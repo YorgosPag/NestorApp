@@ -1,6 +1,6 @@
 # ADR-503 — Two-way auto-size + safety-gated lock (μηδέν σπατάλη + μηδέν ανασφαλές κλείδωμα)
 
-**Status:** 🟡 Slice 1 DONE (two-way column section + ν-floor) — UNCOMMITTED 2026-06-19 · Slice 2 (safety-gated lock) + Slice 3 (organism-wide) = ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ
+**Status:** 🟡 Slice 1 + Slice 2 DONE (two-way column section + ν-floor + safety-gated lock) — UNCOMMITTED 2026-06-19 · Slice 3 (organism-wide: δοκό/πλάκα/πέδιλο) = ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ
 **Date:** 2026-06-19
 **Υλοποιεί:** ADR-487 §4 (live αυτο-διόρθωση) + §5 (δυναμική επανα-διαστασιολόγηση) + §8.4 (ο άνθρωπος υπογράφει, το σύστημα προειδοποιεί)
 **Σχετικά:** ADR-499 (auto-correcting organism / column sizing B2), ADR-502 (live reaction-aware takedown), ADR-475 (auto member sizing)
@@ -34,9 +34,14 @@
 
 ## 3. Slice 2 — Safety-gated lock (ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ)
 
-Σήμερα το `autoSized:false` (lock) μπαίνει **μόνο στα δοκάρια** (manual section grip → `grip-parametric-commits.ts:333`)· στις κολώνες ο μηχανισμός lock ουσιαστικά δεν υπάρχει. Σχέδιο:
-- NEW pure `isSectionAdequate(params, designMoment)` (reuse `columnSectionFits`/`suggestColumnSection`).
-- Στο σημείο manual section edit (grip/panel): manual ≥ επαρκές → lock OK (`autoSized:false`)· manual < επαρκές → **ΜΠΛΟΚ** (μένει AUTO, σύστημα κρατά ελάχιστο επαρκές + μήνυμα i18n el+en).
+**DONE 2026-06-19.** Πριν: το `autoSized:false` (lock) έμπαινε **μόνο στα δοκάρια** (`grip-parametric-commits.ts:333` + `useBeamParamsDispatcher`)· στις κολώνες ο μηχανισμός lock **δεν υπήρχε** (ούτε grip `column-width`/`column-depth`, ούτε panel `useColumnParamsDispatcher`).
+
+**Υλοποίηση:**
+- NEW pure `isColumnSectionAdequate(provider, params, moment?)` → `{ adequate, minWidthMm, minDepthMm }` (`column-sizing.ts`). `adequate` ⇔ η **πραγματική** `width×depth` περνά τις πύλες αντοχής **ΚΑΙ** το γεωμετρικό floor. Boy-scout de-dup (N.0.2): εξαγωγή `rectangularSectionFits(w,d)` (το `columnSectionFits(s)` έγινε thin wrapper) + `columnDimensionFloorMm(height)` (λυγηρότητα EC2 ∨ MIN EC8).
+- NEW **ΕΝΑ SSoT** `resolveColumnSectionLock(provider, prev, next, moment?)` (`column-size-patch.ts`): δεν άλλαξε διατομή → pass-through· manual ≥ επαρκές → `autoSized:false`· manual < επαρκές → **ΜΠΛΟΚ** (clamp στο ελάχιστο επαρκές, μένει AUTO, `rejected:true`). Αντικαθιστά το copy-paste του δοκού σε 2 σημεία.
+- Wiring 2 call sites (thin): `useColumnParamsDispatcher` (panel/ribbon) + `commitColumnGripDrag` (grip). Provider = `resolveStructuralCode(codeId)`, moment = `resolveActiveColumnDesignMoment(id)` (ίδιο SSoT με τον auto-sizer).
+- Toast: NEW typed event `bim:column-section-rejected` + registrar στο `structural-attach-notifications.ts` με **stable `id`** (μηδέν storm κατά το συνεχές section-grip drag). i18n `structuralOrganism.columnSectionRejected` (el+en).
+- **Jest:** +5 `isColumnSectionAdequate` (200/250→ανεπαρκές, 300/500→επαρκές, circular→no-op) +3 `resolveColumnSectionLock` (pass-through / lock OK / ΜΠΛΟΚ-clamp). 28/28 sizing GREEN· 1226 pass structural+commands (7 pre-existing fails: 6 raft ADR-476 + 1 AssignWallType).
 
 ## 4. Slice 3 — Organism-wide (ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ)
 
@@ -51,3 +56,4 @@
 | Ημ/νία | Αλλαγή |
 |---|---|
 | 2026-06-19 | **Δημιουργία + Slice 1.** Two-way `suggestColumnSection` (shrink+grow στο ελάχιστο επαρκές) + NEW ν-floor `MAX_AXIAL_LOAD_RATIO=0.65` (EC8) στο `columnSectionFits` (η πύλη ασφαλείας του shrink). Square-only v1· μη-τετράγωνες grow-only. Live-model verified (400×400→300×300). Slice 2 (safety-gated lock) + Slice 3 (organism-wide) = handoff. UNCOMMITTED. |
+| 2026-06-19 | **Slice 2 — safety-gated lock (κολώνα).** NEW `isColumnSectionAdequate` + ΕΝΑ SSoT `resolveColumnSectionLock` (de-dup boy-scout: `rectangularSectionFits`/`columnDimensionFloorMm`). Wired σε panel (`useColumnParamsDispatcher`) + grip (`commitColumnGripDrag`): manual ≥ επαρκές → lock· < επαρκές → ΜΠΛΟΚ (clamp στο ελάχιστο επαρκές, μένει AUTO) + toast (event `bim:column-section-rejected`, stable id, i18n el+en). +8 jest (28/28). UNCOMMITTED. |

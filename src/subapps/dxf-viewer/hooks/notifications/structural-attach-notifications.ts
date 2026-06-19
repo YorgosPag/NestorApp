@@ -81,6 +81,24 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       });
     }),
 
+    // ADR-503 Slice 3 — organism-wide safety-gated lock (δοκός/πλάκα/πέδιλο), mirror της
+    // κολώνας. Stable `id` ανά τύπο ⇒ ένα toast κατά το συνεχές section-grip drag (μηδέν storm).
+    EventBus.on('bim:beam-section-rejected', ({ depth, minDepth }) => {
+      toast.warning(t('structuralOrganism.beamSectionRejected', { depth, minDepth }), {
+        id: 'beam-section-rejected',
+      });
+    }),
+    EventBus.on('bim:slab-section-rejected', ({ thickness, minThickness }) => {
+      toast.warning(t('structuralOrganism.slabSectionRejected', { thickness, minThickness }), {
+        id: 'slab-section-rejected',
+      });
+    }),
+    EventBus.on('bim:foundation-section-rejected', ({ w, l, minW, minL }) => {
+      toast.warning(t('structuralOrganism.footingSectionRejected', { w, l, minW, minL }), {
+        id: 'foundation-section-rejected',
+      });
+    }),
+
     // ADR-464 Slice 4 — «Υπολογισμός Φορτίων»: N πέδιλα έλαβαν tributary φορτίο.
     // count=0 → καμία πηγή (χωρίς κολώνες σε πέδιλα / ορόφους) → οδηγία διάγνωσης.
     EventBus.on('bim:structural-loads-computed', ({ count }) => {

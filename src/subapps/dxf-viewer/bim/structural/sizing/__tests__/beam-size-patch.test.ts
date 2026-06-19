@@ -5,7 +5,12 @@
 import type { BeamEntity, BeamParams } from '../../../types/beam-types';
 import type { ColumnEntity } from '../../../types/column-types';
 import { GREEK_LEGACY_PROVIDER } from '../../codes/greek-legacy-provider';
-import { buildBeamSizePatch, isBeamAutoSized } from '../beam-size-patch';
+import {
+  buildBeamSizePatch,
+  isBeamAutoSized,
+  isBeamSectionAdequate,
+  resolveBeamSectionLock,
+} from '../beam-size-patch';
 
 function makeBeam(over: Partial<BeamParams> = {}, lengthM = 9.6): BeamEntity {
   const params: BeamParams = {
@@ -63,5 +68,58 @@ describe('buildBeamSizePatch', () => {
     const cantilever = buildBeamSizePatch(makeBeam(), GREEK_LEGACY_PROVIDER, 'cantilever');
     expect(cantilever).not.toBeNull();
     expect(cantilever!.next.depth).toBeGreaterThan(simple!.next.depth);
+  });
+});
+
+// ADR-503 Slice 3 — safety-gated lock (mirror κολώνας). Στα 9.6 m greek-legacy το ελάχιστο
+// επαρκές ύψος είναι 850 mm (serviceability L/d, ανεξάρτητο φορτίου).
+describe('isBeamSectionAdequate (ADR-503 Slice 3)', () => {
+  const provider = GREEK_LEGACY_PROVIDER;
+
+  it('flags an under-sized depth as inadequate + reports the minimum adequate', () => {
+    const beam = makeBeam({ depth: 500 });
+    const res = isBeamSectionAdequate(provider, beam, beam.params);
+    expect(res.adequate).toBe(false);
+    expect(res.minDepthMm).toBe(850);
+  });
+
+  it('accepts a depth at or above the minimum adequate', () => {
+    const beam = makeBeam({ depth: 900 });
+    const res = isBeamSectionAdequate(provider, beam, beam.params);
+    expect(res.adequate).toBe(true);
+    expect(res.minDepthMm).toBe(850);
+  });
+});
+
+describe('resolveBeamSectionLock (ADR-503 Slice 3)', () => {
+  const provider = GREEK_LEGACY_PROVIDER;
+  const beam = makeBeam();
+
+  it('passes through a non-section edit (no autoSized mutation)', () => {
+    const prev = makeBeam({ depth: 850 }).params;
+    const next = makeBeam({ depth: 850, topElevation: 4000 }).params;
+    const lock = resolveBeamSectionLock(provider, beam, prev, next);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params).toBe(next);
+    expect(lock.params.autoSized).toBeUndefined();
+  });
+
+  it('locks an adequate manual depth (autoSized:false, Revit user-wins)', () => {
+    const prev = makeBeam({ depth: 500 }).params;
+    const next = makeBeam({ depth: 900 }).params;
+    const lock = resolveBeamSectionLock(provider, beam, prev, next);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params.autoSized).toBe(false);
+    expect(lock.params.depth).toBe(900);
+  });
+
+  it('BLOCKS an under-sized manual depth → clamps to minimum adequate, stays AUTO', () => {
+    const prev = makeBeam({ depth: 850 }).params;
+    const next = makeBeam({ depth: 300 }).params;
+    const lock = resolveBeamSectionLock(provider, beam, prev, next);
+    expect(lock.rejected).toBe(true);
+    expect(lock.params.depth).toBe(850);
+    expect(lock.params.autoSized).toBe(true);
+    expect(lock.minDepthMm).toBe(850);
   });
 });

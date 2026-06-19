@@ -18,16 +18,8 @@ const SLAB_TEST_MAT = new THREE.MeshPhysicalMaterial({
 });
 
 export function overrideSlabBodyMaterialTEMP(root: THREE.Object3D, sp: unknown): void {
-  // 🚨 Decisive z-fight test: όλα τα meshes της ομάδας πλάκας → ΕΝΑ κοινό lit υλικό.
-  // Uniform ⇒ ήταν z-fight 2 διαφορετικών υλικών. Two-tone ⇒ intrinsic shading.
-  root.traverse((o) => {
-    const m = o as THREE.Mesh & { isLineSegments2?: boolean };
-    if (m.isMesh && !m.isLineSegments2 && m.userData['bimType'] === 'slab') {
-      m.material = SLAB_TEST_MAT;
-      m.receiveShadow = false; // 🚨 test σκιάς (surviving file, αξιόπιστο)
-      m.castShadow = false;
-    }
-  });
+  // (διαγνωστικά απενεργοποιημένα — δοκιμή πραγματικού fix depth-priority στο MaterialCatalog3D)
+  void SLAB_TEST_MAT; void root;
   if (__slabParamsDumped || typeof document === 'undefined') return;
   let body: THREE.Mesh | undefined;
   root.traverse((o) => {
@@ -39,21 +31,29 @@ export function overrideSlabBodyMaterialTEMP(root: THREE.Object3D, sp: unknown):
   __slabParamsDumped = true;
   const geo = body.geometry;
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  const nor = geo.getAttribute('normal') as THREE.BufferAttribute | undefined;
   const idx = geo.getIndex();
   const triCount = idx ? idx.count / 3 : pos.count / 3;
   const vidx = (t: number, k: number): number => (idx ? idx.getX(t * 3 + k) : t * 3 + k);
   const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
   const ab = new THREE.Vector3(), ac = new THREE.Vector3(), fn = new THREE.Vector3();
+  const mat0 = Array.isArray(body.material) ? body.material[0] : body.material;
   const lines: string[] = ['=== SLAB CURRENT GEOMETRY (local) ==='];
-  lines.push(`bbox-from-geo: see inventory. triCount=${triCount} indexed=${idx ? 'Y' : 'N'}`);
-  lines.push('--- TOP-facing triangles (faceN.y>0.3) ---');
+  lines.push(`triCount=${triCount} indexed=${idx ? 'Y' : 'N'} hasNormalAttr=${nor ? 'Y' : 'N'} groups=${geo.groups?.length ?? 0} matArray=${Array.isArray(body.material)} matType=${(mat0 as THREE.Material)?.type} flatShading=${(mat0 as THREE.MeshStandardMaterial)?.flatShading} hasNormalMap=${!!(mat0 as THREE.MeshStandardMaterial)?.normalMap}`);
+  lines.push('--- TOP triangles: geometric faceN + STORED vertex normals ---');
+  const sn = (i: number): string => nor ? `(${nor.getX(i).toFixed(3)},${nor.getY(i).toFixed(3)},${nor.getZ(i).toFixed(3)})` : '?';
   for (let t = 0; t < triCount; t++) {
-    a.fromBufferAttribute(pos, vidx(t, 0)); b.fromBufferAttribute(pos, vidx(t, 1)); c.fromBufferAttribute(pos, vidx(t, 2));
+    const i0 = vidx(t, 0), i1 = vidx(t, 1), i2 = vidx(t, 2);
+    a.fromBufferAttribute(pos, i0); b.fromBufferAttribute(pos, i1); c.fromBufferAttribute(pos, i2);
     ab.subVectors(b, a); ac.subVectors(c, a); fn.crossVectors(ab, ac).normalize();
-    if (fn.y > 0.3) {
-      lines.push(`tri${t} faceN=(${fn.x.toFixed(3)},${fn.y.toFixed(3)},${fn.z.toFixed(3)}) cY=${((a.y + b.y + c.y) / 3).toFixed(3)} verts=[(${a.x.toFixed(2)},${a.y.toFixed(2)},${a.z.toFixed(2)})(${b.x.toFixed(2)},${b.y.toFixed(2)},${b.z.toFixed(2)})(${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)})]`);
-    }
+    if (fn.y > 0.3) lines.push(`tri${t} faceN=(${fn.x.toFixed(3)},${fn.y.toFixed(3)},${fn.z.toFixed(3)}) storedN=[${sn(i0)}${sn(i1)}${sn(i2)}]`);
   }
+  lines.push('--- CHILDREN of slab body ---');
+  body.children.forEach((ch, i) => {
+    const cm = ch as THREE.Mesh;
+    const cmat = Array.isArray(cm.material) ? cm.material[0] : cm.material;
+    lines.push(`child${i} type=${ch.type} bimType=${ch.userData['bimType']} isMesh=${!!cm.isMesh} matType=${(cmat as THREE.Material)?.type ?? '-'}`);
+  });
   lines.push(`slabParams: ${JSON.stringify(sp)}`);
   const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);

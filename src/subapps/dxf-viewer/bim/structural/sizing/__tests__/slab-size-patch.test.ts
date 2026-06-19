@@ -7,7 +7,12 @@ import type { ColumnEntity } from '../../../types/column-types';
 import type { SlabSupportCondition } from '../../loads/slab-beam-support';
 import type { SlabDna } from '../../../types/slab-dna-types';
 import { EUROCODE_PROVIDER } from '../../codes/eurocode-provider';
-import { buildSlabSizePatch, isSlabAutoSized } from '../slab-size-patch';
+import {
+  buildSlabSizePatch,
+  isSlabAutoSized,
+  isSlabSectionAdequate,
+  resolveSlabSectionLock,
+} from '../slab-size-patch';
 
 const CANTILEVER: SlabSupportCondition = {
   supportType: 'cantilever', supportCount: 1, cantileverLengthM: 3,
@@ -67,5 +72,64 @@ describe('buildSlabSizePatch', () => {
   it('null όταν συγκλίνει (πάχος ήδη επαρκές)', () => {
     const grown = buildSlabSizePatch(makeSlab(), EUROCODE_PROVIDER, CANTILEVER)!.next.thickness;
     expect(buildSlabSizePatch(makeSlab({ thickness: grown }), EUROCODE_PROVIDER, CANTILEVER)).toBeNull();
+  });
+});
+
+// ADR-503 Slice 3 — safety-gated lock (mirror κολώνας/δοκού).
+const GROWN_CANTILEVER = buildSlabSizePatch(makeSlab(), EUROCODE_PROVIDER, CANTILEVER)!.next.thickness;
+
+describe('isSlabSectionAdequate (ADR-503 Slice 3)', () => {
+  it('flags an under-sized cantilever thickness as inadequate', () => {
+    const slab = makeSlab({ thickness: 200 });
+    const res = isSlabSectionAdequate(EUROCODE_PROVIDER, slab, slab.params, CANTILEVER);
+    expect(res.adequate).toBe(false);
+    expect(res.minThicknessMm).toBe(GROWN_CANTILEVER);
+  });
+
+  it('accepts a thickness at or above the minimum adequate', () => {
+    const slab = makeSlab({ thickness: GROWN_CANTILEVER });
+    expect(isSlabSectionAdequate(EUROCODE_PROVIDER, slab, slab.params, CANTILEVER).adequate).toBe(true);
+  });
+
+  it('no gate for a non-cantilever slab (sizer undefined → adequate)', () => {
+    const slab = makeSlab({ thickness: 200 });
+    expect(isSlabSectionAdequate(EUROCODE_PROVIDER, slab, slab.params).adequate).toBe(true);
+  });
+});
+
+describe('resolveSlabSectionLock (ADR-503 Slice 3)', () => {
+  it('passes through a composite (dna) slab untouched', () => {
+    const slab = makeSlab({ dna: {} as SlabDna });
+    const next = makeSlab({ dna: {} as SlabDna, thickness: 50 }).params;
+    const lock = resolveSlabSectionLock(EUROCODE_PROVIDER, slab, slab.params, next, CANTILEVER);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params).toBe(next);
+    expect(lock.params.autoSized).toBeUndefined();
+  });
+
+  it('passes through a non-thickness edit (no autoSized mutation)', () => {
+    const slab = makeSlab();
+    const next = makeSlab({ levelElevation: 4000 }).params;
+    const lock = resolveSlabSectionLock(EUROCODE_PROVIDER, slab, slab.params, next, CANTILEVER);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params.autoSized).toBeUndefined();
+  });
+
+  it('locks an adequate manual thickness (autoSized:false, Revit user-wins)', () => {
+    const slab = makeSlab();
+    const next = makeSlab({ thickness: GROWN_CANTILEVER }).params;
+    const lock = resolveSlabSectionLock(EUROCODE_PROVIDER, slab, slab.params, next, CANTILEVER);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params.autoSized).toBe(false);
+    expect(lock.params.thickness).toBe(GROWN_CANTILEVER);
+  });
+
+  it('BLOCKS an under-sized manual thickness → clamps to minimum adequate, stays AUTO', () => {
+    const slab = makeSlab({ thickness: GROWN_CANTILEVER });
+    const next = makeSlab({ thickness: 200 }).params;
+    const lock = resolveSlabSectionLock(EUROCODE_PROVIDER, slab, slab.params, next, CANTILEVER);
+    expect(lock.rejected).toBe(true);
+    expect(lock.params.thickness).toBe(GROWN_CANTILEVER);
+    expect(lock.params.autoSized).toBe(true);
   });
 });

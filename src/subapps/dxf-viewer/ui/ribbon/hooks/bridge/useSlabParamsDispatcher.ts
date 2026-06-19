@@ -19,6 +19,10 @@ import { useCallback } from 'react';
 import type { SlabEntity, SlabParams } from '../../../../bim/types/slab-types';
 import { useCommandHistory } from '../../../../core/commands';
 import { UpdateSlabParamsCommand } from '../../../../core/commands/entity-commands/UpdateSlabParamsCommand';
+import { resolveSlabSectionLock } from '../../../../bim/structural/sizing/slab-size-patch';
+import { resolveActiveSlabSupportCondition } from '../../../../bim/structural/active-reinforcement';
+import { resolveStructuralCode } from '../../../../bim/structural/codes';
+import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { useLevels } from '../../../../systems/levels';
@@ -48,10 +52,23 @@ export function useSlabParamsDispatcher(
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
+      // ADR-503 Slice 3 — safety-gated lock (mirror κολώνας/δοκού): χειροκίνητο πάχος ≥ επαρκές
+      // → lock (`autoSized:false`)· < επαρκές → ΜΠΛΟΚ (μένει AUTO, το σύστημα κρατά το ελάχιστο
+      // επαρκές + toast). Πριν: ο dispatcher ΔΕΝ κλείδωνε → χειροκίνητο πάχος έμενε AUTO → ο
+      // proactive κύκλος το ξαναέγραφε (pre-existing α-gap). Composite `dna`/μη-πάχος edit → pass-through.
+      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+      const lock = resolveSlabSectionLock(
+        provider, slab, slab.params, nextParams, resolveActiveSlabSupportCondition(slab.id),
+      );
       executeCommand(
-        new UpdateSlabParamsCommand(slab.id, nextParams, slab.params, sm, false),
+        new UpdateSlabParamsCommand(slab.id, lock.params, slab.params, sm, false),
       );
       EventBus.emit('bim:slab-params-updated', { slabId: slab.id });
+      if (lock.rejected) {
+        EventBus.emit('bim:slab-section-rejected', {
+          slabId: slab.id, thickness: nextParams.thickness, minThickness: lock.minThicknessMm,
+        });
+      }
     },
     [executeCommand, levelManager],
   );

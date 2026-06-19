@@ -74,3 +74,79 @@ export function buildSlabSizePatch(
     next: { ...slab.params, thickness: suggested.thicknessMm, autoSized: true },
   };
 }
+
+/** Επάρκεια χειροκίνητου πάχους πλάκας (ADR-503 Slice 3 lock-gate). */
+export interface SlabSectionAdequacy {
+  readonly adequate: boolean;
+  /** Το ελάχιστο επαρκές πάχος (mm) — για το μήνυμα toast + το clamp. */
+  readonly minThicknessMm: number;
+}
+
+/**
+ * ADR-503 Slice 3 — Είναι ΕΠΑΡΚΕΣ το **πάχος** μιας χειροκίνητης πλάκας; `adequate` ⇔
+ * `next.thickness ≥ suggested.thicknessMm`. Ο `suggestSlabThickness` είναι cantilever-only
+ * (αναρτημένη πλάκα-πρόβολος)· `undefined` (αμφιέρειστη / εδαφόπλακα / μηδέν άνοιγμα) ⇒ ο gate
+ * δεν αφορά → `adequate:true` (no-op, μηδέν false-positive). Το ctx χτίζεται από τα **next** params.
+ * `supportCondition` = topology-aware (`resolveActiveSlabSupportCondition`, ίδιο SSoT με τον
+ * auto-sizer & τον οπλισμό). Pure (provider arg).
+ */
+export function isSlabSectionAdequate(
+  provider: StructuralCodeProvider,
+  slab: SlabEntity,
+  next: SlabParams,
+  supportCondition?: SlabSupportCondition,
+): SlabSectionAdequacy {
+  const suggested = suggestSlabThickness(
+    provider,
+    buildSlabFoundationSectionContext({ ...slab, params: next }, supportCondition),
+  );
+  if (!suggested) return { adequate: true, minThicknessMm: next.thickness };
+  return { adequate: next.thickness >= suggested.thicknessMm, minThicknessMm: suggested.thicknessMm };
+}
+
+/** Αποτέλεσμα του safety-gated lock σε **χειροκίνητο** πάχος πλάκας (ADR-503 Slice 3). */
+export interface SlabSectionLockResolution {
+  /** Οι params που θα γραφτούν: locked (`autoSized:false`) αν επαρκές· αλλιώς bumped στο ελάχιστο επαρκές + AUTO. */
+  readonly params: SlabParams;
+  /** `true` ⇔ το χειροκίνητο πάχος απορρίφθηκε (υποδιαστασιολόγηση) → ο caller δείχνει toast. */
+  readonly rejected: boolean;
+  /** Το ελάχιστο επαρκές πάχος (για το μήνυμα toast). */
+  readonly minThicknessMm: number;
+}
+
+/**
+ * ADR-503 Slice 3 — **ΕΝΑ SSoT** για το lock σε χειροκίνητο πάχος πλάκας (panel/ribbon· η πλάκα
+ * δεν έχει grip πάχους). Mirror του `resolveColumnSectionLock`. Σήμερα ο dispatcher ΔΕΝ κλείδωνε
+ * καθόλου → χειροκίνητο πάχος έμενε AUTO → ο proactive κύκλος το ξαναέγραφε (pre-existing α-gap).
+ * Κανόνας (Giorgio Q2):
+ *   - **composite `dna`** (πάχος = `dna.totalThickness`, δεν το διαχειρίζεται ο auto-sizer) → pass-through.
+ *   - **δεν άλλαξε πάχος** → pass-through.
+ *   - manual **≥ επαρκές** → lock OK: `{...next, autoSized:false}` (user wins, Revit).
+ *   - manual **< επαρκές** (υποδιαστασιολόγηση) → **ΜΠΛΟΚ**: `{...next, thickness:minThicknessMm,
+ *     autoSized:true}` (μένει AUTO, το σύστημα κρατά το ελάχιστο επαρκές) + `rejected:true`.
+ *
+ * Invariant: καμία persisted πλάκα ποτέ κάτω από το επαρκές. Pure — ο caller το τυλίγει σε command.
+ */
+export function resolveSlabSectionLock(
+  provider: StructuralCodeProvider,
+  slab: SlabEntity,
+  prevParams: SlabParams,
+  nextParams: SlabParams,
+  supportCondition?: SlabSupportCondition,
+): SlabSectionLockResolution {
+  const passThrough: SlabSectionLockResolution = {
+    params: nextParams, rejected: false, minThicknessMm: nextParams.thickness,
+  };
+  if (nextParams.dna !== undefined) return passThrough;
+  if (nextParams.thickness === prevParams.thickness) return passThrough;
+
+  const { adequate, minThicknessMm } = isSlabSectionAdequate(provider, slab, nextParams, supportCondition);
+  if (adequate) {
+    return { params: { ...nextParams, autoSized: false }, rejected: false, minThicknessMm };
+  }
+  return {
+    params: { ...nextParams, thickness: minThicknessMm, autoSized: true },
+    rejected: true,
+    minThicknessMm,
+  };
+}

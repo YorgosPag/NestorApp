@@ -20,7 +20,10 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isFoundationEntity } from '../../../types/entities';
+import type { Entity } from '../../../types/entities';
 import { hasGuideBindings } from '../../../bim/hosting/guide-binding-types';
+import { buildPadSizingInput, resolvePadSectionLock } from '../../../bim/structural/sizing/pad-size-patch';
+import { useStructuralSettingsStore } from '../../../state/structural-settings-store';
 import {
   type FoundationEntity,
   type FoundationKind,
@@ -196,12 +199,34 @@ export function useRibbonFoundationBridge(
         levelManager.setLevelScene,
         levelId,
       );
-      const update = new UpdateFoundationParamsCommand(foundation.id, nextParams, foundation.params, sm, false);
+      const scene = levelManager.getLevelScene(levelId);
+      // ADR-503 Slice 3 — pad width/length = χειροκίνητη διάσταση → safety-gated lock (ίδιο SSoT με
+      // το grip, mirror κολώνας/δοκού). ≥ επαρκές → lock (`autoDesigned:false`)· < επαρκές → ΜΠΛΟΚ
+      // (clamp στην ελάχιστη επαρκή + toast). strip/tie-beam → pass-through (junction recompute).
+      let finalParams = nextParams;
+      let padRejection: { w: number; l: number; minW: number; minL: number } | null = null;
+      if (nextParams.kind === 'pad' && foundation.params.kind === 'pad') {
+        const input = buildPadSizingInput(
+          foundation,
+          (scene?.entities ?? []) as unknown as readonly Entity[],
+          useStructuralSettingsStore.getState().soilBearingCapacityKpa,
+        );
+        if (input) {
+          const lock = resolvePadSectionLock(input, foundation.params, nextParams);
+          finalParams = lock.params;
+          if (lock.rejected) {
+            padRejection = { w: nextParams.width, l: nextParams.length, minW: lock.minWidthMm, minL: lock.minLengthMm };
+          }
+        }
+      }
+      const update = new UpdateFoundationParamsCommand(foundation.id, finalParams, foundation.params, sm, false);
       // ADR-441 Slice 8 — αλλαγή έδρασης/πλάτους grid λωρίδας → ανα-υπολογισμός joins
       // ώστε οι γειτονικές λωρίδες να κλείσουν/ανοίξουν τις γωνίες live (Revit auto-join).
-      const scene = levelManager.getLevelScene(levelId);
-      const junction = scene ? junctionNeighborCommand(foundation, nextParams, scene, sm) : null;
+      const junction = scene ? junctionNeighborCommand(foundation, finalParams, scene, sm) : null;
       executeCommand(junction ? new CompoundCommand('Update foundation + junctions', [update, junction]) : update);
+      if (padRejection) {
+        EventBus.emit('bim:foundation-section-rejected', { foundationId: foundation.id, ...padRejection });
+      }
     },
     [executeCommand, levelManager],
   );

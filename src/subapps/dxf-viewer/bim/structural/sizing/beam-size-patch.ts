@@ -109,3 +109,76 @@ export function buildBeamSizePatch(
     next: { ...p, width: suggested.widthMm, depth: suggested.depthMm, autoSized: true },
   };
 }
+
+/** Επάρκεια χειροκίνητης διατομής δοκαριού (ADR-503 Slice 3 lock-gate). depth-driven. */
+export interface BeamSectionAdequacy {
+  readonly adequate: boolean;
+  /** Το ελάχιστο επαρκές ύψος (mm) — για το μήνυμα toast + το clamp. */
+  readonly minDepthMm: number;
+}
+
+/**
+ * ADR-503 Slice 3 — Είναι ΕΠΑΡΚΕΣ το **ύψος** μιας χειροκίνητης διατομής δοκαριού;
+ * `adequate` ⇔ `next.depth ≥ suggested.depthMm`· το `suggestBeamSection` δίνει το ελάχιστο
+ * επαρκές ύψος = max[serviceability L/d, κάμψη, διάτμηση, στρέψη, MIN] (rounded). Το ctx χτίζεται
+ * από τα **next** params ώστε το πλάτος (αρχιτεκτονική επιλογή) να επηρεάζει σωστά το απαιτούμενο
+ * ύψος. `supportTypeOverride`/`designTorsionKnm` = topology-aware overrides (ίδιο SSoT με τον
+ * auto-sizer & τον οπλισμό· πρόβολος → wL²/2 + στρέψη). Pure (provider arg).
+ */
+export function isBeamSectionAdequate(
+  provider: StructuralCodeProvider,
+  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  next: BeamParams,
+  supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
+): BeamSectionAdequacy {
+  const suggested = suggestBeamSection(
+    provider,
+    buildBeamSectionContext({ ...beam, params: next }, supportTypeOverride, designTorsionKnm),
+  );
+  return { adequate: next.depth >= suggested.depthMm, minDepthMm: suggested.depthMm };
+}
+
+/** Αποτέλεσμα του safety-gated lock σε **χειροκίνητη** επεξεργασία διατομής δοκαριού (ADR-503 Slice 3). */
+export interface BeamSectionLockResolution {
+  /** Οι params που θα γραφτούν: locked (`autoSized:false`) αν επαρκής· αλλιώς bumped στο ελάχιστο επαρκές ύψος + AUTO. */
+  readonly params: BeamParams;
+  /** `true` ⇔ η χειροκίνητη διατομή απορρίφθηκε (υποδιαστασιολόγηση) → ο caller δείχνει toast. */
+  readonly rejected: boolean;
+  /** Το ελάχιστο επαρκές ύψος (για το μήνυμα toast). */
+  readonly minDepthMm: number;
+}
+
+/**
+ * ADR-503 Slice 3 — **ΕΝΑ SSoT** για την απόφαση lock σε χειροκίνητη διατομή δοκαριού (grip
+ * resize ∨ panel/ribbon). Αντικαθιστά το inline `sectionChanged ? {...,autoSized:false} : ...`
+ * σε 2 σημεία (N.0.2). Mirror του `resolveColumnSectionLock`. Κανόνας (Giorgio Q2):
+ *   - **δεν άλλαξε διατομή** (width/depth ίδια) → pass-through (μη-section edits δεν κλειδώνουν).
+ *   - manual **≥ επαρκές** → lock OK: `{...next, autoSized:false}` (user wins, Revit).
+ *   - manual **< επαρκές** (υποδιαστασιολόγηση) → **ΜΠΛΟΚ**: `{...next, depth:minDepthMm,
+ *     autoSized:true}` (μένει AUTO, το σύστημα κρατά το ελάχιστο επαρκές) + `rejected:true`.
+ *
+ * Invariant: καμία persisted δοκός ποτέ κάτω από το επαρκές. Pure — ο caller το τυλίγει σε command.
+ * `supportTypeOverride`/`designTorsionKnm`: topology-aware (`resolveActiveBeamSupportType`/
+ * `resolveActiveBeamTorsion`, ίδιο SSoT με τον auto-sizer).
+ */
+export function resolveBeamSectionLock(
+  provider: StructuralCodeProvider,
+  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  prevParams: BeamParams,
+  nextParams: BeamParams,
+  supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
+): BeamSectionLockResolution {
+  const sectionChanged = nextParams.width !== prevParams.width || nextParams.depth !== prevParams.depth;
+  if (!sectionChanged) {
+    return { params: nextParams, rejected: false, minDepthMm: nextParams.depth };
+  }
+  const { adequate, minDepthMm } = isBeamSectionAdequate(
+    provider, beam, nextParams, supportTypeOverride, designTorsionKnm,
+  );
+  if (adequate) {
+    return { params: { ...nextParams, autoSized: false }, rejected: false, minDepthMm };
+  }
+  return { params: { ...nextParams, depth: minDepthMm, autoSized: true }, rejected: true, minDepthMm };
+}

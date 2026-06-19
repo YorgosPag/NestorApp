@@ -62,6 +62,47 @@ const SYSTEM_TINT_MAX_METALNESS = 0.1;
 const FACE_POLYGON_OFFSET_FACTOR = 1;
 const FACE_POLYGON_OFFSET_UNITS = 1;
 
+/**
+ * Per-category DEPTH PRIORITY (polygonOffsetUnits) — coplanar-face z-fighting SSoT.
+ *
+ * Structural elements are modelled FLUSH: a beam embedded in a slab, a column
+ * stopping at the floor level — their top faces are geometrically COPLANAR at the
+ * storey elevation. With a single uniform `polygonOffsetUnits` (1) on every solid,
+ * those coplanar faces share the exact same depth → the depth test has no
+ * tie-breaker → they flicker between materials as the camera orbits (Giorgio:
+ * «μίξη χρωμάτων στις πάνω παρειές που κινείται με το orbit», 2026-06-19).
+ *
+ * Fix: a deterministic per-category bias. LOWER units = nearer the camera = WINS.
+ * The visually-dominant surface gets the smallest bias:
+ *   - finish/plaster skin (1, default) → wins over its own structural core,
+ *   - slab (floor/roof surface, 2) → wins over the beams/columns embedded in it,
+ *   - beam (3), column (4), foundations (5-7, each distinct so coplanar footing
+ *     tops don't fight each other either).
+ * Edge overlays (`LineSegments2`, polygonOffset 0) stay nearest of all → still win
+ * against every face, so the ADR-375 "Shaded with Edges" contract is preserved
+ * (all biases are ≥ 1, i.e. still pushed back relative to the edges).
+ */
+const STRUCTURAL_DEPTH_OFFSET_UNITS: Readonly<Record<string, number>> = {
+  'elem-slab': 2,
+  'elem-beam': 3,
+  'elem-column': 4,
+  'elem-foundation': 5,
+  'elem-foundation-pad': 5,
+  'elem-foundation-strip': 6,
+  'elem-foundation-tie-beam': 7,
+};
+
+/** Depth-priority bias for a resolved material key (default = finish/skin tier). */
+function depthOffsetUnitsForKey(key: string): number {
+  return STRUCTURAL_DEPTH_OFFSET_UNITS[key] ?? FACE_POLYGON_OFFSET_UNITS;
+}
+
+/** Apply the per-category depth bias to a resolved (cached) material. Idempotent. */
+function withDepthPriority(mat: THREE.MeshStandardMaterial, key: string): THREE.MeshStandardMaterial {
+  mat.polygonOffsetUnits = depthOffsetUnitsForKey(key);
+  return mat;
+}
+
 function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: def.color,
@@ -279,7 +320,8 @@ function resolveUserMaterial(id: string): THREE.MeshStandardMaterial {
 /** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */
 export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
   if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return withFaceMode(resolveUserMaterial(materialId));
-  return withFaceMode(resolveTexturedMaterial(resolveMaterialKey(materialId)));
+  const key = resolveMaterialKey(materialId);
+  return withFaceMode(withDepthPriority(resolveTexturedMaterial(key), key));
 }
 
 // ── ADR-417 #6 — Roof tile displacement relief cache ─────────────────────────
@@ -325,7 +367,8 @@ export function getRoofTileMaterial3D(materialId: string, reliefMm: number): THR
 export function getElementMaterial3D(
   type: 'column' | 'beam' | 'slab' | 'foundation' | 'foundation-pad' | 'foundation-strip' | 'foundation-tie-beam' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
-  return withFaceMode(resolveTexturedMaterial(`elem-${type}`));
+  const key = `elem-${type}`;
+  return withFaceMode(withDepthPriority(resolveTexturedMaterial(key), key));
 }
 
 /**

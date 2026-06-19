@@ -33,8 +33,15 @@ import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grip
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { EventBus } from '../../systems/events/EventBus';
+import type { Entity } from '../../types/entities';
 import { resolveColumnSectionLock } from '../../bim/structural/sizing/column-size-patch';
-import { resolveActiveColumnDesignMoment } from '../../bim/structural/active-reinforcement';
+import { resolveBeamSectionLock } from '../../bim/structural/sizing/beam-size-patch';
+import { buildPadSizingInput, resolvePadSectionLock } from '../../bim/structural/sizing/pad-size-patch';
+import {
+  resolveActiveColumnDesignMoment,
+  resolveActiveBeamSupportType,
+  resolveActiveBeamTorsion,
+} from '../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -232,14 +239,18 @@ export function commitBeamGripDrag(
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
-  // ADR-475 — grip resize ΔΙΑΤΟΜΗΣ (depth/width) = override → lock της auto-size
-  // (Revit). Endpoint/rotation grips (span) κρατούν το auto-size ενεργό (re-size on span).
-  const sectionChanged =
-    newParams.width !== originalParams.width || newParams.depth !== originalParams.depth;
-  const finalParams = sectionChanged ? { ...newParams, autoSized: false } : newParams;
+  // ADR-503 Slice 3 — grip resize ΔΙΑΤΟΜΗΣ (depth/width) = χειροκίνητη διατομή → safety-gated lock
+  // (ίδιο SSoT με panel, mirror κολώνας): ≥ επαρκές → lock (`autoSized:false`)· < επαρκές → ΜΠΛΟΚ
+  // (clamp στο ελάχιστο επαρκές ύψος, μένει AUTO). Endpoint/rotation grips → δεν αλλάζει διατομή
+  // → pass-through (το auto-size μένει ενεργό για re-size on span).
+  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+  const lock = resolveBeamSectionLock(
+    provider, beam, originalParams, newParams,
+    resolveActiveBeamSupportType(grip.entityId), resolveActiveBeamTorsion(grip.entityId),
+  );
   const command = new UpdateBeamParamsCommand(
     grip.entityId,
-    finalParams,
+    lock.params,
     originalParams,
     sceneManager,
     true,
@@ -247,6 +258,11 @@ export function commitBeamGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('beam', grip.entityId);
+  if (lock.rejected) {
+    EventBus.emit('bim:beam-section-rejected', {
+      beamId: grip.entityId, depth: newParams.depth, minDepth: lock.minDepthMm,
+    });
+  }
 }
 
 /**
@@ -400,9 +416,28 @@ export function commitFoundationGripDrag(
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
+  // ADR-503 Slice 3 — pad width/length resize = χειροκίνητη διάσταση → safety-gated lock (mirror
+  // κολώνας/δοκού· lock-flag = `autoDesigned`, ο reconciler ξαναδιαστασιολογεί μόνο autoDesigned).
+  // ≥ επαρκές → lock· < επαρκές → ΜΠΛΟΚ (clamp στην ελάχιστη επαρκή). strip/tie-beam → pass-through.
+  let finalParams = newParams;
+  let padRejection: { w: number; l: number; minW: number; minL: number } | null = null;
+  if (newParams.kind === 'pad' && originalParams.kind === 'pad') {
+    const input = buildPadSizingInput(
+      foundation,
+      sceneManager.getEntities() as unknown as readonly Entity[],
+      useStructuralSettingsStore.getState().soilBearingCapacityKpa,
+    );
+    if (input) {
+      const lock = resolvePadSectionLock(input, originalParams, newParams);
+      finalParams = lock.params;
+      if (lock.rejected) {
+        padRejection = { w: newParams.width, l: newParams.length, minW: lock.minWidthMm, minL: lock.minLengthMm };
+      }
+    }
+  }
   const command = new UpdateFoundationParamsCommand(
     grip.entityId,
-    newParams,
+    finalParams,
     originalParams,
     sceneManager,
     true,
@@ -410,4 +445,7 @@ export function commitFoundationGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('foundation', grip.entityId);
+  if (padRejection) {
+    EventBus.emit('bim:foundation-section-rejected', { foundationId: grip.entityId, ...padRejection });
+  }
 }

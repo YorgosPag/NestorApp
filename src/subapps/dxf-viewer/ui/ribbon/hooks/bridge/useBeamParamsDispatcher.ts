@@ -20,6 +20,13 @@ import { useCallback } from 'react';
 import type { BeamEntity, BeamParams } from '../../../../bim/types/beam-types';
 import { useCommandHistory } from '../../../../core/commands';
 import { UpdateBeamParamsCommand } from '../../../../core/commands/entity-commands/UpdateBeamParamsCommand';
+import { resolveBeamSectionLock } from '../../../../bim/structural/sizing/beam-size-patch';
+import {
+  resolveActiveBeamSupportType,
+  resolveActiveBeamTorsion,
+} from '../../../../bim/structural/active-reinforcement';
+import { resolveStructuralCode } from '../../../../bim/structural/codes';
+import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { useLevels } from '../../../../systems/levels';
@@ -49,17 +56,23 @@ export function useBeamParamsDispatcher(
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
-      // ADR-475 — χειροκίνητη αλλαγή ΔΙΑΤΟΜΗΣ (depth/width) = override → lock της auto-size
-      // (Revit). Άλλες αλλαγές (supportType/material/…) κρατούν το auto-size ενεργό.
-      const sectionChanged =
-        nextParams.width !== beam.params.width || nextParams.depth !== beam.params.depth;
-      const finalParams: BeamParams = sectionChanged
-        ? { ...nextParams, autoSized: false }
-        : nextParams;
+      // ADR-503 Slice 3 — safety-gated lock (ίδιο SSoT με grip, mirror κολώνας): χειροκίνητη
+      // διατομή ≥ επαρκές → lock (`autoSized:false`)· < επαρκές → ΜΠΛΟΚ (μένει AUTO, το σύστημα
+      // κρατά το ελάχιστο επαρκές ύψος + toast). Μη-section edits (supportType/material/…) → pass-through.
+      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+      const lock = resolveBeamSectionLock(
+        provider, beam, beam.params, nextParams,
+        resolveActiveBeamSupportType(beam.id), resolveActiveBeamTorsion(beam.id),
+      );
       executeCommand(
-        new UpdateBeamParamsCommand(beam.id, finalParams, beam.params, sm, false),
+        new UpdateBeamParamsCommand(beam.id, lock.params, beam.params, sm, false),
       );
       EventBus.emit('bim:beam-params-updated', { beamId: beam.id });
+      if (lock.rejected) {
+        EventBus.emit('bim:beam-section-rejected', {
+          beamId: beam.id, depth: nextParams.depth, minDepth: lock.minDepthMm,
+        });
+      }
     },
     [executeCommand, levelManager],
   );
