@@ -37,7 +37,13 @@ import {
   isWallEntity,
   isSlabEntity,
   isColumnEntity,
+  isStairEntity,
 } from '../../types/entities';
+import {
+  attachSideReferencesAny,
+  type AttachBindingParams,
+  type EntityAttachSide,
+} from '../entities/entity-attach-detach';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
 
@@ -80,51 +86,65 @@ export function findHostedSlabOpenings(
   return out;
 }
 
+/** Any BIM entity whose vertical extent can attach to a structural host (ADR-401). */
+function isAttachableEntity(e: Entity): boolean {
+  return isWallEntity(e) || isColumnEntity(e) || isStairEntity(e);
+}
+
 /**
- * Finds `attached` wall ids whose `params.attachTopToIds` reference any host in
- * `hostIds` (ADR-401 Phase C — host-deletion warning reverse lookup). Mirror of
- * {@link findHostedOpenings} for the beam/slab→wall direction. Walls with a
- * non-`attached` top binding (or no attach list) are skipped.
+ * ADR-401 — SSoT reverse lookup: every attachable entity (wall | column | stair)
+ * whose `side` is `attached` and whose attach-id list references any host in
+ * `hostIds`. ONE loop over the scene driven by the `attachSideReferencesAny`
+ * primitive (entity-attach-detach.ts); the per-entity wrappers below differ only
+ * by their `guard` (which entity type) and `side`. Empty host set → `[]` (O(1)).
+ *
+ * Call AFTER the host removal lands: the affected entities remain in the scene
+ * (only their host is gone), so the reverse lookup still resolves them.
+ *
+ * @param guard restricts the sweep to one entity kind; omit for any attachable.
  */
-export function findAttachedWalls(
+export function findEntitiesAttachedToHosts(
   hostIds: ReadonlySet<string>,
   entities: readonly Entity[],
+  side: EntityAttachSide,
+  guard: (e: Entity) => boolean = isAttachableEntity,
 ): string[] {
   if (hostIds.size === 0) return [];
   const out: string[] = [];
   for (const e of entities) {
-    if (!isWallEntity(e)) continue;
-    if (e.params.topBinding !== 'attached') continue;
-    const ids = e.params.attachTopToIds;
-    if (ids && ids.some((id) => hostIds.has(id))) out.push(e.id);
+    if (!guard(e)) continue;
+    const params = (e as { params?: AttachBindingParams }).params;
+    if (params && attachSideReferencesAny(params, side, hostIds)) out.push(e.id);
   }
   return out;
 }
 
 /**
- * Finds `attached` column ids whose `attachTopToIds` / `attachBaseToIds` reference
- * any host in `hostIds` (ADR-401 — host-deletion **detach** reverse lookup for
- * columns). Mirror of {@link findAttachedWalls}, but partitioned by side so the
- * caller can run a `DetachColumnsCommand` per affected side. Columns with a
- * non-`attached` binding (or no attach list) on a given side are skipped there.
- *
- * Call AFTER the host removal lands: the affected columns remain in the scene
- * (only their host is gone), so the reverse lookup still resolves them.
+ * Finds `attached` wall ids whose top attach list references any host in
+ * `hostIds` (ADR-401 Phase C — host-deletion warning reverse lookup). Thin
+ * wrapper over {@link findEntitiesAttachedToHosts} (wall guard, top side).
+ */
+export function findAttachedWalls(
+  hostIds: ReadonlySet<string>,
+  entities: readonly Entity[],
+): string[] {
+  return findEntitiesAttachedToHosts(hostIds, entities, 'top', isWallEntity);
+}
+
+/**
+ * Finds `attached` column ids whose top / base attach list references any host in
+ * `hostIds` (ADR-401 — host-deletion **detach** reverse lookup for columns),
+ * partitioned by side so the caller can run a `DetachColumnsCommand` per affected
+ * side. Thin wrapper over {@link findEntitiesAttachedToHosts} (column guard).
  */
 export function findAttachedColumns(
   hostIds: ReadonlySet<string>,
   entities: readonly Entity[],
 ): { topIds: string[]; baseIds: string[] } {
-  const topIds: string[] = [];
-  const baseIds: string[] = [];
-  if (hostIds.size === 0) return { topIds, baseIds };
-  for (const e of entities) {
-    if (!isColumnEntity(e)) continue;
-    const p = e.params;
-    if (p.topBinding === 'attached' && p.attachTopToIds?.some((id) => hostIds.has(id))) topIds.push(e.id);
-    if (p.baseBinding === 'attached' && p.attachBaseToIds?.some((id) => hostIds.has(id))) baseIds.push(e.id);
-  }
-  return { topIds, baseIds };
+  return {
+    topIds: findEntitiesAttachedToHosts(hostIds, entities, 'top', isColumnEntity),
+    baseIds: findEntitiesAttachedToHosts(hostIds, entities, 'base', isColumnEntity),
+  };
 }
 
 // ─── Composition helpers ────────────────────────────────────────────────────

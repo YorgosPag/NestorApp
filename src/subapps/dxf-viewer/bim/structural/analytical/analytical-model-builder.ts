@@ -29,6 +29,7 @@ import type { BeamEntity } from '../../types/beam-types';
 import type { GuideOffsetLookup } from '../../hosting/derive-slots';
 import { columnCenterM, beamEndpointsM } from '../loads/member-load-geometry';
 import type { StructuralGraph, StructuralNode } from '../organism/structural-organism-types';
+import { beamInteriorSupports, type BeamInteriorSupport } from './beam-interior-supports';
 import {
   NodeUnionFind,
   mergeByProximity,
@@ -63,9 +64,14 @@ export interface BuildAnalyticalModelInput {
   readonly getOffset?: GuideOffsetLookup;
 }
 
-/** Ακατέργαστο μέλος (raw άκρα) πριν την επίλυση τελικών κόμβων. */
+/**
+ * Ακατέργαστο μέλος (raw άκρα) πριν την επίλυση τελικών κόμβων. `memberId` = μοναδικό
+ * αναλυτικό id (1:1 με στοιχείο solver/διαγράμματος)· `entityId` = το physical entity
+ * (πολλά υπο-μέλη συνεχούς δοκού μοιράζονται το ίδιο `entityId`, ADR-504 Φ2 S5).
+ */
 interface RawMember {
   readonly entityId: string;
+  readonly memberId: string;
   readonly memberType: AnalyticalMemberType;
   readonly iRaw: string;
   readonly jRaw: string;
@@ -79,6 +85,8 @@ interface RawAccumulator {
   readonly columnBaseRaw: Map<string, string>;
   readonly beamEnds: Map<string, RawNode[]>;
   readonly rawById: Map<string, RawNode>;
+  /** `${beamId}|${columnId}` → raw id ενδιάμεσου κόμβου (ADR-504 S5 — interior-support merge). */
+  readonly beamInteriorRaw: Map<string, string>;
 }
 
 function emptyAccumulator(): RawAccumulator {
@@ -86,6 +94,7 @@ function emptyAccumulator(): RawAccumulator {
     raws: [], members: [],
     columnTopRaw: new Map(), columnBaseRaw: new Map(),
     beamEnds: new Map(), rawById: new Map(),
+    beamInteriorRaw: new Map(),
   };
 }
 
@@ -106,21 +115,43 @@ function appendColumn(
   pushRaw(acc, { id: topId, priority: COLUMN_PRIORITY, position: { xM: centre.xM, yM: centre.yM, zM: node.topZmm * MM_TO_M } });
   acc.columnBaseRaw.set(node.id, baseId);
   acc.columnTopRaw.set(node.id, topId);
-  acc.members.push({ entityId: node.id, memberType: 'column', iRaw: baseId, jRaw: topId });
+  acc.members.push({ entityId: node.id, memberId: node.id, memberType: 'column', iRaw: baseId, jRaw: topId });
 }
 
-/** Κόμβοι/μέλος δοκαριού: 2 άκρα στο υψόμετρο της άνω παρειάς (framing datum). */
-function appendBeam(acc: RawAccumulator, node: StructuralNode, b: BeamEntity): void {
+/**
+ * Κόμβοι/μέλος δοκαριού στο υψόμετρο της άνω παρειάς (framing datum). Όταν ο δοκός έχει
+ * **εσωτερικές** στηρίξεις (ADR-504 Φ2 S5 — συνεχής δοκός), εισάγονται ενδιάμεσοι κόμβοι
+ * στα κλάσματά τους και το member σπάει σε υπο-μέλη `i→s1→…→j` (κοινό `entityId`, μοναδικά
+ * `memberId`) → ο solver βγάζει sagging+hogging envelope. Χωρίς εσωτερικές → ΕΝΑ member.
+ */
+function appendBeam(
+  acc: RawAccumulator, node: StructuralNode, b: BeamEntity, interior: readonly BeamInteriorSupport[],
+): void {
   const ends = beamEndpointsM(b);
   const zM = node.topZmm * MM_TO_M;
-  const iId = `${node.id}:i`;
-  const jId = `${node.id}:j`;
-  const iRaw: RawNode = { id: iId, priority: BEAM_PRIORITY, position: { xM: ends.start.xM, yM: ends.start.yM, zM } };
-  const jRaw: RawNode = { id: jId, priority: BEAM_PRIORITY, position: { xM: ends.end.xM, yM: ends.end.yM, zM } };
+  const at = (t: number): { xM: number; yM: number; zM: number } => ({
+    xM: ends.start.xM + (ends.end.xM - ends.start.xM) * t,
+    yM: ends.start.yM + (ends.end.yM - ends.start.yM) * t,
+    zM,
+  });
+  const iRaw: RawNode = { id: `${node.id}:i`, priority: BEAM_PRIORITY, position: at(0) };
+  const jRaw: RawNode = { id: `${node.id}:j`, priority: BEAM_PRIORITY, position: at(1) };
   pushRaw(acc, iRaw);
   pushRaw(acc, jRaw);
   acc.beamEnds.set(node.id, [iRaw, jRaw]);
-  acc.members.push({ entityId: node.id, memberType: 'beam', iRaw: iId, jRaw: jId });
+
+  const seq: RawNode[] = [iRaw];
+  interior.forEach((sup, k) => {
+    const raw: RawNode = { id: `${node.id}:s${k}`, priority: BEAM_PRIORITY, position: at(sup.t) };
+    pushRaw(acc, raw);
+    acc.beamInteriorRaw.set(`${node.id}|${sup.columnId}`, raw.id);
+    seq.push(raw);
+  });
+  seq.push(jRaw);
+  for (let k = 0; k < seq.length - 1; k++) {
+    const memberId = seq.length === 2 ? node.id : `${node.id}#${k}`;
+    acc.members.push({ entityId: node.id, memberId, memberType: 'beam', iRaw: seq[k].id, jRaw: seq[k + 1].id });
+  }
 }
 
 /** Συγκέντρωσε raw κόμβους/μέλη από τα graph nodes (κολόνες + δοκάρια). */
@@ -130,7 +161,9 @@ function collectRaws(input: BuildAnalyticalModelInput): RawAccumulator {
   for (const node of input.graph.nodes) {
     const entity = byId.get(node.id);
     if (node.memberKind === 'column' && entity && isColumnEntity(entity)) appendColumn(acc, node, entity, input.getOffset);
-    else if (node.memberKind === 'beam' && entity && isBeamEntity(entity)) appendBeam(acc, node, entity);
+    else if (node.memberKind === 'beam' && entity && isBeamEntity(entity)) {
+      appendBeam(acc, node, entity, beamInteriorSupports(entity, input.graph, input.entities));
+    }
   }
   return acc;
 }
@@ -141,15 +174,22 @@ function planDist(a: AnalyticalPoint3D, b: AnalyticalPoint3D): number {
 }
 
 /**
- * Connectivity merge: για κάθε `column-bearing` ακμή, ένωσε το πλησιέστερο (στο
- * plan) άκρο του δοκαριού με την κορυφή της στηρίζουσας κολόνας.
+ * Connectivity merge: για κάθε `column-bearing` ακμή, ένωσε την κορυφή της στηρίζουσας
+ * κολόνας με τον κόμβο του δοκαριού. **Εσωτερική** στήριξη (ADR-504 Φ2 S5) → ο ειδικός
+ * ενδιάμεσος κόμβος της (από το subdivision)· αλλιώς → το πλησιέστερο (στο plan) άκρο.
  */
 function mergeFramingEdges(acc: RawAccumulator, graph: StructuralGraph, uf: NodeUnionFind): void {
   for (const edge of graph.edges) {
     if (edge.kind !== 'column-bearing') continue;
     const topId = acc.columnTopRaw.get(edge.supportId);
+    if (!topId) continue;
+    const interiorId = acc.beamInteriorRaw.get(`${edge.supportedId}|${edge.supportId}`);
+    if (interiorId) {
+      uf.union(interiorId, topId);
+      continue;
+    }
     const ends = acc.beamEnds.get(edge.supportedId);
-    if (!topId || !ends || ends.length === 0) continue;
+    if (!ends || ends.length === 0) continue;
     const top = acc.rawById.get(topId);
     if (!top) continue;
     const nearest = ends.reduce((best, e) =>
@@ -226,7 +266,7 @@ function buildMembers(acc: RawAccumulator, resolved: ResolvedNodes): AnalyticalM
     const pi = resolved.positionByNode.get(iNodeId) as AnalyticalPoint3D;
     const pj = resolved.positionByNode.get(jNodeId) as AnalyticalPoint3D;
     const lengthM = Math.hypot(pi.xM - pj.xM, pi.yM - pj.yM, pi.zM - pj.zM);
-    return { id: m.entityId, entityId: m.entityId, memberType: m.memberType, iNodeId, jNodeId, lengthM };
+    return { id: m.memberId, entityId: m.entityId, memberType: m.memberType, iNodeId, jNodeId, lengthM };
   });
 }
 

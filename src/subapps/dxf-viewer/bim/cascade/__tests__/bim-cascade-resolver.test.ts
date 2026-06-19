@@ -9,18 +9,28 @@ import {
   findHostedOpenings,
   findHostedSlabOpenings,
   findAttachedColumns,
+  findEntitiesAttachedToHosts,
   partitionBimHosts,
   expandSelectionForDelete,
   expandSelectionForMove,
 } from '../bim-cascade-resolver';
 import type { Entity } from '../../../types/entities';
 
+type AttachParams = { topBinding?: string; baseBinding?: string; attachTopToIds?: string[]; attachBaseToIds?: string[] };
+
 /** Column with explicit top/base bindings + attach lists (ADR-401 host-delete reverse lookup). */
-function attachedColumn(
-  id: string,
-  params: { topBinding?: string; baseBinding?: string; attachTopToIds?: string[]; attachBaseToIds?: string[] },
-): Entity {
+function attachedColumn(id: string, params: AttachParams): Entity {
   return { id, type: 'column', kind: 'rectangular', params } as unknown as Entity;
+}
+
+/** Wall with explicit bindings + attach lists (ADR-401 host-delete reverse lookup). */
+function attachedWall(id: string, params: AttachParams): Entity {
+  return { id, type: 'wall', kind: 'straight', params } as unknown as Entity;
+}
+
+/** Stair with explicit bindings + attach lists (ADR-401 Phase G attachable). */
+function attachedStair(id: string, params: AttachParams): Entity {
+  return { id, type: 'stair', kind: 'straight', params } as unknown as Entity;
 }
 
 function wall(id: string): Entity {
@@ -219,6 +229,51 @@ describe('ADR-363 Phase 7A — BIM cascade resolver', () => {
       const entities = [attachedColumn('c1', { topBinding: 'attached', attachTopToIds: ['beam1'] }), wall('w1')];
       expect(findAttachedColumns(new Set(), entities)).toEqual({ topIds: [], baseIds: [] });
       expect(findAttachedColumns(new Set(['beam1']), [wall('w1')])).toEqual({ topIds: [], baseIds: [] });
+    });
+  });
+
+  // ─── findEntitiesAttachedToHosts (ADR-401 entity-agnostic reverse-lookup SSoT) ───
+
+  describe('findEntitiesAttachedToHosts', () => {
+    it('finds wall top-attached refs to a deleted host (the warning + detach lookup)', () => {
+      const entities = [
+        attachedWall('wTop', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        attachedWall('wOther', { topBinding: 'attached', attachTopToIds: ['beam2'] }),
+        attachedWall('wPlain', { topBinding: 'storey-ceiling', attachTopToIds: ['beam1'] }),
+      ];
+      expect(findEntitiesAttachedToHosts(new Set(['beam1']), entities, 'top')).toEqual(['wTop']);
+    });
+
+    it('finds wall BASE-attached refs (the new wall base-detach path)', () => {
+      const entities = [
+        attachedWall('wBase', { baseBinding: 'attached', attachBaseToIds: ['fbeam1'] }),
+        attachedWall('wBaseOther', { baseBinding: 'storey-floor', attachBaseToIds: ['fbeam1'] }),
+      ];
+      expect(findEntitiesAttachedToHosts(new Set(['fbeam1']), entities, 'base')).toEqual(['wBase']);
+    });
+
+    it('respects the entity-type guard (top side) — walls only / columns only', () => {
+      const entities = [
+        attachedWall('w1', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        attachedColumn('c1', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+      ];
+      expect(findEntitiesAttachedToHosts(new Set(['beam1']), entities, 'top', (e) => e.type === 'wall')).toEqual(['w1']);
+      expect(findEntitiesAttachedToHosts(new Set(['beam1']), entities, 'top', (e) => e.type === 'column')).toEqual(['c1']);
+    });
+
+    it('default guard sweeps all attachable kinds (wall + column + stair)', () => {
+      const entities = [
+        attachedWall('w1', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        attachedColumn('c1', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        attachedStair('st1', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        wall('wPlain'), // no params → ignored
+      ];
+      expect(findEntitiesAttachedToHosts(new Set(['beam1']), entities, 'top').sort()).toEqual(['c1', 'st1', 'w1']);
+    });
+
+    it('no-ops on an empty host set', () => {
+      const entities = [attachedWall('w1', { topBinding: 'attached', attachTopToIds: ['beam1'] })];
+      expect(findEntitiesAttachedToHosts(new Set(), entities, 'top')).toEqual([]);
     });
   });
 });

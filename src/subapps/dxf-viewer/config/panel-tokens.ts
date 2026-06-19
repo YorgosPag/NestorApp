@@ -1690,6 +1690,10 @@ export const PANEL_ANCHORING = {
     STATUSBAR_GAP: 4,
     /** Guide panel gap from the section slider (left) and the ViewCube (top) */
     GUIDE_PANEL_GAP: 8,
+    /** Guide panel upward nudge from the ViewCube-bottom anchor (Giorgio 2026-06-19) */
+    GUIDE_PANEL_VERTICAL_LIFT: 50,
+    /** Guide panel rightward nudge from the section-slider anchor (Giorgio 2026-06-19) */
+    GUIDE_PANEL_HORIZONTAL_NUDGE: 5,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1702,8 +1706,8 @@ export const PANEL_ANCHORING = {
     STATUSBAR_HEIGHT: 32,
     /** Windows taskbar height (approximate) */
     WINDOWS_TASKBAR: 40,
-    /** Section slider left edge distance from viewport right (right-3=12px + w-12=48px) */
-    SECTION_SLIDER_LEFT_FROM_RIGHT: 60,
+    /** Section slider left edge distance from viewport right (w-12=48px + right margin + scrollbar, measured ≈68px) */
+    SECTION_SLIDER_LEFT_FROM_RIGHT: 68,
     /** Section slider TOP offset inside the canvas container (Tailwind top-14 = 56px) */
     SECTION_SLIDER_TOP: 56,
     /** ViewCube bottom offset inside the canvas container (top:12px + 160px canvas size) */
@@ -1815,8 +1819,14 @@ export const PanelPositionCalculator = {
     }
 
     return {
-      x: Math.max(OFFSETS.VIEWPORT_MARGIN, sliderLeft - OFFSETS.GUIDE_PANEL_GAP - panelWidth),
-      y: viewCubeBottom + OFFSETS.GUIDE_PANEL_GAP,
+      x: Math.max(
+        OFFSETS.VIEWPORT_MARGIN,
+        sliderLeft - OFFSETS.GUIDE_PANEL_GAP - panelWidth + OFFSETS.GUIDE_PANEL_HORIZONTAL_NUDGE,
+      ),
+      y: Math.max(
+        OFFSETS.VIEWPORT_MARGIN,
+        viewCubeBottom + OFFSETS.GUIDE_PANEL_GAP - OFFSETS.GUIDE_PANEL_VERTICAL_LIFT,
+      ),
     };
   },
 

@@ -1,0 +1,77 @@
+/**
+ * Beam interior supports — pure SSoT για FEM subdivision (ADR-504 Φ2 S5 / ADR-480).
+ *
+ * Όταν μια στηρίζουσα κολώνα προβάλλεται στο **εσωτερικό** (όχι στα άκρα) του δοκού,
+ * ο αναλυτικός builder πρέπει να εισάγει ενδιάμεσο κόμβο εκεί και να σπάσει το beam
+ * member σε υπο-μέλη → πραγματικός **συνεχής** δοκός (sagging στα ανοίγματα + hogging
+ * πάνω από την εσωτερική στήριξη). Αυτό το module εντοπίζει αυτές τις εσωτερικές
+ * στηρίξεις ως **κλάσμα t∈(0,1)** κατά μήκος του άξονα start→end.
+ *
+ * **Ίδιο SSoT προβολής** με το `deriveBeamSpanModel` (S2): `projectColumnFootprintOnAxis`
+ * + `beamSupportColumnIds`. Μια κολώνα είναι **end** στήριξη (όχι interior) όταν το
+ * footprint της **καλύπτει** ένα άκρο του δοκού (alongMin ≤ 0 ή alongMax ≥ len) —
+ * αλλιώς είναι interior. Το κλάσμα είναι unit-invariant (λόγος) → εφαρμόζεται απευθείας
+ * στους κόμβους του analytical model (μέτρα).
+ *
+ * Pure — zero React/DOM/Firestore. Μονάδες εισόδου: scene units (mm).
+ *
+ * @see ../organism/derive-beam-span-model.ts — ίδια προβολή, closed-form υπο-άνοιγμα (S2)
+ * @see ../../columns/column-face-trim.ts — projectColumnFootprintOnAxis (reuse)
+ * @see ./analytical-model-builder.ts — ο καταναλωτής (appendBeam subdivision)
+ * @see docs/centralized-systems/reference/adrs/ADR-504-practical-span-intermediate-columns.md §5.1
+ */
+
+import { isColumnEntity } from '../../../types/entities';
+import type { Entity } from '../../../types/entities';
+import type { BeamEntity } from '../../types/beam-types';
+import type { ColumnEntity } from '../../types/column-types';
+import { projectColumnFootprintOnAxis } from '../../columns/column-face-trim';
+import { beamSupportColumnIds } from '../loads/load-path-walk';
+import type { StructuralGraph } from '../organism/structural-organism-types';
+
+/** Float-noise ανοχή (scene units) για το «καλύπτει το άκρο» τεστ. */
+const EDGE_TOL = 1;
+
+/** Μια εσωτερική στήριξη δοκού: η στηρίζουσα κολώνα + το κλάσμα της στον άξονα (0,1). */
+export interface BeamInteriorSupport {
+  readonly columnId: string;
+  /** Κλάσμα κατά μήκος start→end, αυστηρά εσωτερικό (0 < t < 1). */
+  readonly t: number;
+}
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/**
+ * Οι εσωτερικές στηρίξεις ενός δοκού, ταξινομημένες κατά `t`. Κάθε στηρίζουσα κολώνα
+ * προβάλλεται στον άξονα· όσες **καλύπτουν** άκρο (alongMin ≤ tol ή alongMax ≥ len−tol)
+ * είναι end-supports → αγνοούνται. Οι υπόλοιπες δίνουν ενδιάμεσο κόμβο στο μέσο της
+ * προβολής τους. Κενό όταν ο δοκός είναι αμφιέρειστος/πρόβολος (μηδέν subdivision).
+ */
+export function beamInteriorSupports(
+  beam: BeamEntity,
+  graph: StructuralGraph,
+  entities: readonly Entity[],
+): BeamInteriorSupport[] {
+  const s = beam.params.startPoint;
+  const e = beam.params.endPoint;
+  const dx = e.x - s.x;
+  const dy = e.y - s.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return [];
+  const ux = dx / len;
+  const uy = dy / len;
+
+  const supportIds = new Set(beamSupportColumnIds(graph, beam.id));
+  const columns = entities.filter(
+    (ent): ent is ColumnEntity => isColumnEntity(ent) && supportIds.has(ent.id),
+  );
+
+  const out: BeamInteriorSupport[] = [];
+  for (const col of columns) {
+    const { alongMin, alongMax } = projectColumnFootprintOnAxis(col, s.x, s.y, ux, uy);
+    if (alongMin <= EDGE_TOL || alongMax >= len - EDGE_TOL) continue; // καλύπτει άκρο → end support
+    out.push({ columnId: col.id, t: clamp01((alongMin + alongMax) / 2 / len) });
+  }
+  out.sort((a, b) => a.t - b.t);
+  return out;
+}

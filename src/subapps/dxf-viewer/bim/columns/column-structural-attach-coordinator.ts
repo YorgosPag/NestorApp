@@ -33,6 +33,7 @@ import {
   type Pt2,
 } from '../geometry/wall-host-plan-builder';
 import { resolveColumnBaseZmm } from '../geometry/column-vertical-profile';
+import { entitySideEligibleForReAutoAttach } from '../entities/entity-attach-detach';
 import { projectColumnFootprintOnAxis } from './column-face-trim';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import type { ColumnEntity } from '../types/column-types';
@@ -52,22 +53,15 @@ const AUTO_ATTACH_Z_GATE_MM = 1;
 const ACTIVE_LEVEL_FLOOR_MM = 0;
 
 /**
- * ADR-401 — μια κολώνα είναι επιλέξιμη για (re-)auto-attach της **κορυφής** της όταν:
- *   • `topBinding==='storey-ceiling'` (default — δεν έχει attach-άρει ποτέ), Ή
- *   • `topBinding==='attached'` ΑΛΛΑ **ΟΛΑ** τα `attachTopToIds` είναι **stale** (δείχνουν
- *     σε host που δεν υπάρχει πλέον — π.χ. διαγραμμένο δοκάρι).
- *
- * Το stale-attach ΔΕΝ πρέπει να μπλοκάρει το re-link σε νέο host: ο host-delete (ADR-401
- * Phase C) δεν καθάριζε το column binding, οπότε η κολώνα έμενε «κολλημένη σε φάντασμα» και
- * τα νέα δοκάρια δεν την ξανά-έπιαναν. Εδώ self-heal-άρει. Attach σε **ζωντανό** host ή
- * `unconnected`/`absolute` → ΟΧΙ (δεν διαταράσσουμε έγκυρη/ρητή επιλογή).
+ * ADR-401 — μια κολώνα είναι επιλέξιμη για (re-)auto-attach της **κορυφής** της όταν
+ * `topBinding==='storey-ceiling'` (default) Ή είναι `attached` ΑΛΛΑ ΜΟΝΟ σε **stale**
+ * hosts (διαγραμμένα δοκάρια). Thin wrapper πάνω στο entity-agnostic SSoT
+ * `entitySideEligibleForReAutoAttach` (entity-attach-detach.ts) — η ΙΔΙΑ λογική που
+ * αξιοποιεί ο τοίχος· μηδέν διπλότυπο. Το stale-attach self-heal-άρει ώστε ένα νέο
+ * δοκάρι να ξανά-πιάσει την κολώνα (ο host-delete αφήνει dangling ref).
  */
 function columnTopEligibleForAutoAttach(column: ColumnEntity, liveIds: ReadonlySet<string>): boolean {
-  const b = column.params.topBinding;
-  if (b === 'storey-ceiling') return true;
-  if (b !== 'attached') return false;
-  const ids = column.params.attachTopToIds;
-  return !ids || ids.length === 0 || ids.every((id) => !liveIds.has(id));
+  return entitySideEligibleForReAutoAttach(column.params, 'top', liveIds);
 }
 
 /** Host footprint-input από beam/slab, αλλιώς null (όχι structural). */

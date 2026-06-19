@@ -10,6 +10,9 @@ import {
   detachEntitySide,
   isEntitySideAttached,
   detachSidesAffectedByVerticalEdit,
+  attachSideReferencesAny,
+  attachSideIsStale,
+  entitySideEligibleForReAutoAttach,
   type VerticalAttachParams,
 } from '../entity-attach-detach';
 import {
@@ -107,5 +110,82 @@ describe('detachSidesAffectedByVerticalEdit (full-params)', () => {
     const out = detachSidesAffectedByVerticalEdit(p, next);
     expect(out).toBe(next);
     expect(out.baseBinding).toBe('attached');
+  });
+});
+
+// ─── ADR-401 SSoT — reverse-lookup / stale / eligibility primitives ───────────
+//
+// These three drive `findAttachedWalls`/`findAttachedColumns` (bim-cascade-resolver)
+// and `columnTopEligibleForAutoAttach` (column coordinator), which are now thin
+// wrappers. Verify the generic shape directly so the wrappers stay coverage-free.
+
+describe('attachSideReferencesAny', () => {
+  it('true when the attached side references a host in the set', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['beam-1', 'beam-2'] });
+    expect(attachSideReferencesAny(p, 'top', new Set(['beam-2']))).toBe(true);
+  });
+
+  it('false when no attach id is in the host set', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['beam-1'] });
+    expect(attachSideReferencesAny(p, 'top', new Set(['beam-X']))).toBe(false);
+  });
+
+  it('false when the side is not attached (even if the list intersects)', () => {
+    const p = params({ topBinding: 'storey-ceiling', attachTopToIds: ['beam-1'] });
+    expect(attachSideReferencesAny(p, 'top', new Set(['beam-1']))).toBe(false);
+  });
+
+  it('handles the base side independently', () => {
+    const p = params({ baseBinding: 'attached', attachBaseToIds: ['slab-1'] });
+    expect(attachSideReferencesAny(p, 'base', new Set(['slab-1']))).toBe(true);
+    expect(attachSideReferencesAny(p, 'top', new Set(['slab-1']))).toBe(false);
+  });
+
+  it('false when the attach list is missing', () => {
+    const p = params({ topBinding: 'attached' });
+    expect(attachSideReferencesAny(p, 'top', new Set(['beam-1']))).toBe(false);
+  });
+});
+
+describe('attachSideIsStale', () => {
+  it('true when attached but ALL ids are missing from liveIds', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['ghost-1', 'ghost-2'] });
+    expect(attachSideIsStale(p, 'top', new Set(['beam-1']))).toBe(true);
+  });
+
+  it('false when at least one id is still live', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['ghost-1', 'beam-1'] });
+    expect(attachSideIsStale(p, 'top', new Set(['beam-1']))).toBe(false);
+  });
+
+  it('true when attached with an empty / missing attach list', () => {
+    expect(attachSideIsStale(params({ topBinding: 'attached', attachTopToIds: [] }), 'top', new Set())).toBe(true);
+    expect(attachSideIsStale(params({ topBinding: 'attached' }), 'top', new Set())).toBe(true);
+  });
+
+  it('false when the side is not attached (explicit intent is not stale)', () => {
+    expect(attachSideIsStale(params({ topBinding: 'unconnected' }), 'top', new Set())).toBe(false);
+  });
+});
+
+describe('entitySideEligibleForReAutoAttach', () => {
+  it('true for the default binding (never explicitly bound)', () => {
+    expect(entitySideEligibleForReAutoAttach(params(), 'top', new Set())).toBe(true);
+    expect(entitySideEligibleForReAutoAttach(params(), 'base', new Set())).toBe(true);
+  });
+
+  it('true when attached only to STALE (deleted) hosts → self-heal', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['ghost'] });
+    expect(entitySideEligibleForReAutoAttach(p, 'top', new Set(['beam-1']))).toBe(true);
+  });
+
+  it('false when attached to a LIVE host (valid attach not disturbed)', () => {
+    const p = params({ topBinding: 'attached', attachTopToIds: ['beam-1'] });
+    expect(entitySideEligibleForReAutoAttach(p, 'top', new Set(['beam-1']))).toBe(false);
+  });
+
+  it('false for explicit unconnected / absolute', () => {
+    expect(entitySideEligibleForReAutoAttach(params({ topBinding: 'unconnected' }), 'top', new Set())).toBe(false);
+    expect(entitySideEligibleForReAutoAttach(params({ baseBinding: 'absolute' }), 'base', new Set())).toBe(false);
   });
 });

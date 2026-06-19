@@ -135,11 +135,16 @@ export function useDraggable(
 
   useEffect(() => {
     // Only run once after mount, and only if getClientPosition is provided
-    if (getClientPosition && !hasCalculatedClientPosition && typeof window !== 'undefined') {
-      const clientPosition = getClientPosition();
-      setPosition(clientPosition);
+    if (!getClientPosition || hasCalculatedClientPosition || typeof window === 'undefined') return;
+
+    // Defer one frame so persistent overlay anchors (e.g. on-canvas section slider /
+    // 3D ViewCube) are laid out before we measure them. Measuring synchronously on mount
+    // can race ahead of layout and yield fallback coordinates (panel opens too high).
+    const raf = requestAnimationFrame(() => {
+      setPosition(getClientPosition());
       setHasCalculatedClientPosition(true);
-    }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [getClientPosition, hasCalculatedClientPosition]);
 
   // ========================================================================

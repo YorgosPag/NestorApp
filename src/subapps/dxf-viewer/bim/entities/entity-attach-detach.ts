@@ -97,6 +97,64 @@ export function isEntitySideAttached(params: AttachBindingParams, side: EntityAt
   return side === 'top' ? params.topBinding === 'attached' : params.baseBinding === 'attached';
 }
 
+/** The host-id list bound to a given side (top → `attachTopToIds`, base → `attachBaseToIds`). */
+function attachIdsForSide(params: AttachBindingParams, side: EntityAttachSide): readonly string[] | undefined {
+  return side === 'top' ? params.attachTopToIds : params.attachBaseToIds;
+}
+
+/**
+ * True when the entity's given side is `attached` AND its attach-id list references
+ * at least one host in `hostIds`. The single reverse-lookup primitive behind the
+ * host-deletion detach/warning sweeps (`findAttachedWalls` / `findAttachedColumns`
+ * in bim-cascade-resolver): a host was removed → does THIS side point at it?
+ */
+export function attachSideReferencesAny(
+  params: AttachBindingParams,
+  side: EntityAttachSide,
+  hostIds: ReadonlySet<string>,
+): boolean {
+  if (!isEntitySideAttached(params, side)) return false;
+  const ids = attachIdsForSide(params, side);
+  return !!ids && ids.some((id) => hostIds.has(id));
+}
+
+/**
+ * True when the entity's given side is `attached` but ALL of its attach ids are
+ * STALE — they reference hosts no longer present in `liveIds` (or the list is
+ * empty/absent). A stale attach is a dangling ref to a deleted host: it must NOT
+ * block re-auto-attach to a new host (the wall/column self-heals). A side that is
+ * not `attached` is not stale (returns false — explicit user intent stands).
+ */
+export function attachSideIsStale(
+  params: AttachBindingParams,
+  side: EntityAttachSide,
+  liveIds: ReadonlySet<string>,
+): boolean {
+  if (!isEntitySideAttached(params, side)) return false;
+  const ids = attachIdsForSide(params, side);
+  return !ids || ids.length === 0 || ids.every((id) => !liveIds.has(id));
+}
+
+/**
+ * True when the entity's given side is eligible for (re-)auto-attach: either it
+ * still holds its default binding (never explicitly bound) OR it is `attached`
+ * but only to STALE hosts (self-heal after the host was deleted). An attach to a
+ * LIVE host, or an explicit `unconnected`/`absolute`, is NOT eligible — we never
+ * disturb a valid/explicit choice. Generalises the per-entity eligibility test
+ * (e.g. `columnTopEligibleForAutoAttach`) into ONE place.
+ */
+export function entitySideEligibleForReAutoAttach(
+  params: AttachBindingParams,
+  side: EntityAttachSide,
+  liveIds: ReadonlySet<string>,
+  defaults: AttachDetachDefaults = WALL_ATTACH_DETACH_DEFAULTS,
+): boolean {
+  const binding = side === 'top' ? params.topBinding : params.baseBinding;
+  const def = side === 'top' ? defaults.top : defaults.base;
+  if (binding === def) return true;
+  return attachSideIsStale(params, side, liveIds);
+}
+
 /**
  * ADR-401 — «manual vertical edit breaks attach» (Revit semantics), full-params variant.
  *
