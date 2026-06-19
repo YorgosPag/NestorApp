@@ -58,11 +58,38 @@ const INACTIVE_LINE_WIDTH = 1;
 const ACTIVE_LINE_WIDTH = 2;
 const ANCHOR_MARKER_SIZE_PX = 5;
 
+/** Χρωματισμός ghost ανά placement status (ADR-398 §ghost coloring). */
+export interface GhostStatusColor {
+  readonly stroke: string;
+  readonly fill: string;
+}
+
+/**
+ * Παλέτα status του ghost: 🟢 `beam` (snap στον άξονα δοκαριού — έγκυρος στόχος) / 🔴
+ * `overlap` (πάνω σε υπάρχουσα κολώνα — σύγκρουση). `neutral` → `null` (default kind χρώμα).
+ */
+const GHOST_STATUS_COLORS: Readonly<Record<'beam' | 'overlap', GhostStatusColor>> = {
+  beam: { stroke: '#2e9e44', fill: 'rgba(46, 158, 68, 0.30)' },
+  overlap: { stroke: '#d23b3b', fill: 'rgba(210, 59, 59, 0.30)' },
+};
+
+/** Resolve του status σε χρώμα· `null` για `neutral` (κρατά το χρώμα τύπου). */
+export function resolveGhostStatusColor(
+  status: 'beam' | 'overlap' | 'neutral',
+): GhostStatusColor | null {
+  return status === 'neutral' ? null : GHOST_STATUS_COLORS[status];
+}
+
 export interface ColumnAnchorGhostRenderInput {
   readonly ghosts: readonly AnchorGhost[];
   readonly kind: ColumnKind;
   readonly transform: ViewTransform;
   readonly viewport: { readonly width: number; readonly height: number };
+  /**
+   * ADR-398 §ghost coloring — όταν δοθεί, υπερισχύει του χρώματος τύπου (🟢 beam-snap /
+   * 🔴 overlap). Absent/`null` ⇒ default kind χρώμα (μηδέν regression).
+   */
+  readonly statusColor?: GhostStatusColor | null;
 }
 
 /**
@@ -74,10 +101,11 @@ export class ColumnAnchorGhostRenderer {
   constructor(private readonly ctx: CanvasRenderingContext2D) {}
 
   render(input: Readonly<ColumnAnchorGhostRenderInput>): void {
-    const { ghosts, kind, transform, viewport } = input;
+    const { ghosts, kind, transform, viewport, statusColor } = input;
     if (ghosts.length === 0) return;
-    const stroke = KIND_STROKE[kind];
-    const fillActive = KIND_FILL_ACTIVE[kind];
+    // ADR-398 §ghost coloring — status χρώμα (🟢 beam / 🔴 overlap) υπερισχύει του kind.
+    const stroke = statusColor?.stroke ?? KIND_STROKE[kind];
+    const fillActive = statusColor?.fill ?? KIND_FILL_ACTIVE[kind];
 
     // 1) Inactive ghosts first (background layer).
     for (const g of ghosts) {

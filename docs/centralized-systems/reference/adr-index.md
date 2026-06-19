@@ -381,6 +381,7 @@
 | **ADR-395** | Ενσωμάτωση BIM οντοτήτων στην καρτέλα «Επιμετρήσεις» Κτιρίου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-395-bim-quantities-building-measurements.md) |
 | **ADR-396** | Ενιαία Εξωτερική Θερμοπρόσοψη (ETICS) για BIM | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-396-bim-external-thermal-envelope-etics.md) |
 | **ADR-397** | BIM Grip & Glyph Behavior System (FULL SSoT) — Wall reference → Column parity | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-397-bim-grip-glyph-behavior-ssot.md) |
+| **ADR-398** | Column placement snap — corner projection + **beam-axis snap** (κέντρο κολώνας ≡ άξονας δοκαριού) + **ghost coloring** (🟢 δοκάρι / 🔴 overlap) | 🟢 beam-axis DONE (UNCOMMITTED) | 2026-06-19 | DXF/BIM | [📄](./adrs/ADR-398-column-placement-snap.md) |
 | **ADR-399** | DXF Viewer: Building Floor Navigation Tabs + Auto-Provisioned Levels | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-399-dxf-floor-navigation-tabs.md) |
 | **ADR-400** | Viewport State Persistence (DXF Viewer) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-400-viewport-state-persistence.md) |
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
@@ -841,6 +842,7 @@
 | **ADR-395** | Ενσωμάτωση BIM οντοτήτων στην καρτέλα «Επιμετρήσεις» Κτιρίου | ✅ APPROVED | [View](./adrs/ADR-395-bim-quantities-building-measurements.md) |
 | **ADR-396** | Ενιαία Εξωτερική Θερμοπρόσοψη (ETICS) για BIM | ✅ APPROVED | [View](./adrs/ADR-396-bim-external-thermal-envelope-etics.md) |
 | **ADR-397** | BIM Grip & Glyph Behavior System (FULL SSoT) — Wall reference → Column parity | ✅ APPROVED | [View](./adrs/ADR-397-bim-grip-glyph-behavior-ssot.md) |
+| **ADR-398** | Column placement snap — beam-axis snap + ghost coloring | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-398-column-placement-snap.md) |
 | **ADR-399** | DXF Viewer: Building Floor Navigation Tabs + Auto-Provisioned Levels | ✅ APPROVED | [View](./adrs/ADR-399-dxf-floor-navigation-tabs.md) |
 | **ADR-400** | Viewport State Persistence (DXF Viewer) | ✅ APPROVED | [View](./adrs/ADR-400-viewport-state-persistence.md) |
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | [View](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |

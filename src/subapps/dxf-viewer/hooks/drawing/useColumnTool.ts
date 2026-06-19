@@ -41,8 +41,9 @@ import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 import {
   computeAnchorGhostFootprints,
   type AnchorGhost,
-  type ColumnGhostOverrides,
 } from '../../bim/columns/column-anchor-ghosts';
+import { buildColumnGhostOverrides } from './column-tool-ghost-overrides';
+import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 // ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
@@ -50,6 +51,7 @@ import { useColumnRegionClicks } from './use-column-region-clicks';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
+import { getColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -289,10 +291,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
    */
   const commitColumnFromState = useCallback(
     (s: ColumnToolState, clickPoint: Readonly<Point2D>): boolean => {
+      // ADR-398 §Column→Beam axis snap — όταν το σημείο κουμπώνει στον άξονα δοκαριού
+      // (ghost 🟢), η κολώνα τοποθετείται ΚΕΝΤΡΑΡΙΣΜΕΝΗ εκεί (κέντρο ≡ άξονας δοκού), ανεξάρτητα
+      // από τον επιλεγμένο anchor — η ρητή απαίτηση του χρήστη.
+      const anchor: ColumnAnchor = getColumnGhostStatus() === 'beam' ? 'center' : s.anchor;
       const overridesWithKind: ColumnParamOverrides = {
         ...s.overrides,
         kind: s.kind,
-        anchor: s.anchor,
+        anchor,
       };
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const params = buildDefaultColumnParams(clickPoint, s.kind, overridesWithKind, sceneUnits);
@@ -413,24 +419,10 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       )
         return null;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
-      // ColumnGhostOverrides is structurally a subset of ColumnParamOverrides
-      // (kind+anchor flattened to args). Spread keeps width/depth/height/
-      // rotation/material/lshape/tshape only — kind/anchor passed explicitly.
-      const ghostOverrides: ColumnGhostOverrides = {
-        ...(s.overrides.width !== undefined ? { width: s.overrides.width } : {}),
-        ...(s.overrides.depth !== undefined ? { depth: s.overrides.depth } : {}),
-        ...(s.overrides.height !== undefined ? { height: s.overrides.height } : {}),
-        ...(s.overrides.rotation !== undefined ? { rotation: s.overrides.rotation } : {}),
-        ...(s.overrides.material !== undefined ? { material: s.overrides.material } : {}),
-        ...(s.overrides.lshape !== undefined ? { lshape: s.overrides.lshape } : {}),
-        ...(s.overrides.tshape !== undefined ? { tshape: s.overrides.tshape } : {}),
-        // ADR-363 Phase 8D — polygon/ishape variant overrides drive ghost
-        // preview geometry for the 3 new kinds (polygon sides, I-shape flange/
-        // web thickness).
-        ...(s.overrides.polygon !== undefined ? { polygon: s.overrides.polygon } : {}),
-        ...(s.overrides.ishape !== undefined ? { ishape: s.overrides.ishape } : {}),
-        sceneUnits: getSceneUnitsRef.current?.() ?? 'mm',
-      };
+      const ghostOverrides = buildColumnGhostOverrides(
+        s.overrides,
+        getSceneUnitsRef.current?.() ?? 'mm',
+      );
       return computeAnchorGhostFootprints(cursorPos, s.kind, s.anchor, ghostOverrides);
     },
     [],
@@ -467,26 +459,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // ESC handled centrally by EscapeCommandBus (ADR-364 §4.1 BIM migration
   // 2026-05-19) — DRAW_TOOL slot in useKeyboardShortcuts calls
   // handleToolCompletion(activeTool, true) which deactivates this tool.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-      const s = stateRef.current;
-      if (s.phase !== 'awaitingPosition') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      const direction: 1 | -1 = e.shiftKey ? -1 : 1;
-      setState((prev) => {
-        const idx = ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
-        const len = ANCHOR_CYCLE_ORDER.length;
-        const nextIdx = (idx + direction + len) % len;
-        return { ...prev, anchor: ANCHOR_CYCLE_ORDER[nextIdx] };
-      });
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  useColumnAnchorTabCycle(stateRef, setState);
 
   return {
     state,

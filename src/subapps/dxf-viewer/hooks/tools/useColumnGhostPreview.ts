@@ -18,8 +18,12 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { ColumnKind } from '../../bim/types/column-types';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { getColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import type { AnchorGhost } from '../../bim/columns/column-anchor-ghosts';
-import { ColumnAnchorGhostRenderer } from '../../bim/columns/ColumnAnchorGhostRenderer';
+import {
+  ColumnAnchorGhostRenderer,
+  resolveGhostStatusColor,
+} from '../../bim/columns/ColumnAnchorGhostRenderer';
 
 export interface UseColumnGhostPreviewProps {
   readonly isAwaitingPosition: boolean;
@@ -72,8 +76,12 @@ export function useColumnGhostPreview(props: Readonly<UseColumnGhostPreviewProps
     const rect = viewportElement.getBoundingClientRect();
     const viewport = { width: rect.width, height: rect.height };
 
+    // ADR-398 §ghost coloring — 🟢 πάνω σε δοκάρι (snap στον άξονα) / 🔴 πάνω σε κολώνα
+    // (overlap) / default. Imperatively read μέσα στο RAF (zero React subscription, ADR-040).
+    const statusColor = resolveGhostStatusColor(getColumnGhostStatus());
+
     const renderer = new ColumnAnchorGhostRenderer(ctx);
-    renderer.render({ ghosts, kind, transform, viewport });
+    renderer.render({ ghosts, kind, transform, viewport, statusColor });
   }, [isAwaitingPosition, kind, transform, getGhostFootprints, getCanvas, getViewportElement, cursorWorld]);
 
   // Clear stale ghosts on transition out of awaitingPosition.

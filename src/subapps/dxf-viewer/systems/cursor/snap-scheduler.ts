@@ -28,9 +28,15 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
+import { resolveColumnPlacementContext } from '../../bim/columns/column-placement-snap-context';
+import {
+  setColumnGhostStatus,
+  clearColumnGhostStatus,
+} from './ColumnPlacementGhostStatusStore';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ProSnapResult } from '../../snapping/extended-types';
 import type { SnapResultItem } from './mouse-handler-types';
+import type { Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 
 /** Inputs the scheduler needs to compute one snap detection pass. */
@@ -41,6 +47,12 @@ export interface SnapDetectionInput {
   readonly findSnapPoint: (x: number, y: number) => ProSnapResult | null;
   /** Gated React snap-state setter (LayerCanvas draw); a no-op for opted-out consumers. */
   readonly setSnapResults: (results: SnapResultItem[]) => void;
+  /**
+   * ADR-398 §Column→Beam axis snap — live scene entities getter (για το column-placement
+   * context: snap στον άξονα δοκαριού + ghost χρωματισμός). Omit ⇒ το beam-axis snap είναι
+   * no-op (μηδέν regression).
+   */
+  readonly getEntities?: () => readonly Entity[];
 }
 
 // ── Module-level SSoT state (zero-React singleton, à la ImmediatePositionStore) ──
@@ -63,9 +75,51 @@ function clearSnapState(setSnapResults: (r: SnapResultItem[]) => void): void {
   lastSnapY = NaN;
 }
 
+/**
+ * ADR-398 §Column→Beam axis snap — γράφει το snap SSoT στο σημείο πάνω στον άξονα του
+ * δοκαριού (dedup ίδιο με το corner/center path). Το ghost κουμπώνει εκεί (πράσινο).
+ */
+function writeBeamAxisSnap(input: SnapDetectionInput, point: Point2D, beamId: string): void {
+  const snapMoved = Math.abs(point.x - lastSnapX) > 0.001 || Math.abs(point.y - lastSnapY) > 0.001;
+  if (snapMoved || !lastSnapFound) {
+    lastSnapX = point.x;
+    lastSnapY = point.y;
+    input.setSnapResults([{ point, type: 'nearest', entityId: beamId, distance: 0, priority: 0 }]);
+    setFullSnapResult(null); // δεν υπάρχει ProSnapResult· ο ghost χρωματισμός είναι το σήμα
+    setImmediateSnap({ found: true, point, mode: 'nearest', entityId: beamId });
+  }
+  lastSnapFound = true;
+}
+
+/**
+ * ADR-398 §Column→Beam axis snap — όταν τοποθετείται κολώνα, αναλύει τι βρίσκεται κάτω
+ * από τον cursor και θέτει το ghost status. **Δοκάρι ΝΙΚΑ**: snap στον άξονά του → `true`
+ * (short-circuit του corner/center snap). Αλλιώς status overlap/neutral + `false` (πέφτει
+ * στο κανονικό snap). Όταν δεν τοποθετείται κολώνα → reset status.
+ */
+function applyColumnPlacementContext(input: SnapDetectionInput): boolean {
+  const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
+  if (!colHandle?.isActive) {
+    clearColumnGhostStatus();
+    return false;
+  }
+  const ctx = resolveColumnPlacementContext(input.worldPos, input.getEntities?.() ?? []);
+  setColumnGhostStatus(ctx.status);
+  if (ctx.status === 'beam') {
+    writeBeamAxisSnap(input, ctx.point, ctx.beamId);
+    return true;
+  }
+  return false;
+}
+
 /** The heavy work — runs in the RAF slot, NEVER inside the mousemove handler. */
 function runSnapDetection(input: SnapDetectionInput): void {
   try {
+    // ADR-398 §Column→Beam axis snap — beam ΝΙΚΑ (η ρητή «hover→place» πρόθεση): όταν ο
+    // cursor είναι πάνω σε δοκάρι, snap στον άξονά του + ghost 🟢. Αλλιώς status overlap(🔴)/
+    // neutral και πέφτουμε στο κανονικό snap (corner/center) χωρίς regression.
+    if (applyColumnPlacementContext(input)) return;
+
     // ADR-398 — Column draw: project the would-be column's corners; a corner
     // match wins over the plain center-cursor snap. The indicator shows the
     // target corner; the ghost anchor (ImmediateSnap.point) is shifted to
@@ -163,5 +217,6 @@ export function requestSnapDetection(input: SnapDetectionInput): void {
 export function clearSnapDetection(setSnapResults: (r: SnapResultItem[]) => void): void {
   latest = null;
   dirty = false;
+  clearColumnGhostStatus(); // ADR-398 §Column→Beam axis snap — reset ghost χρωματισμό
   clearSnapState(setSnapResults);
 }
