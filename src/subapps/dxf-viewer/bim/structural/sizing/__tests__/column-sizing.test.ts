@@ -29,10 +29,10 @@ describe('suggestColumnSection', () => {
     expect(suggestColumnSection(EUROCODE_PROVIDER, makeParams({ kind: 'circular' }), 2000)).toBeUndefined();
   });
 
-  it('400×400 χωρίς φορτίο/ροπή → δεν μεγαλώνει (governedBy minimum)', () => {
+  it('τετράγωνη 400×400 χωρίς φορτίο/ροπή → ΜΙΚΡΑΙΝΕΙ στο ελάχιστο 250×250 (two-way, no waste)', () => {
     const s = suggestColumnSection(EUROCODE_PROVIDER, makeParams())!;
-    expect(s.widthMm).toBe(400);
-    expect(s.depthMm).toBe(400);
+    expect(s.widthMm).toBe(250); // EC8 MIN_COLUMN_DIMENSION· καμία ζήτηση → ελάχιστο
+    expect(s.depthMm).toBe(250);
     expect(s.governedBy).toBe('minimum');
   });
 
@@ -55,7 +55,7 @@ describe('suggestColumnSection', () => {
     expect(s.governedBy).toBe('slenderness');
   });
 
-  it('διατήρηση διαστάσεων upward-only (δεν μικραίνει ποτέ)', () => {
+  it('μη-τετράγωνη (700×500) → grow-only (διατηρεί aspect ratio, δεν μικραίνει· two-way DEFER)', () => {
     const s = suggestColumnSection(EUROCODE_PROVIDER, makeParams({ width: 700, depth: 500 }))!;
     expect(s.widthMm).toBeGreaterThanOrEqual(700);
     expect(s.depthMm).toBeGreaterThanOrEqual(500);
@@ -70,5 +70,37 @@ describe('suggestColumnSection', () => {
     const s = suggestColumnSection(EUROCODE_PROVIDER, makeParams(), 1e8)!;
     expect(s.widthMm).toBe(MAX_PRACTICAL_COLUMN_DIMENSION_MM);
     expect(s.governedBy).toBe('reinforcement');
+  });
+});
+
+describe('suggestColumnSection — ADR-503 two-way + ν-floor (EC8)', () => {
+  // appliedLoad του live μοντέλου (Firestore proj_12788b6a): dead=430.09, live=105.65 kN
+  // → ULS ≈ 1.35·430.09 + 1.5·105.65 = 739 kN.
+  const LIVE_LOAD = { deadAxialKn: 430.09, liveAxialKn: 105.65, source: 'takedown' as const };
+
+  it('live 400×400 με φορτίο προβόλου → ΜΙΚΡΑΙΝΕΙ σε 300×300 (ν-governed, ΟΧΙ 250)', () => {
+    const s = suggestColumnSection(EUROCODE_PROVIDER, makeParams({ appliedLoad: LIVE_LOAD }))!;
+    // 250×250 → ν≈0.71 > 0.65 (EC8 παραβίαση)· 300×300 → ν≈0.49 ✓ → το ελάχιστο επαρκές.
+    expect(s.widthMm).toBe(300);
+    expect(s.depthMm).toBe(300);
+  });
+
+  it('ν-floor: μεγαλύτερο αξονικό → μεγαλύτερη ελάχιστη διατομή (monotonic)', () => {
+    const light = suggestColumnSection(
+      EUROCODE_PROVIDER, makeParams({ appliedLoad: { deadAxialKn: 150, liveAxialKn: 40, source: 'takedown' } }),
+    )!;
+    const heavy = suggestColumnSection(
+      EUROCODE_PROVIDER, makeParams({ appliedLoad: { deadAxialKn: 1400, liveAxialKn: 350, source: 'takedown' } }),
+    )!;
+    expect(heavy.widthMm).toBeGreaterThan(light.widthMm);
+  });
+
+  it('idempotent: η προτεινόμενη διατομή είναι ήδη επαρκής (μηδέν αλλαγή σε 2ο pass → convergence)', () => {
+    const first = suggestColumnSection(EUROCODE_PROVIDER, makeParams({ appliedLoad: LIVE_LOAD }))!;
+    const second = suggestColumnSection(
+      EUROCODE_PROVIDER, makeParams({ width: first.widthMm, depth: first.depthMm, appliedLoad: LIVE_LOAD }),
+    )!;
+    expect(second.widthMm).toBe(first.widthMm);
+    expect(second.depthMm).toBe(first.depthMm);
   });
 });

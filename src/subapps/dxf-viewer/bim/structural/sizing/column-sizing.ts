@@ -3,15 +3,15 @@
  * Slice B2, Revit-grade). Αδελφή των `suggestBeamSection` (ύψος δοκαριού) και
  * `suggestSlabThickness` (πάχος πλάκας-προβόλου).
  *
- * Όταν ένας πρόβολος (ADR-486/498) φορτίζει τη στηρίζουσα κολώνα, η FEM ροπή
- * `wL²/2` (ADR-491) εκτοξεύεται ενώ η διατομή μένει 400×400 → ο διαμήκης οπλισμός
- * θα ξεπερνούσε το ρ_max (φυσικά αδύνατο). Εδώ η **χαρακτηριστική διάσταση**
- * αυτο-μεγαλώνει ώστε να ικανοποιούνται ΤΑΥΤΟΧΡΟΝΑ:
+ * **ADR-503 — two-way:** η **χαρακτηριστική διάσταση** αυτο-**προσαρμόζεται** (μεγαλώνει
+ * όταν υποδιαστασιολογείται, **μικραίνει** όταν υπερδιαστασιολογείται → μηδέν σπατάλη
+ * υλικού/χρήματος· ο αρχιτέκτονας βάζει default 400×400 χωρίς στατικά). Βρίσκει το
+ * **ελάχιστο επαρκές** `s×s` που ικανοποιεί ΤΑΥΤΟΧΡΟΝΑ:
+ *   0. **Ανηγμένο αξονικό** `ν = N_Ed/(A_c·f_cd) ≤ 0.65` (EC8 §5.4.3.2.1, DCM) — η πύλη
+ *      που κάνει το **shrink ασφαλές** (χωρίς αυτήν ο sizer θα μίκραινε σε EC8 παραβίαση).
  *   1. **Χωράει ο οπλισμός** (η φυσική πύλη): `As,req(N-M) ≤ ρ_max·A_c` (ρ_max=0.04,
  *      EC8). Το `As,req` = `asStrengthColumnMm2` (ήδη N-M aware, ADR-472/491) —
- *      περιλαμβάνει ΚΑΙ τον αξονικό όρο `(N_Ed − f_cd·A_c)/f_yd`, άρα καλύπτει
- *      σιωπηλά και το `N_Rd` (αν `N_Ed > f_cd·A_c` ο αξονικός όρος εκτοξεύεται →
- *      η διατομή μεγαλώνει· μηδέν διπλότυπος τύπος N_Rd).
+ *      περιλαμβάνει ΚΑΙ τον αξονικό όρο `(N_Ed − f_cd·A_c)/f_yd`.
  *   2. **Λυγηρότητα** (EC2 §5.8): `min(width,depth) ≥ height / λ_max` με
  *      `λ_max = MAX_SLENDERNESS_RATIO` — το **ΙΔΙΟ** γεωμετρικό κριτήριο που
  *      ελέγχει ο `validateColumnParams` (height/minDim ≤ 30) ⇒ η αυτο-μεγεθυμένη
@@ -39,12 +39,22 @@
 
 import { buildColumnSectionContextFromParams } from '../section-context';
 import { asStrengthColumnMm2 } from '../codes/suggest-reinforcement';
+import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import type { ColumnParams } from '../../types/column-types';
 import { MIN_COLUMN_DIMENSION_MM, MAX_SLENDERNESS_RATIO } from '../../types/column-types';
 
 /** Constructible module στρογγυλοποίησης διάστασης κολώνας (mm). */
 const COLUMN_DIMENSION_MODULE_MM = 50;
+
+/**
+ * ADR-503 — όριο **ανηγμένου αξονικού** `ν_d = N_Ed/(A_c·f_cd)` για ορθογώνια κολώνα
+ * (EC8 §5.4.3.2.1, DCM). Η πύλη που το παλιό grow-only ΔΕΝ χρειαζόταν (μεγάλες διατομές
+ * την περνούσαν τετριμμένα) αλλά γίνεται **κρίσιμη στο shrink**: χωρίς αυτήν, ο two-way
+ * sizer θα μίκραινε μια κολώνα ως το reinforcement-fit ελάχιστο, παραβιάζοντας το ν (EC8).
+ * DCH (0.55) / provider-driven per ductility = DEFER (conservative DCM v1).
+ */
+const MAX_AXIAL_LOAD_RATIO = 0.65;
 
 /** Πρακτικό άνω φράγμα χαρακτηριστικής διάστασης κολώνας (mm) — πάνω → Slice D escalation. */
 export const MAX_PRACTICAL_COLUMN_DIMENSION_MM = 1200;
@@ -67,9 +77,13 @@ function roundUpToModule(value: number, module: number): number {
 }
 
 /**
- * Χωράει ο διαμήκης οπλισμός σε ορθογώνια διατομή με χαρακτηριστική διάσταση `sMm`;
- * (`As,req ≤ ρ_max·A_c`). Ξαναχτίζει το context από τα ίδια SSoT για την trial διατομή
- * `width=max(w₀,s)`, `depth=max(d₀,s)` (grow upward, διατηρεί αρχιτεκτονικές διαστάσεις).
+ * Είναι ΕΠΑΡΚΗΣ μια **τετράγωνη** trial διατομή `s×s`; Ελέγχει ΤΑΥΤΟΧΡΟΝΑ:
+ *   (α) **ανηγμένο αξονικό** `ν = N_Ed/(A_c·f_cd) ≤ MAX_AXIAL_LOAD_RATIO` (EC8, η πύλη που
+ *       κάνει το shrink ασφαλές — ίδιο `f_cd` SSoT με το `asStrengthColumnMm2`)·
+ *   (β) **χωράει ο διαμήκης οπλισμός** `As,req ≤ ρ_max·A_c`.
+ * Ξαναχτίζει το context για την trial **τετράγωνη** διατομή `s×s` (ΟΧΙ `max(orig,s)` —
+ * two-way: η αναζήτηση ξεκινά από το κάτω φράγμα κι ανεβαίνει στο **ελάχιστο επαρκές**,
+ * ώστε μια υπερδιαστασιολογημένη κολώνα να μπορεί να μικρύνει).
  */
 function columnSectionFits(
   provider: StructuralCodeProvider,
@@ -77,19 +91,31 @@ function columnSectionFits(
   femMomentKnm: number | undefined,
   sMm: number,
 ): boolean {
-  const width = Math.max(baseParams.width, sMm);
-  const depth = Math.max(baseParams.depth, sMm);
-  const ctx = buildColumnSectionContextFromParams({ ...baseParams, width, depth }, femMomentKnm);
+  const ctx = buildColumnSectionContextFromParams({ ...baseParams, width: sMm, depth: sMm }, femMomentKnm);
+  // (α) όριο ανηγμένου αξονικού (EC8) — N_Ed σε N· f_cd·A_c = αντοχή θλίψης σκυροδέματος.
+  const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
+  const nEdN = Math.max(0, ctx.designAxialKn ?? 0) * 1000;
+  if (nEdN > MAX_AXIAL_LOAD_RATIO * fcd * ctx.grossAreaMm2) return false;
+  // (β) χωράει ο οπλισμός.
   const maxRatio = provider.columnReinforcementLimits(ctx, COLUMN_FIT_PROBE_DIAMETER_MM).maxRatio;
   if (maxRatio <= 0) return true;
   return asStrengthColumnMm2(ctx) <= maxRatio * ctx.grossAreaMm2;
 }
 
 /**
- * Πρόταση ελάχιστης επαρκούς διατομής **ορθογώνιας** κολώνας. `undefined` όταν δεν
- * εφαρμόζεται (μη-ορθογώνια) ⇒ ο caller κρατά τη stored διατομή. Η `femMomentKnm` =
- * η engaged-gated FEM ροπή του φορέα (ADR-491· πρόβολος → `wL²/2`) που υπερισχύει της
- * ονομαστικής e₀. `governedBy` = ο έλεγχος που καθόρισε την αύξηση (προ-patch).
+ * Πρόταση **ελάχιστης επαρκούς** διατομής ορθογώνιας κολώνας — **two-way** (ADR-503): η
+ * διάσταση **μεγαλώνει** όταν υποδιαστασιολογείται **ΚΑΙ μικραίνει** όταν υπερδιαστασιολογείται,
+ * ώστε μηδέν σπατάλη υλικού (ο αρχιτέκτονας βάζει default 400×400 χωρίς στατικά). `undefined`
+ * όταν δεν εφαρμόζεται (μη-ορθογώνια) ⇒ ο caller κρατά τη stored διατομή. Η `femMomentKnm` =
+ * η ροπή σχεδιασμού του φορέα (ADR-491/502· πρόβολος → `wL²/2`) που υπερισχύει της ονομαστικής e₀.
+ *
+ * Το ελάχιστο επαρκές `s` (πολλαπλάσιο 50mm) ικανοποιεί ΤΑΥΤΟΧΡΟΝΑ: ν≤0.65 (EC8) + οπλισμός
+ * (`columnSectionFits`) + λυγηρότητα (`s ≥ height/30`) + `MIN_COLUMN_DIMENSION_MM` (EC8 250mm).
+ *
+ * **Scope two-way v1:** ΜΟΝΟ **τετράγωνες** (`width===depth`, default παλέτας). Μη-τετράγωνες
+ * (ρητή αρχιτεκτονική πρόθεση) → **grow-only** (διατηρεί aspect ratio· proportional shrink = DEFER).
+ * **Convergence-safe:** στο ντετερμινιστικό takedown η ζήτηση δεν εξαρτάται από τη δική της
+ * δυσκαμψία — μόνο γεωμετρία + ίδιο βάρος (μικρό κλάσμα) → μονότονη σύγκλιση, μηδέν ταλάντωση.
  */
 export function suggestColumnSection(
   provider: StructuralCodeProvider,
@@ -99,20 +125,25 @@ export function suggestColumnSection(
   if (params.kind !== 'rectangular') return undefined;
 
   const slenderMinMm = MAX_SLENDERNESS_RATIO > 0 ? params.height / MAX_SLENDERNESS_RATIO : 0;
-  const sStart = roundUpToModule(Math.max(slenderMinMm, MIN_COLUMN_DIMENSION_MM), COLUMN_DIMENSION_MODULE_MM);
+  const floorMm = roundUpToModule(Math.max(slenderMinMm, MIN_COLUMN_DIMENSION_MM), COLUMN_DIMENSION_MODULE_MM);
 
-  let s = sStart;
-  let grewForSteel = false;
+  let s = floorMm;
+  let grewForStrength = false;
   while (s < MAX_PRACTICAL_COLUMN_DIMENSION_MM && !columnSectionFits(provider, params, femMomentKnm, s)) {
     s += COLUMN_DIMENSION_MODULE_MM;
-    grewForSteel = true;
+    grewForStrength = true;
   }
   s = Math.min(s, MAX_PRACTICAL_COLUMN_DIMENSION_MM);
 
-  const governedBy: ColumnSizingGovernedBy = grewForSteel
+  const governedBy: ColumnSizingGovernedBy = grewForStrength
     ? 'reinforcement'
     : slenderMinMm > MIN_COLUMN_DIMENSION_MM ? 'slenderness' : 'minimum';
-  return { widthMm: Math.max(params.width, s), depthMm: Math.max(params.depth, s), governedBy };
+
+  // ADR-503 — τετράγωνη → two-way (μεγαλώνει/μικραίνει στο ελάχιστο επαρκές `s×s`)·
+  // μη-τετράγωνη → grow-only (διατηρεί την αρχιτεκτονική αναλογία, μηδέν surprise squaring).
+  return params.width === params.depth
+    ? { widthMm: s, depthMm: s, governedBy }
+    : { widthMm: Math.max(params.width, s), depthMm: Math.max(params.depth, s), governedBy };
 }
 
 /**

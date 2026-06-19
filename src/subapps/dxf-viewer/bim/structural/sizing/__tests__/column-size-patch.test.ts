@@ -42,8 +42,12 @@ describe('buildColumnSizePatch', () => {
     expect(patch!.next.autoSized).toBe(true);
   });
 
-  it('null χωρίς ροπή/φορτίο (400×400 επαρκεί → convergence)', () => {
-    expect(buildColumnSizePatch(makeColumn(), EUROCODE_PROVIDER)).toBeNull();
+  it('τετράγωνη 400×400 χωρίς φορτίο → patch ΜΙΚΡΑΙΝΕΙ σε 250×250 (ADR-503 two-way, no waste)', () => {
+    const patch = buildColumnSizePatch(makeColumn(), EUROCODE_PROVIDER);
+    expect(patch).not.toBeNull();
+    expect(patch!.next.width).toBe(250);
+    expect(patch!.next.depth).toBe(250);
+    expect(patch!.next.autoSized).toBe(true);
   });
 
   it('null για κλειδωμένη κολώνα (manual override wins)', () => {
