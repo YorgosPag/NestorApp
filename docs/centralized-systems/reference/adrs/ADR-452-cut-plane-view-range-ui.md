@@ -140,6 +140,22 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
 
 ## 8. Changelog
 
+- **2026-06-19** — v2.19 (Giorgio «slab/structural two-tone», 4 ανεξάρτητα z-fight/render bugs που
+  φάνηκαν μαζί στις πάνω παρειές — όλα browser-verified):
+  1. **Coplanar core z-fight** (κύρια αιτία· *όχι* στο cut path): τα δομικά είναι μοντελοποιημένα
+     flush (κορυφή πλάκας ≡ δοκαριού ≡ κολώνας στο ίδιο Y) κι ΟΛΑ τα υλικά είχαν ίδιο
+     `polygonOffset(1,1)` → κανένα δεν κέρδιζε το depth test → τρεμόπαιγμα/μίξη με orbit. Fix:
+     per-category depth-priority `polygonOffsetUnits` στο **`MaterialCatalog3D`** (`STRUCTURAL_DEPTH_OFFSET_UNITS`:
+     finish/σοβάς 1 < slab 2 < beam 3 < column 4 < foundation 5-7· ακμές 0 νικούν όλα — ADR-375 contract). Εφαρμογή σε `getMaterial3D` + `getElementMaterial3D` (`withDepthPriority`).
+  2. **Clip-boundary flicker στην κορυφή** (μόνο με cut ON, slider στο max): οι όψεις στο `worldY`
+     έπεφταν στο όριο `dot==0` → floating-point flicker. Fix: 1 mm `CUT_PLANE_KEEP_EPSILON_M` upward
+     bias στο `resolveCutPlaneWorldY` (**`cut-plane-3d.ts`**) → οριακές όψεις κρατιούνται σταθερά.
+  3. **M/V/N διαγράμματα/ετικέτες αλλάζαν χρώμα με cut ON**: τα always-on-top overlays
+     (`depthTest:false` Mesh + `Sprite` labels) έγραφαν stray stencil στα cut-parity passes → phantom
+     cap recolour. Fix: `isSectionParityOverlay` (depthTest:false **ή** isSprite **ή** `bimEdgeOverlay`)
+     εξαιρεί overlays από ΟΛΑ τα parity passes (**`section-stencil-renderer.ts`**, μαζί με τα edges).
+  4. **Cut-slider drag έδειχνε hollow/grey draft** (Giorgio ήθελε live χρωματιστές όψεις): ο drag
+     παίρνει πλέον quality `'colors'` + τα caps τρέχουν ΚΑΘΕ frame (όχι skip· **`section-scene-controller.ts`** v2.10→v2.19)· hatch/emphasis refine στο settle. ⚠️ βαρύτερο σε πυκνό όροφο (N.17).
 - **2026-06-13** — v1: SSoT extents + hide gate (default OFF) + 2D cut-plane slider. 18 jest.
 - **2026-06-13** — v1.1 UX fix: the leaf clears the SSoT crosshair on `onMouseEnter`
   (`setImmediatePosition(null)`, mirroring `ViewMode3DToggleButton`) so the crosshair no longer

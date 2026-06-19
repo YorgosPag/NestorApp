@@ -48,6 +48,10 @@ import { ColumnSupportMomentStore } from '../bim/structural/organism/column-supp
 import { runSlabChecks } from '../bim/structural/organism/slab-checks';
 import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
 import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-checks';
+// ADR-504 §Φ1 — practical-span advisory (μη-πρακτικά βαθιά δοκός → πρόταση ενδιάμεσων κολωνών).
+import { runPracticalSpanChecks } from '../bim/structural/organism/practical-span-checks';
+import { readActiveStoreyContext } from '../systems/levels/storey-creation-defaults';
+import { DEFAULT_STOREY_HEIGHT_MM } from '../systems/levels/active-storey-context';
 // ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
 import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
 import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
@@ -114,6 +118,13 @@ export function runOrganismDiagnostics(
 
   const settings = useStructuralSettingsStore.getState();
   const provider = resolveStructuralCode(settings.codeId);
+  // ADR-504 §Φ1 — δυναμικό practical-span threshold από τον ενεργό όροφο (ύψος ορόφου +
+  // χρήση)· degenerate (χωρίς active storey) → τυπικός όροφος 3,0m/κατοικία (μηδέν regression).
+  const storeyCtx = readActiveStoreyContext();
+  const practicalSpanStorey = {
+    storeyHeightMm: storeyCtx?.storeyHeightMm ?? DEFAULT_STOREY_HEIGHT_MM,
+    storeyKind: storeyCtx?.storeyKind ?? null,
+  };
   const diagnostics = [
     ...runOrganismChecks(graph),
     ...runReinforcementChecks(graph, entities, provider),
@@ -125,6 +136,7 @@ export function runOrganismDiagnostics(
     ...runSlabChecks(entities, provider),
     ...runBeamTorsionChecks(entities),
     ...runFeasibilityChecks(entities, provider, buildActiveColumnDesignMomentMap(entities)),
+    ...runPracticalSpanChecks(entities, graph, provider, practicalSpanStorey),
     ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),
   ];
   StructuralDiagnosticsStore.set(diagnostics);

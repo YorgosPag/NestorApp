@@ -19,6 +19,7 @@ import {
   getHatchCapMaterial,
   setHatchRepeat,
 } from './section-hatch-cap';
+import { isSectionParityOverlay } from './section-parity-overlay';
 
 /** Shared renderer state ώστε οι secondary passes να μην κρατούν δικό τους αντίγραφο. */
 export interface SecondaryCapContext {
@@ -46,14 +47,15 @@ export function renderEmphasisCapForPlane(
   ctx.selectedCapMat.clippingPlanes = otherPlanes;
 
   // Temporarily hide BIM meshes that are NOT in the selection so that the
-  // stencil pass encodes only the selected entities' solid interior. Edge overlays
-  // (no bimId, LineSegments2) must also be hidden — they corrupt the Mesh-material
-  // parity (see hideEdgeOverlaysForParity).
+  // stencil pass encodes only the selected entities' solid interior. Overlays
+  // (edge fat-lines + always-on-top M/V/N diagrams/labels) must also be hidden —
+  // they corrupt the Mesh-material parity (SSoT predicate `isSectionParityOverlay`).
   const hidden: THREE.Object3D[] = [];
   mainScene.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh) || !obj.visible) return;
+    if (!obj.visible) return;
+    if (isSectionParityOverlay(obj)) { hidden.push(obj); obj.visible = false; return; }
+    if (!(obj instanceof THREE.Mesh)) return;
     const ud = obj.userData as Record<string, unknown>;
-    if (ud['bimEdgeOverlay'] === true) { hidden.push(obj); obj.visible = false; return; }
     const bimId = ud['bimId'];
     if (bimId !== undefined && !selectedBimIds.includes(bimId as string)) {
       hidden.push(obj);
@@ -111,14 +113,15 @@ function renderHatchGroupForPlane(
 ): void {
   ctx.singlePassStencilMat.clippingPlanes = otherPlanes;
 
-  // Hide BIM meshes that are NOT this material to isolate the stencil fill. Edge
-  // overlays (no bimId, LineSegments2) must also be hidden — they corrupt the
-  // Mesh-material parity (see hideEdgeOverlaysForParity).
+  // Hide BIM meshes that are NOT this material to isolate the stencil fill. Overlays
+  // (edge fat-lines + always-on-top M/V/N diagrams/labels) must also be hidden — they
+  // corrupt the Mesh-material parity (SSoT predicate `isSectionParityOverlay`).
   const hidden: THREE.Object3D[] = [];
   mainScene.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh) || !obj.visible) return;
+    if (!obj.visible) return;
+    if (isSectionParityOverlay(obj)) { hidden.push(obj); obj.visible = false; return; }
+    if (!(obj instanceof THREE.Mesh)) return;
     const ud = obj.userData as Record<string, unknown>;
-    if (ud['bimEdgeOverlay'] === true) { hidden.push(obj); obj.visible = false; return; }
     const bimId = ud['bimId'];
     if (bimId === undefined) return;
     if (!meshes.includes(obj)) {
