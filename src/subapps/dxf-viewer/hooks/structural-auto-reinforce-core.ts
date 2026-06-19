@@ -32,6 +32,8 @@ import { buildStructuralGraph } from '../bim/structural/organism/structural-grap
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
 // ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial· πρόβολος → hogging άνω σχάρα).
 import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
+// ADR-499 §6.3-c — DERIVED στρεπτική ροπή δοκού (μονόπλευρη πρόβολος-πλάκα → στρεπτικός οπλισμός).
+import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../types/entities';
 // ADR-491 — DERIVED FEM ροπή φορέα ανά κολώνα στήριξης. Το engaged gate ζει στο ΕΝΑ SSoT
 // `resolveEngagedAnalysisResult` (κοινό με τον render path active-reinforcement — μηδέν διπλό gate).
@@ -96,8 +98,12 @@ export function runOrganismAutoReinforce(
   );
   // ADR-498 — συνθήκη στήριξης ανά πλάκα (spatial): ο πρόβολος ξανα-σχεδιάζεται με q·L²/2 άνω σχάρα.
   const slabSupportConditionBySlabId = computeSlabSupportConditions(entities);
+  // ADR-499 §6.3-c — στρεπτική ροπή ανά δοκάρι (μονόπλευρη πρόβολος-πλάκα): η φέρουσα δοκός
+  // παίρνει στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (ΕΝΑ SSoT με τον sensor/store).
+  const beamTorsionByBeamId = computeBeamDesignTorsion(entities);
   const command = new AutoReinforceOrganismCommand(
     ids, sm, provider, supportTypeByBeamId, columnFemMomentById, slabSupportConditionBySlabId,
+    beamTorsionByBeamId,
   );
   const reinforced = command.getReinforcedEntityIds();
   if (reinforced.length === 0) {

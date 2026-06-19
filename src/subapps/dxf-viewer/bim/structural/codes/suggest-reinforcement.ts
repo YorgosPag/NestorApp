@@ -15,6 +15,7 @@ import {
 } from '../rebar-catalog';
 import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
 import { flexuralCapacityCapFactor, limitMomentNmm } from './flexural-capacity';
+import { torsionTubeProperties } from './torsion-capacity';
 import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcement-types';
 import type { BeamSupportType } from '../../types/beam-types';
 import type {
@@ -23,18 +24,13 @@ import type {
   StirrupType,
   WallReinforcementIntent,
 } from '../reinforcement/column-reinforcement-types';
-import type { BeamRebarLayer, BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
-import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
+import type { BeamReinforcement, BeamStirrups } from '../reinforcement/beam-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
-  FootingReinforcementLimits,
-  FootingSectionContext,
-  PadSectionContext,
   StructuralCodeProvider,
-  TieBeamSectionContext,
 } from './structural-code-types';
 
 /** Άνω φράγμα ασφαλείας πλήθους διαμήκων (αποφυγή runaway σε εκφυλισμένη είσοδο). */
@@ -90,7 +86,7 @@ export function resolveBarSet(
 }
 
 /** kN → N (φορτίο context σε kN, αντοχές υλικών σε N/mm² = MPa). */
-const KN_TO_N = 1000;
+export const KN_TO_N = 1000;
 
 /** EC2 §6.1(4) — κατώφλι ονομαστικής εκκεντρότητας e₀ (mm): e₀ ≥ 20 mm. */
 export const NOMINAL_ECCENTRICITY_FLOOR_MM = 20;
@@ -310,10 +306,69 @@ export function asStrengthBeamMm2(ctx: BeamSectionContext, effectiveDepthMm: num
   return mEdNmm / (BEAM_LEVER_ARM_FACTOR * effectiveDepthMm * rebarFydMpa());
 }
 
+/** ADR-499 §6.3-c — ο πρόσθετος στρεπτικός χάλυβας ορθογώνιας δοκού (EC2 §6.3.2). */
+interface BeamTorsionSteel {
+  /** Απαιτούμενη A_st/s κλειστού συνδετήρα **ανά μέτρο** (mm²/m) — μία κλειστή τοιχωμένη βρόχωση. */
+  readonly stirrupAreaPerMetreMm2: number;
+  /** Απαιτούμενο **ολικό** A_sl διαμήκους στρεπτικού χάλυβα γύρω από την περίμετρο (mm²). */
+  readonly longitudinalAreaMm2: number;
+}
+
+/**
+ * ADR-499 §6.3-c — στρεπτικός χάλυβας ορθογώνιας δοκού από `T_Ed` (EC2 §6.3.2, cotθ=1):
+ *   · `A_st/s = T_Ed / (2·A_k·f_yd)`   (κλειστοί συνδετήρες· ανά μέτρο = ×1000)
+ *   · `A_sl   = T_Ed·u_k / (2·A_k·f_yd)` (διαμήκεις γωνιακοί, ολικό)
+ * Reuse `torsionTubeProperties` (A_k/u_k — ΕΝΑ SSoT με το `T_Rd,max`). `null` χωρίς στρέψη /
+ * εκφυλισμένη διατομή ⇒ ο caller παράγει τον σημερινό code-min οπλισμό (μηδέν regression).
+ */
+function resolveBeamTorsionDemand(ctx: BeamSectionContext): BeamTorsionSteel | null {
+  const tEdKnm = ctx.designTorsionKnm ?? 0;
+  if (tEdKnm <= 0) return null;
+  const tube = torsionTubeProperties(ctx.widthMm, ctx.depthMm);
+  if (!tube) return null;
+  const denom = 2 * tube.akMm2 * rebarFydMpa(); // cotθ=1
+  if (denom <= 0) return null;
+  const tEdNmm = tEdKnm * 1e6;
+  return {
+    stirrupAreaPerMetreMm2: (tEdNmm / denom) * 1000,
+    longitudinalAreaMm2: (tEdNmm * tube.ukMm) / denom,
+  };
+}
+
+/**
+ * ADR-499 §6.3-c — κλειστοί συνδετήρες δοκού. Χωρίς στρέψη → code-minimum (μηδέν regression).
+ * Με στρέψη → πύκνωση/μεγέθυνση ώστε η παρεχόμενη A_st/s ανά μέτρο ≥ απαίτηση (reuse του SSoT
+ * `resolveMatMesh` — ο ίδιος spacing-then-diameter αλγόριθμος με τη σχάρα θεμελίωσης· default =
+ * code-min όταν demand μικρό ⇒ additive «max» με το ελάχιστο). Κρίσιμο βήμα ≤ νέο κύριο βήμα.
+ */
+function resolveBeamStirrups(
+  limits: BeamReinforcementLimits,
+  torsion: BeamTorsionSteel | null,
+): BeamStirrups {
+  if (!torsion) {
+    return {
+      diameterMm: limits.minStirrupDiameterMm,
+      spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
+      spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
+    };
+  }
+  const mesh = resolveMatMesh(torsion.stirrupAreaPerMetreMm2, limits.minStirrupDiameterMm, limits.maxStirrupSpacingMm);
+  return {
+    diameterMm: mesh.diameterMm,
+    spacingMm: mesh.spacingMm,
+    spacingCriticalMm: Math.min(roundSpacingDown(limits.criticalStirrupSpacingMm), mesh.spacingMm),
+  };
+}
+
 /**
  * Επιλέγει ελάχιστο-έγκυρο διαμήκη (κάτω/άνω) + εγκάρσιο οπλισμό δοκαριού,
  * εγγυώμενος ρ_κάτω ≥ ρ_min επί της ενεργού διατομής b·d (d ≈ 0.9h). Reuse του
  * SSoT `resolveBarSet` (μηδέν duplicate). Καλείται από κάθε provider.
+ *
+ * ADR-499 §6.3-c — όταν `ctx.designTorsionKnm > 0` (μονόπλευρη πρόβολος-πλάκα), ο στρεπτικός
+ * χάλυβας προστίθεται **in-place**: `A_sl/2` ανά παρειά (γωνιακοί κάτω+άνω) additive στον
+ * καμπτικό/ελάχιστο + πυκνότεροι κλειστοί συνδετήρες (`A_st/s`). Render & ΠΟΣΟΤΗΤΕΣ ακολουθούν
+ * τα πραγματικά bars (geometry-is-SSoT) — μηδέν παράλληλο demand πεδίο, μηδέν αλλαγή render.
  */
 export function suggestBeamReinforcementFrom(
   provider: StructuralCodeProvider,
@@ -328,16 +383,19 @@ export function suggestBeamReinforcementFrom(
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
   const mLimNmm = limitMomentNmm(ctx.widthMm, effectiveDepthMm, fcd, provider.flexuralLimitMuLim());
   const capFactor = flexuralCapacityCapFactor(beamDesignMomentNmm(ctx), mLimNmm);
-  // ADR-472 — max(ελάχιστο ρ_min επί b·d, capped απαίτηση καμπτικής αντοχής).
+  // ADR-499 §6.3-c — γωνιακός στρεπτικός χάλυβας A_sl κατανεμημένος συμμετρικά (μισό κάτω, μισό άνω).
+  const torsion = resolveBeamTorsionDemand(ctx);
+  const asTorsionPerFaceMm2 = torsion ? torsion.longitudinalAreaMm2 / 2 : 0;
+  // ADR-472 — max(ελάχιστο ρ_min επί b·d, capped απαίτηση καμπτικής αντοχής) + στρεπτικός γωνιακός.
   const asBottomMm2 = Math.max(
     seed.minRatio * ctx.widthMm * effectiveDepthMm,
     asStrengthBeamMm2(ctx, effectiveDepthMm) * capFactor,
-  );
+  ) + asTorsionPerFaceMm2;
   const seedDia = nextRebarDiameterMm(seed.minBarDiameterMm);
 
   const bottom = resolveBarSet(asBottomMm2, Math.max(seed.minBottomBarCount, 2), seedDia);
   const top = resolveBarSet(
-    BEAM_TOP_TO_BOTTOM_RATIO * bottom.count * barAreaMm2(bottom.diameterMm),
+    BEAM_TOP_TO_BOTTOM_RATIO * bottom.count * barAreaMm2(bottom.diameterMm) + asTorsionPerFaceMm2,
     Math.max(seed.minTopBarCount, 2),
     seedDia,
   );
@@ -346,11 +404,7 @@ export function suggestBeamReinforcementFrom(
   return {
     bottom: { diameterMm: bottom.diameterMm, count: bottom.count },
     top: { diameterMm: top.diameterMm, count: top.count },
-    stirrups: {
-      diameterMm: limits.minStirrupDiameterMm,
-      spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
-      spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
-    },
+    stirrups: resolveBeamStirrups(limits, torsion),
     coverMm: limits.nominalCoverMm,
   };
 }
@@ -391,101 +445,10 @@ export function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): n
   return Math.max(0, thicknessMm - coverMm);
 }
 
-/**
- * ADR-464 — απαιτείται άνω σχάρα πεδίλου; (κανόνας code-driven, μηδέν φορτίο
- * απαραίτητο): (α) χονδρό πέδιλο `thickness ≥ padTopMeshMinThicknessMm` (επιδερμικός
- * οπλισμός, EC2 §9.7/§7.3.3) **ή** (β) έκκεντρο `eccentricityRatio > padTopMeshKernRatio`
- * (kern → αποκόλληση/hogging). Default πέδιλο (0.5m, κεντρικό) ⇒ false (μηδέν regression).
- */
-function padNeedsTopMesh(ctx: PadSectionContext, limits: FootingReinforcementLimits): boolean {
-  if (ctx.thicknessMm >= limits.padTopMeshMinThicknessMm) return true;
-  return (ctx.eccentricityRatio ?? 0) > limits.padTopMeshKernRatio;
-}
-
-/**
- * Επιλέγει ελάχιστο-έγκυρο οπλισμό θεμελίωσης ανά kind. pad → δι-διευθυντική σχάρα
- * (reuse `resolveMatMesh`)· strip → εγκάρσια σχάρα + διαμήκεις διανομής (reuse
- * `resolveBarSet`)· tie-beam → **delegate** στον beam suggester (μηδέν duplicate,
- * N.0.2). Καλείται από κάθε provider μέσα στο `suggestFootingReinforcement`.
- */
-/**
- * EN1998-5 §5.4.1.2 — αναβάθμιση μιας παρειάς (κάτω/άνω) ώστε να φέρει το μερίδιό της
- * της σεισμικής δύναμης σύνδεσης: αν ο υπάρχων (καμπτικός/ελάχιστος) οπλισμός υπολείπεται
- * του `asTiePerFaceMm2`, ξανα-επιλέγεται με reuse του SSoT `resolveBarSet` (μηδέν duplicate).
- */
-function upgradeFaceForTie(layer: BeamRebarLayer, asTiePerFaceMm2: number): BeamRebarLayer {
-  if (layer.count * barAreaMm2(layer.diameterMm) >= asTiePerFaceMm2) return layer;
-  const set = resolveBarSet(asTiePerFaceMm2, layer.count, layer.diameterMm);
-  return { diameterMm: set.diameterMm, count: set.count };
-}
-
-/**
- * Συνδετήρια δοκός: ΕΙΝΑΙ δοκός → πρώτα delegate στον beam suggester (καμπτικός +
- * detailing + EC8 συνδετήρες, μηδέν duplicate). Έπειτα, αν υπάρχει σεισμική δύναμη
- * σύνδεσης (EN1998-5 §5.4.1.2(7)), προστίθεται `As,tie = N_tie/f_yd` κατανεμημένο
- * **συμμετρικά** (μισό κάτω, μισό άνω — αξονικός σύνδεσμος εφελκυσμού/θλίψης):
- * κάθε παρειά = max(καμπτικό/ελάχιστο, μερίδιο tie). Absent/≤0 N_tie → καθαρά δοκός.
- */
-function suggestTieBeamReinforcementFrom(
-  provider: StructuralCodeProvider,
-  ctx: TieBeamSectionContext,
-): FootingReinforcement {
-  const beam = suggestBeamReinforcementFrom(provider, ctx);
-  const nTieKn = ctx.designAxialTieKn ?? 0;
-  if (nTieKn <= 0) return { kind: 'tie-beam', ...beam };
-  const asTiePerFaceMm2 = (nTieKn * KN_TO_N) / rebarFydMpa() / 2;
-  return {
-    kind: 'tie-beam',
-    ...beam,
-    bottom: upgradeFaceForTie(beam.bottom, asTiePerFaceMm2),
-    top: upgradeFaceForTie(beam.top, asTiePerFaceMm2),
-  };
-}
-
-export function suggestFootingReinforcementFrom(
-  provider: StructuralCodeProvider,
-  ctx: FootingSectionContext,
-): FootingReinforcement {
-  if (ctx.kind === 'tie-beam') {
-    return suggestTieBeamReinforcementFrom(provider, ctx);
-  }
-
-  const limits = provider.footingReinforcementLimits(ctx);
-  const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
-  const thicknessMm = ctx.thicknessMm;
-  const dEff = footingEffectiveDepthMm(thicknessMm, limits.nominalCoverMm);
-  const asPerMetre = limits.minRatio * 1000 * dEff;
-
-  if (ctx.kind === 'pad') {
-    const mesh = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
-    const layer = { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm };
-    // ADR-464 — άνω σχάρα όταν την απαιτεί ο κώδικας (επιδερμικός/kern)· ίδια
-    // ελάχιστη διάταξη με την κάτω (mirror raft, συντηρητικό & πρακτικό).
-    const topMesh = padNeedsTopMesh(ctx, limits) ? layer : undefined;
-    return {
-      kind: 'pad',
-      bottomMeshX: layer,
-      bottomMeshY: layer,
-      ...(topMesh ? { topMesh } : {}),
-      coverMm: limits.nominalCoverMm,
-    };
-  }
-
-  // strip — ανεστραμμένη δοκός: εγκάρσιες (κύριος) + διαμήκεις διανομής (detailing).
-  const transverse = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
-  const initialLongCount = Math.max(
-    limits.minLongitudinalBarCount,
-    Math.ceil(ctx.widthMm / limits.maxBarSpacingMm) + 1,
-  );
-  // Διαμήκεις = detailing-governed (όχι strength) → asRequired=0 ⇒ reuse SSoT χωρίς bump.
-  const longitudinal = resolveBarSet(0, initialLongCount, seedDia);
-  return {
-    kind: 'strip',
-    transverse: { diameterMm: transverse.diameterMm, spacingMm: transverse.spacingMm },
-    longitudinal: { diameterMm: longitudinal.diameterMm, count: longitudinal.count },
-    coverMm: limits.nominalCoverMm,
-  };
-}
+// suggestFootingReinforcementFrom (pad/strip/tie-beam) moved to
+// ./suggest-footing-reinforcement.ts (N.7.1 file-size). It reuses the SSoT helpers
+// exported above (resolveMatMesh, resolveBarSet, footingEffectiveDepthMm,
+// suggestBeamReinforcementFrom, KN_TO_N); providers import it directly from there.
 
 // ─── Slab suggester — universal (ADR-459 Φ4e/E3 + ADR-476) ───────────────────
 // Moved to ./suggest-slab-reinforcement.ts (N.7.1 file-size). Providers import

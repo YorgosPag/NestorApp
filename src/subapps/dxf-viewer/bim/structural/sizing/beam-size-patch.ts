@@ -57,9 +57,13 @@ function resolveActiveBeamSection(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
 ): BeamSizing | undefined {
   if (!isBeamAutoSized(beam.params)) return undefined;
-  return suggestBeamSection(provider, buildBeamSectionContext(beam, supportTypeOverride));
+  return suggestBeamSection(
+    provider,
+    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm),
+  );
 }
 
 /**
@@ -84,14 +88,19 @@ function beamSectionMateriallyDiffers(
  * ADR-486 §C — `supportTypeOverride`: ο caller (command) περνά τον topology-aware
  * τύπο στήριξης (`resolveActiveBeamSupportType`) ώστε ο πρόβολος να διαστασιολογείται
  * με wL²/2 (όχι stored 'simple'). Απών → fallback στο stored (graphless = legacy).
+ *
+ * ADR-499 §6.3-b — `designTorsionKnm`: ο caller περνά την DERIVED στρεπτική ροπή
+ * (`resolveActiveBeamTorsion`) ώστε ο sizer να μεγαλώνει το ύψος ώστε
+ * `T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1`. Απών/≤0 → καμία στρέψη (μηδέν regression).
  */
 export function buildBeamSizePatch(
   entity: Entity,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
 ): MemberSizePatch | null {
   if (!isBeamEntity(entity)) return null;
-  const suggested = resolveActiveBeamSection(entity, provider, supportTypeOverride);
+  const suggested = resolveActiveBeamSection(entity, provider, supportTypeOverride, designTorsionKnm);
   if (!suggested) return null;
   const p = entity.params;
   if (!beamSectionMateriallyDiffers(p, suggested)) return null;

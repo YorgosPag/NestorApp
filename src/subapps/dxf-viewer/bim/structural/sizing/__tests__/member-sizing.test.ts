@@ -14,6 +14,9 @@ import {
   BEAM_MAX_PRACTICAL_DEPTH_MM,
   suggestBeamSection,
 } from '../member-sizing';
+import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../../concrete-grades';
+import { plasticTorsionalResistanceKnm } from '../../codes/torsion-capacity';
+import { BEAM_EFFECTIVE_DEPTH_FACTOR } from '../../codes/suggest-reinforcement';
 
 function makeCtx(over: Partial<BeamSectionContext> = {}): BeamSectionContext {
   return {
@@ -81,5 +84,46 @@ describe('suggestBeamSection', () => {
     const light = suggestBeamSection(EUROCODE_PROVIDER, makeCtx({ spanMm: 6000, designLineLoadKnM: 20 }));
     const heavy = suggestBeamSection(EUROCODE_PROVIDER, makeCtx({ spanMm: 6000, designLineLoadKnM: 250 }));
     expect(heavy.depthMm).toBeGreaterThanOrEqual(light.depthMm);
+  });
+});
+
+describe('suggestBeamSection — torsion από μονόπλευρη πρόβολο-πλάκα (ADR-499 §6.3-b)', () => {
+  const torsionCtx = (over: Partial<BeamSectionContext> = {}): BeamSectionContext =>
+    makeCtx({ widthMm: 300, spanMm: 3000, ...over });
+
+  it('μεγαλώνει το ύψος όταν η στρέψη κυριαρχεί (governedBy = torsion)', () => {
+    const base = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx());
+    const tors = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx({ designTorsionKnm: 120 }));
+    expect(tors.depthMm).toBeGreaterThan(base.depthMm);
+    expect(tors.governedBy).toBe('torsion');
+  });
+
+  it('μηδέν στρέψη → ίδια διατομή με τη χωρίς-στρέψη (μηδέν regression)', () => {
+    const noField = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx());
+    const zero = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx({ designTorsionKnm: 0 }));
+    expect(zero).toEqual(noField);
+  });
+
+  it('η επιλεγμένη διατομή ικανοποιεί την αλληλεπίδραση T/T_Rd + V/V_Rd ≤ 1', () => {
+    const s = suggestBeamSection(
+      EUROCODE_PROVIDER, torsionCtx({ designTorsionKnm: 120, designLineLoadKnM: 40 }),
+    );
+    const fcd = concreteFcdMpa(DEFAULT_CONCRETE_GRADE);
+    const tRd = plasticTorsionalResistanceKnm(s.widthMm, s.depthMm, fcd);
+    const vEd = 40 * 3 * 0.5; // w·L/2 (simple)
+    const vRd = (0.27 * fcd * s.widthMm * (s.depthMm * BEAM_EFFECTIVE_DEPTH_FACTOR)) / 1000;
+    expect(120 / tRd + vEd / vRd).toBeLessThanOrEqual(1.0000001);
+  });
+
+  it('μεγαλύτερη στρέψη ποτέ δεν δίνει ρηχότερη διατομή (μονοτονία)', () => {
+    const light = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx({ designTorsionKnm: 80 }));
+    const heavy = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx({ designTorsionKnm: 200 }));
+    expect(heavy.depthMm).toBeGreaterThanOrEqual(light.depthMm);
+  });
+
+  it('clamp στο πρακτικό μέγιστο όταν η στρέψη είναι ανέφικτη σε κάθε ύψος', () => {
+    const s = suggestBeamSection(EUROCODE_PROVIDER, torsionCtx({ widthMm: 250, designTorsionKnm: 5000 }));
+    expect(s.depthMm).toBe(BEAM_MAX_PRACTICAL_DEPTH_MM);
+    expect(s.governedBy).toBe('torsion');
   });
 });

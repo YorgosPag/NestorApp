@@ -35,6 +35,8 @@ import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-
 import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
 import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
+import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
+import { BeamTorsionStore } from '../bim/structural/organism/beam-torsion-store';
 import { runSlabChecks } from '../bim/structural/organism/slab-checks';
 import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
 import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-checks';
@@ -120,6 +122,10 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
       // ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial: πλάκες εκτός graph).
       SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
+      // ADR-499 §6.3 — DERIVED στρεπτική ροπή σχεδιασμού δοκού T_Ed από μονόπλευρη πρόβολο-
+      // πλάκα ώστε το per-entity sizing/reinforce path (active-reinforcement) να τη διαβάζει
+      // synchronous, χωρίς να ξαναϋπολογίζει τη spatial τοπολογία προβόλου (ADR-040 safe).
+      BeamTorsionStore.set(computeBeamDesignTorsion(entities));
       // ADR-488 §6.1 — publish την DERIVED effective βάση κάθε κολώνας (άνω παρειά
       // στηρίζοντος πεδίλου) στο transient store ώστε το 3Δ render path (syncColumns)
       // να κατεβάζει τη βάση στο πέδιλο (στατική συνέχεια), χωρίς να ξαναχτίζει graph.

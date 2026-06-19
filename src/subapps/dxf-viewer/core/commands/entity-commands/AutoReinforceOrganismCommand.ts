@@ -56,6 +56,9 @@ export class AutoReinforceOrganismCommand implements ICommand {
     private readonly columnFemMomentById?: ReadonlyMap<string, number>,
     // ADR-498 — DERIVED topology-aware συνθήκη στήριξης ανά πλάκα (πρόβολος → hogging άνω σχάρα).
     private readonly slabSupportConditionBySlabId?: ReadonlyMap<string, SlabSupportCondition>,
+    // ADR-499 §6.3-c — DERIVED στρεπτική ροπή T_Ed ανά δοκάρι (μονόπλευρη πρόβολος-πλάκα →
+    // στρεπτικοί κλειστοί συνδετήρες + γωνιακοί διαμήκεις).
+    private readonly beamTorsionByBeamId?: ReadonlyMap<string, number>,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -90,6 +93,7 @@ export class AutoReinforceOrganismCommand implements ICommand {
         this.supportTypeByBeamId?.get(entityId),
         this.columnFemMomentById?.get(entityId),
         this.slabSupportConditionBySlabId?.get(entityId),
+        this.beamTorsionByBeamId?.get(entityId),
       );
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });

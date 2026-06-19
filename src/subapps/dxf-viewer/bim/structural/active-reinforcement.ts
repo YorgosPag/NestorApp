@@ -32,6 +32,7 @@ import { useStructuralSettingsStore } from '../../state/structural-settings-stor
 import type { BeamSupportType } from '../types/beam-types';
 import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
 import { SlabSupportConditionStore } from './organism/slab-support-condition-store';
+import { BeamTorsionStore } from './organism/beam-torsion-store';
 import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
@@ -161,7 +162,11 @@ export function resolveActiveBeamReinforcementForEntity(
 ): BeamReinforcement | undefined {
   if (!beam.params.reinforcement?.auto) return beam.params.reinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  return resolveActiveBeamReinforcement(beam, provider, resolveActiveBeamSupportType(beam.id));
+  // ADR-499 §6.3-c — + DERIVED στρέψη (πρόβολος-πλάκα) ώστε ο live 2Δ/3Δ οπλισμός να δείχνει
+  // τους στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (μηδέν αλλαγή render path).
+  return resolveActiveBeamReinforcement(
+    beam, provider, resolveActiveBeamSupportType(beam.id), resolveActiveBeamTorsion(beam.id),
+  );
 }
 
 /**
@@ -170,6 +175,17 @@ export function resolveActiveBeamReinforcementForEntity(
  */
 export function resolveActiveBeamSupportType(beamId: string): BeamSupportType | undefined {
   return BeamSupportConditionStore.get(beamId);
+}
+
+/**
+ * ADR-499 §6.3 — η DERIVED στρεπτική ροπή σχεδιασμού `T_Ed` (kNm) μιας δοκού από το transient
+ * `BeamTorsionStore` (γράφεται στο organism pass από `computeBeamDesignTorsion`). `undefined`
+ * → καμία πρόβολος-πλάκα τη στρίβει (μηδέν στρέψη) → ο consumer (sizing/οπλισμός) δεν προσθέτει
+ * στρεπτικό όρο (μηδέν regression). Pure store read (ADR-040 safe). Mirror του
+ * `resolveActiveBeamSupportType`.
+ */
+export function resolveActiveBeamTorsion(beamId: string): number | undefined {
+  return BeamTorsionStore.get(beamId);
 }
 
 /** Ο ενεργός οπλισμός + το layout ράβδων ενός δοκαριού (topology-aware). */

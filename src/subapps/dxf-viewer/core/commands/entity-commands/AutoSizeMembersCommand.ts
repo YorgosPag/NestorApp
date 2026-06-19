@@ -35,6 +35,7 @@ import { buildSlabSizePatch } from '../../../bim/structural/sizing/slab-size-pat
 import { buildColumnSizePatch } from '../../../bim/structural/sizing/column-size-patch';
 import {
   resolveActiveBeamSupportType,
+  resolveActiveBeamTorsion,
   resolveActiveSlabSupportCondition,
   resolveActiveColumnFemMoment,
 } from '../../../bim/structural/active-reinforcement';
@@ -102,7 +103,12 @@ export class AutoSizeMembersCommand implements ICommand {
       if (isBeamEntity(entity)) {
         // ADR-486 §C — topology-aware τύπος στήριξης: ο πρόβολος (1 στήριξη) διαστασιολογείται
         // με wL²/2 ώστε ρ≤ρ_max, ίδιο SSoT με τον οπλισμό (μηδέν διπλή αλήθεια).
-        const patch = buildBeamSizePatch(entity, this.provider, resolveActiveBeamSupportType(entityId));
+        // ADR-499 §6.3-b — + DERIVED στρέψη από μονόπλευρη πρόβολο-πλάκα: το ύψος μεγαλώνει
+        // ώστε T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1 (ίδιο SSoT με τον sensor/classifier).
+        const patch = buildBeamSizePatch(
+          entity, this.provider,
+          resolveActiveBeamSupportType(entityId), resolveActiveBeamTorsion(entityId),
+        );
         if (patch) this.patches.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
       } else if (isSlabEntity(entity)) {
         // ADR-498/499 — πρόβολος-πλάκα: το πάχος αυτο-μεγαλώνει ώστε M_Ed≤M_Rd,lim + L/d≤όριο.

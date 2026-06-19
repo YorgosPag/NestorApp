@@ -205,10 +205,15 @@ export function resolveActiveColumnReinforcement(
  * του stored. Απών → η προηγούμενη συμπεριφορά (stored ?? 'simple'). Η συνάρτηση μένει
  * **pure**: ο caller που έχει τον graph (organism/checks/auto-reinforce) παράγει & περνά
  * τον override· οι graphless callers (isolated tests/BOQ) πέφτουν στο stored — μηδέν regression.
+ *
+ * ADR-499 §6.3 — `designTorsionKnm` (προαιρετικό): η DERIVED στρεπτική ροπή `T_Ed` (kNm)
+ * από μονόπλευρη πρόβολο-πλάκα. Absent/≤0 → καμία στρέψη (μηδέν regression). Ίδιο pattern
+ * με το `supportTypeOverride`: ο caller με τον graph (organism) την παράγει & περνά.
  */
 export function buildBeamSectionContext(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
 ): BeamSectionContext {
   const p = beam.params;
   const spanMm = beam.geometry.length * M_TO_MM;
@@ -219,6 +224,7 @@ export function buildBeamSectionContext(
     grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.depth),
     supportType: supportTypeOverride ?? p.supportType ?? 'simple',
     ...resolveBeamDesignLoad(p, spanMm),
+    ...(designTorsionKnm !== undefined && designTorsionKnm > 0 ? { designTorsionKnm } : {}),
   };
 }
 
@@ -255,10 +261,15 @@ export function resolveActiveBeamReinforcement(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
 ): BeamReinforcement | undefined {
   const r = beam.params.reinforcement;
   if (!r || !r.auto) return r;
-  const fresh = provider.suggestBeamReinforcement(buildBeamSectionContext(beam, supportTypeOverride));
+  // ADR-499 §6.3-c — η DERIVED στρέψη (πρόβολος-πλάκα) προστίθεται στον code-suggested
+  // οπλισμό (γωνιακοί A_sl + πυκνότεροι κλειστοί συνδετήρες A_st/s) μέσα στον suggester.
+  const fresh = provider.suggestBeamReinforcement(
+    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm),
+  );
   return {
     ...fresh,
     auto: true,

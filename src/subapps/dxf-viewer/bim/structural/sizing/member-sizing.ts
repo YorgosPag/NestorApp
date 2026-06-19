@@ -40,6 +40,7 @@ import {
 } from '../codes/suggest-reinforcement';
 import type { BeamSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
 import { MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
+import { plasticTorsionalResistanceKnm, shearTorsionUtilization } from '../codes/torsion-capacity';
 
 /** Constructible module στρογγυλοποίησης ύψους (mm). */
 const BEAM_DEPTH_MODULE_MM = 50;
@@ -57,7 +58,7 @@ const KN_TO_N = 1000;
 const MM_PER_M = 1000;
 
 /** Ποιος έλεγχος καθόρισε την τελική διατομή (διαγνωστικό/τεκμηρίωση). */
-export type BeamSizingGovernedBy = 'serviceability' | 'flexure' | 'shear' | 'minimum';
+export type BeamSizingGovernedBy = 'serviceability' | 'flexure' | 'shear' | 'torsion' | 'minimum';
 
 /** Προτεινόμενη διατομή δοκαριού (depth-driven· width αμετάβλητο v1). */
 export interface BeamSizing {
@@ -93,16 +94,54 @@ function flexuralDepthMm(ctx: BeamSectionContext, maxRatio: number): number {
   return Math.sqrt(Math.max(0, dSq)) / BEAM_EFFECTIVE_DEPTH_FACTOR;
 }
 
+/**
+ * Τέμνουσα σχεδιασμού V_Ed (kN) στη στήριξη από το UDL `w_Ed`: αμφιέρειστη/αμφίπακτη
+ * αντίδραση `w·L/2`· πρόβολος `w·L` (στην πάκτωση). ΕΝΑ SSoT — μοιράζονται ο έλεγχος
+ * διάτμησης (`shearDepthMm`) και ο έλεγχος αλληλεπίδρασης διάτμησης-στρέψης (`torsionDepthMm`).
+ */
+function designShearKn(ctx: BeamSectionContext): number {
+  const w = ctx.designLineLoadKnM ?? 0;
+  if (w <= 0 || ctx.spanMm <= 0) return 0;
+  const spanM = ctx.spanMm / MM_PER_M;
+  return w * spanM * (ctx.supportType === 'cantilever' ? 1 : 0.5);
+}
+
+/** V_Rd,max (kN) θλιπτήρα σκυροδέματος για διατομή `b × depth` (EC2 §6.2.3, z=0.9·d). */
+function shearResistanceKn(widthMm: number, depthMm: number, fcdMpa: number): number {
+  const dMm = depthMm * BEAM_EFFECTIVE_DEPTH_FACTOR;
+  return (VRD_MAX_COEFF * fcdMpa * widthMm * dMm) / KN_TO_N;
+}
+
 /** ULS διάτμηση: ελάχιστο h ώστε V_Ed ≤ V_Rd,max (θλιπτήρας). */
 function shearDepthMm(ctx: BeamSectionContext): number {
-  const w = ctx.designLineLoadKnM ?? 0;
-  if (w <= 0 || ctx.spanMm <= 0 || ctx.widthMm <= 0) return 0;
-  const spanM = ctx.spanMm / MM_PER_M;
-  // UDL αντίδραση: αμφιέρειστη/αμφίπακτη V=w·L/2· πρόβολος V=w·L (στην πάκτωση).
-  const vEdN = w * spanM * (ctx.supportType === 'cantilever' ? 1 : 0.5) * KN_TO_N;
+  const vEdKn = designShearKn(ctx);
+  if (vEdKn <= 0 || ctx.widthMm <= 0) return 0;
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
   if (fcd <= 0) return 0;
-  return vEdN / (VRD_MAX_COEFF * fcd * ctx.widthMm) / BEAM_EFFECTIVE_DEPTH_FACTOR;
+  return (vEdKn * KN_TO_N) / (VRD_MAX_COEFF * fcd * ctx.widthMm) / BEAM_EFFECTIVE_DEPTH_FACTOR;
+}
+
+/**
+ * ADR-499 §6.3-b — ULS αλληλεπίδραση **διάτμησης-στρέψης** (EC2 §6.3.2(4)): ελάχιστο ύψος h
+ * ώστε `T_Ed/T_Rd,max(b,h) + V_Ed/V_Rd,max(b,h) ≤ 1` (ο λοξός θλιπτήρας δεν συνθλίβεται από
+ * τον συνδυασμό). **Iterative** (το `T_Rd,max` είναι μη-γραμμικό στο h — ισοδύναμος σωλήνας
+ * `A_k·t_ef`, όπως ο grow της κολώνας B2): δοκιμάζει ύψη ανά module (50 mm) από το ελάχιστο ως
+ * το πρακτικό μέγιστο. Ανέφικτο ακόμη και στο μέγιστο → επιστρέφει `BEAM_MAX_PRACTICAL_DEPTH_MM`
+ * (ο έλεγχος εφικτότητας — Slice D — το εκδίδει ως error). Μηδέν στρέψη → `0` (κανένα candidate).
+ */
+function torsionDepthMm(ctx: BeamSectionContext): number {
+  const tEdKnm = ctx.designTorsionKnm ?? 0;
+  if (tEdKnm <= 0 || ctx.widthMm <= 0) return 0;
+  const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
+  if (fcd <= 0) return 0;
+  const vEdKn = designShearKn(ctx);
+  const b = ctx.widthMm;
+  for (let depth = MIN_BEAM_DEPTH_MM; depth <= BEAM_MAX_PRACTICAL_DEPTH_MM; depth += BEAM_DEPTH_MODULE_MM) {
+    const tRdMaxKnm = plasticTorsionalResistanceKnm(b, depth, fcd);
+    const vRdMaxKn = shearResistanceKn(b, depth, fcd);
+    if (shearTorsionUtilization(tEdKnm, tRdMaxKnm, vEdKn, vRdMaxKn) <= 1) return depth;
+  }
+  return BEAM_MAX_PRACTICAL_DEPTH_MM;
 }
 
 /**
@@ -120,6 +159,8 @@ export function suggestBeamSection(
     { raw: serviceabilityDepthMm(ctx, provider), governedBy: 'serviceability' },
     { raw: flexuralDepthMm(ctx, maxRatio), governedBy: 'flexure' },
     { raw: shearDepthMm(ctx), governedBy: 'shear' },
+    // ADR-499 §6.3-b — αλληλεπίδραση διάτμησης-στρέψης από μονόπλευρη πρόβολο-πλάκα.
+    { raw: torsionDepthMm(ctx), governedBy: 'torsion' },
   ];
   const winner = candidates.reduce((a, b) => (b.raw > a.raw ? b : a));
   const depthMm = Math.min(

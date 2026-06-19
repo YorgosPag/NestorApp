@@ -132,6 +132,14 @@ export interface BeamSectionContext {
    * τον οπλισμό (ο οπλισμός είναι steel-driven) — μόνο το member-sizing.
    */
   readonly concreteGrade?: ConcreteGrade;
+  /**
+   * ADR-499 §6.3 — DERIVED στρεπτική ροπή σχεδιασμού `T_Ed` (kNm) από μονόπλευρη πρόβολο-
+   * πλάκα (`computeBeamDesignTorsion`, EC2 §6.3). Absent/≤0 ⇒ καμία στρέψη (σημερινή
+   * συμπεριφορά — μηδέν regression). Παρόν ⇒ ο auto-sizer μεγαλώνει το ύψος ώστε
+   * `T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1` (§6.3-b) και ο suggester προσθέτει στρεπτικούς
+   * κλειστούς συνδετήρες `A_st/s` + διαμήκη `A_sl` (§6.3-c).
+   */
+  readonly designTorsionKnm?: number;
 }
 
 /**

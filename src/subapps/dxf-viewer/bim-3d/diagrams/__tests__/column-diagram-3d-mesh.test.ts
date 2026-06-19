@@ -1,9 +1,10 @@
 /**
  * Tests — column-diagram-3d-mesh (ADR-483 Slice 5).
  *
- * Structural tests: null για κενό set· ΕΝΑ pivot group ανά κολώνα (στο plan-σημείο)
- * με fill + line· signed δίχρωμη ροπή / μονόχρωμη N· τοπικές συντεταγμένες (axis base
- * στο τοπικό (0, zM, 0))· billboard (rotation.y γύρω από κατακόρυφο άξονα προς κάμερα).
+ * Structural tests: null για κενό set· ΕΝΑ pivot group ανά κολώνα (plan-σημείο, μέσο ύψος)
+ * με fill + line· signed δίχρωμη ροπή / μονόχρωμη N· τοπικές συντεταγμένες κεντραρισμένες
+ * κατακόρυφα (axis base στο τοπικό (0, zM−centerY, 0))· always-on-top (depthTest:false +
+ * renderOrder)· full-billboard (quaternion κάμερας → ορατό ακόμα κι από nadir).
  * Οι ετικέτες (sprite) παραλείπονται σε node (χωρίς DOM) — by design.
  */
 
@@ -48,7 +49,7 @@ describe('buildColumnDiagram3DGroup (ADR-483 Slice 5)', () => {
     expect(buildColumnDiagram3DGroup(set({ referenceLengthM: 0 }))).toBeNull();
   });
 
-  it('έγκυρο set → non-pickable group με 1 pivot/κολώνα στο plan-σημείο (xM,0,−yM)', () => {
+  it('έγκυρο set → non-pickable group με 1 pivot/κολώνα στο plan-σημείο, μέσο ύψος (xM,centerY,−yM)', () => {
     const group = buildColumnDiagram3DGroup(set());
     expect(group).not.toBeNull();
     if (!group) return;
@@ -57,7 +58,7 @@ describe('buildColumnDiagram3DGroup (ADR-483 Slice 5)', () => {
     const ps = pivots(group);
     expect(ps).toHaveLength(1);
     expect(ps[0]!.position.x).toBeCloseTo(2, 6);
-    expect(ps[0]!.position.y).toBeCloseTo(0, 6);
+    expect(ps[0]!.position.y).toBeCloseTo(1.5, 6); // centerY = (zM_base 0 + zM_top 3)/2 → full-billboard origin
     expect(ps[0]!.position.z).toBeCloseTo(-5, 6); // −yM
     // Μέσα στο pivot: fill (Mesh) + outline (Line) (sprite μόνο σε DOM).
     const kids = ps[0]!.children;
@@ -89,39 +90,82 @@ describe('buildColumnDiagram3DGroup (ADR-483 Slice 5)', () => {
     expect(colors).toEqual(new Set([COLUMN_DIAGRAM_COLORS.axial])); // μόνο μπλε (axial monochrome)
   });
 
-  it('τοπικές συντεταγμένες — axis base στο τοπικό (0, zM, 0)', () => {
+  it('τοπικές συντεταγμένες κεντραρισμένες — axis base στο τοπικό (0, zM−centerY, 0)', () => {
     const group = buildColumnDiagram3DGroup(set());
     if (!group) return;
     const line = pivots(group)[0]!.children.find((c) => (c as THREE.Line).isLine) as THREE.Line;
     const pos = line.geometry.getAttribute('position');
-    // Πρώτο σημείο outline = axis base ΤΟΠΙΚΑ: (0, zM=0, 0). Η world θέση δίνεται από το pivot.
+    // Πρώτο σημείο outline = axis base ΤΟΠΙΚΑ: (0, zM_base 0 − centerY 1.5 = −1.5, 0).
+    // Η world θέση = pivot.position(.y=centerY) + local → επανέρχεται στο σωστό υψόμετρο.
     expect(pos.getX(0)).toBeCloseTo(0, 6);
-    expect(pos.getY(0)).toBeCloseTo(0, 6);
+    expect(pos.getY(0)).toBeCloseTo(-1.5, 6);
     expect(pos.getZ(0)).toBeCloseTo(0, 6);
+  });
+
+  it('always-on-top — γέμισμα+outline depthTest:false/depthWrite:false + renderOrder (fill < outline < label)', () => {
+    const group = buildColumnDiagram3DGroup(set());
+    if (!group) return;
+    const kids = pivots(group)[0]!.children;
+    const meshes = kids.filter((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh[];
+    const line = kids.find((c) => (c as THREE.Line).isLine) as THREE.Line;
+    for (const m of meshes) {
+      const mat = m.material as THREE.MeshBasicMaterial;
+      expect(mat.depthTest).toBe(false);
+      expect(mat.depthWrite).toBe(false);
+      expect(m.renderOrder).toBe(9990);
+    }
+    const lineMat = line.material as THREE.LineBasicMaterial;
+    expect(lineMat.depthTest).toBe(false);
+    expect(lineMat.depthWrite).toBe(false);
+    expect(line.renderOrder).toBe(9991);
+    // fill (9990) < outline (9991) < label (10000) — σειρά σχεδίασης overlay.
+    expect(meshes[0]!.renderOrder).toBeLessThan(line.renderOrder);
   });
 });
 
-describe('billboardColumnDiagrams (ADR-483 Slice 5 — rotation)', () => {
-  function cameraAt(x: number, y: number, z: number): THREE.Camera {
-    return { position: new THREE.Vector3(x, y, z) } as THREE.Camera;
+describe('billboardColumnDiagrams (ADR-483 Slice 5 — full-billboard)', () => {
+  function lookCamera(x: number, y: number, z: number, target: THREE.Vector3): THREE.PerspectiveCamera {
+    const cam = new THREE.PerspectiveCamera();
+    cam.position.set(x, y, z);
+    cam.lookAt(target);
+    cam.updateMatrixWorld(true);
+    return cam;
+  }
+  /** Κανονικοποιημένη normal (local +Z) του pivot σε world. */
+  function pivotNormal(pivot: THREE.Object3D): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 1).applyQuaternion(pivot.quaternion).normalize();
   }
 
-  it('στρέφει το pivot γύρω από τον κατακόρυφο άξονα προς την κάμερα (θ=atan2(dx,dz))', () => {
+  it('αντιγράφει το world quaternion της κάμερας στο pivot', () => {
     const group = buildColumnDiagram3DGroup(set());
     if (!group) return;
-    // pivot @ (2,0,−5)· κάμερα @ (12,0,−5) → dx=10, dz=0 → θ=atan2(10,0)=π/2.
-    billboardColumnDiagrams(group, cameraAt(12, 0, -5));
-    expect(pivots(group)[0]!.rotation.y).toBeCloseTo(Math.PI / 2, 5);
-    // κάμερα @ (2,0,5) → dx=0, dz=10 → θ=atan2(0,10)=0.
-    billboardColumnDiagrams(group, cameraAt(2, 0, 5));
-    expect(pivots(group)[0]!.rotation.y).toBeCloseTo(0, 5);
+    const pivot = pivots(group)[0]!;
+    const cam = lookCamera(12, 1.5, -5, pivot.position);
+    billboardColumnDiagrams(group, cam);
+    const camQ = new THREE.Quaternion();
+    cam.getWorldQuaternion(camQ);
+    expect(pivot.quaternion.angleTo(camQ)).toBeCloseTo(0, 5);
   });
 
-  it('κάμερα πάνω από το pivot (dx=dz=0) → no-op (διατηρεί προηγούμενη γωνία)', () => {
+  it('πλάγια όψη — το επίπεδο (local +Z normal) κοιτά πλήρως την κάμερα', () => {
     const group = buildColumnDiagram3DGroup(set());
     if (!group) return;
-    pivots(group)[0]!.rotation.y = 1.23;
-    billboardColumnDiagrams(group, cameraAt(2, 50, -5)); // ακριβώς πάνω
-    expect(pivots(group)[0]!.rotation.y).toBeCloseTo(1.23, 5);
+    const pivot = pivots(group)[0]!;
+    const cam = lookCamera(12, 1.5, -5, pivot.position);
+    billboardColumnDiagrams(group, cam);
+    const toCam = cam.position.clone().sub(pivot.position).normalize();
+    expect(pivotNormal(pivot).dot(toCam)).toBeGreaterThan(0.99);
+  });
+
+  it('nadir — κάμερα ακριβώς από πάνω → κοιτά πάνω (ορατό, ΟΧΙ edge-on)', () => {
+    const group = buildColumnDiagram3DGroup(set());
+    if (!group) return;
+    const pivot = pivots(group)[0]!;
+    const cam = lookCamera(2, 50, -5, pivot.position); // ακριβώς πάνω από το pivot
+    billboardColumnDiagrams(group, cam);
+    const toCam = cam.position.clone().sub(pivot.position).normalize();
+    const normal = pivotNormal(pivot);
+    expect(normal.dot(toCam)).toBeGreaterThan(0.99); // κοιτά την κάμερα ακόμα κι από nadir
+    expect(normal.y).toBeGreaterThan(0.9); // normal προς τα πάνω → ορατή επιφάνεια, όχι λεπτή γραμμή
   });
 });

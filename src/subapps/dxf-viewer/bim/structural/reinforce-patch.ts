@@ -85,7 +85,13 @@ export function beamReinforcementMateriallyDiffers(
     a.bottom.count !== b.bottom.count ||
     a.bottom.diameterMm !== b.bottom.diameterMm ||
     a.top.count !== b.top.count ||
-    a.top.diameterMm !== b.top.diameterMm
+    a.top.diameterMm !== b.top.diameterMm ||
+    // ADR-499 §6.3-c — οι **στρεπτικοί** κλειστοί συνδετήρες είναι demand-driven (διάμετρος+
+    // βήμα από T_Ed)· χωρίς αυτή τη σύγκριση πυκνότεροι torsion συνδετήρες δεν θα περνούσαν
+    // τον convergence guard → ο persisted οπλισμός θα έχανε τη στρέψη. (Καθαρά-detailing prefs
+    // type/legs ΔΕΝ συγκρίνονται — δεν είναι strength-driven.)
+    a.stirrups.diameterMm !== b.stirrups.diameterMm ||
+    a.stirrups.spacingMm !== b.stirrups.spacingMm
   );
 }
 
@@ -129,6 +135,11 @@ export function slabReinforcementMateriallyDiffers(
  * προβόλου (`wL²/2`) που ο caller (auto-reinforce core) διαβάζει από το engaged-gated FEM
  * store. Έτσι η κολώνα στήριξης ξανα-σχεδιάζεται M-N για τη ροπή → patch → persisted οπλισμός
  * επαρκής (utilization ≤ 1). Mirror του beam `supportType` (αναλυτικός override).
+ *
+ * ADR-499 §6.3-c — `beamTorsionKnm` (προαιρετικό): η DERIVED στρεπτική ροπή `T_Ed` (μονόπλευρη
+ * πρόβολος-πλάκα) που ο caller διαβάζει από το `computeBeamDesignTorsion`. Η δοκός παίρνει
+ * στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (in-place στον suggester). Mirror
+ * του `supportType` (per-beam override).
  */
 export function buildReinforcePatch(
   entity: Entity,
@@ -136,6 +147,7 @@ export function buildReinforcePatch(
   supportType?: BeamSupportType,
   columnFemMomentKnm?: number,
   slabSupportCondition?: SlabSupportCondition,
+  beamTorsionKnm?: number,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     const stored = entity.params.reinforcement;
@@ -153,9 +165,14 @@ export function buildReinforcePatch(
     const stored = entity.params.reinforcement;
     if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite (parity με κολόνα)
     // ADR-486 — topology-aware supportType override (πρόβολος → wL²/2) και στις δύο διαδρομές.
+    // ADR-499 §6.3-c — + DERIVED στρέψη (πρόβολος-πλάκα) ώστε ο persisted οπλισμός να φέρει τους
+    // στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (mirror του supportType threading).
     const fresh: BeamReinforcement = stored
-      ? resolveActiveBeamReinforcement(entity, provider, supportType) ?? stored
-      : { ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity, supportType)), auto: true };
+      ? resolveActiveBeamReinforcement(entity, provider, supportType, beamTorsionKnm) ?? stored
+      : {
+          ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity, supportType, beamTorsionKnm)),
+          auto: true,
+        };
     if (stored && !beamReinforcementMateriallyDiffers(stored, fresh)) return null;
     return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
   }

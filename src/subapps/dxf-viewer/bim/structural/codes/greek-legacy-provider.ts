@@ -32,8 +32,8 @@ import type {
 import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
-  suggestFootingReinforcementFrom,
 } from './suggest-reinforcement';
+import { suggestFootingReinforcementFrom } from './suggest-footing-reinforcement';
 import { suggestSlabFoundationReinforcementFrom } from './suggest-slab-reinforcement';
 import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
 import type { BeamSupportType } from '../../types/beam-types';

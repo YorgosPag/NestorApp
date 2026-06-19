@@ -74,7 +74,12 @@ export class EnvmapGenerator {
     for (let row = 0; row < ENV_HEIGHT; row++) {
       const distToHorizon = Math.abs(row - horizonRow);
       const blendT = Math.max(0, Math.min(1, (distToHorizon - blendPx * 0.5) / (blendPx * 0.5)));
-      const isSky = row < horizonRow;
+      // `DataTexture` έχει `flipY=false` + `EquirectangularReflectionMapping`: η κατεύθυνση
+      // +Y (ζενίθ) αντιστοιχεί στο v≈1 → στις ΤΕΛΕΥΤΑΙΕΣ γραμμές (row→ENV_HEIGHT). Άρα το
+      // πάνω ημισφαίριο = `row >= horizonRow`. (Πριν ήταν `row < horizonRow` → ανεστραμμένο:
+      // ο ουρανός έμπαινε κάτω και το μπεζ έδαφος πάνω → ΟΛΕΣ οι οριζόντιες top επιφάνειες
+      // φωτίζονταν μπεζ από το IBL όταν τις έβλεπες από πάνω. Giorgio fix 2026-06-19.)
+      const isSky = row >= horizonRow;
       const base = isSky ? skyColor : groundColor;
       const other = isSky ? groundColor : skyColor;
       const r = base.r + (other.r - base.r) * (1 - blendT);
