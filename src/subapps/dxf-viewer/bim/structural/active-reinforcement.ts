@@ -38,6 +38,8 @@ import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/be
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
 // του ΕΝΟΣ SSoT `resolveEngagedAnalysisResult` (μηδέν διπλό gate με τον auto-reinforce core).
 import { resolveColumnFemMomentKnm } from './analytical/column-fem-moment';
+// ADR-502 §Slice2 — DERIVED στατική ροπή στηρίζουσας κολώνας από δοκάρι-πρόβολο (always-on).
+import { ColumnSupportMomentStore } from './organism/column-support-moment-store';
 // ADR-497 — DERIVED FEM αξονικό βάσης κολώνας (πρόβολος → αντίδραση), engaged-gated.
 import { resolveColumnFemAxial, type ColumnFemAxial } from './analytical/column-fem-axial';
 import { resolveEngagedAnalysisResult } from './analytical/engaged-analysis-result';
@@ -74,20 +76,35 @@ export function resolveActiveColumnFemMoment(columnId: string): number | undefin
 }
 
 /**
- * ADR-499 (Slice D) — `Map<columnId → engaged-gated FEM ροπή (kNm)>` για ΟΛΕΣ τις κολώνες
- * της σκηνής. Ο **pure** feasibility runner (`runFeasibilityChecks`) το παίρνει ώστε ο
- * έλεγχος «ανέφικτη διατομή στο μέγιστο» να χρησιμοποιεί την ΙΔΙΑ ροπή με τον auto-sizer
- * (B2, `AutoSizeMembersCommand`· μηδέν διπλή αλήθεια). Mirror του `buildActiveFootingFemAxialMap`:
- * το store coupling ζει εδώ, ΟΧΙ μέσα στον runner. Κενό εκτός engaged → nominal e₀ fallback
- * μέσα στον context builder. Pure store read (ADR-040 safe).
+ * ADR-502 §Slice2 — η **ροπή σχεδιασμού** (kNm) μιας κολώνας με ιεραρχία **ΕΝΟΣ οργανισμού**:
+ * το engaged-gated FEM (ADR-491, ακριβές πλαισιακό) **υπερισχύει**· αλλιώς πέφτει στη
+ * **στατική** ροπή στηρίζουσας-προβόλου (`ColumnSupportMomentStore`, always-on, ντετερμινιστική).
+ * `undefined` όταν καμία από τις δύο → η κολώνα επανέρχεται στην ονομαστική e₀ (μηδέν regression).
+ *
+ * ΕΝΑ SSoT ροπής σχεδιασμού: τη μοιράζονται sizing (`AutoSizeMembersCommand`), reinforce
+ * (`resolveActiveColumnReinforcementForEntity`), feasibility + utilization overlay — μηδέν
+ * παράλληλη διπλή αλήθεια (γι' αυτό το όραμα μιλά για ΕΝΑΝ οργανισμό, ADR-487 §3).
  */
-export function buildActiveColumnFemMomentMap(
+export function resolveActiveColumnDesignMoment(columnId: string): number | undefined {
+  return resolveActiveColumnFemMoment(columnId) ?? ColumnSupportMomentStore.get(columnId);
+}
+
+/**
+ * ADR-499 (Slice D) / ADR-502 §Slice2 — `Map<columnId → ροπή σχεδιασμού (kNm)>` για ΟΛΕΣ
+ * τις κολώνες της σκηνής, με την ιεραρχία `resolveActiveColumnDesignMoment` (engaged FEM ??
+ * static πρόβολος). Ο **pure** feasibility runner (`runFeasibilityChecks`) το παίρνει ώστε ο
+ * έλεγχος «ανέφικτη διατομή στο μέγιστο» να χρησιμοποιεί την ΙΔΙΑ ροπή με τον auto-sizer
+ * (`AutoSizeMembersCommand`· μηδέν διπλή αλήθεια). Mirror του `buildActiveFootingFemAxialMap`:
+ * το store coupling ζει εδώ, ΟΧΙ μέσα στον runner. Κενό → nominal e₀ fallback μέσα στον
+ * context builder. Pure store read (ADR-040 safe).
+ */
+export function buildActiveColumnDesignMomentMap(
   entities: readonly Entity[],
 ): ReadonlyMap<string, number> {
   const map = new Map<string, number>();
   for (const e of entities) {
     if (!isColumnEntity(e)) continue;
-    const moment = resolveActiveColumnFemMoment(e.id);
+    const moment = resolveActiveColumnDesignMoment(e.id);
     if (moment !== undefined) map.set(e.id, moment);
   }
   return map;
@@ -144,7 +161,7 @@ export function resolveActiveColumnReinforcementForEntity(
 ): ColumnReinforcement | undefined {
   if (!column.params.reinforcement?.auto) return column.params.reinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  return resolveActiveColumnReinforcement(column.params, provider, resolveActiveColumnFemMoment(column.id));
+  return resolveActiveColumnReinforcement(column.params, provider, resolveActiveColumnDesignMoment(column.id));
 }
 
 /**

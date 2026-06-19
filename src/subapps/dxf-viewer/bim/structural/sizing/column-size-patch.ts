@@ -55,9 +55,10 @@ function columnSectionMateriallyDiffers(
  *   - αλλιώς → `{ prev, next }` με νέα `width`/`depth` + `autoSized:true`.
  * Geometry-mutating — ο caller το τυλίγει σε undoable command (mirror δοκαριού).
  *
- * ADR-491 — `femMomentKnm`: ο caller (command) περνά την engaged-gated FEM ροπή
- * (`resolveActiveColumnFemMoment`) ώστε η στηρίζουσα κολώνα προβόλου να διαστασιολογείται
- * με `wL²/2`. Απών → ο sizer πέφτει στην ονομαστική e₀ (graphless fallback, μηδέν regression).
+ * ADR-491 / ADR-502 §Slice2 — `femMomentKnm`: ο caller (command) περνά τη **ροπή σχεδιασμού**
+ * (`resolveActiveColumnDesignMoment` = engaged FEM ?? static πρόβολος `wL²/2`) ώστε η στηρίζουσα
+ * κολώνα προβόλου να διαστασιολογείται **live**. Απών → ο sizer πέφτει στην ονομαστική e₀
+ * (graphless fallback, μηδέν regression). Το όνομα της παραμέτρου μένει `femMomentKnm` (legacy).
  */
 export function buildColumnSizePatch(
   entity: Entity,

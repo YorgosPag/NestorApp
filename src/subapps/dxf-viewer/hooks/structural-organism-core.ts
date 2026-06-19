@@ -32,7 +32,7 @@ import { runReinforcementChecks } from '../bim/structural/organism/reinforcement
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
 import {
   buildActiveFootingFemAxialMap,
-  buildActiveColumnFemMomentMap,
+  buildActiveColumnDesignMomentMap,
 } from '../bim/structural/active-reinforcement';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
@@ -42,6 +42,9 @@ import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
 import { BeamTorsionStore } from '../bim/structural/organism/beam-torsion-store';
+// ADR-502 §Slice2 — DERIVED στατική ροπή στηρίζουσας κολώνας από δοκάρι-πρόβολο → transient store.
+import { buildColumnSupportMomentMap } from '../bim/structural/loads/column-support-moment';
+import { ColumnSupportMomentStore } from '../bim/structural/organism/column-support-moment-store';
 import { runSlabChecks } from '../bim/structural/organism/slab-checks';
 import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
 import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-checks';
@@ -106,6 +109,7 @@ export function runOrganismDiagnostics(
   BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
   SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
   BeamTorsionStore.set(computeBeamDesignTorsion(entities));
+  ColumnSupportMomentStore.set(buildColumnSupportMomentMap(entities, graph)); // ADR-502 §Slice2
   ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
 
   const settings = useStructuralSettingsStore.getState();
@@ -120,7 +124,7 @@ export function runOrganismDiagnostics(
     }, buildActiveFootingFemAxialMap(entities)),
     ...runSlabChecks(entities, provider),
     ...runBeamTorsionChecks(entities),
-    ...runFeasibilityChecks(entities, provider, buildActiveColumnFemMomentMap(entities)),
+    ...runFeasibilityChecks(entities, provider, buildActiveColumnDesignMomentMap(entities)),
     ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),
   ];
   StructuralDiagnosticsStore.set(diagnostics);

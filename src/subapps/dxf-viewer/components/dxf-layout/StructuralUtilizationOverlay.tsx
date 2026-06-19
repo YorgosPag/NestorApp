@@ -43,7 +43,7 @@ import {
 import {
   resolveActiveBeamReinforcementForEntity,
   resolveActiveColumnReinforcementForEntity,
-  resolveActiveColumnFemMoment,
+  resolveActiveColumnDesignMoment,
   resolveActiveBeamSupportType,
 } from '../../bim/structural/active-reinforcement';
 import { resolveMemberFootprintVertices } from '../../bim/structural/member-footprint-2d';
@@ -155,7 +155,7 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
         const util = columnUtilization(
           e,
           resolveActiveColumnReinforcementForEntity(e),
-          resolveActiveColumnFemMoment(e.id),
+          resolveActiveColumnDesignMoment(e.id),
         );
         const verts = resolveMemberFootprintVertices(e);
         if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });

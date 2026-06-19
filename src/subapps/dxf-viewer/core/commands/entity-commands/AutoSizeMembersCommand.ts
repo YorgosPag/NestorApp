@@ -37,7 +37,7 @@ import {
   resolveActiveBeamSupportType,
   resolveActiveBeamTorsion,
   resolveActiveSlabSupportCondition,
-  resolveActiveColumnFemMoment,
+  resolveActiveColumnDesignMoment,
 } from '../../../bim/structural/active-reinforcement';
 import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
 import { computeSlabGeometry } from '../../../bim/geometry/slab-geometry';
@@ -115,9 +115,10 @@ export class AutoSizeMembersCommand implements ICommand {
         const patch = buildSlabSizePatch(entity, this.provider, resolveActiveSlabSupportCondition(entityId));
         if (patch) this.patches.push({ entityId, entityType: 'slab', prev: patch.prev, next: patch.next });
       } else if (isColumnEntity(entity)) {
-        // ADR-499 §B2 — στηρίζουσα κολώνα προβόλου: η διατομή αυτο-μεγαλώνει ώστε As,req≤ρ_max·A_c
-        // + λυγηρότητα, με την engaged-gated FEM ροπή (wL²/2, ADR-491· ίδιο SSoT με τον οπλισμό).
-        const patch = buildColumnSizePatch(entity, this.provider, resolveActiveColumnFemMoment(entityId));
+        // ADR-499 §B2 / ADR-502 §Slice2 — στηρίζουσα κολώνα προβόλου: η διατομή αυτο-μεγαλώνει
+        // ώστε As,req≤ρ_max·A_c + λυγηρότητα, με τη ροπή σχεδιασμού (engaged FEM ?? static wL²/2·
+        // ίδιο SSoT με τον οπλισμό → live always-on, μηδέν διπλή αλήθεια).
+        const patch = buildColumnSizePatch(entity, this.provider, resolveActiveColumnDesignMoment(entityId));
         if (patch) this.patches.push({ entityId, entityType: 'column', prev: patch.prev, next: patch.next });
       }
     }
