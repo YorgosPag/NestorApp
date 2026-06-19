@@ -947,6 +947,7 @@
         "slabEdge": "On slab edge",
         "openingJamb": "On opening jamb",
         "columnAxis": "On column axis",
+        "beamAxis": "On beam axis",
         "corner": "Corner",
         "midpoint": "Midpoint",
         "center": "Center",

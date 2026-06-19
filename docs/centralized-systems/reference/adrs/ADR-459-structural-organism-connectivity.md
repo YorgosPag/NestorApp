@@ -1,6 +1,6 @@
 # ADR-459 — Structural Organism / Analytical Connectivity Model
 
-**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)· cross-level autosave-origin fix 2026-06-17 (v8.2)· Revit-grade footing in-place update + atomic undo 2026-06-17 (v8.3)· **3Δ rotate/resize→footing follow via kind→event emit SSoT 2026-06-17 (v8.4)· **Phase 8 PROACTIVE auto-reinforce οργανισμού 2026-06-17 (v9)· **Phase 9 Slice 1 PROACTIVE real-time φορτία 2026-06-17 (v10)**)
+**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)· cross-level autosave-origin fix 2026-06-17 (v8.2)· Revit-grade footing in-place update + atomic undo 2026-06-17 (v8.3)· **3Δ rotate/resize→footing follow via kind→event emit SSoT 2026-06-17 (v8.4)· **Phase 8 PROACTIVE auto-reinforce οργανισμού 2026-06-17 (v9)· **Phase 9 Slice 1 PROACTIVE real-time φορτία 2026-06-17 (v10)· **Atomic undo σε διαγραφή — SSoT geometry-edit classifier 2026-06-19 (v11)**)
 **Discipline:** BIM / Structural (DXF Viewer subapp)
 **Σχετικά:** ADR-401 (auto-attach), ADR-436 (foundation discipline), ADR-456 (structural quantities), ADR-458 (beam-column cutback)
 
@@ -513,6 +513,23 @@ NEW `hooks/__tests__/structural-load-takedown-core.test.ts` (6 jest) · MOD `hoo
 
 ## 8. Changelog
 
+- **2026-06-19 (v11, Opus):** **Atomic undo σε διαγραφή — SSoT geometry-edit classifier (Φ7/Φ8/Φ9).** Bug
+  (DB-verified): διαγραφή δοκαριού/κολώνας χρειαζόταν **2× Ctrl+Z** (το δοκάρι+detach επανέρχονταν στο 1ο undo,
+  ο παράγωγος structural recalc στο 2ο). **Ρίζα = divergent duplication:** οι 4 proactive hooks
+  (`useProactiveStructuralLoads`, `useProactiveMemberSizing`, `useProactiveOrganismReinforce`,
+  `useAutoFoundationDesign`) κρατούσαν ο καθένας **δικό του** `GEOMETRY_EDIT_TRIGGERS` set· τα `*-delete-requested`
+  μπήκαν στις λίστες συνδρομής (`PROACTIVE_*_EVENTS`) αλλά **ξεχάστηκαν** στα geom-edit sets των loads + foundation
+  → ο recalc δρομολογούνταν standalone (`execute`) αντί grouped (`executeGrouped`/`appendToLast`) → δεύτερο entry.
+  **Fix (SSoT, μηδέν νέος μηχανισμός):** NEW `hooks/structural-geometry-edit-triggers.ts` (`GEOMETRY_EDIT_TRIGGERS`
+  + `isGeometryEditTrigger`, incl. και τα 5 `*-delete-requested`) — αντικαθιστά τα 4 inline αντίγραφα. Superset-safe
+  (ο predicate ερωτάται μόνο για subscribed events) → behavior-preserving για sizing/reinforce, προσθέτει **μόνο** την
+  ομαδοποίηση της διαγραφής σε loads + foundation. Reuse 100% του υπάρχοντος `CommandHistory.appendToLast` /
+  `CompositeCommand` (v8.3). 1× Ctrl+Z αναιρεί τη `DeleteEntityCommand` (+ ADR-401 detach children) **μαζί** με τον
+  παράγωγο recalc, όπως η Revit. 12 jest (5 classification + behavioral «διαγραφή→ΕΝΑ undo entry» + from-grid
+  standalone· composite-command suite άθικτο). **DEFER:** η δεύτερη βαθμίδα της αλυσίδας (sizing/reinforce που
+  πυροδοτούνται από `bim:structural-loads-computed`) παραμένει standalone — pre-existing, κοινό με move/create,
+  no-op σε καθαρή διαγραφή· πλήρης transaction-scope grouping = ξεχωριστό task (handoff §3 option 3). 🔴 browser-verify
+  + commit (Giorgio).
 - **2026-06-17 (v10, Opus):** **Phase 9 Slice 1 — PROACTIVE real-time φορτία (§6l).** Ο load-path engine
   (ADR-467) έτρεχε ΜΟΝΟ με ribbon κουμπί· τώρα τα φορτία γίνονται **proactive** σε κάθε load-topology μεταβολή
   (mirror Φ7/Φ8) → η αλυσίδα `φορτία → sizing πεδίλων → διαγνωστικά` τρέχει αυτόματα. **SSoT extraction:** NEW

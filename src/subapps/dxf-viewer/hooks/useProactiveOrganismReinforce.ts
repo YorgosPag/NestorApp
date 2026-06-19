@@ -33,6 +33,7 @@ import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { runOrganismAutoReinforce, type ReinforceLevelManager } from './structural-auto-reinforce-core';
+import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
 
 /** Στατικές μεταβολές που δημιουργούν/μεγαλώνουν τον οργανισμό → re-reinforce. */
 const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
@@ -63,20 +64,9 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
 // οπλισμός βάφεται μόνο στο ΡΗΤΟ κουμπί «Αυτόματος Οπλισμός» (one-shot· το `columnFemMomentById`
 // threading στο command/core παραμένει γι' αυτό).
 
-/**
- * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
- * στο undo stack) → ο παράγωγος οπλισμός ομαδοποιείται στο **ίδιο** atomic undo step
- * (Revit transaction group). Τα batch/from-grid πάνε standalone — δεν αντιστοιχούν
- * σε ένα μοναδικό προηγούμενο user command.
- */
-const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
-  'drawing:entity-created',
-  'bim:column-params-updated',
-  'bim:beam-params-updated',
-  'bim:foundation-params-updated',
-  'bim:slab-params-updated', // ADR-476 — grip/ribbon edit πλάκας = atomic undo group
-  'bim:entities-moved',
-]);
+// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
+// ζει πλέον στο SSoT `isGeometryEditTrigger` — μηδέν τοπικό αντίγραφο (superset-safe:
+// ο reinforce δεν συνδρομεί σε *-delete-requested, άρα η συμπεριφορά του είναι αμετάβλητη).
 
 export function useProactiveOrganismReinforce(props: { levelManager: ReinforceLevelManager }): void {
   const { levelManager } = props;
@@ -97,7 +87,7 @@ export function useProactiveOrganismReinforce(props: { levelManager: ReinforceLe
     };
 
     const schedule = (ev: DrawingEventType): void => {
-      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
+      if (isGeometryEditTrigger(ev)) groupable = true;
       if (scheduled) return;
       scheduled = true;
       queueMicrotask(recompute);

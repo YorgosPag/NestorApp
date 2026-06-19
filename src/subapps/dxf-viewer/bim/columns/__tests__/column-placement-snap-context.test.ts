@@ -20,7 +20,10 @@ function beam(id: string, sx: number, sy: number, ex: number, ey: number, width 
       kind: 'straight', width, depth: 500, sceneUnits: 'mm',
       startPoint: { x: sx, y: sy }, endPoint: { x: ex, y: ey },
     },
-    geometry: { length: Math.hypot(ex - sx, ey - sy) / 1000 },
+    geometry: {
+      axisPolyline: { points: [{ x: sx, y: sy, z: 0 }, { x: ex, y: ey, z: 0 }] },
+      length: Math.hypot(ex - sx, ey - sy) / 1000,
+    },
   } as unknown as BeamEntity;
 }
 
@@ -79,12 +82,23 @@ describe('resolveColumnPlacementContext — precedence', () => {
     if (ctx.status === 'beam') expect(ctx.point.y).toBeCloseTo(0, 6);
   });
 
-  it('δοκάρι ΝΙΚΑ ακόμη κι όταν υπάρχει κολώνα από κάτω (overlap)', () => {
+  it('ΥΠΑΡΧΟΥΣΑ κολώνα ΝΙΚΑ το δοκάρι (ενδιάμεση κολώνα στη μέση δοκαριού → 🔴, όχι 🟢)', () => {
+    // Σενάριο Giorgio: τρίτη κολώνα στο μέσο δοκαριού· hover πάνω της → overlap (μην βάλεις διπλή).
     const entities = [
       beam('b1', 0, 0, 10000, 0) as unknown as Entity,
-      columnFootprint('c1', 4000, 0),
+      columnFootprint('c1', 5000, 0),
     ];
-    const ctx = resolveColumnPlacementContext({ x: 4000, y: 0 }, entities);
+    const ctx = resolveColumnPlacementContext({ x: 5000, y: 0 }, entities);
+    expect(ctx.status).toBe('overlap');
+    if (ctx.status === 'overlap') expect(ctx.columnId).toBe('c1');
+  });
+
+  it('κενό σημείο δοκαριού (όχι πάνω σε κολώνα) → beam (🟢)', () => {
+    const entities = [
+      beam('b1', 0, 0, 10000, 0) as unknown as Entity,
+      columnFootprint('c1', 5000, 0),
+    ];
+    const ctx = resolveColumnPlacementContext({ x: 3000, y: 0 }, entities); // μακριά από την c1
     expect(ctx.status).toBe('beam');
   });
 

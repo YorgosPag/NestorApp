@@ -12,12 +12,14 @@ import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 // ADR-363 Phase 5.5e — wall axis projection (clamped NEAREST semantics).
-import { isWallEntity, isSlabEntity, isOpeningEntity } from '../../types/entities';
+import { isWallEntity, isSlabEntity, isOpeningEntity, isBeamEntity } from '../../types/entities';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
 // ADR-363 Phase 5.5f — slab edge projection (clamped NEAREST semantics).
 import { projectPointOnSlabEdge } from '../../bim/slabs/slab-edge-projection';
 // ADR-363 Phase 5.5g — opening outline projection (clamped NEAREST semantics).
 import { projectPointOnOpeningOutline } from '../../bim/walls/opening-outline-projection';
+// ADR-398 §Column→Beam axis snap — beam axis projection (clamped NEAREST, parity με τοίχο/πλάκα).
+import { projectPointOnBeamAxis } from '../../bim/beams/beam-axis-projection';
 
 export class NearestSnapEngine extends BaseSnapEngine {
 
@@ -67,6 +69,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
       const description = isWallEntity(closestEntity) ? 'bim-wall'
         : isSlabEntity(closestEntity) ? 'bim-slab'
         : isOpeningEntity(closestEntity) ? 'bim-opening'
+        : isBeamEntity(closestEntity) ? 'bim-beam'
         : 'Nearest';
       const candidate = this.createCandidate(
         closestPoint,
@@ -100,6 +103,11 @@ export class NearestSnapEngine extends BaseSnapEngine {
     // ADR-363 Phase 5.5g — opening outline (4-edge cutout rectangle).
     if (isOpeningEntity(entity)) {
       return projectPointOnOpeningOutline(entity, point);
+    }
+    // ADR-398 §Column→Beam axis snap — beam centerline projection (διαβάζει cached
+    // `axisPolyline.points`· straight/curved uniform). Parity με τοίχο/πλάκα.
+    if (isBeamEntity(entity)) {
+      return projectPointOnBeamAxis(entity, point);
     }
 
     const entityType = entity.type.toLowerCase();

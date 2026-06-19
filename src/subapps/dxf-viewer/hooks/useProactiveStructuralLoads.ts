@@ -47,6 +47,7 @@ import { resolveEffectiveAreaLoads } from '../bim/structural/loads/occupancy-loa
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
 import { useBuildingOccupancy } from './useBuildingOccupancy';
 import { runStructuralLoadTakedown, type LoadTakedownLevelManager } from './structural-load-takedown-core';
+import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
 
 /** Στατικές μεταβολές που αλλάζουν τη διαδρομή φορτίων → recompute. */
 const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
@@ -66,18 +67,9 @@ const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
   'bim:walls-from-perimeter', // ADR-478 — batch τοίχοι από περίμετρο
 ];
 
-/**
- * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
- * στο undo stack) → τα παράγωγα φορτία ομαδοποιούνται στο **ίδιο** atomic undo step
- * (Revit transaction group). Τα batch/from-grid πάνε standalone.
- */
-const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
-  'drawing:entity-created',
-  'bim:column-params-updated',
-  'bim:beam-params-updated',
-  'bim:wall-params-updated', // ADR-478 — atomic undo group με το user wall-edit command
-  'bim:entities-moved',
-]);
+// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
+// ζει πλέον στο SSoT `isGeometryEditTrigger` (incl. *-delete-requested) — μηδέν τοπικό
+// αντίγραφο, συνεπής συμπεριφορά σε όλους τους proactive hooks.
 
 export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownLevelManager }): void {
   const { levelManager } = props;
@@ -117,7 +109,7 @@ export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownL
     };
 
     const schedule = (ev: DrawingEventType): void => {
-      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
+      if (isGeometryEditTrigger(ev)) groupable = true;
       if (scheduled) return;
       scheduled = true;
       queueMicrotask(recompute);

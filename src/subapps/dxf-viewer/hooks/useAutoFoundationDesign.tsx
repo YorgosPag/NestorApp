@@ -31,6 +31,7 @@ import {
   foundationChangeCount,
   type FoundationDesignLevelManager,
 } from './auto-foundation-design-core';
+import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
 
 /** Στατικές μεταβολές που επανα-διαστασιολογούν τη θεμελίωση. */
 const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
@@ -41,16 +42,9 @@ const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
   'bim:structural-loads-computed',
 ];
 
-/**
- * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
- * στο undo stack) → το παράγωγο footing re-derive ομαδοποιείται στο **ίδιο** atomic
- * undo step (Revit transaction group).
- */
-const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
-  'drawing:entity-created',
-  'bim:column-params-updated',
-  'bim:entities-moved',
-]);
+// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
+// ζει πλέον στο SSoT `isGeometryEditTrigger` (incl. bim:column-delete-requested) —
+// μηδέν τοπικό αντίγραφο: η διαγραφή κολώνας ομαδοποιεί το footing re-derive (1× Ctrl+Z).
 
 export function useAutoFoundationDesign(props: { levelManager: FoundationDesignLevelManager }): void {
   const { levelManager } = props;
@@ -84,7 +78,7 @@ export function useAutoFoundationDesign(props: { levelManager: FoundationDesignL
     };
 
     const schedule = (ev: DrawingEventType): void => {
-      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
+      if (isGeometryEditTrigger(ev)) groupable = true;
       if (scheduled) return;
       scheduled = true;
       queueMicrotask(recompute);

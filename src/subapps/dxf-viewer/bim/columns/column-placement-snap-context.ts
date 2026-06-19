@@ -11,10 +11,11 @@
  *                 Ghost = 🔴 κόκκινο (προειδοποίηση, τοποθετείται ακόμη).
  *   · `neutral` → ελεύθερη τοποθέτηση.
  *
- * Pure — zero React/DOM/Firestore. Reuse `projectPointOnAxis` (SSoT προβολής) +
- * `isPointInPolygon` (SSoT hit-test). Μονάδες: scene units (worldPos + entities ομοιόμορφα).
+ * Pure — zero React/DOM/Firestore. Reuse `projectPointOnBeamAxisDetailed` (SSoT προβολής
+ * δοκαριού, κοινό με `NearestSnapEngine`) + `isPointInPolygon` (SSoT hit-test). Μονάδες:
+ * scene units (worldPos + entities ομοιόμορφα).
  *
- * @see ../geometry/shared/polygon-axis-projection.ts — projectPointOnAxis (reuse)
+ * @see ../beams/beam-axis-projection.ts — projectPointOnBeamAxisDetailed (SSoT, reuse)
  * @see ../../systems/cursor/snap-scheduler.ts — move-path consumer (ghost status + snap)
  * @see ../../systems/cursor/mouse-handler-up.ts — commit-path consumer (snap point)
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-body-corner-projection-snap.md
@@ -24,7 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
 import type { BeamEntity } from '../types/beam-types';
-import { projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
+import { projectPointOnBeamAxisDetailed } from '../beams/beam-axis-projection';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 
 /**
@@ -41,31 +42,24 @@ export interface ColumnBeamAxisSnap {
 }
 
 /**
- * Πλησιέστερο δοκάρι του οποίου το **σώμα** καλύπτει τον cursor → κάθετη προβολή στον
- * άξονά του (clamped στο segment — όχι προέκταση). Νικά το μικρότερο κάθετο. `null` όταν
- * ο cursor δεν είναι πάνω σε κανένα δοκάρι.
+ * Πλησιέστερο δοκάρι του οποίου το **σώμα** καλύπτει τον cursor → το σημείο στον άξονά
+ * του (μέσω του SSoT `projectPointOnBeamAxisDetailed` — ίδιο με τον `NearestSnapEngine`).
+ * Νικά το μικρότερο κάθετο. Απορρίπτεται όταν ο cursor είναι **πέρα** από τα άκρα
+ * (`atEndpoint`) ή εκτός width-capture. `null` όταν δεν είναι πάνω σε κανένα δοκάρι.
  */
 export function findColumnBeamAxisSnap(
   worldPos: Readonly<Point2D>,
   beams: readonly BeamEntity[],
 ): ColumnBeamAxisSnap | null {
   let best: ColumnBeamAxisSnap | null = null;
-  let bestPerp = Infinity;
+  let bestDistance = Infinity;
   for (const beam of beams) {
-    const s = beam.params.startPoint;
-    const e = beam.params.endPoint;
-    const dx = e.x - s.x;
-    const dy = e.y - s.y;
-    const len = Math.hypot(dx, dy);
-    if (len < 1e-6) continue;
-    const ux = dx / len;
-    const uy = dy / len;
-    const { along, perp } = projectPointOnAxis(worldPos.x, worldPos.y, s.x, s.y, ux, uy);
-    if (along < 0 || along > len) continue; // εκτός ανοίγματος (όχι προέκταση)
+    const proj = projectPointOnBeamAxisDetailed(beam, worldPos);
+    if (!proj || proj.atEndpoint) continue; // πάνω στο σώμα, όχι πέρα από τα άκρα
     const capture = ((beam.params.width ?? 0) / 2) * BEAM_AXIS_CAPTURE;
-    if (perp > capture || perp >= bestPerp) continue;
-    bestPerp = perp;
-    best = { point: { x: s.x + ux * along, y: s.y + uy * along }, beamId: beam.id };
+    if (proj.distance > capture || proj.distance >= bestDistance) continue;
+    bestDistance = proj.distance;
+    best = { point: proj.foot, beamId: beam.id };
   }
   return best;
 }
@@ -76,25 +70,39 @@ export type ColumnPlacementContext =
   | { readonly status: 'overlap'; readonly columnId: string }
   | { readonly status: 'neutral' };
 
+/** Η πρώτη υπάρχουσα κολώνα της οποίας το footprint περιέχει τον cursor (`null` αν καμία). */
+function findColumnOverlap(
+  worldPos: Readonly<Point2D>,
+  entities: readonly Entity[],
+): string | null {
+  for (const e of entities) {
+    if (!isColumnEntity(e)) continue;
+    const verts = e.geometry?.footprint?.vertices;
+    if (verts && verts.length >= 3 && isPointInPolygon(worldPos, verts as Point2D[])) {
+      return e.id;
+    }
+  }
+  return null;
+}
+
 /**
- * Resolve του context: **δοκάρι πάντα νικά** (η ρητή «hover→place» πρόθεση)· αλλιώς αν ο
- * cursor είναι μέσα σε footprint υπάρχουσας κολώνας → `overlap`· αλλιώς `neutral`. Pure.
+ * Resolve του context. **Overlap νικά**: αν ο cursor είναι μέσα σε footprint υπάρχουσας
+ * κολώνας → `overlap` (🔴 — μην βάλεις διπλή στην ίδια θέση· ισχύει ΑΚΟΜΗ κι όταν από κάτω
+ * περνά δοκάρι, π.χ. ενδιάμεση κολώνα στη μέση δοκαριού). Αλλιώς, πάνω σε **κενό** σώμα
+ * δοκαριού → `beam` (🟢 snap στον άξονα). Αλλιώς `neutral`. Pure.
  */
 export function resolveColumnPlacementContext(
   worldPos: Readonly<Point2D>,
   entities: readonly Entity[],
 ): ColumnPlacementContext {
+  const overlapId = findColumnOverlap(worldPos, entities);
+  if (overlapId) {
+    return { status: 'overlap', columnId: overlapId };
+  }
   const beams = entities.filter(isBeamEntity);
   const beamSnap = findColumnBeamAxisSnap(worldPos, beams);
   if (beamSnap) {
     return { status: 'beam', point: beamSnap.point, beamId: beamSnap.beamId };
-  }
-  for (const e of entities) {
-    if (!isColumnEntity(e)) continue;
-    const verts = e.geometry?.footprint?.vertices;
-    if (verts && verts.length >= 3 && isPointInPolygon(worldPos, verts as Point2D[])) {
-      return { status: 'overlap', columnId: e.id };
-    }
   }
   return { status: 'neutral' };
 }

@@ -39,6 +39,7 @@ import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { runMemberAutoSize, type MemberSizeLevelManager } from './member-auto-size-core';
+import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
 
 /**
  * Μεταβολές που απαιτούν re-sizing. ΟΧΙ `bim:beam-params-updated` (self-emit → loop)·
@@ -52,14 +53,9 @@ const PROACTIVE_SIZE_EVENTS: readonly DrawingEventType[] = [
   'bim:structural-loads-computed',
 ];
 
-/**
- * Άμεσες geometry edits του χρήστη (δικό τους command στο undo stack) → η
- * διαστασιολόγηση ομαδοποιείται στο ΙΔΙΟ atomic undo step (Revit transaction group).
- */
-const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
-  'drawing:entity-created',
-  'bim:entities-moved',
-]);
+// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
+// ζει πλέον στο SSoT `isGeometryEditTrigger` — μηδέν τοπικό αντίγραφο (superset-safe:
+// ο sizing συνδρομεί μόνο σε created/moved/from-grid/loads-computed, άρα αμετάβλητος).
 
 export function useProactiveMemberSizing(props: { levelManager: MemberSizeLevelManager }): void {
   const { levelManager } = props;
@@ -78,7 +74,7 @@ export function useProactiveMemberSizing(props: { levelManager: MemberSizeLevelM
     };
 
     const schedule = (ev: DrawingEventType): void => {
-      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
+      if (isGeometryEditTrigger(ev)) groupable = true;
       if (scheduled) return;
       scheduled = true;
       queueMicrotask(recompute);

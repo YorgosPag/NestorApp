@@ -22,6 +22,7 @@ export const BIM_SNAP_DESCRIPTION_KEY: Readonly<Record<string, string>> = {
   'bim-slab':           'snapModes.labels.bim.slabEdge',
   'bim-opening':        'snapModes.labels.bim.openingJamb',
   'bim-column':         'snapModes.labels.bim.columnAxis',
+  'bim-beam':           'snapModes.labels.bim.beamAxis',
   // ADR-363 Φ1G.5 Slice 2i: wall FACE line (face-to-face magnetism)
   'bim-wall-face':      'snapModes.labels.bim.wallFace',
   'bim-mep-connector':  'snapModes.labels.bim.mepConnector',
