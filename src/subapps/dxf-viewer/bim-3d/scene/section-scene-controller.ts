@@ -332,11 +332,13 @@ export class SectionSceneController {
     this.lastCamQuat.copy(camera.quaternion);
     this.lastCamZoom = camZoom;
 
-    const quality: SectionCapQuality = cutMoving
-      ? 'fast'
-      : (interacting || camMoved)
-        ? 'colors'
-        : 'full';
+    // Giorgio 2026-06-19: κατά το σύρσιμο του cut-slider θέλει να βλέπει τα ΧΡΩΜΑΤΙΣΤΑ cut
+    // faces σε πραγματικό χρόνο (ό,τι θα μείνει στο σταμάτημα), ΟΧΙ hollow/grey draft. Άρα ο
+    // cut drag παίρνει 'colors' (grey base + per-material όψεις) όπως ήδη η κίνηση κάμερας· το
+    // βαρύ hatch/emphasis ('full') μένει για το settle μέσω armRefine.
+    const quality: SectionCapQuality = (cutMoving || interacting || camMoved)
+      ? 'colors'
+      : 'full';
 
     // ADR-452 v2.12 — fat-line edge overlays follow the cut HERE, applying the EXACT
     // gradual trim on EVERY frame the cut is live (drag AND settled). The per-overlay
@@ -370,15 +372,12 @@ export class SectionSceneController {
     renderer.autoClear = true;
     renderer.render(this.deps.scene, camera);
 
-    // ADR-452 v2.10 — while the cut-slider is actively dragging (`cutMoving`), render
-    // ONLY the clipped scene as the live draft and SKIP every cap pass. The geometry
-    // already slices live via the clip plane, so the section reads correctly; the cap
-    // passes (grey base + per-material colours) cost 3–4 full-scene renders/frame and
-    // were the ~8–12 fps slider-drag jank on weak hardware (61–324 ms RAF). The solid /
-    // coloured cut faces refine the instant the slider settles (armRefine → one FULL
-    // frame). Camera motion keeps its 'colors' caps (v2.9) — only the per-frame-changing
-    // cut geometry, which can't be cached, takes the cheapest 1-render draft.
-    if (!cutMoving) {
+    // ADR-452 v2.19 (Giorgio 2026-06-19) — caps render EVERY frame, INCLUDING the cut-slider
+    // drag, so the coloured cut faces are live (no hollow/grey draft). The cut geometry
+    // changes per frame so the caps can't be cached; 'colors' quality bounds the cost (grey
+    // base + N per-material colour passes, NO hatch/emphasis — those refine on settle). On a
+    // dense floor this is heavier than the old drag-skip draft; revisit if FPS suffers (N.17).
+    {
       const bounds = this.computeSceneBounds();
       // Box / crop caps via the existing multi-plane loop (cut planes excluded).
       if (this.sectionPlanes.length > 0) {

@@ -54,8 +54,6 @@ import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
 import { syncPointEntities } from './bim-scene-point-syncs';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
-// 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μαζί με bim-scene-slab-diagnostics.ts μετά.
-import { overrideSlabBodyMaterialTEMP, dumpCoplanarAtSlabTopOnce } from './bim-scene-slab-diagnostics';
 
 export interface EntityResolution {
   readonly layer: SceneLayer | null;
@@ -201,7 +199,6 @@ export class BimSceneLayer {
     let found = false;
     this.group.traverse((obj) => { if (!found && obj instanceof THREE.Mesh) found = true; });
     this._hasMesh = found;
-    dumpCoplanarAtSlabTopOnce(this.group); // 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μετά.
   }
 
   /**
@@ -338,11 +335,7 @@ export class BimSceneLayer {
         entities.slabOpenings, slab.id, r.buildingMode, ctx,
       );
       const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation, ctx.floorElevationMm);
-      if (mesh) {
-        mesh.userData['buildingId'] = r.buildingId;
-        overrideSlabBodyMaterialTEMP(mesh, slab.params); // 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μετά.
-        this.group.add(mesh);
-      }
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
 

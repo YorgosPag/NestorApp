@@ -55,6 +55,7 @@ import {
   renderEmphasisCapForPlane,
   renderHatchOverlaysForPlane,
 } from './section-stencil-secondary-passes';
+import { isSectionParityOverlay } from './section-parity-overlay';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -264,12 +265,15 @@ export class SectionStencilRenderer {
     const hidden: THREE.Object3D[] = [];
     const keep = isolate ? new Set(isolate) : null;
     mainScene.traverse((obj) => {
-      // Only hide currently-visible meshes — restore sets `visible = true`, so pushing
+      // Only hide currently-visible objects — restore sets `visible = true`, so pushing
       // an already-hidden overlay (e.g. one the edge-cut trim hid above the cut) would
       // wrongly re-show it as a phantom cage.
-      if (!(obj instanceof THREE.Mesh) || !obj.visible) return;
+      if (!obj.visible) return;
+      // ADR-452/483 — edge overlays + always-on-top analysis diagrams/labels (Mesh AND
+      // Sprite) write stray stencil → exclude them from the parity FIRST.
+      if (isSectionParityOverlay(obj)) { hidden.push(obj); obj.visible = false; return; }
+      if (!(obj instanceof THREE.Mesh)) return;
       const ud = obj.userData as Record<string, unknown>;
-      if (ud['bimEdgeOverlay'] === true) { hidden.push(obj); obj.visible = false; return; }
       if (keep && ud['bimId'] !== undefined && !keep.has(obj)) { hidden.push(obj); obj.visible = false; }
     });
 
@@ -414,9 +418,9 @@ export class SectionStencilRenderer {
    */
   private hideEdgeOverlaysForParity(mainScene: THREE.Scene, hidden: THREE.Object3D[]): void {
     mainScene.traverse((obj) => {
-      if (obj instanceof THREE.Mesh
-        && obj.visible
-        && (obj.userData as Record<string, unknown>)['bimEdgeOverlay'] === true) {
+      // ADR-452/483 — edge overlays AND always-on-top M/V/N diagrams (depthTest:false)
+      // must skip the parity (both write stray stencil → phantom recolour at the cut).
+      if (obj.visible && isSectionParityOverlay(obj)) {
         hidden.push(obj);
         obj.visible = false;
       }

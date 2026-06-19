@@ -462,9 +462,7 @@ export function slabToMesh(
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   applySlabSlope(geo, slab.params);
   const matId = slab.params.material ?? 'elem-slab';
-  // 🚨 TEMP DIAGNOSTIC #10 (slab two-tone) — roughness=1 ΚΑΙ envMapIntensity=0 ΜΑΖΙ. ΑΦΑΙΡΕΣΕ μετά.
-  // Uniform ⇒ fix = structural defs roughness 1 + envMapIntensity 0 (kills sun+env specular).
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xb2a290, roughness: 1, metalness: 0, envMapIntensity: 0, side: THREE.DoubleSide }));
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   // ADR-448 §4.1 — levelElevation is FLOOR-RELATIVE, so add the storey FFL via the

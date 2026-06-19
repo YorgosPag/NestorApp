@@ -135,7 +135,10 @@ export type StructuralDiagnosticCode =
   // ADR-499 §C — beam torsion from one-sided cantilever slab.
   | 'beamCantileverTorsionExceedsCapacity'
   // ADR-499 §D — global feasibility: μέλος ανέφικτο στο πρακτικό μέγιστο μέγεθος (error).
-  | 'sectionInfeasibleAtMaxSize';
+  | 'sectionInfeasibleAtMaxSize'
+  // ADR-504 §Φ1 — practical-span advisory: μη-πρακτικά βαθιά δοκός (κόβει καθαρό ύψος) →
+  // πρόταση ενδιάμεσων κολωνών (soft warning, opt-in).
+  | 'beamSpanImpractical';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το
