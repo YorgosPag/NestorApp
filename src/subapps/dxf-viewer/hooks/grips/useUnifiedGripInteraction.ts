@@ -30,7 +30,7 @@ import type {
   GripHoverThrottle,
 } from './unified-grip-types';
 import { useGripRegistry } from './grip-registry';
-import { isReferenceFlowKey, type WallHotGripOp, type HotGripStep } from './wall-hot-grip-fsm';
+import { hotGripKindOf, isWallHotGripKind, type WallHotGripOp, type HotGripStep } from './wall-hot-grip-fsm';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 // ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
@@ -42,13 +42,16 @@ import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 // ADR-501 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
+// ADR-501 Slice 2 — publish the armable (standard, non-hot-kind) DXF grips so the
+// marquee mouse-up handler can arm the ones a rubber-band catches (read at event time).
+import { ArmableGripsStore } from '../../systems/grip/ArmableGripsStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { useGripSpacebarCycle } from './useGripSpacebarCycle';
 // ADR-397 Σ2/Σ3 — rotate-free keyboard: «R» → reference flow, typed-angle commit.
-import { enterReferenceFromFree, commitTypedRotate } from './grip-hotgrip-actions';
+import { runHotGripKeyDown } from './grip-hotgrip-actions';
 // ADR-397 Σ3 — typed-angle digit buffer SSoT (ADR-344, «angle for rotation»).
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
 import {
@@ -72,7 +75,6 @@ import { clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
 // ADR-397 Φ2 — per-arm MOVE-glyph hover highlight (Giorgio 2026-06-17): classify the
 // cursor into a move arm (world frame) and publish it so the renderer lights only it.
 import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
-import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // Re-export types for consumers
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
@@ -116,6 +118,19 @@ export function useUnifiedGripInteraction(
   }, [universalSelection, currentOverlays]);
   // ── Grip registry ──
   const allGrips = useGripRegistry({ dxfScene, selectedEntityIds, selectedOverlays });
+  // ADR-501 Slice 2 — publish the armable grips (standard, non-hot-kind DXF grips —
+  // the same kinds Slice 1 arms on click; hot-kind wall/column move/rotate/corner
+  // grips keep their dedicated flow and are excluded) so the marquee mouse-up
+  // handler can arm those a rubber-band catches. LOW-frequency write (selection /
+  // scene change), no React subscription → ADR-040 compliant. Cleared on unmount.
+  useEffect(() => {
+    ArmableGripsStore.set(
+      allGrips
+        .filter((g) => g.source === 'dxf' && g.entityId !== undefined && !isWallHotGripKind(hotGripKindOf(g)))
+        .map((g) => ({ entityId: g.entityId as string, gripIndex: g.gripIndex, position: g.position })),
+    );
+  }, [allGrips]);
+  useEffect(() => () => { ArmableGripsStore.clear(); }, []);
   // ── Core state ──
   const [phase, setPhase] = useState<UnifiedGripPhase>('idle');
   const [hoveredGrip, setHoveredGrip] = useState<UnifiedGripInfo | null>(null);
@@ -336,57 +351,19 @@ export function useUnifiedGripInteraction(
   // rotate-free). Σ2: «R» jumps to the 6-click reference flow. Returns true when the
   // key is consumed so the canvas keyboard hook can `preventDefault` + block globals.
   // Refs are read at call time (closure), so only `phase` needs to be a dep.
-  const handleHotGripKeyDown = useCallback((key: string): boolean => {
-    if (phase !== 'hotGrip' || hotGripOpRef.current !== 'rotate') return false;
-    // NB: ESC is NOT handled here — it routes through the escape-bus SSoT at
-    // `ESC_PRIORITY.HOT_GRIP_OP` (registered in useCanvasEscapeRegistrations), so an
-    // active grip op owns ESC over every tool/numeric handler (ADR-397 ESC fix).
-    if (hotGripStepRef.current !== 'rotate-free') return false;
-    // «R» → opt into the 6-click reference flow (drop any typed angle).
-    if (isReferenceFlowKey(key)) {
-      enterReferenceFromFree({
-        hotGripStepRef, hotGripRotateBaseRef,
-        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
-      });
-      hotGripMovedRef.current = false;        // require a fresh move before the 1st ref pick
-      setCurrentWorldPos(null);               // drop the free-rotate ghost until ref picked
-      rotateDdeRef.current.reset();
-      setTypedRotate(null);
-      markSystemsDirty(['dxf-canvas']);        // repaint: hint switch + ghost cleared
-      return true;
-    }
-    const dde = rotateDdeRef.current;
-    // Enter → commit the typed angle (exact). Swallowed even when empty so a stray
-    // Enter never reaches the drawing-finish path while the entity is spinning.
-    if (key === 'Enter') {
-      const { value } = dde.snapshot();
-      if (value != null && hotGripBaseRef.current && activeGrip?.source === 'dxf') {
-        commitTypedRotate(activeGrip, hotGripBaseRef.current, value, dxfCommitDeps);
-        resetToIdle();                         // clears refs + typed buffer
-      }
-      return true;
-    }
-    // Digit alphabet (0-9 / - / .) → buffer the signed angle (DirectDistanceEntry SSoT).
-    if (/^[\d.-]$/.test(key)) {
-      if (dde.snapshot().status !== 'buffering') dde.begin();
-      dde.pressKey(key);                       // rejects illegal keystrokes internally
-      const s = dde.snapshot();
-      setTypedRotate({ buffer: s.buffer, deg: s.value });
-      markSystemsDirty(['dxf-canvas']);
-      return true;
-    }
-    // Backspace → edit the buffer (swallowed during rotate so it never smart-deletes).
-    if (key === 'Backspace') {
-      if (dde.snapshot().status === 'buffering') {
-        dde.pressKey('Backspace');
-        const s = dde.snapshot();
-        setTypedRotate({ buffer: s.buffer, deg: s.value });
-        markSystemsDirty(['dxf-canvas']);
-      }
-      return true;
-    }
-    return false;
-  }, [phase, activeGrip, dxfCommitDeps, resetToIdle]);
+  // ADR-397 Σ2/Σ3 — logic extracted → grip-hotgrip-actions.runHotGripKeyDown (file-size
+  // N.7.1). Refs read at call time (closure), so only `phase` needs to be a dep. ESC is
+  // NOT handled here — it routes through the escape-bus SSoT at `ESC_PRIORITY.HOT_GRIP_OP`.
+  const handleHotGripKeyDown = useCallback(
+    (key: string): boolean =>
+      runHotGripKeyDown(key, phase, {
+        hotGripOpRef, hotGripStepRef, hotGripBaseRef, hotGripRotateBaseRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripMovedRef,
+        rotateDdeRef, activeGrip, dxfCommitDeps, resetToIdle,
+        setCurrentWorldPos, setTypedRotate,
+      }),
+    [phase, activeGrip, dxfCommitDeps, resetToIdle],
+  );
   // True while a hot-grip flow is live — coarse reactive gate for the canvas keyboard
   // hook; the fine op/step check happens inside `handleHotGripKeyDown` (refs).
   const hotGripIsActive = phase === 'hotGrip';

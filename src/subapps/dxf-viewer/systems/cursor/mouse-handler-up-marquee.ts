@@ -23,6 +23,10 @@ import type { Entity, SceneModel } from '../../types/entities';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { resolveCircuitWirePaths } from '../../bim/mep-systems/mep-wire-scene';
 import { selectCircuitsInMarquee } from '../../bim/mep-systems/mep-wire-hit';
+// ADR-501 Slice 2 — grip marquee arming: a window over visible grips arms them
+// (orange) instead of selecting new entities (AutoCAD/Revit "hot grips").
+import { ArmableGripsStore } from '../grip/ArmableGripsStore';
+import { runGripMarqueeArm } from '../grip/grip-marquee-arm';
 
 export interface MarqueeContext {
   cursor: ReturnType<typeof import('./CursorSystem').useCursor>;
@@ -53,6 +57,22 @@ export function processMarqueeSelection(
 
   const canvas = canvasRef?.current ?? null;
   const marqueeSnap = getPointerSnapshotFromElement(canvas);
+
+  // ADR-501 Slice 2 — grip marquee: when grips are visible (a selection exists) and
+  // the box catches ≥1 armable grip, arm those grips (orange) and CONSUME the
+  // marquee — do NOT select entities. Only in grip mode (select/layering); with no
+  // grip inside, falls through to the unchanged entity-marquee (no regression).
+  if ((activeTool === 'select' || activeTool === 'layering') && marqueeSnap) {
+    const armed = runGripMarqueeArm(
+      cursor.selectionStart!,
+      cursor.position!,
+      transform,
+      { width: marqueeSnap.rect.width, height: marqueeSnap.rect.height },
+      e.shiftKey,
+      ArmableGripsStore.getSnapshot(),
+    );
+    if (armed) return;
+  }
 
   // ADR-363 Phase 1K Mode C / «Τοίχος από περίγραμμα» — box-select: intercept the
   // marquee → run window/crossing selection to collect entities → hand their ids to

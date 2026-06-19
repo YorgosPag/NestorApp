@@ -13,7 +13,10 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
-import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
+import { isReferenceFlowKey } from './wall-hot-grip-fsm';
+import type { UnifiedGripInfo, UnifiedGripPhase, DxfCommitDeps } from './unified-grip-types';
+import type { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
+import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 // ADR-397 — arm the rotation snap targets (pivot ⊙ + entity grips) when the centre is picked.
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
@@ -244,4 +247,76 @@ export function commitTypedRotate(
   BimRotateHotGripStore.set(pivot, { x: pivot.x + 1, y: pivot.y });
   commitDxfGripDragModeAware(grip, rotateDeltaForAngleDeg(angleDeg), deps, GripModeStore.getSnapshot());
   GripBasePointStore.clear();
+}
+
+/** Full ref/setter context for {@link runHotGripKeyDown} (rotate-free key routing). */
+export interface HotGripKeyDownCtx extends RotateFreeKeyCtx {
+  hotGripOpRef: MutableRefObject<WallHotGripOp | null>;
+  hotGripBaseRef: MutableRefObject<Point2D | null>;
+  hotGripMovedRef: MutableRefObject<boolean>;
+  rotateDdeRef: MutableRefObject<DirectDistanceEntry>;
+  activeGrip: UnifiedGripInfo | null;
+  dxfCommitDeps: DxfCommitDeps;
+  resetToIdle: () => void;
+  setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
+  setTypedRotate: Dispatch<SetStateAction<{ buffer: string; deg: number | null } | null>>;
+}
+
+/**
+ * ADR-397 Σ2/Σ3 — window-level key handler for the live FREE rotate
+ * (`phase==='hotGrip'`, op rotate, step rotate-free). «R» → 6-click reference flow;
+ * digits/-/. buffer a signed typed angle (DirectDistanceEntry SSoT); Enter commits it
+ * exactly; Backspace edits the buffer. Returns true when the key is consumed so the
+ * canvas keyboard hook can `preventDefault` + block globals. Refs read at call time.
+ *
+ * NB: ESC is NOT handled here — it routes through the escape-bus SSoT at
+ * `ESC_PRIORITY.HOT_GRIP_OP` so an active grip op owns ESC over every other handler.
+ *
+ * Extracted from `useUnifiedGripInteraction` to keep that hook under the Google
+ * 500-line file limit (SOS N.7.1); behaviour is byte-for-byte identical.
+ */
+export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: HotGripKeyDownCtx): boolean {
+  if (phase !== 'hotGrip' || ctx.hotGripOpRef.current !== 'rotate') return false;
+  if (ctx.hotGripStepRef.current !== 'rotate-free') return false;
+  // «R» → opt into the 6-click reference flow (drop any typed angle).
+  if (isReferenceFlowKey(key)) {
+    enterReferenceFromFree(ctx);
+    ctx.hotGripMovedRef.current = false;     // require a fresh move before the 1st ref pick
+    ctx.setCurrentWorldPos(null);            // drop the free-rotate ghost until ref picked
+    ctx.rotateDdeRef.current.reset();
+    ctx.setTypedRotate(null);
+    markSystemsDirty(['dxf-canvas']);        // repaint: hint switch + ghost cleared
+    return true;
+  }
+  const dde = ctx.rotateDdeRef.current;
+  // Enter → commit the typed angle (exact). Swallowed even when empty so a stray
+  // Enter never reaches the drawing-finish path while the entity is spinning.
+  if (key === 'Enter') {
+    const { value } = dde.snapshot();
+    if (value != null && ctx.hotGripBaseRef.current && ctx.activeGrip?.source === 'dxf') {
+      commitTypedRotate(ctx.activeGrip, ctx.hotGripBaseRef.current, value, ctx.dxfCommitDeps);
+      ctx.resetToIdle();                     // clears refs + typed buffer
+    }
+    return true;
+  }
+  // Digit alphabet (0-9 / - / .) → buffer the signed angle (DirectDistanceEntry SSoT).
+  if (/^[\d.-]$/.test(key)) {
+    if (dde.snapshot().status !== 'buffering') dde.begin();
+    dde.pressKey(key);                       // rejects illegal keystrokes internally
+    const s = dde.snapshot();
+    ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
+    markSystemsDirty(['dxf-canvas']);
+    return true;
+  }
+  // Backspace → edit the buffer (swallowed during rotate so it never smart-deletes).
+  if (key === 'Backspace') {
+    if (dde.snapshot().status === 'buffering') {
+      dde.pressKey('Backspace');
+      const s = dde.snapshot();
+      ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
+      markSystemsDirty(['dxf-canvas']);
+    }
+    return true;
+  }
+  return false;
 }

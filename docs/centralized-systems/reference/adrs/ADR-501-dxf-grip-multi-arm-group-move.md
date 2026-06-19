@@ -1,6 +1,6 @@
 # ADR-501 — DXF Grip Multi-Arm + Group Move (AutoCAD/Revit-grade)
 
-**Status:** 🟡 Slice 1 implemented — pending browser-verify + commit (2026-06-19)
+**Status:** 🟡 Slices 1+2 implemented — pending browser-verify + commit (2026-06-19)
 **Discipline:** DXF Viewer · Grip interaction · Canvas rendering (ADR-040-sensitive)
 **Related:** ADR-397 (grip glyph/temperature SSoT), ADR-363 (grip system phases), ADR-040 (canvas performance / micro-leaf subscribers), ADR-183 (unified grip system)
 
@@ -42,7 +42,7 @@ orange; hot red stays reserved for the grip under active drag).
 | Slice | Scope | Status |
 |-------|-------|--------|
 | **1** | Arm + multi-select (click / shift+click) + orange visual | 🟡 implemented (this ADR) |
-| **2** | Marquee rubber-band over grips → arm many | ⏳ pending |
+| **2** | Marquee rubber-band over grips → arm many | 🟡 implemented (this ADR) |
 | **3** | Group move (all armed grips, one delta, single undo) + numeric distance | ⏳ pending |
 
 ### Slice 1 — arming + visual (implemented)
@@ -57,6 +57,39 @@ orange; hot red stays reserved for the grip under active drag).
 - **Scope**: standard (non-hot-kind) DXF grips. Wall/column hot-grip kinds keep their
   dedicated click-click move/rotate/corner flow (ADR-363/397) and are not armed in Slice 1.
 - **Excluded**: Alt-move (whole-entity base-point move) keeps its drag intent.
+
+### Slice 2 — marquee rubber-band → arm many (implemented)
+
+AutoCAD/Revit: with an entity selected (grips visible), dragging a window over the
+grips arms the ones inside (orange) rather than selecting new entities. The seam is
+the **marquee mouse-up** path (`processMarqueeSelection`), intercepted **before** the
+entity selection:
+
+- **When**: `activeTool ∈ {select, layering}` AND ≥1 armable grip falls inside the
+  box. **Precedence (AutoCAD-like)**: the grip-marquee consumes the gesture ONLY
+  when it catches ≥1 grip; with none inside it returns `false` and the unchanged
+  entity-marquee runs — the box never "steals" an entity selection intended
+  elsewhere.
+- **Armable grips**: the **standard, non-hot-kind** DXF grips — the exact same kinds
+  Slice 1 arms on click. Hot-kind grips (wall/column move/rotate/corner) keep their
+  dedicated click-click flow and are excluded, via the `isWallHotGripKind(
+  hotGripKindOf(grip))` SSoT predicate (`wall-hot-grip-fsm`).
+- **Shift** = add the caught grips to the existing armed set (`armMany`); **plain** =
+  replace it (`clear` + `armMany`) — mirrors Slice 1 (plain = setOnly, Shift = add).
+- **Point semantics**: each grip is a POINT, so classification reuses
+  `selectItemsInMarquee` with `isCrossing = false` — for a point, window-containment
+  IS point-in-rect and is the correct verdict for either drag direction (a point
+  cannot be "partially crossed"; the polygon crossing path needs ≥3 vertices).
+
+#### Data flow (ADR-040-safe — no 6-layer prop threading)
+
+A new imperative **`ArmableGripsStore`** (vanilla singleton, mirror of the other
+`systems/grip/*Store.ts`) bridges React → event handler: the grip hook PUBLISHES the
+armable grips to it on selection/scene change (a low-frequency `useEffect`, **not** a
+60fps subscription), and the marquee mouse-up handler READS `getSnapshot()` at event
+time (ADR-040 cardinal rule #2 — event handlers read via getters, not threaded
+snapshots). The arm itself is `GripArmedStore.armMany`/`clear`; the orange repaint is
+the existing Slice 1 `useSyncExternalStore` channel.
 
 ### Temperature priority (extended SSoT)
 
@@ -91,6 +124,15 @@ colour repaint is a single low-frequency React re-render.
 **NEW**
 - `src/subapps/dxf-viewer/systems/grip/GripArmedStore.ts`
 
+**NEW (Slice 2)**
+- `systems/grip/ArmableGripsStore.ts` — published armable grips (event-time read SSoT)
+- `systems/grip/grip-marquee-arm.ts` — pure `runGripMarqueeArm` (classify + arm)
+- `systems/grip/__tests__/grip-marquee-arm.test.ts` — 9 jest (classify / consume / shift add vs replace / store)
+
+**MOD (Slice 2)**
+- `systems/cursor/mouse-handler-up-marquee.ts` — grip-marquee intercept at the top of `processMarqueeSelection` (before entity selection)
+- `hooks/grips/useUnifiedGripInteraction.ts` — low-frequency publish of armable grips → `ArmableGripsStore` (+ clear on unmount)
+
 **MOD (Slice 1)**
 - `config/color-config.ts` (`GRIP_ARMED_COLOR`)
 - `rendering/grips/constants.ts` (armed size multipliers + default colour)
@@ -123,7 +165,6 @@ duplicate deselect/move logic, ADR-040-safe.
 
 ## 6. Out of scope / DEFER
 
-- **Slice 2** — marquee rubber-band over grips (`selectItemsInMarquee` + grip-center proximity).
 - **Slice 3** — group move of all armed grips by one delta (single composite undo via
   `StretchEntityCommand` multi-entity params) + typed distance/coordinate (PromptDialogStore
   / dynamic input).
@@ -131,6 +172,13 @@ duplicate deselect/move logic, ADR-040-safe.
 
 ## Changelog
 
+- **2026-06-19** — Slice 2 created (Opus 4.8). Marquee rubber-band over grips →
+  `runGripMarqueeArm` (pure, reuses `selectItemsInMarquee` point-in-box + `GripArmedStore.armMany`)
+  + `ArmableGripsStore` (event-time read SSoT, published low-freq by the grip hook).
+  Intercept at the top of `processMarqueeSelection`, consumes only when ≥1 armable
+  grip is caught (else entity-marquee unchanged); Shift adds, plain replaces. Armable
+  = Slice 1's non-hot-kind DXF grips (`isWallHotGripKind` SSoT). 9 jest. ADR-040-safe
+  (publish, no subscription). Pending browser-verify + commit.
 - **2026-06-19** — Slice 1 created (Opus 4.8). `GripArmedStore` + `'armed'` orange
   temperature + click-to-arm (plain/shift) with click-vs-drag threshold + Esc/click-away
   clear. Render thread plumbed end-to-end. Pending browser-verify + commit.
