@@ -131,7 +131,9 @@ export type StructuralDiagnosticCode =
   | 'staticAnalysisUnstable'
   | 'staticAnalysisMemberSkipped'
   // ADR-498 — cantilever slab design.
-  | 'cantileverSlabTooThin';
+  | 'cantileverSlabTooThin'
+  // ADR-499 §C — beam torsion from one-sided cantilever slab.
+  | 'beamCantileverTorsionExceedsCapacity';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

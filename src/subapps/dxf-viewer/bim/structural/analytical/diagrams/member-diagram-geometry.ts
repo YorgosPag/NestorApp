@@ -24,21 +24,23 @@
 
 import type { Point2D } from '../../../../rendering/types/Types';
 import type { AnalyticalModel } from '../analytical-model-types';
-import type {
-  AnalysisResult,
-  CombinationResult,
-  DiagramStation,
-  MemberForceResult,
-} from '../solver/solver-types';
+import type { AnalysisResult, MemberForceResult } from '../solver/solver-types';
+import {
+  clamp01,
+  dominantMomentKey,
+  dominantShearKey,
+  recoverUdlKnM,
+  selectCombination,
+  stationValue,
+  type DiagramComponent,
+  type DiagramSample,
+} from './member-diagram-sampling';
 
-/** Ποιο εντατικό μέγεθος σχεδιάζεται (v1 overlay = ροπή· extensible σε V/N). */
-export type DiagramComponent = 'moment' | 'shear' | 'axial';
-
-/** Μία στάθμη διαγράμματος: κλάσμα μήκους f∈[0,1] + (προσημασμένη) τιμή. */
-export interface DiagramSample {
-  readonly f: number;
-  readonly value: number;
-}
+// ADR-483 Slice 5 — τα sampling helpers (selectCombination/dominant*/stationValue/
+// recoverUdlKnM/clamp01) ζουν πλέον στο shared `member-diagram-sampling` (κοινό SSoT
+// με τον 3Δ column builder). Re-export των τύπων ώστε οι υπάρχοντες consumers
+// (analysis-diagram-view-store, DiagramComponentSelect, …) να μην αλλάξουν import.
+export type { DiagramComponent, DiagramSample };
 
 /** Η διαδρομή διαγράμματος ενός μέλους — άξονας (canvas units) + στάθμες. */
 export interface MemberDiagramPath {
@@ -99,73 +101,6 @@ function meanPathLength(paths: readonly MemberDiagramPath[]): number {
   let sum = 0;
   for (const p of paths) sum += Math.hypot(p.jCanvas.x - p.iCanvas.x, p.jCanvas.y - p.iCanvas.y);
   return sum / paths.length;
-}
-
-function clamp01(t: number): number {
-  return t < 0 ? 0 : t > 1 ? 1 : t;
-}
-
-/**
- * Επίλεξε τον συνδυασμό προς σχεδίαση: ο πρώτος μη-singular ULS (το envelope δεν
- * κρατά διάγραμμα, μόνο extrema) — αλλιώς ο πρώτος έγκυρος. `null` αν κανείς.
- */
-function selectCombination(result: AnalysisResult): CombinationResult | null {
-  const valid = result.combinations.filter((c) => !c.singular && c.memberForces.length > 0);
-  if (valid.length === 0) return null;
-  return valid.find((c) => c.combinationKind.toLowerCase().includes('uls')) ?? valid[0]!;
-}
-
-/** Κυρίαρχος άξονας κάμψης του μέλους: momentZ vs momentY (μεγαλύτερο max-abs). */
-function dominantMomentKey(diagram: readonly DiagramStation[]): 'momentY' | 'momentZ' {
-  let y = 0;
-  let z = 0;
-  for (const s of diagram) {
-    y = Math.max(y, Math.abs(s.momentY));
-    z = Math.max(z, Math.abs(s.momentZ));
-  }
-  return z >= y ? 'momentZ' : 'momentY';
-}
-
-/** Κυρίαρχος άξονας τέμνουσας: shearY vs shearZ (μεγαλύτερο max-abs). */
-function dominantShearKey(diagram: readonly DiagramStation[]): 'shearY' | 'shearZ' {
-  let y = 0;
-  let z = 0;
-  for (const s of diagram) {
-    y = Math.max(y, Math.abs(s.shearY));
-    z = Math.max(z, Math.abs(s.shearZ));
-  }
-  return z >= y ? 'shearZ' : 'shearY';
-}
-
-/**
- * Ανάκτηση του ομοιόμορφου φορτίου q (kN/m) από την **καμπυλότητα της ροπής**: για
- * UDL ισχύει `M(x) = a + b·x − (w/2)·x²` → `w = −d²M/dx²` (σταθερό). Δεύτερη διαφορά
- * των ισαπεχουσών σταθμών ροπής, μέσος όρος εσωτερικών → robust. 0 αν <3 σταθμές.
- */
-function recoverUdlKnM(moment: readonly number[], lengthM: number): number {
-  const n = moment.length;
-  if (n < 3 || lengthM <= 0) return 0;
-  const dx = lengthM / (n - 1);
-  if (dx <= 0) return 0;
-  let sum = 0;
-  let count = 0;
-  for (let k = 1; k < n - 1; k++) {
-    sum += Math.abs(moment[k - 1]! - 2 * moment[k]! + moment[k + 1]!) / (dx * dx);
-    count++;
-  }
-  return count > 0 ? sum / count : 0;
-}
-
-/** Τιμή μιας στάθμης για το επιλεγμένο component (κυρίαρχος άξονας ανά μέλος). */
-function stationValue(
-  st: DiagramStation,
-  component: DiagramComponent,
-  momentKey: 'momentY' | 'momentZ',
-  shearKey: 'shearY' | 'shearZ',
-): number {
-  if (component === 'axial') return st.axialN;
-  if (component === 'shear') return st[shearKey];
-  return st[momentKey];
 }
 
 /** Διαδρομή ενός μέλους (ή null αν λείπουν κόμβοι/διάγραμμα). */

@@ -44,7 +44,8 @@
       "padEccentricHogging": "Eccentric footing (e/L={ratio}% > {kern}% kern) — partial base uplift; a top mesh (hogging) is required.",
       "punchingInadequate": "Inadequate punching shear: v_Ed={vEd} MPa > v_Rd,c={vRd} MPa (utilization {utilization}%) — increase thickness or concrete grade.",
       "oneWayShearInadequate": "Inadequate one-way shear: v_Ed={vEd} MPa > v_Rd,c={vRd} MPa (utilization {utilization}%) — increase footing thickness.",
-      "cantileverSlabTooThin": "Cantilever slab L={span}m: thickness {thickness}mm inadequate — L/d ratio {ldRatio} > limit {ldLimit} (deflection). Increase the slab thickness."
+      "cantileverSlabTooThin": "Cantilever slab L={span}m: thickness {thickness}mm inadequate — L/d ratio {ldRatio} > limit {ldLimit} (deflection). Increase the slab thickness.",
+      "beamCantileverTorsionExceedsCapacity": "Beam {width}×{depth}mm: torsion from cantilever slab T_Ed={tEd} kNm > capacity T_Rd,max={tRd} kNm — the section cannot resist the torsion even with stirrups. Enlarge the section or support the free edge."
     },
     "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}",
     "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",

@@ -33,6 +33,7 @@ import { BeamSupportConditionStore } from '../bim/structural/organism/beam-suppo
 import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { runSlabChecks } from '../bim/structural/organism/slab-checks';
+import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
 // ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
 import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
 import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
@@ -135,6 +136,8 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         }, buildActiveFootingFemAxialMap(entities)),
         // ADR-498 — έλεγχος βέλους πλάκας-προβόλου (πολύ λεπτή → warning, αλλιώς σιωπηλό).
         ...runSlabChecks(entities, provider),
+        // ADR-499 §C — στρέψη δοκού από μονόπλευρη πρόβολο-πλάκα (T_Ed > T_Rd,max → warning).
+        ...runBeamTorsionChecks(entities),
         // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
         // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
         ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),

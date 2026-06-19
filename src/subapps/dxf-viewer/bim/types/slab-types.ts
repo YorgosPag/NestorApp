@@ -105,6 +105,13 @@ export interface SlabParams {
   readonly heightOffsetFromLevel?: number;
   /** mm. Πάχος πλάκας (default DEFAULT_SLAB_THICKNESS_MM = 200). */
   readonly thickness: number;
+  /**
+   * ADR-499 — Είναι η πλάκα σε AUTO διαστασιολόγηση πάχους; default = AUTO
+   * (absent/true)· `false` = κλειδωμένη (ο μηχανικός όρισε χειροκίνητα το πάχος →
+   * user wins). Mirror του `BeamParams.autoSized`. Πρόβολος-πλάκα: το πάχος αυτο-
+   * μεγαλώνει ώστε `M_Ed ≤ M_Rd,lim` + `L/d ≤ όριο` (αντί ψεύτικου Ø25/75 σε 200mm).
+   */
+  readonly autoSized?: boolean;
   /** ADR-369 §9 Q7. 'box' (default) | 'tilted'. */
   readonly geometryType: SlabGeometryType;
   /** Required ΟΤΑΝ geometryType='tilted'. Forbidden αλλιώς. */

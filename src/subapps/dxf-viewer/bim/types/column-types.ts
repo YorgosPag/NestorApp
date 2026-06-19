@@ -357,6 +357,13 @@ export interface ColumnParams {
    * absent → δεν έχει υπολογιστεί. ΠΟΤΕ derived state — μόνο input για checks.
    */
   readonly appliedLoad?: AppliedMemberLoad;
+  /**
+   * ADR-499 Slice B2 — Auto-διαστασιολόγηση διατομής. default = AUTO (absent/true):
+   * η χαρακτηριστική διάσταση αυτο-μεγαλώνει ώστε `As,req ≤ ρ_max·A_c` + λυγηρότητα
+   * (`suggestColumnSection`, μόνο `kind==='rectangular'`). `false` = κλειδωμένη (ο
+   * μηχανικός όρισε χειροκίνητα width/depth → user wins). Optional/non-breaking.
+   */
+  readonly autoSized?: boolean;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

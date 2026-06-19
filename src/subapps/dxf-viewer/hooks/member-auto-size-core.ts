@@ -2,28 +2,29 @@
  * member-auto-size-core — ADR-475 (proactive auto διαστασιολόγηση μελών).
  *
  * SSoT πυρήνας της αυτόματης διαστασιολόγησης διατομής, mirror του
- * `structural-auto-reinforce-core`: resolve scope (όλα τα δοκάρια του ενεργού
- * ορόφου) → build ΕΝΑ undoable `AutoSizeMembersCommand` → `exec(cmd)` → emit
- * `bim:beam-params-updated` ανά διαστασιολογημένο δοκάρι (ώστε να το σώσει το
- * `useBeamPersistence` ΚΑΙ να ξανα-τρέξουν φορτία+οπλισμός στη νέα διατομή).
+ * `structural-auto-reinforce-core`: resolve scope (όλα τα διαστασιολογήσιμα μέλη του
+ * ενεργού ορόφου — δοκάρι ύψος ADR-475, πλάκα-πρόβολος πάχος ADR-499) → build ΕΝΑ
+ * undoable `AutoSizeMembersCommand` → `exec(cmd)` → emit `bim:<kind>-params-updated`
+ * ανά διαστασιολογημένο μέλος μέσω του ΕΝΟΣ `emitBimEntityParamsUpdated` (ADR-459 Φ7),
+ * ώστε να το σώσει η persistence ΚΑΙ να ξανα-τρέξουν φορτία+οπλισμός στη νέα διατομή.
  *
  * **Light module (zero firebase/store imports):** ο `provider` injected από τον
  * caller → jest-clean. Το command είναι idempotent ως προς locked/converged μέλη.
  *
- * **Σύγκλιση (κρίσιμο):** η αλυσίδα `sizing → beam-params-updated → loads →
- * loads-computed → sizing` τερματίζει στον convergence guard του `buildBeamSizePatch`
- * (ίδια 50mm-quantized διατομή → μηδέν patch → μηδέν emit). Anti-oscillation.
+ * **Σύγκλιση (κρίσιμο):** η αλυσίδα `sizing → *-params-updated → loads → loads-computed
+ * → sizing` τερματίζει στον convergence guard κάθε patch builder (ίδια quantized
+ * διατομή → μηδέν patch → μηδέν emit). Anti-oscillation, μηδέν infinite-loop.
  *
  * @see core/commands/entity-commands/AutoSizeMembersCommand.ts — το command
  * @see hooks/useProactiveMemberSizing.ts — proactive trigger
- * @see docs/centralized-systems/reference/adrs/ADR-475-auto-member-sizing.md
+ * @see docs/centralized-systems/reference/adrs/ADR-499-auto-correcting-organism.md
  */
 
 import type { ICommand } from '../core/commands/interfaces';
-import { EventBus } from '../systems/events/EventBus';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoSizeMembersCommand } from '../core/commands/entity-commands/AutoSizeMembersCommand';
-import { isBeamEntity } from '../types/entities';
+import { isBeamEntity, isSlabEntity, isColumnEntity } from '../types/entities';
+import { emitBimEntityParamsUpdated } from '../systems/events/emit-bim-entity-params-updated';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { StructuralCodeProvider } from '../bim/structural/codes/structural-code-types';
@@ -53,7 +54,10 @@ export function runMemberAutoSize(
   if (!scene) return 0;
 
   const entities = scene.entities as unknown as readonly Entity[];
-  const ids = entities.filter(isBeamEntity).map((e) => e.id);
+  // ADR-499 — member-generic scope: δοκάρι (ύψος) + πλάκα-πρόβολος (πάχος) + κολώνα
+  // (διατομή, §B2). Το command skip-άρει σιωπηλά όσα δεν αλλάζουν (null patch) → ασφαλές super-set.
+  const sizeable = entities.filter((e) => isBeamEntity(e) || isSlabEntity(e) || isColumnEntity(e));
+  const ids = sizeable.map((e) => e.id);
   if (ids.length === 0) return 0;
 
   const sm = new LevelSceneManagerAdapter(
@@ -66,7 +70,9 @@ export function runMemberAutoSize(
   if (resized.length === 0) return 0; // converged / locked → no-op (κανένα undo entry)
 
   exec(command);
-  // Persist + re-chain (φορτία→οπλισμός) στη νέα διατομή· loop-safe μέσω convergence guard.
-  for (const beamId of resized) EventBus.emit('bim:beam-params-updated', { beamId });
+  // Persist + re-chain (φορτία→οπλισμός) στη νέα διατομή ανά τύπο μέλους (ΕΝΑ SSoT
+  // emit helper, ADR-459 Φ7)· loop-safe μέσω convergence guard.
+  const typeById = new Map(sizeable.map((e) => [e.id, e.type]));
+  for (const id of resized) emitBimEntityParamsUpdated(typeById.get(id) ?? '', id);
   return resized.length;
 }

@@ -17,7 +17,10 @@ import type { AppliedMemberLoad } from '../loads/structural-loads-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 
 const provider = EUROCODE_PROVIDER;
-const HEAVY_LINE: AppliedMemberLoad = { deadAxialKn: 220, liveAxialKn: 80 };
+// ADR-499 — φορτίο εντός της καμπτικής χωρητικότητας της διατομής (M_Ed,πρόβολος < M_Rd,lim),
+// ώστε η σύγκριση πρόβολος-vs-αμφιέρειστο να ΜΗΝ κρύβεται πίσω από το flexural-capacity cap
+// (saturation). Διαφορετικά ένα ανεπαρκές 250×500 θα κορέννυε ΚΑΙ τα δύο στο A_s,lim (ίσα).
+const HEAVY_LINE: AppliedMemberLoad = { deadAxialKn: 36, liveAxialKn: 12 };
 
 function makeBeam(reinforcement?: BeamReinforcement, appliedLoad?: AppliedMemberLoad): BeamEntity {
   const r = completeBeamFromTwoClicks({ x: 0, y: 0 }, { x: 6000, y: 0 }, 'L1');

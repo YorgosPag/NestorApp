@@ -171,10 +171,13 @@ function asMomentColumnMm2(ctx: ColumnSectionContext): number {
  */
 export function asStrengthColumnMm2(ctx: ColumnSectionContext): number {
   const nEdKn = ctx.designAxialKn ?? 0;
-  if (nEdKn <= 0) return 0;
+  // Η αξονική συνιστώσα μετρά μόνο σε θλίψη (N>0)· η **καμπτική** (ADR-491 — πρόβολος
+  // → wL²/2 στη στήριξη) μετρά ΠΑΝΤΑ, ακόμη και με μηδενικό tributary αξονικό — αλλιώς η
+  // στηρίζουσα κολώνα προβόλου έμενε ανεπαρκής, αντίθετα με το intent του resolveColumnDesignLoad.
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE); // N/mm²
-  const concreteCapacityN = fcd * ctx.grossAreaMm2;
-  const asAxialMm2 = Math.max(0, (nEdKn * KN_TO_N - concreteCapacityN) / rebarFydMpa());
+  const asAxialMm2 = nEdKn > 0
+    ? Math.max(0, (nEdKn * KN_TO_N - fcd * ctx.grossAreaMm2) / rebarFydMpa())
+    : 0;
   return asAxialMm2 + asMomentColumnMm2(ctx);
 }
 

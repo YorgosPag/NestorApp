@@ -46,3 +46,19 @@ export function flexuralCapacityCapFactor(designMomentNmm: number, limitMomentNm
   if (limitMomentNmmValue <= 0 || designMomentNmm <= limitMomentNmmValue) return 1;
   return limitMomentNmmValue / designMomentNmm;
 }
+
+/**
+ * ADR-499 (Slice B) — το **ελάχιστο ενεργό βάθος** d ώστε `M_Ed ≤ M_Rd,lim`: αντιστροφή
+ * του `limitMomentNmm` ⇒ `d = √(M_Ed/(μ_lim·f_cd·b))`. Η διατομή που το ικανοποιεί έχει
+ * τη ροπή ακριβώς στο όριο (ξ=ξ_lim)· ο auto-sizer μεγαλώνει το πάχος/ύψος μέχρι εκεί.
+ * ΕΝΑ SSoT με το `limitMomentNmm` (ίδιο `μ·f_cd·b`). 0 σε αφόρτιστη/εκφυλισμένη είσοδο.
+ */
+export function capacityDepthMm(
+  designMomentNmm: number,
+  fcdMpa: number,
+  muLim: number,
+  widthMm: number,
+): number {
+  if (designMomentNmm <= 0 || fcdMpa <= 0 || muLim <= 0 || widthMm <= 0) return 0;
+  return Math.sqrt(designMomentNmm / (muLim * fcdMpa * widthMm));
+}

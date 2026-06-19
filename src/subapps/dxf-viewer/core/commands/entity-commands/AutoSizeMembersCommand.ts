@@ -1,14 +1,16 @@
 /**
- * AUTO-SIZE MEMBERS COMMAND — ADR-475 (auto διαστασιολόγηση διατομής).
+ * AUTO-SIZE MEMBERS COMMAND — ADR-475 (δοκάρι) + ADR-499 (πλάκα-πρόβολος), member-generic.
  *
- * Batch, undoable αυτόματη διαστασιολόγηση N δοκαριών: κάθε AUTO δοκάρι παίρνει την
- * **ελάχιστη επαρκή** διατομή (EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση) μέσω του SSoT
- * `buildBeamSizePatch`. Revit-grade serviceability-driven sizing — το `depth` γίνεται
- * **persisted** γεωμετρία (σε αντίθεση με τον additive/derived οπλισμό).
+ * Batch, undoable αυτόματη διαστασιολόγηση N μελών: κάθε AUTO μέλος παίρνει την
+ * **ελάχιστη επαρκή** διατομή μέσω του αντίστοιχου SSoT patch builder —
+ * `buildBeamSizePatch` (ύψος δοκαριού: EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση) ή
+ * `buildSlabSizePatch` (πάχος πλάκας-προβόλου: L/d + φυσική πύλη M_Ed≤M_Rd,lim, ADR-499).
+ * Revit-grade — η διατομή (`depth`/`thickness`) γίνεται **persisted** γεωμετρία (σε
+ * αντίθεση με τον additive/derived οπλισμό).
  *
- * **Geometry-mutating:** αλλάζει `depth` → το `applyPatch` ξανα-υπολογίζει `geometry`
- * (bbox/volume) + `validation` atomically μέσω `computeBeamGeometry`+`validateBeamParams`
- * (mirror `UpdateBeamParamsCommand`) ώστε render/BOQ να μην αποκλίνουν.
+ * **Geometry-mutating:** αλλάζει διατομή → το `applyPatch` ξανα-υπολογίζει `geometry`
+ * + `validation` atomically per kind (`compute{Beam,Slab}Geometry`+`validate{Beam,Slab}Params`,
+ * mirror `Update{Beam,Slab}ParamsCommand`) ώστε render/BOQ να μην αποκλίνουν.
  *
  * Per-member snapshots χτίζονται ΜΙΑ φορά στο πρώτο `execute()`· `undo`/`redo` =
  * pure re-applies (idempotent). Idempotent ΚΑΙ ως προς converged/locked μέλη (skip
@@ -23,18 +25,35 @@
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Entity } from '../../../types/entities';
+import { isBeamEntity, isSlabEntity, isColumnEntity } from '../../../types/entities';
 import type { BeamGeometry, BeamParams } from '../../../bim/types/beam-types';
+import type { SlabGeometry, SlabParams } from '../../../bim/types/slab-types';
+import type { ColumnGeometry, ColumnParams } from '../../../bim/types/column-types';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
 import { buildBeamSizePatch } from '../../../bim/structural/sizing/beam-size-patch';
-import { resolveActiveBeamSupportType } from '../../../bim/structural/active-reinforcement';
+import { buildSlabSizePatch } from '../../../bim/structural/sizing/slab-size-patch';
+import { buildColumnSizePatch } from '../../../bim/structural/sizing/column-size-patch';
+import {
+  resolveActiveBeamSupportType,
+  resolveActiveSlabSupportCondition,
+  resolveActiveColumnFemMoment,
+} from '../../../bim/structural/active-reinforcement';
 import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
+import { computeSlabGeometry } from '../../../bim/geometry/slab-geometry';
+import { computeColumnGeometry } from '../../../bim/geometry/column-geometry';
 import { validateBeamParams } from '../../../bim/validators/beam-validator';
+import { validateSlabParams } from '../../../bim/validators/slab-validator';
+import { validateColumnParams } from '../../../bim/validators/column-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+
+/** Διατομικά params μέλους που διαστασιολογείται (ύψος δοκαριού / πάχος πλάκας / διατομή κολώνας). */
+type MemberSizeParams = BeamParams | SlabParams | ColumnParams;
 
 interface SizePatchEntry {
   readonly entityId: string;
-  readonly prev: BeamParams;
-  readonly next: BeamParams;
+  readonly entityType: 'beam' | 'slab' | 'column';
+  readonly prev: MemberSizeParams;
+  readonly next: MemberSizeParams;
 }
 
 export class AutoSizeMembersCommand implements ICommand {
@@ -58,41 +77,73 @@ export class AutoSizeMembersCommand implements ICommand {
 
   execute(): void {
     if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
+    for (const p of this.patches) this.applyPatch(p, p.next);
     this.wasExecuted = this.patches.length > 0;
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.entityId, p.prev);
+    for (const p of this.patches) this.applyPatch(p, p.prev);
   }
 
   redo(): void {
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
+    for (const p of this.patches) this.applyPatch(p, p.next);
   }
 
-  /** Snapshot live params per beam → {prev, next}. Skips non-beam / locked / converged. */
+  /**
+   * Snapshot live params per μέλος → {prev, next}. Member-generic (ADR-499): δοκάρι
+   * (ύψος, ADR-475) + πλάκα-πρόβολος (πάχος, ADR-499). Skips non-sizeable / locked /
+   * converged μέσω του null-return κάθε patch builder.
+   */
   private buildPatches(): void {
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
-      // ADR-486 §C — topology-aware τύπος στήριξης (ADR-486): ο πρόβολος (1 στήριξη)
-      // διαστασιολογείται με wL²/2 ώστε ρ≤ρ_max, ίδιο SSoT με τον οπλισμό (μηδέν διπλή αλήθεια).
-      const patch = buildBeamSizePatch(entity, this.provider, resolveActiveBeamSupportType(entityId));
-      if (!patch) continue; // idempotent: μη-δοκάρι / locked / converged
-      this.patches.push({ entityId, prev: patch.prev, next: patch.next });
+      if (isBeamEntity(entity)) {
+        // ADR-486 §C — topology-aware τύπος στήριξης: ο πρόβολος (1 στήριξη) διαστασιολογείται
+        // με wL²/2 ώστε ρ≤ρ_max, ίδιο SSoT με τον οπλισμό (μηδέν διπλή αλήθεια).
+        const patch = buildBeamSizePatch(entity, this.provider, resolveActiveBeamSupportType(entityId));
+        if (patch) this.patches.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
+      } else if (isSlabEntity(entity)) {
+        // ADR-498/499 — πρόβολος-πλάκα: το πάχος αυτο-μεγαλώνει ώστε M_Ed≤M_Rd,lim + L/d≤όριο.
+        const patch = buildSlabSizePatch(entity, this.provider, resolveActiveSlabSupportCondition(entityId));
+        if (patch) this.patches.push({ entityId, entityType: 'slab', prev: patch.prev, next: patch.next });
+      } else if (isColumnEntity(entity)) {
+        // ADR-499 §B2 — στηρίζουσα κολώνα προβόλου: η διατομή αυτο-μεγαλώνει ώστε As,req≤ρ_max·A_c
+        // + λυγηρότητα, με την engaged-gated FEM ροπή (wL²/2, ADR-491· ίδιο SSoT με τον οπλισμό).
+        const patch = buildColumnSizePatch(entity, this.provider, resolveActiveColumnFemMoment(entityId));
+        if (patch) this.patches.push({ entityId, entityType: 'column', prev: patch.prev, next: patch.next });
+      }
     }
   }
 
-  /** Geometry-mutating apply — depth αλλάζει → recompute geometry+validation atomically. */
-  private applyPatch(entityId: string, params: BeamParams): void {
-    const geometry: BeamGeometry = computeBeamGeometry(params);
-    const validation = validateBeamParams(params).bimValidation;
-    this.sceneManager.updateEntity(entityId, {
-      kind: params.kind,
-      params,
-      geometry,
-      validation,
+  /** Geometry-mutating apply — διατομή αλλάζει → recompute geometry+validation atomically per kind. */
+  private applyPatch(entry: SizePatchEntry, params: MemberSizeParams): void {
+    if (entry.entityType === 'slab') {
+      const slabParams = params as SlabParams;
+      const geometry: SlabGeometry = computeSlabGeometry(slabParams);
+      const validation = validateSlabParams(slabParams).bimValidation;
+      this.sceneManager.updateEntity(entry.entityId, {
+        kind: slabParams.kind, params: slabParams, geometry, validation,
+      } as unknown as Partial<SceneEntity>);
+      return;
+    }
+    if (entry.entityType === 'column') {
+      // ADR-499 §B2 — mirror UpdateColumnParamsCommand: recompute geometry + ρ-validation
+      // με τον ενεργό κανονισμό (provider.id) ώστε render/BOQ/validation να μην αποκλίνουν.
+      const columnParams = params as ColumnParams;
+      const geometry: ColumnGeometry = computeColumnGeometry(columnParams);
+      const validation = validateColumnParams(columnParams, this.provider.id).bimValidation;
+      this.sceneManager.updateEntity(entry.entityId, {
+        kind: columnParams.kind, params: columnParams, geometry, validation,
+      } as unknown as Partial<SceneEntity>);
+      return;
+    }
+    const beamParams = params as BeamParams;
+    const geometry: BeamGeometry = computeBeamGeometry(beamParams);
+    const validation = validateBeamParams(beamParams).bimValidation;
+    this.sceneManager.updateEntity(entry.entityId, {
+      kind: beamParams.kind, params: beamParams, geometry, validation,
     } as unknown as Partial<SceneEntity>);
   }
 
@@ -107,7 +158,7 @@ export class AutoSizeMembersCommand implements ICommand {
   }
 
   getDescription(): string {
-    return `Auto-size ${this.patches.length} beam(s)`;
+    return `Auto-size ${this.patches.length} member(s)`;
   }
 
   getAffectedEntityIds(): string[] {

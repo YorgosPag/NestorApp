@@ -171,6 +171,16 @@ export interface SlabSupportCondition {
   readonly supportCount: number;
   /** Μήκος προβόλου (m) = κάθετη προβολή ως την ελεύθερη παρειά· 0 όταν δεν είναι πρόβολος. */
   readonly cantileverLengthM: number;
+  /**
+   * ADR-499 §C — η μοναδική **φέρουσα δοκός** όταν `supportType==='cantilever'` (το hogging
+   * της προβόλου-πλάκας τη φορτίζει στρεπτικά). Absent όταν δεν είναι πρόβολος. Additive.
+   */
+  readonly bearingBeamId?: string;
+  /**
+   * ADR-499 §C — διαμήκες καλυμμένο μήκος (m) της δοκού από την πλάκα-πρόβολο = το μήκος
+   * πάνω στο οποίο δρα ο κατανεμημένος στρεπτικός φόρτος `t_Ed`. Absent όταν δεν είναι πρόβολος.
+   */
+  readonly coverageLengthM?: number;
 }
 
 /**
@@ -182,7 +192,13 @@ export interface SlabSupportCondition {
 function slabSupportCondition(slabPtsM: readonly Pt2M[], axes: readonly BeamAxisM[]): SlabSupportCondition {
   const { covered } = bearingBeams(slabPtsM, axes);
   if (covered.length === 1) {
-    return { supportType: 'cantilever', supportCount: 1, cantileverLengthM: covered[0].perpDepthM };
+    return {
+      supportType: 'cantilever',
+      supportCount: 1,
+      cantileverLengthM: covered[0].perpDepthM,
+      bearingBeamId: covered[0].id,
+      coverageLengthM: covered[0].cov,
+    };
   }
   return { supportType: 'simple', supportCount: covered.length, cantileverLengthM: 0 };
 }

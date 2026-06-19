@@ -39,7 +39,7 @@ function slabDesignSpanMm(ctx: SlabFoundationSectionContext): number {
  * `c` = `spanMomentDivisor(supportType)`: αμφιέρειστο ÷8 (κάτω), **πρόβολος ÷2** (hogging,
  * άνω σχάρα — ADR-498). 0 χωρίς φορτίο/άνοιγμα.
  */
-function slabDesignMomentNmmPerM(ctx: SlabFoundationSectionContext): number {
+export function slabDesignMomentNmmPerM(ctx: SlabFoundationSectionContext): number {
   const qEd = ctx.designLoadKpa ?? 0;
   const spanMm = slabDesignSpanMm(ctx);
   if (qEd <= 0 || spanMm <= 0) return 0;

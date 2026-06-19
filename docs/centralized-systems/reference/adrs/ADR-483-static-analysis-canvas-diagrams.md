@@ -71,3 +71,55 @@ Overlay = leaf subscriber σε **low-freq** stores (γράφονται μόνο 
 - **2026-06-18 (Opus, UNCOMMITTED):** Αρχική υλοποίηση Slice 4. NEW: member-diagram-geometry.ts (+test), member-diagram-draw.ts, StructuralDiagramOverlay.tsx, analysis-diagram-view-store.ts, ShowAnalysisDiagramsToggle.tsx. MOD: view-tab-bim-settings.ts, RibbonPanel.tsx, canvas-layer-stack-2d-overlays-leaf.tsx, i18n el/en dxf-viewer-shell.json.
 - **2026-06-18 (Opus, UNCOMMITTED) — browser-verify fix #1:** Η αρχική κλίμακα ήταν σταθερό pixel ύψος (60px) → το διάγραμμα άλλαζε αναλογία με το zoom (Giorgio το εντόπισε). Διορθώθηκε σε **model-space**: NEW `referenceLengthCanvas` (μέσο μήκος μέλους) στο geometry· overlay pxScale = (referenceLengthCanvas·0.35 / globalMaxAbs) · transform.scale → κλιμάκωση μαζί με το μοντέλο (Robot-grade). 5 jest GREEN.
 - **2026-06-18 (Opus, UNCOMMITTED) — browser-verify fix #2:** Η καμπύλη φαινόταν σπασμένη (polyline 9 σταθμών). NEW `buildSmoothThrough` (midpoint quadratic-bezier) στο `member-diagram-draw` → ομαλή καμπύλη + γέμισμα, περνά ακριβώς από τα άκρα, εξομαλύνει τα ενδιάμεσα· **μηδέν αλλαγή στις σταθμές του solver** (read-only). Pure draw-layer.
+
+## 10. Slice 5 — 3Δ διαγράμματα κολώνας (κατακόρυφος άξονας)
+
+`Στιγμιότυπο οθόνης 2026-06-18 233548.jpg` (το 2Δ δοκάρι ως αναφορά — ζητήθηκε το ίδιο για κολώνες).
+
+**Πρόβλημα/απόφαση (Giorgio):** τα μεμονωμένα M/V/N + η επάρκεια κολώνας **υπάρχουν ήδη** (FEM ADR-481 λύνει
+όλα τα μέλη· panel «ΕΝΤΑΤΙΚΑ ΜΕΓΕΘΗ» ADR-482· M-N οπλισμός ADR-491). Έλειπε μόνο η **οπτική καμπύλη**. Σε
+**κάτοψη** η κολώνα είναι σημείο (`iCanvas==jCanvas`) → το Slice 4 builder φιλτράρει σωστά `memberType!=='beam'`.
+Revit/Robot δείχνουν διαγράμματα κολώνας σε **3Δ/όψη**. Επιλογή Giorgio: **3Δ overlay κατά τον κατακόρυφο άξονα.**
+
+### 10.1 SSoT de-dup (πρώτα)
+Τα sampling helpers (`selectCombination`/`dominantMomentKey`/`dominantShearKey`/`stationValue`/`recoverUdlKnM`/
+`clamp01`) ήταν private στο `member-diagram-geometry`. **Εξάχθηκαν** σε NEW `member-diagram-sampling.ts` (zero
+behaviour change· `DiagramComponent`/`DiagramSample` re-exported για back-compat) → καταναλώνονται **και** από
+το 2Δ (δοκάρια) **και** από το 3Δ (κολώνες) builder. ΕΝΑ SSoT δειγματοληψίας.
+
+### 10.2 Σύστημα συντεταγμένων
+Το analytical model έχει ήδη 3Δ κόμβους (μέτρα): column member `iNode=base` / `jNode=top` (εγγύηση
+`analytical-model-builder.appendColumn`), `zM=baseZmm·0.001`. Mapping analytical `(xM=East,yM=North,zM=Up)` →
+three.js world `(x=East, y=Up, z=−North)` — η ΜΟΝΗ θέση μετατροπής είναι ο mesh builder· το pure geometry module
+μένει domain-agnostic. Default `buildingBaseElevationM=0` (μονό κτίριο)· σταθερό offset = fast-follow.
+
+### 10.3 Υλοποίηση (extend — μηδέν διπλότυπα)
+
+| # | Αλλαγή | Αρχείο |
+|---|--------|--------|
+| 1 | **NEW** shared sampling SSoT (extract από Slice 4) | `analytical/diagrams/member-diagram-sampling.ts` |
+| 2 | import sampling + re-export τύπων (de-dup· zero behaviour change) | `analytical/diagrams/member-diagram-geometry.ts` |
+| 3 | **NEW pure** `buildColumnDiagram3DPaths` (column-only· base→top άξονας· f=xM/L· extremum· reuse sampling) | `bim-3d/diagrams/column-diagram-3d-geometry.ts` |
+| 4 | **NEW** three.js builder `buildColumnDiagram3DGroup` (κορδέλα fill + outline + billboard sprite ετικέτα· analytical→world) | `bim-3d/diagrams/column-diagram-3d-mesh.ts` |
+| 5 | **NEW** overlay `ColumnDiagram3DOverlay` (lifecycle mirror `ProposalGhost3DOverlay`· active όταν `showAnalysisDiagrams && mode!=='2d'`) | `bim-3d/diagrams/ColumnDiagram3DOverlay.tsx` |
+| 6 | mount μετά το `ProposalGhost3DMount` (1 γραμμή) | `bim-3d/viewport/BimViewport3D.tsx` |
+| 7 | **+13 jest** (geometry: column-only/άξονας/sampling/component/dominant/EMPTY/singular· mesh: null/structure/world-map) | `bim-3d/diagrams/__tests__/*` |
+
+**Reuse (μηδέν νέο):** sampling SSoT, analytical node positions, `ProposalGhost3DOverlay` lifecycle, `disposeSubtree`
+pattern, view-store toggle `showAnalysisDiagrams` + `diagramComponent` (ΕΝΑ toggle, δύο projections — 2Δ δοκάρια /
+3Δ κολώνες). **Μηδέν νέο ribbon κουμπί, μηδέν νέο store flag.**
+
+### 10.4 ADR-040 / full automation
+Overlay = leaf subscriber σε **low-freq** stores (`AnalysisResultsStore`/`AnalyticalModelStore`, γράφονται μόνο
+στην «Ανάλυση») + view toggles· useEffect-based `scene.add`/dispose (ΟΧΙ `useSyncExternalStore` σε hot-path/tick)·
+group non-pickable. **Μηδέν αλλαγή στο ADR-040 render loop.** Το `isAnalysisEngaged` περιλαμβάνει ήδη
+`showAnalysisDiagrams` → ο FEM μένει ζωντανός → τα διαγράμματα ακολουθούν κάθε στατική μεταβολή.
+
+### 10.5 Scope / DEFER
+- ✅ **ΕΝΤΟΣ:** κολώνες σε 3Δ (καμπύλη + γέμισμα + ετικέτα ακραίας τιμής· Μ/V/N· αστάθεια→αμπέρ).
+- 🔜 **DEFER:** δοκάρια σε 3Δ (ήδη φαίνονται σε κάτοψη)· dominant-axis-aware επίπεδο offset (v1 = σταθερά +East)·
+  `buildingBaseElevationM` offset· τομή/όψη 2Δ surface· PDF export 3Δ διαγράμματος· caption/στηρίξεις 3Δ.
+
+### Changelog (Slice 5)
+- **2026-06-19 (Opus, UNCOMMITTED):** Slice 5 — 3Δ διαγράμματα κολώνας. SSoT de-dup `member-diagram-sampling`. NEW `column-diagram-3d-geometry` (pure) + `column-diagram-3d-mesh` (three.js) + `ColumnDiagram3DOverlay` (ADR-040-safe lifecycle). Mount στο `BimViewport3D`. **+13 jest GREEN** (24 diagram-suite συνολικά). tsc clean (touched). 🔴 browser-verify (3Δ → «Ανάλυση» → toggle «Διαγράμματα M/V/N» ON → κορδέλες M/V/N κατά τον άξονα κάθε κολώνας) + commit.
+- **2026-06-19 (Opus, UNCOMMITTED) — browser-verify fix #1 (Giorgio):** (α) **χρώματα** — το γέμισμα ροπής ήταν μονόχρωμο (κόκκινο @0.18 opacity → φαινόταν μπεζ)· διορθώθηκε σε **signed δίχρωμο** (μπλε θετική/hogging + κόκκινη αρνητική/sagging, split στα zero-crossings — mirror του 2Δ `fillSignedRibbon`)· V/N μονόχρωμα· opacity 0.18→0.38. (β) **ετικέτα** — κρυβόταν πίσω από το γέμισμα· sprite `depthTest:false`+`depthWrite:false`+`renderOrder=10000` ΚΑΙ προστίθεται **τελευταία** στο group → πάντα μπροστά στο 3Δ. +2 mesh jest (δίχρωμη ροπή / μονόχρωμη N). **5 mesh jest GREEN.**

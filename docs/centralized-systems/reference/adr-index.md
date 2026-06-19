@@ -464,7 +464,7 @@
 | **ADR-480** | Analytical Model SSoT (T2 — αναλυτικός φορέας, θεμέλιο για FEM/σεισμό) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-480-analytical-model-ssot.md) |
 | **ADR-481** | Static Linear FEM Solver (T3 — 3D space-frame K·u=F → πραγματικά M/V/N) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-481-static-fem-solver.md) |
 | **ADR-482** | Static Analysis UI Surface (T3-UI — κουμπί «Ανάλυση» + M/V/N readout + diagnostics) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-482-static-analysis-ui-surface.md) |
-| **ADR-483** | Static Analysis Canvas Diagrams (T3-UI / Slice 4 — διαγράμματα Μ κατά μήκος μελών στον καμβά) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
+| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ διαγράμματα κολώνας κατά τον κατακόρυφο άξονα**) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
 | **ADR-484** | Cross-level Foundation Properties (κοινός SSoT selection resolver) + διασαφήνιση ανάθεσης επιπέδου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-484-cross-level-foundation-properties.md) |
 | **ADR-485** | Reinforcement-Utilization Overlay (T3-UI / Slice 4c — χρωματισμός επάρκειας As,req/As,prov στον καμβά) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-485-utilization-overlay.md) |
 | **ADR-486** | Topology-aware Beam Support Condition (DERIVED-from-connectivity SSoT) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-486-topology-aware-beam-support.md) |
@@ -923,7 +923,7 @@
 | **ADR-480** | Analytical Model SSoT (T2 — αναλυτικός φορέας, θεμέλιο για FEM/σεισμό) | ✅ APPROVED | [View](./adrs/ADR-480-analytical-model-ssot.md) |
 | **ADR-481** | Static Linear FEM Solver (T3 — 3D space-frame K·u=F → πραγματικά M/V/N) | ✅ APPROVED | [View](./adrs/ADR-481-static-fem-solver.md) |
 | **ADR-482** | Static Analysis UI Surface (T3-UI — κουμπί «Ανάλυση» + M/V/N readout + diagnostics) | ✅ APPROVED | [View](./adrs/ADR-482-static-analysis-ui-surface.md) |
-| **ADR-483** | Static Analysis Canvas Diagrams (T3-UI / Slice 4 — διαγράμματα Μ κατά μήκος μελών στον καμβά) | ✅ APPROVED | [View](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
+| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ διαγράμματα κολώνας κατά τον κατακόρυφο άξονα**) | ✅ APPROVED | [View](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
 | **ADR-484** | Cross-level Foundation Properties (κοινός SSoT selection resolver) + διασαφήνιση ανάθεσης επιπέδου | ✅ APPROVED | [View](./adrs/ADR-484-cross-level-foundation-properties.md) |
 | **ADR-485** | Reinforcement-Utilization Overlay (T3-UI / Slice 4c — χρωματισμός επάρκειας As,req/As,prov στον καμβά) | ✅ APPROVED | [View](./adrs/ADR-485-utilization-overlay.md) |
 | **ADR-486** | Topology-aware Beam Support Condition (DERIVED-from-connectivity SSoT) | ✅ APPROVED | [View](./adrs/ADR-486-topology-aware-beam-support.md) |
@@ -938,7 +938,7 @@
 | **ADR-496** | Έξυπνη ευθυγράμμιση κολώνας στα πλαισιωτικά δοκάρια κατά την αλλαγή τύπου (Phase 1 L-shape bearing-arm· **Phase 2 T-shape dual-beam T-junction**· **Phase 3 L-shape dual-leg corner** — Γ σε γωνία με 2 κάθετα δοκάρια, handedness cross-product· command-time, full re-study) | ✅ Phase 3 | [View](./adrs/ADR-496-smart-column-type-change-align-to-beam.md) |
 | **ADR-497** | FEM-authoritative axial — single source of truth κολώνα-N→πέδιλο (engaged FEM υπερισχύει του grid-tributary· ο πρόβολος ADR-495 φτάνει στο πέδιλο· mirror ADR-491) | ✅ Slice 2A | [View](./adrs/ADR-497-fem-authoritative-axial-footing.md) |
 | **ADR-498** | Cantilever-aware slab design (πλάκα-πρόβολος → q·L²/2 hogging άνω σχάρα + L/d warning· topology-aware spatial, mirror ADR-486) | ✅ Slice 1+2 | [View](./adrs/ADR-498-cantilever-slab-design.md) |
-| **ADR-499** | Αυτο-διορθούμενος οργανισμός: flexural-capacity ceiling (M_Ed ≤ M_Rd,lim· cap αντί ψεύτικου Ø25/75) + auto-size διατομών + στρέψη + global feasibility (υλοποιεί ADR-487) | 🟡 Slice A | [View](./adrs/ADR-499-auto-correcting-organism.md) |
+| **ADR-499** | Αυτο-διορθούμενος οργανισμός: flexural-capacity ceiling (M_Ed ≤ M_Rd,lim· cap αντί ψεύτικου Ø25/75) + auto-size διατομών (πλάκα-πρόβολος πάχος + ορθογ. κολώνα διατομή· member-generic AutoSizeMembersCommand) + στρέψη δοκού-προβόλου (v1 sensor: T_Ed/T_Rd,max diagnostic) + global feasibility (υλοποιεί ADR-487) | 🟡 Slice A+B1+B2+C(v1) | [View](./adrs/ADR-499-auto-correcting-organism.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
