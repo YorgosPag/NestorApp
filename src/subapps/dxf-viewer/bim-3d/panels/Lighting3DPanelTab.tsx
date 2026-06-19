@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { PRESET_ORDER } from '../lighting/lighting-presets';
 import { HDRI_PRESETS } from '../lighting/hdri-environment';
 import { HdriUploader } from '../lighting/HdriUploader';
@@ -18,10 +19,18 @@ export function Lighting3DPanelTab() {
     useViewMode3DStore.getState,
   );
 
-  const { hdriPresetId, isLoading, loadError, customHdriUrl, backgroundMode } = useSyncExternalStore(
+  const { hdriPresetId, isLoading, loadError, customHdriUrl } = useSyncExternalStore(
     useEnvironmentStore.subscribe,
     useEnvironmentStore.getState,
     useEnvironmentStore.getState,
+  );
+
+  // ADR-446 §2 — background mode lives on the per-view appearance SSoT (bim-render-settings),
+  // alongside visualStyle — NOT the lighting EnvironmentStore. Subscribe to that primitive.
+  const backgroundMode = useSyncExternalStore(
+    useBimRenderSettingsStore.subscribe,
+    () => useBimRenderSettingsStore.getState().backgroundMode,
+    () => useBimRenderSettingsStore.getState().backgroundMode,
   );
 
   const [timeHour, setTimeHour] = useState(12);
@@ -74,7 +83,7 @@ export function Lighting3DPanelTab() {
         <Switch
           id="bim3d-dark-bg"
           checked={backgroundMode === 'dark'}
-          onCheckedChange={(v) => useEnvironmentStore.getState().setBackgroundMode(v ? 'dark' : 'environment')}
+          onCheckedChange={(v) => useBimRenderSettingsStore.getState().setBackgroundMode(v ? 'dark' : 'environment')}
           className="scale-90 origin-right data-[state=checked]:bg-[hsl(var(--text-success))]"
         />
       </div>

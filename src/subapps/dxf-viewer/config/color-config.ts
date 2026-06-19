@@ -571,6 +571,23 @@ export const CANVAS_THEME = {
 export type CanvasThemeKey = keyof typeof CANVAS_THEME;
 export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
 
+/**
+ * ADR-446 §2 — resolve the LIVE 2D DXF canvas background colour as a concrete hex.
+ *
+ * `CANVAS_THEME.DXF_CANVAS` is the CSS variable `--canvas-background-dxf` (default
+ * `#000000`, AutoCAD black). Consumers that cannot use a CSS variable directly — the
+ * WebGL `scene.background` of the 3D «σαν 2Δ» dark mode — read THIS so the 3D dark
+ * background is FULL SSoT with the 2D canvas: a theme switch (AutoCAD/Blender/…) moves
+ * both views together. Falls back to the token default off-DOM (SSR / tests / workers).
+ */
+export function resolveDxfCanvasBackgroundHex(): string {
+  if (typeof document === 'undefined') return UI_COLORS_BASE.CANVAS_BACKGROUND;
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue('--canvas-background-dxf')
+    .trim();
+  return v || UI_COLORS_BASE.CANVAS_BACKGROUND;
+}
+
 // ============================================================================
 // 🏢 ADR-142: ICON CLICK SEQUENCE COLORS (2026-02-01)
 // ============================================================================

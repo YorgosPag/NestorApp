@@ -12,6 +12,7 @@ import type { EnvmapGenerator } from '../lighting/envmap-generator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
@@ -166,14 +167,18 @@ export class ThreeJsSceneManager {
       (s) => s.hdriUrl,
       (url) => { if (url) void this.loadHdriEnvironment(url); },
     );
-    // ADR-446 §2 — visible-background mode (dark «σαν 2Δ» ↔ environment). The
-    // EnvmapGenerator owns `scene.background`; flip it imperatively + repaint. The
-    // matching edge-colour swap is rebuilt React-side (use-bim3d-vg-resync).
-    this.envmapGenerator.setBackgroundMode(useEnvironmentStore.getState().backgroundMode);
-    this.bgModeUnsub = useEnvironmentStore.subscribe(
-      (s) => s.backgroundMode,
-      (mode) => { this.envmapGenerator.setBackgroundMode(mode); this.markSceneDirty(); },
-    );
+    // ADR-446 §2 — visible-background mode (dark «σαν 2Δ» ↔ environment), per-view SSoT
+    // on `bim-render-settings-store` alongside `visualStyle`. The EnvmapGenerator owns
+    // `scene.background`; flip it imperatively + repaint. The matching edge-colour swap
+    // is rebuilt React-side (use-bim3d-vg-resync). Plain-zustand store → manual prev-guard.
+    this.envmapGenerator.setBackgroundMode(useBimRenderSettingsStore.getState().backgroundMode);
+    let prevBgMode = useBimRenderSettingsStore.getState().backgroundMode;
+    this.bgModeUnsub = useBimRenderSettingsStore.subscribe((s) => {
+      if (s.backgroundMode === prevBgMode) return;
+      prevBgMode = s.backgroundMode;
+      this.envmapGenerator.setBackgroundMode(s.backgroundMode);
+      this.markSceneDirty();
+    });
     // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
@@ -354,14 +359,12 @@ export class ThreeJsSceneManager {
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
     if (this.disposed) return;
-    applyFloorVisibility(this.bimLayer.group, modes);
-    this.markSceneDirty();
+    applyFloorVisibility(this.bimLayer.group, modes); this.markSceneDirty();
   }
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
     if (this.disposed) return;
-    applyBuildingVisibility(this.bimLayer.group, modes);
-    this.markSceneDirty();
+    applyBuildingVisibility(this.bimLayer.group, modes); this.markSceneDirty();
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
@@ -422,16 +425,13 @@ export class ThreeJsSceneManager {
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
     if (this.disposed) return;
-    updateSunDirection(this.sun, azimuthDeg, elevationDeg);
-    this.markSceneDirty();
+    updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.markSceneDirty();
   }
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
   initSectionBox(): void {
     if (this.disposed) return;
-    this.sectionController.ensureInit();
-    this.sectionController.applyState();
-    this.markSceneDirty();
+    this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty();
   }
 
   async loadHdriEnvironment(url: string): Promise<void> {

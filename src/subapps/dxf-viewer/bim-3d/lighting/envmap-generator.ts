@@ -1,15 +1,12 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import type { LightPreset } from './lighting-presets';
-import type { BackgroundMode } from '../stores/EnvironmentStore';
+import type { BackgroundMode } from '../../config/bim-visual-style';
+import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 const ENV_WIDTH = 512;
 const ENV_HEIGHT = 256;
 const BLEND_ZONE = 0.2;
-
-/** ADR-446 §2 — flat dark background for the «σαν 2Δ» view (matches the 2D canvas
- * `#1a1a1a` AND the renderer `setClearColor`). */
-const DARK_BG_COLOR = 0x1a1a1a;
 
 export class EnvmapGenerator {
   private readonly renderer: THREE.WebGLRenderer;
@@ -48,7 +45,8 @@ export class EnvmapGenerator {
   /** Resolve `scene.background` from the current mode + last env-derived source. */
   private applyBackground(): void {
     if (this.backgroundMode === 'dark') {
-      this.scene.background = new THREE.Color(DARK_BG_COLOR);
+      // FULL SSoT — the SAME `--canvas-background-dxf` token the 2D canvas uses.
+      this.scene.background = new THREE.Color(resolveDxfCanvasBackgroundHex());
       return;
     }
     this.scene.background = this.hdriActive && this.currentBackground

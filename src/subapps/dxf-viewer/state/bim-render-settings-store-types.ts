@@ -8,7 +8,7 @@
  */
 
 import type { BimRenderSettings, ResolvedBimSettings, AxisCutKey } from '../config/bim-render-settings-types';
-import type { VisualStylePreset } from '../config/bim-visual-style';
+import type { VisualStylePreset, BackgroundMode } from '../config/bim-visual-style';
 import type { ViewRange } from '../config/bim-view-range';
 import type { BimCategory, ObjectStyle, SubcategoryStyle } from '../config/bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
@@ -82,6 +82,12 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * update + single debounced write (idempotent).
    */
   setVisualStyle: (preset: VisualStylePreset) => void;
+  /**
+   * ADR-446 §2 — set the per-view visible-background mode (`environment` ↔ `dark`,
+   * the «σαν 2Δ» view). Orthogonal to `setVisualStyle`. Single state update + single
+   * debounced write (idempotent).
+   */
+  setBackgroundMode: (mode: BackgroundMode) => void;
   /**
    * ADR-413/446 — LEGACY alias: maps the realistic boolean onto the equivalent
    * Visual Style preset (`true`→'realistic-edges', `false`→'shaded-edges'). Kept

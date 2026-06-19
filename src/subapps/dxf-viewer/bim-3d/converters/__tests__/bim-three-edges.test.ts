@@ -13,9 +13,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 import { attachEdgesProjection } from '../bim-three-edges';
 import { bimEdgeResolutionStore } from '../../edges/bim-edge-resolution-store';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
-import { useEnvironmentStore } from '../../stores/EnvironmentStore';
-import { DEFAULT_OBJECT_STYLES } from '../../../config/bim-object-styles';
-import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
+import { DEFAULT_OBJECT_STYLES, BIM_CATEGORY_LINE_COLORS } from '../../../config/bim-object-styles';
 import type { BimCategory, ObjectStyle } from '../../../config/bim-object-styles';
 
 function makeBoxMesh(): THREE.Mesh {
@@ -41,7 +39,7 @@ describe('ADR-377 Phase E — attachEdgesProjection (3D edge SSoT)', () => {
 
   afterEach(() => {
     setObjectStyles(originalStyles);
-    useEnvironmentStore.getState().setBackgroundMode('environment');
+    useBimRenderSettingsStore.getState().setBackgroundMode('environment');
   });
 
   describe('store-read parity (V/G + subcategory)', () => {
@@ -70,22 +68,22 @@ describe('ADR-377 Phase E — attachEdgesProjection (3D edge SSoT)', () => {
       expect(mat.color.getHex()).toBe(0x1a1a1a); // uniform near-black, not 0xff0000
     });
 
-    it('ADR-446 §2 — dark background + no V/G colour → bright 2D default pen (#ffffff), not near-black', () => {
-      // «σαν 2Δ»: untokened entities must use the bright 2D ByLayer pen so they stay
-      // visible on black — NOT the resolver's near-black DEFAULT_EDGE_COLOR.
-      useEnvironmentStore.getState().setBackgroundMode('dark');
+    it('ADR-446 §2 — dark background → FULL SSoT 2D colour (per-category), NOT the uniform silhouette', () => {
+      // «σαν 2Δ»: the uniform near-black override is dropped, so each entity keeps the
+      // EXACT 2D resolver colour — default wall = wallExterior (#2b2f36), not 0x1a1a1a.
+      useBimRenderSettingsStore.getState().setBackgroundMode('dark');
       setObjectStyles({});
       const mesh = makeBoxMesh();
       attachEdgesProjection(mesh, 'wall', 'common-edges');
       const mat = overlayOf(mesh)!.material as LineMaterial;
-      expect(mat.color.getHex()).toBe(new THREE.Color(DEFAULT_LAYER_COLOR).getHex());
+      expect(mat.color.getHex()).toBe(new THREE.Color(BIM_CATEGORY_LINE_COLORS.wallExterior).getHex());
       expect(mat.color.getHex()).not.toBe(0x1a1a1a);
     });
 
     it('ADR-446 §2 — dark background + explicit V/G colour → that colour (2D parity)', () => {
       // With a dark background the uniform-silhouette override is dropped, so the
       // resolver's per-category colour reaches the edge (matches the 2D line work).
-      useEnvironmentStore.getState().setBackgroundMode('dark');
+      useBimRenderSettingsStore.getState().setBackgroundMode('dark');
       setObjectStyles({
         wall: {
           projectionPen: 5,

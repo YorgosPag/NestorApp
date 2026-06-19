@@ -22,8 +22,6 @@ import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-import { useEnvironmentStore } from '../stores/EnvironmentStore';
-import { DEFAULT_LAYER_COLOR } from '../../config/color-config';
 
 // ADR-375 Phase C.7 — default 3D edge resolution context.
 // scaleDenominator 100 = 1:100 architectural plan, the most common BIM scale.
@@ -70,19 +68,21 @@ export function attachEdgesProjection(
     subcategoryKey,
     objectStyles: useBimRenderSettingsStore.getState().objectStyles,
   });
-  // ADR-446 §2 — «σαν 2Δ» dark background: the uniform near-black silhouette would
-  // vanish on black, so we reproduce the 2D plan line work instead —
-  //   • resolver gave an explicit per-category / V-G / layer colour → use it (parity
-  //     with the 2D override), else
-  //   • fall back to the 2D default pen `DEFAULT_LAYER_COLOR` (#ffffff) — the SAME
-  //     bright ByLayer colour untokened entities get on the 2D dark canvas (NOT the
-  //     resolver's near-black `DEFAULT_EDGE_COLOR`, which would be invisible).
-  // In the default (light/environment) background we keep v2.22's uniform near-black
-  // silhouette (Revit "Shaded with Edges"). width/pattern/visibility stay resolver-driven.
-  const darkBg = useEnvironmentStore.getState().backgroundMode === 'dark';
-  const edgeColor = darkBg ? (style.color ?? DEFAULT_LAYER_COLOR) : BIM_3D_EDGE_COLOR;
+  // ADR-446 §2 — «σαν 2Δ» dark background = FULL SSoT with the 2D line work. The
+  // uniform near-black silhouette override is DROPPED entirely, so each entity keeps
+  // EXACTLY the per-category / V-G / layer colour the 2D plan renders (`style.color`,
+  // the same `resolveSubcategoryStyle` source the 2D renderers read) — e.g. blue
+  // columns, amber beams. On the matching black canvas (--canvas-background-dxf) these
+  // read just like the 2D view. In the default (light/environment) background we keep
+  // v2.22's uniform near-black silhouette (Revit "Shaded with Edges"). width/pattern/
+  // visibility stay resolver-driven in both.
+  const darkBg = useBimRenderSettingsStore.getState().backgroundMode === 'dark';
   attachEdgeOverlay(
     mesh,
-    buildEdgeOverlay(mesh, { ...style, color: edgeColor, occlude: edgeMode !== 'all' }),
+    buildEdgeOverlay(mesh, {
+      ...style,
+      ...(darkBg ? {} : { color: BIM_3D_EDGE_COLOR }),
+      occlude: edgeMode !== 'all',
+    }),
   );
 }

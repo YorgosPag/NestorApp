@@ -18,10 +18,12 @@ import {
 import type { Discipline } from '../bim/discipline/bim-discipline';
 import {
   DEFAULT_VISUAL_STYLE,
+  DEFAULT_BACKGROUND_MODE,
   resolveVisualStyleAxes,
   type VisualStylePreset,
   type FaceMode,
   type EdgeMode,
+  type BackgroundMode,
 } from './bim-visual-style';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
@@ -104,6 +106,13 @@ export interface BimRenderSettings {
    */
   visualStyle?: VisualStylePreset;
   /**
+   * ADR-446 §2 — visible-background mode (the «σαν 2Δ» dark view). ORTHOGONAL to
+   * `visualStyle` (any preset pairs with either background). Absent ⇒ `environment`
+   * (photoreal sky/HDRI, the pre-§2 look). `dark` ⇒ flat 2D-canvas background +
+   * 2D per-category edge colours. Persisted per-view.
+   */
+  backgroundMode?: BackgroundMode;
+  /**
    * ADR-413 — LEGACY realistic-materials bit. Superseded by {@link visualStyle}
    * (ADR-446): `realisticMaterials === (faceMode === 'realistic')`. Retained ONLY
    * to migrate pre-ADR-446 persisted docs; new writes go through `visualStyle`.
@@ -170,6 +179,8 @@ export interface ResolvedBimSettings {
   faceMode: FaceMode;
   /** ADR-446 — EDGES axis, derived from {@link visualStyle}. */
   edgeMode: EdgeMode;
+  /** ADR-446 §2 — resolved visible-background mode (default `environment`). */
+  backgroundMode: BackgroundMode;
   /**
    * ADR-413/446 — DERIVED convenience flag `faceMode === 'realistic'`, kept so
    * existing realistic-only consumers (e.g. roof relief) need no faceMode logic.
@@ -234,6 +245,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     visualStyle,
     faceMode: axes.faceMode,
     edgeMode: axes.edgeMode,
+    // ADR-446 §2 — absent ⇒ environment (photoreal sky/HDRI, the pre-§2 look).
+    backgroundMode: s?.backgroundMode ?? DEFAULT_BACKGROUND_MODE,
     // ADR-413/446 — DERIVED from the face mode (no longer a free-standing bit).
     realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).

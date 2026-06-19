@@ -78,6 +78,20 @@ export interface VisualStyleAxes {
 }
 
 /**
+ * ADR-446 §2 — visible-background mode. ORTHOGONAL to the FACES/EDGES preset axes
+ * (any preset can pair with either background), so it is its own per-view field on
+ * `BimRenderSettings` rather than folded into `VisualStylePreset`:
+ *   - `environment` → the lighting environment shows (gradient sky colour / HDRI). Default.
+ *   - `dark` → flat 2D-canvas colour (`--canvas-background-dxf`) — the «σαν 2Δ» view.
+ *     `scene.environment` is untouched, so PBR faces stay lit; the model edges drop
+ *     their uniform silhouette and keep the 2D per-category colours (FULL SSoT).
+ */
+export type BackgroundMode = 'environment' | 'dark';
+
+/** Default visible-background mode (photoreal environment, the pre-§2 behaviour). */
+export const DEFAULT_BACKGROUND_MODE: BackgroundMode = 'environment';
+
+/**
  * Default visual style = «Shaded with Edges» (Σκιασμένο με Ακμές): lit flat-colour
  * faces + the always-built visible model edge overlay (ADR-375). Giorgio's chosen
  * default (2026-06-13) — every NEW view opens shaded-with-edges; views that already

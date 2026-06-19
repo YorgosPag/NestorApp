@@ -2,7 +2,6 @@
 
 import { useEffect, type RefObject } from 'react';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { type Bim3DEntities, EMPTY_BIM_ENTITIES, useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { subscribeEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
 import { subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
@@ -70,14 +69,18 @@ export function useBim3DVgResync(
       resync();
     });
 
-    // (f) ADR-446 — Visual Style preset: when the per-view style flips (faces and/or
-    // edges axis), rebuild so the scene swaps materials (flat/lit/unlit/textured/
-    // white/hidden) AND re-attaches or drops the edge overlays. Supersedes the
-    // ADR-413 realisticMaterials-only subscription (now derived from visualStyle).
+    // (f) ADR-446 — Visual Style preset OR §2 background mode: when the per-view style
+    // flips (faces and/or edges axis) the scene swaps materials (flat/lit/unlit/textured/
+    // white/hidden) AND re-attaches or drops the edge overlays; when the background mode
+    // flips (σαν 2Δ ↔ environment) the edge COLOUR swaps (uniform silhouette ⟷ 2D
+    // per-category), baked at edge-build time → rebuild. Both live on the SAME store, so
+    // one subscription covers them. (Supersedes the ADR-413 realisticMaterials-only sub.)
     let prevVisualStyle = useBimRenderSettingsStore.getState().visualStyle;
+    let prevBgMode = useBimRenderSettingsStore.getState().backgroundMode;
     const unsubVisualStyle = useBimRenderSettingsStore.subscribe((state) => {
-      if (state.visualStyle === prevVisualStyle) return;
+      if (state.visualStyle === prevVisualStyle && state.backgroundMode === prevBgMode) return;
       prevVisualStyle = state.visualStyle;
+      prevBgMode = state.backgroundMode;
       resync();
     });
 
@@ -95,17 +98,6 @@ export function useBim3DVgResync(
       resync();
     });
 
-    // (h) ADR-446 §2 — «σαν 2Δ» dark background flips the edge colour (uniform
-    // near-black ⟷ per-category 2D line work). The colour is baked at edge-build
-    // time in `bim-three-edges.ts`, so a mode flip must rebuild to re-attach the
-    // overlays. (The `scene.background` half flips imperatively in the manager.)
-    let prevBgMode = useEnvironmentStore.getState().backgroundMode;
-    const unsubBgMode = useEnvironmentStore.subscribe((state) => {
-      if (state.backgroundMode === prevBgMode) return;
-      prevBgMode = state.backgroundMode;
-      resync();
-    });
-
     return () => {
       unsubVg();
       unsubEnvelope();
@@ -114,7 +106,6 @@ export function useBim3DVgResync(
       unsubTextures();
       unsubVisualStyle();
       unsubStructuralOverlays();
-      unsubBgMode();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

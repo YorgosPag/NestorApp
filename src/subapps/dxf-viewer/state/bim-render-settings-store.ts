@@ -79,6 +79,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       // ADR-446 — persist the Visual Style preset (the SSoT); `realisticMaterials`
       // is derived and no longer written.
       visualStyle: state.visualStyle,
+      // ADR-446 §2 — persist the visible-background mode (σαν 2Δ) per-view.
+      backgroundMode: state.backgroundMode,
       showHeatLoad: state.showHeatLoad,
       // ADR-470 — persist the concrete-core toggle per-view.
       showStructuralCore: state.showStructuralCore,
@@ -123,6 +125,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         visualStyle: resolved.visualStyle,
         faceMode: resolved.faceMode,
         edgeMode: resolved.edgeMode,
+        backgroundMode: resolved.backgroundMode,
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
         showStructuralCore: resolved.showStructuralCore,
@@ -251,6 +254,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     setRealisticMaterials(realisticMaterials) {
       // ADR-446 — legacy alias onto the equivalent Visual Style preset.
       get().setVisualStyle(realisticMaterials ? 'realistic-edges' : 'shaded-edges');
+    },
+
+    setBackgroundMode(backgroundMode) {
+      const state = get();
+      if (state.backgroundMode === backgroundMode) return; // idempotent — no-op write
+      set({ backgroundMode, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), backgroundMode }));
     },
 
     setShowHeatLoad(showHeatLoad) {

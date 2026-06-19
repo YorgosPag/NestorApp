@@ -139,9 +139,82 @@ etc.). No high-frequency subscriber or bitmap-cache-key change.
   concern, not BIM solids).
 - Per-category visual-style overrides.
 
+## 8. §2 — Dark «σαν 2Δ» background mode (2026-06-20)
+
+**Problem.** Giorgio works mostly in the 2D canvas: he likes the entity line work on
+the dark AutoCAD background. In 3D the look diverged on two counts — (a) the visible
+background was always the lighting environment (gradient sky colour or HDRI texture,
+never dark), and (b) the model edges were forced to a uniform near-black silhouette
+(`#1a1a1a`, §4 v2.22) which is invisible on a dark background anyway. He asked for the
+3D model lines + dark background to match the 2D view, **with FULL SSoT — exactly the
+2D colours, no recolouring**.
+
+**Root cause.**
+- Background: `EnvmapGenerator` wrote `scene.background` from the env (`skyColor` /
+  HDRI) on every light-preset change, overriding `renderer.setClearColor`. `background`
+  (what you SEE) and `environment` (how PBR faces are LIT) were coupled.
+- Edges: `bim-three-edges.ts` overrode the resolver colour with the uniform
+  `BIM_3D_EDGE_COLOR`. The resolver already returns the SAME per-category colour the
+  2D renderers read (`resolveSubcategoryStyle`); the override was discarding it.
+
+**Decision — a `backgroundMode` field on the per-view appearance SSoT
+(`bim-render-settings-store`), ORTHOGONAL to the `visualStyle` preset.**
+
+```
+backgroundMode = 'environment' (default — photoreal sky/HDRI) | 'dark' (σαν 2Δ)
+```
+
+It lives on `BimRenderSettings` next to `visualStyle` (the SAME ADR-446 per-view,
+Firestore-persisted SSoT for «how this view looks») — NOT on the lighting
+`EnvironmentStore` (HDRI/sun, non-persisted). Reasons: (1) it is a view appearance
+preference, identical in nature to `visualStyle`; (2) it persists per-view, so a user's
+dark-view choice is remembered per level; (3) the rebuild subscriber
+(`use-bim3d-vg-resync`) already watches this store, so visualStyle + backgroundMode
+share ONE subscription. The type itself lives in `config/bim-visual-style.ts` (the
+pure-data appearance SSoT). It is its own field rather than a `VisualStylePreset`
+variant because it is orthogonal — any preset pairs with either background.
+
+- **Background (what you see).** `EnvmapGenerator.applyBackground()` is the sole
+  resolver of `scene.background`: in `dark` it paints the FULL-SSoT 2D canvas colour
+  via `resolveDxfCanvasBackgroundHex()` (the live `--canvas-background-dxf` token —
+  a theme switch moves both 2D and 3D together), in `environment` it restores the
+  env-derived sky/HDRI. **`scene.environment` is never touched**, so PBR faces keep
+  their IBL lighting/reflections in either mode. The manager flips it imperatively on
+  the `bim-render-settings-store` subscription (+ repaint).
+- **Edges (the line work).** In `dark`, `bim-three-edges.ts` DROPS the uniform-
+  silhouette override entirely → each entity keeps EXACTLY its 2D `style.color`
+  (blue columns, amber beams, …). FULL SSoT, zero recolouring. In `environment` the
+  v2.22 uniform near-black silhouette (Revit "Shaded with Edges") is unchanged.
+  width/pattern/visibility stay resolver-driven in both. The colour is baked at
+  edge-build time, so a mode flip rebuilds via `use-bim3d-vg-resync` (f), folded into
+  the existing visualStyle subscription (one store, one sub).
+- **UI.** A «Σκούρο φόντο (σαν 2Δ)» switch in the Lighting 3D panel tab (reads the
+  `bim-render-settings-store` primitive).
+
+**Files.** `config/bim-visual-style.ts` (`BackgroundMode` type + `DEFAULT_BACKGROUND_MODE`)
+· `config/bim-render-settings-types.ts` (persisted `backgroundMode` field + resolved +
+`resolveBimSettings`) · `state/bim-render-settings-store(-types).ts` (`setBackgroundMode`
++ buildRaw/loadForLevel) · `lighting/envmap-generator.ts` (`setBackgroundMode` +
+`applyBackground` SSoT) · `scene/ThreeJsSceneManager.ts` (+ `scene-dispose.ts`)
+subscription/teardown · `converters/bim-three-edges.ts` (drop override in dark) ·
+`viewport/use-bim3d-vg-resync.ts` (f) rebuild trigger · `config/color-config.ts`
+(`resolveDxfCanvasBackgroundHex` SSoT helper) · `panels/Lighting3DPanelTab.tsx` (UI)
+· i18n `bim3d.lighting.darkBackground` (el+en). 8 jest (bim-three-edges).
+
+**ADR-040.** Background flip is imperative (manager subscription, zero React render).
+Edge rebuild reuses the existing `use-bim3d-vg-resync` path. No new high-freq subscriber.
+
 ---
 
 ## Changelog
+- **2026-06-20** — §2 Dark «σαν 2Δ» background mode: `backgroundMode` field on the
+  per-view appearance SSoT (`bim-render-settings-store`, Firestore-persisted, beside
+  `visualStyle`) — NOT a separate store. FULL-SSoT 2D colours (edges drop the uniform
+  override → per-category `style.color`; background = live `--canvas-background-dxf`
+  token via `resolveDxfCanvasBackgroundHex`). `scene.environment` untouched (PBR lit in
+  both); orthogonal to visualStyle (own field, shared rebuild subscription). 8 jest pass.
+  🔴 browser-verify + commit. **(Next phase: ADR-TBD plan-locked 3D mode — 2D grips
+  inside the 3D view.)**
 - **2026-06-13** — Default changed `realistic-edges` → `shaded-edges` (Σκιασμένο με
   Ακμές), Giorgio's request. `DEFAULT_VISUAL_STYLE` (SSoT) + `deriveVisualStyleFromLegacy`
   (absent/`false` legacy bit ⇒ default; explicit `true` still ⇒ `realistic-edges`).
