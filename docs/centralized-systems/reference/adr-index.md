@@ -464,7 +464,7 @@
 | **ADR-480** | Analytical Model SSoT (T2 — αναλυτικός φορέας, θεμέλιο για FEM/σεισμό) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-480-analytical-model-ssot.md) |
 | **ADR-481** | Static Linear FEM Solver (T3 — 3D space-frame K·u=F → πραγματικά M/V/N) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-481-static-fem-solver.md) |
 | **ADR-482** | Static Analysis UI Surface (T3-UI — κουμπί «Ανάλυση» + M/V/N readout + diagnostics) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-482-static-analysis-ui-surface.md) |
-| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ διαγράμματα κολώνας κατά τον κατακόρυφο άξονα**) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
+| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ κολώνας** · **Slice 6 3Δ δοκαριού στο κάθετο επίπεδο ανοίγματος**) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
 | **ADR-484** | Cross-level Foundation Properties (κοινός SSoT selection resolver) + διασαφήνιση ανάθεσης επιπέδου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-484-cross-level-foundation-properties.md) |
 | **ADR-485** | Reinforcement-Utilization Overlay (T3-UI / Slice 4c — χρωματισμός επάρκειας As,req/As,prov στον καμβά) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-485-utilization-overlay.md) |
 | **ADR-486** | Topology-aware Beam Support Condition (DERIVED-from-connectivity SSoT) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-486-topology-aware-beam-support.md) |
@@ -923,7 +923,7 @@
 | **ADR-480** | Analytical Model SSoT (T2 — αναλυτικός φορέας, θεμέλιο για FEM/σεισμό) | ✅ APPROVED | [View](./adrs/ADR-480-analytical-model-ssot.md) |
 | **ADR-481** | Static Linear FEM Solver (T3 — 3D space-frame K·u=F → πραγματικά M/V/N) | ✅ APPROVED | [View](./adrs/ADR-481-static-fem-solver.md) |
 | **ADR-482** | Static Analysis UI Surface (T3-UI — κουμπί «Ανάλυση» + M/V/N readout + diagnostics) | ✅ APPROVED | [View](./adrs/ADR-482-static-analysis-ui-surface.md) |
-| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ διαγράμματα κολώνας κατά τον κατακόρυφο άξονα**) | ✅ APPROVED | [View](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
+| **ADR-483** | Static Analysis Canvas Diagrams (Slice 4 διαγράμματα Μ/V/N δοκαριών κάτοψη · **Slice 5 3Δ κολώνας** · **Slice 6 3Δ δοκαριού στο κάθετο επίπεδο ανοίγματος**) | ✅ APPROVED | [View](./adrs/ADR-483-static-analysis-canvas-diagrams.md) |
 | **ADR-484** | Cross-level Foundation Properties (κοινός SSoT selection resolver) + διασαφήνιση ανάθεσης επιπέδου | ✅ APPROVED | [View](./adrs/ADR-484-cross-level-foundation-properties.md) |
 | **ADR-485** | Reinforcement-Utilization Overlay (T3-UI / Slice 4c — χρωματισμός επάρκειας As,req/As,prov στον καμβά) | ✅ APPROVED | [View](./adrs/ADR-485-utilization-overlay.md) |
 | **ADR-486** | Topology-aware Beam Support Condition (DERIVED-from-connectivity SSoT) | ✅ APPROVED | [View](./adrs/ADR-486-topology-aware-beam-support.md) |

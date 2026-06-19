@@ -117,8 +117,47 @@ group non-pickable. **Μηδέν αλλαγή στο ADR-040 render loop.** Το
 
 ### 10.5 Scope / DEFER
 - ✅ **ΕΝΤΟΣ:** κολώνες σε 3Δ (καμπύλη + γέμισμα + ετικέτα ακραίας τιμής· Μ/V/N· αστάθεια→αμπέρ).
-- 🔜 **DEFER:** δοκάρια σε 3Δ (ήδη φαίνονται σε κάτοψη)· dominant-axis-aware επίπεδο offset (v1 = σταθερά +East)·
-  `buildingBaseElevationM` offset· τομή/όψη 2Δ surface· PDF export 3Δ διαγράμματος· caption/στηρίξεις 3Δ.
+- ✅ **ΕΝΤΟΣ (Slice 6):** δοκάρια σε 3Δ (κάθετο επίπεδο ανοίγματος, fixed — βλ. §11).
+- 🔜 **DEFER:** dominant-axis-aware επίπεδο offset (v1 = σταθερά +East/world-up)·
+  `buildingBaseElevationM` offset· κεκλιμένα δοκάρια (v1 = οριζόντιο, αγνοεί zM-κλίση)· τομή/όψη 2Δ surface·
+  PDF export 3Δ διαγράμματος· caption/στηρίξεις 3Δ· beam nadir-billboard (διαθέσιμο `billboardDiagramPivots`, μη-ενεργό).
+
+---
+
+## 11. Slice 6 — 3Δ διαγράμματα δοκαριού (κάθετο επίπεδο ανοίγματος)
+
+Το **DEFER της §10.5** («δοκάρια σε 3Δ»): mirror των κολωνών (Slice 5), αλλά στο **κάθετο επίπεδο που
+περιέχει τον άξονα του δοκαριού** (Revit/Robot beam diagram), αντί κατακόρυφου άξονα. Τα δοκάρια ήδη
+σχεδιάζονταν σε **2Δ κάτοψη** (`StructuralDiagramOverlay`)· έλειπε μόνο η 3Δ απόδοση.
+
+### 11.1 SSoT extraction (μηδέν copy-paste column→beam)
+Τα **member-generic** helpers του `column-diagram-3d-mesh.ts` εξήχθησαν αυτούσια (zero behaviour change,
+column tests byte-for-byte πράσινα) σε **NEW `bim-3d/diagrams/member-diagram-3d-shared.ts`**:
+`MEMBER_DIAGRAM_3D_COLORS`, render-order consts (9990/9991/10000), `fillMesh`, `makeTextSprite`,
+`buildSignedRibbonFill` (zero-crossing signed split + outline), `billboardDiagramPivots`,
+`MEMBER_DIAGRAM_PIVOT_FLAG`. Ο column builder τα ξανα-εξάγει ως aliases (`COLUMN_DIAGRAM_COLORS`,
+`COLUMN_DIAGRAM_PIVOT_FLAG`, `billboardColumnDiagrams`). Sampling SSoT (`member-diagram-sampling`) ήδη
+κοινό από Slice 5. → ΕΝΑ SSoT, και τα δύο μέλη το καταναλώνουν.
+
+### 11.2 Προσανατολισμός (κύρια απόφαση — fixed, ΟΧΙ billboard)
+Κάθε δοκάρι σε ΔΙΚΟ pivot group στο **3D μέσο** του (`((xM_i+xM_j)/2, (zM_i+zM_j)/2, −(yM_i+yM_j)/2)`).
+Pivot quaternion κλειδωμένο στο build: τοπικό **+X = κατεύθυνση ανοίγματος** (`normalize(Δx,0,−Δy)`),
+**+Y = world up** (offset τιμής κρέμεται πάνω/κάτω), **+Z = οριζόντια νορμάλ** (ex×up). **Fixed κάθετο
+επίπεδο** (Revit-style) → διαβάζεται από κάθε πλάγιο orbit, edge-on μόνο από αυστηρό nadir· ΟΧΙ
+full-billboard όπως οι κολώνες (κατακόρυφες → χρειάζονται billboard κατά του nadir). Συνέπεια: ο
+overlay είναι **στατικός — κανένα per-frame work/scheduler** (vs ο column που κάνει register billboard).
+Sagging=ΑΡΝΗΤΙΚΟ → κρέμεται κάτω (κόκκινο), hogging πάνω (μπλε). 🔴 **browser-verify οπτικά με Giorgio.**
+
+### Changelog (Slice 6)
+- **2026-06-19 (Opus, UNCOMMITTED):** Slice 6 — 3Δ διαγράμματα δοκαριού. **SSoT extraction**: NEW
+  `member-diagram-3d-shared.ts` (member-generic mesh helpers· column builder τα ξανα-εξάγει ως aliases,
+  tests byte-for-byte πράσινα). NEW `beam-diagram-3d-geometry.ts` (pure, beam-only filter, πλήρεις 3D
+  κόμβοι με zM) + `beam-diagram-3d-mesh.ts` (fixed κάθετο επίπεδο ανοίγματος, +X=span/+Y=up, pivot στο
+  3D μέσο) + `BeamDiagram3DOverlay.tsx` (ADR-040-safe, **στατικός — χωρίς scheduler** αφού fixed plane).
+  Mount στο `BimViewport3D` (1 γραμμή, δίπλα στον column overlay). ΕΝΑ toggle οδηγεί 2Δ+3Δ-column+3Δ-beam.
+  **+14 jest GREEN** (30 diagram-suite-3D συνολικά). 🔴 browser-verify (3Δ → «Ανάλυση» → toggle ON →
+  κορδέλες M/V/N στο κάθετο επίπεδο κάθε δοκαριού· beam+column μαζί· **οπτική επιβεβαίωση fixed-plane vs
+  billboard**· selection+hatch τομή ενεργά → χρώματα σταθερά) + commit.
 
 ### Changelog (Slice 5)
 - **2026-06-19 (Opus, UNCOMMITTED):** Slice 5 — 3Δ διαγράμματα κολώνας. SSoT de-dup `member-diagram-sampling`. NEW `column-diagram-3d-geometry` (pure) + `column-diagram-3d-mesh` (three.js) + `ColumnDiagram3DOverlay` (ADR-040-safe lifecycle). Mount στο `BimViewport3D`. **+13 jest GREEN** (24 diagram-suite συνολικά). tsc clean (touched). 🔴 browser-verify (3Δ → «Ανάλυση» → toggle «Διαγράμματα M/V/N» ON → κορδέλες M/V/N κατά τον άξονα κάθε κολώνας) + commit.
