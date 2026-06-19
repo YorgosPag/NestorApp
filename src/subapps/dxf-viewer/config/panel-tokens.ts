@@ -1691,9 +1691,9 @@ export const PANEL_ANCHORING = {
     /** Guide panel gap from the section slider (left) and the ViewCube (top) */
     GUIDE_PANEL_GAP: 8,
     /** Guide panel upward nudge from the ViewCube-bottom anchor (Giorgio 2026-06-19) */
-    GUIDE_PANEL_VERTICAL_LIFT: 50,
+    GUIDE_PANEL_VERTICAL_LIFT: 44,
     /** Guide panel rightward nudge from the section-slider anchor (Giorgio 2026-06-19) */
-    GUIDE_PANEL_HORIZONTAL_NUDGE: 5,
+    GUIDE_PANEL_HORIZONTAL_NUDGE: 7,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
