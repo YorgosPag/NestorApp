@@ -62,3 +62,15 @@ export function capacityDepthMm(
   if (designMomentNmm <= 0 || fcdMpa <= 0 || muLim <= 0 || widthMm <= 0) return 0;
   return Math.sqrt(designMomentNmm / (muLim * fcdMpa * widthMm));
 }
+
+/**
+ * ADR-499 (Slice D) — επαρκεί καμπτικά η διατομή; `M_Ed ≤ M_Rd,lim`. Η αντίστροφη
+ * ερώτηση του `flexuralCapacityCapFactor`: όταν επιστρέφει `false` **ΚΑΙ** η διατομή
+ * είναι ήδη στο πρακτικό μέγιστο πάχος/ύψος, ο οργανισμός κλιμακώνει σε diagnostic
+ * «ανέφικτο» (`feasibility-checks`, η έσχατη παρέμβαση του οράματος ADR-487 §7).
+ * `limitMomentNmmValue ≤ 0` (εκφυλισμένη/αφόρτιστη διατομή) ⇒ θεωρείται **επαρκής**
+ * (μη-περιοριστική· ΕΝΑ SSoT με το cap-factor guard — μηδέν απόκλιση).
+ */
+export function isFlexurallyAdequate(designMomentNmm: number, limitMomentNmmValue: number): boolean {
+  return limitMomentNmmValue <= 0 || designMomentNmm <= limitMomentNmmValue;
+}

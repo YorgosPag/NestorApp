@@ -40,8 +40,8 @@ const SLAB_THICKNESS_MODULE_MM = 10;
 /** Πρακτικό άνω φράγμα πάχους πλάκας (mm) — πάνω από αυτό → Slice D escalation (ανέφικτο). */
 export const MAX_PRACTICAL_SLAB_THICKNESS_MM = 1200;
 
-/** Πλάτος λωρίδας σχεδιασμού πλάκας (mm) — ανά μέτρο. */
-const SLAB_DESIGN_STRIP_MM = 1000;
+/** Πλάτος λωρίδας σχεδιασμού πλάκας (mm) — ανά μέτρο. ADR-499 §D: reuse στο feasibility-check. */
+export const SLAB_DESIGN_STRIP_MM = 1000;
 
 /** Ποιος έλεγχος καθόρισε το τελικό πάχος (διαγνωστικό/τεκμηρίωση). */
 export type SlabSizingGovernedBy = 'serviceability' | 'capacity' | 'minimum';

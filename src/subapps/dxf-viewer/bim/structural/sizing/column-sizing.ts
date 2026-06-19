@@ -114,3 +114,19 @@ export function suggestColumnSection(
     : slenderMinMm > MIN_COLUMN_DIMENSION_MM ? 'slenderness' : 'minimum';
   return { widthMm: Math.max(params.width, s), depthMm: Math.max(params.depth, s), governedBy };
 }
+
+/**
+ * ADR-499 (Slice D) — είναι η **ορθογώνια** κολώνα ανέφικτη στο πρακτικό μέγιστο; (ο
+ * διαμήκης οπλισμός δεν χωρά: `As,req > ρ_max·A_c` ακόμη και στη
+ * `MAX_PRACTICAL_COLUMN_DIMENSION_MM`). Τότε ο οργανισμός κλιμακώνει σε diagnostic
+ * «ανέφικτο» (`feasibility-checks`). Μη-ορθογώνια (DEFER auto-size) → `false` (no-op).
+ * Reuse του ΙΔΙΟΥ `columnSectionFits` @max → μηδέν διπλό κριτήριο `As≤ρ_max·A_c`.
+ */
+export function isColumnInfeasibleAtMaxSection(
+  provider: StructuralCodeProvider,
+  params: ColumnParams,
+  femMomentKnm?: number,
+): boolean {
+  if (params.kind !== 'rectangular') return false;
+  return !columnSectionFits(provider, params, femMomentKnm, MAX_PRACTICAL_COLUMN_DIMENSION_MM);
+}

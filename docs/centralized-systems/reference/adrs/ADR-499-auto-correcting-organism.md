@@ -1,6 +1,6 @@
 # ADR-499 — Αυτο-διορθούμενος Οργανισμός: capacity ceiling + auto-size διατομών + στρέψη + global feasibility
 
-**Status:** 🟡 IN PROGRESS — Slice A + B1 + B2 + C(v1 sensor) DONE (UNCOMMITTED), Slice D PLANNED· πλήρες §6.3 torsion design DEFER (νέα συνεδρία)
+**Status:** 🟡 IN PROGRESS — Slice A + B1 + B2 + C(v1 sensor) + D DONE (UNCOMMITTED)· πλήρες §6.3 torsion design (actuator) = επόμενο
 **Date:** 2026-06-19
 **Author:** Opus session (συνέχεια ADR-498)
 **Υλοποιεί:** ADR-487 §3-§5 (Living Structural Organism — δυναμική επανα-διαστασιολόγηση)
@@ -44,8 +44,12 @@ NEW SSoT `codes/flexural-capacity.ts`: `M_Rd,lim = μ_lim·f_cd·b·d²` (EC2 An
 
 **C — πλήρες EC2 §6.3 (DEFER, νέα συνεδρία):** στρεπτικοί συνδετήρες `A_st/s` + διαμήκης στρεπτικός χάλυβας + αλληλεπίδραση διάτμησης-στρέψης `T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1` + **section-grow** (auto-correct) + μη-ορθογώνιες. Ο «actuator» πάνω στον v1 sensor.
 
-### D — Global feasibility escalation (warning ΜΟΝΟ εδώ) — PLANNED
-Όταν το auto-size (B) φτάσει πρακτικό μέγιστο και ΑΚΟΜΑ δεν επαρκεί → escalate diagnostic «ανέφικτο — απαιτείται αλλαγή σχεδιασμού». Reuse `StructuralDiagnostic` + `runSlabChecks` (ADR-498). Η έσχατη παρέμβαση.
+### D — Global feasibility escalation (το ΜΟΝΑΔΙΚΟ `error`) ✅ DONE (UNCOMMITTED)
+Όταν το auto-size (B/§6.3) φτάσει το πρακτικό μέγιστο (`MAX_PRACTICAL_{SLAB_THICKNESS,COLUMN_DIMENSION}_MM` / `BEAM_MAX_PRACTICAL_DEPTH_MM`) και η διατομή είναι **ΑΚΟΜΑ ανεπαρκής** → diagnostic `severity:'error'` «ανέφικτο — απαιτείται αλλαγή σχεδιασμού». Η έσχατη παρέμβαση (ADR-487 §7): εδώ η αυτο-διόρθωση έχει εξαντληθεί, ο «στατικός» παραδίδεται στον άνθρωπο.
+
+NEW `organism/feasibility-checks.ts` `runFeasibilityChecks(entities, provider, femMomentByColumnId)` (pure, mirror `runSlabChecks`): **πλάκα** `!isFlexurallyAdequate(M_Ed, M_Rd,lim@max thickness)` · **κολώνα** `isColumnInfeasibleAtMaxSection` (reuse private `columnSectionFits` @MAX → μηδέν διπλό `As≤ρ_max·A_c`) · **δοκός-στρέψη** `assessBeamTorsion → 'infeasible'`. RE-ADD `flexural-capacity.isFlexurallyAdequate` (μαζί με τον consumer → CHECK 3.22 clean). NEW `buildActiveColumnFemMomentMap` (active-reinforcement· engaged-gated, ίδια ροπή με τον B2 sizer → μηδέν διπλή αλήθεια· store coupling έξω από τον pure runner, mirror `buildActiveFootingFemAxialMap`).
+
+**Warning↔error dedup (Giorgio: «πάντα ΕΝΑ μήνυμα»):** NEW shared classifier `beam-torsion.classifyBeamTorsion → 'ok'|'growToFix'|'infeasible'` + `assessBeamTorsion` (ΕΝΑ SSoT). Ο C-v1 runner (`beam-torsion-checks`) βγάζει **warning ΜΟΝΟ σε `'growToFix'`** (λύνεται μεγαλώνοντας)· το D βγάζει **error ΜΟΝΟ σε `'infeasible'`** (ανέφικτο ακόμη και @ `BEAM_MAX_PRACTICAL_DEPTH_MM`) → αμοιβαία αποκλειόμενα, μηδέν διπλό diagnostic. ΕΝΑ i18n key `sectionInfeasibleAtMaxSize` (ICU select στο `memberKind` token, el+en). Wired στο `useStructuralOrganism` diagnostics pass — **κανένα νέο reactive trigger**. 25 jest (3 suites), 775 structural pass· 6 fails = pre-existing raft (ADR-476).
 
 ---
 
@@ -94,12 +98,27 @@ NEW SSoT `codes/flexural-capacity.ts`: `M_Rd,lim = μ_lim·f_cd·b·d²` (EC2 An
 - **MOD** `hooks/useStructuralOrganism.ts` — `...runBeamTorsionChecks(entities)` στο diagnostics pass.
 - **MOD** `i18n/locales/{el,en}/dxf-viewer-shell.json` — `beamCantileverTorsionExceedsCapacity`.
 
+### Slice D (DONE, UNCOMMITTED)
+- **NEW** `bim/structural/organism/feasibility-checks.ts` — `runFeasibilityChecks` (πλάκα/κολώνα/δοκός-στρέψη ανέφικτα @ max → error).
+- **NEW** `bim/structural/organism/__tests__/feasibility-checks.test.ts` (10 jest).
+- **MOD** `codes/flexural-capacity.ts` — RE-ADD `isFlexurallyAdequate` (consumer = feasibility-checks).
+- **MOD** `sizing/column-sizing.ts` — `isColumnInfeasibleAtMaxSection` (reuse private `columnSectionFits` @MAX).
+- **MOD** `sizing/slab-sizing.ts` — export `SLAB_DESIGN_STRIP_MM` (reuse στο feasibility-check).
+- **MOD** `loads/beam-torsion.ts` — `classifyBeamTorsion` (`'ok'|'growToFix'|'infeasible'`) + `assessBeamTorsion` (ΕΝΑ SSoT για warning+error).
+- **MOD** `organism/beam-torsion-checks.ts` — refactor → warning ΜΟΝΟ σε `'growToFix'` (μηδέν διπλό με το D error).
+- **MOD** `bim/structural/active-reinforcement.ts` — `buildActiveColumnFemMomentMap` (engaged-gated, B2-parity).
+- **MOD** `organism/structural-organism-types.ts` — `StructuralDiagnosticCode` += `sectionInfeasibleAtMaxSize`.
+- **MOD** `hooks/useStructuralOrganism.ts` — `...runFeasibilityChecks(entities, provider, buildActiveColumnFemMomentMap(entities))`.
+- **MOD** `i18n/locales/{el,en}/dxf-viewer-shell.json` — `sectionInfeasibleAtMaxSize` (ICU select στο `memberKind`).
+- **MOD** `loads/__tests__/beam-torsion.test.ts` + `organism/__tests__/beam-torsion-checks.test.ts` — classifier + νέα σημασιολογία (warning↔error).
+
 ---
 
 ## 5. Changelog
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-06-19 | **Slice D (global feasibility escalation — το ΜΟΝΑΔΙΚΟ `error`).** NEW `organism/feasibility-checks.ts` `runFeasibilityChecks` (πλάκα `!isFlexurallyAdequate@max thickness` + κολώνα `isColumnInfeasibleAtMaxSection` reuse `columnSectionFits@MAX` + δοκός-στρέψη `assessBeamTorsion→'infeasible'`). RE-ADD `flexural-capacity.isFlexurallyAdequate` (με consumer → CHECK 3.22). NEW `buildActiveColumnFemMomentMap` (engaged-gated, B2-parity). **Warning↔error dedup** (Giorgio «πάντα ΕΝΑ μήνυμα»): NEW shared `beam-torsion.classifyBeamTorsion`/`assessBeamTorsion` (`'ok'|'growToFix'|'infeasible'`)· C-v1 warning ΜΟΝΟ σε `growToFix`, D error ΜΟΝΟ σε `infeasible` → αμοιβαία αποκλειόμενα. ΕΝΑ i18n key `sectionInfeasibleAtMaxSize` (ICU select `memberKind`, el+en). Wired `useStructuralOrganism` — κανένα νέο reactive trigger. 25 jest GREEN· 775 structural pass· 6 fails = pre-existing raft (ADR-476). **DEFER: πλήρες §6.3 actuator** (section-grow + στρεπτικός οπλισμός + 2Δ/3Δ render). UNCOMMITTED. |
 | 2026-06-19 | **Δημιουργία + Slice A.** Flexural-capacity ceiling (`M_Ed ≤ M_Rd,lim`). NEW `flexural-capacity.ts` SSoT + provider `flexuralLimitMuLim()`. Cap στον οπλισμό δοκαριού & πλάκας (saturation αντί ψεύτικου Ø25/75). 13 jest GREEN, 51 στο cluster, μηδέν regression. Roadmap B/C/D plan-first. UNCOMMITTED. |
 | 2026-06-19 | **Slice C v1 (sensor).** Beam torsion από μονόπλευρη πρόβολο-πλάκα — DETECTION only. NEW `loads/beam-torsion.ts` (`computeBeamDesignTorsion`, ΕΝΑ SSoT: `t_Ed = slabDesignMomentNmmPerM` hogging/μέτρο, `T_Ed = t_Ed·L_cov/2`) + `codes/torsion-capacity.ts` (`plasticTorsionalResistanceKnm` = T_Rd,max EC2 §6.3.2) + `organism/beam-torsion-checks.ts` (`runBeamTorsionChecks` warning όταν `T_Ed>T_Rd,max`). `SlabSupportCondition` +`bearingBeamId`/`coverageLengthM`. Wired στο `useStructuralOrganism`. i18n el+en. 13 jest GREEN· 759 structural pass· 6 fails = pre-existing raft. **DEFER (νέα συνεδρία): πλήρες §6.3** (στρεπτικός οπλισμός + section-grow + shear-torsion interaction + διαμήκης). UNCOMMITTED. |
 | 2026-06-19 | **Slice B2.** Auto-size **διατομής κολώνας** (ορθογώνιας). NEW `column-sizing.ts` (`suggestColumnSection` — iterative grow ώσπου `As,req≤ρ_max·A_c` + λυγηρότητα `height/λ_max`, reuse `asStrengthColumnMm2`/`buildColumnSectionContextFromParams`/`columnReinforcementLimits`) + `column-size-patch.ts` (`buildColumnSizePatch`, convergence guard 50mm) + `ColumnParams.autoSized`. `AutoSizeMembersCommand`/`member-auto-size-core` → column branch με engaged-gated FEM ροπή (`resolveActiveColumnFemMoment`, ADR-491). Latent fix `asStrengthColumnMm2` (καμπτική συνιστώσα μετρά πάντα). Scope v1 = `rectangular` (L/T/U/I/circular/wall DEFER). 17 νέα jest GREEN· 746 structural pass· 6 fails = pre-existing raft (ADR-476). **Κανένα νέο reactive trigger.** UNCOMMITTED. |

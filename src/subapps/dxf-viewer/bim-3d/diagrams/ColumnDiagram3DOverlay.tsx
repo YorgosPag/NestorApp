@@ -31,8 +31,9 @@ import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useAnalysisDiagramViewStore } from '../../state/analysis-diagram-view-store';
 import { AnalysisResultsStore } from '../../bim/structural/analytical/solver/analysis-results-store';
 import { AnalyticalModelStore } from '../../bim/structural/analytical/analytical-model-store';
+import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 import { buildColumnDiagram3DPaths } from './column-diagram-3d-geometry';
-import { buildColumnDiagram3DGroup } from './column-diagram-3d-mesh';
+import { buildColumnDiagram3DGroup, billboardColumnDiagrams } from './column-diagram-3d-mesh';
 
 export interface ColumnDiagram3DOverlayProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -75,7 +76,33 @@ export function ColumnDiagram3DOverlay({ managerRef }: ColumnDiagram3DOverlayPro
     const manager = managerRef.current;
     if (!manager || !group) return;
     manager.scene.add(group);
+
+    // Billboard: κάθε per-column pivot στρέφεται γύρω από τον κατακόρυφο άξονα ώστε να
+    // κοιτά την κάμερα → ευανάγνωστο σε κάθε orbit. Τρέχει AFTER το `bim-3d-scene` (LOW)
+    // και ΜΟΝΟ όταν κινηθεί η κάμερα (camera-dirty signature, μηδέν idle spin· ADR-040).
+    let lastSig = '';
+    const unregister = UnifiedFrameScheduler.register(
+      'bim-3d-column-diagrams',
+      'BIM 3D Column Diagrams',
+      RENDER_PRIORITIES.LOW,
+      () => {
+        const m = managerRef.current;
+        if (m) billboardColumnDiagrams(group, m.getCamera());
+      },
+      () => {
+        const m = managerRef.current;
+        if (!m) return false;
+        const p = m.getCamera().position;
+        const sig = `${p.x},${p.y},${p.z}`;
+        if (sig === lastSig) return false;
+        lastSig = sig;
+        return true;
+      },
+    );
+    billboardColumnDiagrams(group, manager.getCamera()); // αρχικός προσανατολισμός
+
     return () => {
+      unregister();
       manager.scene.remove(group);
       disposeDiagramGroup(group);
     };

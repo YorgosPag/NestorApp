@@ -25,7 +25,10 @@ import {
 } from '../bim/structural/organism/organism-checks';
 import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
-import { buildActiveFootingFemAxialMap } from '../bim/structural/active-reinforcement';
+import {
+  buildActiveFootingFemAxialMap,
+  buildActiveColumnFemMomentMap,
+} from '../bim/structural/active-reinforcement';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
@@ -34,6 +37,7 @@ import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { runSlabChecks } from '../bim/structural/organism/slab-checks';
 import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
+import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-checks';
 // ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
 import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
 import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
@@ -138,6 +142,10 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         ...runSlabChecks(entities, provider),
         // ADR-499 §C — στρέψη δοκού από μονόπλευρη πρόβολο-πλάκα (T_Ed > T_Rd,max → warning).
         ...runBeamTorsionChecks(entities),
+        // ADR-499 §D — έσχατη παρέμβαση: μέλος ανέφικτο στο πρακτικό μέγιστο μέγεθος (πλάκα/
+        // κολώνα/δοκός-στρέψη) → error «απαιτείται αλλαγή σχεδιασμού». Η FEM ροπή κολώνας ίδια
+        // με τον auto-sizer B2 (engaged-gated map → μηδέν διπλή αλήθεια).
+        ...runFeasibilityChecks(entities, provider, buildActiveColumnFemMomentMap(entities)),
         // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
         // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
         ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),

@@ -41,7 +41,7 @@ import { resolveColumnFemMomentKnm } from './analytical/column-fem-moment';
 import { resolveColumnFemAxial, type ColumnFemAxial } from './analytical/column-fem-axial';
 import { resolveEngagedAnalysisResult } from './analytical/engaged-analysis-result';
 import type { Entity } from '../../types/entities';
-import { isFoundationEntity } from '../../types/entities';
+import { isFoundationEntity, isColumnEntity } from '../../types/entities';
 import { resolveSupportingColumn } from './footing-design/footing-support-column';
 
 /**
@@ -70,6 +70,26 @@ export function resolveActiveColumnReinforcementForParams(
  */
 export function resolveActiveColumnFemMoment(columnId: string): number | undefined {
   return resolveColumnFemMomentKnm(resolveEngagedAnalysisResult(), columnId);
+}
+
+/**
+ * ADR-499 (Slice D) — `Map<columnId → engaged-gated FEM ροπή (kNm)>` για ΟΛΕΣ τις κολώνες
+ * της σκηνής. Ο **pure** feasibility runner (`runFeasibilityChecks`) το παίρνει ώστε ο
+ * έλεγχος «ανέφικτη διατομή στο μέγιστο» να χρησιμοποιεί την ΙΔΙΑ ροπή με τον auto-sizer
+ * (B2, `AutoSizeMembersCommand`· μηδέν διπλή αλήθεια). Mirror του `buildActiveFootingFemAxialMap`:
+ * το store coupling ζει εδώ, ΟΧΙ μέσα στον runner. Κενό εκτός engaged → nominal e₀ fallback
+ * μέσα στον context builder. Pure store read (ADR-040 safe).
+ */
+export function buildActiveColumnFemMomentMap(
+  entities: readonly Entity[],
+): ReadonlyMap<string, number> {
+  const map = new Map<string, number>();
+  for (const e of entities) {
+    if (!isColumnEntity(e)) continue;
+    const moment = resolveActiveColumnFemMoment(e.id);
+    if (moment !== undefined) map.set(e.id, moment);
+  }
+  return map;
 }
 
 /**

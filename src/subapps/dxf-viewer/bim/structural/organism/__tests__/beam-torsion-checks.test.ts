@@ -30,25 +30,31 @@ function slab(id: string, xMax: number, yMax: number, deadAxialKn: number): Enti
 }
 
 const codeOf = (d: { code: string }) => d.code;
+const TORSION = 'beamCantileverTorsionExceedsCapacity';
 
-describe('runBeamTorsionChecks (ADR-499 §C)', () => {
-  it('μεγάλος πρόβολος σε λεπτή δοκό 250×400 → warning', () => {
-    const diags = runBeamTorsionChecks([beam('b1', 250, 400, 5000), slab('s1', 5000, 4000, 300)]);
-    const d = diags.find((x) => x.code === 'beamCantileverTorsionExceedsCapacity');
+describe('runBeamTorsionChecks (ADR-499 §C/§D — warning ΜΟΝΟ σε growToFix)', () => {
+  it('πρόβολος σε φαρδιά-ρηχή δοκό (700×400, λύνεται με μεγαλύτερο ύψος) → warning', () => {
+    const diags = runBeamTorsionChecks([beam('b1', 700, 400, 5000), slab('s1', 5000, 4000, 300)]);
+    const d = diags.find((x) => x.code === TORSION);
     expect(d).toBeDefined();
     expect(d?.severity).toBe('warning');
     expect(d?.entityIds).toContain('b1');
     expect(d?.messageParams?.tEd).toBeDefined();
   });
 
-  it('ίδιος πρόβολος σε επαρκώς μεγάλη δοκό (800×1200) → σιωπηλό', () => {
+  it('ίδιος πρόβολος σε επαρκώς μεγάλη δοκό (800×1200) → σιωπηλό (ok)', () => {
     const diags = runBeamTorsionChecks([beam('b1', 800, 1200, 5000), slab('s1', 5000, 4000, 300)]);
-    expect(diags.map(codeOf)).not.toContain('beamCantileverTorsionExceedsCapacity');
+    expect(diags.map(codeOf)).not.toContain(TORSION);
   });
 
-  it('μικρός πρόβολος (q χαμηλό) σε 250×400 → σιωπηλό (T_Ed ≤ T_Rd,max)', () => {
+  it('μικρός πρόβολος (q χαμηλό) σε 250×400 → σιωπηλό (ok, T_Ed ≤ T_Rd,max)', () => {
     const diags = runBeamTorsionChecks([beam('b1', 250, 400, 5000), slab('s1', 5000, 1000, 20)]);
-    expect(diags.map(codeOf)).not.toContain('beamCantileverTorsionExceedsCapacity');
+    expect(diags.map(codeOf)).not.toContain(TORSION);
+  });
+
+  it('ανέφικτη στρέψη σε λεπτή δοκό 250×400 → ΚΑΝΕΝΑ warning (κλιμάκωση σε error στο feasibility)', () => {
+    const diags = runBeamTorsionChecks([beam('b1', 250, 400, 5000), slab('s1', 5000, 4000, 300)]);
+    expect(diags.map(codeOf)).not.toContain(TORSION);
   });
 
   it('καμία πλάκα → κενό', () => {

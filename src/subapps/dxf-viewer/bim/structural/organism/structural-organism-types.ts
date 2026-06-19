@@ -133,7 +133,9 @@ export type StructuralDiagnosticCode =
   // ADR-498 — cantilever slab design.
   | 'cantileverSlabTooThin'
   // ADR-499 §C — beam torsion from one-sided cantilever slab.
-  | 'beamCantileverTorsionExceedsCapacity';
+  | 'beamCantileverTorsionExceedsCapacity'
+  // ADR-499 §D — global feasibility: μέλος ανέφικτο στο πρακτικό μέγιστο μέγεθος (error).
+  | 'sectionInfeasibleAtMaxSize';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

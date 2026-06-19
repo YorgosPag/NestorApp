@@ -20,12 +20,8 @@
  */
 
 import type { Entity } from '../../../types/entities';
-import { isBeamEntity } from '../../../types/entities';
 import type { StructuralDiagnostic } from './structural-organism-types';
-import { computeBeamDesignTorsion } from '../loads/beam-torsion';
-import { plasticTorsionalResistanceKnm } from '../codes/torsion-capacity';
-import { buildBeamSectionContext } from '../section-context';
-import { DEFAULT_CONCRETE_GRADE, concreteFcdMpa } from '../concrete-grades';
+import { assessBeamTorsion } from '../loads/beam-torsion';
 
 /** i18n key prefix (ns `dxf-viewer-shell`) — κοινό με τα υπόλοιπα structural διαγνωστικά. */
 const MSG = 'structuralOrganism.diagnostics';
@@ -33,34 +29,27 @@ const MSG = 'structuralOrganism.diagnostics';
 /**
  * Έλεγχοι στρέψης δοκών πάνω στα entities της σκηνής (ADR-499 §C). Pure — δεν χρειάζεται
  * provider (το `T_Rd,max` είναι γεωμετρικό-υλικό). Κενό όταν καμία δοκός δεν φέρει πρόβολο-πλάκα.
+ *
+ * **Warning ΜΟΝΟ σε `'growToFix'`** (ADR-499 §D): υπερβαίνει την τρέχουσα διατομή αλλά λύνεται
+ * μεγαλώνοντας το ύψος («μεγάλωσε τη διατομή»). Το `'infeasible'` (ανέφικτο ακόμη και στο
+ * πρακτικό μέγιστο) κλιμακώνεται σε **error** από το `feasibility-checks` → ποτέ διπλό μήνυμα.
  */
 export function runBeamTorsionChecks(entities: readonly Entity[]): StructuralDiagnostic[] {
-  const torsionByBeam = computeBeamDesignTorsion(entities);
-  if (torsionByBeam.size === 0) return [];
   const out: StructuralDiagnostic[] = [];
-
-  for (const e of entities) {
-    if (!isBeamEntity(e)) continue;
-    const tEdKnm = torsionByBeam.get(e.id) ?? 0;
-    if (tEdKnm <= 0) continue;
-
-    const ctx = buildBeamSectionContext(e);
-    const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
-    const tRdMaxKnm = plasticTorsionalResistanceKnm(ctx.widthMm, ctx.depthMm, fcd);
-    if (tRdMaxKnm <= 0 || tEdKnm <= tRdMaxKnm) continue; // η διατομή αντέχει → σιωπηλό
-
+  for (const [beamId, a] of assessBeamTorsion(entities)) {
+    if (a.classification !== 'growToFix') continue;
     out.push({
-      id: `beamCantileverTorsionExceedsCapacity:${e.id}`,
+      id: `beamCantileverTorsionExceedsCapacity:${beamId}`,
       code: 'beamCantileverTorsionExceedsCapacity',
       severity: 'warning',
       messageKey: `${MSG}.beamCantileverTorsionExceedsCapacity`,
-      primaryEntityId: e.id,
-      entityIds: [e.id],
+      primaryEntityId: beamId,
+      entityIds: [beamId],
       messageParams: {
-        tEd: tEdKnm.toFixed(1),
-        tRd: tRdMaxKnm.toFixed(1),
-        width: Math.round(ctx.widthMm),
-        depth: Math.round(ctx.depthMm),
+        tEd: a.tEdKnm.toFixed(1),
+        tRd: a.tRdMaxCurrentKnm.toFixed(1),
+        width: Math.round(a.widthMm),
+        depth: Math.round(a.depthMm),
       },
     });
   }
