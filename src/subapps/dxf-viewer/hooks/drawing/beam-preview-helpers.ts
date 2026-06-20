@@ -30,6 +30,7 @@ import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import {
   resolveBeamGhostSnapFromStore,
   BEAM_GHOST_LEN_MM,
@@ -90,12 +91,23 @@ function makeBeamGhostBeforeClick(
   sceneUnits: SceneUnits,
   columnFootprints: readonly (readonly Point2D[])[],
 ): ExtendedSceneEntity | null {
+  // ADR-398 §Smart beam ghost (2026-06-20 fix) — το crosshair ζωγραφίζεται στο
+  // **snapped** σημείο (`ImmediateSnap`), ενώ ο preview hover περνά RAW cursor
+  // (το `processDrawingHover` ΔΕΝ εφαρμόζει το βασικό OSNAP/grid snap πριν το 1ο κλικ).
+  // Με grid/OSNAP ON αυτό έδειχνε το φάντασμα σταθερά λίγο μετατοπισμένο από το
+  // σταυρόνημα. Διάβασε το ίδιο snapped σημείο με τον crosshair / column ghost
+  // (mirror `useColumnGhostPreview`) → ο άξονας του ghost ταυτίζεται με το σταυρόνημα.
+  const snapState = getImmediateSnap();
+  const effectiveCursor: Point2D =
+    snapState?.found === true && snapState.point != null
+      ? { x: snapState.point.x, y: snapState.point.y }
+      : { x: cursorPoint.x, y: cursorPoint.y };
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-  const snap = resolveBeamGhostSnapFromStore(cursorPoint, columnFootprints, widthMm, sceneUnits);
-  const start: Point2D = snap ? snap.start : { x: cursorPoint.x, y: cursorPoint.y };
+  const snap = resolveBeamGhostSnapFromStore(effectiveCursor, columnFootprints, widthMm, sceneUnits);
+  const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end
-    : { x: cursorPoint.x + BEAM_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: cursorPoint.y };
+    : { x: effectiveCursor.x + BEAM_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
   const params = buildDefaultBeamParams(start, end, kind, overrides, sceneUnits);
   const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;

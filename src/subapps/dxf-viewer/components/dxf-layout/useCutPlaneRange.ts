@@ -50,6 +50,12 @@ export type { CutPlaneRange } from './cut-plane-range';
  * is 0 for the FFL-relative single-floor range, or the floor's datum-relative FFL
  * for the all-floors range.
  */
+/**
+ * Vertical slider margin (mm) added below the lowest material so the cut can sit
+ * strictly under it (the 2D hide-gate needs `cut < base`). 1 slider step (10mm).
+ */
+const CUT_RANGE_BOTTOM_MARGIN_MM = 10;
+
 function entityEnvelope(
   entities: readonly DxfEntityUnion[],
   fflOffset: number,
@@ -61,8 +67,12 @@ function entityEnvelope(
   for (const e of entities) {
     const ext = getEntityZExtents(e);
     if (!ext) continue;
-    const lo = fflOffset + ext.zBottomMm;
-    const hi = fflOffset + ext.zTopMm;
+    // Foundations carry datum-relative Z (`topElevationMm` = project origin), so
+    // they must NOT get the floor's FFL offset (that would double-count it, pushing
+    // the range ~1 storey too deep). Everything else is floor-relative.
+    const offset = e.type === 'foundation' ? 0 : fflOffset;
+    const lo = offset + ext.zBottomMm;
+    const hi = offset + ext.zTopMm;
     if (lo < minMm) minMm = lo;
     if (hi > maxMm) maxMm = hi;
   }
@@ -154,7 +164,10 @@ export function useCutPlaneRange(): CutPlaneRange | null {
   return useMemo(() => {
     // 3D «all»: stacked building envelope (datum-relative, per-floor FFL offset).
     if (all3D) {
-      return computeMultiFloorCutRange(buildFloorCutExtents(bimStack, dxfStack, storeyHeightMm ?? 0));
+      return computeMultiFloorCutRange(
+        buildFloorCutExtents(bimStack, dxfStack, storeyHeightMm ?? 0),
+        CUT_RANGE_BOTTOM_MARGIN_MM,
+      );
     }
     if (storeyHeightMm == null) return null;
     // 2D «all»: a plan κάτοψη — every floor shares the plan plane (NO stacking
@@ -163,11 +176,17 @@ export function useCutPlaneRange(): CutPlaneRange | null {
     if (all2D) {
       const others = underlayFloors.flatMap((f) => f.model.entities as DxfEntityUnion[]);
       const env = entityEnvelope([...activeEntities, ...others], 0, 0, storeyHeightMm);
-      return computeMultiFloorCutRange([{ hasEntities: true, minMm: env.minMm, maxMm: env.maxMm }]);
+      return computeMultiFloorCutRange(
+        [{ hasEntities: true, minMm: env.minMm, maxMm: env.maxMm }],
+        CUT_RANGE_BOTTOM_MARGIN_MM,
+      );
     }
     // Single floor (2D or 3D «ενεργός όροφος»): FFL-relative storey band [0, storeyHeight]
     // extended down/up by the active floor's real entity extents (reaches πέδιλα below 0).
     const env = entityEnvelope(activeEntities, 0, 0, storeyHeightMm);
-    return computeMultiFloorCutRange([{ hasEntities: true, minMm: env.minMm, maxMm: env.maxMm }]);
+    return computeMultiFloorCutRange(
+      [{ hasEntities: true, minMm: env.minMm, maxMm: env.maxMm }],
+      CUT_RANGE_BOTTOM_MARGIN_MM,
+    );
   }, [all3D, all2D, bimStack, dxfStack, activeEntities, underlayFloors, storeyHeightMm]);
 }

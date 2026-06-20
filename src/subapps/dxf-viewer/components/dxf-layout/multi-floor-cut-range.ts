@@ -40,9 +40,16 @@ export interface FloorCutExtent {
  * union of their material envelopes. Returns `null` when no floor is occupied or
  * the envelope is degenerate (slider hides, matching the single-floor no-storey
  * behaviour).
+ *
+ * `bottomMarginMm` extends the low end a hair BELOW the lowest material bottom so
+ * the cut can sit strictly under it: the 2D hide-gate hides an entity only when
+ * its base is strictly ABOVE the cut (`zBottom > cut`), so without this the lowest
+ * piece (e.g. πέδιλα) could never be hidden — the slider would stop exactly at its
+ * base. Harmless in 3D (vertex clipping already hides it at its bottom).
  */
 export function computeMultiFloorCutRange(
   floors: readonly FloorCutExtent[],
+  bottomMarginMm = 0,
 ): CutPlaneRange | null {
   let minMm = Infinity;
   let maxMm = -Infinity;
@@ -58,5 +65,5 @@ export function computeMultiFloorCutRange(
   }
   // Default = top → whole occupied stack visible first, then slide down
   // (mirrors the single-floor `defaultMm = storeyHeight`).
-  return { minMm, maxMm, defaultMm: maxMm };
+  return { minMm: minMm - bottomMarginMm, maxMm, defaultMm: maxMm };
 }

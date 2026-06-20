@@ -55,4 +55,11 @@ describe('computeMultiFloorCutRange', () => {
   it('returns null for a degenerate (zero-thickness) envelope', () => {
     expect(computeMultiFloorCutRange([floor(3000, 3000)])).toBeNull();
   });
+
+  it('bottom margin extends min below the lowest material (so the cut can sit under it)', () => {
+    // foundation bottom at -1500: with a 10mm margin the slider reaches -1510 so the
+    // 2D hide-gate (base > cut) can finally hide the πέδιλο.
+    const r = computeMultiFloorCutRange([floor(-1500, 0)], 10);
+    expect(r).toEqual({ minMm: -1510, maxMm: 0, defaultMm: 0 });
+  });
 });

@@ -264,6 +264,15 @@ export class EntityRendererComposite {
     this.renderers.forEach(renderer => renderer.setTransform(transform));
   }
 
+  /**
+   * ADR-398 — forward a canonical viewport override to every child renderer for
+   * the WYSIWYG BIM preview pass (`BimPreviewRenderer`). `null` clears it so the
+   * default `getBoundingClientRect()` measurement resumes on the main path.
+   */
+  setViewportOverride(viewport: Viewport | null): void {
+    this.renderers.forEach(renderer => renderer.setViewportOverride(viewport));
+  }
+
   setGripSettings(settings: GripSettings): void {
     this.gripSettings = settings;
     // Update all renderers

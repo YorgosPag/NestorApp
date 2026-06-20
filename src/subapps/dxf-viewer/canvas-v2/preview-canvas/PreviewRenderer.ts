@@ -284,7 +284,10 @@ export class PreviewRenderer {
     // on top via the handler's subsequent drawPolarTrackingLine/Alignment calls.
     const bimMeta = entity as { wysiwygPreview?: boolean };
     if (bimMeta.wysiwygPreview && this.bimPreview) {
-      this.bimPreview.render(entity as unknown as Entity, transform);
+      // ADR-398 — pass the canonical viewport (= prop viewport = DxfCanvas /
+      // container rect) so the BIM ghost measures its y-flip against the SAME
+      // viewport as the committed entity, not the PreviewCanvas's own rect.
+      this.bimPreview.render(entity as unknown as Entity, transform, viewport);
       return;
     }
 

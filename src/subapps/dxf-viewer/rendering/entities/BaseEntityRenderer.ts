@@ -63,6 +63,15 @@ export abstract class BaseEntityRenderer {
   protected phaseManager: PhaseManager;
   private _viewportCache: Viewport | null = null;
   private _viewportCacheTime = 0;
+  /**
+   * ADR-398 — canonical viewport injected by the WYSIWYG BIM preview pass
+   * (`BimPreviewRenderer`). When set, `getViewport()` returns it instead of this
+   * renderer's own `getBoundingClientRect()`, so the preview ghost measures its
+   * y-flip against the SAME viewport as the committed entity (DxfCanvas/container
+   * rect) — otherwise a few-px height divergence yields a constant +Y offset.
+   * `null` on the main render path → unchanged behaviour (zero regression).
+   */
+  private _viewportOverride: Viewport | null = null;
   protected _currentHovered = false;
 
   constructor(ctx: CanvasRenderingContext2D) {
@@ -103,7 +112,18 @@ export abstract class BaseEntityRenderer {
     };
   }
 
+  /**
+   * ADR-398 — inject/clear the canonical viewport for the BIM preview pass.
+   * `null` restores the default `getBoundingClientRect()` measurement.
+   */
+  setViewportOverride(viewport: Viewport | null): void {
+    this._viewportOverride = viewport;
+  }
+
   private getViewport(): Viewport {
+    // ADR-398 — preview pass: measure against the injected canonical viewport
+    // (DxfCanvas / container rect), NOT this renderer's own canvas rect.
+    if (this._viewportOverride) return this._viewportOverride;
     const now = performance.now();
     if (!this._viewportCache || now - this._viewportCacheTime > 16) {
       const rect = this.ctx.canvas.getBoundingClientRect();
@@ -272,35 +292,18 @@ export abstract class BaseEntityRenderer {
   // Grip hit testing
   public findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = DEFAULT_TOLERANCE): GripInfo | null {
     if (!this.gripSettings) return null;
-    
     const grips = this.getGrips(entity);
-    
     for (const grip of grips) {
       const screenGrip = this.worldToScreen(grip.position);
       // 🏢 ADR-065: Use centralized distance calculation
-      const distance = calculateDistance(screenPoint, screenGrip);
-
-      if (distance <= tolerance) {
-        return grip;
-      }
+      if (calculateDistance(screenPoint, screenGrip) <= tolerance) return grip;
     }
-    
     return null;
   }
 
-  // New phase-based style setup
-  // ╔════════════════════════════════════════════════════════════════════════╗
-  // ║ 🎨 AUTOCAD-LIKE CANVAS STATE RESET (2026-01-03)                        ║
-  // ║                                                                        ║
-  // ║ ΚΡΙΣΙΜΟ: Πλήρες reset του canvas state σε κάθε entity!                ║
-  // ║ Αυτό αποτρέπει "πέπλο" και αλλοιωμένα χρώματα.                        ║
-  // ║                                                                        ║
-  // ║ Fixes:                                                                 ║
-  // ║ - globalAlpha = 1 (χωρίς transparency)                                ║
-  // ║ - globalCompositeOperation = 'source-over' (normal blending)          ║
-  // ║ - setLineDash([]) (solid lines)                                       ║
-  // ║ - lineCap = 'butt', lineJoin = 'miter' (standard CAD)                ║
-  // ╚════════════════════════════════════════════════════════════════════════╝
+  // New phase-based style setup.
+  // 🎨 AutoCAD-like canvas state reset (2026-01-03): full per-entity reset prevents "πέπλο"
+  // / αλλοιωμένα χρώματα — globalAlpha=1, source-over, no dash, butt/miter caps, no shadow.
   protected setupStyle(entity: EntityModel, options: RenderOptions = {}): void {
     this.ctx.save();
 
