@@ -174,3 +174,48 @@ describe('writeDxfAscii — colour (ACI code 62)', () => {
     expect(dxf).not.toContain('\n31\n');
   });
 });
+
+// ADR-505 §C — hatch carrier (patternType:'solid') με προ-υπολογισμένα dxfFaces → 3DFACE.
+describe('writeDxfAscii — solid fill (3DFACE, ADR-505 §C)', () => {
+  function fillQuad(): Entity {
+    return {
+      id: 'f', type: 'hatch', layerId: 'L', color: '#ff0000',
+      patternType: 'solid', boundaryPaths: [[]],
+      dxfFaces: [[
+        { x: 0, y: 0, zMm: 0 }, { x: 10, y: 0, zMm: 0 },
+        { x: 10, y: 0, zMm: 3000 }, { x: 0, y: 0, zMm: 3000 },
+      ]],
+    } as unknown as Entity;
+  }
+  function fillTri(): Entity {
+    return {
+      id: 't', type: 'hatch', layerId: 'L', boundaryPaths: [[]],
+      dxfFaces: [[
+        { x: 0, y: 0, zMm: 0 }, { x: 4, y: 0, zMm: 0 }, { x: 4, y: 4, zMm: 0 },
+      ]],
+    } as unknown as Entity;
+  }
+
+  it('quad face → 3DFACE με 4 κορυφές (10/20/30 … 13/23/33)', () => {
+    const dxf = writeDxfAscii([fillQuad()], { layersById: LAYERS, mmScale: 0.001 });
+    expect(dxf).toContain('0\n3DFACE\n');
+    // 1η κορυφή (0,0,0) + 3η κορυφή z = 3000mm × 0.001 = 3m στο group 32.
+    expect(dxf).toContain('10\n0\n20\n0\n30\n0\n');
+    expect(dxf).toContain('\n32\n3\n');
+    expect(dxf).toContain('8\nCOLOR_10\n62\n1\n'); // layer + κόκκινο ACI
+  });
+
+  it('triangle face → 4η κορυφή = 3η (3DFACE quirk)', () => {
+    const dxf = writeDxfAscii([fillTri()], { layersById: LAYERS });
+    expect(dxf).toContain('0\n3DFACE\n');
+    // 3η κορυφή (12/22) == 4η κορυφή (13/23) = (4,4).
+    expect(dxf).toContain('12\n4\n22\n4\n32\n0\n13\n4\n23\n4\n33\n0\n');
+  });
+
+  it('hatch χωρίς dxfFaces → skip χωρίς crash', () => {
+    const bare = { id: 'b', type: 'hatch', layerId: 'L', boundaryPaths: [[]] } as unknown as Entity;
+    const dxf = writeDxfAscii([bare, line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('3DFACE');
+    expect(dxf).toContain('0\nLINE\n');
+  });
+});

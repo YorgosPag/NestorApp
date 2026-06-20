@@ -28,6 +28,7 @@ import { resolveEntityColorHex } from '../../systems/selection/select-similar-by
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { flattenSceneEntitiesForDxf } from '../core/bim-to-dxf-primitives';
 import { collectOverlayDxfEntities } from '../core/overlay-dxf-collector';
+import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
@@ -90,10 +91,12 @@ export function buildDxfExportRequest(
   const colored = stampRenderedColors(selected, scene.layersById);
   const { entities, warnings } = flattenSceneEntitiesForDxf(colored);
 
-  // ADR-505 (finish/rebar phase) — σοβάδες + οπλισμός είναι derived overlays (όχι
-  // entities) → ξεχωριστός collector παράγει extra DXF primitives, gated «what's
-  // visible». Scope-filtered input (`selected`) → dxf-only scope = μηδέν overlays.
-  const overlay = collectOverlayDxfEntities(selected, { lineMode: options.lineMode });
+  // ADR-505 (finish/rebar + §C fill) — σοβάδες/οπλισμός/γέμισμα είναι derived overlays
+  // (όχι entities) → ξεχωριστός collector παράγει extra DXF primitives, gated «what's
+  // visible». Δίνουμε `colored` ώστε το body fill να κληρονομεί το resolved χρώμα.
+  const overlay = collectOverlayDxfEntities(colored, { lineMode: options.lineMode });
+
+  const allEntities = [...entities, ...overlay.entities];
 
   const settings = createDefaultExportSettings();
   if (options.version) settings.version = options.version;
@@ -102,8 +105,10 @@ export function buildDxfExportRequest(
   const request: DxfExportSceneRequest = {
     scene: {
       ...scene,
-      entities: [...entities, ...overlay.entities],
-      layersById: { ...scene.layersById, ...overlay.layers },
+      entities: allEntities,
+      // ADR-505 §C — register ΜΟΝΟ τους per-category layers που όντως χρησιμοποιήθηκαν
+      // (re-layered bodies)· ο writer δεν βγάζει LAYER table → χρειάζεται name resolution.
+      layersById: { ...scene.layersById, ...usedCategoryLayerDefs(allEntities), ...overlay.layers },
     },
     settings,
     entityIds: null,
@@ -180,14 +185,22 @@ export function mergeFloorsToSingleDxfScene(
     const flat = flattenSceneEntitiesForDxf(colored);
     warnings.push(...flat.warnings);
 
-    // ADR-505 (finish/rebar phase) — overlays ανά όροφο, με το ΙΔΙΟ FLnn_ namespacing.
-    const overlay = collectOverlayDxfEntities(selected, { lineMode });
+    // ADR-505 (finish/rebar + §C fill) — overlays ανά όροφο, με το ΙΔΙΟ FLnn_ namespacing.
+    const overlay = collectOverlayDxfEntities(colored, { lineMode });
 
+    const floorEntities = [...flat.entities, ...overlay.entities];
     const prefix = floor.layerPrefix;
-    for (const e of [...flat.entities, ...overlay.entities]) {
+    for (const e of floorEntities) {
       entities.push(prefix ? { ...e, layerId: `${prefix}${e.layerId}` } : e);
     }
-    for (const [id, layer] of Object.entries({ ...floor.scene.layersById, ...overlay.layers })) {
+    // ADR-505 §C — register χρησιμοποιημένους per-category layers (re-layered bodies)
+    // δίπλα στα αρχικά + overlay layers, ΠΡΙΝ το FLnn_ prefix.
+    const floorLayers = {
+      ...floor.scene.layersById,
+      ...usedCategoryLayerDefs(floorEntities),
+      ...overlay.layers,
+    };
+    for (const [id, layer] of Object.entries(floorLayers)) {
       const newId = prefix ? `${prefix}${id}` : id;
       layersById[newId] = prefix
         ? { ...layer, id: newId, name: `${prefix}${layer.name}` }

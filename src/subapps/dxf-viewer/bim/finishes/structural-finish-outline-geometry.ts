@@ -114,6 +114,41 @@ function closeOpenOuterEnds(
 }
 
 /**
+ * ADR-449 — δοκιμή miter του `b` άκρου του segment `k` με το `a` άκρο του segment `m` όταν
+ * μοιράζονται κορυφή (convex → extend, reflex → trim, αιχμηρή → square). Mutates τα outer/mit
+ * arrays. No-op αν: ήδη mitered, degenerate offset, μη-κοινή κορυφή, ή πέρα από το miter limit.
+ * ΕΝΑ SSoT — το καλεί ΚΑΙ το positional pass ΚΑΙ το geometry pass (multi-ring silhouette).
+ */
+function tryMiterPair(
+  k: number,
+  m: number,
+  segs: readonly FinishFaceSegment[],
+  offsets: readonly (Vec2 | null)[],
+  aOuter: Vec2[],
+  bOuter: Vec2[],
+  aMit: boolean[],
+  bMit: boolean[],
+): void {
+  if (k === m || bMit[k] || aMit[m]) return;
+  const ok = offsets[k];
+  const om = offsets[m];
+  if (!ok || !om) return;
+  const v = segs[k].b;
+  const tol = 1e-6 * (1 + Math.hypot(v.x, v.y));
+  if (Math.hypot(v.x - segs[m].a.x, v.y - segs[m].a.y) > tol) return; // όχι κοινή κορυφή
+  const dCur = { x: segs[k].b.x - segs[k].a.x, y: segs[k].b.y - segs[k].a.y };
+  const dNxt = { x: segs[m].b.x - segs[m].a.x, y: segs[m].b.y - segs[m].a.y };
+  const mPt = lineIntersect({ x: segs[k].a.x + ok.x, y: segs[k].a.y + ok.y }, dCur, { x: segs[m].a.x + om.x, y: segs[m].a.y + om.y }, dNxt);
+  if (!mPt) return;
+  const offMag = Math.max(Math.hypot(ok.x, ok.y), Math.hypot(om.x, om.y));
+  if (Math.hypot(mPt.x - v.x, mPt.y - v.y) > MITER_LIMIT_FACTOR * offMag) return; // αιχμηρή → square
+  bOuter[k] = mPt;
+  aOuter[m] = mPt;
+  bMit[k] = true;
+  aMit[m] = true;
+}
+
+/**
  * ADR-449 Slice 5 fix — outer offset endpoints κάθε exposed παρειάς, **mitered** στις
  * κοινές κορυφές: το εξωτερικό άκρο επεκτείνεται/κόβεται στην τομή των δύο offset
  * ευθειών → ΕΝΑ 45° seam, **μηδέν επικάλυψη/κενό** (convex → extend, reflex → trim).
@@ -141,26 +176,25 @@ export function computeMiteredOuter(
   }
   const aMit = new Array<boolean>(n).fill(false);
   const bMit = new Array<boolean>(n).fill(false);
-  for (let k = 0; k < n && n >= 2; k++) {
-    const m = (k + 1) % n;
-    const cur = segs[k];
-    const nxt = segs[m];
-    const ok = offsets[k];
-    const om = offsets[m];
-    if (!ok || !om) continue;
-    const v = cur.b;
+  // Pass 1 — positional γείτονας: για ΕΝΑ ring κλείνει ΟΛΕΣ τις γωνίες (incl. wrap-around).
+  for (let k = 0; k < n && n >= 2; k++) tryMiterPair(k, (k + 1) % n, segs, offsets, aOuter, bOuter, aMit, bMit);
+  // Pass 2 (ADR-449 merged-silhouette fix) — geometry-based: το `segs` μπορεί να συνενώνει
+  // ΠΟΛΛΑΠΛΑ rings (ένα ανά disjoint δομικό στοιχείο / τρύπα πλαισίου, ADR-449 Slice 7). Το
+  // positional `(k+1)%n` wrap mis-pairs το τελευταίο edge ενός ring με το πρώτο του επόμενου →
+  // η γωνία-κλείσιμο κάθε ring (seam = ΝΔ κορυφή από polygon-clipping) έμενε ανοιχτή → λάθος 45°
+  // chamfer. Εδώ κάθε ανοιχτό `b` άκρο ταιριάζει με το ομόκορφο ανοιχτό `a` οποιουδήποτε segment
+  // (manifold ring → 1 in / 1 out ανά κορυφή → μη-διφορούμενο· single ring = no-op, byte-for-byte).
+  for (let k = 0; k < n; k++) {
+    if (bMit[k] || !offsets[k]) continue;
+    const v = segs[k].b;
     const tol = 1e-6 * (1 + Math.hypot(v.x, v.y));
-    if (Math.hypot(v.x - nxt.a.x, v.y - nxt.a.y) > tol) continue; // όχι κοινή κορυφή
-    const dCur = { x: cur.b.x - cur.a.x, y: cur.b.y - cur.a.y };
-    const dNxt = { x: nxt.b.x - nxt.a.x, y: nxt.b.y - nxt.a.y };
-    const mPt = lineIntersect({ x: cur.a.x + ok.x, y: cur.a.y + ok.y }, dCur, { x: nxt.a.x + om.x, y: nxt.a.y + om.y }, dNxt);
-    if (!mPt) continue;
-    const offMag = Math.max(Math.hypot(ok.x, ok.y), Math.hypot(om.x, om.y));
-    if (Math.hypot(mPt.x - v.x, mPt.y - v.y) > MITER_LIMIT_FACTOR * offMag) continue; // αιχμηρή → square
-    bOuter[k] = mPt;
-    aOuter[m] = mPt;
-    bMit[k] = true;
-    aMit[m] = true;
+    for (let j = 0; j < n; j++) {
+      if (j === k || aMit[j] || !offsets[j]) continue;
+      if (Math.hypot(v.x - segs[j].a.x, v.y - segs[j].a.y) <= tol) {
+        tryMiterPair(k, j, segs, offsets, aOuter, bOuter, aMit, bMit);
+        break;
+      }
+    }
   }
   if (chamferOpenEnds) closeOpenOuterEnds(segs, offsets, aCore, bCore, aOuter, bOuter, aMit, bMit);
   return { aOuter, bOuter, aCore, bCore };

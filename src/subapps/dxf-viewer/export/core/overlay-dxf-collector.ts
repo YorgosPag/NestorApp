@@ -25,7 +25,7 @@
  * ADR-505 §C (finish/rebar phase).
  */
 
-import type { Entity, LWPolylineEntity, CircleEntity, LineEntity } from '../../types/entities';
+import type { Entity, LWPolylineEntity, CircleEntity, LineEntity, HatchEntity } from '../../types/entities';
 import {
   isColumnEntity,
   isBeamEntity,
@@ -40,6 +40,7 @@ import {
   isStructuralComponentVisible,
   type ComponentVisibilityEntity,
 } from '../../bim/visibility/structural-component-visibility';
+import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { StructuralComponent } from '../../config/bim-structural-components';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
@@ -59,13 +60,18 @@ import {
 import type { RebarPlanGeometry, RebarSeg3D } from '../../bim/structural/reinforcement/rebar-plan-geometry-types';
 import { REBAR_COLOR_HEX } from '../../bim/structural/rebar-catalog';
 import type { ExtrudedLwpolyline } from './bim-to-dxf-primitives';
+import { extractEntityFootprintRing, extractHeightMm } from './bim-to-dxf-primitives';
+import { buildPrismFaces, type Fill3DFace } from './solid-fill-geometry';
+import { resolveDxfFillLayer, CATEGORY_LAYER_DEFS } from './dxf-category-layers';
 import type { DxfLineMode } from '../types';
 
 // DXF layer names (Revit subcategories) — ASCII ΕΠΙΤΗΔΕΣ: ο writer βγάζει bare DXF
 // χωρίς HEADER/$DWGCODEPAGE, οπότε ο AutoCAD υποθέτει ANSI και ΣΚΑΛΩΝΕΙ σε non-ASCII
 // (UTF-8 ελληνικά) layer names — ο Τέκτονας τα διαβάζει χαλαρά, ο AutoCAD «κολλάει».
-/** DXF layer name (Revit subcategory) — σοβάδες. */
+/** DXF layer name (Revit subcategory) — σοβάδες (περίγραμμα). */
 export const FINISH_LAYER_ID = 'FINISH';
+/** DXF layer name (Revit subcategory) — σοβάδες (συμπαγές γέμισμα 3DFACE, ADR-505 §C). */
+export const FINISH_FILL_LAYER_ID = 'FINISH_FILL';
 /** DXF layer name (Revit subcategory) — οπλισμός. */
 export const REBAR_LAYER_ID = 'REBAR';
 
@@ -95,6 +101,11 @@ interface Rebar3DLine extends LineEntity {
   readonly dxfEndZMm?: number;
 }
 
+/** HatchEntity carrier (patternType:'solid') + προ-υπολογισμένα 3D faces (ADR-505 §C). */
+interface SolidFillHatch extends HatchEntity {
+  readonly dxfFaces: readonly Fill3DFace[];
+}
+
 export interface OverlayCollectResult {
   /** Extra DXF primitives (finish + rebar) έτοιμα για append στο export request. */
   readonly entities: Entity[];
@@ -104,6 +115,15 @@ export interface OverlayCollectResult {
 
 function makeLayer(id: string, color: string): SceneLayer {
   return { id, name: id, color, visible: true, locked: false };
+}
+
+/**
+ * Το `ComponentVisibilityEntity` view ενός entity (μόνο το `styleOverride` — το μόνο
+ * που χρειάζεται ο visibility resolver). Το πλήρες `Entity` union δεν είναι structurally
+ * assignable· εξάγουμε το optional field με inline cast (idiomatic, μηδέν `any`).
+ */
+function visibilityOf(e: Entity): ComponentVisibilityEntity {
+  return { styleOverride: (e as { styleOverride?: BimElementStyleOverride }).styleOverride };
 }
 
 /**
@@ -118,14 +138,67 @@ export function collectOverlayDxfEntities(
   const out: Entity[] = [];
   const layers: Record<string, SceneLayer> = {};
 
-  // ── Σοβάς (ενιαία silhouette, ίδια SSoT με 2Δ/3Δ) ──
+  // ── Σοβάς (ενιαία silhouette, ίδια SSoT με 2Δ/3Δ): περίγραμμα + γέμισμα 3DFACE ──
   collectFinishEntities(entities, componentVisible, out, layers);
+
+  // ── Συμπαγές γέμισμα δομικών σωμάτων (κολώνες/δοκάρια/πλάκες/πέδιλα), 3DFACE ──
+  collectBodyFillEntities(entities, componentVisible, out, layers);
 
   // ── Οπλισμός: 3Δ κλωβός (AutoCAD/polyline) ή 2Δ κάτοψη (Τέκτονας/lines) ──
   const want3D = options.lineMode !== 'lines';
   collectReinforcementEntities(entities, componentVisible, want3D, out, layers);
 
   return { entities: out, layers };
+}
+
+/** Χτίζει SolidFillHatch carrier (footprint+ύψος → 3D faces). `null` αν degenerate. */
+function makeFillHatch(
+  id: string, layerId: string, color: string,
+  ring: readonly Point2D[], baseZMm: number, heightMm: number,
+): SolidFillHatch | null {
+  const faces = buildPrismFaces(ring, baseZMm, heightMm);
+  if (faces.length === 0) return null;
+  return {
+    id, type: 'hatch', layerId, color, fillColor: color, visible: true,
+    patternType: 'solid', patternName: 'SOLID',
+    boundaryPaths: [ring.map((p) => ({ x: p.x, y: p.y }))],
+    dxfFaces: faces,
+  };
+}
+
+/**
+ * Συμπαγές γέμισμα (3DFACE) των δομικών σωμάτων που ζήτησε ο Giorgio: κολώνες,
+ * δοκάρια, πλάκες, πέδιλα. Boundary = το ΙΔΙΟ footprint με το outline (reuse
+ * `extractEntityFootprintRing`)· ύψος = `extractHeightMm` (ίδιο με το body extrusion,
+ * base z=0). Gated από το structural 'core' (Revit: κρύψε core → σβήνει το γέμισμα).
+ * Χρώμα = το resolved χρώμα του στοιχείου (ο caller περνά ήδη-χρωματισμένα entities).
+ */
+function collectBodyFillEntities(
+  entities: readonly Entity[],
+  componentVisible: ComponentVisibilityPredicate,
+  out: Entity[],
+  layers: Record<string, SceneLayer>,
+): void {
+  const used = new Set<string>();
+  for (const entity of entities) {
+    const fillLayer = resolveDxfFillLayer(entity.type);
+    if (!fillLayer) continue;
+    if (!componentVisible('core', visibilityOf(entity))) continue;
+    const ring = extractEntityFootprintRing(entity);
+    if (!ring) continue;
+    const color = entity.color ?? CATEGORY_LAYER_DEFS[fillLayer]?.color ?? FINISH_LAYER_COLOR;
+    const fill = makeFillHatch(
+      `${entity.id}__fill`, fillLayer, color,
+      ring.map(toVertex), 0, extractHeightMm(entity),
+    );
+    if (!fill) continue;
+    out.push(fill);
+    used.add(fillLayer);
+  }
+  for (const id of used) {
+    const def = CATEGORY_LAYER_DEFS[id];
+    layers[id] = def ?? makeLayer(id, FINISH_LAYER_COLOR);
+  }
 }
 
 /** Σοβάς → extruded lwpolylines (μία πηγή με 2Δ/3Δ silhouette). */
@@ -153,6 +226,7 @@ function collectFinishEntities(
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
 
   let n = 0;
+  let fills = 0;
   for (const band of bands) {
     const heightMm = Math.max(0, band.zTopMm - band.zBottomMm);
     for (const pl of collectFinishOutlinePlanPolylines(band.faces, sceneUnits, heightMm)) {
@@ -170,9 +244,18 @@ function collectFinishEntities(
         dxfThicknessMm: pl.heightMm > 0 ? pl.heightMm : undefined,
       };
       out.push(poly);
+
+      // ADR-505 §C — συμπαγές γέμισμα 3DFACE της ζώνης σοβά (base z=0, ίδιο με το
+      // outline extrude· χρώμα = flat υλικό σοβά) σε ΞΕΧΩΡΙΣΤΟ layer FINISH_FILL.
+      const fill = makeFillHatch(
+        `__finish_fill_${fills}`, FINISH_FILL_LAYER_ID, pl.colorHex,
+        pl.points, 0, pl.heightMm,
+      );
+      if (fill) { out.push(fill); fills++; }
     }
   }
   if (n > 0) layers[FINISH_LAYER_ID] = makeLayer(FINISH_LAYER_ID, FINISH_LAYER_COLOR);
+  if (fills > 0) layers[FINISH_FILL_LAYER_ID] = makeLayer(FINISH_FILL_LAYER_ID, FINISH_LAYER_COLOR);
 }
 
 /** Οπλισμός κάθε ορατού δομικού μέλους → DXF primitives (3Δ LINEs ή 2Δ lwpolylines/circles). */
@@ -185,7 +268,7 @@ function collectReinforcementEntities(
 ): void {
   let count = 0;
   for (const entity of entities) {
-    if (!componentVisible('reinforcement', entity)) continue;
+    if (!componentVisible('reinforcement', visibilityOf(entity))) continue;
     count += want3D
       ? emitRebarSegments3D(rebarSegments3DFor(entity), entity.id, out)
       : emitRebarGeometry(rebarPlanGeometryFor(entity), entity.id, planSceneUnits(entity), out);

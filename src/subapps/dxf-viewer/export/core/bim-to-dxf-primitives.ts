@@ -23,6 +23,7 @@ import { isBimEntity } from '../../types/entities';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfFlattenResult } from '../types';
+import { resolveDxfBodyLayer } from './dxf-category-layers';
 
 /**
  * Flatten a scope-filtered entity list into entities the DXF writer accepts:
@@ -86,7 +87,7 @@ const HEIGHT_KEYS = ['height', 'depth', 'thickness', 'thicknessMm', 'bodyHeightM
  *   MEP → bodyHeightMm. column also caches geometry.height. Returns 0 (→ flat 2D)
  *   when nothing matches.
  */
-function extractHeightMm(entity: Entity): number {
+export function extractHeightMm(entity: Entity): number {
   const geomHeight = (readGeometry(entity) as { height?: number } | undefined)?.height;
   if (typeof geomHeight === 'number' && geomHeight > 0) return geomHeight;
 
@@ -123,6 +124,15 @@ function extractFootprintVertices(geometry: unknown): readonly Point3D[] | null 
   );
 }
 
+/**
+ * Public reuse (ADR-505 §C fill) — το plan footprint ring ενός BIM entity
+ * (`footprint`/`outline`/`polygon`), ΙΔΙΟ με αυτό που γίνεται outline. `null` όταν
+ * δεν υπάρχει (π.χ. path-based). Ο overlay collector το καταναλώνει για το γέμισμα.
+ */
+export function extractEntityFootprintRing(entity: Entity): readonly Point3D[] | null {
+  return extractFootprintVertices(readGeometry(entity));
+}
+
 /** Extract `.vertices` (≥2 points) from a `Polygon3D`-shaped value. */
 function polygonVertices(value: unknown): readonly Point3D[] | null {
   if (!value || typeof value !== 'object' || !('vertices' in value)) return null;
@@ -139,10 +149,10 @@ export interface ExtrudedLwpolyline extends LWPolylineEntity {
   readonly dxfThicknessMm?: number;
 }
 
-/** Build a closed `lwpolyline` primitive from a 3D point ring, inheriting the
- *  source entity's layer/color so the DXF keeps the drawing's organisation.
- *  When `thicknessMm > 0`, the primitive carries it so the writer can extrude
- *  the polyline into pseudo-3D (AutoCAD polyline mode). */
+/** Build a closed `lwpolyline` primitive from a 3D point ring. Layer = per-category
+ *  (ADR-505 §C, `resolveDxfBodyLayer`) so each category lands on its own DXF layer;
+ *  colour inherited from the source. When `thicknessMm > 0`, the primitive carries
+ *  it so the writer can extrude the polyline into pseudo-3D (AutoCAD polyline mode). */
 function makeClosedLwpolyline(
   source: Entity,
   ring: readonly Point3D[],
@@ -152,7 +162,9 @@ function makeClosedLwpolyline(
   return {
     id: `${source.id}__dxf_${suffix}`,
     type: 'lwpolyline',
-    layerId: source.layerId,
+    // ADR-505 §C — re-layer κάθε BIM body σε per-category layer (COLUMNS/WALLS/…).
+    // Άγνωστη κατηγορία → κράτα το αρχικό DXF layer (zero-break).
+    layerId: resolveDxfBodyLayer(source.type) ?? source.layerId,
     color: source.color,
     visible: source.visible ?? true,
     vertices: ring.map(to2D),

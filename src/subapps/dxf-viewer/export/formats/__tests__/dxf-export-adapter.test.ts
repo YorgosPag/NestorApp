@@ -41,11 +41,18 @@ describe('buildDxfExportRequest', () => {
     expect(request.scene.entities.map((e) => e.type)).toEqual(['line']);
   });
 
-  it('both → BIM γίνεται lwpolyline primitive', () => {
+  it('both → BIM γίνεται lwpolyline primitive (+ ADR-505 §C γέμισμα hatch)', () => {
     const { request } = buildDxfExportRequest(scene([native('line', 'l'), column('c')]), {
       entityScope: 'both',
     });
-    expect(request.scene.entities.map((e) => e.type).sort()).toEqual(['line', 'lwpolyline']);
+    // line (native) + column outline (lwpolyline, re-layered COLUMNS) + γέμισμα (hatch, COLUMNS_FILL).
+    expect(request.scene.entities.map((e) => e.type).sort()).toEqual(['hatch', 'line', 'lwpolyline']);
+    const poly = request.scene.entities.find((e) => e.type === 'lwpolyline');
+    expect(poly?.layerId).toBe('COLUMNS');
+    expect(request.scene.layersById['COLUMNS']).toBeDefined();
+    expect(request.scene.layersById['COLUMNS_FILL']).toBeDefined();
+    // dxf layer (lyr_a) ΔΕΝ μπαίνει ως category — μένει μόνο ως αρχικό scene layer.
+    expect(request.scene.layersById['lyr_a']).toBeDefined();
   });
 
   it('περνά version/unit overrides στα settings', () => {

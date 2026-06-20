@@ -10,6 +10,7 @@
 import {
   collectOverlayDxfEntities,
   FINISH_LAYER_ID,
+  FINISH_FILL_LAYER_ID,
   type ComponentVisibilityPredicate,
 } from '../overlay-dxf-collector';
 import { buildDefaultBeamParams, buildBeamEntity } from '../../../hooks/drawing/beam-completion';
@@ -44,6 +45,16 @@ function lineEntity(): Entity {
   } as unknown as Entity;
 }
 
+function columnEntity(): Entity {
+  return {
+    id: 'col1', type: 'column', layerId: 'lyr_c', color: '#2f6690', visible: true,
+    geometry: {
+      footprint: { vertices: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }] },
+      height: 3000,
+    },
+  } as unknown as Entity;
+}
+
 describe('collectOverlayDxfEntities (ADR-505)', () => {
   it('κενό input → κενά entities + layers', () => {
     const r = collectOverlayDxfEntities([], { componentVisible: ALWAYS });
@@ -73,5 +84,39 @@ describe('collectOverlayDxfEntities (ADR-505)', () => {
     const r = collectOverlayDxfEntities([lineEntity()], { componentVisible: ALWAYS });
     expect(r.entities).toEqual([]);
     expect(r.layers).toEqual({});
+  });
+});
+
+// ADR-505 §C — συμπαγές γέμισμα (3DFACE) δομικών σωμάτων + σοβά.
+describe('collectOverlayDxfEntities — solid fill (ADR-505 §C)', () => {
+  // μόνο-core predicate → απομονώνει το body fill (χωρίς να ανάψει το rebar pass που
+  // απαιτεί column.params — εδώ το fixture είναι σκόπιμα minimal geometry-only).
+  const CORE_ONLY: ComponentVisibilityPredicate = (c) => c === 'core';
+
+  it('κολώνα + core visible → hatch (patternType solid) με dxfFaces στο COLUMNS_FILL', () => {
+    const r = collectOverlayDxfEntities([columnEntity()], { componentVisible: CORE_ONLY });
+    const fill = r.entities.filter((e) => e.layerId === 'COLUMNS_FILL');
+    expect(fill).toHaveLength(1);
+    expect(fill[0].type).toBe('hatch');
+    const faces = (fill[0] as { dxfFaces?: unknown[] }).dxfFaces;
+    expect(Array.isArray(faces)).toBe(true);
+    // τετράγωνο footprint εξωθημένο: 2 καπάκια (2 τρίγωνα×2) + 4 πλευρές = 8 faces.
+    expect(faces).toHaveLength(8);
+    expect(r.layers['COLUMNS_FILL']).toBeDefined();
+  });
+
+  it('κολώνα + core OFF → κανένα γέμισμα', () => {
+    const r = collectOverlayDxfEntities([columnEntity()], { componentVisible: NEVER });
+    expect(r.entities.filter((e) => e.layerId === 'COLUMNS_FILL')).toHaveLength(0);
+  });
+
+  it('δοκάρι με σοβά → γέμισμα σοβά στο FINISH_FILL (ξεχωριστά από FINISH)', () => {
+    const r = collectOverlayDxfEntities([beamWithFinish()], { componentVisible: ALWAYS });
+    const fill = r.entities.filter((e) => e.layerId === FINISH_FILL_LAYER_ID);
+    expect(fill.length).toBeGreaterThan(0);
+    expect(fill.every((e) => e.type === 'hatch')).toBe(true);
+    expect(r.layers[FINISH_FILL_LAYER_ID]).toBeDefined();
+    // το περίγραμμα σοβά μένει ξεχωριστό στο FINISH.
+    expect(r.entities.some((e) => e.layerId === FINISH_LAYER_ID)).toBe(true);
   });
 });

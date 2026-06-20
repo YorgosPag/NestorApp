@@ -137,10 +137,37 @@ function writeEntity(
       emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness);
       break;
     }
-    // point/spline/hatch/dimension/leader/xline/ray → skipped.
+    case 'hatch': {
+      // ADR-505 §C (SOLID fill / poché) — «βαμμένη επιφάνεια» = προ-υπολογισμένα 3D
+      // faces (πλευρές + καπάκια, βλ. solid-fill-geometry) → ένα `3DFACE` ανά face.
+      // x/y με coordinate scale· z (mm) με mmScale (ίδια σύμβαση με rebar/thickness).
+      const faces = (e as {
+        dxfFaces?: ReadonlyArray<ReadonlyArray<{ x: number; y: number; zMm: number }>>;
+      }).dxfFaces;
+      if (faces) for (const f of faces) emit3DFace(f, layer, aci, s, mmScale, pair);
+      break;
+    }
+    // point/spline/dimension/leader/xline/ray → skipped.
     default:
       break;
   }
+}
+
+/** A `3DFACE` — up to 4 corners (triangle → 4th = 3rd). x/y × `s`, z (mm) × mmScale. */
+function emit3DFace(
+  face: ReadonlyArray<{ x: number; y: number; zMm: number }>,
+  layer: string, aci: number, s: number, mmScale: number, pair: Pair,
+): void {
+  if (face.length < 3) return;
+  const c = [face[0], face[1], face[2], face[3] ?? face[2]]; // tri → 4η κορυφή = 3η
+  pair(0, '3DFACE');
+  for (let i = 0; i < 4; i += 1) {
+    pair(10 + i, c[i].x * s);
+    pair(20 + i, c[i].y * s);
+    pair(30 + i, c[i].zMm * mmScale);
+  }
+  pair(8, layer);
+  pair(62, aci);
 }
 
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */

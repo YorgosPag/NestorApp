@@ -65,11 +65,12 @@ describe('decomposeBimEntityToDxfPrimitives', () => {
     expect(p.vertices).toEqual([
       { x: 0, y: 1 }, { x: 10, y: 1 }, { x: 10, y: -1 }, { x: 0, y: -1 },
     ]);
-    expect(p.layerId).toBe('lyr_w');
+    // ADR-505 §C — re-layer ανά κατηγορία: wall → WALLS (όχι το αρχικό lyr_w).
+    expect(p.layerId).toBe('WALLS');
     expect(p.color).toBe('#ff0000');
   });
 
-  it('column → footprint lwpolyline, z αφαιρείται (3D→2D)', () => {
+  it('column → footprint lwpolyline, z αφαιρείται (3D→2D), re-layer → COLUMNS', () => {
     const out = decomposeBimEntityToDxfPrimitives(column('c1'));
     expect(out).toHaveLength(1);
     const p = out[0];
@@ -77,6 +78,17 @@ describe('decomposeBimEntityToDxfPrimitives', () => {
     expect(p.vertices).toEqual([
       { x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 },
     ]);
+    expect(p.layerId).toBe('COLUMNS');
+  });
+
+  it('ADR-505 §C — re-layer ανά κατηγορία: beam→BEAMS, slab→SLABS, Η-Μ→MEP', () => {
+    expect(decomposeBimEntityToDxfPrimitives(beam('b1'))[0].layerId).toBe('BEAMS');
+    expect(decomposeBimEntityToDxfPrimitives(slab('s1'))[0].layerId).toBe('SLABS');
+    const fixture = {
+      id: 'm1', type: 'mep-fixture', layerId: 'lyr_m',
+      geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }] } },
+    } as unknown as Entity;
+    expect(decomposeBimEntityToDxfPrimitives(fixture)[0].layerId).toBe('MEP');
   });
 
   it('slab → polygon lwpolyline', () => {
