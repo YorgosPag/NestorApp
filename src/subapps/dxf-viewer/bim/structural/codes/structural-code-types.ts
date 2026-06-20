@@ -377,6 +377,13 @@ export interface StructuralCodeProvider {
    */
   beamSpanDepthLimit(ctx: BeamSectionContext): number;
   /**
+   * ADR-506 — **ελάχιστο πλάτος δοκαριού** (mm) κατά τον ενεργό κώδικα. Σεισμικοί κώδικες
+   * (ΕΚ8 §5.4.1.2.1 πρωτεύουσα σεισμική δοκός / ΕΚΩΣ) → 200· σκέτος EC2 (μη-σεισμικός) → 150.
+   * Ο width-aware auto-sizer (`sizeWidthFree`) το χρησιμοποιεί ως **κάτω όριο** του two-way
+   * shrink — ώστε ποτέ να μη πέφτει κάτω από το ελάχιστο του κανονισμού που έχει επιλεγεί.
+   */
+  beamMinWidthMm(): number;
+  /**
    * ADR-498 — μέγιστος επιτρεπτός λόγος L/d **πλάκας** (EC2 §7.4.2 Table 7.4N· slab-basic ×
    * K). Ο έλεγχος βέλους προβόλου: d_req = cantileverSpan / limit· πάχος < απαιτούμενο → warning.
    */

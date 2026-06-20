@@ -230,6 +230,10 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   },
   beamSpanDepthLimit: greekLegacyBeamSpanDepthLimit,
   slabSpanDepthLimit: greekLegacySlabSpanDepthLimit,
+  // ADR-506 — ΕΑΚ/ΕΚΩΣ (σεισμικός): ελάχιστο πλάτος δοκαριού 200mm (parity με ΕΚ8 §5.4.1.2.1).
+  beamMinWidthMm(): number {
+    return 200;
+  },
   flexuralLimitMuLim(): number {
     return GREEK_LEGACY_FLEXURAL_LIMIT_MU;
   },

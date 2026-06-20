@@ -237,6 +237,10 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   },
   beamSpanDepthLimit: eurocodeBeamSpanDepthLimit,
   slabSpanDepthLimit: eurocodeSlabSpanDepthLimit,
+  // ADR-506 — EN1998-1 §5.4.1.2.1: b_w πρωτεύουσας σεισμικής δοκού ≥ 200mm (DCM).
+  beamMinWidthMm(): number {
+    return 200;
+  },
   flexuralLimitMuLim(): number {
     return EUROCODE_FLEXURAL_LIMIT_MU;
   },

@@ -188,4 +188,18 @@ describe('suggestBeamSection — width-aware (ADR-506)', () => {
     expect(s.depthMm).toBe(600); // ύψος αμετάβλητο (locked)
     expect(s.widthMm).toBeGreaterThan(250); // φάρδυνε ώστε 600 να αρκεί
   });
+
+  // ADR-506 §7 — το two-way shrink ΔΕΝ πέφτει κάτω από το ΕΚ8 ελάχιστο (b_w ≥ 200, §5.4.1.2.1).
+  it('σέβεται το ΕΚ8 floor 200mm (δεν στενεύει στο EC2 150) — σεισμικός provider', () => {
+    const s = suggestBeamSection(
+      EUROCODE_PROVIDER,
+      makeCtx({ widthMm: 400, spanMm: 3000, designLineLoadKnM: 10, maxWidthMm: 400, practicalDepthLimitMm: 1500 }),
+    );
+    expect(s.widthMm).toBe(200); // ελάχιστο ΕΚ8, ΟΧΙ 150
+  });
+
+  it('οι σεισμικοί providers εκθέτουν beamMinWidthMm = 200 (ΕΚ8 §5.4.1.2.1 / ΕΚΩΣ)', () => {
+    expect(EUROCODE_PROVIDER.beamMinWidthMm()).toBe(200);
+    expect(GREEK_LEGACY_PROVIDER.beamMinWidthMm()).toBe(200);
+  });
 });

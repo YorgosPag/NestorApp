@@ -27,6 +27,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityColorHex } from '../../systems/selection/select-similar-by-color';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { flattenSceneEntitiesForDxf } from '../core/bim-to-dxf-primitives';
+import { collectOverlayDxfEntities } from '../core/overlay-dxf-collector';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
@@ -89,12 +90,21 @@ export function buildDxfExportRequest(
   const colored = stampRenderedColors(selected, scene.layersById);
   const { entities, warnings } = flattenSceneEntitiesForDxf(colored);
 
+  // ADR-505 (finish/rebar phase) — σοβάδες + οπλισμός είναι derived overlays (όχι
+  // entities) → ξεχωριστός collector παράγει extra DXF primitives, gated «what's
+  // visible». Scope-filtered input (`selected`) → dxf-only scope = μηδέν overlays.
+  const overlay = collectOverlayDxfEntities(selected);
+
   const settings = createDefaultExportSettings();
   if (options.version) settings.version = options.version;
   if (options.unit) settings.units = options.unit;
 
   const request: DxfExportSceneRequest = {
-    scene: { ...scene, entities },
+    scene: {
+      ...scene,
+      entities: [...entities, ...overlay.entities],
+      layersById: { ...scene.layersById, ...overlay.layers },
+    },
     settings,
     entityIds: null,
     layerNames: null,
@@ -169,11 +179,14 @@ export function mergeFloorsToSingleDxfScene(
     const flat = flattenSceneEntitiesForDxf(colored);
     warnings.push(...flat.warnings);
 
+    // ADR-505 (finish/rebar phase) — overlays ανά όροφο, με το ΙΔΙΟ FLnn_ namespacing.
+    const overlay = collectOverlayDxfEntities(selected);
+
     const prefix = floor.layerPrefix;
-    for (const e of flat.entities) {
+    for (const e of [...flat.entities, ...overlay.entities]) {
       entities.push(prefix ? { ...e, layerId: `${prefix}${e.layerId}` } : e);
     }
-    for (const [id, layer] of Object.entries(floor.scene.layersById)) {
+    for (const [id, layer] of Object.entries({ ...floor.scene.layersById, ...overlay.layers })) {
       const newId = prefix ? `${prefix}${id}` : id;
       layersById[newId] = prefix
         ? { ...layer, id: newId, name: `${prefix}${layer.name}` }

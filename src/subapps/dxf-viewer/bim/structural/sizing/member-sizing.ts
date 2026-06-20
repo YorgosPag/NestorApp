@@ -45,7 +45,7 @@ import {
   spanMomentDivisor,
 } from '../codes/suggest-reinforcement';
 import type { BeamSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
-import { MIN_BEAM_DEPTH_MM, MIN_BEAM_WIDTH_MM } from '../../types/beam-types';
+import { MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
 import { plasticTorsionalResistanceKnm, shearTorsionUtilization } from '../codes/torsion-capacity';
 
 /** Constructible module στρογγυλοποίησης ύψους (mm). */
@@ -215,9 +215,12 @@ function sizeFixedWidth(ctx: BeamSectionContext, provider: StructuralCodeProvide
  */
 function sizeWidthFree(ctx: BeamSectionContext, provider: StructuralCodeProvider, maxRatio: number): BeamSizing {
   const depthCap = effectiveDepthCap(ctx);
-  const cap = Math.max(MIN_BEAM_WIDTH_MM, roundDownToModule(ctx.maxWidthMm ?? ctx.widthMm, BEAM_WIDTH_MODULE_MM));
+  // ADR-506 — κάτω όριο πλάτους από τον ΕΝΕΡΓΟ κώδικα (ΕΚ8/ΕΚΩΣ→200, EC2→150), ΟΧΙ σταθερό:
+  // το two-way shrink δεν πέφτει ποτέ κάτω από το ελάχιστο του κανονισμού («πλήρως ΕΚ8»).
+  const minWidth = provider.beamMinWidthMm();
+  const cap = Math.max(minWidth, roundDownToModule(ctx.maxWidthMm ?? ctx.widthMm, BEAM_WIDTH_MODULE_MM));
   const depthLocked = ctx.depthAutoSized === false;
-  for (let w = MIN_BEAM_WIDTH_MM; w <= cap; w += BEAM_WIDTH_MODULE_MM) {
+  for (let w = minWidth; w <= cap; w += BEAM_WIDTH_MODULE_MM) {
     const { raw, governedBy } = requiredDepthRaw(ctx, provider, maxRatio, w);
     if (depthLocked) {
       if (ctx.depthMm >= raw) return { widthMm: w, depthMm: ctx.depthMm, governedBy };

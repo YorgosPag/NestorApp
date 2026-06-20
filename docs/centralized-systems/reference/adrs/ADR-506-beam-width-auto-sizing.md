@@ -99,9 +99,25 @@
 - NEW `derive-beam-max-width.test.ts`: perp-projection cap, min-over-supports, point-column→absent, beams-only.
 - **44 jest πράσινα** (+ 40 σε section-context/span-model/practical-span/torsion regression).
 
-## 6. DEFER
-- Width-sizing με AUTO πλάτος στενεύει στο **ελάχιστο επαρκές** (έως 150mm) όταν υπάρχει στήριξη·
-  να επαληθευτεί στο browser ότι δεν εκπλήσσει (αρχιτεκτονικό πλάτος → lock από τον μηχανικό).
+## 6. Απόφαση Giorgio (2026-06-20, DB-verified) — shrink-to-min = BY DESIGN
+Live test (4 κολώνες 250×250 + 4 δοκάρια, όροφος 3000mm, άνοιγμα 4.24–4.56m): τα δοκάρια βγήκαν
+**150×400** με `autoSizedWidth:true` persisted, `hasCodeViolations:false`. Το two-way **στένεψε** το
+πλάτος στο ελάχιστο επαρκές (150 = EC2 floor)· depth 400 < ΝΟΚ 800 → χωρίς growth (αναμενόμενο σε
+μικρό άνοιγμα). **Giorgio: το 150 μένει** — η εφαρμογή δεν ξέρει αν η κατασκευή θα μεγαλώσει (μπορεί
+κιόσκι-πλαίσιο)· το zero-waste 150 είναι σωστό για το τρέχον φορτίο, και reactive growth θα δώσει τα
+σωστά μεγέθη όσο προστίθενται όροφοι. Σεισμικά ευνοϊκό (ασθενές δοκάρι < ισχυρή κολώνα, ΕΚ8 ικανοτικός).
+
+## 7. ΕΚ8 ελάχιστο πλάτος σεισμικής δοκού (b_w ≥ 200mm) — ✅ DONE (Giorgio go 2026-06-20)
+Το floor 150 ήταν **EC2 generic**· ο **ΕΚ8 §5.4.1.2.1** απαιτεί **b_w ≥ 200mm** για πρωτεύουσα
+σεισμική δοκό (DCM). **Fix (provider-driven SSoT):** NEW `StructuralCodeProvider.beamMinWidthMm()` —
+σεισμικοί κώδικες (eurocode/EN1998 + greek-legacy/ΕΚΩΣ) → **200**, μελλοντικός μη-σεισμικός EC2 → 150.
+Ο `sizeWidthFree` χρησιμοποιεί `provider.beamMinWidthMm()` ως κάτω όριο του two-way shrink (αντί
+hardcoded `MIN_BEAM_WIDTH_MM`). Έτσι το «σέβεται πλήρως τον ΕΚ8» γίνεται αλήθεια χωρίς να επιβληθεί
+πλάτος κολώνας (zero-waste διατηρείται· απλώς δεν πέφτει κάτω από 200). +2 jest.
+**DEFER:** ο **validator** ακόμη δεν flag-άρει χειροκίνητο b_w<200 (μόνο ο auto-sizer το σέβεται)·
++ primary-vs-secondary seismic member distinction (όλες θεωρούνται primary σήμερα).
+
+## 8. DEFER
 - Tie-in: το `governedBy:'width-capped'` μπορεί μελλοντικά να ενεργοποιεί ρητά το ADR-504 advisory
   (σήμερα το advisory βασίζεται στο depth-vs-practical· καλύπτει το ίδιο σενάριο).
 
@@ -112,3 +128,6 @@
 - **2026-06-20** — SSoT cleanup (§3.6, Giorgio challenge): NEW `beam-axis-scene-frame.ts` (params-only)
   ενοποίησε το axis-frame derivation που ήταν inline ×2 (`maxClearSubSpanMm`/`beamInteriorSupports`) — και
   τα 3 consumers delegate· μηδέν νέο διπλότυπο, −2 προϋπάρχοντα. 88 jest συνολικά.
+- **2026-06-20** — DB-verified (4 δοκάρια 150×400, autoSizedWidth persisted). Giorgio: shrink = by-design (§6).
+- **2026-06-20** — §7 ΕΚ8 floor (Giorgio go): NEW `beamMinWidthMm()` provider method (σεισμικοί→200)·
+  `sizeWidthFree` floor = provider min αντί hardcoded 150. +2 jest. 59 jest sizing συνολικά.
