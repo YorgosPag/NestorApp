@@ -24,23 +24,33 @@ const HORIZONTAL: BeamSnapTarget = {
   ],
 };
 
-const OPTS: BeamBeamFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600 };
+const OPTS: BeamBeamFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, beamWidthScene: 200 };
 
 describe('resolveBeamBeamFaceSnap — κατευθυντικό status + γεωμετρία', () => {
-  it('Βόρεια μακριά παρειά → 🟢 beam, flush στη βόρεια (y=+100), ghost προς τα έξω (+y)', () => {
+  it('Βόρεια, ΜΕΣΑΙΟ τρίτο → 🟢 flush βόρεια (y=+100), κεντραρισμένο (x=cursor), ghost +y', () => {
     const r = resolveBeamBeamFaceSnap({ x: 5000, y: 150 }, [HORIZONTAL], OPTS);
     expect(r).not.toBeNull();
     expect(r!.status).toBe('beam');
-    expect(r!.start).toEqual({ x: 5000, y: 100 });
+    expect(r!.start).toEqual({ x: 5000, y: 100 }); // mid → χωρίς μετατόπιση
     expect(r!.end).toEqual({ x: 5000, y: 1300 });
   });
 
-  it('Νότια μακριά παρειά → 🟢 beam, flush στη νότια (y=−100), ghost προς τα έξω (−y)', () => {
-    const r = resolveBeamBeamFaceSnap({ x: 3000, y: -150 }, [HORIZONTAL], OPTS);
+  it('Βόρεια, ΑΡΙΣΤΕΡΟ τρίτο → δοκάρι ΔΕΞΙΑ του cursor (centerline +half = x+100)', () => {
+    const r = resolveBeamBeamFaceSnap({ x: 2000, y: 150 }, [HORIZONTAL], OPTS);
+    expect(r!.start).toEqual({ x: 2100, y: 100 }); // cursor=αριστερή ακμή, δοκάρι δεξιά
+  });
+
+  it('Βόρεια, ΔΕΞΙ τρίτο → δοκάρι ΑΡΙΣΤΕΡΑ του cursor (centerline −half = x−100)', () => {
+    const r = resolveBeamBeamFaceSnap({ x: 8000, y: 150 }, [HORIZONTAL], OPTS);
+    expect(r!.start).toEqual({ x: 7900, y: 100 }); // cursor=δεξιά ακμή, δοκάρι αριστερά
+  });
+
+  it('Νότια → ΑΝΤΙΣΤΡΟΦΑ: αριστερό τρίτο → δοκάρι ΑΡΙΣΤΕΡΑ (centerline −half = x−100)', () => {
+    const r = resolveBeamBeamFaceSnap({ x: 2000, y: -150 }, [HORIZONTAL], OPTS);
     expect(r).not.toBeNull();
     expect(r!.status).toBe('beam');
-    expect(r!.start).toEqual({ x: 3000, y: -100 });
-    expect(r!.end).toEqual({ x: 3000, y: -1300 });
+    expect(r!.start).toEqual({ x: 1900, y: -100 }); // νότια flush + αντίστροφη μετατόπιση
+    expect(r!.end).toEqual({ x: 1900, y: -1300 });
   });
 
   it('Κέντρο άξονα → 🟢 beam + auto-snap στην πλησιέστερη παρειά (απόφαση «Α»)', () => {
@@ -49,11 +59,6 @@ describe('resolveBeamBeamFaceSnap — κατευθυντικό status + γεωμ
     expect(r!.status).toBe('beam');
     // Στο τέλειο κέντρο (perp=0) η ισοπαλία πάει ντετερμινιστικά σε μία παρειά.
     expect(Math.abs(r!.start.y)).toBe(100);
-  });
-
-  it('Ολίσθηση κατά μήκος: το start ακολουθεί το along του (snapped) cursor', () => {
-    const r = resolveBeamBeamFaceSnap({ x: 2000, y: 150 }, [HORIZONTAL], OPTS);
-    expect(r!.start).toEqual({ x: 2000, y: 100 });
   });
 
   it('Ανατολική κοντή άκρη (πέρα από το άκρο) → 🔴 overlap, συγγραμμική συνέχεια', () => {
@@ -82,33 +87,31 @@ describe('resolveBeamBeamFaceSnap — κατευθυντικό status + γεωμ
 });
 
 describe('isBeamCollinearOverlap — ΑΠΑΓΟΡΕΥΣΗ ομοαξονικού/πάνω σε υφιστάμενο', () => {
-  const W = 200; // πλάτος νέου = πλάτος target
-
   it('ομοαξονικό ΠΑΝΩ στο σώμα → true', () => {
-    expect(isBeamCollinearOverlap({ x: 2000, y: 0 }, { x: 8000, y: 0 }, W, [HORIZONTAL])).toBe(true);
+    expect(isBeamCollinearOverlap({ x: 2000, y: 0 }, { x: 8000, y: 0 }, [HORIZONTAL])).toBe(true);
   });
 
   it('κάθετο Τ-framing (⊥) → false (όχι παράλληλο)', () => {
-    expect(isBeamCollinearOverlap({ x: 5000, y: -2000 }, { x: 5000, y: 2000 }, W, [HORIZONTAL])).toBe(false);
+    expect(isBeamCollinearOverlap({ x: 5000, y: -2000 }, { x: 5000, y: 2000 }, [HORIZONTAL])).toBe(false);
   });
 
   it('παράλληλο ΔΙΠΛΑ (offset > half-widths) → false', () => {
-    expect(isBeamCollinearOverlap({ x: 2000, y: 500 }, { x: 8000, y: 500 }, W, [HORIZONTAL])).toBe(false);
+    expect(isBeamCollinearOverlap({ x: 2000, y: 500 }, { x: 8000, y: 500 }, [HORIZONTAL])).toBe(false);
   });
 
   it('άκρο-με-άκρο άγγιγμα (μηδέν επικάλυψη) → false (νόμιμη επέκταση)', () => {
-    expect(isBeamCollinearOverlap({ x: 10000, y: 0 }, { x: 16000, y: 0 }, W, [HORIZONTAL])).toBe(false);
+    expect(isBeamCollinearOverlap({ x: 10000, y: 0 }, { x: 16000, y: 0 }, [HORIZONTAL])).toBe(false);
   });
 
   it('μερική επικάλυψη στο άκρο → true', () => {
-    expect(isBeamCollinearOverlap({ x: 9000, y: 0 }, { x: 15000, y: 0 }, W, [HORIZONTAL])).toBe(true);
+    expect(isBeamCollinearOverlap({ x: 9000, y: 0 }, { x: 15000, y: 0 }, [HORIZONTAL])).toBe(true);
   });
 
   it('κανένας στόχος → false', () => {
-    expect(isBeamCollinearOverlap({ x: 2000, y: 0 }, { x: 8000, y: 0 }, W, [])).toBe(false);
+    expect(isBeamCollinearOverlap({ x: 2000, y: 0 }, { x: 8000, y: 0 }, [])).toBe(false);
   });
 
   it('εκφυλισμένο νέο (start==end) → false', () => {
-    expect(isBeamCollinearOverlap({ x: 5000, y: 0 }, { x: 5000, y: 0 }, W, [HORIZONTAL])).toBe(false);
+    expect(isBeamCollinearOverlap({ x: 5000, y: 0 }, { x: 5000, y: 0 }, [HORIZONTAL])).toBe(false);
   });
 });

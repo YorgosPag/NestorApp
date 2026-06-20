@@ -202,12 +202,18 @@ export function resolveActiveColumnReinforcement(
  * Υπερισχύει του πλήρους μήκους **μόνο για ροπή/βέλος** (`spanMm`)· το γραμμικό φορτίο w
  * (kN/m) μένει από το ΠΛΗΡΕΣ άνοιγμα (το φορτίο ανά μέτρο δεν αλλάζει — αλλάζει μόνο το
  * μήκος που κάμπτει). Absent/≤0 → πλήρες μήκος (μηδέν regression). Ίδιο pattern override.
+ *
+ * ADR-506 — `sizing` (προαιρετικό): τα width-aware όρια διαστασιολόγησης (`practicalDepthLimitMm`
+ * πρακτικό ΝΟΚ + `maxWidthMm` cap κολώνας + `widthAutoSized`/`depthAutoSized` lock flags). Μόνο
+ * ο sizing path τα δίνει (`resolveActiveBeamSizingLimits`)· ο reinforce path τα παραλείπει
+ * → depth-only (μηδέν regression). Τα flags `false` ΠΡΕΠΕΙ να μεταφέρονται (lock semantics).
  */
 export function buildBeamSectionContext(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
+  sizing?: Pick<BeamSectionContext, 'practicalDepthLimitMm' | 'maxWidthMm' | 'widthAutoSized' | 'depthAutoSized'>,
 ): BeamSectionContext {
   const p = beam.params;
   const fullSpanMm = beam.geometry.length * M_TO_MM;
@@ -221,6 +227,10 @@ export function buildBeamSectionContext(
     supportType: supportTypeOverride ?? p.supportType ?? 'simple',
     ...resolveBeamDesignLoad(p, fullSpanMm),
     ...(designTorsionKnm !== undefined && designTorsionKnm > 0 ? { designTorsionKnm } : {}),
+    ...(sizing?.practicalDepthLimitMm !== undefined ? { practicalDepthLimitMm: sizing.practicalDepthLimitMm } : {}),
+    ...(sizing?.maxWidthMm !== undefined ? { maxWidthMm: sizing.maxWidthMm } : {}),
+    ...(sizing?.widthAutoSized !== undefined ? { widthAutoSized: sizing.widthAutoSized } : {}),
+    ...(sizing?.depthAutoSized !== undefined ? { depthAutoSized: sizing.depthAutoSized } : {}),
   };
 }
 

@@ -163,8 +163,7 @@ function makeBeamGhostBeforeClick(
   // (β) το φάντασμα κείτεται ομοαξονικά/πάνω σε υφιστάμενο δοκάρι (`isBeamCollinearOverlap` —
   // πιάνει ΚΑΙ το εφεδρικό free-fallback ghost που έπεφτε ομοαξονικό σε οριζόντιο δοκάρι).
   // 🟢 `beam` (έγκυρο κάθετο Τ-framing) & `neutral` → WYSIWYG amber αυτούσιο (decision A).
-  const widthScene = widthMm * mmToSceneUnits(sceneUnits);
-  const isOverlap = snap?.status === 'overlap' || isBeamCollinearOverlap(start, end, widthScene, beamTargets);
+  const isOverlap = snap?.status === 'overlap' || isBeamCollinearOverlap(start, end, beamTargets);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
   return {
     ...built.entity,
@@ -215,9 +214,8 @@ function makeBeamWysiwygGhost(
   // ADR-398 §3.6 — αν το rubber-band δοκάρι θα κείτεται ομοαξονικά/πάνω σε υφιστάμενο
   // (duplication) → 🔴 κόκκινο schematic + μπλοκάρισμα commit (στο `useBeamTool`). Κάθετο
   // Τ-framing αποκλείεται (μη παράλληλο). straight/cantilever μόνο.
-  const widthScene = (overrides.width ?? DEFAULT_BEAM_WIDTH_MM) * mmToSceneUnits(sceneUnits);
   const ghostStatusColor =
-    kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, widthScene, beamTargets)
+    kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, beamTargets)
       ? resolveGhostStatusColor('overlap')
       : null;
   const statusField = ghostStatusColor ? { ghostStatusColor } : {};

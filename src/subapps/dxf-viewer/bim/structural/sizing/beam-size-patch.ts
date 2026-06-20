@@ -27,7 +27,7 @@ import { isBeamEntity } from '../../../types/entities';
 import type { BeamEntity, BeamParams, BeamSupportType } from '../../types/beam-types';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import { buildBeamSectionContext } from '../section-context';
-import { suggestBeamSection, type BeamSizing } from './member-sizing';
+import { suggestBeamSection } from './member-sizing';
 
 /** Patch διατομής μέλους (beam-only v1· generic επέκταση κολόνας = ADR-475 §4 DEFER). */
 export interface MemberSizePatch {
@@ -36,67 +36,50 @@ export interface MemberSizePatch {
 }
 
 /**
- * ADR-475 — Είναι το δοκάρι σε AUTO διαστασιολόγηση; default = AUTO (absent/true)·
- * `false` = κλειδωμένο (ο μηχανικός όρισε χειροκίνητα τη διατομή → user wins).
+ * ADR-506 — τα width-aware όρια διαστασιολόγησης ενός δοκαριού (storey/topology-derived). Τα
+ * παράγει ο store-coupled `resolveActiveBeamSizingLimits` (active-reinforcement) και τα περνά
+ * ο caller (command / grip / panel) στον pure sizer/lock. Absent ⇒ depth-only (μηδέν regression).
+ */
+export interface BeamSizingLimits {
+  /** Πρακτικό άνω όριο ΥΨΟΥΣ (mm) = ύψος ορόφου − ελεύθερο ύψος κάτω από δοκό (ΝΟΚ). */
+  readonly practicalDepthLimitMm: number;
+  /** Άνω όριο ΠΛΑΤΟΥΣ (mm) = κάθετη προβολή στηρίζουσας κολώνας. Absent ⇒ depth-only. */
+  readonly maxWidthMm?: number;
+}
+
+/**
+ * ADR-475 — Είναι το **ΥΨΟΣ** του δοκαριού σε AUTO διαστασιολόγηση; default = AUTO (absent/true)·
+ * `false` = κλειδωμένο (ο μηχανικός όρισε χειροκίνητα το ύψος → user wins).
  */
 export function isBeamAutoSized(params: BeamParams): boolean {
   return params.autoSized !== false;
 }
 
 /**
- * ADR-475 — η ΕΝΕΡΓΗ προτεινόμενη διατομή ενός AUTO δοκαριού από την ΤΡΕΧΟΥΣΑ
- * γεωμετρία + φορτίο (span = derived `geometry.length`). Locked → `undefined`
- * (η stored διατομή ισχύει ως έχει). Pure (provider arg) ⇒ unit-testable.
- *
- * ADR-486 §C — `supportTypeOverride` (προαιρετικό): ο **topology-aware** τύπος
- * στήριξης (ADR-486). Κρίσιμο για τον πρόβολο: χωρίς αυτόν ο sizer έβλεπε το stored
- * `'simple'` → wL²/8 → υπο-διαστασιολόγηση → ο οπλισμός (που υπολογίζεται σωστά με
- * wL²/2) δεν χωρούσε → ρ > ρ_max. Mirror του reinforce path (`resolveActiveBeam*`).
+ * ADR-506 — Είναι το **ΠΛΑΤΟΣ** του δοκαριού σε AUTO διαστασιολόγηση; default = AUTO (absent/true)·
+ * `false` = κλειδωμένο (ο μηχανικός όρισε χειροκίνητα το πλάτος → αρχιτεκτονική επιλογή, user wins).
+ * Ανεξάρτητο από το `isBeamAutoSized` (ύψος) — independent lock.
  */
-function resolveActiveBeamSection(
-  beam: Pick<BeamEntity, 'params' | 'geometry'>,
-  provider: StructuralCodeProvider,
-  supportTypeOverride?: BeamSupportType,
-  designTorsionKnm?: number,
-  sizingSpanOverrideMm?: number,
-): BeamSizing | undefined {
-  if (!isBeamAutoSized(beam.params)) return undefined;
-  return suggestBeamSection(
-    provider,
-    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm),
-  );
+export function isBeamWidthAutoSized(params: BeamParams): boolean {
+  return params.autoSizedWidth !== false;
 }
 
 /**
- * ADR-475 — convergence guard: διαφέρει ΟΥΣΙΩΔΩΣ η διατομή; (50mm-quantized →
- * exact compare· ίδια πρόταση → `false` → μηδέν patch → μηδέν undo entry → μηδέν
- * event storm, anti-oscillation — mirror `beamReinforcementMateriallyDiffers`).
- */
-function beamSectionMateriallyDiffers(
-  current: { readonly width: number; readonly depth: number },
-  suggested: BeamSizing,
-): boolean {
-  return current.width !== suggested.widthMm || current.depth !== suggested.depthMm;
-}
-
-/**
- * ADR-475 — auto-size patch ενός δοκαριού: re-derive διατομή από γεωμετρία+φορτίο.
- *   - μη-δοκάρι / locked (`autoSized:false`) → `null` (user wins).
+ * ADR-475/506 — auto-size patch ενός δοκαριού: re-derive διατομή (ύψος ∧/∨ πλάτος) από
+ * γεωμετρία+φορτίο+τοπολογία.
+ *   - μη-δοκάρι → `null`.
+ *   - πλήρως κλειδωμένο (`autoSized:false` ΚΑΙ `autoSizedWidth:false`) → `null` (user wins).
  *   - converged (ίδια διατομή) → `null` (convergence guard, idempotent).
- *   - αλλιώς → `{ prev, next }` με νέο `depth`/`width` + `autoSized:true`.
+ *   - αλλιώς → `{ prev, next }` με νέα διάσταση μόνο στα **AUTO** πεδία (+ αντίστοιχα flags).
  * Geometry-mutating — ο caller το τυλίγει σε undoable command (mirror foundation).
  *
- * ADR-486 §C — `supportTypeOverride`: ο caller (command) περνά τον topology-aware
- * τύπο στήριξης (`resolveActiveBeamSupportType`) ώστε ο πρόβολος να διαστασιολογείται
- * με wL²/2 (όχι stored 'simple'). Απών → fallback στο stored (graphless = legacy).
+ * **Independent locks (ADR-506):** το ύψος (`autoSized`) και το πλάτος (`autoSizedWidth`)
+ * ρυθμίζονται ανεξάρτητα — κλειδωμένη διάσταση κρατά το stored value, η AUTO ξανα-υπολογίζεται.
  *
- * ADR-499 §6.3-b — `designTorsionKnm`: ο caller περνά την DERIVED στρεπτική ροπή
- * (`resolveActiveBeamTorsion`) ώστε ο sizer να μεγαλώνει το ύψος ώστε
- * `T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1`. Απών/≤0 → καμία στρέψη (μηδέν regression).
- *
- * ADR-504 Φ2 — `sizingSpanOverrideMm`: ο caller περνά το DERIVED υπο-άνοιγμα συνεχούς δοκού
- * (`resolveActiveBeamSpanMm`) ώστε ο sizer να μικραίνει το ύψος (ροπή/βέλος από max sub-span).
- * Απών/≤0 → πλήρες μήκος (μηδέν regression). Αυτό κάνει ΠΡΑΞΗ το «η δοκός μικραίνει».
+ * Override args (ίδιο pattern με reinforce path): `supportTypeOverride` (ADR-486 topology-aware
+ * πρόβολος→wL²/2), `designTorsionKnm` (ADR-499 §6.3 στρέψη→ύψος), `sizingSpanOverrideMm` (ADR-504
+ * συνεχής δοκός→υπο-άνοιγμα), `limits` (ADR-506 πρακτικό ΝΟΚ ύψος + cap πλάτους κολώνας →
+ * width-sizing). Απόντα → fallback legacy (μηδέν regression).
  */
 export function buildBeamSizePatch(
   entity: Entity,
@@ -104,17 +87,33 @@ export function buildBeamSizePatch(
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
+  limits?: BeamSizingLimits,
 ): MemberSizePatch | null {
   if (!isBeamEntity(entity)) return null;
-  const suggested = resolveActiveBeamSection(
-    entity, provider, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
-  );
-  if (!suggested) return null;
   const p = entity.params;
-  if (!beamSectionMateriallyDiffers(p, suggested)) return null;
+  const widthAuto = isBeamWidthAutoSized(p);
+  const depthAuto = isBeamAutoSized(p);
+  if (!widthAuto && !depthAuto) return null; // πλήρως κλειδωμένο → user wins
+  const suggested = suggestBeamSection(
+    provider,
+    buildBeamSectionContext(entity, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm, {
+      ...limits,
+      widthAutoSized: widthAuto,
+      depthAutoSized: depthAuto,
+    }),
+  );
+  const nextWidth = widthAuto ? suggested.widthMm : p.width;
+  const nextDepth = depthAuto ? suggested.depthMm : p.depth;
+  if (nextWidth === p.width && nextDepth === p.depth) return null; // convergence guard (idempotent)
   return {
     prev: p,
-    next: { ...p, width: suggested.widthMm, depth: suggested.depthMm, autoSized: true },
+    next: {
+      ...p,
+      width: nextWidth,
+      depth: nextDepth,
+      ...(widthAuto ? { autoSizedWidth: true } : {}),
+      ...(depthAuto ? { autoSized: true } : {}),
+    },
   };
 }
 
@@ -140,11 +139,15 @@ export function isBeamSectionAdequate(
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
+  limits?: BeamSizingLimits,
 ): BeamSectionAdequacy {
+  // ADR-506 — adequacy κρίνεται με ΣΤΑΘΕΡΟ το χειροκίνητο πλάτος (`widthAutoSized:false`) ώστε το
+  // `suggested.depthMm` να είναι το ελάχιστο επαρκές ύψος ΓΙ' ΑΥΤΟ το πλάτος (capped στο ΝΟΚ όριο).
   const suggested = suggestBeamSection(
     provider,
     buildBeamSectionContext(
       { ...beam, params: next }, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
+      { ...limits, widthAutoSized: false, depthAutoSized: true },
     ),
   );
   return { adequate: next.depth >= suggested.depthMm, minDepthMm: suggested.depthMm };
@@ -161,17 +164,18 @@ export interface BeamSectionLockResolution {
 }
 
 /**
- * ADR-503 Slice 3 — **ΕΝΑ SSoT** για την απόφαση lock σε χειροκίνητη διατομή δοκαριού (grip
- * resize ∨ panel/ribbon). Αντικαθιστά το inline `sectionChanged ? {...,autoSized:false} : ...`
- * σε 2 σημεία (N.0.2). Mirror του `resolveColumnSectionLock`. Κανόνας (Giorgio Q2):
- *   - **δεν άλλαξε διατομή** (width/depth ίδια) → pass-through (μη-section edits δεν κλειδώνουν).
- *   - manual **≥ επαρκές** → lock OK: `{...next, autoSized:false}` (user wins, Revit).
- *   - manual **< επαρκές** (υποδιαστασιολόγηση) → **ΜΠΛΟΚ**: `{...next, depth:minDepthMm,
- *     autoSized:true}` (μένει AUTO, το σύστημα κρατά το ελάχιστο επαρκές) + `rejected:true`.
+ * ADR-503 Slice 3 / ADR-506 — **ΕΝΑ SSoT** για την απόφαση lock σε χειροκίνητη διατομή δοκαριού
+ * (grip resize ∨ panel/ribbon). Mirror του `resolveColumnSectionLock`. **Independent locks** —
+ * το ύψος και το πλάτος κλειδώνουν ξεχωριστά ανάλογα με το ΤΙ άλλαξε:
+ *   - **τίποτα** (width/depth ίδια) → pass-through (μη-section edits δεν κλειδώνουν).
+ *   - **άλλαξε ΥΨΟΣ**: manual ≥ επαρκές → lock ύψους (`autoSized:false`, user wins)· manual <
+ *     επαρκές (υποδιαστασιολόγηση) → **ΜΠΛΟΚ**: `depth:minDepthMm` + `autoSized:true` + `rejected`.
+ *   - **άλλαξε ΠΛΑΤΟΣ**: lock πλάτους (`autoSizedWidth:false`) — το πλάτος είναι αρχιτεκτονική
+ *     επιλογή (Giorgio), δεν απορρίπτεται· το ύψος μένει AUTO και ξανα-υπολογίζεται γι' αυτό το
+ *     πλάτος (αν τελικά ανεπαρκές → ο validator/ADR-504 advisory το επισημαίνει).
  *
- * Invariant: καμία persisted δοκός ποτέ κάτω από το επαρκές. Pure — ο caller το τυλίγει σε command.
- * `supportTypeOverride`/`designTorsionKnm`: topology-aware (`resolveActiveBeamSupportType`/
- * `resolveActiveBeamTorsion`, ίδιο SSoT με τον auto-sizer).
+ * Invariant: καμία persisted δοκός ποτέ με ΥΨΟΣ κάτω από το επαρκές. Pure — ο caller το τυλίγει σε
+ * command. Override args topology-aware (`resolveActiveBeam*`) + `limits` (ADR-506 ΝΟΚ/cap κολώνας).
  */
 export function resolveBeamSectionLock(
   provider: StructuralCodeProvider,
@@ -181,16 +185,28 @@ export function resolveBeamSectionLock(
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
+  limits?: BeamSizingLimits,
 ): BeamSectionLockResolution {
-  const sectionChanged = nextParams.width !== prevParams.width || nextParams.depth !== prevParams.depth;
-  if (!sectionChanged) {
+  const widthChanged = nextParams.width !== prevParams.width;
+  const depthChanged = nextParams.depth !== prevParams.depth;
+  if (!widthChanged && !depthChanged) {
     return { params: nextParams, rejected: false, minDepthMm: nextParams.depth };
   }
-  const { adequate, minDepthMm } = isBeamSectionAdequate(
-    provider, beam, nextParams, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
-  );
-  if (adequate) {
-    return { params: { ...nextParams, autoSized: false }, rejected: false, minDepthMm };
+  let params = nextParams;
+  let rejected = false;
+  let minDepthMm = nextParams.depth;
+  if (depthChanged) {
+    const adq = isBeamSectionAdequate(
+      provider, beam, nextParams, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm, limits,
+    );
+    minDepthMm = adq.minDepthMm;
+    params = adq.adequate
+      ? { ...params, autoSized: false }
+      : { ...params, depth: adq.minDepthMm, autoSized: true };
+    rejected = !adq.adequate;
   }
-  return { params: { ...nextParams, depth: minDepthMm, autoSized: true }, rejected: true, minDepthMm };
+  if (widthChanged) {
+    params = { ...params, autoSizedWidth: false }; // lock πλάτους (αρχιτεκτονική επιλογή)
+  }
+  return { params, rejected, minDepthMm };
 }

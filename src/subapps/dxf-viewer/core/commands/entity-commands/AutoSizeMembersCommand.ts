@@ -37,6 +37,7 @@ import {
   resolveActiveBeamSupportType,
   resolveActiveBeamTorsion,
   resolveActiveBeamSpanMm,
+  resolveActiveBeamSizingLimits,
   resolveActiveSlabSupportCondition,
   resolveActiveColumnDesignMoment,
 } from '../../../bim/structural/active-reinforcement';
@@ -108,10 +109,12 @@ export class AutoSizeMembersCommand implements ICommand {
         // ώστε T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1 (ίδιο SSoT με τον sensor/classifier).
         // ADR-504 Φ2 — + DERIVED υπο-άνοιγμα συνεχούς δοκού: το ύψος ΜΙΚΡΑΙΝΕΙ (ροπή/βέλος από
         // max sub-span μεταξύ ενδιάμεσων στηρίξεων). Αυτό κάνει πράξη το «η δοκός μικραίνει».
+        // ADR-506 — + width-aware όρια (πρακτικό ΝΟΚ ύψος + cap πλάτους κολώνας): όταν το ύψος
+        // χτυπά το ΝΟΚ όριο, το πλάτος φαρδαίνει two-way στο ελάχιστο επαρκές (≤ πλάτος κολώνας).
         const patch = buildBeamSizePatch(
           entity, this.provider,
           resolveActiveBeamSupportType(entityId), resolveActiveBeamTorsion(entityId),
-          resolveActiveBeamSpanMm(entityId),
+          resolveActiveBeamSpanMm(entityId), resolveActiveBeamSizingLimits(entityId),
         );
         if (patch) this.patches.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
       } else if (isSlabEntity(entity)) {

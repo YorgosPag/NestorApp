@@ -1375,6 +1375,7 @@
       "mepFixtureLibraryPlacement": "Placement",
       "mepRiser": "Stack",
       "print": "Print",
+      "export": "Export",
       "structural": "Structural"
     },
     "minimizeStates": {
@@ -3850,6 +3851,7 @@
         }
       },
       "print": "Print",
+      "export": "Export",
       "runStructuralAnalysis": "Analysis",
       "autoStudyOrganism": "Auto Study",
       "autoReinforceOrganism": "Auto-Reinforce",
@@ -3865,6 +3867,7 @@
       "bimSchedule": "Open BIM Schedule — export structural elements",
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
+      "export": "Export DXF & BIM entities to a file (DXF / IFC / PDF) — DXF only, BIM only or both, per floor or all together",
       "autoStudyOrganism": "Studies the whole floor by itself: iterates loads → sizing → reinforcement → footings → check, until nothing is red (or up to 10 rounds). One Ctrl+Z undoes the whole study",
       "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
       "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)",
@@ -4827,5 +4830,44 @@
       "date": "Date",
       "sheet": "Sheet"
     }
+  },
+  "export": {
+    "dialogTitle": "Export Drawing",
+    "dialogDescription": "Export the DXF & BIM entities to a file. Choose format, content and floor scope.",
+    "format": "File format",
+    "formats": {
+      "dxf": "DXF (AutoCAD/CAD)",
+      "ifc": "IFC4 (BIM — Revit/ArchiCAD)",
+      "pdf": "PDF (drawing)"
+    },
+    "content": "Content",
+    "contentScopes": {
+      "both": "DXF & BIM (all)",
+      "dxf-only": "DXF entities only",
+      "bim-only": "BIM entities only"
+    },
+    "floors": "Floors",
+    "floorScopes": {
+      "active": "Active floor",
+      "all-zip": "All floors — ZIP (one file per floor)",
+      "all-single": "All floors — single file (layer per floor)"
+    },
+    "dxfVersion": "DXF version",
+    "dxfUnit": "Units",
+    "units": {
+      "millimeters": "Millimeters (mm)",
+      "centimeters": "Centimeters (cm)",
+      "meters": "Meters (m)"
+    },
+    "dxfLineMode": "Compatibility",
+    "lineModes": {
+      "polyline": "Polyline (AutoCAD / standard)",
+      "lines": "Lines (Tekton / FESPA)"
+    },
+    "scopeConflict": "IFC contains BIM entities only. Choose “DXF & BIM” or “BIM only”.",
+    "submit": "Export",
+    "cancel": "Cancel",
+    "exporting": "Exporting…",
+    "error": "Export failed. Please try again."
   }
 }

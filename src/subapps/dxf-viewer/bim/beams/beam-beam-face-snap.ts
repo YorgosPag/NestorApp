@@ -24,6 +24,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
+import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
+import { pickThird } from './beam-face-third';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 
 /** Στόχος face-snap = υφιστάμενο δοκάρι (axis + outline, scene units). */
@@ -50,6 +52,8 @@ export interface BeamBeamFaceSnapOptions {
   readonly ghostLenScene: number;
   /** Μέγιστη απόσταση cursor→σώμα δοκαριού για ενεργοποίηση. */
   readonly captureScene: number;
+  /** Πλάτος νέου δοκαριού (scene units) — για την 3-ζωνική δικαιολόγηση κατά τον άξονα. */
+  readonly beamWidthScene: number;
 }
 
 /** Πλαίσιο άξονα ενός υποψήφιου δοκαριού-στόχου (όλα σε scene units). */
@@ -122,12 +126,21 @@ export function resolveBeamBeamFaceSnap(
 
   // ── cursor πάνω στο σώμα → 🟢 κάθετο Τ-framing στην πλησιέστερη μακριά παρειά ──────
   if (cAlong >= alongMin && cAlong <= alongMax) {
-    const nearPerp = cPerp >= mid ? perpMax : perpMin; // πλησιέστερη παρειά (κέντρο→«Α»)
-    const outwardSign = nearPerp >= mid ? 1 : -1; // μακριά από το κέντρο σώματος
-    const tAlong = Math.min(Math.max(cAlong, alongMin), alongMax); // ολίσθηση κατά μήκος
+    const isSouth = cPerp >= mid; // perpMax = νότια παρειά (signedPerp αντίστροφο του y)
+    const nearPerp = isSouth ? perpMax : perpMin; // πλησιέστερη παρειά (κέντρο→«Α»)
+    const outwardSign = isSouth ? 1 : -1; // ghost προς τα έξω, μακριά από το κέντρο σώματος
+    // 3-ζωνική δικαιολόγηση πλάτους (Giorgio §3.6): το δοκάρι ΜΕΝΕΙ ίσιο/κάθετο — απλώς
+    // ΜΕΤΑΤΟΠΙΖΕΤΑΙ κατά τον άξονα u ώστε το σταυρόνημα να πέφτει στην αρχή/μέση/τέλος του
+    // πλάτους του. ΒΟΡΕΙΑ: lo→δοκάρι «δεξιά» (cursor αριστερή ακμή· centerline +half),
+    // hi→«αριστερά» (cursor δεξιά ακμή· −half), mid→κεντραρισμένο. ΝΟΤΙΑ: αντίστροφα.
+    const third = pickThird(cAlong, alongMin, alongMax);
+    const half = opts.beamWidthScene / 2;
+    const baseShift = third === 'lo' ? half : third === 'hi' ? -half : 0;
+    const shift = isSouth ? -baseShift : baseShift;
+    const centerAlong = cAlong + shift;
     const start: Point2D = {
-      x: a.x + tAlong * u.x + nearPerp * p.x,
-      y: a.y + tAlong * u.y + nearPerp * p.y,
+      x: a.x + centerAlong * u.x + nearPerp * p.x,
+      y: a.y + centerAlong * u.y + nearPerp * p.y,
     };
     const end: Point2D = {
       x: start.x + outwardSign * len * p.x,
@@ -153,24 +166,21 @@ export function resolveBeamBeamFaceSnap(
 
 /** Συνημίτονο ορίου «παράλληλων αξόνων» (≈ ±10°). |u₁·u₂| ≥ τιμή ⇒ παράλληλα. */
 const PARALLEL_COS = 0.985;
-/** Float-noise guard για το «ουσιαστική επικάλυψη κατά μήκος» (scene units). */
-const OVERLAP_EPS = 1e-6;
 
 /**
- * `true` αν το νέο δοκάρι (`start→end`, πλάτος `newWidthScene`) θα κείτεται **ομοαξονικά /
- * πάνω** σε υφιστάμενο δοκάρι — duplication, ΟΧΙ έγκυρο κάθετο Τ-framing. Κριτήρια (ΟΛΑ):
- *   1. **παράλληλοι** άξονες (`|u_new·u_target| ≥ PARALLEL_COS`),
- *   2. **ουσιαστική** επικάλυψη κατά μήκος του κοινού άξονα (`> OVERLAP_EPS` — όχι απλό
- *      άγγιγμα άκρο-με-άκρο, που είναι νόμιμη επέκταση),
- *   3. **κοντινές παρειές**: κάθετη απόσταση κέντρου νέου ≤ άθροισμα half-widths.
+ * `true` αν το νέο δοκάρι (`start→end`) θα κείτεται **ομοαξονικά / πάνω** σε υφιστάμενο
+ * δοκάρι — duplication, ΟΧΙ έγκυρο κάθετο Τ-framing. Δύο κριτήρια:
+ *   1. **παράλληλοι** άξονες (`|u_new·u_target| ≥ PARALLEL_COS`) → αποκλείει το ⊥ Τ-framing,
+ *   2. ο **άξονας** του νέου περνά **μέσα** από το outline του υφιστάμενου (on-top) — μέσω του
+ *      SSoT `coveredIntervals` (segment ∩ polygon coverage· robust convex/concave).
  *
- * Κάθετο Τ-framing (⊥) αποκλείεται από το (1). Παράλληλο δοκάρι **δίπλα** (offset > half-widths)
- * αποκλείεται από το (3). Reuse `projectPointOnAxis`/`projectPolygonOnAxis`. Pure (scene units).
+ * Παράλληλο δοκάρι **δίπλα** (άξονας εκτός outline) → coverage 0 → false. Άκρο-με-άκρο
+ * άγγιγμα (μηδέν coverage) → νόμιμη επέκταση → false. **Reuse** `coveredIntervals` (ΟΧΙ
+ * hand-rolled overlap). Pure (scene units).
  */
 export function isBeamCollinearOverlap(
   start: Readonly<Point2D>,
   end: Readonly<Point2D>,
-  newWidthScene: number,
   targets: readonly BeamSnapTarget[],
 ): boolean {
   const ndx = end.x - start.x;
@@ -178,34 +188,19 @@ export function isBeamCollinearOverlap(
   const nlen = Math.hypot(ndx, ndy);
   if (nlen < 1e-9) return false;
   const nu: Point2D = { x: ndx / nlen, y: ndy / nlen };
-  const newHalf = newWidthScene / 2;
-  const midX = (start.x + end.x) / 2;
-  const midY = (start.y + end.y) / 2;
 
   for (const t of targets) {
     if (t.axis.length < 2 || t.outline.length < 3) continue;
     const a = t.axis[0];
     const b = t.axis[t.axis.length - 1];
-    const tdx = b.x - a.x;
-    const tdy = b.y - a.y;
-    const tlen = Math.hypot(tdx, tdy);
+    const tlen = Math.hypot(b.x - a.x, b.y - a.y);
     if (tlen < 1e-9) continue;
-    const tu: Point2D = { x: tdx / tlen, y: tdy / tlen };
+    const tu: Point2D = { x: (b.x - a.x) / tlen, y: (b.y - a.y) / tlen };
 
-    // (1) παράλληλοι άξονες;
+    // (1) παράλληλοι άξονες; (αποκλείει κάθετο Τ-framing)
     if (Math.abs(nu.x * tu.x + nu.y * tu.y) < PARALLEL_COS) continue;
-
-    // (2) ουσιαστική επικάλυψη κατά μήκος του άξονα-στόχου;
-    const tp = projectPolygonOnAxis(t.outline, a.x, a.y, tu.x, tu.y);
-    const sA = projectPointOnAxis(start.x, start.y, a.x, a.y, tu.x, tu.y).along;
-    const eA = projectPointOnAxis(end.x, end.y, a.x, a.y, tu.x, tu.y).along;
-    const overlapLen = Math.min(Math.max(sA, eA), tp.alongMax) - Math.max(Math.min(sA, eA), tp.alongMin);
-    if (overlapLen <= OVERLAP_EPS) continue;
-
-    // (3) κοντινές παρειές (κάθετη απόσταση κέντρου ≤ άθροισμα half-widths);
-    const perp = projectPointOnAxis(midX, midY, a.x, a.y, tu.x, tu.y).perp;
-    const targetHalf = Math.max(Math.abs(tp.perpMin), Math.abs(tp.perpMax));
-    if (perp <= newHalf + targetHalf) return true;
+    // (2) ο άξονας του νέου περνά ΜΕΣΑ από το outline του υφιστάμενου (on-top) — SSoT
+    if (coveredIntervals(start, end, t.outline).length > 0) return true;
   }
   return false;
 }

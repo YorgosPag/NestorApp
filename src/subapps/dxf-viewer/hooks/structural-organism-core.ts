@@ -45,6 +45,9 @@ import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
 import { BeamTorsionStore } from '../bim/structural/organism/beam-torsion-store';
+// ADR-506 — DERIVED άνω όριο πλάτους δοκαριού (κάθετη προβολή στηρίζουσας κολώνας) → transient store.
+import { buildBeamMaxWidthMap } from '../bim/structural/organism/derive-beam-max-width';
+import { BeamMaxWidthStore } from '../bim/structural/organism/beam-max-width-store';
 // ADR-502 §Slice2 — DERIVED στατική ροπή στηρίζουσας κολώνας από δοκάρι-πρόβολο → transient store.
 import { buildColumnSupportMomentMap } from '../bim/structural/loads/column-support-moment';
 import { ColumnSupportMomentStore } from '../bim/structural/organism/column-support-moment-store';
@@ -127,6 +130,7 @@ export function runOrganismDiagnostics(
   BeamSpanStore.set(beamSpans);
   SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
   BeamTorsionStore.set(computeBeamDesignTorsion(entities));
+  BeamMaxWidthStore.set(buildBeamMaxWidthMap(graph, entities)); // ADR-506 — width-sizing cap
   ColumnSupportMomentStore.set(buildColumnSupportMomentMap(entities, graph)); // ADR-502 §Slice2
   ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
 

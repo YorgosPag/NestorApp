@@ -30,7 +30,6 @@ import {
 } from '../../bim/types/beam-types';
 import { resolveBeamGhostSnapFromStore } from '../../bim/beams/beam-column-face-snap';
 import { isBeamCollinearOverlap } from '../../bim/beams/beam-beam-face-snap';
-import { mmToSceneUnits } from '../../utils/scene-units';
 import {
   buildAnchoredBeamParams,
   buildBeamEntity,
@@ -264,8 +263,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       // ADR-398 §3.6 — ΑΠΑΓΟΡΕΥΣΗ τοποθέτησης δοκαριού ομοαξονικά/πάνω σε υφιστάμενο
       // (duplication — «extend instead»). Το κόκκινο awaitingEnd ghost ήδη το δείχνει·
       // εδώ μπλοκάρεται το commit (silent — ο χρήστης σύρει αλλού). Κάθετο Τ-framing OK.
-      const widthScene = (s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM) * mmToSceneUnits(sceneUnits);
-      if (isBeamCollinearOverlap(s.startPoint, endPoint, widthScene, preview.beamTargets)) {
+      if (isBeamCollinearOverlap(s.startPoint, endPoint, preview.beamTargets)) {
         return false;
       }
       const params = preview.startAnchored

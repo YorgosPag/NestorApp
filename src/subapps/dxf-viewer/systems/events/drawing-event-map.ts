@@ -213,6 +213,9 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // ADR-453 — Open the Print/Export («Εκτύπωση») dialog (PrintHost listens).
   // Emitted by the ribbon Output → «Εκτύπωση» action via wrappedHandleAction.
   'dxf:print-dialog-requested': Record<string, never>;
+  // ADR-505 — Open the Export («Εξαγωγή») dialog (ExportHost listens).
+  // Emitted by the ribbon Output → «Εξαγωγή» action via wrappedHandleAction.
+  'dxf:export-dialog-requested': Record<string, never>;
   // ADR-400 — Restore persisted viewport transform (pan+zoom) without bounds recalc.
   // Emitted by the useViewportAutoFit SSoT controller (ADR-399) when a valid persisted
   // transform is found on first scene load. Consumed by useFitToView via setTransform.

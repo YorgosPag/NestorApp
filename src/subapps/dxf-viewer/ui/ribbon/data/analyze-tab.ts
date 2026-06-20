@@ -140,6 +140,33 @@ export const PRINT_PANEL: RibbonPanelDef = {
   ],
 };
 
+// ADR-505 — Export («Εξαγωγή»): DXF/IFC/PDF, scope-filtered (DXF/BIM/both),
+// multi-floor (active / zip-per-floor / single-merged). Output tool → «Ανάλυση»
+// (mirror Print: action → wrappedHandleAction → EventBus → ExportHost).
+export const EXPORT_PANEL: RibbonPanelDef = {
+  id: 'export',
+  labelKey: 'ribbon.panels.export',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.export',
+            labelKey: 'ribbon.commands.export',
+            icon: 'export-dxf',
+            commandKey: 'open-export-dialog',
+            action: 'open-export-dialog',
+            tooltipKey: 'ribbon.tooltips.export',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 // ADR-459 Φ4d — Structural «Αυτόματος Οπλισμός»: auto-apply code-suggested
 // reinforcement στα επιλεγμένα μέλη (ή όλον τον οργανισμό ορόφου). Analysis tool →
 // «Ανάλυση» (mirror Schedule: action → wrappedHandleAction → EventBus → command hook).
@@ -247,5 +274,6 @@ export const ANALYZE_TAB: RibbonTab = {
     THERMAL_ENVELOPE_PANEL,
     CLASH_COORDINATION_PANEL,
     PRINT_PANEL,
+    EXPORT_PANEL,
   ],
 } as const;

@@ -15,8 +15,14 @@
  * constructible module (50 mm), με πρακτικό άνω φράγμα (belt-and-suspenders: αν το
  * φράγμα κόψει την απαίτηση, ο validator κρατά code-violation).
  *
- * **Depth-only (v1):** το `width` είναι αρχιτεκτονική επιλογή του μηχανικού →
- * αμετάβλητο (η διάτμηση οδηγεί ΥΨΟΣ, όχι πλάτος — width-bump = DEFER).
+ * **Width-aware (ADR-506):** όταν η απαιτούμενη βάθος ξεπερνά το **πρακτικό όριο ΝΟΚ**
+ * (`ctx.practicalDepthLimitMm` = ύψος ορόφου − ελεύθερο ύψος κάτω από δοκό για κούφωμα/
+ * πόρτα, SSoT `clear-height-under-beam`), ο sizer **φαρδαίνει** two-way το πλάτος στο
+ * ελάχιστο επαρκές αντί να βαθαίνει άλλο — με άνω όριο το `ctx.maxWidthMm` (πλάτος
+ * στηρίζουσας κολώνας). **Μονόδρομο:** η κολώνα ΔΕΝ μεγαλώνει — αν δεν χωρά ούτε στο cap,
+ * επιστρέφει `'width-capped'` (υπερβολικό άνοιγμα → ADR-504 πρόταση ενδιάμεσης κολώνας).
+ * Width-sizing ενεργοποιείται ΜΟΝΟ όταν ο caller δώσει `maxWidthMm` + `widthAutoSized !== false`·
+ * αλλιώς **depth-only** (legacy, μηδέν regression).
  *
  * REUSE (μηδέν duplicate μηχανικής, N.0.2): `spanMomentDivisor`,
  * `BEAM_EFFECTIVE_DEPTH_FACTOR`, `BEAM_LEVER_ARM_FACTOR` (suggest-reinforcement SSoT),
@@ -39,11 +45,14 @@ import {
   spanMomentDivisor,
 } from '../codes/suggest-reinforcement';
 import type { BeamSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
-import { MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
+import { MIN_BEAM_DEPTH_MM, MIN_BEAM_WIDTH_MM } from '../../types/beam-types';
 import { plasticTorsionalResistanceKnm, shearTorsionUtilization } from '../codes/torsion-capacity';
 
 /** Constructible module στρογγυλοποίησης ύψους (mm). */
 const BEAM_DEPTH_MODULE_MM = 50;
+
+/** Constructible module στρογγυλοποίησης πλάτους (mm) — ADR-506. */
+const BEAM_WIDTH_MODULE_MM = 50;
 
 /** Πρακτικό άνω φράγμα ύψους δοκαριού (mm) — guard έναντι εκφυλισμένης εισόδου. */
 export const BEAM_MAX_PRACTICAL_DEPTH_MM = 1500;
@@ -58,7 +67,14 @@ const KN_TO_N = 1000;
 const MM_PER_M = 1000;
 
 /** Ποιος έλεγχος καθόρισε την τελική διατομή (διαγνωστικό/τεκμηρίωση). */
-export type BeamSizingGovernedBy = 'serviceability' | 'flexure' | 'shear' | 'torsion' | 'minimum';
+export type BeamSizingGovernedBy =
+  | 'serviceability'
+  | 'flexure'
+  | 'shear'
+  | 'torsion'
+  | 'minimum'
+  /** ADR-506 — το πλάτος έφτασε το cap (κολώνα) χωρίς να χωρά: υπερβολικό άνοιγμα → ADR-504 advisory. */
+  | 'width-capped';
 
 /** Προτεινόμενη διατομή δοκαριού (depth-driven· width αμετάβλητο v1). */
 export interface BeamSizing {
@@ -69,6 +85,10 @@ export interface BeamSizing {
 
 function roundUpToModule(value: number, module: number): number {
   return Math.ceil(value / module) * module;
+}
+
+function roundDownToModule(value: number, module: number): number {
+  return Math.floor(value / module) * module;
 }
 
 /** SLS βέλος (EC2 §7.4.2): ελάχιστο h ώστε span/d_eff ≤ όριο κώδικα. */
@@ -86,11 +106,14 @@ function designMomentNmm(ctx: BeamSectionContext): number {
   return ((w * spanM * spanM) / spanMomentDivisor(ctx.supportType)) * 1e6;
 }
 
-/** ULS κάμψη: ελάχιστο h ώστε ρ ≤ ρ_max (d² ≥ M_Ed/(z·f_yd·b·ρ_max)). */
-function flexuralDepthMm(ctx: BeamSectionContext, maxRatio: number): number {
+/**
+ * ULS κάμψη: ελάχιστο h ώστε ρ ≤ ρ_max (d² ≥ M_Ed/(z·f_yd·b·ρ_max)). ADR-506 — `widthMm`
+ * παραμετρικό (default `ctx.widthMm`) ώστε ο width-search να δοκιμάζει υποψήφια πλάτη.
+ */
+function flexuralDepthMm(ctx: BeamSectionContext, maxRatio: number, widthMm = ctx.widthMm): number {
   const mEdNmm = designMomentNmm(ctx);
-  if (mEdNmm <= 0 || ctx.widthMm <= 0 || maxRatio <= 0) return 0;
-  const dSq = mEdNmm / (BEAM_LEVER_ARM_FACTOR * rebarFydMpa() * ctx.widthMm * maxRatio);
+  if (mEdNmm <= 0 || widthMm <= 0 || maxRatio <= 0) return 0;
+  const dSq = mEdNmm / (BEAM_LEVER_ARM_FACTOR * rebarFydMpa() * widthMm * maxRatio);
   return Math.sqrt(Math.max(0, dSq)) / BEAM_EFFECTIVE_DEPTH_FACTOR;
 }
 
@@ -112,13 +135,13 @@ function shearResistanceKn(widthMm: number, depthMm: number, fcdMpa: number): nu
   return (VRD_MAX_COEFF * fcdMpa * widthMm * dMm) / KN_TO_N;
 }
 
-/** ULS διάτμηση: ελάχιστο h ώστε V_Ed ≤ V_Rd,max (θλιπτήρας). */
-function shearDepthMm(ctx: BeamSectionContext): number {
+/** ULS διάτμηση: ελάχιστο h ώστε V_Ed ≤ V_Rd,max (θλιπτήρας). ADR-506 — `widthMm` παραμετρικό. */
+function shearDepthMm(ctx: BeamSectionContext, widthMm = ctx.widthMm): number {
   const vEdKn = designShearKn(ctx);
-  if (vEdKn <= 0 || ctx.widthMm <= 0) return 0;
+  if (vEdKn <= 0 || widthMm <= 0) return 0;
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
   if (fcd <= 0) return 0;
-  return (vEdKn * KN_TO_N) / (VRD_MAX_COEFF * fcd * ctx.widthMm) / BEAM_EFFECTIVE_DEPTH_FACTOR;
+  return (vEdKn * KN_TO_N) / (VRD_MAX_COEFF * fcd * widthMm) / BEAM_EFFECTIVE_DEPTH_FACTOR;
 }
 
 /**
@@ -129,13 +152,13 @@ function shearDepthMm(ctx: BeamSectionContext): number {
  * το πρακτικό μέγιστο. Ανέφικτο ακόμη και στο μέγιστο → επιστρέφει `BEAM_MAX_PRACTICAL_DEPTH_MM`
  * (ο έλεγχος εφικτότητας — Slice D — το εκδίδει ως error). Μηδέν στρέψη → `0` (κανένα candidate).
  */
-function torsionDepthMm(ctx: BeamSectionContext): number {
+function torsionDepthMm(ctx: BeamSectionContext, widthMm = ctx.widthMm): number {
   const tEdKnm = ctx.designTorsionKnm ?? 0;
-  if (tEdKnm <= 0 || ctx.widthMm <= 0) return 0;
+  if (tEdKnm <= 0 || widthMm <= 0) return 0;
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
   if (fcd <= 0) return 0;
   const vEdKn = designShearKn(ctx);
-  const b = ctx.widthMm;
+  const b = widthMm;
   for (let depth = MIN_BEAM_DEPTH_MM; depth <= BEAM_MAX_PRACTICAL_DEPTH_MM; depth += BEAM_DEPTH_MODULE_MM) {
     const tRdMaxKnm = plasticTorsionalResistanceKnm(b, depth, fcd);
     const vRdMaxKn = shearResistanceKn(b, depth, fcd);
@@ -145,27 +168,80 @@ function torsionDepthMm(ctx: BeamSectionContext): number {
 }
 
 /**
- * Πρόταση ελάχιστης επαρκούς διατομής δοκαριού. Επιστρέφει την κυρίαρχη απαίτηση
- * (max των ελέγχων ∨ ελάχιστο), στρογγυλεμένη σε module 50 mm και clamped στο
- * πρακτικό μέγιστο. `governedBy` = ο έλεγχος που καθόρισε το raw ύψος (προ-clamp).
+ * Raw (προ-clamp/προ-rounding) ελάχιστο επαρκές ύψος για δεδομένο πλάτος `widthMm`: το max
+ * όλων των ελέγχων (serviceability / flexure / shear / torsion) ∨ `MIN_BEAM_DEPTH_MM`. ADR-506
+ * — το πλάτος είναι παράμετρος ώστε ο width-search να ξανα-υπολογίζει ανά υποψήφιο πλάτος.
+ */
+function requiredDepthRaw(
+  ctx: BeamSectionContext,
+  provider: StructuralCodeProvider,
+  maxRatio: number,
+  widthMm: number,
+): { raw: number; governedBy: BeamSizingGovernedBy } {
+  const candidates: ReadonlyArray<{ raw: number; governedBy: BeamSizingGovernedBy }> = [
+    { raw: MIN_BEAM_DEPTH_MM, governedBy: 'minimum' },
+    { raw: serviceabilityDepthMm(ctx, provider), governedBy: 'serviceability' },
+    { raw: flexuralDepthMm(ctx, maxRatio, widthMm), governedBy: 'flexure' },
+    { raw: shearDepthMm(ctx, widthMm), governedBy: 'shear' },
+    // ADR-499 §6.3-b — αλληλεπίδραση διάτμησης-στρέψης από μονόπλευρη πρόβολο-πλάκα.
+    { raw: torsionDepthMm(ctx, widthMm), governedBy: 'torsion' },
+  ];
+  return candidates.reduce((a, b) => (b.raw > a.raw ? b : a));
+}
+
+/** Το ενεργό άνω όριο ύψους (mm): πρακτικό μέγιστο ∧ δυναμικό όριο ΝΟΚ (αν δοθεί). ADR-506. */
+function effectiveDepthCap(ctx: BeamSectionContext): number {
+  return Math.min(BEAM_MAX_PRACTICAL_DEPTH_MM, ctx.practicalDepthLimitMm ?? Infinity);
+}
+
+/**
+ * ADR-506 — διαστασιολόγηση με ΣΤΑΘΕΡΟ πλάτος (`ctx.widthMm`): depth-only (legacy + NOK cap).
+ * Κλειδωμένο ύψος (`depthAutoSized === false`) → κρατά το stored `depthMm`.
+ */
+function sizeFixedWidth(ctx: BeamSectionContext, provider: StructuralCodeProvider, maxRatio: number): BeamSizing {
+  const { raw, governedBy } = requiredDepthRaw(ctx, provider, maxRatio, ctx.widthMm);
+  const depthMm =
+    ctx.depthAutoSized === false
+      ? ctx.depthMm
+      : Math.min(effectiveDepthCap(ctx), roundUpToModule(raw, BEAM_DEPTH_MODULE_MM));
+  return { widthMm: ctx.widthMm, depthMm, governedBy };
+}
+
+/**
+ * ADR-506 — two-way width search: το **ελάχιστο** πλάτος (module 50) στο
+ * `[MIN_BEAM_WIDTH_MM, cap]` ώστε το απαιτούμενο ύψος να χωρά στο `effectiveDepthCap`
+ * (cap = πλάτος στηρίζουσας κολώνας, στρογγ. προς τα κάτω). Κανένα δεν χωρά → `cap` + ύψος
+ * clamped + `'width-capped'` (υπερβολικό άνοιγμα → ADR-504 ενδιάμεση κολώνα· η κολώνα ΔΕΝ μεγαλώνει).
+ */
+function sizeWidthFree(ctx: BeamSectionContext, provider: StructuralCodeProvider, maxRatio: number): BeamSizing {
+  const depthCap = effectiveDepthCap(ctx);
+  const cap = Math.max(MIN_BEAM_WIDTH_MM, roundDownToModule(ctx.maxWidthMm ?? ctx.widthMm, BEAM_WIDTH_MODULE_MM));
+  const depthLocked = ctx.depthAutoSized === false;
+  for (let w = MIN_BEAM_WIDTH_MM; w <= cap; w += BEAM_WIDTH_MODULE_MM) {
+    const { raw, governedBy } = requiredDepthRaw(ctx, provider, maxRatio, w);
+    if (depthLocked) {
+      if (ctx.depthMm >= raw) return { widthMm: w, depthMm: ctx.depthMm, governedBy };
+      continue;
+    }
+    const depthMm = roundUpToModule(raw, BEAM_DEPTH_MODULE_MM);
+    if (depthMm <= depthCap) return { widthMm: w, depthMm, governedBy };
+  }
+  const { raw } = requiredDepthRaw(ctx, provider, maxRatio, cap);
+  const depthMm = depthLocked ? ctx.depthMm : Math.min(depthCap, roundUpToModule(raw, BEAM_DEPTH_MODULE_MM));
+  return { widthMm: cap, depthMm, governedBy: 'width-capped' };
+}
+
+/**
+ * Πρόταση ελάχιστης επαρκούς διατομής δοκαριού (ύψος ∨ ύψος+πλάτος). **Width-sizing
+ * ενεργοποιείται** μόνο όταν δοθεί `ctx.maxWidthMm` (cap κολώνας) ΚΑΙ `widthAutoSized !== false`
+ * → two-way `sizeWidthFree`. Αλλιώς **depth-only** `sizeFixedWidth` (legacy· locked width ∨
+ * graphless caller). `governedBy` = ο έλεγχος που καθόρισε το raw ύψος (∨ `'width-capped'`).
  */
 export function suggestBeamSection(
   provider: StructuralCodeProvider,
   ctx: BeamSectionContext,
 ): BeamSizing {
   const maxRatio = provider.beamReinforcementLimits(ctx, 16).maxRatio;
-  const candidates: ReadonlyArray<{ raw: number; governedBy: BeamSizingGovernedBy }> = [
-    { raw: MIN_BEAM_DEPTH_MM, governedBy: 'minimum' },
-    { raw: serviceabilityDepthMm(ctx, provider), governedBy: 'serviceability' },
-    { raw: flexuralDepthMm(ctx, maxRatio), governedBy: 'flexure' },
-    { raw: shearDepthMm(ctx), governedBy: 'shear' },
-    // ADR-499 §6.3-b — αλληλεπίδραση διάτμησης-στρέψης από μονόπλευρη πρόβολο-πλάκα.
-    { raw: torsionDepthMm(ctx), governedBy: 'torsion' },
-  ];
-  const winner = candidates.reduce((a, b) => (b.raw > a.raw ? b : a));
-  const depthMm = Math.min(
-    BEAM_MAX_PRACTICAL_DEPTH_MM,
-    roundUpToModule(winner.raw, BEAM_DEPTH_MODULE_MM),
-  );
-  return { widthMm: ctx.widthMm, depthMm, governedBy: winner.governedBy };
+  const widthFree = ctx.maxWidthMm !== undefined && ctx.widthAutoSized !== false;
+  return widthFree ? sizeWidthFree(ctx, provider, maxRatio) : sizeFixedWidth(ctx, provider, maxRatio);
 }

@@ -42,6 +42,7 @@ import {
   resolveActiveBeamSupportType,
   resolveActiveBeamTorsion,
   resolveActiveBeamSpanMm,
+  resolveActiveBeamSizingLimits,
 } from '../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
@@ -248,7 +249,7 @@ export function commitBeamGripDrag(
   const lock = resolveBeamSectionLock(
     provider, beam, originalParams, newParams,
     resolveActiveBeamSupportType(grip.entityId), resolveActiveBeamTorsion(grip.entityId),
-    resolveActiveBeamSpanMm(grip.entityId),
+    resolveActiveBeamSpanMm(grip.entityId), resolveActiveBeamSizingLimits(grip.entityId),
   );
   const command = new UpdateBeamParamsCommand(
     grip.entityId,

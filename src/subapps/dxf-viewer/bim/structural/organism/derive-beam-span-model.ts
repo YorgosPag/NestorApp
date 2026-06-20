@@ -26,6 +26,7 @@ import type { Entity } from '../../../types/entities';
 import type { BeamEntity, BeamSupportType } from '../../types/beam-types';
 import type { ColumnEntity } from '../../types/column-types';
 import { projectColumnFootprintOnAxis } from '../../columns/column-face-trim';
+import { beamAxisSceneFrame } from '../../beams/beam-axis-scene-frame';
 import { beamSupportColumnIds } from '../loads/load-path-walk';
 import type { StructuralGraph } from './structural-organism-types';
 import { resolveBeamSupportCondition } from './derive-beam-support';
@@ -58,18 +59,12 @@ function maxClearSubSpanMm(
   columns: readonly ColumnEntity[],
   fullSpanMm: number,
 ): number {
-  const s = beam.params.startPoint;
-  const e = beam.params.endPoint;
-  const dx = e.x - s.x;
-  const dy = e.y - s.y;
-  const lenScene = Math.hypot(dx, dy);
-  if (lenScene < 1e-6 || columns.length === 0) return fullSpanMm;
-  const ux = dx / lenScene;
-  const uy = dy / lenScene;
+  const frame = beamAxisSceneFrame(beam); // ADR-506 — ΕΝΑ SSoT για το axis-frame (πρώην inline)
+  if (!frame || columns.length === 0) return fullSpanMm;
   const positions = [0, fullSpanMm];
   for (const col of columns) {
-    const { alongMin, alongMax } = projectColumnFootprintOnAxis(col, s.x, s.y, ux, uy);
-    positions.push(clamp01((alongMin + alongMax) / 2 / lenScene) * fullSpanMm);
+    const { alongMin, alongMax } = projectColumnFootprintOnAxis(col, frame.ax, frame.ay, frame.ux, frame.uy);
+    positions.push(clamp01((alongMin + alongMax) / 2 / frame.lenScene) * fullSpanMm);
   }
   positions.sort((a, b) => a - b);
   let maxGap = 0;

@@ -26,6 +26,7 @@ import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
 import type { ColumnEntity } from '../../types/column-types';
 import { projectColumnFootprintOnAxis } from '../../columns/column-face-trim';
+import { beamAxisSceneFrame } from '../../beams/beam-axis-scene-frame';
 import { beamSupportColumnIds } from '../loads/load-path-walk';
 import type { StructuralGraph } from '../organism/structural-organism-types';
 
@@ -52,14 +53,8 @@ export function beamInteriorSupports(
   graph: StructuralGraph,
   entities: readonly Entity[],
 ): BeamInteriorSupport[] {
-  const s = beam.params.startPoint;
-  const e = beam.params.endPoint;
-  const dx = e.x - s.x;
-  const dy = e.y - s.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-6) return [];
-  const ux = dx / len;
-  const uy = dy / len;
+  const frame = beamAxisSceneFrame(beam); // ADR-506 — ΕΝΑ SSoT για το axis-frame (πρώην inline)
+  if (!frame) return [];
 
   const supportIds = new Set(beamSupportColumnIds(graph, beam.id));
   const columns = entities.filter(
@@ -68,9 +63,10 @@ export function beamInteriorSupports(
 
   const out: BeamInteriorSupport[] = [];
   for (const col of columns) {
-    const { alongMin, alongMax } = projectColumnFootprintOnAxis(col, s.x, s.y, ux, uy);
-    if (alongMin <= EDGE_TOL || alongMax >= len - EDGE_TOL) continue; // καλύπτει άκρο → end support
-    out.push({ columnId: col.id, t: clamp01((alongMin + alongMax) / 2 / len) });
+    const { alongMin, alongMax } = projectColumnFootprintOnAxis(col, frame.ax, frame.ay, frame.ux, frame.uy);
+    // καλύπτει άκρο → end support (όχι interior)
+    if (alongMin <= EDGE_TOL || alongMax >= frame.lenScene - EDGE_TOL) continue;
+    out.push({ columnId: col.id, t: clamp01((alongMin + alongMax) / 2 / frame.lenScene) });
   }
   out.sort((a, b) => a.t - b.t);
   return out;

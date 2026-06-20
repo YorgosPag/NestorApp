@@ -32,7 +32,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -143,6 +143,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><BimScheduleHost selectionIds={selectionIds} /></React.Suspense>
       {/* ADR-453 — Print/Export («Εκτύπωση») dialog (opened via Analyze → Εκτύπωση). */}
       <React.Suspense fallback={hiddenFallback}><PrintHost /></React.Suspense>
+      {/* ADR-505 — Export («Εξαγωγή») dialog (opened via Analyze → Εξαγωγή). */}
+      <React.Suspense fallback={hiddenFallback}><ExportHost projectId={projectId} buildingId={buildingId ?? undefined} /></React.Suspense>
       {/* ADR-457 — Column Reinforcement Detail Sheet (opened via column contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><ColumnDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-463 — Footing Reinforcement Detail Sheet (opened via foundation contextual tab). */}

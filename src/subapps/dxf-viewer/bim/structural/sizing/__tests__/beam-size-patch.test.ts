@@ -8,6 +8,7 @@ import { GREEK_LEGACY_PROVIDER } from '../../codes/greek-legacy-provider';
 import {
   buildBeamSizePatch,
   isBeamAutoSized,
+  isBeamWidthAutoSized,
   isBeamSectionAdequate,
   resolveBeamSectionLock,
 } from '../beam-size-patch';
@@ -121,5 +122,73 @@ describe('resolveBeamSectionLock (ADR-503 Slice 3)', () => {
     expect(lock.params.depth).toBe(850);
     expect(lock.params.autoSized).toBe(true);
     expect(lock.minDepthMm).toBe(850);
+  });
+});
+
+// ADR-506 — width auto-sizing + independent locks.
+describe('isBeamWidthAutoSized (ADR-506)', () => {
+  it('defaults to AUTO when the flag is absent', () => {
+    expect(isBeamWidthAutoSized(makeBeam().params)).toBe(true);
+  });
+  it('is locked only when explicitly false', () => {
+    expect(isBeamWidthAutoSized(makeBeam({ autoSizedWidth: false }).params)).toBe(false);
+    expect(isBeamWidthAutoSized(makeBeam({ autoSizedWidth: true }).params)).toBe(true);
+  });
+});
+
+describe('buildBeamSizePatch — width-aware (ADR-506)', () => {
+  const provider = GREEK_LEGACY_PROVIDER;
+  const limits = { practicalDepthLimitMm: 600, maxWidthMm: 500 } as const;
+
+  it('caps depth at the NOK limit + widens to the column cap (width-capped over-span)', () => {
+    // 9.6 m serviceability ~850 (γεωμετρικό) > 600 → δεν χωρά με φάρδεμα → cap κολώνας 500.
+    const patch = buildBeamSizePatch(makeBeam(), provider, undefined, undefined, undefined, limits);
+    expect(patch).not.toBeNull();
+    expect(patch?.next.depth).toBe(600);
+    expect(patch?.next.width).toBe(500);
+    expect(patch?.next.autoSizedWidth).toBe(true);
+    expect(patch?.next.autoSized).toBe(true);
+  });
+
+  it('shrinks an oversized AUTO width to the minimum sufficient (two-way)', () => {
+    const patch = buildBeamSizePatch(
+      makeBeam({ width: 400 }, 6), provider, undefined, undefined, undefined,
+      { practicalDepthLimitMm: 1500, maxWidthMm: 400 },
+    );
+    expect(patch).not.toBeNull();
+    expect(patch?.next.width).toBeLessThan(400);
+    expect(patch?.next.autoSizedWidth).toBe(true);
+  });
+
+  it('returns null only when BOTH width and depth are locked', () => {
+    expect(
+      buildBeamSizePatch(
+        makeBeam({ autoSized: false, autoSizedWidth: false, depth: 850 }),
+        provider, undefined, undefined, undefined, limits,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('resolveBeamSectionLock — independent width lock (ADR-506)', () => {
+  const provider = GREEK_LEGACY_PROVIDER;
+  const beam = makeBeam();
+
+  it('locks ONLY the width on a manual width change (depth stays AUTO)', () => {
+    const prev = makeBeam({ depth: 850, width: 250 }).params;
+    const next = makeBeam({ depth: 850, width: 400 }).params; // only width changed
+    const lock = resolveBeamSectionLock(provider, beam, prev, next);
+    expect(lock.rejected).toBe(false);
+    expect(lock.params.width).toBe(400);
+    expect(lock.params.autoSizedWidth).toBe(false); // πλάτος κλειδωμένο
+    expect(lock.params.autoSized).toBeUndefined(); // ύψος ΔΕΝ κλειδώθηκε (μένει AUTO)
+  });
+
+  it('locks both when both dimensions change manually', () => {
+    const prev = makeBeam({ depth: 500, width: 250 }).params;
+    const next = makeBeam({ depth: 900, width: 400 }).params;
+    const lock = resolveBeamSectionLock(provider, beam, prev, next);
+    expect(lock.params.autoSized).toBe(false); // ύψος ≥ επαρκές → lock
+    expect(lock.params.autoSizedWidth).toBe(false); // πλάτος → lock
   });
 });

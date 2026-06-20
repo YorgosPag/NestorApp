@@ -40,11 +40,12 @@ import {
   type BeamGhostSnapResult,
   type BeamSnapTarget,
 } from './beam-beam-face-snap';
+import { pickThird, type BeamGhostThird } from './beam-face-third';
 
 /** Παρειά κολόνας στην οποία κουμπώνει το φάντασμα (world-aligned). */
 export type BeamGhostFace = 'E' | 'W' | 'N' | 'S';
-/** Αγκύρωση κατά μήκος της παρειάς: γωνία / κέντρο / γωνία. */
-export type BeamGhostThird = 'lo' | 'mid' | 'hi';
+/** Αγκύρωση κατά μήκος της παρειάς: γωνία / κέντρο / γωνία (SSoT leaf, re-export). */
+export type { BeamGhostThird };
 
 /** Πλήρες αποτέλεσμα face-snap: ποια παρειά + ποιο third + το centerline start/end. */
 export interface BeamColumnFaceSnap {
@@ -90,14 +91,6 @@ function distanceToBounds(c: Readonly<Point2D>, b: ColumnBounds): number {
   const dx = Math.max(b.minX - c.x, 0, c.x - b.maxX);
   const dy = Math.max(b.minY - c.y, 0, c.y - b.maxY);
   return Math.hypot(dx, dy);
-}
-
-/** Third επιλογή κατά μήκος μιας παρειάς από κανονικοποιημένη θέση `[lo, hi]`. */
-function pickThird(value: number, lo: number, hi: number): BeamGhostThird {
-  const span = hi - lo;
-  if (span <= 0) return 'mid';
-  const t = Math.min(1, Math.max(0, (value - lo) / span));
-  return t < 1 / 3 ? 'lo' : t < 2 / 3 ? 'mid' : 'hi';
 }
 
 /**
@@ -184,7 +177,11 @@ export function resolveBeamGhostSnapFromStore(
     if (cs) return { start: cs.start, end: cs.end, status: 'neutral' };
   }
   if (beamTargets.length > 0) {
-    return resolveBeamBeamFaceSnap(cursor, beamTargets, { ghostLenScene, captureScene });
+    return resolveBeamBeamFaceSnap(cursor, beamTargets, {
+      ghostLenScene,
+      captureScene,
+      beamWidthScene: beamWidthMm * f,
+    });
   }
   return null;
 }

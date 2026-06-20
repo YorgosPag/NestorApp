@@ -140,6 +140,24 @@ export interface BeamSectionContext {
    * κλειστούς συνδετήρες `A_st/s` + διαμήκη `A_sl` (§6.3-c).
    */
   readonly designTorsionKnm?: number;
+  /**
+   * ADR-506 — **πρακτικό άνω όριο ΥΨΟΥΣ** (mm) = ύψος ορόφου − απαιτούμενο ελεύθερο ύψος
+   * κάτω από δοκό (κούφωμα/πόρτα, SSoT `clear-height-under-beam`). Απών ⇒ ο sizer πέφτει στο
+   * σταθερό `BEAM_MAX_PRACTICAL_DEPTH_MM` (legacy). Παρόν ⇒ πέρα από αυτό ο sizer φαρδαίνει
+   * αντί να βαθαίνει (width-aware διαστασιολόγηση).
+   */
+  readonly practicalDepthLimitMm?: number;
+  /**
+   * ADR-506 — **άνω όριο ΠΛΑΤΟΥΣ** (mm) = κάθετη στον άξονα προβολή της στηρίζουσας κολώνας
+   * (min επί όλων των στηρίξεων). **Ενεργοποιεί** το width-sizing: απών ⇒ depth-only (το πλάτος
+   * δεν αλλάζει, legacy/graphless). Παρόν + `widthAutoSized !== false` ⇒ two-way φάρδεμα στο
+   * ελάχιστο επαρκές με αυτό το cap (μονόδρομο: η κολώνα ΔΕΝ μεγαλώνει).
+   */
+  readonly maxWidthMm?: number;
+  /** ADR-506 — `false` ⇒ το πλάτος είναι κλειδωμένο (χειροκίνητο) → depth-only. Default AUTO. */
+  readonly widthAutoSized?: boolean;
+  /** ADR-506 — `false` ⇒ το ύψος είναι κλειδωμένο (χειροκίνητο) → κρατά το stored `depthMm`. Default AUTO. */
+  readonly depthAutoSized?: boolean;
 }
 
 /**

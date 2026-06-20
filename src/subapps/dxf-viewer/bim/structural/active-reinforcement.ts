@@ -34,6 +34,12 @@ import { BeamSupportConditionStore } from './organism/beam-support-condition-sto
 import { SlabSupportConditionStore } from './organism/slab-support-condition-store';
 import { BeamTorsionStore } from './organism/beam-torsion-store';
 import { BeamSpanStore } from './organism/beam-span-store';
+// ADR-506 — DERIVED cap πλάτους (στηρίζουσα κολώνα) + πρακτικό όριο ύψους ΝΟΚ → sizing limits.
+import { BeamMaxWidthStore } from './organism/beam-max-width-store';
+import { practicalBeamDepthLimitMm } from './codes/clear-height-under-beam';
+import type { BeamSizingLimits } from './sizing/beam-size-patch';
+import { readActiveStoreyContext } from '../../systems/levels/storey-creation-defaults';
+import { DEFAULT_STOREY_HEIGHT_MM } from '../../systems/levels/active-storey-context';
 import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
@@ -217,6 +223,33 @@ export function resolveActiveBeamSpanMm(beamId: string): number | undefined {
  */
 export function resolveActiveBeamTorsion(beamId: string): number | undefined {
   return BeamTorsionStore.get(beamId);
+}
+
+/**
+ * ADR-506 — το DERIVED **άνω όριο πλάτους** ενός δοκαριού από το transient `BeamMaxWidthStore`
+ * (γράφεται στο organism pass από `buildBeamMaxWidthMap`): η κάθετη προβολή της στηρίζουσας
+ * κολώνας. `undefined` → καμία εντοπισμένη στήριξη → ο consumer μένει depth-only (μηδέν
+ * regression). Pure store read (ADR-040 safe). Mirror `resolveActiveBeamSupportType`.
+ */
+export function resolveActiveBeamMaxWidthMm(beamId: string): number | undefined {
+  return BeamMaxWidthStore.get(beamId);
+}
+
+/**
+ * ADR-506 — **ΕΝΑ SSoT** για τα width-aware όρια διαστασιολόγησης ενός δοκαριού: το πρακτικό όριο
+ * ύψους ΝΟΚ (από τον ενεργό όροφο: ύψος + χρήση μέσω `practicalBeamDepthLimitMm`) + το cap πλάτους
+ * (στηρίζουσα κολώνα). Το χρησιμοποιούν ο `AutoSizeMembersCommand` + οι lock callers (grip/panel)
+ * ώστε να μην επαναλαμβάνουν τη resolution. Degenerate (χωρίς active storey) → τυπικός όροφος
+ * 3,0m/κατοικία (μηδέν regression). Store-coupled (γι' αυτό ζει εδώ, όχι στο pure beam-size-patch).
+ */
+export function resolveActiveBeamSizingLimits(beamId: string): BeamSizingLimits {
+  const storey = readActiveStoreyContext();
+  const practicalDepthLimitMm = practicalBeamDepthLimitMm(
+    storey?.storeyHeightMm ?? DEFAULT_STOREY_HEIGHT_MM,
+    storey?.storeyKind ?? null,
+  );
+  const maxWidthMm = resolveActiveBeamMaxWidthMm(beamId);
+  return maxWidthMm !== undefined ? { practicalDepthLimitMm, maxWidthMm } : { practicalDepthLimitMm };
 }
 
 /** Ο ενεργός οπλισμός + το layout ράβδων ενός δοκαριού (topology-aware). */

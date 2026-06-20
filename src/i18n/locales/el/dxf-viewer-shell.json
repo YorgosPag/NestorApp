@@ -1375,6 +1375,7 @@
       "mepFixtureLibraryPlacement": "Τοποθέτηση",
       "mepRiser": "Στήλη",
       "print": "Εκτύπωση",
+      "export": "Εξαγωγή",
       "structural": "Στατικά"
     },
     "minimizeStates": {
@@ -3850,6 +3851,7 @@
         }
       },
       "print": "Εκτύπωση",
+      "export": "Εξαγωγή",
       "runStructuralAnalysis": "Ανάλυση",
       "autoStudyOrganism": "Αυτόματη Μελέτη",
       "autoReinforceOrganism": "Αυτόματος Οπλισμός",
@@ -3865,6 +3867,7 @@
       "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",
       "thermalEnvelope": "Εφαρμογή ενιαίας εξωτερικής θερμοπρόσοψης (ETICS) στον όροφο",
       "print": "Εκτύπωση σχεδίου σε PDF, εκτυπωτή ή plotter (από 2Δ ή 3Δ)",
+      "export": "Εξαγωγή οντοτήτων DXF & BIM σε αρχείο (DXF / IFC / PDF) — μόνο DXF, μόνο BIM ή και τα δύο, ανά όροφο ή όλοι μαζί",
       "autoStudyOrganism": "Μελετά μόνη της όλον τον όροφο: επαναλαμβάνει φορτία → διαστασιολόγηση → οπλισμό → πέδιλα → έλεγχο, μέχρι να μη μένει τίποτα κόκκινο (ή έως 10 γύρους). Ένα Ctrl+Z αναιρεί όλη τη μελέτη",
       "autoReinforceOrganism": "Αυτόματος οπλισμός των επιλεγμένων δομικών μελών (ή όλου του ορόφου) με τον ελάχιστο-έγκυρο οπλισμό κατά τον ενεργό κανονισμό",
       "computeTakedownLoads": "Αυτόματα φορτία πεδίλων: επιφάνεια ευθύνης κολόνας × όροφοι × κατανεμημένα φορτία (G/Q) → service φορτίο σχεδιασμού (δεν αλλάζει χειροκίνητα φορτία)",
@@ -4827,5 +4830,44 @@
       "date": "Ημ/νία",
       "sheet": "Φύλλο"
     }
+  },
+  "export": {
+    "dialogTitle": "Εξαγωγή Σχεδίου",
+    "dialogDescription": "Εξαγωγή των οντοτήτων DXF & BIM σε αρχείο. Επιλέξτε μορφή, περιεχόμενο και εύρος ορόφων.",
+    "format": "Μορφή αρχείου",
+    "formats": {
+      "dxf": "DXF (AutoCAD/CAD)",
+      "ifc": "IFC4 (BIM — Revit/ArchiCAD)",
+      "pdf": "PDF (σχέδιο)"
+    },
+    "content": "Περιεχόμενο",
+    "contentScopes": {
+      "both": "DXF & BIM (όλα)",
+      "dxf-only": "Μόνο οντότητες DXF",
+      "bim-only": "Μόνο οντότητες BIM"
+    },
+    "floors": "Όροφοι",
+    "floorScopes": {
+      "active": "Ενεργός όροφος",
+      "all-zip": "Όλοι οι όροφοι — ZIP (ένα αρχείο ανά όροφο)",
+      "all-single": "Όλοι οι όροφοι — ένα αρχείο (layer ανά όροφο)"
+    },
+    "dxfVersion": "Έκδοση DXF",
+    "dxfUnit": "Μονάδες",
+    "units": {
+      "millimeters": "Χιλιοστά (mm)",
+      "centimeters": "Εκατοστά (cm)",
+      "meters": "Μέτρα (m)"
+    },
+    "dxfLineMode": "Συμβατότητα",
+    "lineModes": {
+      "polyline": "Polyline (AutoCAD / standard)",
+      "lines": "Γραμμές (Τέκτονας / FESPA)"
+    },
+    "scopeConflict": "Το IFC περιέχει μόνο οντότητες BIM. Επιλέξτε «DXF & BIM» ή «Μόνο BIM».",
+    "submit": "Εξαγωγή",
+    "cancel": "Άκυρο",
+    "exporting": "Εξαγωγή…",
+    "error": "Η εξαγωγή απέτυχε. Δοκιμάστε ξανά."
   }
 }

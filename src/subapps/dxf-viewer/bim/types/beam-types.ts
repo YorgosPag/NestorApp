@@ -207,15 +207,26 @@ export interface BeamParams {
    */
   readonly appliedLoad?: AppliedMemberLoad;
   /**
-   * ADR-475 — Αυτόματη διαστασιολόγηση διατομής (Revit-grade, serviceability-driven).
+   * ADR-475 — Αυτόματη διαστασιολόγηση **ΥΨΟΥΣ** διατομής (Revit-grade, serviceability-driven).
    *   - `undefined` / `true` → **AUTO**: το `depth` ξανα-υπολογίζεται από span+φορτίο
    *     (EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση) όποτε αλλάζει ο οργανισμός.
-   *   - `false` → **LOCKED**: ο μηχανικός όρισε χειροκίνητα τη διατομή (override) →
-   *     η auto-size σταματά για αυτό το μέλος (ανεπαρκές ⇒ code-violation, validator).
-   * Default = AUTO (πλήρης αυτοματοποίηση· lock μόνο σε χειροκίνητη αλλαγή depth/width).
+   *   - `false` → **LOCKED**: ο μηχανικός όρισε χειροκίνητα το ύψος (override) →
+   *     η auto-size ύψους σταματά για αυτό το μέλος (ανεπαρκές ⇒ code-violation, validator).
+   * Default = AUTO (πλήρης αυτοματοποίηση· lock μόνο σε χειροκίνητη αλλαγή depth).
    * Mirror του `FoundationParams.autoDesigned` (auto-sized πέδιλο).
    */
   readonly autoSized?: boolean;
+  /**
+   * ADR-506 — Αυτόματη διαστασιολόγηση **ΠΛΑΤΟΥΣ** διατομής (ανεξάρτητη από το ύψος). Όταν το
+   * ύψος χτυπά το πρακτικό όριο ΝΟΚ (ελεύθερο ύψος κάτω από δοκό για κούφωμα/πόρτα), ο sizer
+   * φαρδαίνει two-way το πλάτος στο ελάχιστο επαρκές, με άνω όριο το πλάτος της στηρίζουσας
+   * κολώνας (μονόδρομο: η κολώνα ΔΕΝ μεγαλώνει — υπερβολικό άνοιγμα → ADR-504 ενδιάμεση κολώνα).
+   *   - `undefined` / `true` → **AUTO**: το `width` ρυθμίζεται αυτόματα.
+   *   - `false` → **LOCKED**: ο μηχανικός όρισε χειροκίνητα το πλάτος (αρχιτεκτονική επιλογή) →
+   *     κλειδώνει ΜΟΝΟ το πλάτος· το ύψος μένει AUTO (independent lock).
+   * Default = AUTO. Lock μόνο σε χειροκίνητη αλλαγή width.
+   */
+  readonly autoSizedWidth?: boolean;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
