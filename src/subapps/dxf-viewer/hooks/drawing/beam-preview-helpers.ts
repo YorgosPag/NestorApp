@@ -15,6 +15,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import type { ExtendedSceneEntity } from './drawing-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import {
@@ -35,8 +36,54 @@ import {
   resolveBeamGhostSnapFromStore,
   BEAM_GHOST_LEN_MM,
 } from '../../bim/beams/beam-column-face-snap';
+import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
+import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
+
+/** Face-snap targets collected from the live scene for the beam tool's ghost/preview. */
+export interface BeamSnapTargets {
+  readonly footprints: Point2D[][];
+  readonly beamTargets: BeamSnapTarget[];
+}
+
+/**
+ * ADR-398 §3.6 — μάζεψε τους face-snap στόχους από τη σκηνή για το beam ghost/preview.
+ * Κολόνες → footprint πολύγωνα (cutback + ghost flush)· υφιστάμενα δοκάρια → axis+outline
+ * (beam-to-beam Τ-framing). Pure: ΙΔΙΑ δεδομένα που διαβάζει το commit path από το preview
+ * store (preview === commit). Extracted από `useBeamTool.syncSceneTargetsToStore`.
+ */
+export function collectBeamSnapTargets(entities: readonly Entity[]): BeamSnapTargets {
+  const footprints: Point2D[][] = [];
+  const beamTargets: BeamSnapTarget[] = [];
+  for (const e of entities) {
+    if (e.type === 'column') {
+      const verts = (e as { geometry?: { footprint?: { vertices?: readonly { x: number; y: number }[] } } })
+        .geometry?.footprint?.vertices;
+      if (verts && verts.length >= 3) footprints.push(verts.map((v) => ({ x: v.x, y: v.y })));
+      continue;
+    }
+    // ADR-398 §beam-to-beam framing — υφιστάμενα δοκάρια ως face-snap στόχοι (axis+outline).
+    if (e.type === 'beam') {
+      const g = (e as {
+        geometry?: {
+          axisPolyline?: { points?: readonly { x: number; y: number }[] };
+          outline?: { vertices?: readonly { x: number; y: number }[] };
+        };
+      }).geometry;
+      const axis = g?.axisPolyline?.points;
+      const outline = g?.outline?.vertices;
+      if (axis && axis.length >= 2 && outline && outline.length >= 3) {
+        beamTargets.push({
+          id: e.id,
+          axis: axis.map((pt) => ({ x: pt.x, y: pt.y })),
+          outline: outline.map((v) => ({ x: v.x, y: v.y })),
+        });
+      }
+    }
+  }
+  return { footprints, beamTargets };
+}
 
 /**
  * Build a beam preview entity from `tempPoints` + cursor. State machine map:
@@ -59,7 +106,7 @@ export function generateBeamPreview(
     // ADR-398 §Smart beam ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα → κουμπώνει σε παρειά/anchor (centerline start/end)· αλλιώς ακολουθεί
     // ελεύθερα τον κέρσορα (ευθύ μικρό ghost). Pure — reuse του face-snap SSoT.
-    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, preview.columnFootprints);
+    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, preview.columnFootprints, preview.beamTargets);
   }
 
   const startPt = tempPoints[0];
@@ -67,12 +114,12 @@ export function generateBeamPreview(
   if (tempPoints.length === 1) {
     // awaitingEnd: straight/cantilever rectangle (curved χωρίς control = ευθεία).
     // `startAnchored` (face-snapped start) → centerline mode (χωρίς location-line auto-flush).
-    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, preview.columnFootprints, preview.startAnchored);
+    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, preview.columnFootprints, preview.startAnchored, preview.beamTargets);
   }
 
   // awaitingCurveControl (curved): cursor = quadratic Bezier control point.
   const endPt = tempPoints[1];
-  return makeBeamWysiwygGhost('preview_beam_curve', startPt, endPt, 'curved', preview.overrides, sceneUnits, cursorPoint, preview.columnFootprints, false);
+  return makeBeamWysiwygGhost('preview_beam_curve', startPt, endPt, 'curved', preview.overrides, sceneUnits, cursorPoint, preview.columnFootprints, false, preview.beamTargets);
 }
 
 /**
@@ -90,6 +137,7 @@ function makeBeamGhostBeforeClick(
   overrides: BeamParamOverrides,
   sceneUnits: SceneUnits,
   columnFootprints: readonly (readonly Point2D[])[],
+  beamTargets: readonly BeamSnapTarget[],
 ): ExtendedSceneEntity | null {
   // ADR-398 §Smart beam ghost (2026-06-20 fix) — το crosshair ζωγραφίζεται στο
   // **snapped** σημείο (`ImmediateSnap`), ενώ ο preview hover περνά RAW cursor
@@ -103,7 +151,7 @@ function makeBeamGhostBeforeClick(
       ? { x: snapState.point.x, y: snapState.point.y }
       : { x: cursorPoint.x, y: cursorPoint.y };
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-  const snap = resolveBeamGhostSnapFromStore(effectiveCursor, columnFootprints, widthMm, sceneUnits);
+  const snap = resolveBeamGhostSnapFromStore(effectiveCursor, columnFootprints, beamTargets, widthMm, sceneUnits);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end
@@ -111,7 +159,18 @@ function makeBeamGhostBeforeClick(
   const params = buildDefaultBeamParams(start, end, kind, overrides, sceneUnits);
   const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;
-  return { ...built.entity, id: 'preview_beam_ghost', preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
+  // ADR-398 §beam-to-beam framing — μόνο το 🔴 `overlap` (συγγραμμικό κοντής άκρης /
+  // duplication) «ψήνει» status color πάνω στο entity → ο `PreviewRenderer` ζωγραφίζει
+  // κόκκινο schematic αντί WYSIWYG. 🟢 `beam` (έγκυρο Τ-framing) & `neutral` → WYSIWYG
+  // amber αυτούσιο (το πραγματικό δοκάρι δείχνει ήδη πού πατάει — δεν χρειάζεται recolor).
+  const ghostStatusColor = snap && snap.status === 'overlap' ? resolveGhostStatusColor(snap.status) : null;
+  return {
+    ...built.entity,
+    id: 'preview_beam_ghost',
+    preview: true,
+    wysiwygPreview: true,
+    ...(ghostStatusColor ? { ghostStatusColor } : {}),
+  } as unknown as ExtendedSceneEntity;
 }
 
 /**
@@ -130,6 +189,7 @@ function makeBeamWysiwygGhost(
   curveControl: Point2D | null,
   columnFootprints: readonly (readonly Point2D[])[],
   startAnchored: boolean,
+  beamTargets: readonly BeamSnapTarget[],
 ): ExtendedSceneEntity | null {
   let params: BeamParams;
   if (kind === 'curved') {
@@ -149,6 +209,16 @@ function makeBeamWysiwygGhost(
   const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;
   const entity = built.entity;
+
+  // ADR-398 §3.6 — αν το rubber-band δοκάρι θα κείτεται ομοαξονικά/πάνω σε υφιστάμενο
+  // (duplication) → 🔴 κόκκινο schematic + μπλοκάρισμα commit (στο `useBeamTool`). Κάθετο
+  // Τ-framing αποκλείεται (μη παράλληλο). straight/cantilever μόνο.
+  const widthScene = (overrides.width ?? DEFAULT_BEAM_WIDTH_MM) * mmToSceneUnits(sceneUnits);
+  const ghostStatusColor =
+    kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, widthScene, beamTargets)
+      ? resolveGhostStatusColor('overlap')
+      : null;
+  const statusField = ghostStatusColor ? { ghostStatusColor } : {};
 
   // ADR-458 — εφάρμοσε το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
   // δοκάρι (κοινό SSoT `buildBeamCutbackDisplay`), ώστε το preview να δείχνει την
@@ -171,8 +241,9 @@ function makeBeamWysiwygGhost(
         id,
         preview: true,
         wysiwygPreview: true,
+        ...statusField,
       } as unknown as ExtendedSceneEntity;
     }
   }
-  return { ...entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
+  return { ...entity, id, preview: true, wysiwygPreview: true, ...statusField } as unknown as ExtendedSceneEntity;
 }

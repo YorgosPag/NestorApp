@@ -20,7 +20,7 @@
  *   ├── useEnterpriseSettingsState() → hooks/useEnterpriseSettingsState.ts
  *   ├── useEnterpriseActions()      → hooks/useEnterpriseActions.ts
  *   ├── useEffectiveSettings()      → hooks/useEffectiveSettings.ts
- *   └── useStoreSync()              → settings/sync/storeSync.ts
+ *   └── style-store hydration       → stores/style-store-sync.ts (SSoT writers)
  * ```
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
@@ -51,9 +51,16 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useEnterpriseActions } from './hooks/useEnterpriseActions';
 import { useEffectiveSettings } from './hooks/useEffectiveSettings';
 
-// Store sync (NEW: Ports & Adapters)
-import { createStoreSync } from '../settings/sync/storeSync';
-import type { SyncDependencies } from '../settings/sync/ports';
+// 🏢 SSoT store hydration: settings → legacy style stores via the SINGLE
+// mapping writers (stores/style-store-sync.ts). This provider is the one
+// runtime driver. The former hexagonal ports/adapters/createStoreSync layer
+// was retired 2026-06-20 (it had become a dead second writer + dormant DI).
+import {
+  syncToolStyleStoreFromSettings,
+  syncTextStyleStoreFromSettings,
+  syncCompletionStyleStoreFromSettings,
+} from '../stores/style-store-sync';
+import { EXPERIMENTAL_FEATURES } from '../config/experimental-features';
 
 // ✅ ENTERPRISE: Conditional Logging System
 import { dlog, dwarn, derr } from '../debug/utils/devlog';
@@ -151,23 +158,11 @@ interface EnterpriseDxfSettingsProviderProps {
   children: ReactNode;
   /** Feature flag - enable/disable enterprise provider */
   enabled?: boolean;
-  /**
-   * Sync dependencies (Dependency Injection)
-   *
-   * If not provided, sync will be disabled
-   *
-   * @example
-   * ```tsx
-   * <EnterpriseDxfSettingsProvider syncDeps={syncDeps}>
-   * ```
-   */
-  syncDeps?: SyncDependencies;
 }
 
 export function EnterpriseDxfSettingsProvider({
   children,
-  enabled = false,
-  syncDeps
+  enabled = false
 }: EnterpriseDxfSettingsProviderProps) {
   // ========================================================================
   // DEBUG: Render counter
@@ -278,36 +273,38 @@ export function EnterpriseDxfSettingsProvider({
   const effectiveSettings = useEffectiveSettings(state.settings);
 
   // ========================================================================
-  // STORE SYNC (NEW: Ports & Adapters Pattern)
+  // STORE HYDRATION (SSoT: settings → legacy style stores)
   // ========================================================================
-  const syncRef = useRef<ReturnType<typeof createStoreSync>>();
-
+  // Single runtime driver. Pushes FULL effective state into the legacy style
+  // stores via the one mapping source (stores/style-store-sync.ts) once the
+  // persisted settings have loaded — exactly what the old createStoreSync(...)
+  // .start()/pushFromSettings() did, minus the dead hexagonal port indirection.
+  //
+  // ⚠️ GRIP IS DELIBERATELY EXCLUDED. `gripStyleStore` has a single authoritative
+  // owner — `GripProvider` — which hydrates it (mount + on every change) from the
+  // GENERAL effective grip settings (`getEffectiveGripSettings()`, base size 7).
+  // The retired `storeSync` used a divergent `grip('preview')` → 'draft' mode here;
+  // pushing that as a second writer raced GripProvider and made grips render the
+  // wrong (draft-mode) size. One store, one owner.
+  //
+  // Per-entity effective modes: tool = 'preview', completion = 'completion',
+  // text = default.
   useEffect(() => {
-    // Only sync if syncDeps are provided and settings are loaded
-    if (!syncDeps || !state.isLoaded) return;
+    if (!EXPERIMENTAL_FEATURES.ENABLE_SETTINGS_SYNC || !state.isLoaded) return;
 
-    dlog('[Enterprise] Starting store sync with DI');
+    dlog('[Enterprise] Hydrating style stores from effective settings');
 
-    // Create sync instance
-    syncRef.current = createStoreSync(syncDeps);
+    syncToolStyleStoreFromSettings(effectiveSettings.getEffectiveLineSettings('preview'));
+    syncCompletionStyleStoreFromSettings(effectiveSettings.getEffectiveLineSettings('completion'));
+    syncTextStyleStoreFromSettings(effectiveSettings.getEffectiveTextSettings());
+    // grip: owned by GripProvider — intentionally NOT written here (see above).
+    // Initialize once when loaded (matches the prior pushFromSettings-on-mount
+    // behaviour; ongoing per-change sync is handled by StyleManagerProvider).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.isLoaded]);
 
-    // Start sync with effective settings getter
-    const { stop, pushFromSettings } = syncRef.current.start({
-      line: effectiveSettings.getEffectiveLineSettings,
-      text: effectiveSettings.getEffectiveTextSettings,
-      grip: effectiveSettings.getEffectiveGripSettings
-    });
-
-    // Cleanup on unmount
-    return () => {
-      dlog('[Enterprise] Stopping store sync');
-      stop();
-    };
-  }, [syncDeps, state.isLoaded]); // Initialize once when loaded
-
-  // ✅ ENTERPRISE: Manual sync trigger (prevents infinite loops)
-  // Settings sync happens only when explicitly requested via actions
-  // This eliminates useEffect dependency cycles entirely
+  // ✅ ENTERPRISE: hydration runs once on load; per-change sync flows through
+  // StyleManagerProvider's updateStore — no useEffect dependency cycles.
 
   // ========================================================================
   // STABLE QUOTA (Prevents infinite loops from changing quota objects)

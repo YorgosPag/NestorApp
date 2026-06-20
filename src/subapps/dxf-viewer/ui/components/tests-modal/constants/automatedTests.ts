@@ -23,8 +23,7 @@ import {
   Triangle,
   Ruler,
   Eye,
-  Info,
-  Server
+  Info
 } from 'lucide-react';
 
 export function getAutomatedTests(showCopyableNotification: NotificationFn): TestDefinition[] {
@@ -177,19 +176,6 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
         const viewport = `${window.innerWidth}×${window.innerHeight}`;
         const summary = `Browser: ${browser}\nViewport: ${viewport}\nPixel Ratio: ${window.devicePixelRatio}`;
         showCopyableNotification(summary, 'info');
-      }
-    },
-    {
-      id: 'store-sync',
-      name: 'Store Sync Test',
-      description: 'Ports & Adapters Architecture validation (Hexagonal)',
-      icon: Server,
-      action: async () => {
-        const module = await import('../../../../debug/store-sync-test.qa');
-        const { runStoreSyncTests } = module;
-        const report = await runStoreSyncTests();
-        const summary = `Store Sync Tests Complete!\n✅ Passed: ${report.passed}/${report.totalTests}\n❌ Failed: ${report.failed}\n⚠️ Warnings: ${report.warnings}\n\n🎯 Architecture:\n  Ports: ${report.architecture.portsImplemented}\n  Adapters: ${report.architecture.adaptersImplemented}\n  Pure Functions: ${report.architecture.pureFunctionsValidated ? '✅' : '❌'}\n\n🔧 Feature Flags:\n  Sync Enabled: ${report.featureFlags.syncEnabled ? '✅' : '❌'}`;
-        showCopyableNotification(summary, report.success ? 'success' : (report.failed > 0 ? 'error' : 'warning'));
       }
     }
   ];

@@ -156,14 +156,15 @@ describe('resolveBeamColumnFaceSnap — capture gate + edge cases', () => {
 });
 
 describe('resolveBeamGhostSnapFromStore — mm→scene wrapper (preview === commit SSoT)', () => {
-  it("mm scene: identity factor, matches the pure resolver", () => {
-    const r = resolveBeamGhostSnapFromStore({ x: 250, y: 0 }, [COL_400], 300, 'mm');
+  it("mm scene: identity factor, matches the pure resolver (column path → status neutral)", () => {
+    const r = resolveBeamGhostSnapFromStore({ x: 250, y: 0 }, [COL_400], [], 300, 'mm');
     expect(r!.start).toEqual({ x: 200, y: 0 });
     expect(r!.end).toEqual({ x: 1400, y: 0 });
+    expect(r!.status).toBe('neutral');
   });
 
-  it('empty footprints → null (free placement, no work)', () => {
-    expect(resolveBeamGhostSnapFromStore({ x: 0, y: 0 }, [], 300, 'mm')).toBeNull();
+  it('empty footprints + empty beams → null (free placement, no work)', () => {
+    expect(resolveBeamGhostSnapFromStore({ x: 0, y: 0 }, [], [], 300, 'mm')).toBeNull();
   });
 
   it('metre scene: scales footprints/width/len consistently', () => {
@@ -173,10 +174,20 @@ describe('resolveBeamGhostSnapFromStore — mm→scene wrapper (preview === comm
       { x: 0.2, y: 0.2 },
       { x: -0.2, y: 0.2 },
     ];
-    const r = resolveBeamGhostSnapFromStore({ x: 0.25, y: 0 }, [colM], 300, 'm');
+    const r = resolveBeamGhostSnapFromStore({ x: 0.25, y: 0 }, [colM], [], 300, 'm');
     expect(r).not.toBeNull();
-    expect(r!.face).toBe('E');
+    expect(r!.status).toBe('neutral'); // column path
     expect(r!.start.x).toBeCloseTo(0.2, 6); // maxX of the metre column
     expect(r!.end.x).toBeCloseTo(1.4, 6); // 0.2 + 1200mm→1.2m
+  });
+
+  it('column-priority: κολόνα εντός capture νικά τα δοκάρια (status neutral)', () => {
+    const beamTarget = {
+      id: 'b1',
+      axis: [{ x: 0, y: 0 }, { x: 5000, y: 0 }],
+      outline: [{ x: 0, y: -100 }, { x: 5000, y: -100 }, { x: 5000, y: 100 }, { x: 0, y: 100 }],
+    };
+    const r = resolveBeamGhostSnapFromStore({ x: 250, y: 0 }, [COL_400], [beamTarget], 300, 'mm');
+    expect(r!.status).toBe('neutral'); // η κολόνα υπερισχύει
   });
 });

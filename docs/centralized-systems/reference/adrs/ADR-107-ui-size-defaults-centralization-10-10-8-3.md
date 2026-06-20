@@ -168,14 +168,85 @@ grip (multi-caller, single idempotent writer, full write not partial).
   assert outcomes on the real stores (the ports no longer receive `apply`). 14 green.
 - Debug `debug/store-sync-test.qa.ts` introspection updated to the new SSoT writers.
 
-**Open / deferred (separate decision):** retiring the hexagonal port layer (`ports.ts` /
-adapters / `compositionRoot` / `createStoreSync` wiring) entirely is a larger, higher-risk
-follow-up — the `apply` path is now bypassed but the `onChange/bus` scaffolding + the DI wiring
-remain. Also pre-existing and out of scope: `toolStyleStore` is fed with `'preview'`-mode line
-settings by storeSync vs default-mode by StyleManager — a mode discrepancy to reconcile when the
-single-driver consolidation happens.
-
 **NOT touched:** UI-driven `toolStyleStore.set` in `OverlayToolbar` / `DraggableOverlayToolbar`
 (different concern), grid/ruler ports, `bim/structural/*`, `codes/*` (shared tree, other agent).
+
+### 2026-06-20 — Hexagonal port-sync layer FULLY RETIRED (one visible path)
+
+**Problem (Giorgio, self-audit "would Google do it exactly like this?"):** the step above left
+the `apply` path of the hexagonal ports bypassed but the whole layer still present — dead
+`*StyleAdapter.apply`, a dormant `onChange/bus` (the `bus` is never set), and the
+`createStoreSync`/`compositionRoot` DI ceremony. That is exactly the dead indirection a big
+player removes; "FULL SSoT" means ONE visible path, not a half-retired subsystem.
+
+**Decision (Giorgio): full removal (option C).**
+
+**Removed (whole `settings/sync/` folder + its QA harness):** `storeSync.ts`,
+`storeSync.test.ts`, `ports.ts`, `compositionRoot.ts`, `adapters/{toolStyle,textStyle,gripStyle,
+grid,ruler,consoleLogger}Adapter.ts`, `adapters/index.ts`, `debug/store-sync-test.qa.ts`.
+
+**Re-homed runtime hydration (the single driver now):** `EnterpriseDxfSettingsProvider` — one
+`useEffect` (gated on `EXPERIMENTAL_FEATURES.ENABLE_SETTINGS_SYNC` + `state.isLoaded`, runs once
+on load, exactly the old `pushFromSettings`-on-mount) calls the four SSoT writers directly with
+the effective settings (modes preserved: tool/grip `'preview'`, completion `'completion'`, text
+default). `DxfViewerApp` drops `createSyncDependencies` + the `syncDeps` prop; the provider prop
+is gone. Debug `index.tsx` + tests-modal `automatedTests.ts` unregister the Store-Sync QA entry.
+
+**Why safe:** verified (grep) the port layer had no consumers outside the deleted folder except
+the provider/app wiring (re-homed) + the QA harness (deleted); grid/ruler adapters were consumed
+only by `compositionRoot` and storeSync never pushed them (RulersGridSystem stays their SSoT).
+The mode discrepancy noted previously is resolved by the provider now owning a single,
+explicit per-entity mode mapping.
+
+**End state:** `settings change → SSoT writers (stores/style-store-sync.ts) → legacy style
+stores`. One mapping, one driver, zero dead indirection.
+
+### 2026-06-20 — Grip excluded from the on-load driver (fixes "grips big again = 14 not 7")
+
+**Symptom (Giorgio):** after the re-home, selection grips rendered large again (~14 not 7).
+
+**Root cause (not the SSoT writer — the MODE):** the on-load driver initially mirrored the
+retired `storeSync`, which hydrated grip from `getEffectiveGripSettings('preview')`.
+`modeMap('preview') → 'draft'`, so that reads the **draft** mode-variant grip settings, whose
+persisted value can be large (≈14). Meanwhile `GripProvider` — the real, always-mounted grip
+owner — hydrates `gripStyleStore` from the **general** effective settings
+(`getEffectiveGripSettings()`, base `GRIP_SIZE_DEFAULT = 7`) on mount and on every change. Two
+writers, two different modes → race → the draft size could win. (`dpiScale` is not involved: it
+defaults to 1.0; `GRIP_BOUNDS.SIZE` = 3..20 so 14 passes unclamped.) This dual-mode write
+pre-dated the refactor — it lived in `storeSync` — and was the real reason grips were
+"sometimes big": the original 7↔14 flicker.
+
+**Fix:** the on-load driver no longer writes grip at all. `gripStyleStore` has a single owner,
+`GripProvider` (general mode → 7). `EnterpriseDxfSettingsProvider` hydrates only tool / text /
+completion. One store → one owner → no mode race.
+
+**Caveat (data, not code):** if a user has a persisted **general** `gripSize` ≠ 7, GripProvider
+will faithfully render that value — that is correct behaviour, resolved by changing the setting,
+not by code.
+
+### 2026-06-20 — Root cause of "grips still 14 after restart": stale PERSISTED default → settings migration v7→v8
+
+**Diagnosis (live `[GRIP-DEBUG]` in GripProvider):** `effective gripSize = 14, dpiScale = 1,
+central = true`. Every code default is 7 and the literal `14` exists nowhere in the grip code,
+so the 14 came from **persisted storage** (IndexedDB) — saved while the OLD default was 14 and
+never cleared by a server restart. The single-owner fix above was necessary but not sufficient:
+GripProvider faithfully writes the (stale) effective value.
+
+**Fix (Revit-grade, via the EXISTING migration registry — no new mechanism):**
+- **NEW** `migration_v7_to_v8` in `settings/io/grip-cold-color-migrations.ts` (the established
+  home of grip value migrations, v4→v7): on load, any persisted `gripSize` / `size` equal to the
+  legacy default **14** → SSoT `GRIP_SIZE_DEFAULT` (7), across `grip.general` + every
+  `specific` / `overrides` scope. **Conditional on 14 only** — the intentional mode-variant
+  sizes (draft 8, hover/selection 12) are untouched.
+- `CURRENT_VERSION` 7 → 8 (`settings/FACTORY_DEFAULTS.ts`); `safeLoad` already runs
+  `migrateToVersion(rawData, CURRENT_VERSION)` (with a pre-migration backup), so this heals
+  **every** user with stale data on next load, not just one machine.
+- Tests: **NEW** `settings/io/__tests__/grip-size-migration.test.ts` (6 cases — heals 14, spares
+  8/12/7, pure/no-mutation, version bump). Browser-verified: `[GRIP-DEBUG]` went 14 → 7 after
+  one hard refresh; the temporary diagnostic log was then removed.
+
+**Lesson:** changing a default does NOT fix already-persisted settings — a value that was once a
+default gets baked into storage. The SSoT fix for "old default stuck in storage" is a versioned
+settings migration, not a code-default change.
 
 ---

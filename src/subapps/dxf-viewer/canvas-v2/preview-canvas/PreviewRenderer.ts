@@ -32,6 +32,10 @@ import { renderPreviewDimension } from './preview-dimension-renderer';
 // 🏢 WYSIWYG placement preview — render synthetic BIM entities (wall/foundation/…)
 // through the REAL entity renderers instead of a schematic green outline.
 import { BimPreviewRenderer } from './bim-preview-render';
+// ADR-398 §beam-to-beam framing — 🔴 schematic override για το beam ghost (κοινό SSoT
+// με το column anchor ghost) όταν η σύνδεση είναι παράλογη (συγγραμμική κοντή άκρη).
+import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
+import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -279,8 +283,21 @@ export class PreviewRenderer {
     // IS the final element (fill / hatch / lineweight), not a green outline.
     // Tracking markers were already painted above; polar/tracking overlays draw
     // on top via the handler's subsequent drawPolarTrackingLine/Alignment calls.
-    const bimMeta = entity as { wysiwygPreview?: boolean };
+    const bimMeta = entity as {
+      wysiwygPreview?: boolean;
+      ghostStatusColor?: GhostStatusColor | null;
+      geometry?: { outline?: { vertices?: ReadonlyArray<{ x: number; y: number }> } };
+    };
     if (bimMeta.wysiwygPreview && this.bimPreview) {
+      // ADR-398 §beam-to-beam framing — όταν η σύνδεση είναι παράλογη (🔴), ζωγράφισε
+      // κόκκινο schematic (outline + 30% fill) του outline αντί WYSIWYG amber, μέσω του
+      // κοινού `drawStatusGhostPolygon` SSoT (ίδιο look με το active column anchor ghost).
+      const statusColor = bimMeta.ghostStatusColor;
+      const outline = bimMeta.geometry?.outline?.vertices;
+      if (statusColor && outline && outline.length >= 3) {
+        drawStatusGhostPolygon(ctx, outline, transform, viewport, statusColor);
+        return;
+      }
       // ADR-398 — pass the canonical viewport (= prop viewport = DxfCanvas /
       // container rect) so the BIM ghost measures its y-flip against the SAME
       // viewport as the committed entity, not the PreviewCanvas's own rect.

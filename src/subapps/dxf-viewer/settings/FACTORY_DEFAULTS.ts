@@ -36,8 +36,9 @@ import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
  * ✅ FIX v3: FontWeight type migration (string→number) - ChatGPT5 fix
  * ✅ FIX v4: Complete grip colors (add missing cold/warm/hot/contour for selection/completion)
  * ✅ FIX v6: Revit-style null sentinel — cold: null means "use GRIP_COLD_COLOR SSoT at render"
+ * ✅ FIX v8: Grip size heal — stale pre-ADR-107 default 14 → SSoT GRIP_SIZE_DEFAULT (7)
  */
-export const CURRENT_VERSION = 7;
+export const CURRENT_VERSION = 8;
 
 // ============================================================================
 // LINE SETTINGS DEFAULTS

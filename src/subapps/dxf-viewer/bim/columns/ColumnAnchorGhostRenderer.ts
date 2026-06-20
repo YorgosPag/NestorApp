@@ -22,6 +22,14 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { ColumnKind } from '../types/column-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { AnchorGhost } from './column-anchor-ghosts';
+import { strokeGhostPolygon, fillGhostPolygon } from '../ghosts/ghost-status-polygon-draw';
+import { resolveGhostStatusColor, type GhostStatusColor } from '../ghosts/ghost-status-color';
+
+// ADR-398 §ghost coloring — η παλέτα/resolver μετακόμισαν σε ουδέτερο SSoT (`bim/ghosts`)
+// ώστε ΚΑΙ το beam ghost να τα χρησιμοποιεί χωρίς beam→column-renderer coupling. Re-export
+// για back-compat με τους υπάρχοντες importers (`useColumnGhostPreview`).
+export { resolveGhostStatusColor };
+export type { GhostStatusColor };
 
 /** Stroke colour per kind. Mirror του `ColumnRenderer.KIND_STROKE`. */
 const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
@@ -58,28 +66,6 @@ const INACTIVE_LINE_WIDTH = 1;
 const ACTIVE_LINE_WIDTH = 2;
 const ANCHOR_MARKER_SIZE_PX = 5;
 
-/** Χρωματισμός ghost ανά placement status (ADR-398 §ghost coloring). */
-export interface GhostStatusColor {
-  readonly stroke: string;
-  readonly fill: string;
-}
-
-/**
- * Παλέτα status του ghost: 🟢 `beam` (snap στον άξονα δοκαριού — έγκυρος στόχος) / 🔴
- * `overlap` (πάνω σε υπάρχουσα κολώνα — σύγκρουση). `neutral` → `null` (default kind χρώμα).
- */
-const GHOST_STATUS_COLORS: Readonly<Record<'beam' | 'overlap', GhostStatusColor>> = {
-  beam: { stroke: '#2e9e44', fill: 'rgba(46, 158, 68, 0.30)' },
-  overlap: { stroke: '#d23b3b', fill: 'rgba(210, 59, 59, 0.30)' },
-};
-
-/** Resolve του status σε χρώμα· `null` για `neutral` (κρατά το χρώμα τύπου). */
-export function resolveGhostStatusColor(
-  status: 'beam' | 'overlap' | 'neutral',
-): GhostStatusColor | null {
-  return status === 'neutral' ? null : GHOST_STATUS_COLORS[status];
-}
-
 export interface ColumnAnchorGhostRenderInput {
   readonly ghosts: readonly AnchorGhost[];
   readonly kind: ColumnKind;
@@ -110,68 +96,19 @@ export class ColumnAnchorGhostRenderer {
     // 1) Inactive ghosts first (background layer).
     for (const g of ghosts) {
       if (g.isActive) continue;
-      this.drawGhostOutline(g.footprint.vertices, transform, viewport, stroke, INACTIVE_OPACITY, INACTIVE_LINE_WIDTH);
+      strokeGhostPolygon(this.ctx, g.footprint.vertices, transform, viewport, stroke, INACTIVE_OPACITY, INACTIVE_LINE_WIDTH);
     }
 
     // 2) Active ghost on top (fill + bold stroke).
     const active = ghosts.find((g) => g.isActive);
     if (active) {
-      this.drawGhostFill(active.footprint.vertices, transform, viewport, fillActive);
-      this.drawGhostOutline(active.footprint.vertices, transform, viewport, stroke, 1, ACTIVE_LINE_WIDTH);
+      fillGhostPolygon(this.ctx, active.footprint.vertices, transform, viewport, fillActive);
+      strokeGhostPolygon(this.ctx, active.footprint.vertices, transform, viewport, stroke, 1, ACTIVE_LINE_WIDTH);
     }
 
     // 3) Anchor marker (cursor) — shared by όλα τα ghosts του frame.
     const cursor = ghosts[0].cursorPos;
     this.drawAnchorMarker(cursor, transform, viewport, stroke);
-  }
-
-  private drawGhostOutline(
-    vertices: ReadonlyArray<{ x: number; y: number }>,
-    transform: ViewTransform,
-    viewport: { readonly width: number; readonly height: number },
-    stroke: string,
-    opacity: number,
-    lineWidth: number,
-  ): void {
-    if (vertices.length < 3) return;
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.globalAlpha = opacity;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    const first = CoordinateTransforms.worldToScreen({ x: vertices[0].x, y: vertices[0].y }, transform, viewport);
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = CoordinateTransforms.worldToScreen({ x: vertices[i].x, y: vertices[i].y }, transform, viewport);
-      ctx.lineTo(s.x, s.y);
-    }
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  private drawGhostFill(
-    vertices: ReadonlyArray<{ x: number; y: number }>,
-    transform: ViewTransform,
-    viewport: { readonly width: number; readonly height: number },
-    fill: string,
-  ): void {
-    if (vertices.length < 3) return;
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    const first = CoordinateTransforms.worldToScreen({ x: vertices[0].x, y: vertices[0].y }, transform, viewport);
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = CoordinateTransforms.worldToScreen({ x: vertices[i].x, y: vertices[i].y }, transform, viewport);
-      ctx.lineTo(s.x, s.y);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
   }
 
   private drawAnchorMarker(

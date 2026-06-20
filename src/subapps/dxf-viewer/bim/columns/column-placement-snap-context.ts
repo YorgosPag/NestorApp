@@ -26,7 +26,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { findEntityOverlap } from '../geometry/entity-overlap';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { ExtendedSnapType, type ProSnapResult } from '../../snapping/extended-types';
 import type { CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
@@ -84,19 +84,15 @@ export function resolveColumnDrawSnap(
   return null;
 }
 
-/** Η πρώτη υπάρχουσα κολώνα της οποίας το footprint περιέχει τον cursor (`null` αν καμία). */
+/** Η πρώτη υπάρχουσα κολώνα της οποίας το footprint περιέχει τον cursor (`null` αν καμία).
+ *  Delegate στο ουδέτερο `findEntityOverlap` SSoT (column extractor = `geometry.footprint`). */
 export function findColumnOverlap(
   worldPos: Readonly<Point2D>,
   entities: readonly Entity[],
 ): string | null {
-  for (const e of entities) {
-    if (!isColumnEntity(e)) continue;
-    const verts = e.geometry?.footprint?.vertices;
-    if (verts && verts.length >= 3 && isPointInPolygon(worldPos, verts as Point2D[])) {
-      return e.id;
-    }
-  }
-  return null;
+  return findEntityOverlap(worldPos, entities, (e) =>
+    isColumnEntity(e) ? e.geometry?.footprint?.vertices : null,
+  );
 }
 
 /**

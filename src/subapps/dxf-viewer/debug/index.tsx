@@ -26,7 +26,6 @@ interface DxfDebugAPI {
   snap: () => Logger;
   performance: () => Logger;
   testSettings: () => Promise<unknown> | undefined;
-  testStoreSync: () => Promise<unknown> | undefined;
   help: () => void;
 }
 
@@ -34,7 +33,6 @@ declare global {
   interface Window {
     __DXF_DEBUG__?: boolean;
     runEnterpriseSettingsTests?: () => Promise<unknown>;
-    runStoreSyncTests?: () => Promise<unknown>;
     dxfDebug?: DxfDebugAPI;
   }
 }
@@ -128,7 +126,6 @@ export const hitTestWarn = (...args: unknown[]) => HitTestLogger.warn(...args);
 
 // ═══ ENTERPRISE TESTS ═══
 export { runEnterpriseSettingsTests } from './settings-enterprise-test.qa';
-export { runStoreSyncTests } from './store-sync-test.qa';
 
 // ═══ DEVELOPMENT HELPERS ═══
 
@@ -139,11 +136,6 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   // Enterprise Settings Tests
   import('./settings-enterprise-test.qa').then(({ runEnterpriseSettingsTests }) => {
     window.runEnterpriseSettingsTests = runEnterpriseSettingsTests;
-  });
-
-  // Store Sync Tests (Ports & Adapters Architecture)
-  import('./store-sync-test.qa').then(({ runStoreSyncTests }) => {
-    window.runStoreSyncTests = runStoreSyncTests;
   });
 
   window.dxfDebug = {
@@ -174,16 +166,6 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
       }
     },
 
-    // 🆕 Store Sync Tests (Ports & Adapters Architecture)
-    testStoreSync: () => {
-      if (window.runStoreSyncTests) {
-        return window.runStoreSyncTests();
-      } else {
-        console.error('Store Sync Tests not loaded yet');
-        return undefined;
-      }
-    },
-
     // Quick help
     help: () => {
       console.log(`
@@ -209,9 +191,7 @@ dxfDebug.manager().emergencyRestore() - Restore normal logging
 
 == Enterprise Tests ==
 dxfDebug.testSettings()               - Run Enterprise Settings validation suite
-dxfDebug.testStoreSync()              - Run Store Sync (Ports & Adapters) tests
 runEnterpriseSettingsTests()          - Direct test runner (async)
-runStoreSyncTests()                   - Direct store sync test runner (async)
 
 == Legacy Support ==
 dxfDebug.enable()  - Enable legacy DXF_DEBUG flag

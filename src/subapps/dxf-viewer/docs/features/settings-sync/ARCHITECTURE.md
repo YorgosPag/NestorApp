@@ -1,6 +1,11 @@
 # Store Sync - Ports & Adapters Architecture
 
-**Status**: ✅ PRODUCTION READY
+> ⚠️ **REMOVED 2026-06-20.** This hexagonal ports/adapters store-sync layer was retired.
+> Settings → legacy style stores is now a single mapping SSoT in
+> `stores/style-store-sync.ts`, driven once-on-load by `EnterpriseDxfSettingsProvider`.
+> This document is kept for historical context only. See ADR-107 (changelog 2026-06-20).
+
+**Status**: 🗑️ REMOVED (was: ✅ PRODUCTION READY)
 **Version**: 1.0.0
 **Date**: 2025-10-09
 **Author**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

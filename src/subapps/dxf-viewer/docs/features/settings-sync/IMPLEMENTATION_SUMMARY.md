@@ -1,5 +1,9 @@
 # Ports & Adapters Implementation - Complete Summary
 
+> ⚠️ **REMOVED 2026-06-20.** The hexagonal ports/adapters store-sync subsystem described here
+> was retired in favour of a single mapping SSoT (`stores/style-store-sync.ts`) driven by
+> `EnterpriseDxfSettingsProvider`. Kept for historical context only. See ADR-107.
+
 **Project**: DXF Viewer - Enterprise Settings System
 **Implementation**: Hexagonal Architecture (Ports & Adapters Pattern)
 **Date**: 2025-10-09

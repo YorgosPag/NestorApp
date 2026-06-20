@@ -35,6 +35,11 @@ import type { Point2D } from '../../rendering/types/Types';
 import { projectPolygonOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import type { SceneUnits } from '../../utils/scene-units';
+import {
+  resolveBeamBeamFaceSnap,
+  type BeamGhostSnapResult,
+  type BeamSnapTarget,
+} from './beam-beam-face-snap';
 
 /** Παρειά κολόνας στην οποία κουμπώνει το φάντασμα (world-aligned). */
 export type BeamGhostFace = 'E' | 'W' | 'N' | 'S';
@@ -150,23 +155,36 @@ export function resolveBeamColumnFaceSnap(
 }
 
 /**
- * Wrapper που κάνει το mm→scene conversion και καλεί τον pure resolver. **ΕΝΑ SSoT**
+ * Dispatcher που κάνει το mm→scene conversion και επιλέγει στόχο face-snap. **ΕΝΑ SSoT**
  * για preview (`beam-preview-helpers`) ΚΑΙ click (`useBeamTool`) ώστε το φάντασμα να
  * είναι ταυτόσημο με το σημείο που κλειδώνει το 1ο κλικ (preview === commit).
+ *
+ * **Column-priority** (ADR-398 §beam-to-beam framing 2026-06-20): όταν υπάρχει κολόνα
+ * εντός capture, η **παρειά κολόνας νικά** (διατηρεί ΑΚΡΙΒΩΣ το committed §3.3 behavior —
+ * status `neutral`)· το beam-to-beam framing (🟢/🔴 status) ισχύει **μακριά** από κολόνες.
  *
  * @param beamWidthMm  `overrides.width ?? DEFAULT_BEAM_WIDTH_MM` (mm).
  */
 export function resolveBeamGhostSnapFromStore(
   cursor: Readonly<Point2D>,
   columnFootprints: readonly (readonly Point2D[])[],
+  beamTargets: readonly BeamSnapTarget[],
   beamWidthMm: number,
   sceneUnits: SceneUnits,
-): BeamColumnFaceSnap | null {
-  if (columnFootprints.length === 0) return null;
+): BeamGhostSnapResult | null {
   const f = mmToSceneUnits(sceneUnits);
-  return resolveBeamColumnFaceSnap(cursor, columnFootprints, {
-    beamWidthScene: beamWidthMm * f,
-    ghostLenScene: BEAM_GHOST_LEN_MM * f,
-    captureScene: BEAM_GHOST_CAPTURE_MM * f,
-  });
+  const ghostLenScene = BEAM_GHOST_LEN_MM * f;
+  const captureScene = BEAM_GHOST_CAPTURE_MM * f;
+  if (columnFootprints.length > 0) {
+    const cs = resolveBeamColumnFaceSnap(cursor, columnFootprints, {
+      beamWidthScene: beamWidthMm * f,
+      ghostLenScene,
+      captureScene,
+    });
+    if (cs) return { start: cs.start, end: cs.end, status: 'neutral' };
+  }
+  if (beamTargets.length > 0) {
+    return resolveBeamBeamFaceSnap(cursor, beamTargets, { ghostLenScene, captureScene });
+  }
+  return null;
 }
