@@ -8,12 +8,18 @@ import {
   contrastRatio,
   luminance601,
   mixHex,
+  parseColor,
+  rgbaString,
+  compositeOverHex,
 } from '../color-math';
 import {
   adaptColorToBackground,
   adaptEntityColorForCanvas,
+  adaptFillTintForCanvas,
   _clearAdaptiveColorCache,
   MIN_ENTITY_CONTRAST,
+  MIN_FILL_CONTRAST,
+  FILL_BOOST_MAX_ALPHA,
 } from '../adaptive-entity-color';
 
 describe('color-math', () => {
@@ -42,6 +48,74 @@ describe('color-math', () => {
     expect(mixHex('#000000', '#ffffff', 0)).toBe('#000000');
     expect(mixHex('#000000', '#ffffff', 1)).toBe('#ffffff');
     expect(mixHex('#000000', '#ffffff', 0.5)).toBe('#808080');
+  });
+
+  it('parseColor — hex / rgb / rgba / invalid', () => {
+    expect(parseColor('#2b2f36')).toEqual({ r: 0x2b, g: 0x2f, b: 0x36, a: 1 });
+    expect(parseColor('rgb(120, 144, 156)')).toEqual({ r: 120, g: 144, b: 156, a: 1 });
+    expect(parseColor('rgba(120, 144, 156, 0.18)')).toEqual({ r: 120, g: 144, b: 156, a: 0.18 });
+    expect(parseColor('nope')).toBeNull();
+  });
+
+  it('rgbaString — round-trips channels + alpha (clamped)', () => {
+    expect(rgbaString({ r: 120, g: 144, b: 156, a: 0.18 })).toBe('rgba(120, 144, 156, 0.18)');
+    expect(rgbaString({ r: 300, g: -5, b: 156.6, a: 2 })).toBe('rgba(255, 0, 157, 1)');
+  });
+
+  it('compositeOverHex — alpha-over reuse mixHex (a=0 → bg, a=1 → fg)', () => {
+    expect(compositeOverHex({ r: 255, g: 255, b: 255, a: 0 }, '#000000')).toBe('#000000');
+    expect(compositeOverHex({ r: 255, g: 255, b: 255, a: 1 }, '#000000')).toBe('#ffffff');
+    // 50% white over black → mid grey
+    expect(compositeOverHex({ r: 255, g: 255, b: 255, a: 0.5 }, '#000000')).toBe('#808080');
+  });
+});
+
+describe('adaptFillTintForCanvas (Revit-grade poché)', () => {
+  const BLACK = '#000000';
+  const WHITE = '#ffffff';
+
+  it('wall body fill rgba(120,144,156,0.18) σε ΜΑΥΡΟ → boost (composited ορατό γκρι)', () => {
+    const out = adaptFillTintForCanvas('rgba(120, 144, 156, 0.18)', BLACK);
+    expect(out).not.toBe('rgba(120, 144, 156, 0.18)');
+    const c = parseColor(out);
+    expect(c).not.toBeNull();
+    // διατηρεί translucency — ΟΧΙ opaque
+    expect(c!.a).toBeLessThanOrEqual(FILL_BOOST_MAX_ALPHA + 1e-9);
+    expect(c!.a).toBeGreaterThan(0);
+    // το composited σώμα φτάνει το κατώφλι ορατότητας
+    expect(contrastRatio(compositeOverHex(c!, BLACK), BLACK)).toBeGreaterThanOrEqual(MIN_FILL_CONTRAST - 0.05);
+  });
+
+  it('ίδιο tint σε ΛΕΥΚΟ φόντο → σκουραίνει (προς μαύρο endpoint)', () => {
+    const out = adaptFillTintForCanvas('rgba(120, 144, 156, 0.18)', WHITE);
+    const c = parseColor(out);
+    expect(c).not.toBeNull();
+    // composited πρέπει να ξεχωρίζει από το λευκό
+    expect(contrastRatio(compositeOverHex(c!, WHITE), WHITE)).toBeGreaterThanOrEqual(MIN_FILL_CONTRAST - 0.05);
+  });
+
+  it('ήδη ορατό tint → ΑΥΤΟΥΣΙΟ (κρατά translucency + hue)', () => {
+    // αρκετά αδιαφανές ανοιχτό tint σε μαύρο → composited ήδη ≥ κατώφλι
+    const input = 'rgba(180, 190, 200, 0.7)';
+    if (contrastRatio(compositeOverHex(parseColor(input)!, BLACK), BLACK) >= MIN_FILL_CONTRAST) {
+      expect(adaptFillTintForCanvas(input, BLACK)).toBe(input);
+    }
+  });
+
+  it('hue preservation — slate παραμένει μπλε-ίσκιος (b ≥ r) μετά το boost σε μαύρο', () => {
+    const c = parseColor(adaptFillTintForCanvas('rgba(120, 144, 156, 0.18)', BLACK))!;
+    expect(c.b).toBeGreaterThanOrEqual(c.r);
+  });
+
+  it('άκυρο input → αυτούσιο (no throw)', () => {
+    expect(adaptFillTintForCanvas('not-a-color', BLACK)).toBe('not-a-color');
+  });
+
+  it('idempotent-ish — re-adapt του αποτελέσματος δεν μειώνει contrast κάτω από το κατώφλι', () => {
+    const once = adaptFillTintForCanvas('rgba(120, 144, 156, 0.18)', BLACK);
+    const twice = adaptFillTintForCanvas(once, BLACK);
+    const c = parseColor(twice)!;
+    expect(contrastRatio(compositeOverHex(c, BLACK), BLACK)).toBeGreaterThanOrEqual(MIN_FILL_CONTRAST - 0.05);
   });
 });
 

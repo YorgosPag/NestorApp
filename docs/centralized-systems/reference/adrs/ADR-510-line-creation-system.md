@@ -1,6 +1,8 @@
-# ADR-508 — Line Creation System (Δημιουργία Γραμμών στο DXF Viewer — «ανώτεροι από την AutoCAD»)
+# ADR-510 — Line Creation System (Δημιουργία Γραμμών στο DXF Viewer — «ανώτεροι από την AutoCAD»)
 
-> **Status:** 🟡 RESEARCH COMPLETE — Q&A ΑΝΟΙΧΤΟ (research §2 ολοκληρωμένη· διευκρινιστικές ερωτήσεις σε εξέλιξη, μία-μία)
+> ⚠️ **Renumber 508→510 (2026-06-20):** οι αριθμοί ADR-508 (Unified Linear-Member Framing) & ADR-509 (Adaptive Entity Color) είχαν δεσμευτεί από άλλον agent. Αυτό το ADR μετονομάστηκε σε ADR-510.
+
+> **Status:** 🟢 SPECIFICATION COMPLETE — research §2 + Q&A 15 ερωτήσεων κλειστό + αρχιτεκτονική §4 + 10 φάσεις. Έτοιμο για υλοποίηση (μηδέν κώδικας ακόμη).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -178,6 +180,55 @@ Fillet (στρογγύλεμα γωνίας με τόξο· `Polyline` option σ
 4. **Καθαρό, σύγχρονο web UX** (heads-up δυναμικά πεδία, χωρίς command-line μυσταγωγία) — προσβάσιμο σε μη-CAD χρήστες.
 5. **Άμεση διαλειτουργικότητα DXF** (σωστά linetypes/lineweights round-trip — δουλεύουμε ήδη στο ADR-505 export).
 
+### 2.10 Επιπλέον υπαρκτοί αυτοματισμοί που ΔΕΝ είχαμε καλύψει ρητά (gaps — να μπουν)
+
+*(Κυρίως από SketchUp inference engine + AutoCAD precision tools — πράγματα που λείπαν από την 1η έρευνα.)*
+
+| Αυτοματισμός | Τι κάνει | Παράδειγμα |
+|---|---|---|
+| **Κλείδωμα άξονα με βελάκια** | Πλήκτρα ←/→/↑ κλειδώνουν κατεύθυνση χωρίς να βασίζεσαι στον μαγνήτη | Τραβάς γραμμή, πατάς → → κλειδώνει οριζόντια όσο σύρεις |
+| **Shift-lock κατά μήκος ίχνους** | Κλειδώνεις μια κατεύθυνση και μετά δείχνεις άλλο σημείο ως αναφορά | «ευθεία με αυτή τη γραμμή, αλλά μήκος μέχρι εκείνη τη γωνία» |
+| **«From» snap (offset από σημείο)** | Ξεκινάς μετρώντας από ένα σημείο αναφοράς | «10εκ μέσα από τη γωνία» |
+| **Μέσο 2 σημείων (M2P)** | Κουμπώνει στο μέσο ανάμεσα σε δύο σημεία | Κέντρο πόρτας ανάμεσα σε 2 κολώνες |
+| **Προσωρινά σημεία ίχνους** | Βοηθητικά σημεία που εμφανίζουν μονοπάτια ευθυγράμμισης | Ευθυγράμμιση με 2 μακρινά σημεία ταυτόχρονα |
+| **Ισομετρική σχεδίαση** | Λειτουργία 2.5D iso | Σχέδιο σε ισομετρία |
+| **Auto-close** | Αυτόματο κλείσιμο σχήματος | Πλησιάζεις την αρχή → «κλείσε;» |
+| **Auto-trim/auto-join σε τομές & γωνίες** | Καθάρισμα γωνιών τοίχων αυτόματα (wall cleanup) | Δύο τοίχοι τέμνονται → καθαρή γωνία μόνη της |
+| **Ελεύθερο χέρι (SKETCH)** | Σχεδίαση με το χέρι | Σκαρίφημα καμπύλης |
+| **Ζωντανές συντεταγμένες (coordinate readout)** | Δείχνει X,Y του κέρσορα συνεχώς | Κάτω-κάτω: X=12.30 Y=4.50 |
+| **Tab-to-lock στα δυναμικά πεδία** | Κλειδώνεις ένα πεδίο (μήκος ή γωνία) και αλλάζεις το άλλο | Κλειδώνεις 30°, αλλάζεις μόνο μήκος |
+| **Reverse / Convert / Explode** | Αλλαγή φοράς, μετατροπή γραμμή↔πολυγραμμή, διάσπαση | Αντιστροφή κατεύθυνσης για linetype με βέλη |
+
+### 2.11 Σύγχρονη AI που ΥΠΑΡΧΕΙ ήδη (για να ξέρουμε τι ΔΕΝ είναι πρωτότυπο)
+
+- **AutoCAD 2026 / Autodesk AI:** Smart Blocks (AI detect & convert επαναλαμβανόμενης γεωμετρίας), **Markup
+  Assist** (διαβάζει markup από PDF/εικόνα και τα εφαρμόζει), **Activity Insights** («τι άλλαξε» στη συνεδρία).
+- **BricsCAD:** **AI Predict** / predictive Quad (ML που προβλέπει επόμενη κίνηση), Copy/Move Guided, Blockify.
+- **Ακαδημαϊκή έρευνα (papers — ΟΧΙ shipped σε εργαλείο γραμμής):** **Text2CAD**, **CADialogue** (conversational
+  CAD με κείμενο/φωνή/εικόνα), **NURBGen** (text→NURBS), CadVLM, cadrille — δηλαδή το «text-to-CAD» **υπάρχει σε
+  πειράματα** αλλά **όχι** ως ζωντανό εργαλείο σχεδίασης γραμμής.
+
+### 2.12 🚀 ΠΡΩΤΟΠΟΡΙΑΚΕΣ AI μαγείες — κανείς δεν τις έχει σε εργαλείο γραμμής ΑΚΟΜΗ
+
+*(Εδώ γινόμαστε πραγματικά ανώτεροι. Ιδέες που σήμερα ΔΕΝ υπάρχουν shipped — ευκαιρία να είμαστε πρώτοι.
+Σημ.: φιλοδοξία· κάθε μία θα γίνει ρητή απόφαση Q&A πριν μπει σε φάση.)*
+
+| # | Μαγεία AI | Τι κάνει (απλά) | Παράδειγμα |
+|---|---|---|---|
+| **N1** | **Προβλεπτικό φάντασμα επόμενης γραμμής** | Όπως το autocomplete στο κινητό, αλλά για σχέδιο: μαντεύει την επόμενη γραμμή και τη δείχνει αχνά· Tab=αποδοχή | Σχεδίασες 3 πλευρές δωματίου → προτείνει την 4η για να κλείσει |
+| **N2** | **Σχεδίαση με φυσική γλώσσα/φωνή** | Λες/γράφεις τι θες κι εμφανίζεται | «τοίχος 4μ παράλληλος στη βόρεια όψη, 20εκ από το παράθυρο» |
+| **N3** | **«Ζωγράφισε το αποτέλεσμα»** | Δηλώνεις το ζητούμενο, η AI φτιάχνει τη γεωμετρία | «ορθογώνιο 20τμ εδώ» ή «κάνε αυτή τη γραμμή ίση με εκείνη» |
+| **N4** | **Σημασιολογικές έλξεις** | Κουμπώνει σε «έννοιες», όχι μόνο σημεία | κέντρο δωματίου, άξονας συμμετρίας, μέση 2 κολωνών |
+| **N5** | **Αυτο-θεραπεία ενώ σχεδιάζεις** | Κλείνει μικρο-κενά, σβήνει διπλές, ισιώνει στραβά live (με undo) | 2 γραμμές «σχεδόν» ακουμπάνε → τις ενώνει μόνη της |
+| **N6** | **Έξυπνη επέκταση μοτίβου** | Βλέπει επανάληψη και προτείνει να τη συνεχίσει | Σχεδίασες 2 σκαλιά → «να βάλω τα υπόλοιπα μέχρι εκεί;» |
+| **N7** | **Καθάρισμα ελεύθερου σκίτσου** | Τραβάς πρόχειρα με το χέρι → γίνεται τέλεια γεωμετρία | Στραβό τετράπλευρο → τέλειο ορθογώνιο με ίσιες γωνίες |
+| **N8** | **Ζωντανός έλεγχος κανονισμού** | Σε προειδοποιεί ΕΝΩ σχεδιάζεις, πριν τελειώσεις | Τραβάς διάδρομο 70εκ → «κάτω από το ελάχιστο ΝΟΚ» |
+| **N9** | **Αυτόματο layer + στυλ από πρόθεση** | Καταλαβαίνει τι σχεδιάζεις και βάζει σωστό layer/linetype μόνο του | Κρυφή ακμή → αυτόματα hidden linetype + σωστό layer |
+| **N10** | **Προσωπικός co-pilot που μαθαίνει εσένα** | Θυμάται στυλ/πάχη/layers/αποστάσεις σου & τα προεπιλέγει | Πάντα βάζεις τοίχους 25εκ → προεπιλέγεται 25εκ |
+| **N11** | **Ιχνηλάτηση από φωτογραφία/σκαρίφημα** | Βάζεις φωτο/σκαναρισμένη κάτοψη, η AI βρίσκει ακμές & κουμπώνεις πάνω | Φωτο χειρόγραφης κάτοψης → ξανασχεδιάζεις πάνω της |
+| **N12** | **«Εξήγησέ μου / διόρθωσέ μου»** | Δείχνεις γραμμή & ρωτάς· η AI απαντά + προτείνει διόρθωση | «γιατί βγήκε στραβή;» → «λάθος snap· να το φτιάξω;» |
+| **N13** | **Generative διάταξη από περιορισμούς** | Λες τι θες, προτείνει εναλλακτικές διατάξεις γραμμών/τοίχων | «σκελετός 3 δωματίων εδώ» → 3 προτάσεις |
+
 ---
 
 ## 3. Αποφάσεις (Q&A — 🟡 ΑΝΟΙΧΤΟ, μία ερώτηση τη φορά)
@@ -207,10 +258,84 @@ Fillet (στρογγύλεμα γωνίας με τόξο· `Polyline` option σ
 
 ---
 
-## 4. Αρχιτεκτονική (ΘΑ ΟΡΙΣΤΕΙ μετά το Q&A)
+## 4. Αρχιτεκτονική (ΟΡΙΣΤΙΚΗ μετά το Q&A)
 
-*Θα συμπληρωθεί όταν κλείσει το Q&A: τύποι οντοτήτων, modules (SSoT «μία γεωμετρία → canvas + DXF»),
-ribbon/contextual UI, ADR-040 compliance, DXF writer/reader, φάσεις υλοποίησης.*
+### 4.1 Αρχή SSoT
+
+**«Μία γεωμετρία → canvas + DXF + μέτρηση»** — η ίδια περιγραφή γραμμής/καμπύλης τροφοδοτεί canvas renderer,
+DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pure modules. Καμία διπλή υλοποίηση γεωμετρίας.
+
+### 4.2 Μοντέλο οντοτήτων (επεκτάσεις)
+
+| Entity | Αλλαγή | Q |
+|---|---|---|
+| `LineEntity` | + προαιρετικά `constraints?` (γεωμετρικοί δεσμοί), `linetype`/`ltscale`/`lineweight` | Q4, Q5 |
+| `PolylineEntity` | + **per-segment bulge** (`vertices` → `{point, bulge?, startWidth?, endWidth?}[]`), arc segments | Q9 |
+| `SplineEntity` | ενεργοποίηση για drawing· `mode: 'fit' \| 'cv'`, fit points / control vertices / knots | Q12 |
+| **NEW** `MultiLineEntity` | n παράλληλες (offsets[], justification) ή γράψιμο ως n LWPOLYLINE σε DXF | Q11 |
+| Όλα | `linetype` (Q5), `lineweight`, `ltscale` ως κοινά πεδία γραμμικών | Q5 |
+
+### 4.3 Επίπεδο εισαγωγής & ακρίβειας (input/precision)
+
+- **Direct Distance Entry = κύριο** (Q1): κατεύθυνση από κέρσορα + πληκτρολόγηση μήκους. Δευτερεύοντα:
+  dynamic fields (μήκος/γωνία Tab) + συντεταγμένες (@dx,dy / @d<a).
+- **Polar tracking 15°** default (Q2) + Ortho (0/90) ως υποσύνολο· toggle/increment από status bar.
+- **OSNAP πλήρες σετ** default (Q3): endpoint/midpoint/center/intersection/perpendicular/tangent/extension.
+- **Object Snap Tracking** (alignment paths) ως follow-up.
+- **Parser μονάδων** (Q15): δέχεται m & mm, εμφάνιση σε m με δεκαδικά.
+
+### 4.4 Modules — ομάδες (NEW/MOD)
+
+| Ομάδα | Modules (ενδεικτικά) | NEW/MOD |
+|---|---|---|
+| Input/precision SSoT | `drawing/direct-distance-input.ts`, `drawing/polar-tracking.ts`, `snap/osnap-resolver.ts` (reuse `BimCharacteristicSnapEngine`), `units/length-format.ts` | NEW/MOD |
+| Linetypes | `data/linetype-catalog.ts`, `rendering/linetype-dash-renderer.ts`, `linetype/complex-linetype-text-shape.ts`, `export` LTYPE table | NEW |
+| Geometry SSoT | `geometry/bulge-arc.ts` (Q9), `geometry/nurbs-spline.ts` (Q12), `geometry/parallel-offset.ts` (reuse `useLineParallel`), `geometry/line-intersection.ts` (Q13) | NEW |
+| Tools (δημιουργία) | ολοκλήρωση `line/polyline/xline/ray`, NEW `useSplineTool`, `useMultiLineTool`, NEW `useSmartLineTool` (Q6 orchestrator) | NEW/MOD |
+| Tools (επεξεργασία) | `modify/offset.ts`, `trim.ts`, `extend.ts`, `join.ts`, `break.ts`, `fillet.ts`, `chamfer.ts` (Q13) | NEW |
+| Grips | multifunctional grips (Q8) — reuse ADR-501 + ADR-107 | MOD |
+| Constraints (υβριδικό) | `constraints/constraint-store.ts`, `constraints/solver.ts`, UI «κλείδωμα σχέσης» (Q4) | NEW |
+| Magic/AI | `preview/command-preview.ts` (Q10.1), `ui/rollover-tooltip.ts` (Q10.2), `modify/guided-copy-move.ts` (Q10.3), `selection/cycling.ts` (Q10.4) | NEW |
+| Live preview | `preview/line-ghost-overlay.ts` (μήκος+γωνία+σχέση+snap, Q7) — reuse ghost/`getImmediateSnap` | NEW |
+| Ribbon/UI | `ui/ribbon/data/home-tab-draw.ts` (κουμπιά + ✨), contextual panels (linetype/width/constraint) | MOD |
+| i18n | `i18n/locales/{el,en}/dxf-viewer*.json` | MOD |
+
+### 4.5 ADR-040 compliance
+
+- Όλα τα overlays (ghost/preview, rollover, snap indicators, command preview) = **leaf consumers** (μόνο leaf
+  `useSyncExternalStore`)· **καμία** high-freq subscription σε `CanvasSection`/`CanvasLayerStack`.
+- Event handlers διαβάζουν με getters (`getImmediateSnap`, `getImmediateTransform`) — όχι snapshots.
+- Geometry computations = pure functions· caching όπου χρειάζεται (linetype dash, spline tessellation).
+
+### 4.6 DXF round-trip
+
+- Writer: `LINE`, `LWPOLYLINE` (με bulge `42`, widths `40/41`), `SPLINE`, `XLINE`, `RAY`, `MLINE`/n-polylines,
+  `LTYPE` table (linetypes), entity `linetype`/`ltscale`/`lineweight`.
+- Reader: αντίστοιχοι converters (`utils/dxf-entity-converters.ts`) — bulge→arc, spline knots/CVs, linetypes.
+- Συνεργασία με ADR-505 (Unified Export).
+
+### 4.7 «Ανώτεροι από AutoCAD» — οι διαφοροποιήσεις (από §2.9)
+
+1. Live ghost με μήκος+γωνία+**σχέση γειτονικών**+snap (Q7) — όλα ταυτόχρονα, μοντέρνο UI.
+2. Υβριδικοί έξυπνοι δεσμοί με Shift-override (Q4) — η ισχύς του parametric χωρίς την πολυπλοκότητα.
+3. «✨ Έξυπνη Γραμμή» (Q6) — ένα εργαλείο που μαντεύει line/polyline/wall.
+4. Καθαρό web UX (Direct Distance + dynamic fields, Q1) — χωρίς command-line μυσταγωγία.
+5. Σωστό DXF round-trip linetypes/lineweights (§4.6).
+
+### 4.8 Φάσεις υλοποίησης (πρόταση)
+
+| Φάση | Περιεχόμενο | Q |
+|---|---|---|
+| **Φ1** | Input/precision SSoT (Direct Distance + polar 15° + OSNAP full) + live ghost basic (μήκος/γωνία) | Q1,Q2,Q3,Q7 |
+| **Φ2** | Linetypes (έτοιμα) + lineweight + μονάδες m + contextual panel | Q5,Q15 |
+| **Φ3** | Polyline με bulge (γραμμή↔τόξο) + multifunctional grips | Q8,Q9 |
+| **Φ4** | Spline tool (fit+CV) + MultiLine tool | Q11,Q12 |
+| **Φ5** | Modify suite (offset/trim/extend πρώτα, μετά join/break/fillet/chamfer) + command preview | Q10.1,Q13 |
+| **Φ6** | Magic: rollover tooltip + guided copy/move + selection cycling | Q10.2,Q10.3,Q10.4 |
+| **Φ7** | Υβριδικοί έξυπνοι δεσμοί (constraint store + solver + UI) + live «σχέση γειτονικών» στο ghost | Q4,Q7 |
+| **Φ8** | «✨ Έξυπνη Γραμμή» orchestrator + σύνθετα linetypes (κείμενο/σύμβολο) | Q6,Q5 |
+| **Φ9** | DXF round-trip πλήρες (LTYPE, bulge, spline, MLINE) | §4.6 |
+| **Φ10** | Επόμενα modern: AI palette (Quad-style), command autocomplete/autocorrect, Object Snap Tracking | §2.8 |
 
 ---
 
@@ -231,3 +356,8 @@ ribbon/contextual UI, ADR-040 compliance, DXF writer/reader, φάσεις υλο
 - **2026-06-20** — Δημιουργία ADR. Ολοκλήρωση έρευνας §2 (τύποι γραμμών, linetypes, input methods, drawing aids,
   constraints, pline options, modify/grips, modern/AI features, ευκαιρίες υπεροχής). Καταγραφή σημερινής
   κατάστασης κώδικα §1.1. Q&A ανοιχτό — ξεκινά Q1.
+- **2026-06-20** — Κλείσιμο Q&A (15 ερωτήσεις): Q1 Direct Distance κύριο· Q2 polar 15°· Q3 πλήρες OSNAP·
+  Q4 υβριδικοί δεσμοί· Q5 πλήρης βιβλιοθήκη linetypes (+σύνθετα)· Q6 ξεχωριστά κουμπιά + ✨Έξυπνη Γραμμή·
+  Q7 πλήρες live ghost· Q8 multifunctional grips· Q9 polyline με bulge (γραμμή+τόξο+width)· Q10 και οι 4
+  magic πρώτες· Q11 γενικό MultiLine· Q12 spline fit+CV· Q13 πλήρες modify suite· Q14 συνεχής σχεδίαση·
+  Q15 μέτρα με δεκαδικά. Συγγραφή αρχιτεκτονικής §4 + 10 φάσεις. Status → SPECIFICATION COMPLETE.

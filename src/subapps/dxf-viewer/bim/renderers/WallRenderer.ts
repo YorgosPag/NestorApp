@@ -39,7 +39,7 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
-import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
@@ -251,7 +251,12 @@ export class WallRenderer extends BaseEntityRenderer {
       elementOverride: wall.styleOverride, layerOverride,
     });
     // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
-    this.ctx.fillStyle = resolveVgFillTint('wall', _cutState, _styles) ?? WALL_CATEGORY_FILL[cat];
+    // ADR-509 — background-adaptive poché: το translucent σώμα (rgba 0.18 alpha) πάνω σε
+    // μαύρο canvas composit-άρει σχεδόν-μαύρο· εδώ boost-άρεται ώστε να διαβάζεται ως
+    // ανοιχτό-γκρι (και σκουραίνει σε ανοιχτό φόντο), κρατώντας το CAD translucent feel.
+    this.ctx.fillStyle = adaptFillTintForCanvas(
+      resolveVgFillTint('wall', _cutState, _styles) ?? WALL_CATEGORY_FILL[cat],
+    );
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
 

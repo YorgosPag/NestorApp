@@ -20,6 +20,11 @@ export interface Rgb {
   readonly b: number;
 }
 
+/** Opaque-or-translucent χρώμα: `Rgb` + alpha 0..1. */
+export interface RgbaColor extends Rgb {
+  readonly a: number;
+}
+
 /** Parse `#rgb` / `#rrggbb` (case-insensitive) → 0..255 channels, ή `null` σε άκυρο. */
 export function parseHex(hex: string): Rgb | null {
   const m = hex.trim().replace(/^#/, '');
@@ -93,4 +98,38 @@ export function mixHex(aHex: string, bHex: string, t: number): string {
     g: a.g + (b.g - a.g) * k,
     b: a.b + (b.b - a.b) * k,
   });
+}
+
+/**
+ * Parse `#hex` / `rgb(r,g,b)` / `rgba(r,g,b,a)` → {r,g,b,a} (channels 0..255, alpha 0..1).
+ * hex/rgb → `a=1`. `null` σε άκυρο input. Reuse `parseHex` για το hex μέρος (μηδέν duplicate).
+ */
+export function parseColor(input: string): RgbaColor | null {
+  const s = input.trim();
+  if (s.startsWith('#')) {
+    const rgb = parseHex(s);
+    return rgb ? { ...rgb, a: 1 } : null;
+  }
+  const m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(s);
+  if (!m) return null;
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  const a = m[4] === undefined ? 1 : Number(m[4]);
+  if ([r, g, b, a].some(Number.isNaN)) return null;
+  return { r, g, b, a: Math.max(0, Math.min(1, a)) };
+}
+
+/** `{r,g,b,a}` → `rgba(r, g, b, a)` (κανάλια rounded+clamped 0..255, alpha clamped 0..1). */
+export function rgbaString(c: RgbaColor): string {
+  const ch = (n: number): number => Math.max(0, Math.min(255, Math.round(n)));
+  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${Math.max(0, Math.min(1, c.a))})`;
+}
+
+/**
+ * Alpha-composite ένα translucent χρώμα πάνω σε opaque hex φόντο → effective **opaque** hex.
+ * `out = fg·a + bg·(1−a)` = `mixHex(bg, fg, a)` (reuse — μηδέν duplicate compositing math).
+ */
+export function compositeOverHex(fg: RgbaColor, bgHex: string): string {
+  return mixHex(bgHex, rgbToHex(fg), fg.a);
 }
