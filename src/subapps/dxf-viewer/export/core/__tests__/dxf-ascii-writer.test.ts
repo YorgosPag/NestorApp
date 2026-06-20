@@ -155,4 +155,22 @@ describe('writeDxfAscii — colour (ACI code 62)', () => {
     const dxf = writeDxfAscii([wall], { layersById: LAYERS, lineMode: 'lines' });
     expect(countOccurrences(dxf, '62\n1\n')).toBe(3); // και τα 3 segments κόκκινα
   });
+
+  // ADR-505 (rebar 3D) — LINE με προαιρετικό Z ανά άκρο (group 30/31).
+  it('LINE με dxfStartZMm/dxfEndZMm → group 30/31 (z × mmScale)', () => {
+    const seg = {
+      id: 'r', type: 'line', layerId: 'L',
+      start: { x: 0, y: 0 }, end: { x: 0, y: 0 },
+      dxfStartZMm: 0, dxfEndZMm: 3000,
+    } as unknown as Entity;
+    const dxf = writeDxfAscii([seg], { layersById: LAYERS, mmScale: 0.001 }); // mm → m
+    expect(dxf).toContain('30\n0\n');   // start z = 0
+    expect(dxf).toContain('31\n3\n');   // end z = 3000mm × 0.001 = 3m
+  });
+
+  it('απλό LINE (χωρίς Z) → ΚΑΝΕΝΑ group 30/31 (body 2Δ αμετάβλητο)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('\n30\n');
+    expect(dxf).not.toContain('\n31\n');
+  });
 });

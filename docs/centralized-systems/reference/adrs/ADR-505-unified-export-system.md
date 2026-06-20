@@ -1,7 +1,7 @@
 # ADR-505 — Unified Export System (DXF / IFC4 / PDF, scope-filtered, multi-floor)
 
 **Status:** ✅ BROWSER-VERIFIED (Τέκτονας/FESPA 2Δ + AutoCAD 2Δ/3Δ) · DXF πλήρες (active+zip+single, dual-mode polyline/lines, ACI χρώμα, generic BIM/Η-Μ, 3Δ extrusion) · IFC/PDF μέσω delegation — UNCOMMITTED 2026-06-20 · 🔴 ΜΟΝΟ commit (stage ADR-505, CHECK 6B/6D)
-**Status (finish/rebar phase, §C):** ⏳ Τέκτονας ✅ (σοβάδες+οπλισμός σωστά) · AutoCAD hardening εφαρμόστηκε (ASCII layers `FINISH`/`REBAR` + closed finish prism + degenerate-circle guard) — UNCOMMITTED 2026-06-20 · 🔴 re-verify AutoCAD + commit
+**Status (finish/rebar phase, §C):** Τέκτονας ✅ (σοβάδες+οπλισμός) · AutoCAD ✅ (σοβάδες 3Δ, οπλισμός εμφανίζεται μετά το hardening: ASCII layers `FINISH`/`REBAR` + closed finish prism + degenerate-circle guard) · **+Phase D: 3Δ οπλισμός** (πραγματικός κλωβός σε AutoCAD/polyline mode· LINE με Z· Τέκτονας/lines=2Δ κάτοψη) — UNCOMMITTED 2026-06-20 · 🔴 re-verify AutoCAD 3Δ rebar + commit
 **Date:** 2026-06-20
 **Category:** Entity Systems / DXF Viewer Output
 **Author:** Γιώργος Παγώνης + Claude Code (Anthropic AI)
@@ -67,6 +67,12 @@
 - **NEW `export/core/overlay-dxf-collector.ts`** — `collectOverlayDxfEntities(entities, {componentVisible})`: gating «export what's visible» (`isStructuralComponentVisible('plaster'|'reinforcement', e)`, per-element override→per-view) → finish (`computeStructuralFinishSilhouette`, ίδιο SSoT με 2Δ/3Δ) ως **extruded** lwpolyline (group-39 ύψος ζώνης) + οπλισμός (κολώνα/δοκάρι/πέδιλο/πλάκα) ως lwpolyline + circle (διαμήκεις κουκκίδες). Layers (Revit subcategories): `FINISH` / `REBAR`.
 - **Wiring** στο `dxf-export-adapter.ts` (`buildDxfExportRequest` + `mergeFloorsToSingleDxfScene` με `FLnn_` prefix), gated στο scope (dxf-only → μηδέν overlays).
 - **AutoCAD hardening** (Τέκτονας τα διάβαζε, AutoCAD «κολλούσε»): (1) **ASCII** layer names — ο writer βγάζει bare DXF χωρίς HEADER/`$DWGCODEPAGE` → ο AutoCAD υποθέτει ANSI και σκαλώνει σε UTF-8 ελληνικά layer names· (2) finish polyline **closed** (καθαρό extruded prism = verified body μονοπάτι, όχι open-poly-with-thickness)· (3) skip degenerate circle (radius≤ε = invalid AutoCAD audit).
+
+### Phase D — 3Δ οπλισμός (πραγματικός κλωβός)
+Ο 2Δ-plan οπλισμός εμφανιζόταν σωστά αλλά επίπεδος (ο σοβάς ήταν 3Δ). Λύση: εξαγωγή του **πραγματικού 3Δ κλωβού** σε AutoCAD/polyline mode (Τέκτονας/lines = 2Δ κάτοψη, mirror του body extrusion).
+- **NEW 3Δ-segment SSoT** `bim/structural/reinforcement/rebar-segments-3d-{linear,grid}.ts` — `collect{Column,Beam,Footing,Slab}RebarSegments3D` → `RebarSeg3D[]` (plan x,y σε **scene units** + `zMm` **σχετικό με τη βάση**, z=0 στο footprint plane = ίδιος pseudo-3D χώρος με το body). Reuse ΟΛΟΥ του rebar **math** (resolveActive*Reinforcement + layout + levels + columnLocalMmToWorld + samplePolylineFrame) — mirror της segment-assembly των 3Δ mesh builders ΧΩΡΙΣ να τους αγγίξω (browser-verified-only 3Δ → μηδέν regression risk). Διαμήκεις κολώνας=κατακόρυφες, δοκαριού=οριζόντιες στο σωστό z, συνδετήρες=loops σε κάθε στάθμη.
+- **Writer Z**: optional group 30/31 στο LINE (z×mmScale, x,y×coordinateScale· absent → 2Δ, body αμετάβλητο).
+- **Collector**: `lineMode` branch — polyline→3Δ LINEs (Z)· lines→2Δ κάτοψη. tilt κεκλιμένης κολώνας στο DXF = DEFER.
 
 ## Changelog
 - **2026-06-20 (j)** — **Finish/rebar phase (§C):** εξαγωγή σοβάδων + οπλισμού ως derived-overlay collector, full SSoT (5 NEW plan-geometry modules + 1 finish + collector· 5 renderers → thin consumers· wiring adapter). Gating «what's visible». Browser-verify: **Τέκτονας ✅** σοβάδες+οπλισμός σωστά· **AutoCAD «κολλούσε»** → hardening (ASCII layers `FINISH`/`REBAR`, closed finish prism, degenerate-circle guard). 22 jest (8 NEW finish-plan-geo + overlay-collector, 14 affected GREEN), tsc clean. 🔴 re-verify AutoCAD + commit.
