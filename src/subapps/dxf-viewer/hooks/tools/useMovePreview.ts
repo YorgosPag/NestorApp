@@ -8,24 +8,24 @@
  * PreviewCanvas overlay. Also draws:
  *   - Base point crosshair marker (red)
  *   - Rubber band line: base point → cursor (dashed gold)
- *   - Displacement tooltip near cursor showing Δx, Δy
+ *   - Displacement tooltip near cursor showing distance
  *
  * Ghost rendering itself is delegated to `rendering/ghost` (SSOT) — the same
  * primitives used by `useGripGhostPreview` so the two preview paths cannot
  * visually diverge.
  *
- * Uses requestAnimationFrame for 60fps — NO React re-renders.
- * Cursor position read via useCursorWorldPosition() (ImmediatePositionStore).
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
+ * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
  *
  * @module hooks/tools/useMovePreview
  */
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { MovePhase } from './useMoveTool';
 import type { useLevels } from '../../systems/levels';
 import type { Overlay } from '../../overlays/types';
@@ -43,6 +43,8 @@ import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ============================================================================
 // TYPES
@@ -87,12 +89,6 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     getViewportElement,
   } = props;
 
-  // SSoT gate (ADR-040): only subscribe to the 60fps cursor stream while a
-  // preview phase is active. Idle/other tools → no listener, no re-render.
-  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
-  const rafRef = useRef<number>(0);
-  const prevPhaseRef = useRef<MovePhase>('idle');
-
   // O(1) entity lookup — map rebuilt only when entities array ref changes (not every RAF frame)
   const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());
   const entityArrayRef = useRef<AnySceneEntity[] | undefined>(undefined);
@@ -111,24 +107,11 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     [levelManager],
   );
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!PREVIEW_PHASES.has(phase)) return;
     if (!basePoint) return;
 
-    const viewportEl = getViewportElement?.() ?? canvas;
-    const rect = viewportEl.getBoundingClientRect();
-    const vp = { width: rect.width, height: rect.height };
-    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, vp);
+    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, t, viewport);
 
     // Base point crosshair (red)
     const markerSize = 8;
@@ -143,14 +126,14 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.stroke();
     ctx.restore();
 
-    if (!cursorWorld) return;
+    if (!effectiveCursor) return;
 
     // ORTHO (F8): lock the destination to the H/V axis from the base point so the
     // rubber band, ghost, and tooltip all match the committed move (useMoveTool).
-    // No-op when ORTHO is OFF (effectiveCursor === cursorWorld).
-    const orthoDelta = applyOrthoToDelta({ x: cursorWorld.x - basePoint.x, y: cursorWorld.y - basePoint.y });
-    const effectiveCursor: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
-    const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, transform, vp);
+    // No-op when ORTHO is OFF.
+    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - basePoint.x, y: effectiveCursor.y - basePoint.y });
+    const orthoDestination: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
+    const cursorScreen = CoordinateTransforms.worldToScreen(orthoDestination, t, viewport);
 
     // Rubber band (dashed gold)
     ctx.save();
@@ -170,17 +153,13 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // Same ORTHO-locked displacement the rubber band + commit use (WYSIWYG).
     const delta: Point2D = orthoDelta;
 
-    // Live move-distance readout: a discreet Revit-grade pill at the rubber-band midpoint
-    // showing how far the selection has moved (metres, locale-formatted). Replaces the old
-    // crude `Δx, Δy` tooltip. Scene-unit displacement → metres via the readout SSoT.
+    // Live move-distance readout: a discreet Revit-grade pill at the rubber-band midpoint.
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
     const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
     const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
     drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
 
-    // Solid preview entities at destination — AutoCAD parity: originals ghost on main
-    // canvas (handled by dxf-canvas-renderer movePreviewActive), preview shows solid
-    // in the entity's ACTUAL COLOR (not ghost cyan) so it looks like the real entity.
+    // Solid preview entities at destination — AutoCAD parity.
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
       ctx.globalAlpha = 1.0;
@@ -191,20 +170,18 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         if (!entity) continue;
         const preview = makeTranslationPreview(entityId, delta);
         const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
-        // Resolve entity color for solid-looking preview (AutoCAD parity).
-        // ByLayer/ByBlock: cascade to LayerStore for the actual displayed color.
         const useLayerColor = !entity.color || entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
         const color: string = useLayerColor
           ? (getLayer(entity.layerId)?.color ?? '#FFFFFF')
           : (entity.color ?? '#FFFFFF');
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
-        drawGhostEntity(ctx, transformed, transform, vp);
+        drawGhostEntity(ctx, transformed, t, viewport);
       }
 
       ctx.restore();
 
-      // Solid overlay preview at destination (AutoCAD parity — matches entity ghost reversal).
+      // Solid overlay preview at destination (AutoCAD parity).
       if (selectedOverlayIds && selectedOverlayIds.length > 0 && getOverlay) {
         ctx.save();
         ctx.globalAlpha = 1.0;
@@ -214,7 +191,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
           const ov = getOverlay(ovId);
           if (!ov || ov.polygon.length < 2) continue;
           const pts = ov.polygon.map(([x, y]) =>
-            CoordinateTransforms.worldToScreen({ x: x + delta.x, y: y + delta.y }, transform, vp)
+            CoordinateTransforms.worldToScreen({ x: x + delta.x, y: y + delta.y }, t, viewport)
           );
           ctx.beginPath();
           ctx.moveTo(pts[0].x, pts[0].y);
@@ -225,31 +202,13 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         ctx.restore();
       }
     }
-  }, [phase, basePoint, cursorWorld, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, transform, getCanvas, getViewportElement]);
+  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager]);
 
-  // Clear canvas when leaving preview phase
-  useEffect(() => {
-    const wasPreview = PREVIEW_PHASES.has(prevPhaseRef.current);
-    const isPreview = PREVIEW_PHASES.has(phase);
-    if (wasPreview && !isPreview) {
-      const canvas = getCanvas();
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const clearDpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(clearDpr, 0, 0, clearDpr, 0, 0);
-        }
-      }
-    }
-    prevPhaseRef.current = phase;
-  }, [phase, getCanvas]);
-
-  // Schedule RAF during preview phases
-  useEffect(() => {
-    if (!PREVIEW_PHASES.has(phase)) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: PREVIEW_PHASES.has(phase),
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }

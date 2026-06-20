@@ -8,14 +8,24 @@
  * (width/depth) is dragged, a floating "w=350mm" label appears near the grip
  * handle on the preview canvas — Revit/AutoCAD live-dim convention.
  *
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + canonical viewport/transform ζουν πλέον ΜΙΑ φορά στο harness·
+ * εδώ μένει ΜΟΝΟ η draw logic (label pill).
+ *
+ * `cursorMode: 'none'` — cursor έρχεται μέσω `dragPreview.anchorPos + delta`.
+ * `clearMode: 'skip-clear'` — ζωγραφίζει LAYERED πάνω στο frame του
+ * useGripGhostPreview· ΔΕΝ κάνει per-frame clear (αλλιώς σβήνει το grip ghost).
+ * Clear-on-exit γίνεται κανονικά από το harness.
+ *
  * @module hooks/tools/useGripDimAnnotation
  * @see ADR-363 Phase 4.5c.5
  * @see ADR-040 — Preview Canvas Performance
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
 'use client';
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
@@ -35,6 +45,8 @@ import {
   pillPath,
 } from '../../rendering/utils/canvas-pill';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,15 +69,6 @@ const LABEL_OFFSET_X = 12;
 const LABEL_OFFSET_Y = -4;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function clearCanvas(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const dpr = window.devicePixelRatio || 1;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
 
 function drawLabelPill(
   ctx: CanvasRenderingContext2D,
@@ -222,22 +225,18 @@ function buildFoundationLabel(
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
   const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
 
-  const rafRef = useRef<number>(0);
-  const prevActiveRef = useRef<boolean>(false);
-
   const isDimPreview =
     dragPreview !== null &&
     (dragPreview.columnGripKind !== undefined ||
       dragPreview.beamGripKind !== undefined ||
       dragPreview.foundationGripKind !== undefined);
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // NOTE: Do NOT clearCanvas here — GripDragPreviewMount (mounted before this
+  // cursorMode: 'none' — cursor comes via dragPreview.anchorPos + delta, not
+  // useCursorWorldPosition. effectiveCursor will be null (unused below).
+  // clearMode: 'skip-clear' — draws LAYERED on top of useGripGhostPreview's frame.
+  // The harness still clears on gate-exit (isDimPreview → false).
+  const draw = useCallback(({ ctx, viewport, transform: t }: GhostDrawFrame) => {
+    // NOTE: Do NOT clear here — GripDragPreviewMount (mounted before this
     // leaf in PreviewCanvasMounts) schedules its RAF first, clears the canvas,
     // then draws the ghost. This RAF runs second, drawing the label on top of
     // the already-cleared canvas. Two clears in the same frame = label wipe.
@@ -257,10 +256,7 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     // (Y-inversion + margins) — the previous local helper omitted the Y-flip, so
     // the label tracked the cursor vertically inverted. Viewport derived from the
     // same element the ghost uses (`getGhostPreview` pattern) for 1:1 placement.
-    const viewportEl = getViewportElement?.() ?? canvas;
-    const rect = viewportEl.getBoundingClientRect();
-    const vp = { width: rect.width, height: rect.height };
-    const { x: sx, y: sy } = CoordinateTransforms.worldToScreen(gripWorld, transform, vp);
+    const { x: sx, y: sy } = CoordinateTransforms.worldToScreen(gripWorld, t, viewport);
 
     let label: string | null = null;
     if (columnGripKind && isColumnEntity(entity)) {
@@ -272,21 +268,15 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     }
 
     if (label) drawLabelPill(ctx, label, sx, sy);
-  }, [dragPreview, levelManager, transform, getCanvas, getViewportElement]);
+  }, [dragPreview, levelManager]);
 
-  useEffect(() => {
-    if (prevActiveRef.current && !isDimPreview) {
-      const canvas = getCanvas();
-      if (canvas) clearCanvas(canvas);
-    }
-    prevActiveRef.current = isDimPreview;
-  }, [isDimPreview, getCanvas]);
-
-  useEffect(() => {
-    if (!isDimPreview) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [isDimPreview, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: isDimPreview,
+    getCanvas,
+    getViewportElement,
+    transform,
+    cursorMode: 'none',
+    clearMode: 'skip-clear',
+    draw,
+  });
 }

@@ -36,6 +36,8 @@ export interface GripStyle {
 
 import { useSyncExternalStore } from 'react';
 import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
 
 type Listener = () => void;
 let current: GripStyle = {
@@ -46,7 +48,7 @@ let current: GripStyle = {
     hot: GRIP_HOT_COLOR,                 // SSOT → color-config.ts (red selected) — was SNAP_ENDPOINT
     contour: GRIP_CONTOUR_COLOR // SSOT → color-config.ts (black) — was UI_COLORS.BLACK
   },
-  gripSize: 14,
+  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size
   pickBoxSize: 3,
   apertureSize: 20,
   showGrips: true,

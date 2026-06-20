@@ -26,7 +26,7 @@
   - `RULER_UNITS_FONT_SIZE`: 10 - Default ruler units label font size (px)
   - `MAJOR_TICK_LENGTH`: 10 - Default major tick mark length (px)
   - `APERTURE_SIZE`: 10 - Grip selection aperture size (px, AutoCAD APERTURE)
-  - `GRIP_SIZE`: 8 - Default grip point size (px, AutoCAD GRIPSIZE)
+  - `GRIP_SIZE`: `GRIP_SIZE_DEFAULT` (7) - Default grip point size (px, AutoCAD GRIPSIZE). Since 2026-06-20 references the SSoT leaf `config/grip-size-default.ts` (see Changelog).
   - `PICK_BOX_SIZE`: 3 - Default pick box size (px, AutoCAD PICKBOX)
   - `TEXT_HEIGHT_FALLBACK`: 10 - Default text height for bounds calculation (drawing units)
 - **API**:
@@ -36,7 +36,7 @@
     RULER_UNITS_FONT_SIZE: 10,
     MAJOR_TICK_LENGTH: 10,
     APERTURE_SIZE: 10,
-    GRIP_SIZE: 8,
+    GRIP_SIZE: GRIP_SIZE_DEFAULT, // 🏢 7 — SSoT leaf config/grip-size-default.ts
     PICK_BOX_SIZE: 3,
     TEXT_HEIGHT_FALLBACK: 10,
   } as const;
@@ -56,5 +56,57 @@
   - Single point of change for default sizes
   - Consistent fallback behavior across all UI systems
 - **Companion**: ADR-042 (UI Fonts), ADR-044 (Canvas Line Widths), ADR-093 (Text Label Offsets)
+
+---
+
+## Changelog
+
+### 2026-06-20 — Grip base size unified to ONE SSoT leaf (`GRIP_SIZE_DEFAULT = 7`)
+
+**Problem (Giorgio): selection grips rendered "sometimes big, sometimes small" at the same zoom.**
+
+Real root cause (grep audit, not the override path): the base grip pixel size was
+declared in **~6 places that disagreed** — split between **14**, **7** and **5**:
+
+| Source | Old value |
+|--------|-----------|
+| `config/text-rendering-config.ts` `UI_SIZE_DEFAULTS.GRIP_SIZE` | 14 |
+| `types/gripSettings.ts` `DEFAULT_GRIP_SETTINGS` | 14 |
+| `stores/GripStyleStore.ts` module default | 14 |
+| `settings/FACTORY_DEFAULTS.ts` `GRIP_DEFAULTS` (initial state) | 14 (+ `size: 14`) |
+| `settings-core/defaults.ts` `DEFAULT_GRIP_SETTINGS` | 7 |
+| `settings-core/types/domain.ts` `validateGripSettings` defaults | 7 |
+| `settings-core/types/domain.ts` `validateGripSize(undefined)` (effective default) | **5** |
+| `ui/hooks/useUnifiedSpecificSettings.ts` mock fallback | 5 |
+
+Three independent sync writers (`GripProvider` effect, `StyleManagerProvider.syncGripStore`,
+`gripStyleAdapter`) push `getEffectiveGripSettings()` into `gripStyleStore`; whichever
+default/validation path won at a given lifecycle moment determined the size → 7↔14↔5 flicker.
+Grips are screen-constant (zoom-independent), which matched Giorgio's observation that the
+variation was **not** zoom-related.
+
+**Decision (Giorgio):** unify the base to **7** (AutoCAD GRIPSIZE).
+
+**Fix (FULL SSoT):**
+- **NEW** `config/grip-size-default.ts` — a dedicated **zero-import leaf** exporting
+  `GRIP_SIZE_DEFAULT = 7`. A leaf (no deps) is the only cycle-proof home: the value is needed
+  by both the very low-level `validation-bounds-config → geometry-utils` chain and higher-level
+  settings, so hosting it in any module with its own imports causes a circular import
+  (verified: hosting in `validation-bounds-config` produced a `geometry-utils → entity-bounds →
+  text-rendering-config → validation-bounds-config` cycle).
+- All 8 selection/general base-default surfaces above now **import** `GRIP_SIZE_DEFAULT`
+  (incl. `validateGripSize` default `5 → 7` and `UI_SIZE_DEFAULTS.GRIP_SIZE`).
+- **Preview-DRAW grips** (`PREVIEW_DEFAULTS` / `DEFAULT_PREVIEW_OPTIONS` = 6) are a **separate,
+  internally-consistent domain** and intentionally NOT bound to this constant.
+- **Dead-code removal (ADR-048 path):** the `draftGripSettingsStore` override machinery in
+  `hooks/useGripPreviewStyle.ts` (`updateDraftGripSettingsStore` /
+  `getGripPreviewStyleWithOverride`) was **never wired** (no caller anywhere) → removed;
+  `GripPhaseRenderer` now reads `getGripPreviewStyle()` directly.
+- **Tests:** NEW `config/__tests__/grip-size-default-ssot.test.ts` (regression guard — every
+  default surface must equal `GRIP_SIZE_DEFAULT`); updated `settings-core` validation test
+  expectation `5 → 7`.
+
+**NOT touched:** `GripSizeCalculator` math + temperature multipliers (by-design hover/active
+growth), preview-draw grips, `bim/structural/*`, `codes/*` (shared tree, other agent).
 
 ---

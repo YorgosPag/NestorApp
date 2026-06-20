@@ -27,6 +27,8 @@ import {
   LINE_BOUNDS,
   GRIP_BOUNDS,
 } from '../../config/validation-bounds-config';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
 
 // ============================================================================
 // LINE TYPES & SETTINGS (ISO 128)
@@ -293,7 +295,7 @@ export const validateFontSize = (value: number | null | undefined): number => {
 
 export const validateGripSize = (value: number | null | undefined): number => {
   if (value == null || isNaN(value) || typeof value !== 'number') {
-    return 5;
+    return GRIP_SIZE_DEFAULT; // 🏢 SSoT base grip size (was hardcoded 5)
   }
   // 🏢 ADR-034: Centralized validation bounds
   return clamp(value, GRIP_BOUNDS.SIZE.min, GRIP_BOUNDS.SIZE.max);
@@ -407,7 +409,7 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
 export const validateGripSettings = (settings: Partial<GripSettings>): GripSettings => {
   const defaults: GripSettings = {
     enabled: true,
-    gripSize: 7,
+    gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size
     pickBoxSize: 3,
     apertureSize: 10,
     opacity: 1.0,

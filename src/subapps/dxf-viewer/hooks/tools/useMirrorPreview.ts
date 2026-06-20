@@ -4,8 +4,12 @@
  * Draws mirrored ghost copies of selected entities on the PreviewCanvas.
  * Also draws the mirror axis line while awaiting-second-point.
  *
- * Uses requestAnimationFrame for 60fps — NO React re-renders.
- * Cursor position read via useCursorWorldPosition() (ImmediatePositionStore).
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
+ * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ *
+ * ⚠️ Σημείωση: ο Shift keydown/keyup listener παραμένει εδώ σε ΞΕΧΩΡΙΣΤΟ
+ * useEffect — το harness ΔΕΝ τον διαχειρίζεται.
  *
  * @module hooks/tools/useMirrorPreview
  */
@@ -17,10 +21,11 @@ import type { AnySceneEntity } from '../../types/entities';
 import { mirrorPoint, orthoSnap } from '../../utils/mirror-math';
 import type { MirrorAxis } from '../../utils/mirror-math';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { useCadToggles } from '../common/useCadToggles';
 import type { MirrorPhase } from './useMirrorTool';
 import type { useLevels } from '../../systems/levels';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ============================================================================
 // TYPES
@@ -50,14 +55,13 @@ const PREVIEW_PHASES: ReadonlySet<MirrorPhase> = new Set(['awaiting-second-point
 
 export function useMirrorPreview(props: UseMirrorPreviewProps): void {
   const { phase, firstPoint, secondPoint, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only in a preview phase.
-  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
 
   const { ortho } = useCadToggles();
   const orthoOnRef = useRef(ortho.on);
   orthoOnRef.current = ortho.on;
   const shiftHeldRef = useRef(false);
 
+  // ⚠️ Shift listener — ΚΡΑΤΕΙΤΑΙ εδώ (το harness ΔΕΝ το διαχειρίζεται).
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => { if (e.key === 'Shift') shiftHeldRef.current = true; };
     const onUp = (e: KeyboardEvent) => { if (e.key === 'Shift') shiftHeldRef.current = false; };
@@ -66,9 +70,6 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
   }, []);
 
-  const rafRef = useRef<number>(0);
-  const prevPhaseRef = useRef<MirrorPhase>('idle');
-
   const getEntity = useCallback((entityId: string): AnySceneEntity | null => {
     if (!levelManager.currentLevelId) return null;
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
@@ -76,32 +77,19 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     return scene.entities.find(e => e.id === entityId) ?? null;
   }, [levelManager]);
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const rawAxisP2 = phase === 'awaiting-keep-originals' ? secondPoint : cursorWorld;
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
+    const rawAxisP2 = phase === 'awaiting-keep-originals' ? secondPoint : effectiveCursor;
     const axisP2 = (phase === 'awaiting-second-point' && firstPoint && rawAxisP2 && (orthoOnRef.current || shiftHeldRef.current))
       ? orthoSnap(firstPoint, rawAxisP2)
       : rawAxisP2;
     if (!firstPoint || !axisP2) return;
     if (phase !== 'awaiting-second-point' && phase !== 'awaiting-keep-originals') return;
 
-    const viewportElement = getViewportElement?.() ?? canvas;
-    const rect = viewportElement.getBoundingClientRect();
-    const freshViewport = { width: rect.width, height: rect.height };
-
-    const p1Screen = CoordinateTransforms.worldToScreen(firstPoint, transform, freshViewport);
-    const p2Screen = CoordinateTransforms.worldToScreen(axisP2, transform, freshViewport);
+    const p1Screen = CoordinateTransforms.worldToScreen(firstPoint, t, viewport);
+    const p2Screen = CoordinateTransforms.worldToScreen(axisP2, t, viewport);
 
     // Mirror axis line
+    const dpr = window.devicePixelRatio || 1;
     ctx.save();
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 1.5;
@@ -112,7 +100,10 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     const dy = p2Screen.y - p1Screen.y;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len > 0.01) {
-      const extend = Math.max(canvas.width / dpr, canvas.height / dpr);
+      const canvasEl = getCanvas();
+      const extend = canvasEl
+        ? Math.max(canvasEl.width / dpr, canvasEl.height / dpr)
+        : Math.max(viewport.width, viewport.height);
       const ux = (dx / len) * extend;
       const uy = (dy / len) * extend;
       ctx.moveTo(p1Screen.x - ux, p1Screen.y - uy);
@@ -135,7 +126,7 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     ctx.stroke();
     ctx.restore();
 
-    // Ghost entities mirrored about firstPoint→cursorWorld axis
+    // Ghost entities mirrored about firstPoint→axisP2 axis
     const axis: MirrorAxis = { p1: firstPoint, p2: axisP2 };
     ctx.save();
     ctx.globalAlpha = 0.4;
@@ -145,38 +136,19 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     for (const entityId of selectedEntityIds) {
       const entity = getEntity(entityId);
       if (!entity) continue;
-      drawMirroredGhost(ctx, entity as unknown as DxfEntityUnion, axis, transform, freshViewport);
+      drawMirroredGhost(ctx, entity as unknown as DxfEntityUnion, axis, t, viewport);
     }
 
     ctx.restore();
-  }, [phase, firstPoint, secondPoint, cursorWorld, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement]);
+  }, [phase, firstPoint, secondPoint, selectedEntityIds, getEntity, getCanvas]);
 
-  // Clear on phase exit
-  useEffect(() => {
-    const wasActive = PREVIEW_PHASES.has(prevPhaseRef.current);
-    const isNowActive = PREVIEW_PHASES.has(phase);
-
-    if (wasActive && !isNowActive) {
-      const canvas = getCanvas();
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const clearDpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(clearDpr, 0, 0, clearDpr, 0, 0);
-        }
-      }
-    }
-    prevPhaseRef.current = phase;
-  }, [phase, getCanvas]);
-
-  // Schedule RAF during active phase
-  useEffect(() => {
-    if (!PREVIEW_PHASES.has(phase)) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: PREVIEW_PHASES.has(phase),
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }
 
 // ============================================================================

@@ -19,6 +19,8 @@ import { ACI_PALETTE } from './standards/aci';
 import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../utils/clone-utils';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
 
 // ============================================================================
 // CURRENT SCHEMA VERSION
@@ -156,8 +158,8 @@ const TEXT_COMPLETION_DEFAULTS = {
 
 const GRIP_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
-  gripSize: 14,                 // 14px = comfortable CAD grip (AutoCAD GRIPSIZE 7 equivalent)
-  size: 14,                     // ✅ ENTERPRISE FIX: Add backward compatibility
+  gripSize: GRIP_SIZE_DEFAULT,  // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
+  size: GRIP_SIZE_DEFAULT,      // ✅ ENTERPRISE FIX: Add backward compatibility (mirrors gripSize)
   color: GRIP_COLD_COLOR,                  // SSOT → color-config.ts
   hoverColor: GRIP_WARM_COLOR,            // SSOT → color-config.ts (orange hover, Giorgio 2026-06-17)
   pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)

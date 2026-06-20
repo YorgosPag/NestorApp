@@ -1,31 +1,29 @@
 /**
- * ADR-408 Φ8 — MEP segment 2D placement ghost preview hook (RAF-driven).
+ * ADR-408 Φ8 — MEP segment 2D placement ghost preview hook.
  *
- * Micro-leaf consumer (ADR-040 pattern) that subscribes to
- * `useCursorWorldPosition` and paints the translucent segment rubber-band
- * outline directly onto the preview canvas, animated via RAF — no React
- * re-renders above this leaf on mousemove.
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): το RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + snapped-cursor ζουν πλέον
+ * ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic (rubber-band segment outline).
  *
- * This is a 2-click placement tool (like a wall or beam, NOT a point element
- * like the fixture). The hook is active only during `isAwaitingEnd` (the first
- * click has been made and we are waiting for the second). `getGhostSegment`
- * provides the start point + current section width; the cursor provides the
- * end point live.
+ * This is a 2-click placement tool (like a wall or beam, NOT a point element like
+ * the fixture). The hook is active only during `isAwaitingEnd` (the first click has
+ * been made and we are waiting for the second). `getGhostSegment` provides the start
+ * point + current section width; the cursor provides the end point live.
  *
  * OSNAP support: when a snap hit is present the effective cursor locks to the
  * snapped point — matches the committed second-click point (WYSIWYG).
  *
  * @see bim/mep-segments/MepSegmentGhostRenderer.ts — pure canvas renderer
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
- * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { MepSegmentGhostRenderer } from '../../bim/mep-segments/MepSegmentGhostRenderer';
 import type { MepSegmentDomain } from '../../bim/types/mep-segment-types';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +53,7 @@ export interface UseMepSegmentGhostPreviewProps {
    */
   getGhostSegment(cursorPos: Readonly<Point2D> | null): GhostSegmentSpec | null;
   getCanvas(): HTMLCanvasElement | null;
-  /** Viewport element for size measurement; falls back to `getCanvas`. */
+  /** Viewport element for size measurement; falls back to `getCanvas` (handled by harness). */
   getViewportElement?(): HTMLElement | null;
 }
 
@@ -65,73 +63,27 @@ export function useMepSegmentGhostPreview(
   props: Readonly<UseMepSegmentGhostPreviewProps>,
 ): void {
   const { isAwaitingEnd, transform, getGhostSegment, getCanvas, getViewportElement } = props;
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting the end point.
-  const cursorWorld = useCursorWorldPosition(isAwaitingEnd);
-  const rafRef = useRef<number>(0);
-  const prevActiveRef = useRef<boolean>(false);
 
-  const clearCanvas = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }, [getCanvas]);
-
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    if (!isAwaitingEnd || !cursorWorld) return;
-
-    // Prefer snapped cursor position when OSNAP hit (WYSIWYG with commit).
-    const snapState = getImmediateSnap();
-    const effectiveCursor: Point2D =
-      snapState?.found === true && snapState.point != null
-        ? snapState.point
-        : cursorWorld;
-
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
+    if (!effectiveCursor) return;
     const spec = getGhostSegment(effectiveCursor);
     if (!spec) return;
-
-    const viewportElement = getViewportElement?.() ?? canvas;
-    const rect = viewportElement.getBoundingClientRect();
-    const viewport = { width: rect.width, height: rect.height };
-
-    const renderer = new MepSegmentGhostRenderer(ctx);
-    renderer.render({
+    new MepSegmentGhostRenderer(ctx).render({
       startPoint: spec.startPoint,
       cursor: effectiveCursor,
       sectionWidthCanvas: spec.sectionWidthCanvas,
       domain: spec.domain,
-      transform,
+      transform: t,
       viewport,
     });
-  }, [isAwaitingEnd, transform, getGhostSegment, getCanvas, getViewportElement, cursorWorld]);
+  }, [getGhostSegment]);
 
-  // Clear stale ghost on transition out of awaitingEnd.
-  useEffect(() => {
-    const wasActive = prevActiveRef.current;
-    if (wasActive && !isAwaitingEnd) clearCanvas();
-    prevActiveRef.current = isAwaitingEnd;
-  }, [isAwaitingEnd, clearCanvas]);
-
-  // Schedule one draw per cursor / state change while active.
-  useEffect(() => {
-    if (!isAwaitingEnd) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [isAwaitingEnd, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: isAwaitingEnd,
+    getCanvas,
+    getViewportElement,
+    transform,
+    useImmediateSnap: true,
+    draw,
+  });
 }

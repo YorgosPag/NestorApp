@@ -2,11 +2,14 @@
  * ADR-363 Phase 2 (canvas-wiring follow-up, 2026-05-25) — Opening placement
  * ghost preview hook (RAF-driven).
  *
- * Mirror του `useSlabOpeningGhostPreview` pattern. Activates only όταν ο
- * opening tool βρίσκεται σε phase `awaitingPosition` (host wall locked).
- * Subscribes σε `useCursorWorldPosition` + `ImmediateSnapStore` και ζωγραφίζει
- * τη rectangular cutout outline projected onto the host wall axis, μαζί με
- * προαιρετική quarter-arc swing indicator για door / french-door.
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): το RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + snapped-cursor ζουν πλέον
+ * ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic + η geometry build.
+ *
+ * Activates only όταν ο opening tool βρίσκεται σε phase `awaitingPosition`
+ * (host wall locked). Snapped cursor όταν OSNAP. Ζωγραφίζει τη rectangular
+ * cutout outline projected onto the host wall axis, μαζί με προαιρετική
+ * quarter-arc swing indicator για door / french-door.
  *
  * Scene-units aware: width / wall thickness είναι σε mm (Nestor convention),
  * το axis όμως ζει σε scene units — `mmToSceneUnits()` τα ευθυγραμμίζει ώστε
@@ -19,9 +22,10 @@
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { OpeningKind } from '../../bim/types/opening-types';
@@ -33,11 +37,11 @@ import {
   isHingedKind,
   isDoubleLeafKind,
 } from '../../bim/types/opening-types';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { OpeningGhostRenderer } from '../../bim/walls/opening-ghost-renderer';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 const HALF_PI = Math.PI / 2;
 const HINGE_ARC_SUBDIVISIONS = 12;
@@ -57,33 +61,12 @@ export interface UseOpeningGhostPreviewProps {
 
 export function useOpeningGhostPreview(props: Readonly<UseOpeningGhostPreviewProps>): void {
   const { isAwaitingPosition, kind, overrides, getHostWall, transform, getCanvas, getViewportElement, getSceneUnits } = props;
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
-  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
-  const rafRef = useRef<number>(0);
-  const prevActiveRef = useRef<boolean>(false);
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    if (!isAwaitingPosition || !cursorWorld) return;
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
+    if (!effectiveCursor) return;
     const hostWall = getHostWall();
     if (!hostWall) return;
 
-    const snapState = getImmediateSnap();
-    const effectiveCursor: Point2D =
-      snapState?.found === true && snapState.point != null ? snapState.point : cursorWorld;
-
-    const viewportElement = getViewportElement?.() ?? canvas;
-    const rect = viewportElement.getBoundingClientRect();
-    const viewport = { width: rect.width, height: rect.height };
     const units: SceneUnits = getSceneUnits?.() ?? 'mm';
     const mmFactor = mmToSceneUnits(units);
 
@@ -94,36 +77,19 @@ export function useOpeningGhostPreview(props: Readonly<UseOpeningGhostPreviewPro
       vertices: ghost.vertices,
       hingeArcPoints: ghost.hingeArcPoints,
       kind,
-      transform,
+      transform: t,
       viewport,
     });
-  }, [isAwaitingPosition, kind, overrides, getHostWall, transform, getCanvas, getViewportElement, cursorWorld, getSceneUnits]);
+  }, [kind, overrides, getHostWall, getSceneUnits]);
 
-  // Clear stale ghost on transition out of awaitingPosition.
-  useEffect(() => {
-    const wasActive = prevActiveRef.current;
-    const isActive = isAwaitingPosition;
-    if (wasActive && !isActive) {
-      const canvas = getCanvas();
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-      }
-    }
-    prevActiveRef.current = isActive;
-  }, [isAwaitingPosition, getCanvas]);
-
-  // Schedule one draw per cursor / state change while active.
-  useEffect(() => {
-    if (!isAwaitingPosition) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isAwaitingPosition, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: isAwaitingPosition,
+    getCanvas,
+    getViewportElement,
+    transform,
+    useImmediateSnap: true,
+    draw,
+  });
 }
 
 // ─── Pure helpers (scene-unit aware) ─────────────────────────────────────────

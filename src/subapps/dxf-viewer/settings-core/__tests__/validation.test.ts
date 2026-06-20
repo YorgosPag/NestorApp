@@ -212,8 +212,8 @@ describe('Validation Functions', () => {
     it('should apply AutoCAD grip standards', () => {
       const result = validateGripSettings({});
 
-      // 🔧 FIX: validateGripSize returns 5 for undefined, not 7 from defaults object
-      expect(result.gripSize).toBe(5); // validateGripSize default when undefined
+      // 🏢 SSoT: validateGripSize returns GRIP_SIZE_DEFAULT (7) for undefined (unified 2026-06-20)
+      expect(result.gripSize).toBe(7); // GRIP_SIZE_DEFAULT when undefined
       expect(result.colors.cold).toBeDefined(); // AutoCAD blue for cold grips
       expect(result.apertureSize).toBeDefined(); // AutoCAD aperture size
     });

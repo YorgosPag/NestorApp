@@ -17,6 +17,9 @@
  * @created 2026-01-02
  */
 
+// 🏢 SSoT base grip size (shared with GripStyleStore / settings defaults / validators)
+import { GRIP_SIZE_DEFAULT } from './grip-size-default';
+
 // ============================================
 // TEXT SIZE LIMITS
 // ============================================
@@ -778,11 +781,10 @@ export const UI_SIZE_DEFAULTS = {
   APERTURE_SIZE: 10,
 
   /**
-   * Default grip point size (px)
-   * Used when settings.gripSize is not provided
-   * AutoCAD GRIPSIZE=5 half-width → 10px total box (radius = size/2)
+   * Default grip point size (px) — 🏢 SSoT via GRIP_SIZE_DEFAULT.
+   * Used when settings.gripSize is not provided. AutoCAD GRIPSIZE = 7.
    */
-  GRIP_SIZE: 14,
+  GRIP_SIZE: GRIP_SIZE_DEFAULT,
 
   /**
    * Default pick box size (px)

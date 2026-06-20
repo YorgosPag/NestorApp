@@ -25,7 +25,8 @@ import { resolveGripTemperature } from '../../../rendering/grips/grip-temperatur
 
 /** Union type for preview grip points (can be Point2D or PreviewGripPoint) */
 type PreviewGripPointInput = Point2D | PreviewGripPoint;
-import { getGripPreviewStyleWithOverride } from '../../../hooks/useGripPreviewStyle';
+// 🏢 SSoT grip style read (override machinery removed 2026-06-20 — was dead code, never wired)
+import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 
 // 🏢 ADR-048: Unified Grip Rendering System
 import { UnifiedGripRenderer } from '../../../rendering/grips';
@@ -143,7 +144,7 @@ export class GripPhaseRenderer {
     previewGrips: PreviewGripPointInput[],
     state: PhaseRenderingState
   ): void {
-    const style = getGripPreviewStyleWithOverride();
+    const style = getGripPreviewStyle();
     const cachedSettings: Partial<GripSettings> = {
       colors: style.colors,
       gripSize: style.gripSize,
@@ -169,7 +170,7 @@ export class GripPhaseRenderer {
     state: PhaseRenderingState
   ): void {
     if (grips.length === 0) return;
-    const style = getGripPreviewStyleWithOverride();
+    const style = getGripPreviewStyle();
     const settings: Partial<GripSettings> = {
       colors: style.colors,
       gripSize: style.gripSize,
@@ -246,7 +247,7 @@ export class GripPhaseRenderer {
     cachedSettings?: Partial<GripSettings>
   ): void {
     const settings = cachedSettings ?? (() => {
-      const style = getGripPreviewStyleWithOverride();
+      const style = getGripPreviewStyle();
       return { colors: style.colors, gripSize: style.gripSize, dpiScale: 1.0 };
     })();
     this.identityRenderer.renderGrip(

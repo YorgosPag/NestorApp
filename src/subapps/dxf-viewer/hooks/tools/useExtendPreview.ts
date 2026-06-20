@@ -5,6 +5,10 @@
  * {@link ExtendToolStore} and {@link useCursorWorldPosition} — no orchestrator
  * re-renders.
  *
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + cursor subscription
+ * ζουν πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ *
  * Renders:
  *  - Ghost extension path (green #22DD55) from entity endpoint to boundary
  *  - SHIFT held → cursor switches to TRIM scissor icon; preview color flips red
@@ -12,13 +16,15 @@
  *  - Pickbox cursor at world position
  *
  * @module hooks/tools/useExtendPreview
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 export interface UseExtendPreviewProps {
   transform: ViewTransform;
@@ -28,40 +34,17 @@ export interface UseExtendPreviewProps {
 
 export function useExtendPreview(props: UseExtendPreviewProps): void {
   const { transform, getCanvas, getViewportElement } = props;
-  const rafRef = useRef<number>(0);
 
   const phase = useSyncExternalStore(
     ExtendToolStore.subscribe,
     () => ExtendToolStore.getState().phase,
   );
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
-  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
-  const getViewport = useCallback(
-    (canvas: HTMLCanvasElement) => {
-      const el = getViewportElement?.() ?? canvas;
-      const rect = el.getBoundingClientRect();
-      return { width: rect.width, height: rect.height };
-    },
-    [getViewportElement],
-  );
-
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const s = ExtendToolStore.getState();
     if (s.phase === 'idle') return;
 
-    const viewport = getViewport(canvas);
-    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
+    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
     // EXTEND = green, SHIFT (TRIM inverse) = red
     const previewColor = s.inverseMode ? '#FF3030' : '#22DD55';
 
@@ -123,8 +106,8 @@ export function useExtendPreview(props: UseExtendPreviewProps): void {
     }
 
     // Pickbox cursor crosshair
-    if (!cursorWorld) return;
-    const c = toScreen(cursorWorld);
+    if (!effectiveCursor) return;
+    const c = toScreen(effectiveCursor);
     ctx.save();
     ctx.strokeStyle = s.inverseMode ? '#FF3030' : '#22DD55';
     ctx.lineWidth = 1.5;
@@ -140,23 +123,13 @@ export function useExtendPreview(props: UseExtendPreviewProps): void {
       ctx.stroke();
     }
     ctx.restore();
-  }, [cursorWorld, transform, getCanvas, getViewport]);
+  }, []);
 
-  useEffect(() => {
-    if (phase === 'idle') {
-      const canvas = getCanvas();
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const dpr = window.devicePixelRatio || 1;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return;
-    }
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [phase, drawFrame, getCanvas]);
+  useCanvasGhostPreview({
+    isActive: phase !== 'idle',
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }

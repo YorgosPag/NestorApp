@@ -17,6 +17,8 @@ import { LINE_DASH_PATTERNS, RENDER_LINE_WIDTHS } from '../../config/text-render
 import type { LineDashPattern, RenderLineWidth } from '../../config/text-rendering-config';
 // 🏢 ADR-119: Centralized Opacity Constants
 import { OPACITY } from '../../config/color-config';
+// 🏢 SSoT device-pixel-ratio (μία πηγή για όλα τα canvas).
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
 
 // ============================================================================
 // TYPES
@@ -271,6 +273,29 @@ export function resetCanvasState(ctx: CanvasRenderingContext2D): void {
   ctx.shadowColor = 'rgba(0, 0, 0, 0)';
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
+}
+
+/**
+ * 🏢 SSoT — DPR-aware full canvas clear.
+ *
+ * Το idiom «reset σε identity → clearRect ολόκληρου του backing store → ξανα-set
+ * το DPR scale» ήταν copy-pasted σε ~7 σημεία (PreviewRenderer, dxf-bitmap-cache,
+ * ProposalGhostOverlay, GuideFollowGhostOverlay, CanvasManager, + 19 ghost hooks).
+ * ΜΙΑ πηγή εδώ· χρησιμοποιεί τον κανονικό `getDevicePixelRatio()` (όχι σκόρπιο
+ * `window.devicePixelRatio || 1`).
+ *
+ * @param canvas - το canvas προς καθαρισμό
+ * @param ctx - 2D context· default `canvas.getContext('2d')`
+ */
+export function clearCanvasDpr(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D | null = canvas.getContext('2d'),
+): void {
+  if (!ctx) return;
+  const dpr = getDevicePixelRatio();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 // ============================================================================

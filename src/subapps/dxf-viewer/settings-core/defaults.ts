@@ -14,6 +14,8 @@ import type {
   LayerIsolateSettings
 } from './types';
 import { UI_COLORS, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
 
 // ============================================================================
 // LINE DEFAULTS - ISO 128 Standards
@@ -100,7 +102,7 @@ export const DEFAULT_TEXT_SETTINGS: TextSettings = {
 
 export const DEFAULT_GRIP_SETTINGS: GripSettings = {
   enabled: true,
-  gripSize: 7,                 // ✅ ENTERPRISE: AutoCAD GRIPSIZE default updated to match test expectations
+  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
   pickBoxSize: 3,              // AutoCAD PICKBOX default: 3 DIP
   apertureSize: 10,            // AutoCAD APERTURE default: 10 pixels
   opacity: 1.0,                // Full opacity

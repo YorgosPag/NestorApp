@@ -7,6 +7,10 @@
  * draws a translucent ghost of every captured entity translated by the live
  * delta `(cursor - basePoint)`.
  *
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + cursor subscription
+ * ζουν πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ *
  * Pattern: identical to {@link useScalePreview} / {@link useMovePreview}
  * (ADR-040 micro-leaf — RAF-driven, zero React re-renders).
  *
@@ -22,14 +26,14 @@
  *  - DIMENSION defpoint follow-up & HATCH associative re-fit
  *
  * @module hooks/tools/useStretchPreview
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { Entity, AnySceneEntity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import {
   applyVertexDisplacement,
@@ -38,6 +42,8 @@ import {
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
 import type { useLevels } from '../../systems/levels';
 import type { VertexRef } from '../../systems/stretch/stretch-vertex-classifier';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,14 +60,11 @@ export interface UseStretchPreviewProps {
 
 export function useStretchPreview(props: UseStretchPreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
-  const rafRef = useRef<number>(0);
 
   const phase = useSyncExternalStore(
     StretchToolStore.subscribe,
     () => StretchToolStore.getState().phase,
   );
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
-  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
   // O(1) entity lookup memoised on scene array identity (rebuilt only when scene swaps).
   const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());
@@ -78,30 +81,13 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
     return entityMapRef.current.get(id) ?? null;
   }, [levelManager]);
 
-  const getViewport = useCallback((canvas: HTMLCanvasElement) => {
-    const el = getViewportElement?.() ?? canvas;
-    const rect = el.getBoundingClientRect();
-    return { width: rect.width, height: rect.height };
-  }, [getViewportElement]);
-
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const s = StretchToolStore.getState();
-    if (s.phase !== 'displacement' || !s.basePoint || !cursorWorld) return;
+    if (s.phase !== 'displacement' || !s.basePoint || !effectiveCursor) return;
 
-    const viewport = getViewport(canvas);
-    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
+    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
     const basePt = toScreen(s.basePoint);
-    const cursorPt = toScreen(cursorWorld);
+    const cursorPt = toScreen(effectiveCursor);
 
     // Base point crosshair (red)
     ctx.save();
@@ -125,7 +111,7 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
     ctx.setLineDash([]);
     ctx.restore();
 
-    const delta: Point2D = { x: cursorWorld.x - s.basePoint.x, y: cursorWorld.y - s.basePoint.y };
+    const delta: Point2D = { x: effectiveCursor.x - s.basePoint.x, y: effectiveCursor.y - s.basePoint.y };
 
     // Δ tooltip
     ctx.save();
@@ -151,7 +137,7 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
       const entity = getEntity(entityId);
       if (!entity) continue;
       const ghost = buildAnchorGhost(entity as Entity, delta);
-      if (ghost) drawGhostEntity(ctx, ghost, transform, viewport);
+      if (ghost) drawGhostEntity(ctx, ghost, t, viewport);
     }
 
     // Per-vertex entities → partial deformation
@@ -159,31 +145,19 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
       const entity = getEntity(entityId);
       if (!entity) continue;
       const ghost = buildVertexGhost(entity as Entity, refs, delta);
-      if (ghost) drawGhostEntity(ctx, ghost, transform, viewport);
+      if (ghost) drawGhostEntity(ctx, ghost, t, viewport);
     }
 
     ctx.restore();
-  }, [cursorWorld, transform, getCanvas, getViewport, getEntity]);
+  }, [getEntity]);
 
-  // RAF only during displacement phase
-  useEffect(() => {
-    if (phase !== 'displacement') return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, drawFrame]);
-
-  // Clear canvas when leaving displacement phase
-  useEffect(() => {
-    if (phase === 'displacement') return;
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }, [phase, getCanvas]);
+  useCanvasGhostPreview({
+    isActive: phase !== 'idle',
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }
 
 // ── Pure ghost builders (SSoT-aligned with stretch-entity-transform) ─────────

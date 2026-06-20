@@ -13,13 +13,21 @@
  * The transform itself (translate / vertex stretch / edge stretch / quadrant /
  * arc end) is computed by `rendering/ghost/applyEntityPreview()`.
  *
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform ζουν πλέον ΜΙΑ φορά
+ * στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ *
+ * `cursorMode: 'none'` — ο cursor έρχεται μέσω `dragPreview.delta` prop (ΟΧΙ
+ * μέσω `useCursorWorldPosition`). `effectiveCursor` = null στο draw frame.
+ *
  * @module hooks/tools/useGripGhostPreview
  * @see ADR-040 — Preview Canvas Performance
  * @see ADR-049 — Move tool / grip drag SSoT
  * @see hooks/tools/useMovePreview — sibling preview hook
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -47,6 +55,8 @@ import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAn
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity } from '../../types/entities';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -85,15 +95,6 @@ export interface UseGripGhostPreviewProps {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function clearCanvas(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const dpr = window.devicePixelRatio || 1;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
 
 /** ADR-363 Phase 1G.3 — draw one dashed world-space segment on the preview canvas. */
 function drawDashedSegment(
@@ -165,9 +166,6 @@ function drawAngleArc(
 export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
   const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
 
-  const rafRef = useRef<number>(0);
-  const prevActiveRef = useRef<boolean>(false);
-
   const isActive = dragPreview !== null;
 
   const getEntity = useCallback(
@@ -180,35 +178,28 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     [levelManager],
   );
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    clearCanvas(canvas);
-
+  // cursorMode: 'none' — cursor comes via dragPreview.delta prop, NOT via
+  // useCursorWorldPosition. effectiveCursor will always be null in the frame.
+  const draw = useCallback(({ ctx, viewport, transform: t }: GhostDrawFrame) => {
     if (!dragPreview) return;
 
     const entity = getEntity(dragPreview.entityId);
     if (!entity) return;
 
-    const viewportEl = getViewportElement?.() ?? canvas;
-    const rect = viewportEl.getBoundingClientRect();
-    const vp = { width: rect.width, height: rect.height };
+    const vp = viewport;
 
     // ADR-397 — the picked rotation CENTRE (⊙). Shown for every rotate step once the
     // centre is set, so the user sees the pivot is locked (Giorgio). Same SSoT glyph
     // as the toolbar Rotate tool.
     if (dragPreview.rotatePivot) {
-      drawRotationPivotMarker(ctx, dragPreview.rotatePivot, transform, vp);
+      drawRotationPivotMarker(ctx, dragPreview.rotatePivot, t, vp);
     }
 
     // ADR-397 Σ3 — live angle readout (°) on the cursor during a FREE rotate. Shows the
     // signed sweep (+CCW/−CW), or the typed angle while the user is keying one in, so
     // the rotation is VISIBLE (not blind typing). Same pill SSoT as the move readout.
     if (dragPreview.rotateSweepDeg !== undefined && dragPreview.rotateReadoutAnchor) {
-      const anchorS = CoordinateTransforms.worldToScreen(dragPreview.rotateReadoutAnchor, transform, vp);
+      const anchorS = CoordinateTransforms.worldToScreen(dragPreview.rotateReadoutAnchor, t, vp);
       drawDimPill(ctx, [formatMoveAngle(dragPreview.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
     }
 
@@ -232,10 +223,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // while the wall is not yet rotating, e.g. tracing the reference line).
     if (dragPreview.rotateRefLine || dragPreview.rotateAlignLine) {
       if (dragPreview.rotateRefLine) {
-        drawDashedSegment(ctx, dragPreview.rotateRefLine.from, dragPreview.rotateRefLine.to, transform, vp);
+        drawDashedSegment(ctx, dragPreview.rotateRefLine.from, dragPreview.rotateRefLine.to, t, vp);
       }
       if (dragPreview.rotateAlignLine) {
-        drawDashedSegment(ctx, dragPreview.rotateAlignLine.from, dragPreview.rotateAlignLine.to, transform, vp);
+        drawDashedSegment(ctx, dragPreview.rotateAlignLine.from, dragPreview.rotateAlignLine.to, t, vp);
       }
     } else if (
       // ADR-363 Phase 1G — dashed rubber-band leader to the cursor (corner/move
@@ -248,7 +239,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     ) {
       const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
       const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
-      drawDashedSegment(ctx, fromW, toW, transform, vp);
+      drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
     // ADR-363 — live move-distance readout for ANY whole-entity TRANSLATE: a plain
@@ -258,10 +249,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const isTranslate =
       (dragPreview.movesEntity === true || dragPreview.hotGrip === true) && !dragPreview.rotatePivot;
     if (isTranslate && dragPreview.anchorPos && (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)) {
-      const fromS = CoordinateTransforms.worldToScreen(dragPreview.anchorPos, transform, vp);
+      const fromS = CoordinateTransforms.worldToScreen(dragPreview.anchorPos, t, vp);
       const toS = CoordinateTransforms.worldToScreen(
         { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y },
-        transform, vp,
+        t, vp,
       );
       if (!dragPreview.hotGrip) drawMoveReadoutLeader(ctx, fromS, toS);
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
@@ -286,8 +277,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const movedW = startMoved ? tLine.start : tLine.end;
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       const lenMeters = sceneDistanceToMeters(Math.hypot(movedW.x - fixedW.x, movedW.y - fixedW.y), resolveSceneUnits(scene));
-      const fixedS = CoordinateTransforms.worldToScreen(fixedW, transform, vp);
-      const movedS = CoordinateTransforms.worldToScreen(movedW, transform, vp);
+      const fixedS = CoordinateTransforms.worldToScreen(fixedW, t, vp);
+      const movedS = CoordinateTransforms.worldToScreen(movedW, t, vp);
       // Length pill at the segment midpoint.
       const midS = moveReadoutMid(fixedS, movedS);
       drawDimPill(ctx, [formatMoveDistance(lenMeters)], midS.x, midS.y);
@@ -306,7 +297,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     ctx.strokeStyle = GHOST_DEFAULTS.color;
     ctx.fillStyle = GHOST_DEFAULTS.color;
     ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
-    drawGhostEntity(ctx, transformed, transform, vp);
+    drawGhostEntity(ctx, transformed, t, vp);
 
     // ADR-408 Φ-C — when the dragged entity is a plumbing connector host, draw the
     // connected pipe ends following it so the run visibly stretches WITH the host
@@ -321,24 +312,17 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       transformed as unknown as Entity,
     );
     for (const ghost of pipeGhosts) {
-      drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, transform, vp);
+      drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
     }
     ctx.restore();
-  }, [dragPreview, getEntity, transform, getCanvas, getViewportElement, levelManager]);
+  }, [dragPreview, getEntity, levelManager]);
 
-  // Clear canvas when drag finishes (idle → active transition is handled by RAF)
-  useEffect(() => {
-    if (prevActiveRef.current && !isActive) {
-      const canvas = getCanvas();
-      if (canvas) clearCanvas(canvas);
-    }
-    prevActiveRef.current = isActive;
-  }, [isActive, getCanvas]);
-
-  // Schedule RAF on every drag-preview change
-  useEffect(() => {
-    if (!isActive) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isActive, drawFrame]);
+  useCanvasGhostPreview({
+    isActive,
+    getCanvas,
+    getViewportElement,
+    transform,
+    cursorMode: 'none',
+    draw,
+  });
 }

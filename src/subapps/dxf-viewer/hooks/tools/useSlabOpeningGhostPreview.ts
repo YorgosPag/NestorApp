@@ -1,6 +1,10 @@
 /**
  * ADR-363 Phase 3.7b+ — Slab-opening placement ghost preview hook (RAF-driven).
  *
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): το RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + snapped-cursor ζουν πλέον
+ * ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic (δύο branches).
+ *
  * Mirror του `useColumnGhostPreview` pattern (Phase 4.5c.4): micro-leaf consumer
  * που subscribes σε `useCursorWorldPosition` και ζωγραφίζει ένα rectangle ghost
  * απευθείας στο preview canvas. Ζωντάνεμα μέσω RAF — δεν προκαλεί React
@@ -9,6 +13,14 @@
  * Phase 3.7b++ extension: when `hoveredEdgeMidpointGrip` is set, draws a green
  * "+vertex" indicator at the grip world position (pre-drag hover affordance).
  *
+ * DUAL-BRANCH draw (ΑΜΦΟΤΕΡΑταυτόχρονα δυνατά):
+ *   1. Placement ghost — όταν `isAwaitingPosition && effectiveCursor`.
+ *   2. Edge-midpoint hover indicator — όταν `hoveredEdgeMidpointGrip`.
+ *
+ * Gate: `isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null`.
+ * Cursor subscription: harness subscribes κατά isActive (ελαφρά υπερεκτίμηση
+ * για το pure-hover case — αβλαβές, δεν χρησιμοποιείται το cursor εκεί).
+ *
  * ADR-040 compliance:
  *   - NO `useSyncExternalStore` σε orchestrators
  *   - `getImmediateSnap()` imperative read inside RAF callback
@@ -16,19 +28,20 @@
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md Phase 3.7b+
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { SlabOpeningKind } from '../../bim/types/slab-opening-types';
 import { SLAB_OPENING_DEFAULT_SIZES } from '../../bim/types/slab-opening-types';
 import type { SlabOpeningParamOverrides } from '../drawing/slab-opening-completion';
 import type { UnifiedGripInfo } from '../grips/unified-grip-types';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { SlabOpeningGhostRenderer } from '../../bim/slab-openings/slab-opening-ghost-renderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 export interface UseSlabOpeningGhostPreviewProps {
   readonly isAwaitingPosition: boolean;
@@ -51,33 +64,13 @@ export interface UseSlabOpeningGhostPreviewProps {
 
 export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPreviewProps>): void {
   const { isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, getSceneUnits } = props;
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
-  // NOTE: the +vertex hover affordance (hoveredEdgeMidpointGrip) is drawn from a
-  // separate low-freq prop, so gating the cursor subscription here is safe.
-  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
-  const rafRef = useRef<number>(0);
-  const prevActiveRef = useRef<boolean>(false);
 
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // Gate: ενεργό είτε σε placement είτε σε hover mode.
+  const isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null;
 
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const viewportElement = getViewportElement?.() ?? canvas;
-    const rect = viewportElement.getBoundingClientRect();
-    const viewport = { width: rect.width, height: rect.height };
-
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     // --- Placement ghost ---
-    if (isAwaitingPosition && cursorWorld) {
-      const snapState = getImmediateSnap();
-      const effectiveCursor: Point2D =
-        snapState?.found === true && snapState.point != null ? snapState.point : cursorWorld;
+    if (isAwaitingPosition && effectiveCursor) {
       const defaults = SLAB_OPENING_DEFAULT_SIZES[kind];
       // ADR-370 — defaults σε mm. Convert σε scene-units ώστε το ghost
       // rectangle να συμπίπτει με το rectangle που θα φτιάξει ο builder στο
@@ -94,12 +87,12 @@ export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPr
         { x: cx + halfW, y: cy + halfD },
         { x: cx - halfW, y: cy + halfD },
       ] as const;
-      new SlabOpeningGhostRenderer(ctx).render({ vertices, kind, transform, viewport });
+      new SlabOpeningGhostRenderer(ctx).render({ vertices, kind, transform: t, viewport });
     }
 
     // --- Edge-midpoint hover indicator ---
     if (hoveredEdgeMidpointGrip) {
-      const sp = CoordinateTransforms.worldToScreen(hoveredEdgeMidpointGrip.position, transform, viewport);
+      const sp = CoordinateTransforms.worldToScreen(hoveredEdgeMidpointGrip.position, t, viewport);
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, 6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0, 200, 120, 0.85)';
@@ -113,32 +106,14 @@ export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPr
       ctx.textBaseline = 'middle';
       ctx.fillText('+', sp.x, sp.y);
     }
-  }, [isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, cursorWorld, getSceneUnits]);
+  }, [isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, getSceneUnits]);
 
-  // Clear stale ghost on transition to fully inactive state.
-  useEffect(() => {
-    const wasActive = prevActiveRef.current;
-    const isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null;
-    if (wasActive && !isActive) {
-      const canvas = getCanvas();
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-      }
-    }
-    prevActiveRef.current = isActive;
-  }, [isAwaitingPosition, hoveredEdgeMidpointGrip, getCanvas]);
-
-  // Schedule one draw per cursor / state change while active.
-  useEffect(() => {
-    const isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null;
-    if (!isActive) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isAwaitingPosition, hoveredEdgeMidpointGrip, drawFrame]);
+  useCanvasGhostPreview({
+    isActive,
+    getCanvas,
+    getViewportElement,
+    transform,
+    useImmediateSnap: true,
+    draw,
+  });
 }

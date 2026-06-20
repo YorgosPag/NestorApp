@@ -9,12 +9,14 @@
  * - Angle arc indicator near pivot
  * - Angle tooltip near cursor
  *
- * Uses requestAnimationFrame for 60fps smooth preview — NO React re-renders.
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
+ * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
  *
  * @module hooks/tools/useRotationPreview
  */
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { AnySceneEntity } from '../../types/entities';
@@ -22,9 +24,10 @@ import { rotatePoint } from '../../utils/rotation-math';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { RotationPhase } from './useRotationTool';
 import type { useLevels } from '../../systems/levels';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ============================================================================
 // TYPES
@@ -48,13 +51,10 @@ export interface UseRotationPreviewProps {
    *  to ensure worldToScreen uses the SAME dimensions as the click handler.
    *  Falls back to getCanvas() if not provided. */
   getViewportElement?: () => HTMLElement | null;
-  // 🚀 PERF (2026-05-09): cursorWorld read internally via
-  // `useCursorWorldPosition()` so the rotation preview re-renders only this
-  // hook's leaf consumer, not CanvasSection.
 }
 
-// Phases where the rotation preview consumes the live cursor (SSoT for both
-// the cursor-subscription gate and the clear-on-exit effect below).
+// Phases where the rotation preview consumes the live cursor (SSoT for the
+// cursor-subscription gate; harness also uses it for clear-on-exit).
 const PREVIEW_PHASES: ReadonlySet<RotationPhase> = new Set(['awaiting-reference', 'awaiting-angle']);
 
 // ============================================================================
@@ -67,12 +67,6 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     selectedEntityIds, levelManager,
     transform, getCanvas, getViewportElement,
   } = props;
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only in a preview phase.
-  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
-
-  const rafRef = useRef<number>(0);
-  /** Track previous phase to clear canvas ONLY on transition out of awaiting-angle */
-  const prevPhaseRef = useRef<RotationPhase>('idle');
 
   /** Read an entity from the current level scene (read-only) */
   const getEntity = useCallback((entityId: string): AnySceneEntity | null => {
@@ -82,46 +76,20 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     return scene.entities.find(e => e.id === entityId) ?? null;
   }, [levelManager]);
 
-  /**
-   * Draw a single frame of the rotation preview
-   */
-  const drawFrame = useCallback(() => {
-    const canvas = getCanvas();
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // 🏢 FIX (2026-02-20): Explicit ctx transform — guarantees DPR scaling regardless of
-    // prior state. Same pattern as PreviewRenderer.render() (lines 322-325).
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // Only draw during reference or angle phases
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const isReferencePhase = phase === 'awaiting-reference';
     const isAnglePhase = phase === 'awaiting-angle';
     if ((!isReferencePhase && !isAnglePhase) || !basePoint) return;
 
-    // 🏢 FIX (2026-02-20): Viewport from the DxfCanvas element (= same element used in
-    // click handler's getPointerSnapshotFromElement). This eliminates any viewport mismatch
-    // between the click path and the preview rendering path.
-    const viewportElement = getViewportElement?.() ?? canvas;
-    const rect = viewportElement.getBoundingClientRect();
-    const freshViewport = { width: rect.width, height: rect.height };
+    // Convert pivot to screen coords (CSS pixels) — used by rubber band / arc below.
+    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, t, viewport);
 
-    // Convert pivot to screen coords (CSS pixels) — used by the rubber band / ref
-    // line / angle arc below.
-    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
-
-    // === Rotation-centre marker (⊙) — visible in BOTH phases. Shared SSoT glyph,
-    // identical to the grip-driven 6-click rotate (useGripGhostPreview). ===
-    drawRotationPivotMarker(ctx, basePoint, transform, freshViewport);
+    // === Rotation-centre marker (⊙) — visible in BOTH phases. ===
+    drawRotationPivotMarker(ctx, basePoint, t, viewport);
 
     // === Rubber band line: pivot → cursor — visible in BOTH phases ===
-    if (cursorWorld) {
-      const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, freshViewport);
+    if (effectiveCursor) {
+      const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, t, viewport);
 
       ctx.save();
       ctx.strokeStyle = '#FFD700';
@@ -142,7 +110,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
 
     // Draw reference direction line (dimmed) from pivot to reference point
     if (referencePoint) {
-      const refScreen = CoordinateTransforms.worldToScreen(referencePoint, transform, freshViewport);
+      const refScreen = CoordinateTransforms.worldToScreen(referencePoint, t, viewport);
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
       ctx.lineWidth = 1;
@@ -155,8 +123,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.restore();
     }
 
-    if (cursorWorld) {
-      const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, freshViewport);
+    if (effectiveCursor) {
+      const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, t, viewport);
 
       // Angle arc near pivot (from reference direction to cursor direction)
       const arcRadius = 30;
@@ -185,11 +153,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.save();
       ctx.font = '12px monospace';
       ctx.fillStyle = '#FFD700';
-      ctx.fillText(
-        angleText,
-        cursorScreen.x + 15,
-        cursorScreen.y - 10
-      );
+      ctx.fillText(angleText, cursorScreen.x + 15, cursorScreen.y - 10);
       ctx.restore();
     }
 
@@ -205,42 +169,20 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
         if (!entity) continue;
 
         const dxfEntity = entity as unknown as DxfEntityUnion;
-        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, transform, freshViewport);
+        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, t, viewport);
       }
 
       ctx.restore();
     }
-  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement, cursorWorld]);
+  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity]);
 
-  // Clear canvas when transitioning from active preview phase → idle/base-point
-  useEffect(() => {
-    const wasPreviewActive = PREVIEW_PHASES.has(prevPhaseRef.current);
-    const isPreviewActive = PREVIEW_PHASES.has(phase);
-
-    if (wasPreviewActive && !isPreviewActive) {
-      const canvas = getCanvas();
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const clearDpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.setTransform(clearDpr, 0, 0, clearDpr, 0, 0);
-        }
-      }
-    }
-    prevPhaseRef.current = phase;
-  }, [phase, getCanvas]);
-
-  // Schedule rendering during both reference and angle phases
-  useEffect(() => {
-    if (phase !== 'awaiting-reference' && phase !== 'awaiting-angle') return;
-
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [phase, drawFrame]);
+  useCanvasGhostPreview({
+    isActive: PREVIEW_PHASES.has(phase),
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }
 
 // ============================================================================
@@ -255,7 +197,6 @@ function drawGhostEntity(
   transform: ViewTransform,
   viewport: { width: number; height: number },
 ): void {
-  // 🏢 FIX (2026-02-19): Draw in CSS pixels — DPR scaling handled by canvas transform
   const toScreen = (p: Point2D) =>
     CoordinateTransforms.worldToScreen(p, transform, viewport);
 

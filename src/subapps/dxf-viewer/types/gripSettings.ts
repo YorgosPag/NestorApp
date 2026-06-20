@@ -9,6 +9,8 @@ import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTO
 import { clamp } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-034: Centralized Validation Bounds
 import { OPACITY_BOUNDS, GRIP_BOUNDS } from '../config/validation-bounds-config';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
 
 export interface GripSettings {
   // === AutoCAD Variables ===
@@ -56,7 +58,7 @@ export interface GripInteractionState {
 
 // === DEFAULT AUTOCAD-STYLE SETTINGS (International Standards) ===
 const defaultGripSettings = {
-  gripSize: 14,      // Comfortable CAD grip (AutoCAD GRIPSIZE=7 equivalent: half-width 7px)
+  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
   pickBoxSize: 3,    // ✅ AutoCAD PICKBOX default: 3 DIP
   apertureSize: 10,  // ✅ AutoCAD APERTURE default: 10 pixels
   showAperture: true, // ✅ AutoCAD APBOX default: enabled

@@ -13,6 +13,7 @@ import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle
 import { OPACITY } from '../../config/color-config';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
 import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
@@ -226,12 +227,8 @@ export class PreviewRenderer {
     this.currentPreview = null;
     this.isDirty = false;
 
-    if (this.ctx && this.canvas) {
-      const dpr = getDevicePixelRatio();
-      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
+    // 🏢 SSoT DPR-clear (ADR-084 withCanvasState) — ίδιο idiom με τα ghost hooks.
+    if (this.ctx && this.canvas) clearCanvasDpr(this.canvas, this.ctx);
   }
 
   /** Check if dirty (for UnifiedFrameScheduler) */

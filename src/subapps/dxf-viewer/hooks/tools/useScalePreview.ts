@@ -4,19 +4,26 @@
  * Renders semi-transparent ghost entities scaled around the base point.
  * Live preview at 60fps via requestAnimationFrame — zero React re-renders.
  *
- * Pattern: identical to useRotationPreview (ADR-040 micro-leaf).
+ * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
+ * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
+ * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ *
+ * ⚠️ Σημείωση: η `phase` subscription (useSyncExternalStore → ScaleToolStore)
+ * παραμένει στο top του hook — χρησιμοποιείται ως isActive gate + redraw trigger
+ * για το harness.
  *
  * @module hooks/tools/useScalePreview
  */
 
-import { useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { scalePoint } from '../../systems/scale/scale-entity-transform';
 import type { useLevels } from '../../systems/levels';
+import { useCanvasGhostPreview } from './useCanvasGhostPreview';
+import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,12 +40,10 @@ export interface UseScalePreviewProps {
 
 export function useScalePreview(props: UseScalePreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
-  const rafRef = useRef<number>(0);
 
-  // Reactive phase read — triggers re-render when phase changes so RAF restarts
+  // Reactive phase read — triggers harness re-schedule when phase changes.
+  // ⚠️ ΚΡΑΤΕΙΤΑΙ εδώ: isActive gate υπολογίζεται από αυτή.
   const phase = useSyncExternalStore(ScaleToolStore.subscribe, () => ScaleToolStore.getState().phase);
-  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
-  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
   const getEntity = useCallback((id: string): AnySceneEntity | null => {
     if (!levelManager.currentLevelId) return null;
@@ -46,28 +51,11 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     return scene?.entities.find(e => e.id === id) ?? null;
   }, [levelManager]);
 
-  const getViewport = useCallback((canvas: HTMLCanvasElement) => {
-    const el = getViewportElement?.() ?? canvas;
-    const rect = el.getBoundingClientRect();
-    return { width: rect.width, height: rect.height };
-  }, [getViewportElement]);
-
-  const drawFrame = useCallback(() => {
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const s = ScaleToolStore.getState();
-    if (s.phase !== 'scale_input' || !s.basePoint || !cursorWorld) return;
+    if (s.phase !== 'scale_input' || !s.basePoint || !effectiveCursor) return;
 
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const viewport = getViewport(canvas);
-    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
+    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
 
     // Base point marker
     const basePt = toScreen(s.basePoint);
@@ -81,14 +69,14 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     ctx.restore();
 
     // Compute live scale factor from cursor distance
-    const dx = cursorWorld.x - s.basePoint.x;
-    const dy = cursorWorld.y - s.basePoint.y;
+    const dx = effectiveCursor.x - s.basePoint.x;
+    const dy = effectiveCursor.y - s.basePoint.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const liveSx = s.subPhase === 'direct' ? (dist > 0.001 ? dist / 100 : 1) : s.currentSx;
     const liveSy = liveSx;
 
     // Rubber-band line from base to cursor
-    const cursorPt = toScreen(cursorWorld);
+    const cursorPt = toScreen(effectiveCursor);
     ctx.save();
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 1;
@@ -116,31 +104,19 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     for (const entityId of s.selectedEntityIds) {
       const entity = getEntity(entityId);
       if (!entity) continue;
-      drawGhostEntity(ctx, entity, s.basePoint, liveSx, liveSy, transform, viewport);
+      drawGhostEntity(ctx, entity, s.basePoint, liveSx, liveSy, t, viewport);
     }
 
     ctx.restore();
-  }, [cursorWorld, transform, getCanvas, getViewport, getEntity]);
+  }, [getEntity]);
 
-  // Schedule RAF only during scale_input phase
-  useEffect(() => {
-    if (phase !== 'scale_input') return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, drawFrame]);
-
-  // Clear canvas when returning to idle
-  useEffect(() => {
-    if (phase !== 'idle') return;
-    const canvas = getCanvas();
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }, [phase, getCanvas]);
+  useCanvasGhostPreview({
+    isActive: phase !== 'idle',
+    getCanvas,
+    getViewportElement,
+    transform,
+    draw,
+  });
 }
 
 // ── Ghost entity drawing ──────────────────────────────────────────────────────

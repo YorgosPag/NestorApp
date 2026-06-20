@@ -62,6 +62,8 @@ import {
   useGripDraftSettings
 } from '../../settings-provider';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 SSoT base grip size
+import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
 import type { GripSettings } from '../../types/gripSettings';
@@ -228,7 +230,7 @@ interface MockGripSettings {
 
 const defaultGripPreviewSettings: MockGripSettings = {
   enabled: true,
-  gripSize: 5,              // ✅ AutoCAD GRIPSIZE default: 5 DIP
+  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
   pickBoxSize: 3,           // ✅ AutoCAD PICKBOX default: 3 DIP
   apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
   opacity: 1.0,             // ✅ Full opacity by default
