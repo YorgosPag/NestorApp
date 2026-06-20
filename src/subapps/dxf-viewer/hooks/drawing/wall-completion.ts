@@ -39,6 +39,8 @@ import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
 import { resolveAxisBindings, type AxisCoord } from '../../bim/hosting/resolve-axis-bindings';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
+import { resolveMemberColumnFlushJustification } from '../../bim/framing/member-column-flush';
+import type { StripJustification } from '../../bim/types/foundation-types';
 
 export type { SceneUnits };
 
@@ -188,6 +190,43 @@ export function defaultEdgeAlignmentPoint(
   // +n_ccw (left of A→B direction): any positive distance picks the left side
   // in `computeWallAlignmentOffset` (cross > 0).
   return { x: startPoint.x + (-dy / len), y: startPoint.y + (dx / len) };
+}
+
+/**
+ * ADR-508 — alignment point για ένα ΣΥΓΚΕΚΡΙΜΕΝΟ justification ('left'/'right'). 'left' =
+ * +n_ccw (=`defaultEdgeAlignmentPoint`)· 'right' = −n_ccw (αντίθετη παρειά). `null` σε
+ * εκφυλισμένο τμήμα.
+ */
+function edgeAlignmentPointForJustification(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  justification: StripJustification,
+): Point2D | null {
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return null;
+  const sign = justification === 'right' ? -1 : 1;
+  return { x: startPoint.x + sign * (-dy / len), y: startPoint.y + sign * (dx / len) };
+}
+
+/**
+ * ADR-508 — free-placement auto-flush (mirror του `buildAnchoredBeamParams`): όταν ένα άκρο
+ * πατά μέσα σε κολόνα, η πλευρική παρειά του τοίχου ευθυγραμμίζεται flush με την παρειά της
+ * (full bearing) μέσω του geometric SSoT `resolveMemberColumnFlushJustification`. Χωρίς κολόνα
+ * → fallback 'left' (location-line = face, διατηρεί την υπάρχουσα default συμπεριφορά).
+ * Τροφοδοτεί το ΥΠΑΡΧΟΝ `buildDefaultWallParams(..., alignmentPoint)` — καμία νέα offset math.
+ */
+export function buildAnchoredWallParams(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  overrides: WallParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
+  columnFootprints: readonly (readonly Point2D[])[] = [],
+): WallParams {
+  const justification = resolveMemberColumnFlushJustification(startPoint, endPoint, columnFootprints, 'left');
+  const alignmentPoint = edgeAlignmentPointForJustification(startPoint, endPoint, justification);
+  return buildDefaultWallParams(startPoint, endPoint, overrides, sceneUnits, alignmentPoint);
 }
 
 // ─── Entity builder ──────────────────────────────────────────────────────────

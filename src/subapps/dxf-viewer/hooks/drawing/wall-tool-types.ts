@@ -53,6 +53,12 @@ export interface WallToolState {
   readonly regionMethod: RegionMethod;
   readonly startPoint: Point2D | null;
   readonly endPoint: Point2D | null;
+  /**
+   * ADR-508 — `true` όταν το `startPoint` κλειδώθηκε από face-snap σε κολόνα/μέλος (το
+   * ghost-before-click κούμπωσε σε παρειά). Τότε το 2ο κλικ τραβά centerline (χωρίς
+   * location-line auto-flush). `false` → free placement (auto-flush σε κολόνα).
+   */
+  readonly startAnchored: boolean;
   readonly polylineVertices: readonly Point2D[];
   /** ADR-363 Phase 1J — picked 2D entity source (on-entity mode, awaitingSide). */
   readonly pickedSource: WallSource | null;
@@ -69,6 +75,7 @@ export const INITIAL_STATE: WallToolState = {
   regionMethod: 'lines',
   startPoint: null,
   endPoint: null,
+  startAnchored: false,
   polylineVertices: [],
   pickedSource: null,
   regionPicks: [],

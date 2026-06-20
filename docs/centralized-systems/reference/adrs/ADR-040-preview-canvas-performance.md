@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-20 — ADR-509 background-adaptive entity color (DxfRenderer choke-point)
+
+**Status**: IMPLEMENTED 2026-06-20 (Opus 4.8). **ADR-040-safe** — pure read-time colour remap, ZERO new subscriptions. Ο `DxfRenderer` περνά το resolved χρώμα κάθε οντότητας μέσα από το NEW SSoT `config/adaptive-entity-color.ts → adaptEntityColorForCanvas(color)` στα δύο fallback/resolved colour paths (interactive render μόνο — το print path μένει στο `applyPlotColor`), ώστε near-black imported DXF entities να παραμένουν ορατές πάνω σε σκούρο canvas. Pure συνάρτηση χρώματος (reuse `config/color-math.ts`), event-time, χωρίς state — καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model. **Files**: MOD `canvas-v2/dxf-canvas/DxfRenderer.ts` (import + 2 call-sites)· NEW `config/adaptive-entity-color.ts` + `config/color-math.ts`. **CHECK 6B** (DxfRenderer touch) → ADR-040 staged. ✅ Google-level: YES — pure χρωματικός μετασχηματισμός, μηδέν νέα reactivity.
+
 ### 2026-06-19 — ADR-501 armed-grip keys threaded through DxfRenderer grip-interaction state
 
 **Status**: IMPLEMENTED 2026-06-19 (Opus 4.8). **ADR-040-safe** — pure pass-through, ZERO new subscriptions. Το `DxfRenderer.setGripInteractionState` αποκτά ΕΝΑ νέο optional πεδίο `armedKeys?: ReadonlySet<string>` που προωθείται αυτούσιο στο `EntityRendererComposite → BaseEntityRenderer` (ADR-370/501 armed-grip SSoT: cold grip → orange για multi-grip move). Δύο call-sites (`renderDxfEntities` + single-entity render path) περνούν `gripOpts.armedKeys` δίπλα στα υπάρχοντα `hoveredGrip`/`activeGrip`. Καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model — το armed-set διαβάζεται event-time από το `GripArmedStore` upstream, όπως ήδη τα hovered/active. **Files**: MOD `canvas-v2/dxf-canvas/DxfRenderer.ts` (type + 2 pass-through calls). **CHECK 6B** (DxfRenderer touch) → ADR-040 staged. ✅ Google-level: YES — pure field threading, μηδέν νέα reactivity.

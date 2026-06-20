@@ -529,9 +529,13 @@ export interface LeaderEntity extends BaseEntity {
 }
 
 // ✅ ENTERPRISE: AutoCAD Hatch Entity (fill pattern)
+// 🏢 ADR-507 — γραμμοσκίαση (hatch) όπως AutoCAD HATCH/BHATCH. Φ1a προσθέτει τα
+// πεδία solid + user-defined lines + island/draw-order (incremental — οι υπόλοιπες
+// φάσεις προσθέτουν gradient/predefined PAT/associative metadata).
+// ⚠️ opacity/transparency/colorMode κληρονομούνται από BaseEntity — ΜΗΝ διπλασιάζεις.
 export interface HatchEntity extends BaseEntity {
   type: 'hatch';
-  boundaryPaths: Point2D[][];    // Array of closed boundary paths
+  boundaryPaths: Point2D[][];    // Array of closed boundary paths (path[0] = outer, rest = islands)
   patternName?: string;          // Predefined pattern name (SOLID, ANSI31, etc.)
   patternType?: 'solid' | 'gradient' | 'pattern';
   patternScale?: number;         // Pattern scale factor
@@ -540,6 +544,24 @@ export interface HatchEntity extends BaseEntity {
   fillColor?: string;            // Fill color for solid hatches
   backgroundColor?: string;      // Background color for patterns
   associative?: boolean;         // Whether hatch updates with boundary changes
+  // ── ADR-507 Φ1a ────────────────────────────────────────────────────────────
+  /** Fill family. 'solid' = συμπαγές γέμισμα· 'user-defined' = παράλληλες γραμμές
+   *  (lineAngle/lineSpacing)· 'predefined' = PAT pattern (Φ2)· 'gradient' (Φ5). */
+  fillType?: 'solid' | 'user-defined' | 'predefined' | 'gradient';
+  /** Island detection style (DXF code 75): normal=even-odd, outer, ignore. */
+  islandStyle?: 'normal' | 'outer' | 'ignore';
+  /** User-defined hatch — γωνία γραμμών (μοίρες). */
+  lineAngle?: number;
+  /** User-defined hatch — κάθετη απόσταση γραμμών (mm). */
+  lineSpacing?: number;
+  /** User-defined hatch — διπλή (σταυρωτή) γραμμοσκίαση. */
+  doubleCrossHatch?: boolean;
+  /** Σημείο αναφοράς (phase) του μοτίβου — προεπιλογή world origin. */
+  patternOrigin?: Point2D;
+  /** Draw-order bucket (0=back … 4=front) — §5δ auto-send-to-back. */
+  drawOrder?: 0 | 1 | 2 | 3 | 4;
+  /** Ανοχή κενού ορίου για boundary detection (mm, Φ3). */
+  gapTolerance?: number;
 }
 
 // ✅ ENTERPRISE: AutoCAD XLine Entity (construction line - infinite in both directions)

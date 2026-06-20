@@ -16,6 +16,8 @@ jest.mock('firebase/auth', () => ({
 import { WallRenderer } from '../WallRenderer';
 import type { WallEntity } from '../../types/wall-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-509 — background-adaptive entity color: το near-black parent χρώμα προσαρμόζεται.
+import { adaptEntityColorForCanvas } from '../../../config/adaptive-entity-color';
 
 // ── Store mock ────────────────────────────────────────────────────────────────
 
@@ -177,10 +179,13 @@ function makeInteriorWall(): WallEntity {
 describe('WallRenderer — ADR-375 C.9 default line color', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('εξωτ. τοίχος → footprint strokeStyle = parent #2b2f36', () => {
+  it('εξωτ. τοίχος → footprint strokeStyle = parent #2b2f36 (ADR-509 adaptive σε μαύρο canvas)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeWall() as unknown as EntityModel, {});
-    expect(strokeStyleCalls(mock.calls)).toContain('#2b2f36');
+    // ADR-509 — το near-black #2b2f36 προσαρμόζεται για ορατότητα στο default μαύρο canvas.
+    const expected = adaptEntityColorForCanvas('#2b2f36');
+    expect(expected).not.toBe('#2b2f36'); // sanity: όντως προσαρμόστηκε
+    expect(strokeStyleCalls(mock.calls)).toContain(expected);
   });
 
   it('εσωτ. τοίχος → footprint strokeStyle = #6b7280 (subcategory interior)', () => {

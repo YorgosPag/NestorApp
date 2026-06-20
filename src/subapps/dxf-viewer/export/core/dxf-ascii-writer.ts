@@ -21,9 +21,12 @@
  * ADR-505 §A.
  */
 
-import type { Entity } from '../../types/entities';
+import type { Entity, HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
+import { buildHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { DxfLineMode } from '../types';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
@@ -144,7 +147,14 @@ function writeEntity(
       const faces = (e as {
         dxfFaces?: ReadonlyArray<ReadonlyArray<{ x: number; y: number; zMm: number }>>;
       }).dxfFaces;
-      if (faces) for (const f of faces) emit3DFace(f, layer, aci, s, mmScale, pair);
+      if (faces) {
+        for (const f of faces) emit3DFace(f, layer, aci, s, mmScale, pair);
+        break;
+      }
+      // ADR-507 Φ1a — χωρίς προ-υπολογισμένα 3D faces → πραγματική γραμμοσκίαση:
+      // polyline mode → native `HATCH` entity (boundary loops + pattern meta)·
+      // lines mode (Τέκτονας) → exploded LINEs (boundary + user-defined γραμμές).
+      emitHatch(e as HatchEntity, layer, aci, s, explode, pair);
       break;
     }
     // point/spline/dimension/leader/xline/ray → skipped.
@@ -168,6 +178,90 @@ function emit3DFace(
   }
   pair(8, layer);
   pair(62, aci);
+}
+
+// ─── HATCH (ADR-507 Φ1a) ──────────────────────────────────────────────────────
+// solid-check + island↔code75 = SSoT `bim/hatch/hatch-properties` (κοινό με
+// renderer + reader, N.12 — μηδέν τοπικό διπλότυπο).
+
+/**
+ * Γράψε μια γραμμοσκίαση. polyline-mode → native `HATCH` (boundary loops + pattern
+ * meta)· lines-mode → exploded `LINE`s (boundary outlines + user-defined γραμμές
+ * μέσω του `buildHatchLines` SSoT — ίδια γεωμετρία με τον canvas renderer).
+ */
+function emitHatch(
+  e: HatchEntity, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
+): void {
+  const paths = (e.boundaryPaths ?? []).filter((p) => p.length >= 2);
+  if (!paths.length) return; // κενά όρια → τίποτα (κρατά «bare hatch → skip» συμβατό)
+  const solid = isSolidHatch(e);
+
+  if (explode) {
+    // Τέκτονας: boundary outlines ως LINEs.
+    for (const path of paths) {
+      for (let i = 0; i < path.length - 1; i += 1) emitLine(path[i], path[i + 1], layer, aci, s, pair);
+      if (path.length > 2) emitLine(path[path.length - 1], path[0], layer, aci, s, pair);
+    }
+    // user-defined: οι γραμμές μοτίβου ως LINEs (FULL SSoT με canvas).
+    if (!solid) {
+      const segs = buildHatchLines(paths, {
+        spacingMm: e.lineSpacing ?? e.patternScale ?? 100,
+        angleDeg: e.lineAngle ?? e.patternAngle ?? 0,
+        origin: e.patternOrigin,
+        double: e.doubleCrossHatch ?? false,
+        islandStyle: e.islandStyle ?? 'normal',
+      });
+      for (const seg of segs) emitLine(seg.start, seg.end, layer, aci, s, pair);
+    }
+    return;
+  }
+
+  // Native HATCH (AutoCAD R2000+ minimal, polyline boundaries).
+  pair(0, 'HATCH');
+  pair(8, layer);
+  pair(62, aci);
+  pair(100, 'AcDbHatch');
+  pair(10, 0); pair(20, 0); pair(30, 0);          // elevation point
+  pair(210, 0); pair(220, 0); pair(230, 1);       // extrusion normal
+  pair(2, solid ? 'SOLID' : (e.patternName ?? 'USER'));
+  pair(70, solid ? 1 : 0);                        // solid fill flag
+  pair(71, e.associative ? 1 : 0);                // associativity
+  pair(91, paths.length);                         // number of boundary paths
+  for (let pi = 0; pi < paths.length; pi += 1) {
+    const path = paths[pi];
+    // boundary path type flag: polyline(2) + external(1) στο πρώτο / outermost(16) στα νησιά.
+    const flag = 2 | (pi === 0 ? 1 : 16);
+    pair(92, flag);
+    pair(72, 0);                                  // has bulge = όχι
+    pair(73, 1);                                  // is closed
+    pair(93, path.length);                        // number of vertices
+    for (const v of path) { pair(10, v.x * s); pair(20, v.y * s); }
+    pair(97, 0);                                  // number of source boundary objects
+  }
+  pair(75, islandStyleToDxf75(e.islandStyle));    // hatch style
+  // pattern type: 0=user-defined, 1=predefined. Non-solid χωρίς ρητό fillType →
+  // user-defined (οι default γραμμές μοτίβου είναι user-defined).
+  const userDefined = !solid && (e.fillType === 'user-defined' || e.fillType == null);
+  pair(76, userDefined ? 0 : 1);
+  if (!solid) {
+    const angle = e.lineAngle ?? e.patternAngle ?? 0;
+    const spacing = e.lineSpacing ?? e.patternScale ?? 1;
+    pair(52, angle);                              // pattern angle
+    pair(41, spacing);                            // pattern scale / spacing
+    pair(77, e.doubleCrossHatch ? 1 : 0);         // double flag
+    pair(78, 1);                                  // number of pattern definition lines
+    // ΕΝΑ ορισμός γραμμής μοτίβου → έγκυρο user-defined hatch στο AutoCAD.
+    const r = degToRad(angle);
+    pair(53, angle);                              // line angle
+    pair(43, 0); pair(44, 0);                     // base point
+    pair(45, -Math.sin(r) * spacing);             // offset x (κάθετο)
+    pair(46, Math.cos(r) * spacing);              // offset y (κάθετο)
+    pair(79, 0);                                  // dash items
+  }
+  pair(47, 0);                                    // pixel size
+  const seeds = e.seedPoints ?? [];
+  pair(98, seeds.length);                         // number of seed points
+  for (const sp of seeds) { pair(10, sp.x * s); pair(20, sp.y * s); }
 }
 
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */

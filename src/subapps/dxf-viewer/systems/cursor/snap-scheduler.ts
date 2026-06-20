@@ -33,8 +33,13 @@ import {
   resolveColumnGhostStatusFromSnap,
 } from '../../bim/columns/column-placement-snap-context';
 import {
+  resolveColumnFaceSnap,
+  type ColumnFaceSnap,
+} from '../../bim/columns/column-face-snap';
+import {
   setColumnGhostStatus,
   clearColumnGhostStatus,
+  setColumnFaceAnchor,
 } from './ColumnPlacementGhostStatusStore';
 import type { ColumnToolBridgeHandle } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
@@ -103,10 +108,47 @@ function applyColumnGhostStatus(
   );
 }
 
+/**
+ * ADR-398 §Column smart-ghost face-snap (ADR-508 reuse) — γράφει το column face-snap αποτέλεσμα
+ * στα snap SSoT (ghost point + status + auto λαβή). Drive-ghost-only (όπως το beam smart ghost):
+ * ΚΑΝΕΝΑ snap glyph (`fullSnapResult=null`, markers=[]) — το ghost ζωγραφίζεται από το
+ * `useColumnGhostPreview` μέσω `getImmediateSnap()`. Dedup μέσω lastSnap state (mirror του κύριου).
+ */
+function applyColumnFaceSnap(faceSnap: ColumnFaceSnap, input: SnapDetectionInput): void {
+  setColumnFaceAnchor(faceSnap.anchor);
+  setColumnGhostStatus(faceSnap.status);
+  const { x: sx, y: sy } = faceSnap.position;
+  if (Math.abs(sx - lastSnapX) > 0.001 || Math.abs(sy - lastSnapY) > 0.001 || !lastSnapFound) {
+    lastSnapX = sx;
+    lastSnapY = sy;
+    input.setSnapResults([]);
+    setFullSnapResult(null);
+    setImmediateSnap({
+      found: true,
+      point: faceSnap.position,
+      mode: 'endpoint',
+      entityId: faceSnap.targetId ?? undefined,
+    });
+  }
+  lastSnapFound = true;
+}
+
 /** The heavy work — runs in the RAF slot, NEVER inside the mousemove handler. */
 function runSnapDetection(input: SnapDetectionInput): void {
   const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
   try {
+    // ADR-398 §Column smart-ghost face-snap — HIGHEST priority κατά την τοποθέτηση κολώνας:
+    // κουμπώνει στην εξωτερική παρειά δοκαριού/κολώνας (mirror του beam smart ghost). ΕΝΑ SSoT
+    // με το click path (`mouse-handler-up`) → preview ≡ commit. Miss → fall through στο υπάρχον
+    // corner-projection path (μηδέν regression μακριά από στόχους).
+    if (colHandle?.isActive && input.getEntities) {
+      const faceSnap = resolveColumnFaceSnap(input.worldPos, input.getEntities(), colHandle.getSceneUnits());
+      if (faceSnap) {
+        applyColumnFaceSnap(faceSnap, input);
+        return;
+      }
+    }
+    if (colHandle?.isActive) setColumnFaceAnchor(null);
     // ADR-398 — Column draw: the would-be column's corners project onto targets, AND the
     // crosshair queries the unified snap (BIM corner/mid/center + beam-axis). `resolveColumnDrawSnap`
     // picks Revit-grade: visible corner-projection > visible cursor characteristic > silent grid

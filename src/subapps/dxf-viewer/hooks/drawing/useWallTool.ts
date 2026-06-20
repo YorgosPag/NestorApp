@@ -31,13 +31,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { WallKind, WallCategory } from '../../bim/types/wall-types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα 2Δ» geometry bridge.
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import type { WallParamOverrides } from './wall-completion';
+import { resolveWallThicknessMm } from './wall-completion';
+// ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
+import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
+import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
 import {
   useWallToolDynamicInputListener,
   useWallToolEnterListener,
@@ -45,19 +47,18 @@ import {
   useWallToolPerimeterBoxSelectListener,
 } from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
-import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 // ADR-363 — state-machine types + commit builders extracted for N.7.1 (≤500 lines).
 import {
   INITIAL_STATE,
-  type WallPlacementMode,
   type WallToolState,
   type UseWallToolOptions,
   type UseWallToolResult,
 } from './wall-tool-types';
-import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { useWallCommit } from './use-wall-commit';
 // ADR-363 — in-region / perimeter click handlers extracted for N.7.1 (≤500 lines).
 import { useWallRegionClicks } from './use-wall-region-clicks';
+// ADR-363 — lifecycle + setters + incremental-back ESC handlers extracted for N.7.1.
+import { useWallToolLifecycle } from './use-wall-tool-lifecycle';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -67,6 +68,53 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const [state, setState] = useState<WallToolState>(INITIAL_STATE);
   const stateRef = useRef<WallToolState>(state);
   stateRef.current = state;
+
+  // ── scene snap targets sync (ADR-508 — mirror useBeamTool) ───────────────
+  // Stable getter ref: `options.getSceneEntities` is a new arrow each render, so reading
+  // through a ref keeps `syncSceneTargetsToStore` (→ `activate`) referentially STABLE
+  // (critical: `activate` feeds `useToolLifecycle` deps → avoid setState render loop).
+  const getSceneEntitiesRef = useRef(getSceneEntities);
+  getSceneEntitiesRef.current = getSceneEntities;
+
+  // Φόρτωσε κολόνες + γραμμικά μέλη (τοίχοι+δοκάρια) στο preview store ΠΡΙΝ το 1ο κλικ,
+  // ώστε το ghost-before-click face-snap να έχει τους στόχους έτοιμους.
+  const syncSceneTargetsToStore = useCallback(() => {
+    const entities = getSceneEntitiesRef.current?.() ?? [];
+    const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'beam'] });
+    wallPreviewStore.setColumns(footprints);
+    wallPreviewStore.setMembers(memberTargets);
+  }, []);
+
+  // ADR-508 — re-sync όταν δημιουργείται οντότητα (rAF defer: το event εκπέμπεται σύγχρονα
+  // πριν commit-αριστεί το React scene → διάβασε τη φρέσκια σκηνή στο επόμενο frame, ώστε ο
+  // μόλις-σχεδιασμένος τοίχος να είναι ορατός στο ghost του επόμενου ΠΡΙΝ το 1ο κλικ).
+  useEffect(() => {
+    let raf = 0;
+    const unsub = EventBus.on('drawing:entity-created', () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub();
+    };
+  }, [syncSceneTargetsToStore]);
+
+  // ADR-508 §smart wall ghost — το 1ο κλικ κλειδώνει το START· αν κούμπωνε σε παρειά
+  // κολόνας/μέλους (face-snap), κλειδώνουμε στο προτεινόμενο centerline (+anchored) ώστε το
+  // 2ο κλικ να τραβά centerline (χωρίς location-line auto-flush). Ίδιος resolver με το ghost.
+  const resolveWallStartAnchor = useCallback(
+    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean } => {
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const store = wallPreviewStore.get();
+      const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
+      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits);
+      return snap
+        ? { start: snap.start, anchored: true }
+        : { start: { x: point.x, y: point.y }, anchored: false };
+    },
+    [getSceneUnits],
+  );
 
   // ── preview store sync (ADR-363 Phase 1C) ────────────────────────────────
   // Mirrors `stairPreviewStore` writer pattern: on every state transition we
@@ -117,6 +165,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       curveControl,
       polylineVertices: state.polylineVertices,
       overrides: state.overrides,
+      startAnchored: state.startAnchored,
     });
   }, [state]);
 
@@ -127,119 +176,17 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     };
   }, []);
 
-  // ── lifecycle ────────────────────────────────────────────────────────────
-  const activate = useCallback(() => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      phase: 'awaitingStart',
-    }));
-  }, []);
-
-  const setKind = useCallback((kind: WallKind) => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
-      overrides: prev.overrides,
-    }));
-  }, []);
-
-  // ADR-363 Phase 1J — switch placement mode (freehand ⇄ on-entity). Resets the
-  // state machine (keeps kind + overrides). No-op effect when phase is idle.
-  const setPlacementMode = useCallback((mode: WallPlacementMode) => {
-    setState((prev) => {
-      if (prev.placementMode === mode) return prev;
-      return {
-        ...INITIAL_STATE,
-        kind: prev.kind,
-        overrides: prev.overrides,
-        regionMethod: prev.regionMethod,
-        placementMode: mode,
-        phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
-      };
-    });
-  }, []);
-
-  // ADR-419 — set the in-region method ('lines' | 'inside' | 'box'). Driven by the
-  // active tool id (wall-region-lines/inside/box). Clears accumulated picks on change.
-  const setRegionMethod = useCallback((regionMethod: RegionMethod) => {
-    setState((prev) =>
-      prev.regionMethod === regionMethod ? prev : { ...prev, regionMethod, regionPicks: [] },
-    );
-  }, []);
-
-  // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
-  // setKind is stable (useCallback []) so this listener registers exactly once.
-  useEffect(() => EventBus.on('bim:set-wall-kind', ({ kind }) => setKind(kind)), [setKind]);
-
-  const setCategory = useCallback((category: WallCategory) => {
-    setState((prev) => ({
-      ...prev,
-      phase: prev.phase === 'idle' ? 'awaitingStart' : prev.phase,
-      overrides: { ...prev.overrides, category },
-    }));
-  }, []);
-
-  // ADR-363 Phase A — keyboard W+letter chord: set wall category, activates tool if idle.
-  useEffect(() => EventBus.on('bim:set-wall-category', ({ category }) => setCategory(category)), [setCategory]);
-
-  const deactivate = useCallback(() => {
-    setState(INITIAL_STATE);
-  }, []);
-
-  const reset = useCallback(() => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      overrides: prev.overrides,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
-    }));
-  }, []);
-
-  const setParamOverrides = useCallback((overrides: WallParamOverrides) => {
-    setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
-  }, []);
-
-  // ── incremental back (ADR-363 Phase 1H) ──────────────────────────────────
-  // ESC during the straight-wall side-pick (`awaitingAlignment`) rolls back one
-  // pick: drop the end, keep the start, return to `awaitingEnd`. Mirrors Revit
-  // "Place Wall" Esc semantics (back out one pick instead of exiting). Curved /
-  // polyline kinds never reach `awaitingAlignment`, so this is straight-only.
-  const backToAwaitingEnd = useCallback((): boolean => {
-    if (stateRef.current.phase !== 'awaitingAlignment') return false;
-    setState((prev) => ({ ...prev, phase: 'awaitingEnd', endPoint: null, error: null }));
-    return true;
-  }, []);
-
-  // ESC bus registration — priority above DRAW_TOOL so the incremental back-step
-  // wins over the generic "cancel drawing" handler that would deactivate the tool.
-  useEscapeHandler({
-    id: 'wall-tool/alignment-back',
-    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
-    canHandle: () => stateRef.current.phase === 'awaitingAlignment',
-    handle: () => backToAwaitingEnd(),
-  });
-
-  // ADR-363 Phase 1J — on-entity incremental back: ESC during the side-pick drops
-  // the picked source and returns to awaitingStart (re-pick the entity) instead
-  // of deactivating the tool.
-  useEscapeHandler({
-    id: 'wall-tool/on-entity-back',
-    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
-    canHandle: () =>
-      stateRef.current.placementMode === 'on-entity' && stateRef.current.phase === 'awaitingSide',
-    handle: () => {
-      setState((prev) => ({ ...prev, phase: 'awaitingStart', pickedSource: null, error: null }));
-      return true;
-    },
-  });
+  // ── lifecycle + setters + incremental-back ESC handlers (extracted N.7.1) ──
+  const {
+    activate,
+    setKind,
+    setPlacementMode,
+    setRegionMethod,
+    deactivate,
+    reset,
+    backToAwaitingEnd,
+    setParamOverrides,
+  } = useWallToolLifecycle({ stateRef, setState, syncSceneTargetsToStore });
 
   // ── commit builders (extracted to ./use-wall-commit for N.7.1) ───────────
   const {
@@ -348,28 +295,31 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return false;
       }
 
-      // Straight kind — 3-click chain (ADR-363 Phase 1F):
-      //   click 1 (awaitingStart)     → store start, → awaitingEnd
-      //   click 2 (awaitingEnd)       → store end,   → awaitingAlignment
-      //   click 3 (awaitingAlignment) → commit with lateral offset toward C
+      // Straight kind — 2-click chain (ADR-508, mirror δοκαριού):
+      //   click 1 (awaitingStart) → resolveWallStartAnchor → store start (+anchored), → awaitingEnd
+      //   click 2 (awaitingEnd)   → commit (auto-flush σε κολόνα ή centerline αν anchored)
       if (s.phase === 'awaitingStart') {
-        setState({
-          ...s,
-          phase: 'awaitingEnd',
-          startPoint: { x: point.x, y: point.y },
-          error: null,
+        syncSceneTargetsToStore();
+        // ADR-508 §smart wall ghost — face-snap το start (αν κοντά σε κολόνα/μέλος).
+        const { start: startPoint, anchored } = resolveWallStartAnchor(point);
+        // Sync before setState: το επόμενο mousemove διαβάζει σωστό startPoint αμέσως
+        // (χωρίς useEffect-delay window με stale null → cursor-dot flash).
+        wallPreviewStore.set({
+          startPoint,
+          endPoint: null,
+          curveControl: null,
+          polylineVertices: [],
+          overrides: s.overrides,
+          startAnchored: anchored,
         });
+        setState({ ...s, phase: 'awaitingEnd', startPoint, startAnchored: anchored, error: null });
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        setState({
-          ...s,
-          phase: 'awaitingAlignment',
-          endPoint: { x: point.x, y: point.y },
-          error: null,
-        });
-        return true;
+        return commitStraightFromState(s, point);
       }
+      // Legacy awaitingAlignment commit (μη προσβάσιμο πλέον από κλικ straight· διατηρείται
+      // για το dynamic-input precision path που μπορεί ακόμη να το θέσει).
       if (s.phase === 'awaitingAlignment' && s.startPoint && s.endPoint) {
         return commitStraightFromState(s, s.endPoint, point);
       }
@@ -382,21 +332,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       getSceneEntities,
       onRegionClick,
       onPerimeterClick,
+      resolveWallStartAnchor,
+      syncSceneTargetsToStore,
     ],
   );
-
-  // ESC during in-region: drop accumulated picks (back to empty collecting)
-  // instead of deactivating; no-op when there are no picks (generic ESC exits).
-  useEscapeHandler({
-    id: 'wall-tool/in-region-back',
-    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
-    canHandle: () =>
-      stateRef.current.placementMode === 'in-region' && stateRef.current.regionPicks.length > 0,
-    handle: () => {
-      setState((prev) => ({ ...prev, regionPicks: [], error: null }));
-      return true;
-    },
-  });
 
   const finishPolyline = useCallback((): boolean => {
     const s = stateRef.current;

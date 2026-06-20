@@ -149,6 +149,8 @@ export class DxfEntityParser {
   static parseEntity(lines: string[], startIndex: number): EntityData | null {
     const entityType = lines[startIndex + 1].trim();
     const data: Record<string, string> = {};
+    // ADR-507 — ordered pairs διατηρούν επαναλαμβανόμενους κωδικούς (HATCH boundaries).
+    const pairs: Array<readonly [string, string]> = [];
     let layer = '0';
 
     let i = startIndex + 2;
@@ -163,10 +165,11 @@ export class DxfEntityParser {
       }
 
       data[code] = value;
+      pairs.push([code, value]);
       i += 2;
     }
 
-    return { type: entityType, layer, data };
+    return { type: entityType, layer, data, pairs };
   }
 
   /**

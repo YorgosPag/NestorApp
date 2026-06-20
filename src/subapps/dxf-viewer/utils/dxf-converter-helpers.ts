@@ -33,6 +33,12 @@ export interface EntityData {
   type: string;
   layer: string;
   data: Record<string, string>;
+  /**
+   * Ordered (code, value) pairs — διατηρεί τους ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΟΥΣ κωδικούς που
+   * το flat `data` χάνει (π.χ. HATCH boundary loops: πολλαπλά 10/20 ανά path).
+   * Additive (ADR-507) — οι υπάρχοντες converters συνεχίζουν να διαβάζουν `data`.
+   */
+  pairs?: ReadonlyArray<readonly [string, string]>;
 }
 
 /**

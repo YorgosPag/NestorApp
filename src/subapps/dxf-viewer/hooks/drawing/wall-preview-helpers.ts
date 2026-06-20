@@ -13,13 +13,28 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
-import { buildDefaultWallParams, buildWallEntity, defaultEdgeAlignmentPoint, type WallParamOverrides } from './wall-completion';
+import type { ExtendedSceneEntity } from './drawing-types';
+import {
+  buildAnchoredWallParams,
+  buildDefaultWallParams,
+  buildWallEntity,
+  resolveWallThicknessMm,
+  type WallParamOverrides,
+} from './wall-completion';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
-import type { WallKind } from '../../bim/types/wall-types';
+import type { WallKind, WallParams } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
+import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
+import {
+  isMemberCollinearOverlap,
+  type LinearMemberSnapTarget,
+} from '../../bim/framing/linear-member-face-snap';
+import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
@@ -28,38 +43,29 @@ const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
 
 /**
- * Build a wall preview entity from `tempPoints` + cursor. State machine map:
- *   - [] (idle) → start marker point
- *   - [start] → straight/curved wall ghost from start→cursor
- *   - [start, end] → curve-control ghost or awaitingAlignment-side ghost
- *   - [v1, v2, …] → polyline wall ghost with cursor as next vertex
+ * Build a wall preview entity from `tempPoints` + cursor. State machine map
+ * (ADR-508 unified με το δοκάρι — smart ghost-before-click + 2-κλικ):
+ *   - [] (awaitingStart) → smart wall ghost στο σταυρόνημα (κουμπώνει σε κολόνα/μέλος)
+ *   - [start] → WYSIWYG wall ghost start→cursor (auto-flush / centerline αν anchored)
+ *   - [start, end] → curve-control ghost ή (legacy) awaitingAlignment-side ghost
+ *   - [v1, v2, …] → polyline wall ghost με cursor ως επόμενη κορυφή
  *
- * The wall kind + overrides are read from `wallPreviewStore` (single-writer
- * pattern, mirrors stair). Returns a full `WallEntity` (WYSIWYG) so the
- * placement preview is identical to the committed wall.
- *
- * Falls back to a 1-point start marker before the first click resolves.
+ * The wall kind + overrides + snap targets are read from `wallPreviewStore`
+ * (single-writer). Returns a full `WallEntity` (WYSIWYG) — preview == commit.
  */
 export function generateWallPreview(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
   sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
-  if (tempPoints.length === 0) {
-    return {
-      id: 'preview_wall_startmarker',
-      type: 'point',
-      position: cursorPoint,
-      size: 6,
-      visible: true,
-      layerId: defaultLayerId(),
-      preview: true,
-      showPreviewGrips: true,
-    } as PreviewPoint;
-  }
-
   const preview = wallPreviewStore.get();
   const overrides: WallParamOverrides = preview.overrides;
+
+  if (tempPoints.length === 0) {
+    // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
+    // κολόνα/μέλος → κουμπώνει σε παρειά/anchor· αλλιώς ακολουθεί ελεύθερα τον κέρσορα.
+    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, preview.columnFootprints, preview.memberTargets);
+  }
 
   if (tempPoints.length >= 2) {
     const allVerts = [...tempPoints, cursorPoint];
@@ -68,32 +74,100 @@ export function generateWallPreview(
 
   const startPt = tempPoints[0];
 
-  // ADR-363 Phase 1F — `awaitingAlignment` phase: endPoint is fixed (click 2),
-  // cursor is the live alignment-side pick. Render the wall along start→endPoint
-  // SHIFTED toward the cursor so the user sees the final wall position before
-  // committing with click 3. `preview.endPoint` is only set by `useWallTool`
-  // during the straight-kind awaitingAlignment phase (see Phase 1F effect).
+  // Legacy `awaitingAlignment` (μη-straight modes που το θέτουν): endPoint fixed, cursor =
+  // live side pick. Με το 2-κλικ straight flow (ADR-508) ΔΕΝ τίθεται για ευθύ τοίχο.
   if (preview.endPoint) {
     return makeWallFootprintGhost(
-      'preview_wall_footprint',
-      startPt,
-      preview.endPoint,
-      overrides,
-      'straight',
-      sceneUnits,
-      null,
-      cursorPoint,
+      'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null, cursorPoint,
     );
   }
 
   const endPt = cursorPoint;
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
-  // ADR-363 "Location Line = Finish Face": the straight rubber-band (awaitingEnd,
-  // before the side is picked) places the drawn start→cursor line on one wall
-  // FACE (edge) with the body to a default side, NOT the centerline. The actual
-  // side is re-picked at the 3rd alignment click. Curved keeps its centered axis.
-  const alignment = kind === 'straight' ? defaultEdgeAlignmentPoint(startPt, endPt) : null;
-  return makeWallFootprintGhost('preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits, preview.curveControl, alignment);
+  return makeWallWysiwygGhost(
+    'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
+    preview.curveControl, preview.startAnchored, preview.columnFootprints, preview.memberTargets,
+  );
+}
+
+/**
+ * ADR-508 §smart wall ghost — το φάντασμα πριν το 1ο κλικ (`awaitingStart`).
+ *
+ * Κοντά σε κολόνα/μέλος: ο `resolveMemberGhostSnapFromStore` επιστρέφει το centerline start/end.
+ * Μακριά: ευθύ μικρό ghost από τον (snapped) κέρσορα προς +X. Πάντα centerline mode ώστε το
+ * φάντασμα να δείχνει ΑΚΡΙΒΩΣ το σημείο που θα κλειδώσει το 1ο κλικ (preview === commit).
+ * Διαβάζει `getImmediateSnap()` (snapped σημείο, mirror δοκαριού). `null` σε degenerate frame.
+ */
+function makeWallGhostBeforeClick(
+  cursorPoint: Readonly<Point2D>,
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+  columnFootprints: readonly (readonly Point2D[])[],
+  memberTargets: readonly LinearMemberSnapTarget[],
+): ExtendedSceneEntity | null {
+  const snapState = getImmediateSnap();
+  const effectiveCursor: Point2D =
+    snapState?.found === true && snapState.point != null
+      ? { x: snapState.point.x, y: snapState.point.y }
+      : { x: cursorPoint.x, y: cursorPoint.y };
+  const thicknessMm = resolveWallThicknessMm(overrides);
+  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits);
+  const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
+  const end: Point2D = snap
+    ? snap.end
+    : { x: effectiveCursor.x + MEMBER_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
+  const params = buildDefaultWallParams(start, end, overrides, sceneUnits);
+  const built = buildWallEntity(params, defaultLayerId(), 'straight', sceneUnits);
+  if (!built.ok) return null;
+  // 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή (β) το φάντασμα
+  // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος. 🟢/`neutral` → WYSIWYG αυτούσιο.
+  const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets);
+  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
+  return {
+    ...built.entity,
+    id: 'preview_wall_ghost',
+    preview: true,
+    wysiwygPreview: true,
+    ...(ghostStatusColor ? { ghostStatusColor } : {}),
+  } as unknown as ExtendedSceneEntity;
+}
+
+/**
+ * ADR-508 — WYSIWYG ghost στο `awaitingEnd`. `startAnchored` (face-snapped start) → centerline
+ * mode· free → auto-flush σε κολόνα (`buildAnchoredWallParams`)· curved → centerline + control.
+ * 🔴 schematic + (commit block στο useWallTool) όταν ομοαξονικό/πάνω σε υφιστάμενο μέλος.
+ */
+function makeWallWysiwygGhost(
+  id: string,
+  startPt: Readonly<Point2D>,
+  endPt: Readonly<Point2D>,
+  overrides: WallParamOverrides,
+  kind: WallKind,
+  sceneUnits: SceneUnits,
+  curveControl: Point2D | null,
+  startAnchored: boolean,
+  columnFootprints: readonly (readonly Point2D[])[],
+  memberTargets: readonly LinearMemberSnapTarget[],
+): ExtendedSceneEntity | null {
+  let params: WallParams;
+  if (kind === 'curved') {
+    const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
+    params = curveControl
+      ? { ...base, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
+      : base;
+  } else if (startAnchored) {
+    params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
+  } else {
+    params = buildAnchoredWallParams(startPt, endPt, overrides, sceneUnits, columnFootprints);
+  }
+  const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
+  if (!built.ok) return null;
+  const ghostStatusColor =
+    kind !== 'curved' && isMemberCollinearOverlap(startPt, endPt, memberTargets)
+      ? resolveGhostStatusColor('overlap')
+      : null;
+  const statusField = ghostStatusColor ? { ghostStatusColor } : {};
+  return { ...built.entity, id, preview: true, wysiwygPreview: true, ...statusField } as unknown as ExtendedSceneEntity;
 }
 
 /**

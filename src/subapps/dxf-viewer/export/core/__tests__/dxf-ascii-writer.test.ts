@@ -212,10 +212,66 @@ describe('writeDxfAscii — solid fill (3DFACE, ADR-505 §C)', () => {
     expect(dxf).toContain('12\n4\n22\n4\n32\n0\n13\n4\n23\n4\n33\n0\n');
   });
 
-  it('hatch χωρίς dxfFaces → skip χωρίς crash', () => {
+  it('hatch χωρίς dxfFaces ΚΑΙ χωρίς usable boundary → skip χωρίς crash', () => {
     const bare = { id: 'b', type: 'hatch', layerId: 'L', boundaryPaths: [[]] } as unknown as Entity;
     const dxf = writeDxfAscii([bare, line()], { layersById: LAYERS });
     expect(dxf).not.toContain('3DFACE');
+    expect(dxf).not.toContain('0\nHATCH\n'); // κενά όρια → κανένα HATCH
     expect(dxf).toContain('0\nLINE\n');
+  });
+});
+
+// ADR-507 Φ1a — native HATCH (boundary loops + pattern meta) όταν ΔΕΝ υπάρχουν dxfFaces.
+describe('writeDxfAscii — native HATCH (ADR-507 Φ1a)', () => {
+  function solidHatch(): Entity {
+    return {
+      id: 'h', type: 'hatch', layerId: 'L', color: '#ff0000', fillType: 'solid',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }]],
+    } as unknown as Entity;
+  }
+  function userHatch(): Entity {
+    return {
+      id: 'u', type: 'hatch', layerId: 'L', fillType: 'user-defined',
+      lineAngle: 0, lineSpacing: 5, islandStyle: 'normal',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }]],
+    } as unknown as Entity;
+  }
+
+  it('solid → HATCH με 2/SOLID, 70/1, 91/1, 93/4 + κορυφές', () => {
+    const dxf = writeDxfAscii([solidHatch()], { layersById: LAYERS });
+    expect(dxf).toContain('0\nHATCH\n');
+    expect(dxf).toContain('100\nAcDbHatch\n');
+    expect(dxf).toContain('2\nSOLID\n');
+    expect(dxf).toMatch(/\n70\n1\n/);
+    expect(dxf).toMatch(/\n91\n1\n/);
+    expect(dxf).toMatch(/\n93\n4\n/);
+    expect(dxf).toContain('62\n1\n'); // κόκκινο ACI
+  });
+
+  it('user-defined → 70/0, 76/0 (user-defined), 52 angle, 41 spacing, 78/1 pattern line', () => {
+    const dxf = writeDxfAscii([userHatch()], { layersById: LAYERS });
+    expect(dxf).toContain('0\nHATCH\n');
+    expect(dxf).toMatch(/\n70\n0\n/);
+    expect(dxf).toMatch(/\n76\n0\n/);
+    expect(dxf).toMatch(/\n52\n0\n/);
+    expect(dxf).toMatch(/\n41\n5\n/);
+    expect(dxf).toMatch(/\n78\n1\n/);
+  });
+
+  it('lines mode (Τέκτονας): HATCH → exploded LINEs (boundary + pattern), ΟΧΙ HATCH', () => {
+    const dxf = writeDxfAscii([userHatch()], { layersById: LAYERS, lineMode: 'lines' });
+    expect(dxf).not.toContain('0\nHATCH\n');
+    // 4 boundary edges + ≥1 γραμμή μοτίβου (y=5 εσωτερική).
+    expect(countOccurrences(dxf, '0\nLINE\n')).toBeGreaterThanOrEqual(5);
+  });
+
+  it('dxfFaces έχει προτεραιότητα (ADR-505) — δεν σπάει το 3DFACE path', () => {
+    const withFaces = {
+      id: 'f', type: 'hatch', layerId: 'L', patternType: 'solid', boundaryPaths: [[]],
+      dxfFaces: [[{ x: 0, y: 0, zMm: 0 }, { x: 1, y: 0, zMm: 0 }, { x: 1, y: 1, zMm: 0 }]],
+    } as unknown as Entity;
+    const dxf = writeDxfAscii([withFaces], { layersById: LAYERS });
+    expect(dxf).toContain('0\n3DFACE\n');
+    expect(dxf).not.toContain('0\nHATCH\n'); // faces → δεν εκπέμπει native HATCH
   });
 });

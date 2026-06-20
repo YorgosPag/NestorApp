@@ -38,6 +38,8 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+// ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
+import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
@@ -267,7 +269,8 @@ export class WallRenderer extends BaseEntityRenderer {
     // stroking, else the wall outline + mitred corners vanish when an opening
     // is hosted (the stroke would draw the opening rect instead).
     this.traceFootprintRing(outer, inner);
-    if (_edgeColor !== null) this.ctx.strokeStyle = _edgeColor;
+    // ADR-509 — background-adaptive: near-black τοίχος (#2b2f36) ορατός σε μαύρο canvas.
+    if (_edgeColor !== null) this.ctx.strokeStyle = adaptEntityColorForCanvas(_edgeColor);
     this.ctx.stroke();
   }
 
@@ -420,8 +423,9 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.closePath();
     this.ctx.clip();
 
-    this.ctx.strokeStyle = _hatchStroke;
-    this.ctx.fillStyle = _hatchStroke;
+    // ADR-509 — background-adaptive hatch stroke/fill (visible on dark canvas).
+    this.ctx.strokeStyle = adaptEntityColorForCanvas(_hatchStroke);
+    this.ctx.fillStyle = adaptEntityColorForCanvas(_hatchStroke);
     this.ctx.lineWidth = WALL_HATCH_LINE_WIDTH_PX[key];
     this.ctx.setLineDash(linePatternToDashArray(_hatchPattern) as number[]);
 

@@ -418,6 +418,15 @@ export function convertSpline(
 }
 
 // ============================================================================
+// 🏢 ENTERPRISE: HATCH CONVERTER (ADR-507 Φ1a)
+// ============================================================================
+// Moved to dxf-hatch-converter.ts (Google SRP, N.7.1 500-line cap).
+// Re-exported here so all existing importers keep working unchanged.
+export { convertHatch } from './dxf-hatch-converter';
+
+import { convertHatch } from './dxf-hatch-converter';
+
+// ============================================================================
 // 🏢 ENTERPRISE: AUXILIARY GEOMETRY CONVERTERS (ADR-359 Phase 8)
 // ============================================================================
 // XLINE/RAY converters moved to dxf-xline-ray-converter.ts (Google SRP).
@@ -448,6 +457,9 @@ export function convertEntityToScene(
   switch (type) {
     case 'LINE':
       return convertLine(data, layer, index);
+    case 'HATCH':
+      // ADR-507 Φ1a — χρειάζεται ordered pairs (boundary loops με επαναλαμβανόμενα 10/20).
+      return convertHatch(entityData.pairs ?? [], layer, index);
     case 'LWPOLYLINE':
       return convertLwPolyline(data, layer, index);
     case 'CIRCLE':

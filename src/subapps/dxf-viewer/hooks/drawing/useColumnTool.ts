@@ -51,7 +51,10 @@ import { useColumnRegionClicks } from './use-column-region-clicks';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
-import { getColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import {
+  getColumnGhostStatus,
+  getColumnFaceAnchor,
+} from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -291,10 +294,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
    */
   const commitColumnFromState = useCallback(
     (s: ColumnToolState, clickPoint: Readonly<Point2D>): boolean => {
-      // ADR-398 §Column→Beam axis snap — όταν το σημείο κουμπώνει στον άξονα δοκαριού
-      // (ghost 🟢), η κολώνα τοποθετείται ΚΕΝΤΡΑΡΙΣΜΕΝΗ εκεί (κέντρο ≡ άξονας δοκού), ανεξάρτητα
-      // από τον επιλεγμένο anchor — η ρητή απαίτηση του χρήστη.
-      const anchor: ColumnAnchor = getColumnGhostStatus() === 'beam' ? 'center' : s.anchor;
+      // ADR-398 §Column smart-ghost face-snap — anchor precedence (commit ≡ ghost):
+      //   1. face-snap λαβή (1 από 9) — η κολώνα ακουμπά flush στην παρειά στόχου (το
+      //      `clickPoint` είναι ήδη το snapped face point από το `mouse-handler-up`).
+      //   2. αλλιώς §Column→Beam axis snap: 🟢 → ΚΕΝΤΡΑΡΙΣΜΕΝΗ (κέντρο ≡ άξονας δοκού).
+      //   3. αλλιώς ο επιλεγμένος (Tab) anchor.
+      const faceAnchor = getColumnFaceAnchor();
+      const anchor: ColumnAnchor =
+        faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
       const overridesWithKind: ColumnParamOverrides = {
         ...s.overrides,
         kind: s.kind,

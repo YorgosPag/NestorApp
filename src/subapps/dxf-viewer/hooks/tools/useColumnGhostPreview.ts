@@ -24,7 +24,10 @@
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { ColumnKind } from '../../bim/types/column-types';
-import { getColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import {
+  getColumnGhostStatus,
+  getColumnFaceAnchor,
+} from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import type { AnchorGhost } from '../../bim/columns/column-anchor-ghosts';
 import {
   ColumnAnchorGhostRenderer,
@@ -50,8 +53,16 @@ export function useColumnGhostPreview(props: Readonly<UseColumnGhostPreviewProps
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!effectiveCursor) return;
-    const ghosts = getGhostFootprints(effectiveCursor);
-    if (!ghosts || ghosts.length === 0) return;
+    const all = getGhostFootprints(effectiveCursor);
+    if (!all || all.length === 0) return;
+
+    // ADR-398 §Column smart-ghost face-snap — όταν το face-snap επέλεξε λαβή, δείξε ΜΟΝΟ εκείνο
+    // το ghost (active, στο snapped face point) αντί των 9 — mirror του beam single ghost.
+    // Imperative read (zero React subscription, ADR-040). Fallback στα 9 αν δεν ταιριάζει
+    // (π.χ. circular → 1 ghost 'center').
+    const faceAnchor = getColumnFaceAnchor();
+    const matched = faceAnchor ? all.filter((g) => g.anchor === faceAnchor) : [];
+    const ghosts = matched.length > 0 ? matched.map((g) => ({ ...g, isActive: true })) : all;
 
     // ADR-398 §ghost coloring — imperatively read μέσα στο RAF (zero React subscription).
     const statusColor = resolveGhostStatusColor(getColumnGhostStatus());

@@ -37,6 +37,7 @@ import {
   BEAM_GHOST_LEN_MM,
 } from '../../bim/beams/beam-column-face-snap';
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
+import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
@@ -48,41 +49,15 @@ export interface BeamSnapTargets {
 }
 
 /**
- * ADR-398 §3.6 — μάζεψε τους face-snap στόχους από τη σκηνή για το beam ghost/preview.
+ * ADR-398 §3.6 / ADR-508 — μάζεψε τους face-snap στόχους από τη σκηνή για το beam ghost/preview.
  * Κολόνες → footprint πολύγωνα (cutback + ghost flush)· υφιστάμενα δοκάρια → axis+outline
- * (beam-to-beam Τ-framing). Pure: ΙΔΙΑ δεδομένα που διαβάζει το commit path από το preview
- * store (preview === commit). Extracted από `useBeamTool.syncSceneTargetsToStore`.
+ * (beam-to-beam Τ-framing). Delegate στο generic SSoT `collectMemberSnapTargets` (κοινό με τον
+ * τοίχο)· `memberKinds: ['beam']` → η συμπεριφορά δοκαριού μένει αμετάβλητη (δοκάρια+κολόνες,
+ * ΟΧΙ τοίχοι). Pure: ΙΔΙΑ δεδομένα που διαβάζει το commit path (preview === commit).
  */
 export function collectBeamSnapTargets(entities: readonly Entity[]): BeamSnapTargets {
-  const footprints: Point2D[][] = [];
-  const beamTargets: BeamSnapTarget[] = [];
-  for (const e of entities) {
-    if (e.type === 'column') {
-      const verts = (e as { geometry?: { footprint?: { vertices?: readonly { x: number; y: number }[] } } })
-        .geometry?.footprint?.vertices;
-      if (verts && verts.length >= 3) footprints.push(verts.map((v) => ({ x: v.x, y: v.y })));
-      continue;
-    }
-    // ADR-398 §beam-to-beam framing — υφιστάμενα δοκάρια ως face-snap στόχοι (axis+outline).
-    if (e.type === 'beam') {
-      const g = (e as {
-        geometry?: {
-          axisPolyline?: { points?: readonly { x: number; y: number }[] };
-          outline?: { vertices?: readonly { x: number; y: number }[] };
-        };
-      }).geometry;
-      const axis = g?.axisPolyline?.points;
-      const outline = g?.outline?.vertices;
-      if (axis && axis.length >= 2 && outline && outline.length >= 3) {
-        beamTargets.push({
-          id: e.id,
-          axis: axis.map((pt) => ({ x: pt.x, y: pt.y })),
-          outline: outline.map((v) => ({ x: v.x, y: v.y })),
-        });
-      }
-    }
-  }
-  return { footprints, beamTargets };
+  const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
+  return { footprints, beamTargets: memberTargets };
 }
 
 /**

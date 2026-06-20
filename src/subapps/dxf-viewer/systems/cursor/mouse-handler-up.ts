@@ -35,6 +35,8 @@ import {
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
 import { resolveColumnDrawSnap } from '../../bim/columns/column-placement-snap-context';
+import { resolveColumnFaceSnap } from '../../bim/columns/column-face-snap';
+import { setColumnFaceAnchor } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
@@ -219,14 +221,30 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         // επιβάλλεται στο `useColumnTool` μέσω `getColumnGhostStatus()==='beam'`.
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
         if (colHandle?.isActive) {
-          const drawCorner = findColumnDrawCornerSnap(
-            worldPoint,
-            { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
-            colHandle.getSceneUnits(),
-            findSnapPoint,
-          );
-          const resolved = resolveColumnDrawSnap(worldPoint, drawCorner, findSnapPoint);
-          if (resolved) worldPoint = resolved.ghostPoint;
+          // ADR-398 §Column smart-ghost face-snap — HIGHEST priority, ΕΝΑ SSoT με το move-path
+          // ghost (`snap-scheduler` → `resolveColumnFaceSnap`) ώστε commit ≡ ghost. Set & την
+          // auto λαβή που διαβάζει το `commitColumnFromState`. Miss → υπάρχον corner path.
+          const faceSnap = scene
+            ? resolveColumnFaceSnap(
+                worldPoint,
+                (scene.entities ?? []) as unknown as readonly Entity[],
+                colHandle.getSceneUnits(),
+              )
+            : null;
+          if (faceSnap) {
+            worldPoint = faceSnap.position;
+            setColumnFaceAnchor(faceSnap.anchor);
+          } else {
+            setColumnFaceAnchor(null);
+            const drawCorner = findColumnDrawCornerSnap(
+              worldPoint,
+              { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
+              colHandle.getSceneUnits(),
+              findSnapPoint,
+            );
+            const resolved = resolveColumnDrawSnap(worldPoint, drawCorner, findSnapPoint);
+            if (resolved) worldPoint = resolved.ghostPoint;
+          }
         } else {
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
           if (snapResult && snapResult.found && snapResult.snappedPoint) {

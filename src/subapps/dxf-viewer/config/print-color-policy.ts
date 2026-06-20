@@ -27,6 +27,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-454-print-plot-style.md
  */
 
+import { parseHex, luminance601 as luminance, channelToHex as toHex, type Rgb } from './color-math';
+
 /** AutoCAD CTB / Revit plot-style families. */
 export type PrintPlotStyle = 'colour' | 'monochrome' | 'grayscale' | 'by-pen';
 
@@ -45,46 +47,13 @@ const NEAR_WHITE_THRESHOLD = 0.92;
 /** AutoCAD ACI 7 = white/black-on-white pen — always remapped to black ink. */
 const ACI_WHITE = 7;
 
-interface Rgb {
-  r: number;
-  g: number;
-  b: number;
-}
-
-/** Parse `#rgb` / `#rrggbb` (case-insensitive) → 0..255 channels, or null. */
-function parseHex(hex: string): Rgb | null {
-  const m = hex.trim().replace(/^#/, '');
-  if (m.length === 3) {
-    const r = parseInt(m[0] + m[0], 16);
-    const g = parseInt(m[1] + m[1], 16);
-    const b = parseInt(m[2] + m[2], 16);
-    if ([r, g, b].some(Number.isNaN)) return null;
-    return { r, g, b };
-  }
-  if (m.length === 6) {
-    const r = parseInt(m.slice(0, 2), 16);
-    const g = parseInt(m.slice(2, 4), 16);
-    const b = parseInt(m.slice(4, 6), 16);
-    if ([r, g, b].some(Number.isNaN)) return null;
-    return { r, g, b };
-  }
-  return null;
-}
-
-/** Relative luminance (ITU-R BT.601 weights), 0..1. */
-function luminance(rgb: Rgb): number {
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-}
-
-/** True when every channel sits above the near-white threshold. */
+/**
+ * True when every channel sits above the near-white threshold. (print-specific· `parseHex`/
+ * `luminance601`/`channelToHex`/`Rgb` reused από το `color-math` SSoT — μηδέν duplicate.)
+ */
 function isNearWhite(rgb: Rgb): boolean {
   const t = NEAR_WHITE_THRESHOLD * 255;
   return rgb.r >= t && rgb.g >= t && rgb.b >= t;
-}
-
-function toHex(channel: number): string {
-  const clamped = Math.max(0, Math.min(255, Math.round(channel)));
-  return clamped.toString(16).padStart(2, '0');
 }
 
 /**

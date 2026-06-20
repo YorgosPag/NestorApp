@@ -15,6 +15,8 @@ import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 // ADR-454 — Print Plot Style: white-safe colour remap + print-DPI lineweights.
 // Singleton is null during interactive render (single boolean branch, zero hot-path cost).
 import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
+// ADR-509 — background-adaptive entity color (near-black imported DXF visible on dark canvas).
+import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
@@ -331,7 +333,7 @@ export class DxfRenderer {
     const fallback = {
       colorHex: printPolicy
         ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
-        : (entity.color || CAD_UI_COLORS.entity.default),
+        : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
       alpha: 1,
     };
@@ -359,7 +361,7 @@ export class DxfRenderer {
     const px = lineweightToPx(resolved.lineweight, printPolicy ? printPolicy.dpi : 96);
     const colorHex = printPolicy
       ? applyPlotColor(resolved.color, resolved.colorAci, printPolicy)
-      : resolved.color;
+      : adaptEntityColorForCanvas(resolved.color);
     const baseAlpha = transparencyToAlpha(resolved.transparency);
     return this.applyIsolateAlpha(
       {

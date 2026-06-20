@@ -1,6 +1,6 @@
 # ADR-507 — Hatch Creation System (Γραμμοσκιάσεις στο DXF Viewer)
 
-> **Status:** 🟢 SPECIFICATION COMPLETE — Q&A ολοκληρώθηκε (10 ερωτήσεις), έτοιμο για υλοποίηση
+> **Status:** 🟢 SPECIFICATION COMPLETE v6 — Q&A 10 ερωτήσεις + 44 enterprise features (§5β 12 + §5γ 10 + §5δ 10 automations + §5ε 6 pro/BIM + §5στ 6 modern/AI), 10 φάσεις, έτοιμο για υλοποίηση
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer`
 > **Author:** Giorgio + agent
@@ -341,17 +341,837 @@ export interface HatchEntity extends BaseEntity {
 
 ---
 
+## 5β. Enterprise «Μαγικά» Features — 2ος γύρος έρευνας
+
+*(Βάσει AutoCAD 2024/2025, Revit 2024, ArchiCAD 27, BricsCAD 24, Vectorworks 2024)*
+
+### 5β.1 Gap Tolerance — AutoCAD `HPGAPTOL`
+
+**Τι κάνει:** Επιτρέπει pick-point hatching σε **μη-τέλεια κλειστά** boundaries. Αν δύο γραμμές δεν ακουμπάνε ακριβώς (μικρό gap), το σύστημα το «γεφυρώνει» αυτόματα έως N units.
+
+```
+Χωρίς gap tolerance:         Με gap tolerance = 2mm:
+┌──────  ──────┐              ┌──────────────┐
+│    GAP!      │  → ❌ FAIL   │   ✅ OK      │
+└──────────────┘              └──────────────┘
+```
+
+**Υλοποίηση:** `HatchEntity.gapTolerance?: number` (default `0`)· pure fn `closeGapsInBoundary(path, tolerance)` → snap endpoints εντός tolerance · στο contextual panel slider 0-10 units.
+
+**DXF:** group code `1001 HATCHBACKGROUNDCOLOR` + `1070 gaptol` στο XDATA section ή ως HATCH variable.
+
+---
+
+### 5β.2 Inherit Properties (Match Hatch) — AutoCAD MATCHPROP / Revit «Pick from existing»
+
+**Τι κάνει:** Ο χρήστης κλικάρει σε **υπάρχουσα** γραμμοσκίαση → το tool κληρονομεί αυτόματα όλες τις ρυθμίσεις (pattern, scale, angle, color, origin, opacity, islandStyle) → το επόμενο κλικ εφαρμόζει τις ίδιες ρυθμίσεις σε νέα περιοχή.
+
+**UX flow:**
+```
+[Γραμμοσκίαση] ribbon → [Κληρονόμησε ▼] → κλικ σε υπάρχουσα → ✅ settings αντιγράφηκαν → κλικ σε νέα περιοχή
+```
+
+**Υλοποίηση:** sub-mode `'inherit'` στο `useHatchTool`· `resolveHatchFromEntity(entity): HatchSettings`· αποθηκεύεται στο `HatchToolStore.lastUsedSettings` → επαναχρησιμοποιείται αυτόματα για το επόμενο pick.
+
+---
+
+### 5β.3 Draw Order — AutoCAD `HPDRAWORDER` (group code `284`)
+
+**Τι κάνει:** Ορίζει πού εμφανίζεται η γραμμοσκίαση στο z-stack:
+
+| Τιμή | Σημασία | Πότε |
+|---|---|---|
+| `0` | Χωρίς αλλαγή | — |
+| `1` | Πίσω από όλες τις οντότητες | Default (γραμμοσκιάσεις κάτω) |
+| `2` | Μπροστά από όλες | — |
+| `3` | Πίσω από το boundary | Πιο συχνό επαγγελματικά |
+| `4` | Μπροστά από το boundary | — |
+
+**Default επαγγελματικό: `1` (πίσω από όλα)** — οι γραμμές του boundary φαίνονται πάντα.
+
+**Υλοποίηση:** `HatchEntity.drawOrder?: 0|1|2|3|4`· canvas: HatchRenderer render order (πριν ή μετά τα υπόλοιπα entities)· DXF: group `284`.
+
+---
+
+### 5β.4 Background Color — AutoCAD `HPBACKCOLOR` (group code `63`/`421`)
+
+**Τι κάνει:** Γεμίζει το εσωτερικό του boundary με **χρώμα φόντου** και μετά σχεδιάζει το μοτίβο από πάνω. Δημιουργεί εφέ «χρωματιστό φόντο με γραμμές».
+
+```
+Χωρίς background:    Με background (γαλάζιο):
+│//////////│          │░░░░░░░░░░│  ← γαλάζιο φόντο
+│//////////│          │░/░/░/░/░/│  ← διαγώνιες από πάνω
+```
+
+**Υλοποίηση:** `HatchEntity.backgroundColor?: string`· canvas: `ctx.fillStyle = backgroundColor` → fill → μετά pattern lines · DXF: group `63` (ACI color) ή `421` (true-color).
+
+---
+
+### 5β.5 🌟 Material → Hatch Mapping (Revit-style Automation) — ΤΟ ΠΙΟ «ΜΑΓΙΚΟ»
+
+**Τι κάνει η Revit:** Κάθε υλικό (Material) έχει ορισμένο **Cut Pattern** (τι εμφανίζεται στην τομή) και **Surface Pattern** (τι εμφανίζεται στην κάτοψη). Όταν τοποθετείς έναν τοίχο από σκυρόδεμα, η τομή του εμφανίζει **αυτόματα** AR-CONC. Δεν χρειάζεται να βάλεις χειροκίνητα γραμμοσκίαση.
+
+**Για το Nestor:** Κάθε BIM entity (κολώνα σκυρόδεμα, τοίχος τούβλο, πλάκα ξύλο…) θα έχει αυτόματα τη σωστή γραμμοσκίαση στις 2D προβολές.
+
+**Υλοποίηση (SSoT):**
+```typescript
+// NEW: data/material-hatch-map.ts
+export const MATERIAL_HATCH_MAP: Record<string, HatchSettings> = {
+  'concrete':     { patternName: 'AR-CONC', patternScale: 1.0, fillColor: '#808080' },
+  'brick':        { patternName: 'AR-BRSTD', patternScale: 1.0, fillColor: '#CC6633' },
+  'wood':         { patternName: 'WOOD', patternScale: 0.5, fillColor: '#8B6914' },
+  'steel':        { patternName: 'ANSI31', patternScale: 0.5, fillColor: '#404040' },
+  'insulation':   { patternName: 'INSUL', patternScale: 1.0, fillColor: '#FFFF99' },
+  'earth':        { patternName: 'EARTH', patternScale: 1.0, fillColor: '#8B4513' },
+  'glass':        { fillType: 'solid', fillColor: '#ADD8E6', opacity: 30 },
+};
+
+// Auto-hatch when BIM entity has known material:
+export function resolveAutoHatch(entity: BimEntity): HatchSettings | null
+```
+
+**Trigger:** `FloorFinishEntity` / `ColumnEntity` / `BeamEntity` με γνωστό υλικό → `resolveAutoHatch()` → αν δεν υπάρχει χειροκίνητη γραμμοσκίαση, εφαρμόζεται αυτόματα.
+
+---
+
+### 5β.6 Live Preview on Hover (Ghost Hatch)
+
+**Τι κάνουν AutoCAD 2020+, Revit:** Καθώς ο cursor κινείται πάνω σε μια κλειστή περιοχή, εμφανίζεται **ζωντανό φάντασμα** της γραμμοσκίασης με ημιδιαφάνεια, πριν το κλικ.
+
+**Υλοποίηση:** `HatchGhostRenderer.ts` (mirror `ColumnAnchorGhostRenderer`)· ADR-040-safe (leaf, δεν subscribe σε high-freq)· `HatchGhostStore` (zero React state)· εμφανίζεται κατά το hover πάνω σε detected closed area.
+
+---
+
+### 5β.7 Pattern Thumbnail Preview (Visual Catalog)
+
+**Τι κάνουν Revit / BricsCAD:** Ο κατάλογος μοτίβων δείχνει **miniature preview** κάθε pattern (όχι απλό κείμενο).
+
+**Υλοποίηση:** `HatchPatternPreview` component — mini offscreen canvas 40×40px που ζωγραφίζει κάθε pattern σε μικρογραφία. SSoT: reuse `hatch-pattern-geometry.ts`. Εμφανίζεται στο dropdown του contextual panel.
+
+---
+
+### 5β.8 Smart Auto-Scale (Drawing Unit Aware)
+
+**Τι κάνουν ArchiCAD 27, Vectorworks:** Το spacing του μοτίβου **αυτόματα αναπροσαρμόζεται** βάσει της κλίμακας σχεδίου (1:50, 1:100) ώστε να φαίνεται οπτικά σωστό σε εκτύπωση — όχι πολύ πυκνό, όχι πολύ αραιό.
+
+**Υλοποίηση:** `resolveAdaptivePatternScale(baseScale, drawingScale)` → pure fn· `drawingScale` από `ViewportStore`· εφαρμόζεται κατά render (canvas + DXF export). Override: ο χρήστης μπορεί να «κλειδώσει» manual scale.
+
+---
+
+### 5β.9 Wipeout Masking Hatch
+
+**Τι κάνει AutoCAD WIPEOUT:** Solid λευκή γραμμοσκίαση που **κρύβει** ό,τι βρίσκεται κάτω (χρησιμοποιείται για legend boxes, title blocks, masked labels).
+
+**Υλοποίηση:** `fillType: 'solid'` + `fillColor: '#FFFFFF'` + `drawOrder: 2` (μπροστά από όλα) + dedicated ribbon button «Masking».
+
+---
+
+### 5β.10 Hatch Edit — Double-click / Edit Boundary
+
+**Τι κάνουν AutoCAD + Revit:** Double-click σε υπάρχουσα γραμμοσκίαση → edit mode: μπορείς να **προσθέσεις/αφαιρέσεις loops** (νησιά), να αλλάξεις ρυθμίσεις.
+
+**Υλοποίηση:** `useHatchEditTool` — ξεχωριστό edit hook· double-click trigger (ADR-040 safe)· επιτρέπει `AddLoop` / `RemoveLoop` commands· `HatchLoopEditCommand` → `appendToLast` για undo.
+
+---
+
+### 5β.11 Recent & Favorite Patterns
+
+**Τι κάνουν AutoCAD 2024 Quick Access / BricsCAD:** Τα τελευταία 5 χρησιμοποιηθέντα patterns εμφανίζονται στην κορυφή του dropdown (χωρίς scroll). «Star» για αγαπημένα.
+
+**Υλοποίηση:** `HatchToolStore.recentPatterns: string[]` (max 5, FIFO)· persisted στο `localStorage`· εμφανίζεται ως «Πρόσφατα» section στο pattern dropdown.
+
+---
+
+### 5β.12 Undo-safe Batch Hatch (CompoundCommand)
+
+**Αυτοματοποίηση:** Όταν ο χρήστης κάνει πολλά picks σε μία session (mode B, πολλές περιοχές), **ένα Ctrl+Z** ακυρώνει **όλα** τα picks της session (compound undo) — όχι ένα-ένα. Μοτίβο: `CompoundCommand` (reuse ADR-488 pattern).
+
+---
+
+## 5γ. Enterprise Features — 3ος γύρος (deep analysis)
+
+*(AutoCAD 2024/2025 TRIM/HATCHSEPARATE/HATCHMERGE, Revit 2024 Materials Surface+Cut Pattern, BricsCAD 24, ArchiCAD 27)*
+
+### 5γ.1 🔴 Trim Hatch (TRIM on hatch entity)
+
+**Τι κάνει:** Ο χρήστης σχεδιάζει μια γραμμή που «κόβει» υπάρχουσα γραμμοσκίαση → το τμήμα που είναι εκτός της γραμμής αφαιρείται. Αποτέλεσμα: νέο boundary που ακολουθεί τη γραμμή κοπής.
+
+```
+Πριν:                 Μετά TRIM (κόψιμο στα δεξιά):
+┌──────────────┐       ┌──────┐
+│//////////////│  →    │//////│
+│//////////////│       │//////│
+└──────────────┘       └──────┘
+                  ↑ cutting line εδώ
+```
+
+**Υλοποίηση:**
+- `TrimHatchCommand` — υπολογίζει τομή cutting line με boundary polygon → `polygon-clip-utils.ts` (SSoT) → νέο boundary · `CompoundCommand` wrapper (1 undo).
+- Canvas: ADR-040-safe (leaf re-render).
+- Ribbon: ενεργό μόνο όταν επιλεγμένη γραμμοσκίαση + τουλάχιστον 1 cutting entity.
+
+---
+
+### 5γ.2 🔴 Custom PAT File Import (Enterprise Extensibility)
+
+**Τι κάνει:** Ο χρήστης ανεβάζει δικό του `.PAT` αρχείο → parse → προστίθεται στον κατάλογο μόνιμα (localStorage).
+
+```
+[+ Εισαγωγή PAT] → file picker → parse PAT syntax → preview → [Αποθήκευση]
+→ εμφανίζεται στον κατάλογο στην κατηγορία «Δικά μου»
+```
+
+**Υλοποίηση:**
+- `parsePat(raw: string): PatternDefinition[]` — pure parser για PAT syntax (angle, origin, delta-x/y, dashes).
+- `UserPatternStore` — persisted σε localStorage· merge με `hatch-pattern-catalog.ts` κατά runtime.
+- UI: «Εισαγωγή .PAT» κουμπί στον κατάλογο· thumbnail preview αμέσως μετά parse.
+- Validation: ελέγχει syntax, μέγιστο 50 patterns, max 1MB.
+
+---
+
+### 5γ.3 🔴 Area Calculation — Αυτόματη Εμφάνιση m²
+
+**Τι κάνει:** Κάθε γραμμοσκίαση γνωρίζει και εμφανίζει αυτόματα το **εμβαδόν** της περιοχής (σε m² ή mm²).
+
+```
+Γραμμοσκίαση επιλεγμένη:
+┌──────────────┐
+│//////////////│   Status bar: «Εμβαδόν: 24.5 m²»
+│//////////////│   Tooltip on hover: «24.50 m²»
+└──────────────┘   Properties panel: [Εμβαδόν: 24.50 m²] (read-only)
+```
+
+**Υλοποίηση:**
+- `computeHatchArea(boundaryPaths: Point2D[][]): number` — pure fn· shoelace formula (SSoT `polygon-utils.ts`)· αφαιρεί νησιά (holes).
+- `resolveHatchAreaM2(entity: HatchEntity, drawingUnits: 'mm'|'m'): number` — unit-aware.
+- Εμφάνιση: contextual panel (read-only field) + status bar + tooltip on hover.
+- **Ομαδικό άθροισμα:** αν επιλεγμένες πολλές γραμμοσκιάσεις → «Συνολικό εμβαδόν: 78.3 m²».
+
+---
+
+### 5γ.4 🟠 Select Similar Hatches
+
+**Τι κάνει:** Δεξί κλικ σε γραμμοσκίαση → «Επιλογή ομοίων» → επιλέγει **όλες** τις γραμμοσκιάσεις με ίδιο `patternName` (και προαιρετικά ίδιο scale/color/layer).
+
+**Υλοποίηση:**
+- `selectSimilarHatches(source: HatchEntity, criteria: SimilarCriteria)` — pure filter fn.
+- `SimilarCriteria: { matchPattern: boolean, matchScale: boolean, matchColor: boolean, matchLayer: boolean }`.
+- Context menu entry: «Επιλογή ομοίων γραμμοσκιάσεων».
+- Batch edit: μετά από «Select Similar» → contextual panel αλλάζει όλες μαζί.
+
+---
+
+### 5γ.5 🟠 Pattern Search / Filter in Catalog
+
+**Τι κάνει:** Searchbox στον κατάλογο μοτίβων — ο χρήστης γράφει «conc» ή «τούβ» και φιλτράρεται η λίστα σε real-time.
+
+**Υλοποίηση:**
+- Search field πάνω από το pattern dropdown.
+- Fuzzy match σε `name` + `label_el` + `label_en` + `κατηγορία`.
+- Αν 0 αποτελέσματα → «Δεν βρέθηκε μοτίβο».
+- Shortcut: `/` για focus στο search field.
+- «Δικά μου» patterns εμφανίζονται πάντα πρώτα στα αποτελέσματα.
+
+---
+
+### 5γ.6 🟠 Hatch Lineweight (Pen Weight για Pattern Lines)
+
+**Τι κάνει:** Οι γραμμές του μοτίβου έχουν **δικό τους** πάχος (ανεξάρτητο από το boundary). Σε επαγγελματικά σχέδια, τα boundaries είναι πιο έντονα και τα μοτίβα πιο λεπτά.
+
+```typescript
+// HatchEntity extension:
+patternLineweight?: number; // σε mm· default 0.09 (very thin)
+```
+
+**DXF:** group code `370` (lineweight) στο AcDbEntity subclass.
+**Canvas:** `ctx.lineWidth = patternLineweight * canvasScale`.
+**Contextual panel:** slider «Πάχος γραμμών μοτίβου» (0.05mm → 0.5mm).
+
+---
+
+### 5γ.7 🟠 Alignment Continuity (Phase-Locked Adjacent Hatches)
+
+**Τι κάνει:** Όταν τοποθετείς **νέα** γραμμοσκίαση δίπλα σε **υπάρχουσα** του ίδιου μοτίβου, τα μοτίβα ευθυγραμμίζονται αυτόματα (ίδια phase, ίδιο origin).
+
+```
+ΧΩΡΙΣ alignment:          ΜΕ alignment continuity:
+┌──────┬──────┐            ┌──────┬──────┐
+│▓▓│▓▓│░░│░░ │            │▓▓│▓▓│▓▓│▓▓ │  ← συνεχές
+│──┼──  ──┼── │            │──┼──  ──┼── │
+└──────┴──────┘            └──────┴──────┘
+```
+
+**Υλοποίηση:**
+- `findAdjacentHatch(newBoundary, entities): HatchEntity | null` — ψάχνει γειτονικές γραμμοσκιάσεις ίδιου pattern.
+- Αν βρεθεί → `patternOrigin` της νέας = `patternOrigin` της υπάρχουσας (inherited phase).
+- Opt-out: checkbox «Ευθυγράμμιση με γειτονικές» στο contextual panel (default: ON).
+
+---
+
+### 5γ.8 🟠 Plan vs Section Pattern (Revit Material Dual-Fill)
+
+**Τι κάνει:** Ίδιο υλικό → **διαφορετικό μοτίβο** ανάλογα με τον τύπο προβολής:
+- **Surface Pattern** (κάτοψη / elevation): ό,τι βλέπεις από πάνω (π.χ. κεραμίδια)
+- **Cut Pattern** (τομή): ό,τι «κόβεται» (π.χ. AR-CONC για σκυρόδεμα σε τομή)
+
+```typescript
+// material-hatch-map.ts extension:
+export interface MaterialHatchDefinition {
+  surfacePattern: HatchSettings; // κάτοψη / επιφάνεια
+  cutPattern: HatchSettings;     // τομή / κόψιμο
+}
+
+export const MATERIAL_HATCH_MAP: Record<string, MaterialHatchDefinition> = {
+  'concrete': {
+    surfacePattern: { fillType: 'solid', fillColor: '#C0C0C0', opacity: 40 },
+    cutPattern:     { patternName: 'AR-CONC', patternScale: 1.0, fillColor: '#808080' },
+  },
+  'brick': {
+    surfacePattern: { patternName: 'AR-BRSTD', patternScale: 0.5, fillColor: '#CC6633' },
+    cutPattern:     { patternName: 'BRICK', patternScale: 1.0, fillColor: '#CC6633' },
+  },
+  'wood': {
+    surfacePattern: { patternName: 'WOOD', patternScale: 0.5, fillColor: '#8B6914' },
+    cutPattern:     { patternName: 'ANSI31', patternScale: 0.3, fillColor: '#8B6914' },
+  },
+  'steel': {
+    surfacePattern: { fillType: 'solid', fillColor: '#606060' },
+    cutPattern:     { patternName: 'ANSI31', patternScale: 0.25, fillColor: '#404040' },
+  },
+  'insulation': {
+    surfacePattern: { patternName: 'INSUL', patternScale: 1.0, fillColor: '#FFFF99' },
+    cutPattern:     { patternName: 'INSUL', patternScale: 1.0, fillColor: '#FFFF99' },
+  },
+  'glass': {
+    surfacePattern: { fillType: 'solid', fillColor: '#ADD8E6', opacity: 30 },
+    cutPattern:     { fillType: 'solid', fillColor: '#ADD8E6', opacity: 60 },
+  },
+  'earth':  { surfacePattern: { patternName: 'EARTH', patternScale: 1.0, fillColor: '#8B4513' },
+              cutPattern:     { patternName: 'EARTH', patternScale: 1.0, fillColor: '#6B3410' } },
+};
+```
+
+**`resolveAutoHatch(entity, viewType: 'plan'|'section'|'elevation'): HatchSettings | null`**
+
+**Trigger:** `ViewportStore.viewType` (current 2D view mode) → επιλέγει surface vs cut pattern αυτόματα.
+
+---
+
+### 5γ.9 🟡 Separate & Merge Hatches
+
+**Τι κάνει:**
+- **Separate:** 1 `HatchEntity` με πολλά `boundaryPaths` → N ξεχωριστά entities.
+- **Merge:** N `HatchEntity` ίδιου pattern → 1 entity με πολλά `boundaryPaths`.
+
+**Υλοποίηση:** `SeparateHatchCommand` + `MergeHatchesCommand` · context menu + ribbon «Εργαλεία» tab.
+
+---
+
+### 5γ.10 🟡 Recreate Boundary (Generate Polyline from Hatch)
+
+**Τι κάνει:** Από υπάρχουσα γραμμοσκίαση → δημιουργεί **πολυγραμμή** που αντιστοιχεί στο boundary (για επεξεργασία ή reuse).
+
+**Υλοποίηση:** `RecreateBoundaryCommand` → `boundaryPaths[0]` → νέο `PolylineEntity`· context menu «Δημιουργία ορίου».
+
+---
+
+## 5δ. Automation Features — 4ος γύρος (pure automations)
+
+*(Συμβαίνουν αυτόματα χωρίς user action)*
+
+### 5δ.1 Auto-Hatch on Polygon Close (Completion Trigger)
+
+**Τι κάνει:** Μόλις ο χρήστης **κλείσει** ένα πολύγωνο/πολυγραμμή (τελευταίο vertex = πρώτο) → το σύστημα εντοπίζει το event και:
+- Εμφανίζει **micro-popup**: «Γραμμοσκίαση; [Ναι] [Όχι]» (εξαφανίζεται σε 3s)
+- Αν «Ναι» → εφαρμόζει αυτόματα το `lastUsedHatchSettings`
+- Αν το hatch tool είναι ήδη ενεργό → αμέσως χωρίς popup
+
+**Υλοποίηση:**
+- Hook: `useAutoHatchOnClose()` — subscribe σε `drawing-event-map` event `'polyline:closed'`.
+- `HatchCompletionStore` — transient state για το micro-popup.
+- Opt-in/out: setting `autoHatchOnClose: boolean` (default: OFF για να μην εκπλήσσει νέους χρήστες, ON στις pro ρυθμίσεις).
+
+---
+
+### 5δ.2 Layer → Hatch Auto-Chain (Layer Name Inference)
+
+**Τι κάνει:** Το σύστημα διαβάζει το **όνομα του layer** της επιλεγμένης περιοχής και προτείνει αυτόματα το κατάλληλο hatch pattern:
+
+```typescript
+// NEW: data/layer-hatch-inference.ts
+export const LAYER_HATCH_INFERENCE: Record<string, HatchSettings> = {
+  // Ελληνικά ονόματα layers (Nestor naming convention)
+  'ΤΟΙΧΟΙ':           { patternName: 'AR-BRSTD', patternScale: 1.0 },
+  'ΤΟΙΧΟΣ-ΣΚΥΡΟΔΕΜΑ': { patternName: 'AR-CONC',  patternScale: 1.0 },
+  'ΤΟΙΧΟΣ-ΤΟΥΒΛΟ':    { patternName: 'AR-BRSTD', patternScale: 1.0 },
+  'ΚΟΛΟΝΕΣ':          { patternName: 'AR-CONC',  patternScale: 0.8 },
+  'ΔΟΚΑΡΙΑ':          { patternName: 'ANSI31',   patternScale: 0.5 },
+  'ΠΛΑΚΕΣ':           { patternName: 'AR-CONC',  patternScale: 1.0 },
+  'ΕΔΑΦΟΣ':           { patternName: 'EARTH',    patternScale: 1.0 },
+  'ΧΩΜΑ':             { patternName: 'EARTH',    patternScale: 1.0 },
+  'ΜΟΝΩΣΗ':           { patternName: 'INSUL',    patternScale: 1.0 },
+  // English names (AutoCAD convention)
+  'WALLS':            { patternName: 'AR-BRSTD', patternScale: 1.0 },
+  'CONCRETE':         { patternName: 'AR-CONC',  patternScale: 1.0 },
+  'COLUMNS':          { patternName: 'AR-CONC',  patternScale: 0.8 },
+  'INSULATION':       { patternName: 'INSUL',    patternScale: 1.0 },
+  'EARTH':            { patternName: 'EARTH',    patternScale: 1.0 },
+};
+
+export function inferHatchFromLayer(layerName: string): HatchSettings | null
+```
+
+**Trigger:** κατά το pick-point (Τρόπος Β) → `inferHatchFromLayer(detectedLayer)` → αν βρεθεί → pre-fills contextual panel (ο χρήστης μπορεί να αλλάξει). ΔΕΝ override ρητά χειροκίνητη επιλογή.
+
+---
+
+### 5δ.3 Room / Zone Auto-Color (Architectural Automation)
+
+**Τι κάνει:** Κλειστές αρχιτεκτονικές περιοχές (δωμάτια) χρωματίζονται **αυτόματα** βάσει τύπου χρήσης — χωρίς να χρειαστεί ο χρήστης να βάλει χειροκίνητα γραμμοσκίαση:
+
+```typescript
+// NEW: data/room-type-hatch-map.ts
+export const ROOM_TYPE_HATCH_MAP: Record<string, HatchSettings> = {
+  'bedroom':     { fillType: 'solid', fillColor: '#B0C4DE', opacity: 40 }, // steel blue
+  'living':      { fillType: 'solid', fillColor: '#90EE90', opacity: 40 }, // light green
+  'kitchen':     { fillType: 'solid', fillColor: '#FFD700', opacity: 40 }, // gold
+  'bathroom':    { fillType: 'solid', fillColor: '#87CEEB', opacity: 40 }, // sky blue
+  'corridor':    { fillType: 'solid', fillColor: '#D3D3D3', opacity: 40 }, // light grey
+  'office':      { fillType: 'solid', fillColor: '#DDA0DD', opacity: 40 }, // plum
+  'storage':     { fillType: 'solid', fillColor: '#F4A460', opacity: 40 }, // sandy brown
+  'parking':     { fillType: 'solid', fillColor: '#808080', opacity: 30 }, // grey
+  'stairwell':   { fillType: 'solid', fillColor: '#FFA07A', opacity: 40 }, // salmon
+};
+```
+
+**Trigger:** Αν entity έχει `roomType` property (future BIM entity) → `resolveRoomHatch(roomType)` → auto-apply. Toggle «Χρωματισμός δωματίων» στο ribbon View tab.
+
+**Σημείωση:** Προϋποθέτει Room/Zone entity type (future scope) — η υλοποίηση του mapping γίνεται τώρα, το trigger όταν υπάρχουν Room entities.
+
+---
+
+### 5δ.4 Smart Pattern Suggestion (Context-Aware)
+
+**Τι κάνει:** Κατά το pick-point, **αναλύει τις γειτονικές οντότητες** και προτείνει το πιο πιθανό pattern:
+
+```
+Αλγόριθμος:
+1. Βρες τις οντότητες που σχηματίζουν το boundary
+2. Κοίταξε τις properties τους (material, layer, entityType)
+3. Ψήφισε: αν 3/4 boundary entities = concrete → suggest AR-CONC (confidence 75%)
+4. Εμφάνισε στο panel: «Προτεινόμενο: Σκυρόδεμα (AR-CONC) [Εφάρμοσε]»
+```
+
+**Υλοποίηση:**
+- `suggestHatchPattern(boundaryEntityIds: string[], entities: Entity[]): SuggestionResult` — pure fn.
+- Voting: `entityType → material → layer → LAYER_HATCH_INFERENCE → MATERIAL_HATCH_MAP`.
+- Confidence threshold: ≥60% → εμφάνισε suggestion chip στο panel.
+- Ο χρήστης μπορεί να αγνοήσει (1 κλικ dismiss).
+
+---
+
+### 5δ.5 Explode Hatch to Lines
+
+**Τι κάνει:** Μετατρέπει μια `HatchEntity` σε **ξεχωριστές `LineEntity`** (κάθε γραμμή του μοτίβου → ξεχωριστό αντικείμενο). Χρήσιμο για:
+- Legacy DXF compatibility (παλιά software που δεν διαβάζουν HATCH)
+- Χειροκίνητη επεξεργασία μεμονωμένων γραμμών
+- Export σε formats που δεν υποστηρίζουν HATCH
+
+**Υλοποίηση:**
+- `ExplodeHatchCommand` — `hatch-pattern-geometry.ts` (SSoT) → segments → `CreateLineCommand[]` → `CompoundCommand`.
+- Context menu: «Διάλυση σε γραμμές».
+- ⚠️ Warning: «Η γραμμοσκίαση θα μετατραπεί σε {N} γραμμές. Δεν υποστηρίζεται undo πέρα από αυτό το βήμα.»
+
+---
+
+### 5δ.6 Print vs Screen Toggle (No-Plot Hatch)
+
+**Τι κάνει:** Γραμμοσκίαση με **«Μόνο οθόνη»** — φαίνεται στο canvas αλλά **δεν συμπεριλαμβάνεται στο DXF export / print**. Χρήσιμο για:
+- Χρωματικές ενδείξεις για τον σχεδιαστή (workflow visualization)
+- Πλάνα φάσεων / στάδια κατασκευής
+- Room coloring που δεν τυπώνεται
+
+```typescript
+// HatchEntity extension:
+noPlot?: boolean; // default false· αν true → παραλείπεται από DXF writer + print
+```
+
+**Canvas:** εμφανίζεται με ελαφρά hatched overlay στο thumbnail για να δείξει «screen-only».
+**DXF writer:** `if (entity.noPlot) return;` — skip εντελώς.
+**Contextual panel:** toggle «Μόνο οθόνη (δεν εκτυπώνεται)».
+
+---
+
+### 5δ.7 Density LOD — Level of Detail per Zoom
+
+**Τι κάνει:** Αυτόματη απλοποίηση rendering ανάλογα με το zoom level:
+
+| Zoom | Rendering |
+|---|---|
+| < 10% (πολύ μακριά) | Solid color (skip pattern εντελώς) |
+| 10%-30% | Κάθε 3η γραμμή (1/3 density) |
+| 30%-70% | Κανονικό density |
+| > 70% | Full detail |
+
+**Γιατί:** Πυκνά μοτίβα σε μεγάλα σχέδια με zoom-out → χιλιάδες γραμμές → lag. Η AutoCAD το κάνει αυτόματα εσωτερικά.
+
+**Υλοποίηση:**
+- `resolveHatchLOD(zoom: number): 'solid'|'sparse'|'normal'|'full'` — pure fn.
+- `HatchRenderer` διαβάζει LOD από `useViewportZoom()` (leaf hook, ADR-040-safe).
+- Cache: invalidate μόνο αν LOD tier αλλάζει (όχι σε κάθε zoom step).
+
+---
+
+### 5δ.8 Auto-Exclude Text from Boundary
+
+**Τι κάνει:** Κατά το pick-point boundary detection, αν υπάρχουν `TextEntity`/`MTextEntity` **μέσα** στην περιοχή → αυτόματα δημιουργείται **«τρύπα»** γύρω τους (island) ώστε το γέμισμα να μην καλύπτει το κείμενο.
+
+```
+ΧΩΡΙΣ auto-exclude:      ΜΕ auto-exclude:
+┌──────────────┐           ┌──────────────┐
+│//////////////│           │///// __ /////│
+│/// «Σαλόνι» //│  →       │//// |  | ////│  ← κενό γύρω από text
+│//////////////│           │///// ‾‾ /////│
+└──────────────┘           └──────────────┘
+```
+
+**Υλοποίηση:**
+- `extractTextExclusionZones(entities, boundary): Point2D[][]` — βρίσκει text bboxes μέσα στο boundary → επιστρέφει rectangular islands.
+- Integrate στο boundary detection pipeline (Φ3) πριν από island detection.
+- Opt-out: setting «Εξαίρεση κειμένου» toggle (default: ON).
+
+---
+
+### 5δ.9 Auto Send-to-Back on Create (Explicit Automation)
+
+**Τι κάνει:** Κάθε νέα `HatchEntity` **αυτόματα** τοποθετείται «πίσω από όλες τις άλλες οντότητες» κατά τη δημιουργία — χωρίς να χρειαστεί χειροκίνητο «Αποστολή στο πίσω».
+
+**Γιατί explicit (δεν αρκεί default `drawOrder`):** Ο `drawOrder=1` (DXF 284) αφορά μόνο DXF export. Στο canvas rendering, το z-order εξαρτάται από τη σειρά εισαγωγής. Χρειάζεται ρητή ενέργεια κατά τη δημιουργία:
+
+```typescript
+// CreateHatchCommand.execute():
+// 1. addEntity(hatch)
+// 2. ΑΥΤΟΜΑΤΑ: sendToBack(hatch.id) ← SSoT call, atomic με το undo
+```
+
+**Υλοποίηση:**
+- `CreateHatchCommand` καλεί `sendToBack(id)` εσωτερικά — ΟΧΙ ξεχωριστή εντολή.
+- `drawOrderStore` (existing SSoT) — reuse.
+- Opt-out: setting «Αυτόματα πίσω» (default: ON).
+
+---
+
+### 5δ.10 Hatch Template Inheritance (.dwt-style Defaults)
+
+**Τι κάνει:** Default hatch settings ανά project / template — κάθε νέα γραμμοσκίαση ξεκινά με τις σωστές ρυθμίσεις χωρίς χειροκίνητη επιλογή.
+
+**Cascade κληρονομικότητας:**
+```
+1. Global app defaults
+      ↓ override
+2. Layer defaults (LAYER_HATCH_INFERENCE)
+      ↓ override
+3. Material defaults (MATERIAL_HATCH_MAP)
+      ↓ override
+4. User last-used (HatchHistoryStore)
+      ↓ override
+5. Explicit user choice (contextual panel)
+```
+
+**Υλοποίηση:**
+- `HatchDefaultsStore` — persisted (`dxf-hatch-defaults` localStorage key).
+- `resolveHatchDefaults(context: HatchContext): HatchSettings` — pure cascade resolver.
+- UI: «Αποθήκευση ως προεπιλογή» κουμπί στο contextual panel.
+- Import/Export: `.nestor-hatch-template` JSON αρχείο για μοιρασιά μεταξύ projects.
+
+---
+
+## 5ε. Pro / BIM Features — 5ος γύρος (τελευταία 6 αληθινά κενά)
+
+*(Όχι padding — ό,τι πραγματικά λείπει για 99% παρότητα με μεγάλους παίκτες)*
+
+### 5ε.1 🌟 Annotative Hatches — Constant Plot Density (AutoCAD `ANNOTATIVE`)
+
+**Τι κάνει:** Η πυκνότητα του μοτίβου μένει **σταθερή στο τυπωμένο χαρτί** ανεξάρτητα από την κλίμακα/zoom του σχεδίου ή του viewport.
+
+```
+Κλίμακα 1:50   →  τουβλάκια τυπώνονται 3mm
+Κλίμακα 1:100  →  ΠΑΛΙ 3mm στο χαρτί (ΟΧΙ 1.5mm)
+```
+
+**Διαφορά από §5δ.7 (Density LOD):** Το LOD = απλοποίηση rendering για **ταχύτητα οθόνης**. Το Annotative = **σταθερή πυκνότητα εκτύπωσης** (σημασιολογία plotting, όχι performance).
+
+```typescript
+// HatchEntity extension:
+annotative?: boolean;            // default false
+annotationScale?: number;        // π.χ. 50 για 1:50· null = χρησιμοποίησε active viewport scale
+```
+
+**Υλοποίηση:**
+- `resolveEffectivePatternScale(entity, viewportScale): number` — αν `annotative` → `patternScale × (annotationScale / viewportScale)`.
+- `HatchRenderer` διαβάζει effective scale (leaf hook, ADR-040-safe).
+- DXF: group code `1001/1070` annotative XDATA (`AcDbHatch` annotative scale) για round-trip.
+
+---
+
+### 5ε.2 🌟 Model Pattern vs Drafting Pattern (Revit/ArchiCAD Semantic)
+
+**Τι κάνει:** Θεμελιώδης διάκριση — το μοτίβο ζει στο «χαρτί» ή στον «τοίχο»:
+
+```
+Drafting pattern: τουβλάκια στην κλίμακα σελίδας (scale με το sheet)
+Model pattern:    τουβλάκια αληθινά 250mm το καθένα (scale με τη γεωμετρία· μεγεθύνεις → τα μετράς)
+```
+
+```typescript
+// HatchEntity extension:
+patternSpace?: 'drafting' | 'model'; // default 'drafting'
+// 'model' → patternScale ερμηνεύεται ως πραγματικές μονάδες (mm), όχι page units
+```
+
+**Υλοποίηση:**
+- `resolvePatternWorldScale(entity, drawingUnits): number` — `'model'` → spacing σε world mm (σταθερό στον χώρο)· `'drafting'` → spacing σε page units (scale-relative).
+- Στο `MATERIAL_HATCH_MAP` (§5β.5): δομικά υλικά (τούβλο, σκυρόδεμα) → `patternSpace: 'model'` (πραγματικές διαστάσεις)· σχηματικά (μόνωση hatch) → `'drafting'`.
+- Συνεργάζεται με §5ε.1: model patterns συνήθως ΔΕΝ είναι annotative (ήδη world-scaled).
+
+---
+
+### 5ε.3 🌟 Material Legend / Key Auto-Generation
+
+**Τι κάνει:** Αυτόματος πίνακας υπομνήματος που **χτίζεται μόνος του** από τα hatches του ενεργού σχεδίου:
+
+```
+┌─────────────────────────────┐
+│ ▨  Σκυρόδεμα                 │
+│ ▦  Τούβλο                    │
+│ ░  Μόνωση                    │  ← scan όλων των HatchEntity → unique patterns + material meaning
+└─────────────────────────────┘
+```
+
+**Υλοποίηση:**
+- `buildHatchLegend(entities: Entity[]): LegendRow[]` — pure fn· group by `(patternName + material)` → unique rows.
+- `HatchLegendEntity` (NEW entity ή composite group) — τοποθετείται με drag στο σχέδιο, **ενημερώνεται live** όταν προστίθενται/αφαιρούνται hatches.
+- Reuse: thumbnail rendering (§5β.7) για το swatch κάθε γραμμής.
+- i18n: τα ονόματα υλικών από locale keys (όχι hardcoded).
+- Trigger: κουμπί «Υπόμνημα Υλικών» στο ribbon.
+
+---
+
+### 5ε.4 🟠 Image / Block Fill (Super-Hatch)
+
+**Τι κάνει:** Γέμισμα περιοχής με **raster εικόνα** ή **μπλοκ** αντί για γραμμικό μοτίβο (φωτορεαλιστικό ξύλο, πέτρα, γκαζόν). ArchiCAD image fills, AutoCAD SUPERHATCH.
+
+```typescript
+// HatchFillType extension:
+export type HatchFillType = 'solid' | 'user-defined' | 'predefined' | 'gradient' | 'image' | 'block';
+
+// HatchEntity extensions:
+imageUrl?: string;        // για 'image' — tiled raster μέσα στο boundary (clip)
+imageTileScale?: number;
+blockEntityId?: string;   // για 'block' — επαναλαμβανόμενο μπλοκ μέσα στο boundary
+```
+
+**Υλοποίηση:**
+- `HatchRenderer`: `'image'` → `ctx.createPattern(img, 'repeat')` + clip στο boundary.
+- `'block'` → tile το block geometry μέσα στο boundary (reuse pattern-geometry tiling).
+- ⚠️ DXF export: το raster image fill ΔΕΝ έχει native HATCH αντιστοιχία → fallback σε IMAGE entity + clip boundary, ή solid color στο `noPlot=false` path. Καταγραφή ως limitation.
+- Storage: εικόνες μέσω `enterprise-id.service` + Firebase Storage (company-scoped, security rules).
+
+---
+
+### 5ε.5 🟠 Boundary Set — Performance Scoping (AutoCAD `HPBOUND`)
+
+**Τι κάνει:** Σε τεράστιο σχέδιο, ο χρήστης περιορίζει την ανίχνευση ορίου (pick-point, Τρόπος Β) σε **επιλεγμένα μόνο αντικείμενα** → το flood-fill δεν σαρώνει όλο το σχέδιο → δεν παγώνει.
+
+```
+ΧΩΡΙΣ boundary set:  pick-point σαρώνει 50.000 entities → 4s lag
+ΜΕ boundary set:     σαρώνει μόνο τα 20 επιλεγμένα → instant
+```
+
+**Υλοποίηση:**
+- `HatchBoundaryScopeStore` — προαιρετικό `Set<entityId>` (transient).
+- `collectAreaCandidates()` (existing SSoT, `auto-area-hit.ts`) δέχεται optional `scopeIds` filter.
+- UI: κουμπί «Όρισε αντικείμενα ορίου» στο contextual panel → ο χρήστης επιλέγει → επόμενα picks scoped.
+- Default: scan όλων (current behavior)· scope = opt-in για perf.
+
+---
+
+### 5ε.6 🟠 Live Area Field + Quantity Takeoff (Revit/ArchiCAD Schedule)
+
+**Τι κάνει:** Επέκταση του §5γ.3 (one-time m²) σε **ζωντανό πεδίο** + **πίνακα ποσοτήτων υλικών**:
+
+```
+Live field:  text entity δίπλα στο hatch → "12.4 m²" → ενημερώνεται όταν αλλάζει το όριο (associative)
+Takeoff:     πίνακας → Σκυρόδεμα: 45.2 m² | Τούβλο: 88.1 m² | Μόνωση: 32.0 m²  (άθροισμα ανά υλικό)
+```
+
+**Υλοποίηση:**
+- `HatchAreaFieldEntity` (NEW) — text entity με `linkedHatchId`· reactive recalc όταν το hatch boundary αλλάζει (συνεργάζεται με Φ8 associative).
+- `buildMaterialTakeoff(entities): TakeoffRow[]` — pure fn· group by material → άθροισμα area· reuse `computeHatchArea` (§5γ.3 SSoT).
+- `MaterialTakeoffPanel` — live πίνακας στο ribbon Analyze tab· export CSV.
+- ⚠️ Scope: το takeoff αγγίζει BIM scheduling — ξεφεύγει λίγο από καθαρό «DXF viewer». Υλοποίηση στην τελευταία φάση (Φ9, opt-in).
+
+---
+
+## 5στ. Modern / AI Tier — 6ος γύρος (η «τελειότητα» 2024-2026)
+
+*(Σύγχρονοι αυτοματισμοί AI / cloud / data-driven — ό,τι κάνουν οι μεγάλοι ΤΩΡΑ, πέρα από κλασικό CAD)*
+
+### 5στ.1 ⭐⭐ Data-Driven Heatmap Hatch — ΤΟ ΜΟΝΑΔΙΚΟ ΜΑΣ ΠΛΕΟΝΕΚΤΗΜΑ
+
+**Τι κάνει:** Το γέμισμα γίνεται **ζωντανός χάρτης θερμότητας** οδηγούμενος από δεδομένα της **υπάρχουσας μηχανής ανάλυσης** (FEM, διαγράμματα M/V/N, utilization ratio).
+
+```
+Πλάκα utilization 95%  →  🔴 κόκκινο γέμισμα
+Πλάκα utilization 60%  →  🟡 κίτρινο
+Πλάκα utilization 40%  →  🟢 πράσινο
+```
+
+**Γιατί μοναδικό:** Κανένας DXF viewer δεν το έχει. Εμείς το παίρνουμε **σχεδόν δωρεάν** γιατί τα νούμερα υπάρχουν ήδη (ADR-480/481/483 analytical model, M/V/N).
+
+```typescript
+// HatchFillType extension:
+// ...| 'data-driven'
+
+// HatchEntity extensions:
+dataSource?: 'utilization' | 'moment' | 'shear' | 'axial' | 'deflection' | 'thermal';
+dataColorRamp?: 'red-green' | 'blue-red' | 'viridis' | 'grayscale'; // colorblind-safe option
+dataRange?: { min: number; max: number };  // null = auto από scene min/max
+```
+
+**Υλοποίηση:**
+- `resolveDataDrivenColor(entity, analysisResult, ramp): string` — pure fn· διαβάζει το active analysis result SSoT (FEM store)· map value→color μέσω ramp.
+- `HatchRenderer`: `'data-driven'` → solid fill με το resolved color· **reactive** σε αλλαγή ανάλυσης (leaf hook, ADR-040-safe).
+- Legend auto (§5ε.3): color-ramp scale bar με min/max τιμές.
+- Reuse: ΟΛΗ η αλυσίδα ανάλυσης υπάρχει — μόνο το mapping value→color είναι νέο.
+- ⚠️ DXF export: το data-driven «παγώνει» στο τρέχον solid color κατά την εξαγωγή (στιγμιότυπο).
+
+---
+
+### 5στ.2 🌟 Construction Phasing Hatches (Revit Phases)
+
+**Τι κάνει:** Κάθε hatch ανήκει σε **φάση κατασκευής**· εμφάνιση/χρωματισμός ανά φάση:
+
+```
+Υπάρχον      →  γκρι γέμισμα
+Καθαίρεση    →  διαγώνιες διακεκομμένες (κόκκινο)
+Νέα κατασκευή →  συμπαγές
+```
+
+```typescript
+// HatchEntity extension:
+constructionPhase?: 'existing' | 'demolition' | 'new' | 'temporary';
+```
+
+**Υλοποίηση:**
+- `PHASE_HATCH_STYLE_MAP` — προκαθορισμένο style ανά φάση (color + pattern override).
+- `PhaseFilterStore` — ποιες φάσεις είναι ορατές (toggle ribbon).
+- `HatchRenderer` εφαρμόζει phase override πάνω από το base style· κρύβει αν η φάση είναι off.
+- Συνεργάζεται με §5δ.6 (no-plot) για phase-specific εκτυπώσεις.
+
+---
+
+### 5στ.3 🌟 AI Space Detection → Auto-Hatch
+
+**Τι κάνει:** AI/heuristic ανιχνεύει τα **κλειστά δωμάτια** + μαντεύει τύπο (από διαστάσεις/περιεχόμενο) → αυτόματο γέμισμα. Συμπληρώνει το §5δ.3 (που προϋπέθετε γνωστό `roomType`).
+
+```
+Αλγόριθμος:
+1. Εντόπισε κλειστούς βρόχους τοίχων (reuse auto-area-hit.ts)
+2. Μέτρα εμβαδόν + αναλογίες + περιεχόμενα entities
+3. Ταξινόμησε: μικρό+υδραυλικά → 'bathroom'· μεγάλο+άνοιγμα → 'living'
+4. Auto-apply ROOM_TYPE_HATCH_MAP (§5δ.3) με confidence
+```
+
+**Υλοποίηση:**
+- `detectEnclosedSpaces(entities): DetectedSpace[]` — pure fn (reuse `collectAreaCandidates` SSoT).
+- `classifySpaceType(space): { type, confidence }` — heuristic v1 (rules)· ML-ready interface για future model.
+- Trigger: κουμπί «Αυτόματος χρωματισμός χώρων» → batch με preview + confirm.
+- ⚠️ Confidence < 50% → δεν χρωματίζει, ζητά επιβεβαίωση.
+
+---
+
+### 5στ.4 🟠 Pattern Aligned-to-Element (Follow Geometry)
+
+**Τι κάνει:** Το μοτίβο **ακολουθεί** την κατεύθυνση του host element (τοίχος/καμπύλη) αντί σταθερής γωνίας. Σε καμπύλο τοίχο, τα τουβλάκια λυγίζουν μαζί του.
+
+```typescript
+// HatchEntity extension:
+alignToElement?: boolean;        // default false
+alignElementId?: string;         // host· η γωνία μοτίβου = εφαπτομένη του element
+```
+
+**Υλοποίηση:**
+- `resolvePatternAngleAlongElement(point, element): number` — εφαπτομένη γωνία στο σημείο.
+- `HatchRenderer`: αν `alignToElement` → ανά segment υπολογίζει local γωνία (piecewise για καμπύλες).
+- Reuse: tangent helpers από geometry SSoT (`projectPointOn*` family).
+
+---
+
+### 5στ.5 🟠 Auto Gap-Healing (Active Boundary Closure)
+
+**Τι κάνει:** Πέρα από το §5β.1 (παθητική ανοχή): **σχεδιάζει ενεργά** το τμήμα που κλείνει μικρό κενό στο όριο → εγγυημένα κλειστό boundary. BricsCAD.
+
+```
+Κενό 5mm στη γωνία  →  auto-draw closing segment  →  boundary κλειστό, hatch valid
+```
+
+**Υλοποίηση:**
+- `healBoundaryGaps(loop, tolerance): { healed: Point2D[], addedSegments: Segment[] }` — pure fn.
+- Διαφορά από gap tolerance: το tolerance **αγνοεί** το κενό· το healing **το γεμίζει** ρητά (ορατό κλείσιμο).
+- Opt-in: «Αυτόματο κλείσιμο κενών» στο contextual panel· εμφανίζει τα added segments με preview.
+
+---
+
+### 5στ.6 🟠 GPU / WebGL Rendering για Μαζικά Hatches
+
+**Τι κάνει:** Για τεράστια hatches (χιλιάδες γραμμές μοτίβου), rendering μέσω **WebGL** αντί canvas2D → χωρίς lag.
+
+**Διαφορά από §5δ.7 (LOD):** Το LOD **απλοποιεί** (λιγότερες γραμμές)· αυτό **επιταχύνει** το πλήρες rendering (instanced draw).
+
+**Υλοποίηση:**
+- `HatchWebGLRenderer` — instanced line rendering· fallback σε canvas2D αν δεν υποστηρίζεται WebGL.
+- Threshold: > N γραμμές (π.χ. 5.000) → switch σε WebGL path αυτόματα.
+- ⚠️ Τεχνικά απαιτητικό· integration με υπάρχον canvas pipeline (ADR-040)· τελευταία προτεραιότητα.
+
+---
+
+### 5στ.7 Out of Scope (ειλικρινής καταγραφή — ΔΕΝ υλοποιούνται εδώ)
+
+| Feature | Γιατί out of scope |
+|---|---|
+| Real-time multi-user collaboration (live cursors) | Αφορά ΟΛΗ την εφαρμογή, όχι hatch-specific |
+| Raster/PDF → AI vectorization (Scan2BIM) | Ξεχωριστό βαρύ subsystem |
+| Voice / NL commands («γέμισε τα μπάνια») | App-wide AI scope |
+
+---
+
 ## 6. Πλάνο Φάσεων
 
-| Φάση | Scope | Modules | Σημείωση |
-|---|---|---|---|
-| **Φ1** | Solid + user-defined· Τρόπος Α (κλικ σε κλειστή πολυγραμμή)· canvas + DXF write· contextual panel | 1-13 | ΘΕΜΕΛΙΟ |
-| **Φ2** | Predefined patterns (30+ κατάλογος)· scale/angle· pattern catalog UI | 2, UI | Requires Φ1 |
-| **Φ3** | Pick-point mode (Τρόπος Β)· `auto-area` SSoT | 7 (extension) | Requires Φ1 |
-| **Φ4** | Island detection με τρύπες (Normal/Outer/Ignore)· multi-boundary canvas· evenodd fill rule | 3, 4, 11 | Requires Φ3 |
-| **Φ5** | Gradient fill· canvas gradient· DXF 450-470 | 1(ext), 4(ext), 6(ext) | Requires Φ1 |
-| **Φ6** | DXF import (reader converter `case 'HATCH'`)· round-trip | 14 | Requires Φ1 |
-| **Φ7** | Associative hatch· `boundaryEntityIds`· reactive recalc· DXF `71=1`+`97/330` | 15 | Requires Φ6 · πολύπλοκο |
+| Φάση | Scope | Σημείωση |
+|---|---|---|
+| **Φ1 — ΘΕΜΕΛΙΟ** | Solid + user-defined· Τρόπος Α· canvas + DXF write· contextual panel· draw order· background color· opacity· pattern origin· recent patterns· compound undo· **area calculation** | Χρησιμοποιήσιμο αμέσως |
+| **Φ2 — Patterns** | Predefined 30+ κατάλογος· thumbnail preview· **pattern search/filter**· scale/angle· **hatch lineweight**· smart auto-scale· inherit properties· **alignment continuity** | Requires Φ1 |
+| **Φ3 — Pick Point** | Τρόπος Β (pick-point)· gap tolerance· live ghost preview | Requires Φ1 |
+| **Φ4 — Islands** | Island detection· multi-boundary· evenodd· hatch edit loops· **trim hatch**· **separate/merge**· **recreate boundary** | Requires Φ3 |
+| **Φ5 — Gradient** | Gradient fill· canvas gradient· DXF 450-470 | Requires Φ1 |
+| **Φ6 — Import** | DXF import `case 'HATCH'`· round-trip· **custom PAT import** | Requires Φ1 |
+| **Φ7 — Material Auto** | `MATERIAL_HATCH_MAP` (surface+cut patterns)· `resolveAutoHatch(entity, viewType)`· BIM auto-fill· **plan vs section pattern**· **model vs drafting pattern (5ε.2)**· **select similar**· wipeout masking | Requires Φ2 — «η μαγεία» |
+| **Φ8 — Associative** | `boundaryEntityIds`· reactive recalc· DXF `71=1`+`97/330`· **live area field (5ε.6)** | Requires Φ6 · πολύπλοκο |
+| **Φ9 — Pro/BIM** | **annotative (5ε.1)**· **material legend (5ε.3)**· **image/block fill (5ε.4)**· **boundary set perf (5ε.5)**· **quantity takeoff (5ε.6)** | Requires Φ7+Φ8 — top-tier, opt-in |
+| **Φ10 — Modern/AI** | ⭐ **data-driven heatmap (5στ.1)**· **construction phasing (5στ.2)**· **AI space detection (5στ.3)**· **align-to-element (5στ.4)**· **auto gap-healing (5στ.5)**· **WebGL render (5στ.6)** | Requires Φ7+Φ8+Φ9 — η «τελειότητα»· data-driven αξιοποιεί υπάρχουσα FEM μηχανή |
+
+### 6.1 Session breakdown (υλοποίηση, για χαμηλό context-noise)
+
+Οι 10 φάσεις χωρίζονται σε **9 συνεδρίες** (Φ1 → S1 headless + S2 UI). Πλήρες SSoT audit + ανά-session οδηγίες:
+**`HANDOFFS/HANDOFF_2026-06-20_adr507-hatch-implementation.md`** (η νέα συνεδρία ξεκινά από εκεί — μηδέν re-audit).
+
+| Session | Φάση | Verify |
+|---|---|---|
+| S1 | Φ1a (data+render+DXF I/O core) | jest headless |
+| S2 | Φ1b (tool wiring+UX) | browser |
+| S3 | Φ2 (patterns) · S4 Φ3+Φ4 (pick-point+islands) · S5 Φ5+Φ6 (gradient+import) | browser |
+| S6 | Φ7 (material auto) · S7 Φ8+§5δ (associative+automations) · S8 Φ9 (pro/BIM) · S9 Φ10 (modern/AI) | browser |
 
 ---
 
@@ -373,4 +1193,13 @@ export interface HatchEntity extends BaseEntity {
 
 ## 8. Changelog
 
-- **2026-06-20** — DRAFT δημιουργήθηκε. Βαθιά έρευνα AutoCAD hatch (deep-research workflow, 102 agents, πηγές Autodesk DXF ref 2007-2024 + ezdxf). Χαρτογράφηση υπάρχοντος κώδικα (HatchEntity «νεκρό», SSoT προς επαναχρήση). Clarifying Q&A 2 γύροι (10 ερωτήσεις συνολικά): Q1-6 = γεμίσματα/τρόποι/island/assoc/catalog/UX-flow· Q7-10 = hatch origin (Revit style), dedicated layer, opacity, multi-area. Όλες αποφάσεις οριστικές. Status: SPECIFICATION COMPLETE → έτοιμο για υλοποίηση.
+- **2026-06-20** — **S1 / Φ1a υλοποιήθηκε (headless, 42 jest GREEN).** Ενεργοποίηση του «νεκρού» `HatchEntity`:
+  - **Type** (`types/entities.ts`): +8 Φ1 πεδία (`fillType`, `islandStyle`, `lineAngle`, `lineSpacing`, `doubleCrossHatch`, `patternOrigin`, `drawOrder`, `gapTolerance`) — backward-compatible, χωρίς διπλασιασμό BaseEntity (opacity/transparency κληρονομούνται).
+  - **Property SSoT** (NEW `bim/hatch/hatch-properties.ts`): `isSolidHatch()` + `islandStyleToDxf75()`/`dxf75ToIslandStyle()` + `HatchIslandStyle` type — ΕΝΑ σημείο για render+write+read (αλλιώς η solid-check + island↔code75 λογική τριπλασιαζόταν, N.12). lerp/deg→rad reuse υπαρχόντων `lerpPoint`/`degToRad` SSoT.
+  - **Geometry SSoT** (NEW `bim/geometry/shared/hatch-pattern-geometry.ts`): `buildHatchLines(boundaryPaths, {spacing, angle, origin, double, islandStyle})` — wraps το υπάρχον `buildAxisAlignedHatch`/`clipLineToBbox` (N.12 dedup) + γεωμετρικό clip στα boundary polygons με even-odd νησίδες + origin phase-shift. ΜΙΑ γεωμετρία → canvas + exploded DXF.
+  - **Renderer** (NEW `rendering/entities/HatchRenderer.ts` + register στο `EntityRendererComposite`): solid (even-odd fill) + user-defined γραμμές (μέσω `buildHatchLines`) + outline· ADR-040 leaf (zero subscriptions). hitTest/getGrips even-odd/boundary vertices.
+  - **DXF Writer** (`export/core/dxf-ascii-writer.ts`): `case 'hatch'` → ΚΡΑΤΑ το `dxfFaces`/3DFACE path (ADR-505)· αλλιώς πραγματικό native `HATCH` (boundary loops 91/92/93/10/20· 70 solid flag· 75 island· 76 pattern type· 52/41 angle/scale· 78+pattern-line για έγκυρο user-defined). Lines-mode (Τέκτονας) → exploded LINEs (boundary + user-defined γραμμές μέσω `buildHatchLines`).
+  - **DXF Reader** (`utils/dxf-entity-converters.ts` `convertHatch` + route· `dxf-entity-parser.ts`/`dxf-converter-helpers.ts` +ordered `pairs` στο `EntityData`): state-machine parse των boundary loops (τα επαναλαμβανόμενα 10/20 ΔΕΝ χωράνε στο flat `Record` → ordered pairs additive, μηδέν regression στους υπάρχοντες converters). Round-trips boundaryPaths + fillType + islandStyle + lineAngle/lineSpacing + seedPoints + scale.
+  - **Tests**: `dxf-ascii-writer.test.ts` (+native HATCH describe)· NEW `dxf-roundtrip-hatch.test.ts` (write→read)· NEW `hatch-pattern-geometry.test.ts` (clip/even-odd/double/origin). 42 pass.
+  - **🔴 ΕΚΚΡΕΜΕΙ:** S2 (Φ1b tool wiring + UX, browser-verify) + commit. ΜΗΝ αγγιχτεί tool/ribbon/keyboard ακόμα.
+- **2026-06-20** — DRAFT δημιουργήθηκε. Deep-research workflow (102 agents, Autodesk DXF ref 2007-2024 + ezdxf) + κώδικας-χαρτογράφηση. Q&A 10 ερωτήσεις. §5β 12 enterprise features (gap tolerance, inherit, draw order, bg color, material→hatch, ghost, thumbnail, auto-scale, wipeout, hatch edit, recent, compound undo). §5γ 10 ακόμα features (trim hatch, custom PAT import, area calculation, select similar, pattern search, lineweight, alignment continuity, plan vs section dual-pattern, separate/merge, recreate boundary). Φάσεις 8 (Φ7=material automation SSoT). **Σύνολο: 22 enterprise features, 8 φάσεις, 17+ modules.** Status: SPECIFICATION COMPLETE v3.

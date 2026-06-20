@@ -29,6 +29,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
+import type { LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -53,6 +54,26 @@ export interface WallPreviewState {
   readonly polylineVertices: readonly Point2D[];
   /** Tool overrides (category/height/thickness/flip) — needed to size the preview ghost. */
   readonly overrides: WallParamOverrides;
+  /**
+   * ADR-508 (2026-06-20) — `true` όταν το `startPoint` κλειδώθηκε από **face-snap** σε
+   * κολόνα/μέλος (το ghost-before-click κούμπωσε σε παρειά). Τότε το `startPoint` είναι
+   * ΗΔΗ το τελικό centerline → το awaitingEnd preview/commit χρησιμοποιεί centered axis
+   * (χωρίς location-line auto-flush που θα ξανα-μετατόπιζε το start). `false` (default) →
+   * free placement (auto-flush σε κολόνα / location-line = face).
+   */
+  readonly startAnchored: boolean;
+  /**
+   * ADR-508 — column footprints (2Δ) της σκηνής για το 12-θέσεων ghost face snap + flush.
+   * Γράφεται από `useWallTool` (`setColumns`, on activate)· διατηρείται μέσα από τα `set()`
+   * transitions (αλλάζει σπάνια). `[]` = καμία κολόνα.
+   */
+  readonly columnFootprints: readonly (readonly Point2D[])[];
+  /**
+   * ADR-508 unified linear-member framing — τα υφιστάμενα γραμμικά μέλη (τοίχοι+δοκάρια,
+   * axis + outline) ώστε το ghost-before-click να κουμπώνει κάθετα (🟢 Τ-framing) ή να
+   * γίνεται 🔴 σε ομοαξονικό. Γράφεται από `useWallTool` (`setMembers`). `[]` = κανένα.
+   */
+  readonly memberTargets: readonly LinearMemberSnapTarget[];
 }
 
 const EMPTY: WallPreviewState = Object.freeze({
@@ -61,6 +82,9 @@ const EMPTY: WallPreviewState = Object.freeze({
   curveControl: null,
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
+  startAnchored: false,
+  columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
+  memberTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
 });
 
 type Listener = () => void;
@@ -108,14 +132,24 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'columnFootprints' | 'memberTargets'> & {
+  readonly startAnchored?: boolean;
+};
+
 export const wallPreviewStore = {
-  /** Writer — called by `useWallTool` on every relevant state transition. */
-  set(next: WallPreviewState): void {
+  /**
+   * Writer — called by `useWallTool` on every relevant state transition. Τα
+   * `columnFootprints` / `memberTargets` ΔΕΝ περνούν εδώ (αλλάζουν σπάνια) —
+   * διατηρούνται από το `currentState` (set via `setColumns` / `setMembers`).
+   */
+  set(next: WallPreviewSet): void {
+    const nextAnchored = next.startAnchored ?? false;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
       pointsEqual(currentState.curveControl, next.curveControl) &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
+      currentState.startAnchored === nextAnchored &&
       overridesEqual(currentState.overrides, next.overrides)
     ) {
       return;
@@ -126,7 +160,28 @@ export const wallPreviewStore = {
       curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
+      startAnchored: nextAnchored,
+      columnFootprints: currentState.columnFootprints,
+      memberTargets: currentState.memberTargets,
     };
+    for (const l of listeners) l();
+  },
+  /**
+   * ADR-508 — set τα column footprints για το ghost face snap. Idempotent επί ίδιου
+   * reference· notify μόνο όταν αλλάζει. Called από `useWallTool` on activate / 1ο κλικ.
+   */
+  setColumns(footprints: readonly (readonly Point2D[])[]): void {
+    if (currentState.columnFootprints === footprints) return;
+    currentState = { ...currentState, columnFootprints: footprints };
+    for (const l of listeners) l();
+  },
+  /**
+   * ADR-508 — set τα υφιστάμενα γραμμικά μέλη (τοίχοι+δοκάρια) για το ghost face-snap.
+   * Idempotent επί ίδιου reference· notify μόνο όταν αλλάζει.
+   */
+  setMembers(targets: readonly LinearMemberSnapTarget[]): void {
+    if (currentState.memberTargets === targets) return;
+    currentState = { ...currentState, memberTargets: targets };
     for (const l of listeners) l();
   },
   /** Reset back to empty (tool deactivated / idle / commit). */

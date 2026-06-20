@@ -21,6 +21,8 @@ import { StairRenderer } from '../../bim/renderers/StairRenderer';
 // ADR-359 Phase 4.b — XLINE (infinite) + RAY (semi-infinite) construction line renderers.
 import { XLineRenderer } from '../entities/XLineRenderer';
 import { RayRenderer } from '../entities/RayRenderer';
+// ADR-507 Φ1a — hatch leaf (solid fill + user-defined lines, AutoCAD HATCH).
+import { HatchRenderer } from '../entities/HatchRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -150,6 +152,8 @@ export class EntityRendererComposite {
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
     const xlineRenderer = new XLineRenderer(this.ctx);
     const rayRenderer = new RayRenderer(this.ctx);
+    // ADR-507 Φ1a — hatch renderer (solid fill + user-defined lines).
+    const hatchRenderer = new HatchRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -191,6 +195,7 @@ export class EntityRendererComposite {
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);
+    this.renderers.set('hatch', hatchRenderer);
   }
 
   /**

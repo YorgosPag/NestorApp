@@ -18,10 +18,20 @@
  * @see ../../hooks/tools/useColumnGhostPreview.ts — ο consumer (ghost color)
  */
 
+import type { ColumnAnchor } from '../../bim/types/column-types';
+
 /** Σημασιολογικό status του ghost κατά την τοποθέτηση κολώνας. */
 export type ColumnGhostStatus = 'beam' | 'overlap' | 'neutral';
 
 let status: ColumnGhostStatus = 'neutral';
+
+/**
+ * ADR-398 §Column smart-ghost face-snap — η λαβή (1 από 9) που επέλεξε ΑΥΤΟΜΑΤΑ το column
+ * face-snap (`resolveColumnFaceSnap`) ώστε η κολώνα να ακουμπά flush στην παρειά στόχου. `null`
+ * = ελεύθερη τοποθέτηση (ο χρήστης ορίζει τη λαβή με Tab). Γράφεται από τον `snap-scheduler`
+ * (move) + `mouse-handler-up` (click) — διαβάζεται imperatively από το commit + ghost draw.
+ */
+let faceAnchor: ColumnAnchor | null = null;
 
 /** Write — από τον snap-scheduler ανά move detection (column tool active). */
 export function setColumnGhostStatus(next: ColumnGhostStatus): void {
@@ -33,7 +43,18 @@ export function getColumnGhostStatus(): ColumnGhostStatus {
   return status;
 }
 
-/** Clear — reset σε `neutral` (έξοδος από snappable mode / cleanup). */
+/** Write — auto-selected face-snap λαβή (`null` όταν δεν υπάρχει face-snap). */
+export function setColumnFaceAnchor(next: ColumnAnchor | null): void {
+  faceAnchor = next;
+}
+
+/** Read — imperatively στο commit (anchor precedence) + στο ghost draw (single-anchor). */
+export function getColumnFaceAnchor(): ColumnAnchor | null {
+  return faceAnchor;
+}
+
+/** Clear — reset σε `neutral` + καμία face λαβή (έξοδος από snappable mode / cleanup). */
 export function clearColumnGhostStatus(): void {
   status = 'neutral';
+  faceAnchor = null;
 }
