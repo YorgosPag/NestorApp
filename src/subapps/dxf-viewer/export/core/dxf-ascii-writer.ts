@@ -103,9 +103,16 @@ function writeEntity(
   e: Entity, layer: string, aci: number, s: number, mmScale: number, explode: boolean, pair: Pair,
 ): void {
   switch (e.type) {
-    case 'line':
-      emitLine(e.start, e.end, layer, aci, s, pair);
+    case 'line': {
+      // ADR-505 (rebar 3D export) — προαιρετικό Z ανά άκρο (mm → output unit με mmScale,
+      // ΟΧΙ coord scale· ίδια σύμβαση με το extrusion thickness). Absent → 2Δ (body αμετάβλητο).
+      const za = (e as { dxfStartZMm?: number }).dxfStartZMm;
+      const zb = (e as { dxfEndZMm?: number }).dxfEndZMm;
+      emitLine(e.start, e.end, layer, aci, s, pair,
+        za != null ? za * mmScale : undefined,
+        zb != null ? zb * mmScale : undefined);
       break;
+    }
     case 'circle':
       emitCircle(e.center, e.radius, layer, aci, s, pair);
       break;
@@ -136,11 +143,15 @@ function writeEntity(
   }
 }
 
-/** A LINE — coordinates first, layer, colour (ACI), no Z. */
-function emitLine(a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair): void {
+/** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
+function emitLine(
+  a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair, za?: number, zb?: number,
+): void {
   pair(0, 'LINE');
   pair(10, a.x * s); pair(20, a.y * s);
+  if (za !== undefined) pair(30, za);
   pair(11, b.x * s); pair(21, b.y * s);
+  if (zb !== undefined) pair(31, zb);
   pair(8, layer);
   pair(62, aci);
 }

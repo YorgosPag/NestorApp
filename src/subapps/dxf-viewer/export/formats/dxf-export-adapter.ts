@@ -84,7 +84,7 @@ export interface BuiltDxfRequest {
  */
 export function buildDxfExportRequest(
   scene: SceneModel,
-  options: Pick<DxfExportOptions, 'entityScope' | 'version' | 'unit'>,
+  options: Pick<DxfExportOptions, 'entityScope' | 'version' | 'unit' | 'lineMode'>,
 ): BuiltDxfRequest {
   const selected = resolveExportEntities(scene.entities, options.entityScope);
   const colored = stampRenderedColors(selected, scene.layersById);
@@ -93,7 +93,7 @@ export function buildDxfExportRequest(
   // ADR-505 (finish/rebar phase) — σοβάδες + οπλισμός είναι derived overlays (όχι
   // entities) → ξεχωριστός collector παράγει extra DXF primitives, gated «what's
   // visible». Scope-filtered input (`selected`) → dxf-only scope = μηδέν overlays.
-  const overlay = collectOverlayDxfEntities(selected);
+  const overlay = collectOverlayDxfEntities(selected, { lineMode: options.lineMode });
 
   const settings = createDefaultExportSettings();
   if (options.version) settings.version = options.version;
@@ -166,6 +166,7 @@ export function exportFloorToDxf(
 export function mergeFloorsToSingleDxfScene(
   floors: readonly ResolvedExportFloor[],
   entityScope: ExportEntityScope,
+  lineMode?: DxfLineMode,
 ): { scene: SceneModel; warnings: string[] } {
   const entities: Entity[] = [];
   const layersById: Record<string, SceneLayer> = {};
@@ -180,7 +181,7 @@ export function mergeFloorsToSingleDxfScene(
     warnings.push(...flat.warnings);
 
     // ADR-505 (finish/rebar phase) — overlays ανά όροφο, με το ΙΔΙΟ FLnn_ namespacing.
-    const overlay = collectOverlayDxfEntities(selected);
+    const overlay = collectOverlayDxfEntities(selected, { lineMode });
 
     const prefix = floor.layerPrefix;
     for (const e of [...flat.entities, ...overlay.entities]) {

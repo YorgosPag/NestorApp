@@ -1,6 +1,7 @@
 # ADR-505 — Unified Export System (DXF / IFC4 / PDF, scope-filtered, multi-floor)
 
 **Status:** ✅ BROWSER-VERIFIED (Τέκτονας/FESPA 2Δ + AutoCAD 2Δ/3Δ) · DXF πλήρες (active+zip+single, dual-mode polyline/lines, ACI χρώμα, generic BIM/Η-Μ, 3Δ extrusion) · IFC/PDF μέσω delegation — UNCOMMITTED 2026-06-20 · 🔴 ΜΟΝΟ commit (stage ADR-505, CHECK 6B/6D)
+**Status (finish/rebar phase, §C):** ⏳ Τέκτονας ✅ (σοβάδες+οπλισμός σωστά) · AutoCAD hardening εφαρμόστηκε (ASCII layers `FINISH`/`REBAR` + closed finish prism + degenerate-circle guard) — UNCOMMITTED 2026-06-20 · 🔴 re-verify AutoCAD + commit
 **Date:** 2026-06-20
 **Category:** Entity Systems / DXF Viewer Output
 **Author:** Γιώργος Παγώνης + Claude Code (Anthropic AI)
@@ -55,7 +56,20 @@
 - BIM→DXF decomposition καλύπτει wall/column/slab/beam/foundation/opening/roof/furniture/floorplan-symbol + όλα τα Η/Μ (footprint/outline/polygon convention)· railing/stair (path/stringer) → skip+warning.
 - Y-axis convention: το DXF γράφει raw scene coords — αν φανεί mirrored σε CAD, one-line flip στον writer.
 
+## C. Εξαγωγή σοβάδων (finish) + οπλισμού (reinforcement) — overlay collector (Full SSoT)
+
+Σοβάδες + οπλισμός **ΔΕΝ είναι `scene.entities`** — είναι derived overlays (όπως τα διαγράμματα M/V/N) → ο βασικός pipeline (που διαβάζει `scene.entities`) δεν τα έπιανε. Λύση **full SSoT, μία πηγή γεωμετρίας → canvas + DXF**:
+
+- **NEW shared plan-geometry SSoT** (world coords, ZERO ctx) — εξήχθη από τα «σώματα» των 2Δ draw helpers ώστε να τα καταναλώνουν ΚΑΙ οι renderers ΚΑΙ ο export collector (μηδέν δεύτερη διάσχιση layout):
+  - `bim/structural/reinforcement/{rebar-plan-geometry-types, column-rebar-plan-geometry, linear-member-rebar-plan-geometry, footing-rebar-plan-geometry, slab-rebar-plan-geometry}.ts` — καλούν τα ΥΠΑΡΧΟΝΤΑ layout SSoT (`resolveColumnRebarLayout`/`resolveActiveBeamRebarLayout`/footing/slab + `columnLocalMmToWorld`/`samplePolylineFrame`)· slab clip μέσω `coveredIntervals` (αντί ctx.clip).
+  - `bim/finishes/structural-finish-plan-geometry.ts` — `collectFinishOutlinePlanPolylines` (world λωρίδες μέσω `computeMiteredOuter`, +χρώμα υλικού +ύψος ζώνης).
+- **Refactor 5 renderers → thin consumers** (behavior-preserving): `column-/linear-member-/footing-/slab-rebar-2d.ts` + `structural-finish-outline-2d.ts`.
+- **NEW `export/core/overlay-dxf-collector.ts`** — `collectOverlayDxfEntities(entities, {componentVisible})`: gating «export what's visible» (`isStructuralComponentVisible('plaster'|'reinforcement', e)`, per-element override→per-view) → finish (`computeStructuralFinishSilhouette`, ίδιο SSoT με 2Δ/3Δ) ως **extruded** lwpolyline (group-39 ύψος ζώνης) + οπλισμός (κολώνα/δοκάρι/πέδιλο/πλάκα) ως lwpolyline + circle (διαμήκεις κουκκίδες). Layers (Revit subcategories): `FINISH` / `REBAR`.
+- **Wiring** στο `dxf-export-adapter.ts` (`buildDxfExportRequest` + `mergeFloorsToSingleDxfScene` με `FLnn_` prefix), gated στο scope (dxf-only → μηδέν overlays).
+- **AutoCAD hardening** (Τέκτονας τα διάβαζε, AutoCAD «κολλούσε»): (1) **ASCII** layer names — ο writer βγάζει bare DXF χωρίς HEADER/`$DWGCODEPAGE` → ο AutoCAD υποθέτει ANSI και σκαλώνει σε UTF-8 ελληνικά layer names· (2) finish polyline **closed** (καθαρό extruded prism = verified body μονοπάτι, όχι open-poly-with-thickness)· (3) skip degenerate circle (radius≤ε = invalid AutoCAD audit).
+
 ## Changelog
+- **2026-06-20 (j)** — **Finish/rebar phase (§C):** εξαγωγή σοβάδων + οπλισμού ως derived-overlay collector, full SSoT (5 NEW plan-geometry modules + 1 finish + collector· 5 renderers → thin consumers· wiring adapter). Gating «what's visible». Browser-verify: **Τέκτονας ✅** σοβάδες+οπλισμός σωστά· **AutoCAD «κολλούσε»** → hardening (ASCII layers `FINISH`/`REBAR`, closed finish prism, degenerate-circle guard). 22 jest (8 NEW finish-plan-geo + overlay-collector, 14 affected GREEN), tsc clean. 🔴 re-verify AutoCAD + commit.
 - **2026-06-20** — Αρχική υλοποίηση: DXF pipeline (active/zip/single) + scope filter + owned zip writer + UI dialog/ribbon + i18n el/en + IFC/PDF delegation. **Client-side DXF writer** αντί ezdxf proxy → μηδέν backend (no Docker στον host)· route+client αφαιρέθηκαν.
 - **2026-06-20 (b)** — Tekton-compat fix: reference `.dxf` του Τέκτονα έδειξε ότι ο parser του διαβάζει μόνο LINE/TEXT/CIRCLE (bare ENTITIES, no Z)· η 1η έκδοση «δεν έδειχνε τίποτα» (BIM=POLYLINE αγνοούμενο). Writer ξαναγράφτηκε: explode polyline/rect/BIM→LINE· ARC→tessellation· coord scaling στη μονάδα εξόδου. 39 jest, tsc clean. UNCOMMITTED.
 - **2026-06-20 (c)** — Browser-verify #1: Τέκτονας ΔΙΑΒΑΣΕ τις οντότητες αλλά warning «ορατές οντότητες >4.000μ από κέντρο» — coords σε mm (~11185) διαβάζονται ως μέτρα. Fix: dialog default unit `millimeters`→`meters` (`DEFAULT_EXPORT_UNIT` στο `useExportDialogState`· Tekton/FESPA δουλεύει σε μέτρα).

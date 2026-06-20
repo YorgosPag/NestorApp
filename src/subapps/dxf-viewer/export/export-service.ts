@@ -61,7 +61,7 @@ async function runDxfExport(
 
   // all-single → one merged DXF across every floor.
   if (request.floorScope === 'all-single') {
-    const merged = mergeFloorsToSingleDxfScene(floors, request.entityScope);
+    const merged = mergeFloorsToSingleDxfScene(floors, request.entityScope, request.dxfLineMode);
     const { request: dxfReq, warnings } = buildDxfExportRequest(merged.scene, dxfOptions);
     const blob = renderDxfBlob(dxfReq, request.dxfLineMode);
     const finalName = buildFloorFilename(deps.projectName, 'all-floors', 'dxf');

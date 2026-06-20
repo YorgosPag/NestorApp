@@ -48,3 +48,24 @@ export interface RebarPlanGeometry {
 
 /** Κενή γεωμετρία (no-op helper για τους extractors). */
 export const EMPTY_REBAR_PLAN_GEOMETRY: RebarPlanGeometry = { paths: [], dots: [] };
+
+// ─── 3Δ rebar segments (ADR-505 finish/rebar phase D — DXF 3D export) ──────────
+
+/**
+ * Ένα σημείο 3Δ οπλισμού: plan `x,y` σε **scene/canvas units** (ΟΧΙ μέτρα — ίδιος χώρος
+ * με το DXF body export) + `zMm` = **ύψος σχετικό με τη βάση του μέλους** (z=0 στο
+ * επίπεδο footprint· το DXF body είναι pseudo-3D: footprint στο z=0, extrude προς τα πάνω).
+ * Οι δύο consumers κάνουν διαφορετικό mapping: 3Δ viewer → three.js μέτρα + baseY +
+ * AXIS_FLIP· DXF → x,y×coordinateScale, z=zMm×mmScale.
+ */
+export interface RebarPoint3D {
+  readonly x: number;
+  readonly y: number;
+  readonly zMm: number;
+}
+
+/** Ένα 3Δ τμήμα ράβδου/συνδετήρα (a→b). */
+export interface RebarSeg3D {
+  readonly a: RebarPoint3D;
+  readonly b: RebarPoint3D;
+}
