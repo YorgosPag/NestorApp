@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { GripSettings } from '../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
-import { gripStyleStore } from '../stores/GripStyleStore';
+// 🏢 SSoT single writer: GripSettings → gripStyleStore (replaces the duplicated set() blocks)
+import { syncGripStyleStoreFromSettings } from '../stores/grip-style-sync';
 import { resolveGripColors } from '../config/color-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../rendering/grips/constants';
@@ -88,24 +89,7 @@ export function GripProvider({ children }: GripProviderProps) {
   // Sync persisted gripSettings → GripStyleStore on mount and on every settings change.
   // Without this, GripStyleStore keeps its module-level default and ignores user/persisted settings.
   useEffect(() => {
-    gripStyleStore.set({
-      enabled: gripSettings.showGrips,
-      colors: gripSettings.colors,
-      gripSize: gripSettings.gripSize,
-      pickBoxSize: gripSettings.pickBoxSize,
-      apertureSize: gripSettings.apertureSize,
-      showGrips: gripSettings.showGrips,
-      opacity: gripSettings.opacity || 1.0,
-      showAperture: gripSettings.showAperture,
-      multiGripEdit: gripSettings.multiGripEdit,
-      snapToGrips: gripSettings.snapToGrips,
-      showGripTips: gripSettings.showGripTips,
-      dpiScale: gripSettings.dpiScale ?? 1.0,
-      showMidpoints: gripSettings.showMidpoints,
-      showCenters: gripSettings.showCenters,
-      showQuadrants: gripSettings.showQuadrants,
-      maxGripsPerEntity: gripSettings.maxGripsPerEntity,
-    });
+    syncGripStyleStoreFromSettings(gripSettings);
   }, [gripSettings]);
 
   // ✅ FIX (ChatGPT-5): JSON-based deep equal guard
@@ -127,24 +111,7 @@ export function GripProvider({ children }: GripProviderProps) {
       centralGripHook.updateSettings(updates);
 
       // ✅ Ενημέρωση του GripStyleStore για συνεπή πρόσβαση χωρίς context
-      gripStyleStore.set({
-        enabled: next.showGrips,
-        colors: next.colors,
-        gripSize: next.gripSize,
-        pickBoxSize: next.pickBoxSize,
-        apertureSize: next.apertureSize,
-        showGrips: next.showGrips,
-        opacity: next.opacity || 1.0,
-        showAperture: next.showAperture,
-        multiGripEdit: next.multiGripEdit,
-        snapToGrips: next.snapToGrips,
-        showGripTips: next.showGripTips,
-        dpiScale: next.dpiScale ?? 1.0,
-        showMidpoints: next.showMidpoints,
-        showCenters: next.showCenters,
-        showQuadrants: next.showQuadrants,
-        maxGripsPerEntity: next.maxGripsPerEntity,
-      });
+      syncGripStyleStoreFromSettings(next);
       return;
     }
 
@@ -157,24 +124,7 @@ export function GripProvider({ children }: GripProviderProps) {
         return prev;
       }
 
-      gripStyleStore.set({
-        enabled: next.showGrips,
-        colors: next.colors,
-        gripSize: next.gripSize,
-        pickBoxSize: next.pickBoxSize,
-        apertureSize: next.apertureSize,
-        showGrips: next.showGrips,
-        opacity: next.opacity || 1.0,
-        showAperture: next.showAperture,
-        multiGripEdit: next.multiGripEdit,
-        snapToGrips: next.snapToGrips,
-        showGripTips: next.showGripTips,
-        dpiScale: next.dpiScale ?? 1.0,
-        showMidpoints: next.showMidpoints,
-        showCenters: next.showCenters,
-        showQuadrants: next.showQuadrants,
-        maxGripsPerEntity: next.maxGripsPerEntity,
-      });
+      syncGripStyleStoreFromSettings(next);
 
       return next;
     });

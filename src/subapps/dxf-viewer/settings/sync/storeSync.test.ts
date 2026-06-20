@@ -23,6 +23,9 @@ import {
   DEFAULT_TEXT_SETTINGS
 } from '../../settings-core/defaults';
 import { DEFAULT_GRIP_SETTINGS } from '../../types/gripSettings';
+// 🏢 SSoT (2026-06-20): storeSync now pushes FULL state into the real style
+// stores via style-store-sync.ts — assert outcomes on the stores, not port.apply.
+import { toolStyleStore } from '../../stores/ToolStyleStore';
 
 // ============================================================================
 // FAKE PORTS (Test Doubles)
@@ -136,14 +139,21 @@ describe('createStoreSync', () => {
     });
   });
 
-  it('should push to ports on start', () => {
+  it('should push full state into the tool store on start', () => {
     const sync = createStoreSync(deps);
     const effectiveGetter = createFakeEffectiveGetter();
 
-    const { pushFromSettings } = sync.start(effectiveGetter);
+    // Pollute the store first so we can prove start() overwrote it.
+    toolStyleStore.set({ strokeColor: '#deadbe', lineWidth: 999, enabled: false });
 
-    // Initial push happens automatically
-    expect(fakeToolStyle.applyCalls.length).toBeGreaterThan(0);
+    sync.start(effectiveGetter);
+
+    // Initial push happens automatically — full (non-lossy) state from settings.
+    const state = toolStyleStore.get();
+    expect(state.strokeColor).toBe(DEFAULT_LINE_SETTINGS.color);
+    expect(state.lineWidth).toBe(DEFAULT_LINE_SETTINGS.lineWidth);
+    expect(state.enabled).toBe(DEFAULT_LINE_SETTINGS.enabled);
+    expect(state.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType);
   });
 
   it('should push from settings on demand', () => {
@@ -152,22 +162,27 @@ describe('createStoreSync', () => {
 
     const { pushFromSettings } = sync.start(effectiveGetter);
 
-    fakeToolStyle.clear();
+    // Mutate the store, then re-push and confirm it was restored from settings.
+    toolStyleStore.set({ strokeColor: '#000000' });
     pushFromSettings();
 
-    expect(fakeToolStyle.applyCalls.length).toBeGreaterThan(0);
+    expect(toolStyleStore.get().strokeColor).toBe(DEFAULT_LINE_SETTINGS.color);
   });
 
-  it('should push correct data format', () => {
+  it('should push FULL (non-lossy) tool style — incl. enabled + lineType', () => {
     const sync = createStoreSync(deps);
     const effectiveGetter = createFakeEffectiveGetter();
 
     sync.start(effectiveGetter);
 
-    const lastCall = fakeToolStyle.applyCalls[fakeToolStyle.applyCalls.length - 1];
-    expect(lastCall).toHaveProperty('stroke');
-    expect(lastCall).toHaveProperty('width');
-    expect(lastCall).toHaveProperty('opacity');
+    const state = toolStyleStore.get();
+    // The old lossy port path only wrote stroke/fill/width/opacity; the SSoT
+    // writer also covers enabled + lineType.
+    expect(state).toHaveProperty('strokeColor');
+    expect(state).toHaveProperty('lineWidth');
+    expect(state).toHaveProperty('opacity');
+    expect(state).toHaveProperty('enabled');
+    expect(state).toHaveProperty('lineType');
   });
 
   it('should cleanup subscriptions on stop', () => {
@@ -183,23 +198,17 @@ describe('createStoreSync', () => {
     expect(fakeToolStyle.changeHandlers.length).toBe(0);
   });
 
-  it('should handle apply errors gracefully', () => {
-    const faultyPort: ToolStylePort = {
-      getCurrent: () => ({ stroke: '', fill: '', width: 0, opacity: 0, dashArray: [] }),
-      apply: () => { throw new Error('Apply failed'); },
-      onChange: () => () => {}
+  it('should handle a faulty effective-settings getter gracefully', () => {
+    const sync = createStoreSync(deps);
+    // A getter whose line() throws — the push must be caught, logged, not thrown.
+    const faultyGetter: EffectiveSettingsGetter = {
+      line: () => { throw new Error('effective line settings failed'); },
+      text: () => ({ ...DEFAULT_TEXT_SETTINGS }),
+      grip: () => ({ ...DEFAULT_GRIP_SETTINGS })
     };
-
-    const faultyDeps: SyncDependencies = {
-      logger: fakeLogger,
-      toolStyle: faultyPort
-    };
-
-    const sync = createStoreSync(faultyDeps);
-    const effectiveGetter = createFakeEffectiveGetter();
 
     // Should not throw
-    expect(() => sync.start(effectiveGetter)).not.toThrow();
+    expect(() => sync.start(faultyGetter)).not.toThrow();
 
     // Should log warning
     const warnings = fakeLogger.logs.filter(l => l.level === 'warn');

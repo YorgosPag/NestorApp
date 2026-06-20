@@ -106,7 +106,76 @@ variation was **not** zoom-related.
   default surface must equal `GRIP_SIZE_DEFAULT`); updated `settings-core` validation test
   expectation `5 → 7`.
 
+**Follow-up (same session) — ONE writer for `gripStyleStore` (de-dup ×4):**
+The full `gripStyleStore.set({ enabled, colors, gripSize, … })` mapping block was
+copy-pasted in 4 places — `GripProvider` ×3 (mount effect + central + fallback update
+paths) and `StyleManagerProvider.syncGripStore`. The StyleManager copy wrote only a
+**7-field subset** (dropped `dpiScale`, `showMidpoints/Centers/Quadrants`, `showAperture`,
+`multiGripEdit`, `snapToGrips`, `showGripTips`, `maxGripsPerEntity`, forced `opacity=1.0`),
+a latent SSoT hazard that could silently stomp the advanced fields whenever it ran last.
+- **NEW** `stores/grip-style-sync.ts` → `syncGripStyleStoreFromSettings(settings)`, the ONE
+  writer doing the full mapping. All 4 sites delegate to it. StyleManager now writes the
+  full state (and its `GripSettings` import was corrected `rendering/types/Types` →
+  `types/gripSettings`, which is what `getEffectiveGripSettings()` already returns at runtime).
+- Distinct from `settings/sync/storeSync.ts` (the hexagonal `GripSettings → GripStylePort`
+  size+colors path) and from `gripStyleAdapter` (a genuine port adapter, not a duplicate).
+
 **NOT touched:** `GripSizeCalculator` math + temperature multipliers (by-design hover/active
 growth), preview-draw grips, `bim/structural/*`, `codes/*` (shared tree, other agent).
+
+### 2026-06-20 — Settings → legacy style stores unified to ONE SSoT writer set (symmetric to grip)
+
+**Problem (Giorgio): the grip de-dup above left the architecture ASYMMETRIC.** The same
+"effective settings → full store state" mapping still lived inline for **line / text /
+completion** in `StyleManagerProvider`, and — worse — a **second, diverging writer** existed:
+`settings/sync/storeSync.ts` carried its OWN `mapLineToToolStyle` / `mapTextToTextStyle` /
+`mapGripToGripStyle` that wrote a **lossy partial subset** through the hexagonal port adapters
+(tool: only `stroke/fill/width/opacity`; text: `font/size/color/weight/style`; grip:
+`size`+3 colors). Two writers into the same legacy stores (`toolStyleStore` /
+`textStyleStore` / `completionStyleStore` / `gripStyleStore`) with different field coverage =
+the **same last-writer-wins hazard** the grip fix removed, but for the rest. The port path is
+**wired at runtime** (`EnterpriseDxfSettingsProvider` `createStoreSync` + `pushFromSettings`,
+fed by `DxfViewerApp` `createSyncDependencies`) — so it was an active second writer, not dead.
+
+**Decision (Giorgio): FULL ENTERPRISE + FULL SSoT, "like the big players (Revit)".** One
+mapping, one set of full-state writers, every caller delegates — the exact pattern blessed for
+grip (multi-caller, single idempotent writer, full write not partial).
+
+**Fix:**
+- **NEW** `stores/style-store-sync.ts` — THE single mapping source. Exports
+  `syncToolStyleStoreFromSettings(LineSettings)`, `syncTextStyleStoreFromSettings(TextStyleSyncInput)`,
+  `syncCompletionStyleStoreFromSettings(LineSettings)`, and **re-exports** the existing grip
+  writer (`syncGripStyleStoreFromSettings`) so all four share one import surface — **no second
+  grip writer** (`grip-style-sync.ts` stays the leaf; barrel re-exports the same function
+  identity, asserted by test). Mapping bodies are byte-for-byte the prior authoritative
+  StyleManager logic (zero behavioural change to the mapping itself).
+- `StyleManagerProvider.tsx` — `syncLineStore` / `syncTextStore` / `syncGripStore` /
+  `syncCompletionStore` are now **one-line delegations**; the duplicated local `TextSettings`
+  interface is replaced by the SSoT `TextStyleSyncInput`. Per-entity effective modes preserved.
+- `settings/sync/storeSync.ts` — the **lossy `mapXToY` mappers are deleted**; `start()` now
+  pushes **FULL, non-lossy** state via the SSoT writers (tool/grip `'preview'` mode, completion
+  `'completion'`, text default — modes preserved). The port `onChange → bus` subscriptions are
+  kept as bidirectional scaffolding (`subscribePortToBus`); **grid/ruler ports remain dormant**
+  (RulersGridSystem is their SSoT, unchanged — 2026-05-08 fix). Net effect: the runtime hydration
+  path now writes the same FULL state the StyleManager full writers do — the dual-writer
+  divergence is eliminated.
+- **Behaviour delta (intended):** the runtime push now also sets the previously-dropped fields
+  (tool `enabled`/`lineType`/`fillColor`; full text incl. `textDecoration`/super-sub/`opacity`;
+  full completion) — strictly more-correct, mirroring the grip full-write rationale.
+- **Tests:** NEW `stores/__tests__/style-store-sync-ssot.test.ts` (anti-partial-write guard —
+  each writer must cover every mapped field, incl. derived `fillColor`/`textDecoration`/
+  `opacity÷100`, + grip re-export identity). `settings/sync/storeSync.test.ts` rewritten to
+  assert outcomes on the real stores (the ports no longer receive `apply`). 14 green.
+- Debug `debug/store-sync-test.qa.ts` introspection updated to the new SSoT writers.
+
+**Open / deferred (separate decision):** retiring the hexagonal port layer (`ports.ts` /
+adapters / `compositionRoot` / `createStoreSync` wiring) entirely is a larger, higher-risk
+follow-up — the `apply` path is now bypassed but the `onChange/bus` scaffolding + the DI wiring
+remain. Also pre-existing and out of scope: `toolStyleStore` is fed with `'preview'`-mode line
+settings by storeSync vs default-mode by StyleManager — a mode discrepancy to reconcile when the
+single-driver consolidation happens.
+
+**NOT touched:** UI-driven `toolStyleStore.set` in `OverlayToolbar` / `DraggableOverlayToolbar`
+(different concern), grid/ruler ports, `bim/structural/*`, `codes/*` (shared tree, other agent).
 
 ---

@@ -1,33 +1,36 @@
 /**
- * @file Store Sync - Pure Functions with Ports & Adapters
+ * @file Store Sync - Settings → Legacy Style Stores (single full-state writers)
  * @module settings/sync/storeSync
  *
- * ✅ ENTERPRISE: Hexagonal Architecture - Zero Coupling to Legacy Stores
+ * ✅ ENTERPRISE: drives the runtime "settings → style store" hydration on load
+ * and on demand (`pushFromSettings`).
  *
- * **ARCHITECTURAL PRINCIPLES**:
- * - Dependency Inversion: Depends on ports (abstractions), not implementations
- * - Pure Functions: No React hooks, no side effects (except via ports)
- * - Testability: Can be tested with fake ports
- * - Flexibility: Swap implementations without changing this file
+ * **SSoT (2026-06-20)**: this file used to carry its OWN lossy settings→store
+ * mappers (`mapLineToToolStyle` / `mapTextToTextStyle` / `mapGripToGripStyle`)
+ * that wrote a partial subset via the port adapters — a second, diverging writer
+ * alongside `StyleManagerProvider`'s full mappings (last-writer-wins hazard).
+ * The mapping now lives in exactly ONE place — `stores/style-store-sync.ts` —
+ * and this file delegates to those FULL writers. No more partial/lossy writes.
  *
- * **ZERO IMPORTS FROM**:
- * - ❌ stores/* (NO direct store access)
- * - ❌ contexts/* (NO context dependencies)
- * - ❌ components/* (NO component coupling)
- *
- * **ONLY IMPORTS**:
- * - ✅ ports.ts (abstract interfaces)
- * - ✅ Domain types (LineSettings, TextSettings, etc.)
+ * The port `onChange` subscriptions are kept as the bidirectional (port → bus)
+ * scaffolding; grid/ruler ports remain dormant (RulersGridSystem is their SSoT,
+ * see the start() body).
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI) + ChatGPT-5 Architecture
  * @since 2025-10-09
  */
 
-import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, Unsubscribe } from './ports';
+import type { SyncDependencies, Unsubscribe } from './ports';
 import type { LineSettings, TextSettings } from '../core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../core/types';
-import { UI_COLORS, resolveGripColors } from '../../config/color-config';
+// 🏢 SSoT full-state writers (single mapping source for the legacy style stores)
+import {
+  syncToolStyleStoreFromSettings,
+  syncTextStyleStoreFromSettings,
+  syncCompletionStyleStoreFromSettings,
+  syncGripStyleStoreFromSettings,
+} from '../../stores/style-store-sync';
 
 // ============================================================================
 // EFFECTIVE SETTINGS GETTER TYPE
@@ -63,84 +66,24 @@ export interface StoreSync {
 }
 
 // ============================================================================
-// MAPPER FUNCTIONS (Settings → Port Format)
+// PORT onChange WIRING (Bidirectional scaffolding: port → bus)
 // ============================================================================
 
 /**
- * Map LineSettings → ToolStylePort format
- */
-function mapLineToToolStyle(line: LineSettings): Parameters<ToolStylePort['apply']>[0] {
-  return {
-    stroke: line.color, // MIGRATED: lineColor → color (settings-core/types)
-    fill: UI_COLORS.TRANSPARENT, // Transparent fill
-    width: line.lineWidth,
-    opacity: line.opacity,
-    dashArray: [] // TODO: Map from lineType to dashArray
-  };
-}
-
-/**
- * Map TextSettings → TextStylePort format
- */
-function mapTextToTextStyle(text: TextSettings): Parameters<TextStylePort['apply']>[0] {
-  return {
-    font: text.fontFamily,
-    size: text.fontSize,
-    color: text.color, // MIGRATED: textColor → color (settings-core/types)
-    weight: text.isBold ? 'bold' : 'normal',
-    style: text.isItalic ? 'italic' : 'normal'
-  };
-}
-
-/**
- * Map GripSettings → GripStylePort format
- */
-function mapGripToGripStyle(grip: GripSettings): Parameters<GripStylePort['apply']>[0] {
-  return {
-    size: grip.gripSize,
-    color: resolveGripColors(grip.colors).cold,
-    hoverColor: grip.colors?.warm ?? UI_COLORS.SNAP_INTERSECTION,
-    selectedColor: grip.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT
-  };
-}
-
-// ============================================================================
-// PORT WIRING FUNCTION (Generic)
-// ============================================================================
-
-/**
- * Wire a port for bidirectional sync
+ * Subscribe to a port's external changes and re-emit them on the event bus.
+ * This is the ONLY remaining responsibility of the ports here — the settings →
+ * store push is done via the SSoT full writers (see createStoreSync below).
  *
- * @param port - Port to wire
- * @param pickFromEffective - Function to extract data from effective settings
- * @param deps - Sync dependencies
- * @param getEffective - Getter for effective settings
- * @returns Push function and cleanup subscriptions
+ * @param port - Port exposing `onChange`
+ * @param deps - Sync dependencies (logger + optional bus)
+ * @returns Unsubscribe handle
  */
-function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unknown) => void): Unsubscribe }>(
-  port: TPort,
-  pickFromEffective: (getter: EffectiveSettingsGetter) => unknown,
-  deps: SyncDependencies,
-  getEffective: EffectiveSettingsGetter
-): { push: () => void; subscriptions: Unsubscribe[] } {
-  const subscriptions: Unsubscribe[] = [];
-
-  // ===== UNIDIRECTIONAL FLOW: Settings → Port =====
-  const push = () => {
+function subscribePortToBus(
+  port: { onChange(h: (p: unknown) => void): Unsubscribe },
+  deps: SyncDependencies
+): Unsubscribe {
+  return port.onChange((delta) => {
     try {
-      const data = pickFromEffective(getEffective);
-      port.apply(data);
-      // Debug disabled: Pushed to port
-    } catch (err) {
-      deps.logger.warn('[StoreSync] Apply failed', err);
-    }
-  };
-
-  // ===== BIDIRECTIONAL: Port → Settings (subscribe to port changes) =====
-  const unsub = port.onChange((delta) => {
-    try {
-      // Debug disabled: Port delta received
-      // If bus exists, emit delta for other listeners
       if (deps.bus) {
         deps.bus.emit({ type: 'PORT_DELTA', payload: delta });
       }
@@ -148,9 +91,6 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
       deps.logger.warn('[StoreSync] onChange failed', err);
     }
   });
-  subscriptions.push(unsub);
-
-  return { push, subscriptions };
 }
 
 // ============================================================================
@@ -183,40 +123,38 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
     start(getEffective: EffectiveSettingsGetter) {
       // Debug disabled: Starting sync
 
-      // ===== WIRE TOOL STYLE PORT =====
+      // 🏢 SSoT: push FULL effective state into the legacy style stores via the
+      // single mapping writers (style-store-sync.ts). Each push is wrapped so a
+      // faulty getter is logged, never thrown. Per-entity effective modes are
+      // preserved from the previous port pushers (tool/grip = 'preview',
+      // completion = 'completion', text = default).
+      const addPush = (fn: () => void) => {
+        pushers.push(() => {
+          try {
+            fn();
+          } catch (err) {
+            deps.logger.warn('[StoreSync] Push failed', err);
+          }
+        });
+      };
+
+      // ===== WIRE TOOL STYLE PORT (+ completion, derived from line settings) =====
       if (deps.toolStyle) {
-        const { push, subscriptions } = wirePort(
-          deps.toolStyle,
-          (getter) => mapLineToToolStyle(getter.line('preview')),
-          deps,
-          getEffective
-        );
-        pushers.push(push);
-        allSubscriptions.push(...subscriptions);
+        allSubscriptions.push(subscribePortToBus(deps.toolStyle, deps));
+        addPush(() => syncToolStyleStoreFromSettings(getEffective.line('preview')));
+        addPush(() => syncCompletionStyleStoreFromSettings(getEffective.line('completion')));
       }
 
       // ===== WIRE TEXT STYLE PORT =====
       if (deps.textStyle) {
-        const { push, subscriptions } = wirePort(
-          deps.textStyle,
-          (getter) => mapTextToTextStyle(getter.text()),
-          deps,
-          getEffective
-        );
-        pushers.push(push);
-        allSubscriptions.push(...subscriptions);
+        allSubscriptions.push(subscribePortToBus(deps.textStyle, deps));
+        addPush(() => syncTextStyleStoreFromSettings(getEffective.text()));
       }
 
       // ===== WIRE GRIP STYLE PORT =====
       if (deps.gripStyle) {
-        const { push, subscriptions } = wirePort(
-          deps.gripStyle,
-          (getter) => mapGripToGripStyle(getter.grip('preview')),
-          deps,
-          getEffective
-        );
-        pushers.push(push);
-        allSubscriptions.push(...subscriptions);
+        allSubscriptions.push(subscribePortToBus(deps.gripStyle, deps));
+        addPush(() => syncGripStyleStoreFromSettings(getEffective.grip('preview')));
       }
 
       // ===== WIRE GRID PORT =====
@@ -236,7 +174,7 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
       // ===== WIRE RULER PORT =====
       // (see grid port comment above)
 
-      // ===== INITIAL PUSH (Settings → Ports) =====
+      // ===== INITIAL PUSH (Settings → Stores via SSoT writers) =====
       const pushFromSettings = () => {
         // Debug disabled: Pushing from settings
         for (const push of pushers) {

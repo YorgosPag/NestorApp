@@ -476,25 +476,37 @@ async function testStoreSyncPureFunctions(): Promise<TestResult> {
 }
 
 async function testMapperFunctions(): Promise<TestResult> {
-  return measureTest("PURE FUNCTIONS", "Mapper Functions Exist", async () => {
+  return measureTest("PURE FUNCTIONS", "SSoT Style Writers Exist", async () => {
     try {
-      // Import storeSync to check for mapper functions
-      const storeSyncModule = await import('../settings/sync/storeSync');
+      // SSoT (2026-06-20): storeSync no longer carries its own lossy mappers.
+      // The single settings→store writers live in stores/style-store-sync.ts;
+      // storeSync delegates to them. Verify that module loads + exports them.
+      await import('../settings/sync/storeSync');
+      const writers = await import('../stores/style-store-sync');
 
-      // Mappers are internal, but we can verify module loads without errors
+      const expected = [
+        'syncToolStyleStoreFromSettings',
+        'syncTextStyleStoreFromSettings',
+        'syncCompletionStyleStoreFromSettings',
+        'syncGripStyleStoreFromSettings'
+      ] as const;
+      const missing = expected.filter((n) => typeof (writers as Record<string, unknown>)[n] !== 'function');
+
+      if (missing.length > 0) {
+        return {
+          status: "failed",
+          message: `❌ Missing SSoT style writers: ${missing.join(', ')}`,
+          details: { missing }
+        };
+      }
+
       return {
         status: "success",
-        message: "✅ Mapper functions present (internal implementation)",
-        details: {
-          mappers: [
-            'mapLineToToolStyle',
-            'mapTextToTextStyle',
-            'mapGripToGripStyle'
-          ]
-        }
+        message: "✅ SSoT style writers present (style-store-sync.ts)",
+        details: { writers: [...expected] }
       };
     } catch (err: unknown) {
-      return { status: "failed", message: `❌ Mapper functions error: ${getErrorMessage(err)}` };
+      return { status: "failed", message: `❌ SSoT style writers error: ${getErrorMessage(err)}` };
     }
   });
 }

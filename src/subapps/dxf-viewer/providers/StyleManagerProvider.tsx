@@ -12,15 +12,21 @@ import type {
 // import { useViewerConfig } from './ConfigurationProvider';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../settings-provider';
-import { toolStyleStore } from '../stores/ToolStyleStore';
-import { textStyleStore } from '../stores/TextStyleStore';
-import { gripStyleStore } from '../stores/GripStyleStore';
-// 🏢 ADR-056: Centralized completion style store
-import { completionStyleStore } from '../stores/CompletionStyleStore';
-import { withOpacity } from '../config/color-config';
+// 🏢 SSoT single writers: effective settings → legacy style stores.
+// All four mappers live in ONE place (style-store-sync.ts); these inline
+// syncers are thin, idempotent delegations. Was: duplicated inline mappings
+// here + lossy mappers in settings/sync/storeSync.ts (last-writer-wins hazard).
+import {
+  syncToolStyleStoreFromSettings,
+  syncTextStyleStoreFromSettings,
+  syncCompletionStyleStoreFromSettings,
+  syncGripStyleStoreFromSettings,
+  type TextStyleSyncInput,
+} from '../stores/style-store-sync';
 // 🏢 ADR-056: Import proper LineSettings type from settings-core
 import type { LineSettings as CoreLineSettings } from '../settings-core/types';
-import type { GripSettings } from '../rendering/types/Types';
+// Full GripSettings (matches what getEffectiveGripSettings() actually returns)
+import type { GripSettings } from '../types/gripSettings';
 
 // ===== CONTEXT CREATION =====
 
@@ -30,87 +36,16 @@ const StyleManagerContext = createContext<StyleManagerContextType | null>(null);
 
 // 🏢 ADR-056: Use CoreLineSettings alias for proper type (includes dashScale, lineCap, etc.)
 type LineSettings = CoreLineSettings;
+/** Text settings for store synchronization (SSoT shape in style-store-sync.ts) */
+type TextSettings = TextStyleSyncInput;
 
-/** Text settings for store synchronization */
-interface TextSettings {
-  enabled: boolean;
-  fontFamily: string;
-  fontSize: number;
-  color: string;
-  isBold?: boolean;
-  isItalic?: boolean;
-  isUnderline?: boolean;
-  isStrikethrough?: boolean;
-  isSuperscript?: boolean;
-  isSubscript?: boolean;
-  opacity: number;
-}
-
-// 🔄 MIGRATION NOTE: Type assertion needed because adapter returns Old types
-// but these sync functions expect specific entity types
-const syncLineStore = (settings: LineSettings) => {
-  // Use centralized withOpacity function instead of manual rgba construction
-  toolStyleStore.set({
-    enabled: settings.enabled,
-    strokeColor: settings.color,
-    lineWidth: settings.lineWidth,
-    opacity: settings.opacity,
-    fillColor: withOpacity(settings.color, 0), // Fully transparent fill
-    lineType: settings.lineType, // Now properly typed as LineType
-  });
-};
-
-const syncTextStore = (settings: TextSettings) => {
-  const getTextDecoration = (): string => {
-    const decorations: string[] = [];
-    if (settings.isUnderline) decorations.push('underline');
-    if (settings.isStrikethrough) decorations.push('line-through');
-    return decorations.join(' ') || 'none';
-  };
-
-  textStyleStore.set({
-    enabled: settings.enabled,
-    fontFamily: settings.fontFamily,
-    fontSize: settings.fontSize,
-    color: settings.color,
-    fontWeight: settings.isBold ? 'bold' : 'normal',
-    fontStyle: settings.isItalic ? 'italic' : 'normal',
-    textDecoration: getTextDecoration(),
-    opacity: settings.opacity / 100,
-    isSuperscript: settings.isSuperscript,
-    isSubscript: settings.isSubscript,
-  });
-};
-
-const syncGripStore = (settings: GripSettings) => {
-  gripStyleStore.set({
-    enabled: settings.showGrips,
-    showGrips: settings.showGrips,
-    gripSize: settings.gripSize,
-    pickBoxSize: settings.pickBoxSize,
-    apertureSize: settings.apertureSize,
-    colors: settings.colors,
-    opacity: 1.0
-  });
-};
-
-// 🏢 ADR-056: Sync completion styles to CompletionStyleStore
-// Mirrors syncLineStore pattern for preview styles
-const syncCompletionStore = (settings: LineSettings) => {
-  completionStyleStore.set({
-    enabled: settings.enabled,
-    color: settings.color,
-    fillColor: withOpacity(settings.color, 0), // Fully transparent fill
-    lineWidth: settings.lineWidth,
-    opacity: settings.opacity,
-    lineType: settings.lineType,
-    dashScale: settings.dashScale ?? 1.0,
-    lineCap: settings.lineCap ?? 'round',
-    lineJoin: settings.lineJoin ?? 'round',
-    dashOffset: settings.dashOffset ?? 0,
-    breakAtCenter: settings.breakAtCenter ?? false,
-  });
-};
+// 🏢 SSoT: each syncer is a thin delegation to the single mapper in
+// style-store-sync.ts. Keeping these named wrappers preserves the call sites
+// (syncStores / updateStore) and their per-entity effective-settings modes.
+const syncLineStore = (settings: LineSettings) => syncToolStyleStoreFromSettings(settings);
+const syncTextStore = (settings: TextSettings) => syncTextStyleStoreFromSettings(settings);
+const syncGripStore = (settings: GripSettings) => syncGripStyleStoreFromSettings(settings);
+const syncCompletionStore = (settings: LineSettings) => syncCompletionStyleStoreFromSettings(settings);
 
 // ===== PROVIDER COMPONENT =====
 
