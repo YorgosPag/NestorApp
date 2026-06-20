@@ -65,36 +65,39 @@ export function decomposeBimEntityToDxfPrimitives(entity: Entity): Entity[] {
     const outer = entity.geometry.outerEdge.points;
     const inner = entity.geometry.innerEdge.points;
     const loop = [...outer, ...[...inner].reverse()];
-    return [makeClosedLwpolyline(entity, loop, 'wall', extractExtrusion(entity.geometry))];
+    return [makeClosedLwpolyline(entity, loop, 'wall', extractHeightMm(entity))];
   }
 
   // Every other BIM type (column/slab/beam/foundation/opening/roof/furniture/
   // floorplan-symbol + ALL MEP fixtures/segments/fittings/manifolds/panels) caches
   // a plan polygon under `footprint` / `outline` / `polygon`. One generic extractor
   // covers them all — and any future BIM type that follows the same convention.
-  const geometry = readGeometry(entity);
-  const ring = extractFootprintVertices(geometry);
-  return ring ? [makeClosedLwpolyline(entity, ring, entity.type, extractExtrusion(geometry))] : [];
+  const ring = extractFootprintVertices(readGeometry(entity));
+  return ring ? [makeClosedLwpolyline(entity, ring, entity.type, extractHeightMm(entity))] : [];
 }
 
-/** Vertical extrusion (DXF elevation + thickness) for pseudo-3D in AutoCAD. */
-export interface DxfExtrusion {
-  readonly elevation: number;
-  readonly thickness: number;
-}
+/** Candidate height fields on a BIM `params` object, in priority order (all mm). */
+const HEIGHT_KEYS = ['height', 'depth', 'thickness', 'thicknessMm', 'bodyHeightMm'] as const;
 
 /**
- * Derive the vertical extrusion from a BIM geometry's 3D bbox: `elevation`
- * = bbox.min.z, `thickness` = bbox height. Returns null for flat/2D geometry
- * (no z extent) so those export as plain 2D polygons.
+ * Vertical extent (mm) of a BIM element, for pseudo-3D extrusion. Heights live
+ * in `params` (SSoT stores dimensions in mm) — NOT in the 2D plan bbox.
+ *   wall/column → params.height · slab/foundation → thickness · beam → depth ·
+ *   MEP → bodyHeightMm. column also caches geometry.height. Returns 0 (→ flat 2D)
+ *   when nothing matches.
  */
-function extractExtrusion(geometry: unknown): DxfExtrusion | null {
-  if (!geometry || typeof geometry !== 'object') return null;
-  const bbox = (geometry as { bbox?: { min?: { z?: number }; max?: { z?: number } } }).bbox;
-  const minZ = bbox?.min?.z ?? 0;
-  const maxZ = bbox?.max?.z ?? 0;
-  const thickness = maxZ - minZ;
-  return thickness > 0 ? { elevation: minZ, thickness } : null;
+function extractHeightMm(entity: Entity): number {
+  const geomHeight = (readGeometry(entity) as { height?: number } | undefined)?.height;
+  if (typeof geomHeight === 'number' && geomHeight > 0) return geomHeight;
+
+  const params = (entity as { params?: Record<string, unknown> }).params;
+  if (params) {
+    for (const key of HEIGHT_KEYS) {
+      const v = params[key];
+      if (typeof v === 'number' && v > 0) return v;
+    }
+  }
+  return 0;
 }
 
 // ─── Geometry extraction (generic, convention-based) ──────────────────────────
@@ -130,20 +133,21 @@ function polygonVertices(value: unknown): readonly Point3D[] | null {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** lwpolyline carrying an optional DXF extrusion thickness (group 39). */
+/** lwpolyline carrying an optional extrusion height in MM (DXF group 39). */
 export interface ExtrudedLwpolyline extends LWPolylineEntity {
-  readonly dxfThickness?: number;
+  /** Vertical extent in millimetres; the writer scales it to the output unit. */
+  readonly dxfThicknessMm?: number;
 }
 
 /** Build a closed `lwpolyline` primitive from a 3D point ring, inheriting the
  *  source entity's layer/color so the DXF keeps the drawing's organisation.
- *  When `extrusion` is given, the primitive carries `elevation` + `dxfThickness`
- *  so the writer can extrude it into pseudo-3D (AutoCAD polyline mode). */
+ *  When `thicknessMm > 0`, the primitive carries it so the writer can extrude
+ *  the polyline into pseudo-3D (AutoCAD polyline mode). */
 function makeClosedLwpolyline(
   source: Entity,
   ring: readonly Point3D[],
   suffix: string,
-  extrusion?: DxfExtrusion | null,
+  thicknessMm = 0,
 ): ExtrudedLwpolyline {
   return {
     id: `${source.id}__dxf_${suffix}`,
@@ -153,8 +157,7 @@ function makeClosedLwpolyline(
     visible: source.visible ?? true,
     vertices: ring.map(to2D),
     closed: true,
-    elevation: extrusion?.elevation,
-    dxfThickness: extrusion?.thickness,
+    dxfThicknessMm: thicknessMm > 0 ? thicknessMm : undefined,
   };
 }
 

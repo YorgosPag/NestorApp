@@ -113,6 +113,7 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
   const dxf = writeDxfAscii(request.scene.entities, {
     layersById: request.scene.layersById,
     scale: coordinateScale(request.scene.units, request.settings.units),
+    mmScale: mmToOutputScale(request.settings.units),
     lineMode,
   });
   return new Blob([dxf], { type: 'application/dxf' });
@@ -123,6 +124,12 @@ export function coordinateScale(sceneUnits: SceneUnits, dxfUnit: DxfUnit): numbe
   const target = DXF_UNIT_TO_SCENE[dxfUnit];
   if (!target) return 1; // exotic unit → leave coordinates as-is.
   return mmToSceneUnits(target) / mmToSceneUnits(sceneUnits);
+}
+
+/** Factor to convert a millimetre value (e.g. element height) into the DXF unit. */
+export function mmToOutputScale(dxfUnit: DxfUnit): number {
+  const target = DXF_UNIT_TO_SCENE[dxfUnit];
+  return target ? mmToSceneUnits(target) : 1;
 }
 
 /**

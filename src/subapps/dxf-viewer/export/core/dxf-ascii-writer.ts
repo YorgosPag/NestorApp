@@ -37,8 +37,10 @@ export interface DxfWriteLayer {
 export interface DxfWriteOptions {
   /** id-keyed layer map (SceneModel.layersById). */
   readonly layersById?: Record<string, DxfWriteLayer>;
-  /** Multiply every coordinate / length by this factor (unit conversion). */
+  /** Multiply every coordinate by this factor (scene-unit → output unit). */
   readonly scale?: number;
+  /** Multiply mm-based extrusion thickness by this (mm → output unit). */
+  readonly mmScale?: number;
   /** Geometry mode — 'polyline' (AutoCAD, default) or 'lines' (Tekton). */
   readonly lineMode?: DxfLineMode;
 }
@@ -54,6 +56,7 @@ export function writeDxfAscii(
   options: DxfWriteOptions = {},
 ): string {
   const s = options.scale ?? 1;
+  const mmScale = options.mmScale ?? s;
   const explode = options.lineMode === 'lines';
   const out: string[] = [];
   const pair = (code: number, value: string | number): void => {
@@ -65,7 +68,7 @@ export function writeDxfAscii(
   pair(2, 'ENTITIES');
   for (const e of entities) {
     const layer = layerObj(e);
-    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, explode, pair);
+    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair);
   }
   pair(0, 'ENDSEC');
   pair(0, 'EOF');
@@ -97,7 +100,7 @@ function resolveAci(e: Entity, layer: DxfWriteLayer | undefined): number {
 type Pair = (code: number, value: string | number) => void;
 
 function writeEntity(
-  e: Entity, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
+  e: Entity, layer: string, aci: number, s: number, mmScale: number, explode: boolean, pair: Pair,
 ): void {
   switch (e.type) {
     case 'line':
@@ -121,9 +124,10 @@ function writeEntity(
     case 'polyline':
     case 'lwpolyline': {
       // Pseudo-3D extrusion (AutoCAD polyline mode only — Tekton stays 2D).
-      const elevation = explode ? 0 : (e.elevation ?? 0) * s;
-      const thickness = explode ? 0 : ((e as { dxfThickness?: number }).dxfThickness ?? 0) * s;
-      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, elevation, thickness);
+      // Thickness is in mm → scale with mmScale, NOT the coordinate scale.
+      const thicknessMm = (e as { dxfThicknessMm?: number }).dxfThicknessMm ?? 0;
+      const thickness = explode ? 0 : thicknessMm * mmScale;
+      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness);
       break;
     }
     // point/spline/hatch/dimension/leader/xline/ray → skipped.
@@ -180,7 +184,7 @@ function emitText(
  */
 function emitPath(
   vertices: readonly Point2D[], closed: boolean, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
-  elevation = 0, thickness = 0,
+  thickness = 0,
 ): void {
   if (vertices.length < 2) return;
   if (explode) {
@@ -192,17 +196,15 @@ function emitPath(
     }
     return;
   }
-  // Old-style POLYLINE (R12-native, universally readable). When `thickness` is
-  // set, AutoCAD extrudes the closed polyline upward from `elevation` → pseudo-3D.
+  // Old-style POLYLINE (R12-native, universally readable). With `thickness`,
+  // AutoCAD extrudes the closed polyline along +Z → pseudo-3D prism.
   pair(0, 'POLYLINE'); pair(8, layer); pair(62, aci);
   pair(66, 1);                       // vertices-follow flag
-  if (elevation) { pair(10, 0); pair(20, 0); pair(30, elevation); }
   pair(70, closed ? 1 : 0);          // 1 = closed
   if (thickness) pair(39, thickness); // extrusion height (group 39)
   for (const v of vertices) {
     pair(0, 'VERTEX'); pair(8, layer);
     pair(10, v.x * s); pair(20, v.y * s);
-    if (elevation) pair(30, elevation);
   }
   pair(0, 'SEQEND'); pair(8, layer);
 }
