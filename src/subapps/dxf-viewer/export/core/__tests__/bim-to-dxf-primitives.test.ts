@@ -104,26 +104,31 @@ describe('decomposeBimEntityToDxfPrimitives', () => {
     expect(out[0].type).toBe('lwpolyline');
   });
 
-  it('3Δ extrusion: bbox z extent → dxfThickness + elevation στο primitive', () => {
+  it('3Δ extrusion: geometry.height (mm) → dxfThicknessMm στο primitive', () => {
     const col = {
       id: 'c', type: 'column', layerId: 'lyr_c',
-      geometry: {
-        footprint: { vertices: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }] },
-        bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 4, y: 4, z: 3000 } },
-      },
+      geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }] }, height: 3000 },
     } as unknown as Entity;
-    const out = decomposeBimEntityToDxfPrimitives(col) as Array<{ dxfThickness?: number; elevation?: number }>;
-    expect(out[0].dxfThickness).toBe(3000);
-    expect(out[0].elevation).toBe(0);
+    const out = decomposeBimEntityToDxfPrimitives(col) as Array<{ dxfThicknessMm?: number }>;
+    expect(out[0].dxfThicknessMm).toBe(3000);
   });
 
-  it('flat geometry (μηδέν z extent) → χωρίς extrusion', () => {
+  it('3Δ extrusion: params.thickness (πλάκα) → dxfThicknessMm', () => {
+    const slab = {
+      id: 's', type: 'slab', layerId: 'lyr_s', params: { thickness: 200 },
+      geometry: { polygon: { vertices: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }] } },
+    } as unknown as Entity;
+    const out = decomposeBimEntityToDxfPrimitives(slab) as Array<{ dxfThicknessMm?: number }>;
+    expect(out[0].dxfThicknessMm).toBe(200);
+  });
+
+  it('χωρίς height/params → χωρίς extrusion (flat 2Δ)', () => {
     const flat = {
       id: 'f', type: 'mep-fixture', layerId: 'lyr_m',
-      geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }] }, bbox: { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } } },
+      geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }] } },
     } as unknown as Entity;
-    const out = decomposeBimEntityToDxfPrimitives(flat) as Array<{ dxfThickness?: number }>;
-    expect(out[0].dxfThickness).toBeUndefined();
+    const out = decomposeBimEntityToDxfPrimitives(flat) as Array<{ dxfThicknessMm?: number }>;
+    expect(out[0].dxfThicknessMm).toBeUndefined();
   });
 
   it('opening με outline → lwpolyline', () => {

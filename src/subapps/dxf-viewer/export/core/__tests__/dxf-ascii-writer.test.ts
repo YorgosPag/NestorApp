@@ -103,21 +103,22 @@ describe('writeDxfAscii — polyline mode (AutoCAD, default)', () => {
     expect(a).toBe(b);
   });
 
-  it('3Δ extrusion: dxfThickness → group 39 + elevation (polyline mode)', () => {
+  it('3Δ extrusion: dxfThicknessMm × mmScale → group 39 (polyline mode)', () => {
     const extruded = {
-      id: 'w', type: 'lwpolyline', layerId: 'L', closed: true, elevation: 0, dxfThickness: 3000,
+      id: 'w', type: 'lwpolyline', layerId: 'L', closed: true, dxfThicknessMm: 3000,
       vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }],
     } as unknown as Entity;
-    const dxf = writeDxfAscii([extruded], { layersById: LAYERS });
-    expect(dxf).toContain('\n39\n3000\n'); // extrusion height
+    // mmScale 0.001 (mm→m): 3000mm → 3m
+    const dxf = writeDxfAscii([extruded], { layersById: LAYERS, mmScale: 0.001 });
+    expect(dxf).toContain('\n39\n3\n');
   });
 
   it('lines mode (Τέκτονας) → ΚΑΜΙΑ extrusion (2Δ)', () => {
     const extruded = {
-      id: 'w', type: 'lwpolyline', layerId: 'L', closed: true, elevation: 0, dxfThickness: 3000,
+      id: 'w', type: 'lwpolyline', layerId: 'L', closed: true, dxfThicknessMm: 3000,
       vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }],
     } as unknown as Entity;
-    const dxf = writeDxfAscii([extruded], { layersById: LAYERS, lineMode: 'lines' });
+    const dxf = writeDxfAscii([extruded], { layersById: LAYERS, lineMode: 'lines', mmScale: 0.001 });
     expect(dxf).not.toContain('\n39\n');
   });
 });
