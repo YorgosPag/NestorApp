@@ -159,11 +159,13 @@ function makeBeamGhostBeforeClick(
   const params = buildDefaultBeamParams(start, end, kind, overrides, sceneUnits);
   const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;
-  // ADR-398 §beam-to-beam framing — μόνο το 🔴 `overlap` (συγγραμμικό κοντής άκρης /
-  // duplication) «ψήνει» status color πάνω στο entity → ο `PreviewRenderer` ζωγραφίζει
-  // κόκκινο schematic αντί WYSIWYG. 🟢 `beam` (έγκυρο Τ-framing) & `neutral` → WYSIWYG
-  // amber αυτούσιο (το πραγματικό δοκάρι δείχνει ήδη πού πατάει — δεν χρειάζεται recolor).
-  const ghostStatusColor = snap && snap.status === 'overlap' ? resolveGhostStatusColor(snap.status) : null;
+  // ADR-398 §3.6 — 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή
+  // (β) το φάντασμα κείτεται ομοαξονικά/πάνω σε υφιστάμενο δοκάρι (`isBeamCollinearOverlap` —
+  // πιάνει ΚΑΙ το εφεδρικό free-fallback ghost που έπεφτε ομοαξονικό σε οριζόντιο δοκάρι).
+  // 🟢 `beam` (έγκυρο κάθετο Τ-framing) & `neutral` → WYSIWYG amber αυτούσιο (decision A).
+  const widthScene = widthMm * mmToSceneUnits(sceneUnits);
+  const isOverlap = snap?.status === 'overlap' || isBeamCollinearOverlap(start, end, widthScene, beamTargets);
+  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
   return {
     ...built.entity,
     id: 'preview_beam_ghost',

@@ -159,10 +159,23 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
   // ADR-398 §3.6 — re-sync όταν δημιουργείται οντότητα (π.χ. μόλις σχεδιάστηκε δοκάρι).
   // Χωρίς αυτό, η λίστα στόχων ανανεωνόταν ΜΟΝΟ στο κλικ → ένα δοκάρι που μόλις έφτιαξες
-  // ΔΕΝ το «έβλεπε» το ghost-before-click του επόμενου → εφεδρικό (ομοαξονικό) ghost.
+  // ΔΕΝ το «έβλεπε» το ghost-before-click του επόμενου → εφεδρικό (ομοαξονικό κίτρινο) ghost.
+  //
+  // **rAF defer (κρίσιμο):** το `drawing:entity-created` εκπέμπεται ΣΥΓΧΡΟΝΑ μέσα στο
+  // `appendEntityToScene` αμέσως μετά το `setLevelScene` → το React scene state ΔΕΝ έχει
+  // commit-αριστεί ακόμη· σύγχρονο re-sync θα διάβαζε τη STALE σκηνή (χωρίς το νέο δοκάρι).
+  // Το rAF τρέχει μετά το commit → η σκηνή περιέχει πλέον το νέο δοκάρι → targets φρέσκα
+  // ΠΡΙΝ το επόμενο hover (όχι μόνο στο κλικ — που γι' αυτό «κόκκινο μόνο μετά το κλικ»).
   useEffect(() => {
-    const unsub = EventBus.on('drawing:entity-created', () => syncSceneTargetsToStore());
-    return unsub;
+    let raf = 0;
+    const unsub = EventBus.on('drawing:entity-created', () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub();
+    };
   }, [syncSceneTargetsToStore]);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
