@@ -11,29 +11,23 @@ jest.mock('firebase/auth', () => ({
 }));
 
 /**
- * ADR-363 Phase 4.5c.2 — ColumnRenderer material hatch unit tests.
+ * ADR-507 Φ7 — ColumnRenderer material poché (unified).
  *
- * Verifies the hatch pass (`drawMaterialHatch`):
- *   - `params.material` undefined → falls back to RC (dots only, `arc` calls)
- *   - `'rc'` (case-variants) → dot grid (`arc` + `fill`), no diagonal strokes
- *   - `'steel'` → diagonal cross-hatch strokes, no `arc`
- *   - `'masonry'` → horizontal + staggered vertical strokes, no `arc`
- *   - `'wood'` → single-direction diagonals, no `arc`
- *   - `'circular'` column kind → hatch SKIPPED entirely (no extra clip beyond
- *     the base fill+stroke pass)
- *   - Extreme zoom-out (`transform.scale < 0.001`) → hatch SKIPPED
- *   - save/clip/restore properly scoped — outline stroke survives μετά το pass
- *   - Polygon clip uses footprint vertices (start point matches first vertex
- *     mapped through worldToScreen)
- *   - Unknown material string + uppercase variant → RC fallback path
+ * Μετά την ενοποίηση (ADR-363 bespoke engine → PAT catalog SSoT) η γεωμετρία
+ * δοκιμάζεται στο `material-hatch-geometry.test.ts` + `material-hatch-map.test.ts`.
+ * Εδώ δοκιμάζουμε την ΕΝΣΩΜΑΤΩΣΗ στον renderer (αρχιτεκτονικά invariants) + το
+ * outline χρώμα (ColumnRenderer-specific, ADR-375/445):
+ *   - Το hatch pass δεν κάνει πλέον `ctx.clip()` (segments ήδη clipped) ούτε
+ *     `ctx.arc()` (καμία RC dot-grid / concentric ring — AR-CONC stipple).
+ *   - Pattern segments → `lineTo` strokes.
+ *   - Extreme zoom-out (`scale < 0.001`) → hatch SKIPPED.
+ *   - Outline stroke χρώμα = Object Styles SSoT (parent vs shear-wall).
  */
 
 import { ColumnRenderer } from '../ColumnRenderer';
 import { buildColumnEntity, buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
 import type { ColumnEntity, ColumnKind } from '../../types/column-types';
 import type { EntityModel } from '../../../rendering/types/Types';
-
-// ─── Canvas mock ─────────────────────────────────────────────────────────────
 
 interface MockCtxCall { fn: string; args: readonly unknown[] }
 
@@ -49,16 +43,9 @@ function createMockCtx(width = 800, height = 600) {
   };
   const ctxStub = {
     canvas,
-    save: record('save'),
-    restore: record('restore'),
-    beginPath: record('beginPath'),
-    moveTo: record('moveTo'),
-    lineTo: record('lineTo'),
-    closePath: record('closePath'),
-    clip: record('clip'),
-    arc: record('arc'),
-    stroke: record('stroke'),
-    fill: record('fill'),
+    save: record('save'), restore: record('restore'), beginPath: record('beginPath'),
+    moveTo: record('moveTo'), lineTo: record('lineTo'), closePath: record('closePath'),
+    clip: record('clip'), arc: record('arc'), stroke: record('stroke'), fill: record('fill'),
     setLineDash: record('setLineDash'),
     set globalCompositeOperation(v: string) { calls.push({ fn: 'set:globalCompositeOperation', args: [v] }); },
     set globalAlpha(v: number) { calls.push({ fn: 'set:globalAlpha', args: [v] }); },
@@ -77,13 +64,9 @@ function countCalls(calls: readonly MockCtxCall[], fn: string): number {
   return calls.filter((c) => c.fn === fn).length;
 }
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
-
 function makeColumn(kind: ColumnKind, material?: string): ColumnEntity {
   const params = buildDefaultColumnParams(
-    { x: 0, y: 0 },
-    kind,
-    material !== undefined ? { material } : {},
+    { x: 0, y: 0 }, kind, material !== undefined ? { material } : {},
   );
   const r = buildColumnEntity(params, '0');
   if (!r.ok) throw new Error('column build failed: ' + r.hardErrors.join(','));
@@ -97,186 +80,49 @@ function makeRenderer(scale = 1) {
   return { renderer, mock };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
-describe('ColumnRenderer + material hatch (Phase 4.5c.2)', () => {
-  it('1. material undefined → RC fallback (arc calls > 0, no diagonal strokes mid-clip)', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular') as unknown as EntityModel, {});
-    expect(countCalls(mock.calls, 'arc')).toBeGreaterThan(0);
-    expect(countCalls(mock.calls, 'clip')).toBeGreaterThanOrEqual(1);
-  });
-
-  it('2. material "rc" → dot grid (arc), no inner lineTo strokes between clip+restore', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'rc') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    const hatch = tail.slice(0, restoreIdx);
-    expect(hatch.some((c) => c.fn === 'arc')).toBe(true);
-    expect(hatch.some((c) => c.fn === 'lineTo')).toBe(false);
-  });
-
-  it('3. material "steel" → cross-hatch strokes inside clip (lineTo > 0), no arc inside', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'steel') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    const hatch = tail.slice(0, restoreIdx);
-    expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
-    expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
-  });
-
-  it('4. material "masonry" → strokes inside clip, no arc', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'masonry') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    const hatch = tail.slice(0, restoreIdx);
-    expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
-    expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
-  });
-
-  it('5. material "wood" → strokes inside clip, no arc', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'wood') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    const hatch = tail.slice(0, restoreIdx);
-    expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
-    expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
-  });
-
-  it('6. circular RC → concentric arcs drawn inside single clip pass (Phase 4.5c.3)', () => {
-    // Phase 4.5c.3 superseded the original "circular → SKIP" assumption:
-    // `computeCircularHatchPlan('rc')` returns 3 concentric rings; renderer
-    // clips to the 32-vertex footprint and draws arcs. Outline stroke still
-    // runs after the hatch pass restore.
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('circular', 'rc') as unknown as EntityModel, {});
-    expect(countCalls(mock.calls, 'clip')).toBe(1);
-    expect(countCalls(mock.calls, 'arc')).toBeGreaterThanOrEqual(3);
-  });
-
-  it('7. extreme zoom-out (scale < 0.001) → hatch SKIPPED', () => {
-    const { renderer, mock } = makeRenderer(0.0001);
-    renderer.render(makeColumn('rectangular', 'steel') as unknown as EntityModel, {});
-    expect(countCalls(mock.calls, 'clip')).toBe(0);
-  });
-
-  it('8. hatch pass scoped (save before clip, restore after)', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'steel') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    expect(clipIdx).toBeGreaterThan(-1);
-    const preceding = mock.calls.slice(0, clipIdx);
-    const following = mock.calls.slice(clipIdx);
-    expect(preceding.some((c) => c.fn === 'save')).toBe(true);
-    expect(following.some((c) => c.fn === 'restore')).toBe(true);
-  });
-
-  it('9. outline stroke survives after hatch pass restore', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'steel') as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    expect(restoreIdx).toBeGreaterThan(-1);
-    const afterRestore = tail.slice(restoreIdx);
-    expect(afterRestore.some((c) => c.fn === 'stroke')).toBe(true);
-  });
-
-  it('10. polygon clip path uses footprint first vertex (moveTo right before clip)', () => {
-    const { renderer, mock } = makeRenderer();
-    const column = makeColumn('rectangular', 'rc');
-    renderer.render(column as unknown as EntityModel, {});
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const moveTos = mock.calls.slice(0, clipIdx).filter((c) => c.fn === 'moveTo');
-    expect(moveTos.length).toBeGreaterThan(0);
-    // Last moveTo πριν το clip = polygon path's first vertex worldToScreen.
-    const lastMove = moveTos[moveTos.length - 1];
-    expect(typeof lastMove.args[0]).toBe('number');
-    expect(typeof lastMove.args[1]).toBe('number');
-  });
-
-  it('11. unknown material string → RC fallback (arc calls, no inner stroke lines)', () => {
-    const { renderer, mock } = makeRenderer();
-    renderer.render(makeColumn('rectangular', 'unobtanium') as unknown as EntityModel, {});
-    expect(countCalls(mock.calls, 'arc')).toBeGreaterThan(0);
-    const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-    const tail = mock.calls.slice(clipIdx);
-    const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-    const hatch = tail.slice(0, restoreIdx);
-    expect(hatch.some((c) => c.fn === 'lineTo')).toBe(false);
-  });
-
-  it('12. case-insensitive material lookup ("STEEL" / "Steel" → steel hatch)', () => {
-    const { renderer: r1, mock: m1 } = makeRenderer();
-    const { renderer: r2, mock: m2 } = makeRenderer();
-    r1.render(makeColumn('rectangular', 'STEEL') as unknown as EntityModel, {});
-    r2.render(makeColumn('rectangular', 'Steel') as unknown as EntityModel, {});
-
-    for (const m of [m1, m2]) {
-      const clipIdx = m.calls.findIndex((c) => c.fn === 'clip');
-      const tail = m.calls.slice(clipIdx);
-      const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-      const hatch = tail.slice(0, restoreIdx);
-      expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
-      expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
-    }
-  });
-});
-
-// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape ───────────────────────
-
-describe('ColumnRenderer + Phase 8 kinds (polygon / shear-wall / I-shape)', () => {
-  it.each(['polygon', 'shear-wall', 'I-shape'] as const)(
-    '%s kind RC → single clip pass + dot grid (arc calls)',
-    (kind) => {
-      const { renderer, mock } = makeRenderer();
-      renderer.render(makeColumn(kind, 'rc') as unknown as EntityModel, {});
-      expect(countCalls(mock.calls, 'clip')).toBe(1);
-      expect(countCalls(mock.calls, 'arc')).toBeGreaterThan(0);
-    },
-  );
-
-  it.each(['polygon', 'shear-wall', 'I-shape'] as const)(
-    '%s kind steel → cross-hatch strokes inside clip, no arc',
+describe('ColumnRenderer unified material poché (ADR-507 Φ7)', () => {
+  it.each(['rectangular', 'polygon', 'shear-wall', 'I-shape'] as const)(
+    '%s: το hatch pass δεν κάνει clip ούτε arc (pre-clipped segments, μηδέν dots/rings)',
     (kind) => {
       const { renderer, mock } = makeRenderer();
       renderer.render(makeColumn(kind, 'steel') as unknown as EntityModel, {});
-      const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
-      expect(clipIdx).toBeGreaterThan(-1);
-      const tail = mock.calls.slice(clipIdx);
-      const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
-      const hatch = tail.slice(0, restoreIdx);
-      expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
-      expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
+      expect(countCalls(mock.calls, 'clip')).toBe(0);
+      expect(countCalls(mock.calls, 'arc')).toBe(0);
     },
   );
 
-  // ADR-375 C.9 / ADR-445 — το outline χρώμα οδηγείται από το Object Styles SSoT
-  // (2-tone: parent κολώνα steel-blue #2f6690 / subcategory τοιχίο shear-wall #24506b)·
-  // οι per-kind αποχρώσεις (blue family) ζουν μόνο ως fill tint (KIND_FILL).
-  it('polygon kind → outline = parent column line color (slate)', () => {
+  it('circular RC → καμία arc (rings καταργήθηκαν → AR-CONC clipped στο 32-gon)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeColumn('circular', 'rc') as unknown as EntityModel, {});
+    expect(countCalls(mock.calls, 'arc')).toBe(0);
+    expect(countCalls(mock.calls, 'clip')).toBe(0);
+  });
+
+  it('outline stroke τρέχει μετά το hatch pass (save/restore balanced)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeColumn('rectangular', 'steel') as unknown as EntityModel, {});
+    expect(countCalls(mock.calls, 'save')).toBe(countCalls(mock.calls, 'restore'));
+    expect(countCalls(mock.calls, 'stroke')).toBeGreaterThan(0);
+  });
+});
+
+// ─── ADR-375 C.9 / ADR-445 — outline χρώμα (Object Styles SSoT) ────────────────
+describe('ColumnRenderer outline color (Phase 8 kinds)', () => {
+  it('polygon → parent column line color (slate)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('polygon', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
     expect(strokeStyles).toContain('#2f6690');
   });
 
-  it('shear-wall kind → outline = shear-wall subcategory line color', () => {
+  it('shear-wall → shear-wall subcategory line color', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('shear-wall', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
     expect(strokeStyles).toContain('#24506b');
   });
 
-  it('I-shape kind → outline = parent column line color (not a τοιχίο kind)', () => {
+  it('I-shape → parent column line color (not a τοιχίο kind)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('I-shape', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);

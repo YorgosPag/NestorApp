@@ -22,8 +22,8 @@ import type { Entity } from '../../types/entities';
 import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 
-/** Είδος γραμμικού μέλους που μπορεί να γίνει face-snap στόχος. */
-export type MemberSnapKind = 'beam' | 'wall';
+/** Είδος μέλους που μπορεί να γίνει face-snap στόχος (πλάκα = οι ακμές της). */
+export type MemberSnapKind = 'beam' | 'wall' | 'slab';
 
 export interface MemberSnapTargets {
   /** Column footprints (world-baked 2Δ πολύγωνα). */
@@ -81,6 +81,40 @@ function wallTarget(e: Entity): LinearMemberSnapTarget | null {
 }
 
 /**
+ * ADR-508 §slab — κάθε ΑΚΜΗ πλάκας (εδαφόπλακα/δάπεδο/οροφή) → `LinearMemberSnapTarget` ώστε το
+ * φάντασμα (τοίχος/δοκάρι/κολώνα) να έχει **την ΙΔΙΑ συμπεριφορά** με παρειά μέλους: κάθετο
+ * T-framing προς τον κέρσορα + listening dimensions προς άκρα/κέντρο της ακμής. Μοντέλο: η ακμή
+ * = **κεντρική γραμμή** μιας πολύ λεπτής συμμετρικής band (±eps) → δύο όψεις → ο
+ * `resolveLinearMemberFaceSnap` κουμπώνει στην κοντινή προς τον κέρσορα, ghost flush ≈ στην ακμή.
+ * Reuse μηδέν νέο resolver. Scene units (το `params.outline` είναι world-baked, ίδιο frame με
+ * beam/wall geometry — βλ. `wall-host-plan-builder`).
+ */
+function slabEdgeTargets(e: Entity): LinearMemberSnapTarget[] {
+  const verts = (e as { params?: { outline?: { vertices?: Pts } } }).params?.outline?.vertices;
+  if (!verts || verts.length < 3) return [];
+  const pts = toPoint2D(verts);
+  const n = pts.length;
+  const out: LinearMemberSnapTarget[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % n];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-6) continue;
+    const px = dy / len, py = -dx / len; // μοναδιαία κάθετη της ακμής
+    const eps = len * 0.001;             // αμελητέα συμμετρική band → ακμή ≈ κεντρική γραμμή
+    const outline: Point2D[] = [
+      { x: a.x + px * eps, y: a.y + py * eps },
+      { x: b.x + px * eps, y: b.y + py * eps },
+      { x: b.x - px * eps, y: b.y - py * eps },
+      { x: a.x - px * eps, y: a.y - py * eps },
+    ];
+    out.push({ id: `${e.id}#edge${i}`, axis: [{ x: a.x, y: a.y }, { x: b.x, y: b.y }], outline });
+  }
+  return out;
+}
+
+/**
  * Μάζεψε column footprints + γραμμικά μέλη ως face-snap στόχους. Pure.
  */
 export function collectMemberSnapTargets(
@@ -91,6 +125,7 @@ export function collectMemberSnapTargets(
   const memberTargets: LinearMemberSnapTarget[] = [];
   const wantBeam = opts.memberKinds.includes('beam');
   const wantWall = opts.memberKinds.includes('wall');
+  const wantSlab = opts.memberKinds.includes('slab');
 
   for (const e of entities) {
     if (opts.excludeId && e.id === opts.excludeId) continue;
@@ -108,6 +143,10 @@ export function collectMemberSnapTargets(
     if (wantWall && e.type === 'wall') {
       const t = wallTarget(e);
       if (t) memberTargets.push(t);
+      continue;
+    }
+    if (wantSlab && e.type === 'slab') {
+      memberTargets.push(...slabEdgeTargets(e)); // κάθε ακμή = ξεχωριστός στόχος
     }
   }
   return { footprints, memberTargets };

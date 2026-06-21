@@ -222,6 +222,10 @@ export function completeEntity(
       ...(quickStyle && quickStyle.linetypeName !== 'ByLayer'
         ? { linetypeName: quickStyle.linetypeName }
         : {}),
+      // ADR-510 Φ2E #2 — per-object linetype scale draw-default (CELTSCALE).
+      ...(quickStyle && quickStyle.ltscale !== 1
+        ? { ltscale: quickStyle.ltscale }
+        : {}),
       ...(quickStyle && quickStyle.colorMode === 'Concrete'
         ? {
             colorMode: 'Concrete' as const,

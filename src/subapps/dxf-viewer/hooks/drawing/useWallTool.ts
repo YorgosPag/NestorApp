@@ -82,7 +82,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // ώστε το ghost-before-click face-snap να έχει τους στόχους έτοιμους.
   const syncSceneTargetsToStore = useCallback(() => {
     const entities = getSceneEntitiesRef.current?.() ?? [];
-    const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'beam'] });
+    const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'beam', 'slab'] });
     wallPreviewStore.setColumns(footprints);
     wallPreviewStore.setMembers(memberTargets);
   }, []);

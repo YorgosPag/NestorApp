@@ -29,6 +29,7 @@ import {
   setQuickStyleLineweight,
   setQuickStyleLinetype,
   setQuickStyleColor,
+  setQuickStyleLtscale,
 } from '../../../stores/QuickStyleStore';
 import {
   getLinetypeRegistrySnapshot,
@@ -93,6 +94,11 @@ function entityLineweightValue(entity: AnySceneEntity): string {
   return String(lw);
 }
 
+/** Combobox display value for an entity's per-object linetype scale (CELTSCALE). */
+function entityLtscaleValue(entity: AnySceneEntity): string {
+  return String(entity.ltscale ?? 1);
+}
+
 /** Combobox display value for an entity's color (ByLayer or ACI number). */
 function entityColorValue(entity: AnySceneEntity): string {
   if (entity.colorMode === BYLAYER || entity.colorMode === undefined) return BYLAYER;
@@ -155,6 +161,12 @@ export function useRibbonLineToolBridge(
         const lw = snapshot.lineweightMm;
         return { value: lw === LINEWEIGHT_SPECIAL.BYLAYER ? BYLAYER : String(lw), options: [] };
       }
+      // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE). Options come from the
+      // tab declaration (numeric presets + editable); the bridge supplies only the value.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.linetypeScale) {
+        const value = selected ? entityLtscaleValue(selected) : String(snapshot.ltscale);
+        return { value, options: [] };
+      }
       // color
       if (selected) return { value: entityColorValue(selected), options: [] };
       const colorValue = snapshot.colorMode === BYLAYER
@@ -181,6 +193,15 @@ export function useRibbonLineToolBridge(
           : (parseFloat(value) as LineweightMm);
         if (selected) patchEntity(selected, { lineweightMm: lw });
         else setQuickStyleLineweight(lw);
+        return;
+      }
+      // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE). The editable numeric
+      // combobox already enforces `min: 0.01`; guard again for safety (ignore ≤0/NaN).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.linetypeScale) {
+        const n = parseFloat(value);
+        if (!Number.isFinite(n) || n <= 0) return;
+        if (selected) patchEntity(selected, { ltscale: n });
+        else setQuickStyleLtscale(n);
         return;
       }
       // color

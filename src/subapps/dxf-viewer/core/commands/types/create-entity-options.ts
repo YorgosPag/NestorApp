@@ -36,6 +36,8 @@ export interface CreateEntityOptions {
   linetypeName?: string;
   /** Lineweight mm — accepts -3/-2/-1 sentinels (Phase 6.5). */
   lineweightMm?: LineweightMm;
+  /** Per-object linetype scale — CELTSCALE, DXF group 48 (ADR-510 Φ2E #2). */
+  ltscale?: number;
   /** Transparency 0-90 — DXF group 1071 (Phase 6.5 sentinel forward). */
   transparency?: number;
   /**

@@ -546,7 +546,9 @@
       "polarCustomPlaceholder": "π.χ. 33",
       "snapStepTitle": "Βήμα πρόσδεσης (mm)",
       "displayUnit": "ΜΟΝΑΔΑ",
-      "displayUnitDesc": "Μονάδα εμφάνισης μετρήσεων"
+      "displayUnitDesc": "Μονάδα εμφάνισης μετρήσεων",
+      "ltscale": "LTSCALE",
+      "ltscaleDesc": "Κλίμακα τύπων γραμμής (όλο το σχέδιο)"
     },
     "panels": {
       "objectSnap": "Σημεία Πρόσδεσης",

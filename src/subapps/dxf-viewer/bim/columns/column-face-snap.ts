@@ -272,7 +272,9 @@ export function resolveColumnFaceSnap(
   // κληρονομεί το beam «κοντή άκρη → 🔴» (Giorgio: όλες οι παρειές τοίχου έγκυρες). `footprints`
   // (κολόνες) είναι ίδια και στις δύο κλήσεις → παίρνουμε από τη μία (μηδέν διπλο-μέτρημα).
   const beamPass = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
-  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets;
+  // Τοίχοι + ΑΚΜΕΣ ΠΛΑΚΑΣ (ADR-508 §slab): η κολώνα κουμπώνει στις πλευρές πλάκας όπως στις
+  // παρειές τοίχου (axis-aligned ακμές → bbox face + listening dims).
+  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'slab'] }).memberTargets;
   const targets = buildFaceTargets(beamPass.footprints, beamPass.memberTargets, walls);
   if (targets.length === 0) return null;
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);

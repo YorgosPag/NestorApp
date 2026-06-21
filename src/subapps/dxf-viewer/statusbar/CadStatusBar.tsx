@@ -16,6 +16,7 @@ import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPi
 import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
+import { LinetypeScaleControl } from './LinetypeScaleControl';
 import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
 import { ambientAlignmentConfigStore } from '../systems/tracking/ambient-alignment-config-store';
 import { useDisplayUnit } from '../hooks/common/useDisplayUnit';
@@ -134,6 +135,8 @@ export default function CadStatusBar() {
           />
           {/* ADR-357 Phase 2b: Display unit selector */}
           <DisplayUnitSelector displayUnit={displayUnit} onUnitChange={setDisplayUnit} t={t} />
+          {/* ADR-510 Φ2E #2: global linetype scale (LTSCALE) */}
+          <LinetypeScaleControl />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
           <IsolateStatusIndicator />
           <span className="shrink-0 text-xs text-muted-foreground">

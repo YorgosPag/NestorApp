@@ -53,6 +53,18 @@ const COLOR_OPTIONS = [
   { value: '7',       labelKey: 'White',    isLiteralLabel: true },
 ] as const;
 
+// ─── Linetype scale (CELTSCALE) options ───────────────────────────────────────
+// Numeric presets → RibbonCombobox renders an EDITABLE type-to-enter field (the
+// list is purely numeric); `numericInput.editable` keeps free typing too.
+
+const LINETYPE_SCALE_OPTIONS = [
+  { value: '0.25', labelKey: '0.25', isLiteralLabel: true },
+  { value: '0.5',  labelKey: '0.5',  isLiteralLabel: true },
+  { value: '1',    labelKey: '1',    isLiteralLabel: true },
+  { value: '2',    labelKey: '2',    isLiteralLabel: true },
+  { value: '4',    labelKey: '4',    isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
@@ -99,6 +111,19 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 commandKey: LINE_TOOL_RIBBON_KEYS.color,
                 comboboxWidthPx: 100,
                 options: COLOR_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.linetypeScale',
+                labelKey: 'ribbon.commands.quickStyle.linetypeScale',
+                commandKey: LINE_TOOL_RIBBON_KEYS.linetypeScale,
+                comboboxWidthPx: 80,
+                options: LINETYPE_SCALE_OPTIONS,
+                // ADR-510 Φ2E #2 — editable numeric (CELTSCALE > 0), Revit-grade.
+                numericInput: { editable: true, min: 0.01 },
               },
             },
           ],

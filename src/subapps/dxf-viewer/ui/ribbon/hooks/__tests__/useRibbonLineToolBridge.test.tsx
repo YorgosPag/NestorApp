@@ -42,16 +42,19 @@ const mockQuickSnapshot = {
   lineweightMm: -2, // ByLayer sentinel
   colorMode: 'ByLayer' as 'ByLayer' | 'Concrete',
   colorAci: null as number | null,
+  ltscale: 1,
 };
 const mockSetLinetype = jest.fn();
 const mockSetLineweight = jest.fn();
 const mockSetColor = jest.fn();
+const mockSetLtscale = jest.fn();
 jest.mock('../../../../stores/QuickStyleStore', () => ({
   getQuickStyleSnapshot: () => mockQuickSnapshot,
   subscribeQuickStyle: () => () => {},
   setQuickStyleLinetype: (...a: unknown[]) => mockSetLinetype(...a),
   setQuickStyleLineweight: (...a: unknown[]) => mockSetLineweight(...a),
   setQuickStyleColor: (...a: unknown[]) => mockSetColor(...a),
+  setQuickStyleLtscale: (...a: unknown[]) => mockSetLtscale(...a),
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -66,6 +69,7 @@ const lineEntity = {
   lineweightMm: 0.35,
   colorMode: 'Concrete' as const,
   colorAci: 1,
+  ltscale: 2,
 };
 
 const wallEntity = { id: 'wall-1', type: 'wall' as const, layerId: 'lvl-1', visible: true };
@@ -92,10 +96,12 @@ beforeEach(() => {
   mockSetLinetype.mockClear();
   mockSetLineweight.mockClear();
   mockSetColor.mockClear();
+  mockSetLtscale.mockClear();
   mockQuickSnapshot.linetypeName = 'Continuous';
   mockQuickSnapshot.lineweightMm = -2;
   mockQuickSnapshot.colorMode = 'ByLayer';
   mockQuickSnapshot.colorAci = null;
+  mockQuickSnapshot.ltscale = 1;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,6 +128,10 @@ describe('useRibbonLineToolBridge — selected primitive (read)', () => {
 
   it('reads color (ACI) from the selected entity', () => {
     expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value).toBe('1');
+  });
+
+  it('reads linetype scale (CELTSCALE) from the selected entity', () => {
+    expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.linetypeScale)?.value).toBe('2');
   });
 
   it('linetype options come from the live registry (ByLayer + registered names)', () => {
@@ -153,6 +163,18 @@ describe('useRibbonLineToolBridge — selected primitive (write = undoable comma
   it('lineweight change dispatches a numeric mm patch', () => {
     render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.lineweight, '0.50');
     expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({ lineweightMm: 0.5 });
+  });
+
+  it('linetype scale change dispatches a numeric ltscale patch', () => {
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, '1.5');
+    expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({ ltscale: 1.5 });
+    expect(mockSetLtscale).not.toHaveBeenCalled();
+  });
+
+  it('linetype scale change ignores non-positive / NaN values (no command)', () => {
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, '0');
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, 'abc');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 
   it('color → ByLayer clears the concrete color fields', () => {
@@ -198,6 +220,17 @@ describe('useRibbonLineToolBridge — no selection → QuickStyle draw-defaults'
   it('linetype change writes to QuickStyle, not an entity command', () => {
     render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetype, 'PHANTOM');
     expect(mockSetLinetype).toHaveBeenCalledWith('PHANTOM');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('reads linetype scale from QuickStyle snapshot', () => {
+    mockQuickSnapshot.ltscale = 3;
+    expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.linetypeScale)?.value).toBe('3');
+  });
+
+  it('linetype scale change writes to QuickStyle, not an entity command', () => {
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, '2.5');
+    expect(mockSetLtscale).toHaveBeenCalledWith(2.5);
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 });

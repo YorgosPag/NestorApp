@@ -62,7 +62,7 @@ export interface BeamSnapTargets {
  * ΟΧΙ τοίχοι). Pure: ΙΔΙΑ δεδομένα που διαβάζει το commit path (preview === commit).
  */
 export function collectBeamSnapTargets(entities: readonly Entity[]): BeamSnapTargets {
-  const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
+  const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['beam', 'slab'] });
   return { footprints, beamTargets: memberTargets };
 }
 

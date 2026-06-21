@@ -546,7 +546,9 @@
       "polarCustomPlaceholder": "e.g. 33",
       "snapStepTitle": "Snap step (mm)",
       "displayUnit": "UNIT",
-      "displayUnitDesc": "Measurement display unit"
+      "displayUnitDesc": "Measurement display unit",
+      "ltscale": "LTSCALE",
+      "ltscaleDesc": "Linetype scale (whole drawing)"
     },
     "panels": {
       "objectSnap": "Object Snap",

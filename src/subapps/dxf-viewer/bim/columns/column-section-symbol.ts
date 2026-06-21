@@ -23,7 +23,8 @@
  */
 
 import type { ColumnEntity } from '../types/column-types';
-import { resolveMaterialKey } from './column-hatch-patterns';
+// ADR-507 Φ7 — material classification ενοποιήθηκε στο MATERIAL_HATCH_MAP SSoT.
+import { normalizeMaterial } from '../hatch/material-hatch-map';
 import {
   computeLProfileOutline,
   computePolygonBackedOutline,
@@ -43,7 +44,7 @@ export function resolveColumnSectionOutline(
   const { kind } = column;
 
   if (kind === 'L-shape' || kind === 'T-shape') {
-    if (resolveMaterialKey(column.params.material) !== 'steel') return null;
+    if (normalizeMaterial(column.params.material) !== 'steel') return null;
     const flipY = kind === 'L-shape'
       ? (column.params.lshape?.flipY ?? false)
       : (column.params.tshape?.flipY ?? false);

@@ -11,16 +11,13 @@ import {
   buildEnvelopeRenderPlan,
   buildSlabHatchPlan,
   buildRevealJambPlans,
-  resolveEnvelopeHatchKey,
 } from '../EnvelopeRenderer';
 import type { Point3D } from '../../types/bim-base';
 import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
 import type { EnvelopeOpeningCut } from '../../geometry/envelope-opening-cuts';
 import type { ViewTransform } from '../../../rendering/types/Types';
-import { computeWallHatchPlan } from '../../walls/wall-hatch-patterns';
 import { resolveIsEntityVisible } from '../../visibility/visibility-resolver';
 import { GRAPHITE_EPS_MATERIAL_ID } from '../../types/thermal-envelope-types';
-import type { BoundingBox3D } from '../../types/bim-base';
 
 function squareChain(): EnvelopeChain {
   const exterior = [
@@ -51,15 +48,9 @@ describe('buildEnvelopeRenderPlan', () => {
     expect(plan!.outerLoop).toEqual(squareChain().insulationOuterLoop.points);
   });
 
-  it('reuses computeWallHatchPlan (hatch SSoT, no duplication)', () => {
+  it('γεμίζει INSUL hatch segments (ADR-507 Φ7 unified material poché SSoT)', () => {
     const plan = buildEnvelopeRenderPlan(squareChain(), GRAPHITE_EPS_MATERIAL_ID);
-    const bbox: BoundingBox3D = {
-      min: { x: -100, y: -100, z: 0 },
-      max: { x: 1100, y: 1100, z: 0 },
-    };
-    const expected = computeWallHatchPlan(bbox, resolveEnvelopeHatchKey(GRAPHITE_EPS_MATERIAL_ID));
-    expect(plan!.hatch.lines.length).toBeGreaterThan(0);
-    expect(plan!.hatch.lines.length).toBe(expected.lines.length);
+    expect(plan!.hatch.length).toBeGreaterThan(0);
   });
 
   it('returns null for a degenerate chain (< 2 outer points)', () => {
@@ -81,7 +72,7 @@ describe('buildSlabHatchPlan (Z2/Z3 εκτεθειμένη πλάκα)', () => {
     const plan = buildSlabHatchPlan(footprint, GRAPHITE_EPS_MATERIAL_ID);
     expect(plan).not.toBeNull();
     expect(plan!.polygon).toEqual(footprint);
-    expect(plan!.hatch.lines.length).toBeGreaterThan(0);
+    expect(plan!.hatch.length).toBeGreaterThan(0);
   });
 
   it('επιστρέφει null για degenerate footprint (< 3 κορυφές)', () => {
@@ -101,20 +92,13 @@ describe('buildRevealJambPlans (Z4 περβάζια — 2 παραστάδες)'
       expect(plan.bandRing).toHaveLength(4);   // solid jamb quad (όχι 8-vertex frame)
       expect(plan.outerLoop).toHaveLength(4);  // ίδιο quad → strokeOuterLoop ορατό
       expect(plan.outerClosed).toBe(true);
-      expect(plan.hatch.lines.length).toBeGreaterThan(0);
+      expect(plan.hatch.length).toBeGreaterThan(0);
     }
   });
 
   it('επιστρέφει άδειο array για insetCanvas <= 0 ή degenerate outline', () => {
     expect(buildRevealJambPlans(outline, 0, GRAPHITE_EPS_MATERIAL_ID)).toEqual([]);
     expect(buildRevealJambPlans([{ x: 0, y: 0 }, { x: 1, y: 0 }], 50, GRAPHITE_EPS_MATERIAL_ID)).toEqual([]);
-  });
-});
-
-describe('resolveEnvelopeHatchKey', () => {
-  it('maps insulation material → diagonal hatch family (gypsum)', () => {
-    expect(resolveEnvelopeHatchKey(GRAPHITE_EPS_MATERIAL_ID)).toBe('gypsum');
-    expect(resolveEnvelopeHatchKey('mat-xps')).toBe('gypsum');
   });
 });
 

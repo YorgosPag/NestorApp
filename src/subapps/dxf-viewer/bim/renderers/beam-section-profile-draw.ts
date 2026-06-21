@@ -23,7 +23,8 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
-import { resolveBeamMaterialKey } from '../beams/beam-hatch-patterns';
+// ADR-507 Φ7 — material classification ενοποιήθηκε στο MATERIAL_HATCH_MAP SSoT.
+import { normalizeMaterial } from '../hatch/material-hatch-map';
 import {
   computeIProfileOutline,
   computeHProfileOutline,
@@ -57,7 +58,7 @@ export function drawBeamSectionProfile(
   // διατομή είναι ρητά I-shape (catalog) — ανεξάρτητα από το material ID.
   const isSteelSection =
     beam.params.sectionKind === 'I-shape' ||
-    resolveBeamMaterialKey(beam.params.material) === 'steel';
+    normalizeMaterial(beam.params.material) === 'steel';
   if (!isSteelSection) return;
   if (scale < SECTION_MIN_SCALE) return;
 

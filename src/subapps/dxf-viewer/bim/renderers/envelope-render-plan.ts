@@ -5,8 +5,8 @@
  * transform εξάρτηση (testable χωρίς jsdom). Ο canvas drawer ζει στο
  * `EnvelopeRenderer.ts` (consumes αυτό το plan).
  *
- * Hatch SSoT: reuse `computeWallHatchPlan` (`bim/walls/wall-hatch-patterns.ts`) —
- * ΚΑΜΙΑ διπλασιασμένη hatch math.
+ * Hatch SSoT: reuse `computeMaterialHatchSegments` (ADR-507 Φ7 unified material
+ * poché → PAT catalog) — ΚΑΜΙΑ διπλασιασμένη hatch math.
  *
  * ΜΟΝΑΔΕΣ: τα vertices είναι σε **canvas units** (όπως βγαίνουν από το
  * `computeEnvelopePerimeter`). worldToScreen γίνεται στον renderer.

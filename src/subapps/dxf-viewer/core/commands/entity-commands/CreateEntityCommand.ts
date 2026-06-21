@@ -85,6 +85,10 @@ export class CreateEntityCommand implements ICommand {
       if (this.options.lineweightMm !== undefined) {
         this.entity.lineweightMm = this.options.lineweightMm;
       }
+      // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE) draw-default.
+      if (this.options.ltscale !== undefined) {
+        this.entity.ltscale = this.options.ltscale;
+      }
       if (this.options.transparency !== undefined) {
         this.entity.transparency = this.options.transparency;
       }
