@@ -169,8 +169,11 @@ export function useRibbonHatchBridge(
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.patternName) {
-          if (hatch) patchHatch(hatch, { patternName: value });
-          else setHatchDrawDefaults({ patternName: value });
+          // Επιλογή μοτίβου → αυτόματα predefined (AutoCAD/Revit: διάλεξες μοτίβο =
+          // μοτιβωτή γραμμοσκίαση)· αλλιώς το fillType έμενε 'solid' και ο renderer
+          // αγνοούσε το patternName (έκανε solid fill).
+          if (hatch) patchHatch(hatch, { patternName: value, fillType: 'predefined', patternType: 'pattern' });
+          else setHatchDrawDefaults({ patternName: value, fillType: 'predefined' });
           return;
         }
         // islandStyle
