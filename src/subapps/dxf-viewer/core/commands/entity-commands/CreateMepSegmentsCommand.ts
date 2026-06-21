@@ -32,8 +32,7 @@ import type { MepSegmentEntity } from '../../../bim/types/mep-segment-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const MEP_SEGMENT_TOOL = 'mep-segment';
 
@@ -96,10 +95,7 @@ export class CreateMepSegmentsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const s of segments) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(s) as unknown as AnySceneEntity,
-            tool: MEP_SEGMENT_TOOL,
-          });
+          emitBimEntityCreated(deepClone(s) as unknown as AnySceneEntity, MEP_SEGMENT_TOOL);
         }
       } else {
         for (const s of segments) {

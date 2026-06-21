@@ -24,8 +24,7 @@ import type { BeamEntity } from '../../../bim/types/beam-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const BEAM_TOOL = 'beam';
 
@@ -86,10 +85,7 @@ export class CreateBeamsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const b of beams) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(b) as unknown as AnySceneEntity,
-            tool: BEAM_TOOL,
-          });
+          emitBimEntityCreated(deepClone(b) as unknown as AnySceneEntity, BEAM_TOOL);
         }
       } else {
         for (const b of beams) {

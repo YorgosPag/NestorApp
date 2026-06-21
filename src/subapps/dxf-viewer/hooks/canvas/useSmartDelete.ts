@@ -346,7 +346,7 @@ export function useSmartDelete({
       setSelectedEntityIds([]);
 
       // Trigger Firestore deleteDoc (+ subscription re-add prevention) for each
-      // deleted BIM entity type (SSoT: smart-delete-bim-events.ts → emit-bim-entity-delete-requested).
+      // deleted BIM entity type (SSoT: smart-delete-bim-events.ts → bim-entity-lifecycle-events).
       emitBimDeleteEvents(collected);
 
       return true;

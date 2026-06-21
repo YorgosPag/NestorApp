@@ -1,9 +1,23 @@
 /**
- * ADR-390 — emit-bim-entity-delete-requested SSoT (type → delete event mapping).
+ * ADR-390 — bim-entity-lifecycle-events SSoT (create broadcast + delete-event mapping).
  */
 
-import { emitBimEntityDeleteRequested } from '../emit-bim-entity-delete-requested';
+import {
+  emitBimEntityCreated,
+  emitBimEntityDeleteRequested,
+} from '../bim-entity-lifecycle-events';
 import { EventBus } from '../EventBus';
+import type { AnySceneEntity } from '../../../types/scene';
+
+describe('emitBimEntityCreated', () => {
+  it('broadcasts drawing:entity-created with the entity + tool', () => {
+    const seen: Array<{ id: string; tool: string }> = [];
+    const off = EventBus.on('drawing:entity-created', (p) => seen.push({ id: p.entity.id, tool: p.tool }));
+    emitBimEntityCreated({ id: 'col_1', type: 'column' } as unknown as AnySceneEntity, 'column');
+    expect(seen).toEqual([{ id: 'col_1', tool: 'column' }]);
+    off();
+  });
+});
 
 describe('emitBimEntityDeleteRequested', () => {
   it('maps column → bim:column-delete-requested { columnId }', () => {

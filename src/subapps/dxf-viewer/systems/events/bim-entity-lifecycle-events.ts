@@ -1,24 +1,35 @@
 /**
- * SSoT — single-entity BIM delete-event emitter (type → `bim:<type>-delete-requested`).
+ * SSoT — BIM entity **lifecycle** events (create + delete), ΜΙΑ πηγή για όλο το
+ * codebase (Revit-grade transaction events).
  *
- * Το mapping «entity type → delete event name + payload key» ζούσε **διπλό**:
- *   · `hooks/canvas/smart-delete-bim-events.emitBimDeleteEvents` (bulk smart-delete)·
- *   · hardcoded ανά command (`CreateColumnsCommand`/`CreateFoundationsCommand`).
- * Πλέον ζει ΜΙΑ φορά εδώ. Καταναλώνεται από:
- *   · `CreateBimEntityCommand.undo()` (ADR-390 — symmetric create/undo: ο create
- *      αναιρείται → Firestore deleteDoc, μηδέν zombie doc)·
- *   · `emitBimDeleteEvents` (bulk delete) που πλέον delegate-άρει εδώ.
+ * Πριν, οι δύο emits ήταν **copy-pasted** σε ~11 σημεία:
+ *   · `EventBus.emit('drawing:entity-created', { entity, tool })` (persistence first-save)
+ *     στα 8 batch commands + `CreateBimEntityCommand` + `appendEntityToScene`·
+ *   · `EventBus.emit('bim:<type>-delete-requested', { <key>Id })` (Firestore deleteDoc)
+ *     στα ίδια commands + `emitBimDeleteEvents` (bulk smart-delete), με per-type
+ *     mapping (20-case switch) ξαναγραμμένο.
+ * Πλέον ζουν **ΜΙΑ φορά** εδώ — μηδέν διπλότυπο (N.0.2 / SSoT, Giorgio audit 2026-06-21).
  *
- * Global `EventBus` (ίδιο singleton με τον `useEventBus` hook — το proven από το
- * `CreateColumnsCommand` που εκπέμπει το ίδιο event global και το ακούει η
- * column persistence). Άγνωστος τύπος → no-op (η αφαίρεση από scene έχει ήδη γίνει).
+ * Global `EventBus` (ίδιο singleton με τον `useEventBus` hook). Άγνωστος τύπος στο
+ * delete → no-op (η αφαίρεση από scene έχει ήδη γίνει).
  *
- * @see ../../hooks/canvas/smart-delete-bim-events.ts — bulk consumer (delegate)
- * @see ../../core/commands/entity-commands/CreateBimEntityCommand.ts — create-undo consumer
+ * @see ../../core/commands/entity-commands/CreateBimEntityCommand.ts — single-entity create
+ * @see ../../core/commands/entity-commands/CreateColumnsCommand.ts (+ Beams/Walls/Slabs/Foundations/MepSegments, Merge, DeleteFoundations) — batch consumers
+ * @see ../../hooks/canvas/smart-delete-bim-events.ts — bulk delete consumer
  * @see docs/centralized-systems/reference/adrs/ADR-390-symmetric-bim-delete-undo.md
  */
 
 import { EventBus } from './EventBus';
+import type { AnySceneEntity } from '../../types/scene';
+
+/**
+ * Broadcast `drawing:entity-created` — the trigger the `use*Persistence` hooks wait
+ * on to schedule the first Firestore save. `tool` = the entity-type tag ('column',
+ * 'beam', 'slab', …). Caller is responsible for any defensive deep-clone.
+ */
+export function emitBimEntityCreated(entity: AnySceneEntity, tool: string): void {
+  EventBus.emit('drawing:entity-created', { entity, tool });
+}
 
 /**
  * Fire the per-type `bim:*-delete-requested` event for ONE deleted/undone BIM entity

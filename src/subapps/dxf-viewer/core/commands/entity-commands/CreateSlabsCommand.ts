@@ -22,8 +22,7 @@ import type { SlabEntity } from '../../../bim/types/slab-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const SLAB_TOOL = 'slab';
 
@@ -84,10 +83,7 @@ export class CreateSlabsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const s of slabs) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(s) as unknown as AnySceneEntity,
-            tool: SLAB_TOOL,
-          });
+          emitBimEntityCreated(deepClone(s) as unknown as AnySceneEntity, SLAB_TOOL);
         }
       } else {
         for (const s of slabs) {

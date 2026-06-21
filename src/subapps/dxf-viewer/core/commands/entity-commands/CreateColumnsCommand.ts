@@ -22,8 +22,7 @@ import type { ColumnEntity } from '../../../bim/types/column-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const COLUMN_TOOL = 'column';
 
@@ -84,10 +83,7 @@ export class CreateColumnsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const c of columns) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(c) as unknown as AnySceneEntity,
-            tool: COLUMN_TOOL,
-          });
+          emitBimEntityCreated(deepClone(c) as unknown as AnySceneEntity, COLUMN_TOOL);
         }
       } else {
         for (const c of columns) {

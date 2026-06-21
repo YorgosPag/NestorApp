@@ -26,8 +26,7 @@ import type { WallEntity } from '../../../bim/types/wall-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const WALL_TOOL = 'wall';
 
@@ -88,10 +87,7 @@ export class CreateWallsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const w of walls) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(w) as unknown as AnySceneEntity,
-            tool: WALL_TOOL,
-          });
+          emitBimEntityCreated(deepClone(w) as unknown as AnySceneEntity, WALL_TOOL);
         }
       } else {
         for (const w of walls) {

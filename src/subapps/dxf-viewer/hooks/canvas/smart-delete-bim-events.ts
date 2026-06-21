@@ -12,7 +12,7 @@
  * @see ./useSmartDelete.ts
  */
 import type { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { emitBimEntityDeleteRequested } from '../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityDeleteRequested } from '../../systems/events/bim-entity-lifecycle-events';
 
 export interface CollectedBimDeleteIds {
   wallIds: string[];

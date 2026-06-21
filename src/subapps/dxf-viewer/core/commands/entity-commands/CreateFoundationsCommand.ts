@@ -27,8 +27,7 @@ import type { FoundationEntity } from '../../../bim/types/foundation-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 const FOUNDATION_TOOL = 'foundation';
 
@@ -89,10 +88,7 @@ export class CreateFoundationsCommand implements ICommand {
     queueMicrotask(() => {
       if (direction === 'apply') {
         for (const f of foundations) {
-          EventBus.emit('drawing:entity-created', {
-            entity: deepClone(f) as unknown as AnySceneEntity,
-            tool: FOUNDATION_TOOL,
-          });
+          emitBimEntityCreated(deepClone(f) as unknown as AnySceneEntity, FOUNDATION_TOOL);
         }
       } else {
         for (const f of foundations) {

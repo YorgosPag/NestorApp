@@ -24,7 +24,7 @@
  * `CreateFoundationsCommand`.
  *
  * @see ../../../bim/scene/append-entity-to-scene.ts — the SSoT caller (draw + copy)
- * @see ../../../systems/events/emit-bim-entity-delete-requested.ts — undo delete-event SSoT
+ * @see ../../../systems/events/bim-entity-lifecycle-events.ts — create + undo delete-event SSoT
  * @see ./CreateColumnsCommand.ts — batch grid-gen precedent (deferred-Firestore pattern)
  * @see docs/centralized-systems/reference/adrs/ADR-390-symmetric-bim-delete-undo.md
  */
@@ -33,8 +33,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
+import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 
 export class CreateBimEntityCommand implements ICommand {
   readonly id: string;
@@ -91,10 +90,7 @@ export class CreateBimEntityCommand implements ICommand {
     const entityType = this.entityType;
     queueMicrotask(() => {
       if (direction === 'apply') {
-        EventBus.emit('drawing:entity-created', {
-          entity: deepClone(entity) as unknown as AnySceneEntity,
-          tool,
-        });
+        emitBimEntityCreated(deepClone(entity) as unknown as AnySceneEntity, tool);
       } else {
         emitBimEntityDeleteRequested(entityType, entity.id);
       }
