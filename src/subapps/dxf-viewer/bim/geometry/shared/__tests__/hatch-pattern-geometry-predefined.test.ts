@@ -5,7 +5,9 @@
  * επίδραση angle· πολλαπλές γραμμές μοτίβου (σταυρωτό)· dash subdivision· edge cases.
  */
 
-import { buildPredefinedHatchLines, buildHatchEntitySegments } from '../hatch-pattern-geometry';
+import {
+  buildPredefinedHatchLines, buildHatchEntitySegments, hatchMinWorldSpacing,
+} from '../hatch-pattern-geometry';
 import { getHatchPattern, resolveEffectiveHatchScale, type HatchPattern } from '../../../../data/hatch-pattern-catalog';
 import type { HatchEntity } from '../../../../types/entities';
 
@@ -112,5 +114,32 @@ describe('buildHatchEntitySegments (SSoT entity→segments resolver)', () => {
   it('κενό όριο → []', () => {
     const e = { type: 'hatch', fillType: 'predefined', patternName: 'ANSI31', boundaryPaths: [] } as unknown as HatchEntity;
     expect(buildHatchEntitySegments(e)).toEqual([]);
+  });
+});
+
+describe('hatchMinWorldSpacing (density-LOD input)', () => {
+  it('predefined → ελάχιστο delta-y × effective scale', () => {
+    const h = { fillType: 'predefined', patternName: 'ANSI31', patternScale: 1 } as unknown as HatchEntity;
+    // ANSI31: μία γραμμή delta-y 3.175 × suggested(20) = 63.5
+    expect(hatchMinWorldSpacing(h)).toBeCloseTo(3.175 * resolveEffectiveHatchScale('ANSI31', 1), 3);
+  });
+
+  it('solid → 0 (καμία γραμμή)', () => {
+    expect(hatchMinWorldSpacing({ fillType: 'solid' } as unknown as HatchEntity)).toBe(0);
+  });
+
+  it('user-defined → lineSpacing', () => {
+    const h = { fillType: 'user-defined', lineSpacing: 42 } as unknown as HatchEntity;
+    expect(hatchMinWorldSpacing(h)).toBe(42);
+  });
+
+  it('predefined με άγνωστο pattern → 0', () => {
+    expect(hatchMinWorldSpacing({ fillType: 'predefined', patternName: 'NOPE' } as unknown as HatchEntity)).toBe(0);
+  });
+
+  it('user multiplier μεγαλώνει το spacing (αραιότερο)', () => {
+    const x1 = hatchMinWorldSpacing({ fillType: 'predefined', patternName: 'ANSI31', patternScale: 1 } as unknown as HatchEntity);
+    const x4 = hatchMinWorldSpacing({ fillType: 'predefined', patternName: 'ANSI31', patternScale: 4 } as unknown as HatchEntity);
+    expect(x4).toBeCloseTo(x1 * 4, 3);
   });
 });

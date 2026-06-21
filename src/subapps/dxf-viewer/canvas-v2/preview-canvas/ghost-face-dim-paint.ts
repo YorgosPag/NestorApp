@@ -1,17 +1,18 @@
 /**
  * ghost-face-dim-paint — paints the wall-ghost listening dimensions (ADR-508 §dim) on the
- * PreviewCanvas overlay by REUSING the ADR-362 SSoT `renderPreviewDimension`. Zero second
- * dimension-drawing path: each along-face distance becomes a transient `aligned`
- * DimensionEntity ([p1, p2, dimLineRef]) rendered through the same builder/arrowhead/text
- * pipeline as committed dims, styled with the default ISO-129 template.
+ * PreviewCanvas overlay. Fully SSoT-composed, zero bespoke drawing:
+ *   - LINE + extension lines  → `renderPreviewDimension` (ADR-362) with `overlayLineStyle`
+ *     (the shared 0.5px dashed [8,5] `overlay-line-style` SSoT). The dim's own text is
+ *     suppressed (`userText: ''`).
+ *   - NUMBER                  → `drawOverlayLabel` (`overlay-text-style` SSoT — same font/chip
+ *     as the tracking + polar tooltips), value via `formatLengthForDisplay` (forced metres).
  *
- * Numbers are formatted via `formatLengthForDisplay` — the SAME display-unit SSoT as the
- * tracking/length tooltips — so they read in the user's active unit (e.g. "2.30 m"). The dim
- * line is hidden behind the number via DIMTFILL='backgroundColor' (mask = live canvas bg).
+ * So the listening dims share line-style, text-style AND number-format code with the alignment
+ * traces / polar line — one visual language, one SSoT per concern.
  *
  * @see ../../bim/framing/ghost-face-dim-references.ts — produces the measured dims (pure)
- * @see ./preview-dimension-renderer.ts — the live 2D dimension SSoT (ADR-362 Phase C2)
- * @see ../../config/display-length-format.ts — `formatLengthForDisplay` display-unit SSoT
+ * @see ./preview-dimension-renderer.ts — dim line geometry SSoT (ADR-362)
+ * @see ./overlay-line-style.ts · ./overlay-text-style.ts — shared overlay SSoTs
  */
 
 import type { AlignedDimensionEntity } from '../../types/dimension';
@@ -20,15 +21,16 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { resolveDxfCanvasBackgroundHex, CAD_UI_COLORS } from '../../config/color-config';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { renderPreviewDimension } from './preview-dimension-renderer';
+import { drawOverlayLabel } from './overlay-text-style';
 
-/** Build a transient aligned dim entity for one along-face measurement. `label` overrides the
- *  measured text so the value shows in the active display unit (the on-screen SSoT). */
+/** Build a transient aligned dim entity for one along-face measurement. Text is suppressed
+ *  (`userText: ''`) — the number is drawn separately via the overlay-text SSoT. */
 function toAlignedDim(
   kind: string,
   defPoints: AlignedDimensionEntity['defPoints'],
-  label: string,
 ): AlignedDimensionEntity {
   return {
     id: `__ghost_face_dim_${kind}`,
@@ -37,7 +39,7 @@ function toAlignedDim(
     dimensionType: 'aligned',
     styleId: ISO_129_TEMPLATE.id,
     defPoints,
-    userText: label,
+    userText: '',
   };
 }
 
@@ -52,26 +54,22 @@ export function paintGhostFaceDimensions(
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
 ): void {
-  // DIMTFILL='backgroundColor' → the dim line is masked behind the number (Revit temporary-dim
-  // chip) instead of crossing it. Mask colour = live canvas background (SSoT).
-  const style = { ...ISO_129_TEMPLATE, dimtfill: 'backgroundColor' as const };
-  const canvasBackground = resolveDxfCanvasBackgroundHex();
+  const bgColor = resolveDxfCanvasBackgroundHex();
+  const textColor = CAD_UI_COLORS.entity.preview;
   const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
   for (const d of meta.dims) {
-    // Distance via the `formatLengthForDisplay` SSoT, forced to METRES (architectural
-    // convention — Giorgio: listening dims always in m, regardless of the status-bar unit).
-    const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+    // Dashed 0.5px line + extension lines (text suppressed) via the dim-geometry SSoT.
     renderPreviewDimension({
       ctx,
-      entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef], label),
-      style,
+      entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef]),
+      style: ISO_129_TEMPLATE,
       transform,
       viewport,
-      sceneUnits: meta.sceneUnits,
-      canvasBackground,
-      // ADR-508 §dim — ephemeral dims: screen-constant ~10px text at any zoom (4/scale lives
-      // inside the renderer; see preview-dimension-renderer).
-      opts: { textScreenScaled: true },
+      opts: { overlayLineStyle: true },
     });
+    // Number via the overlay-text SSoT, forced to METRES (architectural convention).
+    const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+    const screen = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
+    drawOverlayLabel(ctx, label, screen.x, screen.y, { textColor, bgColor, align: 'center' });
   }
 }

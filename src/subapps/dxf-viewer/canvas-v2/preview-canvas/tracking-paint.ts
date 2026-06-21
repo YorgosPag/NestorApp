@@ -15,6 +15,8 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import type { TrackingPalette } from './tracking-colors';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
+import { applyOverlayLineStyle } from './overlay-line-style';
+import { drawOverlayLabel } from './overlay-text-style';
 
 /** Acquired-point `+` glyphs (persist across drawPreview cycles). */
 export function paintTrackingMarkers(
@@ -53,9 +55,7 @@ export function paintAlignmentPaths(
   if (paths.length === 0) return;
   const EXTEND = 6000;
   ctx.save();
-  ctx.setLineDash([8, 5]);
-  ctx.strokeStyle = palette.alignmentPath;
-  ctx.lineWidth = 0.5;
+  applyOverlayLineStyle(ctx, palette.alignmentPath); // SSoT: 0.5px dashed [8,5]
   ctx.globalAlpha = 0.75;
   for (const path of paths) {
     const origin = CoordinateTransforms.worldToScreen(path.origin, transform, viewport);
@@ -107,17 +107,10 @@ export function paintTooltip(
 ): void {
   if (!label) return;
   const screen = CoordinateTransforms.worldToScreen(snappedPoint, transform, viewport);
-  const x = screen.x + 14;
-  const y = screen.y - 12;
-  ctx.save();
-  ctx.font = '11px monospace';
-  ctx.textBaseline = 'middle';
-  const metrics = ctx.measureText(label);
-  const padding = 4;
-  ctx.fillStyle = palette.tooltipBackground;
-  ctx.globalAlpha = 1;
-  ctx.fillRect(x - padding, y - 9, metrics.width + padding * 2, 18);
-  ctx.fillStyle = palette.tooltipText;
-  ctx.fillText(label, x, y);
-  ctx.restore();
+  // SSoT overlay label (font + chip). Colour stays per-palette.
+  drawOverlayLabel(ctx, label, screen.x + 14, screen.y - 12, {
+    textColor: palette.tooltipText,
+    bgColor: palette.tooltipBackground,
+    align: 'left',
+  });
 }

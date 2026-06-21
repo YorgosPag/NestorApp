@@ -71,6 +71,10 @@ describe('paintGhostFaceDimensions', () => {
     ).not.toThrow();
     expect(countCalls(mock, 'stroke')).toBeGreaterThan(0);
     expect(countCalls(mock, 'fillText')).toBeGreaterThan(0);
+    // Overlay-line SSoT applied: 0.5px dashed [8,5] reaches the dim lines.
+    expect(mock.calls.some((c) => c.fn === 'set:lineWidth' && c.args[0] === 0.5)).toBe(true);
+    expect(mock.calls.some((c) => c.fn === 'setLineDash'
+      && Array.isArray(c.args[0]) && (c.args[0] as number[]).join(',') === '8,5')).toBe(true);
   });
 
   it('is a no-op (no stroke) when there are no dims', () => {

@@ -40,6 +40,7 @@ import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+import { applyOverlayLineStyle } from './overlay-line-style';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -57,13 +58,11 @@ export interface PreviewDimensionRenderOptions {
   /** Alpha for `helperPath`. Default = OPACITY.MEDIUM. */
   readonly helperOpacity?: number;
   /**
-   * ADR-508 §dim — render TEXT at the same screen-constant auto-scale as the arrows
-   * (≈10px regardless of zoom) instead of the style's real dimscale. Default `false`
-   * keeps committed-matching text (the ADR-362 R9 behaviour). `true` for ephemeral
-   * Revit-style temporary/listening dims, whose text must stay readable at any zoom —
-   * the 4/scale factor lives ONLY here (no duplication at call sites).
+   * ADR-508 §dim — stroke the dim line + extension lines with the shared overlay-guide-line
+   * SSoT (`applyOverlayLineStyle`: 0.5px dashed [8,5]) instead of the committed-dim solid 1px.
+   * `true` for listening dims so they match the alignment traces / polar line exactly.
    */
-  readonly textScreenScaled?: boolean;
+  readonly overlayLineStyle?: boolean;
 }
 
 export interface PreviewDimensionRenderParams {
@@ -80,12 +79,6 @@ export interface PreviewDimensionRenderParams {
    * `DimensionRenderer` path. Default `'mm'`.
    */
   readonly sceneUnits?: 'mm' | 'cm' | 'm' | 'in' | 'ft';
-  /**
-   * Canvas background hex for DIMTFILL='backgroundColor' text masks (so the dim line is
-   * hidden behind the number instead of crossing it). Forwarded to `renderDimensionText`;
-   * defaults to AutoCAD dark there when absent.
-   */
-  readonly canvasBackground?: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -98,7 +91,7 @@ interface ResolvedOpts {
   readonly helperPath: readonly Point2D[] | null;
   readonly helperColor: string;
   readonly helperOpacity: number;
-  readonly textScreenScaled: boolean;
+  readonly overlayLineStyle: boolean;
 }
 
 function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts {
@@ -109,8 +102,15 @@ function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts
     helperPath: o?.helperPath && o.helperPath.length >= 2 ? o.helperPath : null,
     helperColor: o?.helperColor ?? color,
     helperOpacity: o?.helperOpacity ?? OPACITY.MEDIUM,
-    textScreenScaled: o?.textScreenScaled ?? false,
+    overlayLineStyle: o?.overlayLineStyle ?? false,
   };
+}
+
+/** Stroke setup for the dim line + extension lines: shared overlay SSoT (listening dims) or
+ *  the committed-dim solid 1px (default). */
+function applyDimStroke(ctx: CanvasRenderingContext2D, opts: ResolvedOpts): void {
+  if (opts.overlayLineStyle) applyOverlayLineStyle(ctx, opts.color);
+  else applySolidStroke(ctx, opts.color);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -157,10 +157,8 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
     drawDimLineOrArc(scaledParams, geometry, resolvedOpts);
     drawArrowheads(scaledParams, geometry, resolvedOpts);
     // ADR-362 R9 — text uses the ORIGINAL params (real dimscale + real sceneUnits) so
-    // preview text matches committed DimensionRenderer output; autoScale applies only to
-    // arrows. ADR-508 §dim — `textScreenScaled` opts into the auto-scaled params so the
-    // text stays ~10px at any zoom (ephemeral listening dims; would be sub-pixel otherwise).
-    drawText(resolvedOpts.textScreenScaled ? scaledParams : params, geometry, resolvedOpts);
+    // preview text matches committed DimensionRenderer output; autoScale applies only to arrows.
+    drawText(params, geometry, resolvedOpts);
   }
 
   if (resolvedOpts.helperPath) {
@@ -190,7 +188,7 @@ function drawExtensionLines(
   const ext1 = readExtLine(geometry, 1);
   const ext2 = readExtLine(geometry, 2);
   if (!ext1 && !ext2) return;
-  applySolidStroke(params.ctx, opts.color);
+  applyDimStroke(params.ctx, opts);
   if (ext1 && !params.style.suppressExtLine1) strokeSegment(params, ext1);
   if (ext2 && !params.style.suppressExtLine2) strokeSegment(params, ext2);
 }
@@ -200,7 +198,7 @@ function drawDimLineOrArc(
   geometry: DimGeometry,
   opts: ResolvedOpts,
 ): void {
-  applySolidStroke(params.ctx, opts.color);
+  applyDimStroke(params.ctx, opts);
   switch (geometry.kind) {
     case 'linear':
       if (!params.style.suppressDimLine1 && !params.style.suppressDimLine2) {
@@ -259,7 +257,6 @@ function drawText(
     viewport: params.viewport,
     layerColour: opts.color,
     sceneUnits: params.sceneUnits,
-    canvasBackground: params.canvasBackground,
   });
 }
 

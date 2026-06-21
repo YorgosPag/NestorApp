@@ -360,3 +360,30 @@ export function buildHatchEntitySegments(
     islandStyle,
   });
 }
+
+/**
+ * Η ΠΥΚΝΟΤΕΡΗ (ελάχιστη) κάθετη απόσταση γραμμών της γραμμοσκίασης σε **world mm**
+ * — η μικρότερη `delta-y` (× effective scale) μεταξύ όλων των οικογενειών. Χρησιμεύει
+ * για density-LOD: ο renderer τη μετατρέπει σε px (× zoom) και αν είναι sub-pixel
+ * αποφεύγει να παράγει/σχεδιάσει χιλιάδες δυσδιάκριτες γραμμές. Solid → 0.
+ */
+export function hatchMinWorldSpacing(
+  hatch: Pick<
+    HatchEntity,
+    'fillType' | 'patternType' | 'patternName' | 'patternScale' | 'lineSpacing'
+  >,
+): number {
+  if (isSolidHatch(hatch)) return 0;
+  if (hatch.fillType === 'predefined') {
+    const pattern = getHatchPattern(hatch.patternName);
+    if (!pattern || !pattern.lines.length) return 0;
+    const eff = resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale);
+    let min = Number.POSITIVE_INFINITY;
+    for (const l of pattern.lines) {
+      const dy = Math.abs(l.delta[1]) * eff;
+      if (dy > EPS && dy < min) min = dy;
+    }
+    return Number.isFinite(min) ? min : 0;
+  }
+  return hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_HATCH_LINE_SPACING_MM;
+}

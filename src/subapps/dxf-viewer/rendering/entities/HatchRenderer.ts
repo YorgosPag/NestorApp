@@ -23,11 +23,23 @@ import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
-import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch } from '../../bim/hatch/hatch-properties';
+import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 
 const HATCH_LINE_WIDTH = 0.5;
+/**
+ * Density-LOD: κάτω από αυτή την on-screen απόσταση (px) οι γραμμές μοτίβου γίνονται
+ * δυσδιάκριτη μάζα → ο renderer τις αντικαθιστά με ένα ελαφρύ solid tint (industry
+ * pattern: AutoCAD δείχνει πυκνό hatch ως «γεμάτο» σε μικρό zoom). Αποφεύγει την
+ * παραγωγή/σχεδίαση χιλιάδων γραμμών σε zoom-out — η κύρια αιτία βαρύτητας.
+ */
+const HATCH_MIN_LINE_SPACING_PX = 3;
+/** Διαφάνεια του collapsed solid tint (διαβάζεται ως «γεμάτο» χωρίς να βαραίνει). */
+const HATCH_COLLAPSE_ALPHA = 0.45;
+/** Πάνω από τόσα segments ενεργοποιείται το viewport culling (αλλιώς ασύμφορο). */
+const CULL_SEGMENT_THRESHOLD = 200;
 /** Όριο εγγραφών στο segment cache (αποφυγή ανεξέλεγκτης μεγέθυνσης). */
 const SEG_CACHE_MAX = 256;
 
@@ -100,6 +112,15 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.ctx.fillStyle = color;
       this.drawBoundaryPath(paths);
       this.ctx.fill('evenodd');
+    } else if (this.isLineDensityTooHigh(hatch)) {
+      // Density-LOD: γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για χιλιάδες
+      // γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).
+      this.ctx.save();
+      this.ctx.globalAlpha *= HATCH_COLLAPSE_ALPHA;
+      this.ctx.fillStyle = color;
+      this.drawBoundaryPath(paths);
+      this.ctx.fill('evenodd');
+      this.ctx.restore();
     } else {
       // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).
       this.drawPatternSegments(this.cachedSegments(hatch), color);
@@ -143,6 +164,27 @@ export class HatchRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
 
+  /** True όταν οι γραμμές μοτίβου είναι sub-pixel πυκνές στο τρέχον zoom (→ LOD tint). */
+  private isLineDensityTooHigh(hatch: HatchEntity): boolean {
+    const worldSpacing = hatchMinWorldSpacing(hatch);
+    if (worldSpacing <= 0) return false;
+    return worldSpacing * this.transform.scale < HATCH_MIN_LINE_SPACING_PX;
+  }
+
+  /** Ορατά world bounds (με μικρό margin) για segment culling· null αν άγνωστο μέγεθος. */
+  private visibleWorldBounds(): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const w = this.ctx.canvas.clientWidth;
+    const h = this.ctx.canvas.clientHeight;
+    if (w <= 0 || h <= 0) return null;
+    const a = this.screenToWorld({ x: 0, y: 0 });
+    const b = this.screenToWorld({ x: w, y: h });
+    const margin = 4 / Math.max(this.transform.scale, 1e-6);
+    return {
+      minX: Math.min(a.x, b.x) - margin, maxX: Math.max(a.x, b.x) + margin,
+      minY: Math.min(a.y, b.y) - margin, maxY: Math.max(a.y, b.y) + margin,
+    };
+  }
+
   /** Χτίζει ΕΝΑ canvas path με ΟΛΑ τα boundary paths ως subpaths (για even-odd fill). */
   private drawBoundaryPath(paths: ReadonlyArray<ReadonlyArray<Point2D>>): void {
     this.ctx.beginPath();
@@ -165,8 +207,17 @@ export class HatchRenderer extends BaseEntityRenderer {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = HATCH_LINE_WIDTH;
     this.ctx.setLineDash([]);
+    // Viewport culling μόνο όταν αξίζει (πολλά segments) — αλλιώς ο έλεγχος bounds
+    // κοστίζει περισσότερο απ' ό,τι κερδίζει. Off-screen segments → ΟΧΙ transform.
+    const bounds = segments.length > CULL_SEGMENT_THRESHOLD ? this.visibleWorldBounds() : null;
     this.ctx.beginPath();
     for (const seg of segments) {
+      // Reuse AABB SSoT (aabbIntersectsRaw)· skip segments που δεν τέμνουν το viewport.
+      if (bounds && !aabbIntersectsRaw(
+        Math.min(seg.start.x, seg.end.x), Math.min(seg.start.y, seg.end.y),
+        Math.max(seg.start.x, seg.end.x), Math.max(seg.start.y, seg.end.y),
+        bounds.minX, bounds.minY, bounds.maxX, bounds.maxY,
+      )) continue;
       const a = this.worldToScreen(seg.start);
       const b = this.worldToScreen(seg.end);
       this.ctx.moveTo(a.x, a.y);

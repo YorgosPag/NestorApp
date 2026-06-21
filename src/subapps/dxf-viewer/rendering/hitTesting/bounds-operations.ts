@@ -10,19 +10,32 @@ import type { BoundingBox } from './Bounds';
 import { createBoundingBox } from './Bounds';
 
 /**
+ * 🔺 AABB INTERSECTION (primitive args) — SSoT της σύγκρισης δύο axis-aligned boxes.
+ * Allocation-free· κατάλληλο για hot loops (π.χ. per-segment culling) όπου η
+ * δημιουργία `BoundingBox` objects θα κόστιζε. Το `BoundsOperations.intersects`
+ * delegate-άρει εδώ → ΜΙΑ υλοποίηση.
+ */
+export function aabbIntersectsRaw(
+  aMinX: number, aMinY: number, aMaxX: number, aMaxY: number,
+  bMinX: number, bMinY: number, bMaxX: number, bMaxY: number,
+): boolean {
+  return !(aMaxX < bMinX || aMinX > bMaxX || aMaxY < bMinY || aMinY > bMaxY);
+}
+
+/**
  * 🔺 BOUNDING BOX OPERATIONS
  * Utilities για operations μεταξύ bounding boxes
  */
 export class BoundsOperations {
   /**
    * 🔺 INTERSECTION CHECK
-   * Ελέγχει αν δύο bounding boxes τέμνονται
+   * Ελέγχει αν δύο bounding boxes τέμνονται (delegate στο `aabbIntersectsRaw` SSoT)
    */
   static intersects(box1: BoundingBox, box2: BoundingBox): boolean {
-    return !(box1.maxX < box2.minX ||
-             box1.minX > box2.maxX ||
-             box1.maxY < box2.minY ||
-             box1.minY > box2.maxY);
+    return aabbIntersectsRaw(
+      box1.minX, box1.minY, box1.maxX, box1.maxY,
+      box2.minX, box2.minY, box2.maxX, box2.maxY,
+    );
   }
 
   /**

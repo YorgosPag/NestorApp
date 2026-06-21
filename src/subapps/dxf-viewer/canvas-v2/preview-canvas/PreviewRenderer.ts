@@ -61,6 +61,9 @@ import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-reso
 // ADR-362 dimension SSoT.
 import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import { applyOverlayLineStyle } from './overlay-line-style';
+import { drawOverlayLabel } from './overlay-text-style';
+import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -231,22 +234,20 @@ export class PreviewRenderer {
     const EXTEND = 6000;
 
     ctx.save();
-    ctx.setLineDash([8, 5]);
-    ctx.strokeStyle = '#00CC44';
-    ctx.lineWidth = 1;
+    applyOverlayLineStyle(ctx, '#00CC44'); // SSoT: 0.5px dashed [8,5] (same as alignment traces)
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
     ctx.moveTo(refScreen.x, refScreen.y);
     ctx.lineTo(refScreen.x + dx * EXTEND, refScreen.y + dy * EXTEND);
     ctx.stroke();
 
-    // Tooltip near cursor
-    ctx.setLineDash([]);
-    ctx.font = '11px monospace';
-    ctx.fillStyle = '#00CC44';
-    ctx.globalAlpha = 0.9;
-    ctx.fillText(label, cursorScreen.x + 14, cursorScreen.y - 8);
     ctx.restore();
+    // Tooltip near cursor — SSoT overlay label (font + chip), same as the tracking tooltip.
+    drawOverlayLabel(ctx, label, cursorScreen.x + 14, cursorScreen.y - 8, {
+      textColor: '#00CC44',
+      bgColor: resolveDxfCanvasBackgroundHex(),
+      align: 'left',
+    });
   }
 
   /** Clear preview immediately */
