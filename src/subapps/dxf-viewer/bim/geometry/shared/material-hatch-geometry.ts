@@ -45,6 +45,9 @@ export function computeMaterialHatchSegments(
   boundaryPaths: BoundaryPaths,
   material: string | undefined,
   cutState: CutState,
+  /** Πολλαπλασιαστής πυκνότητας (όπως ο user scale του hatch)· για callers σε
+   *  διαφορετική μονάδα/πυκνότητα (π.χ. ETICS envelope canvas units). Default 1. */
+  userScale?: number,
 ): readonly HatchLineSegment[] {
   const patternName = resolveAutoHatch(material, cutState);
   if (!patternName) return [];
@@ -54,12 +57,12 @@ export function computeMaterialHatchSegments(
   const pattern = getHatchPattern(patternName);
   if (!pattern) return [];
 
-  const key = `${patternName}|${cutState}|${pathsSignature(usable)}`;
+  const key = `${patternName}|${cutState}|${userScale ?? 1}|${pathsSignature(usable)}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
   const segs = buildPredefinedHatchLines(usable, pattern, {
-    scale: resolveEffectiveHatchScale(patternName, undefined),
+    scale: resolveEffectiveHatchScale(patternName, userScale),
     islandStyle: 'normal',
   });
 

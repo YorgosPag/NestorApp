@@ -42,7 +42,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -136,12 +136,15 @@ export class ColumnRenderer extends BaseEntityRenderer {
       useDrawingScaleStore.getState().viewRange,
     );
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
-    this.ctx.fillStyle = resolveVgFillTint('column', _colCutState, _colStyles) ?? KIND_FILL[column.kind];
+    // ADR-509 / FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με τον τοίχο &
+    // όλα τα BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια.
+    this.ctx.fillStyle = resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
-    // Phase 4.5c.2/4.5c.3 — per-material hatch (all kinds, incl. circular).
-    drawColumnMaterialHatch(this.ctx, column, this.transform.scale, (p) => this.worldToScreen(p));
+    // ADR-507 Φ7 — unified per-material poché (all kinds, incl. circular). cutState
+    // → surface vs cut pattern μέσω MATERIAL_HATCH_MAP.
+    drawColumnMaterialHatch(this.ctx, column, this.transform.scale, (p) => this.worldToScreen(p), _colCutState);
 
     const _colLayerOverride = _colLayer ? {
       lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
