@@ -5,6 +5,7 @@
  */
 import type React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { PolarSnapResult } from '../../systems/constraints/polar-utils';
@@ -14,6 +15,8 @@ import {
   ACQUISITION_DURATION_MS,
 } from '../../systems/tracking/TrackingPointStore';
 import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
+import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
+import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { applyPolar, formatPolarLabel } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
@@ -59,6 +62,10 @@ export interface DrawingHoverCtx {
   getLatestPreviewEntity: () => ExtendedSceneEntity | null;
   /** ADR-362 hotfix: resolve snap entityId → DetectableEntity for smart dim type detection. */
   resolveEntity: (id: string) => DetectableEntity | undefined;
+  /** ADR-357 ambient alignment: event-time scene entities (floor-scoped, no subscription). */
+  getSceneEntities: () => readonly Entity[];
+  /** ADR-357 ambient alignment: mm→scene-units factor for the (zoom-independent) radius. */
+  getSceneUnitsScale: () => number;
 }
 
 export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
@@ -71,6 +78,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     findSnapPointRef, trackingHoverRef,
     updatePreview, getLatestPreviewEntity,
     resolveEntity,
+    getSceneEntities, getSceneUnitsScale,
   } = ctx;
   // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
   if (isDimTool) {
@@ -181,8 +189,20 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const acquired = TrackingPointStore.getPoints();
     const liveScale = getTransformScale();
     const worldTolerance = 3 / Math.max(liveScale, 0.001);
-    const trackingResult = acquired.length > 0
-      ? resolveTrackingSnap(previewPt, acquired, {
+    // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from
+    // the columns near the cursor — a SECOND source merged with the acquired
+    // (AutoCAD) points into the SAME resolver. Gated behind the AutoAlign toggle.
+    const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
+    const ambient = (isDrawingTool && ambientCfg.enabled)
+      ? collectAmbientAlignmentAnchors(previewPt, getSceneEntities(), {
+          radiusWorld: ambientCfg.radiusMm * getSceneUnitsScale(),
+          maxColumns: ambientCfg.maxColumns,
+          axisToleranceWorld: worldTolerance,
+        })
+      : [];
+    const merged = ambient.length > 0 ? [...acquired, ...ambient] : acquired;
+    const trackingResult = merged.length > 0
+      ? resolveTrackingSnap(previewPt, merged, {
           incrementAngle: polarTrackingStore.incrementAngle,
           additionalAngles: polarTrackingStore.additionalAngles,
           polarEnabled: polarOnRef.current && !orthoOnRef.current,
@@ -246,8 +266,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
                 trackingResult.point.y - trackingResult.anchorPoint.y,
               ).toFixed(1)}`
             : null;
+          // ADR-357 ambient: draw ONLY the cursor-aligned path(s), not every
+          // built path — mirrors Revit/AutoCAD and prevents ambient-source clutter.
           previewCanvasRef.current.drawTrackingAlignment(
-            trackingResult.alignmentPaths,
+            trackingResult.activePaths,
             trackingResult.intersections,
             trackingResult.point,
             label,

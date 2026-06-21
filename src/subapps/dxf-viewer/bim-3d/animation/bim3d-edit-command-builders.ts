@@ -205,14 +205,13 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     if (c.entityIds.length === 1 && primary?.type === 'opening') {
       return buildOpeningRehostMoveCommand(primary as OpeningEntity, delta, entitiesAll, c.sm, c.pickedWall);
     }
-    const moveBase: EditCommand =
-      c.entityIds.length > 1
-        ? new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false)
-        : new MoveEntityCommand(c.entityId, delta, c.sm, false);
-    // ADR-408 Φ-C — pipes snapped to an edited MEP entity follow it in one undo.
-    return withConnectedPipeFollow(moveBase, c.entityIds, entitiesAll, c.sm, (e) =>
-      nextParamsFromPatch(calculateBimMovedGeometry(e, delta)),
-    );
+    // ADR-049 / ADR-408 Φ-C — the Move command SELF-cascades connected pipes inside
+    // its execute/undo/redo (cascadeConnectedPipesByDelta), so the 3D plan move no
+    // longer wraps `withConnectedPipeFollow` (that would double-follow). Rotate and
+    // vertical still wrap it (those commands do not self-cascade pipes).
+    return c.entityIds.length > 1
+      ? new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false)
+      : new MoveEntityCommand(c.entityId, delta, c.sm, false);
   }
   if (outcome.kind === 'rotate') {
     // ADR-402/404: the pivot is mm (worldToDxfPlan); scale it into the entity's

@@ -370,6 +370,8 @@ export const COLLECTIONS = {
   FLOORPLAN_ROOFS: process.env.NEXT_PUBLIC_FLOORPLAN_ROOFS_COLLECTION || 'floorplan_roofs',
   /** ADR-419 — thin floor coverings per room (IfcCovering FLOORING). IDs via ffl_* prefix. */
   FLOORPLAN_FLOOR_FINISHES: process.env.NEXT_PUBLIC_FLOORPLAN_FLOOR_FINISHES_COLLECTION || 'floorplan_floor_finishes',
+  /** ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR). IDs via wcv_* prefix. */
+  FLOORPLAN_WALL_COVERINGS: process.env.NEXT_PUBLIC_FLOORPLAN_WALL_COVERINGS_COLLECTION || 'floorplan_wall_coverings',
   /** ADR-507 — flat DXF hatch fills (Revit Filled-Region). IDs via hatch_* prefix. */
   FLOORPLAN_HATCHES: process.env.NEXT_PUBLIC_FLOORPLAN_HATCHES_COLLECTION || 'floorplan_hatches',
   /** ADR-422 — analytical thermal spaces per room (IfcSpace). IDs via tsp_* prefix. */
@@ -483,6 +485,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_RAILINGS,
   COLLECTIONS.FLOORPLAN_ROOFS,
   COLLECTIONS.FLOORPLAN_FLOOR_FINISHES,
+  COLLECTIONS.FLOORPLAN_WALL_COVERINGS,
   COLLECTIONS.FLOORPLAN_HATCHES,
   COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
   COLLECTIONS.FLOORPLAN_FURNITURE,

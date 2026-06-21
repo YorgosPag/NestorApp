@@ -1219,6 +1219,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_mep_water_heaters', // lines 4025-4047 — tenant-scoped CRUD (DHW water heater / θερμοσίφωνας, mirror mep_boilers); full matrix with the BIM batch
   // — BIM Hatch Fills (ADR-507, 2026-06-21) —
   'floorplan_hatches',          // flat DXF hatch fills (Revit Filled-Region, mirror floorplan_floor_finishes; payload is `data` not `params`); full matrix with the BIM batch
+  // — BIM Wall Finish per Room/Face (ADR-511, 2026-06-21) —
+  'floorplan_wall_coverings',   // lines 4226-4246 — tenant-scoped CRUD (IfcCovering wall finish per room/face, mirror floorplan_floor_finishes; payload is `params`); full matrix with the BIM batch
 ] as const;
 
 // ---------------------------------------------------------------------------

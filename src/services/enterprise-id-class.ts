@@ -363,6 +363,7 @@ export class EnterpriseIdService {
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateRoofId(): string { return this.generateId(P.ROOF).id; }
   generateFloorFinishId(): string { return this.generateId(P.FLOOR_FINISH).id; }
+  generateWallCoveringId(): string { return this.generateId(P.WALL_COVERING).id; }
   generateHatchId(): string { return this.generateId(P.HATCH).id; }
   generateThermalSpaceId(): string { return this.generateId(P.THERMAL_SPACE).id; }
   generateSpaceSeparatorId(): string { return this.generateId(P.SPACE_SEPARATOR).id; }

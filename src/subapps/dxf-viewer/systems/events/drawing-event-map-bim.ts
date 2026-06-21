@@ -39,6 +39,9 @@ export interface BimEventMap {
   // ADR-419 — BIM floor-finish covering (IfcCovering FLOORING) params + delete events
   'bim:floor-finish-params-updated': { floorFinishId: string };
   'bim:floor-finish-delete-requested': { id: string };
+  // ADR-511 — BIM wall-covering (IfcCovering CLADDING/INTERIOR) params + delete events
+  'bim:wall-covering-params-updated': { wallCoveringId: string };
+  'bim:wall-covering-delete-requested': { id: string };
   // ADR-507 — flat DXF hatch fill (Revit Filled-Region) delete event
   'bim:hatch-delete-requested': { id: string };
   // ADR-422 — BIM thermal space (IfcSpace) params + delete events

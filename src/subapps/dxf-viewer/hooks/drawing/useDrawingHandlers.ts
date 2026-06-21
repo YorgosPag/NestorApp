@@ -57,6 +57,7 @@ import { useCadToggles } from '../common/useCadToggles';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
+import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
 import { useUnifiedDrawing } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -411,6 +412,10 @@ export function useDrawingHandlers(
       // ADR-362 hotfix: entity resolver — snap entityId → DetectableEntity
       resolveEntity: (id) =>
         currentScene?.entities.find((e) => e.id === id) as DetectableEntity | undefined,
+      // ADR-357 ambient alignment: event-time scene reads (closed-over prop, no
+      // React subscription in the hover hot path — ADR-040 safe).
+      getSceneEntities: () => currentScene?.entities ?? [],
+      getSceneUnitsScale: () => mmToSceneUnits(resolveSceneUnits(currentScene)),
     });
   }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity, currentScene]);
   

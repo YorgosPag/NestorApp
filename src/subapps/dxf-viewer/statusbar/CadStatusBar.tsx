@@ -17,6 +17,7 @@ import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
 import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
+import { ambientAlignmentConfigStore } from '../systems/tracking/ambient-alignment-config-store';
 import { useDisplayUnit } from '../hooks/common/useDisplayUnit';
 import {
   type DisplayUnit,
@@ -125,6 +126,12 @@ export default function CadStatusBar() {
             description={t('cadDock.statusBar.polarDesc')}
             toggle={polar}
           />
+          {/* ADR-357 ambient extension: Revit-style auto-alignment toggle */}
+          <AutoAlignToggle
+            id="cad-toggle-autoalign"
+            label={t('cadDock.statusBar.autoAlign')}
+            description={t('cadDock.statusBar.autoAlignDesc')}
+          />
           {/* ADR-357 Phase 2b: Display unit selector */}
           <DisplayUnitSelector displayUnit={displayUnit} onUnitChange={setDisplayUnit} t={t} />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
@@ -171,6 +178,42 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
       <TooltipContent side="top">
         {`${description} (${fkey})`}
       </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * ADR-357 ambient extension — Revit-style auto-alignment toggle. Reads the
+ * standalone `ambientAlignmentConfigStore` (localStorage micro-leaf, NOT the
+ * Firestore CAD-toggles slice). Status-bar toggle only (AutoCAD-web pattern,
+ * like Dynamic Input) — no F-key binding.
+ */
+function AutoAlignToggle({ id, label, description }: {
+  id: string;
+  label: string;
+  description: string;
+}) {
+  const snapshot = useSyncExternalStore(
+    ambientAlignmentConfigStore.subscribe,
+    () => ambientAlignmentConfigStore.getSnapshot(),
+    () => ambientAlignmentConfigStore.getSnapshot(),
+  );
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
+            <span className={`text-xs leading-none font-semibold ${snapshot.enabled ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
+          </label>
+          <Switch
+            id={id}
+            checked={snapshot.enabled}
+            onCheckedChange={() => ambientAlignmentConfigStore.toggle()}
+            className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
+          />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top">{description}</TooltipContent>
     </Tooltip>
   );
 }

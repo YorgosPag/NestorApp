@@ -56,6 +56,7 @@ export function emitBimEntityDeleteRequested(type: string, id: string): void {
     case 'mep-water-heater': EventBus.emit('bim:mep-water-heater-delete-requested', { waterHeaterId: id }); break;
     case 'roof': EventBus.emit('bim:roof-delete-requested', { roofId: id }); break;
     case 'floor-finish': EventBus.emit('bim:floor-finish-delete-requested', { id }); break;
+    case 'wall-covering': EventBus.emit('bim:wall-covering-delete-requested', { id }); break;
     case 'mep-underfloor': EventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId: id }); break;
     case 'space-separator': EventBus.emit('bim:space-separator-delete-requested', { id }); break;
     default: break;

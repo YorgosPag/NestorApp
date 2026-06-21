@@ -46,8 +46,19 @@ export interface TrackingAlignmentPath {
 export interface TrackingSnapResult {
   /** Snapped cursor position (projection / intersection). */
   readonly point: Point2D;
-  /** All active alignment paths (for rendering). */
+  /**
+   * Every alignment path built this frame (acquired × angles).
+   * @deprecated For rendering use `activePaths` instead — drawing every path
+   * floods the canvas once ambient sources add dozens of paths. Retained for
+   * back-compat / debug only. (ADR-357 ambient-alignment extension, 2026-06-21)
+   */
   readonly alignmentPaths: readonly TrackingAlignmentPath[];
+  /**
+   * The 1–2 paths that actually produced this snap — the ONLY paths the
+   * renderer should draw (1 for projection, 2 for an intersection). Mirrors
+   * Revit/AutoCAD: only the line(s) the cursor is currently aligned to show.
+   */
+  readonly activePaths: readonly TrackingAlignmentPath[];
   /** Path intersections discovered (priority 1 snap candidates). */
   readonly intersections: readonly Point2D[];
   /** Acquired point closest to the resolved snap (for labeling). */
@@ -60,6 +71,13 @@ export interface TrackingSnapResult {
 
 const HV_ANGLES = [0, 90, 180, 270];
 const EPSILON = 1e-6;
+/**
+ * Cap above which the O(n²) intersection scan is skipped (projection still
+ * runs). Ambient sources can push the path count high; intersections are
+ * mainly useful for intentional/acquired points, so this keeps the synchronous
+ * hover path within the ADR-040 frame budget. (ADR-357 ambient extension)
+ */
+const MAX_INTERSECTION_PATHS = 16;
 
 /**
  * Resolve the active tracking snap for the given cursor, or `null` when no
@@ -82,11 +100,15 @@ export function resolveTrackingSnap(
   const paths = buildAlignmentPaths(acquired, polar);
   if (paths.length === 0) return null;
 
-  const intersection = findClosestIntersection(paths, cursor, worldTolerance);
+  // Intersection scan is O(n²); skip it past the cap (projection still runs).
+  const intersection = paths.length <= MAX_INTERSECTION_PATHS
+    ? findClosestIntersection(paths, cursor, worldTolerance)
+    : null;
   if (intersection) {
     return {
       point: intersection.point,
       alignmentPaths: paths,
+      activePaths: [intersection.pathA, intersection.pathB],
       intersections: [intersection.point],
       anchorPoint: intersection.anchor,
       kind: 'intersection',
@@ -99,6 +121,7 @@ export function resolveTrackingSnap(
     return {
       point: projection.point,
       alignmentPaths: paths,
+      activePaths: [projection.path],
       intersections: [],
       anchorPoint: projection.anchor,
       kind: 'projection',
@@ -153,6 +176,9 @@ interface IntersectionMatch {
   readonly point: Point2D;
   readonly anchor: AcquiredTrackingPoint;
   readonly distance: number;
+  /** The two crossing paths — rendered as the active alignment lines. */
+  readonly pathA: TrackingAlignmentPath;
+  readonly pathB: TrackingAlignmentPath;
 }
 
 function findClosestIntersection(
@@ -175,6 +201,8 @@ function findClosestIntersection(
           point: inter,
           anchor: acquiredFromPath(a),
           distance,
+          pathA: a,
+          pathB: b,
         };
       }
     }

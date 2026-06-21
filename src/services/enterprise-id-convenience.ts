@@ -269,6 +269,7 @@ export const generateOpeningId = () => enterpriseIdService.generateOpeningId();
 export const generateSlabId = () => enterpriseIdService.generateSlabId();
 export const generateRoofId = () => enterpriseIdService.generateRoofId();
 export const generateFloorFinishId = () => enterpriseIdService.generateFloorFinishId();
+export const generateWallCoveringId = () => enterpriseIdService.generateWallCoveringId();
 export const generateHatchId = () => enterpriseIdService.generateHatchId();
 export const generateThermalSpaceId = () => enterpriseIdService.generateThermalSpaceId();
 export const generateSpaceSeparatorId = () => enterpriseIdService.generateSpaceSeparatorId();

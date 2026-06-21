@@ -55,7 +55,7 @@ export function paintAlignmentPaths(
   ctx.save();
   ctx.setLineDash([8, 5]);
   ctx.strokeStyle = palette.alignmentPath;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.25;
   ctx.globalAlpha = 0.75;
   for (const path of paths) {
     const origin = CoordinateTransforms.worldToScreen(path.origin, transform, viewport);

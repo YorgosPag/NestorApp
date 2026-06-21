@@ -428,6 +428,19 @@ export type {
 } from '../bim/types/floor-finish-types';
 import type { FloorFinishEntity } from '../bim/types/floor-finish-types';
 
+// ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR).
+export type {
+  WallCoveringMaterialId,
+  WallCoveringHatchType,
+  WallCoveringLayer,
+  WallCoveringFaceSide,
+  WallCoveringKind,
+  WallCoveringParams,
+  WallCoveringGeometry,
+  WallCoveringEntity,
+} from '../bim/types/wall-covering-types';
+import type { WallCoveringEntity } from '../bim/types/wall-covering-types';
+
 // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
 export type {
   ThermalSpaceUseType,
@@ -677,6 +690,7 @@ export type Entity = (
   | RoofEntity
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
   | FloorFinishEntity
+  | WallCoveringEntity
   // ADR-422 — analytical thermal space (IfcSpace).
   | ThermalSpaceEntity
   // ADR-437 — space separator (IfcVirtualElement).
@@ -884,6 +898,10 @@ export const isRoofEntity = (entity: Entity): entity is RoofEntity =>
 export const isFloorFinishEntity = (entity: Entity): entity is FloorFinishEntity =>
   entity.type === 'floor-finish';
 
+/** ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR). */
+export const isWallCoveringEntity = (entity: Entity): entity is WallCoveringEntity =>
+  entity.type === 'wall-covering';
+
 /** ADR-422 — analytical thermal space (IfcSpace). */
 export const isThermalSpaceEntity = (entity: Entity): entity is ThermalSpaceEntity =>
   entity.type === 'thermal-space';
@@ -893,13 +911,13 @@ export const isSpaceSeparatorEntity = (entity: Entity): entity is SpaceSeparator
   entity.type === 'space-separator';
 
 /** True for any ADR-363/406/407/408/410/415/417/419/422/437 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | ThermalSpaceEntity | SpaceSeparatorEntity =>
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | WallCoveringEntity | ThermalSpaceEntity | SpaceSeparatorEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
   entity.type === 'foundation' ||
   entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'mep-radiator' || entity.type === 'mep-boiler' || entity.type === 'mep-water-heater' || entity.type === 'mep-underfloor' || entity.type === 'railing' ||
   entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
-  entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish' || entity.type === 'thermal-space' || entity.type === 'space-separator';
+  entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish' || entity.type === 'wall-covering' || entity.type === 'thermal-space' || entity.type === 'space-separator';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
