@@ -16,7 +16,7 @@
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { HATCH_STROKE_RGBA } from '../walls/wall-hatch-patterns';
+import { MATERIAL_HATCH_STROKE_RGBA } from './shared/material-hatch-paint';
 import type { EnvelopeOpeningCut } from '../geometry/envelope-opening-cuts';
 import type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
 
@@ -25,7 +25,6 @@ export {
   buildEnvelopeRenderPlan,
   buildSlabHatchPlan,
   buildRevealJambPlans,
-  resolveEnvelopeHatchKey,
 } from './envelope-render-plan';
 
 // ─── Visual constants ─────────────────────────────────────────────────────────
@@ -62,24 +61,15 @@ export class EnvelopeRenderer {
     transform: ViewTransform,
     viewport: EnvelopeRenderViewport,
   ): void {
-    if (plan.polygon.length < 3 || plan.hatch.lines.length === 0) return;
+    if (plan.polygon.length < 3 || plan.hatch.length === 0) return;
     const ctx = this.ctx;
     ctx.save();
-    ctx.beginPath();
-    const first = this.toScreen(plan.polygon[0], transform, viewport);
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < plan.polygon.length; i++) {
-      const s = this.toScreen(plan.polygon[i], transform, viewport);
-      ctx.lineTo(s.x, s.y);
-    }
-    ctx.closePath();
-    ctx.clip();
-
-    ctx.strokeStyle = HATCH_STROKE_RGBA;
+    ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
     ctx.lineWidth = HATCH_LINE_WIDTH_PX;
     ctx.setLineDash([]);
     ctx.beginPath();
-    for (const seg of plan.hatch.lines) {
+    // ADR-507 Φ7 — τα segments έρχονται ήδη clipped στο footprint (μηδέν `ctx.clip()`).
+    for (const seg of plan.hatch) {
       const a = this.toScreen(seg.start, transform, viewport);
       const b = this.toScreen(seg.end, transform, viewport);
       ctx.moveTo(a.x, a.y);
@@ -178,24 +168,15 @@ export class EnvelopeRenderer {
     transform: ViewTransform,
     viewport: EnvelopeRenderViewport,
   ): void {
-    if (plan.bandRing.length < 3 || plan.hatch.lines.length === 0) return;
+    if (plan.bandRing.length < 3 || plan.hatch.length === 0) return;
     const ctx = this.ctx;
     ctx.save();
-    ctx.beginPath();
-    const first = this.toScreen(plan.bandRing[0], transform, viewport);
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < plan.bandRing.length; i++) {
-      const s = this.toScreen(plan.bandRing[i], transform, viewport);
-      ctx.lineTo(s.x, s.y);
-    }
-    ctx.closePath();
-    ctx.clip();
-
-    ctx.strokeStyle = HATCH_STROKE_RGBA;
+    ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
     ctx.lineWidth = HATCH_LINE_WIDTH_PX;
     ctx.setLineDash([]);
     ctx.beginPath();
-    for (const seg of plan.hatch.lines) {
+    // ADR-507 Φ7 — segments ήδη clipped στο band ring (μηδέν `ctx.clip()`).
+    for (const seg of plan.hatch) {
       const a = this.toScreen(seg.start, transform, viewport);
       const b = this.toScreen(seg.end, transform, viewport);
       ctx.moveTo(a.x, a.y);

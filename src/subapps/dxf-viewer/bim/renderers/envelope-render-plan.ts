@@ -14,16 +14,17 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5, §7 (P4)
  */
 
-import type { Point3D, BoundingBox3D } from '../types/bim-base';
+import type { Point3D } from '../types/bim-base';
 import type { EnvelopeChain } from '../geometry/envelope-perimeter';
 import type { EnvelopeMaterialId } from '../types/thermal-envelope-types';
-import {
-  computeWallHatchPlan,
-  resolveWallMaterialKey,
-  type WallMaterialKey,
-  type HatchPlan,
-} from '../walls/wall-hatch-patterns';
+// ADR-507 Φ7 — unified material poché· η ETICS μόνωση → INSUL batting pattern
+// (proper insulation, αναβάθμιση από το παλιό gypsum stand-in).
+import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
+import type { HatchLineSegment } from '../geometry/shared/hatch-pattern-geometry';
 import { computeRevealJambQuads } from '../geometry/reveal-lining-geometry';
+
+/** Το υλικό μόνωσης ETICS → πάντα INSUL (batting) σε τομή. */
+const ENVELOPE_HATCH_MATERIAL = 'insulation';
 
 export interface EnvelopeRenderPlan {
   /** Κλειστό δαχτυλίδι πάχους μόνωσης (outer forward + exterior face reversed). */
@@ -31,29 +32,8 @@ export interface EnvelopeRenderPlan {
   /** Η εξωτ. όψη της μόνωσης (συνεχής offset polyline). */
   readonly outerLoop: readonly Point3D[];
   readonly outerClosed: boolean;
-  /** Hatch lines (canvas units) από το `computeWallHatchPlan`. */
-  readonly hatch: HatchPlan;
-}
-
-/**
- * Map insulation material → υπάρχον `WallMaterialKey` (hatch SSoT reuse). Η ETICS
- * μόνωση ζωγραφίζεται με διαγώνια διαγράμμιση (`gypsum` single-diagonal, ελαφριά,
- * ξεχωρίζει από RC dot-grid & masonry brick). Dedicated insulation-batting pattern
- * = future polish αν το ζητήσει ο Giorgio (P4 reuse, ΟΧΙ νέο hatch family).
- */
-export function resolveEnvelopeHatchKey(_materialId: EnvelopeMaterialId): WallMaterialKey {
-  return resolveWallMaterialKey('gypsum');
-}
-
-function bboxOf(points: readonly Point3D[]): BoundingBox3D {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 0 } };
+  /** Hatch segments (canvas units· ADR-507 Φ7 INSUL batting μέσω MATERIAL_HATCH_MAP). */
+  readonly hatch: readonly HatchLineSegment[];
 }
 
 /**
@@ -62,7 +42,7 @@ function bboxOf(points: readonly Point3D[]): BoundingBox3D {
  */
 export function buildEnvelopeRenderPlan(
   chain: EnvelopeChain,
-  materialId: EnvelopeMaterialId,
+  _materialId: EnvelopeMaterialId,
   spacingScale = 1,
 ): EnvelopeRenderPlan | null {
   const outer = chain.insulationOuterLoop.points;
@@ -70,7 +50,7 @@ export function buildEnvelopeRenderPlan(
   if (outer.length < 2 || inner.length < 2) return null;
 
   const bandRing: Point3D[] = [...outer, ...[...inner].reverse()];
-  const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId), spacingScale);
+  const hatch = computeMaterialHatchSegments([bandRing], ENVELOPE_HATCH_MATERIAL, 'cut', spacingScale);
   return { bandRing, outerLoop: outer, outerClosed: chain.closed, hatch };
 }
 
@@ -84,8 +64,8 @@ export function buildEnvelopeRenderPlan(
 export interface EnvelopeSlabHatchPlan {
   /** Κλειστό polygon footprint πλάκας (canvas units) — clip + stroke. */
   readonly polygon: readonly Point3D[];
-  /** Hatch lines (canvas units) από το `computeWallHatchPlan`. */
-  readonly hatch: HatchPlan;
+  /** Hatch segments (canvas units· ADR-507 Φ7 INSUL batting). */
+  readonly hatch: readonly HatchLineSegment[];
 }
 
 /**
@@ -94,11 +74,11 @@ export interface EnvelopeSlabHatchPlan {
  */
 export function buildSlabHatchPlan(
   footprint: readonly Point3D[],
-  materialId: EnvelopeMaterialId,
+  _materialId: EnvelopeMaterialId,
   spacingScale = 1,
 ): EnvelopeSlabHatchPlan | null {
   if (footprint.length < 3) return null;
-  const hatch = computeWallHatchPlan(bboxOf(footprint), resolveEnvelopeHatchKey(materialId), spacingScale);
+  const hatch = computeMaterialHatchSegments([footprint], ENVELOPE_HATCH_MATERIAL, 'cut', spacingScale);
   return { polygon: footprint, hatch };
 }
 
@@ -120,17 +100,17 @@ export function buildSlabHatchPlan(
 export function buildRevealJambPlans(
   outline: readonly Point3D[],
   insetCanvas: number,
-  materialId: EnvelopeMaterialId,
+  _materialId: EnvelopeMaterialId,
   spacingScale = 1,
 ): EnvelopeRenderPlan[] {
   const jambs = computeRevealJambQuads(outline, insetCanvas);
   if (!jambs) return [];
   const plans: EnvelopeRenderPlan[] = [];
   for (const quad of [jambs.startJamb, jambs.endJamb]) {
-    // bandRing = το ίδιο το quad (solid) → ο renderer κάνει clip+hatch εντός·
+    // bandRing = το ίδιο το quad (solid) → τα segments έρχονται ήδη clipped εντός·
     // outerLoop = quad κλειστό → strokeOuterLoop τραβά το περίγραμμα (ορατότητα,
     // αλλιώς το μόνο hatch σε λεπτή παραστάδα είναι σχεδόν αόρατο).
-    const hatch = computeWallHatchPlan(bboxOf(quad), resolveEnvelopeHatchKey(materialId), spacingScale);
+    const hatch = computeMaterialHatchSegments([quad], ENVELOPE_HATCH_MATERIAL, 'cut', spacingScale);
     plans.push({ bandRing: quad, outerLoop: quad, outerClosed: true, hatch });
   }
   return plans;

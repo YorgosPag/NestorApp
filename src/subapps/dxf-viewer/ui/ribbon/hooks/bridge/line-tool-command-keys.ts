@@ -4,9 +4,11 @@
  */
 
 export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
-  lineweight: 'lineToolStyle.lineweight',
-  linetype:   'lineToolStyle.linetype',
-  color:      'lineToolStyle.color',
+  lineweight:    'lineToolStyle.lineweight',
+  linetype:      'lineToolStyle.linetype',
+  color:         'lineToolStyle.color',
+  // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE, DXF grp 48).
+  linetypeScale: 'lineToolStyle.linetypeScale',
 } as const);
 
 export type LineToolRibbonKey =

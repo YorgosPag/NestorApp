@@ -8,7 +8,7 @@
  *
  * Persistence: localStorage keys `dxf:quickStyle.lineweight`,
  * `dxf:quickStyle.linetype`, `dxf:quickStyle.colorMode`,
- * `dxf:quickStyle.colorAci` — cross-session, user-scoped.
+ * `dxf:quickStyle.colorAci`, `dxf:quickStyle.ltscale` — cross-session, user-scoped.
  *
  * Pre-commit ratchet `quick-style-store` (added to `.ssot-registry.json`)
  * blocks direct localStorage reads/writes of the `dxf:quickStyle.*` namespace
@@ -31,6 +31,8 @@ export interface QuickStyleSnapshot {
   readonly colorAci: number | null;
   /** 0xRRGGBB TrueColor — only used when colorMode === 'Concrete' and colorAci === null. */
   readonly colorTrueColor: number | null;
+  /** ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE). Default 1 (no scaling). */
+  readonly ltscale: number;
 }
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
@@ -39,9 +41,12 @@ const LS_LINEWEIGHT = 'dxf:quickStyle.lineweight';
 const LS_LINETYPE   = 'dxf:quickStyle.linetype';
 const LS_COLOR_MODE = 'dxf:quickStyle.colorMode';
 const LS_COLOR_ACI  = 'dxf:quickStyle.colorAci';
+const LS_LTSCALE    = 'dxf:quickStyle.ltscale';
 
 const BYLAYER_LINETYPE = 'ByLayer';
 const BYLAYER_LINEWEIGHT: LineweightMm = LINEWEIGHT_SPECIAL.BYLAYER;
+/** AutoCAD CELTSCALE default — 1.0 (no per-object scaling). */
+const DEFAULT_LTSCALE = 1;
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -53,19 +58,23 @@ function loadInitialSnapshot(): QuickStyleSnapshot {
       colorMode: 'ByLayer',
       colorAci: null,
       colorTrueColor: null,
+      ltscale: DEFAULT_LTSCALE,
     };
   }
   const rawLw   = localStorage.getItem(LS_LINEWEIGHT);
   const rawLt   = localStorage.getItem(LS_LINETYPE);
   const rawCm   = localStorage.getItem(LS_COLOR_MODE);
   const rawAci  = localStorage.getItem(LS_COLOR_ACI);
+  const rawLts  = localStorage.getItem(LS_LTSCALE);
 
   const lineweightMm: LineweightMm = rawLw !== null ? (parseFloat(rawLw) as LineweightMm) : BYLAYER_LINEWEIGHT;
   const linetypeName = rawLt ?? BYLAYER_LINETYPE;
   const colorMode: 'ByLayer' | 'Concrete' = rawCm === 'Concrete' ? 'Concrete' : 'ByLayer';
   const colorAci = rawAci !== null ? parseInt(rawAci, 10) : null;
+  const parsedLts = rawLts !== null ? parseFloat(rawLts) : DEFAULT_LTSCALE;
+  const ltscale = Number.isFinite(parsedLts) && parsedLts > 0 ? parsedLts : DEFAULT_LTSCALE;
 
-  return Object.freeze({ lineweightMm, linetypeName, colorMode, colorAci, colorTrueColor: null });
+  return Object.freeze({ lineweightMm, linetypeName, colorMode, colorAci, colorTrueColor: null, ltscale });
 }
 
 // ─── Mutable state ───────────────────────────────────────────────────────────
@@ -101,6 +110,11 @@ function persist(next: QuickStyleSnapshot): void {
     } else {
       localStorage.removeItem(LS_COLOR_ACI);
     }
+  }
+  if (next.ltscale === DEFAULT_LTSCALE) {
+    localStorage.removeItem(LS_LTSCALE);
+  } else {
+    localStorage.setItem(LS_LTSCALE, String(next.ltscale));
   }
 }
 
@@ -141,6 +155,19 @@ export function setQuickStyleColor(
   notify();
 }
 
+/**
+ * Set the per-object linetype scale (CELTSCALE) draw-default. Non-positive /
+ * non-finite values are ignored (AutoCAD rejects CELTSCALE <= 0). No-op when
+ * unchanged.
+ */
+export function setQuickStyleLtscale(ltscale: number): void {
+  if (!Number.isFinite(ltscale) || ltscale <= 0) return;
+  if (ltscale === snapshot.ltscale) return;
+  snapshot = Object.freeze({ ...snapshot, ltscale });
+  persist(snapshot);
+  notify();
+}
+
 export function resetQuickStyle(): void {
   snapshot = Object.freeze({
     lineweightMm: BYLAYER_LINEWEIGHT,
@@ -148,6 +175,7 @@ export function resetQuickStyle(): void {
     colorMode: 'ByLayer' as const,
     colorAci: null,
     colorTrueColor: null,
+    ltscale: DEFAULT_LTSCALE,
   });
   persist(snapshot);
   notify();
@@ -165,6 +193,7 @@ export function isQuickStyleAllByLayer(): boolean {
   return (
     s.lineweightMm === BYLAYER_LINEWEIGHT &&
     s.linetypeName === BYLAYER_LINETYPE &&
-    s.colorMode === 'ByLayer'
+    s.colorMode === 'ByLayer' &&
+    s.ltscale === DEFAULT_LTSCALE
   );
 }
