@@ -17,6 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
@@ -142,7 +143,8 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
 
     if (!meshDrew) {
       // Fill + outline (colour-by-system override, ADR-408 Φ5).
-      this.ctx.fillStyle = fillColor;
+      // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+      this.ctx.fillStyle = adaptBimBodyFill(fillColor);
       this.drawPolygonPath(verts);
       this.ctx.fill();
       this.ctx.strokeStyle = strokeColor;

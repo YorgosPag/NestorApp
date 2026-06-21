@@ -15,9 +15,65 @@ import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import { dxf75ToIslandStyle } from '../bim/hatch/hatch-properties';
 import { extractEntityColor } from './dxf-converter-helpers';
+import {
+  getHatchPattern,
+  getSuggestedScale,
+  type HatchPattern,
+  type PatternLine,
+} from '../data/hatch-pattern-catalog';
 import { dwarn } from '../debug';
 
 type DxfPairs = ReadonlyArray<readonly [string, string]>;
+
+/**
+ * i18n key (N.11) για inline-imported pattern. ΔΕΝ εμφανίζεται στο UI dropdown (το
+ * inlinePattern ζει ανά entity, όχι στο catalog) — απλώς ικανοποιεί τον τύπο
+ * `HatchPattern`. Κλειδί, ΟΧΙ hardcoded label.
+ */
+const INLINE_PATTERN_LABEL_KEY = 'ribbon.commands.hatchEditor.patterns.imported';
+
+/**
+ * Διαβάζει τις inline pattern definition lines ενός HATCH (group `78` = πλήθος, ανά
+ * γραμμή `53` γωνία / `43,44` origin / `45,46` delta / `79` πλήθος dash / `49×` dash)
+ * → `PatternLine[]`. Οι τιμές μένουν **απόλυτες** (όπως γράφτηκαν, σε world mm) ώστε
+ * το round-trip να αναπαράγει 1:1 το μοτίβο για third-party DXF εκτός catalog.
+ *
+ * @see AutoCAD DXF Reference: HATCH pattern data (codes 53/43/44/45/46/79/49)
+ */
+function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] {
+  const n = parseInt(pairs[idx78]?.[1] ?? '0', 10) || 0;
+  if (n <= 0) return [];
+  const lines: PatternLine[] = [];
+  let i = idx78 + 1;
+  // Κωδικοί που σηματοδοτούν τέλος του pattern section (pixel size / seeds / επόμενη οντότητα).
+  const isSectionEnd = (c: string): boolean => c === '47' || c === '98' || c === '0';
+
+  for (let li = 0; li < n && i < pairs.length; li += 1) {
+    while (i < pairs.length && pairs[i][0] !== '53') {
+      if (isSectionEnd(pairs[i][0])) return lines;
+      i += 1;
+    }
+    if (i >= pairs.length) break;
+    const angle = parseFloat(pairs[i][1]);
+    i += 1;
+    let ox = 0; let oy = 0; let dx = 0; let dy = 0;
+    const dashes: number[] = [];
+    while (i < pairs.length && pairs[i][0] !== '53' && !isSectionEnd(pairs[i][0])) {
+      const [c, v] = pairs[i];
+      switch (c) {
+        case '43': ox = parseFloat(v); break;
+        case '44': oy = parseFloat(v); break;
+        case '45': dx = parseFloat(v); break;
+        case '46': dy = parseFloat(v); break;
+        case '49': dashes.push(parseFloat(v)); break;
+        default: break; // 79 (dash count) → implicit μέσω συλλογής όλων των 49
+      }
+      i += 1;
+    }
+    lines.push({ angle, origin: [ox, oy], delta: [dx, dy], dashes });
+  }
+  return lines;
+}
 
 /**
  * Convert HATCH entity (ADR-507 Φ1a).
@@ -43,6 +99,7 @@ export function convertHatch(
   let scale: number | undefined;
   let colorAci: number | undefined;
   let path91Index = -1;
+  let idx78 = -1;
 
   for (let i = 0; i < pairs.length; i += 1) {
     const [code, value] = pairs[i];
@@ -54,6 +111,7 @@ export function convertHatch(
       case '52': if (angle === undefined) angle = parseFloat(value); break;
       case '41': if (scale === undefined) scale = parseFloat(value); break;
       case '62': colorAci = parseInt(value, 10); break;
+      case '78': if (idx78 < 0) idx78 = i; break;
       case '91': if (path91Index < 0) path91Index = i; break;
       default: break;
     }
@@ -113,6 +171,38 @@ export function convertHatch(
   // Reuse SSoT ACI→hex (χειρίζεται ByLayer/ByBlock/invalid → undefined).
   const color = colorAci !== undefined ? extractEntityColor({ '62': String(colorAci) }) : undefined;
 
+  const fillType = solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined');
+
+  // ── Scale idempotency + inline pattern (ADR-507 Φ6) ─────────────────────────
+  // Ο writer γράφει στο group 41 το EFFECTIVE scale (= suggested(ανά μοτίβο) × user).
+  // Αν το ξαναδιαβάζαμε ως `patternScale`, ο geometry resolver θα ξανα-εφάρμοζε το
+  // suggested → διπλό scaling. Λύση: για catalog-hit ανέκτησε τον user multiplier
+  // (idempotent write→read→render). Για άγνωστο όνομα (third-party DXF) διάβασε τις
+  // inline γραμμές → render 1:1 ώστε να ΜΗΝ μένει αόρατη η γραμμοσκίαση.
+  let patternScale = scale;
+  let inlinePattern: HatchPattern | undefined;
+  if (fillType === 'predefined') {
+    const catalogHit = getHatchPattern(patternName);
+    if (catalogHit) {
+      const suggested = getSuggestedScale(patternName);
+      if (scale !== undefined && !Number.isNaN(scale) && suggested > 0) patternScale = scale / suggested;
+    } else if (idx78 >= 0) {
+      const lines = parseInlinePatternLines(pairs, idx78);
+      if (lines.length > 0) {
+        inlinePattern = {
+          name: patternName ?? 'IMPORTED',
+          labelKey: INLINE_PATTERN_LABEL_KEY,
+          category: 'special',
+          lines,
+        };
+      }
+    }
+  }
+
+  const hasAngle = angle !== undefined && !Number.isNaN(angle);
+  const hasScale = patternScale !== undefined && !Number.isNaN(patternScale);
+  const userDefined = fillType === 'user-defined';
+
   return {
     id: `hatch_${index}`,
     type: 'hatch',
@@ -121,10 +211,13 @@ export function convertHatch(
     boundaryPaths,
     patternName,
     patternType: solid ? 'solid' : 'pattern',
-    fillType: solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined'),
+    fillType,
     islandStyle: dxf75ToIslandStyle(islandCode),
-    ...(angle !== undefined && !Number.isNaN(angle) && { patternAngle: angle, lineAngle: angle }),
-    ...(scale !== undefined && !Number.isNaN(scale) && { patternScale: scale, lineSpacing: scale }),
+    // patternAngle = γενική γωνία· lineAngle/lineSpacing είναι user-defined έννοιες
+    // (μην τα γεμίζεις σε predefined — εκεί χρησιμοποιείται patternAngle/patternScale).
+    ...(hasAngle && { patternAngle: angle, ...(userDefined && { lineAngle: angle }) }),
+    ...(hasScale && { patternScale, ...(userDefined && { lineSpacing: patternScale }) }),
+    ...(inlinePattern && { inlinePattern }),
     ...(seedPoints.length > 0 && { seedPoints }),
     ...(color && { color }),
   };

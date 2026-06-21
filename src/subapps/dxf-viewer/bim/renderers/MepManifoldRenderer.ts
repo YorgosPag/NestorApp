@@ -17,6 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity } from '../../types/entities';
@@ -79,7 +80,8 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // Fill + outline — equipment cyan-teal for a water manifold; brown for a
     // drainage collector (φρεάτιο). Manifolds are not coloured by circuit (source).
     const palette = resolveManifoldPalette(manifold.params.kind);
-    this.ctx.fillStyle = `rgba(${palette.fillRgb}, ${MANIFOLD_FILL_ALPHA})`;
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(`rgba(${palette.fillRgb}, ${MANIFOLD_FILL_ALPHA})`);
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = palette.strokeHex;

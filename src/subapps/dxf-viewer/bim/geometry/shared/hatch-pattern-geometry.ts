@@ -333,7 +333,8 @@ export function buildHatchEntitySegments(
   hatch: Pick<
     HatchEntity,
     'boundaryPaths' | 'fillType' | 'patternType' | 'patternName' | 'patternScale'
-    | 'patternAngle' | 'patternOrigin' | 'lineAngle' | 'lineSpacing' | 'doubleCrossHatch' | 'islandStyle'
+    | 'patternAngle' | 'patternOrigin' | 'lineAngle' | 'lineSpacing' | 'doubleCrossHatch'
+    | 'islandStyle' | 'inlinePattern'
   >,
 ): HatchLineSegment[] {
   if (isSolidHatch(hatch)) return [];
@@ -343,14 +344,26 @@ export function buildHatchEntitySegments(
 
   if (hatch.fillType === 'predefined') {
     const pattern = getHatchPattern(hatch.patternName);
-    if (!pattern) return [];
-    return buildPredefinedHatchLines(paths, pattern, {
-      // effective = suggested(ανά μοτίβο) × user multiplier — ορατή πυκνότητα by default.
-      scale: resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale),
-      angleDeg: hatch.patternAngle ?? 0,
-      origin: hatch.patternOrigin,
-      islandStyle,
-    });
+    if (pattern) {
+      return buildPredefinedHatchLines(paths, pattern, {
+        // effective = suggested(ανά μοτίβο) × user multiplier — ορατή πυκνότητα by default.
+        scale: resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale),
+        angleDeg: hatch.patternAngle ?? 0,
+        origin: hatch.patternOrigin,
+        islandStyle,
+      });
+    }
+    // Inline (imported) μοτίβο εκτός catalog (ADR-507 Φ6): οι γραμμές είναι ΑΠΟΛΥΤΕΣ
+    // (43-49 σε world mm, 53 = τελική γωνία) → render 1:1 (scale=1, angleDeg=0).
+    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
+      return buildPredefinedHatchLines(paths, hatch.inlinePattern, {
+        scale: 1,
+        angleDeg: 0,
+        origin: hatch.patternOrigin,
+        islandStyle,
+      });
+    }
+    return [];
   }
   return buildHatchLines(paths, {
     spacingMm: hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_HATCH_LINE_SPACING_MM,
@@ -370,20 +383,31 @@ export function buildHatchEntitySegments(
 export function hatchMinWorldSpacing(
   hatch: Pick<
     HatchEntity,
-    'fillType' | 'patternType' | 'patternName' | 'patternScale' | 'lineSpacing'
+    'fillType' | 'patternType' | 'patternName' | 'patternScale' | 'lineSpacing' | 'inlinePattern'
   >,
 ): number {
   if (isSolidHatch(hatch)) return 0;
   if (hatch.fillType === 'predefined') {
     const pattern = getHatchPattern(hatch.patternName);
-    if (!pattern || !pattern.lines.length) return 0;
-    const eff = resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale);
-    let min = Number.POSITIVE_INFINITY;
-    for (const l of pattern.lines) {
-      const dy = Math.abs(l.delta[1]) * eff;
-      if (dy > EPS && dy < min) min = dy;
+    if (pattern && pattern.lines.length) {
+      const eff = resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale);
+      let min = Number.POSITIVE_INFINITY;
+      for (const l of pattern.lines) {
+        const dy = Math.abs(l.delta[1]) * eff;
+        if (dy > EPS && dy < min) min = dy;
+      }
+      return Number.isFinite(min) ? min : 0;
     }
-    return Number.isFinite(min) ? min : 0;
+    // Inline μοτίβο: οι delta είναι ήδη απόλυτες (scale=1) → καμία × effective.
+    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
+      let min = Number.POSITIVE_INFINITY;
+      for (const l of hatch.inlinePattern.lines) {
+        const dy = Math.abs(l.delta[1]);
+        if (dy > EPS && dy < min) min = dy;
+      }
+      return Number.isFinite(min) ? min : 0;
+    }
+    return 0;
   }
   return hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_HATCH_LINE_SPACING_MM;
 }

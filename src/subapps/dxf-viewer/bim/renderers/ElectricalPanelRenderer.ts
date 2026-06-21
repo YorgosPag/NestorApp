@@ -17,6 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isElectricalPanelEntity } from '../../types/entities';
@@ -79,7 +80,8 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     this.ctx.setLineDash([]);
 
     // Fill + outline (equipment teal — panels are not coloured by circuit).
-    this.ctx.fillStyle = PANEL_FILL;
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(PANEL_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = PANEL_STROKE;

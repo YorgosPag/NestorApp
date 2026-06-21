@@ -19,6 +19,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepWaterHeaterEntity } from '../types/mep-water-heater-types';
@@ -82,7 +83,8 @@ export class MepWaterHeaterRenderer extends BaseEntityRenderer {
     this.ctx.setLineDash([]);
 
     // Fill + outline — blue DHW equipment (water heater = domestic-hot-water source).
-    this.ctx.fillStyle = WATER_HEATER_FILL;
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(WATER_HEATER_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = WATER_HEATER_STROKE;

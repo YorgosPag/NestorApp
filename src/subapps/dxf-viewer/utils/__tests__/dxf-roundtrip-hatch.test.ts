@@ -11,7 +11,11 @@
 import { describe, it, expect } from '@jest/globals';
 import { writeDxfAscii } from '../../export/core/dxf-ascii-writer';
 import { convertHatch } from '../dxf-entity-converters';
-import type { Entity } from '../../types/entities';
+import {
+  buildHatchEntitySegments,
+  hatchMinWorldSpacing,
+} from '../../bim/geometry/shared/hatch-pattern-geometry';
+import type { Entity, HatchEntity } from '../../types/entities';
 
 const LAYERS = { L: { name: 'HATCHES' } };
 
@@ -55,6 +59,12 @@ function userHatch(over: Record<string, unknown> = {}): Entity {
   return {
     id: 'u', type: 'hatch', layerId: 'L', fillType: 'user-defined',
     lineAngle: 30, lineSpacing: 5, boundaryPaths: [SQUARE], ...over,
+  } as unknown as Entity;
+}
+function predefinedHatch(over: Record<string, unknown> = {}): Entity {
+  return {
+    id: 'p', type: 'hatch', layerId: 'L', fillType: 'predefined',
+    patternName: 'ANSI31', patternScale: 1, boundaryPaths: [SQUARE], ...over,
   } as unknown as Entity;
 }
 
