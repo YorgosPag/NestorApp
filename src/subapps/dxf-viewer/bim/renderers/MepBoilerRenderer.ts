@@ -17,7 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepBoilerEntity } from '../../types/entities';
@@ -104,7 +104,7 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
 
     // Fill + outline — warm-red heating equipment (boiler = hydronic source).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(BOILER_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(BOILER_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = BOILER_STROKE;

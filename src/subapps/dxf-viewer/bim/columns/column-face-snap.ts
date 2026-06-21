@@ -287,5 +287,19 @@ export function resolveColumnFaceSnap(
       best = t;
     }
   }
+  // 🔧 TEMP DEBUG (ADR-508 §slab column) — αφαιρείται μετά. Δείχνει ΤΥΠΟΥΣ entities + αν πλάκα/
+  // foundation έχει `params.outline.vertices` (γιατί slabEdges=0).
+  const slabLike = entities.filter((e) => ['slab', 'foundation', 'floor', 'ceiling', 'roof'].includes(e.type));
+  // eslint-disable-next-line no-console
+  console.debug('[COL-SNAP]', {
+    targets: targets.length,
+    slabEdges: targets.filter((t) => t.id?.includes('#edge')).length,
+    types: Array.from(new Set(entities.map((e) => e.type))),
+    slabLike: slabLike.map((e) => ({
+      type: e.type,
+      hasParamsOutline: !!(e as { params?: { outline?: { vertices?: unknown[] } } }).params?.outline?.vertices,
+      vCount: (e as { params?: { outline?: { vertices?: unknown[] } } }).params?.outline?.vertices?.length ?? 0,
+    })),
+  });
   return best ? resolveForTarget(cursor, best) : null;
 }

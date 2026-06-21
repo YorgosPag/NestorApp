@@ -13,6 +13,8 @@ import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometr
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
+// 🏢 ADR-510 Φ3: bulge (arc-segment) geometry SSoT
+import { hasAnyBulge, expandPolyline } from './shared/geometry-bulge-utils';
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-090: Centralized Point Vector Operations
@@ -55,6 +57,21 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // 🔺 Έλεγχος αν οι γραμμές είναι ενεργοποιημένες
     if (!this.shouldRenderLines(entity, options)) {
       return; // Δεν σχεδιάζουμε καθόλου γραμμές
+    }
+
+    // 🏢 ADR-510 Φ3: arc segments (bulge) → tessellate via the geometry SSoT and
+    // stroke the resulting path. Canvas dash/linetype still applies along the arc.
+    const bulges = (entity as PolylineEntity).bulges;
+    if (hasAnyBulge(bulges)) {
+      const worldPath = expandPolyline(vertices, bulges, closed);
+      const screenPath = worldPath.map(v => this.worldToScreen(v));
+      this.drawPath(screenPath, false); // expandPolyline already closed the loop
+      const isOverlayEntity = ('isOverlayPreview' in entity && entity.isOverlayPreview === true);
+      if (isOverlayEntity && closed && this.ctx.fillStyle !== UI_COLORS.TRANSPARENT) {
+        this.ctx.fill();
+      }
+      this.ctx.stroke();
+      return;
     }
 
     const screenVertices = vertices.map(v => this.worldToScreen(v));
@@ -284,6 +301,14 @@ export class PolylineRenderer extends BaseEntityRenderer {
     const closed = polylineEntity.closed ?? false;
 
     if (!vertices || vertices.length < 2) return false;
+
+    // 🏢 ADR-510 Φ3: hit-test against tessellated arc segments when bulges exist
+    // (an arc can bow far outside its chord, so chord-only testing would miss it).
+    const bulges = polylineEntity.bulges;
+    if (hasAnyBulge(bulges)) {
+      const expanded = expandPolyline(vertices, bulges, closed);
+      return hitTestLineSegments(point, expanded, tolerance, false, this.worldToScreen.bind(this));
+    }
 
     // Use hitTestLineSegments utility to test all line segments
     return hitTestLineSegments(point, vertices, tolerance, closed, this.worldToScreen.bind(this));

@@ -25,7 +25,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepSegmentEntity, MepSegmentDomain } from '../types/mep-segment-types';
@@ -173,7 +173,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
 
     // 1. Translucent fill — communicates the footprint extent in plan.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(fillColor);
+    this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

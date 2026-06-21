@@ -15,7 +15,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isFurnitureEntity } from '../../types/entities';
@@ -95,7 +95,7 @@ export class FurnitureRenderer extends BaseEntityRenderer {
     if (!drew) {
       // Authored footprint rectangle + generic glyph (diagonal cross).
       // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-      this.ctx.fillStyle = adaptBimBodyFill(FURNITURE_PALETTE.fill);
+      this.ctx.fillStyle = adaptFillTintForCanvas(FURNITURE_PALETTE.fill);
       this.drawPolygonPath(verts);
       this.ctx.fill();
       this.ctx.strokeStyle = FURNITURE_PALETTE.stroke;

@@ -11,7 +11,10 @@
 > **Φ2E #1** 🟢 (selected-line contextual tab + linetype editing UI, Revit-grade dual-mode bridge· + render-bug fix
 > 2026-06-22). **Φ2E #2** 🟢 (linetype scale UI: global LTSCALE status-bar + per-line CELTSCALE «Βήμα» στο tab).
 > **🔴 ΕΚΚΡΕΜΕΙ:** Φ2E #3 (custom-linetype creation pattern editor) + Φ2F (DXF LTYPE round-trip + persistence =
-> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία. Επόμενο spec: **Φ3** (bulge+grips).
+> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία.
+> **Φ3 (bulge polyline + multifunctional grips)** 🟡 ΣΕ ΕΞΕΛΙΞΗ (UNCOMMITTED 2026-06-22): **Φ3a** 🟢 geometry SSoT
+> (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
+> rendering/hit-test· **ΕΚΚΡΕΜΟΥΝ** Φ3c grips, Φ3d μεταβλητό πλάτος, Φ3e endpoint Lengthen, Φ9 DXF 42/40/41. 21 jest.
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -624,3 +627,34 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `SnapToggleWithStep` + `LinetypeScaleControl` το χρησιμοποιούν → ΕΝΑ SSoT control. Το polar «add angle» (button/
   Enter-commit, placeholder) ΕΜΕΙΝΕ inline (διαφορετική αλληλεπίδραση, ΟΧΙ forced unify). +7 jest
   (`StatusBarNumericField.test.tsx`: range guard / minExclusive / buffer re-sync / suffix).
+- **2026-06-22** — **Φ3 PHASE-1 RECOGNITION (N.0.1) — διορθώσεις spec έναντι ΤΡΕΧΟΝΤΟΣ κώδικα (grep audit).**
+  Το SSoT audit (5 παράλληλα greps) **διέψευσε** δύο υποθέσεις του handoff/spec: (1) §1.Α «`geometry-circle-utils.ts`
+  έχει bulge» = **ΛΑΘΟΣ** — έχει ΜΟΝΟ circle math (best-fit/3pt/chord-sagitta/TTT)· **καμία** bulge↔arc μετατροπή
+  (μόνο σχόλιο γρ.278). Άρα `bulge-arc` = γνήσιο NEW (§4.4 σωστά το έλεγε). (2) §2 «bulge ΗΔΗ γράφεται στον
+  `dxf-ascii-writer`» = **ΛΑΘΟΣ** — `emitPath` γράφει μόνο 10/20· `72=0` hardcoded· import αγνοεί 42/40/41 → πλήρης
+  DXF round-trip = **Φ9** (όχι Φ3). (3) **Arc-tessellator fragmentation (προϋπάρχον):** grep βρήκε **~8** ξεχωριστά
+  tessellators (`GeometryUtils.arcToPolyline` ADR-166 degree/CCW-only· `dxf-ascii-writer.arcPoints`· `ClipToRegionService.
+  sampleArcSegments` private· trim `tessellateArc[Sweep]`· `column-cross-ties.arcPoints`· `radial-builder.sampleArc`·
+  2× mep). Κανένα ΔΕΝ είναι reusable public «center+radius+startAngle+**signed sweep**→points» (το αρνητικό bulge=CW
+  το χρειάζεται). Το bulge έχει **private** `tessellateSignedArc` στο `geometry-bulge-utils` (μοναδικός consumer)·
+  η ενοποίηση των 8 → ΕΝΑ signed SSoT = ΞΕΧΩΡΙΣΤΟ ratchet (pending-ratchet-work, ΟΧΙ Φ3). **ΜΑΘΗΜΑ:** αρχικά
+  έφτιαξα 2ο public `arcToPolyline` (name collision με GeometryUtils) — ο Giorgio το έπιασε με SSoT-audit· διορθώθηκε
+  άμεσα σε private helper. Έτοιμα-προς-REUSE επιβεβαιώθηκαν: full grip
+  stack (ADR-501 `GripArmedStore.armedKeys`, `grip-context-menu-resolver` PURE με vertex-ops «Add/Delete Corner»,
+  `grip-temperature`, `GRIP_SIZE_DEFAULT`), `Move/Add/RemoveVertexCommand`, `LengthenCommand` (ADR-349 line+arc).
+- **2026-06-22** — **Φ3 §4.2 ΑΠΟΦΑΣΗ vertex model = parallel arrays (Giorgio «Επιλογή A»).** Αντί restructure
+  `vertices → {point,bulge?,startWidth?,endWidth?}[]` (literal §4.2, σπάει ~12 consumers), κρατάμε `vertices: Point2D[]`
+  ΑΜΕΤΑΒΛΗΤΟ + προσθέτουμε optional **index-aligned** arrays `bulges?`/`startWidths?`/`endWidths?` (DXF 42/40/41,
+  per-vertex «outgoing segment»). **Γιατί:** additive/backward-compatible (όλοι οι consumers άθικτοι), stretch
+  preserves bulge ΔΩΡΕΑΝ (δεν αγγίζει τα arrays), ratchet-safe, DXF 42 είναι ήδη per-vertex. `types/entities.ts`:
+  `PolylineEntity` + `LWPolylineEntity` επεκτάθηκαν.
+- **2026-06-22** — **Φ3a + Φ3b (UNCOMMITTED) — bulge geometry SSoT + arc rendering/hit-test.**
+  **Φ3a:** NEW `rendering/entities/shared/geometry-bulge-utils.ts` (pure SSoT): `bulgeToArc`/`bulgeToPolyline`/
+  `bulgeApexPoint`/`bulgeFromApexPoint` (grip drag inverse, projects to perpendicular apex)/`bulgeSegmentExtremes`
+  (cardinal-aware bbox)/`isStraightSegment`. REUSE `arcToPolyline` (νέο SSoT στο `geometry-arc-utils`). bulge=tan(θ/4):
+  1→ημικύκλιο, 0.4142→τεταρτοκύκλιο, 0→ευθεία. **Φ3b:** `PolylineRenderer` bulge branch (`hasAnyBulge`→`expandPolyline`
+  τessellated path, dash/linetype ρέει στο τόξο) + **hit-test bulge-aware** (το τόξο βγαίνει εκτός chord). 21 jest
+  (`geometry-bulge-utils.test.ts`) + 14 arc regression GREEN. **ΕΚΚΡΕΜΟΥΝ:** Φ3c grips (Convert↔Arc/Line, Add/Remove
+  Vertex, bulge drag — MOD `grip-context-menu-resolver`/`-actions` + NEW `SetBulgeCommand` + adapter bulge/width)·
+  Φ3d μεταβλητό πλάτος (tapered render + DXF 40/41)· Φ3e endpoint Stretch/Lengthen (REUSE `LengthenCommand`)·
+  Φ9 DXF round-trip 42/40/41. ⚠️ Φ3c grip/render αρχεία → stage ADR-040 (CHECK 6B/6D). 🔴 tsc(N.17)+browser-verify+commit.

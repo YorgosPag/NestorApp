@@ -29,7 +29,7 @@
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { StairGeometry, StairStructureType } from '../types/stair-types';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 
 /**
  * Render-helper deps. `worldToScreen` is `BaseEntityRenderer.worldToScreen`
@@ -97,7 +97,7 @@ export function renderTreadsForStructure(
   // FULL SSoT (bim-body-fill) — ίδιο adaptive layer με όλα τα BIM body fills (το V/G
   // tint λύθηκε upstream στον StairRenderer, το per-tread fallback εδώ· background-
   // adaptive boost ⇒ ΙΔΙΑ διαφάνεια με τοίχο/κολώνα σε κάθε φόντο).
-  const fillStyle = adaptBimBodyFill(scx.vgFillTint ?? (isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT));
+  const fillStyle = adaptFillTintForCanvas(scx.vgFillTint ?? (isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT));
 
   ctx.save();
   ctx.lineWidth = scx.treadsLineWidth ?? scx.baseLineWidth;

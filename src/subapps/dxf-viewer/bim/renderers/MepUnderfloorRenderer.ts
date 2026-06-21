@@ -21,7 +21,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepUnderfloorEntity } from '../../types/entities';
@@ -92,7 +92,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
 
     // 1. Translucent warm-red fill for the heating area.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(UF_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(UF_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

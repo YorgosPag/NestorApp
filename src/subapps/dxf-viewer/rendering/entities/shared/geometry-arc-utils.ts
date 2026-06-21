@@ -149,6 +149,37 @@ export function calculateArcLength(radius: number, startAngle: number, endAngle:
 }
 
 /**
+ * 🏢 SSoT (ADR-510 Φ3a): Tessellate an arc into a polyline of points.
+ *
+ * Angles in RADIANS. `sweep` is signed (CCW positive, CW negative) so this
+ * handles both arc directions — unlike the legacy degree-based tessellators.
+ * Both endpoints are included. Used by bulge polylines (geometry-bulge-utils),
+ * the DXF writer and any renderer that needs to draw a circular arc.
+ *
+ * @param center - Arc center
+ * @param radius - Arc radius
+ * @param startAngleRad - Start angle (radians)
+ * @param sweepRad - Signed sweep (radians); CCW positive
+ * @param maxSegDeg - Max angular step per chord segment (default 12°)
+ */
+export function arcToPolyline(
+  center: Point2D,
+  radius: number,
+  startAngleRad: number,
+  sweepRad: number,
+  maxSegDeg = 12
+): Point2D[] {
+  const sweepDeg = Math.abs(sweepRad) * (180 / Math.PI);
+  const steps = Math.max(2, Math.ceil(sweepDeg / Math.max(1e-6, maxSegDeg)));
+  const pts: Point2D[] = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const a = startAngleRad + (sweepRad * i) / steps;
+    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
+  }
+  return pts;
+}
+
+/**
  * Check if angle is between start and end angles (handling wrap-around)
  */
 export function isAngleBetween(angle: number, startAngle: number, endAngle: number): boolean {

@@ -40,7 +40,7 @@ import {
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
@@ -175,7 +175,7 @@ export class RoofRenderer extends BaseEntityRenderer {
   private drawFace(vertices: readonly Point3D[]): void {
     this.drawPolygonPath(vertices);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(ROOF_FACE_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(ROOF_FACE_FILL);
     this.ctx.fill();
 
     this.ctx.strokeStyle = ROOF_FACE_STROKE;

@@ -1,16 +1,18 @@
 /**
  * @module bim-body-fill
- * @description FULL SSoT για το **translucent body fill** («poché») ΟΛΩΝ των BIM 2Δ
- * renderers. Πριν, κάθε renderer έλυνε ΜΟΝΟΣ του «V/G tint ?? hardcoded παλέτα» και
- * **ΜΟΝΟ ο `WallRenderer`** εφάρμοζε επιπλέον το background-adaptive boost (ADR-509)·
- * οι υπόλοιποι (Column/Beam/Slab/…) ζωγράφιζαν raw → **ασύμβατη διαφάνεια** μεταξύ
- * μελών (π.χ. ο τοίχος έδειχνε πιο αδιαφανής από την κολώνα σε μαύρο φόντο, αφού μόνο
- * αυτός boost-αριζόταν). Πλέον **ΕΝΑΣ κώδικας** για όλα:
+ * @description SSoT helper για το **translucent body fill** («poché») των BIM 2Δ
+ * renderers **που έχουν V/G category tint + single palette fallback** (Wall/Column/
+ * Beam/Slab/SlabOpening). Συνθέτει τα ΥΠΑΡΧΟΝΤΑ SSoT primitives σε ΕΝΑ pattern:
  *   `resolveVgFillTint` (ADR-375 V/G) → palette fallback → `adaptFillTintForCanvas` (ADR-509)
- * ⇒ κάθε μέλος έχει **ΙΔΙΑ διαφάνεια** σε κάθε φόντο (Giorgio order 2026-06-22, FULL SSoT).
+ * ώστε να μην επαναλαμβάνεται το «vg ?? fallback → adapt» σε κάθε renderer.
+ *
+ * Renderers ΧΩΡΙΣ category-tint+single-fallback (Stair per-tread / MEP equipment /
+ * Foundation / Roof / …) ΔΕΝ χρειάζονται wrapper — καλούν ΑΠΕΥΘΕΙΑΣ το υπάρχον SSoT
+ * `adaptFillTintForCanvas(resolvedFill)` (κανένα περιττό 1:1 indirection — Giorgio
+ * SSoT audit 2026-06-22: το προηγούμενο `adaptBimBodyFill` wrapper αφαιρέθηκε).
  *
  * @see ./bim-vg-fill-tint.ts — V/G category color → rgba tint (ADR-375)
- * @see ../../config/adaptive-entity-color.ts — adaptFillTintForCanvas (dark-canvas boost, ADR-509)
+ * @see ../../config/adaptive-entity-color.ts — adaptFillTintForCanvas (dark-canvas boost, ADR-509· το adaptive SSoT)
  */
 import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import type { CutState } from '../../config/bim-view-range';
@@ -34,19 +36,5 @@ export function resolveBimBodyFill(
   fallbackFill: string,
   bgHex?: string,
 ): string {
-  return adaptBimBodyFill(resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill, bgHex);
-}
-
-/**
- * Adaptive-only entry point του ίδιου SSoT, για body fills όπου το V/G tint + το
- * fallback έχουν ΗΔΗ λυθεί upstream και ΔΕΝ ταιριάζουν στο single-fallback signature
- * του {@link resolveBimBodyFill} — π.χ. ο `StairRenderer` λύνει το V/G tint πάνω
- * (με cutState/objectStyles) και το per-tread-type fallback (glass vs default) κάτω
- * στο render module. Έτσι ΟΛΑ τα BIM body fills περνούν από το ΙΔΙΟ module → ένα
- * adaptive SSoT, μηδέν διπλότυπη κλήση του `adaptFillTintForCanvas` διάσπαρτη.
- *
- * @param resolvedFill το ήδη resolved `rgba` (V/G tint ?? palette fallback).
- */
-export function adaptBimBodyFill(resolvedFill: string, bgHex?: string): string {
-  return adaptFillTintForCanvas(resolvedFill, bgHex);
+  return adaptFillTintForCanvas(resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill, bgHex);
 }

@@ -26,12 +26,24 @@ export interface LineEntity extends BaseEntity {
   lineStyle?: string;
 }
 
+// ─── ADR-510 Φ3: per-segment bulge + variable width (parallel arrays) ──────────
+// Additive, backward-compatible model (decision Giorgio 2026-06-22, Επιλογή A):
+// `vertices` stays Point2D[] so the ~12 existing consumers are untouched. The
+// optional arrays are index-aligned with `vertices`, AutoCAD/DXF semantics:
+//   bulges[i]      = arc factor (DXF 42) of the OUTGOING segment vertices[i]→[i+1]
+//                    (for closed, bulges[n-1] = segment n-1 → 0). tan(θ/4); 0/absent = straight.
+//   startWidths[i] = width (DXF 40) at vertices[i] of that outgoing segment
+//   endWidths[i]   = width (DXF 41) at vertices[i+1] of that outgoing segment
+// Geometry SSoT: rendering/entities/shared/geometry-bulge-utils.ts.
 export interface PolylineEntity extends BaseEntity {
   type: 'polyline';
   vertices: Point2D[];
   closed?: boolean;
   lineWidth?: number;
   lineStyle?: string;
+  bulges?: number[];          // ADR-510 Φ3: per-segment arc factor (DXF group 42)
+  startWidths?: number[];     // ADR-510 Φ3: per-segment start width (DXF group 40)
+  endWidths?: number[];       // ADR-510 Φ3: per-segment end width (DXF group 41)
 }
 
 export interface LWPolylineEntity extends BaseEntity {
@@ -42,6 +54,9 @@ export interface LWPolylineEntity extends BaseEntity {
   lineStyle?: string;
   constantWidth?: number;     // ✅ ENTERPRISE: AutoCAD lightweight polyline constant width
   elevation?: number;         // ✅ ENTERPRISE: AutoCAD Z-elevation for 2.5D entities
+  bulges?: number[];          // ADR-510 Φ3: per-segment arc factor (DXF group 42)
+  startWidths?: number[];     // ADR-510 Φ3: per-segment start width (DXF group 40)
+  endWidths?: number[];       // ADR-510 Φ3: per-segment end width (DXF group 41)
 }
 
 export interface CircleEntity extends BaseEntity {

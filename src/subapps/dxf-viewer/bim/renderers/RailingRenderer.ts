@@ -17,7 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isRailingEntity } from '../../types/entities';
@@ -82,7 +82,7 @@ export class RailingRenderer extends BaseEntityRenderer {
 
     // Post plan footprints (rotated squares / circles).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(RAILING_POST_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(RAILING_POST_FILL);
     for (const mark of symbol.postMarks) {
       if (mark.length < 3) continue;
       this.drawClosedPath(mark);
@@ -95,7 +95,7 @@ export class RailingRenderer extends BaseEntityRenderer {
     const dotWorldRadius = balusterDotRadiusMm(railing.params.type.balusterPlacement.pattern.profile) * s;
     const dotScreenRadius = Math.max(MIN_BALUSTER_DOT_PX, dotWorldRadius * this.transform.scale);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(RAILING_BALUSTER_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(RAILING_BALUSTER_FILL);
     for (const c of symbol.balusterMarks) {
       const p = this.worldToScreen({ x: c.x, y: c.y });
       this.ctx.beginPath();

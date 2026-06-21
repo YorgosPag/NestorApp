@@ -28,7 +28,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
@@ -141,7 +141,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
 
     // 1. Translucent footprint fill — the real body in plan.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(fillColor);
+    this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

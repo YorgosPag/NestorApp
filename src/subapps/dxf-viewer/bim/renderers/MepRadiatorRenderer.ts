@@ -17,7 +17,7 @@
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isMepRadiatorEntity } from '../../types/entities';
@@ -81,7 +81,7 @@ export class MepRadiatorRenderer extends BaseEntityRenderer {
 
     // Fill + outline — warm-red heating equipment.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptBimBodyFill(RADIATOR_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(RADIATOR_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = RADIATOR_STROKE;

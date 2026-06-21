@@ -20,7 +20,7 @@ import { DEFAULT_I_FLANGE_THICKNESS_MM, DEFAULT_I_WEB_THICKNESS_MM } from '../ty
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { adaptBimBodyFill } from '../utils/bim-body-fill';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
@@ -146,7 +146,7 @@ export function drawBeamSectionProfile(
   }
   ctx.closePath();
   // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-  ctx.fillStyle = adaptBimBodyFill(SECTION_FILL_COLOR);
+  ctx.fillStyle = adaptFillTintForCanvas(SECTION_FILL_COLOR);
   ctx.fill();
   ctx.strokeStyle = _spCol ?? SECTION_STROKE_COLOR;
   ctx.lineWidth = _spPx ?? SECTION_LINE_WIDTH_PX;
