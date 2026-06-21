@@ -19,6 +19,7 @@
  */
 
 import type { ColumnAnchor } from '../../bim/types/column-types';
+import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
 
 /** Σημασιολογικό status του ghost κατά την τοποθέτηση κολώνας. */
 export type ColumnGhostStatus = 'beam' | 'overlap' | 'neutral';
@@ -53,8 +54,25 @@ export function getColumnFaceAnchor(): ColumnAnchor | null {
   return faceAnchor;
 }
 
-/** Clear — reset σε `neutral` + καμία face λαβή (έξοδος από snappable mode / cleanup). */
+/**
+ * ADR-508 §dim — πλαίσιο παρειάς του τρέχοντος column face-snap, για τις listening dimensions
+ * του ghost (ΙΔΙΟ SSoT με τοίχο/δοκάρι). `null` = καμία face-snap → καμία διάσταση.
+ */
+let faceFrame: GhostFaceFrame | null = null;
+
+/** Write — από τον snap-scheduler (move). `null` όταν δεν υπάρχει face-snap. */
+export function setColumnFaceFrame(next: GhostFaceFrame | null): void {
+  faceFrame = next;
+}
+
+/** Read — imperatively στο ghost draw (`column-preview-helpers`) για τις listening dimensions. */
+export function getColumnFaceFrame(): GhostFaceFrame | null {
+  return faceFrame;
+}
+
+/** Clear — reset σε `neutral` + καμία face λαβή/frame (έξοδος από snappable mode / cleanup). */
 export function clearColumnGhostStatus(): void {
   status = 'neutral';
   faceAnchor = null;
+  faceFrame = null;
 }

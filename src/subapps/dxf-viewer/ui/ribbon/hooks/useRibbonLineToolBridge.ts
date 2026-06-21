@@ -33,7 +33,6 @@ import {
 import {
   getLinetypeRegistrySnapshot,
   subscribeLinetypeRegistry,
-  resolveLinetype,
 } from '../../../stores/LinetypeRegistry';
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
@@ -170,17 +169,6 @@ export function useRibbonLineToolBridge(
     (commandKey: string, value: string): void => {
       if (!isLineToolRibbonKey(commandKey)) return;
       const selected = resolveSelected();
-
-      // 🔴 TEMP DIAGNOSTIC (ADR-510 Φ2E — ΜΗΝ κάνεις commit): δείχνει στο console
-      // αν το onComboboxChange φτάνει, και αν το value resolve-άρει σε dash pattern.
-      // eslint-disable-next-line no-console
-      console.warn('[Φ2E onComboboxChange]', {
-        commandKey, value,
-        selectedFound: !!selected,
-        selectedType: selected?.type ?? null,
-        resolvedDef: resolveLinetype(value)?.name ?? 'NULL (δεν resolve-άρει!)',
-        resolvedPattern: JSON.stringify(resolveLinetype(value)?.pattern ?? null),
-      });
 
       if (commandKey === LINE_TOOL_RIBBON_KEYS.linetype) {
         if (selected) patchEntity(selected, { linetypeName: value });

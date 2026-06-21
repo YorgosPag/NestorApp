@@ -14,6 +14,9 @@ import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 // ADR-510 Φ2 — canvas linetype dash: metric pattern (mm) → setLineDash px (zoom + LTSCALE aware).
 import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
+// ADR-510 Φ2E — entity-own linetype → mm pattern SSoT (same resolver the BIM
+// renderers + legacy preview use); drives the layer-less render fallback.
+import { resolveAnyDashMm } from '../../config/linetype-aliases';
 import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
 // ADR-454 — Print Plot Style: white-safe colour remap + print-DPI lineweights.
 // Singleton is null during interactive render (single boolean branch, zero hot-path cost).
@@ -349,8 +352,14 @@ export class DxfRenderer {
         ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
         : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
-      // ADR-510 Φ2 — no layer/cascade context ⇒ solid (Continuous).
-      dashMm: [] as ReadonlyArray<number>,
+      // ADR-510 Φ2E — even without a layer/cascade context, the entity's OWN
+      // linetype must still render dashed. Both the bitmap-cache rebuild (drops
+      // layersById by design, ADR-040 Phase D) and freshly-drawn primitives whose
+      // layerId is absent from scene.layersById land here; the old `[]` silently
+      // dropped a selected line's linetype change to solid (Φ2E bug). Reuses the
+      // SAME `resolveAnyDashMm` SSoT as the BIM renderers + legacy preview —
+      // ByLayer/ByBlock/Continuous/unknown ⇒ [] (solid) intrinsically.
+      dashMm: resolveAnyDashMm(entity.linetypeName),
       alpha: 1,
     };
     if (!layersById) return this.applyIsolateAlpha(fallback, entity);

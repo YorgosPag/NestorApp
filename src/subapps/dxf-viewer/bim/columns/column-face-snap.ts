@@ -52,7 +52,7 @@ import {
 import { pickThird, type MemberGhostThird } from '../framing/member-face-third';
 import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
 import { collectMemberSnapTargets } from '../framing/member-snap-targets';
-import type { LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
+import type { LinearMemberSnapTarget, GhostFaceFrame } from '../framing/linear-member-face-snap';
 import {
   projectPointOnAxis,
   projectPolygonOnAxis,
@@ -73,6 +73,11 @@ export interface ColumnFaceSnap {
   readonly targetId: string | null;
   readonly face: ColumnFaceSide;
   readonly third: MemberGhostThird;
+  /**
+   * ADR-508 §dim — πλαίσιο παρειάς για τις listening dimensions (ΙΔΙΟ SSoT με τοίχο/δοκάρι).
+   * `ghostHalfWidth=0` → οι αποστάσεις μετρούν προς το **κέντρο** της κολώνας (Revit centerline).
+   */
+  readonly faceFrame: GhostFaceFrame;
 }
 
 /** Πλαίσιο άξονα τοίχου (χορδή axis[0]→axis[last]) για το §3.9 axis-center — scene units. */
@@ -158,6 +163,30 @@ function buildWallAxisFrame(
   };
 }
 
+/**
+ * ADR-508 §dim — `GhostFaceFrame` για listening dimensions της κολώνας: άξονας κατά μήκος της
+ * παρειάς-στόχου, `ghostHalfWidth=0` (μετράμε προς το κέντρο της κολώνας — Revit centerline).
+ * Όρισμα `centerAlong` = θέση κολώνας κατά μήκος της παρειάς (από `position`).
+ */
+function buildColumnBboxFaceFrame(b: FootprintBounds, face: ColumnFaceSide, position: Point2D): GhostFaceFrame {
+  if (face === 'N' || face === 'S') {
+    const faceY = face === 'N' ? b.maxY : b.minY;
+    return {
+      origin: { x: b.minX, y: faceY }, axisDir: { x: 1, y: 0 }, perpDir: { x: 0, y: -1 },
+      facePerp: 0, outwardSign: face === 'N' ? -1 : 1,
+      faceAlongMin: 0, faceAlongMax: b.maxX - b.minX,
+      ghostCenterAlong: position.x - b.minX, ghostHalfWidth: 0,
+    };
+  }
+  const faceX = face === 'E' ? b.maxX : b.minX;
+  return {
+    origin: { x: faceX, y: b.minY }, axisDir: { x: 0, y: 1 }, perpDir: { x: 1, y: 0 },
+    facePerp: 0, outwardSign: face === 'E' ? 1 : -1,
+    faceAlongMin: 0, faceAlongMax: b.maxY - b.minY,
+    ghostCenterAlong: position.y - b.minY, ghostHalfWidth: 0,
+  };
+}
+
 /** Λαβή για οριζόντια παρειά (N/S, άξονας X): lo/hi → flush-γωνία, mid → κεντραρισμένη. */
 function anchorForHorizontalFace(face: 'N' | 'S', third: MemberGhostThird): ColumnAnchor {
   if (face === 'N') return third === 'lo' ? 'sw' : third === 'hi' ? 'se' : 's';
@@ -196,6 +225,13 @@ function resolveWallAxisCenter(cursor: Readonly<Point2D>, t: FaceTarget): Column
     targetId: t.id,
     face: pickDominantFace(cursor, t.bounds),
     third: 'mid',
+    // §dim — center-on-axis: μετράμε κατά μήκος του άξονα τοίχου προς άκρα/κέντρο.
+    faceFrame: {
+      origin: fr.a, axisDir: fr.u, perpDir: { x: fr.u.y, y: -fr.u.x },
+      facePerp: 0, outwardSign: 1,
+      faceAlongMin: fr.alongMin, faceAlongMax: fr.alongMax,
+      ghostCenterAlong: along, ghostHalfWidth: 0,
+    },
   };
 }
 
@@ -213,12 +249,14 @@ function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget): ColumnFaceS
     const along = clamp(cursor.x, minX, maxX);
     const third = pickThird(along, minX, maxX);
     const y = face === 'N' ? maxY : minY;
-    return { position: { x: along, y }, anchor: anchorForHorizontalFace(face, third), status, targetId: t.id, face, third };
+    const position: Point2D = { x: along, y };
+    return { position, anchor: anchorForHorizontalFace(face, third), status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
   }
   const along = clamp(cursor.y, minY, maxY);
   const third = pickThird(along, minY, maxY);
   const x = face === 'E' ? maxX : minX;
-  return { position: { x, y: along }, anchor: anchorForVerticalFace(face, third), status, targetId: t.id, face, third };
+  const position: Point2D = { x, y: along };
+  return { position, anchor: anchorForVerticalFace(face, third), status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
 }
 
 /**

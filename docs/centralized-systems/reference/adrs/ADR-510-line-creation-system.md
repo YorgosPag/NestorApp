@@ -573,3 +573,26 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   κλάση/υπογραφή) — νεκρός κώδικας που γλίτωσε το dead-code ratchet επειδή ήταν `protected`. **Διαγράφηκε** → ΕΝΑ
   style-setup SSoT. ΔΕΝ ήταν η αιτία τυχόν linetype-render issue (ποτέ δεν καλούνταν). ⚠️ render αρχείο (ADR-040
   CHECK 6D) → stage μαζί. Μηδέν λειτουργική αλλαγή.
+- **2026-06-22** — **Φ2E RENDER BUG FIX — επιλεγμένη γραμμή: αλλαγή linetype δεν φαινόταν στο canvas (ΡΙΖΑ).**
+  Σύμπτωμα (Giorgio): επιλεγμένη γραμμή → άλλαξε linetype (π.χ. DashDot) → καμία οπτική αλλαγή· ακόμη και μετά
+  την αποεπιλογή έμενε **συμπαγής** (test αποεπιλογής = ΟΧΙ → μηδέν repaint του νέου dash· το «πράσινο» = το χρώμα
+  της ίδιας της γραμμής, ΟΧΙ selection highlight). **ΡΙΖΑ (static trace, FULL SSoT audit):** το
+  `DxfRenderer.resolveStyleForRender` έχει δύο fallback κλάδους — `!layersById` και «layer δεν βρέθηκε» — που
+  επέστρεφαν **hard-coded `dashMm: []`**, αγνοώντας το **δικό** linetype της οντότητας (`entity.linetypeName`).
+  Δύο paths περνούν ΠΑΝΤΑ από αυτό το fallback: (1) το **bitmap-cache rebuild** (ADR-040 Φ.D ρίχνει σκόπιμα το
+  `layersById`) → κάθε cached normal-state γραμμή· (2) **φρεσκο-σχεδιασμένα primitives** που το `layerId` τους δεν
+  υπάρχει (ακόμη) στο `scene.layersById`. Άρα το explicit linetype της γραμμής χανόταν → solid παντού (selected
+  overlay ΚΑΙ cached blit). **FIX (SSoT, ΜΗΔΕΝ νέα συνάρτηση):** ο fallback καλεί τώρα το **ΥΠΑΡΧΟΝ**
+  `resolveAnyDashMm(entity.linetypeName)` (`config/linetype-aliases.ts`) — τον ΙΔΙΟ resolver «όνομα → mm pattern»
+  που ήδη χρησιμοποιούν οι **8 BIM renderers** (μέσω `bim-dash-resolver.ts`) ΚΑΙ το legacy preview
+  (`settings-core/defaults.ts getDashArray`). ByLayer/ByBlock/Continuous/empty/unknown ⇒ `[]` (solid) εγγενώς
+  (δεν είναι catalog/alias names). Το full-cascade path (layer βρέθηκε) ΑΘΙΚΤΟ — το entity-level linetype ήδη
+  υπερισχύει εκεί μέσω `resolveLinetypeName`, μηδέν διπλή εφαρμογή. **ΔΙΟΡΘΩΣΗ ΕΝΔΙΑΜΕΣΟΥ ΛΑΘΟΥΣ (Giorgio SSoT
+  push):** αρχικά έφτιαξα NEW `resolveOwnLinetypeDashMm` στο resolve-entity-style.ts — ο Giorgio ρώτησε «διπλότυπο;»
+  → audit έδειξε ότι το σώμα ήταν σχεδόν ταυτόσημο με το in-use `resolveAnyDashMm` → **διαγράφηκε**, reuse του
+  υπάρχοντος. Καθάρισμα: αφαιρέθηκε το TEMP diagnostic `console.warn` + αχρησιμοποίητο `resolveLinetype` import από
+  το `useRibbonLineToolBridge.ts`. +2 jest στο `linetype-aliases.test.ts` (sentinels→[] lock· 39 total στα 2 suites
+  GREEN). Αρχεία: `canvas-v2/dxf-canvas/DxfRenderer.ts` (⚠️ render, ADR-040 CHECK 6D → stage ADR-040),
+  `ui/ribbon/hooks/useRibbonLineToolBridge.ts`, `config/__tests__/linetype-aliases.test.ts`, ADR-510. Status: Φ2E #1
+  πλήρως λειτουργικό. 🔴 browser-verify (επίλεξε γραμμή → DashDot → διακεκομμένη ΑΜΕΣΩΣ· αποεπίλεξε → παραμένει
+  διακεκομμένη) + commit.

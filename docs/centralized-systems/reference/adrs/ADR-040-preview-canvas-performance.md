@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-22 — ADR-510 Φ2E entity-own linetype στο layer-less fallback (DxfRenderer choke-point)
+
+**Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — pure read-time dash resolve, ZERO new subscriptions. Το layer-less render fallback του `DxfRenderer` (`fallback.dashMm`) επέστρεφε πάντα `[]` (solid)· τόσο το bitmap-cache rebuild (που ρίχνει το `layersById` by design, **ADR-040 Phase D**) όσο και freshly-drawn primitives χωρίς `layerId` στο `scene.layersById` περνούσαν από εδώ → η αλλαγή linetype μιας επιλεγμένης γραμμής έπεφτε σιωπηλά σε solid (Φ2E bug). Fix: `dashMm: resolveAnyDashMm(entity.linetypeName)` — reuses τον ΙΔΙΟ `linetype-aliases` SSoT (resolver) με τους BIM renderers + legacy preview· ByLayer/ByBlock/Continuous/unknown ⇒ `[]` (solid) intrinsically. Καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model — μόνο μία επιπλέον read-time lookup στο fallback branch. **CHECK 6B** (DxfRenderer touch) → ADR-040 + ADR-510 staged. ✅ Google-level: YES — ίδιος resolver SSoT, μηδέν νέα reactivity.
+
 ### 2026-06-21 — ADR-511 wall-covering tool wiring (CanvasSection prop pass-through, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-21 (Opus 4.8). **ADR-040-safe** — pure prop pass-through, ZERO new subscriptions. Το `wallCoveringTool` περνάει από το `useSpecialTools` στο `CanvasSection` και προωθείται στο tool-wiring object, ακριβώς όπως τα υπάρχοντα tools (`floorFinishTool`, `columnTool`, …). Καμία νέα `useSyncExternalStore` subscription στον orchestrator, καμία αλλαγή σε bitmap cache-key / scheduler — μόνο ένα επιπλέον destructured prop. **CHECK 6B** (CanvasSection touch) → ADR-040 staged. ✅ Google-level: YES — ίδιο pattern με τα υπάρχοντα tools, μηδέν νέα reactivity.

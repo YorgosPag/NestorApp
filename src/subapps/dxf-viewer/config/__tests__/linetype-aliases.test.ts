@@ -108,4 +108,20 @@ describe('resolveAnyLinetype', () => {
     expect(resolveAnyDashMm('Continuous')).toEqual([]);
     expect(resolveAnyDashMm('Dashed').length).toBeGreaterThan(0);
   });
+
+  // ADR-510 Φ2E — DxfRenderer.resolveStyleForRender's layer-less fallback feeds an
+  // entity's own `linetypeName` straight into resolveAnyDashMm. The cascade
+  // sentinels (ByLayer/ByBlock) + empty/undefined MUST resolve to solid here, so
+  // the entity's concrete linetype still renders dashed without a layer context.
+  it('resolveAnyDashMm returns [] for cascade sentinels + empty (entity-own fallback)', () => {
+    expect(resolveAnyDashMm('ByLayer')).toEqual([]);
+    expect(resolveAnyDashMm('ByBlock')).toEqual([]);
+    expect(resolveAnyDashMm('')).toEqual([]);
+    expect(resolveAnyDashMm(undefined)).toEqual([]);
+    expect(resolveAnyDashMm(null)).toEqual([]);
+  });
+
+  it('resolveAnyDashMm resolves a concrete entity linetype to its pattern (DashDot)', () => {
+    expect(resolveAnyDashMm('DashDot').length).toBeGreaterThan(0);
+  });
 });

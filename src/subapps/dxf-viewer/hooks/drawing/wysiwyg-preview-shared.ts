@@ -14,8 +14,40 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
 import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
+import {
+  resolveGhostFaceDimensions,
+  type GhostFaceDimensionsMeta,
+} from '../../bim/framing/ghost-face-dim-references';
+import type { SceneUnits } from '../../utils/scene-units';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+
+// ADR-508 §dim — listening-dimension dim-line offsets, screen-relative (× worldPerPixel) so the
+// witness rows sit a constant pixel distance from the face at every zoom. SHARED SSoT for ALL
+// member ghosts (wall / beam / column) — μηδέν διπλότυπο.
+const GHOST_DIM_GAP_OFFSET_PX = 22;
+const GHOST_DIM_CENTER_OFFSET_PX = 50;
+const GHOST_DIM_MIN_PX = 2;
+
+/**
+ * ADR-508 §dim — SSoT: build listening-dimension metadata from a 🟢 face-snap frame (gap-left /
+ * gap-right / centre-to-centre, zoom-adaptive). `null` όταν δεν υπάρχει frame ή είναι 🔴 overlap.
+ * Καταναλώνεται ΟΛΩΝ των member-ghost helpers (wall/beam/column) → ένας κώδικας για όλα.
+ */
+export function resolveGhostFaceDimensionsMeta(
+  faceFrame: GhostFaceFrame | undefined,
+  isOverlap: boolean,
+  sceneUnits: SceneUnits,
+  wpp: number,
+): GhostFaceDimensionsMeta | null {
+  if (!faceFrame || isOverlap) return null;
+  const dims = resolveGhostFaceDimensions(faceFrame, {
+    gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
+    centerOffsetScene: GHOST_DIM_CENTER_OFFSET_PX * wpp,
+    minValueScene: GHOST_DIM_MIN_PX * wpp,
+  });
+  return dims.length > 0 ? { sceneUnits, dims } : null;
+}
 
 /**
  * Το σημείο στο οποίο κουμπώνει το ghost = **ΑΚΡΙΒΩΣ** το σημείο που χρησιμοποιεί το

@@ -38,7 +38,13 @@ import {
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
 import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
+import {
+  resolveEffectivePreviewCursor,
+  toWysiwygPreviewEntity,
+  resolveGhostFaceDimensionsMeta,
+} from './wysiwyg-preview-shared';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
@@ -134,7 +140,11 @@ function makeBeamGhostBeforeClick(
   // 🟢 `beam` (έγκυρο κάθετο Τ-framing) & `neutral` → WYSIWYG amber αυτούσιο (decision A).
   const isOverlap = snap?.status === 'overlap' || isBeamCollinearOverlap(start, end, beamTargets);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  return toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor);
+  // ADR-508 §dim — listening dimensions (ίδιος SSoT με τοίχο): μόνο όταν το ghost γλιστράει 🟢
+  // πάνω σε παρειά μέλους (`snap.faceFrame` υπάρχει) και δεν είναι 🔴 overlap.
+  const wpp = worldPerPixel(getImmediateTransform().scale);
+  const faceDimensions = resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
+  return toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor, faceDimensions);
 }
 
 /**

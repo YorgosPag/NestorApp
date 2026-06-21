@@ -158,6 +158,12 @@ export class ColumnRenderer extends BaseEntityRenderer {
     });
     this.ctx.lineWidth = _colLwPx;
     if (_colColor !== null) this.ctx.strokeStyle = _colColor;
+    // Solid footprint outline (continuous linetype, ίδιο με committed). Ρητό reset
+    // ώστε ο renderer να είναι self-contained: στο shared PreviewCanvas ένα
+    // προηγούμενο tracking/polar paint αφήνει ενεργό dash pattern στο context, που
+    // χωρίς αυτό «διέρρεε» μέσα στο WYSIWYG column ghost → διακεκομμένο περίγραμμα.
+    // Mirror WallRenderer + του hover-halo path παραπάνω (setLineDash([]) πριν stroke).
+    this.ctx.setLineDash([]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

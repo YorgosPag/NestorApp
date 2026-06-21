@@ -25,13 +25,19 @@ import type { WallCategory } from '../types/wall-types';
  */
 export const WALL_LINE_CONTRAST = 9.0;
 
-/** Translucent fill colour per category (CAD industry convention). 2D-only. */
+/**
+ * Translucent fill colour per category (CAD industry convention). 2D-only.
+ * Alpha = 0.22 σε ΟΛΕΣ τις κατηγορίες ώστε το φόντο του τοίχου να έχει την ΙΔΙΑ
+ * διαφάνεια με το φόντο της κολώνας (`KIND_FILL` ~0.22, column-render-palette) —
+ * Giorgio order 2026-06-22. Μόνο το alpha ευθυγραμμίστηκε· τα RGB (ταυτότητα υλικού:
+ * concrete slate / brick warm / stone brown) μένουν αμετάβλητα.
+ */
 export const WALL_CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
-  exterior:  'rgba(120, 144, 156, 0.18)', // concrete slate
-  interior:  'rgba(205, 158, 110, 0.16)', // brick warm
-  partition: 'rgba(205, 158, 110, 0.10)', // brick lighter
+  exterior:  'rgba(120, 144, 156, 0.22)', // concrete slate
+  interior:  'rgba(205, 158, 110, 0.22)', // brick warm
+  partition: 'rgba(205, 158, 110, 0.22)', // brick lighter
   parapet:   'rgba(120, 144, 156, 0.22)', // concrete deeper
-  fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
+  fence:     'rgba(141, 110, 99, 0.22)',  // stone brown
 };
 
 /**

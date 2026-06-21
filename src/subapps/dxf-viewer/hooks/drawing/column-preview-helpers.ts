@@ -43,9 +43,16 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import {
   getColumnFaceAnchor,
   getColumnGhostStatus,
+  getColumnFaceFrame,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
+import {
+  resolveEffectivePreviewCursor,
+  toWysiwygPreviewEntity,
+  resolveGhostFaceDimensionsMeta,
+} from './wysiwyg-preview-shared';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -86,6 +93,11 @@ export function generateColumnPreview(
 
   // 🔴 overlap → red status schematic (PreviewRenderer draws outline + 30% fill,
   // mirror beam). 🟢 beam / neutral → πλήρες WYSIWYG amber (το έγκυρο visual).
-  const ghostStatusColor = status === 'overlap' ? resolveGhostStatusColor('overlap') : null;
-  return toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor);
+  const isOverlap = status === 'overlap';
+  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
+  // ADR-508 §dim — listening dimensions (ΙΔΙΟΣ κοινός κώδικας με τοίχο/δοκάρι): από το faceFrame
+  // που έγραψε ο column face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
+  const wpp = worldPerPixel(getImmediateTransform().scale);
+  const faceDimensions = resolveGhostFaceDimensionsMeta(getColumnFaceFrame() ?? undefined, isOverlap, sceneUnits, wpp);
+  return toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
 }

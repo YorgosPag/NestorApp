@@ -38,6 +38,7 @@ import {
   setColumnGhostStatus,
   clearColumnGhostStatus,
   setColumnFaceAnchor,
+  setColumnFaceFrame,
 } from './ColumnPlacementGhostStatusStore';
 import type { ColumnToolBridgeHandle } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
@@ -132,6 +133,7 @@ function publishSnapMarker(input: SnapDetectionInput, snapResult: ProSnapResult)
 function applyColumnFaceSnap(resolved: ColumnFaceSnapWithGlyph, input: SnapDetectionInput): void {
   const { faceSnap, glyphSnap } = resolved;
   setColumnFaceAnchor(faceSnap.anchor);
+  setColumnFaceFrame(faceSnap.faceFrame); // ADR-508 §dim — listening dimensions της κολώνας
   setColumnGhostStatus(faceSnap.status);
   const { x: sx, y: sy } = faceSnap.position;
   if (Math.abs(sx - lastSnapX) > 0.001 || Math.abs(sy - lastSnapY) > 0.001 || !lastSnapFound) {
@@ -173,7 +175,7 @@ function runSnapDetection(input: SnapDetectionInput): void {
         return;
       }
     }
-    if (colHandle?.isActive) setColumnFaceAnchor(null);
+    if (colHandle?.isActive) { setColumnFaceAnchor(null); setColumnFaceFrame(null); }
     // ADR-398 — Column draw: the would-be column's corners project onto targets, AND the
     // crosshair queries the unified snap (BIM corner/mid/center + beam-axis). `resolveColumnDrawSnap`
     // picks Revit-grade: visible corner-projection > visible cursor characteristic > silent grid
