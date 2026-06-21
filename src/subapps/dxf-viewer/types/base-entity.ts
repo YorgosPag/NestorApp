@@ -111,6 +111,14 @@ export interface BaseEntity {
   lineweight?: number;
   opacity?: number;
   lineType?: 'solid' | 'dashed' | 'dotted' | 'dashdot';
+  /**
+   * ADR-510 Φ2 — render-time resolved linetype pattern in mm (positive = dash,
+   * negative = gap, 0 = dot, empty/absent = solid). Produced by the style
+   * cascade (`ResolvedStyle.linetype.pattern`), consumed at stroke time by
+   * `rendering/linetype-dash-resolver.ts` → `ctx.setLineDash`. Zoom-aware,
+   * unlike `lineweight` (zoom-independent LWT).
+   */
+  dashMm?: ReadonlyArray<number>;
   dashScale?: number;
   lineCap?: 'butt' | 'round' | 'square';
   lineJoin?: 'miter' | 'round' | 'bevel';

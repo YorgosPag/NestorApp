@@ -50,6 +50,7 @@ import { docToEntity as roofDocToEntity } from '../../hooks/data/roof-persistenc
 import { stairDocToEntity } from '../stairs/stair-doc-hydration';
 import { foundationDocToEntity } from '../foundations/foundation-firestore-service';
 import { floorFinishDocToEntity } from '../floor-finishes/floor-finish-firestore-service';
+import { hatchDocToEntity } from '../hatch/hatch-firestore-service';
 import { thermalSpaceDocToEntity } from '../thermal-spaces/thermal-space-firestore-service';
 import { spaceSeparatorDocToEntity } from '../space-separators/space-separator-firestore-service';
 import { slabOpeningDocToEntity } from '../../hooks/data/slab-opening-persistence-helpers';
@@ -77,6 +78,7 @@ import type { RoofDoc } from '../roofs/roof-firestore-service';
 import type { StairDoc } from '../types/stair-types';
 import type { FoundationDoc } from '../foundations/foundation-firestore-service';
 import type { FloorFinishDoc } from '../floor-finishes/floor-finish-firestore-service';
+import type { HatchDoc } from '../hatch/hatch-firestore-service';
 import type { ThermalSpaceDoc } from '../thermal-spaces/thermal-space-firestore-service';
 import type { SpaceSeparatorDoc } from '../space-separators/space-separator-firestore-service';
 import type { SlabOpeningDoc } from '../slab-openings/slab-opening-firestore-service';
@@ -134,6 +136,7 @@ const CROSS_FLOOR_BIM_LOADERS: readonly CrossFloorKindLoader[] = [
   makeLoader<StairDoc>('FLOORPLAN_STAIRS', stairDocToEntity),
   makeLoader<FoundationDoc>('FLOORPLAN_FOUNDATIONS', foundationDocToEntity),
   makeLoader<FloorFinishDoc>('FLOORPLAN_FLOOR_FINISHES', floorFinishDocToEntity),
+  makeLoader<HatchDoc>('FLOORPLAN_HATCHES', hatchDocToEntity),
   makeLoader<ThermalSpaceDoc>('FLOORPLAN_THERMAL_SPACES', thermalSpaceDocToEntity),
   makeLoader<SpaceSeparatorDoc>('FLOORPLAN_SPACE_SEPARATORS', spaceSeparatorDocToEntity),
   makeLoader<SlabOpeningDoc>('FLOORPLAN_SLAB_OPENINGS', slabOpeningDocToEntity),

@@ -34,8 +34,10 @@ import {
   findColumnDrawCornerSnap,
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
-import { resolveColumnDrawSnap } from '../../bim/columns/column-placement-snap-context';
-import { resolveColumnFaceSnap } from '../../bim/columns/column-face-snap';
+import {
+  resolveColumnDrawSnap,
+  resolveColumnFaceSnapWithGlyph,
+} from '../../bim/columns/column-placement-snap-context';
 import { setColumnFaceAnchor } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
@@ -224,16 +226,17 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           // ADR-398 §Column smart-ghost face-snap — HIGHEST priority, ΕΝΑ SSoT με το move-path
           // ghost (`snap-scheduler` → `resolveColumnFaceSnap`) ώστε commit ≡ ghost. Set & την
           // auto λαβή που διαβάζει το `commitColumnFromState`. Miss → υπάρχον corner path.
-          const faceSnap = scene
-            ? resolveColumnFaceSnap(
+          const faceResolved = scene && findSnapPoint
+            ? resolveColumnFaceSnapWithGlyph(
                 worldPoint,
                 (scene.entities ?? []) as unknown as readonly Entity[],
                 colHandle.getSceneUnits(),
+                findSnapPoint,
               )
             : null;
-          if (faceSnap) {
-            worldPoint = faceSnap.position;
-            setColumnFaceAnchor(faceSnap.anchor);
+          if (faceResolved) {
+            worldPoint = faceResolved.faceSnap.position;
+            setColumnFaceAnchor(faceResolved.faceSnap.anchor);
           } else {
             setColumnFaceAnchor(null);
             const drawCorner = findColumnDrawCornerSnap(

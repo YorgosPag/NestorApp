@@ -19,7 +19,7 @@ function mapDxfLineTypeToEnterprise(
 export function buildEntityModelFromDxf(
   entity: DxfEntityUnion,
   isSelected: boolean,
-  resolved: { colorHex: string; lineWidthPx: number; alpha: number },
+  resolved: { colorHex: string; lineWidthPx: number; alpha: number; dashMm?: ReadonlyArray<number> },
 ): Entity {
   const entityWithLineType = entity as typeof entity & { lineType?: string };
   const entityWithMeasurement = entity as typeof entity & {
@@ -34,6 +34,9 @@ export function buildEntityModelFromDxf(
     color: resolved.colorHex,
     lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
     lineweight: resolved.lineWidthPx,
+    // ADR-510 Φ2 — resolved metric dash pattern; BaseEntityRenderer.setupStyle
+    // converts mm → px at stroke time. Absent/[] ⇒ solid (zero regression).
+    ...(resolved.dashMm && resolved.dashMm.length > 0 && { dashMm: resolved.dashMm }),
     ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
     ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances }),
   };

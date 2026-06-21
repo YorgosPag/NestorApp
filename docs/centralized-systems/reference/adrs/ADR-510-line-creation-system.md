@@ -2,7 +2,13 @@
 
 > ⚠️ **Renumber 508→510 (2026-06-20):** οι αριθμοί ADR-508 (Unified Linear-Member Framing) & ADR-509 (Adaptive Entity Color) είχαν δεσμευτεί από άλλον agent. Αυτό το ADR μετονομάστηκε σε ADR-510.
 
-> **Status:** 🟢 Φ1 COMPLETE (UNCOMMITTED polish· core committed `8ab4143a`) — spec v3 complete· **Φ1 SSoT audit (γύρος 2) αποκάλυψε ότι ~80% της Φ1 ΗΔΗ ΥΠΑΡΧΕΙ** (ADR-357 dynamic-input + `polar-tracking-store` + snapping). Υλοποιήθηκαν οι αληθινές ελλείψεις: **Q2** (default polar 90°→15°), **Q3** (full smart OSNAP default), **E2** (math στα numeric πεδία), **Q7** (γωνία+μήκος στο canvas line-ghost). Q1 Direct Distance ~λειτουργικό ήδη. Επόμενο: **Φ2 (Linetypes)** — orchestrator-scale, νέα συνεδρία. 2 γύροι έρευνας (ο 2ος adversarial).
+> **Status:** 🟡 Φ2 CORE COMPLETE (UNCOMMITTED· Φ1 core committed `8ab4143a`) — spec v3 complete. **Φ1** 🟢
+> (Q2 polar 15°, Q3 full OSNAP, E2 math πεδία, Q7 ghost angle). **Φ2 (Linetypes)** 🟡: SSoT audit (γύρος 2)
+> αποκάλυψε ότι ~80% ΗΔΗ ΥΠΑΡΧΕΙ (ADR-358 layer linetype/lineweight + ADR-357 Quick Style)· το αληθινό κενό ήταν
+> ότι ο DxfRenderer **δεν περνούσε** το resolved dash pattern στο `setLineDash` → υλοποιήθηκε NEW
+> `rendering/linetype-dash-resolver.ts` + `stores/LinetypeScaleStore.ts` (LTSCALE) + wiring σε line-batch +
+> `BaseEntityRenderer.setupStyle` (zoom-aware, ADR-040-safe). DEFER: σύνθετα/custom-UI/DXF LTYPE round-trip (Φ9).
+> Επόμενο: **Φ3** (polyline bulge + grips). 2 γύροι έρευνας (ο 2ος adversarial).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -469,7 +475,9 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   δίπλα στο μήκος στο canvas line-ghost (`canvas-v2/preview-canvas/preview-entity-renderers.ts` `renderLine` —
   NEW pure `segmentHeadingDeg` 0..360 AutoCAD-convention + `renderInfoLabel` με locale-aware `formatAngleLocale`
   SSoT· gated στο ίδιο `showEdgeDistances`/measurement flag· μηδέν hardcoded string). Έτσι το rubber-band ghost
-  δείχνει **ΚΑΙ** μήκος **ΚΑΙ** γωνία απευθείας στον καμβά (όχι μόνο στο dynamic-input overlay). **(β) plain-length+
+  δείχνει **ΚΑΙ** μήκος **ΚΑΙ** γωνία απευθείας στον καμβά (όχι μόνο στο dynamic-input overlay). **SSoT angle pipeline
+  (de-dup μετά από SSOT audit Giorgio):** ΚΑΜΙΑ νέα συνάρτηση γωνίας — reuse `calculateAngle` (rad, `geometry-vector-utils`)
+  → `radToDeg` → `normalizeAngleDeg` (0..360, `geometry-angle-utils`). **(β) plain-length+
   Enter edge — ΚΑΜΙΑ ΕΝΕΡΓΕΙΑ (by design):** το `handleLineEnter` δεν έχει τη live θέση κέρσορα/polar-snapped
   γωνία (context = μόνο `firstClickPoint`)· το DDE ήδη λειτουργεί όταν ο κέρσορας έχει κινηθεί (η `angleValue`
   γεμίζει live). Το υπόλοιπο (commit αγνοεί polar-snap στη live γωνία) = βαθύτερο, χρειάζεται cursor-threading →
@@ -482,3 +490,31 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `handleLineEnter` (όταν `angleValue` κενό → να κουμπώνει στη live polar γωνία αντί jump σε angle field)· (γ)
   η wiring αυτών ακουμπά **hatch-owned drawing αρχεία** (ADR-507 uncommitted) → αναμονή commit για conflict-free.
   Status → 🟡 Φ1 IN PROGRESS. UNCOMMITTED. 🔴 browser-verify (15° μαγνήτης, OSNAP set, `1500+300` σε πεδίο) + commit.
+- **2026-06-21** — **Φ2 (Linetypes) core gaps — SSoT audit (γύρος 2) + canvas dash wiring.** Στοχευμένο grep ανά
+  domain αποκάλυψε ότι η **Φ2 είναι ~80% ήδη υλοποιημένη & wired** μέσω **ADR-358** (layer linetype/lineweight
+  SSoT) + **ADR-357** (Quick Style). Το handoff audit είχε ξανά χάσει ολόκληρο subsystem (lesson #1). **Ήδη
+  υπάρχουν & ΔΕΝ ξαναφτιάχτηκαν:** `config/linetype-iso-catalog.ts` (8 ISO linetypes, metric mm patterns +
+  `LinetypeDef`), `stores/LinetypeRegistry.ts` (runtime registry, custom-capable), `config/lineweight-iso-catalog.ts`
+  (24 ISO, `lineweightToPx`, DXF 370), `config/default-lineweight-resolver.ts`, `systems/properties/resolve-entity-style.ts`
+  (πλήρες ByLayer/ByBlock cascade → `ResolvedStyle.linetype.pattern`), `ui/ribbon/data/contextual-line-tool-tab.ts`
+  + `useRibbonLineToolBridge.ts` + `stores/QuickStyleStore.ts` (contextual panel: lineweight/linetype/color), και
+  **entity wiring** (`completeEntity.ts:218-224` περνά ήδη `quickStyle.linetypeName` στο `CreateEntityCommand`).
+  Το lineweight px ✅ ήδη εφαρμοζόταν στο canvas.
+  **Το ΟΥΣΙΑΣΤΙΚΟ κενό:** ο `DxfRenderer` resolve-άρει `resolved.linetype.pattern` (mm) αλλά **ποτέ δεν το περνούσε
+  στο `ctx.setLineDash`** → γραμμές Dashed/Hidden/Center/Phantom/DashDot/Border/Divide **φαίνονταν συνεχείς**.
+  **Υλοποιήθηκαν μόνο τα αληθινά κενά (SSoT, zero-regression):**
+  • NEW `rendering/linetype-dash-resolver.ts` — `dashMmToScreenPx(patternMm, worldToScreenScale, ltscale)`: |v| folds
+    gaps→positive, 0 (dot)→`MIN_DOT_PX`, [] solid→[], degenerate scale guard. Reuse `scaleDashPattern` (ADR-083) για
+    το multiply· **όχι** νέος `setLineDash` wrapper. Dash = zoom-AWARE (σε αντίθεση με το zoom-independent LWT).
+  • NEW `stores/LinetypeScaleStore.ts` — global **LTSCALE** knob (default 1.0, micro-leaf useSyncExternalStore,
+    localStorage `dxf:ltscale`, mirror QuickStyleStore· UI status-bar control = DEFER).
+  • **Wiring** (`+dashMm` στο `ResolvedStyle` render path, ΕΝΑ σημείο, δύο paths): `DxfRenderer.resolveStyleForRender`
+    + `applyIsolateAlpha` + `toEntityModel` (`+dashMm`)· **line-batch** key += dash signature + `setLineDash(dashMmToScreenPx(...))`·
+    **EntityModel path** μέσω `buildEntityModelFromDxf` (`base.dashMm`) → `BaseEntityRenderer.setupStyle` εφαρμόζει το
+    dash ΜΕΤΑ το `applyPhaseStyle` (zoom + LTSCALE)· `types/base-entity.ts` `+ dashMm?`. **ADR-040-safe** (pure read
+    στο stroke time, καμία νέα subscription). Legacy `lineType` short-circuit (DxfRenderer `:152`) ΑΘΙΚΤΟ → zero regression.
+  20 jest (8 dash-resolver + 6 LTSCALE + 6 regression dxf-canvas) GREEN· 37 με το style-cascade. **DEFER:** σύνθετα
+  linetypes (text/.SHX), custom-creation UI (Phase 6+), DXF `LTYPE` round-trip (Φ9/ADR-505), LTSCALE status-bar UI,
+  WallRenderer/preview dash (ξεχωριστό `config/bim-line-patterns.ts`). Status → 🟡 **Φ2 CORE COMPLETE**. UNCOMMITTED.
+  ⚠️ entity render touch → ADR-040 CHECK 6B/6D (stage ADR-040 + ADR-510). 🔴 browser-verify (Quick Style linetype
+  Dashed/Hidden/Center → διακεκομμένη· zoom scale· Continuous → συνεχής) + commit. **Επόμενο: Φ3** (polyline bulge + grips).

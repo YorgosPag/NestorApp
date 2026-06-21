@@ -72,10 +72,11 @@ describe('loadFloorBimEntities', () => {
   it('issues one getAll per registered kind, under the scope constraints (no companyId in constraints)', async () => {
     getAll.mockResolvedValue({ documents: [] });
     await loadFloorBimEntities(scope);
-    // 24 getAll: 22 registry kinds + walls (explicit) + openings (host-aware).
+    // 25 getAll: 23 registry kinds + walls (explicit) + openings (host-aware).
     // ADR-469 v1.1 added slab-opening, railing, furniture, floorplan-symbol,
     // electrical-panel, opening, and the full MEP equipment set.
-    expect(getAll).toHaveBeenCalledTimes(24);
+    // ADR-507 added hatch (floorplan_hatches).
+    expect(getAll).toHaveBeenCalledTimes(25);
     for (const call of getAll.mock.calls) {
       expect(call[1]).toEqual({ constraints: SENTINEL_CONSTRAINTS });
     }

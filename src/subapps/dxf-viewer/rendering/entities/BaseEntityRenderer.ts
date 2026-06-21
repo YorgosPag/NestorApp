@@ -19,6 +19,8 @@ import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
 import { worldZoneToLocalArm } from '../../bim/grips/move-glyph-zones';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
+// ADR-510 Φ2 — canvas linetype dash + glow pre-pass (SRP extraction, ≤500 LOC).
+import { applyEntityLinetypeDash, drawEntityGlowPrePass } from './base-entity-style-helpers';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 // 🏢 ADR-119: Centralized Opacity Constants
 import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -320,6 +322,9 @@ export abstract class BaseEntityRenderer {
     // Determine current phase and apply appropriate styling
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
+    // ADR-510 Φ2 — apply resolved linetype dash AFTER phase style (wins over the solid
+    // reset above); absent/[] ⇒ solid. Zoom-aware + global LTSCALE (unlike LWT).
+    applyEntityLinetypeDash(this.ctx, entity as EntityModel & { dashMm?: ReadonlyArray<number> }, this.transform.scale);
     // Ghost alpha override (Move-tool AutoCAD parity): apply AFTER phase style so
     // applyNormalStyle's globalAlpha=1 reset cannot win. Only when explicitly < 1.
     if (options.alpha !== undefined && options.alpha < OPACITY.OPAQUE) {
@@ -363,16 +368,7 @@ export abstract class BaseEntityRenderer {
 
     // 2. Glow pre-pass for highlighted entities — double-stroke replaces shadowBlur (GPU-free)
     if (phaseState.phase === 'highlighted') {
-      const entityLineWidth = Math.max(1, (entity as EntityModel & { lineWidth?: number }).lineWidth || 1);
-      this.ctx.save();
-      this.ctx.shadowBlur = 0;
-      this.ctx.shadowColor = 'transparent';
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      renderGeometry();
-      this.ctx.restore();
+      drawEntityGlowPrePass(this.ctx, entity as EntityModel & { lineWidth?: number }, renderGeometry);
     }
 
     // 3. Setup phase-appropriate style

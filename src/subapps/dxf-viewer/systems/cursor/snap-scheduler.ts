@@ -31,11 +31,9 @@ import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
 import {
   resolveColumnDrawSnap,
   resolveColumnGhostStatusFromSnap,
+  resolveColumnFaceSnapWithGlyph,
+  type ColumnFaceSnapWithGlyph,
 } from '../../bim/columns/column-placement-snap-context';
-import {
-  resolveColumnFaceSnap,
-  type ColumnFaceSnap,
-} from '../../bim/columns/column-face-snap';
 import {
   setColumnGhostStatus,
   clearColumnGhostStatus,
@@ -110,19 +108,32 @@ function applyColumnGhostStatus(
 
 /**
  * ADR-398 §Column smart-ghost face-snap (ADR-508 reuse) — γράφει το column face-snap αποτέλεσμα
- * στα snap SSoT (ghost point + status + auto λαβή). Drive-ghost-only (όπως το beam smart ghost):
- * ΚΑΝΕΝΑ snap glyph (`fullSnapResult=null`, markers=[]) — το ghost ζωγραφίζεται από το
- * `useColumnGhostPreview` μέσω `getImmediateSnap()`. Dedup μέσω lastSnap state (mirror του κύριου).
+ * στα snap SSoT (ghost point + status + auto λαβή). Όταν υπάρχει ορατό BIM χαρακτηριστικό
+ * (`glyphSnap` — Γωνία/Μέσο/Κέντρο τοίχου/δοκαριού/κολόνας) → **δείχνει τη γλυφή/ετικέτα**
+ * (`fullSnapResult` + markers)· αλλιώς drive-ghost-only (καμία γλυφή). Το ghost ζωγραφίζεται από
+ * το `useColumnGhostPreview` μέσω `getImmediateSnap()`. Dedup μέσω lastSnap state.
  */
-function applyColumnFaceSnap(faceSnap: ColumnFaceSnap, input: SnapDetectionInput): void {
+function applyColumnFaceSnap(resolved: ColumnFaceSnapWithGlyph, input: SnapDetectionInput): void {
+  const { faceSnap, glyphSnap } = resolved;
   setColumnFaceAnchor(faceSnap.anchor);
   setColumnGhostStatus(faceSnap.status);
   const { x: sx, y: sy } = faceSnap.position;
   if (Math.abs(sx - lastSnapX) > 0.001 || Math.abs(sy - lastSnapY) > 0.001 || !lastSnapFound) {
     lastSnapX = sx;
     lastSnapY = sy;
-    input.setSnapResults([]);
-    setFullSnapResult(null);
+    if (glyphSnap?.snappedPoint) {
+      input.setSnapResults([{
+        point: glyphSnap.snappedPoint,
+        type: glyphSnap.activeMode || 'default',
+        entityId: glyphSnap.snapPoint?.entityId || null,
+        distance: glyphSnap.snapPoint?.distance || 0,
+        priority: 0,
+      }]);
+      setFullSnapResult(glyphSnap);
+    } else {
+      input.setSnapResults([]);
+      setFullSnapResult(null);
+    }
     setImmediateSnap({
       found: true,
       point: faceSnap.position,
@@ -142,9 +153,14 @@ function runSnapDetection(input: SnapDetectionInput): void {
     // με το click path (`mouse-handler-up`) → preview ≡ commit. Miss → fall through στο υπάρχον
     // corner-projection path (μηδέν regression μακριά από στόχους).
     if (colHandle?.isActive && input.getEntities) {
-      const faceSnap = resolveColumnFaceSnap(input.worldPos, input.getEntities(), colHandle.getSceneUnits());
-      if (faceSnap) {
-        applyColumnFaceSnap(faceSnap, input);
+      const resolved = resolveColumnFaceSnapWithGlyph(
+        input.worldPos,
+        input.getEntities(),
+        colHandle.getSceneUnits(),
+        input.findSnapPoint,
+      );
+      if (resolved) {
+        applyColumnFaceSnap(resolved, input);
         return;
       }
     }

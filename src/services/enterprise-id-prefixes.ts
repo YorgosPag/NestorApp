@@ -261,6 +261,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   ROOF: 'roof',                // floorplan_roofs collection — parametric pitched roof (footprint + per-edge slopes) (ADR-417)
   FLOOR_FINISH: 'ffl',         // floorplan_floor_finishes collection — thin floor covering per room (ADR-419)
+  HATCH: 'hatch',              // floorplan_hatches collection — flat DXF hatch fill / Revit Filled-Region (ADR-507)
   THERMAL_SPACE: 'tsp',        // floorplan_thermal_spaces collection — analytical thermal space / θερμικός χώρος (IfcSpace) (ADR-422)
   SPACE_SEPARATOR: 'ssp',      // floorplan_space_separators collection — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement) (ADR-437)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)

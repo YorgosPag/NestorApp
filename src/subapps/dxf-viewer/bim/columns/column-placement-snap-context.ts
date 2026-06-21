@@ -30,6 +30,8 @@ import { findEntityOverlap } from '../geometry/entity-overlap';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { ExtendedSnapType, type ProSnapResult } from '../../snapping/extended-types';
 import type { CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
+import type { SceneUnits } from '../../utils/scene-units';
+import { resolveColumnFaceSnap, type ColumnFaceSnap } from './column-face-snap';
 
 /**
  * Ένα snap που ο `SnapIndicatorOverlay` **όντως ζωγραφίζει** γλυφή. Τα `grid`/`guide` είναι
@@ -46,6 +48,37 @@ function isVisibleIndicatorSnap(r: ProSnapResult | null): boolean {
 export interface ColumnDrawSnap {
   readonly snapResult: ProSnapResult;
   readonly ghostPoint: Point2D;
+}
+
+/** Column face-snap + το ορατό BIM χαρακτηριστικό (γλυφή/ετικέτα) που πρέπει να δειχθεί. */
+export interface ColumnFaceSnapWithGlyph {
+  readonly faceSnap: ColumnFaceSnap;
+  /** Το ορατό χαρακτηριστικό (Γωνία/Μέσο/Κέντρο τοίχου/δοκαριού/κολόνας) — `null` αν κανένα. */
+  readonly glyphSnap: ProSnapResult | null;
+}
+
+/**
+ * ADR-398 §3.7 — column smart face-snap **με ορατές έλξεις** (γλυφές + ετικέτες «Γωνία/Μέσο
+ * τοίχου» κ.λπ.). ΕΝΑ SSoT για move (ghost) ΚΑΙ click (commit):
+ *   1. τρέχει το ενιαίο `findSnapPoint` στον cursor·
+ *   2. αν υπάρχει **ορατό** BIM χαρακτηριστικό (όχι σιωπηλό grid/guide) → **μαγνητική έλξη**:
+ *      το χαρακτηριστικό γίνεται ο effective cursor (το ghost κουμπώνει εκεί) ΚΑΙ επιστρέφεται
+ *      ως `glyphSnap` (ο caller δείχνει τη γλυφή/ετικέτα)·
+ *   3. αλλιώς ελεύθερο slide (raw cursor, `glyphSnap=null`).
+ * `null` όταν κανένας στόχος δεν είναι εντός capture (ο caller πέφτει στο default path).
+ */
+export function resolveColumnFaceSnapWithGlyph(
+  cursorPos: Readonly<Point2D>,
+  entities: readonly Entity[],
+  sceneUnits: SceneUnits,
+  findSnapPoint: (x: number, y: number) => ProSnapResult | null,
+): ColumnFaceSnapWithGlyph | null {
+  const snap = findSnapPoint(cursorPos.x, cursorPos.y);
+  const visible = isVisibleIndicatorSnap(snap);
+  const effective = visible && snap?.snappedPoint ? snap.snappedPoint : cursorPos;
+  const faceSnap = resolveColumnFaceSnap(effective, entities, sceneUnits);
+  if (!faceSnap) return null;
+  return { faceSnap, glyphSnap: visible ? snap : null };
 }
 
 /**

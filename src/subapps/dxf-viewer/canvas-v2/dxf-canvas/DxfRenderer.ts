@@ -12,6 +12,9 @@ import { CAD_UI_COLORS } from '../../config/color-config';
 // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver
 import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
+// ADR-510 Φ2 — canvas linetype dash: metric pattern (mm) → setLineDash px (zoom + LTSCALE aware).
+import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
+import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
 // ADR-454 — Print Plot Style: white-safe colour remap + print-DPI lineweights.
 // Singleton is null during interactive render (single boolean branch, zero hot-path cost).
 import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
@@ -135,7 +138,8 @@ export class DxfRenderer {
     // Normal-state solid LINE entities are grouped by (strokeColor × lineWidth) and
     // rendered as single paths — one ctx.stroke() per group instead of per entity.
     // Excludes: selected, hovered, measurement, non-solid line types.
-    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number };
+    // ADR-510 Φ2 — dashMm per batch so linetype dashes (Dashed/Hidden/Center…) survive batching.
+    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number> };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
 
@@ -155,9 +159,12 @@ export class DxfRenderer {
       const color = resolved.colorHex;
       const lw = resolved.lineWidthPx;
       const alpha = resolved.alpha;
-      const key = `${color}\0${lw}\0${alpha.toFixed(3)}`;
+      const dashMm = resolved.dashMm;
+      // ADR-510 Φ2 — dash signature in the key so solid + each linetype batch separately.
+      const dashKey = dashMm.length > 0 ? dashMm.join(',') : '';
+      const key = `${color}\0${lw}\0${alpha.toFixed(3)}\0${dashKey}`;
       let batch = lineBatches.get(key);
-      if (!batch) { batch = { starts: [], ends: [], lw, alpha }; lineBatches.set(key, batch); }
+      if (!batch) { batch = { starts: [], ends: [], lw, alpha, dashMm }; lineBatches.set(key, batch); }
       batch.starts.push(CoordinateTransforms.worldToScreen(entity.start, transform, actualViewport));
       batch.ends.push(CoordinateTransforms.worldToScreen(entity.end, transform, actualViewport));
       batchedIds.add(entity.id);
@@ -168,7 +175,8 @@ export class DxfRenderer {
       this.ctx.save();
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = batch.lw;
-      this.ctx.setLineDash([]);
+      // ADR-510 Φ2 — metric dash → screen px (zoom + LTSCALE aware); [] for solid.
+      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getLinetypeScale()));
       this.ctx.globalAlpha = batch.alpha;
       this.ctx.lineCap = 'butt';
       this.ctx.beginPath();
@@ -311,14 +319,14 @@ export class DxfRenderer {
   private toEntityModel(
     entity: DxfEntityUnion,
     isSelected: boolean,
-    resolvedOrLayersById: { colorHex: string; lineWidthPx: number; alpha: number } | Record<string, SceneLayer> | undefined,
+    resolvedOrLayersById: { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } | Record<string, SceneLayer> | undefined,
   ): Entity {
     const isPreResolved =
       typeof resolvedOrLayersById === 'object' &&
       resolvedOrLayersById !== null &&
       'colorHex' in resolvedOrLayersById;
     const resolved = isPreResolved
-      ? (resolvedOrLayersById as { colorHex: string; lineWidthPx: number; alpha: number })
+      ? (resolvedOrLayersById as { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> })
       : this.resolveStyleForRender(entity, resolvedOrLayersById as Record<string, SceneLayer> | undefined);
     return buildEntityModelFromDxf(entity, isSelected, resolved);
   }
@@ -327,7 +335,7 @@ export class DxfRenderer {
   private resolveStyleForRender(
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
-  ): { colorHex: string; lineWidthPx: number; alpha: number } {
+  ): { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } {
     // ADR-454 — active only during offscreen print render (null otherwise).
     const printPolicy = getPrintColorPolicy();
     const fallback = {
@@ -335,6 +343,8 @@ export class DxfRenderer {
         ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
         : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
+      // ADR-510 Φ2 — no layer/cascade context ⇒ solid (Continuous).
+      dashMm: [] as ReadonlyArray<number>,
       alpha: 1,
     };
     if (!layersById) return this.applyIsolateAlpha(fallback, entity);
@@ -368,6 +378,8 @@ export class DxfRenderer {
         colorHex,
         lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
         alpha: baseAlpha,
+        // ADR-510 Φ2 — resolved metric dash pattern ([] for Continuous).
+        dashMm: resolved.linetype.pattern,
       },
       entity,
     );
@@ -381,9 +393,9 @@ export class DxfRenderer {
    * (see `isEntityLayerSkipped`).
    */
   private applyIsolateAlpha(
-    style: { colorHex: string; lineWidthPx: number; alpha: number },
+    style: { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> },
     entity: DxfEntityUnion,
-  ): { colorHex: string; lineWidthPx: number; alpha: number } {
+  ): { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } {
     const isolate = getIsolateEffectsSnapshot();
     if (!isolate.active || isolate.mode !== 'dim') return style;
     // ADR-358 §5.6.bis — entity-scope isolate (Revit "Isolate Element") takes

@@ -14,6 +14,8 @@ import { calculateWorldDistance, formatAngleLocale } from '../../rendering/entit
 import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
+// ADR-510 Φ1 (Q7): reuse the SSoT angle pipeline (no duplicate atan2/normalise).
+import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -23,12 +25,6 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ADR-510 Φ1 (Q7): vertical screen-px gap so the live angle label sits just below
 // the length label on the rubber-band ghost (no overlap with the distance text).
 const GHOST_ANGLE_LABEL_OFFSET_Y = 16;
-
-/** Heading of a world-space segment in degrees, normalised 0..360 (AutoCAD convention). */
-function segmentHeadingDeg(from: Point2D, to: Point2D): number {
-  const deg = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
-  return ((deg % 360) + 360) % 360;
-}
 
 export function renderLine(
   ctx: CanvasRenderingContext2D, entity: ExtendedLineEntity,
@@ -51,7 +47,8 @@ export function renderLine(
     h.renderDistanceLabelFromWorld(ctx, entity.start, entity.end, start, end);
     // ADR-510 Φ1 (Q7): show the live heading alongside the length, so the ghost
     // reports BOTH μήκος + γωνία directly on the canvas (locale-aware via SSoT).
-    const angleDeg = segmentHeadingDeg(entity.start, entity.end);
+    // Angle pipeline = SSoT chain: calculateAngle (rad) → radToDeg → normalizeAngleDeg (0..360).
+    const angleDeg = normalizeAngleDeg(radToDeg(calculateAngle(entity.start, entity.end)));
     const mid: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
     h.renderInfoLabel(ctx, { x: mid.x, y: mid.y + GHOST_ANGLE_LABEL_OFFSET_Y }, [formatAngleLocale(angleDeg, 1)]);
   }

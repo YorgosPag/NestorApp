@@ -7,8 +7,10 @@
  */
 
 import { resolveColumnFaceSnap, type ColumnFaceSnap } from '../column-face-snap';
+import { resolveColumnFaceSnapWithGlyph } from '../column-placement-snap-context';
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
+import { ExtendedSnapType, type ProSnapResult } from '../../../snapping/extended-types';
 
 // ── Test fixtures (scene units = mm → factor 1, capture = 600) ────────────────
 
@@ -42,6 +44,19 @@ function verticalBeam(id = 'beam-v'): Entity {
           { x: 150, y: 1000 }, { x: -150, y: 1000 },
         ],
       },
+    },
+  } as unknown as Entity;
+}
+
+/** Οριζόντιος τοίχος: άξονας y=0 (x −1000..1000), πάχος 200 (y −100..100). endsAxis = 'x'. */
+function horizontalWall(id = 'wall-h'): Entity {
+  return {
+    id,
+    type: 'wall',
+    geometry: {
+      axisPolyline: { points: [{ x: -1000, y: 0 }, { x: 1000, y: 0 }] },
+      outerEdge: { points: [{ x: -1000, y: 100 }, { x: 1000, y: 100 }] },
+      innerEdge: { points: [{ x: -1000, y: -100 }, { x: 1000, y: -100 }] },
     },
   } as unknown as Entity;
 }
@@ -147,6 +162,37 @@ describe('resolveColumnFaceSnap — vertical beam target (endsAxis y)', () => {
   });
 });
 
+describe('resolveColumnFaceSnap — wall target (ίδια συμπεριφορά με δοκάρι)', () => {
+  const wall = [horizontalWall()];
+
+  it('μακριά παρειά τοίχου (N) → 🟢 beam, anchor s, flush στην παρειά', () => {
+    const r = snap({ x: 0, y: 200 }, wall)!;
+    expect(r.face).toBe('N');
+    expect(r.status).toBe('beam');
+    expect(r.anchor).toBe('s');
+    expect(r.position).toEqual({ x: 0, y: 100 });
+  });
+
+  it('κοντή άκρη τοίχου (E) → 🟢 beam (ΕΠΙΤΡΕΠΕΤΑΙ κολώνα — ΟΧΙ red όπως δοκάρι)', () => {
+    const r = snap({ x: 1100, y: 0 }, wall)!;
+    expect(r.face).toBe('E');
+    expect(r.status).toBe('beam');
+  });
+
+  it('κοντή άκρη τοίχου (W) → 🟢 beam', () => {
+    const r = snap({ x: -1100, y: 0 }, wall)!;
+    expect(r.face).toBe('W');
+    expect(r.status).toBe('beam');
+  });
+
+  it('lo zone τοίχου → anchor sw flush γωνία', () => {
+    const r = snap({ x: -1000, y: 200 }, wall)!;
+    expect(r.third).toBe('lo');
+    expect(r.anchor).toBe('sw');
+    expect(r.position).toEqual({ x: -1000, y: 100 });
+  });
+});
+
 describe('resolveColumnFaceSnap — column target (όλες οι παρειές έγκυρες)', () => {
   const cols = [columnTarget(3000, 0)];
 
@@ -164,6 +210,38 @@ describe('resolveColumnFaceSnap — column target (όλες οι παρειές 
     expect(r.status).toBe('beam');
     expect(r.anchor).toBe('w');
     expect(r.position).toEqual({ x: 3200, y: 0 });
+  });
+});
+
+describe('resolveColumnFaceSnapWithGlyph — έλξεις (γλυφή) + μαγνητική ευθυγράμμιση', () => {
+  const cols = [columnTarget(3000, 0)]; // footprint x 2800..3200, y -200..200
+
+  const proSnap = (mode: ExtendedSnapType, x: number, y: number): ProSnapResult =>
+    ({
+      found: true,
+      snapPoint: { point: { x, y }, type: mode, description: mode, distance: 0, priority: 0 },
+      allCandidates: [], originalPoint: { x, y }, snappedPoint: { x, y }, activeMode: mode, timestamp: 0,
+    } as ProSnapResult);
+
+  it('ορατό BIM χαρακτηριστικό → μαγνητική έλξη + glyphSnap (η γλυφή/ετικέτα δείχνεται)', () => {
+    const find = () => proSnap(ExtendedSnapType.BIM_MIDPOINT, 3000, 200); // N face midpoint
+    const r = resolveColumnFaceSnapWithGlyph({ x: 3005, y: 240 }, cols, 'mm', find)!;
+    expect(r.glyphSnap).not.toBeNull();
+    expect(r.faceSnap.position).toEqual({ x: 3000, y: 200 }); // κουμπώνει στο χαρακτηριστικό
+    expect(r.faceSnap.anchor).toBe('s');
+    expect(r.faceSnap.status).toBe('beam');
+  });
+
+  it('κανένα snap → ελεύθερο slide, glyphSnap null', () => {
+    const r = resolveColumnFaceSnapWithGlyph({ x: 3000, y: 250 }, cols, 'mm', () => null)!;
+    expect(r.glyphSnap).toBeNull();
+    expect(r.faceSnap.position).toEqual({ x: 3000, y: 200 });
+  });
+
+  it('σιωπηλό grid snap → ΟΧΙ γλυφή/έλξη (glyphSnap null)', () => {
+    const find = () => proSnap(ExtendedSnapType.GRID, 3000, 200);
+    const r = resolveColumnFaceSnapWithGlyph({ x: 3000, y: 250 }, cols, 'mm', find)!;
+    expect(r.glyphSnap).toBeNull();
   });
 });
 

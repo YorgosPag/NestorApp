@@ -3,7 +3,7 @@
  *
  * Δίνει στο **εργαλείο Κολώνα** την ίδια «έξυπνη» συμπεριφορά φαντάσματος με το δοκάρι/τοίχο
  * (ADR-508 unified linear-member framing), **πιστά προσαρμοσμένη** σε σημειακό (1-κλικ) μέλος:
- * κοντά σε παρειά υφιστάμενου **δοκαριού ή κολώνας**, η κολώνα «κουμπώνει» στην παρειά, γλιστράει
+ * κοντά σε παρειά υφιστάμενου **δοκαριού, τοίχου ή κολώνας**, η κολώνα «κουμπώνει» στην παρειά, γλιστράει
  * κατά μήκος της και αναπτύσσεται **εξωτερικά**· η θέση κατά μήκος (lo/mid/hi via `pickThird`)
  * επιλέγει ΑΥΤΟΜΑΤΑ ποια από τις 9 λαβές ακουμπά:
  *   · γωνία (lo/hi) → flush-corner (η απέναντι γωνία της κολώνας ≡ γωνία στόχου)
@@ -46,10 +46,7 @@ import {
 } from '../geometry/shared/footprint-face-frame';
 import { pickThird, type MemberGhostThird } from '../framing/member-face-third';
 import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
-import {
-  collectMemberSnapTargets,
-  type MemberSnapTargets,
-} from '../framing/member-snap-targets';
+import { collectMemberSnapTargets } from '../framing/member-snap-targets';
 import type { LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
 
 /** Παρειά στόχου (world-aligned) στην οποία κουμπώνει η κολώνα. */
@@ -86,16 +83,30 @@ function memberEndsAxis(m: LinearMemberSnapTarget): 'x' | 'y' {
   return Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? 'x' : 'y';
 }
 
-/** Στόχοι (κολόνες + δοκάρια) → ενιαία λίστα bbox-frames (reuse `footprintBounds` SSoT). */
-function buildFaceTargets(t: MemberSnapTargets): FaceTarget[] {
+/**
+ * Στόχοι → ενιαία λίστα bbox-frames (reuse `footprintBounds` SSoT). `endsAxis`:
+ *   · κολόνες  → `null` (όλες οι 4 παρειές έγκυρες· δεν υπάρχει «κοντή άκρη»).
+ *   · δοκάρια  → άξονας μέλους → οι κοντές άκρες (Α/Δ ή Β/Ν) γίνονται 🔴 (mirror «extend instead»).
+ *   · τοίχοι   → `null` (Giorgio: σε ΚΑΘΕ παρειά τοίχου, **και τις μικρές άκρες**, ΕΠΙΤΡΕΠΕΤΑΙ
+ *               κολώνα → όλες πράσινες, όπως οι κολόνες-στόχοι).
+ */
+function buildFaceTargets(
+  cols: readonly (readonly Point2D[])[],
+  beams: readonly LinearMemberSnapTarget[],
+  walls: readonly LinearMemberSnapTarget[],
+): FaceTarget[] {
   const out: FaceTarget[] = [];
-  for (const fp of t.footprints) {
+  for (const fp of cols) {
     const bounds = footprintBounds(fp);
     if (bounds) out.push({ id: null, bounds, endsAxis: null });
   }
-  for (const m of t.memberTargets) {
+  for (const m of beams) {
     const bounds = footprintBounds(m.outline);
     if (bounds) out.push({ id: m.id, bounds, endsAxis: memberEndsAxis(m) });
+  }
+  for (const m of walls) {
+    const bounds = footprintBounds(m.outline);
+    if (bounds) out.push({ id: m.id, bounds, endsAxis: null });
   }
   return out;
 }
@@ -145,7 +156,12 @@ export function resolveColumnFaceSnap(
   entities: readonly Entity[],
   sceneUnits: SceneUnits,
 ): ColumnFaceSnap | null {
-  const targets = buildFaceTargets(collectMemberSnapTargets(entities, { memberKinds: ['beam'] }));
+  // Στόχοι = κολόνες (πάντα) + δοκάρια + τοίχοι — μαζεμένα ΞΕΧΩΡΙΣΤΑ ώστε ο τοίχος να μην
+  // κληρονομεί το beam «κοντή άκρη → 🔴» (Giorgio: όλες οι παρειές τοίχου έγκυρες). `footprints`
+  // (κολόνες) είναι ίδια και στις δύο κλήσεις → παίρνουμε από τη μία (μηδέν διπλο-μέτρημα).
+  const beamPass = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
+  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets;
+  const targets = buildFaceTargets(beamPass.footprints, beamPass.memberTargets, walls);
   if (targets.length === 0) return null;
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
