@@ -54,6 +54,8 @@ type BimRestoreEntityType =
   | 'roof'
   // ADR-419 — per-room floor-finish covering.
   | 'floor-finish'
+  // ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR).
+  | 'wall-covering'
   // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loop.
   | 'mep-underfloor'
   // ADR-422 — analytical thermal space (IfcSpace).

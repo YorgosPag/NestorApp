@@ -78,6 +78,8 @@ export type EntityType =
   | 'mep-underfloor'
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
   | 'floor-finish'
+  // ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR).
+  | 'wall-covering'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
   | 'thermal-space'
   // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement).
