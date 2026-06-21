@@ -71,6 +71,48 @@ function resolveGhostDimensions(
   return dims.length > 0 ? { sceneUnits, dims } : null;
 }
 
+/**
+ * ADR-508 — SSoT overlap decision for EVERY wall-ghost path: 🔴 when the ghost lies
+ * collinearly / on-top of (or whose body overlaps, incl. face-anchored) an existing member.
+ * `extra` short-circuits to true (e.g. snap short-end `status==='overlap'`). Curved → never.
+ * One owner so no path can forget the check (the bug it fixes: it was missing from the
+ * footprint path).
+ */
+function isWallGhostOverlap(
+  start: Readonly<Point2D>,
+  end: Readonly<Point2D>,
+  memberTargets: readonly LinearMemberSnapTarget[],
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+  kind: WallKind,
+  extra = false,
+): boolean {
+  if (extra) return true;
+  if (kind === 'curved') return false;
+  const newHalfScene = (resolveWallThicknessMm(overrides) / 2) * mmToSceneUnits(sceneUnits);
+  return isMemberCollinearOverlap(start, end, memberTargets, newHalfScene);
+}
+
+/**
+ * ADR-508 — SSoT build for EVERY wall-ghost path: build the WYSIWYG entity (same `buildWallEntity`
+ * as commit), apply the 🔴 overlap status colour, attach optional listening dimensions. Returns
+ * null on a degenerate frame. The ONE place that owns build + status, so the overlap→red look
+ * stays identical everywhere (mirror του κόκκινου φαντάσματος κολώνας).
+ */
+function buildWallGhostEntity(
+  id: string,
+  params: WallParams,
+  kind: WallKind,
+  sceneUnits: SceneUnits,
+  isOverlap: boolean,
+  faceDimensions: GhostFaceDimensionsMeta | null = null,
+): ExtendedSceneEntity | null {
+  const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
+  if (!built.ok) return null;
+  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
+  return toWysiwygPreviewEntity(built.entity, id, ghostStatusColor, faceDimensions);
+}
+
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
 
 /**
@@ -109,7 +151,8 @@ export function generateWallPreview(
   // live side pick. Με το 2-κλικ straight flow (ADR-508) ΔΕΝ τίθεται για ευθύ τοίχο.
   if (preview.endPoint) {
     return makeWallFootprintGhost(
-      'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null, cursorPoint,
+      'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
+      preview.memberTargets, cursorPoint,
     );
   }
 
@@ -147,17 +190,13 @@ function makeWallGhostBeforeClick(
     ? snap.end
     : { x: effectiveCursor.x + MEMBER_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
   const params = buildDefaultWallParams(start, end, overrides, sceneUnits);
-  const built = buildWallEntity(params, defaultLayerId(), 'straight', sceneUnits);
-  if (!built.ok) return null;
   // 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή (β) το φάντασμα
-  // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος. 🟢/`neutral` → WYSIWYG αυτούσιο.
-  const newHalfScene = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
-  const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets, newHalfScene);
-  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
+  // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος (incl. face-anchored). SSoT decision.
+  const isOverlap = isWallGhostOverlap(start, end, memberTargets, overrides, sceneUnits, 'straight', snap?.status === 'overlap');
   // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
   // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
   const faceDimensions = resolveGhostDimensions(snap?.faceFrame, isOverlap, sceneUnits, wpp);
-  return toWysiwygPreviewEntity(built.entity, 'preview_wall_ghost', ghostStatusColor, faceDimensions);
+  return buildWallGhostEntity('preview_wall_ghost', params, 'straight', sceneUnits, isOverlap, faceDimensions);
 }
 
 /**
@@ -188,14 +227,8 @@ function makeWallWysiwygGhost(
   } else {
     params = buildAnchoredWallParams(startPt, endPt, overrides, sceneUnits, columnFootprints);
   }
-  const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
-  if (!built.ok) return null;
-  const newHalfScene = (resolveWallThicknessMm(overrides) / 2) * mmToSceneUnits(sceneUnits);
-  const ghostStatusColor =
-    kind !== 'curved' && isMemberCollinearOverlap(startPt, endPt, memberTargets, newHalfScene)
-      ? resolveGhostStatusColor('overlap')
-      : null;
-  return toWysiwygPreviewEntity(built.entity, id, ghostStatusColor);
+  const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
+  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap);
 }
 
 /**
@@ -212,15 +245,15 @@ function makeWallFootprintGhost(
   kind: WallKind,
   sceneUnits: SceneUnits,
   curveControl: Point2D | null,
+  memberTargets: readonly LinearMemberSnapTarget[],
   alignmentPoint: Point2D | null = null,
 ): ExtendedSceneEntity | null {
   const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits, alignmentPoint);
   const finalParams = curveControl
     ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
     : params;
-  const built = buildWallEntity(finalParams, defaultLayerId(), kind, sceneUnits);
-  if (!built.ok) return null;
-  return toWysiwygPreviewEntity(built.entity, id);
+  const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
+  return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap);
 }
 
 /**
@@ -239,7 +272,6 @@ function makeWallPolylineGhost(
   const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
   const polylineVertices: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
   const params = { ...base, polylineVertices };
-  const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
-  if (!built.ok) return null;
-  return toWysiwygPreviewEntity(built.entity, id);
+  // Polyline: multi-segment → no single-segment overlap check (isOverlap=false). Same SSoT build.
+  return buildWallGhostEntity(id, params, kind, sceneUnits, false);
 }
