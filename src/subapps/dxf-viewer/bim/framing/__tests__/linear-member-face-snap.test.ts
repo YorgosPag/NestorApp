@@ -109,3 +109,27 @@ describe('isMemberCollinearOverlap — ΑΠΑΓΟΡΕΥΣΗ ομοαξονικο
     expect(isMemberCollinearOverlap({ x: 5000, y: 0 }, { x: 5000, y: 0 }, [HORIZONTAL])).toBe(false);
   });
 });
+
+describe('isMemberCollinearOverlap — body-overlap τοίχου (newHalfScene, ADR-508 face-anchored)', () => {
+  const NEW_HALF = 100; // νέος τοίχος πάχους 200
+
+  it('άξονας στην ΠΑΡΕΙΑ (y=100) ΧΩΡΙΣ newHalf → false (backward-compat, beam path)', () => {
+    expect(isMemberCollinearOverlap({ x: 2000, y: 100 }, { x: 8000, y: 100 }, [HORIZONTAL])).toBe(false);
+  });
+
+  it('άξονας στην ΠΑΡΕΙΑ (y=100) ΜΕ newHalf → true (το σώμα επικαλύπτει)', () => {
+    expect(isMemberCollinearOverlap({ x: 2000, y: 100 }, { x: 8000, y: 100 }, [HORIZONTAL], NEW_HALF)).toBe(true);
+  });
+
+  it('παράλληλο ΔΙΠΛΑ με κενό (y=500) ΜΕ newHalf → false (faces μακριά)', () => {
+    expect(isMemberCollinearOverlap({ x: 2000, y: 500 }, { x: 8000, y: 500 }, [HORIZONTAL], NEW_HALF)).toBe(false);
+  });
+
+  it('faces ΑΓΓΙΖΟΥΝ (y=200, near-face=y=100) → false (άγγιγμα, όχι επικάλυψη)', () => {
+    expect(isMemberCollinearOverlap({ x: 2000, y: 200 }, { x: 8000, y: 200 }, [HORIZONTAL], NEW_HALF)).toBe(false);
+  });
+
+  it('άκρο-με-άκρο (διαμήκης 0) στην παρειά ΜΕ newHalf → false (νόμιμη επέκταση)', () => {
+    expect(isMemberCollinearOverlap({ x: 10000, y: 100 }, { x: 16000, y: 100 }, [HORIZONTAL], NEW_HALF)).toBe(false);
+  });
+});

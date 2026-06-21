@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type LinePatternKey } from '../../../config/bim-line-patterns';
-import { LINEWEIGHT_ISO_VALUES } from '../../../config/lineweight-iso-catalog';
+import { LINEWEIGHT_CONCRETE_MM_VALUES } from '../../../config/lineweight-iso-catalog';
 
 /** Pen indices 1–16 (ISO lineweight slots — ADR-358). */
 export const PEN_OPTIONS = Array.from({ length: 16 }, (_, i) => i + 1);
@@ -37,10 +37,8 @@ export const PATTERN_OPTIONS: LinePatternKey[] = [
   'solid', 'dashed', 'dashed2', 'dotted', 'center', 'hidden', 'dashdot', 'phantom',
 ];
 
-/** Concrete (printable) ISO lineweights in mm — the positive catalog values. */
-export const LINEWEIGHT_MM_OPTIONS: readonly number[] = (
-  LINEWEIGHT_ISO_VALUES as readonly number[]
-).filter((v) => v > 0);
+/** Concrete (printable) ISO lineweights in mm — root SSoT (lineweight-iso-catalog). */
+export const LINEWEIGHT_MM_OPTIONS: readonly number[] = LINEWEIGHT_CONCRETE_MM_VALUES;
 
 interface BimPenSelectProps {
   value: number;

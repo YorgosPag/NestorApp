@@ -52,6 +52,14 @@ export const LINEWEIGHT_SPECIAL_VALUES: ReadonlyArray<-3 | -2 | -1> = Object.fre
 export type ConcreteLineweightMm = Exclude<LineweightMm, -3 | -2 | -1>;
 
 /**
+ * The printable (positive) ISO lineweights — `LINEWEIGHT_ISO_VALUES` χωρίς το 0.
+ * **SSoT για κάθε UI dropdown παχών** (BIM style panels, ribbon line-tool/hatch):
+ * οι αριθμοί ζουν ΜΟΝΟ εδώ, οι consumers παράγουν options/labels από αυτό.
+ */
+export const LINEWEIGHT_CONCRETE_MM_VALUES: readonly ConcreteLineweightMm[] =
+  LINEWEIGHT_ISO_VALUES.filter((v): v is ConcreteLineweightMm => v > 0);
+
+/**
  * Type guard: true when `lw` is a concrete mm value (0..2.11), false for
  * null/undefined and the special sentinels (-3/-2/-1).
  */

@@ -170,6 +170,18 @@ export function useRibbonLineToolBridge(
       if (!isLineToolRibbonKey(commandKey)) return;
       const selected = resolveSelected();
 
+      // 🔴 TEMP DIAGNOSTIC (ADR-510 Φ2E — ΜΗΝ κάνεις commit): δείχνει στο console
+      // αν το onComboboxChange φτάνει, τι τιμή, και αν βρέθηκε επιλεγμένη οντότητα.
+      // eslint-disable-next-line no-console
+      console.warn('[Φ2E onComboboxChange]', {
+        commandKey, value,
+        primaryId: universalSelection.getPrimaryId(),
+        currentLevelId: levelManager.currentLevelId,
+        selectedFound: !!selected,
+        selectedType: selected?.type ?? null,
+        selectedId: selected?.id ?? null,
+      });
+
       if (commandKey === LINE_TOOL_RIBBON_KEYS.linetype) {
         if (selected) patchEntity(selected, { linetypeName: value });
         else setQuickStyleLinetype(value);

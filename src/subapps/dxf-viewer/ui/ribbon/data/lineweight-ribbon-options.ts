@@ -12,21 +12,21 @@
  */
 
 import type { RibbonComboboxOption } from '../types/ribbon-types';
+import { LINEWEIGHT_CONCRETE_MM_VALUES } from '../../../config/lineweight-iso-catalog';
 
 /** Τιμή sentinel για «κληρονομιά από layer» (DXF group 370 = -2). */
 export const LINEWEIGHT_BYLAYER_VALUE = 'ByLayer';
 
+/**
+ * ByLayer + οι concrete ISO τιμές — **derived** από το `LINEWEIGHT_CONCRETE_MM_VALUES`
+ * (root SSoT στο `lineweight-iso-catalog`). Μηδέν hardcoded αριθμοί (σέβεται τον
+ * `lineweight-iso-catalog` ratchet) — value + label παράγονται από την ίδια πηγή.
+ * Έτσι line-tool + hatch + BIM style panels δείχνουν ΤΗΝ ΙΔΙΑ λίστα παχών.
+ */
 export const LINEWEIGHT_RIBBON_OPTIONS: readonly RibbonComboboxOption[] = [
   { value: LINEWEIGHT_BYLAYER_VALUE, labelKey: 'ByLayer', isLiteralLabel: true },
-  { value: '0.05', labelKey: '0.05 mm', isLiteralLabel: true },
-  { value: '0.09', labelKey: '0.09 mm', isLiteralLabel: true },
-  { value: '0.13', labelKey: '0.13 mm', isLiteralLabel: true },
-  { value: '0.18', labelKey: '0.18 mm', isLiteralLabel: true },
-  { value: '0.25', labelKey: '0.25 mm', isLiteralLabel: true },
-  { value: '0.35', labelKey: '0.35 mm', isLiteralLabel: true },
-  { value: '0.50', labelKey: '0.50 mm', isLiteralLabel: true },
-  { value: '0.70', labelKey: '0.70 mm', isLiteralLabel: true },
-  { value: '1.00', labelKey: '1.00 mm', isLiteralLabel: true },
-  { value: '1.40', labelKey: '1.40 mm', isLiteralLabel: true },
-  { value: '2.00', labelKey: '2.00 mm', isLiteralLabel: true },
-] as const;
+  ...LINEWEIGHT_CONCRETE_MM_VALUES.map((mm) => {
+    const v = mm.toFixed(2);
+    return { value: v, labelKey: `${v} mm`, isLiteralLabel: true as const };
+  }),
+];
