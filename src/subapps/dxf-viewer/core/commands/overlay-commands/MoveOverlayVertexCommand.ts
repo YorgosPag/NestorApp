@@ -54,7 +54,9 @@ export class MoveOverlayVertexCommand implements ICommand {
     private readonly vertexIndex: number,
     private readonly oldPosition: [number, number],
     private readonly newPosition: [number, number],
-    private readonly overlayStore: OverlayStoreVertexOperations
+    private readonly overlayStore: OverlayStoreVertexOperations,
+    /** True only for live-drag samples; distinct edits (both `false`) never coalesce. ADR-507 §8. */
+    private readonly isDragging: boolean = false
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -107,7 +109,12 @@ export class MoveOverlayVertexCommand implements ICommand {
       return false;
     }
 
-    // Within the canonical merge window → coalesce into one undo step.
+    // Only coalesce live-drag samples — distinct edits stay separate undo steps.
+    if (!this.isDragging || !other.isDragging) {
+      return false;
+    }
+
+    // Same vertex, both dragging, within the canonical merge window → coalesce.
     return isWithinMergeWindow(this, other);
   }
 
@@ -122,7 +129,8 @@ export class MoveOverlayVertexCommand implements ICommand {
       this.vertexIndex,
       this.oldPosition, // Keep original old position
       otherMove.newPosition, // Use latest new position
-      this.overlayStore
+      this.overlayStore,
+      true // merged result stays a drag so subsequent samples keep coalescing
     );
   }
 
@@ -140,6 +148,7 @@ export class MoveOverlayVertexCommand implements ICommand {
         vertexIndex: this.vertexIndex,
         oldPosition: this.oldPosition,
         newPosition: this.newPosition,
+        isDragging: this.isDragging,
       },
       version: 1,
     };
@@ -188,7 +197,9 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
   constructor(
     /** Vertices to move with their old and new positions */
     private readonly movements: VertexMovement[],
-    private readonly overlayStore: OverlayStoreVertexOperations
+    private readonly overlayStore: OverlayStoreVertexOperations,
+    /** True only for live-drag samples; distinct edits (both `false`) never coalesce. ADR-507 §8. */
+    private readonly isDragging: boolean = false
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -254,7 +265,12 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       }
     }
 
-    // Within the canonical merge window → coalesce into one undo step.
+    // Only coalesce live-drag samples — distinct edits stay separate undo steps.
+    if (!this.isDragging || !other.isDragging) {
+      return false;
+    }
+
+    // Same vertex set, both dragging, within the canonical merge window → coalesce.
     return isWithinMergeWindow(this, other);
   }
 
@@ -283,7 +299,11 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       };
     });
 
-    return new MoveMultipleOverlayVerticesCommand(mergedMovements, this.overlayStore);
+    return new MoveMultipleOverlayVerticesCommand(
+      mergedMovements,
+      this.overlayStore,
+      true // merged result stays a drag so subsequent samples keep coalescing
+    );
   }
 
   /**
@@ -297,6 +317,7 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       timestamp: this.timestamp,
       data: {
         movements: this.movements,
+        isDragging: this.isDragging,
       },
       version: 1,
     };
