@@ -77,12 +77,7 @@ export class UpdateWallParamsCommand extends MergeableUpdateCommand<WallParams> 
   }
 
   protected serializedData(): Record<string, unknown> {
-    return {
-      wallId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-      kind: this.kind,
-    };
+    // Canonical base shape + Wall's genuine extra state (the geometry `kind`).
+    return { ...this.baseSerializedData(), kind: this.kind };
   }
 }

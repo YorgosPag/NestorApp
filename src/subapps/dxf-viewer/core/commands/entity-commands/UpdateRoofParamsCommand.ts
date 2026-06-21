@@ -99,12 +99,7 @@ export class UpdateRoofParamsCommand extends MergeableUpdateCommand<RoofPatch> {
   }
 
   protected serializedData(): Record<string, unknown> {
-    return {
-      roofId: this.entityId,
-      params: this.patch.params,
-      previousParams: this.previousPatch.params,
-      isDragging: this.isDragging,
-      typeChange: this.typeChange ?? null,
-    };
+    // Canonical base shape + Roof's genuine extra state (the Type assignment).
+    return { ...this.baseSerializedData(), typeChange: this.typeChange ?? null };
   }
 }

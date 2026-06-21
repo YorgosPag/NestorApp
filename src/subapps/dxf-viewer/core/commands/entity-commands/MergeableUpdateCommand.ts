@@ -78,10 +78,17 @@ export abstract class MergeableUpdateCommand<TPatch> implements ICommand {
   abstract validate(): string | null;
 
   /**
-   * `data` payload for `serialize()`. Default = canonical shape; override to
-   * preserve a legacy key shape byte-for-byte (e.g. `finishId`, `boundaryPaths`).
+   * `data` payload for `serialize()`. Default = the canonical shape. A subclass
+   * with genuine extra state (e.g. Roof `typeChange`, Wall `kind`) overrides this
+   * and **spreads `baseSerializedData()`** so the four canonical fields are never
+   * re-spelled — one SSoT serialize shape, special cases only add their delta.
    */
   protected serializedData(): Record<string, unknown> {
+    return this.baseSerializedData();
+  }
+
+  /** Canonical serialized payload (SSoT) — spread in a subclass override to add extra state. */
+  protected baseSerializedData(): Record<string, unknown> {
     return {
       entityId: this.entityId,
       patch: this.patch,

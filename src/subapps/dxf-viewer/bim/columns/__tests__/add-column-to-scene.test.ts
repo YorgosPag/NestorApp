@@ -48,7 +48,7 @@ function centerGrip(entityId: string, pos = { x: 0, y: 0 }): UnifiedGripInfo {
 }
 
 describe('addColumnToScene', () => {
-  it('appends the column, persists the scene, broadcasts drawing:entity-created', () => {
+  it('appends the column, persists the scene, broadcasts drawing:entity-created', async () => {
     const col = makeColumn({ x: 0, y: 0 });
     const scene = { current: { entities: [] } as unknown as SceneModel };
     const events: Array<{ id: string; tool: string }> = [];
@@ -56,7 +56,11 @@ describe('addColumnToScene', () => {
 
     addColumnToScene(col, makeDeps(scene));
 
+    // Scene mutation is synchronous (CreateBimEntityCommand.execute → adapter.addEntity).
     expect(scene.current?.entities.map((e) => e.id)).toContain(col.id);
+    // ADR-390 — the persistence broadcast now fires in a microtask (deferred so it
+    // runs after CommandHistory.execute pushes the command → reaction grouping is safe).
+    await Promise.resolve();
     expect(events).toEqual([{ id: col.id, tool: 'column' }]);
     off();
   });
@@ -89,7 +93,7 @@ describe('addColumnToScene', () => {
 });
 
 describe('commitColumnCopy', () => {
-  it('inserts a NEW column translated by delta, original untouched', () => {
+  it('inserts a NEW column translated by delta, original untouched', async () => {
     const original = makeColumn({ x: 0, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
     const created: ColumnEntity[] = [];
@@ -113,6 +117,8 @@ describe('commitColumnCopy', () => {
     const stillOriginal = scene.current!.entities.find((e) => e.id === original.id) as ColumnEntity;
     expect(stillOriginal.params.position.x).toBeCloseTo(0, 6);
 
+    // ADR-390 — broadcast deferred to a microtask (CreateBimEntityCommand).
+    await Promise.resolve();
     expect(created).toHaveLength(1);
     expect(created[0].id).toBe(copy.id);
     off();
