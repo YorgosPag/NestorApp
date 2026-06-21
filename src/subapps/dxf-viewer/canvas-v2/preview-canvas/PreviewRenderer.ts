@@ -39,6 +39,7 @@ import { BimPreviewRenderer } from './bim-preview-render';
 // ADR-398 §beam-to-beam framing — 🔴 schematic override για το beam ghost (κοινό SSoT
 // με το column anchor ghost) όταν η σύνδεση είναι παράλογη (συγγραμμική κοντή άκρη).
 import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
+import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
 import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
@@ -313,14 +314,15 @@ export class PreviewRenderer {
     const bimMeta = entity as {
       wysiwygPreview?: boolean;
       ghostStatusColor?: GhostStatusColor | null;
-      geometry?: { outline?: { vertices?: ReadonlyArray<{ x: number; y: number }> } };
     };
     if (bimMeta.wysiwygPreview && this.bimPreview) {
       // ADR-398 §beam-to-beam framing — όταν η σύνδεση είναι παράλογη (🔴), ζωγράφισε
       // κόκκινο schematic (outline + 30% fill) του outline αντί WYSIWYG amber, μέσω του
       // κοινού `drawStatusGhostPolygon` SSoT (ίδιο look με το active column anchor ghost).
       const statusColor = bimMeta.ghostStatusColor;
-      const outline = bimMeta.geometry?.outline?.vertices;
+      // SSoT: footprint polygon for ANY entity (column/beam → outline.vertices· τοίχος →
+      // outerEdge+innerEdge). Χωρίς αυτό το wall ghost δεν γινόταν ποτέ κόκκινο (ADR-508).
+      const outline = resolveStatusGhostOutline(entity);
       if (statusColor && outline && outline.length >= 3) {
         drawStatusGhostPolygon(ctx, outline, transform, viewport, statusColor);
         return;
