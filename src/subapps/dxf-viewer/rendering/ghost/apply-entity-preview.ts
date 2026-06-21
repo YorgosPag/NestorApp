@@ -48,6 +48,8 @@ import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
+import { applyHatchGripDrag } from '../../bim/hatch/hatch-grips';
+import type { HatchEntity } from '../../types/entities';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
@@ -99,7 +101,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -309,6 +311,17 @@ export function applyEntityPreview(
     const newParams = applyFloorFinishGripDrag(floorFinishGripKind, { originalParams: finish.params, delta });
     if (newParams === finish.params) return entity;
     return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-507 — parametric hatch live preview ────────────────────────────────
+  // entity IS the raw HatchEntity (DIRECT entity, boundaryPaths at top level).
+  // The ghost renderer repaints the outline from the new ring without re-running
+  // the fill-pattern math.
+  if (hatchGripKind && entity.type === 'hatch') {
+    const hatch = entity as unknown as HatchEntity;
+    const newBoundaryPaths = applyHatchGripDrag(hatchGripKind, { originalBoundaryPaths: hatch.boundaryPaths, delta });
+    if (newBoundaryPaths === hatch.boundaryPaths) return entity;
+    return { ...(entity as object), boundaryPaths: newBoundaryPaths } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────

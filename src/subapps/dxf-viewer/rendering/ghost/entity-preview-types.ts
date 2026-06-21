@@ -20,6 +20,7 @@ import type {
   SlabOpeningGripKind,
   RoofGripKind,
   FloorFinishGripKind,
+  HatchGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
@@ -87,6 +88,8 @@ export interface EntityPreviewTransform {
    * `applyFloorFinishGripDrag` (params-only); the ghost is the new footprint outline.
    */
   readonly floorFinishGripKind?: FloorFinishGripKind;
+  /** ADR-507 — hatch boundary grip discriminator (live outline ghost). */
+  readonly hatchGripKind?: HatchGripKind;
   /**
    * ADR-406 — parametric MEP fixture discriminator. Routes preview through
    * `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`. ORTHO (F8) is read

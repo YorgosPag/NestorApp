@@ -370,6 +370,28 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       grips.push(...getMepUnderfloorGrips(entity as unknown as MepUnderfloorEntity));
       break;
     }
+
+    case 'hatch': {
+      // ADR-507 — hatch boundary vertex grips: one per (path, vertex), mirror of
+      // HatchRenderer.getGrips. Hatch is a DIRECT entity (boundaryPaths at top level
+      // in DxfEntityUnion). The `hatchGripKind` encodes BOTH ring + vertex indices
+      // so the drag commit (applyHatchGripDrag → UpdateHatchBoundaryCommand) can
+      // translate the exact vertex even on multi-ring (island) hatches.
+      type HatchLike = { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
+      const paths = (entity as unknown as HatchLike).boundaryPaths ?? [];
+      let gripIndex = 0;
+      paths.forEach((path, pathIdx) => {
+        path.forEach((v, vertexIdx) => {
+          grips.push({
+            entityId: entity.id, gripIndex, type: 'vertex',
+            position: { x: v.x, y: v.y }, movesEntity: false,
+            hatchGripKind: `hatch-vertex-${pathIdx}-${vertexIdx}`,
+          });
+          gripIndex += 1;
+        });
+      });
+      break;
+    }
   }
 
   return grips;

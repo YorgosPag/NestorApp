@@ -92,6 +92,7 @@ import {
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitFloorFinishGripDrag,
+  commitHatchGripDrag,
   commitMepUnderfloorGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
@@ -345,6 +346,13 @@ export function commitDxfGripDragModeAware(
   // geometry atomically. Mirrors slab/roof path.
   if (grip.floorFinishGripKind) {
     commitFloorFinishGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-507 — hatch boundary parametric grip path (per-vertex translate on
+  // boundaryPaths). Bypasses stretch; UpdateHatchBoundaryCommand patches the
+  // outline + merges drag samples into one undo.
+  if (grip.hatchGripKind) {
+    commitHatchGripDrag(grip, delta, deps);
     return;
   }
   // ADR-408 Εύρος Β #3 — underfloor heating loop parametric grip path (per-vertex

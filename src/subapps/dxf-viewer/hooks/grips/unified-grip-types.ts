@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -274,6 +274,12 @@ export interface UnifiedGripInfo {
    * (per-vertex translate + edge-midpoint insertion, mirrors slab/roof).
    */
   readonly floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-507 — hatch boundary grip discriminator (forwarded from
+   * `GripInfo.hatchGripKind`). Routes commit through `applyHatchGripDrag()` +
+   * `UpdateHatchBoundaryCommand` (per-vertex translate on `boundaryPaths`).
+   */
+  readonly hatchGripKind?: HatchGripKind;
   /**
    * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator
    * (forwarded from `GripInfo.mepUnderfloorGripKind`). Routes commit through

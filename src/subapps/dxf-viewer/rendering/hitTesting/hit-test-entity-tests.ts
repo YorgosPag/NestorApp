@@ -16,6 +16,7 @@ import {
   isFloorFinishEntity,
   isFoundationEntity,
   isSpaceSeparatorEntity,
+  isHatchEntity,
 } from '../../types/entities';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
@@ -74,8 +75,21 @@ export function performDetailedHitTest(
     // ADR-437 — space separator: point-to-segment distance (a thin line needs a
     // tolerance corridor, NOT bbox-only — else the diagonal-line bbox over-selects).
     case 'space-separator': return hitTestSpaceSeparator(entity, point, tolerance);
+    // ADR-507 — hatch even-odd polygon containment (outer ring minus island rings),
+    // mirror of HatchRenderer.hitTest. Without this it fell to `default` = AABB-only
+    // (over-selects non-convex hatches + the gaps between islands).
+    case 'hatch': return hitTestHatch(entity, point);
     default: return { hitType: 'entity', hitPoint: point };
   }
+}
+
+function hitTestHatch(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isHatchEntity(entity)) return null;
+  const paths = (entity.boundaryPaths ?? []).filter((p) => p.length >= 3);
+  if (paths.length === 0) return null;
+  let inside = 0;
+  for (const path of paths) if (isPointInPolygon(point, poly3to2(path))) inside += 1;
+  return inside % 2 === 1 ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 // ===== BIM ENTITIES (ADR-363 Bug 1 — polygon containment) =====

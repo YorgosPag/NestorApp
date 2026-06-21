@@ -213,6 +213,16 @@ export type FloorFinishGripKind =
   | `floor-finish-edge-midpoint-${number}`;
 
 /**
+ * ADR-507 — Hatch grip kind (parametric grip type). The hatch is a FLAT primitive
+ * (`boundaryPaths: Point2D[][]`), so the kind encodes BOTH ring + vertex indices
+ * (unlike the flat floor-finish footprint). Routes commit through
+ * `applyHatchGripDrag()` + `UpdateHatchBoundaryCommand`.
+ *
+ *   - `hatch-vertex-${pathIdx}-${vertexIdx}` → translate boundary vertex.
+ */
+export type HatchGripKind = `hatch-vertex-${number}-${number}`;
+
+/**
  * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam grip kind (parametric grip type).
  * Routes commit through `applyBeamGripDrag()` + `UpdateBeamParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.

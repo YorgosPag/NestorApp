@@ -50,6 +50,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.floorplanSymbolGripKind ? { floorplanSymbolGripKind: dp.floorplanSymbolGripKind } : {}),
     // ADR-419 — floor-finish parametric ghost (footprint vertex / insert).
     ...(dp.floorFinishGripKind ? { floorFinishGripKind: dp.floorFinishGripKind } : {}),
+    // ADR-507 — hatch boundary parametric ghost (vertex translate).
+    ...(dp.hatchGripKind       ? { hatchGripKind:       dp.hatchGripKind }        : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

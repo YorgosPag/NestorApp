@@ -348,6 +348,14 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       const r = (entity as unknown as DxfRayLike).rayEntity;
       return { ...baseModel, type: 'ray', basePoint: r.basePoint, direction: r.direction, secondPoint: r.secondPoint } as unknown as EntityModel;
     }
+    // ADR-507 — hatch is a DIRECT entity (boundaryPaths at top level, like floor-finish).
+    // Without this case it fell to `default` which strips boundaryPaths →
+    // BoundsCalculator.calculateHatchBounds returns null → hatch never enters the
+    // spatial index → hover + click-selection silently fail.
+    case 'hatch': {
+      type HatchLike = { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
+      return { ...baseModel, type: 'hatch', boundaryPaths: (entity as unknown as HatchLike).boundaryPaths } as unknown as EntityModel;
+    }
     default: {
       return { ...baseModel } as unknown as EntityModel;
     }

@@ -18,6 +18,7 @@ import type {
   SlabOpeningGripKind,
   RoofGripKind,
   FloorFinishGripKind,
+  HatchGripKind,
   MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
@@ -47,6 +48,7 @@ export type {
   SlabOpeningGripKind,
   RoofGripKind,
   FloorFinishGripKind,
+  HatchGripKind,
   MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
@@ -125,6 +127,12 @@ export interface GripInfo {
    * (per-vertex translate + edge-midpoint insertion).
    */
   floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-507 — hatch boundary grip discriminator. Present only when the grip
+   * belongs to a `HatchEntity`; routes the commit through `applyHatchGripDrag()`
+   * + `UpdateHatchBoundaryCommand` (per-vertex translate on `boundaryPaths`).
+   */
+  hatchGripKind?: HatchGripKind;
   /**
    * ADR-408 Εύρος Β #3 — underfloor heating loop polygon grip discriminator.
    * Present only when the grip belongs to a `MepUnderfloorEntity`; routes the

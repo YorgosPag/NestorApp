@@ -100,6 +100,7 @@ export {
   commitRoofGripDrag,
   commitSlabOpeningGripDrag,
   commitFloorFinishGripDrag,
+  commitHatchGripDrag,
 } from './grip-parametric-footprint-commits';
 
 /**

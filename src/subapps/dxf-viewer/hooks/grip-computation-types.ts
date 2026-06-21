@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, MepUnderfloorGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -121,6 +121,11 @@ export interface DxfGripDragPreview {
    * through `applyFloorFinishGripDrag` (params-only; footprint polygon redrawn).
    */
   floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-507 — hatch boundary grip discriminator. Routes the live ghost through
+   * `applyHatchGripDrag` (boundaryPaths-only; outline redrawn from the new ring).
+   */
+  hatchGripKind?: HatchGripKind;
   /**
    * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator.
    * Routes the live ghost through `applyMepUnderfloorGripDrag` (params-only;

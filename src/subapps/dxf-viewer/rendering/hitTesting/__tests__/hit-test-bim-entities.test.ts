@@ -257,6 +257,41 @@ describe('hitTestOpening — Bug 4: leaf line + swing arc (ADR-363)', () => {
   });
 });
 
+// ─── ADR-507 — hatch even-odd polygon containment ─────────────────────────────
+
+function makeHatchEntity(): Entity {
+  return {
+    id: 'hatch_1',
+    type: 'hatch',
+    layerId: '0',
+    visible: true,
+    // Outer 1000×1000 ring + inner 200×200 island hole centred at (500,500).
+    boundaryPaths: [
+      [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }],
+      [{ x: 400, y: 400 }, { x: 600, y: 400 }, { x: 600, y: 600 }, { x: 400, y: 600 }],
+    ],
+    fillType: 'solid',
+  } as unknown as Entity;
+}
+
+describe('performDetailedHitTest — hatch even-odd containment (ADR-507)', () => {
+  it('hits when the point is inside the outer ring but outside any island', () => {
+    const result = performDetailedHitTest(makeHatchEntity(), { x: 100, y: 100 }, 1);
+    expect(result).not.toBeNull();
+    expect(result?.hitType).toBe('entity');
+  });
+
+  it('misses when the point is inside an island hole (even-odd → 2 crossings)', () => {
+    const result = performDetailedHitTest(makeHatchEntity(), { x: 500, y: 500 }, 1);
+    expect(result).toBeNull();
+  });
+
+  it('misses when the point is outside the outer ring', () => {
+    const result = performDetailedHitTest(makeHatchEntity(), { x: 2000, y: 2000 }, 1);
+    expect(result).toBeNull();
+  });
+});
+
 describe('calculatePriority — child-over-parent (ADR-363 Bug 1)', () => {
   it('opening priority > wall priority', () => {
     const op = makeOpeningEntity();

@@ -13,6 +13,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
+import type { HatchEntity } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { RoofEntity } from '../../bim/types/roof-types';
@@ -20,10 +21,12 @@ import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
 import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import { UpdateFloorFinishParamsCommand } from '../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
+import { UpdateHatchBoundaryCommand } from '../../core/commands/entity-commands/UpdateHatchBoundaryCommand';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
+import { applyHatchGripDrag } from '../../bim/hatch/hatch-grips';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -200,4 +203,44 @@ export function commitFloorFinishGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('floor-finish', grip.entityId);
+}
+
+/**
+ * ADR-507 — Hatch boundary grip commit (per-vertex translate on `boundaryPaths`).
+ * Mirrors `commitFloorFinishGripDrag` but the hatch is a FLAT primitive (no
+ * params/geometry) → routes through `applyHatchGripDrag()` +
+ * `UpdateHatchBoundaryCommand`. The merge window (ADR-031) collapses a continuous
+ * drag into one undo entry. Shift drives rectilinear constraint via
+ * `ShiftKeyTracker`. No `emitBimEntityParamsUpdated` — the hatch is not a BIM
+ * params entity; `useHatchPersistence` auto-saves the patched boundaryPaths.
+ */
+export function commitHatchGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.hatchGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<HatchEntity>;
+  if (candidate.type !== 'hatch' || !candidate.boundaryPaths) return;
+  const original = candidate.boundaryPaths;
+  const rectilinear = ShiftKeyTracker.getSnapshot();
+  const newBoundaryPaths = applyHatchGripDrag(grip.hatchGripKind, {
+    originalBoundaryPaths: original,
+    delta,
+    rectilinear,
+  });
+  if (newBoundaryPaths === original) return;
+  const command = new UpdateHatchBoundaryCommand(
+    grip.entityId,
+    newBoundaryPaths,
+    original,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
 }
