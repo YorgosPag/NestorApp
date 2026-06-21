@@ -21,10 +21,13 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
-import { resolveDxfCanvasBackgroundHex, CAD_UI_COLORS } from '../../config/color-config';
+import { CAD_UI_COLORS } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
+
+/** Extra screen-px the number sits BEYOND the dim line (so it never overlaps it — no bg chip). */
+const LABEL_CLEARANCE_PX = 9;
 
 /** Build a transient aligned dim entity for one along-face measurement. Text is suppressed
  *  (`userText: ''`) — the number is drawn separately via the overlay-text SSoT. */
@@ -54,7 +57,6 @@ export function paintGhostFaceDimensions(
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
 ): void {
-  const bgColor = resolveDxfCanvasBackgroundHex();
   const textColor = CAD_UI_COLORS.entity.preview;
   const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
   for (const d of meta.dims) {
@@ -67,9 +69,21 @@ export function paintGhostFaceDimensions(
       viewport,
       opts: { overlayLineStyle: true },
     });
-    // Number via the overlay-text SSoT, forced to METRES (architectural convention).
+    // Number via the overlay-text SSoT, forced to METRES (architectural convention), placed a
+    // few px BEYOND the dim line (along its outward offset) so it never crosses any line — no
+    // background needed. Outward = (dimLineRef − face-midpoint), in screen space.
     const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
-    const screen = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
-    drawOverlayLabel(ctx, label, screen.x, screen.y, { textColor, bgColor, align: 'center' });
+    const sRef = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
+    const sMid = CoordinateTransforms.worldToScreen(
+      { x: (d.p1.x + d.p2.x) / 2, y: (d.p1.y + d.p2.y) / 2 }, transform, viewport,
+    );
+    const ox = sRef.x - sMid.x, oy = sRef.y - sMid.y;
+    const olen = Math.hypot(ox, oy) || 1;
+    drawOverlayLabel(
+      ctx, label,
+      sRef.x + (ox / olen) * LABEL_CLEARANCE_PX,
+      sRef.y + (oy / olen) * LABEL_CLEARANCE_PX,
+      { textColor, align: 'center' },
+    );
   }
 }

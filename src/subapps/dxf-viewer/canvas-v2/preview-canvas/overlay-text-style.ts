@@ -21,16 +21,15 @@ export const OVERLAY_TEXT_FONT = `${OVERLAY_TEXT_PX}px monospace`;
 export interface OverlayLabelStyle {
   /** Glyph colour. */
   readonly textColor: string;
-  /** Background chip colour (so dashed guide lines never show through the number). */
-  readonly bgColor: string;
   /** 'left' = text starts at the anchor (tooltip beside cursor); 'center' = centred on the
-   *  anchor (dimension number on its dim line). Default 'left'. */
+   *  anchor (dimension number, placed clear of its dim line). Default 'left'. */
   readonly align?: 'left' | 'center';
 }
 
 /**
- * Draw `label` at screen-space `(anchorX, anchorY)` with the canonical overlay font + an
- * opaque background chip. No-op for an empty label. Self-contained ctx save/restore.
+ * Draw `label` at screen-space `(anchorX, anchorY)` with the canonical overlay font. NO
+ * background (Giorgio: «δεν θέλω φόντο κάτω από τα κείμενα») — callers anchor the label clear
+ * of any guide line. No-op for an empty label. Self-contained ctx save/restore.
  */
 export function drawOverlayLabel(
   ctx: CanvasRenderingContext2D,
@@ -40,19 +39,12 @@ export function drawOverlayLabel(
   style: OverlayLabelStyle,
 ): void {
   if (!label) return;
-  const centered = style.align === 'center';
   ctx.save();
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
   ctx.font = OVERLAY_TEXT_FONT;
-  ctx.textAlign = centered ? 'center' : 'left';
+  ctx.textAlign = style.align === 'center' ? 'center' : 'left';
   ctx.textBaseline = 'middle';
-  const w = ctx.measureText(label).width;
-  const padX = 4;
-  const halfH = 9;
-  const bgLeft = centered ? anchorX - w / 2 - padX : anchorX - padX;
-  ctx.fillStyle = style.bgColor;
-  ctx.fillRect(bgLeft, anchorY - halfH, w + padX * 2, halfH * 2);
   ctx.fillStyle = style.textColor;
   ctx.fillText(label, anchorX, anchorY);
   ctx.restore();
