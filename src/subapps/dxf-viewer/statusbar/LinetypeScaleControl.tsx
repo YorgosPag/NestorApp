@@ -4,9 +4,8 @@
  * LinetypeScaleControl — global LTSCALE knob for the CAD status bar (ADR-510 Φ2E #2).
  *
  * Always-visible numeric input that drives the drawing-wide linetype scale
- * (AutoCAD `LTSCALE`). Mirrors the `SnapToggleWithStep` numeric-input pattern in
- * `CadStatusBar.tsx`: a local text buffer so mid-typing never snaps back, with a
- * positive-number guard applying live on every keystroke.
+ * (AutoCAD `LTSCALE`). Reuses the shared `StatusBarNumericField` live-apply control
+ * (local text buffer + range guard) — same SSoT as the snap-step field.
  *
  * SSoT: `stores/LinetypeScaleStore.ts` (zero React state, localStorage-persisted).
  * The canvas dash renderer (`rendering/linetype-dash-resolver.ts`) multiplies this
@@ -16,7 +15,7 @@
  * under the 500-line Google limit (N.7.1).
  */
 
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -24,6 +23,7 @@ import {
   setLinetypeScale,
   subscribeLinetypeScale,
 } from '../stores/LinetypeScaleStore';
+import { StatusBarNumericField } from './StatusBarNumericField';
 
 const LTSCALE_INPUT_ID = 'cad-ltscale-input';
 
@@ -34,10 +34,6 @@ export function LinetypeScaleControl() {
     getLinetypeScale,
     getLinetypeScale,
   );
-  // Local text buffer — partial/empty drafts (e.g. "0.") never snap back; a valid
-  // positive number applies live. AutoCAD rejects LTSCALE <= 0 (store guards too).
-  const [text, setText] = useState(String(scale));
-  useEffect(() => { setText(String(scale)); }, [scale]);
 
   return (
     <Tooltip>
@@ -49,19 +45,16 @@ export function LinetypeScaleControl() {
           >
             {t('cadDock.statusBar.ltscale')}
           </label>
-          <input
+          {/* AutoCAD rejects LTSCALE <= 0 → minExclusive (store guards again too). */}
+          <StatusBarNumericField
             id={LTSCALE_INPUT_ID}
-            type="number"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              const n = parseFloat(e.target.value);
-              if (!isNaN(n) && n > 0) setLinetypeScale(n);
-            }}
-            aria-label={t('cadDock.statusBar.ltscaleDesc')}
-            className="h-6 w-16 text-xs px-2 rounded border border-border bg-background"
+            value={scale}
+            onCommit={setLinetypeScale}
+            ariaLabel={t('cadDock.statusBar.ltscaleDesc')}
             min={0}
+            minExclusive
             step={0.25}
+            widthClass="w-16"
           />
         </div>
       </TooltipTrigger>

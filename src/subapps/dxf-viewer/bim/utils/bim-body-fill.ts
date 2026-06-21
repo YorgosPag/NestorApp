@@ -34,8 +34,19 @@ export function resolveBimBodyFill(
   fallbackFill: string,
   bgHex?: string,
 ): string {
-  return adaptFillTintForCanvas(
-    resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill,
-    bgHex,
-  );
+  return adaptBimBodyFill(resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill, bgHex);
+}
+
+/**
+ * Adaptive-only entry point του ίδιου SSoT, για body fills όπου το V/G tint + το
+ * fallback έχουν ΗΔΗ λυθεί upstream και ΔΕΝ ταιριάζουν στο single-fallback signature
+ * του {@link resolveBimBodyFill} — π.χ. ο `StairRenderer` λύνει το V/G tint πάνω
+ * (με cutState/objectStyles) και το per-tread-type fallback (glass vs default) κάτω
+ * στο render module. Έτσι ΟΛΑ τα BIM body fills περνούν από το ΙΔΙΟ module → ένα
+ * adaptive SSoT, μηδέν διπλότυπη κλήση του `adaptFillTintForCanvas` διάσπαρτη.
+ *
+ * @param resolvedFill το ήδη resolved `rgba` (V/G tint ?? palette fallback).
+ */
+export function adaptBimBodyFill(resolvedFill: string, bgHex?: string): string {
+  return adaptFillTintForCanvas(resolvedFill, bgHex);
 }
