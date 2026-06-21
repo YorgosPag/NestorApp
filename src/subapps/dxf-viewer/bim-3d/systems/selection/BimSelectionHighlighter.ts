@@ -10,16 +10,10 @@
  */
 
 import * as THREE from 'three';
+import { sameSet } from '../../../utils/set-equality';
 
 const HIGHLIGHT_EMISSIVE = new THREE.Color(0xffd700);
 const HIGHLIGHT_EMISSIVE_INTENSITY = 0.3;
-
-/** Set equality (same size + every member shared). */
-function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
-  return true;
-}
 
 export class BimSelectionHighlighter {
   private readonly _originals = new Map<

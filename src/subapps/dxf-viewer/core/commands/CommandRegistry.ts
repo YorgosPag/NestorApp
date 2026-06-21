@@ -139,13 +139,15 @@ export function registerBuiltInCommands(registry: ICommandRegistry): void {
         vertexIndex: number;
         oldPosition: { x: number; y: number };
         newPosition: { x: number; y: number };
+        isDragging?: boolean;
       };
       return new MoveVertexCommand(
         data.entityId,
         data.vertexIndex,
         data.oldPosition,
         data.newPosition,
-        sceneManager
+        sceneManager,
+        data.isDragging ?? false
       );
     });
 

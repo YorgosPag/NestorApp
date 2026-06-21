@@ -17,6 +17,7 @@
 
 import type { ICommand } from './interfaces';
 import { DEFAULT_MERGE_CONFIG } from './interfaces';
+import { sameSet } from '../../utils/set-equality';
 
 /**
  * True when `later` was created within the canonical merge window after
@@ -31,15 +32,11 @@ export function isWithinMergeWindow(earlier: ICommand, later: ICommand): boolean
 /**
  * True when two id lists denote the SAME set of entities (order-independent,
  * deduplicated). The transform commands merge only when both samples target the
- * identical selection — this is that identity check, shared so the comparison is
- * written once.
+ * identical selection — this is that identity check. Array variant: delegates to
+ * the generic `sameSet` SSoT (`utils/set-equality`) so the membership comparison
+ * is written once across the codebase.
  */
 export function sameEntityIdSet(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;
-  const setA = new Set(a);
-  if (setA.size !== new Set(b).size) return false;
-  for (const id of b) {
-    if (!setA.has(id)) return false;
-  }
-  return true;
+  return sameSet(new Set(a), new Set(b));
 }

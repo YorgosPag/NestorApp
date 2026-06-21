@@ -148,6 +148,26 @@ export class PreviewRenderer {
   }
 
   /**
+   * 🏢 Revit/AutoCAD world-locked transform refresh (ADR-040 / ADR-398 §4).
+   *
+   * Re-paints the SAME cached preview entity with a new transform WITHOUT
+   * re-resolving snap. The cached entity lives in WORLD coords, so feeding a
+   * new transform rescales/repositions it correctly while it stays locked to
+   * its last world point — exactly how Revit/AutoCAD ghosts behave on a
+   * mouse-wheel zoom that fires no `mousemove`.
+   *
+   * No-op when there is nothing to paint (no entity AND no tracking markers),
+   * so a bare pan/zoom over an empty canvas costs nothing.
+   */
+  refreshTransform(transform: ViewTransform, viewport: Viewport): void {
+    if (!this.currentPreview && this.trackingMarkers.length === 0) return;
+    this.currentTransform = transform;
+    this.currentViewport = viewport;
+    this.isDirty = true;
+    this.render();
+  }
+
+  /**
    * Set the acquired Object Snap Tracking markers (ADR-357 Phase 4).
    * Markers persist across `drawPreview` cycles — the renderer paints them
    * after every preview so the `+` glyphs stay anchored to acquired points.

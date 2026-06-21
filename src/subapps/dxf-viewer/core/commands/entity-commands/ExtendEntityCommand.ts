@@ -18,6 +18,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import { noopAuditRecorder, type IDxfTextAuditRecorder } from '../text/types';
 import type { ExtendOperation } from '../../../systems/extend/extend-types';
 import type { Entity } from '../../../types/entities';
+import { geometryFromSnapshot } from './snapshot-geometry';
 
 export interface ExtendCommandParams {
   readonly operations: ReadonlyArray<ExtendOperation>;
@@ -106,8 +107,9 @@ export class ExtendEntityCommand implements ICommand {
   }
 
   private geometryUpdates(entity: Readonly<Entity>): Partial<SceneEntity> {
-    const { id: _id, type: _type, layer: _layer, visible: _v, ...rest } = entity as unknown as SceneEntity & Record<string, unknown>;
-    return rest as Partial<SceneEntity>;
+    // Geometry-only restore onto an existing entity — drop identity AND `type`
+    // (Extend never changes the entity's type). SSoT: snapshot-geometry.
+    return geometryFromSnapshot(entity as unknown as SceneEntity, { excludeType: true });
   }
 
   private recordAudit(op: 'extend' | 'extend-undo'): void {

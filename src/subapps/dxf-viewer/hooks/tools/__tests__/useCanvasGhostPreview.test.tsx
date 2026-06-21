@@ -26,10 +26,18 @@ jest.mock('../../../systems/cursor/useCursor', () => ({
 jest.mock('../../../systems/cursor/ImmediateSnapStore', () => ({
   getImmediateSnap: jest.fn(),
 }));
+// ADR-398 §4 — live transform SSoT: harness subscribes here for zero-lag redraw
+// on mouse-wheel zoom/pan (no mousemove). Mock it so a test can fire the callback.
+jest.mock('../../../systems/cursor/ImmediateTransformStore', () => ({
+  subscribeTransform: jest.fn(),
+}));
+
+import { subscribeTransform } from '../../../systems/cursor/ImmediateTransformStore';
 
 const mockFrame = getCanonicalPreviewFrame as jest.Mock;
 const mockCursor = useCursorWorldPosition as jest.Mock;
 const mockSnap = getImmediateSnap as jest.Mock;
+const mockSubscribeTransform = subscribeTransform as jest.Mock;
 
 // Synchronous RAF so drawFrame runs within the effect commit.
 let rafSpy: jest.SpyInstance;
@@ -66,6 +74,7 @@ beforeEach(() => {
   mockFrame.mockReset().mockReturnValue(CANON);
   mockCursor.mockReset().mockReturnValue({ x: 50, y: 60 });
   mockSnap.mockReset().mockReturnValue({ found: false, point: null });
+  mockSubscribeTransform.mockReset().mockReturnValue(() => {});
 });
 
 describe('ADR-398 §4 — useCanvasGhostPreview', () => {
@@ -130,6 +139,35 @@ describe('ADR-398 §4 — useCanvasGhostPreview', () => {
     // useCursorWorldPosition called with `false` (no subscription while 'none')
     expect(mockCursor).toHaveBeenCalledWith(false);
     expect(draw.mock.calls[0][0].effectiveCursor).toBeNull();
+  });
+
+  it('re-draws on a live transform change (mouse-wheel zoom with no mousemove)', () => {
+    let transformCb: (() => void) | null = null;
+    mockSubscribeTransform.mockImplementation((cb: () => void) => {
+      transformCb = cb;
+      return () => { transformCb = null; };
+    });
+    const { canvas } = makeCanvas();
+    const draw = jest.fn();
+    renderHook(() =>
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+    );
+    expect(draw).toHaveBeenCalledTimes(1); // initial paint
+    expect(transformCb).not.toBeNull(); // subscribed to the transform SSoT
+
+    transformCb!(); // simulate wheel-zoom: store notifies, cursor did NOT move
+    expect(draw).toHaveBeenCalledTimes(2); // ghost re-painted in lockstep (Revit world-lock)
+  });
+
+  it('unsubscribes from the transform SSoT on unmount', () => {
+    const unsub = jest.fn();
+    mockSubscribeTransform.mockReturnValue(unsub);
+    const { canvas } = makeCanvas();
+    const { unmount } = renderHook(() =>
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw: jest.fn() }),
+    );
+    unmount();
+    expect(unsub).toHaveBeenCalledTimes(1);
   });
 
   it('does not draw while inactive, and clears on exit transition', () => {

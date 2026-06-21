@@ -30,6 +30,10 @@ import {
   getCanonicalPreviewFrame,
   type GhostDrawDelegate,
 } from '../../systems/preview/ghost-preview-frame';
+// 🏢 ADR-040 / ADR-398 §4 — live transform SSoT: zero-lag redraw on mouse-wheel
+// zoom/pan (no mousemove). Same store that drives the main canvas → world-locked
+// ghost rescales in lockstep (Revit/AutoCAD), no React-prop lag.
+import { subscribeTransform } from '../../systems/cursor/ImmediateTransformStore';
 // 🏢 SSoT — DPR-aware canvas clear (ADR-084 withCanvasState· αντικαθιστά το idiom
 // που ήταν copy-pasted στα 19 ghost hooks + ~5 άλλα σημεία).
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
@@ -57,10 +61,11 @@ export interface CanvasGhostPreviewConfig {
   /** Το element για μέτρηση viewport (κανονικά το DxfCanvas)· fallback `getCanvas`. */
   getViewportElement?(): HTMLElement | null;
   /**
-   * React-prop transform — χρησιμοποιείται ΜΟΝΟ ως redraw-trigger (effect dep) ώστε
-   * το ghost να επανασχεδιάζεται σε programmatic transform changes (fit/zoom button).
-   * Η ΠΡΑΓΜΑΤΙΚΗ τιμή που ζωγραφίζεται είναι το live `getImmediateTransform()` μέσα
-   * στο canonical frame (zero-lag, ίδιο με τον main canvas).
+   * @deprecated (ADR-398 §4) Ο redraw σε transform change οδηγείται πλέον από το
+   * live `subscribeTransform` SSoT (zero-lag, ίδιο store με τον main canvas) — όχι
+   * από αυτό το React-prop. Παραμένει στο interface για backward-compat με τους ~19
+   * consumers· δεν διαβάζεται πλέον εσωτερικά. Η ΠΡΑΓΜΑΤΙΚΗ τιμή που ζωγραφίζεται
+   * είναι το live `getImmediateTransform()` μέσα στο canonical frame.
    */
   readonly transform: ViewTransform;
   /** Default `'world-position'`. */
@@ -75,7 +80,7 @@ export interface CanvasGhostPreviewConfig {
 
 export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>): void {
   const {
-    isActive, getCanvas, getViewportElement, transform,
+    isActive, getCanvas, getViewportElement,
     cursorMode = 'world-position', useImmediateSnap = false, clearMode = 'on-gate-exit', draw,
   } = config;
 
@@ -129,13 +134,20 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
     prevActiveRef.current = isActive;
   }, [isActive, clearCanvas]);
 
-  // Schedule ένα draw ανά cursor / state change ενόσω ενεργό. `transform` στις deps =
-  // redraw-trigger για programmatic transform changes (η live τιμή διαβάζεται στο draw).
+  // Schedule ένα draw ανά cursor / state change ενόσω ενεργό + ένα ζωγράφισμα σε
+  // ΚΑΘΕ live transform change (zoom/pan με ροδάκι, ΧΩΡΙΣ κίνηση κέρσορα). Η
+  // subscription στο `subscribeTransform` SSoT είναι zero-lag (ίδιο store με τον
+  // main canvas) → world-locked ghost σαν Revit, χωρίς εξάρτηση από React-prop lag.
   useEffect(() => {
     if (!isActive) return;
     rafRef.current = requestAnimationFrame(drawFrame);
+    const unsubscribe = subscribeTransform(() => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(drawFrame);
+    });
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      unsubscribe();
     };
-  }, [isActive, drawFrame, transform]);
+  }, [isActive, drawFrame]);
 }

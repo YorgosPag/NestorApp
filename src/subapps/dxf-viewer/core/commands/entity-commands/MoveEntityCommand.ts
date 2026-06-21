@@ -27,7 +27,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 // → pure plan move). The per-type `z` interpretation lives in `calculateBimMovedGeometry`.
 import type { Point3D } from '../../../bim/types/bim-base';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 import { deepClone } from '../../../utils/clone-utils';
 // 🏢 ADR-065: Extracted geometry utilities
 import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
@@ -145,9 +145,8 @@ export class MoveEntityCommand implements ICommand {
       return false;
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Same entity, both dragging, within the canonical merge window → coalesce.
+    return isWithinMergeWindow(this, other);
   }
 
   /**
@@ -363,9 +362,8 @@ export class MoveMultipleEntitiesCommand implements ICommand {
       return false;
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Same entity set, both dragging, within the canonical merge window → coalesce.
+    return isWithinMergeWindow(this, other);
   }
 
   /**

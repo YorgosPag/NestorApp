@@ -16,6 +16,8 @@
  * `useSyncExternalStore` compatible.
  */
 
+import { sameSet } from '../../utils/set-equality';
+
 type IsolateEffectsListener = () => void;
 
 export interface IsolateEffectsSnapshot {
@@ -121,9 +123,9 @@ export function setIsolateEffects(input: SetIsolateEffectsInput): void {
     snapshot.mode === input.mode &&
     snapshot.dimOpacityPercent === input.dimOpacityPercent &&
     snapshot.category === (input.category ?? null) &&
-    sameMembership(snapshot.isolatedLayerIds, nextLayerSet) &&
-    sameMembership(snapshot.isolatedEntityIds, nextEntitySet) &&
-    sameMembership(snapshot.isolatedCategories, nextCategorySet)
+    sameSet(snapshot.isolatedLayerIds, nextLayerSet) &&
+    sameSet(snapshot.isolatedEntityIds, nextEntitySet) &&
+    sameSet(snapshot.isolatedCategories, nextCategorySet)
   ) {
     return;
   }
@@ -145,15 +147,6 @@ export function clearIsolateEffects(): void {
   if (!snapshot.active) return;
   snapshot = INITIAL_SNAPSHOT;
   notify();
-}
-
-function sameMembership(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  if (a === b) return true;
-  if (a.size !== b.size) return false;
-  for (const id of a) {
-    if (!b.has(id)) return false;
-  }
-  return true;
 }
 
 // ─── Test-only reset (NOT exported from index — direct import only) ──────────

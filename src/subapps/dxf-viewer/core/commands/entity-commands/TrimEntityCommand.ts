@@ -23,6 +23,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import { noopAuditRecorder, type IDxfTextAuditRecorder } from '../text/types';
 import type { TrimOperation } from '../../../systems/trim/trim-types';
 import type { Entity } from '../../../types/entities';
+import { geometryFromSnapshot } from './snapshot-geometry';
 
 export interface TrimCommandParams {
   readonly operations: ReadonlyArray<TrimOperation>;
@@ -158,10 +159,9 @@ export class TrimEntityCommand implements ICommand {
     }
   }
 
-  /** Strip identity/visibility fields — only geometric updates flow through updateEntity. */
+  /** Strip identity/visibility/`type` — only geometric updates flow through updateEntity. SSoT: snapshot-geometry. */
   private geometryUpdates(entity: Readonly<Entity>): Partial<SceneEntity> {
-    const { id: _id, type: _type, layer: _layer, visible: _v, ...rest } = entity as unknown as SceneEntity & Record<string, unknown>;
-    return rest as Partial<SceneEntity>;
+    return geometryFromSnapshot(entity as unknown as SceneEntity, { excludeType: true });
   }
 
   private recordAudit(op: 'trim' | 'extend' | 'trim-undo' | 'extend-undo'): void {

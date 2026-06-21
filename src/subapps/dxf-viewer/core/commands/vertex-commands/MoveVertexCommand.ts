@@ -27,7 +27,13 @@ export class MoveVertexCommand implements ICommand {
     private readonly vertexIndex: number,
     private readonly oldPosition: Point2D,
     private readonly newPosition: Point2D,
-    private readonly sceneManager: ISceneManager
+    private readonly sceneManager: ISceneManager,
+    /**
+     * True only for per-frame samples of a live drag. Two DISTINCT edits of the
+     * same vertex (both `false`) must NOT coalesce — mirrors the transform
+     * family's `isDragging` gate (ADR-507 §8). Defaults `false` (single edit).
+     */
+    private readonly isDragging: boolean = false
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -75,7 +81,12 @@ export class MoveVertexCommand implements ICommand {
       return false;
     }
 
-    // Same vertex within the canonical merge window → coalesce into one undo step.
+    // Only coalesce live-drag samples — distinct edits must stay separate undo steps.
+    if (!this.isDragging || !other.isDragging) {
+      return false;
+    }
+
+    // Same vertex, both dragging, within the canonical merge window → coalesce.
     return isWithinMergeWindow(this, other);
   }
 
@@ -90,7 +101,8 @@ export class MoveVertexCommand implements ICommand {
       this.vertexIndex,
       this.oldPosition, // Keep original old position
       otherMove.newPosition, // Use latest new position
-      this.sceneManager
+      this.sceneManager,
+      true // merged result stays a drag so subsequent samples keep coalescing
     );
   }
 
@@ -136,6 +148,7 @@ export class MoveVertexCommand implements ICommand {
         vertexIndex: this.vertexIndex,
         oldPosition: this.oldPosition,
         newPosition: this.newPosition,
+        isDragging: this.isDragging,
       },
       version: 1,
     };
