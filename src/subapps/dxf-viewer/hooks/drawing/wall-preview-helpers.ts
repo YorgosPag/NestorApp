@@ -27,6 +27,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
 import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
@@ -107,7 +108,10 @@ function makeWallGhostBeforeClick(
 ): ExtendedSceneEntity | null {
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const thicknessMm = resolveWallThicknessMm(overrides);
-  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits);
+  // ADR-508 — ίδιο worldPerPixel με το click resolver (useWallTool) → ίδιο zoom-adaptive βήμα
+  // ολίσθησης (preview === commit: το φάντασμα γλιστράει στα ίδια σημεία που θα κλειδώσει το κλικ).
+  const worldPerPixel = 1 / Math.max(getImmediateTransform().scale, 0.001);
+  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits, worldPerPixel);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end

@@ -109,7 +109,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const store = wallPreviewStore.get();
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
-      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits);
+      // ADR-508 — worldPerPixel (=1/scale) → σταθερό zoom-adaptive βήμα ολίσθησης στην παρειά
+      // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
+      const worldPerPixel = 1 / Math.max(getImmediateTransform().scale, 0.001);
+      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits, worldPerPixel);
       if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap

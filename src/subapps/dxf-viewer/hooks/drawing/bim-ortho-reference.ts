@@ -45,7 +45,7 @@ import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 // ADR-508 — reuse the SAME zoom-adaptive distance snap as the alignment traces
 // (no duplicate): the wall length grows in nice round steps that keep a constant
 // on-screen spacing. @see systems/tracking/adaptive-distance-snap.ts
-import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/adaptive-distance-snap';
+import { adaptiveDistanceStep, quantizeAlongPath, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
 const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor']);
@@ -160,8 +160,7 @@ export function resolveWallFaceRelativePolar(
     const len = Math.hypot(dx, dy);
     if (len > 1e-9) {
       const point2 = quantizeAlongPath(result.point, ref, dx / len, dy / len, step);
-      const qDist = Math.round(len / step) * step;
-      result = { ...result, point: point2, distance: qDist };
+      result = { ...result, point: point2, distance: quantizeMagnitude(len, step) };
     }
   }
   return { ref, result, baseAngle };

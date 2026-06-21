@@ -2,9 +2,8 @@
  * ADR-507 §8 — `SnapshotTransformCommand` base tests.
  *
  * Exercises the shared in-place spine (execute/undo/redo), the snapshot restore
- * (geometry restored except id/layer/visible), the delta-style `undoInPlaceWith`
- * variant, the merge gate, and the canonical serialize payload — via a tiny
- * concrete subclass (mirrors `MergeableUpdateCommand.test.ts`).
+ * (geometry restored except id/layer/visible), the merge gate, and the canonical
+ * serialize payload — via a tiny concrete subclass (mirrors `MergeableUpdateCommand.test.ts`).
  */
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../../interfaces';
 import { SnapshotTransformCommand } from '../SnapshotTransformCommand';
@@ -64,12 +63,9 @@ class ShiftCommand extends SnapshotTransformCommand {
   }
 }
 
-/** Same shift, but undo recomputes the inverse from the live entity (Move style). */
-class DeltaShiftCommand extends ShiftCommand {
-  override readonly type = 'test-delta-shift';
-  override undo(): void {
-    this.undoInPlaceWith((entity) => ({ p: { x: (entity as unknown as { p: Pt }).p.x - this.dx, y: 0 } } as unknown as Partial<SceneEntity>));
-  }
+/** A second transform type — used only to assert cross-type merges are rejected. */
+class OtherShiftCommand extends ShiftCommand {
+  override readonly type = 'test-other-shift';
 }
 
 describe('SnapshotTransformCommand — shared in-place spine', () => {
@@ -109,15 +105,6 @@ describe('SnapshotTransformCommand — shared in-place spine', () => {
     expect(px(scene.get('a'))).toBe(7);
   });
 
-  it('undoInPlaceWith recomputes the inverse from the live entity (Move style)', () => {
-    const { scene, sm } = makeMockScene([lineAt('a', 50)]);
-    const cmd = new DeltaShiftCommand(['a'], 30, sm);
-    cmd.execute();
-    expect(px(scene.get('a'))).toBe(80);
-    cmd.undo();
-    expect(px(scene.get('a'))).toBe(50);
-  });
-
   it('execute is a no-op flag-wise when no entity exists (undo guarded)', () => {
     const { scene, sm } = makeMockScene([]);
     const cmd = new ShiftCommand(['missing'], 10, sm);
@@ -154,7 +141,7 @@ describe('SnapshotTransformCommand — merge gate', () => {
 
   it('does NOT merge across different command types', () => {
     const { sm } = makeMockScene([lineAt('a', 0)]);
-    expect(new ShiftCommand(['a'], 1, sm, true).canMergeWith(new DeltaShiftCommand(['a'], 1, sm, true))).toBe(false);
+    expect(new ShiftCommand(['a'], 1, sm, true).canMergeWith(new OtherShiftCommand(['a'], 1, sm, true))).toBe(false);
   });
 });
 

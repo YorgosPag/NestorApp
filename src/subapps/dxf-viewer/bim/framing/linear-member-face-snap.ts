@@ -26,6 +26,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
+import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import { pickThird } from './member-face-third';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 
@@ -55,6 +56,13 @@ export interface LinearMemberFaceSnapOptions {
   readonly captureScene: number;
   /** Πλάτος νέου μέλους (scene units) — για την 3-ζωνική δικαιολόγηση κατά τον άξονα. */
   readonly memberWidthScene: number;
+  /**
+   * ADR-508 (2026-06-21) — προαιρετικό **σταθερό βήμα ολίσθησης** (scene units) όταν το φάντασμα
+   * γλιστράει κατά μήκος της παρειάς: η διαμήκης θέση `cAlong` κουμπώνει σε πολλαπλάσια αυτού
+   * (ΙΔΙΟ `quantizeMagnitude`/`adaptiveDistanceStep` SSoT με τα ίχνη ευθυγράμμισης → zoom-adaptive).
+   * `undefined`/0 ⇒ συνεχής ολίσθηση (συμπεριφορά δοκαριού — αμετάβλητη).
+   */
+  readonly slideStepScene?: number;
 }
 
 /** Πλαίσιο άξονα ενός υποψήφιου μέλους-στόχου (όλα σε scene units). */
@@ -130,15 +138,20 @@ export function resolveLinearMemberFaceSnap(
     const isSouth = cPerp >= mid; // perpMax = νότια παρειά (signedPerp αντίστροφο του y)
     const nearPerp = isSouth ? perpMax : perpMin; // πλησιέστερη παρειά (κέντρο→«Α»)
     const outwardSign = isSouth ? 1 : -1; // ghost προς τα έξω, μακριά από το κέντρο σώματος
+    // ADR-508 — σταθερό βήμα ολίσθησης (zoom-adaptive, ΙΔΙΟ SSoT με τα ίχνη): κούμπωσε τη
+    // διαμήκη θέση σε πολλαπλάσια του `slideStepScene`, μένοντας μέσα στο σώμα [alongMin,alongMax].
+    const slideAlong = opts.slideStepScene
+      ? Math.min(Math.max(quantizeMagnitude(cAlong, opts.slideStepScene), alongMin), alongMax)
+      : cAlong;
     // 3-ζωνική δικαιολόγηση πλάτους: το μέλος ΜΕΝΕΙ ίσιο/κάθετο — απλώς ΜΕΤΑΤΟΠΙΖΕΤΑΙ
     // κατά τον άξονα u ώστε το σταυρόνημα να πέφτει στην αρχή/μέση/τέλος του πλάτους του.
     // ΒΟΡΕΙΑ: lo→μέλος «δεξιά» (cursor αριστερή ακμή· centerline +half), hi→«αριστερά»
     // (cursor δεξιά ακμή· −half), mid→κεντραρισμένο. ΝΟΤΙΑ: αντίστροφα.
-    const third = pickThird(cAlong, alongMin, alongMax);
+    const third = pickThird(slideAlong, alongMin, alongMax);
     const half = opts.memberWidthScene / 2;
     const baseShift = third === 'lo' ? half : third === 'hi' ? -half : 0;
     const shift = isSouth ? -baseShift : baseShift;
-    const centerAlong = cAlong + shift;
+    const centerAlong = slideAlong + shift;
     const start: Point2D = {
       x: a.x + centerAlong * u.x + nearPerp * p.x,
       y: a.y + centerAlong * u.y + nearPerp * p.y,

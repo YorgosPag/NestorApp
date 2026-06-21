@@ -41,6 +41,17 @@ export function adaptiveDistanceStep(worldPerPixel: number): number {
 }
 
 /**
+ * Quantize a scalar magnitude to the nearest multiple of `step` (sign preserved).
+ * The scalar core shared by `quantizeAlongPath` (ray distance) and the linear-member
+ * ghost slide (`resolveLinearMemberFaceSnap` cAlong) — ONE rounding SSoT, no dupes.
+ * Returns the input unchanged when `step` is not positive.
+ */
+export function quantizeMagnitude(value: number, step: number): number {
+  if (!(step > 0)) return value;
+  return Math.round(value / step) * step;
+}
+
+/**
  * Quantize a point lying on the ray `anchor + t·dir` so its distance from
  * `anchor` is a multiple of `step`. `dir` must be a unit vector; the sign of the
  * travel is preserved (snap works on both sides of the anchor). Returns the input
@@ -55,6 +66,6 @@ export function quantizeAlongPath(
 ): Point2D {
   if (!(step > 0)) return point;
   const t = (point.x - anchor.x) * dirX + (point.y - anchor.y) * dirY;
-  const tq = Math.round(t / step) * step;
+  const tq = quantizeMagnitude(t, step);
   return { x: anchor.x + dirX * tq, y: anchor.y + dirY * tq };
 }

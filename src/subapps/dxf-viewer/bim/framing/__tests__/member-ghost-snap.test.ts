@@ -55,6 +55,21 @@ describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () =>
   it('Ούτε κολόνα ούτε μέλος εντός capture → null', () => {
     expect(resolveMemberGhostSnapFromStore({ x: 9e4, y: 9e4 }, [COLUMN_FP], [MEMBER], 200, 'mm')).toBeNull();
   });
+
+  it('worldPerPixel → σταθερό zoom-adaptive βήμα ολίσθησης κατά μήκος της παρειάς', () => {
+    // Οριζόντιο μέλος ⇒ start.x = centerAlong. cursor x=5237 (mid third → shift 0).
+    const free = resolveMemberGhostSnapFromStore({ x: 5237, y: 150 }, [], [MEMBER], 200, 'mm');
+    expect(free!.start.x).toBeCloseTo(5237); // χωρίς βήμα → συνεχής ολίσθηση
+    // step = adaptiveDistanceStep(40) = niceRound(40·25=1000) = 1000 → κούμπωσε στο 5000.
+    const stepped = resolveMemberGhostSnapFromStore({ x: 5237, y: 150 }, [], [MEMBER], 200, 'mm', 40);
+    expect(stepped!.start.x).toBeCloseTo(5000);
+  });
+
+  it('beam path (χωρίς worldPerPixel) → συνεχής ολίσθηση αμετάβλητη', () => {
+    // Το δοκάρι (alias) ΔΕΝ περνά worldPerPixel → καμία αλλαγή (byte-for-byte regression guard).
+    const a = resolveMemberGhostSnapFromStore({ x: 5123, y: 150 }, [], [MEMBER], 200, 'mm');
+    expect(a!.start.x).toBeCloseTo(5123);
+  });
 });
 
 describe('collectMemberSnapTargets — generic scene collector', () => {
