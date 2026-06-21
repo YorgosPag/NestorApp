@@ -19,20 +19,20 @@ const KEY_ENABLED = 'dxf:ambient.enabled';
 const KEY_RADIUS = 'dxf:ambient.radiusMm';
 const DEFAULT_ENABLED = true;
 const DEFAULT_RADIUS_MM = 4000;
-const DEFAULT_MAX_COLUMNS = 6;
+const DEFAULT_MAX_MEMBERS = 6;
 
 type Listener = () => void;
 
 export interface AmbientConfigSnapshot {
   readonly enabled: boolean;
   readonly radiusMm: number;
-  readonly maxColumns: number;
+  readonly maxMembers: number;
 }
 
 class AmbientAlignmentConfigStore {
   private _enabled = DEFAULT_ENABLED;
   private _radiusMm = DEFAULT_RADIUS_MM;
-  private readonly _maxColumns = DEFAULT_MAX_COLUMNS;
+  private readonly _maxMembers = DEFAULT_MAX_MEMBERS;
   private readonly listeners = new Set<Listener>();
   private _cachedSnapshot: AmbientConfigSnapshot | null = null;
 
@@ -49,7 +49,7 @@ class AmbientAlignmentConfigStore {
 
   get enabled(): boolean { return this._enabled; }
   get radiusMm(): number { return this._radiusMm; }
-  get maxColumns(): number { return this._maxColumns; }
+  get maxMembers(): number { return this._maxMembers; }
 
   setEnabled(enabled: boolean): void {
     this._enabled = enabled;
@@ -74,7 +74,7 @@ class AmbientAlignmentConfigStore {
       this._cachedSnapshot = {
         enabled: this._enabled,
         radiusMm: this._radiusMm,
-        maxColumns: this._maxColumns,
+        maxMembers: this._maxMembers,
       };
     }
     return this._cachedSnapshot;

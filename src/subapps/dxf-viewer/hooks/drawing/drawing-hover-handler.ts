@@ -196,7 +196,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const ambient = (isDrawingTool && ambientCfg.enabled)
       ? collectAmbientAlignmentAnchors(previewPt, getSceneEntities(), {
           radiusWorld: ambientCfg.radiusMm * getSceneUnitsScale(),
-          maxColumns: ambientCfg.maxColumns,
+          maxMembers: ambientCfg.maxMembers,
           axisToleranceWorld: worldTolerance,
         })
       : [];

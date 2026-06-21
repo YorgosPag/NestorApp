@@ -334,6 +334,7 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'mep-water-heater': null, // ADR-408 DHW BIM water heater — exported via composite
   'mep-underfloor': null, // ADR-408 Εύρος Β BIM radiant floor loop — exported via composite
   'floor-finish': null,   // ADR-419 BIM floor covering — exported via composite
+  'wall-covering': null,  // ADR-511 BIM wall finish per room/face — exported via composite
   'thermal-space': null,  // ADR-422 analytical thermal space — not exported
   'space-separator': null, // ADR-437 space separator — not exported
 } as const;

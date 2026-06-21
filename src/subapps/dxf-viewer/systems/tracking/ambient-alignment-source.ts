@@ -4,7 +4,9 @@
  * Pure producer of transient alignment anchors for the Object Snap Tracking
  * resolver. Where the AutoCAD model requires the user to hover-acquire a point
  * for 1s (`TrackingPointStore`), this module emits anchors AUTOMATICALLY from
- * the columns near the cursor — the Revit "ambient alignment" behavior.
+ * the STRUCTURAL members near the cursor — the Revit "ambient alignment"
+ * behavior. Members covered (Giorgio 2026-06-21): column, wall, beam, slab,
+ * foundation.
  *
  * It returns the SAME `AcquiredTrackingPoint[]` shape the resolver already
  * consumes, so the caller simply MERGES `[...TrackingPointStore.getPoints(),
@@ -15,8 +17,9 @@
  * — they are recomputed each hover frame as the cursor moves.
  *
  * Pure — zero React/DOM/store. Reuses existing geometry SSoT only:
- *   • `getBimCharacteristicPoints` — column corner(4)+midpoint(4)+center(1) world points.
- *   • `footprintBounds` / `distanceToFootprintBounds` — cursor-to-column proximity.
+ *   • `getBimCharacteristicPoints` — generic BIM dispatcher: corner+midpoint+center
+ *     world points for column/wall/beam/slab/foundation (zero new geometry).
+ *   • `footprintBounds` / `distanceToFootprintBounds` — cursor-to-member proximity.
  *
  * @see ./tracking-resolver.ts — the shared resolver these anchors feed.
  * @see ../../bim/utils/bim-characteristic-points.ts — char-points SSoT.
@@ -25,7 +28,6 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { isColumnEntity } from '../../types/entities';
 import type { AcquiredTrackingPoint } from './TrackingPointStore';
 import { getBimCharacteristicPoints } from '../../bim/utils/bim-characteristic-points';
 import {
@@ -34,54 +36,60 @@ import {
 } from '../../bim/geometry/shared/footprint-face-frame';
 
 /** `sourceSnapType` tag identifying anchors produced by the ambient source. */
-export const AMBIENT_SOURCE_TYPE = 'ambient-column';
+export const AMBIENT_SOURCE_TYPE = 'ambient-member';
+
+/** Structural member entity types the ambient source aligns to. */
+const STRUCTURAL_MEMBER_TYPES: ReadonlySet<string> = new Set([
+  'column', 'wall', 'beam', 'slab', 'foundation',
+]);
 
 export interface AmbientAlignmentConfig {
-  /** Cursor-proximity radius (world units). Columns farther than this are ignored. */
+  /** Cursor-proximity radius (world units). Members farther than this are ignored. */
   readonly radiusWorld: number;
-  /** Keep only the N nearest columns within radius (perf cap). */
-  readonly maxColumns: number;
+  /** Keep only the N nearest members within radius (perf cap). */
+  readonly maxMembers: number;
   /**
-   * Axis gate (world units): a column point is emitted only when the cursor is
+   * Axis gate (world units): a member point is emitted only when the cursor is
    * within this distance of its row OR column — i.e. only when it can actually
    * produce a useful H/V alignment path. Drops >90% of irrelevant anchors.
    */
   readonly axisToleranceWorld: number;
 }
 
-interface ColumnProximity {
-  /** The 9 characteristic world points (corners + midpoints + center). */
+interface MemberProximity {
+  /** The characteristic world points (corners + midpoints + center). */
   readonly points: readonly Point2D[];
-  /** Cursor distance to the column footprint bbox (0 when inside). */
+  /** Cursor distance to the member footprint bbox (0 when inside). */
   readonly distance: number;
 }
 
 /**
- * Pure: nearest-N columns within radius → their characteristic points → only
- * the points axis-aligned with the cursor → transient `AcquiredTrackingPoint[]`.
+ * Pure: nearest-N structural members within radius → their characteristic
+ * points → only the points axis-aligned with the cursor → transient
+ * `AcquiredTrackingPoint[]`.
  */
 export function collectAmbientAlignmentAnchors(
   cursor: Point2D,
   entities: readonly Entity[],
   cfg: AmbientAlignmentConfig,
 ): AcquiredTrackingPoint[] {
-  const near = nearestColumnsWithinRadius(cursor, entities, cfg);
+  const near = nearestMembersWithinRadius(cursor, entities, cfg);
   const anchors: AcquiredTrackingPoint[] = [];
-  for (const col of near) {
-    pushAxisGatedAnchors(cursor, col.points, cfg.axisToleranceWorld, anchors);
+  for (const m of near) {
+    pushAxisGatedAnchors(cursor, m.points, cfg.axisToleranceWorld, anchors);
   }
   return anchors;
 }
 
-/** Single linear scan: columns whose footprint bbox is within `radiusWorld`, nearest-N. */
-function nearestColumnsWithinRadius(
+/** Single linear scan: structural members whose footprint bbox is within radius, nearest-N. */
+function nearestMembersWithinRadius(
   cursor: Point2D,
   entities: readonly Entity[],
   cfg: AmbientAlignmentConfig,
-): ColumnProximity[] {
-  const out: ColumnProximity[] = [];
+): MemberProximity[] {
+  const out: MemberProximity[] = [];
   for (const e of entities) {
-    if (!isColumnEntity(e)) continue;
+    if (!STRUCTURAL_MEMBER_TYPES.has(e.type)) continue;
     const cp = getBimCharacteristicPoints(e);
     const bounds = footprintBounds(cp.corners);
     if (!bounds) continue;
@@ -91,7 +99,7 @@ function nearestColumnsWithinRadius(
     out.push({ points, distance });
   }
   out.sort((a, b) => a.distance - b.distance);
-  return out.length > cfg.maxColumns ? out.slice(0, cfg.maxColumns) : out;
+  return out.length > cfg.maxMembers ? out.slice(0, cfg.maxMembers) : out;
 }
 
 /** Emit each point sharing the cursor's row OR column as a transient ambient anchor. */
