@@ -27,6 +27,19 @@ export interface EntityZExtentsMm {
 }
 
 /**
+ * Read a nested BIM entity's `.params` whether the value is the wrapped
+ * `DxfEntityUnion` variant (BIM nested under `<type>Entity`, the canvas render
+ * path) OR the FLAT scene entity that `SlabPersistenceHost` /
+ * `SlabOpeningPersistenceHost` / … push into `Bim3DEntitiesStore`
+ * (`currentScene.entities.filter(...)`, params at the top level). Both shapes flow
+ * into `getEntityZExtents` via the cut-plane range, so this guards the latter from
+ * crashing on the missing wrapper (`undefined.params`).
+ */
+function nestedParams<T>(wrapper: { params: T } | undefined, entity: DxfEntityUnion): T {
+  return (wrapper ?? (entity as unknown as { params: T })).params;
+}
+
+/**
  * Resolve the Z extents (mm) of a scene entity, or `null` when the entity has no
  * meaningful vertical extent for cut-plane purposes (raw DXF, or a BIM type not
  * gated in v1). The per-type formulas MIRROR the existing `resolveCutState()`
@@ -45,26 +58,27 @@ export function getEntityZExtents(entity: DxfEntityUnion): EntityZExtentsMm | nu
       const top = entity.params.topElevation + (entity.params.zOffset ?? 0);
       return { zBottomMm: top - entity.params.depth, zTopMm: top };
     }
-    // Slabs hang DOWN by `thickness` from their top FFL. NOTE: the scene wrapper
-    // nests the BIM entity under `slabEntity` (vs the flat wall/column/beam shape).
+    // Slabs hang DOWN by `thickness` from their top FFL. NOTE: the canvas render
+    // path nests the BIM entity under `slabEntity`, but the Bim3DEntitiesStore feed
+    // is the FLAT scene entity (params at top level) — `nestedParams` handles both.
     case 'slab': {
-      const p = entity.slabEntity.params;
+      const p = nestedParams(entity.slabEntity, entity);
       const top = p.levelElevation + (p.heightOffsetFromLevel ?? 0);
       return { zBottomMm: top - p.thickness, zTopMm: top };
     }
     // Slab opening: stub 200 mm band below its override elevation (mirrors renderer).
     case 'slab-opening': {
-      const top = entity.slabOpeningEntity.params.elevationOverride ?? 0;
+      const top = nestedParams(entity.slabOpeningEntity, entity).elevationOverride ?? 0;
       return { zBottomMm: top - 200, zTopMm: top };
     }
     // Stair: base point Z + total rise.
     case 'stair': {
-      const p = entity.stairEntity.params;
+      const p = nestedParams(entity.stairEntity, entity);
       return { zBottomMm: p.basePoint.z, zTopMm: p.basePoint.z + p.totalRise };
     }
     // Wall opening (door/window): sill height + opening height.
     case 'opening': {
-      const p = entity.openingEntity.params;
+      const p = nestedParams(entity.openingEntity, entity);
       return { zBottomMm: p.sillHeight, zTopMm: p.sillHeight + p.height };
     }
     // Foundation hangs DOWN by `thicknessMm` from its (typically negative) top face.

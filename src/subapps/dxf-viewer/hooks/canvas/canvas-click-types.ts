@@ -80,6 +80,8 @@ export interface UseCanvasClickHandlerParams {
   roofTool?: SlabToolLike;
   /** ADR-419 — Floor-finish tool click pipeline (covering polygon; same shape as slab). */
   floorFinishTool?: SlabToolLike;
+  /** ADR-511 — Wall-covering tool click pipeline (pick τοίχου+παρειάς → 2-click span). */
+  wallCoveringTool?: SlabToolLike;
   /** ADR-363 Phase 4 — Column tool click pipeline. */
   columnTool?: ColumnToolLike;
   /** ADR-436 Slice 1 — Foundation pad tool click pipeline. */

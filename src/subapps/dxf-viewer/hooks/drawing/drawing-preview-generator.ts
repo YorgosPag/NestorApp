@@ -26,6 +26,7 @@ import type { SceneUnits, StairParamOverrides } from './stair-completion';
 import { generateWallPreview } from './wall-preview-helpers';
 // ADR-363 Phase 6.5.B — slab preview.
 import { generateSlabPreview } from './slab-preview-helpers';
+import { generateWallCoveringPreview } from './wall-covering-preview-helpers';
 // ADR-363 Phase 5.5P — beam preview.
 import { generateBeamPreview } from './beam-preview-helpers';
 // ADR-398 §3.8 — column WYSIWYG preview (real ColumnRenderer ghost).
@@ -119,6 +120,11 @@ export function generatePreviewEntity(
   //    same rubber-band outline as slab/roof). ───────────────────────────────
   if (tool === 'floor-finish') {
     return generateSlabPreview(tempPoints, cursorPoint);
+  }
+  // ── ADR-511 — Wall Covering tool preview branch. Computes the live face strip
+  //    from the locked draw-context store + projected cursor (not from tempPoints). ─
+  if (tool === 'wall-covering') {
+    return generateWallCoveringPreview(cursorPoint);
   }
   // ── ADR-507 S2 — Hatch tool preview branch (closed boundary polygon, same
   //    rubber-band outline as slab/floor-finish). ─────────────────────────────

@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-21 — ADR-511 wall-covering tool wiring (CanvasSection prop pass-through, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-21 (Opus 4.8). **ADR-040-safe** — pure prop pass-through, ZERO new subscriptions. Το `wallCoveringTool` περνάει από το `useSpecialTools` στο `CanvasSection` και προωθείται στο tool-wiring object, ακριβώς όπως τα υπάρχοντα tools (`floorFinishTool`, `columnTool`, …). Καμία νέα `useSyncExternalStore` subscription στον orchestrator, καμία αλλαγή σε bitmap cache-key / scheduler — μόνο ένα επιπλέον destructured prop. **CHECK 6B** (CanvasSection touch) → ADR-040 staged. ✅ Google-level: YES — ίδιο pattern με τα υπάρχοντα tools, μηδέν νέα reactivity.
+
 ### 2026-06-21 — ADR-511 wall-covering per-frame `wallsById` index (DxfRenderer choke-point)
 
 **Status**: IMPLEMENTED 2026-06-21 (Opus 4.8). **ADR-040-safe** — pure per-frame index build, ZERO new subscriptions. Ο `DxfRenderer.render` τροφοδοτεί πλέον στο `EntityRendererComposite` ένα per-frame `wallsById` index (`entityComposite.setWallsById(buildWallsById(scene.entities))`, mirror του υπάρχοντος `setOpeningsByWall` ADR-363) ώστε ο `WallCoveringRenderer` να resolve-άρει τον host τοίχο και να υπολογίζει live το face strip (το covering ΔΕΝ αποθηκεύει render polygon). Καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model — μόνο μία επιπλέον per-frame lookup map. **CHECK 6B** (DxfRenderer touch) → ADR-040 staged. ✅ Google-level: YES — ίδιο pattern με τα υπάρχοντα per-frame indexes, μηδέν νέα reactivity.

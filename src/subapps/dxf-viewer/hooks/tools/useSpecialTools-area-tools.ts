@@ -14,6 +14,8 @@
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useFloorFinishTool';
+import { useWallCoveringTool } from '../drawing/useWallCoveringTool';
+import { isWallEntity } from '../../types/entities';
 import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
 import { useThermalSpaceTool } from '../drawing/useThermalSpaceTool';
 import { useSpaceSeparatorTool } from '../drawing/useSpaceSeparatorTool';
@@ -35,6 +37,7 @@ export interface AreaToolsReturn {
   slabTool: ReturnType<typeof useSlabTool>;
   roofTool: ReturnType<typeof useRoofTool>; // ADR-417
   floorFinishTool: ReturnType<typeof useFloorFinishTool>; // ADR-419
+  wallCoveringTool: ReturnType<typeof useWallCoveringTool>; // ADR-511
   mepUnderfloorTool: ReturnType<typeof useMepUnderfloorTool>; // ADR-408 Εύρος Β #3
   thermalSpaceTool: ReturnType<typeof useThermalSpaceTool>; // ADR-422
   spaceSeparatorTool: ReturnType<typeof useSpaceSeparatorTool>; // ADR-437
@@ -105,6 +108,26 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
     onFloorFinishCreated: (entity) => appendEntityToScene(levelManager, entity, 'floor-finish'),
   });
   useToolLifecycle(activeTool === 'floor-finish', floorFinishTool.activate, floorFinishTool.deactivate);
+  // ADR-511 — WALL-COVERING TOOL: pick τοίχου+παρειάς → 2-click span (φινίρισμα ανά δωμάτιο/παρειά).
+  // Ο host τοίχος αντλείται live από τη σκηνή (walls only). Continuous chain. Το created
+  // `WallCoveringEntity` γίνεται append + broadcast ώστε ο `WallCoveringPersistenceHost` να σώσει.
+  const wallCoveringTool = useWallCoveringTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getWalls: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      const entities = levelManager.getLevelScene(levelId)?.entities ?? [];
+      // WallEntity ικανοποιεί δομικά το WallCoveringHost (id + geometry + params.thickness).
+      return entities.filter(isWallEntity);
+    },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onWallCoveringCreated: (entity) => appendEntityToScene(levelManager, entity, 'wall-covering'),
+  });
+  useToolLifecycle(activeTool === 'wall-covering', wallCoveringTool.activate, wallCoveringTool.deactivate);
   // ADR-408 Εύρος Β #3 — UNDERFLOOR HEATING TOOL: heating-area polygon N-click + Enter
   // (mirror floor-finish). The created `MepUnderfloorEntity` is appended + broadcast so
   // `MepUnderfloorPersistenceHost` saves it.
@@ -158,6 +181,7 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
     slabTool,
     roofTool,
     floorFinishTool,
+    wallCoveringTool,
     mepUnderfloorTool,
     thermalSpaceTool,
     spaceSeparatorTool,

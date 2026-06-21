@@ -60,6 +60,23 @@ function axisFrame(wall: WallCoveringHost): { a: Point2D; u: Vec2; lengthScene: 
   return { a: { x: a.x, y: a.y }, u: { x: dx / lengthScene, y: dy / lengthScene }, lengthScene };
 }
 
+/**
+ * Προβάλλει ένα world-point στον άξονα ΕΝΟΣ συγκεκριμένου τοίχου και επιστρέφει τη διαμήκη
+ * θέση σε mm [0..L] (clamped). Επιστρέφει `null` αν ο άξονας λείπει/είναι εκφυλισμένος.
+ * Κοινό SSoT: tool click-2 (spanEnd στον ΙΔΙΟ τοίχο) + live strip preview (generator).
+ */
+export function alongMmOnWall(
+  wall: WallCoveringHost,
+  point: Readonly<Point2D>,
+  sceneUnits: SceneUnits = 'mm',
+): number | null {
+  const frame = axisFrame(wall);
+  if (!frame) return null;
+  const proj = projectPointOnAxis(point.x, point.y, frame.a.x, frame.a.y, frame.u.x, frame.u.y);
+  const alongScene = Math.max(0, Math.min(proj.along, frame.lengthScene));
+  return alongScene / mmScaleFor({ sceneUnits });
+}
+
 /** Πρόσημο της κάθετης προβολής της `outerEdge[0]` ως προς τον άξονα (ποια πλευρά = «outer»). */
 function outerPerpSign(wall: WallCoveringHost, a: Point2D, u: Vec2): number {
   const outer = wall.geometry?.outerEdge?.points?.[0];

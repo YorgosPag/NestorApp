@@ -58,6 +58,24 @@ describe('getEntityZExtents', () => {
     expect(getEntityZExtents(entity('line', {}))).toBeNull();
     expect(getEntityZExtents(entity('roof', { levelElevation: 6000, thickness: 200 }))).toBeNull();
   });
+
+  // ADR-049 regression — the *PersistenceHost feeds push FLAT scene entities (params
+  // at top level) into Bim3DEntitiesStore, which the cut-plane range then reads. The
+  // nested cases must tolerate that shape, not crash on the missing wrapper.
+  describe('flat scene-entity shape (Bim3DEntitiesStore feed)', () => {
+    it('slab — flat params', () => {
+      expect(getEntityZExtents(entity('slab', { levelElevation: 3000, thickness: 200 }))).toEqual({ zBottomMm: 2800, zTopMm: 3000 });
+    });
+    it('slab-opening — flat params (no crash on missing slabOpeningEntity)', () => {
+      expect(getEntityZExtents(entity('slab-opening', { elevationOverride: 0 }))).toEqual({ zBottomMm: -200, zTopMm: 0 });
+    });
+    it('stair — flat params', () => {
+      expect(getEntityZExtents(entity('stair', { basePoint: { x: 0, y: 0, z: 0 }, totalRise: 3000 }))).toEqual({ zBottomMm: 0, zTopMm: 3000 });
+    });
+    it('opening — flat params', () => {
+      expect(getEntityZExtents(entity('opening', { sillHeight: 900, height: 1200 }))).toEqual({ zBottomMm: 900, zTopMm: 2100 });
+    });
+  });
 });
 
 describe('isHiddenByCutPlane', () => {
