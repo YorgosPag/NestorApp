@@ -107,10 +107,9 @@ export function paintTooltip(
 ): void {
   if (!label) return;
   const screen = CoordinateTransforms.worldToScreen(snappedPoint, transform, viewport);
-  // SSoT overlay label (font + chip). Colour stays per-palette.
+  // SSoT overlay label (font only, no background). Colour stays per-palette.
   drawOverlayLabel(ctx, label, screen.x + 14, screen.y - 12, {
     textColor: palette.tooltipText,
-    bgColor: palette.tooltipBackground,
     align: 'left',
   });
 }

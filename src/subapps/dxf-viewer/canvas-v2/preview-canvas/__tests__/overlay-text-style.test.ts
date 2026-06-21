@@ -22,24 +22,24 @@ function mockCtx(): { calls: Call[]; ctx: CanvasRenderingContext2D } {
 }
 
 describe('drawOverlayLabel', () => {
-  it('draws a background chip + text with the canonical font', () => {
+  it('draws text with the canonical font and NO background', () => {
     const m = mockCtx();
-    drawOverlayLabel(m.ctx, '2.30 m', 100, 50, { textColor: '#0f0', bgColor: '#000', align: 'center' });
+    drawOverlayLabel(m.ctx, '2.30 m', 100, 50, { textColor: '#0f0', align: 'center' });
     expect(m.calls.some((c) => c.fn === 'set:font' && c.args[0] === OVERLAY_TEXT_FONT)).toBe(true);
     expect(m.calls.some((c) => c.fn === 'set:textAlign' && c.args[0] === 'center')).toBe(true);
-    expect(m.calls.filter((c) => c.fn === 'fillRect')).toHaveLength(1);
     expect(m.calls.some((c) => c.fn === 'fillText' && c.args[0] === '2.30 m')).toBe(true);
+    expect(m.calls.filter((c) => c.fn === 'fillRect')).toHaveLength(0); // no background chip
   });
 
   it('left-aligns by default', () => {
     const m = mockCtx();
-    drawOverlayLabel(m.ctx, 'x', 10, 10, { textColor: '#fff', bgColor: '#000' });
+    drawOverlayLabel(m.ctx, 'x', 10, 10, { textColor: '#fff' });
     expect(m.calls.some((c) => c.fn === 'set:textAlign' && c.args[0] === 'left')).toBe(true);
   });
 
   it('is a no-op for an empty label', () => {
     const m = mockCtx();
-    drawOverlayLabel(m.ctx, '', 0, 0, { textColor: '#fff', bgColor: '#000' });
+    drawOverlayLabel(m.ctx, '', 0, 0, { textColor: '#fff' });
     expect(m.calls).toHaveLength(0);
   });
 });

@@ -63,7 +63,6 @@ import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { applyOverlayLineStyle } from './overlay-line-style';
 import { drawOverlayLabel } from './overlay-text-style';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -242,10 +241,9 @@ export class PreviewRenderer {
     ctx.stroke();
 
     ctx.restore();
-    // Tooltip near cursor — SSoT overlay label (font + chip), same as the tracking tooltip.
+    // Tooltip near cursor — SSoT overlay label (font only), same as the tracking tooltip.
     drawOverlayLabel(ctx, label, cursorScreen.x + 14, cursorScreen.y - 8, {
       textColor: '#00CC44',
-      bgColor: resolveDxfCanvasBackgroundHex(),
       align: 'left',
     });
   }
