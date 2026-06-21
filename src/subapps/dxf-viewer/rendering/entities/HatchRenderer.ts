@@ -23,7 +23,8 @@ import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
-import { buildHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { buildHatchLines, buildPredefinedHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { getHatchPattern } from '../../data/hatch-pattern-catalog';
 import { isSolidHatch, type HatchIslandStyle } from '../../bim/hatch/hatch-properties';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 
@@ -61,8 +62,10 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.ctx.fillStyle = color;
       this.drawBoundaryPath(paths);
       this.ctx.fill('evenodd');
+    } else if (hatch.fillType === 'predefined') {
+      this.drawPatternSegments(this.predefinedSegments(hatch, paths), color);
     } else {
-      this.drawUserDefinedLines(hatch, paths, color);
+      this.drawPatternSegments(this.userDefinedSegments(hatch, paths), color);
     }
 
     // Boundary outline.
@@ -122,17 +125,38 @@ export class HatchRenderer extends BaseEntityRenderer {
     }
   }
 
-  private drawUserDefinedLines(
-    hatch: HatchEntity, paths: ReadonlyArray<ReadonlyArray<Point2D>>, color: string,
-  ): void {
+  /** Τμήματα μιας user-defined γραμμοσκίασης (μέσω buildHatchLines SSoT). */
+  private userDefinedSegments(
+    hatch: HatchEntity, paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  ): ReturnType<typeof buildHatchLines> {
     const spacing = hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_LINE_SPACING_MM;
-    const segments = buildHatchLines(paths, {
+    return buildHatchLines(paths, {
       spacingMm: spacing,
       angleDeg: hatch.lineAngle ?? hatch.patternAngle ?? 0,
       origin: hatch.patternOrigin,
       double: hatch.doubleCrossHatch ?? false,
       islandStyle: this.islandStyle(hatch),
     });
+  }
+
+  /** Τμήματα ενός predefined PAT μοτίβου (μέσω buildPredefinedHatchLines SSoT). */
+  private predefinedSegments(
+    hatch: HatchEntity, paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  ): ReturnType<typeof buildPredefinedHatchLines> {
+    const pattern = getHatchPattern(hatch.patternName);
+    if (!pattern) return [];
+    return buildPredefinedHatchLines(paths, pattern, {
+      scale: hatch.patternScale,
+      angleDeg: hatch.patternAngle ?? 0,
+      origin: hatch.patternOrigin,
+      islandStyle: this.islandStyle(hatch),
+    });
+  }
+
+  /** Σχεδιάζει τα τμήματα μοτίβου (κοινό για user-defined + predefined). */
+  private drawPatternSegments(
+    segments: ReadonlyArray<{ start: Point2D; end: Point2D }>, color: string,
+  ): void {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = HATCH_LINE_WIDTH;
     this.ctx.setLineDash([]);

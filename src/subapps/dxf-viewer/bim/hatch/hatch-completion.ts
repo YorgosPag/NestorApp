@@ -34,6 +34,7 @@ export function buildHatchEntityFromBoundary(
   if (points.length < HATCH_MIN_BOUNDARY_POINTS) return null;
   const d = getHatchDrawDefaults();
   const isSolid = d.fillType === 'solid';
+  const isPredefined = d.fillType === 'predefined';
   return {
     id,
     type: 'hatch',
@@ -43,8 +44,12 @@ export function buildHatchEntityFromBoundary(
     fillColor: d.fillColor,
     lineAngle: d.lineAngle,
     lineSpacing: d.lineSpacing,
-    doubleCrossHatch: isSolid ? undefined : d.doubleCrossHatch,
+    doubleCrossHatch: isSolid || isPredefined ? undefined : d.doubleCrossHatch,
     islandStyle: d.islandStyle,
+    // predefined PAT μοτίβο (ADR-507 Φ2) — μόνο όταν fillType==='predefined'.
+    patternName: isPredefined ? d.patternName : undefined,
+    patternScale: isPredefined ? d.patternScale : undefined,
+    patternAngle: isPredefined ? d.patternAngle : undefined,
     // §5δ — back bucket· το ReorderEntityCommand κατεβάζει και τη θέση στον πίνακα.
     drawOrder: 0,
     visible: true,

@@ -128,11 +128,17 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillColor) {
           return { value: hatch?.fillColor ?? defaults.fillColor, options: [] };
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.patternName) {
+          return { value: hatch?.patternName ?? defaults.patternName, options: [] };
+        }
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
           return { value: String(hatch?.lineAngle ?? defaults.lineAngle), options: [] };
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
+          return { value: String(hatch?.patternScale ?? defaults.patternScale), options: [] };
         }
         return { value: String(hatch?.lineSpacing ?? defaults.lineSpacing), options: [] };
       }
@@ -146,15 +152,25 @@ export function useRibbonHatchBridge(
       const hatch = resolveHatch();
       if (isHatchRibbonStringKey(commandKey)) {
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
-          const fillType = value === 'user-defined' ? 'user-defined' : 'solid';
+          const fillType =
+            value === 'user-defined' ? 'user-defined' : value === 'predefined' ? 'predefined' : 'solid';
           const patternType = fillType === 'solid' ? 'solid' : 'pattern';
-          if (hatch) patchHatch(hatch, { fillType, patternType });
-          else setHatchDrawDefaults({ fillType });
+          if (hatch) {
+            // Switch σε predefined χωρίς όνομα → δώσε το default ώστε να φανεί αμέσως.
+            const patch: Record<string, unknown> = { fillType, patternType };
+            if (fillType === 'predefined' && !hatch.patternName) patch.patternName = defaults.patternName;
+            patchHatch(hatch, patch);
+          } else setHatchDrawDefaults({ fillType });
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillColor) {
           if (hatch) patchHatch(hatch, { fillColor: value });
           else setHatchDrawDefaults({ fillColor: value });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.patternName) {
+          if (hatch) patchHatch(hatch, { patternName: value });
+          else setHatchDrawDefaults({ patternName: value });
           return;
         }
         // islandStyle
@@ -171,12 +187,18 @@ export function useRibbonHatchBridge(
           else setHatchDrawDefaults({ lineAngle: numeric });
           return;
         }
+        if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
+          if (numeric <= 0) return;
+          if (hatch) patchHatch(hatch, { patternScale: numeric });
+          else setHatchDrawDefaults({ patternScale: numeric });
+          return;
+        }
         if (numeric <= 0) return;
         if (hatch) patchHatch(hatch, { lineSpacing: numeric });
         else setHatchDrawDefaults({ lineSpacing: numeric });
       }
     },
-    [resolveHatch, patchHatch],
+    [resolveHatch, patchHatch, defaults],
   );
 
   const onToggle = useCallback(

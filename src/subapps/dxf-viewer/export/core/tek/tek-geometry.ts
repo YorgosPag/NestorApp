@@ -6,10 +6,15 @@
  * μετατροπές scene→μέτρα γίνονται μέσω του SSoT `sceneUnitsToMeters` (scene-units.ts)
  * — μηδέν re-impl (ίδιο που χρησιμοποιούν οι bim-3d converters).
  *
- * xmatrix DECODED (δείγμα τοίχου (0,0)→(5,0) πάχος 0.25 → x00=5,x11=0.25,rest=0):
- *   (x00,x10) = E−S            (διάνυσμα μήκους)
- *   (x01,x11) = n̂ · thickness   (n̂ = μοναδιαίο κάθετο)
+ * xmatrix DECODED + CALIBRATED (browser-verified σε λοξούς τοίχους 2026-06-21).
+ * Ο Τέκτων διαβάζει τον πίνακα **column-major**: ο point (u,v) του μοναδιαίου κελιού →
+ *   X = x00·u + x10·v + x20,  Y = x01·u + x11·v + x21
+ * άρα ο **άξονας μήκους** (u) = (x00,x01) και ο **άξονας πάχους** (v) = (x10,x11):
+ *   (x00,x01) = E−S            (διάνυσμα μήκους)
+ *   (x10,x11) = n̂ · thickness   (n̂ = μοναδιαίο κάθετο)
  *   (x20,x21) = σημείο εκκίνησης (γωνία/παρειά)
+ * ΠΡΟΣΟΧΗ: το δείγμα ήταν οριζόντιο (x01=x10=0 → degenerate)· οι λοξοί τοίχοι έδειξαν
+ * ότι χρειάζεται transpose (αλλιώς ο Τέκτων ζωγραφίζει ΡΟΜΒΟ αντί ορθογωνίου).
  */
 
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
@@ -38,9 +43,10 @@ export function buildWallXMatrix(
   const ny = dx / len;
   const half = thicknessM / 2;
   return {
+    // column-major: άξονας μήκους = (x00,x01) = E−S· άξονας πάχους = (x10,x11) = n̂·t.
     x00: dx,
-    x01: nx * thicknessM,
-    x10: dy,
+    x01: dy,
+    x10: nx * thicknessM,
     x11: ny * thicknessM,
     x20: sx - nx * half, // centerline → παρειά
     x21: sy - ny * half,

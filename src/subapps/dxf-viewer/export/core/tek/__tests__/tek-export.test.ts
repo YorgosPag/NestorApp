@@ -19,25 +19,33 @@ describe('tek-geometry', () => {
     expect(mmToMeters(250)).toBe(0.25);
   });
 
-  it('buildWallXMatrix = decoded τύπος (οριζόντιος τοίχος (0,0)→(5,0), t=0.25)', () => {
+  it('buildWallXMatrix column-major (οριζόντιος (0,0)→(5,0), t=0.25)', () => {
     const m = buildWallXMatrix(0, 0, 5, 0, 0.25);
-    // (x00,x10)=E−S=(5,0)· (x01,x11)=n̂·t=(0,0.25)· origin=S−n̂·t/2=(0,−0.125) (centerline→παρειά).
+    // length axis (x00,x01)=E−S=(5,0)· thickness axis (x10,x11)=n̂·t=(0,0.25)· origin=(0,−0.125).
     expect(m.x00).toBeCloseTo(5);
-    expect(m.x10).toBeCloseTo(0);
     expect(m.x01).toBeCloseTo(0);
+    expect(m.x10).toBeCloseTo(0);
     expect(m.x11).toBeCloseTo(0.25);
     expect(m.x20).toBeCloseTo(0);
     expect(m.x21).toBeCloseTo(-0.125);
   });
 
-  it('buildWallXMatrix κάθετος (0,0)→(0,5), t=0.2', () => {
+  it('buildWallXMatrix κάθετος (0,0)→(0,5), t=0.2 — transposed (length axis=(x00,x01))', () => {
     const m = buildWallXMatrix(0, 0, 0, 5, 0.2);
+    // length (x00,x01)=(0,5)· thickness (x10,x11)=n̂·t, n̂=(−1,0) → (−0.2,0)· origin=(0.1,0).
     expect(m.x00).toBeCloseTo(0);
-    expect(m.x10).toBeCloseTo(5);
-    expect(m.x01).toBeCloseTo(-0.2);
+    expect(m.x01).toBeCloseTo(5);
+    expect(m.x10).toBeCloseTo(-0.2);
     expect(m.x11).toBeCloseTo(0);
     expect(m.x20).toBeCloseTo(0.1);
     expect(m.x21).toBeCloseTo(0);
+  });
+
+  it('λοξός τοίχος → length ⊥ thickness ΣΤΗΝ ΑΝΑΓΝΩΣΗ ΤΟΥ ΤΕΚΤΟΝΑ (column-major, μηδέν ρόμβος)', () => {
+    const m = buildWallXMatrix(0, 0, 3, 4, 0.2); // L=5, n̂=(−0.8,0.6)
+    // Τέκτων column-major: length=(x00,x01), thickness=(x10,x11). dot=0 → ορθογώνιο.
+    const dot = m.x00 * m.x10 + m.x01 * m.x11;
+    expect(dot).toBeCloseTo(0);
   });
 });
 

@@ -10,18 +10,22 @@
 
 export const HATCH_RIBBON_KEYS = {
   stringParams: {
-    /** Τύπος γεμίσματος: 'solid' | 'user-defined'. */
+    /** Τύπος γεμίσματος: 'solid' | 'user-defined' | 'predefined'. */
     fillType: 'hatch.params.fillType',
     /** Χρώμα γεμίσματος/γραμμών (hex preset). */
     fillColor: 'hatch.params.fillColor',
     /** Island detection style: 'normal' | 'outer' | 'ignore'. */
     islandStyle: 'hatch.params.islandStyle',
+    /** Όνομα predefined μοτίβου (PAT catalog) — π.χ. 'ANSI31'. */
+    patternName: 'hatch.params.patternName',
   },
   params: {
     /** Γωνία γραμμών (μοίρες) — user-defined. */
     lineAngle: 'hatch.params.lineAngle',
     /** Κάθετη απόσταση γραμμών (mm) — user-defined. */
     lineSpacing: 'hatch.params.lineSpacing',
+    /** Κλίμακα predefined μοτίβου (×). */
+    patternScale: 'hatch.params.patternScale',
   },
   toggles: {
     /** Διπλή (σταυρωτή) γραμμοσκίαση. */
@@ -41,12 +45,14 @@ export const HATCH_RIBBON_KEYS = {
 
 export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.lineAngle
-  | typeof HATCH_RIBBON_KEYS.params.lineSpacing;
+  | typeof HATCH_RIBBON_KEYS.params.lineSpacing
+  | typeof HATCH_RIBBON_KEYS.params.patternScale;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
   | typeof HATCH_RIBBON_KEYS.stringParams.fillColor
-  | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle;
+  | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle
+  | typeof HATCH_RIBBON_KEYS.stringParams.patternName;
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch;
@@ -61,11 +67,13 @@ export type HatchRibbonActionKey =
 const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.params.lineAngle,
   HATCH_RIBBON_KEYS.params.lineSpacing,
+  HATCH_RIBBON_KEYS.params.patternScale,
 ]);
 const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
   HATCH_RIBBON_KEYS.stringParams.fillColor,
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
+  HATCH_RIBBON_KEYS.stringParams.patternName,
 ]);
 const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,

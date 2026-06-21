@@ -19,7 +19,7 @@ import type { HatchEntity } from '../../types/entities';
 
 /** Οι ρυθμίσεις σχεδίασης που κουβαλάει μια νέα γραμμοσκίαση. */
 export interface HatchDrawDefaults {
-  /** 'solid' = συμπαγές γέμισμα· 'user-defined' = παράλληλες γραμμές. */
+  /** 'solid' = συμπαγές· 'user-defined' = παράλληλες γραμμές· 'predefined' = PAT μοτίβο. */
   readonly fillType: NonNullable<HatchEntity['fillType']>;
   /** Χρώμα γεμίσματος/γραμμών (hex). */
   readonly fillColor: string;
@@ -31,6 +31,12 @@ export interface HatchDrawDefaults {
   readonly doubleCrossHatch: boolean;
   /** Island detection style (DXF code 75). */
   readonly islandStyle: NonNullable<HatchEntity['islandStyle']>;
+  /** Όνομα predefined μοτίβου (PAT catalog) — μόνο predefined. */
+  readonly patternName: string;
+  /** Κλίμακα predefined μοτίβου (×) — μόνο predefined. */
+  readonly patternScale: number;
+  /** Γωνία predefined μοτίβου (μοίρες) — μόνο predefined. */
+  readonly patternAngle: number;
 }
 
 /** Εργοστασιακές προεπιλογές — συμπαγής γκρι poché (η συνηθέστερη χρήση). */
@@ -41,6 +47,9 @@ const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   lineSpacing: 100,
   doubleCrossHatch: false,
   islandStyle: 'normal',
+  patternName: 'ANSI31',
+  patternScale: 1,
+  patternAngle: 0,
 };
 
 let state: HatchDrawDefaults = DEFAULT_HATCH_DRAW_DEFAULTS;

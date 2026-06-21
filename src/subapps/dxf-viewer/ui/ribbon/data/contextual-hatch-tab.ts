@@ -18,6 +18,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { HATCH_RIBBON_KEYS } from '../hooks/bridge/hatch-command-keys';
+import { listHatchPatterns } from '../../../data/hatch-pattern-catalog';
 
 export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 
@@ -26,6 +27,22 @@ export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 const FILL_TYPE_OPTIONS = [
   { value: 'solid', labelKey: 'ribbon.commands.hatchEditor.fillTypeSolid', isLiteralLabel: false },
   { value: 'user-defined', labelKey: 'ribbon.commands.hatchEditor.fillTypeUserDefined', isLiteralLabel: false },
+  { value: 'predefined', labelKey: 'ribbon.commands.hatchEditor.fillTypePredefined', isLiteralLabel: false },
+] as const;
+
+/** Predefined μοτίβα — options από τον PAT catalog (SSoT), label μέσω i18n key. */
+const PATTERN_NAME_OPTIONS = listHatchPatterns().map((p) => ({
+  value: p.name, labelKey: p.labelKey, isLiteralLabel: false,
+}));
+
+const PATTERN_SCALE_OPTIONS = [
+  { value: '0.5', labelKey: '×0.5', isLiteralLabel: true },
+  { value: '1', labelKey: '×1', isLiteralLabel: true },
+  { value: '2', labelKey: '×2', isLiteralLabel: true },
+  { value: '5', labelKey: '×5', isLiteralLabel: true },
+  { value: '10', labelKey: '×10', isLiteralLabel: true },
+  { value: '25', labelKey: '×25', isLiteralLabel: true },
+  { value: '50', labelKey: '×50', isLiteralLabel: true },
 ] as const;
 
 const ISLAND_STYLE_OPTIONS = [
@@ -107,6 +124,34 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
       id: 'hatch-pattern',
       labelKey: 'ribbon.panels.hatchPattern',
       rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.patternName',
+                labelKey: 'ribbon.commands.hatchEditor.patternName',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.patternName,
+                comboboxWidthPx: 160,
+                options: PATTERN_NAME_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.patternScale',
+                labelKey: 'ribbon.commands.hatchEditor.patternScale',
+                commandKey: HATCH_RIBBON_KEYS.params.patternScale,
+                comboboxWidthPx: 90,
+                options: PATTERN_SCALE_OPTIONS,
+                numericInput: { editable: true, min: 0.01 },
+              },
+            },
+          ],
+        },
         {
           isInFlyout: false,
           buttons: [

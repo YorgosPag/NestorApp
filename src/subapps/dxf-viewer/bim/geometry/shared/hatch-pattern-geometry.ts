@@ -21,6 +21,7 @@
 import type { Point3D } from '../../types/bim-base';
 import {
   buildAxisAlignedHatch,
+  clipLineToBbox,
   type HatchDirection,
   type HatchLineSegment,
   type HatchPoint2D,
@@ -29,6 +30,7 @@ import { polygonBbox, pointInPolygon } from './polygon-utils';
 import { lerpPoint } from '../../../rendering/entities/shared/geometry-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import type { HatchIslandStyle } from '../../hatch/hatch-properties';
+import type { HatchPattern, PatternLine } from '../../../data/hatch-pattern-catalog';
 
 export type { HatchLineSegment, HatchPoint2D } from './polygon-hatch-utils';
 export type { HatchIslandStyle } from '../../hatch/hatch-properties';
@@ -155,6 +157,166 @@ export function buildHatchLines(
   if (double) segments.push(...buildClippedSet(shifted, spacingMm, angleDeg + 90, islandStyle));
 
   return segments.map((s) => ({
+    start: { x: s.start.x + origin.x, y: s.start.y + origin.y },
+    end: { x: s.end.x + origin.x, y: s.end.y + origin.y },
+  }));
+}
+
+// ─── Predefined PAT patterns (ADR-507 Φ2) ────────────────────────────────────────
+
+/** Μήκος που σχεδιάζεται για μια «κουκκίδα» (dash == 0) — mm, ορατό σημείο. */
+const DOT_LENGTH_MM = 0.35;
+/** Ασφαλιστικό όριο γραμμών ανά οικογένεια (αποφυγή busy loop σε εκφυλισμένα δεδομένα). */
+const MAX_PATTERN_LINES = 4000;
+
+export interface BuildPredefinedHatchOptions {
+  /** Συντελεστής κλίμακας μοτίβου (× origin/delta/dashes). Προεπιλογή 1. */
+  readonly scale?: number;
+  /** Συνολική περιστροφή μοτίβου (μοίρες) — προστίθεται σε κάθε `PatternLine.angle`. */
+  readonly angleDeg?: number;
+  /** Phase origin ολόκληρου του μοτίβου (world mm). Προεπιλογή {0,0}. */
+  readonly origin?: HatchPoint2D;
+  /** Island rule (ίδιο με user-defined). */
+  readonly islandStyle?: HatchIslandStyle;
+}
+
+/** Σημείο πάνω στη γραμμή `angle` με συντεταγμένη `s` κατά μήκος + `k` κάθετα. */
+function pointFromLineCoords(s: number, k: number, ux: number, uy: number): HatchPoint2D {
+  // u = (ux, uy)· n = (-uy, ux)·  p = s·u + k·n.
+  return { x: s * ux - k * uy, y: s * uy + k * ux };
+}
+
+/** Σύνολο dash-υπο-τμημάτων μιας γραμμής, ως [s0, s1] κατά μήκος (πριν το clip). */
+function dashSpansAlongLine(
+  sStart: number, sEnd: number, phase: number, dashes: readonly number[], period: number,
+): Array<readonly [number, number]> {
+  const spans: Array<readonly [number, number]> = [];
+  // Ξεκίνα από τον κύκλο που καλύπτει το sStart (ευθυγραμμισμένος στο phase).
+  let cycleStart = Math.floor((sStart - phase) / period) * period + phase;
+  let guard = 0;
+  while (cycleStart < sEnd && guard < MAX_PATTERN_LINES) {
+    guard += 1;
+    let cursor = cycleStart;
+    for (const d of dashes) {
+      const len = Math.abs(d);
+      if (d > 0) {
+        spans.push([cursor, cursor + len]);
+      } else if (d === 0) {
+        spans.push([cursor, cursor + DOT_LENGTH_MM]); // κουκκίδα
+      }
+      cursor += len === 0 ? DOT_LENGTH_MM : len;
+    }
+    cycleStart += period;
+  }
+  // Clip στο [sStart, sEnd].
+  const out: Array<readonly [number, number]> = [];
+  for (const [a, b] of spans) {
+    const s0 = Math.max(a, sStart);
+    const s1 = Math.min(b, sEnd);
+    if (s1 - s0 > EPS) out.push([s0, s1]);
+  }
+  return out;
+}
+
+/** Παράγει τα (μη-clipped στο όριο) τμήματα μιας `PatternLine` πάνω στο bbox. */
+function buildPatternLineSegments(
+  pl: PatternLine, bbox: ReturnType<typeof polygonBbox>, globalAngleDeg: number,
+): HatchLineSegment[] {
+  const angle = pl.angle + globalAngleDeg;
+  const r = degToRad(angle);
+  const ux = Math.cos(r);
+  const uy = Math.sin(r);
+  const dy = Math.abs(pl.delta[1]);
+  if (dy < EPS) return []; // χωρίς κάθετη απόσταση → εκφυλισμένη οικογένεια
+
+  // Perpendicular συντεταγμένη origin: k = -uy·x + ux·y (ίδιο k με clipLineToBbox).
+  const [ox, oy] = pl.origin;
+  const kOrigin = -uy * ox + ux * oy;
+  const sOrigin = ux * ox + uy * oy;            // along-line συντεταγμένη origin
+  const dx = pl.delta[0];                        // stagger κατά μήκος ανά γραμμή
+  const dashes = pl.dashes;
+  const period = dashes.reduce((acc, d) => acc + (Math.abs(d) || DOT_LENGTH_MM), 0);
+  const hasDashes = dashes.length > 0 && period > EPS;
+
+  // Εύρος δεικτών γραμμών i ώστε k=kOrigin+i·dy να καλύπτει το bbox.
+  const corners: ReadonlyArray<readonly [number, number]> = [
+    [bbox.min.x, bbox.min.y], [bbox.max.x, bbox.min.y],
+    [bbox.max.x, bbox.max.y], [bbox.min.x, bbox.max.y],
+  ];
+  let kMin = Number.POSITIVE_INFINITY;
+  let kMax = Number.NEGATIVE_INFINITY;
+  for (const [x, y] of corners) {
+    const k = -uy * x + ux * y;
+    if (k < kMin) kMin = k;
+    if (k > kMax) kMax = k;
+  }
+  const iStart = Math.ceil((kMin - kOrigin) / dy);
+  const iEnd = Math.floor((kMax - kOrigin) / dy);
+
+  const out: HatchLineSegment[] = [];
+  let steps = 0;
+  for (let i = iStart; i <= iEnd; i += 1) {
+    if (++steps > MAX_PATTERN_LINES) break;
+    const k = kOrigin + i * dy;
+    const chord = clipLineToBbox({ ux, uy }, k, bbox);
+    if (!chord) continue;
+    const sA = chord.start.x * ux + chord.start.y * uy;
+    const sB = chord.end.x * ux + chord.end.y * uy;
+    const sStart = Math.min(sA, sB);
+    const sEnd = Math.max(sA, sB);
+    if (!hasDashes) {
+      out.push({ start: chord.start, end: chord.end });
+      continue;
+    }
+    const phase = sOrigin + i * dx;
+    for (const [s0, s1] of dashSpansAlongLine(sStart, sEnd, phase, dashes, period)) {
+      out.push({
+        start: pointFromLineCoords(s0, k, ux, uy),
+        end: pointFromLineCoords(s1, k, ux, uy),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Παράγει τα τμήματα ενός **predefined** μοτίβου (PAT catalog), κομμένα στα
+ * `boundaryPaths`. SSoT: η ΙΔΙΑ έξοδος τροφοδοτεί τον canvas renderer ΚΑΙ τον DXF
+ * writer (lines-mode) — μηδέν δεύτερη pattern math.
+ *
+ * Reuse: `clipLineToBbox` (chord ανά γραμμή) + `clipSegmentToRegion` (boundary clip,
+ * even-odd island rule) — μηδέν νέα clip math. Η μόνη νέα λογική είναι η υποδιαίρεση
+ * σε dashes/dots κατά μήκος (PAT semantics).
+ */
+export function buildPredefinedHatchLines(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<HatchPoint2D>>,
+  pattern: HatchPattern,
+  opts: BuildPredefinedHatchOptions = {},
+): HatchLineSegment[] {
+  const { scale = 1, angleDeg = 0, origin = { x: 0, y: 0 }, islandStyle = 'normal' } = opts;
+  if (scale <= 0) return [];
+  const usable = boundaryPaths.filter((p) => p.length >= 3);
+  if (!usable.length) return [];
+
+  // Phase origin: μετατόπισε τα όρια κατά -origin, χτίσε, ξανα-μετατόπισε (mirror buildHatchLines).
+  const shifted: Point3D[][] = usable.map((path) =>
+    path.map((v) => ({ x: v.x - origin.x, y: v.y - origin.y, z: 0 })),
+  );
+  const bbox = polygonBbox(shifted.flat());
+
+  const out: HatchLineSegment[] = [];
+  for (const pl of pattern.lines) {
+    const scaled: PatternLine = {
+      angle: pl.angle,
+      origin: [pl.origin[0] * scale, pl.origin[1] * scale],
+      delta: [pl.delta[0] * scale, pl.delta[1] * scale],
+      dashes: pl.dashes.map((d) => d * scale),
+    };
+    const raw = buildPatternLineSegments(scaled, bbox, angleDeg);
+    for (const seg of raw) out.push(...clipSegmentToRegion(seg, shifted, islandStyle));
+  }
+
+  return out.map((s) => ({
     start: { x: s.start.x + origin.x, y: s.start.y + origin.y },
     end: { x: s.end.x + origin.x, y: s.end.y + origin.y },
   }));

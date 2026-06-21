@@ -1,6 +1,6 @@
 # ADR-512 — Εξαγωγή Tekton `.TEK` (αρχιτεκτονικά)
 
-**Status:** 🟡 Φάση 1 (τοίχοι) UNCOMMITTED 2026-06-21 — code+tests+tsc· 🔴 browser-verify (Τέκτων) εκκρεμεί.
+**Status:** 🟢 Φάση 1 (τοίχοι) **BROWSER-VERIFIED στον Τέκτονα** (εμφάνιση+διαστάσεις σωστά) 2026-06-21 — UNCOMMITTED, 🔴 commit (μόνο Giorgio).
 **Σχετικά:** ADR-505 (Unified Export) — επέκταση με 4η μορφή.
 
 ## Context / Πρόβλημα
@@ -52,4 +52,5 @@
 - ⚠️ version-specific (fileversion 516)· μπορεί να σπάσει σε νέα έκδοση Τέκτονα.
 
 ## Changelog
+- **2026-06-21 (b)** — **Browser-verified ✅** (Τέκτων: εμφάνιση+διαστάσεις σωστά). **Calibration fix:** ο Τέκτων διαβάζει το xmatrix **column-major** (length axis=(x00,x01), thickness=(x10,x11)) → χρειάστηκε **transpose** (swap x01↔x10). Δεν φάνηκε στο αρχικό decode γιατί το δείγμα ήταν **οριζόντιος τοίχος** (x01=x10=0 → degenerate, οι δύο αναγνώσεις ταυτίζονται)· οι **λοξοί** τοίχοι του Giorgio αποκάλυψαν τον ρόμβο (sheared footprint). ΜΑΘΗΜΑ: για decode affine matrix, χρησιμοποίησε **μη-degenerate (λοξό)** δείγμα — το axis-aligned κρύβει row/column-major + transpose. **SSoT fix (ίδια συνεδρία):** `metersPerCanvasUnit`→reuse `sceneUnitsToMeters`· `escapeXml`→NEW `src/lib/xml/escape-xml.ts` SSoT. 15 jest. 🔴 commit.
 - **2026-06-21** — Φάση 1 (τοίχοι). Decode `.TEK`=XML v9.1 + xmatrix. Template-based exporter (sanitized σκελετός + parameterized wall record), 7 NEW modules + wiring 5 σημεία + i18n. 19 jest, tsc clean. UNCOMMITTED· 🔴 browser-verify.

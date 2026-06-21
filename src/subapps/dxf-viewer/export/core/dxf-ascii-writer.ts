@@ -24,7 +24,8 @@
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
-import { buildHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { buildHatchLines, buildPredefinedHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { getHatchPattern } from '../../data/hatch-pattern-catalog';
 import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { DxfLineMode } from '../types';
@@ -202,15 +203,9 @@ function emitHatch(
       for (let i = 0; i < path.length - 1; i += 1) emitLine(path[i], path[i + 1], layer, aci, s, pair);
       if (path.length > 2) emitLine(path[path.length - 1], path[0], layer, aci, s, pair);
     }
-    // user-defined: οι γραμμές μοτίβου ως LINEs (FULL SSoT με canvas).
+    // user-defined / predefined: οι γραμμές μοτίβου ως LINEs (FULL SSoT με canvas).
     if (!solid) {
-      const segs = buildHatchLines(paths, {
-        spacingMm: e.lineSpacing ?? e.patternScale ?? 100,
-        angleDeg: e.lineAngle ?? e.patternAngle ?? 0,
-        origin: e.patternOrigin,
-        double: e.doubleCrossHatch ?? false,
-        islandStyle: e.islandStyle ?? 'normal',
-      });
+      const segs = hatchPatternSegments(e);
       for (const seg of segs) emitLine(seg.start, seg.end, layer, aci, s, pair);
     }
     return;
@@ -241,9 +236,12 @@ function emitHatch(
   pair(75, islandStyleToDxf75(e.islandStyle));    // hatch style
   // pattern type: 0=user-defined, 1=predefined. Non-solid χωρίς ρητό fillType →
   // user-defined (οι default γραμμές μοτίβου είναι user-defined).
-  const userDefined = !solid && (e.fillType === 'user-defined' || e.fillType == null);
-  pair(76, userDefined ? 0 : 1);
-  if (!solid) {
+  const predefined = !solid && e.fillType === 'predefined';
+  const userDefined = !solid && !predefined;
+  pair(76, userDefined ? 0 : 1);                  // 0=user-defined, 1=predefined
+  if (predefined) {
+    emitPredefinedPattern(e, pair);
+  } else if (!solid) {
     const angle = e.lineAngle ?? e.patternAngle ?? 0;
     const spacing = e.lineSpacing ?? e.patternScale ?? 1;
     pair(52, angle);                              // pattern angle
@@ -262,6 +260,65 @@ function emitHatch(
   const seeds = e.seedPoints ?? [];
   pair(98, seeds.length);                         // number of seed points
   for (const sp of seeds) { pair(10, sp.x * s); pair(20, sp.y * s); }
+}
+
+/**
+ * Τμήματα μοτίβου μιας μη-solid γραμμοσκίασης για explode mode (LINEs). Predefined →
+ * `buildPredefinedHatchLines` (PAT catalog)· αλλιώς user-defined `buildHatchLines`.
+ * Ίδια SSoT έξοδος με τον canvas renderer (FULL SSoT).
+ */
+function hatchPatternSegments(e: HatchEntity): ReturnType<typeof buildHatchLines> {
+  const paths = (e.boundaryPaths ?? []).filter((p) => p.length >= 3);
+  if (e.fillType === 'predefined') {
+    const pattern = getHatchPattern(e.patternName);
+    if (!pattern) return [];
+    return buildPredefinedHatchLines(paths, pattern, {
+      scale: e.patternScale,
+      angleDeg: e.patternAngle ?? 0,
+      origin: e.patternOrigin,
+      islandStyle: e.islandStyle ?? 'normal',
+    });
+  }
+  return buildHatchLines(paths, {
+    spacingMm: e.lineSpacing ?? e.patternScale ?? 100,
+    angleDeg: e.lineAngle ?? e.patternAngle ?? 0,
+    origin: e.patternOrigin,
+    double: e.doubleCrossHatch ?? false,
+    islandStyle: e.islandStyle ?? 'normal',
+  });
+}
+
+/**
+ * Γράφει τα group codes ενός predefined PAT μοτίβου στο native HATCH: 52/41 (γωνία/
+ * κλίμακα), 78 (πλήθος γραμμών), και ανά `PatternLine` τα 53/43/44/45/46/79/49
+ * (ADR-507 §2.3). Οι τιμές κλιμακώνονται κατά `patternScale` ώστε το εξαγόμενο DXF
+ * να ταιριάζει με την οθόνη. Άγνωστο pattern → fallback σε μία γραμμή (valid hatch).
+ */
+function emitPredefinedPattern(e: HatchEntity, pair: Pair): void {
+  const angle = e.patternAngle ?? 0;
+  const scale = e.patternScale ?? 1;
+  pair(52, angle);                                // pattern angle
+  pair(41, scale);                                // pattern scale
+  pair(77, 0);                                    // double flag (n/a για predefined)
+  const pattern = getHatchPattern(e.patternName);
+  const lines = pattern?.lines ?? [];
+  if (lines.length === 0) {
+    // fallback: μία διαγώνια ώστε το hatch να παραμένει έγκυρο.
+    pair(78, 1);
+    pair(53, angle); pair(43, 0); pair(44, 0);
+    pair(45, 0); pair(46, scale || 1); pair(79, 0);
+    return;
+  }
+  pair(78, lines.length);                         // number of pattern definition lines
+  for (const pl of lines) {
+    pair(53, pl.angle + angle);                   // line angle
+    pair(43, pl.origin[0] * scale);               // base point X
+    pair(44, pl.origin[1] * scale);               // base point Y
+    pair(45, pl.delta[0] * scale);                // offset (delta) X
+    pair(46, pl.delta[1] * scale);                // offset (delta) Y
+    pair(79, pl.dashes.length);                   // number of dash lengths
+    for (const d of pl.dashes) pair(49, d * scale); // dash length
+  }
 }
 
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
