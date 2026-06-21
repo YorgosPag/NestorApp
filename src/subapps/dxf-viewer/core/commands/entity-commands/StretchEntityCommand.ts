@@ -14,6 +14,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { geometryFromSnapshot } from './snapshot-geometry';
 import {
   applyVertexDisplacement,
   translateEntityByAnchor,
@@ -114,7 +115,7 @@ export class StretchEntityCommand implements ICommand {
         this.sceneManager.removeEntity(replacement.newEntity.id);
         this.sceneManager.addEntity(replacement.oldEntity);
       } else {
-        const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot;
+        const geometry = geometryFromSnapshot(snapshot);
         this.sceneManager.updateEntity(entityId, geometry);
       }
     }

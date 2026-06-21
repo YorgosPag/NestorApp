@@ -11,6 +11,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { geometryFromSnapshot } from './snapshot-geometry';
 import {
   applyLengthen,
   type LengthenEndpoint,
@@ -57,7 +58,7 @@ export class LengthenCommand implements ICommand {
 
   undo(): void {
     if (!this.snapshot) return;
-    const { id: _id, layer: _layer, visible: _visible, ...geometry } = this.snapshot;
+    const geometry = geometryFromSnapshot(this.snapshot);
     this.sceneManager.updateEntity(this.params.entityId, geometry);
   }
 

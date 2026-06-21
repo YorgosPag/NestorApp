@@ -19,7 +19,7 @@
 import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 import { deepClone } from '../../../utils/clone-utils';
 import { dlog, dwarn, derr } from '../../../debug';
 
@@ -175,9 +175,8 @@ export class MoveOverlayCommand implements ICommand {
       return false;
     }
 
-    // Check time window (500ms default)
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Within the canonical merge window → coalesce into one undo step.
+    return isWithinMergeWindow(this, other);
   }
 
   /**
@@ -341,9 +340,8 @@ export class MoveMultipleOverlaysCommand implements ICommand {
       return false;
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Within the canonical merge window → coalesce into one undo step.
+    return isWithinMergeWindow(this, other);
   }
 
   mergeWith(other: ICommand): ICommand {

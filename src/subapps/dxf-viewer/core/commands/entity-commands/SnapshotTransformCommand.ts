@@ -37,6 +37,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { isWithinMergeWindow, sameEntityIdSet } from '../merge-window';
+import { geometryFromSnapshot } from './snapshot-geometry';
 // ADR-363 §5.4 — recompute hosted openings against the transformed walls.
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 // ADR-492 — reframe the beams that frame into the transformed columns/beams and announce
@@ -46,20 +47,6 @@ import {
   emitRestoredEntities,
   reframeBeamsAndEmitAfterRestore,
 } from '../../../bim/beams/beam-column-reframe-cascade';
-
-/**
- * Geometry fields to restore from a snapshot on undo — everything EXCEPT the
- * identity fields (`id`, `layer`, `visible`). `type` is intentionally kept so a
- * Scale circle→ellipse conversion is reversible; for Rotate/Mirror the type is
- * unchanged, so restoring it is a harmless no-op.
- */
-function geometryFromSnapshot(snapshot: SceneEntity): Partial<SceneEntity> {
-  const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot as SceneEntity & {
-    layer?: unknown;
-    visible?: unknown;
-  };
-  return geometry as Partial<SceneEntity>;
-}
 
 export abstract class SnapshotTransformCommand implements ICommand {
   readonly id: string;

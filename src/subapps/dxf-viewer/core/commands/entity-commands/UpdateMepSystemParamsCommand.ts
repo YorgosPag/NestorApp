@@ -14,7 +14,7 @@
  */
 
 import type { ICommand, SerializedCommand } from '../interfaces';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 import type { MepSystemParams } from '../../../bim/types/mep-system-types';
 import { getMepSystemMutator } from '../../../bim/mep-systems/mep-system-mutator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
@@ -51,7 +51,7 @@ export class UpdateMepSystemParamsCommand implements ICommand {
     if (!(other instanceof UpdateMepSystemParamsCommand)) return false;
     if (other.systemId !== this.systemId) return false;
     if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    return isWithinMergeWindow(this, other);
   }
 
   mergeWith(other: ICommand): ICommand {

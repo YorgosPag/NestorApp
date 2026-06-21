@@ -15,6 +15,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { geometryFromSnapshot } from './snapshot-geometry';
 import type { PolylineEntity, LWPolylineEntity } from '../../../types/entities';
 
 export type PolylineVertexOp =
@@ -73,7 +74,7 @@ export class PolylineVertexCommand implements ICommand {
 
   undo(): void {
     if (!this.snapshot) return;
-    const { id: _id, layer: _layer, visible: _visible, ...geometry } = this.snapshot;
+    const geometry = geometryFromSnapshot(this.snapshot);
     this.sceneManager.updateEntity(this.params.entityId, geometry);
   }
 

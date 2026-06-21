@@ -32,7 +32,7 @@
 
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 
 export abstract class MergeableUpdateCommand<TPatch> implements ICommand {
   readonly id: string;
@@ -119,7 +119,7 @@ export abstract class MergeableUpdateCommand<TPatch> implements ICommand {
     if (!(other instanceof MergeableUpdateCommand)) return false;
     if (other.type !== this.type || other.entityId !== this.entityId) return false;
     if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    return isWithinMergeWindow(this, other);
   }
 
   mergeWith(other: ICommand): ICommand {

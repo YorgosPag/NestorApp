@@ -11,6 +11,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { geometryFromSnapshot } from './snapshot-geometry';
 import { editArcFromMidpoint, editArcFromRadius } from '../../../systems/grip/arc-radius-edit';
 import type { ArcEntity } from '../../../types/entities';
 
@@ -57,7 +58,7 @@ export class ArcRadiusEditCommand implements ICommand {
 
   undo(): void {
     if (!this.snapshot) return;
-    const { id: _id, layer: _layer, visible: _visible, ...geometry } = this.snapshot;
+    const geometry = geometryFromSnapshot(this.snapshot);
     this.sceneManager.updateEntity(this.params.entityId, geometry);
   }
 
