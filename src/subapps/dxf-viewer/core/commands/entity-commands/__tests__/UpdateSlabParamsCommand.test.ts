@@ -205,6 +205,6 @@ describe('UpdateSlabParamsCommand (Phase 3.5)', () => {
     const cmd = new UpdateSlabParamsCommand(slab.id, slab.params, slab.params, sm, true);
     const s = cmd.serialize();
     expect(s.type).toBe('update-slab-params');
-    expect(s.data).toMatchObject({ slabId: slab.id, isDragging: true });
+    expect(s.data).toMatchObject({ entityId: slab.id, isDragging: true });
   });
 });

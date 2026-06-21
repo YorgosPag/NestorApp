@@ -63,13 +63,4 @@ export class UpdateFurnitureParamsCommand extends MergeableUpdateCommand<Furnitu
     if (!Number.isFinite(this.patch.rotationDeg)) return 'rotationDeg must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      furnitureId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

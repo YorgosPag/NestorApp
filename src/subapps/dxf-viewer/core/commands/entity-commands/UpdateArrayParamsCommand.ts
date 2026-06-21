@@ -50,13 +50,4 @@ export class UpdateArrayParamsCommand extends MergeableUpdateCommand<ArrayParams
     if (!this.entityId) return 'Array entity ID is required';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      arrayId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

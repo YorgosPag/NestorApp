@@ -231,6 +231,6 @@ describe('UpdateBeamParamsCommand (Phase 5.5a)', () => {
     const cmd = new UpdateBeamParamsCommand(beam.id, beam.params, beam.params, sm, true);
     const s = cmd.serialize();
     expect(s.type).toBe('update-beam-params');
-    expect(s.data).toMatchObject({ beamId: beam.id, isDragging: true });
+    expect(s.data).toMatchObject({ entityId: beam.id, isDragging: true });
   });
 });

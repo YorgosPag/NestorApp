@@ -65,13 +65,4 @@ export class UpdateRailingParamsCommand extends MergeableUpdateCommand<RailingPa
     if (!Number.isFinite(this.patch.baseElevationMm)) return 'baseElevationMm must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      railingId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

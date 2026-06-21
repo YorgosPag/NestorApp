@@ -99,13 +99,4 @@ export class UpdateOpeningParamsCommand extends MergeableUpdateCommand<OpeningPa
     if (this.patch.offsetFromStart < 0) return 'offsetFromStart must be >= 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      openingId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

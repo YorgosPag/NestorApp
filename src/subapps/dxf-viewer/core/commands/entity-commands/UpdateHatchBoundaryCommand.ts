@@ -59,13 +59,4 @@ export class UpdateHatchBoundaryCommand extends MergeableUpdateCommand<Point2D[]
     if (this.patch[0].length < 3) return 'outer boundary must have at least 3 vertices';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      hatchId: this.entityId,
-      boundaryPaths: this.patch,
-      previousBoundaryPaths: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

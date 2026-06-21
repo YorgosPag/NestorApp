@@ -65,13 +65,4 @@ export class UpdateFoundationParamsCommand extends MergeableUpdateCommand<Founda
     if (!Number.isFinite(this.patch.topElevationMm)) return 'topElevation must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      foundationId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

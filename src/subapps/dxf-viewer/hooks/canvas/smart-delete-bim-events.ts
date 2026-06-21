@@ -12,7 +12,7 @@
  * @see ./useSmartDelete.ts
  */
 import type { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import type { useEventBus } from '../../systems/events';
+import { emitBimEntityDeleteRequested } from '../../systems/events/emit-bim-entity-delete-requested';
 
 export interface CollectedBimDeleteIds {
   wallIds: string[];
@@ -74,44 +74,34 @@ export function collectBimDeleteIds(
 
 /**
  * Fire Firestore deleteDoc (+ subscription re-add prevention) events for every
- * deleted BIM entity type. MUST run AFTER the delete command executes.
+ * deleted BIM entity type. MUST run AFTER the delete command executes. Delegates
+ * the per-type event mapping to the `emitBimEntityDeleteRequested` SSoT (N.0.2 —
+ * single source shared with `CreateBimEntityCommand.undo()`).
  */
-export function emitBimDeleteEvents(
-  ids: CollectedBimDeleteIds,
-  eventBus: ReturnType<typeof useEventBus>,
-): void {
-  for (const wallId of ids.wallIds) eventBus.emit('bim:wall-delete-requested', { wallId });
-  for (const slabId of ids.slabIds) eventBus.emit('bim:slab-delete-requested', { slabId });
-  for (const columnId of ids.columnIds) eventBus.emit('bim:column-delete-requested', { columnId });
-  for (const beamId of ids.beamIds) eventBus.emit('bim:beam-delete-requested', { beamId });
-  // ADR-436 — foundation.
-  for (const foundationId of ids.foundationIds) eventBus.emit('bim:foundation-delete-requested', { foundationId });
-  // ADR-358 Phase 9C-3 — stair.
-  for (const stairId of ids.stairIds) eventBus.emit('bim:stair-delete-requested', { stairId });
-  for (const openingId of ids.openingIds) eventBus.emit('bim:opening-delete-requested', { openingId });
-  for (const slabOpeningId of ids.slabOpeningIds) eventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId });
-  // ADR-406 — MEP fixture.
-  for (const fixtureId of ids.fixtureIds) eventBus.emit('bim:mep-fixture-delete-requested', { fixtureId });
-  // ADR-408 Φ3 — electrical panel.
-  for (const panelId of ids.panelIds) eventBus.emit('bim:electrical-panel-delete-requested', { panelId });
-  // ADR-410 — furniture.
-  for (const furnitureId of ids.furnitureIds) eventBus.emit('bim:furniture-delete-requested', { furnitureId });
-  // ADR-408 Φ8 — MEP segment.
-  for (const segmentId of ids.mepSegmentIds) eventBus.emit('bim:mep-segment-delete-requested', { segmentId });
-  // ADR-408 Φ12 — plumbing manifold.
-  for (const manifoldId of ids.manifoldIds) eventBus.emit('bim:mep-manifold-delete-requested', { manifoldId });
-  // ADR-408 Εύρος Β — heating radiator.
-  for (const radiatorId of ids.radiatorIds) eventBus.emit('bim:mep-radiator-delete-requested', { radiatorId });
-  // ADR-408 Εύρος Β #2 — heating boiler.
-  for (const boilerId of ids.boilerIds) eventBus.emit('bim:mep-boiler-delete-requested', { boilerId });
-  // ADR-408 — DHW water heater.
-  for (const waterHeaterId of ids.waterHeaterIds) eventBus.emit('bim:mep-water-heater-delete-requested', { waterHeaterId });
-  // ADR-417 — roof.
-  for (const roofId of ids.roofIds) eventBus.emit('bim:roof-delete-requested', { roofId });
-  // ADR-419 — floor finish.
-  for (const floorFinishId of ids.floorFinishIds) eventBus.emit('bim:floor-finish-delete-requested', { id: floorFinishId });
-  // ADR-408 Εύρος Β #3 — underfloor.
-  for (const underfloorId of ids.underfloorIds) eventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId });
-  // ADR-437 — space separator.
-  for (const spaceSeparatorId of ids.spaceSeparatorIds) eventBus.emit('bim:space-separator-delete-requested', { id: spaceSeparatorId });
+export function emitBimDeleteEvents(ids: CollectedBimDeleteIds): void {
+  const groups: ReadonlyArray<readonly [readonly string[], string]> = [
+    [ids.wallIds, 'wall'],
+    [ids.slabIds, 'slab'],
+    [ids.columnIds, 'column'],
+    [ids.beamIds, 'beam'],
+    [ids.foundationIds, 'foundation'],
+    [ids.stairIds, 'stair'],
+    [ids.openingIds, 'opening'],
+    [ids.slabOpeningIds, 'slab-opening'],
+    [ids.fixtureIds, 'mep-fixture'],
+    [ids.panelIds, 'electrical-panel'],
+    [ids.furnitureIds, 'furniture'],
+    [ids.mepSegmentIds, 'mep-segment'],
+    [ids.manifoldIds, 'mep-manifold'],
+    [ids.radiatorIds, 'mep-radiator'],
+    [ids.boilerIds, 'mep-boiler'],
+    [ids.waterHeaterIds, 'mep-water-heater'],
+    [ids.roofIds, 'roof'],
+    [ids.floorFinishIds, 'floor-finish'],
+    [ids.underfloorIds, 'mep-underfloor'],
+    [ids.spaceSeparatorIds, 'space-separator'],
+  ];
+  for (const [arr, type] of groups) {
+    for (const id of arr) emitBimEntityDeleteRequested(type, id);
+  }
 }

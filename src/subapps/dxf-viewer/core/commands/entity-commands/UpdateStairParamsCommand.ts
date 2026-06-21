@@ -66,13 +66,4 @@ export class UpdateStairParamsCommand extends MergeableUpdateCommand<StairParams
     if (this.patch.rise <= 0) return 'rise must be > 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      stairId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

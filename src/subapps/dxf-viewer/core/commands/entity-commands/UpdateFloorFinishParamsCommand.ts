@@ -64,13 +64,4 @@ export class UpdateFloorFinishParamsCommand extends MergeableUpdateCommand<Floor
     if (this.patch.thicknessMm <= 0) return 'thicknessMm must be > 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      finishId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

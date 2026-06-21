@@ -71,13 +71,4 @@ export class UpdateBeamParamsCommand extends MergeableUpdateCommand<BeamParams> 
     }
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      beamId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

@@ -93,7 +93,9 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges. ADR-408 Φ5 — MEP circuit.
   const { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, hatchBridge, thermalSpaceBridge } =
     useDxfBimBridges({ levelManager, universalSelection });
-  const lineToolBridge = useRibbonLineToolBridge();
+  // ADR-510 Φ2E — dual-mode: επεξεργάζεται την επιλεγμένη γεωμετρική οντότητα
+  // (undoable) ή, χωρίς επιλογή, τα draw-defaults (QuickStyleStore).
+  const lineToolBridge = useRibbonLineToolBridge({ levelManager, universalSelection });
   const xlineModeBridge = useRibbonXlineModeBridge();
 
   const ribbonCommands = useRibbonCommands({

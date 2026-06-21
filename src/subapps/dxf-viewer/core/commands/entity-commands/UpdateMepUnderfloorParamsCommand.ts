@@ -63,13 +63,4 @@ export class UpdateMepUnderfloorParamsCommand extends MergeableUpdateCommand<Mep
     if (this.patch.pipeSpacingMm <= 0) return 'pipeSpacingMm must be > 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      underfloorId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

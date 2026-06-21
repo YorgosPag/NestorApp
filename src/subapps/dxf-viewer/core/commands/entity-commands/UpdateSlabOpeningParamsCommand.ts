@@ -89,13 +89,4 @@ export class UpdateSlabOpeningParamsCommand extends MergeableUpdateCommand<SlabO
     }
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      slabOpeningId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

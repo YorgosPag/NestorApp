@@ -65,13 +65,4 @@ export class UpdateSlabParamsCommand extends MergeableUpdateCommand<SlabParams> 
     if (this.patch.thickness <= 0) return 'thickness must be > 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      slabId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

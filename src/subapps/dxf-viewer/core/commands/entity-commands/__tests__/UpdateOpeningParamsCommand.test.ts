@@ -257,6 +257,6 @@ describe('UpdateOpeningParamsCommand (Phase 2.5)', () => {
     const cmd = new UpdateOpeningParamsCommand(opening.id, opening.params, opening.params, sm, true);
     const s = cmd.serialize();
     expect(s.type).toBe('update-opening-params');
-    expect(s.data).toMatchObject({ openingId: opening.id, isDragging: true });
+    expect(s.data).toMatchObject({ entityId: opening.id, isDragging: true });
   });
 });

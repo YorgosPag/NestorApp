@@ -62,13 +62,4 @@ export class UpdateMepSegmentParamsCommand extends MergeableUpdateCommand<MepSeg
     }
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      segmentId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

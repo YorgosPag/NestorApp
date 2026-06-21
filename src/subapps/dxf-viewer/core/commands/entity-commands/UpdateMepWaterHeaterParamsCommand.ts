@@ -82,13 +82,4 @@ export class UpdateMepWaterHeaterParamsCommand extends MergeableUpdateCommand<Me
     if (!Number.isFinite(this.patch.rotation)) return 'rotation must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      waterHeaterId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

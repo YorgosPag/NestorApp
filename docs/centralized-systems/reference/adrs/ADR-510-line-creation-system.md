@@ -8,8 +8,10 @@
 > zoom-scaled mm, μηδέν διπλότυπα**. ΟΛΟΚΛΗΡΩΘΗΚΕ rendering SSoT (Φ2A-D): ΕΝΑ catalog (27 mm patterns
 > `linetype-iso-catalog` + `linetype-aliases.resolveAnyLinetype`) → ΕΝΑΣ resolver (zoom×LTSCALE×CELTSCALE) → ΟΛΟΙ
 > οι consumers (DXF entity + 8 BIM renderers μέσω `bim-dash-resolver` + legacy `getDashArray`). ~250 jest GREEN.
-> **🔴 ΕΚΚΡΕΜΕΙ:** Φ2E (UI: LTSCALE control + live dropdown + custom-creation) + Φ2F (DXF LTYPE round-trip +
-> persistence = Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία (δες HANDOFF). Επόμενο spec: **Φ3** (bulge+grips).
+> **Φ2E #1** 🟡 (selected-line contextual tab + linetype editing UI, Revit-grade dual-mode bridge — επιλεγμένη
+> γραμμή εμφανίζει tab & επεξεργάζεται linetype/lineweight/color με undo, live registry dropdown). **🔴 ΕΚΚΡΕΜΕΙ:**
+> Φ2E #2 (LTSCALE status-bar control + custom-creation pattern editor) + Φ2F (DXF LTYPE round-trip + persistence =
+> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία (δες HANDOFF). Επόμενο spec: **Φ3** (bulge+grips).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -545,3 +547,22 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   status-bar control + linetype dropdown από live `LinetypeRegistry` + custom-creation pattern editor)· **Φ2F** DXF
   LTYPE round-trip (entity grp 6/48/370 read+write + `DxfSceneBuilder` wire `parseLinetypeTable`→`registerLinetypes`
   + export LTYPE table + `LinetypeRegistry` Firestore/localStorage persistence) = Φ9. Δες HANDOFF.
+- **2026-06-21** — **Φ2E #1 SELECTED-LINE CONTEXTUAL TAB + linetype editing UI (Revit-grade, FULL SSoT).**
+  Πρόβλημα (Giorgio): «όταν επιλέγω μια γραμμή δεν εμφανίζεται δικό της contextual tab». SSoT audit (grep): το
+  `resolveContextualTrigger` είχε `case` για κάθε BIM/annotation entity αλλά **έλειπε** για τα καθαρά γεωμετρικά
+  primitives → επιλεγμένη γραμμή = `return null` = καμία tab. Λύση **mirror του hatch (ΕΝΑ trigger, δύο modes)**,
+  ΟΧΙ 2ο bridge/tab (μηδέν διπλότυπο):
+  • NEW `types/style-editable-primitives.ts` — SSoT set+predicate (`isStyleEditablePrimitiveType`: line/polyline/
+    lwpolyline/circle/arc/ellipse/spline/rectangle/rect)· κοινό από ribbon-config + bridge ώστε να μην αποκλίνουν.
+  • `app/ribbon-contextual-config.ts` `resolveContextualTrigger` → grouped case επιστρέφει το ΥΠΑΡΧΟΝ
+    `LINE_TOOL_CONTEXTUAL_TRIGGER` για selected primitive (το ίδιο tab με τη σχεδίαση).
+  • `useRibbonLineToolBridge` αναβαθμίστηκε σε **dual-mode** (αντί νέου bridge): selected primitive →
+    read/write μέσω generic `UpdateEntityCommand` (undoable, μηδέν νέα command class)· καμία/μη-primitive επιλογή →
+    `QuickStyleStore` draw-defaults (αμετάβλητη συμπεριφορά ADR-357). Color→ByLayer καθαρίζει concrete fields.
+  • Linetype options = **live `LinetypeRegistry`** (`getComboboxState` δυναμικά: ByLayer + 27 ISO + runtime custom),
+    ΟΧΙ στατικό `LINETYPE_ISO_NAMES`. Lineweight/color = static tab options.
+  • `app/useDxfViewerRibbon.ts` περνά `{levelManager, universalSelection}` στο bridge.
+  Μηδέν νέα i18n (ίδιο tab/labels). 12 jest GREEN (νέο `useRibbonLineToolBridge.test.tsx`). Status → 🟡 **Φ2E #1
+  COMPLETE**. UNCOMMITTED. ⚠️ ADR-040 CHECK 6B/6D δεν αφορά (ribbon files). 🔴 browser-verify (επίλεξε γραμμή →
+  tab «Στυλ Γραμμής»· άλλαξε linetype→διακεκομμένη με undo) + commit. **🔴 ΕΚΚΡΕΜΕΙ Φ2E #2:** LTSCALE status-bar
+  control + custom-linetype creation pattern editor (→ `registerLinetype`). Δες HANDOFF.

@@ -56,6 +56,7 @@ import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-sourc
 import { isMepSegmentEntity } from '../types/entities';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { resolveSelectedEntityFrom } from '../systems/selection/resolve-selected-entity';
+import { isStyleEditablePrimitiveType } from '../types/style-editable-primitives';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -402,5 +403,10 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
     if (kind === 'path') return ARRAY_PATH_CONTEXTUAL_TRIGGER;
     return ARRAY_RECT_CONTEXTUAL_TRIGGER;
   }
+  // ADR-510 Φ2E — μια επιλεγμένη «καθαρή» γεωμετρική οντότητα (γραμμή/πολυγραμμή/
+  // κύκλος/τόξο/έλλειψη/spline/ορθογώνιο) εμφανίζει το ΙΔΙΟ Line-Tool style tab με
+  // τη σχεδίαση (mirror του hatch: ΕΝΑ trigger, δύο modes). Ο `useRibbonLineToolBridge`
+  // διακρίνει selected-edit vs draw-defaults μέσω του ίδιου SSoT predicate.
+  if (isStyleEditablePrimitiveType(entity.type)) return LINE_TOOL_CONTEXTUAL_TRIGGER;
   return null;
 }

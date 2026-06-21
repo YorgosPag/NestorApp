@@ -69,13 +69,4 @@ export class UpdateElectricalPanelParamsCommand extends MergeableUpdateCommand<E
     if (!Number.isFinite(this.patch.rotation)) return 'rotation must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      panelId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

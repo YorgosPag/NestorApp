@@ -284,6 +284,6 @@ describe('UpdateSlabOpeningParamsCommand (Phase 3.7)', () => {
     const cmd = new UpdateSlabOpeningParamsCommand(opening.id, opening.params, opening.params, sm, true);
     const s = cmd.serialize();
     expect(s.type).toBe('update-slab-opening-params');
-    expect(s.data).toMatchObject({ slabOpeningId: opening.id, isDragging: true });
+    expect(s.data).toMatchObject({ entityId: opening.id, isDragging: true });
   });
 });

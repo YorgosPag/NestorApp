@@ -161,14 +161,16 @@ describe('buildRegionOverrideCommand', () => {
 
   it('γράφει το envelopeFunction στα next params (column)', () => {
     const cmd = buildRegionOverrideCommand(['c1'], 'interior', sm);
-    const data = cmd.commands[0].serialize().data as { params: { envelopeFunction?: EnvelopeFunction } };
-    expect(data.params.envelopeFunction).toBe('interior');
+    // ADR-507 §8 — MergeableUpdateCommand serializes the patch under the canonical
+    // `patch` key (was per-command `params` before the base-class centralization).
+    const data = cmd.commands[0].serialize().data as { patch: { envelopeFunction?: EnvelopeFunction } };
+    expect(data.patch.envelopeFunction).toBe('interior');
   });
 
   it('clear (fn undefined) → next params χωρίς override', () => {
     const cmd = buildRegionOverrideCommand(['c1'], undefined, sm);
-    const data = cmd.commands[0].serialize().data as { params: { envelopeFunction?: EnvelopeFunction } };
-    expect(data.params.envelopeFunction).toBeUndefined();
+    const data = cmd.commands[0].serialize().data as { patch: { envelopeFunction?: EnvelopeFunction } };
+    expect(data.patch.envelopeFunction).toBeUndefined();
   });
 
   it('κενά elementIds → κενό CompoundCommand (no-op)', () => {

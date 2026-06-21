@@ -238,6 +238,6 @@ describe('UpdateColumnParamsCommand (Phase 4.5)', () => {
     const cmd = new UpdateColumnParamsCommand(col.id, col.params, col.params, sm, true);
     const s = cmd.serialize();
     expect(s.type).toBe('update-column-params');
-    expect(s.data).toMatchObject({ columnId: col.id, isDragging: true });
+    expect(s.data).toMatchObject({ entityId: col.id, isDragging: true });
   });
 });

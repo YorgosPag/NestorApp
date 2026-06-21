@@ -66,13 +66,4 @@ export class UpdateThermalSpaceParamsCommand extends MergeableUpdateCommand<Ther
     if (this.patch.ceilingHeightMm <= 0) return 'ceilingHeightMm must be > 0';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      spaceId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }

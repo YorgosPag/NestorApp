@@ -62,13 +62,4 @@ export class UpdateFloorplanSymbolParamsCommand extends MergeableUpdateCommand<F
     if (!Number.isFinite(this.patch.rotationDeg)) return 'rotationDeg must be finite';
     return null;
   }
-
-  protected serializedData(): Record<string, unknown> {
-    return {
-      symbolId: this.entityId,
-      params: this.patch,
-      previousParams: this.previousPatch,
-      isDragging: this.isDragging,
-    };
-  }
 }
