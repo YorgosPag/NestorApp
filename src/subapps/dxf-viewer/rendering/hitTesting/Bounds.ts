@@ -52,6 +52,9 @@ export class BoundsCalculator {
       case 'polyline':
       case 'lwpolyline':
         return this.calculatePolylineBounds(entity, tolerance);
+      // ADR-507 S2 — hatch bounds = AABB πάνω σε όλα τα boundaryPaths (spatial index/hit-test).
+      case 'hatch':
+        return this.calculateHatchBounds(entity, tolerance);
       case 'rectangle':
       case 'rect':
         return this.calculateRectangleBounds(entity, tolerance);
@@ -149,6 +152,22 @@ export class BoundsCalculator {
       bbox.max.x + tolerance,
       bbox.max.y + tolerance,
     );
+  }
+
+  /** ADR-507 S2 — Hatch bounds: AABB over all boundary path vertices. */
+  private static calculateHatchBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+    const h = entity as { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const path of h.boundaryPaths ?? []) {
+      for (const p of path) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      }
+    }
+    if (!Number.isFinite(minX)) return null;
+    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
   }
 
   /**

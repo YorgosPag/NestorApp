@@ -2,7 +2,7 @@
 
 > ⚠️ **Renumber 508→510 (2026-06-20):** οι αριθμοί ADR-508 (Unified Linear-Member Framing) & ADR-509 (Adaptive Entity Color) είχαν δεσμευτεί από άλλον agent. Αυτό το ADR μετονομάστηκε σε ADR-510.
 
-> **Status:** 🟡 Φ1 IN PROGRESS — spec v3 complete· **Φ1 SSoT audit (γύρος 2) αποκάλυψε ότι ~80% της Φ1 ΗΔΗ ΥΠΑΡΧΕΙ** (ADR-357 dynamic-input + `polar-tracking-store` + snapping). Υλοποιήθηκαν οι αληθινές ελλείψεις: **Q2** (default polar 90°→15°), **Q3** (full smart OSNAP default), **E2** (math στα numeric πεδία). Q1/Q7 ~λειτουργικά ήδη. Βλ. §7 (κατάσταση Φ1). 2 γύροι έρευνας (ο 2ος adversarial).
+> **Status:** 🟢 Φ1 COMPLETE (UNCOMMITTED polish· core committed `8ab4143a`) — spec v3 complete· **Φ1 SSoT audit (γύρος 2) αποκάλυψε ότι ~80% της Φ1 ΗΔΗ ΥΠΑΡΧΕΙ** (ADR-357 dynamic-input + `polar-tracking-store` + snapping). Υλοποιήθηκαν οι αληθινές ελλείψεις: **Q2** (default polar 90°→15°), **Q3** (full smart OSNAP default), **E2** (math στα numeric πεδία), **Q7** (γωνία+μήκος στο canvas line-ghost). Q1 Direct Distance ~λειτουργικό ήδη. Επόμενο: **Φ2 (Linetypes)** — orchestrator-scale, νέα συνεδρία. 2 γύροι έρευνας (ο 2ος adversarial).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -465,6 +465,17 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
     + `keyboard-handlers/line-keyboard-handler.ts` (length/angle πεδία). 29 jest (numeric-expression) +
     7 νέα (coordinate-parser) — 91/91 GREEN στο dynamic-input+constraints.
   **Q1 (Direct Distance) & Q7 (live μήκος+γωνία) — ~λειτουργικά ήδη** μέσω ADR-357 (live angle auto-fill + readout).
+- **2026-06-21** — **Φ1 polish (μετά το commit `8ab4143a` του core).** Core Φ1 committed. **Q7 (α)**: γωνία-label
+  δίπλα στο μήκος στο canvas line-ghost (`canvas-v2/preview-canvas/preview-entity-renderers.ts` `renderLine` —
+  NEW pure `segmentHeadingDeg` 0..360 AutoCAD-convention + `renderInfoLabel` με locale-aware `formatAngleLocale`
+  SSoT· gated στο ίδιο `showEdgeDistances`/measurement flag· μηδέν hardcoded string). Έτσι το rubber-band ghost
+  δείχνει **ΚΑΙ** μήκος **ΚΑΙ** γωνία απευθείας στον καμβά (όχι μόνο στο dynamic-input overlay). **(β) plain-length+
+  Enter edge — ΚΑΜΙΑ ΕΝΕΡΓΕΙΑ (by design):** το `handleLineEnter` δεν έχει τη live θέση κέρσορα/polar-snapped
+  γωνία (context = μόνο `firstClickPoint`)· το DDE ήδη λειτουργεί όταν ο κέρσορας έχει κινηθεί (η `angleValue`
+  γεμίζει live). Το υπόλοιπο (commit αγνοεί polar-snap στη live γωνία) = βαθύτερο, χρειάζεται cursor-threading →
+  **DEFER σε Φ7** (constraints), ΟΧΙ επέμβαση στο delicate keyboard handler τώρα. Φ1 → 🟢 COMPLETE. UNCOMMITTED
+  polish (1 αρχείο: `preview-entity-renderers.ts` — ⚠️ ADR-040 CHECK 6D: stage ADR doc μαζί). 🔴 browser-verify
+  (γραμμή ghost δείχνει μήκος+γωνία) + commit. **Επόμενο: Φ2 Linetypes** (orchestrator-scale, νέα συνεδρία).
   **Εκκρεμότητες Φ1 (DEFER, μη-blocking):** (α) γωνία-label στο canvas line-ghost (`preview-entity-renderers`
   `renderLine` — locale-aware via υπάρχον `formatAngleLocale`· σήμερα μόνο μήκος μέσω `showEdgeDistances`,
   γωνία φαίνεται στο dynamic-input overlay)· (β) plain-length-only + Enter (χωρίς mouse move) edge στο
