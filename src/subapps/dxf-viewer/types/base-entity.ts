@@ -119,6 +119,13 @@ export interface BaseEntity {
    * unlike `lineweight` (zoom-independent LWT).
    */
   dashMm?: ReadonlyArray<number>;
+  /**
+   * ADR-510 Φ2 — per-object linetype scale (AutoCAD CELTSCALE, DXF group 48).
+   * Multiplies the dash pattern on top of global LTSCALE + zoom at stroke time.
+   * Default 1. Canonical per-object scale; the legacy `dashScale` (settings/px
+   * path) is being folded into this via the alias bridge (ADR-510 Φ2D).
+   */
+  ltscale?: number;
   dashScale?: number;
   lineCap?: 'butt' | 'round' | 'square';
   lineJoin?: 'miter' | 'round' | 'bevel';

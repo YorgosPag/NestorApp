@@ -139,7 +139,7 @@ export class DxfRenderer {
     // rendered as single paths — one ctx.stroke() per group instead of per entity.
     // Excludes: selected, hovered, measurement, non-solid line types.
     // ADR-510 Φ2 — dashMm per batch so linetype dashes (Dashed/Hidden/Center…) survive batching.
-    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number> };
+    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
 
@@ -160,11 +160,14 @@ export class DxfRenderer {
       const lw = resolved.lineWidthPx;
       const alpha = resolved.alpha;
       const dashMm = resolved.dashMm;
+      // ADR-510 Φ2 — CELTSCALE (per-object, DXF grp 48) participates in the batch key
+      // so entities with the same pattern but different ltscale batch separately.
+      const celtscale = (entity as { ltscale?: number }).ltscale ?? 1;
       // ADR-510 Φ2 — dash signature in the key so solid + each linetype batch separately.
-      const dashKey = dashMm.length > 0 ? dashMm.join(',') : '';
+      const dashKey = dashMm.length > 0 ? `${dashMm.join(',')}@${celtscale}` : '';
       const key = `${color}\0${lw}\0${alpha.toFixed(3)}\0${dashKey}`;
       let batch = lineBatches.get(key);
-      if (!batch) { batch = { starts: [], ends: [], lw, alpha, dashMm }; lineBatches.set(key, batch); }
+      if (!batch) { batch = { starts: [], ends: [], lw, alpha, dashMm, celtscale }; lineBatches.set(key, batch); }
       batch.starts.push(CoordinateTransforms.worldToScreen(entity.start, transform, actualViewport));
       batch.ends.push(CoordinateTransforms.worldToScreen(entity.end, transform, actualViewport));
       batchedIds.add(entity.id);
@@ -175,8 +178,8 @@ export class DxfRenderer {
       this.ctx.save();
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = batch.lw;
-      // ADR-510 Φ2 — metric dash → screen px (zoom + LTSCALE aware); [] for solid.
-      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getLinetypeScale()));
+      // ADR-510 Φ2 — metric dash → screen px (zoom × LTSCALE × CELTSCALE); [] for solid.
+      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getLinetypeScale(), batch.celtscale));
       this.ctx.globalAlpha = batch.alpha;
       this.ctx.lineCap = 'butt';
       this.ctx.beginPath();

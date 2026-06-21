@@ -39,6 +39,18 @@ describe('dashMmToScreenPx', () => {
     expect(dashMmToScreenPx([10, -5], 2, 3)).toEqual([60, 30]);
   });
 
+  it('applies CELTSCALE (per-object) on top of zoom × LTSCALE', () => {
+    expect(dashMmToScreenPx([10, -5], 2, 3, 2)).toEqual([120, 60]);
+  });
+
+  it('defaults CELTSCALE to 1 when omitted', () => {
+    expect(dashMmToScreenPx([10, -5], 2, 3)).toEqual(dashMmToScreenPx([10, -5], 2, 3, 1));
+  });
+
+  it('treats a degenerate CELTSCALE as solid', () => {
+    expect(dashMmToScreenPx([10, -5], 2, 3, 0)).toEqual([]);
+  });
+
   it('returns [] (solid fallback) for a degenerate scale', () => {
     expect(dashMmToScreenPx([10, -5], 0, 1)).toEqual([]);
     expect(dashMmToScreenPx([10, -5], -2, 1)).toEqual([]);

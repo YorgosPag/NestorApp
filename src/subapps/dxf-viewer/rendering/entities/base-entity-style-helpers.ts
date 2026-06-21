@@ -13,17 +13,18 @@ import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
 
 /**
  * ADR-510 Φ2 — apply an entity's resolved metric linetype dash to a canvas context.
- * Absent/empty `dashMm` ⇒ no-op (the line stays solid → zero regression). Zoom-aware
- * (`scale`) + global LTSCALE, unlike the zoom-independent lineweight.
+ * Absent/empty `dashMm` ⇒ no-op (the line stays solid → zero regression). Total
+ * scale = zoom (`scale`) × global LTSCALE × per-object CELTSCALE (`entity.ltscale`),
+ * unlike the zoom-independent lineweight.
  */
 export function applyEntityLinetypeDash(
   ctx: CanvasRenderingContext2D,
-  entity: { dashMm?: ReadonlyArray<number> },
+  entity: { dashMm?: ReadonlyArray<number>; ltscale?: number },
   scale: number,
 ): void {
   const dashMm = entity.dashMm;
   if (dashMm && dashMm.length > 0) {
-    ctx.setLineDash(dashMmToScreenPx(dashMm, scale, getLinetypeScale()));
+    ctx.setLineDash(dashMmToScreenPx(dashMm, scale, getLinetypeScale(), entity.ltscale ?? 1));
   }
 }
 

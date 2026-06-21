@@ -34,11 +34,16 @@ export interface LinetypeDef {
 
 export type LinetypeOrigin =
   | 'iso-baseline'
+  | 'bim-special'
   | 'lin-import'
   | 'user-created'
   | 'dxf-import';
 
-/** Ordered list of ISO baseline linetype names. */
+/**
+ * Ordered list of the 8 ISO 128 baseline linetype names (the canonical roots).
+ * `*2` / `*X2` density variants + Dot/Double/Zigzag live in the full catalog
+ * (`LINETYPE_CATALOG_NAMES`) but are NOT "ISO baseline" in the strict sense.
+ */
 export const LINETYPE_ISO_NAMES = Object.freeze([
   'Continuous',
   'Dashed',
@@ -113,19 +118,159 @@ export const LINETYPE_ISO_CATALOG: Readonly<Record<string, LinetypeDef>> =
       ]) as ReadonlyArray<number>,
       origin: 'iso-baseline' as const,
     }),
+
+    // ── Density variants (acadiso.lin: `2` = half scale, `X2` = double scale) ──
+    Dashed2: Object.freeze({
+      name: 'Dashed2', description: '_ _ _ (½)',
+      pattern: Object.freeze([6.35, -3.175]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    DashedX2: Object.freeze({
+      name: 'DashedX2', description: '__  __  __ (×2)',
+      pattern: Object.freeze([25.4, -12.7]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Hidden2: Object.freeze({
+      name: 'Hidden2', description: '_ _ _ _ (½)',
+      pattern: Object.freeze([3.175, -1.5875]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    HiddenX2: Object.freeze({
+      name: 'HiddenX2', description: '__ __ __ (×2)',
+      pattern: Object.freeze([12.7, -6.35]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Center2: Object.freeze({
+      name: 'Center2', description: '____ _ ____ (½)',
+      pattern: Object.freeze([15.875, -3.175, 3.175, -3.175]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    CenterX2: Object.freeze({
+      name: 'CenterX2', description: '________ __ (×2)',
+      pattern: Object.freeze([63.5, -12.7, 12.7, -12.7]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Phantom2: Object.freeze({
+      name: 'Phantom2', description: '____ _ _ (½)',
+      pattern: Object.freeze([15.875, -3.175, 3.175, -3.175, 3.175, -3.175]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    PhantomX2: Object.freeze({
+      name: 'PhantomX2', description: '________ __ __ (×2)',
+      pattern: Object.freeze([63.5, -12.7, 12.7, -12.7, 12.7, -12.7]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    DashDot2: Object.freeze({
+      name: 'DashDot2', description: '_._._ (½)',
+      pattern: Object.freeze([6.35, -3.175, 0, -3.175]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    DashDotX2: Object.freeze({
+      name: 'DashDotX2', description: '__ . __ . (×2)',
+      pattern: Object.freeze([25.4, -12.7, 0, -12.7]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Border2: Object.freeze({
+      name: 'Border2', description: '__ __ . (½)',
+      pattern: Object.freeze([6.35, -1.5875, 6.35, -1.5875, 0, -1.5875]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    BorderX2: Object.freeze({
+      name: 'BorderX2', description: '__ __ . (×2)',
+      pattern: Object.freeze([25.4, -6.35, 25.4, -6.35, 0, -6.35]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Divide2: Object.freeze({
+      name: 'Divide2', description: '__ . . (½)',
+      pattern: Object.freeze([6.35, -1.5875, 0, -1.5875, 0, -1.5875]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    DivideX2: Object.freeze({
+      name: 'DivideX2', description: '__ . . (×2)',
+      pattern: Object.freeze([25.4, -6.35, 0, -6.35, 0, -6.35]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+
+    // ── Dot family (acadiso.lin DOT: zero-length dash + gap) ──
+    Dot: Object.freeze({
+      name: 'Dot', description: '. . . . .',
+      pattern: Object.freeze([0, -6.35]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    Dot2: Object.freeze({
+      name: 'Dot2', description: '. . . (½)',
+      pattern: Object.freeze([0, -3.175]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+    DotX2: Object.freeze({
+      name: 'DotX2', description: '.  .  . (×2)',
+      pattern: Object.freeze([0, -12.7]) as ReadonlyArray<number>,
+      origin: 'iso-baseline' as const,
+    }),
+
+    // ── BIM specials (ADR-377 — non-ISO; metric approximation of px patterns) ──
+    Double: Object.freeze({
+      name: 'Double', description: 'alternating double-dash',
+      pattern: Object.freeze([12.7, -3.175, 6.35, -3.175]) as ReadonlyArray<number>,
+      origin: 'bim-special' as const,
+    }),
+    Zigzag: Object.freeze({
+      name: 'Zigzag', description: 'insulation/batting (dash approximation)',
+      pattern: Object.freeze([6.35, -3.175, 3.175, -3.175]) as ReadonlyArray<number>,
+      origin: 'bim-special' as const,
+    }),
   });
 
-/** True if `name` is one of the 8 ISO baseline linetypes (case-sensitive). */
+/**
+ * Full ordered catalog name list — 8 ISO base + 14 density variants + 3 Dot +
+ * 2 BIM specials. Used to seed the runtime registry and populate UI dropdowns.
+ * `LINETYPE_ISO_NAMES` remains the strict 8-entry ISO baseline subset.
+ */
+export const LINETYPE_CATALOG_NAMES = Object.freeze([
+  'Continuous',
+  'Dashed', 'Dashed2', 'DashedX2',
+  'Hidden', 'Hidden2', 'HiddenX2',
+  'Center', 'Center2', 'CenterX2',
+  'Phantom', 'Phantom2', 'PhantomX2',
+  'DashDot', 'DashDot2', 'DashDotX2',
+  'Border', 'Border2', 'BorderX2',
+  'Divide', 'Divide2', 'DivideX2',
+  'Dot', 'Dot2', 'DotX2',
+  'Double', 'Zigzag',
+]) as ReadonlyArray<string>;
+
+/**
+ * True if `name` is a **standard acadiso** linetype (`origin: 'iso-baseline'` —
+ * the 8 base + density variants + Dot family). These are implicit in DXF readers,
+ * so the writer does NOT emit a custom `LTYPE` table entry for them. BIM-specials
+ * (Double/Zigzag) and custom/imported linetypes return false ⇒ they DO get written.
+ */
 export function isIsoBaselineLinetype(name: string): boolean {
+  const def = LINETYPE_ISO_CATALOG[name];
+  return def !== undefined && def.origin === 'iso-baseline';
+}
+
+/** True if `name` exists anywhere in the built-in catalog (incl. variants/specials). */
+export function isCatalogLinetype(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(LINETYPE_ISO_CATALOG, name);
 }
 
-/** Resolve an ISO baseline linetype by name. Returns null for unknown names. */
-export function getIsoLinetype(name: string): LinetypeDef | null {
-  return isIsoBaselineLinetype(name) ? LINETYPE_ISO_CATALOG[name] : null;
+/** Resolve any built-in catalog linetype by name (incl. variants/specials). Null on miss. */
+export function getCatalogLinetype(name: string): LinetypeDef | null {
+  return LINETYPE_ISO_CATALOG[name] ?? null;
 }
 
-/** Snapshot list of all ISO baseline definitions, in canonical order. */
+/** @deprecated Use {@link getCatalogLinetype}. Kept for back-compat — same general lookup. */
+export function getIsoLinetype(name: string): LinetypeDef | null {
+  return getCatalogLinetype(name);
+}
+
+/** Snapshot list of the strict 8 ISO baseline definitions, in canonical order. */
 export function listIsoLinetypes(): ReadonlyArray<LinetypeDef> {
   return LINETYPE_ISO_NAMES.map((n) => LINETYPE_ISO_CATALOG[n]);
+}
+
+/** Snapshot list of ALL built-in catalog definitions, in canonical order. */
+export function listAllLinetypes(): ReadonlyArray<LinetypeDef> {
+  return LINETYPE_CATALOG_NAMES.map((n) => LINETYPE_ISO_CATALOG[n]);
 }

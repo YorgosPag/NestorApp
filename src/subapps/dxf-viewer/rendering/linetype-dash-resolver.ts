@@ -30,10 +30,15 @@ export const MIN_DOT_PX = 0.5;
 /**
  * Convert a metric linetype pattern (mm) to a canvas `setLineDash` array (px).
  *
+ * Total scale = zoom × LTSCALE (global) × CELTSCALE (per-object) — exactly the
+ * AutoCAD model-space linetype scaling stack.
+ *
  * @param patternMm        Catalog pattern: positive = dash, negative = gap,
  *                         `0` = dot, empty = solid (Continuous).
  * @param worldToScreenScale  World-units → screen-px factor (the current zoom).
  * @param ltscale          Global linetype scale (`LinetypeScaleStore`, default 1).
+ * @param celtscale        Per-object linetype scale (entity `ltscale`, DXF grp 48,
+ *                         default 1). AutoCAD CELTSCALE.
  * @returns All-positive px lengths for `ctx.setLineDash`; `[]` for solid or when
  *          the scale is degenerate (caller renders a continuous line).
  */
@@ -41,9 +46,10 @@ export function dashMmToScreenPx(
   patternMm: ReadonlyArray<number>,
   worldToScreenScale: number,
   ltscale: number,
+  celtscale = 1,
 ): number[] {
   if (patternMm.length === 0) return [];
-  const totalScale = worldToScreenScale * ltscale;
+  const totalScale = worldToScreenScale * ltscale * celtscale;
   if (!Number.isFinite(totalScale) || totalScale <= 0) return [];
 
   // |v| folds gaps (negative) to positive lengths; dots (0) stay 0 for now.
