@@ -30,6 +30,7 @@
  */
 
 import { getAciColor } from '../settings/standards/aci';
+import { trueColorToHex } from './dxf-true-color';
 import {
   parseDxfCode370,
 } from '../config/lineweight-iso-catalog';
@@ -217,7 +218,7 @@ function buildSceneLayer(draft: MutableLayerDraft, warnings: ParseLayerWarning[]
     id: xd.layerId,
     name,
     color: draft.colorTrueColor != null
-      ? hex(draft.colorTrueColor)
+      ? trueColorToHex(draft.colorTrueColor)
       : getAciColor(aci),
     colorAci: aci,
     colorTrueColor: draft.colorTrueColor ?? null,
@@ -310,8 +311,4 @@ function splitKv(raw: string): [string, string] {
   const eq = raw.indexOf('=');
   if (eq < 0) return [raw, ''];
   return [raw.slice(0, eq), raw.slice(eq + 1)];
-}
-
-function hex(rgb: number): string {
-  return `#${rgb.toString(16).padStart(6, '0').toUpperCase()}`;
 }

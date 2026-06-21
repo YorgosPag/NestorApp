@@ -25,6 +25,10 @@ import { createVertexGrip } from './shared/grip-utils';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
+import {
+  resolveGradientStops, isRadialGradientType, type HatchGradient,
+} from '../../bim/hatch/hatch-gradient';
+import { degToRad } from './shared/geometry-angle-utils';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 /**
@@ -106,7 +110,9 @@ export class HatchRenderer extends BaseEntityRenderer {
 
     const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
 
-    if (isSolidHatch(hatch)) {
+    if (hatch.fillType === 'gradient' && hatch.gradient) {
+      this.fillGradient(paths, hatch.gradient);
+    } else if (isSolidHatch(hatch)) {
       this.ctx.fillStyle = color;
       this.drawBoundaryPath(paths);
       this.ctx.fill('evenodd');
@@ -184,6 +190,46 @@ export class HatchRenderer extends BaseEntityRenderer {
       minX: Math.min(a.x, b.x) - margin, maxX: Math.max(a.x, b.x) + margin,
       minY: Math.min(a.y, b.y) - margin, maxY: Math.max(a.y, b.y) + margin,
     };
+  }
+
+  /**
+   * Γέμισμα gradient (ADR-507 Φ5). Χτίζει CanvasGradient σε screen space: linear κατά
+   * τη γωνία (world, μέσω 2 `worldToScreen` endpoints — το uniform transform διατηρεί
+   * τη γραμμικότητα)· radial από το κέντρο. Stops μέσω του SSoT `resolveGradientStops`.
+   * even-odd → νησίδες μένουν κενές (όπως solid).
+   */
+  private fillGradient(
+    paths: ReadonlyArray<ReadonlyArray<Point2D>>, gradient: HatchGradient,
+  ): void {
+    let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
+    for (const path of paths) {
+      for (const v of path) {
+        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+      }
+    }
+    if (!Number.isFinite(minX) || maxX <= minX || maxY <= minY) return;
+    const cx = (minX + maxX) / 2; const cy = (minY + maxY) / 2;
+    const w = maxX - minX; const h = maxY - minY;
+
+    let grad: CanvasGradient;
+    if (isRadialGradientType(gradient.type)) {
+      const c = this.worldToScreen({ x: cx, y: cy });
+      const rScreen = Math.max(1, 0.5 * Math.hypot(w, h) * this.transform.scale);
+      grad = this.ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, rScreen);
+    } else {
+      const r = degToRad(gradient.angleDeg ?? 0);
+      const dx = Math.cos(r); const dy = Math.sin(r);
+      const half = 0.5 * (Math.abs(w * dx) + Math.abs(h * dy)) || 0.5 * Math.hypot(w, h);
+      const p0 = this.worldToScreen({ x: cx - dx * half, y: cy - dy * half });
+      const p1 = this.worldToScreen({ x: cx + dx * half, y: cy + dy * half });
+      grad = this.ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+    }
+    for (const stop of resolveGradientStops(gradient)) grad.addColorStop(stop.offset, stop.color);
+
+    this.ctx.fillStyle = grad;
+    this.drawBoundaryPath(paths);
+    this.ctx.fill('evenodd');
   }
 
   /** Χτίζει ΕΝΑ canvas path με ΟΛΑ τα boundary paths ως subpaths (για even-odd fill). */

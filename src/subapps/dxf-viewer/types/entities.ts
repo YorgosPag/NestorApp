@@ -7,6 +7,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { DxfTextNode } from '../text-engine/types';
 import type { LineweightMm } from './scene-types';
 import type { HatchPattern } from '../data/hatch-pattern-catalog';
+import type { HatchGradient } from '../bim/hatch/hatch-gradient';
 
 // ─── BaseEntity + EntityType extracted to break circular import (ADR-363 fix) ─
 // bim-base.ts used to import BaseEntity from here → created:
@@ -591,6 +592,8 @@ export interface HatchEntity extends BaseEntity {
    *  Όταν το `patternName` δεν υπάρχει στο catalog, ο DXF reader χτίζει ad-hoc
    *  μοτίβο από τις inline group codes → ο geometry resolver το καταναλώνει 1:1. */
   inlinePattern?: HatchPattern;
+  /** Gradient γέμισμα (ADR-507 Φ5· `fillType:'gradient'`)· DXF group codes 450-470. */
+  gradient?: HatchGradient;
   /** Draw-order bucket (0=back … 4=front) — §5δ auto-send-to-back. */
   drawOrder?: 0 | 1 | 2 | 3 | 4;
   /** Ανοχή κενού ορίου για boundary detection (mm, Φ3). */

@@ -6,11 +6,11 @@
 import { collectMemberSnapTargets } from '../member-snap-targets';
 import type { Entity } from '../../../types/entities';
 
-/** Ορθογώνια πλάκα 4000×3000 (CCW), type 'slab'. */
+/** Ορθογώνια πλάκα 4000×3000 (CCW), type 'slab'. Outline = `geometry.polygon` (world-baked). */
 function slab(): Entity {
   return {
     id: 'slab1', type: 'slab',
-    params: { outline: { vertices: [
+    geometry: { polygon: { vertices: [
       { x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }, { x: 4000, y: 3000, z: 0 }, { x: 0, y: 3000, z: 0 },
     ] } },
   } as unknown as Entity;

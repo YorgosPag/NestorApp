@@ -338,6 +338,9 @@ export function buildHatchEntitySegments(
   >,
 ): HatchLineSegment[] {
   if (isSolidHatch(hatch)) return [];
+  // Gradient = συνεχές γέμισμα (ADR-507 Φ5) — αποδίδεται με CanvasGradient στον
+  // renderer, ΟΧΙ με γραμμές μοτίβου.
+  if (hatch.fillType === 'gradient') return [];
   const paths = (hatch.boundaryPaths ?? []).filter((p) => p.length >= 3);
   if (!paths.length) return [];
   const islandStyle = hatch.islandStyle ?? 'normal';

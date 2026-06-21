@@ -86,11 +86,11 @@ function wallTarget(e: Entity): LinearMemberSnapTarget | null {
  * T-framing προς τον κέρσορα + listening dimensions προς άκρα/κέντρο της ακμής. Μοντέλο: η ακμή
  * = **κεντρική γραμμή** μιας πολύ λεπτής συμμετρικής band (±eps) → δύο όψεις → ο
  * `resolveLinearMemberFaceSnap` κουμπώνει στην κοντινή προς τον κέρσορα, ghost flush ≈ στην ακμή.
- * Reuse μηδέν νέο resolver. Scene units (το `params.outline` είναι world-baked, ίδιο frame με
- * beam/wall geometry — βλ. `wall-host-plan-builder`).
+ * Reuse μηδέν νέο resolver. Διαβάζει το **`geometry.polygon`** (world-baked, scene units — ίδιο
+ * frame με τα beam/wall που διαβάζουν κι αυτά `geometry`, ΟΧΙ `params`).
  */
 function slabEdgeTargets(e: Entity): LinearMemberSnapTarget[] {
-  const verts = (e as { params?: { outline?: { vertices?: Pts } } }).params?.outline?.vertices;
+  const verts = (e as { geometry?: { polygon?: { vertices?: Pts } } }).geometry?.polygon?.vertices;
   if (!verts || verts.length < 3) return [];
   const pts = toPoint2D(verts);
   const n = pts.length;

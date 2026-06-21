@@ -50,9 +50,13 @@ import {
   type FootprintFace,
 } from '../geometry/shared/footprint-face-frame';
 import { pickThird, type MemberGhostThird } from '../framing/member-face-third';
-import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
+import { MEMBER_GHOST_CAPTURE_MM, MEMBER_GHOST_LEN_MM } from '../framing/member-column-face-snap';
 import { collectMemberSnapTargets } from '../framing/member-snap-targets';
-import type { LinearMemberSnapTarget, GhostFaceFrame } from '../framing/linear-member-face-snap';
+import {
+  resolveLinearMemberFaceSnap,
+  type LinearMemberSnapTarget,
+  type GhostFaceFrame,
+} from '../framing/linear-member-face-snap';
 import {
   projectPointOnAxis,
   projectPolygonOnAxis,
@@ -260,6 +264,50 @@ function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget): ColumnFaceS
 }
 
 /**
+ * ADR-508 §slab — ΑΚΜΕΣ ΠΛΑΚΑΣ μέσα από τον **ΙΔΙΟ axis-relative resolver** που χρησιμοποιούν
+ * τοίχος/δοκάρι (`resolveLinearMemberFaceSnap`) — δουλεύει σε ΚΑΘΕ προσανατολισμό (και διαγώνιες),
+ * σε αντίθεση με το bbox path. `memberWidthScene=0` → η κολώνα μετριέται στο **κέντρο** της
+ * (Revit centerline) ⇒ `faceFrame.ghostHalfWidth=0` + `start` = προβολή cursor στην ακμή. Η λαβή
+ * (face × third) παράγεται από το faceFrame (reuse anchor helpers). Επιστρέφει + απόσταση για
+ * σύγκριση προτεραιότητας με το bbox path. `null` όταν καμία ακμή εντός capture.
+ */
+function resolveColumnSlabEdgeSnap(
+  cursor: Readonly<Point2D>,
+  slabEdges: readonly LinearMemberSnapTarget[],
+  sceneUnits: SceneUnits,
+): { snap: ColumnFaceSnap; dist: number } | null {
+  if (slabEdges.length === 0) return null;
+  const f = mmToSceneUnits(sceneUnits);
+  const r = resolveLinearMemberFaceSnap(cursor, slabEdges, {
+    ghostLenScene: MEMBER_GHOST_LEN_MM * f,
+    captureScene: MEMBER_GHOST_CAPTURE_MM * f,
+    memberWidthScene: 0,
+  });
+  if (!r || !r.faceFrame) return null;
+  const ff = r.faceFrame;
+  const horizontal = Math.abs(ff.axisDir.x) >= Math.abs(ff.axisDir.y);
+  const outwardY = ff.outwardSign * ff.perpDir.y;
+  const outwardX = ff.outwardSign * ff.perpDir.x;
+  const face: ColumnFaceSide = horizontal
+    ? (outwardY >= 0 ? 'N' : 'S')
+    : (outwardX >= 0 ? 'E' : 'W');
+  const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
+  const anchor = face === 'N' || face === 'S'
+    ? anchorForHorizontalFace(face, third)
+    : anchorForVerticalFace(face, third);
+  const snap: ColumnFaceSnap = {
+    position: r.start,
+    anchor,
+    status: r.status === 'overlap' ? 'overlap' : 'beam',
+    targetId: null,
+    face,
+    third,
+    faceFrame: ff,
+  };
+  return { snap, dist: Math.hypot(cursor.x - r.start.x, cursor.y - r.start.y) };
+}
+
+/**
  * Επιλέγει το column face-snap για το ghost/click. Pure. `null` όταν κανένας στόχος δεν είναι
  * εντός `MEMBER_GHOST_CAPTURE_MM` (ελεύθερη τοποθέτηση → ο caller πέφτει στο default path).
  */
@@ -268,15 +316,13 @@ export function resolveColumnFaceSnap(
   entities: readonly Entity[],
   sceneUnits: SceneUnits,
 ): ColumnFaceSnap | null {
-  // Στόχοι = κολόνες (πάντα) + δοκάρια + τοίχοι — μαζεμένα ΞΕΧΩΡΙΣΤΑ ώστε ο τοίχος να μην
-  // κληρονομεί το beam «κοντή άκρη → 🔴» (Giorgio: όλες οι παρειές τοίχου έγκυρες). `footprints`
-  // (κολόνες) είναι ίδια και στις δύο κλήσεις → παίρνουμε από τη μία (μηδέν διπλο-μέτρημα).
+  // Στόχοι = κολόνες (πάντα) + δοκάρια + τοίχοι (bbox path). Οι ΑΚΜΕΣ ΠΛΑΚΑΣ πάνε ΞΕΧΩΡΙΣΤΑ
+  // μέσα από τον axis-relative resolver (ίδιος με τοίχο/δοκάρι) — βλ. `resolveColumnSlabEdgeSnap`.
   const beamPass = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
-  // Τοίχοι + ΑΚΜΕΣ ΠΛΑΚΑΣ (ADR-508 §slab): η κολώνα κουμπώνει στις πλευρές πλάκας όπως στις
-  // παρειές τοίχου (axis-aligned ακμές → bbox face + listening dims).
-  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'slab'] }).memberTargets;
+  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets;
+  const slabEdges = collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets;
+  const slabHit = resolveColumnSlabEdgeSnap(cursor, slabEdges, sceneUnits);
   const targets = buildFaceTargets(beamPass.footprints, beamPass.memberTargets, walls);
-  if (targets.length === 0) return null;
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
@@ -287,19 +333,8 @@ export function resolveColumnFaceSnap(
       best = t;
     }
   }
-  // 🔧 TEMP DEBUG (ADR-508 §slab column) — αφαιρείται μετά. Δείχνει ΤΥΠΟΥΣ entities + αν πλάκα/
-  // foundation έχει `params.outline.vertices` (γιατί slabEdges=0).
-  const slabLike = entities.filter((e) => ['slab', 'foundation', 'floor', 'ceiling', 'roof'].includes(e.type));
-  // eslint-disable-next-line no-console
-  console.debug('[COL-SNAP]', {
-    targets: targets.length,
-    slabEdges: targets.filter((t) => t.id?.includes('#edge')).length,
-    types: Array.from(new Set(entities.map((e) => e.type))),
-    slabLike: slabLike.map((e) => ({
-      type: e.type,
-      hasParamsOutline: !!(e as { params?: { outline?: { vertices?: unknown[] } } }).params?.outline?.vertices,
-      vCount: (e as { params?: { outline?: { vertices?: unknown[] } } }).params?.outline?.vertices?.length ?? 0,
-    })),
-  });
-  return best ? resolveForTarget(cursor, best) : null;
+  const bboxHit = best ? { snap: resolveForTarget(cursor, best), dist: bestDist } : null;
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ από bbox (κολώνα/δοκάρι/τοίχος) vs ακμή πλάκας (axis-relative).
+  if (slabHit && bboxHit) return slabHit.dist <= bboxHit.dist ? slabHit.snap : bboxHit.snap;
+  return (slabHit ?? bboxHit)?.snap ?? null;
 }

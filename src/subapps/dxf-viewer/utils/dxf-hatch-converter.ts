@@ -21,6 +21,9 @@ import {
   type HatchPattern,
   type PatternLine,
 } from '../data/hatch-pattern-catalog';
+import { normalizeGradientType, type HatchGradient } from '../bim/hatch/hatch-gradient';
+import { trueColorToHex } from './dxf-true-color';
+import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
 import { dwarn } from '../debug';
 
 type DxfPairs = ReadonlyArray<readonly [string, string]>;
@@ -100,6 +103,14 @@ export function convertHatch(
   let colorAci: number | undefined;
   let path91Index = -1;
   let idx78 = -1;
+  // ── Gradient (DXF 450-470, ADR-507 Φ5) ──────────────────────────────────────
+  let gradientFlag = 0;            // 450: 1=gradient
+  let gradientSingle = 0;          // 452: 1=single-color
+  let gradientAngleRad: number | undefined; // 460 (radians)
+  let gradientShift: number | undefined;    // 461
+  let gradientTint: number | undefined;     // 462
+  let gradientName: string | undefined;     // 470
+  const gradientTrueColors: number[] = [];  // 421 (RGB int), σε σειρά
 
   for (let i = 0; i < pairs.length; i += 1) {
     const [code, value] = pairs[i];
@@ -111,6 +122,13 @@ export function convertHatch(
       case '52': if (angle === undefined) angle = parseFloat(value); break;
       case '41': if (scale === undefined) scale = parseFloat(value); break;
       case '62': colorAci = parseInt(value, 10); break;
+      case '450': gradientFlag = parseInt(value, 10) || 0; break;
+      case '452': gradientSingle = parseInt(value, 10) || 0; break;
+      case '460': if (gradientAngleRad === undefined) gradientAngleRad = parseFloat(value); break;
+      case '461': if (gradientShift === undefined) gradientShift = parseFloat(value); break;
+      case '462': if (gradientTint === undefined) gradientTint = parseFloat(value); break;
+      case '470': if (gradientName === undefined) gradientName = value; break;
+      case '421': { const n = parseInt(value, 10); if (Number.isFinite(n)) gradientTrueColors.push(n); break; }
       case '78': if (idx78 < 0) idx78 = i; break;
       case '91': if (path91Index < 0) path91Index = i; break;
       default: break;
@@ -171,7 +189,26 @@ export function convertHatch(
   // Reuse SSoT ACI→hex (χειρίζεται ByLayer/ByBlock/invalid → undefined).
   const color = colorAci !== undefined ? extractEntityColor({ '62': String(colorAci) }) : undefined;
 
-  const fillType = solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined');
+  // ── Gradient build (DXF 450-470, ADR-507 Φ5) — υπερισχύει solid/pattern ──────
+  let gradient: HatchGradient | undefined;
+  if (gradientFlag === 1 && gradientTrueColors.length > 0) {
+    const color1 = trueColorToHex(gradientTrueColors[0]);
+    const color2 = gradientTrueColors.length > 1 ? trueColorToHex(gradientTrueColors[1]) : undefined;
+    const single = gradientSingle === 1;
+    gradient = {
+      type: normalizeGradientType(gradientName),
+      color1,
+      ...(color2 !== undefined && !single && { color2 }),
+      ...(single && { singleColor: true }),
+      ...(gradientTint !== undefined && !Number.isNaN(gradientTint) && { tint: gradientTint }),
+      ...(gradientAngleRad !== undefined && !Number.isNaN(gradientAngleRad)
+        && { angleDeg: radToDeg(gradientAngleRad) }),
+      ...(gradientShift !== undefined && !Number.isNaN(gradientShift) && { shift: gradientShift }),
+    };
+  }
+
+  const fillType = gradient ? 'gradient'
+    : solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined');
 
   // ── Scale idempotency + inline pattern (ADR-507 Φ6) ─────────────────────────
   // Ο writer γράφει στο group 41 το EFFECTIVE scale (= suggested(ανά μοτίβο) × user).
@@ -210,7 +247,7 @@ export function convertHatch(
     visible: true,
     boundaryPaths,
     patternName,
-    patternType: solid ? 'solid' : 'pattern',
+    patternType: gradient ? 'gradient' : solid ? 'solid' : 'pattern',
     fillType,
     islandStyle: dxf75ToIslandStyle(islandCode),
     // patternAngle = γενική γωνία· lineAngle/lineSpacing είναι user-defined έννοιες
@@ -218,6 +255,7 @@ export function convertHatch(
     ...(hasAngle && { patternAngle: angle, ...(userDefined && { lineAngle: angle }) }),
     ...(hasScale && { patternScale, ...(userDefined && { lineSpacing: patternScale }) }),
     ...(inlinePattern && { inlinePattern }),
+    ...(gradient && { gradient }),
     ...(seedPoints.length > 0 && { seedPoints }),
     ...(color && { color }),
   };

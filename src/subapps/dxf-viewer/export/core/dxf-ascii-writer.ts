@@ -28,6 +28,8 @@ import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-patter
 import { getHatchPattern, resolveEffectiveHatchScale } from '../../data/hatch-pattern-catalog';
 import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
+import { hexToTrueColor } from '../../utils/dxf-true-color';
+import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 import type { DxfLineMode } from '../types';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
@@ -195,6 +197,7 @@ function emitHatch(
 ): void {
   const paths = (e.boundaryPaths ?? []).filter((p) => p.length >= 2);
   if (!paths.length) return; // κενά όρια → τίποτα (κρατά «bare hatch → skip» συμβατό)
+  const gradient = e.fillType === 'gradient' && e.gradient ? e.gradient : undefined;
   const solid = isSolidHatch(e);
 
   if (explode) {
@@ -218,8 +221,8 @@ function emitHatch(
   pair(100, 'AcDbHatch');
   pair(10, 0); pair(20, 0); pair(30, 0);          // elevation point
   pair(210, 0); pair(220, 0); pair(230, 1);       // extrusion normal
-  pair(2, solid ? 'SOLID' : (e.patternName ?? 'USER'));
-  pair(70, solid ? 1 : 0);                        // solid fill flag
+  pair(2, solid || gradient ? 'SOLID' : (e.patternName ?? 'USER'));
+  pair(70, solid || gradient ? 1 : 0);            // solid fill flag (gradient → solid-type region)
   pair(71, e.associative ? 1 : 0);                // associativity
   pair(91, paths.length);                         // number of boundary paths
   for (let pi = 0; pi < paths.length; pi += 1) {
@@ -235,11 +238,14 @@ function emitHatch(
   }
   pair(75, islandStyleToDxf75(e.islandStyle));    // hatch style
   // pattern type: 0=user-defined, 1=predefined. Non-solid χωρίς ρητό fillType →
-  // user-defined (οι default γραμμές μοτίβου είναι user-defined).
-  const predefined = !solid && e.fillType === 'predefined';
-  const userDefined = !solid && !predefined;
+  // user-defined (οι default γραμμές μοτίβου είναι user-defined). Gradient → solid
+  // region + gradient block (κανένα pattern line).
+  const predefined = !solid && !gradient && e.fillType === 'predefined';
+  const userDefined = !solid && !gradient && !predefined;
   pair(76, userDefined ? 0 : 1);                  // 0=user-defined, 1=predefined
-  if (predefined) {
+  if (gradient) {
+    emitGradient(gradient, pair);
+  } else if (predefined) {
     emitPredefinedPattern(e, pair);
   } else if (!solid) {
     const angle = e.lineAngle ?? e.patternAngle ?? 0;
@@ -294,6 +300,30 @@ function emitPredefinedPattern(e: HatchEntity, pair: Pair): void {
     pair(79, pl.dashes.length);                   // number of dash lengths
     for (const d of pl.dashes) pair(49, d * scale); // dash length
   }
+}
+
+/**
+ * Γράφει το gradient block ενός HATCH (DXF 450-470, ADR-507 Φ5): flag/single/πλήθος
+ * χρωμάτων, γωνία (rad), shift, tint, ανά χρώμα `463`(θέση 0/1)+`421`(RGB int), `470`
+ * όνομα. Two-color → 2 χρώματα· single-color → 1 + tint. Mirror του reader (round-trip).
+ */
+function emitGradient(g: HatchGradient, pair: Pair): void {
+  const single = g.singleColor === true || g.color2 === undefined;
+  const rgb1 = hexToTrueColor(g.color1);
+  pair(450, 1);                                   // gradient flag
+  pair(451, 0);                                   // reserved
+  pair(452, single ? 1 : 0);                      // 1=single-color, 0=two-color
+  pair(453, single ? 1 : 2);                      // number of colors
+  pair(460, degToRad(g.angleDeg ?? 0));           // rotation (radians)
+  pair(461, g.shift ?? 0);                        // definition / centered shift
+  pair(462, g.tint ?? (single ? 0 : 1));          // color tint (single-color)
+  pair(463, 0);                                   // color 1 interpolation value
+  pair(421, rgb1);                                // color 1 (RGB true color)
+  if (!single) {
+    pair(463, 1);                                 // color 2 interpolation value
+    pair(421, hexToTrueColor(g.color2 ?? g.color1)); // color 2
+  }
+  pair(470, g.type.toUpperCase());                // gradient name (LINEAR/SPHERICAL/…)
 }
 
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
