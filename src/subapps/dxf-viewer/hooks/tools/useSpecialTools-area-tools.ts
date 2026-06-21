@@ -15,7 +15,9 @@ import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSl
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useFloorFinishTool';
 import { useWallCoveringTool } from '../drawing/useWallCoveringTool';
-import { isWallEntity } from '../../types/entities';
+import { isWallEntity, isThermalSpaceEntity } from '../../types/entities';
+import { appendEntitiesToScene } from '../../bim/scene/append-entity-to-scene';
+import { useEffect } from 'react';
 import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
 import { useThermalSpaceTool } from '../drawing/useThermalSpaceTool';
 import { useSpaceSeparatorTool } from '../drawing/useSpaceSeparatorTool';
@@ -120,14 +122,28 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
       // WallEntity ικανοποιεί δομικά το WallCoveringHost (id + geometry + params.thickness).
       return entities.filter(isWallEntity);
     },
+    getSpaces: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      // ThermalSpaceEntity (IfcSpace) — τα δωμάτια που ορίζουν το room-fill extent.
+      return (levelManager.getLevelScene(levelId)?.entities ?? []).filter(isThermalSpaceEntity);
+    },
     getSceneUnits: () => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
     onWallCoveringCreated: (entity) => appendEntityToScene(levelManager, entity, 'wall-covering'),
+    // Slice C — room-fill: όλα τα regions σε ΕΝΑ undo (CompoundCommand).
+    onRoomFillCreated: (entities) => appendEntitiesToScene(levelManager, entities, 'wall-covering', 'Room-fill wall covering'),
   });
-  useToolLifecycle(activeTool === 'wall-covering', wallCoveringTool.activate, wallCoveringTool.deactivate);
+  const isWallCoveringActive = activeTool === 'wall-covering' || activeTool === 'wall-covering-room';
+  useToolLifecycle(isWallCoveringActive, wallCoveringTool.activate, wallCoveringTool.deactivate);
+  // Slice C — το active tool id οδηγεί το mode (mirror column freehand/perimeter).
+  useEffect(() => {
+    if (activeTool === 'wall-covering') wallCoveringTool.setMode('manual');
+    else if (activeTool === 'wall-covering-room') wallCoveringTool.setMode('room-fill');
+  }, [activeTool, wallCoveringTool]);
   // ADR-408 Εύρος Β #3 — UNDERFLOOR HEATING TOOL: heating-area polygon N-click + Enter
   // (mirror floor-finish). The created `MepUnderfloorEntity` is appended + broadcast so
   // `MepUnderfloorPersistenceHost` saves it.

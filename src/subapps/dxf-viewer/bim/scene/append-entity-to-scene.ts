@@ -32,6 +32,7 @@ import type { SceneModel } from '../../types/scene';
 import type { AnySceneEntity } from '../../types/scene';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateBimEntityCommand } from '../../core/commands/entity-commands/CreateBimEntityCommand';
+import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 
 /**
@@ -62,4 +63,26 @@ export function appendEntityToScene<E extends { id: string }>(
   const adapter = new LevelSceneManagerAdapter(accessor.getLevelScene, accessor.setLevelScene, levelId);
   const command = new CreateBimEntityCommand(entity as unknown as AnySceneEntity, tool, adapter);
   getGlobalCommandHistory().execute(command);
+}
+
+/**
+ * ADR-511 (Slice C) — Append MANY freshly-built BIM entities as a SINGLE undoable batch
+ * (`CompoundCommand` of `CreateBimEntityCommand`s). Each child still broadcasts
+ * `drawing:entity-created` so every entity persists, but Ctrl+Z removes the whole batch at
+ * once (Revit «room-fill = one undo»). No-op when there is no active level / scene / entities.
+ */
+export function appendEntitiesToScene<E extends { id: string }>(
+  accessor: SceneAppendAccessor,
+  entities: readonly E[],
+  tool: string,
+  batchName = 'Batch create',
+): void {
+  const levelId = accessor.currentLevelId;
+  if (!levelId || entities.length === 0) return;
+  if (!accessor.getLevelScene(levelId)) return;
+  const adapter = new LevelSceneManagerAdapter(accessor.getLevelScene, accessor.setLevelScene, levelId);
+  const commands = entities.map(
+    (e) => new CreateBimEntityCommand(e as unknown as AnySceneEntity, tool, adapter),
+  );
+  getGlobalCommandHistory().execute(new CompoundCommand(batchName, commands));
 }

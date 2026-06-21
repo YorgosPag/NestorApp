@@ -34,6 +34,7 @@ import { isOpeningActionKey } from './bridge/opening-command-keys';
 import { isSlabActionKey } from './bridge/slab-command-keys';
 import { isRoofActionKey } from './bridge/roof-command-keys';
 import { isFloorFinishActionKey } from './useRibbonFloorFinishBridge';
+import { isWallCoveringActionKey } from './useRibbonWallCoveringBridge';
 import { isHatchActionKey } from './useRibbonHatchBridge';
 import { isThermalSpaceActionKey } from './useRibbonThermalSpaceBridge';
 import { isColumnActionKey } from './bridge/column-command-keys';
@@ -49,6 +50,7 @@ export type RibbonActionBridges = Pick<
   | 'slabBridge'
   | 'roofBridge'
   | 'floorFinishBridge'
+  | 'wallCoveringBridge'
   | 'hatchBridge'
   | 'thermalSpaceBridge'
   | 'columnBridge'
@@ -107,6 +109,10 @@ export function routeRibbonAction(
   }
   if (isFloorFinishActionKey(action)) {
     bridges.floorFinishBridge.onAction(action);
+    return;
+  }
+  if (isWallCoveringActionKey(action)) {
+    bridges.wallCoveringBridge.onAction(action);
     return;
   }
   if (isHatchActionKey(action)) {

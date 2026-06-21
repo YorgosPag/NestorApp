@@ -81,11 +81,23 @@ function firstLast(points: readonly { x: number; y: number }[]): { a: Point2D; b
   return { a: { x: a.x, y: a.y }, b: { x: b.x, y: b.y } };
 }
 
-/** Διαλέγει την παρειά (inner/outer) από τη γεωμετρία τοίχου. */
-function faceEndpoints(wall: WallCoveringHost, faceSide: WallCoveringFaceSide): { a: Point2D; b: Point2D } | null {
+/**
+ * Δημόσια: τα άκρα της επιλεγμένης παρειάς (inner/outer) σε world scene units. SSoT —
+ * το χρησιμοποιεί ΚΑΙ ο strip υπολογισμός ΚΑΙ το room-partition (Slice C) για να προβάλει
+ * δωμάτια στην παρειά. `null` όταν η γεωμετρία λείπει.
+ */
+export function wallCoveringFaceLine(
+  wall: WallCoveringHost,
+  faceSide: WallCoveringFaceSide,
+): { a: Point2D; b: Point2D } | null {
   const edge = faceSide === 'outer' ? wall.geometry?.outerEdge : wall.geometry?.innerEdge;
   if (!edge) return null;
   return firstLast(edge.points);
+}
+
+/** Διαλέγει την παρειά (inner/outer) από τη γεωμετρία τοίχου. */
+function faceEndpoints(wall: WallCoveringHost, faceSide: WallCoveringFaceSide): { a: Point2D; b: Point2D } | null {
+  return wallCoveringFaceLine(wall, faceSide);
 }
 
 /**

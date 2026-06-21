@@ -257,8 +257,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       floorFinishTool.onCanvasClick(bimPoint);
       return;
     }
-    // PRIORITY 4.7c-bis: ADR-511 — Wall-covering tool (pick τοίχου+παρειάς → 2-click span).
-    if (activeTool === 'wall-covering' && wallCoveringTool?.isActive) {
+    // PRIORITY 4.7c-bis: ADR-511 — Wall-covering tool (manual 2-click span OR Slice C room-fill).
+    if ((activeTool === 'wall-covering' || activeTool === 'wall-covering-room') && wallCoveringTool?.isActive) {
       wallCoveringTool.onCanvasClick(bimPoint);
       return;
     }

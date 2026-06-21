@@ -26,11 +26,11 @@ import { isWallCoveringEntity } from '../../types/entities';
 import type {
   WallCoveringEntity,
   WallCoveringHatchType,
-  WallCoveringLayer,
 } from '../types/wall-covering-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-coverings/wall-covering-material-catalog';
+import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
 import {
   computeWallCoveringStrip,
   type WallCoveringHost,
@@ -79,7 +79,7 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    const visible = resolveVisibleLayer(wc.params.layers);
+    const visible = resolveVisibleWallCoveringLayer(wc.params.layers);
     const color = visible.colorOverride ?? getWallCoveringColor(visible.materialId);
     const hatch = getWallCoveringHatchType(visible.materialId);
 
@@ -161,73 +161,17 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     this.ctx.lineWidth = HATCH_LINE_WIDTH;
     this.ctx.setLineDash([]);
 
+    // Reuse the canvas hatch-fill SSoT (N.0.2) — mapping (material→pattern) μένει εδώ.
+    const bbox = { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
+    const w2s = (p: { x: number; y: number }) => this.worldToScreen(p);
     if (hatch === 'plaster') {
-      this.drawDotGrid(minX, minY, maxX, maxY, spacingMm);
+      fillHatchDots(this.ctx, w2s, bbox, spacingMm, 1.2);
     } else if (hatch === 'board') {
-      this.drawParallelLines(minX, minY, maxX, maxY, spacingMm, 'horizontal');
+      strokeHatchLines(this.ctx, w2s, bbox, spacingMm, 'horizontal');
     } else {
-      this.drawParallelLines(minX, minY, maxX, maxY, spacingMm, 'horizontal');
-      this.drawParallelLines(minX, minY, maxX, maxY, spacingMm, 'vertical');
+      strokeHatchLines(this.ctx, w2s, bbox, spacingMm, 'horizontal');
+      strokeHatchLines(this.ctx, w2s, bbox, spacingMm, 'vertical');
     }
     this.ctx.restore();
   }
-
-  private drawParallelLines(
-    minX: number,
-    minY: number,
-    maxX: number,
-    maxY: number,
-    spacingMm: number,
-    orientation: 'horizontal' | 'vertical',
-  ): void {
-    if (orientation === 'horizontal') {
-      const startY = Math.ceil(minY / spacingMm) * spacingMm;
-      for (let y = startY; y <= maxY; y += spacingMm) {
-        const s = this.worldToScreen({ x: minX, y });
-        const e = this.worldToScreen({ x: maxX, y });
-        this.ctx.beginPath();
-        this.ctx.moveTo(s.x, s.y);
-        this.ctx.lineTo(e.x, e.y);
-        this.ctx.stroke();
-      }
-    } else {
-      const startX = Math.ceil(minX / spacingMm) * spacingMm;
-      for (let x = startX; x <= maxX; x += spacingMm) {
-        const s = this.worldToScreen({ x, y: minY });
-        const e = this.worldToScreen({ x, y: maxY });
-        this.ctx.beginPath();
-        this.ctx.moveTo(s.x, s.y);
-        this.ctx.lineTo(e.x, e.y);
-        this.ctx.stroke();
-      }
-    }
-  }
-
-  private drawDotGrid(minX: number, minY: number, maxX: number, maxY: number, spacingMm: number): void {
-    const startX = Math.ceil(minX / spacingMm) * spacingMm;
-    const startY = Math.ceil(minY / spacingMm) * spacingMm;
-    for (let x = startX; x <= maxX; x += spacingMm) {
-      for (let y = startY; y <= maxY; y += spacingMm) {
-        const s = this.worldToScreen({ x, y });
-        this.ctx.beginPath();
-        this.ctx.arc(s.x, s.y, 1.2, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
-  }
-}
-
-/**
- * Διαλέγει τη στρώση που ορίζει το ορατό χρώμα 2D: η `surface` (coat/μπογιά) αν υπάρχει,
- * αλλιώς η `body` με το μεγαλύτερο πάχος, αλλιώς η πρώτη. Pure.
- */
-function resolveVisibleLayer(layers: readonly WallCoveringLayer[]): WallCoveringLayer {
-  const surface = layers.find((l) => l.function === 'surface');
-  if (surface) return surface;
-  let heaviest: WallCoveringLayer | undefined;
-  for (const l of layers) {
-    if (l.function !== 'body') continue;
-    if (!heaviest || l.thicknessMm > heaviest.thicknessMm) heaviest = l;
-  }
-  return heaviest ?? layers[0];
 }

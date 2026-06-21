@@ -167,6 +167,8 @@ export type ToolType =
   | 'floor-finish'
   // ADR-511: BIM Wall Covering drawing tool (face strip per room, IfcCovering CLADDING)
   | 'wall-covering'
+  // ADR-511 Slice C: Wall Covering room-fill (auto N regions per room, one undo)
+  | 'wall-covering-room'
   // ADR-406: point-based MEP fixture drawing tool (light fixture first)
   | 'mep-fixture'
   // ADR-430: point-based electrical socket (πρίζα / power outlet) — mep-fixture kind, power-in connector

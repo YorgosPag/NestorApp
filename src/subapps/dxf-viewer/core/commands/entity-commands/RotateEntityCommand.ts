@@ -4,18 +4,20 @@
  * 🏢 ADR-188: Entity Rotation System — Command Pattern
  * Supports undo/redo and command merging for smooth drag rotation.
  *
- * Pattern: Follows MoveEntityCommand structure.
- * Consecutive rotations within 500ms are merged into a single command
+ * Consecutive rotations within the merge window are merged into a single command
  * for smooth undo of drag-to-rotate operations (Autodesk/Figma pattern).
  *
+ * ADR-507 §8 — the in-place transform spine (snapshot/restore/cascade/reframe)
+ * lives in `SnapshotTransformCommand`; this command supplies only the per-entity
+ * rotation patch, its angle-accumulating merge, and its copy-mode path.
+ *
  * @see ADR-188 §6.2 (Entity-specific rotation logic)
- * @see MoveEntityCommand (same ICommand pattern)
+ * @see SnapshotTransformCommand — shared in-place base
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
 import { rotateEntity } from '../../../utils/rotation-math';
 import type { Entity } from '../../../types/entities';
@@ -23,180 +25,92 @@ import type { Entity } from '../../../types/entities';
 // geometry recompute). Returns null for non-BIM, falls through to the
 // generic rotateEntity() path below.
 import { calculateBimRotatedGeometry } from '../../../bim/transforms/bim-rotate-geometry';
-// ADR-363 §5.4 — recompute hosted openings against rotated walls.
-import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
-// ADR-492 Φ2 — a rotated beam (or a rotated column) re-frames the associated beams to the
-// column faces, then announces transformed + reframed in ONE `bim:entities-moved` (persist +
-// organism + footing-follow). Command-time, single emit, no reactive loop (the freeze lesson).
-import {
-  reframeBeamsAndEmit,
-  emitRestoredEntities,
-  reframeBeamsAndEmitAfterRestore,
-} from '../../../bim/beams/beam-column-reframe-cascade';
+import { SnapshotTransformCommand } from './SnapshotTransformCommand';
 
 /**
  * Command for rotating multiple entities around a pivot point.
  * All entities rotate by the same angle (batch operation).
  */
-export class RotateEntityCommand implements ICommand {
-  readonly id: string;
+export class RotateEntityCommand extends SnapshotTransformCommand {
   readonly name = 'RotateEntities';
   readonly type = 'rotate-entities';
-  readonly timestamp: number;
 
-  private entitySnapshots: Map<string, SceneEntity> = new Map();
   /** ADR-357 Phase 12 — IDs of clones created when `copyMode === true`. */
   private createdEntityIds: string[] = [];
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: string[],
+    entityIds: string[],
     private readonly pivot: Point2D,
-    private angleDeg: number,
-    private readonly sceneManager: ISceneManager,
-    /** Mark as dragging for merge purposes */
-    private readonly isDragging: boolean = false,
+    private readonly angleDeg: number,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
     /**
      * ADR-357 Phase 12 — when `true`, rotate clones of the sources rather than
-     * mutating in place (mirrors `ScaleEntityCommand.copyMode`). Used by the
-     * grip-context-menu "Copy" toggle when current mode is Rotate.
+     * mutating in place (mirrors `ScaleEntityCommand.copyMode`).
      */
     private readonly copyMode: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  /**
-   * Execute: Rotate all entities around pivot by angleDeg. When `copyMode` is
-   * on, the rotated geometry is applied to fresh clones (sources untouched).
-   */
-  execute(): void {
-    this.entitySnapshots.clear();
-    this.createdEntityIds = [];
-
-    // ADR-492 Φ2 — in-place rotated entities (snapshot+updates), for the reframe announce.
-    const transformed: SceneEntity[] = [];
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (!entity) continue;
-      const updates = this.computeRotateUpdates(entity);
-
-      if (this.copyMode) {
-        const newId = generateEntityId();
-        const clone: SceneEntity = { ...entity, ...updates, id: newId };
-        this.sceneManager.addEntity(clone);
-        this.createdEntityIds.push(newId);
-      } else {
-        this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, updates);
-        transformed.push({ ...entity, ...updates } as SceneEntity);
-      }
-    }
-
-    this.wasExecuted = this.copyMode
-      ? this.createdEntityIds.length > 0
-      : this.entitySnapshots.size > 0;
-
-    // ADR-363 §5.4 — in-place rotation: hosted openings follow the rotated wall.
-    // (Copy mode clones carry no hosted openings, so nothing to cascade.)
-    if (!this.copyMode) {
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 Φ2 — a rotated beam re-snaps its ends to the now-collinear column faces;
-      // transformed + reframed announced in ONE emit (persist + organism + footing-follow).
-      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
-    }
+    super(entityIds, sceneManager, isDragging);
   }
 
   /**
    * Computes the rotation patch for a single entity. ADR-363 Phase 7.2:
    * tries BIM-aware rotate first (returns `{params, geometry}` atomic patch
-   * for the 7 BIM kinds); falls through to the generic `rotateEntity()`
-   * path otherwise.
+   * for the 7 BIM kinds); falls through to the generic `rotateEntity()` path.
    */
-  private computeRotateUpdates(entity: SceneEntity): Partial<SceneEntity> {
-    const bimPatch = calculateBimRotatedGeometry(
-      entity as unknown as Entity,
-      this.pivot,
-      this.angleDeg,
-    );
-    if (bimPatch !== null) return bimPatch;
-    const generic = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
-    return generic as Partial<SceneEntity>;
+  protected computeUpdates(entity: SceneEntity): Partial<SceneEntity> {
+    const bimPatch = calculateBimRotatedGeometry(entity as unknown as Entity, this.pivot, this.angleDeg);
+    if (bimPatch !== null) return bimPatch as Partial<SceneEntity>;
+    return rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg) as Partial<SceneEntity>;
   }
 
-  /**
-   * Undo: Restore all entities from snapshots (or remove the created clones
-   * when running in copyMode).
-   */
+  execute(): void {
+    if (!this.copyMode) {
+      this.executeInPlace();
+      return;
+    }
+    this.entitySnapshots.clear();
+    this.createdEntityIds = [];
+    for (const entityId of this.entityIds) {
+      const entity = this.sceneManager.getEntity(entityId);
+      if (!entity) continue;
+      const newId = generateEntityId();
+      this.sceneManager.addEntity({ ...entity, ...this.computeUpdates(entity), id: newId } as SceneEntity);
+      this.createdEntityIds.push(newId);
+    }
+    this.wasExecuted = this.createdEntityIds.length > 0;
+  }
+
   undo(): void {
     if (!this.wasExecuted) return;
-
     if (this.copyMode) {
-      for (const id of this.createdEntityIds) {
-        this.sceneManager.removeEntity(id);
-      }
+      for (const id of this.createdEntityIds) this.sceneManager.removeEntity(id);
       return;
     }
-
-    // ADR-492 Φ2 — race-guarded restore-first emit (mark dirty before the scene mutation:
-    // the Firestore doc still holds the ROTATED geometry; a snapshot arriving mid-undo would
-    // re-apply it unless dirty is set). SSoT helper — same ordering as the Move/Scale/Mirror undo.
-    emitRestoredEntities([...this.entitySnapshots.values()]);
-    for (const [entityId, snapshot] of this.entitySnapshots) {
-      // Extract geometry fields from snapshot (exclude id, type, layer, visible which are identity fields)
-      const { id: _id, type: _type, layer: _layer, visible: _visible, ...geometry } = snapshot;
-      this.sceneManager.updateEntity(entityId, geometry);
-    }
-    // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
-    cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-    // ADR-492 Φ2 — re-frame beams against the restored geometry; separate emit (restore stays first).
-    reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
+    this.undoInPlace();
   }
 
-  /**
-   * Redo: Re-apply rotation from snapshots (more accurate than re-executing).
-   * In copyMode, re-applies the snapshots as freshly cloned entities so the
-   * clone IDs are deterministic across the undo/redo cycle.
-   */
   redo(): void {
-    if (this.copyMode) {
-      this.createdEntityIds = [];
-      for (const entityId of this.entityIds) {
-        const snapshot = this.entitySnapshots.get(entityId)
-          ?? (this.sceneManager.getEntity(entityId) as SceneEntity | undefined);
-        if (!snapshot) continue;
-        // Cache the snapshot for any subsequent undo/redo cycle.
-        if (!this.entitySnapshots.has(entityId)) {
-          this.entitySnapshots.set(entityId, deepClone(snapshot));
-        }
-        const updates = this.computeRotateUpdates(snapshot);
-        const newId = generateEntityId();
-        const clone: SceneEntity = { ...snapshot, ...updates, id: newId };
-        this.sceneManager.addEntity(clone);
-        this.createdEntityIds.push(newId);
-      }
+    if (!this.copyMode) {
+      this.redoInPlace();
       return;
     }
-
-    const transformed: SceneEntity[] = [];
+    // Copy mode: re-create clones from snapshots so ids are deterministic across
+    // the undo/redo cycle (and cache the snapshot the first time through).
+    this.createdEntityIds = [];
     for (const entityId of this.entityIds) {
-      const snapshot = this.entitySnapshots.get(entityId);
-      if (snapshot) {
-        const updates = this.computeRotateUpdates(snapshot);
-        this.sceneManager.updateEntity(entityId, updates);
-        transformed.push({ ...snapshot, ...updates } as SceneEntity);
+      const snapshot = this.entitySnapshots.get(entityId)
+        ?? (this.sceneManager.getEntity(entityId) as SceneEntity | undefined);
+      if (!snapshot) continue;
+      if (!this.entitySnapshots.has(entityId)) {
+        this.entitySnapshots.set(entityId, deepClone(snapshot));
       }
+      const newId = generateEntityId();
+      this.sceneManager.addEntity({ ...snapshot, ...this.computeUpdates(snapshot), id: newId } as SceneEntity);
+      this.createdEntityIds.push(newId);
     }
-    // ADR-363 §5.4 — hosted openings follow the re-rotated walls.
-    cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-    // ADR-492 Φ2 — reframe beams + announce transformed + reframed in ONE emit (mirror execute).
-    reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
   }
 
-  /**
-   * Get description for UI / undo history
-   */
   getDescription(): string {
     const count = this.entitySnapshots.size || this.entityIds.length;
     const angleStr = this.angleDeg.toFixed(1);
@@ -208,89 +122,29 @@ export class RotateEntityCommand implements ICommand {
   }
 
   /**
-   * Check if can merge with another rotation command.
-   * Merges consecutive rotations of the same entities within time window.
+   * Merge consecutive rotations of the same entities around the same pivot within
+   * the merge window. Identity = same id-set + same pivot (the base owns the
+   * id-set + dragging + time-window checks).
    */
   canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof RotateEntityCommand)) {
-      return false;
-    }
-
-    // Must be same set of entities
-    if (other.entityIds.length !== this.entityIds.length) {
-      return false;
-    }
-
-    const thisSet = new Set(this.entityIds);
-    for (const id of other.entityIds) {
-      if (!thisSet.has(id)) return false;
-    }
-
-    // Must be same pivot point (within tolerance)
-    if (this.pivot.x !== other.pivot.x || this.pivot.y !== other.pivot.y) {
-      return false;
-    }
-
-    // Only merge dragging operations
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    if (other.type !== this.type) return false;
+    const o = other as RotateEntityCommand;
+    const samePivot = this.pivot.x === o.pivot.x && this.pivot.y === o.pivot.y;
+    return this.canMergeTransform(other, samePivot);
   }
 
-  /**
-   * Merge with another rotate command — accumulate angles
-   */
+  /** Merge with another rotate command — accumulate angles. */
   mergeWith(other: ICommand): ICommand {
     const otherRotate = other as RotateEntityCommand;
-    const combinedAngle = this.angleDeg + otherRotate.angleDeg;
     return new RotateEntityCommand(
       this.entityIds,
       this.pivot,
-      combinedAngle,
+      this.angleDeg + otherRotate.angleDeg,
       this.sceneManager,
-      true
+      true,
     );
   }
 
-  /**
-   * Get entity IDs affected by this command
-   */
-  getAffectedEntityIds(): string[] {
-    return [...this.entityIds];
-  }
-
-  /**
-   * Serialize for persistence
-   */
-  serialize(): SerializedCommand {
-    const snapshotsArray: Array<{ id: string; entity: SceneEntity }> = [];
-    this.entitySnapshots.forEach((entity, id) => {
-      snapshotsArray.push({ id, entity });
-    });
-
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityIds: this.entityIds,
-        pivot: this.pivot,
-        angleDeg: this.angleDeg,
-        isDragging: this.isDragging,
-        entitySnapshots: snapshotsArray,
-      },
-      version: 1,
-    };
-  }
-
-  /**
-   * Validate command can be executed
-   */
   validate(): string | null {
     if (!this.entityIds || this.entityIds.length === 0) {
       return 'At least one entity ID is required';
@@ -299,5 +153,21 @@ export class RotateEntityCommand implements ICommand {
       return 'Rotation angle must be non-zero';
     }
     return null;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        ...this.baseTransformData(),
+        pivot: this.pivot,
+        angleDeg: this.angleDeg,
+        isDragging: this.isDragging,
+      },
+      version: 1,
+    };
   }
 }

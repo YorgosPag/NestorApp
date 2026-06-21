@@ -11,7 +11,13 @@
 
 import type { ColumnParams } from '../types/column-types';
 import type { BeamParams } from '../types/beam-types';
-import { isFinishActive, createDefaultStructuralFinishSpec, type StructuralFinishSpec } from './structural-finish-types';
+import {
+  isFinishActive,
+  createDefaultStructuralFinishSpec,
+  STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
+  type StructuralFinishSpec,
+} from './structural-finish-types';
+import { wallToSilhouetteMember } from './wall-finish-source';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
   computeStructuralSilhouetteBands,
@@ -214,23 +220,39 @@ export function computeStructuralFinishSilhouette(
     const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b));
     if (m) members.push(m);
   }
-  if (members.length === 0) return [];
 
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
-  const s = mmToSceneUnits(sceneUnits);
-  const tol = EXTERIOR_EDGE_TOL_MM * s;
-  const classify = buildStructuralFinishClassifier(undefined, walls, tol);
-  // ADR-449 Slice 7/X1 — οι τοίχοι ως obstacles **ΧΩΡΙΣ dilation** (browser-verified per-element
-  // συμπεριφορά): ο **κάθετος** τοίχος που διασχίζει την όψη → καλύπτεται (μηδέν σοβάς εκεί). Η
-  // σύνδεση κολόνα↔δοκάρι (Πρόβλημα Β) λύνεται από το ΕΝΙΑΙΟ union, ΟΧΙ από obstacle dilation.
-  //
-  // ADR-449 Slice X1 — **height-aware** z-extents (port Slice 8/8b): ένας collinear τοίχος-
-  // στήριγμα κάτω από δοκάρι (ταυτόσημος σε κάτοψη, grid framing) είναι `topBinding:'attached'`
-  // → resolved top = κάτω παρειά δοκαριού → ΕΚΤΟΣ της ζώνης ύψους του δοκαριού → δεν καλύπτει
-  // την πλάγια όψη δοκαριού πάνω του (= η αληθινή αιτία του «μία όψη μόνο» bug — ΟΧΙ τοπολογική).
+  // ADR-449 Slice X1/X3 — beam undersides (height-aware z-extent των τοίχων): ένας
+  // attached-top τοίχος-στήριγμα έχει resolved top = κάτω παρειά του δοκαριού που κρατά.
   const beamUndersideById = new Map<string, number>();
   for (const b of beams) beamUndersideById.set(b.id, beamZExtent(b).zBotMm);
-  const wallObstacles: WallObstacle[] = walls.map((w) => {
+
+  // ADR-449 Slice X3 — Ο ΤΟΙΧΟΣ ως finish-member: τοίχος με σοβά (DNA plaster) → **member**
+  // (το core του ενώνεται με τα δομικά μέλη στο union → ο σοβάς τυλίγει το ενιαίο περίγραμμα
+  // + κάθε δωμάτιο και **σβήνει αυτόματα στις συμβολές**). Τοίχος ΧΩΡΙΣ σοβά (parapet/fence/
+  // bare core) → παραμένει coverage **obstacle** (κόβει όψη γειτόνων, δεν παίρνει δικό του).
+  // Το core = `inset(full footprint, skin)` → ο resolver προσθέτει `skin` και ο σοβάς φτάνει
+  // ακριβώς στην επιφάνεια του τοίχου (ενιαίο πάχος = default spec, συνεπές με κολόνα/δοκάρι).
+  const obstacleWalls: WallFinishObstacle[] = [];
+  for (const w of walls) {
+    const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
+    const m = wallToSilhouetteMember(w, STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM, z);
+    if (m) members.push(m);
+    else obstacleWalls.push(w);
+  }
+  if (members.length === 0) return [];
+
+  // sceneUnits: fallback σε τοίχο όταν ο όροφος έχει ΜΟΝΟ τοίχους (μηδέν κολόνα/δοκάρι).
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
+  const s = mmToSceneUnits(sceneUnits);
+  const tol = EXTERIOR_EDGE_TOL_MM * s;
+  // Classifier από ΟΛΟΥΣ τους τοίχους (building footprint = exterior/interior boundary),
+  // ανεξαρτήτως αν είναι members ή obstacles.
+  const classify = buildStructuralFinishClassifier(undefined, walls, tol);
+
+  // ADR-449 Slice 7/X1/X3 — coverage obstacles = **μόνο** οι τοίχοι ΧΩΡΙΣ σοβά (οι members
+  // ενώνονται ήδη στο union· να ήταν ΚΑΙ obstacles θα έκοβαν τον δικό τους σοβά). **ΧΩΡΙΣ
+  // dilation** (browser-verified per-element)· height-aware z-extents (attached-top resolved).
+  const wallObstacles: WallObstacle[] = obstacleWalls.map((w) => {
     const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
     return { footprint: wallFootprintPolygon(w), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
   });

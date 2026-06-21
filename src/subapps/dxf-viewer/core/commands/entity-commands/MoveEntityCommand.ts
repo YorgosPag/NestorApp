@@ -21,7 +21,11 @@
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-import type { Point2D } from '../../../rendering/types/Types';
+// ADR-049 Phase 2 — the move delta is 3D: plan (x, y) in the entity's native canvas
+// units PLUS an optional `z` ELEVATION delta in raw mm (Revit `MoveElement(dx,dy,dz)`).
+// `Point3D` (z optional) is the exact shape; a 2D `{x,y}` caller is unchanged (z absent
+// → pure plan move). The per-type `z` interpretation lives in `calculateBimMovedGeometry`.
+import type { Point3D } from '../../../bim/types/bim-base';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
@@ -31,6 +35,18 @@ import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
 // reframe-beams + emit). Both move commands delegate here so they stay in sync.
 // ADR-049 / ADR-363 / ADR-408 Φ-C / ADR-492 — rationale lives in the module header.
 import { runMoveForwardCascade, runMoveUndoCascade } from './move-entity-cascade';
+
+/**
+ * Sum two move deltas (merge of consecutive drag samples). `z` is kept only when
+ * the combined elevation is non-zero, so a pure-plan merge stays 2D and never
+ * serialises a spurious `z: 0` (ADR-049 Phase 2).
+ */
+function mergeMoveDelta(a: Point3D, b: Point3D): Point3D {
+  const z = (a.z ?? 0) + (b.z ?? 0);
+  return z !== 0
+    ? { x: a.x + b.x, y: a.y + b.y, z }
+    : { x: a.x + b.x, y: a.y + b.y };
+}
 
 /**
  * Command for moving a single entity by delta
@@ -46,7 +62,7 @@ export class MoveEntityCommand implements ICommand {
 
   constructor(
     private readonly entityId: string,
-    private readonly delta: Point2D,
+    private readonly delta: Point3D,
     private readonly sceneManager: ISceneManager,
     /** Optional: Mark as dragging for merge purposes */
     private readonly isDragging: boolean = false
@@ -140,13 +156,9 @@ export class MoveEntityCommand implements ICommand {
    */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveEntityCommand;
-    const combinedDelta: Point2D = {
-      x: this.delta.x + otherMove.delta.x,
-      y: this.delta.y + otherMove.delta.y,
-    };
     return new MoveEntityCommand(
       this.entityId,
-      combinedDelta,
+      mergeMoveDelta(this.delta, otherMove.delta),
       this.sceneManager,
       true // Keep dragging flag
     );
@@ -162,7 +174,7 @@ export class MoveEntityCommand implements ICommand {
   /**
    * Get the movement delta
    */
-  getDelta(): Point2D {
+  getDelta(): Point3D {
     return { ...this.delta };
   }
 
@@ -199,7 +211,8 @@ export class MoveEntityCommand implements ICommand {
     if (!this.entityId) {
       return 'Entity ID is required';
     }
-    if (this.delta.x === 0 && this.delta.y === 0) {
+    // ADR-049 Phase 2 — a PURE vertical move (axis-Y gizmo) has x=y=0 but z≠0.
+    if (this.delta.x === 0 && this.delta.y === 0 && (this.delta.z ?? 0) === 0) {
       return 'Delta must be non-zero';
     }
     return null;
@@ -221,7 +234,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
   constructor(
     private readonly entityIds: string[],
-    private readonly delta: Point2D,
+    private readonly delta: Point3D,
     private readonly sceneManager: ISceneManager,
     /** Optional: Mark as dragging for merge purposes */
     private readonly isDragging: boolean = false
@@ -361,13 +374,9 @@ export class MoveMultipleEntitiesCommand implements ICommand {
    */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveMultipleEntitiesCommand;
-    const combinedDelta: Point2D = {
-      x: this.delta.x + otherMove.delta.x,
-      y: this.delta.y + otherMove.delta.y,
-    };
     return new MoveMultipleEntitiesCommand(
       this.entityIds,
-      combinedDelta,
+      mergeMoveDelta(this.delta, otherMove.delta),
       this.sceneManager,
       true // Keep dragging flag
     );
@@ -383,7 +392,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
   /**
    * Get the movement delta
    */
-  getDelta(): Point2D {
+  getDelta(): Point3D {
     return { ...this.delta };
   }
 
@@ -425,7 +434,8 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     if (!this.entityIds || this.entityIds.length === 0) {
       return 'At least one entity ID is required';
     }
-    if (this.delta.x === 0 && this.delta.y === 0) {
+    // ADR-049 Phase 2 — a PURE vertical move (axis-Y gizmo) has x=y=0 but z≠0.
+    if (this.delta.x === 0 && this.delta.y === 0 && (this.delta.z ?? 0) === 0) {
       return 'Delta must be non-zero';
     }
     return null;

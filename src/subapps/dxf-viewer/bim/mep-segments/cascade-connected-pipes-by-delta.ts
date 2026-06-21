@@ -24,7 +24,9 @@
  */
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
-import type { Point2D } from '../../rendering/types/Types';
+// ADR-049 Phase 2 — the follow uses the FULL 3D move delta (optional `z` = elevation
+// in mm) so a vertical host/pipe move drags its connected pipe ends up/down too.
+import type { Point3D } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
@@ -46,7 +48,7 @@ type CascadeSceneManager = Pick<ISceneManager, 'updateEntities'> & {
 };
 
 /** Params of the move geometry patch (the moved entity's `nextParams`), or null. */
-function movedParams(entity: Entity, delta: Point2D): unknown | null {
+function movedParams(entity: Entity, delta: Point3D): unknown | null {
   const patch = calculateBimMovedGeometry(entity, delta);
   if (patch && typeof patch === 'object' && 'params' in patch) {
     return (patch as { params?: unknown }).params ?? null;
@@ -58,7 +60,7 @@ function movedParams(entity: Entity, delta: Point2D): unknown | null {
 function followPatchesFor(
   entity: Entity,
   entities: readonly Entity[],
-  delta: Point2D,
+  delta: Point3D,
 ): readonly SegmentEndpointMovePatch[] {
   const next = movedParams(entity, delta);
   if (!next) return [];
@@ -82,7 +84,7 @@ function followPatchesFor(
  */
 export function cascadeConnectedPipesByDelta(
   movedIds: readonly string[],
-  delta: Point2D,
+  delta: Point3D,
   sceneManager: CascadeSceneManager,
 ): SceneEntity[] {
   if (movedIds.length === 0) return [];

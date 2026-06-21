@@ -8,13 +8,17 @@
  *  - keepOriginals = true  (default): creates mirrored copies, originals stay
  *  - keepOriginals = false: replaces originals with mirrored versions
  *
+ * ADR-507 §8 — the in-place transform spine (snapshot/restore/cascade/reframe)
+ * lives in `SnapshotTransformCommand`; this command supplies only the per-entity
+ * mirror patch and its distinctive copy path (whole-entity clones + BIM clone
+ * persistence broadcasts).
+ *
+ * @see SnapshotTransformCommand — shared in-place base
  * @see RotateEntityCommand for the analogous pattern
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-import type { Point2D } from '../../../rendering/types/Types';
+import type { ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { deepClone } from '../../../utils/clone-utils';
 import { mirrorEntity } from '../../../utils/mirror-math';
 import type { MirrorAxis } from '../../../utils/mirror-math';
 import type { Entity } from '../../../types/entities';
@@ -22,16 +26,6 @@ import type { Entity } from '../../../types/entities';
 // atomic geometry recompute). Returns null for non-BIM, falls through to the
 // generic mirrorEntity() path below.
 import { calculateBimMirroredGeometry } from '../../../bim/transforms/bim-mirror-geometry';
-// ADR-363 §5.4 — recompute hosted openings against mirrored walls (in-place mode).
-import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
-// ADR-492 Φ2 — an in-place mirrored beam (or column) re-frames the associated beams to the
-// column faces, then announces transformed + reframed in ONE `bim:entities-moved`. Command-time,
-// single emit, no reactive loop. copy+mirror clones carry no association (handled separately).
-import {
-  reframeBeamsAndEmit,
-  emitRestoredEntities,
-  reframeBeamsAndEmitAfterRestore,
-} from '../../../bim/beams/beam-column-reframe-cascade';
 // ADR-363 §7.2 — copy+mirror clones of BIM entities need a fresh enterprise ID +
 // the create/delete/restore EventBus broadcasts the draw + delete paths use, or
 // the Firestore subscription drops the clone on the next snapshot.
@@ -41,14 +35,12 @@ import {
   broadcastBimCloneDeleted,
   broadcastBimCloneRestored,
 } from '../../../bim/transforms/bim-clone-persistence';
+import { SnapshotTransformCommand } from './SnapshotTransformCommand';
 
-export class MirrorEntityCommand implements ICommand {
-  readonly id: string;
+export class MirrorEntityCommand extends SnapshotTransformCommand {
   readonly name = 'MirrorEntities';
   readonly type = 'mirror-entities';
-  readonly timestamp: number;
 
-  private entitySnapshots: Map<string, SceneEntity> = new Map();
   /**
    * The mirrored clones added by this command (keepOriginals mode). Stored whole
    * — not just ids — so undo/redo are id-STABLE (redo re-adds the same entity
@@ -56,54 +48,20 @@ export class MirrorEntityCommand implements ICommand {
    * doc) and so undo/redo can fire the matching BIM delete/restore broadcasts.
    */
   private createdEntities: SceneEntity[] = [];
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: string[],
+    entityIds: string[],
     private readonly mirrorAxis: MirrorAxis,
     private readonly keepOriginals: boolean = true,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityIds, sceneManager);
   }
 
-  execute(): void {
-    this.entitySnapshots.clear();
-    this.createdEntities = [];
-
-    // ADR-492 Φ2 — in-place mirrored entities (snapshot+updates), for the reframe announce.
-    const transformed: SceneEntity[] = [];
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (!entity) continue;
-
-      if (this.keepOriginals) {
-        const clone = this.buildMirroredClone(entity);
-        this.sceneManager.addEntity(clone);
-        this.createdEntities.push(clone);
-        // ADR-363 §7.2 — first Firestore save for BIM clones (no-op otherwise).
-        broadcastBimCloneCreated(clone);
-      } else {
-        const updates = this.computeMirrorUpdates(entity);
-        this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, updates);
-        transformed.push({ ...entity, ...updates } as SceneEntity);
-      }
-    }
-
-    this.wasExecuted = this.keepOriginals
-      ? this.createdEntities.length > 0
-      : this.entitySnapshots.size > 0;
-
-    // ADR-363 §5.4 — in-place mirror: hosted openings follow the mirrored wall.
-    // (copy+mirror clones carry no hosted openings.)
-    if (!this.keepOriginals) {
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 Φ2 — an in-place mirrored beam re-snaps its ends to the column faces;
-      // transformed + reframed announced in ONE emit (persist + organism + footing-follow).
-      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
-    }
+  protected computeUpdates(entity: SceneEntity): Partial<SceneEntity> {
+    const bimPatch = calculateBimMirroredGeometry(entity as unknown as Entity, this.mirrorAxis);
+    if (bimPatch !== null) return bimPatch as Partial<SceneEntity>;
+    return mirrorEntity(entity as unknown as Entity, this.mirrorAxis) as Partial<SceneEntity>;
   }
 
   /**
@@ -112,7 +70,7 @@ export class MirrorEntityCommand implements ICommand {
    * GlobalId (ADR-363 §7.2 / N.6); other entities keep the generic id path.
    */
   private buildMirroredClone(entity: SceneEntity): SceneEntity {
-    const updates = this.computeMirrorUpdates(entity);
+    const updates = this.computeUpdates(entity);
     const identity = mintBimCloneIdentity((entity as { type?: string }).type);
     const clone = identity
       ? { ...entity, ...updates, id: identity.id, ifcGuid: identity.ifcGuid }
@@ -120,68 +78,49 @@ export class MirrorEntityCommand implements ICommand {
     return clone as unknown as SceneEntity;
   }
 
-  /**
-   * Computes the mirror patch for a single entity. ADR-363 Phase 7.2:
-   * tries BIM-aware mirror first (returns `{params, geometry}` atomic patch
-   * for the 7 BIM kinds); falls through to the generic `mirrorEntity()`
-   * path otherwise.
-   */
-  private computeMirrorUpdates(entity: SceneEntity): Partial<SceneEntity> {
-    const bimPatch = calculateBimMirroredGeometry(
-      entity as unknown as Entity,
-      this.mirrorAxis,
-    );
-    if (bimPatch !== null) return bimPatch;
-    const generic = mirrorEntity(entity as unknown as Entity, this.mirrorAxis);
-    return generic as Partial<SceneEntity>;
+  execute(): void {
+    if (!this.keepOriginals) {
+      this.executeInPlace();
+      return;
+    }
+    // copy+mirror: clones added, originals stay.
+    this.entitySnapshots.clear();
+    this.createdEntities = [];
+    for (const entityId of this.entityIds) {
+      const entity = this.sceneManager.getEntity(entityId);
+      if (!entity) continue;
+      const clone = this.buildMirroredClone(entity);
+      this.sceneManager.addEntity(clone);
+      this.createdEntities.push(clone);
+      // ADR-363 §7.2 — first Firestore save for BIM clones (no-op otherwise).
+      broadcastBimCloneCreated(clone);
+    }
+    this.wasExecuted = this.createdEntities.length > 0;
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
-
-    if (this.keepOriginals) {
-      for (const clone of this.createdEntities) {
-        this.sceneManager.removeEntity(clone.id);
-        // ADR-363 §7.2 — drop the BIM clone's Firestore doc (+ tombstone).
-        broadcastBimCloneDeleted(clone);
-      }
-    } else {
-      // ADR-492 Φ2 — race-guarded restore-first emit (mark dirty before scene mutation: the doc
-      // still holds the MIRRORED geometry). SSoT helper — same ordering as Move/Rotate/Scale undo.
-      emitRestoredEntities([...this.entitySnapshots.values()]);
-      for (const [entityId, snapshot] of this.entitySnapshots) {
-        const { id: _id, type: _type, layer: _layer, visible: _visible, ...geometry } = snapshot;
-        this.sceneManager.updateEntity(entityId, geometry);
-      }
-      // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 Φ2 — re-frame beams against the restored geometry; separate emit (restore first).
-      reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
+    if (!this.keepOriginals) {
+      this.undoInPlace();
+      return;
+    }
+    for (const clone of this.createdEntities) {
+      this.sceneManager.removeEntity(clone.id);
+      // ADR-363 §7.2 — drop the BIM clone's Firestore doc (+ tombstone).
+      broadcastBimCloneDeleted(clone);
     }
   }
 
   redo(): void {
-    if (this.keepOriginals) {
-      // Re-add the SAME clones (id-stable) so undo/redo never orphan a Firestore
-      // doc. `broadcastBimCloneRestored` clears the delete tombstone + re-saves.
-      for (const clone of this.createdEntities) {
-        this.sceneManager.addEntity(clone);
-        broadcastBimCloneRestored(clone);
-      }
-    } else {
-      const transformed: SceneEntity[] = [];
-      for (const entityId of this.entityIds) {
-        const snapshot = this.entitySnapshots.get(entityId);
-        if (snapshot) {
-          const updates = this.computeMirrorUpdates(snapshot);
-          this.sceneManager.updateEntity(entityId, updates);
-          transformed.push({ ...snapshot, ...updates } as SceneEntity);
-        }
-      }
-      // ADR-363 §5.4 — hosted openings follow the re-mirrored walls.
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 Φ2 — reframe beams + announce transformed + reframed in ONE emit (mirror execute).
-      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+    if (!this.keepOriginals) {
+      this.redoInPlace();
+      return;
+    }
+    // Re-add the SAME clones (id-stable) so undo/redo never orphan a Firestore
+    // doc. `broadcastBimCloneRestored` clears the delete tombstone + re-saves.
+    for (const clone of this.createdEntities) {
+      this.sceneManager.addEntity(clone);
+      broadcastBimCloneRestored(clone);
     }
   }
 
@@ -211,21 +150,15 @@ export class MirrorEntityCommand implements ICommand {
   }
 
   serialize(): SerializedCommand {
-    const snapshotsArray: Array<{ id: string; entity: SceneEntity }> = [];
-    this.entitySnapshots.forEach((entity, id) => {
-      snapshotsArray.push({ id, entity });
-    });
-
     return {
       type: this.type,
       id: this.id,
       name: this.name,
       timestamp: this.timestamp,
       data: {
-        entityIds: this.entityIds,
+        ...this.baseTransformData(),
         mirrorAxis: this.mirrorAxis,
         keepOriginals: this.keepOriginals,
-        entitySnapshots: snapshotsArray,
         createdEntityIds: this.createdEntities.map((e) => e.id),
       },
       version: 1,

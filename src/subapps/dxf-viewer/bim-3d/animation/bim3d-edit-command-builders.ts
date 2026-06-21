@@ -17,6 +17,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-049 Phase 2 — the unified move delta is 3D (optional `z` = elevation in mm).
+import type { Point3D } from '../../bim/types/bim-base';
 import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { isMepSegmentEntity, isWallEntity } from '../../types/entities';
@@ -36,7 +38,6 @@ import { UpdateMepRadiatorParamsCommand } from '../../core/commands/entity-comma
 import { UpdateMepBoilerParamsCommand } from '../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
 import { UpdateMepWaterHeaterParamsCommand } from '../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
 import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geometry';
-import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
 import { isMepConnectorHost } from '../../bim/mep-systems/connector-access';
 import {
   resolveHostMoveConnectedPipePatches,
@@ -51,18 +52,6 @@ import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/Up
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { buildResizeCommand, buildTiltCommand } from './bim3d-edit-shape-commands';
-import {
-  computeWallVerticalMove,
-  computeColumnVerticalMove,
-  computeBeamVerticalMove,
-  computeSlabVerticalMove,
-  computeStairVerticalMove,
-} from '../gizmo/bim3d-vertical-move';
-import {
-  mepVerticalCommand,
-  mepUpdateCommandFromNext,
-  mepVerticalNextParams,
-} from './bim3d-edit-mep-commands';
 import {
   computeMepSegmentEndpointMove,
   computeWallEndpointMove,
@@ -170,45 +159,35 @@ function withConnectedPipeFollow(
 /** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */
 export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): EditCommand | null {
   if (outcome.kind === 'move') {
-    const masked0 = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
-    const hasHoriz = masked0.x !== 0 || masked0.y !== 0;
-    const hasVert = outcome.deltaUpMm !== 0;
-    // ADR-402 — the axis-Y arrow yields a PURELY vertical drag (deltaDxf ≈ 0): route
-    // it to the per-type elevation edit (handles multi-select too).
-    if (hasVert && !hasHoriz) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
-    // ADR-408 Φ-E — a vertical plane handle (plane-xy / plane-yz) on a free-3D MEP
-    // entity yields a COMBINED horizontal + vertical drag. The XY translate and the
-    // Z shift BOTH rewrite the same entity's params, so they CANNOT be two commands
-    // (the second would clobber the first). Build ONE Update*ParamsCommand with the
-    // combined next params instead (single-select only — multi has no vertical planes).
-    if (hasVert && hasHoriz && c.entityIds.length === 1) {
-      const combined = buildMepCombinedMoveCommand(masked0, outcome.deltaUpMm, c);
-      if (combined) return combined;
-      // Not an MEP host (shouldn't happen for a free-3D type) → fall through to plan-only.
-    }
-    const masked = masked0; // plan-only (deltaUpMm 0, or a non-MEP combined drag fallback)
-    // ADR-402/404: convert the mm gizmo delta into the entity's native CANVAS units
-    // (1 for an mm drawing, 0.001 for a meter scene, the inferred factor for stairs)
-    // so the shared move SSoT relocates the entity by the right distance. Without
-    // this a non-mm drawing flings the element 1000× off-screen (the "vanish" bug).
-    // One delta serves the whole batch — every element in a drawing shares its units
-    // (a mixed-unit multi-select stays the documented limitation).
+    // ADR-049 Phase 2 — Revit `MoveElement(dx,dy,dz)`: ONE command, ONE 3D delta.
+    // Plan (x,y) is masked by the axis lock then scaled into the entity's native
+    // CANVAS units (1 for an mm drawing, 0.001 for a meter scene, the inferred factor
+    // for stairs — without it a non-mm drawing flings the element 1000× off-screen,
+    // the "vanish" bug). `z` is the elevation delta in RAW mm — the polymorphic
+    // geometry SSoT (`calculateBimMovedGeometry`) applies the right per-type elevation
+    // field + unit conversion. Pure vertical (axis-Y arrow) → x=y=0; a combined plane
+    // drag → all three set; a plan drag → `z` absent. The Move command self-cascades
+    // connected pipes inside execute/undo/redo and announces ONE `bim:entities-moved`
+    // (persist + organism in one pass), so the vertical no longer needs a separate
+    // `Update*ParamsCommand` path nor a `withConnectedPipeFollow` wrap.
+    const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
     const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
     const primary = entitiesAll.find((e) => e.id === c.entityId);
     const f = primary ? mmToEntityUnitFactor(primary) : 1;
-    const delta = f === 1 ? masked : { x: masked.x * f, y: masked.y * f };
-    // ADR-363 Φ1G.5 Slice 2 — a hosted opening cannot free-translate: in 3D it
-    // slides along its wall, or RE-HOSTS to another wall (Revit «Pick New Host»),
-    // through the SAME SSoT as the 2D grip path (`resolveOpeningAltMove`). The
-    // re-sync rebuilds the wall meshes with the hole on the resolved host (auto
-    // rotation + thickness). Single-select only (it rewrites one opening's params).
+    const delta: Point3D = {
+      x: f === 1 ? masked.x : masked.x * f,
+      y: f === 1 ? masked.y : masked.y * f,
+      ...(outcome.deltaUpMm !== 0 ? { z: outcome.deltaUpMm } : {}),
+    };
+    if (delta.x === 0 && delta.y === 0 && !delta.z) return null;
+    // ADR-363 Φ1G.5 Slice 2 — a hosted opening cannot free-translate: in 3D it slides
+    // along its wall, or RE-HOSTS to another wall (Revit «Pick New Host»), through the
+    // SAME SSoT as the 2D grip path (`resolveOpeningAltMove`). The re-sync rebuilds the
+    // wall meshes with the hole on the resolved host (auto rotation + thickness).
+    // Single-select only (it rewrites one opening's params).
     if (c.entityIds.length === 1 && primary?.type === 'opening') {
       return buildOpeningRehostMoveCommand(primary as OpeningEntity, delta, entitiesAll, c.sm, c.pickedWall);
     }
-    // ADR-049 / ADR-408 Φ-C — the Move command SELF-cascades connected pipes inside
-    // its execute/undo/redo (cascadeConnectedPipesByDelta), so the 3D plan move no
-    // longer wraps `withConnectedPipeFollow` (that would double-follow). Rotate and
-    // vertical still wrap it (those commands do not self-cascade pipes).
     return c.entityIds.length > 1
       ? new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false)
       : new MoveEntityCommand(c.entityId, delta, c.sm, false);
@@ -309,92 +288,6 @@ function buildEndpointMoveCommand(outcome: EndpointMoveOutcome, c: CommandBuildC
     return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
   }
   return null;
-}
-
-/**
- * Vertical (axis-Y) move → per-type elevation edit (`bim3d-vertical-move` SSoT).
- * Single selection → one `Update*ParamsCommand`; multi-select → a `CompoundCommand`
- * batching each element's elevation edit into ONE undo step (mixed types each get
- * their own canonical field — wall/column `baseOffset`, beam `topElevation`, slab
- * `levelElevation`, stair `basePoint.z`). `null` = no-op / no eligible entity.
- */
-function buildVerticalMoveCommand(deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
-  const scene = c.levels.getLevelScene(c.levelId);
-  if (!scene) return null;
-  const entities = scene.entities;
-  let base: EditCommand | null;
-  if (c.entityIds.length <= 1) {
-    const entity = entities.find((e) => e.id === c.entityId);
-    base = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
-  } else {
-    const commands: EditCommand[] = [];
-    for (const id of c.entityIds) {
-      const entity = entities.find((e) => e.id === id);
-      const cmd = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
-      if (cmd) commands.push(cmd);
-    }
-    base = commands.length > 0 ? new CompoundCommand(`Vertical Move (${commands.length})`, commands) : null;
-  }
-  if (!base) return null;
-  // ADR-408 Φ-C — pipes snapped to a vertically-moved MEP entity follow its Z in one undo.
-  return withConnectedPipeFollow(base, c.entityIds, entities, c.sm, (e) =>
-    mepVerticalNextParams(e, deltaUpMm),
-  );
-}
-
-/** One element → its per-type elevation `Update*ParamsCommand` (null = no-op / unsupported type). */
-function verticalCommandForEntity(entity: Entity, deltaUpMm: number, sm: SceneManager): EditCommand | null {
-  if (entity.type === 'wall') {
-    const next = computeWallVerticalMove(entity.params, deltaUpMm);
-    return next
-      ? new UpdateWallParamsCommand(entity.id, next, entity.params, sm, false, entity.kind ?? 'straight')
-      : null;
-  }
-  if (entity.type === 'column') {
-    const next = computeColumnVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateColumnParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'beam') {
-    const next = computeBeamVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateBeamParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'slab') {
-    const next = computeSlabVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateSlabParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'stair') {
-    const next = computeStairVerticalMove(entity, deltaUpMm);
-    return next ? new UpdateStairParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  // ADR-408 Φ-C (3D gizmo) — MEP entities (point hosts + pipe) shift their elevation.
-  return mepVerticalCommand(entity, deltaUpMm, sm);
-}
-
-/**
- * ADR-408 Φ-E — combined horizontal + vertical move of a SINGLE free-3D MEP entity
- * (vertical plane handle drag). Builds ONE `Update*ParamsCommand` carrying the entity
- * translated in plan AND shifted in elevation (the two cannot be separate commands —
- * they rewrite the same params), wrapped in `withConnectedPipeFollow` so the snapped
- * pipes follow the combined final pose in one undo. `null` = not an MEP host.
- */
-function buildMepCombinedMoveCommand(maskedDxf: Point2D, deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
-  const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
-  const entity = entitiesAll.find((e) => e.id === c.entityId);
-  if (!entity) return null;
-  const f = mmToEntityUnitFactor(entity);
-  const deltaCanvas = f === 1 ? maskedDxf : { x: maskedDxf.x * f, y: maskedDxf.y * f };
-  const next = mepCombinedNextParams(entity, deltaCanvas, deltaUpMm);
-  if (!next) return null;
-  const base = mepUpdateCommandFromNext(entity, next, c.sm);
-  if (!base) return null;
-  return withConnectedPipeFollow(base, [c.entityId], entitiesAll, c.sm, () => next);
-}
-
-/** Final params of an MEP entity after a plan translate (`deltaCanvas`) THEN an elevation shift. */
-function mepCombinedNextParams(entity: Entity, deltaCanvas: Point2D, deltaUpMm: number): unknown | null {
-  const moved = nextParamsFromPatch(calculateBimMovedGeometry(entity, deltaCanvas));
-  if (!moved) return null;
-  return mepVerticalNextParams({ ...entity, params: moved } as Entity, deltaUpMm) ?? moved;
 }
 
 /**

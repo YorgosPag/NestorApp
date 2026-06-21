@@ -17,8 +17,10 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
-import { mmToSceneUnits, mmScaleFor, inferSceneUnitsFromWidth } from '../../utils/scene-units';
+// ADR-049 Phase 2 — `mmToEntityUnitFactor` re-homed to a neutral (Three-free) module
+// so the pure command/geometry path can import it without dragging Three.js in.
+// Re-exported below for back-compat (existing callers import it from here).
+export { mmToEntityUnitFactor } from '../../bim/utils/entity-unit-factor';
 
 const MM_TO_M = 0.001;
 const M_TO_MM = 1000;
@@ -77,52 +79,5 @@ export function worldUpDeltaToMm(
   return (worldEnd.y - worldStart.y) * M_TO_MM;
 }
 
-/**
- * Factor that converts a plan value expressed in **mm** (what
- * {@link worldDeltaToDxfDelta} / `worldToDxfPlan` produce) into an entity's
- * NATIVE parameter units. A pure scale about the shared origin, so it applies to
- * both a delta (move) and a position (rotate pivot) alike — a 3D gizmo gesture
- * then transforms the entity by the right amount.
- *
- * - wall / column / beam / slab carry an optional `sceneUnits` field: their
- *   `start`/`end`/`position`/`outline` plan coords live in the drawing's CANVAS
- *   units (mm only when `sceneUnits` is mm — a meter/cm DXF stores them in m/cm).
- *   → factor `mmScaleFor(params)` = `mmToSceneUnits(sceneUnits ?? 'mm')`. An mm
- *   scene resolves to `1` (byte-for-byte the old behaviour, zero regression); a
- *   meter scene resolves to `0.001`. WITHOUT this, the mm gizmo delta/pivot is
- *   applied verbatim to a meter-scale entity → a 1000× off-screen fling on every
- *   3D move/rotate in a non-mm drawing (ADR-402/404 "vanish" root cause, fixed
- *   2026-06-01 — the entity rendered fine but landed kilometres away).
- * - **stairs** (ADR-358) store geometry + `basePoint` in **inferred drawing
- *   units** (`StairToThreeConverter` derives `sceneToM` from
- *   `inferSceneUnitsFromWidth`) → factor `mmToSceneUnits(inferSceneUnitsFromWidth(width))`,
- *   the SAME factor `getStairGrips` and the Sub-Phase 1 resize bridge use. Without
- *   it the shared `moveStair` / `rotateEntity` SSoT (which in 2D already receive
- *   drawing-unit inputs) over-transform a stair by 1/sceneToM in non-mm drawings
- *   (ADR-402 fix).
- */
-export function mmToEntityUnitFactor(entity: Entity): number {
-  if (entity.type === 'stair') {
-    return mmToSceneUnits(inferSceneUnitsFromWidth(entity.params.width));
-  }
-  if (
-    entity.type === 'wall' ||
-    entity.type === 'column' ||
-    entity.type === 'beam' ||
-    entity.type === 'slab' ||
-    // ADR-406 / ADR-408 Φ3 — point-based MEP hosts also carry `params.sceneUnits`;
-    // without this their meter-scene gizmo move delta is 1000× off (entity flies
-    // away then snaps back on resync). Same fix as the structural types above.
-    entity.type === 'mep-fixture' ||
-    entity.type === 'electrical-panel' ||
-    // ADR-408 Φ12 — plumbing manifold also carries `params.sceneUnits`.
-    entity.type === 'mep-manifold' ||
-    // ADR-410 — furniture also carries `params.sceneUnits` (same pattern).
-    entity.type === 'furniture' ||
-    // ADR-408 Φ8 — linear MEP segment carries `params.sceneUnits` too.
-    entity.type === 'mep-segment'
-  ) {
-    return mmScaleFor(entity.params);
-  }
-  return 1;
-}
+// `mmToEntityUnitFactor` lives in `bim/utils/entity-unit-factor.ts` (re-exported at
+// the top of this file). It was re-homed in ADR-049 Phase 2 — see that module's header.

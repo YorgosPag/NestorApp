@@ -668,6 +668,10 @@
         "tooFewVertices": "Η επικάλυψη δαπέδου χρειάζεται τουλάχιστον 3 κορυφές"
       }
     },
+    "wallCovering": {
+      "statusPickWall": "Κλικ σε τοίχο για να επιλέξεις παρειά φινιρίσματος",
+      "statusSpanEnd": "Κλικ για το τέλος της λωρίδας κατά μήκος της παρειάς"
+    },
     "thermalSpace": {
       "statusPlace": "Κλικ μέσα σε δωμάτιο για δημιουργία θερμικού χώρου"
     },
@@ -1134,6 +1138,7 @@
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
+      "wallCoveringProperties": "Ιδιότητες Φινιρίσματος Τοίχου",
       "hatchProperties": "Γραμμοσκίαση",
       "thermalSpaceProperties": "Ιδιότητες Θερμικού Χώρου",
       "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών",
@@ -1287,6 +1292,9 @@
       "floorFinishGeometry": "Γεωμετρία",
       "floorFinishAppearance": "Εμφάνιση",
       "floorFinishActions": "Ενέργειες",
+      "wallCoveringFinish": "Φινίρισμα",
+      "wallCoveringGeometry": "Γεωμετρία",
+      "wallCoveringActions": "Ενέργειες",
       "hatchFill": "Γέμισμα",
       "hatchPattern": "Μοτίβο",
       "hatchInfo": "Πληροφορίες",
@@ -1634,6 +1642,14 @@
         "floorFinish": {
           "label": "Επικάλυψη Δαπέδου",
           "tooltip": "Σχεδίαση επικάλυψης δαπέδου ανά δωμάτιο (κλικ-κλικ) — τεχνολογία Revit «IfcCovering» (συντόμευση FF)"
+        },
+        "wallCovering": {
+          "label": "Φινίρισμα Τοίχου",
+          "tooltip": "Φινίρισμα τοίχου ανά δωμάτιο/παρειά (διάλεξε τοίχο → παρειά → span) — Revit «IfcCovering» CLADDING (συντόμευση WC)"
+        },
+        "wallCoveringRoom": {
+          "label": "Φινίρισμα ανά Δωμάτιο",
+          "tooltip": "Ένα κλικ σε τοίχο → αυτόματο φινίρισμα ανά δωμάτιο (όρια από IfcSpace, auto-πρόταση ανά χρήση) — ένα undo (συντόμευση WR)"
         },
         "thermalSpace": {
           "label": "Θερμικός Χώρος",
@@ -3196,6 +3212,15 @@
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή επικάλυψης δαπέδου; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
+      "wallCoveringEditor": {
+        "bodyMaterial": "Υλικό φινιρίσματος",
+        "surfaceMaterial": "Χρώμα/μπογιά",
+        "faceSide": "Παρειά",
+        "height": "Ύψος (mm)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή φινιρίσματος τοίχου; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
       "hatchEditor": {
         "fillType": "Τύπος γεμίσματος",
         "fillTypeSolid": "Συμπαγές",
@@ -4429,6 +4454,22 @@
       "parquet": "Παρκέ",
       "epoxy": "Εποξειδικό",
       "carpet": "Μοκέτα"
+    }
+  },
+  "wallCovering": {
+    "materials": {
+      "paintWhite": "Μπογιά λευκή",
+      "paintRed": "Μπογιά κόκκινη",
+      "paintGreen": "Μπογιά πράσινη",
+      "paintBlue": "Μπογιά γαλάζια",
+      "plasterTraditional": "Παραδοσιακός σοβάς",
+      "knaufGypsumBoard": "Γυψοσανίδα (Knauf)",
+      "tileCeramic": "Κεραμικό πλακίδιο",
+      "adhesiveMortar": "Κόλλα"
+    },
+    "faceSide": {
+      "inner": "Εσωτερική",
+      "outer": "Εξωτερική"
     }
   },
   "thermalSpace": {

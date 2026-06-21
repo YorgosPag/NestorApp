@@ -38,6 +38,7 @@ import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/
 import { CONTEXTUAL_MEP_WATER_HEATER_TAB, MEP_WATER_HEATER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
 import { CONTEXTUAL_MEP_UNDERFLOOR_TAB, MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
 import { CONTEXTUAL_FLOOR_FINISH_TAB, FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
+import { CONTEXTUAL_WALL_COVERING_TAB, WALL_COVERING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-covering-tab';
 import { CONTEXTUAL_HATCH_TAB, HATCH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-hatch-tab';
 import { CONTEXTUAL_THERMAL_SPACE_TAB, THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-thermal-space-tab';
 import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
@@ -101,6 +102,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   CONTEXTUAL_FLOOR_FINISH_TAB,
+  CONTEXTUAL_WALL_COVERING_TAB,
   CONTEXTUAL_HATCH_TAB,
   CONTEXTUAL_THERMAL_SPACE_TAB,
   ANIMATION_CONTEXTUAL_TAB,
@@ -276,6 +278,8 @@ export function useActiveContextualTrigger({
     if (activeTool === 'floorplan-symbol') return FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER;
     // ADR-419 — floor-finish tool active → show the floor-finish property tab.
     if (activeTool === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
+    // ADR-511 — wall-covering tool active (manual ή room-fill) → show the property tab.
+    if (activeTool === 'wall-covering' || activeTool === 'wall-covering-room') return WALL_COVERING_CONTEXTUAL_TRIGGER;
     // ADR-507 S2 — hatch tool active → show the «Γραμμοσκίαση» tab (defaults for the
     // next drawn hatch; a selected hatch surfaces the same tab via resolveContextualTrigger).
     if (activeTool === 'hatch') return HATCH_CONTEXTUAL_TRIGGER;
@@ -390,6 +394,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'mep-underfloor') return MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER;
   // ADR-419 — floor-finish (IfcCovering FLOORING) → «Ιδιότητες Επικάλυψης Δαπέδου».
   if (entity.type === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
+  // ADR-511 — wall-covering (IfcCovering CLADDING/INTERIOR) → «Ιδιότητες Φινιρίσματος Τοίχου».
+  if (entity.type === 'wall-covering') return WALL_COVERING_CONTEXTUAL_TRIGGER;
   // ADR-507 S2 — γραμμοσκίαση (hatch) → «Γραμμοσκίαση» tab.
   if (entity.type === 'hatch') return HATCH_CONTEXTUAL_TRIGGER;
   // ADR-422 — thermal-space (IfcSpace) → «Ιδιότητες Θερμικού Χώρου».

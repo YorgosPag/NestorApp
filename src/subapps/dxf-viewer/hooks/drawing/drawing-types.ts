@@ -101,6 +101,7 @@ export type DrawingTool =
   | 'slab-opening'
   | 'roof'
   | 'floor-finish'
+  | 'wall-covering'
   | 'mep-underfloor'
   | 'thermal-space'
   | 'space-separator';

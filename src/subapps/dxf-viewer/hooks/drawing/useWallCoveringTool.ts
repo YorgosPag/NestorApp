@@ -23,6 +23,7 @@ import type { WallCoveringEntity, WallCoveringFaceSide } from '../../bim/types/w
 import {
   buildDefaultWallCoveringParams,
   buildWallCoveringEntity,
+  buildRoomFillCoverings,
   type WallCoveringParamOverrides,
   type SceneUnits,
 } from './wall-covering-completion';
@@ -31,12 +32,16 @@ import {
   alongMmOnWall,
 } from '../../bim/wall-coverings/wall-covering-pick';
 import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
+import type { RoomSpaceLike } from '../../bim/wall-coverings/wall-covering-room-partition';
 import { wallCoveringPreviewStore } from '../../bim/wall-coverings/wall-covering-preview-store';
 import { DEFAULT_WALL_COVERING_LAYERS } from '../../bim/types/wall-covering-types';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
 export type WallCoveringToolPhase = 'idle' | 'awaitingWall' | 'awaitingSpanEnd';
+
+/** 'manual' = pick + 2-click span· 'room-fill' = pick → auto N regions ανά δωμάτιο (ένα undo). */
+export type WallCoveringToolMode = 'manual' | 'room-fill';
 
 interface LockedFace {
   readonly host: WallCoveringHost;
@@ -46,6 +51,7 @@ interface LockedFace {
 
 export interface WallCoveringToolState {
   readonly phase: WallCoveringToolPhase;
+  readonly mode: WallCoveringToolMode;
   readonly locked: LockedFace | null;
   readonly overrides: WallCoveringParamOverrides;
   readonly error: string | null;
@@ -53,6 +59,7 @@ export interface WallCoveringToolState {
 
 const INITIAL_STATE: WallCoveringToolState = {
   phase: 'idle',
+  mode: 'manual',
   locked: null,
   overrides: {},
   error: null,
@@ -67,6 +74,10 @@ export interface UseWallCoveringToolOptions {
   readonly currentLevelId?: string;
   /** Live walls (host candidates) από τη σκηνή. */
   readonly getWalls?: () => readonly WallCoveringHost[];
+  /** Live θερμικοί χώροι (IfcSpace) για το room-fill (Slice C). */
+  readonly getSpaces?: () => readonly RoomSpaceLike[];
+  /** Callback batch-create (room-fill) — ο caller το τυλίγει σε ΕΝΑ undo. */
+  readonly onRoomFillCreated?: (entities: WallCoveringEntity[]) => void;
   /** Active scene units. Default 'mm'. */
   readonly getSceneUnits?: () => SceneUnits;
 }
@@ -80,6 +91,8 @@ export interface UseWallCoveringToolResult {
   onCanvasClick(point: Readonly<Point2D>): boolean;
   /** Dynamic Input field overrides (assembly / height / name). */
   setParamOverrides(overrides: WallCoveringParamOverrides): void;
+  /** Set 'manual' (2-click span) ή 'room-fill' (auto N regions). */
+  setMode(mode: WallCoveringToolMode): void;
   /** Status text key για status-bar / Dynamic Input prompt. */
   getStatusText(): string;
   readonly isActive: boolean;
@@ -88,7 +101,14 @@ export interface UseWallCoveringToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): UseWallCoveringToolResult {
-  const { onWallCoveringCreated, currentLevelId = '0', getWalls, getSceneUnits } = options;
+  const {
+    onWallCoveringCreated,
+    currentLevelId = '0',
+    getWalls,
+    getSpaces,
+    onRoomFillCreated,
+    getSceneUnits,
+  } = options;
 
   const [state, setState] = useState<WallCoveringToolState>(INITIAL_STATE);
   const stateRef = useRef<WallCoveringToolState>(state);
@@ -114,16 +134,17 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
-    setState((prev) => ({ ...INITIAL_STATE, overrides: prev.overrides, phase: 'awaitingWall' }));
+    setState((prev) => ({ ...INITIAL_STATE, mode: prev.mode, overrides: prev.overrides, phase: 'awaitingWall' }));
   }, []);
 
   const deactivate = useCallback(() => {
-    setState(INITIAL_STATE);
+    setState((prev) => ({ ...INITIAL_STATE, mode: prev.mode }));
   }, []);
 
   const reset = useCallback(() => {
     setState((prev) => ({
       ...INITIAL_STATE,
+      mode: prev.mode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingWall',
     }));
@@ -131,6 +152,10 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
 
   const setParamOverrides = useCallback((overrides: WallCoveringParamOverrides) => {
     setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
+  }, []);
+
+  const setMode = useCallback((mode: WallCoveringToolMode) => {
+    setState((prev) => ({ ...prev, mode }));
   }, []);
 
   // ── commit (2ο κλικ) ──────────────────────────────────────────────────────
@@ -155,10 +180,27 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
         return false;
       }
       onWallCoveringCreated?.(result.entity);
-      setState((prev) => ({ ...INITIAL_STATE, overrides: prev.overrides, phase: 'awaitingWall' }));
+      setState((prev) => ({ ...INITIAL_STATE, mode: prev.mode, overrides: prev.overrides, phase: 'awaitingWall' }));
       return true;
     },
     [currentLevelId, onWallCoveringCreated, getSceneUnits],
+  );
+
+  // ── room-fill (Slice C «το μαγικό»): pick τοίχου+παρειάς → batch N regions ──
+  const runRoomFill = useCallback(
+    (pickWall: WallCoveringHost, faceSide: LockedFace['faceSide']): boolean => {
+      const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
+      const spaces = getSpaces?.() ?? [];
+      const entities = buildRoomFillCoverings(pickWall, faceSide, spaces, currentLevelId, { sceneUnits });
+      if (entities.length === 0) {
+        setState((prev) => ({ ...prev, error: 'wall-covering.error.noRooms' }));
+        return false;
+      }
+      onRoomFillCreated?.(entities);
+      setState((prev) => ({ ...INITIAL_STATE, mode: prev.mode, overrides: prev.overrides, phase: 'awaitingWall' }));
+      return true;
+    },
+    [currentLevelId, getSpaces, onRoomFillCreated, getSceneUnits],
   );
 
   // ── click pipeline ───────────────────────────────────────────────────────
@@ -175,6 +217,10 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
           setState((prev) => ({ ...prev, error: 'wall-covering.error.noWallPicked' }));
           return false;
         }
+        if (s.mode === 'room-fill') {
+          // ΤΟ ΜΑΓΙΚΟ: ένα κλικ → auto N regions ανά δωμάτιο (batch, ένα undo).
+          return runRoomFill(pick.wall, pick.faceSide);
+        }
         setState((prev) => ({
           ...prev,
           phase: 'awaitingSpanEnd',
@@ -189,7 +235,7 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
       }
       return false;
     },
-    [getWalls, getSceneUnits, commitSpanEnd],
+    [getWalls, getSceneUnits, commitSpanEnd, runRoomFill],
   );
 
   // ── status text (i18n keys) ──────────────────────────────────────────────
@@ -211,6 +257,7 @@ export function useWallCoveringTool(options: UseWallCoveringToolOptions = {}): U
     reset,
     onCanvasClick,
     setParamOverrides,
+    setMode,
     getStatusText,
     isActive: state.phase !== 'idle',
   };

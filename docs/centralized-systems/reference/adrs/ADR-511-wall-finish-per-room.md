@@ -1,6 +1,6 @@
 # ADR-511 — Wall Finish per Room / per Face (beyond-Revit, room-aware)
 
-**Status:** 🟡 Slice A (data + persistence) DONE — 10 jest GREEN · indexes DEPLOYED (pagonis-87766) · UNCOMMITTED 2026-06-21 · 🔴 Slices B (2D render + tool + ribbon) / C (room-auto-extent magic) / D (3D) / E (BOQ) PENDING · 🔴 tsc (σειριακά N.17) + browser-verify + commit (Giorgio)
+**Status:** 🟡 Slices A + B + C DONE (UNCOMMITTED 2026-06-21) — A: data+persistence (10 jest, indexes DEPLOYED pagonis-87766)· B: 2D render (live face strip) + manual tool (pick τοίχου→παρειά→span) + ribbon assembly editor + i18n el/en· C: room-auto-extent «το μαγικό» (coveredIntervals/IfcSpace → region/δωμάτιο + useType auto-assembly + batch ένα undo). 16 νέα jest GREEN (Slice B/C). tsc clean (δικά μου). 🔴 Slices D (3D) / E (BOQ) PENDING. 🔴 grips (span-slide) DEFER. 🔴 browser-verify + commit (Giorgio· CHECK 6B/6D → stage ADR-040).
 **Date:** 2026-06-21
 **Author:** Claude (Opus) για Γρηγόριο Παγώνη (Giorgio)
 
@@ -76,13 +76,23 @@ derived από **params ΜΟΝΟ** (pure, `computeWallCoveringGeometry`). Το s
   enterprise-id (`generateWallCoveringId`/prefix `wcv`), firestore-collections (+FLOOR_SCOPED), rules,
   indexes (4, DEPLOYED), event-map (`bim:wall-covering-params-updated`/`-delete-requested`),
   lifecycle-events (delete case). **10 jest GREEN** (`wall-covering-core.test.ts`).
-- **Slice B — 2D render + manual tool + ribbon (PENDING):** `WallCoveringRenderer` (χρωματιστή λωρίδα
-  στην παρειά· ⚠️ ADR-040 CHECK 6D → stage ADR-040), `useWallCoveringTool` + completion + preview-store
-  + grips, `contextual-wall-covering-tab` (assembly editor) + architecture-tab button, drawing-preview-generator
-  + tool-definitions wiring, i18n el+en.
-- **Slice C — room-auto-extent / ΤΟ ΜΑΓΙΚΟ (PENDING):** `wall-covering-room-partition` (coveredIntervals
-  per IfcSpace → ένα region ανά δωμάτιο), `wall-covering-room-defaults` (useType→assembly auto-propose),
-  tool room-fill mode (batch-create, ΕΝΑ undo).
+- **Slice B — 2D render + manual tool + ribbon (DONE):** **Foundation SSoT** `wall-covering-strip-geometry`
+  (live face strip από host τοίχο· `computeWallCoveringStrip` + `computeWallCoveringRenderGeometry` cached
+  bbox/outline για selection· `wallCoveringFaceLine`) + `wall-covering-pick` (`pickWallFaceFromPoint` +
+  `alongMmOnWall`, reuse `projectPointOnAxis`). `WallCoveringRenderer` (translucent fill + hatch + outline·
+  per-frame `setWallsById` injection μέσω `dxf-renderer-frame-builders.buildWallsById` → host O(1)· ⚠️ ADR-040
+  CHECK 6B/6D → stage ADR-040)· `DxfWallCovering` wrapper + `toEntityModel` case. `useWallCoveringTool`
+  (FSM: pick τοίχου+παρειάς → 2-click span· continuous) + `wall-covering-completion` (build) +
+  `wall-covering-preview-store` (draw-context) + `wall-covering-preview-helpers` (generator υπολογίζει live
+  strip από context+cursor). `contextual-wall-covering-tab` (body finish + surface paint pickers + faceSide +
+  height) + `useRibbonWallCoveringBridge` + `wall-covering-command-keys` + architecture-tab button + 3×
+  `useRibbonCommands` routing. hit-test + marquee bounds + visibility category + pen styles + discipline.
+  i18n el+en. **Grips (span-slide) = DEFER** (η οντότητα editable από ribbon).
+- **Slice C — room-auto-extent / ΤΟ ΜΑΓΙΚΟ (DONE):** `wall-covering-room-partition` (`partitionWallByRooms`:
+  `coveredIntervals` της παρειάς ανά IfcSpace footprint → ένα region ανά δωμάτιο, όρια από δωμάτια όχι
+  κολώνες)· `wall-covering-room-defaults` (`wallCoveringLayersForUseType`: μπάνιο/wc→κόλλα+πλακίδια,
+  κουζίνα→σοβάς+πλακίδια, ξηροί→σοβάς+μπογιά)· `buildRoomFillCoverings` (batch build) + tool room-fill mode
+  (tool id `wall-covering-room`, ένα κλικ → N regions) + `appendEntitiesToScene` (CompoundCommand, ΕΝΑ undo).
 - **Slice D — 3D (PENDING):** `wall-covering-to-three` (λεπτό κατακόρυφο panel ανά region/layer) + 3D store sync.
 - **Slice E — BOQ + visibility (PENDING):** per-material area aggregation + visibility toggle.
 
@@ -90,8 +100,28 @@ derived από **params ΜΟΝΟ** (pure, `computeWallCoveringGeometry`). Το s
 - `bim/wall-coverings/__tests__/wall-covering-core.test.ts` — **10 GREEN** (Slice A): geometry derivation
   (length/height/area/clamp), totalThickness, kind resolution (tiles>knauf>plaster>paint), catalog
   accessors (8 υλικά), factory (kind derived + ifcType + id `wcv_*` + ifcGuid).
+- `bim/wall-coverings/__tests__/wall-covering-slice-bc.test.ts` — **16 GREEN** (Slices B/C): `computeWallCoveringStrip`
+  (outward quad outer/inner· clamp· null χωρίς geometry)· `computeWallCoveringRenderGeometry` (bbox+outline)·
+  `wallCoveringFaceLine`· `pickWallFaceFromPoint` (outer/inner side· alongMm· null μακριά)· `alongMmOnWall`
+  (clamp [0,L])· `partitionWallByRooms` (2 δωμάτια → 2 regions με σωστά spans· skip μη-εφαπτόμενα· null χωρίς geometry)·
+  `wallCoveringLayersForUseType` (wet→tiles, kitchen→plaster+tile, dry/generic→default).
 
 ## 7. Changelog
+- **2026-06-21 — Slices B + C, UNCOMMITTED.** **Slice B (2D render + manual tool + ribbon):** NEW SSoT
+  γεωμετρία `wall-covering-strip-geometry` (live face strip· cached bbox/outline για selection χωρίς walls·
+  render ΠΑΝΤΑ live) + `wall-covering-pick` (reuse `projectPointOnAxis`). `WallCoveringRenderer` registered
+  στο `EntityRendererComposite` + per-frame `setWallsById` (host O(1), mirror `setOpeningsByWall`) μέσω NEW
+  `buildWallsById` στο `dxf-renderer-frame-builders` (ADR-040 CHECK 6B/6D → stage ADR-040). `DxfWallCovering`
+  wrapper + union + `toEntityModel` case + hit-test + marquee bounds + visibility/discipline/pen-style/subcat.
+  `useWallCoveringTool` (pick→2-click span) + completion + preview-store (draw-context) + preview-helpers
+  (generator computes live strip). Ribbon: `useRibbonWallCoveringBridge` (body+surface material pickers
+  ανασυνθέτουν assembly· faceSide· height· undoable μέσω `UpdateWallCoveringParamsCommand` που τώρα αντλεί
+  host bbox/outline μέσω `sceneManager.getEntity`) + `contextual-wall-covering-tab` + command-keys + 3×
+  `useRibbonCommands` routing + architecture button + i18n el/en. **Grips DEFER.** **Slice C (room-auto-extent
+  «το μαγικό»):** `partitionWallByRooms` (`coveredIntervals` ανά IfcSpace → region/δωμάτιο) + `wallCoveringLayersForUseType`
+  (auto assembly ανά χρήση) + `buildRoomFillCoverings` + tool id `wall-covering-room` (ένα κλικ → batch N regions)
+  + NEW `appendEntitiesToScene` (CompoundCommand, ΕΝΑ undo). 16 jest GREEN (`wall-covering-slice-bc.test.ts`).
+  tsc clean (δικά μου). **Slices D/E PENDING.** 🔴 browser-verify + commit (Giorgio).
 - **2026-06-21 — Δημιουργία + Slice A (data + persistence), UNCOMMITTED.** NEW οντότητα `wall-covering`
   (IfcCovering CLADDING/INTERIOR) ως ξεχωριστό φινίρισμα ανά δωμάτιο/παρειά πάνω σε ΑΘΙΚΤΟ δομικό τοίχο.
   Compound layered assembly (beyond-Revit). Πλήρης persistence stack mirror floor-finish (ADR-419)·

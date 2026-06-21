@@ -30,7 +30,13 @@ import {
   computeWallCoveringRenderGeometry,
   type WallCoveringHost,
 } from '../../bim/wall-coverings/wall-covering-strip-geometry';
+import {
+  partitionWallByRooms,
+  type RoomSpaceLike,
+} from '../../bim/wall-coverings/wall-covering-room-partition';
+import { wallCoveringLayersForUseType } from '../../bim/wall-coverings/wall-covering-room-defaults';
 import { createWallCovering } from '@/services/factories/wall-covering.factory';
+import type { WallCoveringFaceSide as FaceSide } from '../../bim/types/wall-covering-types';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -123,4 +129,45 @@ export function buildWallCoveringEntity(
   };
   const entity = createWallCovering({ params, geometry, layerId, visible: true });
   return { ok: true, entity };
+}
+
+// ─── Slice C — room-auto-extent batch builder («το μαγικό») ───────────────────
+
+export interface RoomFillOptions {
+  readonly sceneUnits?: SceneUnits;
+  readonly floorId?: string;
+  readonly heightTopMm?: number;
+}
+
+/**
+ * ΤΟ ΜΑΓΙΚΟ: δοθέντος τοίχου + παρειάς + δωματίων, παράγει **μία οντότητα covering ανά δωμάτιο**
+ * με auto-προτεινόμενο assembly βάσει χρήσης (`wallCoveringLayersForUseType`). Pure — ο caller
+ * τα κάνει batch-commit σε ΕΝΑ undo (CompoundCommand). Επιστρέφει άδειο όταν κανένα δωμάτιο δεν
+ * ακουμπά την παρειά.
+ */
+export function buildRoomFillCoverings(
+  host: WallCoveringHost,
+  faceSide: FaceSide,
+  spaces: readonly RoomSpaceLike[],
+  layerId: string,
+  options: RoomFillOptions = {},
+): WallCoveringEntity[] {
+  const sceneUnits: SceneUnits = options.sceneUnits ?? 'mm';
+  const regions = partitionWallByRooms(host, faceSide, spaces, { sceneUnits });
+  const out: WallCoveringEntity[] = [];
+  for (const region of regions) {
+    const params = buildDefaultWallCoveringParams(
+      { hostWallId: host.id, faceSide, spanStartMm: region.spanStartMm, spanEndMm: region.spanEndMm },
+      {
+        layers: wallCoveringLayersForUseType(region.useType),
+        spaceId: region.spaceId,
+        ...(options.floorId !== undefined ? { floorId: options.floorId } : {}),
+        ...(options.heightTopMm !== undefined ? { heightTopMm: options.heightTopMm } : {}),
+      },
+      sceneUnits,
+    );
+    const result = buildWallCoveringEntity(params, layerId, host);
+    if (result.ok) out.push(result.entity);
+  }
+  return out;
 }

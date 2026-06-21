@@ -9,6 +9,8 @@
 
 import type { SceneEntity } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
+// ADR-049 Phase 2 — move delta is 3D (optional `z` = elevation delta in mm).
+import type { Point3D } from '../../../bim/types/bim-base';
 import {
   isLineEntity,
   isCircleEntity,
@@ -31,17 +33,20 @@ export function applyDelta(point: Point2D, delta: Point2D): Point2D {
 }
 
 /**
- * Calculate reverse delta
+ * Calculate reverse delta — negates the plan components and, when present, the
+ * vertical `z` (so undo of a 3D move restores the original elevation too).
  */
-export function reverseDelta(delta: Point2D): Point2D {
-  return { x: -delta.x, y: -delta.y };
+export function reverseDelta(delta: Point3D): Point3D {
+  return delta.z !== undefined
+    ? { x: -delta.x, y: -delta.y, z: -delta.z }
+    : { x: -delta.x, y: -delta.y };
 }
 
 /**
  * Calculate geometry updates for an entity based on delta.
  * Uses centralized type guards from types/entities.ts (ADR-102).
  */
-export function calculateMovedGeometry(entity: SceneEntity, delta: Point2D): Partial<SceneEntity> {
+export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Partial<SceneEntity> {
   const e = entity as unknown as Entity;
 
   // ADR-363 Phase 7A — BIM types first. Returns full `{params, geometry}`

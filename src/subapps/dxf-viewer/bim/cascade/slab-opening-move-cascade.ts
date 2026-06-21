@@ -22,7 +22,9 @@
  */
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
-import type { Point2D } from '../../rendering/types/Types';
+// ADR-049 Phase 2 — receives the FULL 3D move delta; slab-openings track the slab
+// plane via x/y only (no own vertical field), so `z` is harmlessly ignored here.
+import type { Point3D } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { findHostedSlabOpenings, partitionBimHosts } from './bim-cascade-resolver';
 import { calculateBimMovedGeometry } from '../utils/bim-move-geometry';
@@ -50,7 +52,7 @@ type CascadeSceneManager = Pick<ISceneManager, 'getEntity' | 'updateEntities'> &
  */
 export function cascadeMovedSlabOpenings(
   movedIds: readonly string[],
-  delta: Point2D,
+  delta: Point3D,
   sceneManager: CascadeSceneManager,
 ): SceneEntity[] {
   if (movedIds.length === 0) return [];

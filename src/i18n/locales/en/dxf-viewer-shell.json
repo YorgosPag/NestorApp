@@ -668,6 +668,10 @@
         "tooFewVertices": "Floor finish requires at least 3 vertices"
       }
     },
+    "wallCovering": {
+      "statusPickWall": "Click a wall to pick the finish face",
+      "statusSpanEnd": "Click for the strip end along the wall face"
+    },
     "thermalSpace": {
       "statusPlace": "Click inside a room to place a thermal space"
     },
@@ -1134,6 +1138,7 @@
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
       "floorFinishProperties": "Floor Finish Properties",
+      "wallCoveringProperties": "Wall Finish Properties",
       "hatchProperties": "Hatch",
       "thermalSpaceProperties": "Thermal Space Properties",
       "mepFixtureLibrary": "Light Fixture Library",
@@ -1287,6 +1292,9 @@
       "floorFinishGeometry": "Geometry",
       "floorFinishAppearance": "Appearance",
       "floorFinishActions": "Actions",
+      "wallCoveringFinish": "Finish",
+      "wallCoveringGeometry": "Geometry",
+      "wallCoveringActions": "Actions",
       "hatchFill": "Fill",
       "hatchPattern": "Pattern",
       "hatchInfo": "Info",
@@ -1634,6 +1642,14 @@
         "floorFinish": {
           "label": "Floor Finish",
           "tooltip": "Draw a floor finish covering per room (click-click) — Revit IfcCovering style (shortcut FF)"
+        },
+        "wallCovering": {
+          "label": "Wall Finish",
+          "tooltip": "Wall finish per room/face (pick wall → face → span) — Revit IfcCovering CLADDING (shortcut WC)"
+        },
+        "wallCoveringRoom": {
+          "label": "Finish by Room",
+          "tooltip": "One click on a wall → auto finish per room (boundaries from IfcSpace, use-based auto-propose) — single undo (shortcut WR)"
         },
         "thermalSpace": {
           "label": "Thermal Space",
@@ -3196,6 +3212,15 @@
         "delete": "Delete",
         "deleteConfirm": "Delete floor finish? This action cannot be undone."
       },
+      "wallCoveringEditor": {
+        "bodyMaterial": "Finish material",
+        "surfaceMaterial": "Colour/paint",
+        "faceSide": "Face",
+        "height": "Height (mm)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete wall finish? This action cannot be undone."
+      },
       "hatchEditor": {
         "fillType": "Fill type",
         "fillTypeSolid": "Solid",
@@ -4429,6 +4454,22 @@
       "parquet": "Parquet",
       "epoxy": "Epoxy",
       "carpet": "Carpet"
+    }
+  },
+  "wallCovering": {
+    "materials": {
+      "paintWhite": "White paint",
+      "paintRed": "Red paint",
+      "paintGreen": "Green paint",
+      "paintBlue": "Blue paint",
+      "plasterTraditional": "Traditional plaster",
+      "knaufGypsumBoard": "Gypsum board (Knauf)",
+      "tileCeramic": "Ceramic tile",
+      "adhesiveMortar": "Adhesive mortar"
+    },
+    "faceSide": {
+      "inner": "Inner",
+      "outer": "Outer"
     }
   },
   "thermalSpace": {

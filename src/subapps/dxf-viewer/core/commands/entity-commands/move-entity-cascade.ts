@@ -24,7 +24,9 @@
  */
 
 import type { ISceneManager, SceneEntity } from '../interfaces';
-import type { Point2D } from '../../../rendering/types/Types';
+// ADR-049 Phase 2 — the cascade threads the FULL 3D move delta (optional `z` =
+// elevation in mm) so connected pipes follow a vertical host move too.
+import type { Point3D } from '../../../bim/types/bim-base';
 import { reverseDelta } from './move-entity-geometry';
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 import {
@@ -45,7 +47,7 @@ import { cascadeConnectedPipesByDelta } from '../../../bim/mep-segments/cascade-
  */
 export function runMoveForwardCascade(
   entityIds: string[],
-  delta: Point2D,
+  delta: Point3D,
   sceneManager: ISceneManager,
   movedEntities: SceneEntity[],
   applyUpdates: () => void,
@@ -71,7 +73,7 @@ export function runMoveForwardCascade(
  */
 export function runMoveUndoCascade(
   entityIds: string[],
-  delta: Point2D,
+  delta: Point3D,
   sceneManager: ISceneManager,
   revertedEntities: SceneEntity[],
   applyReverseUpdates: () => void,

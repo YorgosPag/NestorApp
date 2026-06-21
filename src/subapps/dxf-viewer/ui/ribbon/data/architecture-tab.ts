@@ -38,6 +38,8 @@ export const ARCHITECTURE_TAB: RibbonTab = {
           buttons: [
             toolBtn('architectureTab.roof', 'ribbon.commands.bim.roof.label', 'bim-roof', 'roof', 'RF'),
             toolBtn('architectureTab.floorFinish', 'ribbon.commands.bim.floorFinish.label', 'bim-slab', 'floor-finish', 'FF'),
+            toolBtn('architectureTab.wallCovering', 'ribbon.commands.bim.wallCovering.label', 'bim-wall', 'wall-covering', 'WC'),
+            toolBtn('architectureTab.wallCoveringRoom', 'ribbon.commands.bim.wallCoveringRoom.label', 'bim-wall', 'wall-covering-room', 'WR'),
           ],
         },
       ],

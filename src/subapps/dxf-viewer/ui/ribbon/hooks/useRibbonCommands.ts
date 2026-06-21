@@ -44,6 +44,7 @@ import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleCombobox
 import { isSlabRibbonKey, isSlabRibbonStringKey } from './bridge/slab-command-keys';
 import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey } from './bridge/roof-command-keys';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
+import { isWallCoveringRibbonNumberKey, isWallCoveringRibbonStringKey } from './bridge/wall-covering-command-keys';
 import { isHatchRibbonNumberKey, isHatchRibbonStringKey, isHatchRibbonToggleKey, isHatchRibbonReadoutKey } from './bridge/hatch-command-keys';
 import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnFinishKey, isColumnStructuralKey, isColumnStructuralReadoutKey } from './bridge/column-command-keys';
@@ -75,6 +76,7 @@ export function useRibbonCommands({
   slabBridge,
   roofBridge,
   floorFinishBridge,
+  wallCoveringBridge,
   hatchBridge,
   thermalSpaceBridge,
   columnBridge,
@@ -150,6 +152,10 @@ export function useRibbonCommands({
       }
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) {
         floorFinishBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isWallCoveringRibbonNumberKey(key) || isWallCoveringRibbonStringKey(key)) {
+        wallCoveringBridge.onComboboxChange(key, value);
         return;
       }
       if (isHatchRibbonNumberKey(key) || isHatchRibbonStringKey(key)) {
@@ -246,7 +252,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -260,6 +266,7 @@ export function useRibbonCommands({
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) return floorFinishBridge.getComboboxState(key);
+      if (isWallCoveringRibbonNumberKey(key) || isWallCoveringRibbonStringKey(key)) return wallCoveringBridge.getComboboxState(key);
       if (isHatchRibbonNumberKey(key) || isHatchRibbonStringKey(key) || isHatchRibbonReadoutKey(key)) return hatchBridge.getComboboxState(key);
       if (isThermalSpaceRibbonNumberKey(key) || isThermalSpaceRibbonStringKey(key)) return thermalSpaceBridge.getComboboxState(key);
       // ADR-449 Slice 5 fix — finish keys δρομολογούνται ΚΑΙ εδώ (αλλιώς το combobox δείχνει
@@ -286,7 +293,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -388,7 +395,7 @@ export function useRibbonCommands({
   const onAction = React.useCallback(
     (action: string, data?: RibbonActionPayload) => {
       routeRibbonAction(action, data, {
-        wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, hatchBridge,
+        wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge,
         thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge,
         stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge,
         drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge,
@@ -398,7 +405,7 @@ export function useRibbonCommands({
         wrappedHandleAction,
       });
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

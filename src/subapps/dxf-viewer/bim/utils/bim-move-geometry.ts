@@ -81,6 +81,18 @@ import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
 import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
 import { computeRoofGeometry } from '../geometry/roof-geometry';
 import { computeMepUnderfloorGeometry } from '../mep-underfloor/mep-underfloor-geometry';
+// ADR-049 Phase 2 — the per-type vertical (elevation) computers. The unified move's
+// `delta.z` (elevation delta in mm) dispatches here, reusing the SAME SSoT the 3D
+// gizmo vertical handle used to call through `Update*ParamsCommand` (zero duplication).
+import {
+  computeWallVerticalMove,
+  computeColumnVerticalMove,
+  computeBeamVerticalMove,
+  computeSlabVerticalMove,
+  computeStairVerticalMove,
+  computeMepHostVerticalMove,
+  computeMepSegmentVerticalMove,
+} from './bim-vertical-move';
 
 // ─── Point3D delta helpers ──────────────────────────────────────────────────
 
@@ -97,17 +109,22 @@ function shiftPolygon3D(poly: Polygon3D, delta: Point2D): Polygon3D {
 
 // ─── Per-kind move ──────────────────────────────────────────────────────────
 
-function moveWall(entity: WallEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: WallParams = translateWallParams(entity.params, delta);
+function moveWall(entity: WallEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: WallParams = translateWallParams(entity.params, delta);
+  // ADR-049 Phase 2 — vertical component (gizmo axis-Y): bump `baseOffset` AFTER the
+  // plan translate, reusing the elevation SSoT. `delta.z` truthy skips 0 / undefined.
+  if (delta.z) newParams = computeWallVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeWallGeometry(newParams, entity.kind);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
-function moveSlab(entity: SlabEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: SlabParams = {
+function moveSlab(entity: SlabEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: SlabParams = {
     ...entity.params,
     outline: shiftPolygon3D(entity.params.outline, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `levelElevation` (top face) after the plan move.
+  if (delta.z) newParams = computeSlabVerticalMove(newParams, delta.z) ?? newParams;
   // Slab-openings are NOT passed here — moveSlabOpening() handles them
   // independently via the cascade resolver. Their geometry stays in sync
   // because they appear in the same atomic `updateEntities()` batch.
@@ -124,11 +141,13 @@ function moveSlabOpening(entity: SlabOpeningEntity, delta: Point2D): Partial<Sce
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
-function moveColumn(entity: ColumnEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: ColumnParams = {
+function moveColumn(entity: ColumnEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: ColumnParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `baseOffset` (mirror wall) after the plan move.
+  if (delta.z) newParams = computeColumnVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeColumnGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -144,7 +163,7 @@ function moveFoundation(entity: FoundationEntity, delta: Point2D): Partial<Scene
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
-function moveBeam(entity: BeamEntity, delta: Point2D): Partial<SceneEntity> {
+function moveBeam(entity: BeamEntity, delta: Point3D): Partial<SceneEntity> {
   // `curveControl` is OMITTED from the base spread and re-added only when present:
   // a straight beam has no control point, and Firestore `updateDoc` REJECTS explicit
   // `undefined` field values ("Unsupported field value: undefined") → the per-entity
@@ -153,22 +172,30 @@ function moveBeam(entity: BeamEntity, delta: Point2D): Partial<SceneEntity> {
   // undefined` key left in-memory by a prior (buggy) move. Only a curved beam carries
   // the shifted control point.
   const { curveControl, ...rest } = entity.params;
-  const newParams: BeamParams = {
+  let newParams: BeamParams = {
     ...rest,
     startPoint: shiftPoint3D(entity.params.startPoint, delta),
     endPoint: shiftPoint3D(entity.params.endPoint, delta),
     ...(curveControl ? { curveControl: shiftPoint3D(curveControl, delta) } : {}),
   };
+  // ADR-049 Phase 2 — vertical: bump `topElevation` (depth fixed) after the plan move.
+  if (delta.z) newParams = computeBeamVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeBeamGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
-function moveStair(entity: StairEntity, delta: Point2D): Partial<SceneEntity> {
+function moveStair(entity: StairEntity, delta: Point3D): Partial<SceneEntity> {
   const shifted = shiftPoint3D(entity.params.basePoint, delta);
-  const newParams: StairParams = {
+  let newParams: StairParams = {
     ...entity.params,
     basePoint: { x: shifted.x, y: shifted.y, z: shifted.z ?? 0 },
   };
+  // ADR-049 Phase 2 — vertical: bump `basePoint.z`. The stair stores `basePoint` in
+  // inferred DRAWING units (ADR-358), so the computer converts the mm `delta.z` with
+  // `mmToEntityUnitFactor`. Pass the PLAN-MOVED params (width unchanged → same factor).
+  if (delta.z) {
+    newParams = computeStairVerticalMove({ ...entity, params: newParams }, delta.z) ?? newParams;
+  }
   const geometry = computeStairGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -176,11 +203,13 @@ function moveStair(entity: StairEntity, delta: Point2D): Partial<SceneEntity> {
 // ADR-406 / ADR-408 Φ3 — point-based MEP hosts: shift the single `position`
 // anchor (same shape as the column). Connectors are host-local → they follow for
 // free; the embedded home-run wire is recomputed at render time (ADR-408 Φ7).
-function moveMepFixture(entity: MepFixtureEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepFixtureParams = {
+function moveMepFixture(entity: MepFixtureEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepFixtureParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `mountingElevationMm` (host body + connectors rise).
+  if (delta.z) newParams = computeMepHostVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepFixtureGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -195,11 +224,13 @@ function moveElectricalPanel(entity: ElectricalPanelEntity, delta: Point2D): Par
 }
 
 // ADR-408 Φ12 — point-based plumbing manifold: shift the single `position` anchor (same shape as panel).
-function moveMepManifold(entity: MepManifoldEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepManifoldParams = {
+function moveMepManifold(entity: MepManifoldEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepManifoldParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `mountingElevationMm` (mirror fixture).
+  if (delta.z) newParams = computeMepHostVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepManifoldGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -236,12 +267,15 @@ function moveSpaceSeparator(entity: SpaceSeparatorEntity, delta: Point2D): Parti
 }
 
 // ADR-408 Φ8 — linear MEP segment: shift both axis endpoints (mirror beam).
-function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepSegmentParams = {
+function moveMepSegment(entity: MepSegmentEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepSegmentParams = {
     ...entity.params,
     startPoint: shiftPoint3D(entity.params.startPoint, delta),
     endPoint: shiftPoint3D(entity.params.endPoint, delta),
   };
+  // ADR-049 Phase 2 — vertical: shift both endpoint z's by `delta.z` (slope preserved),
+  // re-derive `centerlineElevationMm`. Runs on the plan-moved endpoints.
+  if (delta.z) newParams = computeMepSegmentVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepSegmentGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -249,31 +283,37 @@ function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<Scene
 // ADR-408 Εύρος Β — point-based heating radiator: shift the single `position`
 // anchor (same shape as the fixture). Connectors are host-local → they follow
 // for free (recomputed by `computeMepRadiatorGeometry` from the moved params).
-function moveMepRadiator(entity: MepRadiatorEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepRadiatorParams = {
+function moveMepRadiator(entity: MepRadiatorEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepRadiatorParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `mountingElevationMm` (mirror fixture).
+  if (delta.z) newParams = computeMepHostVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepRadiatorGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
 // ADR-408 Εύρος Β #2 — point-based heating boiler: shift the single `position` anchor (mirror radiator).
-function moveMepBoiler(entity: MepBoilerEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepBoilerParams = {
+function moveMepBoiler(entity: MepBoilerEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepBoilerParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `mountingElevationMm` (mirror radiator).
+  if (delta.z) newParams = computeMepHostVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepBoilerGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
 // ADR-408 DHW — point-based domestic hot water heater: shift the single `position` anchor (mirror radiator).
-function moveMepWaterHeater(entity: MepWaterHeaterEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: MepWaterHeaterParams = {
+function moveMepWaterHeater(entity: MepWaterHeaterEntity, delta: Point3D): Partial<SceneEntity> {
+  let newParams: MepWaterHeaterParams = {
     ...entity.params,
     position: shiftPoint3D(entity.params.position, delta),
   };
+  // ADR-049 Phase 2 — vertical: bump `mountingElevationMm` (mirror radiator).
+  if (delta.z) newParams = computeMepHostVerticalMove(newParams, delta.z) ?? newParams;
   const geometry = computeMepWaterHeaterGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
@@ -313,7 +353,13 @@ function moveMepUnderfloor(entity: MepUnderfloorEntity, delta: Point2D): Partial
  */
 export function calculateBimMovedGeometry(
   entity: Entity,
-  delta: Point2D,
+  // ADR-049 Phase 2 — `delta.x`/`delta.y` = plan move in the entity's native canvas
+  // units; optional `delta.z` = ELEVATION delta in raw mm (Revit `MoveElement(dx,dy,dz)`).
+  // Vertical-capable types apply their per-type elevation computer after the plan move;
+  // types without a vertical field (opening, foundation, panel, furniture, roof,
+  // floor-finish, separator, underfloor, slab-opening) ignore `z` — same coverage as
+  // the old 3D-gizmo `verticalCommandForEntity`.
+  delta: Point3D,
 ): Partial<SceneEntity> | null {
   switch (entity.type) {
     case 'wall':
