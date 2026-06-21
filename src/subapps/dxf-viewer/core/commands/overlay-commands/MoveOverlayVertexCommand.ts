@@ -17,7 +17,7 @@ import type { ICommand, SerializedCommand } from '../interfaces';
 const logger = createModuleLogger('MoveOverlayVertexCommand');
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 
 /**
  * Overlay store interface for vertex operations
@@ -107,9 +107,8 @@ export class MoveOverlayVertexCommand implements ICommand {
       return false;
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Within the canonical merge window → coalesce into one undo step.
+    return isWithinMergeWindow(this, other);
   }
 
   /**
@@ -255,9 +254,8 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       }
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Within the canonical merge window → coalesce into one undo step.
+    return isWithinMergeWindow(this, other);
   }
 
   /**

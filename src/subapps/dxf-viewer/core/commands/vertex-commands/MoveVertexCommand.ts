@@ -11,7 +11,7 @@
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { isWithinMergeWindow } from '../merge-window';
 
 /**
  * Command for moving a single vertex
@@ -75,9 +75,8 @@ export class MoveVertexCommand implements ICommand {
       return false;
     }
 
-    // Check time window
-    const timeDiff = other.timestamp - this.timestamp;
-    return timeDiff < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
+    // Same vertex within the canonical merge window → coalesce into one undo step.
+    return isWithinMergeWindow(this, other);
   }
 
   /**
