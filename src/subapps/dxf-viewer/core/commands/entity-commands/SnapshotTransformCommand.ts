@@ -43,7 +43,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { isWithinMergeWindow, sameEntityIdSet } from '../merge-window';
+import { canMergeDragSamples, sameEntityIdSet } from '../merge-window';
 import { geometryFromSnapshot } from './snapshot-geometry';
 // ADR-363 §5.4 — recompute hosted openings against the transformed walls.
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
@@ -274,8 +274,8 @@ export abstract class SnapshotTransformCommand implements ICommand {
     const o = other as SnapshotTransformCommand;
     if (!sameEntityIdSet(this.entityIds, o.entityIds)) return false;
     if (!extraMatch) return false;
-    if (!this.isDragging || !o.isDragging) return false;
-    return isWithinMergeWindow(this, other);
+    // Both dragging + within the canonical merge window — shared gate SSoT.
+    return canMergeDragSamples(this, o, this.isDragging, o.isDragging);
   }
 
   /** Canonical serialized payload — subclasses spread this and add their own keys. */

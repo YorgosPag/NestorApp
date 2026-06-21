@@ -16,7 +16,7 @@
  * `useSyncExternalStore` compatible.
  */
 
-import { sameSet } from '../../utils/set-equality';
+import { dequal } from 'dequal';
 
 type IsolateEffectsListener = () => void;
 
@@ -123,9 +123,9 @@ export function setIsolateEffects(input: SetIsolateEffectsInput): void {
     snapshot.mode === input.mode &&
     snapshot.dimOpacityPercent === input.dimOpacityPercent &&
     snapshot.category === (input.category ?? null) &&
-    sameSet(snapshot.isolatedLayerIds, nextLayerSet) &&
-    sameSet(snapshot.isolatedEntityIds, nextEntitySet) &&
-    sameSet(snapshot.isolatedCategories, nextCategorySet)
+    dequal(snapshot.isolatedLayerIds, nextLayerSet) &&
+    dequal(snapshot.isolatedEntityIds, nextEntitySet) &&
+    dequal(snapshot.isolatedCategories, nextCategorySet)
   ) {
     return;
   }

@@ -15,9 +15,9 @@
  * @see core/commands/vertex-commands/MoveVertexCommand.ts — vertex family
  */
 
+import { dequal } from 'dequal';
 import type { ICommand } from './interfaces';
 import { DEFAULT_MERGE_CONFIG } from './interfaces';
-import { sameSet } from '../../utils/set-equality';
 
 /**
  * True when `later` was created within the canonical merge window after
@@ -30,13 +30,30 @@ export function isWithinMergeWindow(earlier: ICommand, later: ICommand): boolean
 }
 
 /**
+ * Shared drag-merge gate (ADR-507 §8): two command samples coalesce into ONE
+ * undo step only when BOTH are live-drag samples AND they fall within the
+ * canonical merge window. Identity matching (same entity / vertex / selection)
+ * is the caller's responsibility — this owns the dragging + time policy shared
+ * across the transform AND vertex command families, so the
+ * `bothDragging && withinWindow` gate is written once.
+ */
+export function canMergeDragSamples(
+  earlier: ICommand,
+  later: ICommand,
+  earlierDragging: boolean,
+  laterDragging: boolean,
+): boolean {
+  return earlierDragging && laterDragging && isWithinMergeWindow(earlier, later);
+}
+
+/**
  * True when two id lists denote the SAME set of entities (order-independent,
  * deduplicated). The transform commands merge only when both samples target the
- * identical selection — this is that identity check. Array variant: delegates to
- * the generic `sameSet` SSoT (`utils/set-equality`) so the membership comparison
- * is written once across the codebase.
+ * identical selection — this is that identity check. Uses the app-wide equality
+ * SSoT `dequal` on Sets (membership-based, order-independent) — no bespoke
+ * set-equality primitive.
  */
 export function sameEntityIdSet(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;
-  return sameSet(new Set(a), new Set(b));
+  return dequal(new Set(a), new Set(b));
 }

@@ -10,7 +10,7 @@
  */
 
 import * as THREE from 'three';
-import { sameSet } from '../../../utils/set-equality';
+import { dequal } from 'dequal';
 
 const HIGHLIGHT_EMISSIVE = new THREE.Color(0xffd700);
 const HIGHLIGHT_EMISSIVE_INTENSITY = 0.3;
@@ -31,7 +31,7 @@ export class BimSelectionHighlighter {
    * + re-clone of the whole selection on every click). ADR-402 Phase C.
    */
   onSelect(bimIds: ReadonlySet<string>): void {
-    if (sameSet(bimIds, this._currentBimIds)) return;
+    if (dequal(bimIds, this._currentBimIds)) return;
 
     this.group.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;

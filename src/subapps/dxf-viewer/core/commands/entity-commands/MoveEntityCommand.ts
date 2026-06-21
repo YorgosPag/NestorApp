@@ -27,7 +27,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 // → pure plan move). The per-type `z` interpretation lives in `calculateBimMovedGeometry`.
 import type { Point3D } from '../../../bim/types/bim-base';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { isWithinMergeWindow } from '../merge-window';
+import { canMergeDragSamples } from '../merge-window';
 import { deepClone } from '../../../utils/clone-utils';
 // 🏢 ADR-065: Extracted geometry utilities
 import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
@@ -140,13 +140,8 @@ export class MoveEntityCommand implements ICommand {
       return false;
     }
 
-    // Only merge if both are dragging operations
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Same entity, both dragging, within the canonical merge window → coalesce.
-    return isWithinMergeWindow(this, other);
+    // Same entity → coalesce only live-drag samples within the merge window. SSoT.
+    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
   }
 
   /**
@@ -357,13 +352,8 @@ export class MoveMultipleEntitiesCommand implements ICommand {
       }
     }
 
-    // Only merge if both are dragging operations
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Same entity set, both dragging, within the canonical merge window → coalesce.
-    return isWithinMergeWindow(this, other);
+    // Same entity set → coalesce only live-drag samples within the merge window. SSoT.
+    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
   }
 
   /**

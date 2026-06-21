@@ -11,7 +11,7 @@
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { isWithinMergeWindow } from '../merge-window';
+import { canMergeDragSamples } from '../merge-window';
 
 /**
  * Command for moving a single vertex
@@ -81,13 +81,8 @@ export class MoveVertexCommand implements ICommand {
       return false;
     }
 
-    // Only coalesce live-drag samples — distinct edits must stay separate undo steps.
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Same vertex, both dragging, within the canonical merge window → coalesce.
-    return isWithinMergeWindow(this, other);
+    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
+    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
   }
 
   /**

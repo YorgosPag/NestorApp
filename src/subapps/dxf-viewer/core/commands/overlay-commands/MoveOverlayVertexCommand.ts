@@ -17,7 +17,7 @@ import type { ICommand, SerializedCommand } from '../interfaces';
 const logger = createModuleLogger('MoveOverlayVertexCommand');
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { isWithinMergeWindow } from '../merge-window';
+import { canMergeDragSamples } from '../merge-window';
 
 /**
  * Overlay store interface for vertex operations
@@ -109,13 +109,8 @@ export class MoveOverlayVertexCommand implements ICommand {
       return false;
     }
 
-    // Only coalesce live-drag samples — distinct edits stay separate undo steps.
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Same vertex, both dragging, within the canonical merge window → coalesce.
-    return isWithinMergeWindow(this, other);
+    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
+    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
   }
 
   /**
@@ -265,13 +260,8 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       }
     }
 
-    // Only coalesce live-drag samples — distinct edits stay separate undo steps.
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Same vertex set, both dragging, within the canonical merge window → coalesce.
-    return isWithinMergeWindow(this, other);
+    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
+    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
   }
 
   /**
