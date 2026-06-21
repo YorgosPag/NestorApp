@@ -24,6 +24,7 @@ jest.mock('firebase/auth', () => ({
 
 import { buildStructuralFinishSilhouette2D } from '../dxf-renderer-frame-builders';
 import { buildDefaultColumnParams, buildColumnEntity } from '../../../hooks/drawing/column-completion';
+import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
 import type { StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
 import type { DxfEntityUnion } from '../dxf-types';
 
@@ -59,5 +60,24 @@ describe('buildStructuralFinishSilhouette2D (ADR-449 Slice X2 μέρος Β)', (
 
   it('κενή σκηνή → null', () => {
     expect(buildStructuralFinishSilhouette2D([])).toBeNull();
+  });
+
+  // ADR-449 Slice X3 — ο τοίχος είναι finish-member: ένας ΜΕΜΟΝΩΜΕΝΟΣ τοίχος (χωρίς
+  // κολόνες/δοκάρια) παράγει σοβά, ΚΑΙ στα 2 μικρά άκρα (⊥ άξονα). Regression για το
+  // root-cause του «δεν βλέπω σοβά στα άκρα»: το παλιό early-return `columns===0 && beams===0`.
+  it('μεμονωμένος τοίχος → bands με σοβά ΚΑΙ στα 2 άκρα (Slice X3 guard fix)', () => {
+    const wall = {
+      type: 'wall',
+      id: 'w1',
+      kind: 'straight',
+      visible: true,
+      params: buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }, { height: 3000 }),
+    };
+    const result = buildStructuralFinishSilhouette2D([wall] as unknown as DxfEntityUnion[]);
+    expect(result).not.toBeNull();
+    const segs = result!.bands.flatMap((b) => b.faces.segments);
+    // άξονας οριζόντιος → άκρα = ακμές ⊥ άξονα (|dy| > |dx|)
+    const akra = segs.filter((s) => Math.abs(s.b.y - s.a.y) > Math.abs(s.b.x - s.a.x));
+    expect(akra.length).toBeGreaterThanOrEqual(2);
   });
 });

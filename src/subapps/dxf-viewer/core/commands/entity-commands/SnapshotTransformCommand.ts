@@ -28,6 +28,13 @@
  * The reframe/emit cascade itself is already SSoT — this base only orchestrates
  * the call order; it does NOT re-implement it.
  *
+ * ADR-408 Φ-C / ADR-507 §8 — the transform also self-cascades its associative
+ * FOLLOWERS inside the command (Revit «connected ends move with the element»):
+ * connected pipes (MEP host/segment) and a slab's slab-openings follow EVERY
+ * transform (rotate/scale/mirror) in EVERY gesture (2D + 3D), via transform-agnostic
+ * engines fed by the same `computeUpdates`. Previously rotate followed pipes only in
+ * the 3D gizmo wrapper, and slab-openings never followed a transform.
+ *
  * @see core/commands/entity-commands/MergeableUpdateCommand.ts — the params-family sibling base
  * @see bim/beams/beam-column-reframe-cascade — reframe/emit SSoT (reused, not duplicated)
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md §8
@@ -47,6 +54,15 @@ import {
   emitRestoredEntities,
   reframeBeamsAndEmitAfterRestore,
 } from '../../../bim/beams/beam-column-reframe-cascade';
+// ADR-408 Φ-C / ADR-507 §8 — the associative followers of a transform live INSIDE the
+// command (Revit «connected ends move with the element»): pipes snapped to a transformed
+// MEP host/segment, and a transformed slab's independent-coord slab-openings. Both reuse
+// the SAME `computeUpdates` that transforms the hosts, through transform-agnostic engines.
+import {
+  cascadeConnectedPipes,
+  nextParamsFromTransformPatch,
+} from '../../../bim/mep-segments/cascade-connected-pipes';
+import { cascadeTransformedSlabOpenings } from '../../../bim/cascade/cascade-transformed-slab-openings';
 
 export abstract class SnapshotTransformCommand implements ICommand {
   readonly id: string;
@@ -59,6 +75,13 @@ export abstract class SnapshotTransformCommand implements ICommand {
 
   /** Pre-transform snapshots, keyed by entity id (populated by `executeInPlace`). */
   protected entitySnapshots: Map<string, SceneEntity> = new Map();
+  /**
+   * Pre-transform snapshots of the associative FOLLOWERS (connected pipes + the slab's
+   * slab-openings) retargeted by this transform, keyed by id. Captured on execute/redo so
+   * undo restores them from snapshot symmetrically with the hosts (ADR-507 §8). The
+   * followers are NOT in `entityIds`, so they are tracked separately.
+   */
+  protected followerSnapshots: Map<string, SceneEntity> = new Map();
   protected wasExecuted = false;
 
   constructor(
@@ -89,9 +112,37 @@ export abstract class SnapshotTransformCommand implements ICommand {
   // Shared in-place spine (the eliminated boilerplate)
   // --------------------------------------------------------------------------
 
-  /** execute/redo in-place: snapshot → patch → batch commit → cascade + reframe. */
+  /**
+   * Run the associative follower cascades for THIS transform — BEFORE the host's own
+   * patch lands (OLD→NEW anchors, mirror of the move cascade ordering). The SAME
+   * `computeUpdates` that transforms the hosts is applied to the followers, so there is
+   * ONE path with no per-transform branching (Revit «reactions live IN the command»):
+   *   - connected pipes snapped to a transformed MEP host/segment (ADR-408 Φ-C), and
+   *   - the slab-openings hosted on a transformed slab (ADR-049).
+   * Captures each follower's pre-transform snapshot in `followerSnapshots` (for
+   * snapshot-symmetric undo) and returns the post-transform followers for the single
+   * reframe/emit.
+   */
+  private runForwardFollowerCascades(): SceneEntity[] {
+    const pipes = cascadeConnectedPipes(
+      this.entityIds,
+      this.sceneManager,
+      (entity) => nextParamsFromTransformPatch(this.computeUpdates(entity as unknown as SceneEntity)),
+    );
+    const slabOpenings = cascadeTransformedSlabOpenings(
+      this.entityIds,
+      this.sceneManager,
+      (opening) => this.computeUpdates(opening as unknown as SceneEntity),
+    );
+    for (const snapshot of pipes.snapshots) this.followerSnapshots.set(snapshot.id, snapshot);
+    for (const snapshot of slabOpenings.snapshots) this.followerSnapshots.set(snapshot.id, snapshot);
+    return [...pipes.moved, ...slabOpenings.moved];
+  }
+
+  /** execute/redo in-place: snapshot → follower cascade → patch → batch commit → cascade + reframe. */
   protected executeInPlace(): void {
     this.entitySnapshots.clear();
+    this.followerSnapshots.clear();
     const updatesMap = new Map<string, Partial<SceneEntity>>();
     const transformed: SceneEntity[] = [];
 
@@ -106,25 +157,33 @@ export abstract class SnapshotTransformCommand implements ICommand {
 
     this.wasExecuted = updatesMap.size > 0;
     if (this.wasExecuted) {
+      // Followers retarget on the OLD host pose — run BEFORE the host patch lands.
+      const followers = this.runForwardFollowerCascades();
       this.sceneManager.updateEntities(updatesMap);
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 — reframe + announce transformed + reframed in ONE emit (no reactive loop).
-      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+      // ADR-492 — reframe + announce transformed hosts + followers + reframed in ONE emit.
+      reframeBeamsAndEmit([...transformed, ...followers], this.entityIds, this.sceneManager);
     }
   }
 
-  /** undo in-place: emit restored FIRST (race guard) → restore from snapshots → cascade + reframe. */
+  /** undo in-place: emit restored FIRST (race guard) → restore hosts + followers from snapshots → cascade + reframe. */
   protected undoInPlace(): void {
     if (!this.wasExecuted) return;
 
+    const followerSnapshots = [...this.followerSnapshots.values()];
+
     // Emit FIRST so persistence hooks mark the entity dirty BEFORE the scene is
     // mutated — closes the race where a Firestore snapshot (dirty=false) could
-    // overwrite the reverted scene with stale transformed data.
-    emitRestoredEntities([...this.entitySnapshots.values()]);
+    // overwrite the reverted scene with stale transformed data. Followers (pipes +
+    // slab-openings) are restored symmetrically with the hosts, so they emit here too.
+    emitRestoredEntities([...this.entitySnapshots.values(), ...followerSnapshots]);
 
     const updatesMap = new Map<string, Partial<SceneEntity>>();
     for (const [entityId, snapshot] of this.entitySnapshots) {
       updatesMap.set(entityId, geometryFromSnapshot(snapshot));
+    }
+    for (const snapshot of followerSnapshots) {
+      updatesMap.set(snapshot.id, geometryFromSnapshot(snapshot));
     }
     this.sceneManager.updateEntities(updatesMap);
 
@@ -155,8 +214,9 @@ export abstract class SnapshotTransformCommand implements ICommand {
     reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
   }
 
-  /** redo in-place: re-apply the patch from the snapshots (deterministic). */
+  /** redo in-place: re-apply the patch from the snapshots (deterministic) + re-run followers. */
   protected redoInPlace(): void {
+    this.followerSnapshots.clear();
     const updatesMap = new Map<string, Partial<SceneEntity>>();
     const transformed: SceneEntity[] = [];
 
@@ -169,9 +229,12 @@ export abstract class SnapshotTransformCommand implements ICommand {
     }
 
     if (updatesMap.size > 0) {
+      // Scene is back at the pre-transform pose (undo restored it), so the followers
+      // retarget identically to execute — run BEFORE the host patch lands.
+      const followers = this.runForwardFollowerCascades();
       this.sceneManager.updateEntities(updatesMap);
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+      reframeBeamsAndEmit([...transformed, ...followers], this.entityIds, this.sceneManager);
     }
   }
 

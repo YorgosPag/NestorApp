@@ -12,11 +12,13 @@ import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
+import type { WallEntity } from '../../bim/types/wall-types';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
 import { isColumnTilted } from '../../bim/geometry/column-tilt';
 import { isBeamTilted } from '../../bim/geometry/beam-slope';
+import { isWallTilted } from '../../bim/geometry/wall-tilt';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-finish-scene-silhouette';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
@@ -67,10 +69,10 @@ export function syncStructuralFinishSkin(
   // rendered πυρήνα (`syncColumns`): storey-ceiling κολώνα → top = nextFloorElevationMm,
   // ΟΧΙ raw `params.height`. Έτσι σοβάς (silhouette + caps/soffit) = πυρήνας πάντα.
   const columnExtents = buildColumnVerticalExtents(entities, ctx);
-  const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] }>();
+  const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[]; walls: WallEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);
-    if (!g) { g = { baseElevation, columns: [], beams: [] }; groups.set(buildingId, g); }
+    if (!g) { g = { baseElevation, columns: [], beams: [], walls: [] }; groups.set(buildingId, g); }
     return g;
   };
   // ADR-404 Bug A — τα κεκλιμένα μέλη ΕΞΑΙΡΟΥΝΤΑΙ από το flat merged union: ένας ενιαίος
@@ -87,9 +89,18 @@ export function syncStructuralFinishSkin(
     const r = resolve(beam, 'beam', ctx);
     if (r) groupFor(r.buildingId, r.baseElevation).beams.push(beam);
   }
+  // ADR-449 Slice X3 — ο τοίχος είναι finish-member (όχι μόνο obstacle): μπαίνει στο group
+  // του κτιρίου του ώστε να ενωθεί με τα δομικά μέλη στο union (σοβάς τυλίγει + σβήνει στις
+  // συμβολές) ΚΑΙ ένας μεμονωμένος τοίχος (χωρίς κολόνες/δοκάρια) να παράγει σοβά. Tilted
+  // τοίχοι εξαιρούνται από το flat union (ADR-404, mirror columns/beams) — DNA lines ως πριν.
+  for (const wall of entities.walls) {
+    if (isWallTilted(wall.params)) continue;
+    const r = resolve(wall, 'wall', ctx);
+    if (r) groupFor(r.buildingId, r.baseElevation).walls.push(wall);
+  }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, entities.walls, ctx.floorElevationMm, columnExtents);
-    const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? 'mm';
+    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents);
+    const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
     );

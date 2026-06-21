@@ -21,7 +21,6 @@ import type { Point2D } from '../../rendering/types/Types';
 // ADR-049 Phase 2 — the unified move delta is 3D (optional `z` = elevation in mm).
 import type { Point3D } from '../../bim/types/bim-base';
 import type { Entity } from '../../types/entities';
-import type { SceneEntity } from '../../core/commands/interfaces';
 import { isMepSegmentEntity, isWallEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
@@ -38,7 +37,6 @@ import { UpdateMepManifoldParamsCommand } from '../../core/commands/entity-comma
 import { UpdateMepRadiatorParamsCommand } from '../../core/commands/entity-commands/UpdateMepRadiatorParamsCommand';
 import { UpdateMepBoilerParamsCommand } from '../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
 import { UpdateMepWaterHeaterParamsCommand } from '../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
-import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geometry';
 import { isMepConnectorHost } from '../../bim/mep-systems/connector-access';
 import {
   resolveHostMoveConnectedPipePatches,
@@ -116,14 +114,6 @@ function pipeFollowPatchesForEntity(
     return resolveSegmentMoveConnectedPipePatches(entities, entity, nextParams as MepSegmentParams);
   }
   return resolveHostMoveConnectedPipePatches(entities, entity, { ...entity, params: nextParams } as Entity);
-}
-
-/** Extract `params` from a rotate/move geometry patch, or null. */
-function nextParamsFromPatch(patch: Partial<SceneEntity> | null): unknown | null {
-  if (patch && typeof patch === 'object' && 'params' in patch) {
-    return (patch as { params?: unknown }).params ?? null;
-  }
-  return null;
 }
 
 /**
@@ -205,11 +195,10 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     const entity = entitiesAll.find((e) => e.id === c.entityId);
     const f = entity ? mmToEntityUnitFactor(entity) : 1;
     if (f !== 1) pivot = { x: pivot.x * f, y: pivot.y * f };
-    const rotateBase = new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
-    // ADR-408 Φ-C — pipes snapped to an edited MEP entity follow the rotation in one undo.
-    return withConnectedPipeFollow(rotateBase, c.entityIds, entitiesAll, c.sm, (e) =>
-      nextParamsFromPatch(calculateBimRotatedGeometry(e, pivot, outcome.angleDeg)),
-    );
+    // ADR-507 §8 — RotateEntityCommand self-cascades connected pipes (and a slab's
+    // slab-openings) inside execute/undo/redo for EVERY gesture (2D + 3D), so the 3D gizmo
+    // no longer needs a `withConnectedPipeFollow` wrap (which only ever covered 3D rotate).
+    return new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
   }
   // Resize is single-entity only (multi-select hides the resize handles).
   if (outcome.kind === 'resize') return c.entityIds.length === 1 ? buildResizeCommand(outcome, c) : null;

@@ -120,8 +120,12 @@ export function buildStructuralFinishSilhouette2D(
     if (e.type === 'column' && isFinishActive(e.params.finish)) columns.push(e);
     else if (e.type === 'beam' && isFinishActive(e.params.finish)) beams.push(e);
   }
-  if (columns.length === 0 && beams.length === 0) return null;
   const walls = entities.filter((w): w is DxfWall => w.type === 'wall');
+  // ADR-449 Slice X3 — ο τοίχος είναι finish-member (όχι μόνο obstacle): ένας μεμονωμένος
+  // τοίχος (χωρίς κολόνες/δοκάρια) παράγει σοβά → ΜΗΝ κάνεις early-return όσο υπάρχουν τοίχοι.
+  // Η `computeStructuralFinishSilhouette` φιλτράρει εσωτερικά τους core-only parapet/fence →
+  // bands=[] → null παρακάτω (γραμμή `bands.length === 0`) αν κανένα στοιχείο δεν έχει σοβά.
+  if (columns.length === 0 && beams.length === 0 && walls.length === 0) return null;
   // ADR-449 Slice 12 — storey-aware columnExtents (ΙΔΙΟ SSoT lookup με το 3Δ). Το
   // active-storey context είναι zero-React store → ασφαλές read από τον DxfRenderer.
   const storey = useActiveStoreyStore.getState().context;
@@ -135,7 +139,7 @@ export function buildStructuralFinishSilhouette2D(
   // χωρίς τις λοξές γραμμούλες της επικαλυπτόμενης z-band στη συμβολή κολόνας↔δοκαριού.
   const bands = computeStructuralFinishSilhouette(columns, beams, walls, floorElevationMm, columnExtents, true);
   if (bands.length === 0) return null;
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   return { bands, sceneUnits };
 }
 
