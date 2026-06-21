@@ -332,18 +332,6 @@ export abstract class BaseEntityRenderer {
     }
   }
 
-  protected applyEntityStyle(entity: EntityModel): void {
-    // Apply authentic entity style (color from layer/entity)
-    this.ctx.strokeStyle = entity.color || CAD_UI_COLORS.entity.default;
-    this.ctx.fillStyle = entity.color || CAD_UI_COLORS.entity.default;
-    // 🎯 AUTOCAD FIX: lineWidth >= 1 prevents sub-pixel color distortion
-    this.ctx.lineWidth = Math.max(1, (entity as { lineWidth?: number }).lineWidth || 1);
-    // Keep solid line for authentic style
-    this.ctx.setLineDash([]);
-    // 🎯 CRITICAL: Ensure full opacity for authentic colors
-    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
-  }
-
   protected cleanupStyle(): void {
     this.ctx.restore();
   }

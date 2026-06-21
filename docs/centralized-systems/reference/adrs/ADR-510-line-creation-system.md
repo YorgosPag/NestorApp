@@ -566,3 +566,10 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   COMPLETE**. UNCOMMITTED. ⚠️ ADR-040 CHECK 6B/6D δεν αφορά (ribbon files). 🔴 browser-verify (επίλεξε γραμμή →
   tab «Στυλ Γραμμής»· άλλαξε linetype→διακεκομμένη με undo) + commit. **🔴 ΕΚΚΡΕΜΕΙ Φ2E #2:** LTSCALE status-bar
   control + custom-linetype creation pattern editor (→ `registerLinetype`). Δες HANDOFF.
+- **2026-06-21** — **Boy-Scout SSoT cleanup (κατά τη διάγνωση Φ2E):** Στο `rendering/entities/BaseEntityRenderer.ts`
+  υπήρχαν **δύο** μέθοδοι style-setup: η ζωντανή `setupStyle` (phase-aware· εφαρμόζει το ADR-510 Φ2 linetype dash
+  μέσω `applyEntityLinetypeDash`) και η legacy `applyEntityStyle` (έκανε `setLineDash([])` → μηδένιζε dash). Audit
+  (grep) έδειξε ότι η `applyEntityStyle` είχε **ΜΗΔΕΝ callers** (η ομώνυμη στο `passes/EntityPass.ts` είναι άλλη
+  κλάση/υπογραφή) — νεκρός κώδικας που γλίτωσε το dead-code ratchet επειδή ήταν `protected`. **Διαγράφηκε** → ΕΝΑ
+  style-setup SSoT. ΔΕΝ ήταν η αιτία τυχόν linetype-render issue (ποτέ δεν καλούνταν). ⚠️ render αρχείο (ADR-040
+  CHECK 6D) → stage μαζί. Μηδέν λειτουργική αλλαγή.
