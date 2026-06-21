@@ -17,6 +17,10 @@ import {
   renderTreadsForStructure,
   type StairStyleContext,
 } from '../stair-render-structure-style';
+// FULL SSoT (bim-body-fill) — οι treads περνούν πλέον από το ΚΟΙΝΟ adaptive layer
+// (ADR-509) όπως όλα τα BIM body fills· το expected υπολογίζεται από τον ΙΔΙΟ helper
+// (bg-agnostic) ώστε το test να κλειδώνει «περνά από το SSoT», όχι ένα boosted literal.
+import { adaptBimBodyFill } from '../../utils/bim-body-fill';
 
 // ─── Canvas mock ─────────────────────────────────────────────────────────────
 
@@ -200,9 +204,9 @@ describe('renderTreadsForStructure — §6.2 symbology mapping', () => {
     expect(countCalls(calls, 'stroke')).toBe(2);
     // No dashed outline.
     expect(countSetLineDashNonEmpty(calls)).toBe(0);
-    // Default translucent slate fill (α=0.12).
+    // Default translucent slate fill (α=0.12) → κοινό adaptive SSoT layer.
     const fillStyle = calls.find((c) => c.fn === 'set:fillStyle');
-    expect(fillStyle?.args[0]).toBe('rgba(120, 144, 156, 0.12)');
+    expect(fillStyle?.args[0]).toBe(adaptBimBodyFill('rgba(120, 144, 156, 0.12)'));
   });
 
   test('glass-tread → dashed outline + ultra-light fill (α=0.04)', () => {
@@ -213,7 +217,7 @@ describe('renderTreadsForStructure — §6.2 symbology mapping', () => {
     // One non-empty setLineDash before the loop.
     expect(countSetLineDashNonEmpty(calls)).toBeGreaterThanOrEqual(1);
     const fillStyle = calls.find((c) => c.fn === 'set:fillStyle');
-    expect(fillStyle?.args[0]).toBe('rgba(120, 144, 156, 0.04)');
+    expect(fillStyle?.args[0]).toBe(adaptBimBodyFill('rgba(120, 144, 156, 0.04)'));
   });
 
   test('steel-grating → solid fill + per-tread clip + hatch lines (ISO 128)', () => {
