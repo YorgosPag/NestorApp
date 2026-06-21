@@ -261,6 +261,8 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
   // Multi-point shapes
   polyline: { minPoints: 2, maxPoints: Infinity, allowsContinuous: true },
   polygon: { minPoints: 3, maxPoints: Infinity, allowsContinuous: false },
+  // ADR-507 S2 — γραμμοσκίαση: κλειστό όριο N-click + Enter (mirror polygon).
+  hatch: { minPoints: 3, maxPoints: Infinity, allowsContinuous: false },
 
   // Measurements
   'measure-distance': { minPoints: 2, maxPoints: 2, allowsContinuous: false },

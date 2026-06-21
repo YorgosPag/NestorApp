@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneLayer, LineweightMm } from '../../types/entities';
+import type { SceneLayer, LineweightMm, HatchEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
 import type { DimensionEntity } from '../../types/dimension';
@@ -455,6 +455,27 @@ export interface DxfSpaceSeparator extends DxfEntity {
   geometry: SpaceSeparatorEntity['geometry'];
 }
 
+/**
+ * ADR-507 S2 — DxfHatch direct entity. HatchRenderer reads boundaryPaths +
+ * fill/pattern fields at top level (μέσω `isHatchEntity` cast σε HatchEntity).
+ */
+export interface DxfHatch extends DxfEntity {
+  type: 'hatch';
+  boundaryPaths: HatchEntity['boundaryPaths'];
+  fillType?: HatchEntity['fillType'];
+  fillColor?: HatchEntity['fillColor'];
+  patternType?: HatchEntity['patternType'];
+  patternName?: HatchEntity['patternName'];
+  patternScale?: HatchEntity['patternScale'];
+  patternAngle?: HatchEntity['patternAngle'];
+  patternOrigin?: HatchEntity['patternOrigin'];
+  lineAngle?: HatchEntity['lineAngle'];
+  lineSpacing?: HatchEntity['lineSpacing'];
+  doubleCrossHatch?: HatchEntity['doubleCrossHatch'];
+  islandStyle?: HatchEntity['islandStyle'];
+  drawOrder?: HatchEntity['drawOrder'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -467,7 +488,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

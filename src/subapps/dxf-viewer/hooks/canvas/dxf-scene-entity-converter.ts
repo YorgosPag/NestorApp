@@ -9,11 +9,10 @@
  * — zero duplication of the per-entity projection logic.
  */
 
-import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { DxfColor } from '../../text-engine/types';
+import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import type { SceneModel, TextEntity, HatchEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -52,13 +51,13 @@ import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
-import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
-import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+// ADR-344 Phase 6.E — textNode style/height resolution (SRP extraction, ≤500 LOC).
+import { extractFirstRunStyle, resolveTextHeight } from './dxf-text-style-extractor';
 import { dwarn } from '../../debug';
 
 export type SceneEntity = NonNullable<SceneModel['entities']>[number];
@@ -145,67 +144,6 @@ function rectangleToVertices(e: {
   return null;
 }
 
-
-/**
- * ADR-344 Phase 6.E — Extract canvas-renderable style from the first run of textNode.
- * Returns undefined when textNode is absent or yields no style fields.
- */
-function extractFirstRunStyle(entity: SceneEntity): DxfTextStyle | undefined {
-  const withNode = entity as { textNode?: DxfTextNode };
-  if (!withNode.textNode) return undefined;
-  const result: DxfTextStyle = {};
-
-  // Node-level: attachment → textAlign (H) + textBaseline (V).
-  const attachment = withNode.textNode.attachment;
-  if (attachment) {
-    const row = attachment[0]; // 'TL'[0]='T', 'ML'[0]='M', 'BL'[0]='B'
-    const col = attachment[1]; // 'TL'[1]='L', 'TC'[1]='C', 'TR'[1]='R'
-    if (col === 'C') result.textAlign = 'center';
-    else if (col === 'R') result.textAlign = 'right';
-    // 'L' = default 'left', omit
-    if (row === 'M') result.textBaseline = 'middle';
-    else if (row === 'B') result.textBaseline = 'bottom';
-    // 'T' = default 'top', omit
-  }
-
-  // Run-level: first run style (bold / italic / underline / font / color).
-  const para = withNode.textNode.paragraphs?.[0];
-  const run = para?.runs?.[0];
-  if (run && !('top' in run)) {
-    const s = (run as TextRun).style;
-    if (s) {
-      if (s.bold !== undefined) result.bold = s.bold;
-      if (s.italic !== undefined) result.italic = s.italic;
-      if (s.underline !== undefined) result.underline = s.underline;
-      if (s.overline !== undefined) result.overline = s.overline;
-      if (s.strikethrough !== undefined) result.strikethrough = s.strikethrough;
-      if (s.fontFamily) result.fontFamily = s.fontFamily;
-      if (s.color) {
-        const c = s.color as DxfColor;
-        if (c.kind === 'TrueColor') {
-          result.runColor = `#${c.r.toString(16).padStart(2, '0')}${c.g.toString(16).padStart(2, '0')}${c.b.toString(16).padStart(2, '0')}`;
-        }
-        // ByLayer / ByBlock → inherit entity color, omit runColor
-      }
-    }
-  }
-
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
-/**
- * ADR-344 Phase 6.E — Resolve text height: prefer first run's textNode height,
- * fall back to flat entity.height / entity.fontSize / default.
- */
-function resolveTextHeight(entity: SceneEntity): number {
-  const withNode = entity as { textNode?: DxfTextNode; height?: number; fontSize?: number };
-  const run = withNode.textNode?.paragraphs?.[0]?.runs?.[0];
-  if (run && !('top' in run)) {
-    const h = (run as TextRun).style?.height;
-    if (h !== undefined && h > 0) return h;
-  }
-  return withNode.height || withNode.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-}
 
 export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: SceneLayers): DxfEntityUnion | null {
   const base = buildBase(entity, layers, layersById);
@@ -479,6 +417,30 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isMepUnderfloorEntity(entity)) return null;
       const uf = entity as MepUnderfloorEntity;
       return { ...base, type: 'mep-underfloor' as const, kind: uf.kind, params: uf.params, geometry: uf.geometry, validation: uf.validation } as DxfEntityUnion;
+    }
+    case 'hatch': {
+      // ADR-507 S2 — direct entity (boundaryPaths + fill/pattern fields at top
+      // level). Χωρίς αυτό το case το committed hatch έπεφτε στο default → null →
+      // αόρατο στον 2D καμβά (το S1 είχε καταχωρήσει μόνο τον HatchRenderer).
+      if (!isHatchEntity(entity)) return null;
+      const h = entity as HatchEntity;
+      return {
+        ...base,
+        type: 'hatch' as const,
+        boundaryPaths: h.boundaryPaths,
+        fillType: h.fillType,
+        fillColor: h.fillColor,
+        patternType: h.patternType,
+        patternName: h.patternName,
+        patternScale: h.patternScale,
+        patternAngle: h.patternAngle,
+        patternOrigin: h.patternOrigin,
+        lineAngle: h.lineAngle,
+        lineSpacing: h.lineSpacing,
+        doubleCrossHatch: h.doubleCrossHatch,
+        islandStyle: h.islandStyle,
+        drawOrder: h.drawOrder,
+      } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

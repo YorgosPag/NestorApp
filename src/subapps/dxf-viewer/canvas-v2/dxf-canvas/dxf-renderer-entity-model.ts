@@ -158,6 +158,26 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
       return { ...base, type: 'ray', basePoint: entity.rayEntity.basePoint, direction: entity.rayEntity.direction } as unknown as Entity;
+    case 'hatch':
+      // ADR-507 S2 — direct entity· HatchRenderer reads boundaryPaths + fill/pattern
+      // fields at top level (μέσω isHatchEntity cast).
+      return {
+        ...base,
+        type: 'hatch',
+        boundaryPaths: entity.boundaryPaths,
+        fillType: entity.fillType,
+        fillColor: entity.fillColor,
+        patternType: entity.patternType,
+        patternName: entity.patternName,
+        patternScale: entity.patternScale,
+        patternAngle: entity.patternAngle,
+        patternOrigin: entity.patternOrigin,
+        lineAngle: entity.lineAngle,
+        lineSpacing: entity.lineSpacing,
+        doubleCrossHatch: entity.doubleCrossHatch,
+        islandStyle: entity.islandStyle,
+        drawOrder: entity.drawOrder,
+      } as unknown as Entity;
     default: {
       const exhaustiveCheck: never = entity;
       return exhaustiveCheck;
