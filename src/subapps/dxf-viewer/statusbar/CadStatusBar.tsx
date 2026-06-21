@@ -17,6 +17,7 @@ import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
 import { LinetypeScaleControl } from './LinetypeScaleControl';
+import { StatusBarNumericField } from './StatusBarNumericField';
 import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
 import { ambientAlignmentConfigStore } from '../systems/tracking/ambient-alignment-config-store';
 import { useDisplayUnit } from '../hooks/common/useDisplayUnit';
@@ -355,10 +356,6 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
   onStepChange: (value: number) => void;
 }) {
   const { t } = useTranslation('dxf-viewer-panels');
-  // Local text buffer so mid-typing (empty / partial) never snaps back to a default;
-  // a valid non-negative number applies live on every keystroke.
-  const [text, setText] = useState(String(step));
-  useEffect(() => { setText(String(step)); }, [step]);
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
@@ -384,22 +381,15 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
         <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
       </Tooltip>
       {toggle.on && (
-        <div className="relative">
-          <input
-            type="number"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              const n = parseFloat(e.target.value);
-              if (!isNaN(n) && n >= 0) onStepChange(n);
-            }}
-            aria-label={t('cadDock.statusBar.snapStepTitle')}
-            className="h-6 w-24 text-xs pl-2 pr-7 rounded border border-border bg-background"
-            min={0}
-            step={1}
-          />
-          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">mm</span>
-        </div>
+        <StatusBarNumericField
+          id={`${id}-step`}
+          value={step}
+          onCommit={onStepChange}
+          ariaLabel={t('cadDock.statusBar.snapStepTitle')}
+          min={0}
+          step={1}
+          unitSuffix="mm"
+        />
       )}
     </div>
   );

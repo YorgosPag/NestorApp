@@ -618,3 +618,9 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   ΑΜΕΣΩΣ+undo· global LTSCALE 1→2 όλες οι γραμμές· συνδυασμός ×4) + commit. 🔴 ΕΚΚΡΕΜΕΙ Φ2E #3: custom-linetype
   creation pattern editor. **ΜΑΘΗΜΑ:** numeric ribbon πεδίο = ΟΧΙ νέος τύπος control· το `ribbon-combobox-numeric`
   κάνει ΚΑΘΕ purely-numeric option list editable app-wide → μόνο preset options + `numericInput` στο tab declaration.
+  **+Boy-Scout SSoT (Giorgio «διόρθωσέ το τώρα»):** το inline live-apply numeric-input pattern (local text buffer +
+  parse + range guard) επαναλαμβανόταν 2× στο status-bar (snap-step + το νέο LTSCALE). Εξήχθη σε NEW
+  `statusbar/StatusBarNumericField.tsx` (props: value/onCommit/min/`minExclusive`/step/unitSuffix/widthClass)·
+  `SnapToggleWithStep` + `LinetypeScaleControl` το χρησιμοποιούν → ΕΝΑ SSoT control. Το polar «add angle» (button/
+  Enter-commit, placeholder) ΕΜΕΙΝΕ inline (διαφορετική αλληλεπίδραση, ΟΧΙ forced unify). +7 jest
+  (`StatusBarNumericField.test.tsx`: range guard / minExclusive / buffer re-sync / suffix).
