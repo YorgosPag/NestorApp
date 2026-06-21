@@ -50,6 +50,12 @@ import {
   getColumnGhostStatus,
   getColumnFaceAnchor,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import {
+  setColumnRotationLock,
+  getColumnRotationLock,
+  clearColumnRotationLock,
+} from '../../systems/cursor/ColumnRotationStore';
+import { columnRotationDeg } from '../../bim/columns/column-rotation';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -75,6 +81,7 @@ export type ColumnPlacementMode =
 export type ColumnToolPhase =
   | 'idle'
   | 'awaitingPosition'
+  | 'awaitingRotation' // ADR-508 §column place+rotate — μετά το 1ο κλικ: ορισμός γωνίας με 2ο κλικ
   | 'committed';
 
 export interface ColumnToolState {
@@ -251,10 +258,12 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   }, []);
 
   const deactivate = useCallback(() => {
+    clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
+    clearColumnRotationLock(); // ESC κατά το awaitingRotation → επιστροφή σε awaitingPosition
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -277,23 +286,21 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
    * commit silently — FSM παραμένει σε awaitingPosition ώστε ο χρήστης να
    * διορθώσει (e.g. via ribbon overrides).
    */
-  const commitColumnFromState = useCallback(
-    (s: ColumnToolState, clickPoint: Readonly<Point2D>): boolean => {
-      // ADR-398 §Column smart-ghost face-snap — anchor precedence (commit ≡ ghost):
-      //   1. face-snap λαβή (1 από 9) — η κολώνα ακουμπά flush στην παρειά στόχου (το
-      //      `clickPoint` είναι ήδη το snapped face point από το `mouse-handler-up`).
-      //   2. αλλιώς §Column→Beam axis snap: 🟢 → ΚΕΝΤΡΑΡΙΣΜΕΝΗ (κέντρο ≡ άξονας δοκού).
-      //   3. αλλιώς ο επιλεγμένος (Tab) anchor.
-      const faceAnchor = getColumnFaceAnchor();
-      const anchor: ColumnAnchor =
-        faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
+  const commitColumnAt = useCallback(
+    (
+      s: ColumnToolState,
+      position: Readonly<Point2D>,
+      anchor: ColumnAnchor,
+      rotationDeg: number,
+    ): boolean => {
       const overridesWithKind: ColumnParamOverrides = {
         ...s.overrides,
         kind: s.kind,
         anchor,
+        rotation: rotationDeg,
       };
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const params = buildDefaultColumnParams(clickPoint, s.kind, overridesWithKind, sceneUnits);
+      const params = buildDefaultColumnParams(position, s.kind, overridesWithKind, sceneUnits);
       const result = buildColumnEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -362,10 +369,30 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       if (s.placementMode === 'in-region') {
         return onRegionClick(s, point);
       }
-      if (s.phase !== 'awaitingPosition') return false;
-      return commitColumnFromState(s, point);
+      // ADR-508 §column place+rotate — freehand 2-click (παριότητα με τοίχο/δοκάρι):
+      //   1ο κλικ (awaitingPosition) → ΚΛΕΙΔΩΣΕ θέση + auto anchor (face-snap precedence ≡ ghost)
+      //   → awaitingRotation (ΟΧΙ commit ακόμη).
+      if (s.phase === 'awaitingPosition') {
+        const faceAnchor = getColumnFaceAnchor();
+        const anchor: ColumnAnchor =
+          faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
+        setColumnRotationLock(point, anchor);
+        setState({ ...s, phase: 'awaitingRotation', error: null });
+        return false;
+      }
+      //   2ο κλικ (awaitingRotation) → γωνία = κατεύθυνση (κλειδωμένη θέση → click) → commit.
+      if (s.phase === 'awaitingRotation') {
+        const rot = getColumnRotationLock();
+        clearColumnRotationLock();
+        if (!rot) {
+          setState({ ...s, phase: 'awaitingPosition' });
+          return false;
+        }
+        return commitColumnAt(s, rot.origin, rot.anchor, columnRotationDeg(rot.origin, point));
+      }
+      return false;
     },
-    [commitColumnFromState, onPerimeterClick, onDiscretePerimeterClick, onRegionClick],
+    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────

@@ -26,6 +26,7 @@ import type { Entity } from '../../types/entities';
 import { isThermalSpaceEntity } from '../../types/entities';
 import type { ThermalSpaceEntity } from '../types/thermal-space-types';
 import { resolveThermalSpaceSetpointC } from '../thermal/thermal-space-use-catalog';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 
@@ -74,7 +75,8 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     this.ctx.save();
 
     // Translucent analytical fill — stronger when selected so the whole area reads as picked.
-    this.ctx.fillStyle = options.selected ? 'rgba(13, 148, 136, 0.24)' : 'rgba(13, 148, 136, 0.12)';
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(options.selected ? 'rgba(13, 148, 136, 0.24)' : 'rgba(13, 148, 136, 0.12)');
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

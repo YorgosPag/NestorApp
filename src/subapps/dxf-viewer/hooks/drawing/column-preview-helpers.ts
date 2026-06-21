@@ -45,6 +45,8 @@ import {
   getColumnGhostStatus,
   getColumnFaceFrame,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
+import { columnRotationDeg } from '../../bim/columns/column-rotation';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
   resolveEffectivePreviewCursor,
@@ -73,6 +75,20 @@ export function generateColumnPreview(
 ): ExtendedSceneEntity | null {
   const handle = columnToolBridgeStore.get();
   if (!handle?.isActive) return null;
+
+  // ADR-508 §column place+rotate — μετά το 1ο κλικ (awaitingRotation): η κολώνα μένει στην
+  // ΚΛΕΙΔΩΜΕΝΗ θέση και ΠΕΡΙΣΤΡΕΦΕΤΑΙ live προς τον κέρσορα (raw → ελεύθερη γωνία). Καμία
+  // overlap/dims εδώ (πέρα από την τοποθέτηση). 2ο κλικ commit-άρει με αυτή τη γωνία.
+  const rot = getColumnRotationLock();
+  if (rot) {
+    const rotationDeg = columnRotationDeg(rot.origin, cursorPoint);
+    const overrides: ColumnParamOverrides = {
+      ...handle.overrides, kind: handle.kind, anchor: rot.anchor, rotation: rotationDeg,
+    };
+    const params = buildDefaultColumnParams(rot.origin, handle.kind, overrides, sceneUnits);
+    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
+    return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
+  }
 
   // Snapped point (face-snap position / corner-projected / raw) — ΤΟ ΙΔΙΟ σημείο
   // που κάνει commit το `mouse-handler-up` (το `snap-scheduler` το γράφει μέσω

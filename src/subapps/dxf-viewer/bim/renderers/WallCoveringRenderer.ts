@@ -33,6 +33,7 @@ import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-covering
 import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
 import { strokeHatchLines, fillHatchDots } from './shared/canvas-hatch-fill';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 
 /** Opacity του translucent fill της λωρίδας (λίγο πιο έντονο από floor-finish για να ξεχωρίζει). */
 const STRIP_FILL_ALPHA = 0.35;
@@ -89,7 +90,8 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     const hatch = getWallCoveringHatchType(visible.materialId);
 
     // Translucent fill — reuse `hexToRgba` SSoT (ADR-375· μηδέν inline hex parse).
-    this.ctx.fillStyle = hexToRgba(color, STRIP_FILL_ALPHA) ?? color;
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(hexToRgba(color, STRIP_FILL_ALPHA) ?? color);
     this.drawQuadPath(quad);
     this.ctx.fill();
 

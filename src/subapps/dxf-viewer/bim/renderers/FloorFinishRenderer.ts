@@ -27,6 +27,7 @@ import {
   getFloorFinishHatchType,
 } from '../floor-finishes/floor-finish-material-catalog';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 
 const HATCH_STROKE = 'rgba(0, 0, 0, 0.15)';
 const HATCH_LINE_WIDTH = 0.5;
@@ -69,7 +70,8 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
 
     // Translucent fill (22% opacity) — reuse `hexToRgba` SSoT (ADR-375· N.0.2 boy-scout,
     // αφαίρεση inline hex parse· κοινό με WallCoveringRenderer ADR-511).
-    this.ctx.fillStyle = hexToRgba(color, 0.22) ?? color;
+    // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+    this.ctx.fillStyle = adaptBimBodyFill(hexToRgba(color, 0.22) ?? color);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
