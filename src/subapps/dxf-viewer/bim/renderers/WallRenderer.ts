@@ -32,25 +32,24 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
-import { adaptEntityColorForCanvas, adaptFillTintForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+// ADR-507 Φ7 — unified material poché (αντικαθιστά το wall-hatch-patterns engine).
+import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
 import {
-  computeWallHatchPlan,
-  resolveWallMaterialKey,
-  HATCH_STROKE_RGBA,
-  RC_DOT_RADIUS_PX,
-  WALL_HATCH_LINE_WIDTH_PX,
-} from '../walls/wall-hatch-patterns';
+  paintMaterialHatchSegments,
+  MATERIAL_HATCH_STROKE_RGBA,
+} from './shared/material-hatch-paint';
 import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 import { wallLayerBoundaryPolylines } from '../walls/wall-layer-lines-2d';
@@ -251,12 +250,9 @@ export class WallRenderer extends BaseEntityRenderer {
       elementOverride: wall.styleOverride, layerOverride,
     });
     // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
-    // ADR-509 — background-adaptive poché: το translucent σώμα (rgba 0.18 alpha) πάνω σε
-    // μαύρο canvas composit-άρει σχεδόν-μαύρο· εδώ boost-άρεται ώστε να διαβάζεται ως
-    // ανοιχτό-γκρι (και σκουραίνει σε ανοιχτό φόντο), κρατώντας το CAD translucent feel.
-    this.ctx.fillStyle = adaptFillTintForCanvas(
-      resolveVgFillTint('wall', _cutState, _styles) ?? WALL_CATEGORY_FILL[cat],
-    );
+    // ADR-509 / FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με κολώνα & όλα τα
+    // BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο.
+    this.ctx.fillStyle = resolveBimBodyFill('wall', _cutState, _styles, WALL_CATEGORY_FILL[cat]);
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(bimDashPx(_edgePattern, this.transform.scale));
 
@@ -401,9 +397,6 @@ export class WallRenderer extends BaseEntityRenderer {
   private drawMaterialHatch(wall: WallEntity, layerOverride?: BimLayerOverride): void {
     if (wall.params.dna) return;
     if (this.transform.scale < 0.001) return;
-    const key = resolveWallMaterialKey(wall.params.material);
-    const plan = computeWallHatchPlan(wall.geometry.bbox, key);
-    if (plan.lines.length === 0 && plan.dots.length === 0) return;
 
     const outer = wall.geometry.outerEdge.points;
     const inner = wall.geometry.innerEdge.points;
@@ -413,51 +406,27 @@ export class WallRenderer extends BaseEntityRenderer {
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,
     );
+
+    // ADR-507 Φ7 — υλικό + cutState → PAT pattern (MATERIAL_HATCH_MAP). Όριο = το wall
+    // body ring (outer + reversed inner ως ΕΝΑ closed polygon)· τα segments έρχονται
+    // ήδη clipped (μηδέν `ctx.clip()`).
+    const ring = [...outer, ...[...inner].reverse()];
+    const segments = computeMaterialHatchSegments([ring], wall.params.material, _hatchCutState);
+    if (segments.length === 0) return;
+
+    // V/G cut-pattern override (color + line pattern) διατηρείται (wall-specific).
     const { linePattern: _hatchPattern, color: _hatchColor } = resolveSubcategoryStyle({
       category: 'wall', subcategoryKey: 'cut-pattern',
       cutState: _hatchCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       objectStyles: useDrawingScaleStore.getState().objectStyles,
       elementOverride: wall.styleOverride, layerOverride,
     });
-    const _hatchStroke = _hatchColor ?? HATCH_STROKE_RGBA;
 
-    this.ctx.save();
-    // Clip to wall body polygon (same path as drawFootprint).
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < outer.length; i++) {
-      const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    for (let i = inner.length - 1; i >= 0; i--) {
-      const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-    this.ctx.clip();
-
-    // ADR-509 — background-adaptive hatch stroke/fill (visible on dark canvas).
-    this.ctx.strokeStyle = adaptEntityColorForCanvas(_hatchStroke);
-    this.ctx.fillStyle = adaptEntityColorForCanvas(_hatchStroke);
-    this.ctx.lineWidth = WALL_HATCH_LINE_WIDTH_PX[key];
-    this.ctx.setLineDash(bimDashPx(_hatchPattern, this.transform.scale));
-
-    for (const seg of plan.lines) {
-      const a = this.worldToScreen(seg.start);
-      const b = this.worldToScreen(seg.end);
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
-    }
-    for (const dot of plan.dots) {
-      const s = this.worldToScreen(dot.center);
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    this.ctx.restore();
+    // ADR-509 — background-adaptive hatch stroke (visible on dark canvas).
+    paintMaterialHatchSegments(this.ctx, segments, (p) => this.worldToScreen(p), {
+      strokeStyle: adaptEntityColorForCanvas(_hatchColor ?? MATERIAL_HATCH_STROKE_RGBA),
+      dashPx: bimDashPx(_hatchPattern, this.transform.scale),
+    });
   }
 
   /**
@@ -477,7 +446,7 @@ export class WallRenderer extends BaseEntityRenderer {
     if (lines.length === 0) return;
 
     this.ctx.save();
-    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
+    this.ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     this.ctx.setLineDash([]);
     for (const poly of lines) this.drawPolyline(poly);

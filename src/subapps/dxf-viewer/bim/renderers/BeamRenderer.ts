@@ -48,15 +48,9 @@ import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { drawBeamSectionProfile } from './beam-section-profile-draw';
-import {
-  computeBeamHatchPlan,
-  resolveBeamMaterialKey,
-  BEAM_HATCH_STROKE_RGBA,
-  BEAM_HATCH_LINE_WIDTH_PX,
-  BEAM_RC_DOT_RADIUS_PX,
-  type BeamMaterialKey,
-  type BeamHatchPlan,
-} from '../beams/beam-hatch-patterns';
+// ADR-507 Φ7 — unified material poché (αντικαθιστά το beam-hatch-patterns engine).
+import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
+import { paintMaterialHatchSegments } from './shared/material-hatch-paint';
 
 // ADR-445 — δοκός = amber ταυτότητα κατηγορίας (αντίθεση με μπλε κολώνες· οι δύο
 // γραμμικές οντότητες ξεχωρίζουν τέλεια εκεί που επικαλύπτονται στην κάτοψη). Fallback
@@ -168,7 +162,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.fill();
 
     // Phase 5.5c — per-material hatch clipped inside footprint.
-    this.drawMaterialHatch(beam, drawable);
+    this.drawMaterialHatch(beam, drawable, _beamStyleCut);
 
     // ADR-377 C.2 — hidden-lines subcategory (dashed outline convention).
     const _beamLayerOverride = _beamLayer ? {
@@ -227,44 +221,17 @@ export class BeamRenderer extends BaseEntityRenderer {
    * περνάει στο pattern computer ώστε `glulam` grain να ευθυγραμμίζεται με
    * την κατεύθυνση του δοκαριού. Skip σε extreme zoom-out (perf saver).
    */
-  private drawMaterialHatch(beam: BeamEntity, pieces: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>): void {
+  private drawMaterialHatch(
+    beam: BeamEntity,
+    pieces: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>,
+    cutState: CutState,
+  ): void {
     if (this.transform.scale < 0.001) return;
-
-    const key: BeamMaterialKey = resolveBeamMaterialKey(beam.params.material);
-    const [start, end] = getBimEntityKeyPoints2D(beam);
-    const plan: BeamHatchPlan = computeBeamHatchPlan(
-      beam.geometry.bbox,
-      { ux: end.x - start.x, uy: end.y - start.y },
-      key,
-    );
-
-    if (plan.lines.length === 0 && plan.dots.length === 0) return;
-
-    this.ctx.save();
-    // ADR-458 — clip στην ένωση των (κομμένων) κομματιών ώστε το hatch να μην ξεχειλίζει
-    // στην περιοχή της κολόνας.
-    this.buildPiecesPath(pieces);
-    this.ctx.clip();
-    this.ctx.strokeStyle = BEAM_HATCH_STROKE_RGBA;
-    this.ctx.fillStyle = BEAM_HATCH_STROKE_RGBA;
-    this.ctx.lineWidth = BEAM_HATCH_LINE_WIDTH_PX[key];
-    this.ctx.setLineDash([]);
-
-    for (const line of plan.lines) {
-      const a = this.worldToScreen(line.start);
-      const b = this.worldToScreen(line.end);
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
-    }
-    for (const dot of plan.dots) {
-      const s = this.worldToScreen(dot.center);
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, BEAM_RC_DOT_RADIUS_PX, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    this.ctx.restore();
+    // ADR-507 Φ7 — υλικό + cutState → PAT pattern (MATERIAL_HATCH_MAP). Τα pieces
+    // (ADR-458 cutback) περνούν ως boundaryPaths → segments ήδη clipped (μηδέν clip),
+    // ώστε το hatch να μην ξεχειλίζει στην περιοχή της κολόνας.
+    const segments = computeMaterialHatchSegments(pieces, beam.params.material, cutState);
+    paintMaterialHatchSegments(this.ctx, segments, (p) => this.worldToScreen(p));
   }
 
   /**

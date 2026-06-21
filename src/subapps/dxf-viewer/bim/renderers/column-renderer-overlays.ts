@@ -15,16 +15,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
-import {
-  computeHatchPlan,
-  computeCircularHatchPlan,
-  resolveMaterialKey,
-  HATCH_STROKE_RGBA,
-  HATCH_LINE_WIDTH_PX,
-  RC_DOT_RADIUS_PX,
-  type ColumnMaterialKey,
-  type HatchPlan,
-} from '../columns/column-hatch-patterns';
+import type { CutState } from '../../config/bim-view-range';
+// ADR-507 Φ7 — unified material poché (αντικαθιστά το column-hatch-patterns engine).
+import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
+import { paintMaterialHatchSegments } from './shared/material-hatch-paint';
 import {
   COL_SECTION_OFFSET_PX,
   COL_SECTION_MIN_SCALE,
@@ -49,72 +43,24 @@ type Verts = ReadonlyArray<{ x: number; y: number }>;
 // σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette pass στον `DxfRenderer` (κοινή SSoT με 3Δ).
 
 /**
- * Phase 4.5c.2/4.5c.3 — per-material hatch pattern inside footprint clip.
- * Mirror του `SlabRenderer.drawReinforcementHatch` pattern.
- *
- * Circular kind routes through `computeCircularHatchPlan()` (concentric arcs for
- * RC, bbox-clipped lines otherwise)· non-circular routes through `computeHatchPlan`.
- * Skip: `scale < 0.001` (invisible zoom-out, perf saver).
+ * Per-material poché μέσα στο footprint (ADR-507 Φ7 unified). Το υλικό
+ * (`column.params.material`) + `cutState` → PAT pattern μέσω του `MATERIAL_HATCH_MAP`
+ * SSoT· τα segments έρχονται ήδη clipped στο footprint (μηδέν `ctx.clip()`).
+ * Circular: footprint 32-vertex polygon (οι RC concentric rings καταργήθηκαν —
+ * AR-CONC clipped στον κύκλο, ADR-507 Φ7). Skip: `scale < 0.001`.
  */
 export function drawColumnMaterialHatch(
   ctx: CanvasRenderingContext2D,
   column: ColumnEntity,
   scale: number,
   worldToScreen: Projector,
+  cutState: CutState,
 ): void {
   if (scale < 0.001) return;
-
-  const key: ColumnMaterialKey = resolveMaterialKey(column.params.material);
-  const plan: HatchPlan = column.kind === 'circular'
-    ? computeCircularHatchPlan(
-        { x: column.params.position.x, y: column.params.position.y },
-        column.params.width / 2,
-        key,
-      )
-    : computeHatchPlan(column.geometry.bbox, key);
-
-  if (plan.lines.length === 0 && plan.dots.length === 0 && plan.arcs.length === 0) return;
-
-  ctx.save();
-  drawFootprintPath(ctx, column.geometry.footprint.vertices, worldToScreen);
-  ctx.clip();
-  ctx.strokeStyle = HATCH_STROKE_RGBA;
-  ctx.fillStyle = HATCH_STROKE_RGBA;
-  ctx.lineWidth = HATCH_LINE_WIDTH_PX[key];
-  ctx.setLineDash([]);
-  paintHatchPlan(ctx, plan, scale, worldToScreen);
-  ctx.restore();
-}
-
-/** Paint the resolved hatch plan (lines + RC dots + circular arcs) inside the clip. */
-function paintHatchPlan(
-  ctx: CanvasRenderingContext2D,
-  plan: HatchPlan,
-  scale: number,
-  worldToScreen: Projector,
-): void {
-  for (const line of plan.lines) {
-    const a = worldToScreen(line.start);
-    const b = worldToScreen(line.end);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-  }
-  for (const dot of plan.dots) {
-    const s = worldToScreen(dot.center);
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  for (const arc of plan.arcs) {
-    const s = worldToScreen(arc.center);
-    const rPx = arc.radiusMm * scale;
-    if (rPx < 0.5) continue;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, rPx, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  const segments = computeMaterialHatchSegments(
+    [column.geometry.footprint.vertices], column.params.material, cutState,
+  );
+  paintMaterialHatchSegments(ctx, segments, worldToScreen);
 }
 
 /**
@@ -302,23 +248,6 @@ function paintSectionSymbol(
   ctx.lineWidth = lineWidthPx;
   ctx.stroke();
   ctx.restore();
-}
-
-/** Build a closed footprint path in screen space (caller decides fill/clip/stroke). */
-function drawFootprintPath(
-  ctx: CanvasRenderingContext2D,
-  vertices: Verts,
-  worldToScreen: Projector,
-): void {
-  if (vertices.length < 3) return;
-  ctx.beginPath();
-  const first = worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-  ctx.moveTo(first.x, first.y);
-  for (let i = 1; i < vertices.length; i++) {
-    const s = worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-    ctx.lineTo(s.x, s.y);
-  }
-  ctx.closePath();
 }
 
 /** Kinds whose highlighted state shows dimension annotations. shear-wall stays

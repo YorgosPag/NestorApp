@@ -38,12 +38,9 @@ import { FOUNDATION_KIND_FILL, FOUNDATION_KIND_STROKE } from '../foundations/fou
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
-import {
-  computeFoundationHatchPlan,
-  FOUNDATION_HATCH_DOT_RADIUS_PX,
-  FOUNDATION_HATCH_LINE_WIDTH_PX,
-  FOUNDATION_HATCH_STROKE_RGBA,
-} from '../foundations/foundation-hatch-patterns';
+// ADR-507 Φ7 — unified material poché (αντικαθιστά το foundation-hatch-patterns engine).
+import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
+import { paintMaterialHatchSegments } from './shared/material-hatch-paint';
 
 /** Hidden-line dash pattern (CSS px) — foundation-plan «below grade» σύμβαση. */
 const HIDDEN_LINE_DASH: readonly number[] = [6, 4];
@@ -154,37 +151,16 @@ export class FoundationRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Concrete (RC) dot-grid hatch inside footprint clip. Mirror του
-   * `ColumnRenderer.drawMaterialHatch` (RC branch). Skip σε invisible zoom-out.
+   * Concrete poché inside footprint (ADR-507 Φ7 unified). Το θεμέλιο είναι πάντα
+   * σκυρόδεμα σε τομή → AR-CONC μέσω του `MATERIAL_HATCH_MAP` SSoT. Τα segments
+   * έρχονται ήδη clipped στο footprint (μηδέν `ctx.clip()`). Skip σε zoom-out.
    */
   private drawConcreteHatch(foundation: FoundationEntity): void {
     if (this.transform.scale < 0.001) return;
-    const plan = computeFoundationHatchPlan(foundation.geometry.bbox);
-    if (plan.dots.length === 0 && plan.lines.length === 0) return;
-
-    this.ctx.save();
-    this.drawPolygonPath(foundation.geometry.footprint.vertices);
-    this.ctx.clip();
-    this.ctx.strokeStyle = FOUNDATION_HATCH_STROKE_RGBA;
-    this.ctx.fillStyle = FOUNDATION_HATCH_STROKE_RGBA;
-    this.ctx.lineWidth = FOUNDATION_HATCH_LINE_WIDTH_PX;
-    this.ctx.setLineDash([]);
-
-    for (const line of plan.lines) {
-      const a = this.worldToScreen(line.start);
-      const b = this.worldToScreen(line.end);
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
-    }
-    for (const dot of plan.dots) {
-      const s = this.worldToScreen(dot.center);
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, FOUNDATION_HATCH_DOT_RADIUS_PX, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    this.ctx.restore();
+    const segments = computeMaterialHatchSegments(
+      [foundation.geometry.footprint.vertices], 'concrete', 'cut',
+    );
+    paintMaterialHatchSegments(this.ctx, segments, (p) => this.worldToScreen(p));
   }
 
   /**
