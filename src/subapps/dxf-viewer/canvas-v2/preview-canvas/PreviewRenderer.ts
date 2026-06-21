@@ -8,6 +8,10 @@ import type { Point2D, ViewTransform, Viewport, Entity } from '../../rendering/t
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
 import type { AngleMeasurementEntity } from '../../types/scene';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
+// 🏢 ADR-040 / ADR-398 §4 — live transform SSoT (ίδιο read με τον main
+// `dxf-canvas-renderer`). render() διαβάζει zero-lag το τρέχον transform → το ghost
+// ακολουθεί zoom/pan world-locked χωρίς cached/stale τιμή.
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { OPACITY } from '../../config/color-config';
@@ -62,7 +66,6 @@ export class PreviewRenderer {
   // composite bound to the preview ctx; created in `initialize`).
   private bimPreview: BimPreviewRenderer | null = null;
   private currentPreview: ExtendedSceneEntity | null = null;
-  private currentTransform: ViewTransform | null = null;
   private currentViewport: Viewport | null = null;
   private currentOptions: Required<PreviewRenderOptions> = { ...DEFAULT_PREVIEW_OPTIONS };
   private isDirty = false;
@@ -121,10 +124,13 @@ export class PreviewRenderer {
   /**
    * Draw preview entity — called directly from mouse handler (NO React state).
    * Immediate synchronous render for zero-latency feedback.
+   *
+   * The entity is stored in WORLD coords; the transform is NOT passed in — it is
+   * read live from `getImmediateTransform()` at paint time (see `render`), so the
+   * ghost stays world-locked on wheel-zoom/pan that fire no `mousemove`.
    */
   drawPreview(
     entity: ExtendedSceneEntity | null,
-    transform: ViewTransform,
     viewport: Viewport,
     options?: PreviewRenderOptions
   ): void {
@@ -139,31 +145,10 @@ export class PreviewRenderer {
     }
 
     this.currentPreview = entity;
-    this.currentTransform = transform;
     this.currentViewport = viewport;
     this.currentOptions = { ...DEFAULT_PREVIEW_OPTIONS, ...options };
 
     // Immediate render (no RAF wait)
-    this.render();
-  }
-
-  /**
-   * 🏢 Revit/AutoCAD world-locked transform refresh (ADR-040 / ADR-398 §4).
-   *
-   * Re-paints the SAME cached preview entity with a new transform WITHOUT
-   * re-resolving snap. The cached entity lives in WORLD coords, so feeding a
-   * new transform rescales/repositions it correctly while it stays locked to
-   * its last world point — exactly how Revit/AutoCAD ghosts behave on a
-   * mouse-wheel zoom that fires no `mousemove`.
-   *
-   * No-op when there is nothing to paint (no entity AND no tracking markers),
-   * so a bare pan/zoom over an empty canvas costs nothing.
-   */
-  refreshTransform(transform: ViewTransform, viewport: Viewport): void {
-    if (!this.currentPreview && this.trackingMarkers.length === 0) return;
-    this.currentTransform = transform;
-    this.currentViewport = viewport;
-    this.isDirty = true;
     this.render();
   }
 
@@ -270,9 +255,14 @@ export class PreviewRenderer {
     // ADR-357 Phase 4: tracking markers can paint without an active preview
     // entity (acquired `+` glyphs persist between drawPreview cycles). Treat
     // viewport availability as the gating condition instead of preview entity.
-    const transform = this.currentTransform;
+    //
+    // ADR-040 / ADR-398 §4: read the LIVE transform from the SSoT (same as the
+    // main `dxf-canvas-renderer`), NOT a cached value — so a scheduler repaint
+    // triggered by a wheel-zoom/pan (no mousemove) draws the cached world-coord
+    // ghost at the new scale, world-locked. Zero-lag, zero re-snap.
+    const transform = getImmediateTransform();
     const viewport = this.currentViewport;
-    if (!transform || !viewport || viewport.width <= 0 || viewport.height <= 0) {
+    if (!viewport || viewport.width <= 0 || viewport.height <= 0) {
       this.isDirty = false;
       return;
     }

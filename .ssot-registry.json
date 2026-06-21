@@ -3879,6 +3879,32 @@
       "addedDate": "2026-05-27",
       "addedByAdr": "ADR-040",
       "tier": 3
+    },
+    "command-merge-window": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/merge-window.ts",
+      "description": "ADR-507 §8 (2026-06-21): The 500ms command-merge time predicate (Autodesk/Adobe parity) is owned by `isWithinMergeWindow()` in merge-window.ts. Forbidden: inline `DEFAULT_MERGE_CONFIG.mergeTimeWindow` time-window comparisons in any command — call `isWithinMergeWindow(this, other)` so the policy lives in ONE place.",
+      "forbiddenPatterns": [
+        "DEFAULT_MERGE_CONFIG\\.mergeTimeWindow"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/merge-window.ts"
+      ],
+      "addedDate": "2026-06-21",
+      "addedByAdr": "ADR-507",
+      "tier": 3
+    },
+    "snapshot-geometry-strip": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/entity-commands/snapshot-geometry.ts",
+      "description": "ADR-507 §8 (2026-06-21): Stripping identity fields (id/layer/visible, optionally type) from an entity snapshot to produce geometry-to-restore is owned by `geometryFromSnapshot()` (pass `{ excludeType: true }` for geometry-only restores like Extend/Trim). Forbidden: inline `{ id: _id, layer: _layer, visible: _… , ...rest }` snapshot-strip destructures in commands — call geometryFromSnapshot instead.",
+      "forbiddenPatterns": [
+        "id: _id,.*layer: _layer,.*visible: _"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/entity-commands/snapshot-geometry.ts"
+      ],
+      "addedDate": "2026-06-21",
+      "addedByAdr": "ADR-507",
+      "tier": 3
     }
   }
 }

@@ -11,9 +11,11 @@ import {
   readFinishParamValue,
   applyFinishParam,
   isFinishActive,
+  resolveFinishThicknessMm,
   STRUCTURAL_FINISH_INTERIOR_MATERIAL,
   STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
   STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
+  STRUCTURAL_FINISH_DEFAULT_EXTERIOR_THICKNESS_MM,
   type StructuralFinishSpec,
 } from '../structural-finish-types';
 
@@ -25,6 +27,7 @@ describe('ADR-449 Slice 5 — createDefaultStructuralFinishSpec', () => {
       interiorMaterialId: STRUCTURAL_FINISH_INTERIOR_MATERIAL,
       exteriorMaterialId: STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
       thickness: STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
+      exteriorThickness: STRUCTURAL_FINISH_DEFAULT_EXTERIOR_THICKNESS_MM,
     });
   });
 
@@ -32,8 +35,28 @@ describe('ADR-449 Slice 5 — createDefaultStructuralFinishSpec', () => {
     expect(isFinishActive(createDefaultStructuralFinishSpec())).toBe(true);
   });
 
-  it('default πάχος = 15mm', () => {
+  it('default πάχος εσωτ. = 15mm, εξωτ. = 25mm (ασύμμετρο, Slice X4)', () => {
     expect(STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM).toBe(15);
+    expect(STRUCTURAL_FINISH_DEFAULT_EXTERIOR_THICKNESS_MM).toBe(25);
+  });
+});
+
+describe('ADR-449 Slice X4 — resolveFinishThicknessMm (ασύμμετρο πάχος ανά ταξινόμηση)', () => {
+  it('εξωτερική παρειά → exteriorThickness· εσωτερική → thickness', () => {
+    const spec = createDefaultStructuralFinishSpec();
+    expect(resolveFinishThicknessMm(spec, 'exterior')).toBe(25);
+    expect(resolveFinishThicknessMm(spec, 'interior')).toBe(15);
+  });
+
+  it('spec ΧΩΡΙΣ exteriorThickness → fallback στο thickness (συμμετρικό, back-compat)', () => {
+    const legacy: StructuralFinishSpec = {
+      enabled: true,
+      interiorMaterialId: 'mat-plaster-int',
+      exteriorMaterialId: 'mat-plaster-ext',
+      thickness: 15,
+    };
+    expect(resolveFinishThicknessMm(legacy, 'exterior')).toBe(15);
+    expect(resolveFinishThicknessMm(legacy, 'interior')).toBe(15);
   });
 });
 

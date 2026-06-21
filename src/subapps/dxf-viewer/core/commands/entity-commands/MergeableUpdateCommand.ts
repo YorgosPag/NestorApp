@@ -16,7 +16,7 @@
  *   - undo    → guard executed → applyPatch(previousPatch)
  *   - redo    → applyPatch(patch)
  *   - canMergeWith → same `type` + same entity + both dragging + within the
- *                    canonical `DEFAULT_MERGE_CONFIG.mergeTimeWindow`
+ *                    canonical merge window (`isWithinMergeWindow`, SSoT)
  *   - mergeWith → keep earliest `previousPatch`, adopt the latest `patch`
  *
  * `canMergeWith` uses **type-equality** (`other.type === this.type`) instead of

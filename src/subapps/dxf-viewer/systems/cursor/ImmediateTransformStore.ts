@@ -16,7 +16,14 @@ import { useSyncExternalStore } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
-const TRANSFORM_CANVAS_IDS = ['dxf-canvas', 'layer-canvas'] as const;
+// 🏢 ADR-040 / ADR-398 §4 — canvases που ξαναζωγραφίζονται σε ΚΑΘΕ transform change
+// (zoom με ροδάκι / pan / fit / programmatic). `preview-canvas`: το WYSIWYG ghost
+// δημιουργίας (κολώνα/τοίχος/δοκάρι/…) είναι σε world coords — μπαίνει εδώ ώστε στο
+// wheel-zoom ΧΩΡΙΣ mousemove να ξαναζωγραφίζεται world-locked (Revit/AutoCAD) μέσω του
+// ΙΔΙΟΥ dirty SSoT με τον main canvas, αντί για χωριστή subscription. Ασφαλές πλέον:
+// ο `PreviewRenderer.render()` διαβάζει live `getImmediateTransform()` (όχι cached) →
+// μηδέν stale-entity race (το entity αλλάζει μόνο σε mousemove, όχι σε pan/zoom).
+const TRANSFORM_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'preview-canvas'] as const;
 
 let _transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 const fullListeners = new Set<() => void>();

@@ -35,8 +35,15 @@ import type { Point2D } from '../../rendering/types/Types';
 export const STRUCTURAL_FINISH_INTERIOR_MATERIAL = 'mat-plaster-int';
 /** Default υλικό εξωτερικών παρειών (σοβάς/θερμοπρόσοψη) — ΑΤΟΕ OIK-4.03. */
 export const STRUCTURAL_FINISH_EXTERIOR_MATERIAL = 'mat-plaster-ext';
-/** Default περιμετρικό πάχος σοβά σε mm (Giorgio 2026-06-12). */
+/** Default πάχος σοβά **εσωτερικών** παρειών σε mm (Knauf· Giorgio 2026-06-12). */
 export const STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM = 15;
+/**
+ * ADR-449 Slice X4 — Default πάχος σοβά **εξωτερικών** παρειών σε mm (πιο παχύς εξωτ.
+ * σοβάς/θερμοπρόσοψη, Giorgio 2026-06-21). «Ομοιόμορφο κέλυφος»: ΟΛΑ τα μέλη (τοίχοι +
+ * κολόνες + δοκάρια) παίρνουν αυτό το πάχος στις πραγματικά-εξωτερικές όψεις — η εξωτ.
+ * πρόσοψη είναι ΜΙΑ συνεχής στρώση που τυλίγει το κτίριο (Revit/πραγματικότητα).
+ */
+export const STRUCTURAL_FINISH_DEFAULT_EXTERIOR_THICKNESS_MM = 25;
 
 // ─── STORED: per-element πρόθεση σοβατίσματος ──────────────────────────────────
 
@@ -54,8 +61,27 @@ export interface StructuralFinishSpec {
   readonly interiorMaterialId: string;
   /** Υλικό εξωτερικών παρειών (default `mat-plaster-ext`). */
   readonly exteriorMaterialId: string;
-  /** mm. Περιμετρικό πάχος σοβά (default 15). ΠΟΤΕ δεν μπαίνει στο `width/depth`. */
+  /** mm. Πάχος σοβά **εσωτερικών** παρειών (default 15). ΠΟΤΕ δεν μπαίνει στο `width/depth`. */
   readonly thickness: number;
+  /**
+   * ADR-449 Slice X4 — mm. Πάχος σοβά **εξωτερικών** παρειών (default 25, πιο παχύς).
+   * Absent → fallback στο `thickness` (back-compat: παλιά specs χωρίς ασύμμετρο πάχος →
+   * συμμετρικός σοβάς όπως πριν). ΠΟΤΕ δεν μπαίνει στο `width/depth`.
+   */
+  readonly exteriorThickness?: number;
+}
+
+/**
+ * ADR-449 Slice X4 — SSoT για το πάχος σοβά **ανά ταξινόμηση** παρειάς. Εξωτερικές παρειές
+ * παίρνουν τον (πιο παχύ) εξωτ. σοβά (`exteriorThickness`, fallback `thickness`)· εσωτερικές
+ * τον `thickness`. ΟΛΟΙ οι consumers (resolver κάθετων όψεων + horizontal top-cap/soffit)
+ * διαβάζουν από εδώ — μηδέν διπλασιασμός του ασύμμετρου branch.
+ */
+export function resolveFinishThicknessMm(
+  spec: StructuralFinishSpec,
+  classification: FinishClassification,
+): number {
+  return classification === 'exterior' ? (spec.exteriorThickness ?? spec.thickness) : spec.thickness;
 }
 
 // ─── DERIVED: resolver output (ποτέ stored) ────────────────────────────────────
@@ -134,13 +160,19 @@ export function createDefaultStructuralFinishSpec(): StructuralFinishSpec {
     interiorMaterialId: STRUCTURAL_FINISH_INTERIOR_MATERIAL,
     exteriorMaterialId: STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
     thickness: STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
+    exteriorThickness: STRUCTURAL_FINISH_DEFAULT_EXTERIOR_THICKNESS_MM,
   };
 }
 
 // ─── Per-element override core (Slice 5, entity & UI agnostic) ──────────────────
 
 /** Επεξεργάσιμα πεδία του spec μέσω του per-element override UI (Properties/ribbon). */
-export type FinishParamField = 'enabled' | 'interiorMaterialId' | 'exteriorMaterialId' | 'thickness';
+export type FinishParamField =
+  | 'enabled'
+  | 'interiorMaterialId'
+  | 'exteriorMaterialId'
+  | 'thickness'
+  | 'exteriorThickness';
 
 /** Spec ή default όταν απών (ώστε το override UI σε παλιό στοιχείο να δείχνει τιμές). */
 function effectiveFinishSpec(spec: StructuralFinishSpec | undefined): StructuralFinishSpec {
@@ -155,6 +187,7 @@ export function readFinishParamValue(spec: StructuralFinishSpec | undefined, fie
     case 'interiorMaterialId': return s.interiorMaterialId;
     case 'exteriorMaterialId': return s.exteriorMaterialId;
     case 'thickness': return String(Math.round(s.thickness));
+    case 'exteriorThickness': return String(Math.round(s.exteriorThickness ?? s.thickness));
   }
 }
 
@@ -178,6 +211,10 @@ export function applyFinishParam(
     case 'thickness': {
       const n = Number.parseFloat(value);
       return Number.isFinite(n) && n > 0 ? { ...base, thickness: n } : null;
+    }
+    case 'exteriorThickness': {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) && n > 0 ? { ...base, exteriorThickness: n } : null;
     }
   }
 }

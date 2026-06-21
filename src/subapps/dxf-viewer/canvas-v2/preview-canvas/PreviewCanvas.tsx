@@ -38,9 +38,6 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { EventBus } from '../../systems/events';
 // 🏢 ADR-146: Canvas Size Observer Centralization
 import { useCanvasSizeObserver } from '../../hooks/canvas';
-// 🏢 ADR-040 / ADR-398 §4: live transform SSoT — drives the world-locked ghost
-// re-paint on mouse-wheel zoom/pan that fires no mousemove (Revit/AutoCAD).
-import { subscribeTransform, getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -254,24 +251,6 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     }, []);
 
     // ============================================================================
-    // 🏢 WORLD-LOCKED GHOST ON ZOOM/PAN (ADR-040 / ADR-398 §4)
-    // ============================================================================
-
-    // Revit/AutoCAD behavior: when the user zooms with the mouse wheel WITHOUT
-    // moving the cursor, the transform changes but `drawPreview()` is never
-    // re-called (it only fires on mousemove). The cached ghost would freeze at
-    // its old scale until the next mousemove. We subscribe to the SAME live
-    // transform SSoT as the main canvas (zero-lag) and re-paint the cached
-    // world-coord entity with the new transform — locked to its world point,
-    // correctly rescaled, no re-snap. Covers EVERY tool routed through this
-    // shared canvas (column/wall/beam/line/circle/dimension/…).
-    useEffect(() => {
-      return subscribeTransform(() => {
-        rendererRef.current?.refreshTransform(getImmediateTransform(), viewportRef.current);
-      });
-    }, []);
-
-    // ============================================================================
     // EVENT BUS INTEGRATION - Drawing Completion Listener (ADR-040)
     // ============================================================================
 
@@ -322,8 +301,9 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
             ...options,
           };
 
-          // 🏢 ADR-040: Pass viewport for Y-axis inversion
-          renderer.drawPreview(entity, transformRef.current, viewportRef.current, mergedOptions);
+          // 🏢 ADR-040: Pass viewport for Y-axis inversion. Transform is NOT passed —
+          // the renderer reads it live from the SSoT at paint time (world-locked ghost).
+          renderer.drawPreview(entity, viewportRef.current, mergedOptions);
         },
 
         /**

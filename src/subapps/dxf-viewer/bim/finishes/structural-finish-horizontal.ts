@@ -28,6 +28,7 @@ import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import { safeDifference, safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import type { FinishClassification, StructuralFinishSpec } from './structural-finish-types';
+import { resolveFinishThicknessMm } from './structural-finish-types';
 import { resolveStructuralFinishFaces } from './structural-finish-resolver';
 import { computeMiteredOuter, segOffsetVec } from './structural-finish-outline-geometry';
 
@@ -159,7 +160,8 @@ export function computeHorizontalFinishFace(input: HorizontalFaceInput): Horizon
   return {
     polygons,
     zMm: input.zMm,
-    thicknessMm: spec.thickness,
+    // ADR-449 Slice X4 — ασύμμετρο πάχος ανά ταξινόμηση (SSoT helper, ίδιο με resolver).
+    thicknessMm: resolveFinishThicknessMm(spec, classification),
     direction: input.direction,
     classification,
     materialId,

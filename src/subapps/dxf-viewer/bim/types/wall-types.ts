@@ -26,6 +26,7 @@ import type {
   BoundingBox3D,
 } from './bim-base';
 import type { WallDna } from './wall-dna-types';
+import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { WallBaseBinding, WallTopBinding } from './bim-binding';
@@ -87,6 +88,14 @@ export interface WallParams {
   readonly measurementLength?: number;
   /** Layered composition. Undefined = bare structural wall (no plaster). */
   readonly dna?: WallDna;
+  /**
+   * ADR-449 Slice X4 — additive σοβάς ως **finish skin** (mirror `ColumnParams.finish`/
+   * `BeamParams.finish`), ΟΧΙ DNA layer. Το `dna` κρατά μόνο δομικό πυρήνα + μόνωση· ο
+   * σοβάς προεξέχει από τον πυρήνα μέσω της ενιαίας structural-finish σιλουέτας (ADR-449),
+   * με δικό υλικό + (ασύμμετρο) πάχος, BOQ-tracked. Absent = legacy τοίχος (σοβάς στο DNA)
+   * ή bare δομικός (parapet/fence) → δεν γίνεται finish-member (βλ. `wall-finish-source`).
+   */
+  readonly finish?: StructuralFinishSpec;
   /** mm. Start endpoint trim for SDF/perpendicular join cleanup. */
   readonly startBevel?: number;
   /** mm. End endpoint trim. */
