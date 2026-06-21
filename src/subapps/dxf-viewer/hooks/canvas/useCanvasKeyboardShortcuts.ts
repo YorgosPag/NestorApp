@@ -248,7 +248,7 @@ export function useCanvasKeyboardShortcuts({
           }
 
           // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083
-          const continuousTools = ['polyline', 'polygon', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
+          const continuousTools = ['polyline', 'polygon', 'hatch', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
           if (continuousTools.includes(activeTool)) {
             e.preventDefault();
             handleDrawingFinish();

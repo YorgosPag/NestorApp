@@ -222,6 +222,19 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             commandKey: 'ellipse',
           },
         },
+        // ADR-507 S2 — Γραμμοσκίαση (AutoCAD HATCH): κλειστό όριο → γέμισμα.
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.hatch',
+            labelKey: 'ribbon.commands.hatch',
+            tooltipKey: 'ribbon.commands.hatchTooltip',
+            icon: 'hatch',
+            commandKey: 'hatch',
+            shortcut: 'H',
+          },
+        },
         // ADR-359 Phase 10.b: Construction Line (XLINE) — infinite reference line.
         {
           type: 'simple',

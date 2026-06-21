@@ -65,7 +65,7 @@ export function useToolbarState() {
     } else if (tool.startsWith('measure-')) {
       const measurementType = tool.replace('measure-', '') as MeasurementType;
       onMeasurementStart(measurementType);
-    } else if (['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'polygon'].includes(tool)) {
+    } else if (['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'polygon', 'hatch'].includes(tool)) {
       onDrawingStart(tool as DrawingTool);
     }
   }, []);

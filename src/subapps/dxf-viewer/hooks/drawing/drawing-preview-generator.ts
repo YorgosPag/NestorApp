@@ -118,6 +118,11 @@ export function generatePreviewEntity(
   if (tool === 'floor-finish') {
     return generateSlabPreview(tempPoints, cursorPoint);
   }
+  // ── ADR-507 S2 — Hatch tool preview branch (closed boundary polygon, same
+  //    rubber-band outline as slab/floor-finish). ─────────────────────────────
+  if (tool === 'hatch') {
+    return generateSlabPreview(tempPoints, cursorPoint);
+  }
   // ── ADR-408 Εύρος Β #3 — Underfloor heating tool preview branch (closed
   //    footprint polygon, same rubber-band outline as slab/roof/floor-finish). ─
   if (tool === 'mep-underfloor') {

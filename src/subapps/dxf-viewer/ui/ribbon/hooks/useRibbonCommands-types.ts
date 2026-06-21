@@ -47,6 +47,7 @@ import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibrary
 import type { RibbonMepRiserBridge } from './useRibbonMepRiserBridge';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import type { RibbonFloorFinishBridge } from './useRibbonFloorFinishBridge';
+import type { RibbonHatchBridge } from './useRibbonHatchBridge';
 import type { RibbonThermalSpaceBridge } from './useRibbonThermalSpaceBridge';
 import type { RibbonXlineModeBridge } from './useRibbonXlineModeBridge';
 
@@ -65,6 +66,7 @@ export interface UseRibbonCommandsProps {
   slabBridge: RibbonSlabBridge;
   roofBridge: RibbonRoofBridge;
   floorFinishBridge: RibbonFloorFinishBridge;
+  hatchBridge: RibbonHatchBridge;
   thermalSpaceBridge: RibbonThermalSpaceBridge;
   columnBridge: RibbonColumnBridge;
   beamBridge: RibbonBeamBridge;

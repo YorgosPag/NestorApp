@@ -2,7 +2,7 @@
 
 > ⚠️ **Renumber 508→510 (2026-06-20):** οι αριθμοί ADR-508 (Unified Linear-Member Framing) & ADR-509 (Adaptive Entity Color) είχαν δεσμευτεί από άλλον agent. Αυτό το ADR μετονομάστηκε σε ADR-510.
 
-> **Status:** 🟢 SPECIFICATION COMPLETE — research §2 + Q&A 15 ερωτήσεων κλειστό + αρχιτεκτονική §4 + 10 φάσεις. Έτοιμο για υλοποίηση (μηδέν κώδικας ακόμη).
+> **Status:** 🟡 Φ1 IN PROGRESS — spec v3 complete· **Φ1 SSoT audit (γύρος 2) αποκάλυψε ότι ~80% της Φ1 ΗΔΗ ΥΠΑΡΧΕΙ** (ADR-357 dynamic-input + `polar-tracking-store` + snapping). Υλοποιήθηκαν οι αληθινές ελλείψεις: **Q2** (default polar 90°→15°), **Q3** (full smart OSNAP default), **E2** (math στα numeric πεδία). Q1/Q7 ~λειτουργικά ήδη. Βλ. §7 (κατάσταση Φ1). 2 γύροι έρευνας (ο 2ος adversarial).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -228,6 +228,31 @@ Fillet (στρογγύλεμα γωνίας με τόξο· `Polyline` option σ
 | **N11** | **Ιχνηλάτηση από φωτογραφία/σκαρίφημα** | Βάζεις φωτο/σκαναρισμένη κάτοψη, η AI βρίσκει ακμές & κουμπώνεις πάνω | Φωτο χειρόγραφης κάτοψης → ξανασχεδιάζεις πάνω της |
 | **N12** | **«Εξήγησέ μου / διόρθωσέ μου»** | Δείχνεις γραμμή & ρωτάς· η AI απαντά + προτείνει διόρθωση | «γιατί βγήκε στραβή;» → «λάθος snap· να το φτιάξω;» |
 | **N13** | **Generative διάταξη από περιορισμούς** | Λες τι θες, προτείνει εναλλακτικές διατάξεις γραμμών/τοίχων | «σκελετός 3 δωματίων εδώ» → 3 προτάσεις |
+| **N14** | **Σημασιολογικοί δεσμοί σε φυσική γλώσσα** | Κλειδώνεις σχέση με λόγια, χωρίς να ξέρεις «παραμετρικά» | «αυτή η γραμμή πάντα μισή από εκείνη» → μένει έτσι |
+| **N15** | **Αυτόματη διαστασιολόγηση/ετικέτες** | Σχεδιάζεις γραμμές → μπαίνουν μόνες οι σωστές διαστάσεις & ενημερώνονται live | Τραβάς δωμάτιο → εμφανίζονται αυτόματα τα μήκη πλευρών |
+| **N16** | **Geo/context-aware AI** | Ξέρει βορρά/ήλιο/όρια οικοπέδου & προτείνει ευθυγραμμίσεις | «ευθυγράμμισε με τον βορρά» / «μέσα στο όριο δόμησης» |
+
+### 2.13 Εξωτικές/προχωρημένες λειτουργίες (adversarial γύρος 2 — να μπουν στο scope)
+
+*(2ος γύρος έρευνας μετά από ερώτηση Giorgio «είσαι σίγουρος;». Πηγές: AutoCAD parametric/QuickCalc/dynamic
+blocks, MicroStation SmartLine, Civil 3D feature lines, Rhino history/georeferencing, CADStudio 2DPlot.)*
+
+| # | Λειτουργία | Τι κάνει | Πού δένει |
+|---|---|---|---|
+| E1 | **Παραμετρικοί διαστατικοί δεσμοί με τύπους** | Το μήκος/γωνία οδηγείται από εξίσωση· `D2 = 0.85·D` → αλλάζεις μία τιμή, αλλάζουν όλες οι εξαρτημένες | Επεκτείνει Q4 (υβριδικοί δεσμοί) → Parameters Manager |
+| E2 | **Αριθμητικές πράξεις & υπολογιστής στα πεδία** | Γράφεις «1500+300» ή `(* 6 7)` ή χρήση QuickCalc ζωντανά κατά την εισαγωγή | Επεκτείνει Q1 (input) — parser με math |
+| E3 | **Καμπύλες από μαθηματική συνάρτηση** | Polyline/curve από εξίσωση (ημίτονο, σπείρα, παραβολή) | Φ4 (spline) — equation curve mode |
+| E4 | **SmartLine (line+arc+rounded/chamfer εν κινήσει)** | Ένα εργαλείο που αλλάζει vertex σε rounded/chamfered καθώς σχεδιάζεις | Επιβεβαιώνει Q9 + «✨ Έξυπνη Γραμμή» (Q6) |
+| E5 | **Associative feature lines (με υψόμετρο)** | Γραμμές συνδεδεμένες με άξονα/προφίλ· αλλάζει ο άξονας → αλλάζουν· έχουν Z | Συγγενές Q4· χρήσιμο για στάθμες/κλίσεις |
+| E6 | **Αυτόματες/συσχετισμένες διαστάσεις & fields** | Ετικέτα μήκους/εμβαδού που ενημερώνεται μόνη της όταν αλλάζει η γραμμή | Magic φάση· βλ. N15 |
+| E7 | **Γεωαναφορά (georeferencing)** | Γραμμές σε πραγματικό σύστημα συντεταγμένων (GIS)· βορράς/προσανατολισμός | Βλ. N16· χρήσιμο για οικόπεδα/τοπογραφικά |
+| E8 | **History-based associativity** | «Μνήμη» πράξης χωρίς πλήρες parametric (Rhino-style) | Ελαφρύτερη εκδοχή Q4 |
+| E9 | **Scripting / API** | Προγραμματιστική δημιουργία γραμμών (AutoLISP-like) | Μελλοντικό· power users |
+| E10 | **Αφή & χειρονομίες (touch/gestures)** | Σχεδίαση/zoom/pan με αφή σε tablet | UX φάση· web-friendly |
+
+**Verdict (τίμιο):** Οι περισσότερες E1-E10 είναι **φυσικές επεκτάσεις** αυτών που ήδη αποφασίσαμε, όχι νέα
+άγνωστα. Τα πιο αξιόλογα να μπουν ρητά: **E1** (formula-driven δεσμοί), **E2** (math στα πεδία — εύκολο & wow),
+**E3** (equation curves), **E6** (auto-updating fields). Τα E7 (georeferencing) & E9 (scripting) = μελλοντικά.
 
 ---
 
@@ -254,7 +279,14 @@ Fillet (στρογγύλεμα γωνίας με τόξο· `Polyline` option σ
 | Q14 | Συμπεριφορά μετά το τέλος μιας γραμμής; | **Μένει ενεργό** — συνεχής σχεδίαση, ESC για έξοδο | Μετά το Enter (τέλος γραμμής) το tool παραμένει ενεργό για την επόμενη (CAD-standard repeat). ESC = έξοδος στο «επιλογή». Ισχύει για όλα τα line tools. Right-click/Enter μπορεί να επαναλαμβάνει & την τελευταία εντολή. ⚠️ Καθαρό state reset μεταξύ διαδοχικών γραμμών (να μην «κολλάνε» tempPoints) — ήδη υπάρχει `DrawingState` (`tempPoints`, `currentPoints`). |
 | Q15 | Πώς εμφανίζονται οι διαστάσεις (μονάδες); | **Μέτρα με δεκαδικά** (π.χ. 3.25 m) | Display μήκους/απόστασης = μέτρα με δεκαδικά (default 2-3 δεκαδικά). Internal αποθήκευση παραμένει σε mm (συνέπεια με υπάρχον entity model). Κεντρικός formatter (πιθανό υπάρχον i18n number/unit util) — **όχι** hardcoded «m». Πιθανή ρύθμιση δεκαδικών στο μέλλον. ⚠️ Input: ο χρήστης μπορεί να πληκτρολογεί σε m ή mm — ο parser να δέχεται και τα δύο (π.χ. «3.25» → m, «3250mm» → mm). |
 
-> **Q&A status:** 🟢 ΚΛΕΙΣΤΟ (15 ερωτήσεις απαντημένες, 2026-06-20). Επόμενο: υλοποίηση κατά φάσεις (§4.8).
+> **Q&A status:** 🟢 ΚΛΕΙΣΤΟ — 16 ερωτήσεις (15 βασικές + Q16 στρατηγική AI). Πρωτοποριακές AI: όλες στο
+> roadmap, 3 tiers (§4.9). Κάθε AI μαγεία = δική της απόφαση/φάση πριν υλοποιηθεί.
+
+### 3.1 Πρωτοποριακές AI μαγείες — αποφάσεις (Q16+)
+
+| # | Ερώτηση (απλά) | Απάντηση Giorgio | Επίπτωση |
+|---|---|---|---|
+| Q16 | Πώς χειριζόμαστε τις 13 πρωτοποριακές AI μαγείες; | **Όλες στο roadmap** — ο agent τις ιεραρχεί σε επίπεδα | Και οι 13 (N1-N13) μπαίνουν στο σχέδιο. Ιεράρχηση σε 3 tiers ανά εφικτότητα/κόστος → §4.9. Καμία δεν χάνεται· οι βαριές (LLM/CV) πάνε σε μελλοντικές φάσεις. Κάθε μία θα γίνει δική της απόφαση/φάση πριν υλοποιηθεί. |
 
 ---
 
@@ -337,6 +369,46 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
 | **Φ9** | DXF round-trip πλήρες (LTYPE, bulge, spline, MLINE) | §4.6 |
 | **Φ10** | Επόμενα modern: AI palette (Quad-style), command autocomplete/autocorrect, Object Snap Tracking | §2.8 |
 
+### 4.9 Roadmap πρωτοποριακών AI μαγειών (Q16 — και οι 13, σε 3 επίπεδα)
+
+**Tier A — «Τώρα» (ντετερμινιστικές/rule-based, μηδέν ή ελάχιστο ML — μεγάλο wow με χαμηλό ρίσκο):**
+
+| # | Μαγεία | Γιατί εφικτή σύντομα |
+|---|---|---|
+| N4 | Σημασιολογικές έλξεις | Καθαρή γεωμετρία (κέντρο/μέση/άξονας) — επέκταση του snap engine |
+| N5 | Αυτο-θεραπεία ενώ σχεδιάζεις | Ανοχές γεωμετρίας (κενά/διπλές/σχεδόν-συνευθειακά) |
+| N6 | Έξυπνη επέκταση μοτίβου | Ανίχνευση ίσων αποστάσεων/επανάληψης — γεωμετρικά |
+| N8 | Ζωντανός έλεγχος κανονισμού | Κανόνες ΝΟΚ (πλάτη διαδρόμου/σκάλας/πόρτας) — reuse structural checks |
+| N9 | Αυτόματο layer/στυλ από πρόθεση | Ευρετικές (κρυφή ακμή→hidden, άξονας→center) |
+| N12 | «Εξήγησέ μου / διόρθωσέ μου» (βασικό) | Rule-based «τι είναι» + «λάθος snap → fix» |
+| N1 | Προβλεπτικό φάντασμα (v1, rule-based) | «κλείσε το σχήμα;» / «επανάλαβε την απόσταση;» χωρίς ML |
+| N15 | Αυτόματη διαστασιολόγηση/ετικέτες (v1) | Auto-dimensions + fields που ενημερώνονται — γεωμετρικά (συγγενές E6) |
+
+**Tier B — «Μεσαία» (χρειάζονται learning/ML ή CV — μέτριο κόστος):**
+
+| # | Μαγεία | Τι χρειάζεται |
+|---|---|---|
+| N1 | Προβλεπτικό φάντασμα (v2, ML) | Μοντέλο ακολουθίας ενεργειών (μαθαίνει μοτίβα χρήστη) |
+| N7 | Καθάρισμα ελεύθερου σκίτσου | Geometry fitting (deterministic core + ML βελτίωση) |
+| N10 | Προσωπικός co-pilot που μαθαίνει εσένα | Usage logging (privacy-safe) + προτιμήσεις/ML |
+| N11 | Ιχνηλάτηση από φωτογραφία/σκαρίφημα | Edge detection (computer vision) + βαθμονόμηση κλίμακας |
+| N16 | Geo/context-aware AI | Γεωαναφορά (E7) + προσανατολισμός/ήλιος/όρια οικοπέδου + προτάσεις |
+
+**Tier C — «Μελλοντικές» (βαριά AI / LLM — υψηλό κόστος, μέγιστο wow):**
+
+| # | Μαγεία | Τι χρειάζεται |
+|---|---|---|
+| N2 | Σχεδίαση με φυσική γλώσσα/φωνή | LLM → εντολές γεωμετρίας (mirror Text2CAD/CADialogue, αλλά live σε γραμμές) |
+| N3 | «Ζωγράφισε το αποτέλεσμα» | LLM/solver: περιγραφή/περιορισμός → γεωμετρία |
+| N13 | Generative διάταξη από περιορισμούς | Generative model: προτάσεις διατάξεων |
+| N14 | Σημασιολογικοί δεσμοί σε φυσική γλώσσα | NLP → παραμετρικός δεσμός (πάνω στο E1 formula-driven engine) |
+
+> **Εξωτικές E1-E10 (§2.13):** οι E1 (formula δεσμοί), E2 (math στα πεδία), E3 (equation curves), E6 (auto fields)
+> εντάσσονται στις βασικές φάσεις (E2→Φ1, E3→Φ4, E1→Φ7, E6→Φ6). E7/E9/E10 = μελλοντικά (με N16/scripting/touch).
+
+> **Φ11 = Tier A, Φ12 = Tier B, Φ13 = Tier C** (μετά τις Φ1-Φ10 της βασικής δημιουργίας/επεξεργασίας).
+> Κάθε AI μαγεία = ξεχωριστή απόφαση Q&A + φάση πριν υλοποιηθεί (privacy/κόστος/ακρίβεια ανά περίπτωση).
+
 ---
 
 ## 5. Πηγές έρευνας
@@ -361,3 +433,41 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   Q7 πλήρες live ghost· Q8 multifunctional grips· Q9 polyline με bulge (γραμμή+τόξο+width)· Q10 και οι 4
   magic πρώτες· Q11 γενικό MultiLine· Q12 spline fit+CV· Q13 πλήρες modify suite· Q14 συνεχής σχεδίαση·
   Q15 μέτρα με δεκαδικά. Συγγραφή αρχιτεκτονικής §4 + 10 φάσεις. Status → SPECIFICATION COMPLETE.
+- **2026-06-20** — Επέκταση έρευνας μετά από ερώτηση Giorgio «προβλέψαμε τα πάντα;»: NEW §2.10 (υπαρκτά gaps —
+  axis-lock βελάκια, From/M2P snap, tracking points, auto-close, auto-trim γωνιών, freehand, coord readout,
+  Tab-lock…), §2.11 (υπαρκτή AI: Smart Blocks/Markup Assist/Activity Insights/BricsCAD AI Predict + research
+  Text2CAD/CADialogue/NURBGen), §2.12 (**13 πρωτοποριακές AI μαγείες N1-N13** που κανείς δεν έχει shipped:
+  predictive next-line, NL/voice drawing, draw-by-result, semantic snap, live self-healing, pattern auto-extend,
+  sketch beautify, live code-compliance, semantic auto-styling, personal co-pilot, photo trace, explain/fix,
+  generative layout). Q&A ξανά ανοιχτό (Q16+).
+- **2026-06-20** — Q16: «όλες οι 13 AI μαγείες στο roadmap». NEW §4.9 (ιεράρχηση 3 tiers: A=ντετερμινιστικές
+  τώρα N4/N5/N6/N8/N9/N12/N1v1· B=ML/CV N1v2/N7/N10/N11· C=LLM N2/N3/N13· φάσεις Φ11/Φ12/Φ13). Status → SPEC v2
+  COMPLETE (16 Q&A, 13 φάσεις). Έτοιμο για υλοποίηση.
+- **2026-06-20** — 2ος (adversarial) γύρος έρευνας μετά από αίτημα Giorgio: NEW §2.13 (10 εξωτικές E1-E10 —
+  formula-driven δεσμοί, math στα πεδία/QuickCalc, equation curves, MicroStation SmartLine, Civil 3D feature
+  lines, auto-updating fields, georeferencing, history-based associativity, scripting/API, touch/gestures) +
+  NEW AI μαγείες **N14-N16** (semantic NL constraints, auto-dimensioning, geo/context-aware). §4.9 ενημερωμένο.
+  Status → SPEC v3. Verdict: οι εξωτικές = κυρίως φυσικές επεκτάσεις· E1/E2/E3/E6 εντάσσονται στις βασικές φάσεις.
+- **2026-06-20** — **Φ1 SSoT audit (γύρος 2) + υλοποίηση αληθινών ελλείψεων.** Στοχευμένο grep ανά domain
+  αποκάλυψε ότι ο πυρήνας της Φ1 **ήδη υπάρχει & είναι wired** (το handoff audit είχε χάσει τα subsystems
+  `systems/constraints/` + `systems/dynamic-input/`): polar tracking (`polar-tracking-store` + `applyPolar`,
+  ADR-357), Direct Distance/dynamic fields (length/angle + Tab + live cursor-angle auto-fill,
+  `useDynamicInputRealtime`), OSNAP πλήρες engine roster, length SSoT (`config/display-length-format`),
+  angle formatter (`distance-label-utils.formatAngle/formatAngleLocale`). Υλοποιήθηκαν **μόνο** οι πραγματικές
+  ελλείψεις, χειρουργικά, σε καθαρά (μη hatch-owned) αρχεία:
+  • **Q2** default polar increment **90°→15°** (`systems/constraints/polar-tracking-store.ts` `DEFAULT_INCREMENT`·
+    ήδη wired live στο drawing hover· user-overridable + localStorage-preserving).
+  • **Q3** full smart OSNAP **default** — προσθήκη MIDPOINT/CENTER/INTERSECTION/PERPENDICULAR/TANGENT/EXTENSION
+    στο default snapState (`snapping/context/SnapContext.tsx`· gated πίσω από global OSNAP toggle· new-users-only).
+  • **E2** (math στα numeric πεδία) — NEW SSoT `systems/dynamic-input/numeric-expression.ts` (`evalExpr`,
+    recursive-descent· `+ - * / ()`, unary, decimals· μηδέν `eval`/`Function`· div-by-zero→null). Wired σε
+    `coordinate-parser.parseValue` (math σε cartesian/polar components· V→`[^,<]+?`, parseValue=μοναδικός validator)
+    + `keyboard-handlers/line-keyboard-handler.ts` (length/angle πεδία). 29 jest (numeric-expression) +
+    7 νέα (coordinate-parser) — 91/91 GREEN στο dynamic-input+constraints.
+  **Q1 (Direct Distance) & Q7 (live μήκος+γωνία) — ~λειτουργικά ήδη** μέσω ADR-357 (live angle auto-fill + readout).
+  **Εκκρεμότητες Φ1 (DEFER, μη-blocking):** (α) γωνία-label στο canvas line-ghost (`preview-entity-renderers`
+  `renderLine` — locale-aware via υπάρχον `formatAngleLocale`· σήμερα μόνο μήκος μέσω `showEdgeDistances`,
+  γωνία φαίνεται στο dynamic-input overlay)· (β) plain-length-only + Enter (χωρίς mouse move) edge στο
+  `handleLineEnter` (όταν `angleValue` κενό → να κουμπώνει στη live polar γωνία αντί jump σε angle field)· (γ)
+  η wiring αυτών ακουμπά **hatch-owned drawing αρχεία** (ADR-507 uncommitted) → αναμονή commit για conflict-free.
+  Status → 🟡 Φ1 IN PROGRESS. UNCOMMITTED. 🔴 browser-verify (15° μαγνήτης, OSNAP set, `1500+300` σε πεδίο) + commit.

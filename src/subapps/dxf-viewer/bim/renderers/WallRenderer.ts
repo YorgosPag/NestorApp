@@ -25,7 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
-import { WALL_CATEGORY_FILL, wallFootprintSubcategory } from '../walls/wall-render-palette';
+import { WALL_CATEGORY_FILL, WALL_LINE_CONTRAST, wallFootprintSubcategory } from '../walls/wall-render-palette';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -39,7 +39,7 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
-import { adaptEntityColorForCanvas, adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptFillTintForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
@@ -148,10 +148,10 @@ export class WallRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_wLayer.lineweight) ? _wLayer.lineweight : undefined,
       color: _wLayer.color ?? undefined,
     } : undefined;
-    this.drawFootprint(wall, _wLayerOverride);
+    const _edgeColorRaw = this.drawFootprint(wall, _wLayerOverride);
     this.drawMaterialHatch(wall, _wLayerOverride);
     this.drawDnaLayerLines(wall);
-    this.drawAxis(wall);
+    this.drawAxis(wall, _edgeColorRaw);
 
     // ADR-404 Phase 3 — κλείσιμο translate (cut σώμα)· βάση λεπτή + connecting lines.
     // Το ring = outer (fwd) + inner (reversed), ίδιο με το footprint του τοίχου.
@@ -225,10 +225,10 @@ export class WallRenderer extends BaseEntityRenderer {
    * neighbouring renderers see the temporary composite mode. Strokes follow
    * the cutout so the wall outline stays intact around the opening jambs.
    */
-  private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride): void {
+  private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride): string | null {
     const outer = wall.geometry.outerEdge.points;
     const inner = wall.geometry.innerEdge.points;
-    if (outer.length < 2 || inner.length < 2) return;
+    if (outer.length < 2 || inner.length < 2) return null;
 
     const cat = wall.params.category;
     const _styles = useDrawingScaleStore.getState().objectStyles;
@@ -274,9 +274,11 @@ export class WallRenderer extends BaseEntityRenderer {
     // stroking, else the wall outline + mitred corners vanish when an opening
     // is hosted (the stroke would draw the opening rect instead).
     this.traceFootprintRing(outer, inner);
-    // ADR-509 — background-adaptive: near-black τοίχος (#2b2f36) ορατός σε μαύρο canvas.
-    if (_edgeColor !== null) this.ctx.strokeStyle = adaptEntityColorForCanvas(_edgeColor);
+    // ADR-509 — background-adaptive + σαφώς φωτεινό δομικό γκρι (WALL_LINE_CONTRAST), χωρίς
+    // ξέπλυμα ζωηρών V/G overrides: near-black #2b2f36 → ανοιχτό γκρι· κόκκινο override → μένει.
+    if (_edgeColor !== null) this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(_edgeColor, WALL_LINE_CONTRAST);
     this.ctx.stroke();
+    return _edgeColor;
   }
 
   /** Traces the wall footprint ring (outer fwd + inner reversed) as a closed path. */
@@ -348,13 +350,20 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  /** Axis polyline rendered dashed-thin (centerline visual aid). */
-  private drawAxis(wall: WallEntity): void {
+  /**
+   * Axis polyline rendered dashed-thin (centerline visual aid). ADR-509 — η γραμμή άξονα
+   * δεν είχε explicit χρώμα (κληρονομούσε το τελευταίο stroke)· τώρα παίρνει το **ίδιο
+   * background-adaptive φωτεινό** χρώμα με το outline (`WALL_LINE_CONTRAST`) ώστε να ξεχωρίζει.
+   */
+  private drawAxis(wall: WallEntity, edgeColor: string | null): void {
     const axis = wall.geometry.axisPolyline.points;
     if (axis.length < 2) return;
     this.ctx.save();
     this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    if (edgeColor !== null) {
+      this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(edgeColor, WALL_LINE_CONTRAST);
+    }
     this.drawPolyline(axis);
     this.ctx.restore();
   }

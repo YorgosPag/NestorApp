@@ -25,6 +25,7 @@ import {
   parseHex,
   rgbaString,
   rgbToHex,
+  saturation,
   srgbRelativeLuminance,
   type RgbaColor,
 } from './color-math';
@@ -71,14 +72,19 @@ const _cache = new Map<string, string>();
 
 /**
  * Προσαρμόζει ένα χρώμα οντότητας στο **ζωντανό** 2D canvas background. Memoized ανά
- * `χρώμα|φόντο`. Καλείται από τους 2D renderers ΑΚΡΙΒΩΣ πριν το `ctx.strokeStyle`/`fillStyle`.
+ * `χρώμα|φόντο|κατώφλι`. Καλείται από τους 2D renderers ΑΚΡΙΒΩΣ πριν το `ctx.strokeStyle`/
+ * `fillStyle`. Το `minContrast` επιτρέπει σε συγκεκριμένες οντότητες (π.χ. wall outline +
+ * axis, βλ. `WALL_LINE_CONTRAST`) να ζητούν **πιο φωτεινό** αποτέλεσμα από το default 3.0.
  */
-export function adaptEntityColorForCanvas(colorHex: string): string {
+export function adaptEntityColorForCanvas(
+  colorHex: string,
+  minContrast: number = MIN_ENTITY_CONTRAST,
+): string {
   const bg = resolveDxfCanvasBackgroundHex();
-  const key = `${colorHex}|${bg}`;
+  const key = `${colorHex}|${bg}|${minContrast}`;
   const hit = _cache.get(key);
   if (hit !== undefined) return hit;
-  const out = adaptColorToBackground(colorHex, bg);
+  const out = adaptColorToBackground(colorHex, bg, minContrast);
   _cache.set(key, out);
   return out;
 }
@@ -147,6 +153,30 @@ function computeAdaptedFillTint(fill: string, bg: string): string {
     else lo = mid;
   }
   return rgbaString(tintAt(hi));
+}
+
+// ============================================================================
+// STRUCTURAL LINE COLOR — δομικό γκρι περίγραμμα/άξονας: φωτεινό αλλά hue-safe
+// ============================================================================
+
+/**
+ * Πάνω από αυτόν τον κορεσμό ένα χρώμα θεωρείται «ζωηρό» (user V/G override, π.χ. κόκκινο):
+ * το mix-προς-λευκό θα το ξέπλενε, άρα ΔΕΝ εφαρμόζουμε το επιθετικό κατώφλι — μόνο standard.
+ */
+export const SATURATED_LINE_THRESHOLD = 0.4;
+
+/**
+ * Προσαρμογή χρώματος **δομικής γραμμής** (wall outline + γραμμή άξονα) στο live 2D bg, με
+ * **σαφώς φωτεινό** αποτέλεσμα για τα ουδέτερα δομικά γκρι (#2b2f36/#6b7280 → ανοιχτό γκρι),
+ * αλλά **χωρίς ξέπλυμα** ζωηρών χρωμάτων: κορεσμένα (≥ {@link SATURATED_LINE_THRESHOLD}) παίρνουν
+ * μόνο το standard {@link MIN_ENTITY_CONTRAST} (κόκκινο override μένει κόκκινο). `brightContrast`
+ * = το επιθετικό κατώφλι για τα γκρι (βλ. `WALL_LINE_CONTRAST`).
+ */
+export function adaptStructuralLineColorForCanvas(colorHex: string, brightContrast: number): string {
+  const c = parseHex(colorHex);
+  if (!c) return colorHex; // non-hex (rgba) → pass-through
+  if (saturation(c) >= SATURATED_LINE_THRESHOLD) return adaptEntityColorForCanvas(colorHex);
+  return adaptEntityColorForCanvas(colorHex, brightContrast);
 }
 
 /** Test hook — καθαρίζει τα memo caches (π.χ. όταν αλλάζει το background στο test). */

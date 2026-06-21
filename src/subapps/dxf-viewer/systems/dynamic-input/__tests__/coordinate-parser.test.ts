@@ -143,6 +143,44 @@ describe('parseCoordInput', () => {
     });
   });
 
+  describe('ADR-510 Φ1 (E2): math expressions in components', () => {
+    it('evaluates addition in an absolute cartesian X', () => {
+      const result = parseCoordInput('100+50,0', null, DISPLAY_UNIT);
+      expect(result).not.toBeNull();
+      expect(result!.x).toBeCloseTo(1500); // (100+50)cm = 150cm = 1500mm
+      expect(result!.y).toBeCloseTo(0);
+    });
+
+    it('evaluates multiplication with precedence', () => {
+      const result = parseCoordInput('2+3*4,0', null, DISPLAY_UNIT);
+      expect(result).not.toBeNull();
+      expect(result!.x).toBeCloseTo(140); // (2+3*4)=14 cm = 140mm
+    });
+
+    it('evaluates parentheses', () => {
+      const result = parseCoordInput('(2+3)*4,0', null, DISPLAY_UNIT);
+      expect(result).not.toBeNull();
+      expect(result!.x).toBeCloseTo(200); // 20cm = 200mm
+    });
+
+    it('evaluates math with a unit suffix', () => {
+      const result = parseCoordInput('1.5+0.5m,0', null, DISPLAY_UNIT);
+      expect(result).not.toBeNull();
+      expect(result!.x).toBeCloseTo(2000); // (1.5+0.5)m = 2m = 2000mm
+    });
+
+    it('evaluates math in a relative polar distance', () => {
+      const result = parseCoordInput('@50+50<0', REF, DISPLAY_UNIT);
+      expect(result).not.toBeNull();
+      expect(result!.x).toBeCloseTo(REF.x + 1000); // 100cm = 1000mm along +X
+      expect(result!.y).toBeCloseTo(REF.y);
+    });
+
+    it('returns null when a component is a malformed expression', () => {
+      expect(parseCoordInput('100+,50', null, DISPLAY_UNIT)).toBeNull();
+    });
+  });
+
   describe('edge cases', () => {
     it('returns null for empty string', () => {
       expect(parseCoordInput('', null, DISPLAY_UNIT)).toBeNull();

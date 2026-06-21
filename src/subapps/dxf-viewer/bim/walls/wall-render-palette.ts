@@ -13,6 +13,18 @@
  */
 import type { WallCategory } from '../types/wall-types';
 
+/**
+ * Brighter line contrast για το wall **outline + γραμμή άξονα** ενάντια στο live 2D canvas
+ * (ADR-509). Σαφώς υψηλότερο από το default `MIN_ENTITY_CONTRAST` (3.0): ο Giorgio ζήτησε τα
+ * περιγράμματα + τον κεντρικό άξονα πιο φωτεινά ώστε να ξεχωρίζουν καθαρά πάνω από το poché
+ * body fill σε μαύρο φόντο. Σε μαύρο canvas το near-black #2b2f36 → ~`#a8aaac` (ανοιχτό γκρι,
+ * όχι λευκό-harsh). Περνιέται ως `adaptEntityColorForCanvas(color, WALL_LINE_CONTRAST)`.
+ *
+ * NB: το 4.5 (πρώτη απόπειρα) έδινε `#727579` — μόλις +28/κανάλι από το προηγ. `#565a5f` (3.0),
+ * ανεπαίσθητο. Το 9.0 δίνει σαφή, ορατή διαφορά διατηρώντας τον CAD γκρι χαρακτήρα.
+ */
+export const WALL_LINE_CONTRAST = 9.0;
+
 /** Translucent fill colour per category (CAD industry convention). 2D-only. */
 export const WALL_CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
   exterior:  'rgba(120, 144, 156, 0.18)', // concrete slate

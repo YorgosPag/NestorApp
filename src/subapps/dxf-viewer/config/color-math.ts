@@ -61,6 +61,17 @@ export function luminance601(rgb: Rgb): number {
   return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
 }
 
+/**
+ * Κορεσμός 0..1 (HSV/HSL ορισμός: `(max−min)/max`). `0` = ουδέτερο γκρι, `1` = πλήρως κορεσμένο.
+ * Επιτρέπει διαχωρισμό «δομικό γκρι» (χαμηλός κορεσμός → ασφαλές να ανοίξει προς λευκό χωρίς
+ * αλλοίωση) από «ζωηρό χρώμα» (υψηλός κορεσμός → mix-προς-λευκό θα το ξέπλενε → να μείνει).
+ */
+export function saturation(rgb: Rgb): number {
+  const max = Math.max(rgb.r, rgb.g, rgb.b);
+  const min = Math.min(rgb.r, rgb.g, rgb.b);
+  return max === 0 ? 0 : (max - min) / max;
+}
+
 /** sRGB linearization ενός καναλιού 0..255 → linear 0..1 (WCAG 2.x). */
 function linearizeChannel(c: number): number {
   const s = c / 255;

@@ -10,7 +10,10 @@
 
 const KEY_INCREMENT = 'dxf:polar.increment';
 const KEY_ADDITIONAL = 'dxf:polar.additional';
-const DEFAULT_INCREMENT = 90;
+// ADR-510 Φ1 (Q2): dense polar tracking — magnet every 15° by default (0/15/30/45…),
+// so orthogonal 0/90 stay a subset. User-overridable from the status-bar dropdown
+// (persisted to localStorage); an existing saved value always wins over this default.
+const DEFAULT_INCREMENT = 15;
 
 type Listener = () => void;
 

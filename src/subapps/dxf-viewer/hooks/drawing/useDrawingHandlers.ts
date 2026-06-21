@@ -239,7 +239,7 @@ export function useDrawingHandlers(
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
     // CRITICAL: Check distance BEFORE snap, using RAW point!
     // 🏢 ENTERPRISE: Unified close detection for ALL polygon-based tools (polygon, measure-area, overlays)
-    const isClosableTool = activeTool === 'measure-area' || activeTool === 'polygon';
+    const isClosableTool = activeTool === 'measure-area' || activeTool === 'polygon' || activeTool === 'hatch';
     const hasMinPoints = drawingState.tempPoints.length >= 3; // Need at least 3 points to close
 
     if (isClosableTool && hasMinPoints && drawingState.tempPoints[0]) {
@@ -432,7 +432,7 @@ export function useDrawingHandlers(
   const onDrawingDoubleClick = useCallback(() => {
     // 🏢 ENTERPRISE (2026-01-27): Continuous tools that finish with double-click
     // 🏢 ENTERPRISE (2026-01-31): Added circle-best-fit - ADR-083
-    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-angle-measuregeom' || activeTool === 'measure-distance-continuous' || activeTool === 'circle-best-fit') {
+    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'hatch' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-angle-measuregeom' || activeTool === 'measure-distance-continuous' || activeTool === 'circle-best-fit') {
       // Check for overlay completion callback first
       const { toolStyleStore } = require('../../stores/ToolStyleStore');
       const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();

@@ -84,6 +84,7 @@ export type DrawingTool =
   | 'circle' | 'circle-diameter' | 'circle-2p-diameter'
   | 'circle-3p' | 'circle-chord-sagitta' | 'circle-2p-radius' | 'circle-best-fit'
   | 'polyline' | 'polygon'
+  | 'hatch' // ADR-507 S2 — γραμμοσκίαση (κλειστό όριο, N-click + Enter)
   | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle'
   | 'measure-angle-line-arc' | 'measure-angle-two-arcs' | 'measure-angle-measuregeom' | 'measure-angle-constraint'
   | 'arc-3p' | 'arc-cse' | 'arc-sce'

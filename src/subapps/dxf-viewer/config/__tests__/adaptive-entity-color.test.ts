@@ -16,6 +16,7 @@ import {
   adaptColorToBackground,
   adaptEntityColorForCanvas,
   adaptFillTintForCanvas,
+  adaptStructuralLineColorForCanvas,
   _clearAdaptiveColorCache,
   MIN_ENTITY_CONTRAST,
   MIN_FILL_CONTRAST,
@@ -169,5 +170,46 @@ describe('adaptEntityColorForCanvas (live bg = #000000 σε test/jsdom)', () => 
     const a = adaptEntityColorForCanvas('#2b2f36');
     const b = adaptEntityColorForCanvas('#2b2f36');
     expect(a).toBe(b);
+  });
+
+  it('minContrast param (WALL_LINE_CONTRAST) → πιο φωτεινό από το default', () => {
+    const standard = adaptEntityColorForCanvas('#2b2f36');
+    const brighter = adaptEntityColorForCanvas('#2b2f36', 4.5);
+    expect(brighter).not.toBe(standard);
+    expect(contrastRatio(brighter, '#000000')).toBeGreaterThan(contrastRatio(standard, '#000000'));
+    expect(contrastRatio(brighter, '#000000')).toBeGreaterThanOrEqual(4.5 - 0.05);
+  });
+
+  it('minContrast = διαφορετικό κλειδί cache (δεν μολύνει το default)', () => {
+    const def = adaptEntityColorForCanvas('#2b2f36');
+    adaptEntityColorForCanvas('#2b2f36', 4.5);
+    expect(adaptEntityColorForCanvas('#2b2f36')).toBe(def);
+  });
+});
+
+describe('adaptStructuralLineColorForCanvas (φωτεινό γκρι, hue-safe)', () => {
+  beforeEach(() => _clearAdaptiveColorCache());
+  const BRIGHT = 9.0;
+
+  it('δομικό γκρι #2b2f36 → ΣΑΦΩΣ φωτεινό (πιο ανοιχτό από default 3.0)', () => {
+    const out = adaptStructuralLineColorForCanvas('#2b2f36', BRIGHT);
+    expect(out).toBe(adaptEntityColorForCanvas('#2b2f36', BRIGHT));
+    expect(contrastRatio(out, '#000000')).toBeGreaterThan(contrastRatio(adaptEntityColorForCanvas('#2b2f36'), '#000000'));
+    expect(contrastRatio(out, '#000000')).toBeGreaterThanOrEqual(BRIGHT - 0.1);
+  });
+
+  it('γκρι interior #6b7280 → ανοίγει (low saturation → bright path)', () => {
+    const out = adaptStructuralLineColorForCanvas('#6b7280', BRIGHT);
+    expect(out).toBe(adaptEntityColorForCanvas('#6b7280', BRIGHT));
+    expect(out).not.toBe('#6b7280');
+  });
+
+  it('ΖΩΗΡΟ κόκκινο override #FF0000 → ΜΕΝΕΙ κόκκινο (ΟΧΙ ξέπλυμα προς λευκό)', () => {
+    // saturation 1.0 ≥ threshold → standard path· #FF0000 contrast≈5.25 ≥ 3.0 → αυτούσιο.
+    expect(adaptStructuralLineColorForCanvas('#FF0000', BRIGHT)).toBe('#FF0000');
+  });
+
+  it('non-hex (rgba) → pass-through', () => {
+    expect(adaptStructuralLineColorForCanvas('rgba(1,2,3,0.5)', BRIGHT)).toBe('rgba(1,2,3,0.5)');
   });
 });

@@ -83,6 +83,16 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     ALL_MODES.forEach(type => {
       initialState[type] = (
         type === ExtendedSnapType.ENDPOINT ||
+        // ADR-510 Φ1 (Q3): full smart OSNAP set on by default — endpoint/midpoint/
+        // center/intersection/perpendicular/tangent/extension. Still gated behind the
+        // global OSNAP master toggle (off by default), so nothing snaps until enabled;
+        // affects defaults for new users only (existing per-mode prefs are preserved).
+        type === ExtendedSnapType.MIDPOINT ||
+        type === ExtendedSnapType.CENTER ||
+        type === ExtendedSnapType.INTERSECTION ||
+        type === ExtendedSnapType.PERPENDICULAR ||
+        type === ExtendedSnapType.TANGENT ||
+        type === ExtendedSnapType.EXTENSION ||
         type === ExtendedSnapType.GUIDE ||
         type === ExtendedSnapType.CONSTRUCTION_POINT ||
         type === ExtendedSnapType.GRID ||

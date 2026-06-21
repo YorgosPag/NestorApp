@@ -18,6 +18,8 @@ import type {
 } from '../../types/scene';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
+// ADR-507 S2 — γραμμοσκίαση: boundary points → HatchEntity (με τα draw-defaults).
+import { buildHatchEntityFromBoundary } from '../../bim/hatch/hatch-completion';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -321,6 +323,9 @@ export function createEntityFromTool(
         } as PolylineEntity;
       }
       break;
+    // ADR-507 S2 — γραμμοσκίαση (Τρόπος Α: κλειστό όριο, N-click + Enter).
+    case 'hatch':
+      return buildHatchEntityFromBoundary(points, id, defaultLayerId);
     // Arc drawing tools - ADR-059
     case 'arc-3p':
       // 3-Point Arc: Start -> Point on Arc -> End
@@ -374,16 +379,9 @@ export function createEntityFromTool(
         const finalCounterclockwise = arcFlipped
           ? !arcResult.counterclockwise
           : arcResult.counterclockwise;
-        console.debug('createEntityFromTool arc-sce:', {
-          startAngle: arcResult.startAngle,
-          endAngle: arcResult.endAngle,
-          counterclockwise: finalCounterclockwise,
-          flipped: arcFlipped,
-          points: { start, center, end },
-        });
-        const arcEntity = {
+        return {
           id,
-          type: 'arc' as const,
+          type: 'arc',
           center: arcResult.center,
           radius: arcResult.radius,
           startAngle: arcResult.startAngle,
@@ -391,9 +389,7 @@ export function createEntityFromTool(
           visible: true,
           layerId: defaultLayerId,
           counterclockwise: finalCounterclockwise,
-        };
-        console.debug('createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
-        return arcEntity as ArcEntity;
+        } as ArcEntity;
       }
       break;
     case 'xline': {
@@ -490,6 +486,7 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'polyline':
     case 'polygon':
     case 'measure-area':
+    case 'hatch': // ADR-507 S2 — closed boundary, N-click + Enter
     case 'circle-best-fit':
       return false; // These tools continue until manually finished
     default:

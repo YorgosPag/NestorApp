@@ -14,6 +14,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { fromDisplay } from '../../config/units';
 import type { DisplayUnit } from '../../config/units';
+// ADR-510 Φ1 (E2) — SSoT arithmetic evaluator so each coordinate component may be
+// typed as a math expression (e.g. "1500+300,2*1000", "@(1+2)m<45").
+import { evalExpr } from './numeric-expression';
 
 export type CoordMode = 'abs' | 'rel' | 'polar';
 
@@ -48,17 +51,22 @@ export function parseCoordInput(
   const t = text.trim();
   if (!t) return null;
 
+  // ADR-510 Φ1 (E2): strip an optional trailing unit suffix, then evaluate the
+  // remainder as an arithmetic expression (so "1500+300", "2*1.5m" both work).
   const parseValue = (s: string): number => {
-    const m = s.trim().match(/^([+-]?\d*\.?\d+)\s*(mm|cm|m|in|ft)?$/i);
-    if (!m) return NaN;
-    const num = parseFloat(m[1]);
-    if (!Number.isFinite(num)) return NaN;
-    const unit = (m[2]?.toLowerCase() as DisplayUnit | undefined) ?? displayUnit;
+    const trimmed = s.trim();
+    const um = trimmed.match(/(mm|cm|m|in|ft)$/i);
+    const exprPart = um ? trimmed.slice(0, trimmed.length - um[1].length) : trimmed;
+    const num = evalExpr(exprPart);
+    if (num === null) return NaN;
+    const unit = (um?.[1]?.toLowerCase() as DisplayUnit | undefined) ?? displayUnit;
     return fromDisplay(num, unit);
   };
 
-  // Regex building blocks
-  const V = String.raw`([+-]?\d*\.?\d+(?:\s*(?:mm|cm|m|in|ft))?)`;
+  // Regex building blocks. ADR-510 Φ1 (E2): a value component is "anything that is
+  // not a component separator" (`,` cartesian, `<` polar); `parseValue` is the sole
+  // validator (math + unit aware), so malformed components fall through to `null`.
+  const V = String.raw`([^,<]+?)`;
   const A = String.raw`([+-]?\d*\.?\d+)`;
 
   // Pattern 1: @V<A — relative polar

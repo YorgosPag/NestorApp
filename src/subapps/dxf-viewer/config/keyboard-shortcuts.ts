@@ -145,6 +145,15 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'polygon',
   },
+  // ADR-507 S2 — Hatch (γραμμοσκίαση), AutoCAD HATCH = H.
+  hatch: {
+    key: 'H',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.hatch',
+    action: 'tool:hatch',
+    category: 'tool',
+    toolType: 'hatch',
+  },
   // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool - ADR-059
   // Note: 'A' is taken by measureArea, using 'Q' (Quadrant of circle reference)
   arc: {

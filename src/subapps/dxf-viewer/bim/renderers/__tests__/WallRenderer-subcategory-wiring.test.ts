@@ -17,7 +17,9 @@ import { WallRenderer } from '../WallRenderer';
 import type { WallEntity } from '../../types/wall-types';
 import type { EntityModel } from '../../../rendering/types/Types';
 // ADR-509 — background-adaptive entity color: το near-black parent χρώμα προσαρμόζεται.
-import { adaptEntityColorForCanvas } from '../../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../../config/adaptive-entity-color';
+// ADR-509 — wall outline + axis ζητούν πιο φωτεινό κατώφλι (WALL_LINE_CONTRAST).
+import { WALL_LINE_CONTRAST } from '../../walls/wall-render-palette';
 
 // ── Store mock ────────────────────────────────────────────────────────────────
 
@@ -179,18 +181,31 @@ function makeInteriorWall(): WallEntity {
 describe('WallRenderer — ADR-375 C.9 default line color', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('εξωτ. τοίχος → footprint strokeStyle = parent #2b2f36 (ADR-509 adaptive σε μαύρο canvas)', () => {
+  it('εξωτ. τοίχος → footprint outline = parent #2b2f36 adaptive ΦΩΤΕΙΝΟ (WALL_LINE_CONTRAST)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeWall() as unknown as EntityModel, {});
-    // ADR-509 — το near-black #2b2f36 προσαρμόζεται για ορατότητα στο default μαύρο canvas.
-    const expected = adaptEntityColorForCanvas('#2b2f36');
-    expect(expected).not.toBe('#2b2f36'); // sanity: όντως προσαρμόστηκε
-    expect(strokeStyleCalls(mock.calls)).toContain(expected);
+    // ADR-509 — near-black γκρι #2b2f36 → background-adaptive ΚΑΙ σαφώς πιο φωτεινό (outline + axis).
+    const expectedBright = adaptStructuralLineColorForCanvas('#2b2f36', WALL_LINE_CONTRAST);
+    expect(expectedBright).not.toBe('#2b2f36'); // sanity: προσαρμόστηκε
+    expect(expectedBright).not.toBe(adaptEntityColorForCanvas('#2b2f36')); // πιο φωτεινό από default
+    expect(strokeStyleCalls(mock.calls)).toContain(expectedBright);
   });
 
-  it('εσωτ. τοίχος → footprint strokeStyle = #6b7280 (subcategory interior)', () => {
+  it('εσωτ. τοίχος → footprint outline = #6b7280 adaptive ΦΩΤΕΙΝΟ (subcategory interior)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeInteriorWall() as unknown as EntityModel, {});
-    expect(strokeStyleCalls(mock.calls)).toContain('#6b7280');
+    const expectedBright = adaptStructuralLineColorForCanvas('#6b7280', WALL_LINE_CONTRAST);
+    expect(strokeStyleCalls(mock.calls)).toContain(expectedBright);
+  });
+
+  it('γραμμή άξονα → παίρνει το ΙΔΙΟ φωτεινό χρώμα με το outline (όχι κληρονομημένο)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeWall() as unknown as EntityModel, {});
+    // ο άξονας ζωγραφίζεται dashed [6,4]· το χρώμα του = adaptStructuralLineColorForCanvas(edge, WALL_LINE_CONTRAST)
+    const expectedBright = adaptStructuralLineColorForCanvas('#2b2f36', WALL_LINE_CONTRAST);
+    const axisDashPresent = lineDashCalls(mock.calls).includes('[6,4]');
+    expect(axisDashPresent).toBe(true);
+    // το φωτεινό χρώμα εμφανίζεται ≥2 φορές (outline + axis)
+    expect(strokeStyleCalls(mock.calls).filter(c => c === expectedBright).length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -49,6 +49,8 @@ import { calculateDistance } from '../../rendering/entities/shared';
 import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
 import { completeEntity } from './completeEntity';
+// ADR-507 §5δ.9 — post-create send-to-back command builder για τη γραμμοσκίαση.
+import { buildHatchPostCreateCommands } from '../../bim/hatch/hatch-completion';
 import { createEntityFromTool as createEntityFromToolPure, isEntityComplete } from './drawing-entity-builders';
 import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from './drawing-preview-generator';
 // Per-BIM-tool preview point reconstruction (stair/wall/slab/roof/beam), extracted to
@@ -71,6 +73,8 @@ const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
   'line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter',
   'circle-3p', 'circle-chord-sagitta', 'circle-2p-radius', 'circle-best-fit',
   'polyline', 'polygon', 'arc-3p', 'arc-cse', 'arc-sce',
+  // ADR-507 S2 — γραμμοσκίαση (κλειστό όριο → HatchEntity).
+  'hatch',
 ]);
 
 /** Resolves the level ID for entity placement (fallback to "0" for known tools) */
@@ -383,7 +387,8 @@ export function useUnifiedDrawing() {
     const isFinishable =
       currentTool === 'polyline' || currentTool === 'measure-angle' ||
       currentTool === 'measure-angle-measuregeom' ||
-      currentTool === 'polygon' || currentTool === 'measure-area';
+      currentTool === 'polygon' || currentTool === 'measure-area' ||
+      currentTool === 'hatch'; // ADR-507 S2 — κλειστό όριο γραμμοσκίασης
 
     if (isFinishable && cleanedPoints.length >= 2) {
       const newEntity = createEntityFromTool(currentTool, cleanedPoints);
@@ -392,6 +397,8 @@ export function useUnifiedDrawing() {
         levelId: currentLevelId || '0',
         getScene: getLevelScene,
         setScene: setLevelScene,
+        // ADR-507 §5δ.9 — auto-send-to-back: create + reorder σε ΕΝΑ undo.
+        ...(currentTool === 'hatch' ? { postCreateCommands: buildHatchPostCreateCommands } : {}),
       });
       setMode('normal');
       cancelDrawing();

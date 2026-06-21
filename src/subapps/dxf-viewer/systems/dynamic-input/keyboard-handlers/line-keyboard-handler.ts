@@ -27,6 +27,8 @@ import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 import { fromDisplay } from '../../../config/units';
 // ADR-357 Phase 6: coordinate input parser.
 import { parseCoordInput, applyCoordMode } from '../coordinate-parser';
+// ADR-510 Φ1 (E2): math in the length/angle fields (e.g. "1500+300", "3000/2").
+import { evalExpr } from '../numeric-expression';
 
 export const handleLineKeyboard: KeyboardHandler = (
   _e,
@@ -134,9 +136,12 @@ function handleLineEnter(
     return true;
   }
 
-  const lengthDisplay = parseFloat(normalizeNumber(lengthValue));
-  const angleNum = parseFloat(normalizeNumber(angleValue));
-  if (!Number.isFinite(lengthDisplay) || !Number.isFinite(angleNum)) {
+  // ADR-510 Φ1 (E2): evaluate each field as an arithmetic expression (a plain
+  // number evaluates to itself), so "1500+300" / "3000/2" are accepted directly.
+  const lengthDisplay = evalExpr(normalizeNumber(lengthValue));
+  const angleNum = evalExpr(normalizeNumber(angleValue));
+  if (lengthDisplay === null || angleNum === null ||
+      !Number.isFinite(lengthDisplay) || !Number.isFinite(angleNum)) {
     CADFeedback.onError();
     return true;
   }

@@ -46,8 +46,9 @@ import { toolStateStore } from '../../stores/ToolStateStore';
 import { perfMark, perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
+import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import type { SceneEntity } from '../../core/commands/interfaces';
+import type { SceneEntity, ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { DrawingTool } from './drawing-types';
 import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
 import { getQuickStyleSnapshot, isQuickStyleAllByLayer } from '../../stores/QuickStyleStore';
@@ -103,6 +104,14 @@ export interface CompleteEntityOptions {
    * abort the completion (scene state remains authoritative for the session).
    */
   persistToOverlays?: PersistToOverlaysOptions;
+
+  /**
+   * ADR-507 §5δ.9 — opt-in post-create εντολές (π.χ. send-to-back) που τυλίγονται
+   * ΜΑΖΙ με το `CreateEntityCommand` σε ΕΝΑ `CompoundCommand` → ΕΝΑ undo. Λαμβάνει
+   * το οριστικό entity id + τον scene manager· κενός πίνακας ⇒ καμία αλλαγή
+   * συμπεριφοράς (default — όλα τα υπόλοιπα εργαλεία μένουν ως έχουν).
+   */
+  postCreateCommands?: (entityId: string, sceneManager: ISceneManager) => ICommand[];
 }
 
 /**
@@ -174,6 +183,7 @@ export function completeEntity(
     skipEvent,
     skipStyles,
     persistToOverlays,
+    postCreateCommands,
   } = options;
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -221,12 +231,28 @@ export function completeEntity(
         : {}),
     }
   );
+  // ADR-507 §5δ.9 — opt-in: τύλιξε create + post-create (send-to-back) σε ΕΝΑ
+  // CompoundCommand ώστε ένα undo να αναιρεί και τα δύο. existingId γνωστό πριν το
+  // execute (drawing tools περνούν transient id) → χτίζουμε τις post-create εδώ.
+  const extraCommands: ICommand[] =
+    postCreateCommands && typeof existingId === 'string'
+      ? postCreateCommands(existingId, adapter)
+      : [];
+  const commandToExecute =
+    extraCommands.length > 0
+      ? new CompoundCommand(`${tool} create`, [command, ...extraCommands])
+      : command;
   perfMark('completeEntity.execute(CreateEntityCommand)', () => {
-    getGlobalCommandHistory().execute(command);
+    getGlobalCommandHistory().execute(commandToExecute);
   });
   const createdEntity = (command.getEntity() ?? entity) as AnySceneEntity;
   const finalEntityId = createdEntity.id;
-  const finalScene: SceneModel = sceneBefore
+  // Με post-create reorder ο πίνακας οντοτήτων άλλαξε σειρά → ξαναδιάβασε το scene
+  // (το χειροκίνητο append θα ήταν λάθος). Αλλιώς κράτα το γρήγορο μονοπάτι.
+  const reorderedScene = extraCommands.length > 0 ? getScene(levelId) : null;
+  const finalScene: SceneModel = reorderedScene
+    ? reorderedScene
+    : sceneBefore
     ? { ...sceneBefore, entities: [...sceneBefore.entities, createdEntity] }
     : {
         entities: [createdEntity],

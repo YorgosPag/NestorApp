@@ -175,6 +175,7 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'rectangle')) { e.preventDefault(); handleToolChange('rectangle'); return; }
       if (matchesShortcut(e, 'polyline')) { e.preventDefault(); handleToolChange('polyline'); return; }
       if (matchesShortcut(e, 'polygon')) { e.preventDefault(); handleToolChange('polygon'); return; }
+      if (matchesShortcut(e, 'hatch')) { e.preventDefault(); handleToolChange('hatch'); return; }
       if (matchesShortcut(e, 'move')) { e.preventDefault(); handleToolChange('move'); return; }
       // ADR-363 Phase 7B: D key = door kind when opening tool active; falls through to
       // measureDistance otherwise — no conflict in any other tool context.

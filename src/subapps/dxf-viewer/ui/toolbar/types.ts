@@ -29,6 +29,8 @@ export type ToolType =
   | 'line-parallel'        // Parallel line with offset
   | 'polyline'
   | 'polygon'
+  // ADR-507 S2: Hatch (γραμμοσκίαση) — closed-boundary fill tool (AutoCAD HATCH)
+  | 'hatch'
   | 'ellipse'
   | 'text'                 // ADR-344 Phase 6.E follow-up: TEXT creation tool (single-line)
   | 'mtext'               // ADR-344 Phase 6.F: MTEXT creation tool (multiline, width-bounded)
