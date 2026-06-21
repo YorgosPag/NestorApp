@@ -33,6 +33,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const MEP_SEGMENT_TOOL = 'mep-segment';
 
@@ -102,7 +103,7 @@ export class CreateMepSegmentsCommand implements ICommand {
         }
       } else {
         for (const s of segments) {
-          EventBus.emit('bim:mep-segment-delete-requested', { segmentId: s.id });
+          emitBimEntityDeleteRequested('mep-segment', s.id);
         }
       }
     });

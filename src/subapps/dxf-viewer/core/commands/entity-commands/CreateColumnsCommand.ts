@@ -23,6 +23,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const COLUMN_TOOL = 'column';
 
@@ -90,7 +91,7 @@ export class CreateColumnsCommand implements ICommand {
         }
       } else {
         for (const c of columns) {
-          EventBus.emit('bim:column-delete-requested', { columnId: c.id });
+          emitBimEntityDeleteRequested('column', c.id);
         }
       }
     });

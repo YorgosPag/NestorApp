@@ -29,6 +29,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 export class MergeColumnsCommand implements ICommand {
   readonly id: string;
@@ -93,13 +94,13 @@ export class MergeColumnsCommand implements ICommand {
     const composite = this.composite;
     queueMicrotask(() => {
       if (direction === 'apply') {
-        for (const s of sources) EventBus.emit('bim:column-delete-requested', { columnId: s.id });
+        for (const s of sources) emitBimEntityDeleteRequested('column', s.id);
         EventBus.emit('drawing:entity-created', {
           entity: composite as unknown as AnySceneEntity,
           tool: 'column',
         });
       } else {
-        EventBus.emit('bim:column-delete-requested', { columnId: composite.id });
+        emitBimEntityDeleteRequested('column', composite.id);
         for (const s of sources) {
           EventBus.emit('bim:entity-restore-requested', {
             entityType: 'column',

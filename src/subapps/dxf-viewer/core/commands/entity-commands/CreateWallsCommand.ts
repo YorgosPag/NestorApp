@@ -27,6 +27,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const WALL_TOOL = 'wall';
 
@@ -94,7 +95,7 @@ export class CreateWallsCommand implements ICommand {
         }
       } else {
         for (const w of walls) {
-          EventBus.emit('bim:wall-delete-requested', { wallId: w.id });
+          emitBimEntityDeleteRequested('wall', w.id);
         }
       }
     });

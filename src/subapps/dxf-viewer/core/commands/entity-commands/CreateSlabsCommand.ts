@@ -23,6 +23,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const SLAB_TOOL = 'slab';
 
@@ -90,7 +91,7 @@ export class CreateSlabsCommand implements ICommand {
         }
       } else {
         for (const s of slabs) {
-          EventBus.emit('bim:slab-delete-requested', { slabId: s.id });
+          emitBimEntityDeleteRequested('slab', s.id);
         }
       }
     });

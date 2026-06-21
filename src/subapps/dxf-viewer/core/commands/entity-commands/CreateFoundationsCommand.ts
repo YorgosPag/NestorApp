@@ -28,6 +28,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const FOUNDATION_TOOL = 'foundation';
 
@@ -95,7 +96,7 @@ export class CreateFoundationsCommand implements ICommand {
         }
       } else {
         for (const f of foundations) {
-          EventBus.emit('bim:foundation-delete-requested', { foundationId: f.id });
+          emitBimEntityDeleteRequested('foundation', f.id);
         }
       }
     });

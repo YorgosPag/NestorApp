@@ -25,6 +25,7 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityDeleteRequested } from '../../../systems/events/emit-bim-entity-delete-requested';
 
 const BEAM_TOOL = 'beam';
 
@@ -92,7 +93,7 @@ export class CreateBeamsCommand implements ICommand {
         }
       } else {
         for (const b of beams) {
-          EventBus.emit('bim:beam-delete-requested', { beamId: b.id });
+          emitBimEntityDeleteRequested('beam', b.id);
         }
       }
     });
