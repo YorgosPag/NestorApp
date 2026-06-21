@@ -78,7 +78,7 @@ function buildPolygonSlab(
   face: HorizontalFinishFace,
   baseY: number,
   id: string,
-  bimType: 'column' | 'beam',
+  bimType: 'column' | 'beam' | 'wall',
   levelId: string | undefined,
   sceneToM: number,
 ): THREE.Mesh | null {
@@ -106,7 +106,7 @@ function buildPolygonSlab(
  */
 export function buildHorizontalFinishSkin(
   faces: readonly HorizontalFinishFace[],
-  bimType: 'column' | 'beam',
+  bimType: 'column' | 'beam' | 'wall',
   buildingBaseElevationM: number,
   sceneUnits: SceneUnits,
   levelId?: string,

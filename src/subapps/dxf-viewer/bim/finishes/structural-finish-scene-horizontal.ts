@@ -26,11 +26,13 @@ import { isFinishActive, type StructuralFinishSpec } from './structural-finish-t
 import {
   computeHorizontalFinishFace,
   type HorizontalFinishFace,
+  type HorizontalFaceDirection,
 } from './structural-finish-horizontal';
 import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
+import { wallIsFinishMember } from './wall-finish-source';
 import type { ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
 const MM_TO_M = 0.001;
@@ -179,6 +181,8 @@ function classifyHorizontal(envelopeFunction: string | undefined): 'interior' | 
 export interface StructuralHorizontalFinishFaces {
   readonly columnFaces: readonly HorizontalFinishFace[];
   readonly beamFaces: readonly HorizontalFinishFace[];
+  /** ADR-449 Slice X4/E — top-cap **ελεύθερης κορυφής** τοίχου (χωρίς πλάκα/δοκάρι από πάνω). */
+  readonly wallFaces: readonly HorizontalFinishFace[];
 }
 
 /** Έγκυρο footprint (≥3 σημεία) ενός μέλους → Pt2[], αλλιώς `null`. */
@@ -220,7 +224,8 @@ function plasterEnvelope(core: Pt2[] | null, spec: StructuralFinishSpec | undefi
  */
 export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): StructuralHorizontalFinishFaces {
   const { columns, beams, walls, slabs, beamObstacles, floorElevationMm, columnExtents } = input;
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
+  // ADR-449 X4/E — sceneUnits fallback σε τοίχο (όροφος με ΜΟΝΟ τοίχους· mirror X3.1 silhouette fix).
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   const s = mmToSceneUnits(sceneUnits);
   const unitToMeters = (1 / s) * MM_TO_M;
   const tol = PLANE_TOL_MM;
@@ -242,6 +247,11 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
   for (const b of beamObstacles) beamUndersideById.set(b.id, beamZExtent(b.params).zBotMm);
   const wallObs = walls.map((w) => toPlanObstacle(wallFootprintPolygon(w), wallZExtent(w, beamUndersideById, floorElevationMm)));
   const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
+  // ADR-449 Slice X4/E — δοκάρια ως οριζόντια εμπόδια κάλυψης της κορυφής τοίχου (αν δοκάρι
+  // από πάνω → η κορυφή καλύπτεται → κανένα top-cap). Reuse beamZExtent + footprint.
+  const beamObs = beamObstacles
+    .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
+    .filter((o): o is PlanObstacle => o !== null);
 
   // Finished outline: lateral obstacles = plaster envelopes του ΑΛΛΟΥ δομικού τύπου + τοίχοι.
   const columnFinished = columns.map((c, i) =>
@@ -251,8 +261,17 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
     finishedObstacleOf(beamCores[j], [...columnEnvelopes, ...wallFps], b.params.finish, s, beamZExtent(b.params)),
   );
 
+  // ADR-449 Slice X4/E — finished outlines τοίχων-finish-members (core + σοβάς skin), lateral
+  // obstacles = δομικοί γείτονες (κολόνα/δοκάρι envelopes) ώστε το top-cap να σταματά flush.
+  const wallFinished = walls.map((w, i) =>
+    wallIsFinishMember(w)
+      ? finishedObstacleOf(coresOf(wallFps[i]), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, wallZExtent(w, beamUndersideById, floorElevationMm))
+      : null,
+  );
+
   const columnFaces: HorizontalFinishFace[] = [];
   const beamFaces: HorizontalFinishFace[] = [];
+  const wallFaces: HorizontalFinishFace[] = [];
   columns.forEach((c, i) => {
     const fin = columnFinished[i];
     if (fin) collectColumnFaces(c, fin, slabObs, unitToMeters, tol, columnFaces);
@@ -261,7 +280,11 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
     const fin = beamFinished[j];
     if (fin) collectBeamFaces(b, fin, slabObs, wallObs, unitToMeters, tol, beamFaces);
   });
-  return { columnFaces, beamFaces };
+  walls.forEach((w, i) => {
+    const fin = wallFinished[i];
+    if (fin) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
+  });
+  return { columnFaces, beamFaces, wallFaces };
 }
 
 /**
@@ -275,6 +298,31 @@ function columnZExtent(c: HorizontalColumnSource, floorElevationMm: number, exte
   return { zBotMm, zTopMm: zBotMm + c.params.height };
 }
 
+/**
+ * ADR-449 Slice 11 — **SSoT** emission ΜΙΑΣ οριζόντιας όψης σοβά σε επίπεδο `planeZmm`:
+ * cover-subtracted (`coversAtPlane` + `computeHorizontalFinishFace`) → push αν εκτεθειμένη.
+ * ΕΝΑ σημείο για όλα τα caps/soffits (κολόνα top/base, δοκάρι top/soffit, τοίχος top) — μηδέν
+ * επανάληψη του `computeHorizontalFinishFace({...}) + if push` boilerplate ανά τύπο μέλους.
+ */
+function pushHorizontalCap(
+  out: HorizontalFinishFace[],
+  fin: PlanObstacle,
+  covers: readonly PlanObstacle[],
+  planeZmm: number,
+  direction: HorizontalFaceDirection,
+  spec: StructuralFinishSpec,
+  classification: 'interior' | 'exterior',
+  unitToMeters: number,
+  tol: number,
+): void {
+  const face = computeHorizontalFinishFace({
+    coreFootprint: fin.footprint,
+    coverFootprints: coversAtPlane(covers, planeZmm, fin.bbox, tol),
+    zMm: planeZmm, direction, spec, classification, unitToMeters,
+  });
+  if (face) out.push(face);
+}
+
 /** Top cap (πάντα candidate) + base cap (μόνο absolute base) μιας κολόνας. */
 function collectColumnFaces(
   c: HorizontalColumnSource,
@@ -286,21 +334,11 @@ function collectColumnFaces(
 ): void {
   const spec = c.params.finish;
   if (!isFinishActive(spec)) return;
-  const classification = classifyHorizontal(c.params.envelopeFunction);
-
-  const cap = computeHorizontalFinishFace({
-    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zTopMm, fin.bbox, tol),
-    zMm: fin.zTopMm, direction: 'up', spec, classification, unitToMeters,
-  });
-  if (cap) out.push(cap);
-
+  const cls = classifyHorizontal(c.params.envelopeFunction);
+  pushHorizontalCap(out, fin, covers, fin.zTopMm, 'up', spec, cls, unitToMeters, tol);
   // Βάση: σοβατίζεται ΜΟΝΟ στον αέρα (pilotis = baseBinding 'absolute'). Κάλυψη = πλάκα/πέδιλο κάτω.
   if (c.params.baseBinding === 'absolute') {
-    const base = computeHorizontalFinishFace({
-      coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zBotMm, fin.bbox, tol),
-      zMm: fin.zBotMm, direction: 'down', spec, classification, unitToMeters,
-    });
-    if (base) out.push(base);
+    pushHorizontalCap(out, fin, covers, fin.zBotMm, 'down', spec, cls, unitToMeters, tol);
   }
 }
 
@@ -316,17 +354,26 @@ function collectBeamFaces(
 ): void {
   const spec = b.params.finish;
   if (!isFinishActive(spec)) return;
-  const classification = classifyHorizontal(b.params.envelopeFunction);
+  const cls = classifyHorizontal(b.params.envelopeFunction);
+  pushHorizontalCap(out, fin, slabCovers, fin.zTopMm, 'up', spec, cls, unitToMeters, tol);
+  pushHorizontalCap(out, fin, wallCovers, fin.zBotMm, 'down', spec, cls, unitToMeters, tol);
+}
 
-  const top = computeHorizontalFinishFace({
-    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(slabCovers, fin.zTopMm, fin.bbox, tol),
-    zMm: fin.zTopMm, direction: 'up', spec, classification, unitToMeters,
-  });
-  if (top) out.push(top);
-
-  const soffit = computeHorizontalFinishFace({
-    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(wallCovers, fin.zBotMm, fin.bbox, tol),
-    zMm: fin.zBotMm, direction: 'down', spec, classification, unitToMeters,
-  });
-  if (soffit) out.push(soffit);
+/**
+ * ADR-449 Slice X4/E — top-cap **ελεύθερης κορυφής** τοίχου (Giorgio: ελεύθερος τοίχος →
+ * σοβάς ΚΑΙ στην πάνω πλευρά). Κάλυψη = πλάκα/δοκάρι από πάνω → ο geometric resolver αφαιρεί
+ * το καλυμμένο κομμάτι· πλήρως καλυμμένος → κανένα cap. Μόνο `up` (η βάση κάθεται σε στάθμη).
+ */
+function collectWallFaces(
+  w: WallFinishObstacle,
+  fin: PlanObstacle,
+  covers: readonly PlanObstacle[],
+  unitToMeters: number,
+  tol: number,
+  out: HorizontalFinishFace[],
+): void {
+  const spec = w.params.finish;
+  if (!isFinishActive(spec)) return;
+  const cls = classifyHorizontal(w.params.envelopeFunction);
+  pushHorizontalCap(out, fin, covers, fin.zTopMm, 'up', spec, cls, unitToMeters, tol);
 }

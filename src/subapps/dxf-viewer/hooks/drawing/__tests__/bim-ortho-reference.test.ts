@@ -14,12 +14,15 @@ import {
   getBimOrthoReference,
   isBimOrthoTool,
   applyBimDrawingConstraint,
+  getWallFaceRelativeBaseAngle,
+  resolveWallFaceRelativePolar,
 } from '../bim-ortho-reference';
 import { wallPreviewStore } from '../../../bim/walls/wall-preview-store';
 import { stairPreviewStore } from '../../../bim/stairs/stair-preview-store';
 import { beamPreviewStore } from '../../../bim/beams/beam-preview-store';
 import { slabPreviewStore } from '../../../bim/slabs/slab-preview-store';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
+import { polarTrackingStore } from '../../../systems/constraints/polar-tracking-store';
 
 describe('bim-ortho-reference', () => {
   beforeEach(() => {
@@ -28,6 +31,9 @@ describe('bim-ortho-reference', () => {
     beamPreviewStore.reset();
     slabPreviewStore.reset();
     cadToggleState.set(false, false);
+    // ADR-508 relative-polar tests rely on a deterministic 15° increment / no extras.
+    polarTrackingStore.setIncrementAngle(15);
+    polarTrackingStore.setAdditionalAngles([]);
   });
 
   describe('isBimOrthoTool', () => {
@@ -156,6 +162,108 @@ describe('bim-ortho-reference', () => {
       });
       cadToggleState.set(true, false);
       expect(applyBimDrawingConstraint('wall', { x: 40, y: 25 })).toEqual({ x: 40, y: 25 });
+    });
+  });
+
+  // ─── ADR-508 — relative-polar-to-face (wall 2nd click) ─────────────────────
+  /** Anchor the wall start at origin with a captured perpendicular-to-face angle. */
+  const anchorWall = (faceAngle: number | null): void => {
+    wallPreviewStore.set({
+      startPoint: { x: 0, y: 0 }, endPoint: null, curveControl: null,
+      polylineVertices: [], overrides: {},
+      startAnchored: faceAngle !== null,
+      startFaceAngle: faceAngle,
+    });
+  };
+  /** Cursor `deg` degrees from origin at `dist`. */
+  const at = (deg: number, dist = 100): { x: number; y: number } => {
+    const r = (deg * Math.PI) / 180;
+    return { x: dist * Math.cos(r), y: dist * Math.sin(r) };
+  };
+
+  describe('getWallFaceRelativeBaseAngle', () => {
+    it('18. non-wall tool → null', () => {
+      anchorWall(90);
+      expect(getWallFaceRelativeBaseAngle('beam')).toBeNull();
+    });
+    it('19. start not face-anchored → null', () => {
+      wallPreviewStore.set({
+        startPoint: { x: 0, y: 0 }, endPoint: null, curveControl: null,
+        polylineVertices: [], overrides: {}, startAnchored: false, startFaceAngle: null,
+      });
+      expect(getWallFaceRelativeBaseAngle('wall')).toBeNull();
+    });
+    it('20. anchored awaitingEnd → returns the captured face angle', () => {
+      anchorWall(90);
+      expect(getWallFaceRelativeBaseAngle('wall')).toBe(90);
+    });
+    it('21. awaitingAlignment (endPoint set) → null', () => {
+      wallPreviewStore.set({
+        startPoint: { x: 0, y: 0 }, endPoint: { x: 100, y: 0 }, curveControl: null,
+        polylineVertices: [], overrides: {}, startAnchored: true, startFaceAngle: 90,
+      });
+      expect(getWallFaceRelativeBaseAngle('wall')).toBeNull();
+    });
+  });
+
+  describe('resolveWallFaceRelativePolar', () => {
+    it('22. not anchored → null', () => {
+      anchorWall(null);
+      expect(resolveWallFaceRelativePolar({ x: 3, y: 100 })).toBeNull();
+    });
+    it('23. ortho on → null (explicit world H/V lock wins)', () => {
+      anchorWall(90);
+      cadToggleState.set(true, false);
+      expect(resolveWallFaceRelativePolar({ x: 3, y: 100 })).toBeNull();
+    });
+    it('24. perpendicular-to-face is the 0° relative snap (the flush case)', () => {
+      // Horizontal existing face ⇒ perpendicular outward = 90° (north).
+      anchorWall(90);
+      const res = resolveWallFaceRelativePolar(at(88, 100)); // ~2° off north
+      expect(res).not.toBeNull();
+      expect(res!.result.isSnapped).toBe(true);
+      expect(res!.result.snappedAngle).toBe(90);
+      expect(res!.result.point.x).toBeCloseTo(0); // locked onto the perpendicular
+    });
+    it('25. tilted face (perp=120°): snaps perpendicular AND parallel relative to it', () => {
+      anchorWall(120); // face oriented 30°, perpendicular = 120°
+      const perp = resolveWallFaceRelativePolar(at(121));
+      expect(perp!.result.snappedAngle).toBe(120); // 0° relative = perpendicular
+      const parallel = resolveWallFaceRelativePolar(at(31)); // ~ face direction (120-90)
+      expect(parallel!.result.snappedAngle).toBe(30); // 90° relative = parallel to face
+    });
+    it('26. free angle between increments → not snapped (light magnet)', () => {
+      anchorWall(90);
+      const res = resolveWallFaceRelativePolar(at(82)); // 8° from north, 7° from 90-15
+      expect(res!.result.isSnapped).toBe(false);
+    });
+    it('29. worldPerPixel quantizes the LENGTH in zoom-adaptive steps (reuse alignment SSoT)', () => {
+      anchorWall(90); // perpendicular = north
+      // worldPerPixel=4 ⇒ adaptiveDistanceStep = niceRound(4·25=100) = 100.
+      const res = resolveWallFaceRelativePolar(at(89.7, 237), 4); // ~north, 237 long
+      expect(res!.result.snappedAngle).toBe(90); // angle still perpendicular
+      expect(res!.result.point.x).toBeCloseTo(0);
+      expect(res!.result.point.y).toBeCloseTo(200); // 237 → nearest 100-step = 200
+      expect(res!.result.distance).toBe(200);
+    });
+    it('30. omitting worldPerPixel leaves the raw (un-quantized) length', () => {
+      anchorWall(90);
+      const res = resolveWallFaceRelativePolar(at(90, 237)); // exactly north
+      expect(res!.result.point.y).toBeCloseTo(237); // no length snap
+    });
+  });
+
+  describe('applyBimDrawingConstraint — face-relative precedence (ADR-508)', () => {
+    it('27. anchored wall constrains the 2nd click even with polar OFF', () => {
+      anchorWall(90);
+      // No toggle on, but face-anchored ⇒ auto magnet locks ~north onto perpendicular.
+      expect(applyBimDrawingConstraint('wall', at(88, 100)).x).toBeCloseTo(0);
+    });
+    it('28. ortho ON overrides the face-relative magnet', () => {
+      anchorWall(120); // would otherwise snap perpendicular at 120°
+      cadToggleState.set(true, false);
+      // |dy|>|dx| at (10, 100) ⇒ ortho vertical lock: x→0, y→100 (NOT the 120° ray).
+      expect(applyBimDrawingConstraint('wall', { x: 10, y: 100 })).toEqual({ x: 0, y: 100 });
     });
   });
 });

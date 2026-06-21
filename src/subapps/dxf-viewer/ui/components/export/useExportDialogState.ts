@@ -55,8 +55,9 @@ export function useExportDialogState(): ExportDialogState {
   // for Τέκτονας/FESPA, whose basic parser reads only LINE/TEXT/CIRCLE.
   const [dxfLineMode, setDxfLineMode] = React.useState<DxfLineMode>('polyline');
 
-  // IFC carries only BIM elements → a `dxf-only` scope produces an empty model.
-  const scopeConflictsWithFormat = format === 'ifc' && !scopeIncludesBim(entityScope);
+  // IFC/TEK carry only BIM elements → a `dxf-only` scope produces an empty model.
+  const scopeConflictsWithFormat =
+    (format === 'ifc' || format === 'tek') && !scopeIncludesBim(entityScope);
 
   const buildRequest = React.useCallback(
     (): ExportRequest => ({

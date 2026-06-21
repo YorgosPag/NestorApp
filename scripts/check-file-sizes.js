@@ -15,8 +15,8 @@
  *   API Route (/api/[id]/route.ts)            300
  *   General                                  500
  *
- * Exempt (no limit): config, types, data, _registry, __tests__, docs, adrs,
- *   scripts/, i18n/locales/, -definitions, -schema, -constants,
+ * Exempt (no limit): config, template, types, data, _registry, __tests__, docs,
+ *   adrs, scripts/, i18n/locales/, -definitions, -schema, -constants,
  *   enterprise-id.service.ts, *.d.ts, *.test.*, *.spec.*, *.stories.*
  *
  * CLI:
@@ -37,6 +37,7 @@ const NC     = '\x1b[0m';
 // Mirrors the bash `get_max_lines` function in the original hook.
 const EXEMPT_RE = new RegExp([
   /\.(config)\./,
+  /\.template\./,
   /\.d\.ts$/,
   /\.test\./,
   /\.spec\./,

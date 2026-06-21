@@ -26,6 +26,7 @@ import type {
 } from '../../bim/types/wall-types';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../bim/types/wall-types';
 import { getDefaultDnaForCategory } from '../../bim/types/wall-dna-types';
+import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../bim/validators/wall-validator';
 import {
@@ -84,6 +85,17 @@ export function resolveWallThicknessMm(overrides: WallParamOverrides = {}): numb
   return getDefaultDnaForCategory(overrides.category ?? 'exterior').totalThickness;
 }
 
+/**
+ * ADR-449 Slice X4 — κατηγορίες τοίχου που παίρνουν **additive σοβά** (finish skin):
+ * εξωτερικός / εσωτερικός / διαχωριστικός. Οι `parapet`/`fence` είναι bare δομικά (στηθαίο
+ * ΟΣ / πέτρινη περίφραξη) → χωρίς σοβά (μένουν obstacles στη σιλουέτα· τυχόν σοβατισμένη
+ * κορυφή περίφραξης = top-cap σε επόμενο slice).
+ */
+const FINISH_SKIN_CATEGORIES: ReadonlySet<WallCategory> = new Set(['exterior', 'interior', 'partition']);
+function categoryGetsFinishSkin(category: WallCategory): boolean {
+  return FINISH_SKIN_CATEGORIES.has(category);
+}
+
 export function buildDefaultWallParams(
   startPoint: Readonly<Point2D>,
   endPoint: Readonly<Point2D>,
@@ -101,6 +113,8 @@ export function buildDefaultWallParams(
   const thickness = resolveWallThicknessMm(overrides);
   const dna: ReturnType<typeof getDefaultDnaForCategory> | null =
     overrideThickness === undefined ? getDefaultDnaForCategory(category) : null;
+  // ADR-449 Slice X4 — additive σοβάς ως finish skin (mirror κολόνας/δοκαριού), ΟΧΙ DNA layer.
+  const finish = categoryGetsFinishSkin(category) ? createDefaultStructuralFinishSpec() : undefined;
   // ADR-363 Phase 1F — alignment offset: shift the axis perpendicular toward
   // `alignmentPoint` so the edge AWAY from C sits on the original A→B line and
   // the wall body extends TOWARD C. `null`/`undefined` ⇒ classic centered axis.
@@ -123,7 +137,8 @@ export function buildDefaultWallParams(
     baseOffset: 0,
     topOffset: 0,
   };
-  return dna === null ? base : { ...base, dna };
+  const withDna = dna === null ? base : { ...base, dna };
+  return finish ? { ...withDna, finish } : withDna;
 }
 
 /**

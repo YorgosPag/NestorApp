@@ -1,29 +1,47 @@
 /**
- * ADR-449 Slice X3 — Ο τοίχος ως finish-member της ενιαίας σιλουέτας σοβά.
+ * ADR-449 Slice X3/X4 — Ο τοίχος ως finish-member της ενιαίας σιλουέτας σοβά.
  *
- * Επαληθεύει: (1) `wallHasPlasterSkin` (DNA με plaster → true· core-only parapet → false),
- * (2) `wallToSilhouetteMember` (core = inset· parapet/skin≤0 → null), (3) integration:
- * `computeStructuralFinishSilhouette` με ΜΟΝΟ τοίχους (πριν επέστρεφε []), (4) contact
- * subtraction — 2 επικαλυπτόμενοι collinear τοίχοι ενώνονται → ο σοβάς σβήνει στην επαφή.
+ * X4 σημασιολογία: ο σοβάς = additive finish skin (`WallParams.finish`), ΟΧΙ DNA layer.
+ * Επαληθεύει: (1) `wallDnaHasPlaster` (legacy DNA με `mat-plaster` → true· νέο brick-only /
+ * EPS / parapet → false), (2) `wallToSilhouetteMember` (member όταν finish active + όχι legacy
+ * plaster· core = **πλήρες** footprint χωρίς inset· legacy/parapet → null), (3) integration:
+ * `computeStructuralFinishSilhouette` με ΜΟΝΟ νέους τοίχους, (4) contact subtraction.
  */
 
-import { wallHasPlasterSkin, wallToSilhouetteMember } from '../wall-finish-source';
+import { wallDnaHasPlaster, wallToSilhouetteMember } from '../wall-finish-source';
 import { computeStructuralFinishSilhouette } from '../structural-finish-scene-silhouette';
-import type { WallFinishObstacle } from '../structural-finish-scene';
+import { wallFootprintPolygon, type WallFinishObstacle } from '../structural-finish-scene';
 import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
 import {
   createDefaultExteriorDna,
+  createExterior25EpsDna,
   createDefaultParapetDna,
+  computeTotalThickness,
   type WallDna,
 } from '../../types/wall-dna-types';
+import type { WallCategory } from '../../types/wall-types';
+
+/** Legacy (pre-X4) exterior DNA: σοβάς ext 25 + τούβλο 210 + Knauf 15 = 250. */
+function legacyPlasterDna(): WallDna {
+  const layers = [
+    { id: 'ext-plaster-out', name: 'Exterior Plaster', thickness: 25, materialId: 'mat-plaster-ext', side: 'exterior' as const },
+    { id: 'ext-core', name: 'Brick Masonry', thickness: 210, materialId: 'mat-brick-masonry', side: 'core' as const },
+    { id: 'ext-plaster-in', name: 'Interior Plaster', thickness: 15, materialId: 'mat-plaster-int', side: 'interior' as const },
+  ];
+  return { layers, totalThickness: computeTotalThickness(layers) };
+}
 
 function wall(
   start: { x: number; y: number },
   end: { x: number; y: number },
-  opts: { dna?: WallDna; id?: string } = {},
+  opts: { dna?: WallDna; id?: string; category?: WallCategory; stripFinish?: boolean } = {},
 ): WallFinishObstacle {
-  const base = buildDefaultWallParams(start, end, { height: 3000 });
-  const params = opts.dna ? { ...base, dna: opts.dna, thickness: opts.dna.totalThickness } : base;
+  let params = buildDefaultWallParams(start, end, { height: 3000, category: opts.category });
+  if (opts.dna) params = { ...params, dna: opts.dna, thickness: opts.dna.totalThickness };
+  if (opts.stripFinish) {
+    const { finish: _drop, ...rest } = params;
+    params = rest;
+  }
   return { id: opts.id ?? 'w1', kind: 'straight', params };
 }
 
@@ -31,62 +49,75 @@ const fullZ = { zBotMm: 0, zTopMm: 3000 };
 const totalLength = (segs: readonly { lengthM: number }[]): number =>
   segs.reduce((s, seg) => s + seg.lengthM, 0);
 
-describe('wallHasPlasterSkin', () => {
-  it('exterior DNA (σοβάς + τούβλο + Knauf) → true', () => {
-    expect(wallHasPlasterSkin(createDefaultExteriorDna())).toBe(true);
+describe('wallDnaHasPlaster (X4 legacy detection)', () => {
+  it('legacy DNA με mat-plaster layer → true', () => {
+    expect(wallDnaHasPlaster(legacyPlasterDna())).toBe(true);
+  });
+  it('νέο exterior DNA (brick-only, X4) → false', () => {
+    expect(wallDnaHasPlaster(createDefaultExteriorDna())).toBe(false);
+  });
+  it('EPS DNA (μόνωση + τούβλο) → false (η μόνωση δεν είναι σοβάς)', () => {
+    expect(wallDnaHasPlaster(createExterior25EpsDna())).toBe(false);
   });
   it('parapet DNA (μονόστρωτο RC core) → false', () => {
-    expect(wallHasPlasterSkin(createDefaultParapetDna())).toBe(false);
+    expect(wallDnaHasPlaster(createDefaultParapetDna())).toBe(false);
   });
   it('undefined DNA → false', () => {
-    expect(wallHasPlasterSkin(undefined)).toBe(false);
+    expect(wallDnaHasPlaster(undefined)).toBe(false);
   });
 });
 
-describe('wallToSilhouetteMember', () => {
-  it('τοίχος με σοβά → member με core footprint (inset προς τα μέσα)', () => {
-    const m = wallToSilhouetteMember(wall({ x: 0, y: 0 }, { x: 3000, y: 0 }), 15, fullZ);
+describe('wallToSilhouetteMember (X4 — full footprint, gate σε finish spec)', () => {
+  it('νέος τοίχος (finish active, brick-only DNA) → member με ΠΛΗΡΕΣ footprint (χωρίς inset)', () => {
+    const w = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
+    const m = wallToSilhouetteMember(w, fullZ);
     expect(m).not.toBeNull();
-    expect(m!.footprint.length).toBeGreaterThanOrEqual(4);
+    // Core = full δομικό footprint (όχι inset) → ο σοβάς προεξέχει.
+    expect(m!.footprint).toEqual(wallFootprintPolygon(w));
     expect(m!.zBotMm).toBe(0);
     expect(m!.zTopMm).toBe(3000);
   });
 
-  it('parapet (core-only) → null (μένει obstacle, δεν παίρνει σοβά)', () => {
+  it('τοίχος ΧΩΡΙΣ finish spec (legacy/bare) → null (μένει obstacle)', () => {
+    const m = wallToSilhouetteMember(wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { stripFinish: true }), fullZ);
+    expect(m).toBeNull();
+  });
+
+  it('finish spec ΑΛΛΑ legacy plaster DNA → null (legacy guard, μηδέν διπλός σοβάς)', () => {
     const m = wallToSilhouetteMember(
-      wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { dna: createDefaultParapetDna() }),
-      15,
+      wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { dna: legacyPlasterDna() }),
       fullZ,
     );
     expect(m).toBeNull();
   });
 
-  it('skin ≤ 0 → null', () => {
-    expect(wallToSilhouetteMember(wall({ x: 0, y: 0 }, { x: 3000, y: 0 }), 0, fullZ)).toBeNull();
+  it('parapet (category parapet → χωρίς finish) → null', () => {
+    const m = wallToSilhouetteMember(
+      wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { category: 'parapet', dna: createDefaultParapetDna() }),
+      fullZ,
+    );
+    expect(m).toBeNull();
   });
 });
 
-describe('computeStructuralFinishSilhouette — ο τοίχος ως member (ADR-449 Slice X3)', () => {
-  it('όροφος με ΜΟΝΟ τοίχο → παράγει band σοβά (πριν επέστρεφε [])', () => {
+describe('computeStructuralFinishSilhouette — ο τοίχος ως member (ADR-449 Slice X3/X4)', () => {
+  it('όροφος με ΜΟΝΟ νέο τοίχο → παράγει band σοβά', () => {
     const bands = computeStructuralFinishSilhouette([], [], [wall({ x: 0, y: 0 }, { x: 3000, y: 0 })], 0);
     expect(bands.length).toBeGreaterThanOrEqual(1);
     expect(bands[0].faces.segments.length).toBeGreaterThan(0);
   });
 
-  it('parapet-only όροφος → καμία band (core-only, χωρίς σοβά)', () => {
+  it('parapet-only όροφος → καμία band (χωρίς finish)', () => {
     const bands = computeStructuralFinishSilhouette(
       [],
       [],
-      [wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { dna: createDefaultParapetDna() })],
+      [wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { category: 'parapet', dna: createDefaultParapetDna() })],
       0,
     );
     expect(bands).toHaveLength(0);
   });
 
   it('2 επικαλυπτόμενοι collinear τοίχοι → ενιαία σιλουέτα (σοβάς σβήνει στην επαφή)', () => {
-    // Α: [0,3000], Β: [2900,6000] collinear στον x → core footprints επικαλύπτονται →
-    // safeUnion → ΕΝΑ outline → η εσωτερική επαφή χάνεται (μικρότερο συνολικό μήκος από
-    // 2 ανεξάρτητους τοίχους που θα είχαν 2× καθέτως-στον-άξονα άκρα στη συμβολή).
     const joined = computeStructuralFinishSilhouette(
       [],
       [],

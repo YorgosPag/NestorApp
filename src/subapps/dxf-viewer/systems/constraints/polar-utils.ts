@@ -15,6 +15,18 @@ export interface PolarTrackingConfig {
   incrementAngle: number;
   additionalAngles: number[];
   angleTolerance: number;
+  /**
+   * ADR-508 (2026-06-21) — relative-polar base angle (degrees, world). The
+   * snap targets become `baseAngle + k·increment` (and `baseAngle + additional`)
+   * instead of the absolute `k·increment`. Default `0` = world-frame polar
+   * (backward-compatible: identical to the pre-baseAngle behaviour).
+   *
+   * Used by the wall tool's 2nd click to snap relative to the face of the
+   * existing member the start anchored to (Revit "angle relative to face"):
+   * `baseAngle` = perpendicular-to-face direction ⇒ `0°` relative = perpendicular
+   * (the flush case), `±90°` = parallel to the face.
+   */
+  baseAngle?: number;
 }
 
 export interface PolarSnapResult {
@@ -50,36 +62,44 @@ export function applyPolar(
     AngleUtils.radiansToDegrees(Math.atan2(dy, dx)),
   );
 
-  let snappedAngle: number | null = null;
+  // ADR-508 — relative-polar: snap in the frame rotated by `baseAngle`, then add
+  // it back. `baseAngle = 0` ⇒ `relAngle === rawAngle` ⇒ world behaviour intact.
+  const baseAngle = config.baseAngle ?? 0;
+  const relAngle = AngleUtils.normalizeAngle(rawAngle - baseAngle);
 
-  // 1. Increment snap: 0°, increment°, 2×increment°, … up to 360°
+  let snappedRel: number | null = null;
+
+  // 1. Increment snap: 0°, increment°, 2×increment°, … up to 360° (relative).
   if (config.incrementAngle > 0) {
-    snappedAngle = AngleUtils.snapAngleToStep(
-      rawAngle,
+    snappedRel = AngleUtils.snapAngleToStep(
+      relAngle,
       config.incrementAngle,
       config.angleTolerance,
     );
   }
 
-  // 2. Additional specific angles (checked if increment didn't match)
-  if (snappedAngle === null && config.additionalAngles.length > 0) {
+  // 2. Additional specific angles — relative to `baseAngle` too (checked if increment didn't match).
+  if (snappedRel === null && config.additionalAngles.length > 0) {
     let minDiff = config.angleTolerance;
     for (const candidate of config.additionalAngles) {
       const normalized = AngleUtils.normalizeAngle(candidate);
       const diff = Math.min(
-        Math.abs(rawAngle - normalized),
-        360 - Math.abs(rawAngle - normalized),
+        Math.abs(relAngle - normalized),
+        360 - Math.abs(relAngle - normalized),
       );
       if (diff < minDiff) {
         minDiff = diff;
-        snappedAngle = normalized;
+        snappedRel = normalized;
       }
     }
   }
 
-  if (snappedAngle === null) {
+  if (snappedRel === null) {
     return { point, isSnapped: false, snappedAngle: null, distance };
   }
+
+  // Back to world frame for the projection + the (absolute) tooltip angle.
+  const snappedAngle = AngleUtils.normalizeAngle(snappedRel + baseAngle);
 
   // Project point onto the snapped angle at same distance
   const rad = degToRad(snappedAngle);
@@ -97,4 +117,21 @@ export function applyPolar(
  */
 export function formatPolarLabel(snappedAngle: number, distance: number): string {
   return `${snappedAngle.toFixed(1)}° / ${distance.toFixed(1)}`;
+}
+
+/**
+ * ADR-508 — display angle (0–90°) for the wall relative-polar-to-face tooltip.
+ *
+ * The snap uses `perpBaseAngle` = the **perpendicular-to-face** world direction as
+ * its base. The user, however, thinks in "angle relative to the face surface"
+ * (Revit «angle relative to face»): perpendicular ⇒ **90°**, parallel ⇒ **0°**.
+ * So we report the acute angle between the drawn direction and the FACE — NOT the
+ * absolute world heading (which is what made the tooltip read e.g. "41.9°" while
+ * the wall was visibly perpendicular). Returns a value in `[0, 90]`.
+ */
+export function faceRelativeDisplayAngle(absAngleDeg: number, perpBaseAngle: number): number {
+  const relToPerp = AngleUtils.normalizeAngle(absAngleDeg - perpBaseAngle); // [0,360) off perpendicular
+  const to180 = relToPerp > 180 ? 360 - relToPerp : relToPerp;             // [0,180]
+  const acuteToPerp = to180 > 90 ? 180 - to180 : to180;                    // [0,90] off perpendicular
+  return 90 - acuteToPerp;                                                  // [0,90] off the face surface
 }

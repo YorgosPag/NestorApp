@@ -19,7 +19,7 @@ import type { Level } from '../systems/levels/config';
 // ============================================================================
 
 /** Target file format. */
-export type ExportFormat = 'dxf' | 'ifc' | 'pdf';
+export type ExportFormat = 'dxf' | 'ifc' | 'pdf' | 'tek';
 
 /**
  * Content filter — which kinds of entities go into the file.

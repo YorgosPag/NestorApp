@@ -28,12 +28,13 @@ describe('ADR-447 — WALL_TYPE_SEEDS catalog', () => {
     }
   });
 
-  it('matches the agreed thicknesses (σταθερός σοβάς + τούβλο στο υπόλοιπο)', () => {
+  it('matches the agreed thicknesses (ADR-449 X4: ΜΟΝΟ δομικός πυρήνας + μόνωση, σοβάς=finish skin)', () => {
     const byKey = (k: string): WallDna => WALL_TYPE_SEEDS.find((s) => s.key === k)!.dna;
-    expect(byKey('exterior').totalThickness).toBe(250);
-    expect(byKey('exterior-eps').totalThickness).toBe(350);
-    expect(byKey('exterior-20').totalThickness).toBe(200);
-    expect(byKey('interior').totalThickness).toBe(100);
+    expect(byKey('exterior').totalThickness).toBe(210);     // τούβλο 210 (σοβάς αφαιρέθηκε από DNA)
+    expect(byKey('exterior-eps').totalThickness).toBe(310); // EPS 100 + τούβλο 210
+    expect(byKey('exterior-20').totalThickness).toBe(160);  // τούβλο 160
+    expect(byKey('interior').totalThickness).toBe(70);      // τούβλο 70
+    expect(byKey('partition').totalThickness).toBe(75);     // τούβλο 75
   });
 
   it('all primary cores are RED brick masonry (Greek RC-frame infill)', () => {

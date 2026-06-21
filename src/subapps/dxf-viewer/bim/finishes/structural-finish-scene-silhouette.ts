@@ -14,7 +14,6 @@ import type { BeamParams } from '../types/beam-types';
 import {
   isFinishActive,
   createDefaultStructuralFinishSpec,
-  STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
   type StructuralFinishSpec,
 } from './structural-finish-types';
 import { wallToSilhouetteMember } from './wall-finish-source';
@@ -226,16 +225,16 @@ export function computeStructuralFinishSilhouette(
   const beamUndersideById = new Map<string, number>();
   for (const b of beams) beamUndersideById.set(b.id, beamZExtent(b).zBotMm);
 
-  // ADR-449 Slice X3 — Ο ΤΟΙΧΟΣ ως finish-member: τοίχος με σοβά (DNA plaster) → **member**
-  // (το core του ενώνεται με τα δομικά μέλη στο union → ο σοβάς τυλίγει το ενιαίο περίγραμμα
-  // + κάθε δωμάτιο και **σβήνει αυτόματα στις συμβολές**). Τοίχος ΧΩΡΙΣ σοβά (parapet/fence/
-  // bare core) → παραμένει coverage **obstacle** (κόβει όψη γειτόνων, δεν παίρνει δικό του).
-  // Το core = `inset(full footprint, skin)` → ο resolver προσθέτει `skin` και ο σοβάς φτάνει
-  // ακριβώς στην επιφάνεια του τοίχου (ενιαίο πάχος = default spec, συνεπές με κολόνα/δοκάρι).
+  // ADR-449 Slice X3/X4 — Ο ΤΟΙΧΟΣ ως finish-member: νέος τοίχος με ενεργό `finish` spec →
+  // **member** (core = **πλήρες** δομικό footprint, χωρίς inset → ο σοβάς προεξέχει· το core
+  // ενώνεται με τα δομικά μέλη στο union → ο σοβάς τυλίγει το ενιαίο περίγραμμα + κάθε δωμάτιο
+  // και **σβήνει αυτόματα στις συμβολές**). Legacy τοίχος (DNA σοβά, χωρίς `finish`) ή bare
+  // (parapet/fence) → παραμένει coverage **obstacle** (κόβει όψη γειτόνων, δεν παίρνει δικό
+  // του). Το πάχος/υλικό σοβά = το ΕΝΙΑΙΟ spec της σιλουέτας (ομοιόμορφο κέλυφος, εξωτ.25/εσωτ.15).
   const obstacleWalls: WallFinishObstacle[] = [];
   for (const w of walls) {
     const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
-    const m = wallToSilhouetteMember(w, STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM, z);
+    const m = wallToSilhouetteMember(w, z);
     if (m) members.push(m);
     else obstacleWalls.push(w);
   }

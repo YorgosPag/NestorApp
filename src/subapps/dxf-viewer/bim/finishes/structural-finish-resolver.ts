@@ -29,7 +29,7 @@ import type {
   FinishFaceSegment,
   FinishClassification,
 } from './structural-finish-types';
-import { resolveFinishThicknessMm } from './structural-finish-types';
+import { resolveFinishForClass } from './structural-finish-types';
 import {
   coveredIntervals,
   exposedComplement,
@@ -180,9 +180,8 @@ function buildSegment(
   const dy = b.y - a.y;
   const outwardNormal: Pt2 = { x: dy, y: -dx }; // CCW polygon → outward = (dy,−dx)
   const classification: FinishClassification = classify(mid, outwardNormal);
-  const materialId = classification === 'exterior' ? spec.exteriorMaterialId : spec.interiorMaterialId;
-  // ADR-449 Slice X4 — ασύμμετρο πάχος ανά ταξινόμηση (εξωτ. παχύτερος σοβάς), SSoT helper.
-  const thickness = resolveFinishThicknessMm(spec, classification);
+  // ADR-449 Slice X4 — υλικό + ασύμμετρο πάχος ανά ταξινόμηση από ΕΝΑ SSoT helper.
+  const { materialId, thicknessMm: thickness } = resolveFinishForClass(spec, classification);
   // ADR-449 — διάκριση ανά είδος γείτονα: δομικό (κολόνα/δοκάρι) → junction (corner-fill
   // EXTEND)· τοίχος (obstacle αλλά ΟΧΙ junctionObstacle) → square butt (ο τοίχος έχει δικό
   // του σοβά → ΜΗΝ εκτείνεσαι μέσα του, #A). Το junction υπερισχύει του square.

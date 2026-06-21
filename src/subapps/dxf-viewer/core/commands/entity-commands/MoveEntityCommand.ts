@@ -1,40 +1,36 @@
 /**
- * MOVE ENTITY COMMAND
+ * MOVE ENTITY COMMANDS — delta subclasses of the in-place transform spine (ADR-507 §8).
  *
- * 🏢 ENTERPRISE (2026-01-25): Command for moving entities by delta
- * Supports command merging for smooth drag operations.
+ * Moves entities by a 3D delta: plan (x, y) in native canvas units PLUS an optional
+ * `z` ELEVATION delta in raw mm (Revit `MoveElement(dx,dy,dz)`, ADR-049 Phase 2).
  *
- * Pattern: Consecutive moves within 500ms are merged into single command
- * This provides smooth undo for drag operations (Autodesk/Figma pattern)
+ * `MoveCommandBase` owns the move-specific core ONCE (the `delta`, the per-entity patch
+ * `computeUpdates` = `calculateMovedGeometry`, `getDelta`, the 3D-aware non-zero guard).
+ * `MoveEntityCommand` (single) and `MoveMultipleEntitiesCommand` (batch) are thin entry
+ * points that differ ONLY in ctor shape, `name`/`type`, serialize envelope and the merge
+ * factory — mirroring Revit's `MoveElement` / `MoveElements` (two ergonomic APIs, ONE
+ * core), and the codebase's own `SnapshotTransformCommand` / `MergeableUpdateCommand`
+ * template-method pattern.
  *
- * Entity Types Supported:
- * - Line: start += delta, end += delta
- * - Circle: center += delta
- * - Rectangle: corner1 += delta, corner2 += delta
- * - Polyline/Polygon: vertices.forEach(v => v += delta)
- * - Arc: center += delta
- * - Ellipse: center += delta
- * - Text: position += delta
- * - Point: position += delta
+ * Everything below the move core — execute/undo/redo, the associative follower cascade
+ * (connected pipes + slab-openings via the transform-agnostic engines), wall-opening
+ * recompute and reframe/emit — is the inherited `SnapshotTransformCommand` spine. Undo
+ * restores each entity (and its followers) from the PRE-move snapshot (exact, Revit-grade),
+ * superseding the former `reverseDelta` recompute (ADR-507 §8 item α / Level 3).
  *
- * @see HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md
+ * Merge: consecutive drag samples of the same entity/selection within the canonical
+ * window coalesce into one undo step (Autodesk/Figma pattern), summing the deltas.
+ *
+ * @see core/commands/entity-commands/SnapshotTransformCommand.ts — the shared in-place spine
+ * @see core/commands/entity-commands/move-entity-geometry.ts — `calculateMovedGeometry` (BIM-first dispatcher)
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-// ADR-049 Phase 2 — the move delta is 3D: plan (x, y) in the entity's native canvas
-// units PLUS an optional `z` ELEVATION delta in raw mm (Revit `MoveElement(dx,dy,dz)`).
-// `Point3D` (z optional) is the exact shape; a 2D `{x,y}` caller is unchanged (z absent
-// → pure plan move). The per-type `z` interpretation lives in `calculateBimMovedGeometry`.
+// ADR-049 Phase 2 — the move delta is 3D (optional `z` = elevation in mm); a 2D `{x,y}`
+// caller is unchanged (z absent → pure plan move). Per-type `z` lives in `calculateBimMovedGeometry`.
 import type { Point3D } from '../../../bim/types/bim-base';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { canMergeDragSamples } from '../merge-window';
-import { deepClone } from '../../../utils/clone-utils';
-// 🏢 ADR-065: Extracted geometry utilities
-import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
-// SSoT for the move cascade ordering (pipes → updates → wall-openings → slab-openings →
-// reframe-beams + emit). Both move commands delegate here so they stay in sync.
-// ADR-049 / ADR-363 / ADR-408 Φ-C / ADR-492 — rationale lives in the module header.
-import { runMoveForwardCascade, runMoveUndoCascade } from './move-entity-cascade';
+import { calculateMovedGeometry } from './move-entity-geometry';
+import { SnapshotTransformCommand } from './SnapshotTransformCommand';
 
 /**
  * Sum two move deltas (merge of consecutive drag samples). `z` is kept only when
@@ -49,132 +45,79 @@ function mergeMoveDelta(a: Point3D, b: Point3D): Point3D {
 }
 
 /**
- * Command for moving a single entity by delta
+ * Shared move core — the SSoT for "translate entities by a 3D delta", reused by both the
+ * single- and multi-entity entry points (DRY, no per-class duplication of the patch / guard).
  */
-export class MoveEntityCommand implements ICommand {
-  readonly id: string;
+abstract class MoveCommandBase extends SnapshotTransformCommand {
+  constructor(
+    entityIds: string[],
+    protected readonly delta: Point3D,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
+  ) {
+    super(entityIds, sceneManager, isDragging);
+  }
+
+  /** The per-entity move patch — BIM-first dispatcher (delegates to `calculateBimMovedGeometry`). */
+  protected computeUpdates(entity: SceneEntity): Partial<SceneEntity> {
+    return calculateMovedGeometry(entity, this.delta);
+  }
+
+  getDelta(): Point3D {
+    return { ...this.delta };
+  }
+
+  /**
+   * True when the delta actually moves something. ADR-049 Phase 2 — a PURE vertical
+   * move (axis-Y gizmo) has x=y=0 but z≠0, so it IS a real move.
+   */
+  protected hasNonZeroDelta(): boolean {
+    return !(this.delta.x === 0 && this.delta.y === 0 && (this.delta.z ?? 0) === 0);
+  }
+}
+
+/**
+ * Command for moving a single entity by a 3D delta.
+ */
+export class MoveEntityCommand extends MoveCommandBase {
   readonly name = 'MoveEntity';
   readonly type = 'move-entity';
-  readonly timestamp: number;
-
-  private entitySnapshot: SceneEntity | null = null;
-  private wasExecuted = false;
 
   constructor(
     private readonly entityId: string,
-    private readonly delta: Point3D,
-    private readonly sceneManager: ISceneManager,
-    /** Optional: Mark as dragging for merge purposes */
-    private readonly isDragging: boolean = false
+    delta: Point3D,
+    sceneManager: ISceneManager,
+    /** Optional: mark as a drag sample so consecutive samples coalesce into one undo step. */
+    isDragging: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super([entityId], delta, sceneManager, isDragging);
   }
 
-  /**
-   * Execute: Move entity by delta
-   */
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.entityId);
-    if (entity) {
-      // Store snapshot before move (for undo)
-      this.entitySnapshot = deepClone(entity);
-
-      // Calculate new geometry
-      const updates = calculateMovedGeometry(entity, this.delta);
-      this.wasExecuted = true;
-      // Post-move host built from snapshot+updates (no getLevelScene — stale at
-      // synchronous emit time). Persistence symmetry with the multi-entity command:
-      // without the cascade emit a single-entity 3D gizmo move never persisted.
-      const movedEntity = { ...this.entitySnapshot, ...updates } as SceneEntity;
-      runMoveForwardCascade(
-        [this.entityId], this.delta, this.sceneManager, [movedEntity],
-        () => this.sceneManager.updateEntity(this.entityId, updates),
-      );
-    }
-  }
-
-  /**
-   * Undo: Move entity by reverse delta
-   */
-  undo(): void {
-    if (this.wasExecuted && this.entitySnapshot) {
-      const entity = this.sceneManager.getEntity(this.entityId);
-      if (entity) {
-        const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
-        const revertedEntity = { ...this.entitySnapshot } as SceneEntity;
-        runMoveUndoCascade(
-          [this.entityId], this.delta, this.sceneManager, [revertedEntity],
-          () => this.sceneManager.updateEntity(this.entityId, reversedUpdates),
-        );
-      }
-    }
-  }
-
-  /**
-   * Redo: Move entity by delta again
-   */
-  redo(): void {
-    this.execute();
-  }
-
-  /**
-   * Get description for UI
-   */
   getDescription(): string {
-    const entityType = this.entitySnapshot?.type ?? 'entity';
+    const entityType = this.entitySnapshots.get(this.entityId)?.type ?? 'entity';
     return `Move ${entityType} by (${this.delta.x.toFixed(1)}, ${this.delta.y.toFixed(1)})`;
   }
 
-  /**
-   * Check if can merge with another command
-   * Merges consecutive moves of the same entity within time window
-   */
+  /** Merge consecutive drag samples of the SAME entity within the canonical window. */
   canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveEntityCommand)) {
-      return false;
-    }
-
-    // Must be same entity
-    if (other.entityId !== this.entityId) {
-      return false;
-    }
-
-    // Same entity → coalesce only live-drag samples within the merge window. SSoT.
-    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
+    return other instanceof MoveEntityCommand && this.canMergeTransform(other);
   }
 
-  /**
-   * Merge with another move command
-   * Combines deltas for a single undo operation
-   */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveEntityCommand;
     return new MoveEntityCommand(
       this.entityId,
       mergeMoveDelta(this.delta, otherMove.delta),
       this.sceneManager,
-      true // Keep dragging flag
+      true, // Keep dragging flag
     );
   }
 
-  /**
-   * Get the entity ID
-   */
   getEntityId(): string {
     return this.entityId;
   }
 
-  /**
-   * Get the movement delta
-   */
-  getDelta(): Point3D {
-    return { ...this.delta };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
+  /** 🏢 ENTERPRISE: Serialize for persistence — legacy single-entity shape preserved. */
   serialize(): SerializedCommand {
     return {
       type: this.type,
@@ -185,28 +128,17 @@ export class MoveEntityCommand implements ICommand {
         entityId: this.entityId,
         delta: this.delta,
         isDragging: this.isDragging,
-        entitySnapshot: this.entitySnapshot,
+        entitySnapshot: this.entitySnapshots.get(this.entityId) ?? null,
       },
       version: 1,
     };
   }
 
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
-  /**
-   * Validate command can be executed
-   */
   validate(): string | null {
     if (!this.entityId) {
       return 'Entity ID is required';
     }
-    // ADR-049 Phase 2 — a PURE vertical move (axis-Y gizmo) has x=y=0 but z≠0.
-    if (this.delta.x === 0 && this.delta.y === 0 && (this.delta.z ?? 0) === 0) {
+    if (!this.hasNonZeroDelta()) {
       return 'Delta must be non-zero';
     }
     return null;
@@ -214,216 +146,66 @@ export class MoveEntityCommand implements ICommand {
 }
 
 /**
- * Command for moving multiple entities at once
- * All entities move by the same delta (batch operation)
+ * Command for moving multiple entities by the same 3D delta (batch operation).
  */
-export class MoveMultipleEntitiesCommand implements ICommand {
-  readonly id: string;
+export class MoveMultipleEntitiesCommand extends MoveCommandBase {
   readonly name = 'MoveMultipleEntities';
   readonly type = 'move-multiple-entities';
-  readonly timestamp: number;
-
-  private entitySnapshots: Map<string, SceneEntity> = new Map();
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: string[],
-    private readonly delta: Point3D,
-    private readonly sceneManager: ISceneManager,
-    /** Optional: Mark as dragging for merge purposes */
-    private readonly isDragging: boolean = false
+    entityIds: string[],
+    delta: Point3D,
+    sceneManager: ISceneManager,
+    /** Optional: mark as a drag sample so consecutive samples coalesce into one undo step. */
+    isDragging: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityIds, delta, sceneManager, isDragging);
   }
 
-  /**
-   * Execute: Move all entities by delta — single batch commit, O(n_scene) not N×O(n_scene).
-   */
-  execute(): void {
-    this.entitySnapshots.clear();
-    const updatesMap = new Map<string, Partial<SceneEntity>>();
-
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (entity) {
-        this.entitySnapshots.set(entityId, deepClone(entity));
-        updatesMap.set(entityId, calculateMovedGeometry(entity, this.delta));
-      }
-    }
-
-    if (updatesMap.size > 0) {
-      this.wasExecuted = true;
-      // Build post-move entities from snapshots+updates (safe: no getLevelScene call,
-      // which would return stale React state at synchronous emit time).
-      const movedEntities: SceneEntity[] = [];
-      for (const [entityId, updates] of updatesMap) {
-        const snapshot = this.entitySnapshots.get(entityId);
-        if (snapshot) movedEntities.push({ ...snapshot, ...updates } as SceneEntity);
-      }
-      runMoveForwardCascade(
-        this.entityIds, this.delta, this.sceneManager, movedEntities,
-        () => this.sceneManager.updateEntities(updatesMap),
-      );
-    }
-  }
-
-  /**
-   * Undo: Move all entities by reverse delta — single batch commit.
-   */
-  undo(): void {
-    if (!this.wasExecuted) return;
-    const updatesMap = new Map<string, Partial<SceneEntity>>();
-
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (entity) {
-        updatesMap.set(entityId, calculateMovedGeometry(entity, reverseDelta(this.delta)));
-      }
-    }
-
-    if (updatesMap.size > 0) {
-      // Build reverted entities from snapshots before touching the scene so the
-      // cascade can emit them first. Snapshots carry the original (pre-move) params —
-      // correct for Firestore persistence regardless of scene state at emit time.
-      const revertedEntities: SceneEntity[] = [];
-      for (const entityId of this.entityIds) {
-        const snapshot = this.entitySnapshots.get(entityId);
-        if (snapshot) revertedEntities.push(snapshot);
-      }
-      runMoveUndoCascade(
-        this.entityIds, this.delta, this.sceneManager, revertedEntities,
-        () => this.sceneManager.updateEntities(updatesMap),
-      );
-    }
-  }
-
-  /**
-   * Redo: Move all entities by delta again — single batch commit.
-   */
-  redo(): void {
-    const updatesMap = new Map<string, Partial<SceneEntity>>();
-    const movedEntities: SceneEntity[] = [];
-
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (entity) {
-        const updates = calculateMovedGeometry(entity, this.delta);
-        updatesMap.set(entityId, updates);
-        movedEntities.push({ ...entity, ...updates } as SceneEntity);
-      }
-    }
-
-    if (updatesMap.size > 0) {
-      runMoveForwardCascade(
-        this.entityIds, this.delta, this.sceneManager, movedEntities,
-        () => this.sceneManager.updateEntities(updatesMap),
-      );
-    }
-  }
-
-  /**
-   * Get description for UI
-   */
   getDescription(): string {
-    return `Move ${this.entitySnapshots.size} entities by (${this.delta.x.toFixed(1)}, ${this.delta.y.toFixed(1)})`;
+    return `Move ${this.entityIds.length} entities by (${this.delta.x.toFixed(1)}, ${this.delta.y.toFixed(1)})`;
   }
 
-  /**
-   * Check if can merge with another command
-   * Merges consecutive moves of the same entities within time window
-   */
+  /** Merge consecutive drag samples of the SAME entity set within the canonical window. */
   canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveMultipleEntitiesCommand)) {
-      return false;
-    }
-
-    // Must be same set of entities
-    if (other.entityIds.length !== this.entityIds.length) {
-      return false;
-    }
-
-    const thisSet = new Set(this.entityIds);
-    const otherSet = new Set(other.entityIds);
-
-    for (const id of thisSet) {
-      if (!otherSet.has(id)) {
-        return false;
-      }
-    }
-
-    // Same entity set → coalesce only live-drag samples within the merge window. SSoT.
-    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
+    return other instanceof MoveMultipleEntitiesCommand && this.canMergeTransform(other);
   }
 
-  /**
-   * Merge with another move command
-   * Combines deltas for a single undo operation
-   */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveMultipleEntitiesCommand;
     return new MoveMultipleEntitiesCommand(
       this.entityIds,
       mergeMoveDelta(this.delta, otherMove.delta),
       this.sceneManager,
-      true // Keep dragging flag
+      true, // Keep dragging flag
     );
   }
 
-  /**
-   * Get the entity IDs
-   */
   getEntityIds(): string[] {
     return [...this.entityIds];
   }
 
-  /**
-   * Get the movement delta
-   */
-  getDelta(): Point3D {
-    return { ...this.delta };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
+  /** 🏢 ENTERPRISE: Serialize for persistence — `{ entityIds, entitySnapshots[] }` + move keys. */
   serialize(): SerializedCommand {
-    const snapshotsArray: Array<{ id: string; entity: SceneEntity }> = [];
-    this.entitySnapshots.forEach((entity, id) => {
-      snapshotsArray.push({ id, entity });
-    });
-
     return {
       type: this.type,
       id: this.id,
       name: this.name,
       timestamp: this.timestamp,
       data: {
-        entityIds: this.entityIds,
+        ...this.baseTransformData(),
         delta: this.delta,
         isDragging: this.isDragging,
-        entitySnapshots: snapshotsArray,
       },
       version: 1,
     };
   }
 
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [...this.entityIds];
-  }
-
-  /**
-   * Validate command can be executed
-   */
   validate(): string | null {
     if (!this.entityIds || this.entityIds.length === 0) {
       return 'At least one entity ID is required';
     }
-    // ADR-049 Phase 2 — a PURE vertical move (axis-Y gizmo) has x=y=0 but z≠0.
-    if (this.delta.x === 0 && this.delta.y === 0 && (this.delta.z ?? 0) === 0) {
+    if (!this.hasNonZeroDelta()) {
       return 'Delta must be non-zero';
     }
     return null;

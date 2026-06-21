@@ -71,17 +71,38 @@ export interface StructuralFinishSpec {
   readonly exteriorThickness?: number;
 }
 
+/** ADR-449 Slice X4 — resolved σοβάς (υλικό + πάχος) μιας ταξινομημένης παρειάς. */
+export interface ResolvedFinishForClass {
+  /** mm — πάχος σοβά (εξωτ.→`exteriorThickness`/fallback `thickness`· εσωτ.→`thickness`). */
+  readonly thicknessMm: number;
+  /** Resolved υλικό (εξωτ.→`exteriorMaterialId`· εσωτ.→`interiorMaterialId`). */
+  readonly materialId: string;
+}
+
 /**
- * ADR-449 Slice X4 — SSoT για το πάχος σοβά **ανά ταξινόμηση** παρειάς. Εξωτερικές παρειές
- * παίρνουν τον (πιο παχύ) εξωτ. σοβά (`exteriorThickness`, fallback `thickness`)· εσωτερικές
- * τον `thickness`. ΟΛΟΙ οι consumers (resolver κάθετων όψεων + horizontal top-cap/soffit)
- * διαβάζουν από εδώ — μηδέν διπλασιασμός του ασύμμετρου branch.
+ * ADR-449 Slice X4 — **ΤΟ** SSoT για «εξωτερική vs εσωτερική παρειά → ποια τιμή σοβά».
+ * Επιστρέφει ΚΑΙ υλικό ΚΑΙ (ασύμμετρο) πάχος ώστε να υπάρχει **ΕΝΑ** σημείο που ξέρει το
+ * exterior/interior branch. ΟΛΟΙ οι consumers (resolver κάθετων όψεων + horizontal
+ * top-cap/soffit) διαβάζουν από εδώ — μηδέν διπλασιασμός του branch (πριν ήταν copy-paste
+ * σε resolver + horizontal για το materialId, + νέο asymmetric πάχος).
  */
+export function resolveFinishForClass(
+  spec: StructuralFinishSpec,
+  classification: FinishClassification,
+): ResolvedFinishForClass {
+  const isExterior = classification === 'exterior';
+  return {
+    thicknessMm: isExterior ? (spec.exteriorThickness ?? spec.thickness) : spec.thickness,
+    materialId: isExterior ? spec.exteriorMaterialId : spec.interiorMaterialId,
+  };
+}
+
+/** Thin SSoT-delegate: μόνο το πάχος ανά ταξινόμηση (callers που δεν χρειάζονται υλικό). */
 export function resolveFinishThicknessMm(
   spec: StructuralFinishSpec,
   classification: FinishClassification,
 ): number {
-  return classification === 'exterior' ? (spec.exteriorThickness ?? spec.thickness) : spec.thickness;
+  return resolveFinishForClass(spec, classification).thicknessMm;
 }
 
 // ─── DERIVED: resolver output (ποτέ stored) ────────────────────────────────────

@@ -21,9 +21,10 @@
  * the `*InPlace` helpers only for the in-place branch. Forcing copy into the base
  * would be a leaky abstraction (ADR-507 §8 decision gate).
  *
- * Undo restores geometry from the snapshot for Rotate/Scale/Mirror. Move keeps
- * its `reverseDelta` recompute as an `undo` override (behaviour-identical); a
- * later pass may unify Move onto snapshot-restore.
+ * Undo restores geometry from the snapshot for ALL in-place subclasses — Rotate,
+ * Scale, Mirror AND Move (ADR-507 §8 item α: Move migrated from its former
+ * `reverseDelta` recompute to exact snapshot-restore, so every subclass now shares
+ * the one snapshot-restore undo path).
  *
  * The reframe/emit cascade itself is already SSoT — this base only orchestrates
  * the call order; it does NOT re-implement it.
@@ -189,28 +190,6 @@ export abstract class SnapshotTransformCommand implements ICommand {
 
     cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     // ADR-492 — re-frame beams against the restored geometry; separate emit (restore stays first).
-    reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
-  }
-
-  /**
-   * Undo variant for delta-based commands (Move) that recompute the INVERSE
-   * patch from the live entity rather than restoring the snapshot. Keeps the
-   * exact same race-guarded emit/cascade ordering as `undoInPlace` — the SSoT
-   * lives here, the subclass supplies only the inverse geometry.
-   */
-  protected undoInPlaceWith(inverseUpdates: (entity: SceneEntity) => Partial<SceneEntity>): void {
-    if (!this.wasExecuted) return;
-
-    emitRestoredEntities([...this.entitySnapshots.values()]);
-
-    const updatesMap = new Map<string, Partial<SceneEntity>>();
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (entity) updatesMap.set(entityId, inverseUpdates(entity));
-    }
-    if (updatesMap.size > 0) this.sceneManager.updateEntities(updatesMap);
-
-    cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
   }
 

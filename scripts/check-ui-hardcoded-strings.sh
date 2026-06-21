@@ -75,7 +75,7 @@ for file in $FILES; do
     [[ ! -f "$file" ]] && continue
 
     # EXEMPT patterns (same as defaultValue hook + extras)
-    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.|\.original\.)'; then
+    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.|\.original\.|\.template\.)'; then
         continue
     fi
 

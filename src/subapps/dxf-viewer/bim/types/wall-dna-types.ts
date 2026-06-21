@@ -42,66 +42,59 @@ export function computeTotalThickness(layers: readonly WallDnaLayer[]): number {
 // ─── Default DNA presets (mm) ───────────────────────────────────────────────
 
 /**
- * ADR-447 — Εξωτερικός τοίχος 25cm (Revit-grade Greek default): εξωτερικός σοβάς
- * 25 + ΚΟΚΚΙΝΟ διάτρητο τούβλο (μπατικό) 210 + εσωτερικός σοβάς Knauf 15 = 250 mm.
- * Greek RC-frame infill masonry — ο φέρων σκελετός είναι κολώνες/δοκάρια (RC), ΟΙ
- * τοίχοι είναι πληρωτικοί από τούβλο (ΟΧΙ RC, όπως ήταν λάθος το παλιό default).
- * Σταθερός σοβάς + τούβλο στο υπόλοιπο (απόφαση Giorgio).
+ * ADR-447/449 X4 — Εξωτερικός τοίχος (Revit-grade Greek default): **ΜΟΝΟ δομικός
+ * πυρήνας** = ΚΟΚΚΙΝΟ διάτρητο τούβλο (μπατικό) 210 mm. Greek RC-frame infill masonry.
+ *
+ * ADR-449 Slice X4 — ο σοβάς **ΔΕΝ** είναι πια DNA layer: είναι additive finish skin
+ * (`WallParams.finish`, mirror κολόνας/δοκαριού) που **προεξέχει** από τον πυρήνα μέσω
+ * της ενιαίας structural-finish σιλουέτας (εξωτ. 25 + εσωτ. 15 = το ίδιο 250mm οπτικό
+ * σύνολο όπως πριν, αλλά ΕΝΑ representation, χωρίς διπλό σοβά). Το DNA κρατά μόνο
+ * δομικό + μόνωση.
  */
 export function createDefaultExteriorDna(): WallDna {
   const layers: readonly WallDnaLayer[] = [
-    { id: 'ext-plaster-out', name: 'Exterior Plaster', thickness: 25, materialId: 'mat-plaster-ext', side: 'exterior' },
     { id: 'ext-core', name: 'Brick Masonry', thickness: 210, materialId: 'mat-brick-masonry', side: 'core' },
-    { id: 'ext-plaster-in', name: 'Interior Plaster (Knauf)', thickness: 15, materialId: 'mat-plaster-int', side: 'interior' },
   ];
   return { layers, totalThickness: computeTotalThickness(layers) };
 }
 
 /**
- * ADR-447 — Εξωτερικός 25cm ΜΕ ΘΕΡΜΟΠΡΟΣΟΨΗ (ETICS): + EPS 100 στην εξωτερική
- * παρειά = 350 mm. Η μόνωση μοντελοποιείται ΕΔΩ (Revit way: layer στο wall type),
- * και ο τοίχος αυτός εξαιρείται από το auto building-envelope (ADR-396) μέσω
- * {@link wallHasExteriorInsulation} → μηδέν διπλή μόνωση (ADR-447 marriage).
+ * ADR-447/449 X4 — Εξωτερικός ΜΕ ΘΕΡΜΟΠΡΟΣΟΨΗ (ETICS): EPS 100 (μόνωση, εξωτ. παρειά) +
+ * τούβλο 210 = 310 mm δομικός+μόνωση. Ο σοβάς (finish skin) πάει ΕΞΩ από το EPS (σωστή
+ * ETICS σειρά: τούβλο → EPS → σοβάς). Η μόνωση μένει DNA layer → ο τοίχος εξαιρείται από
+ * το auto building-envelope (ADR-396) μέσω {@link wallHasExteriorInsulation}.
  */
 export function createExterior25EpsDna(): WallDna {
   const layers: readonly WallDnaLayer[] = [
     { id: 'ext-eps', name: 'EPS Insulation', thickness: 100, materialId: 'mat-eps', side: 'exterior' },
-    { id: 'ext-plaster-out', name: 'Exterior Plaster', thickness: 25, materialId: 'mat-plaster-ext', side: 'exterior' },
     { id: 'ext-core', name: 'Brick Masonry', thickness: 210, materialId: 'mat-brick-masonry', side: 'core' },
-    { id: 'ext-plaster-in', name: 'Interior Plaster (Knauf)', thickness: 15, materialId: 'mat-plaster-int', side: 'interior' },
   ];
   return { layers, totalThickness: computeTotalThickness(layers) };
 }
 
-/** ADR-447 — Εξωτερικός τοίχος 20cm: εξωτ. σοβάς 25 + τούβλο 160 + Knauf 15 = 200 mm. */
+/** ADR-447/449 X4 — Εξωτερικός 20cm: ΜΟΝΟ δομικός πυρήνας τούβλο 160 mm (σοβάς = finish skin). */
 export function createExterior20Dna(): WallDna {
   const layers: readonly WallDnaLayer[] = [
-    { id: 'ext-plaster-out', name: 'Exterior Plaster', thickness: 25, materialId: 'mat-plaster-ext', side: 'exterior' },
     { id: 'ext-core', name: 'Brick Masonry', thickness: 160, materialId: 'mat-brick-masonry', side: 'core' },
-    { id: 'ext-plaster-in', name: 'Interior Plaster (Knauf)', thickness: 15, materialId: 'mat-plaster-int', side: 'interior' },
   ];
   return { layers, totalThickness: computeTotalThickness(layers) };
 }
 
 /**
- * ADR-447 — Εσωτερικός διαχωριστικός 10cm: σοβάς Knauf 15 + ΚΟΚΚΙΝΟ τούβλο 70 +
- * σοβάς Knauf 15 = 100 mm (γυψοσοβάς και στις δύο παρειές).
+ * ADR-447/449 X4 — Εσωτερικός διαχωριστικός: ΜΟΝΟ δομικός πυρήνας ΚΟΚΚΙΝΟ τούβλο 70 mm.
+ * Ο σοβάς (Knauf, 15 ανά παρειά) = finish skin και στις δύο παρειές (εσωτερικές → 15).
  */
 export function createDefaultInteriorDna(): WallDna {
   const layers: readonly WallDnaLayer[] = [
-    { id: 'int-plaster-a', name: 'Interior Plaster (Knauf)', thickness: 15, materialId: 'mat-plaster-int', side: 'exterior' },
     { id: 'int-core', name: 'Brick Masonry', thickness: 70, materialId: 'mat-brick-masonry', side: 'core' },
-    { id: 'int-plaster-b', name: 'Interior Plaster (Knauf)', thickness: 15, materialId: 'mat-plaster-int', side: 'interior' },
   ];
   return { layers, totalThickness: computeTotalThickness(layers) };
 }
 
-/** Partition wall: plaster 12.5 + brick 75 + plaster 12.5 = 100 mm. */
+/** ADR-447/449 X4 — Partition: ΜΟΝΟ δομικός πυρήνας τούβλο 75 mm (σοβάς = finish skin). */
 export function createDefaultPartitionDna(): WallDna {
   const layers: readonly WallDnaLayer[] = [
-    { id: 'part-plaster-a', name: 'Plaster A', thickness: 12.5, materialId: 'mat-plaster-int', side: 'exterior' },
     { id: 'part-core', name: 'Brick Masonry', thickness: 75, materialId: 'mat-brick-masonry', side: 'core' },
-    { id: 'part-plaster-b', name: 'Plaster B', thickness: 12.5, materialId: 'mat-plaster-int', side: 'interior' },
   ];
   return { layers, totalThickness: computeTotalThickness(layers) };
 }

@@ -33,16 +33,6 @@ export function applyDelta(point: Point2D, delta: Point2D): Point2D {
 }
 
 /**
- * Calculate reverse delta — negates the plan components and, when present, the
- * vertical `z` (so undo of a 3D move restores the original elevation too).
- */
-export function reverseDelta(delta: Point3D): Point3D {
-  return delta.z !== undefined
-    ? { x: -delta.x, y: -delta.y, z: -delta.z }
-    : { x: -delta.x, y: -delta.y };
-}
-
-/**
  * Calculate geometry updates for an entity based on delta.
  * Uses centralized type guards from types/entities.ts (ADR-102).
  */

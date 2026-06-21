@@ -24,8 +24,10 @@ describe('buildDefaultWallParams', () => {
     const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 });
     expect(params.category).toBe('exterior');
     expect(params.dna).toBeDefined();
-    expect(params.dna?.totalThickness).toBe(250); // exterior preset
-    expect(params.thickness).toBe(250);
+    // ADR-449 X4 — DNA = ΜΟΝΟ δομικός πυρήνας (τούβλο 210)· ο σοβάς = additive finish skin.
+    expect(params.dna?.totalThickness).toBe(210);
+    expect(params.thickness).toBe(210);
+    expect(params.finish?.enabled).toBe(true); // exterior → παίρνει finish skin
   });
 
   it('matches thickness to DNA total when DNA preset is used', () => {
@@ -74,8 +76,8 @@ describe('buildDefaultWallParams', () => {
     // units) happens in computeWallGeometry." So height stays at 3000 mm even
     // when sceneUnits = 'm', and the DNA preset stays at its raw mm value.
     expect(params.height).toBe(DEFAULT_WALL_HEIGHT_MM);
-    expect(params.thickness).toBe(250); // exterior preset, raw mm
-    expect(params.dna?.totalThickness).toBe(250);
+    expect(params.thickness).toBe(210); // exterior preset (X4: brick-only core), raw mm
+    expect(params.dna?.totalThickness).toBe(210);
     expect(params.sceneUnits).toBe('m');
   });
 });
@@ -253,11 +255,11 @@ describe('buildDefaultWallParams alignment integration', () => {
       undefined, 'mm',
       { x: 500, y: 100 }, // +Y side
     );
-    // exterior DNA thickness = 250 mm → half = 125 → shift +Y by 125.
+    // ADR-449 X4 — exterior DNA (brick-only core) = 210 mm → half = 105 → shift +Y by 105.
     expect(params.start.x).toBeCloseTo(0, 6);
-    expect(params.start.y).toBeCloseTo(125, 6);
+    expect(params.start.y).toBeCloseTo(105, 6);
     expect(params.end.x).toBeCloseTo(1000, 6);
-    expect(params.end.y).toBeCloseTo(125, 6);
+    expect(params.end.y).toBeCloseTo(105, 6);
   });
 
   it('alignment offset uses overridden thickness when provided', () => {

@@ -17,7 +17,6 @@ import {
   type HeatCapacityLayer,
 } from '../assembly-heat-capacity';
 import {
-  createDefaultExteriorDna,
   type WallDna,
   type WallDnaLayer,
 } from '../../../types/wall-dna-types';
@@ -89,9 +88,24 @@ describe('computeArealHeatCapacity', () => {
 
 // ─── wallDnaToHeatCapacityLayers + computeWallArealHeatCapacity ──────────────────
 
+// ADR-449 X4 — το default exterior DNA είναι πλέον ΜΟΝΟ δομικός πυρήνας (τούβλο)· ο σοβάς
+// μετακινήθηκε σε additive finish skin. Τοπικό multi-layer fixture (παλιά σύσταση) ώστε τα
+// generic tests (interior-first reversal, clamp, worked example) να ελέγχουν τη ΣΥΜΠΕΡΙΦΟΡΑ
+// της συνάρτησης ανεξάρτητα από τη σύσταση του default.
+// 🔴 DEFER (ADR-449 X4 follow-up): η θερμική συνεισφορά του σοβά-skin ΔΕΝ τροφοδοτείται πια
+// στον DNA-based υπολογισμό για ΝΕΟΥΣ τοίχους — wiring από τα finish faces εκκρεμεί.
+function legacyMultiLayerExteriorDna(): WallDna {
+  const layers: readonly WallDnaLayer[] = [
+    { id: 'pe', name: 'Plaster Ext', thickness: 25, materialId: 'mat-plaster-ext', side: 'exterior' },
+    { id: 'core', name: 'Concrete', thickness: 210, materialId: 'mat-concrete-c25', side: 'core' },
+    { id: 'pi', name: 'Plaster Int', thickness: 20, materialId: 'mat-plaster-int', side: 'interior' },
+  ];
+  return { layers, totalThickness: 255 };
+}
+
 describe('wallDnaToHeatCapacityLayers', () => {
   it('αντιστρέφει σε interior-first σειρά (DNA = exterior→interior)', () => {
-    const dna = createDefaultExteriorDna(); // [plaster-ext, concrete-c25, plaster-int]
+    const dna = legacyMultiLayerExteriorDna(); // [plaster-ext, concrete-c25, plaster-int]
     const layers = wallDnaToHeatCapacityLayers(dna);
     expect(layers).toHaveLength(3);
     // out[0] = η ΕΣΩΤΕΡΙΚΗ στρώση (plaster-int: ρ=1200), out[1] = πυρήνας (concrete: ρ=2400).
@@ -114,8 +128,8 @@ describe('wallDnaToHeatCapacityLayers', () => {
 });
 
 describe('computeWallArealHeatCapacity', () => {
-  it('default exterior DNA (μπετόν) → κ_m από worked example (185280 J/m²K)', () => {
-    const dna = createDefaultExteriorDna();
+  it('multi-layer DNA (σοβάς+μπετόν) → κ_m από worked example (185280 J/m²K)', () => {
+    const dna = legacyMultiLayerExteriorDna();
     // plaster-int 0.02 (1200·1000) + concrete clamp 0.08 (2400·840) = 185280.
     expect(computeWallArealHeatCapacity(dna)).toBeCloseTo(1200 * 1000 * 0.02 + 2400 * 840 * 0.08);
   });

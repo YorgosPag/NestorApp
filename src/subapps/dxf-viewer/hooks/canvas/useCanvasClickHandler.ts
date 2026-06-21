@@ -201,7 +201,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // opening / slab-opening (no free directional reference). Reads the live
     // toggle from the cadToggleState SSoT mirror and the anchor from the tool's
     // preview store, so the committed point equals the rubber-band preview.
-    const bimPoint = applyBimDrawingConstraint(activeTool, worldPoint);
+    // ADR-508 — pass worldPerPixel (=1/scale) so the wall's face-relative commit
+    // applies the SAME zoom-adaptive length step as the preview ghost (WYSIWYG).
+    const bimPoint = applyBimDrawingConstraint(
+      activeTool,
+      worldPoint,
+      1 / Math.max(getImmediateTransform().scale, 0.001),
+    );
     // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
     if (activeTool === 'stair' && stairTool?.isActive) {
       stairTool.onCanvasClick(bimPoint);

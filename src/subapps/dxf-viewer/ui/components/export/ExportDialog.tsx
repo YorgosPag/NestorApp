@@ -36,7 +36,7 @@ import { useExportDialogState } from './useExportDialogState';
 
 const logger = createModuleLogger('DXF_EXPORT_DIALOG');
 
-const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf'] as const;
+const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf', 'tek'] as const;
 const ENTITY_SCOPE_OPTIONS = ['both', 'dxf-only', 'bim-only'] as const;
 const FLOOR_SCOPE_OPTIONS = ['active', 'all-zip', 'all-single'] as const;
 const UNIT_OPTIONS = ['millimeters', 'centimeters', 'meters'] as const;

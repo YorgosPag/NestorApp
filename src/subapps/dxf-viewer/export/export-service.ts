@@ -29,6 +29,7 @@ import {
   buildFloorFilename,
   type DxfExportOptions,
 } from './formats/dxf-export-adapter';
+import { exportFloorToTek, type TekExportOptions } from './formats/tek-export-adapter';
 import type { ExportArtifact, ExportDeps, ExportRequest, ExportResult } from './types';
 
 export async function runExport(
@@ -38,12 +39,50 @@ export async function runExport(
   switch (request.format) {
     case 'dxf':
       return runDxfExport(request, deps);
+    case 'tek':
+      return runTekExport(request, deps);
     case 'ifc':
     case 'pdf':
       throw new Error(`EXPORT_FORMAT_NOT_READY:${request.format}`);
     default:
       throw new Error(`EXPORT_FORMAT_UNKNOWN`);
   }
+}
+
+/**
+ * Tekton `.TEK` (XML) export — ΑΡΧΙΤΕΚΤΟΝΙΚΑ (φάση 1: τοίχοι). Ένα `.tek` ανά όροφο
+ * (active → 1 αρχείο· πολλοί → zip). Ενοποίηση ορόφων (`all-single`) = DEFER.
+ */
+async function runTekExport(
+  request: ExportRequest,
+  deps: ExportDeps,
+): Promise<ExportResult> {
+  const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, request.floorScope);
+  const opts: TekExportOptions = { entityScope: request.entityScope, baseName: deps.projectName };
+  const warnings: string[] = [];
+  if (request.floorScope === 'all-single') {
+    warnings.push('TEK: ενοποίηση ορόφων σε ένα αρχείο δεν υποστηρίζεται ακόμη — ένα .tek ανά όροφο.');
+  }
+
+  const artifacts: ExportArtifact[] = [];
+  for (const floor of floors) {
+    const out = await exportFloorToTek(floor, opts);
+    artifacts.push(out.artifact);
+    warnings.push(...out.warnings);
+  }
+
+  if (artifacts.length === 1) {
+    triggerExportDownload({ blob: artifacts[0].blob, filename: artifacts[0].filename });
+    return { filename: artifacts[0].filename, fileCount: 1, warnings };
+  }
+
+  const zipFiles: ZipFile[] = await Promise.all(
+    artifacts.map(async (a) => ({ name: a.filename, data: await blobToUint8(a.blob) })),
+  );
+  const zipBlob = createStoredZip(zipFiles);
+  const zipName = buildFloorFilename(deps.projectName, 'floors', 'zip');
+  triggerExportDownload({ blob: zipBlob, filename: zipName });
+  return { filename: zipName, fileCount: artifacts.length, warnings };
 }
 
 async function runDxfExport(

@@ -63,6 +63,13 @@ export interface WallPreviewState {
    */
   readonly startAnchored: boolean;
   /**
+   * ADR-508 (2026-06-21) — γωνία (μοίρες, world) της κάθετης-στην-παρειά κατεύθυνσης όταν το
+   * `startPoint` κλειδώθηκε από face-snap (`end - start` του ghost). Τροφοδοτεί το relative-polar
+   * του 2ου κλικ (preview === commit): `getBimOrthoReference('wall')` δίνει το ref (= start) και το
+   * `resolveWallFaceRelativePolar` διαβάζει αυτό το πεδίο. `null` = free / collinear-overlap.
+   */
+  readonly startFaceAngle: number | null;
+  /**
    * ADR-508 — column footprints (2Δ) της σκηνής για το 12-θέσεων ghost face snap + flush.
    * Γράφεται από `useWallTool` (`setColumns`, on activate)· διατηρείται μέσα από τα `set()`
    * transitions (αλλάζει σπάνια). `[]` = καμία κολόνα.
@@ -83,6 +90,7 @@ const EMPTY: WallPreviewState = Object.freeze({
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
+  startFaceAngle: null,
   columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
   memberTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
 });
@@ -132,8 +140,9 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'columnFootprints' | 'memberTargets'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle' | 'columnFootprints' | 'memberTargets'> & {
   readonly startAnchored?: boolean;
+  readonly startFaceAngle?: number | null;
 };
 
 export const wallPreviewStore = {
@@ -144,12 +153,14 @@ export const wallPreviewStore = {
    */
   set(next: WallPreviewSet): void {
     const nextAnchored = next.startAnchored ?? false;
+    const nextFaceAngle = next.startFaceAngle ?? null;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
       pointsEqual(currentState.curveControl, next.curveControl) &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       currentState.startAnchored === nextAnchored &&
+      currentState.startFaceAngle === nextFaceAngle &&
       overridesEqual(currentState.overrides, next.overrides)
     ) {
       return;
@@ -161,6 +172,7 @@ export const wallPreviewStore = {
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
+      startFaceAngle: nextFaceAngle,
       columnFootprints: currentState.columnFootprints,
       memberTargets: currentState.memberTargets,
     };

@@ -21,7 +21,7 @@ import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/
 import { displayUnitState } from '../../config/display-unit-state';
 import { formatDisplayValue, DISPLAY_UNIT_LABELS } from '../../config/units';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
-import { applyPolar, formatPolarLabel } from '../../systems/constraints/polar-utils';
+import { applyPolar, formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
@@ -29,7 +29,7 @@ import { hardOrtho } from './drawing-handler-utils';
 // ADR-363: BIM tools (wall/stair/beam/slab) keep their points in dedicated
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
 // there so the rubber-band preview honours F8/F10 (preview == commit).
-import { getBimOrthoReference } from './bim-ortho-reference';
+import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
@@ -131,7 +131,15 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const afterOrtho = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
     let polarSnapResult: PolarSnapResult | null = null;
     let previewPt = afterOrtho;
-    if (!orthoOnRef.current && polarOnRef.current && lastRefPt) {
+    // ADR-508 — wall 2nd click anchored to a member face → relative-polar-to-face magnet
+    // (auto, supersedes world polar) + zoom-adaptive length step (same SSoT as the
+    // alignment traces). The helper guards tool/phase/ortho internally and shares the
+    // SSoT with the commit path (`applyBimDrawingConstraint`) so ghost === wall.
+    const faceRel = resolveWallFaceRelativePolar(afterOrtho, 1 / Math.max(getTransformScale(), 0.001));
+    if (faceRel) {
+      polarSnapResult = faceRel.result;
+      previewPt = faceRel.result.point;
+    } else if (!orthoOnRef.current && polarOnRef.current && lastRefPt) {
       polarSnapResult = applyPolar(afterOrtho, lastRefPt, {
         incrementAngle: polarTrackingStore.incrementAngle,
         additionalAngles: polarTrackingStore.additionalAngles,
@@ -265,10 +273,17 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         previewCanvasRef.current.drawPreview(previewEntity);
         // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
         if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {
+          // ADR-508 — face-relative wall snap: label the angle RELATIVE to the face
+          // (perpendicular ⇒ 90°), not the absolute world heading (which read e.g.
+          // "41.9°" while the wall was visibly perpendicular). The ray itself still
+          // points along the absolute snapped angle.
+          const labelAngle = faceRel
+            ? faceRelativeDisplayAngle(polarSnapResult.snappedAngle, faceRel.baseAngle)
+            : polarSnapResult.snappedAngle;
           previewCanvasRef.current.drawPolarTrackingLine(
             lastRefPt,
             polarSnapResult.snappedAngle,
-            formatPolarLabel(polarSnapResult.snappedAngle, polarSnapResult.distance),
+            formatPolarLabel(labelAngle, polarSnapResult.distance),
             previewPt,
           );
         }

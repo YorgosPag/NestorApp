@@ -4913,7 +4913,8 @@
     "formats": {
       "dxf": "DXF (AutoCAD/CAD)",
       "ifc": "IFC4 (BIM — Revit/ArchiCAD)",
-      "pdf": "PDF (drawing)"
+      "pdf": "PDF (drawing)",
+      "tek": "TEK (Tekton — architectural)"
     },
     "content": "Content",
     "contentScopes": {

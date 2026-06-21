@@ -147,7 +147,7 @@ function addHorizontalFinish(
   sceneUnits: SceneUnits,
   columnExtents: ColumnVerticalExtentLookup,
 ): void {
-  const { columnFaces, beamFaces } = computeStructuralHorizontalFinishFaces({
+  const { columnFaces, beamFaces, wallFaces } = computeStructuralHorizontalFinishFaces({
     columns: g.columns,
     beams: g.beams,
     walls: entities.walls,
@@ -164,4 +164,9 @@ function addHorizontalFinish(
     beamFaces, 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
   );
   if (beamSkin) { beamSkin.userData['buildingId'] = buildingId; group.add(beamSkin); }
+  // ADR-449 Slice X4/E — top-cap ελεύθερης κορυφής τοίχου (όροφος-wide walls, ίδιο gating με τον κάθετο σοβά).
+  const wallSkin = buildHorizontalFinishSkin(
+    wallFaces, 'wall', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hwall-${buildingId}`,
+  );
+  if (wallSkin) { wallSkin.userData['buildingId'] = buildingId; group.add(wallSkin); }
 }

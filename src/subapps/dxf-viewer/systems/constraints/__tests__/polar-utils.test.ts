@@ -3,7 +3,7 @@
  * Tests applyPolar pure function: increment snapping, additional angles, no-snap passthrough.
  */
 
-import { applyPolar, formatPolarLabel } from '../polar-utils';
+import { applyPolar, formatPolarLabel, faceRelativeDisplayAngle } from '../polar-utils';
 import type { PolarTrackingConfig } from '../polar-utils';
 
 const REF = { x: 0, y: 0 };
@@ -111,6 +111,66 @@ describe('applyPolar — additional angles', () => {
   });
 });
 
+describe('applyPolar — relative-polar baseAngle (ADR-508)', () => {
+  const cfg15: PolarTrackingConfig = { incrementAngle: 15, additionalAngles: [], angleTolerance: 3 };
+  const BASE = 30; // a "face" oriented 30° off world east
+
+  const pointAt = (deg: number, dist = 100, ref = REF) => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: ref.x + dist * Math.cos(rad), y: ref.y + dist * Math.sin(rad) };
+  };
+
+  it('baseAngle = 0 is identical to world polar (backward-compat lock)', () => {
+    const pt = pointAt(89);
+    const world = applyPolar(pt, REF, cfg90);
+    const explicitZero = applyPolar(pt, REF, { ...cfg90, baseAngle: 0 });
+    expect(explicitZero.isSnapped).toBe(world.isSnapped);
+    expect(explicitZero.snappedAngle).toBe(world.snappedAngle);
+    expect(explicitZero.point.x).toBeCloseTo(world.point.x);
+    expect(explicitZero.point.y).toBeCloseTo(world.point.y);
+  });
+
+  it('snaps to the base direction itself (0° relative) when cursor is near it', () => {
+    const result = applyPolar(pointAt(BASE + 1), REF, { ...cfg15, baseAngle: BASE });
+    expect(result.isSnapped).toBe(true);
+    expect(result.snappedAngle).toBe(BASE); // world-absolute = base + 0
+  });
+
+  it('snaps perpendicular to the face (90° relative = base+90) — the flush case', () => {
+    const result = applyPolar(pointAt(BASE + 90 + 1), REF, { ...cfg15, baseAngle: BASE });
+    expect(result.isSnapped).toBe(true);
+    expect(result.snappedAngle).toBe(BASE + 90); // 120° world
+  });
+
+  it('snaps to base + 45 relative (multiple of the 15° increment)', () => {
+    const result = applyPolar(pointAt(BASE + 45 + 2), REF, { ...cfg15, baseAngle: BASE });
+    expect(result.isSnapped).toBe(true);
+    expect(result.snappedAngle).toBe(BASE + 45); // 75° world
+  });
+
+  it('does NOT snap when the cursor is between relative increments (outside tolerance)', () => {
+    // base+7° is 7° from base (0 rel) and 8° from base+15 (15 rel) — both > 3° tol.
+    const result = applyPolar(pointAt(BASE + 7), REF, { ...cfg15, baseAngle: BASE });
+    expect(result.isSnapped).toBe(false);
+    expect(result.snappedAngle).toBeNull();
+  });
+
+  it('offsets additionalAngles by baseAngle too', () => {
+    const cfgAdd: PolarTrackingConfig = { incrementAngle: 90, additionalAngles: [33], angleTolerance: 3 };
+    // 33° relative to base ⇒ world base+33 = 63°. Cursor 1° off → snaps.
+    const result = applyPolar(pointAt(BASE + 33 + 1), REF, { ...cfgAdd, baseAngle: BASE });
+    expect(result.isSnapped).toBe(true);
+    expect(result.snappedAngle).toBe(BASE + 33); // 63° world
+  });
+
+  it('preserves distance under relative snapping', () => {
+    const dist = 137;
+    const result = applyPolar(pointAt(BASE + 1, dist), REF, { ...cfg15, baseAngle: BASE });
+    const snapDist = Math.hypot(result.point.x, result.point.y);
+    expect(snapDist).toBeCloseTo(dist, 3);
+  });
+});
+
 describe('formatPolarLabel', () => {
   it('formats angle and distance with 1 decimal', () => {
     expect(formatPolarLabel(45, 125.333)).toBe('45.0° / 125.3');
@@ -118,5 +178,34 @@ describe('formatPolarLabel', () => {
 
   it('shows 0.0 for zero distance', () => {
     expect(formatPolarLabel(90, 0)).toBe('90.0° / 0.0');
+  });
+});
+
+describe('faceRelativeDisplayAngle (ADR-508 — relative-polar-to-face tooltip)', () => {
+  // perpBase = the perpendicular-to-face world direction used for snapping.
+  it('perpendicular to face ⇒ 90° (the flush case, regardless of world heading)', () => {
+    expect(faceRelativeDisplayAngle(41.9, 41.9)).toBeCloseTo(90); // wall along perp base
+    expect(faceRelativeDisplayAngle(90, 90)).toBeCloseTo(90);
+    expect(faceRelativeDisplayAngle(0, 0)).toBeCloseTo(90);
+  });
+  it('parallel to face ⇒ 0°', () => {
+    // 90° off the perpendicular base = along the face surface.
+    expect(faceRelativeDisplayAngle(131.9, 41.9)).toBeCloseTo(0);
+    expect(faceRelativeDisplayAngle(41.9 - 90, 41.9)).toBeCloseTo(0);
+  });
+  it('45° off the face reads 45° either side', () => {
+    expect(faceRelativeDisplayAngle(41.9 + 45, 41.9)).toBeCloseTo(45);
+    expect(faceRelativeDisplayAngle(41.9 - 45, 41.9)).toBeCloseTo(45);
+  });
+  it('30° / 15° off the face read 30° / 15°', () => {
+    expect(faceRelativeDisplayAngle(41.9 + 60, 41.9)).toBeCloseTo(30); // 60° off perp = 30° off face
+    expect(faceRelativeDisplayAngle(41.9 + 75, 41.9)).toBeCloseTo(15);
+  });
+  it('always returns a value within [0, 90]', () => {
+    for (let a = 0; a < 360; a += 7) {
+      const v = faceRelativeDisplayAngle(a, 41.9);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(90);
+    }
   });
 });

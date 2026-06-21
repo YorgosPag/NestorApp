@@ -12,6 +12,7 @@ import {
   applyFinishParam,
   isFinishActive,
   resolveFinishThicknessMm,
+  resolveFinishForClass,
   STRUCTURAL_FINISH_INTERIOR_MATERIAL,
   STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
   STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
@@ -57,6 +58,18 @@ describe('ADR-449 Slice X4 — resolveFinishThicknessMm (ασύμμετρο πά
     };
     expect(resolveFinishThicknessMm(legacy, 'exterior')).toBe(15);
     expect(resolveFinishThicknessMm(legacy, 'interior')).toBe(15);
+  });
+
+  it('resolveFinishForClass → ΕΝΑ SSoT για υλικό + πάχος (resolver & horizontal διαβάζουν από εδώ)', () => {
+    const spec = createDefaultStructuralFinishSpec();
+    expect(resolveFinishForClass(spec, 'exterior')).toEqual({
+      thicknessMm: 25,
+      materialId: STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
+    });
+    expect(resolveFinishForClass(spec, 'interior')).toEqual({
+      thicknessMm: 15,
+      materialId: STRUCTURAL_FINISH_INTERIOR_MATERIAL,
+    });
   });
 });
 

@@ -59,6 +59,13 @@ export interface WallToolState {
    * location-line auto-flush). `false` → free placement (auto-flush σε κολόνα).
    */
   readonly startAnchored: boolean;
+  /**
+   * ADR-508 (2026-06-21) — η γωνία (μοίρες, world) της **κάθετης-στην-παρειά** κατεύθυνσης
+   * όταν το `startPoint` κλειδώθηκε με face-snap σε υφιστάμενο μέλος (`end - start` του ghost).
+   * Τροφοδοτεί το relative-polar του 2ου κλικ (Revit «angle relative to face»): `0°` relative =
+   * κάθετο στην παρειά (flush), `±90°` = παράλληλο. `null` σε free placement ή collinear-overlap.
+   */
+  readonly startFaceAngle: number | null;
   readonly polylineVertices: readonly Point2D[];
   /** ADR-363 Phase 1J — picked 2D entity source (on-entity mode, awaitingSide). */
   readonly pickedSource: WallSource | null;
@@ -76,6 +83,7 @@ export const INITIAL_STATE: WallToolState = {
   startPoint: null,
   endPoint: null,
   startAnchored: false,
+  startFaceAngle: null,
   polylineVertices: [],
   pickedSource: null,
   regionPicks: [],

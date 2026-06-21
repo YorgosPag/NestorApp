@@ -13,6 +13,8 @@ import {
   type HorizontalSlabObstacle,
 } from '../structural-finish-scene-horizontal';
 import type { StructuralFinishSpec } from '../structural-finish-types';
+import type { WallFinishObstacle } from '../structural-finish-scene';
+import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
 
 const SPEC: StructuralFinishSpec = {
   enabled: true,
@@ -53,10 +55,21 @@ const slabAt = (topMm: number, x0: number, y0: number, x1: number, y1: number): 
   },
 });
 
+// ADR-449 X4/E — νέος τοίχος (finish skin + brick-only DNA), 3m μήκος· ελεύθερη κορυφή στο 3000.
+const wall = (over: { stripFinish?: boolean } = {}): WallFinishObstacle => {
+  let params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 3, y: 0 }, { height: 3000 }, 'm');
+  if (over.stripFinish) {
+    const { finish: _f, ...rest } = params;
+    params = rest;
+  }
+  return { id: 'w1', kind: 'straight', params };
+};
+
 const run = (over: {
   columns?: HorizontalColumnSource[]; beams?: HorizontalBeamSource[]; slabs?: HorizontalSlabObstacle[];
+  walls?: WallFinishObstacle[];
 } = {}) => computeStructuralHorizontalFinishFaces({
-  columns: over.columns ?? [], beams: over.beams ?? [], walls: [], slabs: over.slabs ?? [],
+  columns: over.columns ?? [], beams: over.beams ?? [], walls: over.walls ?? [], slabs: over.slabs ?? [],
   beamObstacles: [], floorElevationMm: 0,
 });
 
@@ -169,6 +182,25 @@ describe('computeStructuralHorizontalFinishFaces', () => {
   it('inactive finish → κανένα face', () => {
     const c = column({ finish: { ...SPEC, enabled: false } });
     expect(run({ columns: [c] }).columnFaces).toHaveLength(0);
+  });
+
+  // ─── ADR-449 Slice X4/E — top-cap ελεύθερης κορυφής τοίχου ──────────────────────
+  it('ελεύθερος τοίχος (καμία πλάκα/δοκάρι από πάνω) → top-cap στην κορυφή (zMm=3000, up)', () => {
+    const { wallFaces } = run({ walls: [wall()] });
+    expect(wallFaces).toHaveLength(1);
+    expect(wallFaces[0].direction).toBe('up');
+    expect(wallFaces[0].zMm).toBe(3000);
+    expect(wallFaces[0].areaM2).toBeGreaterThan(0);
+  });
+
+  it('πλάκα πάνω από τον τοίχο → top-cap εξαφανίζεται (associative, ίδιο με κολόνα)', () => {
+    const { wallFaces } = run({ walls: [wall()], slabs: [slabAt(3000, -1, -1, 4, 1)] });
+    expect(wallFaces).toHaveLength(0);
+  });
+
+  it('τοίχος ΧΩΡΙΣ finish spec (legacy/bare) → κανένα top-cap', () => {
+    const { wallFaces } = run({ walls: [wall({ stripFinish: true })] });
+    expect(wallFaces).toHaveLength(0);
   });
 
   it('ADR-449 height-SSoT: columnExtents override → cap στο resolved zTop (3000), ΟΧΙ raw params.height (2700)', () => {
