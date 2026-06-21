@@ -6,11 +6,11 @@
  * `validateOpeningParams()` so renderer reads never diverge from the
  * parametric source of truth.
  *
- * Mirrors `UpdateWallParamsCommand` / `UpdateStairParamsCommand` (ADR-031
- * merge pattern) — consecutive drag samples within the merge window collapse
- * into a single undo entry. Host-wall lookup is re-resolved on each
- * execute/undo/redo via `sceneManager.getEntity(wallId)` so the geometry stays
- * correct even if the host wall is independently edited between samples.
+ * Merge/undo/redo skeleton is inherited from `MergeableUpdateCommand` (ADR-507 §8) —
+ * consecutive drag samples within the merge window collapse into a single undo
+ * entry. Host-wall lookup is re-resolved on each execute/undo/redo via
+ * `sceneManager.getEntity(wallId)` so the geometry stays correct even if the
+ * host wall is independently edited between samples.
  *
  * Soft-orphan policy (ADR-363 §5.4): if the host wall is missing at execute
  * time, the patch still applies but geometry/validation reuse the
@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type {
   OpeningGeometry,
   OpeningParams,
@@ -29,43 +29,23 @@ import type { WallEntity } from '../../../bim/types/wall-types';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../../bim/validators/opening-validator';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
-export class UpdateOpeningParamsCommand implements ICommand {
-  readonly id: string;
+export class UpdateOpeningParamsCommand extends MergeableUpdateCommand<OpeningParams> {
   readonly name = 'UpdateOpeningParams';
   readonly type = 'update-opening-params';
-  readonly timestamp: number;
-
-  private wasExecuted = false;
 
   constructor(
-    private readonly openingId: string,
-    private readonly params: OpeningParams,
-    private readonly previousParams: OpeningParams,
-    private readonly sceneManager: ISceneManager,
-    private readonly isDragging: boolean = false,
+    openingId: string,
+    params: OpeningParams,
+    previousParams: OpeningParams,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(openingId, params, previousParams, sceneManager, isDragging);
   }
 
-  execute(): void {
-    this.applyPatch(this.params);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyPatch(this.previousParams);
-  }
-
-  redo(): void {
-    this.applyPatch(this.params);
-  }
-
-  private applyPatch(params: OpeningParams): void {
+  protected applyPatch(params: OpeningParams): void {
     const host = this.resolveHostWall(params.wallId);
     // ADR-363 §5.4 — keep the DERIVED top-level discriminator (`kind` + `ifcType`)
     // in lock-step with `params.kind` (single source of truth). A kind change that
@@ -86,7 +66,7 @@ export class UpdateOpeningParamsCommand implements ICommand {
       const validation = validateOpeningParams(params, null).bimValidation;
       patch.validation = validation;
     }
-    this.sceneManager.updateEntity(this.openingId, patch as Partial<SceneEntity>);
+    this.sceneManager.updateEntity(this.entityId, patch as Partial<SceneEntity>);
   }
 
   private resolveHostWall(wallId: string): WallEntity | null {
@@ -97,54 +77,35 @@ export class UpdateOpeningParamsCommand implements ICommand {
     return candidate as WallEntity;
   }
 
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof UpdateOpeningParamsCommand)) return false;
-    if (other.openingId !== this.openingId) return false;
-    if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
-  }
-
-  mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateOpeningParamsCommand;
+  protected withMergedPatch(nextPatch: OpeningParams): UpdateOpeningParamsCommand {
     return new UpdateOpeningParamsCommand(
-      this.openingId,
-      o.params,
-      this.previousParams,
+      this.entityId,
+      nextPatch,
+      this.previousPatch,
       this.sceneManager,
       true,
     );
   }
 
   getDescription(): string {
-    return `Update opening params (${this.params.kind})`;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.openingId];
+    return `Update opening params (${this.patch.kind})`;
   }
 
   validate(): string | null {
-    if (!this.openingId) return 'Opening entity ID is required';
-    if (!this.params.wallId) return 'Opening params.wallId is required';
-    if (this.params.width <= 0) return 'width must be > 0';
-    if (this.params.height <= 0) return 'height must be > 0';
-    if (this.params.offsetFromStart < 0) return 'offsetFromStart must be >= 0';
+    if (!this.entityId) return 'Opening entity ID is required';
+    if (!this.patch.wallId) return 'Opening params.wallId is required';
+    if (this.patch.width <= 0) return 'width must be > 0';
+    if (this.patch.height <= 0) return 'height must be > 0';
+    if (this.patch.offsetFromStart < 0) return 'offsetFromStart must be >= 0';
     return null;
   }
 
-  serialize(): SerializedCommand {
+  protected serializedData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        openingId: this.openingId,
-        params: this.params,
-        previousParams: this.previousParams,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      openingId: this.entityId,
+      params: this.patch,
+      previousParams: this.previousPatch,
+      isDragging: this.isDragging,
     };
   }
 }

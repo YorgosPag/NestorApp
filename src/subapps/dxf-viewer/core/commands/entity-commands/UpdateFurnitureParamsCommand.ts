@@ -4,56 +4,36 @@
  * Patches `params` on an existing `FurnitureEntity` and recomputes `geometry`
  * + `validation` atomically via `computeFurnitureGeometry()` +
  * `validateFurnitureParams()` so renderer reads never diverge from the
- * parametric source of truth. Mirrors `UpdateMepFixtureParamsCommand` (ADR-406)
- * — supports command merging for grip-drag operations so consecutive drag
- * samples collapse into a single undo entry.
+ * parametric source of truth.
+ *
+ * Merge/undo/redo skeleton is inherited from `MergeableUpdateCommand` (ADR-507 §8).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { FurnitureGeometry, FurnitureParams } from '../../../bim/types/furniture-types';
 import { computeFurnitureGeometry, validateFurnitureParams } from '../../../bim/furniture/furniture-geometry';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
-export class UpdateFurnitureParamsCommand implements ICommand {
-  readonly id: string;
+export class UpdateFurnitureParamsCommand extends MergeableUpdateCommand<FurnitureParams> {
   readonly name = 'UpdateFurnitureParams';
   readonly type = 'update-furniture-params';
-  readonly timestamp: number;
-
-  private wasExecuted = false;
 
   constructor(
-    private readonly furnitureId: string,
-    private readonly params: FurnitureParams,
-    private readonly previousParams: FurnitureParams,
-    private readonly sceneManager: ISceneManager,
-    private readonly isDragging: boolean = false,
+    furnitureId: string,
+    params: FurnitureParams,
+    previousParams: FurnitureParams,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(furnitureId, params, previousParams, sceneManager, isDragging);
   }
 
-  execute(): void {
-    this.applyPatch(this.params);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyPatch(this.previousParams);
-  }
-
-  redo(): void {
-    this.applyPatch(this.params);
-  }
-
-  private applyPatch(params: FurnitureParams): void {
+  protected applyPatch(params: FurnitureParams): void {
     const geometry: FurnitureGeometry = computeFurnitureGeometry(params);
     const validation = validateFurnitureParams(params).bimValidation;
-    this.sceneManager.updateEntity(this.furnitureId, {
+    this.sceneManager.updateEntity(this.entityId, {
       kind: params.kind,
       params,
       geometry,
@@ -61,54 +41,35 @@ export class UpdateFurnitureParamsCommand implements ICommand {
     } as unknown as Partial<SceneEntity>);
   }
 
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof UpdateFurnitureParamsCommand)) return false;
-    if (other.furnitureId !== this.furnitureId) return false;
-    if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
-  }
-
-  mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateFurnitureParamsCommand;
+  protected withMergedPatch(nextPatch: FurnitureParams): UpdateFurnitureParamsCommand {
     return new UpdateFurnitureParamsCommand(
-      this.furnitureId,
-      o.params,
-      this.previousParams,
+      this.entityId,
+      nextPatch,
+      this.previousPatch,
       this.sceneManager,
       true,
     );
   }
 
   getDescription(): string {
-    return `Update furniture params (${this.params.kind})`;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.furnitureId];
+    return `Update furniture params (${this.patch.kind})`;
   }
 
   validate(): string | null {
-    if (!this.furnitureId) return 'Furniture entity ID is required';
-    if (this.params.widthMm <= 0) return 'widthMm must be > 0';
-    if (this.params.depthMm <= 0) return 'depthMm must be > 0';
-    if (this.params.heightMm <= 0) return 'heightMm must be > 0';
-    if (!Number.isFinite(this.params.rotationDeg)) return 'rotationDeg must be finite';
+    if (!this.entityId) return 'Furniture entity ID is required';
+    if (this.patch.widthMm <= 0) return 'widthMm must be > 0';
+    if (this.patch.depthMm <= 0) return 'depthMm must be > 0';
+    if (this.patch.heightMm <= 0) return 'heightMm must be > 0';
+    if (!Number.isFinite(this.patch.rotationDeg)) return 'rotationDeg must be finite';
     return null;
   }
 
-  serialize(): SerializedCommand {
+  protected serializedData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        furnitureId: this.furnitureId,
-        params: this.params,
-        previousParams: this.previousParams,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      furnitureId: this.entityId,
+      params: this.patch,
+      previousParams: this.previousPatch,
+      isDragging: this.isDragging,
     };
   }
 }

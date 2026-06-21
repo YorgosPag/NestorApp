@@ -6,26 +6,21 @@
  * `validateRoofParams()` so renderer reads never diverge from the parametric
  * source of truth (FOOTPRINT ⊥ TYPE — geometry derived, never persisted as truth).
  *
- * Mirrors `UpdateSlabParamsCommand` (ADR-363 Phase 3.5 merge pattern) —
- * consecutive drag samples within the merge window collapse into a single undo
- * entry. The contextual roof tab dispatches one command per edit (`isDragging
- * = false`) so shape / slope / base-elevation / roof-type changes are each their
- * own undo entry.
- *
- * `typeChange` carries the optional Roof Type assignment: when present the root
- * `typeId` field is patched (forward → `next`, undo → `prev`) alongside the
- * params (which already fold in the type's dna/thickness via the bridge). When
- * absent the entity's `typeId` is left untouched (pure geometry edit).
+ * Merge/undo/redo skeleton is inherited from `MergeableUpdateCommand` (ADR-507 §8).
+ * Unlike the other params commands the patch is a COMPOSITE `{ params, typeId }`:
+ * the optional Roof Type assignment carries a forward (`next`) and undo (`prev`)
+ * `typeId` that must travel WITH the params through execute/undo/redo. The base
+ * applies `this.patch` on execute/redo and `this.previousPatch` on undo, so each
+ * direction already carries its own `typeId`. A pure geometry edit leaves
+ * `typeChange` undefined and the entity's `typeId` is never touched.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §10
- * @see core/commands/entity-commands/UpdateSlabParamsCommand.ts — το πρότυπο (clone)
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { RoofGeometry, RoofParams } from '../../../bim/types/roof-types';
 import { computeRoofGeometry, validateRoofParams } from '../../../bim/geometry/roof-geometry';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
 /** Optional Roof Type (family type) assignment carried by the command. */
 export interface RoofTypeChange {
@@ -35,63 +30,51 @@ export interface RoofTypeChange {
   readonly prev: string | undefined;
 }
 
-export class UpdateRoofParamsCommand implements ICommand {
-  readonly id: string;
+/** Composite patch — params travel with the directional `typeId`. */
+interface RoofPatch {
+  readonly params: RoofParams;
+  readonly typeId: string | undefined;
+}
+
+export class UpdateRoofParamsCommand extends MergeableUpdateCommand<RoofPatch> {
   readonly name = 'UpdateRoofParams';
   readonly type = 'update-roof-params';
-  readonly timestamp: number;
 
-  private wasExecuted = false;
+  private readonly typeChange?: RoofTypeChange;
 
   constructor(
-    private readonly roofId: string,
-    private readonly params: RoofParams,
-    private readonly previousParams: RoofParams,
-    private readonly sceneManager: ISceneManager,
-    private readonly isDragging: boolean = false,
-    private readonly typeChange?: RoofTypeChange,
+    roofId: string,
+    params: RoofParams,
+    previousParams: RoofParams,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
+    typeChange?: RoofTypeChange,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(
+      roofId,
+      { params, typeId: typeChange?.next },
+      { params: previousParams, typeId: typeChange?.prev },
+      sceneManager,
+      isDragging,
+    );
+    this.typeChange = typeChange;
   }
 
-  execute(): void {
-    this.applyPatch(this.params, this.typeChange?.next);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyPatch(this.previousParams, this.typeChange?.prev);
-  }
-
-  redo(): void {
-    this.applyPatch(this.params, this.typeChange?.next);
-  }
-
-  private applyPatch(params: RoofParams, typeId: string | undefined): void {
-    const geometry: RoofGeometry = computeRoofGeometry(params);
-    const validation = validateRoofParams(params).bimValidation;
-    const patch: Record<string, unknown> = { params, geometry, validation };
+  protected applyPatch(patch: RoofPatch): void {
+    const geometry: RoofGeometry = computeRoofGeometry(patch.params);
+    const validation = validateRoofParams(patch.params).bimValidation;
+    const scenePatch: Record<string, unknown> = { params: patch.params, geometry, validation };
     // Only touch the root `typeId` for an explicit Roof Type assignment — a pure
     // geometry edit (shape / slope / elevation) leaves the type link intact.
-    if (this.typeChange) patch.typeId = typeId;
-    this.sceneManager.updateEntity(this.roofId, patch as unknown as Partial<SceneEntity>);
+    if (this.typeChange) scenePatch.typeId = patch.typeId;
+    this.sceneManager.updateEntity(this.entityId, scenePatch as unknown as Partial<SceneEntity>);
   }
 
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof UpdateRoofParamsCommand)) return false;
-    if (other.roofId !== this.roofId) return false;
-    if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
-  }
-
-  mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateRoofParamsCommand;
+  protected withMergedPatch(nextPatch: RoofPatch): UpdateRoofParamsCommand {
     return new UpdateRoofParamsCommand(
-      this.roofId,
-      o.params,
-      this.previousParams,
+      this.entityId,
+      nextPatch.params,
+      this.previousPatch.params,
       this.sceneManager,
       true,
       this.typeChange,
@@ -99,39 +82,29 @@ export class UpdateRoofParamsCommand implements ICommand {
   }
 
   getDescription(): string {
-    return `Update roof params (${this.params.outline.vertices.length} verts)`;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.roofId];
+    return `Update roof params (${this.patch.params.outline.vertices.length} verts)`;
   }
 
   validate(): string | null {
-    if (!this.roofId) return 'Roof entity ID is required';
-    if (!this.params.outline || this.params.outline.vertices.length < 3) {
+    const params = this.patch.params;
+    if (!this.entityId) return 'Roof entity ID is required';
+    if (!params.outline || params.outline.vertices.length < 3) {
       return 'outline must have at least 3 vertices';
     }
-    if (this.params.edges.length !== this.params.outline.vertices.length) {
+    if (params.edges.length !== params.outline.vertices.length) {
       return 'edges length must match outline vertices';
     }
-    if (this.params.thickness <= 0) return 'thickness must be > 0';
+    if (params.thickness <= 0) return 'thickness must be > 0';
     return null;
   }
 
-  serialize(): SerializedCommand {
+  protected serializedData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        roofId: this.roofId,
-        params: this.params,
-        previousParams: this.previousParams,
-        isDragging: this.isDragging,
-        typeChange: this.typeChange ?? null,
-      },
-      version: 1,
+      roofId: this.entityId,
+      params: this.patch.params,
+      previousParams: this.previousPatch.params,
+      isDragging: this.isDragging,
+      typeChange: this.typeChange ?? null,
     };
   }
 }

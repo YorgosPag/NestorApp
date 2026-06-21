@@ -4,56 +4,36 @@
  * Patches `params` on an existing `FloorplanSymbolEntity` and recomputes
  * `geometry` + `validation` atomically via `computeFloorplanSymbolGeometry()` +
  * `validateFloorplanSymbolParams()` so renderer reads never diverge from the
- * parametric source of truth. 1:1 mirror of `UpdateFurnitureParamsCommand`
- * (ADR-410) — supports command merging for grip-drag operations so consecutive
- * drag samples collapse into a single undo entry.
+ * parametric source of truth.
+ *
+ * Merge/undo/redo skeleton is inherited from `MergeableUpdateCommand` (ADR-507 §8).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { FloorplanSymbolGeometry, FloorplanSymbolParams } from '../../../bim/types/floorplan-symbol-types';
 import { computeFloorplanSymbolGeometry, validateFloorplanSymbolParams } from '../../../bim/floorplan-symbols/floorplan-symbol-geometry';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
-export class UpdateFloorplanSymbolParamsCommand implements ICommand {
-  readonly id: string;
+export class UpdateFloorplanSymbolParamsCommand extends MergeableUpdateCommand<FloorplanSymbolParams> {
   readonly name = 'UpdateFloorplanSymbolParams';
   readonly type = 'update-floorplan-symbol-params';
-  readonly timestamp: number;
-
-  private wasExecuted = false;
 
   constructor(
-    private readonly symbolId: string,
-    private readonly params: FloorplanSymbolParams,
-    private readonly previousParams: FloorplanSymbolParams,
-    private readonly sceneManager: ISceneManager,
-    private readonly isDragging: boolean = false,
+    symbolId: string,
+    params: FloorplanSymbolParams,
+    previousParams: FloorplanSymbolParams,
+    sceneManager: ISceneManager,
+    isDragging: boolean = false,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(symbolId, params, previousParams, sceneManager, isDragging);
   }
 
-  execute(): void {
-    this.applyPatch(this.params);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyPatch(this.previousParams);
-  }
-
-  redo(): void {
-    this.applyPatch(this.params);
-  }
-
-  private applyPatch(params: FloorplanSymbolParams): void {
+  protected applyPatch(params: FloorplanSymbolParams): void {
     const geometry: FloorplanSymbolGeometry = computeFloorplanSymbolGeometry(params);
     const validation = validateFloorplanSymbolParams(params).bimValidation;
-    this.sceneManager.updateEntity(this.symbolId, {
+    this.sceneManager.updateEntity(this.entityId, {
       kind: params.kind,
       params,
       geometry,
@@ -61,53 +41,34 @@ export class UpdateFloorplanSymbolParamsCommand implements ICommand {
     } as unknown as Partial<SceneEntity>);
   }
 
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof UpdateFloorplanSymbolParamsCommand)) return false;
-    if (other.symbolId !== this.symbolId) return false;
-    if (!this.isDragging || !other.isDragging) return false;
-    return (other.timestamp - this.timestamp) < DEFAULT_MERGE_CONFIG.mergeTimeWindow;
-  }
-
-  mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateFloorplanSymbolParamsCommand;
+  protected withMergedPatch(nextPatch: FloorplanSymbolParams): UpdateFloorplanSymbolParamsCommand {
     return new UpdateFloorplanSymbolParamsCommand(
-      this.symbolId,
-      o.params,
-      this.previousParams,
+      this.entityId,
+      nextPatch,
+      this.previousPatch,
       this.sceneManager,
       true,
     );
   }
 
   getDescription(): string {
-    return `Update floorplan symbol params (${this.params.kind})`;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.symbolId];
+    return `Update floorplan symbol params (${this.patch.kind})`;
   }
 
   validate(): string | null {
-    if (!this.symbolId) return 'Floorplan symbol entity ID is required';
-    if (this.params.widthMm <= 0) return 'widthMm must be > 0';
-    if (this.params.depthMm <= 0) return 'depthMm must be > 0';
-    if (!Number.isFinite(this.params.rotationDeg)) return 'rotationDeg must be finite';
+    if (!this.entityId) return 'Floorplan symbol entity ID is required';
+    if (this.patch.widthMm <= 0) return 'widthMm must be > 0';
+    if (this.patch.depthMm <= 0) return 'depthMm must be > 0';
+    if (!Number.isFinite(this.patch.rotationDeg)) return 'rotationDeg must be finite';
     return null;
   }
 
-  serialize(): SerializedCommand {
+  protected serializedData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        symbolId: this.symbolId,
-        params: this.params,
-        previousParams: this.previousParams,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      symbolId: this.entityId,
+      params: this.patch,
+      previousParams: this.previousPatch,
+      isDragging: this.isDragging,
     };
   }
 }
