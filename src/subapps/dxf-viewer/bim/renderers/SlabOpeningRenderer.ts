@@ -37,7 +37,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -122,7 +122,9 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.fillStyle = resolveVgFillTint('slab-opening', _soCutState, _soStyles) ?? KIND_FILL[opening.kind];
+    // FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με όλα τα BIM (V/G tint ??
+    // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
+    this.ctx.fillStyle = resolveBimBodyFill('slab-opening', _soCutState, _soStyles, KIND_FILL[opening.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

@@ -41,7 +41,7 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -137,7 +137,9 @@ export class SlabRenderer extends BaseEntityRenderer {
       useDrawingScaleStore.getState().viewRange,
     );
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
-    this.ctx.fillStyle = resolveVgFillTint('slab', _slabCutState, _slabStyles) ?? KIND_FILL[slab.kind];
+    // FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με όλα τα BIM (V/G tint ??
+    // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
+    this.ctx.fillStyle = resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

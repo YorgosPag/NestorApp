@@ -36,7 +36,7 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState, type CutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -156,8 +156,9 @@ export class BeamRenderer extends BaseEntityRenderer {
     // lineWidthPx:0 → fill ΧΩΡΙΣ πορτοκαλί outline. Το χαρτογραφούμε σε 'projection'
     // (overhead dashed) ώστε το outline να φαίνεται — preview ΚΑΙ committed parity.
     const _beamStyleCut: CutState = _beamCutState === 'hidden' ? 'projection' : _beamCutState;
-    // Translucent fill first.
-    this.ctx.fillStyle = resolveVgFillTint('beam', _beamStyleCut, _beamDs.objectStyles) ?? KIND_FILL[beam.kind];
+    // Translucent fill first. FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με
+    // όλα τα BIM (V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια).
+    this.ctx.fillStyle = resolveBimBodyFill('beam', _beamStyleCut, _beamDs.objectStyles, KIND_FILL[beam.kind]);
     this.buildPiecesPath(drawable);
     this.ctx.fill();
 

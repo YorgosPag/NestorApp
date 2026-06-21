@@ -8,10 +8,10 @@
 > zoom-scaled mm, μηδέν διπλότυπα**. ΟΛΟΚΛΗΡΩΘΗΚΕ rendering SSoT (Φ2A-D): ΕΝΑ catalog (27 mm patterns
 > `linetype-iso-catalog` + `linetype-aliases.resolveAnyLinetype`) → ΕΝΑΣ resolver (zoom×LTSCALE×CELTSCALE) → ΟΛΟΙ
 > οι consumers (DXF entity + 8 BIM renderers μέσω `bim-dash-resolver` + legacy `getDashArray`). ~250 jest GREEN.
-> **Φ2E #1** 🟡 (selected-line contextual tab + linetype editing UI, Revit-grade dual-mode bridge — επιλεγμένη
-> γραμμή εμφανίζει tab & επεξεργάζεται linetype/lineweight/color με undo, live registry dropdown). **🔴 ΕΚΚΡΕΜΕΙ:**
-> Φ2E #2 (LTSCALE status-bar control + custom-creation pattern editor) + Φ2F (DXF LTYPE round-trip + persistence =
-> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία (δες HANDOFF). Επόμενο spec: **Φ3** (bulge+grips).
+> **Φ2E #1** 🟢 (selected-line contextual tab + linetype editing UI, Revit-grade dual-mode bridge· + render-bug fix
+> 2026-06-22). **Φ2E #2** 🟢 (linetype scale UI: global LTSCALE status-bar + per-line CELTSCALE «Βήμα» στο tab).
+> **🔴 ΕΚΚΡΕΜΕΙ:** Φ2E #3 (custom-linetype creation pattern editor) + Φ2F (DXF LTYPE round-trip + persistence =
+> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία. Επόμενο spec: **Φ3** (bulge+grips).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -596,3 +596,25 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `ui/ribbon/hooks/useRibbonLineToolBridge.ts`, `config/__tests__/linetype-aliases.test.ts`, ADR-510. Status: Φ2E #1
   πλήρως λειτουργικό. 🔴 browser-verify (επίλεξε γραμμή → DashDot → διακεκομμένη ΑΜΕΣΩΣ· αποεπίλεξε → παραμένει
   διακεκομμένη) + commit.
+- **2026-06-22** — **Φ2E #2 LINETYPE SCALE UI — global LTSCALE + per-line CELTSCALE (απόφαση Giorgio «και τα δύο»).**
+  Το rendering υπολόγιζε ήδη `βήμα = zoom × LTSCALE × CELTSCALE` (`linetype-dash-resolver.dashMmToScreenPx`)· έλειπε
+  **μόνο το UI**. Υλοποιήθηκαν **δύο controls, μηδέν νέος μηχανισμός** (reuse υπαρχόντων stores/patterns):
+  • **Global LTSCALE (status-bar):** NEW `statusbar/LinetypeScaleControl.tsx` (always-visible numeric input, mirror
+    του `SnapToggleWithStep`· `useSyncExternalStore` πάνω στο ΥΠΑΡΧΟΝ `stores/LinetypeScaleStore.ts`· local text
+    buffer + `>0` guard → `setLinetypeScale`). Ξεχωριστό αρχείο γιατί το `CadStatusBar.tsx` ήταν 495/500 γραμμές
+    (N.7.1). Render `<LinetypeScaleControl />` δίπλα στο DisplayUnit. i18n `cadDock.statusBar.ltscale[Desc]` el+en
+    (`dxf-viewer-panels`).
+  • **Per-line CELTSCALE (contextual «Στυλ Γραμμής» tab):** 4ο editable-numeric combobox «Βήμα» — **reuse 100% του
+    `ribbon-combobox-numeric` SSoT** (`numericInput: { editable: true, min: 0.01 }`, ίδιο με hatch `patternScale`).
+    NEW key `LINE_TOOL_RIBBON_KEYS.linetypeScale` (routing **αυτόματο** μέσω `isLineToolRibbonKey`)· dual-mode στο
+    `useRibbonLineToolBridge` (selected → `UpdateEntityCommand { ltscale }` undoable· καμία → `setQuickStyleLtscale`).
+    `QuickStyleStore` +`ltscale` field (default 1, persist `dxf:quickStyle.ltscale`, στο `isQuickStyleAllByLayer`).
+    Draw-default: `CreateEntityOptions.ltscale` + apply στο `CreateEntityCommand` + forward στο `completeEntity`
+    (ίδιο pattern με `linetypeName`). i18n `ribbon.commands.quickStyle.linetypeScale` el+en (`dxf-viewer-shell`).
+  Render διαβάζει ήδη `entity.ltscale` (DXF grp 48, `types/base-entity.ts:130`) — μηδέν αλλαγή renderer. Reuse:
+  `LinetypeScaleStore`, `ribbon-combobox-numeric`/`RibbonEditableCombobox`, `UpdateEntityCommand`, QuickStyle dual-mode.
+  +4 jest (`useRibbonLineToolBridge.test.tsx`, 17 total)· 23 store/numeric suites GREEN. ⚠️ Κανένα render αρχείο
+  ADR-040 (status-bar+ribbon+stores) → stage ADR-510. 🔴 tsc(N.17) + browser-verify (per-line «Βήμα» 1→2 αραιώνει
+  ΑΜΕΣΩΣ+undo· global LTSCALE 1→2 όλες οι γραμμές· συνδυασμός ×4) + commit. 🔴 ΕΚΚΡΕΜΕΙ Φ2E #3: custom-linetype
+  creation pattern editor. **ΜΑΘΗΜΑ:** numeric ribbon πεδίο = ΟΧΙ νέος τύπος control· το `ribbon-combobox-numeric`
+  κάνει ΚΑΘΕ purely-numeric option list editable app-wide → μόνο preset options + `numericInput` στο tab declaration.
