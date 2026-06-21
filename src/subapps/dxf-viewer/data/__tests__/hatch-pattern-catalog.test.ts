@@ -10,6 +10,8 @@ import {
   HATCH_PATTERN_CATALOG,
   getHatchPattern,
   listHatchPatterns,
+  getSuggestedScale,
+  resolveEffectiveHatchScale,
   DEFAULT_HATCH_PATTERN_NAME,
 } from '../hatch-pattern-catalog';
 
@@ -68,5 +70,31 @@ describe('hatch-pattern-catalog — integrity', () => {
 
   it('DEFAULT_HATCH_PATTERN_NAME δείχνει σε υπαρκτό μοτίβο', () => {
     expect(getHatchPattern(DEFAULT_HATCH_PATTERN_NAME)).toBeDefined();
+  });
+});
+
+describe('hatch-pattern-catalog — scale normalization', () => {
+  it('κάθε μοτίβο σε suggested scale → ορατή πυκνότητα (delta-y_max × scale ≥ 30 mm)', () => {
+    // Κανένα μοτίβο δεν πρέπει να βγαίνει υπερβολικά πυκνό στην προεπιλογή.
+    for (const p of listHatchPatterns()) {
+      const maxDeltaY = Math.max(...p.lines.map((l) => Math.abs(l.delta[1])));
+      const visible = maxDeltaY * getSuggestedScale(p.name);
+      expect(visible).toBeGreaterThanOrEqual(30);
+    }
+  });
+
+  it('getSuggestedScale case-insensitive + default 1 για άγνωστο', () => {
+    expect(getSuggestedScale('ANSI31')).toBe(getSuggestedScale('ansi31'));
+    expect(getSuggestedScale('ANSI31')).toBeGreaterThan(1);
+    expect(getSuggestedScale('does-not-exist')).toBe(1);
+    expect(getSuggestedScale(undefined)).toBe(1);
+  });
+
+  it('resolveEffectiveHatchScale = suggested × user (user≤0 → 1)', () => {
+    const s = getSuggestedScale('ANSI31');
+    expect(resolveEffectiveHatchScale('ANSI31', 2)).toBe(s * 2);
+    expect(resolveEffectiveHatchScale('ANSI31', undefined)).toBe(s);
+    expect(resolveEffectiveHatchScale('ANSI31', 0)).toBe(s);
+    expect(resolveEffectiveHatchScale('ANSI31', -3)).toBe(s);
   });
 });

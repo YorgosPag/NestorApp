@@ -328,10 +328,44 @@ export const HATCH_PATTERN_CATALOG: Readonly<Record<string, HatchPattern>> = {
 
 // ─── Public API (SSoT accessors) ────────────────────────────────────────────────
 
+/**
+ * Προτεινόμενη κλίμακα ανά μοτίβο (default density normalization). Τα PAT values
+ * έχουν εγγενώς διαφορετική πυκνότητα — τα ANSI είναι λεπτά (acad.pat ~3 mm), τα
+ * AR-x / brick σε πραγματικές διαστάσεις (~200 mm). Ο πολλαπλασιαστής φέρνει ΟΛΑ σε
+ * ορατή πυκνότητα ~60-100 mm όταν ο χρήστης αφήνει `patternScale = 1`. Είναι το
+ * αντίστοιχο του «default hatch scale ανά pattern» της AutoCAD/Revit. SSoT εδώ —
+ * η `resolveEffectiveHatchScale` το συνδυάζει με τον user multiplier.
+ */
+const SUGGESTED_SCALES: Readonly<Record<string, number>> = {
+  ANSI31: 20, ANSI32: 7, ANSI33: 10, ANSI34: 5, ANSI35: 10, ANSI36: 20, ANSI37: 20, ANSI38: 20,
+  'AR-CONC': 2, 'AR-BRSTD': 1, 'AR-B816': 1, 'AR-B88': 1, 'AR-HBONE': 2, 'AR-SAND': 3,
+  BRICK: 1, BRSTONE: 1, WOOD: 5,
+  EARTH: 10, GRAVEL: 2, GRASS: 1, MUDST: 3,
+  STEEL: 7, CROSS: 10,
+  CORK: 7, INSUL: 7,
+  DOTS: 5, PLAST: 10, PLASTI: 10, BOX: 2, NET: 20, HONEY: 3, GOST_GLASS: 2,
+};
+
 /** Επιστρέφει το μοτίβο με το δοθέν όνομα (case-insensitive), ή `undefined`. */
 export function getHatchPattern(name: string | undefined): HatchPattern | undefined {
   if (!name) return undefined;
   return HATCH_PATTERN_CATALOG[name] ?? HATCH_PATTERN_CATALOG[name.toUpperCase()];
+}
+
+/** Προτεινόμενη κλίμακα του μοτίβου (default density· 1 αν άγνωστο). */
+export function getSuggestedScale(name: string | undefined): number {
+  if (!name) return 1;
+  return SUGGESTED_SCALES[name] ?? SUGGESTED_SCALES[name.toUpperCase()] ?? 1;
+}
+
+/**
+ * Πραγματική κλίμακα = προτεινόμενη (ανά μοτίβο) × user multiplier (`patternScale`).
+ * SSoT — την καλούν ΚΑΙ ο geometry resolver ΚΑΙ ο DXF writer (group 41) ώστε
+ * οθόνη + εξαγωγή να συμφωνούν (WYSIWYG).
+ */
+export function resolveEffectiveHatchScale(name: string | undefined, userScale: number | undefined): number {
+  const u = userScale && userScale > 0 ? userScale : 1;
+  return getSuggestedScale(name) * u;
 }
 
 /** Λίστα όλων των μοτίβων (σταθερή σειρά εισαγωγής) — για το UI dropdown. */

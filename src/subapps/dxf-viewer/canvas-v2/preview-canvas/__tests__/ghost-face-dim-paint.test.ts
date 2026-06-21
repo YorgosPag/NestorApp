@@ -31,6 +31,7 @@ function createMockCtx(width = 800, height = 600): MockCtx {
     save: record('save'), restore: record('restore'), beginPath: record('beginPath'),
     moveTo: record('moveTo'), lineTo: record('lineTo'), closePath: record('closePath'),
     stroke: record('stroke'), fill: record('fill'), fillText: record('fillText'),
+    fillRect: record('fillRect'),
     measureText: () => ({ width: 10 }), arc: record('arc'), translate: record('translate'),
     rotate: record('rotate'), scale: record('scale'), setLineDash: record('setLineDash'),
     setTransform: record('setTransform'), clearRect: record('clearRect'), rect: record('rect'),

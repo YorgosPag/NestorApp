@@ -25,7 +25,7 @@ import type { Entity, HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
-import { getHatchPattern } from '../../data/hatch-pattern-catalog';
+import { getHatchPattern, resolveEffectiveHatchScale } from '../../data/hatch-pattern-catalog';
 import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { DxfLineMode } from '../types';
@@ -270,7 +270,8 @@ function emitHatch(
  */
 function emitPredefinedPattern(e: HatchEntity, pair: Pair): void {
   const angle = e.patternAngle ?? 0;
-  const scale = e.patternScale ?? 1;
+  // effective scale (suggested ανά μοτίβο × user) — ίδιο με τον canvas (WYSIWYG).
+  const scale = resolveEffectiveHatchScale(e.patternName, e.patternScale);
   pair(52, angle);                                // pattern angle
   pair(41, scale);                                // pattern scale
   pair(77, 0);                                    // double flag (n/a για predefined)

@@ -6,7 +6,7 @@
  */
 
 import { buildPredefinedHatchLines, buildHatchEntitySegments } from '../hatch-pattern-geometry';
-import { getHatchPattern, type HatchPattern } from '../../../../data/hatch-pattern-catalog';
+import { getHatchPattern, resolveEffectiveHatchScale, type HatchPattern } from '../../../../data/hatch-pattern-catalog';
 import type { HatchEntity } from '../../../../types/entities';
 
 const SQUARE = [[
@@ -91,10 +91,11 @@ describe('buildHatchEntitySegments (SSoT entity→segments resolver)', () => {
     expect(buildHatchEntitySegments(e)).toEqual([]);
   });
 
-  it('predefined → ίδιο με απευθείας buildPredefinedHatchLines (ίδιο mapping)', () => {
+  it('predefined → ίδιο με απευθείας buildPredefinedHatchLines στην effective scale (suggested×user)', () => {
     const e = { ...base, fillType: 'predefined', patternName: 'ANSI31', patternScale: 5 } as unknown as HatchEntity;
     const viaResolver = buildHatchEntitySegments(e);
-    const viaDirect = buildPredefinedHatchLines(SQUARE, pattern('ANSI31'), { scale: 5, angleDeg: 0 });
+    const eff = resolveEffectiveHatchScale('ANSI31', 5); // = suggested(ANSI31) × 5
+    const viaDirect = buildPredefinedHatchLines(SQUARE, pattern('ANSI31'), { scale: eff, angleDeg: 0 });
     expect(viaResolver).toEqual(viaDirect);
   });
 

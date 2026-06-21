@@ -32,7 +32,7 @@ import { lerpPoint } from '../../../rendering/entities/shared/geometry-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import type { HatchIslandStyle } from '../../hatch/hatch-properties';
 import { isSolidHatch } from '../../hatch/hatch-properties';
-import { getHatchPattern, type HatchPattern, type PatternLine } from '../../../data/hatch-pattern-catalog';
+import { getHatchPattern, resolveEffectiveHatchScale, type HatchPattern, type PatternLine } from '../../../data/hatch-pattern-catalog';
 import type { HatchEntity } from '../../../types/entities';
 
 /** Προεπιλεγμένη απόσταση γραμμών (mm) για user-defined hatch χωρίς ρητό spacing. */
@@ -345,7 +345,8 @@ export function buildHatchEntitySegments(
     const pattern = getHatchPattern(hatch.patternName);
     if (!pattern) return [];
     return buildPredefinedHatchLines(paths, pattern, {
-      scale: hatch.patternScale,
+      // effective = suggested(ανά μοτίβο) × user multiplier — ορατή πυκνότητα by default.
+      scale: resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale),
       angleDeg: hatch.patternAngle ?? 0,
       origin: hatch.patternOrigin,
       islandStyle,

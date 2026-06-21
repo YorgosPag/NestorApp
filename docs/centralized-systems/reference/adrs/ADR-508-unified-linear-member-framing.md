@@ -130,3 +130,36 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   call sites (drawing-hover-handler, useCanvasClickHandler, useWallTool, wall-preview-helpers,
   useDrawingHandlers, RulersGridSystem). Εξάλειψη scattered magic `0.001`. +8 jest (93 σύνολο).
   99 jest πράσινα (framing core + beam aliases + wall-preview-store + wall-completion). 🔴 browser-verify + commit.
+- **2026-06-21 (§dim — listening dimensions στο wall ghost)** — Revit-style temporary/listening
+  dimensions καθώς το φάντασμα τοίχου γλιστράει 🟢 πάνω σε παρειά υφιστάμενου μέλους. Giorgio:
+  «πάντα 3 νούμερα ταυτόχρονα» → gap αριστερό άκρο→αριστερή base γωνία φαντάσματος, gap δεξιά base
+  γωνία→δεξί άκρο, και κέντρο-παρειάς→άξονα φαντάσματος. **FULL SSoT reuse, μηδέν διπλότυπο**:
+  (1) `resolveLinearMemberFaceSnap` **εκθέτει** το ήδη-υπολογισμένο `faceFrame` (alongMin/Max +
+  centerAlong + half + axis/perp· μηδέν νέο projection)· (2) NEW pure `bim/framing/ghost-face-dim-references.ts`
+  (αδελφό του `bim/walls/opening-dim-references.ts` — «offsets κατά μήκος άξονα προς πλησιέστερη
+  αναφορά»· υπολογίζει τις 3 αποστάσεις + witness points + zoom-adaptive perpendicular offsets,
+  drops flush/zero)· (3) NEW thin `canvas-v2/preview-canvas/ghost-face-dim-paint.ts` που χτίζει
+  transient `aligned` DimensionEntity ([p1,p2,dimLineRef]) και ΖΩΓΡΑΦΙΖΕΙ μέσω του **ADR-362
+  `renderPreviewDimension` SSoT** (ο μόνος 2D dim renderer — μηδέν 2ος path) με στυλ `ISO_129_TEMPLATE`·
+  (4) metadata `faceDimensions` κρεμασμένο στο ghost entity (`toWysiwygPreviewEntity`, mirror
+  `ghostStatusColor`)· (5) `wall-preview-helpers.makeWallGhostBeforeClick` υπολογίζει+attach (μόνο 🟢,
+  ΟΧΙ 🔴 overlap)· (6) thin `PreviewRenderer.drawGhostFaceDimensions` + `PreviewCanvas` handle (mirror
+  `drawTrackingAlignment`)· (7) `drawing-hover-handler` διαβάζει το metadata + ζωγραφίζει overlay μετά
+  το `drawPreview`. **ΜΑΘΗΜΑ/fix (browser, Giorgio): οι γραμμές φαίνονταν, τα νούμερα ΟΧΙ** — ο
+  ADR-362 renderer σκόπιμα ΔΕΝ auto-scale-άρει το κείμενο (text=dimtxt·dimscale·scale ≈ sub-pixel σε
+  τυπικό zoom). NEW opt `textScreenScaled` στο `renderPreviewDimension` (το `4/scale` ζει ΜΟΝΟ μέσα
+  στον renderer — μηδέν duplication στο call site) → text ~10px σε κάθε zoom για ephemeral dims.
+  21 jest (ghost-face-dim-references 6 + paint smoke 2 + linear-member-face-snap/member-ghost regression).
+  tsc clean. ⚠️ CHECK 6B/6D (PreviewRenderer/PreviewCanvas/drawing-hover-handler) → stage ADR-040 + ADR-362.
+  Μόνο WALLS (το beam alias παίρνει faceFrame αλλά δεν attach-άρει dims — trivial extension αν χρειαστεί).
+  🔴 browser-verify (numbers readable σε zoom· flush drops) + commit.
+- **2026-06-21 (§dim browser fixes, Giorgio)** — **(1)** νούμερα σε **ΜΕΤΡΑ**: το text format άρεται
+  μέσω του υπάρχοντος SSoT `formatLengthForDisplay(mm, {unit:'m'})` (config/display-length-format)
+  ως dim `userText` override — αρχιτεκτονική σύμβαση, ανεξάρτητα από status-bar unit. **(2)** «η γραμμή
+  περνά μέσα από το κείμενο» → `dimtfill:'backgroundColor'` (DIMTFILL μάσκα) με χρώμα = live canvas bg
+  (`resolveDxfCanvasBackgroundHex` SSoT)· NEW προαιρετικό `canvasBackground` στο `renderPreviewDimension`
+  (threaded στο `renderDimensionText` που ήδη υποστηρίζει τη μάσκα). **(3) Boy-Scout κεντρικοποίηση**
+  (Giorgio «πλήρη κεντρικοποίηση»): το tracking tooltip (`drawing-hover-handler`) έφτιαχνε χειροκίνητα
+  `formatDisplayValue(mm,unit) + DISPLAY_UNIT_LABELS[unit]` → αντικαταστάθηκε με `formatLengthForDisplay`
+  (−3 imports). Τα υπόλοιπα `DISPLAY_UNIT_LABELS[]` (CadStatusBar selector, PropertiesPalette/QuickProperties
+  input-suffix) είναι legit standalone labels, ΟΧΙ duplicates. 22 jest GREEN, tsc clean.

@@ -28,8 +28,49 @@ import { isSolidHatch } from '../../bim/hatch/hatch-properties';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 
 const HATCH_LINE_WIDTH = 0.5;
+/** Όριο εγγραφών στο segment cache (αποφυγή ανεξέλεγκτης μεγέθυνσης). */
+const SEG_CACHE_MAX = 256;
+
+/**
+ * Φθηνό signature των geometry-relevant πεδίων μιας γραμμοσκίασης. Τα segments είναι
+ * σε WORLD coords (transform-independent) → αλλάζουν ΜΟΝΟ όταν αλλάξει η γεωμετρία ή
+ * οι ρυθμίσεις μοτίβου, ΟΧΙ σε pan/zoom. Περιλαμβάνει checksum κορυφών (πιάνει grip
+ * moves) χωρίς ακριβό JSON.stringify ανά frame.
+ */
+function hatchSegmentSignature(h: HatchEntity): string {
+  let cs = 0;
+  let counts = '';
+  for (const p of h.boundaryPaths ?? []) {
+    counts += `${p.length},`;
+    for (const v of p) cs += v.x * 31.1 + v.y * 7.3;
+  }
+  return [
+    h.fillType, h.patternName, h.patternScale, h.patternAngle, h.islandStyle,
+    h.lineAngle, h.lineSpacing, h.doubleCrossHatch, counts, cs.toFixed(2),
+  ].join('|');
+}
 
 export class HatchRenderer extends BaseEntityRenderer {
+  /**
+   * ADR-507 §4.5 / ADR-040 — cache των (world-coord) pattern segments ανά entity.
+   * Χωρίς αυτό, ο `render()` ξαναϋπολόγιζε χιλιάδες clipped segments σε ΚΑΘΕ frame
+   * (pan/zoom/hover) → βαρύ. Invalidate μόνο όταν αλλάξει το geometry signature.
+   */
+  private readonly segCache = new Map<string, { sig: string; segs: ReturnType<typeof buildHatchEntitySegments> }>();
+
+  /** Cached pattern segments (recompute μόνο σε αλλαγή geometry/pattern). */
+  private cachedSegments(hatch: HatchEntity): ReturnType<typeof buildHatchEntitySegments> {
+    const sig = hatchSegmentSignature(hatch);
+    const hit = this.segCache.get(hatch.id);
+    if (hit && hit.sig === sig) return hit.segs;
+    const segs = buildHatchEntitySegments(hatch);
+    if (this.segCache.size >= SEG_CACHE_MAX && !this.segCache.has(hatch.id)) {
+      this.segCache.clear(); // απλό bounded reset (σπάνιο σε τυπική σκηνή)
+    }
+    this.segCache.set(hatch.id, { sig, segs });
+    return segs;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isHatchEntity(entity)) return;
     const hatch = entity as HatchEntity;
@@ -60,8 +101,8 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.drawBoundaryPath(paths);
       this.ctx.fill('evenodd');
     } else {
-      // SSoT: ίδια segments με τον DXF writer (buildHatchEntitySegments).
-      this.drawPatternSegments(buildHatchEntitySegments(hatch), color);
+      // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).
+      this.drawPatternSegments(this.cachedSegments(hatch), color);
     }
 
     // Boundary outline.

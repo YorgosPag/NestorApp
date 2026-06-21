@@ -309,9 +309,9 @@ describe('writeDxfAscii — predefined HATCH (ADR-507 Φ2)', () => {
     expect(dxf).toContain('\n49\n'); // group 49 dash length εκπέμπεται
   });
 
-  it('patternScale κλιμακώνει το group 41', () => {
+  it('patternScale κλιμακώνει το group 41 (effective = suggested ANSI31 ×20 × user 5 = 100)', () => {
     const dxf = writeDxfAscii([predef('ANSI31', 5)], { layersById: LAYERS });
-    expect(dxf).toMatch(/\n41\n5\n/);
+    expect(dxf).toMatch(/\n41\n100\n/);
   });
 
   it('patternAngle προστίθεται στο group 53 (γωνία γραμμής)', () => {

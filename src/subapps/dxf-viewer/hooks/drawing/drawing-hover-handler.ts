@@ -18,8 +18,7 @@ import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
 import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/adaptive-distance-snap';
-import { displayUnitState } from '../../config/display-unit-state';
-import { formatDisplayValue, DISPLAY_UNIT_LABELS } from '../../config/units';
+import { formatLengthForDisplay } from '../../config/display-length-format';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { applyPolar, formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
@@ -306,9 +305,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
             trackingPoint.y - trackingResult.anchorPoint.y,
           );
           const distMm = distWorld / Math.max(getSceneUnitsScale(), 1e-9);
-          const unit = displayUnitState.getUnit();
+          // SSoT: value + active display-unit label in ONE call (no manual
+          // formatDisplayValue + DISPLAY_UNIT_LABELS combo).
           const label = trackingResult.snappedAngle !== null
-            ? `${trackingResult.snappedAngle.toFixed(0)}° / ${formatDisplayValue(distMm, unit)} ${DISPLAY_UNIT_LABELS[unit]}`
+            ? `${trackingResult.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
             : null;
           // ADR-357 ambient: draw ONLY the cursor-aligned path(s), not every
           // built path — mirrors Revit/AutoCAD and prevents ambient-source clutter.
