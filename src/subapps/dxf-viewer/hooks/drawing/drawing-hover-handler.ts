@@ -31,6 +31,9 @@ import { hardOrtho } from './drawing-handler-utils';
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
 // ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+// ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
+import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
+import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
@@ -278,6 +281,13 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
         if (faceDims) {
           previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
+        }
+        // ADR-508 §column place+rotate — μετά το 1ο κλικ: ΠΟΡΤΟΚΑΛΙ γραμμή στρέψης + γωνία (ίδιο
+        // SSoT `drawPolarTrackingLine` = drawingGuide χρώμα) από την κλειδωμένη θέση προς τον κέρσορα.
+        const colRot = getColumnRotationLock();
+        if (colRot) {
+          const snappedDeg = resolveColumnRotationDeg(colRot.origin, previewPt, worldPerPixel(getTransformScale()));
+          previewCanvasRef.current.drawPolarTrackingLine(colRot.origin, snappedDeg, `${Math.round(snappedDeg)}°`, previewPt);
         }
         // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
         if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {

@@ -46,7 +46,7 @@ import {
   getColumnFaceFrame,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
-import { columnRotationDeg } from '../../bim/columns/column-rotation';
+import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
   resolveEffectivePreviewCursor,
@@ -81,7 +81,7 @@ export function generateColumnPreview(
   // overlap/dims εδώ (πέρα από την τοποθέτηση). 2ο κλικ commit-άρει με αυτή τη γωνία.
   const rot = getColumnRotationLock();
   if (rot) {
-    const rotationDeg = columnRotationDeg(rot.origin, cursorPoint);
+    const rotationDeg = resolveColumnRotationDeg(rot.origin, cursorPoint, worldPerPixel(getImmediateTransform().scale));
     const overrides: ColumnParamOverrides = {
       ...handle.overrides, kind: handle.kind, anchor: rot.anchor, rotation: rotationDeg,
     };

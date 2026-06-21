@@ -133,3 +133,53 @@ describe('convertHatch — roundtrip (write → read)', () => {
     expect(convertHatch([], '0', 0)).toBeNull();
   });
 });
+
+describe('convertHatch — predefined scale idempotency + inline pattern (ADR-507 Φ6)', () => {
+  it('predefined ANSI31 (scale=2) → ανακτά user scale (όχι διπλό scaling)', () => {
+    const orig = predefinedHatch({ patternName: 'ANSI31', patternScale: 2 });
+    const r = roundtrip(orig);
+    expect(r).not.toBeNull();
+    if (!r || r.type !== 'hatch') return;
+    expect(r.fillType).toBe('predefined');
+    expect(r.patternName).toBe('ANSI31');
+    // group 41 = suggested(20) × user(2) = 40 → reader το διαιρεί πάλι με suggested.
+    expect(r.patternScale).toBeCloseTo(2, 6);
+  });
+
+  it('predefined ANSI31 → ΙΔΙΑ effective πυκνότητα μετά round-trip (write→read→render)', () => {
+    const orig = predefinedHatch({ patternName: 'ANSI31', patternScale: 2 });
+    const r = roundtrip(orig);
+    expect(r).not.toBeNull();
+    if (!r || r.type !== 'hatch') return;
+    // Idempotency: η πυκνότητα γραμμών (min world spacing) ΚΑΙ το πλήθος segments
+    // πρέπει να ταυτίζονται με το αρχικό — αλλιώς διπλό scaling.
+    expect(hatchMinWorldSpacing(r)).toBeCloseTo(hatchMinWorldSpacing(orig as HatchEntity), 6);
+    expect(buildHatchEntitySegments(r).length).toBe(
+      buildHatchEntitySegments(orig as HatchEntity).length,
+    );
+  });
+
+  it('predefined BRICK (multi-line) → density idempotent', () => {
+    const orig = predefinedHatch({ patternName: 'BRICK', patternScale: 3 });
+    const r = roundtrip(orig);
+    expect(r).not.toBeNull();
+    if (!r || r.type !== 'hatch') return;
+    expect(r.patternName).toBe('BRICK');
+    expect(hatchMinWorldSpacing(r)).toBeCloseTo(hatchMinWorldSpacing(orig as HatchEntity), 6);
+    expect(buildHatchEntitySegments(r).length).toBe(
+      buildHatchEntitySegments(orig as HatchEntity).length,
+    );
+  });
+
+  it('άγνωστο pattern (εκτός catalog) → inlinePattern parsed, γραμμοσκίαση ΟΡΑΤΗ', () => {
+    const orig = predefinedHatch({ patternName: 'THIRDPARTY_X', patternScale: 1 });
+    const r = roundtrip(orig);
+    expect(r).not.toBeNull();
+    if (!r || r.type !== 'hatch') return;
+    expect(r.fillType).toBe('predefined');
+    expect(r.inlinePattern).toBeDefined();
+    expect(r.inlinePattern!.lines.length).toBeGreaterThan(0);
+    // Κρίσιμο: ΔΕΝ μένει αόρατη — ο geometry resolver βγάζει segments.
+    expect(buildHatchEntitySegments(r).length).toBeGreaterThan(0);
+  });
+});

@@ -55,7 +55,9 @@ import {
   getColumnRotationLock,
   clearColumnRotationLock,
 } from '../../systems/cursor/ColumnRotationStore';
-import { columnRotationDeg } from '../../bim/columns/column-rotation';
+import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -388,7 +390,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
           setState({ ...s, phase: 'awaitingPosition' });
           return false;
         }
-        return commitColumnAt(s, rot.origin, rot.anchor, columnRotationDeg(rot.origin, point));
+        return commitColumnAt(s, rot.origin, rot.anchor, resolveColumnRotationDeg(rot.origin, point, worldPerPixel(getImmediateTransform().scale)));
       }
       return false;
     },

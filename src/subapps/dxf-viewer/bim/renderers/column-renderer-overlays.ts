@@ -16,6 +16,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import type { CutState } from '../../config/bim-view-range';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 // ADR-507 Φ7 — unified material poché (αντικαθιστά το column-hatch-patterns engine).
 import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
 import { paintMaterialHatchSegments } from './shared/material-hatch-paint';
@@ -242,7 +243,8 @@ function paintSectionSymbol(
     ctx.lineTo(outline[i].x, outline[i].y);
   }
   ctx.closePath();
-  ctx.fillStyle = COL_SECTION_FILL_COLOR;
+  // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+  ctx.fillStyle = adaptBimBodyFill(COL_SECTION_FILL_COLOR);
   ctx.fill();
   ctx.strokeStyle = strokeColor ?? COL_SECTION_STROKE_COLOR;
   ctx.lineWidth = lineWidthPx;

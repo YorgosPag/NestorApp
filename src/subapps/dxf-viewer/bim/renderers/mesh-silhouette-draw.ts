@@ -17,6 +17,7 @@
  */
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { adaptBimBodyFill } from '../utils/bim-body-fill';
 import type { SilPoint, SilSegment } from '../mesh-library/mesh-silhouette';
 
 const M_TO_MM = 1000;
@@ -77,8 +78,8 @@ export function drawMeshSilhouette(args: DrawMeshSilhouetteArgs): boolean {
   const toWorld = makePlanToWorld(transform);
   const outline = silhouette.map((p) => toWorld(p.x, p.y));
 
-  // Fill + outline.
-  ctx.fillStyle = palette.fill;
+  // Fill + outline. FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+  ctx.fillStyle = adaptBimBodyFill(palette.fill);
   tracePolygon(ctx, worldToScreen, outline);
   ctx.fill();
   ctx.strokeStyle = palette.stroke;
