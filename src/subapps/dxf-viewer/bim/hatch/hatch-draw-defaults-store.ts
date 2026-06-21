@@ -15,7 +15,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
-import type { HatchEntity } from '../../types/entities';
+import type { HatchEntity, LineweightMm } from '../../types/entities';
+import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 
 /** Οι ρυθμίσεις σχεδίασης που κουβαλάει μια νέα γραμμοσκίαση. */
 export interface HatchDrawDefaults {
@@ -37,6 +38,8 @@ export interface HatchDrawDefaults {
   readonly patternScale: number;
   /** Γωνία predefined μοτίβου (μοίρες) — μόνο predefined. */
   readonly patternAngle: number;
+  /** Πάχος γραμμών (AutoCAD LWT). -2 = ByLayer (default → renderer fallback). */
+  readonly lineweightMm: LineweightMm;
 }
 
 /** Εργοστασιακές προεπιλογές — συμπαγής γκρι poché (η συνηθέστερη χρήση). */
@@ -50,6 +53,7 @@ const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   patternName: 'ANSI31',
   patternScale: 1,
   patternAngle: 0,
+  lineweightMm: LINEWEIGHT_SPECIAL.BYLAYER,
 };
 
 let state: HatchDrawDefaults = DEFAULT_HATCH_DRAW_DEFAULTS;

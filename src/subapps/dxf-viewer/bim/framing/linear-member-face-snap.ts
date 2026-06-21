@@ -239,6 +239,7 @@ export function isMemberCollinearOverlap(
   start: Readonly<Point2D>,
   end: Readonly<Point2D>,
   targets: readonly LinearMemberSnapTarget[],
+  newHalfScene?: number,
 ): boolean {
   const ndx = end.x - start.x;
   const ndy = end.y - start.y;
@@ -258,6 +259,43 @@ export function isMemberCollinearOverlap(
     if (Math.abs(nu.x * tu.x + nu.y * tu.y) < PARALLEL_COS) continue;
     // (2) ο άξονας του νέου περνά ΜΕΣΑ από το outline του υφιστάμενου (on-top) — SSoT
     if (coveredIntervals(start, end, t.outline).length > 0) return true;
+    // (3) ADR-508 — body-overlap: όταν δίνεται `newHalfScene` (τοίχος), πιάσε ΚΑΙ την περίπτωση
+    //     που ο άξονας του νέου τρέχει στην ΠΑΡΕΙΑ (ακμή outline) του υφιστάμενου — face-anchored
+    //     1ο κλικ → ο άξονας στο όριο, αλλά τα ΣΩΜΑΤΑ επικαλύπτονται. Beams (χωρίς newHalfScene)
+    //     → αμετάβλητα.
+    if (newHalfScene !== undefined && bodyOverlapsAlongMember(start, end, a, tu, t.outline, newHalfScene)) {
+      return true;
+    }
   }
   return false;
+}
+
+/**
+ * `true` όταν το παράλληλο νέο μέλος `[start,end]` (μισό πλάτος `newHalf`) επικαλύπτει το ΣΩΜΑ του
+ * υφιστάμενου μέλους τόσο κατά τον άξονα ΟΣΟ ΚΑΙ κάθετα — πιάνει το face-anchored (άξονας στην
+ * ακμή). «Δίπλα» (κενό faces) ή «άκρο-με-άκρο» → false. Pure (scene units, reuse projections).
+ */
+function bodyOverlapsAlongMember(
+  start: Readonly<Point2D>,
+  end: Readonly<Point2D>,
+  a: Readonly<Point2D>,
+  u: Readonly<Point2D>,
+  outline: readonly Point2D[],
+  newHalf: number,
+): boolean {
+  const EPS = 1e-6;
+  const poly = projectPolygonOnAxis(outline, a.x, a.y, u.x, u.y);
+  const existingHalf = (poly.perpMax - poly.perpMin) / 2;
+  const centerPerp = (poly.perpMin + poly.perpMax) / 2;
+  // Παράλληλο ⇒ ίδιο perp σε όλο το μήκος· χρησιμοποίησε το μέσο (signed perp = ίδιο frame).
+  const mx = (start.x + end.x) / 2;
+  const my = (start.y + end.y) / 2;
+  const newPerp = (mx - a.x) * u.y - (my - a.y) * u.x;
+  // Κάθετη επικάλυψη σωμάτων (αυστηρά — άγγιγμα faces δεν μετράει).
+  if (Math.abs(newPerp - centerPerp) >= existingHalf + newHalf - EPS) return false;
+  // Διαμήκης επικάλυψη (άκρο-με-άκρο = 0 → false).
+  const sA = projectPointOnAxis(start.x, start.y, a.x, a.y, u.x, u.y).along;
+  const eA = projectPointOnAxis(end.x, end.y, a.x, a.y, u.x, u.y).along;
+  const overlap = Math.min(Math.max(sA, eA), poly.alongMax) - Math.max(Math.min(sA, eA), poly.alongMin);
+  return overlap > EPS;
 }

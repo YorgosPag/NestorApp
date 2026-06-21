@@ -18,6 +18,8 @@ export const HATCH_RIBBON_KEYS = {
     islandStyle: 'hatch.params.islandStyle',
     /** Όνομα predefined μοτίβου (PAT catalog) — π.χ. 'ANSI31'. */
     patternName: 'hatch.params.patternName',
+    /** Πάχος γραμμών (AutoCAD LWT) — 'ByLayer' ή mm ως string (ADR-507 Φ2). */
+    lineweight: 'hatch.params.lineweight',
   },
   params: {
     /** Γωνία γραμμών (μοίρες) — user-defined. */
@@ -52,7 +54,8 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
   | typeof HATCH_RIBBON_KEYS.stringParams.fillColor
   | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle
-  | typeof HATCH_RIBBON_KEYS.stringParams.patternName;
+  | typeof HATCH_RIBBON_KEYS.stringParams.patternName
+  | typeof HATCH_RIBBON_KEYS.stringParams.lineweight;
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch;
@@ -74,6 +77,7 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.fillColor,
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
   HATCH_RIBBON_KEYS.stringParams.patternName,
+  HATCH_RIBBON_KEYS.stringParams.lineweight,
 ]);
 const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,

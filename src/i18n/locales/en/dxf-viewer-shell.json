@@ -1095,6 +1095,10 @@
     "storeyGating": {
       "notRecommended": "Not typical on this level"
     },
+    "picker": {
+      "searchPlaceholder": "Search…",
+      "empty": "No results"
+    },
     "tabs": {
       "home": "Home",
       "insert": "Insert",
@@ -3231,6 +3235,7 @@
         "lineSpacing": "Spacing",
         "patternName": "Pattern",
         "patternScale": "Scale",
+        "lineweight": "Lineweight",
         "doubleCrossHatch": "Cross-hatch",
         "islandStyle": "Islands",
         "islandNormal": "Normal",

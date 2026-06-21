@@ -21,10 +21,10 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
-import { CAD_UI_COLORS } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
+import { OVERLAY_LINE_COLORS } from './overlay-line-style';
 
 /** Extra screen-px the number sits BEYOND the dim line (so it never overlaps it — no bg chip). */
 const LABEL_CLEARANCE_PX = 9;
@@ -57,17 +57,17 @@ export function paintGhostFaceDimensions(
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
 ): void {
-  const textColor = CAD_UI_COLORS.entity.preview;
+  const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
   const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
   for (const d of meta.dims) {
-    // Dashed 0.5px line + extension lines (text suppressed) via the dim-geometry SSoT.
+    // Dashed 0.5px CYAN line + extension lines (text suppressed) via the dim-geometry SSoT.
     renderPreviewDimension({
       ctx,
       entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef]),
       style: ISO_129_TEMPLATE,
       transform,
       viewport,
-      opts: { overlayLineStyle: true },
+      opts: { overlayLineStyle: true, color: OVERLAY_LINE_COLORS.listeningDim },
     });
     // Number via the overlay-text SSoT, forced to METRES (architectural convention), placed a
     // few px BEYOND the dim line (along its outward offset) so it never crosses any line — no

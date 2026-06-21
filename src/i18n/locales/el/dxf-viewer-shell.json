@@ -1095,6 +1095,10 @@
     "storeyGating": {
       "notRecommended": "Δεν συνηθίζεται σε αυτή τη στάθμη"
     },
+    "picker": {
+      "searchPlaceholder": "Αναζήτηση…",
+      "empty": "Κανένα αποτέλεσμα"
+    },
     "tabs": {
       "home": "Αρχική",
       "insert": "Εισαγωγή",
@@ -3231,6 +3235,7 @@
         "lineSpacing": "Απόσταση",
         "patternName": "Μοτίβο",
         "patternScale": "Κλίμακα",
+        "lineweight": "Πάχος",
         "doubleCrossHatch": "Σταυρωτή",
         "islandStyle": "Νησίδες",
         "islandNormal": "Κανονικό",

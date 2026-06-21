@@ -18,6 +18,7 @@ import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands/ReorderEntityCommand';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 /** Ελάχιστος αριθμός κορυφών για έγκυρο κλειστό όριο. */
 export const HATCH_MIN_BOUNDARY_POINTS = 3;
@@ -50,6 +51,9 @@ export function buildHatchEntityFromBoundary(
     patternName: isPredefined ? d.patternName : undefined,
     patternScale: isPredefined ? d.patternScale : undefined,
     patternAngle: isPredefined ? d.patternAngle : undefined,
+    // Πάχος γραμμών (AutoCAD LWT) — αποθηκεύεται μόνο όταν concrete· ByLayer/default
+    // παραλείπεται ώστε ο renderer να εφαρμόσει το fallback (mirror completeEntity).
+    lineweightMm: isConcreteLineweight(d.lineweightMm) ? d.lineweightMm : undefined,
     // §5δ — back bucket· το ReorderEntityCommand κατεβάζει και τη θέση στον πίνακα.
     drawOrder: 0,
     visible: true,

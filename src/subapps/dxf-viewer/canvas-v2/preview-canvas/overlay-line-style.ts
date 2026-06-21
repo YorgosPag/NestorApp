@@ -16,6 +16,20 @@ export const OVERLAY_LINE_WIDTH_PX = 0.5;
 export const OVERLAY_LINE_DASH: readonly number[] = [8, 5];
 
 /**
+ * SSoT colours per overlay MECHANISM (Giorgio 2026-06-21 — «κάθε μηχανισμός διαφορετικό χρώμα»):
+ *   - `alignment`     LIGHT GREY — alignment traces (ίχνη ευθυγράμμισης) + their tooltip; kept
+ *                     neutral so they don't clash with the GREEN snap-point labels («ΓΩΝΙΑ ΤΟΙΧΟΥ»)
+ *   - `drawingGuide`  ORANGE     — wall-tool drawing guide (polar / face-relative slope line)
+ *   - `listeningDim`  CYAN       — wall-ghost listening dimensions (lines + numbers)
+ * One place owns the palette so the families never collide or drift.
+ */
+export const OVERLAY_LINE_COLORS = {
+  alignment: '#CCCCCC',
+  drawingGuide: '#FF9800',
+  listeningDim: '#29B6F6',
+} as const;
+
+/**
  * Apply the canonical overlay-guide-line stroke (width + dash + butt cap) for `color` to `ctx`.
  * Call immediately before `ctx.stroke()`. Does NOT save/restore — the caller owns ctx state.
  */

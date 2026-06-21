@@ -12,10 +12,32 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
-import type { HatchEntity } from '../../types/entities';
+import type { HatchEntity, LineweightMm } from '../../types/entities';
+import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 /** Island/fill style — παράγεται από τον τύπο (SSoT, μηδέν χειροκίνητο literal). */
 export type HatchIslandStyle = NonNullable<HatchEntity['islandStyle']>;
+
+/**
+ * Fallback πάχος γραμμών μοτίβου (px) όταν η γραμμοσκίαση δεν έχει concrete
+ * `lineweightMm` (ByLayer/default) — η ιστορική προεπιλογή (zero regression).
+ */
+export const DEFAULT_HATCH_LINE_WIDTH_PX = 0.5;
+
+/**
+ * Πάχος γραμμών μοτίβου (px) από το `lineweightMm` (ADR-507 Φ2). **Zoom-independent
+ * (AutoCAD LWT)** μέσω του mm→px SSoT `lineweightToPx`· μη-concrete (ByLayer/-2 /
+ * undefined) → ιστορικό fallback. Floor στο fallback ώστε λεπτές τιμές να φαίνονται.
+ *
+ * Leaf-safe: ζει εδώ (όχι στον HatchRenderer) ώστε να είναι unit-testable χωρίς να
+ * τραβά το βαρύ render import chain.
+ */
+export function resolveHatchLineWidthPx(
+  lineweightMm: LineweightMm | null | undefined,
+): number {
+  if (!isConcreteLineweight(lineweightMm)) return DEFAULT_HATCH_LINE_WIDTH_PX;
+  return Math.max(DEFAULT_HATCH_LINE_WIDTH_PX, lineweightToPx(lineweightMm));
+}
 
 /** Τα μόνα πεδία που χρειάζεται ο solid-έλεγχος (loose ώστε να δέχεται writer carriers). */
 type SolidProbe = Pick<HatchEntity, 'fillType' | 'patternType' | 'patternName'>;

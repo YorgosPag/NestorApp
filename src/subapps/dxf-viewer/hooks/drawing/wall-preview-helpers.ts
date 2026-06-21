@@ -151,7 +151,8 @@ function makeWallGhostBeforeClick(
   if (!built.ok) return null;
   // 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή (β) το φάντασμα
   // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος. 🟢/`neutral` → WYSIWYG αυτούσιο.
-  const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets);
+  const newHalfScene = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
+  const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets, newHalfScene);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
   // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
   // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
@@ -189,8 +190,9 @@ function makeWallWysiwygGhost(
   }
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
+  const newHalfScene = (resolveWallThicknessMm(overrides) / 2) * mmToSceneUnits(sceneUnits);
   const ghostStatusColor =
-    kind !== 'curved' && isMemberCollinearOverlap(startPt, endPt, memberTargets)
+    kind !== 'curved' && isMemberCollinearOverlap(startPt, endPt, memberTargets, newHalfScene)
       ? resolveGhostStatusColor('overlap')
       : null;
   return toWysiwygPreviewEntity(built.entity, id, ghostStatusColor);

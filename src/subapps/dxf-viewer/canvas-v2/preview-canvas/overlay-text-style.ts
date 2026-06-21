@@ -16,7 +16,8 @@
 export const OVERLAY_TEXT_PX = 11;
 
 /** Canonical overlay label font string. */
-export const OVERLAY_TEXT_FONT = `${OVERLAY_TEXT_PX}px monospace`;
+/** Clean sans-serif stack (native UI fonts → always resolves crisp). Change here only. */
+export const OVERLAY_TEXT_FONT = `${OVERLAY_TEXT_PX}px Verdana, Tahoma, "Segoe UI", sans-serif`;
 
 export interface OverlayLabelStyle {
   /** Glyph colour. */

@@ -87,6 +87,14 @@ export interface RibbonCommand {
    */
   numericInput?: RibbonNumericInputConfig;
   /**
+   * ADR-507 Φ2 — Specialised combobox renderer. When set, RibbonCombobox
+   * delegates to a dedicated control instead of the plain Radix Select:
+   *   - `'hatch-pattern'` → searchable popover with pattern thumbnails
+   *     (HatchPatternPicker). Reuses `options` + the bridge value/onChange.
+   * Omitted ⇒ standard Select / editable-numeric behaviour (zero change).
+   */
+  comboboxVariant?: 'hatch-pattern';
+  /**
    * ADR-419 §ribbon-hierarchy (Revit-style cascading menu) — When present,
    * this command is a SUBMENU HEADER (not a leaf tool). The split dropdown
    * renders it as a hover-expandable item that opens `subVariants` to the

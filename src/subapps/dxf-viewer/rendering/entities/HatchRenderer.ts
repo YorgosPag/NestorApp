@@ -24,11 +24,9 @@ import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
-import { isSolidHatch } from '../../bim/hatch/hatch-properties';
+import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
-
-const HATCH_LINE_WIDTH = 0.5;
 /**
  * Density-LOD: κάτω από αυτή την on-screen απόσταση (px) οι γραμμές μοτίβου γίνονται
  * δυσδιάκριτη μάζα → ο renderer τις αντικαθιστά με ένα ελαφρύ solid tint (industry
@@ -123,7 +121,10 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.ctx.restore();
     } else {
       // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).
-      this.drawPatternSegments(this.cachedSegments(hatch), color);
+      // Πάχος γραμμών = AutoCAD LWT (zoom-independent) από το lineweightMm (ADR-507 Φ2).
+      this.drawPatternSegments(
+        this.cachedSegments(hatch), color, resolveHatchLineWidthPx(hatch.lineweightMm),
+      );
     }
 
     // Boundary outline.
@@ -203,9 +204,10 @@ export class HatchRenderer extends BaseEntityRenderer {
   /** Σχεδιάζει τα τμήματα μοτίβου (κοινό για user-defined + predefined). */
   private drawPatternSegments(
     segments: ReadonlyArray<{ start: Point2D; end: Point2D }>, color: string,
+    lineWidthPx: number,
   ): void {
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = HATCH_LINE_WIDTH;
+    this.ctx.lineWidth = lineWidthPx;
     this.ctx.setLineDash([]);
     // Viewport culling μόνο όταν αξίζει (πολλά segments) — αλλιώς ο έλεγχος bounds
     // κοστίζει περισσότερο απ' ό,τι κερδίζει. Off-screen segments → ΟΧΙ transform.

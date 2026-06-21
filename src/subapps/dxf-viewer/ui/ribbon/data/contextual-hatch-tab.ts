@@ -19,6 +19,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { HATCH_RIBBON_KEYS } from '../hooks/bridge/hatch-command-keys';
 import { listHatchPatterns } from '../../../data/hatch-pattern-catalog';
+import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
 
 export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 
@@ -136,6 +137,8 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 commandKey: HATCH_RIBBON_KEYS.stringParams.patternName,
                 comboboxWidthPx: 160,
                 options: PATTERN_NAME_OPTIONS,
+                // ADR-507 Φ2 — searchable popover με thumbnails (Revit Fill Patterns).
+                comboboxVariant: 'hatch-pattern',
               },
             },
             {
@@ -203,6 +206,17 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 commandKey: HATCH_RIBBON_KEYS.stringParams.islandStyle,
                 comboboxWidthPx: 130,
                 options: ISLAND_STYLE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.lineweight',
+                labelKey: 'ribbon.commands.hatchEditor.lineweight',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.lineweight,
+                comboboxWidthPx: 110,
+                options: LINEWEIGHT_RIBBON_OPTIONS,
               },
             },
           ],

@@ -19,7 +19,9 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isHatchEntity } from '../../../types/entities';
-import type { HatchEntity } from '../../../types/entities';
+import type { HatchEntity, LineweightMm } from '../../../types/entities';
+import { isConcreteLineweight, LINEWEIGHT_SPECIAL, parseDxfCode370 } from '../../../config/lineweight-iso-catalog';
+import { LINEWEIGHT_BYLAYER_VALUE } from '../data/lineweight-ribbon-options';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { DeleteEntityCommand } from '../../../core/commands/entity-commands/DeleteEntityCommand';
@@ -77,6 +79,11 @@ function formatAreaM2(mm2: number): string {
   return `${(mm2 / 1_000_000).toFixed(2)} m²`;
 }
 
+/** lineweightMm → option value ('ByLayer' ή «0.50»· toFixed(2) ταιριάζει με LINEWEIGHT_RIBBON_OPTIONS). */
+function lineweightToOptionValue(lw: LineweightMm | undefined): string {
+  return isConcreteLineweight(lw) ? lw.toFixed(2) : LINEWEIGHT_BYLAYER_VALUE;
+}
+
 export function useRibbonHatchBridge(
   props: UseRibbonHatchBridgeProps,
 ): RibbonHatchBridge {
@@ -131,6 +138,9 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.patternName) {
           return { value: hatch?.patternName ?? defaults.patternName, options: [] };
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.lineweight) {
+          return { value: lineweightToOptionValue(hatch?.lineweightMm ?? defaults.lineweightMm), options: [] };
+        }
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
@@ -174,6 +184,15 @@ export function useRibbonHatchBridge(
           // αγνοούσε το patternName (έκανε solid fill).
           if (hatch) patchHatch(hatch, { patternName: value, fillType: 'predefined', patternType: 'pattern' });
           else setHatchDrawDefaults({ patternName: value, fillType: 'predefined' });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.lineweight) {
+          const lineweightMm: LineweightMm =
+            value === LINEWEIGHT_BYLAYER_VALUE
+              ? LINEWEIGHT_SPECIAL.BYLAYER
+              : parseDxfCode370(Math.round(Number.parseFloat(value) * 100));
+          if (hatch) patchHatch(hatch, { lineweightMm });
+          else setHatchDrawDefaults({ lineweightMm });
           return;
         }
         // islandStyle

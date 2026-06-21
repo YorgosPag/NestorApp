@@ -18,26 +18,14 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { LINE_TOOL_RIBBON_KEYS } from '../hooks/bridge/line-tool-command-keys';
 import { LINETYPE_ISO_NAMES } from '../../../config/linetype-iso-catalog';
+// ADR-357 §G15 / ADR-507 Φ2 — ByLayer + ISO subset, shared SSoT (boy-scout extract).
+import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
 
 export const LINE_TOOL_CONTEXTUAL_TRIGGER = 'line-tool-active';
 
 // ─── Lineweight options ───────────────────────────────────────────────────────
-// ADR-357 §G15: ByLayer + ISO subset (11 most common values per AutoCAD UI).
 
-const LINEWEIGHT_OPTIONS = [
-  { value: 'ByLayer',  labelKey: 'ByLayer',   isLiteralLabel: true },
-  { value: '0.05',     labelKey: '0.05 mm',   isLiteralLabel: true },
-  { value: '0.09',     labelKey: '0.09 mm',   isLiteralLabel: true },
-  { value: '0.13',     labelKey: '0.13 mm',   isLiteralLabel: true },
-  { value: '0.18',     labelKey: '0.18 mm',   isLiteralLabel: true },
-  { value: '0.25',     labelKey: '0.25 mm',   isLiteralLabel: true },
-  { value: '0.35',     labelKey: '0.35 mm',   isLiteralLabel: true },
-  { value: '0.50',     labelKey: '0.50 mm',   isLiteralLabel: true },
-  { value: '0.70',     labelKey: '0.70 mm',   isLiteralLabel: true },
-  { value: '1.00',     labelKey: '1.00 mm',   isLiteralLabel: true },
-  { value: '1.40',     labelKey: '1.40 mm',   isLiteralLabel: true },
-  { value: '2.00',     labelKey: '2.00 mm',   isLiteralLabel: true },
-] as const;
+const LINEWEIGHT_OPTIONS = LINEWEIGHT_RIBBON_OPTIONS;
 
 // ─── Linetype options ─────────────────────────────────────────────────────────
 // ByLayer + all 8 ISO baseline names (SSoT: linetype-iso-catalog.ts).

@@ -61,7 +61,7 @@ import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-reso
 // ADR-362 dimension SSoT.
 import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
-import { applyOverlayLineStyle } from './overlay-line-style';
+import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
 import { drawOverlayLabel } from './overlay-text-style';
 
 export class PreviewRenderer {
@@ -233,7 +233,7 @@ export class PreviewRenderer {
     const EXTEND = 6000;
 
     ctx.save();
-    applyOverlayLineStyle(ctx, '#00CC44'); // SSoT: 0.5px dashed [8,5] (same as alignment traces)
+    applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.drawingGuide); // SSoT: 0.5px dashed [8,5], ORANGE
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
     ctx.moveTo(refScreen.x, refScreen.y);
@@ -241,9 +241,9 @@ export class PreviewRenderer {
     ctx.stroke();
 
     ctx.restore();
-    // Tooltip near cursor — SSoT overlay label (font only), same as the tracking tooltip.
+    // Tooltip near cursor — SSoT overlay label (font only), ORANGE to match the guide line.
     drawOverlayLabel(ctx, label, cursorScreen.x + 14, cursorScreen.y - 8, {
-      textColor: '#00CC44',
+      textColor: OVERLAY_LINE_COLORS.drawingGuide,
       align: 'left',
     });
   }

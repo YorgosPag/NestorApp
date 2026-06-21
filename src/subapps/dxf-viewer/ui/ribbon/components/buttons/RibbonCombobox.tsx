@@ -37,6 +37,7 @@ import type {
 } from '../../types/ribbon-types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { RibbonEditableCombobox } from './RibbonEditableCombobox';
+import { HatchPatternPicker } from './HatchPatternPicker';
 import { resolveNumericConfig } from './ribbon-combobox-numeric';
 
 const DEFAULT_WIDTH_PX = 140;
@@ -54,7 +55,19 @@ function resolveLabel(
   return t(option.labelKey);
 }
 
+/**
+ * Dispatcher: delegates to a specialised control when `comboboxVariant` is set
+ * (ADR-507 Φ2), else renders the standard Select / editable-numeric combobox.
+ * Hook-free wrapper → keeps rules-of-hooks satisfied for both branches.
+ */
 export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
+  if (command.comboboxVariant === 'hatch-pattern') {
+    return <HatchPatternPicker command={command} />;
+  }
+  return <RibbonComboboxDefault command={command} />;
+};
+
+const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const {
     onComboboxChange,

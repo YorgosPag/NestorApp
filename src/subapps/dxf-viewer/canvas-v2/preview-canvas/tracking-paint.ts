@@ -15,7 +15,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import type { TrackingPalette } from './tracking-colors';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
-import { applyOverlayLineStyle } from './overlay-line-style';
+import { applyOverlayLineStyle, OVERLAY_LINE_WIDTH_PX, OVERLAY_LINE_COLORS } from './overlay-line-style';
 import { drawOverlayLabel } from './overlay-text-style';
 
 /** Acquired-point `+` glyphs (persist across drawPreview cycles). */
@@ -28,9 +28,9 @@ export function paintTrackingMarkers(
 ): void {
   const SIZE = 7;
   ctx.save();
-  ctx.setLineDash([]);
+  ctx.setLineDash([]); // `+` glyph = solid point-indicator (not a dashed guide line)
   ctx.strokeStyle = palette.acquiredMarker;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = OVERLAY_LINE_WIDTH_PX; // SSoT 0.5px (shared width)
   ctx.globalAlpha = 0.95;
   for (const m of markers) {
     const s = CoordinateTransforms.worldToScreen({ x: m.x, y: m.y }, transform, viewport);
@@ -55,7 +55,7 @@ export function paintAlignmentPaths(
   if (paths.length === 0) return;
   const EXTEND = 6000;
   ctx.save();
-  applyOverlayLineStyle(ctx, palette.alignmentPath); // SSoT: 0.5px dashed [8,5]
+  applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.alignment); // SSoT: 0.5px dashed [8,5], light grey
   ctx.globalAlpha = 0.75;
   for (const path of paths) {
     const origin = CoordinateTransforms.worldToScreen(path.origin, transform, viewport);
@@ -81,10 +81,10 @@ export function paintIntersections(
   if (intersections.length === 0) return;
   const RADIUS = 6;
   ctx.save();
-  ctx.setLineDash([]);
+  ctx.setLineDash([]); // halo ring = solid point-indicator (not a dashed guide line)
   ctx.strokeStyle = palette.intersectionStroke;
   ctx.fillStyle = palette.intersectionFill;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = OVERLAY_LINE_WIDTH_PX; // SSoT 0.5px (shared width)
   ctx.globalAlpha = 0.9;
   for (const pt of intersections) {
     const s = CoordinateTransforms.worldToScreen(pt, transform, viewport);
@@ -107,9 +107,9 @@ export function paintTooltip(
 ): void {
   if (!label) return;
   const screen = CoordinateTransforms.worldToScreen(snappedPoint, transform, viewport);
-  // SSoT overlay label (font only, no background). Colour stays per-palette.
+  // SSoT overlay label (font only, no background). Light grey to match the alignment line.
   drawOverlayLabel(ctx, label, screen.x + 14, screen.y - 12, {
-    textColor: palette.tooltipText,
+    textColor: OVERLAY_LINE_COLORS.alignment,
     align: 'left',
   });
 }
