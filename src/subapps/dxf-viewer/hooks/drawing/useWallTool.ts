@@ -36,6 +36,7 @@ import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { radToDeg } from '../../rendering/entities/shared/geometry-utils';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { resolveWallThicknessMm } from './wall-completion';
 // ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
@@ -111,8 +112,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
       // ADR-508 — worldPerPixel (=1/scale) → σταθερό zoom-adaptive βήμα ολίσθησης στην παρειά
       // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
-      const worldPerPixel = 1 / Math.max(getImmediateTransform().scale, 0.001);
-      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits, worldPerPixel);
+      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
       if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap

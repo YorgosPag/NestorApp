@@ -77,6 +77,7 @@ import {
   getTrackingPointsSnapshot,
 } from '../../systems/tracking/TrackingPointStore';
 import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
+import { pixelsToWorld } from '../../rendering/utils/viewport-scale';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
@@ -347,7 +348,7 @@ export function useDrawingHandlers(
     const acquired = TrackingPointStore.getPoints();
     let finalPoint = snappedPoint;
     if (acquired.length > 0) {
-      const worldTolerance = 3 / Math.max(canvasOps.getTransform().scale, 0.001);
+      const worldTolerance = pixelsToWorld(3, canvasOps.getTransform().scale);
       const trackingResult = resolveTrackingSnap(snappedPoint, acquired, {
         incrementAngle: polarTrackingStore.incrementAngle,
         additionalAngles: polarTrackingStore.additionalAngles,

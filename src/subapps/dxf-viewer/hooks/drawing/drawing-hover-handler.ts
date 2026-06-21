@@ -38,6 +38,7 @@ import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // ADR-357 Phase 13 G14: length/angle lock geometry constraint
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-scale';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
@@ -135,7 +136,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // (auto, supersedes world polar) + zoom-adaptive length step (same SSoT as the
     // alignment traces). The helper guards tool/phase/ortho internally and shares the
     // SSoT with the commit path (`applyBimDrawingConstraint`) so ghost === wall.
-    const faceRel = resolveWallFaceRelativePolar(afterOrtho, 1 / Math.max(getTransformScale(), 0.001));
+    const faceRel = resolveWallFaceRelativePolar(afterOrtho, worldPerPixel(getTransformScale()));
     if (faceRel) {
       polarSnapResult = faceRel.result;
       previewPt = faceRel.result.point;
@@ -199,16 +200,16 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // every acquired point in addition to the H/V baseline).
     const acquired = TrackingPointStore.getPoints();
     const liveScale = getTransformScale();
-    const worldTolerance = 3 / Math.max(liveScale, 0.001);
+    const worldTolerance = pixelsToWorld(3, liveScale);
     // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from
     // the columns near the cursor — a SECOND source merged with the acquired
     // (AutoCAD) points into the SAME resolver. Gated behind the AutoAlign toggle.
     const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
     const ambient = (isDrawingTool && ambientCfg.enabled)
       ? collectAmbientAlignmentAnchors(previewPt, getSceneEntities(), {
-          // Screen-relative radius (zoom-adaptive): px → world via 1/scale, so the
-          // "members near my cursor on screen" feel stays constant at every zoom.
-          radiusWorld: ambientCfg.radiusPx / Math.max(liveScale, 0.001),
+          // Screen-relative radius (zoom-adaptive): px → world, so the "members near
+          // my cursor on screen" feel stays constant at every zoom.
+          radiusWorld: pixelsToWorld(ambientCfg.radiusPx, liveScale),
           maxMembers: ambientCfg.maxMembers,
           axisToleranceWorld: worldTolerance,
         })
@@ -228,7 +229,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     let trackingPoint: Pt | null = trackingResult ? trackingResult.point : null;
     if (trackingResult && trackingResult.kind === 'projection' && trackingResult.activePaths.length > 0) {
       const path = trackingResult.activePaths[0];
-      const step = adaptiveDistanceStep(1 / Math.max(liveScale, 0.001));
+      const step = adaptiveDistanceStep(worldPerPixel(liveScale));
       trackingPoint = quantizeAlongPath(trackingResult.point, trackingResult.anchorPoint, path.dx, path.dy, step);
     }
     if (trackingResult && trackingPoint) {

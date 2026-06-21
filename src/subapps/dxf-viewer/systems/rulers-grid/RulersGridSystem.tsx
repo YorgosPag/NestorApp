@@ -37,6 +37,7 @@ declare global {
 }
 import { RulersGridCalculations, PerformanceUtilities, UnitConversion } from './utils';
 import { formatLengthMm } from '../../config/display-length-format';
+import { pixelsToWorld } from '../../rendering/utils/viewport-scale';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -202,7 +203,7 @@ function useRulersGridSystemIntegration({
 
   const getOptimalTickSpacing = useCallback(
     (transform: ViewTransform, _type: 'horizontal' | 'vertical'): number => {
-      const scaledSpacing = RULERS_GRID_CONFIG.DEFAULT_TICK_SPACING / Math.max(transform.scale, 0.001);
+      const scaledSpacing = pixelsToWorld(RULERS_GRID_CONFIG.DEFAULT_TICK_SPACING, transform.scale);
       return Math.min(
         Math.max(scaledSpacing, RULERS_GRID_CONFIG.MIN_TICK_SPACING),
         RULERS_GRID_CONFIG.MAX_TICK_SPACING

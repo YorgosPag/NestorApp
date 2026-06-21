@@ -16,6 +16,7 @@ import { getHoveredEntity } from '../../systems/hover/HoverStore';
 // ADR-363 — apply F8 ortho / F10 polar to BIM tool clicks (wall/stair/beam/slab)
 // using their preview-store anchor, so the committed point matches the preview.
 import { applyBimDrawingConstraint } from '../drawing/bim-ortho-reference';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
   ArcPickableEntity,
@@ -206,7 +207,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     const bimPoint = applyBimDrawingConstraint(
       activeTool,
       worldPoint,
-      1 / Math.max(getImmediateTransform().scale, 0.001),
+      worldPerPixel(getImmediateTransform().scale),
     );
     // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
     if (activeTool === 'stair' && stairTool?.isActive) {
