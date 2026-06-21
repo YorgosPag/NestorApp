@@ -32,6 +32,10 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-coverings/wall-covering-material-catalog';
 import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
 import { strokeHatchLines, fillHatchDots } from './shared/canvas-hatch-fill';
+import { hexToRgba } from '../utils/bim-vg-fill-tint';
+
+/** Opacity του translucent fill της λωρίδας (λίγο πιο έντονο από floor-finish για να ξεχωρίζει). */
+const STRIP_FILL_ALPHA = 0.35;
 import {
   computeWallCoveringStrip,
   type WallCoveringHost,
@@ -84,11 +88,8 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     const color = visible.colorOverride ?? getWallCoveringColor(visible.materialId);
     const hatch = getWallCoveringHatchType(visible.materialId);
 
-    // Translucent fill (35% — λίγο πιο έντονο από floor-finish ώστε η λωρίδα να ξεχωρίζει).
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.35)`;
+    // Translucent fill — reuse `hexToRgba` SSoT (ADR-375· μηδέν inline hex parse).
+    this.ctx.fillStyle = hexToRgba(color, STRIP_FILL_ALPHA) ?? color;
     this.drawQuadPath(quad);
     this.ctx.fill();
 
