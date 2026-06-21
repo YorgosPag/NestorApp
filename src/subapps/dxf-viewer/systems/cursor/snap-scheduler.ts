@@ -107,11 +107,27 @@ function applyColumnGhostStatus(
 }
 
 /**
+ * SSoT — δημοσιεύει ένα **ορατό** snap αποτέλεσμα (React marker + `fullSnapResult` για τη γλυφή/
+ * ετικέτα του `SnapIndicatorOverlay`). Κοινό σε κύριο path ΚΑΙ column face-snap (μηδέν διπλότυπο).
+ */
+function publishSnapMarker(input: SnapDetectionInput, snapResult: ProSnapResult): void {
+  if (!snapResult.snappedPoint) return;
+  input.setSnapResults([{
+    point: snapResult.snappedPoint,
+    type: snapResult.activeMode || 'default',
+    entityId: snapResult.snapPoint?.entityId || null,
+    distance: snapResult.snapPoint?.distance || 0,
+    priority: 0,
+  }]);
+  setFullSnapResult(snapResult);
+}
+
+/**
  * ADR-398 §Column smart-ghost face-snap (ADR-508 reuse) — γράφει το column face-snap αποτέλεσμα
  * στα snap SSoT (ghost point + status + auto λαβή). Όταν υπάρχει ορατό BIM χαρακτηριστικό
- * (`glyphSnap` — Γωνία/Μέσο/Κέντρο τοίχου/δοκαριού/κολόνας) → **δείχνει τη γλυφή/ετικέτα**
- * (`fullSnapResult` + markers)· αλλιώς drive-ghost-only (καμία γλυφή). Το ghost ζωγραφίζεται από
- * το `useColumnGhostPreview` μέσω `getImmediateSnap()`. Dedup μέσω lastSnap state.
+ * (`glyphSnap` — Γωνία/Μέσο/Κέντρο τοίχου/δοκαριού/κολόνας) → **δείχνει τη γλυφή/ετικέτα** (μέσω
+ * `publishSnapMarker`)· αλλιώς drive-ghost-only (καμία γλυφή). Το WYSIWYG ghost ζωγραφίζεται
+ * από το `column-preview-helpers` (PreviewCanvas) μέσω `getImmediateSnap()`. Dedup μέσω lastSnap state.
  */
 function applyColumnFaceSnap(resolved: ColumnFaceSnapWithGlyph, input: SnapDetectionInput): void {
   const { faceSnap, glyphSnap } = resolved;
@@ -122,14 +138,7 @@ function applyColumnFaceSnap(resolved: ColumnFaceSnapWithGlyph, input: SnapDetec
     lastSnapX = sx;
     lastSnapY = sy;
     if (glyphSnap?.snappedPoint) {
-      input.setSnapResults([{
-        point: glyphSnap.snappedPoint,
-        type: glyphSnap.activeMode || 'default',
-        entityId: glyphSnap.snapPoint?.entityId || null,
-        distance: glyphSnap.snapPoint?.distance || 0,
-        priority: 0,
-      }]);
-      setFullSnapResult(glyphSnap);
+      publishSnapMarker(input, glyphSnap);
     } else {
       input.setSnapResults([]);
       setFullSnapResult(null);
@@ -195,14 +204,7 @@ function runSnapDetection(input: SnapDetectionInput): void {
       if (snapMoved || !lastSnapFound) {
         lastSnapX = sx;
         lastSnapY = sy;
-        input.setSnapResults([{
-          point: snapResult.snappedPoint,
-          type: snapResult.activeMode || 'default',
-          entityId: snapResult.snapPoint?.entityId || null,
-          distance: snapResult.snapPoint?.distance || 0,
-          priority: 0,
-        }]);
-        setFullSnapResult(snapResult);
+        publishSnapMarker(input, snapResult);
         setImmediateSnap({
           found: true,
           // ADR-398 — ghost anchor follows the corner-aligned cursor (when a corner won).

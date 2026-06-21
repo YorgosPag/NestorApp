@@ -21,7 +21,6 @@ import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay'
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
-import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
 import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
@@ -310,8 +309,6 @@ interface PreviewCanvasMountsProps {
   stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-350: TRIM overlay has no extra payload — full state lives in TrimToolStore. */
   trim?: Record<string, never>;
-  /** ADR-363 Phase 4.5c.1 — column anchor ghost preview payload. */
-  columnGhost: Omit<ColumnGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-406 — MEP fixture 2D placement ghost payload. */
   mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ3 — electrical panel 2D placement ghost payload. */
@@ -347,7 +344,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -401,12 +398,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <GripDragPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
-        transform={transform}
-        getCanvas={getCanvas}
-        getViewportElement={getViewportElement}
-      />
-      <ColumnGhostPreviewMount
-        {...columnGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

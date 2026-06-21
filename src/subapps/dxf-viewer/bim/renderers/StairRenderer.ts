@@ -34,7 +34,8 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
-import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
+import { type LinePatternKey } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -289,7 +290,7 @@ export class StairRenderer extends BaseEntityRenderer {
   private drawWalkline(walkline: ReadonlyArray<Point3D>, lineWidthPx: number, linePattern: LinePatternKey): void {
     if (walkline.length < 2) return;
     this.ctx.save();
-    this.ctx.setLineDash(linePatternToDashArray(linePattern) as number[]);
+    this.ctx.setLineDash(bimDashPx(linePattern, this.transform.scale));
     this.ctx.lineWidth = lineWidthPx;
     this.drawPolyline3D(walkline);
     this.ctx.restore();
@@ -320,7 +321,7 @@ export class StairRenderer extends BaseEntityRenderer {
     );
 
     this.ctx.save();
-    this.ctx.setLineDash(linePatternToDashArray(linePattern) as number[]);
+    this.ctx.setLineDash(bimDashPx(linePattern, this.transform.scale));
     this.ctx.lineWidth = lineWidthPx;
 
     if (handrails.inner) {

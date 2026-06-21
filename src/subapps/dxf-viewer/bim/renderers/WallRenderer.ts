@@ -33,7 +33,7 @@ import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
-import { linePatternToDashArray } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -258,7 +258,7 @@ export class WallRenderer extends BaseEntityRenderer {
       resolveVgFillTint('wall', _cutState, _styles) ?? WALL_CATEGORY_FILL[cat],
     );
     this.ctx.lineWidth = _edgePx;
-    this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
+    this.ctx.setLineDash(bimDashPx(_edgePattern, this.transform.scale));
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
@@ -441,7 +441,7 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.strokeStyle = adaptEntityColorForCanvas(_hatchStroke);
     this.ctx.fillStyle = adaptEntityColorForCanvas(_hatchStroke);
     this.ctx.lineWidth = WALL_HATCH_LINE_WIDTH_PX[key];
-    this.ctx.setLineDash(linePatternToDashArray(_hatchPattern) as number[]);
+    this.ctx.setLineDash(bimDashPx(_hatchPattern, this.transform.scale));
 
     for (const seg of plan.lines) {
       const a = this.worldToScreen(seg.start);

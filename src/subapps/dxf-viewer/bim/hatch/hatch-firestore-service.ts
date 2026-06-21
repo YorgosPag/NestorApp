@@ -46,8 +46,19 @@ import type { HatchEntity } from '../../types/entities';
  * beyond `fillColor`, NO kind/params/geometry). This is the single diff unit
  * (mirror of floor-finish `params`).
  */
+/**
+ * One closed boundary ring, persisted as a MAP wrapping its vertex array.
+ * ⚠️ Firestore forbids directly-nested arrays ANYWHERE (an array element cannot
+ * itself be an array — not even inside a map). The runtime `HatchEntity.boundaryPaths`
+ * is `Point2D[][]`; we serialise each ring to `{ vertices }` so the stored field is
+ * an array-of-MAPS (legal) instead of an array-of-arrays (rejected).
+ */
+export interface HatchBoundaryRing {
+  readonly vertices: Point2D[];
+}
+
 export interface HatchDocData {
-  readonly boundaryPaths: Point2D[][];
+  readonly boundaryPaths: HatchBoundaryRing[];
   readonly patternName?: string;
   readonly patternType?: 'solid' | 'gradient' | 'pattern';
   readonly patternScale?: number;
@@ -105,27 +116,42 @@ export interface HatchUpdateInput {
 // PURE HELPERS (exported for diffing + tests)
 // ============================================================================
 
-/** The hatch-specific keys carried into Firestore (ordered, single SSoT). */
-const HATCH_DATA_KEYS: readonly (keyof HatchDocData)[] = [
-  'boundaryPaths', 'patternName', 'patternType', 'patternScale', 'patternAngle',
+/** The scalar hatch fields carried into Firestore (boundaryPaths handled separately). */
+const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
+  'patternName', 'patternType', 'patternScale', 'patternAngle',
   'seedPoints', 'fillColor', 'backgroundColor', 'associative', 'fillType',
   'islandStyle', 'lineAngle', 'lineSpacing', 'doubleCrossHatch', 'patternOrigin',
   'drawOrder', 'gapTolerance',
 ];
 
+/** Runtime hatch shape consumed on the write side (boundaryPaths = Point2D[][]). */
+type HatchDataSource = Omit<Partial<HatchDocData>, 'boundaryPaths'> & {
+  readonly boundaryPaths?: ReadonlyArray<ReadonlyArray<Point2D>>;
+};
+
+/** Serialise the runtime `Point2D[][]` rings to Firestore-legal array-of-maps. */
+export function serializeBoundaryPaths(paths: ReadonlyArray<ReadonlyArray<Point2D>>): HatchBoundaryRing[] {
+  return paths.map((ring) => ({ vertices: ring.map((p) => ({ x: p.x, y: p.y })) }));
+}
+
+/** Rehydrate the persisted rings back to the runtime `Point2D[][]` shape. */
+export function deserializeBoundaryPaths(rings: ReadonlyArray<HatchBoundaryRing>): Point2D[][] {
+  return rings.map((r) => (r.vertices ?? []).map((p) => ({ x: p.x, y: p.y })));
+}
+
 /**
- * Project a `HatchEntity` down to its persistable payload, dropping `undefined`
+ * Project a `HatchEntity` down to its persistable payload: wraps `boundaryPaths`
+ * into Firestore-legal rings (no nested arrays) and drops `undefined` scalar
  * fields (Firestore rejects `undefined`). Doubles as the diff-normaliser so the
  * hook compares like-for-like against `HatchDoc.data`.
  */
-export function pickHatchData(entity: Pick<HatchEntity, keyof HatchDocData>): HatchDocData {
+export function pickHatchData(entity: HatchDataSource): HatchDocData {
   const out: Record<string, unknown> = {};
-  for (const key of HATCH_DATA_KEYS) {
+  out.boundaryPaths = serializeBoundaryPaths(entity.boundaryPaths ?? []);
+  for (const key of HATCH_SCALAR_KEYS) {
     const value = (entity as Record<string, unknown>)[key];
     if (value !== undefined) out[key] = value;
   }
-  // boundaryPaths is required — guarantee at least an empty array.
-  if (out.boundaryPaths === undefined) out.boundaryPaths = [];
   return out as unknown as HatchDocData;
 }
 
@@ -165,7 +191,9 @@ export class HatchFirestoreService {
       projectId: this.config.projectId,
       // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
       ...bimScopeWriteFields(this.config),
-      data: pickHatchData(input.data as Pick<HatchEntity, keyof HatchDocData>),
+      // input.data is already a serialised HatchDocData (rings, no undefined) — see
+      // hatchEntityToSaveInput → pickHatchData. Do NOT re-pick (would double-wrap).
+      data: input.data,
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
@@ -184,9 +212,7 @@ export class HatchFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.data !== undefined) {
-      payload.data = pickHatchData(patch.data as Pick<HatchEntity, keyof HatchDocData>);
-    }
+    if (patch.data !== undefined) payload.data = patch.data;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     await updateDoc(ref, payload);
   }
@@ -217,10 +243,13 @@ export function hatchEntityToSaveInput(entity: HatchEntity): HatchSaveInput {
 }
 
 export function hatchDocToEntity(d: HatchDoc): HatchEntity {
+  const { boundaryPaths, ...scalars } = d.data;
   return {
     id: d.id,
     type: 'hatch',
-    ...d.data,
+    ...scalars,
+    // Rehydrate the persisted array-of-maps rings back to runtime `Point2D[][]`.
+    boundaryPaths: deserializeBoundaryPaths(boundaryPaths ?? []),
     layerId: d.layerId,
     visible: true,
   } as HatchEntity;

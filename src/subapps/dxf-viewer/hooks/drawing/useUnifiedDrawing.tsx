@@ -260,8 +260,11 @@ export function useUnifiedDrawing() {
     const isSlab = activeTool === 'slab';
     const isBeam = activeTool === 'beam';
     const isRoof = activeTool === 'roof';
-    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : machineTool;
-    if (!isStair && !isWall && !isSlab && !isBeam && !isRoof && (!machineTool || machineTool === 'select')) return;
+    // ADR-398 §3.8 — column tool runs its own single-click FSM (mirror beam),
+    // so `machineTool` stays 'select'. Route it through the WYSIWYG preview path.
+    const isColumn = activeTool === 'column';
+    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : machineTool;
+    if (!isStair && !isWall && !isSlab && !isBeam && !isRoof && !isColumn && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
@@ -277,7 +280,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair && !isWall && !isSlab && !isBeam && !isRoof) return 'mm' as const;
+      if (!isStair && !isWall && !isSlab && !isBeam && !isRoof && !isColumn) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));

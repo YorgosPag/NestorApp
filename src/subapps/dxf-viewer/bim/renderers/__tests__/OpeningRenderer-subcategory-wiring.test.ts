@@ -17,6 +17,8 @@ jest.mock('firebase/auth', () => ({
 import { OpeningRenderer } from '../OpeningRenderer';
 import type { OpeningEntity } from '../../types/opening-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 jest.mock('../../../state/drawing-scale-store', () => ({
   useDrawingScaleStore: { getState: jest.fn() },
@@ -119,11 +121,11 @@ describe('OpeningRenderer — door-opening subcategory wiring (Phase C.3)', () =
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 
-  it('2. door-opening linePattern dashed → setLineDash gets [8,4]', () => {
+  it('2. door-opening linePattern dashed → setLineDash gets SSoT bimDashPx("dashed",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'door-opening', linePattern: 'dashed' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('door') as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('3. door-opening cutColor → strokeStyle overridden with that color', () => {
@@ -150,11 +152,11 @@ describe('OpeningRenderer — window-opening subcategory wiring (Phase C.3)', ()
 });
 
 describe('OpeningRenderer — wall-cutout-jambs subcategory wiring (Phase C.3)', () => {
-  it('6. wall-cutout-jambs linePattern dashed → setLineDash gets [8,4]', () => {
+  it('6. wall-cutout-jambs linePattern dashed → setLineDash gets SSoT bimDashPx("dashed",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'wall-cutout-jambs', linePattern: 'dashed' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('wall-cutout') as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 });
 

@@ -18,6 +18,10 @@ import {
   attachEdgeOverlay,
 } from '../bim-3d-edge-overlay-builder';
 import { bimEdgeResolutionStore } from '../bim-edge-resolution-store';
+// ADR-510 Φ2C — expected world-unit dash values from SSoT (bimDashMm × DASH_WORLD_SCALE_M=0.006).
+import { bimDashMm } from '../../../config/bim-dash-resolver';
+
+const DASH_WORLD_SCALE_M = 0.006;
 
 function makeBoxMesh(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -271,26 +275,32 @@ describe('ADR-375 C.7 — buildEdgeOverlay', () => {
       expect((overlay?.material as LineMaterial).dashed).toBe(false);
     });
 
-    it("linePattern='dashed' → dashed=true, dashSize/gapSize from [8,4] × 0.01m", () => {
+    it("linePattern='dashed' → dashed=true, dashSize/gapSize from SSoT bimDashMm('dashed') × DASH_WORLD_SCALE_M", () => {
       const overlay = buildEdgeOverlay(makeBoxMesh(), {
         lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
         linePattern: 'dashed',
       });
       const mat = overlay?.material as LineMaterial;
+      const dashedMm = bimDashMm('dashed');
+      const expectedDashSize = (dashedMm[0] ?? 0) * DASH_WORLD_SCALE_M;
+      const expectedGapSize = Math.abs(dashedMm[1] ?? 0) * DASH_WORLD_SCALE_M;
       expect(mat.dashed).toBe(true);
-      expect(mat.dashSize).toBeCloseTo(0.08, 6);
-      expect(mat.gapSize).toBeCloseTo(0.04, 6);
+      expect(mat.dashSize).toBeCloseTo(expectedDashSize, 6);
+      expect(mat.gapSize).toBeCloseTo(expectedGapSize, 6);
     });
 
-    it("linePattern='hidden' → dashed=true ([4,2] × 0.01m)", () => {
+    it("linePattern='hidden' → dashed=true, dashSize/gapSize from SSoT bimDashMm('hidden') × DASH_WORLD_SCALE_M", () => {
       const overlay = buildEdgeOverlay(makeBoxMesh(), {
         lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
         linePattern: 'hidden',
       });
       const mat = overlay?.material as LineMaterial;
+      const hiddenMm = bimDashMm('hidden');
+      const expectedDashSize = (hiddenMm[0] ?? 0) * DASH_WORLD_SCALE_M;
+      const expectedGapSize = Math.abs(hiddenMm[1] ?? 0) * DASH_WORLD_SCALE_M;
       expect(mat.dashed).toBe(true);
-      expect(mat.dashSize).toBeCloseTo(0.04, 6);
-      expect(mat.gapSize).toBeCloseTo(0.02, 6);
+      expect(mat.dashSize).toBeCloseTo(expectedDashSize, 6);
+      expect(mat.gapSize).toBeCloseTo(expectedGapSize, 6);
     });
 
     it("linePattern='dot' (zero-length dash) → falls back to solid", () => {

@@ -37,7 +37,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
-import { linePatternToDashArray } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState, type CutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -183,7 +183,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     });
     this.ctx.strokeStyle = KIND_STROKE[beam.kind];
     this.ctx.lineWidth = _beamPx;
-    this.ctx.setLineDash(linePatternToDashArray(_beamPat) as number[]);
+    this.ctx.setLineDash(bimDashPx(_beamPat, this.transform.scale));
     if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
     this.buildPiecesPath(drawable);
     this.ctx.stroke();

@@ -18,6 +18,8 @@ jest.mock('firebase/auth', () => ({
 import { SlabOpeningRenderer } from '../SlabOpeningRenderer';
 import type { SlabOpeningEntity, SlabOpeningKind } from '../../types/slab-opening-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 // ── Store mock ────────────────────────────────────────────────────────────────
 
@@ -135,19 +137,19 @@ describe('SlabOpeningRenderer — edges subcategory wiring (Phase C.1)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[6,3]');
   });
 
-  it('3. edges linePattern center → setLineDash gets [20,6,4,6] (override active)', () => {
+  it('3. edges linePattern center → setLineDash gets SSoT bimDashPx("center",1) (override active)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'edges', linePattern: 'center' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('shaft') as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[20,6,4,6]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('center', 1)));
   });
 
-  it('4. edges linePattern dashed → setLineDash gets [8,4] (from linePatternToDashArray, not KIND_DASH)', () => {
+  it('4. edges linePattern dashed → setLineDash gets SSoT bimDashPx("dashed",1) (from bimDashPx, not KIND_DASH)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'edges', linePattern: 'dashed' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('well') as unknown as EntityModel, {});
-    // well KIND_DASH is [6,3], but dashed override → [8,4]
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    // well KIND_DASH is [6,3], but dashed override → bimDashPx('dashed',1)
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('5. no color override → strokeStyle uses KIND_STROKE[shaft] = #1f3a5f', () => {

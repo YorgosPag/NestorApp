@@ -1,11 +1,12 @@
 /**
  * Ghost status color SSoT (ADR-398 §ghost coloring) — neutral home.
  *
- * Εξήχθη από το `ColumnAnchorGhostRenderer` ώστε ΚΑΙ το column anchor ghost ΚΑΙ το
- * beam ghost να αντλούν το ίδιο 🟢/🔴 παλέτα **χωρίς beam→column-renderer coupling**.
- * Re-exported από `ColumnAnchorGhostRenderer` (back-compat για `useColumnGhostPreview`).
+ * Neutral SSoT ώστε ΟΛΑ τα WYSIWYG ghosts (κολώνα / δοκάρι / τοίχος) να αντλούν το
+ * ίδιο 🟢/🔴 παλέτα **χωρίς coupling σε συγκεκριμένο renderer**. Καταναλώνεται από τα
+ * `*-preview-helpers.ts` (μόνο 🔴 overlap → status schematic· 🟢/neutral → πλήρες WYSIWYG).
  *
- * @see ../columns/ColumnAnchorGhostRenderer.ts — re-export + column consumer
+ * @see ../../hooks/drawing/column-preview-helpers.ts — column WYSIWYG consumer (ADR-398 §3.8)
+ * @see ../../hooks/drawing/beam-preview-helpers.ts — beam consumer
  * @see ../beams/beam-beam-face-snap.ts — beam consumer (κατευθυντικό status)
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md
  */

@@ -9,13 +9,13 @@
  *   · `overlap` → 🔴 κόκκινο ghost (πάνω σε υπάρχουσα κολώνα — σύγκρουση).
  *   · `neutral` → default ghost (ελεύθερη τοποθέτηση).
  *
- * Mirror του `ImmediateSnapStore`: το `useColumnGhostPreview` το διαβάζει **imperatively**
- * μέσα στο RAF draw (zero React subscription) → ο χρωματισμός δεν προκαλεί re-render πάνω
- * από το leaf (ADR-040 cardinal rule).
+ * Mirror του `ImmediateSnapStore`: το `column-preview-helpers` το διαβάζει **imperatively**
+ * (zero React subscription) ώστε το WYSIWYG ghost (status color + auto λαβή) να ταυτίζεται
+ * με το commit (`commitColumnFromState`) χωρίς re-render (ADR-040 cardinal rule).
  *
  * @see ./ImmediateSnapStore.ts — ίδιο pattern (snap point + entityId)
  * @see ../../bim/columns/column-placement-snap-context.ts — η πηγή του status
- * @see ../../hooks/tools/useColumnGhostPreview.ts — ο consumer (ghost color)
+ * @see ../../hooks/drawing/column-preview-helpers.ts — ο WYSIWYG consumer (ADR-398 §3.8)
  */
 
 import type { ColumnAnchor } from '../../bim/types/column-types';

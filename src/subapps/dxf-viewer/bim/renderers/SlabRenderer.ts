@@ -42,7 +42,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
-import { linePatternToDashArray } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -159,7 +159,7 @@ export class SlabRenderer extends BaseEntityRenderer {
       elementOverride: slab.styleOverride, layerOverride: _slabLayerOverride,
     });
     this.ctx.lineWidth = _slabLwPx;
-    this.ctx.setLineDash(linePatternToDashArray(_slabPattern) as number[]);
+    this.ctx.setLineDash(bimDashPx(_slabPattern, this.transform.scale));
     this.ctx.strokeStyle = _slabColor ?? KIND_STROKE[slab.kind];
     this.drawPolygonPath(verts);
     this.ctx.stroke();

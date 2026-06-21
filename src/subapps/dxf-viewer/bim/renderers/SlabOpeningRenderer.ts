@@ -38,7 +38,7 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
-import { linePatternToDashArray } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -138,7 +138,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     });
     this.ctx.lineWidth = _soLwPx;
     const _soDash = _soPattern !== 'solid'
-      ? linePatternToDashArray(_soPattern)
+      ? bimDashPx(_soPattern, this.transform.scale)
       : KIND_DASH[opening.kind];
     this.ctx.setLineDash(_soDash as number[]);
     this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];

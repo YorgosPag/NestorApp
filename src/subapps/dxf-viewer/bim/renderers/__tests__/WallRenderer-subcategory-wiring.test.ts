@@ -20,6 +20,8 @@ import type { EntityModel } from '../../../rendering/types/Types';
 import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../../config/adaptive-entity-color';
 // ADR-509 — wall outline + axis ζητούν πιο φωτεινό κατώφλι (WALL_LINE_CONTRAST).
 import { WALL_LINE_CONTRAST } from '../../walls/wall-render-palette';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 // ── Store mock ────────────────────────────────────────────────────────────────
 
@@ -128,11 +130,11 @@ describe('WallRenderer — common-edges subcategory wiring (Phase C.1)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 
-  it('2. common-edges linePattern dashed → setLineDash gets [8,4]', () => {
+  it('2. common-edges linePattern dashed → setLineDash gets SSoT bimDashPx("dashed",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'common-edges', linePattern: 'dashed' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeWall() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('3. common-edges cutColor → strokeStyle overridden with that color', () => {

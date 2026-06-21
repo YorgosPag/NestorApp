@@ -4,9 +4,14 @@
  * AutoCAD acad.lin–compatible set (28 built-in patterns) + custom user-defined.
  * Used in SubcategoryStyle.linePattern for per-subcategory line pattern overrides.
  *
- * Dash arrays are canvas-compatible (pixel units at 96 dpi reference).
- * Pass to ctx.setLineDash() for 2D rendering.
- * solid = [] (browser native default, most efficient path).
+ * `BIM_LINE_PATTERNS` (key list) + `LinePatternKey` (type) remain the canonical
+ * BIM pattern identifiers (UI dropdowns, SubcategoryStyle, V/G overrides).
+ *
+ * ⚠️ ADR-510 Φ2C — pattern DATA is now unified in `config/linetype-iso-catalog.ts`
+ * (mm, zoom-scaled). Renderers resolve via `config/bim-dash-resolver.ts`
+ * (`bimDashPx`/`bimDashMm`), NOT via the px arrays below. `BUILT_IN_DASH_ARRAYS`
+ * + `linePatternToDashArray` are @deprecated (legacy fixed-px reference, kept for
+ * back-compat + custom-pattern Map). Do NOT add new consumers — use the catalog.
  */
 
 export const BIM_LINE_PATTERNS = [
@@ -38,8 +43,9 @@ export type LinePatternKey =
   | `custom_${string}`;
 
 /**
- * Stroke arrays for each built-in pattern.
- * Values are pixel units; scale with lineWidth if needed at render time.
+ * Stroke arrays for each built-in pattern. Values are pixel units (96-dpi).
+ * @deprecated ADR-510 Φ2C — superseded by `linetype-iso-catalog.ts` (mm) +
+ * `bim-dash-resolver.ts`. Kept for back-compat + tests; not used by renderers.
  */
 export const BUILT_IN_DASH_ARRAYS: Readonly<
   Record<typeof BIM_LINE_PATTERNS[number], ReadonlyArray<number>>
@@ -87,6 +93,9 @@ export interface CustomLinePattern {
  * built-in key  → BUILT_IN_DASH_ARRAYS lookup (zero allocation).
  * custom_* key  → customPatterns map lookup.
  * unknown/missing custom → [] (solid fallback).
+ *
+ * @deprecated ADR-510 Φ2C — use `bim-dash-resolver.ts` `bimDashPx(key, scale)`
+ * (zoom-scaled) or `bimDashMm(key)` (catalog mm). This returns legacy fixed-px.
  */
 export function linePatternToDashArray(
   key: LinePatternKey,

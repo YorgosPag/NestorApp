@@ -24,7 +24,9 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { bimEdgeResolutionStore } from './bim-edge-resolution-store';
-import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
+import { type LinePatternKey } from '../../config/bim-line-patterns';
+// ADR-510 Φ2C — 3D edges read the SAME unified mm catalog as 2D (SSoT), via the alias bridge.
+import { bimDashMm } from '../../config/bim-dash-resolver';
 
 /** Fallback color when the resolver returns null (= token-driven). */
 const DEFAULT_EDGE_COLOR = '#1a1a1a';
@@ -52,15 +54,17 @@ const EDGE_POLYGON_OFFSET_UNITS = -4;
 /**
  * ADR-377 Phase E — px-dash → world-units (meters) conversion for 3D dashes.
  *
- * `linePatternToDashArray` yields canvas px values at the 1:100 / 96-dpi
- * reference. `LineMaterial.dashSize`/`gapSize` are in **world units** (meters,
- * measured along the edge via `computeLineDistances()`). This factor maps the
- * px reference to a metric dash that reads cleanly on architectural solids:
- * 1px → 1cm, so `dashed` [8,4] → 8cm dash / 4cm gap. Visual distinction only —
- * not a metric guarantee (LineMaterial supports a single dash+gap, so multi-
- * segment patterns approximate to their first dash/gap pair).
+ * ADR-510 Φ2C — the pattern data now comes from the unified mm catalog
+ * (`bimDashMm` → `linetype-iso-catalog`), the SAME source as the 2D renderers.
+ * `LineMaterial.dashSize`/`gapSize` are in **world units** (meters, measured
+ * along the edge via `computeLineDistances()`). This factor maps catalog mm to a
+ * metric dash that reads cleanly on architectural solids (≈ the 3D-domain
+ * equivalent of 2D LTSCALE): `Dashed` [12.7,-6.35]mm → ~7.6cm dash / ~3.8cm gap,
+ * preserving the previous visual size. Visual distinction only — LineMaterial
+ * supports a single dash+gap, so multi-segment patterns approximate to their
+ * first dash/gap pair.
  */
-const DASH_WORLD_SCALE_M = 0.01;
+const DASH_WORLD_SCALE_M = 0.006;
 
 export interface EdgeOverlayOptions {
   /** Screen-space line width in CSS pixels (pre-DPR). */
@@ -97,9 +101,11 @@ function resolveWorldDash(
   linePattern: LinePatternKey | undefined,
 ): { dashSize: number; gapSize: number } | null {
   if (!linePattern || linePattern === 'solid') return null;
-  const arr = linePatternToDashArray(linePattern);
+  // Catalog mm: positive = dash, negative = gap, 0 = dot. LineMaterial needs a
+  // positive dash + positive gap; |gap| folds the catalog's negative gap.
+  const arr = bimDashMm(linePattern);
   if (arr.length < 2 || arr[0]! <= 0) return null;
-  return { dashSize: arr[0]! * DASH_WORLD_SCALE_M, gapSize: arr[1]! * DASH_WORLD_SCALE_M };
+  return { dashSize: arr[0]! * DASH_WORLD_SCALE_M, gapSize: Math.abs(arr[1]!) * DASH_WORLD_SCALE_M };
 }
 
 /**

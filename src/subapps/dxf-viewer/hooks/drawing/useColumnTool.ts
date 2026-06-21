@@ -38,11 +38,6 @@ import {
 } from './column-completion';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
-import {
-  computeAnchorGhostFootprints,
-  type AnchorGhost,
-} from '../../bim/columns/column-anchor-ghosts';
-import { buildColumnGhostOverrides } from './column-tool-ghost-overrides';
 import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 // ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
@@ -164,16 +159,6 @@ export interface UseColumnToolResult {
   setParamOverrides(overrides: ColumnParamOverrides): void;
   /** Status text για status-bar / Dynamic Input prompt (i18n key). */
   getStatusText(): string;
-  /**
-   * ADR-363 Phase 4.5c.1 — projection helper για το anchor ghost preview.
-   * Returns null όταν phase !== 'awaitingPosition' ή cursorPos === null.
-   * Διαφορετικά επιστρέφει 9 ghosts (1 για circular) με state.anchor flag-marked.
-   *
-   * Pure projection: ΔΕΝ mutate-άρει state, ΔΕΝ subscribes σε cursor store.
-   * Caller (leaf) supplies το current cursor world position — ώστε το hook
-   * να μην τραβάει re-renders του CanvasSection σε κάθε mousemove (ADR-040).
-   */
-  getGhostFootprints(cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null;
   readonly isActive: boolean;
   readonly isAwaitingPosition: boolean;
 }
@@ -414,27 +399,6 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
-  // ── ADR-363 Phase 4.5c.1 — anchor ghost preview projection ──────────────
-  const getGhostFootprints = useCallback(
-    (cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null => {
-      const s = stateRef.current;
-      // ADR-363 Φ3/3c + ADR-419 — perimeter/in-region modes δεν έχουν anchor ghost (picks).
-      if (
-        s.placementMode === 'outer-perimeter' ||
-        s.placementMode === 'discrete-perimeter' ||
-        s.placementMode === 'in-region'
-      )
-        return null;
-      if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
-      const ghostOverrides = buildColumnGhostOverrides(
-        s.overrides,
-        getSceneUnitsRef.current?.() ?? 'mm',
-      );
-      return computeAnchorGhostFootprints(cursorPos, s.kind, s.anchor, ghostOverrides);
-    },
-    [],
-  );
-
   // ── ADR-363 Phase 8D — publish handle to ribbon bridge store ────────────
   // Single writer pattern (mirror stair-status-store). Bridge reads via
   // `columnToolBridgeStore.get()` when no entity selected, so the contextual
@@ -483,7 +447,6 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     getRegionPickIds,
     setParamOverrides,
     getStatusText,
-    getGhostFootprints,
     isActive: state.phase !== 'idle',
     isAwaitingPosition: state.phase === 'awaitingPosition',
   };

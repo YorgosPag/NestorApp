@@ -17,6 +17,8 @@ jest.mock('firebase/auth', () => ({
 import { StairRenderer } from '../StairRenderer';
 import type { StairEntity } from '../../types/stair-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 jest.mock('../../../state/drawing-scale-store', () => ({
   useDrawingScaleStore: { getState: jest.fn() },
@@ -130,10 +132,10 @@ function makeRenderer() {
 describe('StairRenderer — walkline subcategory wiring (Phase C.3)', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('1. default store → walkline setLineDash uses dashed [8,4] (DEFAULT_OBJECT_STYLES)', () => {
+  it('1. default store → walkline setLineDash uses SSoT bimDashPx("dashed",1) (DEFAULT_OBJECT_STYLES)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeStair() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('2. walkline linePattern solid → setLineDash gets []', () => {
@@ -143,16 +145,16 @@ describe('StairRenderer — walkline subcategory wiring (Phase C.3)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 
-  it('3. walkline linePattern hidden → setLineDash gets [4,2]', () => {
+  it('3. walkline linePattern hidden → setLineDash gets SSoT bimDashPx("hidden",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'walkline', linePattern: 'hidden' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeStair() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[4,2]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('hidden', 1)));
   });
 });
 
 describe('StairRenderer — handrails subcategory wiring (Phase C.3)', () => {
-  it('4. default store → handrails uses dashed2 [4,2] (DEFAULT_OBJECT_STYLES)', () => {
+  it('4. default store → handrails uses SSoT bimDashPx("dashed2",1) (DEFAULT_OBJECT_STYLES)', () => {
     mockGetState.mockReturnValue(makeStoreState());
     const { renderer, mock } = makeRenderer();
     const stairWithHandrails = {
@@ -160,7 +162,7 @@ describe('StairRenderer — handrails subcategory wiring (Phase C.3)', () => {
       params: { ...makeStair().params, handrails: { inner: true, outer: true } },
     } as unknown as StairEntity;
     renderer.render(stairWithHandrails as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[4,2]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed2', 1)));
   });
 
   it('5. handrails linePattern solid override → setLineDash gets []', () => {

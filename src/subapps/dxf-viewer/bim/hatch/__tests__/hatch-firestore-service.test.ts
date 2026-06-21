@@ -145,7 +145,8 @@ describe('HatchFirestoreService.saveHatch', () => {
     const svc = createHatchFirestoreService(CONFIG);
     await svc.saveHatch(hatchEntityToSaveInput(HATCH));
     const payload = mockSetDoc.mock.calls[0][1] as { data: HatchDocData; layerId?: string };
-    expect(payload.data.boundaryPaths).toEqual([SQUARE]);
+    // ⚠️ Firestore forbids nested arrays → rings are wrapped in { vertices } maps.
+    expect(payload.data.boundaryPaths).toEqual([{ vertices: SQUARE }]);
     expect(payload.data.fillColor).toBe('#808080');
     expect(payload.layerId).toBe('lyr_1');
     // Top-level must NOT carry the hatch payload fields (only scope/audit/data/layerId).
@@ -177,7 +178,7 @@ describe('HatchFirestoreService.update/delete', () => {
     expect(payload.updatedBy).toBe('u1');
     expect(payload.updatedAt).toBe('__server_timestamp__');
     expect(payload).not.toHaveProperty('createdAt');
-    expect((payload.data as HatchDocData).boundaryPaths).toEqual([SQUARE]);
+    expect((payload.data as HatchDocData).boundaryPaths).toEqual([{ vertices: SQUARE }]);
   });
 
   it('deleteHatch calls deleteDoc', async () => {
@@ -204,7 +205,14 @@ describe('pickHatchData', () => {
     const data = pickHatchData({ ...HATCH, lineAngle: undefined, doubleCrossHatch: undefined });
     expect(data).not.toHaveProperty('lineAngle');
     expect(data).not.toHaveProperty('doubleCrossHatch');
-    expect(data.boundaryPaths).toEqual([SQUARE]);
+    expect(data.boundaryPaths).toEqual([{ vertices: SQUARE }]);
+  });
+
+  it('serialises rings as { vertices } maps (Firestore nested-array guard) and round-trips', () => {
+    const data = pickHatchData(HATCH);
+    // No element of boundaryPaths is itself an array (would be rejected by Firestore).
+    expect(Array.isArray(data.boundaryPaths[0])).toBe(false);
+    expect(data.boundaryPaths[0]).toEqual({ vertices: SQUARE });
   });
 });
 

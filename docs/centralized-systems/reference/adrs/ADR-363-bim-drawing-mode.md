@@ -1909,7 +1909,9 @@ Adds 4 variant-specific dimension grips on top of the Phase 4.5 base set (center
 
 > **2026-05-18 Update**: Phase 4.5c.1 implemented το anchor cycling visual preview — see § Phase 4.5c.1 below. Anchor-preview line above is now historical. Hatch / snap / section-profile items deferred στο Phase 4.5c.2+.
 
-### Phase 4.5c.1 — Anchor Ghost Preview *(✅ IMPLEMENTED 2026-05-18)*
+### Phase 4.5c.1 — Anchor Ghost Preview *(✅ IMPLEMENTED 2026-05-18 · ⛔ SUPERSEDED 2026-06-21 by ADR-398 §3.8)*
+
+> ⛔ **SUPERSEDED (2026-06-21, ADR-398 §3.8 WYSIWYG column ghost):** τα 9 anchor ghosts (1 active + 8 @15%) αντικαταστάθηκαν από **ΕΝΑ WYSIWYG φάντασμα** = η πραγματική κολώνα μέσω του `ColumnRenderer` (mirror δοκαριού). Διαγράφηκαν `useColumnGhostPreview` / `ColumnAnchorGhostRenderer` / `column-anchor-ghosts` / `column-tool-ghost-overrides` + το `getGhostFootprints`. **Tab/Shift+Tab anchor cycling ΠΑΡΑΜΕΝΕΙ** (αλλάζει το single WYSIWYG ghost μέσω anchor precedence). Το παρακάτω είναι ιστορικό.
 
 Closes το anchor cycling visual feedback gap που το Phase 4.5b είχε αφήσει deferred. Όσο το column tool βρίσκεται σε `awaitingPosition` και ο cursor κινείται στο canvas, εμφανίζονται 9 ghost footprints (ένα ανά `ColumnAnchor`) γύρω από το cursor — το `state.anchor` ξεχωρίζει με kind-coloured fill+stroke, τα υπόλοιπα 8 σχεδιάζονται ως ημιδιαφανή outlines. Tab/Shift+Tab cycling εναλλάσσει αμέσως το active highlight ΧΩΡΙΣ ο cursor να μετακινηθεί — industry convention (Revit Column tool / ArchiCAD CO).
 

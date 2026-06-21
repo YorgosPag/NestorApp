@@ -15,6 +15,8 @@ jest.mock('firebase/auth', () => ({
 import { BeamRenderer } from '../BeamRenderer';
 import type { BeamEntity } from '../../types/beam-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 jest.mock('../../../state/drawing-scale-store', () => ({
   useDrawingScaleStore: { getState: jest.fn() },
@@ -117,10 +119,10 @@ function makeRenderer() {
 describe('BeamRenderer — hidden-lines subcategory wiring (Phase C.2)', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('1. default store → setLineDash [8,4] (dashed default from DEFAULT_OBJECT_STYLES)', () => {
+  it('1. default store → setLineDash SSoT bimDashPx("dashed",1) (dashed default from DEFAULT_OBJECT_STYLES)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeBeam() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('2. hidden-lines linePattern solid override → setLineDash gets []', () => {
@@ -130,11 +132,11 @@ describe('BeamRenderer — hidden-lines subcategory wiring (Phase C.2)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 
-  it('3. hidden-lines linePattern dashed2 → setLineDash gets [4,2]', () => {
+  it('3. hidden-lines linePattern dashed2 → setLineDash gets SSoT bimDashPx("dashed2",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'hidden-lines', linePattern: 'dashed2' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeBeam() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[4,2]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed2', 1)));
   });
 
   it('4. hidden-lines cutColor → strokeStyle overridden with that color', () => {
@@ -167,11 +169,11 @@ describe('BeamRenderer — hidden-lines subcategory wiring (Phase C.2)', () => {
     } as unknown as BeamEntity;
   }
 
-  it('6. overhead-hidden beam (zBottom > topMm) → dashed [8,4] outline (όχι αόρατο solid)', () => {
+  it('6. overhead-hidden beam (zBottom > topMm) → dashed SSoT bimDashPx("dashed",1) outline (όχι αόρατο solid)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOverheadBeam() as unknown as EntityModel, {});
     // 'projection' mapping → 'hidden-lines' sub default dashed· χωρίς το fix το
     // cutState='hidden' θα έδινε linePattern:'solid' → setLineDash([]) + lineWidthPx:0.
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 });

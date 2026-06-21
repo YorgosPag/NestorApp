@@ -28,6 +28,8 @@ import { generateWallPreview } from './wall-preview-helpers';
 import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-363 Phase 5.5P — beam preview.
 import { generateBeamPreview } from './beam-preview-helpers';
+// ADR-398 §3.8 — column WYSIWYG preview (real ColumnRenderer ghost).
+import { generateColumnPreview } from './column-preview-helpers';
 // ADR-436 Slice 2 — foundation line-tool preview (strip / tie-beam band ghost).
 import { generateFoundationPreview } from './foundation-preview-helpers';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
@@ -131,6 +133,13 @@ export function generatePreviewEntity(
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);
+  }
+  // ── ADR-398 §3.8 — Column tool WYSIWYG preview branch ─────────────────────
+  //    Single-click member → no rubber-band tempPoints; the ghost is built from
+  //    the snapped cursor + the live column-tool bridge/face-snap SSoT (preview
+  //    === commit). Replaces the legacy 9-anchor schematic ghost.
+  if (tool === 'column') {
+    return generateColumnPreview(cursorPoint, sceneUnits);
   }
   // ── ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) preview branch.
   //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──

@@ -31,7 +31,7 @@ import { isWindowKind, isSlidingKind } from '../types/opening-types';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
-import { linePatternToDashArray } from '../../config/bim-line-patterns';
+import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -119,7 +119,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.lineWidth = _outlineS.lineWidthPx;
     // Cut → subcategory line pattern (solid poché jambs). Beyond → dashed.
     this.ctx.setLineDash(
-      _isCut ? (linePatternToDashArray(_outlineS.linePattern) as number[]) : (BEYOND_DASH as number[]),
+      _isCut ? bimDashPx(_outlineS.linePattern, this.transform.scale) : (BEYOND_DASH as number[]),
     );
     if (_outlineS.color !== null) this.ctx.strokeStyle = _outlineS.color;
     this.drawOutline(opening);

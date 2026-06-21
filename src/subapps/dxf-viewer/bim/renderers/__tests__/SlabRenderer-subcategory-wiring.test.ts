@@ -15,6 +15,8 @@ jest.mock('firebase/auth', () => ({
 import { SlabRenderer } from '../SlabRenderer';
 import type { SlabEntity } from '../../types/slab-types';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-510 Φ2C — expected dash arrays from SSoT (scale=1, ltscale=1).
+import { bimDashPx } from '../../../config/bim-dash-resolver';
 
 // ── Store mock ────────────────────────────────────────────────────────────────
 
@@ -125,11 +127,11 @@ describe('SlabRenderer — common-edges subcategory wiring (Phase C.1)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 
-  it('2. common-edges linePattern dashed → setLineDash gets [8,4]', () => {
+  it('2. common-edges linePattern dashed → setLineDash gets SSoT bimDashPx("dashed",1)', () => {
     mockGetState.mockReturnValue(makeStoreState({ subcategoryKey: 'common-edges', linePattern: 'dashed' }));
     const { renderer, mock } = makeRenderer();
     renderer.render(makeSlab() as unknown as EntityModel, {});
-    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+    expect(lineDashCalls(mock.calls)).toContain(JSON.stringify(bimDashPx('dashed', 1)));
   });
 
   it('3. common-edges cutColor → strokeStyle overridden with that color', () => {
