@@ -21,6 +21,25 @@ export interface TekXMatrix {
   readonly x21: number;
 }
 
+/** Ένα κούφωμα (πόρτα/παράθυρο) έτοιμο για σειριοποίηση σε nested `<open><record>` (μέτρα). */
+export interface TekOpening {
+  /** Ορατή ετικέτα (mark ή index). */
+  readonly name: string;
+  /** Ποδιά (sill) πάνω από το δάπεδο — `<elevation>` (μέτρα). */
+  readonly sillM: number;
+  /** Υπέρθυρο (head = sill + height) — `<top>` (μέτρα). */
+  readonly headM: number;
+  /** Πλευρά ανοίγματος 0/1 (φορά/μεντεσές· cosmetic — από handing). */
+  readonly side: number;
+  /** Στυλ συμβόλου 0=παράθυρο (υαλοπίνακας) / 1=πόρτα (φύλλο). */
+  readonly style: number;
+  /** Affine θέσης/πλάτους πάνω στον host τοίχο. */
+  readonly xmatrix: TekXMatrix;
+  /** Θέση ετικέτας διάστασης `<txtpos>` (μέτρα). */
+  readonly txtX: number;
+  readonly txtY: number;
+}
+
 /** Ένας τοίχος έτοιμος για σειριοποίηση σε `<record>` (όλα τα μήκη σε μέτρα). */
 export interface TekWall {
   /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */

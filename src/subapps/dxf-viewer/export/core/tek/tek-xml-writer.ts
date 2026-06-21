@@ -7,8 +7,8 @@
  */
 
 import { escapeXml } from '@/lib/xml/escape-xml';
-import { WALL_RECORD_TEMPLATE } from './tek-record-templates';
-import type { TekWall, TekXMatrix } from './tek-types';
+import { WALL_RECORD_TEMPLATE, OPEN_RECORD_TEMPLATE } from './tek-record-templates';
+import type { TekOpening, TekWall, TekXMatrix } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
 
@@ -49,6 +49,29 @@ export function buildWallRecordXml(w: TekWall): string {
     .replace('{{COLOR}}', colorHex6(w.colorHex))
     .replace('{{XMATRIX}}', xmatrixXml(w.xmatrix))
     .replace('{{OPEN}}', w.openXml ?? '');
+}
+
+/** Γεμίζει το parameterized opening record template με τις τιμές ενός κουφώματος. */
+export function buildOpenRecordXml(o: TekOpening): string {
+  return OPEN_RECORD_TEMPLATE
+    .replace('{{NAME}}', escapeXml(o.name))
+    .replace('{{ELEVATION}}', tekNum(o.sillM))
+    .replace('{{TOP}}', tekNum(o.headM))
+    .replace('{{SIDE}}', String(o.side))
+    .replace('{{STYLE}}', String(o.style))
+    .replace('{{TXTPOS_X}}', tekNum(o.txtX))
+    .replace('{{TXTPOS_Y}}', tekNum(o.txtY))
+    .replace('{{XMATRIX}}', xmatrixXml(o.xmatrix));
+}
+
+/**
+ * Συναρμολογεί το `{{OPEN}}` payload ενός τοίχου από τα κουφώματά του. Κενό → `''`
+ * (το wall template εκπέμπει `<open></open>`)· αλλιώς `\n<record>…</record>\n` ώστε να
+ * προκύψει `<open>\n<record>…\n</record>\n</open>` όπως το δείγμα.
+ */
+export function buildOpenXml(openings: readonly TekOpening[]): string {
+  if (openings.length === 0) return '';
+  return `\n${openings.map(buildOpenRecordXml).join('\n')}\n`;
 }
 
 /**

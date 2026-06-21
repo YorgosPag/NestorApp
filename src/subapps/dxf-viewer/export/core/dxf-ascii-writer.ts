@@ -24,7 +24,7 @@
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
-import { buildHatchLines, buildPredefinedHatchLines } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { getHatchPattern } from '../../data/hatch-pattern-catalog';
 import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
@@ -205,7 +205,7 @@ function emitHatch(
     }
     // user-defined / predefined: οι γραμμές μοτίβου ως LINEs (FULL SSoT με canvas).
     if (!solid) {
-      const segs = hatchPatternSegments(e);
+      const segs = buildHatchEntitySegments(e);
       for (const seg of segs) emitLine(seg.start, seg.end, layer, aci, s, pair);
     }
     return;
@@ -260,32 +260,6 @@ function emitHatch(
   const seeds = e.seedPoints ?? [];
   pair(98, seeds.length);                         // number of seed points
   for (const sp of seeds) { pair(10, sp.x * s); pair(20, sp.y * s); }
-}
-
-/**
- * Τμήματα μοτίβου μιας μη-solid γραμμοσκίασης για explode mode (LINEs). Predefined →
- * `buildPredefinedHatchLines` (PAT catalog)· αλλιώς user-defined `buildHatchLines`.
- * Ίδια SSoT έξοδος με τον canvas renderer (FULL SSoT).
- */
-function hatchPatternSegments(e: HatchEntity): ReturnType<typeof buildHatchLines> {
-  const paths = (e.boundaryPaths ?? []).filter((p) => p.length >= 3);
-  if (e.fillType === 'predefined') {
-    const pattern = getHatchPattern(e.patternName);
-    if (!pattern) return [];
-    return buildPredefinedHatchLines(paths, pattern, {
-      scale: e.patternScale,
-      angleDeg: e.patternAngle ?? 0,
-      origin: e.patternOrigin,
-      islandStyle: e.islandStyle ?? 'normal',
-    });
-  }
-  return buildHatchLines(paths, {
-    spacingMm: e.lineSpacing ?? e.patternScale ?? 100,
-    angleDeg: e.lineAngle ?? e.patternAngle ?? 0,
-    origin: e.patternOrigin,
-    double: e.doubleCrossHatch ?? false,
-    islandStyle: e.islandStyle ?? 'normal',
-  });
 }
 
 /**

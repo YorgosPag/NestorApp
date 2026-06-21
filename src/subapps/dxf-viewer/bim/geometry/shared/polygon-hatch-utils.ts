@@ -38,17 +38,14 @@ const HATCH_DEGENERATE_EPS = 1e-6;
 const MAX_HATCH_STEPS = 4000;
 
 /**
- * Build parallel hatch segments running along the unit direction `u`. Spacing is
- * measured perpendicular to the lines (orthogonal mm). Iterate over the
- * perpendicular offset `k = -uy·x + ux·y`, then clip each infinite line to the
- * bbox rectangle. Degenerate bbox (min ≥ max) → empty list.
+ * Εύρος `[kMin, kMax]` της κάθετης συντεταγμένης `k = -uy·x + ux·y` πάνω στις 4
+ * γωνίες του bbox. SSoT για την προβολή «bbox → perpendicular range» — το μοιράζονται
+ * `buildAxisAlignedHatch` (user-defined) ΚΑΙ `buildPredefinedHatchLines` (PAT), ώστε
+ * να μην ξαναγράφεται το ίδιο corner-loop (N.12 dedup).
  */
-export function buildAxisAlignedHatch(
-  bbox: BoundingBox3D,
-  spacingMm: number,
-  u: HatchDirection,
-): HatchLineSegment[] {
-  if (spacingMm <= 0) return [];
+export function perpendicularRangeOverBbox(
+  bbox: BoundingBox3D, u: HatchDirection,
+): { kMin: number; kMax: number } {
   const corners: ReadonlyArray<readonly [number, number]> = [
     [bbox.min.x, bbox.min.y],
     [bbox.max.x, bbox.min.y],
@@ -62,6 +59,22 @@ export function buildAxisAlignedHatch(
     if (k < kMin) kMin = k;
     if (k > kMax) kMax = k;
   }
+  return { kMin, kMax };
+}
+
+/**
+ * Build parallel hatch segments running along the unit direction `u`. Spacing is
+ * measured perpendicular to the lines (orthogonal mm). Iterate over the
+ * perpendicular offset `k = -uy·x + ux·y`, then clip each infinite line to the
+ * bbox rectangle. Degenerate bbox (min ≥ max) → empty list.
+ */
+export function buildAxisAlignedHatch(
+  bbox: BoundingBox3D,
+  spacingMm: number,
+  u: HatchDirection,
+): HatchLineSegment[] {
+  if (spacingMm <= 0) return [];
+  const { kMin, kMax } = perpendicularRangeOverBbox(bbox, u);
   const startK = Math.ceil(kMin / spacingMm) * spacingMm;
   const out: HatchLineSegment[] = [];
   let steps = 0;

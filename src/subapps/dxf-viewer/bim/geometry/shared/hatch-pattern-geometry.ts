@@ -22,6 +22,7 @@ import type { Point3D } from '../../types/bim-base';
 import {
   buildAxisAlignedHatch,
   clipLineToBbox,
+  perpendicularRangeOverBbox,
   type HatchDirection,
   type HatchLineSegment,
   type HatchPoint2D,
@@ -30,7 +31,12 @@ import { polygonBbox, pointInPolygon } from './polygon-utils';
 import { lerpPoint } from '../../../rendering/entities/shared/geometry-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import type { HatchIslandStyle } from '../../hatch/hatch-properties';
-import type { HatchPattern, PatternLine } from '../../../data/hatch-pattern-catalog';
+import { isSolidHatch } from '../../hatch/hatch-properties';
+import { getHatchPattern, type HatchPattern, type PatternLine } from '../../../data/hatch-pattern-catalog';
+import type { HatchEntity } from '../../../types/entities';
+
+/** Προεπιλεγμένη απόσταση γραμμών (mm) για user-defined hatch χωρίς ρητό spacing. */
+export const DEFAULT_HATCH_LINE_SPACING_MM = 100;
 
 export type { HatchLineSegment, HatchPoint2D } from './polygon-hatch-utils';
 export type { HatchIslandStyle } from '../../hatch/hatch-properties';
@@ -238,18 +244,8 @@ function buildPatternLineSegments(
   const period = dashes.reduce((acc, d) => acc + (Math.abs(d) || DOT_LENGTH_MM), 0);
   const hasDashes = dashes.length > 0 && period > EPS;
 
-  // Εύρος δεικτών γραμμών i ώστε k=kOrigin+i·dy να καλύπτει το bbox.
-  const corners: ReadonlyArray<readonly [number, number]> = [
-    [bbox.min.x, bbox.min.y], [bbox.max.x, bbox.min.y],
-    [bbox.max.x, bbox.max.y], [bbox.min.x, bbox.max.y],
-  ];
-  let kMin = Number.POSITIVE_INFINITY;
-  let kMax = Number.NEGATIVE_INFINITY;
-  for (const [x, y] of corners) {
-    const k = -uy * x + ux * y;
-    if (k < kMin) kMin = k;
-    if (k > kMax) kMax = k;
-  }
+  // Εύρος δεικτών γραμμών i ώστε k=kOrigin+i·dy να καλύπτει το bbox (reuse SSoT projection).
+  const { kMin, kMax } = perpendicularRangeOverBbox(bbox, { ux, uy });
   const iStart = Math.ceil((kMin - kOrigin) / dy);
   const iEnd = Math.floor((kMax - kOrigin) / dy);
 
@@ -320,4 +316,46 @@ export function buildPredefinedHatchLines(
     start: { x: s.start.x + origin.x, y: s.start.y + origin.y },
     end: { x: s.end.x + origin.x, y: s.end.y + origin.y },
   }));
+}
+
+// ─── Entity → segments SSoT resolver (ADR-507) ───────────────────────────────────
+
+/**
+ * **SSoT entity→segments mapping.** Μετατρέπει ένα (μη-solid) `HatchEntity` στα
+ * pattern τμήματά του, κάνοντας ΜΙΑ φορά το branching predefined↔user-defined + το
+ * mapping πεδίων→options. Καταναλώνεται ΚΑΙ από τον `HatchRenderer` (canvas) ΚΑΙ από
+ * τον `dxf-ascii-writer` (exploded LINEs) → πλήρες «μία γεωμετρία → canvas + DXF»
+ * (όχι μόνο ίδια low-level συνάρτηση, αλλά ίδιο entity-mapping — μηδέν διπλότυπο).
+ *
+ * Solid hatch → `[]` (ο caller το χειρίζεται με fill / 3DFACE, όχι με γραμμές).
+ */
+export function buildHatchEntitySegments(
+  hatch: Pick<
+    HatchEntity,
+    'boundaryPaths' | 'fillType' | 'patternType' | 'patternName' | 'patternScale'
+    | 'patternAngle' | 'patternOrigin' | 'lineAngle' | 'lineSpacing' | 'doubleCrossHatch' | 'islandStyle'
+  >,
+): HatchLineSegment[] {
+  if (isSolidHatch(hatch)) return [];
+  const paths = (hatch.boundaryPaths ?? []).filter((p) => p.length >= 3);
+  if (!paths.length) return [];
+  const islandStyle = hatch.islandStyle ?? 'normal';
+
+  if (hatch.fillType === 'predefined') {
+    const pattern = getHatchPattern(hatch.patternName);
+    if (!pattern) return [];
+    return buildPredefinedHatchLines(paths, pattern, {
+      scale: hatch.patternScale,
+      angleDeg: hatch.patternAngle ?? 0,
+      origin: hatch.patternOrigin,
+      islandStyle,
+    });
+  }
+  return buildHatchLines(paths, {
+    spacingMm: hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_HATCH_LINE_SPACING_MM,
+    angleDeg: hatch.lineAngle ?? hatch.patternAngle ?? 0,
+    origin: hatch.patternOrigin,
+    double: hatch.doubleCrossHatch ?? false,
+    islandStyle,
+  });
 }

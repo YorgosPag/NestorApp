@@ -29,6 +29,17 @@ export function mmToMeters(mm: number): number {
 }
 
 /**
+ * Γενικό affine SSoT (column-major): origin + άξονας-u (x00,x01) + άξονας-v (x10,x11).
+ * ΟΛΟΙ οι builders (wall/opening/object) περνούν από εδώ — μηδέν 2ος affine από το μηδέν.
+ * Ο Τέκτων διαβάζει point(u,v) → X=x00·u+x10·v+x20, Y=x01·u+x11·v+x21.
+ */
+export function buildXMatrix(
+  ox: number, oy: number, ux: number, uy: number, vx: number, vy: number,
+): TekXMatrix {
+  return { x00: ux, x01: uy, x10: vx, x11: vy, x20: ox, x21: oy };
+}
+
+/**
  * xmatrix τοίχου από centerline άκρα (ΜΕΤΡΑ) + πάχος (ΜΕΤΡΑ). Το origin μετατοπίζεται
  * −n̂·(t/2) ώστε το δικό μας centerline να αντιστοιχεί στην παρειά-αναφορά του Τέκτονα
  * (το πρόσημο επιβεβαιώνεται στο 1ο browser round-trip).
@@ -42,13 +53,29 @@ export function buildWallXMatrix(
   const nx = -dy / len; // μοναδιαίο κάθετο
   const ny = dx / len;
   const half = thicknessM / 2;
-  return {
-    // column-major: άξονας μήκους = (x00,x01) = E−S· άξονας πάχους = (x10,x11) = n̂·t.
-    x00: dx,
-    x01: dy,
-    x10: nx * thicknessM,
-    x11: ny * thicknessM,
-    x20: sx - nx * half, // centerline → παρειά
-    x21: sy - ny * half,
-  };
+  // column-major: άξονας μήκους u=(dx,dy)=E−S· άξονας πάχους v=n̂·t· origin=centerline→παρειά.
+  return buildXMatrix(sx - nx * half, sy - ny * half, dx, dy, nx * thicknessM, ny * thicknessM);
+}
+
+/**
+ * Affine κουφώματος (ΜΕΤΡΑ) από το **κέντρο** + **γωνία άξονα** του host τοίχου + πλάτος.
+ *
+ * SSoT: το κέντρο (`centerX/Y`) και η `rotationRad` ΔΕΝ υπολογίζονται εδώ — έρχονται από το
+ * `computeOpeningGeometry` (`bim/geometry/opening-geometry.ts`), τη μοναδική πηγή θέσης/άξονα
+ * κουφώματος (την ίδια που τρέφει renderers/3D/grips· χειρίζεται straight+curved+polyline hosts).
+ * Εδώ μένει ΜΟΝΟ η Tekton-specific σύνθεση του xmatrix:
+ *   - origin = κέντρο − â·(width/2)   (κοντινή ακμή πάνω στον άξονα)
+ *   - άξονας-u = â·width              (x00,x01 = πλάτος κατά μήκος του τοίχου)
+ *   - άξονας-v = n̂ = (−sin,cos)       (x10,x11 = ΜΟΝΑΔΙΑΙΟ κάθετο — όπως το δείγμα x11=−1·
+ *     ο Τέκτων κόβει το άνοιγμα στο πάχος του host, άρα v=unit, ΟΧΙ ·thickness)
+ * Λοξό-safe by construction (â=(cosθ,sinθ) από τον verified SSoT άξονα).
+ */
+export function buildOpeningXMatrix(
+  centerXm: number, centerYm: number, rotationRad: number, widthM: number,
+): TekXMatrix {
+  const ax = Math.cos(rotationRad); // μοναδιαίος άξονας τοίχου
+  const ay = Math.sin(rotationRad);
+  const half = widthM / 2;
+  // origin = κέντρο − â·(w/2)· u = â·w· v = n̂ μοναδιαίο.
+  return buildXMatrix(centerXm - ax * half, centerYm - ay * half, ax * widthM, ay * widthM, -ay, ax);
 }

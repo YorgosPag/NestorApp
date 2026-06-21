@@ -275,3 +275,60 @@ describe('writeDxfAscii — native HATCH (ADR-507 Φ1a)', () => {
     expect(dxf).not.toContain('0\nHATCH\n'); // faces → δεν εκπέμπει native HATCH
   });
 });
+
+// ADR-507 Φ2 — predefined PAT patterns (group 76/1 + N pattern definition lines).
+describe('writeDxfAscii — predefined HATCH (ADR-507 Φ2)', () => {
+  function predef(name: string, scale = 1, angle = 0): Entity {
+    return {
+      id: 'pd', type: 'hatch', layerId: 'L', fillType: 'predefined',
+      patternName: name, patternScale: scale, patternAngle: angle, islandStyle: 'normal',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]],
+    } as unknown as Entity;
+  }
+
+  it('ANSI31 (1 γραμμή, χωρίς dash) → 76/1, 78/1, 79/0', () => {
+    const dxf = writeDxfAscii([predef('ANSI31')], { layersById: LAYERS });
+    expect(dxf).toContain('0\nHATCH\n');
+    expect(dxf).toMatch(/\n70\n0\n/);   // pattern fill
+    expect(dxf).toMatch(/\n76\n1\n/);   // predefined
+    expect(dxf).toMatch(/\n78\n1\n/);   // 1 pattern definition line
+    expect(dxf).toMatch(/\n53\n45\n/);  // line angle 45°
+    expect(dxf).toMatch(/\n79\n0\n/);   // χωρίς dashes
+  });
+
+  it('ANSI37 (2 γραμμές 45°+135°) → 78/2', () => {
+    const dxf = writeDxfAscii([predef('ANSI37')], { layersById: LAYERS });
+    expect(dxf).toMatch(/\n78\n2\n/);
+    expect(dxf).toMatch(/\n53\n45\n/);
+    expect(dxf).toMatch(/\n53\n135\n/);
+  });
+
+  it('ANSI33 (γραμμή με dashes) → 79/2 + group 49 dash lengths', () => {
+    const dxf = writeDxfAscii([predef('ANSI33')], { layersById: LAYERS });
+    expect(dxf).toMatch(/\n79\n2\n/); // 2η γραμμή έχει 2 dash τιμές
+    expect(dxf).toContain('\n49\n'); // group 49 dash length εκπέμπεται
+  });
+
+  it('patternScale κλιμακώνει το group 41', () => {
+    const dxf = writeDxfAscii([predef('ANSI31', 5)], { layersById: LAYERS });
+    expect(dxf).toMatch(/\n41\n5\n/);
+  });
+
+  it('patternAngle προστίθεται στο group 53 (γωνία γραμμής)', () => {
+    const dxf = writeDxfAscii([predef('ANSI31', 1, 10)], { layersById: LAYERS });
+    expect(dxf).toMatch(/\n53\n55\n/); // 45 + 10
+  });
+
+  it('lines mode (Τέκτονας): predefined → exploded LINEs, ΟΧΙ HATCH', () => {
+    const dxf = writeDxfAscii([predef('ANSI31', 5)], { layersById: LAYERS, lineMode: 'lines' });
+    expect(dxf).not.toContain('0\nHATCH\n');
+    // 4 boundary edges + πολλές γραμμές μοτίβου εντός 100×100.
+    expect(countOccurrences(dxf, '0\nLINE\n')).toBeGreaterThan(4);
+  });
+
+  it('άγνωστο pattern → fallback 78/1 (έγκυρο hatch χωρίς crash)', () => {
+    const dxf = writeDxfAscii([predef('NOPE')], { layersById: LAYERS });
+    expect(dxf).toContain('0\nHATCH\n');
+    expect(dxf).toMatch(/\n78\n1\n/);
+  });
+});

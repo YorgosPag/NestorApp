@@ -8,7 +8,7 @@ import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { CoordinateUtils } from '../../systems/constraints/utils';
+import { CoordinateUtils } from '../../systems/constraints/constraints-geometry';
 import { getLineParameter } from '../../rendering/entities/shared/geometry-utils';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-087: Centralized Snap Engine Configuration

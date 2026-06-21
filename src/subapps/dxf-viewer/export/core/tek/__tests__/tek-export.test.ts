@@ -6,11 +6,13 @@
  * inject στους markers (+throw αν λείπει)· mapper straight→record, curved→skip+warning.
  */
 
-import { mmToMeters, buildWallXMatrix } from '../tek-geometry';
+import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix } from '../tek-geometry';
 import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
+  buildOpenRecordXml, buildOpenXml,
 } from '../tek-xml-writer';
 import { collectTekWalls } from '../bim-to-tek';
+import type { TekOpening } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
 describe('tek-geometry', () => {
@@ -93,11 +95,76 @@ describe('injectTekEntities', () => {
   });
 });
 
+// ── openings (ADR-512 ΦΑΣΗ 2) ──
+// buildOpeningXMatrix: κέντρο+γωνία έρχονται από SSoT computeOpeningGeometry· εδώ μόνο xmatrix.
+describe('buildOpeningXMatrix (column-major, μέτρα)', () => {
+  it('οριζόντιο (center 1.45, rot 0, width 0.9) — u=â·w, v=n̂ μοναδιαίο, origin=center−â·w/2', () => {
+    const m = buildOpeningXMatrix(1.45, 0, 0, 0.9);
+    expect(m.x00).toBeCloseTo(0.9); // πλάτος κατά μήκος
+    expect(m.x01).toBeCloseTo(0);
+    expect(m.x10).toBeCloseTo(0);
+    expect(m.x11).toBeCloseTo(1);   // μοναδιαίο κάθετο (ΟΧΙ ·thickness)
+    expect(m.x20).toBeCloseTo(1);   // origin = 1.45 − 0.45
+    expect(m.x21).toBeCloseTo(0);
+  });
+
+  it('κάθετο (rot π/2) → u ⊥ v (μηδέν ρόμβος), λοξό-safe', () => {
+    const m = buildOpeningXMatrix(0, 1.45, Math.PI / 2, 0.9);
+    const dot = m.x00 * m.x10 + m.x01 * m.x11;
+    expect(dot).toBeCloseTo(0);
+    expect(m.x01).toBeCloseTo(0.9); // length axis κατά +Y
+    expect(m.x10).toBeCloseTo(-1);  // μοναδιαίο κάθετο
+  });
+
+  it('decode parity με δείγμα (παράθυρο: center 20.1, rot π, width 0.8)', () => {
+    const m = buildOpeningXMatrix(20.1, 8.675, Math.PI, 0.8);
+    expect(m.x00).toBeCloseTo(-0.8); // δείγμα x00=-0.8
+    expect(m.x11).toBeCloseTo(-1);   // δείγμα x11=-1
+    expect(m.x20).toBeCloseTo(20.5); // δείγμα x20=20.5
+  });
+});
+
+describe('buildOpenRecordXml / buildOpenXml', () => {
+  const op: TekOpening = {
+    name: 'Θ.101', sillM: 0, headM: 2.2, side: 1, style: 1,
+    xmatrix: { x00: 1, x01: 0, x10: 0, x11: -1, x20: 15.7, x21: 8.7 },
+    txtX: 16.2, txtY: 8.675,
+  };
+  it('γεμίζει όλα τα placeholders (κανένα {{…}} leftover) + escape name', () => {
+    const xml = buildOpenRecordXml({ ...op, name: '<a&b>' });
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<name>&lt;a&amp;b&gt;</name>');
+    expect(xml).toContain('<elevation>0</elevation>');
+    expect(xml).toContain('<top>2.2</top>');
+    expect(xml).toContain('<style>1</style>');
+    expect(xml).toContain('<x20>15.7</x20>');
+  });
+  it('buildOpenXml: κενό → "" ', () => {
+    expect(buildOpenXml([])).toBe('');
+  });
+  it('buildOpenXml: τυλίγει records σε newline payload για <open>', () => {
+    const s = buildOpenXml([op]);
+    expect(s.startsWith('\n')).toBe(true);
+    expect(s.endsWith('\n')).toBe(true);
+    expect(s).toContain('<record>');
+  });
+});
+
 // ── mapper ──
 function straightWall(id: string, start: { x: number; y: number }, end: { x: number; y: number }): Entity {
   return {
     id, type: 'wall', kind: 'straight',
     params: { start: { ...start, z: 0 }, end: { ...end, z: 0 }, height: 3000, thickness: 250, sceneUnits: 'mm' },
+  } as unknown as Entity;
+}
+
+function opening(
+  wallId: string, kind: string, offsetFromStart: number, width: number,
+  extra: Record<string, unknown> = {},
+): Entity {
+  return {
+    id: `o-${wallId}-${offsetFromStart}`, type: 'opening', kind,
+    params: { wallId, kind, offsetFromStart, width, height: 2200, sillHeight: 0, ...extra },
   } as unknown as Entity;
 }
 
@@ -130,5 +197,70 @@ describe('collectTekWalls', () => {
       params: { start: { x: 0, y: 0, z: 0 }, end: { x: 500, y: 0, z: 0 }, height: 3000, thickness: 250, sceneUnits: 'cm' },
     } as unknown as Entity;
     expect(collectTekWalls([w]).wallsXml).toContain('<x00>5</x00>');
+  });
+});
+
+describe('collectTekWalls — κουφώματα (ΦΑΣΗ 2)', () => {
+  it('opening πάνω σε wall → nested <open><record> + openingCount', () => {
+    // wall (0,0)→(5000mm,0)· πόρτα offset 1000mm width 900mm.
+    const r = collectTekWalls([
+      straightWall('w1', { x: 0, y: 0 }, { x: 5000, y: 0 }),
+      opening('w1', 'door', 1000, 900),
+    ]);
+    expect(r.wallCount).toBe(1);
+    expect(r.openingCount).toBe(1);
+    expect(r.warnings).toEqual([]);
+    // το <open> δεν είναι πια κενό· περιέχει record με opening xmatrix (x00=0.9 πλάτος).
+    expect(r.wallsXml).toContain('<open>\n<record>');
+    expect(r.wallsXml).toContain('<x00>0.9</x00>');
+    expect(r.wallsXml).toContain('<x20>1</x20>'); // origin = start + 1m
+  });
+
+  it('style: παράθυρο→0, πόρτα→1', () => {
+    const door = collectTekWalls([
+      straightWall('w', { x: 0, y: 0 }, { x: 5000, y: 0 }),
+      opening('w', 'door', 1000, 900),
+    ]).wallsXml;
+    expect(door).toContain('<style>1</style>');
+    const win = collectTekWalls([
+      straightWall('w', { x: 0, y: 0 }, { x: 5000, y: 0 }),
+      opening('w', 'window', 1000, 900, { sillHeight: 900 }),
+    ]).wallsXml;
+    expect(win).toContain('<style>0</style>');
+    expect(win).toContain('<elevation>0.9</elevation>'); // ποδιά 900mm
+  });
+
+  it('handing right → side 1', () => {
+    const xml = collectTekWalls([
+      straightWall('w', { x: 0, y: 0 }, { x: 5000, y: 0 }),
+      opening('w', 'door', 1000, 900, { handing: 'right' }),
+    ]).wallsXml;
+    expect(xml).toContain('<side>1</side>');
+  });
+
+  it('πολλά κουφώματα στον ίδιο τοίχο → 2 records στο ίδιο <open>', () => {
+    const r = collectTekWalls([
+      straightWall('w', { x: 0, y: 0 }, { x: 6000, y: 0 }),
+      opening('w', 'door', 500, 900),
+      opening('w', 'window', 3000, 1200, { sillHeight: 900 }),
+    ]);
+    expect(r.openingCount).toBe(2);
+    const opens = r.wallsXml.match(/<open>1<\/open>/g) ?? [];
+    expect(opens.length).toBe(2); // δύο opening records (το <open>1</open> flag ανά record)
+  });
+
+  it('ορφανό κούφωμα (host απών) → warning + skip', () => {
+    const r = collectTekWalls([opening('ghost', 'door', 1000, 900)]);
+    expect(r.openingCount).toBe(0);
+    expect(r.warnings).toHaveLength(1);
+    expect(r.warnings[0]).toContain('ghost');
+  });
+
+  it('κούφωμα σε curved host → ορφανό (curved skip) + warning', () => {
+    const curved = { id: 'cv', type: 'wall', kind: 'curved', params: {} } as unknown as Entity;
+    const r = collectTekWalls([curved, opening('cv', 'door', 1000, 900)]);
+    expect(r.openingCount).toBe(0);
+    expect(r.warnings.some((w) => w.includes('curved'))).toBe(true);
+    expect(r.warnings.some((w) => w.includes('cv'))).toBe(true);
   });
 });
