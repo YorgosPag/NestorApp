@@ -418,3 +418,90 @@ describe('ADR-363 Phase 1G.5 — point/polygon BIM move SSoT gap fix', () => {
     expect(patch.geometry).toBeDefined();
   });
 });
+
+// ─── ADR-049 Phase 2 — vertical (delta.z) branch: the unified MoveElement(dx,dy,dz) ──
+// `delta.z` is the elevation delta in mm; each vertical-capable type bumps its own
+// per-type elevation field AFTER the plan move, reusing the `bim-vertical-move` SSoT.
+describe('ADR-049 Phase 2 — calculateBimMovedGeometry vertical (delta.z) branch', () => {
+  const Z = 750; // mm up
+
+  function wallWithBaseOffset(baseOffset: number): Entity {
+    const w = makeWall();
+    return { ...w, params: { ...w.params, baseOffset } } as unknown as Entity;
+  }
+
+  it('wall: delta.z bumps baseOffset (pure vertical leaves plan x/y untouched)', () => {
+    const patch = calculateBimMovedGeometry(wallWithBaseOffset(100), { x: 0, y: 0, z: Z }) as {
+      params: { baseOffset: number; start: { x: number; y: number } };
+    };
+    expect(patch.params.baseOffset).toBe(100 + Z);
+    expect(patch.params.start).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('wall: combined plan + vertical applies BOTH the x/y shift and the baseOffset bump', () => {
+    const patch = calculateBimMovedGeometry(wallWithBaseOffset(0), { x: 1000, y: 500, z: Z }) as {
+      params: { baseOffset: number; start: { x: number; y: number }; end: { x: number; y: number } };
+    };
+    expect(patch.params.start).toEqual({ x: 1000, y: 500, z: 0 });
+    expect(patch.params.end).toEqual({ x: 6000, y: 500, z: 0 });
+    expect(patch.params.baseOffset).toBe(Z);
+  });
+
+  it('column: delta.z bumps baseOffset (mirror wall)', () => {
+    const c = makeColumn();
+    const col = { ...c, params: { ...c.params, baseOffset: 0 } } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(col, { x: 0, y: 0, z: Z }) as {
+      params: { baseOffset: number; position: { x: number; y: number } };
+    };
+    expect(patch.params.baseOffset).toBe(Z);
+    expect(patch.params.position).toEqual({ x: 2000, y: 2000, z: 0 });
+  });
+
+  it('beam: delta.z bumps topElevation (depth fixed)', () => {
+    const b = makeBeam();
+    const beam = { ...b, params: { ...b.params, topElevation: 3000 } } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(beam, { x: 0, y: 0, z: Z }) as {
+      params: { topElevation: number };
+    };
+    expect(patch.params.topElevation).toBe(3000 + Z);
+  });
+
+  it('slab: delta.z bumps levelElevation (top face)', () => {
+    const s = makeSlab();
+    const slab = { ...s, params: { ...s.params, levelElevation: 0 } } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(slab, { x: 0, y: 0, z: Z }) as {
+      params: { levelElevation: number };
+    };
+    expect(patch.params.levelElevation).toBe(Z);
+  });
+
+  it('mep-host (radiator): delta.z bumps mountingElevationMm + shifts position in plan', () => {
+    const rad = makeCentredBoxEquipment<MepRadiatorEntity>('mep-radiator', 'rad_z');
+    const withElev = { ...rad, params: { ...rad.params, mountingElevationMm: 200 } } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(withElev, { x: 1000, y: 500, z: Z }) as {
+      params: { mountingElevationMm: number; position: { x: number; y: number } };
+    };
+    expect(patch.params.mountingElevationMm).toBe(200 + Z);
+    expect(patch.params.position).toEqual({ x: 3000, y: 2500, z: 800 });
+  });
+
+  it('delta.z absent OR 0 leaves the elevation field unchanged (plan-only move)', () => {
+    const noZ = calculateBimMovedGeometry(wallWithBaseOffset(250), { x: 1000, y: 0 }) as {
+      params: { baseOffset: number };
+    };
+    expect(noZ.params.baseOffset).toBe(250);
+    const zeroZ = calculateBimMovedGeometry(wallWithBaseOffset(250), { x: 1000, y: 0, z: 0 }) as {
+      params: { baseOffset: number };
+    };
+    expect(zeroZ.params.baseOffset).toBe(250);
+  });
+
+  it('non-vertical type (furniture/roof) ignores delta.z — same coverage as the old gizmo path', () => {
+    // Roof has no per-type vertical field in the unified move (out of scope, ADR-049 Φ2).
+    const patch = calculateBimMovedGeometry(makeRoof() as unknown as Entity, { x: 1000, y: 500, z: Z }) as {
+      params: { outline: { vertices: readonly { x: number; y: number; z?: number }[] } };
+    };
+    // Plan move still applies; z is silently ignored (outline vertices keep their own z=0).
+    expect(patch.params.outline.vertices[0]).toEqual({ x: 1000, y: 500, z: 0 });
+  });
+});

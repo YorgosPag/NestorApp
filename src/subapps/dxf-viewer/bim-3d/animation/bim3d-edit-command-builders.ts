@@ -9,7 +9,8 @@
  * No React, no scene mutation, no dispatch — the handler owns `execute()`.
  *
  * Per outcome kind:
- *   • move      → plan move (mm→native units) / vertical (axis-Y) elevation edit.
+ *   • move      → ONE 3D `Move*` command `(dx,dy,dz)` — plan (mm→native units) +
+ *                 optional vertical (axis-Y) elevation, unified (ADR-049 Φ2, Revit).
  *   • rotate    → plan rotation about the Y ring (ADR-402).
  *   • resize    → per-type dimension patch via `bim3d-resize-bridge` (ADR-402 Phase B).
  *   • tilt      → per-type tilt patch via `bim3d-tilt-bridge` (ADR-404 Phase 2) — reuses
@@ -70,7 +71,8 @@ export type EditCommand =
   | UpdateBeamParamsCommand
   | UpdateSlabParamsCommand
   | UpdateStairParamsCommand
-  // ADR-408 Φ-C — MEP rotate / vertical-move route through per-type Update commands.
+  // ADR-408 Φ-C / ADR-402 — MEP resize/tilt + the rotate pipe-follow route through
+  // per-type Update commands (vertical/plan MOVE now unifies into Move*, ADR-049 Φ2).
   | UpdateMepSegmentParamsCommand
   | UpdateMepFixtureParamsCommand
   | UpdateMepManifoldParamsCommand

@@ -31,6 +31,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-coverings/wall-covering-material-catalog';
 import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
+import { strokeHatchLines, fillHatchDots } from './shared/canvas-hatch-fill';
 import {
   computeWallCoveringStrip,
   type WallCoveringHost,
