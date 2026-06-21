@@ -2,13 +2,14 @@
 
 > ⚠️ **Renumber 508→510 (2026-06-20):** οι αριθμοί ADR-508 (Unified Linear-Member Framing) & ADR-509 (Adaptive Entity Color) είχαν δεσμευτεί από άλλον agent. Αυτό το ADR μετονομάστηκε σε ADR-510.
 
-> **Status:** 🟡 Φ2 CORE COMPLETE (UNCOMMITTED· Φ1 core committed `8ab4143a`) — spec v3 complete. **Φ1** 🟢
-> (Q2 polar 15°, Q3 full OSNAP, E2 math πεδία, Q7 ghost angle). **Φ2 (Linetypes)** 🟡: SSoT audit (γύρος 2)
-> αποκάλυψε ότι ~80% ΗΔΗ ΥΠΑΡΧΕΙ (ADR-358 layer linetype/lineweight + ADR-357 Quick Style)· το αληθινό κενό ήταν
-> ότι ο DxfRenderer **δεν περνούσε** το resolved dash pattern στο `setLineDash` → υλοποιήθηκε NEW
-> `rendering/linetype-dash-resolver.ts` + `stores/LinetypeScaleStore.ts` (LTSCALE) + wiring σε line-batch +
-> `BaseEntityRenderer.setupStyle` (zoom-aware, ADR-040-safe). DEFER: σύνθετα/custom-UI/DXF LTYPE round-trip (Φ9).
-> Επόμενο: **Φ3** (polyline bulge + grips). 2 γύροι έρευνας (ο 2ος adversarial).
+> **Status:** 🟡 Φ2 RENDERING SSoT COMPLETE (UNCOMMITTED· Φ1 core committed `8ab4143a`) — spec v3. **Φ1** 🟢
+> (Q2 polar 15°, Q3 OSNAP, E2 math, Q7 ghost angle). **Φ2 (Unified Linetype System, Revit-grade)** 🟡: SSoT audit
+> βρήκε 3 ασύμβατα dash subsystems (ADR-358 mm / ADR-377 bim px-fixed / legacy enum px)· απόφαση Giorgio = **όλα
+> zoom-scaled mm, μηδέν διπλότυπα**. ΟΛΟΚΛΗΡΩΘΗΚΕ rendering SSoT (Φ2A-D): ΕΝΑ catalog (27 mm patterns
+> `linetype-iso-catalog` + `linetype-aliases.resolveAnyLinetype`) → ΕΝΑΣ resolver (zoom×LTSCALE×CELTSCALE) → ΟΛΟΙ
+> οι consumers (DXF entity + 8 BIM renderers μέσω `bim-dash-resolver` + legacy `getDashArray`). ~250 jest GREEN.
+> **🔴 ΕΚΚΡΕΜΕΙ:** Φ2E (UI: LTSCALE control + live dropdown + custom-creation) + Φ2F (DXF LTYPE round-trip +
+> persistence = Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία (δες HANDOFF). Επόμενο spec: **Φ3** (bulge+grips).
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent

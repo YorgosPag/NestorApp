@@ -18,25 +18,23 @@ describe('generateFoundationPreview', () => {
     expect(preview!.preview).toBe(true);
   });
 
-  it('returns a closed band polygon ghost once the start is placed', () => {
+  it('returns a WYSIWYG FoundationEntity ghost once the start is placed', () => {
     foundationPreviewStore.set({ startPoint: { x: 0, y: 0 }, endPoint: null, kind: 'strip', overrides: {} });
     const preview = generateFoundationPreview([{ x: 0, y: 0 }], { x: 2000, y: 0 });
     expect(preview).not.toBeNull();
-    expect(preview!.type).toBe('polyline');
-    const poly = preview as { closed?: boolean; vertices?: { x: number; y: number }[] };
-    expect(poly.closed).toBe(true);
-    // band rectangle = 4 vertices
-    expect(poly.vertices).toHaveLength(4);
+    const ghost = preview as { type: string; preview?: boolean; wysiwygPreview?: boolean };
+    // WYSIWYG (2026-06-11): full FoundationEntity via the real renderer, not a green band polyline.
+    expect(ghost.type).toBe('foundation');
+    expect(ghost.preview).toBe(true);
+    expect(ghost.wysiwygPreview).toBe(true);
   });
 
   it('uses the store kind/overrides for WYSIWYG width (tie-beam narrower than strip)', () => {
     foundationPreviewStore.set({ startPoint: { x: 0, y: 0 }, endPoint: null, kind: 'tie-beam', overrides: { width: 250 } });
     const preview = generateFoundationPreview([{ x: 0, y: 0 }], { x: 1000, y: 0 }) as {
-      vertices: { x: number; y: number }[];
+      params: { width: number };
     };
-    // axis along +X, width 250 → band half-width 125 → y extents ±125.
-    const ys = preview.vertices.map((v) => v.y);
-    expect(Math.max(...ys)).toBeCloseTo(125);
-    expect(Math.min(...ys)).toBeCloseTo(-125);
+    // ribbon width override → committed (WYSIWYG) FoundationEntity width = 250.
+    expect(preview.params.width).toBe(250);
   });
 });
