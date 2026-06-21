@@ -12,7 +12,6 @@ import {
   findEntitiesAttachedToHosts,
   partitionBimHosts,
   expandSelectionForDelete,
-  expandSelectionForMove,
 } from '../bim-cascade-resolver';
 import type { Entity } from '../../../types/entities';
 
@@ -169,36 +168,10 @@ describe('ADR-363 Phase 7A — BIM cascade resolver', () => {
     });
   });
 
-  // ─── expandSelectionForMove ────────────────────────────────────────────
-
-  describe('expandSelectionForMove', () => {
-    it('cascades slab→slab-opening only (walls do not cascade for move)', () => {
-      const entities = [
-        wall('w1'),
-        slab('s1'),
-        opening('o1', 'w1'), // must NOT be cascaded
-        slabOpening('so1', 's1'),
-        slabOpening('so2', 's1'),
-      ];
-      const result = expandSelectionForMove(['w1', 's1'], { entities });
-      expect(result.ids).toEqual(['w1', 's1', 'so1', 'so2']);
-      expect(result.cascadedSlabOpeningIds).toEqual(['so1', 'so2']);
-    });
-
-    it('no slab-openings cascaded when only wall in selection', () => {
-      const entities = [wall('w1'), opening('o1', 'w1')];
-      const result = expandSelectionForMove(['w1'], { entities });
-      expect(result.ids).toEqual(['w1']);
-      expect(result.cascadedSlabOpeningIds).toEqual([]);
-    });
-
-    it('does not duplicate slab-openings already in the selection', () => {
-      const entities = [slab('s1'), slabOpening('so1', 's1')];
-      const result = expandSelectionForMove(['s1', 'so1'], { entities });
-      expect(result.ids).toEqual(['s1', 'so1']);
-      expect(result.cascadedSlabOpeningIds).toEqual([]);
-    });
-  });
+  // ADR-049 — `expandSelectionForMove` removed; its slab→slab-opening cascade
+  // moved into the Move commands (cascadeMovedSlabOpenings). The building blocks
+  // (partitionBimHosts + findHostedSlabOpenings) are covered above; the in-command
+  // helper has its own suite in slab-opening-move-cascade.test.ts.
 
   // ─── findAttachedColumns (ADR-401 host-deletion detach reverse lookup) ───
 

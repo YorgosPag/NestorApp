@@ -27,19 +27,10 @@ import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
 // 🏢 ADR-065: Extracted geometry utilities
 import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
-// ADR-363 §5.4 — when a moved entity is a wall, recompute its hosted openings
-// against the moved wall so they follow (same offsetFromStart).
-import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
-// ADR-492 — re-frame the beams that frame into a moved column AND a moved beam itself, so their
-// endpoints snap to the column faces (mirror of the openings cascade). All `bim:entities-moved`
-// emits for the transform/reframe family live in this ONE SSoT module: `reframeBeamsAndEmit`
-// (execute/redo — cascade + dedup-by-id + one emit) and the race-guarded undo pair
-// `emitRestoredEntities` (restore-first) + `reframeBeamsAndEmitAfterRestore` (reframed-only).
-import {
-  reframeBeamsAndEmit,
-  emitRestoredEntities,
-  reframeBeamsAndEmitAfterRestore,
-} from '../../../bim/beams/beam-column-reframe-cascade';
+// SSoT for the move cascade ordering (pipes → updates → wall-openings → slab-openings →
+// reframe-beams + emit). Both move commands delegate here so they stay in sync.
+// ADR-049 / ADR-363 / ADR-408 Φ-C / ADR-492 — rationale lives in the module header.
+import { runMoveForwardCascade, runMoveUndoCascade } from './move-entity-cascade';
 
 /**
  * Command for moving a single entity by delta
@@ -75,21 +66,15 @@ export class MoveEntityCommand implements ICommand {
 
       // Calculate new geometry
       const updates = calculateMovedGeometry(entity, this.delta);
-
-      // Apply updates
-      this.sceneManager.updateEntity(this.entityId, updates);
-      cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
       this.wasExecuted = true;
-      // Symmetry with MoveMultipleEntitiesCommand: emit so BIM persistence hooks
-      // (useBimEntityMovedPersistEffect — fixture/panel/wall/…) save the new
-      // position to Firestore. Without this a single-entity 3D gizmo move was
-      // applied to the scene but never persisted (reverted on refresh). Built
-      // from snapshot+updates (no getLevelScene — stale at synchronous emit time).
-      // ADR-492 — reframe beams (column-move OR beam-move) + announce in the SAME emit
-      // (persist + organism see the corrected geometry in one pass; no second event →
-      // no reactive loop). Dedup-by-id: a moved beam that was itself reframed rides once.
+      // Post-move host built from snapshot+updates (no getLevelScene — stale at
+      // synchronous emit time). Persistence symmetry with the multi-entity command:
+      // without the cascade emit a single-entity 3D gizmo move never persisted.
       const movedEntity = { ...this.entitySnapshot, ...updates } as SceneEntity;
-      reframeBeamsAndEmit([movedEntity], [this.entityId], this.sceneManager);
+      runMoveForwardCascade(
+        [this.entityId], this.delta, this.sceneManager, [movedEntity],
+        () => this.sceneManager.updateEntity(this.entityId, updates),
+      );
     }
   }
 
@@ -101,16 +86,11 @@ export class MoveEntityCommand implements ICommand {
       const entity = this.sceneManager.getEntity(this.entityId);
       if (entity) {
         const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
-        // Emit FIRST so the persistence hook marks the entity dirty BEFORE the
-        // scene is updated. This closes the race window where a Firebase ca9-reset
-        // snapshot could arrive between updateEntity and the emit (dirty still
-        // false) and overwrite the reverted scene with stale moved data.
         const revertedEntity = { ...this.entitySnapshot } as SceneEntity;
-        emitRestoredEntities([revertedEntity]);
-        this.sceneManager.updateEntity(this.entityId, reversedUpdates);
-        cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
-        // ADR-492 — re-frame beams against the reverted geometry, separate emit (restore first).
-        reframeBeamsAndEmitAfterRestore([this.entityId], this.sceneManager);
+        runMoveUndoCascade(
+          [this.entityId], this.delta, this.sceneManager, [revertedEntity],
+          () => this.sceneManager.updateEntity(this.entityId, reversedUpdates),
+        );
       }
     }
   }
@@ -266,8 +246,6 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     }
 
     if (updatesMap.size > 0) {
-      this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
       this.wasExecuted = true;
       // Build post-move entities from snapshots+updates (safe: no getLevelScene call,
       // which would return stale React state at synchronous emit time).
@@ -276,9 +254,10 @@ export class MoveMultipleEntitiesCommand implements ICommand {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) movedEntities.push({ ...snapshot, ...updates } as SceneEntity);
       }
-      // ADR-492 — reframe beams (moved columns OR moved beams) + announce in the SAME emit
-      // (one pass, no reactive loop). Dedup-by-id keeps a reframed moved beam single.
-      reframeBeamsAndEmit(movedEntities, this.entityIds, this.sceneManager);
+      runMoveForwardCascade(
+        this.entityIds, this.delta, this.sceneManager, movedEntities,
+        () => this.sceneManager.updateEntities(updatesMap),
+      );
     }
   }
 
@@ -298,21 +277,17 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
     if (updatesMap.size > 0) {
       // Build reverted entities from snapshots before touching the scene so the
-      // emit below can fire first. Snapshots carry the original (pre-move) params —
+      // cascade can emit them first. Snapshots carry the original (pre-move) params —
       // correct for Firestore persistence regardless of scene state at emit time.
       const revertedEntities: SceneEntity[] = [];
       for (const entityId of this.entityIds) {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) revertedEntities.push(snapshot);
       }
-      // Emit FIRST — marks dirty in all persistence hooks before any scene
-      // mutation. Closes the race where a Firebase ca9-reset Firestore snapshot
-      // (dirty=false) could overwrite the reverted scene with stale moved data.
-      emitRestoredEntities(revertedEntities);
-      this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 — re-frame beams against the reverted geometry; separate emit (restore first).
-      reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
+      runMoveUndoCascade(
+        this.entityIds, this.delta, this.sceneManager, revertedEntities,
+        () => this.sceneManager.updateEntities(updatesMap),
+      );
     }
   }
 
@@ -333,10 +308,10 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     }
 
     if (updatesMap.size > 0) {
-      this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 — reframe beams (moved columns OR moved beams) + announce in the SAME emit.
-      reframeBeamsAndEmit(movedEntities, this.entityIds, this.sceneManager);
+      runMoveForwardCascade(
+        this.entityIds, this.delta, this.sceneManager, movedEntities,
+        () => this.sceneManager.updateEntities(updatesMap),
+      );
     }
   }
 

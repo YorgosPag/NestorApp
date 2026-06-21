@@ -192,20 +192,7 @@ export function expandSelectionForDelete(
   };
 }
 
-/**
- * Expands a selection with move-time cascade (slab→slab-opening only).
- * Wall openings are excluded — their world geometry is derived from the host
- * wall, so the wall move already carries them.
- */
-export function expandSelectionForMove(
-  selectedIds: readonly string[],
-  scene: Pick<SceneModel, 'entities'>,
-): { ids: string[]; cascadedSlabOpeningIds: string[] } {
-  const { slabIds } = partitionBimHosts(selectedIds, scene.entities);
-  const selectionSet = new Set(selectedIds);
-  const cascadedSlabOpeningIds = findHostedSlabOpenings(slabIds, scene.entities, selectionSet);
-  return {
-    ids: [...selectedIds, ...cascadedSlabOpeningIds],
-    cascadedSlabOpeningIds,
-  };
-}
+// ADR-049 — `expandSelectionForMove` (slab→slab-opening selection expansion) was
+// removed: the Move commands now self-cascade slab-openings inside execute/undo/redo
+// via `cascadeMovedSlabOpenings` (bim/cascade/slab-opening-move-cascade.ts), so EVERY
+// move gesture carries them — not just the Move Tool that called this expansion.

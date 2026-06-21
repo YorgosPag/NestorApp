@@ -43,6 +43,8 @@ import { useMoveEntities } from './useMoveEntities';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { createZeroPoint } from '../config/geometry-constants';
+// 🏢 ADR-049: SSoT grid-snap leaf (shared with useGripMovement)
+import { snapToGrid } from '../systems/grid/grid-snap';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -141,16 +143,6 @@ function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
     console.debug(`[EntityDrag] ${message}`, ...args);
   }
-}
-
-/**
- * Apply grid snapping to a point
- */
-function snapToGrid(point: Point2D, gridSize: number): Point2D {
-  return {
-    x: Math.round(point.x / gridSize) * gridSize,
-    y: Math.round(point.y / gridSize) * gridSize,
-  };
 }
 
 /**

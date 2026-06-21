@@ -193,6 +193,51 @@ describe('resolveColumnFaceSnap — wall target (ίδια συμπεριφορά
   });
 });
 
+describe('resolveColumnFaceSnap — ADR-398 §3.9 wall-axis CENTER snap (mirror §3.1b)', () => {
+  // horizontalWall: άξονας y=0 (x −1000..1000), πάχος 200 (y ±100) → halfThickness=100, όριο=50.
+  const wall = [horizontalWall()];
+
+  it('cursor πάνω στον άξονα (y=0) → κέντρο κολώνας στον άξονα, anchor center, 🟢', () => {
+    const r = snap({ x: 0, y: 0 }, wall)!;
+    expect(r.anchor).toBe('center');
+    expect(r.status).toBe('beam');
+    expect(r.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('εσωτερική ζώνη (perp 30 ≤ 50) → center-on-axis (foot στον άξονα, ΟΧΙ flush)', () => {
+    const r = snap({ x: 500, y: 30 }, wall)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 500, y: 0 }); // foot στον άξονα στο x=500
+  });
+
+  it('continuous slide κατά μήκος άξονα — η position ακολουθεί τον cursor', () => {
+    const west = snap({ x: -400, y: -20 }, wall)!;
+    const east = snap({ x: 400, y: 20 }, wall)!;
+    expect(west.anchor).toBe('center');
+    expect(east.anchor).toBe('center');
+    expect(west.position).toEqual({ x: -400, y: 0 });
+    expect(east.position).toEqual({ x: 400, y: 0 });
+  });
+
+  it('εξωτερική ζώνη μέσα στον τοίχο (perp 70 > 50) → flush παρειά (ΟΧΙ center)', () => {
+    const r = snap({ x: 0, y: 70 }, wall)!;
+    expect(r.anchor).toBe('s'); // N face flush
+    expect(r.position).toEqual({ x: 0, y: 100 });
+  });
+
+  it('πέρα από την άκρη του τοίχου (along εκτός) → flush short-end (ΟΧΙ center)', () => {
+    const r = snap({ x: 1100, y: 0 }, wall)!;
+    expect(r.anchor).toBe('w'); // E face flush, ΟΧΙ center
+    expect(r.position).toEqual({ x: 1000, y: 0 });
+  });
+
+  it('δοκάρι ΔΕΝ παίρνει axis-center (μόνο τοίχος) — μένει flush face', () => {
+    const r = snap({ x: 0, y: 0 }, [horizontalBeam()]);
+    // cursor στον άξονα δοκαριού: ΟΧΙ wallFrame → flush path (S ή N face), anchor ΟΧΙ center
+    expect(r?.anchor).not.toBe('center');
+  });
+});
+
 describe('resolveColumnFaceSnap — column target (όλες οι παρειές έγκυρες)', () => {
   const cols = [columnTarget(3000, 0)];
 

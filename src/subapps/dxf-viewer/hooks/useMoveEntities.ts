@@ -30,9 +30,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
+import type { SceneModel } from '../types/scene';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../core/commands';
 import { useCommandHistory } from '../core/commands';
 import { useLevels } from '../systems/levels';
+// 🏢 ADR-049: canonical ISceneManager adapter SSoT (pendingScene batch-cache + full vertex ops)
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 
 /**
  * Options for move operations
@@ -71,159 +74,25 @@ export interface UseMoveEntitiesReturn {
 }
 
 /**
- * Creates a SceneManager adapter from useLevels
- * This bridges the Levels system with the Command Pattern
+ * Creates a SceneManager adapter from useLevels.
+ *
+ * 🏢 ADR-049: thin binding over the canonical `LevelSceneManagerAdapter` SSoT.
+ * Previously this re-implemented the whole ISceneManager inline WITHOUT the
+ * canonical's `pendingScene` batch-cache (so a multi-mutation sync batch read
+ * stale scene state). Delegating gains the cache + full vertex/z-order ops with
+ * zero duplicated logic. The entities-only param types are kept for the existing
+ * call sites; the casts mirror the level functions' real `SceneModel` shape.
  */
 function createSceneManagerAdapter(
   levelId: string,
   getLevelScene: (id: string) => { entities: SceneEntity[] } | null,
   setLevelScene: (id: string, scene: { entities: SceneEntity[] }) => void
 ): ISceneManager {
-  return {
-    addEntity(entity: SceneEntity): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = [...scene.entities, entity];
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    removeEntity(entityId: string): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = scene.entities.filter(e => e.id !== entityId);
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    getEntity(entityId: string): SceneEntity | undefined {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        return scene.entities.find(e => e.id === entityId) as SceneEntity | undefined;
-      }
-      return undefined;
-    },
-
-    // ADR-363 §5.4 — the hosted-opening cascade (`cascadeHostedOpeningsForWalls`,
-    // run by Move/MoveMultiple commands) resolves a wall's openings by scanning
-    // ALL entities for `opening.params.wallId === wall.id` (the authoritative
-    // child→parent foreign key). Without `getEntities` it silently fell back to
-    // the `wall.hostedOpeningIds` mirror, so an Alt-drag whole-wall move (ADR-363
-    // Φ1G.5) left hosted doors/windows behind. Mirror the grip adapter (which has
-    // always implemented this) so every move path keeps openings attached.
-    getEntities(): readonly SceneEntity[] {
-      const scene = getLevelScene(levelId);
-      return (scene?.entities ?? []) as readonly SceneEntity[];
-    },
-
-    updateEntity(entityId: string, updates: Partial<SceneEntity>): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = scene.entities.map(e => {
-          if (e.id === entityId) {
-            return { ...e, ...updates };
-          }
-          return e;
-        });
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    updateVertex(entityId: string, vertexIndex: number, position: Point2D): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = scene.entities.map(e => {
-          if (e.id === entityId && 'vertices' in e && Array.isArray(e.vertices)) {
-            const vertices = [...e.vertices];
-            if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-              vertices[vertexIndex] = position;
-            }
-            return { ...e, vertices };
-          }
-          return e;
-        });
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    insertVertex(entityId: string, insertIndex: number, position: Point2D): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = scene.entities.map(e => {
-          if (e.id === entityId && 'vertices' in e && Array.isArray(e.vertices)) {
-            const vertices = [...e.vertices];
-            vertices.splice(insertIndex, 0, position);
-            return { ...e, vertices };
-          }
-          return e;
-        });
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    removeVertex(entityId: string, vertexIndex: number): void {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const updatedEntities = scene.entities.map(e => {
-          if (e.id === entityId && 'vertices' in e && Array.isArray(e.vertices)) {
-            const vertices = [...e.vertices];
-            if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-              vertices.splice(vertexIndex, 1);
-            }
-            return { ...e, vertices };
-          }
-          return e;
-        });
-        setLevelScene(levelId, { ...scene, entities: updatedEntities });
-      }
-    },
-
-    getVertices(entityId: string): Point2D[] | undefined {
-      const scene = getLevelScene(levelId);
-      if (scene) {
-        const entity = scene.entities.find(e => e.id === entityId);
-        if (entity && 'vertices' in entity && Array.isArray(entity.vertices)) {
-          return entity.vertices as Point2D[];
-        }
-      }
-      return undefined;
-    },
-    updateEntities(updates: ReadonlyMap<string, Partial<SceneEntity>>): void {
-      const scene = getLevelScene(levelId);
-      if (!scene) return;
-      const updatedEntities = scene.entities.map((e) => {
-        const patch = updates.get(e.id);
-        return patch ? ({ ...e, ...patch } as SceneEntity) : e;
-      });
-      setLevelScene(levelId, { ...scene, entities: updatedEntities });
-    },
-    getEntityIndex(entityId: string): number {
-      const scene = getLevelScene(levelId);
-      if (!scene) return -1;
-      return scene.entities.findIndex((e) => e.id === entityId);
-    },
-    reorderEntity(entityId: string, direction: 'front' | 'back'): void {
-      const scene = getLevelScene(levelId);
-      if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      if (direction === 'front') entities.push(entity);
-      else entities.unshift(entity);
-      setLevelScene(levelId, { ...scene, entities });
-    },
-    moveEntityToIndex(entityId: string, targetIndex: number): void {
-      const scene = getLevelScene(levelId);
-      if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      entities.splice(targetIndex, 0, entity);
-      setLevelScene(levelId, { ...scene, entities });
-    },
-  };
+  return createLevelSceneManagerAdapter(
+    getLevelScene as unknown as (id: string) => SceneModel | null,
+    setLevelScene as unknown as (id: string, scene: SceneModel) => void,
+    levelId,
+  );
 }
 
 /**

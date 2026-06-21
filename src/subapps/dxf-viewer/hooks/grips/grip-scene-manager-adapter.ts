@@ -6,6 +6,14 @@
  * and write entities through the shared command interface.
  *
  * Extracted from grip-commit-adapters.ts for N.7.1 file-size compliance.
+ *
+ * 🏢 ADR-049: DELIBERATELY separate from the canonical `LevelSceneManagerAdapter`.
+ * Its `updateVertex`/`getVertices` carry DXF grip-editing semantics the canonical
+ * does NOT model — circle radius via quadrant grips, arc start/end angles,
+ * rectangle 4-corner, angle-measurement. Folding it into the canonical would
+ * regress those grips, so it stays a grip-specialized sibling (no forced
+ * abstraction). Only the move-entity adapter duplicate (`useMoveEntities`) was
+ * consolidated onto the canonical.
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';

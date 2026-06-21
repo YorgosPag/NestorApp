@@ -47,6 +47,8 @@ import { useLevels } from '../systems/levels';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { createZeroPoint } from '../config/geometry-constants';
+// 🏢 ADR-049: SSoT grid-snap leaf (shared with useEntityDrag)
+import { snapToGrid as snapDeltaToGrid } from '../systems/grid/grid-snap';
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
 // ============================================================================
@@ -139,15 +141,6 @@ function debugLog(message: string, ...args: unknown[]): void {
   }
 }
 /**
- * Apply grid snapping to delta
- */
-function snapDeltaToGrid(delta: Point2D, gridSize: number): Point2D {
-  return {
-    x: Math.round(delta.x / gridSize) * gridSize,
-    y: Math.round(delta.y / gridSize) * gridSize,
-  };
-}
-/**
  * Default screen to world transform (identity)
  */
 function defaultScreenToWorld(point: Point2D): Point2D {
@@ -183,7 +176,15 @@ export function useGripMovement({
   const startWorldPositionRef = useRef<Point2D | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   /**
-   * Create SceneManager adapter for vertex commands
+   * Create SceneManager adapter for vertex commands.
+   *
+   * 🏢 ADR-049: DELIBERATELY a minimal, grip-specialized adapter — NOT the
+   * canonical `LevelSceneManagerAdapter`. This legacy grip path edits polyline
+   * vertices only; folding it into the canonical (which models line start/end +
+   * circle CENTER) would change `getVertices`/`updateVertex` semantics for
+   * non-polyline grips. The live unified grip system uses a separate, richer
+   * adapter (`grips/grip-scene-manager-adapter.ts`, circle-radius/arc/rectangle).
+   * Three adapters survive on purpose; only the move-entity duplicate was merged.
    */
   const createSceneManagerAdapter = useCallback((): ISceneManager | null => {
     if (!currentLevelId) return null;

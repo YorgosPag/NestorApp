@@ -26,8 +26,6 @@ import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from 
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
-// ADR-363 Phase 7A — slab→slab-opening cascade for group move.
-import { expandSelectionForMove } from '../../bim/cascade/bim-cascade-resolver';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 
@@ -162,20 +160,14 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
         if (selectedEntityIds.length > 0) {
           const sm = getSceneManager();
           if (sm) {
-            // ADR-363 Phase 7A — slab→slab-opening cascade (independent world
-            // coords, must be in the move set). Wall→opening is NOT added here:
-            // the move command recomputes hosted openings against the moved wall
-            // via the ADR-363 §5.4 `cascadeHostedOpeningsForWalls` SSoT.
-            const scene = levelManager.currentLevelId
-              ? levelManager.getLevelScene(levelManager.currentLevelId)
-              : null;
-            const expandedIds = scene
-              ? expandSelectionForMove(selectedEntityIds, scene).ids
-              : selectedEntityIds;
+            // ADR-049 — the move command self-cascades associative children inside
+            // its execute/undo/redo: slab→slab-opening (cascadeMovedSlabOpenings)
+            // and wall→opening (cascadeHostedOpeningsForWalls). No selection
+            // expansion here — every gesture (tool/drag/nudge) inherits the cascade.
             commands.push(
-              expandedIds.length === 1
-                ? new MoveEntityCommand(expandedIds[0], delta, sm, false)
-                : new MoveMultipleEntitiesCommand(expandedIds, delta, sm, false),
+              selectedEntityIds.length === 1
+                ? new MoveEntityCommand(selectedEntityIds[0], delta, sm, false)
+                : new MoveMultipleEntitiesCommand(selectedEntityIds, delta, sm, false),
             );
           }
         }
