@@ -39,6 +39,34 @@ export interface LinearMemberSnapTarget {
   readonly outline: readonly Point2D[];
 }
 
+/**
+ * Πλαίσιο παρειάς για τις **listening dimensions** (ADR-508 §dim) — όλα τα δεδομένα που
+ * χρειάζεται ο `resolveGhostFaceDimensions` ώστε να μετρήσει αποστάσεις φαντάσματος → άκρα/κέντρο
+ * της παρειάς ΚΑΤΑ ΜΗΚΟΣ του άξονα. Scene units. Εκτίθεται **μόνο** στον 🟢 Τ-framing κλάδο (όπου
+ * το φάντασμα γλιστράει πάνω σε παρειά μέλους)· `undefined` σε column/overlap. Είναι ακριβώς οι
+ * ποσότητες που **ήδη υπολογίζονται** εσωτερικά — μηδέν νέο projection.
+ */
+export interface GhostFaceFrame {
+  /** axis origin a (axis[0]). */
+  readonly origin: Point2D;
+  /** unit axis direction u (chord). */
+  readonly axisDir: Point2D;
+  /** unit perpendicular p = (u.y, −u.x). */
+  readonly perpDir: Point2D;
+  /** signed κάθετη θέση της παρειάς πάνω στην οποία κάθεται το φάντασμα. */
+  readonly facePerp: number;
+  /** φορά «προς τα έξω» (παρειά → φάντασμα) = `outwardSign · perpDir`. */
+  readonly outwardSign: number;
+  /** διαμήκης θέση του ΑΡΙΣΤΕΡΟΥ άκρου της παρειάς (alongMin). */
+  readonly faceAlongMin: number;
+  /** διαμήκης θέση του ΔΕΞΙΟΥ άκρου της παρειάς (alongMax). */
+  readonly faceAlongMax: number;
+  /** διαμήκης θέση του ΑΞΟΝΑ του φαντάσματος (centerAlong). */
+  readonly ghostCenterAlong: number;
+  /** μισό πλάτος φαντάσματος → οι base γωνίες = centerAlong ± αυτό. */
+  readonly ghostHalfWidth: number;
+}
+
 /** Αποτέλεσμα ghost snap: το centerline start/end + το σημασιολογικό status (🟢/🔴/ουδέτερο). */
 export interface MemberGhostSnapResult {
   /** Centerline START (κλειδώνει το 1ο κλικ· πατά flush στην παρειά / κοντή άκρη). */
@@ -47,6 +75,8 @@ export interface MemberGhostSnapResult {
   readonly end: Point2D;
   /** 🟢 `beam` (κάθετο Τ-framing) / 🔴 `overlap` (συγγραμμικό κοντής άκρης) / `neutral`. */
   readonly status: GhostStatus;
+  /** Πλαίσιο παρειάς για listening dimensions — μόνο στον 🟢 Τ-framing κλάδο. */
+  readonly faceFrame?: GhostFaceFrame;
 }
 
 export interface LinearMemberFaceSnapOptions {
@@ -160,7 +190,21 @@ export function resolveLinearMemberFaceSnap(
       x: start.x + outwardSign * len * p.x,
       y: start.y + outwardSign * len * p.y,
     };
-    return { start, end, status: 'beam' };
+    // ADR-508 §dim — εκθέτω το πλαίσιο παρειάς για τις listening dimensions (ίδιες ποσότητες
+    // που μόλις υπολογίστηκαν· μηδέν νέο projection). Ο consumer (wall ghost) μετρά αποστάσεις
+    // φαντάσματος → άκρα/κέντρο παρειάς κατά μήκος του άξονα u.
+    const faceFrame: GhostFaceFrame = {
+      origin: { x: a.x, y: a.y },
+      axisDir: { x: u.x, y: u.y },
+      perpDir: { x: p.x, y: p.y },
+      facePerp: nearPerp,
+      outwardSign,
+      faceAlongMin: alongMin,
+      faceAlongMax: alongMax,
+      ghostCenterAlong: centerAlong,
+      ghostHalfWidth: half,
+    };
+    return { start, end, status: 'beam', faceFrame };
   }
 
   // ── cursor πέρα από κοντή άκρη → 🔴 συγγραμμική συνέχεια («extend instead») ─────────

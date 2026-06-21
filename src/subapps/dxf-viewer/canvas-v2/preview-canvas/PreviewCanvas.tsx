@@ -33,6 +33,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking handle types.
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -112,6 +113,13 @@ export interface PreviewCanvasHandle {
     snappedPoint: Point2D,
     label: string | null,
   ) => void;
+
+  /**
+   * Draw the wall-ghost listening dimensions (ADR-508 §dim). Call AFTER `drawPreview` —
+   * overlays the along-face distance dims (gap-left / gap-right / centre-to-centre).
+   * Wiped on the next `drawPreview`/`clear`.
+   */
+  drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => void;
 }
 
 // ============================================================================
@@ -359,6 +367,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
             transformRef.current,
             viewportRef.current,
           );
+        },
+
+        /** ADR-508 §dim: wall-ghost listening dimensions overlay */
+        drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
         },
       }),
       []

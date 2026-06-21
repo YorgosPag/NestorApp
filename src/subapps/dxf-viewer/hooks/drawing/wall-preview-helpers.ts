@@ -34,13 +34,42 @@ import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
   isMemberCollinearOverlap,
   type LinearMemberSnapTarget,
+  type GhostFaceFrame,
 } from '../../bim/framing/linear-member-face-snap';
+import {
+  resolveGhostFaceDimensions,
+  type GhostFaceDimensionsMeta,
+} from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
+
+// ADR-508 §dim — listening-dimension dim-line offsets, screen-relative (× worldPerPixel) so the
+// witness rows sit a constant pixel distance from the face at every zoom. Gaps share an inner
+// row; center-to-center sits on an outer row (clears the ghost stub it spans). `MIN_PX` drops
+// sub-pixel gaps (flush) from the overlay.
+const GHOST_DIM_GAP_OFFSET_PX = 22;
+const GHOST_DIM_CENTER_OFFSET_PX = 50;
+const GHOST_DIM_MIN_PX = 2;
+
+/** ADR-508 §dim — build listening-dimension metadata from a 🟢 face-snap frame (else null). */
+function resolveGhostDimensions(
+  faceFrame: GhostFaceFrame | undefined,
+  isOverlap: boolean,
+  sceneUnits: SceneUnits,
+  wpp: number,
+): GhostFaceDimensionsMeta | null {
+  if (!faceFrame || isOverlap) return null;
+  const dims = resolveGhostFaceDimensions(faceFrame, {
+    gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
+    centerOffsetScene: GHOST_DIM_CENTER_OFFSET_PX * wpp,
+    minValueScene: GHOST_DIM_MIN_PX * wpp,
+  });
+  return dims.length > 0 ? { sceneUnits, dims } : null;
+}
 
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
 
@@ -111,7 +140,8 @@ function makeWallGhostBeforeClick(
   const thicknessMm = resolveWallThicknessMm(overrides);
   // ADR-508 — ίδιο worldPerPixel με το click resolver (useWallTool) → ίδιο zoom-adaptive βήμα
   // ολίσθησης (preview === commit: το φάντασμα γλιστράει στα ίδια σημεία που θα κλειδώσει το κλικ).
-  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
+  const wpp = worldPerPixel(getImmediateTransform().scale);
+  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits, wpp);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end
@@ -123,7 +153,10 @@ function makeWallGhostBeforeClick(
   // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος. 🟢/`neutral` → WYSIWYG αυτούσιο.
   const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  return toWysiwygPreviewEntity(built.entity, 'preview_wall_ghost', ghostStatusColor);
+  // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
+  // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
+  const faceDimensions = resolveGhostDimensions(snap?.faceFrame, isOverlap, sceneUnits, wpp);
+  return toWysiwygPreviewEntity(built.entity, 'preview_wall_ghost', ghostStatusColor, faceDimensions);
 }
 
 /**

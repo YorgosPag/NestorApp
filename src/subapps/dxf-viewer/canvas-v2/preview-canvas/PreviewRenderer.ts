@@ -57,6 +57,10 @@ import {
 } from './tracking-paint';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
+// ADR-508 §dim — wall-ghost listening dimensions (along-face distances), painted via the
+// ADR-362 dimension SSoT.
+import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -185,6 +189,20 @@ export class PreviewRenderer {
     paintAlignmentPaths(this.ctx, paths, transform, viewport, palette);
     paintIntersections(this.ctx, intersections, transform, viewport, palette);
     paintTooltip(this.ctx, snappedPoint, label, transform, viewport, palette);
+  }
+
+  /**
+   * Draw the wall-ghost listening dimensions (ADR-508 §dim). Called AFTER `drawPreview`
+   * so the along-face distance dims overlay the ghost; wiped on the next
+   * `drawPreview`/`clear`. Delegates to the ADR-362 `renderPreviewDimension` SSoT.
+   */
+  drawGhostFaceDimensions(
+    meta: GhostFaceDimensionsMeta,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    paintGhostFaceDimensions(this.ctx, meta, transform, viewport);
   }
 
   /**

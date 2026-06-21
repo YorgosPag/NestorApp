@@ -30,6 +30,8 @@ import { hardOrtho } from './drawing-handler-utils';
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
 // there so the rubber-band preview honours F8/F10 (preview == commit).
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
+// ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
@@ -272,6 +274,12 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       }
       if (previewEntity) {
         previewCanvasRef.current.drawPreview(previewEntity);
+        // ADR-508 §dim: wall-ghost listening dimensions overlay (gap-left / gap-right /
+        // centre-to-centre along the existing member's face). Attached as ghost metadata.
+        const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
+        if (faceDims) {
+          previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
+        }
         // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
         if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {
           // ADR-508 — face-relative wall snap: label the angle RELATIVE to the face

@@ -14,6 +14,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
 import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 
 /**
@@ -33,13 +34,15 @@ export function resolveEffectivePreviewCursor(cursorPoint: Readonly<Point2D>): P
  * Flag μια φρεσκο-χτισμένη BIM εντότητα ως **WYSIWYG placement ghost**: ο PreviewCanvas
  * (`BimPreviewRenderer`) τη ρεντάρει μέσω του ΠΡΑΓΜΑΤΙΚΟΥ renderer (full fidelity).
  * Optional `ghostStatusColor` (🔴 overlap) → ο `PreviewRenderer` ζωγραφίζει status schematic
- * αντί WYSIWYG (ADR-398 §3.6 red-only). Generic ώστε να δέχεται κάθε `*Entity` + display-modified
- * παραλλαγές (π.χ. beam cutback) χωρίς `any`.
+ * αντί WYSIWYG (ADR-398 §3.6 red-only). Optional `faceDimensions` (ADR-508 §dim) → listening
+ * dimensions που ζωγραφίζει ο handler ως overlay πάνω από το ghost. Generic ώστε να δέχεται
+ * κάθε `*Entity` + display-modified παραλλαγές (π.χ. beam cutback) χωρίς `any`.
  */
 export function toWysiwygPreviewEntity<T extends object>(
   entity: T,
   id: string,
   ghostStatusColor?: GhostStatusColor | null,
+  faceDimensions?: GhostFaceDimensionsMeta | null,
 ): ExtendedSceneEntity {
   return {
     ...entity,
@@ -47,5 +50,6 @@ export function toWysiwygPreviewEntity<T extends object>(
     preview: true,
     wysiwygPreview: true,
     ...(ghostStatusColor ? { ghostStatusColor } : {}),
+    ...(faceDimensions && faceDimensions.dims.length > 0 ? { faceDimensions } : {}),
   } as unknown as ExtendedSceneEntity;
 }
