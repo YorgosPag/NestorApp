@@ -21,6 +21,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
 import type { FoundationKind } from '../../bim/types/foundation-types';
+import { toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -69,5 +70,5 @@ function makeFoundationBandGhost(
   const params = buildDefaultFoundationParams(startPt, kind, { ...overrides, kind, axisEnd }, sceneUnits);
   const built = buildFoundationEntity(params, defaultLayerId());
   if (!built.ok) return null;
-  return { ...built.entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, id);
 }

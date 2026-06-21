@@ -26,17 +26,13 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { projectToLocalFrame, rotateVector } from './grip-math';
+import { constrainDeltaToDominantAxis } from './ortho-delta';
 import type { RectFrame, RectCorner, RectEdge } from './rect-frame';
 
 /** Per-axis minimum half-extents (scene units). Supplied by the entity adapter. */
 export interface RectResizeLimits {
   readonly minHalfWidth: number;
   readonly minHalfLength: number;
-}
-
-/** Constrain a local-frame delta to its dominant axis (ORTHO / F8). */
-function applyOrtho(local: Point2D): Point2D {
-  return Math.abs(local.x) >= Math.abs(local.y) ? { x: local.x, y: 0 } : { x: 0, y: local.y };
 }
 
 /** Translate the centroid by a local-frame shift (rotated into world). */
@@ -58,7 +54,7 @@ export function applyRectCornerDrag(
   ortho?: boolean,
 ): RectFrame {
   const projected = projectToLocalFrame(worldDelta, frame.rotationDeg);
-  const local = ortho ? applyOrtho(projected) : projected;
+  const local = ortho ? constrainDeltaToDominantAxis(projected) : projected;
   const newHalfWidth = Math.max(limits.minHalfWidth, frame.halfWidth + (corner.sx * local.x) / 2);
   const newHalfLength = Math.max(limits.minHalfLength, frame.halfLength + (corner.sy * local.y) / 2);
   // Back-derive the centroid shift from the CLAMPED half so the opposite corner

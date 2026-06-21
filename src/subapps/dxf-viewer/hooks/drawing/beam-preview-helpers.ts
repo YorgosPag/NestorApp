@@ -31,7 +31,6 @@ import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import {
   resolveBeamGhostSnapFromStore,
   BEAM_GHOST_LEN_MM,
@@ -39,6 +38,7 @@ import {
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
 import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
@@ -115,16 +115,10 @@ function makeBeamGhostBeforeClick(
   beamTargets: readonly BeamSnapTarget[],
 ): ExtendedSceneEntity | null {
   // ADR-398 §Smart beam ghost (2026-06-20 fix) — το crosshair ζωγραφίζεται στο
-  // **snapped** σημείο (`ImmediateSnap`), ενώ ο preview hover περνά RAW cursor
-  // (το `processDrawingHover` ΔΕΝ εφαρμόζει το βασικό OSNAP/grid snap πριν το 1ο κλικ).
-  // Με grid/OSNAP ON αυτό έδειχνε το φάντασμα σταθερά λίγο μετατοπισμένο από το
-  // σταυρόνημα. Διάβασε το ίδιο snapped σημείο με τον crosshair / column ghost
-  // (mirror `useColumnGhostPreview`) → ο άξονας του ghost ταυτίζεται με το σταυρόνημα.
-  const snapState = getImmediateSnap();
-  const effectiveCursor: Point2D =
-    snapState?.found === true && snapState.point != null
-      ? { x: snapState.point.x, y: snapState.point.y }
-      : { x: cursorPoint.x, y: cursorPoint.y };
+  // **snapped** σημείο (`ImmediateSnap`), ενώ ο preview hover περνά RAW cursor (το
+  // `processDrawingHover` ΔΕΝ εφαρμόζει το βασικό OSNAP/grid πριν το 1ο κλικ). Κοινό
+  // SSoT `resolveEffectivePreviewCursor` → ο άξονας του ghost ταυτίζεται με το σταυρόνημα.
+  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
   const snap = resolveBeamGhostSnapFromStore(effectiveCursor, columnFootprints, beamTargets, widthMm, sceneUnits);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
@@ -140,13 +134,7 @@ function makeBeamGhostBeforeClick(
   // 🟢 `beam` (έγκυρο κάθετο Τ-framing) & `neutral` → WYSIWYG amber αυτούσιο (decision A).
   const isOverlap = snap?.status === 'overlap' || isBeamCollinearOverlap(start, end, beamTargets);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  return {
-    ...built.entity,
-    id: 'preview_beam_ghost',
-    preview: true,
-    wysiwygPreview: true,
-    ...(ghostStatusColor ? { ghostStatusColor } : {}),
-  } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor);
 }
 
 /**
@@ -193,7 +181,6 @@ function makeBeamWysiwygGhost(
     kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, beamTargets)
       ? resolveGhostStatusColor('overlap')
       : null;
-  const statusField = ghostStatusColor ? { ghostStatusColor } : {};
 
   // ADR-458 — εφάρμοσε το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
   // δοκάρι (κοινό SSoT `buildBeamCutbackDisplay`), ώστε το preview να δείχνει την
@@ -206,19 +193,16 @@ function makeBeamWysiwygGhost(
       columnFootprints,
     );
     if (display) {
-      return {
+      const displayEntity = {
         ...entity,
         geometry: {
           ...entity.geometry,
           displayOutline: display.displayOutline,
           ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
         },
-        id,
-        preview: true,
-        wysiwygPreview: true,
-        ...statusField,
-      } as unknown as ExtendedSceneEntity;
+      };
+      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor);
     }
   }
-  return { ...entity, id, preview: true, wysiwygPreview: true, ...statusField } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(entity, id, ghostStatusColor);
 }

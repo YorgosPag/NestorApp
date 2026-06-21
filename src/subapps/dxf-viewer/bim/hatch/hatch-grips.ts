@@ -17,6 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchGripKind } from '../../hooks/grip-types';
+import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 
@@ -54,7 +55,7 @@ export function applyHatchGripDrag(
   const path = original[pathIdx];
   if (vertexIdx >= path.length) return original as Point2D[][];
 
-  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
   if (delta.x === 0 && delta.y === 0) return original as Point2D[][];
 
   // Clone only the affected ring; share the untouched rings by reference.
@@ -63,10 +64,4 @@ export function applyHatchGripDrag(
       ? ring.map((v, i) => (i === vertexIdx ? { x: v.x + delta.x, y: v.y + delta.y } : { x: v.x, y: v.y }))
       : ring.map((v) => ({ x: v.x, y: v.y })),
   );
-}
-
-function quantizeToDominantAxis(delta: Point2D): Point2D {
-  return Math.abs(delta.x) >= Math.abs(delta.y)
-    ? { x: delta.x, y: 0 }
-    : { x: 0, y: delta.y };
 }

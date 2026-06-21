@@ -28,6 +28,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, SlabGripKind } from '../../hooks/useGripMovement';
+import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 import type { Point3D } from '../types/bim-base';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 import type { Entity } from '../../types/entities';
@@ -107,7 +108,7 @@ export function applySlabGripDrag(
   gripKind: SlabGripKind,
   input: Readonly<SlabGripDragInput>,
 ): SlabParams {
-  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
   if (gripKind.startsWith('slab-vertex-')) {
     const idx = parseInt(gripKind.slice('slab-vertex-'.length), 10);
     if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
@@ -121,11 +122,6 @@ export function applySlabGripDrag(
   return input.originalParams;
 }
 
-function quantizeToDominantAxis(delta: Point2D): Point2D {
-  return Math.abs(delta.x) >= Math.abs(delta.y)
-    ? { x: delta.x, y: 0 }
-    : { x: 0, y: delta.y };
-}
 
 function moveOutlineVertex(
   originalParams: SlabParams,

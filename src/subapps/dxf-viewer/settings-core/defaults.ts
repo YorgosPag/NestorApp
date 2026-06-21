@@ -16,6 +16,16 @@ import type {
 import { UI_COLORS, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
 // 🏢 SSoT base grip size
 import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+// ADR-510 Φ2D — unified linetype catalog SSoT (mm) + canonical resolver.
+import { resolveAnyDashMm } from '../config/linetype-aliases';
+import { dashMmToScreenPx } from '../rendering/linetype-dash-resolver';
+
+/**
+ * ADR-510 Φ2D — normalises catalog mm patterns to the legacy preview-px scale
+ * (`dashed` 12.7mm → ≈5px) so SVG/preview dashes keep their previous on-screen
+ * size while sourcing the SAME pattern data as the canvas.
+ */
+const LEGACY_PREVIEW_MM_TO_PX = 0.4;
 
 // ============================================================================
 // LINE DEFAULTS - ISO 128 Standards
@@ -187,6 +197,11 @@ export const DEFAULT_DXF_SETTINGS: DxfSettings = {
 // DASH PATTERNS - AutoCAD Standards
 // ============================================================================
 
+/**
+ * @deprecated ADR-510 Φ2D — pattern data unified in `config/linetype-iso-catalog.ts`
+ * (mm). `getDashArray` now resolves through the catalog; this px map is no longer
+ * the source of truth. Kept only as a legacy reference.
+ */
 export const DASH_PATTERNS: Record<string, number[]> = {
   solid: [],
   dotted: [1, 3],
@@ -196,12 +211,17 @@ export const DASH_PATTERNS: Record<string, number[]> = {
 };
 
 /**
- * Υπολογίζει το dash array για ένα line type με scale
+ * ADR-510 Φ2D — legacy settings/preview dash array, now sourced from the unified
+ * mm catalog (SSoT) instead of the local `DASH_PATTERNS`. The catalog mm pattern
+ * is normalised to legacy preview-px via `LEGACY_PREVIEW_MM_TO_PX` (so a `dashed`
+ * preview stays ≈ its previous size) and scaled by `dashScale` (CELTSCALE-like).
+ * Reuses the canonical resolver (abs gaps, dot→min, solid→[]).
+ *
+ * Used by SVG previews + the legacy preview hook. The committed-entity canvas
+ * path uses the zoom-aware `dashMmToScreenPx` directly (ADR-510 Φ2B/C).
  */
 export function getDashArray(lineType: string, dashScale: number = 1): number[] {
-  const basePattern = DASH_PATTERNS[lineType] || [];
-  if (basePattern.length === 0) return [];
-  return basePattern.map(value => value * dashScale);
+  return dashMmToScreenPx(resolveAnyDashMm(lineType), LEGACY_PREVIEW_MM_TO_PX, dashScale);
 }
 
 // ============================================================================

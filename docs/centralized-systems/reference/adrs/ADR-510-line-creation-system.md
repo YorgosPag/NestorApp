@@ -518,3 +518,29 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   WallRenderer/preview dash (ξεχωριστό `config/bim-line-patterns.ts`). Status → 🟡 **Φ2 CORE COMPLETE**. UNCOMMITTED.
   ⚠️ entity render touch → ADR-040 CHECK 6B/6D (stage ADR-040 + ADR-510). 🔴 browser-verify (Quick Style linetype
   Dashed/Hidden/Center → διακεκομμένη· zoom scale· Continuous → συνεχής) + commit. **Επόμενο: Φ3** (polyline bulge + grips).
+- **2026-06-21** — **Φ2 UNIFIED LINETYPE SYSTEM (Revit-grade, FULL SSoT) — απόφαση Giorgio «όπως η Revit, μηδέν
+  διπλότυπα».** Μετά SSoT audit (3 Explore agents) βρέθηκαν **3 ανεξάρτητα entity-dash subsystems**: ADR-358
+  catalog (8, mm, zoom-scaled), ADR-377 `bim-line-patterns` (28, **px, FIXED**), legacy `getDashArray` (5 enum, px
+  ×dashScale) — ασύμβατα (μια dashed DXF γραμμή & ένας dashed BIM τοίχος φαίνονταν διαφορετικά). Giorgio: **όλα
+  zoom-scaled mm (model-space) + ΤΑ ΠΑΝΤΑ τώρα**. **Rendering SSoT ΟΛΟΚΛΗΡΩΘΗΚΕ (Φ2A-D):**
+  • **Φ2A** `config/linetype-iso-catalog.ts` επεκτάθηκε σε **27 mm patterns** (8 ISO base + 14 density variants 2/X2
+    + 3 Dot family + 2 BIM specials Double/Zigzag· `LINETYPE_CATALOG_NAMES`· `isIsoBaselineLinetype`→`origin==='iso-baseline'`
+    ώστε ο writer να γράφει LTYPE μόνο για non-standard). NEW `config/linetype-aliases.ts` — `resolveAnyLinetype(input)`:
+    ΕΝΑΣ resolver που χαρτογραφεί legacy enum + 28 BIM keys + case-variant DXF names → canonical `LinetypeDef`.
+  • **Φ2B** `dashMmToScreenPx(mm, zoom, ltscale, celtscale)` — προστέθηκε **CELTSCALE** (per-object, DXF grp 48,
+    `entity.ltscale`)· DxfRenderer line-batch + `BaseEntityRenderer` περνούν celtscale (batch key += ltscale).
+  • **Φ2C** **8 BIM renderers → zoom-scaled** μέσω NEW `config/bim-dash-resolver.ts` (`bimDashPx(key,scale)`/`bimDashMm(key)`
+    → catalog mm). Wall/Beam/Stair/Slab/SlabOpening/Opening (2D) + `bim-3d-edge-overlay-builder` (3D world-units,
+    `DASH_WORLD_SCALE_M=0.006`, |gap| fold). `bim-line-patterns` `BUILT_IN_DASH_ARRAYS`+`linePatternToDashArray`
+    → **@deprecated** (key-list + type μένουν canonical). BIM wiring tests → SSoT-aligned (`bimDashPx` expected, όχι hardcoded).
+  • **Φ2D** legacy `settings-core/defaults.ts getDashArray` → thin wrapper πάνω στο catalog
+    (`dashMmToScreenPx(resolveAnyDashMm(lineType), LEGACY_PREVIEW_MM_TO_PX, dashScale)`)· `DASH_PATTERNS` @deprecated.
+  **ΑΠΟΤΕΛΕΣΜΑ:** ΕΝΑ pattern catalog (mm) → ΕΝΑΣ resolver (zoom×LTSCALE×CELTSCALE) → ΟΛΟΙ οι on-screen consumers
+  (DXF entity + 8 BIM renderers + legacy preview/settings). DXF & BIM dashed πλέον **ταυτόσημα zoom-scaled**.
+  ~250 jest GREEN (Φ2 core 48 + BIM 204 + settings 61), tsc clean. **ΕΚΤΟΣ scope (UI chrome):** `LINE_DASH_PATTERNS`
+  (cursor/hover/selection overlays) μένει ξεχωριστό. Status → 🟡 **Φ2 RENDERING SSoT COMPLETE**. UNCOMMITTED.
+  ⚠️ ADR-040 CHECK 6B/6D + ADR-377/358 touch → stage ADR-040+358+377+510. 🔴 browser-verify (DXF+BIM dashed zoom-scaled
+  ίδια· LTSCALE) + commit. **🔴 ΕΚΚΡΕΜΕΙ (επόμενη συνεδρία, το καθένα orchestrator-scale):** **Φ2E** UI (LTSCALE
+  status-bar control + linetype dropdown από live `LinetypeRegistry` + custom-creation pattern editor)· **Φ2F** DXF
+  LTYPE round-trip (entity grp 6/48/370 read+write + `DxfSceneBuilder` wire `parseLinetypeTable`→`registerLinetypes`
+  + export LTYPE table + `LinetypeRegistry` Firestore/localStorage persistence) = Φ9. Δες HANDOFF.

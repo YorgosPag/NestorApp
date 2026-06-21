@@ -27,7 +27,6 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
 import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
@@ -35,6 +34,7 @@ import {
   type LinearMemberSnapTarget,
 } from '../../bim/framing/linear-member-face-snap';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
@@ -105,11 +105,7 @@ function makeWallGhostBeforeClick(
   columnFootprints: readonly (readonly Point2D[])[],
   memberTargets: readonly LinearMemberSnapTarget[],
 ): ExtendedSceneEntity | null {
-  const snapState = getImmediateSnap();
-  const effectiveCursor: Point2D =
-    snapState?.found === true && snapState.point != null
-      ? { x: snapState.point.x, y: snapState.point.y }
-      : { x: cursorPoint.x, y: cursorPoint.y };
+  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const thicknessMm = resolveWallThicknessMm(overrides);
   const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
@@ -123,13 +119,7 @@ function makeWallGhostBeforeClick(
   // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος. 🟢/`neutral` → WYSIWYG αυτούσιο.
   const isOverlap = snap?.status === 'overlap' || isMemberCollinearOverlap(start, end, memberTargets);
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  return {
-    ...built.entity,
-    id: 'preview_wall_ghost',
-    preview: true,
-    wysiwygPreview: true,
-    ...(ghostStatusColor ? { ghostStatusColor } : {}),
-  } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, 'preview_wall_ghost', ghostStatusColor);
 }
 
 /**
@@ -166,8 +156,7 @@ function makeWallWysiwygGhost(
     kind !== 'curved' && isMemberCollinearOverlap(startPt, endPt, memberTargets)
       ? resolveGhostStatusColor('overlap')
       : null;
-  const statusField = ghostStatusColor ? { ghostStatusColor } : {};
-  return { ...built.entity, id, preview: true, wysiwygPreview: true, ...statusField } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, id, ghostStatusColor);
 }
 
 /**
@@ -192,7 +181,7 @@ function makeWallFootprintGhost(
     : params;
   const built = buildWallEntity(finalParams, defaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
-  return { ...built.entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, id);
 }
 
 /**
@@ -213,5 +202,5 @@ function makeWallPolylineGhost(
   const params = { ...base, polylineVertices };
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
-  return { ...built.entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, id);
 }

@@ -21,6 +21,7 @@ import type { Point3D } from '../types/bim-base';
 import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
+import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 
 // ─── Grip position computation ────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export function applyFloorFinishGripDrag(
   gripKind: FloorFinishGripKind,
   input: Readonly<FloorFinishGripDragInput>,
 ): FloorFinishParams {
-  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
 
   if (gripKind.startsWith('floor-finish-vertex-')) {
     const idx = parseInt(gripKind.slice('floor-finish-vertex-'.length), 10);
@@ -100,12 +101,6 @@ export function applyFloorFinishGripDrag(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function quantizeToDominantAxis(delta: Point2D): Point2D {
-  return Math.abs(delta.x) >= Math.abs(delta.y)
-    ? { x: delta.x, y: 0 }
-    : { x: 0, y: delta.y };
-}
 
 function moveFootprintVertex(
   originalParams: FloorFinishParams,

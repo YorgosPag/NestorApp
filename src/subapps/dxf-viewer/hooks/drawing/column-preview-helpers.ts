@@ -40,12 +40,12 @@ import {
   type SceneUnits,
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import {
   getColumnFaceAnchor,
   getColumnGhostStatus,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -69,12 +69,8 @@ export function generateColumnPreview(
 
   // Snapped point (face-snap position / corner-projected / raw) — ΤΟ ΙΔΙΟ σημείο
   // που κάνει commit το `mouse-handler-up` (το `snap-scheduler` το γράφει μέσω
-  // `setImmediateSnap` στο ίδιο move). Mirror `makeBeamGhostBeforeClick`.
-  const snap = getImmediateSnap();
-  const effectiveCursor: Point2D =
-    snap?.found === true && snap.point != null
-      ? { x: snap.point.x, y: snap.point.y }
-      : { x: cursorPoint.x, y: cursorPoint.y };
+  // `setImmediateSnap` στο ίδιο move). Κοινό SSoT με δοκάρι/τοίχο.
+  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
 
   // Anchor precedence ≡ `commitColumnFromState` (preview === commit):
   //   1. face-snap auto λαβή (flush στην παρειά)· 2. 🟢 beam → center (κέντρο ≡
@@ -91,11 +87,5 @@ export function generateColumnPreview(
   // 🔴 overlap → red status schematic (PreviewRenderer draws outline + 30% fill,
   // mirror beam). 🟢 beam / neutral → πλήρες WYSIWYG amber (το έγκυρο visual).
   const ghostStatusColor = status === 'overlap' ? resolveGhostStatusColor('overlap') : null;
-  return {
-    ...built.entity,
-    id: 'preview_column_ghost',
-    preview: true,
-    wysiwygPreview: true,
-    ...(ghostStatusColor ? { ghostStatusColor } : {}),
-  } as unknown as ExtendedSceneEntity;
+  return toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor);
 }
