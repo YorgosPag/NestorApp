@@ -14,6 +14,7 @@ import {
   isColumnEntity,
   isBeamEntity,
   isFloorFinishEntity,
+  isWallCoveringEntity,
   isFoundationEntity,
   isSpaceSeparatorEntity,
   isHatchEntity,
@@ -72,6 +73,8 @@ export function performDetailedHitTest(
     case 'foundation': return hitTestFoundation(entity, point);
     // ADR-419 — floor-finish polygon containment (same as slab/slab-opening).
     case 'floor-finish': return hitTestFloorFinish(entity, point);
+    // ADR-511 — wall-covering strip containment (cached outline from host wall).
+    case 'wall-covering': return hitTestWallCovering(entity, point);
     // ADR-437 — space separator: point-to-segment distance (a thin line needs a
     // tolerance corridor, NOT bbox-only — else the diagonal-line bbox over-selects).
     case 'space-separator': return hitTestSpaceSeparator(entity, point, tolerance);
@@ -152,6 +155,15 @@ function hitTestFloorFinish(entity: Entity, point: Point2D): Partial<HitTestResu
   const verts = entity.params?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
   return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestWallCovering(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isWallCoveringEntity(entity)) return null;
+  // Cached strip outline (4 σημεία) από τον host τοίχο (build/edit time). Absent αν ο host
+  // έλειπε στο build → no precise target (πέφτει σε broad-phase bbox μέσω geometry.bbox).
+  const outline = entity.geometry?.outline;
+  if (!outline || outline.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(outline)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestSpaceSeparator(

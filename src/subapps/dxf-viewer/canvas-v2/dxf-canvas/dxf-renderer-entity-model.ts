@@ -134,6 +134,10 @@ export function buildEntityModelFromDxf(
       // ADR-422 — direct entity (same pattern as floor-finish). ThermalSpaceRenderer
       // reads geometry.bbox + params.footprint + params.useType at top level.
       return { ...base, type: 'thermal-space', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
+    case 'wall-covering':
+      // ADR-511 — direct entity (same pattern as floor-finish). WallCoveringRenderer
+      // computes the live face strip from the host wall (per-frame setWallsById).
+      return { ...base, type: 'wall-covering', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
     case 'space-separator':
       // ADR-437 — direct entity (same pattern as thermal-space). SpaceSeparatorRenderer
       // reads geometry.bbox + params.start/end at top level.

@@ -67,7 +67,7 @@ describe('tracking-resolver (ADR-357 ambient extension)', () => {
   it('resolves identically whether a point is acquired or ambient-sourced', () => {
     const cursor = { x: 100, y: 0.2 };
     const fromAcquired = resolveTrackingSnap(cursor, [pt(0, 0, 'endpoint')], HV_ONLY, 5);
-    const fromAmbient = resolveTrackingSnap(cursor, [pt(0, 0, 'ambient-column')], HV_ONLY, 5);
+    const fromAmbient = resolveTrackingSnap(cursor, [pt(0, 0, 'ambient-member')], HV_ONLY, 5);
     expect(fromAmbient!.point).toEqual(fromAcquired!.point);
     expect(fromAmbient!.kind).toBe(fromAcquired!.kind);
     expect(fromAmbient!.activePaths).toHaveLength(fromAcquired!.activePaths.length);

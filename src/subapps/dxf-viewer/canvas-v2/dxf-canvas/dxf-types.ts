@@ -35,6 +35,7 @@ import type { FurnitureEntity } from '../../bim/types/furniture-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
+import type { WallCoveringEntity } from '../../bim/types/wall-covering-types';
 import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
 import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
@@ -55,7 +56,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space' | 'space-separator' | 'hatch';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -434,6 +435,17 @@ export interface DxfFloorFinish extends DxfEntity {
 }
 
 /**
+ * ADR-511 — DxfWallCovering direct entity (same pattern as DxfFloorFinish).
+ * WallCoveringRenderer computes the live face strip from the host wall (per-frame index).
+ */
+export interface DxfWallCovering extends DxfEntity {
+  type: 'wall-covering';
+  kind: WallCoveringEntity['kind'];
+  params: WallCoveringEntity['params'];
+  geometry: WallCoveringEntity['geometry'];
+}
+
+/**
  * ADR-422 — DxfThermalSpace direct entity (same pattern as DxfFloorFinish).
  * ThermalSpaceRenderer reads geometry.bbox + params.footprint + params.useType at top level.
  */
@@ -488,7 +500,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

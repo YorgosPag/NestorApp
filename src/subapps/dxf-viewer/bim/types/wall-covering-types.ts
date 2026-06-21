@@ -21,7 +21,7 @@
  * @see bim/types/floor-finish-types.ts — το πρότυπο (IfcCovering FLOORING)
  */
 
-import type { BimEntity } from './bim-base';
+import type { BimEntity, BoundingBox3D, Point3D } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 
@@ -131,6 +131,15 @@ export interface WallCoveringGeometry {
   readonly areaM2: number;
   /** mm. Συνολικό πάχος όλων των στρώσεων. */
   readonly totalThicknessMm: number;
+  /**
+   * Optional cached 2D strip outline (4 σημεία, world scene units) + bbox. Υπολογίζονται
+   * από τον **host τοίχο** στο build/edit time (ADR-511 Slice B) ώστε selection / hit-test
+   * να έχουν στόχο χωρίς πρόσβαση σε walls. Ο 2D **render** ΔΕΝ τα διαβάζει — υπολογίζει
+   * live (`computeWallCoveringStrip`). Stale μόνο αν ο τοίχος μετακινηθεί χωρίς edit του
+   * covering (καλύπτεται από το deferred move-cascade). Absent όταν ο host λείπει στο build.
+   */
+  readonly outline?: readonly Point3D[];
+  readonly bbox?: BoundingBox3D;
 }
 
 // ─── Entity ───────────────────────────────────────────────────────────────────

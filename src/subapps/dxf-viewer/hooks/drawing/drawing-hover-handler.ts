@@ -17,6 +17,9 @@ import {
 import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
 import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
+import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/adaptive-distance-snap';
+import { displayUnitState } from '../../config/display-unit-state';
+import { formatDisplayValue, DISPLAY_UNIT_LABELS } from '../../config/units';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { applyPolar, formatPolarLabel } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
@@ -195,7 +198,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
     const ambient = (isDrawingTool && ambientCfg.enabled)
       ? collectAmbientAlignmentAnchors(previewPt, getSceneEntities(), {
-          radiusWorld: ambientCfg.radiusMm * getSceneUnitsScale(),
+          // Screen-relative radius (zoom-adaptive): px → world via 1/scale, so the
+          // "members near my cursor on screen" feel stays constant at every zoom.
+          radiusWorld: ambientCfg.radiusPx / Math.max(liveScale, 0.001),
           maxMembers: ambientCfg.maxMembers,
           axisToleranceWorld: worldTolerance,
         })
@@ -208,8 +213,18 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
           polarEnabled: polarOnRef.current && !orthoOnRef.current,
         }, worldTolerance)
       : null;
-    if (trackingResult) {
-      previewPt = trackingResult.point;
+    // ADR-357 ambient: "magic" adaptive distance snap (AutoCAD PolarSnap / Revit
+    // temp-dim). Round the slide distance along a projection track to a nice value
+    // whose on-screen spacing stays ~constant (step grows zoomed-out, shrinks
+    // zoomed-in). Only projection slides — intersections are already fixed.
+    let trackingPoint: Pt | null = trackingResult ? trackingResult.point : null;
+    if (trackingResult && trackingResult.kind === 'projection' && trackingResult.activePaths.length > 0) {
+      const path = trackingResult.activePaths[0];
+      const step = adaptiveDistanceStep(1 / Math.max(liveScale, 0.001));
+      trackingPoint = quantizeAlongPath(trackingResult.point, trackingResult.anchorPoint, path.dx, path.dy, step);
+    }
+    if (trackingResult && trackingPoint) {
+      previewPt = trackingPoint;
     }
 
     // ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to locked value.
@@ -259,19 +274,24 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         }
         // ADR-357 Phase 4: Object Snap Tracking alignment overlay (dashed
         // paths from acquired points + intersection halo + distance label).
-        if (trackingResult) {
+        if (trackingResult && trackingPoint) {
+          // Distance from anchor to the (quantized) snap point → display unit
+          // (mm internal → cm/m/… via the live displayUnitState SSoT).
+          const distWorld = Math.hypot(
+            trackingPoint.x - trackingResult.anchorPoint.x,
+            trackingPoint.y - trackingResult.anchorPoint.y,
+          );
+          const distMm = distWorld / Math.max(getSceneUnitsScale(), 1e-9);
+          const unit = displayUnitState.getUnit();
           const label = trackingResult.snappedAngle !== null
-            ? `${trackingResult.snappedAngle.toFixed(0)}° / ${Math.hypot(
-                trackingResult.point.x - trackingResult.anchorPoint.x,
-                trackingResult.point.y - trackingResult.anchorPoint.y,
-              ).toFixed(1)}`
+            ? `${trackingResult.snappedAngle.toFixed(0)}° / ${formatDisplayValue(distMm, unit)} ${DISPLAY_UNIT_LABELS[unit]}`
             : null;
           // ADR-357 ambient: draw ONLY the cursor-aligned path(s), not every
           // built path — mirrors Revit/AutoCAD and prevents ambient-source clutter.
           previewCanvasRef.current.drawTrackingAlignment(
             trackingResult.activePaths,
             trackingResult.intersections,
-            trackingResult.point,
+            trackingPoint,
             label,
           );
         }

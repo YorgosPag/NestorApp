@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-21 — ADR-511 wall-covering per-frame `wallsById` index (DxfRenderer choke-point)
+
+**Status**: IMPLEMENTED 2026-06-21 (Opus 4.8). **ADR-040-safe** — pure per-frame index build, ZERO new subscriptions. Ο `DxfRenderer.render` τροφοδοτεί πλέον στο `EntityRendererComposite` ένα per-frame `wallsById` index (`entityComposite.setWallsById(buildWallsById(scene.entities))`, mirror του υπάρχοντος `setOpeningsByWall` ADR-363) ώστε ο `WallCoveringRenderer` να resolve-άρει τον host τοίχο και να υπολογίζει live το face strip (το covering ΔΕΝ αποθηκεύει render polygon). Καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model — μόνο μία επιπλέον per-frame lookup map. **CHECK 6B** (DxfRenderer touch) → ADR-040 staged. ✅ Google-level: YES — ίδιο pattern με τα υπάρχοντα per-frame indexes, μηδέν νέα reactivity.
+
 ### 2026-06-21 — ADR-398 §3.8 WYSIWYG column ghost: κατάργηση 9-anchor `ColumnGhostPreviewMount` (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-21 (Opus 4.8). **ADR-040-safe** — καθαρή **αφαίρεση** ενός preview mount, ZERO νέα subscriptions. Το εργαλείο «Κολώνα» πέρασε στο υπάρχον WYSIWYG preview path (`drawing-preview-generator` + `BimPreviewRenderer` + `PreviewRenderer`, ίδιο με δοκάρι/τοίχο) → ΕΝΑ φάντασμα μέσω του πραγματικού `ColumnRenderer` (λεπτομέρειες: ADR-398 §3.8). Διαγράφηκε ο RAF-direct schematic ghost (`ColumnGhostPreviewMount`/`useColumnGhostPreview`/`ColumnAnchorGhostRenderer`) και αφαιρέθηκε το `columnGhost(Preview)` prop από το micro-leaf chain (`CanvasSection`→`CanvasLayerStack`→`PreviewCanvasMounts`/leaves/types) + το `getGhostFootprints` από `useColumnTool`. **Καμία αλλαγή σε orchestrator subscription pattern / bitmap cache-key / scheduler** — μόνο διαγραφή ενός zero-jsx mount + ενός prop. **CHECK 6B/6D** (`CanvasSection.tsx`/`CanvasLayerStack.tsx` touch) → ADR-040 + ADR-398 staged. ✅ Google-level: YES — λιγότερος κώδικας, μία πηγή WYSIWYG, μηδέν νέα reactivity.

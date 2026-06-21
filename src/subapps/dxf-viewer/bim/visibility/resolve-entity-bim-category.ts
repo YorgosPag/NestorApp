@@ -28,7 +28,7 @@ const DIRECT_CATEGORY_TYPES = new Set<string>([
   'wall', 'column', 'beam', 'slab', 'slab-opening', 'opening', 'stair', 'roof',
   'foundation', 'railing', 'furniture', 'electrical-panel', 'mep-manifold',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor',
-  'floor-finish', 'thermal-space', 'space-separator',
+  'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',
 ]);
 
 /**

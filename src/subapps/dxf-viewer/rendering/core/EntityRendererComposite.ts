@@ -46,6 +46,8 @@ import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
 import { RoofRenderer } from '../../bim/renderers/RoofRenderer';
 // ADR-419 — floor finish leaf (thin polygon covering per room; hatch + fill).
 import { FloorFinishRenderer } from '../../bim/renderers/FloorFinishRenderer';
+import { WallCoveringRenderer } from '../../bim/renderers/WallCoveringRenderer';
+import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
 import { ThermalSpaceRenderer } from '../../bim/renderers/ThermalSpaceRenderer';
 import { SpaceSeparatorRenderer } from '../../bim/renderers/SpaceSeparatorRenderer';
 // ADR-410 — furniture leaf (mesh-based CC0 item; 2D footprint + glyph).
@@ -127,6 +129,8 @@ export class EntityRendererComposite {
     const roofRenderer = new RoofRenderer(this.ctx);
     // ADR-419 — floor finish renderer (thin polygon covering per room; hatch + fill).
     const floorFinishRenderer = new FloorFinishRenderer(this.ctx);
+    // ADR-511 — wall covering renderer (per-room/per-face finish strip on the wall face).
+    const wallCoveringRenderer = new WallCoveringRenderer(this.ctx);
     // ADR-422 — thermal space renderer (analytical IfcSpace; fill + dashed outline + tag).
     const thermalSpaceRenderer = new ThermalSpaceRenderer(this.ctx);
     // ADR-437 — space separator renderer (IfcVirtualElement; thin dashed violet line).
@@ -182,6 +186,7 @@ export class EntityRendererComposite {
     this.renderers.set('railing', railingRenderer);
     this.renderers.set('roof', roofRenderer);
     this.renderers.set('floor-finish', floorFinishRenderer);
+    this.renderers.set('wall-covering', wallCoveringRenderer);
     this.renderers.set('thermal-space', thermalSpaceRenderer);
     this.renderers.set('space-separator', spaceSeparatorRenderer);
     this.renderers.set('furniture', furnitureRenderer);
@@ -243,6 +248,18 @@ export class EntityRendererComposite {
     const wall = this.renderers.get('wall');
     if (wall instanceof WallRenderer) {
       wall.setOpeningsByWall(map);
+    }
+  }
+
+  /**
+   * ADR-511 — forward the per-frame wall index so the wall-covering renderer can
+   * resolve its host wall (O(1)) and compute the live face strip. No-op when the
+   * covering renderer is absent (defensive for partial test setups).
+   */
+  setWallsById(map: ReadonlyMap<string, WallCoveringHost>): void {
+    const wc = this.renderers.get('wall-covering');
+    if (wc instanceof WallCoveringRenderer) {
+      wc.setWallsById(map);
     }
   }
 

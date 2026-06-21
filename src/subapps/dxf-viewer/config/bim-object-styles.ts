@@ -107,6 +107,8 @@ export type BimCategory =
   | 'kitchen'
   // ADR-419 — per-room floor-finish covering (IfcCovering FLOORING, architectural).
   | 'floor-finish'
+  // ADR-511 — per-room/per-face wall covering (IfcCovering CLADDING/INTERIOR, architectural).
+  | 'wall-covering'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace, architectural overlay).
   | 'thermal-space'
   // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement, architectural overlay).
@@ -365,6 +367,7 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   kitchen:        { projectionPen: 3, cutPen: 3 },
   // ADR-419 — επικάλυψη δαπέδου ανά δωμάτιο: λεπτή γραμμή (IfcCovering FLOORING, interior hatch).
   'floor-finish': { projectionPen: 3, cutPen: 3 },
+  'wall-covering': { projectionPen: 3, cutPen: 3 },
   // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay, interior tag).
   'thermal-space': { projectionPen: 3, cutPen: 3 },
   // ADR-437 — διαχωριστής χώρου: λεπτή γραμμή (IfcVirtualElement boundary line).

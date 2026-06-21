@@ -16,7 +16,19 @@
 import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { WallCoveringParams } from '../../../bim/types/wall-covering-types';
 import { computeWallCoveringGeometry } from '../../../bim/types/wall-covering-types';
+import {
+  computeWallCoveringRenderGeometry,
+  type WallCoveringHost,
+} from '../../../bim/wall-coverings/wall-covering-strip-geometry';
 import { MergeableUpdateCommand } from './MergeableUpdateCommand';
+
+/** Narrow ένα SceneEntity σε WallCoveringHost (μόνο αν είναι τοίχος). */
+function asWallHost(e: SceneEntity | undefined): WallCoveringHost | null {
+  if (!e) return null;
+  const probe = e as { type?: string; id?: string };
+  if (probe.type !== 'wall' || typeof probe.id !== 'string') return null;
+  return e as unknown as WallCoveringHost;
+}
 
 export class UpdateWallCoveringParamsCommand extends MergeableUpdateCommand<WallCoveringParams> {
   readonly name = 'UpdateWallCoveringParams';
@@ -33,7 +45,11 @@ export class UpdateWallCoveringParamsCommand extends MergeableUpdateCommand<Wall
   }
 
   protected applyPatch(params: WallCoveringParams): void {
-    const geometry = computeWallCoveringGeometry(params);
+    // Live render bits (outline + bbox) από τον host τοίχο, ώστε selection/hit-test να έχουν
+    // ενημερωμένο στόχο μετά από κάθε edit. Ο 2D render παραμένει live ανεξάρτητα.
+    const host = asWallHost(this.sceneManager.getEntity(params.hostWallId));
+    const renderGeom = host ? computeWallCoveringRenderGeometry(host, params) : {};
+    const geometry = { ...computeWallCoveringGeometry(params), ...renderGeom };
     const validation = { hasCodeViolations: false, violationKeys: [] as string[], lastValidatedAt: null };
     this.sceneManager.updateEntity(this.entityId, {
       params,

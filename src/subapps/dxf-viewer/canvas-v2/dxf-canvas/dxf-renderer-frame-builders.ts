@@ -17,6 +17,7 @@ import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-buil
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
+import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
 // ADR-449 Slice X2 μέρος Β — το 2Δ τρέφεται από την ΙΔΙΑ merged-silhouette SSoT με το 3Δ.
@@ -64,6 +65,21 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
     const arr = m.get(o.params.wallId) ?? [];
     arr.push(o);
     m.set(o.params.wallId, arr);
+  }
+  return m;
+}
+
+/**
+ * ADR-511 — build per-frame Map<wallId, WallCoveringHost> so `WallCoveringRenderer`
+ * can resolve its host wall (O(1)) and compute the live face strip. `DxfWall`
+ * structurally satisfies `WallCoveringHost` (id + geometry + params.thickness).
+ */
+export function buildWallsById(entities: readonly DxfEntityUnion[]): Map<string, WallCoveringHost> {
+  const m = new Map<string, WallCoveringHost>();
+  for (const e of entities) {
+    if (e.type !== 'wall') continue;
+    const w = e as DxfWall;
+    m.set(w.id, w);
   }
   return m;
 }

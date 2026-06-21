@@ -12,26 +12,31 @@
  * Default ON (Giorgio: «πάντα ON, όπως το Revit») — defeatable from the
  * status-bar «AutoAlign» toggle.
  *
- * Keys: dxf:ambient.enabled, dxf:ambient.radiusMm
+ * Search radius is SCREEN-relative (Giorgio 2026-06-21: «zoom-adaptive») — a
+ * constant pixel radius the caller converts to world units via `1/scale`, so the
+ * "members near my cursor" feel stays constant at every zoom.
+ *
+ * Keys: dxf:ambient.enabled, dxf:ambient.radiusPx
  */
 
 const KEY_ENABLED = 'dxf:ambient.enabled';
-const KEY_RADIUS = 'dxf:ambient.radiusMm';
+const KEY_RADIUS = 'dxf:ambient.radiusPx';
 const DEFAULT_ENABLED = true;
-const DEFAULT_RADIUS_MM = 4000;
+const DEFAULT_RADIUS_PX = 400;
 const DEFAULT_MAX_MEMBERS = 6;
 
 type Listener = () => void;
 
 export interface AmbientConfigSnapshot {
   readonly enabled: boolean;
-  readonly radiusMm: number;
+  /** Screen-space search radius (px) — caller multiplies by `1/scale` → world units. */
+  readonly radiusPx: number;
   readonly maxMembers: number;
 }
 
 class AmbientAlignmentConfigStore {
   private _enabled = DEFAULT_ENABLED;
-  private _radiusMm = DEFAULT_RADIUS_MM;
+  private _radiusPx = DEFAULT_RADIUS_PX;
   private readonly _maxMembers = DEFAULT_MAX_MEMBERS;
   private readonly listeners = new Set<Listener>();
   private _cachedSnapshot: AmbientConfigSnapshot | null = null;
@@ -43,12 +48,12 @@ class AmbientAlignmentConfigStore {
     const savedRadius = localStorage.getItem(KEY_RADIUS);
     if (savedRadius !== null) {
       const parsed = parseFloat(savedRadius);
-      if (!isNaN(parsed) && parsed > 0) this._radiusMm = parsed;
+      if (!isNaN(parsed) && parsed > 0) this._radiusPx = parsed;
     }
   }
 
   get enabled(): boolean { return this._enabled; }
-  get radiusMm(): number { return this._radiusMm; }
+  get radiusPx(): number { return this._radiusPx; }
   get maxMembers(): number { return this._maxMembers; }
 
   setEnabled(enabled: boolean): void {
@@ -61,10 +66,10 @@ class AmbientAlignmentConfigStore {
     this.setEnabled(!this._enabled);
   }
 
-  setRadiusMm(radiusMm: number): void {
-    if (!(radiusMm > 0)) return;
-    this._radiusMm = radiusMm;
-    if (typeof window !== 'undefined') localStorage.setItem(KEY_RADIUS, String(radiusMm));
+  setRadiusPx(radiusPx: number): void {
+    if (!(radiusPx > 0)) return;
+    this._radiusPx = radiusPx;
+    if (typeof window !== 'undefined') localStorage.setItem(KEY_RADIUS, String(radiusPx));
     this.notify();
   }
 
@@ -73,7 +78,7 @@ class AmbientAlignmentConfigStore {
     if (!this._cachedSnapshot) {
       this._cachedSnapshot = {
         enabled: this._enabled,
-        radiusMm: this._radiusMm,
+        radiusPx: this._radiusPx,
         maxMembers: this._maxMembers,
       };
     }

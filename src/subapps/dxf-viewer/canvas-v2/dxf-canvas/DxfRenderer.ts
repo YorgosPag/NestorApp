@@ -30,7 +30,7 @@ import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, transparencyToAlpha } from './dxf-renderer-frame-builders';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
 import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
@@ -105,6 +105,9 @@ export class DxfRenderer {
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.
     this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
+    // ADR-511 — feed per-frame wall index so WallCoveringRenderer resolves its host
+    // wall and computes the live face strip (covering never stores a render polygon).
+    this.entityComposite.setWallsById(buildWallsById(scene.entities));
     // ADR-449 Slice X2 μέρος Β — ο σοβάς (2Δ finished outline) σχεδιάζεται πλέον ως
     // ΕΝΑ scene-level pass (`drawStructuralFinishSkin2D`, πριν το `ctx.restore()`), από την
     // ΙΔΙΑ merged-silhouette SSoT με το 3Δ — αντικαθιστά το παλιό per-element injection στους

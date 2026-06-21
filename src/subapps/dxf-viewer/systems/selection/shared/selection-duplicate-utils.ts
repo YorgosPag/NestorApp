@@ -239,6 +239,7 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'mep-water-heater': // ADR-408 DHW — domestic hot water heater point-based BIM, marquee select
     case 'mep-underfloor': // ADR-408 Εύρος Β #3 — underfloor heating area-based BIM, marquee select
     case 'floor-finish':  // ADR-419 — floor-finish polygon covering, marquee select
+    case 'wall-covering': // ADR-511 — wall-covering face strip (cached bbox), marquee select
     case 'roof':          // ADR-417 — parametric pitched roof, marquee select
     case 'foundation':    // ADR-436 — foundation (pad/strip/tie-beam), marquee select
       return calculateBimEntity2DBounds(entity as unknown as Entity);
