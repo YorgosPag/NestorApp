@@ -6,6 +6,8 @@ import {
   applyHatchGripDrag, decodeHatchVertexGripKind,
   applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBounds, hatchBoundsCenter,
   HATCH_GRADIENT_ORIGIN_KIND,
+  isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
+  HATCH_GRADIENT_ANGLE_KIND,
 } from '../hatch-grips';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { HatchGripKind } from '../../../hooks/grip-types';
@@ -121,5 +123,54 @@ describe('applyHatchOriginGripDrag', () => {
     const origin = { x: 10, y: 10 };
     applyHatchOriginGripDrag(origin, { delta: { x: 5, y: 5 } });
     expect(origin).toEqual({ x: 10, y: 10 });
+  });
+});
+
+// ── ADR-507 Φ5 A4 — gradient-angle βραχίονας ──────────────────────────────────
+
+describe('isHatchAngleGripKind', () => {
+  it('matches only the gradient-angle kind', () => {
+    expect(isHatchAngleGripKind(HATCH_GRADIENT_ANGLE_KIND)).toBe(true);
+    expect(isHatchAngleGripKind(HATCH_GRADIENT_ORIGIN_KIND)).toBe(false);
+    expect(isHatchAngleGripKind('hatch-vertex-0-0')).toBe(false);
+  });
+});
+
+describe('hatchGradientAngleGripPos', () => {
+  // OUTER = 1000×1000 → R = 0.5·hypot(1000,1000) ≈ 707.107.
+  const R = 0.5 * Math.hypot(1000, 1000);
+
+  it('places the handle along +X at angle 0', () => {
+    const pos = hatchGradientAngleGripPos({ x: 500, y: 500 }, 0, [OUTER]);
+    expect(pos?.x).toBeCloseTo(500 + R, 3);
+    expect(pos?.y).toBeCloseTo(500, 3);
+  });
+
+  it('places the handle along +Y at angle 90', () => {
+    const pos = hatchGradientAngleGripPos({ x: 500, y: 500 }, 90, [OUTER]);
+    expect(pos?.x).toBeCloseTo(500, 3);
+    expect(pos?.y).toBeCloseTo(500 + R, 3);
+  });
+
+  it('returns null on empty boundary (degenerate bbox)', () => {
+    expect(hatchGradientAngleGripPos({ x: 0, y: 0 }, 0, [])).toBeNull();
+  });
+});
+
+describe('applyHatchAngleGripDrag', () => {
+  const origin: Point2D = { x: 500, y: 500 };
+
+  it('maps cardinal cursor directions to [0,360) degrees', () => {
+    expect(applyHatchAngleGripDrag(origin, { x: 600, y: 500 })).toBeCloseTo(0, 6);
+    expect(applyHatchAngleGripDrag(origin, { x: 500, y: 600 })).toBeCloseTo(90, 6);
+    expect(applyHatchAngleGripDrag(origin, { x: 400, y: 500 })).toBeCloseTo(180, 6);
+    // -90° → normalized 270°.
+    expect(applyHatchAngleGripDrag(origin, { x: 500, y: 400 })).toBeCloseTo(270, 6);
+  });
+
+  it('does not mutate the input origin', () => {
+    const o = { x: 1, y: 2 };
+    applyHatchAngleGripDrag(o, { x: 5, y: 6 });
+    expect(o).toEqual({ x: 1, y: 2 });
   });
 });

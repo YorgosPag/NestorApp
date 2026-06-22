@@ -23,13 +23,16 @@ import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateFloorFinishParamsCommand } from '../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
 import { UpdateHatchBoundaryCommand } from '../../core/commands/entity-commands/UpdateHatchBoundaryCommand';
 import { UpdateHatchOriginCommand } from '../../core/commands/entity-commands/UpdateHatchOriginCommand';
+import { UpdateHatchGradientCommand } from '../../core/commands/entity-commands/UpdateHatchGradientCommand';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
 import {
   applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
+  isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
 } from '../../bim/hatch/hatch-grips';
+import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -242,6 +245,25 @@ export function commitHatchGripDrag(
     );
     if (originCommand.validate() !== null) return;
     deps.execute(originCommand);
+    return;
+  }
+  // ADR-507 Φ5 A4 — gradient-angle βραχίονας: περιστρέφει το gradient.angleDeg (mergeable
+  // drag → ΕΝΑ undo). Η νέα γωνία = atan2(anchor+delta − origin)· anchor = SSoT θέση λαβής.
+  if (isHatchAngleGripKind(grip.hatchGripKind)) {
+    const gradient = candidate.gradient;
+    if (!gradient) return;
+    const origin = candidate.patternOrigin ?? hatchBoundsCenter(candidate.boundaryPaths);
+    if (!origin) return;
+    const anchor = hatchGradientAngleGripPos(origin, gradient.angleDeg ?? 0, candidate.boundaryPaths);
+    if (!anchor) return;
+    const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y });
+    if (newAngle === (gradient.angleDeg ?? 0)) return;
+    const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
+    const angleCommand = new UpdateHatchGradientCommand(
+      grip.entityId, newGradient, gradient, sceneManager, true,
+    );
+    if (angleCommand.validate() !== null) return;
+    deps.execute(angleCommand);
     return;
   }
   const original = candidate.boundaryPaths;

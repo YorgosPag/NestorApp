@@ -10,7 +10,6 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { type DisplayUnit, fromDisplay } from '../../config/units';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import type { LockedField } from './DynamicInputLockStore';
 
 /** Κλειδιά πεδίων + TAB-order: Μήκος → Γωνία → Πάχος → Ύψος. */
 export type RingFieldKey = 'length' | 'angle' | 'thickness' | 'height';
@@ -118,9 +117,12 @@ export function nextRingField(current: RingFieldKey, shift: boolean): RingFieldK
   return RING_TAB_ORDER[(i + (shift ? len - 1 : 1)) % len];
 }
 
-/** True όταν το συγκεκριμένο πεδίο είναι το ενεργό lock (μόνο Μήκος/Γωνία κλειδώνουν). */
-export function isRingFieldLocked(key: RingFieldKey, locked: LockedField | null): boolean {
-  return (key === 'length' && locked === 'length') || (key === 'angle' && locked === 'angle');
+/**
+ * True όταν το Μήκος/Γωνία πεδίο είναι κλειδωμένο (dual lock — ανεξάρτητα, ADR-513).
+ * Πάχος/Ύψος κλειδώνουν ως overrides (ξεχωριστός έλεγχος στο component).
+ */
+export function isRingFieldLocked(key: RingFieldKey, lock: { length: number | null; angle: number | null }): boolean {
+  return (key === 'length' && lock.length !== null) || (key === 'angle' && lock.angle !== null);
 }
 
 /**

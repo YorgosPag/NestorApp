@@ -223,10 +223,14 @@ export type FloorFinishGripKind =
  *   - `hatch-gradient-origin` → drag the gradient origin/seed point (ADR-507 Φ5 A3·
  *     reuse `patternOrigin`· commit: `applyHatchOriginGripDrag()` +
  *     `UpdateHatchOriginCommand`). Εμφανίζεται ΜΟΝΟ όταν `fillType==='gradient'`.
+ *   - `hatch-gradient-angle` → drag τον βραχίονα που περιστρέφει τη φορά του gradient
+ *     (ADR-507 Φ5 A4· `gradient.angleDeg`· commit: `applyHatchAngleGripDrag()` +
+ *     `UpdateHatchGradientCommand`). Εμφανίζεται ΜΟΝΟ όταν `fillType==='gradient'`.
  */
 export type HatchGripKind =
   | `hatch-vertex-${number}-${number}`
-  | 'hatch-gradient-origin';
+  | 'hatch-gradient-origin'
+  | 'hatch-gradient-angle';
 
 /**
  * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam grip kind (parametric grip type).

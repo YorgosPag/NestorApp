@@ -50,7 +50,9 @@ import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import {
   applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
+  isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
 } from '../../bim/hatch/hatch-grips';
+import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import type { HatchEntity } from '../../types/entities';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
@@ -327,6 +329,19 @@ export function applyEntityPreview(
       if (!current) return entity;
       const patternOrigin = applyHatchOriginGripDrag(current, { delta });
       return { ...(entity as object), patternOrigin } as unknown as DxfEntityUnion;
+    }
+    // ADR-507 Φ5 A4 — gradient-angle βραχίονας: περιστρέφει το gradient.angleDeg (όχι όριο).
+    // Η live γωνία = atan2(anchor+delta − origin)· anchor = θέση της λαβής (SSoT pos fn).
+    if (isHatchAngleGripKind(hatchGripKind)) {
+      const gradient = hatch.gradient;
+      if (!gradient) return entity;
+      const origin = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths);
+      if (!origin) return entity;
+      const anchor = hatchGradientAngleGripPos(origin, gradient.angleDeg ?? 0, hatch.boundaryPaths);
+      if (!anchor) return entity;
+      const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y });
+      const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
+      return { ...(entity as object), gradient: newGradient } as unknown as DxfEntityUnion;
     }
     const newBoundaryPaths = applyHatchGripDrag(hatchGripKind, { originalBoundaryPaths: hatch.boundaryPaths, delta });
     if (newBoundaryPaths === hatch.boundaryPaths) return entity;

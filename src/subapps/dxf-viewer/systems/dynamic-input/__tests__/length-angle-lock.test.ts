@@ -66,4 +66,31 @@ describe('applyLengthAngleLock', () => {
       expect(out.y).toBeCloseTo(300); // 100 + 200 along +y
     });
   });
+
+  describe('ADR-513 dual independent locks', () => {
+    it('length + angle both set → endpoint fully fixed (start + polar)', () => {
+      DynamicInputLockStore.lockLength(100);
+      DynamicInputLockStore.lockAngle(0); // +x, 100
+      const out = applyLengthAngleLock({ x: 999, y: 999 }, REF); // cursor irrelevant
+      expect(out.x).toBeCloseTo(200); // 100 + 100
+      expect(out.y).toBeCloseTo(100);
+    });
+
+    it('locking angle does NOT clear a prior length lock (independent)', () => {
+      DynamicInputLockStore.lockLength(100);
+      DynamicInputLockStore.lockAngle(90);
+      const s = DynamicInputLockStore.getLocked();
+      expect(s.length).toBeCloseTo(100);
+      expect(s.angle).toBeCloseTo(90);
+    });
+
+    it('unlockLength keeps the angle lock', () => {
+      DynamicInputLockStore.lockLength(100);
+      DynamicInputLockStore.lockAngle(45);
+      DynamicInputLockStore.unlockLength();
+      const s = DynamicInputLockStore.getLocked();
+      expect(s.length).toBeNull();
+      expect(s.angle).toBeCloseTo(45);
+    });
+  });
 });

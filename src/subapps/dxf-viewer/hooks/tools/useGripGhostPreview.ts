@@ -58,7 +58,9 @@ import { isLineEntity } from '../../types/entities';
 import type { HatchEntity } from '../../types/entities';
 // ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
 // (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
-import { isHatchOriginGripKind, hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
+import {
+  isHatchOriginGripKind, isHatchAngleGripKind, hatchBoundsCenter, hatchGradientAngleGripPos,
+} from '../../bim/hatch/hatch-grips';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -315,11 +317,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawDimPill(ctx, [formatMoveAngle((Math.abs(segAngle) * 180) / Math.PI)], angleLabelS.x, angleLabelS.y);
     }
 
-    // ADR-507 Φ5 A3b — gradient-origin drag: η λαβή ακολουθεί τον κέρσορα. Σχεδιάζεται
-    // ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να μη
-    // «εξαφανίζεται» — το committed grip κρύβεται από το main canvas στο active drag.
+    // ADR-507 Φ5 A3b/A4 — gradient-origin/angle drag: η λαβή ακολουθεί τον κέρσορα.
+    // Σχεδιάζεται ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να
+    // μη «εξαφανίζεται» — το committed grip κρύβεται από το main canvas στο active drag.
     const isHatchOriginDrag =
       !!dragPreview.hatchGripKind && isHatchOriginGripKind(dragPreview.hatchGripKind) && entity.type === 'hatch';
+    const isHatchAngleDrag =
+      !!dragPreview.hatchGripKind && isHatchAngleGripKind(dragPreview.hatchGripKind) && entity.type === 'hatch';
 
     // applyEntityPreview returns the *same* reference for zero-delta or unsupported
     // types → skip the ghost overlay (avoids a redundant paint). The hatch-origin
@@ -350,12 +354,21 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       ctx.restore();
     }
 
-    // ADR-507 Φ5 A3b — το live origin handle marker LAST (πάνω από το gradient ghost). Η
-    // ζωντανή θέση = `patternOrigin` του preview entity (ή του committed σε zero-delta).
-    if (isHatchOriginDrag) {
+    // ADR-507 Φ5 A3b/A4 — live handle marker LAST (πάνω από το gradient ghost). Ζωντανή θέση
+    // από το preview entity (ή το committed σε zero-delta). Origin → τετράγωνο στο κέντρο·
+    // angle → δαχτυλίδι-βραχίονας (origin→handle dashed) + τετράγωνο στο άκρο = «περιστροφή».
+    if (isHatchOriginDrag || isHatchAngleDrag) {
       const live = (transformed !== entity ? transformed : entity) as unknown as HatchEntity;
       const originW = live.patternOrigin ?? hatchBoundsCenter(live.boundaryPaths ?? []);
-      if (originW) drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(originW, t, vp));
+      if (originW && isHatchOriginDrag) {
+        drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(originW, t, vp));
+      } else if (originW && isHatchAngleDrag) {
+        const handleW = hatchGradientAngleGripPos(originW, live.gradient?.angleDeg ?? 0, live.boundaryPaths ?? []);
+        if (handleW) {
+          drawDashedSegment(ctx, originW, handleW, t, vp);
+          drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(handleW, t, vp));
+        }
+      }
     }
   }, [dragPreview, getEntity, levelManager]);
 

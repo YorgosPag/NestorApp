@@ -68,7 +68,7 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 },
   ]];
 
-  it('emits the origin grip at bbox-center for a gradient hatch (no patternOrigin)', () => {
+  it('emits origin + angle grips for a gradient hatch (no patternOrigin)', () => {
     const hatch = {
       id: 'h1', type: 'hatch', boundaryPaths: SQUARE, fillType: 'gradient',
       gradient: { type: 'linear', color1: '#2980b9', color2: '#ffffff' },
@@ -77,16 +77,22 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     const origin = grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin');
     expect(origin).toBeDefined();
     expect(origin?.position).toEqual({ x: 500, y: 500 });
-    // 4 vertex grips + 1 origin.
-    expect(grips).toHaveLength(5);
+    // ADR-507 Φ5 A4 — angle βραχίονας: origin + R·(cos0,sin0), R = 0.5·hypot(1000,1000).
+    const angle = grips.find((g) => g.hatchGripKind === 'hatch-gradient-angle');
+    expect(angle).toBeDefined();
+    expect(angle?.position.x).toBeCloseTo(500 + 0.5 * Math.hypot(1000, 1000), 3);
+    expect(angle?.position.y).toBeCloseTo(500, 3);
+    // 4 vertex grips + origin + angle.
+    expect(grips).toHaveLength(6);
   });
 
-  it('does NOT emit the origin grip for a non-gradient (solid) hatch', () => {
+  it('does NOT emit gradient grips for a non-gradient (solid) hatch', () => {
     const hatch = {
       id: 'h2', type: 'hatch', boundaryPaths: SQUARE, fillType: 'solid',
     } as unknown as DxfEntityUnion;
     const grips = computeDxfEntityGrips(hatch);
     expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin')).toBeUndefined();
+    expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-angle')).toBeUndefined();
     expect(grips).toHaveLength(4);
   });
 });

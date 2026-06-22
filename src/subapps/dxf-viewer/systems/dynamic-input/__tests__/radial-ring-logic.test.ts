@@ -45,17 +45,25 @@ describe('nextRingField', () => {
   });
 });
 
-describe('isRingFieldLocked', () => {
-  it('highlights only the matching geometry field', () => {
-    expect(isRingFieldLocked('length', 'length')).toBe(true);
-    expect(isRingFieldLocked('angle', 'angle')).toBe(true);
+describe('isRingFieldLocked (dual independent locks)', () => {
+  it('length wedge locked iff length is set', () => {
+    expect(isRingFieldLocked('length', { length: 500, angle: null })).toBe(true);
+    expect(isRingFieldLocked('length', { length: null, angle: 90 })).toBe(false);
   });
-  it('never highlights thickness/height (override-driven, not lock)', () => {
-    expect(isRingFieldLocked('thickness', 'length')).toBe(false);
-    expect(isRingFieldLocked('height', 'angle')).toBe(false);
+  it('angle wedge locked iff angle is set', () => {
+    expect(isRingFieldLocked('angle', { length: null, angle: 90 })).toBe(true);
+    expect(isRingFieldLocked('angle', { length: 500, angle: null })).toBe(false);
   });
-  it('is false when nothing is locked', () => {
-    expect(isRingFieldLocked('length', null)).toBe(false);
+  it('both can be locked independently', () => {
+    expect(isRingFieldLocked('length', { length: 500, angle: 90 })).toBe(true);
+    expect(isRingFieldLocked('angle', { length: 500, angle: 90 })).toBe(true);
+  });
+  it('never highlights thickness/height (override-driven)', () => {
+    expect(isRingFieldLocked('thickness', { length: 500, angle: 90 })).toBe(false);
+    expect(isRingFieldLocked('height', { length: 500, angle: 90 })).toBe(false);
+  });
+  it('false when nothing is locked', () => {
+    expect(isRingFieldLocked('length', { length: null, angle: null })).toBe(false);
   });
 });
 

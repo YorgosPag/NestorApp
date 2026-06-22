@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
-import { hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
+import { hatchBoundsCenter, hatchGradientAngleGripPos } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -159,15 +159,22 @@ export class HatchRenderer extends BaseEntityRenderer {
     // ADR-507 Φ5 A3 — gradient origin/seed grip (ΟΡΑΤΟ· το interaction οδηγείται από
     // το computeDxfEntityGrips με `hatchGripKind`). Index = μετά τις κορυφές, ώστε να
     // αντιστοιχεί 1-προς-1 με την origin λαβή του computeDxfEntityGrips. Μόνο gradient.
-    // ADR-507 Φ5 A3b — όταν ΑΥΤΗ η λαβή σέρνεται (active), ΜΗΝ την εκπέμπεις: το main canvas
-    // δεν ξαναζωγραφίζεται κατά το drag (ADR-040) → θα έμενε «παγωμένη» στην παλιά θέση ενώ ο
-    // χρήστης την σέρνει. Το live marker την ακολουθεί στο preview canvas (`useGripGhostPreview`).
+    // ADR-507 Φ5 A3b/A4 — origin (gi) + angle (gi+1) λαβές. Όταν ΑΥΤΗ που σέρνεται είναι
+    // active, ΜΗΝ την εκπέμπεις: το main canvas δεν ξαναζωγραφίζεται κατά το drag (ADR-040)
+    // → θα έμενε «παγωμένη». Το live marker την ακολουθεί στο preview (`useGripGhostPreview`).
     if (hatch.fillType === 'gradient') {
       const active = this.gripInteraction.active;
-      const originIsBeingDragged = active?.entityId === entity.id && active.gripIndex === gi;
-      if (!originIsBeingDragged) {
-        const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
-        if (originPos) grips.push(createVertexGrip(entity.id, originPos, gi));
+      const originIdx = gi;
+      const angleIdx = gi + 1;
+      const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
+      if (originPos) {
+        const originActive = active?.entityId === entity.id && active.gripIndex === originIdx;
+        if (!originActive) grips.push(createVertexGrip(entity.id, originPos, originIdx));
+        const anglePos = hatchGradientAngleGripPos(originPos, hatch.gradient?.angleDeg ?? 0, hatch.boundaryPaths ?? []);
+        if (anglePos) {
+          const angleActive = active?.entityId === entity.id && active.gripIndex === angleIdx;
+          if (!angleActive) grips.push(createVertexGrip(entity.id, anglePos, angleIdx));
+        }
       }
     }
     return grips;

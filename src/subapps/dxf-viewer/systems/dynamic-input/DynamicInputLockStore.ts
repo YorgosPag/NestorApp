@@ -1,53 +1,84 @@
-// ADR-357 Phase 13 — G14 Length/Angle Locking.
+// ADR-357 Phase 13 — G14 Length/Angle Locking · ADR-513 — dual independent locks.
 // Singleton zero-React SSoT. Pattern: TrackingPointStore / HoverStore.
-// Ctrl+L locks length; Ctrl+A locks angle. Same shortcut or 🔒 click unlocks.
+//
+// ADR-513: το **μήκος ΚΑΙ η γωνία κλειδώνουν ΑΝΕΞΑΡΤΗΤΑ** (όχι αμοιβαία αποκλειόμενα όπως πριν) —
+// ο χρήστης του «Δαχτυλιδιού Εντολών» κλειδώνει ό,τι θέλει, χωρίς να χάνει το άλλο. Για συμβατότητα
+// με τους υπάρχοντες readers (γραμμικό Dynamic Input Ctrl+L/Ctrl+A) εκθέτουμε ΚΑΙ τα derived
+// `lockedField`/`lockedValue` (length-priority). Ctrl+L locks length· Ctrl+A locks angle.
 
 export type LockedField = 'length' | 'angle';
 
 export interface LockState {
-  lockedField: LockedField | null;
-  lockedValue: number | null;
+  /** mm/scene-units μήκος (locked) ή null. */
+  readonly length: number | null;
+  /** μοίρες γωνία (locked) ή null. */
+  readonly angle: number | null;
+  /** Derived (legacy single-field readers): length-priority. */
+  readonly lockedField: LockedField | null;
+  readonly lockedValue: number | null;
 }
 
-const INITIAL: LockState = { lockedField: null, lockedValue: null };
-
-let _state: LockState = INITIAL;
-let _snapshot: LockState = INITIAL;
+let _length: number | null = null;
+let _angle: number | null = null;
+let _snapshot: LockState = derive();
 const _subs = new Set<() => void>();
 
+function derive(): LockState {
+  const lockedField: LockedField | null = _length !== null ? 'length' : _angle !== null ? 'angle' : null;
+  const lockedValue = _length !== null ? _length : _angle;
+  return { length: _length, angle: _angle, lockedField, lockedValue };
+}
+
 function _notify(): void {
-  _snapshot = { ..._state };
+  _snapshot = derive();
   _subs.forEach(cb => cb());
 }
 
 export const DynamicInputLockStore = {
   lockLength(value: number): void {
-    _state = { lockedField: 'length', lockedValue: value };
+    _length = value;
     _notify();
   },
 
   lockAngle(value: number): void {
-    _state = { lockedField: 'angle', lockedValue: value };
+    _angle = value;
     _notify();
   },
 
+  /** Ξεκλείδωμα ΜΟΝΟ του μήκους (το angle μένει). */
+  unlockLength(): void {
+    if (_length === null) return;
+    _length = null;
+    _notify();
+  },
+
+  /** Ξεκλείδωμα ΜΟΝΟ της γωνίας (το length μένει). */
+  unlockAngle(): void {
+    if (_angle === null) return;
+    _angle = null;
+    _notify();
+  },
+
+  /** Ξεκλείδωμα ΚΑΙ των δύο. */
   unlock(): void {
-    _state = INITIAL;
+    if (_length === null && _angle === null) return;
+    _length = null;
+    _angle = null;
     _notify();
   },
 
+  /** Toggle ανεξάρτητα ανά πεδίο (ΔΕΝ καθαρίζει το άλλο) — Ctrl+L / Ctrl+A. */
   toggle(field: LockedField, value: number): void {
-    if (_state.lockedField === field) {
-      DynamicInputLockStore.unlock();
-    } else if (field === 'length') {
-      DynamicInputLockStore.lockLength(value);
+    if (field === 'length') {
+      _length = _length !== null ? null : value;
     } else {
-      DynamicInputLockStore.lockAngle(value);
+      _angle = _angle !== null ? null : value;
     }
+    _notify();
   },
 
   getLocked(): LockState {
-    return _state;
+    return _snapshot;
   },
 
   subscribe(cb: () => void): () => void {

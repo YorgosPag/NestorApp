@@ -24,6 +24,9 @@ const VERTEX_PREFIX = 'hatch-vertex-';
 /** Grip kind για το gradient origin/seed (ADR-507 Φ5 A3). */
 export const HATCH_GRADIENT_ORIGIN_KIND = 'hatch-gradient-origin' as const;
 
+/** Grip kind για τον gradient-angle βραχίονα (ADR-507 Φ5 A4). */
+export const HATCH_GRADIENT_ANGLE_KIND = 'hatch-gradient-angle' as const;
+
 export interface HatchGripDragInput {
   readonly originalBoundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>;
   readonly delta: Point2D;
@@ -33,6 +36,11 @@ export interface HatchGripDragInput {
 /** True όταν το grip kind είναι το gradient origin (όχι boundary vertex). */
 export function isHatchOriginGripKind(gripKind: HatchGripKind): boolean {
   return gripKind === HATCH_GRADIENT_ORIGIN_KIND;
+}
+
+/** True όταν το grip kind είναι ο gradient-angle βραχίονας (ADR-507 Φ5 A4). */
+export function isHatchAngleGripKind(gripKind: HatchGripKind): boolean {
+  return gripKind === HATCH_GRADIENT_ANGLE_KIND;
 }
 
 /** Axis-aligned bounding box των boundaryPaths· `null` σε κενό όριο. */
@@ -82,6 +90,44 @@ export function applyHatchOriginGripDrag(
 ): Point2D {
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
   return { x: originalOrigin.x + delta.x, y: originalOrigin.y + delta.y };
+}
+
+/**
+ * Ακτίνα (world) του gradient-angle βραχίονα = μισή διαγώνιος του bbox. Ανεξάρτητη από
+ * τύπο gradient (linear/radial) — ο βραχίονας δηλώνει ΦΟΡΑ, όχι έκταση → ίδιος κανόνας
+ * για όλους. Καθαρή ποσότητα (όχι το linear `half` του fillGradient → μηδέν διπλότυπο).
+ */
+function hatchGradientArmRadius(b: HatchBounds): number {
+  return 0.5 * Math.hypot(b.maxX - b.minX, b.maxY - b.minY);
+}
+
+/**
+ * Θέση (world) της gradient-angle λαβής: `origin + R·(cosθ, sinθ)` όπου θ=`angleDeg`
+ * (world convention, ίδιο με `fillGradient`) και R = `hatchGradientArmRadius`. `null` σε
+ * εκφυλισμένο bbox. ΜΙΑ SSoT θέση — μοιράζεται DISPLAY (`HatchRenderer.getGrips`) +
+ * INTERACTION (`computeDxfEntityGrips`) + drag math (anchor = αυτή η θέση).
+ */
+export function hatchGradientAngleGripPos(
+  origin: Point2D,
+  angleDeg: number,
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): Point2D | null {
+  const b = hatchBounds(boundaryPaths);
+  if (!b) return null;
+  const R = hatchGradientArmRadius(b);
+  if (!(R > 0)) return null;
+  const r = (angleDeg * Math.PI) / 180;
+  return { x: origin.x + Math.cos(r) * R, y: origin.y + Math.sin(r) * R };
+}
+
+/**
+ * Pure transform: gradient origin + ΖΩΝΤΑΝΗ θέση λαβής (cursor world = anchor + delta) →
+ * νέα γωνία σε **μοίρες** [0,360). `atan2` σε WORLD coords (η `angleDeg` είναι world
+ * convention όπως ο `fillGradient`) → μηδέν canvas-Y σύγχυση. Δεν μεταλλάσσει το input.
+ */
+export function applyHatchAngleGripDrag(origin: Point2D, cursorWorld: Point2D): number {
+  const deg = (Math.atan2(cursorWorld.y - origin.y, cursorWorld.x - origin.x) * 180) / Math.PI;
+  return ((deg % 360) + 360) % 360;
 }
 
 /** Decode `hatch-vertex-${pathIdx}-${vertexIdx}` → `[pathIdx, vertexIdx]` or `null`. */

@@ -54,7 +54,10 @@ import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
 import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
-import { hatchBoundsCenter, HATCH_GRADIENT_ORIGIN_KIND } from '../bim/hatch/hatch-grips';
+import {
+  hatchBoundsCenter, hatchGradientAngleGripPos,
+  HATCH_GRADIENT_ORIGIN_KIND, HATCH_GRADIENT_ANGLE_KIND,
+} from '../bim/hatch/hatch-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -398,6 +401,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>;
         fillType?: string;
         patternOrigin?: { x: number; y: number };
+        gradient?: { angleDeg?: number };
       };
       const hatchLike = entity as unknown as HatchLike;
       const paths = hatchLike.boundaryPaths ?? [];
@@ -424,6 +428,18 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
             hatchGripKind: HATCH_GRADIENT_ORIGIN_KIND,
           });
           gripIndex += 1;
+          // ADR-507 Φ5 A4 — gradient-angle βραχίονας (μετά το origin). Θέση = origin +
+          // R·(cosθ,sinθ) μέσω του SSoT `hatchGradientAngleGripPos`. Commit →
+          // applyHatchAngleGripDrag + UpdateHatchGradientCommand (περιστρέφει angleDeg).
+          const anglePos = hatchGradientAngleGripPos(originPos, hatchLike.gradient?.angleDeg ?? 0, paths);
+          if (anglePos) {
+            grips.push({
+              entityId: entity.id, gripIndex, type: 'vertex',
+              position: { x: anglePos.x, y: anglePos.y }, movesEntity: false,
+              hatchGripKind: HATCH_GRADIENT_ANGLE_KIND,
+            });
+            gripIndex += 1;
+          }
         }
       }
       break;

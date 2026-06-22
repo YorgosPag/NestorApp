@@ -25,7 +25,7 @@ import { portalComponents } from '@/styles/design-tokens';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { type DisplayUnit, fromDisplay, formatDisplayValue } from '../../../config/units';
 import { useDisplayUnit } from '../../../hooks/common/useDisplayUnit';
-import { type SceneUnits } from '../../../utils/scene-units';
+import { type SceneUnits, mmToSceneUnits } from '../../../utils/scene-units';
 import type { Point2D } from '../../../rendering/types/Types';
 import { setCrosshairSuppressed } from '../../cursor/CrosshairSuppressionStore';
 import { useEscapeHandler, ESC_PRIORITY } from '../../escape-bus';
@@ -68,12 +68,21 @@ function currentOverrides(): WallParamOverrides {
   return wallToolBridgeStore.get()?.overrides ?? wallPreviewStore.get().overrides;
 }
 
-/** Αρχική τιμή popup: Πάχος/Ύψος από overrides· Μήκος/Γωνία = κενό (ο χρήστης τυπώνει ακριβή τιμή). */
-function seedValue(key: RingFieldKey, unit: DisplayUnit): string {
+/**
+ * Αρχική τιμή popup (re-open δείχνει την κλειδωμένη τιμή — «κλειδώνουν οι τιμές»):
+ *   · Πάχος/Ύψος ← overrides· · Μήκος/Γωνία ← τρέχον lock (αν κλειδωμένο), αλλιώς κενό.
+ */
+function seedValue(
+  key: RingFieldKey,
+  unit: DisplayUnit,
+  sceneUnits: SceneUnits,
+  lock: { length: number | null; angle: number | null },
+): string {
   const ov = currentOverrides();
   if (key === 'thickness') return formatDisplayValue(resolveWallThicknessMm(ov), unit);
   if (key === 'height') return formatDisplayValue(resolveStoreyHeightMm(ov.height, DEFAULT_WALL_HEIGHT_MM), unit);
-  return '';
+  if (key === 'length') return lock.length !== null ? formatDisplayValue(lock.length / mmToSceneUnits(sceneUnits), unit) : '';
+  return lock.angle !== null ? lock.angle.toFixed(2) : ''; // angle
 }
 
 export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React.ReactElement | null {
@@ -88,6 +97,8 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
   const centerRef = useRef<Point2D | null>(null);
   const prevCursorRef = useRef<Point2D | null>(null);
   const cursorRef = useRef<Point2D | null>(null);
+  const zoneRef = useRef<CursorZone>('inside');
+  const popupRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState<Point2D | null>(null);
   const [center, setCenter] = useState<Point2D | null>(null);
   const [zone, setZone] = useState<CursorZone>('inside');
@@ -137,22 +148,52 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
     const z = cursorZone(d);
     const next = advanceWheelCenter(c, prev, cursor, z);
     if (next.x !== c.x || next.y !== c.y) { centerRef.current = next; setCenter(next); }
+    zoneRef.current = z;
     setZone(z);
     setHovered(z === 'inside'
       ? wedgeAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI)
       : null);
     setCrosshairSuppressed(z === 'inside');
+    // Πάνω στα πλήκτρα: βελάκι αντί crosshair (το σταυρόνημα είναι ήδη κρυμμένο).
+    document.body.style.cursor = z === 'inside' ? 'default' : '';
     prevCursorRef.current = { x: cursor.x, y: cursor.y };
   }, [cursor]);
 
-  // Καθάρισε το crosshair-suppression όταν φεύγει το δαχτυλίδι (tool end / phase change).
-  useEffect(() => () => setCrosshairSuppressed(false), []);
+  // Καθάρισε crosshair-suppression + body cursor όταν φεύγει το δαχτυλίδι (tool end / phase change).
+  useEffect(() => () => { setCrosshairSuppressed(false); document.body.style.cursor = ''; }, []);
 
   const openWedge = useCallback((key: RingFieldKey) => {
     setOpenField(key);
-    setDraft(seedValue(key, displayUnit));
+    setDraft(seedValue(key, displayUnit, sceneUnits, DynamicInputLockStore.getLocked()));
     setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
-  }, [displayUnit]);
+  }, [displayUnit, sceneUnits]);
+
+  // ADR-513 — Όσο ο κέρσορας είναι ΠΑΝΩ στα πλήκτρα (inside) τα wedges είναι `pointer-events-none`
+  // (ώστε ο ΤΟΙΧΟΣ να ΣΥΝΕΧΙΖΕΙ να επεκτείνεται — ο καμβάς δέχεται mousemove). Άρα το κλικ στο
+  // πλήκτρο το πιάνουμε εδώ (window capture): ανοίγουμε το πεδίο ΚΑΙ μπλοκάρουμε το commit τοίχου.
+  // Κλικ έξω από τα πλήκτρα (annulus) → περνά κανονικά στον καμβά = commit.
+  useEffect(() => {
+    const intercept = (e: MouseEvent) => {
+      if (popupRef.current?.contains(e.target as Node)) return; // popup input: άφησέ το
+      const c = centerRef.current;
+      const cur = cursorRef.current;
+      if (!c || !cur) return;
+      const d = Math.hypot(cur.x - c.x, cur.y - c.y);
+      if (cursorZone(d) !== 'inside') return; // annulus/outside → άφησε το commit
+      if (e.type === 'mousedown') {
+        openWedge(wedgeAtAngle((Math.atan2(cur.y - c.y, cur.x - c.x) * 180) / Math.PI));
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    };
+    window.addEventListener('mousedown', intercept, true);
+    window.addEventListener('click', intercept, true);
+    return () => {
+      window.removeEventListener('mousedown', intercept, true);
+      window.removeEventListener('click', intercept, true);
+    };
+  }, [openWedge]);
 
   const commitOpen = useCallback(() => {
     if (!openField) return;
@@ -198,14 +239,18 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
   return (
     <section
       aria-label={t('tools.wall.ringLabel')}
-      className={`fixed -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${colors.text.info}`}
+      className={`fixed -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${colors.text.WHITE}`}
       style={boxStyle(center.x, center.y, box)}
     >
       {showWedges && (
-        <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} className={`absolute ${PANEL_LAYOUT.INSET['0']}`}>
+        <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}>
           {RING_TAB_ORDER.map((key) => {
             const { a0, a1 } = WEDGE_ANGLES[key];
-            const active = hovered === key || openField === key || isRingFieldLocked(key, lock.lockedField);
+            const ov = currentOverrides();
+            const lockedActive = isRingFieldLocked(key, lock)
+              || (key === 'thickness' && ov.thickness !== undefined)
+              || (key === 'height' && ov.height !== undefined);
+            const active = hovered === key || openField === key || lockedActive;
             return (
               <path
                 key={key}
@@ -215,8 +260,7 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
                 stroke="currentColor"
                 strokeOpacity={0.5}
                 strokeWidth={0.75}
-                className={`${PANEL_LAYOUT.POINTER_EVENTS.AUTO} ${PANEL_LAYOUT.CURSOR.DEFAULT}`}
-                onClick={(e) => { e.stopPropagation(); openWedge(key); }}
+                className={PANEL_LAYOUT.POINTER_EVENTS.NONE}
               />
             );
           })}
@@ -242,6 +286,7 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
 
       {openField && popupAnchor && (
         <div
+          ref={popupRef}
           className={`absolute -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
           style={anchorStyle(popupAnchor.x, popupAnchor.y)}
         >

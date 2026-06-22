@@ -224,7 +224,7 @@ export function useGripContextMenuController(
         if (!targetGrip.entityId || !lm.currentLevelId) return;
         const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
         const cmd = buildPolylineVertexOpCommand(targetGrip, op, adapter);
-        if (cmd && cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
+        if (cmd && (cmd.validate?.() ?? null) === null) getGlobalCommandHistory().execute(cmd);
       };
 
       for (const sectionMeta of sectionsMeta) {

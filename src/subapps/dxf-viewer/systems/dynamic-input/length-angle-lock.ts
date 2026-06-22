@@ -37,20 +37,23 @@ export function applyLengthAngleLock(
   ref: Readonly<Point2D> | null | undefined,
 ): Point2D {
   if (!ref) return { x: point.x, y: point.y };
-  const { lockedField, lockedValue } = DynamicInputLockStore.getLocked();
-  if (!lockedField || lockedValue === null) return { x: point.x, y: point.y };
+  // ADR-513 — dual independent locks: εφαρμόζονται ΚΑΙ τα δύο αν είναι ενεργά.
+  const { length, angle } = DynamicInputLockStore.getLocked();
+  if (length === null && angle === null) return { x: point.x, y: point.y };
 
   const dx = point.x - ref.x;
   const dy = point.y - ref.y;
   const dist = Math.hypot(dx, dy);
 
-  if (lockedField === 'length') {
+  // Μήκος-μόνο: κράτα την κατεύθυνση, κλείδωσε την απόσταση.
+  if (length !== null && angle === null) {
     if (dist <= MIN_LOCK_DIST) return { x: point.x, y: point.y };
-    const scale = lockedValue / dist;
+    const scale = length / dist;
     return { x: ref.x + dx * scale, y: ref.y + dy * scale };
   }
 
-  // angle lock — διατήρησε την τρέχουσα απόσταση, κλείδωσε τη γωνία.
-  const rad = degToRad(lockedValue);
-  return { x: ref.x + dist * Math.cos(rad), y: ref.y + dist * Math.sin(rad) };
+  // Γωνία εμπλέκεται (μόνη της ή μαζί με μήκος): target γωνία = locked· target απόσταση = locked ή τρέχουσα.
+  const rad = degToRad(angle ?? 0);
+  const r = length !== null ? length : dist;
+  return { x: ref.x + r * Math.cos(rad), y: ref.y + r * Math.sin(rad) };
 }
