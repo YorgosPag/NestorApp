@@ -33,6 +33,14 @@ let status: ColumnGhostStatus = 'neutral';
  */
 let faceAnchor: ColumnAnchor | null = null;
 
+/**
+ * ADR-398 §3.10b — γωνία (μοίρες) στην οποία στρέφεται η face-snapped κολώνα ώστε να γίνει flush
+ * με **λοξή** ακμή/παρειά (0 για axis-aligned). `null` = καμία face-snap. Γράφεται από τον
+ * `mouse-handler-up` (commit) — διαβάζεται από το `useColumnTool` 1ο κλικ (face-snapped →
+ * single-click commit ευθυγραμμισμένο, αντί place+rotate).
+ */
+let faceRotation: number | null = null;
+
 /** Write — από τον `mouse-handler-up` στο commit (click-time face-snap result). */
 export function setColumnGhostStatus(next: ColumnGhostStatus): void {
   status = next;
@@ -53,8 +61,19 @@ export function getColumnFaceAnchor(): ColumnAnchor | null {
   return faceAnchor;
 }
 
-/** Clear — reset σε `neutral` + καμία face λαβή (έξοδος από snappable mode / cleanup). */
+/** Write — face-snap rotation (`null` όταν δεν υπάρχει face-snap). */
+export function setColumnFaceRotation(next: number | null): void {
+  faceRotation = next;
+}
+
+/** Read — imperatively στο `useColumnTool` 1ο κλικ (flush-to-edge rotation). */
+export function getColumnFaceRotation(): number | null {
+  return faceRotation;
+}
+
+/** Clear — reset σε `neutral` + καμία face λαβή/rotation (έξοδος από snappable mode / cleanup). */
 export function clearColumnGhostStatus(): void {
   status = 'neutral';
   faceAnchor = null;
+  faceRotation = null;
 }

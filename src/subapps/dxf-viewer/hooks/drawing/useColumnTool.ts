@@ -49,6 +49,7 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import {
   getColumnGhostStatus,
   getColumnFaceAnchor,
+  getColumnFaceRotation,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import {
   setColumnRotationLock,
@@ -196,16 +197,12 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // ── scene snap targets sync (ADR-398 §3.10 — mirror useWallTool/useBeamTool) ──
   // Pre-collect κολόνες/δοκάρια/τοίχοι/πλάκες στο `columnPreviewStore` ΠΡΙΝ το 1ο κλικ, ώστε
   // το ghost-before-click face-snap (+ commit) να υπολογίζεται σύγχρονα με έτοιμους στόχους.
-  const syncSceneTargetsToStore = useCallback(() => {
-    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
-  }, []);
-
-  // Re-sync όταν δημιουργείται οντότητα — SSoT hook (rAF defer), κοινό με τοίχο/δοκάρι.
-  useSceneSnapTargetSync(syncSceneTargetsToStore);
+  // Re-sync στόχων on entity-created (rAF) + refresh on activate — SSoT hook, κοινό με τοίχο/δοκάρι.
+  const refreshSnapTargets = useSceneSnapTargetSync(() => getSceneEntitiesRef.current?.() ?? []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
-    syncSceneTargetsToStore(); // στόχοι έτοιμοι πριν το 1ο ghost frame
+    refreshSnapTargets(); // στόχοι έτοιμοι πριν το 1ο ghost frame
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -216,7 +213,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       overrides: prev.overrides,
       phase: 'awaitingPosition',
     }));
-  }, [syncSceneTargetsToStore]);
+  }, [refreshSnapTargets]);
 
   const setKind = useCallback((kind: ColumnKind) => {
     setState((prev) => ({
@@ -389,13 +386,17 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       if (s.placementMode === 'in-region') {
         return onRegionClick(s, point);
       }
-      // ADR-508 §column place+rotate — freehand 2-click (παριότητα με τοίχο/δοκάρι):
-      //   1ο κλικ (awaitingPosition) → ΚΛΕΙΔΩΣΕ θέση + auto anchor (face-snap precedence ≡ ghost)
-      //   → awaitingRotation (ΟΧΙ commit ακόμη).
+      // ADR-508 §column place+rotate / ADR-398 §3.10b — freehand 1ο κλικ (awaitingPosition):
       if (s.phase === 'awaitingPosition') {
         const faceAnchor = getColumnFaceAnchor();
-        const anchor: ColumnAnchor =
-          faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
+        // ADR-398 §3.10b — face-snapped κολώνα είναι ΗΔΗ ευθυγραμμισμένη (anchor + flush rotation,
+        // incl. ΛΟΞΗ ακμή πλάκας): commit ΑΠΕΥΘΕΙΑΣ στο 1ο κλικ (single-click, Revit-grade, preview
+        // ≡ commit). Το place+rotate (2-click) μένει ΜΟΝΟ για ΕΛΕΥΘΕΡΗ τοποθέτηση (καμία face-snap).
+        if (faceAnchor !== null) {
+          return commitColumnAt(s, point, faceAnchor, getColumnFaceRotation() ?? 0);
+        }
+        //   ΕΛΕΥΘΕΡΗ: ΚΛΕΙΔΩΣΕ θέση + anchor → awaitingRotation (2ο κλικ ορίζει γωνία).
+        const anchor: ColumnAnchor = getColumnGhostStatus() === 'beam' ? 'center' : s.anchor;
         setColumnRotationLock(point, anchor);
         setState({ ...s, phase: 'awaitingRotation', error: null });
         return false;

@@ -76,6 +76,13 @@ export interface ColumnFaceSnap {
   readonly anchor: ColumnAnchor;
   /** 🟢 `beam` (έγκυρο κούμπωμα) / 🔴 `overlap` (κοντή άκρη δοκαριού). */
   readonly status: ColumnGhostStatus;
+  /**
+   * ADR-398 §3.10b — γωνία (μοίρες, world) στην οποία πρέπει να στραφεί η κολώνα ώστε να
+   * ευθυγραμμιστεί **flush** με την παρειά/ακμή στόχου. `0` για axis-aligned στόχους (footprint
+   * bbox / οριζόντια-κάθετη ακμή — μηδέν regression)· = γωνία **λοξής** ακμής πλάκας ώστε το
+   * φάντασμα να ακολουθεί τη λοξάδα (αντί να μένει πάντα ορθό).
+   */
+  readonly rotation: number;
   /** id στόχου (δοκάρι· `null` για κολόνα-στόχο — τα footprints δεν φέρουν id). */
   readonly targetId: string | null;
   readonly face: ColumnFaceSide;
@@ -228,6 +235,7 @@ function resolveWallAxisCenter(cursor: Readonly<Point2D>, t: FaceTarget): Column
   return {
     position,
     anchor: 'center',
+    rotation: 0, // center-on-axis → η κολώνα μένει ορθή (§3.9· δεν περιστρέφεται)
     status: 'beam',
     targetId: t.id,
     face: pickDominantFace(cursor, t.bounds),
@@ -257,13 +265,13 @@ function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget): ColumnFaceS
     const third = pickThird(along, minX, maxX);
     const y = face === 'N' ? maxY : minY;
     const position: Point2D = { x: along, y };
-    return { position, anchor: anchorForHorizontalFace(face, third), status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
+    return { position, anchor: anchorForHorizontalFace(face, third), rotation: 0, status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
   }
   const along = clamp(cursor.y, minY, maxY);
   const third = pickThird(along, minY, maxY);
   const x = face === 'E' ? maxX : minX;
   const position: Point2D = { x, y: along };
-  return { position, anchor: anchorForVerticalFace(face, third), status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
+  return { position, anchor: anchorForVerticalFace(face, third), rotation: 0, status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
 }
 
 /**
@@ -288,19 +296,36 @@ function resolveColumnSlabEdgeSnap(
   });
   if (!r || !r.faceFrame) return null;
   const ff = r.faceFrame;
+  const AXIS_EPS = 1e-6;
   const horizontal = Math.abs(ff.axisDir.x) >= Math.abs(ff.axisDir.y);
   const outwardY = ff.outwardSign * ff.perpDir.y;
   const outwardX = ff.outwardSign * ff.perpDir.x;
+  // Πλησιέστερη axis παρειά (για status/metadata· ΚΑΙ για geometry όταν η ακμή είναι axis-aligned).
   const face: ColumnFaceSide = horizontal
     ? (outwardY >= 0 ? 'N' : 'S')
     : (outwardX >= 0 ? 'E' : 'W');
   const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
-  const anchor = face === 'N' || face === 'S'
-    ? anchorForHorizontalFace(face, third)
-    : anchorForVerticalFace(face, third);
+  // ADR-398 §3.10b — ΛΟΞΗ ακμή (και τα δύο axis components μη-μηδενικά): η κολώνα **στρέφεται**
+  // ώστε η παρειά της να γίνει flush με την ακμή (αντί να μένει πάντα ορθή). Το πλάτος τρέχει κατά
+  // μήκος της ακμής (local +X ≡ axisDir)· το σώμα προεξέχει προς τα έξω (outwardSign·perpDir) →
+  // anchor στην εσωτερική παρειά (n-family αν outwardSign>0, αλλιώς s-family· corner ανά third).
+  // Axis-aligned ακμή → rotation 0 + το υπάρχον N/S/E/W anchor (μηδέν regression).
+  const axisAligned = Math.abs(ff.axisDir.x) < AXIS_EPS || Math.abs(ff.axisDir.y) < AXIS_EPS;
+  let anchor: ColumnAnchor;
+  let rotation: number;
+  if (axisAligned) {
+    anchor = face === 'N' || face === 'S' ? anchorForHorizontalFace(face, third) : anchorForVerticalFace(face, third);
+    rotation = 0;
+  } else {
+    rotation = (Math.atan2(ff.axisDir.y, ff.axisDir.x) * 180) / Math.PI;
+    anchor = ff.outwardSign > 0
+      ? (third === 'lo' ? 'nw' : third === 'hi' ? 'ne' : 'n')
+      : (third === 'lo' ? 'sw' : third === 'hi' ? 'se' : 's');
+  }
   const snap: ColumnFaceSnap = {
     position: r.start,
     anchor,
+    rotation,
     status: r.status === 'overlap' ? 'overlap' : 'beam',
     targetId: null,
     face,

@@ -144,27 +144,10 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     return () => beamPreviewStore.reset();
   }, []);
 
-  // ADR-458 (2026-06-17) — κατέγραψε τα column footprints της σκηνής στο preview
-  // store ώστε το WYSIWYG rubber-band να εφαρμόζει το ΙΔΙΟ beam-to-column cutback
-  // (frame-into) με το committed δοκάρι. ADR-398 §Smart beam ghost (2026-06-20):
-  // καλείται ΚΑΙ στο activate, ώστε το ghost-before-click face-snap (resolver) να
-  // έχει τις κολόνες πριν καν το 1ο κλικ. Οι κολόνες αλλάζουν σπάνια στη διάρκεια
-  // ενός placement.
-  const syncSceneTargetsToStore = useCallback(() => {
-    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
-  }, []);
-
-  // ADR-398 §3.6 — re-sync όταν δημιουργείται οντότητα (π.χ. μόλις σχεδιάστηκε δοκάρι).
-  // Χωρίς αυτό, η λίστα στόχων ανανεωνόταν ΜΟΝΟ στο κλικ → ένα δοκάρι που μόλις έφτιαξες
-  // ΔΕΝ το «έβλεπε» το ghost-before-click του επόμενου → εφεδρικό (ομοαξονικό κίτρινο) ghost.
-  //
-  // **rAF defer (κρίσιμο):** το `drawing:entity-created` εκπέμπεται ΣΥΓΧΡΟΝΑ μέσα στο
-  // `appendEntityToScene` αμέσως μετά το `setLevelScene` → το React scene state ΔΕΝ έχει
-  // commit-αριστεί ακόμη· σύγχρονο re-sync θα διάβαζε τη STALE σκηνή (χωρίς το νέο δοκάρι).
-  // Το rAF τρέχει μετά το commit → η σκηνή περιέχει πλέον το νέο δοκάρι → targets φρέσκα
-  // ΠΡΙΝ το επόμενο hover (όχι μόνο στο κλικ — που γι' αυτό «κόκκινο μόνο μετά το κλικ»).
-  // ADR-398 §3.10 — re-sync όταν δημιουργείται οντότητα (SSoT hook, rAF defer).
-  useSceneSnapTargetSync(syncSceneTargetsToStore);
+  // ADR-398 §3.10 — refresh face-snap στόχων στο ΚΟΙΝΟ scene store: on entity-created (rAF, ώστε
+  // ένα μόλις-σχεδιασμένο δοκάρι να είναι ορατό στο ghost του επόμενου ΠΡΙΝ το 1ο κλικ — αλλιώς
+  // «κόκκινο μόνο μετά το κλικ») + on activate (το `syncSceneTargetsToStore` = το hook return).
+  const syncSceneTargetsToStore = useSceneSnapTargetSync(() => getSceneEntitiesRef.current?.() ?? []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   // All state transitions sync beamPreviewStore immediately (before setState)

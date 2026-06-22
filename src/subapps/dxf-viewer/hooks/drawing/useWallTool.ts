@@ -79,14 +79,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const getSceneEntitiesRef = useRef(getSceneEntities);
   getSceneEntitiesRef.current = getSceneEntities;
 
-  // Φόρτωσε κολόνες + γραμμικά μέλη (τοίχοι+δοκάρια) στο preview store ΠΡΙΝ το 1ο κλικ,
-  // ώστε το ghost-before-click face-snap να έχει τους στόχους έτοιμους.
-  const syncSceneTargetsToStore = useCallback(() => {
-    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
-  }, []);
-
-  // ADR-508 / ADR-398 §3.10 — re-sync όταν δημιουργείται οντότητα (SSoT hook, rAF defer).
-  useSceneSnapTargetSync(syncSceneTargetsToStore);
+  // ADR-508 / ADR-398 §3.10 — refresh face-snap στόχων στο ΚΟΙΝΟ scene store: on entity-created
+  // (rAF) μέσω του SSoT hook + on activate (το `syncSceneTargetsToStore` = το hook return, που
+  // περνά στο lifecycle ώστε οι στόχοι να είναι έτοιμοι ΠΡΙΝ το 1ο ghost).
+  const syncSceneTargetsToStore = useSceneSnapTargetSync(() => getSceneEntitiesRef.current?.() ?? []);
 
   // ADR-508 §smart wall ghost — το 1ο κλικ κλειδώνει το START· αν κούμπωνε σε παρειά
   // κολόνας/μέλους (face-snap), κλειδώνουμε στο προτεινόμενο centerline (+anchored) ώστε το

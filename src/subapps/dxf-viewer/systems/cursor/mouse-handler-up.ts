@@ -36,7 +36,7 @@ import {
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
-import { setColumnFaceAnchor, setColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
+import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
@@ -232,9 +232,11 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           if (faceSnap) {
             worldPoint = faceSnap.position;
             setColumnFaceAnchor(faceSnap.anchor);
+            setColumnFaceRotation(faceSnap.rotation); // §3.10b flush-to-edge γωνία (0 axis-aligned)
             setColumnGhostStatus(faceSnap.status);
           } else {
             setColumnFaceAnchor(null);
+            setColumnFaceRotation(null);
             setColumnGhostStatus('neutral');
             worldPoint = effectiveCursor;
           }

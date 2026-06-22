@@ -293,6 +293,24 @@ describe('resolveColumnFaceSnap — slab edge (ADR-398 §3.10 axis-relative — 
     expect(r.position.y).toBeCloseTo(1000);
   });
 
+  it('axis-aligned ακμή → rotation 0 (μηδέν regression)', () => {
+    expect(snap({ x: 1000, y: 120 }, [slab()])!.rotation).toBe(0);
+  });
+
+  // ADR-398 §3.10b — τρίγωνη πλάκα με ΛΟΞΗ ακμή 45° (0,0)→(2000,2000).
+  function diagonalSlab(): Entity {
+    return {
+      id: 'slab-d', type: 'slab',
+      geometry: { polygon: { vertices: [{ x: 0, y: 0 }, { x: 2000, y: 2000 }, { x: 0, y: 2000 }] } },
+    } as unknown as Entity;
+  }
+
+  it('ΛΟΞΗ ακμή πλάκας (45°) → η κολώνα ΣΤΡΕΦΕΤΑΙ flush (rotation ≈ 45°, ΟΧΙ πάντα ορθή)', () => {
+    const r = snap({ x: 1100, y: 900 }, [diagonalSlab()])!;
+    expect(Math.abs(r.rotation - 45)).toBeLessThan(1);
+    expect(r.status).toBe('beam');
+  });
+
   it('μακριά από κάθε ακμή (κέντρο πλάκας, > capture) → null', () => {
     expect(snap({ x: 1000, y: 1000 }, [slab()])).toBeNull();
   });

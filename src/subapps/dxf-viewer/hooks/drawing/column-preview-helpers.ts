@@ -101,7 +101,14 @@ export function generateColumnPreview(
   const status: ColumnGhostStatus = faceSnap?.status ?? 'neutral';
   const anchor: ColumnAnchor = faceSnap?.anchor ?? handle.anchor;
 
-  const overrides: ColumnParamOverrides = { ...handle.overrides, kind: handle.kind, anchor };
+  // ADR-398 §3.10b — λοξή ακμή πλάκας → η κολώνα στρέφεται flush (faceSnap.rotation)· axis-aligned
+  // → 0 (μηδέν αλλαγή). Ελεύθερη τοποθέτηση → ribbon/Tab rotation (handle.overrides).
+  const overrides: ColumnParamOverrides = {
+    ...handle.overrides,
+    kind: handle.kind,
+    anchor,
+    ...(faceSnap ? { rotation: faceSnap.rotation } : {}),
+  };
   const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
   const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;
