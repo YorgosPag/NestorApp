@@ -15,10 +15,16 @@
  * Industry rules (AutoCAD / BricsCAD / progeCAD / GstarCAD / nanoCAD), minus
  * the implicit Stretch:
  *  - LINE endpoint → Lengthen
- *  - POLYLINE / LWPOLYLINE vertex → Add Vertex, Remove Vertex
+ *  - POLYLINE / LWPOLYLINE vertex → Add Vertex, Remove Vertex, Convert to Arc
+ *  - POLYLINE straight segment-midpoint → Add Vertex, Convert to Arc
+ *  - POLYLINE arc-midpoint → Convert to Line
  *  - ARC endpoint → Lengthen
  *  - ARC midpoint → Radius
  *  - everything else (anchors, midpoints, MOVE glyph) → (no menu)
+ *
+ * ADR-510 Φ3c — the polyline multifunctional ops live HERE (the hover menu), the
+ * canonical home for entity-specific grip actions — NOT the right-click mode menu
+ * (`grip-context-menu-resolver`), which carries only the universal cycle modes.
  *
  * @see ADR-349 §Multifunctional Grip Menu
  * @see ADR-397 §BIM grip glyph behaviour
@@ -31,6 +37,8 @@ export type GripMenuActionId =
   | 'lengthen'
   | 'addVertex'
   | 'removeVertex'
+  | 'convertToArc'
+  | 'convertToLine'
   | 'radius';
 
 export interface GripMenuActionMeta {
@@ -40,10 +48,12 @@ export interface GripMenuActionMeta {
 }
 
 const META: Readonly<Record<GripMenuActionId, GripMenuActionMeta>> = {
-  lengthen:     { id: 'lengthen',     labelKey: 'gripMenu.lengthen' },
-  addVertex:    { id: 'addVertex',    labelKey: 'gripMenu.addVertex' },
-  removeVertex: { id: 'removeVertex', labelKey: 'gripMenu.removeVertex' },
-  radius:       { id: 'radius',       labelKey: 'gripMenu.radius' },
+  lengthen:      { id: 'lengthen',      labelKey: 'gripMenu.lengthen' },
+  addVertex:     { id: 'addVertex',     labelKey: 'gripMenu.addVertex' },
+  removeVertex:  { id: 'removeVertex',  labelKey: 'gripMenu.removeVertex' },
+  convertToArc:  { id: 'convertToArc',  labelKey: 'gripMenu.convertToArc' },
+  convertToLine: { id: 'convertToLine', labelKey: 'gripMenu.convertToLine' },
+  radius:        { id: 'radius',        labelKey: 'gripMenu.radius' },
 };
 
 function isLineEndpoint(grip: UnifiedGripInfo): boolean {
@@ -86,11 +96,21 @@ export function resolveMenuActions(entity: Entity, grip: UnifiedGripInfo): GripM
     case 'lwpolyline': {
       const vertices = (entity as { vertices: ReadonlyArray<unknown> }).vertices;
       const vLen = vertices?.length ?? 0;
-      if (isPolylineVertex(grip, vLen)) {
-        const canRemove = vLen > 2;
-        return canRemove
-          ? [META.addVertex, META.removeVertex]
-          : [META.addVertex];
+      // ADR-510 Φ3c — branch on the precise grip role (`polylineGripKind`) so arc
+      // and segment-midpoint grips get the right ops. Falls back to the legacy
+      // gripIndex check for untagged grips (defensive).
+      const kind = grip.polylineGripKind;
+      if (kind?.startsWith('polyline-arc-midpoint-')) {
+        return [META.convertToLine];
+      }
+      if (kind?.startsWith('polyline-segment-midpoint-')) {
+        return [META.addVertex, META.convertToArc];
+      }
+      if (kind?.startsWith('polyline-vertex-') || isPolylineVertex(grip, vLen)) {
+        const ops = [META.addVertex];
+        if (vLen > 2) ops.push(META.removeVertex);
+        ops.push(META.convertToArc);
+        return ops;
       }
       return [];
     }

@@ -16,12 +16,12 @@
 
 import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
-import type { Entity, ArcEntity, PolylineEntity, LWPolylineEntity } from '../../types/entities';
-import type { Point2D } from '../../rendering/types/Types';
+import type { Entity, ArcEntity } from '../../types/entities';
 import type { PromptDialogOptions } from '../prompt-dialog';
 import { LengthenCommand } from '../../core/commands/entity-commands/LengthenCommand';
 import { ArcRadiusEditCommand } from '../../core/commands/entity-commands/ArcRadiusEditCommand';
-import { PolylineVertexCommand } from '../../core/commands/entity-commands/PolylineVertexCommand';
+// ADR-510 Φ3c — polyline add/remove/convert ops share ONE SSoT command builder.
+import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from './polyline-grip-ops';
 import type { LengthenEndpoint } from './lengthen-axial-stretch';
 import type { GripMenuActionId } from './grip-menu-resolver';
 
@@ -32,8 +32,6 @@ export interface GripMenuActionContext {
   readonly t: (key: string, params?: Record<string, unknown>) => string;
   readonly onAfterDispatch: () => void;
 }
-
-type PolyEntity = PolylineEntity | LWPolylineEntity;
 
 function parseFiniteFloat(raw: string | null): number | null {
   if (raw === null) return null;
@@ -107,53 +105,19 @@ async function actionRadius(
   ctx.onAfterDispatch();
 }
 
-function midpoint(a: Point2D, b: Point2D): Point2D {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
-function actionAddVertex(
-  poly: PolyEntity,
+/**
+ * ADR-510 Φ3c — all polyline vertex/segment ops (add / remove / convert-to-arc /
+ * convert-to-line) route through the ONE shared SSoT builder, keyed by
+ * `polylineGripKind`. No inline command construction here.
+ */
+function actionPolylineOp(
+  op: PolylineVertexMenuOp,
   grip: UnifiedGripInfo,
   ctx: GripMenuActionContext,
 ): void {
-  const verts = poly.vertices;
-  const vLen = verts.length;
-  if (vLen === 0) return;
-  const idx = grip.gripIndex;
-  if (idx < 0 || idx >= vLen) return;
-
-  let insertIndex: number;
-  let position: Point2D;
-  if (idx < vLen - 1) {
-    insertIndex = idx + 1;
-    position = midpoint(verts[idx], verts[idx + 1]);
-  } else if (poly.closed && vLen > 1) {
-    insertIndex = vLen;
-    position = midpoint(verts[vLen - 1], verts[0]);
-  } else if (vLen >= 2) {
-    insertIndex = idx;
-    position = midpoint(verts[idx - 1], verts[idx]);
-  } else {
-    return;
-  }
-
-  ctx.executeCommand(new PolylineVertexCommand(
-    { entityId: poly.id, op: { kind: 'add', index: insertIndex, position } },
-    ctx.sceneManager,
-  ));
-  ctx.onAfterDispatch();
-}
-
-function actionRemoveVertex(
-  poly: PolyEntity,
-  grip: UnifiedGripInfo,
-  ctx: GripMenuActionContext,
-): void {
-  if (poly.vertices.length <= 2) return;
-  ctx.executeCommand(new PolylineVertexCommand(
-    { entityId: poly.id, op: { kind: 'remove', index: grip.gripIndex } },
-    ctx.sceneManager,
-  ));
+  const cmd = buildPolylineVertexOpCommand(grip, op, ctx.sceneManager);
+  if (!cmd || (cmd.validate?.() ?? null) !== null) return;
+  ctx.executeCommand(cmd);
   ctx.onAfterDispatch();
 }
 
@@ -181,11 +145,19 @@ export function bindMenuAction(
 
     case 'addVertex':
       if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionAddVertex(entity as PolyEntity, grip, ctx); };
+      return () => { actionPolylineOp('add-vertex', grip, ctx); };
 
     case 'removeVertex':
       if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionRemoveVertex(entity as PolyEntity, grip, ctx); };
+      return () => { actionPolylineOp('remove-vertex', grip, ctx); };
+
+    case 'convertToArc':
+      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
+      return () => { actionPolylineOp('convert-to-arc', grip, ctx); };
+
+    case 'convertToLine':
+      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
+      return () => { actionPolylineOp('convert-to-line', grip, ctx); };
 
     default:
       return null;
