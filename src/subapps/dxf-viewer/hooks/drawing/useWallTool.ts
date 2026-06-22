@@ -48,7 +48,7 @@ import {
   useWallToolRegionBoxSelectListener,
   useWallToolPerimeterBoxSelectListener,
 } from './use-wall-tool-event-listeners';
-import { EventBus } from '../../systems/events/EventBus';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // ADR-363 — state-machine types + commit builders extracted for N.7.1 (≤500 lines).
 import {
   INITIAL_STATE,
@@ -87,20 +87,8 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     wallPreviewStore.setMembers(memberTargets);
   }, []);
 
-  // ADR-508 — re-sync όταν δημιουργείται οντότητα (rAF defer: το event εκπέμπεται σύγχρονα
-  // πριν commit-αριστεί το React scene → διάβασε τη φρέσκια σκηνή στο επόμενο frame, ώστε ο
-  // μόλις-σχεδιασμένος τοίχος να είναι ορατός στο ghost του επόμενου ΠΡΙΝ το 1ο κλικ).
-  useEffect(() => {
-    let raf = 0;
-    const unsub = EventBus.on('drawing:entity-created', () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-      unsub();
-    };
-  }, [syncSceneTargetsToStore]);
+  // ADR-508 / ADR-398 §3.10 — re-sync όταν δημιουργείται οντότητα (SSoT hook, rAF defer).
+  useSceneSnapTargetSync(syncSceneTargetsToStore);
 
   // ADR-508 §smart wall ghost — το 1ο κλικ κλειδώνει το START· αν κούμπωνε σε παρειά
   // κολόνας/μέλους (face-snap), κλειδώνουμε στο προτεινόμενο centerline (+anchored) ώστε το

@@ -47,6 +47,7 @@ import { pickWallEntityAt, buildBeamFromWall } from '../../bim/beams/beam-from-w
 import { beamToolBridgeStore } from '../../bim/beams/beam-tool-bridge-store';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { EventBus } from '../../systems/events/EventBus';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 import { shouldWarnBeamOnFoundation } from '../../systems/levels/storey-creation-defaults';
 
 // ─── State machine types ─────────────────────────────────────────────────────
@@ -165,17 +166,8 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   // commit-αριστεί ακόμη· σύγχρονο re-sync θα διάβαζε τη STALE σκηνή (χωρίς το νέο δοκάρι).
   // Το rAF τρέχει μετά το commit → η σκηνή περιέχει πλέον το νέο δοκάρι → targets φρέσκα
   // ΠΡΙΝ το επόμενο hover (όχι μόνο στο κλικ — που γι' αυτό «κόκκινο μόνο μετά το κλικ»).
-  useEffect(() => {
-    let raf = 0;
-    const unsub = EventBus.on('drawing:entity-created', () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-      unsub();
-    };
-  }, [syncSceneTargetsToStore]);
+  // ADR-398 §3.10 — re-sync όταν δημιουργείται οντότητα (SSoT hook, rAF defer).
+  useSceneSnapTargetSync(syncSceneTargetsToStore);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   // All state transitions sync beamPreviewStore immediately (before setState)

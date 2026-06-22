@@ -20,12 +20,10 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { canMergeDragSamples } from '../merge-window';
+// SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
+import type { PolylineEntity, LWPolylineEntity } from '../../../types/entities';
 
-interface PolyShape {
-  readonly vertices?: ReadonlyArray<unknown>;
-  readonly closed?: boolean;
-  readonly bulges?: ReadonlyArray<number>;
-}
+type PolyReadView = Pick<PolylineEntity | LWPolylineEntity, 'vertices' | 'closed' | 'bulges'>;
 
 /**
  * Command that sets one polyline segment's bulge factor.
@@ -59,7 +57,7 @@ export class SetBulgeCommand implements ICommand {
    * (closed) or vertices − 1 (open); padded with 0 (straight).
    */
   private buildBulges(value: number): number[] | null {
-    const entity = this.sceneManager.getEntity(this.entityId) as unknown as PolyShape | undefined;
+    const entity = this.sceneManager.getEntity(this.entityId) as unknown as PolyReadView | undefined;
     if (!entity || !Array.isArray(entity.vertices)) return null;
     const vLen = entity.vertices.length;
     if (vLen < 2) return null;

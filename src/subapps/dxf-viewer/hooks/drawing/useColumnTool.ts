@@ -63,6 +63,7 @@ import { EventBus } from '../../systems/events/EventBus';
 // (mirror useWallTool/useBeamTool) ώστε το ghost + commit να υπολογίζουν το snap σύγχρονα.
 import { collectColumnFaceSnapTargets } from '../../bim/columns/column-face-snap';
 import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // N.7.1 file-size split — pure status-text resolver (FSM state → i18n key).
 import { resolveColumnStatusTextKey } from './column-status-text';
 
@@ -201,20 +202,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     columnPreviewStore.set(collectColumnFaceSnapTargets(entities));
   }, []);
 
-  // Re-sync όταν δημιουργείται οντότητα (rAF defer: το event εκπέμπεται σύγχρονα πριν commit-
-  // αριστεί το React scene → διάβασε τη φρέσκια σκηνή στο επόμενο frame ώστε η μόλις-σχεδιασμένη
-  // οντότητα να είναι ορατή στους στόχους του επόμενου ghost ΠΡΙΝ το 1ο κλικ).
-  useEffect(() => {
-    let raf = 0;
-    const unsub = EventBus.on('drawing:entity-created', () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-      unsub();
-    };
-  }, [syncSceneTargetsToStore]);
+  // Re-sync όταν δημιουργείται οντότητα — SSoT hook (rAF defer), κοινό με τοίχο/δοκάρι.
+  useSceneSnapTargetSync(syncSceneTargetsToStore);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {

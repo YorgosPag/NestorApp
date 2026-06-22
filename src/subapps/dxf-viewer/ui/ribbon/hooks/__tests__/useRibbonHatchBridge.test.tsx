@@ -54,6 +54,12 @@ function makeSelection(id: string | null) {
 const PATTERN_KEY = HATCH_RIBBON_KEYS.stringParams.patternName;
 const SCALE_KEY = HATCH_RIBBON_KEYS.params.patternScale;
 const FILLTYPE_KEY = HATCH_RIBBON_KEYS.stringParams.fillType;
+const GRAD_TYPE_KEY = HATCH_RIBBON_KEYS.stringParams.gradientType;
+const GRAD_COLOR1_KEY = HATCH_RIBBON_KEYS.stringParams.gradientColor1;
+const GRAD_COLOR2_KEY = HATCH_RIBBON_KEYS.stringParams.gradientColor2;
+const GRAD_ANGLE_KEY = HATCH_RIBBON_KEYS.params.gradientAngle;
+const GRAD_SINGLE_KEY = HATCH_RIBBON_KEYS.toggles.gradientSingleColor;
+const GRAD_VIS_KEY = HATCH_RIBBON_KEYS.visibility.gradient;
 
 beforeEach(() => {
   resetGlobalCommandHistory();
@@ -123,5 +129,106 @@ describe('useRibbonHatchBridge — patternName (drawing mode, χωρίς επι�
     );
     act(() => result.current.onComboboxChange(FILLTYPE_KEY, 'predefined'));
     expect(getHatchDrawDefaults().fillType).toBe('predefined');
+  });
+});
+
+describe('useRibbonHatchBridge — gradient (ADR-507 Φ5 UI)', () => {
+  it('drawing mode: gradient type/color/angle/single → draw-defaults', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() => result.current.onComboboxChange(GRAD_TYPE_KEY, 'spherical'));
+    act(() => result.current.onComboboxChange(GRAD_COLOR1_KEY, '#27ae60'));
+    act(() => result.current.onComboboxChange(GRAD_COLOR2_KEY, '#c0392b'));
+    act(() => result.current.onComboboxChange(GRAD_ANGLE_KEY, '45'));
+    act(() => result.current.onToggle(GRAD_SINGLE_KEY, true));
+    const d = getHatchDrawDefaults();
+    expect(d.gradientType).toBe('spherical');
+    expect(d.gradientColor1).toBe('#27ae60');
+    expect(d.gradientColor2).toBe('#c0392b');
+    expect(d.gradientAngle).toBe(45);
+    expect(d.gradientSingleColor).toBe(true);
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+
+  it('fillType=gradient drawing mode → draw-defaults fillType', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() => result.current.onComboboxChange(FILLTYPE_KEY, 'gradient'));
+    expect(getHatchDrawDefaults().fillType).toBe('gradient');
+  });
+
+  it('selected hatch: switch σε gradient χωρίς gradient data → patch δίνει default gradient object', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(FILLTYPE_KEY, 'gradient'));
+    const patch = (UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(patch.fillType).toBe('gradient');
+    expect(patch.patternType).toBe('gradient');
+    expect(patch.gradient).toMatchObject({ type: 'linear', color1: expect.any(String) });
+  });
+
+  it('selected gradient hatch: αλλαγή color1 χτίζει ΟΛΟ το gradient (nested immutable merge)', () => {
+    const gradHatch = {
+      ...solidHatch, fillType: 'gradient' as const, patternType: 'gradient' as const,
+      gradient: { type: 'linear' as const, color1: '#2980b9', color2: '#ffffff' },
+    };
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(gradHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(GRAD_COLOR1_KEY, '#000000'));
+    const patch = (UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1];
+    // ΟΛΟ το gradient ξαναχτίστηκε: νέο color1, διατήρηση color2/type.
+    expect(patch.gradient).toMatchObject({ type: 'linear', color1: '#000000', color2: '#ffffff' });
+  });
+
+  it('getComboboxState διαβάζει τα gradient πεδία της οντότητας', () => {
+    const gradHatch = {
+      ...solidHatch, fillType: 'gradient' as const,
+      gradient: { type: 'cylinder' as const, color1: '#2980b9', color2: '#c0392b', angleDeg: 30 },
+    };
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(gradHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(GRAD_TYPE_KEY)?.value).toBe('cylinder');
+    expect(result.current.getComboboxState(GRAD_COLOR1_KEY)?.value).toBe('#2980b9');
+    expect(result.current.getComboboxState(GRAD_COLOR2_KEY)?.value).toBe('#c0392b');
+    expect(result.current.getComboboxState(GRAD_ANGLE_KEY)?.value).toBe('30');
+  });
+
+  it('getPanelVisibility: gradient panel ορατό μόνο όταν fillType=gradient', () => {
+    const gradHatch = { ...solidHatch, fillType: 'gradient' as const };
+    const visible = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(gradHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(visible.result.current.getPanelVisibility(GRAD_VIS_KEY)).toBe(true);
+
+    const hidden = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(hidden.result.current.getPanelVisibility(GRAD_VIS_KEY)).toBe(false);
   });
 });

@@ -14,7 +14,9 @@
 > Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία.
 > **Φ3 (bulge polyline + multifunctional grips)** 🟡 ΣΕ ΕΞΕΛΙΞΗ (UNCOMMITTED 2026-06-22): **Φ3a** 🟢 geometry SSoT
 > (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
-> rendering/hit-test· **ΕΚΚΡΕΜΟΥΝ** Φ3c grips, Φ3d μεταβλητό πλάτος, Φ3e endpoint Lengthen, Φ9 DXF 42/40/41. 21 jest.
+> rendering/hit-test· **Φ3c** 🟢 multifunctional grips (Convert↔Arc/Line + Add/Remove Vertex + live bulge-drag· NEW
+> `PolylineGripKind`+`SetBulgeCommand`+`polyline-grip-ops`+`grip-polyline-bulge-commit`· unified path
+> `computeDxfEntityGrips`, ΟΧΙ adapter ext· 47 jest)· **ΕΚΚΡΕΜΟΥΝ** Φ3d μεταβλητό πλάτος, Φ3e endpoint Lengthen, Φ9 DXF 42/40/41.
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -658,3 +660,31 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   Vertex, bulge drag — MOD `grip-context-menu-resolver`/`-actions` + NEW `SetBulgeCommand` + adapter bulge/width)·
   Φ3d μεταβλητό πλάτος (tapered render + DXF 40/41)· Φ3e endpoint Stretch/Lengthen (REUSE `LengthenCommand`)·
   Φ9 DXF round-trip 42/40/41. ⚠️ Φ3c grip/render αρχεία → stage ADR-040 (CHECK 6B/6D). 🔴 tsc(N.17)+browser-verify+commit.
+- **2026-06-22** — **Φ3c (UNCOMMITTED) — Multifunctional polyline grips (Revit-grade, FULL SSoT).** Convert↔Arc/Line +
+  Add/Remove Vertex + live bulge-drag, μηδέν διπλότυπο. **SSoT audit διόρθωσε 2 ανακρίβειες handoff:** (1) το
+  discriminator/menu/commit path **ΔΕΝ είναι** `PolylineRenderer.getGrips` αλλά **`grip-computation.computeDxfEntityGrips`
+  (case 'polyline')** → `wrapDxfGrip` → `UnifiedGripInfo` (το unified ADR-183 path)· (2) **adapter extension περιττή** —
+  το `grip-scene-adapter.insertVertex/removeVertex` είναι NO-OP, οπότε reuse του υπάρχοντος `updateEntity` seam (όπως
+  `PolylineVertexCommand`), ΚΑΜΙΑ αλλαγή `ISceneManager`. **Υλοποίηση:**
+  • **Discriminator** NEW `PolylineGripKind` (`grip-kinds.ts`: `polyline-vertex-N`/`polyline-segment-midpoint-N`/
+    `polyline-arc-midpoint-N`) → `GripInfo`+`UnifiedGripInfo`+`wrapDxfGrip` forward (mirror των ~25 υπαρχόντων kinds).
+  • **Grip tagging** (`computeDxfEntityGrips` case 'polyline'): vertex grips + edge grips· **arc segment** (`!isStraightSegment(bulges[i])`)
+    → grip στο **`bulgeApexPoint`** (ΟΧΙ chord midpoint· import Φ3a, μηδέν νέα math)· straight → chord midpoint.
+  • **Data path fix:** `DxfPolyline` (canvas-v2) + `dxf-scene-entity-converter` (polyline+lwpolyline cases) μετέφεραν
+    μόνο `vertices`/`closed` → πρόσθεσα `bulges/startWidths/endWidths` (αλλιώς ΟΥΤΕ τα arcs render ΟΥΤΕ τα arc grips).
+  • **Context menu** (PURE) `buildPolylineOpsSection` στο `grip-context-menu-resolver` (vertex: Add/Remove/Convert-to-Arc·
+    segment-midpoint: Add/Convert-to-Arc· arc-midpoint: Convert-to-Line) + 4 action ids + bind cases (`grip-context-menu-actions`
+    `onPolylineVertexOp`) + controller dispatcher (mirror `onSlabVertexOp`) + hover-show για `polyline-ops`. i18n el+en.
+  • **Commands:** NEW `SetBulgeCommand` (Convert-to-Arc/Line + drag· sets `bulges[seg]` via `updateEntity`· merge =
+    `MoveVertexCommand` pattern `seg+isDragging+merge-window`)· `PolylineVertexCommand` επεκτάθηκε να κρατά
+    `bulges/startWidths/endWidths` **index-aligned** σε add/remove. NEW SSoT `systems/grip/polyline-grip-ops.ts`
+    (`parsePolylineSegIndex` + `DEFAULT_ARC_BULGE = tan(22.5°)` τεταρτοκύκλιο + `buildPolylineVertexOpCommand`).
+  • **Live bulge-drag:** NEW `grip-polyline-bulge-commit.ts` (`commitPolylineBulgeGripDrag`: apex+delta →
+    `bulgeFromApexPoint` → `SetBulgeCommand isDragging`)· branch στο `commitDxfGripDragModeAware` (ΜΟΝΟ arc-midpoint·
+    vertex/straight μένουν στο standard stretch path). **Convert-to-Arc = Revit way:** βάζει default τεταρτοκύκλιο,
+    μετά ο χρήστης σύρει τη λαβή apex για ακριβή καμπυλότητα (μηδέν μαγικό prompt). **Κάθε ενέργεια = 1 undo.**
+  47 jest GREEN (26 NEW Φ3c + 21 Φ3a· + 29 regression resolver/MoveVertex/grip-computation). ⚠️ render/grip αρχεία →
+  stage ADR-040 (CHECK 6B/6D). **ΜΑΘΗΜΑ:** το `dxf-scene-entity-converter` strip-άρει unknown fields → κάθε νέο
+  per-segment array πρέπει να περάσει ΚΑΙ από εκεί. tsc(N.17) deferred (2 watcher tsc άλλων agents). 🔴 tsc+browser-verify
+  (Convert-to-Arc→drag→Convert-to-Line→Add/Remove, 1 undo το καθένα· ⚠️ verify ΟΧΙ διπλές λαβές από legacy
+  `EntityRendererComposite.getGrips` path)+commit.

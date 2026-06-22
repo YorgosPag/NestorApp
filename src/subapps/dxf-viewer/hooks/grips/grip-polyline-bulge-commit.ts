@@ -20,13 +20,13 @@ import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCom
 import { bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { parsePolylineSegIndex } from '../../systems/grip/polyline-grip-ops';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+// SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
+import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 
-interface PolyShape {
-  readonly type?: string;
-  readonly vertices?: ReadonlyArray<Point2D>;
-  readonly closed?: boolean;
-  readonly bulges?: ReadonlyArray<number>;
-}
+type PolyReadView = { readonly type?: string } & Pick<
+  PolylineEntity | LWPolylineEntity,
+  'vertices' | 'closed' | 'bulges'
+>;
 
 /**
  * ADR-510 Φ3c — commit a polyline arc-apex drag as a bulge change. Idempotent +
@@ -43,7 +43,7 @@ export function commitPolylineBulgeGripDrag(
   if (segIdx == null) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
-  const entity = sceneManager.getEntity(grip.entityId) as unknown as PolyShape | undefined;
+  const entity = sceneManager.getEntity(grip.entityId) as unknown as PolyReadView | undefined;
   if (!entity || (entity.type !== 'polyline' && entity.type !== 'lwpolyline')) return;
   const vertices = entity.vertices;
   if (!Array.isArray(vertices) || vertices.length < 2) return;

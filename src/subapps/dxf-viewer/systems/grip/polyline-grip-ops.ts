@@ -21,6 +21,8 @@ import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import { PolylineVertexCommand } from '../../core/commands/entity-commands/PolylineVertexCommand';
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
+// SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
+import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 
 /**
  * Default bulge applied by «Convert to Arc» before the user grip-tunes the
@@ -36,12 +38,10 @@ export type PolylineVertexMenuOp =
   | 'convert-to-arc'
   | 'convert-to-line';
 
-interface PolyShape {
-  readonly type?: string;
-  readonly vertices?: ReadonlyArray<Point2D>;
-  readonly closed?: boolean;
-  readonly bulges?: ReadonlyArray<number>;
-}
+type PolyReadView = { readonly type?: string } & Pick<
+  PolylineEntity | LWPolylineEntity,
+  'vertices' | 'closed' | 'bulges'
+>;
 
 /**
  * Trailing segment/vertex index of any `polyline-*-N` grip kind. For a vertex
@@ -66,7 +66,7 @@ export function buildPolylineVertexOpCommand(
   sceneManager: ISceneManager,
 ): ICommand | null {
   if (!grip.entityId || !grip.polylineGripKind) return null;
-  const entity = sceneManager.getEntity(grip.entityId) as unknown as PolyShape | undefined;
+  const entity = sceneManager.getEntity(grip.entityId) as unknown as PolyReadView | undefined;
   if (!entity || (entity.type !== 'polyline' && entity.type !== 'lwpolyline')) return null;
   const vertices = entity.vertices;
   if (!Array.isArray(vertices) || vertices.length < 2) return null;
