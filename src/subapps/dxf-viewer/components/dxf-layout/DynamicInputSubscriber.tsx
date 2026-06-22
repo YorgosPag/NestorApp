@@ -27,6 +27,10 @@ import { useDrawingMachine } from '../../core/state-machine';
 import { useDynamicInputHandler } from '../../systems/dynamic-input/hooks/useDynamicInputHandler';
 import DynamicInputSystem from '../../systems/dynamic-input/DynamicInputSystem';
 import type { AnySceneEntity } from '../../rendering/types/Types';
+// ADR-513 — «Δαχτυλίδι Εντολών»: ραδιακό in-canvas dynamic input στη σχεδίαση τοίχου (awaitingEnd).
+import { useWallPreview } from '../../bim/walls/wall-preview-store';
+import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
+import type { SceneUnits } from '../../utils/scene-units';
 
 interface DynamicInputSubscriberProps {
   activeTool: string;
@@ -34,6 +38,8 @@ interface DynamicInputSubscriberProps {
   transform: ViewTransform;
   canvasRect: DOMRect | null;
   onDrawingPoint: (worldPoint: Point2D) => void;
+  /** ADR-513 — draw-time getter των scene-units (μηδέν subscription· mirror slabOpening ghost). */
+  getSceneUnits?: () => SceneUnits;
 }
 
 const NULL_POINT = (): Point2D | null => null;
@@ -44,6 +50,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   viewport,
   canvasRect,
   onDrawingPoint,
+  getSceneUnits,
 }: DynamicInputSubscriberProps) {
   const { dynInput } = useCadToggles();
 
@@ -69,6 +76,11 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const { context } = useDrawingMachine({ useGlobal: true });
   const tempPoints = context.points as Point2D[];
 
+  // ADR-513 — wall awaitingEnd (1ο κλικ έγινε): low-freq reactive read (click-time).
+  const wallPreview = useWallPreview();
+  const wallAwaitingEnd =
+    activeTool === 'wall' && !!wallPreview.startPoint && !wallPreview.endPoint;
+
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
   useDynamicInputHandler({
@@ -82,6 +94,12 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
 
   if (!interactive) {
     return null;
+  }
+
+  // ADR-513 — στη σχεδίαση τοίχου μετά το 1ο κλικ δείξε το ραδιακό «Δαχτυλίδι Εντολών»
+  // (Μήκος/Γωνία/Πάχος/Ύψος) αντί του γραμμικού overlay — μηδέν διπλό UI.
+  if (wallAwaitingEnd && getSceneUnits) {
+    return <RadialCommandRing sceneUnits={getSceneUnits()} />;
   }
 
   return (

@@ -55,6 +55,10 @@ import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAn
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity } from '../../types/entities';
+import type { HatchEntity } from '../../types/entities';
+// ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
+// (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
+import { isHatchOriginGripKind, hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -77,6 +81,9 @@ const ROTATE_READOUT_OFFSET_PX = 18;
 const ANGLE_ARC_RADIUS_PX = 22;
 const ANGLE_ARC_LABEL_GAP_PX = 12;
 const ANGLE_ARC_COLOR = 'rgba(255,255,255,0.7)';
+
+/** ADR-507 Φ5 A3b — half-size (CSS px) του live gradient-origin grip-marker (fixed on-screen). */
+const GRADIENT_ORIGIN_MARKER_HALF_PX = 5;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -159,6 +166,26 @@ function drawAngleArc(
   const bisector = segAngleRad / 2;
   const r = ANGLE_ARC_RADIUS_PX + ANGLE_ARC_LABEL_GAP_PX;
   return { x: centerS.x + r * Math.cos(bisector), y: centerS.y + r * Math.sin(bisector) };
+}
+
+/**
+ * ADR-507 Φ5 A3b — live gradient-origin grip-marker. Ζωγραφίζει το «τετράγωνο» της λαβής
+ * στη ΖΩΝΤΑΝΗ θέση (κέρσορας) στο preview canvas, full-opacity, ώστε να ΑΚΟΛΟΥΘΕΙ ορατά το
+ * drag (το committed grip κρύβεται από το main canvas — `HatchRenderer.getGrips`). Ghost-cyan
+ * γέμισμα + λευκό περίγραμμα = «η λαβή που σέρνεις», fixed on-screen size σε κάθε zoom.
+ */
+function drawGradientOriginMarker(ctx: CanvasRenderingContext2D, screenPt: { x: number; y: number }): void {
+  const h = GRADIENT_ORIGIN_MARKER_HALF_PX;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = GHOST_DEFAULTS.color;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.rect(screenPt.x - h, screenPt.y - h, h * 2, h * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -288,33 +315,48 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawDimPill(ctx, [formatMoveAngle((Math.abs(segAngle) * 180) / Math.PI)], angleLabelS.x, angleLabelS.y);
     }
 
-    // applyEntityPreview returns the *same* reference for zero-delta or
-    // unsupported types → skip drawing (avoids a redundant overlay).
-    if (transformed === entity) return;
+    // ADR-507 Φ5 A3b — gradient-origin drag: η λαβή ακολουθεί τον κέρσορα. Σχεδιάζεται
+    // ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να μη
+    // «εξαφανίζεται» — το committed grip κρύβεται από το main canvas στο active drag.
+    const isHatchOriginDrag =
+      !!dragPreview.hatchGripKind && isHatchOriginGripKind(dragPreview.hatchGripKind) && entity.type === 'hatch';
 
-    ctx.save();
-    ctx.globalAlpha = GHOST_DEFAULTS.alpha;
-    ctx.strokeStyle = GHOST_DEFAULTS.color;
-    ctx.fillStyle = GHOST_DEFAULTS.color;
-    ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
-    drawGhostEntity(ctx, transformed, t, vp);
+    // applyEntityPreview returns the *same* reference for zero-delta or unsupported
+    // types → skip the ghost overlay (avoids a redundant paint). The hatch-origin
+    // marker below still draws (it must follow even on a zero-delta press).
+    if (transformed !== entity) {
+      ctx.save();
+      ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+      ctx.strokeStyle = GHOST_DEFAULTS.color;
+      ctx.fillStyle = GHOST_DEFAULTS.color;
+      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+      drawGhostEntity(ctx, transformed, t, vp);
 
-    // ADR-408 Φ-C — when the dragged entity is a plumbing connector host, draw the
-    // connected pipe ends following it so the run visibly stretches WITH the host
-    // during the drag (matches the connectivity-preserving commit). The SSoT builder
-    // resolves + recomputes geometry once; returns [] for non-plumbing entities.
-    const sceneEntities = levelManager.currentLevelId
-      ? levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? []
-      : [];
-    const pipeGhosts = buildConnectedPipeGhosts(
-      sceneEntities as unknown as readonly Entity[],
-      entity as unknown as Entity,
-      transformed as unknown as Entity,
-    );
-    for (const ghost of pipeGhosts) {
-      drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
+      // ADR-408 Φ-C — when the dragged entity is a plumbing connector host, draw the
+      // connected pipe ends following it so the run visibly stretches WITH the host
+      // during the drag (matches the connectivity-preserving commit). The SSoT builder
+      // resolves + recomputes geometry once; returns [] for non-plumbing entities.
+      const sceneEntities = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? []
+        : [];
+      const pipeGhosts = buildConnectedPipeGhosts(
+        sceneEntities as unknown as readonly Entity[],
+        entity as unknown as Entity,
+        transformed as unknown as Entity,
+      );
+      for (const ghost of pipeGhosts) {
+        drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
+      }
+      ctx.restore();
     }
-    ctx.restore();
+
+    // ADR-507 Φ5 A3b — το live origin handle marker LAST (πάνω από το gradient ghost). Η
+    // ζωντανή θέση = `patternOrigin` του preview entity (ή του committed σε zero-delta).
+    if (isHatchOriginDrag) {
+      const live = (transformed !== entity ? transformed : entity) as unknown as HatchEntity;
+      const originW = live.patternOrigin ?? hatchBoundsCenter(live.boundaryPaths ?? []);
+      if (originW) drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(originW, t, vp));
+    }
   }, [dragPreview, getEntity, levelManager]);
 
   useCanvasGhostPreview({

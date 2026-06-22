@@ -1,0 +1,277 @@
+/**
+ * ADR-513 — «Δαχτυλίδι Εντολών» (Radial Command Ring): in-canvas dynamic input στη σχεδίαση
+ * τοίχου, με τη μηχανική του **AutoCAD NavWheel (SteeringWheels)** — «δάχτυλο μέσα σε δαχτυλίδι»:
+ *
+ *  · Δύο ομόκεντροι κύκλοι: **εσωτερικός ορατός** (4 πλήρεις pie-wedges, ΧΩΡΙΣ τρύπα, με labels)
+ *    + **εξωτερικός αόρατος** (deadzone). Ο κέρσορας κινείται **ελεύθερα** μέσα· το δαχτυλίδι ΔΕΝ
+ *    ακολουθεί. Σπρώχνεται ΜΟΝΟ όταν ο κέρσορας φτάσει στην περιφέρεια του εξωτερικού (`pushWheelCenter`).
+ *  · Κέρσορας στον **εσωτερικό** → πλήκτρα **ορατά**, hover **φωτίζει** + γίνεται **βελάκι**.
+ *    Στο **«κουλούρι»** (annulus) → πλήκτρα **κρυφά** (δεν σπρώχνεται).
+ *  · **Κλικ** σε πλήκτρο → ανοίγει **μικρό διακριτικό input**· type+Enter = καταχώρηση, μετά συνεχίζεις.
+ *    Τα πεδία **ΔΕΝ** φαίνονται συνεχώς. Κλικ έξω από τα πλήκτρα (annulus) = commit τοίχου (περνά στον καμβά).
+ *
+ * **FULL SSoT — μηδέν νέο store:** commit μέσω `DynamicInputLockStore` (Μήκος/Γωνία) +
+ * `wallToolBridgeStore.setParamOverrides` (Πάχος/Ύψος) + `evalExpr` (math). `applyLengthAngleLock`
+ * κάνει preview≡commit. Γεωμετρία/deadzone → `radial-ring-logic.ts` (pure, testable).
+ * Isolated micro-leaf (ADR-040): render μόνο σε awaitingEnd (gate στο `DynamicInputSubscriber`).
+ */
+
+'use client';
+
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { portalComponents } from '@/styles/design-tokens';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { type DisplayUnit, fromDisplay, formatDisplayValue } from '../../../config/units';
+import { useDisplayUnit } from '../../../hooks/common/useDisplayUnit';
+import { type SceneUnits } from '../../../utils/scene-units';
+import type { Point2D } from '../../../rendering/types/Types';
+import { setCrosshairSuppressed } from '../../cursor/CrosshairSuppressionStore';
+import { useEscapeHandler, ESC_PRIORITY } from '../../escape-bus';
+import { wallPreviewStore, useWallPreview } from '../../../bim/walls/wall-preview-store';
+import { wallToolBridgeStore } from '../../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
+import { resolveWallThicknessMm, type WallParamOverrides } from '../../../hooks/drawing/wall-completion';
+import { resolveStoreyHeightMm } from '../../../systems/levels/storey-creation-defaults';
+import { DEFAULT_WALL_HEIGHT_MM } from '../../../bim/types/wall-types';
+import { DynamicInputLockStore } from '../DynamicInputLockStore';
+import { evalExpr } from '../numeric-expression';
+import {
+  type RingFieldKey,
+  type CursorZone,
+  RING_TAB_ORDER,
+  RING_INNER_R,
+  RING_OPACITY,
+  RING_HOVER_OPACITY,
+  WEDGE_ANGLES,
+  polarPoint,
+  pieSectorPath,
+  wedgeAtAngle,
+  cursorZone,
+  advanceWheelCenter,
+  isRingFieldLocked,
+  lengthDisplayToSceneLock,
+  normalizeAngleDeg,
+} from '../radial-ring-logic';
+
+export interface RadialCommandRingProps {
+  /** Scene-units του ενεργού level (mm→scene conversion για το lock μήκους). */
+  readonly sceneUnits: SceneUnits;
+}
+
+const LABEL_KEY: Record<RingFieldKey, string> = {
+  length: 'ringLength', angle: 'ringAngle', thickness: 'ringThickness', height: 'ringHeight',
+};
+
+/** Τρέχοντα overrides (bridge → preview fallback). */
+function currentOverrides(): WallParamOverrides {
+  return wallToolBridgeStore.get()?.overrides ?? wallPreviewStore.get().overrides;
+}
+
+/** Αρχική τιμή popup: Πάχος/Ύψος από overrides· Μήκος/Γωνία = κενό (ο χρήστης τυπώνει ακριβή τιμή). */
+function seedValue(key: RingFieldKey, unit: DisplayUnit): string {
+  const ov = currentOverrides();
+  if (key === 'thickness') return formatDisplayValue(resolveWallThicknessMm(ov), unit);
+  if (key === 'height') return formatDisplayValue(resolveStoreyHeightMm(ov.height, DEFAULT_WALL_HEIGHT_MM), unit);
+  return '';
+}
+
+export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React.ReactElement | null {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const { displayUnit } = useDisplayUnit();
+  const colors = useSemanticColors();
+
+  const lock = useSyncExternalStore(DynamicInputLockStore.subscribe, DynamicInputLockStore.getSnapshot, DynamicInputLockStore.getSnapshot);
+  const preview = useWallPreview();
+  const startKey = preview.startPoint ? `${preview.startPoint.x},${preview.startPoint.y}` : '';
+
+  const centerRef = useRef<Point2D | null>(null);
+  const prevCursorRef = useRef<Point2D | null>(null);
+  const cursorRef = useRef<Point2D | null>(null);
+  const [cursor, setCursor] = useState<Point2D | null>(null);
+  const [center, setCenter] = useState<Point2D | null>(null);
+  const [zone, setZone] = useState<CursorZone>('inside');
+  const [hovered, setHovered] = useState<RingFieldKey | null>(null);
+  const [openField, setOpenField] = useState<RingFieldKey | null>(null);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // ADR-513 — η θέση οδηγείται από WINDOW mousemove (clientX/Y, `position: fixed`): ΔΕΝ παγώνει
+  // ποτέ, ακόμη κι όταν ο κέρσορας είναι πάνω στα `pointer-events-auto` πλήκτρα (το mousemove του
+  // καμβά σταματά εκεί· το window listener όχι). Λύνει hover-stuck + half-speed + στιγμιαίο κόλλημα.
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const p = { x: e.clientX, y: e.clientY };
+      cursorRef.current = p;
+      setCursor(p);
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  // Νέος τοίχος → re-init κέντρο δαχτυλιδιού στον τρέχοντα κέρσορα, κλείσε popup.
+  useEffect(() => {
+    const c = cursorRef.current;
+    if (c) {
+      centerRef.current = { x: c.x, y: c.y };
+      prevCursorRef.current = { x: c.x, y: c.y };
+      setCenter({ x: c.x, y: c.y });
+    }
+    setOpenField(null);
+  }, [startKey]);
+
+  // Deadzone «δάχτυλο-σε-δαχτυλίδι»: inside → half-speed follow· annulus → ακίνητο· outside → push.
+  // + κρύψε το σταυρόνημα όταν inside (γίνεται βελάκι πάνω στα πλήκτρα).
+  useEffect(() => {
+    if (!cursor) return;
+    let c = centerRef.current;
+    if (!c) {
+      c = { x: cursor.x, y: cursor.y };
+      centerRef.current = c;
+      prevCursorRef.current = { x: cursor.x, y: cursor.y };
+      setCenter(c);
+      return;
+    }
+    const prev = prevCursorRef.current ?? cursor;
+    const d = Math.hypot(cursor.x - c.x, cursor.y - c.y);
+    const z = cursorZone(d);
+    const next = advanceWheelCenter(c, prev, cursor, z);
+    if (next.x !== c.x || next.y !== c.y) { centerRef.current = next; setCenter(next); }
+    setZone(z);
+    setHovered(z === 'inside'
+      ? wedgeAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI)
+      : null);
+    setCrosshairSuppressed(z === 'inside');
+    prevCursorRef.current = { x: cursor.x, y: cursor.y };
+  }, [cursor]);
+
+  // Καθάρισε το crosshair-suppression όταν φεύγει το δαχτυλίδι (tool end / phase change).
+  useEffect(() => () => setCrosshairSuppressed(false), []);
+
+  const openWedge = useCallback((key: RingFieldKey) => {
+    setOpenField(key);
+    setDraft(seedValue(key, displayUnit));
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
+  }, [displayUnit]);
+
+  const commitOpen = useCallback(() => {
+    if (!openField) return;
+    const num = evalExpr(draft);
+    if (num !== null) {
+      if (openField === 'length') {
+        DynamicInputLockStore.lockLength(lengthDisplayToSceneLock(num, displayUnit, sceneUnits));
+      } else if (openField === 'angle') {
+        DynamicInputLockStore.lockAngle(normalizeAngleDeg(num));
+      } else {
+        const handle = wallToolBridgeStore.get();
+        handle?.setParamOverrides({ ...handle.overrides, [openField]: fromDisplay(num, displayUnit) });
+      }
+    }
+    setOpenField(null);
+  }, [openField, draft, displayUnit, sceneUnits]);
+
+  const onPopupKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitOpen(); }
+  }, [commitOpen]);
+
+  // ADR-364 — Escape μέσω του κεντρικού EscapeCommandBus (SSoT· ΟΧΙ inline e.key listener).
+  // Το popup πεδίο είναι dynamic-input στυλ: `allowWhenEditable` ώστε να «κερδίζει» το ESC όσο
+  // το input έχει focus, στο ίδιο slot DYNAMIC_INPUT (P900) με το useDynamicInputKeyboard.
+  useEscapeHandler({
+    id: 'radial-command-ring-popup',
+    priority: ESC_PRIORITY.DYNAMIC_INPUT,
+    allowWhenEditable: true,
+    canHandle: () => openField !== null,
+    handle: () => { setOpenField(null); return true; },
+  });
+
+  if (!center || !cursor) return null;
+
+  const showWedges = zone === 'inside' || openField !== null;
+  const box = 2 * RING_INNER_R;
+  const cc = RING_INNER_R; // SVG κέντρο (= κέντρο δαχτυλιδιού)
+  const popupAnchor = openField ? polarPoint(cc, cc, RING_INNER_R * 0.62, WEDGE_ANGLES[openField].centerDeg) : null;
+
+  // section = pointer-events-none → τα κλικ εκτός πλήκτρων (annulus) πάνε στον καμβά = commit τοίχου.
+  // `position: fixed` + clientX/Y → ευθυγραμμισμένο με τον φυσικό κέρσορα, ανεξάρτητο από το frozen
+  // canvas-feed (το window mousemove το οδηγεί).
+  return (
+    <section
+      aria-label={t('tools.wall.ringLabel')}
+      className={`fixed -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${colors.text.info}`}
+      style={boxStyle(center.x, center.y, box)}
+    >
+      {showWedges && (
+        <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} className={`absolute ${PANEL_LAYOUT.INSET['0']}`}>
+          {RING_TAB_ORDER.map((key) => {
+            const { a0, a1 } = WEDGE_ANGLES[key];
+            const active = hovered === key || openField === key || isRingFieldLocked(key, lock.lockedField);
+            return (
+              <path
+                key={key}
+                d={pieSectorPath(cc, cc, RING_INNER_R, a0, a1)}
+                fill="currentColor"
+                fillOpacity={active ? RING_HOVER_OPACITY : RING_OPACITY}
+                stroke="currentColor"
+                strokeOpacity={0.5}
+                strokeWidth={0.75}
+                className={`${PANEL_LAYOUT.POINTER_EVENTS.AUTO} ${PANEL_LAYOUT.CURSOR.DEFAULT}`}
+                onClick={(e) => { e.stopPropagation(); openWedge(key); }}
+              />
+            );
+          })}
+          {RING_TAB_ORDER.map((key) => {
+            const a = polarPoint(cc, cc, RING_INNER_R * 0.6, WEDGE_ANGLES[key].centerDeg);
+            return (
+              <text
+                key={key}
+                x={a.x}
+                y={a.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={9}
+                fill="currentColor"
+                className={PANEL_LAYOUT.POINTER_EVENTS.NONE}
+              >
+                {t(`tools.wall.${LABEL_KEY[key]}`)}
+              </text>
+            );
+          })}
+        </svg>
+      )}
+
+      {openField && popupAnchor && (
+        <div
+          className={`absolute -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
+          style={anchorStyle(popupAnchor.x, popupAnchor.y)}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onPopupKeyDown}
+            aria-label={t(`tools.wall.${LABEL_KEY[openField]}`)}
+            className={`w-16 text-center ${colors.text.WHITE} ${colors.bg.accent} ${PANEL_LAYOUT.SPACING.COMPACT_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded`}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Inline cursor-follow box (px· ίδια εξαίρεση με `DynamicInputContainer`). Κεντραρισμένο στο δαχτυλίδι. */
+function boxStyle(x: number, y: number, box: number): React.CSSProperties {
+  return {
+    left: `${x}px`,
+    top: `${y}px`,
+    width: `${box}px`,
+    height: `${box}px`,
+    zIndex: portalComponents.overlay.controls.zIndex() + 90,
+  };
+}
+
+/** Θέση popup-input στο anchor του wedge (px εντός του box). */
+function anchorStyle(x: number, y: number): React.CSSProperties {
+  return { left: `${x}px`, top: `${y}px` };
+}

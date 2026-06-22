@@ -375,10 +375,13 @@ describe('collectTekPlanes (έπιπλα → κουτιά)', () => {
 // faces από το ήδη-υπολογισμένο geometry.faces[].outline (canvas xy + mm z).
 interface RoofEdge { definesSlope: boolean; slope: number }
 interface RoofFaceFix { outline: ReadonlyArray<{ x: number; y: number; z: number }> }
+interface Pt3 { x: number; y: number; z: number }
+interface RoofRidgeFix { a: Pt3; b: Pt3 }
 function roof(
   outline: ReadonlyArray<{ x: number; y: number }>,
   opts: {
     thickness: number; basePivotZ: number; edges: RoofEdge[]; faces?: RoofFaceFix[];
+    ridges?: RoofRidgeFix[];
     slopeUnit?: 'deg' | 'percent'; sceneUnits?: string; color?: string;
   },
 ): Entity {
@@ -393,7 +396,7 @@ function roof(
       basePivotZ: opts.basePivotZ,
       sceneUnits: opts.sceneUnits ?? 'mm',
     },
-    geometry: { faces: opts.faces ?? [] },
+    geometry: { faces: opts.faces ?? [], ridges: opts.ridges ?? [] },
   } as unknown as Entity;
 }
 
@@ -481,7 +484,10 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
     expect(r.autoroofsXml).toContain('<pX>5</pX><pY>0</pY><angle>0</angle>'); // 5000mm → 5m
   });
 
-  it('κεκλιμένη: edge 30° → angle σε rad = atan(tan(30°)) = 30° = 0.5236 rad', () => {
+  it('δίρριχτη: νερό 30° → 0.5236 rad, αέτωμα → π/2 (κατακόρυφο, ΟΧΙ 0)', () => {
+    // Ground truth (ΣΤΕΓΗ_ΔΙΡΡΥΧΤΗ_ΚΑΘΕΤΑ_ΑΕΤΩΜΑΤΑ.tek φτιαγμένη ΣΤΟΝ Τέκτονα): το <angle>
+    // είναι η κλίση της πλευράς από το οριζόντιο. Αέτωμα = κατακόρυφη πλευρά = π/2, ΟΧΙ 0.
+    // Με angle 0 ο Τέκτων βλέπει το αέτωμα ως οριζόντιο και δεν ζωγραφίζει τη στέγη.
     const edges: RoofEdge[] = [
       { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
       { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
@@ -489,7 +495,9 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
     const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, slopeUnit: 'deg' })]);
     // atan(roofSlopeToRatio(30,'deg')) = atan(tan(30°)) = 30° = 0.523598776 rad (tekNum 9dp).
     expect(r.autoroofsXml).toContain('<angle>0.523598776</angle>');
-    expect(r.autoroofsXml).toContain('<angle>0</angle>'); // αέτωμα (definesSlope false)
+    // αέτωμα (definesSlope false) σε στέγη ΜΕ νερά → π/2 = tekNum(Math.PI/2) = 1.570796327.
+    expect(r.autoroofsXml).toContain('<angle>1.570796327</angle>');
+    expect(r.autoroofsXml).not.toContain('<angle>0</angle>');
   });
 
   it('faces → <v3list> με per-vertex z (κεκλιμένα «νερά»)', () => {
@@ -501,6 +509,40 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
     const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, faces })]);
     expect(r.autoroofsXml).toContain('<onev3list>');
     expect(r.autoroofsXml).toContain('<pvX>2.5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>'); // κορφιάς
+  });
+
+  it('δίρριχτη: αετώματα → κατακόρυφα τρίγωνα στο <v3list> (2 νερά + 2 αετώματα)', () => {
+    // 2 κεκλιμένα νερά (y-low/y-high) + 2 αετώματα (x=0 / x=5000). Ridge οριζόντιο στο μέσο.
+    const edges: RoofEdge[] = [
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+    ];
+    const faces: RoofFaceFix[] = [
+      { outline: [{ x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 }, { x: 5000, y: 2500, z: 3900 }, { x: 0, y: 2500, z: 3900 }] },
+      { outline: [{ x: 5000, y: 5000, z: 3000 }, { x: 0, y: 5000, z: 3000 }, { x: 0, y: 2500, z: 3900 }, { x: 5000, y: 2500, z: 3900 }] },
+    ];
+    const ridges: RoofRidgeFix[] = [
+      { a: { x: 0, y: 2500, z: 3900 }, b: { x: 5000, y: 2500, z: 3900 } },
+    ];
+    const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, faces, ridges })]);
+    // 2 νερά + 2 αετώματα = 4 onev3list (πριν το fix: μόνο 2).
+    expect((r.autoroofsXml.match(/<onev3list>/g) ?? []).length).toBe(4);
+    // αετώματα = κατακόρυφα τρίγωνα: apex στο ridge (z=3.9), 2 eave corners (z=3) στο ίδιο x.
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>0</pvY><pvZ>3</pvZ>');   // δεξί αέτωμα base
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>5</pvY><pvZ>3</pvZ>');   // δεξί αέτωμα base
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>'); // apex
+  });
+
+  it('χωρίς ridges (επίπεδη/μη-διαθέσιμα) → κανένα αέτωμα face (graceful)', () => {
+    const edges: RoofEdge[] = [
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+    ];
+    const faces: RoofFaceFix[] = [
+      { outline: [{ x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 }, { x: 2500, y: 2500, z: 3900 }] },
+    ];
+    const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, faces })]);
+    expect((r.autoroofsXml.match(/<onev3list>/g) ?? []).length).toBe(1); // μόνο το 1 νερό
   });
 
   it('χρώμα από entity (SSoT), fallback στο δείγμα όταν λείπει', () => {
@@ -529,9 +571,9 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
     const pts = [...r.autoroofsXml.matchAll(/<pX>([^<]*)<\/pX><pY>([^<]*)<\/pY><angle>([^<]*)<\/angle>/g)]
       .map((m) => ({ x: +m[1], y: +m[2], a: +m[3] }));
     expect(signedAreaXY(pts)).toBeGreaterThan(0); // CCW
-    // Κάθε κορυφή με κλίση 0 = αέτωμα· με 0.5236 = κεκλιμένη. Σύνολο: 2 κεκλιμένες + 2 αετώματα.
-    expect(pts.filter((p) => p.a > 0.1).length).toBe(2);
-    expect(pts.filter((p) => p.a === 0).length).toBe(2);
+    // Κάθε κορυφή με κλίση π/2 = αέτωμα (κατακόρυφο)· με 0.5236 = κεκλιμένο νερό. 2 νερά + 2 αετώματα.
+    expect(pts.filter((p) => Math.abs(p.a - 0.523598776) < 1e-3).length).toBe(2);
+    expect(pts.filter((p) => Math.abs(p.a - Math.PI / 2) < 1e-3).length).toBe(2);
   });
 });
 

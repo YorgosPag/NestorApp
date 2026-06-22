@@ -35,6 +35,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🚀 PERFORMANCE: ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+// ADR-513 — κρύψε το σταυρόνημα όταν ο κέρσορας μπαίνει στα πλήκτρα του «Δαχτυλιδιού Εντολών».
+import { isCrosshairSuppressed, subscribeCrosshairSuppression } from '../../systems/cursor/CrosshairSuppressionStore';
 import { getHoveredEntity, subscribeHoveredEntity, getHoveredOverlay, subscribeHoveredOverlay } from '../../systems/hover/HoverStore';
 import {
   computeArmLength,
@@ -244,7 +246,8 @@ export default function CrosshairOverlay({
     const container = containerRef.current;
     if (!container) return;
     const cross = settingsRef.current.crosshair;
-    const active = isActiveRef.current && !!pos && (cross?.enabled ?? false);
+    // ADR-513 — όταν ο κέρσορας είναι πάνω στα πλήκτρα του NavWheel, εξαφάνισε το σταυρόνημα.
+    const active = isActiveRef.current && !!pos && (cross?.enabled ?? false) && !isCrosshairSuppressed();
     if (!active || !pos) {
       container.style.visibility = 'hidden';
       return;
@@ -305,6 +308,13 @@ export default function CrosshairOverlay({
 
   // 🚀 DIRECT RENDER: synchronous, zero-latency, compositor-only position update.
   useEffect(() => registerDirectRender((pos) => applyTransform(pos)), [applyTransform]);
+
+  // ADR-513 — re-apply όταν αλλάζει το crosshair-suppression flag χωρίς κίνηση ποντικιού
+  // (π.χ. το NavWheel ξεμοντάρεται ενώ ο κέρσορας μένει ακίνητος).
+  useEffect(
+    () => subscribeCrosshairSuppression(() => applyTransform(getImmediatePosition())),
+    [applyTransform],
+  );
 
   // Selection badge: hover changes + Shift key (low-frequency). The badge rides
   // the moving layer, so only its text/colour/visibility change here — never a

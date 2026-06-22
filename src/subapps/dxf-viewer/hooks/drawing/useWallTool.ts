@@ -64,6 +64,9 @@ import { useWallRegionClicks } from './use-wall-region-clicks';
 import { useWallToolLifecycle } from './use-wall-tool-lifecycle';
 // ADR-404 Phase 5b — publish drawing-mode handle στο ribbon (κεκλιμένος τοίχος «σχεδίασε κεκλιμένο»).
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
+// ADR-513 — «Δαχτυλίδι Εντολών»: το locked μήκος/γωνία πρέπει να σέβεται ΚΑΙ το click-commit
+// (ίδιος SSoT περιορισμός με το preview στο drawing-hover-handler). No-op όταν δεν υπάρχει lock.
+import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -324,7 +327,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        return commitStraightFromState(s, point);
+        // ADR-513 — σεβάσου το locked μήκος/γωνία του «Δαχτυλιδιού Εντολών» στο commit (preview ≡
+        // committed). No-op όταν δεν υπάρχει ενεργό lock → μηδέν αλλαγή στο 2-click free-draw.
+        const lockedEnd = applyLengthAngleLock(point, s.startPoint);
+        return commitStraightFromState(s, lockedEnd);
       }
       // Legacy awaitingAlignment commit (μη προσβάσιμο πλέον από κλικ straight· διατηρείται
       // για το dynamic-input precision path που μπορεί ακόμη να το θέσει).

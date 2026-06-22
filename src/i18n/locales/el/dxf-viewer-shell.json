@@ -644,7 +644,12 @@
       "statusRegionMore": "Επίλεξε κι άλλες γραμμές μέχρι να κλείσει το ορθογώνιο (ESC για ακύρωση)",
       "statusPerimeterPick": "Επίλεξε με παράθυρο τις παρειές ενός δομικού στοιχείου (ορθογώνιο/Γ/Τ/Π) → τοίχοι ανά σκέλος",
       "openingCutConflict": "Κόβει άνοιγμα — ύψος {range}",
-      "hudSpec": "πάχος {thickness} · ύψος {height}"
+      "hudSpec": "πάχος {thickness} · ύψος {height}",
+      "ringLabel": "Δαχτυλίδι εντολών τοίχου",
+      "ringLength": "Μήκος",
+      "ringAngle": "Γωνία",
+      "ringThickness": "Πάχος",
+      "ringHeight": "Ύψος"
     },
     "opening": {
       "statusHostWall": "Επίλεξε τοίχο για να τοποθετήσεις το άνοιγμα",

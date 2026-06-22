@@ -427,6 +427,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             transform={transform}
             canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
             onDrawingPoint={drawingHandlers.onDrawingPoint}
+            getSceneUnits={() => {
+              // ADR-513 — draw-time read του ενεργού level scene (mirror slabOpening ghost).
+              const lvl = levelManager.currentLevelId;
+              return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : dxfSceneRef.current);
+            }}
           />
           <CanvasLayerStack3dLeaf />
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />

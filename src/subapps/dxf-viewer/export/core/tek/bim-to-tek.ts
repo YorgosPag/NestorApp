@@ -28,6 +28,7 @@ import {
   buildOpeningXMatrix,
   footprintRingToMeters,
   roofFaceRingToMeters,
+  buildGableFaces,
   signedAreaXY,
   reverseRoofFootprint,
 } from './tek-geometry';
@@ -237,11 +238,18 @@ function toTekRoof(roof: RoofEntity, id: number): TekRoof {
   const p = roof.params;
   const metersPerSceneUnit = sceneUnitsToMeters(p.sceneUnits ?? 'mm');
 
-  // Footprint κορυφή i + κλίση της ακμής i (i→i+1)· αέτωμα/μη-κεκλιμένη → 0.
+  // Footprint κορυφή i + κλίση της ακμής i (i→i+1). Στον Τέκτονα το `<angle>` είναι η κλίση
+  // της πλευράς από το οριζόντιο: 0 = οριζόντιο νερό (επίπεδη στέγη), π/2 = κατακόρυφη πλευρά
+  // (αέτωμα/gable end). Μια μη-κεκλιμένη ακμή σε στέγη που ΕΧΕΙ νερά είναι αέτωμα → π/2· αν
+  // ΚΑΜΙΑ ακμή δεν έχει κλίση (εντελώς επίπεδη στέγη) → όλες 0. Χωρίς αυτή τη διάκριση ο Τέκτων
+  // βλέπει τα αετώματα ως οριζόντια, αδυνατεί να συμβιβάσει τη γεωμετρία και η στέγη δεν ζωγραφίζεται.
+  const hasSlopedEdge = p.edges.some((edge) => edge?.definesSlope);
   const rawPoints: TekRoofPoint[] = p.outline.vertices.map((v, i) => {
     const edge = p.edges[i];
-    const ratio = edge?.definesSlope ? roofSlopeToRatio(edge.slope, p.slopeUnit) : 0;
-    return { x: v.x * metersPerSceneUnit, y: v.y * metersPerSceneUnit, angleRad: Math.atan(ratio) };
+    const angleRad = edge?.definesSlope
+      ? Math.atan(roofSlopeToRatio(edge.slope, p.slopeUnit))
+      : hasSlopedEdge ? Math.PI / 2 : 0;
+    return { x: v.x * metersPerSceneUnit, y: v.y * metersPerSceneUnit, angleRad };
   });
 
   // Ο Τέκτων χτίζει τη στέγη από το **CCW** footprint (Y προς τα πάνω) + την κλίση ανά ακμή.
@@ -249,13 +257,18 @@ function toTekRoof(roof: RoofEntity, id: number): TekRoof {
   // ζωγραφίζεται. Normalize σε CCW (θετικό signed area)· η κλίση ακολουθεί (reverseRoofFootprint).
   const points = signedAreaXY(rawPoints) < 0 ? reverseRoofFootprint(rawPoints) : rawPoints;
 
-  // Τα «νερά» (computed 3D faces) → `<onev3list>` display cache· per-vertex z διατηρείται.
-  // `roofFaceRingToMeters` καθαρίζει degenerate επαναλήψεις· faces <3 κορυφές απορρίπτονται.
-  // Το winding των faces ΔΕΝ μετράει (το δείγμα έχει ανάμεικτα CW/CCW → ο Τέκτων ξαναϋπολογίζει
-  // από το footprint) → δεν το πειράζουμε.
-  const faces: TekRoofFace[] = roof.geometry.faces
+  // Τα «νερά» (computed 3D faces) → `<onev3list>`· per-vertex z διατηρείται. `roofFaceRingToMeters`
+  // καθαρίζει degenerate επαναλήψεις· faces <3 κορυφές απορρίπτονται. Winding faces ΔΕΝ μετράει.
+  const waterFaces: TekRoofFace[] = roof.geometry.faces
     .map((f) => roofFaceRingToMeters(f.outline, metersPerSceneUnit))
     .filter((ring) => ring.length >= 3);
+  // Τα **αετώματα** (κατακόρυφες όψεις στις μη-κεκλιμένες ακμές) ΔΕΝ ανήκουν στη lower envelope →
+  // λείπουν από `geometry.faces`· ο Τέκτων τα χρειάζεται ως faces αλλιώς μένουν ανοιχτά (κορυφές
+  // δεν ταυτίζονται). Τα χτίζουμε από τα ήδη-υπολογισμένα `geometry.ridges` (FULL SSoT, μηδέν re-derive).
+  const gableFaces: TekRoofFace[] = buildGableFaces(
+    p.outline.vertices, p.edges, roof.geometry.ridges, p.basePivotZ, metersPerSceneUnit,
+  ).filter((ring) => ring.length >= 3);
+  const faces: TekRoofFace[] = [...waterFaces, ...gableFaces];
 
   return {
     id,

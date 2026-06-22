@@ -22,14 +22,14 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
-import { hatchBounds, hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
+import { hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
-import {
-  resolveGradientStops, isRadialGradientType, normalizeGradientShift, type HatchGradient,
-} from '../../bim/hatch/hatch-gradient';
-import { degToRad } from './shared/geometry-angle-utils';
+import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
+// ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
+// `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
+import { fillHatchGradient, traceHatchBoundary } from './shared/hatch-gradient-paint';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 /**
@@ -159,9 +159,16 @@ export class HatchRenderer extends BaseEntityRenderer {
     // ADR-507 Φ5 A3 — gradient origin/seed grip (ΟΡΑΤΟ· το interaction οδηγείται από
     // το computeDxfEntityGrips με `hatchGripKind`). Index = μετά τις κορυφές, ώστε να
     // αντιστοιχεί 1-προς-1 με την origin λαβή του computeDxfEntityGrips. Μόνο gradient.
+    // ADR-507 Φ5 A3b — όταν ΑΥΤΗ η λαβή σέρνεται (active), ΜΗΝ την εκπέμπεις: το main canvas
+    // δεν ξαναζωγραφίζεται κατά το drag (ADR-040) → θα έμενε «παγωμένη» στην παλιά θέση ενώ ο
+    // χρήστης την σέρνει. Το live marker την ακολουθεί στο preview canvas (`useGripGhostPreview`).
     if (hatch.fillType === 'gradient') {
-      const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
-      if (originPos) grips.push(createVertexGrip(entity.id, originPos, gi));
+      const active = this.gripInteraction.active;
+      const originIsBeingDragged = active?.entityId === entity.id && active.gripIndex === gi;
+      if (!originIsBeingDragged) {
+        const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
+        if (originPos) grips.push(createVertexGrip(entity.id, originPos, gi));
+      }
     }
     return grips;
   }
@@ -201,65 +208,24 @@ export class HatchRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Γέμισμα gradient (ADR-507 Φ5). Χτίζει CanvasGradient σε screen space: linear κατά
-   * τη γωνία (world, μέσω 2 `worldToScreen` endpoints — το uniform transform διατηρεί
-   * τη γραμμικότητα)· radial από το κέντρο. Stops μέσω του SSoT `resolveGradientStops`.
-   * even-odd → νησίδες μένουν κενές (όπως solid).
+   * Γέμισμα gradient (ADR-507 Φ5). Delegate στο pure SSoT `fillHatchGradient`
+   * (κοινό με το live grip-drag ghost) — μηδέν τοπική gradient math. Περνά τον ίδιο
+   * `worldToScreen` + `transform.scale` που χρησιμοποιεί ο renderer.
    */
   private fillGradient(
     paths: ReadonlyArray<ReadonlyArray<Point2D>>, gradient: HatchGradient,
     origin?: Point2D,
   ): void {
-    // SSoT bbox (κοινό με το gradient-origin grip default).
-    const b = hatchBounds(paths);
-    if (!b || b.maxX <= b.minX || b.maxY <= b.minY) return;
-    // origin (seed, ADR-507 Φ5 A3) = το patternOrigin όταν υπάρχει, αλλιώς κέντρο bbox.
-    const cx = origin?.x ?? (b.minX + b.maxX) / 2;
-    const cy = origin?.y ?? (b.minY + b.maxY) / 2;
-    const w = b.maxX - b.minX; const h = b.maxY - b.minY;
-
-    // shift (DXF 461) → μετατοπίζει τη γεωμετρία κατά τον άξονα της γωνίας (όχι τα
-    // stops → μηδέν degenerate offset). 0=centered· →1 το 1ο χρώμα κυριαρχεί.
-    const shiftN = normalizeGradientShift(gradient.shift);
-    const r = degToRad(gradient.angleDeg ?? 0);
-    const dx = Math.cos(r); const dy = Math.sin(r);
-
-    let grad: CanvasGradient;
-    if (isRadialGradientType(gradient.type)) {
-      const rWorld = 0.5 * Math.hypot(w, h);
-      // shift → μετακινεί το «κέντρο φωτισμού» εκτός κέντρου κατά τη γωνία.
-      const c = this.worldToScreen({ x: cx + dx * shiftN * rWorld, y: cy + dy * shiftN * rWorld });
-      const rScreen = Math.max(1, rWorld * this.transform.scale);
-      grad = this.ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, rScreen);
-    } else {
-      const half = 0.5 * (Math.abs(w * dx) + Math.abs(h * dy)) || 0.5 * Math.hypot(w, h);
-      // shift → «γλιστράει» τον άξονα κατά shiftN*half· το CanvasGradient κάνει
-      // clamp στα άκρα → το 1ο χρώμα γεμίζει περισσότερο το bbox.
-      const s = shiftN * half;
-      const p0 = this.worldToScreen({ x: cx - dx * half + dx * s, y: cy - dy * half + dy * s });
-      const p1 = this.worldToScreen({ x: cx + dx * half + dx * s, y: cy + dy * half + dy * s });
-      grad = this.ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
-    }
-    for (const stop of resolveGradientStops(gradient)) grad.addColorStop(stop.offset, stop.color);
-
-    this.ctx.fillStyle = grad;
-    this.drawBoundaryPath(paths);
-    this.ctx.fill('evenodd');
+    fillHatchGradient(this.ctx, paths, gradient, {
+      origin,
+      toScreen: (p) => this.worldToScreen(p),
+      scale: this.transform.scale,
+    });
   }
 
-  /** Χτίζει ΕΝΑ canvas path με ΟΛΑ τα boundary paths ως subpaths (για even-odd fill). */
+  /** Χτίζει ΕΝΑ canvas path με ΟΛΑ τα boundary paths ως subpaths (delegate στο SSoT). */
   private drawBoundaryPath(paths: ReadonlyArray<ReadonlyArray<Point2D>>): void {
-    this.ctx.beginPath();
-    for (const path of paths) {
-      if (path.length < 2) continue;
-      const first = this.worldToScreen({ x: path[0].x, y: path[0].y });
-      this.ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < path.length; i += 1) {
-        const s = this.worldToScreen({ x: path[i].x, y: path[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.closePath();
-    }
+    traceHatchBoundary(this.ctx, paths, (p) => this.worldToScreen(p));
   }
 
   /** Σχεδιάζει τα τμήματα μοτίβου (κοινό για user-defined + predefined). */

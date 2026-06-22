@@ -644,7 +644,12 @@
       "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U) → one wall per leg",
       "openingCutConflict": "Cuts an opening — height {range}",
-      "hudSpec": "thickness {thickness} · height {height}"
+      "hudSpec": "thickness {thickness} · height {height}",
+      "ringLabel": "Wall command ring",
+      "ringLength": "Length",
+      "ringAngle": "Angle",
+      "ringThickness": "Thickness",
+      "ringHeight": "Height"
     },
     "opening": {
       "statusHostWall": "Pick a host wall to place the opening",

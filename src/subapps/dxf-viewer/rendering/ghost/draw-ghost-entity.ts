@@ -20,7 +20,11 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { HatchEntity } from '../../types/entities';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+// ADR-507 Φ5 A3 — WYSIWYG hatch ghost: ίδιο pure gradient-paint SSoT με τον committed
+// HatchRenderer, ώστε το drag της gradient-origin λαβής να δείχνει live το τελικό γέμισμα.
+import { fillHatchGradient, traceHatchBoundary } from '../entities/shared/hatch-gradient-paint';
 import type { ColumnParams } from '../../bim/types/column-types';
 import { drawOpeningPlanOverlay } from '../../bim/renderers/opening-overlay-drawing';
 // ADR-456/460 (Giorgio 2026-06-16) — live ghost rebar during column grip-drag/resize.
@@ -450,6 +454,36 @@ export function drawGhostEntity(
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       drawOpeningPlanOverlay(opening, { ctx, toScreen, lineWidth: ctx.lineWidth || 1 });
+      return;
+    }
+
+    // ADR-507 Φ5 A3 — hatch ghost. `applyEntityPreview` ήδη επιστρέφει το preview entity με
+    // το live `patternOrigin` (origin grip) ή νέα `boundaryPaths` (vertex grip). Εδώ το ghost
+    // ζωγραφίζει: (α) το ΠΡΑΓΜΑΤΙΚΟ gradient γέμισμα μέσω του ΙΔΙΟΥ pure `fillHatchGradient`
+    // SSoT με τον committed renderer → preview === commit, μηδέν δεύτερη gradient math· (β) το
+    // boundary silhouette (όπως όλες οι area οντότητες) ώστε και το vertex-drag να φαίνεται.
+    // Κληρονομεί το translucent ghost alpha/color (caller· δεν γίνεται override → reads as ghost).
+    case 'hatch': {
+      const hatch = entity as unknown as HatchEntity;
+      const paths = (hatch.boundaryPaths ?? []).filter((p) => p.length >= 3);
+      if (!paths.length) return;
+      if (hatch.fillType === 'gradient' && hatch.gradient) {
+        // Το committed gradient ζωγραφίζεται ΑΚΟΜΑ full-opacity στο main canvas (ADR-040:
+        // η οντότητα δεν αφαιρείται κατά το grip-drag). Στο gradient-origin drag το ΟΡΙΟ δεν
+        // αλλάζει — μόνο το fill — οπότε translucent ghost (alpha 0.45) θα έλιωνε πάνω στο
+        // αμετάβλητο παλιό → «δεν κουνιέται». Ζωγραφίζουμε FULL-opacity ώστε το preview-canvas
+        // overlay να ΚΑΛΥΨΕΙ πλήρως το παλιό gradient → καθαρό real-time «το φως μετακινείται».
+        ctx.save();
+        ctx.globalAlpha = 1;
+        fillHatchGradient(ctx, paths, hatch.gradient, {
+          origin: hatch.patternOrigin,
+          toScreen,
+          scale: transform.scale,
+        });
+        ctx.restore();
+      }
+      traceHatchBoundary(ctx, paths, toScreen);
+      ctx.stroke();
       return;
     }
 

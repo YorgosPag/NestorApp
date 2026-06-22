@@ -174,3 +174,63 @@ export function roofFaceRingToMeters(
     })),
   );
 }
+
+/** Ανοχή «ridge apex πάνω στην ακμή-αέτωμα» ως κλάσμα του μήκους ακμής (solver jitter). */
+const GABLE_ON_EDGE_FRACTION = 0.02;
+
+/**
+ * Κατασκευάζει τα **αετώματα** (gable end faces) ως κατακόρυφα `<v3list>` πολύγωνα.
+ *
+ * Ο roof solver (`solveLowerEnvelope`) παράγει ΜΟΝΟ τα κεκλιμένα «νερά» — τα αετώματα
+ * (κατακόρυφες τριγωνικές όψεις στις μη-κεκλιμένες ακμές) ΔΕΝ ανήκουν στη lower envelope,
+ * άρα λείπουν από το `geometry.faces`. Ο Τέκτων ΧΡΕΙΑΖΕΤΑΙ αυτά τα faces στο `<v3list>`:
+ * ground-truth `ΣΤΕΓΗ_ΔΙΡΡΥΧΤΗ_ΚΑΘΕΤΑ_ΑΕΤΩΜΑΤΑ.tek` = δίρριχτη με **2 νερά + 2 αετώματα τρίγωνα**.
+ * Χωρίς αυτά, τα αετώματα μένουν ανοιχτά → «οι γραμμές δεν ταυτίζονται» στις κορυφές.
+ *
+ * Κάθε αέτωμα = η κατακόρυφη όψη πάνω από μια μη-κεκλιμένη ακμή A→B (z=base) που ανεβαίνει
+ * στο/στα ridge apex (z=ridge) που κείνται πάνω σ' αυτή την ακμή. **FULL SSoT reuse:** τα apex
+ * έρχονται από τα **ήδη υπολογισμένα** `geometry.ridges` — μηδέν re-derive κορυφογραμμής.
+ * Χρησιμοποιεί το ΑΡΧΙΚΟ footprint winding (ίδιο σύστημα με τα water faces, ΟΧΙ το CCW-flipped
+ * `<point>` output). Επίπεδη στέγη (καμία κεκλιμένη ακμή) → κανένα αέτωμα.
+ */
+export function buildGableFaces(
+  vertices: readonly { x: number; y: number }[],
+  edges: readonly ({ definesSlope?: boolean } | undefined)[],
+  ridges: readonly { a: Point3D; b: Point3D }[] | undefined,
+  basePivotZmm: number,
+  metersPerSceneUnit: number,
+): TekPlanePoint[][] {
+  if (!ridges || ridges.length === 0) return []; // χωρίς κορυφογραμμή → κανένα αέτωμα
+  if (!edges.some((e) => e?.definesSlope)) return [];
+  const ridgePts: Point3D[] = ridges.flatMap((r) => [r.a, r.b]);
+  const n = vertices.length;
+  const out: TekPlanePoint[][] = [];
+  for (let i = 0; i < n; i++) {
+    if (edges[i]?.definesSlope) continue; // κεκλιμένη ακμή = νερό, όχι αέτωμα
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    const abLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (abLen < 1e-6) continue;
+    const eps = abLen * GABLE_ON_EDGE_FRACTION;
+    // ridge apex που κείνται πάνω στην ακμή A→B (xy), ταξινομημένα κατά μήκος a→b.
+    const apexes = ridgePts
+      .map((p) => {
+        const ap = Math.hypot(p.x - a.x, p.y - a.y);
+        const pb = Math.hypot(b.x - p.x, b.y - p.y);
+        const t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / (abLen * abLen);
+        return { p, onEdge: Math.abs(ap + pb - abLen) < eps, t };
+      })
+      .filter((u) => u.onEdge)
+      .sort((u, v) => u.t - v.t)
+      .map((u) => u.p);
+    if (apexes.length === 0) continue;
+    // Κατακόρυφο αέτωμα: A(base) → B(base) → apex(es) σε φθίνον t (κλείνει το πολύγωνο).
+    const ring: Point3D[] = [
+      { x: a.x, y: a.y, z: basePivotZmm },
+      { x: b.x, y: b.y, z: basePivotZmm },
+      ...[...apexes].reverse(),
+    ];
+    out.push(roofFaceRingToMeters(ring, metersPerSceneUnit));
+  }
+  return out;
+}

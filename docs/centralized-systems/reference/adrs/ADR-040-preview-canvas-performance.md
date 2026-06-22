@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-22 — ADR-513 Radial Command Ring: draw-time `getSceneUnits` getter στο `DynamicInputSubscriber` leaf (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — pure draw-time getter pass-through, ZERO new subscriptions. Το `CanvasLayerStack` περνά στο `DynamicInputSubscriber` micro-leaf έναν `getSceneUnits={() => …}` **getter** (ΟΧΙ snapshot value) που διαβάζει event-time το scene του ενεργού level (`levelManager.currentLevelId`/`getLevelScene`, mirror του slab-opening ghost) — ακριβώς το Cardinal rule #2 pattern (handlers δέχονται getters, όχι stale snapshots). Το `RadialCommandRing` παραμένει isolated micro-leaf, render μόνο σε `awaitingEnd` (gate στο `DynamicInputSubscriber`). Καμία νέα `useSyncExternalStore` στον orchestrator, καμία αλλαγή σε bitmap cache-key / scheduler / micro-leaf model — μόνο ένα επιπλέον getter prop. **CHECK 6B** (`CanvasLayerStack.tsx` touch) → ADR-040 + ADR-513 staged. ✅ Google-level: YES — event-time getter, μηδέν νέα reactivity.
+
 ### 2026-06-22 — ADR-417 Φ-per-edge roof-edge highlight: micro-leaf subscription στο `roofEdgeSelectionStore`
 
 **Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — η νέα `useSelectedRoofEdge()` subscription μπαίνει **μέσα στο `DxfCanvasSubscriber` micro-leaf** (`canvas-layer-stack-leaves.tsx`), ΟΧΙ στον orchestrator — ακριβώς το σωστό micro-leaf pattern (Cardinal rule #1). Η αλλαγή επιλεγμένης ακμής στέγης ξανατρέχει ΜΟΝΟ αυτό το leaf ώστε το δυναμικό «selected» pass να επανασχεδιάσει το live edge highlight· ο orchestrator (CanvasSection/CanvasLayerStack) δεν re-renders. Το `selectedRoofEdge` μπαίνει στο σταθερής ταυτότητας `renderOptions` memo (μαζί με `hoveredEntityId`) → καμία αλλαγή σε bitmap cache-key / scheduler. **CHECK 6B** (micro-leaf touch) → ADR-040 + ADR-417 staged. ✅ Google-level: YES — leaf-only reactivity, μηδέν orchestrator subscription.

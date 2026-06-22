@@ -36,6 +36,8 @@ const subscribers = new Set<RoofEdgeListener>();
 export function setSelectedRoofEdge(next: SelectedRoofEdge | null): void {
   if (next?.roofId === selected?.roofId && next?.edgeIndex === selected?.edgeIndex) return;
   selected = next;
+  // TEMP DEBUG (ADR-417 Φ-per-edge highlight) — αφαίρεσέ το μετά τη διάγνωση.
+  console.debug('[roof-edge] setSelectedRoofEdge →', next, 'subscribers:', subscribers.size);
   subscribers.forEach((cb) => cb());
 }
 
