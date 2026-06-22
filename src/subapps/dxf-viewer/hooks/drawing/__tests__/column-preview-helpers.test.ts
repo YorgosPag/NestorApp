@@ -64,6 +64,7 @@ function setTargets(t: Partial<SceneSnapTargets>): void {
     slabTargets: t.slabTargets ?? [],
     lineTargets: t.lineTargets ?? [], // §3.12 — σκέτες γραμμές/κύκλοι/τόξα
     diskTargets: t.diskTargets ?? [], // §3.13 — δίσκοι κύκλων (Polar Magnet)
+    rectTargets: t.rectTargets ?? [], // §3.15 — ορθογώνια (Cartesian Magnet)
   });
 }
 

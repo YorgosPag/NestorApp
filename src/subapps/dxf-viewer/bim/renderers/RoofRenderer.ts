@@ -30,6 +30,7 @@ import { isRoofEntity } from '../../types/entities';
 import type { RoofEntity } from '../types/roof-types';
 import type { Point3D } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
+import { getSelectedRoofEdge } from '../roofs/roof-edge-selection-store';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildRoofEaveDetail } from '../geometry/roof-eave-detail';
 import {
@@ -39,7 +40,7 @@ import {
 } from '../types/roof-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -67,6 +68,12 @@ const ROOF_EAVE_STROKE = '#a04a2b';
 
 /** lineWidth (px) για το περίγραμμα προεξοχής γείσου. */
 const ROOF_EAVE_LINE_WIDTH = 1;
+
+/** Χρώμα highlight της ακμής υπό επεξεργασία — SSoT token (ribbon «Κλίση ανά νερό»). */
+const ROOF_EDGE_HIGHLIGHT_STROKE = UI_COLORS_BASE.EDIT_EDGE_HIGHLIGHT;
+
+/** lineWidth (px) του edge highlight — χοντρό ώστε να ξεχωρίζει από το face stroke. */
+const ROOF_EDGE_HIGHLIGHT_LINE_WIDTH = 3.5;
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +130,15 @@ export class RoofRenderer extends BaseEntityRenderer {
 
     // Draw ridge / hip / valley / eave lines.
     this.drawRidgeLines(roof);
+
+    // ADR-417 Φ-per-edge — live highlight της ακμής υπό επεξεργασία (ribbon
+    // «Κλίση ανά νερό»). ΜΟΝΟ όταν `options.selected` (δυναμικό uncached pass —
+    // τα selected entities ΔΕΝ μπαίνουν στο cached bitmap, DxfRenderer skip· άρα
+    // το highlight δεν «ψήνεται» στο cache). Event-time getter read (ADR-040,
+    // μηδέν subscription)· το redraw trigger ρέει μέσω `renderOptions.selectedRoofEdge`.
+    if (options.selected === true) {
+      this.drawSelectedEdgeHighlight(roof);
+    }
 
     this.ctx.restore();
 
@@ -205,6 +221,36 @@ export class RoofRenderer extends BaseEntityRenderer {
       this.ctx.stroke();
     }
 
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-417 Φ-per-edge — strokes the footprint edge currently being edited in
+   * the «Κλίση ανά νερό» ribbon panel (hybrid dropdown + highlight). Reads the
+   * `roofEdgeSelectionStore` getter at render-time (event-time, zero React);
+   * guarded by `roofId` so only the active roof's edge lights. No-op when no
+   * edge is selected for THIS roof or the index is out of range.
+   */
+  private drawSelectedEdgeHighlight(roof: RoofEntity): void {
+    const sel = getSelectedRoofEdge();
+    if (!sel || sel.roofId !== roof.id) return;
+    const verts = roof.geometry.footprint.vertices;
+    const n = verts.length;
+    if (n < 2 || sel.edgeIndex < 0 || sel.edgeIndex >= n) return;
+    const a = verts[sel.edgeIndex];
+    const b = verts[(sel.edgeIndex + 1) % n];
+    const sa = this.worldToScreen({ x: a.x, y: a.y });
+    const sb = this.worldToScreen({ x: b.x, y: b.y });
+
+    this.ctx.save();
+    this.ctx.strokeStyle = ROOF_EDGE_HIGHLIGHT_STROKE;
+    this.ctx.lineWidth = ROOF_EDGE_HIGHLIGHT_LINE_WIDTH;
+    this.ctx.lineCap = 'round';
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(sa.x, sa.y);
+    this.ctx.lineTo(sb.x, sb.y);
+    this.ctx.stroke();
     this.ctx.restore();
   }
 

@@ -56,15 +56,38 @@ function pointSegmentDistanceSq(
 }
 
 /**
- * Outward-facing azimuth (deg — see {@link directionAzimuthDeg}) of the polygon
- * edge nearest to `p`. **"Outward"** = the edge-normal side pointing **away from
- * the polygon interior**, resolved from the polygon **winding** (no centroid →
- * robust for concave rings). `segmentNormalX/Y` is the CCW (+90°) normal, which
- * points *inward* for a CCW ring, so it is flipped accordingly.
+ * Outward-facing azimuth (deg — see {@link directionAzimuthDeg}) of polygon edge
+ * `edgeIndex` (vertex i → i+1). **"Outward"** = the edge-normal side pointing
+ * **away from the polygon interior**, resolved from the polygon **winding** (no
+ * centroid → robust for concave rings). `segmentNormalX/Y` is the CCW (+90°)
+ * normal, which points *inward* for a CCW ring, so it is flipped accordingly.
  *
- * Returns `null` for `<3` vertices or a degenerate nearest edge. Used to derive
- * an opening's orientation from its room footprint (ADR-422 L7.2 orientation-
- * aware solar gains).
+ * Returns `null` for `<3` vertices or a degenerate edge. **SSoT** for «outward
+ * azimuth of a specific edge» — consumed by {@link nearestEdgeOutwardAzimuthDeg}
+ * (after picking the nearest index) and by the roof per-edge compass labels
+ * (ADR-417 Φ-per-edge).
+ */
+export function edgeOutwardAzimuthDeg(
+  polygon: readonly Point3D[],
+  edgeIndex: number,
+): number | null {
+  const n = polygon.length;
+  if (n < 3) return null;
+  const a = polygon[edgeIndex % n];
+  const b = polygon[(edgeIndex + 1) % n];
+  const nx = segmentNormalX(a, b);
+  const ny = segmentNormalY(a, b);
+  if (nx === null || ny === null) return null;
+  const outwardSign = isPolygonCCW(polygon) ? -1 : 1;
+  return directionAzimuthDeg(outwardSign * nx, outwardSign * ny);
+}
+
+/**
+ * Outward-facing azimuth (deg — see {@link directionAzimuthDeg}) of the polygon
+ * edge nearest to `p`. Picks the nearest edge index, then delegates to the
+ * {@link edgeOutwardAzimuthDeg} SSoT. Returns `null` for `<3` vertices or a
+ * degenerate nearest edge. Used to derive an opening's orientation from its room
+ * footprint (ADR-422 L7.2 orientation-aware solar gains).
  */
 export function nearestEdgeOutwardAzimuthDeg(
   polygon: readonly Point3D[],
@@ -85,13 +108,5 @@ export function nearestEdgeOutwardAzimuthDeg(
     }
   }
   if (bestIndex < 0) return null;
-
-  const a = polygon[bestIndex];
-  const b = polygon[(bestIndex + 1) % n];
-  const nx = segmentNormalX(a, b);
-  const ny = segmentNormalY(a, b);
-  if (nx === null || ny === null) return null;
-
-  const outwardSign = isPolygonCCW(polygon) ? -1 : 1;
-  return directionAzimuthDeg(outwardSign * nx, outwardSign * ny);
+  return edgeOutwardAzimuthDeg(polygon, bestIndex);
 }

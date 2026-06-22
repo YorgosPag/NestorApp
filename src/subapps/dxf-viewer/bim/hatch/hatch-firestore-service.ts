@@ -36,6 +36,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity } from '../../types/entities';
+import type { HatchGradient } from './hatch-gradient';
 
 // ============================================================================
 // TYPES
@@ -75,6 +76,8 @@ export interface HatchDocData {
   readonly patternOrigin?: Point2D;
   readonly drawOrder?: 0 | 1 | 2 | 3 | 4;
   readonly gapTolerance?: number;
+  /** ADR-507 Φ5 — gradient γέμισμα. Flat map (μηδέν nested array) → Firestore-legal αυτούσιο. */
+  readonly gradient?: HatchGradient;
 }
 
 export interface HatchDoc {
@@ -122,6 +125,9 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   'seedPoints', 'fillColor', 'backgroundColor', 'associative', 'fillType',
   'islandStyle', 'lineAngle', 'lineSpacing', 'doubleCrossHatch', 'patternOrigin',
   'drawOrder', 'gapTolerance',
+  // ADR-507 Φ5 — gradient = flat object (όχι nested array) → αποθηκεύεται ως map field
+  // με τον ίδιο μηχανισμό (pickHatchData copy + ...scalars spread στο hatchDocToEntity).
+  'gradient',
 ];
 
 /** Runtime hatch shape consumed on the write side (boundaryPaths = Point2D[][]). */

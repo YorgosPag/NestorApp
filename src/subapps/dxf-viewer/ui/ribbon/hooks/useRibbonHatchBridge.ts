@@ -39,7 +39,7 @@ import {
   withGradientPatch,
   type GradientFieldPatch,
 } from '../../../bim/hatch/hatch-gradient-build';
-import { normalizeGradientType } from '../../../bim/hatch/hatch-gradient';
+import { normalizeGradientType, normalizeGradientShift } from '../../../bim/hatch/hatch-gradient';
 import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
@@ -95,6 +95,7 @@ function gradientDefaultPatch(patch: GradientFieldPatch): Partial<HatchDrawDefau
     case 'color2': return { gradientColor2: patch.value };
     case 'singleColor': return { gradientSingleColor: patch.value };
     case 'angleDeg': return { gradientAngle: patch.value };
+    case 'shift': return { gradientShift: patch.value };
   }
 }
 
@@ -195,6 +196,9 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
           return { value: String(hatch?.gradient?.angleDeg ?? defaults.gradientAngle), options: [] };
         }
+        if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
+          return { value: String(hatch?.gradient?.shift ?? defaults.gradientShift), options: [] };
+        }
         return { value: String(hatch?.lineSpacing ?? defaults.lineSpacing), options: [] };
       }
       return null;
@@ -268,6 +272,10 @@ export function useRibbonHatchBridge(
         if (Number.isNaN(numeric)) return;
         if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
           applyGradientChange(hatch, { field: 'angleDeg', value: numeric });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
+          applyGradientChange(hatch, { field: 'shift', value: normalizeGradientShift(numeric) });
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {

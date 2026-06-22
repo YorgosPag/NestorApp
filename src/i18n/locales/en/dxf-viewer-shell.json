@@ -1215,6 +1215,7 @@
       "slabStructural": "Structural",
       "roofType": "Roof Type",
       "roofShapeSlope": "Shape & Slope",
+      "roofEdgeSlope": "Slope per Face",
       "roofGeometry": "Geometry",
       "roofActions": "Actions",
       "columnKind": "Type",
@@ -2690,6 +2691,25 @@
           "none": "No type",
           "concrete": "Concrete Flat Roof",
           "tiled": "Tiled Roof"
+        },
+        "edge": {
+          "select": "Edge",
+          "edgeWord": "Edge",
+          "defines": "Defines slope?",
+          "definesOn": "Yes",
+          "definesOff": "No",
+          "slope": "Edge slope",
+          "overhang": "Edge overhang",
+          "compass": {
+            "N": "North",
+            "NE": "NE",
+            "E": "East",
+            "SE": "SE",
+            "S": "South",
+            "SW": "SW",
+            "W": "West",
+            "NW": "NW"
+          }
         }
       },
       "beamEditor": {
@@ -3270,6 +3290,7 @@
         "fillTypeGradient": "Gradient",
         "gradientType": "Type",
         "gradientAngle": "Angle",
+        "gradientShift": "Shift",
         "gradientColor1": "Color 1",
         "gradientColor2": "Color 2",
         "gradientSingleColor": "Single color",

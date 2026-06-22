@@ -35,6 +35,7 @@ import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPoint
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
+import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -126,6 +127,11 @@ export interface PreviewCanvasHandle {
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
   drawPolarDisk: (grid: PolarDiskGrid) => void;
+  /**
+   * ADR-398 §3.15 — draw the Cartesian Magnet grid (u/v grid lines + center) inside a rectangle.
+   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawRectGrid: (grid: RectGrid) => void;
 }
 
 // ============================================================================
@@ -387,6 +393,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawPolarDisk(grid, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-398 §3.15: Cartesian Magnet grid overlay (u/v grid lines + center) */
+        drawRectGrid: (grid: RectGrid) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawRectGrid(grid, transformRef.current, viewportRef.current);
         },
       }),
       []

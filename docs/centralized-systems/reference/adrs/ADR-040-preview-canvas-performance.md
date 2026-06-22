@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-22 — ADR-417 Φ-per-edge roof-edge highlight: micro-leaf subscription στο `roofEdgeSelectionStore`
+
+**Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — η νέα `useSelectedRoofEdge()` subscription μπαίνει **μέσα στο `DxfCanvasSubscriber` micro-leaf** (`canvas-layer-stack-leaves.tsx`), ΟΧΙ στον orchestrator — ακριβώς το σωστό micro-leaf pattern (Cardinal rule #1). Η αλλαγή επιλεγμένης ακμής στέγης ξανατρέχει ΜΟΝΟ αυτό το leaf ώστε το δυναμικό «selected» pass να επανασχεδιάσει το live edge highlight· ο orchestrator (CanvasSection/CanvasLayerStack) δεν re-renders. Το `selectedRoofEdge` μπαίνει στο σταθερής ταυτότητας `renderOptions` memo (μαζί με `hoveredEntityId`) → καμία αλλαγή σε bitmap cache-key / scheduler. **CHECK 6B** (micro-leaf touch) → ADR-040 + ADR-417 staged. ✅ Google-level: YES — leaf-only reactivity, μηδέν orchestrator subscription.
+
 ### 2026-06-22 — ADR-510 Φ2E entity-own linetype στο layer-less fallback (DxfRenderer choke-point)
 
 **Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — pure read-time dash resolve, ZERO new subscriptions. Το layer-less render fallback του `DxfRenderer` (`fallback.dashMm`) επέστρεφε πάντα `[]` (solid)· τόσο το bitmap-cache rebuild (που ρίχνει το `layersById` by design, **ADR-040 Phase D**) όσο και freshly-drawn primitives χωρίς `layerId` στο `scene.layersById` περνούσαν από εδώ → η αλλαγή linetype μιας επιλεγμένης γραμμής έπεφτε σιωπηλά σε solid (Φ2E bug). Fix: `dashMm: resolveAnyDashMm(entity.linetypeName)` — reuses τον ΙΔΙΟ `linetype-aliases` SSoT (resolver) με τους BIM renderers + legacy preview· ByLayer/ByBlock/Continuous/unknown ⇒ `[]` (solid) intrinsically. Καμία αλλαγή σε orchestrator subscription / bitmap cache-key / scheduler / micro-leaf model — μόνο μία επιπλέον read-time lookup στο fallback branch. **CHECK 6B** (DxfRenderer touch) → ADR-040 + ADR-510 staged. ✅ Google-level: YES — ίδιος resolver SSoT, μηδέν νέα reactivity.

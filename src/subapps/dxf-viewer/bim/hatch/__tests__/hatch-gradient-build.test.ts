@@ -16,6 +16,7 @@ const TWO_COLOR: GradientDefaults = {
   gradientColor2: '#ffffff',
   gradientSingleColor: false,
   gradientAngle: 0,
+  gradientShift: 0,
 };
 
 describe('buildGradientFromDefaults', () => {
@@ -88,5 +89,14 @@ describe('withGradientPatch', () => {
     const current: HatchGradient = { type: 'linear', color1: '#2980b9', color2: '#ffffff' };
     const next = withGradientPatch(current, TWO_COLOR, { field: 'angleDeg', value: 90 });
     expect(next.angleDeg).toBe(90);
+  });
+
+  it('updates the shift and trims it when zero', () => {
+    const current: HatchGradient = { type: 'linear', color1: '#2980b9', color2: '#ffffff' };
+    const shifted = withGradientPatch(current, TWO_COLOR, { field: 'shift', value: 0.5 });
+    expect(shifted.shift).toBe(0.5);
+    // shift 0 → neutral → παραλείπεται (trimmed).
+    const reset = withGradientPatch(shifted, TWO_COLOR, { field: 'shift', value: 0 });
+    expect(reset.shift).toBeUndefined();
   });
 });

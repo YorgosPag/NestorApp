@@ -183,6 +183,12 @@ export function buildEntityModelFromDxf(
         lineSpacing: entity.lineSpacing,
         doubleCrossHatch: entity.doubleCrossHatch,
         islandStyle: entity.islandStyle,
+        // ADR-507 Φ5 — gradient γέμισμα (αλλιώς ο HatchRenderer πέφτει σε solid).
+        gradient: entity.gradient,
+        // ADR-507 Φ2 — AutoCAD LWT πάχος γραμμών hatch. Το `base` εδώ προωθεί μόνο
+        // `lineweight` (resolved px)· χωρίς αυτό το passthrough ο HatchRenderer βλέπει
+        // lineweightMm:undefined και πέφτει στο DEFAULT_HATCH_LINE_WIDTH_PX.
+        lineweightMm: entity.lineweightMm,
         drawOrder: entity.drawOrder,
       } as unknown as Entity;
     default: {

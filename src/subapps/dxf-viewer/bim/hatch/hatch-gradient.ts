@@ -67,6 +67,16 @@ export function isRadialGradientType(type: HatchGradientType): boolean {
 }
 
 /**
+ * Κανονικοποιεί το shift (DXF 461) στο [0,1]. shift=0 → centered (συμμετρικό)·
+ * shift→1 → η διαβάθμιση «γλιστράει» κατά τον άξονά της (AutoCAD «not centered»),
+ * ώστε το πρώτο χρώμα να κυριαρχεί. Καταναλώνεται από τον renderer για να
+ * μετατοπίσει τη γεωμετρία του gradient (όχι τα stops → μηδέν degenerate offset).
+ */
+export function normalizeGradientShift(shift: number | undefined): number {
+  return Math.min(1, Math.max(0, shift ?? 0));
+}
+
+/**
  * Blend χρώματος προς λευκό κατά `1 - tint` (single-color shading, AutoCAD-style:
  * tint=1 → πλήρες χρώμα, tint=0 → λευκό). Μη-έγκυρο hex → επιστρέφει το input.
  */

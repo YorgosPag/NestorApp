@@ -5,6 +5,7 @@
 import { describe, it, expect } from '@jest/globals';
 import {
   normalizeGradientType, isRadialGradientType, applyTint, resolveGradientStops,
+  normalizeGradientShift,
   type HatchGradient,
 } from '../hatch-gradient';
 
@@ -54,5 +55,12 @@ describe('hatch-gradient', () => {
     const stops = resolveGradientStops(g);
     expect(stops[0].color).toBe('#FF0000');
     expect(stops[1].color).toBe('#FFFFFF'); // tint=0 → λευκό
+  });
+
+  it('normalizeGradientShift — clamp στο [0,1] + undefined→0', () => {
+    expect(normalizeGradientShift(undefined)).toBe(0);
+    expect(normalizeGradientShift(0.5)).toBe(0.5);
+    expect(normalizeGradientShift(-0.3)).toBe(0);
+    expect(normalizeGradientShift(1.7)).toBe(1);
   });
 });

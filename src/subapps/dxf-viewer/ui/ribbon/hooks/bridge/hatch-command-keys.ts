@@ -36,6 +36,8 @@ export const HATCH_RIBBON_KEYS = {
     patternScale: 'hatch.params.patternScale',
     /** Γωνία περιστροφής gradient (μοίρες) — μόνο fillType='gradient'. */
     gradientAngle: 'hatch.params.gradientAngle',
+    /** Μετατόπιση gradient 0..1 (DXF 461· 0=centered) — μόνο fillType='gradient'. */
+    gradientShift: 'hatch.params.gradientShift',
   },
   toggles: {
     /** Διπλή (σταυρωτή) γραμμοσκίαση. */
@@ -63,7 +65,8 @@ export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.lineAngle
   | typeof HATCH_RIBBON_KEYS.params.lineSpacing
   | typeof HATCH_RIBBON_KEYS.params.patternScale
-  | typeof HATCH_RIBBON_KEYS.params.gradientAngle;
+  | typeof HATCH_RIBBON_KEYS.params.gradientAngle
+  | typeof HATCH_RIBBON_KEYS.params.gradientShift;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
@@ -94,6 +97,7 @@ const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.params.lineSpacing,
   HATCH_RIBBON_KEYS.params.patternScale,
   HATCH_RIBBON_KEYS.params.gradientAngle,
+  HATCH_RIBBON_KEYS.params.gradientShift,
 ]);
 const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.fillType,

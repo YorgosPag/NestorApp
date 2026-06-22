@@ -40,6 +40,27 @@ export interface TekOpening {
   readonly txtY: number;
 }
 
+/** Μία κορυφή footprint επίπλου σε world μέτρα (X,Y,Z) — `<point3d><record>`. */
+export interface TekPlanePoint {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/**
+ * Ένα έπιπλο σαν «κουτί πραγματικού μεγέθους» έτοιμο για σειριοποίηση σε `<plane><record>`
+ * (όλα σε μέτρα). Ο Τέκτων εξωθεί το footprint πολύγωνο κατά `widthM` (πάχος plane = ύψος
+ * επίπλου), από τη στάθμη που ορίζουν τα `pointZ` (= mounting elevation).
+ */
+export interface TekPlane {
+  /** Footprint πολύγωνο (rotated rectangle) σε world μέτρα. */
+  readonly points: readonly TekPlanePoint[];
+  /** Πάχος εξώθησης = ύψος επίπλου (μέτρα). */
+  readonly widthM: number;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+}
+
 /** Ένας τοίχος έτοιμος για σειριοποίηση σε `<record>` (όλα τα μήκη σε μέτρα). */
 export interface TekWall {
   /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */

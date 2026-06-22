@@ -24,14 +24,11 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptiveDistanceStep } from '../../systems/tracking/adaptive-distance-snap';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { GhostFaceDimension } from '../framing/ghost-face-dim-references';
-import type { RectFrame } from '../framing/rect-frame';
+import { rectLocalToWorld, type RectFrame } from '../framing/rect-frame';
+import { COLUMN_SNAP_COVER_MM, COLUMN_SNAP_CENTER_CAPTURE_PX } from './polar-disk-snap';
 
 export type { RectFrame };
 
-/** Structural cover (mm) — default όταn ο caller δεν δίνει `clearanceScene`. */
-const RECT_COVER_MM = 50;
-/** Ακτίνα capture (px) γύρω από το κέντρο για το center snap (zoom-σταθερό, mirror polar). */
-const CENTER_CAPTURE_PX = 12;
 /** Κλάσματα διάστασης (Shift mode) — σε local συντεταγμένες (κέντρο=0): −half/2, 0, +half/2. */
 const HALF_FRACTIONS: readonly number[] = [-0.5, 0, 0.5];
 
@@ -101,11 +98,6 @@ function axisCandidates(half: number, clearance: number, step: number, useFracti
 const local = (p: Readonly<Point2D>, c: Readonly<Point2D>, axis: Readonly<Point2D>): number =>
   (p.x - c.x) * axis.x + (p.y - c.y) * axis.y;
 
-const toWorld = (rect: Readonly<RectFrame>, x: number, y: number): Point2D => ({
-  x: rect.center.x + x * rect.u.x + y * rect.v.x,
-  y: rect.center.y + x * rect.u.y + y * rect.v.y,
-});
-
 /**
  * Καρτεσιανό snap κολώνας μέσα στο ορθογώνιο: κέντρο (εντός capture) ή 9-point / grid∩ (snap localX,
  * localY ανεξάρτητα). `null` όταν ο cursor είναι **εκτός** της cover-ζώνης (κοντά στο χείλος) → ο caller
@@ -118,7 +110,7 @@ export function resolveRectCartesianSnap(
   opts: Readonly<RectCartesianSnapOptions>,
 ): RectCartesianSnap | null {
   const f = mmToSceneUnits(sceneUnits);
-  const clearance = opts.clearanceScene ?? RECT_COVER_MM * f;
+  const clearance = opts.clearanceScene ?? COLUMN_SNAP_COVER_MM * f;
   const maxHalfW = rect.halfW - clearance;
   const maxHalfV = rect.halfV - clearance;
   if (!(maxHalfW > 0) || !(maxHalfV > 0)) return null;
@@ -128,7 +120,7 @@ export function resolveRectCartesianSnap(
   if (Math.abs(lx) > maxHalfW || Math.abs(ly) > maxHalfV) return null; // χείλος → §3.11 edge
 
   const wpp = opts.worldPerPixel;
-  const centerCapture = wpp > 0 ? wpp * CENTER_CAPTURE_PX : 0;
+  const centerCapture = wpp > 0 ? wpp * COLUMN_SNAP_CENTER_CAPTURE_PX : 0;
   if (Math.abs(lx) <= centerCapture && Math.abs(ly) <= centerCapture) {
     return { position: { x: rect.center.x, y: rect.center.y }, localX: 0, localY: 0, isCenter: true, isNode: true, dist: calculateDistance(cursor, rect.center) };
   }
@@ -136,7 +128,7 @@ export function resolveRectCartesianSnap(
   const step = adaptiveDistanceStep(wpp);
   const sx = nearest(lx, axisCandidates(rect.halfW, clearance, step, !!opts.shiftFractions));
   const sy = nearest(ly, axisCandidates(rect.halfV, clearance, step, !!opts.shiftFractions));
-  const position = toWorld(rect, sx.value, sy.value);
+  const position = rectLocalToWorld(rect, sx.value, sy.value);
   return {
     position,
     localX: sx.value,
@@ -167,7 +159,7 @@ export function buildRectGrid(
   opts: Readonly<RectCartesianSnapOptions>,
 ): RectGrid {
   const f = mmToSceneUnits(sceneUnits);
-  const clearance = opts.clearanceScene ?? RECT_COVER_MM * f;
+  const clearance = opts.clearanceScene ?? COLUMN_SNAP_COVER_MM * f;
   const step = adaptiveDistanceStep(opts.worldPerPixel);
   const xs = axisCandidates(rect.halfW, clearance, step, !!opts.shiftFractions).map((c) => c.value).sort((a, b) => a - b);
   const ys = axisCandidates(rect.halfV, clearance, step, !!opts.shiftFractions).map((c) => c.value).sort((a, b) => a - b);
@@ -191,7 +183,7 @@ export function resolveRectCartesianDims(rect: Readonly<RectFrame>, columnPt: Re
     { value: rect.halfV - ly, edgeLocal: { x: lx, y: rect.halfV } },  // προς +v ακμή
   ];
   return edges.map((e, i) => {
-    const p2 = toWorld(rect, e.edgeLocal.x, e.edgeLocal.y);
+    const p2 = rectLocalToWorld(rect, e.edgeLocal.x, e.edgeLocal.y);
     return {
       kind: DIM_KINDS[i],
       p1: { x: columnPt.x, y: columnPt.y },

@@ -27,15 +27,17 @@ export interface GradientDefaults {
   readonly gradientColor2: string;
   readonly gradientSingleColor: boolean;
   readonly gradientAngle: number;
+  readonly gradientShift: number;
 }
 
-/** Εργοστασιακές προεπιλογές gradient (μπλε → λευκό, γραμμικό). */
+/** Εργοστασιακές προεπιλογές gradient (μπλε → λευκό, γραμμικό, centered). */
 export const DEFAULT_GRADIENT_DEFAULTS: GradientDefaults = {
   gradientType: 'linear',
   gradientColor1: '#2980b9',
   gradientColor2: '#ffffff',
   gradientSingleColor: false,
   gradientAngle: 0,
+  gradientShift: 0,
 };
 
 /** Ένα πεδίο gradient που μπορεί να αλλάξει το ribbon (1-προς-1 με τα command keys). */
@@ -44,7 +46,8 @@ export type GradientFieldPatch =
   | { readonly field: 'color1'; readonly value: string }
   | { readonly field: 'color2'; readonly value: string }
   | { readonly field: 'singleColor'; readonly value: boolean }
-  | { readonly field: 'angleDeg'; readonly value: number };
+  | { readonly field: 'angleDeg'; readonly value: number }
+  | { readonly field: 'shift'; readonly value: number };
 
 /** Εσωτερική «πλήρης» μορφή (όλα τα πεδία παρόντα) — εύκολο immutable merge. */
 interface RawGradient {
@@ -53,6 +56,7 @@ interface RawGradient {
   color2: string;
   singleColor: boolean;
   angleDeg: number;
+  shift: number;
 }
 
 /** Trimmed canonical `HatchGradient`: παραλείπει προαιρετικά πεδία στο ουδέτερό τους. */
@@ -64,6 +68,7 @@ function finalize(raw: RawGradient): HatchGradient {
     color2: raw.singleColor ? undefined : raw.color2,
     singleColor: raw.singleColor || undefined,
     angleDeg: raw.angleDeg || undefined,
+    shift: raw.shift || undefined,
   };
 }
 
@@ -76,6 +81,7 @@ function toRaw(current: HatchGradient | undefined, d: GradientDefaults): RawGrad
     color2: current?.color2 ?? d.gradientColor2,
     singleColor: current?.singleColor ?? d.gradientSingleColor,
     angleDeg: current?.angleDeg ?? d.gradientAngle,
+    shift: current?.shift ?? d.gradientShift,
   };
 }
 
@@ -101,6 +107,7 @@ export function withGradientPatch(
     case 'color2': raw.color2 = patch.value; break;
     case 'singleColor': raw.singleColor = patch.value; break;
     case 'angleDeg': raw.angleDeg = patch.value; break;
+    case 'shift': raw.shift = patch.value; break;
   }
   return finalize(raw);
 }

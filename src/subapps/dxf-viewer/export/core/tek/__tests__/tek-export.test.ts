@@ -6,13 +6,13 @@
  * inject στους markers (+throw αν λείπει)· mapper straight→record, curved→skip+warning.
  */
 
-import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix } from '../tek-geometry';
+import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix, furnitureFootprintMeters } from '../tek-geometry';
 import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
-  buildOpenRecordXml, buildOpenXml,
+  buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
 } from '../tek-xml-writer';
-import { collectTekWalls } from '../bim-to-tek';
-import type { TekOpening } from '../tek-types';
+import { collectTekWalls, collectTekPlanes } from '../bim-to-tek';
+import type { TekOpening, TekPlane } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
 describe('tek-geometry', () => {
@@ -86,12 +86,15 @@ describe('buildWallRecordXml', () => {
 });
 
 describe('injectTekEntities', () => {
-  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C';
-  it('εγχέει walls/objects στους markers', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJC');
+  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D';
+  it('εγχέει walls/objects/planes στους markers', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES')).toBe('AWALLSBOBJCPLANESD');
   });
-  it('throw αν λείπει marker', () => {
-    expect(() => injectTekEntities('no markers', 'x', 'y')).toThrow();
+  it('planes default κενό όταν παραλείπεται', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCD');
+  });
+  it('throw αν λείπει marker (π.χ. plane)', () => {
+    expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C', 'x', 'y')).toThrow();
   });
 });
 
@@ -262,5 +265,96 @@ describe('collectTekWalls — κουφώματα (ΦΑΣΗ 2)', () => {
     expect(r.openingCount).toBe(0);
     expect(r.warnings.some((w) => w.includes('curved'))).toBe(true);
     expect(r.warnings.some((w) => w.includes('cv'))).toBe(true);
+  });
+});
+
+// ── έπιπλα ως <plane> κουτιά (ADR-512 ΦΑΣΗ 2b) ──
+describe('furnitureFootprintMeters (scene→μέτρα + elevation)', () => {
+  it('mm footprint → μέτρα, Z=elevation', () => {
+    const fp = [
+      { x: 1000, y: 2000, z: 0 },
+      { x: 3000, y: 2000, z: 0 },
+    ];
+    const pts = furnitureFootprintMeters(fp, 0.001, 0.5);
+    expect(pts[0]).toEqual({ x: 1, y: 2, z: 0.5 });
+    expect(pts[1]).toEqual({ x: 3, y: 2, z: 0.5 });
+  });
+});
+
+describe('buildPlanePointsXml / buildPlaneRecordXml', () => {
+  const plane: TekPlane = {
+    points: [
+      { x: 8.624, y: 7.55, z: 0 },
+      { x: 10.624, y: 7.55, z: 0 },
+      { x: 10.624, y: 9.55, z: 0 },
+      { x: 8.624, y: 9.55, z: 0 },
+    ],
+    widthM: 0.9,
+    colorHex: '#bc80fc',
+  };
+  it('points → 4 <point3d> records με σωστά X/Y/Z', () => {
+    const xml = buildPlanePointsXml(plane.points);
+    expect((xml.match(/<pointX>/g) ?? []).length).toBe(4);
+    expect(xml).toContain('<pointX>8.624</pointX><pointY>7.55</pointY><pointZ>0</pointZ>');
+  });
+  it('record fill: κανένα {{…}} leftover + width(=ύψος) + color + 4 κορυφές', () => {
+    const xml = buildPlaneRecordXml(plane);
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<width>0.9</width>');
+    expect(xml).toContain('<color>BC80FC</color>');
+    expect((xml.match(/<pointX>/g) ?? []).length).toBe(4);
+    expect(xml).toContain('<type>10</type>');
+  });
+});
+
+function furniture(
+  position: { x: number; y: number }, rotationDeg: number,
+  dims: { w: number; d: number; h: number }, extra: Record<string, unknown> = {},
+): Entity {
+  return {
+    id: `f-${position.x}-${position.y}`, type: 'furniture', kind: 'chair',
+    params: {
+      kind: 'chair', assetId: 'chair-01', position: { ...position, z: 0 }, rotationDeg,
+      widthMm: dims.w, depthMm: dims.d, heightMm: dims.h, mountingElevationMm: 0, sceneUnits: 'mm',
+      ...extra,
+    },
+  } as unknown as Entity;
+}
+
+describe('collectTekPlanes (έπιπλα → κουτιά)', () => {
+  it('έπιπλο 2000×2000mm @ (1000,1000) rot 0 → footprint 2×2m γύρω από το κέντρο', () => {
+    const r = collectTekPlanes([furniture({ x: 1000, y: 1000 }, 0, { w: 2000, d: 2000, h: 900 })]);
+    expect(r.planeCount).toBe(1);
+    // centred footprint: ±1m γύρω από (1,1) → x ∈ {0,2}, y ∈ {0,2}.
+    expect(r.planesXml).toContain('<pointX>0</pointX><pointY>0</pointY>');
+    expect(r.planesXml).toContain('<pointX>2</pointX><pointY>2</pointY>');
+    expect(r.planesXml).toContain('<width>0.9</width>'); // ύψος 900mm = εξώθηση
+  });
+
+  it('λοξό έπιπλο (rot 90°) → rotated rectangle (W↔D swap στο footprint)', () => {
+    // 2000(W)×1000(D) @ origin, rot 90° → footprint γίνεται 1000×2000 (X↔Y).
+    const r = collectTekPlanes([furniture({ x: 0, y: 0 }, 90, { w: 2000, d: 1000, h: 800 })]);
+    // μετά από rot 90: half-width(1m) πάει στον Y άξονα, half-depth(0.5m) στον X.
+    expect(r.planesXml).toContain('<pointX>0.5</pointX>');
+    expect(r.planesXml).toContain('<pointY>1</pointY>');
+  });
+
+  it('mounting elevation → pointZ', () => {
+    const r = collectTekPlanes([furniture({ x: 0, y: 0 }, 0, { w: 500, d: 500, h: 900 }, { mountingElevationMm: 1200 })]);
+    expect(r.planesXml).toContain('<pointZ>1.2</pointZ>');
+  });
+
+  it('non-furniture αγνοείται', () => {
+    const wall = straightWall('w', { x: 0, y: 0 }, { x: 5000, y: 0 });
+    expect(collectTekPlanes([wall]).planeCount).toBe(0);
+  });
+
+  it('scene-units invariance: φυσικό μέγεθος ίδιο σε mm & cm (2000mm → ±1m)', () => {
+    // widthMm/depthMm/heightMm είναι ΠΑΝΤΑ mm· το sceneUnits αλλάζει μόνο το canvas mapping,
+    // ΟΧΙ το φυσικό μέγεθος → footprint ±1m και στα δύο.
+    const cm = collectTekPlanes([furniture({ x: 0, y: 0 }, 0, { w: 2000, d: 2000, h: 900 }, { sceneUnits: 'cm' })]);
+    expect(cm.planesXml).toContain('<pointX>1</pointX>');
+    expect(cm.planesXml).toContain('<pointX>-1</pointX>');
+    expect(cm.planesXml).toContain('<width>0.9</width>'); // 900mm → 0.9m, ανεξ. sceneUnits
   });
 });

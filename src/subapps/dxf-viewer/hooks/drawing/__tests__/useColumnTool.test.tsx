@@ -3,7 +3,8 @@
  *
  * Coverage:
  *   - activate → 'awaitingPosition'
- *   - single click → onColumnCreated fires + remains in awaitingPosition (chain)
+ *   - 1st click → awaitingRotation (locks position, no commit) — ADR-398 §3.10b 2-click ΠΑΝΤΑ
+ *   - 2nd click → onColumnCreated fires + remains in awaitingPosition (chain)
  *   - cycleAnchor advances through ANCHOR_CYCLE_ORDER
  *   - cycleAnchor(-1) reverses
  *   - setKind preserves anchor + overrides
@@ -32,13 +33,32 @@ describe('useColumnTool', () => {
     expect(result.current.isActive).toBe(true);
   });
 
-  it('single click commits column and chains back to awaitingPosition', () => {
+  // ADR-398 §3.10b (2026-06-22, Giorgio): η κολώνα είναι **2-click ΠΑΝΤΑ** (mirror τοίχου) — το 1ο
+  // κλικ κλειδώνει θέση+λαβή (→ awaitingRotation), το 2ο ορίζει τη γωνία και κάνει commit. ΠΟΤΕ
+  // single-click commit (regression fix: §3.13 Polar / §3.15 Cartesian face-anchor → single-click παντού).
+  it('first click locks position → awaitingRotation, does NOT commit', () => {
     const onColumnCreated = jest.fn();
     const { result } = renderHook(() => useColumnTool({ onColumnCreated }));
     act(() => result.current.activate());
-    let committed = false;
+    let committed = true;
     act(() => {
       committed = result.current.onCanvasClick({ x: 1000, y: 2000 });
+    });
+    expect(committed).toBe(false);
+    expect(onColumnCreated).not.toHaveBeenCalled();
+    expect(result.current.state.phase).toBe('awaitingRotation');
+  });
+
+  it('second click commits column (place+rotate) and chains back to awaitingPosition', () => {
+    const onColumnCreated = jest.fn();
+    const { result } = renderHook(() => useColumnTool({ onColumnCreated }));
+    act(() => result.current.activate());
+    act(() => {
+      result.current.onCanvasClick({ x: 1000, y: 2000 }); // 1ο κλικ → θέση
+    });
+    let committed = false;
+    act(() => {
+      committed = result.current.onCanvasClick({ x: 2000, y: 2000 }); // 2ο κλικ → γωνία
     });
     expect(committed).toBe(true);
     expect(onColumnCreated).toHaveBeenCalledTimes(1);

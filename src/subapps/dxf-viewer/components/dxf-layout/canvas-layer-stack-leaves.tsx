@@ -61,6 +61,7 @@ import {
 } from './canvas-layer-stack-tool-preview-mounts';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import { useHoveredEntity } from '../../systems/hover/useHover';
+import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/scene';
@@ -245,12 +246,16 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
 
   const guideComputed = useGuideWorkflowComputed(localComputedParams);
   const hoveredEntityId = useHoveredEntity();
+  // ADR-417 Φ-per-edge — micro-leaf subscription στο roofEdgeSelectionStore ώστε
+  // η αλλαγή επιλεγμένης ακμής να ξανατρέχει το δυναμικό «selected» pass (live
+  // edge highlight). Μόνο αυτό το leaf re-renders, ΟΧΙ ο orchestrator (ADR-040).
+  const selectedRoofEdge = useSelectedRoofEdge();
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): stable identity prevents the
   // dxf-canvas-renderer dirty-tracking effect from re-running every parent render.
   const renderOptions = useMemo(
-    () => ({ ...renderOptionsBase, hoveredEntityId }),
-    [renderOptionsBase, hoveredEntityId],
+    () => ({ ...renderOptionsBase, hoveredEntityId, selectedRoofEdge }),
+    [renderOptionsBase, hoveredEntityId, selectedRoofEdge],
   );
 
   return (

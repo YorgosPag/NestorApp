@@ -7,14 +7,20 @@
  */
 
 import { escapeXml } from '@/lib/xml/escape-xml';
-import { WALL_RECORD_TEMPLATE, OPEN_RECORD_TEMPLATE } from './tek-record-templates';
-import type { TekOpening, TekWall, TekXMatrix } from './tek-types';
+import {
+  WALL_RECORD_TEMPLATE,
+  OPEN_RECORD_TEMPLATE,
+  PLANE_RECORD_TEMPLATE,
+  PLANE_POINT_TEMPLATE,
+} from './tek-record-templates';
+import type { TekOpening, TekPlane, TekPlanePoint, TekWall, TekXMatrix } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
 
 // Markers — literal-synced με το auto-generated tek-skeleton.template.ts (μηδέν import εκεί).
 const TEK_WALL_MARKER = '<!--TEK_WALL_RECORDS-->';
 const TEK_OBJECT_MARKER = '<!--TEK_OBJECT_RECORDS-->';
+const TEK_PLANE_MARKER = '<!--TEK_PLANE_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -64,6 +70,26 @@ export function buildOpenRecordXml(o: TekOpening): string {
     .replace('{{XMATRIX}}', xmatrixXml(o.xmatrix));
 }
 
+/** Σειριοποιεί τις κορυφές footprint ενός επίπλου σε `<point3d>` records (μέτρα). */
+export function buildPlanePointsXml(points: readonly TekPlanePoint[]): string {
+  return points
+    .map((p) =>
+      PLANE_POINT_TEMPLATE
+        .replace('{{X}}', tekNum(p.x))
+        .replace('{{Y}}', tekNum(p.y))
+        .replace('{{Z}}', tekNum(p.z)),
+    )
+    .join('\n');
+}
+
+/** Γεμίζει το parameterized plane record template με τις τιμές ενός επίπλου-κουτιού. */
+export function buildPlaneRecordXml(p: TekPlane): string {
+  return PLANE_RECORD_TEMPLATE
+    .replace('{{COLOR}}', colorHex6(p.colorHex))
+    .replace('{{WIDTH}}', tekNum(p.widthM))
+    .replace('{{POINTS}}', `\n${buildPlanePointsXml(p.points)}\n`);
+}
+
 /**
  * Συναρμολογεί το `{{OPEN}}` payload ενός τοίχου από τα κουφώματά του. Κενό → `''`
  * (το wall template εκπέμπει `<open></open>`)· αλλιώς `\n<record>…</record>\n` ώστε να
@@ -82,11 +108,17 @@ export function injectTekEntities(
   template: string,
   wallsXml: string,
   objectsXml: string,
+  planesXml = '',
 ): string {
-  if (!template.includes(TEK_WALL_MARKER) || !template.includes(TEK_OBJECT_MARKER)) {
-    throw new Error('TEK skeleton template: missing wall/object marker');
+  if (
+    !template.includes(TEK_WALL_MARKER) ||
+    !template.includes(TEK_OBJECT_MARKER) ||
+    !template.includes(TEK_PLANE_MARKER)
+  ) {
+    throw new Error('TEK skeleton template: missing wall/object/plane marker');
   }
   return template
     .replace(TEK_WALL_MARKER, wallsXml)
-    .replace(TEK_OBJECT_MARKER, objectsXml);
+    .replace(TEK_OBJECT_MARKER, objectsXml)
+    .replace(TEK_PLANE_MARKER, planesXml);
 }

@@ -18,7 +18,8 @@
  */
 
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
-import type { TekXMatrix } from './tek-types';
+import type { Point3D } from '../../../bim/types/bim-base';
+import type { TekXMatrix, TekPlanePoint } from './tek-types';
 
 /** mm → μέτρα. Reuse του SSoT (sceneUnitsToMeters('mm') = 0.001) αντί magic /1000. */
 export const MM_TO_M = sceneUnitsToMeters('mm');
@@ -78,4 +79,21 @@ export function buildOpeningXMatrix(
   const half = widthM / 2;
   // origin = κέντρο − â·(w/2)· u = â·w· v = n̂ μοναδιαίο.
   return buildXMatrix(centerXm - ax * half, centerYm - ay * half, ax * widthM, ay * widthM, -ay, ax);
+}
+
+/**
+ * Footprint ring ενός BIM entity (κορυφές σε **scene units**, από τον γενικό export
+ * extractor `extractEntityFootprintRing` — ΙΔΙΟ που τρέφει DXF/IFC) → `<point3d>` κορυφές
+ * σε **world μέτρα**. Το X/Y μετατρέπεται με `metersPerSceneUnit` (ο ΙΔΙΟΣ παράγοντας με
+ * τους τοίχους)· το Z = `elevationM` (στάθμη βάσης) — το footprint είναι επίπεδο, η εξώθηση
+ * κατά το ύψος γίνεται από το `<width>` του plane. Γενικό: έπιπλα (Φ2b) + structural slabs (Φ3).
+ */
+export function footprintRingToMeters(
+  ring: readonly Point3D[], metersPerSceneUnit: number, elevationM: number,
+): TekPlanePoint[] {
+  return ring.map((v) => ({
+    x: v.x * metersPerSceneUnit,
+    y: v.y * metersPerSceneUnit,
+    z: elevationM,
+  }));
 }

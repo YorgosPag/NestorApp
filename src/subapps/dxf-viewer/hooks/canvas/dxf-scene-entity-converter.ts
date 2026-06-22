@@ -459,6 +459,9 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
         lineSpacing: h.lineSpacing,
         doubleCrossHatch: h.doubleCrossHatch,
         islandStyle: h.islandStyle,
+        // ADR-507 Φ5 — gradient γέμισμα· χωρίς αυτό ο HatchRenderer βλέπει gradient:undefined
+        // και πέφτει σε solid (το gradient δεν φτάνει ποτέ στον καμβά).
+        gradient: h.gradient,
         drawOrder: h.drawOrder,
       } as DxfEntityUnion;
     }

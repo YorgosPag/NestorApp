@@ -12,15 +12,22 @@
  */
 
 import type { Entity } from '../../../types/entities';
-import { isWallEntity, isOpeningEntity } from '../../../types/entities';
+import { isWallEntity, isOpeningEntity, isFurnitureEntity } from '../../../types/entities';
 import { isWindowKind } from '../../../bim/types/opening-types';
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
+import type { SceneUnits } from '../../../utils/scene-units';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
-import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix } from './tek-geometry';
-import { buildWallRecordXml, buildOpenXml } from './tek-xml-writer';
-import type { TekOpening } from './tek-types';
+import { extractEntityFootprintRing, extractHeightMm } from '../bim-to-dxf-primitives';
+import {
+  mmToMeters,
+  buildWallXMatrix,
+  buildOpeningXMatrix,
+  footprintRingToMeters,
+} from './tek-geometry';
+import { buildWallRecordXml, buildOpenXml, buildPlaneRecordXml } from './tek-xml-writer';
+import type { TekOpening, TekPlane } from './tek-types';
 
 export interface TekCollectResult {
   /** Σειριοποιημένα `<record>` τοίχων (join με newline) έτοιμα για injection. */
@@ -133,4 +140,60 @@ export function collectTekWalls(entities: readonly Entity[]): TekCollectResult {
   }
 
   return { wallsXml: records.join('\n'), wallCount: records.length, openingCount, warnings };
+}
+
+/** Προεπιλεγμένο χρώμα επίπλου-κουτιού (ίδιο με το δείγμα plane). */
+const DEFAULT_FURNITURE_COLOR = 'BC80FC';
+
+export interface TekPlaneCollectResult {
+  /** Serialized record elements (newline-joined) ready for injection into the plane element. */
+  readonly planesXml: string;
+  /** Πλήθος planes που εξήχθησαν. */
+  readonly planeCount: number;
+}
+
+/** Scene units ενός BIM entity από τα params (default 'mm'), για το scene→μέτρα. */
+function entitySceneUnits(entity: Entity): SceneUnits {
+  return (entity as { params?: { sceneUnits?: SceneUnits } }).params?.sceneUnits ?? 'mm';
+}
+
+/** Στάθμη βάσης (mm) ενός entity· έπιπλο = `mountingElevationMm` (αλλιώς 0). */
+function baseElevationMm(entity: Entity): number {
+  if (isFurnitureEntity(entity)) return entity.params.mountingElevationMm;
+  return 0;
+}
+
+/**
+ * Ένα BIM entity με footprint → `TekPlane` (κουτί πραγματικού μεγέθους). FULL SSoT reuse των
+ * **γενικών export extractors** `extractEntityFootprintRing` + `extractHeightMm` — οι ΙΔΙΟΙ που
+ * τρέφουν τον DXF/IFC exporter (μηδέν 2η διαδρομή, μηδέν re-derive). Εδώ μόνο scene→μέτρα:
+ * footprint κορυφές + ύψος (εξώθηση `<width>`) + στάθμη (→ pointZ). `null` όταν δεν υπάρχει
+ * footprint (path-based). Γενικό: έπιπλα (Φ2b) + structural slabs (Φ3).
+ */
+function toTekPlane(entity: Entity): TekPlane | null {
+  const ring = extractEntityFootprintRing(entity);
+  if (!ring) return null;
+  const metersPerSceneUnit = sceneUnitsToMeters(entitySceneUnits(entity));
+  const elevationM = mmToMeters(baseElevationMm(entity));
+  return {
+    points: footprintRingToMeters(ring, metersPerSceneUnit, elevationM),
+    // Πάχος plane = ύψος entity → ο Τέκτων εξωθεί το footprint προς τα πάνω σε κουτί.
+    widthM: mmToMeters(extractHeightMm(entity)),
+    colorHex: DEFAULT_FURNITURE_COLOR,
+  };
+}
+
+/**
+ * Συλλέγει τα έπιπλα μιας scope-filtered λίστας entities ως `<plane>` records (κουτιά
+ * πραγματικού μεγέθους). Footprint/ύψος μέσω των γενικών export extractors (ίδιοι με DXF) →
+ * έτοιμο να επεκταθεί σε structural slabs (Φ3) προσθέτοντας τύπους στο filter.
+ */
+export function collectTekPlanes(entities: readonly Entity[]): TekPlaneCollectResult {
+  const records: string[] = [];
+  for (const e of entities) {
+    if (!isFurnitureEntity(e)) continue;
+    const plane = toTekPlane(e);
+    if (plane) records.push(buildPlaneRecordXml(plane));
+  }
+  return { planesXml: records.join('\n'), planeCount: records.length };
 }

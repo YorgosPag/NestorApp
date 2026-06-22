@@ -10,12 +10,21 @@ import { assembleTekDocument } from '../tek-export-adapter';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
-const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
     id: 'w1', type: 'wall', kind: 'straight',
     params: { start: { x: 0, y: 0, z: 0 }, end: { x: 5000, y: 0, z: 0 }, height: 3000, thickness: 250, sceneUnits: 'mm' },
+  } as unknown as Entity;
+}
+function chair(): Entity {
+  return {
+    id: 'f1', type: 'furniture', kind: 'chair',
+    params: {
+      kind: 'chair', assetId: 'chair-01', position: { x: 1000, y: 1000, z: 0 }, rotationDeg: 0,
+      widthMm: 2000, depthMm: 2000, heightMm: 900, mountingElevationMm: 0, sceneUnits: 'mm',
+    },
   } as unknown as Entity;
 }
 function scene(entities: Entity[]): SceneModel {
@@ -41,5 +50,12 @@ describe('assembleTekDocument', () => {
     const { xml } = assembleTekDocument(FAKE_TPL, scene([wall()]), 'dxf-only');
     expect(xml).not.toContain('<x00>');
     expect(xml).toBe('HEADTAIL');
+  });
+
+  it('both → το έπιπλο εγχέεται στον plane marker ως <plane> record (2×2m κουτί)', () => {
+    const { xml } = assembleTekDocument(FAKE_TPL, scene([chair()]), 'both');
+    expect(xml).toContain('<type>10</type>'); // plane record
+    expect(xml).toContain('<width>0.9</width>'); // ύψος 900mm = εξώθηση
+    expect(xml).not.toMatch(/TEK_PLANE_RECORDS/); // marker καταναλώθηκε
   });
 });

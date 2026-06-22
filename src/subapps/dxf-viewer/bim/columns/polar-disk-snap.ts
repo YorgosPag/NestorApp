@@ -35,10 +35,10 @@ import { normalizeAngleDeg, degToRad, radToDeg } from '../../rendering/entities/
 import { buildCenteredAxisFaceFrame } from './column-face-snap-helpers';
 import type { GhostFaceFrame } from '../framing/linear-member-face-snap';
 
-/** Structural cover (mm) από το χείλος — default όταν ο caller δεν δίνει `clearanceScene` (Q5). */
-const POLAR_COVER_MM = 50;
-/** Ακτίνα capture (px) γύρω από το κέντρο για το center snap (Revit-grade nearest, zoom-σταθερό). */
-const CENTER_CAPTURE_PX = 12;
+/** Structural cover (mm) από το χείλος — default `clearanceScene`. **Κοινό SSoT** polar (§3.13) + rect (§3.15). */
+export const COLUMN_SNAP_COVER_MM = 50;
+/** Ακτίνα capture (px) γύρω από το κέντρο για το center snap (zoom-σταθερό). **Κοινό SSoT** polar + rect. */
+export const COLUMN_SNAP_CENTER_CAPTURE_PX = 12;
 /** Nice γωνιακά βήματα (μοίρες) — όλα διαιρούν το 360 (72/36/24/12/8/4 ακτίνες). */
 const NICE_ANGLES_DEG: readonly number[] = [5, 10, 15, 30, 45, 90];
 /** Κλάσματα ακτίνας για το Shift mode (Q1) — R/4, R/3, R/2, 2R/3, 3R/4. */
@@ -90,7 +90,7 @@ export interface PolarDiskGrid {
  */
 export function polarClearanceScene(columnWidthMm: number, columnDepthMm: number, sceneUnits: SceneUnits): number {
   const halfDiagMm = 0.5 * Math.hypot(columnWidthMm, columnDepthMm);
-  return (POLAR_COVER_MM + halfDiagMm) * mmToSceneUnits(sceneUnits);
+  return (COLUMN_SNAP_COVER_MM + halfDiagMm) * mmToSceneUnits(sceneUnits);
 }
 
 /** Επέλεξε από `candidates` την τιμή με τη μικρότερη απόλυτη απόσταση από `target`. */
@@ -166,7 +166,7 @@ function centerSnap(center: Readonly<Point2D>, distToCenter: number): PolarDiskS
 }
 
 /**
- * Πολικό snap κολώνας μέσα στον δίσκο: κέντρο (εντός `CENTER_CAPTURE_PX`) ή δακτύλιος ∩ ακτίνα.
+ * Πολικό snap κολώνας μέσα στον δίσκο: κέντρο (εντός `COLUMN_SNAP_CENTER_CAPTURE_PX`) ή δακτύλιος ∩ ακτίνα.
  * `null` όταν ο δίσκος είναι πολύ μικρός ή ο cursor είναι **πέρα από το `maxRing`** (κοντά στο χείλος)
  * → ο caller πέφτει στο §3.12 circumference (nearest-wins). Pure. Μονάδες: scene units.
  */
@@ -178,13 +178,13 @@ export function resolvePolarDiskSnap(
 ): PolarDiskSnap | null {
   const f = mmToSceneUnits(sceneUnits);
   const { center, radius } = disk;
-  const clearance = opts.clearanceScene ?? POLAR_COVER_MM * f;
+  const clearance = opts.clearanceScene ?? COLUMN_SNAP_COVER_MM * f;
   const maxRing = polarMaxRing(radius, clearance);
   if (!(maxRing > 0)) return null;
 
   const distToCenter = calculateDistance(cursor, center);
   const wpp = opts.worldPerPixel;
-  const centerCapture = wpp > 0 ? wpp * CENTER_CAPTURE_PX : 0;
+  const centerCapture = wpp > 0 ? wpp * COLUMN_SNAP_CENTER_CAPTURE_PX : 0;
   if (distToCenter <= centerCapture) return centerSnap(center, distToCenter);
   if (distToCenter > maxRing) return null; // κοντά στο χείλος → §3.12 circumference
 
@@ -233,7 +233,7 @@ export function buildPolarDiskGrid(
 ): PolarDiskGrid | null {
   const f = mmToSceneUnits(sceneUnits);
   const { center, radius } = disk;
-  const clearance = opts.clearanceScene ?? POLAR_COVER_MM * f;
+  const clearance = opts.clearanceScene ?? COLUMN_SNAP_COVER_MM * f;
   const maxRing = polarMaxRing(radius, clearance);
   const rings = polarRingRadii(maxRing, adaptiveDistanceStep(opts.worldPerPixel), !!opts.shiftFractions, radius);
   if (rings.length === 0) return null;

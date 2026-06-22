@@ -26,6 +26,7 @@ import {
   ROOF_RIBBON_KEYS_ACTIONS,
   ROOF_RIBBON_TOGGLE_KEYS,
   ROOF_RIBBON_BADGE_KEYS,
+  ROOF_EDGE_KEYS,
 } from '../hooks/bridge/roof-command-keys';
 
 export const ROOF_CONTEXTUAL_TRIGGER = 'roof-selected';
@@ -57,6 +58,12 @@ const OVERHANG_MM_OPTIONS = [
   { value: '400', labelKey: '400', isLiteralLabel: true },
   { value: '500', labelKey: '500', isLiteralLabel: true },
   { value: '600', labelKey: '600', isLiteralLabel: true },
+] as const;
+
+// on/off — «Ορίζει κλίση;» (definesSlope) της επιλεγμένης ακμής (ADR-417 Φ-per-edge).
+const ROOF_EDGE_DEFINES_OPTIONS = [
+  { value: 'on',  labelKey: 'ribbon.commands.roofEditor.edge.definesOn',  isLiteralLabel: false },
+  { value: 'off', labelKey: 'ribbon.commands.roofEditor.edge.definesOff', isLiteralLabel: false },
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
@@ -139,6 +146,62 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 id: 'roof.slopeUnitPercent',
                 labelKey: 'ribbon.commands.roofEditor.slopeUnitPercent',
                 commandKey: ROOF_RIBBON_TOGGLE_KEYS.slopeUnitPercent,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-417 Φ-per-edge — «Κλίση ανά νερό»: διάλεξε ακμή (dropdown + live
+      // highlight) → όρισε «ορίζει κλίση;» / κλίση / προεξοχή ΜΟΝΟ αυτής. Η μορφή
+      // (flat/mono/gable/hip) είναι derived. Mirror της πλάκας «Κλίση» (Φ5c) αλλά
+      // per-edge (RoofEdgeSlope[]) αντί ενός επιπέδου SlabSlope.
+      id: 'roof-edge-slope',
+      labelKey: 'ribbon.panels.roofEdgeSlope',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'roof.edge.select',
+                labelKey: 'ribbon.commands.roofEditor.edge.select',
+                commandKey: ROOF_EDGE_KEYS.select,
+                comboboxWidthPx: 150,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'roof.edge.defines',
+                labelKey: 'ribbon.commands.roofEditor.edge.defines',
+                commandKey: ROOF_EDGE_KEYS.defines,
+                comboboxWidthPx: 90,
+                options: ROOF_EDGE_DEFINES_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'roof.edge.slope',
+                labelKey: 'ribbon.commands.roofEditor.edge.slope',
+                commandKey: ROOF_EDGE_KEYS.slope,
+                comboboxWidthPx: 90,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'roof.edge.overhang',
+                labelKey: 'ribbon.commands.roofEditor.edge.overhang',
+                commandKey: ROOF_EDGE_KEYS.overhang,
+                comboboxWidthPx: 90,
               },
             },
           ],

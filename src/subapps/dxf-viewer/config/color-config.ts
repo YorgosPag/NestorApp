@@ -164,6 +164,7 @@ export const UI_COLORS_BASE = {
   
   // Selection colors
   SELECTION_HIGHLIGHT: '#ffffff',
+  EDIT_EDGE_HIGHLIGHT: '#00b8d4',   // Cyan — η ακμή υπό επεξεργασία (per-edge edit· ADR-417 roof «Κλίση ανά νερό»)
   SELECTION_MARQUEE: '#3b82f6',
   SELECTION_LASSO: '#3b82f6',
   SELECTION_RED: '#ff4444',

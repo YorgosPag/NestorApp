@@ -26,7 +26,7 @@ import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
 import {
-  resolveGradientStops, isRadialGradientType, type HatchGradient,
+  resolveGradientStops, isRadialGradientType, normalizeGradientShift, type HatchGradient,
 } from '../../bim/hatch/hatch-gradient';
 import { degToRad } from './shared/geometry-angle-utils';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
@@ -212,17 +212,26 @@ export class HatchRenderer extends BaseEntityRenderer {
     const cx = (minX + maxX) / 2; const cy = (minY + maxY) / 2;
     const w = maxX - minX; const h = maxY - minY;
 
+    // shift (DXF 461) → μετατοπίζει τη γεωμετρία κατά τον άξονα της γωνίας (όχι τα
+    // stops → μηδέν degenerate offset). 0=centered· →1 το 1ο χρώμα κυριαρχεί.
+    const shiftN = normalizeGradientShift(gradient.shift);
+    const r = degToRad(gradient.angleDeg ?? 0);
+    const dx = Math.cos(r); const dy = Math.sin(r);
+
     let grad: CanvasGradient;
     if (isRadialGradientType(gradient.type)) {
-      const c = this.worldToScreen({ x: cx, y: cy });
-      const rScreen = Math.max(1, 0.5 * Math.hypot(w, h) * this.transform.scale);
+      const rWorld = 0.5 * Math.hypot(w, h);
+      // shift → μετακινεί το «κέντρο φωτισμού» εκτός κέντρου κατά τη γωνία.
+      const c = this.worldToScreen({ x: cx + dx * shiftN * rWorld, y: cy + dy * shiftN * rWorld });
+      const rScreen = Math.max(1, rWorld * this.transform.scale);
       grad = this.ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, rScreen);
     } else {
-      const r = degToRad(gradient.angleDeg ?? 0);
-      const dx = Math.cos(r); const dy = Math.sin(r);
       const half = 0.5 * (Math.abs(w * dx) + Math.abs(h * dy)) || 0.5 * Math.hypot(w, h);
-      const p0 = this.worldToScreen({ x: cx - dx * half, y: cy - dy * half });
-      const p1 = this.worldToScreen({ x: cx + dx * half, y: cy + dy * half });
+      // shift → «γλιστράει» τον άξονα κατά shiftN*half· το CanvasGradient κάνει
+      // clamp στα άκρα → το 1ο χρώμα γεμίζει περισσότερο το bbox.
+      const s = shiftN * half;
+      const p0 = this.worldToScreen({ x: cx - dx * half + dx * s, y: cy - dy * half + dy * s });
+      const p1 = this.worldToScreen({ x: cx + dx * half + dx * s, y: cy + dy * half + dy * s });
       grad = this.ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
     }
     for (const stop of resolveGradientStops(gradient)) grad.addColorStop(stop.offset, stop.color);

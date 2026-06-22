@@ -1215,6 +1215,7 @@
       "slabStructural": "Στατικά/Οπλισμός",
       "roofType": "Τύπος Στέγης",
       "roofShapeSlope": "Μορφή & Κλίση",
+      "roofEdgeSlope": "Κλίση ανά νερό",
       "roofGeometry": "Γεωμετρία",
       "roofActions": "Ενέργειες",
       "columnKind": "Τύπος",
@@ -2690,6 +2691,25 @@
           "none": "Χωρίς τύπο",
           "concrete": "Μπετονένιο Δώμα",
           "tiled": "Κεραμοσκεπή"
+        },
+        "edge": {
+          "select": "Ακμή",
+          "edgeWord": "Ακμή",
+          "defines": "Ορίζει κλίση;",
+          "definesOn": "Ναι",
+          "definesOff": "Όχι",
+          "slope": "Κλίση ακμής",
+          "overhang": "Προεξοχή ακμής",
+          "compass": {
+            "N": "Βόρεια",
+            "NE": "ΒΑ",
+            "E": "Ανατολική",
+            "SE": "ΝΑ",
+            "S": "Νότια",
+            "SW": "ΝΔ",
+            "W": "Δυτική",
+            "NW": "ΒΔ"
+          }
         }
       },
       "beamEditor": {
@@ -3270,6 +3290,7 @@
         "fillTypeGradient": "Διαβάθμιση",
         "gradientType": "Τύπος",
         "gradientAngle": "Γωνία",
+        "gradientShift": "Μετατόπιση",
         "gradientColor1": "Χρώμα 1",
         "gradientColor2": "Χρώμα 2",
         "gradientSingleColor": "Μονόχρωμο",

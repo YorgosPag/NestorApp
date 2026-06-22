@@ -64,6 +64,8 @@ import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { paintPolarDisk } from './polar-disk-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
+import { paintRectGrid } from './rect-grid-paint';
+import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
 import { drawOverlayLabel } from './overlay-text-style';
 
@@ -217,6 +219,15 @@ export class PreviewRenderer {
   drawPolarDisk(grid: PolarDiskGrid, transform: ViewTransform, viewport: Viewport): void {
     if (!this.ctx) return;
     paintPolarDisk(this.ctx, grid, transform, viewport);
+  }
+
+  /**
+   * ADR-398 §3.15 — ζωγράφισε το καρτεσιανό πλέγμα (γραμμές u/v + κέντρο) του Cartesian Magnet. Called
+   * AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   */
+  drawRectGrid(grid: RectGrid, transform: ViewTransform, viewport: Viewport): void {
+    if (!this.ctx) return;
+    paintRectGrid(this.ctx, grid, transform, viewport);
   }
 
   /**

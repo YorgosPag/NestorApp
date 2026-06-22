@@ -32,6 +32,7 @@ import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-
 // ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
+import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -288,6 +289,11 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const polarGrid = (previewEntity as { polarDiskGrid?: PolarDiskGrid }).polarDiskGrid;
         if (polarGrid) {
           previewCanvasRef.current.drawPolarDisk(polarGrid);
+        }
+        // ADR-398 §3.15 — Cartesian Magnet: cursor μέσα σε ορθογώνιο → overlay καρτεσιανό πλέγμα.
+        const rectGrid = (previewEntity as { rectGrid?: RectGrid }).rectGrid;
+        if (rectGrid) {
+          previewCanvasRef.current.drawRectGrid(rectGrid);
         }
         // ADR-508 §column place+rotate — μετά το 1ο κλικ: ΠΟΡΤΟΚΑΛΙ γραμμή στρέψης + γωνία (ίδιο
         // SSoT `drawPolarTrackingLine` = drawingGuide χρώμα) από την κλειδωμένη θέση προς τον κέρσορα.

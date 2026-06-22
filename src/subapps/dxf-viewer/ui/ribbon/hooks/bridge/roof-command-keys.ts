@@ -53,6 +53,40 @@ export const ROOF_RIBBON_TOGGLE_KEYS = {
   slopeUnitPercent: 'roof.toggle.slopeUnitPercent',
 } as const;
 
+// ─── ADR-417 Φ-per-edge — κλίση/προεξοχή ΑΝΑ ΑΚΜΗ (Revit «Defines Roof Slope») ──
+
+/**
+ * Τα command keys της per-edge επεξεργασίας (διάλεξε ακμή → όρισε
+ * `definesSlope`/`slope`/`overhangMm` ΜΟΝΟ αυτής). Διακριτό set ώστε ο bridge να
+ * τα δρομολογεί στον dedicated `roof-edge-param` resolver + στο
+ * `roofEdgeSelectionStore` (highlight). ⚠️ Πρέπει να μπει ΚΑΙ στα 2 guards του
+ * `useRibbonCommands` (onComboboxChange + getComboboxState) — αλλιώς no-op
+ * «δεν ανταποκρίνεται» (το μάθημα πλάκας/τοίχου `isSlabSlopeKey`).
+ */
+export const ROOF_EDGE_KEYS = {
+  /** Επιλογή ακμής υπό επεξεργασία (value = index ως string· options = compass list). */
+  select: 'roof.edge.select',
+  /** on/off — «Ορίζει κλίση;» (`definesSlope`) της επιλεγμένης ακμής. */
+  defines: 'roof.edge.defines',
+  /** Κλίση της επιλεγμένης ακμής (στη μονάδα `slopeUnit`). */
+  slope: 'roof.edge.slope',
+  /** mm — προεξοχή γείσου (overhang) της επιλεγμένης ακμής. */
+  overhang: 'roof.edge.overhang',
+} as const;
+
+export const ROOF_EDGE_KEY_LIST: readonly string[] = [
+  ROOF_EDGE_KEYS.select,
+  ROOF_EDGE_KEYS.defines,
+  ROOF_EDGE_KEYS.slope,
+  ROOF_EDGE_KEYS.overhang,
+];
+
+const ROOF_EDGE_KEY_SET: ReadonlySet<string> = new Set<string>(ROOF_EDGE_KEY_LIST);
+
+export function isRoofEdgeKey(commandKey: string): boolean {
+  return ROOF_EDGE_KEY_SET.has(commandKey);
+}
+
 export const ROOF_RIBBON_KEYS_ACTIONS = {
   close: 'roof.actions.close',
   delete: 'roof.actions.delete',

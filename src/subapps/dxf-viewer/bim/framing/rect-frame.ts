@@ -39,3 +39,11 @@ export function rectFrameFromCorners(corners: readonly Point2D[]): RectFrame | n
     halfV: height / 2,
   };
 }
+
+/** Local (x κατά u, y κατά v) → world. **Κοινό SSoT** για snap/grid-fill/painter (μηδέν διπλό `center+x·u+y·v`). */
+export function rectLocalToWorld(rect: Readonly<RectFrame>, x: number, y: number): Point2D {
+  return {
+    x: rect.center.x + x * rect.u.x + y * rect.v.x,
+    y: rect.center.y + x * rect.u.y + y * rect.v.y,
+  };
+}

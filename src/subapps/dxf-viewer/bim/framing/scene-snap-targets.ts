@@ -24,8 +24,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { collectMemberSnapTargets, collectDiskTargets, type MemberSnapKind } from './member-snap-targets';
+import { collectMemberSnapTargets, collectDiskTargets, collectRectTargets, type MemberSnapKind } from './member-snap-targets';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
+import type { RectFrame } from './rect-frame';
 
 /**
  * Pre-collected face-snap στόχοι της σκηνής, **διαχωρισμένοι ανά είδος** (granular superset). Η
@@ -50,6 +51,9 @@ export interface SceneSnapTargets {
    *  Ξεχωριστά από τις χορδές περιφέρειας στο `lineTargets` (§3.12): ο cursor εντός δίσκου → πολικό
    *  πλέγμα (κέντρο/δακτύλιοι/ακτίνες)· στο χείλος → §3.12 circumference. Μόνο η κολώνα τους καταναλώνει. */
   readonly diskTargets: readonly { center: Point2D; radius: number }[];
+  /** ADR-398 §3.15 — ΟΡΘΟΓΩΝΙΑ ως `RectFrame` για το Cartesian Magnet (κολώνα ΜΕΣΑ στο ορθογώνιο).
+   *  Ο cursor εντός ορθογωνίου → καρτεσιανό πλέγμα (9-point/grid)· στο χείλος → §3.11 edge. Μόνο η κολώνα. */
+  readonly rectTargets: readonly RectFrame[];
 }
 
 const EMPTY: SceneSnapTargets = Object.freeze({
@@ -59,6 +63,7 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   slabTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   lineTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   diskTargets: Object.freeze([]) as readonly { center: Point2D; radius: number }[],
+  rectTargets: Object.freeze([]) as readonly RectFrame[],
 });
 
 /**
@@ -75,6 +80,7 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     slabTargets: collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets,
     lineTargets: collectMemberSnapTargets(entities, { memberKinds: ['line'] }).memberTargets,
     diskTargets: collectDiskTargets(entities), // §3.13 — κύκλοι ως δίσκοι (Polar Magnet)
+    rectTargets: collectRectTargets(entities), // §3.15 — ορθογώνια (Cartesian Magnet)
   };
 }
 

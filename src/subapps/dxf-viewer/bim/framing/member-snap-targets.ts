@@ -21,6 +21,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import { rectangleCorners } from '../walls/wall-from-entity';
+import { rectFrameFromCorners, type RectFrame } from './rect-frame';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { arcVisibleCcwRange } from '../../rendering/entities/shared/geometry-arc-utils';
 import type { ArcMeta, LinearMemberSnapTarget } from './linear-member-face-snap';
@@ -286,6 +287,22 @@ export function collectDiskTargets(entities: readonly Entity[]): { center: Point
     const c = e as { center?: Point2D; radius?: number };
     if (!c.center || typeof c.radius !== 'number' || c.radius <= 0) continue;
     out.push({ center: { x: c.center.x, y: c.center.y }, radius: c.radius });
+  }
+  return out;
+}
+
+/**
+ * ADR-398 §3.15 — **ορθογώνια** ως `RectFrame` (κέντρο + u/v + ημι-εκτάσεις) για το Cartesian Magnet
+ * (κολώνα ΜΕΣΑ στο ορθογώνιο). Reuse το BIM SSoT `rectangleCorners` + `rectFrameFromCorners`. Το
+ * `rectangleCorners` αγνοεί rotation app-wide → axis-aligned frames (συνεπές με §3.11)· ο resolver
+ * είναι rotation-ready (λοξές περιοχές = follow-up μέσω πραγματικών κορυφών). Pure.
+ */
+export function collectRectTargets(entities: readonly Entity[]): RectFrame[] {
+  const out: RectFrame[] = [];
+  for (const e of entities) {
+    if (e.type !== 'rectangle') continue;
+    const frame = rectFrameFromCorners(rectangleCorners(e as Parameters<typeof rectangleCorners>[0]));
+    if (frame) out.push(frame);
   }
   return out;
 }

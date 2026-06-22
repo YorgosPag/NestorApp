@@ -495,6 +495,8 @@ export interface DxfHatch extends DxfEntity {
   lineSpacing?: HatchEntity['lineSpacing'];
   doubleCrossHatch?: HatchEntity['doubleCrossHatch'];
   islandStyle?: HatchEntity['islandStyle'];
+  /** ADR-507 Φ5 — gradient γέμισμα· ο HatchRenderer το διαβάζει για fillType='gradient'. */
+  gradient?: HatchEntity['gradient'];
   drawOrder?: HatchEntity['drawOrder'];
 }
 
@@ -544,6 +546,14 @@ export interface DxfRenderOptions {
   wireframeMode: boolean;
   selectedEntityIds: string[];
   hoveredEntityId?: string | null;
+  /**
+   * ADR-417 Φ-per-edge — redraw trigger για το live highlight της ακμής στέγης
+   * υπό επεξεργασία («Κλίση ανά νερό»). Folded από το `roofEdgeSelectionStore`
+   * (μέσω `useSelectedRoofEdge`) ώστε η αλλαγή επιλογής να ξανατρέχει το δυναμικό
+   * «selected» pass — ίδιο μοτίβο με `hoveredEntityId`. Ο `RoofRenderer` διαβάζει
+   * την τιμή με store-getter at render-time· εδώ ζει μόνο ως cache-busting σήμα.
+   */
+  selectedRoofEdge?: import('../../bim/roofs/roof-edge-selection-store').SelectedRoofEdge | null;
   /** Grip interaction state for visual feedback (hovered/active grip coloring) */
   gripInteractionState?: {
     hoveredGrip?: { entityId: string; gripIndex: number };

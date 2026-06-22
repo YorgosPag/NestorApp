@@ -48,7 +48,19 @@ import {
   ROOF_RIBBON_KEYS_ACTIONS,
   ROOF_RIBBON_TOGGLE_KEYS,
   ROOF_RIBBON_BADGE_KEYS,
+  ROOF_EDGE_KEYS,
+  isRoofEdgeKey,
 } from './bridge/roof-command-keys';
+import {
+  applyRoofEdgeChange,
+  clampEdgeIndex,
+  resolveRoofEdgeComboboxState,
+  roofEdgeCompass,
+} from './bridge/roof-edge-param';
+import {
+  getSelectedRoofEdge,
+  setSelectedRoofEdge,
+} from '../../../bim/roofs/roof-edge-selection-store';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -155,10 +167,45 @@ export function useRibbonRoofBridge(
     [executeCommand, levelManager],
   );
 
+  /**
+   * Index της ακμής υπό επεξεργασία: από το `roofEdgeSelectionStore` αν δείχνει
+   * στην ΙΔΙΑ στέγη (clamped)· αλλιώς 0 (default = 1η ακμή). Καθαρό read, μηδέν
+   * side-effect (το store γράφεται μόνο σε ρητή αλλαγή `select`).
+   */
+  const resolveSelectedIndex = useCallback((roof: RoofEntity): number => {
+    const sel = getSelectedRoofEdge();
+    const count = roof.params.edges.length;
+    return sel && sel.roofId === roof.id ? clampEdgeIndex(sel.edgeIndex, count) : 0;
+  }, []);
+
+  /** Options του dropdown «Ακμή»: μία ανά ακμή, label = λέξη + index + compass (i18n). */
+  const buildEdgeOptions = useCallback(
+    (roof: RoofEntity): readonly RibbonComboboxOption[] => {
+      const verts = roof.params.outline.vertices;
+      const edgeWord = t('ribbon.commands.roofEditor.edge.edgeWord');
+      return roof.params.edges.map((_e, i) => {
+        const compass = roofEdgeCompass(verts, i);
+        const compassLabel = compass
+          ? t(`ribbon.commands.roofEditor.edge.compass.${compass}`)
+          : '';
+        const label = compassLabel ? `${edgeWord} ${i + 1} · ${compassLabel}` : `${edgeWord} ${i + 1}`;
+        return { value: String(i), labelKey: label, isLiteralLabel: true };
+      });
+    },
+    [t],
+  );
+
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       const roof = resolveRoof();
       if (!roof) return null;
+      if (isRoofEdgeKey(commandKey)) {
+        const idx = resolveSelectedIndex(roof);
+        if (commandKey === ROOF_EDGE_KEYS.select) {
+          return { value: String(idx), options: buildEdgeOptions(roof) };
+        }
+        return resolveRoofEdgeComboboxState(commandKey, roof.params, idx);
+      }
       switch (commandKey) {
         case ROOF_RIBBON_KEYS.stringParams.shape:
           return { value: clampShape(roof.geometry.shape), options: [] };
@@ -175,7 +222,7 @@ export function useRibbonRoofBridge(
           return null;
       }
     },
-    [resolveRoof],
+    [resolveRoof, resolveSelectedIndex, buildEdgeOptions],
   );
 
   const onComboboxChange = useCallback(
@@ -183,6 +230,19 @@ export function useRibbonRoofBridge(
       const roof = resolveRoof();
       if (!roof) return;
       const p = roof.params;
+
+      // ADR-417 Φ-per-edge — κλίση/προεξοχή/«ορίζει κλίση;» ΑΝΑ ΑΚΜΗ. `select`
+      // γράφει το selection store (live highlight)· τα υπόλοιπα → patched params.
+      if (isRoofEdgeKey(commandKey)) {
+        const result = applyRoofEdgeChange(commandKey, value, roof.params, resolveSelectedIndex(roof));
+        if (!result) return;
+        if (result.kind === 'select') {
+          setSelectedRoofEdge({ roofId: roof.id, edgeIndex: result.edgeIndex });
+          return;
+        }
+        dispatchParams(roof, result.next);
+        return;
+      }
 
       switch (commandKey) {
         case ROOF_RIBBON_KEYS.stringParams.shape: {
@@ -219,7 +279,7 @@ export function useRibbonRoofBridge(
           return;
       }
     },
-    [resolveRoof, dispatchParams],
+    [resolveRoof, dispatchParams, resolveSelectedIndex],
   );
 
   const onToggle = useCallback(

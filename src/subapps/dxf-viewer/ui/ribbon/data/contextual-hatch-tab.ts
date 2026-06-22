@@ -51,6 +51,15 @@ const GRADIENT_ANGLE_OPTIONS = [
   { value: '135', labelKey: '135°', isLiteralLabel: true },
 ] as const;
 
+/** Μετατόπιση gradient 0..1 (DXF 461) — editable numeric combobox με presets. */
+const GRADIENT_SHIFT_OPTIONS = [
+  { value: '0', labelKey: '0', isLiteralLabel: true },
+  { value: '0.25', labelKey: '0.25', isLiteralLabel: true },
+  { value: '0.5', labelKey: '0.5', isLiteralLabel: true },
+  { value: '0.75', labelKey: '0.75', isLiteralLabel: true },
+  { value: '1', labelKey: '1', isLiteralLabel: true },
+] as const;
+
 /** Predefined μοτίβα — options από τον PAT catalog (SSoT), label μέσω i18n key. */
 const PATTERN_NAME_OPTIONS = listHatchPatterns().map((p) => ({
   value: p.name, labelKey: p.labelKey, isLiteralLabel: false,
@@ -273,6 +282,18 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 comboboxWidthPx: 90,
                 options: GRADIENT_ANGLE_OPTIONS,
                 numericInput: { editable: true, min: 0, max: 360 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientShift',
+                labelKey: 'ribbon.commands.hatchEditor.gradientShift',
+                commandKey: HATCH_RIBBON_KEYS.params.gradientShift,
+                comboboxWidthPx: 90,
+                options: GRADIENT_SHIFT_OPTIONS,
+                numericInput: { editable: true, min: 0, max: 1 },
               },
             },
           ],

@@ -52,6 +52,8 @@ export interface HatchDrawDefaults {
   readonly gradientSingleColor: boolean;
   /** Γωνία περιστροφής gradient (μοίρες). */
   readonly gradientAngle: number;
+  /** Μετατόπιση gradient 0..1 (DXF 461) — 0=centered. */
+  readonly gradientShift: number;
 }
 
 /** Εργοστασιακές προεπιλογές — συμπαγής γκρι poché (η συνηθέστερη χρήση). */

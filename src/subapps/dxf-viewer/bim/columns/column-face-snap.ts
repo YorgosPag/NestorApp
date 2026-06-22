@@ -69,6 +69,8 @@ import {
 } from '../framing/linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolvePolarDiskSnap, type PolarDiskSnapOptions } from './polar-disk-snap';
+import { resolveRectCartesianSnap } from './rect-cartesian-snap';
+import type { RectFrame } from '../framing/rect-frame';
 import {
   clamp,
   SLAB_EDGE_CENTER_THRESHOLD_MM,
@@ -319,7 +321,35 @@ function resolvePolarDiskHit(
   return best;
 }
 
-/** Το ΠΛΗΣΙΕΣΤΕΡΟ hit (μικρότερο dist) ανάμεσα στα tiers (edge / bbox / polar) — nearest-wins. */
+/**
+ * ADR-398 §3.15 — **Cartesian Magnet**: cursor ΕΝΤΟΣ ορθογωνίου → καρτεσιανό πλέγμα (κέντρο / 9-point /
+ * grid∩), `anchor:'center'`, rotation = γωνία του u (0 axis-aligned). Τα 4 dx/dy dims παράγονται ξεχωριστά
+ * στο `generateColumnPreview` (faceFrame εδώ = degenerate). Reuse `resolveRectCartesianSnap` SSoT.
+ */
+function resolveRectHit(
+  cursor: Readonly<Point2D>,
+  rects: readonly RectFrame[],
+  sceneUnits: SceneUnits,
+  opts: Readonly<PolarDiskSnapOptions>,
+): { snap: ColumnFaceSnap; dist: number } | null {
+  let best: { snap: ColumnFaceSnap; dist: number } | null = null;
+  for (const rect of rects) {
+    const r = resolveRectCartesianSnap(cursor, rect, sceneUnits, opts);
+    if (r && (!best || r.dist < best.dist)) {
+      best = {
+        snap: {
+          position: r.position, anchor: 'center', status: 'beam',
+          rotation: axisAlignmentRotationDeg(rect.u), targetId: null, face: 'N', third: 'mid',
+          faceFrame: buildCenteredAxisFaceFrame(r.position, { x: 1, y: 0 }, { x: 0, y: 1 }, 0, 0, 0),
+        },
+        dist: r.dist,
+      };
+    }
+  }
+  return best;
+}
+
+/** Το ΠΛΗΣΙΕΣΤΕΡΟ hit (μικρότερο dist) ανάμεσα στα tiers (edge / bbox / polar / rect) — nearest-wins. */
 function nearestHit(...hits: readonly ({ snap: ColumnFaceSnap; dist: number } | null)[]): ColumnFaceSnap | null {
   let best: { snap: ColumnFaceSnap; dist: number } | null = null;
   for (const h of hits) if (h && (!best || h.dist < best.dist)) best = h;
@@ -358,8 +388,12 @@ export function resolveColumnFaceSnapFromTargets(
   const polarHit = opts && opts.worldPerPixel > 0 && t.diskTargets.length > 0
     ? resolvePolarDiskHit(cursor, t.diskTargets, sceneUnits, opts)
     : null;
-  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε bbox / edge / polar (στο χείλος ο polar=null → §3.12 κερδίζει).
-  return nearestHit(edgeHit, bboxHit, polarHit);
+  // ADR-398 §3.15 — Cartesian Magnet: cursor ΕΝΤΟΣ ορθογωνίου → καρτεσιανό πλέγμα (μόνο όταν worldPerPixel).
+  const rectHit = opts && opts.worldPerPixel > 0 && t.rectTargets.length > 0
+    ? resolveRectHit(cursor, t.rectTargets, sceneUnits, opts)
+    : null;
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε bbox / edge / polar / rect (στο χείλος → §3.11/§3.12 κερδίζει).
+  return nearestHit(edgeHit, bboxHit, polarHit, rectHit);
 }
 
 /**

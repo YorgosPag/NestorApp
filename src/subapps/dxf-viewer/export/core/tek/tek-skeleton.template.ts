@@ -24186,6 +24186,7 @@ export const TEK_SKELETON_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 <autoroof>
 </autoroof>
 <plane>
+<!--TEK_PLANE_RECORDS-->
 </plane>
 <spline>
 </spline>

@@ -44,6 +44,7 @@ import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
 import { buildPolarDiskGrid, findDiskContaining } from '../../bim/columns/polar-disk-snap';
+import { buildRectGrid, findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 // ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
@@ -146,11 +147,17 @@ export function generateColumnPreview(
   // ADR-508 §dim — listening dimensions (ΙΔΙΟΣ κοινός κώδικας με τοίχο/δοκάρι): από το faceFrame
   // του ΙΔΙΟΥ face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
   const wpp = worldPerPixel(getImmediateTransform().scale);
-  const faceDimensions = resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
+  // ADR-398 §3.15 — cursor μέσα σε ορθογώνιο → 4 καρτεσιανά dx/dy dims (αντί του faceFrame straight branch).
+  const rect = findRectContaining(effectiveCursor, targets.rectTargets);
+  const faceDimensions = (rect && faceSnap && !isOverlap)
+    ? { sceneUnits, dims: resolveRectCartesianDims(rect, faceSnap.position) }
+    : resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
   const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
-  // ADR-398 §3.13 — όταν ο cursor είναι μέσα σε κυκλικό δίσκο, attach το πολικό πλέγμα ως ghost
-  // metadata (ο `drawing-hover-handler` το ζωγραφίζει ως overlay). ΙΔΙΟ SSoT ring/angle με το snap.
+  // §3.13/§3.15 — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata· ο `drawing-hover-handler`
+  // το ζωγραφίζει ως overlay. ΙΔΙΟ candidate SSoT με το snap (μηδέν απόκλιση πλέγματος↔snap).
   const polarDisk = findDiskContaining(effectiveCursor, targets.diskTargets);
   const polarDiskGrid = polarDisk ? buildPolarDiskGrid(effectiveCursor, polarDisk, sceneUnits, polarOpts) : null;
-  return polarDiskGrid ? ({ ...ghost, polarDiskGrid } as typeof ghost) : ghost;
+  const rectGrid = rect ? buildRectGrid(rect, sceneUnits, polarOpts) : null;
+  const extra = { ...(polarDiskGrid ? { polarDiskGrid } : {}), ...(rectGrid ? { rectGrid } : {}) };
+  return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
 }

@@ -46,7 +46,6 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import {
   getColumnGhostStatus,
   getColumnFaceAnchor,
-  getColumnFaceRotation,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import {
   setColumnRotationLock,
@@ -321,14 +320,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       }
       // ADR-508 §column place+rotate / ADR-398 §3.10b — freehand 1ο κλικ (awaitingPosition):
       if (s.phase === 'awaitingPosition') {
+        // ADR-398 §3.10b (2026-06-22, Giorgio): **2-click ΠΑΝΤΑ** (mirror τοίχου). Η κολώνα ΠΟΤΕ δεν
+        // commit-άρει στο 1ο κλικ — ακόμη κι όταν είναι face-snapped (flush / center-on-axis / polar /
+        // cartesian). Το 1ο κλικ κλειδώνει θέση+λαβή, το 2ο ορίζει τη ΓΩΝΙΑ (ελεύθερη). Η face-snap
+        // λαβή χρησιμοποιείται ΜΟΝΟ ως anchor· το `point` είναι ΗΔΗ η snapped θέση (mouse-handler-up
+        // §3.10: `worldPoint = faceSnap.position`). [Regression fix: οι §3.13 Polar / §3.15 Cartesian
+        // κλάδοι επέστρεφαν face-anchor για ΟΛΟ το εσωτερικό δίσκου/ορθογωνίου → single-click παντού.]
         const faceAnchor = getColumnFaceAnchor();
-        // ADR-398 §3.10b — face-snapped κολώνα είναι ΗΔΗ ευθυγραμμισμένη (anchor + flush rotation,
-        // incl. ΛΟΞΗ ακμή πλάκας): commit ΑΠΕΥΘΕΙΑΣ στο 1ο κλικ (single-click, Revit-grade, preview
-        // ≡ commit). Το place+rotate (2-click) μένει ΜΟΝΟ για ΕΛΕΥΘΕΡΗ τοποθέτηση (καμία face-snap).
-        if (faceAnchor !== null) {
-          return commitColumnAt(s, point, faceAnchor, getColumnFaceRotation() ?? 0);
-        }
-        const anchor: ColumnAnchor = getColumnGhostStatus() === 'beam' ? 'center' : s.anchor;
+        const anchor: ColumnAnchor = faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
         // ADR-404 Φ5 §slanted — ΚΕΚΛΙΜΕΝΗ (ελεύθερη τοποθέτηση): ΚΛΕΙΔΩΣΕ τη βάση + την
         // rotation της διατομής (από ribbon) → awaitingTopLean (2ο κλικ ορίζει την κλίση).
         if (s.slantMode) {

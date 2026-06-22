@@ -252,4 +252,18 @@ describe('converters — entity ↔ doc round-trip', () => {
     const e = hatchDocToEntity(docOf());
     expect(computeHatchAreaMm2(e)).toBe(1_000_000);
   });
+
+  it('round-trips the gradient object (ADR-507 Φ5 — flat map, survives refresh)', () => {
+    const gradHatch = {
+      ...HATCH,
+      fillType: 'gradient' as const,
+      patternType: 'gradient' as const,
+      gradient: { type: 'spherical' as const, color1: '#2980b9', color2: '#c0392b', angleDeg: 45 },
+    };
+    const data = pickHatchData(gradHatch);
+    expect(data.gradient).toEqual(gradHatch.gradient);
+    const rebuilt = hatchDocToEntity({ ...docOf(), data });
+    expect(rebuilt.fillType).toBe('gradient');
+    expect(rebuilt.gradient).toEqual(gradHatch.gradient);
+  });
 });
