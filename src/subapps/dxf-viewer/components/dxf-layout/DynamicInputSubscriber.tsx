@@ -40,6 +40,8 @@ interface DynamicInputSubscriberProps {
   onDrawingPoint: (worldPoint: Point2D) => void;
   /** ADR-513 — draw-time getter των scene-units (μηδέν subscription· mirror slabOpening ghost). */
   getSceneUnits?: () => SceneUnits;
+  /** ADR-513 — draw-time getter του canvas element (βελάκι cursor πάνω στα πλήκτρα του ring). */
+  getCanvasEl?: () => HTMLCanvasElement | null;
 }
 
 const NULL_POINT = (): Point2D | null => null;
@@ -51,6 +53,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   canvasRect,
   onDrawingPoint,
   getSceneUnits,
+  getCanvasEl,
 }: DynamicInputSubscriberProps) {
   const { dynInput } = useCadToggles();
 
@@ -99,7 +102,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // ADR-513 — στη σχεδίαση τοίχου μετά το 1ο κλικ δείξε το ραδιακό «Δαχτυλίδι Εντολών»
   // (Μήκος/Γωνία/Πάχος/Ύψος) αντί του γραμμικού overlay — μηδέν διπλό UI.
   if (wallAwaitingEnd && getSceneUnits) {
-    return <RadialCommandRing sceneUnits={getSceneUnits()} />;
+    return <RadialCommandRing sceneUnits={getSceneUnits()} getCanvasEl={getCanvasEl} />;
   }
 
   return (

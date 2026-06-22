@@ -73,6 +73,7 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
 import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import type { EntityPreviewTransform } from './entity-preview-types';
 import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
 
@@ -339,7 +340,10 @@ export function applyEntityPreview(
       if (!origin) return entity;
       const anchor = hatchGradientAngleGripPos(origin, gradient.angleDeg ?? 0, hatch.boundaryPaths);
       if (!anchor) return entity;
-      const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y });
+      // Shift → snap σε 15° (preview === commit· ίδιο modifier με το commit path).
+      const newAngle = applyHatchAngleGripDrag(
+        origin, { x: anchor.x + delta.x, y: anchor.y + delta.y }, ShiftKeyTracker.getSnapshot(),
+      );
       const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
       return { ...(entity as object), gradient: newGradient } as unknown as DxfEntityUnion;
     }

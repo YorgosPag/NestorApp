@@ -15,9 +15,12 @@ import {
   AUTOROOF_RECORD_TEMPLATE,
   AUTOROOF_POINT_TEMPLATE,
   AUTOROOF_V3_TEMPLATE,
+  LINE_RECORD_TEMPLATE,
+  ARC_RECORD_TEMPLATE,
 } from './tek-record-templates';
 import type {
-  TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace, TekRoofPoint, TekWall, TekXMatrix,
+  TekArc, TekLine, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace, TekRoofPoint,
+  TekWall, TekXMatrix,
 } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
@@ -27,6 +30,8 @@ const TEK_WALL_MARKER = '<!--TEK_WALL_RECORDS-->';
 const TEK_OBJECT_MARKER = '<!--TEK_OBJECT_RECORDS-->';
 const TEK_PLANE_MARKER = '<!--TEK_PLANE_RECORDS-->';
 const TEK_AUTOROOF_MARKER = '<!--TEK_AUTOROOF_RECORDS-->';
+const TEK_LINE_MARKER = '<!--TEK_LINE_RECORDS-->';
+const TEK_ARC_MARKER = '<!--TEK_ARC_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -147,6 +152,34 @@ export function buildAutoroofRecordXml(r: TekRoof): string {
     .replace('{{POINTS}}', `\n${buildRoofPointsXml(r.points)}\n`);
 }
 
+/** Γεμίζει το line record template (DXF line / polyline segment → `<line><record>`). */
+export function buildLineRecordXml(l: TekLine): string {
+  return LINE_RECORD_TEMPLATE
+    .replace('{{N}}', String(l.id))
+    .replace('{{V0X}}', tekNum(l.v0.x))
+    .replace('{{V0Y}}', tekNum(l.v0.y))
+    .replace('{{ELEV0}}', tekNum(l.elevation0))
+    .replace('{{V1X}}', tekNum(l.v1.x))
+    .replace('{{V1Y}}', tekNum(l.v1.y))
+    .replace('{{ELEV1}}', tekNum(l.elevation1))
+    .replace('{{COLOR}}', colorHex6(l.colorHex));
+}
+
+/** Γεμίζει το arc record template (DXF arc / circle → `<arc><record>`). */
+export function buildArcRecordXml(a: TekArc): string {
+  return ARC_RECORD_TEMPLATE
+    .replace('{{N}}', String(a.id))
+    .replace('{{CIRCLE}}', a.isCircle ? '1' : '0')
+    .replace('{{CX}}', tekNum(a.centre.x))
+    .replace('{{CY}}', tekNum(a.centre.y))
+    .replace('{{P0X}}', tekNum(a.p0.x))
+    .replace('{{P0Y}}', tekNum(a.p0.y))
+    .replace('{{P1X}}', tekNum(a.p1.x))
+    .replace('{{P1Y}}', tekNum(a.p1.y))
+    .replace('{{ELEV}}', tekNum(a.elevation))
+    .replace('{{COLOR}}', colorHex6(a.colorHex));
+}
+
 /**
  * Εγχέει τα παραγόμενα records στους markers του skeleton template. Throws αν λείπει
  * marker (σπασμένο/λάθος template) ώστε να μην βγει σιωπηλά μισό αρχείο.
@@ -157,18 +190,24 @@ export function injectTekEntities(
   objectsXml: string,
   planesXml = '',
   autoroofsXml = '',
+  linesXml = '',
+  arcsXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
     !template.includes(TEK_OBJECT_MARKER) ||
     !template.includes(TEK_PLANE_MARKER) ||
-    !template.includes(TEK_AUTOROOF_MARKER)
+    !template.includes(TEK_AUTOROOF_MARKER) ||
+    !template.includes(TEK_LINE_MARKER) ||
+    !template.includes(TEK_ARC_MARKER)
   ) {
-    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof marker');
+    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc marker');
   }
   return template
     .replace(TEK_WALL_MARKER, wallsXml)
     .replace(TEK_OBJECT_MARKER, objectsXml)
     .replace(TEK_PLANE_MARKER, planesXml)
-    .replace(TEK_AUTOROOF_MARKER, autoroofsXml);
+    .replace(TEK_AUTOROOF_MARKER, autoroofsXml)
+    .replace(TEK_LINE_MARKER, linesXml)
+    .replace(TEK_ARC_MARKER, arcsXml);
 }

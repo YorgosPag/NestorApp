@@ -24162,9 +24162,9 @@ export const TEK_SKELETON_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 <text>
 </text>
 <line>
-</line>
+<!--TEK_LINE_RECORDS--></line>
 <arc>
-</arc>
+<!--TEK_ARC_RECORDS--></arc>
 <hatch>
 </hatch>
 <dim>

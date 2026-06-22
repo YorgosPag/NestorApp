@@ -173,4 +173,15 @@ describe('applyHatchAngleGripDrag', () => {
     applyHatchAngleGripDrag(o, { x: 5, y: 6 });
     expect(o).toEqual({ x: 1, y: 2 });
   });
+
+  it('snaps to 15° increments when snap=true (Shift)', () => {
+    // dx=100, dy=30 → 16.7° → 15°.
+    expect(applyHatchAngleGripDrag(origin, { x: 600, y: 530 }, true)).toBeCloseTo(15, 6);
+    // dx=100, dy=80 → 38.66° → 45°.
+    expect(applyHatchAngleGripDrag(origin, { x: 600, y: 580 }, true)).toBeCloseTo(45, 6);
+    // exact axis stays at 0°.
+    expect(applyHatchAngleGripDrag(origin, { x: 600, y: 500 }, true)).toBeCloseTo(0, 6);
+    // snap=false leaves the raw angle.
+    expect(applyHatchAngleGripDrag(origin, { x: 600, y: 530 }, false)).toBeCloseTo(16.699, 2);
+  });
 });

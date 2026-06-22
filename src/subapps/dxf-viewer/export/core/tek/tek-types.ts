@@ -119,3 +119,45 @@ export interface TekWall {
   /** Περιεχόμενο nested `<open>` (κουφώματα) — κενό αν κανένα (φάση 2). */
   readonly openXml?: string;
 }
+
+/**
+ * Ένα ευθύγραμμο τμήμα (DXF line / polyline segment) έτοιμο για `<line><record>`
+ * (type 4). Όλες οι συντεταγμένες σε **μέτρα**· `elevation0/1` = z κάθε άκρου (Φ-D).
+ */
+export interface TekLine {
+  /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */
+  readonly id: number;
+  /** Αρχή (μέτρα). */
+  readonly v0: { readonly x: number; readonly y: number };
+  /** Τέλος (μέτρα). */
+  readonly v1: { readonly x: number; readonly y: number };
+  /** z αρχής (μέτρα). */
+  readonly elevation0: number;
+  /** z τέλους (μέτρα). */
+  readonly elevation1: number;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+}
+
+/**
+ * Ένα τόξο/κύκλος (DXF arc / circle) έτοιμο για `<arc><record>` (type 5). Όλες οι
+ * συντεταγμένες σε **μέτρα** (Φ-D). `isCircle=true` → πλήρης κύκλος (`p0` = σημείο
+ * περιφέρειας ώστε `radius = |centre−p0|`· `p1` = (0,0)). `isCircle=false` → τόξο
+ * (`p0` = σημείο αρχής, `p1` = σημείο τέλους, και τα δύο στην περιφέρεια).
+ */
+export interface TekArc {
+  /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */
+  readonly id: number;
+  /** `true` = κύκλος, `false` = τόξο. */
+  readonly isCircle: boolean;
+  /** Κέντρο (μέτρα). */
+  readonly centre: { readonly x: number; readonly y: number };
+  /** Σημείο αρχής τόξου / σημείο περιφέρειας κύκλου (μέτρα). */
+  readonly p0: { readonly x: number; readonly y: number };
+  /** Σημείο τέλους τόξου / (0,0) για κύκλο (μέτρα). */
+  readonly p1: { readonly x: number; readonly y: number };
+  /** z (μέτρα). */
+  readonly elevation: number;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+}

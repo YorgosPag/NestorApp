@@ -432,6 +432,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               const lvl = levelManager.currentLevelId;
               return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : dxfSceneRef.current);
             }}
+            getCanvasEl={() => dxfCanvasRef?.current?.getCanvas?.() ?? null}
           />
           <CanvasLayerStack3dLeaf />
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />

@@ -45,3 +45,17 @@ export const AUTOROOF_POINT_TEMPLATE = "<record>\n<pX>{{X}}</pX><pY>{{Y}}</pY><a
  * Placeholders: {{X}} {{Y}} {{Z}}.
  */
 export const AUTOROOF_V3_TEMPLATE = "<v3>\n<pvX>{{X}}</pvX><pvY>{{Y}}</pvY><pvZ>{{Z}}</pvZ></v3>";
+
+/**
+ * ADR-512 ΦΑΣΗ D — ευθύγραμμο τμήμα (DXF line / polyline segment) → `<line><record>`
+ * (type 4). Από δείγμα ΔΙΑΦΟΡΑ-2.tek. Placeholders: {{N}} (index) {{V0X}} {{V0Y}}
+ * {{ELEV0}} {{V1X}} {{V1Y}} {{ELEV1}} {{COLOR}} (όλα σε μέτρα/hex). Υλικό+mark σταθερά.
+ */
+export const LINE_RECORD_TEMPLATE = "<record>\n<type>4</type><n>{{N}}</n><taglist>\n</taglist>\n<v0X>{{V0X}}</v0X><v0Y>{{V0Y}}</v0Y><elevation0>{{ELEV0}}</elevation0><v1X>{{V1X}}</v1X><v1Y>{{V1Y}}</v1Y><elevation1>{{ELEV1}}</elevation1><color>{{COLOR}}</color><render_color>1717FF</render_color><type>0</type><density>1</density><thickness>0.01</thickness><pen>2</pen><longl>3</longl>\n<material><type>0</type><dx>1</dx><dy>1</dy><specular>0.3</specular><specpow>20</specpow><diffuse>1</diffuse><ambient>1</ambient><reflection>0</reflection><color>808080</color><diffuse_color>1717FF</diffuse_color><specular_color>FFFFFF</specular_color><xwidth>1</xwidth><ywidth>1</ywidth><depth>0</depth><transp>0</transp><refraction>0</refraction><glossiness>0</glossiness><txt_file>0</txt_file><originX>0</originX><originY>0</originY><originZ>0</originZ><uX>0</uX><uY>0</uY><uZ>0</uZ><vX>0</vX><vY>0</vY><vZ>0</vZ><txt_dx>1</txt_dx><txt_dy>1</txt_dy><ready_type_res>0</ready_type_res><ready_surface_res>0</ready_surface_res><name></name><repu>0</repu><repv>0</repv></material>\n<mark_type>1</mark_type><markends0>0</markends0><markends1>0</markends1><markmiddle>0</markmiddle><invertmiddlemark>0</invertmiddlemark><intrn_mark_type>0</intrn_mark_type><markspace>0.29999999999999999</markspace><distfromline>0</distfromline><mark_size>0.29999999999999999</mark_size><draw_width>1</draw_width><visible>1</visible><appear_in_render>0</appear_in_render><appear_in_3D>0</appear_in_3D><wireframe_3de>0</wireframe_3de></record>";
+
+/**
+ * ADR-512 ΦΑΣΗ D — τόξο/κύκλος (DXF arc / circle) → `<arc><record>` (type 5). Από δείγμα
+ * ΔΙΑΦΟΡΑ-2.tek. Placeholders: {{N}} {{CIRCLE}} (0=τόξο/1=κύκλος) {{CX}} {{CY}} {{P0X}}
+ * {{P0Y}} {{P1X}} {{P1Y}} {{ELEV}} {{COLOR}} (μέτρα/hex). Υλικό σταθερό.
+ */
+export const ARC_RECORD_TEMPLATE = "<record>\n<type>5</type><n>{{N}}</n><taglist>\n</taglist>\n<circle>{{CIRCLE}}</circle><centreX>{{CX}}</centreX><centreY>{{CY}}</centreY><p0X>{{P0X}}</p0X><p0Y>{{P0Y}}</p0Y><p1X>{{P1X}}</p1X><p1Y>{{P1Y}}</p1Y><elevation>{{ELEV}}</elevation><color>{{COLOR}}</color><render_color>E0E0E0</render_color><draw_width>1</draw_width><thickness>0.01</thickness><pen>2</pen><longl>3</longl><line_type>0</line_type><density>1</density>\n<material><type>0</type><dx>1</dx><dy>1</dy><specular>0.3</specular><specpow>20</specpow><diffuse>1</diffuse><ambient>1</ambient><reflection>0</reflection><color>808080</color><diffuse_color>E0E0E0</diffuse_color><specular_color>FFFFFF</specular_color><xwidth>1</xwidth><ywidth>1</ywidth><depth>0</depth><transp>0</transp><refraction>0</refraction><glossiness>0</glossiness><txt_file>0</txt_file><originX>0</originX><originY>0</originY><originZ>0</originZ><uX>0</uX><uY>0</uY><uZ>0</uZ><vX>0</vX><vY>0</vY><vZ>0</vZ><txt_dx>1</txt_dx><txt_dy>1</txt_dy><ready_type_res>0</ready_type_res><ready_surface_res>0</ready_surface_res><name></name><repu>0</repu><repv>0</repv></material>\n</record>";

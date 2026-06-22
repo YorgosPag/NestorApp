@@ -256,7 +256,8 @@ export function commitHatchGripDrag(
     if (!origin) return;
     const anchor = hatchGradientAngleGripPos(origin, gradient.angleDeg ?? 0, candidate.boundaryPaths);
     if (!anchor) return;
-    const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y });
+    // Shift → snap σε 15° (ίδιο modifier με το rectilinear των άλλων hatch grips).
+    const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y }, rectilinear);
     if (newAngle === (gradient.angleDeg ?? 0)) return;
     const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
     const angleCommand = new UpdateHatchGradientCommand(

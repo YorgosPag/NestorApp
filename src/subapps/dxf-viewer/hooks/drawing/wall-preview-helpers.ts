@@ -129,7 +129,13 @@ function buildWallGhostEntity(
   wantHud = false,
 ): ExtendedSceneEntity | null {
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
-  if (!built.ok) return null;
+  if (!built.ok) {
+    // ADR-513 TEMP DIAG — γιατί εξαφανίζεται ο τοίχος-φάντασμα (hard errors validator).
+    console.warn('[ADR-513 DIAG] wall ghost NULL — hardErrors:', built.hardErrors, {
+      start: params.start, end: params.end, thickness: params.thickness, height: params.height, sceneUnits,
+    });
+    return null;
+  }
   // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
   const conflict = conflictCtx
     ? resolveWallOpeningConflictForHost(

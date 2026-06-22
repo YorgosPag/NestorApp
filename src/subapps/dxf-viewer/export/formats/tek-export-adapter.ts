@@ -12,8 +12,10 @@
  */
 
 import type { SceneModel } from '../../types/scene-types';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../core/tek/bim-to-tek';
+import { collectTekLines, collectTekArcs } from '../core/tek/dxf-to-tek';
 import { injectTekEntities } from '../core/tek/tek-xml-writer';
 import { buildFloorFilename } from './dxf-export-adapter';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
@@ -43,7 +45,15 @@ export function assembleTekDocument(
   const { wallsXml, warnings } = collectTekWalls(selected);
   const { planesXml } = collectTekPlanes(selected);
   const { autoroofsXml } = collectTekRoofs(selected);
-  return { xml: injectTekEntities(template, wallsXml, '', planesXml, autoroofsXml), warnings };
+  // DXF primitives (γραμμές/τόξα/κύκλοι) → native `<line>`/`<arc>` (Φ-D). Μέτρα/scene unit
+  // από το scene-level units (τα primitives δεν έχουν per-entity sceneUnits όπως τα BIM params).
+  const f = sceneUnitsToMeters(scene.units);
+  const { linesXml } = collectTekLines(selected, f);
+  const { arcsXml } = collectTekArcs(selected, f);
+  return {
+    xml: injectTekEntities(template, wallsXml, '', planesXml, autoroofsXml, linesXml, arcsXml),
+    warnings,
+  };
 }
 
 /** Φορτώνει lazy τον σκελετό (εκτός main chunk) + assemble. */

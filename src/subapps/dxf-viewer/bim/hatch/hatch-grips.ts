@@ -120,14 +120,24 @@ export function hatchGradientAngleGripPos(
   return { x: origin.x + Math.cos(r) * R, y: origin.y + Math.sin(r) * R };
 }
 
+/** Βήμα snap (μοίρες) όταν ο χρήστης κρατά Shift — AutoCAD/Revit «ortho» για τη γωνία. */
+export const HATCH_ANGLE_SNAP_DEG = 15;
+
 /**
  * Pure transform: gradient origin + ΖΩΝΤΑΝΗ θέση λαβής (cursor world = anchor + delta) →
  * νέα γωνία σε **μοίρες** [0,360). `atan2` σε WORLD coords (η `angleDeg` είναι world
- * convention όπως ο `fillGradient`) → μηδέν canvas-Y σύγχυση. Δεν μεταλλάσσει το input.
+ * convention όπως ο `fillGradient`) → μηδέν canvas-Y σύγχυση. Όταν `snap` (Shift), η γωνία
+ * κουμπώνει σε βήματα `HATCH_ANGLE_SNAP_DEG`. Δεν μεταλλάσσει το input.
  */
-export function applyHatchAngleGripDrag(origin: Point2D, cursorWorld: Point2D): number {
-  const deg = (Math.atan2(cursorWorld.y - origin.y, cursorWorld.x - origin.x) * 180) / Math.PI;
-  return ((deg % 360) + 360) % 360;
+export function applyHatchAngleGripDrag(
+  origin: Point2D,
+  cursorWorld: Point2D,
+  snap: boolean = false,
+): number {
+  const raw = (Math.atan2(cursorWorld.y - origin.y, cursorWorld.x - origin.x) * 180) / Math.PI;
+  const deg = ((raw % 360) + 360) % 360;
+  if (!snap) return deg;
+  return (Math.round(deg / HATCH_ANGLE_SNAP_DEG) * HATCH_ANGLE_SNAP_DEG) % 360;
 }
 
 /** Decode `hatch-vertex-${pathIdx}-${vertexIdx}` → `[pathIdx, vertexIdx]` or `null`. */

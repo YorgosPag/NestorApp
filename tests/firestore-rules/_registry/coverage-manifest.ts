@@ -1221,6 +1221,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_hatches',          // flat DXF hatch fills (Revit Filled-Region, mirror floorplan_floor_finishes; payload is `data` not `params`); full matrix with the BIM batch
   // — BIM Wall Finish per Room/Face (ADR-511, 2026-06-21) —
   'floorplan_wall_coverings',   // lines 4226-4246 — tenant-scoped CRUD (IfcCovering wall finish per room/face, mirror floorplan_floor_finishes; payload is `params`); full matrix with the BIM batch
+  // — BIM Roof Persistence (ADR-417, 2026-06-22) —
+  'floorplan_roofs',            // lines 3747-3769 — tenant-scoped CRUD (BIM roof persistence, mirror floorplan_hatches; payload is `data`); full matrix with the BIM batch
 ] as const;
 
 // ---------------------------------------------------------------------------

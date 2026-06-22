@@ -47,7 +47,15 @@ export function buildEntityModelFromDxf(
     case 'circle':
       return { ...base, type: 'circle', center: entity.center, radius: entity.radius };
     case 'polyline':
-      return { ...base, type: 'polyline', vertices: entity.vertices, closed: entity.closed };
+      // ADR-510 Φ3b/Φ3c — carry the per-segment arc/width parallel arrays into the
+      // EntityModel so PolylineRenderer renders arcs (bulge) and the hit-test sees
+      // them. Without this the renderer always saw straight segments. Absent ⇒ straight.
+      return {
+        ...base, type: 'polyline', vertices: entity.vertices, closed: entity.closed,
+        ...(entity.bulges && { bulges: entity.bulges }),
+        ...(entity.startWidths && { startWidths: entity.startWidths }),
+        ...(entity.endWidths && { endWidths: entity.endWidths }),
+      };
     case 'arc':
       return {
         ...base,

@@ -57,6 +57,9 @@ import {
 export interface RadialCommandRingProps {
   /** Scene-units του ενεργού level (mm→scene conversion για το lock μήκους). */
   readonly sceneUnits: SceneUnits;
+  /** Draw-time getter του canvas element — για να γίνεται **βελάκι** ο κέρσορας πάνω στα πλήκτρα
+   *  (ο καμβάς έχει inline `cursor:crosshair`, οπότε πρέπει να αλλάξει στο ίδιο το element). */
+  readonly getCanvasEl?: () => HTMLCanvasElement | null;
 }
 
 const LABEL_KEY: Record<RingFieldKey, string> = {
@@ -85,7 +88,7 @@ function seedValue(
   return lock.angle !== null ? lock.angle.toFixed(2) : ''; // angle
 }
 
-export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React.ReactElement | null {
+export function RadialCommandRing({ sceneUnits, getCanvasEl }: RadialCommandRingProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const { displayUnit } = useDisplayUnit();
   const colors = useSemanticColors();
@@ -154,13 +157,19 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
       ? wedgeAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI)
       : null);
     setCrosshairSuppressed(z === 'inside');
-    // Πάνω στα πλήκτρα: βελάκι αντί crosshair (το σταυρόνημα είναι ήδη κρυμμένο).
-    document.body.style.cursor = z === 'inside' ? 'default' : '';
+    // Πάνω στα πλήκτρα: βελάκι αντί crosshair στο ΙΔΙΟ canvas element (inline cursor:crosshair).
+    // Re-assert ανά κίνηση ώστε να «κερδίζει» ακόμη κι αν ο καμβάς ξανα-render-άρει.
+    const canvasEl = getCanvasEl?.();
+    if (canvasEl) canvasEl.style.cursor = z === 'inside' ? 'default' : 'crosshair';
     prevCursorRef.current = { x: cursor.x, y: cursor.y };
-  }, [cursor]);
+  }, [cursor, getCanvasEl]);
 
-  // Καθάρισε crosshair-suppression + body cursor όταν φεύγει το δαχτυλίδι (tool end / phase change).
-  useEffect(() => () => { setCrosshairSuppressed(false); document.body.style.cursor = ''; }, []);
+  // Καθάρισε crosshair-suppression + επανάφερε crosshair όταν φεύγει το δαχτυλίδι (tool end / phase).
+  useEffect(() => () => {
+    setCrosshairSuppressed(false);
+    const el = getCanvasEl?.();
+    if (el) el.style.cursor = 'crosshair';
+  }, [getCanvasEl]);
 
   const openWedge = useCallback((key: RingFieldKey) => {
     setOpenField(key);
