@@ -27,7 +27,7 @@ import type { GhostFaceDimension } from '../../bim/framing/ghost-face-dim-refere
 import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
-import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
+import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from './overlay-line-style';
 
 /** Extra screen-px the number sits BEYOND the dim line (so it never overlaps it — no bg chip). */
 const LABEL_CLEARANCE_PX = 9;
@@ -153,17 +153,9 @@ function paintArcDimension(
       ctx.lineTo(s.x, s.y);
     }
     ctx.stroke();
-    strokeScreenSegment(ctx, toScreen(d.p1), s0);                  // ακτινική extension στο «from» άκρο
-    strokeScreenSegment(ctx, toScreen(d.p2), toScreen(curve[curve.length - 1])); // στο «to» άκρο
+    strokeOverlaySegment(ctx, toScreen(d.p1), s0);                  // ακτινική extension στο «from» άκρο
+    strokeOverlaySegment(ctx, toScreen(d.p2), toScreen(curve[curve.length - 1])); // στο «to» άκρο
   }
   const sRef = toScreen(d.dimLineRef);
   drawLabelBeyond(ctx, formatArcLabel(d, mmPerScene, labelMode), sRef, toScreen(arc.center), textColor);
-}
-
-/** Μία ευθεία γραμμή σε screen-space (η τρέχουσα ctx line style προϋποτίθεται ήδη set). */
-function strokeScreenSegment(ctx: CanvasRenderingContext2D, a: Point2D, b: Point2D): void {
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x, b.y);
-  ctx.stroke();
 }

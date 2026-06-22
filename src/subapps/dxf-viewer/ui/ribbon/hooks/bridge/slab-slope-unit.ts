@@ -18,11 +18,16 @@
  * για `ratio` εκτίθεται μόνο το N (π.χ. «50» = 1:50) — το «1:» μπαίνει στο label
  * της μονάδας, ΟΧΙ στο combobox value.
  *
+ * **SSoT reuse (ADR-417 Q5):** το deg↔percent math ΔΕΝ ξαναγράφεται — delegate στο
+ * υπάρχον `roof-slope-units.ts` (`roofSlopeToRatio`/`roofSlopeFromRatio`, pure, dependency-
+ * free, ήδη σε χρήση από τον roof bridge) με pivot το **rise/run ratio**. Εδώ ζει ΜΟΝΟ ό,τι
+ * δεν έχει η στέγη: η 3η μονάδα «λόγος 1:N» (display/parse) + το display-unit pref store.
+ *
+ * @see bim/geometry/roof-slope-units.ts — roofSlopeToRatio/roofSlopeFromRatio (deg↔percent SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 5c
  */
 
-const DEG_TO_RAD = Math.PI / 180;
-const RAD_TO_DEG = 180 / Math.PI;
+import { roofSlopeFromRatio, roofSlopeToRatio } from '../../../../bim/geometry/roof-slope-units';
 
 /** Display/input μονάδα της κλίσης. Stored value = ΠΑΝΤΑ %. */
 export type SlabSlopeUnit = 'percent' | 'degrees' | 'ratio';
@@ -47,15 +52,17 @@ function trimNumber(value: number, decimals: number): string {
 }
 
 /**
- * Stored % → numeric display string στη `unit`. `pct ≤ 0` → «0» (flat).
+ * Stored % → numeric display string στη `unit`. `pct ≤ 0` → «0» (flat). Pivot = rise/run
+ * ratio μέσω του roof SSoT (deg↔percent)· μόνο το «1:N» (ratio) ζει εδώ.
  */
 export function slopePercentToDisplay(pct: number, unit: SlabSlopeUnit): string {
   if (!(pct > 0)) return '0';
+  const riseRun = roofSlopeToRatio(pct, 'percent'); // pct/100
   switch (unit) {
     case 'degrees':
-      return trimNumber(Math.atan(pct / 100) * RAD_TO_DEG, 2);
+      return trimNumber(roofSlopeFromRatio(riseRun, 'deg'), 2);
     case 'ratio':
-      return String(Math.round(100 / pct)); // N στο 1:N
+      return String(Math.round(1 / riseRun)); // N στο 1:N
     case 'percent':
     default:
       return trimNumber(pct, 2);
@@ -65,15 +72,16 @@ export function slopePercentToDisplay(pct: number, unit: SlabSlopeUnit): string 
 /**
  * Numeric display string στη `unit` → stored %. Επιστρέφει `null` σε άκυρο/μη-θετικό
  * (ο caller το ερμηνεύει ως «flat / off»). Για `ratio` το input είναι το N (1:N).
+ * deg↔percent μέσω του roof SSoT (μηδέν re-implement tan/atan).
  */
 export function slopeDisplayToPercent(value: string, unit: SlabSlopeUnit): number | null {
   const n = Number.parseFloat(value);
   if (!Number.isFinite(n) || n <= 0) return null;
   switch (unit) {
     case 'degrees':
-      return Math.tan(n * DEG_TO_RAD) * 100;
+      return roofSlopeFromRatio(roofSlopeToRatio(n, 'deg'), 'percent'); // tan(n°)·100
     case 'ratio':
-      return 100 / n; // 1:N → %
+      return roofSlopeFromRatio(1 / n, 'percent'); // (1/N)·100
     case 'percent':
     default:
       return n;

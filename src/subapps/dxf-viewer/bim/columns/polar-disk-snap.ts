@@ -30,7 +30,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptiveDistanceStep } from '../../systems/tracking/adaptive-distance-snap';
-import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { pointOnCircle, calculateAngle, calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
+import { normalizeAngleDeg, degToRad, radToDeg } from '../../rendering/entities/shared/geometry-utils';
 import { buildCenteredAxisFaceFrame } from './column-face-snap-helpers';
 import type { GhostFaceFrame } from '../framing/linear-member-face-snap';
 
@@ -42,8 +43,6 @@ const CENTER_CAPTURE_PX = 12;
 const NICE_ANGLES_DEG: readonly number[] = [5, 10, 15, 30, 45, 90];
 /** Κλάσματα ακτίνας για το Shift mode (Q1) — R/4, R/3, R/2, 2R/3, 3R/4. */
 const RADIUS_FRACTIONS: readonly number[] = [0.25, 1 / 3, 0.5, 2 / 3, 0.75];
-
-const DEG = 180 / Math.PI;
 
 /** Κύκλος-στόχος ως δίσκος (κέντρο + ακτίνα, scene units). */
 export interface PolarDisk {
@@ -93,9 +92,6 @@ export function polarClearanceScene(columnWidthMm: number, columnDepthMm: number
   const halfDiagMm = 0.5 * Math.hypot(columnWidthMm, columnDepthMm);
   return (POLAR_COVER_MM + halfDiagMm) * mmToSceneUnits(sceneUnits);
 }
-
-const dist2 = (a: Readonly<Point2D>, b: Readonly<Point2D>): number => Math.hypot(a.x - b.x, a.y - b.y);
-const normDeg = (d: number): number => ((d % 360) + 360) % 360;
 
 /** Επέλεξε από `candidates` την τιμή με τη μικρότερη απόλυτη απόσταση από `target`. */
 function nearestValue(target: number, candidates: readonly number[]): number {
@@ -186,7 +182,7 @@ export function resolvePolarDiskSnap(
   const maxRing = polarMaxRing(radius, clearance);
   if (!(maxRing > 0)) return null;
 
-  const distToCenter = dist2(cursor, center);
+  const distToCenter = calculateDistance(cursor, center);
   const wpp = opts.worldPerPixel;
   const centerCapture = wpp > 0 ? wpp * CENTER_CAPTURE_PX : 0;
   if (distToCenter <= centerCapture) return centerSnap(center, distToCenter);
@@ -197,15 +193,15 @@ export function resolvePolarDiskSnap(
   const ringR = nearestValue(distToCenter, rings);
 
   const stepDeg = niceAngleStepDeg(ringR, wpp);
-  const rawDeg = calculateAngle(center, cursor) * DEG;
-  const angleDeg = normDeg(Math.round(rawDeg / stepDeg) * stepDeg);
-  const position = pointOnCircle(center, ringR, angleDeg / DEG);
+  const rawDeg = radToDeg(calculateAngle(center, cursor));
+  const angleDeg = normalizeAngleDeg(Math.round(rawDeg / stepDeg) * stepDeg);
+  const position = pointOnCircle(center, ringR, degToRad(angleDeg));
   return {
     position,
     ringR,
     angleDeg,
     isCenter: false,
-    dist: dist2(cursor, position),
+    dist: calculateDistance(cursor, position),
     faceFrame: buildPolarFaceFrame(center, position, ringR),
   };
 }
@@ -218,7 +214,7 @@ export function findDiskContaining(
   let best: PolarDisk | null = null;
   let bestD = Infinity;
   for (const d of disks) {
-    const dc = dist2(cursor, d.center);
+    const dc = calculateDistance(cursor, d.center);
     if (dc < d.radius && dc < bestD) { bestD = dc; best = d; }
   }
   return best;
@@ -242,10 +238,10 @@ export function buildPolarDiskGrid(
   const rings = polarRingRadii(maxRing, adaptiveDistanceStep(opts.worldPerPixel), !!opts.shiftFractions, radius);
   if (rings.length === 0) return null;
 
-  const distToCenter = dist2(cursor, center);
+  const distToCenter = calculateDistance(cursor, center);
   const activeRingR = nearestValue(Math.min(distToCenter, maxRing), rings);
   const stepDeg = niceAngleStepDeg(activeRingR, opts.worldPerPixel);
   const spokesDeg: number[] = [];
-  for (let a = 0; a < 360 - 1e-6; a += stepDeg) spokesDeg.push(normDeg(a));
+  for (let a = 0; a < 360 - 1e-6; a += stepDeg) spokesDeg.push(normalizeAngleDeg(a));
   return { center: { x: center.x, y: center.y }, rings, spokesDeg, outerR: rings[rings.length - 1] };
 }

@@ -14,16 +14,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.14
  */
 
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+
 /** Άνω όριο «λογικού» αυτόματου fold — πέρα από αυτό θεωρούμε ότι δεν υπάρχει καθαρή συμμετρία. */
 const MAX_AUTO_FOLD = 24;
 /** Ανοχή (μοίρες) ώστε μια προβλεπόμενη θέση να θεωρηθεί «ήδη κατειλημμένη» από υπάρχουσα κολώνα. */
 const OCCUPIED_TOL_DEG = 1;
 
-const normDeg = (d: number): number => ((d % 360) + 360) % 360;
-
 /** Κυκλική απόλυτη γωνιακή διαφορά (μοίρες) στο [0,180]. */
 function angularDiff(a: number, b: number): number {
-  const d = Math.abs(normDeg(a) - normDeg(b)) % 360;
+  const d = Math.abs(normalizeAngleDeg(a) - normalizeAngleDeg(b)) % 360;
   return d > 180 ? 360 - d : d;
 }
 
@@ -44,7 +44,7 @@ function autoFold(anglesDeg: readonly number[]): number | null {
   const base = anglesDeg[0];
   let g = 360;
   for (const a of anglesDeg) {
-    const diff = Math.round(normDeg(a - base));
+    const diff = Math.round(normalizeAngleDeg(a - base));
     if (diff > 0) g = gcd(g, diff);
   }
   if (g <= 0) return null;
@@ -78,7 +78,7 @@ export function detectRingFold(
   const allAnglesDeg: number[] = [];
   const ghostAnglesDeg: number[] = [];
   for (let k = 0; k < fold; k++) {
-    const deg = normDeg(base + k * step);
+    const deg = normalizeAngleDeg(base + k * step);
     allAnglesDeg.push(deg);
     if (!existingAnglesDeg.some((a) => angularDiff(a, deg) <= OCCUPIED_TOL_DEG)) ghostAnglesDeg.push(deg);
   }

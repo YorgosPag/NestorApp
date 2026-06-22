@@ -24,6 +24,8 @@ import type { SlabEntity, SlabParams, SlabSlope } from '../../../../bim/types/sl
 import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 // SSoT geometryType↔slope invariant — reuse σε gizmo + ribbon (μηδέν διπλό coupling).
 import { withSlabSlope } from '../../../../bim/geometry/slab-slope';
+// SSoT angle-normalize [0,360) — reuse (rotation/mirror-math το χρησιμοποιούν), ΟΧΙ νέο local.
+import { normalizeAngleDeg } from '../../../../rendering/entities/shared/geometry-utils';
 import { SLAB_RIBBON_KEYS } from './slab-command-keys';
 import { slabToolBridgeStore } from './slab-tool-bridge-store';
 import {
@@ -76,12 +78,6 @@ function readSlopeField(commandKey: string, slope: SlabSlope | undefined, unit: 
   return null;
 }
 
-/** Normalize γωνία σε [0, 360). */
-function normalizeDeg(deg: number): number {
-  const r = deg % 360;
-  return r < 0 ? r + 360 : r;
-}
-
 /**
  * Παράγει το επόμενο `SlabSlope | null` από μία αλλαγή combobox (`null` = επίπεδη
  * → box). Επιστρέφει `{ next }` ή `null` (άκυρη/μη-slope key — δεν αγγίζει την πλάκα).
@@ -106,7 +102,7 @@ function nextSlopeFor(
   if (commandKey === SLAB_RIBBON_KEYS.slope.direction) {
     const dir = Number.parseFloat(value);
     if (!Number.isFinite(dir)) return null;
-    return { next: { ...base, direction: normalizeDeg(dir) } };
+    return { next: { ...base, direction: normalizeAngleDeg(dir) } };
   }
   if (commandKey === SLAB_RIBBON_KEYS.slope.pivot) {
     if (!PIVOT_SET.has(value)) return null;

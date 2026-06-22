@@ -9,6 +9,8 @@
  * in ANY new overlay line so the look never diverges again.
  */
 
+import type { Point2D } from '../../rendering/types/Types';
+
 /** Stroke width (CSS px) for ALL overlay guide lines. */
 export const OVERLAY_LINE_WIDTH_PX = 0.5;
 
@@ -38,4 +40,16 @@ export function applyOverlayLineStyle(ctx: CanvasRenderingContext2D, color: stri
   ctx.lineWidth = OVERLAY_LINE_WIDTH_PX;
   ctx.setLineDash([...OVERLAY_LINE_DASH]);
   ctx.lineCap = 'butt';
+}
+
+/**
+ * Stroke ΜΙΑ ευθεία γραμμή σε **screen-space** (η overlay line style προϋποτίθεται ήδη set μέσω
+ * `applyOverlayLineStyle`). SSoT για όλους τους overlay painters (listening dims, polar disk) —
+ * μηδέν διπλό `beginPath/moveTo/lineTo/stroke` ανά painter.
+ */
+export function strokeOverlaySegment(ctx: CanvasRenderingContext2D, a: Point2D, b: Point2D): void {
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
 }

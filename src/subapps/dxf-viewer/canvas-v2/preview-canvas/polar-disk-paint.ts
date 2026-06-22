@@ -22,7 +22,8 @@ import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
-import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from './overlay-line-style';
 
 type Viewport = { readonly width: number; readonly height: number };
 
@@ -30,15 +31,6 @@ type Viewport = { readonly width: number; readonly height: number };
 const RING_SEGMENTS = 64;
 /** Μισό μήκος (screen px) του σταυρού κέντρου. */
 const CENTER_CROSS_PX = 6;
-const DEG = Math.PI / 180;
-
-/** Μία ευθεία γραμμή σε screen-space (η ctx line style προϋποτίθεται ήδη set). */
-function strokeSegment(ctx: CanvasRenderingContext2D, a: Point2D, b: Point2D): void {
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x, b.y);
-  ctx.stroke();
-}
 
 /** Ζωγράφισε έναν δακτύλιο (κύκλος) ως screen polyline. */
 function strokeRing(
@@ -76,11 +68,11 @@ export function paintPolarDisk(
 
   const sCenter = toScreen(grid.center);
   for (const deg of grid.spokesDeg) {
-    const tip = pointOnCircle(grid.center, grid.outerR, deg * DEG);
-    strokeSegment(ctx, sCenter, toScreen(tip));
+    const tip = pointOnCircle(grid.center, grid.outerR, degToRad(deg));
+    strokeOverlaySegment(ctx, sCenter, toScreen(tip));
   }
 
   // Κέντρο = μικρός σταυρός σε σταθερό screen μέγεθος (zoom-invariant).
-  strokeSegment(ctx, { x: sCenter.x - CENTER_CROSS_PX, y: sCenter.y }, { x: sCenter.x + CENTER_CROSS_PX, y: sCenter.y });
-  strokeSegment(ctx, { x: sCenter.x, y: sCenter.y - CENTER_CROSS_PX }, { x: sCenter.x, y: sCenter.y + CENTER_CROSS_PX });
+  strokeOverlaySegment(ctx, { x: sCenter.x - CENTER_CROSS_PX, y: sCenter.y }, { x: sCenter.x + CENTER_CROSS_PX, y: sCenter.y });
+  strokeOverlaySegment(ctx, { x: sCenter.x, y: sCenter.y - CENTER_CROSS_PX }, { x: sCenter.x, y: sCenter.y + CENTER_CROSS_PX });
 }
