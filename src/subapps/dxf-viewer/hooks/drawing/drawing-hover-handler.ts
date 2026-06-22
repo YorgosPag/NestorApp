@@ -31,6 +31,7 @@ import { hardOrtho } from './drawing-handler-utils';
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
 // ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
@@ -285,6 +286,17 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
         if (faceDims) {
           previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
+        }
+        // ADR-508 §wall-hud — ζωντανή ταυτότητα τοίχου: aligned διάσταση μήκους + γωνία + πάχος·ύψος.
+        // Τα νούμερα/μετάφραση εδώ (i18n + display units)· το paint είναι pure (numbers in).
+        const wallHud = (previewEntity as { wallHud?: WallHudMeta }).wallHud;
+        if (wallHud) {
+          const specLabel = i18n.t('tools.wall.hudSpec', {
+            thickness: formatLengthForDisplay(wallHud.thicknessMm),
+            height: formatLengthForDisplay(wallHud.heightMm),
+            ns: 'dxf-viewer-shell',
+          });
+          previewCanvasRef.current.drawWallHud(wallHud, specLabel);
         }
         // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
         // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.

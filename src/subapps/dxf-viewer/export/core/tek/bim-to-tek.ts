@@ -261,6 +261,8 @@ function toTekRoof(roof: RoofEntity, id: number): TekRoof {
     id,
     elevationM: mmToMeters(p.basePivotZ),
     widthM: mmToMeters(p.thickness),
+    // Μη-μηδενικός όγκος = «χτισμένη» στέγη (ο Τέκτων δεν ζωγραφίζει roof με volume 0).
+    volumeM3: roof.geometry.volumeM3,
     colorHex: (roof as { color?: string }).color ?? DEFAULT_ROOF_COLOR,
     points,
     faces,

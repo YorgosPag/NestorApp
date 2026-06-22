@@ -140,6 +140,7 @@ export function buildAutoroofRecordXml(r: TekRoof): string {
   return AUTOROOF_RECORD_TEMPLATE
     .replace('{{ID}}', String(r.id))
     .replace('{{ELEVATION}}', tekNum(r.elevationM))
+    .replace('{{VOLUME}}', tekNum(r.volumeM3))
     .replace('{{WIDTH}}', tekNum(r.widthM))
     .replace('{{COLOR}}', colorHex6(r.colorHex))
     .replace('{{V3LIST}}', r.faces.length > 0 ? `\n${buildRoofV3ListXml(r.faces)}\n` : '')

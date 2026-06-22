@@ -182,6 +182,21 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   `resolveWallOpeningConflictForHost`, host = `anchoredHostId`)· (6) tooltip: `openingConflict.bandMm`
   meta → `drawing-hover-handler` το μεταφράζει (`i18n.t('tools.wall.openingCutConflict', {range})`, el+en·
   reuse `formatLengthForDisplay`) → thin `PreviewRenderer.drawGhostConflictTooltip` (reuse `drawOverlayLabel`,
-  overlap red). 16 jest (πόρτα/παράθυρο/μερική/άγγιγμα/host-by-reference). **Κλειδωμένο (Giorgio):** οριζόντιο
+  overlap red). 13 jest (πόρτα/παράθυρο/μερική/άγγιγμα/host-by-reference). **Κλειδωμένο (Giorgio):** οριζόντιο
   εύρος = πάχος ghost· tooltip = κείμενο + εύρος ύψους· host = snapped reference (ΟΧΙ perpendicular re-derive).
   ⚠️ CHECK 6B/6D (PreviewRenderer/PreviewCanvas/drawing-hover-handler) → stage ADR-040. 🔴 browser-verify + commit.
+- **2026-06-22 (§wall-hud — ζωντανή ταυτότητα τοίχου κατά τη σχεδίαση)** — όταν ο χρήστης τραβά τοίχο
+  (awaitingEnd) μακριά από άλλα αντικείμενα, ο τοίχος-φάντασμα φαίνεται σαν **έτοιμο διαστασιολογημένο
+  αρχιτεκτονικό σχέδιο**: (1) **aligned διάσταση μήκους** κάτω από τον τοίχο (μεγαλώνει live), (2)
+  **γωνία** `∠ θ` στην αρχή, (3) ετικέτα **πάχος · ύψος** στη μέση (η BIM ταυτότητα — όχι μόνο
+  γεωμετρία). Διαφοροποίηση από big players: AutoCAD/Revit dynamic input δείχνουν μόνο μικρό πεδίο
+  μήκος/γωνία· εμείς δείχνουμε **ζωντανά τα BIM μεγέθη**. **FULL SSoT, μηδέν bespoke draw:** εξήχθη
+  `paintAlignedOverlayDimension` από το `ghost-face-dim-paint` (κοινό aligned-dim SSoT: `renderPreviewDimension`
+  ADR-362 + overlay-line-style) → το μοιράζονται listening-dims ΚΑΙ HUD· NEW `wall-hud-paint.ts`
+  (`paintWallHud` + `WallHudMeta`) συνθέτει dim + `drawOverlayLabel` (×2) + `formatLengthForDisplay`/
+  `formatAngleLocale`· `wall-preview-helpers.buildWallHudMeta` εξάγει αριθμητικό `wallHud` meta από τον
+  χτισμένο τοίχο (gated σε ευθύ awaitingEnd/footprint· `wantHud`)· `drawing-hover-handler` μεταφράζει το
+  spec (`i18n.t('tools.wall.hudSpec', {thickness,height})`, el+en) + καλεί `PreviewRenderer.drawWallHud`·
+  thin `PreviewCanvas` facade. Χρώμα HUD = ουδέτερο γκρι (διακριτό από cyan listening dims). **Κλειδωμένο
+  (Giorgio):** στυλ «Αρχιτεκτονικό» (διαστάσεις πάνω στον τοίχο). ⚠️ CHECK 6B/6D (PreviewRenderer/
+  PreviewCanvas/drawing-hover-handler) → stage ADR-040. 🔴 tsc + browser-verify + commit.

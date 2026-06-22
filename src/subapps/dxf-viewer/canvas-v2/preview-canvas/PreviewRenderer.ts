@@ -62,6 +62,7 @@ import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-reso
 // ADR-362 dimension SSoT.
 import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import { paintWallHud, type WallHudMeta } from './wall-hud-paint';
 import { paintPolarDisk } from './polar-disk-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { paintRectGrid } from './rect-grid-paint';
@@ -210,6 +211,21 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     paintGhostFaceDimensions(this.ctx, meta, transform, viewport);
+  }
+
+  /**
+   * ADR-508 §wall-hud — «ζωντανή ταυτότητα» τοίχου κατά τη σχεδίαση: aligned διάσταση μήκους +
+   * γωνία + ετικέτα πάχος·ύψος. Called AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   * `specLabel` = ΗΔΗ μεταφρασμένο (i18n στον handler). Delegate στο `wall-hud-paint` SSoT.
+   */
+  drawWallHud(
+    meta: WallHudMeta,
+    specLabel: string,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    paintWallHud(this.ctx, meta, specLabel, transform, viewport);
   }
 
   /**

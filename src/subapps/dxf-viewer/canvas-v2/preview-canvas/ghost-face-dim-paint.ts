@@ -84,7 +84,36 @@ function drawLabelBeyond(
   });
 }
 
-/** ΕΥΘΕΙΑ listening dim (along-face / radius) — αμετάβλητη: ADR-362 `renderPreviewDimension` + overlay label. */
+/**
+ * SSoT: μία ΕΥΘΕΙΑ aligned overlay dimension (ADR-362 `renderPreviewDimension` με το κοινό
+ * 0.5px dashed overlay-line-style + ο αριθμός μέσω `drawOverlayLabel`, τοποθετημένος BEYOND τη
+ * dim line). Μοιράζεται από τις listening-dims (ADR-508 §dim) ΚΑΙ το wall HUD (ADR-509 §self-dim)
+ * → ένα οπτικό λεξιλόγιο, μηδέν διπλό dim-draw (ADR-508 §wall-hud). Το `label` είναι ΗΔΗ formatted.
+ */
+export function paintAlignedOverlayDimension(
+  ctx: CanvasRenderingContext2D,
+  p1: Point2D,
+  p2: Point2D,
+  dimLineRef: Point2D,
+  label: string,
+  transform: ViewTransform,
+  viewport: { readonly width: number; readonly height: number },
+  color: string = OVERLAY_LINE_COLORS.listeningDim,
+): void {
+  renderPreviewDimension({
+    ctx,
+    entity: toAlignedDim('overlay', [p1, p2, dimLineRef]),
+    style: ISO_129_TEMPLATE,
+    transform,
+    viewport,
+    opts: { overlayLineStyle: true, color },
+  });
+  const sRef = CoordinateTransforms.worldToScreen(dimLineRef, transform, viewport);
+  const sMid = CoordinateTransforms.worldToScreen({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }, transform, viewport);
+  drawLabelBeyond(ctx, label, sRef, sMid, color);
+}
+
+/** ΕΥΘΕΙΑ listening dim (along-face / radius) — delegate στο κοινό `paintAlignedOverlayDimension` SSoT. */
 function paintStraightDimension(
   ctx: CanvasRenderingContext2D,
   d: GhostFaceDimension,
@@ -93,20 +122,8 @@ function paintStraightDimension(
   mmPerScene: number,
   textColor: string,
 ): void {
-  renderPreviewDimension({
-    ctx,
-    entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef]),
-    style: ISO_129_TEMPLATE,
-    transform,
-    viewport,
-    opts: { overlayLineStyle: true, color: OVERLAY_LINE_COLORS.listeningDim },
-  });
   const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
-  const sRef = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
-  const sMid = CoordinateTransforms.worldToScreen(
-    { x: (d.p1.x + d.p2.x) / 2, y: (d.p1.y + d.p2.y) / 2 }, transform, viewport,
-  );
-  drawLabelBeyond(ctx, label, sRef, sMid, textColor);
+  paintAlignedOverlayDimension(ctx, d.p1, d.p2, d.dimLineRef, label, transform, viewport, textColor);
 }
 
 /** Αριθμός δειγμάτων της καμπύλης dim line (πυκνό αρκετά ώστε να φαίνεται ομαλή σε κάθε zoom). */

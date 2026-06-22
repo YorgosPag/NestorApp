@@ -399,7 +399,7 @@ function roof(
 
 describe('buildRoofPointsXml / buildRoofV3ListXml / buildAutoroofRecordXml', () => {
   const tekRoof: TekRoof = {
-    id: 1, elevationM: 3, widthM: 0.15, colorHex: '#A42800',
+    id: 1, elevationM: 3, widthM: 0.15, volumeM3: 42.5, colorHex: '#A42800',
     points: [
       { x: 0, y: 0, angleRad: 0.366519 },
       { x: 5, y: 0, angleRad: 0 },
@@ -417,12 +417,13 @@ describe('buildRoofPointsXml / buildRoofV3ListXml / buildAutoroofRecordXml', () 
     expect((xml.match(/<v3>/g) ?? []).length).toBe(3);
     expect(xml).toContain('<pvX>2.5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>');
   });
-  it('record fill: κανένα {{…}} leftover + elevation/width/color + type 8', () => {
+  it('record fill: κανένα {{…}} leftover + elevation/width/volume/color + type 8', () => {
     const xml = buildAutoroofRecordXml(tekRoof);
     expect(xml).not.toMatch(/\{\{/);
     expect(xml).toContain('<type>8</type>');
     expect(xml).toContain('<elevation>3</elevation>');
     expect(xml).toContain('<width>0.15</width>');
+    expect(xml).toContain('<roof_volume_acc>42.5</roof_volume_acc>'); // μη-μηδενικός όγκος
     expect(xml).toContain('<color>A42800</color>');
   });
   it('επίπεδη στέγη (κενά faces) → κενό <v3list>', () => {

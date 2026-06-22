@@ -34,6 +34,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import type { WallHudMeta } from './wall-hud-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -122,6 +123,11 @@ export interface PreviewCanvasHandle {
    * Wiped on the next `drawPreview`/`clear`.
    */
   drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => void;
+  /**
+   * ADR-508 §wall-hud — draw the live wall identity HUD (aligned length dim + angle + spec label).
+   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawWallHud: (meta: WallHudMeta, specLabel: string) => void;
   /**
    * ADR-508 §opening-conflict — draw the 🔴 tooltip explaining the height-band opening cut.
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
@@ -391,6 +397,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-508 §wall-hud: live wall identity HUD (aligned length dim + angle + spec) */
+        drawWallHud: (meta: WallHudMeta, specLabel: string) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawWallHud(meta, specLabel, transformRef.current, viewportRef.current);
         },
 
         /** ADR-508 §opening-conflict: 🔴 tooltip explaining the height-band opening cut */

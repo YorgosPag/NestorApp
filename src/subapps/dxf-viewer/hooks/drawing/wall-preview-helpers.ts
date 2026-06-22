@@ -41,6 +41,30 @@ import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+
+const DEG_PER_RAD = 180 / Math.PI;
+
+/**
+ * ADR-508 §wall-hud — εξαγωγή των αριθμητικών HUD δεδομένων από τον ΧΤΙΣΜΕΝΟ τοίχο (μήκος/γωνία/
+ * πάχος/ύψος). Καθαρά νούμερα (N.11-clean)· η μετάφραση/μορφοποίηση γίνεται στον renderer/handler.
+ */
+function buildWallHudMeta(entity: WallEntity, sceneUnits: SceneUnits): WallHudMeta {
+  const p = entity.params;
+  const start = { x: p.start.x, y: p.start.y };
+  const end = { x: p.end.x, y: p.end.y };
+  const lenScene = Math.hypot(end.x - start.x, end.y - start.y);
+  const angle = Math.atan2(end.y - start.y, end.x - start.x) * DEG_PER_RAD;
+  return {
+    start,
+    end,
+    lengthMm: lenScene / mmToSceneUnits(sceneUnits),
+    angleDeg: ((angle % 360) + 360) % 360,
+    thicknessMm: p.thickness,
+    heightMm: p.height,
+    sceneUnits,
+  };
+}
 import {
   resolveEffectivePreviewCursor,
   toWysiwygPreviewEntity,
@@ -102,6 +126,7 @@ function buildWallGhostEntity(
   isOverlap: boolean,
   faceDimensions: GhostFaceDimensionsMeta | null = null,
   conflictCtx: WallGhostConflictCtx | null = null,
+  wantHud = false,
 ): ExtendedSceneEntity | null {
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
@@ -116,9 +141,12 @@ function buildWallGhostEntity(
   const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;
   // 🔴 → ποτέ listening dims (mirror short-end overlap).
   const dims = overlap ? null : faceDimensions;
+  // ADR-508 §wall-hud — ζωντανή ταυτότητα (μήκος/γωνία/πάχος/ύψος) μόνο σε ευθύ τοίχο που σχεδιάζεται.
+  const wallHud = wantHud && kind === 'straight' ? buildWallHudMeta(built.entity, sceneUnits) : null;
   return toWysiwygPreviewEntity(
     built.entity, id, ghostStatusColor, dims,
     conflict ? { bandMm: conflict.bandMm } : null,
+    wallHud,
   );
 }
 
@@ -258,7 +286,8 @@ function makeWallWysiwygGhost(
   const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
     ? null
     : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
-  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, null, conflictCtx);
+  // wantHud=true → ζωντανή ταυτότητα τοίχου (μήκος/γωνία/πάχος/ύψος) κατά το awaitingEnd drag.
+  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, null, conflictCtx, true);
 }
 
 /**
@@ -289,7 +318,7 @@ function makeWallFootprintGhost(
   const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
     ? null
     : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
-  return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap, null, conflictCtx);
+  return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap, null, conflictCtx, true);
 }
 
 /**

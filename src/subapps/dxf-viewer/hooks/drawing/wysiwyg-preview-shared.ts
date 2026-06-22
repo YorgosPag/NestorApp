@@ -15,6 +15,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
 import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
+import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import {
   resolveGhostFaceDimensions,
   type GhostFaceDimensionsMeta,
@@ -90,6 +91,7 @@ export function toWysiwygPreviewEntity<T extends object>(
   ghostStatusColor?: GhostStatusColor | null,
   faceDimensions?: GhostFaceDimensionsMeta | null,
   openingConflict?: OpeningConflictMeta | null,
+  wallHud?: WallHudMeta | null,
 ): ExtendedSceneEntity {
   return {
     ...entity,
@@ -99,5 +101,6 @@ export function toWysiwygPreviewEntity<T extends object>(
     ...(ghostStatusColor ? { ghostStatusColor } : {}),
     ...(faceDimensions && faceDimensions.dims.length > 0 ? { faceDimensions } : {}),
     ...(openingConflict ? { openingConflict } : {}),
+    ...(wallHud ? { wallHud } : {}),
   } as unknown as ExtendedSceneEntity;
 }

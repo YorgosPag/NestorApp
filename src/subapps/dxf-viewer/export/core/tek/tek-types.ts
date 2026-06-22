@@ -92,6 +92,8 @@ export interface TekRoof {
   readonly elevationM: number;
   /** Πάχος στέγης (εξώθηση «νερών») — `<width>` (μέτρα). */
   readonly widthM: number;
+  /** Όγκος στέγης (m³) — `<roof_volume_acc>`. Μη-μηδενικό = «χτισμένη» (ο Τέκτων το χρειάζεται). */
+  readonly volumeM3: number;
   /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
   readonly colorHex: string;
   /** Footprint κορυφές + κλίση ανά ακμή (`<point>`). */
