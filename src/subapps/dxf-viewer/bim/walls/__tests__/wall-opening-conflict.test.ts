@@ -3,7 +3,7 @@
  * Ένας κανόνας πόρτα/παράθυρο (sillHeight): οριζόντια ΚΑΙ κατακόρυφη τομή με το κενό.
  */
 
-import { wallGhostBlocksOpening, resolveWallStartOpeningConflict } from '../wall-opening-conflict';
+import { wallGhostBlocksOpening, resolveWallOpeningConflictForHost } from '../wall-opening-conflict';
 import type { WallEntity } from '../../types/wall-types';
 import type { OpeningEntity } from '../../types/opening-types';
 
@@ -103,25 +103,29 @@ describe('wallGhostBlocksOpening — 2-interval rule (πάχος ghost × ύψο
   });
 });
 
-describe('resolveWallStartOpeningConflict — host detection + abut (preview === commit)', () => {
+describe('resolveWallOpeningConflictForHost — abut επί γνωστού host (snapped reference, preview === commit)', () => {
   const host = makeWall('w1', { lengthMm: 2000, thickness: 200 });
   const door = makeOpening('o1', 'w1', { offsetFromStart: 1000, width: 900, sillHeight: 0, height: 2100 });
 
-  it('🔴 σημείο επαφής στην παρειά, μπροστά στο κενό', () => {
+  it('🔴 σημείο επαφής στην παρειά, abut=1450 μπροστά στο κενό', () => {
     const ghost = makeWall('g', { height: 3000 });
-    // contact στην +y παρειά (y=100=halfHost), abut=1450 (κέντρο ανοίγματος)
-    const c = resolveWallStartOpeningConflict({ x: 1450, y: 100 }, ghost, 200, [host], [door], 'mm');
+    const c = resolveWallOpeningConflictForHost({ x: 1450, y: 100 }, ghost, 200, host, [door]);
     expect(c).not.toBeNull();
     expect(c!.opening.id).toBe('o1');
   });
 
-  it('🟢 σημείο μακριά από κάθε τοίχο → καμία false-positive', () => {
+  it('🟢 host=null (free placement, κανένα snap) → καμία false-positive', () => {
     const ghost = makeWall('g', { height: 3000 });
-    expect(resolveWallStartOpeningConflict({ x: 1450, y: 5000 }, ghost, 200, [host], [door], 'mm')).toBeNull();
+    expect(resolveWallOpeningConflictForHost({ x: 1450, y: 100 }, ghost, 200, null, [door])).toBeNull();
   });
 
-  it('🟢 επαφή στην παρειά αλλά εκτός του span ανοίγματος (δίπλα στο συμπαγές)', () => {
+  it('🟢 abut εκτός του span ανοίγματος (δίπλα στο συμπαγές)', () => {
     const ghost = makeWall('g', { height: 3000 });
-    expect(resolveWallStartOpeningConflict({ x: 200, y: 100 }, ghost, 200, [host], [door], 'mm')).toBeNull();
+    expect(resolveWallOpeningConflictForHost({ x: 200, y: 100 }, ghost, 200, host, [door])).toBeNull();
+  });
+
+  it('🟢 host χωρίς ανοίγματα', () => {
+    const ghost = makeWall('g', { height: 3000 });
+    expect(resolveWallOpeningConflictForHost({ x: 1450, y: 100 }, ghost, 200, host, [])).toBeNull();
   });
 });

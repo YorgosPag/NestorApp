@@ -98,6 +98,13 @@ export interface MemberGhostSnapResult {
   readonly status: GhostStatus;
   /** Πλαίσιο παρειάς για listening dimensions — μόνο στον 🟢 Τ-framing κλάδο. */
   readonly faceFrame?: GhostFaceFrame;
+  /**
+   * ADR-508 §opening-conflict — id του **host μέλους** στο οποίο κούμπωσε το ghost (= `target.id`).
+   * Revit-grade «reference carries its host»: η ταυτότητα του host καθορίζεται ΕΔΩ ΜΙΑ φορά και
+   * διαδίδεται (preview + commit) αντί να ξανα-υπολογίζεται γεωμετρικά. `undefined` σε column-priority
+   * snap (κολόνες δεν φιλοξενούν ανοίγματα).
+   */
+  readonly targetId?: string;
 }
 
 export interface LinearMemberFaceSnapOptions {
@@ -172,12 +179,14 @@ export function resolveLinearMemberFaceSnap(
 ): MemberGhostSnapResult | null {
   let best: TargetFrame | null = null;
   let bestArc: ArcMeta | undefined; // ADR-398 §3.12 — γεωμετρία περιφέρειας του επιλεγμένου στόχου
+  let bestId: string | undefined;   // ADR-508 §opening-conflict — id του επιλεγμένου host μέλους
   for (const t of targets) {
     if (t.axis.length < 2 || t.outline.length < 3) continue;
     const fr = buildTargetFrame(cursor, t);
     if (fr && fr.distance <= opts.captureScene && (!best || fr.distance < best.distance)) {
       best = fr;
       bestArc = t.arc;
+      bestId = t.id;
     }
   }
   if (!best) return null;
@@ -228,7 +237,7 @@ export function resolveLinearMemberFaceSnap(
       ghostHalfWidth: half,
       arc: bestArc, // §3.12 — κύκλος/τόξο → arc-length listening dims (αλλιώς undefined)
     };
-    return { start, end, status: 'beam', faceFrame };
+    return { start, end, status: 'beam', faceFrame, targetId: bestId };
   }
 
   // ── cursor πέρα από κοντή άκρη → 🔴 συγγραμμική συνέχεια («extend instead») ─────────
@@ -243,7 +252,7 @@ export function resolveLinearMemberFaceSnap(
     x: start.x + dir * len * u.x,
     y: start.y + dir * len * u.y,
   };
-  return { start, end, status: 'overlap' };
+  return { start, end, status: 'overlap', targetId: bestId };
 }
 
 /** Συνημίτονο ορίου «παράλληλων αξόνων» (≈ ±10°). |u₁·u₂| ≥ τιμή ⇒ παράλληλα. */

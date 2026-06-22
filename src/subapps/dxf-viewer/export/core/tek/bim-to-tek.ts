@@ -28,6 +28,8 @@ import {
   buildOpeningXMatrix,
   footprintRingToMeters,
   roofFaceRingToMeters,
+  signedAreaXY,
+  reverseRoofFootprint,
 } from './tek-geometry';
 import {
   buildWallRecordXml, buildOpenXml, buildPlaneRecordXml, buildAutoroofRecordXml,
@@ -235,16 +237,22 @@ function toTekRoof(roof: RoofEntity, id: number): TekRoof {
   const p = roof.params;
   const metersPerSceneUnit = sceneUnitsToMeters(p.sceneUnits ?? 'mm');
 
-  // Footprint κορυφή i + κλίση της ακμής i (i→i+1, CCW)· αέτωμα/μη-κεκλιμένη → 0.
-  const points: TekRoofPoint[] = p.outline.vertices.map((v, i) => {
+  // Footprint κορυφή i + κλίση της ακμής i (i→i+1)· αέτωμα/μη-κεκλιμένη → 0.
+  const rawPoints: TekRoofPoint[] = p.outline.vertices.map((v, i) => {
     const edge = p.edges[i];
     const ratio = edge?.definesSlope ? roofSlopeToRatio(edge.slope, p.slopeUnit) : 0;
     return { x: v.x * metersPerSceneUnit, y: v.y * metersPerSceneUnit, angleRad: Math.atan(ratio) };
   });
 
-  // Τα «νερά» (computed 3D faces) → `<onev3list>`· per-vertex z (κεκλιμένο) διατηρείται.
-  // Το `roofFaceRingToMeters` καθαρίζει degenerate επαναλήψεις· faces που καταρρέουν σε <3
-  // κορυφές (degenerate) απορρίπτονται — ο Τέκτων δεν δέχεται εκφυλισμένα πολύγωνα.
+  // Ο Τέκτων χτίζει τη στέγη από το **CCW** footprint (Y προς τα πάνω) + την κλίση ανά ακμή.
+  // Το canvas Y είναι «κάτω» → CCW-σε-canvas outline βγαίνει CW-σε-Τέκτονα → η στέγη δεν
+  // ζωγραφίζεται. Normalize σε CCW (θετικό signed area)· η κλίση ακολουθεί (reverseRoofFootprint).
+  const points = signedAreaXY(rawPoints) < 0 ? reverseRoofFootprint(rawPoints) : rawPoints;
+
+  // Τα «νερά» (computed 3D faces) → `<onev3list>` display cache· per-vertex z διατηρείται.
+  // `roofFaceRingToMeters` καθαρίζει degenerate επαναλήψεις· faces <3 κορυφές απορρίπτονται.
+  // Το winding των faces ΔΕΝ μετράει (το δείγμα έχει ανάμεικτα CW/CCW → ο Τέκτων ξαναϋπολογίζει
+  // από το footprint) → δεν το πειράζουμε.
   const faces: TekRoofFace[] = roof.geometry.faces
     .map((f) => roofFaceRingToMeters(f.outline, metersPerSceneUnit))
     .filter((ring) => ring.length >= 3);

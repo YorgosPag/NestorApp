@@ -13,8 +13,12 @@
  *
  * **FULL SSoT reuse — μηδέν νέος μηχανισμός (Giorgio SSoT audit):**
  *   · `getEntityZExtents` (ADR-452) → κατακόρυφο εύρος ΚΑΙ του τοίχου ΚΑΙ του ανοίγματος.
- *   · `projectPointToWallOffsetMm` / `wallAxisPointAtOffsetMm` (opening-geometry) → οριζόντιο `abut` + host detection.
+ *   · `projectPointToWallOffsetMm` (opening-geometry) → οριζόντιο `abut` (offset επί του host άξονα).
  *   · `getSiblingOpeningsOnWall` (opening-siblings) → ανοίγματα ενός host τοίχου.
+ *
+ * **Revit-grade host = snapped reference (ΟΧΙ re-derive):** ο host τοίχος δίνεται από έξω — είναι η
+ * ταυτότητα που **ήδη επέλεξε το snap** (`MemberGhostSnapResult.targetId`) και διαδίδεται σε preview
+ * (live) ΚΑΙ commit (locked `anchoredHostId`). Εδώ απλώς υπολογίζεται το `abut` του γνωστού host.
  *
  * Pure — zero React/DOM/store. Καταναλώνεται ΟΜΟΙΑ από preview (`wall-preview-helpers`) ΚΑΙ
  * commit (`use-wall-commit`) → preview === commit.
@@ -26,12 +30,24 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { getEntityZExtents } from '../visibility/entity-z-extents';
-import { projectPointToWallOffsetMm, wallAxisPointAtOffsetMm } from '../geometry/opening-geometry';
+import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { getSiblingOpeningsOnWall } from './opening-siblings';
+import { getEntityZExtents, type EntityZExtentsMm } from '../visibility/entity-z-extents';
+import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
+
+/**
+ * Z-extents ενός scene τοίχου/ανοίγματος μέσω του **ADR-452 SSoT** `getEntityZExtents`. Το SSoT είναι
+ * typed για το canvas `DxfEntityUnion`, αλλά είναι τεκμηριωμένα σχεδιασμένο να δέχεται ΚΑΙ flat scene
+ * entities (το `nestedParams` fallback του). Τα scene `WallEntity`/`OpeningEntity` είναι **structurally
+ * ταυτόσημα** για τον z-τύπο (`params.baseOffset/height`, `params.sillHeight/height`) αλλά **nominally**
+ * διαφορετικά (`BimEntity` base vs `DxfEntity` base) → ένα boundary-cast ΕΔΩ (ΟΧΙ `as any`), ώστε να
+ * κρατήσουμε το SSoT reuse χωρίς να αντιγράψουμε τον z-τύπο.
+ */
+function zExtentsOf(e: WallEntity | OpeningEntity): EntityZExtentsMm | null {
+  return getEntityZExtents(e as unknown as DxfEntityUnion);
+}
 
 /** Η σύγκρουση που εντοπίστηκε: το άνοιγμα + το κατακόρυφο εύρος επικάλυψης (mm) για το tooltip. */
 export interface WallOpeningConflict {
@@ -56,7 +72,7 @@ export function wallGhostBlocksOpening(
   ghostThicknessMm: number,
   openings: readonly OpeningEntity[],
 ): WallOpeningConflict | null {
-  const ghostZ = getEntityZExtents(ghostWall);
+  const ghostZ = zExtentsOf(ghostWall);
   if (!ghostZ) return null;
   const half = ghostThicknessMm / 2;
   const hLo = abutMm - half;
@@ -66,7 +82,7 @@ export function wallGhostBlocksOpening(
     // Οριζόντια τομή κατά τον host άξονα (πάχος ghost ∩ άνοιγμα).
     if (overlapLength(hLo, hHi, oLo, oLo + width) <= 0) continue;
     // Κατακόρυφη τομή (κενό ανοίγματος ∩ εύρος νέου τοίχου) — reuse getEntityZExtents.
-    const oz = getEntityZExtents(opening);
+    const oz = zExtentsOf(opening);
     if (!oz) continue;
     const lo = Math.max(ghostZ.zBottomMm, oz.zBottomMm);
     const hi = Math.min(ghostZ.zTopMm, oz.zTopMm);
@@ -76,42 +92,22 @@ export function wallGhostBlocksOpening(
 }
 
 /**
- * Βρες τον host τοίχο πάνω στην παρειά του οποίου ακουμπά το σημείο επαφής `contactPt` (το
- * centerline start του φαντάσματος / committed τοίχου) και έλεγξε αν ο νέος τοίχος κόβει άνοιγμά του.
- * **ΕΝΑ SSoT για preview ΚΑΙ commit.** `null` όταν δεν υπάρχει host κοντά ή κανένα άνοιγμα δεν κόβεται.
- *
- * Host detection (μηδέν νέο projection): για κάθε τοίχο με ανοίγματα, `abut = projectPointToWallOffsetMm`,
- * `axisPt = wallAxisPointAtOffsetMm(abut)`· host = ο πλησιέστερος του οποίου η παρειά αγγίζει το `contactPt`
- * (απόσταση ≤ μισό-host + μισό-ghost). Έτσι ελεύθερη τοποθέτηση μακριά από τοίχο → καμία false-positive.
+ * Έλεγξε αν ο νέος τοίχος κόβει άνοιγμα του **γνωστού host** (= ο τοίχος που επέλεξε το snap,
+ * `MemberGhostSnapResult.targetId`). **ΕΝΑ SSoT για preview ΚΑΙ commit** — η ταυτότητα του host ΔΕΝ
+ * ξανα-υπολογίζεται εδώ (Revit-grade reference propagation). Το μόνο που υπολογίζεται είναι το `abut`
+ * (offset του σημείου επαφής επί του host άξονα) μέσω του SSoT `projectPointToWallOffsetMm`.
+ * `null` όταν δεν υπάρχει host (free placement) ή κανένα άνοιγμα δεν κόβεται.
  */
-export function resolveWallStartOpeningConflict(
+export function resolveWallOpeningConflictForHost(
   contactPt: Readonly<Point2D>,
   ghostWall: WallEntity,
   ghostThicknessMm: number,
-  walls: readonly WallEntity[],
-  openings: readonly OpeningEntity[],
-  sceneUnits: SceneUnits,
+  hostWall: WallEntity | null,
+  allOpenings: readonly OpeningEntity[],
 ): WallOpeningConflict | null {
-  const mmFactor = mmToSceneUnits(sceneUnits);
-  const halfGhostScene = (ghostThicknessMm / 2) * mmFactor;
-  const eps = mmFactor; // ~1mm ανοχή στο scene frame
-
-  let host: WallEntity | null = null;
-  let hostAbutMm = 0;
-  let bestDist = Infinity;
-  for (const wall of walls) {
-    const hosted = getSiblingOpeningsOnWall(wall.id, openings, '');
-    if (hosted.length === 0) continue;
-    const abutMm = projectPointToWallOffsetMm(contactPt, wall);
-    const axisPt = wallAxisPointAtOffsetMm(wall, abutMm);
-    const dist = Math.hypot(contactPt.x - axisPt.x, contactPt.y - axisPt.y);
-    const halfHostScene = (wall.params.thickness / 2) * mmFactor;
-    if (dist <= halfHostScene + halfGhostScene + eps && dist < bestDist) {
-      bestDist = dist;
-      host = wall;
-      hostAbutMm = abutMm;
-    }
-  }
-  if (!host) return null;
-  return wallGhostBlocksOpening(ghostWall, hostAbutMm, ghostThicknessMm, getSiblingOpeningsOnWall(host.id, openings, ''));
+  if (!hostWall) return null;
+  const hosted = getSiblingOpeningsOnWall(hostWall.id, allOpenings, '');
+  if (hosted.length === 0) return null;
+  const abutMm = projectPointToWallOffsetMm(contactPt, hostWall);
+  return wallGhostBlocksOpening(ghostWall, abutMm, ghostThicknessMm, hosted);
 }

@@ -68,6 +68,11 @@ export interface WallPreviewState {
    * `resolveWallFaceRelativePolar` διαβάζει αυτό το πεδίο. `null` = free / collinear-overlap.
    */
   readonly startFaceAngle: number | null;
+  /**
+   * ADR-508 §opening-conflict — id του host μέλους όπου κούμπωσε το `startPoint` (snapped reference).
+   * Το awaitingEnd ghost ελέγχει αν κόβει άνοιγμα ΑΥΤΟΥ του host (μηδέν re-derive). `null` = free.
+   */
+  readonly anchoredHostId: string | null;
   // ADR-398 §3.10 — οι face-snap στόχοι (column footprints + γραμμικά μέλη) ΜΕΤΑΚΙΝΗΘΗΚΑΝ στο
   // κοινό `sceneSnapTargetsStore` (bim/framing/scene-snap-targets.ts) — ΕΝΑ SSoT για όλα τα
   // placement tools. Αυτό το store κρατά πλέον ΜΟΝΟ το wall-tool FSM state.
@@ -81,6 +86,7 @@ const EMPTY: WallPreviewState = Object.freeze({
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
   startFaceAngle: null,
+  anchoredHostId: null,
 });
 
 type Listener = () => void;
@@ -128,9 +134,10 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle' | 'anchoredHostId'> & {
   readonly startAnchored?: boolean;
   readonly startFaceAngle?: number | null;
+  readonly anchoredHostId?: string | null;
 };
 
 export const wallPreviewStore = {
@@ -138,6 +145,7 @@ export const wallPreviewStore = {
   set(next: WallPreviewSet): void {
     const nextAnchored = next.startAnchored ?? false;
     const nextFaceAngle = next.startFaceAngle ?? null;
+    const nextHostId = next.anchoredHostId ?? null;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
@@ -145,6 +153,7 @@ export const wallPreviewStore = {
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       currentState.startAnchored === nextAnchored &&
       currentState.startFaceAngle === nextFaceAngle &&
+      currentState.anchoredHostId === nextHostId &&
       overridesEqual(currentState.overrides, next.overrides)
     ) {
       return;
@@ -157,6 +166,7 @@ export const wallPreviewStore = {
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
       startFaceAngle: nextFaceAngle,
+      anchoredHostId: nextHostId,
     };
     for (const l of listeners) l();
   },

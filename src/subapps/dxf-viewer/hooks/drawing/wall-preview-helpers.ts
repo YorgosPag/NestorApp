@@ -38,7 +38,7 @@ import {
 } from '../../bim/framing/linear-member-face-snap';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { resolveWallStartOpeningConflict } from '../../bim/walls/wall-opening-conflict';
+import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
@@ -83,7 +83,8 @@ interface WallGhostConflictCtx {
   /** Σημείο επαφής του ghost στην παρειά host (centerline start). */
   readonly contactPt: Readonly<Point2D>;
   readonly thicknessMm: number;
-  readonly walls: readonly WallEntity[];
+  /** Ο host τοίχος που ΗΔΗ επέλεξε το snap (`targetId`) — μηδέν re-derive. `null` = free placement. */
+  readonly host: WallEntity | null;
   readonly openings: readonly OpeningEntity[];
 }
 
@@ -106,9 +107,9 @@ function buildWallGhostEntity(
   if (!built.ok) return null;
   // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
   const conflict = conflictCtx
-    ? resolveWallStartOpeningConflict(
+    ? resolveWallOpeningConflictForHost(
         conflictCtx.contactPt, built.entity, conflictCtx.thicknessMm,
-        conflictCtx.walls, conflictCtx.openings, sceneUnits,
+        conflictCtx.host, conflictCtx.openings,
       )
     : null;
   const overlap = isOverlap || conflict !== null;
@@ -148,6 +149,9 @@ export function generateWallPreview(
   // ADR-508 §opening-conflict — host τοίχοι + ανοίγματα για τον έλεγχο «ο κάθετος τοίχος κόβει άνοιγμα;».
   const walls = targets.wallEntities;
   const openings = targets.openings;
+  // awaitingEnd/footprint: ο host είναι ο LOCKED snapped reference (μηδέν re-derive). before-click
+  // τον βρίσκει live από `snap.targetId` μέσα στον helper.
+  const anchoredHost = preview.anchoredHostId ? walls.find((w) => w.id === preview.anchoredHostId) ?? null : null;
 
   if (tempPoints.length === 0) {
     // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
@@ -167,7 +171,7 @@ export function generateWallPreview(
   if (preview.endPoint) {
     return makeWallFootprintGhost(
       'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
-      members, walls, openings, cursorPoint,
+      members, anchoredHost, openings, cursorPoint,
     );
   }
 
@@ -175,7 +179,7 @@ export function generateWallPreview(
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
-    preview.curveControl, preview.startAnchored, footprints, members, walls, openings,
+    preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
   );
 }
 
@@ -213,8 +217,9 @@ function makeWallGhostBeforeClick(
   // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
   // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
   const faceDimensions = resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
-  // ADR-508 §opening-conflict — το σημείο επαφής (centerline start) ελέγχεται κατά των ανοιγμάτων host.
-  const conflictCtx: WallGhostConflictCtx = { contactPt: start, thicknessMm, walls, openings };
+  // ADR-508 §opening-conflict — host = ο reference που ΗΔΗ επέλεξε το snap (`snap.targetId`), live.
+  const host = snap?.targetId ? walls.find((w) => w.id === snap.targetId) ?? null : null;
+  const conflictCtx: WallGhostConflictCtx = { contactPt: start, thicknessMm, host, openings };
   return buildWallGhostEntity('preview_wall_ghost', params, 'straight', sceneUnits, isOverlap, faceDimensions, conflictCtx);
 }
 
@@ -234,7 +239,7 @@ function makeWallWysiwygGhost(
   startAnchored: boolean,
   columnFootprints: readonly (readonly Point2D[])[],
   memberTargets: readonly LinearMemberSnapTarget[],
-  walls: readonly WallEntity[],
+  host: WallEntity | null,
   openings: readonly OpeningEntity[],
 ): ExtendedSceneEntity | null {
   let params: WallParams;
@@ -249,10 +254,10 @@ function makeWallWysiwygGhost(
     params = buildAnchoredWallParams(startPt, endPt, overrides, sceneUnits, columnFootprints);
   }
   const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
-  // ADR-508 §opening-conflict — straight μόνο (κάθετο T-framing)· το startPt είναι το σημείο επαφής host.
+  // ADR-508 §opening-conflict — straight μόνο (κάθετο T-framing)· host = locked snapped reference.
   const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
     ? null
-    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), walls, openings };
+    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
   return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, null, conflictCtx);
 }
 
@@ -271,7 +276,7 @@ function makeWallFootprintGhost(
   sceneUnits: SceneUnits,
   curveControl: Point2D | null,
   memberTargets: readonly LinearMemberSnapTarget[],
-  walls: readonly WallEntity[],
+  host: WallEntity | null,
   openings: readonly OpeningEntity[],
   alignmentPoint: Point2D | null = null,
 ): ExtendedSceneEntity | null {
@@ -280,10 +285,10 @@ function makeWallFootprintGhost(
     ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
     : params;
   const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
-  // ADR-508 §opening-conflict — straight μόνο· startPt = σημείο επαφής host.
+  // ADR-508 §opening-conflict — straight μόνο· host = locked snapped reference.
   const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
     ? null
-    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), walls, openings };
+    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
   return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap, null, conflictCtx);
 }
 

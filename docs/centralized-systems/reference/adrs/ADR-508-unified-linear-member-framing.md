@@ -163,3 +163,25 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   `formatDisplayValue(mm,unit) + DISPLAY_UNIT_LABELS[unit]` → αντικαταστάθηκε με `formatLengthForDisplay`
   (−3 imports). Τα υπόλοιπα `DISPLAY_UNIT_LABELS[]` (CadStatusBar selector, PropertiesPalette/QuickProperties
   input-suffix) είναι legit standalone labels, ΟΧΙ duplicates. 22 jest GREEN, tsc clean.
+- **2026-06-22 (§opening-conflict — wall ghost 🔴 ΜΠΛΟΚΑΡΕΙ μπροστά από άνοιγμα, 3D)** — όταν ο
+  κάθετος τοίχος-φάντασμα (T-framing στην παρειά host) θα **έκοβε** πόρτα/παράθυρο του host, γίνεται
+  **🔴 + block commit** (ίδιο μονοπάτι με το short-end overlap). 3D έλεγχος: κατακόρυφη τομή
+  `[baseOffset, +height] ∩ [sillHeight, +height]` **ΚΑΙ** οριζόντια `[abut−t/2, abut+t/2] ∩
+  [offsetFromStart, +width]` κατά τον host άξονα. **ΕΝΑΣ κανόνας πόρτα/παράθυρο** (sillHeight). **FULL
+  SSoT reuse, μηδέν νέος μηχανισμός (Giorgio audit):** (1) NEW pure `bim/walls/wall-opening-conflict.ts`
+  (`wallGhostBlocksOpening` + `resolveWallOpeningConflictForHost`) — **reuse `getEntityZExtents` (ADR-452)**
+  για το κατακόρυφο εύρος ΚΑΙ τοίχου ΚΑΙ ανοίγματος, **`projectPointToWallOffsetMm`** (opening-geometry)
+  για το `abut`, **`getSiblingOpeningsOnWall`** (opening-siblings) για φιλτράρισμα ανά `wallId`·
+  (2) **Revit-grade host = snapped reference (Giorgio «τι θα έκανε η Revit;»):** ο host ΔΕΝ ξανα-βρίσκεται
+  γεωμετρικά — `MemberGhostSnapResult` **εκθέτει `targetId`** (το `best` target που ΗΔΗ επέλεξε ο
+  `resolveLinearMemberFaceSnap`)· διαδίδεται live στο preview ΚΑΙ ως locked `WallToolState.anchoredHostId`
+  (+ `wall-preview-store`) στο awaitingEnd/commit → ΜΙΑ πηγή αλήθειας για τον host (μηδέν re-derive)·
+  (3) `scene-snap-targets` += `wallEntities`+`openings` (1 pass στον ίδιο collector → preview≡commit)·
+  (4) gate στον SSoT `buildWallGhostEntity` (wall-preview-helpers) — conflict ⇒ 🔴 + κρύβει listening
+  dims + `openingConflict` meta· (5) commit block στο `use-wall-commit.commitStraightFromState` (ίδιο
+  `resolveWallOpeningConflictForHost`, host = `anchoredHostId`)· (6) tooltip: `openingConflict.bandMm`
+  meta → `drawing-hover-handler` το μεταφράζει (`i18n.t('tools.wall.openingCutConflict', {range})`, el+en·
+  reuse `formatLengthForDisplay`) → thin `PreviewRenderer.drawGhostConflictTooltip` (reuse `drawOverlayLabel`,
+  overlap red). 16 jest (πόρτα/παράθυρο/μερική/άγγιγμα/host-by-reference). **Κλειδωμένο (Giorgio):** οριζόντιο
+  εύρος = πάχος ghost· tooltip = κείμενο + εύρος ύψους· host = snapped reference (ΟΧΙ perpendicular re-derive).
+  ⚠️ CHECK 6B/6D (PreviewRenderer/PreviewCanvas/drawing-hover-handler) → stage ADR-040. 🔴 browser-verify + commit.

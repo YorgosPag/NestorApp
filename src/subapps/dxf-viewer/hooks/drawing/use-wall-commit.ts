@@ -25,7 +25,7 @@ import { buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resol
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-snap';
-import { resolveWallStartOpeningConflict } from '../../bim/walls/wall-opening-conflict';
+import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 
@@ -133,10 +133,13 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       }
       // ADR-508 §opening-conflict — μπλόκαρε commit όταν ο κάθετος τοίχος θα έκοβε άνοιγμα host τοίχου
       // (3D: κατακόρυφη ΚΑΙ οριζόντια τομή με το κενό). Ίδιο μονοπάτι με το short-end overlap· το 🔴
-      // ghost ήταν ήδη το feedback. preview === commit (ίδιο `resolveWallStartOpeningConflict`).
-      if (resolveWallStartOpeningConflict(
-        s.startPoint, result.entity, resolveWallThicknessMm(s.overrides),
-        targets.wallEntities, targets.openings, sceneUnits,
+      // ghost ήταν ήδη το feedback. Host = ο LOCKED snapped reference (`s.anchoredHostId`, μηδέν
+      // re-derive) → preview === commit μέσω του ΙΔΙΟΥ host.
+      const hostWall = s.anchoredHostId
+        ? targets.wallEntities.find((w) => w.id === s.anchoredHostId) ?? null
+        : null;
+      if (resolveWallOpeningConflictForHost(
+        s.startPoint, result.entity, resolveWallThicknessMm(s.overrides), hostWall, targets.openings,
       )) {
         return false;
       }

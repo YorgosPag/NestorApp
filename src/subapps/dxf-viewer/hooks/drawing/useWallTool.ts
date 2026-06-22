@@ -90,7 +90,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // κολόνας/μέλους (face-snap), κλειδώνουμε στο προτεινόμενο centerline (+anchored) ώστε το
   // 2ο κλικ να τραβά centerline (χωρίς location-line auto-flush). Ίδιος resolver με το ghost.
   const resolveWallStartAnchor = useCallback(
-    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean; faceAngle: number | null } => {
+    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean; faceAngle: number | null; hostId: string | null } => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const targets = sceneSnapTargetsStore.get();
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
@@ -98,7 +98,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
       // ADR-398 §3.10 — τοίχος = συνδυασμένα wall+beam+slab μέλη (selectGhostMembers).
       const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab']), thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
-      if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null };
+      if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null, hostId: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap
       // (status 'overlap') το `end - start` είναι ΚΑΤΑ ΜΗΚΟΣ του μέλους (όχι face normal) → null.
@@ -106,7 +106,8 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const dy = snap.end.y - snap.start.y;
       const faceAngle =
         snap.status !== 'overlap' && Math.hypot(dx, dy) > 1e-9 ? radToDeg(Math.atan2(dy, dx)) : null;
-      return { start: snap.start, anchored: true, faceAngle };
+      // ADR-508 §opening-conflict — κράτα τον host reference που ΗΔΗ επέλεξε το snap (μηδέν re-derive).
+      return { start: snap.start, anchored: true, faceAngle, hostId: snap.targetId ?? null };
     },
     [getSceneUnits],
   );
@@ -162,6 +163,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       overrides: state.overrides,
       startAnchored: state.startAnchored,
       startFaceAngle: state.startFaceAngle,
+      anchoredHostId: state.anchoredHostId,
     });
   }, [state]);
 
@@ -297,7 +299,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       if (s.phase === 'awaitingStart') {
         syncSceneTargetsToStore();
         // ADR-508 §smart wall ghost — face-snap το start (αν κοντά σε κολόνα/μέλος).
-        const { start: startPoint, anchored, faceAngle } = resolveWallStartAnchor(point);
+        const { start: startPoint, anchored, faceAngle, hostId } = resolveWallStartAnchor(point);
         // Sync before setState: το επόμενο mousemove διαβάζει σωστό startPoint αμέσως
         // (χωρίς useEffect-delay window με stale null → cursor-dot flash).
         wallPreviewStore.set({
@@ -308,6 +310,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
           overrides: s.overrides,
           startAnchored: anchored,
           startFaceAngle: faceAngle,
+          anchoredHostId: hostId,
         });
         setState({
           ...s,
@@ -315,6 +318,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
           startPoint,
           startAnchored: anchored,
           startFaceAngle: faceAngle,
+          anchoredHostId: hostId,
           error: null,
         });
         return true;

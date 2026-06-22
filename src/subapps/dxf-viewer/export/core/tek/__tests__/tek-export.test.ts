@@ -8,6 +8,7 @@
 
 import {
   mmToMeters, buildWallXMatrix, buildOpeningXMatrix, footprintRingToMeters, roofFaceRingToMeters,
+  signedAreaXY, reverseRoofFootprint,
 } from '../tek-geometry';
 import { computeFurnitureGeometry } from '../../../../bim/furniture/furniture-geometry';
 import type { FurnitureParams } from '../../../../bim/types/furniture-types';
@@ -17,7 +18,7 @@ import {
   buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml,
 } from '../tek-xml-writer';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
-import type { TekOpening, TekPlane, TekRoof } from '../tek-types';
+import type { TekOpening, TekPlane, TekRoof, TekRoofPoint } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
 describe('tek-geometry', () => {
@@ -511,5 +512,49 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
   it('στέγη ΔΕΝ μπαίνει στα planes (μόνο σε autoroof)', () => {
     const r = roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges: FLAT_EDGES });
     expect(collectTekPlanes([r]).planeCount).toBe(0);
+  });
+
+  it('CW canvas footprint → CCW export (ο Τέκτων θέλει CCW· Y-flip), κλίσεις ανά ακμή διατηρούνται', () => {
+    // Σχήμα στέγης Giorgio: gable με κεκλιμένες ακμές y-low/y-high, αετώματα αριστερά/δεξιά.
+    // Canvas outline CW (Y «κάτω») → πρέπει να βγει CCW με σωστή αντιστοίχιση κλίσης.
+    const gable = [
+      { x: 2760, y: -3900 }, { x: 7960, y: -3900 }, { x: 7960, y: -6550 }, { x: 2760, y: -6550 },
+    ];
+    const edges: RoofEdge[] = [
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+    ];
+    const r = collectTekRoofs([roof(gable, { thickness: 434, basePivotZ: 3000, edges })]);
+    const pts = [...r.autoroofsXml.matchAll(/<pX>([^<]*)<\/pX><pY>([^<]*)<\/pY><angle>([^<]*)<\/angle>/g)]
+      .map((m) => ({ x: +m[1], y: +m[2], a: +m[3] }));
+    expect(signedAreaXY(pts)).toBeGreaterThan(0); // CCW
+    // Κάθε κορυφή με κλίση 0 = αέτωμα· με 0.5236 = κεκλιμένη. Σύνολο: 2 κεκλιμένες + 2 αετώματα.
+    expect(pts.filter((p) => p.a > 0.1).length).toBe(2);
+    expect(pts.filter((p) => p.a === 0).length).toBe(2);
+  });
+});
+
+describe('signedAreaXY / reverseRoofFootprint', () => {
+  it('signedAreaXY: CCW θετικό, CW αρνητικό', () => {
+    const ccw = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }];
+    expect(signedAreaXY(ccw)).toBeGreaterThan(0);
+    expect(signedAreaXY([...ccw].reverse())).toBeLessThan(0);
+  });
+
+  it('reverseRoofFootprint: αντιστρέφει winding + μετατοπίζει κλίση ανά ακμή σωστά', () => {
+    // p[i].angle = κλίση εξερχόμενης ακμής i→i+1. Μετά την αντιστροφή, κάθε ακμή κρατά την κλίση της.
+    const pts: TekRoofPoint[] = [
+      { x: 0, y: 0, angleRad: 0.5 }, // ακμή 0→1
+      { x: 4, y: 0, angleRad: 0 },   // ακμή 1→2
+      { x: 4, y: 4, angleRad: 0.5 }, // ακμή 2→3
+      { x: 0, y: 4, angleRad: 0 },   // ακμή 3→0
+    ];
+    const rev = reverseRoofFootprint(pts);
+    expect(signedAreaXY(pts)).toBeGreaterThan(0);
+    expect(signedAreaXY(rev)).toBeLessThan(0); // αντίστροφο winding
+    // reversed[0] = κορυφή p[3]=(0,4), εξερχόμενη ακμή (0,4)→(4,4) = αντίστροφη ακμής 2 → κλίση 0.5.
+    expect(rev[0]).toEqual({ x: 0, y: 4, angleRad: 0.5 });
+    // διπλή αντιστροφή = ταυτότητα (ίδιες κορυφές+κλίσεις).
+    expect(reverseRoofFootprint(rev)).toEqual(pts);
   });
 });

@@ -19,7 +19,7 @@
 
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
 import type { Point3D } from '../../../bim/types/bim-base';
-import type { TekXMatrix, TekPlanePoint } from './tek-types';
+import type { TekXMatrix, TekPlanePoint, TekRoofPoint } from './tek-types';
 
 /** mm → μέτρα. Reuse του SSoT (sceneUnitsToMeters('mm') = 0.001) αντί magic /1000. */
 export const MM_TO_M = sceneUnitsToMeters('mm');
@@ -124,6 +124,36 @@ export function dedupeFaceRing(ring: readonly TekPlanePoint[]): TekPlanePoint[] 
   // Drop trailing closing vertex (== first) ώστε το face να μείνει ανοιχτό όπως το δείγμα.
   while (out.length > 1 && samePoint3D(out[0], out[out.length - 1])) out.pop();
   return out;
+}
+
+/**
+ * Προσημασμένο εμβαδό XY ενός ring (shoelace). > 0 = CCW, < 0 = CW (math convention,
+ * Y προς τα πάνω = ο τρόπος που διαβάζει ο Τέκτων).
+ */
+export function signedAreaXY(ring: readonly { x: number; y: number }[]): number {
+  let s = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    s += a.x * b.y - b.x * a.y;
+  }
+  return s / 2;
+}
+
+/**
+ * Αντιστρέφει το winding ενός roof footprint **διατηρώντας σωστά την κλίση ανά ακμή**. Η
+ * `angleRad` κάθε κορυφής είναι η κλίση της **εξερχόμενης** ακμής (vertex i → i+1). Όταν
+ * αντιστρέφεται η σειρά, η εξερχόμενη ακμή της νέας κορυφής `j` είναι η αντίστροφη μιας
+ * παλιάς ακμής → η κλίση πρέπει να μετατοπιστεί (όχι απλό `reverse()`):
+ *   reversed[j] = { κορυφή p[n-1-j],  angle p[(n-2-j) mod n] }.
+ */
+export function reverseRoofFootprint(points: readonly TekRoofPoint[]): TekRoofPoint[] {
+  const n = points.length;
+  return points.map((_, j) => {
+    const vertex = points[n - 1 - j];
+    const angleSrc = points[(((n - 2 - j) % n) + n) % n];
+    return { x: vertex.x, y: vertex.y, angleRad: angleSrc.angleRad };
+  });
 }
 
 /**

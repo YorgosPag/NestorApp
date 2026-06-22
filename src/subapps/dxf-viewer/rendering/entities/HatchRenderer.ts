@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
-import { hatchBounds } from '../../bim/hatch/hatch-grips';
+import { hatchBounds, hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -155,6 +155,13 @@ export class HatchRenderer extends BaseEntityRenderer {
         grips.push(createVertexGrip(entity.id, { x: v.x, y: v.y }, gi));
         gi += 1;
       }
+    }
+    // ADR-507 Φ5 A3 — gradient origin/seed grip (ΟΡΑΤΟ· το interaction οδηγείται από
+    // το computeDxfEntityGrips με `hatchGripKind`). Index = μετά τις κορυφές, ώστε να
+    // αντιστοιχεί 1-προς-1 με την origin λαβή του computeDxfEntityGrips. Μόνο gradient.
+    if (hatch.fillType === 'gradient') {
+      const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
+      if (originPos) grips.push(createVertexGrip(entity.id, originPos, gi));
     }
     return grips;
   }

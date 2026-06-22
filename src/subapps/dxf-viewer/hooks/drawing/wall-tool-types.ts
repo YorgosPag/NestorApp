@@ -66,6 +66,13 @@ export interface WallToolState {
    * κάθετο στην παρειά (flush), `±90°` = παράλληλο. `null` σε free placement ή collinear-overlap.
    */
   readonly startFaceAngle: number | null;
+  /**
+   * ADR-508 §opening-conflict — id του host μέλους όπου κούμπωσε το `startPoint` (= snapped
+   * reference, `MemberGhostSnapResult.targetId`). Διαδίδεται στο awaitingEnd preview + commit ώστε
+   * ο έλεγχος «κόβει άνοιγμα;» να καταναλώνει τον ΙΔΙΟ host που επέλεξε το snap (Revit-grade, μηδέν
+   * re-derive). `null` σε free placement.
+   */
+  readonly anchoredHostId: string | null;
   readonly polylineVertices: readonly Point2D[];
   /** ADR-363 Phase 1J — picked 2D entity source (on-entity mode, awaitingSide). */
   readonly pickedSource: WallSource | null;
@@ -84,6 +91,7 @@ export const INITIAL_STATE: WallToolState = {
   endPoint: null,
   startAnchored: false,
   startFaceAngle: null,
+  anchoredHostId: null,
   polylineVertices: [],
   pickedSource: null,
   regionPicks: [],
