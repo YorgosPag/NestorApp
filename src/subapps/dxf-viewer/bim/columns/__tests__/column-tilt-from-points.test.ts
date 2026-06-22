@@ -1,54 +1,64 @@
 /**
- * ADR-404 Φ5 — tests για το `tiltFromBaseTop` (βάση→κορυφή → ColumnTilt).
+ * ADR-404 Φ5 — tests για το «βάση→κορυφή → ColumnTilt».
  *
- * Η κεκλιμένη κολώνα (Revit «Slanted Column») ορίζεται με 2 κλικ· η οριζόντια
- * απόσταση βάση→κορυφή = `height·tan(angle)` (η ευθεία πράξη του `columnTiltShearAt`),
- * οπότε `angle = atan(distMm / heightMm)`. Επαληθεύουμε το round-trip + edge cases.
+ * `tiltAngleFromBaseTop` = η μόνη νέα μαθηματική πράξη (`angle = atan(distMm/heightMm)`,
+ * αντίστροφο του `columnTiltShearAt`). `resolveTopLeanTilt` = SSoT composer (snapped
+ * direction μέσω column-rotation + snapped angle) που μοιράζονται preview + commit.
  */
 
-import { tiltFromBaseTop, MAX_COLUMN_TILT_DEG } from '../column-tilt-from-points';
+import {
+  tiltAngleFromBaseTop,
+  resolveTopLeanTilt,
+  MAX_COLUMN_TILT_DEG,
+} from '../column-tilt-from-points';
 
 const H = 3000; // mm — τυπικό ύψος ορόφου
+const FINE_WPP = 0.5; // ≤0.75 → 1° βήμα direction (resolveColumnRotationDeg), ώστε να μην «τραβάει»
 
-describe('tiltFromBaseTop', () => {
-  it('15° round-trip: top μετατοπισμένο κατά height·tan(15°) ≈ 804mm στον +X', () => {
-    const shift = H * Math.tan((15 * Math.PI) / 180); // ≈ 803.8mm
-    const tilt = tiltFromBaseTop({ x: 0, y: 0 }, { x: shift, y: 0 }, H, 'mm');
-    expect(tilt.angle).toBeCloseTo(15, 5);
-    expect(tilt.direction).toBeCloseTo(0, 5);
+describe('tiltAngleFromBaseTop (η νέα γωνιακή πράξη)', () => {
+  it('15° round-trip: shift = height·tan(15°) ≈ 804mm → 15°', () => {
+    const shift = H * Math.tan((15 * Math.PI) / 180);
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: shift, y: 0 }, H, 'mm')).toBeCloseTo(15, 5);
   });
 
   it('45° → οριζόντια απόσταση == ύψος', () => {
-    const tilt = tiltFromBaseTop({ x: 0, y: 0 }, { x: H, y: 0 }, H, 'mm');
-    expect(tilt.angle).toBeCloseTo(45, 5);
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: H, y: 0 }, H, 'mm')).toBeCloseTo(45, 5);
   });
 
-  it('direction στα 4 τεταρτημόρια (atan2 CCW από +X)', () => {
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: 100, y: 0 }, H, 'mm').direction).toBeCloseTo(0, 5);
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: 0, y: 100 }, H, 'mm').direction).toBeCloseTo(90, 5);
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: -100, y: 0 }, H, 'mm').direction).toBeCloseTo(180, 5);
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: 0, y: -100 }, H, 'mm').direction).toBeCloseTo(-90, 5);
+  it('top === base → 0 (flat fast-path)', () => {
+    expect(tiltAngleFromBaseTop({ x: 12, y: 34 }, { x: 12, y: 34 }, H, 'mm')).toBe(0);
   });
 
-  it('top === base → {direction:0, angle:0} (flat fast-path)', () => {
-    const tilt = tiltFromBaseTop({ x: 12, y: 34 }, { x: 12, y: 34 }, H, 'mm');
-    expect(tilt).toEqual({ direction: 0, angle: 0 });
-  });
-
-  it('μη-έγκυρο ύψος (≤0) → flat', () => {
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: 100, y: 0 }, 0, 'mm')).toEqual({ direction: 0, angle: 0 });
-    expect(tiltFromBaseTop({ x: 0, y: 0 }, { x: 100, y: 0 }, -10, 'mm')).toEqual({ direction: 0, angle: 0 });
+  it('μη-έγκυρο ύψος (≤0) → 0', () => {
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: 100, y: 0 }, 0, 'mm')).toBe(0);
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: 100, y: 0 }, -10, 'mm')).toBe(0);
   });
 
   it('clamp στη MAX_COLUMN_TILT_DEG (σχεδόν-οριζόντια τοποθέτηση)', () => {
-    // απόσταση 100×ύψος → atan ≈ 89.4° → clamped
-    const tilt = tiltFromBaseTop({ x: 0, y: 0 }, { x: H * 100, y: 0 }, H, 'mm');
-    expect(tilt.angle).toBe(MAX_COLUMN_TILT_DEG);
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: H * 100, y: 0 }, H, 'mm')).toBe(MAX_COLUMN_TILT_DEG);
   });
 
-  it('unit-safe: σε scene units = m, η απόσταση μετατρέπεται σε mm πριν τον λόγο', () => {
-    // height 3000mm· top 3m=3000mm στον +X (σε scene units 'm' η απόσταση είναι 3) → 45°.
-    const tilt = tiltFromBaseTop({ x: 0, y: 0 }, { x: 3, y: 0 }, H, 'm');
-    expect(tilt.angle).toBeCloseTo(45, 5);
+  it('unit-safe: scene units = m → η απόσταση μετατρέπεται σε mm πριν τον λόγο', () => {
+    // height 3000mm· top 3 (scene 'm') = 3000mm → 45°.
+    expect(tiltAngleFromBaseTop({ x: 0, y: 0 }, { x: 3, y: 0 }, H, 'm')).toBeCloseTo(45, 5);
+  });
+});
+
+describe('resolveTopLeanTilt (SSoT composer — preview ≡ commit)', () => {
+  it('15° στον +X → {direction:0, angle:15} (snapped)', () => {
+    const shift = H * Math.tan((15 * Math.PI) / 180);
+    const tilt = resolveTopLeanTilt({ x: 0, y: 0 }, { x: shift, y: 0 }, H, 'mm', FINE_WPP);
+    expect(tilt.direction).toBeCloseTo(0, 5);
+    expect(tilt.angle).toBeCloseTo(15, 5);
+  });
+
+  it('direction στα τεταρτημόρια (μέσω column-rotation SSoT)', () => {
+    expect(resolveTopLeanTilt({ x: 0, y: 0 }, { x: 0, y: H }, H, 'mm', FINE_WPP).direction).toBeCloseTo(90, 5);
+    expect(resolveTopLeanTilt({ x: 0, y: 0 }, { x: -H, y: 0 }, H, 'mm', FINE_WPP).direction).toBeCloseTo(180, 5);
+  });
+
+  it('angle περνά από τον snap SSoT (5/15/30/45°): ~14° → 15', () => {
+    const shift = H * Math.tan((14 * Math.PI) / 180);
+    expect(resolveTopLeanTilt({ x: 0, y: 0 }, { x: shift, y: 0 }, H, 'mm', FINE_WPP).angle).toBe(15);
   });
 });

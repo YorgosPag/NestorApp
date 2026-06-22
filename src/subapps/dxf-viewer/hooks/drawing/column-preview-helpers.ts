@@ -45,8 +45,7 @@ import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 // ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
-import { tiltFromBaseTop } from '../../bim/columns/column-tilt-from-points';
-import { snapTiltAngleDeg } from '../../bim-3d/gizmo/bim3d-tilt-bridge';
+import { resolveTopLeanTilt } from '../../bim/columns/column-tilt-from-points';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
@@ -100,10 +99,7 @@ export function generateColumnPreview(
   if (lean) {
     const wpp = worldPerPixel(getImmediateTransform().scale);
     const heightMm = resolveStoreyHeightMm(handle.overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
-    const tilt = {
-      direction: resolveColumnRotationDeg(lean.basePoint, cursorPoint, wpp),
-      angle: snapTiltAngleDeg(tiltFromBaseTop(lean.basePoint, cursorPoint, heightMm, sceneUnits).angle),
-    };
+    const tilt = resolveTopLeanTilt(lean.basePoint, cursorPoint, heightMm, sceneUnits, wpp);
     const overrides: ColumnParamOverrides = {
       ...handle.overrides, kind: handle.kind, anchor: lean.anchor, rotation: lean.rotationDeg, tilt,
     };
