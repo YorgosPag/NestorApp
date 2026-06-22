@@ -17,6 +17,8 @@
 
 import type { HatchEntity, LineweightMm } from '../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
+import type { HatchGradientType } from './hatch-gradient';
+import { DEFAULT_GRADIENT_DEFAULTS } from './hatch-gradient-build';
 
 /** Οι ρυθμίσεις σχεδίασης που κουβαλάει μια νέα γραμμοσκίαση. */
 export interface HatchDrawDefaults {
@@ -40,6 +42,16 @@ export interface HatchDrawDefaults {
   readonly patternAngle: number;
   /** Πάχος γραμμών (AutoCAD LWT). -2 = ByLayer (default → renderer fallback). */
   readonly lineweightMm: LineweightMm;
+  /** Τύπος gradient (DXF 470) — μόνο fillType='gradient'. */
+  readonly gradientType: HatchGradientType;
+  /** Πρώτο χρώμα gradient (hex). */
+  readonly gradientColor1: string;
+  /** Δεύτερο χρώμα gradient (hex) — αγνοείται όταν single-color. */
+  readonly gradientColor2: string;
+  /** Single-color gradient (color1 → tint προς λευκό, αγνοεί color2). */
+  readonly gradientSingleColor: boolean;
+  /** Γωνία περιστροφής gradient (μοίρες). */
+  readonly gradientAngle: number;
 }
 
 /** Εργοστασιακές προεπιλογές — συμπαγής γκρι poché (η συνηθέστερη χρήση). */
@@ -54,6 +66,8 @@ const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   patternScale: 1,
   patternAngle: 0,
   lineweightMm: LINEWEIGHT_SPECIAL.BYLAYER,
+  // Gradient defaults (ADR-507 Φ5 UI) — μπλε → λευκό, γραμμικό· SSoT στο hatch-gradient-build.
+  ...DEFAULT_GRADIENT_DEFAULTS,
 };
 
 let state: HatchDrawDefaults = DEFAULT_HATCH_DRAW_DEFAULTS;

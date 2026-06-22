@@ -32,6 +32,8 @@ import type { RoofEntity } from '../bim/types/roof-types';
 import type { FloorFinishEntity } from '../bim/types/floor-finish-types';
 import type { MepUnderfloorEntity } from '../bim/types/mep-underfloor-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
+// ADR-510 Φ3c — bulge SSoT: arc apex = arc-midpoint grip position (no duplicate math).
+import { bulgeApexPoint, isStraightSegment } from '../rendering/entities/shared/geometry-bulge-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
 import { getBeamGrips } from '../bim/beams/beam-grips';
@@ -122,20 +124,34 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'polyline': {
+      // ADR-510 Φ3c — tag every grip with `polylineGripKind` so the context menu
+      // + commit pipeline can branch by role. Vertex grips at each outline point;
+      // edge grips at the chord midpoint (straight) or the arc apex (bulged).
+      const bulges = entity.bulges;
       entity.vertices.forEach((v, i) => {
         grips.push({
           entityId: entity.id, gripIndex: i, type: 'vertex',
           position: v, movesEntity: false,
+          polylineGripKind: `polyline-vertex-${i}`,
         });
       });
       const vLen = entity.vertices.length;
       const edgeCount = entity.closed ? vLen : vLen - 1;
       for (let i = 0; i < edgeCount; i++) {
         const next = (i + 1) % vLen;
+        const p0 = entity.vertices[i];
+        const p1 = entity.vertices[next];
+        const bulge = bulges?.[i];
+        // ADR-510 Φ3c — an arc segment's grip sits at the apex (`bulgeApexPoint`),
+        // NOT the chord midpoint, so dragging it changes curvature directly.
+        const isArc = !isStraightSegment(bulge);
         grips.push({
           entityId: entity.id, gripIndex: vLen + i, type: 'edge',
-          position: calculateMidpoint(entity.vertices[i], entity.vertices[next]),
+          position: isArc ? bulgeApexPoint(p0, p1, bulge as number) : calculateMidpoint(p0, p1),
           movesEntity: false, edgeVertexIndices: [i, next],
+          polylineGripKind: isArc
+            ? `polyline-arc-midpoint-${i}`
+            : `polyline-segment-midpoint-${i}`,
         });
       }
       break;

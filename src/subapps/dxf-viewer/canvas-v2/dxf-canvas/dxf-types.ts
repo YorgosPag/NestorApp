@@ -125,6 +125,16 @@ export interface DxfPolyline extends DxfEntity {
   type: 'polyline';
   vertices: Point2D[];
   closed: boolean;
+  /**
+   * ADR-510 Φ3b/Φ3c — per-segment arc/width parallel arrays, index-aligned with
+   * `vertices` (AutoCAD/DXF semantics: `bulges[i]` spans `vertices[i] → [i+1]`,
+   * closed: `bulges[n-1]` spans n-1 → 0). Mirror of `PolylineEntity` in
+   * `types/entities.ts` so the unified grip path (`computeDxfEntityGrips`) and
+   * renderer see the same arc data. Absent ⇒ all segments straight, width 0.
+   */
+  bulges?: number[];
+  startWidths?: number[];
+  endWidths?: number[];
 }
 
 export interface DxfArc extends DxfEntity {

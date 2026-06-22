@@ -415,6 +415,26 @@ export type FoundationGripKind =
   | 'foundation-corner-end-pos'
   | 'foundation-corner-end-neg';
 
+/**
+ * ADR-510 Φ3c — Polyline multifunctional grip kind (plain DXF polyline, NOT a
+ * BIM params entity). Tags each grip emitted by `computeDxfEntityGrips` (case
+ * 'polyline') so the context menu (`buildPolylineOpsSection`) and the commit
+ * pipeline (`commitPolylineBulgeGripDrag`) can branch by grip role:
+ *   - `polyline-vertex-N`           → outline vertex N. Menu: Add / Remove /
+ *                                     Convert-to-Arc (outgoing segment N).
+ *   - `polyline-segment-midpoint-N` → midpoint of STRAIGHT segment N (chord
+ *                                     midpoint). Menu: Add / Convert-to-Arc.
+ *   - `polyline-arc-midpoint-N`     → apex of ARC segment N (`bulgeApexPoint`).
+ *                                     Menu: Convert-to-Line. Drag = live bulge
+ *                                     curvature (`bulgeFromApexPoint`).
+ * Segment index N = AutoCAD outgoing-segment semantics (`bulges[N]` spans
+ * `vertices[N] → vertices[N+1]`, closed: `bulges[n-1]` spans n-1 → 0).
+ */
+export type PolylineGripKind =
+  | `polyline-vertex-${number}`
+  | `polyline-segment-midpoint-${number}`
+  | `polyline-arc-midpoint-${number}`;
+
 // ADR-406/408/410/415/359 — placeable-object + linear-element grip kinds live in
 // the sibling module `grip-kinds-placeable.ts` (SRP / N.7.1) and are re-exported
 // here for backward compatibility (existing `import { … } from '../grip-kinds'`).

@@ -73,7 +73,7 @@ const DEBUG_MODE = process.env.NODE_ENV === 'development';
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (extracted to grip-types.ts — SRP)
 // ============================================================================
-export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, XLineGripKind, RayGripKind, GripInfo, GripDragState } from './grip-types';
+export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, XLineGripKind, RayGripKind, PolylineGripKind, GripInfo, GripDragState } from './grip-types';
 import type { GripInfo, GripDragState } from './grip-types';
 /**
  * Options for useGripMovement hook

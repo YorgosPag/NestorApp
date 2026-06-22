@@ -91,6 +91,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.xlineGripKind ? { xlineGripKind: grip.xlineGripKind } : {}),
     // ADR-359 Phase 11 — forward Ray grip discriminator.
     ...(grip.rayGripKind ? { rayGripKind: grip.rayGripKind } : {}),
+    // ADR-510 Φ3c — forward multifunctional polyline grip discriminator.
+    ...(grip.polylineGripKind ? { polylineGripKind: grip.polylineGripKind } : {}),
   };
 }
 

@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -299,6 +299,15 @@ export interface UnifiedGripInfo {
    * direct scene patch (translate basePoint or rotate direction).
    */
   readonly rayGripKind?: RayGripKind;
+  /**
+   * ADR-510 Φ3c — multifunctional polyline grip discriminator (forwarded from
+   * `GripInfo.polylineGripKind` in `grip-registry.wrapDxfGrip`). Drives the
+   * polyline-ops context menu (Add / Remove / Convert-to-Arc / Convert-to-Line)
+   * and routes arc-apex drags through `commitPolylineBulgeGripDrag()` +
+   * `SetBulgeCommand` (live bulge curvature). Straight-segment grips keep the
+   * standard `StretchEntityCommand` vertex path.
+   */
+  readonly polylineGripKind?: PolylineGripKind;
   /**
    * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
    * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in

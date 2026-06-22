@@ -34,6 +34,7 @@ import type {
   MepSegmentGripKind,
   XLineGripKind,
   RayGripKind,
+  PolylineGripKind,
 } from './grip-kinds';
 
 // Re-export the grip-kind unions for backward compatibility (call-sites import
@@ -64,6 +65,7 @@ export type {
   MepSegmentGripKind,
   XLineGripKind,
   RayGripKind,
+  PolylineGripKind,
 } from './grip-kinds';
 
 /** Grip information */
@@ -238,6 +240,14 @@ export interface GripInfo {
    * direct scene patch (translate basePoint or rotate direction).
    */
   rayGripKind?: RayGripKind;
+  /**
+   * ADR-510 Φ3c — multifunctional polyline grip discriminator. Present only when
+   * the grip belongs to a plain DXF `polyline`; drives the polyline-ops context
+   * menu (Add / Remove / Convert-to-Arc / Convert-to-Line) and routes arc-apex
+   * drags through `commitPolylineBulgeGripDrag()` + `SetBulgeCommand` (live bulge
+   * curvature). Straight-segment grips keep the standard stretch/move path.
+   */
+  polylineGripKind?: PolylineGripKind;
 }
 
 /** Grip drag state */
