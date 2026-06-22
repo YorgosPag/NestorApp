@@ -21,7 +21,6 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { BeamKind } from '../../bim/types/beam-types';
 import type { BeamParamOverrides } from '../../hooks/drawing/beam-completion';
-import type { BeamSnapTarget } from './beam-beam-face-snap';
 
 export interface BeamPreviewState {
   readonly startPoint: Point2D | null;
@@ -37,20 +36,9 @@ export interface BeamPreviewState {
    * `false` (default) → υπάρχουσα location-line συμπεριφορά (ADR-363 §5.7).
    */
   readonly startAnchored: boolean;
-  /**
-   * ADR-458 (2026-06-17) — column footprints (2Δ) της σκηνής, ώστε το WYSIWYG
-   * preview να εφαρμόζει το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
-   * δοκάρι. Γράφεται από το `useBeamTool` (`setColumns`, on activate)· διατηρείται
-   * μέσα από τα `set()` transitions (αλλάζει σπάνια). `[]` = καμία κολόνα.
-   */
-  readonly columnFootprints: readonly (readonly Point2D[])[];
-  /**
-   * ADR-398 §beam-to-beam framing (2026-06-20) — τα υφιστάμενα δοκάρια (axis + outline,
-   * scene units) ώστε το ghost-before-click να κουμπώνει ΚΑΙ πάνω σε δοκάρι (κάθετο
-   * Τ-framing 🟢 / συγγραμμική κοντή άκρη 🔴). Γράφεται από `useBeamTool` (`setBeams`,
-   * on activate / κάθε 1ο κλικ)· διατηρείται μέσα από τα `set()` transitions. `[]` = κανένα.
-   */
-  readonly beamTargets: readonly BeamSnapTarget[];
+  // ADR-398 §3.10 — οι face-snap στόχοι (column footprints + beam targets) ΜΕΤΑΚΙΝΗΘΗΚΑΝ στο
+  // κοινό `sceneSnapTargetsStore` (bim/framing/scene-snap-targets.ts) — ΕΝΑ SSoT για όλα τα
+  // placement tools. Αυτό το store κρατά πλέον ΜΟΝΟ το beam-tool FSM state.
 }
 
 const EMPTY: BeamPreviewState = Object.freeze({
@@ -59,8 +47,6 @@ const EMPTY: BeamPreviewState = Object.freeze({
   kind: 'straight' as BeamKind,
   overrides: Object.freeze({}) as BeamParamOverrides,
   startAnchored: false,
-  columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
-  beamTargets: Object.freeze([]) as readonly BeamSnapTarget[],
 });
 
 type Listener = () => void;
@@ -95,12 +81,8 @@ function overridesEqual(a: BeamParamOverrides, b: BeamParamOverrides): boolean {
 }
 
 export const beamPreviewStore = {
-  /**
-   * Writer — called by `useBeamTool` on every state transition. Το
-   * `columnFootprints` ΔΕΝ περνά εδώ (αλλάζει σπάνια) — διατηρείται από το
-   * `currentState` (set via `setColumns`).
-   */
-  set(next: Omit<BeamPreviewState, 'columnFootprints' | 'beamTargets' | 'startAnchored'> & { startAnchored?: boolean }): void {
+  /** Writer — called by `useBeamTool` on every state transition (FSM state only). */
+  set(next: Omit<BeamPreviewState, 'startAnchored'> & { startAnchored?: boolean }): void {
     const nextAnchored = next.startAnchored ?? false;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
@@ -117,28 +99,7 @@ export const beamPreviewStore = {
       kind: next.kind,
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
-      columnFootprints: currentState.columnFootprints,
-      beamTargets: currentState.beamTargets,
     };
-    for (const l of listeners) l();
-  },
-  /**
-   * ADR-458 — set the scene column footprints για το preview cutback. Idempotent
-   * επί ίδιου reference· notify μόνο όταν αλλάζει. Called από `useBeamTool` on activate.
-   */
-  setColumns(footprints: readonly (readonly Point2D[])[]): void {
-    if (currentState.columnFootprints === footprints) return;
-    currentState = { ...currentState, columnFootprints: footprints };
-    for (const l of listeners) l();
-  },
-  /**
-   * ADR-398 §beam-to-beam framing — set τα υφιστάμενα δοκάρια-στόχους για το ghost
-   * face-snap. Idempotent επί ίδιου reference· notify μόνο όταν αλλάζει. Called από
-   * `useBeamTool` μαζί με το `setColumns` (on activate / κάθε 1ο κλικ).
-   */
-  setBeams(targets: readonly BeamSnapTarget[]): void {
-    if (currentState.beamTargets === targets) return;
-    currentState = { ...currentState, beamTargets: targets };
     for (const l of listeners) l();
   },
   /** Reset to empty (tool deactivated / committed / idle). */

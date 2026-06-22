@@ -40,7 +40,8 @@ import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { resolveWallThicknessMm } from './wall-completion';
 // ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
-import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
+// ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store (κοινό με κολώνα/δοκάρι).
+import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
 import {
   useWallToolDynamicInputListener,
@@ -81,10 +82,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // Φόρτωσε κολόνες + γραμμικά μέλη (τοίχοι+δοκάρια) στο preview store ΠΡΙΝ το 1ο κλικ,
   // ώστε το ghost-before-click face-snap να έχει τους στόχους έτοιμους.
   const syncSceneTargetsToStore = useCallback(() => {
-    const entities = getSceneEntitiesRef.current?.() ?? [];
-    const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['wall', 'beam', 'slab'] });
-    wallPreviewStore.setColumns(footprints);
-    wallPreviewStore.setMembers(memberTargets);
+    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
   }, []);
 
   // ADR-508 / ADR-398 §3.10 — re-sync όταν δημιουργείται οντότητα (SSoT hook, rAF defer).
@@ -96,11 +94,12 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const resolveWallStartAnchor = useCallback(
     (point: Readonly<Point2D>): { start: Point2D; anchored: boolean; faceAngle: number | null } => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const store = wallPreviewStore.get();
+      const targets = sceneSnapTargetsStore.get();
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
       // ADR-508 — worldPerPixel (=1/scale) → σταθερό zoom-adaptive βήμα ολίσθησης στην παρειά
       // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
-      const snap = resolveMemberGhostSnapFromStore(point, store.columnFootprints, store.memberTargets, thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
+      // ADR-398 §3.10 — τοίχος = συνδυασμένα wall+beam+slab μέλη (selectGhostMembers).
+      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab']), thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
       if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap

@@ -23,7 +23,7 @@ import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces'
 import { EventBus } from '../../systems/events/EventBus';
 import { buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
-import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
+import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-snap';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
@@ -109,11 +109,12 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     ): boolean => {
       if (s.startPoint === null) return false;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      // ADR-508 — preview === commit: διάβασε τους ΙΔΙΟΥΣ snap στόχους με το ghost.
-      const preview = wallPreviewStore.get();
+      // ADR-508 / ADR-398 §3.10 — preview === commit: διάβασε τους ΙΔΙΟΥΣ snap στόχους με το ghost
+      // από το ΚΟΙΝΟ scene store· τοίχος = wall+beam+slab μέλη.
+      const targets = sceneSnapTargetsStore.get();
       // ADR-508 — μπλόκαρε commit όταν ο τοίχος θα κείτεται ομοαξονικά/πάνω σε υφιστάμενο
       // μέλος (duplication· το 🔴 ghost ήταν ήδη το feedback). Mirror του δοκαριού.
-      if (isMemberCollinearOverlap(s.startPoint, endPoint, preview.memberTargets)) {
+      if (isMemberCollinearOverlap(s.startPoint, endPoint, selectGhostMembers(targets, ['wall', 'beam', 'slab']))) {
         return false;
       }
       // ADR-508 — params: explicit alignmentPoint (legacy/dynamic-input precision) >
@@ -123,7 +124,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
           ? buildDefaultWallParams(s.startPoint, endPoint, s.overrides, sceneUnits, alignmentPoint)
           : s.startAnchored
             ? buildDefaultWallParams(s.startPoint, endPoint, s.overrides, sceneUnits)
-            : buildAnchoredWallParams(s.startPoint, endPoint, s.overrides, sceneUnits, preview.columnFootprints);
+            : buildAnchoredWallParams(s.startPoint, endPoint, s.overrides, sceneUnits, targets.footprints);
       const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });

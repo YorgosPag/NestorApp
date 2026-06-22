@@ -3,7 +3,7 @@
  *
  * Verifies that `generateColumnPreview` builds the SAME entity the commit path builds
  * (preview === commit): it computes the face-snap **synchronously** from the pre-collected
- * `columnPreviewStore` targets + the snapped cursor (`ImmediateSnap`), adopts the auto face
+ * `sceneSnapTargetsStore` targets + the snapped cursor (`ImmediateSnap`), adopts the auto face
  * anchor / §3.9 wall-axis center, and renders the 🔴 overlap status schematic for beam
  * short-ends. Pure — μηδέν canvas, μηδέν async scheduler.
  */
@@ -11,8 +11,7 @@
 import { generateColumnPreview } from '../column-preview-helpers';
 import { columnToolBridgeStore } from '../../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { setImmediateSnap, clearImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
-import { columnPreviewStore } from '../../../bim/columns/column-preview-store';
-import type { ColumnFaceSnapTargets } from '../../../bim/columns/column-face-snap';
+import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../../bim/framing/scene-snap-targets';
 import type { LinearMemberSnapTarget } from '../../../bim/framing/linear-member-face-snap';
 import type { ColumnAnchor, ColumnKind } from '../../../bim/types/column-types';
 import type { ColumnParamOverrides } from '../column-completion';
@@ -57,8 +56,8 @@ const slabSquare: LinearMemberSnapTarget[] = [
   { id: 's#1', axis: [{ x: 2000, y: 0 }, { x: 2000, y: 2000 }], outline: [{ x: 1998, y: 0 }, { x: 2002, y: 0 }, { x: 2002, y: 2000 }, { x: 1998, y: 2000 }] },
 ];
 
-function setTargets(t: Partial<ColumnFaceSnapTargets>): void {
-  columnPreviewStore.set({
+function setTargets(t: Partial<SceneSnapTargets>): void {
+  sceneSnapTargetsStore.set({
     footprints: t.footprints ?? [],
     beamTargets: t.beamTargets ?? [],
     wallTargets: t.wallTargets ?? [],
@@ -84,7 +83,7 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
   afterEach(() => {
     columnToolBridgeStore.set(null);
     clearImmediateSnap();
-    columnPreviewStore.reset();
+    sceneSnapTargetsStore.reset();
   });
 
   it('returns null when the column tool is inactive (no bridge handle)', () => {
@@ -100,7 +99,7 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
   it('free placement (no targets) → full WYSIWYG ColumnEntity at the raw cursor + ribbon anchor', () => {
     activateColumnBridge({ anchor: 'center' });
     clearImmediateSnap(); // no snap armed → raw cursor
-    columnPreviewStore.reset(); // no targets → no face-snap
+    sceneSnapTargetsStore.reset(); // no targets → no face-snap
     const ghost = generateColumnPreview({ x: 100, y: 200 }) as PreviewColumn;
     expect(ghost).not.toBeNull();
     expect(ghost.type).toBe('column');
@@ -115,7 +114,7 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
 
   it('uses the snapped point from ImmediateSnap (preview === commit click point)', () => {
     activateColumnBridge();
-    columnPreviewStore.reset();
+    sceneSnapTargetsStore.reset();
     setImmediateSnap({ found: true, point: { x: 555, y: 666 }, mode: 'endpoint' });
     const ghost = generateColumnPreview({ x: 0, y: 0 }) as PreviewColumn;
     expect(ghost.params.position.x).toBeCloseTo(555);
@@ -165,7 +164,7 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
 
   it('respects ribbon kind + width overrides (WYSIWYG dims == committed dims)', () => {
     activateColumnBridge({ kind: 'rectangular', overrides: { width: 800, depth: 600 } });
-    columnPreviewStore.reset();
+    sceneSnapTargetsStore.reset();
     const ghost = generateColumnPreview({ x: 0, y: 0 }) as PreviewColumn;
     expect(ghost.params.kind).toBe('rectangular');
     expect(ghost.params.width).toBe(800);

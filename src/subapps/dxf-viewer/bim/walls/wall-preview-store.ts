@@ -29,7 +29,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
-import type { LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -69,18 +68,9 @@ export interface WallPreviewState {
    * `resolveWallFaceRelativePolar` διαβάζει αυτό το πεδίο. `null` = free / collinear-overlap.
    */
   readonly startFaceAngle: number | null;
-  /**
-   * ADR-508 — column footprints (2Δ) της σκηνής για το 12-θέσεων ghost face snap + flush.
-   * Γράφεται από `useWallTool` (`setColumns`, on activate)· διατηρείται μέσα από τα `set()`
-   * transitions (αλλάζει σπάνια). `[]` = καμία κολόνα.
-   */
-  readonly columnFootprints: readonly (readonly Point2D[])[];
-  /**
-   * ADR-508 unified linear-member framing — τα υφιστάμενα γραμμικά μέλη (τοίχοι+δοκάρια,
-   * axis + outline) ώστε το ghost-before-click να κουμπώνει κάθετα (🟢 Τ-framing) ή να
-   * γίνεται 🔴 σε ομοαξονικό. Γράφεται από `useWallTool` (`setMembers`). `[]` = κανένα.
-   */
-  readonly memberTargets: readonly LinearMemberSnapTarget[];
+  // ADR-398 §3.10 — οι face-snap στόχοι (column footprints + γραμμικά μέλη) ΜΕΤΑΚΙΝΗΘΗΚΑΝ στο
+  // κοινό `sceneSnapTargetsStore` (bim/framing/scene-snap-targets.ts) — ΕΝΑ SSoT για όλα τα
+  // placement tools. Αυτό το store κρατά πλέον ΜΟΝΟ το wall-tool FSM state.
 }
 
 const EMPTY: WallPreviewState = Object.freeze({
@@ -91,8 +81,6 @@ const EMPTY: WallPreviewState = Object.freeze({
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
   startFaceAngle: null,
-  columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
-  memberTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
 });
 
 type Listener = () => void;
@@ -140,17 +128,13 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle' | 'columnFootprints' | 'memberTargets'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle'> & {
   readonly startAnchored?: boolean;
   readonly startFaceAngle?: number | null;
 };
 
 export const wallPreviewStore = {
-  /**
-   * Writer — called by `useWallTool` on every relevant state transition. Τα
-   * `columnFootprints` / `memberTargets` ΔΕΝ περνούν εδώ (αλλάζουν σπάνια) —
-   * διατηρούνται από το `currentState` (set via `setColumns` / `setMembers`).
-   */
+  /** Writer — called by `useWallTool` on every relevant state transition (FSM state only). */
   set(next: WallPreviewSet): void {
     const nextAnchored = next.startAnchored ?? false;
     const nextFaceAngle = next.startFaceAngle ?? null;
@@ -173,27 +157,7 @@ export const wallPreviewStore = {
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
       startFaceAngle: nextFaceAngle,
-      columnFootprints: currentState.columnFootprints,
-      memberTargets: currentState.memberTargets,
     };
-    for (const l of listeners) l();
-  },
-  /**
-   * ADR-508 — set τα column footprints για το ghost face snap. Idempotent επί ίδιου
-   * reference· notify μόνο όταν αλλάζει. Called από `useWallTool` on activate / 1ο κλικ.
-   */
-  setColumns(footprints: readonly (readonly Point2D[])[]): void {
-    if (currentState.columnFootprints === footprints) return;
-    currentState = { ...currentState, columnFootprints: footprints };
-    for (const l of listeners) l();
-  },
-  /**
-   * ADR-508 — set τα υφιστάμενα γραμμικά μέλη (τοίχοι+δοκάρια) για το ghost face-snap.
-   * Idempotent επί ίδιου reference· notify μόνο όταν αλλάζει.
-   */
-  setMembers(targets: readonly LinearMemberSnapTarget[]): void {
-    if (currentState.memberTargets === targets) return;
-    currentState = { ...currentState, memberTargets: targets };
     for (const l of listeners) l();
   },
   /** Reset back to empty (tool deactivated / idle / commit). */

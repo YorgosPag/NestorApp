@@ -19,6 +19,7 @@ import { buildAnchoredBeamParams, buildBeamEntity } from '../beam-completion';
 import { generateBeamPreview } from '../beam-preview-helpers';
 import { applyBeamColumnCutback2D } from '../../canvas/dxf-scene-beam-cutback';
 import { beamPreviewStore } from '../../../bim/beams/beam-preview-store';
+import { sceneSnapTargetsStore } from '../../../bim/framing/scene-snap-targets';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 
@@ -68,13 +69,17 @@ function committedDisplay(): WithDisplay['geometry'] {
 function previewDisplay(): WithDisplay['geometry'] {
   beamPreviewStore.reset();
   beamPreviewStore.set({ startPoint: START, endPoint: null, kind: 'straight', overrides: {} });
-  beamPreviewStore.setColumns([COLUMN_FOOTPRINT]);
+  // ADR-398 §3.10 — τα column footprints ζουν πλέον στο κοινό sceneSnapTargetsStore.
+  sceneSnapTargetsStore.set({ footprints: [COLUMN_FOOTPRINT], beamTargets: [], wallTargets: [], slabTargets: [] });
   const ghost = generateBeamPreview([START], END, 'mm');
   return (ghost as unknown as WithDisplay).geometry;
 }
 
 describe('Beam preview ↔ committed cutback parity (ADR-458)', () => {
-  afterEach(() => beamPreviewStore.reset());
+  afterEach(() => {
+    beamPreviewStore.reset();
+    sceneSnapTargetsStore.reset();
+  });
 
   it('το preview εφαρμόζει cutback (αποκτά displayOutline) όταν υπάρχει κολόνα στη γωνία', () => {
     const preview = previewDisplay();

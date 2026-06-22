@@ -36,7 +36,7 @@ import {
   buildDefaultBeamParams,
   type BeamParamOverrides,
 } from './beam-completion';
-import { collectBeamSnapTargets } from './beam-preview-helpers';
+import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { BeamParams } from '../../bim/types/beam-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
@@ -151,10 +151,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   // έχει τις κολόνες πριν καν το 1ο κλικ. Οι κολόνες αλλάζουν σπάνια στη διάρκεια
   // ενός placement.
   const syncSceneTargetsToStore = useCallback(() => {
-    const entities = getSceneEntitiesRef.current?.() ?? [];
-    const { footprints, beamTargets } = collectBeamSnapTargets(entities);
-    beamPreviewStore.setColumns(footprints);
-    beamPreviewStore.setBeams(beamTargets);
+    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
   }, []);
 
   // ADR-398 §3.6 — re-sync όταν δημιουργείται οντότητα (π.χ. μόλις σχεδιάστηκε δοκάρι).
@@ -252,15 +249,17 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       // ADR-398 §Smart beam ghost — αν το start κλειδώθηκε από face-snap (centerline),
       // commit centerline (ΟΧΙ location-line auto-flush) ώστε commit === preview.
       const preview = beamPreviewStore.get();
+      // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store (preview === commit)· δοκάρι = beam+slab.
+      const targets = sceneSnapTargetsStore.get();
       // ADR-398 §3.6 — ΑΠΑΓΟΡΕΥΣΗ τοποθέτησης δοκαριού ομοαξονικά/πάνω σε υφιστάμενο
       // (duplication — «extend instead»). Το κόκκινο awaitingEnd ghost ήδη το δείχνει·
       // εδώ μπλοκάρεται το commit (silent — ο χρήστης σύρει αλλού). Κάθετο Τ-framing OK.
-      if (isBeamCollinearOverlap(s.startPoint, endPoint, preview.beamTargets)) {
+      if (isBeamCollinearOverlap(s.startPoint, endPoint, selectGhostMembers(targets, ['beam', 'slab']))) {
         return false;
       }
       const params = preview.startAnchored
         ? buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits)
-        : buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, preview.columnFootprints);
+        : buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, targets.footprints);
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -355,8 +354,9 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     (point: Readonly<Point2D>): { start: Point2D; anchored: boolean } => {
       const widthMm = stateRef.current.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const store = beamPreviewStore.get();
-      const snap = resolveBeamGhostSnapFromStore(point, store.columnFootprints, store.beamTargets, widthMm, sceneUnits);
+      // ADR-398 §3.10 — δοκάρι = beam+slab μέλη από το ΚΟΙΝΟ scene store (preview === commit).
+      const targets = sceneSnapTargetsStore.get();
+      const snap = resolveBeamGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['beam', 'slab']), widthMm, sceneUnits);
       return snap
         ? { start: snap.start, anchored: true }
         : { start: { x: point.x, y: point.y }, anchored: false };

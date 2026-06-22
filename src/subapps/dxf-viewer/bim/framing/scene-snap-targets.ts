@@ -84,7 +84,11 @@ export function selectGhostMembers(
 let current: SceneSnapTargets = EMPTY;
 
 export const sceneSnapTargetsStore = {
-  /** Writer — από `useSceneSnapTargetSync` on activate / `drawing:entity-created` (pre-collected). */
+  /** Low-level writer — set pre-collected στόχους απευθείας (escape hatch + tests). */
+  set(targets: SceneSnapTargets): void {
+    current = targets;
+  },
+  /** Writer — collect από `entities` + set (από `useSceneSnapTargetSync` on activate / entity-created). */
   refresh(entities: readonly Entity[]): void {
     current = collectSceneSnapTargets(entities);
   },

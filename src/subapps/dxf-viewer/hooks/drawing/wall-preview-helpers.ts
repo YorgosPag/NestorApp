@@ -22,6 +22,7 @@ import {
   type WallParamOverrides,
 } from './wall-completion';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
+import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import type { WallKind, WallParams } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
@@ -109,11 +110,15 @@ export function generateWallPreview(
 ): ExtendedSceneEntity | null {
   const preview = wallPreviewStore.get();
   const overrides: WallParamOverrides = preview.overrides;
+  // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store· τοίχος = wall+beam+slab μέλη.
+  const targets = sceneSnapTargetsStore.get();
+  const footprints = targets.footprints;
+  const members = selectGhostMembers(targets, ['wall', 'beam', 'slab']);
 
   if (tempPoints.length === 0) {
     // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα/μέλος → κουμπώνει σε παρειά/anchor· αλλιώς ακολουθεί ελεύθερα τον κέρσορα.
-    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, preview.columnFootprints, preview.memberTargets);
+    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, members);
   }
 
   if (tempPoints.length >= 2) {
@@ -128,7 +133,7 @@ export function generateWallPreview(
   if (preview.endPoint) {
     return makeWallFootprintGhost(
       'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
-      preview.memberTargets, cursorPoint,
+      members, cursorPoint,
     );
   }
 
@@ -136,7 +141,7 @@ export function generateWallPreview(
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
-    preview.curveControl, preview.startAnchored, preview.columnFootprints, preview.memberTargets,
+    preview.curveControl, preview.startAnchored, footprints, members,
   );
 }
 

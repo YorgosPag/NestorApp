@@ -15,7 +15,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import type { ExtendedSceneEntity } from './drawing-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import {
@@ -36,7 +35,7 @@ import {
   BEAM_GHOST_LEN_MM,
 } from '../../bim/beams/beam-column-face-snap';
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
-import { collectMemberSnapTargets } from '../../bim/framing/member-snap-targets';
+import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
   resolveEffectivePreviewCursor,
@@ -47,24 +46,6 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
-
-/** Face-snap targets collected from the live scene for the beam tool's ghost/preview. */
-export interface BeamSnapTargets {
-  readonly footprints: Point2D[][];
-  readonly beamTargets: BeamSnapTarget[];
-}
-
-/**
- * ADR-398 §3.6 / ADR-508 — μάζεψε τους face-snap στόχους από τη σκηνή για το beam ghost/preview.
- * Κολόνες → footprint πολύγωνα (cutback + ghost flush)· υφιστάμενα δοκάρια → axis+outline
- * (beam-to-beam Τ-framing). Delegate στο generic SSoT `collectMemberSnapTargets` (κοινό με τον
- * τοίχο)· `memberKinds: ['beam']` → η συμπεριφορά δοκαριού μένει αμετάβλητη (δοκάρια+κολόνες,
- * ΟΧΙ τοίχοι). Pure: ΙΔΙΑ δεδομένα που διαβάζει το commit path (preview === commit).
- */
-export function collectBeamSnapTargets(entities: readonly Entity[]): BeamSnapTargets {
-  const { footprints, memberTargets } = collectMemberSnapTargets(entities, { memberKinds: ['beam', 'slab'] });
-  return { footprints, beamTargets: memberTargets };
-}
 
 /**
  * Build a beam preview entity from `tempPoints` + cursor. State machine map:
@@ -82,12 +63,16 @@ export function generateBeamPreview(
   sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
   const preview = beamPreviewStore.get();
+  // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store· δοκάρι = beam+slab μέλη (ΟΧΙ τοίχοι).
+  const targets = sceneSnapTargetsStore.get();
+  const footprints = targets.footprints;
+  const beamTargets = selectGhostMembers(targets, ['beam', 'slab']);
 
   if (tempPoints.length === 0) {
     // ADR-398 §Smart beam ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα → κουμπώνει σε παρειά/anchor (centerline start/end)· αλλιώς ακολουθεί
     // ελεύθερα τον κέρσορα (ευθύ μικρό ghost). Pure — reuse του face-snap SSoT.
-    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, preview.columnFootprints, preview.beamTargets);
+    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, footprints, beamTargets);
   }
 
   const startPt = tempPoints[0];
@@ -95,12 +80,12 @@ export function generateBeamPreview(
   if (tempPoints.length === 1) {
     // awaitingEnd: straight/cantilever rectangle (curved χωρίς control = ευθεία).
     // `startAnchored` (face-snapped start) → centerline mode (χωρίς location-line auto-flush).
-    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, preview.columnFootprints, preview.startAnchored, preview.beamTargets);
+    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, footprints, preview.startAnchored, beamTargets);
   }
 
   // awaitingCurveControl (curved): cursor = quadratic Bezier control point.
   const endPt = tempPoints[1];
-  return makeBeamWysiwygGhost('preview_beam_curve', startPt, endPt, 'curved', preview.overrides, sceneUnits, cursorPoint, preview.columnFootprints, false, preview.beamTargets);
+  return makeBeamWysiwygGhost('preview_beam_curve', startPt, endPt, 'curved', preview.overrides, sceneUnits, cursorPoint, footprints, false, beamTargets);
 }
 
 /**

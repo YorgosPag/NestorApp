@@ -9,9 +9,9 @@
 import {
   resolveColumnFaceSnap,
   resolveColumnFaceSnapFromTargets,
-  collectColumnFaceSnapTargets,
   type ColumnFaceSnap,
 } from '../column-face-snap';
+import { collectSceneSnapTargets } from '../../framing/scene-snap-targets';
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
 
@@ -298,9 +298,9 @@ describe('resolveColumnFaceSnap — slab edge (ADR-398 §3.10 axis-relative — 
   });
 });
 
-describe('collectColumnFaceSnapTargets + resolveColumnFaceSnapFromTargets (core SSoT)', () => {
+describe('collectSceneSnapTargets + resolveColumnFaceSnapFromTargets (core SSoT)', () => {
   it('διαχωρίζει σωστά κολόνες/δοκάρια/πλάκες ανά είδος', () => {
-    const t = collectColumnFaceSnapTargets([horizontalBeam(), columnTarget(3000, 0)]);
+    const t = collectSceneSnapTargets([horizontalBeam(), columnTarget(3000, 0)]);
     expect(t.beamTargets).toHaveLength(1);
     expect(t.footprints).toHaveLength(1);
     expect(t.wallTargets).toHaveLength(0);
@@ -311,7 +311,7 @@ describe('collectColumnFaceSnapTargets + resolveColumnFaceSnapFromTargets (core 
     const entities = [horizontalBeam()];
     const cursor: Point2D = { x: 0, y: 250 };
     const viaWrapper = resolveColumnFaceSnap(cursor, entities, 'mm');
-    const viaCore = resolveColumnFaceSnapFromTargets(cursor, collectColumnFaceSnapTargets(entities), 'mm');
+    const viaCore = resolveColumnFaceSnapFromTargets(cursor, collectSceneSnapTargets(entities), 'mm');
     expect(viaCore).toEqual(viaWrapper);
   });
 });

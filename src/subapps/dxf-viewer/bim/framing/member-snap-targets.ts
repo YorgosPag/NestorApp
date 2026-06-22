@@ -13,7 +13,7 @@
  * (preview === commit).
  *
  * @see ./linear-member-face-snap.ts — LinearMemberSnapTarget consumer
- * @see ../../hooks/drawing/beam-preview-helpers.ts — collectBeamSnapTargets (delegate)
+ * @see ./scene-snap-targets.ts — collectSceneSnapTargets (ο κοινός consumer, ΕΝΑ SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-508-unified-linear-member-framing.md
  */
 
