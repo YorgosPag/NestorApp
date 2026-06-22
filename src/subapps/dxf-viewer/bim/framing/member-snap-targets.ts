@@ -292,17 +292,34 @@ export function collectDiskTargets(entities: readonly Entity[]): { center: Point
 }
 
 /**
+ * ADR-398 §3.15/§3.17 — **κλειστή 4-κορυφη πολυγραμμή** (`polyline`/`lwpolyline`) → `RectFrame` από τις
+ * **πραγματικές** κορυφές (reuse `rectFrameFromCorners`). Σε αντίθεση με το `rectangle` (που περνά από
+ * `rectangleCorners` = axis-aligned), εδώ οι κορυφές κρατούν τυχόν **λοξή** στροφή → ο u/v άξονας φέρει
+ * το rotation (το χρειάζεται το §3.17 «υιοθέτηση μεγέθους+γωνίας»). `null` αν δεν είναι κλειστό quad.
+ */
+function closedQuadRectFrame(e: Entity): RectFrame | null {
+  const pl = e as { vertices?: Pts; closed?: boolean };
+  if (!pl.closed || !pl.vertices || pl.vertices.length !== 4) return null;
+  return rectFrameFromCorners(toPoint2D(pl.vertices));
+}
+
+/**
  * ADR-398 §3.15 — **ορθογώνια** ως `RectFrame` (κέντρο + u/v + ημι-εκτάσεις) για το Cartesian Magnet
- * (κολώνα ΜΕΣΑ στο ορθογώνιο). Reuse το BIM SSoT `rectangleCorners` + `rectFrameFromCorners`. Το
- * `rectangleCorners` αγνοεί rotation app-wide → axis-aligned frames (συνεπές με §3.11)· ο resolver
- * είναι rotation-ready (λοξές περιοχές = follow-up μέσω πραγματικών κορυφών). Pure.
+ * (κολώνα ΜΕΣΑ στο ορθογώνιο) + §3.17 (υιοθέτηση μεγέθους). Πηγές: `rectangle` entity (reuse BIM SSoT
+ * `rectangleCorners` — axis-aligned, συνεπές με §3.11) ΚΑΙ **κλειστή 4-κορυφη `polyline`/`lwpolyline`**
+ * (reuse `rectFrameFromCorners` σε πραγματικές κορυφές → κρατά λοξή στροφή). 4 ξεχωριστές γραμμές που
+ * κλείνουν → §3.17 region-detection path (ΟΧΙ εδώ, για να μένει O(1) ανά entity). Pure.
  */
 export function collectRectTargets(entities: readonly Entity[]): RectFrame[] {
   const out: RectFrame[] = [];
   for (const e of entities) {
-    if (e.type !== 'rectangle') continue;
-    const frame = rectFrameFromCorners(rectangleCorners(e as Parameters<typeof rectangleCorners>[0]));
-    if (frame) out.push(frame);
+    if (e.type === 'rectangle') {
+      const frame = rectFrameFromCorners(rectangleCorners(e as Parameters<typeof rectangleCorners>[0]));
+      if (frame) out.push(frame);
+    } else if (e.type === 'polyline' || e.type === 'lwpolyline') {
+      const frame = closedQuadRectFrame(e);
+      if (frame) out.push(frame);
+    }
   }
   return out;
 }

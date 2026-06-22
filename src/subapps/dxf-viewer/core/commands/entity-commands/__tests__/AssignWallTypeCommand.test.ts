@@ -127,7 +127,10 @@ describe('AssignWallTypeCommand (ADR-412 Φ4)', () => {
       sm,
     );
     cmd.undo();
-    expect((scene.get(wall.id) as unknown as WallEntity).typeId).toBeUndefined();
+    // No-op: the wall keeps whatever type it was created with (a default wall is
+    // auto-linked to its built-in via resolveAutoWallTypeId — ADR-447/449), so the
+    // assertion is «unchanged from the original», not «undefined».
+    expect((scene.get(wall.id) as unknown as WallEntity).typeId).toBe(wall.typeId);
   });
 
   it('5. getDescription reflects assign vs clear', () => {

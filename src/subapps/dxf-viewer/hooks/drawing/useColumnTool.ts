@@ -41,6 +41,10 @@ import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
 import { useColumnRegionClicks } from './use-column-region-clicks';
+// ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» (opt-in confirm στο 1ο κλικ μέσα σε ορθογώνιο DXF).
+import { useColumnRectAdopt } from './use-column-rect-adopt';
+import type { RectFrame } from '../../bim/framing/rect-frame';
+import type { AdoptRectDims } from '../../bim/columns/column-adopt-rect';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
@@ -279,6 +283,34 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     [currentLevelId, onColumnCreated, getSceneUnits],
   );
 
+  // ── ADR-398 §3.17 «Υιοθέτηση μεγέθους ορθογωνίου» — opt-in confirm στο 1ο κλικ ────
+  // Adopt («Ναι») → commit στο μέγεθος+κέντρο+γωνία του ορθογωνίου (anchor `center`, μηδέν 2ο κλικ:
+  // το ορθογώνιο ορίζει πλήρως την κολόνα, Revit-grade). Default («Όχι») → κανονική ροή 2-κλικ.
+  const onAdoptRect = useCallback(
+    (s: ColumnToolState, rect: RectFrame, dims: AdoptRectDims): void => {
+      commitColumnAt(
+        { ...s, overrides: { ...s.overrides, width: dims.widthMm, depth: dims.depthMm } },
+        rect.center,
+        'center',
+        dims.rotationDeg,
+      );
+    },
+    [commitColumnAt],
+  );
+  const onAdoptDefault = useCallback(
+    (s: ColumnToolState, point: Readonly<Point2D>, anchor: ColumnAnchor): void => {
+      setColumnRotationLock(point, anchor); // ίδια κανονική ροή «θέση→γωνία» (2ο κλικ ορίζει γωνία)
+      setState({ ...s, phase: 'awaitingRotation', error: null });
+    },
+    [],
+  );
+  const { tryAdoptRectColumn } = useColumnRectAdopt({
+    getSceneEntitiesRef,
+    getSceneUnitsRef,
+    onAdopt: onAdoptRect,
+    onDefault: onAdoptDefault,
+  });
+
   // ── «από περίγραμμα» commit helpers (ADR-363 Φ3/Φ3c) — εξήχθησαν σε hook ────
   // (N.7.1 file-size split). Box-select listener + click-inside για outer-perimeter
   // (ΜΕ ένωση→τοιχία) και discrete-perimeter (ΧΩΡΙΣ ένωση→αυτόματη ταξινόμηση+confirm).
@@ -328,6 +360,10 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         // κλάδοι επέστρεφαν face-anchor για ΟΛΟ το εσωτερικό δίσκου/ορθογωνίου → single-click παντού.]
         const faceAnchor = getColumnFaceAnchor();
         const anchor: ColumnAnchor = faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
+        // ADR-398 §3.17 — 1ο κλικ μέσα σε ορθογώνιο DXF (rectangle/polyline/4-γραμμές): opt-in confirm
+        // «υιοθέτηση μεγέθους ή default;». Μόνο ΕΛΕΥΘΕΡΗ τοποθέτηση (όχι slant). Αν ανοίξει → σταμάτα
+        // εδώ (η ροή συνεχίζει async στο resolve: adopt→commit / default→awaitingRotation / cancel→noop).
+        if (!s.slantMode && tryAdoptRectColumn(s, point, anchor)) return false;
         // ADR-404 Φ5 §slanted — ΚΕΚΛΙΜΕΝΗ (ελεύθερη τοποθέτηση): ΚΛΕΙΔΩΣΕ τη βάση + την
         // rotation της διατομής (από ribbon) → awaitingTopLean (2ο κλικ ορίζει την κλίση).
         if (s.slantMode) {
@@ -372,7 +408,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       }
       return false;
     },
-    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick, getSceneUnits],
+    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick, getSceneUnits, tryAdoptRectColumn],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────

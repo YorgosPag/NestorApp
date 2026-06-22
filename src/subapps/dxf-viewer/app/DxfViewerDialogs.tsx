@@ -32,7 +32,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -101,6 +101,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-363 Φ3c — «Κολώνα από περίγραμμα» ενημερωτικό confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>
         <ColumnPerimeterConfirmDialog />
+      </React.Suspense>
+      {/* ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» confirm (self-subscribing). */}
+      <React.Suspense fallback={hiddenFallback}>
+        <ColumnAdoptSizeDialog />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
         <CalibrationDialog />

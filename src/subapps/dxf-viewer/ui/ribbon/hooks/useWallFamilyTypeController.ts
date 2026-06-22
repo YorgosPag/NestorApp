@@ -84,6 +84,16 @@ export interface WallFamilyTypeController {
    * a «Duplicate & edit» flow (ADR-412 Φ5).
    */
   readonly duplicateCurrent: (displayName: string) => Promise<string | null>;
+  /**
+   * ADR-363/412 — save a BRAND-NEW user wall type from explicit `typeParams`
+   * (not a clone of an existing type). Used by the draw-tool draft panel
+   * «Αποθήκευση ως νέος τύπος»: the composition set before drawing becomes a
+   * reusable, persistent type. Returns the new id (or `null` when auth not ready).
+   */
+  readonly saveNewType: (
+    typeParams: WallTypeParams,
+    displayName: string,
+  ) => Promise<string | null>;
   /** Rename a (user) type. Built-ins are read-only — guard in the UI. */
   readonly renameType: (typeId: string, name: string) => Promise<void>;
   /**
@@ -200,6 +210,26 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     [service, currentType, dispatchAssignment],
   );
 
+  const saveNewType = useCallback(
+    async (typeParams: WallTypeParams, displayName: string): Promise<string | null> => {
+      if (!service) return null;
+      const created = await service.saveType({
+        name: displayName,
+        category: 'wall',
+        scope: 'company',
+        origin: 'user',
+        typeParams,
+      });
+      const store = useBimFamilyTypeStore.getState();
+      store.setTypes([...store.getTypes(), created]); // optimistic — catalog now lists it
+      void recordFamilyTypeChange('created', {
+        id: created.id, name: created.name, category: 'wall', typeParams,
+      });
+      return created.id;
+    },
+    [service],
+  );
+
   const countWallsOfType = useCallback(
     (typeId: string): number => {
       if (!levelManager.currentLevelId) return 0;
@@ -301,6 +331,7 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     clearOverride,
     resetOverrides,
     duplicateCurrent,
+    saveNewType,
     renameType,
     updateTypeParams,
     deleteType,

@@ -111,7 +111,7 @@ export interface ColumnParamOverrides {
  * realistic structural defaults (2m×20cm wall / IPE-300 b×h) αντί για
  * τα generic 400×400 RC column defaults.
  */
-function getKindDimensionDefaults(kind: ColumnKind): { width: number; depth: number } {
+export function getKindDimensionDefaults(kind: ColumnKind): { width: number; depth: number } {
   switch (kind) {
     case 'shear-wall':
       return { width: DEFAULT_SHEAR_WALL_LENGTH_MM, depth: DEFAULT_SHEAR_WALL_THICKNESS_MM };

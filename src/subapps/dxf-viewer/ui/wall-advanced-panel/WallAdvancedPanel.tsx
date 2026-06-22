@@ -26,6 +26,7 @@ import type { useLevels } from '../../systems/levels';
 import type { UseWallPersistenceResult } from '../../hooks/data/useWallPersistence';
 import { WallWarningsSection } from './sections/WallWarningsSection';
 import { WallPersistenceSection } from './sections/WallPersistenceSection';
+import { WallDraftSaveTypeSection } from './sections/WallDraftSaveTypeSection';
 import { WallDnaSection } from './sections/WallDnaSection';
 import type { DispatchWallParamPatch } from './commands/dispatchWallParamPatch';
 import { useDnaMaterialOptions } from './hooks/useDnaMaterialOptions';
@@ -44,6 +45,11 @@ export interface WallAdvancedPanelProps {
   readonly containerClassName?: string;
   readonly hideHeader?: boolean;
   readonly projectId?: string;
+  /**
+   * ADR-363/412 — draft mode (draw-tool defaults, no entity). Αντί για persistence
+   * εμφανίζει «Αποθήκευση ως νέος τύπος» (η σύνθεση σώζεται ως reusable τύπος).
+   */
+  readonly draftMode?: boolean;
 }
 
 export function WallAdvancedPanel({
@@ -54,6 +60,7 @@ export function WallAdvancedPanel({
   containerClassName,
   hideHeader,
   projectId,
+  draftMode,
 }: WallAdvancedPanelProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const { libraryMaterials, libraryLoading } = useDnaMaterialOptions({ projectId });
@@ -78,6 +85,7 @@ export function WallAdvancedPanel({
           persistence={persistence}
         />
       )}
+      {draftMode && <WallDraftSaveTypeSection wall={wall} />}
       <WallDnaSection
         wall={wall}
         dispatchPatch={dispatchPatch}

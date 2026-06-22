@@ -205,6 +205,13 @@
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
     "noClosedLoop": "No closed boundary found near the point — the lines may not connect."
   },
+  "columnAdoptSize": {
+    "title": "Adopt rectangle size",
+    "message": "The first click landed inside a {adopt} rectangle in the drawing. Create a column at this size, or keep the default {default}?",
+    "adoptButton": "Yes, {size}",
+    "defaultButton": "No, default {size}",
+    "cancel": "Cancel"
+  },
   "perimeterColumnConfirm": {
     "title": "Section classification",
     "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",
@@ -4252,6 +4259,15 @@
         "savedAt": "Saved at {time}",
         "error": "Save error",
         "editingByOther": "Another user is editing this wall"
+      },
+      "saveAsType": {
+        "title": "Wall type",
+        "button": "Save as new type",
+        "hint": "Save the current composition as a reusable wall type.",
+        "saved": "Type saved.",
+        "error": "Type save error.",
+        "promptTitle": "New wall type",
+        "promptLabel": "Type name"
       },
       "dna": {
         "title": "Layer Composition",

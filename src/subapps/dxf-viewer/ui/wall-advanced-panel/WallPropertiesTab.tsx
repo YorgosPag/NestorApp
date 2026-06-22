@@ -73,6 +73,8 @@ export function WallPropertiesTab({
       levelManager={levelManager}
       // Draft (no entity) → no persistence section; real selection → soft-lock + saveNow.
       persistence={selectedWall ? persistence ?? undefined : undefined}
+      // Draft → «Αποθήκευση ως νέος τύπος» αντί persistence.
+      draftMode={!selectedWall && !!draftMode}
       hideHeader
       containerClassName="flex flex-col gap-3 p-2"
     />
