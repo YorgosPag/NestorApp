@@ -77,6 +77,11 @@ export function resolveColumnComboboxState(
     if (commandKey === COLUMN_RIBBON_KEYS.stringParams.envelopeFunction) {
       return { value: readEnvelopeFunctionValue(column.params.envelopeFunction), options: [] };
     }
+    // ADR-404 Φ5 — κεκλιμένη: η επιλεγμένη κολώνα είναι slanted όταν υπάρχει tilt με γωνία≠0.
+    if (commandKey === COLUMN_RIBBON_KEYS.stringParams.tiltEnabled) {
+      const isTilted = column.params.tilt !== undefined && column.params.tilt.angle !== 0;
+      return { value: isTilted ? 'on' : 'off', options: [] };
+    }
     // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
     if (isColumnFinishKey(commandKey)) {
       return resolveFinishComboboxState(column.params.finish, commandKey, COLUMN_FINISH_KEY_TO_FIELD);
@@ -136,9 +141,19 @@ export function resolveColumnComboboxState(
   if (commandKey === COLUMN_RIBBON_KEYS.stringParams.catalogProfile) {
     return { value: toolHandle.overrides.catalogProfile ?? CATALOG_CUSTOM_SENTINEL, options: [] };
   }
+  // ADR-404 Φ5 — κεκλιμένη στο drawing mode = slantMode (2-κλικ placement).
+  if (commandKey === COLUMN_RIBBON_KEYS.stringParams.tiltEnabled) {
+    return { value: toolHandle.slantMode ? 'on' : 'off', options: [] };
+  }
   if (isNestedNumberKey(commandKey)) {
     const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
-    const group = path.group === 'polygon' ? toolHandle.overrides.polygon : toolHandle.overrides.ishape;
+    const group = path.group === 'polygon'
+      ? toolHandle.overrides.polygon
+      : path.group === 'ishape'
+        ? toolHandle.overrides.ishape
+        : path.group === 'ushape'
+          ? toolHandle.overrides.ushape
+          : toolHandle.overrides.tilt;
     const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
     const value = typeof raw === 'number' ? raw : path.defaultValue;
     return { value: String(Math.round(value)), options: [] };
@@ -170,6 +185,13 @@ export function applyColumnComboboxChange(
       const parsed = parseEnvelopeFunctionValue(value);
       if (!parsed) return;
       dispatchParams(column, { ...column.params, envelopeFunction: parsed.fn });
+      return;
+    }
+    // ADR-404 Φ5 — κεκλιμένη on/off: 'on' → κράτα/φτιάξε tilt· 'off' → καθάρισε (κατακόρυφη).
+    if (commandKey === COLUMN_RIBBON_KEYS.stringParams.tiltEnabled) {
+      const enabled = value === 'on';
+      const nextTilt = enabled ? (column.params.tilt ?? { direction: 0, angle: 0 }) : undefined;
+      dispatchParams(column, { ...column.params, tilt: nextTilt });
       return;
     }
     // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
@@ -250,12 +272,24 @@ export function applyColumnComboboxChange(
     applyToolCatalogPreset(handle, value);
     return;
   }
+  // ADR-404 Φ5 — κεκλιμένη on/off στο drawing mode → slantMode (2-κλικ placement).
+  if (commandKey === COLUMN_RIBBON_KEYS.stringParams.tiltEnabled) {
+    handle.setSlantMode(value === 'on');
+    return;
+  }
   if (isNestedNumberKey(commandKey)) {
     const numeric = Number.parseFloat(value);
     if (Number.isNaN(numeric)) return;
     const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
     if (path.group === 'polygon') {
       handle.setParamOverrides({ polygon: { ...(handle.overrides.polygon ?? {}), [path.field]: numeric } });
+    } else if (path.group === 'ushape') {
+      handle.setParamOverrides({ ushape: { ...(handle.overrides.ushape ?? {}), [path.field]: numeric } });
+    } else if (path.group === 'tilt') {
+      // ADR-404 — γωνία/φορά για precise drawing (1-κλικ + αριθμητική κλίση). Και τα δύο πεδία πλήρη.
+      handle.setParamOverrides({
+        tilt: { direction: 0, angle: 0, ...(handle.overrides.tilt ?? {}), [path.field]: numeric },
+      });
     } else {
       const clearCatalog = catalogOwnsNestedParam(commandKey, handle.kind);
       const nextIshape: ColumnIShapeParams = { ...(handle.overrides.ishape ?? {}), [path.field]: numeric };

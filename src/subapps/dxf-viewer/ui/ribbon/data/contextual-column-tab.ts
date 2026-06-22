@@ -172,6 +172,27 @@ const ROTATION_DEG_OPTIONS = [
   { value: '180', labelKey: '180', isLiteralLabel: true },
 ] as const;
 
+// ADR-404 Φ5 — κεκλιμένη κολώνα: on/off toggle + γωνία (μοίρες από κατακόρυφο, 0..80°,
+// editable-free) + φορά (reuse ROTATION_DEG_OPTIONS ως ring 0..180°). Exported ώστε το
+// docked Properties panel (`column-property-fields.ts`) να τα κάνει reuse — μηδέν διπλό list.
+export const TILT_ENABLED_OPTIONS = [
+  { value: 'on',  labelKey: 'ribbon.commands.columnEditor.tilt.on',  isLiteralLabel: false },
+  { value: 'off', labelKey: 'ribbon.commands.columnEditor.tilt.off', isLiteralLabel: false },
+] as const;
+
+export const TILT_ANGLE_DEG_OPTIONS = [
+  { value: '0',  labelKey: '0',  isLiteralLabel: true },
+  { value: '5',  labelKey: '5',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '30', labelKey: '30', isLiteralLabel: true },
+  { value: '45', labelKey: '45', isLiteralLabel: true },
+  { value: '60', labelKey: '60', isLiteralLabel: true },
+] as const;
+
+export const TILT_DIRECTION_DEG_OPTIONS = ROTATION_DEG_OPTIONS;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
@@ -277,6 +298,54 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-404 Φ5 — κεκλιμένη κολώνα (Revit «Slanted Column»). Toggle «Κεκλιμένη»
+      // (drawing → slantMode 2-κλικ· selected → params.tilt) + γωνία + φορά κλίσης.
+      // Πάντα ορατό (η κλίση αφορά κάθε τύπο διατομής).
+      id: 'column-tilt',
+      labelKey: 'ribbon.panels.columnTilt',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.tiltEnabled',
+                labelKey: 'ribbon.commands.columnEditor.tilt.enabled',
+                commandKey: COLUMN_RIBBON_KEYS.stringParams.tiltEnabled,
+                comboboxWidthPx: 90,
+                options: TILT_ENABLED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.tiltAngle',
+                labelKey: 'ribbon.commands.columnEditor.tilt.angle',
+                commandKey: COLUMN_RIBBON_KEYS.params.tiltAngle,
+                comboboxWidthPx: 80,
+                options: TILT_ANGLE_DEG_OPTIONS,
+                numericInput: { min: 0, max: 80 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.tiltDirection',
+                labelKey: 'ribbon.commands.columnEditor.tilt.direction',
+                commandKey: COLUMN_RIBBON_KEYS.params.tiltDirection,
+                comboboxWidthPx: 80,
+                options: TILT_DIRECTION_DEG_OPTIONS,
               },
             },
           ],

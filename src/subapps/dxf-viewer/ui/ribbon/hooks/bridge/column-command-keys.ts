@@ -24,6 +24,8 @@ export const COLUMN_RIBBON_KEYS = {
     catalogProfile: 'column.params.catalogProfile',
     /** ADR-396 v2 Φ6a — ETICS envelope-function override (auto/exterior/interior). */
     envelopeFunction: 'column.params.envelopeFunction',
+    /** ADR-404 Φ5 — κεκλιμένη κολώνα on/off. Drawing mode → slantMode (2-κλικ)· selected → params.tilt. */
+    tiltEnabled: 'column.params.tiltEnabled',
   },
   params: {
     /** mm — column width (διάμετρος αν circular). */
@@ -44,6 +46,10 @@ export const COLUMN_RIBBON_KEYS = {
     legThickness: 'column.params.legThickness',
     /** ADR-363 Phase 2b — U-shape (Π) base thickness (mm, only meaningful αν kind='U-shape' χωρίς polygon). */
     baseThickness: 'column.params.baseThickness',
+    /** ADR-404 Φ5 — γωνία κλίσης (μοίρες από κατακόρυφο, 0=όρθια). Nested → tilt.angle. */
+    tiltAngle: 'column.params.tiltAngle',
+    /** ADR-404 Φ5 — φορά κλίσης (μοίρες CCW, η κορυφή γέρνει προς εκεί). Nested → tilt.direction. */
+    tiltDirection: 'column.params.tiltDirection',
   },
 } as const;
 
@@ -56,14 +62,17 @@ export type ColumnRibbonNumberCommandKey =
   | typeof COLUMN_RIBBON_KEYS.params.flangeThickness
   | typeof COLUMN_RIBBON_KEYS.params.webThickness
   | typeof COLUMN_RIBBON_KEYS.params.legThickness
-  | typeof COLUMN_RIBBON_KEYS.params.baseThickness;
+  | typeof COLUMN_RIBBON_KEYS.params.baseThickness
+  | typeof COLUMN_RIBBON_KEYS.params.tiltAngle
+  | typeof COLUMN_RIBBON_KEYS.params.tiltDirection;
 
 export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
   | typeof COLUMN_RIBBON_KEYS.stringParams.anchor
   | typeof COLUMN_RIBBON_KEYS.stringParams.material
   | typeof COLUMN_RIBBON_KEYS.stringParams.catalogProfile
-  | typeof COLUMN_RIBBON_KEYS.stringParams.envelopeFunction;
+  | typeof COLUMN_RIBBON_KEYS.stringParams.envelopeFunction
+  | typeof COLUMN_RIBBON_KEYS.stringParams.tiltEnabled;
 
 export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] = [
   COLUMN_RIBBON_KEYS.params.width,
@@ -75,6 +84,8 @@ export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] 
   COLUMN_RIBBON_KEYS.params.webThickness,
   COLUMN_RIBBON_KEYS.params.legThickness,
   COLUMN_RIBBON_KEYS.params.baseThickness,
+  COLUMN_RIBBON_KEYS.params.tiltAngle,
+  COLUMN_RIBBON_KEYS.params.tiltDirection,
 ];
 
 export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] = [
@@ -83,6 +94,7 @@ export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] 
   COLUMN_RIBBON_KEYS.stringParams.material,
   COLUMN_RIBBON_KEYS.stringParams.catalogProfile,
   COLUMN_RIBBON_KEYS.stringParams.envelopeFunction,
+  COLUMN_RIBBON_KEYS.stringParams.tiltEnabled,
 ];
 
 export const COLUMN_RIBBON_KEYS_ACTIONS = {

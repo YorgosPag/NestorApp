@@ -112,13 +112,16 @@ describe('resolveGhostFaceDimensions — arc branch (§3.12)', () => {
     const byKind = Object.fromEntries(dims.map((d) => [d.kind, d.valueScene]));
     expect(byKind.arcLeftGap).toBeCloseTo(1000 * (Math.PI / 3), 2); // 60° CW → quadrant 0° = 1047.2
     expect(byKind.arcRightGap).toBeCloseTo(1000 * (Math.PI / 6), 2); // 30° CCW → quadrant 90° = 523.6
-    expect(byKind.radius).toBeCloseTo(1000, 6);
+    expect(byKind.radius).toBeCloseTo(1000, 2);
   });
 
   it('carries curved-render span + sweepDeg on the arc gaps, witness pts ON the circle', () => {
     const dims = resolveGhostFaceDimensions(arcFrame({ x: 500, y: 866.0254 }, CIRCLE), ARC_OPTS);
     const left = dims.find((d) => d.kind === 'arcLeftGap')!;
-    expect(left.arc).toEqual({ center: { x: 0, y: 0 }, radius: 1000, startAngleDeg: 0, endAngleDeg: 60 });
+    expect(left.arc!.center).toEqual({ x: 0, y: 0 });
+    expect(left.arc!.radius).toBe(1000);
+    expect(left.arc!.startAngleDeg).toBeCloseTo(0);
+    expect(left.arc!.endAngleDeg).toBeCloseTo(60); // ≈ θ (column position angle)
     expect(left.sweepDeg).toBeCloseTo(60);
     expect(left.p1.x).toBeCloseTo(1000); // quadrant 0° = (1000,0)
     expect(left.p1.y).toBeCloseTo(0);

@@ -36,6 +36,12 @@ import {
   FINISH_MATERIAL_OPTIONS,
   FINISH_THICKNESS_OPTIONS,
 } from '../ribbon/hooks/bridge/finish-param';
+// ADR-404 Φ5 — reuse των ribbon tilt option lists (μηδέν διπλό list).
+import {
+  TILT_ENABLED_OPTIONS,
+  TILT_ANGLE_DEG_OPTIONS,
+  TILT_DIRECTION_DEG_OPTIONS,
+} from '../ribbon/data/contextual-column-tab';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../ribbon/hooks/bridge/envelope-function-param';
 // ADR-471 (boy-scout, N.0.2) — οι row/field τύποι ενοποιήθηκαν στο member-agnostic
 // `bim-property-types` (κοινά κολόνα + δοκάρι). Εδώ μένουν ως aliases (μηδέν διπλότυπο).
@@ -106,6 +112,18 @@ export const COLUMN_PROPERTY_GROUPS: readonly ColumnPropertyGroup[] = [
       { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadDeadAxial, labelKey: 'ribbon.commands.columnStructural.loadDeadAxial', options: [], readOnly: true },
       { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadLiveAxial, labelKey: 'ribbon.commands.columnStructural.loadLiveAxial', options: [], readOnly: true },
       { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadUlsAxial, labelKey: 'ribbon.commands.columnStructural.loadUlsAxial', options: [], readOnly: true },
+    ],
+  },
+  {
+    // ADR-404 Φ5 — κεκλιμένη κολώνα (Revit «Slanted Column»): on/off + γωνία + φορά.
+    // Εφαρμόζεται σε ΟΛΟΥΣ τους τύπους διατομής. Γράφει `params.tilt` μέσω
+    // UpdateColumnParamsCommand (ίδιο SSoT με το 3D gizmo, ADR-404 Φ2).
+    id: 'tilt',
+    titleKey: 'columnAdvancedPanel.sections.tilt.title',
+    fields: [
+      { commandKey: COLUMN_RIBBON_KEYS.stringParams.tiltEnabled, labelKey: 'ribbon.commands.columnEditor.tilt.enabled', options: TILT_ENABLED_OPTIONS },
+      { commandKey: COLUMN_RIBBON_KEYS.params.tiltAngle, labelKey: 'ribbon.commands.columnEditor.tilt.angle', options: TILT_ANGLE_DEG_OPTIONS },
+      { commandKey: COLUMN_RIBBON_KEYS.params.tiltDirection, labelKey: 'ribbon.commands.columnEditor.tilt.direction', options: TILT_DIRECTION_DEG_OPTIONS },
     ],
   },
   {

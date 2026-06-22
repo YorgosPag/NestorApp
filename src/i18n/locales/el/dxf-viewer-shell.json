@@ -1217,6 +1217,7 @@
       "roofActions": "Ενέργειες",
       "columnKind": "Τύπος",
       "columnGeometry": "Γεωμετρία",
+      "columnTilt": "Κλίση",
       "columnPolygon": "Πολύγωνο",
       "columnIshape": "Διατομή Ι",
       "columnUshape": "Διατομή Π",
@@ -2921,6 +2922,13 @@
         "webThickness": "Πάχος κορμού",
         "legThickness": "Πάχος ποδιού",
         "baseThickness": "Πάχος βάσης",
+        "tilt": {
+          "enabled": "Κεκλιμένη",
+          "angle": "Γωνία Κλίσης",
+          "direction": "Φορά Κλίσης",
+          "on": "Ναι",
+          "off": "Όχι"
+        },
         "attachTop": "Σύνδεση Κορυφής",
         "attachBase": "Σύνδεση Βάσης",
         "detachTop": "Αποσύνδεση Κορυφής",
@@ -4141,6 +4149,7 @@
     "sections": {
       "structural": { "title": "Στατικά / Οπλισμός" },
       "loads": { "title": "Φορτίο Σχεδιασμού" },
+      "tilt": { "title": "Κλίση" },
       "finish": { "title": "Σοβάς" },
       "envelope": { "title": "Λειτουργία Κελύφους" },
       "material": { "title": "Υλικό" }

@@ -16,7 +16,7 @@
  */
 
 import type { AlignedDimensionEntity } from '../../types/dimension';
-import type { ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
 import { mmToSceneUnits } from '../../utils/scene-units';

@@ -1217,6 +1217,7 @@
       "roofActions": "Actions",
       "columnKind": "Type",
       "columnGeometry": "Geometry",
+      "columnTilt": "Tilt",
       "columnPolygon": "Polygon",
       "columnIshape": "I-shape",
       "columnUshape": "U-shape",
@@ -2921,6 +2922,13 @@
         "webThickness": "Web thickness",
         "legThickness": "Leg thickness",
         "baseThickness": "Base thickness",
+        "tilt": {
+          "enabled": "Slanted",
+          "angle": "Tilt Angle",
+          "direction": "Tilt Direction",
+          "on": "Yes",
+          "off": "No"
+        },
         "attachTop": "Attach Top",
         "attachBase": "Attach Base",
         "detachTop": "Detach Top",
@@ -4141,6 +4149,7 @@
     "sections": {
       "structural": { "title": "Structural / Reinforcement" },
       "loads": { "title": "Design Load" },
+      "tilt": { "title": "Tilt" },
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }

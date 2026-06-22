@@ -12,6 +12,7 @@ import type {
   ColumnIShapeParams,
   ColumnParams,
   ColumnPolygonParams,
+  ColumnTilt,
   ColumnUshapeParams,
 } from '../../../../bim/types/column-types';
 import {
@@ -41,11 +42,12 @@ export const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> =
  * ADR-363 Phase 8D — Nested-param routing. Sides → polygon.sides;
  * flangeThickness/webThickness → ishape.{flange|web}Thickness.
  */
-type NestedGroup = 'polygon' | 'ishape' | 'ushape';
+type NestedGroup = 'polygon' | 'ishape' | 'ushape' | 'tilt';
 type NestedField =
   | keyof ColumnPolygonParams
   | keyof ColumnIShapeParams
-  | keyof ColumnUshapeParams;
+  | keyof ColumnUshapeParams
+  | keyof ColumnTilt;
 
 export interface NestedPath {
   readonly group: NestedGroup;
@@ -80,6 +82,17 @@ export const NESTED_NUMBER_KEY_TO_PATH: Readonly<Record<string, NestedPath>> = {
     field: 'baseThickness',
     defaultValue: DEFAULT_U_BASE_THICKNESS_MM,
   },
+  // ADR-404 Φ5 — κεκλιμένη κολώνα: γωνία + φορά κλίσης (nested `tilt.{angle|direction}`).
+  [COLUMN_RIBBON_KEYS.params.tiltAngle]: {
+    group: 'tilt',
+    field: 'angle',
+    defaultValue: 0,
+  },
+  [COLUMN_RIBBON_KEYS.params.tiltDirection]: {
+    group: 'tilt',
+    field: 'direction',
+    defaultValue: 0,
+  },
 };
 
 export function isNestedNumberKey(commandKey: string): boolean {
@@ -91,7 +104,9 @@ export function readNestedValue(params: Readonly<ColumnParams>, path: NestedPath
     ? params.polygon
     : path.group === 'ishape'
       ? params.ishape
-      : params.ushape;
+      : path.group === 'ushape'
+        ? params.ushape
+        : params.tilt;
   const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
   return typeof raw === 'number' ? raw : path.defaultValue;
 }
@@ -108,6 +123,12 @@ export function patchNestedParams(
   if (path.group === 'ushape') {
     const nextUshape: ColumnUshapeParams = { ...(params.ushape ?? {}), [path.field]: nextValue };
     return { ...params, ushape: nextUshape };
+  }
+  if (path.group === 'tilt') {
+    // ADR-404 — ΚΑΙ τα δύο πεδία υποχρεωτικά: default 0 στο απών ώστε το `ColumnTilt`
+    // να μένει πλήρες όταν ο χρήστης ορίζει μόνο γωνία ή μόνο φορά.
+    const nextTilt: ColumnTilt = { direction: 0, angle: 0, ...(params.tilt ?? {}), [path.field]: nextValue };
+    return { ...params, tilt: nextTilt };
   }
   const nextIshape: ColumnIShapeParams = { ...(params.ishape ?? {}), [path.field]: nextValue };
   return { ...params, ishape: nextIshape };
