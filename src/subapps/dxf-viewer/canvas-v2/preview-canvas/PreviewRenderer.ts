@@ -15,7 +15,6 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { OPACITY } from '../../config/color-config';
-import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
 import type { PreviewGripPoint } from '../../types/entities';
@@ -40,7 +39,8 @@ import { BimPreviewRenderer } from './bim-preview-render';
 // με το column anchor ghost) όταν η σύνδεση είναι παράλογη (συγγραμμική κοντή άκρη).
 import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
 import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
-import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { resolveGhostStatusColor, type GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { drawOverlayLabel } from './overlay-text-style';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -66,8 +66,8 @@ import { paintPolarDisk } from './polar-disk-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { paintRectGrid } from './rect-grid-paint';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
-import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
-import { drawOverlayLabel } from './overlay-text-style';
+// ADR-357 Phase 1 — polar tracking line overlay (extracted, SRP — same pattern as the other *-paint helpers).
+import { paintPolarTrackingLine } from './polar-tracking-line-paint';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -213,6 +213,25 @@ export class PreviewRenderer {
   }
 
   /**
+   * ADR-508 §opening-conflict — 🔴 tooltip που εξηγεί ΓΙΑΤΙ ο κάθετος τοίχος μπλοκάρει: κόβει
+   * άνοιγμα host σε δεδομένο εύρος ύψους (3D έλεγχος αόρατος στην κάτοψη). Called AFTER `drawPreview`·
+   * wiped στο επόμενο `drawPreview`/`clear`. Reuse `drawOverlayLabel` SSoT· χρώμα = overlap red.
+   */
+  drawGhostConflictTooltip(
+    label: string,
+    anchorWorld: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx || !label) return;
+    const screen = CoordinateTransforms.worldToScreen(anchorWorld, transform, viewport);
+    drawOverlayLabel(this.ctx, label, screen.x + 14, screen.y + 18, {
+      textColor: resolveGhostStatusColor('overlap')?.stroke ?? '#d23b3b',
+      align: 'left',
+    });
+  }
+
+  /**
    * ADR-398 §3.13 — ζωγράφισε το πολικό πλέγμα (κέντρο/δακτύλιοι/ακτίνες) του Polar Magnet. Called
    * AFTER `drawPreview` ώστε να overlay-άρει το ghost· wiped στο επόμενο `drawPreview`/`clear`.
    */
@@ -244,31 +263,7 @@ export class PreviewRenderer {
     viewport: Viewport,
   ): void {
     if (!this.ctx) return;
-    const ctx = this.ctx;
-
-    const refScreen = CoordinateTransforms.worldToScreen(ref, transform, viewport);
-    const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, viewport);
-
-    // Direction in screen space — flip Y since screen Y is down
-    const rad = degToRad(snappedAngle);
-    const dx = Math.cos(rad);
-    const dy = -Math.sin(rad);
-    const EXTEND = 6000;
-
-    ctx.save();
-    applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.drawingGuide); // SSoT: 0.5px dashed [8,5], ORANGE
-    ctx.globalAlpha = 0.75;
-    ctx.beginPath();
-    ctx.moveTo(refScreen.x, refScreen.y);
-    ctx.lineTo(refScreen.x + dx * EXTEND, refScreen.y + dy * EXTEND);
-    ctx.stroke();
-
-    ctx.restore();
-    // Tooltip near cursor — SSoT overlay label (font only), ORANGE to match the guide line.
-    drawOverlayLabel(ctx, label, cursorScreen.x + 14, cursorScreen.y - 8, {
-      textColor: OVERLAY_LINE_COLORS.drawingGuide,
-      align: 'left',
-    });
+    paintPolarTrackingLine(this.ctx, ref, snappedAngle, label, cursorWorld, transform, viewport);
   }
 
   /** Clear preview immediately */

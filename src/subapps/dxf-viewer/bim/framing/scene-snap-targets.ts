@@ -27,6 +27,8 @@ import type { Entity } from '../../types/entities';
 import { collectMemberSnapTargets, collectDiskTargets, collectRectTargets, type MemberSnapKind } from './member-snap-targets';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 import type { RectFrame } from './rect-frame';
+import type { WallEntity } from '../types/wall-types';
+import type { OpeningEntity } from '../types/opening-types';
 
 /**
  * Pre-collected face-snap στόχοι της σκηνής, **διαχωρισμένοι ανά είδος** (granular superset). Η
@@ -54,6 +56,11 @@ export interface SceneSnapTargets {
   /** ADR-398 §3.15 — ΟΡΘΟΓΩΝΙΑ ως `RectFrame` για το Cartesian Magnet (κολώνα ΜΕΣΑ στο ορθογώνιο).
    *  Ο cursor εντός ορθογωνίου → καρτεσιανό πλέγμα (9-point/grid)· στο χείλος → §3.11 edge. Μόνο η κολώνα. */
   readonly rectTargets: readonly RectFrame[];
+  /** ADR-508 §opening-conflict — υφιστάμενοι τοίχοι ΩΣ ΟΝΤΟΤΗΤΕΣ (όχι μόνο axis/outline) ώστε ο
+   *  τοίχος-φάντασμα να ελέγχει αν κόβει άνοιγμα host (`resolveWallStartOpeningConflict`). */
+  readonly wallEntities: readonly WallEntity[];
+  /** ADR-508 §opening-conflict — όλα τα ανοίγματα (πόρτες/παράθυρα) της σκηνής (φιλτράρονται ανά `wallId`). */
+  readonly openings: readonly OpeningEntity[];
 }
 
 const EMPTY: SceneSnapTargets = Object.freeze({
@@ -64,6 +71,8 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   lineTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   diskTargets: Object.freeze([]) as readonly { center: Point2D; radius: number }[],
   rectTargets: Object.freeze([]) as readonly RectFrame[],
+  wallEntities: Object.freeze([]) as readonly WallEntity[],
+  openings: Object.freeze([]) as readonly OpeningEntity[],
 });
 
 /**
@@ -81,6 +90,9 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     lineTargets: collectMemberSnapTargets(entities, { memberKinds: ['line'] }).memberTargets,
     diskTargets: collectDiskTargets(entities), // §3.13 — κύκλοι ως δίσκοι (Polar Magnet)
     rectTargets: collectRectTargets(entities), // §3.15 — ορθογώνια (Cartesian Magnet)
+    // ADR-508 §opening-conflict — full wall/opening entities (1 pass, ίδια σκηνή → preview≡commit).
+    wallEntities: entities.filter((e): e is WallEntity => e.type === 'wall'),
+    openings: entities.filter((e): e is OpeningEntity => e.type === 'opening'),
   };
 }
 

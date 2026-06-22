@@ -38,6 +38,9 @@ import {
 } from '../../bim/framing/linear-member-face-snap';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import { resolveWallStartOpeningConflict } from '../../bim/walls/wall-opening-conflict';
+import type { WallEntity } from '../../bim/types/wall-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
   resolveEffectivePreviewCursor,
   toWysiwygPreviewEntity,
@@ -71,6 +74,20 @@ function isWallGhostOverlap(
 }
 
 /**
+ * ADR-508 §opening-conflict — context για τον έλεγχο «κόβει άνοιγμα host;». Όταν δοθεί, ο builder
+ * τρέχει το `resolveWallStartOpeningConflict` πάνω στην ΧΤΙΣΜΕΝΗ οντότητα (reuse `getEntityZExtents`)
+ * και, σε conflict, κάνει το ghost 🔴 + κρύβει τις listening dims + επισυνάπτει το `openingConflict`
+ * meta (κατακόρυφο εύρος σύγκρουσης → tooltip). `null` → η συμπεριφορά μένει αμετάβλητη.
+ */
+interface WallGhostConflictCtx {
+  /** Σημείο επαφής του ghost στην παρειά host (centerline start). */
+  readonly contactPt: Readonly<Point2D>;
+  readonly thicknessMm: number;
+  readonly walls: readonly WallEntity[];
+  readonly openings: readonly OpeningEntity[];
+}
+
+/**
  * ADR-508 — SSoT build for EVERY wall-ghost path: build the WYSIWYG entity (same `buildWallEntity`
  * as commit), apply the 🔴 overlap status colour, attach optional listening dimensions. Returns
  * null on a degenerate frame. The ONE place that owns build + status, so the overlap→red look
@@ -83,11 +100,25 @@ function buildWallGhostEntity(
   sceneUnits: SceneUnits,
   isOverlap: boolean,
   faceDimensions: GhostFaceDimensionsMeta | null = null,
+  conflictCtx: WallGhostConflictCtx | null = null,
 ): ExtendedSceneEntity | null {
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
-  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  return toWysiwygPreviewEntity(built.entity, id, ghostStatusColor, faceDimensions);
+  // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
+  const conflict = conflictCtx
+    ? resolveWallStartOpeningConflict(
+        conflictCtx.contactPt, built.entity, conflictCtx.thicknessMm,
+        conflictCtx.walls, conflictCtx.openings, sceneUnits,
+      )
+    : null;
+  const overlap = isOverlap || conflict !== null;
+  const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;
+  // 🔴 → ποτέ listening dims (mirror short-end overlap).
+  const dims = overlap ? null : faceDimensions;
+  return toWysiwygPreviewEntity(
+    built.entity, id, ghostStatusColor, dims,
+    conflict ? { bandMm: conflict.bandMm } : null,
+  );
 }
 
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
@@ -114,11 +145,14 @@ export function generateWallPreview(
   const targets = sceneSnapTargetsStore.get();
   const footprints = targets.footprints;
   const members = selectGhostMembers(targets, ['wall', 'beam', 'slab']);
+  // ADR-508 §opening-conflict — host τοίχοι + ανοίγματα για τον έλεγχο «ο κάθετος τοίχος κόβει άνοιγμα;».
+  const walls = targets.wallEntities;
+  const openings = targets.openings;
 
   if (tempPoints.length === 0) {
     // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα/μέλος → κουμπώνει σε παρειά/anchor· αλλιώς ακολουθεί ελεύθερα τον κέρσορα.
-    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, members);
+    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, members, walls, openings);
   }
 
   if (tempPoints.length >= 2) {
@@ -133,7 +167,7 @@ export function generateWallPreview(
   if (preview.endPoint) {
     return makeWallFootprintGhost(
       'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
-      members, cursorPoint,
+      members, walls, openings, cursorPoint,
     );
   }
 
@@ -141,7 +175,7 @@ export function generateWallPreview(
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
-    preview.curveControl, preview.startAnchored, footprints, members,
+    preview.curveControl, preview.startAnchored, footprints, members, walls, openings,
   );
 }
 
@@ -159,6 +193,8 @@ function makeWallGhostBeforeClick(
   sceneUnits: SceneUnits,
   columnFootprints: readonly (readonly Point2D[])[],
   memberTargets: readonly LinearMemberSnapTarget[],
+  walls: readonly WallEntity[],
+  openings: readonly OpeningEntity[],
 ): ExtendedSceneEntity | null {
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const thicknessMm = resolveWallThicknessMm(overrides);
@@ -177,7 +213,9 @@ function makeWallGhostBeforeClick(
   // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
   // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
   const faceDimensions = resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
-  return buildWallGhostEntity('preview_wall_ghost', params, 'straight', sceneUnits, isOverlap, faceDimensions);
+  // ADR-508 §opening-conflict — το σημείο επαφής (centerline start) ελέγχεται κατά των ανοιγμάτων host.
+  const conflictCtx: WallGhostConflictCtx = { contactPt: start, thicknessMm, walls, openings };
+  return buildWallGhostEntity('preview_wall_ghost', params, 'straight', sceneUnits, isOverlap, faceDimensions, conflictCtx);
 }
 
 /**
@@ -196,6 +234,8 @@ function makeWallWysiwygGhost(
   startAnchored: boolean,
   columnFootprints: readonly (readonly Point2D[])[],
   memberTargets: readonly LinearMemberSnapTarget[],
+  walls: readonly WallEntity[],
+  openings: readonly OpeningEntity[],
 ): ExtendedSceneEntity | null {
   let params: WallParams;
   if (kind === 'curved') {
@@ -209,7 +249,11 @@ function makeWallWysiwygGhost(
     params = buildAnchoredWallParams(startPt, endPt, overrides, sceneUnits, columnFootprints);
   }
   const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
-  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap);
+  // ADR-508 §opening-conflict — straight μόνο (κάθετο T-framing)· το startPt είναι το σημείο επαφής host.
+  const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
+    ? null
+    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), walls, openings };
+  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, null, conflictCtx);
 }
 
 /**
@@ -227,6 +271,8 @@ function makeWallFootprintGhost(
   sceneUnits: SceneUnits,
   curveControl: Point2D | null,
   memberTargets: readonly LinearMemberSnapTarget[],
+  walls: readonly WallEntity[],
+  openings: readonly OpeningEntity[],
   alignmentPoint: Point2D | null = null,
 ): ExtendedSceneEntity | null {
   const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits, alignmentPoint);
@@ -234,7 +280,11 @@ function makeWallFootprintGhost(
     ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
     : params;
   const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
-  return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap);
+  // ADR-508 §opening-conflict — straight μόνο· startPt = σημείο επαφής host.
+  const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
+    ? null
+    : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), walls, openings };
+  return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap, null, conflictCtx);
 }
 
 /**

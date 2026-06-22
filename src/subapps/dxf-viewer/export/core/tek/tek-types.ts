@@ -61,6 +61,45 @@ export interface TekPlane {
   readonly colorHex: string;
 }
 
+/**
+ * Μία footprint κορυφή στέγης + η κλίση της ακμής που ξεκινά εκεί — `<point><record>`.
+ * `angleRad` = γωνία κλίσης σε radians (0 = αέτωμα/κατακόρυφο άκρο ή επίπεδη στέγη).
+ */
+export interface TekRoofPoint {
+  /** X (world μέτρα). */
+  readonly x: number;
+  /** Y (world μέτρα). */
+  readonly y: number;
+  /** Κλίση ακμής σε radians (atan(rise/run)). */
+  readonly angleRad: number;
+}
+
+/**
+ * Ένα «νερό» (face) της στέγης = κλειστό 3D πολύγωνο σε world μέτρα — ένα `<onev3list>`
+ * με `<v3>` κορυφές. Reuse `TekPlanePoint` ({x,y,z}) — ίδια σημασιολογία (3D κορυφή, μέτρα).
+ */
+export type TekRoofFace = readonly TekPlanePoint[];
+
+/**
+ * Μία στέγη έτοιμη για σειριοποίηση σε `<autoroof><record>` (όλα σε μέτρα). Ο Τέκτων
+ * αναπαριστά την κεκλιμένη στέγη με: footprint `points` (κορυφές + κλίση ανά ακμή) +
+ * `faces` (τα υπολογισμένα «νερά» ως 3D πολύγωνα) + στάθμη βάσης + πάχος εξώθησης.
+ */
+export interface TekRoof {
+  /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */
+  readonly id: number;
+  /** Στάθμη βάσης / γείσου (eaves datum) — `<elevation>` (μέτρα). */
+  readonly elevationM: number;
+  /** Πάχος στέγης (εξώθηση «νερών») — `<width>` (μέτρα). */
+  readonly widthM: number;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+  /** Footprint κορυφές + κλίση ανά ακμή (`<point>`). */
+  readonly points: readonly TekRoofPoint[];
+  /** Τα κεκλιμένα «νερά» ως 3D πολύγωνα (`<v3list>`). Κενό → επίπεδη στέγη. */
+  readonly faces: readonly TekRoofFace[];
+}
+
 /** Ένας τοίχος έτοιμος για σειριοποίηση σε `<record>` (όλα τα μήκη σε μέτρα). */
 export interface TekWall {
   /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */

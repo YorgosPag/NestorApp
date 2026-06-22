@@ -642,7 +642,8 @@
       "statusRegionInsidePick": "Click inside a closed rectangle → one wall filling it",
       "statusRegionBoxPick": "Drag a box around rectangles → one wall per rectangle",
       "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)",
-      "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U) → one wall per leg"
+      "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U) → one wall per leg",
+      "openingCutConflict": "Cuts an opening — height {range}"
     },
     "opening": {
       "statusHostWall": "Pick a host wall to place the opening",

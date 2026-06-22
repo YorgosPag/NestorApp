@@ -123,6 +123,11 @@ export interface PreviewCanvasHandle {
    */
   drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => void;
   /**
+   * ADR-508 §opening-conflict — draw the 🔴 tooltip explaining the height-band opening cut.
+   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawGhostConflictTooltip: (label: string, anchorWorld: Point2D) => void;
+  /**
    * ADR-398 §3.13 — draw the Polar Magnet grid (center / concentric rings / radial spokes).
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
@@ -386,6 +391,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-508 §opening-conflict: 🔴 tooltip explaining the height-band opening cut */
+        drawGhostConflictTooltip: (label: string, anchorWorld: Point2D) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawGhostConflictTooltip(label, anchorWorld, transformRef.current, viewportRef.current);
         },
 
         /** ADR-398 §3.13: Polar Magnet grid overlay (center / rings / spokes) */

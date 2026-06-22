@@ -97,3 +97,50 @@ export function footprintRingToMeters(
     z: elevationM,
   }));
 }
+
+/** Ανοχή ισότητας κορυφών σε μέτρα (1 micron) για το dedup των face rings. */
+const VERTEX_EPSILON_M = 1e-6;
+
+function samePoint3D(a: TekPlanePoint, b: TekPlanePoint): boolean {
+  return (
+    Math.abs(a.x - b.x) < VERTEX_EPSILON_M &&
+    Math.abs(a.y - b.y) < VERTEX_EPSILON_M &&
+    Math.abs(a.z - b.z) < VERTEX_EPSILON_M
+  );
+}
+
+/**
+ * Καθαρίζει ένα face ring από **διαδοχικές διπλές κορυφές** + το **κλείσιμο** (τελευταία ==
+ * πρώτη). Ο roof solver παράγει closed rings με degenerate επαναλήψεις (π.χ. ακμές μηδενικού
+ * μήκους)· ο Τέκτων **απορρίπτει** τέτοια `<v3list>` faces → η στέγη δεν ζωγραφίζεται. Τα
+ * έγκυρα faces του δείγματος είναι **απλά ανοιχτά πολύγωνα** (καμία επανάληψη). 3D σύγκριση
+ * (xy ίδιο αλλά z διαφορετικό = γνήσια κορυφή στην κλίση, ΟΧΙ διπλή).
+ */
+export function dedupeFaceRing(ring: readonly TekPlanePoint[]): TekPlanePoint[] {
+  const out: TekPlanePoint[] = [];
+  for (const p of ring) {
+    if (out.length === 0 || !samePoint3D(out[out.length - 1], p)) out.push(p);
+  }
+  // Drop trailing closing vertex (== first) ώστε το face να μείνει ανοιχτό όπως το δείγμα.
+  while (out.length > 1 && samePoint3D(out[0], out[out.length - 1])) out.pop();
+  return out;
+}
+
+/**
+ * 3D ring ενός roof «νερού» (face outline· **canvas-unit xy + mm z absolute**, από το
+ * `RoofGeometry.faces[].outline`) → `<v3>` κορυφές σε **world μέτρα**. Σε αντίθεση με το
+ * `footprintRingToMeters` (που ισοπεδώνει το Z), εδώ το **Z διατηρείται per-vertex** (mm→m)
+ * γιατί το κεκλιμένο face έχει διαφορετικό ύψος σε κάθε κορυφή (γείσο→κορφιάς). Το ring
+ * περνά από `dedupeFaceRing` (αφαίρεση degenerate επαναλήψεων — απαραίτητο για να το δεχτεί ο Τέκτων).
+ */
+export function roofFaceRingToMeters(
+  ring: readonly Point3D[], metersPerSceneUnit: number,
+): TekPlanePoint[] {
+  return dedupeFaceRing(
+    ring.map((v) => ({
+      x: v.x * metersPerSceneUnit,
+      y: v.y * metersPerSceneUnit,
+      z: (v.z ?? 0) * MM_TO_M,
+    })),
+  );
+}

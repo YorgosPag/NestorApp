@@ -45,6 +45,8 @@ import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-scale';
+// ADR-508 §opening-conflict — i18n instance (non-React) για το 🔴 tooltip «κόβει άνοιγμα».
+import { i18n } from '@/i18n';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
@@ -283,6 +285,15 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
         if (faceDims) {
           previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
+        }
+        // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
+        // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.
+        const openingConflict = (previewEntity as { openingConflict?: { bandMm: readonly [number, number] } }).openingConflict;
+        if (openingConflict) {
+          const [lo, hi] = openingConflict.bandMm;
+          const range = `${formatLengthForDisplay(lo, { withUnit: false })}–${formatLengthForDisplay(hi)}`;
+          const label = i18n.t('tools.wall.openingCutConflict', { range, ns: 'dxf-viewer-shell' });
+          previewCanvasRef.current.drawGhostConflictTooltip(label, previewPt);
         }
         // ADR-398 §3.13 — Polar Magnet: όταν ο cursor είναι μέσα σε κυκλικό δίσκο, overlay πολικό
         // πλέγμα (κέντρο/δακτύλιοι/ακτίνες). Attached ως ghost metadata από το `generateColumnPreview`.

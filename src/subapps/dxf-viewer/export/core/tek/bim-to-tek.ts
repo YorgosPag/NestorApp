@@ -17,7 +17,9 @@ import { isWindowKind } from '../../../bim/types/opening-types';
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import type { SceneUnits } from '../../../utils/scene-units';
+import type { RoofEntity } from '../../../bim/types/roof-types';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
+import { roofSlopeToRatio } from '../../../bim/geometry/roof-slope-units';
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
 import { extractEntityFootprintRing, extractHeightMm } from '../bim-to-dxf-primitives';
 import {
@@ -25,9 +27,12 @@ import {
   buildWallXMatrix,
   buildOpeningXMatrix,
   footprintRingToMeters,
+  roofFaceRingToMeters,
 } from './tek-geometry';
-import { buildWallRecordXml, buildOpenXml, buildPlaneRecordXml } from './tek-xml-writer';
-import type { TekOpening, TekPlane } from './tek-types';
+import {
+  buildWallRecordXml, buildOpenXml, buildPlaneRecordXml, buildAutoroofRecordXml,
+} from './tek-xml-writer';
+import type { TekOpening, TekPlane, TekRoof, TekRoofFace, TekRoofPoint } from './tek-types';
 
 export interface TekCollectResult {
   /** Σειριοποιημένα `<record>` τοίχων (join με newline) έτοιμα για injection. */
@@ -157,23 +162,20 @@ function entitySceneUnits(entity: Entity): SceneUnits {
   return (entity as { params?: { sceneUnits?: SceneUnits } }).params?.sceneUnits ?? 'mm';
 }
 
-/**
- * Στάθμη βάσης (mm) ενός entity. Έπιπλο = `mountingElevationMm`· στέγη = `basePivotZ`
- * (στάθμη γείσου / eaves datum — από εκεί ξεκινά το επίπεδο footprint). Αλλιώς 0.
- */
+/** Στάθμη βάσης (mm) ενός entity· έπιπλο = `mountingElevationMm` (αλλιώς 0). */
 function baseElevationMm(entity: Entity): number {
   if (isFurnitureEntity(entity)) return entity.params.mountingElevationMm;
-  if (isRoofEntity(entity)) return entity.params.basePivotZ;
   return 0;
 }
 
 /**
  * Τύποι που εξάγονται ως flat `<plane>` κουτί (footprint + εξώθηση ύψους μέσω των γενικών
- * extractors): έπιπλα (Φ2b) + στέγη (Φ-A, MVP flat — η κεκλιμένη μορφή θα γίνει `<autoroof>`).
- * Νέος τύπος με cached footprint = +ένα type-guard εδώ, μηδέν άλλη αλλαγή.
+ * extractors): έπιπλα (Φ2b). Η **στέγη** ΔΕΝ είναι plane — εξάγεται ως native `<autoroof>`
+ * (κεκλιμένη με «νερά», βλ. `collectTekRoofs`). Νέος plane-τύπος (π.χ. structural slabs Φ3)
+ * με cached footprint = +ένα type-guard εδώ, μηδέν άλλη αλλαγή.
  */
 function isTekPlaneEntity(entity: Entity): boolean {
-  return isFurnitureEntity(entity) || isRoofEntity(entity);
+  return isFurnitureEntity(entity);
 }
 
 /**
@@ -198,10 +200,10 @@ function toTekPlane(entity: Entity): TekPlane | null {
 }
 
 /**
- * Συλλέγει τα plane-εξαγώγιμα entities (έπιπλα + στέγη) μιας scope-filtered λίστας ως
- * `<plane>` records (κουτιά πραγματικού μεγέθους). Footprint/ύψος μέσω των γενικών export
- * extractors (ίδιοι με DXF) → έτοιμο να επεκταθεί (structural slabs Φ3) προσθέτοντας τύπο
- * στο `isTekPlaneEntity`. Η στέγη εξάγεται flat (MVP)· κεκλιμένη → `<autoroof>` αργότερα.
+ * Συλλέγει τα plane-εξαγώγιμα entities (έπιπλα) μιας scope-filtered λίστας ως `<plane>`
+ * records (κουτιά πραγματικού μεγέθους). Footprint/ύψος μέσω των γενικών export extractors
+ * (ίδιοι με DXF) → έτοιμο να επεκταθεί (structural slabs Φ3) προσθέτοντας τύπο στο
+ * `isTekPlaneEntity`. (Η στέγη πάει σε `collectTekRoofs` → `<autoroof>`, ΟΧΙ εδώ.)
  */
 export function collectTekPlanes(entities: readonly Entity[]): TekPlaneCollectResult {
   const records: string[] = [];
@@ -211,4 +213,63 @@ export function collectTekPlanes(entities: readonly Entity[]): TekPlaneCollectRe
     if (plane) records.push(buildPlaneRecordXml(plane));
   }
   return { planesXml: records.join('\n'), planeCount: records.length };
+}
+
+/** Προεπιλεγμένο χρώμα στέγης (κεραμίδι — ίδιο με το δείγμα autoroof). */
+const DEFAULT_ROOF_COLOR = 'A42800';
+
+export interface TekRoofCollectResult {
+  /** Serialized record elements (newline-joined), ready for autoroof injection. */
+  readonly autoroofsXml: string;
+  /** Πλήθος στεγών που εξήχθησαν. */
+  readonly roofCount: number;
+}
+
+/**
+ * Μία `RoofEntity` → `TekRoof` (native `<autoroof>`). FULL SSoT reuse: το footprint +
+ * per-edge κλίση από `params.outline`/`params.edges` (μέσω του SSoT `roofSlopeToRatio`),
+ * τα κεκλιμένα «νερά» από το **ήδη υπολογισμένο** `geometry.faces[].outline` (canvas xy +
+ * mm z) — μηδέν re-derive γεωμετρίας. Επίπεδη στέγη → angle 0 + κενά faces (degenerate).
+ */
+function toTekRoof(roof: RoofEntity, id: number): TekRoof {
+  const p = roof.params;
+  const metersPerSceneUnit = sceneUnitsToMeters(p.sceneUnits ?? 'mm');
+
+  // Footprint κορυφή i + κλίση της ακμής i (i→i+1, CCW)· αέτωμα/μη-κεκλιμένη → 0.
+  const points: TekRoofPoint[] = p.outline.vertices.map((v, i) => {
+    const edge = p.edges[i];
+    const ratio = edge?.definesSlope ? roofSlopeToRatio(edge.slope, p.slopeUnit) : 0;
+    return { x: v.x * metersPerSceneUnit, y: v.y * metersPerSceneUnit, angleRad: Math.atan(ratio) };
+  });
+
+  // Τα «νερά» (computed 3D faces) → `<onev3list>`· per-vertex z (κεκλιμένο) διατηρείται.
+  // Το `roofFaceRingToMeters` καθαρίζει degenerate επαναλήψεις· faces που καταρρέουν σε <3
+  // κορυφές (degenerate) απορρίπτονται — ο Τέκτων δεν δέχεται εκφυλισμένα πολύγωνα.
+  const faces: TekRoofFace[] = roof.geometry.faces
+    .map((f) => roofFaceRingToMeters(f.outline, metersPerSceneUnit))
+    .filter((ring) => ring.length >= 3);
+
+  return {
+    id,
+    elevationM: mmToMeters(p.basePivotZ),
+    widthM: mmToMeters(p.thickness),
+    colorHex: (roof as { color?: string }).color ?? DEFAULT_ROOF_COLOR,
+    points,
+    faces,
+  };
+}
+
+/**
+ * Συλλέγει τις στέγες μιας scope-filtered λίστας entities ως `<autoroof>` records. Native
+ * Tekton roof element (κεκλιμένη με «νερά»· footprint+κλίση ανά ακμή + computed 3D faces).
+ */
+export function collectTekRoofs(entities: readonly Entity[]): TekRoofCollectResult {
+  const records: string[] = [];
+  let id = 1;
+  for (const e of entities) {
+    if (!isRoofEntity(e)) continue;
+    records.push(buildAutoroofRecordXml(toTekRoof(e, id)));
+    id += 1;
+  }
+  return { autoroofsXml: records.join('\n'), roofCount: records.length };
 }

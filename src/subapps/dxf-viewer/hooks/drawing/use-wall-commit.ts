@@ -21,10 +21,11 @@ import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wa
 import { extendFillingWallToNeighbors } from '../../bim/walls/wall-region-autojoin';
 import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { EventBus } from '../../systems/events/EventBus';
-import { buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, type SceneUnits } from './wall-completion';
+import { buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, resolveWallThicknessMm, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-snap';
+import { resolveWallStartOpeningConflict } from '../../bim/walls/wall-opening-conflict';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 
@@ -128,6 +129,15 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
+        return false;
+      }
+      // ADR-508 §opening-conflict — μπλόκαρε commit όταν ο κάθετος τοίχος θα έκοβε άνοιγμα host τοίχου
+      // (3D: κατακόρυφη ΚΑΙ οριζόντια τομή με το κενό). Ίδιο μονοπάτι με το short-end overlap· το 🔴
+      // ghost ήταν ήδη το feedback. preview === commit (ίδιο `resolveWallStartOpeningConflict`).
+      if (resolveWallStartOpeningConflict(
+        s.startPoint, result.entity, resolveWallThicknessMm(s.overrides),
+        targets.wallEntities, targets.openings, sceneUnits,
+      )) {
         return false;
       }
       // ADR-441 Slice WALL — host-on-snap: αν τα άκρα της location-line πέφτουν σε άξονες

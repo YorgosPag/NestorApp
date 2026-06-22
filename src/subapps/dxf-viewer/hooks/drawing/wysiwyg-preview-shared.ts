@@ -31,6 +31,16 @@ const GHOST_DIM_CENTER_OFFSET_PX = 50;
 const GHOST_DIM_MIN_PX = 2;
 
 /**
+ * ADR-508 §opening-conflict — meta που επισυνάπτεται στο 🔴 wall ghost όταν ο κάθετος τοίχος κόβει
+ * άνοιγμα host. Μόνο αριθμοί (mm) → pure/N.11-clean· ο `drawing-hover-handler` μεταφράζει + μορφοποιεί
+ * το κείμενο σε display units (i18n).
+ */
+export interface OpeningConflictMeta {
+  /** [lo, hi] mm — η κατακόρυφη ζώνη σύγκρουσης (η «κομμένη» περιοχή του ανοίγματος). */
+  readonly bandMm: readonly [number, number];
+}
+
+/**
  * ADR-508 §dim — SSoT: build listening-dimension metadata from a 🟢 face-snap frame (gap-left /
  * gap-right / centre-to-centre, zoom-adaptive). `null` όταν δεν υπάρχει frame ή είναι 🔴 overlap.
  * Καταναλώνεται ΟΛΩΝ των member-ghost helpers (wall/beam/column) → ένας κώδικας για όλα.
@@ -79,6 +89,7 @@ export function toWysiwygPreviewEntity<T extends object>(
   id: string,
   ghostStatusColor?: GhostStatusColor | null,
   faceDimensions?: GhostFaceDimensionsMeta | null,
+  openingConflict?: OpeningConflictMeta | null,
 ): ExtendedSceneEntity {
   return {
     ...entity,
@@ -87,5 +98,6 @@ export function toWysiwygPreviewEntity<T extends object>(
     wysiwygPreview: true,
     ...(ghostStatusColor ? { ghostStatusColor } : {}),
     ...(faceDimensions && faceDimensions.dims.length > 0 ? { faceDimensions } : {}),
+    ...(openingConflict ? { openingConflict } : {}),
   } as unknown as ExtendedSceneEntity;
 }

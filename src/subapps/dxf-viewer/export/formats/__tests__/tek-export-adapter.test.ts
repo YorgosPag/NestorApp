@@ -12,7 +12,7 @@ import type { FurnitureParams } from '../../../bim/types/furniture-types';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
-const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
@@ -28,6 +28,18 @@ function chair(): Entity {
   return {
     id: 'f1', type: 'furniture', kind: 'chair', params,
     geometry: computeFurnitureGeometry(params),
+  } as unknown as Entity;
+}
+function roof(): Entity {
+  return {
+    id: 'r1', type: 'roof', kind: 'roof',
+    params: {
+      outline: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }, { x: 5000, y: 5000, z: 0 }, { x: 0, y: 5000, z: 0 }] },
+      edges: [{ definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+        { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 }],
+      slopeUnit: 'deg', thickness: 150, basePivotZ: 3000, sceneUnits: 'mm',
+    },
+    geometry: { faces: [{ outline: [{ x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 }, { x: 2500, y: 2500, z: 3900 }] }] },
   } as unknown as Entity;
 }
 function scene(entities: Entity[]): SceneModel {
@@ -60,5 +72,14 @@ describe('assembleTekDocument', () => {
     expect(xml).toContain('<type>10</type>'); // plane record
     expect(xml).toContain('<width>0.9</width>'); // ύψος 900mm = εξώθηση
     expect(xml).not.toMatch(/TEK_PLANE_RECORDS/); // marker καταναλώθηκε
+  });
+
+  it('both → η στέγη εγχέεται στον autoroof marker ως <autoroof> record (type 8)', () => {
+    const { xml } = assembleTekDocument(FAKE_TPL, scene([roof()]), 'both');
+    expect(xml).toContain('<type>8</type>');       // autoroof record
+    expect(xml).toContain('<elevation>3</elevation>'); // basePivotZ 3000mm → 3m
+    expect(xml).toContain('<onev3list>');           // computed «νερό»
+    expect(xml).not.toMatch(/TEK_AUTOROOF_RECORDS/); // marker καταναλώθηκε
+    expect(xml).not.toContain('<type>10</type>');   // στέγη ΟΧΙ ως plane
   });
 });

@@ -6,15 +6,18 @@
  * inject στους markers (+throw αν λείπει)· mapper straight→record, curved→skip+warning.
  */
 
-import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix, footprintRingToMeters } from '../tek-geometry';
+import {
+  mmToMeters, buildWallXMatrix, buildOpeningXMatrix, footprintRingToMeters, roofFaceRingToMeters,
+} from '../tek-geometry';
 import { computeFurnitureGeometry } from '../../../../bim/furniture/furniture-geometry';
 import type { FurnitureParams } from '../../../../bim/types/furniture-types';
 import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
   buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
+  buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml,
 } from '../tek-xml-writer';
-import { collectTekWalls, collectTekPlanes } from '../bim-to-tek';
-import type { TekOpening, TekPlane } from '../tek-types';
+import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
+import type { TekOpening, TekPlane, TekRoof } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
 describe('tek-geometry', () => {
@@ -88,15 +91,15 @@ describe('buildWallRecordXml', () => {
 });
 
 describe('injectTekEntities', () => {
-  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D';
-  it('εγχέει walls/objects/planes στους markers', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES')).toBe('AWALLSBOBJCPLANESD');
+  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E';
+  it('εγχέει walls/objects/planes/autoroofs στους markers', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS')).toBe('AWALLSBOBJCPLANESDROOFSE');
   });
-  it('planes default κενό όταν παραλείπεται', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCD');
+  it('planes/autoroofs default κενά όταν παραλείπονται', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCDE');
   });
-  it('throw αν λείπει marker (π.χ. plane)', () => {
-    expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C', 'x', 'y')).toThrow();
+  it('throw αν λείπει marker (π.χ. autoroof)', () => {
+    expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D', 'x', 'y')).toThrow();
   });
 });
 
@@ -365,46 +368,148 @@ describe('collectTekPlanes (έπιπλα → κουτιά)', () => {
   });
 });
 
-// ── στέγη ως <plane> κουτί (ADR-512 ΦΑΣΗ A, MVP flat) ──
-// Ίδιος γενικός extractor με έπιπλα/DXF: footprint από geometry.footprint, ύψος από
-// params.thickness, στάθμη από params.basePivotZ. Κεκλιμένη μορφή → <autoroof> αργότερα.
+// ── στέγη → native <autoroof> (ADR-512 ΦΑΣΗ A) ──
+// Decoded από ΔΙΑΦΟΡΑ.tek: footprint <point> (κορυφές + κλίση ακμής σε rad) + <v3list>
+// (τα «νερά» ως 3D faces, per-vertex z). FULL SSoT: footprint/edges → roofSlopeToRatio·
+// faces από το ήδη-υπολογισμένο geometry.faces[].outline (canvas xy + mm z).
+interface RoofEdge { definesSlope: boolean; slope: number }
+interface RoofFaceFix { outline: ReadonlyArray<{ x: number; y: number; z: number }> }
 function roof(
-  footprint: ReadonlyArray<{ x: number; y: number }>,
-  opts: { thickness: number; basePivotZ: number; sceneUnits?: string; color?: string },
+  outline: ReadonlyArray<{ x: number; y: number }>,
+  opts: {
+    thickness: number; basePivotZ: number; edges: RoofEdge[]; faces?: RoofFaceFix[];
+    slopeUnit?: 'deg' | 'percent'; sceneUnits?: string; color?: string;
+  },
 ): Entity {
   return {
-    id: 'roof-1', type: 'roof', kind: 'pitched',
+    id: 'roof-1', type: 'roof', kind: 'roof',
     ...(opts.color ? { color: opts.color } : {}),
-    params: { thickness: opts.thickness, basePivotZ: opts.basePivotZ, sceneUnits: opts.sceneUnits ?? 'mm' },
-    geometry: { footprint: { vertices: footprint.map((p) => ({ ...p, z: 0 })) } },
+    params: {
+      outline: { vertices: outline.map((p) => ({ ...p, z: 0 })) },
+      edges: opts.edges,
+      slopeUnit: opts.slopeUnit ?? 'deg',
+      thickness: opts.thickness,
+      basePivotZ: opts.basePivotZ,
+      sceneUnits: opts.sceneUnits ?? 'mm',
+    },
+    geometry: { faces: opts.faces ?? [] },
   } as unknown as Entity;
 }
 
-describe('collectTekPlanes (στέγη → κουτί, ΦΑΣΗ A)', () => {
+describe('buildRoofPointsXml / buildRoofV3ListXml / buildAutoroofRecordXml', () => {
+  const tekRoof: TekRoof = {
+    id: 1, elevationM: 3, widthM: 0.15, colorHex: '#A42800',
+    points: [
+      { x: 0, y: 0, angleRad: 0.366519 },
+      { x: 5, y: 0, angleRad: 0 },
+    ],
+    faces: [[{ x: 0, y: 0, z: 3 }, { x: 5, y: 0, z: 3 }, { x: 2.5, y: 2.5, z: 3.9 }]],
+  };
+  it('points → <pX>/<pY>/<angle> records (κλίση σε rad)', () => {
+    const xml = buildRoofPointsXml(tekRoof.points);
+    expect(xml).toContain('<pX>0</pX><pY>0</pY><angle>0.366519</angle>');
+    expect(xml).toContain('<pX>5</pX><pY>0</pY><angle>0</angle>');
+  });
+  it('v3list → <onev3list> ανά face με <v3> 3D κορυφές (per-vertex z)', () => {
+    const xml = buildRoofV3ListXml(tekRoof.faces);
+    expect((xml.match(/<onev3list>/g) ?? []).length).toBe(1);
+    expect((xml.match(/<v3>/g) ?? []).length).toBe(3);
+    expect(xml).toContain('<pvX>2.5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>');
+  });
+  it('record fill: κανένα {{…}} leftover + elevation/width/color + type 8', () => {
+    const xml = buildAutoroofRecordXml(tekRoof);
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<type>8</type>');
+    expect(xml).toContain('<elevation>3</elevation>');
+    expect(xml).toContain('<width>0.15</width>');
+    expect(xml).toContain('<color>A42800</color>');
+  });
+  it('επίπεδη στέγη (κενά faces) → κενό <v3list>', () => {
+    const flat: TekRoof = { ...tekRoof, faces: [] };
+    expect(buildAutoroofRecordXml(flat)).toContain('<v3list></v3list>');
+  });
+});
+
+describe('roofFaceRingToMeters (face outline → μέτρα, per-vertex z)', () => {
+  it('canvas xy + mm z → μέτρα, Z ΑΝΑ κορυφή (όχι ισοπεδωμένο)', () => {
+    const pts = roofFaceRingToMeters(
+      [{ x: 1000, y: 2000, z: 3000 }, { x: 3000, y: 2000, z: 3896 }], 0.001,
+    );
+    expect(pts[0]).toEqual({ x: 1, y: 2, z: 3 });
+    expect(pts[1]).toEqual({ x: 3, y: 2, z: 3.896 });
+  });
+
+  it('ΚΑΘΑΡΙΖΕΙ degenerate επαναλήψεις: διπλές διαδοχικές + κλείσιμο (ο solver παράγει closed ring)', () => {
+    // closed ring με duplicate (10,0,3) + κλείσιμο (==πρώτη) — όπως ο πραγματικός roof solver.
+    const ring = [
+      { x: 0, y: 0, z: 3000 }, { x: 10000, y: 0, z: 3000 }, { x: 10000, y: 0, z: 3000 }, // διπλή
+      { x: 5000, y: 2500, z: 3900 }, { x: 0, y: 0, z: 3000 }, // κλείσιμο == πρώτη
+    ];
+    const pts = roofFaceRingToMeters(ring, 0.001);
+    // απομένουν 3 distinct κορυφές (τρίγωνο): (0,0,3),(10,0,3),(5,2.5,3.9).
+    expect(pts).toEqual([
+      { x: 0, y: 0, z: 3 }, { x: 10, y: 0, z: 3 }, { x: 5, y: 2.5, z: 3.9 },
+    ]);
+  });
+
+  it('διατηρεί κορυφές με ίδιο xy αλλά ΔΙΑΦΟΡΕΤΙΚΟ z (γνήσιες, ΟΧΙ διπλές)', () => {
+    const pts = roofFaceRingToMeters(
+      [{ x: 1000, y: 1000, z: 3000 }, { x: 1000, y: 1000, z: 4000 }], 0.001,
+    );
+    expect(pts).toHaveLength(2); // γείσο+κορφιάς στην ίδια xy = δύο διαφορετικά σημεία
+  });
+});
+
+describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
   const SQUARE = [
-    { x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 },
+    { x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 },
+  ];
+  const FLAT_EDGES: RoofEdge[] = [
+    { definesSlope: false, slope: 0 }, { definesSlope: false, slope: 0 },
+    { definesSlope: false, slope: 0 }, { definesSlope: false, slope: 0 },
   ];
 
-  it('flat στέγη 4×4m, πάχος 250mm, γείσο 3000mm → footprint μέτρα + width + pointZ=3', () => {
-    const r = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000 })]);
-    expect(r.planeCount).toBe(1);
-    expect(r.planesXml).toContain('<pointX>0</pointX><pointY>0</pointY><pointZ>3</pointZ>');
-    expect(r.planesXml).toContain('<pointX>4</pointX><pointY>4</pointY><pointZ>3</pointZ>');
-    expect(r.planesXml).toContain('<width>0.25</width>'); // πάχος στέγης = εξώθηση
+  it('επίπεδη στέγη → footprint points (angle 0), elevation/width σε μέτρα', () => {
+    const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges: FLAT_EDGES })]);
+    expect(r.roofCount).toBe(1);
+    expect(r.autoroofsXml).toContain('<type>8</type>');
+    expect(r.autoroofsXml).toContain('<elevation>3</elevation>'); // basePivotZ 3000mm
+    expect(r.autoroofsXml).toContain('<width>0.15</width>');      // thickness 150mm
+    expect(r.autoroofsXml).toContain('<pX>0</pX><pY>0</pY><angle>0</angle>');
+    expect(r.autoroofsXml).toContain('<pX>5</pX><pY>0</pY><angle>0</angle>'); // 5000mm → 5m
   });
 
-  it('χρώμα από το entity (SSoT), fallback στο δείγμα όταν λείπει', () => {
-    const colored = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000, color: '#FF8040' })]);
-    expect(colored.planesXml).toContain('<color>FF8040</color>');
-    const bare = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000 })]);
-    expect(bare.planesXml).toContain('<color>BC80FC</color>');
+  it('κεκλιμένη: edge 30° → angle σε rad = atan(tan(30°)) = 30° = 0.5236 rad', () => {
+    const edges: RoofEdge[] = [
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+    ];
+    const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, slopeUnit: 'deg' })]);
+    // atan(roofSlopeToRatio(30,'deg')) = atan(tan(30°)) = 30° = 0.523598776 rad (tekNum 9dp).
+    expect(r.autoroofsXml).toContain('<angle>0.523598776</angle>');
+    expect(r.autoroofsXml).toContain('<angle>0</angle>'); // αέτωμα (definesSlope false)
   });
 
-  it('έπιπλο + στέγη μαζί → δύο plane records', () => {
-    const r = collectTekPlanes([
-      furniture({ x: 1000, y: 1000 }, 0, { w: 2000, d: 2000, h: 900 }),
-      roof(SQUARE, { thickness: 250, basePivotZ: 3000 }),
-    ]);
-    expect(r.planeCount).toBe(2);
+  it('faces → <v3list> με per-vertex z (κεκλιμένα «νερά»)', () => {
+    const faces: RoofFaceFix[] = [
+      { outline: [{ x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 }, { x: 2500, y: 2500, z: 3900 }] },
+    ];
+    const edges: RoofEdge[] = [{ definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 },
+      { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 }];
+    const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, faces })]);
+    expect(r.autoroofsXml).toContain('<onev3list>');
+    expect(r.autoroofsXml).toContain('<pvX>2.5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>'); // κορφιάς
+  });
+
+  it('χρώμα από entity (SSoT), fallback στο δείγμα όταν λείπει', () => {
+    const colored = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges: FLAT_EDGES, color: '#FF8040' })]);
+    expect(colored.autoroofsXml).toContain('<color>FF8040</color>');
+    const bare = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges: FLAT_EDGES })]);
+    expect(bare.autoroofsXml).toContain('<color>A42800</color>');
+  });
+
+  it('στέγη ΔΕΝ μπαίνει στα planes (μόνο σε autoroof)', () => {
+    const r = roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges: FLAT_EDGES });
+    expect(collectTekPlanes([r]).planeCount).toBe(0);
   });
 });

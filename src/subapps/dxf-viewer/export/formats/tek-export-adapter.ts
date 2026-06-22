@@ -13,7 +13,7 @@
 
 import type { SceneModel } from '../../types/scene-types';
 import { resolveExportEntities } from '../core/export-entity-scope';
-import { collectTekWalls, collectTekPlanes } from '../core/tek/bim-to-tek';
+import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../core/tek/bim-to-tek';
 import { injectTekEntities } from '../core/tek/tek-xml-writer';
 import { buildFloorFilename } from './dxf-export-adapter';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
@@ -42,7 +42,8 @@ export function assembleTekDocument(
   const selected = resolveExportEntities(scene.entities, entityScope);
   const { wallsXml, warnings } = collectTekWalls(selected);
   const { planesXml } = collectTekPlanes(selected);
-  return { xml: injectTekEntities(template, wallsXml, '', planesXml), warnings };
+  const { autoroofsXml } = collectTekRoofs(selected);
+  return { xml: injectTekEntities(template, wallsXml, '', planesXml, autoroofsXml), warnings };
 }
 
 /** Φορτώνει lazy τον σκελετό (εκτός main chunk) + assemble. */

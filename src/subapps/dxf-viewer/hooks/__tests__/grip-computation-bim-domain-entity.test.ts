@@ -62,3 +62,31 @@ describe('computeDxfEntityGrips — domain BIM entity (ADR-402 3D snap regressio
     expect(domainGrips).toEqual(wrappedGrips);
   });
 });
+
+describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)', () => {
+  const SQUARE = [[
+    { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 },
+  ]];
+
+  it('emits the origin grip at bbox-center for a gradient hatch (no patternOrigin)', () => {
+    const hatch = {
+      id: 'h1', type: 'hatch', boundaryPaths: SQUARE, fillType: 'gradient',
+      gradient: { type: 'linear', color1: '#2980b9', color2: '#ffffff' },
+    } as unknown as DxfEntityUnion;
+    const grips = computeDxfEntityGrips(hatch);
+    const origin = grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin');
+    expect(origin).toBeDefined();
+    expect(origin?.position).toEqual({ x: 500, y: 500 });
+    // 4 vertex grips + 1 origin.
+    expect(grips).toHaveLength(5);
+  });
+
+  it('does NOT emit the origin grip for a non-gradient (solid) hatch', () => {
+    const hatch = {
+      id: 'h2', type: 'hatch', boundaryPaths: SQUARE, fillType: 'solid',
+    } as unknown as DxfEntityUnion;
+    const grips = computeDxfEntityGrips(hatch);
+    expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin')).toBeUndefined();
+    expect(grips).toHaveLength(4);
+  });
+});

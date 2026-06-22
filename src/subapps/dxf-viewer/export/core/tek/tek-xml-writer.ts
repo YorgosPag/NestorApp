@@ -12,8 +12,13 @@ import {
   OPEN_RECORD_TEMPLATE,
   PLANE_RECORD_TEMPLATE,
   PLANE_POINT_TEMPLATE,
+  AUTOROOF_RECORD_TEMPLATE,
+  AUTOROOF_POINT_TEMPLATE,
+  AUTOROOF_V3_TEMPLATE,
 } from './tek-record-templates';
-import type { TekOpening, TekPlane, TekPlanePoint, TekWall, TekXMatrix } from './tek-types';
+import type {
+  TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace, TekRoofPoint, TekWall, TekXMatrix,
+} from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
 
@@ -21,6 +26,7 @@ export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/
 const TEK_WALL_MARKER = '<!--TEK_WALL_RECORDS-->';
 const TEK_OBJECT_MARKER = '<!--TEK_OBJECT_RECORDS-->';
 const TEK_PLANE_MARKER = '<!--TEK_PLANE_RECORDS-->';
+const TEK_AUTOROOF_MARKER = '<!--TEK_AUTOROOF_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -100,6 +106,46 @@ export function buildOpenXml(openings: readonly TekOpening[]): string {
   return `\n${openings.map(buildOpenRecordXml).join('\n')}\n`;
 }
 
+/** Σειριοποιεί τις footprint κορυφές μιας στέγης σε `<point><record>` (μέτρα + κλίση rad). */
+export function buildRoofPointsXml(points: readonly TekRoofPoint[]): string {
+  return points
+    .map((p) =>
+      AUTOROOF_POINT_TEMPLATE
+        .replace('{{X}}', tekNum(p.x))
+        .replace('{{Y}}', tekNum(p.y))
+        .replace('{{ANGLE}}', tekNum(p.angleRad)),
+    )
+    .join('\n');
+}
+
+/** Σειριοποιεί τα «νερά» (faces) μιας στέγης σε `<v3list>` → `<onev3list><v3>…</v3></onev3list>`. */
+export function buildRoofV3ListXml(faces: readonly TekRoofFace[]): string {
+  return faces
+    .map((face) => {
+      const v3s = face
+        .map((v) =>
+          AUTOROOF_V3_TEMPLATE
+            .replace('{{X}}', tekNum(v.x))
+            .replace('{{Y}}', tekNum(v.y))
+            .replace('{{Z}}', tekNum(v.z)),
+        )
+        .join('\n');
+      return `<onev3list>\n${v3s}</onev3list>`;
+    })
+    .join('\n');
+}
+
+/** Γεμίζει το parameterized autoroof record template με τις τιμές μιας στέγης. */
+export function buildAutoroofRecordXml(r: TekRoof): string {
+  return AUTOROOF_RECORD_TEMPLATE
+    .replace('{{ID}}', String(r.id))
+    .replace('{{ELEVATION}}', tekNum(r.elevationM))
+    .replace('{{WIDTH}}', tekNum(r.widthM))
+    .replace('{{COLOR}}', colorHex6(r.colorHex))
+    .replace('{{V3LIST}}', r.faces.length > 0 ? `\n${buildRoofV3ListXml(r.faces)}\n` : '')
+    .replace('{{POINTS}}', `\n${buildRoofPointsXml(r.points)}\n`);
+}
+
 /**
  * Εγχέει τα παραγόμενα records στους markers του skeleton template. Throws αν λείπει
  * marker (σπασμένο/λάθος template) ώστε να μην βγει σιωπηλά μισό αρχείο.
@@ -109,16 +155,19 @@ export function injectTekEntities(
   wallsXml: string,
   objectsXml: string,
   planesXml = '',
+  autoroofsXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
     !template.includes(TEK_OBJECT_MARKER) ||
-    !template.includes(TEK_PLANE_MARKER)
+    !template.includes(TEK_PLANE_MARKER) ||
+    !template.includes(TEK_AUTOROOF_MARKER)
   ) {
-    throw new Error('TEK skeleton template: missing wall/object/plane marker');
+    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof marker');
   }
   return template
     .replace(TEK_WALL_MARKER, wallsXml)
     .replace(TEK_OBJECT_MARKER, objectsXml)
-    .replace(TEK_PLANE_MARKER, planesXml);
+    .replace(TEK_PLANE_MARKER, planesXml)
+    .replace(TEK_AUTOROOF_MARKER, autoroofsXml);
 }
