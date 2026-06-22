@@ -119,6 +119,8 @@ export { ArcRadiusEditCommand } from './entity-commands/ArcRadiusEditCommand';
 export type { ArcRadiusEditParams, ArcRadiusInput } from './entity-commands/ArcRadiusEditCommand';
 export { PolylineVertexCommand } from './entity-commands/PolylineVertexCommand';
 export type { PolylineVertexParams, PolylineVertexOp } from './entity-commands/PolylineVertexCommand';
+// ADR-510 Φ3c — polyline segment bulge (Convert-to-Arc / Convert-to-Line / drag).
+export { SetBulgeCommand } from './entity-commands/SetBulgeCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';

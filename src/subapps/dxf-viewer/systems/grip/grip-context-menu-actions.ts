@@ -47,6 +47,16 @@ export interface GripContextActionBindContext {
    * edge midpoint (delta = 0). Provided by `useGripContextMenuController`.
    */
   readonly onSlabVertexOp?: (grip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => void;
+  /**
+   * ADR-510 Φ3c — callback for multifunctional polyline grip operations. Provided
+   * by `useGripContextMenuController`; builds the right command (PolylineVertexCommand
+   * for add/remove, SetBulgeCommand for arc/line) and runs it through the global
+   * history (one undo step).
+   */
+  readonly onPolylineVertexOp?: (
+    grip: UnifiedGripInfo,
+    op: 'add-vertex' | 'remove-vertex' | 'convert-to-arc' | 'convert-to-line',
+  ) => void;
 }
 
 function updateModeHint(): void {

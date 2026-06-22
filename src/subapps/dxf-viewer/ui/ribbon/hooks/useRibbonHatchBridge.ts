@@ -35,12 +35,19 @@ import {
 } from '../../../bim/hatch/hatch-draw-defaults-store';
 import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
 import {
+  buildGradientFromDefaults,
+  withGradientPatch,
+  type GradientFieldPatch,
+} from '../../../bim/hatch/hatch-gradient-build';
+import { normalizeGradientType } from '../../../bim/hatch/hatch-gradient';
+import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
   isHatchRibbonStringKey,
   isHatchRibbonToggleKey,
   isHatchRibbonReadoutKey,
   isHatchRibbonActionKey,
+  isHatchRibbonVisibilityKey,
 } from './bridge/hatch-command-keys';
 import type {
   RibbonComboboxState,
@@ -70,6 +77,7 @@ export interface RibbonHatchBridge {
   readonly onToggle: (commandKey: string, nextValue: boolean) => void;
   readonly getToggleState: (commandKey: string) => RibbonToggleState;
   readonly onAction: (action: string) => void;
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const NULL_TOGGLE: RibbonToggleState = false;
@@ -77,6 +85,17 @@ const NULL_TOGGLE: RibbonToggleState = false;
 /** mm² → «12.50 m²» (runtime value, όχι i18n label). */
 function formatAreaM2(mm2: number): string {
   return `${(mm2 / 1_000_000).toFixed(2)} m²`;
+}
+
+/** Map ενός gradient field patch → το αντίστοιχο flat draw-default πεδίο (no-selection mode). */
+function gradientDefaultPatch(patch: GradientFieldPatch): Partial<HatchDrawDefaults> {
+  switch (patch.field) {
+    case 'type': return { gradientType: patch.value };
+    case 'color1': return { gradientColor1: patch.value };
+    case 'color2': return { gradientColor2: patch.value };
+    case 'singleColor': return { gradientSingleColor: patch.value };
+    case 'angleDeg': return { gradientAngle: patch.value };
+  }
 }
 
 /** lineweightMm → option value ('ByLayer' ή «0.50»· toFixed(2) ταιριάζει με LINEWEIGHT_RIBBON_OPTIONS). */
@@ -119,6 +138,20 @@ export function useRibbonHatchBridge(
       executeCommand(new UpdateEntityCommand(hatch.id, patch, sm, 'Update hatch'));
     },
     [executeCommand, levelManager],
+  );
+
+  // Gradient = nested object: σε αλλαγή 1 πεδίου ξαναχτίζουμε ΟΛΟ το gradient
+  // (immutable) από (entity.gradient ?? defaults) + patch, μέσω του build SSoT.
+  const applyGradientChange = useCallback(
+    (hatch: HatchEntity | null, patch: GradientFieldPatch): void => {
+      if (hatch) {
+        const gradient = withGradientPatch(hatch.gradient, defaults, patch);
+        patchHatch(hatch, { gradient, fillType: 'gradient', patternType: 'gradient' });
+      } else {
+        setHatchDrawDefaults(gradientDefaultPatch(patch));
+      }
+    },
+    [defaults, patchHatch],
   );
 
   const getComboboxState = useCallback(

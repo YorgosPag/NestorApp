@@ -65,6 +65,23 @@ import {
 /** Παρειά στόχου (world-aligned) στην οποία κουμπώνει η κολώνα. */
 export type ColumnFaceSide = FootprintFace;
 
+/**
+ * ADR-398 §3.10 — **pre-collected** face-snap στόχοι (μία συλλογή, πολλαπλή χρήση). Το ίδιο
+ * σχήμα γεμίζει το `columnPreviewStore` (sync-in-preview, mirror τοίχου/δοκαριού) και τρέφει τον
+ * `resolveColumnFaceSnapFromTargets`. Διαχωρισμένοι ανά είδος γιατί ο resolver τους χειρίζεται
+ * διαφορετικά: κολόνες/δοκάρια/τοίχοι → bbox path (με endsAxis / wallFrame)· πλάκες → axis-relative.
+ */
+export interface ColumnFaceSnapTargets {
+  /** Column footprints (world-baked 2Δ πολύγωνα) — όλες οι 4 παρειές έγκυρες. */
+  readonly footprints: readonly (readonly Point2D[])[];
+  /** Υφιστάμενα δοκάρια ({axis, outline}) — bbox με 🔴 κοντές άκρες. */
+  readonly beamTargets: readonly LinearMemberSnapTarget[];
+  /** Υφιστάμενοι τοίχοι ({axis, outline}) — bbox + §3.9 wall-axis center. */
+  readonly wallTargets: readonly LinearMemberSnapTarget[];
+  /** Ακμές πλάκας ως {axis, outline} — axis-relative resolver (κάθε προσανατολισμός). */
+  readonly slabTargets: readonly LinearMemberSnapTarget[];
+}
+
 /** Αποτέλεσμα column face-snap: πού πάει το `position` + ποια λαβή ακουμπά + το status. */
 export interface ColumnFaceSnap {
   /** Σημείο όπου εδράζεται η `anchor` λαβή (scene units) — το committed click point. */
@@ -308,33 +325,60 @@ function resolveColumnSlabEdgeSnap(
 }
 
 /**
- * Επιλέγει το column face-snap για το ghost/click. Pure. `null` όταν κανένας στόχος δεν είναι
- * εντός `MEMBER_GHOST_CAPTURE_MM` (ελεύθερη τοποθέτηση → ο caller πέφτει στο default path).
+ * ADR-398 §3.10 — μάζεψε τους face-snap στόχους της σκηνής σε ΕΝΑ pre-collected object (SSoT
+ * populator για το `columnPreviewStore` ΚΑΙ για το `resolveColumnFaceSnap` wrapper). Reuse
+ * `collectMemberSnapTargets` (οι κολόνες μαζεύονται πάντα μαζί με τα δοκάρια). Pure.
  */
-export function resolveColumnFaceSnap(
+export function collectColumnFaceSnapTargets(entities: readonly Entity[]): ColumnFaceSnapTargets {
+  const beamPass = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
+  return {
+    footprints: beamPass.footprints,
+    beamTargets: beamPass.memberTargets,
+    wallTargets: collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets,
+    slabTargets: collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets,
+  };
+}
+
+/**
+ * ADR-398 §3.10 — **core** column face-snap από **pre-collected** στόχους (sync-in-preview SSoT,
+ * mirror του `resolveLinearMemberFaceSnap` που καταναλώνουν τοίχος/δοκάρι). Καλείται σύγχρονα από
+ * το preview ghost ΚΑΙ από το commit (ίδιοι στόχοι + ίδιος cursor → preview ≡ commit). Pure.
+ * `null` όταν κανένας στόχος δεν είναι εντός `MEMBER_GHOST_CAPTURE_MM` (ελεύθερη τοποθέτηση).
+ */
+export function resolveColumnFaceSnapFromTargets(
   cursor: Readonly<Point2D>,
-  entities: readonly Entity[],
+  t: Readonly<ColumnFaceSnapTargets>,
   sceneUnits: SceneUnits,
 ): ColumnFaceSnap | null {
-  // Στόχοι = κολόνες (πάντα) + δοκάρια + τοίχοι (bbox path). Οι ΑΚΜΕΣ ΠΛΑΚΑΣ πάνε ΞΕΧΩΡΙΣΤΑ
-  // μέσα από τον axis-relative resolver (ίδιος με τοίχο/δοκάρι) — βλ. `resolveColumnSlabEdgeSnap`.
-  const beamPass = collectMemberSnapTargets(entities, { memberKinds: ['beam'] });
-  const walls = collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets;
-  const slabEdges = collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets;
-  const slabHit = resolveColumnSlabEdgeSnap(cursor, slabEdges, sceneUnits);
-  const targets = buildFaceTargets(beamPass.footprints, beamPass.memberTargets, walls);
+  // Οι ΑΚΜΕΣ ΠΛΑΚΑΣ πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative resolver (ίδιος με τοίχο/δοκάρι)·
+  // κολόνες/δοκάρια/τοίχοι → bbox path. Βλ. `resolveColumnSlabEdgeSnap`.
+  const slabHit = resolveColumnSlabEdgeSnap(cursor, t.slabTargets, sceneUnits);
+  const targets = buildFaceTargets(t.footprints, t.beamTargets, t.wallTargets);
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
-  for (const t of targets) {
-    const d = distanceToFootprintBounds(cursor, t.bounds);
+  for (const ft of targets) {
+    const d = distanceToFootprintBounds(cursor, ft.bounds);
     if (d <= captureScene && d < bestDist) {
       bestDist = d;
-      best = t;
+      best = ft;
     }
   }
   const bboxHit = best ? { snap: resolveForTarget(cursor, best), dist: bestDist } : null;
   // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ από bbox (κολώνα/δοκάρι/τοίχος) vs ακμή πλάκας (axis-relative).
   if (slabHit && bboxHit) return slabHit.dist <= bboxHit.dist ? slabHit.snap : bboxHit.snap;
   return (slabHit ?? bboxHit)?.snap ?? null;
+}
+
+/**
+ * Επιλέγει το column face-snap για το ghost/click. Pure. Thin wrapper που μαζεύει τους στόχους
+ * από `entities` και delegate-άρει στον core `resolveColumnFaceSnapFromTargets` (ΕΝΑ SSoT). `null`
+ * όταν κανένας στόχος δεν είναι εντός `MEMBER_GHOST_CAPTURE_MM` (ελεύθερη τοποθέτηση).
+ */
+export function resolveColumnFaceSnap(
+  cursor: Readonly<Point2D>,
+  entities: readonly Entity[],
+  sceneUnits: SceneUnits,
+): ColumnFaceSnap | null {
+  return resolveColumnFaceSnapFromTargets(cursor, collectColumnFaceSnapTargets(entities), sceneUnits);
 }

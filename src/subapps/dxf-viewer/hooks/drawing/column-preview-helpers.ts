@@ -40,11 +40,9 @@ import {
   type SceneUnits,
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
-import {
-  getColumnFaceAnchor,
-  getColumnGhostStatus,
-  getColumnFaceFrame,
-} from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
@@ -90,20 +88,22 @@ export function generateColumnPreview(
     return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
   }
 
-  // Snapped point (face-snap position / corner-projected / raw) — ΤΟ ΙΔΙΟ σημείο
-  // που κάνει commit το `mouse-handler-up` (το `snap-scheduler` το γράφει μέσω
-  // `setImmediateSnap` στο ίδιο move). Κοινό SSoT με δοκάρι/τοίχο.
+  // ADR-398 §3.10 — sync-in-preview (πιστό mirror τοίχου/δοκαριού): υπολόγισε το face-snap
+  // ΣΥΓΧΡΟΝΑ εδώ από τους pre-collected στόχους (`columnPreviewStore`) + τον snapped cursor
+  // (`getImmediateSnap` μέσω `resolveEffectivePreviewCursor` — ό,τι έγραψε ο scheduler:
+  // corner-projection / BIM χαρακτηριστικό / grid). Το commit (`mouse-handler-up`) καλεί ΤΟΝ
+  // ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor → preview ≡ commit εξ ορισμού.
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
+  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, columnPreviewStore.get(), sceneUnits);
 
-  // Anchor precedence ≡ `commitColumnFromState` (preview === commit):
-  //   1. face-snap auto λαβή (flush στην παρειά)· 2. 🟢 beam → center (κέντρο ≡
-  //   άξονας)· 3. ο επιλεγμένος (ribbon/Tab) anchor.
-  const status = getColumnGhostStatus();
-  const faceAnchor = getColumnFaceAnchor();
-  const anchor: ColumnAnchor = faceAnchor ?? (status === 'beam' ? 'center' : handle.anchor);
+  // θέση + λαβή + status απευθείας από το ΕΝΑ αποτέλεσμα (ΟΧΙ από 3 stores). Η §3.9 wall-axis
+  // επιστρέφει ήδη anchor `center`· face-attach (§3.7) υπερισχύει του §3.1b center-on-beam-axis.
+  const position: Point2D = faceSnap ? faceSnap.position : effectiveCursor;
+  const status: ColumnGhostStatus = faceSnap?.status ?? 'neutral';
+  const anchor: ColumnAnchor = faceSnap?.anchor ?? handle.anchor;
 
   const overrides: ColumnParamOverrides = { ...handle.overrides, kind: handle.kind, anchor };
-  const params = buildDefaultColumnParams(effectiveCursor, handle.kind, overrides, sceneUnits);
+  const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
   const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
   if (!built.ok) return null;
 
@@ -112,8 +112,8 @@ export function generateColumnPreview(
   const isOverlap = status === 'overlap';
   const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
   // ADR-508 §dim — listening dimensions (ΙΔΙΟΣ κοινός κώδικας με τοίχο/δοκάρι): από το faceFrame
-  // που έγραψε ο column face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
+  // του ΙΔΙΟΥ face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
   const wpp = worldPerPixel(getImmediateTransform().scale);
-  const faceDimensions = resolveGhostFaceDimensionsMeta(getColumnFaceFrame() ?? undefined, isOverlap, sceneUnits, wpp);
+  const faceDimensions = resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
   return toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
 }

@@ -29,6 +29,26 @@ const FILL_TYPE_OPTIONS = [
   { value: 'solid', labelKey: 'ribbon.commands.hatchEditor.fillTypeSolid', isLiteralLabel: false },
   { value: 'user-defined', labelKey: 'ribbon.commands.hatchEditor.fillTypeUserDefined', isLiteralLabel: false },
   { value: 'predefined', labelKey: 'ribbon.commands.hatchEditor.fillTypePredefined', isLiteralLabel: false },
+  { value: 'gradient', labelKey: 'ribbon.commands.hatchEditor.fillTypeGradient', isLiteralLabel: false },
+] as const;
+
+/** Τύποι gradient (DXF 470) — ADR-507 Φ5. */
+const GRADIENT_TYPE_OPTIONS = [
+  { value: 'linear', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.linear', isLiteralLabel: false },
+  { value: 'cylinder', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.cylinder', isLiteralLabel: false },
+  { value: 'invcylinder', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.invcylinder', isLiteralLabel: false },
+  { value: 'spherical', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.spherical', isLiteralLabel: false },
+  { value: 'invspherical', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.invspherical', isLiteralLabel: false },
+  { value: 'hemispherical', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.hemispherical', isLiteralLabel: false },
+  { value: 'curved', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.curved', isLiteralLabel: false },
+] as const;
+
+/** Γωνία gradient (μοίρες) — editable numeric combobox με presets. */
+const GRADIENT_ANGLE_OPTIONS = [
+  { value: '0', labelKey: '0°', isLiteralLabel: true },
+  { value: '45', labelKey: '45°', isLiteralLabel: true },
+  { value: '90', labelKey: '90°', isLiteralLabel: true },
+  { value: '135', labelKey: '135°', isLiteralLabel: true },
 ] as const;
 
 /** Predefined μοτίβα — options από τον PAT catalog (SSoT), label μέσω i18n key. */
@@ -217,6 +237,77 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 commandKey: HATCH_RIBBON_KEYS.stringParams.lineweight,
                 comboboxWidthPx: 110,
                 options: LINEWEIGHT_RIBBON_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-507 Φ5 — Revit-style contextual: ορατό μόνο όταν fillType='gradient'.
+      id: 'hatch-gradient',
+      labelKey: 'ribbon.panels.hatchGradient',
+      visibilityKey: HATCH_RIBBON_KEYS.visibility.gradient,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientType',
+                labelKey: 'ribbon.commands.hatchEditor.gradientType',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.gradientType,
+                comboboxWidthPx: 150,
+                options: GRADIENT_TYPE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientAngle',
+                labelKey: 'ribbon.commands.hatchEditor.gradientAngle',
+                commandKey: HATCH_RIBBON_KEYS.params.gradientAngle,
+                comboboxWidthPx: 90,
+                options: GRADIENT_ANGLE_OPTIONS,
+                numericInput: { editable: true, min: 0, max: 360 },
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientColor1',
+                labelKey: 'ribbon.commands.hatchEditor.gradientColor1',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.gradientColor1,
+                // ADR-507 Φ5 — enterprise color-dialog swatch (hex in/out).
+                comboboxVariant: 'hatch-gradient-color',
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientColor2',
+                labelKey: 'ribbon.commands.hatchEditor.gradientColor2',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.gradientColor2,
+                comboboxVariant: 'hatch-gradient-color',
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'hatch.gradientSingleColor',
+                labelKey: 'ribbon.commands.hatchEditor.gradientSingleColor',
+                commandKey: HATCH_RIBBON_KEYS.toggles.gradientSingleColor,
               },
             },
           ],
