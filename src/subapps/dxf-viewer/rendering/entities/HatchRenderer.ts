@@ -22,6 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
+import { hatchBounds } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -111,7 +112,7 @@ export class HatchRenderer extends BaseEntityRenderer {
     const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
 
     if (hatch.fillType === 'gradient' && hatch.gradient) {
-      this.fillGradient(paths, hatch.gradient);
+      this.fillGradient(paths, hatch.gradient, hatch.patternOrigin);
     } else if (isSolidHatch(hatch)) {
       this.ctx.fillStyle = color;
       this.drawBoundaryPath(paths);
@@ -200,17 +201,15 @@ export class HatchRenderer extends BaseEntityRenderer {
    */
   private fillGradient(
     paths: ReadonlyArray<ReadonlyArray<Point2D>>, gradient: HatchGradient,
+    origin?: Point2D,
   ): void {
-    let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
-    for (const path of paths) {
-      for (const v of path) {
-        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-      }
-    }
-    if (!Number.isFinite(minX) || maxX <= minX || maxY <= minY) return;
-    const cx = (minX + maxX) / 2; const cy = (minY + maxY) / 2;
-    const w = maxX - minX; const h = maxY - minY;
+    // SSoT bbox (κοινό με το gradient-origin grip default).
+    const b = hatchBounds(paths);
+    if (!b || b.maxX <= b.minX || b.maxY <= b.minY) return;
+    // origin (seed, ADR-507 Φ5 A3) = το patternOrigin όταν υπάρχει, αλλιώς κέντρο bbox.
+    const cx = origin?.x ?? (b.minX + b.maxX) / 2;
+    const cy = origin?.y ?? (b.minY + b.maxY) / 2;
+    const w = b.maxX - b.minX; const h = b.maxY - b.minY;
 
     // shift (DXF 461) → μετατοπίζει τη γεωμετρία κατά τον άξονα της γωνίας (όχι τα
     // stops → μηδέν degenerate offset). 0=centered· →1 το 1ο χρώμα κυριαρχεί.

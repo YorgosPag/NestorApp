@@ -21,10 +21,67 @@ import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 
+/** Grip kind για το gradient origin/seed (ADR-507 Φ5 A3). */
+export const HATCH_GRADIENT_ORIGIN_KIND = 'hatch-gradient-origin' as const;
+
 export interface HatchGripDragInput {
   readonly originalBoundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>;
   readonly delta: Point2D;
   readonly rectilinear?: boolean;
+}
+
+/** True όταν το grip kind είναι το gradient origin (όχι boundary vertex). */
+export function isHatchOriginGripKind(gripKind: HatchGripKind): boolean {
+  return gripKind === HATCH_GRADIENT_ORIGIN_KIND;
+}
+
+/** Axis-aligned bounding box των boundaryPaths· `null` σε κενό όριο. */
+export interface HatchBounds {
+  readonly minX: number; readonly minY: number;
+  readonly maxX: number; readonly maxY: number;
+}
+
+/**
+ * SSoT bounding-box των boundaryPaths. Το μοιράζονται η προεπιλεγμένη θέση του
+ * gradient origin (`hatchBoundsCenter`) και ο `HatchRenderer.fillGradient`
+ * (center + extent) → ΜΙΑ bbox math, μηδέν διπλότυπο.
+ */
+export function hatchBounds(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): HatchBounds | null {
+  let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
+  for (const path of boundaryPaths) {
+    for (const v of path) {
+      if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+    }
+  }
+  if (!Number.isFinite(minX) || maxX < minX || maxY < minY) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+/**
+ * Κέντρο bbox των boundaryPaths — η **προεπιλεγμένη** θέση του gradient origin
+ * (όταν `patternOrigin` απών). Επιστρέφει `null` σε κενό/εκφυλισμένο όριο.
+ */
+export function hatchBoundsCenter(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): Point2D | null {
+  const b = hatchBounds(boundaryPaths);
+  return b ? { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 } : null;
+}
+
+/**
+ * Pure transform: gradient origin + drag delta → νέο origin (Point2D). Rectilinear
+ * (Shift/Ortho) → quantize στον κυρίαρχο άξονα, ίδιο με τη boundary λαβή. Δεν
+ * μεταλλάσσει το input.
+ */
+export function applyHatchOriginGripDrag(
+  originalOrigin: Point2D,
+  input: Readonly<Pick<HatchGripDragInput, 'delta' | 'rectilinear'>>,
+): Point2D {
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
+  return { x: originalOrigin.x + delta.x, y: originalOrigin.y + delta.y };
 }
 
 /** Decode `hatch-vertex-${pathIdx}-${vertexIdx}` → `[pathIdx, vertexIdx]` or `null`. */

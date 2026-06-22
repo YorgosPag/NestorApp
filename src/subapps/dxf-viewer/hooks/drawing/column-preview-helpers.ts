@@ -40,11 +40,11 @@ import {
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
-import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
-import { buildPolarDiskGrid, findDiskContaining } from '../../bim/columns/polar-disk-snap';
-import { buildRectGrid, findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
+import { buildPolarDiskGrid, findDiskContaining, type PolarDiskGrid, type PolarDiskSnapOptions } from '../../bim/columns/polar-disk-snap';
+import { buildRectGrid, findRectContaining, resolveRectCartesianDims, type RectGrid } from '../../bim/columns/rect-cartesian-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 // ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
@@ -63,6 +63,27 @@ import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
+
+/**
+ * ADR-398 §3.13/§3.15 — χτίζει το placement-guidance πλέγμα (πολικό δίσκου ή καρτεσιανό ορθογωνίου)
+ * γύρω από ένα **σημείο αναφοράς**. **Κοινό SSoT** για awaitingPosition (ref = snapped cursor) ΚΑΙ
+ * awaitingRotation (ref = κλειδωμένη θέση 1ου κλικ): το πλέγμα **παραμένει ορατό κατά τη στρέψη**
+ * (Giorgio 2026-06-22 — μετά το 1ο κλικ μέσα σε δίσκο/ορθογώνιο η πολική/καρτεσιανή καθοδήγηση ΔΕΝ
+ * πρέπει να χάνεται). Η δομή (κέντρο/δακτύλιοι/άξονες) ανήκει στον στόχο· το `ref` καθορίζει μόνο
+ * το ενεργό δαχτυλίδι/πυκνότητα. ΙΔΙΟΣ resolver με το snap → καμία απόκλιση πλέγματος↔snap.
+ */
+function buildPlacementGridMeta(
+  ref: Readonly<Point2D>,
+  targets: Readonly<SceneSnapTargets>,
+  sceneUnits: SceneUnits,
+  polarOpts: Readonly<PolarDiskSnapOptions>,
+): { polarDiskGrid?: PolarDiskGrid; rectGrid?: RectGrid } {
+  const disk = findDiskContaining(ref, targets.diskTargets);
+  const polarDiskGrid = disk ? buildPolarDiskGrid(ref, disk, sceneUnits, polarOpts) : null;
+  const rect = findRectContaining(ref, targets.rectTargets);
+  const rectGrid = rect ? buildRectGrid(rect, sceneUnits, polarOpts) : null;
+  return { ...(polarDiskGrid ? { polarDiskGrid } : {}), ...(rectGrid ? { rectGrid } : {}) };
+}
 
 /**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a
@@ -91,7 +112,14 @@ export function generateColumnPreview(
     };
     const params = buildDefaultColumnParams(rot.origin, handle.kind, overrides, sceneUnits);
     const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
-    return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
+    if (!built.ok) return null;
+    const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null);
+    // ADR-398 §3.13/§3.15 (Giorgio 2026-06-22) — ΔΙΑΤΗΡΗΣΕ την πολική/καρτεσιανή καθοδήγηση ΚΑΙ μετά
+    // το 1ο κλικ: το πλέγμα χτίζεται γύρω από την ΚΛΕΙΔΩΜΕΝΗ θέση (`rot.origin`) ώστε ο χρήστης να
+    // βλέπει τις πολικές συντεταγμένες ενώ ορίζει τη γωνία (ΕΝΑ SSoT helper με το awaitingPosition).
+    const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
+    const grid = buildPlacementGridMeta(rot.origin, sceneSnapTargetsStore.get(), sceneUnits, polarOpts);
+    return Object.keys(grid).length ? ({ ...ghost, ...grid } as typeof ghost) : ghost;
   }
 
   // ADR-404 Φ5 §slanted — μετά το 1ο κλικ (awaitingTopLean): η κολώνα μένει στη ΣΤΑΘΕΡΗ βάση
@@ -154,10 +182,7 @@ export function generateColumnPreview(
     : resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
   const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
   // §3.13/§3.15 — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata· ο `drawing-hover-handler`
-  // το ζωγραφίζει ως overlay. ΙΔΙΟ candidate SSoT με το snap (μηδέν απόκλιση πλέγματος↔snap).
-  const polarDisk = findDiskContaining(effectiveCursor, targets.diskTargets);
-  const polarDiskGrid = polarDisk ? buildPolarDiskGrid(effectiveCursor, polarDisk, sceneUnits, polarOpts) : null;
-  const rectGrid = rect ? buildRectGrid(rect, sceneUnits, polarOpts) : null;
-  const extra = { ...(polarDiskGrid ? { polarDiskGrid } : {}), ...(rectGrid ? { rectGrid } : {}) };
+  // το ζωγραφίζει ως overlay. ΕΝΑ SSoT helper με το awaitingRotation path (μηδέν απόκλιση πλέγματος↔snap).
+  const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, polarOpts);
   return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
 }

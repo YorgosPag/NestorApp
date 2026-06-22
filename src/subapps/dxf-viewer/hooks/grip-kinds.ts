@@ -218,9 +218,15 @@ export type FloorFinishGripKind =
  * (unlike the flat floor-finish footprint). Routes commit through
  * `applyHatchGripDrag()` + `UpdateHatchBoundaryCommand`.
  *
- *   - `hatch-vertex-${pathIdx}-${vertexIdx}` → translate boundary vertex.
+ *   - `hatch-vertex-${pathIdx}-${vertexIdx}` → translate boundary vertex
+ *     (commit: `applyHatchGripDrag()` + `UpdateHatchBoundaryCommand`).
+ *   - `hatch-gradient-origin` → drag the gradient origin/seed point (ADR-507 Φ5 A3·
+ *     reuse `patternOrigin`· commit: `applyHatchOriginGripDrag()` +
+ *     `UpdateHatchOriginCommand`). Εμφανίζεται ΜΟΝΟ όταν `fillType==='gradient'`.
  */
-export type HatchGripKind = `hatch-vertex-${number}-${number}`;
+export type HatchGripKind =
+  | `hatch-vertex-${number}-${number}`
+  | 'hatch-gradient-origin';
 
 /**
  * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam grip kind (parametric grip type).

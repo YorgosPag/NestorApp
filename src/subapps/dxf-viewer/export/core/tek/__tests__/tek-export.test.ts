@@ -6,7 +6,9 @@
  * inject στους markers (+throw αν λείπει)· mapper straight→record, curved→skip+warning.
  */
 
-import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix, furnitureFootprintMeters } from '../tek-geometry';
+import { mmToMeters, buildWallXMatrix, buildOpeningXMatrix, footprintRingToMeters } from '../tek-geometry';
+import { computeFurnitureGeometry } from '../../../../bim/furniture/furniture-geometry';
+import type { FurnitureParams } from '../../../../bim/types/furniture-types';
 import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
   buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
@@ -269,13 +271,13 @@ describe('collectTekWalls — κουφώματα (ΦΑΣΗ 2)', () => {
 });
 
 // ── έπιπλα ως <plane> κουτιά (ADR-512 ΦΑΣΗ 2b) ──
-describe('furnitureFootprintMeters (scene→μέτρα + elevation)', () => {
+describe('footprintRingToMeters (scene→μέτρα + elevation)', () => {
   it('mm footprint → μέτρα, Z=elevation', () => {
     const fp = [
       { x: 1000, y: 2000, z: 0 },
       { x: 3000, y: 2000, z: 0 },
     ];
-    const pts = furnitureFootprintMeters(fp, 0.001, 0.5);
+    const pts = footprintRingToMeters(fp, 0.001, 0.5);
     expect(pts[0]).toEqual({ x: 1, y: 2, z: 0.5 });
     expect(pts[1]).toEqual({ x: 3, y: 2, z: 0.5 });
   });
@@ -307,17 +309,21 @@ describe('buildPlanePointsXml / buildPlaneRecordXml', () => {
   });
 });
 
+// Πραγματικό furniture entity: params + cached geometry (όπως στη δημιουργία, ADR-410).
+// Ο tek mapper διαβάζει το cached footprint μέσω του γενικού extractEntityFootprintRing.
 function furniture(
   position: { x: number; y: number }, rotationDeg: number,
   dims: { w: number; d: number; h: number }, extra: Record<string, unknown> = {},
 ): Entity {
+  const params: FurnitureParams = {
+    kind: 'chair', assetId: 'chair-01', position: { ...position, z: 0 }, rotationDeg,
+    widthMm: dims.w, depthMm: dims.d, heightMm: dims.h, mountingElevationMm: 0, sceneUnits: 'mm',
+    ...(extra as Partial<FurnitureParams>),
+  };
   return {
     id: `f-${position.x}-${position.y}`, type: 'furniture', kind: 'chair',
-    params: {
-      kind: 'chair', assetId: 'chair-01', position: { ...position, z: 0 }, rotationDeg,
-      widthMm: dims.w, depthMm: dims.d, heightMm: dims.h, mountingElevationMm: 0, sceneUnits: 'mm',
-      ...extra,
-    },
+    params,
+    geometry: computeFurnitureGeometry(params),
   } as unknown as Entity;
 }
 

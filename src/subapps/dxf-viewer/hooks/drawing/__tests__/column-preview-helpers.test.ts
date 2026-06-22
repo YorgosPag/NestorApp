@@ -11,6 +11,8 @@
 import { generateColumnPreview } from '../column-preview-helpers';
 import { columnToolBridgeStore } from '../../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { setImmediateSnap, clearImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
+import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
+import { setColumnRotationLock, clearColumnRotationLock } from '../../../systems/cursor/ColumnRotationStore';
 import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../../bim/framing/scene-snap-targets';
 import type { LinearMemberSnapTarget } from '../../../bim/framing/linear-member-face-snap';
 import type { ColumnAnchor, ColumnKind } from '../../../bim/types/column-types';
@@ -86,6 +88,7 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
   afterEach(() => {
     columnToolBridgeStore.set(null);
     clearImmediateSnap();
+    clearColumnRotationLock();
     sceneSnapTargetsStore.reset();
   });
 
@@ -163,6 +166,22 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
     const ghost = generateColumnPreview({ x: 1100, y: 0 }) as PreviewColumn;
     expect(ghost.ghostStatusColor).not.toBeNull();
     expect(ghost.ghostStatusColor!.stroke).toBe('#d23b3b');
+  });
+
+  // ADR-398 §3.13 (Giorgio 2026-06-22): μετά το 1ο κλικ μέσα σε δίσκο η κολώνα μπαίνει σε
+  // awaitingRotation (2-click ΠΑΝΤΑ)· το πολικό πλέγμα guidance πρέπει να ΠΑΡΑΜΕΝΕΙ ορατό (χτισμένο
+  // γύρω από την ΚΛΕΙΔΩΜΕΝΗ θέση) ώστε ο χρήστης να μη χάνει τις πολικές συντεταγμένες ενώ στρέφει.
+  it('awaitingRotation μέσα σε δίσκο → κολώνα στην κλειδωμένη θέση + ΔΙΑΤΗΡΕΙ το polarDiskGrid', () => {
+    activateColumnBridge({ anchor: 'center' });
+    updateImmediateTransform({ scale: 1, offsetX: 0, offsetY: 0 }); // worldPerPixel=1 → υπαρκτό πλέγμα
+    setTargets({ diskTargets: [{ center: { x: 0, y: 0 }, radius: 3000 }] });
+    setColumnRotationLock({ x: 0, y: 0 }, 'center'); // 1ο κλικ: θέση κλειδωμένη στο κέντρο δίσκου
+    // ο κέρσορας τώρα ΕΞΩ από τον δίσκο (ορίζει γωνία) — το πλέγμα δεν πρέπει να χαθεί.
+    const ghost = generateColumnPreview({ x: 5000, y: 0 }) as PreviewColumn & { readonly polarDiskGrid?: unknown };
+    expect(ghost).not.toBeNull();
+    expect(ghost.params.position.x).toBeCloseTo(0); // μένει στην κλειδωμένη θέση, ΟΧΙ στον κέρσορα
+    expect(ghost.params.position.y).toBeCloseTo(0);
+    expect(ghost.polarDiskGrid).toBeDefined(); // §3.13 guidance ΠΑΡΑΜΕΝΕΙ
   });
 
   it('respects ribbon kind + width overrides (WYSIWYG dims == committed dims)', () => {

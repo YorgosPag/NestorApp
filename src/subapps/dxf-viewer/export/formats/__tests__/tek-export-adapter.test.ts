@@ -7,6 +7,8 @@
  */
 
 import { assembleTekDocument } from '../tek-export-adapter';
+import { computeFurnitureGeometry } from '../../../bim/furniture/furniture-geometry';
+import type { FurnitureParams } from '../../../bim/types/furniture-types';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
@@ -19,12 +21,13 @@ function wall(): Entity {
   } as unknown as Entity;
 }
 function chair(): Entity {
+  const params: FurnitureParams = {
+    kind: 'chair', assetId: 'chair-01', position: { x: 1000, y: 1000, z: 0 }, rotationDeg: 0,
+    widthMm: 2000, depthMm: 2000, heightMm: 900, mountingElevationMm: 0, sceneUnits: 'mm',
+  };
   return {
-    id: 'f1', type: 'furniture', kind: 'chair',
-    params: {
-      kind: 'chair', assetId: 'chair-01', position: { x: 1000, y: 1000, z: 0 }, rotationDeg: 0,
-      widthMm: 2000, depthMm: 2000, heightMm: 900, mountingElevationMm: 0, sceneUnits: 'mm',
-    },
+    id: 'f1', type: 'furniture', kind: 'chair', params,
+    geometry: computeFurnitureGeometry(params),
   } as unknown as Entity;
 }
 function scene(entities: Entity[]): SceneModel {
