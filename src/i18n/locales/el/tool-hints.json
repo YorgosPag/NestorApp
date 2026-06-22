@@ -790,8 +790,6 @@
     "lengthen": "Μήκος",
     "addVertex": "Προσθήκη κορυφής",
     "removeVertex": "Διαγραφή κορυφής",
-    "convertToArc": "Μετατροπή σε τόξο",
-    "convertToLine": "Μετατροπή σε ευθεία",
     "radius": "Ακτίνα",
     "prompt": {
       "lengthenTitle": "Επιμήκυνση κατά μήκος",
@@ -810,10 +808,15 @@
     "undo": "Αναίρεση",
     "deleteCorner": "Διαγραφή γωνίας",
     "addCorner": "Προσθήκη γωνίας εδώ",
+    "addVertex": "Προσθήκη κορυφής",
+    "removeVertex": "Αφαίρεση κορυφής",
+    "convertToArc": "Μετατροπή σε τόξο",
+    "convertToLine": "Μετατροπή σε ευθεία",
     "section": {
       "modes": "Λειτουργία",
       "extras": "Επιπλέον",
       "vertexOps": "Γωνία",
+      "polylineOps": "Πολυγραμμή",
       "terminal": "Ενέργειες"
     },
     "prompts": {

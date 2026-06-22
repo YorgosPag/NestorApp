@@ -200,3 +200,15 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   thin `PreviewCanvas` facade. Χρώμα HUD = ουδέτερο γκρι (διακριτό από cyan listening dims). **Κλειδωμένο
   (Giorgio):** στυλ «Αρχιτεκτονικό» (διαστάσεις πάνω στον τοίχο). ⚠️ CHECK 6B/6D (PreviewRenderer/
   PreviewCanvas/drawing-hover-handler) → stage ADR-040. 🔴 tsc + browser-verify + commit.
+- **2026-06-23 (§center/flush μαγνήτες — Giorgio bug «δεν κεντράρει σε κοντή γραμμή»)** — όταν ο τοίχος
+  κούμπωνε την παρειά του σε **κοντή γραμμή** (π.χ. 25cm), δεν καθόταν στο **μέσο** της: άφηνε 1,5/2,5cm
+  (5mm offset). **ΡΙΖΑ:** στο T-framing (`resolveLinearMemberFaceSnap`) το `centerAlong` ακολουθούσε τον
+  cursor κουμπωμένο σε **regular grid** (`quantizeMagnitude(cAlong, slideStepScene)`, anchored στην αρχή
+  της γραμμής) → **έχανε** το μέσο/flush. Λείπαν οι «μαγνήτες» χαρακτηριστικών θέσεων που έχει ήδη η
+  **κολόνα** (`resolveMemberColumnFaceSnap`: lo→flush, mid→κέντρο, hi→flush). **FIX:** NEW pure
+  `magnetizeGhostCenterAlong` — το centerline κουμπώνει στο **κέντρο** της παρειάς ή **flush** σε κάθε
+  κοντή άκρη όταν ο raw cursor είναι εντός `radius=slideStepScene`, αλλιώς συνεχής/grid ολίσθηση (ΜΕΤΑΞΥ
+  μαγνητών αμετάβλητη). Gated σε `slideStepScene` (τοίχος)· **δοκάρι αμετάβλητο**. Υλοποιεί το documented
+  intent του `lineTarget`/`edgeBandTarget` («flush εκατέρωθεν + center»). 5 jest (center/flush/free-slide·
+  26 σύνολο). 🔴 browser-verify + commit. (Pre-existing άσχετο fail `beam-grips.test` rotation-grip
+  standoff = grip-domain, uncommitted άλλου agent — ΟΧΙ δικό μου.)

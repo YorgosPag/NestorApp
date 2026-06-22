@@ -49,6 +49,17 @@ export function isWallRegionTool(tool: string | null | undefined): boolean {
 }
 
 /**
+ * Όλα τα εργαλεία ΣΧΕΔΙΑΣΗΣ τοίχου που μοιράζονται το ίδιο contextual tab + τις
+ * ίδιες draw-defaults (`wallToolBridgeStore`): ευθύς/καμπύλος/πολυγραμμή τοίχος
+ * (`'wall'`), region 3-way (`isWallRegionTool`) και «από περίγραμμα». SSoT — το
+ * inline check ζούσε διπλό σε `ribbon-contextual-config` + θα ζητηθεί και από το
+ * αριστερό draft panel (`BimPropertiesRouter`) + το auto-switch (N.0.2).
+ */
+export function isWallDrawingTool(tool: string | null | undefined): boolean {
+  return tool === 'wall' || isWallRegionTool(tool) || tool === 'wall-from-perimeter';
+}
+
+/**
  * Εργαλεία που χρησιμοποιούν το box-select marquee pipeline (drag → emit
  * `bim:wall-region-box-select`): οι «με πλαίσιο» region variants + όλα τα
  * «από περίγραμμα» (outer/discrete, κολώνα/τοιχίο). Τα «4 γραμμές»/«μέσα σε

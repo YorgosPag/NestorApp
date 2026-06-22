@@ -44,6 +44,11 @@ export interface BimPropertiesShellProps {
   readonly currentScene: SceneModel | null;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /**
+   * ADR-363 — ενεργό εργαλείο σχεδίασης. Προωθείται στον `BimPropertiesRouter`
+   * για το draft property panel του τοίχου (εργαλείο ενεργό, καμία επιλογή).
+   */
+  readonly activeTool?: string;
 }
 
 const SUB_TABS = ['parameters', 'boq', 'comments', 'audit'] as const;

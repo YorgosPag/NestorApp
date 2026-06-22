@@ -27,6 +27,7 @@ import type {
 } from '../../bim/types/wall-types';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../bim/types/wall-types';
 import { getDefaultDnaForCategory } from '../../bim/types/wall-dna-types';
+import type { WallDna } from '../../bim/types/wall-dna-types';
 import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../bim/validators/wall-validator';
@@ -59,6 +60,13 @@ export interface WallParamOverrides {
   readonly height?: number;
   /** mm. Overrides DNA-derived thickness (advanced use only). */
   readonly thickness?: number;
+  /**
+   * ADR-363 — πλήρης σύνθεση στρώσεων ως draw-default (left draft panel «ΣΥΝΘΕΣΗ
+   * ΣΤΡΩΣΕΩΝ»). Όταν set, ο επόμενος τοίχος γεννιέται με ΑΥΤΟ το DNA (thickness =
+   * `dna.totalThickness`), priority πάνω από το category-default DNA. Reuse του
+   * ΙΔΙΟΥ `WallParams.dna` shape — μηδέν νέος τύπος.
+   */
+  readonly dna?: WallDna;
   readonly flip?: boolean;
   /**
    * ADR-404 Phase 5b — κεκλιμένος τοίχος (battered wall). Όταν set, ο τοίχος
@@ -88,6 +96,9 @@ export interface WallParamOverrides {
  * preset's `totalThickness` for the category.
  */
 export function resolveWallThicknessMm(overrides: WallParamOverrides = {}): number {
+  // ADR-363 — explicit DNA draw-default wins (thickness ≡ dna.totalThickness, ίδιο
+  // invariant με τον DNA editor)· μετά manual thickness· αλλιώς category preset.
+  if (overrides.dna) return overrides.dna.totalThickness;
   if (overrides.thickness !== undefined) return overrides.thickness;
   return getDefaultDnaForCategory(overrides.category ?? 'exterior').totalThickness;
 }
@@ -113,13 +124,16 @@ export function buildDefaultWallParams(
   const category: WallCategory = overrides.category ?? 'exterior';
   // ADR-448 Phase 2 — storey-aware default: override → active storey height → legacy const.
   const height = resolveStoreyHeightMm(overrides.height, DEFAULT_WALL_HEIGHT_MM);
-  // Thickness resolution (Revit "Generic Wall" pattern, SSoT `resolveWallThicknessMm`):
-  //   - Explicit override → manual wall, NO DNA attached (caller owns layers).
-  //   - Else → DNA preset SSoT, thickness === dna.totalThickness.
-  const overrideThickness = overrides.thickness;
+  // Thickness + DNA resolution (Revit "Generic Wall" pattern, SSoT `resolveWallThicknessMm`):
+  //   - Explicit DNA draw-default → use it as-is (thickness === dna.totalThickness).
+  //   - Else explicit thickness override → manual wall, NO DNA (caller owns layers).
+  //   - Else → DNA preset SSoT for the category, thickness === dna.totalThickness.
   const thickness = resolveWallThicknessMm(overrides);
-  const dna: ReturnType<typeof getDefaultDnaForCategory> | null =
-    overrideThickness === undefined ? getDefaultDnaForCategory(category) : null;
+  const dna: WallDna | null = overrides.dna
+    ? overrides.dna
+    : overrides.thickness === undefined
+      ? getDefaultDnaForCategory(category)
+      : null;
   // ADR-449 Slice X4 — additive σοβάς ως finish skin (mirror κολόνας/δοκαριού), ΟΧΙ DNA layer.
   const finish = categoryGetsFinishSkin(category) ? createDefaultStructuralFinishSpec() : undefined;
   // ADR-363 Phase 1F — alignment offset: shift the axis perpendicular toward

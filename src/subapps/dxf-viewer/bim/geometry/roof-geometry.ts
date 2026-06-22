@@ -37,9 +37,10 @@ import {
   DEFAULT_ROOF_SLOPE_DEG,
   MIN_ROOF_POLYGON_VERTICES,
 } from '../types/roof-types';
-import { polygonArea, polygonBbox, polygonPerimeter } from './shared/polygon-utils';
+import { isConvexPolygon, polygonArea, polygonBbox, polygonPerimeter } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { roofSlopeToRatio, roofSlopeFromRatio } from './roof-slope-units';
+import { solveRoofByStraightSkeleton } from './roof-skeleton-solver';
 import {
   inwardNormal,
   makeFace,
@@ -77,12 +78,16 @@ function classifyShape(planes: readonly EavePlane[]): RoofShape {
 
 /**
  * Παράγει τα νερά + κορφιάδες. 0 planes → flat (1 face)· 1 → mono (1 face)·
- * ≥2 → γενικός lower-envelope solver (gable/hip/complex ενιαία). Graceful flat
- * fallback αν ο solver καταρρεύσει (degenerate footprint).
+ * ≥2 → solver. **Κοίλο (concave) footprint με ΟΛΕΣ τις ακμές κλίσης (hip)** →
+ * straight skeleton (Revit-correct τετράρριχτη σε σχήματα Γ/Τ/Π, με λούκια στις
+ * εσωτερικές γωνίες, ADR-417 Φ2). **Κυρτό / μικτό (αετώματα)** → ο proven
+ * lower-envelope solver (gable/hip/complex ενιαία). Graceful flat fallback αν ο
+ * solver καταρρεύσει (degenerate footprint).
  */
 function buildFacesAndRidges(
   footprint2D: readonly Vec2[],
   planes: readonly EavePlane[],
+  slopeEdgeIndices: readonly number[],
   basePivotZ: number,
   s: number,
   canvasToM: number,
@@ -93,6 +98,10 @@ function buildFacesAndRidges(
   });
   if (planes.length === 0) return flat(0, []);
   if (planes.length === 1) return flat(planes[0].ratio, planes);
+  if (!isConvexPolygon(footprint2D)) {
+    const sk = solveRoofByStraightSkeleton(footprint2D, planes, slopeEdgeIndices, basePivotZ, s, canvasToM);
+    if (sk && sk.faces.length > 0) return sk;
+  }
   const solved = solveLowerEnvelope(footprint2D, planes, basePivotZ, s, canvasToM);
   return solved.faces.length > 0 ? solved : flat(0, []);
 }
@@ -113,10 +122,20 @@ export function computeRoofGeometry(params: RoofParams): RoofGeometry {
   const xyBbox = polygonBbox(verts);
 
   const resolved = resolveEavePlanes(verts, params.edges, params.slopeUnit);
-  const planes = verts.length >= MIN_ROOF_POLYGON_VERTICES ? resolved.planes : [];
-  const shape = verts.length >= MIN_ROOF_POLYGON_VERTICES ? classifyShape(planes) : 'flat';
+  const enoughVerts = verts.length >= MIN_ROOF_POLYGON_VERTICES;
+  const planes = enoughVerts ? resolved.planes : [];
+  const slopeEdgeIndices = enoughVerts ? resolved.slopeEdgeIndices : [];
+  // Κοίλο footprint με κλίσεις → 'complex' (σύνθετη τετράρριχτη, Φ2)· αλλιώς label
+  // από τη διάταξη των επιπέδων.
+  const shape: RoofShape = enoughVerts
+    ? !isConvexPolygon(footprint2D) && planes.length >= 2
+      ? 'complex'
+      : classifyShape(planes)
+    : 'flat';
 
-  const { faces, ridges } = buildFacesAndRidges(footprint2D, planes, params.basePivotZ, s, canvasToM);
+  const { faces, ridges } = buildFacesAndRidges(
+    footprint2D, planes, slopeEdgeIndices, params.basePivotZ, s, canvasToM,
+  );
 
   const grossAreaM2 = faces.reduce((sum, f) => sum + f.grossAreaM2, 0);
   const thicknessMm = Math.max(0, params.thickness);

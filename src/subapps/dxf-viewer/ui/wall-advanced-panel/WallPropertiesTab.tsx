@@ -19,6 +19,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
 import { useSelectedWall } from './hooks/useSelectedWall';
+import { useWallDraftFromBridge } from './hooks/useWallDraftFromBridge';
 import { useWallParamsDispatcher } from './commands/dispatchWallParamPatch';
 import { useBimPersistenceStateStore } from '../../bim/persistence/bim-persistence-state-store';
 import { WallAdvancedPanel } from './WallAdvancedPanel';
@@ -29,18 +30,32 @@ export interface WallPropertiesTabProps {
   readonly currentScene: SceneModel | null;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /**
+   * ADR-363 — draft mode: το εργαλείο «Τοίχος» είναι ενεργό ΧΩΡΙΣ επιλεγμένη
+   * οντότητα. Το panel επεξεργάζεται τις draw-defaults (`wallToolBridgeStore`)
+   * αντί για υπάρχοντα τοίχο· δεν εμφανίζει persistence (δεν υπάρχει entity).
+   */
+  readonly draftMode?: boolean;
 }
 
 export function WallPropertiesTab({
   primarySelectedId,
   currentScene,
+  draftMode,
 }: WallPropertiesTabProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const wall = useSelectedWall(primarySelectedId, currentScene);
+  const selectedWall = useSelectedWall(primarySelectedId, currentScene);
   const levelManager = useLevels();
-  const dispatchPatch = useWallParamsDispatcher({ levelManager });
+  const selectedDispatch = useWallParamsDispatcher({ levelManager });
   const { user } = useAuth();
   const persistence = useBimPersistenceStateStore((s) => s.wall);
+  // ADR-363 — draft binding (draw-defaults). Always called (hook rules); used only
+  // when there is no real selection and the tab is in draft mode.
+  const draft = useWallDraftFromBridge();
+
+  // Real selection wins; else fall back to the draft (draw-defaults) entity.
+  const wall = selectedWall ?? (draftMode ? draft?.wall ?? null : null);
+  const dispatchPatch = selectedWall ? selectedDispatch : (draft?.dispatchPatch ?? selectedDispatch);
 
   if (!wall) {
     return (
@@ -56,7 +71,8 @@ export function WallPropertiesTab({
       dispatchPatch={dispatchPatch}
       userId={user?.uid ?? null}
       levelManager={levelManager}
-      persistence={persistence ?? undefined}
+      // Draft (no entity) → no persistence section; real selection → soft-lock + saveNow.
+      persistence={selectedWall ? persistence ?? undefined : undefined}
       hideHeader
       containerClassName="flex flex-col gap-3 p-2"
     />

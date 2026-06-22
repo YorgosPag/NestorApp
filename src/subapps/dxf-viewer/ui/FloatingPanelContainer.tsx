@@ -12,6 +12,7 @@ import { PanelTabs } from './components/PanelTabs';
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
 import { isBimEntity, isStairEntity } from '../types/entities';
+import { isWallDrawingTool } from '../systems/tools/region-tool-ids';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { useLevels } from '../systems/levels';
@@ -105,6 +106,21 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
       setActivePanel('properties');
     }
   }, [primarySelectedId, scene, activePanel, setActivePanel]);
+
+  // ADR-363 — auto-open the Properties palette when the user ACTIVATES the wall
+  // tool (Revit «set the type, then draw»): the left panel surfaces the draft
+  // wall parameters (ΣΥΝΘΕΣΗ ΣΤΡΩΣΕΩΝ) alongside the contextual ribbon tab.
+  // Gated on the TRANSITION into a wall tool (prevToolRef) so a manual switch to
+  // another panel WHILE the tool stays active is respected (no bounce-back).
+  const prevToolRef = React.useRef<ToolType | null>(null);
+  React.useEffect(() => {
+    const enteredWallTool =
+      isWallDrawingTool(currentTool) && !isWallDrawingTool(prevToolRef.current ?? undefined);
+    prevToolRef.current = currentTool;
+    if (enteredWallTool && activePanel !== 'properties') {
+      setActivePanel('properties');
+    }
+  }, [currentTool, activePanel, setActivePanel]);
 
   // Imperative handle for parent control
   useImperativeHandle(ref, () => handleMethods, [handleMethods]);

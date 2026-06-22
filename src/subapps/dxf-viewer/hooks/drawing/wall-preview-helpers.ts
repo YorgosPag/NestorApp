@@ -193,6 +193,10 @@ export function generateWallPreview(
   const targets = sceneSnapTargetsStore.get();
   const footprints = targets.footprints;
   const members = selectGhostMembers(targets, ['wall', 'beam', 'slab']);
+  // ADR-398 §3.11 — το before-click smart ghost ακολουθεί ΚΑΙ σκέτες ΓΡΑΜΜΕΣ (ίδια συμπεριφορά με
+  // την κολώνα, ίδιος resolver). ΟΧΙ στον overlap-check του awaitingEnd (ώστε τοίχος κατά μήκος
+  // γραμμής-αναφοράς να μη «κοκκινίζει»). Reuse-only, μηδέν διπλότυπο.
+  const snapMembers = selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']);
   // ADR-508 §opening-conflict — host τοίχοι + ανοίγματα για τον έλεγχο «ο κάθετος τοίχος κόβει άνοιγμα;».
   const walls = targets.wallEntities;
   const openings = targets.openings;
@@ -203,7 +207,7 @@ export function generateWallPreview(
   if (tempPoints.length === 0) {
     // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα/μέλος → κουμπώνει σε παρειά/anchor· αλλιώς ακολουθεί ελεύθερα τον κέρσορα.
-    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, members, walls, openings);
+    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, snapMembers, members, walls, openings);
   }
 
   if (tempPoints.length >= 2) {
@@ -247,7 +251,8 @@ function makeWallGhostBeforeClick(
   overrides: WallParamOverrides,
   sceneUnits: SceneUnits,
   columnFootprints: readonly (readonly Point2D[])[],
-  memberTargets: readonly LinearMemberSnapTarget[],
+  snapTargets: readonly LinearMemberSnapTarget[],
+  collisionTargets: readonly LinearMemberSnapTarget[],
   walls: readonly WallEntity[],
   openings: readonly OpeningEntity[],
 ): ExtendedSceneEntity | null {
@@ -256,15 +261,18 @@ function makeWallGhostBeforeClick(
   // ADR-508 — ίδιο worldPerPixel με το click resolver (useWallTool) → ίδιο zoom-adaptive βήμα
   // ολίσθησης (preview === commit: το φάντασμα γλιστράει στα ίδια σημεία που θα κλειδώσει το κλικ).
   const wpp = worldPerPixel(getImmediateTransform().scale);
-  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, memberTargets, thicknessMm, sceneUnits, wpp);
+  // ADR-398 §3.11 — snap ΚΑΙ σε σκέτες γραμμές (ακολουθεί τη γραμμή, ίδιος resolver με την κολώνα).
+  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, snapTargets, thicknessMm, sceneUnits, wpp);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end
     : { x: effectiveCursor.x + MEMBER_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
   const params = buildDefaultWallParams(start, end, overrides, sceneUnits);
-  // 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή (β) το φάντασμα
-  // κείτεται ομοαξονικά/πάνω σε υφιστάμενο μέλος (incl. face-anchored). SSoT decision.
-  const isOverlap = isWallGhostOverlap(start, end, memberTargets, overrides, sceneUnits, 'straight', snap?.status === 'overlap');
+  // 🔴 `overlap` ΜΟΝΟ για ΔΟΜΙΚΑ μέλη (collisionTargets), ΟΧΙ για reference γραμμές: η γραμμή είναι
+  // οδηγός στοίχισης, ΟΧΙ εμπόδιο. (α) short-end συγγραμμική συνέχεια ΜΟΝΟ αν snap-άρισε σε μέλος·
+  // (β) ομοαξονικά/πάνω σε υφιστάμενο μέλος. Έτσι ο τοίχος κατά μήκος γραμμής μένει 🟢 (commit-able).
+  const snappedToMember = snap?.targetId != null && collisionTargets.some((m) => m.id === snap.targetId);
+  const isOverlap = isWallGhostOverlap(start, end, collisionTargets, overrides, sceneUnits, 'straight', snappedToMember && snap?.status === 'overlap');
   // ADR-508 §dim — listening dimensions: μόνο όταν το φάντασμα γλιστράει 🟢 πάνω σε παρειά μέλους
   // (`faceFrame` υπάρχει) ΚΑΙ δεν είναι 🔴 overlap. Πάντα 3 νούμερα (gap αριστερά/δεξιά + κέντρο).
   const faceDimensions = resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);

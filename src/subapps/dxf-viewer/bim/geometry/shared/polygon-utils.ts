@@ -99,6 +99,30 @@ export function minPolygonInteriorAngleDeg(
   return min;
 }
 
+/**
+ * True αν το πολύγωνο είναι **κυρτό** (convex) — όλες οι στροφές ίδιου προσήμου
+ * (συγγραμμικές κορυφές αγνοούνται). Τρίγωνο πάντα κυρτό. Winding-agnostic. SSoT
+ * για το routing κυρτό vs κοίλο (ADR-417 Φ2: κοίλο → straight skeleton).
+ */
+export function isConvexPolygon(
+  vertices: readonly { readonly x: number; readonly y: number }[],
+): boolean {
+  const n = vertices.length;
+  if (n < 4) return true;
+  let sign = 0;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    const c = vertices[(i + 2) % n];
+    const cr = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (Math.abs(cr) < 1e-9) continue;
+    const s = cr > 0 ? 1 : -1;
+    if (sign === 0) sign = s;
+    else if (s !== sign) return false;
+  }
+  return true;
+}
+
 /** Axis-aligned bounding box (XY plane, z=0). */
 export function polygonBbox(vertices: readonly Point3D[]): BoundingBox3D {
   if (vertices.length === 0) {

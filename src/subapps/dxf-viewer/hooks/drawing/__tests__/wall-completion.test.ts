@@ -16,6 +16,7 @@ import {
   computeWallAlignmentOffset,
 } from '../wall-completion';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../../bim/types/wall-types';
+import { getDefaultDnaForCategory } from '../../../bim/types/wall-dna-types';
 import { useActiveStoreyStore } from '../../../systems/levels/active-storey-store';
 import { buildActiveStoreyContext } from '../../../systems/levels/active-storey-context';
 
@@ -67,6 +68,26 @@ describe('buildDefaultWallParams', () => {
       flip: true,
     });
     expect(params.flip).toBe(true);
+  });
+
+  it('honours explicit DNA draw-default override (thickness ≡ dna.totalThickness)', () => {
+    // ADR-363 — left draft panel «ΣΥΝΘΕΣΗ ΣΤΡΩΣΕΩΝ» writes a full dna draw-default.
+    const interiorDna = getDefaultDnaForCategory('interior');
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 }, {
+      dna: interiorDna,
+    });
+    expect(params.dna).toEqual(interiorDna);
+    expect(params.thickness).toBe(interiorDna.totalThickness);
+  });
+
+  it('DNA draw-default wins over an explicit thickness override', () => {
+    const interiorDna = getDefaultDnaForCategory('interior');
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 }, {
+      dna: interiorDna,
+      thickness: 999,
+    });
+    expect(params.dna).toEqual(interiorDna);
+    expect(params.thickness).toBe(interiorDna.totalThickness);
   });
 
   it('scene-unit m: scalar params stay in mm (SSoT — boundary conversion lives in computeWallGeometry)', () => {

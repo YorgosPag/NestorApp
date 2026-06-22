@@ -80,6 +80,53 @@ describe('resolveLinearMemberFaceSnap — κατευθυντικό status + γε
   });
 });
 
+describe('resolveLinearMemberFaceSnap — center/flush ΜΑΓΝΗΤΕΣ (ADR-508, Giorgio 2026-06-23)', () => {
+  // Σενάριο bug: γραμμή-στόχος 250mm (zero-width band) + νέος τοίχος πλάτους 210mm (half=105).
+  // Χωρίς μαγνήτη, σε cursor 122 το grid (βήμα 10) κουμπώνει στο 120 → μέλος [15,225] → κενά
+  // 15/25 (το 5mm offset που ανέφερε ο Giorgio). Με μαγνήτη → κέντρο 125 → [20,230] → 20/20.
+  const LINE25: LinearMemberSnapTarget = {
+    id: 'L',
+    axis: [{ x: 0, y: 0 }, { x: 250, y: 0 }],
+    outline: [{ x: 0, y: -0.25 }, { x: 250, y: -0.25 }, { x: 250, y: 0.25 }, { x: 0, y: 0.25 }],
+  };
+  const W = 210; // πλάτος τοίχου, half = 105
+  const noStep: LinearMemberFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, memberWidthScene: W };
+  const withStep: LinearMemberFaceSnapOptions = { ...noStep, slideStepScene: 10 };
+
+  it('ΧΩΡΙΣ slide step (δοκάρι) → centerline ακολουθεί cursor (συνεχές, αμετάβλητο)', () => {
+    const r = resolveLinearMemberFaceSnap({ x: 122, y: 3 }, [LINE25], noStep);
+    expect(r!.status).toBe('beam');
+    expect(r!.start.x).toBeCloseTo(122, 6);
+  });
+
+  it('ΜΕ slide step (τοίχος): cursor 122 κοντά στο μέσο → ΜΑΓΝΗΤΗΣ κέντρου 125 (κεντράρει, όχι 120)', () => {
+    const r = resolveLinearMemberFaceSnap({ x: 122, y: 3 }, [LINE25], withStep);
+    expect(r!.start.x).toBeCloseTo(125, 6); // κέντρο γραμμής → 20mm/20mm κενά (όχι 15/25)
+  });
+
+  it('ΜΕ slide step: cursor κοντά στην αρχή → ΜΑΓΝΗΤΗΣ flush (centerline = alongMin+half = 105)', () => {
+    const r = resolveLinearMemberFaceSnap({ x: 4, y: 3 }, [LINE25], withStep);
+    expect(r!.start.x).toBeCloseTo(105, 6);
+  });
+
+  it('ΜΕ slide step: cursor κοντά στο τέλος → ΜΑΓΝΗΤΗΣ flush (centerline = alongMax−half = 145)', () => {
+    const r = resolveLinearMemberFaceSnap({ x: 246, y: 3 }, [LINE25], withStep);
+    expect(r!.start.x).toBeCloseTo(145, 6);
+  });
+
+  it('ΜΕ slide step ΜΑΚΡΙΑ από κάθε μαγνήτη → ελεύθερη/grid ολίσθηση (δεν επιβάλλει anchor)', () => {
+    // Μακριά γραμμή 1000mm· μέλος 200 (half=100)· anchors=100/500/900. cursor 400 (μεσαίο τρίτο,
+    // 100mm από το κέντρο) → πέρα από radius=10 → centerline = grid(400), όχι μαγνήτης.
+    const LONG: LinearMemberSnapTarget = {
+      id: 'L2', axis: [{ x: 0, y: 0 }, { x: 1000, y: 0 }],
+      outline: [{ x: 0, y: -0.25 }, { x: 1000, y: -0.25 }, { x: 1000, y: 0.25 }, { x: 0, y: 0.25 }],
+    };
+    const opt: LinearMemberFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, memberWidthScene: 200, slideStepScene: 10 };
+    const r = resolveLinearMemberFaceSnap({ x: 400, y: 3 }, [LONG], opt);
+    expect(r!.start.x).toBeCloseTo(400, 6);
+  });
+});
+
 describe('isMemberCollinearOverlap — ΑΠΑΓΟΡΕΥΣΗ ομοαξονικού/πάνω σε υφιστάμενο', () => {
   it('ομοαξονικό ΠΑΝΩ στο σώμα → true', () => {
     expect(isMemberCollinearOverlap({ x: 2000, y: 0 }, { x: 8000, y: 0 }, [HORIZONTAL])).toBe(true);

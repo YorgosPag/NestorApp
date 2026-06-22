@@ -76,6 +76,20 @@ export function getBuiltInWallTypeId(key: string): string {
   return `${BUILTIN_ID_PREFIX}-wall-${key}`;
 }
 
+/**
+ * Is `id` the synthetic id of a built-in (factory) wall family type? SSoT
+ * companion to {@link getBuiltInWallTypeId} — both derive the `bimftype-builtin-
+ * wall-` prefix from {@link BUILTIN_ID_PREFIX}, declared once (N.0.2). Used by the
+ * edit-time auto-type re-flow (`UpdateWallParamsCommand`) to distinguish an
+ * AUTO-linked wall (read-only built-in → re-resolve / detach on a cross-section
+ * edit, Revit «Generic Wall / Duplicate-to-edit») from a user-assigned custom
+ * type (left untouched — its own lifecycle owns it). Accepts `undefined` for the
+ * untyped case (returns `false`).
+ */
+export function isBuiltInWallTypeId(id: string | undefined): boolean {
+  return !!id && id.startsWith(`${BUILTIN_ID_PREFIX}-wall-`);
+}
+
 // ─── Built-in stair seed constants (mm) ──────────────────────────────────────
 //
 // Mirror the residential defaults baked into `buildDefaultStairParams`

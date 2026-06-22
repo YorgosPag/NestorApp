@@ -61,6 +61,9 @@ import type { HatchEntity } from '../../types/entities';
 import {
   isHatchOriginGripKind, isHatchAngleGripKind, hatchBoundsCenter, hatchGradientAngleGripPos,
 } from '../../bim/hatch/hatch-grips';
+// ADR-507 Φ5 A4 — ίδια οπτική ένδειξη με την περιστροφή κολώνας (ADR-357/398): πορτοκαλί
+// polar-tracking ray στη γωνία + tooltip τιμής. Κεντρικό SSoT — μηδέν bespoke style.
+import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -363,9 +366,12 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       if (originW && isHatchOriginDrag) {
         drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(originW, t, vp));
       } else if (originW && isHatchAngleDrag) {
-        const handleW = hatchGradientAngleGripPos(originW, live.gradient?.angleDeg ?? 0, live.boundaryPaths ?? []);
+        const angleDeg = live.gradient?.angleDeg ?? 0;
+        const handleW = hatchGradientAngleGripPos(originW, angleDeg, live.boundaryPaths ?? []);
         if (handleW) {
-          drawDashedSegment(ctx, originW, handleW, t, vp);
+          // ΙΔΙΑ ένδειξη με την περιστροφή κολώνας: πορτοκαλί guide ray στη (snapped) γωνία +
+          // tooltip τιμής (formatMoveAngle). Έτσι ο χρήστης ΒΛΕΠΕΙ τη γωνία + το «κούμπωμα» 15°.
+          paintPolarTrackingLine(ctx, originW, angleDeg, formatMoveAngle(angleDeg), handleW, t, vp);
           drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(handleW, t, vp));
         }
       }

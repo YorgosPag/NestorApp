@@ -124,37 +124,20 @@ describe('resolveMenuActions — multifunctional entries', () => {
     expect(ids(arc, grip({ type: 'edge', gripIndex: 3 }))).toEqual(['radius']);
   });
 
-  it('polyline vertex (2 verts) → [addVertex, convertToArc] (cannot remove below 2)', () => {
-    expect(ids(polyOpen, grip({ type: 'vertex', gripIndex: 0 }))).toEqual([
-      'addVertex',
-      'convertToArc',
-    ]);
+  // ADR-510 Φ3c — polyline grip ops moved to the RIGHT-CLICK menu
+  // (grip-context-menu-resolver) so the polyline grip shows ONE menu. The hover
+  // menu therefore yields NOTHING for polyline grips (no duplicate floating menu).
+  it('polyline vertex → [] (ops live in the right-click menu)', () => {
+    expect(ids(polyOpen, grip({ type: 'vertex', gripIndex: 0 }))).toEqual([]);
+    expect(ids(polyClosed, grip({ type: 'vertex', gripIndex: 1, polylineGripKind: 'polyline-vertex-1' }))).toEqual([]);
   });
 
-  it('polyline vertex (3 verts) → [addVertex, removeVertex, convertToArc]', () => {
-    expect(ids(polyClosed, grip({ type: 'vertex', gripIndex: 1 }))).toEqual([
-      'addVertex',
-      'removeVertex',
-      'convertToArc',
-    ]);
-  });
-
-  // ADR-510 Φ3c — segment/arc midpoint grips (tagged via polylineGripKind).
-  it('polyline straight segment-midpoint → [addVertex, convertToArc]', () => {
+  it('polyline segment-midpoint / arc-midpoint → [] in the hover menu', () => {
     expect(
       ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-segment-midpoint-0' })),
-    ).toEqual(['addVertex', 'convertToArc']);
-  });
-
-  it('polyline arc-midpoint → [convertToLine]', () => {
+    ).toEqual([]);
     expect(
       ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-arc-midpoint-0' })),
-    ).toEqual(['convertToLine']);
-  });
-
-  it('polyline vertex tagged kind (3 verts) → [addVertex, removeVertex, convertToArc]', () => {
-    expect(
-      ids(polyClosed, grip({ type: 'vertex', gripIndex: 1, polylineGripKind: 'polyline-vertex-1' })),
-    ).toEqual(['addVertex', 'removeVertex', 'convertToArc']);
+    ).toEqual([]);
   });
 });

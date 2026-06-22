@@ -707,4 +707,17 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `gripContextMenu.*`→`gripMenu.convertToArc/convertToLine` el+en). Live bulge-drag (`grip-polyline-bulge-commit` +
   `commitDxfGripDragModeAware` branch) ΑΘΙΚΤΟ. ΕΝΑ μενού πλέον (hover), παράλληλο με line→Lengthen / arc→Radius.
   46 jest GREEN (5 suites). **ΜΑΘΗΜΑ: πριν προσθέσεις action σε μενού grip, grep ΚΑΙ τα δύο menu systems
-  (hover `grip-menu-resolver` + right-click `grip-context-menu-resolver`) — entity-specific = hover, modes = right-click.**
+  (hover `grip-menu-resolver` + right-click `grip-context-menu-resolver`).**
+- **2026-06-23** — **Φ3c BUG FIX #3 (διπλό μενού στο ΔΕΞΙ κλικ) — τελική απόφαση Giorgio: ΕΝΑ μενού στο right-click.**
+  Μετά το #2 (ops στο hover) ο Giorgio είδε ΑΚΟΜΗ 2 μενού στο **δεξί κλικ** σε λαβή polyline: το hover menu (mine,
+  Convert κ.λπ.) + το right-click menu. Εντολή: «ενοποίησέ τα σε ΕΝΑ· το δικό σου βάλ' το στο άλλο». **FIX (αντιστροφή
+  του #2):** τα polyline ops πήγαν στο **right-click** grip context menu (`grip-context-menu-resolver` →
+  `buildPolylineOpsSection`, δίπλα στα slab/roof vertex-ops· vertex→Add/Remove/Convert-to-Arc, seg-mid→Add/Convert-to-Arc,
+  arc-mid→Convert-to-Line) + `onPolylineVertexOp` dispatcher στον controller (reuse `buildPolylineVertexOpCommand` SSoT)
+  + `hasVertexOps` περιλαμβάνει `polyline-ops` (→ stopPropagation στο contextmenu → το app-level EntityContextMenu
+  ΚΑΤΑΣΤΕΛΛΕΤΑΙ). **Το hover menu ΑΔΕΙΑΣΕ για polyline** (`grip-menu-resolver` polyline→`[]`· έσβησα GripMenuActionId
+  addVertex/removeVertex/convertToArc/convertToLine + actions· line/arc κρατούν Lengthen/Radius — δεν έχουν right-click
+  ισοδύναμο). i18n → πίσω σε `gripContextMenu.*`. Live bulge-drag άθικτο. **ΑΠΟΤΕΛΕΣΜΑ: δεξί κλικ σε λαβή polyline =
+  ΕΝΑ μενού** (modes/extras + polyline ops). 43 jest GREEN. **ΜΑΘΗΜΑ: grip-aware ops → right-click grip context menu
+  (είναι grip-aware + κάνει stopPropagation που καταστέλλει το EntityContextMenu)· το hover menu = συμπληρωματικό
+  μόνο όπου δεν υπάρχει right-click ισοδύναμο (line/arc).**

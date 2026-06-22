@@ -15,19 +15,19 @@
  * Industry rules (AutoCAD / BricsCAD / progeCAD / GstarCAD / nanoCAD), minus
  * the implicit Stretch:
  *  - LINE endpoint → Lengthen
- *  - POLYLINE / LWPOLYLINE vertex → Add Vertex, Remove Vertex, Convert to Arc
- *  - POLYLINE straight segment-midpoint → Add Vertex, Convert to Arc
- *  - POLYLINE arc-midpoint → Convert to Line
  *  - ARC endpoint → Lengthen
  *  - ARC midpoint → Radius
  *  - everything else (anchors, midpoints, MOVE glyph) → (no menu)
  *
- * ADR-510 Φ3c — the polyline multifunctional ops live HERE (the hover menu), the
- * canonical home for entity-specific grip actions — NOT the right-click mode menu
- * (`grip-context-menu-resolver`), which carries only the universal cycle modes.
+ * ADR-510 Φ3c — POLYLINE multifunctional ops (Add/Remove Vertex, Convert to
+ * Arc/Line) do NOT live here: they are in the RIGHT-CLICK grip context menu
+ * (`grip-context-menu-resolver` → `buildPolylineOpsSection`) so the polyline grip
+ * shows ONE menu (Giorgio 2026-06-23). Listing them here too produced a duplicate
+ * floating menu. Line/arc keep their hover entries (no right-click equivalent).
  *
  * @see ADR-349 §Multifunctional Grip Menu
  * @see ADR-397 §BIM grip glyph behaviour
+ * @see grip-context-menu-resolver §buildPolylineOpsSection — polyline ops home
  */
 
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
@@ -35,10 +35,6 @@ import type { Entity } from '../../types/entities';
 
 export type GripMenuActionId =
   | 'lengthen'
-  | 'addVertex'
-  | 'removeVertex'
-  | 'convertToArc'
-  | 'convertToLine'
   | 'radius';
 
 export interface GripMenuActionMeta {
@@ -48,12 +44,8 @@ export interface GripMenuActionMeta {
 }
 
 const META: Readonly<Record<GripMenuActionId, GripMenuActionMeta>> = {
-  lengthen:      { id: 'lengthen',      labelKey: 'gripMenu.lengthen' },
-  addVertex:     { id: 'addVertex',     labelKey: 'gripMenu.addVertex' },
-  removeVertex:  { id: 'removeVertex',  labelKey: 'gripMenu.removeVertex' },
-  convertToArc:  { id: 'convertToArc',  labelKey: 'gripMenu.convertToArc' },
-  convertToLine: { id: 'convertToLine', labelKey: 'gripMenu.convertToLine' },
-  radius:        { id: 'radius',        labelKey: 'gripMenu.radius' },
+  lengthen: { id: 'lengthen', labelKey: 'gripMenu.lengthen' },
+  radius:   { id: 'radius',   labelKey: 'gripMenu.radius' },
 };
 
 function isLineEndpoint(grip: UnifiedGripInfo): boolean {
@@ -66,10 +58,6 @@ function isArcEndpoint(grip: UnifiedGripInfo): boolean {
 
 function isArcMidpoint(grip: UnifiedGripInfo): boolean {
   return grip.type === 'edge' && grip.gripIndex === 3;
-}
-
-function isPolylineVertex(grip: UnifiedGripInfo, vertexCount: number): boolean {
-  return grip.type === 'vertex' && grip.gripIndex >= 0 && grip.gripIndex < vertexCount;
 }
 
 /**
@@ -92,29 +80,8 @@ export function resolveMenuActions(entity: Entity, grip: UnifiedGripInfo): GripM
       if (isArcEndpoint(grip)) return [META.lengthen];
       return [];
 
-    case 'polyline':
-    case 'lwpolyline': {
-      const vertices = (entity as { vertices: ReadonlyArray<unknown> }).vertices;
-      const vLen = vertices?.length ?? 0;
-      // ADR-510 Φ3c — branch on the precise grip role (`polylineGripKind`) so arc
-      // and segment-midpoint grips get the right ops. Falls back to the legacy
-      // gripIndex check for untagged grips (defensive).
-      const kind = grip.polylineGripKind;
-      if (kind?.startsWith('polyline-arc-midpoint-')) {
-        return [META.convertToLine];
-      }
-      if (kind?.startsWith('polyline-segment-midpoint-')) {
-        return [META.addVertex, META.convertToArc];
-      }
-      if (kind?.startsWith('polyline-vertex-') || isPolylineVertex(grip, vLen)) {
-        const ops = [META.addVertex];
-        if (vLen > 2) ops.push(META.removeVertex);
-        ops.push(META.convertToArc);
-        return ops;
-      }
-      return [];
-    }
-
+    // ADR-510 Φ3c — polyline / lwpolyline grip ops live in the RIGHT-CLICK menu
+    // (grip-context-menu-resolver), not here — so the polyline grip shows ONE menu.
     // column / BIM anchors, circle / ellipse / text / point → drag-only, no menu.
     default:
       return [];

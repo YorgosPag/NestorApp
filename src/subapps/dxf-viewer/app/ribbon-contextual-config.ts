@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SceneModel } from '../types/scene';
-import { isColumnRegionTool, isWallRegionTool } from '../systems/tools/region-tool-ids';
+import { isColumnRegionTool, isWallDrawingTool } from '../systems/tools/region-tool-ids';
 import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
 import {
   CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
@@ -239,11 +239,7 @@ export function useActiveContextualTrigger({
     // ADR-363 Phase 1K / «από περίγραμμα» — in-region & outer-perimeter share the
     // wall contextual tab (category/height feed the walls; thickness is geometry-
     // driven from the faces).
-    if (
-      activeTool === 'wall' ||
-      isWallRegionTool(activeTool) ||
-      activeTool === 'wall-from-perimeter'
-    )
+    if (isWallDrawingTool(activeTool))
       return WALL_CONTEXTUAL_TRIGGER;
     if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;

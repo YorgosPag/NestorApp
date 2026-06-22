@@ -47,6 +47,15 @@ export interface GripContextActionBindContext {
    * edge midpoint (delta = 0). Provided by `useGripContextMenuController`.
    */
   readonly onSlabVertexOp?: (grip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => void;
+  /**
+   * ADR-510 Φ3c — multifunctional polyline grip operations (add/remove/convert).
+   * Provided by `useGripContextMenuController`; builds the right command via the
+   * shared `buildPolylineVertexOpCommand` SSoT and runs it through global history.
+   */
+  readonly onPolylineVertexOp?: (
+    grip: UnifiedGripInfo,
+    op: 'add-vertex' | 'remove-vertex' | 'convert-to-arc' | 'convert-to-line',
+  ) => void;
 }
 
 function updateModeHint(): void {
@@ -143,6 +152,18 @@ export function bindContextMenuAction(
     case 'vertex-ops:addCorner':
       if (!grip || !ctx.onSlabVertexOp) return null;
       return () => { ctx.onSlabVertexOp!(grip, 'add-corner'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:addVertex':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'add-vertex'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:removeVertex':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'remove-vertex'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:convertToArc':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-arc'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:convertToLine':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-line'); ctx.onAfterDispatch(); };
     default:
       return null;
   }

@@ -99,8 +99,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
       // ADR-508 — worldPerPixel (=1/scale) → σταθερό zoom-adaptive βήμα ολίσθησης στην παρειά
       // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
-      // ADR-398 §3.10 — τοίχος = συνδυασμένα wall+beam+slab μέλη (selectGhostMembers).
-      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab']), thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
+      // ADR-398 §3.10/§3.11 — τοίχος = wall+beam+slab μέλη ΚΑΙ σκέτες ΓΡΑΜΜΕΣ (ίδιο με το preview
+      // ghost → preview ≡ commit: το 1ο κλικ κουμπώνει στη γραμμή όπως δείχνει το φάντασμα). Οι
+      // γραμμές = οδηγοί στοίχισης· ο commit overlap-check (use-wall-commit) τις εξαιρεί (δεν μπλοκάρουν).
+      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
       if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null, hostId: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap

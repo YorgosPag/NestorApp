@@ -109,6 +109,10 @@ export function selectGhostMembers(
   if (kinds.includes('wall')) out.push(...t.wallTargets);
   if (kinds.includes('beam')) out.push(...t.beamTargets);
   if (kinds.includes('slab')) out.push(...t.slabTargets);
+  // ADR-398 §3.11 — σκέτες ΓΡΑΜΜΕΣ/πολυγραμμές/ορθογώνια/κύκλοι/τόξα ως zero-width edges. Έτσι ο
+  // τοίχος ακολουθεί γραμμή με τον ΙΔΙΟ axis-relative resolver (`resolveLinearMemberFaceSnap`) που
+  // χρησιμοποιεί η κολώνα — μηδέν διπλότυπο. Σταθερή σειρά (line τελευταίο) για ντετερμινισμό.
+  if (kinds.includes('line')) out.push(...t.lineTargets);
   return out;
 }
 

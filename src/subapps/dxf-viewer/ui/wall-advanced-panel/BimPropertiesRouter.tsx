@@ -19,6 +19,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
+import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
@@ -33,12 +34,17 @@ export interface BimPropertiesRouterProps {
   readonly currentScene: SceneModel | null;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /**
+   * ADR-363 — ενεργό εργαλείο σχεδίασης. Όταν είναι εργαλείο τοίχου ΧΩΡΙΣ επιλογή,
+   * το panel ανοίγει σε draft mode (draw-defaults) — «set the type, then draw».
+   */
+  readonly activeTool?: string;
 }
 
 export function BimPropertiesRouter(
   props: BimPropertiesRouterProps,
 ): React.ReactElement {
-  const { primarySelectedId, currentScene } = props;
+  const { primarySelectedId, currentScene, activeTool } = props;
   const { t } = useTranslation('dxf-viewer-shell');
 
   // ADR-484 — κοινός SSoT resolver (active scene + cross-level foundation fallback)
@@ -47,6 +53,13 @@ export function BimPropertiesRouter(
 
   if (selected && isWallEntity(selected)) {
     return <WallPropertiesTab {...props} />;
+  }
+
+  // ADR-363 — κανένα selection αλλά ενεργό εργαλείο τοίχου → draft property panel
+  // (πλήρης σύνθεση στρώσεων ως draw-default). Πριν τα υπόλοιπα selected branches:
+  // ισχύει μόνο όταν `!selected`, άρα δεν συγκρούεται με per-type selection panels.
+  if (!selected && isWallDrawingTool(activeTool)) {
+    return <WallPropertiesTab {...props} draftMode />;
   }
 
   // ADR-363 Phase 4 — column Properties palette (ribbon ↔ panel split).

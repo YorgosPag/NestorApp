@@ -277,6 +277,16 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.13 (2026-06-23)** — **Edit-time auto-type re-flow (fix «το πάχος τοίχου δεν σώζεται»).** **Root cause:** ένας
+  default τοίχος είναι auto-linked σε read-only built-in type· ο `UpdateWallParamsCommand.applyPatch` ενημέρωνε
+  `params/geometry/validation` αλλά **όχι** το `typeId`, οπότε στο reload ο `docToEntity` ξανα-resolve-άρει params από
+  τον (αμετάβλητο) τύπο («type always wins») → πάχος/dna **επαναφέρονταν** στο seed. **Fix (SSoT, ένα chokepoint):** το
+  `applyPatch` ξανατρέχει την creation-time policy `resolveAutoWallTypeId(params)` στα ΝΕΑ params — **μόνο** για
+  AUTO-linked (built-in) ή untyped τοίχους (νέος SSoT guard `isBuiltInWallTypeId(id)` στο `built-in-types.ts`, mirror του
+  `getBuiltInWallTypeId`): custom cross-section → detach (`typeId=undefined` → reload κρατάει το edit)· still-matching
+  seed → relink (effective===params)· **undo** συμμετρικό (previousPatch ξανα-resolve-άρει)· user-assigned **custom**
+  type μένει ανέγγιχτος (δικός του lifecycle). Καλύπτει όλα τα edit paths (panel/ribbon/grips — ένα command). Tests:
+  `UpdateWallParamsCommand.autotype.test.ts` (detach/relink/undo/custom-untouched). Βλ. ADR-363 §wall-panel-2026-06-23.
 - **v0.12 (2026-06-12)** — **ADR-447 — Revit wall-type catalog (1→πολλοί τύποι/category).** Νέο SSoT
   `WALL_TYPE_SEEDS` (`wall-dna-types.ts`) + `getBuiltInWallTypeId(key)` key-based + `getBuiltInWallTypes` iterate
   seeds (7 τύποι: exterior 25cm / 25cm+θερμοπρόσοψη / 20cm + interior/partition/parapet/fence). PRIMARY key===category

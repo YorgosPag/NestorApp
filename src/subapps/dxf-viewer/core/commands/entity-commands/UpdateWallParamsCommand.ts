@@ -22,6 +22,11 @@ import { validateWallParams } from '../../../bim/validators/wall-validator';
 // follows the wall (grip / endpoint / length-edit / ribbon / bulk all funnel
 // through this command). Same offsetFromStart, new wall → computeOpeningGeometry.
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-412/414 — auto family-type policy (SSoT). A cross-section edit (thickness/dna)
+// must re-flow the AUTO link, otherwise «type always wins» (docToEntity) overwrites
+// the new params from the stale built-in on reload → the edit "doesn't save".
+import { resolveAutoWallTypeId } from '../../../bim/family-types/wall-type-auto-assign';
+import { isBuiltInWallTypeId } from '../../../bim/family-types/built-in-types';
 import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
 export class UpdateWallParamsCommand extends MergeableUpdateCommand<WallParams> {
@@ -45,11 +50,27 @@ export class UpdateWallParamsCommand extends MergeableUpdateCommand<WallParams> 
   protected applyPatch(params: WallParams): void {
     const geometry: WallGeometry = computeWallGeometry(params, this.kind);
     const validation = validateWallParams(params).bimValidation;
-    this.sceneManager.updateEntity(this.entityId, {
-      params,
-      geometry,
-      validation,
-    } as unknown as Record<string, unknown>);
+    const updates: Record<string, unknown> = { params, geometry, validation };
+    // ADR-412/414 — re-flow the AUTO family-type link from the NEW cross-section.
+    // Without this, a thickness/dna edit leaves the wall pointing at its original
+    // read-only built-in type, so on reload `docToEntity` re-resolves params from
+    // that type («type always wins») and the edit silently reverts. We re-run the
+    // SAME creation-time policy (`resolveAutoWallTypeId`): a still-matching seed
+    // relinks to its built-in (effective === params → no revert), a customised
+    // cross-section detaches to ad-hoc (`undefined` → reload keeps the instance
+    // params). Symmetric on undo (previousPatch re-resolves the original link).
+    // Scoped to AUTO-linked / untyped walls — a user-assigned CUSTOM type is left
+    // untouched (it owns its own lifecycle; «type always wins» is intentional there).
+    const prev = this.sceneManager.getEntity(this.entityId) as
+      | { typeId?: string }
+      | undefined;
+    if (isBuiltInWallTypeId(prev?.typeId) || !prev?.typeId) {
+      updates.typeId = resolveAutoWallTypeId(params);
+      // AUTO-linked walls never carry per-instance overrides (a customised wall is
+      // ad-hoc). Clear any so a detached/relinked wall persists a clean link.
+      updates.typeOverrides = undefined;
+    }
+    this.sceneManager.updateEntity(this.entityId, updates);
     // ADR-363 §5.4 — recompute hosted openings against the now-updated wall.
     cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
   }

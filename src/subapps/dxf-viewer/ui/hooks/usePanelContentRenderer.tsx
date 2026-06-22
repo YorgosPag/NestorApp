@@ -120,6 +120,7 @@ export function usePanelContentRenderer({
             currentScene={scene}
             projectId={projectId}
             floorplanId={floorplanId}
+            activeTool={currentTool}
           />
         );
 

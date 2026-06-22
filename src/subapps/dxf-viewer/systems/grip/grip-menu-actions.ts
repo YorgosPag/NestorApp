@@ -20,8 +20,6 @@ import type { Entity, ArcEntity } from '../../types/entities';
 import type { PromptDialogOptions } from '../prompt-dialog';
 import { LengthenCommand } from '../../core/commands/entity-commands/LengthenCommand';
 import { ArcRadiusEditCommand } from '../../core/commands/entity-commands/ArcRadiusEditCommand';
-// ADR-510 Φ3c — polyline add/remove/convert ops share ONE SSoT command builder.
-import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from './polyline-grip-ops';
 import type { LengthenEndpoint } from './lengthen-axial-stretch';
 import type { GripMenuActionId } from './grip-menu-resolver';
 
@@ -105,22 +103,6 @@ async function actionRadius(
   ctx.onAfterDispatch();
 }
 
-/**
- * ADR-510 Φ3c — all polyline vertex/segment ops (add / remove / convert-to-arc /
- * convert-to-line) route through the ONE shared SSoT builder, keyed by
- * `polylineGripKind`. No inline command construction here.
- */
-function actionPolylineOp(
-  op: PolylineVertexMenuOp,
-  grip: UnifiedGripInfo,
-  ctx: GripMenuActionContext,
-): void {
-  const cmd = buildPolylineVertexOpCommand(grip, op, ctx.sceneManager);
-  if (!cmd || (cmd.validate?.() ?? null) !== null) return;
-  ctx.executeCommand(cmd);
-  ctx.onAfterDispatch();
-}
-
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
 /**
@@ -142,22 +124,6 @@ export function bindMenuAction(
     case 'radius':
       if (entity.type !== 'arc') return null;
       return () => { void actionRadius(entity as ArcEntity, ctx); };
-
-    case 'addVertex':
-      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionPolylineOp('add-vertex', grip, ctx); };
-
-    case 'removeVertex':
-      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionPolylineOp('remove-vertex', grip, ctx); };
-
-    case 'convertToArc':
-      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionPolylineOp('convert-to-arc', grip, ctx); };
-
-    case 'convertToLine':
-      if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return null;
-      return () => { actionPolylineOp('convert-to-line', grip, ctx); };
 
     default:
       return null;
