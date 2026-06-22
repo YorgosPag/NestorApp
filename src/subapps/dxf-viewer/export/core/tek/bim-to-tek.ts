@@ -12,7 +12,7 @@
  */
 
 import type { Entity } from '../../../types/entities';
-import { isWallEntity, isOpeningEntity, isFurnitureEntity } from '../../../types/entities';
+import { isWallEntity, isOpeningEntity, isFurnitureEntity, isRoofEntity } from '../../../types/entities';
 import { isWindowKind } from '../../../bim/types/opening-types';
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
@@ -142,8 +142,8 @@ export function collectTekWalls(entities: readonly Entity[]): TekCollectResult {
   return { wallsXml: records.join('\n'), wallCount: records.length, openingCount, warnings };
 }
 
-/** Προεπιλεγμένο χρώμα επίπλου-κουτιού (ίδιο με το δείγμα plane). */
-const DEFAULT_FURNITURE_COLOR = 'BC80FC';
+/** Fallback χρώμα plane-κουτιού όταν το entity δεν φέρει δικό του (ίδιο με το δείγμα plane). */
+const DEFAULT_PLANE_COLOR = 'BC80FC';
 
 export interface TekPlaneCollectResult {
   /** Serialized record elements (newline-joined) ready for injection into the plane element. */
@@ -157,10 +157,23 @@ function entitySceneUnits(entity: Entity): SceneUnits {
   return (entity as { params?: { sceneUnits?: SceneUnits } }).params?.sceneUnits ?? 'mm';
 }
 
-/** Στάθμη βάσης (mm) ενός entity· έπιπλο = `mountingElevationMm` (αλλιώς 0). */
+/**
+ * Στάθμη βάσης (mm) ενός entity. Έπιπλο = `mountingElevationMm`· στέγη = `basePivotZ`
+ * (στάθμη γείσου / eaves datum — από εκεί ξεκινά το επίπεδο footprint). Αλλιώς 0.
+ */
 function baseElevationMm(entity: Entity): number {
   if (isFurnitureEntity(entity)) return entity.params.mountingElevationMm;
+  if (isRoofEntity(entity)) return entity.params.basePivotZ;
   return 0;
+}
+
+/**
+ * Τύποι που εξάγονται ως flat `<plane>` κουτί (footprint + εξώθηση ύψους μέσω των γενικών
+ * extractors): έπιπλα (Φ2b) + στέγη (Φ-A, MVP flat — η κεκλιμένη μορφή θα γίνει `<autoroof>`).
+ * Νέος τύπος με cached footprint = +ένα type-guard εδώ, μηδέν άλλη αλλαγή.
+ */
+function isTekPlaneEntity(entity: Entity): boolean {
+  return isFurnitureEntity(entity) || isRoofEntity(entity);
 }
 
 /**
@@ -179,19 +192,21 @@ function toTekPlane(entity: Entity): TekPlane | null {
     points: footprintRingToMeters(ring, metersPerSceneUnit, elevationM),
     // Πάχος plane = ύψος entity → ο Τέκτων εξωθεί το footprint προς τα πάνω σε κουτί.
     widthM: mmToMeters(extractHeightMm(entity)),
-    colorHex: DEFAULT_FURNITURE_COLOR,
+    // Χρώμα από το ίδιο το entity (SSoT)· fallback στο δείγμα plane όταν λείπει.
+    colorHex: (entity as { color?: string }).color ?? DEFAULT_PLANE_COLOR,
   };
 }
 
 /**
- * Συλλέγει τα έπιπλα μιας scope-filtered λίστας entities ως `<plane>` records (κουτιά
- * πραγματικού μεγέθους). Footprint/ύψος μέσω των γενικών export extractors (ίδιοι με DXF) →
- * έτοιμο να επεκταθεί σε structural slabs (Φ3) προσθέτοντας τύπους στο filter.
+ * Συλλέγει τα plane-εξαγώγιμα entities (έπιπλα + στέγη) μιας scope-filtered λίστας ως
+ * `<plane>` records (κουτιά πραγματικού μεγέθους). Footprint/ύψος μέσω των γενικών export
+ * extractors (ίδιοι με DXF) → έτοιμο να επεκταθεί (structural slabs Φ3) προσθέτοντας τύπο
+ * στο `isTekPlaneEntity`. Η στέγη εξάγεται flat (MVP)· κεκλιμένη → `<autoroof>` αργότερα.
  */
 export function collectTekPlanes(entities: readonly Entity[]): TekPlaneCollectResult {
   const records: string[] = [];
   for (const e of entities) {
-    if (!isFurnitureEntity(e)) continue;
+    if (!isTekPlaneEntity(e)) continue;
     const plane = toTekPlane(e);
     if (plane) records.push(buildPlaneRecordXml(plane));
   }

@@ -364,3 +364,47 @@ describe('collectTekPlanes (έπιπλα → κουτιά)', () => {
     expect(cm.planesXml).toContain('<width>0.9</width>'); // 900mm → 0.9m, ανεξ. sceneUnits
   });
 });
+
+// ── στέγη ως <plane> κουτί (ADR-512 ΦΑΣΗ A, MVP flat) ──
+// Ίδιος γενικός extractor με έπιπλα/DXF: footprint από geometry.footprint, ύψος από
+// params.thickness, στάθμη από params.basePivotZ. Κεκλιμένη μορφή → <autoroof> αργότερα.
+function roof(
+  footprint: ReadonlyArray<{ x: number; y: number }>,
+  opts: { thickness: number; basePivotZ: number; sceneUnits?: string; color?: string },
+): Entity {
+  return {
+    id: 'roof-1', type: 'roof', kind: 'pitched',
+    ...(opts.color ? { color: opts.color } : {}),
+    params: { thickness: opts.thickness, basePivotZ: opts.basePivotZ, sceneUnits: opts.sceneUnits ?? 'mm' },
+    geometry: { footprint: { vertices: footprint.map((p) => ({ ...p, z: 0 })) } },
+  } as unknown as Entity;
+}
+
+describe('collectTekPlanes (στέγη → κουτί, ΦΑΣΗ A)', () => {
+  const SQUARE = [
+    { x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 },
+  ];
+
+  it('flat στέγη 4×4m, πάχος 250mm, γείσο 3000mm → footprint μέτρα + width + pointZ=3', () => {
+    const r = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000 })]);
+    expect(r.planeCount).toBe(1);
+    expect(r.planesXml).toContain('<pointX>0</pointX><pointY>0</pointY><pointZ>3</pointZ>');
+    expect(r.planesXml).toContain('<pointX>4</pointX><pointY>4</pointY><pointZ>3</pointZ>');
+    expect(r.planesXml).toContain('<width>0.25</width>'); // πάχος στέγης = εξώθηση
+  });
+
+  it('χρώμα από το entity (SSoT), fallback στο δείγμα όταν λείπει', () => {
+    const colored = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000, color: '#FF8040' })]);
+    expect(colored.planesXml).toContain('<color>FF8040</color>');
+    const bare = collectTekPlanes([roof(SQUARE, { thickness: 250, basePivotZ: 3000 })]);
+    expect(bare.planesXml).toContain('<color>BC80FC</color>');
+  });
+
+  it('έπιπλο + στέγη μαζί → δύο plane records', () => {
+    const r = collectTekPlanes([
+      furniture({ x: 1000, y: 1000 }, 0, { w: 2000, d: 2000, h: 900 }),
+      roof(SQUARE, { thickness: 250, basePivotZ: 3000 }),
+    ]);
+    expect(r.planeCount).toBe(2);
+  });
+});
