@@ -171,6 +171,8 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
   // ADR-513 — Όσο ο κέρσορας είναι ΠΑΝΩ στα πλήκτρα (inside) τα wedges είναι `pointer-events-none`
   // (ώστε ο ΤΟΙΧΟΣ να ΣΥΝΕΧΙΖΕΙ να επεκτείνεται — ο καμβάς δέχεται mousemove). Άρα το κλικ στο
   // πλήκτρο το πιάνουμε εδώ (window capture): ανοίγουμε το πεδίο ΚΑΙ μπλοκάρουμε το commit τοίχου.
+  // ⚠️ Το commit τοίχου γίνεται στο **mouseup** (React onMouseUp στον καμβά) — γι' αυτό μπλοκάρουμε
+  // ΚΑΙ τα τρία (mousedown/mouseup/click) σε capture phase, ώστε το event να μη φτάσει στον React root.
   // Κλικ έξω από τα πλήκτρα (annulus) → περνά κανονικά στον καμβά = commit.
   useEffect(() => {
     const intercept = (e: MouseEvent) => {
@@ -188,9 +190,11 @@ export function RadialCommandRing({ sceneUnits }: RadialCommandRingProps): React
       e.stopImmediatePropagation();
     };
     window.addEventListener('mousedown', intercept, true);
+    window.addEventListener('mouseup', intercept, true);
     window.addEventListener('click', intercept, true);
     return () => {
       window.removeEventListener('mousedown', intercept, true);
+      window.removeEventListener('mouseup', intercept, true);
       window.removeEventListener('click', intercept, true);
     };
   }, [openWedge]);
