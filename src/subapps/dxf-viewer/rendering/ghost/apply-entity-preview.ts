@@ -48,7 +48,9 @@ import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
-import { applyHatchGripDrag } from '../../bim/hatch/hatch-grips';
+import {
+  applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
+} from '../../bim/hatch/hatch-grips';
 import type { HatchEntity } from '../../types/entities';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
@@ -319,6 +321,13 @@ export function applyEntityPreview(
   // the fill-pattern math.
   if (hatchGripKind && entity.type === 'hatch') {
     const hatch = entity as unknown as HatchEntity;
+    // ADR-507 Φ5 A3 — gradient origin/seed grip: μετακινεί το patternOrigin, ΟΧΙ όριο.
+    if (isHatchOriginGripKind(hatchGripKind)) {
+      const current = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths);
+      if (!current) return entity;
+      const patternOrigin = applyHatchOriginGripDrag(current, { delta });
+      return { ...(entity as object), patternOrigin } as unknown as DxfEntityUnion;
+    }
     const newBoundaryPaths = applyHatchGripDrag(hatchGripKind, { originalBoundaryPaths: hatch.boundaryPaths, delta });
     if (newBoundaryPaths === hatch.boundaryPaths) return entity;
     return { ...(entity as object), boundaryPaths: newBoundaryPaths } as unknown as DxfEntityUnion;

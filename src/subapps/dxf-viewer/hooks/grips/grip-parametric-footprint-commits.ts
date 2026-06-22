@@ -22,11 +22,14 @@ import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-comma
 import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import { UpdateFloorFinishParamsCommand } from '../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
 import { UpdateHatchBoundaryCommand } from '../../core/commands/entity-commands/UpdateHatchBoundaryCommand';
+import { UpdateHatchOriginCommand } from '../../core/commands/entity-commands/UpdateHatchOriginCommand';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
-import { applyHatchGripDrag } from '../../bim/hatch/hatch-grips';
+import {
+  applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
+} from '../../bim/hatch/hatch-grips';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -226,8 +229,22 @@ export function commitHatchGripDrag(
   if (!raw) return;
   const candidate = raw as unknown as Partial<HatchEntity>;
   if (candidate.type !== 'hatch' || !candidate.boundaryPaths) return;
-  const original = candidate.boundaryPaths;
   const rectilinear = ShiftKeyTracker.getSnapshot();
+  // ADR-507 Φ5 A3 — gradient origin/seed grip: patch το patternOrigin (mergeable
+  // drag → ΕΝΑ undo), ΟΧΙ το όριο. Default origin = κέντρο bbox (ίδιο SSoT).
+  if (isHatchOriginGripKind(grip.hatchGripKind)) {
+    const current = candidate.patternOrigin ?? hatchBoundsCenter(candidate.boundaryPaths);
+    if (!current) return;
+    const newOrigin = applyHatchOriginGripDrag(current, { delta, rectilinear });
+    if (newOrigin.x === current.x && newOrigin.y === current.y) return;
+    const originCommand = new UpdateHatchOriginCommand(
+      grip.entityId, newOrigin, current, sceneManager, true,
+    );
+    if (originCommand.validate() !== null) return;
+    deps.execute(originCommand);
+    return;
+  }
+  const original = candidate.boundaryPaths;
   const newBoundaryPaths = applyHatchGripDrag(grip.hatchGripKind, {
     originalBoundaryPaths: original,
     delta,

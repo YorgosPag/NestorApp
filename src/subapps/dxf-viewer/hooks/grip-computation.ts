@@ -54,6 +54,7 @@ import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
 import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
+import { hatchBoundsCenter, HATCH_GRADIENT_ORIGIN_KIND } from '../bim/hatch/hatch-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -393,8 +394,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // in DxfEntityUnion). The `hatchGripKind` encodes BOTH ring + vertex indices
       // so the drag commit (applyHatchGripDrag → UpdateHatchBoundaryCommand) can
       // translate the exact vertex even on multi-ring (island) hatches.
-      type HatchLike = { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
-      const paths = (entity as unknown as HatchLike).boundaryPaths ?? [];
+      type HatchLike = {
+        boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>;
+        fillType?: string;
+        patternOrigin?: { x: number; y: number };
+      };
+      const hatchLike = entity as unknown as HatchLike;
+      const paths = hatchLike.boundaryPaths ?? [];
       let gripIndex = 0;
       paths.forEach((path, pathIdx) => {
         path.forEach((v, vertexIdx) => {
@@ -406,6 +412,20 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           gripIndex += 1;
         });
       });
+      // ADR-507 Φ5 A3 — gradient origin/seed λαβή (ΜΟΝΟ όταν fillType='gradient').
+      // Θέση = patternOrigin όταν υπάρχει, αλλιώς κέντρο bbox (ίδιο SSoT με τον
+      // fillGradient). Commit → applyHatchOriginGripDrag + UpdateHatchOriginCommand.
+      if (hatchLike.fillType === 'gradient') {
+        const originPos = hatchLike.patternOrigin ?? hatchBoundsCenter(paths);
+        if (originPos) {
+          grips.push({
+            entityId: entity.id, gripIndex, type: 'vertex',
+            position: { x: originPos.x, y: originPos.y }, movesEntity: false,
+            hatchGripKind: HATCH_GRADIENT_ORIGIN_KIND,
+          });
+          gripIndex += 1;
+        }
+      }
       break;
     }
   }

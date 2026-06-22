@@ -2,7 +2,11 @@
  * ADR-507 S2-fix-3 — hatch grip-drag transform tests.
  */
 
-import { applyHatchGripDrag, decodeHatchVertexGripKind } from '../hatch-grips';
+import {
+  applyHatchGripDrag, decodeHatchVertexGripKind,
+  applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBounds, hatchBoundsCenter,
+  HATCH_GRADIENT_ORIGIN_KIND,
+} from '../hatch-grips';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { HatchGripKind } from '../../../hooks/grip-types';
 
@@ -77,5 +81,45 @@ describe('applyHatchGripDrag', () => {
     const snapshot = JSON.stringify(original);
     applyHatchGripDrag('hatch-vertex-0-1', { originalBoundaryPaths: original, delta: { x: 50, y: 50 } });
     expect(JSON.stringify(original)).toBe(snapshot);
+  });
+});
+
+// ── ADR-507 Φ5 A3 — gradient origin/seed grip ────────────────────────────────
+
+describe('hatchBounds / hatchBoundsCenter', () => {
+  it('computes the axis-aligned bbox + center over all rings', () => {
+    expect(hatchBounds([OUTER, ISLAND])).toEqual({ minX: 0, minY: 0, maxX: 1000, maxY: 1000 });
+    expect(hatchBoundsCenter([OUTER])).toEqual({ x: 500, y: 500 });
+  });
+
+  it('returns null on empty boundary', () => {
+    expect(hatchBounds([])).toBeNull();
+    expect(hatchBoundsCenter([])).toBeNull();
+  });
+});
+
+describe('isHatchOriginGripKind', () => {
+  it('matches only the gradient-origin kind', () => {
+    expect(isHatchOriginGripKind(HATCH_GRADIENT_ORIGIN_KIND)).toBe(true);
+    expect(isHatchOriginGripKind('hatch-vertex-0-0')).toBe(false);
+  });
+});
+
+describe('applyHatchOriginGripDrag', () => {
+  it('translates the origin by the delta', () => {
+    expect(applyHatchOriginGripDrag({ x: 500, y: 500 }, { delta: { x: 30, y: -20 } }))
+      .toEqual({ x: 530, y: 480 });
+  });
+
+  it('quantizes to the dominant axis when rectilinear', () => {
+    // |dx| > |dy| → y component dropped.
+    expect(applyHatchOriginGripDrag({ x: 0, y: 0 }, { delta: { x: 80, y: 20 }, rectilinear: true }))
+      .toEqual({ x: 80, y: 0 });
+  });
+
+  it('does not mutate the input origin', () => {
+    const origin = { x: 10, y: 10 };
+    applyHatchOriginGripDrag(origin, { delta: { x: 5, y: 5 } });
+    expect(origin).toEqual({ x: 10, y: 10 });
   });
 });
