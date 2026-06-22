@@ -82,7 +82,18 @@ export function buildPolylineVertexOpCommand(
   }
   if (op === 'add-vertex') {
     const next = (segIdx + 1) % vLen;
-    if (next === 0 && !entity.closed) return null; // open polyline: no wrap segment
+    if (next === 0 && !entity.closed) {
+      // Last vertex of an OPEN polyline has no outgoing segment → add on the
+      // incoming segment instead (legacy hover-menu parity), if one exists.
+      if (segIdx > 0) {
+        const incoming = calculateMidpoint(vertices[segIdx - 1], vertices[segIdx]);
+        return new PolylineVertexCommand(
+          { entityId: grip.entityId, op: { kind: 'add', index: segIdx, position: incoming } },
+          sceneManager,
+        );
+      }
+      return null;
+    }
     const position = calculateMidpoint(vertices[segIdx], vertices[next]);
     return new PolylineVertexCommand(
       { entityId: grip.entityId, op: { kind: 'add', index: segIdx + 1, position } },
