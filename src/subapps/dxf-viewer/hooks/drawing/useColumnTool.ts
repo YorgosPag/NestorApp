@@ -59,8 +59,7 @@ import {
   getColumnTopLeanLock,
   clearColumnTopLeanLock,
 } from '../../systems/cursor/ColumnTopLeanStore';
-import { tiltFromBaseTop } from '../../bim/columns/column-tilt-from-points';
-import { snapTiltAngleDeg } from '../../bim-3d/gizmo/bim3d-tilt-bridge';
+import { resolveTopLeanTilt } from '../../bim/columns/column-tilt-from-points';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
@@ -364,10 +363,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         const sceneUnits = getSceneUnits?.() ?? 'mm';
         const heightMm = resolveStoreyHeightMm(s.overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
         const wpp = worldPerPixel(getImmediateTransform().scale);
-        const tilt = {
-          direction: resolveColumnRotationDeg(lean.basePoint, point, wpp),
-          angle: snapTiltAngleDeg(tiltFromBaseTop(lean.basePoint, point, heightMm, sceneUnits).angle),
-        };
+        const tilt = resolveTopLeanTilt(lean.basePoint, point, heightMm, sceneUnits, wpp);
         return commitColumnAt(
           { ...s, overrides: { ...s.overrides, tilt } },
           lean.basePoint,
