@@ -293,12 +293,9 @@ export function useMouseMoveHandler({
     // The scheduler keeps the ~30fps snap throttle + the corner-snap (ADR-398) logic.
     // Grip-drag snap stays SYNCHRONOUS above (it needs a 1:1 ghost).
     if (snapEnabled && findSnapPoint && !isGripDragging) {
-      // ADR-398 §Column→Beam axis snap — `getEntities` τροφοδοτεί το column-placement
-      // context (snap στον άξονα δοκαριού + ghost χρωματισμός) στον decoupled scheduler.
-      requestSnapDetection({
-        worldPos, activeTool, findSnapPoint, setSnapResults,
-        getEntities: () => scene?.entities ?? [],
-      });
+      // ADR-398 §3.10 — το column face-snap υπολογίζεται πλέον σύγχρονα στο preview/commit από
+      // τους pre-collected στόχους (`columnPreviewStore`)· ο scheduler δεν χρειάζεται entities.
+      requestSnapDetection({ worldPos, activeTool, findSnapPoint, setSnapResults });
     } else if (!isGripDragging) {
       clearSnapDetection(setSnapResults);
     }

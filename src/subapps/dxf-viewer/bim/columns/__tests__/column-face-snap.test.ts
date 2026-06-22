@@ -6,11 +6,14 @@
  * κολόνα-στόχος (όλες οι παρειές έγκυρες), capture distance.
  */
 
-import { resolveColumnFaceSnap, type ColumnFaceSnap } from '../column-face-snap';
-import { resolveColumnFaceSnapWithGlyph } from '../column-placement-snap-context';
+import {
+  resolveColumnFaceSnap,
+  resolveColumnFaceSnapFromTargets,
+  collectColumnFaceSnapTargets,
+  type ColumnFaceSnap,
+} from '../column-face-snap';
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
-import { ExtendedSnapType, type ProSnapResult } from '../../../snapping/extended-types';
 
 // ── Test fixtures (scene units = mm → factor 1, capture = 600) ────────────────
 
@@ -258,35 +261,58 @@ describe('resolveColumnFaceSnap — column target (όλες οι παρειές 
   });
 });
 
-describe('resolveColumnFaceSnapWithGlyph — έλξεις (γλυφή) + μαγνητική ευθυγράμμιση', () => {
-  const cols = [columnTarget(3000, 0)]; // footprint x 2800..3200, y -200..200
+describe('resolveColumnFaceSnap — slab edge (ADR-398 §3.10 axis-relative — η ρίζα του handoff)', () => {
+  /** Τετράγωνη πλάκα x 0..2000, y 0..2000. */
+  function slab(id = 'slab-1'): Entity {
+    return {
+      id,
+      type: 'slab',
+      geometry: {
+        polygon: {
+          vertices: [{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }, { x: 0, y: 2000 }],
+        },
+      },
+    } as unknown as Entity;
+  }
 
-  const proSnap = (mode: ExtendedSnapType, x: number, y: number): ProSnapResult =>
-    ({
-      found: true,
-      snapPoint: { point: { x, y }, type: mode, description: mode, distance: 0, priority: 0 },
-      allCandidates: [], originalPoint: { x, y }, snappedPoint: { x, y }, activeMode: mode, timestamp: 0,
-    } as ProSnapResult);
+  // Το `slabEdgeTargets` μοντελοποιεί κάθε ακμή ως πολύ λεπτή band ±eps (eps = len·0.001 = 2 για
+  // ακμή 2000)· ο axis-relative resolver κουμπώνει flush στην κοντινή όψη → η κολώνα εδράζεται
+  // εντός ~eps της ακμής (αμελητέο, ΙΔΙΟ μοντέλο με τοίχο/δοκάρι).
+  const EDGE_EPS = 2.001;
 
-  it('ορατό BIM χαρακτηριστικό → μαγνητική έλξη + glyphSnap (η γλυφή/ετικέτα δείχνεται)', () => {
-    const find = () => proSnap(ExtendedSnapType.BIM_MIDPOINT, 3000, 200); // N face midpoint
-    const r = resolveColumnFaceSnapWithGlyph({ x: 3005, y: 240 }, cols, 'mm', find)!;
-    expect(r.glyphSnap).not.toBeNull();
-    expect(r.faceSnap.position).toEqual({ x: 3000, y: 200 }); // κουμπώνει στο χαρακτηριστικό
-    expect(r.faceSnap.anchor).toBe('s');
-    expect(r.faceSnap.status).toBe('beam');
+  it('κοντά στην κάτω ακμή (y=0) → κουμπώνει flush στην ακμή (position.y ≈ 0 ± eps)', () => {
+    const r = snap({ x: 1000, y: 120 }, [slab()])!;
+    expect(Math.abs(r.position.y)).toBeLessThanOrEqual(EDGE_EPS);
+    expect(r.position.x).toBeCloseTo(1000);
+    expect(r.status).toBe('beam');
   });
 
-  it('κανένα snap → ελεύθερο slide, glyphSnap null', () => {
-    const r = resolveColumnFaceSnapWithGlyph({ x: 3000, y: 250 }, cols, 'mm', () => null)!;
-    expect(r.glyphSnap).toBeNull();
-    expect(r.faceSnap.position).toEqual({ x: 3000, y: 200 });
+  it('κοντά στην δεξιά ακμή (x=2000) → κουμπώνει flush (position.x ≈ 2000 ± eps)', () => {
+    const r = snap({ x: 1880, y: 1000 }, [slab()])!;
+    expect(Math.abs(r.position.x - 2000)).toBeLessThanOrEqual(EDGE_EPS);
+    expect(r.position.y).toBeCloseTo(1000);
   });
 
-  it('σιωπηλό grid snap → ΟΧΙ γλυφή/έλξη (glyphSnap null)', () => {
-    const find = () => proSnap(ExtendedSnapType.GRID, 3000, 200);
-    const r = resolveColumnFaceSnapWithGlyph({ x: 3000, y: 250 }, cols, 'mm', find)!;
-    expect(r.glyphSnap).toBeNull();
+  it('μακριά από κάθε ακμή (κέντρο πλάκας, > capture) → null', () => {
+    expect(snap({ x: 1000, y: 1000 }, [slab()])).toBeNull();
+  });
+});
+
+describe('collectColumnFaceSnapTargets + resolveColumnFaceSnapFromTargets (core SSoT)', () => {
+  it('διαχωρίζει σωστά κολόνες/δοκάρια/πλάκες ανά είδος', () => {
+    const t = collectColumnFaceSnapTargets([horizontalBeam(), columnTarget(3000, 0)]);
+    expect(t.beamTargets).toHaveLength(1);
+    expect(t.footprints).toHaveLength(1);
+    expect(t.wallTargets).toHaveLength(0);
+    expect(t.slabTargets).toHaveLength(0);
+  });
+
+  it('ο core δίνει ΤΟ ΙΔΙΟ αποτέλεσμα με το wrapper (preview ≡ commit path)', () => {
+    const entities = [horizontalBeam()];
+    const cursor: Point2D = { x: 0, y: 250 };
+    const viaWrapper = resolveColumnFaceSnap(cursor, entities, 'mm');
+    const viaCore = resolveColumnFaceSnapFromTargets(cursor, collectColumnFaceSnapTargets(entities), 'mm');
+    expect(viaCore).toEqual(viaWrapper);
   });
 });
 

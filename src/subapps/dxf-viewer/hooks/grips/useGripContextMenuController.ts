@@ -46,6 +46,8 @@ import { removeVertexFromRoof, applyRoofGripDrag } from '../../bim/roofs/roof-gr
 import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-510 Φ3c — multifunctional polyline grip ops (add/remove/convert).
+import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from '../../systems/grip/polyline-grip-ops';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -154,7 +156,9 @@ export function useGripContextMenuController(
       // entirely grip-zone (e.g. a column) must open the SAME menu as a wall.
       // Keep the grip menu on hover only when it carries vertex-ops (slab/roof
       // add/delete corner), and unconditionally during an active drag.
-      const hasVertexOps = sectionsMeta.some((s) => s.id === 'vertex-ops');
+      const hasVertexOps = sectionsMeta.some(
+        (s) => s.id === 'vertex-ops' || s.id === 'polyline-ops',
+      );
       if ((d.phase === 'hovering' || d.phase === 'warm') && !hasVertexOps) return;
 
       // Suppress the browser's native context menu — AutoCAD-style menu wins.
@@ -212,6 +216,17 @@ export function useGripContextMenuController(
         if (cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
       };
 
+      // ADR-510 Φ3c — multifunctional polyline grip ops. Pure builder picks the
+      // right command (PolylineVertexCommand add/remove, SetBulgeCommand arc/line);
+      // run through global history = one undo step (mirror of onSlabVertexOp).
+      const onPolylineVertexOp = (targetGrip: UnifiedGripInfo, op: PolylineVertexMenuOp) => {
+        const lm = depsRef.current.levelManager;
+        if (!targetGrip.entityId || !lm.currentLevelId) return;
+        const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
+        const cmd = buildPolylineVertexOpCommand(targetGrip, op, adapter);
+        if (cmd && cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
+      };
+
       for (const sectionMeta of sectionsMeta) {
         const items: GripContextMenuSection['items'][number][] = [];
         for (const actionMeta of sectionMeta.items) {
@@ -220,6 +235,7 @@ export function useGripContextMenuController(
             onAfterDispatch: () => GripContextMenuStore.hide(),
             sessionUndo,
             onSlabVertexOp,
+            onPolylineVertexOp,
           }, grip);
           if (!onSelect) continue;
           const { checked, disabled } = applyDynamicFlags(actionMeta);

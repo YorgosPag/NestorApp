@@ -97,6 +97,7 @@ import {
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
+  commitPolylineBulgeGripDrag,
 } from './grip-parametric-commits';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
@@ -373,6 +374,14 @@ export function commitDxfGripDragModeAware(
   // ADR-359 Phase 11 — Ray grip path (basePoint translate or direction rotate).
   if (grip.rayGripKind) {
     commitRayGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-510 Φ3c — polyline ARC-MIDPOINT grip → live bulge curvature drag (the
+  // apex follows the cursor). Only the arc-apex grip routes here; vertex +
+  // straight-segment-midpoint polyline grips fall through to the standard
+  // stretch path below (move vertex / move both edge vertices).
+  if (grip.polylineGripKind?.startsWith('polyline-arc-midpoint-')) {
+    commitPolylineBulgeGripDrag(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.

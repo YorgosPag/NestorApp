@@ -10,24 +10,23 @@
  * του ΠΡΑΓΜΑΤΙΚΟΥ `ColumnRenderer` (category fill / material hatch / lineweight)
  * αντί για τα 9 schematic anchor-ghosts. Το ghost ΕΙΝΑΙ η τελική κολώνα.
  *
- * **preview === commit (byte-for-byte):** διαβάζει ΑΚΡΙΒΩΣ τα ίδια imperative SSoT
- * που γράφει το §3.7 move/click path:
- *   · θέση  → `getImmediateSnap()` (snapped face/corner point — ό,τι κάνει commit
- *             το `mouse-handler-up`)·
- *   · λαβή  → `getColumnFaceAnchor()` ?? (`getColumnGhostStatus()==='beam'` ? center
- *             : ribbon/Tab anchor) — ΙΔΙΑ precedence με `commitColumnFromState`·
- *   · status→ `getColumnGhostStatus()` (🔴 overlap → red schematic, mirror beam·
- *             🟢/neutral → πλήρες WYSIWYG, όπως το έγκυρο δοκάρι).
+ * **preview === commit (ADR-398 §3.10 sync-in-preview):** υπολογίζει το face-snap
+ * ΣΥΓΧΡΟΝΑ εδώ (πιστό mirror τοίχου/δοκαριού — `makeWallGhostBeforeClick`), από:
+ *   · στόχους → `columnPreviewStore.get()` (pre-collected κολόνες/δοκάρια/τοίχοι/πλάκες)·
+ *   · cursor  → `resolveEffectivePreviewCursor` = `getImmediateSnap()` (snapped point που
+ *               έγραψε ο scheduler: corner-projection / BIM χαρακτηριστικό / grid)·
+ *   · resolver→ `resolveColumnFaceSnapFromTargets` (ΕΝΑ SSoT) → θέση + λαβή + status + faceFrame.
+ * Το commit (`mouse-handler-up`) καλεί ΤΟΝ ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor
+ * → preview ≡ commit εξ ορισμού (κανένα async store, καμία διπλή πηγή αλήθειας).
  *
- * kind/anchor/overrides διαβάζονται από το ΥΠΑΡΧΟΝ `columnToolBridgeStore` (μηδέν
- * νέο preview-store — το bridge κρατά ήδη το user-editable state). Pure: zero
- * React/DOM, ΙΔΙΑ δεδομένα με το commit path.
+ * kind/anchor/overrides διαβάζονται από το ΥΠΑΡΧΟΝ `columnToolBridgeStore` (user-editable state).
+ * Pure: zero React/DOM, ΙΔΙΑ δεδομένα με το commit path.
  *
  * @see ./column-completion.ts — buildDefaultColumnParams / buildColumnEntity (commit builders)
- * @see ../../bim/columns/column-face-snap.ts — §3.7 face-snap (θέση/λαβή/status SSoT)
- * @see ../../systems/cursor/snap-scheduler.ts — move-path writer (ImmediateSnap + face anchor)
- * @see ../../systems/cursor/mouse-handler-up.ts — click-path commit (ίδιο snapped point)
- * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.8
+ * @see ../../bim/columns/column-face-snap.ts — resolveColumnFaceSnapFromTargets (θέση/λαβή/status SSoT)
+ * @see ../../bim/columns/column-preview-store.ts — pre-collected στόχοι (sync-in-preview)
+ * @see ../../systems/cursor/mouse-handler-up.ts — click-path commit (ίδιος resolver + στόχοι)
+ * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.10
  */
 
 import type { Point2D } from '../../rendering/types/Types';

@@ -31,14 +31,12 @@ import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import {
   findColumnGripCornerSnap,
-  findColumnDrawCornerSnap,
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
-import {
-  resolveColumnDrawSnap,
-  resolveColumnFaceSnapWithGlyph,
-} from '../../bim/columns/column-placement-snap-context';
-import { setColumnFaceAnchor } from './ColumnPlacementGhostStatusStore';
+import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
+import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
+import { setColumnFaceAnchor, setColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
@@ -217,36 +215,28 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       // intersection-only guide policy as the hover preview (Giorgio: σχεδιασμός → μόνο ✕).
       setSnapDrawingMode(isInDrawingMode(activeTool, overlayMode));
       if (snapEnabled && findSnapPoint && !dimLineRefPhase) {
-        // ADR-398 — Column draw commit: SAME Revit-grade resolver as the move-path ghost
-        // (`resolveColumnDrawSnap`: visible corner-projection > visible cursor characteristic >
-        // silent grid alignment) → commit ≡ ghost. Center-anchor (κέντρο ≡ άξονας δοκαριού)
-        // επιβάλλεται στο `useColumnTool` μέσω `getColumnGhostStatus()==='beam'`.
+        // ADR-398 §3.10 — Column commit ≡ preview (sync-in-preview unification): ΙΔΙΟΣ resolver
+        // (`resolveColumnFaceSnapFromTargets`) + ΙΔΙΟΙ pre-collected στόχοι (`columnPreviewStore`)
+        // + ΙΔΙΟΣ effective cursor (`resolveEffectivePreviewCursor` = ImmediateSnap = ό,τι έδειξε
+        // ο scheduler: corner-projection / BIM χαρακτηριστικό / grid). Set & την auto λαβή/status
+        // που διαβάζει το `useColumnTool` (center-anchor όταn status==='beam'). Miss → ο effective
+        // cursor (corner/grid-adjusted) ΕΙΝΑΙ το committed σημείο — ακριβώς όπως το ghost.
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
         if (colHandle?.isActive) {
-          // ADR-398 §Column smart-ghost face-snap — HIGHEST priority, ΕΝΑ SSoT με το move-path
-          // ghost (`snap-scheduler` → `resolveColumnFaceSnap`) ώστε commit ≡ ghost. Set & την
-          // auto λαβή που διαβάζει το `commitColumnFromState`. Miss → υπάρχον corner path.
-          const faceResolved = scene && findSnapPoint
-            ? resolveColumnFaceSnapWithGlyph(
-                worldPoint,
-                (scene.entities ?? []) as unknown as readonly Entity[],
-                colHandle.getSceneUnits(),
-                findSnapPoint,
-              )
-            : null;
-          if (faceResolved) {
-            worldPoint = faceResolved.faceSnap.position;
-            setColumnFaceAnchor(faceResolved.faceSnap.anchor);
+          const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
+          const faceSnap = resolveColumnFaceSnapFromTargets(
+            effectiveCursor,
+            columnPreviewStore.get(),
+            colHandle.getSceneUnits(),
+          );
+          if (faceSnap) {
+            worldPoint = faceSnap.position;
+            setColumnFaceAnchor(faceSnap.anchor);
+            setColumnGhostStatus(faceSnap.status);
           } else {
             setColumnFaceAnchor(null);
-            const drawCorner = findColumnDrawCornerSnap(
-              worldPoint,
-              { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
-              colHandle.getSceneUnits(),
-              findSnapPoint,
-            );
-            const resolved = resolveColumnDrawSnap(worldPoint, drawCorner, findSnapPoint);
-            if (resolved) worldPoint = resolved.ghostPoint;
+            setColumnGhostStatus('neutral');
+            worldPoint = effectiveCursor;
           }
         } else {
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);

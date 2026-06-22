@@ -174,6 +174,15 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.lineweight) {
           return { value: lineweightToOptionValue(hatch?.lineweightMm ?? defaults.lineweightMm), options: [] };
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientType) {
+          return { value: hatch?.gradient?.type ?? defaults.gradientType, options: [] };
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor1) {
+          return { value: hatch?.gradient?.color1 ?? defaults.gradientColor1, options: [] };
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
+          return { value: hatch?.gradient?.color2 ?? defaults.gradientColor2, options: [] };
+        }
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
@@ -182,6 +191,9 @@ export function useRibbonHatchBridge(
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
           return { value: String(hatch?.patternScale ?? defaults.patternScale), options: [] };
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
+          return { value: String(hatch?.gradient?.angleDeg ?? defaults.gradientAngle), options: [] };
         }
         return { value: String(hatch?.lineSpacing ?? defaults.lineSpacing), options: [] };
       }
@@ -195,13 +207,18 @@ export function useRibbonHatchBridge(
       const hatch = resolveHatch();
       if (isHatchRibbonStringKey(commandKey)) {
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
-          const fillType =
-            value === 'user-defined' ? 'user-defined' : value === 'predefined' ? 'predefined' : 'solid';
-          const patternType = fillType === 'solid' ? 'solid' : 'pattern';
+          const fillType: NonNullable<HatchEntity['fillType']> =
+            value === 'user-defined' ? 'user-defined'
+              : value === 'predefined' ? 'predefined'
+                : value === 'gradient' ? 'gradient'
+                  : 'solid';
+          const patternType: NonNullable<HatchEntity['patternType']> =
+            fillType === 'solid' ? 'solid' : fillType === 'gradient' ? 'gradient' : 'pattern';
           if (hatch) {
-            // Switch σε predefined χωρίς όνομα → δώσε το default ώστε να φανεί αμέσως.
+            // Switch χωρίς δεδομένα → δώσε τα defaults ώστε να φανεί αμέσως (mirror predefined).
             const patch: Record<string, unknown> = { fillType, patternType };
             if (fillType === 'predefined' && !hatch.patternName) patch.patternName = defaults.patternName;
+            if (fillType === 'gradient' && !hatch.gradient) patch.gradient = buildGradientFromDefaults(defaults);
             patchHatch(hatch, patch);
           } else setHatchDrawDefaults({ fillType });
           return;
@@ -228,6 +245,18 @@ export function useRibbonHatchBridge(
           else setHatchDrawDefaults({ lineweightMm });
           return;
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientType) {
+          applyGradientChange(hatch, { field: 'type', value: normalizeGradientType(value) });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor1) {
+          applyGradientChange(hatch, { field: 'color1', value });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
+          applyGradientChange(hatch, { field: 'color2', value });
+          return;
+        }
         // islandStyle
         const islandStyle = value === 'outer' ? 'outer' : value === 'ignore' ? 'ignore' : 'normal';
         if (hatch) patchHatch(hatch, { islandStyle });
@@ -237,6 +266,10 @@ export function useRibbonHatchBridge(
       if (isHatchRibbonNumberKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
+        if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
+          applyGradientChange(hatch, { field: 'angleDeg', value: numeric });
+          return;
+        }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
           if (hatch) patchHatch(hatch, { lineAngle: numeric });
           else setHatchDrawDefaults({ lineAngle: numeric });
@@ -253,23 +286,30 @@ export function useRibbonHatchBridge(
         else setHatchDrawDefaults({ lineSpacing: numeric });
       }
     },
-    [resolveHatch, patchHatch, defaults],
+    [resolveHatch, patchHatch, applyGradientChange, defaults],
   );
 
   const onToggle = useCallback(
     (commandKey: string, nextValue: boolean): void => {
       if (!isHatchRibbonToggleKey(commandKey)) return;
       const hatch = resolveHatch();
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
+        applyGradientChange(hatch, { field: 'singleColor', value: nextValue });
+        return;
+      }
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
-    [resolveHatch, patchHatch],
+    [resolveHatch, patchHatch, applyGradientChange],
   );
 
   const getToggleState = useCallback(
     (commandKey: string): RibbonToggleState => {
       if (!isHatchRibbonToggleKey(commandKey)) return NULL_TOGGLE;
       const hatch = resolveHatch();
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
+        return hatch ? (hatch.gradient?.singleColor ?? false) : defaults.gradientSingleColor;
+      }
       return hatch ? (hatch.doubleCrossHatch ?? false) : defaults.doubleCrossHatch;
     },
     [resolveHatch, defaults],
@@ -298,9 +338,19 @@ export function useRibbonHatchBridge(
     [resolveHatch, levelManager, executeCommand, t],
   );
 
+  // Gradient panel ορατό μόνο όταν το (επιλεγμένο hatch ή τα defaults) fillType='gradient'.
+  const getPanelVisibility = useCallback(
+    (visibilityKey: string): boolean => {
+      if (!isHatchRibbonVisibilityKey(visibilityKey)) return true;
+      const hatch = resolveHatch();
+      return (hatch?.fillType ?? defaults.fillType) === 'gradient';
+    },
+    [resolveHatch, defaults],
+  );
+
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
   );
 }
 
@@ -308,3 +358,6 @@ export function useRibbonHatchBridge(
 export function isHatchActionKey(action: string): boolean {
   return isHatchRibbonActionKey(action);
 }
+
+/** Re-export ώστε ο `useRibbonCommands` να δρομολογεί το hatch gradient panel visibility. */
+export { isHatchRibbonVisibilityKey as isHatchPanelVisibilityKey } from './bridge/hatch-command-keys';

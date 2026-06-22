@@ -18,6 +18,7 @@ import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands/ReorderEntityCommand';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
+import { buildGradientFromDefaults } from './hatch-gradient-build';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 /** Ελάχιστος αριθμός κορυφών για έγκυρο κλειστό όριο. */
@@ -36,21 +37,25 @@ export function buildHatchEntityFromBoundary(
   const d = getHatchDrawDefaults();
   const isSolid = d.fillType === 'solid';
   const isPredefined = d.fillType === 'predefined';
+  const isGradient = d.fillType === 'gradient';
+  const isUserDefined = d.fillType === 'user-defined';
   return {
     id,
     type: 'hatch',
     boundaryPaths: [points.map((p) => ({ x: p.x, y: p.y }))],
     fillType: d.fillType,
-    patternType: isSolid ? 'solid' : 'pattern',
+    patternType: isSolid ? 'solid' : isGradient ? 'gradient' : 'pattern',
     fillColor: d.fillColor,
     lineAngle: d.lineAngle,
     lineSpacing: d.lineSpacing,
-    doubleCrossHatch: isSolid || isPredefined ? undefined : d.doubleCrossHatch,
+    doubleCrossHatch: isUserDefined ? d.doubleCrossHatch : undefined,
     islandStyle: d.islandStyle,
     // predefined PAT μοτίβο (ADR-507 Φ2) — μόνο όταν fillType==='predefined'.
     patternName: isPredefined ? d.patternName : undefined,
     patternScale: isPredefined ? d.patternScale : undefined,
     patternAngle: isPredefined ? d.patternAngle : undefined,
+    // gradient γέμισμα (ADR-507 Φ5) — μόνο όταν fillType==='gradient', χτισμένο από τα defaults (SSoT).
+    gradient: isGradient ? buildGradientFromDefaults(d) : undefined,
     // Πάχος γραμμών (AutoCAD LWT) — αποθηκεύεται μόνο όταν concrete· ByLayer/default
     // παραλείπεται ώστε ο renderer να εφαρμόσει το fallback (mirror completeEntity).
     lineweightMm: isConcreteLineweight(d.lineweightMm) ? d.lineweightMm : undefined,

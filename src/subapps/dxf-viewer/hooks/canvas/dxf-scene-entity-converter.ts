@@ -158,8 +158,19 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       return { ...base, type: 'circle' as const, center: e.center, radius: e.radius } as DxfEntityUnion;
     }
     case 'polyline': {
-      const e = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
-      return { ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed } as DxfEntityUnion;
+      // ADR-510 Φ3b/Φ3c — carry the per-segment arc/width parallel arrays through
+      // to the canvas/grip path (index-aligned with vertices) so arcs render and
+      // arc-midpoint grips appear. Absent ⇒ all-straight (back-compat).
+      const e = entity as typeof entity & {
+        vertices: Point2D[]; closed: boolean;
+        bulges?: number[]; startWidths?: number[]; endWidths?: number[];
+      };
+      return {
+        ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed,
+        ...(e.bulges ? { bulges: e.bulges } : {}),
+        ...(e.startWidths ? { startWidths: e.startWidths } : {}),
+        ...(e.endWidths ? { endWidths: e.endWidths } : {}),
+      } as DxfEntityUnion;
     }
     case 'arc': {
       const e = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
@@ -189,9 +200,18 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       return { ...base, type: 'angle-measurement' as const, vertex: e.vertex, point1: e.point1, point2: e.point2, angle: e.angle } as DxfEntityUnion;
     }
     case 'lwpolyline': {
-      // ADR-186: LWPolyline → render as standard polyline
-      const e = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
-      return { ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed ?? false } as DxfEntityUnion;
+      // ADR-186: LWPolyline → render as standard polyline.
+      // ADR-510 Φ3b/Φ3c — carry bulge/width parallel arrays (see 'polyline' case).
+      const e = entity as typeof entity & {
+        vertices: Point2D[]; closed?: boolean;
+        bulges?: number[]; startWidths?: number[]; endWidths?: number[];
+      };
+      return {
+        ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed ?? false,
+        ...(e.bulges ? { bulges: e.bulges } : {}),
+        ...(e.startWidths ? { startWidths: e.startWidths } : {}),
+        ...(e.endWidths ? { endWidths: e.endWidths } : {}),
+      } as DxfEntityUnion;
     }
     case 'rectangle': {
       const e = entity as typeof entity & {

@@ -45,7 +45,7 @@ import { isSlabRibbonKey, isSlabRibbonStringKey } from './bridge/slab-command-ke
 import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey } from './bridge/roof-command-keys';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
 import { isWallCoveringRibbonNumberKey, isWallCoveringRibbonStringKey } from './bridge/wall-covering-command-keys';
-import { isHatchRibbonNumberKey, isHatchRibbonStringKey, isHatchRibbonToggleKey, isHatchRibbonReadoutKey } from './bridge/hatch-command-keys';
+import { isHatchRibbonNumberKey, isHatchRibbonStringKey, isHatchRibbonToggleKey, isHatchRibbonReadoutKey, isHatchRibbonVisibilityKey } from './bridge/hatch-command-keys';
 import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnFinishKey, isColumnStructuralKey, isColumnStructuralReadoutKey } from './bridge/column-command-keys';
 import { isStoreyRibbonKey } from './bridge/storey-command-keys';
@@ -378,9 +378,10 @@ export function useRibbonCommands({
       if (isMepSegmentPanelVisibilityKey(visibilityKey)) return mepSegmentBridge.getPanelVisibility(visibilityKey);
       if (isFurniturePanelVisibilityKey(visibilityKey)) return furnitureBridge.getPanelVisibility(visibilityKey);
       if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
+      if (isHatchRibbonVisibilityKey(visibilityKey)) return hatchBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, slabBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
+    [stairBridge, columnBridge, beamBridge, slabBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, hatchBridge],
   );
 
   // ADR-461 Phase C4 / ADR-467 — Revit-style advisory recommendation per active

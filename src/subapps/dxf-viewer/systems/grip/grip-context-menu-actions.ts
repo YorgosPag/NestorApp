@@ -153,6 +153,18 @@ export function bindContextMenuAction(
     case 'vertex-ops:addCorner':
       if (!grip || !ctx.onSlabVertexOp) return null;
       return () => { ctx.onSlabVertexOp!(grip, 'add-corner'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:addVertex':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'add-vertex'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:removeVertex':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'remove-vertex'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:convertToArc':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-arc'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:convertToLine':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-line'); ctx.onAfterDispatch(); };
     default:
       return null;
   }

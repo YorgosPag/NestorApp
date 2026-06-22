@@ -78,6 +78,35 @@ describe('buildHatchEntityFromBoundary', () => {
     expect(h.lineSpacing).toBe(150);
     expect(h.doubleCrossHatch).toBe(true);
   });
+
+  it('builds a gradient hatch carrying the gradient object from defaults (ADR-507 Φ5)', () => {
+    setHatchDrawDefaults({
+      fillType: 'gradient',
+      gradientType: 'spherical',
+      gradientColor1: '#2980b9',
+      gradientColor2: '#c0392b',
+      gradientAngle: 45,
+    });
+    const h = buildHatchEntityFromBoundary(SQUARE, 'e3', 'lyr')!;
+    expect(h.fillType).toBe('gradient');
+    expect(h.patternType).toBe('gradient');
+    expect(h.gradient).toEqual({
+      type: 'spherical',
+      color1: '#2980b9',
+      color2: '#c0392b',
+      angleDeg: 45,
+      singleColor: undefined,
+    });
+    // gradient → όχι double-hatch, όχι predefined pattern.
+    expect(h.doubleCrossHatch).toBeUndefined();
+    expect(h.patternName).toBeUndefined();
+  });
+
+  it('omits gradient for non-gradient fill types', () => {
+    setHatchDrawDefaults({ fillType: 'solid' });
+    const h = buildHatchEntityFromBoundary(SQUARE, 'e4', 'lyr')!;
+    expect(h.gradient).toBeUndefined();
+  });
 });
 
 describe('computeHatchAreaMm2', () => {

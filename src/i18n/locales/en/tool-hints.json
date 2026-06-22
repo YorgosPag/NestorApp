@@ -836,10 +836,15 @@
     "undo": "Undo",
     "deleteCorner": "Delete corner",
     "addCorner": "Add corner here",
+    "addVertex": "Add vertex",
+    "removeVertex": "Remove vertex",
+    "convertToArc": "Convert to arc",
+    "convertToLine": "Convert to line",
     "section": {
       "modes": "Mode",
       "extras": "Extras",
       "vertexOps": "Corner",
+      "polylineOps": "Polyline",
       "terminal": "Actions"
     },
     "prompts": {

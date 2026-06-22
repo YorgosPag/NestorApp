@@ -103,6 +103,10 @@ export {
   commitHatchGripDrag,
 } from './grip-parametric-footprint-commits';
 
+// ADR-510 Φ3c — polyline arc-apex bulge drag lives in grip-polyline-bulge-commit.ts
+// (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitPolylineBulgeGripDrag } from './grip-polyline-bulge-commit';
+
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
  * stretch / move / rotate strategies because `StairEntity` is parametric:

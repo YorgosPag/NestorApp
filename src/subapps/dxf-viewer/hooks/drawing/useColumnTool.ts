@@ -59,6 +59,12 @@ import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { EventBus } from '../../systems/events/EventBus';
+// ADR-398 §3.10 sync-in-preview — pre-collect τους face-snap στόχους στο column preview store
+// (mirror useWallTool/useBeamTool) ώστε το ghost + commit να υπολογίζουν το snap σύγχρονα.
+import { collectColumnFaceSnapTargets } from '../../bim/columns/column-face-snap';
+import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+// N.7.1 file-size split — pure status-text resolver (FSM state → i18n key).
+import { resolveColumnStatusTextKey } from './column-status-text';
 
 /**
  * ADR-363 Φάση 3 / 3c — column placement mode:
@@ -187,8 +193,32 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const onColumnCreatedRef = useRef(onColumnCreated);
   onColumnCreatedRef.current = onColumnCreated;
 
+  // ── scene snap targets sync (ADR-398 §3.10 — mirror useWallTool/useBeamTool) ──
+  // Pre-collect κολόνες/δοκάρια/τοίχοι/πλάκες στο `columnPreviewStore` ΠΡΙΝ το 1ο κλικ, ώστε
+  // το ghost-before-click face-snap (+ commit) να υπολογίζεται σύγχρονα με έτοιμους στόχους.
+  const syncSceneTargetsToStore = useCallback(() => {
+    const entities = getSceneEntitiesRef.current?.() ?? [];
+    columnPreviewStore.set(collectColumnFaceSnapTargets(entities));
+  }, []);
+
+  // Re-sync όταν δημιουργείται οντότητα (rAF defer: το event εκπέμπεται σύγχρονα πριν commit-
+  // αριστεί το React scene → διάβασε τη φρέσκια σκηνή στο επόμενο frame ώστε η μόλις-σχεδιασμένη
+  // οντότητα να είναι ορατή στους στόχους του επόμενου ghost ΠΡΙΝ το 1ο κλικ).
+  useEffect(() => {
+    let raf = 0;
+    const unsub = EventBus.on('drawing:entity-created', () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => syncSceneTargetsToStore());
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub();
+    };
+  }, [syncSceneTargetsToStore]);
+
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
+    syncSceneTargetsToStore(); // στόχοι έτοιμοι πριν το 1ο ghost frame
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -199,7 +229,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       overrides: prev.overrides,
       phase: 'awaitingPosition',
     }));
-  }, []);
+  }, [syncSceneTargetsToStore]);
 
   const setKind = useCallback((kind: ColumnKind) => {
     setState((prev) => ({
@@ -261,6 +291,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
 
   const deactivate = useCallback(() => {
     clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
+    columnPreviewStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, []);
 
@@ -411,22 +442,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   }, []);
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
-  const getStatusText = useCallback((): string => {
-    const s = stateRef.current;
-    if (s.phase === 'idle') return '';
-    // ADR-363 Φάση 3 — outer-perimeter prompt (box-select τις παρειές).
-    if (s.placementMode === 'outer-perimeter') return 'tools.column.statusPerimeterPick';
-    // ADR-363 Φάση 3c — discrete-perimeter prompt (box-select· αυτόματη ταξινόμηση).
-    if (s.placementMode === 'discrete-perimeter')
-      return 'tools.column.statusDiscretePerimeterPick';
-    // ADR-419 — in-region prompt ανά τρόπο (4 γραμμές / κλικ μέσα / πλαίσιο).
-    if (s.placementMode === 'in-region') {
-      if (s.regionMethod === 'inside') return 'tools.column.statusRegionInsidePick';
-      if (s.regionMethod === 'box') return 'tools.column.statusRegionBoxPick';
-      return 'tools.column.statusRegionLinesPick';
-    }
-    return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
-  }, []);
+  // N.7.1 split — pure resolver lives σε column-status-text.ts (SSoT).
+  const getStatusText = useCallback((): string => resolveColumnStatusTextKey(stateRef.current), []);
 
   // ── ADR-363 Phase 8D — publish handle to ribbon bridge store ────────────
   // Single writer pattern (mirror stair-status-store). Bridge reads via
