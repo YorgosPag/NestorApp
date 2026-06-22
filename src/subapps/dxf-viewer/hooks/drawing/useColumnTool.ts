@@ -22,11 +22,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import {
   ANCHOR_CYCLE_ORDER,
+  DEFAULT_COLUMN_HEIGHT_MM,
   type ColumnAnchor,
-  type ColumnEntity,
   type ColumnKind,
 } from '../../bim/types/column-types';
 import {
@@ -34,7 +33,6 @@ import {
   buildDefaultColumnParams,
   resolveColumnGridBindings,
   type ColumnParamOverrides,
-  type SceneUnits,
 } from './column-completion';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
@@ -43,7 +41,6 @@ import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
 import { useColumnRegionClicks } from './use-column-region-clicks';
-import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
@@ -56,6 +53,15 @@ import {
   getColumnRotationLock,
   clearColumnRotationLock,
 } from '../../systems/cursor/ColumnRotationStore';
+// ADR-404 Phase 5 — slanted column 2-click (base→top-lean) place flow.
+import {
+  setColumnTopLeanLock,
+  getColumnTopLeanLock,
+  clearColumnTopLeanLock,
+} from '../../systems/cursor/ColumnTopLeanStore';
+import { tiltFromBaseTop } from '../../bim/columns/column-tilt-from-points';
+import { snapTiltAngleDeg } from '../../bim-3d/gizmo/bim3d-tilt-bridge';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
@@ -66,118 +72,23 @@ import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // N.7.1 file-size split — pure status-text resolver (FSM state → i18n key).
 import { resolveColumnStatusTextKey } from './column-status-text';
+// N.7.1 file-size split — state machine types + hook contract + INITIAL_STATE.
+import {
+  INITIAL_STATE,
+  type ColumnPlacementMode,
+  type ColumnToolState,
+  type UseColumnToolOptions,
+  type UseColumnToolResult,
+} from './column-tool-types';
 
-/**
- * ADR-363 Φάση 3 / 3c — column placement mode:
- *   - 'freehand'          — single-click placement (default, Phase 4).
- *   - 'outer-perimeter'   — box-select παρειές → ΕΝΑ τοιχίο (ColumnEntity) ανά
- *                           κλειστή περίμετρο, ΜΕ ένωση γειτονικών (Φάση 3).
- *   - 'discrete-perimeter'— box-select παρειές → ΧΩΡΙΣ ένωση (κάθε περίγραμμα
- *                           ξεχωριστό)· αυτόματη ταξινόμηση κολώνα/τοιχίο ανά
- *                           αναλογία πλευρών + ενημερωτικό confirm (Φάση 3c).
- *   - 'in-region'         — ADR-419 «Κολώνα σε περιοχή (4 γραμμές)»: 4 κλικ σε
- *                           γραμμές / 1 κλικ μέσα / box-select → ΕΝΑ ColumnEntity
- *                           ανά εσώκλειστο ορθογώνιο (ΙΔΙΑ SSoT με «Τοίχος σε περιοχή»).
- */
-export type ColumnPlacementMode =
-  | 'freehand'
-  | 'outer-perimeter'
-  | 'discrete-perimeter'
-  | 'in-region';
-
-// ─── State machine types ─────────────────────────────────────────────────────
-
-export type ColumnToolPhase =
-  | 'idle'
-  | 'awaitingPosition'
-  | 'awaitingRotation' // ADR-508 §column place+rotate — μετά το 1ο κλικ: ορισμός γωνίας με 2ο κλικ
-  | 'committed';
-
-export interface ColumnToolState {
-  readonly phase: ColumnToolPhase;
-  readonly kind: ColumnKind;
-  readonly anchor: ColumnAnchor;
-  /** ADR-363 Φάση 3 — 'freehand' (single-click) ή 'outer-perimeter' (από περίγραμμα). */
-  readonly placementMode: ColumnPlacementMode;
-  /**
-   * ADR-419 — όταν `placementMode === 'in-region'`, ποιον τρόπο δέχεται το εργαλείο:
-   * 'lines' (4 γραμμές) / 'inside' (κλικ μέσα) / 'box' (πλαίσιο). Οδηγείται από το
-   * active tool id (column-region-lines/inside/box). Αδιάφορο στα άλλα modes.
-   */
-  readonly regionMethod: RegionMethod;
-  /**
-   * ADR-419 — όταν `placementMode === 'discrete-perimeter'`, η πρόθεση του χρήστη:
-   * 'columns' («Πολλαπλή δημιουργία κολωνών») ή 'walls' («…τοιχίων»). Καθορίζει τι
-   * δημιουργείται κατευθείαν vs τι ζητά επιβεβαίωση (intent-aware confirm).
-   */
-  readonly discreteIntent: 'columns' | 'walls';
-  readonly overrides: ColumnParamOverrides;
-  /** ADR-419 «Κολώνα σε περιοχή» — accumulated 4-line picks (mirror του τοίχου). */
-  readonly regionPicks: readonly RegionLineSeg[];
-  readonly error: string | null;
-}
-
-const INITIAL_STATE: ColumnToolState = {
-  phase: 'idle',
-  kind: 'rectangular',
-  anchor: 'center',
-  placementMode: 'freehand',
-  regionMethod: 'lines',
-  discreteIntent: 'columns',
-  overrides: {},
-  regionPicks: [],
-  error: null,
-};
-
-// ─── Hook options + return ───────────────────────────────────────────────────
-
-export interface UseColumnToolOptions {
-  /** Callback fired μετά από επιτυχές build + commit. */
-  readonly onColumnCreated?: (entity: ColumnEntity) => void;
-  /** Layer ID στο οποίο γράφεται η νέα column. */
-  readonly currentLevelId?: string;
-  /** Returns the active scene's coordinate units for correct mm→canvas conversion. */
-  readonly getSceneUnits?: () => SceneUnits;
-  /**
-   * ADR-363 Φάση 3 — live scene entities getter για το 'outer-perimeter' mode
-   * (ανάλυση των παρειών στο box-select / click-inside). Omit ⇒ το «από
-   * περίγραμμα» γίνεται no-op.
-   */
-  readonly getSceneEntities?: () => readonly Entity[];
-}
-
-export interface UseColumnToolResult {
-  readonly state: ColumnToolState;
-  activate(): void;
-  /** Switch active kind (4 kinds). Resets the state machine. */
-  setKind(kind: ColumnKind): void;
-  /**
-   * ADR-363 Φάση 3 — switch placement mode ('freehand' ⇄ 'outer-perimeter').
-   * Resets the state machine (κρατά kind + anchor + overrides). Driven by the
-   * active tool id ('column' → freehand, 'column-from-perimeter' → outer-perimeter).
-   */
-  setPlacementMode(mode: ColumnPlacementMode): void;
-  /** ADR-419 — in-region method ('lines' | 'inside' | 'box'), driven by tool id. */
-  setRegionMethod(method: RegionMethod): void;
-  /** ADR-419 — discrete-from-perimeter intent ('columns' | 'walls'), driven by tool id. */
-  setDiscreteIntent(intent: 'columns' | 'walls'): void;
-  /** Explicit anchor selector (used από ribbon combobox). */
-  setAnchor(anchor: ColumnAnchor): void;
-  /** Tab cycles through 9-state ring (ANCHOR_CYCLE_ORDER). */
-  cycleAnchor(direction?: 1 | -1): void;
-  deactivate(): void;
-  reset(): void;
-  /** Returns true αν το click commit-άρισε νέα column. */
-  onCanvasClick(point: Readonly<Point2D>): boolean;
-  /** ADR-419 — deduped ids των accumulated in-region picks (selection highlight). */
-  getRegionPickIds(): string[];
-  /** Dynamic Input field overrides (width / depth / height / rotation). */
-  setParamOverrides(overrides: ColumnParamOverrides): void;
-  /** Status text για status-bar / Dynamic Input prompt (i18n key). */
-  getStatusText(): string;
-  readonly isActive: boolean;
-  readonly isAwaitingPosition: boolean;
-}
+// Re-export το πλήρες type contract → οι consumers (`import … from './useColumnTool'`) δεν αλλάζουν.
+export type {
+  ColumnPlacementMode,
+  ColumnToolPhase,
+  ColumnToolState,
+  UseColumnToolOptions,
+  UseColumnToolResult,
+} from './column-tool-types';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -210,6 +121,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       discreteIntent: prev.discreteIntent,
+      slantMode: prev.slantMode,
       overrides: prev.overrides,
       phase: 'awaitingPosition',
     }));
@@ -223,6 +135,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       discreteIntent: prev.discreteIntent,
+      slantMode: prev.slantMode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -240,6 +153,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         overrides: prev.overrides,
         regionMethod: prev.regionMethod,
         discreteIntent: prev.discreteIntent,
+        slantMode: prev.slantMode,
         placementMode: mode,
         phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
       };
@@ -275,12 +189,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
 
   const deactivate = useCallback(() => {
     clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
+    clearColumnTopLeanLock(); // ADR-404 Φ5 — ακύρωση τυχόν ενεργού slant 2-click
     sceneSnapTargetsStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
     clearColumnRotationLock(); // ESC κατά το awaitingRotation → επιστροφή σε awaitingPosition
+    clearColumnTopLeanLock(); // ESC κατά το awaitingTopLean → επιστροφή σε awaitingPosition
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -288,6 +204,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       discreteIntent: prev.discreteIntent,
+      slantMode: prev.slantMode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -295,6 +212,22 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
 
   const setParamOverrides = useCallback((overrides: ColumnParamOverrides) => {
     setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
+  }, []);
+
+  // ADR-404 Φ5 — ribbon toggle «Κεκλιμένη». Αλλαγή mode → ακύρωση τυχόν ενεργού 2-click
+  // (rotation ή top-lean) ώστε να μην μείνει «μισό» κλικ από προηγούμενο mode.
+  const setSlantMode = useCallback((slantMode: boolean) => {
+    setState((prev) => {
+      if (prev.slantMode === slantMode) return prev;
+      clearColumnRotationLock();
+      clearColumnTopLeanLock();
+      return {
+        ...prev,
+        slantMode,
+        phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
+        error: null,
+      };
+    });
   }, []);
 
   // ── commit ───────────────────────────────────────────────────────────────
@@ -339,6 +272,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         placementMode: s.placementMode,
         regionMethod: s.regionMethod,
         discreteIntent: s.discreteIntent,
+        slantMode: s.slantMode,
         overrides: s.overrides,
         phase: 'awaitingPosition',
       });
@@ -395,8 +329,15 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         if (faceAnchor !== null) {
           return commitColumnAt(s, point, faceAnchor, getColumnFaceRotation() ?? 0);
         }
-        //   ΕΛΕΥΘΕΡΗ: ΚΛΕΙΔΩΣΕ θέση + anchor → awaitingRotation (2ο κλικ ορίζει γωνία).
         const anchor: ColumnAnchor = getColumnGhostStatus() === 'beam' ? 'center' : s.anchor;
+        // ADR-404 Φ5 §slanted — ΚΕΚΛΙΜΕΝΗ (ελεύθερη τοποθέτηση): ΚΛΕΙΔΩΣΕ τη βάση + την
+        // rotation της διατομής (από ribbon) → awaitingTopLean (2ο κλικ ορίζει την κλίση).
+        if (s.slantMode) {
+          setColumnTopLeanLock(point, anchor, s.overrides.rotation ?? 0);
+          setState({ ...s, phase: 'awaitingTopLean', error: null });
+          return false;
+        }
+        //   ΕΛΕΥΘΕΡΗ: ΚΛΕΙΔΩΣΕ θέση + anchor → awaitingRotation (2ο κλικ ορίζει γωνία).
         setColumnRotationLock(point, anchor);
         setState({ ...s, phase: 'awaitingRotation', error: null });
         return false;
@@ -411,9 +352,32 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         }
         return commitColumnAt(s, rot.origin, rot.anchor, resolveColumnRotationDeg(rot.origin, point, worldPerPixel(getImmediateTransform().scale)));
       }
+      //   2ο κλικ (awaitingTopLean) → κλίση από βάση→κορυφή· direction snapped (ίδια με rotation),
+      //   angle = atan(οριζόντια απόσταση / ύψος) snapped (5/15/30/45°) → commit με tilt.
+      if (s.phase === 'awaitingTopLean') {
+        const lean = getColumnTopLeanLock();
+        clearColumnTopLeanLock();
+        if (!lean) {
+          setState({ ...s, phase: 'awaitingPosition' });
+          return false;
+        }
+        const sceneUnits = getSceneUnits?.() ?? 'mm';
+        const heightMm = resolveStoreyHeightMm(s.overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
+        const wpp = worldPerPixel(getImmediateTransform().scale);
+        const tilt = {
+          direction: resolveColumnRotationDeg(lean.basePoint, point, wpp),
+          angle: snapTiltAngleDeg(tiltFromBaseTop(lean.basePoint, point, heightMm, sceneUnits).angle),
+        };
+        return commitColumnAt(
+          { ...s, overrides: { ...s.overrides, tilt } },
+          lean.basePoint,
+          lean.anchor,
+          lean.rotationDeg,
+        );
+      }
       return false;
     },
-    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick],
+    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick, getSceneUnits],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
@@ -444,9 +408,11 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       isActive,
       kind: state.kind,
       anchor: state.anchor,
+      slantMode: state.slantMode,
       overrides: state.overrides,
       setKind,
       setAnchor,
+      setSlantMode,
       setParamOverrides,
       // ADR-398 — expose scene units for the Body Corner Projection snap.
       getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',
@@ -458,7 +424,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         columnToolBridgeStore.set(null);
       }
     };
-  }, [state, setKind, setAnchor, setParamOverrides]);
+  }, [state, setKind, setAnchor, setSlantMode, setParamOverrides]);
 
   // ── Tab cycles anchor (ADR-363 Phase 4.5c) ───────────────────────────────
   // ESC handled centrally by EscapeCommandBus (ADR-364 §4.1 BIM migration
@@ -474,6 +440,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     setRegionMethod,
     setDiscreteIntent,
     setAnchor,
+    setSlantMode,
     cycleAnchor,
     deactivate,
     reset,

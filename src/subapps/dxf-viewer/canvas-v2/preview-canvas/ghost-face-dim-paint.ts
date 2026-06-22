@@ -22,9 +22,11 @@ import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
+import type { GhostFaceDimension } from '../../bim/framing/ghost-face-dim-references';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
-import { OVERLAY_LINE_COLORS } from './overlay-line-style';
+import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
 
 /** Extra screen-px the number sits BEYOND the dim line (so it never overlaps it — no bg chip). */
 const LABEL_CLEARANCE_PX = 9;
@@ -59,31 +61,109 @@ export function paintGhostFaceDimensions(
 ): void {
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
   const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
+  const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {
-    // Dashed 0.5px CYAN line + extension lines (text suppressed) via the dim-geometry SSoT.
-    renderPreviewDimension({
-      ctx,
-      entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef]),
-      style: ISO_129_TEMPLATE,
-      transform,
-      viewport,
-      opts: { overlayLineStyle: true, color: OVERLAY_LINE_COLORS.listeningDim },
-    });
-    // Number via the overlay-text SSoT, forced to METRES (architectural convention), placed a
-    // few px BEYOND the dim line (along its outward offset) so it never crosses any line — no
-    // background needed. Outward = (dimLineRef − face-midpoint), in screen space.
-    const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
-    const sRef = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
-    const sMid = CoordinateTransforms.worldToScreen(
-      { x: (d.p1.x + d.p2.x) / 2, y: (d.p1.y + d.p2.y) / 2 }, transform, viewport,
-    );
-    const ox = sRef.x - sMid.x, oy = sRef.y - sMid.y;
-    const olen = Math.hypot(ox, oy) || 1;
-    drawOverlayLabel(
-      ctx, label,
-      sRef.x + (ox / olen) * LABEL_CLEARANCE_PX,
-      sRef.y + (oy / olen) * LABEL_CLEARANCE_PX,
-      { textColor, align: 'center' },
-    );
+    if (d.arc) paintArcDimension(ctx, d, transform, viewport, mmPerScene, labelMode, textColor);
+    else paintStraightDimension(ctx, d, transform, viewport, mmPerScene, textColor);
   }
+}
+
+/** Place the number a few px BEYOND `sRef` along the screen-space outward vector (sRef − sBase). */
+function drawLabelBeyond(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  sRef: Point2D,
+  sBase: Point2D,
+  textColor: string,
+): void {
+  const ox = sRef.x - sBase.x, oy = sRef.y - sBase.y;
+  const olen = Math.hypot(ox, oy) || 1;
+  drawOverlayLabel(ctx, label, sRef.x + (ox / olen) * LABEL_CLEARANCE_PX, sRef.y + (oy / olen) * LABEL_CLEARANCE_PX, {
+    textColor, align: 'center',
+  });
+}
+
+/** ΕΥΘΕΙΑ listening dim (along-face / radius) — αμετάβλητη: ADR-362 `renderPreviewDimension` + overlay label. */
+function paintStraightDimension(
+  ctx: CanvasRenderingContext2D,
+  d: GhostFaceDimension,
+  transform: ViewTransform,
+  viewport: { readonly width: number; readonly height: number },
+  mmPerScene: number,
+  textColor: string,
+): void {
+  renderPreviewDimension({
+    ctx,
+    entity: toAlignedDim(d.kind, [d.p1, d.p2, d.dimLineRef]),
+    style: ISO_129_TEMPLATE,
+    transform,
+    viewport,
+    opts: { overlayLineStyle: true, color: OVERLAY_LINE_COLORS.listeningDim },
+  });
+  const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+  const sRef = CoordinateTransforms.worldToScreen(d.dimLineRef, transform, viewport);
+  const sMid = CoordinateTransforms.worldToScreen(
+    { x: (d.p1.x + d.p2.x) / 2, y: (d.p1.y + d.p2.y) / 2 }, transform, viewport,
+  );
+  drawLabelBeyond(ctx, label, sRef, sMid, textColor);
+}
+
+/** Αριθμός δειγμάτων της καμπύλης dim line (πυκνό αρκετά ώστε να φαίνεται ομαλή σε κάθε zoom). */
+const ARC_DIM_SEGMENTS = 32;
+
+/** Ετικέτα arc gap κατά `labelMode`: μήκος τόξου (μέτρα) / γωνία (μοίρες) / και τα δύο. */
+function formatArcLabel(d: GhostFaceDimension, mmPerScene: number, labelMode: 'length' | 'angle' | 'both'): string {
+  const len = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+  const sweep = d.sweepDeg ?? 0;
+  const ang = `${sweep < 10 ? sweep.toFixed(1) : Math.round(sweep)}°`;
+  if (labelMode === 'angle') return ang;
+  if (labelMode === 'both') return `${len} / ${ang}`;
+  return len;
+}
+
+/**
+ * ADR-398 §3.12 — ΚΑΜΠΥΛΗ listening dim (μήκος τόξου): η dim line **ακολουθεί την περιφέρεια**
+ * (sampled μέσω του `arcToPolyline` SSoT) σε ακτίνα `radius + offset`, με ακτινικές extension lines
+ * προς τα 2 άκρα + ετικέτα (μήκος/γωνία) στο μεσοτόξιο. Ίδιο 0.5px dashed cyan overlay SSoT με τα ευθεία.
+ */
+function paintArcDimension(
+  ctx: CanvasRenderingContext2D,
+  d: GhostFaceDimension,
+  transform: ViewTransform,
+  viewport: { readonly width: number; readonly height: number },
+  mmPerScene: number,
+  labelMode: 'length' | 'angle' | 'both',
+  textColor: string,
+): void {
+  const arc = d.arc;
+  if (!arc) return;
+  const toScreen = (p: Point2D): Point2D => CoordinateTransforms.worldToScreen(p, transform, viewport);
+  const dimRadius = Math.hypot(d.dimLineRef.x - arc.center.x, d.dimLineRef.y - arc.center.y);
+  const curve = arcToPolyline(
+    { center: arc.center, radius: dimRadius, startAngle: arc.startAngleDeg, endAngle: arc.endAngleDeg },
+    ARC_DIM_SEGMENTS,
+  );
+  applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.listeningDim);
+  if (curve.length >= 2) {
+    ctx.beginPath();
+    const s0 = toScreen(curve[0]);
+    ctx.moveTo(s0.x, s0.y);
+    for (let i = 1; i < curve.length; i++) {
+      const s = toScreen(curve[i]);
+      ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke();
+    strokeScreenSegment(ctx, toScreen(d.p1), s0);                  // ακτινική extension στο «from» άκρο
+    strokeScreenSegment(ctx, toScreen(d.p2), toScreen(curve[curve.length - 1])); // στο «to» άκρο
+  }
+  const sRef = toScreen(d.dimLineRef);
+  drawLabelBeyond(ctx, formatArcLabel(d, mmPerScene, labelMode), sRef, toScreen(arc.center), textColor);
+}
+
+/** Μία ευθεία γραμμή σε screen-space (η τρέχουσα ctx line style προϋποτίθεται ήδη set). */
+function strokeScreenSegment(ctx: CanvasRenderingContext2D, a: Point2D, b: Point2D): void {
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
 }

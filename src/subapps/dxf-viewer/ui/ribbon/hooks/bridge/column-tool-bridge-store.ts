@@ -38,9 +38,13 @@ export interface ColumnToolBridgeHandle {
   readonly isActive: boolean;
   readonly kind: ColumnKind;
   readonly anchor: ColumnAnchor;
+  /** ADR-404 Φ5 — slant mode toggle («Κεκλιμένη»): 2-κλικ placement βάση→κορυφή. */
+  readonly slantMode: boolean;
   readonly overrides: ColumnParamOverrides;
   setKind(kind: ColumnKind): void;
   setAnchor(anchor: ColumnAnchor): void;
+  /** ADR-404 Φ5 — toggle κεκλιμένης κολώνας. */
+  setSlantMode(slantMode: boolean): void;
   setParamOverrides(overrides: ColumnParamOverrides): void;
   /**
    * ADR-398 — active scene units, so the Column Body Corner Projection snap

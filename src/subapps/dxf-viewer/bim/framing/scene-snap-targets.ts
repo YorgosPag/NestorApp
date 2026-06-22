@@ -41,6 +41,11 @@ export interface SceneSnapTargets {
   readonly wallTargets: readonly LinearMemberSnapTarget[];
   /** Ακμές πλάκας ως {axis, outline}. */
   readonly slabTargets: readonly LinearMemberSnapTarget[];
+  /** ADR-398 §3.11/§3.12 — σκέτες ΓΡΑΜΜΕΣ + ΠΟΛΥΓΡΑΜΜΕΣ + ΟΡΘΟΓΩΝΙΑ + ΚΥΚΛΟΙ + ΤΟΞΑ (`line`/`polyline`/
+   *  `lwpolyline`/`rectangle`/`circle`/`arc`) ως zero-width {axis, outline} (ένα ανά τμήμα/πλευρά/χορδή).
+   *  Κύκλος/τόξο φέρουν `arc` meta → arc-length listening dims. Μόνο η κολώνα τις καταναλώνει
+   *  (ίδιο axis-relative path με ακμές πλάκας)· wall/beam T-framing ΟΧΙ. */
+  readonly lineTargets: readonly LinearMemberSnapTarget[];
 }
 
 const EMPTY: SceneSnapTargets = Object.freeze({
@@ -48,6 +53,7 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   beamTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   wallTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   slabTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
+  lineTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
 });
 
 /**
@@ -62,6 +68,7 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     beamTargets: beamPass.memberTargets,
     wallTargets: collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets,
     slabTargets: collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets,
+    lineTargets: collectMemberSnapTargets(entities, { memberKinds: ['line'] }).memberTargets,
   };
 }
 

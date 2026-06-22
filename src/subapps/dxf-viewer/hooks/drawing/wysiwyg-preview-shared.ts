@@ -19,6 +19,7 @@ import {
   resolveGhostFaceDimensions,
   type GhostFaceDimensionsMeta,
 } from '../../bim/framing/ghost-face-dim-references';
+import { arcListeningDimConfigStore } from '../../bim/framing/arc-listening-dim-config';
 import type { SceneUnits } from '../../utils/scene-units';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 
@@ -41,12 +42,15 @@ export function resolveGhostFaceDimensionsMeta(
   wpp: number,
 ): GhostFaceDimensionsMeta | null {
   if (!faceFrame || isOverlap) return null;
+  // ADR-398 §3.12 — οι ρυθμίσεις arc-length dims (config SSoT)· ο ευθύς κλάδος τις αγνοεί (gated).
+  const arcConfig = arcListeningDimConfigStore.get();
   const dims = resolveGhostFaceDimensions(faceFrame, {
     gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
     centerOffsetScene: GHOST_DIM_CENTER_OFFSET_PX * wpp,
     minValueScene: GHOST_DIM_MIN_PX * wpp,
+    arcConfig,
   });
-  return dims.length > 0 ? { sceneUnits, dims } : null;
+  return dims.length > 0 ? { sceneUnits, dims, labelMode: arcConfig.labelMode } : null;
 }
 
 /**

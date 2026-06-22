@@ -31,7 +31,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
-import type { ColumnAnchor } from '../../bim/types/column-types';
+import { DEFAULT_COLUMN_HEIGHT_MM, type ColumnAnchor } from '../../bim/types/column-types';
 import {
   buildColumnEntity,
   buildDefaultColumnParams,
@@ -43,6 +43,11 @@ import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhos
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
+// ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
+import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
+import { tiltFromBaseTop } from '../../bim/columns/column-tilt-from-points';
+import { snapTiltAngleDeg } from '../../bim-3d/gizmo/bim3d-tilt-bridge';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
@@ -83,6 +88,26 @@ export function generateColumnPreview(
       ...handle.overrides, kind: handle.kind, anchor: rot.anchor, rotation: rotationDeg,
     };
     const params = buildDefaultColumnParams(rot.origin, handle.kind, overrides, sceneUnits);
+    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
+    return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
+  }
+
+  // ADR-404 Φ5 §slanted — μετά το 1ο κλικ (awaitingTopLean): η κολώνα μένει στη ΣΤΑΘΕΡΗ βάση
+  // και ΓΕΡΝΕΙ live προς τον κέρσορα. Η οριζόντια απόσταση βάση→κέρσορας → tilt.angle (snapped),
+  // η φορά → tilt.direction (snapped, ίδια με rotation). Ο πραγματικός ColumnRenderer ζωγραφίζει
+  // ήδη το Revit slanted-in-plan σύμβολο (ADR-404 Φ3). 2ο κλικ commit-άρει με αυτή την κλίση.
+  const lean = getColumnTopLeanLock();
+  if (lean) {
+    const wpp = worldPerPixel(getImmediateTransform().scale);
+    const heightMm = resolveStoreyHeightMm(handle.overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
+    const tilt = {
+      direction: resolveColumnRotationDeg(lean.basePoint, cursorPoint, wpp),
+      angle: snapTiltAngleDeg(tiltFromBaseTop(lean.basePoint, cursorPoint, heightMm, sceneUnits).angle),
+    };
+    const overrides: ColumnParamOverrides = {
+      ...handle.overrides, kind: handle.kind, anchor: lean.anchor, rotation: lean.rotationDeg, tilt,
+    };
+    const params = buildDefaultColumnParams(lean.basePoint, handle.kind, overrides, sceneUnits);
     const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
     return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
   }

@@ -61,6 +61,21 @@ describe('collectSceneSnapTargets — διαχωρισμός ανά είδος',
     expect(t.wallTargets).toHaveLength(0);
     expect(t.slabTargets).toHaveLength(0);
   });
+
+  it('§3.12 — ΚΥΚΛΟΣ → lineTargets (χορδές) που φέρουν arc meta {center,radius,0,360}', () => {
+    const circle = { id: 'circ1', type: 'circle', center: { x: 10, y: 20 }, radius: 1000 } as unknown as Entity;
+    const t = collectSceneSnapTargets([circle]);
+    expect(t.lineTargets.length).toBeGreaterThan(2); // tessellated chords
+    expect(t.lineTargets.every((x) => x.arc !== undefined)).toBe(true);
+    expect(t.lineTargets[0].arc).toEqual({ center: { x: 10, y: 20 }, radius: 1000, startAngle: 0, endAngle: 360 });
+  });
+
+  it('§3.12 — ΤΟΞΟ → lineTargets που φέρουν arc meta με τα ΠΡΑΓΜΑΤΙΚΑ άκρα', () => {
+    const arc = { id: 'arc1', type: 'arc', center: { x: 0, y: 0 }, radius: 500, startAngle: 30, endAngle: 200 } as unknown as Entity;
+    const t = collectSceneSnapTargets([arc]);
+    expect(t.lineTargets.length).toBeGreaterThan(2);
+    expect(t.lineTargets[0].arc).toEqual({ center: { x: 0, y: 0 }, radius: 500, startAngle: 30, endAngle: 200 });
+  });
 });
 
 describe('selectGhostMembers — flat member set ανά tool', () => {

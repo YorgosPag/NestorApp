@@ -30,6 +30,19 @@ import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap
 import { pickThird } from './member-face-third';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 
+/**
+ * ADR-398 §3.12 — **καμπύλος στόχος** (κύκλος/τόξο): η αληθινή γεωμετρία περιφέρειας, ώστε οι
+ * listening dimensions να μετρούν **μήκος τόξου** (`s=r·θ`) αντί ευθείας χορδής και η dim line να
+ * **ακολουθεί την καμπύλη**. Γωνίες σε **μοίρες** (DXF convention, CCW)· κύκλος = `0→360`. Φέρεται
+ * αυτούσιο από `circleTargets`/`arcTargets` σε **κάθε** χορδή του ίδιου κύκλου/τόξου (μηδέν νέο math).
+ */
+export interface ArcMeta {
+  readonly center: Point2D;
+  readonly radius: number;
+  readonly startAngle: number;
+  readonly endAngle: number;
+}
+
 /** Στόχος face-snap = υφιστάμενο γραμμικό μέλος (axis + outline, scene units). */
 export interface LinearMemberSnapTarget {
   readonly id: string;
@@ -37,6 +50,8 @@ export interface LinearMemberSnapTarget {
   readonly axis: readonly Point2D[];
   /** outline vertices (≥3) — δίνει τις μακριές παρειές + κοντές άκρες μέσω projection. */
   readonly outline: readonly Point2D[];
+  /** ADR-398 §3.12 — γεωμετρία περιφέρειας όταν ο στόχος είναι χορδή κύκλου/τόξου (αλλιώς `undefined`). */
+  readonly arc?: ArcMeta;
 }
 
 /**
@@ -65,6 +80,12 @@ export interface GhostFaceFrame {
   readonly ghostCenterAlong: number;
   /** μισό πλάτος φαντάσματος → οι base γωνίες = centerAlong ± αυτό. */
   readonly ghostHalfWidth: number;
+  /**
+   * ADR-398 §3.12 — γεωμετρία περιφέρειας όταν η παρειά προέρχεται από **χορδή κύκλου/τόξου**. Όταν
+   * οριστεί, ο `resolveGhostFaceDimensions` περνά στον arc-length κλάδο (μήκος τόξου + καμπύλη dim line)·
+   * `undefined` σε ευθείς στόχους → αμετάβλητη ευθεία συμπεριφορά (gated).
+   */
+  readonly arc?: ArcMeta;
 }
 
 /** Αποτέλεσμα ghost snap: το centerline start/end + το σημασιολογικό status (🟢/🔴/ουδέτερο). */
@@ -150,11 +171,13 @@ export function resolveLinearMemberFaceSnap(
   opts: Readonly<LinearMemberFaceSnapOptions>,
 ): MemberGhostSnapResult | null {
   let best: TargetFrame | null = null;
+  let bestArc: ArcMeta | undefined; // ADR-398 §3.12 — γεωμετρία περιφέρειας του επιλεγμένου στόχου
   for (const t of targets) {
     if (t.axis.length < 2 || t.outline.length < 3) continue;
     const fr = buildTargetFrame(cursor, t);
     if (fr && fr.distance <= opts.captureScene && (!best || fr.distance < best.distance)) {
       best = fr;
+      bestArc = t.arc;
     }
   }
   if (!best) return null;
@@ -203,6 +226,7 @@ export function resolveLinearMemberFaceSnap(
       faceAlongMax: alongMax,
       ghostCenterAlong: centerAlong,
       ghostHalfWidth: half,
+      arc: bestArc, // §3.12 — κύκλος/τόξο → arc-length listening dims (αλλιώς undefined)
     };
     return { start, end, status: 'beam', faceFrame };
   }

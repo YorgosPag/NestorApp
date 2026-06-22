@@ -26,36 +26,64 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { GhostFaceFrame } from './linear-member-face-snap';
+import type { ArcMeta, GhostFaceFrame } from './linear-member-face-snap';
+import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { calculateArcLength } from '../../rendering/entities/shared/geometry-arc-utils';
+import { degToRad, radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+import {
+  ARC_LISTENING_DIM_DEFAULT,
+  type ArcListeningDimConfig,
+} from './arc-listening-dim-config';
 
-/** A single along-face listening dimension (scene units). */
+/**
+ * ADR-398 §3.12 — γεωμετρία **καμπύλης** dim line (μόνο `arcLeftGap`/`arcRightGap`): ο painter
+ * δειγματίζει την περιφέρεια `arcToPolyline({center,radius,startAngleDeg,endAngleDeg})` ώστε η dim
+ * line να **ακολουθεί την καμπύλη** (όχι ευθεία χορδή). Γωνίες σε μοίρες (DXF/`arcToPolyline` convention).
+ */
+export interface ArcDimSpan {
+  readonly center: Point2D;
+  readonly radius: number;
+  readonly startAngleDeg: number;
+  readonly endAngleDeg: number;
+}
+
+/** A single listening dimension (scene units) — ευθεία (along-face) ή καμπύλη (arc-length). */
 export interface GhostFaceDimension {
-  /** Semantic role — drives nothing geometric, useful for labels/tests. */
-  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter';
-  /** Witness point A, ON the face line (scene units). */
+  /** Semantic role — drives label/tests· `arc*`/`radius` = ADR-398 §3.12 κύκλος/τόξο. */
+  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter' | 'arcLeftGap' | 'arcRightGap' | 'radius';
+  /** Witness point A (scene units) — ON the face line (ευθύ) ή ON the circle at the «from» angle (arc). */
   readonly p1: Point2D;
-  /** Witness point B, ON the face line (scene units). */
+  /** Witness point B (scene units). */
   readonly p2: Point2D;
-  /** Any point on the dim line — offset OUTWARD from the face so text/line clear the wall. */
+  /** Any point on the dim line — offset OUTWARD (face) ή στο dim-arc radius στο μεσοτόξιο (arc). */
   readonly dimLineRef: Point2D;
-  /** Measured along-face distance (scene units, ≥ 0). */
+  /** Measured distance (scene units, ≥ 0) = along-face μήκος (ευθύ) ή **μήκος τόξου** `s=r·θ` (arc). */
   readonly valueScene: number;
+  /** ADR-398 §3.12 — όταν οριστεί, ο painter ζωγραφίζει **καμπύλη** dim line (arc gaps μόνο). */
+  readonly arc?: ArcDimSpan;
+  /** ADR-398 §3.12 — γωνία τόξου (μοίρες) για το `labelMode:'angle'|'both'` (arc gaps μόνο). */
+  readonly sweepDeg?: number;
 }
 
 /** Renderable bundle attached to the wall ghost preview entity (carries the unit system). */
 export interface GhostFaceDimensionsMeta {
   readonly sceneUnits: SceneUnits;
   readonly dims: readonly GhostFaceDimension[];
+  /** ADR-398 §3.12 — πώς γράφονται οι ετικέτες των arc gaps (length/angle/both)· default 'length'. */
+  readonly labelMode?: ArcListeningDimConfig['labelMode'];
 }
 
 export interface GhostFaceDimensionsOptions {
-  /** Perpendicular offset (scene units) for the two end-gap dims — the inner stacked row. */
+  /** Perpendicular offset (scene units) for the two end-gap dims — the inner stacked row.
+   *  ADR-398 §3.12 — και η ακτινική απόσταση του dim-arc από την περιφέρεια (arc gaps). */
   readonly gapOffsetScene: number;
   /** Perpendicular offset (scene units) for the center-to-center dim — the outer row,
    *  larger so it clears the ghost stub it spans over. */
   readonly centerOffsetScene: number;
   /** Distances below this (scene units) are dropped (flush / zero-width → no dim). */
   readonly minValueScene?: number;
+  /** ADR-398 §3.12 — ρυθμίσεις arc dims (ποιες εκπέμπονται)· default `ARC_LISTENING_DIM_DEFAULT`. */
+  readonly arcConfig?: ArcListeningDimConfig;
 }
 
 /**
@@ -67,8 +95,11 @@ export function resolveGhostFaceDimensions(
   frame: Readonly<GhostFaceFrame>,
   opts: Readonly<GhostFaceDimensionsOptions>,
 ): readonly GhostFaceDimension[] {
-  const { origin: a, axisDir: u, perpDir: p, facePerp, outwardSign } = frame;
   const minValue = opts.minValueScene ?? 1e-6;
+  // ADR-398 §3.12 — ΚΥΚΛΟΣ/ΤΟΞΟ: μήκος τόξου + καμπύλη dim line (gated νέος κλάδος· ο ευθύς μένει αμετάβλητος).
+  if (frame.arc) return resolveArcGhostDimensions(frame, frame.arc, opts, minValue);
+
+  const { origin: a, axisDir: u, perpDir: p, facePerp, outwardSign } = frame;
 
   // Point on the face line at longitudinal position `along`.
   const at = (along: number): Point2D => ({
@@ -117,4 +148,115 @@ function pushDim(
     dimLineRef: off((alongA + alongB) / 2, offsetScene),
     valueScene,
   });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ADR-398 §3.12 — ARC-LENGTH listening dimensions (ΚΥΚΛΟΣ + ΤΟΞΟ)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Τεταρτημόρια (AutoCAD QUADRANT osnap) — datum βάση κάθε κύκλου/τόξου. */
+const QUADRANTS_DEG: readonly number[] = [0, 90, 180, 270];
+
+/** Κανονικοποίηση γωνίας σε [0, 360). */
+const normalize360 = (deg: number): number => ((deg % 360) + 360) % 360;
+
+/**
+ * ADR-398 §3.12 — **datum angles** (μοίρες, [0,360)) που εξυπηρετούν κάθε λογική χρήστη: τεταρτημόρια
+ * **εντός** του angular span + (αν τόξο) τα **πραγματικά άκρα**. Κύκλος (span 360°) → 4 τεταρτημόρια.
+ */
+function arcDatumAngles(arc: Readonly<ArcMeta>): number[] {
+  const rawSpan = arc.endAngle - arc.startAngle;
+  const isFull = Math.abs(rawSpan) >= 360 - 1e-6 || normalize360(rawSpan) < 1e-6;
+  const span = isFull ? 360 : normalize360(rawSpan);
+  const start = normalize360(arc.startAngle);
+  const datums: number[] = [];
+  for (const q of QUADRANTS_DEG) {
+    if (isFull || normalize360(q - start) <= span + 1e-6) datums.push(q);
+  }
+  if (!isFull) datums.push(normalize360(arc.startAngle), normalize360(arc.endAngle));
+  return datums;
+}
+
+/** Πλησιέστερα bracketing datums γύρω από `thetaDeg`: CW (φθίνουσα γωνία) + CCW (αύξουσα). */
+function bracketDatums(datums: readonly number[], thetaDeg: number): { cwDeg: number; ccwDeg: number } | null {
+  let cwDeg: number | null = null, ccwDeg: number | null = null;
+  let cwGap = Infinity, ccwGap = Infinity;
+  for (const d of datums) {
+    const ccw = normalize360(d - thetaDeg); // θ → d CCW
+    const cw = normalize360(thetaDeg - d);  // θ → d CW
+    if (ccw > 1e-6 && ccw < ccwGap) { ccwGap = ccw; ccwDeg = d; }
+    if (cw > 1e-6 && cw < cwGap) { cwGap = cw; cwDeg = d; }
+  }
+  return cwDeg !== null && ccwDeg !== null ? { cwDeg, ccwDeg } : null;
+}
+
+/** Σημείο στη γραμμή παρειάς (facePerp 0 σε κεντραρισμένο arc frame) στη διαμήκη θέση `along`. */
+function facePointAt(frame: Readonly<GhostFaceFrame>, along: number): Point2D {
+  return {
+    x: frame.origin.x + along * frame.axisDir.x + frame.facePerp * frame.perpDir.x,
+    y: frame.origin.y + along * frame.axisDir.y + frame.facePerp * frame.perpDir.y,
+  };
+}
+
+/** Ένα καμπύλο arc gap (datum→column ή column→datum) — μήκος τόξου `s=r·θ` + curved render span. */
+function pushArcGap(
+  out: GhostFaceDimension[],
+  kind: 'arcLeftGap' | 'arcRightGap',
+  arc: Readonly<ArcMeta>,
+  fromDeg: number,
+  toDeg: number,
+  offsetScene: number,
+  minValue: number,
+): void {
+  const sweepDeg = normalize360(toDeg - fromDeg);
+  // μήκος τόξου μέσω του SSoT `calculateArcLength` (= radius · sweepRad). ΜΗΝ ξαναγράψεις s=r·θ.
+  const valueScene = calculateArcLength(arc.radius, degToRad(fromDeg), degToRad(toDeg));
+  if (valueScene <= minValue) return;
+  const midDeg = fromDeg + sweepDeg / 2;
+  out.push({
+    kind,
+    p1: pointOnCircle(arc.center, arc.radius, degToRad(fromDeg)),
+    p2: pointOnCircle(arc.center, arc.radius, degToRad(toDeg)),
+    dimLineRef: pointOnCircle(arc.center, arc.radius + offsetScene, degToRad(midDeg)),
+    valueScene,
+    arc: { center: arc.center, radius: arc.radius, startAngleDeg: fromDeg, endAngleDeg: toDeg },
+    sweepDeg,
+  });
+}
+
+/**
+ * ADR-398 §3.12 — οι arc-length listening dimensions για κολώνα στη γωνία `θ` πάνω σε κύκλο/τόξο:
+ * 2 **καμπύλα** μήκη τόξου προς τα γειτονικά datums (τεταρτημόρια/άκρα) + **ευθεία ακτίνα** R. Config-gated
+ * (Giorgio: «κάθε λογική χρήστη»). Reuse `calculateAngle`/`calculateArcLength`/`pointOnCircle` SSoT.
+ */
+function resolveArcGhostDimensions(
+  frame: Readonly<GhostFaceFrame>,
+  arc: Readonly<ArcMeta>,
+  opts: Readonly<GhostFaceDimensionsOptions>,
+  minValue: number,
+): readonly GhostFaceDimension[] {
+  const cfg = opts.arcConfig ?? ARC_LISTENING_DIM_DEFAULT;
+  const colPt = facePointAt(frame, frame.ghostCenterAlong);
+  const thetaDeg = normalize360(radToDeg(calculateAngle(arc.center, colPt)));
+  const out: GhostFaceDimension[] = [];
+  if (cfg.showArcGaps) {
+    const br = bracketDatums(arcDatumAngles(arc), thetaDeg);
+    if (br) {
+      pushArcGap(out, 'arcLeftGap', arc, br.cwDeg, thetaDeg, opts.gapOffsetScene, minValue);
+      pushArcGap(out, 'arcRightGap', arc, thetaDeg, br.ccwDeg, opts.gapOffsetScene, minValue);
+    }
+  }
+  if (cfg.showRadius) {
+    const valueScene = Math.hypot(colPt.x - arc.center.x, colPt.y - arc.center.y);
+    if (valueScene > minValue) {
+      out.push({
+        kind: 'radius',
+        p1: { x: arc.center.x, y: arc.center.y },
+        p2: colPt,
+        dimLineRef: { x: (arc.center.x + colPt.x) / 2, y: (arc.center.y + colPt.y) / 2 },
+        valueScene,
+      });
+    }
+  }
+  return out;
 }

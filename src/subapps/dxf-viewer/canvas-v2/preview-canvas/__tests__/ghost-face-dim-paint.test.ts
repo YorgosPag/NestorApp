@@ -87,4 +87,41 @@ describe('paintGhostFaceDimensions', () => {
     );
     expect(countCalls(mock, 'stroke')).toBe(0);
   });
+
+  // ── ADR-398 §3.12 — curved arc-length dim line ──
+  /** Column at 60° on r=1000 circle → arc gaps + radius. */
+  const ARC_FRAME: GhostFaceFrame = {
+    origin: { x: 500, y: 866.0254 }, axisDir: { x: 1, y: 0 }, perpDir: { x: 0, y: -1 },
+    facePerp: 0, outwardSign: 1, faceAlongMin: 0, faceAlongMax: 0,
+    ghostCenterAlong: 0, ghostHalfWidth: 0,
+    arc: { center: { x: 0, y: 0 }, radius: 1000, startAngle: 0, endAngle: 360 },
+  };
+
+  it('paints curved arc-length dims following the circle (many lineTo segments)', () => {
+    const dims = resolveGhostFaceDimensions(ARC_FRAME, { gapOffsetScene: 24, centerOffsetScene: 52 });
+    expect(dims.map((d) => d.kind)).toEqual(['arcLeftGap', 'arcRightGap', 'radius']);
+    const mock = createMockCtx();
+    expect(() =>
+      paintGhostFaceDimensions(
+        mock.ctx, { sceneUnits: 'mm', dims }, { scale: 1, offsetX: 0, offsetY: 0 }, { width: 800, height: 600 },
+      ),
+    ).not.toThrow();
+    expect(countCalls(mock, 'stroke')).toBeGreaterThan(0);
+    expect(countCalls(mock, 'fillText')).toBeGreaterThan(0);
+    // Καμπύλη = πολλά lineTo (sampled), όχι μία ευθεία χορδή.
+    expect(countCalls(mock, 'lineTo')).toBeGreaterThan(20);
+    // Ίδιο overlay SSoT (0.5px dashed) με τα ευθεία.
+    expect(mock.calls.some((c) => c.fn === 'set:lineWidth' && c.args[0] === 0.5)).toBe(true);
+  });
+
+  it('labelMode "angle" renders degree labels for the arc gaps', () => {
+    const dims = resolveGhostFaceDimensions(ARC_FRAME, { gapOffsetScene: 24, centerOffsetScene: 52 });
+    const mock = createMockCtx();
+    paintGhostFaceDimensions(
+      mock.ctx, { sceneUnits: 'mm', dims, labelMode: 'angle' },
+      { scale: 1, offsetX: 0, offsetY: 0 }, { width: 800, height: 600 },
+    );
+    const texts = mock.calls.filter((c) => c.fn === 'fillText').map((c) => String(c.args[0]));
+    expect(texts.some((t) => t.includes('°'))).toBe(true);
+  });
 });

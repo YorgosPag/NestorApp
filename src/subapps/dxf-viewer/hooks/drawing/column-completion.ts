@@ -36,6 +36,7 @@ import {
   type ColumnLshapeParams,
   type ColumnParams,
   type ColumnPolygonParams,
+  type ColumnTilt,
   type ColumnTshapeParams,
   type ColumnUshapeParams,
 } from '../../bim/types/column-types';
@@ -98,6 +99,11 @@ export interface ColumnParamOverrides {
   readonly composite?: ColumnCompositeParams;
   /** ADR-363 Phase 8E — catalog profile ID persisted with the column. */
   readonly catalogProfile?: string;
+  /**
+   * ADR-404 Phase 5 — 3Δ κλίση (raking column). Από 2-κλικ placement (βάση→κορυφή,
+   * `tiltFromBaseTop`) ή αριθμητικά πεδία ribbon. Absent / `angle===0` = κατακόρυφη.
+   */
+  readonly tilt?: ColumnTilt;
 }
 
 /**
@@ -168,6 +174,7 @@ export function buildDefaultColumnParams(
     ...(overrides.ushape !== undefined ? { ushape: overrides.ushape } : {}),
     ...(overrides.composite !== undefined ? { composite: overrides.composite } : {}),
     ...(overrides.catalogProfile !== undefined ? { catalogProfile: overrides.catalogProfile } : {}),
+    ...(overrides.tilt !== undefined ? { tilt: overrides.tilt } : {}),
   };
   return params;
 }

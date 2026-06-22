@@ -234,10 +234,69 @@ describe('resolveColumnFaceSnap — ADR-398 §3.9 wall-axis CENTER snap (mirror 
     expect(r.position).toEqual({ x: 1000, y: 0 });
   });
 
-  it('δοκάρι ΔΕΝ παίρνει axis-center (μόνο τοίχος) — μένει flush face', () => {
-    const r = snap({ x: 0, y: 0 }, [horizontalBeam()]);
-    // cursor στον άξονα δοκαριού: ΟΧΙ wallFrame → flush path (S ή N face), anchor ΟΧΙ center
-    expect(r?.anchor).not.toBe('center');
+  it('ΤΩΡΑ και το δοκάρι παίρνει axis-center (ADR-398 §3.11 — ίδιος κώδικας με τοίχο)', () => {
+    const r = snap({ x: 0, y: 0 }, [horizontalBeam()])!;
+    // cursor στον άξονα δοκαριού (perp 0 ≤ halfThickness/2=75) → κέντρο στον άξονα.
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('resolveColumnFaceSnap — ADR-398 §3.11 BEAM-axis CENTER snap (νέο αίτημα Giorgio)', () => {
+  // horizontalBeam: άξονας y=0 (x −1000..1000), πάχος 300 (y ±150) → halfThickness=150, όριο=75.
+  const beam = [horizontalBeam()];
+
+  it('cursor στον άξονα δοκαριού (perp 0) → κέντρο κολώνας στον άξονα, anchor center, 🟢', () => {
+    const r = snap({ x: 300, y: 0 }, beam)!;
+    expect(r.anchor).toBe('center');
+    expect(r.status).toBe('beam');
+    expect(r.position).toEqual({ x: 300, y: 0 }); // foot στον άξονα στο x=300
+    expect(r.rotation).toBe(0);
+  });
+
+  it('εσωτερική ζώνη (perp 50 ≤ 75) → center-on-axis (foot στον άξονα, ΟΧΙ flush)', () => {
+    const r = snap({ x: -400, y: 50 }, beam)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: -400, y: 0 });
+  });
+
+  it('continuous slide κατά μήκος του άξονα δοκαριού → η position ακολουθεί', () => {
+    const west = snap({ x: -600, y: 20 }, beam)!;
+    const east = snap({ x: 600, y: -20 }, beam)!;
+    expect(west.anchor).toBe('center');
+    expect(east.anchor).toBe('center');
+    expect(west.position).toEqual({ x: -600, y: 0 });
+    expect(east.position).toEqual({ x: 600, y: 0 });
+  });
+
+  it('εξωτερική ζώνη (perp 120 > 75) → flush παρειά (ΟΧΙ center)', () => {
+    const r = snap({ x: 0, y: 120 }, beam)!;
+    expect(r.anchor).toBe('s'); // N face flush
+    expect(r.position).toEqual({ x: 0, y: 150 });
+  });
+
+  it('κοντή άκρη δοκαριού (along εκτός) → 🔴 overlap flush (ΟΧΙ center)', () => {
+    const r = snap({ x: 1100, y: 0 }, beam)!;
+    expect(r.anchor).not.toBe('center');
+    expect(r.status).toBe('overlap');
+  });
+
+  it('ΛΟΞΟ δοκάρι (45°) → center-on-axis + στραμμένη (rotation ≈ 45)', () => {
+    const oblique: Entity = {
+      id: 'beam-d', type: 'beam',
+      geometry: {
+        axisPolyline: { points: [{ x: 0, y: 0 }, { x: 1414, y: 1414 }] },
+        outline: {
+          vertices: [
+            { x: -106, y: 106 }, { x: 1308, y: 1520 },
+            { x: 1520, y: 1308 }, { x: 106, y: -106 },
+          ],
+        },
+      },
+    } as unknown as Entity;
+    const r = snap({ x: 700, y: 700 }, [oblique])!; // πάνω στον λοξό άξονα
+    expect(r.anchor).toBe('center');
+    expect(Math.abs(r.rotation - 45)).toBeLessThan(1);
   });
 });
 
@@ -314,15 +373,243 @@ describe('resolveColumnFaceSnap — slab edge (ADR-398 §3.10 axis-relative — 
   it('μακριά από κάθε ακμή (κέντρο πλάκας, > capture) → null', () => {
     expect(snap({ x: 1000, y: 1000 }, [slab()])).toBeNull();
   });
+
+  // ── ADR-398 §3.11 — center-on-axis ολίσθηση πάνω στον άξονα ακμής (το αίτημα του handoff) ──
+  describe('§3.11 center-on-axis (threshold ±150mm — Giorgio 2026-06-22)', () => {
+    it('cursor κάθετα κοντά στην κάτω ακμή (perp 80 ≤ 150) → ΚΕΝΤΡΟ στον άξονα, anchor center', () => {
+      const r = snap({ x: 1000, y: 80 }, [slab()])!;
+      expect(r.anchor).toBe('center');
+      expect(r.status).toBe('beam');
+      expect(r.position).toEqual({ x: 1000, y: 0 }); // foot στον άξονα στο x=1000
+      expect(r.rotation).toBe(0); // axis-aligned → ορθή
+    });
+
+    it('slide κατά μήκος του άξονα → η position ακολουθεί, anchor μένει center', () => {
+      const west = snap({ x: 500, y: 60 }, [slab()])!;
+      const east = snap({ x: 1500, y: 60 }, [slab()])!;
+      expect(west.anchor).toBe('center');
+      expect(east.anchor).toBe('center');
+      expect(west.position).toEqual({ x: 500, y: 0 });
+      expect(east.position).toEqual({ x: 1500, y: 0 });
+    });
+
+    it('cursor τραβηγμένος σε πλευρά (perp 250 > 150) → flush (ΟΧΙ center)', () => {
+      const r = snap({ x: 1000, y: 250 }, [slab()])!;
+      expect(r.anchor).not.toBe('center');
+      expect(r.status).toBe('beam');
+      expect(Math.abs(r.position.y)).toBeLessThanOrEqual(EDGE_EPS);
+    });
+
+    it('κάθετη ακμή (x=2000), cursor perp 50 → center, foot στον άξονα, rotation 0', () => {
+      const r = snap({ x: 1950, y: 1000 }, [slab()])!;
+      expect(r.anchor).toBe('center');
+      expect(r.position).toEqual({ x: 2000, y: 1000 });
+      expect(r.rotation).toBe(0);
+    });
+
+    it('ΛΟΞΗ ακμή 45°, cursor perp ≈ 35 ≤ 150 → center + στραμμένη (rotation ≈ 45)', () => {
+      const r = snap({ x: 1000, y: 1050 }, [diagonalSlab()])!;
+      expect(r.anchor).toBe('center');
+      expect(r.status).toBe('beam');
+      expect(Math.abs(r.rotation - 45)).toBeLessThan(1);
+      expect(r.position.x).toBeCloseTo(1025, 0); // foot πάνω στη διαγώνιο y=x
+      expect(r.position.y).toBeCloseTo(1025, 0);
+    });
+  });
+});
+
+describe('resolveColumnFaceSnap — ADR-398 §3.11 σκέτη ΓΡΑΜΜΗ (ίδιο zero-width path με ακμή πλάκας)', () => {
+  /** Σκέτη γραμμή (LineEntity, top-level start/end) από (sx,sy)→(ex,ey). */
+  function lineEntity(sx: number, sy: number, ex: number, ey: number, id = 'line-1'): Entity {
+    return { id, type: 'line', start: { x: sx, y: sy }, end: { x: ex, y: ey } } as unknown as Entity;
+  }
+  const EDGE_EPS = 2.001; // ίδιο zero-width band μοντέλο με ακμή πλάκας
+
+  const hLine = [lineEntity(0, 0, 2000, 0)]; // οριζόντια γραμμή y=0
+
+  it('cursor κάθετα κοντά στη γραμμή (perp 80 ≤ 150) → ΚΕΝΤΡΟ στον άξονα, anchor center', () => {
+    const r = snap({ x: 1000, y: 80 }, hLine)!;
+    expect(r.anchor).toBe('center');
+    expect(r.status).toBe('beam');
+    expect(r.position).toEqual({ x: 1000, y: 0 });
+    expect(r.rotation).toBe(0);
+  });
+
+  it('slide κατά μήκος της γραμμής → η position ακολουθεί, anchor μένει center', () => {
+    const west = snap({ x: 500, y: 60 }, hLine)!;
+    const east = snap({ x: 1500, y: -60 }, hLine)!;
+    expect(west.anchor).toBe('center');
+    expect(east.anchor).toBe('center');
+    expect(west.position).toEqual({ x: 500, y: 0 });
+    expect(east.position).toEqual({ x: 1500, y: 0 });
+  });
+
+  it('cursor εκατέρωθεν, τραβηγμένος σε πλευρά (perp 300 > 150) → flush (ΟΧΙ center)', () => {
+    const r = snap({ x: 1000, y: 300 }, hLine)!;
+    expect(r.anchor).not.toBe('center');
+    expect(Math.abs(r.position.y)).toBeLessThanOrEqual(EDGE_EPS);
+  });
+
+  it('κάθετη γραμμή x=0, cursor perp 50 → center, foot στον άξονα', () => {
+    const r = snap({ x: 50, y: 1000 }, [lineEntity(0, 0, 0, 2000)])!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 0, y: 1000 });
+  });
+
+  it('ΛΟΞΗ γραμμή 45°, cursor perp ≈ 35 → center + στραμμένη (rotation ≈ 45)', () => {
+    const r = snap({ x: 1000, y: 1050 }, [lineEntity(0, 0, 2000, 2000)])!;
+    expect(r.anchor).toBe('center');
+    expect(Math.abs(r.rotation - 45)).toBeLessThan(1);
+    expect(r.position.x).toBeCloseTo(1025, 0);
+    expect(r.position.y).toBeCloseTo(1025, 0);
+  });
+
+  it('μακριά από τη γραμμή (> capture) → null', () => {
+    expect(snap({ x: 1000, y: 1000 }, hLine)).toBeNull();
+  });
+});
+
+describe('resolveColumnFaceSnap — ADR-398 §3.11 ΠΟΛΥΓΡΑΜΜΗ (ίδιο zero-width path, ένα edge ανά τμήμα)', () => {
+  /** Πολυγραμμή (polyline/lwpolyline, top-level vertices+closed). */
+  function poly(vertices: Point2D[], closed = false, type: 'polyline' | 'lwpolyline' = 'polyline', id = 'pl-1'): Entity {
+    return { id, type, vertices, closed } as unknown as Entity;
+  }
+  // L-σχήμα ανοιχτό: (0,0)→(2000,0)→(2000,2000) — 2 τμήματα (οριζόντιο + κάθετο).
+  const lShape = [poly([{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }])];
+
+  it('cursor κοντά στο 1ο τμήμα (οριζόντιο) → center-on-axis στο y=0', () => {
+    const r = snap({ x: 1000, y: 80 }, lShape)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 1000, y: 0 });
+  });
+
+  it('cursor κοντά στο 2ο τμήμα (κάθετο) → center-on-axis στο x=2000', () => {
+    const r = snap({ x: 1920, y: 1000 }, lShape)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 2000, y: 1000 });
+  });
+
+  it('cursor τραβηγμένος σε πλευρά τμήματος (perp 300 > 150) → flush', () => {
+    const r = snap({ x: 1000, y: 300 }, lShape)!;
+    expect(r.anchor).not.toBe('center');
+  });
+
+  it('ΚΛΕΙΣΤΗ πολυγραμμή → και το τμήμα last→first γίνεται στόχος', () => {
+    // τρίγωνο (0,0)→(2000,0)→(1000,1732) closed· το closing edge (1000,1732)→(0,0) είναι λοξό.
+    const tri = [poly([{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 1000, y: 1732 }], true)];
+    // σημείο πάνω στο closing edge (midpoint ≈ (500,866))
+    const r = snap({ x: 500, y: 866 }, tri)!;
+    expect(r.anchor).toBe('center');
+    expect(r.status).toBe('beam');
+  });
+
+  it('lwpolyline → ίδια συμπεριφορά με polyline', () => {
+    const lw = [poly([{ x: 0, y: 0 }, { x: 2000, y: 0 }], false, 'lwpolyline')];
+    const r = snap({ x: 1000, y: 80 }, lw)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 1000, y: 0 });
+  });
+});
+
+describe('resolveColumnFaceSnap — ADR-398 §3.11 ΟΡΘΟΓΩΝΙΟ (4 πλευρές = zero-width edges)', () => {
+  /** RectangleEntity (x,y,width,height). */
+  function rect(x: number, y: number, w: number, h: number, id = 'rc-1'): Entity {
+    return { id, type: 'rectangle', x, y, width: w, height: h } as unknown as Entity;
+  }
+  const r1 = [rect(0, 0, 2000, 2000)];
+
+  it('cursor κοντά στην κάτω πλευρά (y=0) → center-on-axis', () => {
+    const r = snap({ x: 1000, y: 80 }, r1)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 1000, y: 0 });
+  });
+
+  it('cursor κοντά στη δεξιά πλευρά (x=2000) → center-on-axis', () => {
+    const r = snap({ x: 1920, y: 500 }, r1)!;
+    expect(r.anchor).toBe('center');
+    expect(r.position).toEqual({ x: 2000, y: 500 });
+  });
+
+  it('cursor στο κέντρο, > capture από κάθε πλευρά → null', () => {
+    expect(snap({ x: 1000, y: 1000 }, r1)).toBeNull();
+  });
+
+  it('cursor σε πλευρά αλλά perp > 150 → flush (ΟΧΙ center)', () => {
+    const r = snap({ x: 1000, y: 300 }, r1)!;
+    expect(r.anchor).not.toBe('center');
+  });
+});
+
+describe('resolveColumnFaceSnap — ADR-398 §3.11 ΚΥΚΛΟΣ (περιφέρεια tessellated σε zero-width edges)', () => {
+  /** CircleEntity (center, radius). */
+  function circle(cx: number, cy: number, r: number, id = 'cir-1'): Entity {
+    return { id, type: 'circle', center: { x: cx, y: cy }, radius: r } as unknown as Entity;
+  }
+  const c1 = [circle(0, 0, 1000)]; // κύκλος ακτίνας 1000 στο (0,0)
+
+  it('cursor κοντά στην περιφέρεια → ολίσθηση πάνω στον κύκλο (anchor center, 🟢)', () => {
+    const r = snap({ x: 1000, y: 50 }, c1)!; // λίγο έξω από το σημείο (1000,0)
+    expect(r.anchor).toBe('center');
+    expect(r.status).toBe('beam');
+    // foot πάνω στη χορδή ≈ στην περιφέρεια (chord sag μικρό για 24 τμήματα).
+    expect(Math.abs(Math.hypot(r.position.x, r.position.y) - 1000)).toBeLessThan(30);
+  });
+
+  it('cursor στο κέντρο του κύκλου (> capture από περιφέρεια) → null', () => {
+    expect(snap({ x: 0, y: 0 }, c1)).toBeNull();
+  });
+
+  // ── ADR-398 §3.12 — arc-length listening dims: faceFrame.arc + ακριβής re-projection ──
+  it('§3.12 — faceFrame.arc φέρει τη γεωμετρία περιφέρειας + θέση ΑΚΡΙΒΩΣ στον κύκλο', () => {
+    const r = snap({ x: 1000, y: 50 }, c1)!;
+    expect(r.faceFrame.arc).toEqual({ center: { x: 0, y: 0 }, radius: 1000, startAngle: 0, endAngle: 360 });
+    // re-projection: η κολώνα κάθεται ΑΚΡΙΒΩΣ στην περιφέρεια (όχι chord-inset).
+    expect(Math.hypot(r.position.x, r.position.y)).toBeCloseTo(1000, 6);
+  });
+
+  it('§3.12 — ΤΟΞΟ (ArcEntity) → faceFrame.arc με τα ΠΡΑΓΜΑΤΙΚΑ άκρα + θέση στο τόξο', () => {
+    const arc = { id: 'A1', type: 'arc', center: { x: 0, y: 0 }, radius: 1000, startAngle: 0, endAngle: 180 } as unknown as Entity;
+    // cursor 50mm ακτινικά έξω, στη γωνία 50° (mid-chord, ΟΧΙ σε vertex) → κουμπώνει στο τόξο.
+    const r = snap({ x: 1050 * Math.cos((50 * Math.PI) / 180), y: 1050 * Math.sin((50 * Math.PI) / 180) }, [arc])!;
+    expect(r.faceFrame.arc).toEqual({ center: { x: 0, y: 0 }, radius: 1000, startAngle: 0, endAngle: 180 });
+    expect(Math.hypot(r.position.x, r.position.y)).toBeCloseTo(1000, 6);
+  });
 });
 
 describe('collectSceneSnapTargets + resolveColumnFaceSnapFromTargets (core SSoT)', () => {
-  it('διαχωρίζει σωστά κολόνες/δοκάρια/πλάκες ανά είδος', () => {
+  it('ορθογώνιο → lineTargets (4 πλευρές)', () => {
+    const rc = { id: 'R1', type: 'rectangle', x: 0, y: 0, width: 1000, height: 500 } as unknown as Entity;
+    expect(collectSceneSnapTargets([rc]).lineTargets).toHaveLength(4);
+  });
+
+  it('κύκλος → lineTargets (περιφέρεια tessellated, πολλά τμήματα)', () => {
+    const cir = { id: 'C1', type: 'circle', center: { x: 0, y: 0 }, radius: 1000 } as unknown as Entity;
+    expect(collectSceneSnapTargets([cir]).lineTargets.length).toBeGreaterThan(8);
+  });
+
+  it('διαχωρίζει σωστά κολόνες/δοκάρια/πλάκες/γραμμές ανά είδος', () => {
     const t = collectSceneSnapTargets([horizontalBeam(), columnTarget(3000, 0)]);
     expect(t.beamTargets).toHaveLength(1);
     expect(t.footprints).toHaveLength(1);
     expect(t.wallTargets).toHaveLength(0);
     expect(t.slabTargets).toHaveLength(0);
+    expect(t.lineTargets).toHaveLength(0);
+  });
+
+  it('σκέτη γραμμή → lineTargets (1 zero-width edge), όχι slab/beam/wall', () => {
+    const line = { id: 'L1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1000, y: 0 } } as unknown as Entity;
+    const t = collectSceneSnapTargets([line]);
+    expect(t.lineTargets).toHaveLength(1);
+    expect(t.slabTargets).toHaveLength(0);
+    expect(t.beamTargets).toHaveLength(0);
+  });
+
+  it('πολυγραμμή ανοιχτή 3 κορυφών → lineTargets (2 τμήματα)· κλειστή → 3', () => {
+    const verts = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }];
+    const open = collectSceneSnapTargets([{ id: 'P1', type: 'polyline', vertices: verts, closed: false } as unknown as Entity]);
+    expect(open.lineTargets).toHaveLength(2);
+    const closed = collectSceneSnapTargets([{ id: 'P2', type: 'lwpolyline', vertices: verts, closed: true } as unknown as Entity]);
+    expect(closed.lineTargets).toHaveLength(3);
   });
 
   it('ο core δίνει ΤΟ ΙΔΙΟ αποτέλεσμα με το wrapper (preview ≡ commit path)', () => {
