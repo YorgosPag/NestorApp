@@ -12,7 +12,7 @@ import type { FurnitureParams } from '../../../bim/types/furniture-types';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
-const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {

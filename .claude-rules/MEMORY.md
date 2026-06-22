@@ -1,7 +1,7 @@
 # Claude Memory - Nestor Pagonis Project
 
-## 🚨 Master Tracker — ΑΠΑΡΑΒΑΤΟΣ ΚΑΝΟΝΑΣ (N.15)
-- **`C:\Nestor_Pagonis\local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt`** = master status tracker για όλα τα εκκρεμή ADR items. Μετά από ΚΑΘΕ υλοποίηση που σχετίζεται με item εκεί → ενημέρωσε: (1) ΕΚΚΡΕΜΟΤΗΤΕΣ, (2) ADR, (3) adr-index, (4) pending-ratchet-work.md. Όλα στο ίδιο commit. Κανόνας N.15 CLAUDE.md.
+## 🚨 N.15 — ΑΠΑΓΟΡΕΥΣΗ ΚΑΤΑΓΡΑΦΗΣ ΕΚΚΡΕΜΟΤΗΤΩΝ (Giorgio 2026-06-23)
+- ❌ **ΠΟΤΕ** μην γράφεις στο `C:\Nestor_Pagonis\local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` — το tracker εκκρεμοτήτων **καταργήθηκε**. Μην το αγγίζεις, μην φτιάχνεις άλλο στη θέση του. Κατάσταση εργασίας → ADR changelog (N.0.1) + git + `.claude-rules/pending-ratchet-work.md` (ratchet) + MEMORY.md. Κανόνας N.15 CLAUDE.md.
 
 ## Quality Standard
 - [Google-level quality](feedback_google_quality_standard.md) — All solutions at Google engineering level. No patched solutions, proper architecture, root cause fixes.

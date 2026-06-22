@@ -15,12 +15,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-512-tekton-tek-export.md
  */
 
-import type { Entity } from '../../types/entities';
+import type { Entity } from '../../../types/entities';
 import type {
   ArcEntity, CircleEntity, LineEntity, LWPolylineEntity, PolylineEntity,
-} from '../../types/entities';
-import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
-import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
+} from '../../../types/entities';
+import { pointOnCircle } from '../../../rendering/entities/shared/geometry-vector-utils';
+import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { buildLineRecordXml, buildArcRecordXml } from './tek-xml-writer';
 import type { TekArc, TekLine } from './tek-types';
 
