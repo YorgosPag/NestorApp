@@ -1192,6 +1192,7 @@
       "stairActions": "Actions",
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
+      "wallTilt": "Tilt",
       "wallMaterial": "Material",
       "wallFamilyType": "Type",
       "wallActions": "Actions",
@@ -2268,6 +2269,15 @@
           "gypsum": "Gypsum Board",
           "tooltip": "Select wall material for hatch pattern",
           "comingSoon": "Available with WallDna Phase 1D"
+        },
+        "tilt": {
+          "enabled": "Slanted",
+          "angle": "Tilt Angle",
+          "side": "Side",
+          "on": "Yes",
+          "off": "No",
+          "left": "Left",
+          "right": "Right"
         }
       },
       "bimFamilyType": {

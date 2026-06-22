@@ -62,6 +62,8 @@ import { useWallCommit } from './use-wall-commit';
 import { useWallRegionClicks } from './use-wall-region-clicks';
 // ADR-363 — lifecycle + setters + incremental-back ESC handlers extracted for N.7.1.
 import { useWallToolLifecycle } from './use-wall-tool-lifecycle';
+// ADR-404 Phase 5b — publish drawing-mode handle στο ribbon (κεκλιμένος τοίχος «σχεδίασε κεκλιμένο»).
+import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -384,6 +386,24 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return '';
     }
   }, []);
+
+  // ── ADR-404 Phase 5b — publish handle στο ribbon bridge store ────────────
+  // Single writer (mirror columnToolBridgeStore). Ο bridge διαβάζει μέσω
+  // `wallToolBridgeStore.get()` όταν δεν υπάρχει επιλεγμένος τοίχος, ώστε το panel
+  // «Κλίση» να οδηγεί τα overrides σε drawing mode (ο επόμενος τοίχος born-tilted).
+  useEffect(() => {
+    wallToolBridgeStore.set({
+      isActive: state.phase !== 'idle',
+      overrides: state.overrides,
+      setParamOverrides,
+    });
+    return () => {
+      // Καθάρισε μόνο αν είμαστε ο τρέχων publisher (μην σβήσεις νεότερο mount).
+      if (wallToolBridgeStore.get()?.setParamOverrides === setParamOverrides) {
+        wallToolBridgeStore.set(null);
+      }
+    };
+  }, [state.phase, state.overrides, setParamOverrides]);
 
   // ── side-effect listeners (extracted for N.7.1, parity preserved) ────────
   useWallToolDynamicInputListener({

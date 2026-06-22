@@ -22,6 +22,7 @@ import type { Entity } from '../../types/entities';
 import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import { rectangleCorners } from '../walls/wall-from-entity';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
+import { arcVisibleCcwRange } from '../../rendering/entities/shared/geometry-arc-utils';
 import type { ArcMeta, LinearMemberSnapTarget } from './linear-member-face-snap';
 
 /**
@@ -193,18 +194,23 @@ function circleTargets(e: Entity): LinearMemberSnapTarget[] {
 }
 
 /**
- * ADR-398 §3.12 — **ΤΟΞΟ** (`ArcEntity`, `center`+`radius`+`startAngle`/`endAngle` σε μοίρες) → zero-width
- * edges κατά μήκος του τόξου: reuse `arcToPolyline` (tessellation με τα **πραγματικά** άκρα) +
- * `polylineEdgeTargets`. Κάθε χορδή φέρει `arc` με τα αληθινά `startAngle/endAngle` → οι listening
- * dimensions μετρούν μήκος τόξου προς τα **πραγματικά άκρα** (mirror του κύκλου, datum=άκρα). `closed=false`.
+ * ADR-398 §3.12 — **ΤΟΞΟ** (`ArcEntity`, `center`+`radius`+`startAngle`/`endAngle` σε μοίρες
+ * +`counterclockwise`) → zero-width edges κατά μήκος της **ΦΑΝΕΡΗΣ** πλευράς: reuse `arcToPolyline` +
+ * `polylineEdgeTargets`. **Κρίσιμο (ADR-398 §3.12 bugfix):** το `arcToPolyline` tessellate-άρει πάντα CCW
+ * `start→end` αγνοώντας τη φορά· για να κουμπώσει η κολώνα στην ΟΡΑΤΗ πλευρά (αυτή που σχεδιάζει ο
+ * `ArcRenderer` / χτυπιέται από `hitTestArcEntity`) περνάμε το **ορατό CCW εύρος** μέσω του κοινού
+ * SSoT `arcVisibleCcwRange` (counterclockwise===true ⇒ swap). Κάθε χορδή φέρει `arc` με αυτό το ορατό
+ * εύρος → οι listening dimensions μετρούν προς τα **σωστά (ορατά) άκρα**. `closed=false`.
  */
 function arcTargets(e: Entity): LinearMemberSnapTarget[] {
-  const a = e as { center?: Point2D; radius?: number; startAngle?: number; endAngle?: number };
+  const a = e as { center?: Point2D; radius?: number; startAngle?: number; endAngle?: number; counterclockwise?: boolean };
   if (!a.center || typeof a.radius !== 'number' || a.radius <= 0) return [];
   if (typeof a.startAngle !== 'number' || typeof a.endAngle !== 'number') return [];
   const center = { x: a.center.x, y: a.center.y };
-  const arc: ArcMeta = { center, radius: a.radius, startAngle: a.startAngle, endAngle: a.endAngle };
-  const pts = arcToPolyline({ center, radius: a.radius, startAngle: a.startAngle, endAngle: a.endAngle });
+  // Ορατή πλευρά (κοινό SSoT με hit-test) — ΟΧΙ το συμπληρωματικό (κρυφό) τόξο.
+  const { start: startAngle, end: endAngle } = arcVisibleCcwRange(a.startAngle, a.endAngle, a.counterclockwise);
+  const arc: ArcMeta = { center, radius: a.radius, startAngle, endAngle };
+  const pts = arcToPolyline({ center, radius: a.radius, startAngle, endAngle });
   return pts.length < 2 ? [] : polylineEdgeTargets(pts, false, e.id, arc);
 }
 

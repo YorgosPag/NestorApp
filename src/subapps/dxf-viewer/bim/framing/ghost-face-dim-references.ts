@@ -29,7 +29,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ArcMeta, GhostFaceFrame } from './linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { calculateArcLength } from '../../rendering/entities/shared/geometry-arc-utils';
-import { degToRad, radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+import { degToRad, radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import {
   ARC_LISTENING_DIM_DEFAULT,
   type ArcListeningDimConfig,
@@ -101,11 +101,8 @@ export function resolveGhostFaceDimensions(
 
   const { origin: a, axisDir: u, perpDir: p, facePerp, outwardSign } = frame;
 
-  // Point on the face line at longitudinal position `along`.
-  const at = (along: number): Point2D => ({
-    x: a.x + along * u.x + facePerp * p.x,
-    y: a.y + along * u.y + facePerp * p.y,
-  });
+  // Point on the face line at longitudinal position `along` — κοινό SSoT `facePointAt` (ίδιο με arc branch).
+  const at = (along: number): Point2D => facePointAt(frame, along);
   // Point offset OUTWARD (toward the ghost) from the face line at `along` by `d`.
   const off = (along: number, d: number): Point2D => ({
     x: a.x + along * u.x + (facePerp + outwardSign * d) * p.x,
@@ -157,23 +154,20 @@ function pushDim(
 /** Τεταρτημόρια (AutoCAD QUADRANT osnap) — datum βάση κάθε κύκλου/τόξου. */
 const QUADRANTS_DEG: readonly number[] = [0, 90, 180, 270];
 
-/** Κανονικοποίηση γωνίας σε [0, 360). */
-const normalize360 = (deg: number): number => ((deg % 360) + 360) % 360;
-
 /**
  * ADR-398 §3.12 — **datum angles** (μοίρες, [0,360)) που εξυπηρετούν κάθε λογική χρήστη: τεταρτημόρια
  * **εντός** του angular span + (αν τόξο) τα **πραγματικά άκρα**. Κύκλος (span 360°) → 4 τεταρτημόρια.
  */
 function arcDatumAngles(arc: Readonly<ArcMeta>): number[] {
   const rawSpan = arc.endAngle - arc.startAngle;
-  const isFull = Math.abs(rawSpan) >= 360 - 1e-6 || normalize360(rawSpan) < 1e-6;
-  const span = isFull ? 360 : normalize360(rawSpan);
-  const start = normalize360(arc.startAngle);
+  const isFull = Math.abs(rawSpan) >= 360 - 1e-6 || normalizeAngleDeg(rawSpan) < 1e-6;
+  const span = isFull ? 360 : normalizeAngleDeg(rawSpan);
+  const start = normalizeAngleDeg(arc.startAngle);
   const datums: number[] = [];
   for (const q of QUADRANTS_DEG) {
-    if (isFull || normalize360(q - start) <= span + 1e-6) datums.push(q);
+    if (isFull || normalizeAngleDeg(q - start) <= span + 1e-6) datums.push(q);
   }
-  if (!isFull) datums.push(normalize360(arc.startAngle), normalize360(arc.endAngle));
+  if (!isFull) datums.push(normalizeAngleDeg(arc.startAngle), normalizeAngleDeg(arc.endAngle));
   return datums;
 }
 
@@ -182,8 +176,8 @@ function bracketDatums(datums: readonly number[], thetaDeg: number): { cwDeg: nu
   let cwDeg: number | null = null, ccwDeg: number | null = null;
   let cwGap = Infinity, ccwGap = Infinity;
   for (const d of datums) {
-    const ccw = normalize360(d - thetaDeg); // θ → d CCW
-    const cw = normalize360(thetaDeg - d);  // θ → d CW
+    const ccw = normalizeAngleDeg(d - thetaDeg); // θ → d CCW
+    const cw = normalizeAngleDeg(thetaDeg - d);  // θ → d CW
     if (ccw > 1e-6 && ccw < ccwGap) { ccwGap = ccw; ccwDeg = d; }
     if (cw > 1e-6 && cw < cwGap) { cwGap = cw; cwDeg = d; }
   }
@@ -208,7 +202,7 @@ function pushArcGap(
   offsetScene: number,
   minValue: number,
 ): void {
-  const sweepDeg = normalize360(toDeg - fromDeg);
+  const sweepDeg = normalizeAngleDeg(toDeg - fromDeg);
   // μήκος τόξου μέσω του SSoT `calculateArcLength` (= radius · sweepRad). ΜΗΝ ξαναγράψεις s=r·θ.
   const valueScene = calculateArcLength(arc.radius, degToRad(fromDeg), degToRad(toDeg));
   if (valueScene <= minValue) return;
@@ -237,7 +231,7 @@ function resolveArcGhostDimensions(
 ): readonly GhostFaceDimension[] {
   const cfg = opts.arcConfig ?? ARC_LISTENING_DIM_DEFAULT;
   const colPt = facePointAt(frame, frame.ghostCenterAlong);
-  const thetaDeg = normalize360(radToDeg(calculateAngle(arc.center, colPt)));
+  const thetaDeg = normalizeAngleDeg(radToDeg(calculateAngle(arc.center, colPt)));
   const out: GhostFaceDimension[] = [];
   if (cfg.showArcGaps) {
     const br = bracketDatums(arcDatumAngles(arc), thetaDeg);

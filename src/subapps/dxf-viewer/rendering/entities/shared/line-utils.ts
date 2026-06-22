@@ -12,6 +12,8 @@ import { pointToLineDistance, radToDeg, normalizeAngleDeg, calculateMidpoint } f
 // 🏢 ADR-065: Centralized Distance & Vector Operations
 // 🏢 ADR-090: Centralized Point Vector Operations
 import { calculateDistance, getUnitVector, offsetPoint } from './geometry-rendering-utils';
+// 🏢 ADR-398 §3.12: visible-arc CCW range SSoT (shared with snap-target tessellation)
+import { arcVisibleCcwRange } from './geometry-arc-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
@@ -102,9 +104,10 @@ export function hitTestArcEntity(
   const angle = normalizeAngleDeg(radToDeg(Math.atan2(point.y - center.y, point.x - center.x)));
 
   // counterclockwise=true means the arc draws CW in world (renderer uses !counterclockwise).
-  // The visible range is [endAngle→startAngle] CCW, so swap for the check.
-  const start = normalizeAngleDeg(counterclockwise === true ? endAngle : startAngle);
-  const end = normalizeAngleDeg(counterclockwise === true ? startAngle : endAngle);
+  // Visible CCW range via the shared SSoT (ADR-398 §3.12) — same convention as snap tessellation.
+  const visible = arcVisibleCcwRange(startAngle, endAngle, counterclockwise);
+  const start = normalizeAngleDeg(visible.start);
+  const end = normalizeAngleDeg(visible.end);
 
   // Check if angle is within arc range
   if (start <= end) {

@@ -26,6 +26,13 @@ import {
 } from '../hooks/bridge/wall-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+// ADR-404 Phase 5b — κεκλιμένος τοίχος: option-value sentinels (SSoT με τον resolver).
+import {
+  TILT_ENABLED_ON,
+  TILT_ENABLED_OFF,
+  TILT_SIDE_LEFT,
+  TILT_SIDE_RIGHT,
+} from '../hooks/bridge/wall-tilt-param';
 
 export const WALL_CONTEXTUAL_TRIGGER = 'wall-selected';
 
@@ -53,6 +60,29 @@ const WALL_MATERIAL_OPTIONS = [
   { value: 'masonry',           labelKey: 'ribbon.commands.wallEditor.material.masonry',          isLiteralLabel: false },
   { value: 'aerated-concrete',  labelKey: 'ribbon.commands.wallEditor.material.aeratedConcrete',  isLiteralLabel: false },
   { value: 'gypsum',            labelKey: 'ribbon.commands.wallEditor.material.gypsum',           isLiteralLabel: false },
+] as const;
+
+// ADR-404 Phase 5b — κεκλιμένος (battered) τοίχος: on/off + γωνία (μέγεθος 0..80°) +
+// πλευρά. Ο τοίχος είναι 1-DOF (lean ⟂ run)· δεν υπάρχει «φορά» όπως στην κολώνα.
+const WALL_TILT_ENABLED_OPTIONS = [
+  { value: TILT_ENABLED_ON,  labelKey: 'ribbon.commands.wallEditor.tilt.on',  isLiteralLabel: false },
+  { value: TILT_ENABLED_OFF, labelKey: 'ribbon.commands.wallEditor.tilt.off', isLiteralLabel: false },
+] as const;
+
+const WALL_TILT_ANGLE_DEG_OPTIONS = [
+  { value: '0',  labelKey: '0',  isLiteralLabel: true },
+  { value: '5',  labelKey: '5',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '30', labelKey: '30', isLiteralLabel: true },
+  { value: '45', labelKey: '45', isLiteralLabel: true },
+  { value: '60', labelKey: '60', isLiteralLabel: true },
+] as const;
+
+const WALL_TILT_SIDE_OPTIONS = [
+  { value: TILT_SIDE_LEFT,  labelKey: 'ribbon.commands.wallEditor.tilt.left',  isLiteralLabel: false },
+  { value: TILT_SIDE_RIGHT, labelKey: 'ribbon.commands.wallEditor.tilt.right', isLiteralLabel: false },
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
@@ -172,6 +202,54 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 id: 'wall.length',
                 labelKey: 'ribbon.commands.wallEditor.length',
                 commandKey: 'wall.length.field',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-404 Phase 5b — κεκλιμένος (battered) τοίχος (Revit «Slanted wall»). Toggle
+      // «Κεκλιμένος» (drawing → born-tilted overrides· selected → params.tilt) + γωνία
+      // (μέγεθος 0..80°) + πλευρά. Πάντα ορατό (η κλίση αφορά κάθε κατηγορία τοίχου).
+      id: 'wall-tilt',
+      labelKey: 'ribbon.panels.wallTilt',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'wall.tiltEnabled',
+                labelKey: 'ribbon.commands.wallEditor.tilt.enabled',
+                commandKey: WALL_RIBBON_KEYS.tilt.enabled,
+                comboboxWidthPx: 90,
+                options: WALL_TILT_ENABLED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'wall.tiltAngle',
+                labelKey: 'ribbon.commands.wallEditor.tilt.angle',
+                commandKey: WALL_RIBBON_KEYS.tilt.angle,
+                comboboxWidthPx: 80,
+                options: WALL_TILT_ANGLE_DEG_OPTIONS,
+                numericInput: { min: 0, max: 80 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'wall.tiltSide',
+                labelKey: 'ribbon.commands.wallEditor.tilt.side',
+                commandKey: WALL_RIBBON_KEYS.tilt.side,
+                comboboxWidthPx: 100,
+                options: WALL_TILT_SIDE_OPTIONS,
               },
             },
           ],

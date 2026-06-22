@@ -23,6 +23,7 @@ import type {
   WallGeometry,
   WallKind,
   WallParams,
+  WallTilt,
 } from '../../bim/types/wall-types';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../bim/types/wall-types';
 import { getDefaultDnaForCategory } from '../../bim/types/wall-dna-types';
@@ -59,6 +60,12 @@ export interface WallParamOverrides {
   /** mm. Overrides DNA-derived thickness (advanced use only). */
   readonly thickness?: number;
   readonly flip?: boolean;
+  /**
+   * ADR-404 Phase 5b — κεκλιμένος τοίχος (battered wall). Όταν set, ο τοίχος
+   * γεννιέται ήδη κεκλιμένος (drawing-mode «σχεδίασε κεκλιμένο»). `angle===0` /
+   * absent → κατακόρυφος. Signed (πρόσημο = πλευρά). SSoT: `wall-tilt.ts`.
+   */
+  readonly tilt?: WallTilt;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -138,7 +145,10 @@ export function buildDefaultWallParams(
     topOffset: 0,
   };
   const withDna = dna === null ? base : { ...base, dna };
-  return finish ? { ...withDna, finish } : withDna;
+  const withFinish = finish ? { ...withDna, finish } : withDna;
+  // ADR-404 Phase 5b — born-tilted όταν το εργαλείο είναι σε slant mode (ribbon tilt
+  // override). `angle===0` αφήνεται ως-έχει (κατακόρυφος fast-path· isWallTilted=false).
+  return overrides.tilt ? { ...withFinish, tilt: overrides.tilt } : withFinish;
 }
 
 /**

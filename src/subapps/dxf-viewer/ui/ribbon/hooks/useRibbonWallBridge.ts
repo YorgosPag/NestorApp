@@ -31,9 +31,15 @@ import {
   isWallRibbonKey,
   isWallRibbonStringKey,
   isWallRibbonToggleKey,
+  isWallTiltKey,
   WALL_RIBBON_KEYS_ACTIONS,
   WALL_RIBBON_BADGE_KEYS,
 } from './bridge/wall-command-keys';
+// ADR-404 Phase 5b — κεκλιμένος τοίχος: dedicated resolver (signed angle ↔ magnitude+side).
+import {
+  resolveWallTiltComboboxState,
+  applyWallTiltComboboxChange,
+} from './bridge/wall-tilt-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 // ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο» (στα segments).
@@ -147,6 +153,11 @@ export function useRibbonWallBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
+      // ADR-404 Phase 5b — tilt keys: resolver χειρίζεται ΚΑΙ selected ΚΑΙ drawing-mode
+      // (overrides) → τρέχει ΠΡΙΝ το null-check (drawing mode = no selection).
+      if (isWallTiltKey(commandKey)) {
+        return resolveWallTiltComboboxState(commandKey, resolveWall());
+      }
       const wall = resolveWall();
       if (!wall) return null;
       if (isWallRibbonStringKey(commandKey) || isWallRibbonToggleKey(commandKey)) {
@@ -162,6 +173,12 @@ export function useRibbonWallBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-404 Phase 5b — tilt keys: γράφει selected τοίχο (UpdateWallParamsCommand) ή
+      // drawing-tool overrides (born-tilted). Τρέχει ΠΡΙΝ το null-check (drawing mode).
+      if (isWallTiltKey(commandKey)) {
+        applyWallTiltComboboxChange(commandKey, value, resolveWall(), dispatchParams);
+        return;
+      }
       const wall = resolveWall();
       if (!wall) return;
 

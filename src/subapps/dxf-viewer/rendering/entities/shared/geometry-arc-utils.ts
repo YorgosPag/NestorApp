@@ -140,6 +140,26 @@ export function arcFromStartCenterEnd(
 }
 
 /**
+ * ADR-398 §3.12 — η **ΦΑΝΕΡΗ** πλευρά ενός τόξου ως CCW εύρος `[start→end]` (μοίρες). **ΕΝΑ SSoT**
+ * για τη φορά του τόξου, μοιραζόμενο από hit-test (`hitTestArcEntity`) ΚΑΙ tessellation των snap
+ * targets (`arcTargets`) — ώστε η κολώνα να κουμπώνει στην ΙΔΙΑ (ορατή) πλευρά που χτυπιέται/σχεδιάζεται.
+ *
+ * **Γιατί swap:** ο `ArcRenderer`→`addArcPath` ζωγραφίζει με Y-flip (`screenCCW = !counterclockwise`),
+ * οπότε στον world χώρο `counterclockwise===true` ⇒ το τόξο σχεδιάζεται **CW** ⇒ το ορατό CCW εύρος
+ * είναι `[endAngle→startAngle]` (ανεστραμμένο). Αλλιώς (false/undefined, default) ⇒ `[startAngle→endAngle]`.
+ * Επιστρέφει **ακανόνιστες** μοίρες (ο caller κανονικοποιεί όπως χρειάζεται).
+ */
+export function arcVisibleCcwRange(
+  startAngle: number,
+  endAngle: number,
+  counterclockwise?: boolean,
+): { start: number; end: number } {
+  return counterclockwise === true
+    ? { start: endAngle, end: startAngle }
+    : { start: startAngle, end: endAngle };
+}
+
+/**
  * Calculate arc length
  */
 export function calculateArcLength(radius: number, startAngle: number, endAngle: number): number {

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt) + Phase 3 (2Δ cut-plane projection + section parity) + Phase 4 (pieces/prism 3Δ tilt — attached/με-ανοίγματα) + Phase 4.1 (tilt-aware attach clip) + Phase 4.2 (tilt pocket band-split + sloped-underside host) + Phase 4.3 (topology-aware sub-loft) + Phase 5 (UX placement 2-κλικ + ribbon/property αριθμητικά — κολώνα)** DONE (pending commit, 🔴 browser verify) |
+| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt) + Phase 3 (2Δ cut-plane projection + section parity) + Phase 4 (pieces/prism 3Δ tilt — attached/με-ανοίγματα) + Phase 4.1 (tilt-aware attach clip) + Phase 4.2 (tilt pocket band-split + sloped-underside host) + Phase 4.3 (topology-aware sub-loft) + Phase 5 (UX placement 2-κλικ + ribbon/property αριθμητικά — κολώνα) + Phase 5b (ribbon UX κεκλιμένος ΤΟΙΧΟΣ — 1-DOF magnitude+side, selected + drawing-mode born-tilted)** DONE (pending commit, 🔴 browser verify) |
 | Date | 2026-06-01 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-402 (3D editing — αυτό ξεκλειδώνει τα X/Z rings του), ADR-401 (slope precedents beam/slab), ADR-369 (elevation convention), ADR-188 (rotation) |
@@ -295,6 +295,47 @@ Phase 2). Recognition: όλη η γεωμετρία/3D/2D/undo της κλίση
 
 ---
 
+## Phase 5b — UX ribbon κεκλιμένος ΤΟΙΧΟΣ (1-DOF, selected + drawing-mode) — UNCOMMITTED 2026-06-22
+
+**Στόχος (Giorgio):** ο χρήστης να ορίζει την **κλίση τοίχου** από το UI (όχι μόνο 3D gizmo Phase 2) —
+αδελφό της κολώνας Phase 5, αλλά **προσαρμοσμένο στη φύση του τοίχου**. Recognition (SSoT audit, grep):
+όλη η γεωμετρία/3D/2D/undo υπάρχει ήδη (`wall-tilt.ts` `WallTilt {angle}` + `wallTiltShearAt`/`isWallTilted`,
+`computeWallTiltParams` gizmo, `UpdateWallParamsCommand`). **Το μόνο κενό = το ribbon wiring.** Μηδέν νέα γεωμετρία.
+
+**Κρίσιμη διαφορά από κολώνα (ΟΧΙ copy-paste):**
+- Τοίχος = **1-DOF** (`WallTilt {angle}` signed, lean ⟂ run) → **ΚΑΜΙΑ «φορά»**, **ΚΑΝΕΝΑ 2-κλικ** base→top
+  (δεν φτιάχτηκε `wall-tilt-from-points` — δεν χρειάζεται· ο τοίχος γέρνει πάντα ⟂ στη run).
+- UI επιλογή Giorgio: **μέγεθος γωνίας (0..80°) + πλευρά (Αριστερά/Δεξιά)** αντί ενός signed πεδίου. Το
+  stored `tilt.angle` μένει το ΕΝΑ signed SSoT· η μετάφραση γίνεται σε ένα dedicated pure module.
+- Drawing-mode: ο τοίχος **δεν είχε** tool-bridge store (η κολώνα έχει `columnToolBridgeStore`). Επειδή ο
+  Giorgio θέλει «σχεδίασε ήδη κεκλιμένο», φτιάχτηκε **minimal** `wall-tool-bridge-store` (μόνο
+  `{isActive, overrides, setParamOverrides}` — ΟΧΙ kind/anchor/slant-2-κλικ): ο τοίχος γεννιέται born-tilted
+  μέσω `overrides.tilt` στο **υπάρχον** `buildDefaultWallParams`.
+
+**Υλοποίηση (data-driven, μηδέν νέα εντολή):**
+- **NEW `wall-tilt-param.ts`** — pure SSoT αμφίδρομης μετάφρασης signed `tilt.angle` ↔ {enabled, side, magnitude}:
+  Αριστερά→**+**γωνία (κορυφή προς αριστερή κάθετη της φοράς start→end), Δεξιά→**−**. `resolveWallTiltComboboxState`
+  / `applyWallTiltComboboxChange` χειρίζονται **ΚΑΙ** selected `WallEntity` (`dispatchParams`→`UpdateWallParamsCommand`)
+  **ΚΑΙ** drawing-mode (`wallToolBridgeStore` overrides). Clamp 0..80°.
+- **NEW `wall-tool-bridge-store.ts`** — minimal publish handle (mirror κολώνας, χωρίς το slant/kind machinery).
+- **`wall-command-keys.ts`** — NEW `tilt` group (`tiltEnabled`/`tiltSide`/`tiltAngle`) + `isWallTiltKey` (διακριτό
+  set → δρομολόγηση στον dedicated resolver, ΟΧΙ στους generic helpers).
+- **`useRibbonWallBridge.ts`** — tilt branch σε `getComboboxState`/`onComboboxChange` (ΠΡΙΝ το null-check ώστε να
+  τρέχει και σε drawing-mode), delegate στον resolver. **Καμία άλλη αλλαγή** (το pipeline υπήρχε).
+- **`useWallTool.ts`** — publish του handle (single-writer effect, mirror columnToolBridgeStore).
+- **`wall-completion.ts`** — `WallParamOverrides += tilt?` + apply στο `buildDefaultWallParams` (born-tilted).
+- **`contextual-wall-tab.ts`** — NEW panel «Κλίση» (3 combobox: enabled + angle `numericInput {0,80}` + side).
+- **i18n el+en (N.11):** `ribbon.commands.wallEditor.tilt.*` + `ribbon.panels.wallTilt`.
+- **Tests:** NEW `wall-tilt-param.test.ts` (10) — signed↔magnitude+side, on/off, side flip, clamp, no-op.
+
+### Documented limitations (Phase 5b)
+- Slant μόνο post-creation property + drawing-mode born-tilted (ομοιόμορφο για όλα τα τμήματα του εργαλείου)·
+  η κλίση καμπύλου/polyline τοίχου ακολουθεί την υπάρχουσα flat-path συμπεριφορά (κληρονομιά Φ4 limitation)·
+  η πλευρά είναι meaningful μόνο όταν `angle ≠ 0` (το πρόσημο του 0 δεν αποθηκεύει πλευρά — δεν υπάρχει lean).
+- DEFER (handoff): ίδιο numeric UX για πλάκα (`slope {direction, angle}`, σχεδόν mirror κολώνας).
+
+---
+
 ## SSoT reuse (μηδέν διπλά μαθηματικά)
 - Shear loop: ΕΝΑ `applyHorizontalTiltShear` (κολώνα+τοίχος).
 - Tilt math: `columnTiltShearAt`/`wallTiltShearAt` (αδέλφια `beamSlopeOffsetZmm`/
@@ -317,6 +358,7 @@ Phase 2). Recognition: όλη η γεωμετρία/3D/2D/undo της κλίση
 ---
 
 ## Changelog
+- **2026-06-22 (Opus 4.8) — Phase 5b: ribbon UX κεκλιμένος ΤΟΙΧΟΣ** (pending commit, 🔴 browser verify). Αδελφό της κολώνας Phase 5, αλλά **1-DOF** (`WallTilt {angle}` signed, lean ⟂ run — **καμία φορά, κανένα 2-κλικ**). Recognition (SSoT grep audit): όλη η γεωμετρία/3D/2D/undo υπήρχε ήδη (`wall-tilt.ts`, `UpdateWallParamsCommand`)· μόνο ribbon wiring έλειπε. **Giorgio choices:** (1) UI = **μέγεθος 0..80° + πλευρά** (Αριστερά/Δεξιά) αντί signed πεδίου· (2) **και drawing-mode** «σχεδίασε ήδη κεκλιμένο». NEW `wall-tilt-param.ts` (pure SSoT: signed `tilt.angle` ↔ {enabled,side,magnitude}· Αριστερά→+, Δεξιά→−· clamp 80°· selected→`dispatchParams`/`UpdateWallParamsCommand` + drawing→`wallToolBridgeStore` overrides) + NEW minimal `wall-tool-bridge-store.ts` (`{isActive,overrides,setParamOverrides}` — χωρίς το kind/slant machinery της κολώνας). `wall-command-keys` += `tilt` group + `isWallTiltKey`· `useRibbonWallBridge` += tilt branch (ΠΡΙΝ null-check → drawing-mode)· `useWallTool` publish handle· `WallParamOverrides += tilt` apply στο `buildDefaultWallParams` (born-tilted)· NEW panel «Κλίση» (3 combobox, angle `numericInput {0,80}`)· i18n el+en. **Μηδέν διπλότυπη γεωμετρία/εντολή** (Giorgio SSoT audit ✅). NEW `wall-tilt-param.test.ts` 10/10 PASS. 🔴 tsc (N.17, background) + browser-verify + commit.
 - **2026-06-02 (Opus 4.8) — Phase 4.3 robustness: clipper-free convex difference** (pending commit, 🔴 verify Giorgio). **Root cause των κενών + penetration** (επιβεβαιωμένο από browser console του Giorgio, ΟΧΙ stale build): το `safeDifference` (`polygon-clipping` μέσω `safe-polygon-boolean.ts`) πετά «Unable to complete output ring» στις **σχεδόν-εκφυλισμένες** θέσεις όπου το λεπτό δοκάρι (250mm) **μόλις-μόλις γεφυρώνει** τον λεπτό τοίχο (200mm) ΑΚΡΙΒΩΣ στο ύψος προσάρτησης (το topology split είναι στο `t≈0`). Το `computeTiltLoftCriticalTs` το καλεί 48+26×/region → graceful fallback κενό → λάθος critical heights → το `buildTiltTransitionLofts` ξανα-αποτυγχάνει → κενά + στοιχεία μέσα στο δοκάρι. Η Phase 4.3 ΛΟΓΙΚΗ ήταν σωστή (67 tests + αναλυτική απόδειξη)· το πρόβλημα ήταν **καθαρά robustness του polygon boolean**. **Fix:** ΝΕΟ SSoT `bim/geometry/shared/convex-polygon-difference.ts` — `subject ∖ convexHole` με **analytic half-plane peel** (`convexHole = ⋂ Lᵢ` ⟹ `S∖H = ⋃ᵢ (S ∩ L̄ᵢ)`, peel ώστε ξένα convex κομμάτια· κάθε βήμα = Sutherland–Hodgman σε ΕΝΑ ημιεπίπεδο → **ποτέ** δεν αποτυγχάνει). Ο `wall-top-clip.ts` (`diffQuadMinusHostPieces`) δρομολογεί στο analytic path για **κυρτό** host (αποτύπωμα δοκαριού = ορθογώνιο)· μη-κυρτό host → boolean fallback. Αντικαθιστά τα 3 `safeDifference` call sites του tilted path (signature detection + slab construction + outside prisms). Εξαλείφει ΚΑΙ το performance spam (μηδέν clipper στο per-frame live-preview detection). +ΝΕΟ `convex-polygon-difference.test.ts` 11/11 (correctness + degenerate bridge δεν πετά) + robustness regression στις ακριβείς runtime coords `wall_c23277ef`+`beam_f704603a` (assert: καμία SafePolygonBoolean αποτυχία + lofts>0 + watertight). 73/73 tilt tests + 116 broader sweep PASS, tsc 0. **Αίρει** το «pending robustness fix» από το handoff 2026-06-02.
 - **2026-06-02 (Opus 4.8) — Phase 4.3: topology-aware sub-loft** (pending commit, 🔴 verify Giorgio). Μετά το 4.2, ο γερμένος τοίχος κάτω από **λοξό** δοκάρι έδειχνε ακόμη τριγωνικές τρύπες. **Root cause (Giorgio + μέτρηση):** το `buildTopFootprintFromBottom` είναι **constructive** (ίδιο vertex-count, ΕΝΑ πολύγωνο), αλλά καθώς η κοπή μετατοπίζεται κατά `Δcut` (~13cm για 15°/50cm) η **τοπολογία αλλάζει** — η διατομή αποκτά γωνίες ΚΑΙ **σπάει σε πολλά πολύγωνα** (μετρήθηκε: αληθινό `quad−host_atNominal` = 4-γωνο + 3-γωνο ενώ constructive = ένα 4-γωνο). Single-ring loft σταθερού count → λάθος σχήμα → τρύπες. Ίσχυε **και για flat δοκάρι** (το committed band-split `4d21ae6e` ήταν ήδη ελλιπές σε πραγματικές λοξές διασταυρώσεις). **Fix:** ΝΕΟ `computeTiltLoftCriticalTs` (robust **sampling+bisection** του topology signature — πιάνει edge-edge bridges που το αναλυτικό vertex-on-edge μοντέλο έχανε) + ΝΕΟ `buildTiltTransitionLofts` που σπάει το `Hu→nominal` στα critical heights και χτίζει **ένα slab loft ανά υπο-διάστημα σταθερής τοπολογίας ανά sub-polygon** (constructive exact εντός slab· επίπεδη παρειά δοκαριού → συνεπίπεδα slabs, μηδέν stepping· per-vertex sloped bottom στο slab-0). Δεν υπάρχει 3D CSG lib → χρήση 2D `safeDifference`. 67/67 tests (νέο topology suite: split detection, stacked slabs, base→Hu watertight, slab stacking), tsc 0.
 - **2026-06-01 (Opus 4.8) — Phase 4.2: tilt pocket band-split + sloped-underside host** (pending commit, 🔴 verify Giorgio). Γερμένος attached τοίχος κάτω από δοκάρι που τον διασχίζει **λοξά** → δύο τριγωνικές τρύπες (ο ομοιόμορφος shear έγερνε τη διαγώνια κοπή). Fix part 1 (band-split, committed `4d21ae6e`): ΝΕΟ `clipWallBandTopRegionsTilted` σπάει κάθε outside μεταβατική περιοχή στο `Hu` → κάτω prism + πάνω loft band (`topFootprint = bottom − Δcut`) → κατακόρυφη κοπή μετά τον shear· ΝΕΟ `buildWallLoftBandGeometry`. Fix part 2 (sloped host, αυτή η συνεδρία): **root cause επιβεβαιωμένο με Firestore** — το δοκάρι `beam_f704603a` έχει `topElevationEnd=3003.7≠topElevation=3000` (κλίση 3.7mm) → `undersideZmmAt` set → το gate παρέκαμπτε το band-split → fallback → τρύπες. Fix: gate δέχεται single sloped host· `Hu`+`Δcut` **per-vertex**· `WallTopLoftBand.huLocalM`→`bottomLocalM[]`· lower prism top==loft bottom (watertight). 62/62 tests (incl. exact sloped repro), tsc 0. Cleanup: αφαιρέθηκαν τα `[TILT-DIAG]` logs που είχαν διαρρεύσει στο `4d21ae6e`.

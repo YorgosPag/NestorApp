@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md
  */
 
-import type { WallParams } from '../types/wall-types';
+import type { WallParams, WallTilt } from '../types/wall-types';
 import type { PlanShift } from './column-tilt';
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -27,9 +27,19 @@ const LEN_EPS = 1e-9;
 
 const NO_SHIFT: PlanShift = { dx: 0, dy: 0 };
 
+/**
+ * `true` όταν ένα `WallTilt` εκφράζει **ενεργή** κλίση (μη-μηδενική γωνία). SSoT
+ * για το «τι σημαίνει κεκλιμένος» — καταναλώνεται ΚΑΙ από το `isWallTilted` (params
+ * level) ΚΑΙ από το ribbon (`wall-tilt-param`, που δουλεύει σε `WallTilt | undefined`
+ * — selected + drawing-mode overrides). Μηδέν διπλή σύγκριση.
+ */
+export function isWallTiltAngleActive(tilt: WallTilt | undefined): boolean {
+  return tilt !== undefined && tilt.angle !== 0;
+}
+
 /** `true` όταν ο τοίχος είναι **κεκλιμένος** (έχει `tilt` με μη-μηδενική γωνία). */
 export function isWallTilted(params: WallParams): boolean {
-  return params.tilt !== undefined && params.tilt.angle !== 0;
+  return isWallTiltAngleActive(params.tilt);
 }
 
 /**

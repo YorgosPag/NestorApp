@@ -29,6 +29,19 @@ export const WALL_RIBBON_KEYS = {
     /** Exterior-face flip selector. */
     flip: 'wall.params.flip',
   },
+  // ─── ADR-404 Phase 5b — κεκλιμένος (battered) τοίχος ──────────────────────
+  // 1-DOF lean ⟂ στη φορά start→end. Το signed `tilt.angle` (SSoT `wall-tilt.ts`)
+  // εκφράζεται στο UI ως **μέγεθος** (`tiltAngle`, 0..80°) + **πλευρά** (`tiltSide`,
+  // left/right). Drawing-mode → tool overrides· selected → params.tilt. Logic SSoT =
+  // `wall-tilt-param.ts` (μηδέν διπλό μέσα στους generic param-helpers).
+  tilt: {
+    /** on/off — κεκλιμένος ή κατακόρυφος. */
+    enabled: 'wall.params.tiltEnabled',
+    /** left/right — πλευρά κλίσης (πρόσημο του signed angle). */
+    side: 'wall.params.tiltSide',
+    /** deg — μέγεθος γωνίας από κατακόρυφο (0..80, unsigned· πρόσημο από `side`). */
+    angle: 'wall.params.tiltAngle',
+  },
 } as const;
 
 export type WallRibbonNumberCommandKey =
@@ -100,4 +113,20 @@ export function isWallRibbonStringKey(commandKey: string): boolean {
 
 export function isWallRibbonToggleKey(commandKey: string): boolean {
   return WALL_TOGGLE_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-404 Phase 5b — tilt key set + guard ─────────────────────────────────
+
+/** Τα 3 command keys της κλίσης (enabled/side/angle). Διακριτό set ώστε ο bridge να
+ *  τα δρομολογεί στον dedicated `wall-tilt-param` resolver, ΟΧΙ στους generic helpers. */
+export const WALL_RIBBON_TILT_KEYS = [
+  WALL_RIBBON_KEYS.tilt.enabled,
+  WALL_RIBBON_KEYS.tilt.side,
+  WALL_RIBBON_KEYS.tilt.angle,
+] as const;
+
+const WALL_TILT_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_TILT_KEYS);
+
+export function isWallTiltKey(commandKey: string): boolean {
+  return WALL_TILT_KEY_SET.has(commandKey);
 }

@@ -24,6 +24,7 @@ import { formatLengthForDisplay } from '../../config/display-length-format';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import type { GhostFaceDimension } from '../../bim/framing/ghost-face-dim-references';
+import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
@@ -114,8 +115,7 @@ const ARC_DIM_SEGMENTS = 32;
 /** Ετικέτα arc gap κατά `labelMode`: μήκος τόξου (μέτρα) / γωνία (μοίρες) / και τα δύο. */
 function formatArcLabel(d: GhostFaceDimension, mmPerScene: number, labelMode: 'length' | 'angle' | 'both'): string {
   const len = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
-  const sweep = d.sweepDeg ?? 0;
-  const ang = `${sweep < 10 ? sweep.toFixed(1) : Math.round(sweep)}°`;
+  const ang = formatAngleLocale(d.sweepDeg ?? 0); // SSoT (ADR-082 locale-aware el/en + °) — μηδέν inline format
   if (labelMode === 'angle') return ang;
   if (labelMode === 'both') return `${len} / ${ang}`;
   return len;
