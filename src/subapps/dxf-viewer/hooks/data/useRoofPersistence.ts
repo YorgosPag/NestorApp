@@ -232,12 +232,7 @@ export function useRoofPersistence(
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: RoofEntity) => {
     const svc = serviceRef.current;
-    // TEMP DEBUG (ADR-417 roof-persist) — αφαίρεσέ το μετά τη διάγνωση.
-    console.debug('[roof-save] persist() called· service ready?', !!svc, 'roofId:', entity.id);
-    if (!svc) {
-      console.warn('[roof-save] ❌ ΚΑΝΕΝΑ service — λείπει scope (companyId/projectId/floorplanId/userId). Η στέγη ΔΕΝ θα σωθεί.');
-      return;
-    }
+    if (!svc) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
     const isNew = prevParams === null;
     setSaveState('saving');
@@ -266,8 +261,6 @@ export function useRoofPersistence(
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      // TEMP DEBUG (ADR-417 roof-persist) — αφαίρεσέ το μετά τη διάγνωση.
-      console.debug('[roof-save] ✅ SAVED OK·', isNew ? 'create' : 'update', entity.id);
       void recordRoofChange(
         isNew ? 'created' : 'updated',
         entity,
@@ -286,8 +279,6 @@ export function useRoofPersistence(
         );
       }
     } catch (err) {
-      // TEMP DEBUG (ADR-417 roof-persist) — αφαίρεσέ το μετά τη διάγνωση.
-      console.error('[roof-save] ❌ SAVE FAILED — το ΑΚΡΙΒΕΣ error:', err);
       setError(err instanceof Error ? err.message : 'ROOF_SAVE_ERROR');
       setSaveState('error');
     }

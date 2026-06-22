@@ -24,12 +24,12 @@ function arc(
 }
 
 describe('collectTekLines (γραμμές/polylines → <line>)', () => {
-  it('line → ένα <line> record, coords σε μέτρα (v0/v1)', () => {
+  it('line → ένα <line> record, coords σε μέτρα (v0/v1, Y-flipped)', () => {
     const r = collectTekLines([line({ x: 1000, y: 2000 }, { x: 3000, y: 2000 })], F);
     expect(r.lineCount).toBe(1);
     expect(r.linesXml).toContain('<type>4</type>');
-    expect(r.linesXml).toContain('<v0X>1</v0X><v0Y>2</v0Y>');
-    expect(r.linesXml).toContain('<v1X>3</v1X><v1Y>2</v1Y>');
+    expect(r.linesXml).toContain('<v0X>1</v0X><v0Y>-2</v0Y>'); // Y-flip: 2000·F → −2
+    expect(r.linesXml).toContain('<v1X>3</v1X><v1Y>-2</v1Y>');
     expect(r.linesXml).toContain('<elevation0>0</elevation0>');
   });
 
@@ -61,18 +61,19 @@ describe('collectTekArcs (κύκλοι/τόξα → <arc>)', () => {
     expect(r.arcCount).toBe(1);
     expect(r.arcsXml).toContain('<type>5</type>');
     expect(r.arcsXml).toContain('<circle>1</circle>');
-    expect(r.arcsXml).toContain('<centreX>5</centreX><centreY>5</centreY>');
-    expect(r.arcsXml).toContain('<p0X>7</p0X><p0Y>5</p0Y>'); // (5000+2000, 5000)·0.001
+    expect(r.arcsXml).toContain('<centreX>5</centreX><centreY>-5</centreY>'); // Y-flip
+    expect(r.arcsXml).toContain('<p0X>7</p0X><p0Y>-5</p0Y>'); // (5000+2000, −5000)·0.001
     expect(r.arcsXml).toContain('<p1X>0</p1X><p1Y>0</p1Y>');
   });
 
-  it('arc → <arc> <circle>0, p0/p1 = αρχή/τέλος από startAngle/endAngle (μοίρες)', () => {
-    // center (0,0), r=1000, 0°→90°: p0 = (1000,0)·F = (1,0)· p1 = (0,1000)·F = (0,1).
+  it('arc → <arc> <circle>0, p0/p1 = αρχή/τέλος (Y-flip + swap φοράς)', () => {
+    // center (0,0), r=1000, 0°→90°. Y-flip αντιστρέφει φορά → swap: p0 = reflect(end) = (0,−1)·m·
+    // p1 = reflect(start) = (1,0)·m.
     const r = collectTekArcs([arc({ x: 0, y: 0 }, 1000, 0, 90)], F);
     expect(r.arcCount).toBe(1);
     expect(r.arcsXml).toContain('<circle>0</circle>');
-    expect(r.arcsXml).toContain('<p0X>1</p0X><p0Y>0</p0Y>');
-    expect(r.arcsXml).toContain('<p1Y>1</p1Y>');
+    expect(r.arcsXml).toContain('<p0Y>-1</p0Y>'); // reflect(end y=1000)
+    expect(r.arcsXml).toContain('<p1X>1</p1X><p1Y>0</p1Y>'); // reflect(start)
   });
 
   it('αγνοεί non-καμπύλα (line/polyline)', () => {

@@ -171,6 +171,11 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.roofEditor.edge.select',
                 commandKey: ROOF_EDGE_KEYS.select,
                 comboboxWidthPx: 150,
+                // ⚠️ Τα option values είναι αριθμητικά (index «0»/«1»…) αλλά αυτό ΔΕΝ
+                // είναι αριθμητικό πεδίο — είναι picker ακμής με labels «Ακμή N ·
+                // κατεύθυνση». Χωρίς αυτό, το `isNumericOptionList` θα το έκανε
+                // editable numeric input (έδειχνε «0», όχι dropdown). Force Select.
+                numericInput: { editable: false },
               },
             },
             {
@@ -192,6 +197,9 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.roofEditor.edge.slope',
                 commandKey: ROOF_EDGE_KEYS.slope,
                 comboboxWidthPx: 90,
+                // Editable type-to-enter (ο bridge δίνει value χωρίς presets· χωρίς
+                // αυτό θα ήταν read-only Select με μηδέν στοιχεία → απληκτρολόγητο).
+                numericInput: { editable: true, allowDecimal: true, min: 0 },
               },
             },
             {
@@ -202,6 +210,8 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.roofEditor.edge.overhang',
                 commandKey: ROOF_EDGE_KEYS.overhang,
                 comboboxWidthPx: 90,
+                // Reuse των mm presets → numeric editable (type-to-enter + quick-pick).
+                options: OVERHANG_MM_OPTIONS,
               },
             },
           ],

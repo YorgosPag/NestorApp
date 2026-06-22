@@ -249,12 +249,13 @@ function toTekRoof(roof: RoofEntity, id: number): TekRoof {
     const angleRad = edge?.definesSlope
       ? Math.atan(roofSlopeToRatio(edge.slope, p.slopeUnit))
       : hasSlopedEdge ? Math.PI / 2 : 0;
-    return { x: v.x * metersPerSceneUnit, y: v.y * metersPerSceneUnit, angleRad };
+    // Y-flip: καμβάς Y-down → Τέκτων Y-up (ίδιο με buildXMatrix/face rings).
+    return { x: v.x * metersPerSceneUnit, y: -v.y * metersPerSceneUnit, angleRad };
   });
 
-  // Ο Τέκτων χτίζει τη στέγη από το **CCW** footprint (Y προς τα πάνω) + την κλίση ανά ακμή.
-  // Το canvas Y είναι «κάτω» → CCW-σε-canvas outline βγαίνει CW-σε-Τέκτονα → η στέγη δεν
-  // ζωγραφίζεται. Normalize σε CCW (θετικό signed area)· η κλίση ακολουθεί (reverseRoofFootprint).
+  // Ο Τέκτων χτίζει τη στέγη από **CCW** footprint + κλίση ανά ακμή. Μετά το Y-flip τα coords
+  // είναι ήδη σε Τέκτων-Y-up· ο έλεγχος signed-area μένει αυτο-διορθωτικός (αν βγει CW → reverse,
+  // με σωστή μετατόπιση κλίσης ανά ακμή μέσω reverseRoofFootprint).
   const points = signedAreaXY(rawPoints) < 0 ? reverseRoofFootprint(rawPoints) : rawPoints;
 
   // Τα «νερά» (computed 3D faces) → `<onev3list>`· per-vertex z διατηρείται. `roofFaceRingToMeters`

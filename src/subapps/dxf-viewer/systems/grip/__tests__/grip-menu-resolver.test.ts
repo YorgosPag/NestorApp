@@ -124,14 +124,37 @@ describe('resolveMenuActions — multifunctional entries', () => {
     expect(ids(arc, grip({ type: 'edge', gripIndex: 3 }))).toEqual(['radius']);
   });
 
-  it('polyline vertex (2 verts) → [addVertex] only (cannot remove below 2)', () => {
-    expect(ids(polyOpen, grip({ type: 'vertex', gripIndex: 0 }))).toEqual(['addVertex']);
+  it('polyline vertex (2 verts) → [addVertex, convertToArc] (cannot remove below 2)', () => {
+    expect(ids(polyOpen, grip({ type: 'vertex', gripIndex: 0 }))).toEqual([
+      'addVertex',
+      'convertToArc',
+    ]);
   });
 
-  it('polyline vertex (3 verts) → [addVertex, removeVertex]', () => {
+  it('polyline vertex (3 verts) → [addVertex, removeVertex, convertToArc]', () => {
     expect(ids(polyClosed, grip({ type: 'vertex', gripIndex: 1 }))).toEqual([
       'addVertex',
       'removeVertex',
+      'convertToArc',
     ]);
+  });
+
+  // ADR-510 Φ3c — segment/arc midpoint grips (tagged via polylineGripKind).
+  it('polyline straight segment-midpoint → [addVertex, convertToArc]', () => {
+    expect(
+      ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-segment-midpoint-0' })),
+    ).toEqual(['addVertex', 'convertToArc']);
+  });
+
+  it('polyline arc-midpoint → [convertToLine]', () => {
+    expect(
+      ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-arc-midpoint-0' })),
+    ).toEqual(['convertToLine']);
+  });
+
+  it('polyline vertex tagged kind (3 verts) → [addVertex, removeVertex, convertToArc]', () => {
+    expect(
+      ids(polyClosed, grip({ type: 'vertex', gripIndex: 1, polylineGripKind: 'polyline-vertex-1' })),
+    ).toEqual(['addVertex', 'removeVertex', 'convertToArc']);
   });
 });

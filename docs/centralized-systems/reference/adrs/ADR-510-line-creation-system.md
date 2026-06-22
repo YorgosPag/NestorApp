@@ -688,3 +688,23 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   per-segment array πρέπει να περάσει ΚΑΙ από εκεί. tsc(N.17) deferred (2 watcher tsc άλλων agents). 🔴 tsc+browser-verify
   (Convert-to-Arc→drag→Convert-to-Line→Add/Remove, 1 undo το καθένα· ⚠️ verify ΟΧΙ διπλές λαβές από legacy
   `EntityRendererComposite.getGrips` path)+commit.
+- **2026-06-23** — **Φ3c BUG FIX #1 (data-path): «δεν μετατρεπόταν σε τόξο».** Τα bulges κόβονταν σε **ΔΥΟ**
+  conversion layers scene→render: `hooks/canvas/dxf-scene-entity-converter` (scene→DxfScene) **και**
+  `canvas-v2/dxf-canvas/dxf-renderer-entity-model.buildEntityModelFromDxf` (DxfScene→EntityModel). Πρόσθεσα
+  `bulges/startWidths/endWidths` passthrough ΚΑΙ στα δύο (+ `DxfPolyline` type). Χωρίς το 2ο, ο Φ3b `PolylineRenderer`
+  (διαβάζει `entity.bulges`→`expandPolyline`) ΠΟΤΕ δεν έπαιρνε bulges → solid (γι' αυτό το Φ3b δεν είχε φανεί ποτέ).
+  Polylines ΔΕΝ μπαίνουν στο line-batch (μόνο `type==='line'`). **ΜΑΘΗΜΑ: 2 conversion layers — κάθε νέο per-segment
+  πεδίο πρέπει να περάσει ΚΑΙ από τα δύο.**
+- **2026-06-23** — **Φ3c BUG FIX #2 (διπλό μενού) + αρχιτεκτονική διόρθωση (FULL SSoT).** Giorgio: «δεξί κλικ → 2 μενού,
+  το μικρό επανάληψη του μεγάλου». ΡΙΖΑ: είχα βάλει τα polyline-ops στο **right-click** menu (`grip-context-menu-resolver`),
+  αλλά το **hover** menu (`grip-menu-resolver`) **ΗΔΗ** έβγαζε polyline Add/Remove (το «μικρό»). Το σχόλιο της
+  αρχιτεκτονικής το έλεγε ρητά: entity-specific actions ανήκουν στο hover menu, ΟΧΙ στο right-click (που έχει μόνο τα
+  universal cycle modes). **FIX:** (α) μετέφερα ΟΛΑ τα polyline ops στο **hover menu** — `grip-menu-resolver` τώρα δίνει
+  vertex→Add/Remove/**Convert-to-Arc**, straight segment-midpoint→Add/**Convert-to-Arc**, arc-midpoint→**Convert-to-Line**
+  (branch σε `polylineGripKind`)· `grip-menu-actions` delegate **ΟΛΑ** (add/remove/convert) στο ΕΝΑ SSoT
+  `buildPolylineVertexOpCommand` (εξάλειψη των inline `actionAddVertex`/`actionRemoveVertex` που διπλασίαζαν τον builder).
+  (β) **ΑΝΑΙΡΕΣΑ** πλήρως τα right-click polyline-ops (resolver/actions/controller revert· i18n keys → μετακινήθηκαν
+  `gripContextMenu.*`→`gripMenu.convertToArc/convertToLine` el+en). Live bulge-drag (`grip-polyline-bulge-commit` +
+  `commitDxfGripDragModeAware` branch) ΑΘΙΚΤΟ. ΕΝΑ μενού πλέον (hover), παράλληλο με line→Lengthen / arc→Radius.
+  46 jest GREEN (5 suites). **ΜΑΘΗΜΑ: πριν προσθέσεις action σε μενού grip, grep ΚΑΙ τα δύο menu systems
+  (hover `grip-menu-resolver` + right-click `grip-context-menu-resolver`) — entity-specific = hover, modes = right-click.**

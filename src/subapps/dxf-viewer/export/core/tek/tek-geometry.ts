@@ -33,11 +33,16 @@ export function mmToMeters(mm: number): number {
  * Γενικό affine SSoT (column-major): origin + άξονας-u (x00,x01) + άξονας-v (x10,x11).
  * ΟΛΟΙ οι builders (wall/opening/object) περνούν από εδώ — μηδέν 2ος affine από το μηδέν.
  * Ο Τέκτων διαβάζει point(u,v) → X=x00·u+x10·v+x20, Y=x01·u+x11·v+x21.
+ *
+ * **Y-FLIP (SSoT):** ο καμβάς του Νέστορα έχει Y «προς τα κάτω» (screen), ο Τέκτων Y «προς τα
+ * πάνω» (CAD) → χωρίς αναστροφή το σχέδιο βγαίνει mirror (πάνω↔κάτω). Αρνούμαστε τα Y-components
+ * (x01,x11,x21) ώστε Y_Τέκτων = −Y_καμβά. Εφαρμόζεται ΕΔΩ (όχι στους callers) → όλα τα xmatrix
+ * entities (τοίχοι/κουφώματα/objects) διορθώνονται ομοιόμορφα από ΕΝΑ σημείο.
  */
 export function buildXMatrix(
   ox: number, oy: number, ux: number, uy: number, vx: number, vy: number,
 ): TekXMatrix {
-  return { x00: ux, x01: uy, x10: vx, x11: vy, x20: ox, x21: oy };
+  return { x00: ux, x01: -uy, x10: vx, x11: -vy, x20: ox, x21: -oy };
 }
 
 /**
@@ -93,7 +98,7 @@ export function footprintRingToMeters(
 ): TekPlanePoint[] {
   return ring.map((v) => ({
     x: v.x * metersPerSceneUnit,
-    y: v.y * metersPerSceneUnit,
+    y: -v.y * metersPerSceneUnit || 0, // Y-flip (καμβάς→Τέκτων)· `|| 0` αποφεύγει −0
     z: elevationM,
   }));
 }
@@ -169,7 +174,7 @@ export function roofFaceRingToMeters(
   return dedupeFaceRing(
     ring.map((v) => ({
       x: v.x * metersPerSceneUnit,
-      y: v.y * metersPerSceneUnit,
+      y: -v.y * metersPerSceneUnit || 0, // Y-flip (καμβάς→Τέκτων)· `|| 0` αποφεύγει −0
       z: (v.z ?? 0) * MM_TO_M,
     })),
   );

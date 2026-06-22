@@ -233,8 +233,6 @@ export class RoofRenderer extends BaseEntityRenderer {
    */
   private drawSelectedEdgeHighlight(roof: RoofEntity): void {
     const sel = getSelectedRoofEdge();
-    // TEMP DEBUG (ADR-417 Φ-per-edge highlight) — αφαίρεσέ το μετά τη διάγνωση.
-    console.debug('[roof-edge] drawHighlight — selected pass· store:', sel, 'roof.id:', roof.id);
     if (!sel || sel.roofId !== roof.id) return;
     const verts = roof.geometry.footprint.vertices;
     const n = verts.length;

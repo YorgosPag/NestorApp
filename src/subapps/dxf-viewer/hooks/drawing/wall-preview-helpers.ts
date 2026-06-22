@@ -24,6 +24,8 @@ import {
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import type { WallKind, WallParams } from '../../bim/types/wall-types';
+// ADR-513 — ελάχιστο μήκος για clamp του PREVIEW (το commit μένει αυστηρό μέσω validator).
+import { MIN_WALL_LENGTH_MM } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -129,13 +131,7 @@ function buildWallGhostEntity(
   wantHud = false,
 ): ExtendedSceneEntity | null {
   const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
-  if (!built.ok) {
-    // ADR-513 TEMP DIAG — γιατί εξαφανίζεται ο τοίχος-φάντασμα (hard errors validator).
-    console.warn('[ADR-513 DIAG] wall ghost NULL — hardErrors:', built.hardErrors, {
-      start: params.start, end: params.end, thickness: params.thickness, height: params.height, sceneUnits,
-    });
-    return null;
-  }
+  if (!built.ok) return null;
   // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
   const conflict = conflictCtx
     ? resolveWallOpeningConflictForHost(
@@ -169,6 +165,23 @@ function buildWallGhostEntity(
  * The wall kind + overrides + snap targets are read from `wallPreviewStore`
  * (single-writer). Returns a full `WallEntity` (WYSIWYG) — preview == commit.
  */
+/**
+ * ADR-513 — επέκτεινε το PREVIEW endpoint ώστε το μήκος να είναι ≥ `MIN_WALL_LENGTH_MM` (στην
+ * κατεύθυνση αρχή→cursor), μόνο όταν είναι πιο κοντό. Εκφυλισμένο (cursor≡start) → +X. ΜΟΝΟ για το
+ * φάντασμα — το commit δεν περνά από εδώ, οπότε ο validator παραμένει αυστηρός (preview ≈ commit,
+ * εκτός του ακραίου «πολύ κοντού» όπου το ghost παραμένει ορατό αντί να εξαφανίζεται).
+ */
+function clampPreviewMinLength(start: Readonly<Point2D>, end: Readonly<Point2D>, sceneUnits: SceneUnits): Point2D {
+  const minLen = MIN_WALL_LENGTH_MM * mmToSceneUnits(sceneUnits);
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len >= minLen) return { x: end.x, y: end.y };
+  const ux = len > 1e-9 ? dx / len : 1;
+  const uy = len > 1e-9 ? dy / len : 0;
+  return { x: start.x + ux * minLen, y: start.y + uy * minLen };
+}
+
 export function generateWallPreview(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
@@ -209,8 +222,12 @@ export function generateWallPreview(
     );
   }
 
-  const endPt = cursorPoint;
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
+  // ADR-513 — όταν ο χρήστης κάνει 1ο κλικ και πάει ΑΜΕΣΩΣ στο «Δαχτυλίδι Εντολών» (χωρίς να
+  // τραβήξει τον τοίχο), ο κέρσορας είναι κοντά στην αρχή → ο τοίχος < MIN_WALL_LENGTH → ο validator
+  // ακυρώνει το ghost → εξαφανίζεται. Clamp ΜΟΝΟ του PREVIEW στο ελάχιστο μήκος (το commit μένει
+  // αυστηρό): ο χρήστης βλέπει πάντα τον τοίχο και μπορεί να τυπώσει μήκος/γωνία στο δαχτυλίδι.
+  const endPt = kind === 'straight' ? clampPreviewMinLength(startPt, cursorPoint, sceneUnits) : cursorPoint;
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
     preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,

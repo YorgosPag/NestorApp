@@ -51,11 +51,6 @@ export type GripContextActionId =
   | 'extras:sessionUndo'
   | 'vertex-ops:deleteCorner'
   | 'vertex-ops:addCorner'
-  // ADR-510 Φ3c — multifunctional polyline grip ops.
-  | 'polyline-ops:addVertex'
-  | 'polyline-ops:removeVertex'
-  | 'polyline-ops:convertToArc'
-  | 'polyline-ops:convertToLine'
   | 'exit';
 
 export interface GripContextActionMeta {
@@ -71,7 +66,7 @@ export interface GripContextActionMeta {
 }
 
 export interface GripContextSectionMeta {
-  readonly id: 'modes' | 'extras' | 'vertex-ops' | 'polyline-ops' | 'terminal';
+  readonly id: 'modes' | 'extras' | 'vertex-ops' | 'terminal';
   readonly titleKey?: string;
   readonly items: ReadonlyArray<GripContextActionMeta>;
 }
@@ -158,51 +153,6 @@ function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | 
 }
 
 /**
- * ADR-510 Φ3c — multifunctional polyline grip ops, keyed by `polylineGripKind`:
- *   - vertex            → Add Vertex / Remove Vertex / Convert to Arc
- *   - segment-midpoint  → Add Vertex / Convert to Arc
- *   - arc-midpoint      → Convert to Line
- * Mirrors `buildVertexOpsSection` (slab/roof) — same pure (entity, grip) → items
- * mapping, so the controller dispatches via `ctx.onPolylineVertexOp`.
- */
-function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
-  const kind = grip.polylineGripKind;
-  if (!kind) return null;
-  const titleKey = 'gripContextMenu.section.polylineOps';
-  if (kind.startsWith('polyline-vertex-')) {
-    return {
-      id: 'polyline-ops',
-      titleKey,
-      items: [
-        { id: 'polyline-ops:addVertex', labelKey: 'gripContextMenu.addVertex' },
-        { id: 'polyline-ops:removeVertex', labelKey: 'gripContextMenu.removeVertex' },
-        { id: 'polyline-ops:convertToArc', labelKey: 'gripContextMenu.convertToArc' },
-      ],
-    };
-  }
-  if (kind.startsWith('polyline-segment-midpoint-')) {
-    return {
-      id: 'polyline-ops',
-      titleKey,
-      items: [
-        { id: 'polyline-ops:addVertex', labelKey: 'gripContextMenu.addVertex' },
-        { id: 'polyline-ops:convertToArc', labelKey: 'gripContextMenu.convertToArc' },
-      ],
-    };
-  }
-  if (kind.startsWith('polyline-arc-midpoint-')) {
-    return {
-      id: 'polyline-ops',
-      titleKey,
-      items: [
-        { id: 'polyline-ops:convertToLine', labelKey: 'gripContextMenu.convertToLine' },
-      ],
-    };
-  }
-  return null;
-}
-
-/**
  * Resolve the section + action list for a right-click context menu on a hot
  * grip. Pure: the same `(entity, grip)` always yields the same sections.
  *
@@ -217,14 +167,12 @@ export function resolveContextMenuSections(
   _entity: Entity,
   grip: UnifiedGripInfo,
 ): ReadonlyArray<GripContextSectionMeta> {
-  // ADR-363/417 slab/roof vertex-ops OR ADR-510 Φ3c polyline-ops — at most one
-  // applies (discriminators are mutually exclusive per entity type).
-  const opsSection = buildVertexOpsSection(grip) ?? buildPolylineOpsSection(grip);
-  if (!opsSection) return BASE_SECTIONS;
+  const vertexOps = buildVertexOpsSection(grip);
+  if (!vertexOps) return BASE_SECTIONS;
   return [
     BASE_SECTIONS[0],
     BASE_SECTIONS[1],
-    opsSection,
+    vertexOps,
     BASE_SECTIONS[2],
   ];
 }

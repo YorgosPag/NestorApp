@@ -102,6 +102,9 @@ export function RadialCommandRing({ sceneUnits, getCanvasEl }: RadialCommandRing
   const cursorRef = useRef<Point2D | null>(null);
   const zoneRef = useRef<CursorZone>('inside');
   const popupRef = useRef<HTMLDivElement>(null);
+  // Αρχικό cursor του καμβά (για capture-and-restore· ΠΟΤΕ δεν επιβάλλουμε σταθερό 'crosshair'
+  // ώστε να μην προστίθεται OS «σταυρουδάκι» πάνω στο custom σταυρόνημα).
+  const canvasCursorRef = useRef<string | null>(null);
   const [cursor, setCursor] = useState<Point2D | null>(null);
   const [center, setCenter] = useState<Point2D | null>(null);
   const [zone, setZone] = useState<CursorZone>('inside');
@@ -157,18 +160,29 @@ export function RadialCommandRing({ sceneUnits, getCanvasEl }: RadialCommandRing
       ? wedgeAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI)
       : null);
     setCrosshairSuppressed(z === 'inside');
-    // Πάνω στα πλήκτρα: βελάκι αντί crosshair στο ΙΔΙΟ canvas element (inline cursor:crosshair).
-    // Re-assert ανά κίνηση ώστε να «κερδίζει» ακόμη κι αν ο καμβάς ξανα-render-άρει.
+    // Πάνω στα πλήκτρα: βελάκι. ΑΛΛΟΥ: επανάφερε ΑΚΡΙΒΩΣ το αρχικό cursor (capture-once), ποτέ
+    // σταθερό 'crosshair' — αλλιώς προστίθεται OS «σταυρουδάκι» πάνω στο custom σταυρόνημα παντού.
     const canvasEl = getCanvasEl?.();
-    if (canvasEl) canvasEl.style.cursor = z === 'inside' ? 'default' : 'crosshair';
+    if (canvasEl) {
+      if (z === 'inside') {
+        if (canvasCursorRef.current === null) canvasCursorRef.current = canvasEl.style.cursor;
+        canvasEl.style.cursor = 'default';
+      } else if (canvasCursorRef.current !== null) {
+        canvasEl.style.cursor = canvasCursorRef.current;
+        canvasCursorRef.current = null;
+      }
+    }
     prevCursorRef.current = { x: cursor.x, y: cursor.y };
   }, [cursor, getCanvasEl]);
 
-  // Καθάρισε crosshair-suppression + επανάφερε crosshair όταν φεύγει το δαχτυλίδι (tool end / phase).
+  // Καθάρισε crosshair-suppression + επανάφερε το αρχικό cursor όταν φεύγει το δαχτυλίδι.
   useEffect(() => () => {
     setCrosshairSuppressed(false);
     const el = getCanvasEl?.();
-    if (el) el.style.cursor = 'crosshair';
+    if (el && canvasCursorRef.current !== null) {
+      el.style.cursor = canvasCursorRef.current;
+      canvasCursorRef.current = null;
+    }
   }, [getCanvasEl]);
 
   const openWedge = useCallback((key: RingFieldKey) => {
@@ -210,7 +224,8 @@ export function RadialCommandRing({ sceneUnits, getCanvasEl }: RadialCommandRing
 
   const commitOpen = useCallback(() => {
     if (!openField) return;
-    const num = evalExpr(draft);
+    // Δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (0,25 ≡ 0.25) — όπως το `DynamicInputField`.
+    const num = evalExpr(draft.replace(/,/g, '.'));
     if (num !== null) {
       if (openField === 'length') {
         DynamicInputLockStore.lockLength(lengthDisplayToSceneLock(num, displayUnit, sceneUnits));
@@ -220,9 +235,17 @@ export function RadialCommandRing({ sceneUnits, getCanvasEl }: RadialCommandRing
         const handle = wallToolBridgeStore.get();
         handle?.setParamOverrides({ ...handle.overrides, [openField]: fromDisplay(num, displayUnit) });
       }
+      // ADR-513 — άμεσο rebuild του ghost: το `DynamicInputLockStore` (Μήκος/Γωνία) ΔΕΝ τρέφει το
+      // preview, οπότε χωρίς αυτό η αλλαγή (ιδίως η Γωνία = κατεύθυνση) φαινόταν μόνο μετά από κίνηση
+      // ποντικιού → «δεν λειτουργεί». Στέλνουμε synthetic mousemove στον καμβά στην τρέχουσα θέση.
+      const canvasEl = getCanvasEl?.();
+      const cur = cursorRef.current;
+      if (canvasEl && cur) {
+        canvasEl.dispatchEvent(new MouseEvent('mousemove', { clientX: cur.x, clientY: cur.y, bubbles: true }));
+      }
     }
     setOpenField(null);
-  }, [openField, draft, displayUnit, sceneUnits]);
+  }, [openField, draft, displayUnit, sceneUnits, getCanvasEl]);
 
   const onPopupKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitOpen(); }

@@ -25,7 +25,7 @@
  * @see ui/ribbon/hooks/useRibbonSlabBridge.ts — το πρότυπο
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRoofEntity } from '../../../types/entities';
 import {
@@ -57,10 +57,8 @@ import {
   resolveRoofEdgeComboboxState,
   roofEdgeCompass,
 } from './bridge/roof-edge-param';
-import {
-  getSelectedRoofEdge,
-  setSelectedRoofEdge,
-} from '../../../bim/roofs/roof-edge-selection-store';
+import { setSelectedRoofEdge } from '../../../bim/roofs/roof-edge-selection-store';
+import { useSelectedRoofEdge } from '../../../bim/roofs/useRoofEdgeSelection';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -167,16 +165,32 @@ export function useRibbonRoofBridge(
     [executeCommand, levelManager],
   );
 
+  // Subscribe στο edge-selection store ώστε το ribbon να ΞΑΝΑ-renderάρεται όταν
+  // αλλάζει η επιλεγμένη ακμή → η τιμή του dropdown ακολουθεί την επιλογή (αλλιώς
+  // κολλάει στην 1η) + συγχρονισμός με το live highlight.
+  const selectedEdge = useSelectedRoofEdge();
+
   /**
-   * Index της ακμής υπό επεξεργασία: από το `roofEdgeSelectionStore` αν δείχνει
-   * στην ΙΔΙΑ στέγη (clamped)· αλλιώς 0 (default = 1η ακμή). Καθαρό read, μηδέν
-   * side-effect (το store γράφεται μόνο σε ρητή αλλαγή `select`).
+   * Index της ακμής υπό επεξεργασία: από το (reactive) `selectedEdge` αν δείχνει
+   * στην ΙΔΙΑ στέγη (clamped)· αλλιώς 0 (default = 1η ακμή).
    */
   const resolveSelectedIndex = useCallback((roof: RoofEntity): number => {
-    const sel = getSelectedRoofEdge();
     const count = roof.params.edges.length;
-    return sel && sel.roofId === roof.id ? clampEdgeIndex(sel.edgeIndex, count) : 0;
-  }, []);
+    return selectedEdge && selectedEdge.roofId === roof.id
+      ? clampEdgeIndex(selectedEdge.edgeIndex, count)
+      : 0;
+  }, [selectedEdge]);
+
+  // Default-select την 1η ακμή μόλις γίνει active μια στέγη → φωτίζεται αμέσως
+  // (Revit «πρώτη ακμή επιλεγμένη») ΚΑΙ η 1η ακμή ξανα-επιλέγεται κανονικά αργότερα
+  // (το Radix Select δεν fire-άρει σε ίδια τιμή). Idempotent ανά στέγη (μηδέν loop).
+  const activeRoofId = resolveRoof()?.id ?? null;
+  useEffect(() => {
+    if (!activeRoofId) return;
+    if (!selectedEdge || selectedEdge.roofId !== activeRoofId) {
+      setSelectedRoofEdge({ roofId: activeRoofId, edgeIndex: 0 });
+    }
+  }, [activeRoofId, selectedEdge]);
 
   /** Options του dropdown «Ακμή»: μία ανά ακμή, label = λέξη + index + compass (i18n). */
   const buildEdgeOptions = useCallback(

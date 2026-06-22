@@ -27,22 +27,23 @@ describe('tek-geometry', () => {
     expect(mmToMeters(250)).toBe(0.25);
   });
 
-  it('buildWallXMatrix column-major (οριζόντιος (0,0)→(5,0), t=0.25)', () => {
+  it('buildWallXMatrix column-major (οριζόντιος (0,0)→(5,0), t=0.25) — Y-flipped', () => {
     const m = buildWallXMatrix(0, 0, 5, 0, 0.25);
-    // length axis (x00,x01)=E−S=(5,0)· thickness axis (x10,x11)=n̂·t=(0,0.25)· origin=(0,−0.125).
+    // length axis (x00,x01)=E−S=(5,0)· thickness (x10,x11)=n̂·t=(0,0.25)· origin=(0,−0.125).
+    // Y-flip (καμβάς Y-down → Τέκτων Y-up) αρνείται x01/x11/x21.
     expect(m.x00).toBeCloseTo(5);
     expect(m.x01).toBeCloseTo(0);
     expect(m.x10).toBeCloseTo(0);
-    expect(m.x11).toBeCloseTo(0.25);
+    expect(m.x11).toBeCloseTo(-0.25); // Y-flipped
     expect(m.x20).toBeCloseTo(0);
-    expect(m.x21).toBeCloseTo(-0.125);
+    expect(m.x21).toBeCloseTo(0.125); // Y-flipped
   });
 
-  it('buildWallXMatrix κάθετος (0,0)→(0,5), t=0.2 — transposed (length axis=(x00,x01))', () => {
+  it('buildWallXMatrix κάθετος (0,0)→(0,5), t=0.2 — transposed + Y-flipped', () => {
     const m = buildWallXMatrix(0, 0, 0, 5, 0.2);
     // length (x00,x01)=(0,5)· thickness (x10,x11)=n̂·t, n̂=(−1,0) → (−0.2,0)· origin=(0.1,0).
     expect(m.x00).toBeCloseTo(0);
-    expect(m.x01).toBeCloseTo(5);
+    expect(m.x01).toBeCloseTo(-5); // Y-flipped
     expect(m.x10).toBeCloseTo(-0.2);
     expect(m.x11).toBeCloseTo(0);
     expect(m.x20).toBeCloseTo(0.1);
@@ -108,29 +109,29 @@ describe('injectTekEntities', () => {
 // ── openings (ADR-512 ΦΑΣΗ 2) ──
 // buildOpeningXMatrix: κέντρο+γωνία έρχονται από SSoT computeOpeningGeometry· εδώ μόνο xmatrix.
 describe('buildOpeningXMatrix (column-major, μέτρα)', () => {
-  it('οριζόντιο (center 1.45, rot 0, width 0.9) — u=â·w, v=n̂ μοναδιαίο, origin=center−â·w/2', () => {
+  it('οριζόντιο (center 1.45, rot 0, width 0.9) — u=â·w, v=n̂ μοναδιαίο — Y-flipped', () => {
     const m = buildOpeningXMatrix(1.45, 0, 0, 0.9);
     expect(m.x00).toBeCloseTo(0.9); // πλάτος κατά μήκος
     expect(m.x01).toBeCloseTo(0);
     expect(m.x10).toBeCloseTo(0);
-    expect(m.x11).toBeCloseTo(1);   // μοναδιαίο κάθετο (ΟΧΙ ·thickness)
+    expect(m.x11).toBeCloseTo(-1);  // μοναδιαίο κάθετο, Y-flipped
     expect(m.x20).toBeCloseTo(1);   // origin = 1.45 − 0.45
     expect(m.x21).toBeCloseTo(0);
   });
 
-  it('κάθετο (rot π/2) → u ⊥ v (μηδέν ρόμβος), λοξό-safe', () => {
+  it('κάθετο (rot π/2) → u ⊥ v (μηδέν ρόμβος), λοξό-safe — Y-flipped', () => {
     const m = buildOpeningXMatrix(0, 1.45, Math.PI / 2, 0.9);
     const dot = m.x00 * m.x10 + m.x01 * m.x11;
-    expect(dot).toBeCloseTo(0);
-    expect(m.x01).toBeCloseTo(0.9); // length axis κατά +Y
-    expect(m.x10).toBeCloseTo(-1);  // μοναδιαίο κάθετο
+    expect(dot).toBeCloseTo(0); // ορθογωνιότητα διατηρείται μετά το Y-flip
+    expect(m.x01).toBeCloseTo(-0.9); // length axis κατά −Y (Y-flipped)
+    expect(m.x10).toBeCloseTo(-1);   // μοναδιαίο κάθετο
   });
 
-  it('decode parity με δείγμα (παράθυρο: center 20.1, rot π, width 0.8)', () => {
+  it('decode parity με δείγμα (παράθυρο: center 20.1, rot π, width 0.8) — Y-flipped κάθετο', () => {
     const m = buildOpeningXMatrix(20.1, 8.675, Math.PI, 0.8);
-    expect(m.x00).toBeCloseTo(-0.8); // δείγμα x00=-0.8
-    expect(m.x11).toBeCloseTo(-1);   // δείγμα x11=-1
-    expect(m.x20).toBeCloseTo(20.5); // δείγμα x20=20.5
+    expect(m.x00).toBeCloseTo(-0.8); // δείγμα x00=-0.8 (X άθικτο)
+    expect(m.x11).toBeCloseTo(1);    // δείγμα x11=-1 → +1 μετά το Y-flip
+    expect(m.x20).toBeCloseTo(20.5); // δείγμα x20=20.5 (X άθικτο)
   });
 });
 
@@ -185,7 +186,7 @@ describe('collectTekWalls', () => {
     expect(r.wallCount).toBe(1);
     expect(r.warnings).toEqual([]);
     expect(r.wallsXml).toContain('<x00>5</x00>');
-    expect(r.wallsXml).toContain('<x11>0.25</x11>');
+    expect(r.wallsXml).toContain('<x11>-0.25</x11>'); // Y-flipped
     expect(r.wallsXml).toContain('<height>3</height>');
   });
 
@@ -283,8 +284,8 @@ describe('footprintRingToMeters (scene→μέτρα + elevation)', () => {
       { x: 3000, y: 2000, z: 0 },
     ];
     const pts = footprintRingToMeters(fp, 0.001, 0.5);
-    expect(pts[0]).toEqual({ x: 1, y: 2, z: 0.5 });
-    expect(pts[1]).toEqual({ x: 3, y: 2, z: 0.5 });
+    expect(pts[0]).toEqual({ x: 1, y: -2, z: 0.5 }); // Y-flip: 2000·F → −2
+    expect(pts[1]).toEqual({ x: 3, y: -2, z: 0.5 });
   });
 });
 
@@ -336,9 +337,9 @@ describe('collectTekPlanes (έπιπλα → κουτιά)', () => {
   it('έπιπλο 2000×2000mm @ (1000,1000) rot 0 → footprint 2×2m γύρω από το κέντρο', () => {
     const r = collectTekPlanes([furniture({ x: 1000, y: 1000 }, 0, { w: 2000, d: 2000, h: 900 })]);
     expect(r.planeCount).toBe(1);
-    // centred footprint: ±1m γύρω από (1,1) → x ∈ {0,2}, y ∈ {0,2}.
+    // centred footprint ±1m γύρω από (1,1) → x ∈ {0,2}, y ∈ {0,2}· Y-flip → y ∈ {0,−2}.
     expect(r.planesXml).toContain('<pointX>0</pointX><pointY>0</pointY>');
-    expect(r.planesXml).toContain('<pointX>2</pointX><pointY>2</pointY>');
+    expect(r.planesXml).toContain('<pointX>2</pointX><pointY>-2</pointY>');
     expect(r.planesXml).toContain('<width>0.9</width>'); // ύψος 900mm = εξώθηση
   });
 
@@ -441,8 +442,8 @@ describe('roofFaceRingToMeters (face outline → μέτρα, per-vertex z)', () 
     const pts = roofFaceRingToMeters(
       [{ x: 1000, y: 2000, z: 3000 }, { x: 3000, y: 2000, z: 3896 }], 0.001,
     );
-    expect(pts[0]).toEqual({ x: 1, y: 2, z: 3 });
-    expect(pts[1]).toEqual({ x: 3, y: 2, z: 3.896 });
+    expect(pts[0]).toEqual({ x: 1, y: -2, z: 3 }); // Y-flip
+    expect(pts[1]).toEqual({ x: 3, y: -2, z: 3.896 });
   });
 
   it('ΚΑΘΑΡΙΖΕΙ degenerate επαναλήψεις: διπλές διαδοχικές + κλείσιμο (ο solver παράγει closed ring)', () => {
@@ -452,9 +453,9 @@ describe('roofFaceRingToMeters (face outline → μέτρα, per-vertex z)', () 
       { x: 5000, y: 2500, z: 3900 }, { x: 0, y: 0, z: 3000 }, // κλείσιμο == πρώτη
     ];
     const pts = roofFaceRingToMeters(ring, 0.001);
-    // απομένουν 3 distinct κορυφές (τρίγωνο): (0,0,3),(10,0,3),(5,2.5,3.9).
+    // απομένουν 3 distinct κορυφές (τρίγωνο), Y-flipped: (0,0,3),(10,0,3),(5,−2.5,3.9).
     expect(pts).toEqual([
-      { x: 0, y: 0, z: 3 }, { x: 10, y: 0, z: 3 }, { x: 5, y: 2.5, z: 3.9 },
+      { x: 0, y: 0, z: 3 }, { x: 10, y: 0, z: 3 }, { x: 5, y: -2.5, z: 3.9 },
     ]);
   });
 
@@ -509,7 +510,7 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
       { definesSlope: true, slope: 30 }, { definesSlope: false, slope: 0 }];
     const r = collectTekRoofs([roof(SQUARE, { thickness: 150, basePivotZ: 3000, edges, faces })]);
     expect(r.autoroofsXml).toContain('<onev3list>');
-    expect(r.autoroofsXml).toContain('<pvX>2.5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>'); // κορφιάς
+    expect(r.autoroofsXml).toContain('<pvX>2.5</pvX><pvY>-2.5</pvY><pvZ>3.9</pvZ>'); // κορφιάς, Y-flip
   });
 
   it('δίρριχτη: αετώματα → κατακόρυφα τρίγωνα στο <v3list> (2 νερά + 2 αετώματα)', () => {
@@ -529,9 +530,9 @@ describe('collectTekRoofs (στέγη → <autoroof>, ΦΑΣΗ A)', () => {
     // 2 νερά + 2 αετώματα = 4 onev3list (πριν το fix: μόνο 2).
     expect((r.autoroofsXml.match(/<onev3list>/g) ?? []).length).toBe(4);
     // αετώματα = κατακόρυφα τρίγωνα: apex στο ridge (z=3.9), 2 eave corners (z=3) στο ίδιο x.
-    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>0</pvY><pvZ>3</pvZ>');   // δεξί αέτωμα base
-    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>5</pvY><pvZ>3</pvZ>');   // δεξί αέτωμα base
-    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>2.5</pvY><pvZ>3.9</pvZ>'); // apex
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>0</pvY><pvZ>3</pvZ>');    // δεξί αέτωμα base (y=0)
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>-5</pvY><pvZ>3</pvZ>');   // δεξί αέτωμα base, Y-flip
+    expect(r.autoroofsXml).toContain('<pvX>5</pvX><pvY>-2.5</pvY><pvZ>3.9</pvZ>'); // apex, Y-flip
   });
 
   it('χωρίς ridges (επίπεδη/μη-διαθέσιμα) → κανένα αέτωμα face (graceful)', () => {
