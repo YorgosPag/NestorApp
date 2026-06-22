@@ -15,6 +15,7 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition } from './ImmediatePositionStore';
+import { setColumnPolarShiftFractions } from './ColumnPolarStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { getLockedGripWorldPos } from './GripSnapStore';
 import { getGripStepAnchor } from './GripStepAnchorStore';
@@ -282,6 +283,9 @@ export function useMouseMoveHandler({
     if (debugEnabled) dperf('Performance', `MOUSEMOVE tool=${activeTool} drawing=${inDrawingMode} cb=${!!onDrawingHover}`);
 
     if (onDrawingHover && inDrawingMode) {
+      // ADR-398 §3.13 — Polar Magnet Q1: Shift κρατιέται → δακτύλιοι σε κλάσματα ακτίνας (event-time,
+      // zero React· ο ghost/commit το διαβάζει imperatively από το ColumnPolarStore).
+      if (activeTool === 'column') setColumnPolarShiftFractions(e.shiftKey);
       if (debugEnabled) console.log('[MouseHandlers] CALLING onDrawingHover', { worldX: worldPos.x, worldY: worldPos.y });
       withPerf('drawing-hover-callback', () => onDrawingHover(worldPos));
     }

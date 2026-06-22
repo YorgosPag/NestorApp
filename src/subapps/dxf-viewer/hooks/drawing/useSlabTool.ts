@@ -33,6 +33,8 @@ import {
 } from './slab-completion';
 import { getDefaultSlabBuildupForKind } from '../../bim/types/slab-dna-types';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
+// ADR-404 Phase 5c — publish drawing-mode handle στο ribbon (κεκλιμένη πλάκα «σχεδίασε ήδη κεκλιμένη»).
+import { slabToolBridgeStore } from '../../ui/ribbon/hooks/bridge/slab-tool-bridge-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -153,6 +155,24 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
   const setParamOverrides = useCallback((overrides: SlabParamOverrides) => {
     setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
   }, []);
+
+  // ── ADR-404 Phase 5c — publish handle στο ribbon bridge store ─────────────
+  // Single writer (mirror wallToolBridgeStore). Ο bridge διαβάζει μέσω
+  // `slabToolBridgeStore.get()` όταν δεν υπάρχει επιλεγμένη πλάκα, ώστε το panel
+  // «Κλίση» να οδηγεί τα overrides σε drawing mode (η επόμενη πλάκα born-sloped).
+  useEffect(() => {
+    slabToolBridgeStore.set({
+      isActive: state.phase !== 'idle',
+      overrides: state.overrides,
+      setParamOverrides,
+    });
+    return () => {
+      // Καθάρισε μόνο αν είμαστε ο τρέχων publisher (μην σβήσεις νεότερο mount).
+      if (slabToolBridgeStore.get()?.setParamOverrides === setParamOverrides) {
+        slabToolBridgeStore.set(null);
+      }
+    };
+  }, [state.phase, state.overrides, setParamOverrides]);
 
   // ── commit ───────────────────────────────────────────────────────────────
   /**

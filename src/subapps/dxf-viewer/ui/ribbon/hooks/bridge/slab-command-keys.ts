@@ -27,6 +27,23 @@ export const SLAB_RIBBON_KEYS = {
     /** mm — top face (FFL) από project origin. ADR-369 §2.1. */
     levelElevation: 'slab.params.levelElevation',
   },
+  // ─── ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκας (sloped slab) ───────────────
+  // `geometryType:'box'|'tilted'` + `SlabSlope {direction°, angle%, pivotEdge}`
+  // (SSoT `slab-types.ts` + invariant `withSlabSlope`). Selected → params· drawing
+  // → tool overrides (born-sloped). Logic SSoT = `slab-slope-param.ts`. Η μονάδα
+  // εμφάνισης (%/μοίρες/λόγος) είναι ribbon pref (`slab-slope-unit`), ΟΧΙ key πεδίο.
+  slope: {
+    /** on/off — κεκλιμένη ή επίπεδη (toggle geometryType↔slope). */
+    enabled: 'slab.params.slopeEnabled',
+    /** percent/degrees/ratio — μονάδα εμφάνισης της τιμής (display pref). */
+    unit: 'slab.params.slopeUnit',
+    /** Τιμή κλίσης στη επιλεγμένη μονάδα (stored ΠΑΝΤΑ %). */
+    angle: 'slab.params.slopeAngle',
+    /** μοίρες CCW from +X (0=Αν, 90=Β) — φορά «ανηφόρας». Ελεύθερη 0..360. */
+    direction: 'slab.params.slopeDirection',
+    /** center/N/S/E/W — άξονας/ακμή που μένει στη nominal στάθμη. */
+    pivot: 'slab.params.slopePivot',
+  },
 } as const;
 
 export type SlabRibbonNumberCommandKey =
@@ -91,6 +108,28 @@ export function isSlabRibbonKey(commandKey: string): boolean {
 
 export function isSlabRibbonStringKey(commandKey: string): boolean {
   return SLAB_STRING_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-404 Phase 5c — slope key set + guard ─────────────────────────────────
+
+/**
+ * Τα 5 command keys της κλίσης (enabled/unit/angle/direction/pivot). Διακριτό set
+ * ώστε ο bridge να τα δρομολογεί στον dedicated `slab-slope-param` resolver (μηδέν
+ * διπλό μέσα στους generic param-helpers). ⚠️ Πρέπει να προστεθεί ΚΑΙ στα 2 guards
+ * του `useRibbonCommands` (onComboboxChange + getComboboxState) — αλλιώς no-op.
+ */
+export const SLAB_RIBBON_SLOPE_KEYS = [
+  SLAB_RIBBON_KEYS.slope.enabled,
+  SLAB_RIBBON_KEYS.slope.unit,
+  SLAB_RIBBON_KEYS.slope.angle,
+  SLAB_RIBBON_KEYS.slope.direction,
+  SLAB_RIBBON_KEYS.slope.pivot,
+] as const;
+
+const SLAB_SLOPE_KEY_SET: ReadonlySet<string> = new Set<string>(SLAB_RIBBON_SLOPE_KEYS);
+
+export function isSlabSlopeKey(commandKey: string): boolean {
+  return SLAB_SLOPE_KEY_SET.has(commandKey);
 }
 
 // ─── ADR-476 — δομοστατικά / οπλισμός πλάκας (reinforcement) ───────────────────

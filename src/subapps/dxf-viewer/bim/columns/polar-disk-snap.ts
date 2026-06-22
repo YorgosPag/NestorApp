@@ -210,6 +210,20 @@ export function resolvePolarDiskSnap(
   };
 }
 
+/** Ο δίσκος που **περιέχει** τον cursor (πλησιέστερο κέντρο εντός ακτίνας)· `null` αν κανένας. */
+export function findDiskContaining(
+  cursor: Readonly<Point2D>,
+  disks: readonly PolarDisk[],
+): PolarDisk | null {
+  let best: PolarDisk | null = null;
+  let bestD = Infinity;
+  for (const d of disks) {
+    const dc = dist2(cursor, d.center);
+    if (dc < d.radius && dc < bestD) { bestD = dc; best = d; }
+  }
+  return best;
+}
+
 /**
  * Το ορατό πολικό πλέγμα για τον overlay painter (§3.13 A6): όλοι οι δακτύλιοι ≤ maxRing + οι ακτίνες
  * στην πυκνότητα του **ενεργού** (πλησιέστερου στον cursor) δακτυλίου. `null` όταν ο δίσκος είναι

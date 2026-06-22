@@ -62,6 +62,8 @@ import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-reso
 // ADR-362 dimension SSoT.
 import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import { paintPolarDisk } from './polar-disk-paint';
+import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
 import { drawOverlayLabel } from './overlay-text-style';
 
@@ -206,6 +208,15 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     paintGhostFaceDimensions(this.ctx, meta, transform, viewport);
+  }
+
+  /**
+   * ADR-398 §3.13 — ζωγράφισε το πολικό πλέγμα (κέντρο/δακτύλιοι/ακτίνες) του Polar Magnet. Called
+   * AFTER `drawPreview` ώστε να overlay-άρει το ghost· wiped στο επόμενο `drawPreview`/`clear`.
+   */
+  drawPolarDisk(grid: PolarDiskGrid, transform: ViewTransform, viewport: Viewport): void {
+    if (!this.ctx) return;
+    paintPolarDisk(this.ctx, grid, transform, viewport);
   }
 
   /**

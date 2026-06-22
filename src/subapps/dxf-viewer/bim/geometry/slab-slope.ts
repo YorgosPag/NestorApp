@@ -29,7 +29,39 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q7
  */
 
-import type { SlabParams } from '../types/slab-types';
+import type { SlabGeometryType, SlabParams, SlabSlope } from '../types/slab-types';
+
+const TILTED: SlabGeometryType = 'tilted';
+const BOX: SlabGeometryType = 'box';
+
+/**
+ * Slope-bearing shape — ΚΑΙ το `SlabParams` (geometryType required) ΚΑΙ το
+ * `SlabParamOverrides` (geometryType optional, drawing-mode) το ικανοποιούν.
+ * Το invariant `geometryType ↔ slope` ζει σε ΕΝΑ σημείο (`withSlabSlope`),
+ * ώστε gizmo + ribbon (selected) + drawing-mode να μοιράζονται τη ΜΙΑ SSoT.
+ */
+export interface SlabSlopeBearing {
+  readonly geometryType?: SlabGeometryType;
+  readonly slope?: SlabSlope;
+}
+
+/**
+ * **SSoT του geometryType↔slope invariant** (ADR-369 §9 Q7, Zod-enforced στο
+ * `slab.schemas.ts`). `slope` set → `{geometryType:'tilted', slope}`· `slope`
+ * `null` → `{geometryType:'box'}` + **drop** του `slope` key (όχι `undefined`
+ * value — πλήρης αφαίρεση, ώστε `.strict()` Zod + serialization να μένουν καθαρά).
+ *
+ * Καταναλωτές: `bim3d-tilt-bridge` (gizmo `computeSlabTiltParams`/`straightenSlab`)
+ * + `slab-slope-param` (ribbon numeric, selected + drawing-mode overrides). ΚΑΝΕΙΣ
+ * δεν ξαναγράφει το coupling inline (μάθημα τοίχου: `isWallTiltAngleActive`).
+ */
+export function withSlabSlope<T extends SlabSlopeBearing>(base: T, slope: SlabSlope | null): T {
+  if (slope === null) {
+    const { slope: _drop, ...rest } = base;
+    return { ...rest, geometryType: BOX } as T;
+  }
+  return { ...base, geometryType: TILTED, slope } as T;
+}
 
 /** Ελάχιστο 2D plan-point (mm, ίδιο space με `SlabParams.outline`). */
 export interface SlabPlanPoint {

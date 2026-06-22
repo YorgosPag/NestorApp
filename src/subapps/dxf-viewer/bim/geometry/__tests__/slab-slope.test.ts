@@ -9,8 +9,9 @@ import {
   slabSlopeOffsetZmm,
   slabTopZmmAt,
   slabUndersideZmmAt,
+  withSlabSlope,
 } from '../slab-slope';
-import type { SlabParams } from '../../types/slab-types';
+import type { SlabParams, SlabSlope } from '../../types/slab-types';
 
 /** 10000×10000 mm τετράγωνο outline με γωνία στο (0,0). AABB center = (5000,5000). */
 const SQUARE = {
@@ -89,5 +90,40 @@ describe('slabTopZmmAt / slabUndersideZmmAt', () => {
     // σταθερό πάχος → top − underside === thickness παντού
     const pt = { x: 7000, y: 2000 };
     expect(slabTopZmmAt(p, pt) - slabUndersideZmmAt(p, pt)).toBeCloseTo(200, 6);
+  });
+});
+
+// ─── ADR-404 Phase 5c — withSlabSlope invariant (geometryType↔slope SSoT) ─────
+describe('withSlabSlope (geometryType↔slope invariant SSoT)', () => {
+  const SLOPE: SlabSlope = { direction: 90, angle: 2, pivotEdge: 'S' };
+
+  it('slope set → geometryType="tilted" + slope', () => {
+    const next = withSlabSlope(slab(), SLOPE);
+    expect(next.geometryType).toBe('tilted');
+    expect(next.slope).toEqual(SLOPE);
+  });
+
+  it('null → geometryType="box" + DROP slope key (όχι undefined value)', () => {
+    const tilted = slab({ geometryType: 'tilted', slope: SLOPE });
+    const next = withSlabSlope(tilted, null);
+    expect(next.geometryType).toBe('box');
+    expect(next.slope).toBeUndefined();
+    expect('slope' in next).toBe(false); // πλήρης αφαίρεση (Zod .strict + serialization καθαρά)
+  });
+
+  it('διατηρεί τα υπόλοιπα πεδία αμετάβλητα (immutable update)', () => {
+    const base = slab({ levelElevation: 4200, thickness: 250, kind: 'roof' });
+    const next = withSlabSlope(base, SLOPE);
+    expect(next.levelElevation).toBe(4200);
+    expect(next.thickness).toBe(250);
+    expect(next.kind).toBe('roof');
+    expect(base.geometryType).toBe('box'); // δεν mutate-άρει το input
+  });
+
+  it('λειτουργεί σε partial overrides shape (drawing-mode {geometryType?, slope?})', () => {
+    const offBox = withSlabSlope({ geometryType: 'tilted', slope: SLOPE }, null);
+    expect(offBox).toEqual({ geometryType: 'box' });
+    const onTilted = withSlabSlope({}, SLOPE);
+    expect(onTilted).toEqual({ geometryType: 'tilted', slope: SLOPE });
   });
 });

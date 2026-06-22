@@ -34,6 +34,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -120,6 +121,11 @@ export interface PreviewCanvasHandle {
    * Wiped on the next `drawPreview`/`clear`.
    */
   drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => void;
+  /**
+   * ADR-398 §3.13 — draw the Polar Magnet grid (center / concentric rings / radial spokes).
+   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawPolarDisk: (grid: PolarDiskGrid) => void;
 }
 
 // ============================================================================
@@ -374,6 +380,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-398 §3.13: Polar Magnet grid overlay (center / rings / spokes) */
+        drawPolarDisk: (grid: PolarDiskGrid) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawPolarDisk(grid, transformRef.current, viewportRef.current);
         },
       }),
       []

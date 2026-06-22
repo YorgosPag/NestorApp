@@ -31,6 +31,7 @@ import { hardOrtho } from './drawing-handler-utils';
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
 // ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -281,6 +282,12 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
         if (faceDims) {
           previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
+        }
+        // ADR-398 §3.13 — Polar Magnet: όταν ο cursor είναι μέσα σε κυκλικό δίσκο, overlay πολικό
+        // πλέγμα (κέντρο/δακτύλιοι/ακτίνες). Attached ως ghost metadata από το `generateColumnPreview`.
+        const polarGrid = (previewEntity as { polarDiskGrid?: PolarDiskGrid }).polarDiskGrid;
+        if (polarGrid) {
+          previewCanvasRef.current.drawPolarDisk(polarGrid);
         }
         // ADR-508 §column place+rotate — μετά το 1ο κλικ: ΠΟΡΤΟΚΑΛΙ γραμμή στρέψης + γωνία (ίδιο
         // SSoT `drawPolarTrackingLine` = drawingGuide χρώμα) από την κλειδωμένη θέση προς τον κέρσορα.

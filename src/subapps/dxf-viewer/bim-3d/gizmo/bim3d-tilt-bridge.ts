@@ -36,6 +36,8 @@ import type { ColumnParams } from '../../bim/types/column-types';
 import type { WallParams } from '../../bim/types/wall-types';
 import type { BeamParams } from '../../bim/types/beam-types';
 import type { SlabParams } from '../../bim/types/slab-types';
+// SSoT του geometryType↔slope invariant (ADR-404 Phase 5c) — reuse, μηδέν inline coupling.
+import { withSlabSlope } from '../../bim/geometry/slab-slope';
 import { AngleUtils } from '../../systems/constraints/constraints-geometry';
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -203,18 +205,19 @@ export function computeSlabTiltParams(params: SlabParams, drag: TiltDragDeg): Sl
   const sign = drag.angleDeg >= 0 ? 1 : -1;
   const direction = normalizeDeg(Math.atan2(uphill.y * sign, uphill.x * sign) * RAD_TO_DEG);
   const anglePct = Math.tan(mag * DEG_TO_RAD) * 100;
-  const next: SlabParams = {
-    ...params,
-    geometryType: 'tilted',
-    slope: { direction, angle: anglePct, pivotEdge: params.slope?.pivotEdge ?? 'center' },
-  };
+  // SSoT invariant (withSlabSlope): set → tilted+slope. ΟΧΙ inline coupling.
+  const next = withSlabSlope(params, {
+    direction,
+    angle: anglePct,
+    pivotEdge: params.slope?.pivotEdge ?? 'center',
+  });
   return sameSlabSlope(params, next) ? null : next;
 }
 
 function straightenSlab(params: SlabParams): SlabParams | null {
   if (params.geometryType !== 'tilted') return null;
-  const { slope: _drop, ...rest } = params;
-  return { ...rest, geometryType: 'box' };
+  // SSoT invariant (withSlabSlope): null → box + drop slope.
+  return withSlabSlope(params, null);
 }
 
 function sameSlabSlope(a: SlabParams, b: SlabParams): boolean {

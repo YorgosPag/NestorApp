@@ -1210,6 +1210,7 @@
       "slabType": "Slab Type",
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
+      "slabSlope": "Slope",
       "slabActions": "Actions",
       "slabStructural": "Structural",
       "roofType": "Roof Type",
@@ -2646,6 +2647,23 @@
           "composite": "Composite Slab",
           "wood": "Timber",
           "comingSoon": "Available with material library Phase 6+"
+        },
+        "slope": {
+          "enabled": "Sloped",
+          "on": "On",
+          "off": "Off",
+          "unit": "Unit",
+          "unitPercent": "Percent %",
+          "unitDegrees": "Degrees",
+          "unitRatio": "Ratio 1:N",
+          "angle": "Slope",
+          "direction": "Direction",
+          "pivot": "Pivot",
+          "pivotCenter": "Center",
+          "pivotN": "North",
+          "pivotS": "South",
+          "pivotE": "East",
+          "pivotW": "West"
         }
       },
       "roofEditor": {

@@ -24,6 +24,13 @@ import {
   SLAB_STRUCTURAL_VISIBILITY_KEYS,
 } from '../hooks/bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+// ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκα: option sentinels (SSoT, reused από τον resolver).
+import { SLOPE_ENABLED_ON, SLOPE_ENABLED_OFF } from '../hooks/bridge/slab-slope-param';
+import {
+  SLAB_SLOPE_UNIT_DEGREES,
+  SLAB_SLOPE_UNIT_PERCENT,
+  SLAB_SLOPE_UNIT_RATIO,
+} from '../hooks/bridge/slab-slope-unit';
 
 export const SLAB_CONTEXTUAL_TRIGGER = 'slab-selected';
 
@@ -71,6 +78,45 @@ const ELEVATION_MM_OPTIONS = [
   { value: '3000', labelKey: '3000', isLiteralLabel: true },
   { value: '3300', labelKey: '3300', isLiteralLabel: true },
   { value: '6000', labelKey: '6000', isLiteralLabel: true },
+] as const;
+
+// ─── ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκα (Sloped slab) ────────────────────
+// on/off + μονάδα (%/μοίρες/λόγος) + τιμή + φορά° (ελεύθερη) + άξονας. Το angle
+// αποθηκεύεται ΠΑΝΤΑ ως % (η μονάδα είναι display pref· numericInput-safe values).
+const SLAB_SLOPE_ENABLED_OPTIONS = [
+  { value: SLOPE_ENABLED_ON,  labelKey: 'ribbon.commands.slabEditor.slope.on',  isLiteralLabel: false },
+  { value: SLOPE_ENABLED_OFF, labelKey: 'ribbon.commands.slabEditor.slope.off', isLiteralLabel: false },
+] as const;
+
+const SLAB_SLOPE_UNIT_OPTIONS = [
+  { value: SLAB_SLOPE_UNIT_PERCENT, labelKey: 'ribbon.commands.slabEditor.slope.unitPercent', isLiteralLabel: false },
+  { value: SLAB_SLOPE_UNIT_DEGREES, labelKey: 'ribbon.commands.slabEditor.slope.unitDegrees', isLiteralLabel: false },
+  { value: SLAB_SLOPE_UNIT_RATIO,   labelKey: 'ribbon.commands.slabEditor.slope.unitRatio',   isLiteralLabel: false },
+] as const;
+
+// Παρουσιαζόμενα presets σε όρους % (drainage συνηθισμένα)· numericInput δέχεται ό,τι αξία.
+const SLAB_SLOPE_ANGLE_OPTIONS = [
+  { value: '1',  labelKey: '1',  isLiteralLabel: true },
+  { value: '2',  labelKey: '2',  isLiteralLabel: true },
+  { value: '3',  labelKey: '3',  isLiteralLabel: true },
+  { value: '5',  labelKey: '5',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+] as const;
+
+// Φορά «ανηφόρας» σε μοίρες CCW (0=Αν, 90=Β, 180=Δ, 270=Ν)· numericInput ελεύθερη 0..360.
+const SLAB_SLOPE_DIRECTION_OPTIONS = [
+  { value: '0',   labelKey: '0',   isLiteralLabel: true },
+  { value: '90',  labelKey: '90',  isLiteralLabel: true },
+  { value: '180', labelKey: '180', isLiteralLabel: true },
+  { value: '270', labelKey: '270', isLiteralLabel: true },
+] as const;
+
+const SLAB_SLOPE_PIVOT_OPTIONS = [
+  { value: 'center', labelKey: 'ribbon.commands.slabEditor.slope.pivotCenter', isLiteralLabel: false },
+  { value: 'N',      labelKey: 'ribbon.commands.slabEditor.slope.pivotN',      isLiteralLabel: false },
+  { value: 'S',      labelKey: 'ribbon.commands.slabEditor.slope.pivotS',      isLiteralLabel: false },
+  { value: 'E',      labelKey: 'ribbon.commands.slabEditor.slope.pivotE',      isLiteralLabel: false },
+  { value: 'W',      labelKey: 'ribbon.commands.slabEditor.slope.pivotW',      isLiteralLabel: false },
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
@@ -166,6 +212,77 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.params.levelElevation,
                 comboboxWidthPx: 90,
                 options: ELEVATION_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκα (Revit «Sloped slab / slope arrow»).
+      // Toggle «Κεκλιμένη» (drawing → born-sloped overrides· selected → params.slope) +
+      // μονάδα + τιμή + φορά° + άξονας. Πάντα ορατό. Logic SSoT = slab-slope-param.
+      id: 'slab-slope',
+      labelKey: 'ribbon.panels.slabSlope',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.slopeEnabled',
+                labelKey: 'ribbon.commands.slabEditor.slope.enabled',
+                commandKey: SLAB_RIBBON_KEYS.slope.enabled,
+                comboboxWidthPx: 90,
+                options: SLAB_SLOPE_ENABLED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.slopeUnit',
+                labelKey: 'ribbon.commands.slabEditor.slope.unit',
+                commandKey: SLAB_RIBBON_KEYS.slope.unit,
+                comboboxWidthPx: 120,
+                options: SLAB_SLOPE_UNIT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.slopeAngle',
+                labelKey: 'ribbon.commands.slabEditor.slope.angle',
+                commandKey: SLAB_RIBBON_KEYS.slope.angle,
+                comboboxWidthPx: 80,
+                options: SLAB_SLOPE_ANGLE_OPTIONS,
+                numericInput: { min: 0, max: 1000 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.slopeDirection',
+                labelKey: 'ribbon.commands.slabEditor.slope.direction',
+                commandKey: SLAB_RIBBON_KEYS.slope.direction,
+                comboboxWidthPx: 80,
+                options: SLAB_SLOPE_DIRECTION_OPTIONS,
+                numericInput: { min: 0, max: 360 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.slopePivot',
+                labelKey: 'ribbon.commands.slabEditor.slope.pivot',
+                commandKey: SLAB_RIBBON_KEYS.slope.pivot,
+                comboboxWidthPx: 100,
+                options: SLAB_SLOPE_PIVOT_OPTIONS,
               },
             },
           ],

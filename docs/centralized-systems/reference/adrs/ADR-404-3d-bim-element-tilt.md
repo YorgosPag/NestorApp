@@ -336,6 +336,49 @@ Phase 2). Recognition: όλη η γεωμετρία/3D/2D/undo της κλίση
 
 ---
 
+## Phase 5c — UX ribbon ΚΕΚΛΙΜΕΝΗ/ΡΥΣΗ ΠΛΑΚΑΣ (sloped slab, full-flex, selected + drawing-mode) — UNCOMMITTED 2026-06-22
+
+**Στόχος (Giorgio):** ο χρήστης να ορίζει την **κλίση/ρύση πλάκας** (Revit «Sloped slab / slope arrow»,
+drainage) από το UI ribbon — τρίτο αδελφό μετά κολώνα (Phase 5) + τοίχο (Phase 5b ✅ browser-verified).
+Recognition (SSoT grep audit): **όλη** η γεωμετρία/3D/2D υπάρχει ήδη (`SlabSlope {direction, angle%, pivotEdge}`,
+`applySlabSlope`, `slabSlopeOffsetZmm`, gizmo `computeSlabTiltParams`, `UpdateSlabParamsCommand`, Zod
+`SlabParamsSchema.superRefine`). **Μόνο ribbon wiring έλειπε.** Μηδέν νέα γεωμετρία.
+
+**Δύο invariants που ΔΕΝ έχει κολώνα/τοίχος (ADR-369 §9 Q7):**
+1. **`geometryType:'box'|'tilted'` discriminator** — το toggle αλλάζει ΚΑΙ τα δύο (`slope` required iff
+   `'tilted'`, Zod-enforced). Το coupling ζούσε **μερικώς private** στο gizmo (`straightenSlab`). **Εξήχθη**
+   σε ΕΝΑ SSoT **`withSlabSlope(base, slope|null)`** (`bim/geometry/slab-slope.ts`, generic στο
+   `SlabSlopeBearing` ⊇ `SlabParams` + `SlabParamOverrides`): `slope` set → `tilted`+slope· `null` → `box` +
+   **drop** του key. **Reuse σε gizmo + ribbon + drawing-mode** (μάθημα τοίχου `isWallTiltAngleActive` — μην
+   ξαναγράφεις private logic inline). Gizmo `computeSlabTiltParams`/`straightenSlab` → delegate (byte-equiv).
+2. **`angle` = ποσοστό %** (όχι μοίρες).
+
+**Giorgio choices (πλήρης ευελιξία):**
+- **Μονάδα εμφάνισης = επιλογή χρήστη**: %/μοίρες/λόγος (1:N). Stored ΠΑΝΤΑ %· η μονάδα είναι ribbon **display
+  pref** (NEW `slab-slope-unit.ts` — conversions SSoT + module store)· numeric-safe (ratio εκθέτει το N).
+  Το `useRibbonSlabBridge` την κάνει subscribe (`useSyncExternalStore`) ώστε το πεδίο «Τιμή» να ξανα-μορφοποιείται.
+- **Φορά = ελεύθερη**: `direction°` (0..360 CCW numericInput) **+** `pivotEdge` (center/N/S/E/W) — εκθέτει πλήρως
+  το υπάρχον μοντέλο, μηδέν νέα γεωμετρία.
+- **Και drawing-mode** «σχεδίασε ήδη κεκλιμένη»: NEW minimal `slab-tool-bridge-store.ts` (mirror τοίχου)·
+  `useSlabTool` publish handle· τα `SlabParamOverrides`/`buildDefaultSlabParams` **ήδη** φέρουν `geometryType`+`slope`.
+
+**Υλοποίηση (data-driven, μηδέν νέα εντολή):**
+- **`slab-slope.ts`** += `withSlabSlope` SSoT (+`SlabSlopeBearing`). **`bim3d-tilt-bridge.ts`** → gizmo delegate.
+- **NEW `slab-slope-unit.ts`** (μονάδα + conversions), **NEW `slab-slope-param.ts`** (resolver:
+  enabled/unit/angle/direction/pivot· selected→`dispatchParams`/`UpdateSlabParamsCommand` + drawing→store),
+  **NEW `slab-tool-bridge-store.ts`** (minimal handle).
+- **`slab-command-keys.ts`** += `slope` group (5 keys) + `isSlabSlopeKey`. **`useRibbonSlabBridge.ts`** += slope
+  branch (ΠΡΙΝ null-check → drawing-mode) + unit subscribe. **`useSlabTool.ts`** publish handle.
+- **`useRibbonCommands.ts`** += `isSlabSlopeKey` στα **2 guards** (onComboboxChange + getComboboxState) — **το
+  μάθημα τοίχου** (διακριτό key-set ⇒ πρέπει και στον composer, αλλιώς no-op «δεν ανταποκρίνεται»).
+- **`contextual-slab-tab.ts`** NEW panel «Κλίση» (5 combobox). **i18n el+en:** `slabEditor.slope.*` + `panels.slabSlope`.
+- **Tests:** `slab-slope.test.ts` += `withSlabSlope` (4)· NEW `slab-slope-param.test.ts` (conversions + resolver, 20).
+
+**Verification (Phase 5c):** `npx jest slab-slope bim3d-tilt-bridge` → 55/55 PASS (incl. gizmo regression
+byte-equiv). 🔴 tsc deferred (N.17 — άλλος agent έτρεχε tsc) + browser-verify + commit.
+
+---
+
 ## SSoT reuse (μηδέν διπλά μαθηματικά)
 - Shear loop: ΕΝΑ `applyHorizontalTiltShear` (κολώνα+τοίχος).
 - Tilt math: `columnTiltShearAt`/`wallTiltShearAt` (αδέλφια `beamSlopeOffsetZmm`/
@@ -358,6 +401,7 @@ Phase 2). Recognition: όλη η γεωμετρία/3D/2D/undo της κλίση
 ---
 
 ## Changelog
+- **2026-06-22 (Opus 4.8) — Phase 5c: ribbon UX ΚΕΚΛΙΜΕΝΗ/ΡΥΣΗ ΠΛΑΚΑΣ (full-flex)** (pending commit, 🔴 browser verify). Τρίτο αδελφό μετά κολώνα (Phase 5) + τοίχο (Phase 5b). Recognition (SSoT grep audit): όλη η γεωμετρία/3D/2D/undo υπήρχε (`SlabSlope`, `applySlabSlope`, `slabSlopeOffsetZmm`, `computeSlabTiltParams`, `UpdateSlabParamsCommand`, Zod superRefine)· μόνο ribbon wiring έλειπε. **Δύο invariants (ADR-369 §9 Q7):** (1) `geometryType:'box'|'tilted'` ↔ `slope` coupling — **εξήχθη** το private gizmo logic σε ΕΝΑ SSoT `withSlabSlope(base, slope|null)` (`slab-slope.ts`, generic `SlabSlopeBearing`), reuse σε gizmo (delegate, byte-equiv) + ribbon + drawing-mode (μάθημα τοίχου `isWallTiltAngleActive`)· (2) `angle`=%. **Giorgio choices = πλήρης ευελιξία:** μονάδα εμφάνισης χρήστη (%/μοίρες/λόγος· stored % πάντα· NEW `slab-slope-unit.ts` conversions+pref store· `useSyncExternalStore` re-format) + ελεύθερη φορά (`direction°` 0..360 + `pivotEdge`) + drawing-mode born-sloped (NEW minimal `slab-tool-bridge-store.ts`· `useSlabTool` publish· overrides ήδη φέρουν geometryType+slope). NEW `slab-slope-param.ts` (resolver: enabled/unit/angle/direction/pivot· selected→`dispatchParams` + drawing→store). `slab-command-keys` += `slope` group + `isSlabSlopeKey`· `useRibbonSlabBridge` += slope branch (ΠΡΙΝ null-check)· **`useRibbonCommands` += `isSlabSlopeKey` στα 2 guards (το μάθημα τοίχου)**· NEW panel «Κλίση» (5 combobox)· i18n el+en. **Μηδέν διπλότυπη γεωμετρία/εντολή** (Giorgio SSoT audit ✅). `slab-slope.test.ts` += withSlabSlope (4) + NEW `slab-slope-param.test.ts` (20) → 55/55 PASS (gizmo regression byte-equiv). 🔴 tsc deferred (N.17, άλλος agent έτρεχε tsc) + browser-verify + commit.
 - **2026-06-22 (Opus 4.8) — Phase 5b 🐛 FIX: composer routing (το ribbon δεν ανταποκρινόταν)** (pending commit). Browser feedback Giorgio: ο τοίχος δεν γινόταν κεκλιμένος + το panel «Κλίση» δεν αντιδρούσε. **Root cause:** ο `useRibbonCommands` composer δρομολογεί στον `wallBridge` μόνο για `isWallRibbonKey || isWallRibbonStringKey || isWallRibbonToggleKey`· τα NEW tilt keys ζουν σε **ξεχωριστό** `WALL_RIBBON_TILT_KEYS` set → **ο composer δεν τα έστελνε ΠΟΤΕ** στον wallBridge (no-op πριν καν φτάσει στον resolver). Ίδια κλάση bug με το column comment «ο composer τα ξεχνούσε». **Fix:** `+ isWallTiltKey(key)` στα 2 guards (`onComboboxChange` + `getComboboxState`) του composer. Καμία άλλη αλλαγή — ο bridge + resolver ήταν ήδη σωστοί. **ΜΑΘΗΜΑ:** νέο διακριτό key-set ⇒ ΠΡΕΠΕΙ να προστεθεί και στον `useRibbonCommands` composer guard, όχι μόνο στον bridge.
 - **2026-06-22 (Opus 4.8) — Phase 5b: ribbon UX κεκλιμένος ΤΟΙΧΟΣ** (pending commit, 🔴 browser verify). Αδελφό της κολώνας Phase 5, αλλά **1-DOF** (`WallTilt {angle}` signed, lean ⟂ run — **καμία φορά, κανένα 2-κλικ**). Recognition (SSoT grep audit): όλη η γεωμετρία/3D/2D/undo υπήρχε ήδη (`wall-tilt.ts`, `UpdateWallParamsCommand`)· μόνο ribbon wiring έλειπε. **Giorgio choices:** (1) UI = **μέγεθος 0..80° + πλευρά** (Αριστερά/Δεξιά) αντί signed πεδίου· (2) **και drawing-mode** «σχεδίασε ήδη κεκλιμένο». NEW `wall-tilt-param.ts` (pure SSoT: signed `tilt.angle` ↔ {enabled,side,magnitude}· Αριστερά→+, Δεξιά→−· clamp 80°· selected→`dispatchParams`/`UpdateWallParamsCommand` + drawing→`wallToolBridgeStore` overrides) + NEW minimal `wall-tool-bridge-store.ts` (`{isActive,overrides,setParamOverrides}` — χωρίς το kind/slant machinery της κολώνας). `wall-command-keys` += `tilt` group + `isWallTiltKey`· `useRibbonWallBridge` += tilt branch (ΠΡΙΝ null-check → drawing-mode)· `useWallTool` publish handle· `WallParamOverrides += tilt` apply στο `buildDefaultWallParams` (born-tilted)· NEW panel «Κλίση» (3 combobox, angle `numericInput {0,80}`)· i18n el+en. **Μηδέν διπλότυπη γεωμετρία/εντολή** (Giorgio SSoT audit ✅). NEW `wall-tilt-param.test.ts` 10/10 PASS. 🔴 tsc (N.17, background) + browser-verify + commit.
 - **2026-06-02 (Opus 4.8) — Phase 4.3 robustness: clipper-free convex difference** (pending commit, 🔴 verify Giorgio). **Root cause των κενών + penetration** (επιβεβαιωμένο από browser console του Giorgio, ΟΧΙ stale build): το `safeDifference` (`polygon-clipping` μέσω `safe-polygon-boolean.ts`) πετά «Unable to complete output ring» στις **σχεδόν-εκφυλισμένες** θέσεις όπου το λεπτό δοκάρι (250mm) **μόλις-μόλις γεφυρώνει** τον λεπτό τοίχο (200mm) ΑΚΡΙΒΩΣ στο ύψος προσάρτησης (το topology split είναι στο `t≈0`). Το `computeTiltLoftCriticalTs` το καλεί 48+26×/region → graceful fallback κενό → λάθος critical heights → το `buildTiltTransitionLofts` ξανα-αποτυγχάνει → κενά + στοιχεία μέσα στο δοκάρι. Η Phase 4.3 ΛΟΓΙΚΗ ήταν σωστή (67 tests + αναλυτική απόδειξη)· το πρόβλημα ήταν **καθαρά robustness του polygon boolean**. **Fix:** ΝΕΟ SSoT `bim/geometry/shared/convex-polygon-difference.ts` — `subject ∖ convexHole` με **analytic half-plane peel** (`convexHole = ⋂ Lᵢ` ⟹ `S∖H = ⋃ᵢ (S ∩ L̄ᵢ)`, peel ώστε ξένα convex κομμάτια· κάθε βήμα = Sutherland–Hodgman σε ΕΝΑ ημιεπίπεδο → **ποτέ** δεν αποτυγχάνει). Ο `wall-top-clip.ts` (`diffQuadMinusHostPieces`) δρομολογεί στο analytic path για **κυρτό** host (αποτύπωμα δοκαριού = ορθογώνιο)· μη-κυρτό host → boolean fallback. Αντικαθιστά τα 3 `safeDifference` call sites του tilted path (signature detection + slab construction + outside prisms). Εξαλείφει ΚΑΙ το performance spam (μηδέν clipper στο per-frame live-preview detection). +ΝΕΟ `convex-polygon-difference.test.ts` 11/11 (correctness + degenerate bridge δεν πετά) + robustness regression στις ακριβείς runtime coords `wall_c23277ef`+`beam_f704603a` (assert: καμία SafePolygonBoolean αποτυχία + lofts>0 + watertight). 73/73 tilt tests + 116 broader sweep PASS, tsc 0. **Αίρει** το «pending robustness fix» από το handoff 2026-06-02.

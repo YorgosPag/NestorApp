@@ -41,7 +41,7 @@ import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallTiltKey } from './bridge/wall-command-keys';
 import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
-import { isSlabRibbonKey, isSlabRibbonStringKey } from './bridge/slab-command-keys';
+import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabSlopeKey } from './bridge/slab-command-keys';
 import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey } from './bridge/roof-command-keys';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
 import { isWallCoveringRibbonNumberKey, isWallCoveringRibbonStringKey } from './bridge/wall-covering-command-keys';
@@ -142,7 +142,7 @@ export function useRibbonCommands({
         openingBridge.onComboboxChange(key, value);
         return;
       }
-      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) {
+      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key) || isSlabSlopeKey(key)) {
         slabBridge.onComboboxChange(key, value);
         return;
       }
@@ -263,7 +263,7 @@ export function useRibbonCommands({
       if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) return stairBridge.getComboboxState(key);
       if (isWallRibbonKey(key) || isWallRibbonStringKey(key) || isWallRibbonToggleKey(key) || isWallTiltKey(key)) return wallBridge.getComboboxState(key);
       if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key) || isOpeningTagStyleComboboxKey(key)) return openingBridge.getComboboxState(key);
-      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
+      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key) || isSlabSlopeKey(key)) return slabBridge.getComboboxState(key);
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) return floorFinishBridge.getComboboxState(key);
       if (isWallCoveringRibbonNumberKey(key) || isWallCoveringRibbonStringKey(key)) return wallCoveringBridge.getComboboxState(key);

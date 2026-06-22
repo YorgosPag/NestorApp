@@ -34,6 +34,7 @@ import {
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
+import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
 import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation } from './ColumnPlacementGhostStatusStore';
@@ -224,10 +225,13 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
         if (colHandle?.isActive) {
           const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
+          // ADR-398 §3.13 — Polar Magnet opts (ίδια με το ghost → preview ≡ commit).
+          const polarOpts = buildColumnPolarSnapOptions(colHandle.overrides, colHandle.getSceneUnits());
           const faceSnap = resolveColumnFaceSnapFromTargets(
             effectiveCursor,
             sceneSnapTargetsStore.get(),
             colHandle.getSceneUnits(),
+            polarOpts,
           );
           if (faceSnap) {
             worldPoint = faceSnap.position;

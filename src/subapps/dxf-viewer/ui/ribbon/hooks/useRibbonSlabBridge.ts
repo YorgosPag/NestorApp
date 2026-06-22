@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.5
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
@@ -31,9 +31,16 @@ import {
   SLAB_RIBBON_BADGE_KEYS,
   isSlabRibbonKey,
   isSlabRibbonStringKey,
+  isSlabSlopeKey,
   isSlabStructuralVisibilityKey,
   resolveSlabPanelVisibility,
 } from './bridge/slab-command-keys';
+// ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκας: dedicated resolver (geometryType↔slope + μονάδα).
+import {
+  resolveSlabSlopeComboboxState,
+  applySlabSlopeComboboxChange,
+} from './bridge/slab-slope-param';
+import { slabSlopeUnitStore } from './bridge/slab-slope-unit';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 // ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (εδαφόπλακα / δάπεδα / οροφές).
@@ -116,6 +123,11 @@ export function useRibbonSlabBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
+  // ADR-404 Phase 5c — η μονάδα εμφάνισης κλίσης είναι ribbon pref· subscribe ώστε το
+  // πεδίο «Τιμή» να ξανα-μορφοποιείται όταν αλλάζει η μονάδα (selected + drawing-mode).
+  // Ο bridge ζει στο DxfViewerContent (ΟΧΙ ADR-040 high-freq leaf) → useSyncExternalStore OK.
+  const slopeUnit = useSyncExternalStore(slabSlopeUnitStore.subscribe, slabSlopeUnitStore.get);
+
   const resolveSlab = useCallback((): SlabEntity | null => {
     const id = universalSelection.getPrimaryId();
     if (!id || !levelManager.currentLevelId) return null;
@@ -149,6 +161,11 @@ export function useRibbonSlabBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
+      // ADR-404 Phase 5c — slope keys: resolver χειρίζεται ΚΑΙ selected ΚΑΙ drawing-mode
+      // (overrides) + μονάδα → τρέχει ΠΡΙΝ το null-check (drawing mode = no selection).
+      if (isSlabSlopeKey(commandKey)) {
+        return resolveSlabSlopeComboboxState(commandKey, resolveSlab(), slopeUnit);
+      }
       const slab = resolveSlab();
       if (!slab) return null;
       if (isSlabRibbonStringKey(commandKey)) {
@@ -164,11 +181,19 @@ export function useRibbonSlabBridge(
       }
       return null;
     },
-    [resolveSlab],
+    // `slopeUnit` → re-render όταν αλλάζει η μονάδα ώστε το πεδίο «Τιμή» να ξαναμορφοποιηθεί.
+    [resolveSlab, slopeUnit],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-404 Phase 5c — slope keys: γράφει selected πλάκα (UpdateSlabParamsCommand +
+      // withSlabSlope invariant), drawing-tool overrides (born-sloped), ή μονάδα-pref.
+      // Τρέχει ΠΡΙΝ το null-check (drawing mode = no selection).
+      if (isSlabSlopeKey(commandKey)) {
+        applySlabSlopeComboboxChange(commandKey, value, resolveSlab(), dispatchParams);
+        return;
+      }
       const slab = resolveSlab();
       if (!slab) return;
 

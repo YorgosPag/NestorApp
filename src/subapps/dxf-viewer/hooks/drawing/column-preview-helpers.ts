@@ -42,6 +42,8 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
+import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
+import { buildPolarDiskGrid, findDiskContaining } from '../../bim/columns/polar-disk-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 // ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
@@ -114,7 +116,10 @@ export function generateColumnPreview(
   // corner-projection / BIM χαρακτηριστικό / grid). Το commit (`mouse-handler-up`) καλεί ΤΟΝ
   // ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor → preview ≡ commit εξ ορισμού.
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
-  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, sceneSnapTargetsStore.get(), sceneUnits);
+  // ADR-398 §3.13 — Polar Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
+  const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
+  const targets = sceneSnapTargetsStore.get();
+  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, targets, sceneUnits, polarOpts);
 
   // θέση + λαβή + status απευθείας από το ΕΝΑ αποτέλεσμα (ΟΧΙ από 3 stores). Η §3.9 wall-axis
   // επιστρέφει ήδη anchor `center`· face-attach (§3.7) υπερισχύει του §3.1b center-on-beam-axis.
@@ -142,5 +147,10 @@ export function generateColumnPreview(
   // του ΙΔΙΟΥ face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
   const wpp = worldPerPixel(getImmediateTransform().scale);
   const faceDimensions = resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
-  return toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
+  const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
+  // ADR-398 §3.13 — όταν ο cursor είναι μέσα σε κυκλικό δίσκο, attach το πολικό πλέγμα ως ghost
+  // metadata (ο `drawing-hover-handler` το ζωγραφίζει ως overlay). ΙΔΙΟ SSoT ring/angle με το snap.
+  const polarDisk = findDiskContaining(effectiveCursor, targets.diskTargets);
+  const polarDiskGrid = polarDisk ? buildPolarDiskGrid(effectiveCursor, polarDisk, sceneUnits, polarOpts) : null;
+  return polarDiskGrid ? ({ ...ghost, polarDiskGrid } as typeof ghost) : ghost;
 }

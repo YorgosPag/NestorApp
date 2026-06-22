@@ -1210,6 +1210,7 @@
       "slabType": "Τύπος Πλάκας",
       "slabGeometry": "Γεωμετρία",
       "slabMaterial": "Υλικό",
+      "slabSlope": "Κλίση",
       "slabActions": "Ενέργειες",
       "slabStructural": "Στατικά/Οπλισμός",
       "roofType": "Τύπος Στέγης",
@@ -2646,6 +2647,23 @@
           "composite": "Σύνθετη Πλάκα",
           "wood": "Ξυλεία",
           "comingSoon": "Διαθέσιμο σε επόμενη φάση"
+        },
+        "slope": {
+          "enabled": "Κεκλιμένη",
+          "on": "Ναι",
+          "off": "Όχι",
+          "unit": "Μονάδα",
+          "unitPercent": "Ποσοστό %",
+          "unitDegrees": "Μοίρες",
+          "unitRatio": "Λόγος 1:Ν",
+          "angle": "Κλίση",
+          "direction": "Φορά",
+          "pivot": "Άξονας",
+          "pivotCenter": "Κέντρο",
+          "pivotN": "Βόρεια",
+          "pivotS": "Νότια",
+          "pivotE": "Ανατολικά",
+          "pivotW": "Δυτικά"
         }
       },
       "roofEditor": {
