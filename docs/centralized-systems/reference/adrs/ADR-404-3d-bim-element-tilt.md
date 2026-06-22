@@ -270,10 +270,11 @@ regression στις ακριβείς runtime coords: μηδέν clipper failure 
 Phase 2). Recognition: όλη η γεωμετρία/3D/2D/undo της κλίσης υπάρχει ήδη (Φ1–Φ4.3) — **το μόνο κενό
 ήταν το UX placement/numeric**. Μηδέν νέα γεωμετρία· αποκλειστικά wiring πάνω στο `tilt` SSoT.
 
-- **NEW SSoT `bim/columns/column-tilt-from-points.ts`** — `tiltFromBaseTop(base, top, heightMm, sceneUnits)`:
-  η οριζόντια απόσταση βάση→κορυφή = `height·tan(angle)` (η **αντίστροφη** του `columnTiltShearAt`),
-  άρα `angle = atan(distMm/heightMm)` (unit-safe μέσω `canvasToMmScaleFor`, clamp `MAX_COLUMN_TILT_DEG=80`),
-  `direction = atan2(dy,dx)`. preview ≡ commit ≡ 3D shear.
+- **NEW SSoT `bim/columns/column-tilt-from-points.ts`** — `tiltAngleFromBaseTop` (η **μόνη νέα** πράξη:
+  `angle = atan(distMm/heightMm)`, αντίστροφο του `columnTiltShearAt`, unit-safe `canvasToMmScaleFor`, clamp 80°)
+  + `resolveTopLeanTilt` (SSoT **composer**: direction μέσω **υπάρχοντος** `resolveColumnRotationDeg` (snapped),
+  angle μέσω **υπάρχοντος** `snapTiltAngleDeg` — μηδέν διπλό atan2). Ο composer καλείται ΚΑΙ από το commit ΚΑΙ
+  από το preview → **preview ≡ commit by construction**.
 - **2-κλικ placement (Domain 1):** NEW `systems/cursor/ColumnTopLeanStore.ts` (sibling του `ColumnRotationStore`,
   κρατά `basePoint+anchor+rotationDeg`). `useColumnTool`: νέα FSM φάση `awaitingTopLean` + `slantMode` state·
   όταν slant ON + ελεύθερη τοποθέτηση → 1ο κλικ κλειδώνει βάση, 2ο ορίζει top-lean (reuse `resolveColumnRotationDeg`

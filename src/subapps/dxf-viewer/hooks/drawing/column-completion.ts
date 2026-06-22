@@ -101,7 +101,7 @@ export interface ColumnParamOverrides {
   readonly catalogProfile?: string;
   /**
    * ADR-404 Phase 5 — 3Δ κλίση (raking column). Από 2-κλικ placement (βάση→κορυφή,
-   * `tiltFromBaseTop`) ή αριθμητικά πεδία ribbon. Absent / `angle===0` = κατακόρυφη.
+   * `resolveTopLeanTilt`) ή αριθμητικά πεδία ribbon. Absent / `angle===0` = κατακόρυφη.
    */
   readonly tilt?: ColumnTilt;
 }

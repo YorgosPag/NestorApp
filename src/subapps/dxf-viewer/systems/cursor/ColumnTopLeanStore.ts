@@ -6,14 +6,14 @@
  * μπαίνουμε σε «awaitingTopLean». Όσο ο χρήστης κινεί τον κέρσορα, το `column-preview-helpers`
  * διαβάζει εδώ imperatively (zero React, ADR-040) και ζωγραφίζει την κολώνα στη ΣΤΑΘΕΡΗ βάση,
  * **γερμένη** προς τον κέρσορα (η οριζόντια απόσταση βάση→κέρσορας → `tilt.angle/direction`,
- * `tiltFromBaseTop`). Το 2ο κλικ commit-άρει με αυτή την κλίση. `null` = εκτός slant phase.
+ * `resolveTopLeanTilt`). Το 2ο κλικ commit-άρει με αυτή την κλίση. `null` = εκτός slant phase.
  *
  * Ξεχωριστό από το `ColumnRotationStore` (όχι reuse) ΓΙΑΤΙ: (1) χρειάζεται επιπλέον
  * `rotationDeg` της διατομής, (2) ο reader πρέπει να διακρίνει tilt-phase από rotation-phase
  * μέσω ανεξάρτητου sentinel.
  *
  * @see ./ColumnRotationStore.ts — το αδελφό store (rotation phase)
- * @see ../../bim/columns/column-tilt-from-points.ts — `tiltFromBaseTop` (βάση→κορυφή → tilt)
+ * @see ../../bim/columns/column-tilt-from-points.ts — `resolveTopLeanTilt` (βάση→κορυφή → tilt)
  * @see ../../hooks/drawing/useColumnTool.ts — writer (1ο/2ο κλικ)
  * @see ../../hooks/drawing/column-preview-helpers.ts — reader (tilt preview)
  */
