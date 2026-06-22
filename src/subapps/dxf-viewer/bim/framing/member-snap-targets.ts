@@ -273,3 +273,19 @@ export function collectMemberSnapTargets(
   }
   return { footprints, memberTargets };
 }
+
+/**
+ * ADR-398 §3.13 — **δίσκοι** (κύκλοι ως {center,radius}) για το Polar Magnet (κολώνα ΜΕΣΑ στον δίσκο).
+ * Ξεχωριστά από το `circleTargets` (που δίνει την **περιφέρεια** ως zero-width edges, §3.12): εδώ ο
+ * κύκλος εκτίθεται ως **εσωτερικό** πολικό σύστημα. Reuse το ΗΔΗ υπάρχον circle read. Pure.
+ */
+export function collectDiskTargets(entities: readonly Entity[]): { center: Point2D; radius: number }[] {
+  const out: { center: Point2D; radius: number }[] = [];
+  for (const e of entities) {
+    if (e.type !== 'circle') continue;
+    const c = e as { center?: Point2D; radius?: number };
+    if (!c.center || typeof c.radius !== 'number' || c.radius <= 0) continue;
+    out.push({ center: { x: c.center.x, y: c.center.y }, radius: c.radius });
+  }
+  return out;
+}

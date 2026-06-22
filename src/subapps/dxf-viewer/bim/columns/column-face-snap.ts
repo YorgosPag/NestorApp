@@ -68,6 +68,7 @@ import {
   type GhostFaceFrame,
 } from '../framing/linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { resolvePolarDiskSnap, type PolarDiskSnapOptions } from './polar-disk-snap';
 import {
   clamp,
   SLAB_EDGE_CENTER_THRESHOLD_MM,
@@ -294,6 +295,38 @@ function resolveColumnEdgeSnap(
 }
 
 /**
+ * ADR-398 §3.13 — **Polar Magnet**: όταν ο cursor είναι ΕΝΤΟΣ κυκλικού δίσκου, η κολώνα κουμπώνει στο
+ * πολικό πλέγμα (κέντρο / δακτύλιος∩ακτίνα), `anchor:'center'`. Επιστρέφει + dist για nearest-wins με
+ * edge/bbox. `null` όταν λείπει `worldPerPixel` (zoom-adaptive) ή ο cursor είναι κοντά στο χείλος
+ * (→ §3.12 circumference). Reuse `resolvePolarDiskSnap` SSoT — ΜΗΔΕΝ polar math εδώ.
+ */
+function resolvePolarDiskHit(
+  cursor: Readonly<Point2D>,
+  disks: readonly { center: Point2D; radius: number }[],
+  sceneUnits: SceneUnits,
+  opts: Readonly<PolarDiskSnapOptions>,
+): { snap: ColumnFaceSnap; dist: number } | null {
+  let best: { snap: ColumnFaceSnap; dist: number } | null = null;
+  for (const disk of disks) {
+    const r = resolvePolarDiskSnap(cursor, disk, sceneUnits, opts);
+    if (r && (!best || r.dist < best.dist)) {
+      best = {
+        snap: { position: r.position, anchor: 'center', status: 'beam', rotation: 0, targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame },
+        dist: r.dist,
+      };
+    }
+  }
+  return best;
+}
+
+/** Το ΠΛΗΣΙΕΣΤΕΡΟ hit (μικρότερο dist) ανάμεσα στα tiers (edge / bbox / polar) — nearest-wins. */
+function nearestHit(...hits: readonly ({ snap: ColumnFaceSnap; dist: number } | null)[]): ColumnFaceSnap | null {
+  let best: { snap: ColumnFaceSnap; dist: number } | null = null;
+  for (const h of hits) if (h && (!best || h.dist < best.dist)) best = h;
+  return best?.snap ?? null;
+}
+
+/**
  * ADR-398 §3.10 — **core** column face-snap από **pre-collected** στόχους (sync-in-preview SSoT,
  * mirror του `resolveLinearMemberFaceSnap` που καταναλώνουν τοίχος/δοκάρι). Καλείται σύγχρονα από
  * το preview ghost ΚΑΙ από το commit (ίδιοι στόχοι από το κοινό `sceneSnapTargetsStore` + ίδιος
@@ -303,6 +336,7 @@ export function resolveColumnFaceSnapFromTargets(
   cursor: Readonly<Point2D>,
   t: Readonly<SceneSnapTargets>,
   sceneUnits: SceneUnits,
+  opts?: Readonly<PolarDiskSnapOptions>,
 ): ColumnFaceSnap | null {
   // Τα zero-width edges (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative
   // resolver (ίδιος με τοίχο/δοκάρι)· κολόνες/δοκάρια/τοίχοι → bbox path. Βλ. `resolveColumnEdgeSnap`.
@@ -320,9 +354,12 @@ export function resolveColumnFaceSnapFromTargets(
     }
   }
   const bboxHit = best ? { snap: resolveForTarget(cursor, best), dist: bestDist } : null;
-  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ από bbox (κολώνα/δοκάρι/τοίχος) vs edge (ακμή πλάκας/γραμμή).
-  if (edgeHit && bboxHit) return edgeHit.dist <= bboxHit.dist ? edgeHit.snap : bboxHit.snap;
-  return (edgeHit ?? bboxHit)?.snap ?? null;
+  // ADR-398 §3.13 — Polar Magnet: cursor ΕΝΤΟΣ δίσκου → πολικό πλέγμα (μόνο όταν δίνεται worldPerPixel).
+  const polarHit = opts && opts.worldPerPixel > 0 && t.diskTargets.length > 0
+    ? resolvePolarDiskHit(cursor, t.diskTargets, sceneUnits, opts)
+    : null;
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε bbox / edge / polar (στο χείλος ο polar=null → §3.12 κερδίζει).
+  return nearestHit(edgeHit, bboxHit, polarHit);
 }
 
 /**

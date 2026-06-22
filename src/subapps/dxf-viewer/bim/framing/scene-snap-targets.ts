@@ -24,7 +24,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { collectMemberSnapTargets, type MemberSnapKind } from './member-snap-targets';
+import { collectMemberSnapTargets, collectDiskTargets, type MemberSnapKind } from './member-snap-targets';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 
 /**
@@ -46,6 +46,10 @@ export interface SceneSnapTargets {
    *  Κύκλος/τόξο φέρουν `arc` meta → arc-length listening dims. Μόνο η κολώνα τις καταναλώνει
    *  (ίδιο axis-relative path με ακμές πλάκας)· wall/beam T-framing ΟΧΙ. */
   readonly lineTargets: readonly LinearMemberSnapTarget[];
+  /** ADR-398 §3.13 — ΚΥΚΛΟΙ ως **δίσκοι** {center,radius} για το Polar Magnet (κολώνα ΜΕΣΑ στον δίσκο).
+   *  Ξεχωριστά από τις χορδές περιφέρειας στο `lineTargets` (§3.12): ο cursor εντός δίσκου → πολικό
+   *  πλέγμα (κέντρο/δακτύλιοι/ακτίνες)· στο χείλος → §3.12 circumference. Μόνο η κολώνα τους καταναλώνει. */
+  readonly diskTargets: readonly { center: Point2D; radius: number }[];
 }
 
 const EMPTY: SceneSnapTargets = Object.freeze({
@@ -54,6 +58,7 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   wallTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   slabTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   lineTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
+  diskTargets: Object.freeze([]) as readonly { center: Point2D; radius: number }[],
 });
 
 /**
@@ -69,6 +74,7 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     wallTargets: collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets,
     slabTargets: collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets,
     lineTargets: collectMemberSnapTargets(entities, { memberKinds: ['line'] }).memberTargets,
+    diskTargets: collectDiskTargets(entities), // §3.13 — κύκλοι ως δίσκοι (Polar Magnet)
   };
 }
 
