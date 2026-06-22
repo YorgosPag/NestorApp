@@ -12,7 +12,7 @@
  *
  * **preview === commit (ADR-398 §3.10 sync-in-preview):** υπολογίζει το face-snap
  * ΣΥΓΧΡΟΝΑ εδώ (πιστό mirror τοίχου/δοκαριού — `makeWallGhostBeforeClick`), από:
- *   · στόχους → `columnPreviewStore.get()` (pre-collected κολόνες/δοκάρια/τοίχοι/πλάκες)·
+ *   · στόχους → `sceneSnapTargetsStore.get()` (κοινό SSoT· κολόνες/δοκάρια/τοίχοι/πλάκες)·
  *   · cursor  → `resolveEffectivePreviewCursor` = `getImmediateSnap()` (snapped point που
  *               έγραψε ο scheduler: corner-projection / BIM χαρακτηριστικό / grid)·
  *   · resolver→ `resolveColumnFaceSnapFromTargets` (ΕΝΑ SSoT) → θέση + λαβή + status + faceFrame.
@@ -24,7 +24,7 @@
  *
  * @see ./column-completion.ts — buildDefaultColumnParams / buildColumnEntity (commit builders)
  * @see ../../bim/columns/column-face-snap.ts — resolveColumnFaceSnapFromTargets (θέση/λαβή/status SSoT)
- * @see ../../bim/columns/column-preview-store.ts — pre-collected στόχοι (sync-in-preview)
+ * @see ../../bim/framing/scene-snap-targets.ts — κοινό SSoT στόχων (sync-in-preview)
  * @see ../../systems/cursor/mouse-handler-up.ts — click-path commit (ίδιος resolver + στόχοι)
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.10
  */
@@ -40,7 +40,7 @@ import {
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
-import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -93,7 +93,7 @@ export function generateColumnPreview(
   // corner-projection / BIM χαρακτηριστικό / grid). Το commit (`mouse-handler-up`) καλεί ΤΟΝ
   // ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor → preview ≡ commit εξ ορισμού.
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
-  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, columnPreviewStore.get(), sceneUnits);
+  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, sceneSnapTargetsStore.get(), sceneUnits);
 
   // θέση + λαβή + status απευθείας από το ΕΝΑ αποτέλεσμα (ΟΧΙ από 3 stores). Η §3.9 wall-axis
   // επιστρέφει ήδη anchor `center`· face-attach (§3.7) υπερισχύει του §3.1b center-on-beam-axis.

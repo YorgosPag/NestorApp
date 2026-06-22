@@ -59,10 +59,9 @@ import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { EventBus } from '../../systems/events/EventBus';
-// ADR-398 §3.10 sync-in-preview — pre-collect τους face-snap στόχους στο column preview store
-// (mirror useWallTool/useBeamTool) ώστε το ghost + commit να υπολογίζουν το snap σύγχρονα.
-import { collectColumnFaceSnapTargets } from '../../bim/columns/column-face-snap';
-import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+// ADR-398 §3.10 sync-in-preview — pre-collect τους face-snap στόχους στο ΚΟΙΝΟ scene store
+// (κοινό με τοίχο/δοκάρι) ώστε το ghost + commit να υπολογίζουν το snap σύγχρονα.
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // N.7.1 file-size split — pure status-text resolver (FSM state → i18n key).
 import { resolveColumnStatusTextKey } from './column-status-text';
@@ -198,8 +197,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // Pre-collect κολόνες/δοκάρια/τοίχοι/πλάκες στο `columnPreviewStore` ΠΡΙΝ το 1ο κλικ, ώστε
   // το ghost-before-click face-snap (+ commit) να υπολογίζεται σύγχρονα με έτοιμους στόχους.
   const syncSceneTargetsToStore = useCallback(() => {
-    const entities = getSceneEntitiesRef.current?.() ?? [];
-    columnPreviewStore.set(collectColumnFaceSnapTargets(entities));
+    sceneSnapTargetsStore.refresh(getSceneEntitiesRef.current?.() ?? []);
   }, []);
 
   // Re-sync όταν δημιουργείται οντότητα — SSoT hook (rAF defer), κοινό με τοίχο/δοκάρι.
@@ -280,7 +278,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
 
   const deactivate = useCallback(() => {
     clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
-    columnPreviewStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
+    sceneSnapTargetsStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, []);
 

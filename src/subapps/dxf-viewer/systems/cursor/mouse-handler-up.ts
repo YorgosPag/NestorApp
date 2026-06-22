@@ -34,7 +34,7 @@ import {
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
 import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
-import { columnPreviewStore } from '../../bim/columns/column-preview-store';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
 import { setColumnFaceAnchor, setColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
@@ -226,7 +226,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
           const faceSnap = resolveColumnFaceSnapFromTargets(
             effectiveCursor,
-            columnPreviewStore.get(),
+            sceneSnapTargetsStore.get(),
             colHandle.getSceneUnits(),
           );
           if (faceSnap) {
