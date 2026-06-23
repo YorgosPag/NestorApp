@@ -11,7 +11,11 @@ import type { HitTestResult } from './hit-tester-types';
 import { pointToLineDistance, degToRad } from '../entities/shared/geometry-utils';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
-import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
+import {
+  computeDimHitGeometry,
+  buildVariantHitGeometry,
+  hitTestDimGeometry,
+} from '../../systems/dimensions/dim-hit-geometry';
 import { closestPointOnLine } from './hit-test-entity-tests';
 
 // ===== TEXT / MTEXT =====
@@ -105,9 +109,12 @@ export function hitTestAngleMeasurement(entity: Entity, point: Point2D, toleranc
  * New path for linear+aligned: use `computeDimHitGeometry()` to derive the
  * actual foot points (projections of pts[0], pts[1] onto the dim line through
  * pts[2]) and use those for the dim-line + text-anchor tests. Extension lines
- * test pts[0]→foot1 and pts[1]→foot2 (the rendered extension paths). Radial /
- * angular / ordinate keep the legacy defPoints-based approximation until a
- * future Phase I delivers per-variant hit tests.
+ * test pts[0]→foot1 and pts[1]→foot2 (the rendered extension paths).
+ *
+ * ADR-362 Phase I (2026-06-24): radial / angular / ordinate now hit-test against
+ * their actual rendered arc / leader / dim-line via `buildVariantHitGeometry` +
+ * `hitTestDimGeometry` (shared SSoT) instead of the legacy defPoints
+ * approximation. baseline / continued (lookup-dependent) keep the legacy path.
  *
  * Tests (priority order):
  *   1. Text label — circle around textAnchor (tolerance × 1.5)
@@ -123,7 +130,24 @@ export function hitTestDimension(entity: DimensionEntity, point: Point2D, tolera
   if (hitGeom) {
     return hitTestStraightDim(entity, point, tolerance, hitGeom);
   }
+  const variantGeom = buildVariantHitGeometry(entity);
+  if (variantGeom) {
+    const hitPoint = hitTestDimGeometry(variantGeom, point, tolerance);
+    if (hitPoint) return { hitType: 'entity', hitPoint };
+    return hitTestDefPoints(entity, point, tolerance);
+  }
   return hitTestLegacyDim(entity, point, tolerance);
+}
+
+/** defPoint proximity — last-resort hit on raw definition points (vertices,
+ *  arrowhead origins). Shared by the per-variant path and the legacy fallback. */
+function hitTestDefPoints(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  for (const pt of entity.defPoints) {
+    if (calculateDistance(point, pt) <= tolerance) {
+      return { hitType: 'entity', hitPoint: pt };
+    }
+  }
+  return null;
 }
 
 /** Linear/aligned — uses computed foot points for accurate dim line + text. */
@@ -156,7 +180,8 @@ function hitTestStraightDim(
   return null;
 }
 
-/** Radial/angular/ordinate fallback — legacy defPoints-based approximation. */
+/** baseline/continued fallback — legacy defPoints-based approximation (these
+ *  need a parent lookup the hit path does not carry, so no rendered geometry). */
 function hitTestLegacyDim(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
   const pts = entity.defPoints;
   const textPt = entity.textMidpoint ?? (pts.length >= 2 ? { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 } : pts[0]);
@@ -174,10 +199,5 @@ function hitTestLegacyDim(entity: DimensionEntity, point: Point2D, tolerance: nu
   if (pts.length >= 2 && pointToLineDistance(point, pts[0], pts[1]) <= tolerance) {
     return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[1]) };
   }
-  for (const pt of pts) {
-    if (calculateDistance(point, pt) <= tolerance) {
-      return { hitType: 'entity', hitPoint: pt };
-    }
-  }
-  return null;
+  return hitTestDefPoints(entity, point, tolerance);
 }

@@ -12,6 +12,34 @@ import type { Point2D } from '../../../rendering/types/Types';
 export const COLINEAR_EPSILON = 1e-12;
 
 const HALF_PI = Math.PI / 2;
+const TAU = Math.PI * 2;
+
+/**
+ * True when `testAngle` lies on the arc traced from `startAngle` to `endAngle`
+ * along the SIGNED, UNWRAPPED sweep `endAngle - startAngle` — the convention
+ * produced by `assembleAngular` (angular-builder) and the arc-length leader
+ * (radial-builder): positive sweep = CCW, and the magnitude may exceed π for
+ * long arcs.
+ *
+ * Distinct from `geometry-arc-utils.isAngleBetween`, which normalises both ends
+ * into [0, 2π) and tests *range membership* (direction-agnostic, breaks for
+ * sweeps > π or negative sweeps). This helper preserves sweep DIRECTION and
+ * MAGNITUDE, so it accepts long arcs and rejects the complementary side — the
+ * exact semantics the dimension arc hit-test needs (ADR-362 per-variant hit).
+ */
+export function isAngleOnSweptArc(
+  testAngle: number,
+  startAngle: number,
+  endAngle: number,
+  epsilon = 1e-9,
+): boolean {
+  const sweep = endAngle - startAngle;
+  if (Math.abs(sweep) < epsilon) return false;
+  const sign = sweep > 0 ? 1 : -1;
+  let rel = (sign * (testAngle - startAngle)) % TAU;
+  if (rel < 0) rel += TAU;
+  return rel <= Math.abs(sweep) + epsilon;
+}
 
 /** Rotate a 2D vector by `angleRad` (CCW). */
 export function rotateVector(v: Point2D, angleRad: number): Point2D {
