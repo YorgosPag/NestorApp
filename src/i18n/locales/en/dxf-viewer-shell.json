@@ -3348,6 +3348,10 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete hatch? This action cannot be undone.",
+        "selectExisting": "Select hatch",
+        "selectExistingHint": "Click a hatch to select it",
+        "hatchList": "Floor hatches",
+        "hatchItem": "Hatch {index}",
         "colors": {
           "black": "Black",
           "darkGray": "Dark gray",

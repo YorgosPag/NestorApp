@@ -34,9 +34,11 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleHatchSelectClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
 import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
+// ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing) mode SSoT.
+import { isHatchSelectArmed } from '../../bim/hatch/hatch-select-mode-store';
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -103,6 +105,14 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 0.5: Polygon crop — accumulate click-to-add polygon point
     if (activeTool === 'polygon-crop') {
       PolygonCropStore.addPoint(worldPoint.x, worldPoint.y);
+      return;
+    }
+    // PRIORITY 0.6: ADR-507 — «Επιλογή γραμμοσκίασης» one-shot pick-existing.
+    // Tool-agnostic (armed από το ribbon ενώ ο χρήστης είναι σε select/hatch):
+    // intercept ΠΡΙΝ τα grips ώστε το κλικ να διαλέξει νέα γραμμοσκίαση, όχι να
+    // πειράξει grip της ήδη επιλεγμένης. Πάντα consume + disarm (one-shot).
+    if (isHatchSelectArmed()) {
+      handleHatchSelectClick(worldPoint, params);
       return;
     }
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)

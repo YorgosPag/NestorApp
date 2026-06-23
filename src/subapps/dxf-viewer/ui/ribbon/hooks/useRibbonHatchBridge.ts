@@ -40,6 +40,11 @@ import {
   type HatchPickMode,
 } from '../../../bim/hatch/hatch-pick-mode-store';
 import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
+// Area readout SSoT (ADR-462) — locale + display-unit aware (μηδέν δικό μου format).
+import { formatAreaForDisplay } from '../../../config/display-length-format';
+// ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing) mode SSoT.
+import { armHatchSelect } from '../../../bim/hatch/hatch-select-mode-store';
+import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import {
   buildGradientFromDefaults,
   withGradientPatch,
@@ -87,11 +92,6 @@ export interface RibbonHatchBridge {
 }
 
 const NULL_TOGGLE: RibbonToggleState = false;
-
-/** mm² → «12.50 m²» (runtime value, όχι i18n label). */
-function formatAreaM2(mm2: number): string {
-  return `${(mm2 / 1_000_000).toFixed(2)} m²`;
-}
 
 /** Map ενός gradient field patch → το αντίστοιχο flat draw-default πεδίο (no-selection mode). */
 function gradientDefaultPatch(patch: GradientFieldPatch): Partial<HatchDrawDefaults> {
@@ -172,7 +172,7 @@ export function useRibbonHatchBridge(
       const hatch = resolveHatch();
       // Readout: live εμβαδόν (μόνο όταν υπάρχει επιλεγμένη γραμμοσκίαση).
       if (isHatchRibbonReadoutKey(commandKey)) {
-        return { value: hatch ? formatAreaM2(computeHatchAreaMm2(hatch)) : '—', options: [] };
+        return { value: hatch ? formatAreaForDisplay(computeHatchAreaMm2(hatch)) : '—', options: [] };
       }
       if (isHatchRibbonStringKey(commandKey)) {
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
@@ -357,6 +357,13 @@ export function useRibbonHatchBridge(
   const onAction = useCallback(
     (action: string): void => {
       if (!isHatchRibbonActionKey(action)) return;
+      // «Επιλογή γραμμοσκίασης» — όπλισε το one-shot pick-existing mode + δείξε
+      // prompt στο status bar (καθαρίζεται από το disarm στο click handler).
+      if (action === HATCH_RIBBON_KEYS.actions.selectExisting) {
+        armHatchSelect();
+        toolHintOverrideStore.setOverride(t('ribbon.commands.hatchEditor.selectExistingHint'));
+        return;
+      }
       if (action === HATCH_RIBBON_KEYS.actions.delete) {
         const hatch = resolveHatch();
         if (!hatch || !levelManager.currentLevelId) return;

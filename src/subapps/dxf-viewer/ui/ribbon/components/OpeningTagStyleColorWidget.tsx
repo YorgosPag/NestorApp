@@ -15,8 +15,7 @@
 
 import React, { useCallback, useEffect, useReducer } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
-import { ColorDialogTrigger } from '../../color/EnterpriseColorDialog';
+import { RibbonColorField } from './RibbonColorField';
 import {
   getOpeningTagStyleService,
   type OpeningTagStyle,
@@ -67,34 +66,7 @@ function OpeningTagStyleColorWidget({ field, labelKey }: OpeningTagStyleColorWid
     [field],
   );
 
-  return (
-    <span className="dxf-ribbon-combobox-row">
-      <span className="dxf-ribbon-combobox-label">{t(labelKey)}</span>
-      <span className="dxf-ribbon-widget-compact">
-        <ColorDialogTrigger
-          value={hex}
-          onChange={handleChange}
-          title={t(labelKey)}
-          alpha={false}
-          modes={['hex', 'rgb', 'hsl']}
-          palettes={['dxf', 'semantic', 'material']}
-          recent
-          eyedropper
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className="block h-6 w-14 rounded border border-input hover:ring-1 hover:ring-ring"
-                style={{ backgroundColor: hex }}
-                aria-label={hex}
-              />
-            </TooltipTrigger>
-            <TooltipContent>{hex}</TooltipContent>
-          </Tooltip>
-        </ColorDialogTrigger>
-      </span>
-    </span>
-  );
+  return <RibbonColorField label={t(labelKey)} value={hex} onChange={handleChange} />;
 }
 
 // ─── Zero-arg leaf exports (ADR-040: no props = no orchestrator dependency) ───

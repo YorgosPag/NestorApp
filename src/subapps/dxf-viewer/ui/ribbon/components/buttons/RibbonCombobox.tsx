@@ -38,7 +38,7 @@ import type {
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { RibbonEditableCombobox } from './RibbonEditableCombobox';
 import { HatchPatternPicker } from './HatchPatternPicker';
-import { HatchGradientColorPicker } from './HatchGradientColorPicker';
+import { RibbonDxfColorPickerWidget } from './RibbonDxfColorPickerWidget';
 import { resolveNumericConfig } from './ribbon-combobox-numeric';
 
 const DEFAULT_WIDTH_PX = 140;
@@ -65,8 +65,8 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
   if (command.comboboxVariant === 'hatch-pattern') {
     return <HatchPatternPicker command={command} />;
   }
-  if (command.comboboxVariant === 'hatch-gradient-color') {
-    return <HatchGradientColorPicker command={command} />;
+  if (command.comboboxVariant === 'dxf-color') {
+    return <RibbonDxfColorPickerWidget command={command} />;
   }
   return <RibbonComboboxDefault command={command} />;
 };

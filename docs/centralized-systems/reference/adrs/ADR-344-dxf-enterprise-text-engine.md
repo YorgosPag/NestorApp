@@ -870,6 +870,13 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-06-23 — Ribbon color-picker unification Φ1 (text/dimension → EnterpriseColorPicker)** (Giorgio: «στα contextual ribbon tabs όλα τα σημεία επιλογής χρώματος να χρησιμοποιούν ΕΝΑ πλούσιο picker, όχι φτωχά dropdowns»).
+  - Στο tab «Αληθινό χρώμα» του `ColorPickerPopover` το bare `react-colorful HexColorPicker` αντικαταστάθηκε από το SSoT `EnterpriseColorPicker` (HSL sliders + HEX/RGB/HSL + παλέτες DXF/semantic/material + recent + WCAG), `eyedropper={false}` (το nav έχει ήδη το SSoT eyedropper → αποφυγή διπλού). Νέο inverse conversion `hexToDxfTrueColor(hex)→DxfColor` δίπλα στο `dxfColorToHex` (SSoT location `aci-palette.ts`, reuse `parseHex`· distinct από το `utils/dxf-true-color.hexToTrueColor` που γυρίζει packed `number` για DXF 420/421). `PopoverContent` `w-72`→`w-auto`. Επηρεάζει αυτόματα text editor + dimension.
+  - **Hatch (ADR-507 / ADR-345 §14)**: το hatch fill/gradient ΔΕΝ χρησιμοποιεί το `ColorPickerPopover` — είναι καθαρό hex και ο Giorgio θέλει **floating** picker → χρησιμοποιεί το `ColorDialogTrigger` (`EnterpriseColorDialog`, ο ΙΔΙΟΣ floating picker με τις «Ρυθμίσεις DXF»). Λεπτομέρειες στο ADR-345 §14.
+  - ✅ Google-level: YES — ΕΝΑ picker engine (`EnterpriseColorPicker`) + ΕΝΑ conversion SSoT (`aci-palette`)· μηδέν νέο picker/conversion/dependency· boy-scout dedup του inline hex→TrueColor σε ΕΝΑ helper.
+  - **Files**: `ui/text-toolbar/controls/ColorPickerPopover.tsx` (MOD — EnterpriseColorPicker στο true tab), `ui/text-toolbar/controls/aci-palette.ts` (MOD — `hexToDxfTrueColor`).
+  - 🔴 browser-verify (text/dimension → tab «Αληθινό χρώμα» → πλούσιος picker).
+
 - **2026-05-21 — InsertTextTokenCommand: raw Unicode codepoint support (ADR-345 Fase 5.5-SYM)**. `resolveToken(token)` helper added to `InsertTextTokenCommand.ts`: TOKEN_MAP lookup first; if not found, accepts raw single Unicode codepoint (`[...token].length === 1`) directly. `execute()`, `validate()`, `getDescription()` updated to use `resolveToken`. Retro-compatible: existing `%%c/%%d/%%p/\S` tokens unchanged. Enables `SymbolPickerDialog` (ADR-345) to pass Unicode symbols (±, °, Ø, ©, ®, ™, →, ←, etc.) directly without expanding TOKEN_MAP.
 
 - **2026-05-20 — Round 6 — Belt-and-suspenders zero-height run patch (dimscale-aware, unit-fallback)**.

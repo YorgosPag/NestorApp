@@ -58,6 +58,8 @@ export const HATCH_RIBBON_KEYS = {
     close: 'hatch.action.close',
     /** Διαγραφή της γραμμοσκίασης. */
     delete: 'hatch.action.delete',
+    /** Επιλογή υπάρχουσας γραμμοσκίασης (one-shot pick-existing). */
+    selectExisting: 'hatch.action.selectExisting',
   },
   visibility: {
     /** Panel «Gradient» ορατό μόνο όταν fillType='gradient' (Revit-style contextual). */
@@ -93,7 +95,8 @@ export type HatchRibbonReadoutKey =
 
 export type HatchRibbonActionKey =
   | typeof HATCH_RIBBON_KEYS.actions.close
-  | typeof HATCH_RIBBON_KEYS.actions.delete;
+  | typeof HATCH_RIBBON_KEYS.actions.delete
+  | typeof HATCH_RIBBON_KEYS.actions.selectExisting;
 
 export type HatchRibbonVisibilityKey =
   | typeof HATCH_RIBBON_KEYS.visibility.gradient;
@@ -127,6 +130,7 @@ const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
 const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.actions.close,
   HATCH_RIBBON_KEYS.actions.delete,
+  HATCH_RIBBON_KEYS.actions.selectExisting,
 ]);
 const VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.visibility.gradient,

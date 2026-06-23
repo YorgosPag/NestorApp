@@ -91,12 +91,14 @@ export interface RibbonCommand {
    * delegates to a dedicated control instead of the plain Radix Select:
    *   - `'hatch-pattern'` → searchable popover with pattern thumbnails
    *     (HatchPatternPicker). Reuses `options` + the bridge value/onChange.
-   *   - `'hatch-gradient-color'` → enterprise color-dialog swatch
-   *     (HatchGradientColorPicker). Hex in/out via the bridge value/onChange
-   *     (ADR-507 Φ5 UI). Reuses the centralized `ColorDialogTrigger`.
+   *   - `'dxf-color'` → unified DXF color picker (RibbonDxfColorPickerWidget).
+   *     Hex in/out via the bridge value/onChange; renders the SSoT
+   *     `ColorPickerPopover` (true-color via EnterpriseColorPicker + ACI),
+   *     the same rich picker as text/dimension (ADR-344). Used for hatch fill
+   *     + gradient color1/2 (ADR-507 Φ2/Φ5).
    * Omitted ⇒ standard Select / editable-numeric behaviour (zero change).
    */
-  comboboxVariant?: 'hatch-pattern' | 'hatch-gradient-color';
+  comboboxVariant?: 'hatch-pattern' | 'dxf-color';
   /**
    * ADR-419 §ribbon-hierarchy (Revit-style cascading menu) — When present,
    * this command is a SUBMENU HEADER (not a leaf tool). The split dropdown

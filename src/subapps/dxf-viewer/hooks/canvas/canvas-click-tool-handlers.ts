@@ -21,11 +21,18 @@ import { dlog } from '../../debug';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import { testEntityHit } from './canvas-click-entity-hit';
+import { isHatchEntity } from '../../types/entities';
+// ADR-507 — «Επιλογή γραμμοσκίασης»: reuse του even-odd hatch hit-test SSoT (case 'hatch').
+import { performDetailedHitTest } from '../../rendering/hitTesting/hit-test-entity-tests';
+import { disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
 // ADR-507 Φ3 — pick-point (Τρόπος Β): ΕΝΑ κλικ μέσα σε περιοχή → HatchEntity.
 import { buildHatchFromPick, isPointInsideExistingHatch } from '../../bim/hatch/hatch-pick-completion';
+// ADR-507 Φ3 — preview ≡ commit (WYSIWYG): το commit γεμίζει ΑΚΡΙΒΩΣ την περιοχή που
+// δείχνει το μπλε ghost (AutoAreaPreviewStore), όχι μια νέα ανίχνευση στο σημείο του click.
+import { getAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 // ADR-507 Φ3 — warn+allow όταν η περιοχή έχει ήδη γραμμοσκίαση (επιλογή Giorgio).
 import { requestHatchOverlapConfirm } from '../../bim/hatch/hatch-overlap-confirm-store';
-import { buildHatchPostCreateCommands } from '../../bim/hatch/hatch-completion';
+import { buildHatchPostCreateCommands, buildHatchEntityFromRegion } from '../../bim/hatch/hatch-completion';
 import { completeEntity } from '../drawing/completeEntity';
 // Enterprise-id SSoT (N.6) — ίδιος generator με τον CreateEntityCommand· μηδέν δικός counter.
 import { generateEntityId } from '../../systems/entity-creation/utils';
@@ -112,6 +119,22 @@ export function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandle
 // HATCH PICK-POINT CLICK (ADR-507 Φ3 — Τρόπος Β)
 // ============================================================================
 /**
+ * ADR-507 Φ3 — αντιπροσωπευτικό ΕΣΩΤΕΡΙΚΟ σημείο της περιοχής που πρόκειται να γεμίσει
+ * (preview), για τον έλεγχο επικάλυψης. Το κεντροειδές είναι εντός για κυρτά/τυπικά
+ * κελιά· σε κοίλο πολύγωνο (κεντροειδές εκτός) πέφτουμε στο σημείο του click. Έτσι ο
+ * έλεγχος «η περιοχή έχει ήδη γραμμοσκίαση;» αφορά ό,τι ΓΕΜΙΖΟΥΜΕ (preview ≡ commit),
+ * όχι το σημείο του click που λόγω jitter μπορεί να πέσει εκτός κελιού.
+ */
+function pickRegionInteriorPoint(polygon: Point2D[] | undefined, fallback: Point2D): Point2D {
+  if (!polygon || polygon.length < 3) return fallback;
+  let cx = 0;
+  let cy = 0;
+  for (const v of polygon) { cx += v.x; cy += v.y; }
+  const centroid = { x: cx / polygon.length, y: cy / polygon.length };
+  return isPointInPolygon(centroid, polygon) ? centroid : fallback;
+}
+
+/**
  * Τρόπος Β: ΕΝΑ κλικ ΜΕΣΑ σε κλειστή περιοχή → ανίχνευση ορίου (+ νησιά) μέσω
  * `auto-area-hit` SSoT → `HatchEntity` → `completeEntity` (ίδιο pipeline με τον
  * Τρόπο Α: undo + auto-send-to-back + `drawing:complete` → persistence).
@@ -131,14 +154,23 @@ export function handleHatchPickPointClick(
   const entities = scene?.entities ?? [];
   // ADR-040 XXII.A: live SSoT scale read at click time.
   const scale = getImmediateTransform().scale;
-  const hatch = buildHatchFromPick({
-    worldPoint,
-    entities,
-    overlays: p.currentOverlays,
-    scale,
-    id: generateEntityId(),
-    layerId: undefined,
-  });
+  // ADR-507 Φ3 — preview ≡ commit (WYSIWYG): γέμισε ΑΚΡΙΒΩΣ την περιοχή που δείχνει το
+  // μπλε ghost. Λόγω throttle/μικρο-κίνησης, το σημείο του click μπορεί να πέσει λίγο
+  // έξω από το κελί που έδειξε το hover → η ξανα-ανίχνευση στο click επέστρεφε ΟΛΟ το
+  // δωμάτιο («ξεχείλισμα σε όμορες περιοχές»). Το preview store ΕΙΝΑΙ ό,τι βλέπει ο
+  // χρήστης· το reuse εγγυάται «what you see is what you get» (reuse buildHatchEntityFromRegion,
+  // μηδέν νέα γεωμετρία). Fallback σε click-detection μόνο όταν δεν υπάρχει ενεργό ghost.
+  const preview = getAutoAreaPreview();
+  const hatch = (preview && preview.polygon.length >= 3)
+    ? buildHatchEntityFromRegion(preview.polygon, preview.holes, generateEntityId(), undefined)
+    : buildHatchFromPick({
+        worldPoint,
+        entities,
+        overlays: p.currentOverlays,
+        scale,
+        id: generateEntityId(),
+        layerId: undefined,
+      });
   if (!hatch) {
     dlog('handleHatchPickPointClick', 'no closed region under cursor');
     return false;
@@ -161,7 +193,8 @@ export function handleHatchPickPointClick(
   // ADR-507 Φ3 — η περιοχή έχει ΗΔΗ γραμμοσκίαση: προειδοποίηση + επιτρέπεται (Giorgio,
   // «ΠΟΤΕ σιωπηλά»). Σαν AutoCAD (στοιβάζει μετά από confirm)· οι χώροι Revit είναι
   // αποκλειστικοί ανά περιοχή — εδώ το αφήνουμε opt-in με ρητή επιβεβαίωση.
-  if (isPointInsideExistingHatch(worldPoint, entities)) {
+  const overlapTestPoint = pickRegionInteriorPoint(preview?.polygon, worldPoint);
+  if (isPointInsideExistingHatch(overlapTestPoint, entities)) {
     void (async () => {
       const action = await requestHatchOverlapConfirm();
       if (action === 'create') commit();
@@ -171,6 +204,45 @@ export function handleHatchPickPointClick(
   }
 
   commit();
+  return true;
+}
+
+// ============================================================================
+// HATCH SELECT (ADR-507 — «Επιλογή γραμμοσκίασης», one-shot pick-existing)
+// ============================================================================
+/**
+ * One-shot «διάλεξε υπάρχουσα γραμμοσκίαση»: κλικ στον καμβά → hit-test ΜΟΝΟ σε
+ * `HatchEntity` (reuse του `performDetailedHitTest` even-odd SSoT — `case 'hatch'`)
+ * → επιλογή της κορυφαίας → το contextual tab δείχνει αμέσως τις ιδιότητές της
+ * (dual-mode `resolveHatch` = `getPrimaryId`). Topmost-first (τα τελευταία entities
+ * ζωγραφίζονται από πάνω).
+ *
+ * Πάντα καταναλώνει το κλικ και κλείνει το mode (one-shot, AutoCAD-style) — και
+ * όταν βρει γραμμοσκίαση και όταν όχι (miss → απλά disarm).
+ */
+export function handleHatchSelectClick(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const scene = p.levelManager.currentLevelId
+    ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
+    : null;
+  const entities = scene?.entities ?? [];
+  // ADR-040 XXII.A: live SSoT scale read at click time.
+  const tolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
+  for (let i = entities.length - 1; i >= 0; i--) {
+    const e = entities[i];
+    if (!isHatchEntity(e)) continue;
+    if (performDetailedHitTest(e, worldPoint, tolerance)) {
+      p.universalSelection.replaceEntitySelection([e.id]);
+      disarmHatchSelect();
+      dlog('handleHatchSelectClick', `selected hatch ${e.id}`);
+      return true;
+    }
+  }
+  // Καμία γραμμοσκίαση κάτω από τον κέρσορα → one-shot: κλείσε το mode.
+  disarmHatchSelect();
+  dlog('handleHatchSelectClick', 'no hatch under cursor');
   return true;
 }
 

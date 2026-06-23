@@ -100,18 +100,6 @@ const ISLAND_STYLE_OPTIONS = [
   { value: 'ignore', labelKey: 'ribbon.commands.hatchEditor.islandIgnore', isLiteralLabel: false },
 ] as const;
 
-/** Preset χρώματα (value=hex, label=i18n όνομα — N.11: μηδέν literal label). */
-const FILL_COLOR_OPTIONS = [
-  { value: '#000000', labelKey: 'ribbon.commands.hatchEditor.colors.black', isLiteralLabel: false },
-  { value: '#404040', labelKey: 'ribbon.commands.hatchEditor.colors.darkGray', isLiteralLabel: false },
-  { value: '#808080', labelKey: 'ribbon.commands.hatchEditor.colors.gray', isLiteralLabel: false },
-  { value: '#c0c0c0', labelKey: 'ribbon.commands.hatchEditor.colors.lightGray', isLiteralLabel: false },
-  { value: '#ffffff', labelKey: 'ribbon.commands.hatchEditor.colors.white', isLiteralLabel: false },
-  { value: '#c0392b', labelKey: 'ribbon.commands.hatchEditor.colors.red', isLiteralLabel: false },
-  { value: '#2980b9', labelKey: 'ribbon.commands.hatchEditor.colors.blue', isLiteralLabel: false },
-  { value: '#27ae60', labelKey: 'ribbon.commands.hatchEditor.colors.green', isLiteralLabel: false },
-] as const;
-
 const LINE_ANGLE_OPTIONS = [
   { value: '0', labelKey: '0°', isLiteralLabel: true },
   { value: '45', labelKey: '45°', isLiteralLabel: true },
@@ -196,8 +184,9 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 id: 'hatch.fillColor',
                 labelKey: 'ribbon.commands.hatchEditor.fillColor',
                 commandKey: HATCH_RIBBON_KEYS.stringParams.fillColor,
-                comboboxWidthPx: 140,
-                options: FILL_COLOR_OPTIONS,
+                // ADR-344/345 — unified rich color picker (ColorPickerPopover),
+                // hex in/out via the bridge. Replaces the 8-swatch dropdown.
+                comboboxVariant: 'dxf-color',
               },
             },
           ],
@@ -362,8 +351,8 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 id: 'hatch.gradientColor1',
                 labelKey: 'ribbon.commands.hatchEditor.gradientColor1',
                 commandKey: HATCH_RIBBON_KEYS.stringParams.gradientColor1,
-                // ADR-507 Φ5 — enterprise color-dialog swatch (hex in/out).
-                comboboxVariant: 'hatch-gradient-color',
+                // ADR-344/345 — unified rich color picker (ColorPickerPopover), hex in/out.
+                comboboxVariant: 'dxf-color',
               },
             },
             {
@@ -373,7 +362,7 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 id: 'hatch.gradientColor2',
                 labelKey: 'ribbon.commands.hatchEditor.gradientColor2',
                 commandKey: HATCH_RIBBON_KEYS.stringParams.gradientColor2,
-                comboboxVariant: 'hatch-gradient-color',
+                comboboxVariant: 'dxf-color',
               },
             },
             {
@@ -410,6 +399,22 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
             },
           ],
         },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              // ADR-507 — dropdown «Γραμμοσκιάσεις ορόφου» (λίστα + επιλογή + zoom).
+              type: 'widget',
+              size: 'small',
+              widgetId: 'hatch-list',
+              command: {
+                id: 'hatch.list',
+                labelKey: 'ribbon.commands.hatchEditor.hatchList',
+                commandKey: 'hatch.list',
+              },
+            },
+          ],
+        },
       ],
     },
     {
@@ -419,6 +424,18 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
+            {
+              // ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'hatch.selectExisting',
+                labelKey: 'ribbon.commands.hatchEditor.selectExisting',
+                icon: 'hatch',
+                commandKey: HATCH_RIBBON_KEYS.actions.selectExisting,
+                action: HATCH_RIBBON_KEYS.actions.selectExisting,
+              },
+            },
             {
               type: 'simple',
               size: 'small',

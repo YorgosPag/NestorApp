@@ -18,7 +18,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ColorDialogTrigger } from '../../color/EnterpriseColorDialog';
+import { RibbonColorField } from './RibbonColorField';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
@@ -52,24 +52,12 @@ export function RibbonMepCircuitColorWidget(): React.JSX.Element | null {
   );
 
   if (!active) return null;
-  const label = t('ribbon.commands.mepCircuit.color');
 
   return (
-    <span className="dxf-ribbon-combobox-row">
-      <span className="dxf-ribbon-combobox-label">{label}</span>
-      <span className="dxf-ribbon-widget-compact">
-        <ColorDialogTrigger
-          value={hex}
-          onChange={handleChange}
-          label={hex}
-          title={label}
-          alpha={false}
-          modes={['hex', 'rgb', 'hsl']}
-          palettes={['dxf', 'semantic', 'material']}
-          recent
-          eyedropper
-        />
-      </span>
-    </span>
+    <RibbonColorField
+      label={t('ribbon.commands.mepCircuit.color')}
+      value={hex}
+      onChange={handleChange}
+    />
   );
 }
