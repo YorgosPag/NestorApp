@@ -32,8 +32,7 @@ import {
 } from '../../bim/columns/column-from-faces';
 import {
   perimeterFacesToRects,
-  getCachedRegionPerimeters,
-  pickSmallestContainingPerimeter,
+  pickRegionPerimeterAt,
   isPerimeterOversized,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
@@ -83,12 +82,10 @@ export function useColumnPerimeterCommit(
       | { kind: 'none' } => {
       const entities = getSceneEntitiesRef.current?.() ?? [];
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const tol = resolveRegionLoopTolWorld(sceneUnits);
       const scale = mmToSceneUnits(sceneUnits);
-      // Cached (SSoT) — μοιράζεται το αποτέλεσμα με το hover preview· μηδέν O(n²)
-      // recompute στο κλικ δημιουργίας (το ~1.5s freeze).
-      const perimeters = getCachedRegionPerimeters(entities, tol);
-      const pick = pickSmallestContainingPerimeter(point, perimeters);
+      // ADR-419 Layer 1 SSoT — μικρότερο εμπεριέχον loop + tol (cached, κοινό
+      // με το hover preview· μηδέν O(n²) recompute στο κλικ δημιουργίας ~1.5s freeze).
+      const { perimeter: pick, tol } = pickRegionPerimeterAt(point, entities, sceneUnits);
       if (!pick) {
         // Layer 5 — open-loop diagnostics: αν υπάρχουν γραμμές με ανοιχτό άκρο κοντά,
         // οι παρειές δεν ενώνονται· αλλιώς κενός χώρος (no-op).

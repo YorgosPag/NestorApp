@@ -4,13 +4,11 @@ import { useCallback, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { LevelManagerLike } from './canvas-click-types';
 import {
-  getCachedRegionPerimeters,
-  pickSmallestContainingPerimeter,
+  pickRegionPerimeterAt,
   isPerimeterOversized,
   perimeterExtentMm,
   type ClosedPerimeter,
 } from '../../bim/walls/perimeter-from-faces';
-import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import {
   setRegionPerimeterPreview,
   clearRegionPerimeterPreview,
@@ -71,12 +69,10 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
         return;
       }
       const sceneUnits = resolveSceneUnits(scene);
-      const tol = resolveRegionLoopTolWorld(sceneUnits);
       const scale = mmToSceneUnits(sceneUnits);
-      // Cached (SSoT, κοινό με το click-inside commit) — η O(n²) ανίχνευση τρέχει
-      // μία φορά ανά (γραμμές, tol)· μηδέν recompute σε κάθε move ή στο κλικ.
-      const perimeters = getCachedRegionPerimeters(entities, tol);
-      const pick = pickSmallestContainingPerimeter(worldPos, perimeters);
+      // ADR-419 Layer 1 SSoT (κοινό με το click-inside commit) — cached perimeters,
+      // η O(n²) ανίχνευση τρέχει μία φορά ανά (γραμμές, tol)· μηδέν recompute ανά move.
+      const { perimeter: pick } = pickRegionPerimeterAt(worldPos, entities, sceneUnits);
       // Δείχνουμε preview ΜΟΝΟ για έγκυρο (μη-oversized) περίγραμμα. Το γιγάντιο
       // εξωτερικό περίγραμμα ΔΕΝ ζωγραφίζεται (Revit-style: κανένα κόκκινο που
       // κυριαρχεί)· η προειδοποίηση δίνεται στο κλικ (toast «δεν ενώνονται»).

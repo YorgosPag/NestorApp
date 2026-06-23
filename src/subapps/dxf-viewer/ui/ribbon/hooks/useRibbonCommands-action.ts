@@ -41,26 +41,12 @@ import { isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamActionKey } from './bridge/beam-command-keys';
 import { isFoundationActionKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
+import { isContextualTabCloseAction } from './bridge/contextual-tab-close';
 
-/**
- * ADR-363 — «Κλείσιμο» contextual-tab action SSoT.
- *
- * Every contextual ribbon tab exposes a `*.action(s).close` button whose only
- * job is to deselect the entity so the tab disappears. Previously this was
- * (mis)handled three different ways per bridge — `clearAll()` (worked),
- * `EventBus.emit('bim:select-none')` (dead — no listener ever existed), or not
- * at all (column/wall/slab/roof/opening/beam/foundation → button did nothing).
- *
- * This single predicate + the central branch in `routeRibbonAction` make close
- * a uniform, prefix-agnostic no-args deselect for ALL tabs, reusing the one
- * working primitive (`universalSelection.clearAll()`) via `closeContextualTab`.
- *
- * Matches both the dominant `*.actions.close` and the legacy singular
- * `*.action.close` (thermalSpace/hatch/floorFinish/wallCovering) key forms.
- */
-export function isContextualTabCloseAction(action: string): boolean {
-  return /\.actions?\.close$/.test(action);
-}
+// ADR-363 — «Κλείσιμο» SSoT predicate lives in a dependency-free module so it
+// is unit-testable without the heavy bridge import graph. Re-exported here for
+// the existing call-site / tests.
+export { isContextualTabCloseAction };
 
 /** The subset of `useRibbonCommands` props that own ribbon action keys. */
 export type RibbonActionBridges = Pick<
