@@ -67,6 +67,10 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // segment, AutoCAD model). Takes priority over the hairline stroke paths
     // below; the band builder handles arc segments via the bulge SSoT.
     const pe = entity as PolylineEntity & { constantWidth?: number };
+    if (pe.startWidths !== undefined || pe.endWidths !== undefined || pe.constantWidth !== undefined) {
+      // eslint-disable-next-line no-console
+      console.warn('[Φ3d] render sees width — id:', entity.id, 'startWidths:', JSON.stringify(pe.startWidths), 'hasAnyWidth:', hasAnyWidth(pe.startWidths, pe.endWidths, pe.constantWidth));
+    }
     if (hasAnyWidth(pe.startWidths, pe.endWidths, pe.constantWidth)) {
       this.renderPolylineWidthBands(vertices, closed, bulges, pe.startWidths, pe.endWidths, pe.constantWidth);
       return;
@@ -152,7 +156,12 @@ export class PolylineRenderer extends BaseEntityRenderer {
         this.ctx.stroke();
         continue;
       }
-      this.drawPath(band.map(v => this.worldToScreen(v)), true);
+      const screenBand = band.map(v => this.worldToScreen(v));
+      if (i === 0) {
+        // eslint-disable-next-line no-console
+        console.warn('[Φ3d] band seg0 — worldStart:', JSON.stringify(vertices[0]), 'width:', start, 'bandPts:', band.length, 'screen:', JSON.stringify(screenBand), 'fill:', this.ctx.fillStyle, 'alpha:', this.ctx.globalAlpha);
+      }
+      this.drawPath(screenBand, true);
       this.ctx.fill();
     }
     this.ctx.restore();

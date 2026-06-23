@@ -251,3 +251,44 @@ describe('ADR-449 Slice X1 — height-aware walls (grid coincident support, Fire
     expect(lower!.faces.segments.length).toBeGreaterThan(0);
   });
 });
+
+describe('ADR-449 — flush column↔column union (Firestore-shaped, float-drift weld)', () => {
+  // Οι ΑΚΡΙΒΕΙΣ footprints των δύο κολόνων σε σχήμα L (Firestore, mm). Οι παρειές επαφής
+  // διαφέρουν κατά ~9e-13mm (float noise «από κάναβο») → χωρίς weld η polygon-clipping ΔΕΝ
+  // τις ενώνει → ορατή ραφή σοβά στη θαμμένη διεπαφή (Giorgio 2026-06-23, screenshots).
+  const colA: Pt2[] = [
+    { x: 901.3878188660065, y: 250.00000000004593 },
+    { x: 901.3878188660065, y: 1250.0000000000605 },
+    { x: 651.3878188660065, y: 1250.0000000000605 },
+    { x: 651.3878188660065, y: 250.00000000004593 },
+  ];
+  const colB: Pt2[] = [
+    { x: 1651.387818866, y: 500.0000000000454 },
+    { x: 901.3878188660074, y: 500.00000000004553 },
+    { x: 901.3878188660074, y: 250.00000000004553 },
+    { x: 1651.387818866, y: 250.00000000004542 },
+  ];
+  const IFACE_X = 901.3878188660065;
+
+  it('οι δύο flush κολόνες ΕΝΩΝΟΝΤΑΙ σε ΕΝΑ L-outline (μηδέν internal seam)', () => {
+    const out = computeStructuralSilhouetteBands(baseInput([
+      member(colA, 0, 3000),
+      member(colB, 0, 3000),
+    ]));
+    expect(out).toHaveLength(1);
+    const segs = out[0].faces.segments;
+    // Ενιαία περίμετρος L = 4000· δύο ξεχωριστά = 4500 (η ραφή 250 μετριέται 2×). Το 4000 ⇒ ένωση.
+    expect(totalLength(segs)).toBeCloseTo(4000, 0);
+    // Καμία όψη πάνω στη θαμμένη διεπαφή (x≈901.39, y∈[250,500]).
+    const seam = segs.filter((s) =>
+      Math.abs(s.a.x - IFACE_X) < 1e-3 && Math.abs(s.b.x - IFACE_X) < 1e-3 &&
+      Math.min(s.a.y, s.b.y) >= 250 - 1 && Math.max(s.a.y, s.b.y) <= 500 + 1);
+    expect(seam).toHaveLength(0);
+  });
+
+  it('η μακρινή ακμή της Β (x≈1651) ΠΑΡΑΜΕΝΕΙ στο ενιαίο outline (η ένωση δεν έφαγε γεωμετρία)', () => {
+    const out = computeStructuralSilhouetteBands(baseInput([member(colA, 0, 3000), member(colB, 0, 3000)]));
+    const segs = out[0].faces.segments;
+    expect(segs.some((s) => Math.abs(s.a.x - 1651.387818866) < 1e-3 || Math.abs(s.b.x - 1651.387818866) < 1e-3)).toBe(true);
+  });
+});

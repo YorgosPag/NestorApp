@@ -31,13 +31,17 @@ const METHOD_OPTIONS = [
   { value: 'boundary', labelKey: 'ribbon.commands.hatchEditor.methodBoundary', isLiteralLabel: false },
 ] as const;
 
-/** Gap tolerance (AutoCAD HPGAPTOL, world units) — editable numeric με presets 0..10. */
+/**
+ * Gap tolerance (AutoCAD HPGAPTOL, σε μονάδες σχεδίου — π.χ. mm) — editable numeric.
+ * Presets ρεαλιστικά για κατόψεις σε mm· ο χρήστης πληκτρολογεί ελεύθερα 0..5000.
+ */
 const GAP_TOLERANCE_OPTIONS = [
   { value: '0', labelKey: '0', isLiteralLabel: true },
-  { value: '1', labelKey: '1', isLiteralLabel: true },
-  { value: '2', labelKey: '2', isLiteralLabel: true },
-  { value: '5', labelKey: '5', isLiteralLabel: true },
   { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '100', labelKey: '100', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
 ] as const;
 
 const FILL_TYPE_OPTIONS = [
@@ -160,7 +164,7 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 commandKey: HATCH_RIBBON_KEYS.params.gapTolerance,
                 comboboxWidthPx: 90,
                 options: GAP_TOLERANCE_OPTIONS,
-                numericInput: { editable: true, min: 0, max: 100 },
+                numericInput: { editable: true, min: 0, max: 5000 },
               },
             },
           ],

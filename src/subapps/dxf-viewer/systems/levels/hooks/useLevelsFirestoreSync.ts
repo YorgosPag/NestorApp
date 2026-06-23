@@ -6,6 +6,7 @@ import type { QueryResult } from '@/services/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelOperations } from '../utils';
 import { createDxfLevelWithPolicy } from '@/services/dxf-level-mutation-gateway';
+import { hasFloorLinkedLevel, isUnlinkedDefaultLevel, pickActiveLevel } from '../level-visibility';
 import type { Level } from '../config';
 
 interface UseLevelsFirestoreSyncParams {
@@ -88,10 +89,20 @@ export function useLevelsFirestoreSync({
           if (fetchedLevels.length > 0) {
             setLevels(fetchedLevels);
             const activeId = currentLevelIdRef.current;
-            if (!activeId || !fetchedLevels.some(l => l.id === activeId)) {
-              const defaultLevel = fetchedLevels.find(l => l.isDefault) || fetchedLevels[0];
-              setCurrentLevelId(defaultLevel.id);
-              onLevelChange?.(defaultLevel.id);
+            const activeLevel = activeId ? fetchedLevels.find(l => l.id === activeId) : undefined;
+            // Re-elect when there is no valid active level OR the active one is the
+            // unlinked bootstrap default while building structure now exists — that
+            // surface silently loses data (ADR-420), so we move off it to a real
+            // floor-linked level. `pickActiveLevel` is the shared SSoT used by the
+            // «Στάθμες» panel filter too, so panel + active stay consistent.
+            const activeIsHiddenOrphan =
+              !!activeLevel && isUnlinkedDefaultLevel(activeLevel) && hasFloorLinkedLevel(fetchedLevels);
+            if (!activeLevel || activeIsHiddenOrphan) {
+              const nextLevel = pickActiveLevel(fetchedLevels);
+              if (nextLevel && nextLevel.id !== activeId) {
+                setCurrentLevelId(nextLevel.id);
+                onLevelChange?.(nextLevel.id);
+              }
             }
           } else if (bootstrapStateRef.current === 'idle') {
             bootstrapStateRef.current = 'running';

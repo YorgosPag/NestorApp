@@ -27,6 +27,8 @@ import { buildHatchPostCreateCommands } from '../../bim/hatch/hatch-completion';
 import { completeEntity } from '../drawing/completeEntity';
 // Enterprise-id SSoT (N.6) — ίδιος generator με τον CreateEntityCommand· μηδέν δικός counter.
 import { generateEntityId } from '../../systems/entity-creation/utils';
+// Scene-units SSoT — μετατροπή ακατέργαστων συντεταγμένων (mm) σε m/m² για εμφάνιση.
+import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -85,19 +87,23 @@ export function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandle
   const best = candidates.reduce((a, b) => a.area < b.area ? a : b);
   const holes = collectHoleAreas(best.polygon, best.area, scene?.entities ?? [], p.currentOverlays, liveTransform.scale);
   const holesArea = holes.reduce((sum, h) => sum + h.area, 0);
+  // Οι συντεταγμένες είναι σε μονάδες σχεδίου (συνήθως mm). Το panel εμφανίζει m/m²
+  // → μετατροπή με το scene-units SSoT (length × mPerUnit, area × mPerUnit²).
+  const mPerUnit = sceneUnitsToMeters(resolveSceneUnits(scene));
+  const areaFactor = mPerUnit * mPerUnit;
   setAutoAreaState({
     found: true,
-    area: best.area,
-    netArea: best.area - holesArea,
+    area: best.area * areaFactor,
+    netArea: (best.area - holesArea) * areaFactor,
     holesCount: holes.length,
-    holesArea,
-    perimeter: best.perimeter,
+    holesArea: holesArea * areaFactor,
+    perimeter: best.perimeter * mPerUnit,
     source: best.source,
     layerName: best.layerName,
     screenX: screen.x,
     screenY: screen.y,
   });
-  dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
+  dlog('handleAutoAreaClick', `area_m2=${(best.area * areaFactor).toFixed(2)} units=${resolveSceneUnits(scene)} holes=${holes.length} source=${best.source}`);
 }
 
 // ============================================================================
@@ -127,6 +133,8 @@ export function handleHatchPickPointClick(
     entities: scene?.entities ?? [],
     overlays: p.currentOverlays,
     scale,
+    // Units-aware ανοχή βρόχου — ΙΔΙΟ SSoT με «Τοποθέτηση χώρου» (room detector).
+    sceneUnits: resolveSceneUnits(scene),
     id: generateEntityId(),
     layerId: undefined,
   });

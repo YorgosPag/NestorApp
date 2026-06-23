@@ -13,7 +13,7 @@ function makeResolver(byFloorId: Record<string, LevelFloorClass>) {
 }
 
 describe('orderLevelsForPanel (ADR-461 — «Στάθμες» panel order)', () => {
-  it('places «Επίπεδο 1» top, Θεμελίωση bottom, storeys by number DESC, penthouse/roof under default', () => {
+  it('orders storeys penthouse→foundation and HIDES the unlinked default once floors exist (ADR-420)', () => {
     const floors: Record<string, { kind: FloorKind; number: number }> = {
       'f-found': { kind: 'foundation', number: -3 },
       'f-b2': { kind: 'basement', number: -2 },
@@ -30,7 +30,7 @@ describe('orderLevelsForPanel (ADR-461 — «Στάθμες» panel order)', () 
       lvl('ground', 5, { floorId: 'f-g' }),
       lvl('foundation', 1, { floorId: 'f-found' }),
       lvl('penthouse', 8, { floorId: 'f-pent' }),
-      lvl('default', 0, { isDefault: true }),
+      lvl('default', 0, { isDefault: true }), // unlinked bootstrap default → hidden
       lvl('b2', 3, { floorId: 'f-b2' }),
       lvl('2nd', 7, { floorId: 'f-2' }),
       lvl('roof', 9, { floorId: 'f-roof' }),
@@ -40,9 +40,9 @@ describe('orderLevelsForPanel (ADR-461 — «Στάθμες» panel order)', () 
 
     const ordered = orderLevelsForPanel(levels, makeResolver(floors)).map((l) => l.id);
 
+    // The unlinked default is filtered out; real storeys keep the physical order.
     expect(ordered).toEqual([
-      'default', // Επίπεδο 1 — top
-      'penthouse', // Απόληξη Κλιμακοστασίου
+      'penthouse', // Απόληξη Κλιμακοστασίου — top
       'roof', // Δώμα
       '2nd',
       '1st',

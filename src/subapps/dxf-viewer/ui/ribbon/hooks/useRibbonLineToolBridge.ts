@@ -265,8 +265,14 @@ export function useRibbonLineToolBridge(
       // ADR-510 Φ3d — polyline width. Write a uniform per-segment width to the
       // selected polyline; draw-default width is not wired in Φ3d (no-op).
       if (commandKey === LINE_TOOL_RIBBON_KEYS.width) {
-        if (!selected || !isPolylineLike(selected.type)) return;
+        if (!selected || !isPolylineLike(selected.type)) {
+          // eslint-disable-next-line no-console
+          console.warn('[Φ3d] width write SKIPPED — selected:', selected?.type ?? 'none');
+          return;
+        }
         const patch = widthPatchForEntity(selected as unknown as WidthCapableEntity, value);
+        // eslint-disable-next-line no-console
+        console.warn('[Φ3d] width write — id:', selected.id, 'value:', value, 'patch:', JSON.stringify(patch));
         if (patch) patchEntity(selected, patch);
         return;
       }

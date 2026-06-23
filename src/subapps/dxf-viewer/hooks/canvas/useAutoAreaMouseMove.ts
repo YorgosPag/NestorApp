@@ -9,6 +9,9 @@ import { setAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore
 // ADR-507 Φ3 — το live ghost της pick-point γραμμοσκίασης reuse-άρει το ίδιο SSoT.
 import { getHatchPickMode } from '../../bim/hatch/hatch-pick-mode-store';
 import { getHatchDrawDefaults } from '../../bim/hatch/hatch-draw-defaults-store';
+// Ενοποιημένος room detector (ΙΔΙΟ με «Τοποθέτηση χώρου») → preview ≡ commit.
+import { resolveHatchPickRegion } from '../../bim/hatch/hatch-region-detect';
+import { resolveSceneUnits } from '../../utils/scene-units';
 
 export interface UseAutoAreaMouseMoveParams {
   handleMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
@@ -53,15 +56,23 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
 
       const lm = lmRef.current;
       const scene = lm.currentLevelId ? lm.getLevelScene(lm.currentLevelId) : null;
-      // Hatch pick-point σέβεται το HPGAPTOL (preview ≡ commit)· auto-measure = 0.
-      const gapTolerance = isHatchPick ? getHatchDrawDefaults().gapTolerance : 0;
-      const result = getAutoAreaHitResult(
-        worldPos,
-        scene?.entities ?? [],
-        overlaysRef.current,
-        scaleRef.current,
-        gapTolerance,
-      );
+      const entities = scene?.entities ?? [];
+      if (isHatchPick) {
+        // Hatch pick-point: ΙΔΙΟΣ layered room detector με το click commit (region
+        // δωμάτια από πολυγραμμές/τοίχους + holes) — preview ≡ commit. HPGAPTOL aware.
+        const region = resolveHatchPickRegion({
+          worldPoint: worldPos,
+          entities,
+          overlays: overlaysRef.current,
+          scale: scaleRef.current,
+          sceneUnits: resolveSceneUnits(scene),
+          gapTolerance: getHatchDrawDefaults().gapTolerance,
+        });
+        setAutoAreaPreview(region ? { polygon: region.outer, holes: region.holes } : null);
+        return;
+      }
+      // Μέτρηση εμβαδού — κλασικό auto-area hit (gap tolerance 0).
+      const result = getAutoAreaHitResult(worldPos, entities, overlaysRef.current, scaleRef.current, 0);
       setAutoAreaPreview(result ? { polygon: result.polygon, holes: result.holes } : null);
     },
     [],

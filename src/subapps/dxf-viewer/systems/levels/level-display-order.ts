@@ -5,7 +5,7 @@
  * (`Level.order`) which is what `LevelOperations.getLevelsSortedByOrder` and the
  * 3D `sortLevelsTopDown` give. Giorgio's spec (2026-06-16), top → bottom:
  *
- *   «Επίπεδο 1» (the default working level)   ← ALWAYS top
+ *   «Επίπεδο 1» (the default working level)   ← top (see visibility note below)
  *   Απόληξη Κλιμακοστασίου (stair-penthouse)   ← directly below «Επίπεδο 1»
  *   Δώμα (roof)                                ← physically below the penthouse
  *   …3ος, 2ος, 1ος, Ισόγειο…                   ← counted storeys, number DESC
@@ -14,6 +14,12 @@
  *
  * Read bottom → top this is the real building stack (foundation, −2, −1, ground,
  * 1, 2, 3, roof, penthouse), with the abstract «Επίπεδο 1» pinned above it.
+ *
+ * Visibility (ADR-420, 2026-06-23): the «Επίπεδο 1» pin only applies while the
+ * project has NO building structure. Once at least one level is bound to a floor,
+ * the unlinked bootstrap default is a data-loss landmine and is filtered OUT here
+ * via the `selectVisibleLevels` SSoT — so it is neither shown nor (via the same
+ * predicate in `useLevelsFirestoreSync`) auto-elected as active.
  *
  * `Level` itself carries no kind/elevation — those live on the linked building
  * `Floor` (ProjectHierarchyContext, ADR-461). Callers pass a resolver that maps a
@@ -26,6 +32,7 @@
 
 import type { Level } from './config';
 import type { FloorKind } from '@/utils/floor-naming';
+import { selectVisibleLevels } from './level-visibility';
 
 /** Minimal linked-floor classification needed to place a level in the panel. */
 export interface LevelFloorClass {
@@ -73,7 +80,10 @@ export function orderLevelsForPanel(
   levels: readonly Level[],
   resolveFloor: LevelFloorResolver,
 ): Level[] {
-  return [...levels]
+  // ADR-420 — drop the unlinked bootstrap default once building structure exists
+  // (it would silently lose any geometry drawn on it). SSoT predicate so the panel
+  // and the active-level election stay in lock-step.
+  return selectVisibleLevels(levels)
     .map((level, index) => ({ level, index, cls: resolveFloor(level) }))
     .sort((a, b) => {
       const tierA = tierFor(a.level, a.cls);

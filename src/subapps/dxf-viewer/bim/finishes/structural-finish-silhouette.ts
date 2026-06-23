@@ -22,6 +22,9 @@
 
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
+// ADR-049 SSoT — component-wise grid rounding (reuse· ΟΧΙ re-implement). Welds float-noise
+// drift ώστε flush structural↔structural παρειές να συμπίπτουν ακριβώς πριν το boolean union.
+import { snapToGrid } from '../../systems/grid/grid-snap';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './structural-finish-resolver';
 import type { StructuralFinishSpec, StructuralFinishFaces, FinishFaceSegment } from './structural-finish-types';
@@ -77,6 +80,14 @@ const EPS = 1e-6;
 const MM_TO_M = 0.001;
 /** Ελάχιστο ύψος ζώνης (mm) — φιλτράρει εκφυλισμένες z-breakpoints. */
 const MIN_BAND_MM = 1e-3;
+/**
+ * ADR-449 — weld tolerance (mm) για το flush structural↔structural union. Δύο μέλη που
+ * κουμπώνουν παρειά-με-παρειά «από κάναβο» έχουν float-noise drift (~1e-12mm) στις κοινές
+ * παρειές → η `polygon-clipping` δεν τα συγχωνεύει (sub-ULP) → ορατή ραφή σοβά στη θαμμένη
+ * διεπαφή. Snap σε grid 1μm πριν το union ⇒ ακριβής σύμπτωση ⇒ ένα ενιαίο outline. 1μm:
+ * «κολλάει» float drift + ό,τι είναι πρακτικά flush, ΠΟΤΕ πραγματικό κενό (≥ δέκατα mm).
+ */
+const WELD_TOL_MM = 1e-3;
 /** Ανοχή (mm) κατακόρυφης επικάλυψης τοίχου↔ζώνης (mirror `WALL_BEAM_BAND_TOL_MM`). */
 const WALL_BAND_TOL_MM = 1;
 
@@ -116,9 +127,19 @@ function outerRingToPts(ring: readonly Pair[]): Pt2[] {
   return pts;
 }
 
-/** Ένωση των footprints σε ΕΝΑ `MultiPolygon` (κενό όταν δεν υπάρχουν). */
-function unionFootprints(footprints: readonly (readonly Pt2[])[]): MultiPolygon {
-  const polys = footprints.filter((fp) => fp.length >= 3).map(footprintToPolygon);
+/**
+ * Ένωση των footprints σε ΕΝΑ `MultiPolygon` (κενό όταν δεν υπάρχουν). Κάθε κορυφή
+ * **snap-άρεται σε grid `weldQuantum`** (canvas units) μέσω του ADR-049 `snapToGrid` SSoT
+ * πριν το union, ώστε flush structural↔structural διεπαφές (float-noise drift ~1e-12) να
+ * συμπίπτουν ακριβώς και να συγχωνεύονται σε ΕΝΑ outline — αλλιώς η `polygon-clipping`
+ * (sub-ULP) τα αφήνει χωριστά και ο σοβάς εμφανίζεται στη θαμμένη ραφή. `weldQuantum<=0` → no-op.
+ */
+function unionFootprints(footprints: readonly (readonly Pt2[])[], weldQuantum: number): MultiPolygon {
+  const weld = (fp: readonly Pt2[]): readonly Pt2[] =>
+    weldQuantum > 0 ? fp.map((p) => snapToGrid(p, weldQuantum)) : fp;
+  const polys = footprints
+    .filter((fp) => fp.length >= 3)
+    .map((fp) => footprintToPolygon(weld(fp)));
   if (polys.length === 0) return [];
   if (polys.length === 1) return [polys[0]]; // ένα footprint → MultiPolygon χωρίς clipping
   return safeUnion(polys[0], ...polys.slice(1));
@@ -169,7 +190,10 @@ function resolveBandFaces(
   const merged: FinishFaceSegment[] = [];
   let interiorAreaM2 = 0;
   let exteriorAreaM2 = 0;
-  for (const poly of unionFootprints(present.map((m) => m.footprint))) {
+  // ADR-449 — weld quantum σε canvas units: `unitToMeters = (1/s)·MM_TO_M` ⇒ `s = MM_TO_M/unitToMeters`
+  // (canvas ανά mm) ⇒ `quantum = WELD_TOL_MM · s`. Έτσι το snap είναι sub-micron σε φυσικό μήκος.
+  const weldQuantum = WELD_TOL_MM * (MM_TO_M / Math.max(input.unitToMeters, 1e-12));
+  for (const poly of unionFootprints(present.map((m) => m.footprint), weldQuantum)) {
     // ADR-449 Slice 7 — ΟΛΑ τα rings: poly[0] = εξωτερικό περίγραμμα (solid)· poly[1..] =
     // τρύπες (όψεις δωματίου ενός δομικού πλαισίου) → σοβάς ΚΑΙ στις εσωτερικές πλευρές
     // (αλλιώς frame δοκαριών/κολώνων = σοβάς μόνο απ' έξω). `holeRing` → φορά προς το δωμάτιο.

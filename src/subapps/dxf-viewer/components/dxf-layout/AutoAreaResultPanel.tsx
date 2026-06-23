@@ -19,13 +19,13 @@ import {
 // HELPERS
 // ============================================================================
 
+/** Πάντα m² (αρχιτεκτονικές κατόψεις — όχι εκτάρια). Τιμή ήδη σε m² από την πηγή. */
 function formatArea(area: number): string {
-  if (area >= 10_000) return `${(area / 10_000).toFixed(4)} ha (${area.toFixed(1)} m²)`;
   return `${area.toFixed(2)} m²`;
 }
 
+/** Πάντα m (όχι km). Τιμή ήδη σε m από την πηγή. */
 function formatPerimeter(p: number): string {
-  if (p >= 1000) return `${(p / 1000).toFixed(3)} km`;
   return `${p.toFixed(2)} m`;
 }
 
