@@ -20,6 +20,8 @@ export const HATCH_RIBBON_KEYS = {
     patternName: 'hatch.params.patternName',
     /** Πάχος γραμμών (AutoCAD LWT) — 'ByLayer' ή mm ως string (ADR-507 Φ2). */
     lineweight: 'hatch.params.lineweight',
+    /** Μέθοδος ορίου (ADR-507 Φ3): 'pick-point' (Τρόπος Β) | 'boundary' (Τρόπος Α). */
+    method: 'hatch.params.method',
     /** Τύπος gradient (DXF 470) — μόνο fillType='gradient' (ADR-507 Φ5). */
     gradientType: 'hatch.params.gradientType',
     /** Πρώτο χρώμα gradient (hex). */
@@ -38,6 +40,8 @@ export const HATCH_RIBBON_KEYS = {
     gradientAngle: 'hatch.params.gradientAngle',
     /** Μετατόπιση gradient 0..1 (DXF 461· 0=centered) — μόνο fillType='gradient'. */
     gradientShift: 'hatch.params.gradientShift',
+    /** Gap tolerance (AutoCAD HPGAPTOL, world units) — pick-point (ADR-507 Φ3/§5β.1). */
+    gapTolerance: 'hatch.params.gapTolerance',
   },
   toggles: {
     /** Διπλή (σταυρωτή) γραμμοσκίαση. */
@@ -66,7 +70,8 @@ export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.lineSpacing
   | typeof HATCH_RIBBON_KEYS.params.patternScale
   | typeof HATCH_RIBBON_KEYS.params.gradientAngle
-  | typeof HATCH_RIBBON_KEYS.params.gradientShift;
+  | typeof HATCH_RIBBON_KEYS.params.gradientShift
+  | typeof HATCH_RIBBON_KEYS.params.gapTolerance;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
@@ -74,6 +79,7 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle
   | typeof HATCH_RIBBON_KEYS.stringParams.patternName
   | typeof HATCH_RIBBON_KEYS.stringParams.lineweight
+  | typeof HATCH_RIBBON_KEYS.stringParams.method
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientType
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor1
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor2;
@@ -98,6 +104,7 @@ const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.params.patternScale,
   HATCH_RIBBON_KEYS.params.gradientAngle,
   HATCH_RIBBON_KEYS.params.gradientShift,
+  HATCH_RIBBON_KEYS.params.gapTolerance,
 ]);
 const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
@@ -105,6 +112,7 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
   HATCH_RIBBON_KEYS.stringParams.patternName,
   HATCH_RIBBON_KEYS.stringParams.lineweight,
+  HATCH_RIBBON_KEYS.stringParams.method,
   HATCH_RIBBON_KEYS.stringParams.gradientType,
   HATCH_RIBBON_KEYS.stringParams.gradientColor1,
   HATCH_RIBBON_KEYS.stringParams.gradientColor2,

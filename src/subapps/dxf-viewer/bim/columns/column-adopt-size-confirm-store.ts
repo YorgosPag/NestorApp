@@ -18,18 +18,24 @@
  */
 
 /** Απόκριση χρήστη: υιοθέτηση μεγέθους / default διατομή / ακύρωση. */
+import type { ColumnSizeTier } from '../validators/column-validator';
+
 export type ColumnAdoptSizeAction = 'adopt' | 'default' | 'cancel';
 
 export interface ColumnAdoptSizeState {
   readonly open: boolean;
-  /** Πλάτος του ορθογωνίου (mm). */
+  /** Πλάτος του ορθογωνίου (mm, μεγάλη πλευρά). */
   readonly widthMm: number;
-  /** Βάθος του ορθογωνίου (mm). */
+  /** Βάθος του ορθογωνίου (mm, μικρή πλευρά). */
   readonly depthMm: number;
   /** Πλάτος της default διατομής (mm) — για το «ή να κρατήσω το X×Y;». */
   readonly defaultWidthMm: number;
   /** Βάθος της default διατομής (mm). */
   readonly defaultDepthMm: number;
+  /** EC2 §9.6.1: αναλογία > 4 → τοιχίο (shear-wall)· αλλιώς κολόνα. Οδηγεί τη γλώσσα του dialog. */
+  readonly isShearWall: boolean;
+  /** §3.17 — κλιμακωτό μέγεθος: 'block' (μη κατασκευάσιμο → χωρίς δημιουργία) / 'warning' / 'ok'. */
+  readonly tier: ColumnSizeTier;
 }
 
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -40,6 +46,8 @@ const CLOSED: ColumnAdoptSizeState = {
   depthMm: 0,
   defaultWidthMm: 0,
   defaultDepthMm: 0,
+  isShearWall: false,
+  tier: 'ok',
 };
 
 let _state: ColumnAdoptSizeState = CLOSED;
@@ -61,6 +69,8 @@ export function requestColumnAdoptSizeConfirm(args: {
   depthMm: number;
   defaultWidthMm: number;
   defaultDepthMm: number;
+  isShearWall: boolean;
+  tier: ColumnSizeTier;
 }): Promise<ColumnAdoptSizeAction> {
   return new Promise<ColumnAdoptSizeAction>((resolve) => {
     _pendingResolve = resolve;
@@ -70,6 +80,8 @@ export function requestColumnAdoptSizeConfirm(args: {
       depthMm: args.depthMm,
       defaultWidthMm: args.defaultWidthMm,
       defaultDepthMm: args.defaultDepthMm,
+      isShearWall: args.isShearWall,
+      tier: args.tier,
     };
     _notify();
   });

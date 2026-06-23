@@ -6,6 +6,9 @@ import type { Overlay } from '../../overlays/types';
 import type { LevelManagerLike } from './canvas-click-types';
 import { getAutoAreaHitResult } from '../../systems/auto-area/auto-area-hit';
 import { setAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
+// ADR-507 Φ3 — το live ghost της pick-point γραμμοσκίασης reuse-άρει το ίδιο SSoT.
+import { getHatchPickMode } from '../../bim/hatch/hatch-pick-mode-store';
+import { getHatchDrawDefaults } from '../../bim/hatch/hatch-draw-defaults-store';
 
 export interface UseAutoAreaMouseMoveParams {
   handleMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
@@ -37,7 +40,12 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
     (worldPos: Point2D, screenPos: Point2D) => {
       handleRef.current(worldPos, screenPos);
 
-      if (toolRef.current !== 'auto-measure-area') return;
+      // Το ghost preview ανάβει σε δύο εργαλεία που μοιράζονται το ίδιο SSoT:
+      //   - 'auto-measure-area' (μέτρηση εμβαδού)
+      //   - 'hatch' σε pick-point mode (ADR-507 Φ3, Τρόπος Β).
+      const tool = toolRef.current;
+      const isHatchPick = tool === 'hatch' && getHatchPickMode() === 'pick-point';
+      if (tool !== 'auto-measure-area' && !isHatchPick) return;
 
       const now = performance.now();
       if (now - throttleRef.current < 50) return;
@@ -45,11 +53,14 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
 
       const lm = lmRef.current;
       const scene = lm.currentLevelId ? lm.getLevelScene(lm.currentLevelId) : null;
+      // Hatch pick-point σέβεται το HPGAPTOL (preview ≡ commit)· auto-measure = 0.
+      const gapTolerance = isHatchPick ? getHatchDrawDefaults().gapTolerance : 0;
       const result = getAutoAreaHitResult(
         worldPos,
         scene?.entities ?? [],
         overlaysRef.current,
         scaleRef.current,
+        gapTolerance,
       );
       setAutoAreaPreview(result ? { polygon: result.polygon, holes: result.holes } : null);
     },

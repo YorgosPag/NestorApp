@@ -4,6 +4,7 @@
 
 import {
   buildHatchEntityFromBoundary,
+  buildHatchEntityFromRegion,
   computeHatchAreaMm2,
   buildHatchPostCreateCommands,
   HATCH_MIN_BOUNDARY_POINTS,
@@ -106,6 +107,52 @@ describe('buildHatchEntityFromBoundary', () => {
     setHatchDrawDefaults({ fillType: 'solid' });
     const h = buildHatchEntityFromBoundary(SQUARE, 'e4', 'lyr')!;
     expect(h.gradient).toBeUndefined();
+  });
+});
+
+describe('buildHatchEntityFromRegion (ADR-507 Φ3 — pick-point)', () => {
+  beforeEach(() => resetHatchDrawDefaults());
+
+  const HOLE: Point2D[] = [
+    { x: 250, y: 250 },
+    { x: 750, y: 250 },
+    { x: 750, y: 750 },
+    { x: 250, y: 750 },
+  ];
+
+  it('returns null when the outer ring is below the minimum points', () => {
+    expect(buildHatchEntityFromRegion(SQUARE.slice(0, 2), [], 'e1', 'lyr')).toBeNull();
+  });
+
+  it('builds a single-ring hatch when there are no holes', () => {
+    const h = buildHatchEntityFromRegion(SQUARE, [], 'e1', 'lyr')!;
+    expect(h.type).toBe('hatch');
+    expect(h.boundaryPaths).toHaveLength(1);
+    expect(h.boundaryPaths[0]).toHaveLength(4);
+  });
+
+  it('keeps islands as inner rings (outer + holes)', () => {
+    const h = buildHatchEntityFromRegion(SQUARE, [HOLE], 'e2', 'lyr')!;
+    expect(h.boundaryPaths).toHaveLength(2);
+    expect(computeHatchAreaMm2(h)).toBe(1_000_000 - 250_000);
+  });
+
+  it('drops degenerate rings (<3 vertices) — outer survives, bad hole removed', () => {
+    const h = buildHatchEntityFromRegion(SQUARE, [HOLE.slice(0, 2)], 'e3', 'lyr')!;
+    expect(h.boundaryPaths).toHaveLength(1);
+  });
+
+  it('clones the input points (no aliasing of caller arrays)', () => {
+    const outer = SQUARE.map((p) => ({ ...p }));
+    const h = buildHatchEntityFromRegion(outer, [], 'e4', 'lyr')!;
+    expect(h.boundaryPaths[0][0]).not.toBe(outer[0]);
+    expect(h.boundaryPaths[0][0]).toEqual(outer[0]);
+  });
+
+  it('persists gapTolerance only when > 0', () => {
+    expect(buildHatchEntityFromRegion(SQUARE, [], 'e5', 'lyr')!.gapTolerance).toBeUndefined();
+    setHatchDrawDefaults({ gapTolerance: 3 });
+    expect(buildHatchEntityFromRegion(SQUARE, [], 'e6', 'lyr')!.gapTolerance).toBe(3);
   });
 });
 

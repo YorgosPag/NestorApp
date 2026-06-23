@@ -18,6 +18,8 @@ import {
   registerLinetype,
   __resetLinetypeRegistryForTesting,
 } from '../../../../stores/LinetypeRegistry';
+import { toDisplay, fromDisplay } from '../../../../config/units';
+import { displayUnitState } from '../../../../config/display-unit-state';
 
 // ── Mock UpdateEntityCommand to capture selected-entity writes ─────────────────
 jest.mock(
@@ -73,6 +75,18 @@ const lineEntity = {
 };
 
 const wallEntity = { id: 'wall-1', type: 'wall' as const, layerId: 'lvl-1', visible: true };
+
+// 3 vertices, open → 2 segments. Width arrays index-aligned (ADR-510 Φ3d).
+const polylineEntity = {
+  id: 'pl-1',
+  type: 'polyline' as const,
+  layerId: 'lvl-1',
+  visible: true,
+  vertices: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
+  closed: false,
+  startWidths: [100, 100],
+  endWidths: [100, 100],
+};
 
 function makeLevelManager(entity: unknown | null) {
   const scene = entity ? { entities: [entity] } : { entities: [] };
@@ -231,6 +245,57 @@ describe('useRibbonLineToolBridge — no selection → QuickStyle draw-defaults'
   it('linetype scale change writes to QuickStyle, not an entity command', () => {
     render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, '2.5');
     expect(mockSetLtscale).toHaveBeenCalledWith(2.5);
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POLYLINE WIDTH (ADR-510 Φ3d)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonLineToolBridge — polyline width (Φ3d)', () => {
+  const unit = displayUnitState.getUnit();
+
+  function renderPolyline() {
+    return renderHook(() =>
+      useRibbonLineToolBridge({
+        levelManager: makeLevelManager(polylineEntity),
+        universalSelection: makeSelection('pl-1'),
+      }),
+    ).result;
+  }
+
+  it('reads the uniform width from the selected polyline (in display unit)', () => {
+    const expected = String(toDisplay(100, unit).value);
+    expect(renderPolyline().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.width)?.value).toBe(expected);
+  });
+
+  it('width change writes a uniform per-segment patch (display → mm) for both sides', () => {
+    renderPolyline().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.width, '0.2');
+    const mm = fromDisplay(0.2, unit);
+    expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({
+      startWidths: [mm, mm], // 2 segments
+      endWidths: [mm, mm],
+    });
+  });
+
+  it('width 0 clears to zero-width segments (hairline)', () => {
+    renderPolyline().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.width, '0');
+    expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({
+      startWidths: [0, 0],
+      endWidths: [0, 0],
+    });
+  });
+
+  it('width is 0 and writes nothing for a non-polyline selection', () => {
+    const result = renderHook(() =>
+      useRibbonLineToolBridge({
+        levelManager: makeLevelManager(lineEntity),
+        universalSelection: makeSelection('line-1'),
+      }),
+    ).result;
+    expect(result.current.getComboboxState(LINE_TOOL_RIBBON_KEYS.width)?.value).toBe('0');
+    result.current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.width, '0.3');
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 });

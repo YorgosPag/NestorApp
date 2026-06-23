@@ -1176,6 +1176,13 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   margin-top: 4px;
 }
 
+/* ADR-398 §3.17 — κάθετη στοίβα κουμπιών (full-width) για μακριά labels (π.χ. «Ναι, τοιχίο 3,100 × 0,250 m»)
+   που ξεχείλιζαν από την κάρτα 360px σε row layout. Πρωτεύον κουμπί πρώτο (πάνω). */
+.dxf-modal-actions-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .dxf-modal-button {
   padding: 7px 16px;
   border-radius: 5px;
@@ -1214,6 +1221,55 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   border-color: #1d4ed8;
 }
 
+/* ADR-398 §3.17 — warning variant: εργαλείο «Κολόνα» αλλά το στοιχείο είναι τοιχίο (EC2 §9.6.1). */
+.dxf-modal-card-warning {
+  border-top: 4px solid #f59e0b;
+}
+
+.dxf-modal-title-warning {
+  color: #b45309;
+}
+
+.dxf-modal-note-warning {
+  font-size: 13px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.dxf-modal-button-warning {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.dxf-modal-button-warning:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+/* ADR-398 §3.17 — danger variant: μη κατασκευάσιμη διατομή (κάτω από EC8/constructible floor) → block. */
+.dxf-modal-card-danger {
+  border-top: 4px solid #dc2626;
+}
+
+.dxf-modal-title-danger {
+  color: #b91c1c;
+}
+
+.dxf-modal-note-danger {
+  font-size: 13px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
 .dark .dxf-modal-card,
 [data-theme="dark"] .dxf-modal-card {
   background: #1e293b;
@@ -1228,6 +1284,30 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 .dark .dxf-modal-body,
 [data-theme="dark"] .dxf-modal-body {
   color: #94a3b8;
+}
+
+.dark .dxf-modal-title-warning,
+[data-theme="dark"] .dxf-modal-title-warning {
+  color: #fbbf24;
+}
+
+.dark .dxf-modal-note-warning,
+[data-theme="dark"] .dxf-modal-note-warning {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.dark .dxf-modal-title-danger,
+[data-theme="dark"] .dxf-modal-title-danger {
+  color: #f87171;
+}
+
+.dark .dxf-modal-note-danger,
+[data-theme="dark"] .dxf-modal-note-danger {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.4);
 }
 
 .dark .dxf-modal-button,

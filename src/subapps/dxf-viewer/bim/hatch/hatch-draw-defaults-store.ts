@@ -42,6 +42,11 @@ export interface HatchDrawDefaults {
   readonly patternAngle: number;
   /** Πάχος γραμμών (AutoCAD LWT). -2 = ByLayer (default → renderer fallback). */
   readonly lineweightMm: LineweightMm;
+  /**
+   * Gap tolerance (AutoCAD HPGAPTOL, σε DXF/world units) για pick-point (Τρόπος Β):
+   * γεφυρώνει μικρά κενά στο όριο κατά την ανίχνευση. 0 = απενεργοποιημένο (ADR-507 §5β.1).
+   */
+  readonly gapTolerance: number;
   /** Τύπος gradient (DXF 470) — μόνο fillType='gradient'. */
   readonly gradientType: HatchGradientType;
   /** Πρώτο χρώμα gradient (hex). */
@@ -68,6 +73,8 @@ const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   patternScale: 1,
   patternAngle: 0,
   lineweightMm: LINEWEIGHT_SPECIAL.BYLAYER,
+  // Gap tolerance off by default (AutoCAD HPGAPTOL=0) — pick-point απαιτεί κλειστό όριο.
+  gapTolerance: 0,
   // Gradient defaults (ADR-507 Φ5 UI) — μπλε → λευκό, γραμμικό· SSoT στο hatch-gradient-build.
   ...DEFAULT_GRADIENT_DEFAULTS,
 };

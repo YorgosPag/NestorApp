@@ -207,8 +207,13 @@
   },
   "columnAdoptSize": {
     "title": "Adopt rectangle size",
-    "message": "The first click landed inside a {adopt} rectangle in the drawing. Create a column at this size, or keep the default {default}?",
-    "adoptButton": "Yes, {size}",
+    "elementColumn": "column",
+    "elementWall": "shear wall",
+    "blockTitle": "Non-constructible section",
+    "blockNote": "🚫 Section {size}: the short side is below the minimum constructible size (column 120mm / shear wall 150mm per EC8) — cannot be created. Draw a larger section or keep the default.",
+    "wallWarning": "⚠️ You selected the Column tool, but the side ratio is > 4 — per EC2 §9.6.1 this is a shear wall and will be created as one.",
+    "message": "The first click landed inside a {adopt} rectangle in the drawing. Create a {element} at this size, or keep the default {default}?",
+    "adoptButton": "Yes, {element} {size}",
     "defaultButton": "No, default {size}",
     "cancel": "Cancel"
   },
@@ -1317,6 +1322,7 @@
       "wallCoveringFinish": "Finish",
       "wallCoveringGeometry": "Geometry",
       "wallCoveringActions": "Actions",
+      "hatchMethod": "Method",
       "hatchFill": "Fill",
       "hatchPattern": "Pattern",
       "hatchGradient": "Gradient",
@@ -3297,6 +3303,10 @@
         "deleteConfirm": "Delete wall finish? This action cannot be undone."
       },
       "hatchEditor": {
+        "method": "Boundary method",
+        "methodPickPoint": "Pick point",
+        "methodBoundary": "Draw boundary",
+        "gapTolerance": "Gap tolerance",
         "fillType": "Fill type",
         "fillTypeSolid": "Solid",
         "fillTypeUserDefined": "Lines",
@@ -3916,7 +3926,8 @@
         "lineweight": "Lineweight",
         "linetype": "Linetype",
         "color": "Color",
-        "linetypeScale": "Scale"
+        "linetypeScale": "Scale",
+        "width": "Width"
       },
       "thermalEnvelope": {
         "label": "Apply Thermal Envelope",
@@ -4321,6 +4332,21 @@
       }
     }
   },
+  "wall": {
+    "validation": {
+      "hardErrors": {
+        "lengthTooShort": "The wall is too short",
+        "thicknessNonPositive": "Thickness must be greater than 0",
+        "thicknessExceedsMax": "Thickness exceeds the maximum allowed",
+        "heightNonPositive": "Height must be greater than 0",
+        "dnaThicknessMismatch": "The sum of the layers does not match the wall thickness"
+      },
+      "codeViolations": {
+        "thicknessBelowMin": "Thickness is below the minimum allowed",
+        "exteriorBelowNokMin": "Exterior load-bearing wall below the minimum thickness (NOK code)"
+      }
+    }
+  },
   "slabOpening": {
     "validation": {
       "codeViolations": {
@@ -4352,7 +4378,9 @@
         "invalidIShapeWebOverflow": "Web exceeds flange width",
         "invalidUshapeLeg": "Invalid U-shape leg thickness — exceeds width",
         "invalidUshapeBase": "Invalid U-shape base thickness — exceeds depth",
-        "invalidCompositePolygon": "Invalid composite section polygon — needs at least 3 vertices with non-zero area"
+        "invalidCompositePolygon": "Invalid composite section polygon — needs at least 3 vertices with non-zero area",
+        "dimensionNotConstructible": "Section below the minimum constructible size (120mm) — not a buildable RC structural member (no room for cover + reinforcement)",
+        "shearWallThicknessNotConstructible": "Shear wall thickness below the Eurocode 8 minimum (150mm) — non-compliant/non-constructible wall"
       },
       "codeViolations": {
         "widthTooSmall": "Width below Eurocode minimum (250mm)",

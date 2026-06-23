@@ -46,8 +46,9 @@ export function getAutoAreaHitPolygon(
   entities: ReadonlyArray<Entity>,
   overlays: ReadonlyArray<Overlay>,
   scale: number,
+  gapTolerance = 0,
 ): Point2D[] | null {
-  const result = getAutoAreaHitResult(worldPoint, entities, overlays, scale);
+  const result = getAutoAreaHitResult(worldPoint, entities, overlays, scale, gapTolerance);
   return result?.polygon ?? null;
 }
 
@@ -60,11 +61,12 @@ export function getAutoAreaHitResult(
   entities: ReadonlyArray<Entity>,
   overlays: ReadonlyArray<Overlay>,
   scale: number,
+  gapTolerance = 0,
 ): { polygon: Point2D[]; holes: Point2D[][] } | null {
-  const candidates = collectAreaCandidates(worldPoint, entities, overlays, scale);
+  const candidates = collectAreaCandidates(worldPoint, entities, overlays, scale, gapTolerance);
   if (candidates.length === 0) return null;
   const best = candidates.reduce((a, b) => a.area < b.area ? a : b);
-  const holes = collectHoleAreas(best.polygon, best.area, entities, overlays, scale);
+  const holes = collectHoleAreas(best.polygon, best.area, entities, overlays, scale, gapTolerance);
   return { polygon: best.polygon, holes: holes.map(h => h.polygon) };
 }
 
@@ -76,9 +78,10 @@ export function collectAreaCandidates(
   entities: ReadonlyArray<Entity>,
   overlays: ReadonlyArray<Overlay>,
   scale: number,
+  gapTolerance = 0,
 ): AreaCandidate[] {
   const out: AreaCandidate[] = [];
-  collectEntityCandidates(worldPoint, entities, scale, out);
+  collectEntityCandidates(worldPoint, entities, scale, gapTolerance, out);
 
   for (const overlay of overlays) {
     if (!overlay.polygon || overlay.polygon.length < 3) continue;
@@ -101,13 +104,23 @@ export function collectAreaCandidates(
 // CACHE — closed faces depend only on entities ref + scale, not mouse position
 // ============================================================================
 
-// WeakMap: entities array ref → (rounded scale → faces)
+// WeakMap: entities array ref → (`${roundedScale}|${gapTolerance}` → faces)
 // WeakMap ensures GC collects entries when the entities array is replaced.
-const _closedFacesCache = new WeakMap<ReadonlyArray<Entity>, Map<number, Point2D[][]>>();
+const _closedFacesCache = new WeakMap<ReadonlyArray<Entity>, Map<string, Point2D[][]>>();
 
-function getCachedClosedFaces(entities: ReadonlyArray<Entity>, scale: number): Point2D[][] {
+/**
+ * @param gapTolerance Σε world units (AutoCAD HPGAPTOL). 0 = κλασικό snap tolerance.
+ *   Όταν >0, γεφυρώνει μεγαλύτερα κενά μεταξύ ακμών ώστε να κλείσει το όριο
+ *   (pick-point γραμμοσκίαση σε μη-τέλεια κλειστά σχήματα, ADR-507 §5β.1).
+ */
+function getCachedClosedFaces(
+  entities: ReadonlyArray<Entity>,
+  scale: number,
+  gapTolerance = 0,
+): Point2D[][] {
   // Round to 3 decimal places — avoids cache misses on sub-pixel float drift
   const roundedScale = Math.round(scale * 1000) / 1000;
+  const key = `${roundedScale}|${gapTolerance}`;
 
   let scaleMap = _closedFacesCache.get(entities);
   if (!scaleMap) {
@@ -115,7 +128,7 @@ function getCachedClosedFaces(entities: ReadonlyArray<Entity>, scale: number): P
     _closedFacesCache.set(entities, scaleMap);
   }
 
-  const cached = scaleMap.get(roundedScale);
+  const cached = scaleMap.get(key);
   if (cached) return cached;
 
   const linePairs: [Point2D, Point2D][] = [];
@@ -123,9 +136,11 @@ function getCachedClosedFaces(entities: ReadonlyArray<Entity>, scale: number): P
     if (isLineEntity(entity)) linePairs.push([entity.start, entity.end]);
   }
 
-  const snapTol = TOLERANCE_CONFIG.SNAP_DEFAULT / scale;
+  // Gap tolerance (world units) διευρύνει το βασικό snap tolerance ώστε να κλείνουν
+  // μικρά ανοίγματα· default 0 → ταυτόσημη συμπεριφορά με πριν (μηδέν regression).
+  const snapTol = Math.max(TOLERANCE_CONFIG.SNAP_DEFAULT / scale, gapTolerance);
   const faces = findClosedPolygonsFromLines(linePairs, snapTol);
-  scaleMap.set(roundedScale, faces);
+  scaleMap.set(key, faces);
   return faces;
 }
 
@@ -137,6 +152,7 @@ function collectEntityCandidates(
   worldPoint: Point2D,
   entities: ReadonlyArray<Entity>,
   scale: number,
+  gapTolerance: number,
   out: AreaCandidate[],
 ): void {
   for (const entity of entities) {
@@ -178,7 +194,7 @@ function collectEntityCandidates(
     }
   }
 
-  for (const face of getCachedClosedFaces(entities, scale)) {
+  for (const face of getCachedClosedFaces(entities, scale, gapTolerance)) {
     if (isPointInPolygon(worldPoint, face)) {
       out.push({ area: calculatePolygonArea(face), perimeter: calculatePolygonPerimeter(face), source: 'dxf-polyline', polygon: face });
     }
@@ -288,6 +304,7 @@ function collectAllClosedPolygons(
   entities: ReadonlyArray<Entity>,
   overlays: ReadonlyArray<Overlay>,
   scale: number,
+  gapTolerance: number,
   out: AreaCandidate[],
 ): void {
   for (const entity of entities) {
@@ -321,7 +338,7 @@ function collectAllClosedPolygons(
     out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'overlay', layerName: overlay.label ?? undefined, polygon: verts });
   }
 
-  for (const face of getCachedClosedFaces(entities, scale)) {
+  for (const face of getCachedClosedFaces(entities, scale, gapTolerance)) {
     out.push({ area: calculatePolygonArea(face), perimeter: calculatePolygonPerimeter(face), source: 'dxf-polyline', polygon: face });
   }
 }
@@ -337,9 +354,10 @@ export function collectHoleAreas(
   entities: ReadonlyArray<Entity>,
   overlays: ReadonlyArray<Overlay>,
   scale: number,
+  gapTolerance = 0,
 ): AreaCandidate[] {
   const all: AreaCandidate[] = [];
-  collectAllClosedPolygons(entities, overlays, scale, all);
+  collectAllClosedPolygons(entities, overlays, scale, gapTolerance, all);
 
   // Relative threshold: excludes the outer polygon itself (same area → same float)
   // and avoids the absolute-0.001 bug for small-scale drawings

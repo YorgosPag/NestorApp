@@ -16,7 +16,8 @@
 > (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
 > rendering/hit-test· **Φ3c** 🟢 multifunctional grips (Convert↔Arc/Line + Add/Remove Vertex + live bulge-drag· NEW
 > `PolylineGripKind`+`SetBulgeCommand`+`polyline-grip-ops`+`grip-polyline-bulge-commit`· unified path
-> `computeDxfEntityGrips`, ΟΧΙ adapter ext· 47 jest)· **ΕΚΚΡΕΜΟΥΝ** Φ3d μεταβλητό πλάτος, Φ3e endpoint Lengthen, Φ9 DXF 42/40/41.
+> `computeDxfEntityGrips`, ΟΧΙ adapter ext· 47 jest)· **Φ3d** 🟢 μεταβλητό/σταθερό πλάτος (tapered render band
+> + contextual «Πλάτος» πεδίο, UNCOMMITTED 2026-06-23)· **ΕΚΚΡΕΜΟΥΝ** Φ3e endpoint Lengthen, Φ9 DXF 42/40/41.
 > **Date:** 2026-06-20
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -708,6 +709,32 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `commitDxfGripDragModeAware` branch) ΑΘΙΚΤΟ. ΕΝΑ μενού πλέον (hover), παράλληλο με line→Lengthen / arc→Radius.
   46 jest GREEN (5 suites). **ΜΑΘΗΜΑ: πριν προσθέσεις action σε μενού grip, grep ΚΑΙ τα δύο menu systems
   (hover `grip-menu-resolver` + right-click `grip-context-menu-resolver`).**
+- **2026-06-23** — **Φ3d (UNCOMMITTED) — Μεταβλητό/σταθερό πλάτος πολυγραμμής (tapered band render + UI, FULL SSoT).**
+  PHASE-1 RECOGNITION (N.0.1, grep audit) επιβεβαίωσε: (1) το entity model έχει ΗΔΗ `startWidths?`/`endWidths?` (DXF
+  40/41) + `constantWidth?` (Φ3 Επιλογή A)· (2) οι **δύο** scene→render converters (`dxf-scene-entity-converter` +
+  `dxf-renderer-entity-model`) περνούν ΗΔΗ `startWidths`/`endWidths` (από Φ3c)· (3) το υπάρχον `geometry-offset-utils.
+  offsetPolyline` (ADR-358) είναι **constant-distance** → ΔΕΝ καλύπτει variable-width taper (δικαιολογεί NEW module,
+  μηδέν διπλότυπο). **Υλοποίηση (SSoT, zero-regression):**
+  • **NEW** `rendering/entities/shared/geometry-polyline-width.ts` (pure SSoT): `hasAnyWidth` + `resolveSegmentWidth`
+    (per-segment arrays > constantWidth > 0) + `buildSegmentWidthBand` (centerline tessellation **reuse `bulgeToPolyline`**
+    → per-point interpolated half-width → left/right ribbon polygon· straight=trapezoid, arc=curved band, end-width-0=arrow).
+    **FULL reuse vector/scalar SSoT** (Giorgio SSoT-audit catch — η 1η έκδοση είχε inline perpendicular/lerp/distance/offset):
+    `calculateDistance` + `getPerpendicularUnitVector` + `offsetPoint` (geometry-vector-utils) + `lerp` (geometry-utils)·
+    μηδέν inline vector math. (`offsetPolyline` ADR-358 = constant-distance → ΔΕΝ καλύπτει variable width: γνήσιο NEW band.)
+  • **MOD** `PolylineRenderer.renderPolylineGeometry`: ΝΕΟ width branch (ΠΡΙΝ τα bulge/normal paths) → `renderPolylineWidthBands`
+    fill-ει κάθε segment ΞΕΧΩΡΙΣΤΑ (AutoCAD per-segment model)· `fillStyle = strokeStyle` (band = γραμμή-χρώμα)· zero-width
+    segment → hairline stroke της (πιθανώς bulged) centerline. Width=model-space (κλιμακώνεται με zoom μέσω worldToScreen).
+  • **UI (dual-mode, mirror του «Βήμα» Φ2E #2):** NEW `LINE_TOOL_RIBBON_KEYS.width` (routing αυτόματο μέσω `isLineToolRibbonKey`)·
+    contextual «Στυλ Γραμμής» tab +editable-numeric «Πλάτος» (`numericInput {editable, min:0}`, presets m-baseline)·
+    `useRibbonLineToolBridge` dual-mode: selected **polyline** → `UpdateEntityCommand` με **uniform** `startWidths=endWidths`
+    (length=segments, closed-aware)· display-unit aware (**reuse `toDisplay`/`fromDisplay`** ADR-462, Q15)· non-polyline/
+    draw-default → read 0 / no-op (QuickStyle width = DEFER). i18n `ribbon.commands.quickStyle.width` el+en.
+  **ΕΚΤΟΣ scope Φ3d (ρητά):** DXF 40/41/43 round-trip = **Φ9**· `constantWidth` render-ready στο SSoT αλλά ΟΧΙ converter
+  passthrough ακόμη (DxfPolyline type δεν το φέρει — με Φ9)· per-vertex taper UI via grip = επόμενη μικρο-φάση (render
+  ΗΔΗ το υποστηρίζει). 13 NEW geometry jest + 4 NEW bridge jest (31 στα 2 suites) + 47 Φ3 regression GREEN. ⚠️ render
+  αρχείο (`PolylineRenderer`) → ADR-040 CHECK 6B/6D → stage ADR-040 + ADR-510. 🔴 tsc(N.17) + browser-verify (επίλεξε
+  polyline → «Πλάτος» 0→0.2 → γεμάτη ζώνη· start≠end imported → βέλος· arc segment → καμπύλη ζώνη) + commit.
+  **ΜΑΘΗΜΑ:** το width είναι model-space (όχι display-space όπως lineweight) → display-unit conversion στο UI, ΟΧΙ raw mm.
 - **2026-06-23** — **Φ3c BUG FIX #3 (διπλό μενού στο ΔΕΞΙ κλικ) — τελική απόφαση Giorgio: ΕΝΑ μενού στο right-click.**
   Μετά το #2 (ops στο hover) ο Giorgio είδε ΑΚΟΜΗ 2 μενού στο **δεξί κλικ** σε λαβή polyline: το hover menu (mine,
   Convert κ.λπ.) + το right-click menu. Εντολή: «ενοποίησέ τα σε ΕΝΑ· το δικό σου βάλ' το στο άλλο». **FIX (αντιστροφή

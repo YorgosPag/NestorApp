@@ -44,6 +44,7 @@ import type { BimValidation } from '../types/bim-base';
 import {
   MAX_SLENDERNESS_RATIO,
   MIN_COLUMN_DIMENSION_MM,
+  MIN_CONSTRUCTIBLE_COLUMN_MM,
   MIN_POLYGON_SIDES,
   MAX_POLYGON_SIDES,
   MIN_SHEAR_WALL_THICKNESS_MM,
@@ -67,6 +68,24 @@ export interface ColumnValidationResult {
   readonly codeViolations: readonly string[];
   /** `BimValidation` payload για direct assignment στο `ColumnEntity.validation`. */
   readonly bimValidation: BimValidation;
+}
+
+/**
+ * ADR-398 §3.17 — κλιμακωτή ταξινόμηση μεγέθους διατομής (κοινό SSoT για validator + adoption UI):
+ *   - 'block'   → μικρή πλευρά κάτω από το κατώφλι κατασκευασιμότητας (κολόνα 120mm / τοιχίο 150mm EC8)
+ *                 → ΔΕΝ δημιουργείται (hardError).
+ *   - 'warning' → κολόνα 120–249mm (κάτω από EC8 250mm αλλά κατασκευάσιμη) → επιτρεπτό με προειδοποίηση.
+ *   - 'ok'      → εντός κανονισμού.
+ * Τα τοιχία (≥150mm) είναι 'ok' (δεν έχουν warn-zone· κάτω από 150mm = block). Ίδια κατώφλια με τους
+ * field-level ελέγχους του validator (ίδιες σταθερές) → καμία απόκλιση μεταξύ block στο UI και στο commit.
+ */
+export type ColumnSizeTier = 'ok' | 'warning' | 'block';
+
+export function classifyColumnSectionSize(shortSideMm: number, isShearWall: boolean): ColumnSizeTier {
+  if (isShearWall) return shortSideMm < MIN_SHEAR_WALL_THICKNESS_MM ? 'block' : 'ok';
+  if (shortSideMm < MIN_CONSTRUCTIBLE_COLUMN_MM) return 'block';
+  if (shortSideMm < MIN_COLUMN_DIMENSION_MM) return 'warning';
+  return 'ok';
 }
 
 /**
@@ -105,6 +124,9 @@ function validateDimensions(
 ): void {
   if (params.width <= 0) {
     hardErrors.push('column.validation.hardErrors.nonPositiveWidth');
+  } else if (!isRelaxedWidth(params) && params.width < MIN_CONSTRUCTIBLE_COLUMN_MM) {
+    // ADR-398 §3.17 — κάτω από το κατώφλι κατασκευασιμότητας (120mm) → HARD BLOCK (αδύνατο μέλος Ο/Σ).
+    hardErrors.push('column.validation.hardErrors.dimensionNotConstructible');
   } else if (params.width < MIN_COLUMN_DIMENSION_MM && !isRelaxedWidth(params)) {
     codeViolations.push('column.validation.codeViolations.widthTooSmall');
   }
@@ -115,6 +137,8 @@ function validateDimensions(
 
   if (params.depth <= 0) {
     hardErrors.push('column.validation.hardErrors.nonPositiveDepth');
+  } else if (!isRelaxedDepth(params) && params.depth < MIN_CONSTRUCTIBLE_COLUMN_MM) {
+    hardErrors.push('column.validation.hardErrors.dimensionNotConstructible');
   } else if (params.depth < MIN_COLUMN_DIMENSION_MM && !isRelaxedDepth(params)) {
     codeViolations.push('column.validation.codeViolations.depthTooSmall');
   }
@@ -176,7 +200,7 @@ function validateVariantParams(
     validatePolygonParams(params, hardErrors);
   }
   if (params.kind === 'shear-wall') {
-    validateShearWallParams(params, codeViolations);
+    validateShearWallParams(params, hardErrors, codeViolations);
   }
   if (params.kind === 'I-shape') {
     validateIShapeParams(params, hardErrors);
@@ -199,13 +223,18 @@ function validatePolygonParams(params: ColumnParams, hardErrors: string[]): void
 
 /**
  * Eurocode 8 §5.4.2.4 thresholds for ductile RC shear walls.
- *   - thickness (= depth) ≥ 150mm.
+ *   - thickness (= depth) ≥ 150mm. ADR-398 §3.17 (Giorgio, αυστηρό): κάτω από το EC8 ελάχιστο 150mm
+ *     το τοιχίο ΔΕΝ είναι κατασκευάσιμο/συμμορφούμενο → **HARD BLOCK** (όχι απλό warning).
  *   - aspect ratio (length / thickness) ≥ 4 to qualify as a wall (below this
  *     it behaves as a regular column and the user should switch kind).
  */
-function validateShearWallParams(params: ColumnParams, codeViolations: string[]): void {
+function validateShearWallParams(
+  params: ColumnParams,
+  hardErrors: string[],
+  codeViolations: string[],
+): void {
   if (params.depth > 0 && params.depth < MIN_SHEAR_WALL_THICKNESS_MM) {
-    codeViolations.push('column.validation.codeViolations.shearWallThicknessTooSmall');
+    hardErrors.push('column.validation.hardErrors.shearWallThicknessNotConstructible');
   }
   if (params.width > 0 && params.depth > 0) {
     const aspect = params.width / params.depth;

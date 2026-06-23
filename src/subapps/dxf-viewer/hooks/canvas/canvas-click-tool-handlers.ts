@@ -15,11 +15,18 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { TOLERANCE_CONFIG, POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { setAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area/auto-area-hit';
+import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { dlog } from '../../debug';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import { testEntityHit } from './canvas-click-entity-hit';
+// ADR-507 Φ3 — pick-point (Τρόπος Β): ΕΝΑ κλικ μέσα σε περιοχή → HatchEntity.
+import { buildHatchFromPick } from '../../bim/hatch/hatch-pick-completion';
+import { buildHatchPostCreateCommands } from '../../bim/hatch/hatch-completion';
+import { completeEntity } from '../drawing/completeEntity';
+// Enterprise-id SSoT (N.6) — ίδιος generator με τον CreateEntityCommand· μηδέν δικός counter.
+import { generateEntityId } from '../../systems/entity-creation/utils';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -91,6 +98,55 @@ export function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandle
     screenY: screen.y,
   });
   dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
+}
+
+// ============================================================================
+// HATCH PICK-POINT CLICK (ADR-507 Φ3 — Τρόπος Β)
+// ============================================================================
+/**
+ * Τρόπος Β: ΕΝΑ κλικ ΜΕΣΑ σε κλειστή περιοχή → ανίχνευση ορίου (+ νησιά) μέσω
+ * `auto-area-hit` SSoT → `HatchEntity` → `completeEntity` (ίδιο pipeline με τον
+ * Τρόπο Α: undo + auto-send-to-back + `drawing:complete` → persistence).
+ *
+ * Επιστρέφει `true` αν δημιουργήθηκε γραμμοσκίαση, `false` αν δεν βρέθηκε περιοχή.
+ * Σε κάθε περίπτωση ο caller καταναλώνει το κλικ (pick-point mode).
+ */
+export function handleHatchPickPointClick(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const levelId = p.levelManager.currentLevelId;
+  const setScene = p.levelManager.setLevelScene;
+  if (!levelId || !setScene) return false;
+
+  const scene = p.levelManager.getLevelScene(levelId);
+  // ADR-040 XXII.A: live SSoT scale read at click time.
+  const scale = getImmediateTransform().scale;
+  const hatch = buildHatchFromPick({
+    worldPoint,
+    entities: scene?.entities ?? [],
+    overlays: p.currentOverlays,
+    scale,
+    id: generateEntityId(),
+    layerId: undefined,
+  });
+  if (!hatch) {
+    dlog('handleHatchPickPointClick', 'no closed region under cursor');
+    return false;
+  }
+
+  completeEntity(hatch, {
+    tool: 'hatch',
+    levelId,
+    getScene: p.levelManager.getLevelScene,
+    setScene,
+    // ADR-507 §5δ.9 — auto-send-to-back: create + reorder σε ΕΝΑ undo.
+    postCreateCommands: buildHatchPostCreateCommands,
+  });
+  // Καθάρισε το ghost της μόλις-γεμισμένης περιοχής (το επόμενο mouse-move το ξαναβρίσκει).
+  clearAutoAreaPreview();
+  dlog('handleHatchPickPointClick', `created hatch ${hatch.id} rings=${hatch.boundaryPaths.length}`);
+  return true;
 }
 
 // ============================================================================

@@ -25,6 +25,21 @@ export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 
 // ─── Combobox options ─────────────────────────────────────────────────────────
 
+/** Μέθοδος ορίου (ADR-507 Φ3): Τρόπος Β (pick-point) ⇄ Τρόπος Α (σχεδίαση ορίου). */
+const METHOD_OPTIONS = [
+  { value: 'pick-point', labelKey: 'ribbon.commands.hatchEditor.methodPickPoint', isLiteralLabel: false },
+  { value: 'boundary', labelKey: 'ribbon.commands.hatchEditor.methodBoundary', isLiteralLabel: false },
+] as const;
+
+/** Gap tolerance (AutoCAD HPGAPTOL, world units) — editable numeric με presets 0..10. */
+const GAP_TOLERANCE_OPTIONS = [
+  { value: '0', labelKey: '0', isLiteralLabel: true },
+  { value: '1', labelKey: '1', isLiteralLabel: true },
+  { value: '2', labelKey: '2', isLiteralLabel: true },
+  { value: '5', labelKey: '5', isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+] as const;
+
 const FILL_TYPE_OPTIONS = [
   { value: 'solid', labelKey: 'ribbon.commands.hatchEditor.fillTypeSolid', isLiteralLabel: false },
   { value: 'user-defined', labelKey: 'ribbon.commands.hatchEditor.fillTypeUserDefined', isLiteralLabel: false },
@@ -117,6 +132,41 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: HATCH_CONTEXTUAL_TRIGGER,
   panels: [
+    {
+      // ADR-507 Φ3 — Τρόπος ορισμού περιοχής (AutoCAD «Boundaries»).
+      id: 'hatch-method',
+      labelKey: 'ribbon.panels.hatchMethod',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.method',
+                labelKey: 'ribbon.commands.hatchEditor.method',
+                commandKey: HATCH_RIBBON_KEYS.stringParams.method,
+                comboboxWidthPx: 150,
+                options: METHOD_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.gapTolerance',
+                labelKey: 'ribbon.commands.hatchEditor.gapTolerance',
+                commandKey: HATCH_RIBBON_KEYS.params.gapTolerance,
+                comboboxWidthPx: 90,
+                options: GAP_TOLERANCE_OPTIONS,
+                numericInput: { editable: true, min: 0, max: 100 },
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'hatch-fill',
       labelKey: 'ribbon.panels.hatchFill',

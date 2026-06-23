@@ -33,6 +33,13 @@ import {
   subscribeHatchDrawDefaults,
   type HatchDrawDefaults,
 } from '../../../bim/hatch/hatch-draw-defaults-store';
+// ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
+import {
+  getHatchPickMode,
+  setHatchPickMode,
+  subscribeHatchPickMode,
+  type HatchPickMode,
+} from '../../../bim/hatch/hatch-pick-mode-store';
 import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
 import {
   buildGradientFromDefaults,
@@ -117,6 +124,12 @@ export function useRibbonHatchBridge(
     getHatchDrawDefaults,
     getHatchDrawDefaults,
   );
+  // Re-render όταν αλλάζει η μέθοδος ορίου (pick-point ⇄ boundary).
+  const pickMode = useSyncExternalStore<HatchPickMode>(
+    subscribeHatchPickMode,
+    getHatchPickMode,
+    getHatchPickMode,
+  );
 
   const resolveHatch = useCallback((): HatchEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -184,9 +197,16 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
           return { value: hatch?.gradient?.color2 ?? defaults.gradientColor2, options: [] };
         }
+        // Μέθοδος ορίου = tool setting (όχι ιδιότητα οντότητας) → πάντα από το store.
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.method) {
+          return { value: pickMode, options: [] };
+        }
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
+        if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
+          return { value: String(hatch?.gapTolerance ?? defaults.gapTolerance), options: [] };
+        }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
           return { value: String(hatch?.lineAngle ?? defaults.lineAngle), options: [] };
         }
@@ -203,7 +223,7 @@ export function useRibbonHatchBridge(
       }
       return null;
     },
-    [resolveHatch, defaults],
+    [resolveHatch, defaults, pickMode],
   );
 
   const onComboboxChange = useCallback(
@@ -261,6 +281,11 @@ export function useRibbonHatchBridge(
           applyGradientChange(hatch, { field: 'color2', value });
           return;
         }
+        // Μέθοδος ορίου (pick-point ⇄ boundary) — καθαρό tool setting.
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.method) {
+          setHatchPickMode(value === 'boundary' ? 'boundary' : 'pick-point');
+          return;
+        }
         // islandStyle
         const islandStyle = value === 'outer' ? 'outer' : value === 'ignore' ? 'ignore' : 'normal';
         if (hatch) patchHatch(hatch, { islandStyle });
@@ -270,6 +295,13 @@ export function useRibbonHatchBridge(
       if (isHatchRibbonNumberKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
+        // Gap tolerance: 0 ΕΓΚΥΡΟ (απενεργοποίηση) → πριν από τον generic >0 έλεγχο.
+        if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
+          if (numeric < 0) return;
+          if (hatch) patchHatch(hatch, { gapTolerance: numeric > 0 ? numeric : undefined });
+          else setHatchDrawDefaults({ gapTolerance: numeric });
+          return;
+        }
         if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
           applyGradientChange(hatch, { field: 'angleDeg', value: numeric });
           return;

@@ -54,25 +54,55 @@ export const ColumnAdoptSizeDialog: React.FC = () => {
 
   const adoptSize = formatSize(state.widthMm, state.depthMm);
   const defaultSize = formatSize(state.defaultWidthMm, state.defaultDepthMm);
+  // EC2 §9.6.1 — αναλογία > 4 → «τοιχίο», αλλιώς «κολόνα» (η εφαρμογή ταξινομεί στατικά τίμια).
+  const isWall = state.isShearWall;
+  const element = isWall
+    ? t('columnAdoptSize.elementWall')
+    : t('columnAdoptSize.elementColumn');
+  // §3.17 — 3 καταστάσεις: block (μη κατασκευάσιμο → κόκκινο, ΧΩΡΙΣ δημιουργία) / warning (τοιχίο ενώ
+  // διάλεξες κολόνα → αμβέρ) / ok (μπλε). Το block ΕΥΘΥΓΡΑΜΜΙΖΕΤΑΙ με τον validator (ΕΝΑ SSoT κατώφλι).
+  const blocked = state.tier === 'block';
+  const variant = blocked ? 'danger' : isWall ? 'warning' : null;
+  const cardClass = variant ? `dxf-modal-card dxf-modal-card-${variant}` : 'dxf-modal-card';
+  const titleClass = variant ? `dxf-modal-title dxf-modal-title-${variant}` : 'dxf-modal-title';
 
   return createPortal(
     <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
-      <div className="dxf-modal-card">
-        <h2 className="dxf-modal-title">{t('columnAdoptSize.title')}</h2>
-        <p className="dxf-modal-body">
-          {t('columnAdoptSize.message', { adopt: adoptSize, default: defaultSize })}
-        </p>
-        <div className="dxf-modal-actions">
+      <div className={cardClass}>
+        <h2 className={titleClass}>
+          {blocked ? t('columnAdoptSize.blockTitle') : t('columnAdoptSize.title')}
+        </h2>
+        {blocked ? (
+          <p className="dxf-modal-note-danger">{t('columnAdoptSize.blockNote', { size: adoptSize })}</p>
+        ) : (
+          <>
+            {isWall && (
+              <p className="dxf-modal-note-warning">{t('columnAdoptSize.wallWarning')}</p>
+            )}
+            <p className="dxf-modal-body">
+              {t('columnAdoptSize.message', { adopt: adoptSize, default: defaultSize, element })}
+            </p>
+          </>
+        )}
+        <div className="dxf-modal-actions dxf-modal-actions-stack">
+          {/* Block → ΧΩΡΙΣ κουμπί δημιουργίας (δεν επιτρέπεται μη κατασκευάσιμη διατομή). */}
+          {!blocked && (
+            <button
+              type="button"
+              autoFocus
+              className={
+                isWall
+                  ? 'dxf-modal-button dxf-modal-button-warning'
+                  : 'dxf-modal-button dxf-modal-button-primary'
+              }
+              onClick={() => resolveColumnAdoptSize('adopt')}
+            >
+              {t('columnAdoptSize.adoptButton', { size: adoptSize, element })}
+            </button>
+          )}
           <button
             type="button"
-            autoFocus
-            className="dxf-modal-button dxf-modal-button-primary"
-            onClick={() => resolveColumnAdoptSize('adopt')}
-          >
-            {t('columnAdoptSize.adoptButton', { size: adoptSize })}
-          </button>
-          <button
-            type="button"
+            autoFocus={blocked}
             className="dxf-modal-button"
             onClick={() => resolveColumnAdoptSize('default')}
           >

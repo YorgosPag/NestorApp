@@ -25,15 +25,19 @@ import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 export const HATCH_MIN_BOUNDARY_POINTS = 3;
 
 /**
- * Χτίζει `HatchEntity` από τις κορυφές του ορίου, εφαρμόζοντας τα τρέχοντα
- * draw-defaults. Επιστρέφει `null` αν δεν υπάρχουν αρκετές κορυφές.
+ * SSoT core: χτίζει `HatchEntity` από έτοιμα `boundaryPaths` (εξωτερικό δακτύλιο +
+ * νησιά), εφαρμόζοντας τα τρέχοντα draw-defaults. Κοινό για τον Τρόπο Α (boundary,
+ * 1 ring) και τον Τρόπο Β (pick-point, ring + holes) — μηδέν copy-paste.
+ *
+ * Επιστρέφει `null` αν ο εξωτερικός δακτύλιος δεν έχει αρκετές κορυφές.
  */
-export function buildHatchEntityFromBoundary(
-  points: Point2D[],
+function buildHatchEntityFromPaths(
+  boundaryPaths: Point2D[][],
   id: string,
   layerId: string | undefined,
 ): HatchEntity | null {
-  if (points.length < HATCH_MIN_BOUNDARY_POINTS) return null;
+  const outer = boundaryPaths[0];
+  if (!outer || outer.length < HATCH_MIN_BOUNDARY_POINTS) return null;
   const d = getHatchDrawDefaults();
   const isSolid = d.fillType === 'solid';
   const isPredefined = d.fillType === 'predefined';
@@ -42,7 +46,10 @@ export function buildHatchEntityFromBoundary(
   return {
     id,
     type: 'hatch',
-    boundaryPaths: [points.map((p) => ({ x: p.x, y: p.y }))],
+    // Κράτα μόνο τους έγκυρους δακτυλίους (≥3 κορυφές) + κλώνος των σημείων.
+    boundaryPaths: boundaryPaths
+      .filter((ring) => ring.length >= HATCH_MIN_BOUNDARY_POINTS)
+      .map((ring) => ring.map((p) => ({ x: p.x, y: p.y }))),
     fillType: d.fillType,
     patternType: isSolid ? 'solid' : isGradient ? 'gradient' : 'pattern',
     fillColor: d.fillColor,
@@ -56,6 +63,8 @@ export function buildHatchEntityFromBoundary(
     patternAngle: isPredefined ? d.patternAngle : undefined,
     // gradient γέμισμα (ADR-507 Φ5) — μόνο όταν fillType==='gradient', χτισμένο από τα defaults (SSoT).
     gradient: isGradient ? buildGradientFromDefaults(d) : undefined,
+    // Gap tolerance (ADR-507 §5β.1 / Φ3) — αποθηκεύεται μόνο όταν >0 (pick-point bridge).
+    gapTolerance: d.gapTolerance > 0 ? d.gapTolerance : undefined,
     // Πάχος γραμμών (AutoCAD LWT) — αποθηκεύεται μόνο όταν concrete· ByLayer/default
     // παραλείπεται ώστε ο renderer να εφαρμόσει το fallback (mirror completeEntity).
     lineweightMm: isConcreteLineweight(d.lineweightMm) ? d.lineweightMm : undefined,
@@ -64,6 +73,35 @@ export function buildHatchEntityFromBoundary(
     visible: true,
     layerId,
   } as HatchEntity;
+}
+
+/**
+ * Τρόπος Α (boundary) — χτίζει `HatchEntity` από τις κορυφές ΕΝΟΣ κλειστού ορίου.
+ * Επιστρέφει `null` αν δεν υπάρχουν αρκετές κορυφές.
+ */
+export function buildHatchEntityFromBoundary(
+  points: Point2D[],
+  id: string,
+  layerId: string | undefined,
+): HatchEntity | null {
+  if (points.length < HATCH_MIN_BOUNDARY_POINTS) return null;
+  return buildHatchEntityFromPaths([points], id, layerId);
+}
+
+/**
+ * Τρόπος Β (pick-point) — χτίζει `HatchEntity` από το αποτέλεσμα ανίχνευσης
+ * περιοχής (`auto-area-hit`): εξωτερικός δακτύλιος + νησιά (holes) ως εσωτερικοί
+ * δακτύλιοι. Το even-odd render/area αφαιρεί αυτόματα τα νησιά (ίδιο με Τρόπο Α).
+ * Επιστρέφει `null` αν ο εξωτερικός δακτύλιος δεν έχει αρκετές κορυφές.
+ */
+export function buildHatchEntityFromRegion(
+  outer: Point2D[],
+  holes: Point2D[][],
+  id: string,
+  layerId: string | undefined,
+): HatchEntity | null {
+  if (outer.length < HATCH_MIN_BOUNDARY_POINTS) return null;
+  return buildHatchEntityFromPaths([outer, ...holes], id, layerId);
 }
 
 /**

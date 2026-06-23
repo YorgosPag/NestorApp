@@ -107,4 +107,21 @@ describe('buildCompositeFromColumns', () => {
     const a = col('a', rect(0, 0, 1000, 300));
     expect(buildCompositeFromColumns([a], '0', SU, TOL)).toBeNull();
   });
+
+  // BUGFIX (Giorgio): με ΜΕΓΑΛΟ (zoom-dependent) tol το composite ΔΕΝ πρέπει να μετατοπίζεται/αλλάζει
+  // μέγεθος — τα εφαπτόμενα footprints ενώνονται με αμελητέο epsilon (διατήρηση αρχικής θέσης).
+  it('ΔΕΝ μετατοπίζει το τοιχίο με μεγάλο tol (διατήρηση θέσης)', () => {
+    const a = col('a', rect(0, 0, 1000, 250));
+    const b = col('b', rect(1000, 0, 2000, 250)); // ένωση = 2000×250 @ centroid (1000,125)
+    const composite = buildCompositeFromColumns([a, b], '0', SU, 200); // tol=200 → παλιά: snap σε πλέγμα 200
+    expect(composite).not.toBeNull();
+    const fp = columnWorldFootprint(composite as ColumnEntity) ?? [];
+    const xs = fp.map((p) => p.x);
+    const ys = fp.map((p) => p.y);
+    // bbox = η ΠΡΑΓΜΑΤΙΚΗ ένωση (0,0)-(2000,250), όχι κβαντισμένη στο 200.
+    expect(Math.min(...xs)).toBeCloseTo(0, 0);
+    expect(Math.max(...xs)).toBeCloseTo(2000, 0);
+    expect(Math.min(...ys)).toBeCloseTo(0, 0);
+    expect(Math.max(...ys)).toBeCloseTo(250, 0);
+  });
 });

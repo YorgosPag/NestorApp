@@ -207,8 +207,13 @@
   },
   "columnAdoptSize": {
     "title": "Υιοθέτηση μεγέθους ορθογωνίου",
-    "message": "Το 1ο κλικ έπεσε μέσα σε ορθογώνιο {adopt} του σχεδίου. Να δημιουργήσω κολόνα σε αυτό το μέγεθος, ή να κρατήσω την προεπιλογή {default};",
-    "adoptButton": "Ναι, {size}",
+    "elementColumn": "κολόνα",
+    "elementWall": "τοιχίο",
+    "blockTitle": "Μη κατασκευάσιμη διατομή",
+    "blockNote": "🚫 Διατομή {size}: η μικρή πλευρά είναι κάτω από το ελάχιστο κατασκευάσιμο (κολόνα 120mm / τοιχίο 150mm κατά EC8) — δεν δημιουργείται. Σχεδίασε μεγαλύτερη διατομή ή κράτα την προεπιλογή.",
+    "wallWarning": "⚠️ Διάλεξες «Κολόνα», αλλά η αναλογία πλευρών είναι > 4 — κατά EC2 §9.6.1 αυτό είναι ΤΟΙΧΙΟ και θα δημιουργηθεί ως τοιχίο.",
+    "message": "Το 1ο κλικ έπεσε μέσα σε ορθογώνιο {adopt} του σχεδίου. Να δημιουργήσω {element} σε αυτό το μέγεθος, ή να κρατήσω την προεπιλογή {default};",
+    "adoptButton": "Ναι, {element} {size}",
     "defaultButton": "Όχι, προεπιλογή {size}",
     "cancel": "Άκυρο"
   },
@@ -1317,6 +1322,7 @@
       "wallCoveringFinish": "Φινίρισμα",
       "wallCoveringGeometry": "Γεωμετρία",
       "wallCoveringActions": "Ενέργειες",
+      "hatchMethod": "Μέθοδος",
       "hatchFill": "Γέμισμα",
       "hatchPattern": "Μοτίβο",
       "hatchGradient": "Διαβάθμιση",
@@ -3297,6 +3303,10 @@
         "deleteConfirm": "Διαγραφή φινιρίσματος τοίχου; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "hatchEditor": {
+        "method": "Μέθοδος ορίου",
+        "methodPickPoint": "Επιλογή σημείου",
+        "methodBoundary": "Σχεδίαση ορίου",
+        "gapTolerance": "Ανοχή κενού",
         "fillType": "Τύπος γεμίσματος",
         "fillTypeSolid": "Συμπαγές",
         "fillTypeUserDefined": "Γραμμές",
@@ -3916,7 +3926,8 @@
         "lineweight": "Πάχος",
         "linetype": "Τύπος Γραμμής",
         "color": "Χρώμα",
-        "linetypeScale": "Βήμα"
+        "linetypeScale": "Βήμα",
+        "width": "Πλάτος"
       },
       "thermalEnvelope": {
         "label": "Εφαρμογή Θερμοπρόσοψης",
@@ -4321,6 +4332,21 @@
       }
     }
   },
+  "wall": {
+    "validation": {
+      "hardErrors": {
+        "lengthTooShort": "Ο τοίχος είναι πολύ κοντός",
+        "thicknessNonPositive": "Το πάχος πρέπει να είναι μεγαλύτερο από 0",
+        "thicknessExceedsMax": "Το πάχος υπερβαίνει το μέγιστο επιτρεπτό",
+        "heightNonPositive": "Το ύψος πρέπει να είναι μεγαλύτερο από 0",
+        "dnaThicknessMismatch": "Το άθροισμα των στρώσεων δεν ταιριάζει με το πάχος του τοίχου"
+      },
+      "codeViolations": {
+        "thicknessBelowMin": "Το πάχος είναι κάτω από το ελάχιστο επιτρεπτό",
+        "exteriorBelowNokMin": "Εξωτερικός φέρων τοίχος κάτω από το ελάχιστο πάχος (ΝΟΚ)"
+      }
+    }
+  },
   "slabOpening": {
     "validation": {
       "codeViolations": {
@@ -4352,7 +4378,9 @@
         "invalidIShapeWebOverflow": "Ο κορμός υπερβαίνει το πλάτος πέλματος",
         "invalidUshapeLeg": "Άκυρο πάχος ποδιού Π — υπερβαίνει το πλάτος",
         "invalidUshapeBase": "Άκυρο πάχος βάσης Π — υπερβαίνει το βάθος",
-        "invalidCompositePolygon": "Άκυρο πολύγωνο σύνθετης διατομής — χρειάζονται τουλάχιστον 3 κορυφές με μη μηδενικό εμβαδόν"
+        "invalidCompositePolygon": "Άκυρο πολύγωνο σύνθετης διατομής — χρειάζονται τουλάχιστον 3 κορυφές με μη μηδενικό εμβαδόν",
+        "dimensionNotConstructible": "Διατομή κάτω από το ελάχιστο κατασκευάσιμο (120mm) — δεν είναι υλοποιήσιμο φέρον μέλος Ο/Σ (δεν χωρά επικάλυψη + οπλισμός)",
+        "shearWallThicknessNotConstructible": "Πάχος τοιχίου κάτω από το ελάχιστο Eurocode 8 (150mm) — μη συμμορφούμενο/κατασκευάσιμο τοιχίο"
       },
       "codeViolations": {
         "widthTooSmall": "Πλάτος κάτω από το ελάχιστο Eurocode (250mm)",

@@ -100,7 +100,7 @@ function polygonToLocalMm(
 
 // ─── shape → overrides ────────────────────────────────────────────────────────
 
-interface ColumnPlacement {
+export interface ColumnPlacement {
   readonly center: Point2D;
   readonly overrides: ColumnParamOverrides;
 }
@@ -178,7 +178,7 @@ export function perimeterAspectRatio(perimeter: ClosedPerimeter): number {
  * `width`=longSide (mm), `depth`=shortSide (mm), `rotation` = γωνία μεγάλης ακμής.
  * aspect > SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (Eurocode 8 §5.4.2.4).
  */
-function rectColumnPlacement(rect: DetectedRectangle, s: number): ColumnPlacement {
+export function rectColumnPlacement(rect: DetectedRectangle, s: number): ColumnPlacement {
   const c = rect.polygon;
   const center: Point2D = {
     x: (c[0].x + c[1].x + c[2].x + c[3].x) / 4,

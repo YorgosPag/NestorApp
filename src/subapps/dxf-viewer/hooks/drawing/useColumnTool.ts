@@ -28,14 +28,9 @@ import {
   type ColumnAnchor,
   type ColumnKind,
 } from '../../bim/types/column-types';
-import {
-  buildColumnEntity,
-  buildDefaultColumnParams,
-  resolveColumnGridBindings,
-  type ColumnParamOverrides,
-} from './column-completion';
-import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
+import { type ColumnParamOverrides } from './column-completion';
+// N.7.1 file-size split — pure column-from-click entity builder (extracted commitColumnAt core).
+import { buildClickColumnEntity, type ColumnSizeOverride } from './column-commit-build';
 import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 // ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
@@ -43,8 +38,7 @@ import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 import { useColumnRegionClicks } from './use-column-region-clicks';
 // ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» (opt-in confirm στο 1ο κλικ μέσα σε ορθογώνιο DXF).
 import { useColumnRectAdopt } from './use-column-rect-adopt';
-import type { RectFrame } from '../../bim/framing/rect-frame';
-import type { AdoptRectDims } from '../../bim/columns/column-adopt-rect';
+import type { AdoptProposal } from '../../bim/columns/column-adopt-rect';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
@@ -244,29 +238,27 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       position: Readonly<Point2D>,
       anchor: ColumnAnchor,
       rotationDeg: number,
+      // ADR-398 §3.17 — one-shot override (υιοθέτηση ορθογωνίου): χτίζει ΑΥΤΟ το στοιχείο με το adopted
+      // width/depth/kind (κολόνα ή τοιχίο κατά EC2) ΧΩΡΙΣ να αλλάξει την προεπιλογή του εργαλείου (το
+      // persisted `s.overrides`/`s.kind` μένουν άθικτα → το επόμενο στοιχείο ξαναγίνεται default).
+      sizeOverride?: ColumnSizeOverride,
     ): boolean => {
-      const overridesWithKind: ColumnParamOverrides = {
-        ...s.overrides,
-        kind: s.kind,
-        anchor,
-        rotation: rotationDeg,
-      };
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const params = buildDefaultColumnParams(position, s.kind, overridesWithKind, sceneUnits);
-      const result = buildColumnEntity(params, currentLevelId, sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
+      const built = buildClickColumnEntity(
+        s.overrides,
+        s.kind,
+        position,
+        anchor,
+        rotationDeg,
+        currentLevelId,
+        sceneUnits,
+        sizeOverride,
+      );
+      if (!built.ok) {
+        setState({ ...s, error: built.error });
         return false;
       }
-      // ADR-441 Slice COL — host-on-snap: αν το σημείο πέφτει σε άξονα/τομή κανάβου,
-      // «κρέμασε» την κολώνα ώστε να ακολουθεί τον κάναβο (Revit «Column → At Grids»).
-      const bindings = resolveColumnGridBindings(
-        params.position,
-        getGlobalGuideStore(),
-        axisHostTolScene(sceneUnits),
-      );
-      const entity = bindings.length > 0 ? { ...result.entity, guideBindings: bindings } : result.entity;
-      onColumnCreated?.(entity);
+      onColumnCreated?.(built.entity);
       setState({
         ...INITIAL_STATE,
         kind: s.kind,
@@ -287,13 +279,27 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // Adopt («Ναι») → commit στο μέγεθος+κέντρο+γωνία του ορθογωνίου (anchor `center`, μηδέν 2ο κλικ:
   // το ορθογώνιο ορίζει πλήρως την κολόνα, Revit-grade). Default («Όχι») → κανονική ροή 2-κλικ.
   const onAdoptRect = useCallback(
-    (s: ColumnToolState, rect: RectFrame, dims: AdoptRectDims): void => {
-      commitColumnAt(
-        { ...s, overrides: { ...s.overrides, width: dims.widthMm, depth: dims.depthMm } },
-        rect.center,
-        'center',
-        dims.rotationDeg,
-      );
+    (s: ColumnToolState, proposal: AdoptProposal): void => {
+      // one-shot override (5ος παράμετρος) → χτίζει στο μέγεθος + ΤΥΠΟ (κολόνα/τοιχίο κατά EC2) του
+      // ορθογωνίου ΧΩΡΙΣ leak στην προεπιλογή του εργαλείου.
+      //
+      // ΣΤΑΤΙΚΟΣ ΠΥΡΗΝΑΣ = Η ΠΕΡΙΟΧΗ ΑΚΡΙΒΩΣ (Giorgio 2026-06-23, Revit-grade): το σχεδιασμένο
+      // ορθογώνιο (4 ενωμένες γραμμές) είναι ο ΣΤΑΤΙΚΟΣ ΠΥΡΗΝΑΣ της κολόνας → η κολόνα γεμίζει την
+      // περιοχή ΑΚΡΙΒΩΣ (δεν προεξέχει, δεν υπολείπεται). Ο σοβάς (ADR-449) είναι additive «δέρμα»
+      // που μπαίνει ΓΥΡΩ-ΓΥΡΩ από τον πυρήνα (έξω από την περιοχή) — μηδέν inset, μηδέν επηρεασμός
+      // του width/depth (immutable στατική διάσταση). `finish` παραλείπεται → default enabled
+      // (`buildDefaultColumnParams`) → ο σοβάς εμφανίζεται κανονικά περιμετρικά.
+      //
+      // `autoSized: false` (ADR-499/ADR-503) — ΚΡΙΣΙΜΟ: η υιοθετημένη διάσταση είναι ΡΗΤΗ
+      // αρχιτεκτονική πρόθεση (ο χρήστης τη σχεδίασε) → user-wins. Χωρίς αυτό, ο auto-sizer
+      // (`buildColumnSizePatch`) ξανα-υπολόγιζε τη διατομή από λυγηρότητα/οπλισμό και «φούσκωνε»
+      // π.χ. το 250 στο ελάχιστο επαρκές 300 (Giorgio bug 2026-06-23: 1×0,25 → 1×0,30).
+      commitColumnAt(s, proposal.center, 'center', proposal.rotationDeg, {
+        width: proposal.widthMm,
+        depth: proposal.depthMm,
+        kind: proposal.kind,
+        autoSized: false,
+      });
     },
     [commitColumnAt],
   );

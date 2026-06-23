@@ -179,4 +179,10 @@ export interface OpeningToolLike {
 export interface LevelManagerLike {
   currentLevelId: string | null;
   getLevelScene: (levelId: string) => SceneModel | null;
+  /**
+   * Optional: write a level scene. Present on the real `useLevels()` manager
+   * (ADR-507 Φ3 pick-point hatch creation via `completeEntity`). Optional so
+   * minimal read-only mocks/tests remain valid.
+   */
+  setLevelScene?: (levelId: string, scene: SceneModel) => void;
 }

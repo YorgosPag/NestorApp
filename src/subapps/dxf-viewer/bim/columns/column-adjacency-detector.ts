@@ -30,7 +30,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity } from '../types/column-types';
-import type { SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { safeUnion, type ClipGeom } from '../geometry/shared/safe-polygon-boolean';
 import {
   classifyPerimeter,
@@ -199,9 +199,20 @@ export function buildCompositeFromColumns(
     .filter((p): p is Point2D[] => p !== null);
   if (polys.length < 2) return null;
 
-  const ring = unionGroup(polys, tol);
+  // ΘΕΣΗ-ΑΚΡΙΒΕΙΑ (bugfix): το `tol` εδώ είναι zoom-dependent (SNAP_DEFAULT/scale). Αν περάσει στο
+  // `snapToGrid`, ΚΒΑΝΤΙΖΕΙ τα world coords σε πλέγμα `tol` → όλο το τοιχίο ΜΕΤΑΤΟΠΙΖΕΤΑΙ έως `tol`
+  // (χάνει τη σωστή αρχική θέση). Τα εφαπτόμενα footprints μοιράζονται κοινές κορυφές → ενώνονται με
+  // ΑΜΕΛΗΤΕΟ epsilon (μηδέν ορατή μετατόπιση). Fallback στο `tol` μόνο αν υπάρχει αισθητό κενό (σπάνιο).
+  const mm = mmToSceneUnits(sceneUnits) || 1;
+  const eps = mm * 0.05; // ~0.05mm: κλείνει float gaps χωρίς να μετατοπίζει
+  let ring = unionGroup(polys, eps);
+  let perimTol = mm; // 1mm physical (zoom-independent) για classify/normalize/decompose
+  if (!ring) {
+    ring = unionGroup(polys, tol);
+    perimTol = Math.max(tol, mm);
+  }
   if (!ring) return null;
 
-  const perimeter = makeClosedPerimeter(ring, tol);
+  const perimeter = makeClosedPerimeter(ring, perimTol);
   return buildColumnsFromPerimeters([perimeter], layerId, sceneUnits).columns[0] ?? null;
 }

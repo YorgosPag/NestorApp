@@ -400,8 +400,16 @@ export interface ColumnEntity
 
 // ─── Defaults & constants ────────────────────────────────────────────────────
 
-/** Ελάχιστη διατομή (mm) — Eurocode 25×25cm. Phase 4 code violation threshold. */
+/** Ελάχιστη διατομή (mm) — Eurocode 25×25cm. Phase 4 code violation threshold (WARNING). */
 export const MIN_COLUMN_DIMENSION_MM = 250;
+
+/**
+ * ADR-398 §3.17 — απόλυτο κατώφλι **κατασκευασιμότητας** κολόνας (mm): κάτω από αυτό η διατομή ΔΕΝ
+ * χωρά επικάλυψη (2×~25mm) + διαμήκεις ράβδους + συνδετήρες + μέγιστο αδρανές → **HARD BLOCK** (δεν
+ * είναι πραγματικό φέρον μέλος Ο/Σ — π.χ. «κολόνα» 2/3/…/11 cm). Πιο αυστηρό από το EC8 warning (250mm):
+ * 120mm = block (αδύνατο), 120–249mm = warning (υπάρχοντα/δευτερεύοντα/DCL), ≥250mm = OK.
+ */
+export const MIN_CONSTRUCTIBLE_COLUMN_MM = 120;
 
 /** Default πλάτος κολώνας (mm). 40×40cm RC typical. */
 export const DEFAULT_COLUMN_WIDTH_MM = 400;

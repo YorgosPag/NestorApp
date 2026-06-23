@@ -52,7 +52,7 @@ import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
 import { resolveAxisBindings } from '../../bim/hosting/resolve-axis-bindings';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
-import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
+import { createDefaultStructuralFinishSpec, type StructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 
 export type { SceneUnits };
 
@@ -104,6 +104,17 @@ export interface ColumnParamOverrides {
    * `resolveTopLeanTilt`) ή αριθμητικά πεδία ribbon. Absent / `angle===0` = κατακόρυφη.
    */
   readonly tilt?: ColumnTilt;
+  /**
+   * ADR-449 — override του σοβά (finish skin). Absent → default σοβάς (enabled, κανονικές κολόνες).
+   */
+  readonly finish?: StructuralFinishSpec;
+  /**
+   * ADR-499 — AUTO διαστασιολόγηση on/off. Absent → AUTO (ο auto-sizer μπορεί να αλλάξει `width`/`depth`).
+   * `false` = locked (ρητή διάσταση χρήστη → user wins). **ADR-398 §3.17:** η υιοθέτηση σχεδιασμένου
+   * ορθογωνίου DXF το θέτει `false` ώστε η διατομή να μένει ΑΚΡΙΒΩΣ όση σχεδιάστηκε (ο auto-sizer δεν
+   * την «φουσκώνει» στο ελάχιστο επαρκές λόγω λυγηρότητας/οπλισμού).
+   */
+  readonly autoSized?: boolean;
 }
 
 /**
@@ -165,7 +176,7 @@ export function buildDefaultColumnParams(
     topOffset: 0,
     // ADR-449 Slice 5 — κάθε νέα κολόνα γεννιέται με σοβά (enabled). Η ορατότητα
     // ελέγχεται view-level από το master toggle «Σοβατισμένη όψη» (showFinishSkin).
-    finish: createDefaultStructuralFinishSpec(),
+    finish: overrides.finish ?? createDefaultStructuralFinishSpec(),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
@@ -175,6 +186,7 @@ export function buildDefaultColumnParams(
     ...(overrides.composite !== undefined ? { composite: overrides.composite } : {}),
     ...(overrides.catalogProfile !== undefined ? { catalogProfile: overrides.catalogProfile } : {}),
     ...(overrides.tilt !== undefined ? { tilt: overrides.tilt } : {}),
+    ...(overrides.autoSized !== undefined ? { autoSized: overrides.autoSized } : {}),
   };
   return params;
 }

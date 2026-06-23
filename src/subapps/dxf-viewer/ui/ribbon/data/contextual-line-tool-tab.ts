@@ -65,6 +65,19 @@ const LINETYPE_SCALE_OPTIONS = [
   { value: '4',    labelKey: '4',    isLiteralLabel: true },
 ] as const;
 
+// ─── Polyline width options (ADR-510 Φ3d) ─────────────────────────────────────
+// Edge-to-edge width in the ACTIVE display unit (default cm). Presets are just
+// shortcuts — the field is editable (numericInput), so any value can be typed.
+// 0 = hairline. Values chosen to be VISIBLE at the default cm unit (1 cm = 10 mm).
+
+const WIDTH_OPTIONS = [
+  { value: '0',  labelKey: '0',  isLiteralLabel: true },
+  { value: '1',  labelKey: '1',  isLiteralLabel: true },
+  { value: '2',  labelKey: '2',  isLiteralLabel: true },
+  { value: '5',  labelKey: '5',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
@@ -124,6 +137,19 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 options: LINETYPE_SCALE_OPTIONS,
                 // ADR-510 Φ2E #2 — editable numeric (CELTSCALE > 0), Revit-grade.
                 numericInput: { editable: true, min: 0.01 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.width',
+                labelKey: 'ribbon.commands.quickStyle.width',
+                commandKey: LINE_TOOL_RIBBON_KEYS.width,
+                comboboxWidthPx: 80,
+                options: WIDTH_OPTIONS,
+                // ADR-510 Φ3d — editable numeric polyline width (≥ 0, display unit).
+                numericInput: { editable: true, min: 0 },
               },
             },
           ],

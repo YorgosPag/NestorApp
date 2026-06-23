@@ -14,7 +14,9 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
 // 🏢 ADR-510 Φ3: bulge (arc-segment) geometry SSoT
-import { hasAnyBulge, expandPolyline } from './shared/geometry-bulge-utils';
+import { hasAnyBulge, expandPolyline, bulgeToPolyline } from './shared/geometry-bulge-utils';
+// 🏢 ADR-510 Φ3d: wide / tapered polyline (per-segment width) geometry SSoT
+import { hasAnyWidth, resolveSegmentWidth, buildSegmentWidthBand } from './shared/geometry-polyline-width';
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-090: Centralized Point Vector Operations
@@ -59,9 +61,19 @@ export class PolylineRenderer extends BaseEntityRenderer {
       return; // Δεν σχεδιάζουμε καθόλου γραμμές
     }
 
+    const bulges = (entity as PolylineEntity).bulges;
+
+    // 🏢 ADR-510 Φ3d: wide / tapered polyline → paint a SOLID filled band (per
+    // segment, AutoCAD model). Takes priority over the hairline stroke paths
+    // below; the band builder handles arc segments via the bulge SSoT.
+    const pe = entity as PolylineEntity & { constantWidth?: number };
+    if (hasAnyWidth(pe.startWidths, pe.endWidths, pe.constantWidth)) {
+      this.renderPolylineWidthBands(vertices, closed, bulges, pe.startWidths, pe.endWidths, pe.constantWidth);
+      return;
+    }
+
     // 🏢 ADR-510 Φ3: arc segments (bulge) → tessellate via the geometry SSoT and
     // stroke the resulting path. Canvas dash/linetype still applies along the arc.
-    const bulges = (entity as PolylineEntity).bulges;
     if (hasAnyBulge(bulges)) {
       const worldPath = expandPolyline(vertices, bulges, closed);
       const screenPath = worldPath.map(v => this.worldToScreen(v));
@@ -106,6 +118,44 @@ export class PolylineRenderer extends BaseEntityRenderer {
         this.ctx.stroke();
       }
     }
+  }
+
+  /**
+   * 🏢 ADR-510 Φ3d: render a wide / tapered polyline as a solid filled band.
+   * Each segment is its own filled polygon (AutoCAD per-segment model) so tapers
+   * and arcs are exact. A zero-width segment falls back to a hairline stroke of
+   * its (possibly bulged) centreline. Fill colour = the resolved line colour.
+   */
+  private renderPolylineWidthBands(
+    vertices: Point2D[],
+    closed: boolean,
+    bulges: number[] | undefined,
+    startWidths: number[] | undefined,
+    endWidths: number[] | undefined,
+    constantWidth: number | undefined,
+  ): void {
+    const n = vertices.length;
+    const segCount = closed ? n : n - 1;
+
+    this.ctx.save();
+    this.ctx.fillStyle = this.ctx.strokeStyle;
+    for (let i = 0; i < segCount; i += 1) {
+      const a = vertices[i];
+      const b = vertices[(i + 1) % n];
+      const bulge = bulges?.[i] ?? 0;
+      const { start, end } = resolveSegmentWidth(i, startWidths, endWidths, constantWidth);
+      const band = buildSegmentWidthBand(a, b, bulge, start, end);
+      if (band.length < 3) {
+        // Zero-width segment → stroke the centreline (handles arcs via bulge SSoT).
+        const center = bulgeToPolyline(a, b, bulge).map(v => this.worldToScreen(v));
+        this.drawPath(center, false);
+        this.ctx.stroke();
+        continue;
+      }
+      this.drawPath(band.map(v => this.worldToScreen(v)), true);
+      this.ctx.fill();
+    }
+    this.ctx.restore();
   }
 
   private renderPolylineMeasurements(vertices: Point2D[], closed: boolean, entity: EntityModel, options: RenderOptions): void {

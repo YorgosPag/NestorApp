@@ -11,7 +11,7 @@
  *   - Valid params → 0 hard errors, 0 code violations
  */
 
-import { validateColumnParams } from '../column-validator';
+import { validateColumnParams, classifyColumnSectionSize } from '../column-validator';
 import type { ColumnParams } from '../../types/column-types';
 
 function makeColumn(overrides?: Partial<ColumnParams>): ColumnParams {
@@ -147,12 +147,62 @@ describe('validateColumnParams — polygon kind (Phase 8)', () => {
   });
 });
 
+// ADR-398 §3.17 — κλιμακωτό όριο κατασκευασιμότητας (Giorgio): <120mm κολόνα = HARD BLOCK,
+// 120–249mm = warning (codeViolation), ≥250mm = OK.
+describe('validateColumnParams — constructibility floor (§3.17)', () => {
+  it('width 100mm → HARD BLOCK (dimensionNotConstructible)', () => {
+    const r = validateColumnParams(makeColumn({ width: 100, depth: 400 }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.dimensionNotConstructible');
+  });
+
+  it('depth 30mm (2-3-4cm «κολόνα») → HARD BLOCK', () => {
+    const r = validateColumnParams(makeColumn({ width: 400, depth: 30 }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.dimensionNotConstructible');
+  });
+
+  it('circular διάμετρος 100mm → HARD BLOCK', () => {
+    const r = validateColumnParams(makeColumn({ kind: 'circular', width: 100, depth: 0 }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.dimensionNotConstructible');
+  });
+
+  it('200×200mm → ΟΧΙ block (≥120) αλλά warning (codeViolation <250)', () => {
+    const r = validateColumnParams(makeColumn({ width: 200, depth: 200 }));
+    expect(r.hardErrors).not.toContain('column.validation.hardErrors.dimensionNotConstructible');
+    expect(r.codeViolations).toContain('column.validation.codeViolations.widthTooSmall');
+  });
+
+  it('120mm (όριο) → ΟΧΙ block', () => {
+    const r = validateColumnParams(makeColumn({ width: 120, depth: 400 }));
+    expect(r.hardErrors).not.toContain('column.validation.hardErrors.dimensionNotConstructible');
+  });
+});
+
+describe('classifyColumnSectionSize (§3.17 — κοινό SSoT κατώφλι UI/validator)', () => {
+  it('κολόνα: <120 block, 120–249 warning, ≥250 ok', () => {
+    expect(classifyColumnSectionSize(100, false)).toBe('block');
+    expect(classifyColumnSectionSize(120, false)).toBe('warning');
+    expect(classifyColumnSectionSize(200, false)).toBe('warning');
+    expect(classifyColumnSectionSize(250, false)).toBe('ok');
+  });
+  it('τοιχίο: <150 block, ≥150 ok (χωρίς warn-zone)', () => {
+    expect(classifyColumnSectionSize(100, true)).toBe('block');
+    expect(classifyColumnSectionSize(149, true)).toBe('block');
+    expect(classifyColumnSectionSize(150, true)).toBe('ok');
+    expect(classifyColumnSectionSize(200, true)).toBe('ok');
+  });
+});
+
 describe('validateColumnParams — shear-wall kind (Phase 8)', () => {
-  it('flags shearWallThicknessTooSmall για thickness < 150mm', () => {
+  // ADR-398 §3.17 (Giorgio, αυστηρό): πάχος τοιχίου < 150mm (EC8) → HARD BLOCK (όχι πλέον απλό warning).
+  it('HARD-BLOCK (hardError) για thickness < 150mm', () => {
     const r = validateColumnParams(makeColumn({
       kind: 'shear-wall', width: 2000, depth: 140,
     }));
-    expect(r.codeViolations).toContain(
+    expect(r.hardErrors).toContain(
+      'column.validation.hardErrors.shearWallThicknessNotConstructible',
+    );
+    // δεν είναι πλέον (απλό) codeViolation — μπλοκάρει τη δημιουργία
+    expect(r.codeViolations).not.toContain(
       'column.validation.codeViolations.shearWallThicknessTooSmall',
     );
   });

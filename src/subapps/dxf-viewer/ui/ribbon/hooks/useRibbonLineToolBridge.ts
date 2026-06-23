@@ -38,6 +38,10 @@ import {
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
 import { isStyleEditablePrimitiveType } from '../../../types/style-editable-primitives';
+// ADR-510 Φ3d — polyline width is model-space (drawing units): convert mm ↔ the
+// live display unit so the ribbon field matches the rest of the readouts (Q15).
+import { toDisplay, fromDisplay } from '../../../config/units';
+import { displayUnitState } from '../../../config/display-unit-state';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -97,6 +101,52 @@ function entityLineweightValue(entity: AnySceneEntity): string {
 /** Combobox display value for an entity's per-object linetype scale (CELTSCALE). */
 function entityLtscaleValue(entity: AnySceneEntity): string {
   return String(entity.ltscale ?? 1);
+}
+
+/** Polyline-like entity shape carrying the Φ3d per-segment width arrays. */
+interface WidthCapableEntity {
+  readonly type: string;
+  readonly vertices?: ReadonlyArray<unknown>;
+  readonly closed?: boolean;
+  readonly startWidths?: readonly number[];
+  readonly endWidths?: readonly number[];
+  readonly constantWidth?: number;
+}
+
+/** Only polylines carry an edge-to-edge width. */
+function isPolylineLike(type: string): boolean {
+  return type === 'polyline' || type === 'lwpolyline';
+}
+
+/** Current uniform width of a polyline, in the active display unit (string). */
+function entityWidthDisplayValue(entity: WidthCapableEntity): string {
+  const mm = entity.startWidths?.find((w) => w > 0)
+    ?? entity.endWidths?.find((w) => w > 0)
+    ?? entity.constantWidth
+    ?? 0;
+  const { value } = toDisplay(mm, displayUnitState.getUnit());
+  return String(value);
+}
+
+/**
+ * Build a uniform-width patch (all segments share one width) from a display-unit
+ * input. Returns null for a non-polyline, a degenerate polyline, or invalid input.
+ */
+function widthPatchForEntity(
+  entity: WidthCapableEntity,
+  displayValue: string,
+): Record<string, unknown> | null {
+  if (!isPolylineLike(entity.type)) return null;
+  const n = entity.vertices?.length ?? 0;
+  if (n < 2) return null;
+  const parsed = parseFloat(displayValue);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  const mm = fromDisplay(parsed, displayUnitState.getUnit());
+  const segs = entity.closed ? n : n - 1;
+  return {
+    startWidths: new Array(segs).fill(mm),
+    endWidths: new Array(segs).fill(mm),
+  };
 }
 
 /** Combobox display value for an entity's color (ByLayer or ACI number). */
@@ -167,6 +217,14 @@ export function useRibbonLineToolBridge(
         const value = selected ? entityLtscaleValue(selected) : String(snapshot.ltscale);
         return { value, options: [] };
       }
+      // ADR-510 Φ3d — polyline width (edge-to-edge). Only a selected polyline has a
+      // width source; for other selections / draw-defaults show 0 (no QuickStyle width yet).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.width) {
+        const value = selected && isPolylineLike(selected.type)
+          ? entityWidthDisplayValue(selected as unknown as WidthCapableEntity)
+          : '0';
+        return { value, options: [] };
+      }
       // color
       if (selected) return { value: entityColorValue(selected), options: [] };
       const colorValue = snapshot.colorMode === BYLAYER
@@ -202,6 +260,14 @@ export function useRibbonLineToolBridge(
         if (!Number.isFinite(n) || n <= 0) return;
         if (selected) patchEntity(selected, { ltscale: n });
         else setQuickStyleLtscale(n);
+        return;
+      }
+      // ADR-510 Φ3d — polyline width. Write a uniform per-segment width to the
+      // selected polyline; draw-default width is not wired in Φ3d (no-op).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.width) {
+        if (!selected || !isPolylineLike(selected.type)) return;
+        const patch = widthPatchForEntity(selected as unknown as WidthCapableEntity, value);
+        if (patch) patchEntity(selected, patch);
         return;
       }
       // color
