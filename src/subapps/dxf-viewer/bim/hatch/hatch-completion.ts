@@ -16,6 +16,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity } from '../../types/entities';
 import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands/ReorderEntityCommand';
+import { HatchLifecycleSignalCommand } from '../../core/commands/entity-commands/HatchLifecycleSignalCommand';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildGradientFromDefaults } from './hatch-gradient-build';
@@ -118,13 +119,21 @@ export function computeHatchAreaMm2(hatch: Pick<HatchEntity, 'boundaryPaths'>): 
 }
 
 /**
- * §5δ.9 — post-create εντολές για τη γραμμοσκίαση: αποστολή στο πίσω μέρος ώστε να
- * μη σκεπάζει τις γραμμές που γεμίζει. Τυλίγεται με το `CreateEntityCommand` σε ΕΝΑ
- * `CompoundCommand` από το `completeEntity` → ΕΝΑ undo.
+ * §5δ.9 — post-create εντολές για τη γραμμοσκίαση, τυλιγμένες με το
+ * `CreateEntityCommand` σε ΕΝΑ `CompoundCommand` από το `completeEntity` → ΕΝΑ undo:
+ *   1. `ReorderEntityCommand` — αποστολή στο πίσω μέρος ώστε να μη σκεπάζει τις
+ *      γραμμές που γεμίζει,
+ *   2. `HatchLifecycleSignalCommand` (ADR-390/ADR-507) — ΤΕΛΕΥΤΑΙΟ child· εκπέμπει
+ *      `bim:hatch-delete-requested` στο undo-of-create (σβήσιμο doc + tombstone) και
+ *      `bim:entity-restore-requested` στο redo (re-create doc, ίδιο id). Μηδέν επίδραση
+ *      στη σκηνή — μόνο persistence lifecycle (δες το command για τη σειρά undo/redo).
  */
 export function buildHatchPostCreateCommands(
   entityId: string,
   sceneManager: ISceneManager,
 ): ICommand[] {
-  return [new ReorderEntityCommand(entityId, 'back', sceneManager)];
+  return [
+    new ReorderEntityCommand(entityId, 'back', sceneManager),
+    new HatchLifecycleSignalCommand(entityId, sceneManager),
+  ];
 }

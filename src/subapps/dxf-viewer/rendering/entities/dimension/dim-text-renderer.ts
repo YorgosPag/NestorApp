@@ -43,6 +43,7 @@ import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // units before view-scale, otherwise meters/cm scenes draw text at the world-unit
 // size of the paper-mm number (huge).
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
+import { paperHeightToModel } from '../../../utils/annotation-scale';
 
 const RADIAL_DIAMETER_PREFIX = 'Ø ';
 const RADIAL_RADIUS_PREFIX = 'R ';
@@ -89,7 +90,13 @@ export function renderDimensionText(
   // Mirror R12 dim-style-importer rescue: dimscale<10 in a sub-mm-per-unit scene → treat as 1:100 default.
   const effectiveDimscale =
     unitFactor <= mmToSceneUnits('m') && params.style.dimscale < 10 ? 100 : params.style.dimscale;
-  const primaryHeight = params.style.dimtxt * effectiveDimscale * unitFactor * params.transform.scale;
+  // ADR-344 Round 7 — same paper→model SSoT as ribbon Text (`paperHeightToModel`),
+  // then × view scale to reach screen px. Byte-equivalent to the previous inline
+  // `dimtxt × effectiveDimscale × unitFactor`; centralised so the conversion lives
+  // in one place. `effectiveDimscale` (imported-DXF DIMSTYLE rescue) stays local.
+  const primaryHeight =
+    paperHeightToModel(params.style.dimtxt, effectiveDimscale, params.sceneUnits ?? 'mm') *
+    params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
   const colour = params.hovered

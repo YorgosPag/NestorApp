@@ -425,15 +425,15 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
-              // ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing).
-              type: 'simple',
+              // ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing· toggle = μένει
+              // πατημένο όσο περιμένει κλικ σε γραμμοσκίαση, one-shot disarm μετά).
+              type: 'toggle',
               size: 'small',
               command: {
                 id: 'hatch.selectExisting',
                 labelKey: 'ribbon.commands.hatchEditor.selectExisting',
                 icon: 'hatch',
-                commandKey: HATCH_RIBBON_KEYS.actions.selectExisting,
-                action: HATCH_RIBBON_KEYS.actions.selectExisting,
+                commandKey: HATCH_RIBBON_KEYS.toggles.selectExisting,
               },
             },
             {

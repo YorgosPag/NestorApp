@@ -177,10 +177,12 @@ describe('computeHatchAreaMm2', () => {
 });
 
 describe('buildHatchPostCreateCommands', () => {
-  it('returns a single send-to-back reorder command', () => {
+  it('returns send-to-back reorder + lifecycle signal (ADR-390/ADR-507)', () => {
     const fakeSm = {} as never;
     const cmds = buildHatchPostCreateCommands('e1', fakeSm);
-    expect(cmds).toHaveLength(1);
+    expect(cmds).toHaveLength(2);
     expect(cmds[0].name).toBe('ReorderEntity');
+    // ΤΕΛΕΥΤΑΙΟ child: undo→delete doc, redo→restore doc (μηδέν zombie/loss).
+    expect(cmds[1].name).toBe('HatchLifecycleSignal');
   });
 });

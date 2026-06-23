@@ -24,11 +24,15 @@ import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { DXF_COLOR_BY_LAYER } from '../../text-engine/types/text-toolbar.types';
 import type { DxfTextNode } from '../../text-engine/types';
 import type { ToolType } from '../../ui/toolbar/types';
-// ADR-344 Phase 13 — scene-units awareness for default text height. Without this,
-// `height: 2.5` is interpreted as 2.5 world units (= 2.5m in a meters scene =>
-// huge), instead of the intended 2.5 paper-mm. SSoT helper lives in scene-units.
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
+// ADR-344 Phase 13 / Round 7 — scene-units + annotation-scale awareness for the
+// default text height. The 2.5 paper-mm CAD default must be (a) scaled by the
+// active drawing scale (Revit annotation scale, ADR-375 — 1:100 default) and
+// (b) converted to world units, so a ribbon TEXT is legible at building scale in
+// ANY unit system (mm/cm/m). SSoT helpers: scene-units + annotation-scale.
+import { type SceneUnits } from '../../utils/scene-units';
+import { paperHeightToModel } from '../../utils/annotation-scale';
+import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 
 interface CreatingState {
   readonly entityId: string;
@@ -78,13 +82,13 @@ interface TextCreationToolApi {
 // Mirrors `DEFAULT_RUN_STYLE` from text-engine/templates/defaults/template-helpers
 // without coupling to that private module.
 //
-// ADR-344 Phase 13 — the 2.5 default is paper-mm (CAD convention). Convert to
-// the active scene's world units so a meters-scale DXF renders the text at
-// 2.5 mm equivalent (0.0025 world units) instead of 2.5 m (huge).
-function makeEmptyTextNode(units: SceneUnits, dimscale = 1): DxfTextNode {
-  // ADR-344 R6: multiply by dimscale (default 1) so the initial TipTap node
-  // shows at model-space size (e.g. 2.5mm × 100 = 250mm for 1:100 DXF).
-  const height = 2.5 * Math.max(1, dimscale) * mmToSceneUnits(units);
+// ADR-344 Phase 13 / Round 7 — the DEFAULT_HEIGHT (2.5) is paper-mm (CAD/ISO
+// convention). It is scaled by the active drawing scale (Revit annotation scale)
+// and converted to the scene's world units, so the initial TipTap node shows at
+// model-space size (e.g. 2.5mm × 100 = 250mm for a 1:100 drawing) in any unit
+// system — mm/cm/m all yield the same 250mm physical height.
+function makeEmptyTextNode(units: SceneUnits, drawingScale = 1): DxfTextNode {
+  const height = paperHeightToModel(TEXT_SIZE_LIMITS.DEFAULT_HEIGHT, drawingScale, units);
   return {
     paragraphs: [{
       runs: [{
@@ -181,22 +185,17 @@ export function useTextCreationTool(
       const isMText = activeTool === 'mtext';
       const { worldWidth, ...anchorRect } = computeAnchorRect(worldPoint, transform, container, isMText);
       const units = getSceneUnits ? getSceneUnits() : 'mm';
-      const reg = getDimStyleRegistry();
-      const activeStyle = reg.getAllStyles().find(s => s.id === reg.getActiveStyleId());
-      const rawDimscale = activeStyle?.dimscale ?? 1;
-      // ADR-344 R6: when no meaningful scale is declared (dimscale ≤ 1),
-      // fall back to a unit-aware typical drawing scale so the committed text
-      // height is visible. E.g. m scene + scale 1 → 0.0025m (sub-pixel). Using
-      // 100 gives 0.25m (250mm) — legible at typical 1:100 building scale.
-      const dimscale = rawDimscale > 1 ? rawDimscale : (
-        units === 'm'  ? 100 :  // 2.5mm × 100 = 250mm — 1:100 building
-        units === 'cm' ? 10  :  // 2.5mm × 10 = 25mm  — 1:10 detail
-        1                        // mm/in/ft — paper-mm is correct
-      );
+      // ADR-344 Round 7 — annotation scale = the canonical `drawingScale` SSoT
+      // (ADR-375, Revit annotation-scale pattern, default 1:100, set in the View
+      // ribbon, decoupled from zoom). Replaces the Round-6 unit-system heuristic
+      // (m→100/cm→10/mm→1) which produced inconsistent physical sizes — invisible
+      // 2.5mm text in the very common model-space-in-mm drawings. Read at click
+      // time (event-time getState, ADR-040) so it always reflects the live scale.
+      const drawingScale = useDrawingScaleStore.getState().drawingScale;
       setCreatingState({
         entityId: generateEntityId(),
         position: worldPoint,
-        initial: makeEmptyTextNode(units, dimscale),
+        initial: makeEmptyTextNode(units, drawingScale),
         anchorRect,
         worldWidth,
         forceMText: isMText,
@@ -231,7 +230,9 @@ export function useTextCreationTool(
         return;
       }
       const firstRun = state.initial.paragraphs[0]?.runs[0];
-      const defaultHeight = (firstRun && 'text' in firstRun) ? firstRun.style.height : 2.5;
+      const defaultHeight = (firstRun && 'text' in firstRun)
+        ? firstRun.style.height
+        : TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
       const patchedNext = patchZeroHeightRuns(next, defaultHeight);
       const cmd = new CreateTextCommand(
         {

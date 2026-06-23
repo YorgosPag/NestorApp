@@ -34,11 +34,13 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleHatchSelectClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
 import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
-// ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing) mode SSoT.
-import { isHatchSelectArmed } from '../../bim/hatch/hatch-select-mode-store';
+// ADR-507 — armed «Επιλογή γραμμοσκίασης»: hatch-only pick (even-odd SSoT, world-coords).
+import { isHatchSelectArmed, disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
+import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
+import type { Entity } from '../../types/entities';
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -107,13 +109,21 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       PolygonCropStore.addPoint(worldPoint.x, worldPoint.y);
       return;
     }
-    // PRIORITY 0.6: ADR-507 — «Επιλογή γραμμοσκίασης» one-shot pick-existing.
-    // Tool-agnostic (armed από το ribbon ενώ ο χρήστης είναι σε select/hatch):
-    // intercept ΠΡΙΝ τα grips ώστε το κλικ να διαλέξει νέα γραμμοσκίαση, όχι να
-    // πειράξει grip της ήδη επιλεγμένης. Πάντα consume + disarm (one-shot).
+    // PRIORITY 0.6: ADR-507 — armed «Επιλογή γραμμοσκίασης» (one-shot). Tool-agnostic
+    // intercept ΑΚΡΙΒΩΣ ΠΡΙΝ τη δημιουργία pick-point (PRIORITY 1.75) → επιλέγει την
+    // υφιστάμενη γραμμοσκίαση αντί να σχεδιάσει νέα. Reuse: even-odd SSoT (`pickTopHatchAt`,
+    // ίδιο με το hover-highlight) + `replaceEntitySelection`. Consume + disarm.
     if (isHatchSelectArmed()) {
-      handleHatchSelectClick(worldPoint, params);
-      return;
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+      const hatchId = pickTopHatchAt(worldPoint, (scene?.entities ?? []) as unknown as Entity[]);
+      // Disarm ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (ξαναδοκίμασε).
+      if (hatchId) {
+        universalSelection.replaceEntitySelection([hatchId]);
+        disarmHatchSelect();
+      }
+      return; // πάντα consume — ΠΟΤΕ δημιουργία pick-point όσο armed
     }
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
     if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && activeTool !== 'scale' && activeTool !== 'stretch' && activeTool !== 'mstretch' && dxfGripInteraction.handleGripClick(worldPoint)) {

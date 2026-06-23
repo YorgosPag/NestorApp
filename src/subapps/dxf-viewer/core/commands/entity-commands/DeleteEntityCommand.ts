@@ -8,7 +8,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
+import { emitBimEntityRestoreRequested } from '../../../systems/events/bim-entity-lifecycle-events';
 import type { AnySceneEntity } from '../../../types/scene';
 // ADR-401 Phase C — deleting a structural host (beam/slab) leaves any `attached`
 // wall without its top support. The wall auto-falls-back to baseline geometry
@@ -57,23 +57,23 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'thermal-space',
   // ADR-437 — space separator (IfcVirtualElement).
   'space-separator',
+  // ADR-507 — FLAT DXF hatch (symmetric undo→Firestore restore, mirror BIM entities).
+  'hatch',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space' | 'space-separator';
+  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space' | 'space-separator'
+  | 'hatch';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;
   if (!type || !BIM_ENTITY_TYPES.has(type)) return;
-  // SceneEntity (loose interface) → AnySceneEntity (BIM-union) cast μέσω
-  // unknown — bypass δικαιολογημένο γιατί έχουμε ήδη τσεκάρει type discriminator.
-  EventBus.emit('bim:entity-restore-requested', {
-    entityType: type as BimEntityType,
-    entitySnapshot: snapshot as unknown as AnySceneEntity,
-    source: 'undo-delete',
-  });
+  // SceneEntity (loose interface) → AnySceneEntity (BIM-union) cast μέσω unknown —
+  // bypass δικαιολογημένο γιατί έχουμε ήδη τσεκάρει τον type discriminator. Emit μέσω
+  // του lifecycle SSoT (ADR-390) — μηδέν inline copy.
+  emitBimEntityRestoreRequested(type as BimEntityType, snapshot as unknown as AnySceneEntity, 'undo-delete');
 }
 
 /**

@@ -42,8 +42,13 @@ import {
 import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
 // Area readout SSoT (ADR-462) — locale + display-unit aware (μηδέν δικό μου format).
 import { formatAreaForDisplay } from '../../../config/display-length-format';
-// ADR-507 — «Επιλογή γραμμοσκίασης» (one-shot pick-existing) mode SSoT.
-import { armHatchSelect } from '../../../bim/hatch/hatch-select-mode-store';
+// ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing) mode SSoT.
+import {
+  armHatchSelect,
+  disarmHatchSelect,
+  isHatchSelectArmed,
+  subscribeHatchSelect,
+} from '../../../bim/hatch/hatch-select-mode-store';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import {
   buildGradientFromDefaults,
@@ -128,6 +133,12 @@ export function useRibbonHatchBridge(
     subscribeHatchPickMode,
     getHatchPickMode,
     getHatchPickMode,
+  );
+  // Re-render όταν αλλάζει το armed «Επιλογή γραμμοσκίασης» (toggle κουμπί = πατημένο).
+  const hatchSelectArmed = useSyncExternalStore<boolean>(
+    subscribeHatchSelect,
+    isHatchSelectArmed,
+    isHatchSelectArmed,
   );
 
   const resolveHatch = useCallback((): HatchEntity | null => {
@@ -331,6 +342,17 @@ export function useRibbonHatchBridge(
   const onToggle = useCallback(
     (commandKey: string, nextValue: boolean): void => {
       if (!isHatchRibbonToggleKey(commandKey)) return;
+      // «Επιλογή γραμμοσκίασης» — armed pick-existing (όχι ιδιότητα οντότητας). Όσο
+      // πατημένο, το επόμενο κλικ στον καμβά επιλέγει hatch-only (mouse-handler-up).
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.selectExisting) {
+        if (nextValue) {
+          armHatchSelect();
+          toolHintOverrideStore.setOverride(t('ribbon.commands.hatchEditor.selectExistingHint'));
+        } else {
+          disarmHatchSelect();
+        }
+        return;
+      }
       const hatch = resolveHatch();
       if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
         applyGradientChange(hatch, { field: 'singleColor', value: nextValue });
@@ -339,31 +361,28 @@ export function useRibbonHatchBridge(
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
-    [resolveHatch, patchHatch, applyGradientChange],
+    [resolveHatch, patchHatch, applyGradientChange, t],
   );
 
   const getToggleState = useCallback(
     (commandKey: string): RibbonToggleState => {
       if (!isHatchRibbonToggleKey(commandKey)) return NULL_TOGGLE;
+      // Armed state (πατημένο όσο περιμένουμε κλικ σε γραμμοσκίαση).
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.selectExisting) {
+        return hatchSelectArmed;
+      }
       const hatch = resolveHatch();
       if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
         return hatch ? (hatch.gradient?.singleColor ?? false) : defaults.gradientSingleColor;
       }
       return hatch ? (hatch.doubleCrossHatch ?? false) : defaults.doubleCrossHatch;
     },
-    [resolveHatch, defaults],
+    [resolveHatch, defaults, hatchSelectArmed],
   );
 
   const onAction = useCallback(
     (action: string): void => {
       if (!isHatchRibbonActionKey(action)) return;
-      // «Επιλογή γραμμοσκίασης» — όπλισε το one-shot pick-existing mode + δείξε
-      // prompt στο status bar (καθαρίζεται από το disarm στο click handler).
-      if (action === HATCH_RIBBON_KEYS.actions.selectExisting) {
-        armHatchSelect();
-        toolHintOverrideStore.setOverride(t('ribbon.commands.hatchEditor.selectExistingHint'));
-        return;
-      }
       if (action === HATCH_RIBBON_KEYS.actions.delete) {
         const hatch = resolveHatch();
         if (!hatch || !levelManager.currentLevelId) return;

@@ -1,40 +1,44 @@
 /**
- * Hatch select-mode flag (ADR-507 — «Επιλογή γραμμοσκίασης» / pick-existing).
+ * Hatch select-mode store (ADR-507 — «Επιλογή γραμμοσκίασης» / pick-existing).
  *
- * SSoT για το one-shot «διάλεξε υπάρχουσα γραμμοσκίαση» mode: όταν είναι armed, το
- * επόμενο κλικ στον καμβά κάνει hit-test μόνο σε `HatchEntity` (reuse του
- * `performDetailedHitTest` even-odd SSoT) και επιλέγει τη γραμμοσκίαση — ώστε ο
- * χρήστης να ρυθμίσει τις ιδιότητές της χωρίς να φύγει από το contextual tab.
+ * SSoT για το armed «διάλεξε υπάρχουσα γραμμοσκίαση» mode: όσο είναι armed, το
+ * τοπικό κουμπί στο contextual tab μένει **πατημένο** (reactive — `useSyncExternalStore`)
+ * και το επόμενο κλικ στον καμβά επιλέγει hatch-only (reuse του even-odd hit-test SSoT)·
+ * μετά την επιλογή το mode κλείνει μόνο του (one-shot, AutoCAD-style).
  *
- * One-shot (AutoCAD-style): μετά την πρώτη επιλογή (ή αστοχία) το mode κλείνει μόνο
- * του (`disarmHatchSelect`). Το disarm καθαρίζει και το status-hint override.
+ * **Reuse του `createToggleStore` SSoT** (boolean toggle singleton· zero-React +
+ * `useSyncExternalStore`-compatible) — μηδέν hand-rolled `_state`/`_subs`/`_notify`
+ * boilerplate. Το `disarmHatchSelect` προσθέτει μόνο το καθάρισμα του status-hint.
  *
- * **Σκόπιμα plain imperative flag, ΟΧΙ listener-store/`createToggleStore`:** το flag
- * διαβάζεται ΜΟΝΟ imperative στο click-time (`useCanvasClickHandler`, ADR-040
- * event-time read) — κανείς δεν το subscribe-άρει για re-render. Άρα δεν χρειάζεται
- * το subscribe/getSnapshot boilerplate που εξαλείφει το `createToggleStore` (αντίθετα
- * με το αδελφό `hatch-pick-mode-store`, που ΟΝΤΩΣ subscribe-άρεται από το bridge).
+ * Καταναλωτές:
+ *   - `useRibbonHatchBridge` — toggle κουμπί (πατημένο = armed) + arm/disarm.
+ *   - `systems/cursor/mouse-handler-up` — authoritative hatch-only pick στο click.
  *
+ * @see ../../stores/createToggleStore — boolean toggle SSoT factory
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
+import { createToggleStore } from '../../stores/createToggleStore';
 import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
 
-let armed = false;
+const store = createToggleStore();
 
-/** `true` όταν περιμένουμε κλικ σε υπάρχουσα γραμμοσκίαση (one-shot). */
+/** `true` όσο περιμένουμε κλικ σε υπάρχουσα γραμμοσκίαση (event-time + snapshot read). */
 export function isHatchSelectArmed(): boolean {
-  return armed;
+  return store.isOpen();
 }
+
+/** `useSyncExternalStore` subscribe (το toggle κουμπί δείχνει armed κατάσταση). */
+export const subscribeHatchSelect = store.subscribe;
 
 /** Οπλίζει το mode «διάλεξε υπάρχουσα». */
 export function armHatchSelect(): void {
-  armed = true;
+  store.open();
 }
 
 /** Κλείνει το mode + καθαρίζει το status-hint override (κάθε disarm path· null = μηδέν i18n). */
 export function disarmHatchSelect(): void {
-  if (!armed) return;
-  armed = false;
+  if (!store.isOpen()) return;
+  store.close();
   toolHintOverrideStore.setOverride(null);
 }

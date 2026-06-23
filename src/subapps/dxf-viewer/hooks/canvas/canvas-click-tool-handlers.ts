@@ -21,10 +21,6 @@ import { dlog } from '../../debug';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import { testEntityHit } from './canvas-click-entity-hit';
-import { isHatchEntity } from '../../types/entities';
-// ADR-507 — «Επιλογή γραμμοσκίασης»: reuse του even-odd hatch hit-test SSoT (case 'hatch').
-import { performDetailedHitTest } from '../../rendering/hitTesting/hit-test-entity-tests';
-import { disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
 // ADR-507 Φ3 — pick-point (Τρόπος Β): ΕΝΑ κλικ μέσα σε περιοχή → HatchEntity.
 import { buildHatchFromPick, isPointInsideExistingHatch } from '../../bim/hatch/hatch-pick-completion';
 // ADR-507 Φ3 — preview ≡ commit (WYSIWYG): το commit γεμίζει ΑΚΡΙΒΩΣ την περιοχή που
@@ -204,45 +200,6 @@ export function handleHatchPickPointClick(
   }
 
   commit();
-  return true;
-}
-
-// ============================================================================
-// HATCH SELECT (ADR-507 — «Επιλογή γραμμοσκίασης», one-shot pick-existing)
-// ============================================================================
-/**
- * One-shot «διάλεξε υπάρχουσα γραμμοσκίαση»: κλικ στον καμβά → hit-test ΜΟΝΟ σε
- * `HatchEntity` (reuse του `performDetailedHitTest` even-odd SSoT — `case 'hatch'`)
- * → επιλογή της κορυφαίας → το contextual tab δείχνει αμέσως τις ιδιότητές της
- * (dual-mode `resolveHatch` = `getPrimaryId`). Topmost-first (τα τελευταία entities
- * ζωγραφίζονται από πάνω).
- *
- * Πάντα καταναλώνει το κλικ και κλείνει το mode (one-shot, AutoCAD-style) — και
- * όταν βρει γραμμοσκίαση και όταν όχι (miss → απλά disarm).
- */
-export function handleHatchSelectClick(
-  worldPoint: Point2D,
-  p: UseCanvasClickHandlerParams,
-): boolean {
-  const scene = p.levelManager.currentLevelId
-    ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
-    : null;
-  const entities = scene?.entities ?? [];
-  // ADR-040 XXII.A: live SSoT scale read at click time.
-  const tolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
-  for (let i = entities.length - 1; i >= 0; i--) {
-    const e = entities[i];
-    if (!isHatchEntity(e)) continue;
-    if (performDetailedHitTest(e, worldPoint, tolerance)) {
-      p.universalSelection.replaceEntitySelection([e.id]);
-      disarmHatchSelect();
-      dlog('handleHatchSelectClick', `selected hatch ${e.id}`);
-      return true;
-    }
-  }
-  // Καμία γραμμοσκίαση κάτω από τον κέρσορα → one-shot: κλείσε το mode.
-  disarmHatchSelect();
-  dlog('handleHatchSelectClick', 'no hatch under cursor');
   return true;
 }
 

@@ -10,7 +10,7 @@
 
 import {
   reconcileLoadedSceneBim,
-  isBimOrStairEntity,
+  isPerEntityPersistedEntity,
   stripForeignFloorBim,
   replaceFootingsFromModel,
   stripAllFoundations,
@@ -26,20 +26,24 @@ const entF = (id: string, type: string, floorId?: string): Entity =>
 const scene = (entities: Entity[]): SceneModel =>
   ({ entities, layersById: {}, bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, units: 'mm' } as unknown as SceneModel);
 
-describe('isBimOrStairEntity', () => {
+describe('isPerEntityPersistedEntity', () => {
   it('flags BIM parametric entities', () => {
     for (const t of ['wall', 'column', 'beam', 'slab', 'foundation', 'opening', 'roof']) {
-      expect(isBimOrStairEntity(ent('x', t))).toBe(true);
+      expect(isPerEntityPersistedEntity(ent('x', t))).toBe(true);
     }
   });
 
   it('flags stairs (not covered by isBimEntity but per-entity persisted)', () => {
-    expect(isBimOrStairEntity(ent('s', 'stair'))).toBe(true);
+    expect(isPerEntityPersistedEntity(ent('s', 'stair'))).toBe(true);
   });
 
-  it('does NOT flag pure-DXF entities', () => {
+  it('flags hatch (ADR-507 — pure-DXF primitive with own floorplan_hatches SSoT)', () => {
+    expect(isPerEntityPersistedEntity(ent('h', 'hatch'))).toBe(true);
+  });
+
+  it('does NOT flag pure-DXF entities without own persistence', () => {
     for (const t of ['line', 'polyline', 'arc', 'text', 'circle']) {
-      expect(isBimOrStairEntity(ent('d', t))).toBe(false);
+      expect(isPerEntityPersistedEntity(ent('d', t))).toBe(false);
     }
   });
 });
@@ -80,6 +84,22 @@ describe('reconcileLoadedSceneBim', () => {
     const result = reconcileLoadedSceneBim(loaded, existing);
     expect(result.entities).toHaveLength(1);
     expect(result.entities[0].type).toBe('line');
+  });
+
+  it('ADR-507 — drops snapshot hatch (floorplan_hatches = SSoT), keeps pure-DXF', () => {
+    // Το hatch στο snapshot είναι παράγωγο cache· πετιέται ώστε να ξαναγεμίσει ΜΟΝΟ
+    // από το floorplan_hatches subscription → διαγραφή της collection = ΟΧΙ φάντασμα.
+    const loaded = scene([ent('l1', 'line'), ent('h_stale', 'hatch')]);
+    const result = reconcileLoadedSceneBim(loaded, null);
+    expect(result.entities.map((e) => e.id)).toEqual(['l1']);
+  });
+
+  it('ADR-507 — preserves in-memory hatch (subscription raced ahead of load)', () => {
+    const loaded = scene([ent('l1', 'line'), ent('h_stale', 'hatch')]);
+    const existing = scene([ent('h_db', 'hatch')]);
+    const result = reconcileLoadedSceneBim(loaded, existing);
+    // snapshot hatch dropped, DXF kept, in-memory (DB-sourced) hatch preserved.
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['h_db', 'l1']);
   });
 });
 

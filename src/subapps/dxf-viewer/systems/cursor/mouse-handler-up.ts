@@ -45,6 +45,9 @@ import { LassoStore, computeLassoMode } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
 import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
+// ADR-507 — «Επιλογή γραμμοσκίασης»: armed hatch-only pick (even-odd SSoT, world-coords).
+import { isHatchSelectArmed, disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
+import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -117,6 +120,28 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         cancelAnimationFrame(panState.animationId);
         panState.animationId = null;
       }
+    }
+
+    // ADR-507 — «Επιλογή γραμμοσκίασης» (armed): authoritative hatch-only pick. Τρέχει
+    // ΠΡΙΝ από grips / drawing-click / γενικό entity-select ώστε (α) να μη σχεδιαστεί νέα
+    // γραμμοσκίαση με ενεργό το hatch tool και (β) να μην «κλαπεί» από υπερκείμενες
+    // γραμμές/τοίχους. Reuse του ΙΔΙΟΥ spatial-index pick SSoT με τη normal selection,
+    // απλώς με `typeFilter:['hatch']` + `replaceEntitySelection` (onEntitiesSelected).
+    // One-shot: disarm σε κάθε περίπτωση, consume το click.
+    if (isHatchSelectArmed() && e.button === 0 && !wasPanning) {
+      // Θέση κλικ ΑΠΕΥΘΕΙΑΣ από το event (ίδιο με το onCanvasClick). World-coords pick
+      // μέσω του even-odd SSoT (ίδιο με το hover-highlight) → replace-selection.
+      const pickSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+      if (pickSnap && scene) {
+        const wp = screenToWorldWithSnapshot(getScreenPosFromEvent(e, pickSnap), transform, pickSnap);
+        const hatchId = pickTopHatchAt(wp, (scene.entities ?? []) as unknown as Entity[]);
+        // Disarm ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (forgiving — ξαναδοκίμασε).
+        if (hatchId && onEntitiesSelected) {
+          onEntitiesSelected([hatchId]);
+          disarmHatchSelect();
+        }
+      }
+      return; // πάντα consume — ΠΟΤΕ δημιουργία/grip/select όσο armed
     }
 
     // Grip drag-release with snap

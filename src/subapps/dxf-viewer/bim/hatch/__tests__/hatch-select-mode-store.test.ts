@@ -1,9 +1,11 @@
 /**
- * ADR-507 — tests για το hatch select-mode flag («Επιλογή γραμμοσκίασης», one-shot).
+ * ADR-507 — tests για το hatch select-mode store («Επιλογή γραμμοσκίασης»,
+ * armed pick-existing, reuse `createToggleStore`).
  */
 
 import {
   isHatchSelectArmed,
+  subscribeHatchSelect,
   armHatchSelect,
   disarmHatchSelect,
 } from '../hatch-select-mode-store';
@@ -30,6 +32,18 @@ describe('hatch-select-mode-store', () => {
     expect(isHatchSelectArmed()).toBe(false);
     disarmHatchSelect();
     expect(isHatchSelectArmed()).toBe(false);
+  });
+
+  it('notifies subscribers on arm/disarm (toggle button reflects armed state)', () => {
+    let calls = 0;
+    const unsub = subscribeHatchSelect(() => { calls++; });
+    armHatchSelect();
+    expect(calls).toBe(1);
+    disarmHatchSelect();
+    expect(calls).toBe(2);
+    unsub();
+    armHatchSelect();
+    expect(calls).toBe(2);
   });
 
   it('clears the status-hint override on disarm (any path)', () => {

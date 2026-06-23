@@ -1,0 +1,44 @@
+/**
+ * ADR-344 Round 7 — `paperHeightToModel` SSoT.
+ *
+ * The single conversion paper-mm → model-space height. The defining property:
+ * for a fixed paper height + drawing scale, EVERY unit system must yield the same
+ * physical height (the meters/mm text-size bug was the violation of exactly this).
+ */
+
+import { paperHeightToModel } from '../annotation-scale';
+import { mmToSceneUnits, type SceneUnits } from '../scene-units';
+
+describe('paperHeightToModel — annotation-scale SSoT', () => {
+  const PAPER = 2.5; // ISO 3098 / TEXT_SIZE_LIMITS.DEFAULT_HEIGHT
+  const ALL_UNITS: readonly SceneUnits[] = ['mm', 'cm', 'm', 'in', 'ft'];
+
+  it('yields the SAME physical height (mm) across every unit system at 1:100', () => {
+    const physicalMm = (u: SceneUnits) =>
+      paperHeightToModel(PAPER, 100, u) / mmToSceneUnits(u);
+    for (const u of ALL_UNITS) {
+      expect(physicalMm(u)).toBeCloseTo(250, 6); // 2.5mm × 100 = 250mm
+    }
+  });
+
+  it('stores the height in the requested scene units', () => {
+    expect(paperHeightToModel(PAPER, 100, 'mm')).toBeCloseTo(250, 6);
+    expect(paperHeightToModel(PAPER, 100, 'cm')).toBeCloseTo(25, 6);
+    expect(paperHeightToModel(PAPER, 100, 'm')).toBeCloseTo(0.25, 6);
+    expect(paperHeightToModel(PAPER, 100, 'in')).toBeCloseTo(250 / 25.4, 6);
+    expect(paperHeightToModel(PAPER, 100, 'ft')).toBeCloseTo(250 / 304.8, 6);
+  });
+
+  it('scales linearly with the drawing-scale denominator', () => {
+    expect(paperHeightToModel(PAPER, 1, 'mm')).toBeCloseTo(2.5, 6);
+    expect(paperHeightToModel(PAPER, 50, 'mm')).toBeCloseTo(125, 6);
+    expect(paperHeightToModel(PAPER, 200, 'mm')).toBeCloseTo(500, 6);
+  });
+
+  it('collapses non-positive / non-finite scale to 1 (defensive, never NaN/0)', () => {
+    expect(paperHeightToModel(PAPER, 0, 'mm')).toBeCloseTo(2.5, 6);
+    expect(paperHeightToModel(PAPER, -5, 'mm')).toBeCloseTo(2.5, 6);
+    expect(paperHeightToModel(PAPER, Number.NaN, 'mm')).toBeCloseTo(2.5, 6);
+    expect(paperHeightToModel(PAPER, Number.POSITIVE_INFINITY, 'mm')).toBeCloseTo(2.5, 6);
+  });
+});

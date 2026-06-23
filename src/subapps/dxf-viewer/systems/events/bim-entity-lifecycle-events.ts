@@ -21,6 +21,10 @@
 
 import { EventBus } from './EventBus';
 import type { AnySceneEntity } from '../../types/scene';
+import type { BimEventMap } from './drawing-event-map-bim';
+
+/** Payload shape του `bim:entity-restore-requested` — SSoT για τα param types του helper. */
+type RestoreRequestedPayload = BimEventMap['bim:entity-restore-requested'];
 
 /**
  * Broadcast `drawing:entity-created` — the trigger the `use*Persistence` hooks wait
@@ -59,6 +63,26 @@ export function emitBimEntityDeleteRequested(type: string, id: string): void {
     case 'wall-covering': EventBus.emit('bim:wall-covering-delete-requested', { id }); break;
     case 'mep-underfloor': EventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId: id }); break;
     case 'space-separator': EventBus.emit('bim:space-separator-delete-requested', { id }); break;
+    // ADR-507 — FLAT DXF hatch (undo-of-create + delete-tool → Firestore deleteDoc + tombstone).
+    case 'hatch': EventBus.emit('bim:hatch-delete-requested', { id }); break;
     default: break;
   }
+}
+
+/**
+ * Fire `bim:entity-restore-requested` — ο **τρίτος αδελφός** του create/delete
+ * lifecycle SSoT (συμμετρικός με τα `emitBimEntityCreated` / `emitBimEntityDeleteRequested`).
+ * Τα persistence hooks ξαναγράφουν το Firestore doc (+ audit `action='restored'`) όταν
+ * ένα delete αναιρείται ή ένα create επαναλαμβάνεται (redo), με το **ίδιο id**.
+ *
+ * Πριν ήταν copy-pasted inline σε 4 σημεία (DeleteEntityCommand, MergeColumnsCommand,
+ * bim-clone-persistence, HatchLifecycleSignalCommand) — πλέον ΜΙΑ πηγή (N.0.2 / SSoT).
+ * `source` default = `'undo-delete'` (η συχνότερη περίπτωση· redo → `'redo-restore'`).
+ */
+export function emitBimEntityRestoreRequested(
+  entityType: RestoreRequestedPayload['entityType'],
+  entitySnapshot: AnySceneEntity,
+  source: RestoreRequestedPayload['source'] = 'undo-delete',
+): void {
+  EventBus.emit('bim:entity-restore-requested', { entityType, entitySnapshot, source });
 }

@@ -9,10 +9,12 @@
  *   - subscribe + diff-merge incoming Firestore docs
  *   - first-save on `drawing:complete` (tool: 'hatch')  ← NOT `drawing:entity-created`
  *   - 500ms auto-save debounce on selected hatch payload change
- *   - delete on `bim:hatch-delete-requested`
+ *   - delete on `bim:hatch-delete-requested` (delete-tool + undo-of-create)
+ *   - ADR-390 symmetric undo/redo: `bim:entity-restore-requested` ('hatch') → re-create
+ *     doc με ίδιο id (create-redo + delete-undo). Reuse του `persist` ως `persistRestore`
+ *     (η `isNew` διαδρομή ξαναγράφει με `setDoc` + ίδιο id) — μηδέν διπλότυπο.
  *
- * DEFER (ADR-507 later phase): move/grip-edit re-persist
- * (`useBimEntityMovedPersistEffect` / `useBimEntityRestoredPersistEffect`).
+ * DEFER (ADR-507 later phase): move/grip-edit re-persist (`useBimEntityMovedPersistEffect`).
  *
  * ⚠️ The create event divergence is deliberate: hatch completes via
  * `completeEntity()` which emits `drawing:complete {tool, entityId, entity}`
@@ -40,6 +42,7 @@ import {
   type HatchDocData,
 } from '../../bim/hatch/hatch-firestore-service';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // CONSTANTS
@@ -271,13 +274,27 @@ export function useHatchPersistence(params: UseHatchPersistenceParams): UseHatch
     return cleanup;
   }, [persist]);
 
-  // Delete-requested listener.
+  // Delete-requested listener (delete-tool + undo-of-create).
   useEffect(() => {
     const cleanup = EventBus.on('bim:hatch-delete-requested', (payload) => {
       if (payload.id) void deleteHatch(payload.id);
     });
     return cleanup;
   }, [deleteHatch]);
+
+  // ADR-390 — restore-requested listener (create-redo + delete-undo). Reuse `persist`
+  // ως `persistRestore`: μετά από delete/undo το `lastSavedDataRef` δεν έχει το id →
+  // η `isNew` διαδρομή ξαναγράφει το doc με ίδιο id (`setDoc`). Ο effect κάνει ήδη
+  // `pendingFirstSaveIdsRef.add` + `deletedIdsRef.delete` ώστε ο subscribe-loop να μην
+  // πετάξει/μπλοκάρει το entity στο race με το Firestore Watch.
+  useBimEntityRestoredPersistEffect(
+    'hatch',
+    isHatchEntity,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persist,
+  );
 
   useEffect(() => {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };

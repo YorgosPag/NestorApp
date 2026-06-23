@@ -25,6 +25,7 @@
  * @see bim/scene/append-entity-to-scene.ts — draw-tool create path (tool = type)
  */
 import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityRestoreRequested } from '../../systems/events/bim-entity-lifecycle-events';
 import type { AnySceneEntity } from '../../types/entities';
 import {
   generateWallId,
@@ -136,9 +137,5 @@ export function broadcastBimCloneDeleted(entity: CloneEntityLike): void {
  */
 export function broadcastBimCloneRestored(entity: CloneEntityLike): void {
   if (!isBimPersistedType(entity.type)) return;
-  EventBus.emit('bim:entity-restore-requested', {
-    entityType: entity.type,
-    entitySnapshot: entity as unknown as AnySceneEntity,
-    source: 'redo-restore',
-  });
+  emitBimEntityRestoreRequested(entity.type, entity as unknown as AnySceneEntity, 'redo-restore');
 }

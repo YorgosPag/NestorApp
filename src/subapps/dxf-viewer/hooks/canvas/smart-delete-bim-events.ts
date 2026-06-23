@@ -35,6 +35,8 @@ export interface CollectedBimDeleteIds {
   floorFinishIds: string[];
   underfloorIds: string[];
   spaceSeparatorIds: string[];
+  // ADR-507 — FLAT DXF hatch (Firestore deleteDoc + tombstone on delete-tool).
+  hatchIds: string[];
 }
 
 /**
@@ -69,6 +71,7 @@ export function collectBimDeleteIds(
     floorFinishIds: byType('floor-finish'),
     underfloorIds: byType('mep-underfloor'),
     spaceSeparatorIds: byType('space-separator'),
+    hatchIds: byType('hatch'),
   };
 }
 
@@ -100,6 +103,7 @@ export function emitBimDeleteEvents(ids: CollectedBimDeleteIds): void {
     [ids.floorFinishIds, 'floor-finish'],
     [ids.underfloorIds, 'mep-underfloor'],
     [ids.spaceSeparatorIds, 'space-separator'],
+    [ids.hatchIds, 'hatch'],
   ];
   for (const [arr, type] of groups) {
     for (const id of arr) emitBimEntityDeleteRequested(type, id);

@@ -28,8 +28,11 @@ import type { ColumnEntity } from '../../../bim/types/column-types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
-import { EventBus } from '../../../systems/events/EventBus';
-import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
+import {
+  emitBimEntityCreated,
+  emitBimEntityDeleteRequested,
+  emitBimEntityRestoreRequested,
+} from '../../../systems/events/bim-entity-lifecycle-events';
 
 export class MergeColumnsCommand implements ICommand {
   readonly id: string;
@@ -99,11 +102,7 @@ export class MergeColumnsCommand implements ICommand {
       } else {
         emitBimEntityDeleteRequested('column', composite.id);
         for (const s of sources) {
-          EventBus.emit('bim:entity-restore-requested', {
-            entityType: 'column',
-            entitySnapshot: s as unknown as AnySceneEntity,
-            source: 'undo-delete',
-          });
+          emitBimEntityRestoreRequested('column', s as unknown as AnySceneEntity, 'undo-delete');
         }
       }
     });

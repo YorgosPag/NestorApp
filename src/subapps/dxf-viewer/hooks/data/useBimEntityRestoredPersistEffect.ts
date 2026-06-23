@@ -61,7 +61,9 @@ type BimRestoreEntityType =
   // ADR-422 — analytical thermal space (IfcSpace).
   | 'thermal-space'
   // ADR-437 — space separator (IfcVirtualElement).
-  | 'space-separator';
+  | 'space-separator'
+  // ADR-507 — FLAT DXF hatch (undo/redo persistence, mirror BIM restore flow).
+  | 'hatch';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

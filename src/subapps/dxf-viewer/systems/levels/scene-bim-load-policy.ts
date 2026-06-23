@@ -24,16 +24,24 @@
 
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../../types/entities';
-import { isBimEntity, isStairEntity } from '../../types/entities';
+import { isBimEntity, isStairEntity, isHatchEntity } from '../../types/entities';
 
 /**
- * True για κάθε BIM/parametric entity που έχει δικό του per-entity persistence
- * (SSoT). `isBimEntity` ΔΕΝ καλύπτει `'stair'` (ADR-358, χωριστό union) — ο stair
- * έχει επίσης per-entity persistence (`bim/hooks/use-stair-persistence`), οπότε
- * τον προσθέτουμε ρητά.
+ * True για κάθε entity που έχει δικό του **per-entity Firestore persistence (SSoT)**,
+ * άρα το αντίγραφό του στο `.scene.json` snapshot είναι **παράγωγο cache** που πρέπει
+ * να πετιέται στο load (και να ξαναγεμίζει από το per-entity subscription).
+ *
+ * Καλύπτει 3 οικογένειες:
+ *   · BIM/parametric (`isBimEntity`) — walls/columns/slabs/… (`floorplan_*`).
+ *   · `'stair'` — δεν είναι στο `isBimEntity` union (ADR-358, χωριστό union) αλλά
+ *     έχει per-entity persistence (`bim/hooks/use-stair-persistence`).
+ *   · `'hatch'` (ADR-507) — pure-DXF primitive ΑΛΛΑ με δικό του collection
+ *     (`floorplan_hatches`, SSoT) + cross-floor loader. ΧΩΡΙΣ αυτό, το scene.json
+ *     copy της γραμμοσκίασης επιβίωνε ως «φάντασμα» μετά από διαγραφή του doc
+ *     (dual-authority bug) — εδώ γίνεται κι αυτό derived-cache (single SSoT).
  */
-export function isBimOrStairEntity(entity: Entity): boolean {
-  return isBimEntity(entity) || isStairEntity(entity);
+export function isPerEntityPersistedEntity(entity: Entity): boolean {
+  return isBimEntity(entity) || isStairEntity(entity) || isHatchEntity(entity);
 }
 
 /**
@@ -48,9 +56,9 @@ export function reconcileLoadedSceneBim(
   loaded: SceneModel,
   existing: SceneModel | null,
 ): SceneModel {
-  const dxfOnly = loaded.entities.filter((e) => !isBimOrStairEntity(e));
+  const dxfOnly = loaded.entities.filter((e) => !isPerEntityPersistedEntity(e));
   const preservedBim = existing
-    ? existing.entities.filter((e) => isBimOrStairEntity(e))
+    ? existing.entities.filter((e) => isPerEntityPersistedEntity(e))
     : [];
   // Dedup-by-id ασφάλεια: αν για κάποιο λόγο ένα preserved BIM id υπάρχει και ως
   // DXF (δεν θα έπρεπε), το DXF προηγείται· το preserved BIM φιλτράρεται.
@@ -83,7 +91,7 @@ export function stripForeignFloorBim(
   if (!ownFloorId) return scene;
   const entities = scene.entities.filter((e) => {
     const floorId = (e as { floorId?: string }).floorId;
-    return !(isBimOrStairEntity(e) && typeof floorId === 'string' && floorId !== ownFloorId);
+    return !(isPerEntityPersistedEntity(e) && typeof floorId === 'string' && floorId !== ownFloorId);
   });
   return entities.length === scene.entities.length ? scene : { ...scene, entities };
 }

@@ -48,6 +48,8 @@ export const HATCH_RIBBON_KEYS = {
     doubleCrossHatch: 'hatch.toggle.doubleCrossHatch',
     /** Single-color gradient (color1 → tint προς λευκό). */
     gradientSingleColor: 'hatch.toggle.gradientSingleColor',
+    /** «Επιλογή γραμμοσκίασης» — armed pick-existing (πατημένο = armed, one-shot). */
+    selectExisting: 'hatch.toggle.selectExisting',
   },
   readouts: {
     /** Live εμβαδόν (read-only, m²). */
@@ -58,8 +60,6 @@ export const HATCH_RIBBON_KEYS = {
     close: 'hatch.action.close',
     /** Διαγραφή της γραμμοσκίασης. */
     delete: 'hatch.action.delete',
-    /** Επιλογή υπάρχουσας γραμμοσκίασης (one-shot pick-existing). */
-    selectExisting: 'hatch.action.selectExisting',
   },
   visibility: {
     /** Panel «Gradient» ορατό μόνο όταν fillType='gradient' (Revit-style contextual). */
@@ -88,15 +88,15 @@ export type HatchRibbonStringCommandKey =
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch
-  | typeof HATCH_RIBBON_KEYS.toggles.gradientSingleColor;
+  | typeof HATCH_RIBBON_KEYS.toggles.gradientSingleColor
+  | typeof HATCH_RIBBON_KEYS.toggles.selectExisting;
 
 export type HatchRibbonReadoutKey =
   | typeof HATCH_RIBBON_KEYS.readouts.area;
 
 export type HatchRibbonActionKey =
   | typeof HATCH_RIBBON_KEYS.actions.close
-  | typeof HATCH_RIBBON_KEYS.actions.delete
-  | typeof HATCH_RIBBON_KEYS.actions.selectExisting;
+  | typeof HATCH_RIBBON_KEYS.actions.delete;
 
 export type HatchRibbonVisibilityKey =
   | typeof HATCH_RIBBON_KEYS.visibility.gradient;
@@ -123,6 +123,7 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
 const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
   HATCH_RIBBON_KEYS.toggles.gradientSingleColor,
+  HATCH_RIBBON_KEYS.toggles.selectExisting,
 ]);
 const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.readouts.area,
@@ -130,7 +131,6 @@ const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
 const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.actions.close,
   HATCH_RIBBON_KEYS.actions.delete,
-  HATCH_RIBBON_KEYS.actions.selectExisting,
 ]);
 const VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.visibility.gradient,
