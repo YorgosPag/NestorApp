@@ -31,11 +31,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { Overlay } from '../../overlays/types';
 import type { SceneUnits } from '../../utils/scene-units';
-import {
-  getCachedRegionPerimeters,
-  pickSmallestContainingPerimeter,
-} from '../walls/perimeter-from-faces';
-import { resolveRegionLoopTolWorld } from '../walls/region-tolerance';
+import { pickRegionPerimeterAt } from '../walls/perimeter-from-faces';
 import { collectHoleAreas, getAutoAreaHitResult } from '../../systems/auto-area/auto-area-hit';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 
@@ -68,9 +64,7 @@ export function resolveHatchPickRegion(params: ResolveHatchPickRegionParams): Ha
   const { worldPoint, entities, overlays, scale, sceneUnits, gapTolerance } = params;
 
   // ── Layer 1 — room detector (ΙΔΙΟ SSoT με «Τοποθέτηση χώρου») ───────────────
-  const tol = resolveRegionLoopTolWorld(sceneUnits);
-  const perimeters = getCachedRegionPerimeters(entities, tol);
-  const pick = pickSmallestContainingPerimeter(worldPoint, perimeters);
+  const { perimeter: pick } = pickRegionPerimeterAt(worldPoint, entities, sceneUnits);
   if (pick) {
     const outer = pick.polygon.map((p) => ({ x: p.x, y: p.y }));
     const holes = collectHoleAreas(

@@ -227,9 +227,8 @@ export function useRibbonThermalSpaceBridge(
         EventBus.emit('bim:thermal-space-delete-requested', { id: ts.id });
         return;
       }
-      if (action === THERMAL_SPACE_RIBBON_KEYS.actions.close) {
-        EventBus.emit('bim:select-none' as Parameters<typeof EventBus.emit>[0], undefined);
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in `routeRibbonAction`
+      // (uniform deselect for every contextual tab). No per-bridge branch.
     },
     [resolveThermalSpace, t],
   );

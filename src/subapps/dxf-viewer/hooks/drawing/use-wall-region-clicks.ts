@@ -21,8 +21,7 @@ import {
   type RegionLineSeg,
 } from '../../bim/walls/wall-in-region';
 import {
-  getCachedRegionPerimeters,
-  pickSmallestContainingPerimeter,
+  pickRegionPerimeterAt,
   isPerimeterOversized,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
@@ -142,12 +141,9 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
     (s: WallToolState, point: Readonly<Point2D>): boolean => {
       const entities = getSceneEntities?.() ?? [];
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const tol = resolveRegionLoopTolWorld(sceneUnits);
       const scale = mmToSceneUnits(sceneUnits);
-      // Cached (SSoT) — κοινό με hover· μηδέν O(n²) recompute στο κλικ.
-      const perimeters = getCachedRegionPerimeters(entities, tol);
-      // ADR-419 Layer 1 — μικρότερο εμπεριέχον loop (όχι όλα τα containing).
-      const pick = pickSmallestContainingPerimeter(point, perimeters);
+      // ADR-419 Layer 1 SSoT — μικρότερο εμπεριέχον loop + tol (cached, κοινό click/hover).
+      const { perimeter: pick, tol } = pickRegionPerimeterAt(point, entities, sceneUnits);
       if (!pick) {
         // Layer 5 — open-loop diagnostics.
         const openIds = findOpenChainLineIdsNear(point, entities, tol);

@@ -66,6 +66,7 @@ export function useRibbonCommands({
   handleToolChange,
   handleRibbonComingSoon,
   wrappedHandleAction,
+  closeContextualTab,
   canUndo,
   canRedo,
   textEditorBridge,
@@ -396,6 +397,7 @@ export function useRibbonCommands({
   const onAction = React.useCallback(
     (action: string, data?: RibbonActionPayload) => {
       routeRibbonAction(action, data, {
+        closeContextualTab,
         wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge,
         thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge,
         stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge,
@@ -406,7 +408,7 @@ export function useRibbonCommands({
         wrappedHandleAction,
       });
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [closeContextualTab, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

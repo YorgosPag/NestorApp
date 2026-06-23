@@ -18,6 +18,7 @@
  * - DxfViewerTopBar.tsx (consumer — renders RibbonRoot with these commands)
  */
 
+import { useCallback } from 'react';
 import { useLevels } from '../systems/levels';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
@@ -98,9 +99,18 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   const lineToolBridge = useRibbonLineToolBridge({ levelManager, universalSelection });
   const xlineModeBridge = useRibbonXlineModeBridge();
 
+  // ADR-363 — uniform «Κλείσιμο» for every contextual tab: deselect the active
+  // entity so the contextual tab disappears. SSoT deselect = the same primitive
+  // the working mep close handlers already use (`clearAll()`); replaces the
+  // dead `bim:select-none` emits + the no-op bridges (column/wall/slab/…).
+  const closeContextualTab = useCallback((): void => {
+    universalSelection.clearAll();
+  }, [universalSelection]);
+
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
+    closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,
     slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, xlineModeBridge,

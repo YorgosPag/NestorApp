@@ -26,7 +26,6 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { DeleteEntityCommand } from '../../../core/commands/entity-commands/DeleteEntityCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
-import { EventBus } from '../../../systems/events/EventBus';
 import {
   getHatchDrawDefaults,
   setHatchDrawDefaults,
@@ -371,9 +370,8 @@ export function useRibbonHatchBridge(
         executeCommand(new DeleteEntityCommand(hatch.id, sm));
         return;
       }
-      if (action === HATCH_RIBBON_KEYS.actions.close) {
-        EventBus.emit('bim:select-none' as Parameters<typeof EventBus.emit>[0], undefined);
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in `routeRibbonAction`
+      // (uniform deselect for every contextual tab). No per-bridge branch.
     },
     [resolveHatch, levelManager, executeCommand, t],
   );

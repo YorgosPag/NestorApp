@@ -57,6 +57,12 @@ export interface UseRibbonCommandsProps {
   handleToolChange: (tool: ToolType) => void;
   handleRibbonComingSoon: (label: string) => void;
   wrappedHandleAction: (action: string, data?: RibbonActionPayload) => void;
+  /**
+   * ADR-363 — central «Κλείσιμο» handler for every contextual tab. Deselects
+   * the active entity (`universalSelection.clearAll()`) so the contextual tab
+   * disappears. Invoked by `routeRibbonAction` for any `*.action(s).close` key.
+   */
+  closeContextualTab: () => void;
   canUndo: boolean;
   canRedo: boolean;
   textEditorBridge: RibbonTextEditorBridge;

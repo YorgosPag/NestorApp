@@ -51,7 +51,8 @@ import {
 } from './wall-in-region';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
+import { resolveRegionLoopTolWorld } from './region-tolerance';
+import type { SceneUnits } from '../../utils/scene-units';
 import {
   EPS,
   dist,
@@ -65,6 +66,12 @@ import {
 // Public API backward-compat — pure polygon math lives in the split module.
 export { classifyPerimeter, decomposeRectilinear } from './perimeter-polygon-math';
 export type { PerimeterShape } from './perimeter-polygon-math';
+// Public API backward-compat — pure measurement helpers (N.7.1 split).
+export {
+  perimeterMemberThicknessMm,
+  perimeterExtentMm,
+  isPerimeterOversized,
+} from './perimeter-measure';
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -320,66 +327,6 @@ export function pickSmallestContainingPerimeter(
   return best;
 }
 
-/** Axis-aligned bbox min/max ενός πολυγώνου (world/scene units). */
-function bboxExtent(poly: readonly Point2D[]): { width: number; height: number } {
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  for (const p of poly) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { width: maxX - minX, height: maxY - minY };
-}
-
-/**
- * Χαρακτηριστικό «πάχος» (μικρή πλευρά) ενός περιγράμματος σε mm (Layer 4). Για
- * ορθογώνια/αποσυντιθέμενα σχήματα = το **παχύτερο σκέλος** (max `shortSide`):
- * ένα πραγματικό Γ/Τ/Π τοιχίο έχει λεπτά σκέλη, ενώ το εξωτερικό περίγραμμα του
- * σχεδίου αποσυντίθεται σε «σκέλη» τεράστιου πάχους. Για καθαρά composite (γωνίες
- * ≠ 90°, χωρίς rects) fallback στη μικρή διάσταση του bbox.
- *
- * @param scale mmToSceneUnits(sceneUnits) — world units ανά mm.
- */
-export function perimeterMemberThicknessMm(perimeter: ClosedPerimeter, scale: number): number {
-  const s = scale > 0 ? scale : 1;
-  if (perimeter.rects.length > 0) {
-    const maxShort = Math.max(...perimeter.rects.map((r) => r.shortSide));
-    return maxShort / s;
-  }
-  const { width, height } = bboxExtent(perimeter.polygon);
-  return Math.min(width, height) / s;
-}
-
-/**
- * Διαστάσεις bbox ενός περιγράμματος σε mm (για toast/preview labels). `scale` =
- * mmToSceneUnits(sceneUnits) — world units ανά mm.
- */
-export function perimeterExtentMm(
-  perimeter: ClosedPerimeter,
-  scale: number,
-): { width: number; height: number } {
-  const s = scale > 0 ? scale : 1;
-  const { width, height } = bboxExtent(perimeter.polygon);
-  return { width: width / s, height: height / s };
-}
-
-/**
- * Layer 4 — size sanity guard: `true` αν το περίγραμμα ξεπερνά το λογικό «πάχος»
- * δομικού μέλους (`MAX_MEMBER_THICKNESS_MM`). Πιάνει το εξωτερικό περίγραμμα του
- * σχεδίου που περνούσε για κολώνα (το bug). Ελέγχει ΜΟΝΟ τη μικρή πλευρά.
- */
-export function isPerimeterOversized(
-  perimeter: ClosedPerimeter,
-  scale: number,
-  maxMm: number = REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM,
-): boolean {
-  return perimeterMemberThicknessMm(perimeter, scale) > maxMm;
-}
-
 /**
  * Layer 5 — open-loop diagnostics: ids των γραμμών κοντά στο `point` που έχουν
  * **ανοιχτό άκρο** (κόμβος βαθμού 1 στον γράφο των segments) — αυτές «δεν
@@ -451,6 +398,33 @@ export function getCachedRegionPerimeters(
   _lastRegionPerimeters = result;
   byTol.set(key, result);
   return result;
+}
+
+/** Αποτέλεσμα του `pickRegionPerimeterAt`: το επιλεγμένο loop + η ανοχή που χρησιμοποιήθηκε. */
+export interface RegionPerimeterPick {
+  /** Το μικρότερο εμπεριέχον περίγραμμα κάτω από το σημείο (ή `null`). */
+  readonly perimeter: ClosedPerimeter | null;
+  /** Η units-aware ανοχή βρόχου — για τυχόν open-chain diagnostics στον caller. */
+  readonly tol: number;
+}
+
+/**
+ * Layer 1 SSoT (κοινό click + hover): επιστρέφει το **μικρότερο εμπεριέχον**
+ * περίγραμμα κάτω από το `point`, με την units-aware ανοχή βρόχου. Ενοποιεί το
+ * τριπλό `resolveRegionLoopTolWorld` → `getCachedRegionPerimeters` →
+ * `pickSmallestContainingPerimeter` που ζούσε **αυτολεξεί** σε 5 σημεία
+ * (thermal-space, wall-region, column-perimeter, region-mousemove, hatch pick-point).
+ * Επιστρέφει και το `tol` ώστε ο caller να μην το ξαναϋπολογίζει για το
+ * `findOpenChainLineIdsNear` (open-loop diagnostics).
+ */
+export function pickRegionPerimeterAt(
+  point: Readonly<Point2D>,
+  entities: readonly Entity[],
+  sceneUnits: SceneUnits,
+): RegionPerimeterPick {
+  const tol = resolveRegionLoopTolWorld(sceneUnits);
+  const perimeter = pickSmallestContainingPerimeter(point, getCachedRegionPerimeters(entities, tol));
+  return { perimeter, tol };
 }
 
 export function findOpenChainLineIdsNear(

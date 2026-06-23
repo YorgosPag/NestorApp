@@ -175,9 +175,8 @@ export function useRibbonFloorFinishBridge(
         EventBus.emit('bim:floor-finish-delete-requested', { id: ff.id });
         return;
       }
-      if (action === FLOOR_FINISH_RIBBON_KEYS.actions.close) {
-        EventBus.emit('bim:select-none' as Parameters<typeof EventBus.emit>[0], undefined);
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in `routeRibbonAction`
+      // (uniform deselect for every contextual tab). No per-bridge branch.
     },
     [resolveFloorFinish, t],
   );

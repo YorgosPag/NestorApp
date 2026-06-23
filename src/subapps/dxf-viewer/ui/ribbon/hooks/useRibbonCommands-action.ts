@@ -42,9 +42,30 @@ import { isBeamActionKey } from './bridge/beam-command-keys';
 import { isFoundationActionKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
 
+/**
+ * ADR-363 — «Κλείσιμο» contextual-tab action SSoT.
+ *
+ * Every contextual ribbon tab exposes a `*.action(s).close` button whose only
+ * job is to deselect the entity so the tab disappears. Previously this was
+ * (mis)handled three different ways per bridge — `clearAll()` (worked),
+ * `EventBus.emit('bim:select-none')` (dead — no listener ever existed), or not
+ * at all (column/wall/slab/roof/opening/beam/foundation → button did nothing).
+ *
+ * This single predicate + the central branch in `routeRibbonAction` make close
+ * a uniform, prefix-agnostic no-args deselect for ALL tabs, reusing the one
+ * working primitive (`universalSelection.clearAll()`) via `closeContextualTab`.
+ *
+ * Matches both the dominant `*.actions.close` and the legacy singular
+ * `*.action.close` (thermalSpace/hatch/floorFinish/wallCovering) key forms.
+ */
+export function isContextualTabCloseAction(action: string): boolean {
+  return /\.actions?\.close$/.test(action);
+}
+
 /** The subset of `useRibbonCommands` props that own ribbon action keys. */
 export type RibbonActionBridges = Pick<
   UseRibbonCommandsProps,
+  | 'closeContextualTab'
   | 'wallBridge'
   | 'openingBridge'
   | 'slabBridge'
@@ -91,6 +112,14 @@ export function routeRibbonAction(
   data: RibbonActionPayload | undefined,
   bridges: RibbonActionBridges,
 ): void {
+  // ADR-363 — «Κλείσιμο» is a uniform deselect for every contextual tab.
+  // Intercept BEFORE per-bridge routing so it works regardless of which bridge
+  // owns the key (the owning bridge's `isXActionKey` would otherwise swallow it
+  // and no-op). Reuses the single working primitive `clearAll()`.
+  if (isContextualTabCloseAction(action)) {
+    bridges.closeContextualTab();
+    return;
+  }
   if (isWallActionKey(action)) {
     bridges.wallBridge.onAction(action);
     return;

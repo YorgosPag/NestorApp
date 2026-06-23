@@ -34,13 +34,11 @@ import {
 } from './thermal-space-completion';
 import { DEFAULT_THERMAL_SPACE_CEILING_HEIGHT_MM } from '../../bim/types/thermal-space-types';
 import {
-  getCachedRegionPerimeters,
-  pickSmallestContainingPerimeter,
+  pickRegionPerimeterAt,
   isPerimeterOversized,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
 } from '../../bim/walls/perimeter-from-faces';
-import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -136,13 +134,11 @@ export function useThermalSpaceTool(
 
       const entities = getSceneEntities?.() ?? [];
       const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
-      const tol = resolveRegionLoopTolWorld(sceneUnits);
       const scale = mmToSceneUnits(sceneUnits);
 
-      // ADR-419 SSoT — cached perimeters (shared with hover, no O(n²) recompute).
-      const perimeters = getCachedRegionPerimeters(entities, tol);
-      // Layer 1 — smallest enclosing loop under the click (όχι όλα τα containing).
-      const pick = pickSmallestContainingPerimeter(point, perimeters);
+      // ADR-419 Layer 1 SSoT — μικρότερο εμπεριέχον loop + tol (κοινό click/hover,
+      // cached perimeters, μηδέν O(n²) recompute).
+      const { perimeter: pick, tol } = pickRegionPerimeterAt(point, entities, sceneUnits);
       if (!pick) {
         // Layer 5 — open-loop diagnostics (highlight unclosed lines, μην σιωπάς).
         const openIds = findOpenChainLineIdsNear(point, entities, tol);

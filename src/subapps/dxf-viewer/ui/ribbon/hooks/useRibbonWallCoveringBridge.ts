@@ -169,9 +169,8 @@ export function useRibbonWallCoveringBridge(
         EventBus.emit('bim:wall-covering-delete-requested', { id: wc.id });
         return;
       }
-      if (action === WALL_COVERING_RIBBON_KEYS.actions.close) {
-        EventBus.emit('bim:select-none' as Parameters<typeof EventBus.emit>[0], undefined);
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in `routeRibbonAction`
+      // (uniform deselect for every contextual tab). No per-bridge branch.
     },
     [resolveWallCovering, t],
   );
