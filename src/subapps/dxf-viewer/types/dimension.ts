@@ -272,6 +272,21 @@ export interface DimensionAssociation {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// DIMBREAK persisted state (ADR-362 Phase K) — world-space break points per
+// rendered segment. The renderer applies the DIMSTYLE `breakGap` around each
+// point via `computeManualBreaks`, so breaks are computed ONCE by the DIMBREAK
+// command (not per-frame) and survive as entity data (AutoCAD-faithful).
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** World-space break points, one set per rendered segment of a dimension. */
+export interface DimensionManualBreaks {
+  readonly dimLinePoints?: readonly Point2D[];
+  readonly extLine1Points?: readonly Point2D[];
+  readonly extLine2Points?: readonly Point2D[];
+  readonly leaderPoints?: readonly Point2D[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Common shape of every DimensionEntity variant
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -297,6 +312,8 @@ interface DimensionEntityCommon extends BaseEntity {
   measurementValue?: number;
   /** D11 — geometry references (one per anchored defPoint). */
   associations?: readonly DimensionAssociation[];
+  /** DIMBREAK (Phase K) — persisted world-space break points; absent = no breaks. */
+  manualBreaks?: DimensionManualBreaks;
   /** D3 future-proof — per-entity annotative scales. Phase 1: `[currentScale]`. */
   annotativeScales?: readonly number[];
 

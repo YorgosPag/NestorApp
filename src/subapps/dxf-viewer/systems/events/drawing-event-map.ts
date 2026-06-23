@@ -144,6 +144,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // B88: IFC export completed
   'grid:ifc-exported': { axisCount: number; format: 'IFC4' };
 
+  // 🏢 ADR-362 Phase K — DIMBREAK / DIMSPACE ribbon requests (selection-driven).
+  // `useDimensionModify` host subscribes + runs the undoable command.
+  'dim:break-requested': { entityIds: readonly string[] };
+  'dim:space-requested': { entityIds: readonly string[] };
+
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration
   // useUnifiedDrawing emits this event - EntityCreationManager handles saving

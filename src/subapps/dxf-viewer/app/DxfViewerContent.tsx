@@ -55,6 +55,7 @@ import { useProactiveStructuralAnalysis } from '../hooks/useProactiveStructuralA
 import { useStructuralAnalysisNotification } from '../hooks/useStructuralAnalysisNotification';
 import { useStructuralSettingsRecompute } from '../hooks/useStructuralSettingsRecompute';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
+import { useDimensionModify } from '../hooks/useDimensionModify';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
@@ -295,6 +296,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useProactiveStructuralLoads({ levelManager });
   useProactiveTieBeamTieForce({ levelManager }); // ADR-477 Slice 3 — PROACTIVE σεισμική δύναμη σύνδεσης (μετά τα φορτία κολονών → N_tie συνδετήριας)
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
+  useDimensionModify({ levelManager }); // ADR-362 Phase K — DIMBREAK / DIMSPACE (selection-driven, undoable)
   useStructuralComponentOverride({ levelManager }); // ADR-470 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)

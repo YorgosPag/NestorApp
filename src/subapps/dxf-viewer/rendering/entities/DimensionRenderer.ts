@@ -58,7 +58,7 @@ import { renderDimensionText } from './dimension/dim-text-renderer';
 import { resolveDimColor } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import {
-  computeAutoBreaks,
+  computeManualBreaks,
   type DimBreakResult,
 } from '../../systems/dimensions/dim-break-engine';
 import {
@@ -105,8 +105,6 @@ export class DimensionRenderer extends BaseEntityRenderer {
   private dimensionLookup: DimensionLookup = () => undefined;
   private styleRegistry: DimStyleRegistry = getDimStyleRegistry();
   private layerColour: string | undefined;
-  /** All non-dimension scene entities for auto DIMBREAK intersection detection (Phase K1). */
-  private sceneEntities: readonly Entity[] = [];
   /** Canvas background for DIMTFILL='backgroundColor' mask (Phase K3). */
   private canvasBackground: string | undefined;
   /**
@@ -137,15 +135,6 @@ export class DimensionRenderer extends BaseEntityRenderer {
     this.layerColour = colour;
   }
 
-  /**
-   * Inject scene entities for auto DIMBREAK intersection detection (Phase K1).
-   * Called once per frame by the orchestrating renderer before drawing dims.
-   * Typically all non-dimension entities so break gaps appear at crossings.
-   */
-  setSceneEntities(entities: readonly Entity[]): void {
-    this.sceneEntities = entities;
-  }
-
   /** Canvas background for DIMTFILL 'backgroundColor' mask (Phase K3). */
   setCanvasBackground(bg: string): void {
     this.canvasBackground = bg;
@@ -165,8 +154,11 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const resolved = this.resolveFromEntity(entity);
     if (!resolved) return;
 
-    const breaks = this.sceneEntities.length > 0
-      ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.geoStyle)
+    // ADR-362 Phase K — DIMBREAK reads the entity's persisted `manualBreaks`
+    // (computed ONCE by the DIMBREAK command from crossing entities, not per
+    // frame). The renderer just applies the `breakGap` around each stored point.
+    const breaks = resolved.entity.manualBreaks
+      ? computeManualBreaks(resolved.geometry, resolved.entity.manualBreaks, resolved.geoStyle)
       : undefined;
 
     // Glow pre-pass — SSoT: same HOVER_HIGHLIGHT.ENTITY config as BaseEntityRenderer

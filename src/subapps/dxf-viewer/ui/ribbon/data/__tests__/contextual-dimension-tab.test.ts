@@ -109,6 +109,11 @@ describe('ADR-362 Phase E2 — DIMENSION_CONTEXTUAL_TAB', () => {
       'dim.modify.dimBreak',
       'dim.modify.dimSpace',
     ]);
+    // ADR-362 Phase K wiring — both now carry an `action` and are no longer stubs.
+    for (const btn of buttons) {
+      expect(btn.command.comingSoon).toBeFalsy();
+      expect(btn.command.action).toBe(btn.command.commandKey);
+    }
   });
 
   it('dim-properties panel has 3 buttons across 2 rows', () => {

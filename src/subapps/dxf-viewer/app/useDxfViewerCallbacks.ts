@@ -248,6 +248,16 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       if (entityId) openDimTextOverride(entityId);
       return;
     }
+    // ADR-362 Phase K: DIMBREAK / DIMSPACE — selection-driven, the
+    // `useDimensionModify` host runs the undoable command (mirrors organism.*).
+    if (action === 'dim.modify.dimBreak') {
+      EventBus.emit('dim:break-requested', { entityIds: [...params.selectedEntityIds] });
+      return;
+    }
+    if (action === 'dim.modify.dimSpace') {
+      EventBus.emit('dim:space-requested', { entityIds: [...params.selectedEntityIds] });
+      return;
+    }
     // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
     if (action === 'animation.tool-toggle') {
       const state = useAnimationStore.getState();

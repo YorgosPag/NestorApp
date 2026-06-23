@@ -18,7 +18,7 @@
  */
 
 import type { DimGeometry, DimLineSegment } from './dim-geometry-builder';
-import type { DimStyle } from '../../types/dimension';
+import type { DimStyle, DimensionManualBreaks } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import {
@@ -43,13 +43,12 @@ export interface DimBreakResult {
   readonly leaderSegments?: readonly DimLineSegment[];
 }
 
-/** Input for manual break mode — explicit world-space break points on a segment. */
-export interface ManualBreakInput {
-  readonly dimLinePoints?: readonly Point2D[];
-  readonly extLine1Points?: readonly Point2D[];
-  readonly extLine2Points?: readonly Point2D[];
-  readonly leaderPoints?: readonly Point2D[];
-}
+/**
+ * Input for manual break mode — explicit world-space break points on a segment.
+ * SSoT shape lives in `types/dimension.ts` (it is also the persisted entity
+ * field `DimensionEntity.manualBreaks`); aliased here for the engine call sites.
+ */
+export type ManualBreakInput = DimensionManualBreaks;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -151,7 +150,70 @@ export function computeManualBreaks(
     };
   }
 
+  if (geometry.kind === 'radial' && manual.leaderPoints?.length) {
+    const points = manual.leaderPoints;
+    const broken = pathToSegments(geometry.leaderPath).flatMap((s) =>
+      splitSegmentAtPoints(s, points, halfGap),
+    );
+    return { leaderSegments: broken };
+  }
+
   return result;
+}
+
+/**
+ * Compute the world-space break points where `crossingEntities` intersect the
+ * dimension's rendered segments — the persistable input for `computeManualBreaks`
+ * (and the `DimensionEntity.manualBreaks` field). Pure geometry, gap-independent:
+ * the DIMSTYLE `breakGap` is applied later at render. Returns an empty object
+ * when nothing crosses. Reuses the same `findIntersectionTs` SSoT as auto mode.
+ *
+ * @param geometry         - Geometry from `buildDimensionGeometry`.
+ * @param crossingEntities - Scene entities except the dimension itself.
+ */
+export function computeAutoBreakPoints(
+  geometry: DimGeometry,
+  crossingEntities: readonly Entity[],
+): DimensionManualBreaks {
+  const crossingSegments = extractEntitySegments(crossingEntities);
+  if (crossingSegments.length === 0) return {};
+
+  const crossPoints = (seg: DimLineSegment): readonly Point2D[] | undefined => {
+    const pts = findIntersectionTs(seg, crossingSegments).map((t) => pointAtT(seg, t));
+    return pts.length > 0 ? pts : undefined;
+  };
+
+  if (geometry.kind === 'linear') {
+    return {
+      dimLinePoints: crossPoints(geometry.dimLine),
+      extLine1Points: geometry.extLine1 ? crossPoints(geometry.extLine1) : undefined,
+      extLine2Points: geometry.extLine2 ? crossPoints(geometry.extLine2) : undefined,
+    };
+  }
+
+  if (geometry.kind === 'angular') {
+    return {
+      extLine1Points: geometry.extLine1 ? crossPoints(geometry.extLine1) : undefined,
+      extLine2Points: geometry.extLine2 ? crossPoints(geometry.extLine2) : undefined,
+    };
+  }
+
+  if (geometry.kind === 'radial') {
+    const pts = pathToSegments(geometry.leaderPath).flatMap(
+      (s) => findIntersectionTs(s, crossingSegments).map((t) => pointAtT(s, t)),
+    );
+    return { leaderPoints: pts.length > 0 ? pts : undefined };
+  }
+
+  return {};
+}
+
+/** World point at parameter `t` (0..1) along a segment. */
+function pointAtT(seg: DimLineSegment, t: number): Point2D {
+  return {
+    x: seg.start.x + t * (seg.end.x - seg.start.x),
+    y: seg.start.y + t * (seg.end.y - seg.start.y),
+  };
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────

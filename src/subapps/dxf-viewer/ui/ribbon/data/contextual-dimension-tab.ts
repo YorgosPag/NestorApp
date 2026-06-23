@@ -11,9 +11,11 @@
  *   (C) Κείμενο   — text height, position, rotation, reset
  *   (D) Ιδιότητες — layer, annotation scale, open panel
  *
- * Action handlers are stubs in E2 (`comingSoon: true`).
- * Real DIMSTYLE writes arrive in Phase F (style manager) and
- * Phase G (advanced overrides).
+ * Most action handlers are still stubs in E2 (`comingSoon: true`); real DIMSTYLE
+ * writes arrive in Phase F (style manager) / Phase G (advanced overrides).
+ * EXCEPTIONS already wired: `dim.text.override` (Phase G1) and the Modify panel
+ * `dim.modify.dimBreak` / `dim.modify.dimSpace` (Phase K) — these carry an
+ * `action` routed to `useDimensionModify` via `wrappedHandleAction`.
  *
  * Trigger token: 'dim-selected' (resolved by `resolveContextualTrigger`
  * in `app/ribbon-contextual-config.ts` when `entity.type === 'dimension'`).
@@ -281,7 +283,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimBreak',
                 icon: 'dim-break',
                 commandKey: DIM_RIBBON_KEYS.modify.dimBreak,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.modify.dimBreak,
               },
             },
             {
@@ -292,7 +294,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimSpace',
                 icon: 'dim-space',
                 commandKey: DIM_RIBBON_KEYS.modify.dimSpace,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.modify.dimSpace,
               },
             },
           ],
