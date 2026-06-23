@@ -25,7 +25,10 @@
  * @see bim/scene/append-entity-to-scene.ts — draw-tool create path (tool = type)
  */
 import { EventBus } from '../../systems/events/EventBus';
-import { emitBimEntityRestoreRequested } from '../../systems/events/bim-entity-lifecycle-events';
+import {
+  emitBimEntityDeleteRequested,
+  emitBimEntityRestoreRequested,
+} from '../../systems/events/bim-entity-lifecycle-events';
 import type { AnySceneEntity } from '../../types/entities';
 import {
   generateWallId,
@@ -100,34 +103,13 @@ export function broadcastBimCloneCreated(entity: CloneEntityLike): void {
 
 /**
  * Emit the per-type `bim:*-delete-requested` so the clone's Firestore doc is
- * removed (+ tombstoned) when its creating command is undone. No-op for non-BIM.
+ * removed (+ tombstoned) when its creating command is undone. Delegates to the
+ * `emitBimEntityDeleteRequested` lifecycle SSoT (μηδέν inline switch) — που καλύπτει
+ * ΟΛΟΥΣ τους per-entity τύπους (incl. `floor-finish`, που το παλιό inline switch
+ * **παρέλειπε** → ο orphan doc του clone δεν σβηνόταν). No-op for non-persisted types.
  */
 export function broadcastBimCloneDeleted(entity: CloneEntityLike): void {
-  switch (entity.type) {
-    case 'wall':
-      EventBus.emit('bim:wall-delete-requested', { wallId: entity.id });
-      break;
-    case 'opening':
-      EventBus.emit('bim:opening-delete-requested', { openingId: entity.id });
-      break;
-    case 'slab':
-      EventBus.emit('bim:slab-delete-requested', { slabId: entity.id });
-      break;
-    case 'slab-opening':
-      EventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId: entity.id });
-      break;
-    case 'column':
-      EventBus.emit('bim:column-delete-requested', { columnId: entity.id });
-      break;
-    case 'beam':
-      EventBus.emit('bim:beam-delete-requested', { beamId: entity.id });
-      break;
-    case 'stair':
-      EventBus.emit('bim:stair-delete-requested', { stairId: entity.id });
-      break;
-    default:
-      break;
-  }
+  emitBimEntityDeleteRequested(entity.type ?? '', entity.id);
 }
 
 /**

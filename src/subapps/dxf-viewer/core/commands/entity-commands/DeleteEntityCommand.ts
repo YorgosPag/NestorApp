@@ -28,44 +28,23 @@ import type { Entity } from '../../../types/entities';
 import type { ColumnKind } from '../../../bim/types/column-types';
 import type { WallKind } from '../../../bim/types/wall-types';
 
-// ADR-390 — BIM entity types eligible για symmetric undo→Firestore restore.
-const BIM_ENTITY_TYPES = new Set<string>([
+// ADR-390 — entity types whose restore-on-undo is emitted by the GENERIC
+// DeleteEntityCommand. ΥΠΟΣΥΝΟΛΟ του canonical `BimRestoreEntityType` — ΕΞΑΙΡΟΥΝΤΑΙ
+// όσα έχουν dedicated delete command (foundation/furniture/floorplan-symbol/wall-covering),
+// που εκπέμπουν restore μόνα τους. ΕΝΑ `as const` tuple → Set + union (μηδέν drift
+// μεταξύ runtime+type)· η subset σχέση με το canonical επιβάλλεται από τον compiler
+// στο call site (`emitBimEntityRestoreRequested(type as BimEntityType, …)`).
+const BIM_RESTORE_VIA_DELETE_COMMAND = [
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
-  // ADR-406 — point-based MEP fixture.
-  'mep-fixture',
-  // ADR-408 Φ3 — point-based electrical panel.
-  'electrical-panel',
-  // ADR-407 — standalone path-based railing.
-  'railing',
-  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
-  'mep-segment',
-  // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
-  'mep-manifold',
-  // ADR-408 Εύρος Β — heating radiator (wall-mounted terminal).
-  'mep-radiator',
-  // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
-  'mep-boiler',
-  // ADR-408 — DHW water heater (θερμοσίφωνας / αντλία θερμότητας ΖΝΧ).
-  'mep-water-heater',
-  // ADR-408 Εύρος Β #3 — area-based radiant floor heating loop.
-  'mep-underfloor',
-  // ADR-417 — parametric pitched roof.
-  'roof',
-  // ADR-419 — floor-finish covering polygon.
-  'floor-finish',
-  // ADR-422 — thermal space (IfcSpace).
-  'thermal-space',
-  // ADR-437 — space separator (IfcVirtualElement).
+  'mep-fixture', 'electrical-panel', 'railing', 'mep-segment', 'mep-manifold', 'mep-radiator',
+  'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'roof', 'floor-finish', 'thermal-space',
   'space-separator',
   // ADR-507 — FLAT DXF hatch (symmetric undo→Firestore restore, mirror BIM entities).
   'hatch',
-]);
+] as const;
 
-type BimEntityType =
-  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space' | 'space-separator'
-  | 'hatch';
+type BimEntityType = typeof BIM_RESTORE_VIA_DELETE_COMMAND[number];
+const BIM_ENTITY_TYPES: ReadonlySet<string> = new Set(BIM_RESTORE_VIA_DELETE_COMMAND);
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

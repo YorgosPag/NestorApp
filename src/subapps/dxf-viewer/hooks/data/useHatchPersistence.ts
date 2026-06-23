@@ -27,7 +27,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel, HatchEntity } from '../../types/entities';
+import type { SceneModel, HatchEntity } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { isHatchEntity } from '../../types/entities';
 import { EventBus } from '../../systems/events/EventBus';
@@ -43,6 +43,7 @@ import {
 } from '../../bim/hatch/hatch-firestore-service';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 // ============================================================================
 // CONSTANTS
@@ -131,58 +132,27 @@ export function useHatchPersistence(params: UseHatchPersistenceParams): UseHatch
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeHatches(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `pickHatchData`
+      // (entity) ⇄ `doc.data` (μηδέν copy-pasted loop· mirror column/wall/…).
       (docs: readonly HatchDoc[]) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, HatchDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneMap = new Map<string, HatchEntity>();
-        const others: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isHatchEntity(e)) sceneMap.set(e.id, e);
-          else others.push(e);
-        }
-
-        const nextEntities: HatchEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const d of docs) {
-          if (deleted.has(d.id)) continue;
-          const existing = sceneMap.get(d.id);
-          if (!existing) {
-            if (!dirty.has(d.id)) { nextEntities.push(hatchDocToEntity(d)); mutated = true; }
-            continue;
-          }
-          if (dirty.has(d.id)) { nextEntities.push(existing); continue; }
-          // Grace-period guard: suppress stale snapshots after a ca9 Watch reset.
-          if (isWithinGrace(d.id)) { nextEntities.push(existing); continue; }
-          if (!dequal(pickHatchData(existing), d.data)) {
-            nextEntities.push(hatchDocToEntity(d)); mutated = true;
-          } else {
-            nextEntities.push(existing);
-          }
-        }
-
-        for (const [id, entity] of sceneMap) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) nextEntities.push(entity);
-          else mutated = true;
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] }, 'remote-echo');
-        }
-
-        for (const d of docs) {
-          if (!lastSavedDataRef.current.has(d.id)) lastSavedDataRef.current.set(d.id, d.data);
-        }
+        mergeDocsIntoScene<HatchDoc, HatchEntity, HatchDocData>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isHatchEntity,
+            docToEntity: hatchDocToEntity,
+            entityComparable: (e) => pickHatchData(e),
+            docComparable: (d) => d.data,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace,
+            lastSavedBaseline: lastSavedDataRef.current,
+          },
+        );
       },
       (err: Error) => { setError(err.message); setSaveState('error'); },
     );

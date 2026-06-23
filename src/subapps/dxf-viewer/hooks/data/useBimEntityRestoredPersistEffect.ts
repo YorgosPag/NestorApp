@@ -25,45 +25,14 @@ import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
 import type { AnySceneEntity } from '../../types/entities';
+import type { BimEventMap } from '../../systems/events/drawing-event-map-bim';
 
-type BimRestoreEntityType =
-  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  // ADR-436 — substructure footing (pad/strip/tie-beam, IfcFooting).
-  | 'foundation'
-  // ADR-406 — point-based MEP fixture.
-  | 'mep-fixture'
-  // ADR-408 Φ3 — point-based electrical panel.
-  | 'electrical-panel'
-  // ADR-407 — standalone path-based railing.
-  | 'railing'
-  // ADR-410 — mesh-based CC0 furniture.
-  | 'furniture'
-  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
-  | 'mep-segment'
-  // ADR-415 — pure-vector 2D floorplan symbol.
-  | 'floorplan-symbol'
-  // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
-  | 'mep-manifold'
-  // ADR-408 Εύρος Β — heating radiator (wall-mounted terminal).
-  | 'mep-radiator'
-  // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
-  | 'mep-boiler'
-  // ADR-408 — DHW water heater (θερμοσίφωνας / αντλία θερμότητας ΖΝΧ).
-  | 'mep-water-heater'
-  // ADR-417 — parametric pitched roof.
-  | 'roof'
-  // ADR-419 — per-room floor-finish covering.
-  | 'floor-finish'
-  // ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR).
-  | 'wall-covering'
-  // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loop.
-  | 'mep-underfloor'
-  // ADR-422 — analytical thermal space (IfcSpace).
-  | 'thermal-space'
-  // ADR-437 — space separator (IfcVirtualElement).
-  | 'space-separator'
-  // ADR-507 — FLAT DXF hatch (undo/redo persistence, mirror BIM restore flow).
-  | 'hatch';
+/**
+ * ⭐ Derived από το CANONICAL SSoT (`bim:entity-restore-requested` event payload).
+ * Νέος restore-able τύπος προστίθεται ΜΟΝΟ εκεί — εδώ απλώς αντλείται (μηδέν
+ * hand-maintained αντίγραφο union που drift-άρει).
+ */
+type BimRestoreEntityType = BimEventMap['bim:entity-restore-requested']['entityType'];
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

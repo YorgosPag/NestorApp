@@ -7,13 +7,13 @@
  * @see ./useColumnPersistence.ts
  */
 
-import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../bim/validators/column-validator';
 import type { ColumnDoc } from '../../bim/columns/column-firestore-service';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 /** Minimal level-manager surface used by the snapshot merge. */
 export interface ColumnMergeLevelManager {
@@ -57,8 +57,8 @@ export function columnDocToEntity(doc: ColumnDoc): ColumnEntity {
 
 /**
  * Diff-merge a Firestore column snapshot into the active scene (selective skip of
- * locally-dirty/pending/grace columns). Mutates via `lm.setLevelScene` only when the
- * merged set differs. Behavior-identical to the former inline subscribe handler.
+ * locally-dirty/pending/grace columns). Thin column adapter πάνω από το
+ * `mergeDocsIntoScene` SSoT (μηδέν copy-pasted loop)· comparable = `params`.
  */
 export function mergeColumnDocsIntoScene(
   docs: readonly ColumnDoc[],
@@ -66,73 +66,22 @@ export function mergeColumnDocsIntoScene(
   lm: ColumnMergeLevelManager,
   refs: ColumnMergeRefs,
 ): void {
-  const scene = lm.getLevelScene(levelId);
-  if (!scene) return;
-
-  const docsById = new Map<string, ColumnDoc>();
-  for (const d of docs) docsById.set(d.id, d);
-
-  const { dirty, deleted, pending, lastSavedParams, isWithinGrace } = refs;
-  const sceneColumns = new Map<string, ColumnEntity>();
-  const nonColumns: AnySceneEntity[] = [];
-  for (const e of scene.entities) {
-    if (isColumn(e)) sceneColumns.set(e.id, e);
-    else nonColumns.push(e);
-  }
-
-  const nextColumns: ColumnEntity[] = [];
-  let mutated = false;
-
-  for (const doc of docs) {
-    if (deleted.has(doc.id)) continue;
-    const existing = sceneColumns.get(doc.id);
-    if (!existing) {
-      if (!dirty.has(doc.id)) {
-        nextColumns.push(columnDocToEntity(doc));
-        mutated = true;
-      }
-      continue;
-    }
-    if (dirty.has(doc.id)) {
-      nextColumns.push(existing);
-      continue;
-    }
-    // Grace-period guard (useBimFirestoreWriteGrace SSoT).
-    if (isWithinGrace(doc.id)) {
-      nextColumns.push(existing);
-      continue;
-    }
-    if (!dequal(existing.params, doc.params)) {
-      nextColumns.push(columnDocToEntity(doc));
-      mutated = true;
-    } else {
-      nextColumns.push(existing);
-    }
-  }
-
-  // ADR-397 — seed the "known/last-saved" baseline for every Firestore doc so a
-  // subsequently edited column passes the auto-save gate + its dirty flag protects
-  // the local edit from this snapshot (else pre-existing column edits snap back).
-  for (const doc of docs) {
-    if (!lastSavedParams.has(doc.id)) {
-      lastSavedParams.set(doc.id, doc.params);
-    }
-  }
-
-  // ADR-390 — drop scene columns whose doc disappeared, unless dirty/pending.
-  for (const [id, entity] of sceneColumns) {
-    if (docsById.has(id)) continue;
-    if (dirty.has(id) || pending.has(id)) {
-      nextColumns.push(entity);
-    } else {
-      mutated = true;
-    }
-  }
-
-  if (mutated) {
-    lm.setLevelScene(levelId, {
-      ...scene,
-      entities: [...nonColumns, ...nextColumns],
-    }, 'remote-echo');
-  }
+  mergeDocsIntoScene<ColumnDoc, ColumnEntity, ColumnEntity['params']>(
+    docs,
+    levelId,
+    lm,
+    {
+      isEntity: isColumn,
+      docToEntity: columnDocToEntity,
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+    },
+    {
+      dirty: refs.dirty,
+      deleted: refs.deleted,
+      pending: refs.pending,
+      isWithinGrace: refs.isWithinGrace,
+      lastSavedBaseline: refs.lastSavedParams,
+    },
+  );
 }

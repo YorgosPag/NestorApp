@@ -36,6 +36,8 @@ import {
 } from '../../systems/dimensions/dim-geometry-builder';
 import { renderArrowhead } from '../../rendering/entities/dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from '../../rendering/entities/dimension/dim-text-renderer';
+import { resolveEffectiveDimscale } from '../../utils/annotation-scale';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
@@ -246,9 +248,18 @@ function drawText(
   geometry: DimGeometry,
   opts: ResolvedOpts,
 ): void {
+  // ADR-362 R14 — preview text must match committed output, which heals dimscale
+  // via the same SSoT in DimensionRenderer.resolveFromEntity. Apply the identical
+  // `resolveEffectiveDimscale` here (real dimscale, NOT the arrow autoScale) so a
+  // built-in dimscale=1 renders at the drawingScale size in the preview too.
+  const drawingScale = useDrawingScaleStore.getState().drawingScale;
+  const healedStyle = {
+    ...params.style,
+    dimscale: resolveEffectiveDimscale(params.style.dimscale, drawingScale),
+  };
   // Text renderer reads style.dimclrt for color; force it to the preview
   // color via the layerColour fallback (DIMSTYLE clone sets clrt = ByLayer).
-  const previewStyle = withPreviewColors(params.style);
+  const previewStyle = withPreviewColors(healedStyle);
   renderDimensionText(params.ctx, {
     entity: params.entity,
     geometry,

@@ -212,8 +212,16 @@ export interface BimEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'. ADR-408 — 'mep-water-heater'. ADR-507 — 'hatch' (FLAT DXF primitive, undo/redo persistence).
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space' | 'space-separator' | 'hatch';
+    // ⭐ CANONICAL SSoT των restore-able entity types (ADR-390). Κάθε τύπος εδώ ΠΡΕΠΕΙ
+    // να αντιστοιχεί σε έναν caller του `useBimEntityRestoredPersistEffect`. Το
+    // `BimRestoreEntityType` (στο hook) **derive-άρεται** από αυτό → ΜΙΑ πηγή, μηδέν
+    // hand-maintained αντίγραφο union. Πρόσθεσε νέο τύπο ΜΟΝΟ εδώ.
+    entityType:
+      | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+      | 'foundation' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator'
+      | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'mep-segment' | 'railing'
+      | 'furniture' | 'floorplan-symbol' | 'floor-finish' | 'wall-covering' | 'roof'
+      | 'thermal-space' | 'space-separator' | 'hatch';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };
