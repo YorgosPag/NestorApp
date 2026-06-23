@@ -8,13 +8,16 @@ import {
   subscribeHatchSelect,
   armHatchSelect,
   disarmHatchSelect,
+  finishHatchSelectPick,
 } from '../hatch-select-mode-store';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
+import { toolStateStore } from '../../../stores/ToolStateStore';
 
 describe('hatch-select-mode-store', () => {
   beforeEach(() => {
     disarmHatchSelect();
     toolHintOverrideStore.setOverride(null);
+    toolStateStore.reset();
   });
 
   it('defaults to disarmed', () => {
@@ -51,6 +54,21 @@ describe('hatch-select-mode-store', () => {
     toolHintOverrideStore.setOverride('Κάνε κλικ σε γραμμοσκίαση για επιλογή');
     expect(toolHintOverrideStore.getSnapshot()).not.toBeNull();
     disarmHatchSelect();
+    expect(toolHintOverrideStore.getSnapshot()).toBeNull();
+  });
+
+  it('finishHatchSelectPick disarms AND exits the hatch tool to select', () => {
+    toolStateStore.selectTool('hatch');
+    armHatchSelect();
+    expect(isHatchSelectArmed()).toBe(true);
+    expect(toolStateStore.get().activeTool).toBe('hatch');
+
+    finishHatchSelectPick();
+
+    // Disarmed (one-shot) + tool back to 'select' → no create-ghost on next move,
+    // no new hatch on next click (the regression this fixes).
+    expect(isHatchSelectArmed()).toBe(false);
+    expect(toolStateStore.get().activeTool).toBe('select');
     expect(toolHintOverrideStore.getSnapshot()).toBeNull();
   });
 });

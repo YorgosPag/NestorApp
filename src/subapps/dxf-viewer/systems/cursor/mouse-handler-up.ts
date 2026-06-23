@@ -46,7 +46,7 @@ import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
 import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 // ADR-507 — «Επιλογή γραμμοσκίασης»: armed hatch-only pick (even-odd SSoT, world-coords).
-import { isHatchSelectArmed, disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
+import { isHatchSelectArmed, finishHatchSelectPick } from '../../bim/hatch/hatch-select-mode-store';
 import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
 
 interface MouseUpHandlerDeps {
@@ -135,10 +135,12 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       if (pickSnap && scene) {
         const wp = screenToWorldWithSnapshot(getScreenPosFromEvent(e, pickSnap), transform, pickSnap);
         const hatchId = pickTopHatchAt(wp, (scene.entities ?? []) as unknown as Entity[]);
-        // Disarm ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (forgiving — ξαναδοκίμασε).
+        // Finalize ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (forgiving — ξαναδοκίμασε).
+        // finishHatchSelectPick = disarm + έξοδος hatch tool → 'select' (αλλιώς το επόμενο
+        // mousemove ξανάδειχνε create-ghost & το επόμενο κλικ δημιουργούσε νέα γραμμοσκίαση).
         if (hatchId && onEntitiesSelected) {
           onEntitiesSelected([hatchId]);
-          disarmHatchSelect();
+          finishHatchSelectPick();
         }
       }
       return; // πάντα consume — ΠΟΤΕ δημιουργία/grip/select όσο armed

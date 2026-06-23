@@ -42,7 +42,7 @@ import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
 // units before view-scale, otherwise meters/cm scenes draw text at the world-unit
 // size of the paper-mm number (huge).
-import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
+import { type SceneUnits } from '../../../utils/scene-units';
 import { paperHeightToModel } from '../../../utils/annotation-scale';
 
 const RADIAL_DIAMETER_PREFIX = 'Ø ';
@@ -79,23 +79,14 @@ export function renderDimensionText(
     params.transform,
     params.viewport,
   );
-  // DIMTXT is paper-mm by DIMSTYLE convention. Convert to scene world units
-  // first (ADR-362 Round 5), then multiply by the view scale to reach pixels.
-  // DIMSCALE (ADR-362 R7) is the annotation scale factor (e.g. 100 for 1:100
-  // drawings). DIMTXT without DIMSCALE is paper-mm; with DIMSCALE it becomes
-  // model-space mm matching the height stored in native TEXT entities.
-  // Mirrors drawArrowheads which already does `dimasz * dimscale`.
-  const unitFactor = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  // ADR-362 R13: built-in styles carry dimscale=1 → 2.5×1×0.001×vs microscopic in meters scenes.
-  // Mirror R12 dim-style-importer rescue: dimscale<10 in a sub-mm-per-unit scene → treat as 1:100 default.
-  const effectiveDimscale =
-    unitFactor <= mmToSceneUnits('m') && params.style.dimscale < 10 ? 100 : params.style.dimscale;
-  // ADR-344 Round 7 — same paper→model SSoT as ribbon Text (`paperHeightToModel`),
-  // then × view scale to reach screen px. Byte-equivalent to the previous inline
-  // `dimtxt × effectiveDimscale × unitFactor`; centralised so the conversion lives
-  // in one place. `effectiveDimscale` (imported-DXF DIMSTYLE rescue) stays local.
+  // DIMTXT is paper-mm by DIMSTYLE convention. ADR-362 Round 14: `style.dimscale`
+  // arrives ALREADY resolved to the effective annotation scale (DimensionRenderer
+  // heals it once via `resolveEffectiveDimscale` — imported DIMSCALE>1 or the
+  // `drawingScale` SSoT). So this leaf is "dumb": same paper→model SSoT as ribbon
+  // Text (`paperHeightToModel`), then × view scale to reach screen px. No local
+  // rescue heuristic (that lived here only for meters and missed mm/cm).
   const primaryHeight =
-    paperHeightToModel(params.style.dimtxt, effectiveDimscale, params.sceneUnits ?? 'mm') *
+    paperHeightToModel(params.style.dimtxt, params.style.dimscale, params.sceneUnits ?? 'mm') *
     params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;

@@ -46,6 +46,8 @@ import {
 import {
   resolveDimStyle,
 } from '../../systems/dimensions/dim-style-resolver';
+import { resolveEffectiveDimscale } from '../../utils/annotation-scale';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import {
   getDimStyleRegistry,
   type DimStyleRegistry,
@@ -247,7 +249,18 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const e = entity as Entity;
     if (!isDimensionEntity(e)) return null;
     const dim = e as DimensionEntity;
-    const style = resolveDimStyle(dim, this.styleRegistry);
+    const rawStyle = resolveDimStyle(dim, this.styleRegistry);
+    // ADR-344 Round 7 / ADR-362 Round 14 — resolve the effective annotation scale
+    // ONCE here (imported DIMSCALE>1 wins, else the `drawingScale` SSoT, ADR-375).
+    // Every downstream consumer (extension/dim-line offsets, arrowheads, text,
+    // center mark) reads `style.dimscale`, so healing it at the single resolution
+    // point fixes the whole dimension uniformly — no per-renderer heuristics. This
+    // replaces the old metre-only rescue that left mm/cm dimensions microscopic.
+    const drawingScale = useDrawingScaleStore.getState().drawingScale;
+    const style: DimStyle = {
+      ...rawStyle,
+      dimscale: resolveEffectiveDimscale(rawStyle.dimscale, drawingScale),
+    };
     // ADR-362 R8 — paper-mm geometry offsets must be in world units before the
     // geometry builder uses them as coordinate deltas. DIMASZ / DIMTXT are NOT
     // scaled here because their renderers (drawArrowheads / dim-text-renderer)

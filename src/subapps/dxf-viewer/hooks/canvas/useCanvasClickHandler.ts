@@ -38,7 +38,7 @@ import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPoin
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
 import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
 // ADR-507 — armed «Επιλογή γραμμοσκίασης»: hatch-only pick (even-odd SSoT, world-coords).
-import { isHatchSelectArmed, disarmHatchSelect } from '../../bim/hatch/hatch-select-mode-store';
+import { isHatchSelectArmed, finishHatchSelectPick } from '../../bim/hatch/hatch-select-mode-store';
 import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
 import type { Entity } from '../../types/entities';
 // ============================================================================
@@ -118,10 +118,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
       const hatchId = pickTopHatchAt(worldPoint, (scene?.entities ?? []) as unknown as Entity[]);
-      // Disarm ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (ξαναδοκίμασε).
+      // Finalize ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (ξαναδοκίμασε).
+      // finishHatchSelectPick = disarm + έξοδος hatch tool → 'select' (αλλιώς μένει
+      // ενεργό το pick-point → create-ghost στο επόμενο mousemove).
       if (hatchId) {
         universalSelection.replaceEntitySelection([hatchId]);
-        disarmHatchSelect();
+        finishHatchSelectPick();
       }
       return; // πάντα consume — ΠΟΤΕ δημιουργία pick-point όσο armed
     }

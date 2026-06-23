@@ -1,11 +1,15 @@
 /**
- * ADR-362 Round 5 — `dim-text-renderer` scene-units conversion.
+ * ADR-362 Round 5 + Round 14 — `dim-text-renderer` scene-units conversion.
  *
  * DIMSTYLE.dimtxt is paper-mm by convention. The renderer multiplies it by
- * `mmToSceneUnits(units)` to land in world units before applying the view
- * scale (px / world-unit). Without that step a 2.5 mm DIMTXT in a meters scene
- * would render as 2.5 m worth of pixels — the visible "ribbon dim text is
- * huge" bug this round fixes.
+ * `mmToSceneUnits(units)` to land in world units before applying the view scale
+ * (px / world-unit). Round 14: the renderer is now a "dumb" leaf — it applies
+ * `style.dimscale` VERBATIM. The annotation-scale rescue (built-in dimscale=1 →
+ * `drawingScale` SSoT, imported DIMSCALE>1 wins) is resolved ONCE upstream in
+ * `DimensionRenderer.resolveFromEntity` via `resolveEffectiveDimscale`, so it
+ * applies uniformly to text + arrowheads + offsets + center mark. These tests
+ * therefore pass the already-resolved dimscale and assert the pure formula:
+ *   px = dimtxt × dimscale × mmToSceneUnits(units) × viewScale
  *
  * The test spies on `ctx.font` after `renderDimensionText` runs and parses the
  * pixel height back out. `buildUIFont` emits `${height}px ${family}`.
@@ -119,193 +123,73 @@ function extractFontHeight(font: string): number {
   return match ? Number(match[1]) : NaN;
 }
 
+function renderWith(style: DimStyle, units: SceneUnits | undefined, transformScale: number) {
+  const { ctx, calls } = makeCtxSpy();
+  renderDimensionText(ctx, {
+    entity: makeEntity(),
+    geometry: makeLinearGeometry(),
+    style,
+    transform: { scale: transformScale, offsetX: 0, offsetY: 0 },
+    viewport: { width: 800, height: 600 },
+    layerColour: '#888',
+    ...(units ? { sceneUnits: units } : {}),
+  });
+  return calls;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Cases
 // ──────────────────────────────────────────────────────────────────────────────
 
-// ADR-362 R7: formula is `dimtxt × dimscale × mmToSceneUnits(units) × viewScale`.
-// makeStyle() uses dimscale=1.
-// R13: 'm'-scene with dimscale=1 triggers rescue → effectiveDimscale=100.
-// Formula: 2.5 × effectiveDimscale × unitFactor × viewScale
-const CASES: ReadonlyArray<{ units: SceneUnits; transformScale: number; expectedPx: number }> = [
-  // mm scene, view scale 1 px/mm → 2.5 × 1 × 1 × 1 = 2.5 px (no rescue, back-compat baseline).
-  { units: 'mm', transformScale: 1, expectedPx: 2.5 },
-  // cm scene, view scale 10 px/cm → 2.5 × 1 × 0.1 × 10 = 2.5 px (no rescue, unitFactor > 0.001).
-  { units: 'cm', transformScale: 10, expectedPx: 2.5 },
-  // m scene, view scale 1000 px/m → R13 rescue dimscale=1→100 → 2.5 × 100 × 0.001 × 1000 = 250 px.
-  { units: 'm',  transformScale: 1000, expectedPx: 250 },
-];
-
 describe('renderDimensionText — paper-mm DIMTXT → world units (ADR-362 Round 5)', () => {
-  it.each(CASES)('emits the same screen px under $units when view scale matches', ({ units, transformScale, expectedPx }) => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(),
-      geometry: makeLinearGeometry(),
-      style: makeStyle(),
-      transform: { scale: transformScale, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 },
-      layerColour: '#888',
-      sceneUnits: units,
-    });
+  // Pure formula: dimtxt(2.5) × dimscale × mmToSceneUnits(units) × viewScale.
+  // dimscale arrives already resolved; makeStyle() carries the effective 100 here
+  // (the value DimensionRenderer would heal a built-in 1 to at 1:100).
+  const style100 = { ...makeStyle(), dimscale: 100 };
+
+  // View scale chosen to cancel the unit factor → every unit prints the same px.
+  const CASES: ReadonlyArray<{ units: SceneUnits; transformScale: number; expectedPx: number }> = [
+    { units: 'mm', transformScale: 1,    expectedPx: 250 }, // 2.5×100×1×1     = 250
+    { units: 'cm', transformScale: 10,   expectedPx: 250 }, // 2.5×100×0.1×10  = 250
+    { units: 'm',  transformScale: 1000, expectedPx: 250 }, // 2.5×100×0.001×1000 = 250
+  ];
+
+  it.each(CASES)('applies the unit factor under $units', ({ units, transformScale, expectedPx }) => {
+    const calls = renderWith(style100, units, transformScale);
     expect(calls.length).toBeGreaterThan(0);
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(expectedPx, 4);
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(expectedPx, 3);
   });
 
   it('defaults to mm when sceneUnits is omitted (back-compat)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(),
-      geometry: makeLinearGeometry(),
-      style: makeStyle(),
-      transform: { scale: 2, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 },
-      layerColour: '#888',
-      // no sceneUnits — must behave identically to legacy code path.
-    });
-    const px = extractFontHeight(calls[0].font);
-    // 2.5 (mm) × 1 (mm factor) × 2 (scale) = 5 px.
-    expect(px).toBeCloseTo(5, 4);
-  });
-
-  it('R6 regression: m-scene text is 10× smaller than mm-scene at same view scale (R13 rescue active)', () => {
-    // Guards against useDxfSceneConversion forwarding raw scene.units (possibly
-    // undefined) instead of resolveSceneUnits() — which would make DxfRenderer
-    // fall back to 'mm', rendering 2.5 world-units of text in a meters scene.
-    // R13: dimscale=1 in m-scene → rescued to 100. Ratio = (2.5×1×1×1) / (2.5×100×0.001×1) = 2.5/0.25 = 10.
-    const shared = {
-      entity: makeEntity(), geometry: makeLinearGeometry(), style: makeStyle(),
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888',
-    };
-    const { ctx: ctxMm, calls: callsMm } = makeCtxSpy();
-    const { ctx: ctxM, calls: callsM } = makeCtxSpy();
-    renderDimensionText(ctxMm, { ...shared, sceneUnits: 'mm' });
-    renderDimensionText(ctxM,  { ...shared, sceneUnits: 'm' });
-    const ratio = extractFontHeight(callsMm[0].font) / extractFontHeight(callsM[0].font);
-    expect(ratio).toBeCloseTo(10, 2); // mm(no rescue)/m(rescued): 2.5 / 0.25 = 10
-  });
-
-  it('R13 rescue applies at unit transform scale (dimscale=1 m-scene → 0.25px)', () => {
-    // m scene with view scale = 1 px/m, dimscale=1:
-    // R13 rescue: dimscale=1 < 10 → effectiveDimscale=100
-    // 2.5 mm × 100 × 0.001 m/mm × 1 px/m = 0.25 px.
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(),
-      geometry: makeLinearGeometry(),
-      style: makeStyle(), // dimscale=1
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 },
-      layerColour: '#888',
-      sceneUnits: 'm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(0.25, 6);
-  });
-
-  it('R7: dimscale=100 in m-scene scales text to model-space size matching native TEXT', () => {
-    // A 1:100 annotation (dimscale=100) in a meters scene:
-    //   dimtxt=2.5mm × 100 × 0.001 m/mm × 40 px/m = 10 px.
-    // A native TEXT entity stored at height=0.25m renders identically:
-    //   0.25m × 40 px/m = 10 px.
-    // This verifies that DIMSCALE is applied to text (like it is to arrowheads).
-    const style100 = { ...makeStyle(), dimscale: 100 };
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(),
-      geometry: makeLinearGeometry(),
-      style: style100,
-      transform: { scale: 40, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 },
-      layerColour: '#888',
-      sceneUnits: 'm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(10, 4); // 2.5 × 100 × 0.001 × 40 = 10 px
+    // dimscale=1 (verbatim) × 1 (mm) × 2 (scale) = 5 px.
+    const calls = renderWith(makeStyle(), undefined, 2);
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(5, 4);
   });
 });
 
-describe('renderDimensionText — R13 dimscale rescue for built-in styles (ADR-362 Round 13)', () => {
-  // Rescue: unitFactor <= mmToSceneUnits('m') && dimscale < 10 → effectiveDimscale=100.
-  // Built-in styles (ISO_129, Standard) ship with dimscale=1 → invisible in meters scenes.
-  // Same result as imported styles rescued by R12 dim-style-importer.
+describe('renderDimensionText — applies dimscale VERBATIM (rescue is upstream, Round 14)', () => {
+  // The renderer no longer rescues. DimensionRenderer.resolveFromEntity heals
+  // dimscale once (resolveEffectiveDimscale). These tests prove the leaf passes
+  // whatever dimscale it is given straight through the formula.
 
-  it('ISO_129-style dimscale=1 in m-scene → rescued to 100 (same as imported Standard)', () => {
-    // 2.5 × 100 × 0.001 × 40 = 10 px — matches imported Standard with dimscale=100
-    const { ctx: ctxBuiltIn, calls: callsBuiltIn } = makeCtxSpy();
-    const { ctx: ctxImported, calls: callsImported } = makeCtxSpy();
-    const shared = {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      transform: { scale: 40, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'm' as SceneUnits,
-    };
-    renderDimensionText(ctxBuiltIn,  { ...shared, style: { ...makeStyle(), dimscale: 1 } });
-    renderDimensionText(ctxImported, { ...shared, style: { ...makeStyle(), dimscale: 100 } });
-    const pxBuiltIn  = extractFontHeight(callsBuiltIn[0].font);
-    const pxImported = extractFontHeight(callsImported[0].font);
-    expect(pxBuiltIn).toBeCloseTo(10, 4);   // 2.5 × 100(rescued) × 0.001 × 40
-    expect(pxImported).toBeCloseTo(10, 4);  // 2.5 × 100(real) × 0.001 × 40
+  it('dimscale=1 in mm-scene → 2.5 px (verbatim, NOT rescued here)', () => {
+    const calls = renderWith(makeStyle(), 'mm', 1); // 2.5 × 1 × 1 × 1
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(2.5, 6);
   });
 
-  it('dimscale=9 in m-scene → rescued to 100 (boundary: 9 < 10)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      style: { ...makeStyle(), dimscale: 9 },
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(0.25, 6); // 2.5 × 100(rescued) × 0.001 × 1
+  it('dimscale=1 in m-scene → 0.0025 px (verbatim — proves no metre rescue)', () => {
+    const calls = renderWith(makeStyle(), 'm', 1); // 2.5 × 1 × 0.001 × 1
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(0.0025, 6);
   });
 
-  it('dimscale=10 in m-scene → NOT rescued (boundary: 10 is not < 10)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      style: { ...makeStyle(), dimscale: 10 },
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(0.025, 6); // 2.5 × 10(kept) × 0.001 × 1
+  it('effective dimscale=100 (as healed upstream) → model-space size', () => {
+    // m scene: 2.5 × 100 × 0.001 × 40 = 10 px — matches a native TEXT at 0.25m.
+    const calls = renderWith({ ...makeStyle(), dimscale: 100 }, 'm', 40);
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(10, 4);
   });
 
-  it('dimscale=100 in m-scene → NOT rescued (already scaled)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      style: { ...makeStyle(), dimscale: 100 },
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(0.25, 6); // 2.5 × 100(kept) × 0.001 × 1
-  });
-
-  it('dimscale=1 in cm-scene → NOT rescued (unitFactor=0.1 > 0.001 threshold)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      style: makeStyle(), // dimscale=1
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'cm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(0.25, 6); // 2.5 × 1(kept) × 0.1 × 1 = 0.25 px
-  });
-
-  it('dimscale=1 in mm-scene → NOT rescued (unitFactor=1 > 0.001 threshold)', () => {
-    const { ctx, calls } = makeCtxSpy();
-    renderDimensionText(ctx, {
-      entity: makeEntity(), geometry: makeLinearGeometry(),
-      style: makeStyle(), // dimscale=1
-      transform: { scale: 1, offsetX: 0, offsetY: 0 },
-      viewport: { width: 800, height: 600 }, layerColour: '#888', sceneUnits: 'mm',
-    });
-    const px = extractFontHeight(calls[0].font);
-    expect(px).toBeCloseTo(2.5, 6); // 2.5 × 1(kept) × 1 × 1 = 2.5 px
+  it('explicit imported dimscale=50 passes through unchanged', () => {
+    const calls = renderWith({ ...makeStyle(), dimscale: 50 }, 'mm', 1); // 2.5 × 50 × 1 × 1
+    expect(extractFontHeight(calls[0].font)).toBeCloseTo(125, 4);
   });
 });

@@ -20,6 +20,7 @@
 
 import { createToggleStore } from '../../stores/createToggleStore';
 import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
+import { toolStateStore } from '../../stores/ToolStateStore';
 
 const store = createToggleStore();
 
@@ -41,4 +42,21 @@ export function disarmHatchSelect(): void {
   if (!store.isOpen()) return;
   store.close();
   toolHintOverrideStore.setOverride(null);
+}
+
+/**
+ * Ολοκλήρωση **επιτυχούς** pick υπάρχουσας γραμμοσκίασης: disarm + έξοδος από το
+ * εργαλείο «Γραμμοσκίαση» πίσω σε `'select'` (canonical `toolStateStore.deselectTool`).
+ *
+ * **Γιατί χρειάζεται το deselect:** το armed pick γίνεται ενόσω είναι ενεργό το
+ * hatch tool (pick-point mode). Χωρίς την έξοδο, μετά το disarm το `activeTool`
+ * έμενε `'hatch'` → το επόμενο mousemove ξανάδειχνε το create-ghost (pick-point)
+ * και το επόμενο κλικ δημιουργούσε νέα γραμμοσκίαση — ενώ ο χρήστης απλώς ήθελε να
+ * δει/ρυθμίσει την επιλεγμένη. Το contextual tab παραμένει (selection-driven).
+ *
+ * SSoT για τα 2 intercept sites (`mouse-handler-up` + `useCanvasClickHandler`).
+ */
+export function finishHatchSelectPick(): void {
+  disarmHatchSelect();
+  toolStateStore.deselectTool();
 }

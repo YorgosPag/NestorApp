@@ -38,3 +38,20 @@ export function paperHeightToModel(
   const scale = Number.isFinite(drawingScale) && drawingScale > 0 ? drawingScale : 1;
   return paperHeightMm * scale * mmToSceneUnits(units);
 }
+
+/**
+ * Effective annotation (DIMSCALE) factor for a dimension. An explicit imported
+ * DIMSTYLE scale (`> 1`, e.g. 50 / 100) wins — it is the drawing's own declared
+ * plot scale. A built-in or annotative style (`dimscale ≤ 1`, the default) falls
+ * back to the canonical `drawingScale` SSoT (the View-ribbon 1:N, default 1:100).
+ *
+ * This is the dimension counterpart of the ribbon-Text rule (Round 7): every
+ * part of a dimension (text, arrowheads, geometry offsets, center mark) must use
+ * the SAME factor, resolved ONCE. It is **unit-independent** — it replaces the
+ * old renderer heuristic (`unitFactor ≤ m && dimscale < 10`) that only rescued
+ * metre scenes, leaving mm/cm dimensions microscopic.
+ */
+export function resolveEffectiveDimscale(rawDimscale: number, drawingScale: number): number {
+  if (Number.isFinite(rawDimscale) && rawDimscale > 1) return rawDimscale;
+  return Number.isFinite(drawingScale) && drawingScale > 0 ? drawingScale : 1;
+}
