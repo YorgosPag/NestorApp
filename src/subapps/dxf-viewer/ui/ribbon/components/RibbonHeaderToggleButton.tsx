@@ -3,7 +3,7 @@
 import React from 'react';
 import { PanelTopOpen, PanelTopClose } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 import { useDxfGlobalHeaderToggle } from '../hooks/useDxfGlobalHeaderToggle';
 
 /**

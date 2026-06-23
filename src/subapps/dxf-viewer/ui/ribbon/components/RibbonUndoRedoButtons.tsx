@@ -3,7 +3,7 @@
 import React from 'react';
 import { Undo2, Redo2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 import { useRibbonCommand } from '../context/RibbonCommandContext';
 
 /**

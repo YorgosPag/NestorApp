@@ -25,7 +25,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { ChevronDown, Eye, EyeOff, RotateCcw } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/RibbonTooltip';
 import { FloatingPanel } from '@/components/ui/floating';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';

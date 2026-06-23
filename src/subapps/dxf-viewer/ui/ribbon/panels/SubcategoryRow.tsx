@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { Lock, X } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/RibbonTooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';

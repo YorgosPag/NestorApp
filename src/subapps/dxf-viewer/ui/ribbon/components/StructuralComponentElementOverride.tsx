@@ -32,7 +32,7 @@ import {
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 
 /** Lucide icon ανά component (UI-local· config κρατιέται React-free). */
 const COMPONENT_ICON: Readonly<Record<StructuralComponent, React.FC<{ className?: string }>>> = {

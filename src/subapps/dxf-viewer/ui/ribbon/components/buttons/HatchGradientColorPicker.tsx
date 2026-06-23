@@ -19,7 +19,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 import { ColorDialogTrigger } from '../../../color/EnterpriseColorDialog';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import type { RibbonCommand } from '../../types/ribbon-types';

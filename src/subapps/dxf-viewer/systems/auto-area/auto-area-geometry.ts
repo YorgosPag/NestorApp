@@ -98,6 +98,48 @@ function planarizeSegments(
   return out;
 }
 
+/**
+ * Gap-bridging «extend-to-gap» (AutoCAD HPGAPTOL): για κάθε άκρο τμήματος προεκτείνει
+ * το τμήμα στην κατεύθυνσή του και, αν συναντήσει το ΠΛΗΣΙΕΣΤΕΡΟ άκρο άλλου τμήματος
+ * εντός `gapTol` (κατά μήκος) και σχεδόν συγγραμμικά (perp ≤ `mergeTol`), προσθέτει
+ * ευθεία γέφυρα. Έτσι κλείνουν ΑΝΟΙΧΤΑ κενά ορίου (πόρτες/σκάλες) χωρίς να καταρρέουν
+ * κόμβοι. Το «πλησιέστερο πρώτα» αποτρέπει υπερπήδηση γειτονικών άκρων· τυχόν γέφυρα
+ * προς ήδη-συνδεδεμένο άκρο γίνεται deduplicated στο edge-dedup.
+ */
+function bridgeCollinearGaps(
+  linePairs: ReadonlyArray<readonly [Point2D, Point2D]>,
+  mergeTol: number,
+  gapTol: number,
+): [Point2D, Point2D][] {
+  // Κάθε άκρο με την ΕΞΩΣΤΡΕΦΗ μοναδιαία κατεύθυνση του τμήματός του.
+  const ends: { p: Point2D; dx: number; dy: number }[] = [];
+  for (const [s, e] of linePairs) {
+    const len = Math.hypot(e.x - s.x, e.y - s.y);
+    if (len < 1e-9) continue;
+    ends.push({ p: s, dx: (s.x - e.x) / len, dy: (s.y - e.y) / len });
+    ends.push({ p: e, dx: (e.x - s.x) / len, dy: (e.y - s.y) / len });
+  }
+
+  const bridges: [Point2D, Point2D][] = [];
+  for (let i = 0; i < ends.length; i++) {
+    const a = ends[i];
+    let best: { q: Point2D; along: number } | null = null;
+    for (let j = 0; j < ends.length; j++) {
+      if (j === i) continue;
+      const b = ends[j];
+      const vx = b.p.x - a.p.x;
+      const vy = b.p.y - a.p.y;
+      const along = vx * a.dx + vy * a.dy;           // προβολή στην προέκταση (ahead > 0)
+      if (along <= mergeTol || along > gapTol) continue; // πραγματικό κενό, εντός HPGAPTOL
+      const perp = Math.abs(vx * -a.dy + vy * a.dx);  // πλευρική απόκλιση από την ευθεία
+      if (perp > mergeTol) continue;                  // σχεδόν συγγραμμικό μόνο
+      if (!best || along < best.along) best = { q: b.p, along };
+    }
+    if (best) bridges.push([{ x: a.p.x, y: a.p.y }, { x: best.q.x, y: best.q.y }]);
+  }
+  return bridges;
+}
+
 // ============================================================================
 // MAIN EXPORT
 // ============================================================================
@@ -108,19 +150,30 @@ function planarizeSegments(
  * ordered array of vertices.
  *
  * @param linePairs - Array of [start, end] world-coord pairs
- * @param tolerance - Endpoint merge distance (snap tolerance)
+ * @param mergeTol  - Απόσταση σύμπτωσης κόμβων (node snap) + perp-corridor + T-junction
+ *                    proximity. Μικρή (≈ pixel snap σε world units). ΔΕΝ διογκώνεται
+ *                    από το gap tolerance — έτσι μικροί τοίχοι ΔΕΝ καταρρέουν.
+ * @param gapTol    - AutoCAD HPGAPTOL (world units). Μέγιστο μήκος «extend-to-gap»
+ *                    γέφυρας πάνω από ΑΝΟΙΧΤΟ κενό ορίου (πόρτα/σκάλα). 0 = χωρίς
+ *                    bridging (μη-regression).
  */
 export function findClosedPolygonsFromLines(
   linePairs: ReadonlyArray<readonly [Point2D, Point2D]>,
-  tolerance: number,
+  mergeTol: number,
+  gapTol = 0,
 ): Point2D[][] {
   if (linePairs.length < 3) return [];
 
-  // 0. Planarization/noding — σπάμε τα τμήματα στα σημεία τομής (X + tolerance-aware
+  // 0a. Gap-bridging (HPGAPTOL) — γεφυρώνει ΑΝΟΙΧΤΑ κενά ορίου (πόρτες/σκάλες) με
+  // ευθεία «extend-to-gap» γέφυρα, όπως το AutoCAD BHATCH. Διαφορετικό από το
+  // node-merge: ΠΡΟΣΘΕΤΕΙ ακμή αντί να καταρρέει κόμβους (δεν χαλά μικρούς τοίχους).
+  const bridges = gapTol > 0 ? bridgeCollinearGaps(linePairs, mergeTol, gapTol) : [];
+  const withBridges = bridges.length ? [...linePairs, ...bridges] : linePairs;
+
+  // 0b. Planarization/noding — σπάμε τα τμήματα στα σημεία τομής (X + tolerance-aware
   // T-junctions) ώστε οι διασταυρούμενες γραμμές («σκάρα») ΚΑΙ οι τοίχοι με μικρά
-  // κενά/overshoots να γίνουν κόμβοι του γράφου → βρίσκονται τα δωμάτια. Το `tolerance`
-  // (snapTol, world units) τροφοδοτεί το T-junction noding ΚΑΙ το endpoint-merge.
-  const noded = planarizeSegments(linePairs, tolerance);
+  // κενά/overshoots να γίνουν κόμβοι του γράφου → βρίσκονται τα δωμάτια.
+  const noded = planarizeSegments(withBridges, mergeTol);
 
   // 1. Normalize endpoints
   const nodes: Node[] = [];
@@ -129,15 +182,23 @@ export function findClosedPolygonsFromLines(
   const findOrAdd = (p: Point2D): number => {
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i].pos;
-      if (Math.hypot(n.x - p.x, n.y - p.y) <= tolerance) return i;
+      if (Math.hypot(n.x - p.x, n.y - p.y) <= mergeTol) return i;
     }
     return nodes.push({ pos: { x: p.x, y: p.y } }) - 1;
   };
 
+  // Dedup ακμών ανά ζεύγος κόμβων: οι διπλές/επικαλυπτόμενες γραμμές (π.χ. τοίχος
+  // σχεδιασμένος δύο φορές) θα δημιουργούσαν παράλληλες half-edges μεταξύ ίδιων
+  // κόμβων → ασαφές «επόμενο» στην angular sort → χαλασμένες όψεις.
+  const seenEdges = new Set<string>();
   for (const [s, e] of noded) {
     const u = findOrAdd(s);
     const v = findOrAdd(e);
-    if (u !== v) edgeList.push([u, v]);
+    if (u === v) continue;
+    const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+    if (seenEdges.has(key)) continue;
+    seenEdges.add(key);
+    edgeList.push([u, v]);
   }
 
   if (edgeList.length < 3) return [];

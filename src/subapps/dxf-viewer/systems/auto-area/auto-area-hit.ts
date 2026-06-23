@@ -21,7 +21,7 @@ import { findClosedPolygonsFromLines } from './auto-area-geometry';
 // ΙΔΙΟ με τον room detector ώστε ο half-edge face traversal να πιάνει ΔΩΜΑΤΙΑ από
 // double-line πολυγραμμικούς τοίχους (όχι μόνο `LINE`).
 import { extractLineSegments } from '../../bim/walls/wall-in-region';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { TOLERANCE_CONFIG, REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 
@@ -143,10 +143,18 @@ function getCachedClosedFaces(
     (s) => [s.start, s.end] as [Point2D, Point2D],
   );
 
-  // Gap tolerance (world units) διευρύνει το βασικό snap tolerance ώστε να κλείνουν
-  // μικρά ανοίγματα· default 0 → ταυτόσημη συμπεριφορά με πριν (μηδέν regression).
-  const snapTol = Math.max(TOLERANCE_CONFIG.SNAP_DEFAULT / scale, gapTolerance);
-  const faces = findClosedPolygonsFromLines(linePairs, snapTol);
+  // Διαχωρισμός ανοχών (ADR-507 §5β.2): mergeTol = node-snap, gapTolerance = HPGAPTOL.
+  // ⚠️ ΚΡΙΣΙΜΟ (ADR-507 §5β.3): το node-merge tolerance είναι ιδιότητα των ΔΕΔΟΜΕΝΩΝ
+  // (πόσο απέχουν «ίδια» άκρα), ΟΧΙ του zoom. Το pixel-based `SNAP_DEFAULT/scale`
+  // διογκωνόταν σε χαμηλό zoom (scale 0.02 → 300mm) και ΣΥΓΧΩΝΕΥΕ τις δύο παρειές
+  // μικρών μελών (π.χ. κολώνα 250mm) σε έναν κόμβο → η περιοχή κατέρρεε/χανόταν.
+  // CAP στο `LOOP_JOIN_TOLERANCE_MM` (SSoT, 50mm — κάτω από πάχος μέλους): σε κανονικό
+  // zoom αμετάβλητο· σε χαμηλό zoom δεν καταρρέει μικρά μέλη (deterministic ανά zoom).
+  const mergeTol = Math.min(
+    TOLERANCE_CONFIG.SNAP_DEFAULT / scale,
+    REGION_PERIMETER_LIMITS.LOOP_JOIN_TOLERANCE_MM,
+  );
+  const faces = findClosedPolygonsFromLines(linePairs, mergeTol, gapTolerance);
   scaleMap.set(key, faces);
   return faces;
 }

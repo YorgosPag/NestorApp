@@ -12,7 +12,7 @@ import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 
 interface RibbonLargeButtonProps {
   command: RibbonCommand;

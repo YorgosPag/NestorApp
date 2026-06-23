@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 import type { RibbonMinimizeState } from '../types/ribbon-types';
 
 interface RibbonMinimizeButtonProps {

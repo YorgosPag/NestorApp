@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useOpeningFamilyTypeController } from '../hooks/useOpeningFamilyTypeController';
 import { isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';

@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 
 interface RibbonToggleButtonProps {
   command: RibbonCommand;

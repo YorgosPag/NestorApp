@@ -14,7 +14,7 @@ import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { isAnyVariantActive, flattenLeafVariants } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { RibbonSplitDropdown } from './RibbonSplitDropdown';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 
 interface RibbonSplitButtonProps {
   button: RibbonButton;

@@ -19,7 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 import {
   Select,
   SelectContent,
