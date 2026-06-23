@@ -11,9 +11,16 @@ import {
   formatLimitsText,
   formatAlternateUnit,
   composeFullDimText,
+  formatLinearMeasurement,
 } from '../dim-text-formatter';
 import type { DimStyle } from '../../../types/dimension';
 import { ISO_129_TEMPLATE } from '../dim-style-templates';
+import { displayUnitState } from '../../../config/display-unit-state';
+
+// ADR-362 R15 — formatLinearMeasurement converts mm → the live display unit first.
+// These tests assert the DXF formatting pipeline in mm-space, so pin the unit to
+// 'mm' (toDisplay is then identity) to keep the expected values unit-agnostic.
+beforeEach(() => displayUnitState.setUnit('mm'));
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Fixture helpers
@@ -26,6 +33,26 @@ function makeStyle(overrides: Partial<DimStyle> = {}): DimStyle {
 // ──────────────────────────────────────────────────────────────────────────────
 // formatAlternateUnit (Phase G3)
 // ──────────────────────────────────────────────────────────────────────────────
+
+describe('formatLinearMeasurement — display-unit SSoT (ADR-362 R15)', () => {
+  const decimalStyle = makeStyle({ dimlfac: 1, dimrnd: 0, dimlunit: 'decimal', dimdec: 2, dimdsep: ',', dimpost: '' });
+
+  it('renders a canonical-mm measurement in METRES (Giorgio fix): 8808.57mm → "8,81"', () => {
+    expect(formatLinearMeasurement(8808.57, decimalStyle, 'm')).toBe('8,81');
+  });
+
+  it('same measurement in mm view is unchanged (identity conversion)', () => {
+    expect(formatLinearMeasurement(8808.57, decimalStyle, 'mm')).toBe('8808,57');
+  });
+
+  it('cm view converts ÷10', () => {
+    expect(formatLinearMeasurement(8808.57, decimalStyle, 'cm')).toBe('880,86');
+  });
+
+  it('DIMPOST suffix still applied after the unit conversion', () => {
+    expect(formatLinearMeasurement(8808.57, makeStyle({ ...decimalStyle, dimpost: '[] m' }), 'm')).toBe('8,81 m');
+  });
+});
 
 describe('formatAlternateUnit', () => {
   it('returns null when dimalt=false', () => {

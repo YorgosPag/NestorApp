@@ -13,6 +13,11 @@
 import { composePrimaryText, composeFullDimText } from '../dim-text-formatter';
 import type { DimStyle } from '../../../types/dimension';
 import { ISO_129_TEMPLATE } from '../dim-style-templates';
+import { displayUnitState } from '../../../config/display-unit-state';
+
+// ADR-362 R15 — pin display unit to 'mm' so mm→display conversion is identity and
+// the DXF-pipeline expectations below stay unit-agnostic.
+beforeEach(() => displayUnitState.setUnit('mm'));
 
 function makeStyle(overrides: Partial<DimStyle> = {}): DimStyle {
   return {

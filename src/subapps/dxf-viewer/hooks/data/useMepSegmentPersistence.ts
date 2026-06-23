@@ -27,6 +27,7 @@ import {
 } from '../../bim/mep-segments/mep-segment-firestore-service';
 import { recordMepSegmentChange } from '../../bim/mep-segments/mep-segment-audit-client';
 import { mepSegmentDocToEntity as docToEntity } from './mep-segment-persistence-helpers';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -147,80 +148,33 @@ export function useMepSegmentPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeSegments(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Δεν έχει
+      // write-grace. EDGE (Tier 4): `shouldDropOrphan` κρατά segments που δεν έχουν
+      // ποτέ persist-αριστεί (`!lastSavedBaseline.has`) — segment loaded από το DXF
+      // `scene.json` δεν έχει ακόμα Firestore doc· drop ΜΟΝΟ όταν ΗΤΑΝ persisted (στο
+      // baseline) ΚΑΙ το doc εξαφανίστηκε (genuine remote delete) — αλλιώς οι σωλήνες
+      // εξαφανίζονται σε hard refresh.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, MepSegmentDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneSegments = new Map<string, MepSegmentEntity>();
-        const nonSegments: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isSegment(e)) sceneSegments.set(e.id, e);
-          else nonSegments.push(e);
-        }
-
-        const nextSegments: MepSegmentEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const d of docs) {
-          if (deleted.has(d.id)) continue;
-          const existing = sceneSegments.get(d.id);
-          if (!existing) {
-            if (!dirty.has(d.id)) {
-              nextSegments.push(docToEntity(d));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(d.id)) {
-            nextSegments.push(existing);
-            continue;
-          }
-          const fresh = docToEntity(d);
-          if (!dequal(existing.params, fresh.params)) {
-            nextSegments.push(fresh);
-            mutated = true;
-          } else {
-            nextSegments.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc.
-        for (const d of docs) {
-          if (!lastSavedParamsRef.current.has(d.id)) {
-            lastSavedParamsRef.current.set(d.id, d.params);
-          }
-        }
-
-        for (const [id, entity] of sceneSegments) {
-          if (docsById.has(id)) continue;
-          // Keep a scene segment that is NOT in the Firestore snapshot when it is
-          // locally dirty, pending its first save, OR was never confirmed-saved
-          // (`!lastSavedParamsRef.has`). The last case is the critical one: a
-          // segment loaded from the DXF `scene.json` on reload has no Firestore doc
-          // yet — dropping it here is exactly why pipes vanished after every hard
-          // refresh. Only a segment that WAS persisted (in the baseline) and whose
-          // doc has since disappeared is a genuine remote delete → drop it.
-          if (dirty.has(id) || pending.has(id) || !lastSavedParamsRef.current.has(id)) {
-            nextSegments.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonSegments, ...nextSegments],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<MepSegmentDoc, MepSegmentEntity, MepSegmentEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isSegment,
+            docToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+            shouldDropOrphan: (id, r) =>
+              !r.dirty.has(id) && !r.pending.has(id) && r.lastSavedBaseline.has(id),
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

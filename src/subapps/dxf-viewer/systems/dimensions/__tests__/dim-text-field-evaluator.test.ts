@@ -39,6 +39,12 @@ import { evaluateFieldAST, evaluateFieldText, type FieldEvalContext } from '../d
 import { parseFieldAST } from '../dim-text-field-parser';
 import { ISO_129_TEMPLATE } from '../dim-style-templates';
 import type { DimStyle } from '../../../types/dimension';
+import { displayUnitState } from '../../../config/display-unit-state';
+
+// ADR-362 R15 — <measurement>/<length> tokens flow through formatLinearMeasurement,
+// which now converts mm → the live display unit. Pin to 'mm' (identity) so these
+// expectations stay unit-agnostic.
+beforeEach(() => displayUnitState.setUnit('mm'));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

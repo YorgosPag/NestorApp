@@ -25,7 +25,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import { EventBus } from '../../systems/events/EventBus';
@@ -49,6 +49,7 @@ import {
   type SlabTypeLink,
 } from './slab-persistence-helpers';
 import { useSlabTypeReresolution } from './useSlabTypeReresolution';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 // ============================================================================
 // TYPES
@@ -160,73 +161,40 @@ export function useSlabPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeSlabs(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. ADR-412
+      // «type always wins»: `differs` = `slabEntityDiffersFromDoc` (diff vs EFFECTIVE
+      // type-resolved params)· `seedExtraBaseline` seed-άρει το δεύτερο type-link map.
+      // NOTE: ο generic προσθέτει το ADR-397/412 baseline seed (που έλειπε από το πρώην
+      // inline loop) → loaded slabs route-άρουν UPDATE + auto-save gate αναγνωρίζει το id.
+      // Δεν έχει write-grace.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, SlabDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneSlabs = new Map<string, SlabEntity>();
-        const nonSlabs: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isSlab(e)) sceneSlabs.set(e.id, e);
-          else nonSlabs.push(e);
-        }
-
-        const nextSlabs: SlabEntity[] = [];
-        let mutated = false;
-
-        // ADR-390 — block subscribe from re-adding tombstoned IDs (delete race).
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneSlabs.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextSlabs.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextSlabs.push(existing);
-            continue;
-          }
-          // ADR-412 — diff against the doc's EFFECTIVE (type-resolved) params so
-          // a typed slab doesn't churn on every snapshot (scene holds resolved).
-          if (slabEntityDiffersFromDoc(existing, doc)) {
-            nextSlabs.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextSlabs.push(existing);
-          }
-        }
-
-        // ADR-390 — replaces buggy `neverSaved` guard. Keep entities only αν
-        // είναι (a) dirty (locally being edited), or (b) pendingFirstSave
-        // (just drawn / just restored, in-flight first persist). DXF-JSON-only
-        // ghost entities (loaded after refresh με κενό pendingRef) DROP από
-        // scene — Bug B fix.
-        for (const [id, entity] of sceneSlabs) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextSlabs.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonSlabs, ...nextSlabs],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<SlabDoc, SlabEntity, SlabEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isSlab,
+            docToEntity: (doc) => docToEntity(doc),
+            entityComparable: (e) => e.params, // unused (differs override provided)
+            docComparable: (d) => d.params, // baseline seed = raw cached doc.params
+            differs: (existing, doc) => slabEntityDiffersFromDoc(existing, doc),
+            seedExtraBaseline: (doc) => {
+              if (!lastSavedTypeLinkRef.current.has(doc.id)) {
+                lastSavedTypeLinkRef.current.set(doc.id, {
+                  typeId: doc.typeId,
+                  typeOverrides: doc.typeOverrides,
+                });
+              }
+            },
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

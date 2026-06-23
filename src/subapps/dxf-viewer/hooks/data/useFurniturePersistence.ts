@@ -28,6 +28,7 @@ import {
 } from '../../bim/furniture/furniture-firestore-service';
 import { recordFurnitureChange } from '../../bim/furniture/furniture-audit-client';
 import { furnitureDocToEntity as docToEntity } from './furniture-persistence-helpers';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -140,73 +141,28 @@ export function useFurniturePersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeFurniture(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Δεν έχει write-grace →
+      // `isWithinGrace: () => false`.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, FurnitureDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneFurniture = new Map<string, FurnitureEntity>();
-        const nonFurniture: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isFurniture(e)) sceneFurniture.set(e.id, e);
-          else nonFurniture.push(e);
-        }
-
-        const nextFurniture: FurnitureEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneFurniture.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextFurniture.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextFurniture.push(existing);
-            continue;
-          }
-          const fresh = docToEntity(doc);
-          if (!dequal(existing.params, fresh.params)) {
-            nextFurniture.push(fresh);
-            mutated = true;
-          } else {
-            nextFurniture.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc.
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        for (const [id, entity] of sceneFurniture) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextFurniture.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonFurniture, ...nextFurniture],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<FurnitureDoc, FurnitureEntity, FurnitureEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isFurniture,
+            docToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

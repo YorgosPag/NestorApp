@@ -30,7 +30,6 @@
  */
 
 import type { SceneModel, ImportedSceneDimStyle } from '../../types/scene-types';
-import { resolveSceneUnits } from '../../utils/scene-units';
 import type {
   DimStyle,
   DimLinearUnitFormat,
@@ -242,10 +241,6 @@ export interface RegisterImportedDimStylesResult {
  * Returning a structured result keeps the function unit-testable without
  * having to spy on the registry's subscriber list.
  */
-// Fallback annotation scale for malformed DXFs (declared mm, resolved m, dimscale<10).
-// 1:100 is the standard architectural scale — 2.5×100×0.001×viewScale = 0.25m text.
-const ARCH_RESCUE_DIMSCALE = 100;
-
 export function registerImportedDimStyles(
   scene: (Pick<SceneModel, 'dimStyles'> & Partial<Pick<SceneModel, 'units' | 'headerDimscale' | 'bounds'>>) | null | undefined,
   registry: DimStyleRegistry = getDimStyleRegistry(),
@@ -261,10 +256,12 @@ export function registerImportedDimStyles(
   }
 
   const headerDimscale = scene.headerDimscale ?? 1;
-  // ADR-362 R12 — detect malformed DXF: $INSUNITS declares 'mm' but
-  // bounds heuristic resolves 'm'. When dimscale<10 (unset for annotation),
-  // rescue to 100 (1:100) so ribbon dims render at 0.25m instead of 2.5m.
-  const hasUnitConflict = scene.units === 'mm' && resolveSceneUnits(scene) !== 'mm';
+  // ADR-362 R14/R15 — the dimscale annotation-scale rescue is centralised at the
+  // single render point `resolveEffectiveDimscale` (utils/annotation-scale.ts):
+  // imported DIMSCALE>1 wins, else the live `drawingScale` SSoT, unit-independent.
+  // The old import-time R12 rescue was removed — it duplicated that logic AND had
+  // become dead code under ADR-462 (resolveSceneUnits now trusts the declared unit,
+  // so the "declared-mm-but-bounds-metres" conflict it keyed on never fires).
 
   const created: string[] = [];
   let standardId: string | null = null;
@@ -272,9 +269,6 @@ export function registerImportedDimStyles(
 
   for (const [name, entry] of entries) {
     const input = translateToDimStyle(entry, name, headerDimscale);
-    if (hasUnitConflict && input.dimscale < 10) {
-      input.dimscale = ARCH_RESCUE_DIMSCALE;
-    }
     const style = registry.createCustomStyle(input);
     created.push(style.id);
     if (firstId === null) firstId = style.id;

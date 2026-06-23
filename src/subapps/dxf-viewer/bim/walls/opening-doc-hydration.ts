@@ -15,6 +15,7 @@ import { inferOpeningIfcType } from '@/services/factories/opening.factory';
 import { resolveOpeningEffective, openingEntityDiffersFromDoc, type OpeningTypeLink } from '../family-types/opening-type-resolution';
 import { resolveAutoOpeningTypeId } from '../family-types/auto-opening-type';
 import type { OpeningDoc } from './opening-firestore-service';
+import { mergeDocsIntoScene } from '../../hooks/data/merge-docs-into-scene';
 
 export function isOpening(entity: AnySceneEntity): entity is OpeningEntity {
   return (entity as { type?: string }).type === 'opening';
@@ -96,9 +97,15 @@ export interface OpeningMergeRefs {
 
 /**
  * Diff-merge a Firestore opening snapshot into the active scene (host-aware
- * hydration + selective skip of dirty/pending). Mutates via `lm.setLevelScene`
- * only when the merged set differs. Behavior-identical to the former inline
- * subscribe handler (file-size split).
+ * hydration + selective skip of dirty/pending). Thin opening adapter πάνω από το
+ * `mergeDocsIntoScene` SSoT (μηδέν copy-pasted loop):
+ *   - `prepareContext` = build του host-wall lookup μία φορά (walls μένουν στα
+ *     `others` αυτόματα, αφού `isOpening(wall) === false`).
+ *   - `docToEntity → null` = ADR-440 host-wall lookup: αν ο host wall δεν είναι
+ *     ακόμα στο scene, ο generic κάνει skip (retry στο επόμενο snapshot).
+ *   - `differs` = `openingEntityDiffersFromDoc` (ADR-421 «type always wins»).
+ *   - `seedExtraBaseline` = seed του δεύτερου `lastSavedLink` map.
+ *   - `shouldDropOrphan` = deleted-wins (ADR-390).
  */
 export function mergeOpeningDocsIntoScene(
   docs: readonly OpeningDoc[],
@@ -106,86 +113,37 @@ export function mergeOpeningDocsIntoScene(
   lm: OpeningMergeLevelManager,
   refs: OpeningMergeRefs,
 ): void {
-  const scene = lm.getLevelScene(levelId);
-  if (!scene) return;
-
-  const docsById = new Map<string, OpeningDoc>();
-  for (const d of docs) docsById.set(d.id, d);
-
-  const { dirty, deleted, pending, lastSavedParams, lastSavedLink } = refs;
-  const wallsById = new Map<string, WallEntity>();
-  const sceneOpenings = new Map<string, OpeningEntity>();
-  const nonOpenings: AnySceneEntity[] = [];
-
-  for (const e of scene.entities) {
-    if (isWall(e)) {
-      wallsById.set(e.id, e);
-      nonOpenings.push(e);
-    } else if (isOpening(e)) {
-      sceneOpenings.set(e.id, e);
-    } else {
-      nonOpenings.push(e);
-    }
-  }
-
-  const nextOpenings: OpeningEntity[] = [];
-  let mutated = false;
-
-  for (const doc of docs) {
-    const existing = sceneOpenings.get(doc.id);
-    const host = wallsById.get(doc.params.wallId) ?? null;
-    if (!existing) {
-      if (!dirty.has(doc.id)) {
-        const entity = openingDocToEntity(doc, host);
-        if (entity) {
-          nextOpenings.push(entity);
-          mutated = true;
+  mergeDocsIntoScene<OpeningDoc, OpeningEntity, OpeningEntity['params'], Map<string, WallEntity>>(
+    docs,
+    levelId,
+    lm,
+    {
+      isEntity: isOpening,
+      prepareContext: (scene) => {
+        const wallsById = new Map<string, WallEntity>();
+        for (const e of scene.entities) if (isWall(e)) wallsById.set(e.id, e);
+        return wallsById;
+      },
+      docToEntity: (doc, _existing, wallsById) =>
+        openingDocToEntity(doc, wallsById.get(doc.params.wallId) ?? null),
+      entityComparable: (e) => e.params, // unused (differs override provided)
+      docComparable: (d) => d.params, // baseline seed = raw cached doc.params
+      differs: (existing, doc) => openingEntityDiffersFromDoc(existing, doc),
+      seedExtraBaseline: (doc) => {
+        // ADR-421 SLICE C — track the persisted Family/Type link too.
+        if (!refs.lastSavedLink.has(doc.id)) {
+          refs.lastSavedLink.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
         }
-      }
-      continue;
-    }
-    if (dirty.has(doc.id)) {
-      nextOpenings.push(existing);
-      continue;
-    }
-    // ADR-421 SLICE C — compare against the EFFECTIVE («type wins») state.
-    if (openingEntityDiffersFromDoc(existing, doc)) {
-      const entity = openingDocToEntity(doc, host);
-      if (entity) {
-        nextOpenings.push(entity);
-        mutated = true;
-      } else {
-        nextOpenings.push(existing);
-      }
-    } else {
-      nextOpenings.push(existing);
-    }
-  }
-
-  // Seed last-saved baselines so loaded openings route through UPDATE (not setDoc).
-  for (const doc of docs) {
-    if (!lastSavedParams.has(doc.id)) lastSavedParams.set(doc.id, doc.params);
-    // ADR-421 SLICE C — track the persisted Family/Type link too.
-    if (!lastSavedLink.has(doc.id)) {
-      lastSavedLink.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
-    }
-  }
-
-  for (const [id, entity] of sceneOpenings) {
-    if (docsById.has(id)) continue;
-    if (deleted.has(id)) { mutated = true; continue; }
-    // ADR-390 — preserve only dirty / pendingFirstSave openings.
-    if (dirty.has(id) || pending.has(id)) {
-      nextOpenings.push(entity);
-    } else {
-      mutated = true;
-    }
-  }
-
-  if (mutated) {
-    lm.setLevelScene(levelId, {
-      ...scene,
-      entities: [...nonOpenings, ...nextOpenings],
-    }, 'remote-echo');
-  }
+      },
+      shouldDropOrphan: (id, r) =>
+        r.deleted.has(id) || (!r.dirty.has(id) && !r.pending.has(id)),
+    },
+    {
+      dirty: refs.dirty,
+      deleted: refs.deleted,
+      pending: refs.pending,
+      isWithinGrace: () => false, // opening has no write-grace in the original loop
+      lastSavedBaseline: refs.lastSavedParams,
+    },
+  );
 }

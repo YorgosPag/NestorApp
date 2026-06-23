@@ -13,7 +13,22 @@
  *  - ADR-390 preserves only `dirty` / `pendingFirstSave` orphans, closing the
  *    Bug B ghost-render path where a fresh refresh kept orphan entities.
  *
+ * SSoT NOTE (ADR-390 mergeDocsIntoScene rollout, 2026-06-24): the stair merge is
+ * deliberately NOT migrated onto the generic `hooks/data/merge-docs-into-scene.ts`
+ * SSoT. It diverges on three axes the generic does not model:
+ *   1. **Return contract** — returns `{entities, mutated}` and lets the CALLER own
+ *      the `setLevelScene` write (the generic writes internally). Stairs need the
+ *      caller-owned write for their selection-debounce persist path.
+ *   2. **ADR-402 seed-before-existing** — seeds `lastSavedParams` INSIDE the doc
+ *      loop, BEFORE the existing-entity check, and gated on `!dirty` (the generic
+ *      seeds unconditionally AFTER the loop).
+ *   3. **Composite compare** — `params` AND `editingBy` (soft-lock).
+ * Forcing it onto the generic would require either widening the generic's contract
+ * (a return-only mode for a single consumer) or a throw-away level-manager shim —
+ * both worse than this self-contained pure function. Kept intentionally special.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §6.1
+ * @see ../../hooks/data/merge-docs-into-scene.ts — generic SSoT (column/wall/opening/MEP/…)
  */
 
 import { dequal } from 'dequal';

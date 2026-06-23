@@ -20,6 +20,7 @@ import type { BimFamilyType } from '../../bim/types/bim-family-type';
 import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
 import { resolveEffectiveWallParams } from '../../bim/family-types/resolve-effective-params';
 import { resolveAutoWallTypeId } from '../../bim/family-types/wall-type-auto-assign';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 /**
  * Migrate legacy WallParams (pre-ADR-363 SSOT fix) from scene-unit storage to mm.
@@ -273,9 +274,13 @@ export interface WallMergeRefs {
 
 /**
  * Diff-merge a Firestore wall snapshot into the active scene (selective skip of
- * dirty/pending/grace walls + ADR-412 family-type baseline seed). Mutates via
- * `lm.setLevelScene` only when the merged set differs. Behavior-identical to the
- * former inline subscribe handler (file-size split).
+ * dirty/pending/grace walls + ADR-412 family-type baseline seed). Thin wall adapter
+ * πάνω από το `mergeDocsIntoScene` SSoT (μηδέν copy-pasted loop):
+ *   - `differs` = `wallEntityDiffersFromDoc` (ADR-412 «type always wins» — diff vs
+ *     EFFECTIVE type-resolved params· reuse, ΟΧΙ re-implement).
+ *   - `seedExtraBaseline` = seed του δεύτερου `lastSavedType` map (family-type link).
+ *   - `shouldDropOrphan` = deleted-wins (ADR-390: deleted ORphan drop πριν το
+ *     dirty/pending keep — byte-equivalent με το πρώην inline loop).
  */
 export function mergeWallDocsIntoScene(
   docs: readonly WallDoc[],
@@ -283,74 +288,31 @@ export function mergeWallDocsIntoScene(
   lm: WallMergeLevelManager,
   refs: WallMergeRefs,
 ): void {
-  const scene = lm.getLevelScene(levelId);
-  if (!scene) return;
-
-  const docsById = new Map<string, WallDoc>();
-  for (const d of docs) docsById.set(d.id, d);
-
-  const { dirty, deleted, pending, lastSavedParams, lastSavedType, isWithinGrace } = refs;
-  const nonWalls: AnySceneEntity[] = [];
-  const sceneWalls = new Map<string, WallEntity>();
-  for (const e of scene.entities) {
-    if (isWall(e)) sceneWalls.set(e.id, e);
-    else nonWalls.push(e);
-  }
-
-  const nextWalls: WallEntity[] = [];
-  let mutated = false;
-
-  for (const doc of docs) {
-    const existing = sceneWalls.get(doc.id);
-    if (!existing) {
-      if (!dirty.has(doc.id) && !deleted.has(doc.id)) {
-        nextWalls.push(docToEntity(doc));
-        mutated = true;
-      }
-      continue;
-    }
-    if (dirty.has(doc.id)) {
-      nextWalls.push(existing);
-      continue;
-    }
-    // Grace period (useBimFirestoreWriteGrace SSoT).
-    if (isWithinGrace(doc.id)) {
-      nextWalls.push(existing);
-      continue;
-    }
-    // ADR-412 — diff vs EFFECTIVE (type-resolved) params (see helper).
-    if (wallEntityDiffersFromDoc(existing, doc)) {
-      nextWalls.push(docToEntity(doc));
-      mutated = true;
-    } else {
-      nextWalls.push(existing);
-    }
-  }
-
-  // Seed last-saved baselines so loaded walls route through UPDATE (not setDoc).
-  for (const doc of docs) {
-    if (!lastSavedParams.has(doc.id)) lastSavedParams.set(doc.id, doc.params);
-    // ADR-412 — seed the family-type link so a later detach is detectable.
-    if (!lastSavedType.has(doc.id)) {
-      lastSavedType.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
-    }
-  }
-
-  for (const [id, entity] of sceneWalls) {
-    if (docsById.has(id)) continue;
-    if (deleted.has(id)) { mutated = true; continue; }
-    // ADR-390 — preserve only dirty / pendingFirstSave walls.
-    if (dirty.has(id) || pending.has(id)) {
-      nextWalls.push(entity);
-    } else {
-      mutated = true;
-    }
-  }
-
-  if (mutated) {
-    lm.setLevelScene(levelId, {
-      ...scene,
-      entities: [...nonWalls, ...nextWalls],
-    }, 'remote-echo');
-  }
+  mergeDocsIntoScene<WallDoc, WallEntity, WallEntity['params']>(
+    docs,
+    levelId,
+    lm,
+    {
+      isEntity: isWall,
+      docToEntity: (doc) => docToEntity(doc),
+      entityComparable: (e) => e.params, // unused (differs override provided)
+      docComparable: (d) => d.params, // baseline seed = raw cached doc.params
+      differs: (existing, doc) => wallEntityDiffersFromDoc(existing, doc),
+      seedExtraBaseline: (doc) => {
+        // ADR-412 — seed the family-type link so a later detach is detectable.
+        if (!refs.lastSavedType.has(doc.id)) {
+          refs.lastSavedType.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
+        }
+      },
+      shouldDropOrphan: (id, r) =>
+        r.deleted.has(id) || (!r.dirty.has(id) && !r.pending.has(id)),
+    },
+    {
+      dirty: refs.dirty,
+      deleted: refs.deleted,
+      pending: refs.pending,
+      isWithinGrace: refs.isWithinGrace,
+      lastSavedBaseline: refs.lastSavedParams,
+    },
+  );
 }

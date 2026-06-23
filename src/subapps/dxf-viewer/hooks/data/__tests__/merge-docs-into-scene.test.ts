@@ -124,4 +124,119 @@ describe('mergeDocsIntoScene', () => {
     const lm: DocsMergeLevelManager = { getLevelScene: () => null, setLevelScene: () => { throw new Error('should not write'); } };
     expect(() => mergeDocsIntoScene<FooDoc, FooEntity, number>([{ id: 'f1', value: 1 }], 'L', lm, config, refs())).not.toThrow();
   });
+
+  // --- optional callbacks (Tier 2/3/4 extensions) ---
+
+  it('docToEntity → null SKIPS the add (host-missing, ADR-440)', () => {
+    const { lm, current, writes } = makeLM([ent('keep', 'line')]);
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 1 }], 'L', lm,
+      { ...config, docToEntity: () => null }, refs(),
+    );
+    expect(current().map((e) => e.id)).toEqual(['keep']);
+    expect(writes).toHaveLength(0);
+  });
+
+  it('docToEntity → null on replace KEEPS the existing entity', () => {
+    const { lm, current } = makeLM([ent('f1', 'foo', 1)]);
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 9 }], 'L', lm,
+      { ...config, docToEntity: (d, existing) => (existing ? null : docToFoo(d)) }, refs(),
+    );
+    expect((current().find((e) => e.id === 'f1') as unknown as FooEntity).value).toBe(1);
+  });
+
+  it('docToEntity receives the existing entity on replace (MEP projection)', () => {
+    const { lm, current } = makeLM([ent('f1', 'foo', 1)]);
+    const seen: Array<number | null> = [];
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 9 }], 'L', lm,
+      {
+        ...config,
+        docToEntity: (d, existing) => {
+          seen.push(existing ? existing.value : null);
+          // project: keep doc.value but tag prior — assert generic passes existing through.
+          return docToFoo(d);
+        },
+      },
+      refs(),
+    );
+    expect(seen).toContain(1);
+    expect((current().find((e) => e.id === 'f1') as unknown as FooEntity).value).toBe(9);
+  });
+
+  it('differs override decides replace (and gets a build-once candidate getter)', () => {
+    const { lm, current, writes } = makeLM([ent('f1', 'foo', 1)]);
+    let builds = 0;
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 9 }], 'L', lm,
+      {
+        ...config,
+        docToEntity: (d) => { builds += 1; return docToFoo(d); },
+        // Force "no change" even though value differs → must NOT replace.
+        differs: () => false,
+      },
+      refs(),
+    );
+    expect(writes).toHaveLength(0);
+    expect((current().find((e) => e.id === 'f1') as unknown as FooEntity).value).toBe(1);
+    expect(builds).toBe(0); // differs returned false → candidate never built
+  });
+
+  it('differs getCandidate() builds at most once', () => {
+    const { lm } = makeLM([ent('f1', 'foo', 1)]);
+    let builds = 0;
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 9 }], 'L', lm,
+      {
+        ...config,
+        docToEntity: (d) => { builds += 1; return docToFoo(d); },
+        differs: (_e, _d, getCandidate) => { getCandidate(); getCandidate(); return true; },
+      },
+      refs(),
+    );
+    expect(builds).toBe(1); // memoised across getCandidate() + final push
+  });
+
+  it('seedExtraBaseline runs per doc (Tier-2 dual baseline)', () => {
+    const extra = new Map<string, string>();
+    const { lm } = makeLM([]);
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [{ id: 'f1', value: 7 }, { id: 'f2', value: 8 }], 'L', lm,
+      { ...config, seedExtraBaseline: (d) => { if (!extra.has(d.id)) extra.set(d.id, `link:${d.id}`); } },
+      refs(),
+    );
+    expect(extra.get('f1')).toBe('link:f1');
+    expect(extra.get('f2')).toBe('link:f2');
+  });
+
+  it('shouldDropOrphan override keeps un-persisted entities (MepSegment)', () => {
+    const baseline = new Map<string, number>(); // f1 NOT persisted
+    const { lm, current } = makeLM([ent('f1', 'foo', 1)]);
+    mergeDocsIntoScene<FooDoc, FooEntity, number>(
+      [], 'L', lm,
+      {
+        ...config,
+        shouldDropOrphan: (id, r) => !r.dirty.has(id) && !r.pending.has(id) && r.lastSavedBaseline.has(id),
+      },
+      refs({ lastSavedBaseline: baseline }),
+    );
+    expect(current().map((e) => e.id)).toEqual(['f1']); // kept (never persisted)
+  });
+
+  it('prepareContext builds once and feeds docToEntity', () => {
+    const { lm, current } = makeLM([ent('keep', 'line')]);
+    let prepCalls = 0;
+    mergeDocsIntoScene<FooDoc, FooEntity, number, { bonus: number }>(
+      [{ id: 'f1', value: 1 }, { id: 'f2', value: 2 }], 'L', lm,
+      {
+        ...config,
+        prepareContext: () => { prepCalls += 1; return { bonus: 100 }; },
+        docToEntity: (d, _e, ctx) => ({ id: d.id, type: 'foo', value: d.value + ctx.bonus }),
+      },
+      refs(),
+    );
+    expect(prepCalls).toBe(1);
+    expect((current().find((e) => e.id === 'f1') as unknown as FooEntity).value).toBe(101);
+  });
 });

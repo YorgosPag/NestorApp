@@ -16,10 +16,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { WallCoveringEntity } from '../../bim/types/wall-covering-types';
 import { isWallCoveringEntity } from '../../types/entities';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -122,60 +123,27 @@ export function useWallCoveringPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeWallCoverings(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Με write-grace.
       (docs: readonly WallCoveringDoc[]) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, WallCoveringDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneMap = new Map<string, WallCoveringEntity>();
-        const others: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isWallCoveringEntity(e)) sceneMap.set(e.id, e);
-          else others.push(e);
-        }
-
-        const nextEntities: WallCoveringEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const d of docs) {
-          if (deleted.has(d.id)) continue;
-          const existing = sceneMap.get(d.id);
-          if (!existing) {
-            if (!dirty.has(d.id)) { nextEntities.push(wallCoveringDocToEntity(d)); mutated = true; }
-            continue;
-          }
-          if (dirty.has(d.id)) { nextEntities.push(existing); continue; }
-          // Grace-period guard (useBimFirestoreWriteGrace SSoT) — suppress stale snapshots.
-          if (isWithinGrace(d.id)) { nextEntities.push(existing); continue; }
-          if (!dequal(existing.params, d.params)) {
-            nextEntities.push(wallCoveringDocToEntity(d)); mutated = true;
-          } else {
-            nextEntities.push(existing);
-          }
-        }
-
-        for (const [id, entity] of sceneMap) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) nextEntities.push(entity);
-          else mutated = true;
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] }, 'remote-echo');
-        }
-
-        for (const d of docs) {
-          if (!lastSavedParamsRef.current.has(d.id)) {
-            lastSavedParamsRef.current.set(d.id, d.params);
-          }
-        }
+        mergeDocsIntoScene<WallCoveringDoc, WallCoveringEntity, WallCoveringEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isWallCoveringEntity,
+            docToEntity: wallCoveringDocToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => { setError(err.message); setSaveState('error'); },
     );

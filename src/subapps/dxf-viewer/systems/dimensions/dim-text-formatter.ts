@@ -23,6 +23,12 @@ import type {
   DimStyle,
 } from '../../types/dimension';
 import type { Precision } from '../../config/number-format-config';
+// ADR-462 / ADR-362 R15 — dimension values follow the app display-unit SSoT
+// (status-bar selector, default live), same as every other length readout, so a
+// canonical-mm measurement is shown in the user's unit (e.g. metres) instead of
+// raw mm. Internal geometry stays canonical-mm; only the displayed number changes.
+import { toDisplay, type DisplayUnit } from '../../config/units';
+import { displayUnitState } from '../../config/display-unit-state';
 import {
   formatArchitectural,
   formatDMS,
@@ -125,11 +131,19 @@ function formatAngularByUnit(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Linear measurement (input mm).
- * Applies DIMLFAC → DIMRND → DIMLUNIT/DIMDEC → DIMDSEP → DIMPOST.
+ * Linear measurement (input canonical mm).
+ * Converts mm → the active display unit (ADR-462 SSoT) FIRST, then applies
+ * DIMLFAC → DIMRND → DIMLUNIT/DIMDEC → DIMDSEP → DIMPOST. So an 8808.57 mm
+ * measurement renders as "8,81" in a metres view (dimdec=2) instead of raw mm.
+ * `displayUnit` defaults to the live status-bar selection; tests pass it explicitly.
  */
-export function formatLinearMeasurement(valueMm: number, style: DimStyle): string {
-  const scaled = valueMm * style.dimlfac;
+export function formatLinearMeasurement(
+  valueMm: number,
+  style: DimStyle,
+  displayUnit: DisplayUnit = displayUnitState.getUnit(),
+): string {
+  const inDisplayUnit = toDisplay(valueMm, displayUnit).value;
+  const scaled = inDisplayUnit * style.dimlfac;
   const rounded = applyRounding(scaled, style.dimrnd);
   const raw = formatLinearByUnit(rounded, style.dimlunit, style.dimdec);
   const localized = swapDecimalSeparator(raw, style.dimdsep);

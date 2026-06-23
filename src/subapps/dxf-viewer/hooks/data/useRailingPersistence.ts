@@ -28,6 +28,7 @@ import {
 } from '../../bim/railings/railing-firestore-service';
 import { recordRailingChange } from '../../bim/railings/railing-audit-client';
 import { railingDocToEntity as docToEntity } from './railing-persistence-helpers';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -143,72 +144,28 @@ export function useRailingPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeRailings(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Δεν έχει write-grace →
+      // `isWithinGrace: () => false`.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, RailingDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneRailings = new Map<string, RailingEntity>();
-        const nonRailings: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isRailing(e)) sceneRailings.set(e.id, e);
-          else nonRailings.push(e);
-        }
-
-        const nextRailings: RailingEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneRailings.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextRailings.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextRailings.push(existing);
-            continue;
-          }
-          if (!dequal(existing.params, doc.params)) {
-            nextRailings.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextRailings.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc (mirror column ADR-397).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        for (const [id, entity] of sceneRailings) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextRailings.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonRailings, ...nextRailings],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<RailingDoc, RailingEntity, RailingEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isRailing,
+            docToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

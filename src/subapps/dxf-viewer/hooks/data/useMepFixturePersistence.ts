@@ -28,7 +28,8 @@ import {
 } from '../../bim/mep-fixtures/mep-fixture-firestore-service';
 import { recordMepFixtureChange } from '../../bim/mep-fixtures/mep-fixture-audit-client';
 import { mepFixtureDocToEntity as docToEntity } from './mep-fixture-persistence-helpers';
-import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -138,83 +139,33 @@ export function useMepFixturePersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeFixtures(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Το MEP
+      // project-άρει το live (reconciler-owned) systemId πάνω στο fresh doc-entity
+      // (ADR-408 anti-ping-pong) μέσω του `projectMepConnectorsOntoFresh` adapter +
+      // `differs` που συγκρίνει το projected candidate. Δεν έχει write-grace.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, MepFixtureDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneFixtures = new Map<string, MepFixtureEntity>();
-        const nonFixtures: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isFixture(e)) sceneFixtures.set(e.id, e);
-          else nonFixtures.push(e);
-        }
-
-        const nextFixtures: MepFixtureEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneFixtures.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextFixtures.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextFixtures.push(existing);
-            continue;
-          }
-          // Project the live (reconciler-owned) systemId cache onto the fresh
-          // doc entity, ignoring the doc's non-authoritative systemId. Without
-          // this the diff disagrees with the reconciler on every snapshot and
-          // ping-pongs `setLevelScene` forever (ADR-408 idle-loop fix).
-          const fresh = docToEntity(doc);
-          const freshConnectors = fresh.params.connectors ?? [];
-          const projected = projectConnectorSystemIds(freshConnectors, existing.params.connectors);
-          const candidate =
-            projected === freshConnectors
-              ? fresh
-              : { ...fresh, params: { ...fresh.params, connectors: projected } };
-          if (!dequal(existing.params, candidate.params)) {
-            nextFixtures.push(candidate);
-            mutated = true;
-          } else {
-            nextFixtures.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc (mirror column ADR-397).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        for (const [id, entity] of sceneFixtures) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextFixtures.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonFixtures, ...nextFixtures],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<MepFixtureDoc, MepFixtureEntity, MepFixtureEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isFixture,
+            docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+            differs: (existing, _doc, getCandidate) => {
+              const candidate = getCandidate();
+              return candidate !== null && !dequal(existing.params, candidate.params);
+            },
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

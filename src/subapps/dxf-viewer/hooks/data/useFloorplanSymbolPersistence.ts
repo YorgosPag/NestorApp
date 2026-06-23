@@ -31,6 +31,7 @@ import {
 } from '../../bim/floorplan-symbols/floorplan-symbol-firestore-service';
 import { recordFloorplanSymbolChange } from '../../bim/floorplan-symbols/floorplan-symbol-audit-client';
 import { floorplanSymbolDocToEntity as docToEntity } from './floorplan-symbol-persistence-helpers';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -143,73 +144,28 @@ export function useFloorplanSymbolPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeFloorplanSymbols(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Δεν έχει write-grace →
+      // `isWithinGrace: () => false`.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, FloorplanSymbolDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneSymbols = new Map<string, FloorplanSymbolEntity>();
-        const others: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isFloorplanSymbol(e)) sceneSymbols.set(e.id, e);
-          else others.push(e);
-        }
-
-        const nextSymbols: FloorplanSymbolEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneSymbols.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextSymbols.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextSymbols.push(existing);
-            continue;
-          }
-          const fresh = docToEntity(doc);
-          if (!dequal(existing.params, fresh.params)) {
-            nextSymbols.push(fresh);
-            mutated = true;
-          } else {
-            nextSymbols.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc.
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        for (const [id, entity] of sceneSymbols) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextSymbols.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...others, ...nextSymbols],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<FloorplanSymbolDoc, FloorplanSymbolEntity, FloorplanSymbolEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isFloorplanSymbol,
+            docToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

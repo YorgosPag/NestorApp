@@ -15,10 +15,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
 import { isThermalSpaceEntity } from '../../types/entities';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -126,62 +127,27 @@ export function useThermalSpacePersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeThermalSpaces(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Με write-grace.
       (docs: readonly ThermalSpaceDoc[]) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, ThermalSpaceDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneMap = new Map<string, ThermalSpaceEntity>();
-        const others: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isThermalSpaceEntity(e)) sceneMap.set(e.id, e);
-          else others.push(e);
-        }
-
-        const nextEntities: ThermalSpaceEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const d of docs) {
-          if (deleted.has(d.id)) continue;
-          const existing = sceneMap.get(d.id);
-          if (!existing) {
-            if (!dirty.has(d.id)) { nextEntities.push(thermalSpaceDocToEntity(d)); mutated = true; }
-            continue;
-          }
-          if (dirty.has(d.id)) { nextEntities.push(existing); continue; }
-          // Grace-period guard (useBimFirestoreWriteGrace SSoT): suppress stale
-          // Firestore snapshots that arrive after a Firebase Watch-stream reset
-          // during the post-write window — same fix as walls/columns/floor-finish.
-          if (isWithinGrace(d.id)) { nextEntities.push(existing); continue; }
-          if (!dequal(existing.params, d.params)) {
-            nextEntities.push(thermalSpaceDocToEntity(d)); mutated = true;
-          } else {
-            nextEntities.push(existing);
-          }
-        }
-
-        for (const [id, entity] of sceneMap) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) nextEntities.push(entity);
-          else mutated = true;
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] }, 'remote-echo');
-        }
-
-        for (const d of docs) {
-          if (!lastSavedParamsRef.current.has(d.id)) {
-            lastSavedParamsRef.current.set(d.id, d.params);
-          }
-        }
+        mergeDocsIntoScene<ThermalSpaceDoc, ThermalSpaceEntity, ThermalSpaceEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isThermalSpaceEntity,
+            docToEntity: thermalSpaceDocToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => { setError(err.message); setSaveState('error'); },
     );

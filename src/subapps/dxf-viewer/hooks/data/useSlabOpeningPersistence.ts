@@ -38,6 +38,7 @@ import {
 } from '../../bim/slab-openings/slab-opening-firestore-service';
 import { recordSlabOpeningChange } from '../../bim/slab-openings/slab-opening-audit-client';
 import { slabOpeningDocToEntity as docToEntity } from './slab-opening-persistence-helpers';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -152,66 +153,29 @@ export function useSlabOpeningPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeSlabOpenings(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Δεν έχει write-grace →
+      // `isWithinGrace: () => false`. NOTE: ο generic προσθέτει το ADR-397 baseline
+      // seed (που έλειπε εδώ) → loaded slab-openings πλέον route-άρουν UPDATE.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, SlabOpeningDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneEntities = new Map<string, SlabOpeningEntity>();
-        const others: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isSlabOpening(e)) sceneEntities.set(e.id, e);
-          else others.push(e);
-        }
-
-        const nextSlabOpenings: SlabOpeningEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneEntities.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextSlabOpenings.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextSlabOpenings.push(existing);
-            continue;
-          }
-          if (!dequal(existing.params, doc.params)) {
-            nextSlabOpenings.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextSlabOpenings.push(existing);
-          }
-        }
-
-        // ADR-390 — replaces buggy `neverSaved` guard.
-        for (const [id, entity] of sceneEntities) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextSlabOpenings.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...others, ...nextSlabOpenings],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<SlabOpeningDoc, SlabOpeningEntity, SlabOpeningEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isSlabOpening,
+            docToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

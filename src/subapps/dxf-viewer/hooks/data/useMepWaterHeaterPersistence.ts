@@ -27,7 +27,8 @@ import {
 } from '../../bim/mep-water-heaters/mep-water-heater-firestore-service';
 import { recordMepWaterHeaterChange } from '../../bim/mep-water-heaters/mep-water-heater-audit-client';
 import { mepWaterHeaterDocToEntity as docToEntity } from './mep-water-heater-persistence-helpers';
-import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -144,82 +145,32 @@ export function useMepWaterHeaterPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeWaterHeaters(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Το MEP
+      // project-άρει το live systemId πάνω στο fresh doc-entity (ADR-408 anti-ping-pong)
+      // μέσω του `projectMepConnectorsOntoFresh` adapter. Δεν έχει write-grace.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, MepWaterHeaterDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneWaterHeaters = new Map<string, MepWaterHeaterEntity>();
-        const nonWaterHeaters: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isWaterHeater(e)) sceneWaterHeaters.set(e.id, e);
-          else nonWaterHeaters.push(e);
-        }
-
-        const nextWaterHeaters: MepWaterHeaterEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneWaterHeaters.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextWaterHeaters.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextWaterHeaters.push(existing);
-            continue;
-          }
-          // Project the live (reconciler-owned) systemId cache onto the fresh doc
-          // entity, ignoring the doc's non-authoritative systemId — same ping-pong
-          // guard as the fixture/manifold hook (ADR-408 idle-loop fix).
-          const fresh = docToEntity(doc);
-          const freshConnectors = fresh.params.connectors ?? [];
-          const projected = projectConnectorSystemIds(freshConnectors, existing.params.connectors);
-          const candidate =
-            projected === freshConnectors
-              ? fresh
-              : { ...fresh, params: { ...fresh.params, connectors: projected } };
-          if (!dequal(existing.params, candidate.params)) {
-            nextWaterHeaters.push(candidate);
-            mutated = true;
-          } else {
-            nextWaterHeaters.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline for every Firestore doc.
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        for (const [id, entity] of sceneWaterHeaters) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextWaterHeaters.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonWaterHeaters, ...nextWaterHeaters],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<MepWaterHeaterDoc, MepWaterHeaterEntity, MepWaterHeaterEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isWaterHeater,
+            docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+            differs: (existing, _doc, getCandidate) => {
+              const candidate = getCandidate();
+              return candidate !== null && !dequal(existing.params, candidate.params);
+            },
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

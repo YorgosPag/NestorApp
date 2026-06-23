@@ -42,6 +42,7 @@ import { recordFoundationChange } from '../../bim/foundations/foundation-audit-c
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 // ============================================================================
 // TYPES
@@ -151,81 +152,27 @@ export function useFoundationPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeFoundations(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Με write-grace.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, FoundationDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneFoundations = new Map<string, FoundationEntity>();
-        const nonFoundations: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isFoundation(e)) sceneFoundations.set(e.id, e);
-          else nonFoundations.push(e);
-        }
-
-        const nextFoundations: FoundationEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneFoundations.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextFoundations.push(foundationDocToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextFoundations.push(existing);
-            continue;
-          }
-          // Grace-period guard (useBimFirestoreWriteGrace SSoT).
-          if (isWithinGrace(doc.id)) {
-            nextFoundations.push(existing);
-            continue;
-          }
-          if (!dequal(existing.params, doc.params)) {
-            nextFoundations.push(foundationDocToEntity(doc));
-            mutated = true;
-          } else {
-            nextFoundations.push(existing);
-          }
-        }
-
-        // ADR-397 — seed the "last-saved" baseline for every Firestore doc so a
-        // subsequently edited foundation (loaded this session, not freshly drawn)
-        // passes the auto-save gate (`lastSavedParamsRef.has(id)`) and its dirty
-        // flag protects the local edit from this snapshot (anti snap-back).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        // ADR-390 — keep locally-pending / dirty foundations not yet in Firestore.
-        for (const [id, entity] of sceneFoundations) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextFoundations.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonFoundations, ...nextFoundations],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<FoundationDoc, FoundationEntity, FoundationEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isFoundation,
+            docToEntity: foundationDocToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

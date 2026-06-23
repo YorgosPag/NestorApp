@@ -42,6 +42,7 @@ import { beamBoqEntity } from './beam-boq-feed';
 // docToEntity → beamDocToEntity moved here on the file-size split (see line ~92 note).
 import { beamDocToEntity } from './beam-persistence-helpers';
 import { createPersistSerializer } from './persist-serializer';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -165,75 +166,28 @@ export function useBeamPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeBeams(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
+      // (μηδέν copy-pasted loop· mirror column/hatch). Beam δεν έχει write-grace →
+      // `isWithinGrace: () => false`.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, BeamDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneBeams = new Map<string, BeamEntity>();
-        const nonBeams: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isBeam(e)) sceneBeams.set(e.id, e);
-          else nonBeams.push(e);
-        }
-
-        const nextBeams: BeamEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneBeams.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextBeams.push(beamDocToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextBeams.push(existing);
-            continue;
-          }
-          if (!dequal(existing.params, doc.params)) {
-            nextBeams.push(beamDocToEntity(doc));
-            mutated = true;
-          } else {
-            nextBeams.push(existing);
-          }
-        }
-
-        // ADR-397 — seed the "known/last-saved" baseline for every Firestore doc
-        // so edits to a pre-existing beam pass the auto-save gate + dirty-guard
-        // instead of being reverted by the next snapshot (mirror wall/column).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        // ADR-390 — replaces buggy `neverSaved` guard.
-        for (const [id, entity] of sceneBeams) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextBeams.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonBeams, ...nextBeams],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<BeamDoc, BeamEntity, BeamEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isBeam,
+            docToEntity: beamDocToEntity,
+            entityComparable: (e) => e.params,
+            docComparable: (d) => d.params,
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);

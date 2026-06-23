@@ -240,52 +240,31 @@ describe('registerImportedDimStyles — dimscale storage', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// R12 — unit-conflict rescue (declared mm + meter-scale bounds + dimscale<10)
+// R14/R15 — DIMSCALE passthrough. The annotation-scale rescue (built-in/imported
+// dimscale=1 → drawingScale SSoT, imported >1 wins) is centralised render-side in
+// `resolveEffectiveDimscale` (see annotation-scale.test.ts). The importer must NOT
+// rescue at import time — it stores the imported DIMSCALE verbatim. (The old R12
+// import-time rescue was removed: it duplicated that logic AND was dead under
+// ADR-462, where resolveSceneUnits trusts the declared unit.)
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe('registerImportedDimStyles — R12 unit-conflict rescue', () => {
+describe('registerImportedDimStyles — DIMSCALE passthrough (rescue is render-side)', () => {
   let registry: DimStyleRegistry;
   beforeEach(() => { registry = new DimStyleRegistry(); });
 
-  it('rescues dimscale=1 to 100 when declared mm but bounds indicate meters', () => {
-    // Malformed DXF: $INSUNITS=4 (mm) but coords in meters (0-21).
-    // resolveSceneUnits overrides to 'm' → unit conflict → rescue.
-    // Result: 2.5×100×0.001×viewScale = 0.25m readable annotation.
+  it('stores imported dimscale=1 verbatim even with meter-scale bounds (no import-time rescue)', () => {
     const result = registerImportedDimStyles(
       makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'mm', undefined, METERS_BOUNDS),
       registry,
     );
-    const style = registry.getStyle(result.created[0]);
-    expect(style?.dimscale).toBe(100);
+    expect(registry.getStyle(result.created[0])?.dimscale).toBe(1);
   });
 
-  it('does NOT rescue dimscale=100 when already reasonable (≥10)', () => {
-    // DXF author set dimscale=100 → already correct for 1:100 annotation.
+  it('stores an explicit imported dimscale=100 verbatim', () => {
     const result = registerImportedDimStyles(
       makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 100 }) }, 'mm', undefined, METERS_BOUNDS),
       registry,
     );
-    const style = registry.getStyle(result.created[0]);
-    expect(style?.dimscale).toBe(100);
-  });
-
-  it('does NOT rescue when declared m (no unit conflict)', () => {
-    // Correctly declared meters scene — no rescue even if dimscale=1.
-    const result = registerImportedDimStyles(
-      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'm', undefined, METERS_BOUNDS),
-      registry,
-    );
-    const style = registry.getStyle(result.created[0]);
-    expect(style?.dimscale).toBe(1);
-  });
-
-  it('does NOT rescue when no bounds supplied (cannot detect conflict)', () => {
-    // scene.units='mm', no bounds → resolveSceneUnits returns 'mm' → no conflict.
-    const result = registerImportedDimStyles(
-      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'mm'),
-      registry,
-    );
-    const style = registry.getStyle(result.created[0]);
-    expect(style?.dimscale).toBe(1);
+    expect(registry.getStyle(result.created[0])?.dimscale).toBe(100);
   });
 });

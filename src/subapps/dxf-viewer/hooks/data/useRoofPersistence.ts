@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { EventBus } from '../../systems/events/EventBus';
@@ -38,6 +38,7 @@ import {
 import { useRoofTypeReresolution } from './useRoofTypeReresolution';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 // ============================================================================
 // TYPES
@@ -145,80 +146,38 @@ export function useRoofPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeRoofs(
+      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. ADR-412
+      // «type always wins»: `differs` = `roofEntityDiffersFromDoc` (diff vs EFFECTIVE
+      // type-resolved params)· `seedExtraBaseline` seed-άρει το δεύτερο type-link map.
+      // Δεν έχει write-grace.
       (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, RoofDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneRoofs = new Map<string, RoofEntity>();
-        const nonRoofs: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isRoof(e)) sceneRoofs.set(e.id, e);
-          else nonRoofs.push(e);
-        }
-
-        const nextRoofs: RoofEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneRoofs.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextRoofs.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextRoofs.push(existing);
-            continue;
-          }
-          // ADR-412 — diff against EFFECTIVE (type-resolved) params so a typed
-          // roof does not re-map on every snapshot.
-          if (roofEntityDiffersFromDoc(existing, doc)) {
-            nextRoofs.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextRoofs.push(existing);
-          }
-        }
-
-        // Seed last-saved baseline για κάθε Firestore doc (mirror ADR-397).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-          if (!lastSavedTypeLinkRef.current.has(doc.id)) {
-            lastSavedTypeLinkRef.current.set(doc.id, {
-              typeId: doc.typeId,
-              typeOverrides: doc.typeOverrides,
-            });
-          }
-        }
-
-        for (const [id, entity] of sceneRoofs) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextRoofs.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonRoofs, ...nextRoofs],
-          }, 'remote-echo');
-        }
+        mergeDocsIntoScene<RoofDoc, RoofEntity, RoofEntity['params']>(
+          docs,
+          levelId,
+          levelManagerRef.current,
+          {
+            isEntity: isRoof,
+            docToEntity: (doc) => docToEntity(doc),
+            entityComparable: (e) => e.params, // unused (differs override provided)
+            docComparable: (d) => d.params, // baseline seed = raw cached doc.params
+            differs: (existing, doc) => roofEntityDiffersFromDoc(existing, doc),
+            seedExtraBaseline: (doc) => {
+              if (!lastSavedTypeLinkRef.current.has(doc.id)) {
+                lastSavedTypeLinkRef.current.set(doc.id, {
+                  typeId: doc.typeId,
+                  typeOverrides: doc.typeOverrides,
+                });
+              }
+            },
+          },
+          {
+            dirty: dirtyIdsRef.current,
+            deleted: deletedIdsRef.current,
+            pending: pendingFirstSaveIdsRef.current,
+            isWithinGrace: () => false,
+            lastSavedBaseline: lastSavedParamsRef.current,
+          },
+        );
       },
       (err: Error) => {
         setError(err.message);
