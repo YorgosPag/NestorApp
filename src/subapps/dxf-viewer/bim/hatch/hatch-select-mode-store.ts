@@ -21,6 +21,9 @@
 import { createToggleStore } from '../../stores/createToggleStore';
 import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
 import { toolStateStore } from '../../stores/ToolStateStore';
+import { pickTopHatchAt } from './hatch-pick-at';
+import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 
 const store = createToggleStore();
 
@@ -59,4 +62,29 @@ export function disarmHatchSelect(): void {
 export function finishHatchSelectPick(): void {
   disarmHatchSelect();
   toolStateStore.deselectTool();
+}
+
+/**
+ * Εκτελεί **ΜΙΑ απόπειρα** armed pick υπάρχουσας γραμμοσκίασης — το ΕΝΑ authoritative
+ * SSoT για τα **2 intercept sites** (`mouse-handler-up` event-path + `useCanvasClickHandler`
+ * PRIORITY 0.6 belt-and-suspenders). Δεν διπλασιάζεται η ροή pick→select→finalize.
+ *
+ * Ροή: even-odd hatch hit-test (`pickTopHatchAt` SSoT) → αν βρεθεί γραμμοσκίαση,
+ * `selectFn([id])` (ο caller δίνει το δικό του selection SSoT: `replaceEntitySelection`
+ * ή το prop `onEntitiesSelected`) + `finishHatchSelectPick()` (disarm + έξοδος tool).
+ * Σε αστοχία: **μένει armed** (forgiving — ξαναδοκιμάζεις).
+ *
+ * @returns `true` αν επιλέχθηκε γραμμοσκίαση. Ο caller **πάντα** καταναλώνει το click
+ *          (armed → consume) ανεξάρτητα από το return — ΠΟΤΕ δημιουργία όσο armed.
+ */
+export function runArmedHatchPick(
+  worldPoint: Point2D,
+  entities: readonly Entity[],
+  selectFn: (ids: string[]) => void,
+): boolean {
+  const hatchId = pickTopHatchAt(worldPoint, entities);
+  if (!hatchId) return false;
+  selectFn([hatchId]);
+  finishHatchSelectPick();
+  return true;
 }

@@ -9,9 +9,25 @@ import {
   armHatchSelect,
   disarmHatchSelect,
   finishHatchSelectPick,
+  runArmedHatchPick,
 } from '../hatch-select-mode-store';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import { toolStateStore } from '../../../stores/ToolStateStore';
+import type { Entity } from '../../../types/entities';
+
+/** Square hatch fixture (mirror του hatch-pick-at.test.ts). */
+function hatch(id: string, minX: number, minY: number, size: number): Entity {
+  return {
+    id,
+    type: 'hatch',
+    boundaryPaths: [[
+      { x: minX, y: minY },
+      { x: minX + size, y: minY },
+      { x: minX + size, y: minY + size },
+      { x: minX, y: minY + size },
+    ]],
+  } as unknown as Entity;
+}
 
 describe('hatch-select-mode-store', () => {
   beforeEach(() => {
@@ -55,6 +71,32 @@ describe('hatch-select-mode-store', () => {
     expect(toolHintOverrideStore.getSnapshot()).not.toBeNull();
     disarmHatchSelect();
     expect(toolHintOverrideStore.getSnapshot()).toBeNull();
+  });
+
+  it('runArmedHatchPick (hit) → selects + disarms + exits tool, returns true', () => {
+    toolStateStore.selectTool('hatch');
+    armHatchSelect();
+    const selected: string[][] = [];
+
+    const hit = runArmedHatchPick({ x: 5, y: 5 }, [hatch('h1', 0, 0, 10)], (ids) => selected.push(ids));
+
+    expect(hit).toBe(true);
+    expect(selected).toEqual([['h1']]);
+    expect(isHatchSelectArmed()).toBe(false);
+    expect(toolStateStore.get().activeTool).toBe('select');
+  });
+
+  it('runArmedHatchPick (miss) → no select, stays armed, returns false (forgiving)', () => {
+    toolStateStore.selectTool('hatch');
+    armHatchSelect();
+    let calls = 0;
+
+    const hit = runArmedHatchPick({ x: 99, y: 99 }, [hatch('h1', 0, 0, 10)], () => { calls++; });
+
+    expect(hit).toBe(false);
+    expect(calls).toBe(0);
+    expect(isHatchSelectArmed()).toBe(true); // ξαναδοκιμάζεις
+    expect(toolStateStore.get().activeTool).toBe('hatch'); // δεν φεύγει το tool
   });
 
   it('finishHatchSelectPick disarms AND exits the hatch tool to select', () => {

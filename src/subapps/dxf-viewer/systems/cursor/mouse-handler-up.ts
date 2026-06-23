@@ -46,8 +46,7 @@ import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
 import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 // ADR-507 — «Επιλογή γραμμοσκίασης»: armed hatch-only pick (even-odd SSoT, world-coords).
-import { isHatchSelectArmed, finishHatchSelectPick } from '../../bim/hatch/hatch-select-mode-store';
-import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
+import { isHatchSelectArmed, runArmedHatchPick } from '../../bim/hatch/hatch-select-mode-store';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -129,19 +128,12 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
     // απλώς με `typeFilter:['hatch']` + `replaceEntitySelection` (onEntitiesSelected).
     // One-shot: disarm σε κάθε περίπτωση, consume το click.
     if (isHatchSelectArmed() && e.button === 0 && !wasPanning) {
-      // Θέση κλικ ΑΠΕΥΘΕΙΑΣ από το event (ίδιο με το onCanvasClick). World-coords pick
-      // μέσω του even-odd SSoT (ίδιο με το hover-highlight) → replace-selection.
+      // Θέση κλικ ΑΠΕΥΘΕΙΑΣ από το event (ίδιο με το onCanvasClick). Pick→select→finalize
+      // μέσω του ΚΟΙΝΟΥ `runArmedHatchPick` SSoT (ίδιο με το useCanvasClickHandler).
       const pickSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
-      if (pickSnap && scene) {
+      if (pickSnap && scene && onEntitiesSelected) {
         const wp = screenToWorldWithSnapshot(getScreenPosFromEvent(e, pickSnap), transform, pickSnap);
-        const hatchId = pickTopHatchAt(wp, (scene.entities ?? []) as unknown as Entity[]);
-        // Finalize ΜΟΝΟ σε επιτυχή επιλογή· σε αστοχία μένει armed (forgiving — ξαναδοκίμασε).
-        // finishHatchSelectPick = disarm + έξοδος hatch tool → 'select' (αλλιώς το επόμενο
-        // mousemove ξανάδειχνε create-ghost & το επόμενο κλικ δημιουργούσε νέα γραμμοσκίαση).
-        if (hatchId && onEntitiesSelected) {
-          onEntitiesSelected([hatchId]);
-          finishHatchSelectPick();
-        }
+        runArmedHatchPick(wp, (scene.entities ?? []) as unknown as Entity[], onEntitiesSelected);
       }
       return; // πάντα consume — ΠΟΤΕ δημιουργία/grip/select όσο armed
     }

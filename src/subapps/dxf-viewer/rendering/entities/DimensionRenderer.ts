@@ -28,7 +28,7 @@ import type { Entity } from '../../types/entities';
 // (dimtxt, dimasz, dimgap, dimexe, dimexo) convert to world units before the
 // view-scale multiplier. Without this, meters/cm scenes draw dims at the
 // world-unit size of the paper-mm number (e.g. 2.5 m text in a meters DXF).
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { type SceneUnits } from '../../utils/scene-units';
 import {
   isDimensionEntity,
   type DimensionEntity,
@@ -46,7 +46,7 @@ import {
 import {
   resolveDimStyle,
 } from '../../systems/dimensions/dim-style-resolver';
-import { resolveEffectiveDimscale } from '../../utils/annotation-scale';
+import { paperHeightToModel, resolveEffectiveDimscale } from '../../utils/annotation-scale';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import {
   getDimStyleRegistry,
@@ -86,10 +86,6 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
  * of pixels (huge — the "ribbon dim larger than native DXF" bug, ADR-362
  * Round 5).
  */
-function paperMmToPx(mm: number, scale: number, units: SceneUnits): number {
-  return mm * mmToSceneUnits(units) * scale;
-}
-
 interface ResolvedDimensionRender {
   readonly entity: DimensionEntity;
   readonly style: DimStyle;
@@ -152,8 +148,8 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   /**
    * ADR-362 Round 5 — set the active scene unit system. Drives paper-mm →
-   * world-unit conversion in `paperMmToPx()` and downstream text height in
-   * `dim-text-renderer`. Default = `'mm'` (back-compat).
+   * world-unit conversion via the annotation-scale SSoT (`paperHeightToModel`)
+   * in geometry offsets / arrowheads / `dim-text-renderer`. Default = `'mm'`.
    */
   setSceneUnits(units: SceneUnits): void {
     this.sceneUnits = units;
@@ -279,16 +275,18 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   /** Scale paper-mm geometry offset fields to world units for the geometry builder
-   *  and break engine. dimscale × mmToSceneUnits gives model-space world units. */
+   *  and break engine, via the annotation-scale SSoT (paper × dimscale ×
+   *  mmToSceneUnits). `style.dimscale` is already the effective value. */
   private scaleGeometryOffsets(style: DimStyle): DimStyle {
-    const factor = style.dimscale * mmToSceneUnits(this.sceneUnits);
+    const toModel = (paperMm: number) =>
+      paperHeightToModel(paperMm, style.dimscale, this.sceneUnits);
     return {
       ...style,
-      dimexo: style.dimexo * factor,
-      dimexe: style.dimexe * factor,
-      dimdli: style.dimdli * factor,
-      dimcen: style.dimcen * factor,
-      breakGap: style.breakGap * factor,
+      dimexo: toModel(style.dimexo),
+      dimexe: toModel(style.dimexe),
+      dimdli: toModel(style.dimdli),
+      dimcen: toModel(style.dimcen),
+      breakGap: toModel(style.breakGap),
     };
   }
 
@@ -342,7 +340,10 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const block2Name = r.style.dimblk2 || r.style.dimblk;
     const block1 = getArrowheadBlock(block1Name);
     const block2 = getArrowheadBlock(block2Name);
-    const unitPx = paperMmToPx(r.style.dimasz * r.style.dimscale, this.transform.scale, this.sceneUnits);
+    // Arrowhead unit length: paper dimasz → model (× dimscale × mmToSceneUnits via
+    // the annotation-scale SSoT) → screen px (× view scale).
+    const unitPx =
+      paperHeightToModel(r.style.dimasz, r.style.dimscale, this.sceneUnits) * this.transform.scale;
     const colour = resolveDimColor(r.style.dimclrd, this.layerColour);
     const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
     const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
