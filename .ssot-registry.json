@@ -3357,6 +3357,22 @@
       "addedByAdr": "ADR-376",
       "tier": 3
     },
+    "module-rounding": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/structural/sizing/module-rounding.ts",
+      "description": "ADR-459 v16: SSoT για στρογγυλοποίηση διάστασης σε module βήμα (mm). `roundUpToModule` (tolerant-ceil — αφαιρεί MODULE_CEIL_EPSILON ώστε sub-ULP float dust να μην πηδά ολόκληρο module) + `roundDownToModule`. Αντικατέστησε 4 ταυτόσημα inline `Math.ceil(value/module)*module` (slab-sizing/member-sizing/column-sizing/suggest-pad-dimensions). Κάθε sizing/footing path MUST κάνει import από εδώ· inline re-definition ή raw module-ceiling fragments το dust-protection contract.",
+      "forbiddenPatterns": [
+        "function\\s+roundUpToModule\\b",
+        "function\\s+roundDownToModule\\b",
+        "Math\\.ceil\\([^)]*/ *module\\) *\\* *module"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/structural/sizing/module-rounding.ts",
+        "src/subapps/dxf-viewer/bim/structural/sizing/__tests__/module-rounding.test.ts"
+      ],
+      "addedDate": "2026-06-24",
+      "addedByAdr": "ADR-459",
+      "tier": 3
+    },
     "opening-boq-grouper": {
       "ssotFile": "src/subapps/dxf-viewer/bim/services/opening-boq-grouper.ts",
       "description": "ADR-376 Phase B.2 §7: BOQ signature-group aggregation for openings. `computeOpeningSignature()` + `signatureKey()` + `signatureGroupBoqId()` + `groupBySignature()` + `buildOpeningGroupPayload()` + `compactMarkRange()` are the single source for how openings collapse into one BOQ row per (kind+width+height+sillHeight+openDirection) signature group per floorplan. Consumers (opening-boq-sync.ts, OpeningBOQHost) MUST route through this module; inline signature recomputation, ad-hoc grouping logic, or duplicate compactMarkRange implementations outside this file fragment the aggregation contract and produce split rows where the industry standard (Revit Schedule pattern 6/6 convergence) requires one.",

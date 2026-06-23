@@ -445,3 +445,23 @@ export function createLevelSceneManagerAdapter(
 ): LevelSceneManagerAdapter {
   return new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
 }
+
+/** Subset of the level manager needed to build a scene-manager adapter. */
+export interface LevelSceneAccess {
+  getLevelScene: GetLevelSceneFunction;
+  setLevelScene: SetLevelSceneFunction;
+}
+
+/**
+ * Convenience SSoT factory — build the adapter straight from a level-manager
+ * object, so command-running hosts (`useDimensionModify`, `useStructuralFootingConnect`,
+ * `useStructuralOrganismNotification`, `useCanvasEditActions`, …) stop repeating
+ * `new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, levelId)`.
+ * Delegates to `createLevelSceneManagerAdapter` (single construction site).
+ */
+export function levelSceneManagerFor(
+  levelManager: LevelSceneAccess,
+  levelId: string,
+): LevelSceneManagerAdapter {
+  return createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+}

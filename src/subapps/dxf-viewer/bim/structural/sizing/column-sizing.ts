@@ -43,6 +43,7 @@ import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import type { ColumnParams } from '../../types/column-types';
 import { MIN_COLUMN_DIMENSION_MM, MAX_SLENDERNESS_RATIO } from '../../types/column-types';
+import { roundUpToModule } from './module-rounding';
 
 /** Constructible module στρογγυλοποίησης διάστασης κολώνας (mm). */
 const COLUMN_DIMENSION_MODULE_MM = 50;
@@ -70,10 +71,6 @@ export interface ColumnSizing {
   readonly widthMm: number;
   readonly depthMm: number;
   readonly governedBy: ColumnSizingGovernedBy;
-}
-
-function roundUpToModule(value: number, module: number): number {
-  return Math.ceil(value / module) * module;
 }
 
 /**

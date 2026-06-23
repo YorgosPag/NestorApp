@@ -326,12 +326,7 @@ function splitAtTs(
 }
 
 function interpolateSegment(seg: DimLineSegment, t0: number, t1: number): DimLineSegment {
-  const dx = seg.end.x - seg.start.x;
-  const dy = seg.end.y - seg.start.y;
-  return {
-    start: { x: seg.start.x + t0 * dx, y: seg.start.y + t0 * dy },
-    end:   { x: seg.start.x + t1 * dx, y: seg.start.y + t1 * dy },
-  };
+  return { start: pointAtT(seg, t0), end: pointAtT(seg, t1) };
 }
 
 function splitSegmentByEntities(

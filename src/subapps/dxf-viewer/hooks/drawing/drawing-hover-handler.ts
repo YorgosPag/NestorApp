@@ -20,6 +20,9 @@ import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alig
 import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/adaptive-distance-snap';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+// ADR-362 — dim entity pick reads the entity-under-cursor from the hit-test SSoT
+// (HoverStore), matching AutoCAD DIMRADIUS (pick the body, not an OSNAP point).
+import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { applyPolar, formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
@@ -104,8 +107,12 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // Skip entity resolution on dimLineRef phase — no entity to hit anyway.
     let hoveredEntity: DetectableEntity | undefined;
     if (p && !skipSnap) {
+      // Primary: entity under the cursor via the hit-test SSoT (HoverStore, filled
+      // by the hover-highlight pass now that dim tools are in `entityPickingActive`).
+      // Fallback: snap.entityId when the cursor snapped onto an entity's OSNAP point.
       const snap = findSnapPointRef.current?.(p.x, p.y);
-      if (snap?.entityId) hoveredEntity = resolveEntity(snap.entityId);
+      const hoveredId = getHoveredEntity() ?? snap?.entityId;
+      if (hoveredId) hoveredEntity = resolveEntity(hoveredId);
     }
     handleDimHover(snapped, hoveredEntity);
     return;

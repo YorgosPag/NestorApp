@@ -21,7 +21,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { levelSceneManagerFor, type LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AttachColumnFootingCommand } from '../core/commands/entity-commands/AttachColumnFootingCommand';
 import { DetachColumnFootingCommand } from '../core/commands/entity-commands/DetachColumnFootingCommand';
 import { isColumnEntity, isFoundationEntity } from '../types/entities';
@@ -56,7 +56,7 @@ export function useStructuralFootingConnect(props: { levelManager: LevelManagerL
       if (!levelId) return null;
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return null;
-      const sm = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+      const sm = levelSceneManagerFor(levelManager, levelId);
       return { entities: scene.entities as unknown as readonly Entity[], sm };
     };
 

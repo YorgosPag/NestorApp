@@ -84,15 +84,12 @@ import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
-// ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef click — AutoCAD
-// disables OSNAP on the dim-line offset pick so preview & commit match.
-import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // ADR-362 Phase L2: Center mark + centerline standalone tools
 import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, hardOrtho, MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
+import { handleToolCompletion, hardOrtho, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext } from './drawing-handler-utils';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -204,21 +201,12 @@ export function useDrawingHandlers(
   const onDrawingPoint = useCallback((p: Pt) => {
     // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
     if (dimRouting.isDimTool) {
-      // ADR-362 hotfix (2026-05-19): skip snap on the dim-line-offset click
-      // (3rd click of linear/aligned). AutoCAD pattern — that click is a free
-      // position pick, not an entity pick. Without this, snap can nudge the
-      // dim line away from the preview's cursor position, making the committed
-      // dim jump to a different Y at place time (root of "position jumps on
-      // 3rd click" bug). Hover phase skips snap symmetrically — see
-      // drawing-hover-handler.
-      const skipSnap = isDimLineRefPhase();
-      const snapped = skipSnap ? p : applySnap(p);
-      // ADR-362 hotfix: resolve entity from snap result so smart dim detector
-      // can suggest the correct dim type (line→aligned, circle→diameter, etc.)
-      const snapResult = skipSnap ? undefined : findSnapPoint?.(p.x, p.y);
-      const hoveredEntity: DetectableEntity | undefined = snapResult?.entityId
-        ? (currentScene?.entities.find((e) => e.id === snapResult.entityId) as DetectableEntity | undefined)
-        : undefined;
+      // ADR-362 hotfix (2026-05-19): the dim-line-offset click (3rd click) is a free
+      // position pick — skip-snap + entity-under-cursor resolution lives in the shared
+      // helper so preview & commit stay in sync (see resolveDimPickContext).
+      const { snapped, hoveredEntity } = resolveDimPickContext(
+        p, applySnap, findSnapPoint, currentScene?.entities,
+      );
       dimRouting.handlePoint(snapped, hoveredEntity);
       return;
     }

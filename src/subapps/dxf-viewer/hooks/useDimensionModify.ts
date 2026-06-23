@@ -28,7 +28,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { levelSceneManagerFor } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateEntityCommand } from '../core/commands/entity-commands/UpdateEntityCommand';
 import { CompositeCommand } from '../core/commands/CompositeCommand';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
@@ -38,7 +38,7 @@ import { buildDimensionGeometry } from '../systems/dimensions/dim-geometry-build
 import { computeDimSpacing } from '../systems/dimensions/dim-space-engine';
 import { computeAutoBreakPoints } from '../systems/dimensions/dim-break-engine';
 import type { DimensionEntity, DimensionManualBreaks } from '../types/dimension';
-import type { Entity } from '../types/entities';
+import { isDimensionEntity, type Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 
 interface LevelManagerLike {
@@ -50,10 +50,6 @@ interface LevelManagerLike {
 interface ModifyContext {
   readonly entities: readonly Entity[];
   readonly sm: ISceneManager;
-}
-
-function isDimension(e: Entity): e is DimensionEntity {
-  return e.type === 'dimension';
 }
 
 /** True when any segment carries at least one break point. */
@@ -78,8 +74,8 @@ export function buildBreakCommands(
   ctx: ModifyContext,
 ): ICommand[] {
   const lookup = (id: string): DimensionEntity | undefined =>
-    ctx.entities.find((e) => e.id === id && isDimension(e)) as DimensionEntity | undefined;
-  const crossings = ctx.entities.filter((e) => !isDimension(e));
+    ctx.entities.find((e) => e.id === id && isDimensionEntity(e)) as DimensionEntity | undefined;
+  const crossings = ctx.entities.filter((e) => !isDimensionEntity(e));
   const registry = getDimStyleRegistry();
   const commands: ICommand[] = [];
 
@@ -134,10 +130,10 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       if (!levelId) return null;
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return null;
-      const sm = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+      const sm = levelSceneManagerFor(levelManager, levelId);
       const entities = scene.entities as unknown as readonly Entity[];
       const selected = new Set(entityIds);
-      const dims = entities.filter((e): e is DimensionEntity => selected.has(e.id) && isDimension(e));
+      const dims = entities.filter((e): e is DimensionEntity => selected.has(e.id) && isDimensionEntity(e));
       if (dims.length === 0) return null;
       return { ctx: { entities, sm }, dims };
     };

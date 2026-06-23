@@ -513,6 +513,46 @@ NEW `hooks/__tests__/structural-load-takedown-core.test.ts` (6 jest) · MOD `hoo
 
 ## 8. Changelog
 
+- **2026-06-24 (v16, Opus):** **`roundUpToModule` SSoT — πλήρης ενοποίηση 4 διπλότυπων (FULL SSoT, Giorgio order).**
+  Συνέχεια του v14: αντί να μείνει flagged, το **4-way duplicate** ενοποιήθηκε πλήρως. NEW pure leaf
+  `bim/structural/sizing/module-rounding.ts` με `roundUpToModule` (**tolerant-ceil** ενσωματωμένο, `- MODULE_CEIL_EPSILON`)
+  + `roundDownToModule`. Αντικατέστησε τα **4 ταυτόσημα** inline `Math.ceil(value/module)*module`
+  (`slab-sizing` / `member-sizing` / `column-sizing` / `suggest-pad-dimensions`) + το μοναδικό inline
+  `roundDownToModule` (`member-sizing`) → όλοι οι callers κάνουν delegate. **Bonus:** το dust-protection (tolerant-ceil)
+  ισχύει πλέον για slab/member/column πέρα από το pad (που είχε το reported #3 symptom) — μηδέν λανθάνον dust-bug.
+  `.ssot-registry.json` module `module-rounding` (Tier 3, forbid inline `Math.ceil(.../module)*module` σε sizing/footing)
+  + baseline. NEW `__tests__/module-rounding.test.ts` (tolerant-ceil + false-snap guard + floor). **117/117** sizing+pad
+  jest GREEN, μηδέν regression. Grep-verified: ΜΗΔΕΝ duplicate. **SSoT note:** το `snapToGrid` (ADR-049) είναι Point2D —
+  δεν ταιριάζει σε scalar ceiling (δεν έγινε force-reuse).
+- **2026-06-24 (v15, Opus):** **Delete-path: διαγραφή κολώνας από combined ΔΕΝ ξαναδιαστασιολογούσε το πέδιλο — race (stale scene).**
+  Bug (Giorgio-reproduced QA): 2 κολώνες με combined πέδιλο· διαγραφή της μίας μέσω **ribbon «Διαγραφή»** →
+  το πέδιλο έμενε «παγωμένο» στο combined αντί να συρρικνωθεί σε isolated. **Ρίζα (100% — όχι η αρχική υπόθεση
+  «classifier/reconcile»):** το **ribbon path** εκπέμπει `bim:column-delete-requested` (σύγχρονο emit)· ο
+  `useColumnPersistence.deleteColumn` αφαιρούσε την κολώνα από τη σκηνή **ΜΕΤΑ** το `await svc.deleteColumn()`
+  (Firestore network). Οι coalesced (`queueMicrotask`, `useGroupedStructuralReaction`→`createMicrotaskCoalescer`)
+  structural αντιδράσεις στο ΙΔΙΟ event drain-άρουν **πριν** resolve-άρει το network await → ο
+  `runAutoFoundationDesign` διάβαζε **stale column set** (2 κολώνες) → `reconcileFoundationLayout` idempotent
+  no-op → combined πέδιλο αμετάβλητο. Το **smart-delete (keyboard) path δεν έπασχε** — εκεί το
+  `executeCommand(DeleteEntityCommand)` αφαιρεί από τη σκηνή **σύγχρονα ΠΡΙΝ** το `emitBimDeleteEvents`.
+  **Fix (Google-level optimistic update, N.7):** η scene removal μετακινήθηκε **ΠΡΙΝ** το Firestore `await` στο
+  `deleteColumn` (μέσα στο synchronous emit) → οι microtask αντιδράσεις βλέπουν φρέσκια σκηνή (1 κολώνα) →
+  reconcile combined→isolated. **Boy-scout (N.0.2):** πανομοιότυπο anti-pattern στο `useWallPersistence.deleteWall`
+  (σχόλιο «optimistically» ήταν ψευδές — έτρεχε μετά το await) διορθώθηκε ομοίως. **🔴 browser-verify** (delete 1
+  κολώνα από combined → πέδιλο συρρικνώνεται). **Observation (out-of-scope):** το ribbon delete ΔΕΝ περνά από
+  `CommandHistory` (όχι undoable· το `executeGrouped`/`appendToLast` της αντίδρασης δεν έχει user command να
+  append-άρει) — ξεχωριστό follow-up αν χρειαστεί undoable ribbon delete.
+- **2026-06-24 (v14, Opus):** **Float-dust fix — pad 50 mm oversize (1350 αντί 1300).**
+  Bug (Firestore-verified, QA «δομικός οργανισμός»): isolated πέδιλο κολόνας 1000×250 (rot 90°) έβγαινε **1350**
+  αντί 1300. **Ρίζα:** το `effectiveFaces` (auto-foundation-layout.ts) un-rotate (`rotatePoint`) παράγει sub-ULP
+  dust → `widthMm = 1000.0000000000146`· +2×150 overhang = `1300.0000000000146`· το `Math.ceil(value/50)*50` του
+  `roundUpTo` (suggest-pad-dimensions.ts) πηδά **ολόκληρο module** → 1350. **Fix (targeted, SSoT-aware):**
+  - `roundUpTo` → **tolerant-ceil**: `Math.ceil(value/module - CEIL_EPSILON)*module` (CEIL_EPSILON = 1e-9 του
+    πηλίκου — τάξεις μεγέθους πάνω από το dust ~1e-13, invisible σε νόμιμες τιμές). Καλύπτει **και** τα δύο branches
+    (geometric + bearing) γιατί ζει στο κοινό ceiling helper της SSoT.
+  - **SSoT audit (100% ειλικρίνεια):** το `snapToGrid` (ADR-049) είναι **Point2D** (component-wise) — ΔΕΝ
+    εφαρμόζεται σε scalar ceiling, δεν έγινε force-reuse. Εντοπίστηκε **4-way duplicate** `roundUpToModule`/`roundUpTo`
+    (slab/member/column/pad sizing) → **ενοποιήθηκε πλήρως σε v16** (Giorgio order: FULL SSoT, μηδέν διπλότυπα).
+  - +2 jest regression (dust 1000.0000000000146 → 1300· false-snap guard 1000.5 → 1350). 7/7 GREEN.
 - **2026-06-23 (v13, Opus):** **Composite (L/T/U) κολόνα — area-centroid placement + footprint-aware sizing.**
   Bug (Firestore-verified, σύνθετη L κολόνα 1000×1000 bbox): isolated πέδιλο `fnd_530f6be3` κεντραρισμένο στο
   (1068, 667) = **μέσος όρος κορυφών**, με εξοχή που έπεφτε στα **66.67 mm** (< 150 mm detailing) στις δύο άκρες

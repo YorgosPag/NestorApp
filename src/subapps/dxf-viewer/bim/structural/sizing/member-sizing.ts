@@ -47,6 +47,7 @@ import {
 import type { BeamSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
 import { MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
 import { plasticTorsionalResistanceKnm, shearTorsionUtilization } from '../codes/torsion-capacity';
+import { roundUpToModule, roundDownToModule } from './module-rounding';
 
 /** Constructible module στρογγυλοποίησης ύψους (mm). */
 const BEAM_DEPTH_MODULE_MM = 50;
@@ -81,14 +82,6 @@ export interface BeamSizing {
   readonly widthMm: number;
   readonly depthMm: number;
   readonly governedBy: BeamSizingGovernedBy;
-}
-
-function roundUpToModule(value: number, module: number): number {
-  return Math.ceil(value / module) * module;
-}
-
-function roundDownToModule(value: number, module: number): number {
-  return Math.floor(value / module) * module;
 }
 
 /** SLS βέλος (EC2 §7.4.2): ελάχιστο h ώστε span/d_eff ≤ όριο κώδικα. */

@@ -13,7 +13,7 @@ import { useTextCreationTool } from './useTextCreationTool';
 import { useArrayRepickHandlers } from './useArrayRepickHandlers';
 import { useSmartDelete } from './useSmartDelete';
 import { useEntityJoin } from '../useEntityJoin';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { levelSceneManagerFor } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 // ADR-344 Phase 13 — feed active scene units into ribbon text creation so 2.5
 // paper-mm default lands in world units regardless of DXF unit system.
@@ -91,7 +91,7 @@ export function useCanvasEditActions({
   }, [overlayMode, setOverlayMode]);
   const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
     if (selectedEntityIds.length !== 1 || !levelManager.currentLevelId) return;
-    const adapter = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
+    const adapter = levelSceneManagerFor(levelManager, levelManager.currentLevelId);
     executeCommand(new ReorderEntityCommand(selectedEntityIds[0], direction, adapter));
   }, [selectedEntityIds, levelManager, executeCommand]);
   return { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, entityJoinState, handleExitDrawMode, handleReorderEntity };

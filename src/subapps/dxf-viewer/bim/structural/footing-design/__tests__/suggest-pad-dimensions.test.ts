@@ -42,4 +42,18 @@ describe('suggestPadDimensions', () => {
     });
     expect(d).toEqual({ widthMm: 700, lengthMm: 700 });
   });
+
+  it('tolerant-ceil: sub-ULP float dust δεν προκαλεί 50mm oversize (1300 όχι 1350)', () => {
+    // Regression: το `effectiveFaces` un-rotate παράγει dust (1000.0000000000146).
+    // +2×150 overhang = 1300.0000000000146· naive Math.ceil → 1350. Πρέπει → 1300.
+    const dust = 1000.0000000000146;
+    const d = suggestPadDimensions({ columnWidthMm: dust, columnDepthMm: dust });
+    expect(d).toEqual({ widthMm: 1300, lengthMm: 1300 });
+  });
+
+  it('μια ΠΡΑΓΜΑΤΙΚΗ τιμή ελάχιστα πάνω από module ΑΝΕΒΑΙΝΕΙ κανονικά (όχι false-snap)', () => {
+    // Guard: το epsilon δεν «τρώει» πραγματικές διαστάσεις. 1000.5 + 300 = 1300.5 → 1350.
+    const d = suggestPadDimensions({ columnWidthMm: 1000.5, columnDepthMm: 1000.5 });
+    expect(d).toEqual({ widthMm: 1350, lengthMm: 1350 });
+  });
 });

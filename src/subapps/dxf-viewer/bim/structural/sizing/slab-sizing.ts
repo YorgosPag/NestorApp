@@ -33,6 +33,7 @@ import { slabDesignMomentNmmPerM } from '../codes/suggest-slab-reinforcement';
 import { footingEffectiveDepthMm } from '../codes/suggest-reinforcement';
 import type { SlabFoundationSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../types/slab-types';
+import { roundUpToModule } from './module-rounding';
 
 /** Constructible module στρογγυλοποίησης πάχους πλάκας (mm). */
 const SLAB_THICKNESS_MODULE_MM = 10;
@@ -50,10 +51,6 @@ export type SlabSizingGovernedBy = 'serviceability' | 'capacity' | 'minimum';
 export interface SlabSizing {
   readonly thicknessMm: number;
   readonly governedBy: SlabSizingGovernedBy;
-}
-
-function roundUpToModule(value: number, module: number): number {
-  return Math.ceil(value / module) * module;
 }
 
 /**

@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { levelSceneManagerFor } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
@@ -76,8 +76,7 @@ export function useStructuralOrganismNotification(props: { levelManager: LevelMa
   const { user } = useAuth();
 
   useEffect(() => {
-    const adapterFor = (levelId: string): LevelSceneManagerAdapter =>
-      new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+    const adapterFor = (levelId: string) => levelSceneManagerFor(levelManager, levelId);
 
     const onConfirm = (columnIds: readonly string[], footingId: string, levelId: string): void => {
       const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);

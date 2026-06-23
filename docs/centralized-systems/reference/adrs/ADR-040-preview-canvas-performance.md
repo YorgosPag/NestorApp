@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-24 — ADR-362 dim create tools στο `entityPickingActive` (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-24 (Opus 4.8). **ADR-040-safe** — pure prop-level αλλαγή, ZERO new subscriptions. Ο orchestrator `CanvasSection.tsx` προσθέτει `|| isDimTool(activeTool)` στο υπολογιζόμενο `entityPickingActive` prop ώστε τα dim-create tools να συμμετέχουν στο entity hit-test SSoT: hovering arc/circle το highlight-άρει ΚΑΙ γεμίζει το `HoverStore` για το radial entity pick (μ' αυτό ο `useDrawingHandlers` διαβάζει το body-under-cursor αντί για OSNAP point). Καμία νέα `useSyncExternalStore`, καμία αλλαγή σε bitmap cache-key / scheduler / micro-leaf model — μόνο μία επιπλέον boolean disjunction σε υπάρχον prop (event-time `activeTool` read). N.7.1 file-size: 2-line comment → 1-line ώστε ο orchestrator να μείνει ≤500 γρ. **CHECK 6B** (`CanvasSection.tsx` touch) → ADR-040 staged. ✅ Google-level: YES — pure prop, μηδέν νέα reactivity.
+
 ### 2026-06-22 — ADR-513 Radial Command Ring: draw-time `getSceneUnits` getter στο `DynamicInputSubscriber` leaf (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-22 (Opus 4.8). **ADR-040-safe** — pure draw-time getter pass-through, ZERO new subscriptions. Το `CanvasLayerStack` περνά στο `DynamicInputSubscriber` micro-leaf δύο **getters** (ΟΧΙ snapshot values): `getSceneUnits={() => …}` που διαβάζει event-time το scene του ενεργού level (`levelManager.currentLevelId`/`getLevelScene`, mirror του slab-opening ghost) + `getCanvasEl={() => dxfCanvasRef…getCanvas()}` (draw-time read του canvas element, για το cursor «βελάκι» πάνω στα πλήκτρα του ring) — ακριβώς το Cardinal rule #2 pattern (handlers δέχονται getters, όχι stale snapshots). Το `RadialCommandRing` παραμένει isolated micro-leaf, render μόνο σε `awaitingEnd` (gate στο `DynamicInputSubscriber`). Καμία νέα `useSyncExternalStore` στον orchestrator, καμία αλλαγή σε bitmap cache-key / scheduler / micro-leaf model — μόνο ένα επιπλέον getter prop. **CHECK 6B** (`CanvasLayerStack.tsx` touch) → ADR-040 + ADR-513 staged. ✅ Google-level: YES — event-time getter, μηδέν νέα reactivity.

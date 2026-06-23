@@ -309,6 +309,21 @@ export function useWallPersistence(
     const deletedEntity = scene?.entities.find((e) => e.id === wallId);
 
     const deletedWall = (deletedEntity && isWall(deletedEntity)) ? deletedEntity : null;
+
+    // Google-level OPTIMISTIC UPDATE (N.7): αφαίρεσε τον τοίχο από τη σκηνή ΣΥΓΧΡΟΝΑ,
+    // ΠΡΙΝ το Firestore `await` (το προηγούμενο σχόλιο «optimistically» ήταν ψευδές —
+    // η αφαίρεση έτρεχε ΜΕΤΑ το await). Οι coalesced (queueMicrotask) structural
+    // αντιδράσεις στο ίδιο `bim:wall-delete-requested` emit πρέπει να δουν φρέσκια σκηνή
+    // (mirror του column delete fix· διαφορετικά παράγωγα footings/loads μένουν stale).
+    if (scene) {
+      const nextEntities = scene.entities.filter((e) => e.id !== wallId);
+      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+      // Recompute neighbour miter/bevel patches now that this wall is gone, and
+      // persist the updated params so Firestore stays in sync. Symmetric to the
+      // addWallToScene re-trim pass that runs on insertion.
+      recomputeWallTrimsAfterDelete(levelManager);
+    }
+
     try {
       await svc.deleteWall(wallId);
       void recordWallChange(
@@ -320,16 +335,6 @@ export function useWallPersistence(
       void bimToBoqBridge.deleteBoqItemForBim(wallId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure is silent — user can retry.
-    }
-
-    // Remove from local scene optimistically (already done Firestore-side).
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== wallId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-      // Recompute neighbour miter/bevel patches now that this wall is gone, and
-      // persist the updated params so Firestore stays in sync. Symmetric to the
-      // addWallToScene re-trim pass that runs on insertion.
-      recomputeWallTrimsAfterDelete(levelManager);
     }
 
     dirtyIdsRef.current.delete(wallId);

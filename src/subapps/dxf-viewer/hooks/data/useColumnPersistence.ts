@@ -302,6 +302,19 @@ export function useColumnPersistence(
     const deletedEntity = scene?.entities.find((e) => e.id === columnId);
 
     const deletedColumn = (deletedEntity && isColumn(deletedEntity)) ? deletedEntity : null;
+
+    // Google-level OPTIMISTIC UPDATE (N.7): αφαίρεσε την κολώνα από τη σκηνή ΣΥΓΧΡΟΝΑ,
+    // ΠΡΙΝ το Firestore `await` — μέσα στο ίδιο synchronous `bim:column-delete-requested`
+    // emit. Οι coalesced (queueMicrotask) structural αντιδράσεις στο ΙΔΙΟ event
+    // (auto-foundation / loads / organism, useGroupedStructuralReaction) draining ΜΕΤΑ
+    // το emit πρέπει να δουν ΦΡΕΣΚΙΑ σκηνή· αν η αφαίρεση έμενε πίσω από το network await,
+    // ο planner διάβαζε stale column set → π.χ. combined πέδιλο «παγωμένο» μετά τη
+    // διαγραφή της μίας κολώνας. Mirror του smart-delete (scene-sync ΠΡΙΝ τα delete events).
+    if (scene) {
+      const nextEntities = scene.entities.filter((e) => e.id !== columnId);
+      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+    }
+
     try {
       await svc.deleteColumn(columnId);
       void recordColumnChange(
@@ -313,11 +326,6 @@ export function useColumnPersistence(
       void bimToBoqBridge.deleteBoqItemForBim(columnId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== columnId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
     }
 
     dirtyIdsRef.current.delete(columnId);

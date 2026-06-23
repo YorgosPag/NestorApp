@@ -15,7 +15,10 @@
  *
  * @see ./footing-bearing.ts — ο πλήρης EC7 bearing έλεγχος (επαλήθευση μετά)
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 2
+ * @see ../sizing/module-rounding.ts — roundUpToModule SSoT (tolerant-ceil)
  */
+
+import { roundUpToModule } from '../sizing/module-rounding';
 
 /** Προεξοχή πεδίλου πέρα από κάθε παρειά κολόνας (mm). */
 export const PAD_FACE_OVERHANG_MM = 150;
@@ -40,10 +43,6 @@ export interface PadDimensions {
   readonly lengthMm: number;
 }
 
-function roundUpTo(value: number, module: number): number {
-  return Math.ceil(value / module) * module;
-}
-
 /** Τετράγωνη πλευρά (mm) από έδραση, ή 0 όταν λείπουν φορτίο/σ_allow. */
 function bearingSideMm(input: PadSizingInput): number {
   const n = input.axialServiceKn;
@@ -59,11 +58,11 @@ function bearingSideMm(input: PadSizingInput): number {
  */
 export function suggestPadDimensions(input: PadSizingInput): PadDimensions {
   const fromLoad = bearingSideMm(input);
-  const widthMm = roundUpTo(
+  const widthMm = roundUpToModule(
     Math.max(input.columnWidthMm + 2 * PAD_FACE_OVERHANG_MM, fromLoad, PAD_MIN_SIDE_MM),
     PAD_SIZE_MODULE_MM,
   );
-  const lengthMm = roundUpTo(
+  const lengthMm = roundUpToModule(
     Math.max(input.columnDepthMm + 2 * PAD_FACE_OVERHANG_MM, fromLoad, PAD_MIN_SIDE_MM),
     PAD_SIZE_MODULE_MM,
   );
