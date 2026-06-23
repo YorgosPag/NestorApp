@@ -16,6 +16,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { Overlay } from '../../overlays/types';
+import { isHatchEntity } from '../../types/entities';
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { getAutoAreaHitResult } from '../../systems/auto-area/auto-area-hit';
 import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildHatchEntityFromRegion } from './hatch-completion';
@@ -46,4 +48,28 @@ export function buildHatchFromPick(params: BuildHatchFromPickParams): HatchEntit
   const result = getAutoAreaHitResult(worldPoint, entities, overlays, scale, gapTolerance);
   if (!result) return null;
   return buildHatchEntityFromRegion(result.polygon, result.holes, id, layerId);
+}
+
+/**
+ * True αν το `worldPoint` βρίσκεται μέσα σε ΥΠΑΡΧΟΥΣΑ γραμμοσκίαση της σκηνής —
+ * δηλ. στο εξωτερικό όριο (path[0]) ΚΑΙ ΟΧΙ μέσα σε νησί (path[1..]) της. Οδηγεί
+ * την προειδοποίηση «η περιοχή έχει ήδη γραμμοσκίαση» (επιλογή Giorgio: warn+allow,
+ * όπως οι χώροι της Revit είναι αποκλειστικοί ανά κλειστή περιοχή). Reuse του
+ * `isPointInPolygon` SSoT — καμία νέα γεωμετρία.
+ */
+export function isPointInsideExistingHatch(
+  worldPoint: Point2D,
+  entities: ReadonlyArray<Entity>,
+): boolean {
+  for (const e of entities) {
+    if (!isHatchEntity(e)) continue;
+    const paths = e.boundaryPaths;
+    if (!paths || paths.length === 0) continue;
+    const outer = paths[0];
+    if (outer.length < 3 || !isPointInPolygon(worldPoint, outer)) continue;
+    // Μέσα στο εξωτερικό· εξαίρεσε αν πέφτει σε νησί (τρύπα) → δεν είναι γεμάτο εκεί.
+    const inHole = paths.slice(1).some((ring) => ring.length >= 3 && isPointInPolygon(worldPoint, ring));
+    if (!inHole) return true;
+  }
+  return false;
 }

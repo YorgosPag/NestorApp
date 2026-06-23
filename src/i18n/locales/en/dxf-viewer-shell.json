@@ -217,6 +217,12 @@
     "defaultButton": "No, default {size}",
     "cancel": "Cancel"
   },
+  "hatchOverlap": {
+    "title": "Region already hatched",
+    "message": "This region already has a hatch. Add another one on top?",
+    "createButton": "Yes, add",
+    "cancel": "Cancel"
+  },
   "perimeterColumnConfirm": {
     "title": "Section classification",
     "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",

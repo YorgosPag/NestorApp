@@ -11,7 +11,6 @@
 
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HexColorPicker } from 'react-colorful';
 import { Pipette } from 'lucide-react';
 import {
   Popover,
@@ -21,7 +20,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { openEyedropper, hasNativeEyedropper } from '../../color/eyedropper';
-import { aciToRgb, dxfColorToHex, hexToAci, rgbToHex } from './aci-palette';
+import { aciToRgb, dxfColorToHex, hexToAci, hexToDxfTrueColor, rgbToHex } from './aci-palette';
+import { EnterpriseColorPicker } from '../../color/EnterpriseColorPicker';
 import type { DxfColor, MixedValue } from '../../../text-engine/types';
 import { DXF_COLOR_BY_LAYER, DXF_COLOR_BY_BLOCK } from '../../../text-engine/types';
 
@@ -48,13 +48,7 @@ export function ColorPickerPopover({
     try {
       const { sRGBHex } = await openEyedropper();
       if (trueColorSupported) {
-        const rgb = parseInt(sRGBHex.slice(1), 16);
-        onChange({
-          kind: 'TrueColor',
-          r: (rgb >> 16) & 0xff,
-          g: (rgb >> 8) & 0xff,
-          b: rgb & 0xff,
-        });
+        onChange(hexToDxfTrueColor(sRGBHex));
       } else {
         onChange({ kind: 'ACI', index: hexToAci(sRGBHex) });
       }
@@ -82,7 +76,7 @@ export function ColorPickerPopover({
           <span className="text-xs">{value === null ? t('textToolbar:color.mixed') : t('textToolbar:color.label')}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-2">
+      <PopoverContent className="w-auto p-2">
         <nav className="mb-2 flex gap-1" role="tablist" aria-label={t('textToolbar:color.tabsLabel')}>
           {trueColorSupported && (
             <Button
@@ -128,17 +122,20 @@ export function ColorPickerPopover({
 
         {tab === 'true' && trueColorSupported && (
           <div role="tabpanel">
-            <HexColorPicker
-              color={value && value.kind === 'TrueColor' ? rgbToHex(value.r, value.g, value.b) : '#ffffff'}
-              onChange={(hex) => {
-                const rgb = parseInt(hex.slice(1), 16);
-                onChange({
-                  kind: 'TrueColor',
-                  r: (rgb >> 16) & 0xff,
-                  g: (rgb >> 8) & 0xff,
-                  b: rgb & 0xff,
-                });
-              }}
+            {/* ADR-344 — the «Αληθινό χρώμα» tab uses the SSoT EnterpriseColorPicker
+                (HSL sliders + HEX/RGB/HSL + DXF/semantic/material palettes + recent +
+                WCAG), not a bare react-colorful square. Eyedropper stays on the nav
+                (works cross-tab) so the picker's own is disabled to avoid a duplicate. */}
+            <EnterpriseColorPicker
+              value={value && value.kind === 'TrueColor' ? rgbToHex(value.r, value.g, value.b) : '#ffffff'}
+              onChange={(hex) => onChange(hexToDxfTrueColor(hex))}
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent
+              eyedropper={false}
+              orientation="vertical"
+              className="w-[320px]"
             />
           </div>
         )}

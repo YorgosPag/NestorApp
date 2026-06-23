@@ -7,7 +7,7 @@
  * `extractLineSegments` SSoT) — όχι μόνο όταν είναι `LINE` entities.
  */
 
-import { buildHatchFromPick } from '../hatch-pick-completion';
+import { buildHatchFromPick, isPointInsideExistingHatch } from '../hatch-pick-completion';
 import { resetHatchDrawDefaults, setHatchDrawDefaults } from '../hatch-draw-defaults-store';
 import { getAutoAreaHitResult } from '../../../systems/auto-area/auto-area-hit';
 import type { Entity } from '../../../types/entities';
@@ -125,5 +125,30 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       expect(h!.type).toBe('hatch');
       expect(h!.boundaryPaths[0].length).toBeGreaterThanOrEqual(3);
     });
+  });
+});
+
+// ── OVERLAP DETECTION (warn+allow όταν η περιοχή έχει ήδη γραμμοσκίαση) ─────────
+describe('isPointInsideExistingHatch (ADR-507 Φ3)', () => {
+  const hatch = (id: string, paths: Point2D[][]): Entity =>
+    ({ id, type: 'hatch', boundaryPaths: paths } as unknown as Entity);
+
+  it('true όταν το σημείο είναι μέσα σε υπάρχουσα γραμμοσκίαση', () => {
+    expect(isPointInsideExistingHatch({ x: 500, y: 500 }, [hatch('h1', [OUTER])])).toBe(true);
+  });
+
+  it('false όταν το σημείο είναι εκτός', () => {
+    expect(isPointInsideExistingHatch({ x: 5000, y: 5000 }, [hatch('h1', [OUTER])])).toBe(false);
+  });
+
+  it('false όταν το σημείο πέφτει σε νησί (τρύπα) της γραμμοσκίασης', () => {
+    // OUTER με INNER ως τρύπα· σημείο μέσα στην τρύπα → δεν είναι γεμάτο εκεί.
+    expect(isPointInsideExistingHatch({ x: 500, y: 500 }, [hatch('h1', [OUTER, INNER])])).toBe(false);
+    // ...αλλά στον δακτύλιο (μέσα στο OUTER, έξω από το INNER) → true.
+    expect(isPointInsideExistingHatch({ x: 100, y: 100 }, [hatch('h1', [OUTER, INNER])])).toBe(true);
+  });
+
+  it('αγνοεί μη-hatch entities', () => {
+    expect(isPointInsideExistingHatch({ x: 500, y: 500 }, [closedPolyline('p1', OUTER)])).toBe(false);
   });
 });

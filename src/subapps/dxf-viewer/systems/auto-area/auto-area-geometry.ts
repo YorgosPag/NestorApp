@@ -76,10 +76,12 @@ function planarizeSegments(
       if (hit) {
         addCut(i, hit.t, hit.point);
         addCut(j, hit.u, hit.point);
-        continue;
       }
-      // Καμία ακριβής τομή → δοκίμασε tolerance-aware T-junctions και προς τις 2
-      // κατευθύνσεις (άκρο του ενός στο εσωτερικό του άλλου).
+      // ΠΑΝΤΑ (όχι μόνο σε no-hit) tolerance-aware endpoint-on-interior splits — και
+      // προς τις 2 κατευθύνσεις. Κρίσιμο για **near-collinear επικαλύψεις**: σε coords
+      // ~1e4 με μικροδιαφορές ~1e-8, το determinant-based segmentIntersection (eps 1e-9)
+      // τις ταξινομεί ΛΑΘΩΣ ως τομή → χωρίς αυτό θα μέναν un-noded → duplicate-angle
+      // half-edges → χαλασμένες όψεις. Το perp-distance split είναι magnitude-robust.
       tryEndpointSplit(b1, i, a1, a2);
       tryEndpointSplit(b2, i, a1, a2);
       tryEndpointSplit(a1, j, b1, b2);

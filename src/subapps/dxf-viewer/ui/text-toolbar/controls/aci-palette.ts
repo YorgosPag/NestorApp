@@ -94,6 +94,17 @@ export function hexToAci(hex: string): number {
   return best;
 }
 
+/**
+ * Inverse of {@link dxfColorToHex} for true-color input: `#RRGGBB` → `DxfColor`
+ * `TrueColor`. Lives beside its forward pair (SSoT). Distinct from
+ * `utils/dxf-true-color.hexToTrueColor`, which returns a packed RGB `number` for
+ * DXF group 420/421 export — different shape, hence a different name.
+ */
+export function hexToDxfTrueColor(hex: string): DxfColor {
+  const [r, g, b] = parseHex(hex) ?? [255, 255, 255];
+  return { kind: 'TrueColor', r, g, b };
+}
+
 /** Convert a `DxfColor` discriminated union to its sRGB hex representation. */
 export function dxfColorToHex(color: DxfColor): string {
   switch (color.kind) {

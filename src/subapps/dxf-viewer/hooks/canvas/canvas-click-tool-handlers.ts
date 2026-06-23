@@ -22,7 +22,9 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import { testEntityHit } from './canvas-click-entity-hit';
 // ADR-507 Φ3 — pick-point (Τρόπος Β): ΕΝΑ κλικ μέσα σε περιοχή → HatchEntity.
-import { buildHatchFromPick } from '../../bim/hatch/hatch-pick-completion';
+import { buildHatchFromPick, isPointInsideExistingHatch } from '../../bim/hatch/hatch-pick-completion';
+// ADR-507 Φ3 — warn+allow όταν η περιοχή έχει ήδη γραμμοσκίαση (επιλογή Giorgio).
+import { requestHatchOverlapConfirm } from '../../bim/hatch/hatch-overlap-confirm-store';
 import { buildHatchPostCreateCommands } from '../../bim/hatch/hatch-completion';
 import { completeEntity } from '../drawing/completeEntity';
 // Enterprise-id SSoT (N.6) — ίδιος generator με τον CreateEntityCommand· μηδέν δικός counter.
@@ -126,11 +128,12 @@ export function handleHatchPickPointClick(
   if (!levelId || !setScene) return false;
 
   const scene = p.levelManager.getLevelScene(levelId);
+  const entities = scene?.entities ?? [];
   // ADR-040 XXII.A: live SSoT scale read at click time.
   const scale = getImmediateTransform().scale;
   const hatch = buildHatchFromPick({
     worldPoint,
-    entities: scene?.entities ?? [],
+    entities,
     overlays: p.currentOverlays,
     scale,
     id: generateEntityId(),
@@ -141,17 +144,33 @@ export function handleHatchPickPointClick(
     return false;
   }
 
-  completeEntity(hatch, {
-    tool: 'hatch',
-    levelId,
-    getScene: p.levelManager.getLevelScene,
-    setScene,
-    // ADR-507 §5δ.9 — auto-send-to-back: create + reorder σε ΕΝΑ undo.
-    postCreateCommands: buildHatchPostCreateCommands,
-  });
-  // Καθάρισε το ghost της μόλις-γεμισμένης περιοχής (το επόμενο mouse-move το ξαναβρίσκει).
-  clearAutoAreaPreview();
-  dlog('handleHatchPickPointClick', `created hatch ${hatch.id} rings=${hatch.boundaryPaths.length}`);
+  const commit = (): void => {
+    completeEntity(hatch, {
+      tool: 'hatch',
+      levelId,
+      getScene: p.levelManager.getLevelScene,
+      setScene,
+      // ADR-507 §5δ.9 — auto-send-to-back: create + reorder σε ΕΝΑ undo.
+      postCreateCommands: buildHatchPostCreateCommands,
+    });
+    // Καθάρισε το ghost της μόλις-γεμισμένης περιοχής (το επόμενο mouse-move το ξαναβρίσκει).
+    clearAutoAreaPreview();
+    dlog('handleHatchPickPointClick', `created hatch ${hatch.id} rings=${hatch.boundaryPaths.length}`);
+  };
+
+  // ADR-507 Φ3 — η περιοχή έχει ΗΔΗ γραμμοσκίαση: προειδοποίηση + επιτρέπεται (Giorgio,
+  // «ΠΟΤΕ σιωπηλά»). Σαν AutoCAD (στοιβάζει μετά από confirm)· οι χώροι Revit είναι
+  // αποκλειστικοί ανά περιοχή — εδώ το αφήνουμε opt-in με ρητή επιβεβαίωση.
+  if (isPointInsideExistingHatch(worldPoint, entities)) {
+    void (async () => {
+      const action = await requestHatchOverlapConfirm();
+      if (action === 'create') commit();
+      else clearAutoAreaPreview(); // ακύρωση → σβήσε το ghost
+    })();
+    return true; // κλικ καταναλώθηκε (η ροή συνεχίζει στο resolve)
+  }
+
+  commit();
   return true;
 }
 

@@ -44,6 +44,8 @@ export const FloorManagementDialogHost = React.lazy(() => import('./FloorManagem
 export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPerimeterConfirmDialog').then(mod => ({ default: mod.ColumnPerimeterConfirmDialog })));
 // ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» confirm dialog (self-subscribing, zero props)
 export const ColumnAdoptSizeDialog = React.lazy(() => import('../ui/dialogs/ColumnAdoptSizeDialog').then(mod => ({ default: mod.ColumnAdoptSizeDialog })));
+// ADR-507 Φ3 — «η περιοχή έχει ήδη γραμμοσκίαση» confirm dialog (warn+allow, self-subscribing)
+export const HatchOverlapConfirmDialog = React.lazy(() => import('../ui/dialogs/HatchOverlapConfirmDialog').then(mod => ({ default: mod.HatchOverlapConfirmDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 export const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 export const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
