@@ -84,6 +84,14 @@ export interface ColumnSectionContext {
 export interface ColumnReinforcementLimits {
   /** ρ_min — ελάχιστο ποσοστό διαμήκους οπλισμού (As/Ac). */
   readonly minRatio: number;
+  /**
+   * ρ_min **τοιχώματος** (mode==='wall') — ελάχιστο κατακόρυφο ποσοστό κατανεμημένου
+   * web επί gross (EC2 §9.6.2 ≈ 0.002 / ΕΚΩΣ §18.4 ≈ 0.0025), **διακριτό** από το
+   * column ρ_min (1%, EC8 §5.4.3.2.2). Ο validator το χρησιμοποιεί όταν
+   * `section.mode==='wall'` ώστε σωστά οπλισμένο τοιχίο (boundary+web) να ΜΗΝ
+   * σημαδεύεται ψευδώς ως ανεπαρκές. Absent → fallback στο `minRatio` (μηδέν regression).
+   */
+  readonly wallMinRatio?: number;
   /** ρ_max — μέγιστο ποσοστό διαμήκους οπλισμού (As/Ac). */
   readonly maxRatio: number;
   /** Ελάχιστο πλήθος διαμήκων ράβδων (4 για ορθογωνική). */

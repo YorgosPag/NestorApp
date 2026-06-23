@@ -513,6 +513,43 @@ NEW `hooks/__tests__/structural-load-takedown-core.test.ts` (6 jest) · MOD `hoo
 
 ## 8. Changelog
 
+- **2026-06-23 (v13, Opus):** **Composite (L/T/U) κολόνα — area-centroid placement + footprint-aware sizing.**
+  Bug (Firestore-verified, σύνθετη L κολόνα 1000×1000 bbox): isolated πέδιλο `fnd_530f6be3` κεντραρισμένο στο
+  (1068, 667) = **μέσος όρος κορυφών**, με εξοχή που έπεφτε στα **66.67 mm** (< 150 mm detailing) στις δύο άκρες
+  του L, ενώ το πραγματικό **κέντρο βάρους** (load resultant) είναι (990.7, 589.3). **Δύο ρίζες:** (1) ο
+  `polygonCentroid` (vertex-mean) ≠ area-centroid για μη-συμμετρικά ίχνη → εκκεντρότητα φορτίου → μη-ομοιόμορφη
+  πίεση (παραβίαση της παραδοχής «uniform pressure» του σχεδιασμού)· (2) το `requiredPad` διαστασιολογούσε από
+  το `params.width/depth` (= **bbox**) σαν η κολόνα να είναι κεντραρισμένη στο bbox της → ανεπαρκής εξοχή στην
+  εκκεντρική πλευρά. **Fix (FULL SSoT, unified rectangular+composite):**
+  - NEW `polygonAreaCentroid` στο `bim/geometry/shared/polygon-utils.ts` — πραγματικό area-centroid μέσω **reuse
+    του `shoelaceArea` SSoT** (degenerate → fallback στον vertex-mean `polygonCentroid`). Δίπλα στο vertex-mean
+    (διακριτό primitive, ΟΧΙ duplicate).
+  - `auto-foundation-design-core.toLayoutColumn` → `polygonAreaCentroid(verts)` αντί vertex-mean (placement =
+    load resultant)· περνά το πραγματικό `footprint` στο `LayoutColumnInput`.
+  - `auto-foundation-layout.requiredPad` → NEW `effectiveFaces`: υπολογίζει τις **effective όψεις** στο LOCAL
+    frame **συμμετρικά γύρω από το area-centroid** (reuse `rotatePoint` ADR-188 για un-rotate), και τις τροφοδοτεί
+    στο **υπάρχον `suggestPadDimensions` SSoT** (μηδέν duplicate overhang/min/load/module logic). Εγγυάται
+    ≥overhang σε ΟΛΕΣ τις παρειές του πραγματικού ίχνους.
+  - **Ορθογώνια κεντραρισμένη κολόνα → byte-ταυτόσημο** (area-centroid = bbox-center, effective faces = width×depth)
+    → μηδέν regression· τα v12 rotated combined tests εξακολουθούν GREEN.
+  3 νέα jest (composite-L isolated coverage) + 6 polygon-area-centroid· σύνολο 13 layout + 6 centroid + 17 συναφή
+  GREEN. 🔴 browser-verify (L κολόνα → πέδιλο κεντραρισμένο στο κέντρο βάρους + ≥150 mm εξοχή παντού) + commit.
+  **DEFER:** coverage representative-point για βαθιά κοίλα (το area-centroid πέφτει στην εγκοπή — όπως και το παλιό
+  vertex-mean, μηδέν regression· proper fix = `interiorAnchorPoint` SSoT, ξεχωριστό task).
+- **2026-06-23 (v12, Opus):** **Combined footing — rotation-aware enclosure (στραμμένη κολώνα έμενε ακάλυπτη).**
+  Bug (Firestore-verified, 2 κολόνες σε L): combined πέδιλο `fnd_1320cf79` έφτανε Y=1102 ενώ η col1 (1000×250,
+  **rotation 90°**, world footprint Y∈[250,1250]) απαιτούσε Y=1425 → ~323 mm της κολόνας **ακάλυπτα**. **Ρίζα:** το
+  `requiredPad` (auto-foundation-layout.ts) χαρτογραφούσε `suggestPadDimensions.widthMm → world-X half` και
+  `lengthMm → world-Y half` **αγνοώντας το `rotationDeg`**. Σε στροφή 90°/270° τα width↔depth αντιστρέφονται στους
+  world άξονες, οπότε το axis-aligned **combined** enclosure (rotation 0) υπολόγιζε το `halfL` της col1 από το
+  depth (250→halfL 300) αντί από το width (1000→halfL 650). Το **μεμονωμένο** πέδιλο δεν επηρεαζόταν (κληρονομεί
+  local dims + `rotationDeg` → render στραμμένο σωστά). **Fix (FULL SSoT, μηδέν νέα rotation/AABB math):** το
+  `PadRect` κρατά πλέον και τα **world-AABB** half-extents (`aabbHalfW`/`aabbHalfL`) του rotated pad, υπολογισμένα
+  μέσω **reuse του ADR-188 `rotatePoint`** (rotation-math SSoT) πάνω στις 4 local γωνίες· `padsShareFooting`
+  (grouping/clearance) + `combinedFooting` (enclosure) χρησιμοποιούν αυτά αντί των local. Στροφή 0°/180° →
+  ταυτοτικά (μηδέν regression). 2 νέα regression jest (90°-rotated single-cover + δύο tall 90° κολόνες grow-along-Y)·
+  σύνολο 12 layout + 17 συναφή GREEN. 🔴 browser-verify (re-run auto-design στο L-σχήμα → πέδιλο καλύπτει και τις 2
+  κολόνες + overhang) + commit (Giorgio).
 - **2026-06-19 (v11, Opus):** **Atomic undo σε διαγραφή — SSoT geometry-edit classifier (Φ7/Φ8/Φ9).** Bug
   (DB-verified): διαγραφή δοκαριού/κολώνας χρειαζόταν **2× Ctrl+Z** (το δοκάρι+detach επανέρχονταν στο 1ο undo,
   ο παράγωγος structural recalc στο 2ο). **Ρίζα = divergent duplication:** οι 4 proactive hooks

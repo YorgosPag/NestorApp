@@ -2,9 +2,9 @@
  * ADR-507 Φ3 — tests για το pick-point completion (Τρόπος Β).
  * ΕΝΑ κλικ μέσα σε περιοχή → HatchEntity με auto boundary (+ νησιά).
  *
- * Καλύπτει την **ενοποίηση με τον room-detector** (`resolveHatchPickRegion`): το
- * δωμάτιο αναγνωρίζεται ΚΑΙ όταν οι τοίχοι είναι **πολυγραμμές** (όχι μόνο LINE) —
- * η περίπτωση που ο παλιός `auto-area-hit` detector αποτύγχανε.
+ * Καλύπτει τη **ρίζα της διόρθωσης**: ο `auto-area-hit` (half-edge planar faces)
+ * αναγνωρίζει πλέον δωμάτια ΚΑΙ όταν οι τοίχοι είναι **πολυγραμμές** (μέσω του
+ * `extractLineSegments` SSoT) — όχι μόνο όταν είναι `LINE` entities.
  */
 
 import { buildHatchFromPick } from '../hatch-pick-completion';
@@ -18,7 +18,7 @@ function closedPolyline(id: string, verts: Point2D[]): Entity {
   return { id, type: 'polyline', closed: true, vertices: verts } as unknown as Entity;
 }
 
-/** Helper: ΑΝΟΙΧΤΗ πολυγραμμή 2 κορυφών (μία ακμή τοίχου) — auto-area την αγνοεί. */
+/** Helper: ΑΝΟΙΧΤΗ πολυγραμμή 2 κορυφών (μία ακμή τοίχου). */
 function openEdgePolyline(id: string, a: Point2D, b: Point2D): Entity {
   return { id, type: 'polyline', closed: false, vertices: [a, b] } as unknown as Entity;
 }
@@ -45,7 +45,6 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       entities: [closedPolyline('p1', OUTER)],
       overlays: [],
       scale: 1,
-      sceneUnits: 'mm',
       id: 'e1',
       layerId: undefined,
     });
@@ -58,7 +57,6 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       entities: [closedPolyline('p1', OUTER)],
       overlays: [],
       scale: 1,
-      sceneUnits: 'mm',
       id: 'e1',
       layerId: 'lyr',
     })!;
@@ -74,7 +72,6 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       entities: [closedPolyline('outer', OUTER), closedPolyline('inner', INNER)],
       overlays: [],
       scale: 1,
-      sceneUnits: 'mm',
       id: 'e2',
       layerId: undefined,
     })!;
@@ -88,7 +85,6 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       entities: [closedPolyline('p1', OUTER)],
       overlays: [],
       scale: 1,
-      sceneUnits: 'mm',
       id: 'e3',
       layerId: undefined,
     })!;
@@ -96,12 +92,13 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
     expect(h.patternName).toBe('ANSI31');
   });
 
-  // ── ΕΝΟΠΟΙΗΣΗ ΜΕ ROOM-DETECTOR (το bug fix) ────────────────────────────────
-  describe('room from polyline walls (auto-area alone failed)', () => {
+  // ── ROOM FROM POLYLINE WALLS (η ρίζα της διόρθωσης) ────────────────────────
+  describe('room from polyline walls (extractLineSegments fix)', () => {
     // Δωμάτιο 1000×1000 από 4 ΑΝΟΙΧΤΕΣ πολυγραμμές (μία ακμή η καθεμία) — όπως οι
-    // double-line τοίχοι μιας πραγματικής κάτοψης. Ο `auto-area` line-faces πιάνει
-    // ΜΟΝΟ `LINE` entities → τις αγνοεί. Ο room detector σπάει τις πολυγραμμές σε
-    // segments (`extractLineSegments`) → βρίσκει τον βρόχο.
+    // double-line τοίχοι μιας πραγματικής κάτοψης. Πριν τη διόρθωση, το auto-area
+    // line-faces έπαιρνε ΜΟΝΟ `LINE` entities → τις αγνοούσε. Τώρα ο
+    // `extractLineSegments` τις σπάει σε segments → ο half-edge traversal κλείνει
+    // τον βρόχο του δωματίου.
     const wallRoom: Entity[] = [
       openEdgePolyline('w1', { x: 0, y: 0 }, { x: 1000, y: 0 }),
       openEdgePolyline('w2', { x: 1000, y: 0 }, { x: 1000, y: 1000 }),
@@ -109,18 +106,18 @@ describe('buildHatchFromPick (ADR-507 Φ3)', () => {
       openEdgePolyline('w4', { x: 0, y: 1000 }, { x: 0, y: 0 }),
     ];
 
-    it('control: ο παλιός auto-area detector ΔΕΝ βρίσκει το δωμάτιο', () => {
-      // Απόδειξη του root cause — οι πολυγραμμές-τοίχοι αγνοούνται από το line-faces.
-      expect(getAutoAreaHitResult({ x: 500, y: 500 }, wallRoom, [], 1, 0)).toBeNull();
+    it('ο auto-area detector βρίσκει το δωμάτιο από πολυγραμμές-τοίχους', () => {
+      const hit = getAutoAreaHitResult({ x: 500, y: 500 }, wallRoom, [], 1, 0);
+      expect(hit).not.toBeNull();
+      expect(hit!.polygon.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('ο ενοποιημένος detector γεμίζει το δωμάτιο από πολυγραμμές-τοίχους', () => {
+    it('η γραμμοσκίαση γεμίζει το δωμάτιο από πολυγραμμές-τοίχους', () => {
       const h = buildHatchFromPick({
         worldPoint: { x: 500, y: 500 },
         entities: wallRoom,
         overlays: [],
         scale: 1,
-        sceneUnits: 'mm',
         id: 'room',
         layerId: undefined,
       });

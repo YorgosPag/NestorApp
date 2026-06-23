@@ -17,6 +17,7 @@ import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
 import { flexuralCapacityCapFactor, limitMomentNmm } from './flexural-capacity';
 import { torsionTubeProperties } from './torsion-capacity';
 import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcement-types';
+import { isWallReinforcementMode } from '../reinforcement/column-section-outline';
 import type { BeamSupportType } from '../../types/beam-types';
 import type {
   ColumnReinforcement,
@@ -225,7 +226,7 @@ export function suggestColumnReinforcementFrom(
     coverMm: limits.nominalCoverMm,
   };
   // ADR-460 — τοίχωμα: πρόσθεσε boundary elements + κατανεμημένο κορμό (EC8 §5.4.3.4).
-  if (ctx.mode === 'wall') {
+  if (isWallReinforcementMode(ctx.mode)) {
     return { ...base, wall: suggestWallIntent(ctx, limits) };
   }
   return base;

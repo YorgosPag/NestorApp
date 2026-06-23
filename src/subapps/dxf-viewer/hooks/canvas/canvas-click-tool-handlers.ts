@@ -133,8 +133,6 @@ export function handleHatchPickPointClick(
     entities: scene?.entities ?? [],
     overlays: p.currentOverlays,
     scale,
-    // Units-aware ανοχή βρόχου — ΙΔΙΟ SSoT με «Τοποθέτηση χώρου» (room detector).
-    sceneUnits: resolveSceneUnits(scene),
     id: generateEntityId(),
     layerId: undefined,
   });

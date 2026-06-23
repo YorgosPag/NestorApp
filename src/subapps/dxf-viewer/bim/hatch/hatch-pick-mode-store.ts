@@ -32,6 +32,15 @@ export function getHatchPickMode(): HatchPickMode {
   return state;
 }
 
+/**
+ * SSoT predicate: `true` όταν είναι ενεργό το εργαλείο «Γραμμοσκίαση» σε pick-point
+ * mode (Τρόπος Β). Κοινό για τη δρομολόγηση κλικ (`useCanvasClickHandler`) ΚΑΙ το
+ * live hover preview (`useRegionPerimeterMouseMove`) → μηδέν διπλό inline predicate.
+ */
+export function isHatchPickPointActive(tool: string | null | undefined): boolean {
+  return tool === 'hatch' && state === 'pick-point';
+}
+
 /** Ορισμός τρόπου + ειδοποίηση subscribers (no-op αν ίδιος). */
 export function setHatchPickMode(mode: HatchPickMode): void {
   if (mode === state) return;

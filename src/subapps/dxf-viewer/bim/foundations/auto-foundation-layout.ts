@@ -26,6 +26,8 @@
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { suggestPadDimensions } from '../structural/footing-design/suggest-pad-dimensions';
+import { rotatePoint } from '../../utils/rotation-math';
+import type { Point2D } from '../../rendering/types/Types';
 import type { CoveragePoint } from './footing-column-coverage';
 
 /** Κατασκευαστική απόσταση (mm) κάτω από την οποία δύο μεμονωμένα πέδιλα ενώνονται. */
@@ -36,11 +38,17 @@ const M2_TO_MM2 = 1_000_000;
 /** Κολώνα ως είσοδος του layout engine (γεωμετρία normalized από τον caller). */
 export interface LayoutColumnInput {
   readonly id: string;
-  /** Plan-centroid βάσης (canvas units). */
+  /** Plan **area**-centroid βάσης (canvas units) — load resultant για ομοιόμορφη πίεση. */
   readonly centroid: CoveragePoint;
-  /** Όψη κολώνας X (mm). */
+  /**
+   * Πραγματικό αποτύπωμα βάσης (canvas units, world). Διαστασιολογεί το πέδιλο ώστε
+   * να καλύπτει το ΑΛΗΘΙΝΟ ίχνος (κρίσιμο για composite L/T/U όπου centroid ≠ bbox-center)·
+   * για ορθογώνια ταυτίζεται με το width×depth (μηδέν regression).
+   */
+  readonly footprint: readonly CoveragePoint[];
+  /** Όψη κολώνας X (mm) — bbox για composite. */
   readonly widthMm: number;
-  /** Όψη κολώνας Y (mm). */
+  /** Όψη κολώνας Y (mm) — bbox για composite. */
   readonly depthMm: number;
   /** Χαρακτηριστικό service αξονικό N = G + Q (kN), αν γνωστό. */
   readonly axialServiceKn?: number;
@@ -72,34 +80,107 @@ export interface FoundationLayoutPlan {
   readonly footings: readonly PlannedFooting[];
 }
 
-/** Axis-aligned ορθογώνιο pad (canvas units) γύρω από κολώνα. */
+/**
+ * Απαιτούμενο μεμονωμένο pad μιας κολώνας (canvas units).
+ * - `halfW`/`halfL`: μισές πλευρές στο **LOCAL frame** της κολώνας (column-aligned)
+ *   — τα κληρονομεί το μεμονωμένο πέδιλο μαζί με το `rotationDeg`.
+ * - `aabbHalfW`/`aabbHalfL`: μισές πλευρές του **WORLD AABB** του rotated pad — τα
+ *   χρησιμοποιεί το axis-aligned grouping/combined ώστε να περικλείει σωστά και
+ *   στραμμένες κολώνες (π.χ. 90° swap width↔depth).
+ */
 interface PadRect {
   readonly cx: number;
   readonly cy: number;
   readonly halfW: number;
   readonly halfL: number;
+  readonly rotationDeg: number;
+  readonly aabbHalfW: number;
+  readonly aabbHalfL: number;
+}
+
+const ORIGIN: Point2D = { x: 0, y: 0 };
+
+/**
+ * Μισές πλευρές του world-axis AABB ενός local pad ορθογωνίου (κεντραρισμένο)
+ * μετά από rotation. Reuse του ADR-188 `rotatePoint` SSoT — μηδέν νέα rotation math.
+ * Για κεντραρισμένο ορθογώνιο το AABB είναι συμμετρικό → halfExtent = max|coord|.
+ */
+function rotatedHalfExtents(halfW: number, halfL: number, rotationDeg: number): { hx: number; hy: number } {
+  if (rotationDeg === 0) return { hx: halfW, hy: halfL };
+  const corners: readonly Point2D[] = [
+    { x: -halfW, y: -halfL },
+    { x: halfW, y: -halfL },
+    { x: halfW, y: halfL },
+    { x: -halfW, y: halfL },
+  ];
+  let hx = 0;
+  let hy = 0;
+  for (const c of corners) {
+    const r = rotatePoint(c, ORIGIN, rotationDeg);
+    hx = Math.max(hx, Math.abs(r.x));
+    hy = Math.max(hy, Math.abs(r.y));
+  }
+  return { hx, hy };
+}
+
+/**
+ * **Effective** όψεις κολόνας (mm) στο LOCAL frame, **συμμετρικά γύρω από το
+ * area-centroid** (load resultant) → ομοιόμορφη πίεση. Το πέδιλο, κεντραρισμένο
+ * στο centroid + αυτές τις όψεις + overhang (μέσω `suggestPadDimensions`), εγγυάται
+ * ≥overhang σε ΟΛΕΣ τις παρειές του πραγματικού ίχνους. Reuse του ADR-188 `rotatePoint`
+ * για un-rotate στο local frame.
+ *
+ * Ορθογώνια κεντραρισμένη κολόνα → επιστρέφει ακριβώς width×depth (μηδέν regression).
+ * Degenerate footprint → fallback στο bbox width×depth.
+ */
+function effectiveFaces(col: LayoutColumnInput, s: number): { widthMm: number; depthMm: number } {
+  if (col.footprint.length < 3 || s <= 0) {
+    return { widthMm: col.widthMm, depthMm: col.depthMm };
+  }
+  const c: Point2D = { x: col.centroid.x, y: col.centroid.y };
+  let halfX = 0;
+  let halfY = 0;
+  for (const v of col.footprint) {
+    const local = col.rotationDeg === 0 ? v : rotatePoint({ x: v.x, y: v.y }, c, -col.rotationDeg);
+    halfX = Math.max(halfX, Math.abs(local.x - c.x));
+    halfY = Math.max(halfY, Math.abs(local.y - c.y));
+  }
+  // 2·half (full effective face) σε mm· συμμετρία γύρω από το centroid → κάλυψη
+  // του πιο απομακρυσμένου vertex κάθε πλευράς + ίσο overhang.
+  return { widthMm: (2 * halfX) / s, depthMm: (2 * halfY) / s };
 }
 
 /** Απαιτούμενο μεμονωμένο pad μιας κολώνας (canvas units). */
 function requiredPad(col: LayoutColumnInput, sigmaKpa: number | undefined, s: number): PadRect {
+  const faces = effectiveFaces(col, s);
   const dims = suggestPadDimensions({
-    columnWidthMm: col.widthMm,
-    columnDepthMm: col.depthMm,
+    columnWidthMm: faces.widthMm,
+    columnDepthMm: faces.depthMm,
     axialServiceKn: col.axialServiceKn,
     soilBearingCapacityKpa: sigmaKpa,
   });
+  const halfW = (dims.widthMm / 2) * s;
+  const halfL = (dims.lengthMm / 2) * s;
+  const { hx, hy } = rotatedHalfExtents(halfW, halfL, col.rotationDeg);
   return {
     cx: col.centroid.x,
     cy: col.centroid.y,
-    halfW: (dims.widthMm / 2) * s,
-    halfL: (dims.lengthMm / 2) * s,
+    halfW,
+    halfL,
+    rotationDeg: col.rotationDeg,
+    aabbHalfW: hx,
+    aabbHalfL: hy,
   };
 }
 
-/** True αν δύο pads επικαλύπτονται ή το κενό τους είναι < clearance (canvas). */
+/**
+ * True αν δύο pads επικαλύπτονται ή το κενό τους είναι < clearance (canvas).
+ * Χρησιμοποιεί τα **world-AABB** half-extents ώστε το overlap test να ισχύει και
+ * για στραμμένες κολώνες (axis-aligned conservative).
+ */
 function padsShareFooting(a: PadRect, b: PadRect, clearanceCanvas: number): boolean {
-  const gapX = Math.abs(a.cx - b.cx) - (a.halfW + b.halfW);
-  const gapY = Math.abs(a.cy - b.cy) - (a.halfL + b.halfL);
+  const gapX = Math.abs(a.cx - b.cx) - (a.aabbHalfW + b.aabbHalfW);
+  const gapY = Math.abs(a.cy - b.cy) - (a.aabbHalfL + b.aabbHalfL);
   return gapX < clearanceCanvas && gapY < clearanceCanvas;
 }
 
@@ -187,12 +268,15 @@ function combinedFooting(
     cx /= pads.length;
     cy /= pads.length;
   }
-  // Μισές πλευρές που περικλείουν κάθε member-pad γύρω από το κέντρο.
+  // Μισές πλευρές που περικλείουν κάθε member-pad γύρω από το κέντρο. Χρήση των
+  // **world-AABB** half-extents: το combined είναι axis-aligned (rotation 0), άρα
+  // πρέπει να περικλείσει το world-aligned ίχνος κάθε (πιθανώς στραμμένου) pad —
+  // αλλιώς κολώνα στραμμένη 90° (width↔depth swap) μένει ακάλυπτη.
   let halfW = 0;
   let halfL = 0;
   for (const p of pads) {
-    halfW = Math.max(halfW, Math.abs(p.cx - cx) + p.halfW);
-    halfL = Math.max(halfL, Math.abs(p.cy - cy) + p.halfL);
+    halfW = Math.max(halfW, Math.abs(p.cx - cx) + p.aabbHalfW);
+    halfL = Math.max(halfL, Math.abs(p.cy - cy) + p.aabbHalfL);
   }
   // Έλεγχος εμβαδού έδρασης: μεγέθυνε ομοιόμορφα ώστε A ≥ ΣN/σ_allow.
   if (sumN > 0 && sigmaKpa && sigmaKpa > 0) {

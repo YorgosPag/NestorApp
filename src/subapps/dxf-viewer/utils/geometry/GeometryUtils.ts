@@ -235,6 +235,41 @@ export function segmentsIntersect(
   return false;
 }
 
+/** Σημείο τομής δύο ΤΜΗΜΑΤΩΝ + οι παράμετροι t (στο a) και u (στο b), ∈ [0,1]. */
+export interface SegmentIntersection {
+  readonly point: Point2D;
+  readonly t: number;
+  readonly u: number;
+}
+
+/**
+ * 🎯 CENTRALIZED SEGMENT-SEGMENT INTERSECTION POINT (SSoT, point-returning).
+ *
+ * Επιστρέφει το σημείο τομής δύο **τμημάτων** `a1→a2` και `b1→b2` (clamped: τέμνονται
+ * όντως μέσα στα όρια ΚΑΙ των δύο), μαζί με τις παραμέτρους `t`/`u`. `null` αν είναι
+ * παράλληλα/συγγραμμικά ή τέμνονται μόνο στις προεκτάσεις τους.
+ *
+ * Σε αντίθεση με το `segmentsIntersect` (boolean — selection systems) και τα
+ * infinite-line helpers (`wall-from-entity`/`angle-entity-math`, miter/γωνία), αυτό
+ * δίνει το ΣΗΜΕΙΟ τομής τμημάτων — π.χ. για planarization/noding ενός δικτύου
+ * γραμμών (auto-area face detection σε κατόψεις «σκάρα»).
+ */
+export function segmentIntersection(
+  a1: Point2D, a2: Point2D,
+  b1: Point2D, b2: Point2D,
+  eps = 1e-9,
+): SegmentIntersection | null {
+  const rx = a2.x - a1.x, ry = a2.y - a1.y;
+  const sx = b2.x - b1.x, sy = b2.y - b1.y;
+  const denom = rx * sy - ry * sx;
+  if (Math.abs(denom) < eps) return null; // παράλληλα ή συγγραμμικά
+  const qpx = b1.x - a1.x, qpy = b1.y - a1.y;
+  const t = (qpx * sy - qpy * sx) / denom;
+  const u = (qpx * ry - qpy * rx) / denom;
+  if (t < -eps || t > 1 + eps || u < -eps || u > 1 + eps) return null;
+  return { point: { x: a1.x + t * rx, y: a1.y + t * ry }, t, u };
+}
+
 /**
  * 🏢 ADR-114: CENTRALIZED BOUNDS CALCULATION
  * Re-export από geometry-utils.ts (Single Source of Truth)

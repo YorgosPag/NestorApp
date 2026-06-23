@@ -10,8 +10,10 @@
  *                        switch tool back to 'select'.
  *   array-edit-source  → enter Edit Source mode (Q21) for the primary
  *                        array.
- *   array-close-tab    → clear the primary selection so the contextual
- *                        tab disappears.
+ *
+ * NOTE: «Κλείσιμο» (`array.actions.close`) is NOT handled here — it is caught
+ * centrally by `routeRibbonAction` like every other contextual tab (ADR-363),
+ * via the single `closeContextualTab` deselect primitive.
  *
  * Mirrors the small "wrappedHandleAction" pattern used in
  * useDxfViewerCallbacks for cross-cutting UI side-effects.
@@ -75,7 +77,6 @@ export function useArrayRibbonActions(
       if (
         action !== 'array-explode' &&
         action !== 'array-edit-source' &&
-        action !== 'array-close-tab' &&
         action !== ARRAY_RIBBON_KEYS.actions.polarPickCenter &&
         action !== ARRAY_RIBBON_KEYS.actions.pathPickPath
       ) {
@@ -87,12 +88,6 @@ export function useArrayRibbonActions(
       const levelId = levelManager.currentLevelId;
       if (!primaryId || !levelId) {
         fallback(action, data);
-        return;
-      }
-
-      if (action === 'array-close-tab') {
-        universalSelection.replaceEntitySelection([]);
-        handleToolChange('select' as ToolType);
         return;
       }
 

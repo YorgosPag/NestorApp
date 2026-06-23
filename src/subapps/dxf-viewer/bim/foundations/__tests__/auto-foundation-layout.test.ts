@@ -7,9 +7,41 @@ import {
   MIN_PAD_CLEARANCE_MM,
   type LayoutColumnInput,
 } from '../auto-foundation-layout';
+import { polygonAreaCentroid } from '../../geometry/shared/polygon-utils';
 
-function col(id: string, x: number, y: number, axialServiceKn?: number, rotationDeg = 0): LayoutColumnInput {
-  return { id, centroid: { x, y }, widthMm: 400, depthMm: 400, axialServiceKn, baseZmm: -1000, rotationDeg };
+/** area-centroid του L-footprint (Point2D wrapper για το test). */
+function areaCentroid(poly: readonly { x: number; y: number }[]): { x: number; y: number } {
+  return polygonAreaCentroid(poly.map((p) => ({ ...p, z: 0 })));
+}
+
+/** Rotated-rectangle footprint (world) γύρω από (x,y), width×depth, CCW. */
+function rectFootprint(
+  x: number, y: number, widthMm: number, depthMm: number, rotationDeg: number,
+): { x: number; y: number }[] {
+  const hw = widthMm / 2;
+  const hd = depthMm / 2;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return [
+    { x: -hw, y: -hd }, { x: hw, y: -hd }, { x: hw, y: hd }, { x: -hw, y: hd },
+  ].map((c) => ({ x: x + c.x * cos - c.y * sin, y: y + c.x * sin + c.y * cos }));
+}
+
+function col(
+  id: string, x: number, y: number, axialServiceKn?: number, rotationDeg = 0,
+  widthMm = 400, depthMm = 400,
+): LayoutColumnInput {
+  return {
+    id,
+    centroid: { x, y },
+    footprint: rectFootprint(x, y, widthMm, depthMm, rotationDeg),
+    widthMm,
+    depthMm,
+    axialServiceKn,
+    baseZmm: -1000,
+    rotationDeg,
+  };
 }
 
 describe('planFoundationLayout', () => {
@@ -87,5 +119,74 @@ describe('planFoundationLayout', () => {
     );
     expect(plan.footings[0].combined).toBe(true);
     expect(plan.footings[0].rotationDeg).toBe(0);
+  });
+
+  it('combined footing fully covers a 90°-rotated rectangular column (world AABB, not local swap)', () => {
+    // Bug regression: col1 width=1000 (κατά Y λόγω rot90), depth=250 (κατά X).
+    // Centroid (776, 750), world footprint Y∈[250,1250]. Το combined enclosure
+    // ΠΡΕΠΕΙ να φτάσει τουλάχιστον col-top + overhang κατά Y, ΟΧΙ να μπερδέψει
+    // width↔depth. Δεύτερη κολώνα ώστε να μπει στο combined path.
+    const rotated = col('C1', 776, 750, 18, 90, 1000, 250);
+    const neighbour = col('C2', 1276, 375, 14, 180, 750, 250);
+    const plan = planFoundationLayout([rotated, neighbour], 200, 'mm');
+    expect(plan.footings).toHaveLength(1);
+    const f = plan.footings[0];
+    expect(f.combined).toBe(true);
+
+    // Το πέδιλο πρέπει να καλύπτει το ΠΡΑΓΜΑΤΙΚΟ world Y-extent της col1
+    // ([250,1250]) + overhang 150 ανά πλευρά → top ≥ 1400, bottom ≤ 100.
+    const top = f.position.y + f.lengthMm / 2;
+    const bottom = f.position.y - f.lengthMm / 2;
+    expect(top).toBeGreaterThanOrEqual(1400 - 1);
+    expect(bottom).toBeLessThanOrEqual(100 + 1);
+
+    // Και το X-extent της col2 ([901,1651]) + overhang → right ≥ 1801.
+    const right = f.position.x + f.widthMm / 2;
+    expect(right).toBeGreaterThanOrEqual(1801 - 1);
+  });
+
+  it('combined footing of two 90°-rotated tall columns grows along Y (no width/depth swap)', () => {
+    // Δύο κολώνες 1000(Y)×250(X) στραμμένες 90°, στοιχισμένες κατά Y, κοντινές
+    // κατά X → ενώνονται. Το enclosure κατά Y πρέπει να βασίζεται στο 1000 (world),
+    // όχι στο depth 250.
+    const a = col('A', 0, 0, 50, 90, 1000, 250);
+    const b = col('B', 300, 0, 50, 90, 1000, 250);
+    const plan = planFoundationLayout([a, b], undefined, 'mm');
+    expect(plan.footings).toHaveLength(1);
+    const f = plan.footings[0];
+    // World Y half-extent ≥ 1000/2 + 150 overhang = 650· length ≥ 1300.
+    expect(f.lengthMm).toBeGreaterThanOrEqual(1300 - 1);
+  });
+
+  it('isolated footing under an L-shaped (composite) column: centred on area-centroid + ≥150mm overhang all faces', () => {
+    // L-footprint (Firestore-verified bug): κάτω βραχίονας x[651,1651] y[250,500] +
+    // αριστερός βραχίονας x[651,901] y[500,1250]. Bbox 1000×1000, αλλά το υλικό
+    // είναι εκκεντρικό. Vertex-mean = (1068,667)· AREA centroid ≈ (990.7, 589.3).
+    const lFootprint = [
+      { x: 651.4, y: 250 }, { x: 1651.4, y: 250 }, { x: 1651.4, y: 500 },
+      { x: 901.4, y: 500 }, { x: 901.4, y: 1250 }, { x: 651.4, y: 1250 },
+    ];
+    const lColumn: LayoutColumnInput = {
+      id: 'L', centroid: areaCentroid(lFootprint), footprint: lFootprint,
+      widthMm: 1000, depthMm: 1000, axialServiceKn: 268, baseZmm: -1200, rotationDeg: 0,
+    };
+    const plan = planFoundationLayout([lColumn], 200, 'mm');
+    expect(plan.footings).toHaveLength(1);
+    const f = plan.footings[0];
+    expect(f.combined).toBe(false);
+
+    // Κεντράρισμα στο area-centroid (ΟΧΙ vertex-mean 1068/667, ΟΧΙ bbox-center 1151/750).
+    expect(f.position.x).toBeCloseTo(990.7, 0);
+    expect(f.position.y).toBeCloseTo(589.3, 0);
+
+    // ≥150mm εξοχή σε ΚΑΘΕ παρειά του πραγματικού ίχνους (rotation 0 → axis-aligned).
+    const left = f.position.x - f.widthMm / 2;
+    const right = f.position.x + f.widthMm / 2;
+    const bottom = f.position.y - f.lengthMm / 2;
+    const topY = f.position.y + f.lengthMm / 2;
+    expect(651.4 - left).toBeGreaterThanOrEqual(150 - 1);   // αριστερή παρειά
+    expect(right - 1651.4).toBeGreaterThanOrEqual(150 - 1); // δεξιά άκρη κάτω βραχίονα
+    expect(250 - bottom).toBeGreaterThanOrEqual(150 - 1);   // κάτω παρειά
+    expect(topY - 1250).toBeGreaterThanOrEqual(150 - 1);    // πάνω άκρη αριστ. βραχίονα
   });
 });

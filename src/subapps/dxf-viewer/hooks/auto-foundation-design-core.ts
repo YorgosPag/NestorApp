@@ -43,7 +43,8 @@ import {
   footingAbsoluteZ,
 } from '../bim/foundations/footing-element-summary';
 import { collectFoundationFootings } from '../bim/foundations/foundation-footing-candidates';
-import { footingSupportsColumnBase, polygonCentroid } from '../bim/foundations/footing-column-coverage';
+import { footingSupportsColumnBase } from '../bim/foundations/footing-column-coverage';
+import { polygonAreaCentroid } from '../bim/geometry/shared/polygon-utils';
 import { resolveColumnBaseZmm } from '../bim/geometry/column-vertical-profile';
 import { buildDefaultFoundationParams, buildFoundationEntity } from './drawing/foundation-completion';
 import { resolveFoundationTopElevationMm } from '../bim/types/foundation-types';
@@ -139,12 +140,15 @@ function toLayoutColumn(
   if (column.params.footingId !== undefined && manualFootingIds.has(column.params.footingId)) {
     return null;
   }
-  const centroid = polygonCentroid(verts);
+  // Area-centroid (load resultant) — ΟΧΙ vertex-mean· κρίσιμο για composite L/T/U
+  // ώστε το πέδιλο να κεντράρεται στο πραγματικό κέντρο βάρους (ομοιόμορφη πίεση).
+  const centroid = polygonAreaCentroid(verts);
   const baseZmm = resolveColumnBaseZmm(column.params, { floorElevationMm: activeFloorElevationMm });
   if (coveredByManualFooting(column, centroid, baseZmm, manualFootings)) return null;
   return {
     id: column.id,
     centroid,
+    footprint: verts.map((v) => ({ x: v.x, y: v.y })),
     widthMm: column.params.width,
     depthMm: column.params.depth,
     axialServiceKn: serviceAxialKn(column.params.appliedLoad),

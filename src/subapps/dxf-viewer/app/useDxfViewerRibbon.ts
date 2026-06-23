@@ -99,13 +99,15 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   const lineToolBridge = useRibbonLineToolBridge({ levelManager, universalSelection });
   const xlineModeBridge = useRibbonXlineModeBridge();
 
-  // ADR-363 — uniform «Κλείσιμο» for every contextual tab: deselect the active
-  // entity so the contextual tab disappears. SSoT deselect = the same primitive
-  // the working mep close handlers already use (`clearAll()`); replaces the
-  // dead `bim:select-none` emits + the no-op bridges (column/wall/slab/…).
+  // ADR-363 — THE single «Κλείσιμο» primitive for EVERY contextual tab (generic
+  // BIM entities + mep + array). Deselect via the existing SSoT `clearAll()`
+  // (already used in 12+ sites) + drop any active tool back to `select` (absorbs
+  // the array close-tab behavior). `routeRibbonAction` invokes this for any
+  // `*.action(s).close` key, so per-bridge close handlers no longer exist.
   const closeContextualTab = useCallback((): void => {
     universalSelection.clearAll();
-  }, [universalSelection]);
+    handleToolChange('select' as ToolType);
+  }, [universalSelection, handleToolChange]);
 
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,

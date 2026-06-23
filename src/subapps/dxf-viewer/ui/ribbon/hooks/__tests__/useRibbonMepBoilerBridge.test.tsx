@@ -9,7 +9,7 @@
  *     patched field; ignores NaN. (Connector re-seeding is the command's job — the
  *     bridge does NOT pre-build connectors, unlike the manifold bridge.)
  *   - onAction: delete emits the delete-requested event (confirm accepted); close
- *     clears the selection.
+ *     is a no-op in the bridge (handled centrally by routeRibbonAction, ADR-363).
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -88,7 +88,6 @@ function makeLevelManager(entity: unknown | null) {
 function makeSelection(id: string | null) {
   return {
     getPrimaryId: jest.fn(() => id),
-    clearAll: jest.fn(),
   } as unknown as Parameters<typeof useRibbonMepBoilerBridge>[0]['universalSelection'];
 }
 
@@ -511,15 +510,14 @@ describe('useRibbonMepBoilerBridge — onAction', () => {
     emitSpy.mockRestore();
   });
 
-  it('close clears the selection', () => {
-    const selection = makeSelection('boiler-1');
+  it('close is a no-op in the bridge — intercepted centrally by routeRibbonAction (ADR-363)', () => {
     const { result } = renderHook(() =>
       useRibbonMepBoilerBridge({
         levelManager: makeLevelManager(boiler),
-        universalSelection: selection,
+        universalSelection: makeSelection('boiler-1'),
       }),
     );
-    act(() => result.current.onAction(MEP_BOILER_RIBBON_KEYS_ACTIONS.close));
-    expect(selection.clearAll).toHaveBeenCalled();
+    // «Κλείσιμο» never reaches the bridge — routeRibbonAction intercepts it first.
+    expect(() => act(() => result.current.onAction(MEP_BOILER_RIBBON_KEYS_ACTIONS.close))).not.toThrow();
   });
 });

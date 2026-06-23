@@ -52,7 +52,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'clearAll'
+  'getPrimaryId'
 >;
 
 export interface UseRibbonMepWaterHeaterBridgeProps {
@@ -160,10 +160,7 @@ export function useRibbonMepWaterHeaterBridge(
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action === MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS.close) {
-        universalSelection.clearAll();
-        return;
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in routeRibbonAction (single SSoT).
       if (action !== MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS.delete) return;
       const waterHeater = resolveWaterHeater();
       if (!waterHeater) return;

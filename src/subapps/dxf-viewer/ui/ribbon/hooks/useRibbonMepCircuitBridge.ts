@@ -64,7 +64,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getSelectedEntityIds' | 'clearAll'
+  'getSelectedEntityIds'
 >;
 
 export interface UseRibbonMepCircuitBridgeProps {
@@ -171,9 +171,7 @@ export function useRibbonMepCircuitBridge(
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.deriveNetworks) return handleDeriveNetworks();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.addMembers) return handleAddMembers();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers) return handleRemoveMembers();
-      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.close) {
-        universalSelection.clearAll();
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in routeRibbonAction (single SSoT).
     },
     [handleCreate, handleDeriveNetworks, handleAddMembers, handleRemoveMembers, universalSelection],
   );

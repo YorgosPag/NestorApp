@@ -265,6 +265,35 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
   return { x: sumX / n, y: sumY / n };
 }
 
+/**
+ * **Area** centroid (κέντρο βάρους εμβαδού) ενός πολυγώνου μέσω του shoelace SSoT
+ * (XY plane, z αγνοείται). Σε αντίθεση με το {@link polygonCentroid} (μέσος όρος
+ * κορυφών), αυτό δίνει το πραγματικό κέντρο βάρους — **κρίσιμο για κοίλα/μη-συμμετρικά**
+ * αποτυπώματα (L/T/U), όπου ο μέσος όρος κορυφών ≠ κέντρο μάζας (π.χ. τοποθέτηση
+ * θεμελίου κάτω από το load resultant για ομοιόμορφη πίεση). Για συμμετρικά
+ * (ορθογώνιο) ταυτίζεται με τον μέσο όρο κορυφών.
+ *
+ * Degenerate (< 3 κορυφές ή μηδενικό εμβαδόν) → fallback στον vertex-mean
+ * {@link polygonCentroid} (well-defined αντί διαίρεση με το μηδέν).
+ */
+export function polygonAreaCentroid(vertices: readonly Point3D[]): { x: number; y: number } {
+  const n = vertices.length;
+  if (n < 3) return polygonCentroid(vertices);
+  const signedArea = shoelaceArea(vertices);
+  if (signedArea === 0) return polygonCentroid(vertices);
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    const cross = a.x * b.y - b.x * a.y;
+    cx += (a.x + b.x) * cross;
+    cy += (a.y + b.y) * cross;
+  }
+  const factor = 1 / (6 * signedArea);
+  return { x: cx * factor, y: cy * factor };
+}
+
 // ─── Polygon ↔ axis projection (SSoT) ─────────────────────────────────────────
 //
 // Moved to sibling module `polygon-axis-projection.ts` (N.7.1 500-line cap).

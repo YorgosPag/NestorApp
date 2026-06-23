@@ -9,7 +9,7 @@
  *     patched field; ignores NaN. (Connector re-seeding is the command's job — the
  *     bridge does NOT pre-build connectors, unlike the manifold bridge.)
  *   - onAction: delete emits the delete-requested event (confirm accepted); close
- *     clears the selection.
+ *     is a no-op in the bridge (handled centrally by routeRibbonAction, ADR-363).
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -21,6 +21,16 @@ import {
 import { UpdateMepRadiatorParamsCommand } from '../../../../core/commands/entity-commands/UpdateMepRadiatorParamsCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+
+// Break the Firebase transitive import chain from useRadiatorSizing → useSpaceHeatLoads
+// → useHeatLoadInputs → useLevels → Firebase. Mirror of the boiler test pattern.
+let mockHeatLoads: { results: Map<string, { totalW: number }>; totalW: number } | null = null;
+jest.mock('../../../../hooks/data/useSpaceHeatLoads', () => ({
+  useSpaceHeatLoads: () => mockHeatLoads,
+}));
+jest.mock('../../../../bim/mep-systems/mep-system-store', () => ({
+  useMepSystemStore: { getState: () => ({ getSystems: () => [] }) },
+}));
 
 // Mock the command to capture the patched params (avoids geometry/validation calc).
 jest.mock(
@@ -72,7 +82,6 @@ function makeLevelManager(entity: unknown | null) {
 function makeSelection(id: string | null) {
   return {
     getPrimaryId: jest.fn(() => id),
-    clearAll: jest.fn(),
   } as unknown as Parameters<typeof useRibbonMepRadiatorBridge>[0]['universalSelection'];
 }
 
@@ -193,15 +202,14 @@ describe('useRibbonMepRadiatorBridge — onAction', () => {
     emitSpy.mockRestore();
   });
 
-  it('close clears the selection', () => {
-    const selection = makeSelection('rad-1');
+  it('close is a no-op in the bridge — intercepted centrally by routeRibbonAction (ADR-363)', () => {
     const { result } = renderHook(() =>
       useRibbonMepRadiatorBridge({
         levelManager: makeLevelManager(radiator),
-        universalSelection: selection,
+        universalSelection: makeSelection('rad-1'),
       }),
     );
-    act(() => result.current.onAction(MEP_RADIATOR_RIBBON_KEYS_ACTIONS.close));
-    expect(selection.clearAll).toHaveBeenCalled();
+    // «Κλείσιμο» never reaches the bridge — routeRibbonAction intercepts it first.
+    expect(() => act(() => result.current.onAction(MEP_RADIATOR_RIBBON_KEYS_ACTIONS.close))).not.toThrow();
   });
 });

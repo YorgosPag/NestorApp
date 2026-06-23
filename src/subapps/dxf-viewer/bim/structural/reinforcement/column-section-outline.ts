@@ -33,6 +33,18 @@ import { polygonArea, polygonPerimeter, polygonBbox } from '../../geometry/share
 export type ColumnReinforcementMode = 'perimeter' | 'circular' | 'wall';
 
 /**
+ * SSoT type-guard «η διατομή οπλίζεται ως **τοίχωμα**» (boundary elements +
+ * κατανεμημένος κορμός, EC8 §5.4.3.4). ΕΝΑ σημείο για τον discriminant `mode==='wall'`
+ * που μοιράζονται section-outline / compute / suggester / validator → μηδέν scatter.
+ * Type-guard (`mode is 'wall'`) ώστε να διατηρείται το TypeScript narrowing.
+ */
+export function isWallReinforcementMode(
+  mode: ColumnReinforcementMode | undefined,
+): mode is 'wall' {
+  return mode === 'wall';
+}
+
+/**
  * EC8 §5.1.2: στοιχείο θεωρείται **τοίχωμα** όταν ο λόγος επιμήκυνσης (μέγιστη
  * διάσταση διατομής / πάχος) ≥ 4. Πάνω από αυτό → boundary-element detailing.
  */
@@ -96,7 +108,7 @@ export function resolveColumnReinforcementSection(params: ColumnParams): ColumnR
   const perimeterMm = isCircular ? Math.PI * diameterMm! : polygonPerimeter(xy);
 
   const mode = resolveMode(params, bboxWidthMm, bboxDepthMm, isCircular);
-  const wallAxis = mode === 'wall'
+  const wallAxis = isWallReinforcementMode(mode)
     ? (bboxWidthMm >= bboxDepthMm ? { x: 1, y: 0 } : { x: 0, y: 1 })
     : undefined;
 

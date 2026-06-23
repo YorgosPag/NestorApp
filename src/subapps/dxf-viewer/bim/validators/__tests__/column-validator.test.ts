@@ -241,6 +241,26 @@ describe('validateColumnParams — shear-wall kind (Phase 8)', () => {
     expect(r.codeViolations).not.toContain('column.validation.codeViolations.widthTooSmall');
     expect(r.codeViolations).not.toContain('column.validation.codeViolations.depthTooSmall');
   });
+
+  // Regression (Issue 1, 2026-06-23): το τοιχίο οπλίζεται με boundary + κατανεμημένο
+  // web (EC8 §5.4.3.4.2, ρ ≈ 0.2-0.9% επί gross), που διέπεται από wall ρ_min
+  // (EC2 §9.6.2 ≈ 0.002), ΟΧΙ από το column 1% (EC8 §5.4.3.2.2). Πριν το fix ο
+  // validator εφάρμοζε το column 1% → ψευδές reinforcementRatioBelowMin.
+  it('σωστά οπλισμένο τοιχίο → ΧΩΡΙΣ ψευδές reinforcementRatioBelowMin', () => {
+    // auto: true → ο validator τρέχει φρέσκο code-design (boundary+web) και ελέγχει το ρ.
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 3000, depth: 250, height: 3000,
+      reinforcement: {
+        longitudinal: { diameterMm: 16, count: 4 },
+        stirrups: { diameterMm: 8, spacingMm: 200, spacingCriticalMm: 100 },
+        coverMm: 30,
+        auto: true,
+      },
+    }));
+    expect(r.codeViolations).not.toContain(
+      'column.validation.codeViolations.reinforcementRatioBelowMin',
+    );
+  });
 });
 
 describe('validateColumnParams — I-shape kind (Phase 8)', () => {

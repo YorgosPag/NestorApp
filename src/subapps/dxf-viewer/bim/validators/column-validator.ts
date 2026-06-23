@@ -58,7 +58,7 @@ import { polygonArea, minPolygonInteriorAngleDeg } from '../geometry/shared/poly
 import { resolveStructuralCode, type StructuralCodeId } from '../structural/codes';
 import { resolveActiveColumnReinforcement } from '../structural/section-context';
 import { computeColumnReinforcementQuantities } from '../structural/reinforcement/column-reinforcement-compute';
-import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
+import { resolveColumnReinforcementSection, isWallReinforcementMode } from '../structural/reinforcement/column-section-outline';
 
 /** Result of a column validation pass — hard errors non-empty when invalid. */
 export interface ColumnValidationResult {
@@ -359,7 +359,13 @@ function validateReinforcementRatio(
   const { ratio } = computeColumnReinforcementQuantities(ctx, r, undefined, section);
   const limits = provider.columnReinforcementLimits(ctx, r.longitudinal.diameterMm);
 
-  if (ratio < limits.minRatio) {
+  // ADR-460 — τοίχωμα: ο κατανεμημένος οπλισμός (boundary + web, EC8 §5.4.3.4.2)
+  // διέπεται από wall ρ_min (EC2 §9.6.2 / ΕΚΩΣ §18.4), ΟΧΙ από το column 1%
+  // (EC8 §5.4.3.2.2). Χρήση του `wallMinRatio` ώστε σωστά οπλισμένο τοιχίο να ΜΗΝ
+  // σημαδεύεται ψευδώς ως `reinforcementRatioBelowMin`. Fallback → minRatio.
+  const minRatio = isWallReinforcementMode(section.mode) ? limits.wallMinRatio ?? limits.minRatio : limits.minRatio;
+
+  if (ratio < minRatio) {
     codeViolations.push('column.validation.codeViolations.reinforcementRatioBelowMin');
   } else if (ratio > limits.maxRatio) {
     codeViolations.push('column.validation.codeViolations.reinforcementRatioAboveMax');

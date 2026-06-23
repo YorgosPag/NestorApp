@@ -24,7 +24,7 @@ import {
 } from './column-rebar-layout';
 import { buildColumnCrossTies, crossTieCenterlineLengthMm } from './column-cross-ties';
 import { resolveColumnRebarLayout, resolveColumnCrossTies } from './column-rebar-layout-resolve';
-import type { ColumnReinforcementSection } from './column-section-outline';
+import { isWallReinforcementMode, type ColumnReinforcementSection } from './column-section-outline';
 
 const MM_TO_M = 0.001;
 
@@ -187,7 +187,7 @@ export function computeColumnReinforcementQuantities(
 
   // Geometry-is-SSoT: ΙΔΙΑ διάταξη με 2Δ/3Δ μέσω του dispatcher (ή rect fast-path).
   const layout = section ? resolveColumnRebarLayout(r, section) : computeColumnRebarLayout(r, ctx.widthMm, ctx.depthMm);
-  const isWall = section?.mode === 'wall';
+  const isWall = isWallReinforcementMode(section?.mode);
   const lng = longitudinalSteel(r, layout, barLengthMm, isWall);
 
   // Εγκάρσιος οπλισμός ανά τύπο: spiral = συνεχής· closed-hooked/welded = N κλειστά.

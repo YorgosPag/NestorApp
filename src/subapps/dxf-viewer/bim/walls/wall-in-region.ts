@@ -27,9 +27,17 @@ import {
   isPolylineEntity,
   isLWPolylineEntity,
   isSpaceSeparatorEntity,
+  isArcEntity,
+  isCircleEntity,
+  isEllipseEntity,
+  isSplineEntity,
 } from '../../types/entities';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { isPointInPolygon, arcToPolyline } from '../../utils/geometry/GeometryUtils';
+// Reuse των ΚΑΝΟΝΙΚΩΝ tessellators (μηδέν νέος): arc/circle → arcToPolyline (ADR-166),
+// ellipse/spline → trim SSoT. Έτσι τα καμπύλα όρια (τόξα/κύκλοι/τεταρτημόρια/καμπύλες)
+// συμμετέχουν στην ανίχνευση περιοχής όπως οι ευθείες.
+import { tessellateEllipse, tessellateSpline } from '../../systems/trim/trim-intersection-mapper';
 import type { WallEntity } from '../types/wall-types';
 import {
   buildDefaultWallParams,
@@ -60,13 +68,47 @@ export interface DetectedRectangle {
 
 // ─── Scene → candidate segments ──────────────────────────────────────────────
 
+/** Επιλογές εξαγωγής τμημάτων. */
+export interface ExtractLineSegmentsOptions {
+  /**
+   * Αν `true`, τα καμπύλα entities (ARC/CIRCLE/ELLIPSE/SPLINE) δειγματίζονται σε
+   * τμήματα ώστε να συμμετέχουν στην ανίχνευση περιοχής (τόξα/κύκλοι/τεταρτημόρια/
+   * καμπύλες ως όρια δωματίου). Default `false` → ΜΟΝΟ ευθείες (πλήρης μη-regression
+   * για τον wall/thermal rectangle detector που θέλει μόνο ευθείες πλευρές).
+   */
+  readonly tessellateCurves?: boolean;
+}
+
+/** Σπάει μια αλυσίδα δειγματισμένων σημείων σε διαδοχικά τμήματα (closed → +κλείσιμο). */
+function pushChainSegments(
+  id: string | undefined,
+  pts: readonly Point2D[],
+  closed: boolean,
+  out: RegionLineSeg[],
+): void {
+  if (pts.length < 2) return;
+  for (let i = 0; i < pts.length - 1; i++) {
+    out.push({ id, start: { x: pts[i].x, y: pts[i].y }, end: { x: pts[i + 1].x, y: pts[i + 1].y } });
+  }
+  if (closed) {
+    const a = pts[pts.length - 1];
+    const b = pts[0];
+    out.push({ id, start: { x: a.x, y: a.y }, end: { x: b.x, y: b.y } });
+  }
+}
+
 /**
  * Όλα τα ευθύγραμμα τμήματα από scene entities που μπορούν να γίνουν πλευρές:
- * κάθε LINE (1 τμήμα) + κάθε ακμή ανοιχτού/κλειστού POLYLINE/LWPOLYLINE. Κρατά
- * το `id` της οντότητας (για highlight των picked). Πηγή για τους τρόπους «1
- * κλικ μέσα» και «box-select».
+ * κάθε LINE (1 τμήμα) + κάθε ακμή ανοιχτού/κλειστού POLYLINE/LWPOLYLINE + (opt-in)
+ * δειγματισμένα καμπύλα (ARC/CIRCLE/ELLIPSE/SPLINE). Κρατά το `id` της οντότητας
+ * (για highlight των picked). Πηγή για τους τρόπους «1 κλικ μέσα» / «box-select»
+ * και για τον auto-area room detector (με `tessellateCurves`).
  */
-export function extractLineSegments(entities: readonly Entity[]): RegionLineSeg[] {
+export function extractLineSegments(
+  entities: readonly Entity[],
+  options: ExtractLineSegmentsOptions = {},
+): RegionLineSeg[] {
+  const { tessellateCurves = false } = options;
   const segs: RegionLineSeg[] = [];
   for (const e of entities) {
     if (isLineEntity(e)) {
@@ -90,6 +132,20 @@ export function extractLineSegments(entities: readonly Entity[]): RegionLineSeg[
     if (isSpaceSeparatorEntity(e)) {
       const { start, end } = e.params;
       segs.push({ id: e.id, start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y } });
+      continue;
+    }
+    // ── Καμπύλα όρια (opt-in) — reuse των κανονικών tessellators ──────────────
+    if (!tessellateCurves) continue;
+    if (isArcEntity(e)) {
+      pushChainSegments(e.id, arcToPolyline(e), false, segs); // ανοιχτό τόξο/τεταρτημόριο
+    } else if (isCircleEntity(e)) {
+      pushChainSegments(e.id, arcToPolyline({ center: e.center, radius: e.radius, startAngle: 0, endAngle: 360 }), true, segs);
+    } else if (isEllipseEntity(e)) {
+      const span = Math.abs((e.endParam ?? Math.PI * 2) - (e.startParam ?? 0));
+      const fullEllipse = span >= Math.PI * 2 - 1e-6;
+      pushChainSegments(e.id, tessellateEllipse(e), fullEllipse, segs);
+    } else if (isSplineEntity(e)) {
+      pushChainSegments(e.id, tessellateSpline(e), e.closed === true, segs);
     }
   }
   return segs;

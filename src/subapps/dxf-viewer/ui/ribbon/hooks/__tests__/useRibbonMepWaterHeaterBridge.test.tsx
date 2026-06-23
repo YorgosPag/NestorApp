@@ -9,7 +9,7 @@
  *     patched field; ignores NaN. (Connector re-seeding is the command's job — the
  *     bridge does NOT pre-build connectors, unlike the manifold bridge.)
  *   - onAction: delete emits the delete-requested event (confirm accepted); close
- *     clears the selection.
+ *     is a no-op in the bridge (handled centrally by routeRibbonAction, ADR-363).
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -85,7 +85,6 @@ function makeLevelManager(entity: unknown | null) {
 function makeSelection(id: string | null) {
   return {
     getPrimaryId: jest.fn(() => id),
-    clearAll: jest.fn(),
   } as unknown as Parameters<typeof useRibbonMepWaterHeaterBridge>[0]['universalSelection'];
 }
 
@@ -259,15 +258,15 @@ describe('useRibbonMepWaterHeaterBridge — onAction', () => {
     emitSpy.mockRestore();
   });
 
-  it('close clears the selection', () => {
-    const selection = makeSelection('wh-1');
+  it('close is a no-op in the bridge — intercepted centrally by routeRibbonAction (ADR-363)', () => {
     const { result } = renderHook(() =>
       useRibbonMepWaterHeaterBridge({
         levelManager: makeLevelManager(waterHeater),
-        universalSelection: selection,
+        universalSelection: makeSelection('wh-1'),
       }),
     );
-    act(() => result.current.onAction(MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS.close));
-    expect(selection.clearAll).toHaveBeenCalled();
+    // «Κλείσιμο» never reaches the bridge — routeRibbonAction intercepts it first.
+    // Verify onAction does not throw.
+    expect(() => act(() => result.current.onAction(MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS.close))).not.toThrow();
   });
 });

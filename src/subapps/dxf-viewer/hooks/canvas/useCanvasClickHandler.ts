@@ -36,7 +36,7 @@ import {
 import type { EntityPickContext } from './entity-pick-handlers';
 import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
-import { getHatchPickMode } from '../../bim/hatch/hatch-pick-mode-store';
+import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -195,7 +195,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.75: ADR-507 Φ3 — Hatch pick-point (Τρόπος Β). ΕΝΑ κλικ μέσα σε
     // περιοχή → auto boundary + νησιά → HatchEntity. Καταναλώνει το κλικ ώστε να
     // ΜΗΝ μπει στο unified drawing (boundary accumulation = Τρόπος Α).
-    if (activeTool === 'hatch' && getHatchPickMode() === 'pick-point') {
+    if (isHatchPickPointActive(activeTool)) {
       handleHatchPickPointClick(worldPoint, params);
       return;
     }

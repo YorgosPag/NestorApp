@@ -4,6 +4,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { segmentIntersection } from '../../utils/geometry/GeometryUtils';
+import { getNearestPointOnLine, getLineParameter, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // TYPES
@@ -11,6 +13,89 @@ import type { Point2D } from '../../rendering/types/Types';
 
 interface Node {
   pos: Point2D;
+}
+
+/** Param-space epsilon: αγνοούμε τομές ακριβώς στα άκρα ενός τμήματος (t≈0/1). */
+const PARAM_EPS = 1e-6;
+
+/**
+ * Planarization / noding: σπάει τα τμήματα στα σημεία **τομής** τους (X-crossings
+ * ΚΑΙ T-junctions) ώστε να προκύψει επίπεδος γράφος όπου τα τμήματα συναντιούνται
+ * ΜΟΝΟ σε κορυφές. Απαραίτητο για κατόψεις «σκάρα» (γραμμές που τέμνονται στη μέση,
+ * όχι άκρο-με-άκρο): χωρίς αυτό ο half-edge face traversal δεν βρίσκει τα δωμάτια,
+ * γιατί τα crossings δεν είναι κόμβοι του γράφου.
+ *
+ * **Tolerance-aware (ADR-507 Φ3):** σε πραγματικές κατόψεις οι τοίχοι σπάνια
+ * τέμνονται/ενώνονται τέλεια — ένα άκρο σταματά λίγα mm **πριν** (κενό) ή **μετά**
+ * (overshoot) τον κάθετο τοίχο. Το exact `segmentIntersection` τα χάνει (t/u εκτός
+ * [0,1]) → το κελί δεν κλείνει → ο traversal διαρρέει σε γιγάντιο face. Γι' αυτό,
+ * πέρα από τις ακριβείς τομές, σπάμε ΚΑΙ σε **T-junctions με ανοχή**: αν το άκρο
+ * ενός τμήματος προβάλλεται στο ΕΣΩΤΕΡΙΚΟ ενός άλλου σε απόσταση ≤ `snapTol`,
+ * σπάμε τον «host» στο foot point. Το άκρο και το foot απέχουν ≤ `snapTol`, οπότε
+ * το `findOrAdd` (ίδια ανοχή) τα ενώνει αυτόματα σε έναν κόμβο — χωρίς να
+ * μετακινήσουμε άκρα. Έτσι κλείνουν gap **και** overshoot junctions.
+ *
+ * Το (κοινό) σημείο τομής μοιράζεται ως ΙΔΙΟ object και στα δύο τμήματα ώστε το
+ * endpoint-merge του traversal να τα ενώσει σε έναν κόμβο. O(n²) pairwise — το
+ * αποτέλεσμα γίνεται cache στο `getCachedClosedFaces`.
+ *
+ * @param snapTol Ανοχή σε world units (= `max(SNAP_DEFAULT/scale, gapTolerance)`).
+ *   Τροφοδοτεί το T-junction noding· 0 = μόνο exact crossings (μη-regression).
+ */
+function planarizeSegments(
+  linePairs: ReadonlyArray<readonly [Point2D, Point2D]>,
+  snapTol: number,
+  eps = 1e-9,
+): [Point2D, Point2D][] {
+  const n = linePairs.length;
+  const cuts: { t: number; p: Point2D }[][] = Array.from({ length: n }, () => []);
+
+  // Split ΜΟΝΟ στο ΕΣΩΤΕΡΙΚΟ κάθε τμήματος· οι ακραίες ενώσεις (t≈0/1) πιάνονται
+  // ήδη από το endpoint-merge (`findOrAdd`) του face traversal.
+  const addCut = (seg: number, t: number, p: Point2D): void => {
+    if (t > PARAM_EPS && t < 1 - PARAM_EPS) cuts[seg].push({ t, p });
+  };
+
+  // T-junction με ανοχή: αν το άκρο `P` πέφτει στο ΕΣΩΤΕΡΙΚΟ του host `[h1,h2]` σε
+  // απόσταση ≤ snapTol, σπάμε τον host στο foot. ΟΛΗ η γεωμετρία μέσω υπαρχόντων
+  // SSoT (geometry-utils, ADR-065): param + clamped distance + foot point — μηδέν
+  // inline math, μηδέν νέος intersection helper.
+  const tryEndpointSplit = (P: Point2D, hostIdx: number, h1: Point2D, h2: Point2D): void => {
+    if (snapTol <= 0) return;
+    const t = getLineParameter(P, h1, h2);
+    if (t <= PARAM_EPS || t >= 1 - PARAM_EPS) return; // μόνο εσωτερικό (T-junction)
+    if (pointToLineDistance(P, h1, h2) > snapTol) return;
+    addCut(hostIdx, t, getNearestPointOnLine(P, h1, h2, true));
+  };
+
+  for (let i = 0; i < n; i++) {
+    const [a1, a2] = linePairs[i];
+    for (let j = i + 1; j < n; j++) {
+      const [b1, b2] = linePairs[j];
+      const hit = segmentIntersection(a1, a2, b1, b2, eps);
+      if (hit) {
+        addCut(i, hit.t, hit.point);
+        addCut(j, hit.u, hit.point);
+        continue;
+      }
+      // Καμία ακριβής τομή → δοκίμασε tolerance-aware T-junctions και προς τις 2
+      // κατευθύνσεις (άκρο του ενός στο εσωτερικό του άλλου).
+      tryEndpointSplit(b1, i, a1, a2);
+      tryEndpointSplit(b2, i, a1, a2);
+      tryEndpointSplit(a1, j, b1, b2);
+      tryEndpointSplit(a2, j, b1, b2);
+    }
+  }
+  const out: [Point2D, Point2D][] = [];
+  for (let i = 0; i < n; i++) {
+    const [s, e] = linePairs[i];
+    if (cuts[i].length === 0) { out.push([s, e]); continue; }
+    cuts[i].sort((p, q) => p.t - q.t);
+    let prev = s;
+    for (const c of cuts[i]) { out.push([prev, c.p]); prev = c.p; }
+    out.push([prev, e]);
+  }
+  return out;
 }
 
 // ============================================================================
@@ -31,6 +116,12 @@ export function findClosedPolygonsFromLines(
 ): Point2D[][] {
   if (linePairs.length < 3) return [];
 
+  // 0. Planarization/noding — σπάμε τα τμήματα στα σημεία τομής (X + tolerance-aware
+  // T-junctions) ώστε οι διασταυρούμενες γραμμές («σκάρα») ΚΑΙ οι τοίχοι με μικρά
+  // κενά/overshoots να γίνουν κόμβοι του γράφου → βρίσκονται τα δωμάτια. Το `tolerance`
+  // (snapTol, world units) τροφοδοτεί το T-junction noding ΚΑΙ το endpoint-merge.
+  const noded = planarizeSegments(linePairs, tolerance);
+
   // 1. Normalize endpoints
   const nodes: Node[] = [];
   const edgeList: [number, number][] = [];
@@ -43,7 +134,7 @@ export function findClosedPolygonsFromLines(
     return nodes.push({ pos: { x: p.x, y: p.y } }) - 1;
   };
 
-  for (const [s, e] of linePairs) {
+  for (const [s, e] of noded) {
     const u = findOrAdd(s);
     const v = findOrAdd(e);
     if (u !== v) edgeList.push([u, v]);

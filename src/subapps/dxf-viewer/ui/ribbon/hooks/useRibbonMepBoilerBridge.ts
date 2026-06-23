@@ -83,7 +83,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'clearAll'
+  'getPrimaryId'
 >;
 
 export interface UseRibbonMepBoilerBridgeProps {
@@ -301,10 +301,7 @@ export function useRibbonMepBoilerBridge(
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action === MEP_BOILER_RIBBON_KEYS_ACTIONS.close) {
-        universalSelection.clearAll();
-        return;
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in routeRibbonAction (single SSoT).
       if (action !== MEP_BOILER_RIBBON_KEYS_ACTIONS.delete) return;
       const boiler = resolveBoiler();
       if (!boiler) return;

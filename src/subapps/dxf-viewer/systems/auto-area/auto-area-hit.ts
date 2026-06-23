@@ -7,7 +7,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, RectangleEntity, RectEntity } from '../../types/entities';
 import type { Overlay } from '../../overlays/types';
 import {
-  isLineEntity, isPolylineEntity, isLWPolylineEntity,
+  isPolylineEntity, isLWPolylineEntity,
   isRectangleEntity, isRectEntity, isCircleEntity,
   isArcEntity, isEllipseEntity,
 } from '../../types/entities';
@@ -17,6 +17,10 @@ import {
   calculatePolygonPerimeter,
 } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { findClosedPolygonsFromLines } from './auto-area-geometry';
+// ADR-507 Φ3 — SSoT εξαγωγής segments (lines + ΠΟΛΥΓΡΑΜΜΕΣ + space-separators),
+// ΙΔΙΟ με τον room detector ώστε ο half-edge face traversal να πιάνει ΔΩΜΑΤΙΑ από
+// double-line πολυγραμμικούς τοίχους (όχι μόνο `LINE`).
+import { extractLineSegments } from '../../bim/walls/wall-in-region';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../stores/LayerStore';
@@ -131,10 +135,13 @@ function getCachedClosedFaces(
   const cached = scaleMap.get(key);
   if (cached) return cached;
 
-  const linePairs: [Point2D, Point2D][] = [];
-  for (const entity of entities) {
-    if (isLineEntity(entity)) linePairs.push([entity.start, entity.end]);
-  }
+  // Σπάμε ΟΛΑ τα όρια (LINE + πολυγραμμές + διαχωριστές + ΔΕΙΓΜΑΤΙΣΜΕΝΑ καμπύλα:
+  // ARC/CIRCLE/ELLIPSE/SPLINE) σε segments μέσω του SSoT· έτσι ο half-edge traversal
+  // κλείνει τους βρόχους δωματίων από double-line πολυγραμμικούς τοίχους ΚΑΙ από
+  // καμπύλα όρια (τόξα/κύκλοι/τεταρτημόρια/καμπύλες) — όχι μόνο καθαρά `LINE`.
+  const linePairs: [Point2D, Point2D][] = extractLineSegments(entities, { tessellateCurves: true }).map(
+    (s) => [s.start, s.end] as [Point2D, Point2D],
+  );
 
   // Gap tolerance (world units) διευρύνει το βασικό snap tolerance ώστε να κλείνουν
   // μικρά ανοίγματα· default 0 → ταυτόσημη συμπεριφορά με πριν (μηδέν regression).

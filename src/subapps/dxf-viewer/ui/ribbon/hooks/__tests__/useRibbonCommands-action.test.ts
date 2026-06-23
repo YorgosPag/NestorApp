@@ -35,6 +35,7 @@ describe('isContextualTabCloseAction', () => {
     expect(isContextualTabCloseAction('wall.actions.close')).toBe(true);
     expect(isContextualTabCloseAction('beam.actions.close')).toBe(true);
     expect(isContextualTabCloseAction('mepWaterHeater.actions.close')).toBe(true);
+    expect(isContextualTabCloseAction('array.actions.close')).toBe(true);
     // legacy singular form (thermalSpace/hatch/floorFinish/wallCovering)
     expect(isContextualTabCloseAction('thermalSpace.action.close')).toBe(true);
     expect(isContextualTabCloseAction('hatch.action.close')).toBe(true);
@@ -122,6 +123,12 @@ describe('routeRibbonAction — central close interception', () => {
   it('routes a legacy singular close (thermalSpace) to closeContextualTab', () => {
     const { bridges, closeContextualTab } = makeBridges();
     routeRibbonAction('thermalSpace.action.close', undefined, bridges);
+    expect(closeContextualTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes array.actions.close to closeContextualTab (was previously array-close-tab divergent path)', () => {
+    const { bridges, closeContextualTab } = makeBridges();
+    routeRibbonAction('array.actions.close', undefined, bridges);
     expect(closeContextualTab).toHaveBeenCalledTimes(1);
   });
 

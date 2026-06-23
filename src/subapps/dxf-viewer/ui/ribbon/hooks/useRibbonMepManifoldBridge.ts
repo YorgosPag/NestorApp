@@ -60,7 +60,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'clearAll'
+  'getPrimaryId'
 >;
 
 export interface UseRibbonMepManifoldBridgeProps {
@@ -197,10 +197,7 @@ export function useRibbonMepManifoldBridge(
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action === MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.close) {
-        universalSelection.clearAll();
-        return;
-      }
+      // ADR-363 — «Κλείσιμο» handled centrally in routeRibbonAction (single SSoT).
       if (action !== MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.delete) return;
       const manifold = resolveManifold();
       if (!manifold) return;
