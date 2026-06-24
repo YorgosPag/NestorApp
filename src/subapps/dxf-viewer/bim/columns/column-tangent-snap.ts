@@ -120,6 +120,31 @@ function perpGuide(px: number, py: number, perpX: number, perpY: number, halfLen
 }
 
 /**
+ * ADR-398 §3.20c — **κοινό** quadrant-to-end alignment για ΟΠΟΙΟΔΗΠΟΤΕ mode κυκλικής σε γραμμικό μέλος
+ * (tangent #3/#4 ΚΑΙ center-on-axis #2): δοθέντος του ελεύθερου διαμήκους `alongFree` του κέντρου,
+ * κουμπώνει στα `{alongMin+R, alongMax−R, μέσον}` + παράγει τη γραμμή-οδηγό στο άκρο/μέσον. Έτσι ο οδηγός
+ * εμφανίζεται **και όταν το κέντρο είναι μέσα στο σώμα του τοίχου** (center-on-axis), όχι μόνο σε tangent.
+ * Reuse `snapAlongToEnds` + `perpGuide` + `alignZone` (ΕΝΑ SSoT). `a`/`u` = origin/άξονας μέλους.
+ */
+export function resolveQuadrantEndAlignment(
+  alongFree: number,
+  alongMin: number,
+  alongMax: number,
+  radius: number,
+  a: Readonly<Point2D>,
+  u: Readonly<Point2D>,
+  halfThickness: number,
+  wpp: number,
+  scaleF: number,
+): { along: number; guide: PlacementAlignmentGuide | null } {
+  const { along, guideAlong } = snapAlongToEnds(alongFree, alongMin, alongMax, radius, alignZone(wpp, scaleF));
+  const guide = guideAlong === null ? null : perpGuide(
+    a.x + guideAlong * u.x, a.y + guideAlong * u.y, u.y, -u.x, halfThickness + 2 * radius,
+  );
+  return { along, guide };
+}
+
+/**
  * §3.19 mode #4 — **περιφέρεια → ΚΕΝΤΡΙΚΟΣ ΑΞΟΝΑΣ** ενός μέλους: ο κύκλος εφάπτεται στον άξονα. Το κέντρο
  * μετατοπίζεται κατά `R` κατά μήκος της καθέτου `perpDir=(u.y,−u.x)` **προς την πλευρά του cursor**. Το
  * διαμήκες `along` κουμπώνει στα άκρα/μέσον (§3.20) → γραμμή-οδηγός. `dist=|perp−R|`. `null` εκτός άκρων /
@@ -151,7 +176,10 @@ function axisTangentForMember(
     snap: {
       position: center, anchor: 'center', rotation: 0, status: 'beam', targetId: m.id,
       face: bounds ? pickDominantFace(cursor, bounds) : 'N', third: 'mid',
-      faceFrame: buildCenteredAxisFaceFrame(fr.a, fr.u, { x: fr.u.y, y: -fr.u.x }, fr.alongMin, fr.alongMax, along),
+      // §3.20b — κάθετο offset = sign·R (η περιφέρεια εφάπτεται στον άξονα) → επιπλέον κάθετη (dy) dim.
+      faceFrame: buildCenteredAxisFaceFrame(
+        fr.a, fr.u, { x: fr.u.y, y: -fr.u.x }, fr.alongMin, fr.alongMax, along, undefined, sign * radius,
+      ),
       ...(guide ? { alignmentGuide: guide } : {}),
     },
     dist: cleanDist(dist),
@@ -183,26 +211,33 @@ function resolveEdgeTangent(
   });
   if (!r || !r.faceFrame) return null;
   const ff = r.faceFrame;
-  const perpToFace = (cursor.x - ff.origin.x) * ff.perpDir.x + (cursor.y - ff.origin.y) * ff.perpDir.y - ff.facePerp;
-  const dist = Math.abs(Math.abs(perpToFace) - radius);
+  // ΠΥΡΗΝΑΣ, ΟΧΙ μπάντα: ο `edgeBandTarget` παχαίνει την ακμή κατά `len·0.001` (~2mm σε τοίχο 2m) →
+  // το `ff.facePerp` δείχνει την ΕΞΩΤΕΡΙΚΗ παρειά της μπάντας. Ο **ΑΞΟΝΑΣ** (`ff.origin`+axisDir, perp 0)
+  // ΕΙΝΑΙ ο πραγματικός πυρήνας — κουμπώνουμε εκεί (ίδιο με `resolveFootprintEdgeSnap`, facePerp:0) ώστε
+  // tangent + dims = core-to-core (ο σοβάς/η μπάντα ΔΕΝ μετράει). Giorgio: «μην λαμβάνεις τον σοβά».
+  const perpToCore = (cursor.x - ff.origin.x) * ff.perpDir.x + (cursor.y - ff.origin.y) * ff.perpDir.y;
+  const dist = Math.abs(Math.abs(perpToCore) - radius);
   if (dist > MEMBER_GHOST_CAPTURE_MM * scaleF) return null;
   const { along, guideAlong } = snapAlongToEnds(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax, radius, zone);
-  const faceX = ff.origin.x + along * ff.axisDir.x + ff.facePerp * ff.perpDir.x;
-  const faceY = ff.origin.y + along * ff.axisDir.y + ff.facePerp * ff.perpDir.y;
+  const coreX = ff.origin.x + along * ff.axisDir.x; // άξονας = πυρήνας (perp 0)
+  const coreY = ff.origin.y + along * ff.axisDir.y;
   const center: Point2D = {
-    x: faceX + radius * ff.outwardSign * ff.perpDir.x,
-    y: faceY + radius * ff.outwardSign * ff.perpDir.y,
+    x: coreX + radius * ff.outwardSign * ff.perpDir.x,
+    y: coreY + radius * ff.outwardSign * ff.perpDir.y,
   };
   const guide = guideAlong === null ? null : perpGuide(
-    ff.origin.x + guideAlong * ff.axisDir.x + ff.facePerp * ff.perpDir.x,
-    ff.origin.y + guideAlong * ff.axisDir.y + ff.facePerp * ff.perpDir.y,
+    ff.origin.x + guideAlong * ff.axisDir.x,
+    ff.origin.y + guideAlong * ff.axisDir.y,
     ff.perpDir.x, ff.perpDir.y, 2 * radius,
   );
   return {
     snap: {
       position: center, anchor: 'center', rotation: 0, status: 'beam', targetId: null,
       face: edgeNearFace(ff), third: 'mid',
-      faceFrame: buildCenteredAxisFaceFrame(ff.origin, ff.axisDir, ff.perpDir, ff.faceAlongMin, ff.faceAlongMax, along, ff.arc),
+      // §3.20b — κάθετο offset = R·outwardSign (κέντρο από τον ΠΥΡΗΝΑ, perp 0) → κάθετη (dy) dim = R ακριβώς.
+      faceFrame: buildCenteredAxisFaceFrame(
+        ff.origin, ff.axisDir, ff.perpDir, ff.faceAlongMin, ff.faceAlongMax, along, ff.arc, radius * ff.outwardSign,
+      ),
       ...(guide ? { alignmentGuide: guide } : {}),
     },
     dist: cleanDist(dist),

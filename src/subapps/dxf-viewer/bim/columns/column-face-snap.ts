@@ -68,14 +68,13 @@ import {
   type GhostFaceFrame,
 } from '../framing/linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
-import { resolvePolarDiskSnap, type PolarDiskSnapOptions } from './polar-disk-snap';
-import { resolveCircularTangentHit, type PlacementAlignmentGuide } from './column-tangent-snap';
-import { resolveRectCartesianSnap } from './rect-cartesian-snap';
+import type { PolarDiskSnapOptions } from './polar-disk-snap';
+import { resolveCircularTangentHit, resolveQuadrantEndAlignment, type PlacementAlignmentGuide } from './column-tangent-snap';
+import { resolvePolarDiskHit, resolveRectHit } from './column-magnet-snap';
 import {
   resolveColumnHeadReferenceSnap,
   type HeadReferenceLines,
 } from './column-reference-lines';
-import type { RectFrame } from '../framing/rect-frame';
 import {
   clamp,
   SLAB_EDGE_CENTER_THRESHOLD_MM,
@@ -85,6 +84,7 @@ import {
   buildCenteredAxisFaceFrame,
   memberEndsAxis,
   buildMemberAxisFrame,
+  distanceToMemberSolid,
   buildColumnBboxFaceFrame,
   anchorForHorizontalFace,
   anchorForVerticalFace,
@@ -171,6 +171,13 @@ function buildFaceTargets(
   return out;
 }
 
+/** ADR-398 §3.20c — opts κυκλικού ghost για quadrant-to-end alignment στο center-on-axis (radius + zoom). */
+interface CircleGhostOpts {
+  readonly radius: number;
+  readonly wpp: number;
+  readonly scaleF: number;
+}
+
 /**
  * ADR-398 §3.9/§3.11 — **member-axis CENTER snap** (τοίχος Ή δοκάρι· mirror του §3.1b «Column→Beam
  * axis»): το κέντρο της κολώνας κουμπώνει στον κεντρικό άξονα του μέλους και ολισθαίνει κατά μήκος.
@@ -179,32 +186,40 @@ function buildFaceTargets(
  * Λοξό μέλος → η κολώνα **στρέφεται** flush (`axisAlignmentRotationDeg`). Reuse κοινός `resolveAxisCenterFoot`
  * + `buildCenteredAxisFaceFrame` SSoT. ΧΩΡΙΣ split.
  */
-function resolveMemberAxisCenter(cursor: Readonly<Point2D>, t: FaceTarget): ColumnFaceSnap | null {
+function resolveMemberAxisCenter(cursor: Readonly<Point2D>, t: FaceTarget, circle?: CircleGhostOpts | null): ColumnFaceSnap | null {
   const fr = t.axisFrame;
   if (!fr) return null;
   // Reuse κοινός SSoT core (§3.11) — threshold = ημι-πάχος/2 (εσωτερική μισή ζώνη μέλους).
   const foot = resolveAxisCenterFoot(cursor, fr.a, fr.u, fr.alongMin, fr.alongMax, fr.halfThickness / 2);
   if (!foot) return null;
+  // ADR-398 §3.20c — κυκλικό ghost: quadrant-to-end alignment + γραμμή-οδηγός ΚΑΙ στο center-on-axis (όταν
+  // το κέντρο είναι ΜΕΣΑ στο σώμα του τοίχου, το αν./δυτ. τεταρτημόριο κουμπώνει στο άκρο). Reuse §3.20 SSoT.
+  const align = circle
+    ? resolveQuadrantEndAlignment(foot.along, fr.alongMin, fr.alongMax, circle.radius, fr.a, fr.u, fr.halfThickness, circle.wpp, circle.scaleF)
+    : null;
+  const along = align ? align.along : foot.along;
+  const position: Point2D = align ? { x: fr.a.x + along * fr.u.x, y: fr.a.y + along * fr.u.y } : foot.position;
   return {
-    position: foot.position,
+    position,
     anchor: 'center',
     rotation: axisAlignmentRotationDeg(fr.u), // 0 axis-aligned (μηδέν regression)· λοξό → flush στροφή
     status: 'beam',
     targetId: t.id,
     face: pickDominantFace(cursor, t.bounds),
     third: 'mid',
+    ...(align?.guide ? { alignmentGuide: align.guide } : {}),
     // §dim — center-on-axis: μετράμε κατά μήκος του άξονα μέλους προς άκρα/κέντρο (κοινό SSoT).
     faceFrame: buildCenteredAxisFaceFrame(
-      fr.a, fr.u, { x: fr.u.y, y: -fr.u.x }, fr.alongMin, fr.alongMax, foot.along,
+      fr.a, fr.u, { x: fr.u.y, y: -fr.u.x }, fr.alongMin, fr.alongMax, along,
     ),
   };
 }
 
 /** Χτίζει το τελικό face-snap για τον επιλεγμένο στόχο (continuous slide + auto anchor). */
-function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget): ColumnFaceSnap {
+function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget, circle?: CircleGhostOpts | null): ColumnFaceSnap {
   // ADR-398 §3.9/§3.11 — τοίχος/δοκάρι: πρώτα δοκίμασε center-on-axis· εσωτερική ζώνη → κέντρο στον άξονα.
   if (t.axisFrame) {
-    const axisSnap = resolveMemberAxisCenter(cursor, t);
+    const axisSnap = resolveMemberAxisCenter(cursor, t, circle);
     if (axisSnap) return axisSnap;
   }
   const { minX, maxX, minY, maxY } = t.bounds;
@@ -352,59 +367,6 @@ function resolveFootprintEdgeSnap(
   };
 }
 
-/**
- * ADR-398 §3.13 — **Polar Magnet**: όταν ο cursor είναι ΕΝΤΟΣ κυκλικού δίσκου, η κολώνα κουμπώνει στο
- * πολικό πλέγμα (κέντρο / δακτύλιος∩ακτίνα), `anchor:'center'`. Επιστρέφει + dist για nearest-wins με
- * edge/bbox. `null` όταν λείπει `worldPerPixel` (zoom-adaptive) ή ο cursor είναι κοντά στο χείλος
- * (→ §3.12 circumference). Reuse `resolvePolarDiskSnap` SSoT — ΜΗΔΕΝ polar math εδώ.
- */
-function resolvePolarDiskHit(
-  cursor: Readonly<Point2D>,
-  disks: readonly { center: Point2D; radius: number }[],
-  sceneUnits: SceneUnits,
-  opts: Readonly<PolarDiskSnapOptions>,
-): { snap: ColumnFaceSnap; dist: number } | null {
-  let best: { snap: ColumnFaceSnap; dist: number } | null = null;
-  for (const disk of disks) {
-    const r = resolvePolarDiskSnap(cursor, disk, sceneUnits, opts);
-    if (r && (!best || r.dist < best.dist)) {
-      best = {
-        snap: { position: r.position, anchor: 'center', status: 'beam', rotation: 0, targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame },
-        dist: r.dist,
-      };
-    }
-  }
-  return best;
-}
-
-/**
- * ADR-398 §3.15 — **Cartesian Magnet**: cursor ΕΝΤΟΣ ορθογωνίου → καρτεσιανό πλέγμα (κέντρο / 9-point /
- * grid∩), `anchor:'center'`, rotation = γωνία του u (0 axis-aligned). Τα 4 dx/dy dims παράγονται ξεχωριστά
- * στο `generateColumnPreview` (faceFrame εδώ = degenerate). Reuse `resolveRectCartesianSnap` SSoT.
- */
-function resolveRectHit(
-  cursor: Readonly<Point2D>,
-  rects: readonly RectFrame[],
-  sceneUnits: SceneUnits,
-  opts: Readonly<PolarDiskSnapOptions>,
-): { snap: ColumnFaceSnap; dist: number } | null {
-  let best: { snap: ColumnFaceSnap; dist: number } | null = null;
-  for (const rect of rects) {
-    const r = resolveRectCartesianSnap(cursor, rect, sceneUnits, opts);
-    if (r && (!best || r.dist < best.dist)) {
-      best = {
-        snap: {
-          position: r.position, anchor: 'center', status: 'beam',
-          rotation: axisAlignmentRotationDeg(rect.u), targetId: null, face: 'N', third: 'mid',
-          faceFrame: buildCenteredAxisFaceFrame(r.position, { x: 1, y: 0 }, { x: 0, y: 1 }, 0, 0, 0),
-        },
-        dist: r.dist,
-      };
-    }
-  }
-  return best;
-}
-
 /** Το ΠΛΗΣΙΕΣΤΕΡΟ hit (μικρότερο dist) ανάμεσα στα tiers (edge / bbox / polar / rect) — nearest-wins. */
 function nearestHit(...hits: readonly ({ snap: ColumnFaceSnap; dist: number } | null)[]): ColumnFaceSnap | null {
   let best: { snap: ColumnFaceSnap; dist: number } | null = null;
@@ -453,17 +415,25 @@ export function resolveColumnFaceSnapFromTargets(
   // (multi-reference) → εκτός bbox center-on-axis ώστε να μην ανταγωνίζονται δύο μηχανισμοί στον ίδιο τοίχο.
   const bboxWalls = columnHead ? [] : t.wallTargets;
   const targets = buildFaceTargets(t.circularFootprints ?? [], t.beamTargets, bboxWalls);
-  const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
+  const scaleF = mmToSceneUnits(sceneUnits);
+  const captureScene = MEMBER_GHOST_CAPTURE_MM * scaleF;
+  // ADR-398 §3.20c — κυκλικό ghost → quadrant-to-end alignment + οδηγός ΚΑΙ στο center-on-axis (κέντρο μέσα στο σώμα).
+  const circleOpts: CircleGhostOpts | null = opts?.circleRadiusScene
+    ? { radius: opts.circleRadiusScene, wpp: opts.worldPerPixel ?? 0, scaleF }
+    : null;
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
   for (const ft of targets) {
-    const d = distanceToFootprintBounds(cursor, ft.bounds);
+    // ADR-398 §3.18b — γραμμικά μέλη (axisFrame): ΠΡΟΣΑΝΑΤΟΛΙΣΜΕΝΗ απόσταση στο στερεό (όχι axis-aligned
+    // bbox) ώστε το λοξό μέλος να μη δίνει spurious `0` cursor-εντός-AABB και σκιάζει το tangent (§3.19) →
+    // ο κύκλος ολισθαίνει σε λοξό όπως σε οριζόντιο. Axis-aligned: ταυτόσημο με AABB (μηδέν regression).
+    const d = ft.axisFrame ? distanceToMemberSolid(cursor, ft.axisFrame) : distanceToFootprintBounds(cursor, ft.bounds);
     if (d <= captureScene && d < bestDist) {
       bestDist = d;
       best = ft;
     }
   }
-  const bboxHit = best ? { snap: resolveForTarget(cursor, best), dist: bestDist } : null;
+  const bboxHit = best ? { snap: resolveForTarget(cursor, best, circleOpts), dist: bestDist } : null;
   // ADR-398 §3.13 — Polar Magnet: cursor ΕΝΤΟΣ δίσκου → πολικό πλέγμα (μόνο όταν δίνεται worldPerPixel).
   const polarHit = opts && opts.worldPerPixel > 0 && t.diskTargets.length > 0
     ? resolvePolarDiskHit(cursor, t.diskTargets, sceneUnits, opts)

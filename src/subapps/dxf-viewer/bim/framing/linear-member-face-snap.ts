@@ -81,6 +81,13 @@ export interface GhostFaceFrame {
   /** μισό πλάτος φαντάσματος → οι base γωνίες = centerAlong ± αυτό. */
   readonly ghostHalfWidth: number;
   /**
+   * ADR-398 §3.20b — **προσημασμένη κάθετη απόσταση** (κατά `perpDir`) του ΚΕΝΤΡΟΥ του φαντάσματος από
+   * τη γραμμή αναφοράς (`facePerp`-line). Όταν οριστεί (≠0), ο `resolveGhostFaceDimensions` εκπέμπει μια
+   * επιπλέον **κάθετη (dy)** listening dimension (πλήρες καρτεσιανό dx+dy). Χρησιμοποιείται από το
+   * circumference-tangent (§3.19): η κυκλική ολισθαίνει με σταθερό perp = R → δείχνει το κάθετο offset.
+   * `undefined`/0 → καμία κάθετη dim (όλοι οι υπόλοιποι callers αμετάβλητοι). */
+  readonly ghostPerpOffset?: number;
+  /**
    * ADR-398 §3.12 — γεωμετρία περιφέρειας όταν η παρειά προέρχεται από **χορδή κύκλου/τόξου**. Όταν
    * οριστεί, ο `resolveGhostFaceDimensions` περνά στον arc-length κλάδο (μήκος τόξου + καμπύλη dim line)·
    * `undefined` σε ευθείς στόχους → αμετάβλητη ευθεία συμπεριφορά (gated).

@@ -49,8 +49,8 @@ export interface ArcDimSpan {
 
 /** A single listening dimension (scene units) — ευθεία (along-face) ή καμπύλη (arc-length). */
 export interface GhostFaceDimension {
-  /** Semantic role — drives label/tests· `arc*`/`radius` = ADR-398 §3.12 κύκλος/τόξο. */
-  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter' | 'arcLeftGap' | 'arcRightGap' | 'radius';
+  /** Semantic role — drives label/tests· `arc*`/`radius` = ADR-398 §3.12 κύκλος/τόξο· `perp` = §3.20b κάθετη (dy). */
+  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter' | 'arcLeftGap' | 'arcRightGap' | 'radius' | 'perp';
   /** Witness point A (scene units) — ON the face line (ευθύ) ή ON the circle at the «from» angle (arc). */
   readonly p1: Point2D;
   /** Witness point B (scene units). */
@@ -121,8 +121,36 @@ export function resolveGhostFaceDimensions(
   pushDim(out, 'rightGap', ghostRightAlong, frame.faceAlongMax, opts.gapOffsetScene, at, off, minValue);
   // 3. centerToCenter — face center → ghost axis-center (outer row, larger offset).
   pushDim(out, 'centerToCenter', faceCenterAlong, frame.ghostCenterAlong, opts.centerOffsetScene, at, off, minValue);
+  // 4. ADR-398 §3.20b — ΚΑΘΕΤΗ (dy): γραμμή αναφοράς → κέντρο φαντάσματος κατά `perpDir` (πλήρες
+  //    καρτεσιανό dx+dy). Μόνο όταν `ghostPerpOffset` ορίστηκε (circumference-tangent· perp = R).
+  pushPerpDim(out, frame, opts.gapOffsetScene, minValue);
 
   return out;
+}
+
+/**
+ * ADR-398 §3.20b — μία ΚΑΘΕΤΗ (dy) listening dimension: από τη γραμμή αναφοράς (`facePerp`-line) στη
+ * διαμήκη θέση του κέντρου, μέχρι το ΚΕΝΤΡΟ του φαντάσματος (offset `ghostPerpOffset` κατά `perpDir`). Η
+ * dim line μετατοπίζεται **κατά μήκος του άξονα** (`gapOffsetScene`) ώστε να μην επικαλύπτει την κάθετη.
+ */
+function pushPerpDim(
+  out: GhostFaceDimension[],
+  frame: Readonly<GhostFaceFrame>,
+  offsetScene: number,
+  minValue: number,
+): void {
+  const perpOffset = frame.ghostPerpOffset ?? 0;
+  if (Math.abs(perpOffset) <= minValue) return;
+  const { axisDir: u, perpDir: p } = frame;
+  const base = facePointAt(frame, frame.ghostCenterAlong); // πάνω στη γραμμή αναφοράς
+  const center: Point2D = { x: base.x + perpOffset * p.x, y: base.y + perpOffset * p.y };
+  out.push({
+    kind: 'perp',
+    p1: base,
+    p2: center,
+    dimLineRef: { x: (base.x + center.x) / 2 + offsetScene * u.x, y: (base.y + center.y) / 2 + offsetScene * u.y },
+    valueScene: Math.abs(perpOffset),
+  });
 }
 
 /** Build one dim from two longitudinal positions; append only when length > `minValue`. */

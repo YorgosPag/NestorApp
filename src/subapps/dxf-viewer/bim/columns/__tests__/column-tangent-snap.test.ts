@@ -8,6 +8,7 @@
 
 import { resolveColumnFaceSnapFromTargets } from '../column-face-snap';
 import type { PolarDiskSnapOptions } from '../polar-disk-snap';
+import { resolveGhostFaceDimensions } from '../../framing/ghost-face-dim-references';
 import { collectSceneSnapTargets } from '../../framing/scene-snap-targets';
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
@@ -106,6 +107,29 @@ describe('ADR-398 §3.19 — gating (μηδέν regression χωρίς R)', () =>
   });
 });
 
+describe('ADR-398 §3.20b — ΚΑΘΕΤΗ (dy) CL ένδειξη (πλήρες καρτεσιανό)', () => {
+  const R = 200;
+
+  it('#4 tangent→άξονας: faceFrame κουβαλά ghostPerpOffset = ±R (κέντρο εφάπτεται στον άξονα)', () => {
+    const s = snapWall({ x: 0, y: 200 }, circularOpts(R));
+    expect(Math.abs(s!.faceFrame.ghostPerpOffset ?? 0)).toBeCloseTo(R, 3);
+  });
+
+  it('resolveGhostFaceDimensions εκπέμπει κάθετη (perp) dim ίση με R', () => {
+    const s = snapWall({ x: 0, y: 200 }, circularOpts(R));
+    const dims = resolveGhostFaceDimensions(s!.faceFrame, { gapOffsetScene: 50, centerOffsetScene: 100 });
+    const perp = dims.find((d) => d.kind === 'perp');
+    expect(perp).toBeDefined();
+    expect(perp!.valueScene).toBeCloseTo(R, 3);
+  });
+
+  it('μη-tangent (center-on-axis) → ΚΑΜΙΑ κάθετη dim (ghostPerpOffset undefined)', () => {
+    const s = snapWall({ x: 0, y: 0 }, circularOpts(R)); // κέντρο στον άξονα → perp 0
+    const dims = resolveGhostFaceDimensions(s!.faceFrame, { gapOffsetScene: 50, centerOffsetScene: 100 });
+    expect(dims.find((d) => d.kind === 'perp')).toBeUndefined();
+  });
+});
+
 describe('ADR-398 §3.20 — quadrant-to-end alignment (τεταρτημόριο ↔ άκρο/μέσον παρειάς)', () => {
   const R = 200;
   // Τοίχος δυτικό άκρο world x=-1000, ανατολικό x=+1000 (axis a=(-1000,0), along 0..2000).
@@ -139,6 +163,16 @@ describe('ADR-398 §3.20 — quadrant-to-end alignment (τεταρτημόριο
     expect(s!.position.x).toBeCloseTo(-400, 3); // ελεύθερο (μακριά > ζώνη 60mm)
     expect(s!.alignmentGuide ?? null).toBeNull();
   });
+
+  // §3.20c — οδηγός ΚΑΙ όταν το κέντρο είναι ΜΕΣΑ στο σώμα του τοίχου (center-on-axis), όχι μόνο tangent.
+  it('§3.20c κέντρο ΜΕΣΑ στο σώμα (perp 0) + Α-τεταρτημόριο ↔ ανατ. άκρο → οδηγός', () => {
+    const s = snapWall({ x: 800, y: 0 }, circularOpts(R)); // cursor στον άξονα, x=alongMax-R
+    expect(s!.anchor).toBe('center');
+    expect(s!.position.y).toBeCloseTo(0, 3);          // κέντρο στον άξονα (μέσα στο σώμα)
+    expect(s!.position.x).toBeCloseTo(800, 3);        // Α-τεταρτημόριο (800+200=1000) στο ανατ. άκρο
+    expect(s!.alignmentGuide).toBeDefined();
+    expect(s!.alignmentGuide!.a.x).toBeCloseTo(1000, 3); // οδηγός στο ανατολικό άκρο
+  });
 });
 
 describe('ADR-398 §3.19 — ΛΟΞΟΣ τοίχος 45° (tangent σε κάθε γωνία)', () => {
@@ -159,5 +193,19 @@ describe('ADR-398 §3.19 — ΛΟΞΟΣ τοίχος 45° (tangent σε κάθε
     expect(distToSlantAxis(s!.position)).toBeCloseTo(R, 2); // εφάπτεται στον λοξό άξονα
     expect(s!.position.x).toBeCloseTo(cursorAtTangent.x, 2);
     expect(s!.position.y).toBeCloseTo(cursorAtTangent.y, 2);
+  });
+
+  // ADR-398 §3.18b — ΟΛΙΣΘΗΣΗ σε λοξό όπως σε οριζόντιο: η προσανατολισμένη bbox απόσταση σταματά το
+  // spurious AABB-flush· σε off-ideal perp ο κύκλος εφάπτεται στη ΛΟΞΗ παρειά (perp-to-axis = halfThickness+R),
+  // ΟΧΙ AABB junk. perp=300 (off-ideal, πάχος 200 → ημι=100, R=200 → tangent-to-face perp=300).
+  it('§3.18b off-ideal perp σε λοξό → tangent στη λοξή παρειά (ΟΧΙ AABB flush)', () => {
+    const targets = collectSceneSnapTargets([slantedWall()]);
+    const perp: Point2D = { x: SQRT1_2, y: -SQRT1_2 };
+    const cursor: Point2D = { x: 500 + 300 * perp.x, y: 500 + 300 * perp.y }; // perp=300 από τον άξονα
+    const s = resolveColumnFaceSnapFromTargets(cursor, targets, 'mm', { worldPerPixel: 5, circleRadiusScene: R });
+    expect(s!.anchor).toBe('center');                       // tangent (ΟΧΙ 'n'/'ne' AABB flush)
+    // περιφέρεια εφάπτεται στη λοξή παρειά (perp ≈ ημι-πάχος+R ≈ 300)· tangent, ΟΧΙ flush(~100)/AABB junk.
+    expect(distToSlantAxis(s!.position)).toBeGreaterThan(290);
+    expect(distToSlantAxis(s!.position)).toBeLessThan(310);
   });
 });

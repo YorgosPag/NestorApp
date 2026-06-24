@@ -102,6 +102,7 @@ export function buildCenteredAxisFaceFrame(
   faceAlongMax: number,
   ghostCenterAlong: number,
   arc?: ArcMeta,
+  ghostPerpOffset?: number,
 ): GhostFaceFrame {
   return {
     origin, axisDir, perpDir,
@@ -109,7 +110,27 @@ export function buildCenteredAxisFaceFrame(
     faceAlongMin, faceAlongMax,
     ghostCenterAlong, ghostHalfWidth: 0,
     ...(arc ? { arc } : {}), // ADR-398 §3.12 — κύκλος/τόξο → arc-length listening dims
+    // ADR-398 §3.20b — κάθετο (dy) offset κέντρου → επιπλέον κάθετη listening dim (πλήρες καρτεσιανό).
+    ...(ghostPerpOffset ? { ghostPerpOffset } : {}),
   };
+}
+
+/**
+ * ADR-398 §3.18b — **προσανατολισμένη** απόσταση cursor → στερεό **γραμμικού μέλους** (μέσω του
+ * `MemberAxisFrame`, ΟΧΙ axis-aligned bbox). Για **λοξό** τοίχο/δοκάρι το AABB είναι πολύ μεγαλύτερο
+ * από το πραγματικό στερεό → `distanceToFootprintBounds` δίνει spurious `0` cursor-εντός-AABB και σκιάζει
+ * το circumference-tangent (§3.19) → ο κύκλος ΔΕΝ ολισθαίνει όπως σε οριζόντιο. Η προσανατολισμένη
+ * απόσταση (perp − ημι-πάχος, + along-overflow) είναι **ταυτόσημη με το AABB για axis-aligned μέλη**
+ * (μηδέν regression) και σωστή για λοξά. `0` cursor-εντός του πραγματικού στερεού. Pure (scene units).
+ */
+export function distanceToMemberSolid(cursor: Readonly<Point2D>, fr: MemberAxisFrame): number {
+  const rx = cursor.x - fr.a.x;
+  const ry = cursor.y - fr.a.y;
+  const along = rx * fr.u.x + ry * fr.u.y;
+  const perp = Math.abs(rx * fr.u.y - ry * fr.u.x);
+  const alongOut = Math.max(0, fr.alongMin - along, along - fr.alongMax);
+  const perpOut = Math.max(0, perp - fr.halfThickness);
+  return Math.hypot(alongOut, perpOut);
 }
 
 /** Κυρίαρχος άξονας ενός γραμμικού μέλους → κατά μήκος ποιου κείτονται οι κοντές άκρες. */
