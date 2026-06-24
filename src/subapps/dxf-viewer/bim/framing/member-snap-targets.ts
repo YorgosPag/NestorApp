@@ -3,7 +3,9 @@
  *
  * Μαζεύει από τη σκηνή τους face-snap στόχους για το ghost-before-click ΚΑΘΕ γραμμικού
  * εργαλείου (δοκάρι/τοίχος):
- *   · **Κολόνες** → footprint πολύγωνα (12-θέσεων face snap + flush) — ΠΑΝΤΑ.
+ *   · **Κολόνες** → footprint πολύγωνα (9-θέσεων face snap + flush) — ΠΑΝΤΑ.
+ *   · **Πέδιλα (pad)** → footprint ως 4 zero-width edges μέσω `collectFoundationPadEdgeTargets` (ξεχωριστό
+ *     bucket → μόνο column/foundation-pad resolver· flush + center-on-axis + slant-following).
  *   · **Γραμμικά μέλη** (δοκάρια/τοίχοι, ανά `memberKinds`) → `{ axis, outline }` για το
  *     member-to-member Τ-framing.
  *
@@ -34,7 +36,7 @@ import type { ArcMeta, LinearMemberSnapTarget } from './linear-member-face-snap'
 export type MemberSnapKind = 'beam' | 'wall' | 'slab' | 'line';
 
 export interface MemberSnapTargets {
-  /** Column footprints (world-baked 2Δ πολύγωνα). */
+  /** Column footprints (world-baked 2Δ πολύγωνα). Πέδιλα-pad → `collectFoundationPadEdgeTargets` (ξεχωριστά). */
   readonly footprints: Point2D[][];
   /** Γραμμικά μέλη ως {axis, outline}. */
   readonly memberTargets: LinearMemberSnapTarget[];
@@ -273,6 +275,25 @@ export function collectMemberSnapTargets(
     }
   }
   return { footprints, memberTargets };
+}
+
+/**
+ * ADR-514 Φ6d — **πέδιλα (pad)** ως face-snap στόχοι: το ορθογώνιο `geometry.footprint` (world-baked,
+ * φέρει τη στροφή) → 4 **zero-width edges** (reuse `polylineEdgeTargets`, closed) ΟΠΩΣ ένα rectangle.
+ * Έτσι το νέο πέδιλο/κολώνα κουμπώνει flush + center-on-axis ΚΑΙ **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ** μέσω του
+ * axis-relative `resolveLinearMemberFaceSnap` (το bbox path θα ίσιωνε τη στροφή σε rotation 0). **Ξεχωριστό
+ * bucket** (ΟΧΙ `lineTargets`/`slabTargets`) ώστε να το καταναλώνει ΜΟΝΟ ο column/foundation-pad resolver —
+ * τα εργαλεία τοίχου/δοκαριού (που διαβάζουν `lineTargets` μέσω `selectGhostMembers`) μένουν αμετάβλητα.
+ * strip/tie-beam (γραμμικά πέδιλα) → DEFER. Pure.
+ */
+export function collectFoundationPadEdgeTargets(entities: readonly Entity[]): LinearMemberSnapTarget[] {
+  const out: LinearMemberSnapTarget[] = [];
+  for (const e of entities) {
+    if (e.type !== 'foundation' || (e as { kind?: string }).kind !== 'pad') continue;
+    const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
+    if (verts && verts.length >= 3) out.push(...polylineEdgeTargets(toPoint2D(verts), true, e.id));
+  }
+  return out;
 }
 
 /**

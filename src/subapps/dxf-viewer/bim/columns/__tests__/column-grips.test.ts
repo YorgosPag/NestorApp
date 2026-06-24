@@ -4,8 +4,8 @@
  * Verifies:
  *   - `getColumnGrips` emits the correct count + ordering per kind
  *     (rectangular → 3 grips, L-shape / T-shape → 5 grips Phase 4.5b,
- *     circular → 1 grip, polygon → 2 grips, shear-wall → 3 grips, I-shape → 5 grips).
- *     ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted.
+ *     circular → 1 grip, polygon → full set (ADR-518), shear-wall → 10 grips, I-shape → 6 grips).
+ *     ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted (except rect/shear-wall + polygon ADR-518).
  *   - Grip positions correspond to centroid / rotation handle / far-edge
  *     midpoints / variant edge midpoints σε mm world space.
  *   - `applyColumnGripDrag` patches the right field per kind, clamps
@@ -726,23 +726,35 @@ describe('column-grips — materialize helpers (Phase 4.5b)', () => {
 
 // ─── ADR-363 Phase 8C — polygon / shear-wall / I-shape grips ────────────────
 
-describe('column-grips — Phase 8C: polygon kind', () => {
-  it('46. polygon → 2 grips (rotation + width). NO center, NO depth grip — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 3 to 2
-    const grips = getColumnGrips(makeOfKind('polygon'));
-    expect(grips).toHaveLength(2);
-    expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-rotation',
-      'column-width',
-    ]);
+describe('column-grips — ADR-518: polygon kind full grip set (parity ορθογώνιας)', () => {
+  it('46. polygon → πλήρες set: center MOVE + rotation + λαβή/κορυφή + λαβή/μέσο-πλευράς', () => {
+    // ADR-518: η κανονική πολυγωνική κολόνα αποκτά parity με την ορθογώνια — center MOVE
+    // (4 ξεχωριστά βελάκια) + rotation + ΜΙΑ λαβή ανά κορυφή + ΜΙΑ λαβή ανά μέσο πλευράς.
+    const col = makeOfKind('polygon', { polygon: { sides: 6 }, anchor: 'center', rotation: 0 });
+    const grips = getColumnGrips(col);
+    expect(grips).toHaveLength(2 + 6 + 6); // center + rotation + 6 κορυφές + 6 μέσα
+    expect(grips[0].columnGripKind).toBe('column-center');
+    expect(grips[0].movesEntity).toBe(true);
+    expect(grips[1].columnGripKind).toBe('column-rotation');
+    const kinds = grips.map((g) => g.columnGripKind);
+    for (let i = 0; i < 6; i++) {
+      expect(kinds).toContain(`column-poly-vertex-${i}`);
+      expect(kinds).toContain(`column-poly-edge-${i}`);
+    }
   });
 
-  it('47. polygon width handle at perimeter +X = (width/2, 0) world (anchor=center, rotation=0)', () => {
-    const col = makeOfKind('polygon', { width: 400, anchor: 'center', rotation: 0 });
+  it('47. polygon center MOVE στο centroid· rotation ΑΝΑΜΕΣΑ κέντρο↔κάτω (ΟΧΙ πάνω στο κέντρο)', () => {
+    // ΚΡΙΣΙΜΟ ADR-518: για convex N-gon το interiorAnchorPoint ≈ centroid, οπότε το rotation
+    // ΠΡΕΠΕΙ να μετατοπίζεται (−dimY/4) αλλιώς θα έπεφτε πάνω στο move glyph.
+    const col = makeOfKind('polygon', { polygon: { sides: 6 }, width: 400, anchor: 'center', rotation: 0 });
     const grips = getColumnGrips(col);
-    const widthGrip = grips.find((g) => g.columnGripKind === 'column-width')!;
-    expect(widthGrip.position.x).toBeCloseTo(col.params.width / 2, 4);
-    expect(widthGrip.position.y).toBeCloseTo(0, 4);
+    const center = grips.find((g) => g.columnGripKind === 'column-center')!;
+    const rot = grips.find((g) => g.columnGripKind === 'column-rotation')!;
+    expect(center.position.x).toBeCloseTo(0, 4);
+    expect(center.position.y).toBeCloseTo(0, 4);
+    expect(rot.position.x).toBeCloseTo(0, 4);
+    expect(rot.position.y).toBeLessThan(0);                  // μετατοπισμένο κάτω από το κέντρο
+    expect(Math.abs(rot.position.y)).toBeGreaterThan(1e-3);  // ΔΕΝ συμπίπτει με το centroid/move
   });
 
   it('48. polygon depth grip drag → no-op (referential identity)', () => {

@@ -1,10 +1,11 @@
 /**
- * ADR-436 Slice 1b — foundation pad grip tests.
+ * ADR-436 Slice 1b / ADR-517 — foundation pad grip tests.
  *
- * Verifies grip emission (rotation/width/length, declutter no-center), handle
- * world positions, and `applyFoundationGripDrag` transforms (anchor-aware
- * width/length resize, rotation about position, 6-click pivot, Alt-move,
- * zero-delta no-op, min clamp). Pure functions — μηδέν mocks. Mirror column.
+ * Verifies grip emission (ADR-517 full rect-column parity: center MOVE +
+ * rotation + 4 mid-side edges + 4 corners), handle world positions, and
+ * `applyFoundationGripDrag` transforms (anchor-aware width/length/edge-w/edge-s
+ * resize, rotation about position, 6-click pivot, Alt-move, zero-delta no-op,
+ * min clamp). Pure functions — μηδέν mocks. Mirror column.
  */
 
 import { getFoundationGrips, applyFoundationGripDrag } from '../foundation-grips';
@@ -48,19 +49,44 @@ const stripEntity = (over: Partial<StripFootingParams> = {}): FoundationEntity =
   ({ id: 'fnd-2', type: 'foundation', kind: 'strip', params: strip(over) } as unknown as FoundationEntity);
 
 describe('getFoundationGrips — pad', () => {
-  it('emits exactly 7 grips: rotation / 2 edges / 4 corners (no central move)', () => {
+  // ADR-517 — full rect-column parity: center MOVE + rotation + 4 mid-side edges + 4 corners.
+  it('emits exactly 10 grips: center / rotation / 4 edges / 4 corners (mirror rect column)', () => {
     const grips = getFoundationGrips(padEntity());
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.foundationGripKind)).toEqual([
+      'foundation-center',
       'foundation-rotation',
       'foundation-width',
       'foundation-length',
+      'foundation-edge-w',
+      'foundation-edge-s',
       'foundation-corner-ne',
       'foundation-corner-nw',
       'foundation-corner-sw',
       'foundation-corner-se',
     ]);
-    expect(grips.every((g) => g.movesEntity === false)).toBe(true);
+  });
+
+  it('emits the center grip as a whole-entity MOVE handle at the centroid (4-arrow cross)', () => {
+    const grips = getFoundationGrips(padEntity());
+    const center = grips.find((g) => g.foundationGripKind === 'foundation-center')!;
+    expect(center.type).toBe('center');
+    expect(center.movesEntity).toBe(true);
+    expect(center.position).toEqual({ x: 0, y: 0 }); // anchor=center → centroid = position
+  });
+
+  it('marks every non-center grip as movesEntity=false', () => {
+    const grips = getFoundationGrips(padEntity());
+    const nonCenter = grips.filter((g) => g.foundationGripKind !== 'foundation-center');
+    expect(nonCenter.every((g) => g.movesEntity === false)).toBe(true);
+  });
+
+  it('places the WEST + SOUTH edge handles at the «other two» mid-side faces', () => {
+    const grips = getFoundationGrips(padEntity());
+    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    // width=1500 → W face at −750; length=2000 → S face at −1000.
+    expect(at('foundation-edge-w')).toEqual({ x: -750, y: 0 });
+    expect(at('foundation-edge-s')).toEqual({ x: 0, y: -1000 });
   });
 
   it('places the four corners at the footprint vertices (anchor=center, rotation=0)', () => {
@@ -86,13 +112,14 @@ describe('getFoundationGrips — pad', () => {
     expect(length.position.y).toBeCloseTo(1000); // length/2
   });
 
-  it('places the rotation handle ON the OPPOSITE (south) face from the length edge handle', () => {
+  it('places the rotation handle MIDWAY between centre and the south mid-side (rect-column parity)', () => {
     const grips = getFoundationGrips(padEntity());
     const rot = grips.find((g) => g.foundationGripKind === 'foundation-rotation')!;
-    // Shared rotation-handle policy: length handle on +Y (north) → rotation sits ON
-    // the −Y (south) face: −(length/2 + 0) = −1000. Clean separation, Revit-style.
+    // ADR-517 — mirror the rectangular column: rotation marker at local (0, −length/4)
+    // = the midpoint of centre→south-edge-midpoint. length=2000 → y = −500. This also
+    // keeps it clear of the new `foundation-edge-s` grip (which sits at −1000).
     expect(rot.position.x).toBeCloseTo(0);
-    expect(rot.position.y).toBeCloseTo(-1000);
+    expect(rot.position.y).toBeCloseTo(-500);
   });
 
 });
@@ -335,6 +362,36 @@ describe('applyFoundationGripDrag — edge resize (opposite edge fixed)', () => 
       delta: { x: 100, y: 0 },
     });
     expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(2000);
+  });
+
+  // ADR-517 — the WEST + SOUTH edge grips resize the OPPOSITE (near) face, with the
+  // far face fixed — mirror `applyRectColumnGrip` for `column-edge-w` / `column-edge-s`.
+  it('edge-w grows the WEST face outward, opposite (east) face fixed', () => {
+    const p = applyFoundationGripDrag('foundation-edge-w', {
+      originalParams: pad(),
+      delta: { x: -100, y: 0 }, // drag west face further −X
+    });
+    expect(p.kind === 'pad' && p.width).toBeCloseTo(1600); // +100
+    expect(p.kind === 'pad' && p.position.x).toBeCloseTo(-50); // centroid shifts west
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(2000); // length untouched
+  });
+
+  it('edge-s grows the SOUTH face outward, opposite (north) face fixed', () => {
+    const p = applyFoundationGripDrag('foundation-edge-s', {
+      originalParams: pad(),
+      delta: { x: 0, y: -100 }, // drag south face further −Y
+    });
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBeCloseTo(2100); // +100
+    expect(p.kind === 'pad' && p.position.y).toBeCloseTo(-50); // centroid shifts south
+    expect(p.kind === 'pad' && p.width).toBe(1500); // width untouched
+  });
+
+  it('clamps edge-s to MIN_FOUNDATION_DIMENSION_MM on a large inward drag', () => {
+    const p = applyFoundationGripDrag('foundation-edge-s', {
+      originalParams: pad(),
+      delta: { x: 0, y: 100000 }, // push south face north past north face
+    });
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(MIN_FOUNDATION_DIMENSION_MM);
   });
 });
 

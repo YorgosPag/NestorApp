@@ -24,7 +24,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { collectMemberSnapTargets, collectDiskTargets, collectRectTargets, type MemberSnapKind } from './member-snap-targets';
+import { collectMemberSnapTargets, collectDiskTargets, collectRectTargets, collectFoundationPadEdgeTargets, type MemberSnapKind } from './member-snap-targets';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 import type { RectFrame } from './rect-frame';
 import type { WallEntity } from '../types/wall-types';
@@ -44,6 +44,9 @@ export interface SceneSnapTargets {
   readonly wallTargets: readonly LinearMemberSnapTarget[];
   /** Ακμές πλάκας ως {axis, outline}. */
   readonly slabTargets: readonly LinearMemberSnapTarget[];
+  /** ADR-514 Φ6d — ΠΕΔΙΛΑ (pad) ως 4 zero-width edges (slant-following). Ξεχωριστά από `lineTargets`:
+   *  τα καταναλώνει ΜΟΝΟ ο column/foundation-pad resolver (όχι wall/beam μέσω `selectGhostMembers`). */
+  readonly padEdgeTargets: readonly LinearMemberSnapTarget[];
   /** ADR-398 §3.11/§3.12 — σκέτες ΓΡΑΜΜΕΣ + ΠΟΛΥΓΡΑΜΜΕΣ + ΟΡΘΟΓΩΝΙΑ + ΚΥΚΛΟΙ + ΤΟΞΑ (`line`/`polyline`/
    *  `lwpolyline`/`rectangle`/`circle`/`arc`) ως zero-width {axis, outline} (ένα ανά τμήμα/πλευρά/χορδή).
    *  Κύκλος/τόξο φέρουν `arc` meta → arc-length listening dims. Μόνο η κολώνα τις καταναλώνει
@@ -68,6 +71,7 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   beamTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   wallTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   slabTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
+  padEdgeTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   lineTargets: Object.freeze([]) as readonly LinearMemberSnapTarget[],
   diskTargets: Object.freeze([]) as readonly { center: Point2D; radius: number }[],
   rectTargets: Object.freeze([]) as readonly RectFrame[],
@@ -87,6 +91,7 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     beamTargets: beamPass.memberTargets,
     wallTargets: collectMemberSnapTargets(entities, { memberKinds: ['wall'] }).memberTargets,
     slabTargets: collectMemberSnapTargets(entities, { memberKinds: ['slab'] }).memberTargets,
+    padEdgeTargets: collectFoundationPadEdgeTargets(entities), // ADR-514 Φ6d — πέδιλα ως slant-following edges
     lineTargets: collectMemberSnapTargets(entities, { memberKinds: ['line'] }).memberTargets,
     diskTargets: collectDiskTargets(entities), // §3.13 — κύκλοι ως δίσκοι (Polar Magnet)
     rectTargets: collectRectTargets(entities), // §3.15 — ορθογώνια (Cartesian Magnet)

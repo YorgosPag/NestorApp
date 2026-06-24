@@ -244,3 +244,28 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
     (name collision types vs completion) → flagged `pending-ratchet-work.md`. 🔴 browser-verify (πέδιλο: flush
     παρειά/άξονα + σιελ + polar/rect πλέγμα + 1ο κλικ→περιστροφή+πορτοκαλί γραμμή→2ο κλικ commit· ίδια αίσθηση
     με κολόνα) + commit. ⚠️ CHECK 6B/6D → stage ADR-040 + ADR-514 + ADR-398 μαζί.
+- **2026-06-24** — **Φ6d follow-up #1+#2 (Giorgio browser-verify)**: (#1) «δεν εμφανίζονται οι σιελ όταν το
+  πέδιλο πάει κοντά σε ΥΦΙΣΤΑΜΕΝΟ πέδιλο» + (#2) «σε ΛΟΞΑ τοποθετημένο υφιστάμενο πέδιλο το φάντασμα δεν
+  ακολουθεί τη λοξάδα / δεν κολλάει στις λοξές παρειές». ΙΔΙΑ κλάση με δοκάρι→τοίχο (snap target set). Ρίζα =
+  τα υφιστάμενα **πέδιλα δεν συλλέγονταν πουθενά** ως face-snap στόχοι → κανένα faceFrame → καμία σιελ. **FIX
+  (reuse-only, slant-aware):** NEW `collectFoundationPadEdgeTargets(entities)` (`member-snap-targets.ts`) — το
+  pad `geometry.footprint` (world-baked, φέρει τη στροφή) → 4 **zero-width edges** (reuse `polylineEdgeTargets`,
+  ΟΠΩΣ rectangle/slab) → περνά από τον axis-relative `resolveLinearMemberFaceSnap` που **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ**
+  (επιστρέφει τη γωνία της λοξής παρειάς· το bbox/footprint path θα την ίσιωνε σε rotation 0). NEW ξεχωριστό
+  πεδίο **`SceneSnapTargets.padEdgeTargets`** (ΟΧΙ στο `lineTargets`/`footprints`) ώστε να το καταναλώνει
+  **ΜΟΝΟ** ο column/foundation-pad edge path (`resolveColumnFaceSnapFromTargets` concat `slab+line+padEdges` με
+  `?? []` guard) — τα εργαλεία τοίχου/δοκαριού (που διαβάζουν `lineTargets` μέσω `selectGhostMembers`) **μένουν
+  αμετάβλητα** (scoped, μηδέν regression). flush + center-on-axis + σιελ + slant για κάθε προσανατολισμό.
+  strip/tie-beam (γραμμικά) → DEFER. +4 jest (scene-snap-targets pad→padEdgeTargets×4 όχι footprints/lineTargets·
+  pad+column ξεχωριστά paths· foundation-preview: λοξό πέδιλο → ghost rotation≠0). tsc 0. 🔴 browser-verify + commit.
+- **2026-06-24** — **Φ6d follow-up #3 (Giorgio browser-verify: «δεν μπορώ να κοντοζυγώσω τόσο σε γωνία ώστε
+  να φανεί η έλξη γωνία πεδίλου & να κολλήσουν οι δύο παρειές»)**: τα pad edges περνούσαν από τον γενικό
+  `resolveColumnEdgeSnap` (slab/line) → **center-on-axis (150mm) straddle** «άρπαζε» τον κέρσορα κοντά στη
+  γωνία (το πέδιλο κεντράρονταν πάνω στην παρειά) → γωνία-με-γωνία μη προσβάσιμη. **FIX (pad-scoped, SSoT
+  reuse):** NEW `resolveColumnPadEdgeSnap` (ξεχωριστός tier στο `nearestHit`, μόνο για `padEdgeTargets`) —
+  **flush-beside, ΧΩΡΙΣ center-on-axis** (όχι straddle)· στο **εξωτερικό τρίτο** της παρειάς (`pickThird`
+  lo/hi) κουμπώνει το `centerAlong` στην **ΚΟΡΥΦΗ** → **γωνία-με-γωνία** (anchor corner via `edgeFlushAnchor`,
+  δύο παρειές flush)· **`facePerp:0`** → ΑΚΡΙΒΕΣ flush (ο άξονας ακμής = όριο footprint, 0 κενό, όχι ±eps band)·
+  rotation από τον άξονα → **ακολουθεί τη λοξάδα**. Reuse `resolveLinearMemberFaceSnap`/`pickThird`/
+  `edgeFlushAnchor`/`edgeNearFace` — μηδέν νέα geometry. slab/line/column tiers ΑΜΕΤΑΒΛΗΤΟΙ. +1 jest
+  (foundation-preview: κέρσορας σε γωνία → ghost στην κορυφή, rotation 0). 🔴 browser-verify + commit.

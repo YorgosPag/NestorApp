@@ -23,6 +23,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { GripInfo } from '../../hooks/useGripMovement';
 import {
+  columnCenterMoveGrip,
   localToWorld,
   polygonBackedBboxMm,
   projectDeltaToLocal,
@@ -199,6 +200,23 @@ export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo
     movesEntity: false,
     columnGripKind: 'column-rotation',
   }];
+  grips.push(...perVertexAndEdgeGrips(entity, verts));
+  return grips;
+}
+
+/**
+ * ADR-518 — ΚΟΙΝΟ SSoT για τις λαβές **κορυφών + μέσων-πλευρών** ενός footprint (world κορυφές).
+ * Μία λαβή ανά **κορυφή** (`column-poly-vertex-i`, reshape γωνίας) + μία λαβή στο **μέσο κάθε
+ * πλευράς** (`column-poly-edge-i`, μετακίνηση όλης της πλευράς). Εξήχθη ώστε ΚΑΙ το
+ * `freeCornerReshapeGrips` (L/T/U/composite) ΚΑΙ το `polygonReshapeGrips` (regular polygon) να
+ * μοιράζονται ΕΝΑ σημείο εκπομπής — μηδέν διπλότυπο (N.0.2). Stable indices 10+i / 100+i.
+ */
+function perVertexAndEdgeGrips(
+  entity: Readonly<ColumnEntity>,
+  verts: readonly { readonly x: number; readonly y: number }[],
+): GripInfo[] {
+  const n = verts.length;
+  const grips: GripInfo[] = [];
   verts.forEach((v, i) => {
     grips.push({
       entityId: entity.id,
@@ -222,4 +240,33 @@ export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo
     });
   });
   return grips;
+}
+
+/**
+ * ADR-518 — Πλήρες set λαβών **κανονικής πολυγωνικής** κολόνας (`kind === 'polygon'`), parity με
+ * την ορθογώνια:
+ *   0     → center MOVE (`column-center`, 4 ξεχωριστά βελάκια) — shared `columnCenterMoveGrip` SSoT
+ *   1     → rotation    (`column-rotation`) στο `rotationHandleWorld` (= local (0,−dimY/4), ΑΝΑΜΕΣΑ
+ *           στο κέντρο και την κάτω λαβή· ΠΟΤΕ πάνω στο centroid του move glyph)
+ *   10+i  → λαβή ανά **κορυφή** του N-gon (`column-poly-vertex-i`)
+ *   100+i → λαβή ανά **μέσο πλευράς** (`column-poly-edge-i`)
+ *
+ * Το vertex/edge drag κάνει materialize σε `composite` (ίδιο SSoT με L/T) στο πρώτο σύρσιμο. Το
+ * `polygon` ΔΕΝ μπαίνει στο `usesFreeReshapeGrips` ώστε το rotation **drag** να διαβάζει το ΙΔΙΟ
+ * `rotationHandleWorld` με το emission (μηδέν jump). Reuse `perVertexAndEdgeGrips` — μηδέν διπλότυπο.
+ */
+export function polygonReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
+  const verts = entity.geometry?.footprint?.vertices ?? computeColumnGeometry(entity.params).footprint.vertices;
+  return [
+    columnCenterMoveGrip(entity),
+    {
+      entityId: entity.id,
+      gripIndex: 1,
+      type: 'vertex',
+      position: rotationHandleWorld(entity.params),
+      movesEntity: false,
+      columnGripKind: 'column-rotation',
+    },
+    ...perVertexAndEdgeGrips(entity, verts),
+  ];
 }

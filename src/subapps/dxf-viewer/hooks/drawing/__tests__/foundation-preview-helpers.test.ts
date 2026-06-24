@@ -7,7 +7,8 @@
 
 import { generateFoundationPreview, generateFoundationPadPreview } from '../foundation-preview-helpers';
 import { foundationPreviewStore } from '../../../bim/foundations/foundation-preview-store';
-import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../../bim/framing/scene-snap-targets';
+import { sceneSnapTargetsStore, collectSceneSnapTargets, type SceneSnapTargets } from '../../../bim/framing/scene-snap-targets';
+import type { Entity } from '../../../types/entities';
 import { setPlacementRotationLock, clearPlacementRotationLock } from '../../../systems/cursor/PlacementRotationStore';
 import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
 
@@ -76,6 +77,35 @@ describe('generateFoundationPadPreview — ADR-514 Φ6c live pad ghost', () => {
     };
     // ανατολική παρειά κολόνας @ x=400 (ΙΔΙΟΣ εγκέφαλος 'foundation-pad' με το commit).
     expect(ghost.params.position.x).toBeCloseTo(400);
+  });
+
+  it('ADR-514 Φ6d — κοντά σε ΛΟΞΑ τοποθετημένο πέδιλο → το φάντασμα ΑΚΟΛΟΥΘΕΙ τη λοξάδα (rotation ≠ 0)', () => {
+    foundationPreviewStore.set({ startPoint: null, endPoint: null, kind: 'pad', overrides: {} });
+    // Υφιστάμενο πέδιλο στραμμένο 30° (footprint world-baked με τη στροφή).
+    const c = Math.cos(Math.PI / 6), s = Math.sin(Math.PI / 6);
+    const rot = (x: number, y: number) => ({ x: x * c - y * s, y: x * s + y * c });
+    const verts = [rot(-500, -500), rot(500, -500), rot(500, 500), rot(-500, 500)];
+    const padFp = { id: 'rp', type: 'foundation', kind: 'pad', geometry: { footprint: { vertices: verts } } } as unknown as Entity;
+    sceneSnapTargetsStore.set(collectSceneSnapTargets([padFp]));
+    // κέρσορας λίγο έξω από τη λοξή ανατολική παρειά (local x≈560).
+    const ghost = generateFoundationPadPreview(rot(560, 0)) as { params: { rotation: number } };
+    expect(ghost).not.toBeNull();
+    expect(Number.isFinite(ghost.params.rotation)).toBe(true);
+    expect(Math.abs(ghost.params.rotation)).toBeGreaterThan(1); // ακολουθεί τη λοξάδα (το bbox path θα έδινε 0)
+  });
+
+  it('ADR-514 Φ6d — κέρσορας κοντά σε ΓΩΝΙΑ υφιστάμενου πεδίλου → γωνία-με-γωνία (ghost στην κορυφή)', () => {
+    foundationPreviewStore.set({ startPoint: null, endPoint: null, kind: 'pad', overrides: {} });
+    // Υφιστάμενο πέδιλο axis-aligned ±500 (γωνία ΒΑ στο (500,500)).
+    const verts = [{ x: -500, y: -500 }, { x: 500, y: -500 }, { x: 500, y: 500 }, { x: -500, y: 500 }];
+    const padFp = { id: 'ap', type: 'foundation', kind: 'pad', geometry: { footprint: { vertices: verts } } } as unknown as Entity;
+    sceneSnapTargetsStore.set(collectSceneSnapTargets([padFp]));
+    // κέρσορας λίγο έξω από την ανατολική παρειά, στο εξωτερικό (ΒΑ) τρίτο της → κουμπώνει στη γωνία (500,500).
+    const ghost = generateFoundationPadPreview({ x: 520, y: 400 }) as { params: { position: { x: number; y: number }; rotation: number } };
+    expect(ghost).not.toBeNull();
+    expect(ghost.params.position.x).toBeCloseTo(500); // η λαβή-γωνία του φαντάσματος εδράζεται στην κορυφή
+    expect(ghost.params.position.y).toBeCloseTo(500);
+    expect(ghost.params.rotation).toBeCloseTo(0); // axis-aligned
   });
 });
 

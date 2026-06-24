@@ -92,6 +92,7 @@ import {
   freeCornerReshapeGrips,
   freeReshapeRotationWorld,
   moveColumnEdgeFree,
+  polygonReshapeGrips,
   reshapeColumnCornerFree,
 } from './column-poly-vertex-grips';
 // ADR-363 Slice C — rectangular / shear-wall corners + edges via shared
@@ -170,24 +171,14 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     return grips;
   }
 
+  // ADR-518 — κανονική πολυγωνική κολόνα: πλήρες set λαβών (center MOVE 4-βελάκια +
+  // rotation + λαβή ανά κορυφή + λαβή ανά μέσο πλευράς), parity με την ορθογώνια. Reuse
+  // του `perVertexAndEdgeGrips` SSoT (ίδιο με L/T/U/composite)· το vertex/edge drag κάνει
+  // materialize σε `composite`. ΔΕΝ μπαίνει στο `usesFreeReshapeGrips` ώστε το rotation drag
+  // να διαβάζει το ΙΔΙΟ `rotationHandleWorld` με το emission (μηδέν jump). Αντικαθιστά το
+  // παλιό 2-grip branch (rotation έξω + width).
   if (params.kind === 'polygon') {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 1,
-      type: 'vertex',
-      position: rotationHandleWorld(params),
-      movesEntity: false,
-      columnGripKind: 'column-rotation',
-    });
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 2,
-      type: 'vertex',
-      position: widthHandleWorld(params),
-      movesEntity: false,
-      columnGripKind: 'column-width',
-    });
-    return grips;
+    return polygonReshapeGrips(entity);
   }
 
   // ADR-363/449 — free reshape ΤΗΣ ΣΤΑΤΙΚΗΣ ΔΙΑΤΟΜΗΣ: L-shape (PHASE 1) + κάθε polygon-backed

@@ -26,7 +26,6 @@ import { rotateVector, farEdgeSign } from '../grips/grip-math';
 import type { RectFrame, RectCorner } from '../grips/rect-frame';
 import type { RectResizeLimits } from '../grips/rect-grip-engine';
 import { mmScaleFor } from '../../utils/scene-units';
-import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
 import {
   centredCentroidWorld,
   centredLocalToWorld,
@@ -53,7 +52,7 @@ function padAnchorFrame(params: PadFootingParams): CentredAnchorFrame {
 }
 
 /** Centroid (bbox centre) του pad footprint σε world coords — shared SSoT. */
-function computeCentroidWorld(params: PadFootingParams): Point2D {
+export function computeCentroidWorld(params: PadFootingParams): Point2D {
   return centredCentroidWorld(padAnchorFrame(params));
 }
 
@@ -77,14 +76,34 @@ export function lengthHandleWorld(params: PadFootingParams): Point2D {
 }
 
 /**
- * World position της λαβής rotation. Shared `rotation-handle-policy` SSoT: stands
- * off the local-Y face OPPOSITE the `length` edge handle (which sits on `signY`),
- * so rotation is never coincident with the length dimension handle (Revit rule).
+ * ADR-517 — WEST edge-midpoint λαβή (the «other» local-X face). Always the −X
+ * face του local frame (centroid-centred), mirror `column-edge-w`
+ * (`localToWorld({ x: -width/2, y: 0 })`). Completes the 4 mid-side grips.
+ */
+export function edgeWHandleWorld(params: PadFootingParams): Point2D {
+  return localToWorld({ x: -params.width / 2, y: 0 }, params);
+}
+
+/**
+ * ADR-517 — SOUTH edge-midpoint λαβή (the «other» local-Y face). Always the −Y
+ * face του local frame, mirror `column-edge-s` (`localToWorld({ x: 0, y: -depth/2 })`).
+ */
+export function edgeSHandleWorld(params: PadFootingParams): Point2D {
+  return localToWorld({ x: 0, y: -params.length / 2 }, params);
+}
+
+/**
+ * World position της λαβής rotation. ADR-517 — full rect-column parity: το σήμα
+ * περιστροφής κάθεται στο ΜΕΣΟ της νοητής γραμμής κέντρου→νότιας μέσης-πλευράς →
+ * local `(0, −length/4)` (καθρέφτης `column-grip-utils.rotationHandleWorld` για
+ * rectangular/shear-wall). Κρατιέται ΕΔΩ (single rotation-position SSoT) ώστε η
+ * εκπομπή ΚΑΙ το rotation drag (`rotateAroundPosition`, που διαβάζει αυτό) να
+ * συμφωνούν — αλλιώς η λαβή θα «πηδούσε» στο πιάσιμο. Επιπλέον δεν συμπίπτει με
+ * τη νέα `foundation-edge-s` (στο −length/2), σε αντίθεση με την παλιά
+ * on-the-face θέση (`rotation-handle-policy`).
  */
 export function rotationHandleWorld(params: PadFootingParams): Point2D {
-  const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSign(dy);
-  return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.length / 2, signY) }, params);
+  return localToWorld({ x: 0, y: -params.length / 4 }, params);
 }
 
 /** World position μιας γωνιακής λαβής (local signs `sx`/`sy` × half-extents). */
@@ -100,6 +119,22 @@ export const FOUNDATION_CORNER_MAP: Partial<Record<FoundationGripKind, RectCorne
   'foundation-corner-nw': { sx: -1, sy: 1 },
   'foundation-corner-sw': { sx: -1, sy: -1 },
   'foundation-corner-se': { sx: 1, sy: -1 },
+};
+
+/**
+ * ADR-517 — `foundation-{width|length|edge-w|edge-s}` → engine edge axis + face.
+ * `near:false` = the FAR face from the anchor (width=E, length=N)· `near:true` =
+ * the OPPOSITE face (edge-w=W, edge-s=S). One table → one `applyRectEdgeDrag`
+ * call (DRY, mirror `column-rect-adapter.COLUMN_EDGE_MAP`). The sign derives from
+ * `farEdgeSign(anchorOffset)` so every anchor resizes the correct face.
+ */
+export const FOUNDATION_EDGE_MAP: Partial<
+  Record<FoundationGripKind, { axis: 'x' | 'y'; near: boolean }>
+> = {
+  'foundation-width': { axis: 'x', near: false },
+  'foundation-edge-w': { axis: 'x', near: true },
+  'foundation-length': { axis: 'y', near: false },
+  'foundation-edge-s': { axis: 'y', near: true },
 };
 
 /**

@@ -10,7 +10,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ColumnParams } from '../types/column-types';
+import type { ColumnEntity, ColumnParams } from '../types/column-types';
+import type { GripInfo } from '../../hooks/useGripMovement';
 import { ANCHOR_OFFSETS } from '../types/column-types';
 import { columnFootprintDims, polygonBboxMm } from './column-footprint-dims';
 import { mmScaleFor } from '../../utils/scene-units';
@@ -92,6 +93,25 @@ export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
   return centredLocalToWorld(columnAnchorFrame(params), local);
 }
 
+/**
+ * ADR-518 — SSoT for the gripIndex-0 centre MOVE grip (4-arrow glyph). Shared by
+ * BOTH `rectColumnGrips` (rectangular / shear-wall) AND `polygonReshapeGrips`
+ * (regular polygon) so the centre-move emission lives in ONE place (N.0.2 Boy-Scout
+ * dedup of the prior inline literal). `movesEntity: true` + `column-center` kind →
+ * the registry paints the 4-separate-arrow move glyph and the move-glyph zone
+ * hit-test (`move-glyph-zones`) gives each arrow its own directional function.
+ */
+export function columnCenterMoveGrip(entity: Readonly<ColumnEntity>): GripInfo {
+  return {
+    entityId: entity.id,
+    gripIndex: 0,
+    type: 'center',
+    position: computeCentroidWorld(entity.params),
+    movesEntity: true,
+    columnGripKind: 'column-center',
+  };
+}
+
 // Far-edge face sign = shared `farEdgeSign` SSoT (grip-math) — applied to the
 // anchor's local dx (width axis) or dy (depth axis).
 
@@ -151,13 +171,20 @@ export function rotationHandleWorld(params: ColumnParams): Point2D {
   if (params.kind === 'rectangular' || params.kind === 'shear-wall') {
     return localToWorld({ x: 0, y: -params.depth / 4 }, params);
   }
-  const dimY = params.kind === 'polygon'
-    ? polygonBboxMm(params.width, params.polygon?.sides).dimY
-    : params.depth;
+  // ADR-518 — polygon mirror του rectangular: η λαβή περιστροφής στο μέσο της νοητής
+  // γραμμής κέντρο→κάτω edge-midpoint (local (0,−dimY/4)) — ΑΝΑΜΕΣΑ στο center MOVE
+  // (centroid) και την κάτω λαβή. ΠΟΤΕ πάνω στο centroid (όπου κάθεται το move glyph,
+  // αφού `interiorAnchorPoint` ≈ centroid για convex N-gon) ΟΥΤΕ στην περίμετρο (λαβές
+  // γωνιών/πλευρών). `dimY` = πραγματικό N-gon bbox. Emission ≡ rotation drag, αφού
+  // το `polygon` ΔΕΝ μπαίνει στο `usesFreeReshapeGrips` (διαβάζει αυτή την ίδια θέση).
+  if (params.kind === 'polygon') {
+    const dimY = polygonBboxMm(params.width, params.polygon?.sides).dimY;
+    return localToWorld({ x: 0, y: -dimY / 4 }, params);
+  }
   // Depth handle face = `signY` (farEdgeSign of the anchor's dy); the shared
   // rotation-handle policy stands the rotation handle off the OPPOSITE (−signY)
   // face so the two never coincide for any anchor (mm local frame → `localToWorld`).
-  const dy = params.kind === 'polygon' ? 0 : ANCHOR_OFFSETS[params.anchor].dy;
+  const dy = ANCHOR_OFFSETS[params.anchor].dy;
   const signY = farEdgeSign(dy);
-  return localToWorld({ x: 0, y: rotationHandlePerpOffset(dimY / 2, signY) }, params);
+  return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.depth / 2, signY) }, params);
 }

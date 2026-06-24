@@ -412,6 +412,11 @@ export type FoundationGripKind =
   | 'foundation-rotation'
   | 'foundation-width'
   | 'foundation-length'
+  // ADR-517 — pad ↔ rect-column grip parity: the WEST + SOUTH edge-midpoints
+  // (the «other two» faces), so all 4 mid-side grips are emitted (mirror
+  // `column-edge-w` / `column-edge-s`).
+  | 'foundation-edge-w'
+  | 'foundation-edge-s'
   | 'foundation-corner-ne'
   | 'foundation-corner-nw'
   | 'foundation-corner-sw'

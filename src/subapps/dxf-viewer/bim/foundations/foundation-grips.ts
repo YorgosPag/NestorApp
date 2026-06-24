@@ -59,13 +59,17 @@ import {
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
 import { stripJustifiedAxis, unjustifyStripAxis } from '../geometry/foundation-geometry';
-// ADR-436 Slice 1c — pad frame/handle geometry adapter SSoT (500-line SRP split).
+// ADR-436 Slice 1c / ADR-517 — pad frame/handle geometry adapter SSoT (500-line SRP split).
 import {
+  computeCentroidWorld,
   widthHandleWorld,
   lengthHandleWorld,
+  edgeWHandleWorld,
+  edgeSHandleWorld,
   rotationHandleWorld,
   cornerHandleWorld,
   FOUNDATION_CORNER_MAP,
+  FOUNDATION_EDGE_MAP,
   padToRectFrame,
   rectFrameToPadParams,
   padResizeLimits,
@@ -119,8 +123,11 @@ const RAD_TO_DEG = 180 / Math.PI;
  * Compute parametric grip positions για ένα `FoundationEntity`. Stable order.
  * Declutter: NO central move grip — Alt+drag μετακινεί. ΟΛΑ τα kinds εκπέμπουν 7.
  *
- *   pad (7 grips — ADR-436 Slice 1c, anchor+W×L frame):
- *     1 → rotation, 2 → width edge, 3 → length edge,
+ *   pad (10 grips — ADR-517 full rect-column parity, anchor+W×L frame):
+ *     0 → center (MOVE σταυρός — re-added για πλήρη ομοιότητα με ορθογώνια κολόνα),
+ *     1 → rotation (στο μέσο κέντρου↔νότιας μέσης, local (0,−length/4)),
+ *     2 → width edge (E), 3 → length edge (N),
+ *     8 → edge-w (W μέσο πλευράς), 9 → edge-s (S μέσο πλευράς),
  *     4 → corner-ne, 5 → corner-nw, 6 → corner-sw, 7 → corner-se
  *   strip / tie-beam (7 grips — ADR-436 2026-06-11, shared axis-box SSoT,
  *     wall/beam parity): width edge, length edge, 4 axis corners, rotation.
@@ -129,7 +136,18 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
   const { params } = entity;
   if (isLineFoundation(params)) return getLineFoundationGrips(entity, params);
 
+  // ADR-517 — exact mirror of `column-rect-adapter.rectColumnGrips`: center MOVE +
+  // rotation(inner) + 4 edge-midpoints (E/N via width/length + W/S) + 4 corners.
+  // Stable indices (no reindex): center=0, edges=2/3/8/9, corners=4..7.
   return [
+    {
+      entityId: entity.id,
+      gripIndex: 0,
+      type: 'center',
+      position: computeCentroidWorld(params),
+      movesEntity: true,
+      foundationGripKind: 'foundation-center',
+    },
     {
       entityId: entity.id,
       gripIndex: 1,
@@ -153,6 +171,22 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: lengthHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-length',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 8,
+      type: 'edge',
+      position: edgeWHandleWorld(params),
+      movesEntity: false,
+      foundationGripKind: 'foundation-edge-w',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 9,
+      type: 'edge',
+      position: edgeSHandleWorld(params),
+      movesEntity: false,
+      foundationGripKind: 'foundation-edge-s',
     },
     {
       entityId: entity.id,
@@ -277,17 +311,14 @@ export function applyFoundationGripDrag(
     const frame = applyRectCornerDrag(padToRectFrame(pad), corner, input.delta, padResizeLimits(pad));
     return rectFrameToPadParams(frame, pad);
   }
-  const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
-  if (gripKind === 'foundation-width') {
-    const frame = applyRectEdgeDrag(
-      padToRectFrame(pad), { axis: 'x', sign: farEdgeSign(dx) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
-    );
-    return rectFrameToPadParams(frame, pad);
-  }
-  if (gripKind === 'foundation-length') {
-    const frame = applyRectEdgeDrag(
-      padToRectFrame(pad), { axis: 'y', sign: farEdgeSign(dy) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
-    );
+  // ADR-517 — width / length / edge-w / edge-s → one engine call via the edge map
+  // (DRY, mirror `applyRectColumnGrip`). `near` flips to the OPPOSITE face sign.
+  const edge = FOUNDATION_EDGE_MAP[gripKind];
+  if (edge) {
+    const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
+    const far = farEdgeSign(edge.axis === 'x' ? dx : dy) === 1 ? 1 : -1;
+    const sign: 1 | -1 = edge.near ? (-far as 1 | -1) : far;
+    const frame = applyRectEdgeDrag(padToRectFrame(pad), { axis: edge.axis, sign }, input.delta, padResizeLimits(pad));
     return rectFrameToPadParams(frame, pad);
   }
   return input.originalParams;

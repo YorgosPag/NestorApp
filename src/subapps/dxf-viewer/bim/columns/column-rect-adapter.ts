@@ -33,6 +33,7 @@ import {
   type RectResizeLimits,
 } from '../grips/rect-grip-engine';
 import {
+  columnCenterMoveGrip,
   computeCentroidWorld,
   depthHandleWorld,
   localToWorld,
@@ -129,7 +130,8 @@ export function rectColumnCornerGrips(entity: Readonly<ColumnEntity>): GripInfo[
 export function rectColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
   const { id, params } = entity;
   return [
-    { entityId: id, gripIndex: 0, type: 'center', position: computeCentroidWorld(params), movesEntity: true, columnGripKind: 'column-center' },
+    // ADR-518 — center MOVE via shared `columnCenterMoveGrip` SSoT (was inline).
+    columnCenterMoveGrip(entity),
     { entityId: id, gripIndex: 1, type: 'vertex', position: rotationHandleWorld(params), movesEntity: false, columnGripKind: 'column-rotation' },
     { entityId: id, gripIndex: 2, type: 'edge', position: widthHandleWorld(params), movesEntity: false, columnGripKind: 'column-width' },
     { entityId: id, gripIndex: 3, type: 'edge', position: depthHandleWorld(params), movesEntity: false, columnGripKind: 'column-depth' },

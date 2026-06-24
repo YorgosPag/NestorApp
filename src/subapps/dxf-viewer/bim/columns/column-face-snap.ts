@@ -297,6 +297,50 @@ function resolveColumnEdgeSnap(
 }
 
 /**
+ * ADR-514 Φ6d — face-snap σε υφιστάμενο **ΠΕΔΙΛΟ (pad)** μέσω των 4 zero-width edges του footprint.
+ * Σε αντίθεση με slab/line edges (center-on-axis straddle), το πέδιλο πρέπει να κάθεται **flush ΔΙΠΛΑ**
+ * στην παρειά (ΟΧΙ κεντραρισμένο πάνω της) και, κοντά σε **ΓΩΝΙΑ** (εξωτερικό τρίτο της παρειάς), να
+ * κουμπώνει **γωνία-με-γωνία**: το `centerAlong` κουμπώνει στην ΚΟΡΥΦΗ → **δύο παρειές flush** (η κοινή +
+ * η συγγραμμική) — αυτό που ζήτησε ο Giorgio («έλξη γωνία πεδίλου, να κολλήσουν οι δύο παρειές»). Ακολουθεί
+ * τη **λοξάδα** (rotation από τον άξονα ακμής· axis-relative). Reuse `resolveLinearMemberFaceSnap` +
+ * `pickThird` + `edgeFlushAnchor` + `edgeNearFace` — ΜΗΔΕΝ center-on-axis (no straddle), μηδέν νέα geometry.
+ * `dist` = κάθετη απόσταση στην παρειά (σταθερή προτεραιότητα → η γωνία «κολλάει» στο εξωτερικό τρίτο).
+ */
+function resolveColumnPadEdgeSnap(
+  cursor: Readonly<Point2D>,
+  edges: readonly LinearMemberSnapTarget[],
+  sceneUnits: SceneUnits,
+): { snap: ColumnFaceSnap; dist: number } | null {
+  if (edges.length === 0) return null;
+  const f = mmToSceneUnits(sceneUnits);
+  const r = resolveLinearMemberFaceSnap(cursor, edges, {
+    ghostLenScene: MEMBER_GHOST_LEN_MM * f,
+    captureScene: MEMBER_GHOST_CAPTURE_MM * f,
+    memberWidthScene: 0,
+  });
+  if (!r || !r.faceFrame) return null;
+  const ff = r.faceFrame;
+  const axisAligned = isAxisAligned(ff.axisDir);
+  const rotation = axisAlignmentRotationDeg(ff.axisDir);
+  const face = edgeNearFace(ff);
+  // εξωτερικό τρίτο → ΚΟΡΥΦΗ (corner-to-corner)· μεσαίο → flush κατά μήκος (beside). ΧΩΡΙΣ center-on-axis.
+  const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
+  const centerAlong = third === 'lo' ? ff.faceAlongMin : third === 'hi' ? ff.faceAlongMax : ff.ghostCenterAlong;
+  // ΑΚΡΙΒΕΣ flush (facePerp 0): ο άξονας ακμής ΕΙΝΑΙ το όριο footprint του πεδίλου → η λαβή κάθεται πάνω
+  // στην παρειά (0 κενό), όχι ±eps του zero-width band. Το outward extension το ορίζει το anchor.
+  const position: Point2D = {
+    x: ff.origin.x + centerAlong * ff.axisDir.x,
+    y: ff.origin.y + centerAlong * ff.axisDir.y,
+  };
+  const faceFrame: GhostFaceFrame = { ...ff, ghostCenterAlong: centerAlong, facePerp: 0 };
+  const perpDist = Math.abs((cursor.x - ff.origin.x) * ff.perpDir.x + (cursor.y - ff.origin.y) * ff.perpDir.y - ff.facePerp);
+  return {
+    snap: { position, anchor: edgeFlushAnchor(face, third, axisAligned, ff.outwardSign), rotation, status: 'beam', targetId: null, face, third, faceFrame },
+    dist: perpDist,
+  };
+}
+
+/**
  * ADR-398 §3.13 — **Polar Magnet**: όταν ο cursor είναι ΕΝΤΟΣ κυκλικού δίσκου, η κολώνα κουμπώνει στο
  * πολικό πλέγμα (κέντρο / δακτύλιος∩ακτίνα), `anchor:'center'`. Επιστρέφει + dist για nearest-wins με
  * edge/bbox. `null` όταν λείπει `worldPerPixel` (zoom-adaptive) ή ο cursor είναι κοντά στο χείλος
@@ -370,8 +414,11 @@ export function resolveColumnFaceSnapFromTargets(
 ): ColumnFaceSnap | null {
   // Τα zero-width edges (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative
   // resolver (ίδιος με τοίχο/δοκάρι)· κολόνες/δοκάρια/τοίχοι → bbox path. Βλ. `resolveColumnEdgeSnap`.
-  // Concat slab+line (ίδιο zero-width μοντέλο): η κολώνα ολισθαίνει σε γραμμή ΟΠΩΣ σε ακμή πλάκας.
+  // slab+line edges → center-on-axis/flush (ίδιο zero-width μοντέλο, ακμή πλάκας ≡ γραμμή).
   const edgeHit = resolveColumnEdgeSnap(cursor, [...t.slabTargets, ...t.lineTargets], sceneUnits);
+  // ADR-514 Φ6d — υφιστάμενα ΠΕΔΙΛΑ → ΞΕΧΩΡΙΣΤΟ pad face-snap: flush-beside + γωνία-με-γωνία + slant
+  // (ΟΧΙ center-on-axis straddle). `?? []` για ασφάλεια με partial test objects / παλιά snapshots.
+  const padHit = resolveColumnPadEdgeSnap(cursor, t.padEdgeTargets ?? [], sceneUnits);
   const targets = buildFaceTargets(t.footprints, t.beamTargets, t.wallTargets);
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
@@ -392,8 +439,8 @@ export function resolveColumnFaceSnapFromTargets(
   const rectHit = opts && opts.worldPerPixel > 0 && t.rectTargets.length > 0
     ? resolveRectHit(cursor, t.rectTargets, sceneUnits, opts)
     : null;
-  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε bbox / edge / polar / rect (στο χείλος → §3.11/§3.12 κερδίζει).
-  return nearestHit(edgeHit, bboxHit, polarHit, rectHit);
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε edge / pad / bbox / polar / rect (στο χείλος → §3.11/§3.12 κερδίζει).
+  return nearestHit(edgeHit, padHit, bboxHit, polarHit, rectHit);
 }
 
 /**

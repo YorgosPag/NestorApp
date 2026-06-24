@@ -44,6 +44,18 @@ function column(id: string): Entity {
     geometry: { footprint: { vertices: [{ x: -100, y: -100 }, { x: 100, y: -100 }, { x: 100, y: 100 }, { x: -100, y: 100 }] } },
   } as unknown as Entity;
 }
+function foundationPad(id: string): Entity {
+  return {
+    id, type: 'foundation', kind: 'pad',
+    geometry: { footprint: { vertices: [{ x: 400, y: 400 }, { x: 800, y: 400 }, { x: 800, y: 800 }, { x: 400, y: 800 }] } },
+  } as unknown as Entity;
+}
+function foundationStrip(id: string): Entity {
+  return {
+    id, type: 'foundation', kind: 'strip',
+    geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 600 }, { x: 0, y: 600 }] } },
+  } as unknown as Entity;
+}
 
 describe('collectSceneSnapTargets — διαχωρισμός ανά είδος', () => {
   it('μαζεύει κολόνες/δοκάρια/τοίχους/πλάκες σε ξεχωριστά arrays', () => {
@@ -52,6 +64,20 @@ describe('collectSceneSnapTargets — διαχωρισμός ανά είδος',
     expect(t.beamTargets.map((x) => x.id)).toEqual(['b1']);
     expect(t.wallTargets.map((x) => x.id)).toEqual(['w1']);
     expect(t.slabTargets).toHaveLength(4); // 4 ακμές πλάκας
+  });
+
+  it('ADR-514 Φ6d — υφιστάμενο ΠΕΔΙΛΟ (pad) → 4 zero-width edges στο padEdgeTargets (slant-following)· strip ΟΧΙ', () => {
+    const t = collectSceneSnapTargets([foundationPad('p1'), foundationStrip('st1')]);
+    // pad = κλειστό ορθογώνιο footprint → 4 edges (ΟΧΙ bbox → ακολουθεί τη λοξάδα)· strip = γραμμικό → DEFER.
+    expect(t.padEdgeTargets).toHaveLength(4);
+    expect(t.footprints).toHaveLength(0); // ΟΧΙ ως bbox footprint
+    expect(t.lineTargets).toHaveLength(0); // ΟΧΙ στο lineTargets (αλλιώς θα το έβλεπαν wall/beam)
+  });
+
+  it('ADR-514 Φ6d — κολώνα → footprint(bbox)· pad → padEdgeTargets (ξεχωριστά paths)', () => {
+    const t = collectSceneSnapTargets([column('c1'), foundationPad('p1')]);
+    expect(t.footprints).toHaveLength(1); // μόνο η κολώνα (bbox path)
+    expect(t.padEdgeTargets).toHaveLength(4); // pad edges (axis-relative path, slant-following)
   });
 
   it('κενή σκηνή → όλα κενά', () => {
