@@ -30,12 +30,10 @@ import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import {
-  resolveBeamGhostSnapFromStore,
-  BEAM_GHOST_LEN_MM,
-} from '../../bim/beams/beam-column-face-snap';
+import { BEAM_GHOST_LEN_MM } from '../../bim/beams/beam-column-face-snap';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
-import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
+import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
   resolveEffectivePreviewCursor,
@@ -72,7 +70,7 @@ export function generateBeamPreview(
     // ADR-398 §Smart beam ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα → κουμπώνει σε παρειά/anchor (centerline start/end)· αλλιώς ακολουθεί
     // ελεύθερα τον κέρσορα (ευθύ μικρό ghost). Pure — reuse του face-snap SSoT.
-    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, footprints, beamTargets);
+    return makeBeamGhostBeforeClick(cursorPoint, preview.kind, preview.overrides, sceneUnits, targets, beamTargets);
   }
 
   const startPt = tempPoints[0];
@@ -102,7 +100,7 @@ function makeBeamGhostBeforeClick(
   kind: BeamKind,
   overrides: BeamParamOverrides,
   sceneUnits: SceneUnits,
-  columnFootprints: readonly (readonly Point2D[])[],
+  targets: Readonly<SceneSnapTargets>,
   beamTargets: readonly BeamSnapTarget[],
 ): ExtendedSceneEntity | null {
   // ADR-398 §Smart beam ghost (2026-06-20 fix) — το crosshair ζωγραφίζεται στο
@@ -111,7 +109,11 @@ function makeBeamGhostBeforeClick(
   // SSoT `resolveEffectivePreviewCursor` → ο άξονας του ghost ταυτίζεται με το σταυρόνημα.
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-  const snap = resolveBeamGhostSnapFromStore(effectiveCursor, columnFootprints, beamTargets, widthMm, sceneUnits);
+  // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam', kinds beam+slab).
+  // ⚠️ ADR-514 §2 — ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap).
+  // ΙΔΙΟ entry με το commit (`useBeamTool.resolveStartAnchor`) → preview ≡ commit by construction.
+  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'] });
+  const snap = snapResult.kind === 'member-placement' ? snapResult.placement : null;
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end

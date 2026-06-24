@@ -84,19 +84,6 @@ export function buildCommittedDimensionEntity(
   });
   if (!entity) return null;
   const associations = collectAssociations(state, entity);
-  // TEMP DIAGNOSTIC (ADR-362 J3, gap #2) — remove after root-cause found.
-  // eslint-disable-next-line no-console
-  console.debug('[ADR-362-J3] capture', {
-    type: entity.dimensionType,
-    clicks: state.clicks.map((c) => ({
-      world: c.world,
-      pickedId: c.pickedEntity?.id,
-      pickedType: c.pickedEntity?.type,
-      snapMode: c.snapMode,
-      second: c.pickedEntity2?.id,
-    })),
-    associations,
-  });
   return {
     entity: associations.length > 0 ? { ...entity, associations } : entity,
     associations,

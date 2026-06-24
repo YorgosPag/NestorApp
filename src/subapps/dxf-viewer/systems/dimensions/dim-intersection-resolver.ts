@@ -5,13 +5,15 @@
  * dimension def point anchored to `associationType: 'intersection'` follows the
  * geometry (Revit/AutoCAD DIMASSOC=2). Used by `dim-association-service`.
  *
- * SSoT: the intersection math itself is NOT re-implemented here. We delegate to
- * the exported leaf calculators in `snapping/engines/intersection-calculators`
- * (the same functions `IntersectionSnapEngine` uses, built on
- * `GeometricCalculations`). This module only:
- *   1. dispatches the relevant entity-pair calculator, and
- *   2. disambiguates multi-point results (line×circle, circle×circle) by
- *      picking the candidate nearest the previous def point.
+ * SSoT: the intersection math itself is NOT re-implemented here.
+ *   - line×line uses the dim-owned infinite-line SSoT `intersectLines`
+ *     (`builders/shared-geometry-helpers`) — "apparent intersection" so the dim
+ *     follows the carriers even after a move pushes the crossing off a segment
+ *     (the segment-clamped leaf would freeze it). Revit/AutoCAD DIMASSOC.
+ *   - all other pairs delegate to the exported leaf calculators in
+ *     `snapping/engines/intersection-calculators` (same ones the snap engine uses).
+ * This module only dispatches the entity-pair and disambiguates multi-point
+ * results (line×circle, circle×circle) by the previous-def-point hint.
  *
  * NOTE (centralization debt, N.0.2): `IntersectionSnapEngine.calculateIntersections`
  * holds a private 20-pair dispatcher. Extracting a shared `intersectEntities(a,b)`
@@ -24,10 +26,10 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
+import type { Entity, LineEntity } from '../../types/entities';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
+import { intersectLines } from './builders/shared-geometry-helpers';
 import {
-  lineLineIntersection,
   lineCircleIntersection,
   circleCircleIntersection,
   polylineLineIntersection,
@@ -65,7 +67,20 @@ function collectIntersections(a: Entity, b: Entity): Point2D[] {
   const tb = b.type.toLowerCase();
 
   if (LINE_TYPES.has(ta) && LINE_TYPES.has(tb)) {
-    return lineLineIntersection(a, b).map((r) => r.point);
+    // Infinite-line ("apparent intersection") so the dim follows the carriers
+    // even after a move pushes the crossing off either segment — Revit/AutoCAD
+    // DIMASSOC semantics. The leaf `lineLineIntersection` is segment-clamped
+    // (returns null once the segments stop physically overlapping), which froze
+    // the dimension. Reuses the dim-owned infinite-line SSoT `intersectLines`.
+    const la = a as LineEntity;
+    const lb = b as LineEntity;
+    const p = intersectLines(
+      la.start,
+      { x: la.end.x - la.start.x, y: la.end.y - la.start.y },
+      lb.start,
+      { x: lb.end.x - lb.start.x, y: lb.end.y - lb.start.y },
+    );
+    return p ? [p] : [];
   }
   if (LINE_TYPES.has(ta) && CIRCLE_TYPES.has(tb)) {
     return lineCircleIntersection(a, b).map((r) => r.point);

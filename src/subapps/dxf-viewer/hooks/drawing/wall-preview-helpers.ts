@@ -22,7 +22,7 @@ import {
   type WallParamOverrides,
 } from './wall-completion';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
-import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
+import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
 import type { WallKind, WallParams } from '../../bim/types/wall-types';
 // ADR-513 — ελάχιστο μήκος για clamp του PREVIEW (το commit μένει αυστηρό μέσω validator).
 import { MIN_WALL_LENGTH_MM } from '../../bim/types/wall-types';
@@ -32,7 +32,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
-import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
   isMemberCollinearOverlap,
@@ -211,7 +211,7 @@ export function generateWallPreview(
   if (tempPoints.length === 0) {
     // ADR-508 §smart wall ghost — πριν το 1ο κλικ: μικρό έξυπνο φάντασμα. Κοντά σε
     // κολόνα/μέλος → κουμπώνει σε παρειά/anchor· αλλιώς ακολουθεί ελεύθερα τον κέρσορα.
-    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, footprints, snapMembers, members, walls, openings);
+    return makeWallGhostBeforeClick(cursorPoint, overrides, sceneUnits, targets, members, walls, openings);
   }
 
   if (tempPoints.length >= 2) {
@@ -267,8 +267,7 @@ function makeWallGhostBeforeClick(
   cursorPoint: Readonly<Point2D>,
   overrides: WallParamOverrides,
   sceneUnits: SceneUnits,
-  columnFootprints: readonly (readonly Point2D[])[],
-  snapTargets: readonly LinearMemberSnapTarget[],
+  targets: Readonly<SceneSnapTargets>,
   collisionTargets: readonly LinearMemberSnapTarget[],
   walls: readonly WallEntity[],
   openings: readonly OpeningEntity[],
@@ -279,8 +278,12 @@ function makeWallGhostBeforeClick(
   // (screen-relative offset)· ΔΕΝ περνά πια στο snap → πλήρως συνεχής ολίσθηση (μηδέν quantize/magnet,
   // ίδιο με την κολώνα). preview === commit (το click resolver επίσης χωρίς wpp).
   const wpp = worldPerPixel(getImmediateTransform().scale);
-  // ADR-398 §3.11 — snap ΚΑΙ σε σκέτες γραμμές (ακολουθεί τη γραμμή, ίδιος resolver με την κολώνα).
-  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, snapTargets, thicknessMm, sceneUnits);
+  // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'wall', default kinds
+  // wall+beam+slab+line — snap ΚΑΙ σε σκέτες γραμμές, ίδιος resolver με την κολώνα). ⚠️ ADR-514 §2 —
+  // ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap). ΙΔΙΟ entry με το
+  // commit (`useWallTool.resolveWallStartAnchor`) → preview ≡ commit by construction.
+  const snapResult = resolveBimCursorSnap({ toolKind: 'wall', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: thicknessMm });
+  const snap = snapResult.kind === 'member-placement' ? snapResult.placement : null;
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end

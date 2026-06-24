@@ -251,6 +251,20 @@ describe('recomputeAssociatedDefPoint — intersection with geometryId2 (J3)', (
     expect(pt2?.y).toBeCloseTo(0);
   });
 
+  it('segments no longer physically overlap but carriers cross → follows apparent intersection', () => {
+    // line1 = horizontal y=0, x∈[0,10]; line2 = vertical x=50, y∈[0,10].
+    // The segments do NOT overlap, but the infinite carriers cross at (50,0).
+    // Revit/AutoCAD DIMASSOC: the dim must follow that apparent intersection.
+    const h = ({ id: 'geo', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } }) as unknown as SceneEntity;
+    const v = ({ id: 'geo2', type: 'line', layerId: '0', start: { x: 50, y: 0 }, end: { x: 50, y: 10 } }) as unknown as SceneEntity;
+    const pt = recomputeAssociatedDefPoint(interAssoc, h, {
+      resolveEntity: (id) => (id === 'geo2' ? v : undefined),
+      currentDefPoint: { x: 50, y: 0 },
+    });
+    expect(pt?.x).toBeCloseTo(50);
+    expect(pt?.y).toBeCloseTo(0);
+  });
+
   it('no longer crossing (parallel) → null (preserve)', () => {
     expect(
       recomputeAssociatedDefPoint(interAssoc, line1(0), {

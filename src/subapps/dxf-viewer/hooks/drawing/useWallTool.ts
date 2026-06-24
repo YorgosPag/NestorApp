@@ -41,7 +41,7 @@ import { resolveWallThicknessMm } from './wall-completion';
 // ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
 // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store (κοινό με κολώνα/δοκάρι).
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
-import { resolveMemberGhostSnapFromStore } from '../../bim/framing/member-ghost-snap';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import {
   useWallToolDynamicInputListener,
   useWallToolEnterListener,
@@ -102,17 +102,22 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       // ολίσθηση** στην παρειά (μηδέν quantize/magnet, ίδιο με την κολώνα `resolveForTarget`). preview ≡
       // commit. ADR-398 §3.10/§3.11 — τοίχος = wall+beam+slab μέλη ΚΑΙ σκέτες ΓΡΑΜΜΕΣ (γραμμές = οδηγοί
       // στοίχισης· ο commit overlap-check στο use-wall-commit τις εξαιρεί, δεν μπλοκάρουν).
-      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), thicknessMm, sceneUnits);
-      if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null, hostId: null };
+      // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'wall') αντί για άμεση κλήση
+      // του dispatcher. Default member kinds = wall+beam+slab+line (ίδιο με πριν). ⚠️ ADR-514 §2 — ο
+      // `point` έρχεται ήδη OSNAP-snapped από το click pipeline → ΧΩΡΙΣ findSnapPoint (anti double-snap).
+      // ΙΔΙΟ entry με το preview (`makeWallGhostBeforeClick`) → preview ≡ commit by construction.
+      const snap = resolveBimCursorSnap({ toolKind: 'wall', cursor: point, targets, sceneUnits, memberWidthMm: thicknessMm });
+      if (snap.kind !== 'member-placement') return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null, hostId: null };
+      const placement = snap.placement;
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap
       // (status 'overlap') το `end - start` είναι ΚΑΤΑ ΜΗΚΟΣ του μέλους (όχι face normal) → null.
-      const dx = snap.end.x - snap.start.x;
-      const dy = snap.end.y - snap.start.y;
+      const dx = placement.end.x - placement.start.x;
+      const dy = placement.end.y - placement.start.y;
       const faceAngle =
-        snap.status !== 'overlap' && Math.hypot(dx, dy) > 1e-9 ? radToDeg(Math.atan2(dy, dx)) : null;
+        placement.status !== 'overlap' && Math.hypot(dx, dy) > 1e-9 ? radToDeg(Math.atan2(dy, dx)) : null;
       // ADR-508 §opening-conflict — κράτα τον host reference που ΗΔΗ επέλεξε το snap (μηδέν re-derive).
-      return { start: snap.start, anchored: true, faceAngle, hostId: snap.targetId ?? null };
+      return { start: placement.start, anchored: true, faceAngle, hostId: placement.targetId ?? null };
     },
     [getSceneUnits],
   );

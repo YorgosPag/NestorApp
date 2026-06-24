@@ -1,6 +1,6 @@
 # ADR-514 — Unified BIM Cursor Snap («Ένας Εγκέφαλος Έλξης», Revit-grade)
 
-- **Status**: 🟡 IN PROGRESS — Φ1 foundation + Φ2 column wiring DONE (jest GREEN, UNCOMMITTED), Φ2 pending browser-verify · Φ3-Φ5 TODO
+- **Status**: 🟡 IN PROGRESS — Φ1 foundation + Φ2 column + Φ3 wall/beam wiring DONE (jest GREEN, UNCOMMITTED), Φ2+Φ3 pending browser-verify · Φ4-Φ5 TODO
 - **Date**: 2026-06-24
 - **Category**: DXF Viewer — Snapping (Master companion to ADR-378)
 - **Related**: ADR-378 (Snap Master Architecture), ADR-398 (Column placement snap), ADR-508 (Unified linear-member framing), ADR-040 (Preview Canvas perf)
@@ -86,7 +86,7 @@ type BimCursorSnap =
 |---|----|--------|--------|
 | **Φ1** | Pure SSoT `resolveBimCursorSnap` + tests (6 jest). Μηδέν wiring → μηδέν regression. | ✅ DONE | jest GREEN |
 | **Φ2** | Wire **κολόνα**: `mouse-handler-up` column branch (commit) + `column-preview-helpers` (preview) → καταναλώνουν τον εγκέφαλο (`toolKind:'column'`, ΧΩΡΙΣ findSnapPoint = anti double-snap). | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify κολόνα |
-| **Φ3** | Wire **wall + beam**: `useWallTool`/`useBeamTool` + `*-preview-helpers` → εγκέφαλος. Εξάλειψη in-tool placement calls. | 🔴 TODO | browser-verify τοίχος/δοκάρι |
+| **Φ3** | Wire **wall + beam** START placement (1ο κλικ): commit (`useWallTool.resolveWallStartAnchor` + `useBeamTool.resolveStartAnchor`) + preview (`makeWallGhostBeforeClick` + `makeBeamGhostBeforeClick`) → εγκέφαλος (`toolKind:'wall'\|'beam'`, ΧΩΡΙΣ findSnapPoint). Wall END snap (`wall-endpoint-snap`) = ξεχωριστό point-snap leaf, εκτός scope. | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify τοίχος/δοκάρι |
 | **Φ4** | Ομοιόμορφη έλξη σε νέα tools (slab/roof/foundation-line) μέσω του ΙΔΙΟΥ εγκεφάλου. | 🔴 TODO | browser-verify |
 | **Φ5** | SSoT registry entry + ADR-378/398/508 cross-links + dead-code baseline. | 🔴 TODO | pre-commit |
 
@@ -113,5 +113,20 @@ type BimCursorSnap =
   ΙΔΙΟ entry point, ίδια opts/targets/cursor → preview ≡ commit by construction). Καθαρό refactor: ΙΔΙΟΙ
   resolvers/stores (`resolveColumnFaceSnapFromTargets` delegate· anchor/rotation/status setters αμετάβλητα),
   μηδέν νέο geometry/store. +2 jest (optional findSnapPoint). 76/76 jest GREEN (placement + column-face-snap).
-  tsc: παραλείφθηκε (άλλος agent έτρεχε tsc — N.17 single-tsc). 🔴 browser-verify εκκρεμεί.
-  ⚠️ CHECK 6B/6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκε `mouse-handler-up.ts`).
+  tsc: ✅ clean (επιβεβαιώθηκε στο Φ3 tsc run — μηδέν errors σε `mouse-handler-up`/`column-preview-helpers`/`bim-cursor-snap`).
+  🔴 browser-verify εκκρεμεί. ⚠️ CHECK 6B/6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκε `mouse-handler-up.ts`).
+- **2026-06-24** — Φ3 (wall + beam START placement wiring, UNCOMMITTED): commit + preview και των δύο
+  εργαλείων καλούν τώρα `resolveBimCursorSnap` αντί για τους dispatchers απευθείας. **Wall**:
+  `useWallTool.resolveWallStartAnchor` (commit) + `wall-preview-helpers.makeWallGhostBeforeClick` (preview,
+  signature: `columnFootprints`+`snapTargets` → ΕΝΑ `targets: SceneSnapTargets`· `collisionTargets`
+  αμετάβλητο για overlap). **Beam**: `useBeamTool.resolveStartAnchor` (commit, `memberKinds:['beam','slab']`)
+  + `beam-preview-helpers.makeBeamGhostBeforeClick` (preview, signature: `columnFootprints` → `targets`·
+  `beamTargets` μένει για `isBeamCollinearOverlap`). ⚠️ ΧΩΡΙΣ findSnapPoint (cursor ήδη snapped, §2).
+  Ο εγκέφαλος delegate-άρει στον ΙΔΙΟ `resolveMemberGhostSnapFromStore`· επιστρέφει ΟΛΟΚΛΗΡΟ
+  `MemberGhostSnapResult` (start/end/status/targetId/faceFrame) → drop-in. Default member kinds του
+  εγκεφάλου = `['wall','beam','slab','line']` = τα wall kinds (γι' αυτό το wall path δεν περνά memberKinds).
+  Wall END snap (`wall-endpoint-snap`) αμετάβλητο (ξεχωριστό point-snap leaf). Τα aliases
+  `resolveBeamGhostSnapFromStore`/`resolveBeamColumnFaceSnap` μένουν test-only (όπως ήδη ο 2ος — μηδέν
+  dead-code regression, baseline file-level). 673/674 jest GREEN (το 1 fail = `beam-grips.test.ts:447`
+  προϋπάρχον, μηδέν σχέση με τα αλλαγμένα αρχεία). tsc: ✅ clean (0 errors στα 5 αρχεία). 🔴 browser-verify
+  εκκρεμεί. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκαν drawing/preview canvas files).
