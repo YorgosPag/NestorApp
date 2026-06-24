@@ -26,7 +26,8 @@ import {
 // ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
 import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
 // 🏢 SSoT view-model for the snap glyph (ADR-137 §Step 2) — replaces the former inline interface.
-import type { SnapIndicatorView } from '../../snapping/extended-types';
+// `isSnapMarkerVisible` = ΕΝΑ SSoT για «πότε φωτίζεται έλξη» (grid/guide σιωπηλά).
+import { isSnapMarkerVisible, type SnapIndicatorView } from '../../snapping/extended-types';
 
 interface SnapIndicatorOverlayProps {
   snapResult?: SnapIndicatorView | null;
@@ -356,13 +357,13 @@ export default function SnapIndicatorOverlay({
   className = ''
 }: SnapIndicatorOverlayProps) {
   const { t } = useTranslation('dxf-viewer-shell');
-  if (!snapResult || !snapResult.point || !transform) return null;
   // AutoCAD standard: grid snap has no floating visual marker — cursor snaps silently.
   // ADR-189 §3.17 (2026-06-11): a guide *line* snap is likewise silent — the visible guide
   // line already shows where the cursor locked, so the cursor-following ═ glyph was pure
   // noise (Giorgio). Only a discrete guide *crossing* draws a marker, and GuideSnapEngine
   // emits that as an INTERSECTION (✕) — not as type 'guide'.
-  if (snapResult.type === 'grid' || snapResult.type === 'guide') return null;
+  // ADR-515: ο κανόνας grid/guide-σιωπηλό ζει πλέον στο `isSnapMarkerVisible` SSoT.
+  if (!transform || !isSnapMarkerVisible(snapResult)) return null;
 
   const { point, type, description } = snapResult;
   // ADR-370: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for

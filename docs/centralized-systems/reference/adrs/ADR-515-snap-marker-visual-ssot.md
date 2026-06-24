@@ -141,3 +141,13 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
   - **ΕΚΤΟΣ scope** (δεν αγγίχθηκε): `OverlayPass.renderSnapIndicators` + `RenderPipeline` — ολόκληρο
     το 3-pass canvas pipeline είναι ήδη flagged `DEADCODE` (γραμμή 1)· η αφαίρεσή του είναι ξεχωριστό
     pipeline-wide ratchet, όχι snap-specific.
+- **2026-06-24 (feature: pickbox-hide-on-snap, Giorgio)** — το πράσινο τετράγωνο (cursor pick-box) στο
+  κέντρο του σταυρονήματος εξαφανίζεται όταν φωτίζεται έλξη (το snap marker «κουμπώνει» το κέντρο):
+  - **NEW SSoT** `isSnapMarkerVisible(view)` (type predicate) στο `snapping/extended-types.ts` — ΕΝΑΣ
+    κανόνας «πότε φωτίζεται έλξη» (grid/guide σιωπηλά). Καταναλωτές: `SnapIndicatorOverlay` (return null
+    αντί inline grid/guide check — refactor προς SSoT) **και** `CrosshairOverlay`.
+  - `CrosshairOverlay.tsx` — subscription στο `ImmediateSnapStore` (ΙΔΙΑ αλυσίδα με τον
+    `SnapIndicatorSubscriber`: `getFullSnapResult → toSnapIndicatorView → isSnapMarkerVisible`)·
+    κεντρικό `updatePickboxVisibility()` (κρυφό αν `!cursor.enabled || snapActive`)· γράφει DOM ΜΟΝΟ
+    όταν αλλάζει το active state (ADR-040 compositor-safe, κανένα re-render).
+  - Επιβεβαιωμένο: `setFullSnapResult(null)` σε loss-of-snap → pickbox επανεμφανίζεται. Μηδέν διπλή πηγή.

@@ -124,6 +124,23 @@ export function toSnapIndicatorView(result: ProSnapResult | null): SnapIndicator
   };
 }
 
+/**
+ * 🏢 SSoT — «πότε φωτίζεται μια έλξη» (πότε το `SnapIndicatorOverlay` ζωγραφίζει marker).
+ *
+ * AutoCAD σύμβαση: grid & guide-line snaps είναι ΣΙΩΠΗΛΑ — ο κέρσορας κουμπώνει χωρίς
+ * ορατό marker (το grid δεν έχει σύμβολο· η οδηγός-γραμμή δείχνει ήδη πού κλείδωσε).
+ * Κάθε άλλη ενεργή έλξη ζωγραφίζει marker.
+ *
+ * Type predicate → narrow σε `SnapIndicatorView`. Καταναλώνεται από:
+ *   - `SnapIndicatorOverlay` (αν false → return null, δεν ζωγραφίζει marker)
+ *   - `CrosshairOverlay` (αν true → κρύβει το pickbox του σταυρονήματος — το marker «κουμπώνει»
+ *     το κέντρο, οπότε το τετράγωνο περισσεύει)
+ */
+export function isSnapMarkerVisible(view: SnapIndicatorView | null): view is SnapIndicatorView {
+  if (!view || !view.point) return false;
+  return view.type !== 'grid' && view.type !== 'guide';
+}
+
 // Per-mode tolerances σε pixels
 export type PerModeTolerance = Partial<Record<ExtendedSnapType, number>>;
 

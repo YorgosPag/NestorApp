@@ -35,6 +35,9 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🚀 PERFORMANCE: ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+// ADR-515 — κρύψε το pickbox του σταυρονήματος όταν φωτίζεται έλξη (το marker κουμπώνει το κέντρο).
+import { getFullSnapResult, subscribeSnapResult } from '../../systems/cursor/ImmediateSnapStore';
+import { toSnapIndicatorView, isSnapMarkerVisible } from '../../snapping/extended-types';
 // ADR-513 — κρύψε το σταυρόνημα όταν ο κέρσορας μπαίνει στα πλήκτρα του «Δαχτυλιδιού Εντολών».
 import { isCrosshairSuppressed, subscribeCrosshairSuppression } from '../../systems/cursor/CrosshairSuppressionStore';
 import { getHoveredEntity, subscribeHoveredEntity, getHoveredOverlay, subscribeHoveredOverlay } from '../../systems/hover/HoverStore';
@@ -127,6 +130,8 @@ export default function CrosshairOverlay({
   const isActiveRef = useRef<boolean>(isActive);
   const marginsRef = useRef(rulerMargins);
   const areaSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  // ADR-515 — true όταν φωτίζεται έλξη (snap marker ορατός) ⇒ κρύψε το pickbox.
+  const snapActiveRef = useRef<boolean>(false);
 
   // Keep event-time refs current (read inside the compositor callbacks).
   isActiveRef.current = isActive;
@@ -134,6 +139,18 @@ export default function CrosshairOverlay({
 
   const { gripSettings } = useGripContext();
   const { pickBoxSize, showAperture, apertureSize } = gripSettings;
+
+  // ============================================================================
+  // ADR-515 — PICK-BOX VISIBILITY (ΕΝΑ σημείο). Το πράσινο τετράγωνο του κέντρου
+  // κρύβεται αν ο κέρσορας δεν το θέλει Ή αν φωτίζεται έλξη (το snap marker κουμπώνει
+  // το κέντρο, οπότε το τετράγωνο περισσεύει — Giorgio 2026-06-24). Γράφει μόνο `display`.
+  // ============================================================================
+  const updatePickboxVisibility = useCallback(() => {
+    const pb = pickboxRef.current;
+    const cur = settingsRef.current.cursor;
+    if (!pb) return;
+    pb.style.display = cur?.enabled && !snapActiveRef.current ? '' : 'none';
+  }, []);
 
   // ============================================================================
   // STATIC STYLES — sizes/colours/boxes + the gap-baked positions of every part.
@@ -177,20 +194,17 @@ export default function CrosshairOverlay({
     // Cursor pick box (circle or square at the crosshair centre).
     const pb = pickboxRef.current;
     const cur = settingsRef.current.cursor;
-    if (pb) {
-      if (cur?.enabled) {
-        pb.style.display = '';
-        pb.style.width = `${cur.size}px`;
-        pb.style.height = `${cur.size}px`;
-        pb.style.left = `${-cur.size / 2}px`;
-        pb.style.top = `${-cur.size / 2}px`;
-        pb.style.border = `${cur.line_width || 1}px solid ${cur.color}`;
-        pb.style.borderRadius = cur.shape === 'circle' ? '50%' : '0';
-        pb.style.opacity = String(cur.opacity ?? 1);
-      } else {
-        pb.style.display = 'none';
-      }
+    if (pb && cur?.enabled) {
+      pb.style.width = `${cur.size}px`;
+      pb.style.height = `${cur.size}px`;
+      pb.style.left = `${-cur.size / 2}px`;
+      pb.style.top = `${-cur.size / 2}px`;
+      pb.style.border = `${cur.line_width || 1}px solid ${cur.color}`;
+      pb.style.borderRadius = cur.shape === 'circle' ? '50%' : '0';
+      pb.style.opacity = String(cur.opacity ?? 1);
     }
+    // ADR-515: η ορατότητα (display) καθορίζεται κεντρικά — λαμβάνει υπόψη και ενεργή έλξη.
+    updatePickboxVisibility();
 
     // Aperture box (AutoCAD APBOX) — snap acquisition zone indicator.
     const ap = apertureRef.current;
@@ -216,7 +230,7 @@ export default function CrosshairOverlay({
       badge.style.left = `${offset}px`;
       badge.style.top = `${-offset - 11}px`;
     }
-  }, [showAperture, apertureSize, pickBoxSize]);
+  }, [showAperture, apertureSize, pickBoxSize, updatePickboxVisibility]);
 
   // ============================================================================
   // SELECTION BADGE — AutoCAD-style "+"/"−" at the centre gap. Driven by hover /
@@ -308,6 +322,20 @@ export default function CrosshairOverlay({
 
   // 🚀 DIRECT RENDER: synchronous, zero-latency, compositor-only position update.
   useEffect(() => registerDirectRender((pos) => applyTransform(pos)), [applyTransform]);
+
+  // ADR-515 — όταν φωτίζεται/σβήνει έλξη, κρύψε/δείξε το pickbox. Γράφει DOM ΜΟΝΟ όταν
+  // αλλάζει το active state (όχι ανά snap update), συμβατό με ADR-040 (κανένα re-render).
+  useEffect(() => {
+    const refresh = (): void => {
+      const active = isSnapMarkerVisible(toSnapIndicatorView(getFullSnapResult()));
+      if (active !== snapActiveRef.current) {
+        snapActiveRef.current = active;
+        updatePickboxVisibility();
+      }
+    };
+    refresh(); // initial sync
+    return subscribeSnapResult(refresh);
+  }, [updatePickboxVisibility]);
 
   // ADR-513 — re-apply όταν αλλάζει το crosshair-suppression flag χωρίς κίνηση ποντικιού
   // (π.χ. το NavWheel ξεμοντάρεται ενώ ο κέρσορας μένει ακίνητος).
