@@ -1,6 +1,6 @@
 # ADR-514 — Unified BIM Cursor Snap («Ένας Εγκέφαλος Έλξης», Revit-grade)
 
-- **Status**: 🟡 IN PROGRESS — Φ1 foundation DONE (pure SSoT + tests), wiring (Φ2-Φ4) pending browser-verify
+- **Status**: 🟡 IN PROGRESS — Φ1 foundation + Φ2 column wiring DONE (jest GREEN, UNCOMMITTED), Φ2 pending browser-verify · Φ3-Φ5 TODO
 - **Date**: 2026-06-24
 - **Category**: DXF Viewer — Snapping (Master companion to ADR-378)
 - **Related**: ADR-378 (Snap Master Architecture), ADR-398 (Column placement snap), ADR-508 (Unified linear-member framing), ADR-040 (Preview Canvas perf)
@@ -65,7 +65,8 @@ type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'point-only';
 
 resolveBimCursorSnap({
   toolKind, cursor, targets: SceneSnapTargets, sceneUnits,
-  findSnapPoint,                 // Layer 1 (injected)
+  findSnapPoint?,                // Layer 1 (injected). OPTIONAL — παρέλειψέ το όταν ο cursor
+                                 //   είναι ήδη OSNAP-snapped upstream → anti double-snap (§2 wiring).
   memberWidthMm?, memberKinds?,  // wall/beam
   columnOpts?,                   // column polar/rect magnet
 }): BimCursorSnap
@@ -84,7 +85,7 @@ type BimCursorSnap =
 | Φ | Τι | Status | Verify |
 |---|----|--------|--------|
 | **Φ1** | Pure SSoT `resolveBimCursorSnap` + tests (6 jest). Μηδέν wiring → μηδέν regression. | ✅ DONE | jest GREEN |
-| **Φ2** | Wire **κολόνα**: `mouse-handler-up` column branch + `snap-scheduler`/preview → καταναλώνουν τον εγκέφαλο (cleanest — ήδη κεντρικό). | 🔴 TODO | browser-verify κολόνα |
+| **Φ2** | Wire **κολόνα**: `mouse-handler-up` column branch (commit) + `column-preview-helpers` (preview) → καταναλώνουν τον εγκέφαλο (`toolKind:'column'`, ΧΩΡΙΣ findSnapPoint = anti double-snap). | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify κολόνα |
 | **Φ3** | Wire **wall + beam**: `useWallTool`/`useBeamTool` + `*-preview-helpers` → εγκέφαλος. Εξάλειψη in-tool placement calls. | 🔴 TODO | browser-verify τοίχος/δοκάρι |
 | **Φ4** | Ομοιόμορφη έλξη σε νέα tools (slab/roof/foundation-line) μέσω του ΙΔΙΟΥ εγκεφάλου. | 🔴 TODO | browser-verify |
 | **Φ5** | SSoT registry entry + ADR-378/398/508 cross-links + dead-code baseline. | 🔴 TODO | pre-commit |
@@ -105,3 +106,12 @@ type BimCursorSnap =
 - **2026-06-24** — Φ1: δημιουργία `bim/placement/bim-cursor-snap.ts` (pure SSoT) + 6 jest. ADR created.
   (Αντικατέστησε ενδιάμεσο `bim/framing/unified-cursor-snap.ts` — στενότερο member+point — για μηδέν
   επικαλυπτόμενα SSoT.)
+- **2026-06-24** — Φ2 (column wiring, UNCOMMITTED): `findSnapPoint` → **optional** στον εγκέφαλο
+  (anti double-snap, §2: ο cursor έρχεται ήδη OSNAP-snapped κεντρικά). Wired **commit**
+  (`systems/cursor/mouse-handler-up.ts` — column branch τώρα καλεί `resolveBimCursorSnap({toolKind:'column'})`,
+  branch στο `.kind==='column-placement'`) + **preview** (`hooks/drawing/column-preview-helpers.ts` —
+  ΙΔΙΟ entry point, ίδια opts/targets/cursor → preview ≡ commit by construction). Καθαρό refactor: ΙΔΙΟΙ
+  resolvers/stores (`resolveColumnFaceSnapFromTargets` delegate· anchor/rotation/status setters αμετάβλητα),
+  μηδέν νέο geometry/store. +2 jest (optional findSnapPoint). 76/76 jest GREEN (placement + column-face-snap).
+  tsc: παραλείφθηκε (άλλος agent έτρεχε tsc — N.17 single-tsc). 🔴 browser-verify εκκρεμεί.
+  ⚠️ CHECK 6B/6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκε `mouse-handler-up.ts`).

@@ -59,30 +59,32 @@ function distanceToEntity(p: Point2D, e: DetectableEntity): number {
 const DETECTABLE = new Set(['line', 'circle', 'arc', 'polyline', 'lwpolyline']);
 
 /**
- * Find the detectable entity (other than `firstId`) that passes through `point`,
- * i.e. the 2nd curve of the intersection. The snapped point lies on both curves
- * to full float precision, so the true host's distance is ~0 while unrelated
- * entities are far — a coordinate-scaled epsilon separates them robustly.
- * Returns the nearest qualifying host, or `undefined` when none is close enough.
+ * Find the detectable curves passing through `point`, nearest-first (capped at
+ * `max`). The snapped point lies on its host curves to full float precision, so
+ * true hosts have distance ~0 while unrelated entities are far — a
+ * coordinate-scaled epsilon separates them robustly.
+ *
+ * Why geometric (not HoverStore): the entity-under-cursor hit-test only fills
+ * when the cursor is over the entity *body*. At an intersection / endpoint the
+ * cursor often isn't, so `getHoveredEntity()` returns nothing — yet both hosts
+ * provably pass through the snapped point. This recovers them deterministically
+ * so `intersection` (2 hosts) and `nearest`/`endpoint` (1 host) associations are
+ * captured reliably regardless of cursor proximity to a body.
  */
-export function findIntersectionSecondHost(
+export function findHostsAtPoint(
   point: Point2D,
   entities: ReadonlyArray<Entity> | undefined,
-  firstId: string | undefined,
-): DetectableEntity | undefined {
-  if (!entities?.length) return undefined;
+  max = 2,
+): DetectableEntity[] {
+  if (!entities?.length) return [];
   const eps = 1e-6 * (1 + Math.abs(point.x) + Math.abs(point.y));
-  let best: DetectableEntity | undefined;
-  let bestDist = eps;
+  const hits: Array<{ entity: DetectableEntity; dist: number }> = [];
   for (const e of entities) {
-    if (e.id === firstId) continue;
     if (!DETECTABLE.has(e.type)) continue;
     const candidate = e as DetectableEntity;
     const d = distanceToEntity(point, candidate);
-    if (d <= bestDist) {
-      bestDist = d;
-      best = candidate;
-    }
+    if (d <= eps) hits.push({ entity: candidate, dist: d });
   }
-  return best;
+  hits.sort((a, b) => a.dist - b.dist);
+  return hits.slice(0, max).map((h) => h.entity);
 }

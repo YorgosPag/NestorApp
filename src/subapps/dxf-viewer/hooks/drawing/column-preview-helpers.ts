@@ -41,7 +41,7 @@ import {
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
-import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
 import { buildPolarDiskGrid, findDiskContaining, type PolarDiskGrid, type PolarDiskSnapOptions } from '../../bim/columns/polar-disk-snap';
 import { buildRectGrid, findRectContaining, resolveRectCartesianDims, type RectGrid } from '../../bim/columns/rect-cartesian-snap';
@@ -148,7 +148,19 @@ export function generateColumnPreview(
   // ADR-398 §3.13 — Polar Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
   const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
   const targets = sceneSnapTargetsStore.get();
-  const faceSnap = resolveColumnFaceSnapFromTargets(effectiveCursor, targets, sceneUnits, polarOpts);
+  // ADR-514 Φ2 — «Ένας Εγκέφαλος Έλξης»: το preview καλεί τον ΙΔΙΟ unified resolver με το commit
+  // (`resolveBimCursorSnap`, toolKind:'column', ΙΔΙΑ opts/targets/cursor) → preview ≡ commit by
+  // construction. ⚠️ ADR-514 §2 — ο effectiveCursor είναι ΗΔΗ snapped → ΧΩΡΙΣ findSnapPoint (no double-snap).
+  // Ο εγκέφαλος delegate-άρει στον ΙΔΙΟ `resolveColumnFaceSnapFromTargets`· `column-placement` →
+  // ΟΛΟΚΛΗΡΟ `ColumnFaceSnap` (position+anchor+rotation+status+faceFrame), αλλιώς → null (ίδιο σχήμα όπως πριν).
+  const snap = resolveBimCursorSnap({
+    toolKind: 'column',
+    cursor: effectiveCursor,
+    targets,
+    sceneUnits,
+    columnOpts: polarOpts,
+  });
+  const faceSnap = snap.kind === 'column-placement' ? snap.placement : null;
 
   // θέση + λαβή + status απευθείας από το ΕΝΑ αποτέλεσμα (ΟΧΙ από 3 stores). Η §3.9 wall-axis
   // επιστρέφει ήδη anchor `center`· face-attach (§3.7) υπερισχύει του §3.1b center-on-beam-axis.

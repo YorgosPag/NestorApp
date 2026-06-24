@@ -66,8 +66,13 @@ export interface BimCursorSnapInput {
   /** Pre-collected στόχοι σκηνής (ΚΟΙΝΟ store — column + wall + beam). */
   readonly targets: Readonly<SceneSnapTargets>;
   readonly sceneUnits: SceneUnits;
-  /** Layer 1 OSNAP engine — injected (pure/testable). */
-  readonly findSnapPoint: FindSnapPointFn;
+  /**
+   * Layer 1 OSNAP engine — injected (pure/testable). **Optional**: όταν ο `cursor` έρχεται ήδη
+   * OSNAP-snapped κεντρικά από το pipeline (`mouse-handler-up`/scheduler γράφουν `ImmediateSnapStore`,
+   * διαβ. μέσω `resolveEffectivePreviewCursor`), παρέλειψέ το ώστε ο εγκέφαλος **να ΜΗΝ ξανα-snapάρει**
+   * (double-snap). Χωρίς αυτό, το `point` branch επιστρέφει τον cursor **αυτούσιο** (ADR-514 §2).
+   */
+  readonly findSnapPoint?: FindSnapPointFn;
   /** wall/beam: πλάτος/πάχος νέου μέλους σε mm (ζωνική δικαιολόγηση). */
   readonly memberWidthMm?: number;
   /** wall/beam: ποιοι στόχοι μετράνε (default = wall+beam+slab+line). */
@@ -117,7 +122,9 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
   }
 
   // ── Layer 1: point (OSNAP engine) — fallback ───────────────────────────────
-  const result = findSnapPoint(cursor.x, cursor.y);
+  // `findSnapPoint` optional: αν λείπει (cursor ήδη snapped upstream), παρακάμπτεται →
+  // ο cursor επιστρέφει αυτούσιος (anti double-snap, ADR-514 §2).
+  const result = findSnapPoint?.(cursor.x, cursor.y);
   if (result && result.found) {
     return { kind: 'point', point: result.snappedPoint, snapType: result.activeMode, candidate: result.snapPoint };
   }

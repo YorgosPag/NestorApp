@@ -145,6 +145,34 @@ describe('resolveBimCursorSnap — Layer 1 point fallback', () => {
     }
   });
 
+  it('χωρίς findSnapPoint (cursor ήδη snapped upstream) → kind=point, cursor αυτούσιος (anti double-snap)', () => {
+    // ADR-514 §2: το column/wall/beam wiring περνά effectiveCursor (ήδη OSNAP-snapped) ΧΩΡΙΣ
+    // findSnapPoint → ο εγκέφαλος ΔΕΝ ξανα-snapάρει, επιστρέφει τον cursor όπως ήρθε.
+    const r = resolveBimCursorSnap({
+      toolKind: 'point-only',
+      cursor: { x: 314, y: 271 },
+      targets: makeTargets(),
+      sceneUnits: 'mm',
+    });
+    expect(r.kind).toBe('point');
+    if (r.kind === 'point') {
+      expect(r.point).toEqual({ x: 314, y: 271 });
+      expect(r.snapType).toBeNull();
+      expect(r.candidate).toBeNull();
+    }
+  });
+
+  it('column χωρίς placement κοντά + χωρίς findSnapPoint → kind=point, cursor αυτούσιος', () => {
+    const r = resolveBimCursorSnap({
+      toolKind: 'column',
+      cursor: { x: 9000, y: 9000 }, // μακριά από στόχους → κανένα face placement
+      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      sceneUnits: 'mm',
+    });
+    expect(r.kind).toBe('point');
+    if (r.kind === 'point') expect(r.point).toEqual({ x: 9000, y: 9000 });
+  });
+
   it('OSNAP provider null (engine ανενεργός) → kind=point, καθαρός cursor', () => {
     const r = resolveBimCursorSnap({
       toolKind: 'point-only',

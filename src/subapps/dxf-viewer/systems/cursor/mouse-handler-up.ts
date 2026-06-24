@@ -33,7 +33,7 @@ import {
   findColumnGripCornerSnap,
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
-import { resolveColumnFaceSnapFromTargets } from '../../bim/columns/column-face-snap';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
@@ -235,33 +235,37 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       // intersection-only guide policy as the hover preview (Giorgio: σχεδιασμός → μόνο ✕).
       setSnapDrawingMode(isInDrawingMode(activeTool, overlayMode));
       if (snapEnabled && findSnapPoint && !dimLineRefPhase) {
-        // ADR-398 §3.10 — Column commit ≡ preview (sync-in-preview unification): ΙΔΙΟΣ resolver
-        // (`resolveColumnFaceSnapFromTargets`) + ΙΔΙΟΙ pre-collected στόχοι (`columnPreviewStore`)
-        // + ΙΔΙΟΣ effective cursor (`resolveEffectivePreviewCursor` = ImmediateSnap = ό,τι έδειξε
-        // ο scheduler: corner-projection / BIM χαρακτηριστικό / grid). Set & την auto λαβή/status
-        // που διαβάζει το `useColumnTool` (center-anchor όταn status==='beam'). Miss → ο effective
-        // cursor (corner/grid-adjusted) ΕΙΝΑΙ το committed σημείο — ακριβώς όπως το ghost.
+        // ADR-514 Φ2 — «Ένας Εγκέφαλος Έλξης»: το commit καλεί τον ΕΝΑ unified resolver
+        // (`resolveBimCursorSnap`, toolKind:'column') αντί για τον column-specific resolver απευθείας.
+        // ΙΔΙΟ σημείο εισόδου με το preview (`generateColumnPreview`) → preview ≡ commit by construction.
+        // Ο εγκέφαλος delegate-άρει στον ΙΔΙΟ `resolveColumnFaceSnapFromTargets` + ΙΔΙΟΙ pre-collected
+        // στόχοι (`sceneSnapTargetsStore`) + ΙΔΙΟΣ effective cursor (`resolveEffectivePreviewCursor` =
+        // ImmediateSnap = ό,τι έδειξε ο scheduler: corner-projection / BIM χαρακτηριστικό / grid).
+        // ⚠️ ADR-514 §2 — ο effectiveCursor είναι ΗΔΗ OSNAP-snapped κεντρικά εδώ → ΧΩΡΙΣ findSnapPoint
+        // ώστε ο εγκέφαλος να ΜΗΝ ξανα-snapάρει (double-snap). Set & την auto λαβή/status που διαβάζει
+        // το `useColumnTool` (center-anchor όταν status==='beam').
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
         if (colHandle?.isActive) {
           const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
           // ADR-398 §3.13 — Polar Magnet opts (ίδια με το ghost → preview ≡ commit).
           const polarOpts = buildColumnPolarSnapOptions(colHandle.overrides, colHandle.getSceneUnits());
-          const faceSnap = resolveColumnFaceSnapFromTargets(
-            effectiveCursor,
-            sceneSnapTargetsStore.get(),
-            colHandle.getSceneUnits(),
-            polarOpts,
-          );
-          if (faceSnap) {
-            worldPoint = faceSnap.position;
-            setColumnFaceAnchor(faceSnap.anchor);
-            setColumnFaceRotation(faceSnap.rotation); // §3.10b flush-to-edge γωνία (0 axis-aligned)
-            setColumnGhostStatus(faceSnap.status);
+          const snap = resolveBimCursorSnap({
+            toolKind: 'column',
+            cursor: effectiveCursor,
+            targets: sceneSnapTargetsStore.get(),
+            sceneUnits: colHandle.getSceneUnits(),
+            columnOpts: polarOpts,
+          });
+          if (snap.kind === 'column-placement') {
+            worldPoint = snap.placement.position;
+            setColumnFaceAnchor(snap.placement.anchor);
+            setColumnFaceRotation(snap.placement.rotation); // §3.10b flush-to-edge γωνία (0 axis-aligned)
+            setColumnGhostStatus(snap.placement.status);
           } else {
             setColumnFaceAnchor(null);
             setColumnFaceRotation(null);
             setColumnGhostStatus('neutral');
-            worldPoint = effectiveCursor;
+            worldPoint = snap.point; // effectiveCursor αυτούσιος (corner/grid-adjusted) — όπως το ghost
           }
         } else {
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);

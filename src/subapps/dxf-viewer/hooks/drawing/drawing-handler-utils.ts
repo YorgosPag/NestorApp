@@ -5,7 +5,16 @@ import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detect
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { findIntersectionSecondHost } from '../../systems/dimensions/dim-intersection-host-finder';
+import { findHostsAtPoint } from '../../systems/dimensions/dim-intersection-host-finder';
+
+/** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
+const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
+  ExtendedSnapType.ENDPOINT,
+  ExtendedSnapType.MIDPOINT,
+  ExtendedSnapType.NEAREST,
+  ExtendedSnapType.PERPENDICULAR,
+  ExtendedSnapType.QUADRANT,
+]);
 
 type Pt = { x: number; y: number };
 
@@ -46,17 +55,29 @@ export function resolveDimPickContext(
   const snapped = skipSnap ? p : applySnap(p);
   const snapResult = skipSnap ? undefined : findSnapPoint?.(p.x, p.y);
   const hoveredId = skipSnap ? undefined : (getHoveredEntity() ?? snapResult?.entityId);
-  const hoveredEntity: DetectableEntity | undefined = hoveredId
+  let hoveredEntity: DetectableEntity | undefined = hoveredId
     ? (sceneEntities?.find((e) => e.id === hoveredId) as DetectableEntity | undefined)
     : undefined;
 
-  // ADR-362 Phase J3 (gap #2) — capture the active snap mode + 2nd intersection
-  // host so the association is recorded as intersection / parametric-nearest.
+  // ADR-362 Phase J3 (gap #2) — capture the active snap mode + host(s).
   const snapMode = normalizeSnapMode(snapResult?.activeMode);
-  const secondEntity =
-    snapMode === ExtendedSnapType.INTERSECTION
-      ? findIntersectionSecondHost(snapped, sceneEntities, hoveredId)
-      : undefined;
+  let secondEntity: DetectableEntity | undefined;
+
+  if (!skipSnap && snapMode === ExtendedSnapType.INTERSECTION) {
+    // Resolve BOTH crossing hosts geometrically — the entity-under-cursor
+    // hit-test (HoverStore) often returns nothing at an intersection, which
+    // previously dropped the whole association even though both curves are
+    // known. Keep `hoveredEntity` if it's a real host; else take the nearest.
+    const hosts = findHostsAtPoint(snapped, sceneEntities, 2);
+    if (!hoveredEntity || !hosts.some((h) => h.id === hoveredEntity!.id)) {
+      hoveredEntity = hosts[0] ?? hoveredEntity;
+    }
+    secondEntity = hosts.find((h) => h.id !== hoveredEntity?.id);
+  } else if (!skipSnap && !hoveredEntity && snapMode && POINT_ON_CURVE_SNAPS.has(snapMode)) {
+    // Single-host point snap (endpoint / midpoint / nearest / …) whose host the
+    // hit-test missed — recover it so the parametric-nearest anchor is captured.
+    hoveredEntity = findHostsAtPoint(snapped, sceneEntities, 1)[0];
+  }
 
   return { snapped, hoveredEntity, snapMode, secondEntity };
 }
