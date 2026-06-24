@@ -136,7 +136,7 @@ export function toSnapIndicatorView(result: ProSnapResult | null): SnapIndicator
  *   - `CrosshairOverlay` (αν true → κρύβει το pickbox του σταυρονήματος — το marker «κουμπώνει»
  *     το κέντρο, οπότε το τετράγωνο περισσεύει)
  */
-export function isSnapMarkerVisible(view: SnapIndicatorView | null): view is SnapIndicatorView {
+export function isSnapMarkerVisible(view: SnapIndicatorView | null | undefined): view is SnapIndicatorView {
   if (!view || !view.point) return false;
   return view.type !== 'grid' && view.type !== 'guide';
 }

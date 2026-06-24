@@ -477,6 +477,43 @@ export const UI_COLORS = {
 } as const;
 
 // ============================================================================
+// 🏢 ADR-515: SNAP MARKER PALETTE (type-specific, Revit-grade)
+// ============================================================================
+//
+// Primitive palette SSoT για τα ΧΡΩΜΑΤΑ των συμβόλων έλξης (snap markers). Το
+// semantic type→χρώμα mapping (ExtendedSnapType → token) + ο resolver ζουν στο
+// `rendering/ui/snap/snap-visual-config.ts` — αυτό εδώ είναι ΜΟΝΟ η παλέτα.
+//
+// Reuse υπαρχόντων primitives όπου η τιμή ΚΑΙ το νόημα συμπίπτουν (HIGHLIGHTED_ENTITY,
+// SNAP_INTERSECTION, GUIDE_X). Τα υπόλοιπα είναι snap-specific primitives (πρώτη χρήση).
+//
+// @see ADR-515 §4.1
+export const SNAP_MARKER_COLORS = {
+  ENDPOINT:         UI_COLORS_BASE.HIGHLIGHTED_ENTITY,   // #FF3B30 κόκκινο (reuse)
+  MIDPOINT:         '#00e676',                            // πράσινο
+  CENTER:           '#2196f3',                            // μπλε
+  INTERSECTION:     UI_COLORS_BASE.MAGENTA,               // #FF00FF magenta (reuse)
+  PERPENDICULAR:    UI_COLORS_BASE.YELLOW,                // #FFFF00 κίτρινο (reuse)
+  TANGENT:          '#ff9100',                            // amber
+  QUADRANT:         UI_COLORS_BASE.GUIDE_X,               // #00BCD4 teal (reuse)
+  NEAREST:          '#9e9e9e',                            // γκρι
+  EXTENSION:        '#b0bec5',                            // γκρι-μπλε
+  NODE:             '#ffc107',                            // amber
+  PARALLEL:         UI_COLORS_BASE.SNAP_PERPENDICULAR,    // #9B59B6 μωβ (reuse)
+  CONSTRUCTION:     '#ff4081',                            // pink
+  DIM:              '#b388ff',                            // λιλά
+  BIM_CORNER:       '#ff9800',                            // πορτοκαλί
+  BIM_MIDPOINT:     '#1de9b6',                            // teal-green
+  BIM_CENTER:       '#00e5ff',                            // κυανό
+  BIM_WALL_FACE:    '#80d8ff',                            // αν. κυανό
+  BIM_MEP_CONNECTOR:'#e040fb',                            // purple-pink
+  TEXT:             '#ffd740',                            // χρυσό
+  ROTATION:         '#ff6e40',                            // βαθύ πορτοκαλί
+  /** Base / fallback marker colour (κυανό — κρατά το 3D marker στο ιστορικό cyan). */
+  BASE:             '#00e5ff',
+} as const;
+
+// ============================================================================
 // CANVAS THEME SYSTEM - Enterprise Canvas Background Management (ADR-004)
 // ============================================================================
 //

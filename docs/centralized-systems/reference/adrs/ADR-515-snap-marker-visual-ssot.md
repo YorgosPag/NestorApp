@@ -77,17 +77,16 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
 Δημιουργείται **ΕΝΑ** module που είναι η μοναδική πηγή για το *οπτικό* μέρος κάθε snap marker
 (σχήμα-token + χρώμα + μέγεθος), καταναλωνόμενο **ταυτόχρονα** από 2D SVG overlay **και** 3D markers.
 
-### 4.1 Νέο SSoT: `rendering/ui/snap/snap-visual-config.ts`
-- **Δεν διπλασιάζει** το `SNAP_ICON_GEOMETRY` (ADR-137): το **κάνει re-export / reference** (geometry
-  παραμένει εκεί).
-- Ορίζει `SNAP_COLORS: Record<ExtendedSnapType, string>` — μία εγγραφή ανά τύπο (πηγή: η enum
-  `ExtendedSnapType` στο `snapping/extended-types.ts`).
-- Ορίζει `SNAP_MARKER_BASE_COLOR` (το AutoCAD-style ενιαίο marker color) ως default/fallback.
-- `resolveSnapColor(type: ExtendedSnapType | string): string` — ΕΝΑ resolver, με ασφαλές fallback
-  στο base color για άγνωστο τύπο.
-- Το χρωματικό **μοντέλο** (μονόχρωμο AutoCAD-true ↔ type-specific Revit-rich) είναι **policy μέσα
-  σε αυτό το SSoT**: αν μονόχρωμο, όλες οι εγγραφές δείχνουν στο `SNAP_MARKER_BASE_COLOR`· αν
-  type-specific, κάθε εγγραφή έχει το δικό της. Αλλαγή policy = αλλαγή **σε ΕΝΑ αρχείο**.
+### 4.1 Two-layer design tokens (Google pattern) — μηδέν hex literal εκτός palette
+- **Primitive palette** → `SNAP_MARKER_COLORS` στο `config/color-config.ts` (το dxf-viewer color
+  SSoT). Raw hex, reuse υπαρχόντων primitives όπου τιμή+νόημα συμπίπτουν (`HIGHLIGHTED_ENTITY`,
+  `MAGENTA`, `YELLOW`, `GUIDE_X`, `SNAP_PERPENDICULAR`).
+- **Semantic mapping** → `rendering/ui/snap/snap-visual-config.ts`:
+  - `SNAP_COLORS: Record<ExtendedSnapType, string>` — μία εγγραφή ανά τύπο, **δείχνει στο palette**
+    (κανένα hex literal). Type-safe → exhaustiveness guard.
+  - `resolveSnapColor(type)` — ΕΝΑΣ resolver, ασφαλές fallback στο `SNAP_MARKER_BASE_COLOR`.
+  - re-export `SNAP_ICON_GEOMETRY` (ADR-137) → ΕΝΑ import σημείο για snap visuals.
+- Χρωματικό **μοντέλο** = type-specific (Revit-rich)· αλλαγή τιμής = ΕΝΑ σημείο (palette).
 
 ### 4.2 Consumers (reuse, μηδέν διπλότυπο)
 - **2D**: `SnapIndicatorOverlay.tsx` → `resolveSnapColor(type)` αντί του σταθερού
@@ -151,3 +150,10 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
     κεντρικό `updatePickboxVisibility()` (κρυφό αν `!cursor.enabled || snapActive`)· γράφει DOM ΜΟΝΟ
     όταν αλλάζει το active state (ADR-040 compositor-safe, κανένα re-render).
   - Επιβεβαιωμένο: `setFullSnapResult(null)` σε loss-of-snap → pickbox επανεμφανίζεται. Μηδέν διπλή πηγή.
+- **2026-06-24 (self-audit fix, Giorgio SSoT review)** — αφαίρεση διπλότυπων που είχα εισάγει:
+  - **Διπλότυπο palette**: τα hex ήταν literals μέσα στο `snap-visual-config` ενώ ήδη υπήρχαν tokens
+    στο `color-config` (`#FF3B30`, `#9B59B6`, `#00BCD4`…). FIX: νέο primitive `SNAP_MARKER_COLORS` στο
+    `color-config.ts` (reuse `HIGHLIGHTED_ENTITY`/`MAGENTA`/`YELLOW`/`GUIDE_X`/`SNAP_PERPENDICULAR`)·
+    το `SNAP_COLORS` δείχνει εκεί — **μηδέν hex literal** στο semantic layer.
+  - **Περιττός helper**: `snapColorToThreeHex` (custom parseInt) αφαιρέθηκε — αντικαταστάθηκε με το
+    standard codebase pattern `new THREE.Color(hex).getHex()` στο `snap-marker-core`.
