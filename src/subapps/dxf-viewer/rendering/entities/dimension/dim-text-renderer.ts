@@ -96,7 +96,7 @@ export function renderDimensionText(
 
   // Angular dims: simplified path (no tolerance/limits/inspection in G2/G3).
   if (params.geometry.kind === 'angular') {
-    const text = buildPrimaryText(params.geometry, params.style, params.entity.userText);
+    const text = resolveDimensionText(params.geometry, params.style, params.entity.userText);
     if (!text) return;
     ctx.save();
     ctx.translate(screenAnchor.x, screenAnchor.y);
@@ -295,9 +295,9 @@ function drawToleranceStack(
   ctx.fillText(minus, 0, tolBotY);
 }
 
-// Geometry → primary label is the shared `resolveDimensionText` SSoT (formatter)
-// so canvas/preview text and the exported DXF block text never diverge.
-const buildPrimaryText = resolveDimensionText;
+// Geometry → primary label uses the shared `resolveDimensionText` SSoT (formatter)
+// so canvas/preview text and the exported DXF block text never diverge (see the
+// angular path above + `buildFullText` below for the linear/radial path).
 
 /**
  * Builds full text payload (primary + optional tolerance/limits) for non-angular dims.

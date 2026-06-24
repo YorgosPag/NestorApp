@@ -11,27 +11,27 @@
  * αντί για τα 9 schematic anchor-ghosts. Το ghost ΕΙΝΑΙ η τελική κολώνα.
  *
  * **preview === commit (ADR-398 §3.10 sync-in-preview):** υπολογίζει το face-snap
- * ΣΥΓΧΡΟΝΑ εδώ (πιστό mirror τοίχου/δοκαριού — `makeWallGhostBeforeClick`), από:
- *   · στόχους → `sceneSnapTargetsStore.get()` (κοινό SSoT· κολόνες/δοκάρια/τοίχοι/πλάκες)·
- *   · cursor  → `resolveEffectivePreviewCursor` = `getImmediateSnap()` (snapped point που
- *               έγραψε ο scheduler: corner-projection / BIM χαρακτηριστικό / grid)·
- *   · resolver→ `resolveColumnFaceSnapFromTargets` (ΕΝΑ SSoT) → θέση + λαβή + status + faceFrame.
- * Το commit (`mouse-handler-up`) καλεί ΤΟΝ ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor
- * → preview ≡ commit εξ ορισμού (κανένα async store, καμία διπλή πηγή αλήθειας).
+ * ΣΥΓΧΡΟΝΑ εδώ (πιστό mirror τοίχου/δοκαριού), από τους pre-collected στόχους + τον
+ * snapped cursor, μέσω του ΕΝΟΣ εγκεφάλου `resolveBimCursorSnap` (toolKind:'column').
+ *
+ * **ADR-514 Φ6d — κοινή assembly:** η συναρμολόγηση του ghost + CL listening dims +
+ * polar/rect grid ζει πλέον σε ΕΝΑ entity-agnostic SSoT (`placement-ghost-assembly`)
+ * που μοιράζονται κολώνα ΚΑΙ πέδιλο. Εδώ μένει μόνο το column-specific glue:
+ * polar opts (διαστάσεις κολώνας), ο builder, και ο column-only slanted (TopLean) κλάδος.
  *
  * kind/anchor/overrides διαβάζονται από το ΥΠΑΡΧΟΝ `columnToolBridgeStore` (user-editable state).
  * Pure: zero React/DOM, ΙΔΙΑ δεδομένα με το commit path.
  *
  * @see ./column-completion.ts — buildDefaultColumnParams / buildColumnEntity (commit builders)
- * @see ../../bim/placement/bim-cursor-snap.ts — resolveBimCursorSnap (ADR-514 unified entry· delegate → column face SSoT)
- * @see ../../bim/framing/scene-snap-targets.ts — κοινό SSoT στόχων (sync-in-preview)
+ * @see ../../bim/placement/placement-ghost-assembly.ts — κοινή assembly (ghost + CL dims + grid)
+ * @see ../../bim/placement/bim-cursor-snap.ts — resolveBimCursorSnap (ADR-514 unified entry)
  * @see ../../systems/cursor/mouse-handler-up.ts — click-path commit (ίδιος resolver + στόχοι)
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.10
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
-import { DEFAULT_COLUMN_HEIGHT_MM, type ColumnAnchor } from '../../bim/types/column-types';
+import { DEFAULT_COLUMN_HEIGHT_MM } from '../../bim/types/column-types';
 import {
   buildColumnEntity,
   buildDefaultColumnParams,
@@ -39,33 +39,26 @@ import {
   type SceneUnits,
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
-import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
-import { findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
-import { buildPlacementGridMeta } from '../../bim/placement/placement-grid-meta';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
-// ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
+import {
+  assemblePlacementGhost,
+  assemblePlacementRotationGhost,
+  type PlacementGhostEntityBuilder,
+} from '../../bim/placement/placement-ghost-assembly';
+// ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή) — column-only, εκτός κοινής assembly.
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
 import { resolveTopLeanTilt } from '../../bim/columns/column-tilt-from-points';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
-import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
-import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import {
-  resolveEffectivePreviewCursor,
-  toWysiwygPreviewEntity,
-  resolveGhostFaceDimensionsMeta,
-} from './wysiwyg-preview-shared';
+import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
-
-// ADR-398 §3.13/§3.15 — `buildPlacementGridMeta` (placement-guidance πλέγμα) μετακόμισε σε κοινό SSoT
-// `bim/placement/placement-grid-meta.ts` ώστε να το μοιράζεται ΚΑΙ το beam preview (Giorgio 2026-06-24).
 
 /**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a
@@ -83,31 +76,42 @@ export function generateColumnPreview(
   const handle = columnToolBridgeStore.get();
   if (!handle?.isActive) return null;
 
-  // ADR-508 §column place+rotate — μετά το 1ο κλικ (awaitingRotation): η κολώνα μένει στην
-  // ΚΛΕΙΔΩΜΕΝΗ θέση και ΠΕΡΙΣΤΡΕΦΕΤΑΙ live προς τον κέρσορα (raw → ελεύθερη γωνία). Καμία
-  // overlap/dims εδώ (πέρα από την τοποθέτηση). 2ο κλικ commit-άρει με αυτή τη γωνία.
+  // ADR-398 §3.13 — Polar/Rect Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
+  const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
+  const targets = sceneSnapTargetsStore.get();
+
+  // entity-specific builder — ΙΔΙΟΙ builders με το commit (preview ≡ commit). λοξή ακμή → flush rotation·
+  // ελεύθερη → null (ribbon/Tab rotation από τα overrides).
+  const buildColumnGhostEntity: PlacementGhostEntityBuilder = (position, anchor, rotation) => {
+    const overrides: ColumnParamOverrides = {
+      ...handle.overrides,
+      kind: handle.kind,
+      anchor,
+      ...(rotation !== null ? { rotation } : {}),
+    };
+    const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
+    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
+    return built.ok ? built.entity : null;
+  };
+
+  // ADR-508 §column place+rotate — μετά το 1ο κλικ (awaitingRotation): η κολώνα μένει στην ΚΛΕΙΔΩΜΕΝΗ
+  // θέση και ΠΕΡΙΣΤΡΕΦΕΤΑΙ live προς τον κέρσορα. Κρατά το πολικό/καρτεσιανό πλέγμα (ΕΝΑ SSoT assembly).
   const rot = getColumnRotationLock();
   if (rot) {
-    const rotationDeg = resolveColumnRotationDeg(rot.origin, cursorPoint, worldPerPixel(getImmediateTransform().scale));
-    const overrides: ColumnParamOverrides = {
-      ...handle.overrides, kind: handle.kind, anchor: rot.anchor, rotation: rotationDeg,
-    };
-    const params = buildDefaultColumnParams(rot.origin, handle.kind, overrides, sceneUnits);
-    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
-    if (!built.ok) return null;
-    const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null);
-    // ADR-398 §3.13/§3.15 (Giorgio 2026-06-22) — ΔΙΑΤΗΡΗΣΕ την πολική/καρτεσιανή καθοδήγηση ΚΑΙ μετά
-    // το 1ο κλικ: το πλέγμα χτίζεται γύρω από την ΚΛΕΙΔΩΜΕΝΗ θέση (`rot.origin`) ώστε ο χρήστης να
-    // βλέπει τις πολικές συντεταγμένες ενώ ορίζει τη γωνία (ΕΝΑ SSoT helper με το awaitingPosition).
-    const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
-    const grid = buildPlacementGridMeta(rot.origin, sceneSnapTargetsStore.get(), sceneUnits, polarOpts);
-    return Object.keys(grid).length ? ({ ...ghost, ...grid } as typeof ghost) : ghost;
+    return assemblePlacementRotationGhost({
+      origin: rot.origin,
+      anchor: rot.anchor,
+      cursor: cursorPoint,
+      targets,
+      sceneUnits,
+      polarOpts,
+      ghostId: 'preview_column_ghost',
+      buildEntity: buildColumnGhostEntity,
+    });
   }
 
-  // ADR-404 Φ5 §slanted — μετά το 1ο κλικ (awaitingTopLean): η κολώνα μένει στη ΣΤΑΘΕΡΗ βάση
-  // και ΓΕΡΝΕΙ live προς τον κέρσορα. Η οριζόντια απόσταση βάση→κέρσορας → tilt.angle (snapped),
-  // η φορά → tilt.direction (snapped, ίδια με rotation). Ο πραγματικός ColumnRenderer ζωγραφίζει
-  // ήδη το Revit slanted-in-plan σύμβολο (ADR-404 Φ3). 2ο κλικ commit-άρει με αυτή την κλίση.
+  // ADR-404 Φ5 §slanted — μετά το 1ο κλικ (awaitingTopLean): η κολώνα μένει στη ΣΤΑΘΕΡΗ βάση και ΓΕΡΝΕΙ
+  // live προς τον κέρσορα. **column-only** (το πέδιλο δεν γέρνει) → εκτός κοινής assembly.
   const lean = getColumnTopLeanLock();
   if (lean) {
     const wpp = worldPerPixel(getImmediateTransform().scale);
@@ -121,20 +125,10 @@ export function generateColumnPreview(
     return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
   }
 
-  // ADR-398 §3.10 — sync-in-preview (πιστό mirror τοίχου/δοκαριού): υπολόγισε το face-snap
-  // ΣΥΓΧΡΟΝΑ εδώ από τους pre-collected στόχους (`columnPreviewStore`) + τον snapped cursor
-  // (`getImmediateSnap` μέσω `resolveEffectivePreviewCursor` — ό,τι έγραψε ο scheduler:
-  // corner-projection / BIM χαρακτηριστικό / grid). Το commit (`mouse-handler-up`) καλεί ΤΟΝ
-  // ΙΔΙΟ resolver με τους ΙΔΙΟΥΣ στόχους + ίδιο cursor → preview ≡ commit εξ ορισμού.
+  // ADR-398 §3.10 — awaitingPosition: sync-in-preview face-snap (ΕΝΑΣ εγκέφαλος, ΙΔΙΑ opts/targets/cursor
+  // με το commit) → κοινή assembly (ghost + CL listening dims + polar/rect grid). ⚠️ effectiveCursor ΗΔΗ
+  // snapped → ΧΩΡΙΣ findSnapPoint (no double-snap, ADR-514 §2).
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
-  // ADR-398 §3.13 — Polar Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
-  const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
-  const targets = sceneSnapTargetsStore.get();
-  // ADR-514 Φ2 — «Ένας Εγκέφαλος Έλξης»: το preview καλεί τον ΙΔΙΟ unified resolver με το commit
-  // (`resolveBimCursorSnap`, toolKind:'column', ΙΔΙΑ opts/targets/cursor) → preview ≡ commit by
-  // construction. ⚠️ ADR-514 §2 — ο effectiveCursor είναι ΗΔΗ snapped → ΧΩΡΙΣ findSnapPoint (no double-snap).
-  // Ο εγκέφαλος delegate-άρει στον ΙΔΙΟ `resolveColumnFaceSnapFromTargets`· `column-placement` →
-  // ΟΛΟΚΛΗΡΟ `ColumnFaceSnap` (position+anchor+rotation+status+faceFrame), αλλιώς → null (ίδιο σχήμα όπως πριν).
   const snap = resolveBimCursorSnap({
     toolKind: 'column',
     cursor: effectiveCursor,
@@ -142,41 +136,14 @@ export function generateColumnPreview(
     sceneUnits,
     columnOpts: polarOpts,
   });
-  const faceSnap = snap.kind === 'column-placement' ? snap.placement : null;
-
-  // θέση + λαβή + status απευθείας από το ΕΝΑ αποτέλεσμα (ΟΧΙ από 3 stores). Η §3.9 wall-axis
-  // επιστρέφει ήδη anchor `center`· face-attach (§3.7) υπερισχύει του §3.1b center-on-beam-axis.
-  const position: Point2D = faceSnap ? faceSnap.position : effectiveCursor;
-  const status: ColumnGhostStatus = faceSnap?.status ?? 'neutral';
-  const anchor: ColumnAnchor = faceSnap?.anchor ?? handle.anchor;
-
-  // ADR-398 §3.10b — λοξή ακμή πλάκας → η κολώνα στρέφεται flush (faceSnap.rotation)· axis-aligned
-  // → 0 (μηδέν αλλαγή). Ελεύθερη τοποθέτηση → ribbon/Tab rotation (handle.overrides).
-  const overrides: ColumnParamOverrides = {
-    ...handle.overrides,
-    kind: handle.kind,
-    anchor,
-    ...(faceSnap ? { rotation: faceSnap.rotation } : {}),
-  };
-  const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
-  const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
-  if (!built.ok) return null;
-
-  // 🔴 overlap → red status schematic (PreviewRenderer draws outline + 30% fill,
-  // mirror beam). 🟢 beam / neutral → πλήρες WYSIWYG amber (το έγκυρο visual).
-  const isOverlap = status === 'overlap';
-  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
-  // ADR-508 §dim — listening dimensions (ΙΔΙΟΣ κοινός κώδικας με τοίχο/δοκάρι): από το faceFrame
-  // του ΙΔΙΟΥ face-snap. `ghostHalfWidth=0` → αποστάσεις προς το κέντρο (Revit centerline).
-  const wpp = worldPerPixel(getImmediateTransform().scale);
-  // ADR-398 §3.15 — cursor μέσα σε ορθογώνιο → 4 καρτεσιανά dx/dy dims (αντί του faceFrame straight branch).
-  const rect = findRectContaining(effectiveCursor, targets.rectTargets);
-  const faceDimensions = (rect && faceSnap && !isOverlap)
-    ? { sceneUnits, dims: resolveRectCartesianDims(rect, faceSnap.position) }
-    : resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
-  const ghost = toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', ghostStatusColor, faceDimensions);
-  // §3.13/§3.15 — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata· ο `drawing-hover-handler`
-  // το ζωγραφίζει ως overlay. ΕΝΑ SSoT helper με το awaitingRotation path (μηδέν απόκλιση πλέγματος↔snap).
-  const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, polarOpts);
-  return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
+  return assemblePlacementGhost({
+    snap,
+    effectiveCursor,
+    targets,
+    sceneUnits,
+    polarOpts,
+    fallbackAnchor: handle.anchor,
+    ghostId: 'preview_column_ghost',
+    buildEntity: buildColumnGhostEntity,
+  });
 }

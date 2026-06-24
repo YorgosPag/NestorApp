@@ -55,12 +55,24 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
+// ADR-514 Φ6d — pad place→rotate (2-click, mirror κολώνας): κοινό rotation lock + ίδια opts/γωνία SSoT.
+import { buildPlacementPolarSnapOptions } from '../../bim/placement/placement-polar-opts';
+import {
+  setPlacementRotationLock,
+  getPlacementRotationLock,
+  clearPlacementRotationLock,
+} from '../../systems/cursor/PlacementRotationStore';
+import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
+import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM } from '../../bim/types/foundation-types';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
 export type FoundationToolPhase =
   | 'idle'
-  | 'awaitingPosition'   // pad — single-click
+  | 'awaitingPosition'   // pad — 1ο κλικ (θέση)
+  | 'awaitingRotation'   // pad — 2ο κλικ (γωνία, ADR-514 Φ6d place+rotate, mirror κολώνας)
   | 'awaitingStart'      // line — 1st click
   | 'awaitingEnd'        // line — 2nd click
   | 'committed';
@@ -190,6 +202,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   }, [syncPreview, refreshSnapTargets]);
 
   const setKind = useCallback((kind: FoundationKind) => {
+    clearPlacementRotationLock(); // ADR-514 Φ6d — αλλαγή kind ακυρώνει τυχόν ενεργό pad place+rotate
     setState((prev) => {
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(kind, prev.placementMode);
       syncPreview(kind, prev.placementMode, phase, null, prev.overrides, prev.anchor);
@@ -198,6 +211,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   }, [syncPreview]);
 
   const setPlacementMode = useCallback((mode: FoundationPlacementMode) => {
+    clearPlacementRotationLock(); // ADR-514 Φ6d — αλλαγή mode ακυρώνει τυχόν ενεργό pad place+rotate
     setState((prev) => {
       if (prev.placementMode === mode) return prev;
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(prev.kind, mode);
@@ -225,12 +239,14 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   }, [syncPreview]);
 
   const deactivate = useCallback(() => {
+    clearPlacementRotationLock(); // ADR-514 Φ6d — ακύρωση τυχόν ενεργού pad place+rotate
     foundationPreviewStore.reset();
     sceneSnapTargetsStore.reset(); // ADR-514 Φ6c — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
+    clearPlacementRotationLock(); // ESC κατά το awaitingRotation → επιστροφή σε awaitingPosition
     setState((prev) => {
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(prev.kind, prev.placementMode);
       syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides, prev.anchor);
@@ -249,18 +265,21 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     });
   }, [syncPreview]);
 
-  // ── commit: pad single-click (Slice 1) ───────────────────────────────────
-  const commitFromState = useCallback(
-    (s: FoundationToolState, clickPoint: Readonly<Point2D>): boolean => {
+  // ── commit: pad (ADR-514 Φ6d place+rotate — 2ο κλικ ορίζει τη γωνία) ───────
+  // `position`/`anchor`/`rotationDeg` έρχονται από το κλειδωμένο 1ο κλικ + τη γωνία του 2ου (mirror
+  // `commitColumnAt`). Validator hardError → FSM μένει στη φάση ώστε ο χρήστης να διορθώσει.
+  const commitPadAt = useCallback(
+    (s: FoundationToolState, position: Readonly<Point2D>, anchor: FoundationAnchor, rotationDeg: number): boolean => {
       const ffl = resolveActiveFoundationLevelElevationMm();
       const overridesWithKind: FoundationParamOverrides = {
         ...s.overrides,
         kind: s.kind,
-        anchor: s.anchor,
+        anchor,
+        rotation: rotationDeg,
         ...(ffl != null ? { foundationLevelElevationMm: ffl } : {}),
       };
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const params = buildDefaultFoundationParams(clickPoint, s.kind, overridesWithKind, sceneUnits);
+      const params = buildDefaultFoundationParams(position, s.kind, overridesWithKind, sceneUnits);
       const result = buildFoundationEntity(params, currentLevelId);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -331,15 +350,34 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
         return commitFromWall(s, point);
       }
 
-      // pad — single click. ADR-514 Φ6c — flush σε παρειά/άξονα κολόνας/μέλους ΜΕΣΑ από τον εγκέφαλο
-      // (reuse `resolveColumnFaceSnapFromTargets` μέσω toolKind 'foundation-pad'). Ο `point` έρχεται
-      // ήδη OSNAP-snapped κεντρικά → ΧΩΡΙΣ findSnapPoint (anti double-snap, ADR-514 §2). Μακριά από
-      // μέλη → ο εγκέφαλος επιστρέφει τον cursor αυτούσιο (μηδέν regression).
+      // pad — ADR-514 Φ6d **place+rotate 2-click** (mirror κολώνας, «μέχρι και την περιστροφή»):
       if (!isLineKind(s.kind)) {
-        if (s.phase !== 'awaitingPosition') return false;
         const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-        const snap = resolveBimCursorSnap({ toolKind: 'foundation-pad', cursor: point, targets: sceneSnapTargetsStore.get(), sceneUnits });
-        return commitFromState(s, snap.point);
+        // 2ο κλικ (awaitingRotation) → γωνία = κλειδωμένη θέση → click → commit.
+        if (s.phase === 'awaitingRotation') {
+          const rot = getPlacementRotationLock();
+          clearPlacementRotationLock();
+          if (!rot) {
+            setState({ ...s, phase: 'awaitingPosition' });
+            return false;
+          }
+          const rotationDeg = resolveColumnRotationDeg(rot.origin, point, worldPerPixel(getImmediateTransform().scale));
+          return commitPadAt(s, rot.origin, rot.anchor, rotationDeg);
+        }
+        if (s.phase !== 'awaitingPosition') return false;
+        // 1ο κλικ — face-snap ΜΕΣΑ από τον ΕΝΑ εγκέφαλο (flush σε παρειά/άξονα + polar/rect magnet, ΙΔΙΑ
+        // opts με το preview). Ο `point` έρχεται ήδη OSNAP-snapped → ΧΩΡΙΣ findSnapPoint (ADR-514 §2).
+        // ΚΛΕΙΔΩΣΕ θέση + auto λαβή → awaitingRotation (2ο κλικ ορίζει τη γωνία).
+        const padWidthMm = typeof s.overrides.width === 'number' ? s.overrides.width : DEFAULT_PAD_WIDTH_MM;
+        const padLengthMm = typeof s.overrides.length === 'number' ? s.overrides.length : DEFAULT_PAD_LENGTH_MM;
+        const polarOpts = buildPlacementPolarSnapOptions(padWidthMm, padLengthMm, sceneUnits);
+        const snap = resolveBimCursorSnap({ toolKind: 'foundation-pad', cursor: point, targets: sceneSnapTargetsStore.get(), sceneUnits, columnOpts: polarOpts });
+        const faceSnap = snap.kind === 'column-placement' ? snap.placement : null;
+        const position = faceSnap ? faceSnap.position : snap.point;
+        const anchor: FoundationAnchor = faceSnap?.anchor ?? s.anchor;
+        setPlacementRotationLock(position, anchor);
+        setState({ ...s, phase: 'awaitingRotation', error: null });
+        return false;
       }
 
       // strip / tie-beam — 2-click chain.
@@ -355,7 +393,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
       }
       return false;
     },
-    [commitFromState, commitTwoClickFromState, commitFromWall],
+    [commitPadAt, commitTwoClickFromState, commitFromWall],
   );
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
@@ -363,7 +401,9 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     const s = stateRef.current;
     if (s.phase === 'idle') return '';
     if (s.placementMode === 'from-wall') return 'tools.foundation.statusPickWall';
-    if (!isLineKind(s.kind)) return 'tools.foundation.statusPosition';
+    if (!isLineKind(s.kind)) {
+      return s.phase === 'awaitingRotation' ? 'tools.foundation.statusRotation' : 'tools.foundation.statusPosition';
+    }
     return s.phase === 'awaitingEnd' ? 'tools.foundation.statusEnd' : 'tools.foundation.statusStart';
   }, []);
 

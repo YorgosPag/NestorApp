@@ -20,14 +20,21 @@ import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
-import type { FoundationKind } from '../../bim/types/foundation-types';
+import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM, type FoundationKind } from '../../bim/types/foundation-types';
 import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
-// ADR-514 Φ6c — live pad ghost: flush σε παρειά/άξονα κολόνας ΜΕΣΑ από τον ΕΝΑ εγκέφαλο έλξης
-// (ΙΔΙΟΣ resolver με το commit `useFoundationTool` pad branch → preview ≡ commit by construction).
+// ADR-514 Φ6c/Φ6d — live pad ghost: flush σε παρειά/άξονα κολόνας ΜΕΣΑ από τον ΕΝΑ εγκέφαλο έλξης +
+// ΚΟΙΝΗ assembly (ghost + CL dims + polar/rect grid + place→rotate) με την κολώνα — μηδέν διπλότυπο.
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { buildPlacementPolarSnapOptions } from '../../bim/placement/placement-polar-opts';
+import { getPlacementRotationLock } from '../../systems/cursor/PlacementRotationStore';
+import {
+  assemblePlacementGhost,
+  assemblePlacementRotationGhost,
+  type PlacementGhostEntityBuilder,
+} from '../../bim/placement/placement-ghost-assembly';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
@@ -63,12 +70,19 @@ export function generateFoundationPreview(
 }
 
 /**
- * ADR-514 Φ6c — **live pad ghost** (Revit-grade): WYSIWYG `FoundationEntity` (pad) στον face-snapped
- * cursor, ώστε το πέδιλο να κουμπώνει **ζωντανά** σε παρειά/άξονα κολόνας/μέλους καθώς κινείς τον
- * κέρσορα (όχι μόνο στο κλικ). Ο cursor περνά από `resolveEffectivePreviewCursor` (ήδη OSNAP-snapped,
- * mirror του commit `worldPoint`) και μετά από τον ΙΔΙΟ εγκέφαλο `toolKind:'foundation-pad'` ΧΩΡΙΣ
- * findSnapPoint (anti double-snap, ADR-514 §2). kind/overrides(+anchor) από το κοινό
- * `foundationPreviewStore` (single-writer ο tool) → preview ≡ commit. `null` σε degenerate frame.
+ * ADR-514 Φ6c/Φ6d — **live pad ghost** (Revit-grade, ΙΔΙΟ σύστημα με την κολώνα από ΜΙΑ πηγή αλήθειας):
+ * WYSIWYG `FoundationEntity` (pad) που κουμπώνει **ζωντανά** flush σε παρειά/άξονα κολόνας/μέλους (9-handle
+ * face-snap) + **πολικό/καρτεσιανό πλέγμα** μέσα σε κύκλο/ορθογώνιο + **CL listening dimensions** (σιελ) —
+ * όλα μέσω της ΚΟΙΝΗΣ `placement-ghost-assembly` (entity-agnostic, μηδέν διπλότυπο με το column).
+ *
+ * Δύο φάσεις (mirror κολώνας, ADR-508 §column place+rotate):
+ *   · awaitingRotation (μετά το 1ο κλικ) → το πέδιλο μένει στην ΚΛΕΙΔΩΜΕΝΗ θέση και ΠΕΡΙΣΤΡΕΦΕΤΑΙ live
+ *     προς τον κέρσορα (`PlacementRotationStore` — κοινό lock με την κολώνα → ο `drawing-hover-handler`
+ *     ζωγραφίζει αυτόματα την πορτοκαλί γραμμή/γωνία).
+ *   · awaitingPosition (πριν το 1ο κλικ) → face-snap μέσω του ΕΝΟΣ εγκεφάλου `toolKind:'foundation-pad'`
+ *     (ΙΔΙΟΣ resolver με την κολώνα), ΧΩΡΙΣ findSnapPoint (anti double-snap, ADR-514 §2).
+ *
+ * kind/overrides(+anchor) από το κοινό `foundationPreviewStore` (single-writer ο tool) → preview ≡ commit.
  */
 export function generateFoundationPadPreview(
   cursorPoint: Point2D,
@@ -76,12 +90,60 @@ export function generateFoundationPadPreview(
 ): ExtendedSceneEntity | null {
   const preview = foundationPreviewStore.get();
   if (preview.kind !== 'pad') return null; // safety — μόνο για το pad kind
-  const eff = resolveEffectivePreviewCursor(cursorPoint);
-  const snap = resolveBimCursorSnap({ toolKind: 'foundation-pad', cursor: eff, targets: sceneSnapTargetsStore.get(), sceneUnits });
-  const params = buildDefaultFoundationParams(snap.point, 'pad', { ...preview.overrides, kind: 'pad' }, sceneUnits);
-  const built = buildFoundationEntity(params, defaultLayerId());
-  if (!built.ok) return null;
-  return toWysiwygPreviewEntity(built.entity, 'preview_foundation_pad');
+
+  // ADR-398 §3.13 — Polar/Rect Magnet opts με τις διαστάσεις του ΠΕΔΙΛΟΥ (width×length), ίδιο SSoT με κολόνα.
+  const padWidthMm = typeof preview.overrides.width === 'number' ? preview.overrides.width : DEFAULT_PAD_WIDTH_MM;
+  const padLengthMm = typeof preview.overrides.length === 'number' ? preview.overrides.length : DEFAULT_PAD_LENGTH_MM;
+  const polarOpts = buildPlacementPolarSnapOptions(padWidthMm, padLengthMm, sceneUnits);
+  const targets = sceneSnapTargetsStore.get();
+
+  // entity-specific builder — ΙΔΙΟΣ builder με το commit (preview ≡ commit).
+  const buildPadGhostEntity: PlacementGhostEntityBuilder = (position, anchor, rotation) => {
+    const overrides: FoundationParamOverrides = {
+      ...preview.overrides,
+      kind: 'pad',
+      anchor,
+      ...(rotation !== null ? { rotation } : {}),
+    };
+    const params = buildDefaultFoundationParams(position, 'pad', overrides, sceneUnits);
+    const built = buildFoundationEntity(params, defaultLayerId());
+    return built.ok ? built.entity : null;
+  };
+
+  // awaitingRotation — locked θέση, live περιστροφή προς τον κέρσορα (+ grid).
+  const rot = getPlacementRotationLock();
+  if (rot) {
+    return assemblePlacementRotationGhost({
+      origin: rot.origin,
+      anchor: rot.anchor,
+      cursor: cursorPoint,
+      targets,
+      sceneUnits,
+      polarOpts,
+      ghostId: 'preview_foundation_pad',
+      buildEntity: buildPadGhostEntity,
+    });
+  }
+
+  // awaitingPosition — face-snap → κοινή assembly (ghost + CL dims + polar/rect grid).
+  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
+  const snap = resolveBimCursorSnap({
+    toolKind: 'foundation-pad',
+    cursor: effectiveCursor,
+    targets,
+    sceneUnits,
+    columnOpts: polarOpts,
+  });
+  return assemblePlacementGhost({
+    snap,
+    effectiveCursor,
+    targets,
+    sceneUnits,
+    polarOpts,
+    fallbackAnchor: preview.overrides.anchor ?? 'center',
+    ghostId: 'preview_foundation_pad',
+    buildEntity: buildPadGhostEntity,
+  });
 }
 
 function makeFoundationBandGhost(

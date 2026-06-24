@@ -724,7 +724,8 @@
       }
     },
     "foundation": {
-      "statusPosition": "Click to place footing — Tab cycles the anchor point",
+      "statusPosition": "Click for the footing position — Tab cycles the anchor point",
+      "statusRotation": "Click for the footing rotation angle",
       "statusStart": "Click for the strip-footing start",
       "statusEnd": "Click for the strip-footing end",
       "statusPickWall": "Pick a wall to place the strip footing",

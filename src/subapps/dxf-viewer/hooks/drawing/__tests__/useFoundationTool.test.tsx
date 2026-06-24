@@ -15,6 +15,9 @@ import { useFoundationTool } from '../useFoundationTool';
 import type { FoundationEntity } from '../../../bim/types/foundation-types';
 import type { Entity } from '../../../types/entities';
 import type { WallEntity } from '../../../bim/types/wall-types';
+import { clearPlacementRotationLock } from '../../../systems/cursor/PlacementRotationStore';
+
+afterEach(() => clearPlacementRotationLock()); // ADR-514 Φ6d — μην διαρρεύσει pad rotation lock μεταξύ tests
 
 const wallFixture = (id: string): WallEntity =>
   ({
@@ -32,18 +35,46 @@ describe('useFoundationTool', () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it('pad: activate → awaitingPosition, single click commits + chains', () => {
+  // ADR-514 Φ6d — pad place+rotate (2-click, mirror κολώνας «μέχρι και την περιστροφή»):
+  // 1ο κλικ κλειδώνει θέση+λαβή (awaitingRotation, ΚΑΜΙΑ δημιουργία), 2ο κλικ ορίζει γωνία → commit + chain.
+  it('pad: 2-click place+rotate — 1ο κλικ → awaitingRotation, 2ο → commit + chain', () => {
     const onFoundationCreated = jest.fn();
     const { result } = renderHook(() => useFoundationTool({ onFoundationCreated }));
     act(() => result.current.activate());
     expect(result.current.state.phase).toBe('awaitingPosition');
+    // 1ο κλικ — κλειδώνει θέση, ΔΕΝ commit-άρει.
+    let firstClick = true;
+    act(() => { firstClick = result.current.onCanvasClick({ x: 100, y: 100 }); });
+    expect(firstClick).toBe(false);
+    expect(result.current.state.phase).toBe('awaitingRotation');
+    expect(onFoundationCreated).not.toHaveBeenCalled();
+    // 2ο κλικ — ορίζει γωνία → commit + chain πίσω σε awaitingPosition.
     let committed = false;
-    act(() => { committed = result.current.onCanvasClick({ x: 100, y: 100 }); });
+    act(() => { committed = result.current.onCanvasClick({ x: 600, y: 100 }); });
     expect(committed).toBe(true);
     expect(onFoundationCreated).toHaveBeenCalledTimes(1);
     const entity = onFoundationCreated.mock.calls[0][0] as FoundationEntity;
     expect(entity.kind).toBe('pad');
     expect(result.current.state.phase).toBe('awaitingPosition');
+  });
+
+  it('pad: status text → statusPosition (1ο κλικ) μετά statusRotation (awaitingRotation)', () => {
+    const { result } = renderHook(() => useFoundationTool({ onFoundationCreated: jest.fn() }));
+    act(() => result.current.activate());
+    expect(result.current.getStatusText()).toBe('tools.foundation.statusPosition');
+    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
+    expect(result.current.getStatusText()).toBe('tools.foundation.statusRotation');
+  });
+
+  it('pad: ESC (reset) κατά το awaitingRotation → επιστροφή σε awaitingPosition χωρίς commit', () => {
+    const onFoundationCreated = jest.fn();
+    const { result } = renderHook(() => useFoundationTool({ onFoundationCreated }));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 100, y: 100 }); });
+    expect(result.current.state.phase).toBe('awaitingRotation');
+    act(() => result.current.reset());
+    expect(result.current.state.phase).toBe('awaitingPosition');
+    expect(onFoundationCreated).not.toHaveBeenCalled();
   });
 
   it('strip: 2-click line commit + chain back to awaitingStart', () => {

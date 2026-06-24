@@ -114,6 +114,20 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
 
 ## 6. Changelog
 
+- **2026-06-24** — Φ6d (placement assembly + rotate-lock SSoT, UNCOMMITTED): το 2-click «place→rotate»
+  flow + η συναρμολόγηση του placement ghost γενικεύτηκαν ώστε **κολώνα ΚΑΙ πέδιλο** να μοιράζονται ΕΝΑΝ
+  κώδικα (μηδέν παράλληλο store/assembly). **NEW** `systems/cursor/PlacementRotationStore.ts` (zero-React
+  singleton, εξήχθη από το column-only `ColumnRotationStore` — που πλέον κρατά **byte-for-byte aliases**
+  `setColumnRotationLock`/`getColumnRotationLock`/`clearColumnRotationLock` → οι column consumers αμετάβλητοι).
+  **NEW** `bim/placement/placement-ghost-assembly.ts` (`assemblePlacementGhost` awaitingPosition +
+  `assemblePlacementRotationGhost` awaitingRotation, entity-agnostic· η μόνη entity-specific παράμετρος =
+  injected `buildEntity(position,anchor,rotation)` + `ghostId` + magnet `polarOpts`· reuse
+  `resolveGhostFaceDimensionsMeta`+`resolveRectCartesianDims`+`buildPlacementGridMeta`+`toWysiwygPreviewEntity`,
+  καμία νέα γεωμετρία). `useFoundationTool` + `foundation-preview-helpers` υιοθετούν το ΙΔΙΟ flow·
+  `column-polar-opts`/`placement-polar-opts` ευθυγραμμίστηκαν. Boy-scout: `dim-text-renderer.ts` —
+  αφαιρέθηκε το alias `buildPrimaryText` (καλεί απευθείας το `resolveDimensionText` SSoT). jest GREEN
+  (foundation + placement-ghost-assembly + placement suites). 🔴 browser-verify εκκρεμεί.
+  ⚠️ CHECK 6D: staged μαζί ADR-514 (canvas drawing files: `dim-text-renderer`, `ColumnRotationStore`).
 - **2026-06-24** — Φ1: δημιουργία `bim/placement/bim-cursor-snap.ts` (pure SSoT) + 6 jest. ADR created.
   (Αντικατέστησε ενδιάμεσο `bim/framing/unified-cursor-snap.ts` — στενότερο member+point — για μηδέν
   επικαλυπτόμενα SSoT.)
