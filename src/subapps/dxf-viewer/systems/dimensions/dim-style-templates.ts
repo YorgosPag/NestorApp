@@ -157,6 +157,13 @@ export const ISO_129_TEMPLATE: DimStyle = makeBuiltInTemplate(
     dimtoh: false,
     dimdsep: ',',
     targetLayer: 'ΔΙΑΣΤΑΣΕΙΣ',
+    // ADR-362 Round 21 (Giorgio 2026-06-24) — witness lines must TOUCH the
+    // feature point (no gap). The standard ISO/AutoCAD DIMEXO gap (0.625mm ×
+    // dimscale) left a visible offset between the extension-line origin and the
+    // measured endpoint/intersection; for the Greek architectural default Giorgio
+    // wants them flush. (The associativity fix already lands the defPoint on the
+    // true endpoint/intersection — what remained was purely this by-design gap.)
+    dimexo: 0,
   },
 );
 

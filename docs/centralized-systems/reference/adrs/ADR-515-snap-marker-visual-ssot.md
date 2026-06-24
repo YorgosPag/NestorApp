@@ -130,7 +130,14 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
     `canvasUI.overlay.colors.snap.border`)· αφαιρέθηκε το πλέον αχρησιμοποίητο `canvasUI` import.
   - **3D** `bim-3d/shared/snap-marker-core.ts` — `SNAP_MARKER_COLOR` derived από
     `SNAP_MARKER_BASE_COLOR` (ήταν inline `0x00e5ff`) → 2D & 3D κινούνται μαζί.
-  - **Deprecation** `SnapTypes.ts → DEFAULT_SNAP_SETTINGS` type-colors: σημάνθηκαν `@deprecated`
-    (νεκρά· pointer στο νέο SSoT). Πλήρης αφαίρεση νεκρών (`OverlayPass`/`RenderPipeline` snap path,
-    `snapIndicator.positioned` token) = ξεχωριστό housekeeping βήμα (§4.3).
   - 🔴 Εκκρεμεί: tsc + browser-verify + commit (staging ADR-040 + ADR-515 → CHECK 6B/6D).
+- **2026-06-24 (housekeeping §4.3)** — αφαίρεση νεκρών snap-specific πηγών (επιβεβαιωμένα μηδέν
+  ζωντανός consumer μέσω grep):
+  - `design-tokens/modules/canvas-ui.ts` — αφαιρέθηκαν `overlay.colors.snap` (border/background/glow)
+    **και** `overlay.snapIndicator.positioned` (10px circle, green-500) — αμφότερα αχρησιμοποίητα.
+  - `SnapTypes.ts` — αφαιρέθηκαν τα 4 type-color fields (`endpointColor`/`midpointColor`/`centerColor`/
+    `intersectionColor`) από το `SnapSettings` interface **και** το `DEFAULT_SNAP_SETTINGS`.
+  - `CanvasSettings.ts` — αφαιρέθηκαν τα αντίστοιχα 4 type-color fields από το snap block.
+  - **ΕΚΤΟΣ scope** (δεν αγγίχθηκε): `OverlayPass.renderSnapIndicators` + `RenderPipeline` — ολόκληρο
+    το 3-pass canvas pipeline είναι ήδη flagged `DEADCODE` (γραμμή 1)· η αφαίρεσή του είναι ξεχωριστό
+    pipeline-wide ratchet, όχι snap-specific.
