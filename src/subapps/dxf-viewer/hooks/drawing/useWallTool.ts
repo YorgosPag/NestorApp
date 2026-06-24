@@ -67,7 +67,7 @@ import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-brid
 // (ίδιος SSoT περιορισμός με το preview στο drawing-hover-handler). No-op όταν δεν υπάρχει lock.
 import { applyLengthAngleLock, isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 // ADR-508 — endpoint face-snap (point snap, ΙΔΙΟΣ dispatcher με το start → preview ≡ commit).
-import { resolveWallEndpointSnap } from '../../bim/walls/wall-endpoint-snap';
+import { resolveWallEndpointSnap, resolveWallEndpointWithFineStep } from '../../bim/walls/wall-endpoint-snap';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -339,13 +339,15 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         } else {
           const targets = sceneSnapTargetsStore.get();
           // ΧΩΡΙΣ worldPerPixel → πλήρως συνεχής ολίσθηση του ΑΚΡΟΥ στην παρειά (Giorgio «ΠΛΗΡΩΣ»).
-          endPoint = resolveWallEndpointSnap(
+          const endSnap = resolveWallEndpointSnap(
             point,
             targets.footprints,
             selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']),
             resolveWallThicknessMm(s.overrides),
             getSceneUnits?.() ?? 'mm',
-          ).point;
+          );
+          // ADR-049 — Shift fine 1cm βήμα στο ΑΚΡΟ ΜΟΝΟ στο ελεύθερο (face-snap νικά). preview ≡ commit.
+          endPoint = resolveWallEndpointWithFineStep(endSnap, s.startPoint);
         }
         return commitStraightFromState(s, endPoint);
       }

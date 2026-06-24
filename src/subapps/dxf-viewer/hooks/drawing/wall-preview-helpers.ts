@@ -40,7 +40,7 @@ import {
   type GhostFaceFrame,
 } from '../../bim/framing/linear-member-face-snap';
 // ADR-508 — endpoint face-snap (point snap, reuse dispatcher) + lock precedence (Δαχτυλίδι νικά).
-import { resolveWallEndpointSnap } from '../../bim/walls/wall-endpoint-snap';
+import { resolveWallEndpointSnap, resolveWallEndpointWithFineStep } from '../../bim/walls/wall-endpoint-snap';
 import { isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
@@ -241,7 +241,8 @@ export function generateWallPreview(
     const snap = resolveWallEndpointSnap(
       cursorPoint, footprints, snapMembers, resolveWallThicknessMm(overrides), sceneUnits,
     );
-    rawEnd = snap.point;
+    // ADR-049 — Shift fine 1cm βήμα στο ΑΚΡΟ ΜΟΝΟ στο ελεύθερο (face-snap νικά). preview ≡ commit.
+    rawEnd = resolveWallEndpointWithFineStep(snap, startPt);
     endFaceFrame = snap.faceFrame ?? null;
   }
   // ADR-513 — clamp ΜΟΝΟ του PREVIEW στο ελάχιστο μήκος (το commit μένει αυστηρός validator): ο χρήστης

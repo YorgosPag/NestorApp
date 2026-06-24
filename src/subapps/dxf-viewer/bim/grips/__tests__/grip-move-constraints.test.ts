@@ -10,6 +10,7 @@ import {
   applyOrthoToDelta,
   applyMoveConstraints,
   applyMoveFineStep,
+  applyMoveFineStepAboutAnchor,
   isMoveFineStepActive,
   MOVE_FINE_STEP_MM,
 } from '../grip-move-constraints';
@@ -114,6 +115,15 @@ describe('grip-move-constraints (ORTHO on a move delta)', () => {
       cadToggleState.setSnap(false, 0);
       ShiftKeyTracker._setForTest(false);
       expect(applyMoveConstraints({ x: 47, y: -43 })).toEqual({ x: 47, y: -43 });
+    });
+
+    it('15. applyMoveFineStepAboutAnchor quantizes the point RELATIVE to the anchor', () => {
+      immediateSceneScale.set(1);
+      ShiftKeyTracker._setForTest(true);
+      // anchor 1000; point 1047 → 1050, point 1043 → 1040 (delta stepped, offset kept).
+      expect(applyMoveFineStepAboutAnchor({ x: 1047, y: -23 }, { x: 1000, y: 0 })).toEqual({ x: 1050, y: -20 });
+      ShiftKeyTracker._setForTest(false);
+      expect(applyMoveFineStepAboutAnchor({ x: 1047, y: -23 }, { x: 1000, y: 0 })).toEqual({ x: 1047, y: -23 });
     });
   });
 });

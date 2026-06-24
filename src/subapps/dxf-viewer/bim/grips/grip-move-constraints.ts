@@ -78,6 +78,18 @@ export function applyMoveFineStep(delta: Point2D): Point2D {
 }
 
 /**
+ * Point form of {@link applyMoveFineStep}: quantize `point` to the Shift fine 1 cm
+ * step measured RELATIVE to `anchor` (so the displacement `point − anchor` lands on
+ * clean 1 cm multiples — Option Α, step of the move). No-op (point verbatim) when
+ * Shift is up. Used by the wall-draw endpoint so a freely-placed end grows in 1 cm
+ * increments from the start point — same SSoT math as the grip move.
+ */
+export function applyMoveFineStepAboutAnchor(point: Point2D, anchor: Point2D): Point2D {
+  const d = applyMoveFineStep({ x: point.x - anchor.x, y: point.y - anchor.y });
+  return { x: anchor.x + d.x, y: anchor.y + d.y };
+}
+
+/**
  * ORTHO (F8) for a whole-entity move displacement: locks the delta to the H or V
  * axis (the larger component wins, AutoCAD-style). No-op when ORTHO is OFF.
  */

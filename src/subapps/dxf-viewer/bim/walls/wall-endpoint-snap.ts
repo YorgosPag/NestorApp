@@ -25,6 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { resolveMemberGhostSnapFromStore } from '../framing/member-ghost-snap';
 import type { GhostFaceFrame, LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
+import { applyMoveFineStepAboutAnchor } from '../grips/grip-move-constraints';
 
 /** Αποτέλεσμα endpoint snap: το (πιθανώς) snapped σημείο + προαιρετικό faceFrame για listening dims. */
 export interface WallEndpointSnap {
@@ -48,4 +49,17 @@ export function resolveWallEndpointSnap(
   const snap = resolveMemberGhostSnapFromStore(rawEnd, columnFootprints, memberTargets, thicknessMm, sceneUnits);
   if (!snap) return { point: { x: rawEnd.x, y: rawEnd.y } };
   return { point: { x: snap.start.x, y: snap.start.y }, faceFrame: snap.faceFrame };
+}
+
+/**
+ * ADR-049 (Giorgio 2026-06-24) — εφάρμοσε το **Shift fine 1 cm βήμα** στο ΑΚΡΟ που σχεδιάζεται,
+ * ΜΟΝΟ όταν ΔΕΝ κούμπωσε σε παρειά (ελεύθερος χώρος). **Precedence (Giorgio): face-snap νικά** — αν
+ * υπάρχει `faceFrame`, επιστρέφει το flush σημείο αυτούσιο· αλλιώς το άκρο κβαντίζεται σε πολλαπλάσια
+ * του 1 cm σχετικά με το `start` (reuse του move SSoT `applyMoveFineStepAboutAnchor` — no-op όταν το
+ * Shift δεν κρατιέται). Ο ΙΔΙΟΣ helper τρέχει στο preview (`wall-preview-helpers`) ΚΑΙ στο commit
+ * (`useWallTool`) → preview ≡ commit.
+ */
+export function resolveWallEndpointWithFineStep(snap: WallEndpointSnap, start: Readonly<Point2D>): Point2D {
+  if (snap.faceFrame) return { x: snap.point.x, y: snap.point.y };
+  return applyMoveFineStepAboutAnchor(snap.point, start);
 }
