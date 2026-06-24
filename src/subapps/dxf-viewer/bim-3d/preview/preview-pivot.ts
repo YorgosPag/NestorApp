@@ -24,12 +24,13 @@
  */
 
 import * as THREE from 'three';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** Crosshair half-length (meters) — sized for the ~1m preview stub. */
 const MARKER_HALF_M = 0.12;
 const MARKER_COLOR = 0x38bdf8; // sky-400 — matches the band highlight outline.
 /** How long the pivot crosshair stays visible after an Alt+click (ms). */
-const MARKER_FLASH_MS = 900;
+const MARKER_FLASH_MS = DXF_TIMING.animation.MARKER_FLASH; // ADR-516
 
 const _ndc = new THREE.Vector2();
 const _normal = new THREE.Vector3();

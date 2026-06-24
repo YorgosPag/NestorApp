@@ -8,9 +8,10 @@
 
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 const OVERLAY_ID = 'origin-indicator-overlay';
-const OVERLAY_TTL_MS = 6000;
+const OVERLAY_TTL_MS = DXF_TIMING.animation.OVERLAY_TTL; // ADR-516
 
 /** Creates a pulsing SVG crosshair overlay at the given screen coordinates. */
 export function createOriginIndicatorOverlay(finalScreenX: number, finalScreenY: number): void {

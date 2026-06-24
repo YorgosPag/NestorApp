@@ -37,6 +37,7 @@ import {
   buildStructuralSettingsForPreset,
   type StructuralPresetKind,
 } from '../bim/structural/presets';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 // ── Debounce helper (per building) ──────────────────────────────────────────
 
@@ -52,7 +53,7 @@ const pendingTimers: Map<string, Timer> = new Map();
  * ήδη deferred + fire-and-forget → μηδέν behavior change. Pattern ήδη καθιερωμένο
  * (12+ αρχεία με `await import()` για heavy persistence deps).
  */
-function debounceWrite(buildingId: string, settings: StructuralSettings, delayMs = 500): void {
+function debounceWrite(buildingId: string, settings: StructuralSettings, delayMs = DXF_TIMING.persist.SETTINGS): void {
   const existing = pendingTimers.get(buildingId);
   if (existing) clearTimeout(existing);
   const t = setTimeout(() => {

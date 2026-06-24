@@ -20,6 +20,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getSpellChecker } from '../spell';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type {
   CustomTermPayload,
   MisspelledRange,
@@ -66,7 +67,7 @@ const DEFAULT_OPTIONS: SpellCheckOptions = {
   languages: ['el', 'en'],
   initialCustomTerms: [],
   enabled: true,
-  debounceMs: 300,
+  debounceMs: DXF_TIMING.ui.SPELLCHECK_DEBOUNCE, // ADR-516
 };
 
 declare module '@tiptap/core' {

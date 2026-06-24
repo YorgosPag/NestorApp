@@ -12,6 +12,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { transcribeVoiceWithPolicy } from '@/services/voice/voice-mutation-gateway';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export type VoiceRecorderState = 'idle' | 'recording' | 'processing' | 'done' | 'error';
 
@@ -25,7 +26,7 @@ export interface UseVoiceRecorderReturn {
   readonly reset: () => void;
 }
 
-const MAX_RECORDING_MS = 30_000;
+const MAX_RECORDING_MS = DXF_TIMING.lifecycle.MAX_RECORDING; // ADR-516
 
 function buildAudioFormData(blob: Blob): FormData {
   const ext = blob.type.includes('ogg') ? 'ogg' : 'webm';

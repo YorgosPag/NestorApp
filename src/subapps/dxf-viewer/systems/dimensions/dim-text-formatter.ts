@@ -22,6 +22,7 @@ import type {
   DimLinearUnitFormat,
   DimStyle,
 } from '../../types/dimension';
+import type { DimGeometry } from './dim-geometry-builder';
 import type { Precision } from '../../config/number-format-config';
 // ADR-462 / ADR-362 R15 — dimension values follow the app display-unit SSoT
 // (status-bar selector, default live), same as every other length readout, so a
@@ -221,6 +222,54 @@ export function composePrimaryText(
   const measured = formatLinearMeasurement(valueMm, style);
   if (userText === undefined || userText === '<>') return measured;
   return userText.replace('<>', measured);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Geometry-aware primary text (SSoT — shared by the canvas renderer + DXF block export)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Radial dim text prefixes (AutoCAD parity): Ø for diameter, R for radius. */
+export const RADIAL_DIAMETER_PREFIX = 'Ø ';
+export const RADIAL_RADIUS_PREFIX = 'R ';
+
+/**
+ * Resolve the PRIMARY display string for a built `DimGeometry`, dispatching on its
+ * kind (angular → angular format; radial → R/Ø-prefixed; linear/ordinate/etc. →
+ * linear format) and honouring the `userText` token semantics. This is the SSoT
+ * for "geometry → measured label": `dim-text-renderer` (canvas/preview) and the
+ * DXF dimension-block emitter (export) both delegate here so the on-screen label
+ * and the exported block text never diverge.
+ *
+ * Note: `measurementValue` is mm for linear/radial/arcLength and **radians** for
+ * angular — the per-kind formatter applies the right unit conversion.
+ */
+export function resolveDimensionText(
+  geometry: DimGeometry,
+  style: DimStyle,
+  userText?: string,
+): string {
+  // Empty user text = suppress entirely (AutoCAD parity).
+  if (userText === '') return '';
+
+  if (geometry.kind === 'angular') {
+    const measured = formatAngularMeasurement(geometry.measurementValue, style);
+    if (userText === undefined || userText === '<>') return measured;
+    return userText.replace('<>', measured);
+  }
+
+  if (geometry.kind === 'radial') {
+    const measured = composePrimaryText(geometry.measurementValue, style, userText);
+    if (!measured) return '';
+    // Prefix only when user text is the measured token ('' / undefined / '<>'),
+    // otherwise the user already supplied custom text (don't double-prefix).
+    if (userText === undefined || userText === '<>') {
+      return (geometry.isDiameter ? RADIAL_DIAMETER_PREFIX : RADIAL_RADIUS_PREFIX) + measured;
+    }
+    return measured;
+  }
+
+  // Linear / aligned / ordinate / baseline / continued — all consume linear formatting.
+  return composePrimaryText(geometry.measurementValue, style, userText);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

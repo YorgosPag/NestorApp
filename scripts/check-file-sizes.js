@@ -37,6 +37,7 @@ const NC     = '\x1b[0m';
 // Mirrors the bash `get_max_lines` function in the original hook.
 const EXEMPT_RE = new RegExp([
   /\.(config)\./,
+  /(^|\/)config\.tsx?$/, // a file literally named config.ts(x) is configuration (N.7.1, ίδιο με /config/ dir + *.config.*)
   /\.template\./,
   /\.d\.ts$/,
   /\.test\./,

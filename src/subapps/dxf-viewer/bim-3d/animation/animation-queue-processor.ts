@@ -49,6 +49,7 @@ import { resumeFrameIndex, serializeCheckpoint } from './render-checkpoint';
 import { buildBimAnimationRenderPath } from '@/services/upload/utils/storage-path';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { AnimationCodec } from './animation-types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface QueueProcessorCallbacks {
   readonly onRenderStarted?: (animationName: string) => void;
@@ -64,7 +65,7 @@ export interface QueueProcessorContext {
   readonly callbacks?: QueueProcessorCallbacks;
 }
 
-const PROGRESS_PERSIST_INTERVAL_MS = 1500;
+const PROGRESS_PERSIST_INTERVAL_MS = DXF_TIMING.persist.PROGRESS_INTERVAL; // ADR-516
 const DEFAULT_RENDER_WIDTH = 1920;
 const DEFAULT_RENDER_HEIGHT = 1080;
 

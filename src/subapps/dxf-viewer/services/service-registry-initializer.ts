@@ -13,6 +13,7 @@ import type {
   ServiceFactoryOptions,
   ServiceMetadata,
 } from './service-registry-types';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 /**
  * Initialize a service with retry logic, exponential backoff, and timeout
@@ -25,7 +26,7 @@ export async function initializeServiceInstance(
   metadata: Map<ServiceName, ServiceMetadata>,
   weakRefs: Map<ServiceName, WeakRef<object>>
 ): Promise<unknown> {
-  const { retries = 0, backoffMs = 100, timeout = 5000 } = options;
+  const { retries = 0, backoffMs = DXF_TIMING.lifecycle.SERVICE_RETRY_BACKOFF, timeout = 5000 } = options; // ADR-516
   const startTime = performance.now();
 
   let lastError: Error | undefined;

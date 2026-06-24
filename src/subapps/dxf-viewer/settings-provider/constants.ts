@@ -32,7 +32,7 @@ export const ENTERPRISE_CONSTANTS = {
    * so legitimate long-session re-renders (floor changes, settings edits,
    * hydration) never accumulate into a false "INFINITE LOOP DETECTED". Only a
    * genuine tight loop can reach the threshold before the window resets. */
-  RENDER_LOOP_WINDOW_MS: 2000,
+  RENDER_LOOP_WINDOW_MS: DXF_TIMING.lifecycle.RENDER_LOOP_WINDOW, // ADR-516
 
   /** Auto-save debounce delay in milliseconds (ADR-516 → DXF_TIMING.persist.ENTITY_AUTOSAVE). */
   AUTO_SAVE_DEBOUNCE_MS: DXF_TIMING.persist.ENTITY_AUTOSAVE,

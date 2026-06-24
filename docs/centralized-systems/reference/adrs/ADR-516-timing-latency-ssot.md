@@ -276,16 +276,52 @@ bypass timing constants ώστε να δείχνουν στο `DXF_TIMING`, + pa
 
 ### 3. Ratchet — CHECK 3.27 (path-scoped, ADR-294/314 pattern)
 - NEW `scripts/check-dxf-timing-ratchet.js` — μπλοκάρει νέο raw timing literal
-  (`*_MS|*_DELAY|*_THROTTLE|*_DEBOUNCE|*_INTERVAL|*_TIMEOUT|*_DURATION|*_WINDOW|*_ms|*Ms = <number>`)
+  (`*_MS|*_DELAY|*_THROTTLE|*_DEBOUNCE|*_INTERVAL|*_TIMEOUT|*_DURATION|*_WINDOW|*_ms|*Ms = <non-zero>`)
   μέσα στο `src/subapps/dxf-viewer/**`. Reference (`= DXF_TIMING.*`) δεν ματσάρει (μηδέν digit).
+  Η regex απαιτεί **μη-μηδενικό** πρώτο ψηφίο (skips `= 0` runtime-metric initializers όπως
+  `parseTimeMs: 0`/`totalMs: 0`) και εξαιρεί rate fields `*PerMs` (π.χ. `samplesPerMs`) → μηδέν false positives.
 - **Self-contained (ΟΧΙ στο `.ssot-registry.json`)** — σκόπιμη απόκλιση από το handoff Step D:
   ο global `ssot-baseline-engine` εφαρμόζει τα registry `forbiddenPatterns` σε ΟΛΟ το `src/`, ενώ το
   DXF_TIMING SSoT καλύπτει ΜΟΝΟ τον viewer (η υπόλοιπη app δεν έχει timing SSoT → θα μπλόκαρε χωρίς πού
   να δείξει). Μιμείται τα υπάρχοντα self-contained bespoke ratchets (`check-tabs-import`/`check-no-flash`).
-- Baseline `.dxf-timing-baseline.json` = **35 αρχεία / 57 violations** (το «tail»: `io/dxf-import`,
-  `RenderPipeline`, `ServiceHealthMonitor`, bim-3d perf collectors, voice-recorder, constraints κ.λπ. —
-  distinct/diagnostic/perf-internal). Ratchet: μειώνεται μόνο, νέα αρχεία = zero tolerance.
+- Baseline `.dxf-timing-baseline.json` = **24 αρχεία / 30 violations** (μετά το καθάρισμα false
+  positives) → **7/9 μετά το Group 6** (§8.quater). Όλα γνήσια one-off config timings = **το αντικείμενο του Group 6**:
+  `ServiceHealthMonitor` (4), 3× store `delayMs=500`, `constraints` MIN/MAX_UPDATE, `OVERLAY_TTL`,
+  `MAX_RECORDING`, ai `TIMEOUT`, telemetry `BASE_DELAY`, `QUOTA_CHECK_INTERVAL`, perf-monitor cooldowns,
+  `MARKER_FLASH`, spell-check/tiptap debounce κ.λπ. Ratchet: μειώνεται μόνο, νέα αρχεία = zero tolerance.
 - Wired: CHECK 3.27 στο `run-checks-parallel.js`· npm scripts `dxf-timing:{audit,report,baseline}`.
+
+## 8.quater Group 6 — Implemented (2026-06-24)
+
+Κεντρικοποιήθηκαν **17 αρχεία / 21 γνήσια production one-off timings** → `DXF_TIMING`. Καμία αλλαγή
+τιμής (μόνο `import` + reference στο SSoT). Baseline `.dxf-timing-baseline.json`: **24/30 → 7/9**.
+
+### Νέα categorized keys (18 keys, μηδέν value-change)
+- **frame**: `CONSTRAINT_MIN`(10) / `CONSTRAINT_MAX`(100) — `systems/constraints/config.ts` MIN/MAX_UPDATE_INTERVAL.
+- **ui**: `SPELLCHECK_DEBOUNCE`(300) — `spell-check-extension.ts` + `tiptap-config.ts` (ίδια έννοια → ίδιο key).
+- **persist**: `PROGRESS_INTERVAL`(1500) — `animation-queue-processor.ts`. (3× store `delayMs=500` → υπάρχον `persist.SETTINGS`.)
+- **animation**: `OVERLAY_TTL`(6000) — `origin-indicator-overlay.ts`· `MARKER_FLASH`(900) — `preview-pivot.ts`.
+- **lifecycle**: `HEALTH_TIMEOUT`(1000)/`HEALTH_DEGRADED`(500)/`HEALTH_UNHEALTHY`(1000) — `ServiceHealthMonitor.ts`
+  (το `intervalMs:30000` → υπάρχον `HEALTH_CHECK`)· `MAX_RECORDING`(30000) — `useVoiceRecorder.ts`·
+  `AI_REQUEST_TIMEOUT`(30000) — `ai-assistant-config.ts`· `RETRY_BASE_DELAY`(500) — `telemetry-uploader.ts`·
+  `SERVICE_RETRY_BACKOFF`(100) — `service-registry-initializer.ts`· `QUOTA_CHECK_FAST`(30000) —
+  `useStorageQuota.ts` (**value-conflict resolved**: ≠ υπάρχον `QUOTA_CHECK=60000`, νέο key, καμία αλλαγή τιμής)·
+  `RENDER_LOOP_WINDOW`(2000) — `settings-provider/constants.ts`.
+- **gesture**: `CAMERA_IDLE`(800) — `scene-idle-handlers.ts` (IdleDetector camera-idle threshold· **όχι** reuse
+  `HOVER_REVEAL=800` — ξεχωριστή έννοια, αποφυγή λάθος coupling).
+
+### Σκόπιμα baselined (7 αρχεία / 9 violations) — διαγνωστικά/telemetry-internals, ΟΧΙ interaction timing
+Κρίση cohesion: το `DXF_TIMING` είναι SSoT για **interaction & app-lifecycle** timing. Τα παρακάτω είναι
+ξένη ανησυχία (dev-instrumentation ή ADR-366 telemetry FSM εσωτερικά) και διαβάζονται καθαρότερα inline:
+- `debug/perf-line-profile.ts` (`THRESHOLD_MS=1`) — πίσω από `PERF_LINE_PROFILE=false` flag, dev-only.
+- `rendering/core/CoordinateTransforms.ts` (`VIEWPORT_COMPARISON_WINDOW=100`) — `NODE_ENV==='development'` only.
+- `hooks/drawing/drawing-hover-handler.ts` (`PERF_DRAWHOVER_WARN_MS=4`) — perf-trace άλλου agent (wall-lag).
+- `bim-3d/performance/{auto-submit-fps-threshold,regression-detector,baseline-tracker,PerformanceCollector}.ts`
+  — ADR-366 telemetry FSM cadences (24h/30min cooldowns, 7-day rolling window, 250ms collector tick· cohesive).
+
+Αυτά μένουν **ratchet-protected** (δεν αυξάνονται). Αν χρειαστεί αργότερα, κεντρικοποιούνται ως
+`lifecycle.PERF_*` σε follow-up. **Εξαιρέσεις regex (να ΜΗΝ κεντρικοποιηθούν ποτέ):** runtime-metric πεδία
+(`parseTimeMs`/`totalMs`/`lastRunMs` = 0) — ήδη εκτός της regex.
 
 ### 4. Facades — διατηρήθηκαν ως @facade (Step C deferred)
 Τα `panel-tokens.ts`/`timing-config.ts`/`settings-config.ts` παραμένουν references στο `DXF_TIMING`
@@ -300,11 +336,16 @@ bypass timing constants ώστε να δείχνουν στο `DXF_TIMING`, + pa
 
 ## 8. Changelog
 
+- **2026-06-24 (Group 6)** — Κεντρικοποίηση 17 αρχείων / 21 γνήσιων production one-off timings → `DXF_TIMING`
+  (18 νέα categorized keys, καμία αλλαγή τιμής, §8.quater). Baseline `.dxf-timing-baseline.json`: **24/30 → 7/9**.
+  Τα εναπομείναντα 7/9 σκόπιμα baselined (dev-instrumentation + ADR-366 telemetry FSM internals — cohesion).
+  Value-conflict resolved: `QUOTA_CHECK_FAST=30000` ≠ `QUOTA_CHECK=60000`. tsc 0 (δικά μου). **Status: Phase 2 + Group 6 complete.**
 - **2026-06-24 (Phase 2 impl)** — Rewire ~55 bypass timing constants → `DXF_TIMING` σε 5 ομάδες
   (Autosave 26· persist/ui 10· frame-16 3· gesture/one-off 15· animation/lifecycle 16), καμία αλλαγή
   τιμής. 16 νέα categorized keys (§8.ter §2). NEW path-scoped ratchet CHECK 3.27
-  (`scripts/check-dxf-timing-ratchet.js`, self-contained, baseline `.dxf-timing-baseline.json` 35/57)
-  + npm `dxf-timing:{audit,report,baseline}`. tsc 0 (δικά μου). **Status → Phase 2 Implemented.**
+  (`scripts/check-dxf-timing-ratchet.js`, self-contained, baseline `.dxf-timing-baseline.json` 24/30
+  μετά το καθάρισμα false positives) + npm `dxf-timing:{audit,report,baseline}`. tsc 0 (δικά μου).
+  Group 6 (τα 24/30 γνήσια one-offs) deferred σε νέα συνεδρία (§8.quater). **Status → Phase 2 Implemented.**
 - **2026-06-24 (Phase 1 impl)** — Υλοποίηση Φάσης 1: NEW `config/dxf-timing.ts` (DXF_TIMING, 7
   κατηγορίες)· τα 3 configs → facades· NEW `hooks/raf-coalesced-throttle.ts` SSoT helper· grip zero-lag
   fix (`useGripMovement` hard-drop → trailing-RAF) + ενοποίηση με `useEntityDrag`· 6/6 jest. Open

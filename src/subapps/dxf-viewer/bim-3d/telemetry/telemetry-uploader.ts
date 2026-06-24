@@ -14,11 +14,12 @@
  */
 
 import type { AnonymizedTelemetrySample } from './anonymizer';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 const UPLOAD_URL = '/api/telemetry/bim-performance';
 const ERASE_URL = '/api/telemetry/bim-performance/erase';
 const MAX_ATTEMPTS = 3;
-const BASE_DELAY_MS = 500;
+const BASE_DELAY_MS = DXF_TIMING.lifecycle.RETRY_BASE_DELAY; // ADR-516
 const SESSION_HEADER = 'x-bim-session-id';
 
 interface UploadInput {

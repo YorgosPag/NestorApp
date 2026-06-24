@@ -429,3 +429,75 @@ describe('writeDxfAscii — DIMSTYLE table (ADR-362 Round 25)', () => {
     expect(dxf).toContain('0\nDIMENSION\n'); // dimension still emitted (just STANDARD style)
   });
 });
+
+// ADR-362 Round 26 — anonymous dimension BLOCKS: each dimension's real drawn
+// geometry (ext lines + dim line/arc + arrowheads + text) emitted as a *Dn block
+// so dimensions display reliably without relying on the reader's DIMREGEN.
+import { ASME_Y14_5_TEMPLATE } from '../../../systems/dimensions/dim-style-templates';
+
+describe('writeDxfAscii — dimension BLOCKS section (ADR-362 Round 26)', () => {
+  const STYLE = ISO_129_TEMPLATE;
+  function linearDim(id: string, styleId = STYLE.id): Entity {
+    return {
+      id, type: 'dimension', dimensionType: 'linear', layerId: 'L', styleId,
+      defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      rotation: 0, measurementValue: 100,
+    } as unknown as Entity;
+  }
+
+  it('emits a BLOCKS section between TABLES and ENTITIES when dimStyles is provided', () => {
+    const dxf = writeDxfAscii([linearDim('d')], { layersById: LAYERS, dimStyles: [STYLE] });
+    expect(dxf).toContain('0\nSECTION\n2\nBLOCKS\n');
+    expect(dxf.indexOf('2\nTABLES\n')).toBeLessThan(dxf.indexOf('2\nBLOCKS\n'));
+    expect(dxf.indexOf('2\nBLOCKS\n')).toBeLessThan(dxf.indexOf('2\nENTITIES\n'));
+  });
+
+  it('one BLOCK/ENDBLK per dimension, named to match the DIMENSION code-2 ref', () => {
+    const dxf = writeDxfAscii([linearDim('d0'), linearDim('d1')], { layersById: LAYERS, dimStyles: [STYLE] });
+    expect(countOccurrences(dxf, '0\nBLOCK\n')).toBe(2);
+    expect(countOccurrences(dxf, '0\nENDBLK\n')).toBe(2);
+    expect(dxf).toContain('2\n*D0\n'); // block header *D0 AND the DIMENSION entity ref
+    expect(dxf).toContain('2\n*D1\n');
+    expect(dxf).toContain('3\n*D0\n'); // block name (code 3) inside the BLOCK header
+  });
+
+  it('block carries real drawn geometry (LINEs for the oblique-tick ISO dim)', () => {
+    const dxf = writeDxfAscii([linearDim('d')], { layersById: LAYERS, dimStyles: [STYLE] });
+    const blocks = dxf.slice(dxf.indexOf('2\nBLOCKS\n'), dxf.indexOf('2\nENTITIES\n'));
+    expect(countOccurrences(blocks, '0\nLINE\n')).toBeGreaterThanOrEqual(3); // ext+dim+arrows
+    expect(blocks).toContain('0\nTEXT\n');
+    expect(blocks).toContain('72\n1\n'); // dim text is centered (code 72=1)
+  });
+
+  it('solid arrowheads (ASME closedFilled) → 3DFACE inside the block', () => {
+    const dxf = writeDxfAscii(
+      [linearDim('d', ASME_Y14_5_TEMPLATE.id)],
+      { layersById: LAYERS, dimStyles: [ASME_Y14_5_TEMPLATE] },
+    );
+    const blocks = dxf.slice(dxf.indexOf('2\nBLOCKS\n'), dxf.indexOf('2\nENTITIES\n'));
+    expect(blocks).toContain('0\n3DFACE\n');
+  });
+
+  it('block geometry is coordinate-scaled like every entity (mm→m ×0.001)', () => {
+    const dxf = writeDxfAscii([linearDim('d')], { layersById: LAYERS, dimStyles: [STYLE], scale: 0.001 });
+    const blocks = dxf.slice(dxf.indexOf('2\nBLOCKS\n'), dxf.indexOf('2\nENTITIES\n'));
+    // dim-line foot (100,20) → (0.1, 0.02): the dim line end lands on 11/21.
+    expect(blocks).toContain('11\n0.1\n21\n0.02\n');
+  });
+
+  it('NO dimStyles → no BLOCKS section (Round 24/25 fallback preserved)', () => {
+    const dxf = writeDxfAscii([linearDim('d')], { layersById: LAYERS });
+    expect(dxf).not.toContain('2\nBLOCKS\n');
+    expect(dxf).toContain('0\nDIMENSION\n');
+  });
+
+  it('unresolved style → DIMENSION stays but its block is skipped (no crash)', () => {
+    const dxf = writeDxfAscii(
+      [linearDim('d', 'UNKNOWN_STYLE')],
+      { layersById: LAYERS, dimStyles: [STYLE] },
+    );
+    // BLOCKS section opens (other dims could resolve) but this dim contributes no block.
+    expect(countOccurrences(dxf, '0\nBLOCK\n')).toBe(0);
+    expect(dxf).toContain('0\nDIMENSION\n');
+  });
+});

@@ -30,8 +30,10 @@ import type { DimGeometry } from '../../../systems/dimensions/dim-geometry-build
 import {
   composePrimaryText,
   composeFullDimText,
-  formatAngularMeasurement,
   formatAlternateUnit,
+  resolveDimensionText,
+  RADIAL_DIAMETER_PREFIX,
+  RADIAL_RADIUS_PREFIX,
   type FullDimText,
 } from '../../../systems/dimensions/dim-text-formatter';
 import { resolveDimColor } from './dim-color-resolver';
@@ -44,9 +46,6 @@ import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // size of the paper-mm number (huge).
 import { type SceneUnits } from '../../../utils/scene-units';
 import { paperHeightToModel } from '../../../utils/annotation-scale';
-
-const RADIAL_DIAMETER_PREFIX = 'Ø ';
-const RADIAL_RADIUS_PREFIX = 'R ';
 
 /** Screen-px canvas background used for DIMTFILL='backgroundColor'. */
 const CANVAS_BG_DEFAULT = UI_COLORS.CANVAS_BACKGROUND_AUTOCAD_DARK;
@@ -296,38 +295,9 @@ function drawToleranceStack(
   ctx.fillText(minus, 0, tolBotY);
 }
 
-function buildPrimaryText(
-  geometry: DimGeometry,
-  style: DimStyle,
-  userText: string | undefined,
-): string {
-  // Empty user text = suppress (AutoCAD parity, `composePrimaryText` returns '').
-  if (userText === '') return '';
-
-  if (geometry.kind === 'angular') {
-    const measured = formatAngularMeasurement(geometry.measurementValue, style);
-    return applyUserTextToken(userText, measured);
-  }
-
-  if (geometry.kind === 'radial') {
-    const measured = composePrimaryText(geometry.measurementValue, style, userText);
-    if (!measured) return '';
-    // Only prefix when user text is the measured token ('' / undefined / '<>'),
-    // otherwise the user already provided custom text (don't double-prefix).
-    if (userText === undefined || userText === '<>') {
-      return (geometry.isDiameter ? RADIAL_DIAMETER_PREFIX : RADIAL_RADIUS_PREFIX) + measured;
-    }
-    return measured;
-  }
-
-  // Linear / aligned / ordinate / baseline / continued — all consume linear formatting.
-  return composePrimaryText(geometry.measurementValue, style, userText);
-}
-
-function applyUserTextToken(userText: string | undefined, measured: string): string {
-  if (userText === undefined || userText === '<>') return measured;
-  return userText.replace('<>', measured);
-}
+// Geometry → primary label is the shared `resolveDimensionText` SSoT (formatter)
+// so canvas/preview text and the exported DXF block text never diverge.
+const buildPrimaryText = resolveDimensionText;
 
 /**
  * Builds full text payload (primary + optional tolerance/limits) for non-angular dims.

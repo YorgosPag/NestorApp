@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { dlog, dwarn, derr } from '../../debug/utils/devlog';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // TYPES
@@ -48,7 +49,7 @@ export interface StorageQuotaState {
 
 const ENTERPRISE_STORAGE_CONSTANTS = {
   /** Check quota every 30 seconds */
-  QUOTA_CHECK_INTERVAL: 30000,
+  QUOTA_CHECK_INTERVAL: DXF_TIMING.lifecycle.QUOTA_CHECK_FAST, // ADR-516
   /** Switch to memory mode when less than 50MB available */
   MEMORY_MODE_THRESHOLD: 50 * 1024 * 1024, // 50MB
   /** Warn when storage usage > 85% */

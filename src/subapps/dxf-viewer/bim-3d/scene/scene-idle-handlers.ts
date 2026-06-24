@@ -5,6 +5,7 @@ import type { BimSceneLayer } from './BimSceneLayer';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export function createSceneIdleDetector(deps: {
   qualityModulator: QualityModulator;
@@ -13,7 +14,7 @@ export function createSceneIdleDetector(deps: {
   pathTracerRenderer: PathTracerRenderer;
 }): IdleDetector {
   return new IdleDetector({
-    thresholdMs: 800,
+    thresholdMs: DXF_TIMING.gesture.CAMERA_IDLE, // ADR-516
     onIdle: () => {
       // ADR-366 — ALL idle quality escalation is opt-in via `autoPreviewEnabled`
       // (default OFF): the SSAO refine-on-idle composer pass, the render-quality

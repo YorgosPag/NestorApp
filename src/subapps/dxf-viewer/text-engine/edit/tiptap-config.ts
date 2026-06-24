@@ -26,6 +26,7 @@ import {
 import { StackNode } from './nodes';
 import { createSpellCheckExtension } from './spell-check-extension';
 import type { CustomTermPayload, SpellLanguage } from '../spell';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /**
  * All DXF-specific TipTap extensions in canonical order.
@@ -61,7 +62,7 @@ export function buildDxfTextExtensionsWithSpell(opts: {
       languages: opts.languages ?? ['el', 'en'],
       initialCustomTerms: opts.initialCustomTerms,
       enabled: opts.spellEnabled,
-      debounceMs: 300,
+      debounceMs: DXF_TIMING.ui.SPELLCHECK_DEBOUNCE, // ADR-516
     }),
   ];
 }

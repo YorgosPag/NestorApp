@@ -24,6 +24,7 @@
 
 import { serviceRegistry, type ServiceName } from './ServiceRegistry';
 import { dlog, dwarn, derr } from '../debug';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 // ✅ ENTERPRISE: Window interface extension for debug helpers
 declare global {
@@ -90,10 +91,10 @@ interface HealthCheckConfig {
  */
 const DEFAULT_CONFIG: HealthCheckConfig = {
   enabled: true,
-  intervalMs: 30000, // Check every 30 seconds
-  timeoutMs: 1000, // 1 second timeout
-  degradedThresholdMs: 500, // > 500ms = degraded
-  unhealthyThresholdMs: 1000 // > 1000ms = unhealthy
+  intervalMs: DXF_TIMING.lifecycle.HEALTH_CHECK, // ADR-516 — check every 30 seconds
+  timeoutMs: DXF_TIMING.lifecycle.HEALTH_TIMEOUT, // ADR-516 — 1 second timeout
+  degradedThresholdMs: DXF_TIMING.lifecycle.HEALTH_DEGRADED, // ADR-516 — > 500ms = degraded
+  unhealthyThresholdMs: DXF_TIMING.lifecycle.HEALTH_UNHEALTHY // ADR-516 — > 1000ms = unhealthy
 };
 
 /**

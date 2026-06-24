@@ -11,6 +11,8 @@ import { DEGREES_TO_RADIANS, RADIANS_TO_DEGREES } from '../../rendering/entities
 import { ENTITY_LIMITS } from '../../config/tolerance-config';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { ZERO_VECTOR } from '../../config/geometry-constants';
+// 🏢 ADR-516: Timing & latency SSoT
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ===== BASIC TYPES =====
 export type ConstraintType = 'ortho' | 'polar' | 'angle' | 'distance' | 'parallel' | 'perpendicular' | 'tangent' | 'horizontal' | 'vertical';
@@ -423,8 +425,8 @@ export const CONSTRAINTS_CONFIG = {
   
   // Performance limits
   MAX_CONSTRAINT_DISTANCE: 1000, // Maximum distance for constraint calculations
-  MIN_UPDATE_INTERVAL: 10, // Minimum milliseconds between updates
-  MAX_UPDATE_INTERVAL: 100, // Maximum milliseconds between updates
+  MIN_UPDATE_INTERVAL: DXF_TIMING.frame.CONSTRAINT_MIN, // ADR-516 — min ms between updates
+  MAX_UPDATE_INTERVAL: DXF_TIMING.frame.CONSTRAINT_MAX, // ADR-516 — max ms between updates
   
   // Visual constants
   MIN_RAY_LENGTH: 20,

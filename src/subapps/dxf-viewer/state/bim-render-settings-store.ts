@@ -43,13 +43,14 @@ import {
 import type { Discipline } from '../bim/discipline/bim-discipline';
 import { saveBimRenderSettings } from '../services/bim-render-settings.service';
 import type { BimRenderSettingsState } from './bim-render-settings-store-types';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 // ── Debounce helper ────────────────────────────────────────────────────────
 
 type Timer = ReturnType<typeof setTimeout>;
 const pendingTimers: Map<string, Timer> = new Map();
 
-function debounceWrite(levelId: string, settings: BimRenderSettings, delayMs = 500): void {
+function debounceWrite(levelId: string, settings: BimRenderSettings, delayMs = DXF_TIMING.persist.SETTINGS): void {
   const existing = pendingTimers.get(levelId);
   if (existing) clearTimeout(existing);
   const t = setTimeout(() => {

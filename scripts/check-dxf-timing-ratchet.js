@@ -29,9 +29,14 @@
  * ---------------
  * A timing-suffixed identifier (`*_MS`, `*_DELAY`, `*_THROTTLE`, `*_DEBOUNCE`,
  * `*_INTERVAL`, `*_TIMEOUT`, `*_DURATION`, `*_WINDOW`, `*_ms`, `*Ms`) directly
- * assigned a numeric literal: `NAME = 500` / `NAME: 500`. Type annotations
- * (`foo?: number`, `foo: number`) and SSoT references (`= DXF_TIMING.*`) never
- * match (no digit follows). Comment-only lines are skipped.
+ * assigned a NON-ZERO numeric literal: `NAME = 500` / `NAME: 500`. Type
+ * annotations (`foo?: number`, `foo: number`) and SSoT references
+ * (`= DXF_TIMING.*`) never match (no digit follows).
+ *
+ * The leading `[1-9]` requirement deliberately skips `= 0` initializers, which
+ * are runtime metric/timestamp accumulators (`parseTimeMs: 0`, `totalMs: 0`,
+ * `lastRunMs = 0`), NOT centralizable config. Rate fields ending in `PerMs`
+ * (e.g. `samplesPerMs`) are excluded too. Comment-only lines are skipped.
  *
  * Allowlist
  * ---------
@@ -86,8 +91,10 @@ const NC = '\x1b[0m';
 // Detection regex — timing-suffixed identifier assigned a numeric literal.
 // A reference (`= DXF_TIMING.persist.X`) has no digit and never matches.
 // ---------------------------------------------------------------------------
+// Non-zero leading digit skips `= 0` runtime-metric initializers. `(?<!Per)`
+// drops rate fields like `samplesPerMs`.
 const TIMING_REGEX =
-  /\b[A-Za-z_][A-Za-z0-9_]*(?:_MS|_DELAY|_THROTTLE|_DEBOUNCE|_INTERVAL|_TIMEOUT|_DURATION|_WINDOW|_ms|Ms)\b\s*[:=]\s*\d/g;
+  /\b[A-Za-z_][A-Za-z0-9_]*(?:_MS|_DELAY|_THROTTLE|_DEBOUNCE|_INTERVAL|_TIMEOUT|_DURATION|_WINDOW|_ms|(?<!Per)Ms)\b\s*[:=]\s*[1-9]/g;
 
 const COMMENT_RE = /^\s*(\/\/|\*|\/\*)/;
 

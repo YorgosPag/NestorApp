@@ -38,6 +38,7 @@ import {
   subscribePenTableOverrides,
 } from '../services/bim-pen-table.service';
 import type { ConcreteLineweightMm } from '../config/lineweight-iso-catalog';
+import { DXF_TIMING } from '../config/dxf-timing';
 
 // ── Debounce helper ────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ function debounceSave(
   companyId: string,
   overrides: PenTableOverrides,
   activePresetName: string,
-  delayMs = 500,
+  delayMs = DXF_TIMING.persist.SETTINGS, // ADR-516
 ): void {
   if (_pendingSave) clearTimeout(_pendingSave);
   _pendingSave = setTimeout(() => {

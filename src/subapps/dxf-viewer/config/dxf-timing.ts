@@ -55,6 +55,10 @@ export const DXF_TIMING = {
     READOUT: 100,
     /** Section edge-trim recompute throttle (bim-3d section controller). */
     EDGE_TRIM: 50,
+    /** Geometric-constraint solver min interval between updates (ADR-516 Group 6). */
+    CONSTRAINT_MIN: 10,
+    /** Geometric-constraint solver max interval between updates (ADR-516 Group 6). */
+    CONSTRAINT_MAX: 100,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -107,6 +111,8 @@ export const DXF_TIMING = {
     ARIA_IDEMPOTENCY: 200,
     /** Screen-reader announcement coalescing debounce. */
     ARIA_DEBOUNCE: 250,
+    /** Spell-check worker round-trip debounce (text engine, ADR-516 Group 6). */
+    SPELLCHECK_DEBOUNCE: 300,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -138,6 +144,8 @@ export const DXF_TIMING = {
     SETTLE_PERSIST: 350,
     /** Text-draft recovery autosave debounce (30s). */
     DRAFT_DEBOUNCE: 30000,
+    /** 3D animation render progress persist interval (queue processor, ADR-516 Group 6). */
+    PROGRESS_INTERVAL: 1500,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -170,6 +178,10 @@ export const DXF_TIMING = {
     ANCHOR_DISPLAY: 1000,
     /** Point-of-interest fade-out start delay (bim-3d viewport). */
     POI_FADE_DELAY: 1500,
+    /** Origin-indicator overlay auto-remove TTL (panToWorldOrigin confirm, ADR-516 Group 6). */
+    OVERLAY_TTL: 6000,
+    /** Preview pivot crosshair flash duration after Alt+click (bim-3d, ADR-516 Group 6). */
+    MARKER_FLASH: 900,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -210,6 +222,25 @@ export const DXF_TIMING = {
     TELEMETRY_FLUSH: 5 * 60 * 1000,
     /** Text-draft recovery expiry (7 days). */
     DRAFT_EXPIRY: 7 * 24 * 60 * 60 * 1000,
+    // ── ADR-516 Group 6 one-offs ──────────────────────────────────────────
+    /** Service health-check probe timeout (ServiceHealthMonitor). */
+    HEALTH_TIMEOUT: 1000,
+    /** Health response-time threshold for "degraded" status. */
+    HEALTH_DEGRADED: 500,
+    /** Health response-time threshold for "unhealthy" status. */
+    HEALTH_UNHEALTHY: 1000,
+    /** Voice recorder hard cap on a single recording (text-engine AI). */
+    MAX_RECORDING: 30000,
+    /** DXF AI assistant REST request timeout. */
+    AI_REQUEST_TIMEOUT: 30000,
+    /** Telemetry upload exponential-backoff base delay (bim-3d telemetry). */
+    RETRY_BASE_DELAY: 500,
+    /** Service-registry init retry backoff base (service-registry-initializer). */
+    SERVICE_RETRY_BACKOFF: 100,
+    /** Storage quota fast check interval (cf. QUOTA_CHECK=60000 for the slow path). */
+    QUOTA_CHECK_FAST: 30000,
+    /** Infinite-render-loop detector burst window (settings-provider diagnostic). */
+    RENDER_LOOP_WINDOW: 2000,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -240,6 +271,8 @@ export const DXF_TIMING = {
     COMMAND_MERGE_WINDOW: 500,
     /** Wheel-interaction idle timeout (bim-3d camera settles after scroll). */
     WHEEL_IDLE: 220,
+    /** Camera idle threshold before bim-3d quality escalation (IdleDetector, ADR-516 Group 6). */
+    CAMERA_IDLE: 800,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
