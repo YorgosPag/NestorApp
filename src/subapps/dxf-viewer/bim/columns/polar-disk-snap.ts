@@ -58,6 +58,13 @@ export interface PolarDiskSnapOptions {
   readonly shiftFractions?: boolean;
   /** Q5 — περιθώριο (scene units) από το χείλος (ημι-διαγώνιος κολώνας + cover). Default = cover 50mm. */
   readonly clearanceScene?: number;
+  /**
+   * ADR-398 §3.19 — **ακτίνα του ΚΥΚΛΙΚΟΥ φαντάσματος** (scene units) για το circumference-tangent
+   * (mode #3/#4): η ΠΕΡΙΦΕΡΕΙΑ της κολόνας εφάπτεται σε παρειά/άξονα (κέντρο offset κατά `R`). Δίνεται
+   * **ΜΟΝΟ** όταν `kind==='circular'` (συνεπές με το `clearanceScene` που ήδη κουβαλά μέγεθος κολόνας
+   * στα ίδια opts)· `undefined`/`0` → κανένα tangent candidate (rect/polygon/πέδιλο αμετάβλητα). Δεν το
+   * διαβάζει ο polar/rect resolver — αποκλειστικά ο `resolveCircularTangentHit` (§3.19). */
+  readonly circleRadiusScene?: number;
 }
 
 /** Αποτέλεσμα polar snap: θέση + ring/angle + faceFrame (R/θ dims) + dist (για nearest-wins). */

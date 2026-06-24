@@ -41,6 +41,7 @@ import {
   type ColumnUshapeParams,
 } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
+import { buildColumnHeadReferences, type HeadReferenceLines } from '../../bim/columns/column-reference-lines';
 import { validateColumnParams } from '../../bim/validators/column-validator';
 import {
   DEFAULT_COLUMN_BASE_BINDING,
@@ -131,6 +132,27 @@ export function getKindDimensionDefaults(kind: ColumnKind): { width: number; dep
     default:
       return { width: DEFAULT_COLUMN_WIDTH_MM, depth: DEFAULT_COLUMN_DEPTH_MM };
   }
+}
+
+/**
+ * ADR-523 — οι reference lines της κεφαλής του ενεργού column ghost από `kind` + `overrides`,
+ * με τα ΙΔΙΑ width/depth defaults που θα έβγαζε το commit (`getKindDimensionDefaults` SSoT). Καλείται
+ * ταυτόσημα από preview ΚΑΙ commit ώστε ο multi-reference snap να είναι preview ≡ commit by construction.
+ * `null` για μη-Τ kind (ο tier αδρανής). Pure (delegate στο `buildColumnHeadReferences`).
+ */
+export function resolveColumnHeadReferences(
+  kind: ColumnKind,
+  overrides: ColumnParamOverrides,
+  sceneUnits: SceneUnits,
+): HeadReferenceLines | null {
+  const dims = getKindDimensionDefaults(kind);
+  return buildColumnHeadReferences(
+    kind,
+    overrides.width ?? dims.width,
+    overrides.depth ?? dims.depth,
+    overrides.tshape,
+    sceneUnits,
+  );
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────

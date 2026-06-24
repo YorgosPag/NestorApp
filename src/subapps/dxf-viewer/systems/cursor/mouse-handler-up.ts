@@ -35,6 +35,7 @@ import {
 } from '../../bim/columns/column-corner-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
+import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completion';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
 import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation } from './ColumnPlacementGhostStatusStore';
@@ -248,13 +249,16 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         if (colHandle?.isActive) {
           const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
           // ADR-398 §3.13 — Polar Magnet opts (ίδια με το ghost → preview ≡ commit).
-          const polarOpts = buildColumnPolarSnapOptions(colHandle.overrides, colHandle.getSceneUnits());
+          // §3.19 — `colHandle.kind` → circle radius (tangent candidates μόνο σε κυκλική).
+          const polarOpts = buildColumnPolarSnapOptions(colHandle.overrides, colHandle.getSceneUnits(), colHandle.kind);
           const snap = resolveBimCursorSnap({
             toolKind: 'column',
             cursor: effectiveCursor,
             targets: sceneSnapTargetsStore.get(),
             sceneUnits: colHandle.getSceneUnits(),
             columnOpts: polarOpts,
+            // ADR-523 — Τ-κεφαλή multi-reference (ίδιες refs με το ghost → preview ≡ commit).
+            columnHead: resolveColumnHeadReferences(colHandle.kind, colHandle.overrides, colHandle.getSceneUnits()),
           });
           if (snap.kind === 'column-placement') {
             worldPoint = snap.placement.position;

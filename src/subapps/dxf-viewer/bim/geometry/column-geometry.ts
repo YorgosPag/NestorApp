@@ -202,17 +202,32 @@ function buildLshapeLocal(width: number, depth: number, s: number, override?: Co
  * flipY=true: flange moves to bottom (set by mirror — ADR-363 Phase 7.2).
  * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
-function buildTshapeLocal(width: number, depth: number, s: number, override?: ColumnTshapeParams): Point3D[] {
+/** T-shape μετρικά (scaled, scene units) — ΕΝΑ SSoT για footprint ΚΑΙ reference lines (ADR-523). */
+interface TshapeMetrics {
+  readonly flangeDepth: number; // πάχος πέλματος (κατά τον τοπικό y)
+  readonly hd: number;          // ημι-βάθος (depth·s/2) — η κεφαλή κορυφώνεται στο ±hd
+  readonly halfFlange: number;  // ημι-μήκος πέλματος (κατά τον τοπικό x)
+  readonly halfWeb: number;     // ημι-πάχος κορμού
+  readonly ys: number;          // +1 default / -1 flipY (κεφαλή κάτω)
+}
+
+function tshapeMetrics(width: number, depth: number, s: number, override?: ColumnTshapeParams): TshapeMetrics {
   // All mm scalars scaled by s → canvas units for correct 2D placement.
   const flangeLength = Math.max(s, (override?.flangeLength ?? width) * s);
   const webThickness = Math.max(s, (override?.webThickness ?? depth / 3) * s);
   const flangeDepth = Math.max(s, (override?.flangeThickness ?? depth / 3) * s);
-  const flipY = override?.flipY ?? false;
   const hw = (width * s) / 2;
-  const hd = (depth * s) / 2;
-  const halfFlange = Math.min(hw, flangeLength / 2);
-  const halfWeb = Math.min(hw, webThickness / 2);
-  const ys = flipY ? -1 : 1;
+  return {
+    flangeDepth,
+    hd: (depth * s) / 2,
+    halfFlange: Math.min(hw, flangeLength / 2),
+    halfWeb: Math.min(hw, webThickness / 2),
+    ys: override?.flipY ? -1 : 1,
+  };
+}
+
+function buildTshapeLocal(width: number, depth: number, s: number, override?: ColumnTshapeParams): Point3D[] {
+  const { flangeDepth, hd, halfFlange, halfWeb, ys } = tshapeMetrics(width, depth, s, override);
   const verts: Point3D[] = [
     { x: -halfWeb,    y: ys * -hd,               z: 0 },
     { x:  halfWeb,    y: ys * -hd,               z: 0 },
@@ -223,7 +238,33 @@ function buildTshapeLocal(width: number, depth: number, s: number, override?: Co
     { x: -halfFlange, y: ys * (hd - flangeDepth), z: 0 },
     { x: -halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
   ];
-  return flipY ? [...verts].reverse() : verts;
+  return ys === -1 ? [...verts].reverse() : verts;
+}
+
+/**
+ * ADR-523 — οι ΤΡΕΙΣ παράλληλες reference lines της **κεφαλής (flange)** Τ-κολόνας ως signed
+ * perpendicular offsets από το ΚΕΝΤΡΟ κατά τον τοπικό άξονα y (scene units), + ημι-μήκος κεφαλής.
+ * Reuse `tshapeMetrics` (ΙΔΙΕΣ φόρμουλες με το footprint — μηδέν διπλό math). Με `flipY` τα offsets
+ * γίνονται αρνητικά (η κεφαλή στο −y) — ο matcher τα χειρίζεται signed (orientation-agnostic).
+ */
+export interface TshapeHeadReferences {
+  /** [βόρεια 1-2 (έξω άκρη), άξονας Γ, νότια ε (έσω άκρη)] — signed local-y offsets, scene units. */
+  readonly perps: readonly [number, number, number];
+  /** Ημι-μήκος κεφαλής κατά τον τοπικό x (along) — scene units. */
+  readonly alongHalf: number;
+}
+
+export function tshapeHeadReferences(
+  width: number,
+  depth: number,
+  s: number,
+  override?: ColumnTshapeParams,
+): TshapeHeadReferences {
+  const { flangeDepth, hd, halfFlange, ys } = tshapeMetrics(width, depth, s, override);
+  return {
+    perps: [ys * hd, ys * (hd - flangeDepth / 2), ys * (hd - flangeDepth)],
+    alongHalf: halfFlange,
+  };
 }
 
 /**

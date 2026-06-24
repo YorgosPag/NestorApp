@@ -69,7 +69,12 @@ import {
 } from '../framing/linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolvePolarDiskSnap, type PolarDiskSnapOptions } from './polar-disk-snap';
+import { resolveCircularTangentHit } from './column-tangent-snap';
 import { resolveRectCartesianSnap } from './rect-cartesian-snap';
+import {
+  resolveColumnHeadReferenceSnap,
+  type HeadReferenceLines,
+} from './column-reference-lines';
 import type { RectFrame } from '../framing/rect-frame';
 import {
   clamp,
@@ -413,7 +418,22 @@ export function resolveColumnFaceSnapFromTargets(
   t: Readonly<SceneSnapTargets>,
   sceneUnits: SceneUnits,
   opts?: Readonly<PolarDiskSnapOptions>,
+  columnHead?: Readonly<HeadReferenceLines> | null,
 ): ColumnFaceSnap | null {
+  // ADR-523 — Τ-κολόνα: η κεφαλή (flange) κουμπώνει Revit-style με ΤΡΕΙΣ reference lines στις τρεις του
+  // τοίχου (nearest-wins κάθετα + ολίσθηση κατά μήκος). Όταν υπάρχει `columnHead`, οι ΤΟΙΧΟΙ φεύγουν από
+  // το bbox center-on-axis (παρακάτω) και πάνε εδώ (priority + μηδέν διπλό handling)· το flush περιμετρικά
+  // μένει μέσω `footprintEdgeHit`. `null` head (μη-Τ ghost) → tier αδρανής, μηδέν regression.
+  const headRefHit = (() => {
+    if (!columnHead) return null;
+    const r = resolveColumnHeadReferenceSnap(cursor, t.wallTargets, columnHead, sceneUnits);
+    if (!r) return null;
+    const snap: ColumnFaceSnap = {
+      position: r.position, anchor: 'center', status: 'beam', rotation: r.rotation,
+      targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame,
+    };
+    return { snap, dist: r.dist };
+  })();
   // Τα zero-width edges (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative
   // resolver (ίδιος με τοίχο/δοκάρι). slab+line edges → center-on-axis/flush (ίδιο zero-width μοντέλο,
   // ακμή πλάκας ≡ γραμμή). Βλ. `resolveColumnEdgeSnap`.
@@ -424,7 +444,10 @@ export function resolveColumnFaceSnapFromTargets(
   const footprintEdgeHit = resolveFootprintEdgeSnap(cursor, t.footprintEdgeTargets ?? [], sceneUnits);
   // ΜΟΝΟ ΚΥΚΛΙΚΕΣ κολόνες στο bbox path (§3.18 — χωρίς λοξές παρειές)· δοκάρια/τοίχοι → bbox center-on-axis
   // (ο τοίχος ΚΑΙ στο footprintEdgeHit: bbox κερδίζει cursor-εντός, edge ακολουθεί λοξάδα cursor-εκτός).
-  const targets = buildFaceTargets(t.circularFootprints ?? [], t.beamTargets, t.wallTargets);
+  // ADR-523 — όταν ο ghost είναι Τ (head refs), οι τοίχοι χειρίζονται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `headRefHit`
+  // (multi-reference) → εκτός bbox center-on-axis ώστε να μην ανταγωνίζονται δύο μηχανισμοί στον ίδιο τοίχο.
+  const bboxWalls = columnHead ? [] : t.wallTargets;
+  const targets = buildFaceTargets(t.circularFootprints ?? [], t.beamTargets, bboxWalls);
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
@@ -444,8 +467,17 @@ export function resolveColumnFaceSnapFromTargets(
   const rectHit = opts && opts.worldPerPixel > 0 && t.rectTargets.length > 0
     ? resolveRectHit(cursor, t.rectTargets, sceneUnits, opts)
     : null;
-  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε edge / footprint-edge / bbox / polar / rect (nearest-wins).
-  return nearestHit(edgeHit, footprintEdgeHit, bboxHit, polarHit, rectHit);
+  // ADR-398 §3.19 — circumference-tangent (ΜΟΝΟ κυκλικό φάντασμα: `circleRadiusScene>0`): η περιφέρεια
+  // εφάπτεται σε άξονα/παρειά (mode #3/#4) ως επιπλέον candidate. Gated → rect/polygon/πέδιλο αμετάβλητα.
+  const tangentHit = opts && opts.circleRadiusScene
+    ? resolveCircularTangentHit(cursor, t, sceneUnits, opts.circleRadiusScene)
+    : null;
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ (nearest-wins). Το `tangentHit` μπαίνει **ΠΡΙΝ** το `bboxHit`: για
+  // ΛΟΞΑ μέλη το AABB είναι μεγαλύτερο από το στερεό → ο `bboxHit` δίνει spurious `dist=0` cursor-εντός·
+  // σε ισοπαλία (tangent στο ιδανικό = dist 0) θέλουμε να κερδίζει το tangent. Χάνει όμως από γνήσιο
+  // μικρότερο edge/center dist (flush/center-on-axis), οπότε μηδέν regression στα center modes.
+  // `headRefHit` ΠΡΩΤΟ: ισοπαλία dist → η Τ multi-reference (κεφαλή↔τοίχος) κερδίζει (Revit alignment refs).
+  return nearestHit(headRefHit, edgeHit, footprintEdgeHit, tangentHit, bboxHit, polarHit, rectHit);
 }
 
 /**

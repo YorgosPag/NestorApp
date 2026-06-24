@@ -43,6 +43,7 @@ import { resolveMemberGhostSnapFromStore } from '../framing/member-ghost-snap';
 import { selectGhostMembers, type SceneSnapTargets } from '../framing/scene-snap-targets';
 import type { MemberGhostSnapResult } from '../framing/linear-member-face-snap';
 import { resolveColumnFaceSnapFromTargets, type ColumnFaceSnap } from '../columns/column-face-snap';
+import type { HeadReferenceLines } from '../columns/column-reference-lines';
 import type { PolarDiskSnapOptions } from '../columns/polar-disk-snap';
 import { resolveMemberMagnetPlacement } from './member-magnet-placement';
 
@@ -91,6 +92,11 @@ export interface BimCursorSnapInput {
   /** column: Polar/Rect Magnet opts (ADR-398 §3.13/§3.15) — `undefined` = χωρίς magnet. */
   readonly columnOpts?: Readonly<PolarDiskSnapOptions>;
   /**
+   * column (ADR-523): οι reference lines της **κεφαλής** του ghost (Τ-κολόνα) → multi-reference flush
+   * snap στις παρειές/άξονα τοίχου. `undefined`/`null` (μη-Τ ή μη υπολογισμένο) → ο tier αδρανής.
+   */
+  readonly columnHead?: Readonly<HeadReferenceLines> | null;
+  /**
    * wall/beam: Polar/Rect Magnet opts για το **START** του μέλους (ADR-398 §3.13/§3.15, ίδιο SSoT με
    * την κολώνα). `undefined` = χωρίς magnet (σημερινή συμπεριφορά τοίχου). Όταν δοθεί (δοκάρι), το
    * φάντασμα κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο **ΟΠΩΣ η κολώνα** — ως
@@ -127,7 +133,7 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
   // ADR-514 Φ6 — το πέδιλο (`foundation-pad`) κουμπώνει ΟΠΩΣ η κολώνα (ίδιος resolver: center-on-axis
   // / 9-handle flush) → reuse, μηδέν παράλληλο subsystem.
   if (toolKind === 'column' || toolKind === 'foundation-pad') {
-    const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts);
+    const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts, input.columnHead);
     if (placement) return { kind: 'column-placement', placement, point: placement.position };
   } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex') {
     const members = selectGhostMembers(targets, input.memberKinds ?? DEFAULT_MEMBER_KINDS);

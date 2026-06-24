@@ -114,6 +114,7 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
 
 ## 6. Changelog
 
+- **2026-06-25** — **Φ6f circumference-tangent κυκλικής κολόνας (ADR-398 §3.19, UNCOMMITTED)** — η κυκλική κολόνα κουμπώνει με την **ΠΕΡΙΦΕΡΕΙΑ** της (tangent) σε παρειά (#3) / κεντρικό άξονα (#4) τοίχου/μέλους, όχι μόνο με το κέντρο. **Καθαρά additive στον εγκέφαλο:** το `columnOpts` (`PolarDiskSnapOptions`) απέκτησε `circleRadiusScene?` (gated `kind==='circular'` στο `buildColumnPolarSnapOptions(overrides, sceneUnits, kind)`)· ο core `resolveColumnFaceSnapFromTargets` περνά το R στο νέο pure `column-tangent-snap.ts` (`resolveCircularTangentHit`) → επιπλέον candidate στο υπάρχον `nearestHit` (tangent ΠΡΙΝ bbox + FP-floor). Reuse `buildMemberAxisFrame`/`resolveLinearMemberFaceSnap`/`buildCenteredAxisFaceFrame` — μηδέν νέα geometry, μηδέν αλλαγή στο anchor pipeline (geometry κυκλικής αγνοεί anchor → offset κέντρου). Auto-candidates (μηδέν mode toggle, Giorgio)· λοξό = κάθε γωνία. ghost+commit περνούν `kind` → preview≡commit. 9+99 jest GREEN. ⚠️ CHECK 6B/6D → stage **ADR-040 + ADR-398 + ADR-514**. 🔴 browser-verify + commit (Giorgio).
 - **2026-06-25** — **Φ6e ΓΕΝΙΚΕΥΣΗ slant-following edges σε ΚΟΛΟΝΕΣ + ΤΟΙΧΟΥΣ (UNCOMMITTED)** — Giorgio: «το
   φάντασμα κολόνας να ακολουθεί τις ΛΟΞΕΣ/ΠΟΛΥΓΩΝΙΚΕΣ παρειές υφιστάμενης πολυγωνικής/Γ/λοξής κολόνας ή
   τοιχίου (flush + στροφή + γωνία-με-γωνία), ΟΧΙ στο axis-aligned bbox». Το Φ6d **pad edge-snap πρότυπο**

@@ -35,6 +35,7 @@ import { DEFAULT_COLUMN_HEIGHT_MM } from '../../bim/types/column-types';
 import {
   buildColumnEntity,
   buildDefaultColumnParams,
+  resolveColumnHeadReferences,
   type ColumnParamOverrides,
   type SceneUnits,
 } from './column-completion';
@@ -77,7 +78,8 @@ export function generateColumnPreview(
   if (!handle?.isActive) return null;
 
   // ADR-398 §3.13 — Polar/Rect Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
-  const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits);
+  // §3.19 — `handle.kind` → circle radius (tangent candidates μόνο σε κυκλική).
+  const polarOpts = buildColumnPolarSnapOptions(handle.overrides, sceneUnits, handle.kind);
   const targets = sceneSnapTargetsStore.get();
 
   // entity-specific builder — ΙΔΙΟΙ builders με το commit (preview ≡ commit). λοξή ακμή → flush rotation·
@@ -135,6 +137,7 @@ export function generateColumnPreview(
     targets,
     sceneUnits,
     columnOpts: polarOpts,
+    columnHead: resolveColumnHeadReferences(handle.kind, handle.overrides, sceneUnits),
   });
   return assemblePlacementGhost({
     snap,
