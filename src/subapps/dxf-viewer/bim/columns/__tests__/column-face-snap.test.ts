@@ -318,6 +318,66 @@ describe('resolveColumnFaceSnap — column target (όλες οι παρειές 
     expect(r.anchor).toBe('w');
     expect(r.position).toEqual({ x: 3200, y: 0 });
   });
+
+  it('axis-aligned ορθογώνια κολόνα → rotation 0 (μηδέν regression — edge-snap ίσο feel)', () => {
+    expect(snap({ x: 3000, y: 250 }, cols)!.rotation).toBe(0);
+  });
+});
+
+// ── ADR-398 §3.18 — το φάντασμα ΑΚΟΛΟΥΘΕΙ τις ΛΟΞΕΣ/ΠΟΛΥΓΩΝΙΚΕΣ παρειές (το αίτημα του handoff) ──
+describe('resolveColumnFaceSnap — ΛΟΞΗ/ΠΟΛΥΓΩΝΙΚΗ κολόνα-στόχος (slant-following edges)', () => {
+  /** Διαμάντι (τετράγωνο στραμμένο 45°) κεντραρισμένο στο (3000,0): όλες οι παρειές στις 45°. */
+  function diamondColumn(id = 'col-diamond'): Entity {
+    return {
+      id, type: 'column', kind: 'polygon',
+      geometry: { footprint: { vertices: [
+        { x: 3000, y: 200 }, { x: 3200, y: 0 }, { x: 3000, y: -200 }, { x: 2800, y: 0 },
+      ] } },
+    } as unknown as Entity;
+  }
+  /** Κανονικό εξάγωνο (κυκλικό περιγεγραμμένο R=200) κεντραρισμένο στο (3000,0). */
+  function hexColumn(id = 'col-hex'): Entity {
+    return {
+      id, type: 'column', kind: 'polygon',
+      geometry: { footprint: { vertices: [
+        { x: 3200, y: 0 }, { x: 3100, y: 173 }, { x: 2900, y: 173 },
+        { x: 2800, y: 0 }, { x: 2900, y: -173 }, { x: 3100, y: -173 },
+      ] } },
+    } as unknown as Entity;
+  }
+
+  it('λοξή παρειά 45° → το φάντασμα ΣΤΡΕΦΕΤΑΙ flush (|rotation| ≈ 45, ΟΧΙ ορθό bbox)', () => {
+    // cursor λίγο έξω από το μέσο της ΒΑ παρειάς (3000,200)→(3200,0) (outward normal ≈ (.707,.707)).
+    const r = snap({ x: 3135, y: 135 }, [diamondColumn()])!;
+    expect(Math.abs(Math.abs(r.rotation) - 45)).toBeLessThan(1);
+    expect(r.status).toBe('beam');
+  });
+
+  it('λοξή παρειά → flush ΠΑΝΩ στην πραγματική (λοξή) ακμή, ΟΧΙ στο axis-aligned bbox', () => {
+    // η ΒΑ ακμή είναι η ευθεία x + y = 3200· το flush σημείο πρέπει να κάθεται πάνω της (facePerp 0).
+    const r = snap({ x: 3135, y: 135 }, [diamondColumn()])!;
+    expect(r.position.x + r.position.y).toBeCloseTo(3200, 0);
+  });
+
+  it('πολυγωνική (εξάγωνο) κολόνα → κουμπώνει σε λοξή παρειά με στροφή ≠ 0', () => {
+    // πάνω-δεξιά παρειά (3200,0)→(3100,173): κλίση ≈ atan2(173,-100) → στραμμένη.
+    const r = snap({ x: 3200, y: 100 }, [hexColumn()])!;
+    expect(r.status).toBe('beam');
+    expect(r.rotation).not.toBe(0); // ΑΚΟΛΟΥΘΕΙ τη λοξή παρειά (το bbox θα έδινε 0)
+  });
+
+  it('στραμμένη ΟΡΘΟΓΩΝΙΑ κολόνα → edges ακολουθούν τη στροφή (το bbox την ίσιωνε)', () => {
+    // ορθογώνιο 400×200 στραμμένο 45° (κέντρο 3000,0): οι μακριές παρειές στις 45°.
+    const rotRect: Entity = {
+      id: 'col-rot', type: 'column', kind: 'rectangular',
+      geometry: { footprint: { vertices: [
+        { x: 3000, y: 283 }, { x: 3212, y: 71 }, { x: 3000, y: -283 }, { x: 2788, y: 71 },
+      ] } },
+    } as unknown as Entity;
+    const r = snap({ x: 3170, y: 220 }, [rotRect])!;
+    expect(r.rotation).not.toBe(0);
+    expect(r.status).toBe('beam');
+  });
 });
 
 describe('resolveColumnFaceSnap — slab edge (ADR-398 §3.10 axis-relative — η ρίζα του handoff)', () => {

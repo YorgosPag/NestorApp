@@ -122,6 +122,40 @@ export function isColumnActionKey(action: string): boolean {
   return COLUMN_ACTION_KEY_SET.has(action);
 }
 
+// ─── ADR-521 — «Τύποι» ribbon dropdown (column kind quick-draw) ────────────────
+
+/**
+ * ADR-521 — action prefix για το «Τύποι» dropdown (καρτέλα Δομικά). Επιλογή τύπου →
+ * `onAction('column.drawKind:<kind>')` → setKind + activate column tool. Πρόθεμα ώστε ΕΝΑ
+ * predicate (`isColumnDrawKindAction`) να πιάνει όλους τους τύπους χωρίς per-kind key explosion.
+ */
+const COLUMN_DRAW_KIND_PREFIX = 'column.drawKind:';
+
+/**
+ * Οι **σχεδιάσιμοι** τύποι κολώνας (8) — αυτό που εμφανίζει το «Τύποι» dropdown. ΟΧΙ `composite`
+ * (προκύπτει μόνο runtime από free-reshape, δεν ξεκινά απευθείας ως σχεδίαση).
+ */
+export const COLUMN_DRAW_KINDS: readonly ColumnKind[] = [
+  'rectangular', 'circular', 'L-shape', 'T-shape', 'polygon', 'shear-wall', 'I-shape', 'U-shape',
+];
+
+/** Build the ribbon action string for a drawable column kind. */
+export function columnDrawKindAction(kind: ColumnKind): string {
+  return `${COLUMN_DRAW_KIND_PREFIX}${kind}`;
+}
+
+/** `true` αν το action ανήκει στο «Τύποι» dropdown (column kind quick-draw). */
+export function isColumnDrawKindAction(action: string): boolean {
+  return action.startsWith(COLUMN_DRAW_KIND_PREFIX);
+}
+
+/** Parse `'column.drawKind:<kind>'` → `ColumnKind`, ή `null` αν άγνωστο/μη-σχεδιάσιμο. */
+export function parseColumnDrawKind(action: string): ColumnKind | null {
+  if (!isColumnDrawKindAction(action)) return null;
+  const kind = action.slice(COLUMN_DRAW_KIND_PREFIX.length) as ColumnKind;
+  return COLUMN_DRAW_KINDS.includes(kind) ? kind : null;
+}
+
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const COLUMN_RIBBON_BADGE_KEYS = {
   violations: 'column.badge.violations',

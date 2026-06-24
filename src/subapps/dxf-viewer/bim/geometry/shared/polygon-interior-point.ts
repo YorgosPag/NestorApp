@@ -34,15 +34,20 @@ function clearanceToBoundary(p: XY, verts: readonly XY[]): number {
 }
 
 /**
- * Εσωτερικό σημείο με μέγιστη απόσταση από την περίμετρο. Υποψήφια: το centroid + τα μέσα ΟΛΩΝ
- * των ζευγών κορυφών (O(n²), n μικρό σε δομικές διατομές)· κρατά αυτό που είναι **μέσα** στο
- * πολύγωνο με τη μεγαλύτερη clearance. Fallback (degenerate) → centroid.
+ * Εσωτερικό σημείο με μέγιστη απόσταση από την περίμετρο **μαζί με αυτή την clearance**
+ * (min distance του σημείου από κάθε ακμή). Υποψήφια: το centroid + τα μέσα ΟΛΩΝ των ζευγών
+ * κορυφών (O(n²), n μικρό σε δομικές διατομές)· κρατά αυτό που είναι **μέσα** στο πολύγωνο με τη
+ * μεγαλύτερη clearance. Fallback (degenerate) → centroid με clearance 0.
+ *
+ * ADR-520 — η clearance εκτίθεται ώστε ο caller (free-reshape rotation handle) να μπορεί να
+ * μετατοπίσει μια δεύτερη λαβή κατά απόσταση `< clearance` και να μένει **εγγυημένα μέσα** στο
+ * σώμα (ο εγγεγραμμένος δίσκος ακτίνας clearance γύρω από το σημείο είναι όλος εντός πολυγώνου).
  */
-export function interiorAnchorPoint(verts: readonly XY[]): XY {
+export function interiorAnchorPointWithClearance(verts: readonly XY[]): { point: XY; clearance: number } {
   const n = verts.length;
   const poly3: Point3D[] = verts.map((v) => ({ x: v.x, y: v.y, z: 0 }));
   const centroid = polygonCentroid(poly3);
-  if (n < 3) return centroid;
+  if (n < 3) return { point: centroid, clearance: 0 };
 
   const candidates: XY[] = [centroid];
   for (let i = 0; i < n; i++) {
@@ -60,5 +65,13 @@ export function interiorAnchorPoint(verts: readonly XY[]): XY {
       best = c;
     }
   }
-  return best;
+  return { point: best, clearance: Math.max(bestClearance, 0) };
+}
+
+/**
+ * Εσωτερικό σημείο με μέγιστη απόσταση από την περίμετρο. Thin wrapper πάνω στο
+ * {@link interiorAnchorPointWithClearance} (το σημείο μόνο) — backward-compatible SSoT.
+ */
+export function interiorAnchorPoint(verts: readonly XY[]): XY {
+  return interiorAnchorPointWithClearance(verts).point;
 }

@@ -1575,6 +1575,10 @@
           "label": "Column",
           "tooltip": "Draw column (shortcut CL)"
         },
+        "columnType": {
+          "label": "Types",
+          "tooltip": "Pick a column type before drawing"
+        },
         "beam": {
           "label": "Beam",
           "tooltip": "Draw beam (shortcut BM)"

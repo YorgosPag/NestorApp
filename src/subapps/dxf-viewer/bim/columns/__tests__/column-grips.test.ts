@@ -4,14 +4,14 @@
  * Verifies:
  *   - `getColumnGrips` emits the correct count + ordering per kind
  *     (rectangular → 3 grips, L-shape / T-shape → 5 grips Phase 4.5b,
- *     circular → 1 grip, polygon → full set (ADR-518), shear-wall → 10 grips, I-shape → 6 grips).
- *     ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted (except rect/shear-wall + polygon ADR-518).
+ *     circular → 5 grips (center + 4 quadrants, ADR-519), polygon → full set (ADR-518), shear-wall → 10 grips, I-shape → 6 grips).
+ *     ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted (except rect/shear-wall + polygon ADR-518 + circular ADR-519).
  *   - Grip positions correspond to centroid / rotation handle / far-edge
  *     midpoints / variant edge midpoints σε mm world space.
  *   - `applyColumnGripDrag` patches the right field per kind, clamps
  *     width/depth/variant dims στο MIN_COLUMN_DIMENSION_MM, preserves foreign
  *     params (height/anchor/material/lshape/tshape) και short-circuits zero
- *     delta + unknown grip kinds + circular depth/rotation + cross-kind
+ *     delta + unknown grip kinds + circular rotation (no-op) + cross-kind
  *     variant grips στο originalParams (referential identity).
  *   - L-shape / T-shape drag materializes defaults από width/3 + depth/3
  *     (L) ή width + depth/3 (T) όταν params.lshape / params.tshape undefined.
@@ -149,12 +149,35 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(next.width).toBeCloseTo(500, 3);
   });
 
-  it('2. circular → 1 grip (width=radius only) — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: column-center removed; circular now returns exactly ONE grip
+  it('2. circular → 5 grips: center MOVE + 4 quadrants (Β/Α/Ν/Δ) — ADR-519', () => {
+    // ADR-519: circular reaches full rect parity = center MOVE (4 αυτόνομα βελάκια)
+    // + 4 quadrant λαβές που μεγαλώνουν την ακτίνα. ΧΩΡΙΣ rotation (κύκλος συμμετρικός).
     const grips = getColumnGrips(makeCircular());
-    expect(grips).toHaveLength(1);
-    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
-    expect(grips[0].columnGripKind).toBe('column-width');
+    expect(grips).toHaveLength(5);
+    expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
+      'column-width', // E
+      'column-depth', // N
+      'column-edge-w', // W
+      'column-edge-s', // S
+    ]);
+    // No rotation handle for a rotationally-symmetric circle.
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-rotation');
+    const center = grips.find((g) => g.columnGripKind === 'column-center')!;
+    expect(center.type).toBe('center');
+    expect(center.movesEntity).toBe(true);
+  });
+
+  it('2b. circular → 4 quadrant grips sit on the circumference (Β/Α/Ν/Δ) — ADR-519', () => {
+    const ent = makeCircular();
+    const { params } = ent;
+    const r = (params.width / 2) * 1; // sceneUnits 'mm' → scale 1
+    const at = (k: string) =>
+      getColumnGrips(ent).find((g) => g.columnGripKind === k)!.position;
+    expect(at('column-width')).toEqual({ x: params.position.x + r, y: params.position.y }); // E
+    expect(at('column-depth')).toEqual({ x: params.position.x, y: params.position.y + r }); // N
+    expect(at('column-edge-w')).toEqual({ x: params.position.x - r, y: params.position.y }); // W
+    expect(at('column-edge-s')).toEqual({ x: params.position.x, y: params.position.y - r }); // S
   });
 
   it('3. L-shape → free reshape: rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς — ADR-363/449', () => {
@@ -163,8 +186,9 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     const ent = makeLshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips).toHaveLength(1 + 2 * verts.length); // rotation + N corners + N edges
+    expect(grips).toHaveLength(2 + 2 * verts.length); // ADR-520: center + rotation + N corners + N edges
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center', // ADR-520 — σταυρός μετακίνησης
       'column-rotation',
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
@@ -178,8 +202,9 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     const ent = makeTshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips).toHaveLength(1 + 2 * verts.length); // rotation + N corners + N edges
+    expect(grips).toHaveLength(2 + 2 * verts.length); // ADR-520: center + rotation + N corners + N edges
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center', // ADR-520 — σταυρός μετακίνησης
       'column-rotation',
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
@@ -188,15 +213,21 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(grips.map((g) => g.columnGripKind)).not.toContain('column-web-thickness');
   });
 
-  it('5. rect emits a center MOVE grip (Giorgio 2026-06-15)· circular/L still do NOT', () => {
-    // ADR-363 (Giorgio 2026-06-15): rect re-gains the center MOVE grip. Other kinds
-    // keep the Φ1G.5 Slice 2 declutter (Alt+drag moves them).
+  it('5. rect + circular + free-reshape(L) all emit a center MOVE grip', () => {
+    // ADR-363 (Giorgio 2026-06-15): rect re-gains the center MOVE grip· ADR-519:
+    // circular too· ADR-520: free-reshape (L/T/U/composite) too.
     const rect = getColumnGrips(makeRect());
     const center = rect.find((g) => g.columnGripKind === 'column-center');
     expect(center).toBeDefined();
     expect(center!.movesEntity).toBe(true);
-    // circular keeps no center grip.
-    expect(getColumnGrips(makeCircular()).map((g) => g.columnGripKind)).not.toContain('column-center');
+    // ADR-519 — circular now also emits the center MOVE grip.
+    const circCenter = getColumnGrips(makeCircular()).find((g) => g.columnGripKind === 'column-center');
+    expect(circCenter).toBeDefined();
+    expect(circCenter!.movesEntity).toBe(true);
+    // ADR-520 — free-reshape (L-shape) now ALSO emits the center MOVE grip.
+    const lCenter = getColumnGrips(makeLshape()).find((g) => g.columnGripKind === 'column-center');
+    expect(lCenter).toBeDefined();
+    expect(lCenter!.movesEntity).toBe(true);
   });
 
   it('6. width grip on rectangular sits at +width/2 along X (anchor=center, rotation=0)', () => {
@@ -306,13 +337,16 @@ describe('column-grips — applyColumnGripDrag (Phase 4.5)', () => {
     expect(next.depth).toBe(MIN_COLUMN_DIMENSION_MM);
   });
 
-  it('14. circular kind: depth-grip drag → no-op (referentially equal)', () => {
+  it('14. circular kind: depth-grip (N quadrant) → diameter resize (symmetric +Y) — ADR-519', () => {
+    // ADR-519: the N quadrant grip (`column-depth`) now grows the diameter along +Y
+    // (was a no-op before the circular grip parity). Symmetric factor 2, centre fixed.
     const col = makeCircular();
     const next = applyColumnGripDrag('column-depth', {
       originalParams: col.params,
-      delta: { x: 100, y: 100 },
+      delta: { x: 0, y: 50 },
     });
-    expect(next).toBe(col.params);
+    expect(next.width).toBeCloseTo(col.params.width + 100, 6);
+    expect(next.position).toEqual(col.params.position); // centre stays put
   });
 
   it('15. circular kind: rotation-grip drag → no-op (referentially equal)', () => {
@@ -331,6 +365,31 @@ describe('column-grips — applyColumnGripDrag (Phase 4.5)', () => {
       delta: { x: 50, y: 0 },
     });
     expect(next.width).toBeCloseTo(col.params.width + 100, 6);
+  });
+
+  it('16b. circular W/S quadrants grow the diameter on the opposite (−) drag — ADR-519', () => {
+    const col = makeCircular();
+    // W quadrant (`column-edge-w`, −X): dragging further −X grows the radius.
+    const w = applyColumnGripDrag('column-edge-w', {
+      originalParams: col.params,
+      delta: { x: -50, y: 0 },
+    });
+    expect(w.width).toBeCloseTo(col.params.width + 100, 6);
+    // S quadrant (`column-edge-s`, −Y): dragging further −Y grows the radius.
+    const s = applyColumnGripDrag('column-edge-s', {
+      originalParams: col.params,
+      delta: { x: 0, y: -50 },
+    });
+    expect(s.width).toBeCloseTo(col.params.width + 100, 6);
+  });
+
+  it('16c. circular diameter resize clamps to MIN_COLUMN_DIMENSION_MM — ADR-519', () => {
+    const col = makeCircular();
+    const next = applyColumnGripDrag('column-width', {
+      originalParams: col.params,
+      delta: { x: -100000, y: 0 },
+    });
+    expect(next.width).toBe(MIN_COLUMN_DIMENSION_MM);
   });
 
   it('17. zero delta → returns originalParams referentially', () => {
@@ -628,12 +687,16 @@ describe('column-grips — Phase 4.5b non-regression (rectangular + circular)', 
     ]);
   });
 
-  it('42. circular column STILL emits 1 grip (no center, no variant grips) — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: column-center removed; circular returns exactly 1 grip
+  it('42. circular column emits center MOVE + 4 quadrants (no rotation/variant) — ADR-519', () => {
+    // ADR-519: circular full parity = center + 4 quadrant radius grips, no rotation.
     const grips = getColumnGrips(makeCircular());
-    expect(grips).toHaveLength(1);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
       'column-width',
+      'column-depth',
+      'column-edge-w',
+      'column-edge-s',
     ]);
   });
 });

@@ -64,12 +64,13 @@ function makeTshape(): ColumnEntity {
 }
 
 describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () => {
-  it('T-shape → rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΙΔΙΟΣ μηχανισμός με Γ)', () => {
+  it('T-shape → center MOVE + rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ADR-520)', () => {
     const ent = makeTshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips[0].columnGripKind).toBe('column-rotation');
-    expect(grips.slice(1).map((g) => g.columnGripKind)).toEqual([
+    expect(grips[0].columnGripKind).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
+    expect(grips[1].columnGripKind).toBe('column-rotation');
+    expect(grips.slice(2).map((g) => g.columnGripKind)).toEqual([
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
@@ -81,7 +82,7 @@ describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () =
     expect(kinds).not.toContain('column-depth');
     expect(kinds).not.toContain('column-flange-length');
     expect(kinds).not.toContain('column-web-thickness');
-    expect(kinds).not.toContain('column-center');
+    expect(kinds).toContain('column-center'); // ADR-520 — ο σταυρός μετακίνησης εμφανίζεται πλέον
   });
 
   it('σύρσιμο γωνίας T → composite με ΙΔΙΟ πλήθος κορυφών (όπως Γ)', () => {
@@ -104,12 +105,13 @@ describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () =
 });
 
 describe('column free per-corner reshape — emission (L-shape)', () => {
-  it('L-shape → rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς', () => {
+  it('L-shape → center MOVE + rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ADR-520)', () => {
     const ent = makeLshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips[0].columnGripKind).toBe('column-rotation');
-    expect(grips.slice(1).map((g) => g.columnGripKind)).toEqual([
+    expect(grips[0].columnGripKind).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
+    expect(grips[1].columnGripKind).toBe('column-rotation');
+    expect(grips.slice(2).map((g) => g.columnGripKind)).toEqual([
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
@@ -134,14 +136,15 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
     expect(kinds).not.toContain('column-depth');
     expect(kinds).not.toContain('column-arm-length');
     expect(kinds).not.toContain('column-arm-width');
-    expect(kinds).not.toContain('column-center'); // ADR-363 Φ1G.5 Slice 2
+    expect(kinds).toContain('column-center'); // ADR-520 — ο σταυρός μετακίνησης εμφανίζεται πλέον
   });
 
   it('θέση corner-λαβής = world κορυφή του rendered footprint', () => {
     const ent = makeLshape();
     const grips = getColumnGrips(ent);
+    // ADR-520: grips = [center, rotation, vertex0, vertex1, …] → οι κορυφές ξεκινούν στον δείκτη 2.
     ent.geometry.footprint.vertices.forEach((v, i) => {
-      expect(grips[1 + i].position).toEqual({ x: v.x, y: v.y });
+      expect(grips[2 + i].position).toEqual({ x: v.x, y: v.y });
     });
   });
 
@@ -151,6 +154,71 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
     const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
     expect(rot).toBeDefined();
     expect(pointInPolygon(rot!.position, poly3)).toBe(true);
+  });
+});
+
+// ADR-520 — σταυρός μετακίνησης (4 αυτόνομα βελάκια) σε free-reshape / composite στήλες.
+function makeComposite(): ColumnEntity {
+  // Convex «κεκλιμένο ορθογώνιο» (mirror δύο συγχωνευμένων επικαλυπτόμενων στηλών) — LOCAL mm, CCW.
+  const params: ColumnParams = {
+    ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'),
+    kind: 'composite',
+    composite: { polygon: [
+      { x: -200, y: -480 }, { x: 200, y: -480 }, { x: 200, y: 480 }, { x: -200, y: 480 },
+    ] },
+    position: { x: 0, y: 0, z: 0 },
+    rotation: 0,
+    anchor: 'center',
+    width: 400,
+    depth: 960,
+    sceneUnits: 'mm',
+  } as unknown as ColumnParams;
+  return {
+    id: 'col_C',
+    type: 'column',
+    kind: 'composite',
+    layerId: '0',
+    params,
+    geometry: computeColumnGeometry(params),
+    validation: undefined as never,
+    visible: true,
+  } as unknown as ColumnEntity;
+}
+
+describe('ADR-520 — center MOVE cross on free-reshape / composite columns', () => {
+  it('composite εκπέμπει τον σταυρό μετακίνησης (column-center, movesEntity) ΜΕΣΑ στο σώμα', () => {
+    const ent = makeComposite();
+    const grips = getColumnGrips(ent);
+    const center = grips.find((g) => g.columnGripKind === 'column-center');
+    expect(center).toBeDefined();
+    expect(center!.type).toBe('center');
+    expect(center!.movesEntity).toBe(true);
+    const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
+    expect(pointInPolygon(center!.position, poly3)).toBe(true);
+  });
+
+  it('ο σταυρός μετακίνησης ΔΕΝ συμπίπτει με τη λαβή περιστροφής (χωριστά σημεία)', () => {
+    for (const ent of [makeComposite(), makeLshape(), makeTshape()]) {
+      const grips = getColumnGrips(ent);
+      const center = grips.find((g) => g.columnGripKind === 'column-center')!;
+      const rot = grips.find((g) => g.columnGripKind === 'column-rotation')!;
+      const dist = Math.hypot(center.position.x - rot.position.x, center.position.y - rot.position.y);
+      expect(dist).toBeGreaterThan(1); // ξεχωριστά, όχι επικάλυψη
+      // Και τα δύο μέσα στο σώμα (η περιστροφή φραγμένη από clearance).
+      const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
+      expect(pointInPolygon(center.position, poly3)).toBe(true);
+      expect(pointInPolygon(rot.position, poly3)).toBe(true);
+    }
+  });
+
+  it('click στον σταυρό (column-center) μετακινεί όλη τη στήλη (translate position)', () => {
+    const ent = makeComposite();
+    const moved = applyColumnGripDrag('column-center', {
+      originalParams: ent.params,
+      delta: { x: 120, y: -80 },
+    });
+    expect(moved.position.x).toBeCloseTo(ent.params.position.x + 120, 6);
+    expect(moved.position.y).toBeCloseTo(ent.params.position.y - 80, 6);
   });
 });
 

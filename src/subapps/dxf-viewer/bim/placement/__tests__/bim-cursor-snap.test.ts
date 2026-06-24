@@ -6,12 +6,19 @@
 
 import { resolveBimCursorSnap, type FindSnapPointFn } from '../bim-cursor-snap';
 import type { SceneSnapTargets } from '../../framing/scene-snap-targets';
+import { collectFootprintEdgeTargets } from '../../framing/member-snap-targets';
+import type { Entity } from '../../../types/entities';
 import { ExtendedSnapType, type ProSnapResult } from '../../../snapping/extended-types';
 
 /** Τετράγωνη κολόνα 400×400 (ίδια με τα tests των resolvers). */
 const COLUMN_FP = [
   { x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 },
 ];
+
+/** ADR-398 §3.18 — ΜΗ-κυκλική κολόνα → slant-following edges (ο column tool τα διαβάζει, όχι το bbox `footprints`). */
+const COLUMN_EDGES = collectFootprintEdgeTargets([
+  { id: 'col', type: 'column', geometry: { footprint: { vertices: COLUMN_FP } } } as unknown as Entity,
+]);
 
 /** Κενοί στόχοι σκηνής + override ό,τι χρειάζεται το test. */
 function makeTargets(partial: Partial<SceneSnapTargets> = {}): SceneSnapTargets {
@@ -55,7 +62,7 @@ describe('resolveBimCursorSnap — Layer 2 placement (ανά toolKind)', () => {
     const r = resolveBimCursorSnap({
       toolKind: 'column',
       cursor: { x: 700, y: 200 },
-      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      targets: makeTargets({ footprintEdgeTargets: COLUMN_EDGES }),
       sceneUnits: 'mm',
       findSnapPoint,
     });
@@ -87,7 +94,7 @@ describe('resolveBimCursorSnap — Layer 2 placement (ανά toolKind)', () => {
     const r = resolveBimCursorSnap({
       toolKind: 'foundation-pad',
       cursor: { x: 700, y: 200 },
-      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      targets: makeTargets({ footprintEdgeTargets: COLUMN_EDGES }),
       sceneUnits: 'mm',
     });
     expect(r.kind).toBe('column-placement');

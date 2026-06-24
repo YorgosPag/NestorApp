@@ -58,6 +58,10 @@ import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
 import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
 import { isCommandRecommendedForStorey } from './bridge/storey-tool-gating';
+// ADR-521 — «Τύποι» column-type dropdown: action → setKind + activate column tool.
+import { isColumnDrawKindAction, parseColumnDrawKind } from './bridge/column-command-keys';
+import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
+import type { ToolType } from '../../toolbar/types';
 
 export type { UseRibbonCommandsProps };
 
@@ -396,6 +400,19 @@ export function useRibbonCommands({
   // falling through to the generic DxfViewerContent action handler.
   const onAction = React.useCallback(
     (action: string, data?: RibbonActionPayload) => {
+      // ADR-521 — «Τύποι» dropdown: επιλογή τύπου κολώνας → set kind + activate column
+      // tool, ΧΩΡΙΣ race. `setKind` ενημερώνει το FSM state.kind (idle → μένει idle)·
+      // το `handleToolChange('column')` ενεργοποιεί → `activate()` (effect) κρατά
+      // `prev.kind` = το νέο. Ήδη-ενεργό → setKind αλλάζει άμεσα + tool-change no-op.
+      // Intercept ΠΡΙΝ το routeRibbonAction (tool activation δεν ανήκει σε entity bridge).
+      if (isColumnDrawKindAction(action)) {
+        const kind = parseColumnDrawKind(action);
+        if (kind) {
+          columnToolBridgeStore.get()?.setKind(kind);
+          handleToolChange('column' as ToolType);
+        }
+        return;
+      }
       routeRibbonAction(action, data, {
         closeContextualTab,
         wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge,
@@ -408,7 +425,7 @@ export function useRibbonCommands({
         wrappedHandleAction,
       });
     },
-    [closeContextualTab, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [handleToolChange, closeContextualTab, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

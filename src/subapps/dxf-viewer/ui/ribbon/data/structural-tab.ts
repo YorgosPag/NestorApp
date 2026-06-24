@@ -31,6 +31,9 @@
  */
 
 import type { RibbonButton, RibbonCommand, RibbonTab } from '../types/ribbon-types';
+import type { ColumnKind } from '../../../bim/types/column-types';
+import { columnDrawKindAction } from '../hooks/bridge/column-command-keys';
+import { COLUMN_KIND_OPTIONS } from './contextual-column-tab';
 
 /** Helper: a LARGE tool button (commandKey → onToolChange, optional shortcut). */
 function toolBtn(
@@ -62,6 +65,35 @@ function splitActionBtn(
     type: 'split', size: 'large',
     command: { id, labelKey, icon, commandKey: mainAction, action: mainAction },
     variants,
+  };
+}
+
+/**
+ * ADR-521 — ONE «Τύποι» dropdown variant: επιλογή τύπου → `onAction('column.drawKind:<kind>')`
+ * → setKind + activate column tool. Reuse του υπάρχοντος kind-label (`COLUMN_KIND_OPTIONS`).
+ */
+function columnKindVariant(value: string, labelKey: string): RibbonCommand {
+  const action = columnDrawKindAction(value as ColumnKind);
+  return { id: `structuralTab.columnType.${value}`, labelKey, icon: 'struct-col-single', commandKey: action, action };
+}
+
+/**
+ * ADR-521 — «Τύποι» column-type dropdown (αντικαθιστά το «Στήλη» toolBtn). Καθαρό dropdown:
+ * κλικ → λίστα 8 σχεδιάσιμων τύπων· επιλογή → ενεργοποιεί τη σχεδίαση μ' αυτόν τον τύπο. Το
+ * `commandKey:'column'` διατηρείται για storey-gating/recommendation parity με το παλιό button.
+ */
+function columnTypeDropdownBtn(): RibbonButton {
+  return {
+    type: 'dropdown', size: 'large',
+    command: {
+      id: 'structuralTab.columnType',
+      labelKey: 'ribbon.commands.bim.columnType.label',
+      tooltipKey: 'ribbon.commands.bim.columnType.tooltip',
+      icon: 'struct-col-single',
+      commandKey: 'column',
+      shortcut: 'CL',
+    },
+    variants: COLUMN_KIND_OPTIONS.map((o) => columnKindVariant(o.value, o.labelKey)),
   };
 }
 
@@ -108,7 +140,8 @@ export const STRUCTURAL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            toolBtn('structuralTab.column', 'ribbon.commands.bim.column.label', 'struct-col-single', 'column', 'CL'),
+            // ADR-521 — «Στήλη» → «Τύποι» dropdown (επιλογή τύπου κολώνας πριν τη σχεδίαση).
+            columnTypeDropdownBtn(),
             toolBtn('structuralTab.columnRegionLines', 'ribbon.commands.bim.columnRegionLines.label', 'struct-col-region-lines', 'column-region-lines'),
             toolBtn('structuralTab.columnRegionInside', 'ribbon.commands.bim.columnRegionInside.label', 'struct-col-region-inside', 'column-region-inside'),
             toolBtn('structuralTab.columnRegionBox', 'ribbon.commands.bim.columnRegionBox.label', 'struct-col-region-box', 'column-region-box'),

@@ -4,8 +4,8 @@
  * Μαζεύει από τη σκηνή τους face-snap στόχους για το ghost-before-click ΚΑΘΕ γραμμικού
  * εργαλείου (δοκάρι/τοίχος):
  *   · **Κολόνες** → footprint πολύγωνα (9-θέσεων face snap + flush) — ΠΑΝΤΑ.
- *   · **Πέδιλα (pad)** → footprint ως 4 zero-width edges μέσω `collectFoundationPadEdgeTargets` (ξεχωριστό
- *     bucket → μόνο column/foundation-pad resolver· flush + center-on-axis + slant-following).
+ *   · **Πέδιλα/μη-κυκλικές κολόνες/τοίχοι** → outline ως zero-width edges μέσω `collectFootprintEdgeTargets`
+ *     (ξεχωριστό bucket → μόνο column/foundation-pad resolver· flush + γωνία-με-γωνία + slant-following).
  *   · **Γραμμικά μέλη** (δοκάρια/τοίχοι, ανά `memberKinds`) → `{ axis, outline }` για το
  *     member-to-member Τ-framing.
  *
@@ -36,7 +36,7 @@ import type { ArcMeta, LinearMemberSnapTarget } from './linear-member-face-snap'
 export type MemberSnapKind = 'beam' | 'wall' | 'slab' | 'line';
 
 export interface MemberSnapTargets {
-  /** Column footprints (world-baked 2Δ πολύγωνα). Πέδιλα-pad → `collectFoundationPadEdgeTargets` (ξεχωριστά). */
+  /** Column footprints (world-baked 2Δ πολύγωνα). Slant-following edges → `collectFootprintEdgeTargets` (ξεχωριστά). */
   readonly footprints: Point2D[][];
   /** Γραμμικά μέλη ως {axis, outline}. */
   readonly memberTargets: LinearMemberSnapTarget[];
@@ -71,22 +71,26 @@ function beamTarget(e: Entity): LinearMemberSnapTarget | null {
   return null;
 }
 
-/** Wall outline = outerEdge + αντεστραμμένο innerEdge (κλειστός δακτύλιος). */
-function wallTarget(e: Entity): LinearMemberSnapTarget | null {
-  const g = (e as {
-    geometry?: {
-      axisPolyline?: { points?: Pts };
-      outerEdge?: { points?: Pts };
-      innerEdge?: { points?: Pts };
-    };
-  }).geometry;
-  const axis = g?.axisPolyline?.points;
+/**
+ * Wall outline ring = outerEdge + αντεστραμμένο innerEdge (κλειστός δακτύλιος). **Κοινός SSoT**
+ * (reuse `closedRingFromEdges`, ΟΧΙ inline `[...outer, ...inner.reverse()]`) — μοιράζεται ο
+ * `wallTarget` (bbox/axis-frame) ΚΑΙ ο `collectFootprintEdgeTargets` (slant-following flush edges).
+ */
+function wallOutlineRing(e: Entity): Point2D[] | null {
+  const g = (e as { geometry?: { outerEdge?: { points?: Pts }; innerEdge?: { points?: Pts } } }).geometry;
   const outer = g?.outerEdge?.points;
   const inner = g?.innerEdge?.points;
-  if (!axis || axis.length < 2 || !outer || outer.length < 2 || !inner || inner.length < 2) return null;
-  // SSoT `closedRingFromEdges` (polygon-utils) — όχι inline `[...outer, ...inner.reverse()]`.
+  if (!outer || outer.length < 2 || !inner || inner.length < 2) return null;
   const outline = closedRingFromEdges(toPoint2D(outer), toPoint2D(inner));
-  if (outline.length < 3) return null;
+  return outline.length < 3 ? null : outline;
+}
+
+/** Wall {axis, outline} face-snap target (axis = κεντρικός άξονας· outline = κοινός `wallOutlineRing`). */
+function wallTarget(e: Entity): LinearMemberSnapTarget | null {
+  const axis = (e as { geometry?: { axisPolyline?: { points?: Pts } } }).geometry?.axisPolyline?.points;
+  if (!axis || axis.length < 2) return null;
+  const outline = wallOutlineRing(e);
+  if (!outline) return null;
   return { id: e.id, axis: toPoint2D(axis), outline };
 }
 
@@ -277,21 +281,54 @@ export function collectMemberSnapTargets(
   return { footprints, memberTargets };
 }
 
+/** geometry.footprint.vertices (world-baked στραμμένο πολύγωνο) → zero-width edges (reuse `polylineEdgeTargets`, closed). */
+function footprintEdges(e: Entity): LinearMemberSnapTarget[] {
+  const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
+  return verts && verts.length >= 3 ? polylineEdgeTargets(toPoint2D(verts), true, e.id) : [];
+}
+
 /**
- * ADR-514 Φ6d — **πέδιλα (pad)** ως face-snap στόχοι: το ορθογώνιο `geometry.footprint` (world-baked,
- * φέρει τη στροφή) → 4 **zero-width edges** (reuse `polylineEdgeTargets`, closed) ΟΠΩΣ ένα rectangle.
- * Έτσι το νέο πέδιλο/κολώνα κουμπώνει flush + center-on-axis ΚΑΙ **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ** μέσω του
- * axis-relative `resolveLinearMemberFaceSnap` (το bbox path θα ίσιωνε τη στροφή σε rotation 0). **Ξεχωριστό
- * bucket** (ΟΧΙ `lineTargets`/`slabTargets`) ώστε να το καταναλώνει ΜΟΝΟ ο column/foundation-pad resolver —
- * τα εργαλεία τοίχου/δοκαριού (που διαβάζουν `lineTargets` μέσω `selectGhostMembers`) μένουν αμετάβλητα.
- * strip/tie-beam (γραμμικά πέδιλα) → DEFER. Pure.
+ * ADR-514 Φ6d / ADR-398 §3.18 — **σημειακά/πεπερασμένα μέλη ως slant-following flush edges**. Το
+ * world-baked outline (φέρει στροφή + ΠΡΑΓΜΑΤΙΚΕΣ λοξές/πολυγωνικές ακμές) κάθε υφιστάμενου:
+ *   · **ΠΕΔΙΛΟΥ** (foundation `pad`) → `geometry.footprint`,
+ *   · **ΜΗ-ΚΥΚΛΙΚΗΣ ΚΟΛΟΝΑΣ** (πολύγωνο/Γ/Τ/Π/I/U/shear-wall/στραμμένο ορθογώνιο) → `geometry.footprint`,
+ *   · **ΤΟΙΧΟΥ** → `wallOutlineRing` (outer+inner· κρατά γωνιακά/Γ σκέλη)
+ * → **zero-width edges** (reuse `polylineEdgeTargets`, closed) ΟΠΩΣ ένα rectangle. Έτσι το νέο φάντασμα
+ * κολόνας/πεδίλου κουμπώνει flush + γωνία-με-γωνία ΚΑΙ **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ** μέσω του axis-relative
+ * `resolveLinearMemberFaceSnap` (το bbox path ίσιωνε τη στροφή σε rotation 0). **Ξεχωριστό bucket** (ΟΧΙ
+ * `lineTargets`/`slabTargets`) → το καταναλώνει ΜΟΝΟ ο column/foundation-pad resolver· wall/beam tools (που
+ * διαβάζουν `lineTargets` μέσω `selectGhostMembers`) μένουν αμετάβλητα. **ΚΥΚΛΙΚΗ κολόνα** (πολύγωνο
+ * πολλών χορδών — χωρίς λοξές παρειές) → ΕΞΑΙΡΕΙΤΑΙ (μένει bbox via `collectCircularColumnFootprints`).
+ * Ο τοίχος υπάρχει ΚΑΙ ως `wallTargets` (bbox center-on-axis): το bbox κερδίζει cursor-εντός-σώματος, το
+ * edge ακολουθεί τη λοξάδα cursor-εκτός → dual-path, μηδέν regression. strip/tie-beam γραμμικά → DEFER. Pure.
  */
-export function collectFoundationPadEdgeTargets(entities: readonly Entity[]): LinearMemberSnapTarget[] {
+export function collectFootprintEdgeTargets(entities: readonly Entity[]): LinearMemberSnapTarget[] {
   const out: LinearMemberSnapTarget[] = [];
   for (const e of entities) {
-    if (e.type !== 'foundation' || (e as { kind?: string }).kind !== 'pad') continue;
+    if (e.type === 'foundation' && (e as { kind?: string }).kind === 'pad') {
+      out.push(...footprintEdges(e));
+    } else if (e.type === 'column' && (e as { kind?: string }).kind !== 'circular') {
+      out.push(...footprintEdges(e));
+    } else if (e.type === 'wall') {
+      const ring = wallOutlineRing(e);
+      if (ring) out.push(...polylineEdgeTargets(ring, true, e.id));
+    }
+  }
+  return out;
+}
+
+/**
+ * ADR-398 §3.18 — **ΚΥΚΛΙΚΕΣ κολόνες** ως bbox footprints (ΟΧΙ slant edges): η κυκλική έχει πολύγωνο
+ * πολλών χορδών — δεν έχει διακριτές «λοξές παρειές» να ακολουθήσει το φάντασμα → μένει στο
+ * world-aligned bbox path (9-handle flush, αμετάβλητη συμπεριφορά). Οι ΜΗ-κυκλικές κολόνες πάνε
+ * `collectFootprintEdgeTargets`. Pure. (Το `footprints` bucket κρατά ΟΛΕΣ τις κολόνες — wall/beam tools.)
+ */
+export function collectCircularColumnFootprints(entities: readonly Entity[]): Point2D[][] {
+  const out: Point2D[][] = [];
+  for (const e of entities) {
+    if (e.type !== 'column' || (e as { kind?: string }).kind !== 'circular') continue;
     const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
-    if (verts && verts.length >= 3) out.push(...polylineEdgeTargets(toPoint2D(verts), true, e.id));
+    if (verts && verts.length >= 3) out.push(toPoint2D(verts));
   }
   return out;
 }

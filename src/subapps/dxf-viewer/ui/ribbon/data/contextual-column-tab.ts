@@ -39,7 +39,9 @@ export const COLUMN_CONTEXTUAL_TRIGGER = 'column-selected';
 
 // ─── Combobox options ────────────────────────────────────────────────────────
 
-const COLUMN_KIND_OPTIONS = [
+// ADR-521 — exported (was const): reused by the structural-tab «Τύποι» dropdown so
+// the kind→label mapping lives in ONE place (μηδέν διπλό option list).
+export const COLUMN_KIND_OPTIONS = [
   { value: 'rectangular', labelKey: 'ribbon.commands.columnEditor.kind.rectangular', isLiteralLabel: false },
   { value: 'circular',    labelKey: 'ribbon.commands.columnEditor.kind.circular',    isLiteralLabel: false },
   { value: 'L-shape',     labelKey: 'ribbon.commands.columnEditor.kind.lShape',      isLiteralLabel: false },

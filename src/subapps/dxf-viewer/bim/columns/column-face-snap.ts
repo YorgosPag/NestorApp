@@ -134,7 +134,8 @@ interface FaceTarget {
 
 /**
  * Στόχοι → ενιαία λίστα bbox-frames (reuse `footprintBounds` SSoT). `endsAxis` + `axisFrame`:
- *   · κολόνες  → `endsAxis null`, **χωρίς** axisFrame (καθαρό bbox· όλες οι 4 παρειές έγκυρες).
+ *   · ΚΥΚΛΙΚΕΣ κολόνες (§3.18) → `endsAxis null`, **χωρίς** axisFrame (καθαρό bbox· 4 παρειές έγκυρες).
+ *     Οι ΜΗ-κυκλικές δεν φτάνουν εδώ — πάνε `resolveFootprintEdgeSnap` (slant-following).
  *   · δοκάρια  → `endsAxis` μέλους (κοντές άκρες Α/Δ ή Β/Ν → 🔴 «extend instead» στο flush) **+**
  *               `axisFrame` (ADR-398 §3.11: center-on-axis στον κεντρικό άξονα, ίδιο με τοίχο).
  *   · τοίχοι   → `endsAxis null` (Giorgio: ΚΑΘΕ παρειά + μικρές άκρες έγκυρες) **+** `axisFrame` (§3.9).
@@ -297,16 +298,17 @@ function resolveColumnEdgeSnap(
 }
 
 /**
- * ADR-514 Φ6d — face-snap σε υφιστάμενο **ΠΕΔΙΛΟ (pad)** μέσω των 4 zero-width edges του footprint.
- * Σε αντίθεση με slab/line edges (center-on-axis straddle), το πέδιλο πρέπει να κάθεται **flush ΔΙΠΛΑ**
- * στην παρειά (ΟΧΙ κεντραρισμένο πάνω της) και, κοντά σε **ΓΩΝΙΑ** (εξωτερικό τρίτο της παρειάς), να
- * κουμπώνει **γωνία-με-γωνία**: το `centerAlong` κουμπώνει στην ΚΟΡΥΦΗ → **δύο παρειές flush** (η κοινή +
- * η συγγραμμική) — αυτό που ζήτησε ο Giorgio («έλξη γωνία πεδίλου, να κολλήσουν οι δύο παρειές»). Ακολουθεί
- * τη **λοξάδα** (rotation από τον άξονα ακμής· axis-relative). Reuse `resolveLinearMemberFaceSnap` +
- * `pickThird` + `edgeFlushAnchor` + `edgeNearFace` — ΜΗΔΕΝ center-on-axis (no straddle), μηδέν νέα geometry.
- * `dist` = κάθετη απόσταση στην παρειά (σταθερή προτεραιότητα → η γωνία «κολλάει» στο εξωτερικό τρίτο).
+ * ADR-514 Φ6d / ADR-398 §3.18 — face-snap σε υφιστάμενο **ΠΕΔΙΛΟ / ΜΗ-ΚΥΚΛΙΚΗ ΚΟΛΟΝΑ / ΤΟΙΧΟ** μέσω
+ * των zero-width edges του πραγματικού (world-baked, στραμμένου, **πολυγωνικού/Γ/Τ/Π/λοξού**) footprint.
+ * Σε αντίθεση με slab/line edges (center-on-axis straddle), το νέο μέλος κάθεται **flush ΔΙΠΛΑ** στην
+ * παρειά (ΟΧΙ κεντραρισμένο πάνω της) και, κοντά σε **ΓΩΝΙΑ** (εξωτερικό τρίτο της παρειάς), κουμπώνει
+ * **γωνία-με-γωνία**: το `centerAlong` κουμπώνει στην ΚΟΡΥΦΗ → **δύο παρειές flush** (η κοινή + η
+ * συγγραμμική). **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ** (rotation από τον άξονα ακμής· axis-relative) → το φάντασμα
+ * στρέφεται flush στην πραγματική (λοξή) παρειά αντί να ισιώνει σε ορθογώνιο bbox. Reuse
+ * `resolveLinearMemberFaceSnap` + `pickThird` + `edgeFlushAnchor` + `edgeNearFace` — ΜΗΔΕΝ center-on-axis
+ * (no straddle), μηδέν νέα geometry. `dist` = κάθετη απόσταση στην παρειά (η γωνία «κολλάει» στο εξωτ. τρίτο).
  */
-function resolveColumnPadEdgeSnap(
+function resolveFootprintEdgeSnap(
   cursor: Readonly<Point2D>,
   edges: readonly LinearMemberSnapTarget[],
   sceneUnits: SceneUnits,
@@ -413,13 +415,16 @@ export function resolveColumnFaceSnapFromTargets(
   opts?: Readonly<PolarDiskSnapOptions>,
 ): ColumnFaceSnap | null {
   // Τα zero-width edges (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative
-  // resolver (ίδιος με τοίχο/δοκάρι)· κολόνες/δοκάρια/τοίχοι → bbox path. Βλ. `resolveColumnEdgeSnap`.
-  // slab+line edges → center-on-axis/flush (ίδιο zero-width μοντέλο, ακμή πλάκας ≡ γραμμή).
+  // resolver (ίδιος με τοίχο/δοκάρι). slab+line edges → center-on-axis/flush (ίδιο zero-width μοντέλο,
+  // ακμή πλάκας ≡ γραμμή). Βλ. `resolveColumnEdgeSnap`.
   const edgeHit = resolveColumnEdgeSnap(cursor, [...t.slabTargets, ...t.lineTargets], sceneUnits);
-  // ADR-514 Φ6d — υφιστάμενα ΠΕΔΙΛΑ → ΞΕΧΩΡΙΣΤΟ pad face-snap: flush-beside + γωνία-με-γωνία + slant
-  // (ΟΧΙ center-on-axis straddle). `?? []` για ασφάλεια με partial test objects / παλιά snapshots.
-  const padHit = resolveColumnPadEdgeSnap(cursor, t.padEdgeTargets ?? [], sceneUnits);
-  const targets = buildFaceTargets(t.footprints, t.beamTargets, t.wallTargets);
+  // ADR-514 Φ6d / ADR-398 §3.18 — υφιστάμενα ΠΕΔΙΛΑ + ΜΗ-ΚΥΚΛΙΚΕΣ ΚΟΛΟΝΕΣ + ΤΟΙΧΟΙ → ΞΕΧΩΡΙΣΤΟ footprint
+  // edge face-snap: flush-beside + γωνία-με-γωνία + slant-following (ΟΧΙ center-on-axis straddle). Έτσι το
+  // φάντασμα ακολουθεί τις πραγματικές (λοξές/πολυγωνικές) παρειές. `?? []` για partial test objects.
+  const footprintEdgeHit = resolveFootprintEdgeSnap(cursor, t.footprintEdgeTargets ?? [], sceneUnits);
+  // ΜΟΝΟ ΚΥΚΛΙΚΕΣ κολόνες στο bbox path (§3.18 — χωρίς λοξές παρειές)· δοκάρια/τοίχοι → bbox center-on-axis
+  // (ο τοίχος ΚΑΙ στο footprintEdgeHit: bbox κερδίζει cursor-εντός, edge ακολουθεί λοξάδα cursor-εκτός).
+  const targets = buildFaceTargets(t.circularFootprints ?? [], t.beamTargets, t.wallTargets);
   const captureScene = MEMBER_GHOST_CAPTURE_MM * mmToSceneUnits(sceneUnits);
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
@@ -439,8 +444,8 @@ export function resolveColumnFaceSnapFromTargets(
   const rectHit = opts && opts.worldPerPixel > 0 && t.rectTargets.length > 0
     ? resolveRectHit(cursor, t.rectTargets, sceneUnits, opts)
     : null;
-  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε edge / pad / bbox / polar / rect (στο χείλος → §3.11/§3.12 κερδίζει).
-  return nearestHit(edgeHit, padHit, bboxHit, polarHit, rectHit);
+  // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ ανάμεσα σε edge / footprint-edge / bbox / polar / rect (nearest-wins).
+  return nearestHit(edgeHit, footprintEdgeHit, bboxHit, polarHit, rectHit);
 }
 
 /**

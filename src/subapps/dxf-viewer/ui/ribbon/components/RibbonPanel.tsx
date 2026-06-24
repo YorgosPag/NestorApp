@@ -10,6 +10,7 @@ import type {
 import { RibbonLargeButton } from './buttons/RibbonLargeButton';
 import { RibbonSmallButton } from './buttons/RibbonSmallButton';
 import { RibbonSplitButton } from './buttons/RibbonSplitButton';
+import { RibbonDropdownButton } from './buttons/RibbonDropdownButton';
 import { RibbonToggleButton } from './buttons/RibbonToggleButton';
 import { RibbonCombobox } from './buttons/RibbonCombobox';
 import { ZoomControlsWidget } from './ZoomControlsWidget';
@@ -245,6 +246,11 @@ function renderButton(button: RibbonButton): React.ReactNode {
   }
   if (button.type === 'split') {
     return <RibbonSplitButton key={key} button={button} />;
+  }
+  // ADR-521 — pure dropdown («Τύποι» column-type picker): single trigger opens
+  // the variant list (no top-action). Reuses RibbonSplitDropdown for the menu.
+  if (button.type === 'dropdown') {
+    return <RibbonDropdownButton key={key} button={button} />;
   }
   if (button.type === 'toggle') {
     return <RibbonToggleButton key={key} command={button.command} />;

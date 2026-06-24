@@ -80,10 +80,11 @@ describe('column-grips Phase 2b — emission', () => {
     ]);
   });
 
-  // ADR-363/449 — free reshape: rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΟΧΙ center/width/depth)
-  it('polygon-backed composite → rotation + λαβή/κορυφή + λαβή/μέσο-πλευράς', () => {
+  // ADR-520 — free reshape: center MOVE + rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΟΧΙ width/depth)
+  it('polygon-backed composite → center + rotation + λαβή/κορυφή + λαβή/μέσο-πλευράς', () => {
     const grips = getColumnGrips(makeComposite());
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center', // ADR-520 — σταυρός μετακίνησης (4 αυτόνομα βελάκια)
       'column-rotation',
       'column-poly-vertex-0',
       'column-poly-vertex-1',
@@ -105,7 +106,7 @@ describe('column-grips Phase 2b — emission', () => {
     expect(kinds).toContain('column-poly-vertex-0');
     expect(kinds).not.toContain('column-width');
     expect(kinds).not.toContain('column-depth');
-    expect(kinds).not.toContain('column-center'); // ADR-363 Φ1G.5 Slice 2
+    expect(kinds).toContain('column-center'); // ADR-520 — ο σταυρός μετακίνησης εμφανίζεται πλέον
   });
 
   it('per-vertex handle position = vertex world (anchor center, rotation 0)', () => {

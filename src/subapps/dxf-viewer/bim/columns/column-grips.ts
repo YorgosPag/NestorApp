@@ -103,6 +103,12 @@ import {
   rectColumnGrips,
   applyRectColumnGrip,
 } from './column-rect-adapter';
+// ADR-519 — circular column: center MOVE (4 αυτόνομα βελάκια) + 4 quadrant grips
+// (Β/Α/Ν/Δ) που μεγαλώνουν την ακτίνα. Αδελφός adapter του `column-rect-adapter`.
+import {
+  circularColumnGrips,
+  applyCircularColumnGrip,
+} from './column-circular-adapter';
 
 // ─── Grip emission (ADR-363 §6 Phase 4.5 + 4.5b) ─────────────────────────────
 
@@ -159,16 +165,12 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
   // (declutter). gripIndex 0 is left unused — NO reindex. The `column-center`
   // transform (`moveCenter`) + hot-grip move path are retained but unreachable.
 
+  // ADR-519 — circular: full grip set = center MOVE (4 αυτόνομα βελάκια) + 4
+  // quadrant λαβές (Β/Α/Ν/Δ) που μεγαλώνουν την ακτίνα. ΧΩΡΙΣ rotation (κύκλος =
+  // rotationally symmetric). Single SSoT emission στο `column-circular-adapter`
+  // (reuse `columnCenterMoveGrip`). Αντικαθιστά το παλιό 1-grip branch.
   if (params.kind === 'circular') {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 1,
-      type: 'vertex',
-      position: widthHandleWorld(params),
-      movesEntity: false,
-      columnGripKind: 'column-width',
-    });
-    return grips;
+    return circularColumnGrips(entity);
   }
 
   // ADR-518 — κανονική πολυγωνική κολόνα: πλήρες set λαβών (center MOVE 4-βελάκια +
@@ -344,6 +346,10 @@ export function applyColumnGripDrag(
   // their own transforms below.
   const rectResult = applyRectColumnGrip(gripKind, input.originalParams, input.delta);
   if (rectResult) return rectResult;
+  // ADR-519 — circular quadrant grips (Β/Α/Ν/Δ) → symmetric diameter resize.
+  // Returns null για μη-circular ή μη-quadrant kinds → fall through (mirror rect).
+  const circularResult = applyCircularColumnGrip(gripKind, input.originalParams, input.delta);
+  if (circularResult) return circularResult;
   if (gripKind === 'column-width') return resizeWidth(input);
   if (gripKind === 'column-depth') return resizeDepth(input);
   if (gripKind === 'column-arm-length') return resizeArmLength(input);
@@ -439,10 +445,8 @@ function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
   // local delta back to mm (÷ s) before adding, so resize tracks the cursor 1:1
   // in metre/cm scenes (mirror wall `resizeThickness` / `mmScaleFor`).
   const s = mmScaleFor(originalParams);
-  if (originalParams.kind === 'circular') {
-    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + (2 * delta.x) / s);
-    return { ...originalParams, width: newWidth };
-  }
+  // ADR-519 — circular diameter resize now lives in `column-circular-adapter`
+  // (`applyCircularColumnGrip`, intercepted earlier in `applyColumnGripDrag`).
   if (originalParams.kind === 'polygon') {
     // Phase 8C — polygon scales symmetrically about centroid. Handle at local
     // (width/2, 0) → drag dxLocal → newWidth = width + 2·dxLocal (mirror των

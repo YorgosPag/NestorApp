@@ -94,19 +94,30 @@ export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
 }
 
 /**
- * ADR-518 — SSoT for the gripIndex-0 centre MOVE grip (4-arrow glyph). Shared by
- * BOTH `rectColumnGrips` (rectangular / shear-wall) AND `polygonReshapeGrips`
- * (regular polygon) so the centre-move emission lives in ONE place (N.0.2 Boy-Scout
- * dedup of the prior inline literal). `movesEntity: true` + `column-center` kind →
- * the registry paints the 4-separate-arrow move glyph and the move-glyph zone
- * hit-test (`move-glyph-zones`) gives each arrow its own directional function.
+ * ADR-518 + ADR-520 — SSoT for the gripIndex-0 centre MOVE grip (4-arrow glyph).
+ * Shared by `rectColumnGrips` (rectangular / shear-wall), `circularColumnGrips`,
+ * `polygonReshapeGrips` (regular polygon) AND `freeCornerReshapeGrips`
+ * (composite / L / T / U-polygon) so the centre-move emission lives in ONE place
+ * (N.0.2 Boy-Scout dedup of the prior inline literal). `movesEntity: true` +
+ * `column-center` kind → the registry paints the 4-separate-arrow move glyph and
+ * the move-glyph zone hit-test (`move-glyph-zones`) gives each arrow its own
+ * directional function.
+ *
+ * `position` override (ADR-520): convex kinds use the default bbox centroid; the
+ * free-reshape (possibly **concave**) kinds pass the body-`interiorAnchorPoint` so
+ * the cross never lands in a notch. Owning the default here (not at the call site)
+ * keeps a single source for the grip's structure — callers only supply WHERE when
+ * the centroid is unsafe.
  */
-export function columnCenterMoveGrip(entity: Readonly<ColumnEntity>): GripInfo {
+export function columnCenterMoveGrip(
+  entity: Readonly<ColumnEntity>,
+  position?: Point2D,
+): GripInfo {
   return {
     entityId: entity.id,
     gripIndex: 0,
     type: 'center',
-    position: computeCentroidWorld(entity.params),
+    position: position ?? computeCentroidWorld(entity.params),
     movesEntity: true,
     columnGripKind: 'column-center',
   };

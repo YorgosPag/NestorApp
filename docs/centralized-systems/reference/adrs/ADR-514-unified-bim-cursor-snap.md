@@ -114,6 +114,18 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
 
 ## 6. Changelog
 
+- **2026-06-25** — **Φ6e ΓΕΝΙΚΕΥΣΗ slant-following edges σε ΚΟΛΟΝΕΣ + ΤΟΙΧΟΥΣ (UNCOMMITTED)** — Giorgio: «το
+  φάντασμα κολόνας να ακολουθεί τις ΛΟΞΕΣ/ΠΟΛΥΓΩΝΙΚΕΣ παρειές υφιστάμενης πολυγωνικής/Γ/λοξής κολόνας ή
+  τοιχίου (flush + στροφή + γωνία-με-γωνία), ΟΧΙ στο axis-aligned bbox». Το Φ6d **pad edge-snap πρότυπο**
+  γενικεύτηκε: ο collector `collectFoundationPadEdgeTargets`→**`collectFootprintEdgeTargets`** δίνει πλέον
+  zero-width edges (κοινό `polylineEdgeTargets`) και για **μη-κυκλικές κολόνες** (`geometry.footprint`) +
+  **τοίχους** (νέο `wallOutlineRing` SSoT) — όχι μόνο πέδιλα. Bucket `padEdgeTargets`→**`footprintEdgeTargets`**·
+  resolver `resolveColumnPadEdgeSnap`→**`resolveFootprintEdgeSnap`** (ίδια axis-relative λογική μέσω
+  `resolveLinearMemberFaceSnap`). **Κυκλική κολόνα** → μένει bbox (NEW `collectCircularColumnFootprints` +
+  `circularFootprints`). **Τοίχος = dual-path** (bbox center-on-axis + edge slant flush, nearest-wins → μηδέν
+  regression στα 8 wall tests). Edges-για-όλες-τις-μη-κυκλικές (απόφαση Giorgio): axis-aligned = ίδιο feel.
+  Λεπτομέρειες/tests/decisions → **ADR-398 §3.18 + changelog 2026-06-25**. 157 jest GREEN. ⚠️ CHECK 6B/6D →
+  stage ADR-040 + ADR-398 + ADR-514. 🔴 browser-verify + commit (Giorgio).
 - **2026-06-24** — Φ6d (placement assembly + rotate-lock SSoT, UNCOMMITTED): το 2-click «place→rotate»
   flow + η συναρμολόγηση του placement ghost γενικεύτηκαν ώστε **κολώνα ΚΑΙ πέδιλο** να μοιράζονται ΕΝΑΝ
   κώδικα (μηδέν παράλληλο store/assembly). **NEW** `systems/cursor/PlacementRotationStore.ts` (zero-React

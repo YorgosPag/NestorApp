@@ -45,10 +45,6 @@ describe('generateFoundationPreview', () => {
 
 describe('generateFoundationPadPreview — ADR-514 Φ6c live pad ghost', () => {
   const COLUMN_FP = [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 }];
-  const emptyTargets = (partial: Partial<SceneSnapTargets> = {}): SceneSnapTargets => ({
-    footprints: [], beamTargets: [], wallTargets: [], slabTargets: [], lineTargets: [],
-    diskTargets: [], rectTargets: [], wallEntities: [], openings: [], ...partial,
-  });
   afterEach(() => {
     foundationPreviewStore.reset();
     sceneSnapTargetsStore.reset();
@@ -71,7 +67,10 @@ describe('generateFoundationPadPreview — ADR-514 Φ6c live pad ghost', () => {
 
   it('κοντά σε κολόνα → το pad κουμπώνει flush στην παρειά (preview ≡ commit)', () => {
     foundationPreviewStore.set({ startPoint: null, endPoint: null, kind: 'pad', overrides: {} });
-    sceneSnapTargetsStore.set(emptyTargets({ footprints: [COLUMN_FP] }));
+    // ADR-398 §3.18 — η κολόνα γίνεται slant-following edges (όχι bbox `footprints`) → collectSceneSnapTargets.
+    sceneSnapTargetsStore.set(collectSceneSnapTargets([
+      { id: 'col', type: 'column', geometry: { footprint: { vertices: COLUMN_FP } } } as unknown as Entity,
+    ]));
     const ghost = generateFoundationPadPreview({ x: 700, y: 200 }) as {
       params: { position: { x: number; y: number } };
     };

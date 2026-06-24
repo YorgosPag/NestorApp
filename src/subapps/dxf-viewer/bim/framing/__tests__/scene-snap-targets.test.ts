@@ -66,18 +66,48 @@ describe('collectSceneSnapTargets — διαχωρισμός ανά είδος',
     expect(t.slabTargets).toHaveLength(4); // 4 ακμές πλάκας
   });
 
-  it('ADR-514 Φ6d — υφιστάμενο ΠΕΔΙΛΟ (pad) → 4 zero-width edges στο padEdgeTargets (slant-following)· strip ΟΧΙ', () => {
+  it('ADR-514 Φ6d — υφιστάμενο ΠΕΔΙΛΟ (pad) → 4 zero-width edges στο footprintEdgeTargets (slant-following)· strip ΟΧΙ', () => {
     const t = collectSceneSnapTargets([foundationPad('p1'), foundationStrip('st1')]);
     // pad = κλειστό ορθογώνιο footprint → 4 edges (ΟΧΙ bbox → ακολουθεί τη λοξάδα)· strip = γραμμικό → DEFER.
-    expect(t.padEdgeTargets).toHaveLength(4);
+    expect(t.footprintEdgeTargets).toHaveLength(4);
     expect(t.footprints).toHaveLength(0); // ΟΧΙ ως bbox footprint
     expect(t.lineTargets).toHaveLength(0); // ΟΧΙ στο lineTargets (αλλιώς θα το έβλεπαν wall/beam)
   });
 
-  it('ADR-514 Φ6d — κολώνα → footprint(bbox)· pad → padEdgeTargets (ξεχωριστά paths)', () => {
+  it('ADR-398 §3.18 — ΜΗ-κυκλική κολώνα + pad → footprintEdgeTargets (slant edges)· footprints κρατά ΟΛΕΣ τις κολόνες', () => {
     const t = collectSceneSnapTargets([column('c1'), foundationPad('p1')]);
-    expect(t.footprints).toHaveLength(1); // μόνο η κολώνα (bbox path)
-    expect(t.padEdgeTargets).toHaveLength(4); // pad edges (axis-relative path, slant-following)
+    expect(t.footprints).toHaveLength(1); // ΟΛΕΣ οι κολόνες (wall/beam member-endpoint snap)
+    expect(t.circularFootprints).toHaveLength(0); // η κολώνα-test δεν είναι kind 'circular'
+    expect(t.footprintEdgeTargets).toHaveLength(8); // κολώνα 4 edges + pad 4 edges (axis-relative, slant)
+  });
+
+  it('ADR-398 §3.18 — ΚΥΚΛΙΚΗ κολώνα → circularFootprints (bbox)· ΟΧΙ footprintEdgeTargets', () => {
+    const circCol = {
+      id: 'cc1', type: 'column', kind: 'circular',
+      geometry: { footprint: { vertices: [{ x: -50, y: 0 }, { x: 0, y: -50 }, { x: 50, y: 0 }, { x: 0, y: 50 }] } },
+    } as unknown as Entity;
+    const t = collectSceneSnapTargets([circCol]);
+    expect(t.circularFootprints).toHaveLength(1); // bbox path (χωρίς λοξές παρειές)
+    expect(t.footprintEdgeTargets).toHaveLength(0); // ΟΧΙ slant edges
+    expect(t.footprints).toHaveLength(1); // αλλά παραμένει στο footprints (wall/beam tools)
+  });
+
+  it('ADR-398 §3.18 — ΠΟΛΥΓΩΝΙΚΗ κολώνα (εξάγωνο) → 6 slant edges στο footprintEdgeTargets', () => {
+    const hex = {
+      id: 'hex1', type: 'column', kind: 'polygon',
+      geometry: { footprint: { vertices: [
+        { x: 100, y: 0 }, { x: 50, y: 87 }, { x: -50, y: 87 }, { x: -100, y: 0 }, { x: -50, y: -87 }, { x: 50, y: -87 },
+      ] } },
+    } as unknown as Entity;
+    const t = collectSceneSnapTargets([hex]);
+    expect(t.footprintEdgeTargets).toHaveLength(6); // 6 πλευρές = 6 zero-width edges (ακολουθούν τις λοξές παρειές)
+    expect(t.circularFootprints).toHaveLength(0);
+  });
+
+  it('ADR-398 §3.18 — ΤΟΙΧΟΣ → footprintEdgeTargets (4 edges outline) ΚΑΙ wallTargets (bbox center-on-axis)', () => {
+    const t = collectSceneSnapTargets([wall('w1')]);
+    expect(t.wallTargets).toHaveLength(1); // dual-path: bbox κρατά center-on-axis
+    expect(t.footprintEdgeTargets).toHaveLength(4); // outline ring → 4 slant-following flush edges
   });
 
   it('κενή σκηνή → όλα κενά', () => {

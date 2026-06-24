@@ -32,7 +32,10 @@ import {
 } from './column-grip-utils';
 import { mmScaleFor } from '../../utils/scene-units';
 import { computeColumnGeometry, materializeColumnLocalPolygonMm } from '../geometry/column-geometry';
-import { interiorAnchorPoint } from '../geometry/shared/polygon-interior-point';
+import {
+  interiorAnchorPoint,
+  interiorAnchorPointWithClearance,
+} from '../geometry/shared/polygon-interior-point';
 import type { ColumnGripDragInput } from './column-grips';
 
 /**
@@ -56,14 +59,21 @@ export function polyVertexHandlePosition(params: ColumnParams, index: number): P
 }
 
 /**
- * ADR-363/449 — world θέση της λαβής περιστροφής ενός free-reshape στοιχείου = ΕΣΩΤΕΡΙΚΟ σημείο
- * της διατομής (`interiorAnchorPoint` πάνω στο rendered footprint). Params-pure ώστε ΚΑΙ η emission
- * (`freeCornerReshapeGrips`, που έχει το geometry) ΚΑΙ το rotation **drag** (`rotateAroundPosition`,
- * που έχει μόνο params) να δίνουν το **ΙΔΙΟ** σημείο (αλλιώς το πιάσιμο της λαβής θα «πηδούσε»).
+ * ADR-363/449 + ADR-520 — world θέση της λαβής περιστροφής ενός free-reshape στοιχείου. Το
+ * ΕΣΩΤΕΡΙΚΟ σημείο της διατομής (`interiorAnchorPoint`) φιλοξενεί πλέον τον **σταυρό μετακίνησης**
+ * (ADR-520)· για να ΜΗΝ συμπίπτει η περιστροφή με τον σταυρό, μετατοπίζεται προς τα **κάτω** (local
+ * −Y, mirror ορθογώνιας/πολυγωνικής `−depth/4`) κατά `min(depth/4, clearance·0.85)`. Το φράγμα από
+ * την `clearance` εγγυάται ότι η λαβή μένει **μέσα στο σώμα** ακόμη και σε κοίλα Γ/Τ (ο εγγεγραμμένος
+ * δίσκος ακτίνας clearance είναι όλος εντός). Params-pure ώστε emission ≡ drag (μηδέν jump).
  */
 export function freeReshapeRotationWorld(params: ColumnParams): Point2D {
   const verts = computeColumnGeometry(params).footprint.vertices;
-  return verts.length >= 3 ? interiorAnchorPoint(verts) : localToWorld({ x: 0, y: 0 }, params);
+  if (verts.length < 3) return localToWorld({ x: 0, y: 0 }, params);
+  const { point, clearance } = interiorAnchorPointWithClearance(verts);
+  const s = mmScaleFor(params);
+  const mag = Math.min((params.depth / 4) * s, clearance * 0.85);
+  const off = rotate({ x: 0, y: -mag }, params.rotation);
+  return { x: point.x + off.x, y: point.y + off.y };
 }
 
 /**
@@ -189,17 +199,27 @@ export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo
   // ανεξαρτήτως αν ο caller έχει γεμίσει το geometry cache).
   const verts = entity.geometry?.footprint?.vertices ?? computeColumnGeometry(entity.params).footprint.vertices;
   const n = verts.length;
-  const grips: GripInfo[] = [{
+  const grips: GripInfo[] = [];
+
+  // ADR-520 — σταυρός μετακίνησης (4 αυτόνομα βελάκια) στο ΕΣΩΤΕΡΙΚΟ σημείο του σώματος
+  // (όχι bbox-centre — για κοίλα Γ/Τ/composite μπορεί να πέσει στην εγκοπή). Reuse του ΚΟΙΝΟΥ
+  // `columnCenterMoveGrip` SSoT (ίδιο με ορθογώνια/κυκλική/πολυγωνική)· περνά τη body-interior
+  // θέση ως όρισμα. Όταν συγχωνεύονται κολόνες (→ composite) το σύμβολο μετακίνησης εμφανίζεται.
+  if (n >= 3) {
+    grips.push(columnCenterMoveGrip(entity, interiorAnchorPoint(verts)));
+  }
+
+  grips.push({
     entityId: entity.id,
     gripIndex: 1,
     type: 'vertex',
-    // ADR-363/449 — η λαβή περιστροφής σε ΕΣΩΤΕΡΙΚΟ σημείο της διατομής (Giorgio: στο μέσο μεταξύ
-    // εξωτ. & εσωτ. γωνίας του Γ). Για κοίλα σχήματα το bbox-κέντρο πέφτει στην εγκοπή (κενό) →
-    // `interiorAnchorPoint` δίνει σημείο μέσα στο υλικό, μακριά από τις λαβές γωνιών/πλευρών.
-    position: n >= 3 ? interiorAnchorPoint(verts) : rotationHandleWorld(entity.params),
+    // ADR-363/449 + ADR-520 — λαβή περιστροφής σε ΕΣΩΤΕΡΙΚΟ σημείο, μετατοπισμένη προς τα κάτω
+    // ώστε να ΜΗΝ συμπίπτει με τον σταυρό μετακίνησης (single SSoT `freeReshapeRotationWorld` →
+    // emission ≡ drag, μηδέν jump). Φράγμα clearance → πάντα μέσα στο σώμα.
+    position: n >= 3 ? freeReshapeRotationWorld(entity.params) : rotationHandleWorld(entity.params),
     movesEntity: false,
     columnGripKind: 'column-rotation',
-  }];
+  });
   grips.push(...perVertexAndEdgeGrips(entity, verts));
   return grips;
 }
