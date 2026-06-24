@@ -11,18 +11,17 @@ import { useTranslation } from 'react-i18next';
 import type { ViewTransform } from '../../systems/rulers-grid/config';
 // 🏢 ENTERPRISE (2026-02-17): World→Screen conversion for correct indicator positioning
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-// 🏢 ENTERPRISE: Centralized design tokens for overlay colors
-import { canvasUI } from '@/styles/design-tokens/canvas';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 // 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// 🏢 ADR-137: Centralized Snap Icon Geometry
+// 🏢 ADR-137 (geometry) + ADR-515 (χρώμα ανά τύπο) — ΕΝΑ snap-visual SSoT entry point
 import {
   SNAP_ICON_GEOMETRY,
   getSnapIconQuarter,
   getTangentCircleRadius,
-  getNodeDotRadius
-} from '../../rendering/ui/snap/snap-icon-config';
+  getNodeDotRadius,
+  resolveSnapColor
+} from '../../rendering/ui/snap/snap-visual-config';
 
 // ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
 import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
@@ -369,7 +368,8 @@ export default function SnapIndicatorOverlay({
   // ADR-370: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for
   // «περίεργα σχήματα» (empty description) → glyph WITHOUT text (req #4).
   const bimLabel = resolveBimSnapLabelText(t, description) ?? undefined;
-  const snapColor = canvasUI.overlay.colors.snap.border;
+  // 🏢 ADR-515: type-specific χρώμα marker (Revit-rich) από το snap-visual SSoT.
+  const snapColor = resolveSnapColor(type);
 
   // 🏢 ENTERPRISE (2026-02-17): Convert world coordinates → screen coordinates
   // The snap result contains world-space coordinates from ProSnapEngineV2.

@@ -20,13 +20,9 @@ export const canvasUI = {
     backgroundColor: colors.background.overlay,
     zIndex: zIndex.overlay,
     // 🏢 ENTERPRISE: Centralized overlay indicator colors (CAD-standard)
+    // ADR-515: το νεκρό `snap` token αφαιρέθηκε — το snap χρώμα ζει πλέον στο
+    // `subapps/dxf-viewer/rendering/ui/snap/snap-visual-config.ts` (type-specific SSoT).
     colors: {
-      /** Snap indicator - bright green for high visibility (AutoCAD standard) */
-      snap: {
-        border: colors.green["400"],
-        background: colors.green["500"],
-        glow: `0 0 4px ${colors.green["500"]}`
-      },
       /** Zoom window - yellow for clear distinction (industry standard) */
       zoom: {
         border: 'rgba(250, 204, 21, 0.9)', // Yellow with high opacity
@@ -148,21 +144,8 @@ export const canvasUI = {
       })
     },
 
-    snapIndicator: {
-      positioned: (x: number, y: number): React.CSSProperties => ({
-        position: 'absolute',
-        left: `${x - 5}px`,
-        top: `${y - 5}px`,
-        width: '10px',
-        height: '10px',
-        border: `2px solid ${colors.green["500"]}`,
-        borderRadius: '50%',
-        backgroundColor: colors.background.primary,
-        pointerEvents: 'none',
-        zIndex: zIndex.overlay,
-        boxShadow: `0 0 4px ${colors.green["500"]}`
-      })
-    },
+    // ADR-515: το νεκρό `snapIndicator.positioned` (10px circle, κανένας consumer)
+    // αφαιρέθηκε — το ζωντανό snap marker = `SnapIndicatorOverlay` + snap-visual-config SSoT.
 
     zoomWindow: {
       positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties => ({

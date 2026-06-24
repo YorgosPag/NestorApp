@@ -53,11 +53,14 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   lineWidth: 2,
   tolerance: SNAP_TOLERANCE,  // 🏢 ADR-095: Centralized snap tolerance
 
-  // Type-specific colors
-  endpointColor: UI_COLORS.SNAP_ENDPOINT,   // Red for endpoints
-  midpointColor: UI_COLORS.SNAP_MIDPOINT,   // Green for midpoints
-  centerColor: UI_COLORS.SNAP_CENTER,     // Blue for centers
-  intersectionColor: UI_COLORS.SNAP_INTERSECTION, // Magenta for intersections
+  // ⚠️ ADR-515: τα παρακάτω type-specific colors είναι ΝΕΚΡΑ — κανένας ζωντανός renderer
+  // δεν τα διαβάζει. Το ζωντανό type→χρώμα SSoT είναι `SNAP_COLORS`/`resolveSnapColor`
+  // στο `rendering/ui/snap/snap-visual-config.ts`. Παραμένουν μόνο για τύπο-συμβατότητα
+  // του `SnapSettings` (CanvasSettings)· ΜΗΝ τα «διορθώνεις» εδώ — άλλαξε το SSoT.
+  endpointColor: UI_COLORS.SNAP_ENDPOINT,   // @deprecated ADR-515 → snap-visual-config
+  midpointColor: UI_COLORS.SNAP_MIDPOINT,   // @deprecated ADR-515 → snap-visual-config
+  centerColor: UI_COLORS.SNAP_CENTER,       // @deprecated ADR-515 → snap-visual-config
+  intersectionColor: UI_COLORS.SNAP_INTERSECTION, // @deprecated ADR-515 → snap-visual-config
 
   // Visual feedback
   showTooltip: true,

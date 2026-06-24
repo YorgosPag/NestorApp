@@ -1,6 +1,6 @@
 # ADR-515 — Snap Marker Visual SSoT (σχήμα · χρώμα · μέγεθος, 2D + 3D)
 
-- **Status**: Proposed → (In Progress)
+- **Status**: Implemented (uncommitted)
 - **Date**: 2026-06-24
 - **Domain**: DXF Viewer — Snapping / Rendering (2D overlay + 3D markers)
 - **Supersedes scope of**: ADR-137 (Snap Icon Geometry) — *extends*, does not replace
@@ -121,4 +121,16 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
 
 ## 6. Changelog
 - **2026-06-24** — Δημιουργία ADR. Καταγραφή ευρημάτων audit (§2-§3) + απόφαση SSoT (§4).
-  Υλοποίηση: *(σε εξέλιξη)*.
+- **2026-06-24** — Υλοποίηση (χρωματικό μοντέλο: **type-specific / Revit-rich**, επιλογή Giorgio):
+  - **NEW** `rendering/ui/snap/snap-visual-config.ts` — SSoT: `SNAP_COLORS` (type-safe
+    `Record<ExtendedSnapType,string>`, 28/28 μέλη — exhaustiveness guard), `SNAP_MARKER_BASE_COLOR`,
+    `resolveSnapColor(type)`, `snapColorToThreeHex()` + re-export του `SNAP_ICON_GEOMETRY` (ADR-137,
+    ΕΝΑ entry point για snap visuals).
+  - **2D** `SnapIndicatorOverlay.tsx` — `snapColor = resolveSnapColor(type)` (ήταν μονόχρωμο
+    `canvasUI.overlay.colors.snap.border`)· αφαιρέθηκε το πλέον αχρησιμοποίητο `canvasUI` import.
+  - **3D** `bim-3d/shared/snap-marker-core.ts` — `SNAP_MARKER_COLOR` derived από
+    `SNAP_MARKER_BASE_COLOR` (ήταν inline `0x00e5ff`) → 2D & 3D κινούνται μαζί.
+  - **Deprecation** `SnapTypes.ts → DEFAULT_SNAP_SETTINGS` type-colors: σημάνθηκαν `@deprecated`
+    (νεκρά· pointer στο νέο SSoT). Πλήρης αφαίρεση νεκρών (`OverlayPass`/`RenderPipeline` snap path,
+    `snapIndicator.positioned` token) = ξεχωριστό housekeeping βήμα (§4.3).
+  - 🔴 Εκκρεμεί: tsc + browser-verify + commit (staging ADR-040 + ADR-515 → CHECK 6B/6D).

@@ -15,9 +15,14 @@
  */
 
 import * as THREE from 'three';
+// 🏢 ADR-515 — 3D marker χρώμα derived από τον snap-visual SSoT (2D & 3D κινούνται μαζί).
+import { SNAP_MARKER_BASE_COLOR, snapColorToThreeHex } from '../../rendering/ui/snap/snap-visual-config';
 
-/** Snap marker colour (cyan — distinct from axis/hover golds and from geometry). */
-export const SNAP_MARKER_COLOR = 0x00e5ff;
+/**
+ * Snap marker colour (cyan — distinct from axis/hover golds and from geometry).
+ * ADR-515: derived από το `SNAP_MARKER_BASE_COLOR` του snap-visual SSoT (ήταν inline 0x00e5ff).
+ */
+export const SNAP_MARKER_COLOR = snapColorToThreeHex(SNAP_MARKER_BASE_COLOR);
 /** Base marker box half-extent in world metres before screen-constant scaling. */
 export const SNAP_MARKER_RADIUS = 0.06;
 /** Screen-constant multiplier: markerScale = cameraDistance · tan(fov/2) · this. */
