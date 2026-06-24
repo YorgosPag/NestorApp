@@ -14,17 +14,18 @@
  * **FULL SSoT reuse (μηδέν διπλότυπο):** wall refs από `buildMemberAxisFrame` (axis ± ημι-πάχος)·
  * flange refs από `tshapeHeadReferences` (ΙΔΙΕΣ φόρμουλες με το footprint)· `buildCenteredAxisFaceFrame`
  * για τις CL listening dims· `axisAlignmentRotationDeg` για flush στροφή· `clamp` για ολίσθηση. Pure
- * (zero React/DOM/store). Μονάδες: scene units. Επεκτείνεται σε L/I/U flanges αργότερα (kind-dispatch).
+ * (zero React/DOM/store). Μονάδες: scene units. Kind-dispatch: **T-shape** (κεφαλή) + **L-shape**
+ * (οριζόντιο σκέλος) σήμερα με τον ΙΔΙΟ generic matcher· I/U flanges αργότερα.
  *
  * @see ./column-face-snap.ts — ο resolver/tier που το καταναλώνει (nearest-wins με edge/bbox/polar/rect)
- * @see ../geometry/column-geometry.ts — tshapeHeadReferences (SSoT γεωμετρία κεφαλής)
+ * @see ../geometry/column-head-references.ts — tshapeHeadReferences (SSoT γεωμετρία κεφαλής)
  * @see docs/centralized-systems/reference/adrs/ADR-523-column-head-multi-reference-snap.md
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ColumnKind, ColumnTshapeParams } from '../types/column-types';
+import type { ColumnKind, ColumnTshapeParams, ColumnLshapeParams } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { tshapeHeadReferences } from '../geometry/column-geometry';
+import { tshapeHeadReferences, lshapeHeadReferences } from '../geometry/column-head-references';
 import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
 import type { LinearMemberSnapTarget, GhostFaceFrame } from '../framing/linear-member-face-snap';
 import {
@@ -44,21 +45,29 @@ export interface HeadReferenceLines {
 }
 
 /**
- * SSoT builder — οι head reference lines του ενεργού ghost ανά `kind` (scene units). **T-shape μόνο**
- * σήμερα (το στιγμιότυπο)· για κάθε άλλο kind → `null` (ο tier μένει αδρανής → μηδέν regression). Η
- * διάσταση width/depth δίνεται ΗΔΗ resolved από τον caller (ίδιο SSoT defaults με το commit).
+ * SSoT builder — οι head reference lines του ενεργού ghost ανά `kind` (scene units). **T-shape**
+ * (κεφαλή/flange) ΚΑΙ **L-shape** (οριζόντιο σκέλος) σήμερα· για κάθε άλλο kind → `null` (ο tier μένει
+ * αδρανής → μηδέν regression). Η διάσταση width/depth δίνεται ΗΔΗ resolved από τον caller (ίδιο SSoT
+ * defaults με το commit). Kind-dispatch σε ΚΟΙΝΟ `*HeadReferences` SSoT (ΙΔΙΑ γεωμετρία με το footprint).
  */
 export function buildColumnHeadReferences(
   kind: ColumnKind,
   widthMm: number,
   depthMm: number,
   tshape: ColumnTshapeParams | undefined,
+  lshape: ColumnLshapeParams | undefined,
   sceneUnits: SceneUnits,
 ): HeadReferenceLines | null {
-  if (kind !== 'T-shape') return null;
   const s = mmToSceneUnits(sceneUnits);
-  const { perps, alongHalf } = tshapeHeadReferences(widthMm, depthMm, s, tshape);
-  return { perps, alongHalf };
+  if (kind === 'T-shape') {
+    const { perps, alongHalf } = tshapeHeadReferences(widthMm, depthMm, s, tshape);
+    return { perps, alongHalf };
+  }
+  if (kind === 'L-shape') {
+    const { perps, alongHalf } = lshapeHeadReferences(widthMm, depthMm, s, lshape);
+    return { perps, alongHalf };
+  }
+  return null;
 }
 
 /** Αποτέλεσμα multi-reference snap (ο `column-face-snap` το τυλίγει σε `ColumnFaceSnap`). */

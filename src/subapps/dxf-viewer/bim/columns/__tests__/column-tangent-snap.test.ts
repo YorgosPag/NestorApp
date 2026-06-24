@@ -106,6 +106,41 @@ describe('ADR-398 §3.19 — gating (μηδέν regression χωρίς R)', () =>
   });
 });
 
+describe('ADR-398 §3.20 — quadrant-to-end alignment (τεταρτημόριο ↔ άκρο/μέσον παρειάς)', () => {
+  const R = 200;
+  // Τοίχος δυτικό άκρο world x=-1000, ανατολικό x=+1000 (axis a=(-1000,0), along 0..2000).
+
+  it('Δ-τεταρτημόριο ↔ δυτικό άκρο: cursor (-800,200) → κέντρο x≈-800, δυτικό ακραίο σημείο=x=-1000', () => {
+    const s = snapWall({ x: -800, y: 200 }, circularOpts(R));
+    expect(s).not.toBeNull();
+    expect(s!.position.x).toBeCloseTo(-800, 3);          // κέντρο
+    expect(s!.position.x - R).toBeCloseTo(-1000, 3);     // δυτικό ακραίο σημείο ≡ δυτική παρειά
+    expect(s!.anchor).toBe('center');
+    expect(s!.alignmentGuide).toBeDefined();
+    expect(s!.alignmentGuide!.a.x).toBeCloseTo(-1000, 3); // κατακόρυφη γραμμή-οδηγός στο δυτικό άκρο
+    expect(s!.alignmentGuide!.b.x).toBeCloseTo(-1000, 3);
+  });
+
+  it('Α-τεταρτημόριο ↔ ανατολικό άκρο: cursor (800,200) → κέντρο x≈800, ανατολικό ακραίο σημείο=x=1000', () => {
+    const s = snapWall({ x: 800, y: 200 }, circularOpts(R));
+    expect(s!.position.x).toBeCloseTo(800, 3);
+    expect(s!.position.x + R).toBeCloseTo(1000, 3);      // ανατολικό ακραίο σημείο ≡ ανατολική παρειά
+    expect(s!.alignmentGuide!.a.x).toBeCloseTo(1000, 3);
+  });
+
+  it('κέντρο ↔ μέσον: cursor (0,200) → κέντρο x≈0 + γραμμή-οδηγός στο μέσον x=0', () => {
+    const s = snapWall({ x: 0, y: 200 }, circularOpts(R));
+    expect(s!.position.x).toBeCloseTo(0, 3);
+    expect(s!.alignmentGuide!.a.x).toBeCloseTo(0, 3);
+  });
+
+  it('μακριά από άκρα/μέσον: cursor (-400,200) → ελεύθερο γλίστρημα, ΧΩΡΙΣ οδηγό', () => {
+    const s = snapWall({ x: -400, y: 200 }, circularOpts(R));
+    expect(s!.position.x).toBeCloseTo(-400, 3); // ελεύθερο (μακριά > ζώνη 60mm)
+    expect(s!.alignmentGuide ?? null).toBeNull();
+  });
+});
+
 describe('ADR-398 §3.19 — ΛΟΞΟΣ τοίχος 45° (tangent σε κάθε γωνία)', () => {
   const R = 200;
   // perp μοναδιαία του άξονα u=(1/√2,1/√2) → (1/√2,−1/√2). Foot (500,500), offset +R·perp.

@@ -173,14 +173,28 @@ function buildCircularLocal(diameter: number, s: number): Point3D[] {
  * flipY=true: arm base moves to top (set by mirror — ADR-363 Phase 7.2).
  * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
-function buildLshapeLocal(width: number, depth: number, s: number, override?: ColumnLshapeParams): Point3D[] {
+/** L-shape μετρικά (scaled, scene units) — ΕΝΑ SSoT για footprint ΚΑΙ reference lines (ADR-523 §L-shape). */
+interface LshapeMetrics {
+  readonly armWidth: number;  // πάχος δευτερεύοντος (κατακόρυφου) βραχίονα κατά τον τοπικό x
+  readonly armLength: number; // πάχος οριζόντιου σκέλους κατά τον τοπικό y
+  readonly hw: number;        // ημι-πλάτος (width·s/2) — το οριζόντιο σκέλος εκτείνεται ±hw (centered)
+  readonly hd: number;        // ημι-βάθος (depth·s/2)
+  readonly ys: number;        // +1 default (σκέλος κάτω) / -1 flipY (σκέλος πάνω)
+}
+
+export function lshapeMetrics(width: number, depth: number, s: number, override?: ColumnLshapeParams): LshapeMetrics {
   // All mm scalars scaled by s → canvas units for correct 2D placement.
-  const armWidth = Math.max(s, (override?.armWidth ?? width / 3) * s);
-  const armLength = Math.max(s, (override?.armLength ?? depth / 3) * s);
-  const flipY = override?.flipY ?? false;
-  const hw = (width * s) / 2;
-  const hd = (depth * s) / 2;
-  const ys = flipY ? -1 : 1;
+  return {
+    armWidth: Math.max(s, (override?.armWidth ?? width / 3) * s),
+    armLength: Math.max(s, (override?.armLength ?? depth / 3) * s),
+    hw: (width * s) / 2,
+    hd: (depth * s) / 2,
+    ys: override?.flipY ? -1 : 1,
+  };
+}
+
+function buildLshapeLocal(width: number, depth: number, s: number, override?: ColumnLshapeParams): Point3D[] {
+  const { armWidth, armLength, hw, hd, ys } = lshapeMetrics(width, depth, s, override);
   const verts: Point3D[] = [
     { x: -hw,            y: ys * -hd,              z: 0 },
     { x:  hw,            y: ys * -hd,              z: 0 },
@@ -189,7 +203,7 @@ function buildLshapeLocal(width: number, depth: number, s: number, override?: Co
     { x: -hw + armWidth, y: ys * hd,               z: 0 },
     { x: -hw,            y: ys * hd,               z: 0 },
   ];
-  return flipY ? [...verts].reverse() : verts;
+  return override?.flipY ? [...verts].reverse() : verts;
 }
 
 /**
@@ -211,7 +225,7 @@ interface TshapeMetrics {
   readonly ys: number;          // +1 default / -1 flipY (κεφαλή κάτω)
 }
 
-function tshapeMetrics(width: number, depth: number, s: number, override?: ColumnTshapeParams): TshapeMetrics {
+export function tshapeMetrics(width: number, depth: number, s: number, override?: ColumnTshapeParams): TshapeMetrics {
   // All mm scalars scaled by s → canvas units for correct 2D placement.
   const flangeLength = Math.max(s, (override?.flangeLength ?? width) * s);
   const webThickness = Math.max(s, (override?.webThickness ?? depth / 3) * s);
@@ -239,32 +253,6 @@ function buildTshapeLocal(width: number, depth: number, s: number, override?: Co
     { x: -halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
   ];
   return ys === -1 ? [...verts].reverse() : verts;
-}
-
-/**
- * ADR-523 — οι ΤΡΕΙΣ παράλληλες reference lines της **κεφαλής (flange)** Τ-κολόνας ως signed
- * perpendicular offsets από το ΚΕΝΤΡΟ κατά τον τοπικό άξονα y (scene units), + ημι-μήκος κεφαλής.
- * Reuse `tshapeMetrics` (ΙΔΙΕΣ φόρμουλες με το footprint — μηδέν διπλό math). Με `flipY` τα offsets
- * γίνονται αρνητικά (η κεφαλή στο −y) — ο matcher τα χειρίζεται signed (orientation-agnostic).
- */
-export interface TshapeHeadReferences {
-  /** [βόρεια 1-2 (έξω άκρη), άξονας Γ, νότια ε (έσω άκρη)] — signed local-y offsets, scene units. */
-  readonly perps: readonly [number, number, number];
-  /** Ημι-μήκος κεφαλής κατά τον τοπικό x (along) — scene units. */
-  readonly alongHalf: number;
-}
-
-export function tshapeHeadReferences(
-  width: number,
-  depth: number,
-  s: number,
-  override?: ColumnTshapeParams,
-): TshapeHeadReferences {
-  const { flangeDepth, hd, halfFlange, ys } = tshapeMetrics(width, depth, s, override);
-  return {
-    perps: [ys * hd, ys * (hd - flangeDepth / 2), ys * (hd - flangeDepth)],
-    alongHalf: halfFlange,
-  };
 }
 
 /**

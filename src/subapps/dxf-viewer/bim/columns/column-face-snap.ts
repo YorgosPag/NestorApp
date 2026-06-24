@@ -69,7 +69,7 @@ import {
 } from '../framing/linear-member-face-snap';
 import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolvePolarDiskSnap, type PolarDiskSnapOptions } from './polar-disk-snap';
-import { resolveCircularTangentHit } from './column-tangent-snap';
+import { resolveCircularTangentHit, type PlacementAlignmentGuide } from './column-tangent-snap';
 import { resolveRectCartesianSnap } from './rect-cartesian-snap';
 import {
   resolveColumnHeadReferenceSnap,
@@ -121,6 +121,11 @@ export interface ColumnFaceSnap {
    * `ghostHalfWidth=0` → οι αποστάσεις μετρούν προς το **κέντρο** της κολώνας (Revit centerline).
    */
   readonly faceFrame: GhostFaceFrame;
+  /**
+   * ADR-398 §3.20 — γραμμή-οδηγός ευθυγράμμισης (world segment) όταν το **τεταρτημόριο** κυκλικής
+   * κολόνας κουμπώνει σε άκρο/μέσον παρειάς. `undefined` σε όλα τα άλλα snaps (preview-only overlay).
+   */
+  readonly alignmentGuide?: PlacementAlignmentGuide | null;
 }
 
 /** Στόχος: world-aligned bbox + ο άξονας των κοντών άκρων (`null` = κολόνα, καμία άκρη). */
@@ -470,7 +475,7 @@ export function resolveColumnFaceSnapFromTargets(
   // ADR-398 §3.19 — circumference-tangent (ΜΟΝΟ κυκλικό φάντασμα: `circleRadiusScene>0`): η περιφέρεια
   // εφάπτεται σε άξονα/παρειά (mode #3/#4) ως επιπλέον candidate. Gated → rect/polygon/πέδιλο αμετάβλητα.
   const tangentHit = opts && opts.circleRadiusScene
-    ? resolveCircularTangentHit(cursor, t, sceneUnits, opts.circleRadiusScene)
+    ? resolveCircularTangentHit(cursor, t, sceneUnits, opts.circleRadiusScene, opts.worldPerPixel ?? 0)
     : null;
   // Προτεραιότητα: το ΠΛΗΣΙΕΣΤΕΡΟ (nearest-wins). Το `tangentHit` μπαίνει **ΠΡΙΝ** το `bboxHit`: για
   // ΛΟΞΑ μέλη το AABB είναι μεγαλύτερο από το στερεό → ο `bboxHit` δίνει spurious `dist=0` cursor-εντός·

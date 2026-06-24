@@ -37,6 +37,7 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
+import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -329,6 +330,11 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const rectGrid = (previewEntity as { rectGrid?: RectGrid }).rectGrid;
         if (rectGrid) {
           previewCanvasRef.current.drawRectGrid(rectGrid);
+        }
+        // ADR-398 §3.20 — circumference quadrant-to-end alignment: dashed οδηγός στο άκρο/μέσον παρειάς.
+        const alignGuide = (previewEntity as { alignmentGuide?: PlacementAlignmentGuide }).alignmentGuide;
+        if (alignGuide) {
+          previewCanvasRef.current.drawAlignmentGuide(alignGuide);
         }
         // ADR-508 §column place+rotate — μετά το 1ο κλικ: ΠΟΡΤΟΚΑΛΙ γραμμή στρέψης + γωνία (ίδιο
         // SSoT `drawPolarTrackingLine` = drawingGuide χρώμα) από την κλειδωμένη θέση προς τον κέρσορα.

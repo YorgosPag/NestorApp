@@ -122,7 +122,10 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
   const ghost = toWysiwygPreviewEntity(entity, ghostId, ghostStatusColor, faceDimensions);
   // polar/rect grid overlay (ΙΔΙΟΣ resolver με το snap → μηδέν απόκλιση πλέγματος↔snap).
   const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, polarOpts);
-  return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
+  // ADR-398 §3.20 — γραμμή-οδηγός ευθυγράμμισης (τεταρτημόριο κυκλικής ↔ άκρο/μέσον παρειάς), preview-only.
+  const guide = (faceSnap && !isOverlap && faceSnap.alignmentGuide) ? { alignmentGuide: faceSnap.alignmentGuide } : {};
+  const merged = { ...extra, ...guide };
+  return Object.keys(merged).length ? ({ ...ghost, ...merged } as typeof ghost) : ghost;
 }
 
 /**

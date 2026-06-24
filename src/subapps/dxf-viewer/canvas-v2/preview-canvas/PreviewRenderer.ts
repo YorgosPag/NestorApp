@@ -12,8 +12,7 @@ import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils'
 // `dxf-canvas-renderer`). render() διαβάζει zero-lag το τρέχον transform → το ghost
 // ακολουθεί zoom/pan world-locked χωρίς cached/stale τιμή.
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
-import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
+import { renderDistanceLabelFromWorld, renderInfoLabel } from './preview-render-labels';
 import { OPACITY } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
@@ -69,6 +68,9 @@ import { paintRectGrid } from './rect-grid-paint';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 // ADR-357 Phase 1 — polar tracking line overlay (extracted, SRP — same pattern as the other *-paint helpers).
 import { paintPolarTrackingLine } from './polar-tracking-line-paint';
+// ADR-398 §3.20 — circumference quadrant-to-end alignment guide (dashed, same overlay SSoT).
+import { paintAlignmentGuide } from './alignment-guide-paint';
+import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -282,6 +284,15 @@ export class PreviewRenderer {
     paintPolarTrackingLine(this.ctx, ref, snappedAngle, label, cursorWorld, transform, viewport);
   }
 
+  /**
+   * ADR-398 §3.20 — ζωγράφισε τη γραμμή-οδηγό ευθυγράμμισης (τεταρτημόριο κυκλικής ↔ άκρο/μέσον
+   * παρειάς). Called AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   */
+  drawAlignmentGuide(guide: PlacementAlignmentGuide, transform: ViewTransform, viewport: Viewport): void {
+    if (!this.ctx) return;
+    paintAlignmentGuide(this.ctx, guide, transform, viewport);
+  }
+
   /** Clear preview immediately */
   clear(): void {
     this.currentPreview = null;
@@ -391,8 +402,8 @@ export class PreviewRenderer {
     const helpers: PreviewRenderHelpers = {
       viewport,
       renderGrip: (c, pos, o) => this.renderGrip(c, pos, o),
-      renderDistanceLabelFromWorld: (c, w1, w2, s1, s2) => this.renderDistanceLabelFromWorld(c, w1, w2, s1, s2),
-      renderInfoLabel: (c, pos, lines) => this.renderInfoLabel(c, pos, lines),
+      renderDistanceLabelFromWorld: (c, w1, w2, s1, s2) => renderDistanceLabelFromWorld(c, w1, w2, s1, s2),
+      renderInfoLabel: (c, pos, lines) => renderInfoLabel(c, pos, lines),
     };
 
     // Dispatch to entity renderer
@@ -452,38 +463,6 @@ export class PreviewRenderer {
       },
       { gripSize: opts.gripSize, dpiScale: 1.0 }
     );
-  }
-
-  private renderDistanceLabelFromWorld(
-    ctx: CanvasRenderingContext2D,
-    worldP1: Point2D, worldP2: Point2D, screenP1: Point2D, screenP2: Point2D,
-  ): void {
-    renderDistanceLabel(ctx, worldP1, worldP2, screenP1, screenP2, PREVIEW_LABEL_DEFAULTS);
-  }
-
-  private renderInfoLabel(
-    ctx: CanvasRenderingContext2D, screenPos: Point2D, lines: string[],
-  ): void {
-    if (lines.length === 0) return;
-    const style = getTextPreviewStyleWithOverride();
-    if (!style.enabled) return;
-
-    const fontSize = parseInt(style.fontSize);
-    const lineHeight = fontSize + 4;
-    const font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
-
-    ctx.save();
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const boxY = screenPos.y + fontSize + 6;
-    ctx.fillStyle = style.color;
-    ctx.globalAlpha = style.opacity;
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], screenPos.x, boxY + i * lineHeight + lineHeight / 2);
-    }
-    ctx.restore();
   }
 
   // ===== CLEANUP =====

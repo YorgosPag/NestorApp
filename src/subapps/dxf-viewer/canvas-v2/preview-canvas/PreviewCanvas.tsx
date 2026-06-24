@@ -37,6 +37,7 @@ import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-r
 import type { WallHudMeta } from './wall-hud-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
+import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -143,6 +144,11 @@ export interface PreviewCanvasHandle {
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
   drawRectGrid: (grid: RectGrid) => void;
+  /**
+   * ADR-398 §3.20 — draw the circumference quadrant-to-end alignment guide (dashed end/center line).
+   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawAlignmentGuide: (guide: PlacementAlignmentGuide) => void;
 }
 
 // ============================================================================
@@ -425,6 +431,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawRectGrid(grid, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-398 §3.20: circumference quadrant-to-end alignment guide overlay */
+        drawAlignmentGuide: (guide: PlacementAlignmentGuide) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawAlignmentGuide(guide, transformRef.current, viewportRef.current);
         },
       }),
       []

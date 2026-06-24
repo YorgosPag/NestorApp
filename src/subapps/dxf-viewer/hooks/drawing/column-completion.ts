@@ -138,7 +138,7 @@ export function getKindDimensionDefaults(kind: ColumnKind): { width: number; dep
  * ADR-523 — οι reference lines της κεφαλής του ενεργού column ghost από `kind` + `overrides`,
  * με τα ΙΔΙΑ width/depth defaults που θα έβγαζε το commit (`getKindDimensionDefaults` SSoT). Καλείται
  * ταυτόσημα από preview ΚΑΙ commit ώστε ο multi-reference snap να είναι preview ≡ commit by construction.
- * `null` για μη-Τ kind (ο tier αδρανής). Pure (delegate στο `buildColumnHeadReferences`).
+ * `null` για kind χωρίς reference lines (ο tier αδρανής). Pure (delegate στο `buildColumnHeadReferences`).
  */
 export function resolveColumnHeadReferences(
   kind: ColumnKind,
@@ -151,6 +151,7 @@ export function resolveColumnHeadReferences(
     overrides.width ?? dims.width,
     overrides.depth ?? dims.depth,
     overrides.tshape,
+    overrides.lshape,
     sceneUnits,
   );
 }
