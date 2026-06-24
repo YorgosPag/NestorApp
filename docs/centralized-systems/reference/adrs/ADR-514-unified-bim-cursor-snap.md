@@ -220,3 +220,27 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
   endpoint). Το **overlap/collision** set μένει `['beam','slab']` (δοκάρι κατά μήκος τοίχου = έγκυρο, ΟΧΙ
   duplication — split snap-vs-collision όπως ο τοίχος). +1 jest (beam→wall snap ΜΕ/ΧΩΡΙΣ 'wall'). 🔴 tsc +
   browser-verify + commit.
+- **2026-06-24** — **Φ6d ΕΝΟΠΟΙΗΣΗ ΦΑΝΤΑΣΜΑΤΟΣ ΠΕΔΙΛΟΥ ↔ ΚΟΛΟΝΑΣ (placement → rotation → CL ενδείξεις)**
+  (Giorgio «ίδιο σύστημα από ΜΙΑ πηγή αλήθειας, Revit-grade, μέχρι και την περιστροφή», UNCOMMITTED):
+  Ο RESOLVER ήταν ήδη κοινός (`foundation-pad` → ΙΔΙΟΣ `resolveColumnFaceSnapFromTargets`), αλλά η **PREVIEW
+  ASSEMBLY** + το **place→rotate FSM** ήταν column-only· το πέδιλο είχε φτωχό αντίγραφο που κρατούσε μόνο
+  το `snap.point`. **FULL SSoT, μηδέν διπλότυπο (Giorgio audit):**
+  · **NEW `bim/placement/placement-ghost-assembly.ts`** — entity-agnostic συναρμολόγηση ghost + **CL
+    listening dims** (σιελ) / καρτεσιανά dx/dy + **polar/rect grid** (`assemblePlacementGhost` awaitingPosition
+    + `assemblePlacementRotationGhost` awaitingRotation), παραμετρικό ως προς injected `buildEntity`. Reuse
+    `resolveGhostFaceDimensionsMeta` + `resolveRectCartesianDims` + `buildPlacementGridMeta` + `toWysiwygPreviewEntity`
+    — **καμία νέα γεωμετρία**. `generateColumnPreview` + `generateFoundationPadPreview` καλούν την ΙΔΙΑ assembly.
+  · **NEW `systems/cursor/PlacementRotationStore.ts`** — γενίκευση του `ColumnRotationStore` (κοινό place→rotate
+    lock κολώνα+πέδιλο)· το `ColumnRotationStore.ts` = byte-for-byte re-export aliases (column consumers +
+    `drawing-hover-handler` πορτοκαλί γραμμή ΑΜΕΤΑΒΛΗΤΑ· ζωγραφίζεται αυτόματα ΚΑΙ για το πέδιλο).
+  · **NEW `bim/placement/placement-polar-opts.ts`** — γενίκευση `buildColumnPolarSnapOptions(widthMm,depthMm,units)`
+    (column wrapper delegate· πέδιλο περνά width×length).
+  · **`useFoundationTool` pad → 2-click place+rotate** (mirror `useColumnTool`): 1ο κλικ κλειδώνει θέση+auto λαβή
+    (`setPlacementRotationLock`) → `awaitingRotation` → 2ο κλικ commit με `resolveColumnRotationDeg`· ESC/deactivate/
+    setKind/setPlacementMode clear lock. NEW i18n `tools.foundation.statusRotation` (el+en). Το πέδιλο περνά πλέον
+    `columnOpts` σε preview+commit → ΙΔΙΟ magnet με κολόνα. **TopLean (slanted) μένει column-only** (το πέδιλο δεν
+    γέρνει — εκτός scope). 6 (assembly) + 8 (foundation preview) + 10 (foundation FSM) + 29 (column/polar/rect
+    regression) jest GREEN, tsc 0 (δικά μου). **ΟΧΙ runtime διπλότυπο** βρέθηκε στο `buildDefaultFoundationParams`
+    (name collision types vs completion) → flagged `pending-ratchet-work.md`. 🔴 browser-verify (πέδιλο: flush
+    παρειά/άξονα + σιελ + polar/rect πλέγμα + 1ο κλικ→περιστροφή+πορτοκαλί γραμμή→2ο κλικ commit· ίδια αίσθηση
+    με κολόνα) + commit. ⚠️ CHECK 6B/6D → stage ADR-040 + ADR-514 + ADR-398 μαζί.
