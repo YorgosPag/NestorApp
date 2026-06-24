@@ -1,0 +1,259 @@
+/**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * After any architectural change → update the ADR changelog (same commit).
+ *
+ * CanvasLayerStack — composite preview/ghost mounts (Phase E, ADR-040).
+ *
+ * Split out of canvas-layer-stack-leaves.tsx (500-LOC cap). Holds the single
+ * `PreviewCanvasMounts` composite that wires every dedicated-canvas preview /
+ * ghost overlay sharing the same `getCanvas` / `getViewportElement` getters,
+ * keeping the shell CanvasLayerStack lean (one JSX node instead of ~30 lines
+ * of props). The micro-leaf subscriber components stay in -leaves.tsx.
+ */
+
+'use client';
+import React from 'react';
+import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
+import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
+import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
+import { MepRadiatorGhostPreviewMount, type MepRadiatorGhostPreviewMountProps } from './canvas-layer-stack-mep-radiator-ghost';
+import { MepBoilerGhostPreviewMount, type MepBoilerGhostPreviewMountProps } from './canvas-layer-stack-mep-boiler-ghost';
+import { MepWaterHeaterGhostPreviewMount, type MepWaterHeaterGhostPreviewMountProps } from './canvas-layer-stack-mep-water-heater-ghost';
+import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps } from './canvas-layer-stack-mep-segment-ghost';
+import { WaterProposalGhostPreviewMount } from './canvas-layer-stack-water-proposal-ghost';
+import { DrainageProposalGhostPreviewMount } from './canvas-layer-stack-drainage-proposal-ghost';
+import { HeatingProposalGhostPreviewMount } from './canvas-layer-stack-heating-proposal-ghost';
+import { ElectricalProposalGhostPreviewMount } from './canvas-layer-stack-electrical-proposal-ghost';
+import { HvacProposalGhostPreviewMount } from './canvas-layer-stack-hvac-proposal-ghost';
+import { FireProposalGhostPreviewMount } from './canvas-layer-stack-fire-proposal-ghost';
+import { GasProposalGhostPreviewMount } from './canvas-layer-stack-gas-proposal-ghost';
+// ADR-441 Slice 3-perf — zero-lag associative follow ghost (hosted foundation strips
+// follow a dragged guide frame-for-frame on a dedicated canvas).
+import { GuideFollowGhostPreviewMount } from './GuideFollowGhostOverlay';
+import { ClashOverlayMount } from './canvas-layer-stack-clash-overlay';
+import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
+import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
+import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
+import { MepWireWaypointDragMount } from './canvas-layer-stack-mep-wire-waypoint';
+import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation';
+// ADR-362 Phase J4 — live associative-dimension follow during a Move/grip drag
+// (dim value + ext lines + text recompute frame-for-frame, preview ≡ commit).
+import { DimAssociationGhostPreviewMount } from '../../hooks/dimensions/useDimAssociationGhostPreview';
+import { TrimPreviewMount } from './TrimPreviewMount';
+import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
+import {
+  RotationPreviewMount,
+  MovePreviewMount,
+  MirrorPreviewMount,
+  ScalePreviewMount,
+  StretchPreviewMount,
+  GripDragPreviewMount,
+  type RotationPreviewMountProps,
+  type MovePreviewMountProps,
+  type MirrorPreviewMountProps,
+  type ScalePreviewMountProps,
+  type StretchPreviewMountProps,
+} from './canvas-layer-stack-tool-preview-mounts';
+import type { DxfGripDragPreview } from '../../hooks/grip-computation';
+import type { ViewTransform } from '../../rendering/types/Types';
+import type { SceneModel } from '../../types/scene';
+
+// PREVIEW CANVAS MOUNTS — composite zero-jsx preview mounts
+export interface PreviewCanvasMountsProps {
+  rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-350: TRIM overlay has no extra payload — full state lives in TrimToolStore. */
+  trim?: Record<string, never>;
+  /** ADR-406 — MEP fixture 2D placement ghost payload. */
+  mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Φ3 — electrical panel 2D placement ghost payload. */
+  electricalPanelGhost: Omit<ElectricalPanelGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Φ12 — MEP manifold (plumbing) 2D placement ghost payload. */
+  mepManifoldGhost: Omit<MepManifoldGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Εύρος Β — heating radiator 2D placement ghost payload. */
+  mepRadiatorGhost: Omit<MepRadiatorGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Εύρος Β #2 — heating boiler 2D placement ghost payload. */
+  mepBoilerGhost: Omit<MepBoilerGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 DHW — domestic water heater 2D placement ghost payload. */
+  mepWaterHeaterGhost: Omit<MepWaterHeaterGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Φ8 — MEP segment (duct/pipe) 2D rubber-band ghost payload. */
+  mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  openingGhost: Omit<OpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  gripDragPreview: DxfGripDragPreview | null;
+  selectedEntityIds: string[];
+  levelManager: MovePreviewMountProps['levelManager'] & {
+    setLevelScene: (levelId: string, scene: SceneModel) => void;
+  };
+  transform: ViewTransform;
+  /** ADR-040 SSoT — viewport size for the dedicated-canvas proposal ghost overlays. */
+  viewport: { width: number; height: number };
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+/**
+ * Renders the 3 PreviewCanvas mounts (Rotation / Move / GripDrag) sharing
+ * the same `getCanvas` / `getViewportElement` getters. Keeps the shell
+ * CanvasLayerStack lean (single JSX node instead of 30 lines of props).
+ */
+export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
+  props: PreviewCanvasMountsProps,
+) {
+  const { rotation, move, mirror, scale, stretch, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  return (
+    <>
+      <RotationPreviewMount
+        {...rotation}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MirrorPreviewMount
+        {...mirror}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MovePreviewMount
+        {...move}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ScalePreviewMount
+        {...scale}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <StretchPreviewMount
+        {...stretch}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <TrimPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ExtendPreviewOverlay
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <GripDragPreviewMount
+        dragPreview={gripDragPreview}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepFixtureGhostPreviewMount
+        {...mepFixtureGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ElectricalPanelGhostPreviewMount
+        {...electricalPanelGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepManifoldGhostPreviewMount
+        {...mepManifoldGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepRadiatorGhostPreviewMount
+        {...mepRadiatorGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepBoilerGhostPreviewMount
+        {...mepBoilerGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepWaterHeaterGhostPreviewMount
+        {...mepWaterHeaterGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepSegmentGhostPreviewMount
+        {...mepSegmentGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-040 SSoT: every proposal ghost now owns its OWN dedicated canvas (ProposalGhostOverlay),
+          so it persists across idle/pan/zoom instead of being wiped by the shared PreviewCanvas. */}
+      {/* ADR-426 Slice 2 — water auto-design proposal ghost (low-freq store, inert while idle). */}
+      <WaterProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-427 Slice 2 — drainage auto-design proposal ghost (low-freq store, inert while idle). */}
+      <DrainageProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-428 Slice 2 — heating auto-design proposal ghost (low-freq store, inert while idle). */}
+      <HeatingProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-430 Slice 2 — electrical auto-design proposal ghost (low-freq store, inert while idle). */}
+      <ElectricalProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-432 Slice 2 — HVAC (ventilation) auto-design proposal ghost (low-freq store, inert while idle). */}
+      <HvacProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-433 Slice 2 — fire-protection (sprinkler) auto-design proposal ghost (low-freq store, inert while idle). */}
+      <FireProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design proposal ghost (low-freq store, inert while idle). */}
+      <GasProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-441 Slice 3-perf — zero-lag follow ghost: hosted πεδιλοδοκοί ακολουθούν
+          τον dragged οδηγό frame-for-frame (dedicated canvas, mount μόνο όσο σύρεται). */}
+      <GuideFollowGhostPreviewMount transform={transform} viewport={viewport} levelManager={levelManager} />
+      {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
+      <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-362 Phase J4 — associated dimensions follow a Move/grip drag LIVE (recompute
+          per frame via the SAME applyAssociationUpdates SSoT the release commits). Mounted
+          AFTER the entity-ghost mounts so its skip-clear layer paints on top of their frame. */}
+      <DimAssociationGhostPreviewMount
+        movePhase={move.phase}
+        moveBasePoint={move.basePoint}
+        moveSelectedEntityIds={selectedEntityIds}
+        gripDragPreview={gripDragPreview}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <OpeningTagDragMount
+        transform={transform}
+        getViewportElement={getViewportElement}
+        currentLevelId={levelManager.currentLevelId}
+        getLevelScene={levelManager.getLevelScene}
+        setLevelScene={levelManager.setLevelScene}
+      />
+      {/* ADR-408 Φ7 FU#3 — editable home-run wire waypoints (active circuit). */}
+      <MepWireWaypointDragMount
+        transform={transform}
+        getViewportElement={getViewportElement}
+        currentLevelId={levelManager.currentLevelId}
+        getLevelScene={levelManager.getLevelScene}
+      />
+    </>
+  );
+});

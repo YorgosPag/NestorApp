@@ -2,7 +2,7 @@
 
 **Status:** Accepted (uncommitted) — 2026-06-20
 **Owners:** DXF Viewer / BIM drawing tools
-**Related:** ADR-398 (smart beam ghost — η πηγή), ADR-363 (BIM drawing mode / wall+beam FSM)
+**Related:** ADR-398 (smart beam ghost — η πηγή), ADR-363 (BIM drawing mode / wall+beam FSM), ADR-514 (unified BIM cursor snap — η wall+beam placement πλέον καλείται μέσω του εγκεφάλου `resolveBimCursorSnap`, Φ3)
 
 ---
 

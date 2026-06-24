@@ -8,7 +8,7 @@
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-378-snap-system-master-architecture.md` |
 | **Author** | Claude Opus 4.7 + Γιώργος Παγώνης |
 | **Supersedes (consolidates)** | Phantom ADR-149 (referenced by ADR-371 but never written) |
-| **Companions (sub-decisions)** | ADR-087 (config constants), ADR-095 (tolerance), ADR-137 (icon geometry), ADR-153 (tooltip offset), ADR-371 (BIM corners), ADR-362 (dimension snap), ADR-363 (column center), ADR-189 (construction guides), ADR-344 (text snap), ADR-040 (lifecycle owner), ADR-357 (override modes) |
+| **Companions (sub-decisions)** | ADR-087 (config constants), ADR-095 (tolerance), ADR-137 (icon geometry), ADR-153 (tooltip offset), ADR-371 (BIM corners), ADR-362 (dimension snap), ADR-363 (column center), ADR-189 (construction guides), ADR-344 (text snap), ADR-040 (lifecycle owner), ADR-357 (override modes), ADR-514 (unified BIM cursor placement-snap «Ένας Εγκέφαλος Έλξης» — tool-agnostic entry over the Layer-2 placement resolvers) |
 | **Industry alignment** | Revit (Snap Engine), AutoCAD (OSNAP), ArchiCAD (Snap Guide + Hotspots), BricsCAD (ESNAP), SketchUp (Inference Engine), Vectorworks (Snapping Palette), BentleyMicroStation (AccuSnap) |
 
 ---

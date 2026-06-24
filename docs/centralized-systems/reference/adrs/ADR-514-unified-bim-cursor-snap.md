@@ -1,6 +1,6 @@
 # ADR-514 — Unified BIM Cursor Snap («Ένας Εγκέφαλος Έλξης», Revit-grade)
 
-- **Status**: 🟡 IN PROGRESS — Φ1 foundation + Φ2 column + Φ3 wall/beam wiring DONE (jest GREEN, UNCOMMITTED), Φ2+Φ3 pending browser-verify · Φ4-Φ5 TODO
+- **Status**: 🟢 CORE COMPLETE (UNCOMMITTED) — Φ1 foundation + Φ2 column + Φ3 wall/beam wiring + Φ5 SSoT-lock DONE· Φ4 N/A (already uniform via central OSNAP). 🔴 pending browser-verify (Φ2+Φ3) πριν commit. Φ6 face-snap feature = μελλοντικό (Giorgio).
 - **Date**: 2026-06-24
 - **Category**: DXF Viewer — Snapping (Master companion to ADR-378)
 - **Related**: ADR-378 (Snap Master Architecture), ADR-398 (Column placement snap), ADR-508 (Unified linear-member framing), ADR-040 (Preview Canvas perf)
@@ -87,8 +87,9 @@ type BimCursorSnap =
 | **Φ1** | Pure SSoT `resolveBimCursorSnap` + tests (6 jest). Μηδέν wiring → μηδέν regression. | ✅ DONE | jest GREEN |
 | **Φ2** | Wire **κολόνα**: `mouse-handler-up` column branch (commit) + `column-preview-helpers` (preview) → καταναλώνουν τον εγκέφαλο (`toolKind:'column'`, ΧΩΡΙΣ findSnapPoint = anti double-snap). | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify κολόνα |
 | **Φ3** | Wire **wall + beam** START placement (1ο κλικ): commit (`useWallTool.resolveWallStartAnchor` + `useBeamTool.resolveStartAnchor`) + preview (`makeWallGhostBeforeClick` + `makeBeamGhostBeforeClick`) → εγκέφαλος (`toolKind:'wall'\|'beam'`, ΧΩΡΙΣ findSnapPoint). Wall END snap (`wall-endpoint-snap`) = ξεχωριστό point-snap leaf, εκτός scope. | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify τοίχος/δοκάρι |
-| **Φ4** | Ομοιόμορφη έλξη σε νέα tools (slab/roof/foundation-line) μέσω του ΙΔΙΟΥ εγκεφάλου. | 🔴 TODO | browser-verify |
-| **Φ5** | SSoT registry entry + ADR-378/398/508 cross-links + dead-code baseline. | 🔴 TODO | pre-commit |
+| **Φ4** | ~~Ομοιόμορφη έλξη slab/roof/foundation μέσω εγκεφάλου~~ → **N/A**: audit (2026-06-24) έδειξε ότι τα slab/roof/foundation tools έχουν **μηδέν** δικές τους snap κλήσεις — κουμπώνουν ήδη ομοιόμορφα από το **κεντρικό OSNAP** (`mouse-handler-up` else-branch). Καμία ασυμμετρία να ενοποιηθεί· point-only routing = no-op indirection (απορρίφθηκε από Giorgio). | ✅ N/A (already uniform) | — |
+| **Φ5** | SSoT registry module `bim-cursor-snap` (tier 4, 4 forbidden patterns: no parallel brain + no direct Layer-2 resolver calls outside canonical/leaf) + ADR-378/398/508 cross-links. Dead-code: εγκέφαλος πλέον live (5 production consumers)· aliases ήδη test-only → μηδέν baseline change. | ✅ DONE (UNCOMMITTED) | golden 56/56 + dry-run CLEAN |
+| **Φ6** (μελλοντικό) | **NEW feature** (Giorgio 2026-06-24): face-snap placement σε slab/roof/foundation — ακμή πλάκας/θεμελίου flush σε παρειά τοίχου/κολόνας μέσω του εγκεφάλου (νέα `toolKind` + Layer-2 resolver). Σχεδιασμός, όχι wiring. | 🔴 TODO (ξεχωριστή συνεδρία) | browser-verify |
 
 ⚠️ **Wiring touches ADR-040 architecture-critical files** (`mouse-handler-up`, snap-scheduler) → CHECK
 6B/6D: stage ADR-040 + ADR-514 μαζί. Κάθε φάση browser-verified ΠΡΙΝ την επόμενη (zero-regression gate).
@@ -130,3 +131,17 @@ type BimCursorSnap =
   dead-code regression, baseline file-level). 673/674 jest GREEN (το 1 fail = `beam-grips.test.ts:447`
   προϋπάρχον, μηδέν σχέση με τα αλλαγμένα αρχεία). tsc: ✅ clean (0 errors στα 5 αρχεία). 🔴 browser-verify
   εκκρεμεί. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκαν drawing/preview canvas files).
+- **2026-06-24** — Φ4 = **N/A** (audit-driven): τα slab/roof/foundation tools δεν έχουν δικές τους snap
+  κλήσεις (grep-verified) — κουμπώνουν ήδη ομοιόμορφα από το κεντρικό OSNAP. Καμία ασυμμετρία να
+  ενοποιηθεί· point-only routing απορρίφθηκε (no-op indirection). Η ασυμμετρία του ADR λύθηκε πλήρως
+  με Φ2+Φ3. (Giorgio αποφάσισε: Φ5 πρώτα, μετά νέο feature face-snap = Φ6.)
+- **2026-06-24** — Φ5 (SSoT-lock, UNCOMMITTED): NEW registry module `bim-cursor-snap` (`.ssot-registry.json`,
+  tier 4, addedByAdr ADR-514) με 4 forbidden patterns: (1) re-declare `resolveBimCursorSnap` (parallel brain)·
+  (2-4) direct `resolveColumnFaceSnapFromTargets(`/`resolveMemberGhostSnapFromStore(`/`resolveBeamGhostSnapFromStore(`
+  εκτός canonical resolver files + brain + wall-endpoint leaf (allowlist 5 paths). Boy-scout: διορθώθηκε ένα
+  JSDoc comment στο `column-preview-helpers.ts` (false-positive `(` μετά το όνομα). Cross-links: ADR-378
+  (Companions row), ADR-398 (Σχετικά), ADR-508 (Related) → δείχνουν ADR-514. Dead-code: εγκέφαλος live (5
+  consumers)· aliases ήδη test-only → μηδέν `.deadcode-baseline.json` change. Validation: registry golden
+  56/56 PASS (ERE-validity όλων των patterns μέσω `grep -E -f`) + dry-run grep CLEAN (όλα τα matches σε
+  allowlist/exempt). ssot:baseline ΔΕΝ τρέχτηκε (μηδέν violations· αποφυγή pollution από uncommitted
+  άλλων agents στο shared tree). ⚠️ Στο commit: stage ADR-514 + `.ssot-registry.json` + τα 3 cross-linked ADR.

@@ -23,7 +23,7 @@
  * Pure: zero React/DOM, ΙΔΙΑ δεδομένα με το commit path.
  *
  * @see ./column-completion.ts — buildDefaultColumnParams / buildColumnEntity (commit builders)
- * @see ../../bim/columns/column-face-snap.ts — resolveColumnFaceSnapFromTargets (θέση/λαβή/status SSoT)
+ * @see ../../bim/placement/bim-cursor-snap.ts — resolveBimCursorSnap (ADR-514 unified entry· delegate → column face SSoT)
  * @see ../../bim/framing/scene-snap-targets.ts — κοινό SSoT στόχων (sync-in-preview)
  * @see ../../systems/cursor/mouse-handler-up.ts — click-path commit (ίδιος resolver + στόχοι)
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.10
