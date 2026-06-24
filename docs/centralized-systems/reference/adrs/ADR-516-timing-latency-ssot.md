@@ -1,6 +1,6 @@
 # ADR-516 — Timing & Latency SSoT (Zero-Lag Interaction)
 
-- **Status**: **Proposed** (audit complete — υλοποίηση εκκρεμεί συζήτηση/έγκριση Giorgio)
+- **Status**: **Accepted — Phase 1 Implemented** (2026-06-24· config merge + zero-lag guard + grip fix· rewire των bypass = Phase 2)
 - **Date**: 2026-06-24
 - **Domain**: DXF Viewer — Interaction / Performance / Configuration (cross-cutting)
 - **Author**: audit κατόπιν εντολής Giorgio (2026-06-24)
@@ -185,15 +185,21 @@
 
 ---
 
-## 6. Open Questions (να αποφασιστούν στη συζήτηση πριν την υλοποίηση)
+## 6. Open Questions — ΑΠΑΝΤΗΘΗΚΑΝ (2026-06-24)
 
-1. **Autosave: 500 ή 2000ms;** Υπάρχουν και οι δύο τιμές ζωντανές. Ποια είναι η σωστή (ή per-domain;).
-   *(Πρόταση: 500ms per-entity persist, 2000ms scene-level — αλλά θέλει επιβεβαίωση.)*
-2. **Μετακίνηση αντικειμένου (drag/grip) — υπάρχει ορατό 1-frame lag;** Πρέπει να επαληθευτεί στον
-   browser ότι το ghost ακολουθεί instant και μόνο το persist είναι throttled (§2.5).
-3. **Μέγεθος/scope υλοποίησης**: το rewire αγγίζει **~30–40 αρχεία σε 2+ domains** (persistence + drag +
-   bim-3d). Κατά N.8 → **Orchestrator-level** (~2.5–3.5× tokens), απαιτεί ρητή έγκριση. Εναλλακτικά:
-   **Φάση 1 μόνο** (merge configs + ADR + zero-lag guard, χαμηλό ρίσκο), rewire σε επόμενη φάση.
+1. **Autosave: 500 ή 2000ms;** → **Τρεις διακριτές έννοιες, καμία αλλαγή τιμής** (όπως Figma/Google:
+   per-object vs document autosave):
+   - per-entity persist = **500ms** (`DXF_TIMING.persist.ENTITY_AUTOSAVE`, 24 hooks)
+   - scene-level snapshot = **2000ms** (`DXF_TIMING.persist.SCENE_AUTOSAVE`, βαρύ full-scene write)
+   - settings/overlay storage = **500ms** (`DXF_TIMING.persist.SETTINGS`)
+2. **Μετακίνηση αντικειμένου — ορατό lag;** → **Ναι, στο grip path.** Audit του κώδικα έδειξε:
+   - `useEntityDrag.updateDrag`: throttle **με trailing-edge RAF flush** → coalesce σε 60fps, μηδέν
+     dropped frames (ήδη Revit-grade).
+   - `useGripMovement.updateGripDrag`: throttle **HARD-DROP χωρίς trailing flush** (`return` σκέτο)
+     → το `setGripState` (το οπτικό ghost) έμενε έως 1 frame πίσω & έχανε το τελευταίο sub-frame
+     (lag type A). **Διορθώθηκε** (§5.2 παρακάτω).
+3. **Scope** → Πλήρες rewire = **~45 αρχεία / 3 domains = Orchestrator-level** (N.8). Απόφαση Giorgio:
+   **Φάση 1 τώρα** (config merge + zero-lag guard + grip fix, χαμηλό ρίσκο)· rewire των bypass = Φάση 2.
 
 ---
 
@@ -208,9 +214,36 @@
 
 ---
 
+## 8.bis Phase 1 — Implementation (2026-06-24)
+
+**Παραδοτέα Φάσης 1 (χαμηλό ρίσκο, μόνο config + 2 drag/grip hooks):**
+
+1. **ΕΝΑ SSoT module** — `config/dxf-timing.ts → DXF_TIMING`, οργανωμένο στις 7 κατηγορίες (0–6).
+   Κατηγορία 0 (instant path) = **σκόπιμα απούσα** (αρχιτεκτονική, όχι τιμή).
+2. **Τα 3 configs έγιναν facades** πάνω στο `DXF_TIMING` (μηδέν αλλαγή ονομάτων/τιμών/consumer):
+   - `config/panel-tokens.ts → PANEL_LAYOUT.TIMING` (όλα τα ~40 keys → references)
+   - `config/timing-config.ts → TIMING_CONFIG` (INPUT/FIELD/UI/STORAGE/COLLAB/CACHE → references)
+   - `config/settings-config.ts` (CANVAS_THROTTLE/DEBOUNCE_DELAY/AUTO_SAVE_INTERVAL/ANIMATION_DURATION)
+   → Τέλος στα δύο «I am the single source» claims. Καμία τιμή δεν ορίζεται πια εκτός `DXF_TIMING`.
+3. **Zero-lag guard (κατηγορία 0)** — τεκμηριωμένος κανόνας στο τέλος του `dxf-timing.ts`: τα
+   `ImmediatePositionStore` / `ImmediateTransformStore` / `CrosshairOverlay` ΔΕΝ παίρνουν timing const·
+   το ghost μετακίνησης ακολουθεί instant (per-frame coalesced), throttle μόνο στο command/persist.
+   *(Pre-commit ratchet = Φάση 2.)*
+4. **Grip zero-lag fix + SSoT helper** — NEW `hooks/raf-coalesced-throttle.ts`
+   (`createRafCoalescedThrottle`): leading-edge apply + trailing-RAF flush του **τελευταίου** payload.
+   Εξάλειψε το διπλότυπο throttle: ΚΑΙ `useEntityDrag` ΚΑΙ `useGripMovement` το χρησιμοποιούν τώρα.
+   Διορθώνει το hard-drop του grip ghost (§6 Q2). Frame window + merge window → `DXF_TIMING`.
+   - jest: `hooks/__tests__/raf-coalesced-throttle.test.ts` (6/6 — leading/trailing/coalesce/reset/cancel).
+
+**Φάση 2 (επόμενη συνεδρία, Orchestrator):** rewire των ~45 bypass (`AUTO_SAVE_DEBOUNCE_MS`,
+frame-time, one-off §2.4) → `DXF_TIMING` + κατάργηση facades + pre-commit ratchet (ADR-294/314).
+
 ## 8. Changelog
 
+- **2026-06-24 (Phase 1 impl)** — Υλοποίηση Φάσης 1: NEW `config/dxf-timing.ts` (DXF_TIMING, 7
+  κατηγορίες)· τα 3 configs → facades· NEW `hooks/raf-coalesced-throttle.ts` SSoT helper· grip zero-lag
+  fix (`useGripMovement` hard-drop → trailing-RAF) + ενοποίηση με `useEntityDrag`· 6/6 jest. Open
+  questions §6 απαντήθηκαν. **Status → Accepted (Phase 1 Implemented).**
 - **2026-06-24** — Δημιουργία ADR. Πλήρες audit timing/lag (§2): 3 ανταγωνιστικά SSoT, αντιφάσεις,
   κατάλογος bypass (§2.4), zero-lag path (§2.5). Κατηγοριοποίηση 0–6 (§4). Proposed απόφαση (§5):
   ένα `DXF_TIMING` + zero-lag guard + rewire + ratchet. Open questions προς συζήτηση (§6).
-  **Status: Proposed — καμία αλλαγή κώδικα. Αναμονή έγκρισης Giorgio.**

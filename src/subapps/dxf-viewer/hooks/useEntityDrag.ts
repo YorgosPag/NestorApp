@@ -45,6 +45,9 @@ import { calculateDistance } from '../rendering/entities/shared/geometry-renderi
 import { createZeroPoint } from '../config/geometry-constants';
 // 🏢 ADR-049: SSoT grid-snap leaf (shared with useGripMovement)
 import { snapToGrid } from '../systems/grid/grid-snap';
+// 🏢 ADR-516: Timing SSoT + shared zero-lag throttle (shared with useGripMovement)
+import { DXF_TIMING } from '../config/dxf-timing';
+import { createRafCoalescedThrottle } from './raf-coalesced-throttle';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -57,10 +60,10 @@ import { snapToGrid } from '../systems/grid/grid-snap';
 const DRAG_CONFIG = {
   /** Minimum drag distance to start drag (pixels) - prevents accidental drags */
   MIN_DRAG_DISTANCE: 3,
-  /** Throttle interval for drag updates (ms) - 60fps target */
-  THROTTLE_MS: 16,
-  /** Command merge window for smooth undo (ms) */
-  MERGE_WINDOW_MS: 500,
+  /** Throttle interval for drag updates (ms) - 60fps target (ADR-516 SSoT) */
+  THROTTLE_MS: DXF_TIMING.frame.THROTTLE_60,
+  /** Command merge window for smooth undo (ms) - ADR-516 SSoT */
+  MERGE_WINDOW_MS: DXF_TIMING.gesture.COMMAND_MERGE_WINDOW,
   /** Maximum entities before showing simplified preview */
   PREVIEW_SIMPLIFY_THRESHOLD: 100,
 } as const;
@@ -194,10 +197,8 @@ export function useEntityDrag({
   const [dragState, setDragState] = useState<DragState>(INITIAL_DRAG_STATE);
 
   // Refs for performance (avoid closure stale values)
-  const lastUpdateRef = useRef<number>(0);
-  // 🏢 ADR-118: Use createZeroPoint() for mutable ref initialization
-  const pendingDeltaRef = useRef<Point2D>(createZeroPoint());
-  const rafIdRef = useRef<number | null>(null);
+  // 🏢 ADR-516: shared zero-lag throttle — leading apply + trailing RAF flush of latest
+  const throttleRef = useRef(createRafCoalescedThrottle(DRAG_CONFIG.THROTTLE_MS));
   const startWorldPointRef = useRef<Point2D | null>(null);
 
   /**
@@ -254,37 +255,17 @@ export function useEntityDrag({
       delta = snapToGrid(delta, gridSize);
     }
 
-    // Throttle updates
-    const now = Date.now();
-    if (now - lastUpdateRef.current < DRAG_CONFIG.THROTTLE_MS) {
-      pendingDeltaRef.current = delta;
-
-      // Schedule RAF update if not already pending
-      if (rafIdRef.current === null) {
-        rafIdRef.current = requestAnimationFrame(() => {
-          rafIdRef.current = null;
-          setDragState(prev => ({
-            ...prev,
-            currentPoint: screenPoint,
-            totalDelta: pendingDeltaRef.current,
-            hasMoved: true,
-          }));
-          onDragMove?.(pendingDeltaRef.current);
-        });
-      }
-      return;
-    }
-
-    lastUpdateRef.current = now;
-
-    setDragState(prev => ({
-      ...prev,
-      currentPoint: screenPoint,
-      totalDelta: delta,
-      hasMoved: true,
-    }));
-
-    onDragMove?.(delta);
+    // 🏢 ADR-516 zero-lag: leading-edge apply + trailing RAF flush of the latest
+    // delta — the ghost follows at vsync and never drops the final movement.
+    throttleRef.current.run(() => {
+      setDragState(prev => ({
+        ...prev,
+        currentPoint: screenPoint,
+        totalDelta: delta,
+        hasMoved: true,
+      }));
+      onDragMove?.(delta);
+    });
   }, [dragState, screenToWorld, enableSnap, gridSize, onDragMove]);
 
   /**
@@ -295,11 +276,8 @@ export function useEntityDrag({
       return;
     }
 
-    // Cancel any pending RAF
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
+    // Cancel any pending trailing frame (ADR-516 shared throttle)
+    throttleRef.current.cancel();
 
     const finalDelta = dragState.totalDelta;
 
@@ -328,11 +306,8 @@ export function useEntityDrag({
       return;
     }
 
-    // Cancel any pending RAF
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
+    // Cancel any pending trailing frame (ADR-516 shared throttle)
+    throttleRef.current.cancel();
 
     debugLog('Drag cancelled');
 
@@ -345,10 +320,9 @@ export function useEntityDrag({
    * Cleanup on unmount
    */
   useEffect(() => {
+    const throttle = throttleRef.current;
     return () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
+      throttle.cancel();
     };
   }, []);
 

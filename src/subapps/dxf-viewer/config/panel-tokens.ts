@@ -32,6 +32,8 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRA
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from './color-config';
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ADR-516: Timing & Latency SSoT — PANEL_LAYOUT.TIMING is now a facade over DXF_TIMING
+import { DXF_TIMING } from './dxf-timing';
 
 // ============================================================================
 // ENTERPRISE PANEL COLOR FACTORY - ZERO HARDCODED VALUES
@@ -927,74 +929,63 @@ export const PANEL_LAYOUT = {
   },
 
   // ============================================================================
-  // ⏱️ TIMING - Animation and timeout constants (ENTERPRISE 2026-01-05)
-  // Single source of truth for ALL setTimeout/setInterval values
+  // ⏱️ TIMING — FACADE over DXF_TIMING (ADR-516 SSoT, 2026-06-24)
+  // Every value below references config/dxf-timing.ts → DXF_TIMING. No raw
+  // timing literal is defined here anymore; keys are kept stable for consumers.
+  // New code: import DXF_TIMING directly.
   // ============================================================================
   TIMING: {
-    // ─────────────────────────────────────────────────────────────────────────
-    // INTERACTION THRESHOLDS (2026-01-31 ADR-096)
-    // Single source of truth for mouse/pointer interaction timing
-    // ─────────────────────────────────────────────────────────────────────────
-    DOUBLE_CLICK_MS: 300,                // Double-click detection window (enterprise standard: 200-400ms range)
-    DRAG_THRESHOLD_PX: 5,                // Pixels to move before drag starts
-    CURSOR_UPDATE_THROTTLE: 50,          // Cursor context update throttle (20fps - sufficient for UI)
-    SNAP_DETECTION_THROTTLE: 32,         // Snap detection throttle (30fps — balanced: smooth feel + low CPU)
-    HOVER_THROTTLE_MS: 50,               // Entity/overlay hover hit-test throttle (20fps) — was inline in mouse-handler-move (ADR-040 Φ10 SSoT)
-    GRIP_HOVER_THROTTLE_MS: 100,         // Grip hover detection throttle (10fps) — was duplicated in useLayerCanvasMouseMove + useUnifiedGripInteraction (ADR-040 Φ10 SSoT)
-    COLLAB_CURSOR_THROTTLE_MS: 50,       // Collaboration cursor broadcast inner throttle — was raw literal in CollaborationManager (ADR-040 Φ10 SSoT)
+    // ─── Interaction thresholds ───
+    DOUBLE_CLICK_MS: DXF_TIMING.gesture.DOUBLE_CLICK,
+    DRAG_THRESHOLD_PX: DXF_TIMING.threshold.DRAG_PX,
+    CURSOR_UPDATE_THROTTLE: DXF_TIMING.frame.CURSOR_CONTEXT,
+    SNAP_DETECTION_THROTTLE: DXF_TIMING.frame.SNAP_DETECTION,
+    HOVER_THROTTLE_MS: DXF_TIMING.frame.HOVER_HITTEST,
+    GRIP_HOVER_THROTTLE_MS: DXF_TIMING.frame.GRIP_HOVER,
+    COLLAB_CURSOR_THROTTLE_MS: DXF_TIMING.frame.COLLAB_CURSOR_INNER,
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MICRO DELAYS (10-50ms) - Focus/DOM updates
-    // ─────────────────────────────────────────────────────────────────────────
-    FOCUS_DELAY: 10,                     // Focus after DOM update (DynamicInputOverlay)
-    VIEWPORT_LAYOUT_STABILIZATION: 50,   // 🏢 ADR-045: Wait for browser layout stabilization (CanvasSection)
-    TOOL_TRANSITION: 50,                 // Tool state transition (ToolStateManager)
+    // ─── Micro delays (focus/DOM) ───
+    FOCUS_DELAY: DXF_TIMING.ui.FOCUS_IMMEDIATE,
+    VIEWPORT_LAYOUT_STABILIZATION: DXF_TIMING.ui.LAYOUT_STABILIZATION,
+    TOOL_TRANSITION: DXF_TIMING.ui.TOOL_TRANSITION,
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // DEBOUNCE INTERVALS (100-200ms)
-    // ─────────────────────────────────────────────────────────────────────────
-    DRAG_FINISH_RESET: 100,              // Reset justFinishedDrag flag after drag operations (CanvasSection)
-    DEBOUNCE_SCROLL: 100,                // Scroll event debounce
-    OBSERVER_RETRY: 100,                 // Canvas observer setup retry (CanvasSection)
-    CURSOR_THROTTLE: 100,                // Collaboration cursor throttle
-    DEBOUNCE_INPUT: 150,                 // User input debounce
-    DEBOUNCE_RESIZE: 200,                // Window resize debounce
-    STATE_TRANSITION: 200,               // State transition delay (useSceneState fitToView)
-    FIT_TO_VIEW_DELAY: 200,              // Fit-to-view after scene load
+    // ─── Debounce intervals ───
+    DRAG_FINISH_RESET: DXF_TIMING.ui.DRAG_FINISH_RESET,
+    DEBOUNCE_SCROLL: DXF_TIMING.ui.SCROLL_DEBOUNCE,
+    OBSERVER_RETRY: DXF_TIMING.ui.OBSERVER_RETRY,
+    CURSOR_THROTTLE: DXF_TIMING.frame.COLLAB_CURSOR_OUTER,
+    DEBOUNCE_INPUT: DXF_TIMING.ui.INPUT_DEBOUNCE,
+    DEBOUNCE_RESIZE: DXF_TIMING.ui.RESIZE_DEBOUNCE,
+    STATE_TRANSITION: DXF_TIMING.ui.STATE_TRANSITION,
+    FIT_TO_VIEW_DELAY: DXF_TIMING.ui.FIT_TO_VIEW_DELAY,
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ANIMATION DURATIONS (150-500ms)
-    // ─────────────────────────────────────────────────────────────────────────
-    ANIMATION_FAST: 150,                 // Fast transitions
-    ANIMATION_DEFAULT: 300,              // Standard animations
-    DOUBLE_CLICK_WINDOW: 300,            // Double-click detection window (RulerCornerBox)
-    ANIMATION_SLOW: 500,                 // Slow/emphasis animations
-    ELEMENT_REMOVE: 500,                 // Element removal after feedback (DxfViewerContent)
-    TOOLTIP_DELAY: 500,                  // Tooltip show delay
-    AUTOSAVE_DEBOUNCE: 500,              // Auto-save debounce (useStorageSave)
+    // ─── Animation durations ───
+    ANIMATION_FAST: DXF_TIMING.animation.FAST,
+    ANIMATION_DEFAULT: DXF_TIMING.animation.DEFAULT,
+    DOUBLE_CLICK_WINDOW: DXF_TIMING.gesture.DOUBLE_CLICK,
+    ANIMATION_SLOW: DXF_TIMING.animation.SLOW,
+    ELEMENT_REMOVE: DXF_TIMING.animation.ELEMENT_REMOVE,
+    TOOLTIP_DELAY: DXF_TIMING.animation.TOOLTIP_DELAY,
+    AUTOSAVE_DEBOUNCE: DXF_TIMING.persist.SETTINGS,
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MEDIUM INTERVALS (1000-2000ms)
-    // ─────────────────────────────────────────────────────────────────────────
-    MEASURE_INTERVAL: 1000,              // Layout measurement (LayoutMapper)
-    PERFORMANCE_MONITOR: 1000,           // Performance monitoring interval
-    PAGE_RELOAD: 1500,                   // Page reload after storage action (StorageStatus)
-    TOAST_SHORT: 2000,                   // Quick notifications
-    COPY_FEEDBACK_RESET: 2000,           // Clipboard copy feedback reset (TestResultsModal)
+    // ─── Medium intervals ───
+    MEASURE_INTERVAL: DXF_TIMING.lifecycle.MEASURE_INTERVAL,
+    PERFORMANCE_MONITOR: DXF_TIMING.lifecycle.PERFORMANCE_MONITOR,
+    PAGE_RELOAD: DXF_TIMING.animation.PAGE_RELOAD,
+    TOAST_SHORT: DXF_TIMING.animation.TOAST_SHORT,
+    COPY_FEEDBACK_RESET: DXF_TIMING.animation.COPY_FEEDBACK_RESET,
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // LONG INTERVALS (3000-60000ms)
-    // ─────────────────────────────────────────────────────────────────────────
-    TOAST_DEFAULT: 3000,                 // Standard notifications
-    SAVE_STATUS_RESET: 3000,             // Save status reset to idle
-    TOAST_LONG: 5000,                    // Important notifications
-    PRESENCE_HEARTBEAT: 5000,            // Collaboration presence heartbeat
-    SERVICE_INIT_TIMEOUT: 5000,          // Service initialization timeout
-    AUTO_SAVE_INTERVAL: 30000,           // Auto-save interval (30 seconds)
-    HEALTH_CHECK: 30000,                 // Service health check interval
-    TEST_TIMEOUT: 30000,                 // Test runner timeout
-    QUOTA_CHECK: 60000,                  // Storage quota check interval
-    IMPORT_TIMEOUT: 60000,               // DXF import timeout (1 minute)
+    // ─── Long intervals ───
+    TOAST_DEFAULT: DXF_TIMING.animation.TOAST_DEFAULT,
+    SAVE_STATUS_RESET: DXF_TIMING.persist.SAVE_STATUS_RESET,
+    TOAST_LONG: DXF_TIMING.animation.TOAST_LONG,
+    PRESENCE_HEARTBEAT: DXF_TIMING.lifecycle.PRESENCE_HEARTBEAT,
+    SERVICE_INIT_TIMEOUT: DXF_TIMING.lifecycle.SERVICE_INIT,
+    AUTO_SAVE_INTERVAL: DXF_TIMING.persist.AUTOSAVE_INTERVAL,
+    HEALTH_CHECK: DXF_TIMING.lifecycle.HEALTH_CHECK,
+    TEST_TIMEOUT: DXF_TIMING.lifecycle.TEST_TIMEOUT,
+    QUOTA_CHECK: DXF_TIMING.lifecycle.QUOTA_CHECK,
+    IMPORT_TIMEOUT: DXF_TIMING.lifecycle.IMPORT_TIMEOUT,
   },
 
   // ============================================================================

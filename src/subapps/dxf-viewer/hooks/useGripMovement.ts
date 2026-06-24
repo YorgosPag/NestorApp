@@ -36,7 +36,7 @@
  * @see systems/grip-interaction/GripInteractionManager.ts
  * @see core/commands/vertex-commands/MoveVertexCommand.ts
  */
-import { useCallback, useRef, useState, useMemo } from 'react';
+import { useCallback, useRef, useState, useMemo, useEffect } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
 import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
@@ -49,6 +49,9 @@ import { calculateDistance } from '../rendering/entities/shared/geometry-renderi
 import { createZeroPoint } from '../config/geometry-constants';
 // 🏢 ADR-049: SSoT grid-snap leaf (shared with useEntityDrag)
 import { snapToGrid as snapDeltaToGrid } from '../systems/grid/grid-snap';
+// 🏢 ADR-516: Timing SSoT + shared zero-lag throttle (shared with useEntityDrag)
+import { DXF_TIMING } from '../config/dxf-timing';
+import { createRafCoalescedThrottle } from './raf-coalesced-throttle';
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
 // ============================================================================
@@ -61,10 +64,10 @@ export const GRIP_CONFIG = {
   MIN_DRAG_DISTANCE: 2,
   /** Grip hit tolerance (pixels) */
   HIT_TOLERANCE: 8,
-  /** Debounce time for rapid grip operations (ms) */
-  DEBOUNCE_MS: 16,
-  /** Command merge window for smooth drag (ms) */
-  MERGE_WINDOW_MS: 500,
+  /** Per-frame throttle for grip ghost updates (ms) - 60fps (ADR-516 SSoT) */
+  DEBOUNCE_MS: DXF_TIMING.frame.THROTTLE_60,
+  /** Command merge window for smooth drag (ms) - ADR-516 SSoT */
+  MERGE_WINDOW_MS: DXF_TIMING.gesture.COMMAND_MERGE_WINDOW,
 } as const;
 /**
  * Debug mode flag
@@ -174,7 +177,9 @@ export function useGripMovement({
   const [gripState, setGripState] = useState<GripDragState>(INITIAL_GRIP_STATE);
   // Refs for performance
   const startWorldPositionRef = useRef<Point2D | null>(null);
-  const lastUpdateTimeRef = useRef<number>(0);
+  // 🏢 ADR-516: shared zero-lag throttle — leading apply + trailing RAF flush of latest.
+  // Replaces the previous hard-drop throttle that lagged/dropped the grip ghost.
+  const throttleRef = useRef(createRafCoalescedThrottle(GRIP_CONFIG.DEBOUNCE_MS));
   /**
    * Create SceneManager adapter for vertex commands.
    *
@@ -338,12 +343,7 @@ export function useGripMovement({
     if (!gripState.isDragging || !gripState.activeGrip || !startWorldPositionRef.current) {
       return;
     }
-    // Throttle updates
-    const now = Date.now();
-    if (now - lastUpdateTimeRef.current < GRIP_CONFIG.DEBOUNCE_MS) {
-      return;
-    }
-    lastUpdateTimeRef.current = now;
+    // Compute the delta on EVERY event (cheap) — only the visual apply is throttled.
     const currentWorldPoint = screenToWorld(screenPoint);
     // Calculate delta
     let delta: Point2D = {
@@ -361,13 +361,18 @@ export function useGripMovement({
     if (snapToGrid && gridSize > 0) {
       delta = snapDeltaToGrid(delta, gridSize);
     }
-    setGripState(prev => ({
-      ...prev,
-      currentPosition: currentWorldPoint,
-      totalDelta: delta,
-      hasMoved: true,
-    }));
-    onGripDragMove?.(gripState.activeGrip, delta);
+    const activeGrip = gripState.activeGrip;
+    // 🏢 ADR-516 zero-lag: leading-edge apply + trailing RAF flush of the latest
+    // delta — the grip ghost follows at vsync and never drops the final movement.
+    throttleRef.current.run(() => {
+      setGripState(prev => ({
+        ...prev,
+        currentPosition: currentWorldPoint,
+        totalDelta: delta,
+        hasMoved: true,
+      }));
+      onGripDragMove?.(activeGrip, delta);
+    });
   }, [gripState, screenToWorld, snapToGrid, gridSize, onGripDragMove]);
   /**
    * End grip drag and apply movement via command
@@ -376,6 +381,8 @@ export function useGripMovement({
     if (!gripState.isDragging || !gripState.activeGrip) {
       return;
     }
+    // Cancel any pending trailing frame (ADR-516 shared throttle)
+    throttleRef.current.cancel();
     const { activeGrip, totalDelta, hasMoved } = gripState;
     // Only execute if actually moved
     if (hasMoved && (totalDelta.x !== 0 || totalDelta.y !== 0)) {
@@ -422,10 +429,20 @@ export function useGripMovement({
     if (!gripState.isDragging) {
       return;
     }
+    // Cancel any pending trailing frame (ADR-516 shared throttle)
+    throttleRef.current.cancel();
     debugLog('Grip drag cancelled');
     setGripState(INITIAL_GRIP_STATE);
     startWorldPositionRef.current = null;
   }, [gripState.isDragging]);
+
+  // Cleanup pending trailing frame on unmount (ADR-516 shared throttle)
+  useEffect(() => {
+    const throttle = throttleRef.current;
+    return () => {
+      throttle.cancel();
+    };
+  }, []);
   /**
    * Check if a point is near any grip
    */
