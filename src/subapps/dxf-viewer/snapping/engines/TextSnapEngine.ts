@@ -40,16 +40,9 @@ import {
   type TextEntity,
   type MTextEntity,
 } from '../../types/entities';
-
-type TextSnapKind =
-  | 'insertion'
-  | 'corner-tl'
-  | 'corner-tr'
-  | 'corner-bl'
-  | 'corner-br'
-  | 'center'
-  | 'edge-top-mid'
-  | 'edge-bottom-mid';
+// ADR-378 §Step 4 — the 8-point geometry SSoT lives in TextSnapProvider; the engine
+// reuses it (font-free bbox feed) instead of re-implementing the rotation math.
+import { computeTextSnapGeometry, type TextSnapKind } from '../../text-engine/interaction/TextSnapProvider';
 
 interface IndexedTextPoint {
   readonly point: Point2D;
@@ -118,44 +111,14 @@ interface ComputedTextSnap {
 
 function computeTextSnapPoints(entity: TextEntity | MTextEntity): readonly ComputedTextSnap[] {
   const insertion = entity.position;
-  const rotationDeg = entity.rotation ?? 0;
-  const rad = (rotationDeg * Math.PI) / 180;
-  const bbox = estimateTextBbox(entity);
-
-  const local: Record<Exclude<TextSnapKind, 'insertion'>, Point2D> = {
-    'corner-tl':       { x: 0,            y: 0 },
-    'corner-tr':       { x: bbox.width,   y: 0 },
-    'corner-bl':       { x: 0,            y: bbox.height },
-    'corner-br':       { x: bbox.width,   y: bbox.height },
-    'center':          { x: bbox.width/2, y: bbox.height/2 },
-    'edge-top-mid':    { x: bbox.width/2, y: 0 },
-    'edge-bottom-mid': { x: bbox.width/2, y: bbox.height },
-  };
-
-  const order: readonly TextSnapKind[] = [
-    'insertion',
-    'corner-tl',
-    'corner-tr',
-    'corner-bl',
-    'corner-br',
-    'center',
-    'edge-top-mid',
-    'edge-bottom-mid',
-  ];
-
-  return order.map((kind) => {
-    if (kind === 'insertion') return { point: insertion, kind };
-    const lp = local[kind];
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    return {
-      point: {
-        x: insertion.x + lp.x * cos - lp.y * sin,
-        y: insertion.y + lp.x * sin + lp.y * cos,
-      },
-      kind,
-    };
-  });
+  const rad = ((entity.rotation ?? 0) * Math.PI) / 180;
+  const { width, height } = estimateTextBbox(entity);
+  // Engine convention: insertion = top-left, extent grows by width/height. Express
+  // that as an ABSOLUTE bbox anchored at the insertion point and feed the shared
+  // geometry SSoT (`computeTextSnapGeometry` rotates every corner about insertion,
+  // so corner-tl maps back to the insertion point exactly as before).
+  const bbox = { x: insertion.x, y: insertion.y, width, height };
+  return computeTextSnapGeometry(insertion, rad, bbox).map((g) => ({ point: g.point, kind: g.kind }));
 }
 
 function estimateTextBbox(entity: TextEntity | MTextEntity): { width: number; height: number } {

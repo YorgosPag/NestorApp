@@ -237,3 +237,15 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   (member-ghost-snap + wall-endpoint-snap + beam-column-face-snap + column-face-snap)· framing/walls/beams/
   columns sweep 1196/1197 (το 1 fail = pre-existing `beam-grips` rotation-grip, άλλου agent). ⚠️ CHECK
   6B/6D (wall-preview-helpers/useWallTool drawing path) → stage ADR-040. 🔴 browser-verify + commit.
+- **2026-06-24 (fix — «να ολισθαίνει ΠΛΗΡΩΣ», Giorgio)** — ο τοίχος **ακόμη** μετακινούνταν σε σταθερά
+  βήματα στην παρειά (όχι ρευστά). ΡΙΖΑ: το `slideStepScene` (zoom-adaptive quantize 2026-06-21β) +
+  ο magnet (radius=step, 2026-06-23) — σε normal zoom το step είναι τεράστιο → η ολίσθηση «κούμπωνε» σε
+  βήματα/3 ζώνες. Η **κολώνα** (gold standard) ολισθαίνει ΚΑΘΑΡΑ συνεχώς (`resolveForTarget` = σκέτο
+  `clamp`, μηδέν quantize/magnet). **FIX:** ο τοίχος **έπαψε να περνά `worldPerPixel`** στο face-snap
+  (`useWallTool.resolveWallStartAnchor` + endpoint commit· `wall-preview-helpers` ghost + endpoint) →
+  `slideStepScene` undefined → **πλήρως συνεχής ολίσθηση** START+END, ίδια με την κολώνα. Το `wpp` μένει
+  ΜΟΝΟ για το screen-relative offset των listening dims. Η capability quantize/magnet (`slideStepScene`/
+  `magnetizeGhostCenterAlong`) **διατηρείται** στον resolver (gated· ανενεργή) → re-enable με ένα όρισμα
+  αν ζητηθεί «soft» center/flush snap. **Αναιρεί** το 2026-06-21β (slide-quantize) + 2026-06-23 (magnet)
+  ΓΙΑ ΤΟΝ ΤΟΙΧΟ (το «δεν κεντράρει σε κοντή γραμμή» μπορεί να επανέλθει — αναμονή browser-verify). 94 jest
+  GREEN. 🔴 browser-verify + commit.

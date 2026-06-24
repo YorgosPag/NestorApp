@@ -106,20 +106,30 @@ function descriptionFor(kind: TextSnapKind, entityType: 'text' | 'mtext'): strin
   }
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Geometry SSoT ─────────────────────────────────────────────────────────────
+
+/** A single text snap point: symbolic `kind`, world `point`, pre-rotation `localPoint`. */
+export interface TextSnapGeometryPoint {
+  readonly kind: TextSnapKind;
+  readonly point: Point2D;
+  readonly localPoint: Point2D;
+}
 
 /**
- * Compute the 8 snap points for `entity` given its precomputed `bbox`
- * (in entity-local space, before rotation). Returns the points already
- * rotated to world space.
+ * Pure geometric SSoT for the 8 text snap points (ADR-378 §Step 4).
+ *
+ * Entity-agnostic: takes the `insertion` anchor, `rotationRad`, and an ABSOLUTE
+ * `bbox` (world coords, `x`/`y` = top-left). Every non-insertion point is rotated
+ * about `insertion`. This is the ONE place the 8-point layout + rotation lives —
+ * shared by `getTextSnapPoints` (scene entity + font-aware bbox) and the registry
+ * `TextSnapEngine` (EntityModel + font-free estimated bbox, which passes an absolute
+ * bbox anchored at the insertion point).
  */
-export function getTextSnapPoints(
-  entity: DxfTextSceneEntity,
+export function computeTextSnapGeometry(
+  insertion: Point2D,
+  rotationRad: number,
   bbox: Rect,
-): TextSnapPoint[] {
-  const insertion = entity.position;
-  const rotationRad = degToRad(entity.textNode.rotation);
-
+): TextSnapGeometryPoint[] {
   const local = {
     'corner-tl': { x: bbox.x, y: bbox.y },
     'corner-tr': { x: bbox.x + bbox.width, y: bbox.y },
@@ -141,19 +151,34 @@ export function getTextSnapPoints(
     'edge-bottom-mid',
   ];
 
-  return order.map<TextSnapPoint>((kind) => {
+  return order.map<TextSnapGeometryPoint>((kind) => {
     const localPoint = kind === 'insertion' ? insertion : local[kind];
-    const worldPoint = kind === 'insertion'
+    const point = kind === 'insertion'
       ? insertion
       : rotateAround(localPoint, insertion, rotationRad);
-    return {
-      kind,
-      point: worldPoint,
-      localPoint,
-      snapType: snapTypeFor(kind),
-      description: descriptionFor(kind, entity.type),
-    };
+    return { kind, point, localPoint };
   });
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/**
+ * Compute the 8 snap points for `entity` given its precomputed `bbox`
+ * (absolute world coords). Thin wrapper over `computeTextSnapGeometry` that
+ * adds the snap type + description per kind.
+ */
+export function getTextSnapPoints(
+  entity: DxfTextSceneEntity,
+  bbox: Rect,
+): TextSnapPoint[] {
+  const rotationRad = degToRad(entity.textNode.rotation);
+  return computeTextSnapGeometry(entity.position, rotationRad, bbox).map<TextSnapPoint>((g) => ({
+    kind: g.kind,
+    point: g.point,
+    localPoint: g.localPoint,
+    snapType: snapTypeFor(g.kind),
+    description: descriptionFor(g.kind, entity.type),
+  }));
 }
 
 /**

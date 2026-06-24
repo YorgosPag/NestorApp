@@ -237,9 +237,9 @@ export function generateWallPreview(
   let endFaceFrame: GhostFaceFrame | null = null;
   let rawEnd = cursorPoint;
   if (kind === 'straight' && !isLengthAngleLockActive()) {
+    // ΧΩΡΙΣ worldPerPixel → πλήρως συνεχής ολίσθηση του ΑΚΡΟΥ (Giorgio «ΠΛΗΡΩΣ»). preview ≡ commit.
     const snap = resolveWallEndpointSnap(
       cursorPoint, footprints, snapMembers, resolveWallThicknessMm(overrides), sceneUnits,
-      worldPerPixel(getImmediateTransform().scale),
     );
     rawEnd = snap.point;
     endFaceFrame = snap.faceFrame ?? null;
@@ -274,11 +274,12 @@ function makeWallGhostBeforeClick(
 ): ExtendedSceneEntity | null {
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const thicknessMm = resolveWallThicknessMm(overrides);
-  // ADR-508 — ίδιο worldPerPixel με το click resolver (useWallTool) → ίδιο zoom-adaptive βήμα
-  // ολίσθησης (preview === commit: το φάντασμα γλιστράει στα ίδια σημεία που θα κλειδώσει το κλικ).
+  // ADR-508 (2026-06-24, Giorgio «να ολισθαίνει ΠΛΗΡΩΣ») — το `wpp` μένει ΜΟΝΟ για τα listening dims
+  // (screen-relative offset)· ΔΕΝ περνά πια στο snap → πλήρως συνεχής ολίσθηση (μηδέν quantize/magnet,
+  // ίδιο με την κολώνα). preview === commit (το click resolver επίσης χωρίς wpp).
   const wpp = worldPerPixel(getImmediateTransform().scale);
   // ADR-398 §3.11 — snap ΚΑΙ σε σκέτες γραμμές (ακολουθεί τη γραμμή, ίδιος resolver με την κολώνα).
-  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, snapTargets, thicknessMm, sceneUnits, wpp);
+  const snap = resolveMemberGhostSnapFromStore(effectiveCursor, columnFootprints, snapTargets, thicknessMm, sceneUnits);
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
     ? snap.end

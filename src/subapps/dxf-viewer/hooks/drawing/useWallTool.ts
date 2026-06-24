@@ -36,7 +36,6 @@ import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { radToDeg } from '../../rendering/entities/shared/geometry-utils';
-import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { resolveWallThicknessMm } from './wall-completion';
 // ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
@@ -99,12 +98,11 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const targets = sceneSnapTargetsStore.get();
       const thicknessMm = resolveWallThicknessMm(stateRef.current.overrides);
-      // ADR-508 — worldPerPixel (=1/scale) → σταθερό zoom-adaptive βήμα ολίσθησης στην παρειά
-      // (ΙΔΙΟ SSoT με τα ίχνη). preview === commit: ο preview ghost περνά το ίδιο (wall-preview-helpers).
-      // ADR-398 §3.10/§3.11 — τοίχος = wall+beam+slab μέλη ΚΑΙ σκέτες ΓΡΑΜΜΕΣ (ίδιο με το preview
-      // ghost → preview ≡ commit: το 1ο κλικ κουμπώνει στη γραμμή όπως δείχνει το φάντασμα). Οι
-      // γραμμές = οδηγοί στοίχισης· ο commit overlap-check (use-wall-commit) τις εξαιρεί (δεν μπλοκάρουν).
-      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), thicknessMm, sceneUnits, worldPerPixel(getImmediateTransform().scale));
+      // ADR-508 (2026-06-24, Giorgio «να ολισθαίνει ΠΛΗΡΩΣ») — ΧΩΡΙΣ worldPerPixel → **πλήρως συνεχής
+      // ολίσθηση** στην παρειά (μηδέν quantize/magnet, ίδιο με την κολώνα `resolveForTarget`). preview ≡
+      // commit. ADR-398 §3.10/§3.11 — τοίχος = wall+beam+slab μέλη ΚΑΙ σκέτες ΓΡΑΜΜΕΣ (γραμμές = οδηγοί
+      // στοίχισης· ο commit overlap-check στο use-wall-commit τις εξαιρεί, δεν μπλοκάρουν).
+      const snap = resolveMemberGhostSnapFromStore(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), thicknessMm, sceneUnits);
       if (!snap) return { start: { x: point.x, y: point.y }, anchored: false, faceAngle: null, hostId: null };
       // ADR-508 — `end - start` του ghost = κάθετη-στην-παρειά κατεύθυνση (face normal, outward).
       // Την κρατάμε ως baseAngle για το relative-polar του 2ου κλικ. Στο 🔴 collinear-overlap
@@ -340,13 +338,13 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
           endPoint = applyLengthAngleLock(point, s.startPoint);
         } else {
           const targets = sceneSnapTargetsStore.get();
+          // ΧΩΡΙΣ worldPerPixel → πλήρως συνεχής ολίσθηση του ΑΚΡΟΥ στην παρειά (Giorgio «ΠΛΗΡΩΣ»).
           endPoint = resolveWallEndpointSnap(
             point,
             targets.footprints,
             selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']),
             resolveWallThicknessMm(s.overrides),
             getSceneUnits?.() ?? 'mm',
-            worldPerPixel(getImmediateTransform().scale),
           ).point;
         }
         return commitStraightFromState(s, endPoint);
