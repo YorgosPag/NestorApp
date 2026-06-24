@@ -80,20 +80,23 @@ function keepNearest(best: TangentHit | null, cand: TangentHit | null): TangentH
   return !best || cand.dist < best.dist ? cand : best;
 }
 
-/** Ζώνη έλξης (scene units) — zoom-adaptive όταν δίνεται `wpp>0`, αλλιώς σταθερό mm fallback. */
-function alignZone(wpp: number, scaleF: number): number {
+/**
+ * Ζώνη έλξης (scene units) — zoom-adaptive όταν δίνεται `wpp>0`, αλλιώς σταθερό mm fallback. **Export**
+ * ώστε το rect Cartesian path (§3.20d) να χρησιμοποιεί την ΙΔΙΑ ζώνη με τους γραμμικούς οδηγούς (ΕΝΑ SSoT).
+ */
+export function alignZone(wpp: number, scaleF: number): number {
   return wpp > 0 ? ALIGN_SNAP_PX * wpp : ALIGN_SNAP_FALLBACK_MM * scaleF;
 }
 
 /** Διαμήκες snap-αποτέλεσμα: το (πιθανώς κουμπωμένο) `along` του κέντρου + η along-θέση του οδηγού (`null` = free). */
-interface LongSnap { readonly along: number; readonly guideAlong: number | null; }
+export interface LongSnap { readonly along: number; readonly guideAlong: number | null; }
 
 /**
  * §3.20 — κούμπωσε το διαμήκες `alongFree` του κέντρου σε `{alongMin+R, alongMax−R, μέσον}` εντός `zone`
  * (το ακραίο τεταρτημόριο πέφτει στο άκρο της παρειάς· το κέντρο στο μέσον). Επιστρέφει + την along-θέση
  * του **οδηγού** (= άκρο/μέσον, ΟΧΙ το κέντρο) για τη γραμμή ευθυγράμμισης. `guideAlong:null` → ελεύθερο γλίστρημα.
  */
-function snapAlongToEnds(
+export function snapAlongToEnds(
   alongFree: number, alongMin: number, alongMax: number, radius: number, zone: number,
 ): LongSnap {
   const cands: { c: number; g: number }[] = [];
