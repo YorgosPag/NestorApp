@@ -29,12 +29,6 @@ import { gripStyleStore } from '../../stores/GripStyleStore';
 
 // ── Types ────────────────────────────────────────────────────────────
 
-interface SnapResult {
-  point: Point2D;
-  type: string;
-  entityId?: string;
-}
-
 interface CursorState {
   position: Point2D | null;
   // isSelecting/selectionStart/selectionCurrent moved to selectionRef param
@@ -59,7 +53,6 @@ interface LayerCanvasRendererParams {
   draggingOverlay: { overlayId: string; delta: Point2D } | null;
   cursor: CursorState;
   selectionRef: React.MutableRefObject<SelectionState>;
-  snapResults: SnapResult[];
   crosshairSettings: CrosshairSettings;
   cursorSettings: CursorSettings;
   snapSettings: SnapSettings;
@@ -198,18 +191,11 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         });
       }
 
-      const layerSnapResults: LayerRenderOptions['snapResults'] = current.snapResults.map((snap) => ({
-        point: snap.point,
-        type: snap.type as LayerRenderOptions['snapResults'][number]['type'],
-        entityId: snap.entityId ?? undefined,
-      }));
-
       const finalRenderOptions = {
         ...current.renderOptions,
         // ADR-040 Φ10: canvas crosshair/cursor removed — the compositor <CrosshairOverlay> owns them.
         showSelectionBox: !isPanToolActive && sel.isSelecting && currentSelectionBox !== null,
         selectionBox: isPanToolActive ? null : currentSelectionBox,
-        snapResults: layerSnapResults,
         gripSettings: gripStyleStore.get(),
       };
 
@@ -258,7 +244,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     params.layers,
     params.transform,
     params.viewport,
-    params.snapResults,
     params.layersVisible,
     params.activeTool,
     params.draggingOverlay,

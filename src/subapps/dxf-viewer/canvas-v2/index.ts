@@ -80,7 +80,6 @@ export type {
   // CrosshairSettings μεταφέρθηκε στο rendering/ui/crosshair/ - ΦΑΣΗ 6 κεντρικοποίηση
   SnapSettings,
   SnapType,
-  SnapResult,
   GridSettings,
   RulerSettings,
   SelectionSettings,

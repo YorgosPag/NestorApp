@@ -37,8 +37,6 @@ import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import { useLayerCanvasRenderer } from './layer-canvas-hooks';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
-import type { SnapResult } from './layer-types';
-import { EMPTY_SNAP_RESULTS } from './layer-types';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -96,7 +94,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     showGrid: true,
     showRulers: true,
     showSelectionBox: true,
-    snapResults: [],
     selectionBox: null
   },
   className = '',
@@ -125,12 +122,11 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   // 🚀 PERF (2026-05-10 Phase III corrected): selection ref updated imperatively.
   const selectionRef = useRef<SelectionState>(SelectionStore.getSnapshot());
 
-  // ── Snap results (ADR-040 Φ12/3.2c) ────────────────────────────────
-  // LayerCanvas is a read-only render layer (DxfCanvas is the sole pointer handler),
-  // so it never armed the snap-scheduler → its per-instance snap channel was always
-  // empty. The live snap marker is owned by SnapIndicatorSubscriber (z-30). The
-  // renderer keeps the param for signature stability; it always draws nothing here.
-  const snapResults: SnapResult[] = EMPTY_SNAP_RESULTS;
+  // ── Snap results (ADR-137 §Step 2) ─────────────────────────────────
+  // The layer canvas has NO snap-result channel. The live snap glyph is owned by
+  // SnapIndicatorSubscriber (z-30, SVG) reading ImmediateSnapStore. The former
+  // always-empty `snapResults` plumbing (which only fed the deleted canvas
+  // SnapRenderer) was removed.
 
   // ── Unified canvas system state ────────────────────────────────────
   const [_canvasManager, setCanvasManager] = useState<CanvasManager | null>(null);
@@ -233,7 +229,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       position: cursor.position,
     },
     selectionRef,
-    snapResults,
     crosshairSettings,
     cursorSettings,
     snapSettings,

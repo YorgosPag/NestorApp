@@ -3,7 +3,6 @@
  * ✅ ΦΑΣΗ 6: Unified snap interfaces
  */
 
-import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
 // 🏢 ADR-134: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
@@ -12,33 +11,11 @@ import { UI_COLORS, OPACITY } from '../../../config/color-config';
 // 🏢 ADR-034: Centralized Rendering Z-Index
 import { SNAP_TOLERANCE, SNAP_TOOLTIP_OFFSET, RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
-/**
- * 🔺 SNAP TYPES
- * Different types of snap points
- */
-export type SnapType =
-  | 'endpoint'
-  | 'midpoint'
-  | 'center'
-  | 'intersection'
-  | 'perpendicular'
-  | 'parallel'
-  | 'tangent'
-  | 'quadrant'
-  | 'nearest'
-  | 'grid';
-
-/**
- * 🔺 SNAP RESULT
- * Represents a detected snap point
- */
-export interface SnapResult {
-  readonly point: Point2D;
-  readonly type: SnapType;
-  readonly distance: number;
-  readonly entityId?: string;    // Optional reference to snapped entity
-  readonly priority: number;     // Higher = more important
-}
+// ADR-137 §Step 2 — the legacy `SnapType` / `SnapResult` / `SnapRenderData` / `SnapRenderMode`
+// vocabularies were removed (only the deleted canvas `SnapRenderer`/`LegacySnapAdapter` used them).
+// The single snap result SSoT is `ProSnapResult`/`SnapCandidate` in `snapping/extended-types.ts`;
+// the overlay view-model is `SnapIndicatorView` there. This file now owns ONLY the snap *settings*
+// (`SnapSettings` + `DEFAULT_SNAP_SETTINGS`), still consumed by `CanvasSettings`.
 
 /**
  * 🔺 SNAP SETTINGS
@@ -62,26 +39,6 @@ export interface SnapSettings extends UIElementSettings {
   readonly tooltipOffset: number;
   readonly highlightColor: string;
 }
-
-/**
- * 🔺 SNAP RENDER DATA
- * Data που χρειάζεται το SnapRenderer
- */
-export interface SnapRenderData {
-  readonly snapResults: SnapResult[];
-  readonly settings: SnapSettings;
-  readonly activeSnap?: SnapResult;  // Currently active snap
-  readonly timestamp?: number;       // For animations
-}
-
-/**
- * 🔺 SNAP RENDER MODES
- * Different rendering approaches
- */
-export type SnapRenderMode =
-  | 'normal'      // Standard snap indicators
-  | 'highlight'   // Emphasized snap (brighter/larger)
-  | 'preview';    // Preview mode with tooltips
 
 /**
  * 🔺 DEFAULT SNAP SETTINGS

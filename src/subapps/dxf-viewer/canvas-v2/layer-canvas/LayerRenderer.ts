@@ -29,7 +29,6 @@ import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings'
 // 🏢 ENTERPRISE: Refresh cached bounds before render
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 
-import { LegacySnapAdapter } from '../../rendering/ui/snap/LegacySnapAdapter';
 import { SelectionRenderer } from './selection/SelectionRenderer';
 import { UIRendererComposite } from '../../rendering/ui/core/UIRendererComposite';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
@@ -45,7 +44,6 @@ import { createLayerUISettings } from './layer-ui-settings';
 export class LayerRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
-  private snapRenderer: LegacySnapAdapter;
   private selectionRenderer: SelectionRenderer;
   private debugged: boolean = false;
   private renderDebugShown: boolean = false;
@@ -80,7 +78,6 @@ export class LayerRenderer {
     this.canvasSettings = canvasSettings;
 
     // Legacy adapters for backward compatibility
-    this.snapRenderer = new LegacySnapAdapter(ctx);
     this.selectionRenderer = new SelectionRenderer(ctx);
 
     // ✅ ΦΑΣΗ 6+7: Initialize centralized UI rendering system
@@ -104,7 +101,8 @@ export class LayerRenderer {
    */
   private initializeUIRenderers(): void {
     try {
-      this.uiComposite.register('snap', () => new (require('../../rendering/ui/snap/SnapRenderer')).SnapRenderer(), 30, 'feedback');
+      // ADR-137: Snap indicators are rendered exclusively by SnapIndicatorOverlay (SVG, ADR-040 leaf).
+      // The legacy canvas SnapRenderer/LegacySnapAdapter were dead (never invoked) and were removed.
       this.uiComposite.register('selection', () => this.selectionRenderer, 35, 'feedback');
     } catch (error) {
       console.error('🔥 LayerRenderer: Error initializing UI renderers:', error);
@@ -283,9 +281,10 @@ export class LayerRenderer {
     this.ctx.restore();
 
     // 3. Snap indicators — rendered exclusively by SnapIndicatorOverlay (SVG, ADR-040 leaf pattern).
-    // Legacy canvas SnapRenderer disabled: used world coords as canvas pixels → wrong positions.
+    // ADR-137 §Step 2: the layer canvas no longer carries a snap-result channel, so the
+    // former `window.__debugSnapResults` write (always empty) was removed. The debug
+    // overlay guards a missing global → []. Only the debug viewport remains.
     if (typeof window !== 'undefined') {
-      window.__debugSnapResults = options.showSnapIndicators ? options.snapResults as unknown as typeof window.__debugSnapResults : [];
       (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
     }
 

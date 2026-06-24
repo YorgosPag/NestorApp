@@ -19,6 +19,7 @@ import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
+import { toSnapIndicatorView } from '../../snapping/extended-types';
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
@@ -99,11 +100,7 @@ export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscrib
   const snapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
   return (
     <SnapIndicatorOverlay
-      snapResult={snapResult ? {
-        point: snapResult.snappedPoint,
-        type: snapResult.activeMode || 'endpoint',
-        description: snapResult.snapPoint?.description,
-      } : null}
+      snapResult={toSnapIndicatorView(snapResult)}
       viewport={viewport}
       canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
       transform={transform}

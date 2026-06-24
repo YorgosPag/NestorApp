@@ -86,21 +86,11 @@ export interface SnapSettings {
   tolerance: number;
 }
 
+// Snap *config* vocabulary only. The snap RESULT type was unified onto
+// `ProSnapResult` (snapping/extended-types.ts) — see ADR-137 §Step 2. The former
+// `SnapResult` + `EMPTY_SNAP_RESULTS` (which only fed the deleted canvas SnapRenderer)
+// were removed; the layer canvas no longer carries a snap-result channel.
 export type SnapType = 'endpoint' | 'midpoint' | 'center' | 'intersection';
-
-export interface SnapResult {
-  point: Point2D;
-  type: SnapType;
-  entityId?: string;
-}
-
-/**
- * ADR-040 — SSoT frozen empty snap-result list. Single shared reference used wherever
- * "no snaps" must be passed (LayerCanvas read-only render layer, CanvasLayerStack
- * renderOptions), so consumers never allocate a fresh `[]` per render. Frozen → safe to
- * share. Do NOT re-declare a local `EMPTY_SNAP_RESULTS` — import this one.
- */
-export const EMPTY_SNAP_RESULTS: SnapResult[] = Object.freeze<SnapResult[]>([]) as SnapResult[];
 
 // === GRID TYPES ===
 // 🏢 ENTERPRISE: Single Source of Truth = GridTypes.ts (eliminates duplication)
@@ -176,11 +166,12 @@ import type { GripSettings } from '../../types/gripSettings';
 export interface LayerRenderOptions {
   // ADR-040 Φ10: showCrosshair/showCursor/crosshairPosition/cursorPosition removed —
   // the compositor <CrosshairOverlay> is the sole crosshair/cursor renderer.
+  // ADR-137 §Step 2: `snapResults` removed — the live snap glyph is owned by
+  // SnapIndicatorOverlay (SVG) reading ImmediateSnapStore, not by the layer canvas.
   showSnapIndicators: boolean;
   showGrid: boolean;
   showRulers: boolean;
   showSelectionBox: boolean;
-  snapResults: SnapResult[];
   selectionBox: SelectionBox | null;
   // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for vertex/edge grips
   gripSettings?: GripSettings;

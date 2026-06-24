@@ -46,8 +46,6 @@ import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
 import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers';
-// ADR-040 — SSoT empty snap list (was a local duplicate here; centralized in layer-types).
-import { EMPTY_SNAP_RESULTS } from '../../canvas-v2/layer-canvas/layer-types';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
@@ -188,7 +186,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       showGrid: false,
       showRulers: false,
       showSelectionBox: false,
-      snapResults: EMPTY_SNAP_RESULTS,
       selectionBox: null,
       gripSettings,
     }),

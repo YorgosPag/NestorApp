@@ -94,6 +94,36 @@ export interface ProSnapResult {
  */
 export type SnapResult = ProSnapResult;
 
+/**
+ * 🏢 SSoT presentation view-model for the snap indicator overlay (ADR-137 §Step 2).
+ *
+ * `SnapIndicatorOverlay` needs only these three fields. Field names intentionally
+ * differ from `ProSnapResult` (`point` ← `snappedPoint`, `type` ← `activeMode`,
+ * `description` ← `snapPoint.description`). This is the ONE place that projection
+ * lives — do NOT re-declare an inline `{ point; type; description? }` anywhere else.
+ * Replaces the former parallel `SnapResult` definitions in `layer-types.ts`,
+ * `rendering/ui/snap/SnapTypes.ts`, `layer-canvas-hooks.ts`, and the inline interface
+ * in `SnapIndicatorOverlay.tsx`.
+ */
+export interface SnapIndicatorView {
+  point: Point2D;
+  type: string;
+  description?: string;
+}
+
+/**
+ * Single adapter projecting the canonical `ProSnapResult` onto the overlay view-model.
+ * Returns `null` for a null result (no active snap).
+ */
+export function toSnapIndicatorView(result: ProSnapResult | null): SnapIndicatorView | null {
+  if (!result) return null;
+  return {
+    point: result.snappedPoint,
+    type: result.activeMode || 'endpoint',
+    description: result.snapPoint?.description,
+  };
+}
+
 // Per-mode tolerances σε pixels
 export type PerModeTolerance = Partial<Record<ExtendedSnapType, number>>;
 

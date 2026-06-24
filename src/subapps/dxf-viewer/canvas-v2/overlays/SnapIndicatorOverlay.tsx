@@ -8,7 +8,6 @@
 'use client';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Point2D } from '../../rendering/types/Types';
 import type { ViewTransform } from '../../systems/rulers-grid/config';
 // 🏢 ENTERPRISE (2026-02-17): World→Screen conversion for correct indicator positioning
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -27,15 +26,11 @@ import {
 
 // ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
 import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
-
-interface SnapResult {
-  point: Point2D;
-  type: string;
-  description?: string;
-}
+// 🏢 SSoT view-model for the snap glyph (ADR-137 §Step 2) — replaces the former inline interface.
+import type { SnapIndicatorView } from '../../snapping/extended-types';
 
 interface SnapIndicatorOverlayProps {
-  snapResult?: SnapResult | null;
+  snapResult?: SnapIndicatorView | null;
   viewport: { width: number; height: number };
   canvasRect: DOMRect | null;
   transform?: ViewTransform;  // ✅ ENTERPRISE: Proper type instead of any

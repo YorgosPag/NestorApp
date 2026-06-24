@@ -8,8 +8,10 @@ import type { UIElementSettings } from '../../rendering/ui/core/UIRenderer';
 
 /** Parameters for UI settings creation */
 // ADR-040 Φ10: crosshairSettings/cursorSettings removed — the canvas crosshair/cursor
-// are gone (compositor <CrosshairOverlay> owns them); only snap/grid/ruler/selection remain.
+// are gone (compositor <CrosshairOverlay> owns them).
 interface UISettingsParams {
+  // ADR-137 §Step 2: accepted for caller signature compat but no longer read here —
+  // the canvas snap branch is gone (live glyph = SnapIndicatorOverlay/SVG).
   snapSettings: SnapSettings;
   gridSettings: GridSettings;
   rulerSettings: RulerSettings;
@@ -23,7 +25,6 @@ interface UISettingsParams {
  */
 export function createLayerUISettings(params: UISettingsParams): Map<string, UIElementSettings> {
   const {
-    snapSettings,
     gridSettings,
     rulerSettings,
     selectionSettings,
@@ -53,16 +54,8 @@ export function createLayerUISettings(params: UISettingsParams): Map<string, UIE
   }
 
   // ADR-040 Φ10: dead canvas crosshair + cursor branches removed (compositor owns them).
-
-  // Snap settings
-  if (options.showSnapIndicators && snapSettings.enabled && options.snapResults?.length) {
-    settings.set('snap', {
-      ...snapSettings,
-      enabled: true,
-      visible: true,
-      opacity: 1.0
-    } as UIElementSettings);
-  }
+  // ADR-137 §Step 2: dead canvas snap branch removed (the SnapRenderer it fed is gone;
+  // the live snap glyph is SnapIndicatorOverlay/SVG). `snapSettings` is no longer read here.
 
   // Selection settings
   if (options.showSelectionBox && options.selectionBox) {

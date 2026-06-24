@@ -3,20 +3,11 @@
  * ✅ ΦΑΣΗ 6: Centralized exports για snap rendering
  */
 
-// Main snap renderer
-export { SnapRenderer } from './SnapRenderer';
+// ADR-137: SnapRenderer + LegacySnapAdapter removed (dead canvas path).
+// Live snap rendering is owned exclusively by SnapIndicatorOverlay (SVG, ADR-040 leaf).
 
-// Legacy compatibility
-export { LegacySnapAdapter } from './LegacySnapAdapter';
-
-// Types και configurations
-export type {
-  SnapSettings,
-  SnapResult,
-  SnapRenderData,
-  SnapRenderMode,
-  SnapType
-} from './SnapTypes';
+// Snap settings (the only remaining snap types here — result types live in snapping/extended-types.ts).
+export type { SnapSettings } from './SnapTypes';
 
 export { DEFAULT_SNAP_SETTINGS } from './SnapTypes';
 
