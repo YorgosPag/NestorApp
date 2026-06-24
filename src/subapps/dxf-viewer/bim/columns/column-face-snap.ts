@@ -122,10 +122,12 @@ export interface ColumnFaceSnap {
    */
   readonly faceFrame: GhostFaceFrame;
   /**
-   * ADR-398 §3.20 — γραμμή-οδηγός ευθυγράμμισης (world segment) όταν το **τεταρτημόριο** κυκλικής
-   * κολόνας κουμπώνει σε άκρο/μέσον παρειάς. `undefined` σε όλα τα άλλα snaps (preview-only overlay).
+   * ADR-398 §3.20/§3.20d — γραμμή(ές)-οδηγός ευθυγράμμισης (world segments) όταν το **τεταρτημόριο**
+   * κυκλικής κολόνας κουμπώνει σε άκρο/μέσον παρειάς (τοίχος/γραμμή/πολυγραμμή/ακμή πλάκας) ή σε **πλευρά
+   * ορθογωνίου**. Ένας οδηγός στους γραμμικούς στόχους· **έως δύο** στη **γωνία ορθογωνίου** (§3.20d:
+   * u-edge + v-edge κουμπώνουν ταυτόχρονα). `undefined` σε όλα τα άλλα snaps (preview-only overlay).
    */
-  readonly alignmentGuide?: PlacementAlignmentGuide | null;
+  readonly alignmentGuide?: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[] | null;
 }
 
 /** Στόχος: world-aligned bbox + ο άξονας των κοντών άκρων (`null` = κολόνα, καμία άκρη). */
@@ -250,12 +252,18 @@ function buildEdgeCenterSnap(
   foot: { position: Point2D; along: number },
   rotation: number,
   face: ColumnFaceSide,
+  align?: { along: number; guide: PlacementAlignmentGuide | null } | null,
 ): ColumnFaceSnap {
+  // ADR-398 §3.20d — κυκλικό ghost: το διαμήκες `along` κουμπώνει στο άκρο/μέσον (quadrant-to-end) →
+  // γραμμή-οδηγός ΚΑΙ στο center-on-axis γραμμής/ακμής πλάκας (mirror του τοίχου §3.20c). `core-not-band`:
+  // η θέση πάνω στον ΑΞΟΝΑ της ακμής (perp 0), στο (πιθανώς κουμπωμένο) `along` — όχι στη μπάντα ±eps.
+  const along = align ? align.along : foot.along;
+  const axisPt: Point2D = { x: ff.origin.x + along * ff.axisDir.x, y: ff.origin.y + along * ff.axisDir.y };
   // ADR-398 §3.12 — σε κύκλο/τόξο η κολώνα κάθεται ΑΚΡΙΒΩΣ στην περιφέρεια (radial reprojection:
-  // διορθώνει το chord-inset· η γωνία θέσης διατηρείται). Ευθείς στόχοι → foot.position αυτούσιο.
+  // διορθώνει το chord-inset· η γωνία θέσης διατηρείται). Ευθείς στόχοι → axisPt αυτούσιο.
   const position = ff.arc
-    ? pointOnCircle(ff.arc.center, ff.arc.radius, calculateAngle(ff.arc.center, foot.position))
-    : foot.position;
+    ? pointOnCircle(ff.arc.center, ff.arc.radius, calculateAngle(ff.arc.center, axisPt))
+    : axisPt;
   return {
     position,
     anchor: 'center',
@@ -264,8 +272,9 @@ function buildEdgeCenterSnap(
     targetId: null,
     face,
     third: 'mid',
+    ...(align?.guide ? { alignmentGuide: align.guide } : {}),
     faceFrame: buildCenteredAxisFaceFrame(
-      ff.origin, ff.axisDir, ff.perpDir, ff.faceAlongMin, ff.faceAlongMax, foot.along, ff.arc,
+      ff.origin, ff.axisDir, ff.perpDir, ff.faceAlongMin, ff.faceAlongMax, along, ff.arc,
     ),
   };
 }
@@ -289,6 +298,7 @@ function resolveColumnEdgeSnap(
   cursor: Readonly<Point2D>,
   edges: readonly LinearMemberSnapTarget[],
   sceneUnits: SceneUnits,
+  circle?: CircleGhostOpts | null,
 ): { snap: ColumnFaceSnap; dist: number } | null {
   if (edges.length === 0) return null;
   const f = mmToSceneUnits(sceneUnits);
@@ -306,7 +316,13 @@ function resolveColumnEdgeSnap(
   const foot = resolveAxisCenterFoot(
     cursor, ff.origin, ff.axisDir, ff.faceAlongMin, ff.faceAlongMax, SLAB_EDGE_CENTER_THRESHOLD_MM * f,
   );
-  if (foot) return { snap: buildEdgeCenterSnap(ff, foot, rotation, face), dist: foot.perp };
+  if (foot) {
+    // ADR-398 §3.20d — κυκλικό ghost: quadrant-to-end alignment + γραμμή-οδηγός (zero-width edge → halfThickness 0).
+    const align = circle
+      ? resolveQuadrantEndAlignment(foot.along, ff.faceAlongMin, ff.faceAlongMax, circle.radius, ff.origin, ff.axisDir, 0, circle.wpp, circle.scaleF)
+      : null;
+    return { snap: buildEdgeCenterSnap(ff, foot, rotation, face, align), dist: foot.perp };
+  }
   // §3.10b flush — η κολώνα κάθεται με μία παρειά flush στην ακμή, στην πλευρά του cursor.
   const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
   const snap: ColumnFaceSnap = {
