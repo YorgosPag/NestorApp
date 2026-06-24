@@ -4,8 +4,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/addons/shaders/CopyShader.js';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
-const SSAO_TRANSITION_MS = 300;
+const SSAO_TRANSITION_MS = DXF_TIMING.animation.DEFAULT; // ADR-516
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
 
 /**

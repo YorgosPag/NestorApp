@@ -70,7 +70,7 @@ function previewDisplay(): WithDisplay['geometry'] {
   beamPreviewStore.reset();
   beamPreviewStore.set({ startPoint: START, endPoint: null, kind: 'straight', overrides: {} });
   // ADR-398 §3.10 — τα column footprints ζουν πλέον στο κοινό sceneSnapTargetsStore.
-  sceneSnapTargetsStore.set({ footprints: [COLUMN_FOOTPRINT], beamTargets: [], wallTargets: [], slabTargets: [] });
+  sceneSnapTargetsStore.set({ footprints: [COLUMN_FOOTPRINT], beamTargets: [], wallTargets: [], slabTargets: [], lineTargets: [], diskTargets: [], rectTargets: [] });
   const ghost = generateBeamPreview([START], END, 'mm');
   return (ghost as unknown as WithDisplay).geometry;
 }

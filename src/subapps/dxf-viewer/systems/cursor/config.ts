@@ -18,6 +18,7 @@ import { markSystemsDirty } from '../../rendering/core/frame-scheduler-api';
 // cache (instant first paint) and for one-shot legacy migration.
 import { userSettingsRepository } from '../../../../services/user-settings';
 import type { CursorSettingsSlice } from '../../../../services/user-settings';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ===== TYPES =====
 export interface CursorSettings {
@@ -158,7 +159,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
   
   performance: {
     use_raf: true,            // Smooth 60fps updates
-    throttle_ms: 16,          // ~60fps throttling
+    throttle_ms: DXF_TIMING.frame.THROTTLE_60, // ADR-516 — ~60fps throttling (NOT the cat-0 compositor crosshair)
     precision_mode: true      // High precision για CAD
   }
 };

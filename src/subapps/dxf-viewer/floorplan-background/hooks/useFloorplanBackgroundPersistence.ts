@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { FloorplanBackgroundApiClient } from '../services/floorplan-background-api-client';
 import type { BackgroundTransform, FloorplanBackground } from '../providers/types';
@@ -30,7 +31,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorplanBackgroundPersistence');
 
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 interface PersistableSnapshot {
   id: string;

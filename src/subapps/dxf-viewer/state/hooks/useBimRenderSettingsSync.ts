@@ -31,11 +31,12 @@
  */
 
 import { useEffect } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { Level } from '../../systems/levels/config';
 import { useBimRenderSettingsStore } from '../bim-render-settings-store';
 
 /** Min idle ms after last local setter before snapshot syncs resume. */
-const LOCAL_WRITE_QUIET_WINDOW_MS = 2000;
+const LOCAL_WRITE_QUIET_WINDOW_MS = DXF_TIMING.persist.WRITE_GRACE; // ADR-516
 
 interface UseBimRenderSettingsSyncParams {
   currentLevelId: string | null;

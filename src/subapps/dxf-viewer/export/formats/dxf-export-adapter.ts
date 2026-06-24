@@ -24,6 +24,8 @@ import {
   type DxfUnit,
 } from '../../types/dxf-export.types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { DimStyle } from '../../types/dimension';
+import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { resolveEntityColorHex } from '../../systems/selection/select-similar-by-color';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { flattenSceneEntitiesForDxf } from '../core/bim-to-dxf-primitives';
@@ -119,6 +121,28 @@ export function buildDxfExportRequest(
 }
 
 /**
+ * Resolve the DIMSTYLE definitions the exported dimensions reference, from the
+ * dim-style registry SSoT (ADR-362 Round 25). Unique `styleId`s → `DimStyle`s;
+ * unknown ids (custom styles absent from this session) are skipped — AutoCAD then
+ * falls back to STANDARD for those, which is the safe default. Returns `[]` when
+ * the scene has no dimensions (→ writer keeps the bare, table-less envelope).
+ */
+export function collectDimStylesForExport(entities: readonly Entity[]): DimStyle[] {
+  const registry = getDimStyleRegistry();
+  const seen = new Set<string>();
+  const styles: DimStyle[] = [];
+  for (const e of entities) {
+    if (e.type !== 'dimension') continue;
+    const styleId = (e as unknown as { styleId?: string }).styleId;
+    if (!styleId || seen.has(styleId)) continue;
+    seen.add(styleId);
+    const style = registry.getStyle(styleId);
+    if (style) styles.push(style);
+  }
+  return styles;
+}
+
+/**
  * Render a built DXF request to a `.dxf` Blob, fully client-side (no backend).
  * Coordinates are scaled from the scene's drawing units to the chosen DXF unit
  * (e.g. scene metres → DXF metres = ×1; scene mm → DXF metres = ×0.001), so the
@@ -130,6 +154,9 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     scale: coordinateScale(request.scene.units, request.settings.units),
     mmScale: mmToOutputScale(request.settings.units),
     lineMode,
+    // ADR-362 Round 25 — emit a DIMSTYLE table so native dimensions resolve to a
+    // real style (not STANDARD). Empty for dimension-free scenes → bare envelope.
+    dimStyles: collectDimStylesForExport(request.scene.entities),
   });
   return new Blob([dxf], { type: 'application/dxf' });
 }

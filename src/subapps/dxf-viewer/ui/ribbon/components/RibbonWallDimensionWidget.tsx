@@ -25,6 +25,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { DXF_TIMING } from '../../../config/dxf-timing';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -99,7 +100,7 @@ const CONFIGS: Record<WallDimension, DimensionConfig> = {
 };
 
 /** Debounce window for live commit while typing. */
-const COMMIT_DEBOUNCE_MS = 200;
+const COMMIT_DEBOUNCE_MS = DXF_TIMING.ui.COMMIT_DEBOUNCE; // ADR-516
 
 function toDraft(meters: number | null): string {
   if (meters === null || !Number.isFinite(meters)) return '';

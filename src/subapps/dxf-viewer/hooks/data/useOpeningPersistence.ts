@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
 
 import type { SceneModel } from '../../types/entities';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Level } from '../../systems/levels/config';
@@ -91,7 +92,7 @@ export interface UseOpeningPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 // ============================================================================
 // HOOK

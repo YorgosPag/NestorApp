@@ -40,6 +40,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
@@ -84,7 +85,7 @@ export interface UseMepFittingAutoReconciliationParams {
 // ============================================================================
 
 /** Debounce window for the topology-driven reconcile (echo-loop defence). */
-const RECONCILE_DEBOUNCE_MS = 500;
+const RECONCILE_DEBOUNCE_MS = DXF_TIMING.persist.RECONCILE; // ADR-516
 
 // ============================================================================
 // HELPERS (pure)

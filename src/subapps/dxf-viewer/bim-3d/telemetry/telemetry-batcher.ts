@@ -21,9 +21,10 @@ import { telemetryStore } from './telemetry-store';
 import { uploadTelemetryBatch } from './telemetry-uploader';
 import type { PerformanceMetricsSnapshot } from '../performance/PerformanceHUDStore';
 import type { Bim3dRenderMode } from '../performance/per-mode-promotion';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export const BATCH_SIZE = 5;
-export const FLUSH_INTERVAL_MS = 5 * 60 * 1000;
+export const FLUSH_INTERVAL_MS = DXF_TIMING.lifecycle.TELEMETRY_FLUSH; // ADR-516
 
 interface PendingSample {
   snapshot: PerformanceMetricsSnapshot;

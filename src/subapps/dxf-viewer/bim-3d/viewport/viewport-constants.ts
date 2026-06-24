@@ -5,6 +5,7 @@
  */
 
 import type { ZoomPreset } from './viewport-types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export const ZOOM_PRESETS: readonly ZoomPreset[] = [
   { label: '12.5%', value: 0.125 },
@@ -60,14 +61,14 @@ export const ORTHO_MAX_ZOOM = 100;
 
 export const TUMBLE_BASE_SPEED = 0.005;
 
-export const PROJECTION_SWITCH_DURATION_MS = 500;
-export const FRAME_SCENE_DURATION_MS = 500;
+export const PROJECTION_SWITCH_DURATION_MS = DXF_TIMING.animation.SLOW; // ADR-516
+export const FRAME_SCENE_DURATION_MS = DXF_TIMING.animation.SLOW; // ADR-516
 export const FRAME_PADDING_FACTOR = 1.1;
 
 export const POI_ARM_LENGTH = 0.15;
 export const POI_COLOR: readonly [number, number, number] = [0, 0.706, 0.847];
-export const POI_FADE_DELAY_MS = 1500;
-export const POI_FADE_DURATION_MS = 300;
+export const POI_FADE_DELAY_MS = DXF_TIMING.animation.POI_FADE_DELAY; // ADR-516
+export const POI_FADE_DURATION_MS = DXF_TIMING.animation.DEFAULT; // ADR-516
 
 export const SNAP_PROXIMITY_THRESHOLD = 0.92;
 
@@ -81,4 +82,4 @@ export const SPEED_MODIFIER_PRECISE = 0.5;
 export const VIEWCUBE_HIDE_WIDTH_PX = 600;
 
 /** Duration for keyboard pan easing animation (matches --cp-duration-fast CSS token). */
-export const PAN_ANIMATION_DURATION_MS = 150;
+export const PAN_ANIMATION_DURATION_MS = DXF_TIMING.animation.FAST; // ADR-516

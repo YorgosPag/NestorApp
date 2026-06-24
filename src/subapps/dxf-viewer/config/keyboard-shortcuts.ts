@@ -13,6 +13,7 @@
 // ============================================================================
 
 import type { ToolType } from '../ui/toolbar/types';
+import { DXF_TIMING } from './dxf-timing';
 
 // ============================================================================
 // 📋 TYPE DEFINITIONS
@@ -980,7 +981,7 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
 export const GUIDE_CHORD_LEADER = 'G' as const;
 
 /** Chord window timeout in ms (time to press second key after leader) */
-export const GUIDE_CHORD_TIMEOUT_MS = 350 as const;
+export const GUIDE_CHORD_TIMEOUT_MS = DXF_TIMING.gesture.CHORD_TIMEOUT; // ADR-516
 
 // ============================================================================
 // 🔗 COMBINED SHORTCUTS MAP (All shortcuts in one place)

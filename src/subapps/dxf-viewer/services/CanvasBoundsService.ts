@@ -33,6 +33,8 @@
  * @updated 2026-01-27 - Enterprise event-based invalidation (ADR-039)
  */
 
+import { DXF_TIMING } from '../config/dxf-timing';
+
 export interface CanvasBoundsCache {
   /** Το cached DOMRect για το canvas */
   bounds: DOMRect;
@@ -40,14 +42,14 @@ export interface CanvasBoundsCache {
   timestamp: number;
 }
 
-/** 🏢 ENTERPRISE: Cache configuration constants */
+/** 🏢 ENTERPRISE: Cache configuration constants (ADR-516 → DXF_TIMING) */
 const CACHE_CONFIG = {
   /** Maximum cache age in milliseconds (5 seconds) */
-  MAX_AGE_MS: 5000,
+  MAX_AGE_MS: DXF_TIMING.lifecycle.BOUNDS_MAX_AGE,
   /** Throttle interval for scroll events (100ms) */
-  SCROLL_THROTTLE_MS: 100,
+  SCROLL_THROTTLE_MS: DXF_TIMING.ui.SCROLL_DEBOUNCE,
   /** Debounce interval for resize events (150ms) */
-  RESIZE_DEBOUNCE_MS: 150,
+  RESIZE_DEBOUNCE_MS: DXF_TIMING.ui.RESIZE_DEBOUNCE_FAST,
 } as const;
 
 /**

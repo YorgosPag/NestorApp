@@ -22,7 +22,14 @@
  */
 
 import type { Entity, HatchEntity } from '../../types/entities';
+import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-362 Round 24/25 — native DIMENSION + DIMSTYLE emission reuse the dimension
+// group-code SSoT (utils/dxf-dimension-writer + dxf-dimstyle-writer) so the
+// in-process writers + production export stay in lockstep. Before Round 24,
+// dimensions were silently dropped at the entity switch.
+import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
+import { emitDimStyle } from '../../utils/dxf-dimstyle-writer';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { getHatchPattern, resolveEffectiveHatchScale } from '../../data/hatch-pattern-catalog';
@@ -49,6 +56,13 @@ export interface DxfWriteOptions {
   readonly mmScale?: number;
   /** Geometry mode — 'polyline' (AutoCAD, default) or 'lines' (Tekton). */
   readonly lineMode?: DxfLineMode;
+  /**
+   * ADR-362 Round 25 — the DIMSTYLE definitions the exported dimensions reference
+   * (resolved from the dim-style registry by the export adapter). When non-empty a
+   * `TABLES → DIMSTYLE` section is prepended and DIMENSION code 3 uses the real
+   * style name; otherwise the envelope stays bare (no TABLES) as before.
+   */
+  readonly dimStyles?: ReadonlyArray<DimStyle>;
 }
 
 const DEFAULT_LAYER = '0';
@@ -70,11 +84,30 @@ export function writeDxfAscii(
   };
   const layerObj = (e: Entity): DxfWriteLayer | undefined => options.layersById?.[e.layerId];
 
+  // ADR-362 Round 25 — DIMSTYLE table (only when the export carries dimensions whose
+  // styles were resolved). `styleId → name` lets DIMENSION code 3 reference the real
+  // style; sizes scale via DIMSCALE × `s` (see emitDimStyle).
+  const dimStyles = options.dimStyles ?? [];
+  const dimStyleNameById: Record<string, string> = {};
+  for (const st of dimStyles) dimStyleNameById[st.id] = st.name;
+  if (dimStyles.length > 0) {
+    pair(0, 'SECTION');
+    pair(2, 'TABLES');
+    pair(0, 'TABLE');
+    pair(2, 'DIMSTYLE');
+    pair(70, dimStyles.length);
+    for (const st of dimStyles) emitDimStyle(pair, st, s);
+    pair(0, 'ENDTAB');
+    pair(0, 'ENDSEC');
+  }
+
   pair(0, 'SECTION');
   pair(2, 'ENTITIES');
+  // Anonymous dimension blocks need sequential names (*D0, *D1, …) across the file.
+  let dimBlockIndex = 0;
   for (const e of entities) {
     const layer = layerObj(e);
-    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair);
+    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById);
   }
   pair(0, 'ENDSEC');
   pair(0, 'EOF');
@@ -107,6 +140,7 @@ type Pair = (code: number, value: string | number) => void;
 
 function writeEntity(
   e: Entity, layer: string, aci: number, s: number, mmScale: number, explode: boolean, pair: Pair,
+  nextDimBlock: () => number, dimStyleNameById: Record<string, string>,
 ): void {
   switch (e.type) {
     case 'line': {
@@ -160,7 +194,21 @@ function writeEntity(
       emitHatch(e as HatchEntity, layer, aci, s, explode, pair);
       break;
     }
-    // point/spline/dimension/leader/xline/ray → skipped.
+    case 'dimension': {
+      // ADR-362 Round 24 — native DIMENSION entity (all 11 variants) via the
+      // group-code SSoT. `pair` is the scale-aware sink; coordinates are scaled
+      // inside `emitDimensionEntity` (same `s` as every other entity). styleName =
+      // the dim's styleId (AutoCAD falls back to STANDARD when no DIMSTYLE table is
+      // present — a DIMSTYLE/BLOCKS section is the next increment). Layer/colour are
+      // emitted by the dimension header itself (code 8); ACI is left to the style.
+      const dim = e as unknown as DimensionEntity;
+      // Round 25 — real DIMSTYLE name (from the resolved table) when available,
+      // else the raw styleId / Standard fallback (Round 24 behaviour).
+      const styleName = dimStyleNameById[dim.styleId] ?? dim.styleId ?? 'Standard';
+      emitDimensionEntity(pair, { entity: dim, styleName, layerName: layer }, nextDimBlock(), s);
+      break;
+    }
+    // point/spline/leader/xline/ray → skipped.
     default:
       break;
   }

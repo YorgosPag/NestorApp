@@ -39,6 +39,7 @@ import { useRoofTypeReresolution } from './useRoofTypeReresolution';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { mergeDocsIntoScene } from './merge-docs-into-scene';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // TYPES
@@ -76,7 +77,7 @@ export interface UseRoofPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 // ============================================================================
 // HOOK

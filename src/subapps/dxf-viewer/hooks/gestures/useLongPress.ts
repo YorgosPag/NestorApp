@@ -9,9 +9,10 @@
 
 import { useRef, useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** Long press threshold in ms */
-const LONG_PRESS_THRESHOLD_MS = 500;
+const LONG_PRESS_THRESHOLD_MS = DXF_TIMING.gesture.LONG_PRESS; // ADR-516
 
 /** Maximum movement allowed during long press (pixels) */
 const LONG_PRESS_MOVE_TOLERANCE = 10;

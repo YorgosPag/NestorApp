@@ -31,6 +31,7 @@ import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { useLevels } from '../../systems/levels';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { GripHoverMenuStore, type GripMenuOption } from '../../systems/grip/GripHoverMenuStore';
 import { getClientPosition } from '../../systems/cursor/ImmediatePositionStore';
@@ -38,7 +39,7 @@ import { resolveMenuActions } from '../../systems/grip/grip-menu-resolver';
 import { bindMenuAction, type GripMenuActionContext } from '../../systems/grip/grip-menu-actions';
 
 /** Hold-time before the menu pops, in ms. Matches Windows ToolTip default. */
-const MENU_HOLD_MS = 400;
+const MENU_HOLD_MS = DXF_TIMING.gesture.MENU_HOLD; // ADR-516
 
 /** Menu offset from cursor (viewport px), down-right like Windows context menu. */
 const MENU_OFFSET_PX = { x: 14, y: 14 } as const;

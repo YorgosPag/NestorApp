@@ -32,6 +32,7 @@ import {
   resolveAutoFitAction,
   isDegenerateRestoreScale,
 } from '../../systems/zoom/viewport-autofit-policy';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** Subset of the zoom system this hook needs (floorplan-background fit). */
 interface ZoomSystemLike {
@@ -60,7 +61,7 @@ export interface UseViewportAutoFitParams {
 }
 
 /** Delay before the deferred decision — immune to the cold-load fileRecordId race. */
-const FIT_DELAY_MS = 200;
+const FIT_DELAY_MS = DXF_TIMING.ui.FIT_TO_VIEW_DELAY; // ADR-516
 
 function sceneHasEntities(scene: SceneModel | null): boolean {
   return !!scene && Array.isArray(scene.entities) && scene.entities.length > 0;

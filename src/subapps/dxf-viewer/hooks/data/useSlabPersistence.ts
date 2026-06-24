@@ -50,6 +50,7 @@ import {
 } from './slab-persistence-helpers';
 import { useSlabTypeReresolution } from './useSlabTypeReresolution';
 import { mergeDocsIntoScene } from './merge-docs-into-scene';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // TYPES
@@ -87,7 +88,7 @@ export interface UseSlabPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 // ============================================================================
 // HOOK

@@ -14,10 +14,12 @@
 //   ariaLiveBus._resetForTests()              // test utility only
 // ============================================================================
 
+import { DXF_TIMING } from '../../config/dxf-timing';
+
 export type AriaSeverity = 'polite' | 'assertive';
 export type AriaAnnounceListener = (message: string, severity: AriaSeverity) => void;
 
-const IDEMPOTENCY_MS = 200;
+const IDEMPOTENCY_MS = DXF_TIMING.ui.ARIA_IDEMPOTENCY; // ADR-516
 
 const listeners = new Set<AriaAnnounceListener>();
 let lastMsg = '';

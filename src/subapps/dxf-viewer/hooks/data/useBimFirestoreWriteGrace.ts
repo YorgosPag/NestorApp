@@ -26,9 +26,10 @@
  */
 
 import { useRef, useCallback } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** ms to suppress incoming Firestore snapshots after a local write. */
-export const WRITE_GRACE_MS = 2000;
+export const WRITE_GRACE_MS = DXF_TIMING.persist.WRITE_GRACE; // ADR-516
 
 export interface BimFirestoreWriteGrace {
   /** Call immediately before `dirtyIdsRef.delete(entityId)` in persist(). */

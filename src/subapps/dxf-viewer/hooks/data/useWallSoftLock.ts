@@ -23,8 +23,9 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { WallFirestoreService } from '../../bim/walls/wall-firestore-service';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
-const LOCK_TTL_MS = 5 * 60 * 1000;
+const LOCK_TTL_MS = DXF_TIMING.lifecycle.LOCK_TTL; // ADR-516
 
 export interface UseWallSoftLockResult {
   readonly acquireLock: (wallId: string) => Promise<void>;

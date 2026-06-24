@@ -15,14 +15,15 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type { DxfTextNode } from '../types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DB_NAME = 'dxf-text-drafts';
 const DB_VERSION = 1;
 const STORE_NAME = 'drafts';
-const DEBOUNCE_MS = 30_000;
-const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DEBOUNCE_MS = DXF_TIMING.persist.DRAFT_DEBOUNCE; // ADR-516
+const EXPIRY_MS = DXF_TIMING.lifecycle.DRAFT_EXPIRY; // ADR-516 (7 days)
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 

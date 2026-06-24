@@ -27,6 +27,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -52,7 +53,7 @@ export interface UseHostingReconcilerParams {
 }
 
 /** ms μετά το τελευταίο guide move πριν persist-άρουμε τις moved strips. */
-const SETTLE_PERSIST_MS = 350;
+const SETTLE_PERSIST_MS = DXF_TIMING.persist.SETTLE_PERSIST; // ADR-516
 
 /** Stable signature του συνόλου hosted entities — rebuild index μόνο όταν αλλάζει. */
 function hostedSignature(entities: readonly AnySceneEntity[]): string {

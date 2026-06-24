@@ -15,6 +15,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { lockGripSnapPosition, unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
 import { gripStyleStore } from '../../stores/GripStyleStore';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { UnifiedGripInfo, UnifiedGripPhase, GripHoverThrottle } from './unified-grip-types';
 import { findNearestGrip } from './grip-hit-testing';
 import { setGripStepAnchor, clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
@@ -23,7 +24,7 @@ import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
 import { resolveMoveGlyphZoneForGrip } from '../../bim/grips/move-glyph-zones';
 import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
-const WARM_DELAY_MS = 1000;
+const WARM_DELAY_MS = DXF_TIMING.gesture.WARM_DELAY; // ADR-516
 const GRIP_HOVER_THROTTLE_MS = PANEL_LAYOUT.TIMING.GRIP_HOVER_THROTTLE_MS; // SSoT (ADR-040 Φ10)
 // ADR-363 Phase 1G — squared world-distance threshold above which the hot-grip
 // cursor counts as "moved from the anchor". Tiny (essentially "moved at all"):

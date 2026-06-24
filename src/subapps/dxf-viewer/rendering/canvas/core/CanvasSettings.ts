@@ -12,6 +12,8 @@ import { getDevicePixelRatio } from '../../../systems/cursor/utils';
 import { SNAP_TOLERANCE, RENDERING_ZINDEX } from '../../../config/tolerance-config';
 // 🏢 SSoT: Axis/origin defaults — single source of truth
 import { GRID_AXES_DEFAULTS } from '../../../config/grid-axis-defaults';
+// 🏢 ADR-516: Timing & Latency SSoT
+import { DXF_TIMING } from '../../../config/dxf-timing';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -143,7 +145,7 @@ export class CanvasSettings {
         smoothFade: false,
         smoothFadeMinPx: 2,
         smoothFadeMaxPx: 10,
-        smoothFadeDurationMs: 200,
+        smoothFadeDurationMs: DXF_TIMING.animation.FADE, // ADR-516
         zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {

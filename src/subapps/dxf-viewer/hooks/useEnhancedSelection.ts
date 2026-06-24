@@ -46,6 +46,8 @@ import { useSelection } from '../systems/selection';
 import { useLevels } from '../systems/levels';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../stores/LayerStore';
+// 🏢 ADR-516: Timing & Latency SSoT
+import { DXF_TIMING } from '../config/dxf-timing';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -63,7 +65,7 @@ const SELECTION_PERFORMANCE_CONFIG = {
   /** Chunk size for batch selection operations */
   CHUNK_SIZE: 500,
   /** Debounce time for rapid selection operations (ms) */
-  DEBOUNCE_MS: 16, // ~1 frame at 60fps
+  DEBOUNCE_MS: DXF_TIMING.frame.THROTTLE_60, // ADR-516 — ~1 frame at 60fps
 } as const;
 
 /**

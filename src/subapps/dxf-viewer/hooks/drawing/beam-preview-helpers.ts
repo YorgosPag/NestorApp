@@ -66,9 +66,13 @@ export function generateBeamPreview(
   sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
   const preview = beamPreviewStore.get();
-  // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store· δοκάρι = beam+slab μέλη (ΟΧΙ τοίχοι).
+  // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store.
   const targets = sceneSnapTargetsStore.get();
   const footprints = targets.footprints;
+  // SNAP target set (Giorgio 2026-06-24 «ίδια συμπεριφορά με κολόνα/τοίχο») — το ΑΚΡΟ/ghost κουμπώνει σε
+  // τοίχους + δοκάρια + πλάκες + γραμμές (ΙΔΙΟ με τον τοίχο) → σιελ listening dims ΚΑΙ κοντά σε τοίχο.
+  const snapMembers = selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']);
+  // OVERLAP/collision set — ΜΟΝΟ δοκάρια+πλάκες: ένα δοκάρι κατά μήκος τοίχου είναι έγκυρο (όχι duplication).
   const beamTargets = selectGhostMembers(targets, ['beam', 'slab']);
 
   if (tempPoints.length === 0) {
@@ -92,7 +96,7 @@ export function generateBeamPreview(
     let endFaceFrame: GhostFaceFrame | null = null;
     if (preview.kind !== 'curved') {
       const widthMm = preview.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-      const endSnap = resolveMemberEndpointSnap(cursorPoint, footprints, beamTargets, widthMm, sceneUnits);
+      const endSnap = resolveMemberEndpointSnap(cursorPoint, footprints, snapMembers, widthMm, sceneUnits);
       endPt = resolveMemberEndpointWithFineStep(endSnap, startPt);
       endFaceFrame = endSnap.faceFrame ?? null;
     }
@@ -130,10 +134,11 @@ function makeBeamGhostBeforeClick(
   // ADR-398 §3.13/§3.15 (Giorgio 2026-06-24) — Polar/Rect Magnet opts (ΙΔΙΟ SSoT με κολόνα), ώστε το
   // φάντασμα δοκαριού να κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο ΟΠΩΣ η κολόνα.
   const magnetOpts = buildMemberMagnetOptions(widthMm, sceneUnits);
-  // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam', kinds beam+slab).
+  // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam'). Snap σε τοίχους+δοκάρια+
+  // πλάκες+γραμμές (Giorgio 2026-06-24 «ίδια συμπεριφορά με κολόνα» → σιελ ενδείξεις ΚΑΙ κοντά σε τοίχο).
   // ⚠️ ADR-514 §2 — ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap).
   // ΙΔΙΟ entry με το commit (`useBeamTool.resolveStartAnchor`) → preview ≡ commit by construction.
-  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'], magnetOpts });
+  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['wall', 'beam', 'slab', 'line'], magnetOpts });
   const snap = snapResult.kind === 'member-placement' ? snapResult.placement : null;
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap

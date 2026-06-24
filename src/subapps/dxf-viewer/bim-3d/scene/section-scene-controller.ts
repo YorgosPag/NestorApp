@@ -36,6 +36,7 @@ import {
 import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface SectionControllerDeps {
   readonly renderer: THREE.WebGLRenderer;
@@ -79,7 +80,7 @@ export class SectionSceneController {
    */
   private lastRenderedCutConstants: number[] = [];
   private refineTimer: ReturnType<typeof setTimeout> | null = null;
-  private static readonly REFINE_DELAY_MS = 150;
+  private static readonly REFINE_DELAY_MS = DXF_TIMING.ui.SECTION_REFINE; // ADR-516
   /**
    * ADR-452 v2.12 — throttle for the GPU-heavy EXACT edge trim WHILE the slider is
    * actively dragging (`cutMoving`). On a dense floor, re-uploading every crossing edge
@@ -91,7 +92,7 @@ export class SectionSceneController {
    * guarantees the final exact trim lands the instant the slider settles.
    */
   private lastEdgeTrimMs = 0;
-  private static readonly EDGE_TRIM_THROTTLE_MS = 50;
+  private static readonly EDGE_TRIM_THROTTLE_MS = DXF_TIMING.frame.EDGE_TRIM; // ADR-516
   /**
    * ADR-452 v2.7 — last rendered camera pose, to treat ANY camera navigation as a
    * draft frame. `isInteracting` only flips for orbit/pan/tumble (OrbitControls

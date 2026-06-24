@@ -25,6 +25,7 @@
  */
 
 import { PILL_BG_COLOR } from '../../rendering/utils/canvas-pill';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -81,7 +82,7 @@ const LEADER_STYLE_VALUES: ReadonlySet<OpeningTagLeaderStyle> = new Set([
   'dotted',
 ]);
 
-const DEBOUNCE_MS = 200;
+const DEBOUNCE_MS = DXF_TIMING.ui.COMMIT_DEBOUNCE; // ADR-516
 
 // ────────────────────────────────────────────────────────────────────────────
 // PURE HELPERS

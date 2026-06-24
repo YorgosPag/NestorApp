@@ -1,14 +1,18 @@
 /**
- * DXF DIMSTYLE Table Writer — ADR-362 Phase H1.
+ * DXF DIMSTYLE Table Writer — ADR-362 Phase H1 + Round 25 (production wiring).
  *
- * Emits a DXF `TABLES` section containing the DIMSTYLE table, mirroring the
- * pattern of `dxf-layer-table-writer.ts`. Output: alternating code/value string[]
- * suitable for in-process roundtrip tests (write → feed to `parseDimStyles()`).
+ * SSoT for the DXF DIMSTYLE group-code mapping. The per-style core (`emitDimStyle`)
+ * writes through the generic `DimGroupSink`, so it serves BOTH:
+ *   - `writeDimStyleTable(...)` — standalone `TABLES` section, unscaled `string[]`
+ *     for the in-process roundtrip tests (write → `parseDimStyles()`, lossless);
+ *   - the production client-side exporter (`export/core/dxf-ascii-writer.ts`),
+ *     which prepends a `TABLES → DIMSTYLE` section (the styles the exported
+ *     dimensions reference) so they resolve to a real style instead of STANDARD.
  *
- * NOT a production DXF exporter — production export flows through the ezdxf
- * Python microservice (`types/dxf-export.types.ts`). The writer's purpose is to
- * guarantee that the in-app `DimStyle` data model can survive a tokenised DXF
- * TABLES roundtrip at the DIMSTYLE level (lossless save → load of rendering fields).
+ * Model-space scaling: DIMSCALE (code 40) is multiplied by the coordinate `scale`
+ * — a SINGLE knob that scales every dimension SIZE field (arrows/text/gaps) in
+ * AutoCAD, so the appearance stays correct after unit conversion (mm→m, …). At
+ * scale 1 (default mm→mm export) it is a no-op → the roundtrip tests are unchanged.
  *
  * Mapping notes:
  *   - String enums (DimLinearUnitFormat etc.) → DXF integer codes via local lookup maps.
@@ -27,14 +31,7 @@ import type {
   DimTextVerticalPlacement,
   DimToleranceJustify,
 } from '../types/dimension';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Emit helper
-// ──────────────────────────────────────────────────────────────────────────────
-
-function emit(out: string[], code: string, value: string): void {
-  out.push(code, value);
-}
+import type { DimGroupSink } from './dxf-dimension-writer';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Enum → DXF code lookup maps
@@ -72,97 +69,103 @@ const TOL_JUSTIFY_DXF: Record<DimToleranceJustify, number> = {
 };
 
 function flag(b: boolean): string { return b ? '1' : '0'; }
-function num(n: number): string   { return String(n); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Per-style emitter
+// Per-style emitter (SSoT core — shared by the test table writer + production)
 // ──────────────────────────────────────────────────────────────────────────────
 
-function emitOneDimStyle(out: string[], s: DimStyle): void {
-  emit(out, '0', 'DIMSTYLE');
-  emit(out, '2', s.name);
-  emit(out, '70', '0');                      // flags (standard = 0)
+/**
+ * Emit ONE DIMSTYLE record through `sink`. `scale` (coordinate scale) is applied
+ * ONLY to DIMSCALE (code 40) — AutoCAD's single multiplier for every dimension
+ * SIZE field — so the appearance stays correct after unit conversion. All other
+ * fields are unit-independent (factors/flags/enums/colours) or are paper-relative
+ * sizes that DIMSCALE governs. At scale 1 it is a no-op.
+ */
+export function emitDimStyle(sink: DimGroupSink, s: DimStyle, scale = 1): void {
+  sink(0, 'DIMSTYLE');
+  sink(2, s.name);
+  sink(70, 0);                          // flags (standard = 0)
 
   // ── Scale / geometry (codes 40-48) ────────────────────────────────────────
-  emit(out, '40', num(s.dimscale));
-  emit(out, '41', num(s.dimasz));
-  emit(out, '42', num(s.dimexo));
-  emit(out, '43', num(s.dimdli));
-  emit(out, '44', num(s.dimexe));
-  emit(out, '45', num(s.dimrnd));
-  emit(out, '46', '0');                      // DIMDLE (ext line extension beyond ticks)
-  emit(out, '47', num(s.dimtp));
-  emit(out, '48', num(Math.abs(s.dimtm)));   // DIMTM emitted as positive (AutoCAD spec)
+  sink(40, s.dimscale * scale);         // DIMSCALE × coordinate scale (model-space sizing)
+  sink(41, s.dimasz);
+  sink(42, s.dimexo);
+  sink(43, s.dimdli);
+  sink(44, s.dimexe);
+  sink(45, s.dimrnd);
+  sink(46, 0);                          // DIMDLE (ext line extension beyond ticks)
+  sink(47, s.dimtp);
+  sink(48, Math.abs(s.dimtm));          // DIMTM emitted as positive (AutoCAD spec)
 
   // ── Text / tolerances (codes 140-148) ─────────────────────────────────────
-  emit(out, '140', num(s.dimtxt));
-  emit(out, '141', num(s.dimcen));
-  emit(out, '142', '0');                     // DIMTSZ (tick size, 0 = use arrows)
-  emit(out, '143', num(s.dimaltf));
-  emit(out, '144', num(s.dimlfac));
-  emit(out, '145', '0');                     // DIMTVP (text vertical position offset)
-  emit(out, '146', num(s.dimtfac));
-  emit(out, '147', num(s.dimgap));
-  emit(out, '148', num(s.dimaltrnd));
+  sink(140, s.dimtxt);
+  sink(141, s.dimcen);
+  sink(142, 0);                         // DIMTSZ (tick size, 0 = use arrows)
+  sink(143, s.dimaltf);
+  sink(144, s.dimlfac);
+  sink(145, 0);                         // DIMTVP (text vertical position offset)
+  sink(146, s.dimtfac);
+  sink(147, s.dimgap);
+  sink(148, s.dimaltrnd);
 
   // ── Boolean / enum flags (codes 71-79) ────────────────────────────────────
-  emit(out, '71', flag(s.dimtol));
-  emit(out, '72', flag(s.dimlim));
-  emit(out, '73', flag(s.dimtih));
-  emit(out, '74', flag(s.dimtoh));
-  emit(out, '75', flag(s.suppressExtLine1));
-  emit(out, '76', flag(s.suppressExtLine2));
-  emit(out, '77', num(TEXT_VERTICAL_DXF[s.dimtad]));
-  emit(out, '78', num(s.dimzin));
-  emit(out, '79', '0');                      // DIMAZIN (angular zero suppression)
+  sink(71, flag(s.dimtol));
+  sink(72, flag(s.dimlim));
+  sink(73, flag(s.dimtih));
+  sink(74, flag(s.dimtoh));
+  sink(75, flag(s.suppressExtLine1));
+  sink(76, flag(s.suppressExtLine2));
+  sink(77, TEXT_VERTICAL_DXF[s.dimtad]);
+  sink(78, s.dimzin);
+  sink(79, 0);                          // DIMAZIN (angular zero suppression)
 
   // ── Alternate units flags (codes 170-178) ─────────────────────────────────
-  emit(out, '170', flag(s.dimalt));
-  emit(out, '171', num(s.dimaltd));
-  emit(out, '172', flag(s.dimtofl));
-  emit(out, '173', '0');                     // DIMSAH (separate arrowheads, use DIMBLK1/2)
-  emit(out, '174', flag(s.dimtix));
-  emit(out, '175', '0');                     // DIMSOXD
+  sink(170, flag(s.dimalt));
+  sink(171, s.dimaltd);
+  sink(172, flag(s.dimtofl));
+  sink(173, 0);                         // DIMSAH (separate arrowheads, use DIMBLK1/2)
+  sink(174, flag(s.dimtix));
+  sink(175, 0);                         // DIMSOXD
 
   // ── Colors (codes 176-178) ────────────────────────────────────────────────
-  emit(out, '176', num(s.dimclrd));
-  emit(out, '177', num(s.dimclre));
-  emit(out, '178', num(s.dimclrt));
+  sink(176, s.dimclrd);
+  sink(177, s.dimclre);
+  sink(178, s.dimclrt);
 
   // ── Angular precision (code 179) ──────────────────────────────────────────
-  emit(out, '179', num(s.dimadec));
+  sink(179, s.dimadec);
 
   // ── Unit format codes (270-289) ───────────────────────────────────────────
-  emit(out, '270', num(LINEAR_UNIT_DXF[s.dimlunit]));
-  emit(out, '271', num(s.dimdec));
-  emit(out, '272', num(s.dimtdec));
-  emit(out, '273', num(LINEAR_UNIT_DXF[s.dimaltu]));
-  emit(out, '274', '2');                     // DIMALTTD (alt tolerance dec — default to dimdec)
-  emit(out, '275', num(ANGULAR_UNIT_DXF[s.dimaunit]));
-  emit(out, '276', '0');                     // DIMFRAC (fractional format, 0=horizontal)
-  emit(out, '277', num(LINEAR_UNIT_DXF[s.dimlunit]));  // duplicate of 270 (DIMLUNIT in some R2000 files)
-  emit(out, '278', num(s.dimdsep === '.' ? 46 : 44));  // ASCII: '.'=46  ','=44
-  emit(out, '279', num(s.dimtmove));
-  emit(out, '280', '0');                     // DIMJUST (horizontal text position, 0=centred)
-  emit(out, '281', flag(s.suppressDimLine1));
-  emit(out, '282', flag(s.suppressDimLine2));
-  emit(out, '283', num(TOL_JUSTIFY_DXF[s.dimtolj]));
-  emit(out, '284', '0');                     // DIMTZIN
-  emit(out, '285', '0');                     // DIMALTZ
-  emit(out, '286', '0');                     // DIMALTTZ
-  emit(out, '288', '0');                     // DIMUPT
-  emit(out, '289', num(s.dimatfit));
+  sink(270, LINEAR_UNIT_DXF[s.dimlunit]);
+  sink(271, s.dimdec);
+  sink(272, s.dimtdec);
+  sink(273, LINEAR_UNIT_DXF[s.dimaltu]);
+  sink(274, 2);                         // DIMALTTD (alt tolerance dec — default to dimdec)
+  sink(275, ANGULAR_UNIT_DXF[s.dimaunit]);
+  sink(276, 0);                         // DIMFRAC (fractional format, 0=horizontal)
+  sink(277, LINEAR_UNIT_DXF[s.dimlunit]); // duplicate of 270 (DIMLUNIT in some R2000 files)
+  sink(278, s.dimdsep === '.' ? 46 : 44); // ASCII: '.'=46  ','=44
+  sink(279, s.dimtmove);
+  sink(280, 0);                         // DIMJUST (horizontal text position, 0=centred)
+  sink(281, flag(s.suppressDimLine1));
+  sink(282, flag(s.suppressDimLine2));
+  sink(283, TOL_JUSTIFY_DXF[s.dimtolj]);
+  sink(284, 0);                         // DIMTZIN
+  sink(285, 0);                         // DIMALTZ
+  sink(286, 0);                         // DIMALTTZ
+  sink(288, 0);                         // DIMUPT
+  sink(289, s.dimatfit);
 
   // ── Handles (340-344) — 0 = no explicit style/block ref ───────────────────
-  emit(out, '340', '0');  // DIMTXSTY (text style)
-  emit(out, '341', '0');  // DIMLDRBLK (leader arrowhead)
-  emit(out, '342', '0');  // DIMBLK
-  emit(out, '343', '0');  // DIMBLK1
-  emit(out, '344', '0');  // DIMBLK2
+  sink(340, 0);  // DIMTXSTY (text style)
+  sink(341, 0);  // DIMLDRBLK (leader arrowhead)
+  sink(342, 0);  // DIMBLK
+  sink(343, 0);  // DIMBLK1
+  sink(344, 0);  // DIMBLK2
 
   // ── Line weights (371-372) ─────────────────────────────────────────────────
-  emit(out, '371', '-2'); // DIMLWD (ByLayer = -2)
-  emit(out, '372', '-2'); // DIMLWE (ByLayer = -2)
+  sink(371, -2); // DIMLWD (ByLayer = -2)
+  sink(372, -2); // DIMLWE (ByLayer = -2)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -171,25 +174,28 @@ function emitOneDimStyle(out: string[], s: DimStyle): void {
 
 /**
  * Emit a DXF `TABLES` section containing the DIMSTYLE table for the given styles.
- * Returns alternating code/value lines (line 2i = code, 2i+1 = value).
- * Wrap in the caller's SECTION/ENDSEC markers if composing a full DXF file,
- * or pass directly to `parseDimStyles()` for roundtrip testing.
+ * Returns alternating code/value lines (line 2i = code, 2i+1 = value), unscaled,
+ * for the in-process roundtrip tests. Production export feeds `emitDimStyle` a
+ * scaled `pair` sink directly (see `export/core/dxf-ascii-writer.ts`).
  */
 export function writeDimStyleTable(styles: ReadonlyArray<DimStyle>): string[] {
   const out: string[] = [];
+  const sink: DimGroupSink = (code, value) => {
+    out.push(String(code), typeof value === 'number' ? String(value) : value);
+  };
 
-  emit(out, '0', 'SECTION');
-  emit(out, '2', 'TABLES');
-  emit(out, '0', 'TABLE');
-  emit(out, '2', 'DIMSTYLE');
-  emit(out, '70', String(styles.length));
+  sink(0, 'SECTION');
+  sink(2, 'TABLES');
+  sink(0, 'TABLE');
+  sink(2, 'DIMSTYLE');
+  sink(70, styles.length);
 
   for (const style of styles) {
-    emitOneDimStyle(out, style);
+    emitDimStyle(sink, style, 1);
   }
 
-  emit(out, '0', 'ENDTAB');
-  emit(out, '0', 'ENDSEC');
+  sink(0, 'ENDTAB');
+  sink(0, 'ENDSEC');
 
   return out;
 }

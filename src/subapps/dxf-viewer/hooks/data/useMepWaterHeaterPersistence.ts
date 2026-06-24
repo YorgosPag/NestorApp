@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
 import { EventBus } from '../../systems/events/EventBus';
@@ -70,7 +71,7 @@ export interface UseMepWaterHeaterPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 // ============================================================================
 // HELPERS

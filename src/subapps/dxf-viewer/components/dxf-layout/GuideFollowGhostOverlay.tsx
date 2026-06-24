@@ -33,6 +33,7 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/scene';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { isFoundationEntity } from '../../types/entities';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { hasGuideBindings } from '../../bim/hosting/guide-binding-types';
 import { getHostingStrategy } from '../../bim/hosting/hosting-strategy';
 import {
@@ -63,7 +64,7 @@ export interface GuideFollowGhostOverlayProps {
 }
 
 /** ms να μείνει το ghost μετά το release, ώστε να προσγειωθεί το committed commit. */
-const LINGER_MS = 140;
+const LINGER_MS = DXF_TIMING.gesture.LINGER; // ADR-516
 const GHOST_FILL = 'rgba(74, 144, 217, 0.18)';
 
 function devicePixelRatioSafe(): number {

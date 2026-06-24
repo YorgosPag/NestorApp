@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import { EventBus } from '../../systems/events/EventBus';
@@ -36,7 +37,7 @@ export interface UseGridGuideSettleEmitterParams {
 }
 
 /** ms αδράνειας κανάβου πριν θεωρηθεί «καθισμένος» ο οδηγός (μετά το coordinate-follow). */
-const SETTLE_MS = 400;
+const SETTLE_MS = DXF_TIMING.gesture.SETTLE; // ADR-516
 
 /** Στρογγυλοποίηση offset (m) για floating-point-safe σύγκριση συνόλου αξόνων. */
 const SIG_TOL = 1000;

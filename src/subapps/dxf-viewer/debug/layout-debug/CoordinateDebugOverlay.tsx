@@ -26,6 +26,7 @@ import {
   subscribeToImmediatePosition,
   getImmediateWorldPosition,
 } from '../../systems/cursor/ImmediatePositionStore';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { getImmediateTransform, subscribeTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { getCachedClientRect } from '../../rendering/core/pointer-rect-cache';
 import { installCoordinateClipboardCopy } from './coordinate-clipboard-copy';
@@ -46,7 +47,7 @@ interface CoordinateDebugOverlayProps {
 }
 
 /** Text readout throttle (10fps is plenty for a debug panel). */
-const READOUT_THROTTLE_MS = 100;
+const READOUT_THROTTLE_MS = DXF_TIMING.frame.READOUT; // ADR-516
 
 export default function CoordinateDebugOverlay({ className = '' }: CoordinateDebugOverlayProps) {
   const screenRef = useRef<HTMLSpanElement>(null);

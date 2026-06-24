@@ -339,7 +339,8 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     (point: Readonly<Point2D>): { start: Point2D; anchored: boolean } => {
       const widthMm = stateRef.current.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      // ADR-398 §3.10 — δοκάρι = beam+slab μέλη από το ΚΟΙΝΟ scene store (preview === commit).
+      // ADR-398 §3.10 — snap σε τοίχους+δοκάρια+πλάκες+γραμμές (Giorgio 2026-06-24 «ίδια με κολόνα»·
+      // preview === commit· ΙΔΙΟ target set με το `makeBeamGhostBeforeClick`).
       const targets = sceneSnapTargetsStore.get();
       // ADR-398 §3.13/§3.15 — Polar/Rect Magnet opts (ΙΔΙΑ με το preview `makeBeamGhostBeforeClick`) →
       // το magnet κούμπωμα στο 1ο κλικ ταυτίζεται με το φάντασμα (preview ≡ commit).
@@ -347,7 +348,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam', kinds beam+slab).
       // ⚠️ ADR-514 §2 — ο `point` έρχεται ήδη OSNAP-snapped από το click pipeline → ΧΩΡΙΣ findSnapPoint
       // (anti double-snap). ΙΔΙΟ entry με το preview (`makeBeamGhostBeforeClick`) → preview ≡ commit.
-      const snap = resolveBimCursorSnap({ toolKind: 'beam', cursor: point, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'], magnetOpts });
+      const snap = resolveBimCursorSnap({ toolKind: 'beam', cursor: point, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['wall', 'beam', 'slab', 'line'], magnetOpts });
       return snap.kind === 'member-placement'
         ? { start: snap.placement.start, anchored: true }
         : { start: { x: point.x, y: point.y }, anchored: false };
@@ -407,7 +408,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
         const sceneUnits = getSceneUnits?.() ?? 'mm';
         const targets = sceneSnapTargetsStore.get();
         const widthMm = s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-        const endSnap = resolveMemberEndpointSnap(point, targets.footprints, selectGhostMembers(targets, ['beam', 'slab']), widthMm, sceneUnits);
+        const endSnap = resolveMemberEndpointSnap(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), widthMm, sceneUnits);
         const endPoint = resolveMemberEndpointWithFineStep(endSnap, s.startPoint);
         return commitTwoClickFromState(s, endPoint);
       }

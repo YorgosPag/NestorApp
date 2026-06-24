@@ -15,10 +15,11 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { TransformStore, getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { persistViewport } from '../../services/viewport-persistence';
 
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = DXF_TIMING.ui.URL_DEBOUNCE; // ADR-516
 
 /** Identity transform that should never be persisted (initial canvas state). */
 function isIdentityTransform(scale: number, offsetX: number, offsetY: number): boolean {

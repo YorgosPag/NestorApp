@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../config/keyboard-shortcuts';
+import { DXF_TIMING } from '../config/dxf-timing';
 import type { ToolType } from '../ui/toolbar/types';
 import type { WallKind, WallCategory } from '../bim/types/wall-types';
 import {
@@ -14,7 +15,7 @@ import { EventBus } from '../systems/events/EventBus';
 // ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
 // Leader keys open a 350ms window; second key within window resolves to a tool.
 // Leader key alone fires its fallback (e.g. S → select, C → circle, O → layering).
-const BIM_CHORD_TIMEOUT_MS = 350;
+const BIM_CHORD_TIMEOUT_MS = DXF_TIMING.gesture.CHORD_TIMEOUT; // ADR-516
 
 const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'S', secondKey: 'T', action: 'tool:stair' },       // S+T → stair     (ADR-358)

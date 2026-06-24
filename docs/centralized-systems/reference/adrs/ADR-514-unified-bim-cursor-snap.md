@@ -198,3 +198,11 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
   nice-absolute πλέγμα· member-side Shift = future). 8 (magnet) + 10 (brain regression) + 109 (column/beam/
   framing regression) jest GREEN. 🔴 tsc + browser-verify (δοκάρι μέσα σε κύκλο/ορθογώνιο = ίδια αίσθηση με
   κολόνα) + commit. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 + ADR-398 μαζί.
+- **2026-06-24** — Φ-magnet follow-up (Giorgio browser-verify: «δεν εμφανίζονται οι σιελ ενδείξεις όταν το
+  δοκάρι πάει κοντά σε τοίχο»): ρίζα = το **snap target set** του δοκαριού ήταν `['beam','slab']` (δεν
+  «έβλεπε» τοίχους/γραμμές), ενώ η κολόνα/τοίχος βλέπουν τα πάντα → κανένα face-snap κοντά σε τοίχο →
+  καμία σιελ listening dim. FIX: **snap** set δοκαριού → `['wall','beam','slab','line']` (ΙΔΙΟ με τον
+  τοίχο) σε preview (`makeBeamGhostBeforeClick` + endpoint) + commit (`useBeamTool.resolveStartAnchor` +
+  endpoint). Το **overlap/collision** set μένει `['beam','slab']` (δοκάρι κατά μήκος τοίχου = έγκυρο, ΟΧΙ
+  duplication — split snap-vs-collision όπως ο τοίχος). +1 jest (beam→wall snap ΜΕ/ΧΩΡΙΣ 'wall'). 🔴 tsc +
+  browser-verify + commit.

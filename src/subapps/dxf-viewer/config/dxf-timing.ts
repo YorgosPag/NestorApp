@@ -53,6 +53,8 @@ export const DXF_TIMING = {
     COLLAB_CURSOR_OUTER: 100,
     /** Coordinate debug overlay readout throttle. */
     READOUT: 100,
+    /** Section edge-trim recompute throttle (bim-3d section controller). */
+    EDGE_TRIM: 50,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -93,6 +95,18 @@ export const DXF_TIMING = {
     STATE_TRANSITION: 200,
     /** Fit-to-view after scene load. */
     FIT_TO_VIEW_DELAY: 200,
+    /** Viewport→URL query-sync debounce (deep-link sharing). */
+    URL_DEBOUNCE: 400,
+    /** Slower ribbon widget commit debounce (MEP circuit name/conductors). */
+    COMMIT_DEBOUNCE_SLOW: 300,
+    /** Faster resize debounce (CanvasBoundsService recompute). */
+    RESIZE_DEBOUNCE_FAST: 150,
+    /** Section view refine delay before high-quality recompute (bim-3d). */
+    SECTION_REFINE: 150,
+    /** Screen-reader aria-live duplicate-announcement idempotency window. */
+    ARIA_IDEMPOTENCY: 200,
+    /** Screen-reader announcement coalescing debounce. */
+    ARIA_DEBOUNCE: 250,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -118,6 +132,12 @@ export const DXF_TIMING = {
     SAVE_STATUS_DISPLAY: 2000,
     /** Save status reset to idle. */
     SAVE_STATUS_RESET: 3000,
+    /** MEP fitting auto-reconciliation debounce (same cadence as entity autosave). */
+    RECONCILE: 500,
+    /** Hosting reconciler settle-before-persist delay. */
+    SETTLE_PERSIST: 350,
+    /** Text-draft recovery autosave debounce (30s). */
+    DRAFT_DEBOUNCE: 30000,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -148,6 +168,8 @@ export const DXF_TIMING = {
     PAGE_RELOAD: 1500,
     /** Yellow anchor coordinate highlight display duration. */
     ANCHOR_DISPLAY: 1000,
+    /** Point-of-interest fade-out start delay (bim-3d viewport). */
+    POI_FADE_DELAY: 1500,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -182,6 +204,12 @@ export const DXF_TIMING = {
     LOCK_TTL: 300000,
     /** Tracking point inactivity timeout. */
     TRACKING_INACTIVITY: 5000,
+    /** Canvas bounds cache max age before forced recompute. */
+    BOUNDS_MAX_AGE: 5000,
+    /** Telemetry batch flush interval (5 minutes). */
+    TELEMETRY_FLUSH: 5 * 60 * 1000,
+    /** Text-draft recovery expiry (7 days). */
+    DRAFT_EXPIRY: 7 * 24 * 60 * 60 * 1000,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -210,6 +238,8 @@ export const DXF_TIMING = {
     /** Command-history merge window — consecutive drags within this window
      *  collapse into one undo step (shared by useEntityDrag + useGripMovement). */
     COMMAND_MERGE_WINDOW: 500,
+    /** Wheel-interaction idle timeout (bim-3d camera settles after scroll). */
+    WHEEL_IDLE: 220,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

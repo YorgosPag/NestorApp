@@ -13,6 +13,8 @@
  * @since 2025-10-09
  */
 
+import { DXF_TIMING } from '../config/dxf-timing';
+
 /**
  * Enterprise provider configuration constants
  */
@@ -32,8 +34,8 @@ export const ENTERPRISE_CONSTANTS = {
    * genuine tight loop can reach the threshold before the window resets. */
   RENDER_LOOP_WINDOW_MS: 2000,
 
-  /** Auto-save debounce delay in milliseconds */
-  AUTO_SAVE_DEBOUNCE_MS: 500,
+  /** Auto-save debounce delay in milliseconds (ADR-516 → DXF_TIMING.persist.ENTITY_AUTOSAVE). */
+  AUTO_SAVE_DEBOUNCE_MS: DXF_TIMING.persist.ENTITY_AUTOSAVE,
 
   /** Default viewer mode for backward compatibility */
   DEFAULT_VIEWER_MODE: 'normal' as const,

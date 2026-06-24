@@ -17,6 +17,7 @@
  */
 
 import { useEffect } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { DocumentData } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore';
 import type { Level } from '../../systems/levels/config';
@@ -26,7 +27,7 @@ import { useStructuralSettingsStore } from '../structural-settings-store';
 import type { StructuralSettings } from '../../bim/structural/structural-settings';
 
 /** Min idle ms μετά το τελευταίο local setter πριν ξαναρχίσουν τα server syncs. */
-const LOCAL_WRITE_QUIET_WINDOW_MS = 2000;
+const LOCAL_WRITE_QUIET_WINDOW_MS = DXF_TIMING.persist.WRITE_GRACE; // ADR-516
 
 interface BuildingDoc extends DocumentData {
   structuralSettings?: Partial<StructuralSettings>;

@@ -91,6 +91,29 @@ describe('resolveBimCursorSnap — beam magnet (ADR-514 member branch)', () => {
     if (r.kind === 'point') expect(r.point).toEqual({ x: 5, y: 5 });
   });
 
+  it('Giorgio 2026-06-24 — beam κοντά σε ΤΟΙΧΟ → snap (σιελ dims) όταν "wall" στα kinds', () => {
+    // Οριζόντιος τοίχος 10m, πάχος 200 (y ∈ [-100,100]). Cursor στο σώμα του.
+    const WALL = {
+      id: 'w1',
+      axis: [{ x: 0, y: 0 }, { x: 10000, y: 0 }],
+      outline: [{ x: 0, y: -100 }, { x: 10000, y: -100 }, { x: 10000, y: 100 }, { x: 0, y: 100 }],
+    };
+    const base = {
+      toolKind: 'beam' as const,
+      cursor: { x: 5000, y: 150 },
+      targets: makeTargets({ wallTargets: [WALL] }),
+      sceneUnits: 'mm' as const,
+      memberWidthMm: 250,
+    };
+    // ΜΕ 'wall' (το fix) → κουμπώνει στον τοίχο (member-placement + faceFrame για σιελ dims).
+    const withWall = resolveBimCursorSnap({ ...base, memberKinds: ['wall', 'beam', 'slab', 'line'] });
+    expect(withWall.kind).toBe('member-placement');
+    if (withWall.kind === 'member-placement') expect(withWall.placement.faceFrame).toBeDefined();
+    // ΧΩΡΙΣ 'wall' (παλιά συμπεριφορά) → ο τοίχος αγνοείται → point fallback (καμία ένδειξη).
+    const withoutWall = resolveBimCursorSnap({ ...base, memberKinds: ['beam', 'slab'] });
+    expect(withoutWall.kind).toBe('point');
+  });
+
   it('member-face-first: κοντά σε κολόνα → face νικά το magnet (magnet = fallback μόνο)', () => {
     // cursor κοντά σε κολόνα ΚΑΙ μέσα σε (επικαλυπτόμενο) δίσκο: το face placement προηγείται.
     const r = resolveBimCursorSnap({

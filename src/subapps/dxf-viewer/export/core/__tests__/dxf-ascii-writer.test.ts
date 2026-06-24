@@ -332,3 +332,100 @@ describe('writeDxfAscii — predefined HATCH (ADR-507 Φ2)', () => {
     expect(dxf).toMatch(/\n78\n1\n/);
   });
 });
+
+// ADR-362 Round 24 — dimensions are no longer dropped: native DIMENSION emission
+// (group-code SSoT in utils/dxf-dimension-writer), scaled like every other entity.
+describe('writeDxfAscii — native DIMENSION (ADR-362 Round 24)', () => {
+  function linearDim(): Entity {
+    return {
+      id: 'd', type: 'dimension', dimensionType: 'linear', layerId: 'L',
+      styleId: 'ISO-25',
+      defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      rotation: 0, measurementValue: 100,
+    } as unknown as Entity;
+  }
+  function alignedDim(): Entity {
+    return {
+      id: 'd2', type: 'dimension', dimensionType: 'aligned', layerId: 'L',
+      styleId: 'ISO-25',
+      defPoints: [{ x: 0, y: 0 }, { x: 30, y: 40 }, { x: 15, y: 20 }],
+      measurementValue: 50,
+    } as unknown as Entity;
+  }
+
+  it('emits a native DIMENSION entity (no longer skipped)', () => {
+    const dxf = writeDxfAscii([linearDim()], { layersById: LAYERS });
+    expect(dxf).toContain('0\nDIMENSION\n');
+    expect(dxf).toContain('100\nAcDbDimension\n');
+    expect(dxf).toContain('100\nAcDbRotatedDimension\n');
+    expect(dxf).toContain('70\n0\n');             // linear type flag
+    expect(dxf).toContain('3\nISO-25\n');         // style name (code 3)
+    expect(dxf.trimEnd().endsWith('EOF')).toBe(true); // envelope intact
+  });
+
+  it('def points are scaled like every other entity (mm→m ×0.001)', () => {
+    const dxf = writeDxfAscii([linearDim()], { layersById: LAYERS, scale: 0.001 });
+    // extOrigin2 (100,0) → (0.1, 0) on codes 14/24
+    expect(dxf).toContain('14\n0.1\n24\n0\n');
+    // measurement value (length) scales too: 100 × 0.001 = 0.1
+    expect(dxf).toContain('42\n0.1\n');
+  });
+
+  it('sequential anonymous block names *D0/*D1 across the file', () => {
+    const dxf = writeDxfAscii([linearDim(), alignedDim()], { layersById: LAYERS });
+    expect(dxf).toContain('2\n*D0\n');
+    expect(dxf).toContain('2\n*D1\n');
+  });
+
+  it('missing styleId → falls back to Standard', () => {
+    const noStyle = { ...(linearDim() as object), styleId: undefined } as unknown as Entity;
+    const dxf = writeDxfAscii([noStyle], { layersById: LAYERS });
+    expect(dxf).toContain('3\nStandard\n');
+  });
+
+  it('dimension lands on the SAME resolved layer name as siblings (code 8)', () => {
+    const dxf = writeDxfAscii([linearDim()], { layersById: LAYERS });
+    expect(dxf).toContain('8\nCOLOR_10\n'); // resolved layer name, not the raw id 'L'
+  });
+});
+
+// ADR-362 Round 25 — DIMSTYLE table: dimensions resolve to a real style (not STANDARD).
+import { ISO_129_TEMPLATE } from '../../../systems/dimensions/dim-style-templates';
+
+describe('writeDxfAscii — DIMSTYLE table (ADR-362 Round 25)', () => {
+  const STYLE = ISO_129_TEMPLATE;
+  function dimWithStyle(): Entity {
+    return {
+      id: 'd', type: 'dimension', dimensionType: 'linear', layerId: 'L',
+      styleId: STYLE.id,
+      defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      rotation: 0, measurementValue: 100,
+    } as unknown as Entity;
+  }
+
+  it('prepends a TABLES → DIMSTYLE section when dimStyles is provided', () => {
+    const dxf = writeDxfAscii([dimWithStyle()], { layersById: LAYERS, dimStyles: [STYLE] });
+    expect(dxf).toContain('0\nSECTION\n2\nTABLES\n');
+    expect(dxf).toContain('0\nTABLE\n2\nDIMSTYLE\n');
+    expect(dxf).toContain('0\nDIMSTYLE\n2\n' + STYLE.name + '\n'); // the style record
+    // TABLES section comes BEFORE the ENTITIES section.
+    expect(dxf.indexOf('2\nTABLES\n')).toBeLessThan(dxf.indexOf('2\nENTITIES\n'));
+  });
+
+  it('the DIMENSION references the real style name via code 3 (matches the table)', () => {
+    const dxf = writeDxfAscii([dimWithStyle()], { layersById: LAYERS, dimStyles: [STYLE] });
+    expect(dxf).toContain('3\n' + STYLE.name + '\n');
+  });
+
+  it('DIMSCALE (code 40) is multiplied by the coordinate scale', () => {
+    const dxf = writeDxfAscii([dimWithStyle()], { layersById: LAYERS, dimStyles: [STYLE], scale: 2 });
+    // code 40 appears in the DIMSTYLE record = dimscale × 2
+    expect(dxf).toContain('40\n' + String(STYLE.dimscale * 2) + '\n');
+  });
+
+  it('NO dimStyles → bare envelope, no TABLES (Round 24 fallback preserved)', () => {
+    const dxf = writeDxfAscii([dimWithStyle()], { layersById: LAYERS });
+    expect(dxf).not.toContain('TABLES');
+    expect(dxf).toContain('0\nDIMENSION\n'); // dimension still emitted (just STANDARD style)
+  });
+});

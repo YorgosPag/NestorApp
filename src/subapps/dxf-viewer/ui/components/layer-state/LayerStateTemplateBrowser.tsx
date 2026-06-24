@@ -33,12 +33,13 @@ import {
 import { useTranslation } from '@/i18n';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { PRESET_CATEGORIES } from '../../../types/layer-state-template';
+import { DXF_TIMING } from '../../../config/dxf-timing';
 import type {
   DxfTemplateCategory,
   LayerStateTemplateSummary,
 } from '../../../types/layer-state-template';
 
-const SEARCH_DEBOUNCE_MS = 150;
+const SEARCH_DEBOUNCE_MS = DXF_TIMING.ui.SEARCH_DEBOUNCE; // ADR-516
 
 export interface LayerStateTemplateBrowserProps {
   readonly open: boolean;

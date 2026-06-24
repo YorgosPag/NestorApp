@@ -12,9 +12,10 @@
 
 import { subscribeHoveredEntity, getHoveredEntity } from '../hover/HoverStore';
 import { getImmediatePosition } from '../cursor/ImmediatePositionStore';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** ms of stable hover required before showing Quick Properties. */
-const HOVER_DELAY_MS = 800;
+const HOVER_DELAY_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516
 
 export interface QuickPropertiesSnapshot {
   readonly entityId: string | null;

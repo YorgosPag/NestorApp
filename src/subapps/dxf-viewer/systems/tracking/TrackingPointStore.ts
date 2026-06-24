@@ -16,6 +16,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface AcquiredTrackingPoint {
   readonly x: number;
@@ -31,9 +32,9 @@ type Listener = () => void;
 /** Max simultaneous acquired points before FIFO eviction kicks in. */
 export const MAX_TRACKING_POINTS = 7;
 /** Hover duration (ms) needed on a stable snap candidate before acquisition. */
-export const ACQUISITION_DURATION_MS = 1000;
+export const ACQUISITION_DURATION_MS = DXF_TIMING.gesture.ACQUISITION; // ADR-516
 /** Inactivity window (ms) after which all acquired points decay. */
-export const INACTIVITY_TIMEOUT_MS = 5000;
+export const INACTIVITY_TIMEOUT_MS = DXF_TIMING.lifecycle.TRACKING_INACTIVITY; // ADR-516
 
 class TrackingPointStoreClass {
   private points: AcquiredTrackingPoint[] = [];

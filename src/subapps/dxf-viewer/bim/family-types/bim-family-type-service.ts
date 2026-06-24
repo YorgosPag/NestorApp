@@ -56,6 +56,7 @@ import type {
   BimFamilyTypeOrigin,
   BimTypeParamsByCategory,
 } from '../types/bim-family-type';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // CONFIG
@@ -86,7 +87,7 @@ export interface UpdateTypeInput {
   readonly category?: keyof BimTypeParamsByCategory;
 }
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
 
 // ============================================================================
 // CONVERTERS

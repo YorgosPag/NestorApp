@@ -41,6 +41,7 @@ import type {
   StairPresetDoc,
   StairPresetScope,
 } from '../../bim/types/stair-types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // CONFIG
@@ -59,7 +60,7 @@ export interface SavePresetInput {
   readonly params: Omit<StairParams, 'basePoint' | 'direction'>;
 }
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
 
 // ============================================================================
 // CONVERTERS

@@ -12,8 +12,9 @@ import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
-const HOVER_DEBOUNCE_MS = 800;
+const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516
 
 interface PointerHandlers {
   handleMouseMove: (e: ReactMouseEvent) => void;

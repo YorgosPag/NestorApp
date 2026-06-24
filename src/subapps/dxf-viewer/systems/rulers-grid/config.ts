@@ -12,6 +12,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 SSoT: Axis/origin defaults — single source of truth
 import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
+// 🏢 ADR-516: Timing & Latency SSoT
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface BoundingBox {
   min: Point2D;
@@ -243,7 +245,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     smoothFade: false,
     smoothFadeMinPx: 2,
     smoothFadeMaxPx: 10,
-    smoothFadeDurationMs: 200,
+    smoothFadeDurationMs: DXF_TIMING.animation.FADE, // ADR-516
     fadeAtDistance: true,
     fadeThreshold: 0.1
   }
@@ -290,7 +292,7 @@ export const RULERS_GRID_CONFIG = {
   // Performance thresholds
   MAX_GRID_LINES: 1000,
   MAX_RULER_TICKS: 1000, // Αύξηση από 500 σε 1000 για περισσότερα ticks
-  RENDER_THROTTLE_MS: 16
+  RENDER_THROTTLE_MS: DXF_TIMING.frame.THROTTLE_60 // ADR-516 — 1 frame @60fps
 } as const;
 
 // ===== TYPE EXPORTS =====

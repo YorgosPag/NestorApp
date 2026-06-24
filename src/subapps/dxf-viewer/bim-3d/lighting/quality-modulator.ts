@@ -1,8 +1,9 @@
 import type * as THREE from 'three';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 const SHADOW_SOFT = { radius: 4, mapSize: 2048 } as const;
 const SHADOW_MOVING = { radius: 0.5, mapSize: 1024 } as const;
-const TRANSITION_MS = 300;
+const TRANSITION_MS = DXF_TIMING.animation.DEFAULT; // ADR-516
 
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
 

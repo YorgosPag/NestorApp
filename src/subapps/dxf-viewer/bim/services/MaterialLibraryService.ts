@@ -44,6 +44,7 @@ import {
   type SaveBimMaterialInput,
   type UpdateBimMaterialPatch,
 } from '../types/bim-material-types';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // CONFIG
@@ -55,7 +56,7 @@ export interface MaterialLibraryServiceConfig {
   readonly projectId?: string;
 }
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
 
 // ============================================================================
 // CONVERTERS

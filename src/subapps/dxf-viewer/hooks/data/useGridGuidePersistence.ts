@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
@@ -58,7 +59,7 @@ export interface UseGridGuidePersistenceResult {
 // CONSTANTS + PURE HELPERS
 // ============================================================================
 
-const SAVE_DEBOUNCE_MS = 1000;
+const SAVE_DEBOUNCE_MS = DXF_TIMING.persist.GRID_GUIDE; // ADR-516
 
 /** Stable string signature για no-op / anti-echo σύγκριση. */
 function gridSignature(

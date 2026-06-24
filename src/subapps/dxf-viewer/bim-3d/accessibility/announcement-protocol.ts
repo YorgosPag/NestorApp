@@ -13,6 +13,7 @@
 
 import { ariaLiveBus, type AriaSeverity } from './aria-live-bus';
 import type { TFn } from './status-bar-text-generator';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export type AnnouncementEventType =
   | 'entitySelected'
@@ -52,7 +53,7 @@ const POLITENESS: Record<AnnouncementEventType, AriaSeverity> = {
   error: 'assertive',
 };
 
-const DEBOUNCE_MS = 250;
+const DEBOUNCE_MS = DXF_TIMING.ui.ARIA_DEBOUNCE; // ADR-516
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingAnnouncement: { message: string; severity: AriaSeverity } | null = null;

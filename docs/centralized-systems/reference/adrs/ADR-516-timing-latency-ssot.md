@@ -1,6 +1,6 @@
 # ADR-516 — Timing & Latency SSoT (Zero-Lag Interaction)
 
-- **Status**: **Accepted — Phase 1 Implemented** (2026-06-24· config merge + zero-lag guard + grip fix· rewire των bypass = Phase 2)
+- **Status**: **Accepted — Phase 2 Implemented** (2026-06-24· Phase 1 = config merge + zero-lag guard + grip fix· **Phase 2 = rewire των ~55 bypass → DXF_TIMING + path-scoped ratchet CHECK 3.27**)
 - **Date**: 2026-06-24
 - **Domain**: DXF Viewer — Interaction / Performance / Configuration (cross-cutting)
 - **Author**: audit κατόπιν εντολής Giorgio (2026-06-24)
@@ -238,8 +238,73 @@
 **Φάση 2 (επόμενη συνεδρία, Orchestrator):** rewire των ~45 bypass (`AUTO_SAVE_DEBOUNCE_MS`,
 frame-time, one-off §2.4) → `DXF_TIMING` + κατάργηση facades + pre-commit ratchet (ADR-294/314).
 
+## 8.ter Phase 2 — Implementation (2026-06-24)
+
+**Παραδοτέα Φάσης 2 (Orchestrator, ~55 αρχεία· καμία αλλαγή τιμής):** rewire ΟΛΩΝ των διάσπαρτων
+bypass timing constants ώστε να δείχνουν στο `DXF_TIMING`, + path-scoped ratchet.
+
+### 1. Rewire ανά ομάδα (κάθε bypass → import + reference, ίδιο νούμερο, σωστή κατηγορία)
+- **Ομάδα 1 — Autosave 500** (26 αρχεία): 24 persistence hooks (`useWallPersistence` … `useBeamPersistence`)
+  + `bim/hooks/use-stair-persistence.ts` + `settings-provider/constants.ts`
+  → `const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE`.
+- **Ομάδα 2 — persist/ui παραλλαγές** (10): `RECONCILE_DEBOUNCE_MS→persist.RECONCILE`,
+  `SAVE_DEBOUNCE_MS(grid-guide)→persist.GRID_GUIDE`, `SETTLE_MS→gesture.SETTLE`,
+  `SETTLE_PERSIST_MS→persist.SETTLE_PERSIST`, floorplan-bg `DEBOUNCE_MS→persist.ENTITY_AUTOSAVE`,
+  `WRITE_GRACE_MS→persist.WRITE_GRACE`, 3× `LOCAL_WRITE_QUIET_WINDOW_MS→persist.WRITE_GRACE`,
+  viewport-URL `DEBOUNCE_MS→ui.URL_DEBOUNCE`.
+- **Ομάδα 3 — Frame 16** (3): cursor `throttle_ms`, rulers `RENDER_THROTTLE_MS`,
+  `useEnhancedSelection.DEBOUNCE_MS` → `frame.THROTTLE_60`. *(Επαληθεύτηκε: ο cursor throttle αφορά το
+  cursor-CONTEXT setting, ΟΧΙ τον compositor crosshair — κατηγορία 0 παραμένει ανέγγιχτη.)*
+- **Ομάδα 4 — Gesture/one-off** (15): WARM_DELAY, MENU_HOLD, LONG_PRESS, 2× HOVER_REVEAL, LINGER,
+  ACQUISITION+TRACKING_INACTIVITY, 2× CHORD_TIMEOUT, SEARCH_DEBOUNCE, COMMIT_DEBOUNCE(+_SLOW για MEP 300),
+  opening-tag `→ui.COMMIT_DEBOUNCE`, CanvasBounds (`BOUNDS_MAX_AGE`/`SCROLL_DEBOUNCE`/`RESIZE_DEBOUNCE_FAST`),
+  CoordinateDebug `READOUT`.
+- **Ομάδα 5 — Animation/lifecycle** (~16): viewport-constants (SLOW×2/POI_FADE_DELAY/DEFAULT/FAST),
+  viewport-camera `WHEEL_IDLE`, quality+ssao modulators `→animation.DEFAULT`, a11y (`ARIA_IDEMPOTENCY`/
+  `ARIA_DEBOUNCE`), section-controller (`SECTION_REFINE`/`frame.EDGE_TRIM`), DraftRecovery
+  (`DRAFT_DEBOUNCE`/`DRAFT_EXPIRY`), 3× CACHE_TTL services, `useWallSoftLock.LOCK_TTL`,
+  telemetry-batcher `TELEMETRY_FLUSH`, 2× grid `smoothFadeDurationMs→animation.FADE`, `useViewportAutoFit`.
+
+### 2. Νέα categorized keys στο `DXF_TIMING` (σημασιολογικά σωστά, μηδέν force-fit)
+- `frame.EDGE_TRIM=50`
+- `ui.URL_DEBOUNCE=400`, `ui.COMMIT_DEBOUNCE_SLOW=300`, `ui.RESIZE_DEBOUNCE_FAST=150`,
+  `ui.SECTION_REFINE=150`, `ui.ARIA_IDEMPOTENCY=200`, `ui.ARIA_DEBOUNCE=250`
+- `persist.RECONCILE=500`, `persist.SETTLE_PERSIST=350`, `persist.DRAFT_DEBOUNCE=30000`
+- `animation.POI_FADE_DELAY=1500`
+- `lifecycle.BOUNDS_MAX_AGE=5000`, `lifecycle.TELEMETRY_FLUSH=300000`, `lifecycle.DRAFT_EXPIRY=7d`
+- `gesture.WHEEL_IDLE=220`
+
+### 3. Ratchet — CHECK 3.27 (path-scoped, ADR-294/314 pattern)
+- NEW `scripts/check-dxf-timing-ratchet.js` — μπλοκάρει νέο raw timing literal
+  (`*_MS|*_DELAY|*_THROTTLE|*_DEBOUNCE|*_INTERVAL|*_TIMEOUT|*_DURATION|*_WINDOW|*_ms|*Ms = <number>`)
+  μέσα στο `src/subapps/dxf-viewer/**`. Reference (`= DXF_TIMING.*`) δεν ματσάρει (μηδέν digit).
+- **Self-contained (ΟΧΙ στο `.ssot-registry.json`)** — σκόπιμη απόκλιση από το handoff Step D:
+  ο global `ssot-baseline-engine` εφαρμόζει τα registry `forbiddenPatterns` σε ΟΛΟ το `src/`, ενώ το
+  DXF_TIMING SSoT καλύπτει ΜΟΝΟ τον viewer (η υπόλοιπη app δεν έχει timing SSoT → θα μπλόκαρε χωρίς πού
+  να δείξει). Μιμείται τα υπάρχοντα self-contained bespoke ratchets (`check-tabs-import`/`check-no-flash`).
+- Baseline `.dxf-timing-baseline.json` = **35 αρχεία / 57 violations** (το «tail»: `io/dxf-import`,
+  `RenderPipeline`, `ServiceHealthMonitor`, bim-3d perf collectors, voice-recorder, constraints κ.λπ. —
+  distinct/diagnostic/perf-internal). Ratchet: μειώνεται μόνο, νέα αρχεία = zero tolerance.
+- Wired: CHECK 3.27 στο `run-checks-parallel.js`· npm scripts `dxf-timing:{audit,report,baseline}`.
+
+### 4. Facades — διατηρήθηκαν ως @facade (Step C deferred)
+Τα `panel-tokens.ts`/`timing-config.ts`/`settings-config.ts` παραμένουν references στο `DXF_TIMING`
+(backward-compat). Κατάργηση = ξεχωριστή εκκαθάριση όταν migrate-άρουν οι τελευταίοι consumers.
+
+### Verification
+- tsc (full `--noEmit`, N.17-serialized): **0 errors στα touched μου** (9 προϋπάρχοντα errors άλλων
+  agents — beam-types/concreteGrade/foundation-grips — ΟΧΙ δικά μου).
+- Ratchet regex unit-checked (9/9 cases: literal→block, reference/type-decl→pass). Self-test 0 false-positives.
+- ✅ Google-level: ΝΑΙ — μία πηγή/έννοια, μηδέν αλλαγή τιμής, zero-lag path (κατηγορία 0) ανέγγιχτο,
+  ratchet προστατεύει το regression.
+
 ## 8. Changelog
 
+- **2026-06-24 (Phase 2 impl)** — Rewire ~55 bypass timing constants → `DXF_TIMING` σε 5 ομάδες
+  (Autosave 26· persist/ui 10· frame-16 3· gesture/one-off 15· animation/lifecycle 16), καμία αλλαγή
+  τιμής. 16 νέα categorized keys (§8.ter §2). NEW path-scoped ratchet CHECK 3.27
+  (`scripts/check-dxf-timing-ratchet.js`, self-contained, baseline `.dxf-timing-baseline.json` 35/57)
+  + npm `dxf-timing:{audit,report,baseline}`. tsc 0 (δικά μου). **Status → Phase 2 Implemented.**
 - **2026-06-24 (Phase 1 impl)** — Υλοποίηση Φάσης 1: NEW `config/dxf-timing.ts` (DXF_TIMING, 7
   κατηγορίες)· τα 3 configs → facades· NEW `hooks/raf-coalesced-throttle.ts` SSoT helper· grip zero-lag
   fix (`useGripMovement` hard-drop → trailing-RAF) + ενοποίηση με `useEntityDrag`· 6/6 jest. Open

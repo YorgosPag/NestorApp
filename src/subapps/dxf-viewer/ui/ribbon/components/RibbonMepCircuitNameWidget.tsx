@@ -20,13 +20,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useCommandHistory } from '../../../core/commands';
+import { DXF_TIMING } from '../../../config/dxf-timing';
 import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
 
 /** Debounce window for live commit while typing (coalesced into 1 undo step). */
-const COMMIT_DEBOUNCE_MS = 300;
+const COMMIT_DEBOUNCE_MS = DXF_TIMING.ui.COMMIT_DEBOUNCE_SLOW; // ADR-516
 
 export function RibbonMepCircuitNameWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');

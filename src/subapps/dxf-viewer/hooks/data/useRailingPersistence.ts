@@ -32,6 +32,7 @@ import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // TYPES
@@ -69,7 +70,7 @@ export interface UseRailingPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
 
 // ============================================================================
 // HELPERS

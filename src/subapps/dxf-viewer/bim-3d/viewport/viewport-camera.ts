@@ -23,6 +23,7 @@ import {
 } from './viewport-constants';
 import { computeSurfaceZoomPose, wheelZoomFactor } from './viewport-zoom-surface';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface ViewportCameraOptions {
   readonly initialPosition: THREE.Vector3;
@@ -52,7 +53,7 @@ const _direction = new THREE.Vector3();
  * Wheel events arrive in bursts ~50–120 ms apart; this debounce keeps the cheap
  * navigation path alive across the whole zoom gesture, then lets it settle.
  */
-const WHEEL_INTERACTION_IDLE_MS = 220;
+const WHEEL_INTERACTION_IDLE_MS = DXF_TIMING.gesture.WHEEL_IDLE; // ADR-516
 
 export function createViewportCamera(
   domElement: HTMLElement,

@@ -45,6 +45,7 @@ import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntity
 import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntityAttachedPersistEffect';
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
 import { isStair, mergeStairSnapshot } from '../stairs/stair-snapshot-merge';
+import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // TYPES
@@ -83,8 +84,8 @@ export interface UseStairPersistenceResult {
 // CONSTANTS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
-const LOCK_TTL_MS = 5 * 60 * 1000;
+const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+const LOCK_TTL_MS = DXF_TIMING.lifecycle.LOCK_TTL; // ADR-516
 
 // ============================================================================
 // HOOK
