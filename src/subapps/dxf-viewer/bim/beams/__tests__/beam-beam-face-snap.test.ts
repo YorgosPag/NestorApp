@@ -35,22 +35,22 @@ describe('resolveBeamBeamFaceSnap — κατευθυντικό status + γεωμ
     expect(r!.end).toEqual({ x: 5000, y: 1300 });
   });
 
-  it('Βόρεια, ΑΡΙΣΤΕΡΟ τρίτο → δοκάρι ΔΕΞΙΑ του cursor (centerline +half = x+100)', () => {
+  it('Βόρεια, εντός παρειάς → ΣΥΝΕΧΕΣ centerline = cursor (ADR-508 2026-06-24, μηδέν 3-ζωνική μετατόπιση)', () => {
     const r = resolveBeamBeamFaceSnap({ x: 2000, y: 150 }, [HORIZONTAL], OPTS);
-    expect(r!.start).toEqual({ x: 2100, y: 100 }); // cursor=αριστερή ακμή, δοκάρι δεξιά
+    expect(r!.start).toEqual({ x: 2000, y: 100 }); // centerline = cursor (clamped [100,9900])
   });
 
-  it('Βόρεια, ΔΕΞΙ τρίτο → δοκάρι ΑΡΙΣΤΕΡΑ του cursor (centerline −half = x−100)', () => {
+  it('Βόρεια, δεξιά περιοχή → ΣΥΝΕΧΕΣ centerline = cursor', () => {
     const r = resolveBeamBeamFaceSnap({ x: 8000, y: 150 }, [HORIZONTAL], OPTS);
-    expect(r!.start).toEqual({ x: 7900, y: 100 }); // cursor=δεξιά ακμή, δοκάρι αριστερά
+    expect(r!.start).toEqual({ x: 8000, y: 100 });
   });
 
-  it('Νότια → ΑΝΤΙΣΤΡΟΦΑ: αριστερό τρίτο → δοκάρι ΑΡΙΣΤΕΡΑ (centerline −half = x−100)', () => {
+  it('Νότια → ΣΥΝΕΧΕΣ centerline = cursor (μηδέν shift)', () => {
     const r = resolveBeamBeamFaceSnap({ x: 2000, y: -150 }, [HORIZONTAL], OPTS);
     expect(r).not.toBeNull();
     expect(r!.status).toBe('beam');
-    expect(r!.start).toEqual({ x: 1900, y: -100 }); // νότια flush + αντίστροφη μετατόπιση
-    expect(r!.end).toEqual({ x: 1900, y: -1300 });
+    expect(r!.start).toEqual({ x: 2000, y: -100 });
+    expect(r!.end).toEqual({ x: 2000, y: -1300 });
   });
 
   it('Κέντρο άξονα → 🟢 beam + auto-snap στην πλησιέστερη παρειά (απόφαση «Α»)', () => {

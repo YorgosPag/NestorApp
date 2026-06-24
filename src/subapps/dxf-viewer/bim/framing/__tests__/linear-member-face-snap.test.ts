@@ -34,21 +34,22 @@ describe('resolveLinearMemberFaceSnap — κατευθυντικό status + γε
     expect(r!.end).toEqual({ x: 5000, y: 1300 });
   });
 
-  it('Βόρεια, ΑΡΙΣΤΕΡΟ τρίτο → μέλος ΔΕΞΙΑ του cursor (centerline +half = x+100)', () => {
+  it('Βόρεια, εντός παρειάς → ΣΥΝΕΧΕΣ centerline = cursor (μηδέν 3-ζωνική μετατόπιση)', () => {
+    // ADR-508 (2026-06-24): το centerline ακολουθεί τον cursor (clamped στο [100,9900]), όχι ±half shift.
     const r = resolveLinearMemberFaceSnap({ x: 2000, y: 150 }, [HORIZONTAL], OPTS);
-    expect(r!.start).toEqual({ x: 2100, y: 100 });
+    expect(r!.start).toEqual({ x: 2000, y: 100 });
   });
 
-  it('Βόρεια, ΔΕΞΙ τρίτο → μέλος ΑΡΙΣΤΕΡΑ του cursor (centerline −half = x−100)', () => {
+  it('Βόρεια, δεξιά περιοχή → ΣΥΝΕΧΕΣ centerline = cursor', () => {
     const r = resolveLinearMemberFaceSnap({ x: 8000, y: 150 }, [HORIZONTAL], OPTS);
-    expect(r!.start).toEqual({ x: 7900, y: 100 });
+    expect(r!.start).toEqual({ x: 8000, y: 100 });
   });
 
-  it('Νότια → ΑΝΤΙΣΤΡΟΦΑ: αριστερό τρίτο → μέλος ΑΡΙΣΤΕΡΑ (centerline −half = x−100)', () => {
+  it('Νότια → ΣΥΝΕΧΕΣ centerline = cursor (μηδέν shift)', () => {
     const r = resolveLinearMemberFaceSnap({ x: 2000, y: -150 }, [HORIZONTAL], OPTS);
     expect(r!.status).toBe('beam');
-    expect(r!.start).toEqual({ x: 1900, y: -100 });
-    expect(r!.end).toEqual({ x: 1900, y: -1300 });
+    expect(r!.start).toEqual({ x: 2000, y: -100 });
+    expect(r!.end).toEqual({ x: 2000, y: -1300 });
   });
 
   it('Κέντρο άξονα → 🟢 + auto-snap στην πλησιέστερη παρειά', () => {
@@ -100,19 +101,19 @@ describe('resolveLinearMemberFaceSnap — center/flush ΜΑΓΝΗΤΕΣ (ADR-508
     expect(r!.start.x).toBeCloseTo(122, 6);
   });
 
-  it('ΜΕ slide step (τοίχος): cursor 122 κοντά στο μέσο → ΜΑΓΝΗΤΗΣ κέντρου 125 (κεντράρει, όχι 120)', () => {
+  it('Εντός παρειάς → ΣΥΝΕΧΕΣ centerline (cursor 122, βήμα 8.4 → 126· εντός [105,145])', () => {
     const r = resolveLinearMemberFaceSnap({ x: 122, y: 3 }, [LINE25], withStep);
-    expect(r!.start.x).toBeCloseTo(125, 6); // κέντρο γραμμής → 20mm/20mm κενά (όχι 15/25)
+    expect(r!.start.x).toBeCloseTo(126, 6); // 122 → quantize 8.4 → 126, εντός [105,145]
   });
 
-  it('ΜΕ slide step: cursor κοντά στην αρχή → ΜΑΓΝΗΤΗΣ flush (centerline = alongMin+half = 105)', () => {
+  it('cursor κοντά στην αρχή → clamp flush (centerline = alongMin+half = 105)', () => {
     const r = resolveLinearMemberFaceSnap({ x: 4, y: 3 }, [LINE25], withStep);
-    expect(r!.start.x).toBeCloseTo(105, 6);
+    expect(r!.start.x).toBeCloseTo(105, 6); // inset clamp → πλάγια ακμή flush στην αρχή
   });
 
-  it('ΜΕ slide step: cursor κοντά στο τέλος → ΜΑΓΝΗΤΗΣ flush (centerline = alongMax−half = 145)', () => {
+  it('cursor κοντά στο τέλος → clamp flush (centerline = alongMax−half = 145)', () => {
     const r = resolveLinearMemberFaceSnap({ x: 246, y: 3 }, [LINE25], withStep);
-    expect(r!.start.x).toBeCloseTo(145, 6);
+    expect(r!.start.x).toBeCloseTo(145, 6); // inset clamp → πλάγια ακμή flush στο τέλος
   });
 
   it('ΜΑΚΡΙΑ από κάθε μαγνήτη → ελεύθερη ολίσθηση (δεν επιβάλλει anchor)', () => {

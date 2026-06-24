@@ -263,3 +263,15 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   + κολώνα** (κοινός dispatcher· beam consistent). opts `slideStepScene` → `dominantUnitScene` (rename +
   νέα σημασιολογία: μονάδα διαίρεσης, όχι έτοιμο βήμα). 67 jest GREEN στα 4 snap suites (framing/walls/beams
   sweep 688/689· το 1 fail = pre-existing `beam-grips`). 🔴 browser-verify + commit.
+- **2026-06-24 (fix — «πηδάει άκρες↔κέντρο», Giorgio browser-verify)** — στη μικρή παρειά το φάντασμα
+  **πηδούσε** άκρες→κέντρο→άκρες αντί ομαλά. ΡΙΖΑ: (1) η **3-ζωνική μετατόπιση** `baseShift` (lo→+half,
+  mid→0, hi→−half) στο `resolveLinearMemberFaceSnap` έκανε το centerline να **πηδά ±half** στα όρια των
+  τρίτων· (2) ο `magnetizeGhostCenterAlong` (κέντρο/flush anchors) πρόσθετε επιπλέον grabbing. **FIX
+  (FULL SSoT):** αντικατάσταση και των δύο με **ΣΥΝΕΧΕΣ centerline = (quantized) cursor, clamped εντός
+  παρειάς `[alongMin+half, alongMax−half]`** (μέλος ευρύτερο → κεντράρισμα). Αυτό δίνει: ομαλή κίνηση
+  ΧΩΡΙΣ άλματα + **auto edge-flush στα άκρα** (centerline=insLo ⇒ πλάγια ακμή flush) — διατηρεί το intent
+  του παλιού shift/magnet ΧΩΡΙΣ διακριτότητα. Εφαρμόστηκε ΚΑΙ στο `member-column-face-snap.slideAlongFace`
+  (ίδιο inset clamp). **Διαγράφηκε** ο `magnetizeGhostCenterAlong` (αχρησιμοποίητος· un-export) + το
+  `pickThird` import από linear (το `third` μένει μόνο column-side metadata, από τη ζώνη **του cursor**).
+  Affects τοίχο+δοκάρι+κολώνα (κοινός resolver· beam-beam/beam-column tests → inset values). 691/692 jest
+  (1 fail = pre-existing `beam-grips`). 🔴 browser-verify + commit.

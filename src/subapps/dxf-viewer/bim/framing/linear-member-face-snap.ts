@@ -27,7 +27,6 @@ import type { Point2D } from '../../rendering/types/Types';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
-import { pickThird } from './member-face-third';
 import type { FootprintBounds, FootprintFace } from '../geometry/shared/footprint-face-frame';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 
@@ -183,39 +182,6 @@ function buildTargetFrame(cursor: Readonly<Point2D>, target: LinearMemberSnapTar
 }
 
 /**
- * ADR-508 (2026-06-23) — «μαγνήτης» των 3 χαρακτηριστικών διαμηκών θέσεων της παρειάς: το
- * centerline του φαντάσματος κουμπώνει στο **κέντρο** της παρειάς ή **flush** σε κάθε κοντή άκρη
- * (mirror των 3 column anchors) όταν ο raw cursor (`rawCenter`) είναι εντός `radius`· αλλιώς κρατά
- * τη συνεχή/grid θέση (`slidCenter`). `radius` 0/undefined (δοκάρι — χωρίς slide step) → καμία
- * αλλαγή (συνεχής ολίσθηση δοκαριού αμετάβλητη). Pure — μηδέν side effect.
- */
-export function magnetizeGhostCenterAlong(
-  rawCenter: number,
-  slidCenter: number,
-  alongMin: number,
-  alongMax: number,
-  half: number,
-  radius?: number,
-): number {
-  if (!radius || radius <= 0) return slidCenter;
-  const anchors = [
-    (alongMin + alongMax) / 2, // κεντραρισμένο στην παρειά (Giorgio: τοίχος στο μέσο της γραμμής)
-    alongMin + half,           // flush στην «αρχή» της παρειάς
-    alongMax - half,           // flush στο «τέλος» της παρειάς
-  ];
-  let best = slidCenter;
-  let bestDist = radius;
-  for (const anchor of anchors) {
-    const d = Math.abs(rawCenter - anchor);
-    if (d < bestDist) {
-      bestDist = d;
-      best = anchor;
-    }
-  }
-  return best;
-}
-
-/**
  * Επιλέγει το ghost snap πάνω σε υφιστάμενο γραμμικό μέλος. Pure. `null` όταν κανένα μέλος
  * δεν είναι εντός `captureScene` (ελεύθερη κίνηση → ο caller δείχνει default ghost).
  */
@@ -254,21 +220,17 @@ export function resolveLinearMemberFaceSnap(
     const slideAlong = step
       ? Math.min(Math.max(quantizeMagnitude(cAlong, step), alongMin), alongMax)
       : cAlong;
-    // 3-ζωνική δικαιολόγηση πλάτους: το μέλος ΜΕΝΕΙ ίσιο/κάθετο — απλώς ΜΕΤΑΤΟΠΙΖΕΤΑΙ
-    // κατά τον άξονα u ώστε το σταυρόνημα να πέφτει στην αρχή/μέση/τέλος του πλάτους του.
-    // ΒΟΡΕΙΑ: lo→μέλος «δεξιά» (cursor αριστερή ακμή· centerline +half), hi→«αριστερά»
-    // (cursor δεξιά ακμή· −half), mid→κεντραρισμένο. ΝΟΤΙΑ: αντίστροφα.
-    const third = pickThird(slideAlong, alongMin, alongMax);
+    // ADR-508 (2026-06-24, Giorgio «συνεχώς ομαλά») — ΣΥΝΕΧΗΣ centerline: ακολουθεί τον (quantized)
+    // cursor, clamped ώστε το μέλος να μένει ΕΝΤΟΣ της παρειάς → `[alongMin+half, alongMax−half]`. Auto
+    // edge-flush στα άκρα (centerline=insLo ⇒ πλάγια ακμή flush στην άκρη), ΧΩΡΙΣ τα διακριτά άλματα
+    // 3-ζωνικής μετατόπισης/magnet (που «πηδούσαν» άκρες↔κέντρο). Μέλος ευρύτερο από την παρειά
+    // (inset ανεστραμμένο) → κεντράρισμα. Το `third` παραμένει ως metadata (faceFrame δεν το χρειάζεται).
     const half = opts.memberWidthScene / 2;
-    const baseShift = third === 'lo' ? half : third === 'hi' ? -half : 0;
-    const shift = isSouth ? -baseShift : baseShift;
-    // ADR-508 (2026-06-23) — «μαγνήτες» χαρακτηριστικών θέσεων: το centerline κουμπώνει στο
-    // ΚΕΝΤΡΟ της παρειάς ή flush σε κάθε κοντή άκρη (οι ίδιες 3 αγκυρώσεις με την κολόνα) όταν
-    // ο cursor είναι κοντά, αλλιώς συνεχής/grid ολίσθηση. Χωρίς αυτό, σε κοντό στόχο το regular
-    // grid έχανε το μέσο (τοίχος 21cm σε γραμμή 25cm → 1.5/2.5 αντί 2/2 = 5mm offset, Giorgio).
-    const centerAlong = magnetizeGhostCenterAlong(
-      cAlong + shift, slideAlong + shift, alongMin, alongMax, half, step,
-    );
+    const insLo = alongMin + half;
+    const insHi = alongMax - half;
+    const centerAlong = insLo <= insHi
+      ? Math.min(Math.max(slideAlong, insLo), insHi)
+      : (alongMin + alongMax) / 2;
     const start: Point2D = {
       x: a.x + centerAlong * u.x + nearPerp * p.x,
       y: a.y + centerAlong * u.y + nearPerp * p.y,

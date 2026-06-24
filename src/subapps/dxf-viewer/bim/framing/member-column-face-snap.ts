@@ -40,7 +40,6 @@ import {
 import { pickThird, type MemberGhostThird } from './member-face-third';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import {
-  magnetizeGhostCenterAlong,
   buildColumnBboxFaceFrame,
   proportionalSlideStep,
   type GhostFaceFrame,
@@ -91,15 +90,18 @@ export const MEMBER_GHOST_CAPTURE_MM = 600;
 export const DOMINANT_DIVISION_MM = 10;
 
 /**
- * ADR-508 (2026-06-24) — συνεχής διαμήκης θέση κατά μήκος παρειάς (mirror `resolveLinearMemberFaceSnap`):
- * ακολουθεί τον cursor, κβαντισμένη στο **proportional fine βήμα** (παρειά ÷ 1cm → N· βήμα = πλάτος/N →
- * ομαλή κίνηση) μέσω του ΚΟΙΝΟΥ `proportionalSlideStep`· magnet radius = ίδιο λεπτό βήμα (αμελητέο →
- * ουσιαστικά καθαρή ολίσθηση). ΕΝΑ SSoT, μηδέν διπλό. `half*2` = πλάτος μέλους.
+ * ADR-508 (2026-06-24, Giorgio «συνεχώς ομαλά») — ΣΥΝΕΧΗΣ διαμήκης θέση κατά μήκος παρειάς (mirror
+ * `resolveLinearMemberFaceSnap`): ακολουθεί τον cursor κβαντισμένο στο **proportional fine βήμα**
+ * (παρειά ÷ 1cm → N· βήμα = πλάτος/N → ομαλή κίνηση), **clamped εντός της παρειάς** `[lo+half, hi-half]`
+ * (auto edge-flush στα άκρα, ΧΩΡΙΣ άλματα magnet/3-ζωνών). Μέλος ευρύτερο από την παρειά → κεντράρισμα.
+ * `half*2` = πλάτος μέλους. ΕΝΑ SSoT, μηδέν διπλό.
  */
 function slideAlongFace(c: number, lo: number, hi: number, half: number, dominantUnit?: number): number {
   const step = proportionalSlideStep(hi - lo, half * 2, dominantUnit);
   const slid = step ? clamp(quantizeMagnitude(c, step), lo, hi) : clamp(c, lo, hi);
-  return magnetizeGhostCenterAlong(c, slid, lo, hi, half, step);
+  const insLo = lo + half;
+  const insHi = hi - half;
+  return insLo <= insHi ? clamp(slid, insLo, insHi) : (lo + hi) / 2;
 }
 
 /** Χτίζει το συνεχές centerline (start/end/third) για την επιλεγμένη παρειά. Pure (scene units). */
@@ -116,12 +118,13 @@ function resolveContinuousColumnFace(
     const y = slideAlongFace(cursor.y, minY, maxY, half, dominantUnit);
     const faceX = face === 'E' ? maxX : minX;
     const tip = face === 'E' ? faceX + len : faceX - len;
-    return { third: pickThird(y, minY, maxY), start: { x: faceX, y }, end: { x: tip, y } };
+    // `third` = ζώνη του ΚΕΡΣΟΡΑ (metadata)· η θέση `y` είναι ήδη συνεχής/clamped (μηδέν διακριτό άλμα).
+    return { third: pickThird(cursor.y, minY, maxY), start: { x: faceX, y }, end: { x: tip, y } };
   }
   const x = slideAlongFace(cursor.x, minX, maxX, half, dominantUnit);
   const faceY = face === 'N' ? maxY : minY;
   const tip = face === 'N' ? faceY + len : faceY - len;
-  return { third: pickThird(x, minX, maxX), start: { x, y: faceY }, end: { x, y: tip } };
+  return { third: pickThird(cursor.x, minX, maxX), start: { x, y: faceY }, end: { x, y: tip } };
 }
 
 /**

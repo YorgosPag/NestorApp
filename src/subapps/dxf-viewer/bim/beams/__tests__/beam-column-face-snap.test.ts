@@ -29,21 +29,21 @@ function snap(cursor: Point2D, cols: Point2D[][] = [COL_400]) {
   return resolveBeamColumnFaceSnap(cursor, cols, OPTS);
 }
 
-// ADR-508 ενοποίηση (2026-06-24): το column face snap είναι πλέον **ΣΥΝΕΧΕΣ** (ίδιο SSoT με τοίχο/
-// member). Χωρίς slideStepScene (δοκάρι) → καθαρή συνεχής ολίσθηση: το centerline ακολουθεί τον cursor
-// (clamped στην παρειά), χωρίς magnet — consistent με τη συμπεριφορά δοκαριού στα μέλη. Το `third`
-// παραμένει ως metadata (lo/mid/hi).
+// ADR-508 ενοποίηση (2026-06-24, Giorgio «συνεχώς ομαλά»): το column face snap είναι **ΣΥΝΕΧΕΣ**, ίδιο
+// SSoT με τοίχο/member. Το centerline ακολουθεί τον cursor **clamped εντός της παρειάς** `[lo+half,
+// hi-half]` → auto edge-flush στα άκρα, ΧΩΡΙΣ διακριτά άλματα 3-ζωνών/magnet. COL_400, beam width=300
+// (half=150) → inset = [-50, 50]. Το `third` = ζώνη του ΚΕΡΣΟΡΑ (metadata: lo/mid/hi).
 describe('resolveBeamColumnFaceSnap — EAST face (horizontal beam, exits +X)', () => {
-  it('lo third → συνεχές: centerline ακολουθεί τον cursor (y = clamp)', () => {
+  it('cursor lo-ζώνη → clamp flush στην κάτω άκρη (y = lo+half = −50)', () => {
     const r = snap({ x: 250, y: -150 });
     expect(r).not.toBeNull();
     expect(r!.face).toBe('E');
-    expect(r!.third).toBe('lo');
-    expect(r!.start).toEqual({ x: 200, y: -150 }); // συνεχές (cursor.y)
-    expect(r!.end).toEqual({ x: 1400, y: -150 }); // maxX(200) + len(1200)
+    expect(r!.third).toBe('lo'); // ζώνη κέρσορα
+    expect(r!.start).toEqual({ x: 200, y: -50 }); // inset clamp (−200+150)
+    expect(r!.end).toEqual({ x: 1400, y: -50 }); // maxX(200) + len(1200)
   });
 
-  it('mid third → centerline ακολουθεί τον cursor (κέντρο όταν y=0)', () => {
+  it('mid → centerline = cursor (κέντρο όταν y=0)', () => {
     const r = snap({ x: 250, y: 0 });
     expect(r!.face).toBe('E');
     expect(r!.third).toBe('mid');
@@ -51,84 +51,84 @@ describe('resolveBeamColumnFaceSnap — EAST face (horizontal beam, exits +X)', 
     expect(r!.end).toEqual({ x: 1400, y: 0 });
   });
 
-  it('hi third → συνεχές: centerline ακολουθεί τον cursor (y = clamp)', () => {
+  it('cursor hi-ζώνη → clamp flush στην πάνω άκρη (y = hi−half = 50)', () => {
     const r = snap({ x: 250, y: 150 });
     expect(r!.face).toBe('E');
     expect(r!.third).toBe('hi');
-    expect(r!.start).toEqual({ x: 200, y: 150 }); // συνεχές (cursor.y)
-    expect(r!.end).toEqual({ x: 1400, y: 150 });
+    expect(r!.start).toEqual({ x: 200, y: 50 }); // inset clamp (200−150)
+    expect(r!.end).toEqual({ x: 1400, y: 50 });
   });
 });
 
 describe('resolveBeamColumnFaceSnap — WEST face (horizontal beam, exits −X)', () => {
-  it('lo third → συνεχές', () => {
+  it('cursor lo-ζώνη → clamp flush (−50)', () => {
     const r = snap({ x: -250, y: -150 });
     expect(r!.face).toBe('W');
     expect(r!.third).toBe('lo');
-    expect(r!.start).toEqual({ x: -200, y: -150 });
-    expect(r!.end).toEqual({ x: -1400, y: -150 }); // minX(-200) − len(1200)
+    expect(r!.start).toEqual({ x: -200, y: -50 });
+    expect(r!.end).toEqual({ x: -1400, y: -50 }); // minX(-200) − len(1200)
   });
 
-  it('mid third', () => {
+  it('mid', () => {
     const r = snap({ x: -250, y: 0 });
     expect(r!.face).toBe('W');
     expect(r!.third).toBe('mid');
     expect(r!.start).toEqual({ x: -200, y: 0 });
   });
 
-  it('hi third → συνεχές', () => {
+  it('cursor hi-ζώνη → clamp flush (50)', () => {
     const r = snap({ x: -250, y: 150 });
     expect(r!.face).toBe('W');
     expect(r!.third).toBe('hi');
-    expect(r!.start).toEqual({ x: -200, y: 150 });
+    expect(r!.start).toEqual({ x: -200, y: 50 });
   });
 });
 
 describe('resolveBeamColumnFaceSnap — SOUTH face (vertical beam, exits −Y)', () => {
-  it('lo third → συνεχές: centerline ακολουθεί τον cursor (x = clamp)', () => {
+  it('cursor lo-ζώνη → clamp flush (x = −50)', () => {
     const r = snap({ x: -150, y: -250 });
     expect(r!.face).toBe('S');
     expect(r!.third).toBe('lo');
-    expect(r!.start).toEqual({ x: -150, y: -200 });
-    expect(r!.end).toEqual({ x: -150, y: -1400 }); // minY(-200) − len(1200)
+    expect(r!.start).toEqual({ x: -50, y: -200 });
+    expect(r!.end).toEqual({ x: -50, y: -1400 }); // minY(-200) − len(1200)
   });
 
-  it('mid third', () => {
+  it('mid', () => {
     const r = snap({ x: 0, y: -250 });
     expect(r!.face).toBe('S');
     expect(r!.third).toBe('mid');
     expect(r!.start).toEqual({ x: 0, y: -200 });
   });
 
-  it('hi third → συνεχές', () => {
+  it('cursor hi-ζώνη → clamp flush (x = 50)', () => {
     const r = snap({ x: 150, y: -250 });
     expect(r!.face).toBe('S');
     expect(r!.third).toBe('hi');
-    expect(r!.start).toEqual({ x: 150, y: -200 });
+    expect(r!.start).toEqual({ x: 50, y: -200 });
   });
 });
 
 describe('resolveBeamColumnFaceSnap — NORTH face (vertical beam, exits +Y)', () => {
-  it('lo third → συνεχές', () => {
+  it('cursor lo-ζώνη → clamp flush (−50)', () => {
     const r = snap({ x: -150, y: 250 });
     expect(r!.face).toBe('N');
     expect(r!.third).toBe('lo');
-    expect(r!.start).toEqual({ x: -150, y: 200 });
-    expect(r!.end).toEqual({ x: -150, y: 1400 }); // maxY(200) + len(1200)
+    expect(r!.start).toEqual({ x: -50, y: 200 });
+    expect(r!.end).toEqual({ x: -50, y: 1400 }); // maxY(200) + len(1200)
   });
 
-  it('mid third', () => {
+  it('mid', () => {
     const r = snap({ x: 0, y: 250 });
     expect(r!.face).toBe('N');
     expect(r!.third).toBe('mid');
     expect(r!.start).toEqual({ x: 0, y: 200 });
   });
 
-  it('hi third → συνεχές', () => {
+  it('cursor hi-ζώνη → clamp flush (50)', () => {
     const r = snap({ x: 150, y: 250 });
     expect(r!.face).toBe('N');
     expect(r!.third).toBe('hi');
-    expect(r!.start).toEqual({ x: 150, y: 200 });
+    expect(r!.start).toEqual({ x: 50, y: 200 });
   });
 });
 
