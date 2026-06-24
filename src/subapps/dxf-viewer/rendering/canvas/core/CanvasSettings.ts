@@ -111,10 +111,7 @@ export class CanvasSettings {
         color: UI_COLORS.BRIGHT_YELLOW,
         size: 8,
         lineWidth: 1,
-        endpointColor: UI_COLORS.BRIGHT_YELLOW,
-        midpointColor: UI_COLORS.BRIGHT_GREEN,
-        centerColor: UI_COLORS.BRIGHT_GREEN,
-        intersectionColor: UI_COLORS.BRIGHT_YELLOW,
+        // ADR-515: type-specific snap colors αφαιρέθηκαν (νεκρά) → snap-visual-config SSoT
         showTooltip: true,
         tooltipOffset: 10,
         highlightColor: UI_COLORS.WHITE,
