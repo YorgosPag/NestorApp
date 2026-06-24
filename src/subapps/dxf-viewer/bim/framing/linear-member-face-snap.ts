@@ -116,12 +116,25 @@ export interface LinearMemberFaceSnapOptions {
   /** Πλάτος νέου μέλους (scene units) — για την 3-ζωνική δικαιολόγηση κατά τον άξονα. */
   readonly memberWidthScene: number;
   /**
-   * ADR-508 (2026-06-21) — προαιρετικό **σταθερό βήμα ολίσθησης** (scene units) όταν το φάντασμα
-   * γλιστράει κατά μήκος της παρειάς: η διαμήκης θέση `cAlong` κουμπώνει σε πολλαπλάσια αυτού
-   * (ΙΔΙΟ `quantizeMagnitude`/`adaptiveDistanceStep` SSoT με τα ίχνη ευθυγράμμισης → zoom-adaptive).
-   * `undefined`/0 ⇒ συνεχής ολίσθηση (συμπεριφορά δοκαριού — αμετάβλητη).
+   * ADR-508 (2026-06-24, Giorgio) — προαιρετική **κυρίαρχη μονάδα διαίρεσης** (scene units· π.χ. 1cm).
+   * Η παρειά-στόχος (μήκος `L`) διαιρείται σε `N = round(L / dominantUnitScene)` ίσα τμήματα· το **βήμα
+   * ολίσθησης** = `πλάτος_μέλους / N` → πολύ λεπτό → ΟΜΑΛΗ/ΣΥΝΕΧΗΣ κίνηση με ίσο πλήθος υποδιαιρέσεων
+   * (βλ. `proportionalSlideStep`). `undefined`/0 ή μηδενικό πλάτος ⇒ καθαρή συνεχής ολίσθηση.
    */
-  readonly slideStepScene?: number;
+  readonly dominantUnitScene?: number;
+}
+
+/**
+ * ADR-508 (2026-06-24, Giorgio «συνεχή και ομαλή κίνηση») — **proportional fine slide step**:
+ * η κυρίαρχη (μεγάλη) παρειά μήκους `faceLen` διαιρείται ανά `dominantUnit` (π.χ. 1cm) → `N` ίσα
+ * τμήματα· το βήμα ολίσθησης = `memberWidth / N`. Παράδειγμα: παρειά 2.5m ÷ 1cm = 250 τμήματα·
+ * νέος τοίχος 0.25m ÷ 250 = **1mm βήμα** → οπτικά συνεχές αλλά deterministic/αναλογικό πλέγμα.
+ * `undefined` σε degenerate (μηδενικό πλάτος/μήκος/unit) → ο caller πέφτει σε συνεχή ολίσθηση. Pure.
+ */
+export function proportionalSlideStep(faceLen: number, memberWidth: number, dominantUnit?: number): number | undefined {
+  if (!dominantUnit || dominantUnit <= 0 || memberWidth <= 0 || faceLen <= 0) return undefined;
+  const n = Math.max(1, Math.round(faceLen / dominantUnit));
+  return memberWidth / n;
 }
 
 /** Πλαίσιο άξονα ενός υποψήφιου μέλους-στόχου (όλα σε scene units). */
@@ -234,10 +247,12 @@ export function resolveLinearMemberFaceSnap(
     const isSouth = cPerp >= mid; // perpMax = νότια παρειά (signedPerp αντίστροφο του y)
     const nearPerp = isSouth ? perpMax : perpMin; // πλησιέστερη παρειά (κέντρο→«Α»)
     const outwardSign = isSouth ? 1 : -1; // ghost προς τα έξω, μακριά από το κέντρο σώματος
-    // ADR-508 — σταθερό βήμα ολίσθησης (zoom-adaptive, ΙΔΙΟ SSoT με τα ίχνη): κούμπωσε τη
-    // διαμήκη θέση σε πολλαπλάσια του `slideStepScene`, μένοντας μέσα στο σώμα [alongMin,alongMax].
-    const slideAlong = opts.slideStepScene
-      ? Math.min(Math.max(quantizeMagnitude(cAlong, opts.slideStepScene), alongMin), alongMax)
+    // ADR-508 (2026-06-24) — **proportional fine βήμα** (Giorgio): η παρειά (μήκος) ÷ 1cm = N· βήμα =
+    // πλάτος_μέλους / N → λεπτό → ΟΜΑΛΗ συνεχής κίνηση. Κούμπωσε τη διαμήκη θέση σε πολλαπλάσια αυτού,
+    // μένοντας μέσα στο σώμα [alongMin,alongMax]. `undefined` (μηδ. πλάτος/μήκος) → καθαρή συνεχής.
+    const step = proportionalSlideStep(alongMax - alongMin, opts.memberWidthScene, opts.dominantUnitScene);
+    const slideAlong = step
+      ? Math.min(Math.max(quantizeMagnitude(cAlong, step), alongMin), alongMax)
       : cAlong;
     // 3-ζωνική δικαιολόγηση πλάτους: το μέλος ΜΕΝΕΙ ίσιο/κάθετο — απλώς ΜΕΤΑΤΟΠΙΖΕΤΑΙ
     // κατά τον άξονα u ώστε το σταυρόνημα να πέφτει στην αρχή/μέση/τέλος του πλάτους του.
@@ -252,7 +267,7 @@ export function resolveLinearMemberFaceSnap(
     // ο cursor είναι κοντά, αλλιώς συνεχής/grid ολίσθηση. Χωρίς αυτό, σε κοντό στόχο το regular
     // grid έχανε το μέσο (τοίχος 21cm σε γραμμή 25cm → 1.5/2.5 αντί 2/2 = 5mm offset, Giorgio).
     const centerAlong = magnetizeGhostCenterAlong(
-      cAlong + shift, slideAlong + shift, alongMin, alongMax, half, opts.slideStepScene,
+      cAlong + shift, slideAlong + shift, alongMin, alongMax, half, step,
     );
     const start: Point2D = {
       x: a.x + centerAlong * u.x + nearPerp * p.x,

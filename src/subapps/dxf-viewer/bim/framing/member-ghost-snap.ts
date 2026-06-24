@@ -16,11 +16,11 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { adaptiveDistanceStep } from '../../systems/tracking/adaptive-distance-snap';
 import {
   resolveMemberColumnFaceSnap,
   MEMBER_GHOST_LEN_MM,
   MEMBER_GHOST_CAPTURE_MM,
+  DOMINANT_DIVISION_MM,
 } from './member-column-face-snap';
 import {
   resolveLinearMemberFaceSnap,
@@ -31,11 +31,12 @@ import {
 /**
  * Dispatcher: mm→scene conversion + επιλογή στόχου face-snap (column-priority, μετά member).
  *
+ * ADR-508 (2026-06-24, Giorgio «συνεχή και ομαλή κίνηση») — το βήμα ολίσθησης είναι πλέον **proportional
+ * fine** (γεωμετρικά παραγόμενο, ανεξάρτητο zoom): η παρειά ÷ 1cm = N· βήμα = πλάτος_μέλους / N (βλ.
+ * `proportionalSlideStep`). Υπολογίζεται ΜΙΑ φορά η κυρίαρχη μονάδα (`dominantUnitScene = 1cm`) και
+ * περνά ΚΑΙ στο column branch ΚΑΙ στο member branch → ταυτόσημη ομαλή ολίσθηση σε τοίχο/δοκάρι/κολώνα.
+ *
  * @param memberWidthMm  Πλάτος (δοκάρι) ή πάχος (τοίχος) του νέου μέλους σε mm.
- * @param worldPerPixel  (προαιρετικό) `1/scale` — ενεργοποιεί το **σταθερό, zoom-adaptive βήμα
- *   ολίσθησης** του φαντάσματος κατά μήκος της παρειάς μέλους (ΙΔΙΟ `adaptiveDistanceStep` SSoT
- *   με τα ίχνη ευθυγράμμισης). Το περνά μόνο ο **τοίχος**· το δοκάρι (alias) το παραλείπει → η
- *   ολίσθηση δοκαριού μένει συνεχής/αμετάβλητη.
  */
 export function resolveMemberGhostSnapFromStore(
   cursor: Readonly<Point2D>,
@@ -43,21 +44,19 @@ export function resolveMemberGhostSnapFromStore(
   memberTargets: readonly LinearMemberSnapTarget[],
   memberWidthMm: number,
   sceneUnits: SceneUnits,
-  worldPerPixel?: number,
 ): MemberGhostSnapResult | null {
   const f = mmToSceneUnits(sceneUnits);
   const ghostLenScene = MEMBER_GHOST_LEN_MM * f;
   const captureScene = MEMBER_GHOST_CAPTURE_MM * f;
-  // ADR-508 — βήμα ολίσθησης σε scene units· υπολογίζεται ΜΙΑ φορά (το `adaptiveDistanceStep` δουλεύει
-  // σε world=scene units). Το περνά ΚΑΙ το column branch ΚΑΙ το member branch → ταυτόσημη ρευστή
-  // ολίσθηση + magnet. `undefined` (δοκάρι — χωρίς worldPerPixel) → συνεχής ολίσθηση χωρίς magnet/quantize.
-  const slideStepScene = worldPerPixel && worldPerPixel > 0 ? adaptiveDistanceStep(worldPerPixel) : undefined;
+  // ADR-508 (2026-06-24) — κυρίαρχη μονάδα διαίρεσης = 1cm σε scene units (από τον resolver παράγεται
+  // το proportional fine βήμα ανά παρειά). ΕΝΑ σημείο υπολογισμού· κοινό σε column + member branch.
+  const dominantUnitScene = DOMINANT_DIVISION_MM * f;
   if (columnFootprints.length > 0) {
     const cs = resolveMemberColumnFaceSnap(cursor, columnFootprints, {
       memberWidthScene: memberWidthMm * f,
       ghostLenScene,
       captureScene,
-      slideStepScene,
+      dominantUnitScene,
     });
     // ADR-508 — column-priority: status `neutral` (αμετάβλητο)· faceFrame → listening dims & στις κολόνες.
     if (cs) return { start: cs.start, end: cs.end, status: 'neutral', faceFrame: cs.faceFrame };
@@ -67,7 +66,7 @@ export function resolveMemberGhostSnapFromStore(
       ghostLenScene,
       captureScene,
       memberWidthScene: memberWidthMm * f,
-      slideStepScene,
+      dominantUnitScene,
     });
   }
   return null;

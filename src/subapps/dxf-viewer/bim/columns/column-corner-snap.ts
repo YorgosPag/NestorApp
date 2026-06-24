@@ -8,7 +8,7 @@
  * a nearby target, and returns the cursor correction so the matched corner snaps
  * EXACTLY onto that target.
  *
- * Mirror of `systems/cursor/wall-face-corner-snap.ts`, generalised for whole-body
+ * Mirror of `bim/walls/wall-face-corner-snap.ts`, generalised for whole-body
  * transforms:
  *   - the wall projects 2 face corners at a dragged endpoint (axis ± thickness/2);
  *   - the column projects all 4 (N for polygon) footprint corners and the BEST
@@ -29,7 +29,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see systems/cursor/wall-face-corner-snap.ts — wall sibling (ADR-371)
+ * @see bim/walls/wall-face-corner-snap.ts — wall sibling (ADR-371)
  * @see docs/centralized-systems/reference/adrs/ADR-371-wall-face-corner-projection-snap.md §Column
  */
 

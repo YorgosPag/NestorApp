@@ -27,7 +27,7 @@ import { processMarqueeSelection } from './mouse-handler-up-marquee';
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip } from './GripDragStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
-import { findWallFaceCornerSnap } from './wall-face-corner-snap';
+import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import {
   findColumnGripCornerSnap,

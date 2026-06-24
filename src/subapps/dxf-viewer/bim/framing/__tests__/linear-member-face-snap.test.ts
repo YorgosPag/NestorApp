@@ -82,8 +82,9 @@ describe('resolveLinearMemberFaceSnap — κατευθυντικό status + γε
 
 describe('resolveLinearMemberFaceSnap — center/flush ΜΑΓΝΗΤΕΣ (ADR-508, Giorgio 2026-06-23)', () => {
   // Σενάριο bug: γραμμή-στόχος 250mm (zero-width band) + νέος τοίχος πλάτους 210mm (half=105).
-  // Χωρίς μαγνήτη, σε cursor 122 το grid (βήμα 10) κουμπώνει στο 120 → μέλος [15,225] → κενά
-  // 15/25 (το 5mm offset που ανέφερε ο Giorgio). Με μαγνήτη → κέντρο 125 → [20,230] → 20/20.
+  // ADR-508 (2026-06-24): proportional βήμα = W / round(L/1cm) = 210 / round(250/10=25) = 8.4mm·
+  // ο magnet (radius=βήμα=8.4) κεντράρει cursor 122 → κέντρο 125 → κενά 20/20 (όχι 15/25). Σε μεγάλη
+  // παρειά το βήμα γίνεται ~1mm → magnet αμελητέος → ομαλή ολίσθηση (αυτο-κλιμακώνεται).
   const LINE25: LinearMemberSnapTarget = {
     id: 'L',
     axis: [{ x: 0, y: 0 }, { x: 250, y: 0 }],
@@ -91,7 +92,7 @@ describe('resolveLinearMemberFaceSnap — center/flush ΜΑΓΝΗΤΕΣ (ADR-508
   };
   const W = 210; // πλάτος τοίχου, half = 105
   const noStep: LinearMemberFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, memberWidthScene: W };
-  const withStep: LinearMemberFaceSnapOptions = { ...noStep, slideStepScene: 10 };
+  const withStep: LinearMemberFaceSnapOptions = { ...noStep, dominantUnitScene: 10 };
 
   it('ΧΩΡΙΣ slide step (δοκάρι) → centerline ακολουθεί cursor (συνεχές, αμετάβλητο)', () => {
     const r = resolveLinearMemberFaceSnap({ x: 122, y: 3 }, [LINE25], noStep);
@@ -114,14 +115,14 @@ describe('resolveLinearMemberFaceSnap — center/flush ΜΑΓΝΗΤΕΣ (ADR-508
     expect(r!.start.x).toBeCloseTo(145, 6);
   });
 
-  it('ΜΕ slide step ΜΑΚΡΙΑ από κάθε μαγνήτη → ελεύθερη/grid ολίσθηση (δεν επιβάλλει anchor)', () => {
-    // Μακριά γραμμή 1000mm· μέλος 200 (half=100)· anchors=100/500/900. cursor 400 (μεσαίο τρίτο,
-    // 100mm από το κέντρο) → πέρα από radius=10 → centerline = grid(400), όχι μαγνήτης.
+  it('ΜΑΚΡΙΑ από κάθε μαγνήτη → ελεύθερη ολίσθηση (δεν επιβάλλει anchor)', () => {
+    // Γραμμή 1000mm· μέλος 200· βήμα = 200/round(1000/10=100) = 2mm· anchors=100/500/900. cursor 400
+    // (μεσαίο τρίτο, 100mm από το κέντρο) → πέρα από radius=2 → centerline = 400, όχι μαγνήτης.
     const LONG: LinearMemberSnapTarget = {
       id: 'L2', axis: [{ x: 0, y: 0 }, { x: 1000, y: 0 }],
       outline: [{ x: 0, y: -0.25 }, { x: 1000, y: -0.25 }, { x: 1000, y: 0.25 }, { x: 0, y: 0.25 }],
     };
-    const opt: LinearMemberFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, memberWidthScene: 200, slideStepScene: 10 };
+    const opt: LinearMemberFaceSnapOptions = { ghostLenScene: 1200, captureScene: 600, memberWidthScene: 200, dominantUnitScene: 10 };
     const r = resolveLinearMemberFaceSnap({ x: 400, y: 3 }, [LONG], opt);
     expect(r!.start.x).toBeCloseTo(400, 6);
   });

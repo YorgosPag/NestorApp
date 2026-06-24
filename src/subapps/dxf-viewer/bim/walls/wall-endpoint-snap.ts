@@ -44,9 +44,8 @@ export function resolveWallEndpointSnap(
   memberTargets: readonly LinearMemberSnapTarget[],
   thicknessMm: number,
   sceneUnits: SceneUnits,
-  worldPerPixel?: number,
 ): WallEndpointSnap {
-  const snap = resolveMemberGhostSnapFromStore(rawEnd, columnFootprints, memberTargets, thicknessMm, sceneUnits, worldPerPixel);
+  const snap = resolveMemberGhostSnapFromStore(rawEnd, columnFootprints, memberTargets, thicknessMm, sceneUnits);
   if (!snap) return { point: { x: rawEnd.x, y: rawEnd.y } };
   return { point: { x: snap.start.x, y: snap.start.y }, faceFrame: snap.faceFrame };
 }

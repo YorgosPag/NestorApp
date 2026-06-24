@@ -24,9 +24,11 @@ import type { GizmoHitTestSet } from './gizmo-hit-test';
 import type { GizmoHandleId, GizmoEndpoint, GizmoEndpointMode } from './gizmo-types';
 import {
   GIZMO_COLOR_HOVER, GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
-  SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_MOVE_SCREEN_SCALE,
+  SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_MOVE_SCREEN_SCALE,
   BASE_POINT_MARKER_RADIUS, BASE_POINT_MARKER_SCREEN_SCALE,
 } from './gizmo-constants';
+// ADR-378 §Step 5 — screen-constant marker scaling is the shared SSoT (reused by placement).
+import { snapMarkerScreenScale } from '../shared/snap-marker-core';
 import {
   createSnapMarker, createBasePointMarker, disposeBasePointMarker, defaultColorOf,
 } from './bim-gizmo-overlay-markers';
@@ -256,12 +258,7 @@ export class BimGizmoOverlay {
     // (Revit face-snap square), not hidden: the user must SEE where the face landed.
     const screenScale = this.snapMarkerScaleOverride ?? SNAP_MARKER_SCREEN_SCALE;
     this.snapMarker.position.copy(world);
-    let s = SNAP_MARKER_RADIUS;
-    if (camera instanceof THREE.PerspectiveCamera) {
-      const dist = camera.position.distanceTo(world);
-      s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * screenScale;
-    }
-    this.snapMarker.scale.setScalar(Math.max(s, 1e-3));
+    this.snapMarker.scale.setScalar(snapMarkerScreenScale(world, camera, screenScale));
     this.snapMarker.visible = true;
     this.snapMarker.updateMatrixWorld(true);
   }

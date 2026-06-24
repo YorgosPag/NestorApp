@@ -13,10 +13,11 @@ import type { GizmoHandleId } from './gizmo-types';
 import {
   AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER,
   GIZMO_ENDPOINT_COLOR,
-  SNAP_MARKER_COLOR, SNAP_MARKER_RENDER_ORDER,
   BASE_POINT_MARKER_COLOR, BASE_POINT_MARKER_RENDER_ORDER,
   BASE_POINT_MARKER_SEGMENTS, BASE_POINT_MARKER_CROSS_FACTOR,
 } from './gizmo-constants';
+// ADR-378 §Step 5 — snap marker geometry is the shared SSoT (reused by placement too).
+import { createSnapMarkerMesh } from '../shared/snap-marker-core';
 
 /**
  * Build the drag snap marker — a small cube wireframe (reads as a square frame
@@ -25,16 +26,7 @@ import {
  * so `scale.setScalar(s)` gives a half-extent of `s` metres.
  */
 export function createSnapMarker(): THREE.LineSegments {
-  const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
-  const material = new THREE.LineBasicMaterial({
-    color: SNAP_MARKER_COLOR,
-    depthTest: false,
-    transparent: true,
-  });
-  const marker = new THREE.LineSegments(edges, material);
-  marker.renderOrder = SNAP_MARKER_RENDER_ORDER;
-  marker.visible = false;
-  return marker;
+  return createSnapMarkerMesh();
 }
 
 /**

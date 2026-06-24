@@ -249,3 +249,17 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   αν ζητηθεί «soft» center/flush snap. **Αναιρεί** το 2026-06-21β (slide-quantize) + 2026-06-23 (magnet)
   ΓΙΑ ΤΟΝ ΤΟΙΧΟ (το «δεν κεντράρει σε κοντή γραμμή» μπορεί να επανέλθει — αναμονή browser-verify). 94 jest
   GREEN. 🔴 browser-verify + commit.
+- **2026-06-24 (proportional fine slide step — Giorgio «συνεχή και ομαλή κίνηση»)** — αντικατάσταση του
+  pure-continuous ΚΑΙ του παλιού zoom-adaptive βήματος με **γεωμετρικά παραγόμενο αναλογικό βήμα**: η
+  κυρίαρχη (μεγάλη) παρειά μήκους `L` διαιρείται ανά **1cm** (`DOMINANT_DIVISION_MM`) → `N = round(L/1cm)`·
+  το βήμα ολίσθησης = **`πλάτος_μέλους / N`**. Παράδειγμα Giorgio: παρειά 2.5m ÷ 1cm = 250 τμήματα· νέος
+  τοίχος 0.25m ÷ 250 = **1mm βήμα** → οπτικά συνεχές & ομαλό αλλά deterministic/αναλογικό πλέγμα. NEW pure
+  SSoT `proportionalSlideStep(faceLen, memberWidth, dominantUnit)` (linear-member-face-snap)· reuse ΚΑΙ στο
+  column branch (`member-column-face-snap.slideAlongFace`) ΚΑΙ στο member branch. Ο dispatcher υπολογίζει
+  ΜΙΑ φορά `dominantUnitScene = 1cm·f` (αντικατέστησε το `worldPerPixel`/`adaptiveDistanceStep` param —
+  αφαιρέθηκε· κανένας caller δεν το περνά). **Ο magnet (κέντρο/flush, 2026-06-23) ΔΙΑΤΗΡΕΙΤΑΙ & αυτο-
+  κλιμακώνεται:** radius = βήμα → σε κοντή παρειά (25cm→βήμα 8.4mm) ο magnet κεντράρει (το «κενό σε κοντή
+  γραμμή» ΔΕΝ επανέρχεται)· σε μεγάλη παρειά (2.5m→βήμα 1mm) αμελητέος → ομαλό. Ισχύει σε **τοίχο + δοκάρι
+  + κολώνα** (κοινός dispatcher· beam consistent). opts `slideStepScene` → `dominantUnitScene` (rename +
+  νέα σημασιολογία: μονάδα διαίρεσης, όχι έτοιμο βήμα). 67 jest GREEN στα 4 snap suites (framing/walls/beams
+  sweep 688/689· το 1 fail = pre-existing `beam-grips`). 🔴 browser-verify + commit.

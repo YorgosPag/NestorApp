@@ -29,7 +29,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
 import { getActiveDragGrip } from './GripDragStore';
-import { findWallFaceCornerSnap } from './wall-face-corner-snap';
+import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import {
   findColumnGripCornerSnap,

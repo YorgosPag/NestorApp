@@ -1,6 +1,10 @@
 /**
  * Wall Face Corner Projection Snap — ADR-371 extension
  *
+ * Re-homed to `bim/walls/` (was `systems/cursor/`) to sit beside its sibling
+ * `bim/columns/column-corner-snap.ts` — both are BIM corner-snap helpers over the
+ * shared `systems/cursor/corner-projection-snap` core (ADR-378 §Step 5/#6).
+ *
  * When dragging a wall endpoint grip, the cursor sits on the axis.
  * The face corners (± halfThickness × perpendicular) may be near a BIM corner
  * of an adjacent entity. This utility finds that alignment and returns the
@@ -11,10 +15,10 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { WallEntity } from '../../bim/types/wall-types';
+import type { WallEntity } from '../types/wall-types';
 import type { ProSnapResult } from '../../snapping/extended-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { findBestCornerProjection } from './corner-projection-snap';
+import { findBestCornerProjection } from '../../systems/cursor/corner-projection-snap';
 
 export interface FaceCornerSnapResult {
   /** Snap result at the beam/wall corner (indicator shows HERE) */

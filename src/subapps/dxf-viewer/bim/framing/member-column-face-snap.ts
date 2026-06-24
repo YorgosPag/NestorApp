@@ -42,6 +42,7 @@ import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap
 import {
   magnetizeGhostCenterAlong,
   buildColumnBboxFaceFrame,
+  proportionalSlideStep,
   type GhostFaceFrame,
 } from './linear-member-face-snap';
 
@@ -75,23 +76,28 @@ export interface MemberColumnFaceSnapOptions {
   /** Μέγιστη απόσταση cursor→παρειά για να ενεργοποιηθεί το snap. */
   readonly captureScene: number;
   /**
-   * ADR-508 — προαιρετικό σταθερό βήμα ολίσθησης (scene units, zoom-adaptive· ΙΔΙΟ `quantizeMagnitude`
-   * SSoT με τον member resolver). `undefined`/0 → συνεχής ολίσθηση (δοκάρι αμετάβλητο).
+   * ADR-508 (2026-06-24) — κυρίαρχη μονάδα διαίρεσης (scene units, π.χ. 1cm): η παρειά ÷ unit = N·
+   * βήμα ολίσθησης = πλάτος_μέλους / N (proportional fine step → ομαλή κίνηση, βλ. `proportionalSlideStep`).
+   * `undefined`/0 → καθαρή συνεχής ολίσθηση (δοκάρι/edge αμετάβλητο).
    */
-  readonly slideStepScene?: number;
+  readonly dominantUnitScene?: number;
 }
 
 /** Default μήκος του ghost-before-click (mm) — μικρό, ίσα με ~μισό τυπικό άνοιγμα. */
 export const MEMBER_GHOST_LEN_MM = 1200;
 /** Default capture (mm) από την παρειά της κολόνας. */
 export const MEMBER_GHOST_CAPTURE_MM = 600;
+/** ADR-508 (2026-06-24, Giorgio) — κυρίαρχη μονάδα διαίρεσης (mm): η μεγάλη παρειά διαιρείται ανά 1cm. */
+export const DOMINANT_DIVISION_MM = 10;
 
 /**
- * ADR-508 — συνεχής διαμήκης θέση κατά μήκος παρειάς (mirror `resolveLinearMemberFaceSnap`): ακολουθεί
- * τον cursor, προαιρετικά κβαντισμένη σε `step`, και **μαγνητίζεται** στα 3 χαρακτηριστικά σημεία
- * (κέντρο + flush σε κάθε γωνία) μέσω του ΚΟΙΝΟΥ `magnetizeGhostCenterAlong`. ΕΝΑ SSoT, μηδέν διπλό.
+ * ADR-508 (2026-06-24) — συνεχής διαμήκης θέση κατά μήκος παρειάς (mirror `resolveLinearMemberFaceSnap`):
+ * ακολουθεί τον cursor, κβαντισμένη στο **proportional fine βήμα** (παρειά ÷ 1cm → N· βήμα = πλάτος/N →
+ * ομαλή κίνηση) μέσω του ΚΟΙΝΟΥ `proportionalSlideStep`· magnet radius = ίδιο λεπτό βήμα (αμελητέο →
+ * ουσιαστικά καθαρή ολίσθηση). ΕΝΑ SSoT, μηδέν διπλό. `half*2` = πλάτος μέλους.
  */
-function slideAlongFace(c: number, lo: number, hi: number, half: number, step?: number): number {
+function slideAlongFace(c: number, lo: number, hi: number, half: number, dominantUnit?: number): number {
+  const step = proportionalSlideStep(hi - lo, half * 2, dominantUnit);
   const slid = step ? clamp(quantizeMagnitude(c, step), lo, hi) : clamp(c, lo, hi);
   return magnetizeGhostCenterAlong(c, slid, lo, hi, half, step);
 }
@@ -103,16 +109,16 @@ function resolveContinuousColumnFace(
   cursor: Readonly<Point2D>,
   half: number,
   len: number,
-  step?: number,
+  dominantUnit?: number,
 ): { third: MemberGhostThird; start: Point2D; end: Point2D } {
   const { minX, maxX, minY, maxY } = best;
   if (face === 'E' || face === 'W') {
-    const y = slideAlongFace(cursor.y, minY, maxY, half, step);
+    const y = slideAlongFace(cursor.y, minY, maxY, half, dominantUnit);
     const faceX = face === 'E' ? maxX : minX;
     const tip = face === 'E' ? faceX + len : faceX - len;
     return { third: pickThird(y, minY, maxY), start: { x: faceX, y }, end: { x: tip, y } };
   }
-  const x = slideAlongFace(cursor.x, minX, maxX, half, step);
+  const x = slideAlongFace(cursor.x, minX, maxX, half, dominantUnit);
   const faceY = face === 'N' ? maxY : minY;
   const tip = face === 'N' ? faceY + len : faceY - len;
   return { third: pickThird(x, minX, maxX), start: { x, y: faceY }, end: { x, y: tip } };
@@ -144,6 +150,6 @@ export function resolveMemberColumnFaceSnap(
 
   const half = opts.memberWidthScene / 2;
   const face: MemberGhostFace = pickDominantFace(cursor, best); // reuse pickDominantFace SSoT
-  const { third, start, end } = resolveContinuousColumnFace(best, face, cursor, half, opts.ghostLenScene, opts.slideStepScene);
+  const { third, start, end } = resolveContinuousColumnFace(best, face, cursor, half, opts.ghostLenScene, opts.dominantUnitScene);
   return { face, third, start, end, faceFrame: buildColumnBboxFaceFrame(best, face, start) };
 }

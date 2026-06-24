@@ -39,11 +39,12 @@ describe('resolveMemberColumnFaceSnap — ΣΥΝΕΧΗΣ face snap (ADR-508 εν
     expect(r!.start.y).toBeCloseTo(250);
   });
 
-  it('Magnet: με slideStepScene, cursor κοντά στο κέντρο → κουμπώνει στο κέντρο (200)', () => {
-    const r = resolveMemberColumnFaceSnap({ x: 700, y: 210 }, [COLUMN_FP], {
-      memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600, slideStepScene: 50,
+  it('Proportional βήμα: με dominantUnitScene → ολίσθηση σε λεπτό βήμα = πλάτος/N', () => {
+    // COLUMN 400×400, πλάτος 200, dominantUnit=1cm → N=round(400/10)=40 → βήμα = 200/40 = 5mm.
+    const r = resolveMemberColumnFaceSnap({ x: 700, y: 212 }, [COLUMN_FP], {
+      memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600, dominantUnitScene: 10,
     });
-    expect(r!.start.y).toBeCloseTo(200); // magnet στο κέντρο παρειάς
+    expect(r!.start.y).toBeCloseTo(210); // 212 → πλησιέστερο πολλαπλάσιο του 5mm
   });
 
   it('Μακριά από κολόνα (πέρα από capture) → null', () => {
@@ -68,11 +69,11 @@ describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () =>
     expect(r!.faceFrame).toBeDefined(); // ADR-508 — column branch τώρα γεννά faceFrame
   });
 
-  it('Κολόνα με worldPerPixel → magnet στα 3 χαρακτηριστικά σημεία (συνεχές + magnet)', () => {
-    // step = adaptiveDistanceStep(40)=1000 (>> κολόνα 400) → magnet κυριαρχεί: y=250 → κέντρο (200).
-    const r = resolveMemberGhostSnapFromStore({ x: 700, y: 250 }, [COLUMN_FP], [], 200, 'mm', 40);
+  it('Κολόνα μέσω dispatcher → proportional fine βήμα (όχι 12-jump)', () => {
+    // dominantUnit=1cm· κολόνα 400, πλάτος 200 → βήμα 5mm. cursor y=252 → 250.
+    const r = resolveMemberGhostSnapFromStore({ x: 700, y: 252 }, [COLUMN_FP], [], 200, 'mm');
     expect(r!.status).toBe('neutral');
-    expect(r!.start.y).toBeCloseTo(200);
+    expect(r!.start.y).toBeCloseTo(250);
   });
 
   it('Χωρίς κολόνα, πάνω σε μέλος → member-to-member framing (status beam)', () => {
@@ -84,17 +85,18 @@ describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () =>
     expect(resolveMemberGhostSnapFromStore({ x: 9e4, y: 9e4 }, [COLUMN_FP], [MEMBER], 200, 'mm')).toBeNull();
   });
 
-  it('worldPerPixel → σταθερό zoom-adaptive βήμα ολίσθησης κατά μήκος της παρειάς', () => {
-    // Οριζόντιο μέλος ⇒ start.x = centerAlong. cursor x=5237 (mid third → shift 0).
-    const free = resolveMemberGhostSnapFromStore({ x: 5237, y: 150 }, [], [MEMBER], 200, 'mm');
-    expect(free!.start.x).toBeCloseTo(5237); // χωρίς βήμα → συνεχής ολίσθηση
-    // step = adaptiveDistanceStep(40) = niceRound(40·25=1000) = 1000 → κούμπωσε στο 5000.
-    const stepped = resolveMemberGhostSnapFromStore({ x: 5237, y: 150 }, [], [MEMBER], 200, 'mm', 40);
-    expect(stepped!.start.x).toBeCloseTo(5000);
+  it('Proportional βήμα Giorgio: παρειά 2.5m / νέος 0.25m → βήμα 1mm (ομαλό)', () => {
+    // παρειά 2500 ÷ 1cm = 250 τμήματα· πλάτος 250 ÷ 250 = 1mm βήμα → οπτικά συνεχές, deterministic.
+    const wall25 = {
+      id: 'w', axis: [{ x: 0, y: 0 }, { x: 2500, y: 0 }],
+      outline: [{ x: 0, y: -125 }, { x: 2500, y: -125 }, { x: 2500, y: 125 }, { x: 0, y: 125 }],
+    };
+    const r = resolveMemberGhostSnapFromStore({ x: 1234.7, y: 50 }, [], [wall25], 250, 'mm');
+    expect(r!.start.x).toBeCloseTo(1235); // 1234.7 → πλησιέστερο πολλαπλάσιο του 1mm
   });
 
-  it('beam path (χωρίς worldPerPixel) → συνεχής ολίσθηση αμετάβλητη', () => {
-    // Το δοκάρι (alias) ΔΕΝ περνά worldPerPixel → καμία αλλαγή (byte-for-byte regression guard).
+  it('Μέλος μέσω dispatcher → proportional fine βήμα (πολύ λεπτό ≈ συνεχές)', () => {
+    // MEMBER 10000, πλάτος 200 → N=1000 → βήμα 0.2mm (≈ συνεχές). 5123 = πολλαπλάσιο → αμετάβλητο.
     const a = resolveMemberGhostSnapFromStore({ x: 5123, y: 150 }, [], [MEMBER], 200, 'mm');
     expect(a!.start.x).toBeCloseTo(5123);
   });

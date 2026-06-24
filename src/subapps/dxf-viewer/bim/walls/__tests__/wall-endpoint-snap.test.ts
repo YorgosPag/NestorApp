@@ -40,9 +40,10 @@ describe('resolveWallEndpointSnap', () => {
     expect(r.faceFrame).toBeUndefined();
   });
 
-  it('Κολόνα με worldPerPixel → magnet στο κέντρο της παρειάς (συνεχές + magnet, όχι 12-jump)', () => {
-    const r = resolveWallEndpointSnap({ x: 500, y: 250 }, [COLUMN_FP], [], 200, 'mm', 40);
+  it('Κολόνα → proportional fine βήμα στο endpoint (όχι 12-jump)', () => {
+    // κολόνα 400, πλάτος 200, dominantUnit=1cm → N=40 → βήμα 5mm. cursor y=252 → 250.
+    const r = resolveWallEndpointSnap({ x: 500, y: 252 }, [COLUMN_FP], [], 200, 'mm');
     expect(r.point.x).toBeCloseTo(400);
-    expect(r.point.y).toBeCloseTo(200); // magnet στο κέντρο
+    expect(r.point.y).toBeCloseTo(250); // 252 → πλησιέστερο πολλαπλάσιο του 5mm
   });
 });

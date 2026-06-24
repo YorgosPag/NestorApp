@@ -91,21 +91,24 @@ export const RETICLE_SEGMENTS = 24;
 export const GIZMO_SCREEN_SCALE = 0.45;
 
 // -- Snap Marker (ADR-402 Phase B — drag snap indicator) -----------------------
-/** Snap marker colour (cyan — distinct from axis/hover golds and from geometry). */
-export const SNAP_MARKER_COLOR = 0x00e5ff;
-/** Base marker box radius in world metres before screen-constant scaling. */
-export const SNAP_MARKER_RADIUS = 0.06;
-/** Screen-constant multiplier: markerScale = cameraDistance * tan(fov/2) * this. */
-export const SNAP_MARKER_SCREEN_SCALE = 0.13;
+// ADR-378 §Step 5: the marker geometry/scaling + these tuning constants are the
+// shared SSoT in `bim-3d/shared/snap-marker-core.ts` (reused by the gizmo AND the
+// BIM placement tools). Re-exported here so existing gizmo consumers keep importing
+// SNAP_MARKER_* from gizmo-constants unchanged.
+export {
+  SNAP_MARKER_COLOR,
+  SNAP_MARKER_RADIUS,
+  SNAP_MARKER_SCREEN_SCALE,
+  SNAP_MARKER_RENDER_ORDER,
+} from '../shared/snap-marker-core';
 /**
  * ADR-363 Φ1G.5 Slice 2i — smaller screen scale for the snap marker during a collapsed
  * planar MOVE (wall/column/slab drag). The full 0.13 cube read as a giant cyan box
  * (Giorgio); a small square (~⅓) is the Revit "face snap" glyph. Replaces the old
  * full suppression (`suppressSnapMarker`) so the user SEES where the face landed.
+ * Gizmo-only (not part of the shared core).
  */
 export const SNAP_MARKER_MOVE_SCREEN_SCALE = 0.045;
-/** Render order — above geometry, below the gizmo handles so it never hides them. */
-export const SNAP_MARKER_RENDER_ORDER = 1999;
 
 // -- Alignment line (ADR-363 Φ1G.5 Slice 2i — Revit dashed face-alignment line) ---
 /** Dashed alignment line colour — Revit reference blue (distinct from the cyan snap glyph). */
