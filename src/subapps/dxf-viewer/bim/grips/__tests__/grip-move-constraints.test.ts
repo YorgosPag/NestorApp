@@ -6,14 +6,24 @@
  * isolate the ORTHO behaviour through the real `cadToggleState` singleton.
  */
 
-import { applyOrthoToDelta, applyMoveConstraints } from '../grip-move-constraints';
+import {
+  applyOrthoToDelta,
+  applyMoveConstraints,
+  applyMoveFineStep,
+  isMoveFineStepActive,
+  MOVE_FINE_STEP_MM,
+} from '../grip-move-constraints';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
+import { immediateSceneScale } from '../../../systems/cursor/ImmediateSceneScaleStore';
+import { ShiftKeyTracker } from '../../../keyboard/ShiftKeyTracker';
 
 describe('grip-move-constraints (ORTHO on a move delta)', () => {
   afterEach(() => {
-    // Reset both flags so each test starts ORTHO/SNAP-MODE OFF.
+    // Reset all flags so each test starts ORTHO/SNAP-MODE/Shift OFF.
     cadToggleState.set(false, false);
     cadToggleState.setSnap(false, 0);
+    ShiftKeyTracker._setForTest(false);
+    immediateSceneScale.set(1);
   });
 
   describe('applyOrthoToDelta', () => {
@@ -54,6 +64,56 @@ describe('grip-move-constraints (ORTHO on a move delta)', () => {
       cadToggleState.set(true, false);
       cadToggleState.setSnap(false, 0);
       expect(applyMoveConstraints({ x: 5, y: 90 })).toEqual({ x: 0, y: 90 });
+    });
+  });
+
+  describe('Shift fine 1 cm move step (Giorgio 2026-06-24)', () => {
+    it('8. the increment is 1 cm = 10 mm', () => {
+      expect(MOVE_FINE_STEP_MM).toBe(10);
+    });
+
+    it('9. isMoveFineStepActive tracks Shift only', () => {
+      ShiftKeyTracker._setForTest(false);
+      expect(isMoveFineStepActive()).toBe(false);
+      ShiftKeyTracker._setForTest(true);
+      expect(isMoveFineStepActive()).toBe(true);
+    });
+
+    it('10. applyMoveFineStep is a no-op when Shift is up', () => {
+      ShiftKeyTracker._setForTest(false);
+      expect(applyMoveFineStep({ x: 47, y: -43 })).toEqual({ x: 47, y: -43 });
+    });
+
+    it('11. Shift quantizes the DELTA to multiples of 10 (Option Α — step of the move)', () => {
+      immediateSceneScale.set(1); // mm scene
+      ShiftKeyTracker._setForTest(true);
+      // raw move 47 mm → 50, raw 43 mm → 40 (the exact example shown to Giorgio).
+      expect(applyMoveFineStep({ x: 47, y: -43 })).toEqual({ x: 50, y: -40 });
+      expect(applyMoveFineStep({ x: 8, y: 23 })).toEqual({ x: 10, y: 20 });
+    });
+
+    it('12. converts the 1 cm step to scene units on a metre-scale drawing', () => {
+      ShiftKeyTracker._setForTest(true);
+      immediateSceneScale.set(0.001); // 1 canvas unit = 1 m → 10 mm = 0.01 units
+      const r = applyMoveFineStep({ x: 0.047, y: -0.043 });
+      expect(r.x).toBeCloseTo(0.05);
+      expect(r.y).toBeCloseTo(-0.04);
+    });
+
+    it('13. applyMoveConstraints composes ORTHO then the Shift fine step (WYSIWYG)', () => {
+      immediateSceneScale.set(1);
+      cadToggleState.set(true, false); // ORTHO on
+      ShiftKeyTracker._setForTest(true); // Shift fine step on
+      // |dx|>|dy| → y zeroed, then x (47) quantized to 50.
+      expect(applyMoveConstraints({ x: 47, y: 9 })).toEqual({ x: 50, y: 0 });
+    });
+
+    it('14. Shift OFF → applyMoveConstraints leaves the delta free (regression)', () => {
+      immediateSceneScale.set(1);
+      cadToggleState.set(false, false);
+      cadToggleState.setSnap(false, 0);
+      ShiftKeyTracker._setForTest(false);
+      expect(applyMoveConstraints({ x: 47, y: -43 })).toEqual({ x: 47, y: -43 });
     });
   });
 });
