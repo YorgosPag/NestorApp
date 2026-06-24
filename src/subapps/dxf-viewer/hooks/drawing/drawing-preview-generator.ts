@@ -26,6 +26,12 @@ import type { SceneUnits, StairParamOverrides } from './stair-completion';
 import { generateWallPreview } from './wall-preview-helpers';
 // ADR-363 Phase 6.5.B — slab preview.
 import { generateSlabPreview } from './slab-preview-helpers';
+// ADR-514 Φ6 — face-snap κορυφών στο preview (flush + edge-slide): ΙΔΙΟΣ resolver + ΙΔΙΟ store με
+// το commit (`useSlabTool`/`useRoofTool.onCanvasClick`) → preview ≡ commit by construction.
+import { resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
+import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
 import { generateWallCoveringPreview } from './wall-covering-preview-helpers';
 // ADR-363 Phase 5.5P — beam preview.
 import { generateBeamPreview } from './beam-preview-helpers';
@@ -80,6 +86,18 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
   } as ExtendedPolylineEntity;
 }
 /**
+ * ADR-514 Φ6 — face-snap της ζωντανής κορυφής (πλάκα/στέγη) για το ghost outline. Ο cursor
+ * περνά πρώτα από το ήδη-OSNAP-snapped σημείο (`resolveEffectivePreviewCursor`, mirror του commit
+ * `bimPoint`) και μετά από τον ΙΔΙΟ polygon-vertex resolver + ΙΔΙΟ lock store με το commit → flush
+ * + edge-slide ΑΚΡΙΒΩΣ όπως θα κλειδώσει το κλικ (preview ≡ commit). Στόχοι από το κοινό store.
+ */
+function resolvePolygonPreviewCursor(cursorPoint: Point2D, sceneUnits: SceneUnits): Point2D {
+  const eff = resolveEffectivePreviewCursor(cursorPoint);
+  const snap = resolvePolygonVertexSnap(eff, sceneSnapTargetsStore.get(), sceneUnits, polygonVertexLockStore.get() ?? undefined);
+  return snap.point;
+}
+
+/**
  * Generates a preview entity based on the active tool, existing clicked points, and cursor position.
  *
  * This is a pure function — it produces a new entity object without side effects.
@@ -108,13 +126,15 @@ export function generatePreviewEntity(
     return generateWallPreview(tempPoints, cursorPoint, sceneUnits);
   }
   // ── ADR-363 Phase 6.5.B — Slab tool preview branch ───────────────────────
+  // ADR-514 Φ6 — η ζωντανή κορυφή κουμπώνει flush σε παρειά μέλους (+ edge-slide) πριν χτιστεί το
+  // ghost outline → preview ≡ commit. (Μόνο slab/roof· floor-finish/hatch/underfloor αμετάβλητα.)
   if (tool === 'slab') {
-    return generateSlabPreview(tempPoints, cursorPoint);
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
   }
   // ── ADR-417 — Roof tool preview branch (footprint polygon ghost, reuses the
   //    slab polygon-outline preview — both are closed footprints). ───────────
   if (tool === 'roof') {
-    return generateSlabPreview(tempPoints, cursorPoint);
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
   }
   // ── ADR-419 — Floor Finish tool preview branch (closed footprint polygon,
   //    same rubber-band outline as slab/roof). ───────────────────────────────

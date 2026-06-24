@@ -50,6 +50,11 @@ import { resolveActiveFoundationLevelElevationMm } from '../../bim/foundations/f
 import { isWallEntity, type Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// ADR-514 Φ6c — το πέδιλο (1-κλικ) κουμπώνει σε παρειά/άξονα κολόνας/μέλους ΟΠΩΣ η κολώνα, ΜΕΣΑ από
+// τον ΕΝΑ εγκέφαλο έλξης (reuse `resolveColumnFaceSnapFromTargets`)· κοινό pre-collected scene store.
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -143,6 +148,9 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   const getSceneEntitiesRef = useRef(getSceneEntities);
   getSceneEntitiesRef.current = getSceneEntities;
 
+  // ── ADR-514 Φ6c — scene snap targets sync (mirror useColumnTool) — pad face-snap στόχοι ──
+  const refreshSnapTargets = useSceneSnapTargetSync(() => getSceneEntitiesRef.current?.() ?? []);
+
   // Unmount cleanup — reset line preview store on teardown.
   useEffect(() => {
     return () => foundationPreviewStore.reset();
@@ -164,6 +172,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   );
 
   const activate = useCallback(() => {
+    refreshSnapTargets(); // ADR-514 Φ6c — pad face-snap στόχοι έτοιμοι πριν το 1ο κλικ
     const prev = stateRef.current;
     const phase = activePhaseFor(prev.kind, prev.placementMode);
     syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides);
@@ -172,7 +181,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     // πλέον το πέδιλο δρομολογείται ΠΑΝΤΑ στον foundation level (Revit-canonical,
     // addFoundationToScene), άρα δεν «κολλάει» σε λάθος όροφο → η προειδοποίηση ήταν
     // παραπλανητική. (Το ground-slab warning διατηρείται στο useRibbonSlabBridge.)
-  }, [syncPreview]);
+  }, [syncPreview, refreshSnapTargets]);
 
   const setKind = useCallback((kind: FoundationKind) => {
     setState((prev) => {
@@ -206,6 +215,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
 
   const deactivate = useCallback(() => {
     foundationPreviewStore.reset();
+    sceneSnapTargetsStore.reset(); // ADR-514 Φ6c — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, []);
 
@@ -310,10 +320,15 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
         return commitFromWall(s, point);
       }
 
-      // pad — single click.
+      // pad — single click. ADR-514 Φ6c — flush σε παρειά/άξονα κολόνας/μέλους ΜΕΣΑ από τον εγκέφαλο
+      // (reuse `resolveColumnFaceSnapFromTargets` μέσω toolKind 'foundation-pad'). Ο `point` έρχεται
+      // ήδη OSNAP-snapped κεντρικά → ΧΩΡΙΣ findSnapPoint (anti double-snap, ADR-514 §2). Μακριά από
+      // μέλη → ο εγκέφαλος επιστρέφει τον cursor αυτούσιο (μηδέν regression).
       if (!isLineKind(s.kind)) {
         if (s.phase !== 'awaitingPosition') return false;
-        return commitFromState(s, point);
+        const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+        const snap = resolveBimCursorSnap({ toolKind: 'foundation-pad', cursor: point, targets: sceneSnapTargetsStore.get(), sceneUnits });
+        return commitFromState(s, snap.point);
       }
 
       // strip / tie-beam — 2-click chain.

@@ -71,6 +71,12 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
+    // ADR-514 Φ6 — live scene entities για τον face-snap κορυφών (flush σε παρειά μέλους).
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
     onSlabCreated: (slabEntity) => appendEntityToScene(levelManager, slabEntity, 'slab'),
   });
   useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
@@ -88,6 +94,12 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    // ADR-514 Φ6 — live scene entities για τον face-snap κορυφών (mirror slab).
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
     },
     onRoofCreated: (roofEntity) => appendEntityToScene(levelManager, roofEntity, 'roof'),
   });

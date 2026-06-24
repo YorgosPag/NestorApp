@@ -1,6 +1,6 @@
 # ADR-514 — Unified BIM Cursor Snap («Ένας Εγκέφαλος Έλξης», Revit-grade)
 
-- **Status**: 🟢 CORE COMPLETE (UNCOMMITTED) — Φ1 foundation + Φ2 column + Φ3 wall/beam wiring + Φ5 SSoT-lock DONE· Φ4 N/A (already uniform via central OSNAP). 🔴 pending browser-verify (Φ2+Φ3) πριν commit. Φ6 face-snap feature = μελλοντικό (Giorgio).
+- **Status**: 🟢 CORE COMPLETE + Φ6 IMPLEMENTED (UNCOMMITTED) — Φ1 foundation + Φ2 column + Φ3 wall/beam wiring + Φ5 SSoT-lock + **Φ6 face-snap slab/roof/foundation** DONE· Φ4 N/A (already uniform via central OSNAP). 🔴 pending browser-verify (Φ2+Φ3 + Φ6) πριν commit.
 - **Date**: 2026-06-24
 - **Category**: DXF Viewer — Snapping (Master companion to ADR-378)
 - **Related**: ADR-378 (Snap Master Architecture), ADR-398 (Column placement snap), ADR-508 (Unified linear-member framing), ADR-040 (Preview Canvas perf)
@@ -61,7 +61,8 @@ branch στο `.kind`. Το πεδίο `point` υπάρχει **πάντα** (τ
 ## 3. Contract
 
 ```ts
-type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'point-only';
+// Φ6 — προστέθηκαν 'polygon-vertex' (slab/roof flush) + 'foundation-pad' (pad → κολόνα).
+type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'polygon-vertex' | 'foundation-pad' | 'point-only';
 
 resolveBimCursorSnap({
   toolKind, cursor, targets: SceneSnapTargets, sceneUnits,
@@ -77,8 +78,17 @@ type BimCursorSnap =
   | { kind: 'point'; point; snapType: ExtendedSnapType | null; candidate: SnapCandidate | null }
 ```
 
-Λογική: `column` → `resolveColumnFaceSnapFromTargets`· `wall`/`beam` → `resolveMemberGhostSnapFromStore`
-(column-priority μέσα του)· miss/`point-only` → `findSnapPoint` → `point`· κανένα → καθαρός cursor.
+Λογική: `column`/`foundation-pad` → `resolveColumnFaceSnapFromTargets`· `wall`/`beam`/`polygon-vertex`
+→ `resolveMemberGhostSnapFromStore` (column-priority μέσα του· `polygon-vertex` με memberWidth **πάντα 0**
+→ flush ΠΑΝΩ στην παρειά)· miss/`point-only` → `findSnapPoint` → `point`· κανένα → καθαρός cursor.
+
+**Φ6 — polygon-vertex resolver (slab/roof):** πάνω από τον εγκέφαλο ζει ο pure `resolvePolygonVertexSnap`
+(`bim/placement/polygon-vertex-snap.ts`) που προσθέτει το **edge-slide constraint** (Φ6b): δοθέντος
+`lock` (η παρειά της προηγούμενης κορυφής, στο zero-React `polygonVertexLockStore`), προβάλλει τον cursor
+**κατά μήκος** της κλειδωμένης παρειάς (ακμή flush), παραχωρεί σε φρέσκο snap σε **διαφορετική** παρειά
+(corner-turn) και **απελευθερώνεται** όταν ο cursor απομακρυνθεί κάθετα πέρα από το capture. ΕΝΑΣ
+resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ commit (`useSlabTool`/
+`useRoofTool.onCanvasClick`) by construction.
 
 ## 4. Phases
 
@@ -89,7 +99,7 @@ type BimCursorSnap =
 | **Φ3** | Wire **wall + beam** START placement (1ο κλικ): commit (`useWallTool.resolveWallStartAnchor` + `useBeamTool.resolveStartAnchor`) + preview (`makeWallGhostBeforeClick` + `makeBeamGhostBeforeClick`) → εγκέφαλος (`toolKind:'wall'\|'beam'`, ΧΩΡΙΣ findSnapPoint). Wall END snap (`wall-endpoint-snap`) = ξεχωριστό point-snap leaf, εκτός scope. | ✅ DONE (jest, UNCOMMITTED) | 🔴 browser-verify τοίχος/δοκάρι |
 | **Φ4** | ~~Ομοιόμορφη έλξη slab/roof/foundation μέσω εγκεφάλου~~ → **N/A**: audit (2026-06-24) έδειξε ότι τα slab/roof/foundation tools έχουν **μηδέν** δικές τους snap κλήσεις — κουμπώνουν ήδη ομοιόμορφα από το **κεντρικό OSNAP** (`mouse-handler-up` else-branch). Καμία ασυμμετρία να ενοποιηθεί· point-only routing = no-op indirection (απορρίφθηκε από Giorgio). | ✅ N/A (already uniform) | — |
 | **Φ5** | SSoT registry module `bim-cursor-snap` (tier 4, 4 forbidden patterns: no parallel brain + no direct Layer-2 resolver calls outside canonical/leaf) + ADR-378/398/508 cross-links. Dead-code: εγκέφαλος πλέον live (5 production consumers)· aliases ήδη test-only → μηδέν baseline change. | ✅ DONE (UNCOMMITTED) | golden 56/56 + dry-run CLEAN |
-| **Φ6** (μελλοντικό) | **NEW feature** (Giorgio 2026-06-24): face-snap placement σε slab/roof/foundation — ακμή πλάκας/θεμελίου flush σε παρειά τοίχου/κολόνας μέσω του εγκεφάλου (νέα `toolKind` + Layer-2 resolver). Σχεδιασμός, όχι wiring. | 🔴 TODO (ξεχωριστή συνεδρία) | browser-verify |
+| **Φ6** | **NEW feature** (Giorgio 2026-06-24): face-snap σε slab/roof/foundation μέσω εγκεφάλου. **Φ6a** per-vertex flush (κάθε κορυφή πλάκας/στέγης κουμπώνει flush στην πλησιέστερη παρειά μέλους, `toolKind:'polygon-vertex'` width 0)· **Φ6b** edge-slide constraint (ακμή flush κατά μήκος κλειδωμένης παρειάς + corner-turn + release, `resolvePolygonVertexSnap` + `polygonVertexLockStore`)· **Φ6c** foundation pad → παρειά/άξονα κολόνας (`toolKind:'foundation-pad'` → `resolveColumnFaceSnapFromTargets`). Targets sync ενεργοποιήθηκε σε slab/roof/foundation (κοινό `useSceneSnapTargetSync`). Anti double-snap: ΧΩΡΙΣ findSnapPoint. | ✅ DONE (UNCOMMITTED) — 16+18+606 jest GREEN | 🔴 browser-verify |
 
 ⚠️ **Wiring touches ADR-040 architecture-critical files** (`mouse-handler-up`, snap-scheduler) → CHECK
 6B/6D: stage ADR-040 + ADR-514 μαζί. Κάθε φάση browser-verified ΠΡΙΝ την επόμενη (zero-regression gate).
@@ -145,3 +155,20 @@ type BimCursorSnap =
   56/56 PASS (ERE-validity όλων των patterns μέσω `grep -E -f`) + dry-run grep CLEAN (όλα τα matches σε
   allowlist/exempt). ssot:baseline ΔΕΝ τρέχτηκε (μηδέν violations· αποφυγή pollution από uncommitted
   άλλων agents στο shared tree). ⚠️ Στο commit: stage ADR-514 + `.ssot-registry.json` + τα 3 cross-linked ADR.
+- **2026-06-24** — Φ6 (face-snap slab/roof/foundation, NEW feature, UNCOMMITTED): επέκταση `BimSnapToolKind`
+  με `'polygon-vertex'` (slab/roof) + `'foundation-pad'` + αντίστοιχα branches στον εγκέφαλο (delegate
+  `resolveMemberGhostSnapFromStore` width-0 / `resolveColumnFaceSnapFromTargets` — μηδέν νέο geometry).
+  **NEW** `bim/placement/polygon-vertex-snap.ts` (pure `resolvePolygonVertexSnap`: Φ6a flush + Φ6b
+  edge-slide/corner-turn/release) + `bim/placement/polygon-vertex-lock-store.ts` (zero-React lock SSoT,
+  preview≡commit). **Wiring (ΧΩΡΙΣ findSnapPoint, anti double-snap §2):** `useSlabTool` + `useRoofTool`
+  (νέο `getSceneEntities` option + `useSceneSnapTargetSync` + face-snap στο `onCanvasClick` + lock
+  reset on activate/commit/deactivate· auto-close ελέγχεται στο RAW σημείο ΠΡΙΝ τον face-snap)·
+  `useFoundationTool` (pad branch → `toolKind:'foundation-pad'` + sync)· `drawing-preview-generator`
+  (slab/roof branches → `resolvePolygonPreviewCursor` = `resolveEffectivePreviewCursor` + ΙΔΙΟΣ resolver/
+  store)· `useSpecialTools-area-tools` (περνά `getSceneEntities` σε slab/roof). **SSoT reuse-only** (Giorgio
+  audit): `resolveMemberGhostSnapFromStore` + `resolveColumnFaceSnapFromTargets` + `scene-snap-targets` +
+  `useSceneSnapTargetSync` + `GhostFaceFrame` — μηδέν διπλότυπο, **δεν** ξαναγράφτηκε το `ambient-alignment`
+  (H/V, διαφορετικό). 16 (placement) + 18 (slab/foundation tools) + 606 (framing/columns regression) jest
+  GREEN. tsc: 🔴 εκκρεμεί (N.17 — άλλος agent τρέχει tsc στο shared tree, δεν ξεκίνησα 2ο ταυτόχρονο).
+  🔴 browser-verify εκκρεμεί. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκε `drawing-preview-generator`).
+  📌 Φ6c (pad) = commit-only face-snap (το pad δεν έχει WYSIWYG ghost preview· flush στο κλικ).

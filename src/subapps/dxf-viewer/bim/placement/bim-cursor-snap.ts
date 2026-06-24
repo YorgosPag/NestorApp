@@ -50,8 +50,17 @@ import type { PolarDiskSnapOptions } from '../columns/polar-disk-snap';
  */
 export type FindSnapPointFn = (worldX: number, worldY: number) => ProSnapResult | null;
 
-/** Ποιο placement layer ενεργοποιεί ο εγκέφαλος. `point-only` = μόνο OSNAP (line/polyline/…). */
-export type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'point-only';
+/**
+ * Ποιο placement layer ενεργοποιεί ο εγκέφαλος. `point-only` = μόνο OSNAP (line/polyline/…).
+ *
+ * ADR-514 Φ6 — face-snap σε slab/roof/foundation:
+ *   · `polygon-vertex` (slab/roof) → κορυφή περιγράμματος κουμπώνει **flush** στην πλησιέστερη παρειά
+ *     μέλους (member face-snap, `memberWidthMm` πάντα 0 → το σημείο πατά ΑΚΡΙΒΩΣ πάνω στην παρειά).
+ *     Κοινό για πλάκα ΚΑΙ στέγη (ταυτόσημο polygon FSM) — ΕΝΑ kind, λιγότερη επιφάνεια.
+ *   · `foundation-pad` → το πέδιλο (1-κλικ) κουμπώνει σε παρειά/άξονα κολόνας/μέλους ΟΠΩΣ η κολώνα
+ *     (reuse `resolveColumnFaceSnapFromTargets` — center-on-axis / 9-handle flush).
+ */
+export type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'polygon-vertex' | 'foundation-pad' | 'point-only';
 
 /** Τύπος των member kinds που δέχεται ο `selectGhostMembers` (reuse — μηδέν re-declare). */
 type MemberSnapKinds = Parameters<typeof selectGhostMembers>[1];
@@ -106,16 +115,21 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
   const { toolKind, cursor, targets, sceneUnits, findSnapPoint } = input;
 
   // ── Layer 2: placement (ειδικευμένο ανά εργαλείο) ──────────────────────────
-  if (toolKind === 'column') {
+  // ADR-514 Φ6 — το πέδιλο (`foundation-pad`) κουμπώνει ΟΠΩΣ η κολώνα (ίδιος resolver: center-on-axis
+  // / 9-handle flush) → reuse, μηδέν παράλληλο subsystem.
+  if (toolKind === 'column' || toolKind === 'foundation-pad') {
     const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts);
     if (placement) return { kind: 'column-placement', placement, point: placement.position };
-  } else if (toolKind === 'wall' || toolKind === 'beam') {
+  } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex') {
     const members = selectGhostMembers(targets, input.memberKinds ?? DEFAULT_MEMBER_KINDS);
+    // ADR-514 Φ6 — η κορυφή περιγράμματος (`polygon-vertex`) δεν έχει «πλάτος» → memberWidth 0 ώστε το
+    // `.start` να πατά ΑΚΡΙΒΩΣ πάνω στην παρειά (flush), όχι σε centerline offset ημι-πλάτους.
+    const widthMm = toolKind === 'polygon-vertex' ? 0 : input.memberWidthMm ?? 0;
     const placement = resolveMemberGhostSnapFromStore(
       cursor,
       targets.footprints,
       members,
-      input.memberWidthMm ?? 0,
+      widthMm,
       sceneUnits,
     );
     if (placement) return { kind: 'member-placement', placement, point: placement.start };

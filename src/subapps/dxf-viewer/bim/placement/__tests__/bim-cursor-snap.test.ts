@@ -67,6 +67,47 @@ describe('resolveBimCursorSnap — Layer 2 placement (ανά toolKind)', () => {
     expect(findSnapPoint).not.toHaveBeenCalled();
   });
 
+  it('ADR-514 Φ6 — polygon-vertex κοντά σε footprint → member-placement flush (width 0), point=start', () => {
+    const r = resolveBimCursorSnap({
+      toolKind: 'polygon-vertex',
+      cursor: { x: 700, y: 200 },
+      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      sceneUnits: 'mm',
+      // memberWidthMm ΑΓΝΟΕΙΤΑΙ για polygon-vertex (πάντα 0 → flush ΠΑΝΩ στην παρειά).
+      memberWidthMm: 999,
+    });
+    expect(r.kind).toBe('member-placement');
+    if (r.kind === 'member-placement') {
+      expect(r.point).toEqual(r.placement.start);
+      expect(r.placement.start.x).toBeCloseTo(400); // ανατολική παρειά κολόνας (flush, μηδέν offset)
+    }
+  });
+
+  it('ADR-514 Φ6c — foundation-pad κοντά σε footprint → column-placement, point=position', () => {
+    const r = resolveBimCursorSnap({
+      toolKind: 'foundation-pad',
+      cursor: { x: 700, y: 200 },
+      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      sceneUnits: 'mm',
+    });
+    expect(r.kind).toBe('column-placement');
+    if (r.kind === 'column-placement') {
+      expect(r.point).toEqual(r.placement.position);
+      expect(r.placement.position.x).toBeCloseTo(400);
+    }
+  });
+
+  it('ADR-514 Φ6 — polygon-vertex μακριά από στόχους, χωρίς findSnapPoint → point cursor αυτούσιος', () => {
+    const r = resolveBimCursorSnap({
+      toolKind: 'polygon-vertex',
+      cursor: { x: 9000, y: 9000 },
+      targets: makeTargets({ footprints: [COLUMN_FP] }),
+      sceneUnits: 'mm',
+    });
+    expect(r.kind).toBe('point');
+    if (r.kind === 'point') expect(r.point).toEqual({ x: 9000, y: 9000 });
+  });
+
   it('wall κοντά σε footprint → kind=member-placement (column-priority neutral), point=placement.start', () => {
     const findSnapPoint = jest.fn<ReturnType<FindSnapPointFn>, Parameters<FindSnapPointFn>>(
       () => foundAt({ x: 9999, y: 9999 }, ExtendedSnapType.ENDPOINT),

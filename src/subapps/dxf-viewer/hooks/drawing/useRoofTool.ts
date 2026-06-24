@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { RoofEntity } from '../../bim/types/roof-types';
+import type { Entity } from '../../types/entities';
 import {
   buildRoofEntity,
   buildDefaultRoofParams,
@@ -35,6 +36,11 @@ import {
   type SceneUnits,
 } from './roof-completion';
 import { roofPreviewStore } from '../../bim/roofs/roof-preview-store';
+// ADR-514 Φ6 — face-snap κορυφών (flush + edge-slide), SSoT κοινό με slab/wall/beam/column.
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
+import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
+import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -75,6 +81,8 @@ export interface UseRoofToolOptions {
   readonly getAutoCloseTolerance?: () => number;
   /** Returns the active scene's coordinate units for correct BOQ calculations. */
   readonly getSceneUnits?: () => SceneUnits;
+  /** ADR-514 Φ6 — live scene entities για τον face-snap κορυφών (flush σε παρειά μέλους). */
+  readonly getSceneEntities?: () => readonly Entity[];
 }
 
 export interface UseRoofToolResult {
@@ -98,11 +106,14 @@ export interface UseRoofToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult {
-  const { onRoofCreated, currentLevelId = '0', getAutoCloseTolerance, getSceneUnits } = options;
+  const { onRoofCreated, currentLevelId = '0', getAutoCloseTolerance, getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<RoofToolState>(INITIAL_STATE);
   const stateRef = useRef<RoofToolState>(state);
   stateRef.current = state;
+
+  // ── ADR-514 Φ6 — scene snap targets sync (mirror useSlabTool) ──
+  const refreshSnapTargets = useSceneSnapTargetSync(() => getSceneEntities?.() ?? []);
 
   // ── live preview (ADR-417) — single-writer into roofPreviewStore so
   //    useUnifiedDrawing draws the in-progress footprint rubber-band. ─────────
@@ -119,18 +130,23 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
+    refreshSnapTargets(); // ADR-514 Φ6 — στόχοι έτοιμοι πριν την 1η κορυφή
+    polygonVertexLockStore.reset();
     setState((prev) => ({
       ...INITIAL_STATE,
       overrides: prev.overrides,
       phase: 'awaitingFirstVertex',
     }));
-  }, []);
+  }, [refreshSnapTargets]);
 
   const deactivate = useCallback(() => {
+    sceneSnapTargetsStore.reset(); // ADR-514 Φ6
+    polygonVertexLockStore.reset();
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
+    polygonVertexLockStore.reset();
     setState((prev) => ({
       ...INITIAL_STATE,
       overrides: prev.overrides,
@@ -158,6 +174,7 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
       return false;
     }
     onRoofCreated?.(result.entity);
+    polygonVertexLockStore.reset(); // ADR-514 Φ6 — νέο πολύγωνο, καθαρό edge-slide
     setState({
       ...INITIAL_STATE,
       overrides: s.overrides,
@@ -166,6 +183,14 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
     return true;
   }, [currentLevelId, onRoofCreated, getSceneUnits]);
 
+  // ── ADR-514 Φ6 — face-snap κορυφής (flush + edge-slide) + ενημέρωση lock (mirror useSlabTool) ──
+  const snapVertex = useCallback((point: Readonly<Point2D>): Point2D => {
+    const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
+    const snap = resolvePolygonVertexSnap(point, sceneSnapTargetsStore.get(), sceneUnits, polygonVertexLockStore.get() ?? undefined);
+    polygonVertexLockStore.set(snap.faceFrame ? { faceFrame: snap.faceFrame, targetId: snap.targetId } : null);
+    return snap.point;
+  }, [getSceneUnits]);
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
@@ -173,17 +198,19 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
       if (s.phase === 'idle') return false;
 
       if (s.phase === 'awaitingFirstVertex') {
+        const v = snapVertex(point);
         setState({
           ...s,
           phase: 'awaitingNextVertex',
-          vertices: [{ x: point.x, y: point.y }],
+          vertices: [v],
           error: null,
         });
         return true;
       }
 
       if (s.phase === 'awaitingNextVertex') {
-        // Auto-close: click κοντά στην πρώτη κορυφή με ≥3 vertices → commit.
+        // Auto-close: ελέγχεται στο RAW (ήδη OSNAP-snapped) σημείο ΠΡΙΝ τον face-snap (endpoint OSNAP
+        // νικά στο κλείσιμο, ο face-snap δεν τραβά την κορυφή κλεισίματος μακριά από την 1η).
         if (s.vertices.length >= 3) {
           const first = s.vertices[0];
           const dx = point.x - first.x;
@@ -193,9 +220,10 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
             return commitFromState(s);
           }
         }
+        const v = snapVertex(point);
         setState({
           ...s,
-          vertices: [...s.vertices, { x: point.x, y: point.y }],
+          vertices: [...s.vertices, v],
           error: null,
         });
         return true;
@@ -203,7 +231,7 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
 
       return false;
     },
-    [commitFromState, getAutoCloseTolerance],
+    [commitFromState, getAutoCloseTolerance, snapVertex],
   );
 
   const finishPolygon = useCallback((): boolean => {

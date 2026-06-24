@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
+import type { Entity } from '../../types/entities';
 import {
   buildSlabEntity,
   buildDefaultSlabParams,
@@ -35,6 +36,12 @@ import { getDefaultSlabBuildupForKind } from '../../bim/types/slab-dna-types';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 // ADR-404 Phase 5c — publish drawing-mode handle στο ribbon (κεκλιμένη πλάκα «σχεδίασε ήδη κεκλιμένη»).
 import { slabToolBridgeStore } from '../../ui/ribbon/hooks/bridge/slab-tool-bridge-store';
+// ADR-514 Φ6 — face-snap κορυφών: pre-collect στόχοι στο ΚΟΙΝΟ scene store (SSoT, κοινό με τοίχο/δοκάρι/
+// κολώνα) + ο εγκέφαλος-driven polygon-vertex resolver (flush + edge-slide) → preview ≡ commit.
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
+import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
+import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -77,6 +84,11 @@ export interface UseSlabToolOptions {
   readonly getAutoCloseTolerance?: () => number;
   /** Returns the active scene's coordinate units for correct BOQ calculations. */
   readonly getSceneUnits?: () => SceneUnits;
+  /**
+   * ADR-514 Φ6 — live scene entities για τον face-snap κορυφών (flush σε παρειά τοίχου/κολόνας/
+   * δοκαριού/πλάκας). Προ-συλλέγονται στο κοινό `sceneSnapTargetsStore` on activate / entity-created.
+   */
+  readonly getSceneEntities?: () => readonly Entity[];
 }
 
 export interface UseSlabToolResult {
@@ -101,11 +113,16 @@ export interface UseSlabToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult {
-  const { onSlabCreated, currentLevelId = '0', getAutoCloseTolerance, getSceneUnits } = options;
+  const { onSlabCreated, currentLevelId = '0', getAutoCloseTolerance, getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<SlabToolState>(INITIAL_STATE);
   const stateRef = useRef<SlabToolState>(state);
   stateRef.current = state;
+
+  // ── ADR-514 Φ6 — scene snap targets sync (mirror useColumnTool/useWallTool) ──
+  // Pre-collect κολόνες/τοίχοι/δοκάρια/πλάκες στο ΚΟΙΝΟ store ΠΡΙΝ την 1η κορυφή ώστε το flush
+  // face-snap (preview + commit) να υπολογίζεται σύγχρονα με έτοιμους στόχους. SSoT hook.
+  const refreshSnapTargets = useSceneSnapTargetSync(() => getSceneEntities?.() ?? []);
 
   // ── preview store sync (ADR-363 Phase 6.5.B) ─────────────────────────────
   useEffect(() => {
@@ -122,13 +139,15 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
+    refreshSnapTargets(); // ADR-514 Φ6 — στόχοι έτοιμοι πριν την 1η κορυφή
+    polygonVertexLockStore.reset(); // καθαρό edge-slide state σε νέα σχεδίαση
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
       overrides: prev.overrides,
       phase: 'awaitingFirstVertex',
     }));
-  }, []);
+  }, [refreshSnapTargets]);
 
   const setKind = useCallback((kind: SlabKind) => {
     setState((prev) => ({
@@ -140,10 +159,13 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
   }, []);
 
   const deactivate = useCallback(() => {
+    sceneSnapTargetsStore.reset(); // ADR-514 Φ6 — καθάρισε τους face-snap στόχους
+    polygonVertexLockStore.reset();
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
+    polygonVertexLockStore.reset(); // ESC → νέο πολύγωνο, καθαρό edge-slide
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -205,6 +227,7 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
       return false;
     }
     onSlabCreated?.(result.entity);
+    polygonVertexLockStore.reset(); // ADR-514 Φ6 — νέο πολύγωνο ξεκινά με καθαρό edge-slide
     setState({
       ...INITIAL_STATE,
       kind: s.kind,
@@ -214,6 +237,16 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
     return true;
   }, [currentLevelId, onSlabCreated, getSceneUnits]);
 
+  // ── ADR-514 Φ6 — face-snap κορυφής (flush + edge-slide) + ενημέρωση lock για την επόμενη ──
+  // ΙΔΙΟΣ resolver + ΙΔΙΟ store με το preview (`drawing-preview-generator` slab/roof branch) →
+  // preview ≡ commit by construction. Ο `point` έρχεται ήδη OSNAP-snapped κεντρικά (anti double-snap).
+  const snapVertex = useCallback((point: Readonly<Point2D>): Point2D => {
+    const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
+    const snap = resolvePolygonVertexSnap(point, sceneSnapTargetsStore.get(), sceneUnits, polygonVertexLockStore.get() ?? undefined);
+    polygonVertexLockStore.set(snap.faceFrame ? { faceFrame: snap.faceFrame, targetId: snap.targetId } : null);
+    return snap.point;
+  }, [getSceneUnits]);
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
@@ -221,17 +254,20 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
       if (s.phase === 'idle') return false;
 
       if (s.phase === 'awaitingFirstVertex') {
+        const v = snapVertex(point);
         setState({
           ...s,
           phase: 'awaitingNextVertex',
-          vertices: [{ x: point.x, y: point.y }],
+          vertices: [v],
           error: null,
         });
         return true;
       }
 
       if (s.phase === 'awaitingNextVertex') {
-        // Auto-close: click κοντά στην πρώτη κορυφή με ≥3 vertices → commit.
+        // Auto-close: click κοντά στην πρώτη κορυφή με ≥3 vertices → commit. Ελέγχεται στο RAW
+        // (ήδη OSNAP-snapped) σημείο ΠΡΙΝ τον face-snap, ώστε ο face-snap να μην «τραβά» την
+        // κορυφή κλεισίματος μακριά από την 1η (το endpoint OSNAP νικά στο κλείσιμο).
         if (s.vertices.length >= 3) {
           const first = s.vertices[0];
           const dx = point.x - first.x;
@@ -241,9 +277,10 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
             return commitFromState(s);
           }
         }
+        const v = snapVertex(point);
         setState({
           ...s,
-          vertices: [...s.vertices, { x: point.x, y: point.y }],
+          vertices: [...s.vertices, v],
           error: null,
         });
         return true;
@@ -251,7 +288,7 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
 
       return false;
     },
-    [commitFromState, getAutoCloseTolerance],
+    [commitFromState, getAutoCloseTolerance, snapVertex],
   );
 
   const finishPolygon = useCallback((): boolean => {
