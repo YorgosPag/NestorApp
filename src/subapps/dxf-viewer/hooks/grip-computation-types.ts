@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -126,6 +126,15 @@ export interface DxfGripDragPreview {
    * `applyHatchGripDrag` (boundaryPaths-only; outline redrawn from the new ring).
    */
   hatchGripKind?: HatchGripKind;
+  /**
+   * ADR-362 Phase I (Round 22) — dimension grip discriminator. Set when the active
+   * grip is a `dim-*` kind; consumed by `useDimGripGhostPreview` to render the live
+   * dimension ghost via `applyDimensionGripDrag` + `renderPreviewDimension` (preview
+   * ≡ commit — the SAME pure transform `commitDimensionGripDrag` runs on release).
+   * `anchorPos` carries the grip world position at mouseDown (used as `gripPos` for
+   * the linear rotation handle, matching the commit's `grip.position`).
+   */
+  dimGripKind?: DimensionGripKind;
   /**
    * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator.
    * Routes the live ghost through `applyMepUnderfloorGripDrag` (params-only;

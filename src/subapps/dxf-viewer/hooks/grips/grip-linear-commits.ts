@@ -15,7 +15,8 @@ import type { XLineEntity, RayEntity, DimensionEntity } from '../../types/entiti
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
 import { applyRayGripDrag } from '../../systems/ray/ray-grips';
-import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
+import { applyDimensionGripDrag, diffDimEntity } from '../dimensions/useDimensionGrips';
+import { UpdateDimGripCommand } from '../../core/commands/entity-commands/UpdateDimGripCommand';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -76,15 +77,18 @@ export function commitDimensionGripDrag(
   // SceneModel stores DimensionEntity directly (no DxfDimension wrapper).
   // useDxfSceneConversion wraps it in DxfDimension only for the rendering
   // pipeline — it is NOT persisted back to the scene model.
+  // SceneModel stores DimensionEntity directly (no DxfDimension wrapper) — the
+  // wrapper is created only for the rendering pipeline, never persisted back.
   const asWrapper = raw as unknown as DxfDimension;
   const dimEntity: DimensionEntity = asWrapper.dimensionEntity ?? (raw as unknown as DimensionEntity);
   const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dimEntity, delta, grip.position);
   if (newDimEntity === dimEntity) return;
-  if (asWrapper.dimensionEntity) {
-    // Rare: entity was stored as a DxfDimension wrapper — update nested field.
-    sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
-  } else {
-    // Common: entity is a raw DimensionEntity — patch its fields directly.
-    sceneManager.updateEntity(grip.entityId, newDimEntity as unknown as Partial<SceneEntity>);
-  }
+  // ADR-362 Round 22 — undoable + drag-coalescing commit via the MergeableUpdateCommand
+  // base (replaces the legacy direct sceneManager.updateEntity, which had NO undo). The
+  // minimal symmetric patch is the SSoT diff; an empty patch (zero-delta click) is a no-op.
+  const { patch, previous } = diffDimEntity(dimEntity, newDimEntity);
+  if (Object.keys(patch).length === 0) return;
+  const command = new UpdateDimGripCommand(grip.entityId, patch, previous, sceneManager, false);
+  if (command.validate() !== null) return;
+  deps.execute(command);
 }

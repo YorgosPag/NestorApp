@@ -34,6 +34,11 @@ import {
   type DimensionEntity,
   type DimStyle,
 } from '../../types/entities';
+// ADR-362 Round 22 — render grips from the SAME SSoT the interaction/pick path uses
+// (`getDimensionGrips`) so the drawn grips match the pickable ones exactly (5 grips
+// incl. the dim-extra handle + identical text-midpoint fallback). Pure function, no React.
+import { getDimensionGrips } from '../../hooks/dimensions/useDimensionGrips';
+import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import {
   buildDimensionGeometry,
   type DimensionLookup,
@@ -191,22 +196,20 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isDimensionEntity(entity)) return [];
-    const pts = entity.defPoints;
-    const grips: GripInfo[] = [];
-    if (pts.length >= 1) {
-      grips.push({ id: `${entity.id}-0`, entityId: entity.id, gripIndex: 0, type: 'vertex', position: pts[0], isVisible: true });
-    }
-    if (pts.length >= 2) {
-      grips.push({ id: `${entity.id}-1`, entityId: entity.id, gripIndex: 1, type: 'vertex', position: pts[1], isVisible: true });
-    }
-    if (pts.length >= 3) {
-      grips.push({ id: `${entity.id}-2`, entityId: entity.id, gripIndex: 2, type: 'midpoint', position: pts[2], isVisible: true });
-    }
-    const textPos = entity.textMidpoint ?? (pts.length >= 3 ? pts[2] : null);
-    if (textPos) {
-      grips.push({ id: `${entity.id}-3`, entityId: entity.id, gripIndex: 3, type: 'center', position: textPos, isVisible: true });
-    }
-    return grips;
+    // Delegate to the interaction-path SSoT (`getDimensionGrips`) so the DRAWN grips
+    // match the PICKABLE ones exactly — same 5 grips (incl. the dim-extra rotation/
+    // arc handle) + same text-midpoint fallback. The renderer GripInfo shape differs
+    // (it needs `id`/`isVisible`); the `dimGripKind` discriminator is only needed by
+    // the pick/commit path (carried separately via grip-computation → wrapDxfGrip).
+    const dxfDim = { id: entity.id, dimensionEntity: entity as unknown as DimensionEntity } as DxfDimension;
+    return getDimensionGrips(dxfDim).map((g) => ({
+      id: `${entity.id}-${g.gripIndex}`,
+      entityId: entity.id,
+      gripIndex: g.gripIndex,
+      type: g.type,
+      position: g.position,
+      isVisible: true,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

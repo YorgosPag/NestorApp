@@ -167,6 +167,75 @@ export function applyDimensionGripDrag(
   }
 }
 
+// ─── Public: undoable patch diff (grip commit) ──────────────────────────────────
+
+/**
+ * Minimal field patch for a dimension grip edit — only the fields a grip drag can
+ * touch. Consumed by `UpdateDimGripCommand` (undoable, drag-coalescing).
+ */
+export interface DimGripPatch {
+  defPoints?: readonly Point2D[];
+  textMidpoint?: Point2D;
+  /** Linear dim rotation handle (degrees). */
+  rotation?: number;
+  /** Ordinate datum origin. */
+  datum?: Point2D;
+}
+
+function pointEq(a: Point2D, b: Point2D): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+function pointOptEq(a: Point2D | undefined, b: Point2D | undefined): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return pointEq(a, b);
+}
+
+function defPointsEq(a: readonly Point2D[], b: readonly Point2D[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (!pointEq(a[i], b[i])) return false;
+  return true;
+}
+
+/**
+ * Value-compare two dimension entities (pre/post grip drag) and return the minimal
+ * symmetric `{ patch, previous }` — ONLY the fields that actually changed, by value
+ * (not reference, since `applyDimensionGripDrag` always allocates fresh arrays).
+ *
+ * Empty `patch` ⇒ no-op (zero-delta click) — the caller must skip the command so it
+ * never pollutes the undo stack.
+ */
+export function diffDimEntity(
+  prev: DimensionEntity,
+  next: DimensionEntity,
+): { patch: DimGripPatch; previous: DimGripPatch } {
+  const patch: DimGripPatch = {};
+  const previous: DimGripPatch = {};
+
+  if (!defPointsEq(prev.defPoints, next.defPoints)) {
+    patch.defPoints = next.defPoints;
+    previous.defPoints = prev.defPoints;
+  }
+  if (!pointOptEq(prev.textMidpoint, next.textMidpoint)) {
+    patch.textMidpoint = next.textMidpoint;
+    previous.textMidpoint = prev.textMidpoint;
+  }
+  const prevRot = (prev as { rotation?: number }).rotation;
+  const nextRot = (next as { rotation?: number }).rotation;
+  if (prevRot !== nextRot) {
+    patch.rotation = nextRot;
+    previous.rotation = prevRot;
+  }
+  const prevDatum = (prev as { datum?: Point2D }).datum;
+  const nextDatum = (next as { datum?: Point2D }).datum;
+  if (!pointOptEq(prevDatum, nextDatum)) {
+    patch.datum = nextDatum;
+    previous.datum = prevDatum;
+  }
+  return { patch, previous };
+}
+
 function applyExtraGripDrag(
   dimEntity: DimensionEntity,
   delta: Point2D,

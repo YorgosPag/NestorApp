@@ -40,6 +40,8 @@ import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation
 // ADR-362 Phase J4 — live associative-dimension follow during a Move/grip drag
 // (dim value + ext lines + text recompute frame-for-frame, preview ≡ commit).
 import { DimAssociationGhostPreviewMount } from '../../hooks/dimensions/useDimAssociationGhostPreview';
+// ADR-362 Phase I (Round 22) — live dimension ghost while dragging a dim grip.
+import { DimGripGhostPreviewMount } from '../../hooks/dimensions/useDimGripGhostPreview';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import {
@@ -155,6 +157,17 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getViewportElement={getViewportElement}
       />
       <GripDragPreviewMount
+        dragPreview={gripDragPreview}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-362 Phase I (Round 22) — live dimension ghost while a dim grip is dragged
+          (applyDimensionGripDrag + renderPreviewDimension, preview ≡ commit). Layers on
+          top of the grip-ghost frame (skip-clear); the generic ghost paints nothing for
+          dimensions (no apply-entity-preview branch → transformed === entity). */}
+      <DimGripGhostPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
         transform={transform}

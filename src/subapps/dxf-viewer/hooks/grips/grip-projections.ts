@@ -126,6 +126,10 @@ export function buildDxfDragPreview(
     ...(activeGrip.roofGripKind        ? { roofGripKind:        activeGrip.roofGripKind,        anchorPos } : {}),
     // ADR-507 — hatch boundary grip kind + anchor for the live outline ghost.
     ...(activeGrip.hatchGripKind       ? { hatchGripKind:       activeGrip.hatchGripKind,       anchorPos } : {}),
+    // ADR-362 Phase I (Round 22) — dimension grip kind + anchor for the live dim ghost
+    // (useDimGripGhostPreview → applyDimensionGripDrag + renderPreviewDimension). anchorPos
+    // = grip world pos at mouseDown (gripPos for the linear rotation handle).
+    ...(activeGrip.dimGripKind         ? { dimGripKind:         activeGrip.dimGripKind,         anchorPos } : {}),
   };
 }
 
