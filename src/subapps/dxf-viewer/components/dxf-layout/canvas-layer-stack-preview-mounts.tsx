@@ -240,14 +240,23 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
-      {/* ADR-362 Phase J4 — associated dimensions follow a Move/grip drag LIVE (recompute
-          per frame via the SAME applyAssociationUpdates SSoT the release commits). Mounted
-          AFTER the entity-ghost mounts so its skip-clear layer paints on top of their frame. */}
+      {/* ADR-362 Phase J4 (Round 21) + Round 23 — associated dimensions follow a
+          Move/grip/rotate/mirror/scale/stretch drag LIVE (recompute per frame via the
+          SAME applyAssociationUpdates SSoT the release commits). Rotate/mirror state =
+          props (same the entity ghost mounts get); scale/stretch read their own stores
+          inside the hook. Mounted AFTER the entity-ghost mounts so its skip-clear layer
+          paints on top of their frame. */}
       <DimAssociationGhostPreviewMount
         movePhase={move.phase}
         moveBasePoint={move.basePoint}
         moveSelectedEntityIds={selectedEntityIds}
         gripDragPreview={gripDragPreview}
+        rotationPhase={rotation.phase}
+        rotationBasePoint={rotation.basePoint}
+        rotationAngle={rotation.currentAngle}
+        mirrorPhase={mirror.phase}
+        mirrorFirstPoint={mirror.firstPoint}
+        mirrorSecondPoint={mirror.secondPoint}
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}
