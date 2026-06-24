@@ -33,6 +33,9 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { BEAM_GHOST_LEN_MM } from '../../bim/beams/beam-column-face-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { resolveMemberEndpointSnap, resolveMemberEndpointWithFineStep } from '../../bim/framing/member-endpoint-snap';
+import { buildMemberMagnetOptions } from '../../bim/placement/member-magnet-opts';
+import { buildPlacementGridMeta } from '../../bim/placement/placement-grid-meta';
+import { findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
 import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
@@ -124,10 +127,13 @@ function makeBeamGhostBeforeClick(
   // SSoT `resolveEffectivePreviewCursor` → ο άξονας του ghost ταυτίζεται με το σταυρόνημα.
   const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+  // ADR-398 §3.13/§3.15 (Giorgio 2026-06-24) — Polar/Rect Magnet opts (ΙΔΙΟ SSoT με κολόνα), ώστε το
+  // φάντασμα δοκαριού να κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο ΟΠΩΣ η κολόνα.
+  const magnetOpts = buildMemberMagnetOptions(widthMm, sceneUnits);
   // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam', kinds beam+slab).
   // ⚠️ ADR-514 §2 — ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap).
   // ΙΔΙΟ entry με το commit (`useBeamTool.resolveStartAnchor`) → preview ≡ commit by construction.
-  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'] });
+  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'], magnetOpts });
   const snap = snapResult.kind === 'member-placement' ? snapResult.placement : null;
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
@@ -145,8 +151,17 @@ function makeBeamGhostBeforeClick(
   // ADR-508 §dim — listening dimensions (ίδιος SSoT με τοίχο): μόνο όταν το ghost γλιστράει 🟢
   // πάνω σε παρειά μέλους (`snap.faceFrame` υπάρχει) και δεν είναι 🔴 overlap.
   const wpp = worldPerPixel(getImmediateTransform().scale);
-  const faceDimensions = resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
-  return toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor, faceDimensions);
+  // ADR-398 §3.15 (ΙΔΙΟ SSoT με κολόνα) — cursor μέσα σε ορθογώνιο → 4 καρτεσιανά dx/dy dims (αντί του
+  // faceFrame straight branch)· αλλιώς → R/θ ή straight listening dims από το faceFrame του snap.
+  const rect = findRectContaining(effectiveCursor, targets.rectTargets);
+  const faceDimensions = (rect && snap && !isOverlap)
+    ? { sceneUnits, dims: resolveRectCartesianDims(rect, snap.start) }
+    : resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
+  const ghost = toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor, faceDimensions);
+  // ADR-398 §3.13/§3.15 (Giorgio 2026-06-24) — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata
+  // (ΚΟΙΝΟ SSoT helper με την κολόνα)· ο `drawing-hover-handler` το ζωγραφίζει ως overlay.
+  const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, magnetOpts);
+  return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
 }
 
 /**

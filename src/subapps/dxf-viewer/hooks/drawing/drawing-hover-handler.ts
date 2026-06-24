@@ -54,6 +54,12 @@ import { i18n } from '@/i18n';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
+// 🔬 ADR-516 perf trace (wall-tool lag diagnosis): when true, logs a per-op
+// breakdown ONLY for laggy frames (≥ PERF_DRAWHOVER_WARN_MS). Set to false again
+// once measured. Separate from DEBUG_DRAWING_HANDLERS so it adds no other noise.
+const PERF_DRAWHOVER_TRACE = true;
+const PERF_DRAWHOVER_WARN_MS = 4; // ~1/4 frame @60fps — flag anything above this
+
 type Pt = Point2D;
 type TransformUtils = { worldToScreen: (pt: Pt) => Pt; screenToWorld: (pt: Pt) => Pt };
 type FindSnapResult = { found?: boolean; activeMode?: string | null; snappedPoint?: Pt; entityId?: string };
@@ -221,8 +227,12 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // the columns near the cursor — a SECOND source merged with the acquired
     // (AutoCAD) points into the SAME resolver. Gated behind the AutoAlign toggle.
     const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
-    const ambient = (isDrawingTool && ambientCfg.enabled)
-      ? collectAmbientAlignmentAnchors(previewPt, getSceneEntities(), {
+    // 🔬 perf trace: resolve scene entities once (preserves prior single-call behavior)
+    // so we can both feed the collector and report the member count.
+    const ambientEntities = (isDrawingTool && ambientCfg.enabled) ? getSceneEntities() : null;
+    const _ambT0 = performance.now();
+    const ambient = ambientEntities
+      ? collectAmbientAlignmentAnchors(previewPt, ambientEntities, {
           // Screen-relative radius (zoom-adaptive): px → world, so the "members near
           // my cursor on screen" feel stays constant at every zoom.
           radiusWorld: pixelsToWorld(ambientCfg.radiusPx, liveScale),
@@ -230,7 +240,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
           axisToleranceWorld: worldTolerance,
         })
       : [];
+    const _ambMs = performance.now() - _ambT0;
     const merged = ambient.length > 0 ? [...acquired, ...ambient] : acquired;
+    const _trkT0 = performance.now();
     const trackingResult = merged.length > 0
       ? resolveTrackingSnap(previewPt, merged, {
           incrementAngle: polarTrackingStore.incrementAngle,
@@ -238,6 +250,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
           polarEnabled: polarOnRef.current && !orthoOnRef.current,
         }, worldTolerance)
       : null;
+    const _trkMs = performance.now() - _trkT0;
     // ADR-357 ambient: "magic" adaptive distance snap (AutoCAD PolarSnap / Revit
     // temp-dim). Round the slide distance along a projection track to a nice value
     // whose on-screen spacing stays ~constant (step grows zoomed-out, shrinks
@@ -261,7 +274,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     }
 
     // Update the preview entity (calculates geometry, updates ref)
+    const _prevT0 = performance.now();
     updatePreview(previewPt, transformUtils);
+    const _prevMs = performance.now() - _prevT0;
     const t2 = performance.now();
     // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
     if (previewCanvasRef?.current) {
@@ -369,8 +384,17 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         previewCanvasRef.current.clear();
       }
       const t4 = performance.now();
-      // 🔍 PERF DEBUG: Log timing only when explicitly enabled
-      if (DEBUG_DRAWING_HANDLERS) {
+      // 🔬 ADR-516 perf trace: log the per-op breakdown ONLY for laggy frames, so the
+      // wall-tool lag is attributable to ambient-scan vs tracking vs preview vs draw.
+      if (PERF_DRAWHOVER_TRACE) {
+        const total = t4 - t0;
+        if (total >= PERF_DRAWHOVER_WARN_MS) {
+          const members = ambientEntities ? ambientEntities.length : 0;
+          console.warn(
+            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — ambient=${_ambMs.toFixed(1)} (members=${members}, anchors=${ambient.length}) tracking=${_trkMs.toFixed(1)} preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool}`,
+          );
+        }
+      } else if (DEBUG_DRAWING_HANDLERS) {
         const total = t4 - t0;
         console.debug(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
       }

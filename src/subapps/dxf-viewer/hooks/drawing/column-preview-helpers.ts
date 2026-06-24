@@ -40,11 +40,11 @@ import {
 } from './column-completion';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
-import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
-import { buildPolarDiskGrid, findDiskContaining, type PolarDiskGrid, type PolarDiskSnapOptions } from '../../bim/columns/polar-disk-snap';
-import { buildRectGrid, findRectContaining, resolveRectCartesianDims, type RectGrid } from '../../bim/columns/rect-cartesian-snap';
+import { findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
+import { buildPlacementGridMeta } from '../../bim/placement/placement-grid-meta';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 // ADR-404 Φ5 §slanted — live tilt preview (2ο κλικ: βάση→κορυφή).
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
@@ -64,26 +64,8 @@ import { getLayer } from '../../stores/LayerStore';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
-/**
- * ADR-398 §3.13/§3.15 — χτίζει το placement-guidance πλέγμα (πολικό δίσκου ή καρτεσιανό ορθογωνίου)
- * γύρω από ένα **σημείο αναφοράς**. **Κοινό SSoT** για awaitingPosition (ref = snapped cursor) ΚΑΙ
- * awaitingRotation (ref = κλειδωμένη θέση 1ου κλικ): το πλέγμα **παραμένει ορατό κατά τη στρέψη**
- * (Giorgio 2026-06-22 — μετά το 1ο κλικ μέσα σε δίσκο/ορθογώνιο η πολική/καρτεσιανή καθοδήγηση ΔΕΝ
- * πρέπει να χάνεται). Η δομή (κέντρο/δακτύλιοι/άξονες) ανήκει στον στόχο· το `ref` καθορίζει μόνο
- * το ενεργό δαχτυλίδι/πυκνότητα. ΙΔΙΟΣ resolver με το snap → καμία απόκλιση πλέγματος↔snap.
- */
-function buildPlacementGridMeta(
-  ref: Readonly<Point2D>,
-  targets: Readonly<SceneSnapTargets>,
-  sceneUnits: SceneUnits,
-  polarOpts: Readonly<PolarDiskSnapOptions>,
-): { polarDiskGrid?: PolarDiskGrid; rectGrid?: RectGrid } {
-  const disk = findDiskContaining(ref, targets.diskTargets);
-  const polarDiskGrid = disk ? buildPolarDiskGrid(ref, disk, sceneUnits, polarOpts) : null;
-  const rect = findRectContaining(ref, targets.rectTargets);
-  const rectGrid = rect ? buildRectGrid(rect, sceneUnits, polarOpts) : null;
-  return { ...(polarDiskGrid ? { polarDiskGrid } : {}), ...(rectGrid ? { rectGrid } : {}) };
-}
+// ADR-398 §3.13/§3.15 — `buildPlacementGridMeta` (placement-guidance πλέγμα) μετακόμισε σε κοινό SSoT
+// `bim/placement/placement-grid-meta.ts` ώστε να το μοιράζεται ΚΑΙ το beam preview (Giorgio 2026-06-24).
 
 /**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a

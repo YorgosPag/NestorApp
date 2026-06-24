@@ -29,6 +29,7 @@ import {
   type BeamKind,
 } from '../../bim/types/beam-types';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
+import { buildMemberMagnetOptions } from '../../bim/placement/member-magnet-opts';
 import { resolveMemberEndpointSnap, resolveMemberEndpointWithFineStep } from '../../bim/framing/member-endpoint-snap';
 import { isBeamCollinearOverlap } from '../../bim/beams/beam-beam-face-snap';
 import {
@@ -340,10 +341,13 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       // ADR-398 §3.10 — δοκάρι = beam+slab μέλη από το ΚΟΙΝΟ scene store (preview === commit).
       const targets = sceneSnapTargetsStore.get();
+      // ADR-398 §3.13/§3.15 — Polar/Rect Magnet opts (ΙΔΙΑ με το preview `makeBeamGhostBeforeClick`) →
+      // το magnet κούμπωμα στο 1ο κλικ ταυτίζεται με το φάντασμα (preview ≡ commit).
+      const magnetOpts = buildMemberMagnetOptions(widthMm, sceneUnits);
       // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'beam', kinds beam+slab).
       // ⚠️ ADR-514 §2 — ο `point` έρχεται ήδη OSNAP-snapped από το click pipeline → ΧΩΡΙΣ findSnapPoint
       // (anti double-snap). ΙΔΙΟ entry με το preview (`makeBeamGhostBeforeClick`) → preview ≡ commit.
-      const snap = resolveBimCursorSnap({ toolKind: 'beam', cursor: point, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'] });
+      const snap = resolveBimCursorSnap({ toolKind: 'beam', cursor: point, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['beam', 'slab'], magnetOpts });
       return snap.kind === 'member-placement'
         ? { start: snap.placement.start, anchored: true }
         : { start: { x: point.x, y: point.y }, anchored: false };

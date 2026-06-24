@@ -7,7 +7,8 @@
  *
  *   · **Layer 2 — placement** (ανά toolKind): η ειδικευμένη «έξυπνη» τοποθέτηση δομικού μέλους.
  *       - `column`     → `resolveColumnFaceSnapFromTargets` (9-λαβές face + polar/rect magnet)
- *       - `wall`/`beam`→ `resolveMemberGhostSnapFromStore` (column-priority → linear Τ-framing)
+ *       - `wall`/`beam`→ `resolveMemberGhostSnapFromStore` (column-priority → linear Τ-framing)·
+ *                        +optional polar/rect **magnet** fallback (`magnetOpts`, ίδιο SSoT με κολόνα)
  *     Νικά όταν υπάρχει παρειά/στόχος εντός capture. Επιστρέφει ΟΛΟΚΛΗΡΗ τοποθέτηση.
  *   · **Layer 1 — point** (`findSnapPoint`, ProSnapEngineV2 / 26 engines): OSNAP σε ΣΗΜΕΙΟ
  *       (endpoint/midpoint/grid/intersection/guide/…). **Fallback** όταν καμία παρειά δεν είναι κοντά.
@@ -43,6 +44,7 @@ import { selectGhostMembers, type SceneSnapTargets } from '../framing/scene-snap
 import type { MemberGhostSnapResult } from '../framing/linear-member-face-snap';
 import { resolveColumnFaceSnapFromTargets, type ColumnFaceSnap } from '../columns/column-face-snap';
 import type { PolarDiskSnapOptions } from '../columns/polar-disk-snap';
+import { resolveMemberMagnetPlacement } from './member-magnet-placement';
 
 /**
  * Layer 1 point-snap provider. Ίδια υπογραφή με το `useSnapManager.findSnapPoint`
@@ -88,6 +90,13 @@ export interface BimCursorSnapInput {
   readonly memberKinds?: MemberSnapKinds;
   /** column: Polar/Rect Magnet opts (ADR-398 §3.13/§3.15) — `undefined` = χωρίς magnet. */
   readonly columnOpts?: Readonly<PolarDiskSnapOptions>;
+  /**
+   * wall/beam: Polar/Rect Magnet opts για το **START** του μέλους (ADR-398 §3.13/§3.15, ίδιο SSoT με
+   * την κολώνα). `undefined` = χωρίς magnet (σημερινή συμπεριφορά τοίχου). Όταν δοθεί (δοκάρι), το
+   * φάντασμα κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο **ΟΠΩΣ η κολώνα** — ως
+   * **fallback** όταν καμία παρειά μέλους/κολόνας δεν είναι εντός capture (member-face-first).
+   */
+  readonly magnetOpts?: Readonly<PolarDiskSnapOptions>;
 }
 
 /**
@@ -133,6 +142,13 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
       sceneUnits,
     );
     if (placement) return { kind: 'member-placement', placement, point: placement.start };
+    // ADR-398 §3.13/§3.15 magnet (ίδιο SSoT με κολόνα) — fallback όταν καμία παρειά δεν είναι εντός
+    // capture: cursor εντός κύκλου/ορθογωνίου → πολικό/καρτεσιανό πλέγμα. Μόνο όταν δοθεί `magnetOpts`
+    // (δοκάρι· ο τοίχος δεν το περνά → αμετάβλητος). ΧΩΡΙΣ findSnapPoint (point-snap μένει κεντρικά).
+    if (input.magnetOpts) {
+      const magnet = resolveMemberMagnetPlacement(cursor, targets, sceneUnits, input.magnetOpts);
+      if (magnet) return { kind: 'member-placement', placement: magnet, point: magnet.start };
+    }
   }
 
   // ── Layer 1: point (OSNAP engine) — fallback ───────────────────────────────

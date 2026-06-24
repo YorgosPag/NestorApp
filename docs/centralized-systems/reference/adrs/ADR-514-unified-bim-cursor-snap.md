@@ -183,3 +183,18 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
   να παράγεται preview. +3 jest (pad ghost: null όταν !pad / cursor χωρίς στόχο / flush σε κολόνα).
   ⚠️ 8 pre-existing wall test failures (άλλος agent: ADR-508 FSM rename `awaitingAlignment`→`awaitingEnd`,
   test μη-ενημερωμένο) — ΟΧΙ Φ6 regression.
+- **2026-06-24** — Φ-magnet (Giorgio «το φάντασμα δοκαριού να συμπεριφέρεται ΟΠΩΣ της κολόνας μέχρι το
+  1ο κλικ», UNCOMMITTED): το **δοκάρι** απέκτησε τον **Polar/Rect Magnet** της κολόνας (ADR-398 §3.13/§3.15)
+  πριν το 1ο κλικ — μέσα σε κύκλο → πολικό πλέγμα + R/θ dims· μέσα σε ορθογώνιο → καρτεσιανό πλέγμα + 4
+  dx/dy dims· **+ ορατές ενδείξεις πλέγματος** (overlay). **FULL SSoT reuse-only** (Giorgio audit):
+  NEW `bim/placement/member-magnet-placement.ts` (adapter του column point-snap `resolvePolarDiskSnap`/
+  `resolveRectCartesianSnap` → `MemberGhostSnapResult`· ΜΗΔΕΝ νέα geometry) + NEW `member-magnet-opts.ts`
+  (live opts, reuse `polarClearanceScene`/`worldPerPixel`) + NEW `placement-grid-meta.ts` (**εξαγωγή** του
+  `buildPlacementGridMeta` από `column-preview-helpers` → κοινό SSoT column+beam). Εγκέφαλος: νέο optional
+  `magnetOpts` στο member branch (fallback **μετά** το member-face-snap → member-face-first· μόνο όταν
+  δοθεί → ο τοίχος αμετάβλητος). Beam preview (`makeBeamGhostBeforeClick`) + commit (`useBeamTool.
+  resolveStartAnchor`) περνούν ΙΔΙΑ `magnetOpts` → preview ≡ commit· cartesian dx/dy dims + grid overlay
+  attach ΟΠΩΣ το `generateColumnPreview`. shiftFractions = column interaction (το μέλος παίρνει το βασικό
+  nice-absolute πλέγμα· member-side Shift = future). 8 (magnet) + 10 (brain regression) + 109 (column/beam/
+  framing regression) jest GREEN. 🔴 tsc + browser-verify (δοκάρι μέσα σε κύκλο/ορθογώνιο = ίδια αίσθηση με
+  κολόνα) + commit. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 + ADR-398 μαζί.

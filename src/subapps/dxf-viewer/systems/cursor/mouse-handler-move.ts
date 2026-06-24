@@ -4,7 +4,7 @@
  * Handles: position tracking, snap detection, hover highlighting, pan, drawing preview
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {
   CoordinateTransforms,
   getPointerSnapshotFromElement,
@@ -44,6 +44,11 @@ import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
 import { getAxisCutDragAxis } from '../axis-cut/axis-cut-drag-store';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+// 🏢 ADR-516: per-frame coalescing of the heavy drawing-hover (preview+draw) so it
+// caps at ~60fps regardless of mouse Hz. Crosshair stays instant (compositor, above);
+// leading-edge apply means the ghost has ZERO added lag, only the rapid burst coalesces.
+import { DXF_TIMING } from '../../config/dxf-timing';
+import { createRafCoalescedThrottle } from '../../hooks/raf-coalesced-throttle';
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -64,6 +69,9 @@ export function useMouseMoveHandler({
     scene, colorLayers, isGripDragging = false, entityPickingActive = false,
   } = props;
   const { snapEnabled, findSnapPoint } = snap;
+
+  // 🏢 ADR-516: stable per-frame coalescer for the drawing-hover preview (see import note).
+  const drawHoverThrottleRef = useRef(createRafCoalescedThrottle(DXF_TIMING.frame.THROTTLE_60));
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (debugEnabled) dperf('Performance', 'NATIVE_MOUSEMOVE');
@@ -284,10 +292,18 @@ export function useMouseMoveHandler({
 
     if (onDrawingHover && inDrawingMode) {
       // ADR-398 §3.13 — Polar Magnet Q1: Shift κρατιέται → δακτύλιοι σε κλάσματα ακτίνας (event-time,
-      // zero React· ο ghost/commit το διαβάζει imperatively από το ColumnPolarStore).
+      // zero React· ο ghost/commit το διαβάζει imperatively από το ColumnPolarStore). Stays SYNC.
       if (activeTool === 'column') setColumnPolarShiftFractions(e.shiftKey);
       if (debugEnabled) console.log('[MouseHandlers] CALLING onDrawingHover', { worldX: worldPos.x, worldY: worldPos.y });
-      withPerf('drawing-hover-callback', () => onDrawingHover(worldPos));
+      // 🏢 ADR-516: coalesce the heavy preview+draw to ≤1 per animation frame. Leading-edge
+      // ⇒ the first move paints instantly (no added lag); a rapid burst flushes the LATEST
+      // worldPos on the next frame. Caps CPU when the mouse fires faster than 60fps.
+      drawHoverThrottleRef.current.run(() => {
+        withPerf('drawing-hover-callback', () => onDrawingHover(worldPos));
+      });
+    } else {
+      // Left drawing mode (or no hover handler) — drop any pending trailing frame.
+      drawHoverThrottleRef.current.cancel();
     }
 
     // ADR-040 Φ11: draw-snap detection is DECOUPLED from this synchronous handler.
