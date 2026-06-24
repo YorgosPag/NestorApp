@@ -202,6 +202,18 @@ export function applyAssociationUpdates(
   let orphanCount = 0;
   let newDefPoints: Point2D[] | null = null;
 
+  // TEMP DIAGNOSTIC (ADR-362 J3, gap #2) — remove after root-cause found.
+  // eslint-disable-next-line no-console
+  console.debug('[ADR-362-J3] observer-apply', {
+    dimId: dim.id,
+    associations: dim.associations.map((a) => ({
+      type: a.associationType,
+      geo: a.geometryId,
+      geo2: a.geometryId2,
+      param: a.param,
+    })),
+  });
+
   for (const assoc of dim.associations) {
     const geoEntity = getEntity(assoc.geometryId);
     if (!geoEntity) {
