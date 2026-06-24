@@ -29,6 +29,7 @@ import {
   type BeamKind,
 } from '../../bim/types/beam-types';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
+import { resolveMemberEndpointSnap, resolveMemberEndpointWithFineStep } from '../../bim/framing/member-endpoint-snap';
 import { isBeamCollinearOverlap } from '../../bim/beams/beam-beam-face-snap';
 import {
   buildAnchoredBeamParams,
@@ -395,11 +396,20 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        return commitTwoClickFromState(s, point);
+        // ADR-508 — endpoint face-snap (ΙΔΙΟΣ dispatcher με το start & ΙΔΙΟ SSoT με τον τοίχο
+        // `resolveMemberEndpointSnap`): το ΑΚΡΟ κουμπώνει flush σε παρειά μέλους/κολώνας + Shift 1cm
+        // βήμα στο ελεύθερο (face-snap νικά). Το δοκάρι δεν έχει length/angle lock (wall-only ADR-513)
+        // → χωρίς lock branch. ΙΔΙΟ entry/targets με το preview (`generateBeamPreview`) → preview ≡ commit.
+        const sceneUnits = getSceneUnits?.() ?? 'mm';
+        const targets = sceneSnapTargetsStore.get();
+        const widthMm = s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+        const endSnap = resolveMemberEndpointSnap(point, targets.footprints, selectGhostMembers(targets, ['beam', 'slab']), widthMm, sceneUnits);
+        const endPoint = resolveMemberEndpointWithFineStep(endSnap, s.startPoint);
+        return commitTwoClickFromState(s, endPoint);
       }
       return false;
     },
-    [commitTwoClickFromState, commitCurvedFromState, commitFromWall, syncSceneTargetsToStore, resolveStartAnchor],
+    [commitTwoClickFromState, commitCurvedFromState, commitFromWall, syncSceneTargetsToStore, resolveStartAnchor, getSceneUnits],
   );
 
   // ── ADR-363 «Δοκάρι από τοίχο» — 3D pick bridge ───────────────────────────

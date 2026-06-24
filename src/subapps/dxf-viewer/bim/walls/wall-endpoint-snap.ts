@@ -1,65 +1,27 @@
 /**
- * ADR-508 — Wall ENDPOINT face-snap (point snap) — pure SSoT.
+ * ADR-508 — Wall ENDPOINT face-snap — **thin re-export** του member-agnostic SSoT.
  *
- * Πλήρης ενοποίηση με την κολώνα (Giorgio 2026-06-24): όπως το **START** του τοίχου κουμπώνει/γλιστρά
- * flush σε παρειές μελών/κολωνών μέσω του `resolveMemberGhostSnapFromStore`, έτσι και το **END** (2ο
- * κλικ) πρέπει να «κολλάει» flush στην πλησιέστερη παρειά. Σημασιολογικά είναι **POINT snap** (το άκρο
- * προσγειώνεται στο σημείο επαφής), ΟΧΙ κάθετο T-framing — γι' αυτό κρατάμε το `snap.start` (= το
- * flush σημείο πάνω στην παρειά, ΙΔΙΟ που κλειδώνει το 1ο κλικ) και αγνοούμε το `snap.end` (perpendicular
- * stub). Μηδέν νέο engine: reuse ο ΙΔΙΟΣ dispatcher → preview ≡ commit (το ίδιο helper τρέχει στο ghost
- * `wall-preview-helpers` ΚΑΙ στο commit `useWallTool`).
+ * Η πραγματική λογική ζει πλέον στο `bim/framing/member-endpoint-snap.ts` (canonical), αφού το END snap
+ * είναι μέλος-αγνωστικό — ο ΙΔΙΟΣ κώδικας εξυπηρετεί τοίχο ΚΑΙ δοκάρι (Giorgio 2026-06-24, ενοποίηση
+ * τοίχου ↔ δοκαριού ↔ κολώνας). Αυτό το αρχείο διατηρεί τα wall-named aliases ώστε οι υπάρχοντες wall
+ * consumers (+ tests) να μένουν αμετάβλητοι (byte-for-byte) — mirror του beam-adapter pattern
+ * (`beam-column-face-snap` → `member-column-face-snap`).
  *
- * **Precedence (Giorgio):** το face-snap κερδίζει εντός capture (CAD-standard osnap > ortho). Το
- * length/angle lock (Δαχτυλίδι Εντολών) νικά το face-snap — αλλά αυτό ελέγχεται στον caller
- * (`useWallTool` μέσω `isLengthAngleLockActive`), ώστε αυτό το leaf να μένει pure & καθολικό.
- *
- * Pure — zero React/DOM/store. Μονάδες: scene units (footprints/members world-baked).
- *
- * @see ../framing/member-ghost-snap.ts — ο κοινός dispatcher (column-priority → linear member)
- * @see ../../hooks/drawing/wall-preview-helpers.ts — preview consumer
- * @see ../../hooks/drawing/useWallTool.ts — commit consumer (precedence vs lock)
+ * @see ../framing/member-endpoint-snap.ts — η canonical υλοποίηση
  * @see docs/centralized-systems/reference/adrs/ADR-508-unified-linear-member-framing.md
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import type { SceneUnits } from '../../utils/scene-units';
-import { resolveMemberGhostSnapFromStore } from '../framing/member-ghost-snap';
-import type { GhostFaceFrame, LinearMemberSnapTarget } from '../framing/linear-member-face-snap';
-import { applyMoveFineStepAboutAnchor } from '../grips/grip-move-constraints';
+import {
+  resolveMemberEndpointSnap,
+  resolveMemberEndpointWithFineStep,
+  type MemberEndpointSnap,
+} from '../framing/member-endpoint-snap';
 
-/** Αποτέλεσμα endpoint snap: το (πιθανώς) snapped σημείο + προαιρετικό faceFrame για listening dims. */
-export interface WallEndpointSnap {
-  /** Το snapped άκρο (flush στην παρειά) ή το `rawEnd` αυτούσιο όταν καμία παρειά εντός capture. */
-  readonly point: Point2D;
-  /** Πλαίσιο παρειάς για listening dimensions στο endpoint — `undefined` όταν δεν κούμπωσε. */
-  readonly faceFrame?: GhostFaceFrame;
-}
+/** @deprecated Wall-named alias του member-agnostic `MemberEndpointSnap` (canonical). */
+export type WallEndpointSnap = MemberEndpointSnap;
 
-/**
- * Κούμπωσε το ΑΚΡΟ του τοίχου flush στην πλησιέστερη παρειά μέλους/κολώνας (συνεχής ολίσθηση + magnet,
- * ΙΔΙΟΣ dispatcher με το start). `rawEnd` αυτούσιο όταν τίποτα εντός capture. Pure.
- */
-export function resolveWallEndpointSnap(
-  rawEnd: Readonly<Point2D>,
-  columnFootprints: readonly (readonly Point2D[])[],
-  memberTargets: readonly LinearMemberSnapTarget[],
-  thicknessMm: number,
-  sceneUnits: SceneUnits,
-): WallEndpointSnap {
-  const snap = resolveMemberGhostSnapFromStore(rawEnd, columnFootprints, memberTargets, thicknessMm, sceneUnits);
-  if (!snap) return { point: { x: rawEnd.x, y: rawEnd.y } };
-  return { point: { x: snap.start.x, y: snap.start.y }, faceFrame: snap.faceFrame };
-}
+/** Wall-named alias του canonical `resolveMemberEndpointSnap`. */
+export const resolveWallEndpointSnap = resolveMemberEndpointSnap;
 
-/**
- * ADR-049 (Giorgio 2026-06-24) — εφάρμοσε το **Shift fine 1 cm βήμα** στο ΑΚΡΟ που σχεδιάζεται,
- * ΜΟΝΟ όταν ΔΕΝ κούμπωσε σε παρειά (ελεύθερος χώρος). **Precedence (Giorgio): face-snap νικά** — αν
- * υπάρχει `faceFrame`, επιστρέφει το flush σημείο αυτούσιο· αλλιώς το άκρο κβαντίζεται σε πολλαπλάσια
- * του 1 cm σχετικά με το `start` (reuse του move SSoT `applyMoveFineStepAboutAnchor` — no-op όταν το
- * Shift δεν κρατιέται). Ο ΙΔΙΟΣ helper τρέχει στο preview (`wall-preview-helpers`) ΚΑΙ στο commit
- * (`useWallTool`) → preview ≡ commit.
- */
-export function resolveWallEndpointWithFineStep(snap: WallEndpointSnap, start: Readonly<Point2D>): Point2D {
-  if (snap.faceFrame) return { x: snap.point.x, y: snap.point.y };
-  return applyMoveFineStepAboutAnchor(snap.point, start);
-}
+/** Wall-named alias του canonical `resolveMemberEndpointWithFineStep`. */
+export const resolveWallEndpointWithFineStep = resolveMemberEndpointWithFineStep;

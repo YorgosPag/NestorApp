@@ -32,7 +32,9 @@ import { getLayer } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { BEAM_GHOST_LEN_MM } from '../../bim/beams/beam-column-face-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
+import { resolveMemberEndpointSnap, resolveMemberEndpointWithFineStep } from '../../bim/framing/member-endpoint-snap';
 import { isBeamCollinearOverlap, type BeamSnapTarget } from '../../bim/beams/beam-beam-face-snap';
+import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
 import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import {
@@ -78,7 +80,20 @@ export function generateBeamPreview(
   if (tempPoints.length === 1) {
     // awaitingEnd: straight/cantilever rectangle (curved χωρίς control = ευθεία).
     // `startAnchored` (face-snapped start) → centerline mode (χωρίς location-line auto-flush).
-    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, footprints, preview.startAnchored, beamTargets);
+    // ADR-508 — endpoint face-snap (ΙΔΙΟ SSoT με τον τοίχο, `resolveMemberEndpointSnap`): το ΑΚΡΟ
+    // κουμπώνει/γλιστρά flush σε παρειά μέλους/κολώνας (συνεχής ολίσθηση, ΙΔΙΟΣ dispatcher με το start
+    // → preview ≡ commit) + Shift 1cm βήμα στο ελεύθερο (face-snap νικά). Μόνο straight/cantilever
+    // (curved → raw cursor· το άκρο ορίζεται από το control point). Το δοκάρι δεν έχει length/angle
+    // lock (wall-only ADR-513) → χωρίς lock branch.
+    let endPt = cursorPoint;
+    let endFaceFrame: GhostFaceFrame | null = null;
+    if (preview.kind !== 'curved') {
+      const widthMm = preview.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+      const endSnap = resolveMemberEndpointSnap(cursorPoint, footprints, beamTargets, widthMm, sceneUnits);
+      endPt = resolveMemberEndpointWithFineStep(endSnap, startPt);
+      endFaceFrame = endSnap.faceFrame ?? null;
+    }
+    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, endPt, preview.kind, preview.overrides, sceneUnits, null, footprints, preview.startAnchored, beamTargets, endFaceFrame);
   }
 
   // awaitingCurveControl (curved): cursor = quadratic Bezier control point.
@@ -151,6 +166,7 @@ function makeBeamWysiwygGhost(
   columnFootprints: readonly (readonly Point2D[])[],
   startAnchored: boolean,
   beamTargets: readonly BeamSnapTarget[],
+  endFaceFrame: GhostFaceFrame | null = null,
 ): ExtendedSceneEntity | null {
   let params: BeamParams;
   if (kind === 'curved') {
@@ -174,10 +190,13 @@ function makeBeamWysiwygGhost(
   // ADR-398 §3.6 — αν το rubber-band δοκάρι θα κείτεται ομοαξονικά/πάνω σε υφιστάμενο
   // (duplication) → 🔴 κόκκινο schematic + μπλοκάρισμα commit (στο `useBeamTool`). Κάθετο
   // Τ-framing αποκλείεται (μη παράλληλο). straight/cantilever μόνο.
-  const ghostStatusColor =
-    kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, beamTargets)
-      ? resolveGhostStatusColor('overlap')
-      : null;
+  const isOverlap = kind !== 'curved' && isBeamCollinearOverlap(startPt, endPt, beamTargets);
+  const ghostStatusColor = isOverlap ? resolveGhostStatusColor('overlap') : null;
+  // ADR-508 §dim — listening dimensions στο ENDPOINT όταν το ΑΚΡΟ κούμπωσε flush σε παρειά (ΙΔΙΟ
+  // SSoT με τον τοίχο, `resolveGhostFaceDimensionsMeta`· κρύβονται σε 🔴 overlap μέσα στο helper).
+  const endDims = endFaceFrame
+    ? resolveGhostFaceDimensionsMeta(endFaceFrame, isOverlap, sceneUnits, worldPerPixel(getImmediateTransform().scale))
+    : null;
 
   // ADR-458 — εφάρμοσε το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
   // δοκάρι (κοινό SSoT `buildBeamCutbackDisplay`), ώστε το preview να δείχνει την
@@ -198,8 +217,8 @@ function makeBeamWysiwygGhost(
           ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
         },
       };
-      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor);
+      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor, endDims);
     }
   }
-  return toWysiwygPreviewEntity(entity, id, ghostStatusColor);
+  return toWysiwygPreviewEntity(entity, id, ghostStatusColor, endDims);
 }

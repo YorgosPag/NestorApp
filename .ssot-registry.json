@@ -3091,7 +3091,7 @@
     },
     "bim-cursor-snap": {
       "ssotFile": "src/subapps/dxf-viewer/bim/placement/bim-cursor-snap.ts",
-      "description": "ADR-514 «Ένας Εγκέφαλος Έλξης» — the ONE tool-agnostic BIM cursor placement-snap resolver (`resolveBimCursorSnap`). Given a (already-OSNAP-snapped) cursor + active toolKind ('wall'|'beam'|'column'|'point-only') it returns where the point lands + what it snapped to (discriminated union member-placement|column-placement|point). Commit AND preview of every BIM placement tool MUST call this ONE entry → preview ≡ commit by construction (column wired Φ2, wall+beam Φ3). It delegates to the existing Layer-2 resolvers; calling them directly from tool/preview code re-introduces the column-vs-wall/beam asymmetry the ADR eliminated. Forbidden: (1) re-declaring `resolveBimCursorSnap` outside canonical (parallel brain); (2) direct `resolveColumnFaceSnapFromTargets(` / `resolveMemberGhostSnapFromStore(` / `resolveBeamGhostSnapFromStore(` calls outside the canonical resolver files (column-face-snap, member-ghost-snap, beam-column-face-snap), the brain itself, and the wall-endpoint POINT-snap leaf (wall-endpoint-snap — distinct END concern). New BIM placement tools route through the brain, never the leaf resolvers.",
+      "description": "ADR-514 «Ένας Εγκέφαλος Έλξης» — the ONE tool-agnostic BIM cursor placement-snap resolver (`resolveBimCursorSnap`). Given a (already-OSNAP-snapped) cursor + active toolKind ('wall'|'beam'|'column'|'point-only') it returns where the point lands + what it snapped to (discriminated union member-placement|column-placement|point). Commit AND preview of every BIM placement tool MUST call this ONE entry → preview ≡ commit by construction (column wired Φ2, wall+beam Φ3). It delegates to the existing Layer-2 resolvers; calling them directly from tool/preview code re-introduces the column-vs-wall/beam asymmetry the ADR eliminated. Forbidden: (1) re-declaring `resolveBimCursorSnap` outside canonical (parallel brain); (2) direct `resolveColumnFaceSnapFromTargets(` / `resolveMemberGhostSnapFromStore(` / `resolveBeamGhostSnapFromStore(` calls outside the canonical resolver files (column-face-snap, member-ghost-snap, beam-column-face-snap), the brain itself, and the member-endpoint POINT-snap leaf (framing/member-endpoint-snap — canonical END concern, shared wall+beam, re-exported by walls/wall-endpoint-snap). New BIM placement tools route through the brain, never the leaf resolvers.",
       "forbiddenPatterns": [
         "function\\s+resolveBimCursorSnap\\s*\\(",
         "resolveColumnFaceSnapFromTargets\\s*\\(",
@@ -3102,6 +3102,7 @@
         "src/subapps/dxf-viewer/bim/placement/",
         "src/subapps/dxf-viewer/bim/columns/column-face-snap.ts",
         "src/subapps/dxf-viewer/bim/framing/member-ghost-snap.ts",
+        "src/subapps/dxf-viewer/bim/framing/member-endpoint-snap.ts",
         "src/subapps/dxf-viewer/bim/walls/wall-endpoint-snap.ts",
         "src/subapps/dxf-viewer/bim/beams/beam-column-face-snap.ts"
       ],

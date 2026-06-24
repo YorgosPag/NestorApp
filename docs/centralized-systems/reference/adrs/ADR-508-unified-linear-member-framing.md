@@ -275,3 +275,20 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   `pickThird` import από linear (το `third` μένει μόνο column-side metadata, από τη ζώνη **του cursor**).
   Affects τοίχο+δοκάρι+κολώνα (κοινός resolver· beam-beam/beam-column tests → inset values). 691/692 jest
   (1 fail = pre-existing `beam-grips`). 🔴 browser-verify + commit.
+- **2026-06-24 (endpoint face-snap ενοποίηση τοίχου↔δοκαριού — 2ο κλικ)** — το ΑΚΡΟ (2ο κλικ) του τοίχου
+  είχε ήδη flush face-snap + listening dims + Shift 1cm βήμα (`wall-endpoint-snap`)· **το δοκάρι ΟΧΙ**.
+  Ο μηχανισμός ήταν ήδη 100% generic (καλεί τον κοινό `resolveMemberGhostSnapFromStore` + το move-SSoT
+  `applyMoveFineStepAboutAnchor`· το «wall» ήταν μόνο όνομα). **FIX (FULL SSoT, μηδέν διπλότυπο):**
+  γενίκευση σε **NEW `bim/framing/member-endpoint-snap.ts`** (`MemberEndpointSnap`,
+  `resolveMemberEndpointSnap`, `resolveMemberEndpointWithFineStep`) δίπλα στον dispatcher που χρησιμοποιεί·
+  το `bim/walls/wall-endpoint-snap.ts` → **thin re-export** (wall-named aliases, byte-for-byte για wall
+  consumers + test· mirror του beam-adapter pattern). **Wire δοκάρι:** preview (`beam-preview-helpers.
+  generateBeamPreview` awaitingEnd → endpoint snap + fine-step + `endFaceFrame`→listening dims στο
+  `makeBeamWysiwygGhost`) + commit (`useBeamTool.onCanvasClick` awaitingEnd → `resolveMemberEndpointSnap`
+  πριν το `commitTwoClickFromState`) → preview ≡ commit. Target set δοκαριού = `['beam','slab']` (ίδιο με
+  το START του, consistency). Το δοκάρι **δεν** έχει length/angle lock (wall-only ADR-513) → χωρίς lock
+  branch (απλούστερο από τον τοίχο). Curved → raw cursor (αμετάβλητο, mirror τοίχου). **ADR-514 Φ5
+  registry:** το νέο leaf προστέθηκε στο allowlist του module `bim-cursor-snap` (legit direct
+  `resolveMemberGhostSnapFromStore` call· canonical END leaf, distinct από τον brain). 16 jest νέα/re-export
+  (member+wall endpoint) + 76 beam/framing regression GREEN. 🔴 tsc + browser-verify + commit (CHECK 6D:
+  stage ADR-508 + ADR-040· + `.ssot-registry.json`).
