@@ -169,6 +169,17 @@ resolver + ΕΝΑ store → preview (`drawing-preview-generator` slab/roof) ≡ 
   audit): `resolveMemberGhostSnapFromStore` + `resolveColumnFaceSnapFromTargets` + `scene-snap-targets` +
   `useSceneSnapTargetSync` + `GhostFaceFrame` — μηδέν διπλότυπο, **δεν** ξαναγράφτηκε το `ambient-alignment`
   (H/V, διαφορετικό). 16 (placement) + 18 (slab/foundation tools) + 606 (framing/columns regression) jest
-  GREEN. tsc: 🔴 εκκρεμεί (N.17 — άλλος agent τρέχει tsc στο shared tree, δεν ξεκίνησα 2ο ταυτόχρονο).
-  🔴 browser-verify εκκρεμεί. ⚠️ CHECK 6D: stage ADR-040 + ADR-514 μαζί (τροποποιήθηκε `drawing-preview-generator`).
-  📌 Φ6c (pad) = commit-only face-snap (το pad δεν έχει WYSIWYG ghost preview· flush στο κλικ).
+  GREEN. tsc: ✅ καθαρό για τα Φ6 αρχεία (N.17 σεβαστό — περίμενα να ελευθερωθεί ο tsc του άλλου agent·
+  τα εναπομείναντα tsc errors είναι προϋπάρχοντα/άλλων agents: beam `concreteGrade`, `beam-types` path,
+  `AxisBoxGripRole` foundation-grips, structural — ΟΧΙ Φ6). 🔴 browser-verify εκκρεμεί. ⚠️ CHECK 6D: stage
+  ADR-040 + ADR-514 μαζί (τροποποιήθηκαν `drawing-preview-generator` + `useUnifiedDrawing`).
+- **2026-06-24** — Φ6c **live pad ghost** (Giorgio «ΝΑΙ ΘΕΛΩ», UNCOMMITTED): το πέδιλο απέκτησε **ζωντανό
+  WYSIWYG ghost** που κουμπώνει flush σε παρειά/άξονα κολόνας **καθώς κινείς τον κέρσορα** (πλήρες
+  Revit-grade, όχι commit-only). NEW `generateFoundationPadPreview` (foundation-preview-helpers) =
+  ΙΔΙΟΣ εγκέφαλος `toolKind:'foundation-pad'` + `resolveEffectivePreviewCursor` → preview ≡ commit·
+  `foundationPreviewStore` γεμίζει πλέον ΚΑΙ για pad (kind+overrides+anchor· `overridesEqual` +length/
+  anchor/rotation ώστε το ghost να ανανεώνεται σε Tab anchor/ribbon)· `drawing-types` += `'foundation-pad'`
+  (DrawingTool)· `useUnifiedDrawing` gate εξαιρεί `foundation-pad` (single-click FSM, mirror column) ώστε
+  να παράγεται preview. +3 jest (pad ghost: null όταν !pad / cursor χωρίς στόχο / flush σε κολόνα).
+  ⚠️ 8 pre-existing wall test failures (άλλος agent: ADR-508 FSM rename `awaitingAlignment`→`awaitingEnd`,
+  test μη-ενημερωμένο) — ΟΧΙ Φ6 regression.
