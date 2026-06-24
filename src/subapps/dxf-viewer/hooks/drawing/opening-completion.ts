@@ -20,6 +20,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
+import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap'; // scalar round-to-increment SSoT
 import type {
   OpeningEntity,
   OpeningKind,
@@ -88,7 +89,7 @@ export function buildDefaultOpeningParams(
   // `projectPointToWallOffsetMm` normalises the scene-unit projection → mm, so
   // creation and grip-drag share ONE conversion (no duplicated `/ mmFactor`).
   const centeredOffset = projectPointToWallOffsetMm(clickPoint, hostWall) - width / 2;
-  const snappedOffset = snapToIncrement(centeredOffset, OPENING_SNAP_INCREMENT_MM);
+  const snappedOffset = quantizeMagnitude(centeredOffset, OPENING_SNAP_INCREMENT_MM);
   const wallLengthMm = hostWall.geometry.length * 1000;
   const clampedOffset = clampOffset(snappedOffset, width, wallLengthMm);
 
@@ -162,11 +163,6 @@ export function completeOpeningFromHostClick(
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
-
-function snapToIncrement(value: number, increment: number): number {
-  if (increment <= 0) return value;
-  return Math.round(value / increment) * increment;
-}
 
 function clampOffset(offset: number, width: number, wallLengthMm: number): number {
   if (offset < 0) return 0;

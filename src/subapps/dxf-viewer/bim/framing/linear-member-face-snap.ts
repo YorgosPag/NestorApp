@@ -28,6 +28,7 @@ import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/pol
 import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import { pickThird } from './member-face-third';
+import type { FootprintBounds, FootprintFace } from '../geometry/shared/footprint-face-frame';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 
 /**
@@ -175,7 +176,7 @@ function buildTargetFrame(cursor: Readonly<Point2D>, target: LinearMemberSnapTar
  * τη συνεχή/grid θέση (`slidCenter`). `radius` 0/undefined (δοκάρι — χωρίς slide step) → καμία
  * αλλαγή (συνεχής ολίσθηση δοκαριού αμετάβλητη). Pure — μηδέν side effect.
  */
-function magnetizeGhostCenterAlong(
+export function magnetizeGhostCenterAlong(
   rawCenter: number,
   slidCenter: number,
   alongMin: number,
@@ -370,4 +371,31 @@ function bodyOverlapsAlongMember(
   const eA = projectPointOnAxis(end.x, end.y, a.x, a.y, u.x, u.y).along;
   const overlap = Math.min(Math.max(sA, eA), poly.alongMax) - Math.max(Math.min(sA, eA), poly.alongMin);
   return overlap > EPS;
+}
+
+/**
+ * ADR-508 §dim — `GhostFaceFrame` για listening dimensions πάνω σε **world-aligned bbox** παρειά
+ * (κολώνα-στόχος): άξονας κατά μήκος της παρειάς, `ghostHalfWidth=0` (μετράμε προς το ΚΕΝΤΡΟ —
+ * Revit centerline). **ΕΝΑ SSoT** μοιρασμένο από «κολώνα → παρειά» (`column-face-snap`, μέσω re-export
+ * alias στο `column-face-snap-helpers`) ΚΑΙ «τοίχος/δοκάρι → κολώνα» (`member-column-face-snap`).
+ * Ζει εδώ (δίπλα στο `GhostFaceFrame`) ώστε το `bim/framing` να μην εξαρτάται από το `bim/columns`.
+ * `position` = θέση centerline φαντάσματος κατά μήκος της παρειάς.
+ */
+export function buildColumnBboxFaceFrame(b: FootprintBounds, face: FootprintFace, position: Point2D): GhostFaceFrame {
+  if (face === 'N' || face === 'S') {
+    const faceY = face === 'N' ? b.maxY : b.minY;
+    return {
+      origin: { x: b.minX, y: faceY }, axisDir: { x: 1, y: 0 }, perpDir: { x: 0, y: -1 },
+      facePerp: 0, outwardSign: face === 'N' ? -1 : 1,
+      faceAlongMin: 0, faceAlongMax: b.maxX - b.minX,
+      ghostCenterAlong: position.x - b.minX, ghostHalfWidth: 0,
+    };
+  }
+  const faceX = face === 'E' ? b.maxX : b.minX;
+  return {
+    origin: { x: faceX, y: b.minY }, axisDir: { x: 0, y: 1 }, perpDir: { x: 1, y: 0 },
+    facePerp: 0, outwardSign: face === 'E' ? 1 : -1,
+    faceAlongMin: 0, faceAlongMax: b.maxY - b.minY,
+    ghostCenterAlong: position.y - b.minY, ghostHalfWidth: 0,
+  };
 }

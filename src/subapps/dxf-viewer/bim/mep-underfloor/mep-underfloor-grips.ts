@@ -26,6 +26,7 @@ import type { MepUnderfloorEntity, MepUnderfloorParams } from '../types/mep-unde
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { buildUnderfloorConnectors } from './mep-underfloor-geometry';
+import { constrainDeltaToDominantAxis } from '../grips/ortho-delta'; // ORTHO/F8 SSoT
 
 // ─── Grip position computation ────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ export function applyMepUnderfloorGripDrag(
   gripKind: MepUnderfloorGripKind,
   input: Readonly<MepUnderfloorGripDragInput>,
 ): MepUnderfloorParams {
-  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
 
   if (gripKind.startsWith('mep-underfloor-vertex-')) {
     const idx = parseInt(gripKind.slice('mep-underfloor-vertex-'.length), 10);
@@ -106,12 +107,6 @@ export function applyMepUnderfloorGripDrag(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function quantizeToDominantAxis(delta: Point2D): Point2D {
-  return Math.abs(delta.x) >= Math.abs(delta.y)
-    ? { x: delta.x, y: 0 }
-    : { x: 0, y: delta.y };
-}
 
 function moveFootprintVertex(
   originalParams: MepUnderfloorParams,

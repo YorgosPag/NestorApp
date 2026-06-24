@@ -57,3 +57,13 @@ export function applyLengthAngleLock(
   const r = length !== null ? length : dist;
   return { x: ref.x + r * Math.cos(rad), y: ref.y + r * Math.sin(rad) };
 }
+
+/**
+ * ADR-508 / ADR-513 — `true` όταν υπάρχει ενεργό length Ή angle lock (ρητή αριθμητική είσοδος από το
+ * «Δαχτυλίδι Εντολών» / linear Dynamic Input). Χρησιμοποιείται για precedence: η ρητή είσοδος του
+ * χρήστη **νικά** το αυτόματο face-snap του endpoint. Διαβάζει το ΙΔΙΟ `DynamicInputLockStore` SSoT.
+ */
+export function isLengthAngleLockActive(): boolean {
+  const { length, angle } = DynamicInputLockStore.getLocked();
+  return length !== null || angle !== null;
+}

@@ -39,6 +39,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { constrainDeltaToDominantAxis } from '../grips/ortho-delta'; // ORTHO/F8 SSoT
 import type { GripInfo, RoofGripKind } from '../../hooks/useGripMovement';
 import type { Point3D } from '../types/bim-base';
 import type { RoofEntity, RoofParams, RoofEdgeSlope } from '../types/roof-types';
@@ -115,7 +116,7 @@ export function applyRoofGripDrag(
   gripKind: RoofGripKind,
   input: Readonly<RoofGripDragInput>,
 ): RoofParams {
-  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
   if (gripKind.startsWith('roof-vertex-')) {
     const idx = parseInt(gripKind.slice('roof-vertex-'.length), 10);
     if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
@@ -127,12 +128,6 @@ export function applyRoofGripDrag(
     return insertVertexOnEdge(input.originalParams, delta, idx);
   }
   return input.originalParams;
-}
-
-function quantizeToDominantAxis(delta: Point2D): Point2D {
-  return Math.abs(delta.x) >= Math.abs(delta.y)
-    ? { x: delta.x, y: 0 }
-    : { x: 0, y: delta.y };
 }
 
 function moveOutlineVertex(

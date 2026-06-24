@@ -37,7 +37,11 @@ import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
   isMemberCollinearOverlap,
   type LinearMemberSnapTarget,
+  type GhostFaceFrame,
 } from '../../bim/framing/linear-member-face-snap';
+// ADR-508 — endpoint face-snap (point snap, reuse dispatcher) + lock precedence (Δαχτυλίδι νικά).
+import { resolveWallEndpointSnap } from '../../bim/walls/wall-endpoint-snap';
+import { isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
@@ -227,14 +231,26 @@ export function generateWallPreview(
   }
 
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
-  // ADR-513 — όταν ο χρήστης κάνει 1ο κλικ και πάει ΑΜΕΣΩΣ στο «Δαχτυλίδι Εντολών» (χωρίς να
-  // τραβήξει τον τοίχο), ο κέρσορας είναι κοντά στην αρχή → ο τοίχος < MIN_WALL_LENGTH → ο validator
-  // ακυρώνει το ghost → εξαφανίζεται. Clamp ΜΟΝΟ του PREVIEW στο ελάχιστο μήκος (το commit μένει
-  // αυστηρό): ο χρήστης βλέπει πάντα τον τοίχο και μπορεί να τυπώσει μήκος/γωνία στο δαχτυλίδι.
-  const endPt = kind === 'straight' ? clampPreviewMinLength(startPt, cursorPoint, sceneUnits) : cursorPoint;
+  // ADR-508 — endpoint face-snap: το ΑΚΡΟ κουμπώνει/γλιστρά flush σε παρειά μέλους/κολώνας (συνεχής
+  // ολίσθηση, ΙΔΙΟΣ dispatcher με το start → preview ≡ commit). Precedence (Giorgio): face-snap νικά
+  // το ortho· length/angle lock (Δαχτυλίδι) νικά το face-snap → skip. Curved → raw cursor (αμετάβλητο).
+  let endFaceFrame: GhostFaceFrame | null = null;
+  let rawEnd = cursorPoint;
+  if (kind === 'straight' && !isLengthAngleLockActive()) {
+    const snap = resolveWallEndpointSnap(
+      cursorPoint, footprints, snapMembers, resolveWallThicknessMm(overrides), sceneUnits,
+      worldPerPixel(getImmediateTransform().scale),
+    );
+    rawEnd = snap.point;
+    endFaceFrame = snap.faceFrame ?? null;
+  }
+  // ADR-513 — clamp ΜΟΝΟ του PREVIEW στο ελάχιστο μήκος (το commit μένει αυστηρός validator): ο χρήστης
+  // βλέπει πάντα τον τοίχο ακόμη κι όταν πάει ΑΜΕΣΩΣ στο «Δαχτυλίδι Εντολών» χωρίς να τον τραβήξει.
+  const endPt = kind === 'straight' ? clampPreviewMinLength(startPt, rawEnd, sceneUnits) : cursorPoint;
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
     preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
+    endFaceFrame,
   );
 }
 
@@ -300,6 +316,7 @@ function makeWallWysiwygGhost(
   memberTargets: readonly LinearMemberSnapTarget[],
   host: WallEntity | null,
   openings: readonly OpeningEntity[],
+  endFaceFrame: GhostFaceFrame | null = null,
 ): ExtendedSceneEntity | null {
   let params: WallParams;
   if (kind === 'curved') {
@@ -317,8 +334,13 @@ function makeWallWysiwygGhost(
   const conflictCtx: WallGhostConflictCtx | null = kind === 'curved'
     ? null
     : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
+  // ADR-508 §dim — listening dimensions στο ENDPOINT όταν κούμπωσε flush σε παρειά (reuse ΙΔΙΟ SSoT
+  // με το start· κρύβονται σε 🔴 overlap μέσα στο resolveGhostFaceDimensionsMeta).
+  const endDims = endFaceFrame
+    ? resolveGhostFaceDimensionsMeta(endFaceFrame, isOverlap, sceneUnits, worldPerPixel(getImmediateTransform().scale))
+    : null;
   // wantHud=true → ζωντανή ταυτότητα τοίχου (μήκος/γωνία/πάχος/ύψος) κατά το awaitingEnd drag.
-  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, null, conflictCtx, true);
+  return buildWallGhostEntity(id, params, kind, sceneUnits, isOverlap, endDims, conflictCtx, true);
 }
 
 /**

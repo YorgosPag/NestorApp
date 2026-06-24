@@ -32,6 +32,7 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { safeUnion, type ClipGeom } from '../geometry/shared/safe-polygon-boolean';
+import { snapToGrid } from '../../systems/grid/grid-snap'; // ADR-049 SSoT (per-vertex grid weld)
 import {
   classifyPerimeter,
   decomposeRectilinear,
@@ -65,15 +66,12 @@ export function columnWorldFootprint(column: ColumnEntity): Point2D[] | null {
   return verts.map((v) => ({ x: v.x, y: v.y }));
 }
 
-/** Κβάντιση πολυγώνου σε πλέγμα `tol` (κλείνει υπο-tol κενά πριν το union). */
-function snapToGrid(poly: readonly Point2D[], tol: number): Point2D[] {
-  const q = Math.max(tol, 1e-9);
-  return poly.map((p) => ({ x: Math.round(p.x / q) * q, y: Math.round(p.y / q) * q }));
-}
-
-/** WORLD polygon → polygon-clipping `ClipGeom` (single outer ring, no holes). */
+/** WORLD polygon → polygon-clipping `ClipGeom` (single outer ring, no holes).
+ *  Vertices welded to a `tol` grid (closes sub-tol gaps pre-union) via the ADR-049
+ *  `snapToGrid` SSoT — was a byte-identical private re-implementation. */
 function toGeom(poly: readonly Point2D[], tol: number): ClipGeom {
-  return [snapToGrid(poly, tol).map((p): Pair => [p.x, p.y])];
+  const q = Math.max(tol, 1e-9);
+  return [poly.map((p): Pair => { const s = snapToGrid(p, q); return [s.x, s.y]; })];
 }
 
 /** polygon-clipping ring → `Point2D[]` χωρίς το διπλό κλείσιμο (first===last). */

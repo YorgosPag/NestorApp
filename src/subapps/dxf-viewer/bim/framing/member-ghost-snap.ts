@@ -48,18 +48,21 @@ export function resolveMemberGhostSnapFromStore(
   const f = mmToSceneUnits(sceneUnits);
   const ghostLenScene = MEMBER_GHOST_LEN_MM * f;
   const captureScene = MEMBER_GHOST_CAPTURE_MM * f;
+  // ADR-508 — βήμα ολίσθησης σε scene units· υπολογίζεται ΜΙΑ φορά (το `adaptiveDistanceStep` δουλεύει
+  // σε world=scene units). Το περνά ΚΑΙ το column branch ΚΑΙ το member branch → ταυτόσημη ρευστή
+  // ολίσθηση + magnet. `undefined` (δοκάρι — χωρίς worldPerPixel) → συνεχής ολίσθηση χωρίς magnet/quantize.
+  const slideStepScene = worldPerPixel && worldPerPixel > 0 ? adaptiveDistanceStep(worldPerPixel) : undefined;
   if (columnFootprints.length > 0) {
     const cs = resolveMemberColumnFaceSnap(cursor, columnFootprints, {
       memberWidthScene: memberWidthMm * f,
       ghostLenScene,
       captureScene,
+      slideStepScene,
     });
-    if (cs) return { start: cs.start, end: cs.end, status: 'neutral' };
+    // ADR-508 — column-priority: status `neutral` (αμετάβλητο)· faceFrame → listening dims & στις κολόνες.
+    if (cs) return { start: cs.start, end: cs.end, status: 'neutral', faceFrame: cs.faceFrame };
   }
   if (memberTargets.length > 0) {
-    // ADR-508 — βήμα ολίσθησης σε scene units· υπολογίζεται ΜΙΑ φορά εδώ (το `adaptiveDistanceStep`
-    // δουλεύει σε world=scene units, ίδιο frame με cursor/axis). `undefined` → συνεχής ολίσθηση.
-    const slideStepScene = worldPerPixel && worldPerPixel > 0 ? adaptiveDistanceStep(worldPerPixel) : undefined;
     return resolveLinearMemberFaceSnap(cursor, memberTargets, {
       ghostLenScene,
       captureScene,

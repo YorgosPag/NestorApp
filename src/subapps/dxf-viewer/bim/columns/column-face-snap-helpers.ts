@@ -13,7 +13,6 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnAnchor } from '../types/column-types';
 import {
-  type FootprintBounds,
   type FootprintFace,
 } from '../geometry/shared/footprint-face-frame';
 import { type MemberGhostThird } from '../framing/member-face-third';
@@ -22,6 +21,11 @@ import {
   type LinearMemberSnapTarget,
   type GhostFaceFrame,
 } from '../framing/linear-member-face-snap';
+
+// ADR-508 §dim — `buildColumnBboxFaceFrame` μετακινήθηκε στο `linear-member-face-snap` (SSoT home
+// του `GhostFaceFrame`) ώστε να το μοιράζεται ΚΑΙ το framing («τοίχος/δοκάρι → κολώνα») χωρίς
+// εξάρτηση `bim/framing → bim/columns`. Re-export alias εδώ για συνέχεια των column consumers.
+export { buildColumnBboxFaceFrame } from '../framing/linear-member-face-snap';
 import {
   projectPointOnAxis,
   projectPolygonOnAxis,
@@ -140,30 +144,6 @@ export function buildMemberAxisFrame(
     alongMin: proj.alongMin,
     alongMax: proj.alongMax,
     halfThickness: Math.max(Math.abs(proj.perpMin), Math.abs(proj.perpMax)),
-  };
-}
-
-/**
- * ADR-508 §dim — `GhostFaceFrame` για listening dimensions της κολώνας: άξονας κατά μήκος της
- * παρειάς-στόχου, `ghostHalfWidth=0` (μετράμε προς το κέντρο της κολώνας — Revit centerline).
- * Όρισμα `centerAlong` = θέση κολώνας κατά μήκος της παρειάς (από `position`).
- */
-export function buildColumnBboxFaceFrame(b: FootprintBounds, face: ColumnFaceSide, position: Point2D): GhostFaceFrame {
-  if (face === 'N' || face === 'S') {
-    const faceY = face === 'N' ? b.maxY : b.minY;
-    return {
-      origin: { x: b.minX, y: faceY }, axisDir: { x: 1, y: 0 }, perpDir: { x: 0, y: -1 },
-      facePerp: 0, outwardSign: face === 'N' ? -1 : 1,
-      faceAlongMin: 0, faceAlongMax: b.maxX - b.minX,
-      ghostCenterAlong: position.x - b.minX, ghostHalfWidth: 0,
-    };
-  }
-  const faceX = face === 'E' ? b.maxX : b.minX;
-  return {
-    origin: { x: faceX, y: b.minY }, axisDir: { x: 0, y: 1 }, perpDir: { x: 1, y: 0 },
-    facePerp: 0, outwardSign: face === 'E' ? 1 : -1,
-    faceAlongMin: 0, faceAlongMax: b.maxY - b.minY,
-    ghostCenterAlong: position.y - b.minY, ghostHalfWidth: 0,
   };
 }
 

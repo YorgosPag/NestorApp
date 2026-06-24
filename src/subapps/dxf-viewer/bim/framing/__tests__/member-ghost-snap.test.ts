@@ -14,8 +14,8 @@ const COLUMN_FP = [
   { x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 },
 ];
 
-describe('resolveMemberColumnFaceSnap — 12-θέσεων face snap', () => {
-  it('Ανατολική παρειά, μεσαίο third → start στην παρειά (x=400), centerline=κέντρο', () => {
+describe('resolveMemberColumnFaceSnap — ΣΥΝΕΧΗΣ face snap (ADR-508 ενοποίηση)', () => {
+  it('Ανατολική παρειά, cursor στο κέντρο → start στην παρειά (x=400), centerline=κέντρο + faceFrame', () => {
     const r = resolveMemberColumnFaceSnap({ x: 700, y: 200 }, [COLUMN_FP], {
       memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600,
     });
@@ -24,6 +24,26 @@ describe('resolveMemberColumnFaceSnap — 12-θέσεων face snap', () => {
     expect(r!.third).toBe('mid');
     expect(r!.start).toEqual({ x: 400, y: 200 });
     expect(r!.end).toEqual({ x: 1600, y: 200 });
+    // ADR-508 §dim — εκθέτει faceFrame (→ listening dimensions & στις κολόνες). E face = κάθετος άξονας.
+    expect(r!.faceFrame).toBeDefined();
+    expect(r!.faceFrame.axisDir).toEqual({ x: 0, y: 1 });
+    expect(r!.faceFrame.ghostHalfWidth).toBe(0);
+  });
+
+  it('ΣΥΝΕΧΗΣ ολίσθηση: cursor εκτός κέντρου, ΧΩΡΙΣ step → start ακολουθεί τον cursor (όχι 12-jump)', () => {
+    // y=250 (μεσαίο third). Παλιά (διακριτό) → κούμπωνε στο κέντρο (200). Τώρα συνεχές → 250.
+    const r = resolveMemberColumnFaceSnap({ x: 700, y: 250 }, [COLUMN_FP], {
+      memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600,
+    });
+    expect(r!.face).toBe('E');
+    expect(r!.start.y).toBeCloseTo(250);
+  });
+
+  it('Magnet: με slideStepScene, cursor κοντά στο κέντρο → κουμπώνει στο κέντρο (200)', () => {
+    const r = resolveMemberColumnFaceSnap({ x: 700, y: 210 }, [COLUMN_FP], {
+      memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600, slideStepScene: 50,
+    });
+    expect(r!.start.y).toBeCloseTo(200); // magnet στο κέντρο παρειάς
   });
 
   it('Μακριά από κολόνα (πέρα από capture) → null', () => {
@@ -41,10 +61,18 @@ describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () =>
     outline: [{ x: 0, y: -100 }, { x: 10000, y: -100 }, { x: 10000, y: 100 }, { x: 0, y: 100 }],
   };
 
-  it('Κοντά σε κολόνα → status neutral (column wins)', () => {
+  it('Κοντά σε κολόνα → status neutral (column wins) + faceFrame (listening dims)', () => {
     const r = resolveMemberGhostSnapFromStore({ x: 700, y: 200 }, [COLUMN_FP], [], 200, 'mm');
     expect(r).not.toBeNull();
     expect(r!.status).toBe('neutral');
+    expect(r!.faceFrame).toBeDefined(); // ADR-508 — column branch τώρα γεννά faceFrame
+  });
+
+  it('Κολόνα με worldPerPixel → magnet στα 3 χαρακτηριστικά σημεία (συνεχές + magnet)', () => {
+    // step = adaptiveDistanceStep(40)=1000 (>> κολόνα 400) → magnet κυριαρχεί: y=250 → κέντρο (200).
+    const r = resolveMemberGhostSnapFromStore({ x: 700, y: 250 }, [COLUMN_FP], [], 200, 'mm', 40);
+    expect(r!.status).toBe('neutral');
+    expect(r!.start.y).toBeCloseTo(200);
   });
 
   it('Χωρίς κολόνα, πάνω σε μέλος → member-to-member framing (status beam)', () => {

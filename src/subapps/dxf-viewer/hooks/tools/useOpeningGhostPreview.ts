@@ -40,6 +40,7 @@ import {
 import { OpeningGhostRenderer } from '../../bim/walls/opening-ghost-renderer';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap'; // scalar round-to-increment SSoT
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -119,7 +120,7 @@ function computeOpeningGhost(
   const cursorOffsetScene = projectPointToPolylineOffset(cursorScene, axisVertices);
   const totalLengthScene = polylineLength(axisVertices);
   const centeredOffsetScene = cursorOffsetScene - halfWidthScene;
-  const snappedOffsetScene = snapToIncrement(centeredOffsetScene, snapIncrementScene);
+  const snappedOffsetScene = quantizeMagnitude(centeredOffsetScene, snapIncrementScene);
   const widthScene = widthMm * mmFactor;
   const maxOffsetScene = Math.max(0, totalLengthScene - widthScene);
   const clampedOffsetScene = Math.max(0, Math.min(snappedOffsetScene, maxOffsetScene));
@@ -264,7 +265,3 @@ function polylineLength(vertices: readonly Point3D[]): number {
   return len;
 }
 
-function snapToIncrement(value: number, increment: number): number {
-  if (increment <= 0) return value;
-  return Math.round(value / increment) * increment;
-}

@@ -212,3 +212,28 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   intent του `lineTarget`/`edgeBandTarget` («flush εκατέρωθεν + center»). 5 jest (center/flush/free-slide·
   26 σύνολο). 🔴 browser-verify + commit. (Pre-existing άσχετο fail `beam-grips.test` rotation-grip
   standoff = grip-domain, uncommitted άλλου agent — ΟΧΙ δικό μου.)
+- **2026-06-24 (ΠΛΗΡΗΣ ΕΝΟΠΟΙΗΣΗ τοίχου↔κολώνας — Giorgio «FULL ENOPOIHSH, FULL SSoT»)** — ο τοίχος
+  τώρα ολισθαίνει «ρευστά» γύρω από **κάθε** μέλος, σε **αμφότερα** τα άκρα, όπως η κολώνα. Δύο διαφορές
+  λύθηκαν: **#1 — συνεχής ολίσθηση στις κολώνες (wall START):** το `resolveMemberColumnFaceSnap` έπαψε
+  να ΠΗΔΑΕΙ σε 12 διακριτές θέσεις· έγινε **ΣΥΝΕΧΕΣ** (mirror του `resolveLinearMemberFaceSnap` + του
+  column-tool `resolveForTarget`): `clamp` διαμήκης θέσης + reuse του ΙΔΙΟΥ `magnetizeGhostCenterAlong`
+  (3 anchors: κέντρο + flush άκρα) + **έκθεση `GhostFaceFrame`** → listening dimensions ΚΑΙ στις κολόνες.
+  NEW pure helpers `slideAlongFace`/`resolveContinuousColumnFace` (N.7.1 ≤40γρ.)· νέο optional
+  `slideStepScene` στο `MemberColumnFaceSnapOptions`· ο dispatcher υπολογίζει το step **μία φορά** και το
+  περνά ΚΑΙ στο column branch + επιστρέφει `faceFrame`. **#2 — face-snap στο ENDPOINT (wall awaitingEnd):**
+  NEW pure `bim/walls/wall-endpoint-snap.ts` (`resolveWallEndpointSnap`) = **point snap** που κάνει reuse
+  τον ΙΔΙΟ dispatcher και κρατά το `snap.start` (flush σημείο). Wire σε preview (`wall-preview-helpers`,
+  πριν το `clampPreviewMinLength`, + endpoint listening dims) ΚΑΙ commit (`useWallTool` awaitingEnd) →
+  **preview ≡ commit**. **Precedence (Giorgio):** face-snap > ORTHO (CAD-standard osnap>ortho)·
+  **length/angle lock (Δαχτυλίδι) νικά** το face-snap → NEW `isLengthAngleLockActive` (SSoT στο
+  `length-angle-lock`, reuse `DynamicInputLockStore`). **Layering:** `buildColumnBboxFaceFrame`
+  μετακινήθηκε `bim/columns/column-face-snap-helpers` → `bim/framing/linear-member-face-snap` (SSoT home
+  του `GhostFaceFrame`· αποφυγή κύκλου `framing→columns`) + re-export alias για τους column consumers·
+  `magnetizeGhostCenterAlong` έγινε `export`. **ΠΑΡΕΝΕΡΓΕΙΑ ΔΟΚΑΡΙΟΥ (διαφανώς):** το δοκάρι μοιράζεται
+  τον ίδιο resolver → το δοκάρι-σε-κολώνα έγινε **κι αυτό συνεχές** (χωρίς magnet, αφού το δοκάρι δεν
+  περνά `slideStepScene`) — **εσωτερικά συνεπές** με τη συμπεριφορά του δοκαριού στα μέλη (που ήταν ήδη
+  συνεχής). beam-column-face-snap tests ενημερωμένα σε συνεχή. **Αμετάβλητα:** column-priority (`neutral`),
+  🟢/🔴 overlap, opening-conflict (host = start `anchoredHostId`), curved/polyline. 109 jest GREEN
+  (member-ghost-snap + wall-endpoint-snap + beam-column-face-snap + column-face-snap)· framing/walls/beams/
+  columns sweep 1196/1197 (το 1 fail = pre-existing `beam-grips` rotation-grip, άλλου agent). ⚠️ CHECK
+  6B/6D (wall-preview-helpers/useWallTool drawing path) → stage ADR-040. 🔴 browser-verify + commit.

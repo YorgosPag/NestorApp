@@ -66,7 +66,9 @@ import { useWallToolLifecycle } from './use-wall-tool-lifecycle';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
 // ADR-513 — «Δαχτυλίδι Εντολών»: το locked μήκος/γωνία πρέπει να σέβεται ΚΑΙ το click-commit
 // (ίδιος SSoT περιορισμός με το preview στο drawing-hover-handler). No-op όταν δεν υπάρχει lock.
-import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
+import { applyLengthAngleLock, isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
+// ADR-508 — endpoint face-snap (point snap, ΙΔΙΟΣ dispatcher με το start → preview ≡ commit).
+import { resolveWallEndpointSnap } from '../../bim/walls/wall-endpoint-snap';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -329,10 +331,25 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        // ADR-513 — σεβάσου το locked μήκος/γωνία του «Δαχτυλιδιού Εντολών» στο commit (preview ≡
-        // committed). No-op όταν δεν υπάρχει ενεργό lock → μηδέν αλλαγή στο 2-click free-draw.
-        const lockedEnd = applyLengthAngleLock(point, s.startPoint);
-        return commitStraightFromState(s, lockedEnd);
+        // ADR-513/ADR-508 — precedence στο commit (preview ≡ committed):
+        //  · ενεργό lock (Δαχτυλίδι/Dynamic Input) → ρητή αριθμητική είσοδος ΝΙΚΑ (applyLengthAngleLock)·
+        //  · αλλιώς → endpoint face-snap (το ΑΚΡΟ κουμπώνει flush σε παρειά μέλους/κολώνας, ΙΔΙΟΣ
+        //    dispatcher με το start· face-snap > ortho κατά Giorgio). No-op εκτός capture → raw point.
+        let endPoint: Point2D;
+        if (isLengthAngleLockActive()) {
+          endPoint = applyLengthAngleLock(point, s.startPoint);
+        } else {
+          const targets = sceneSnapTargetsStore.get();
+          endPoint = resolveWallEndpointSnap(
+            point,
+            targets.footprints,
+            selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']),
+            resolveWallThicknessMm(s.overrides),
+            getSceneUnits?.() ?? 'mm',
+            worldPerPixel(getImmediateTransform().scale),
+          ).point;
+        }
+        return commitStraightFromState(s, endPoint);
       }
       // Legacy awaitingAlignment commit (μη προσβάσιμο πλέον από κλικ straight· διατηρείται
       // για το dynamic-input precision path που μπορεί ακόμη να το θέσει).
@@ -346,6 +363,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       commitCurvedFromState,
       commitOnEntity,
       getSceneEntities,
+      getSceneUnits,
       onRegionClick,
       onPerimeterClick,
       resolveWallStartAnchor,
