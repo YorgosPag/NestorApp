@@ -21,6 +21,7 @@
 import type { Entity, LWPolylineEntity } from '../../types/entities';
 import { isBimEntity } from '../../types/entities';
 import type { Point3D } from '../../bim/types/bim-base';
+import { closedRingFromEdges } from '../../bim/geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfFlattenResult } from '../types';
 import { resolveDxfBodyLayer } from './dxf-category-layers';
@@ -65,7 +66,7 @@ export function decomposeBimEntityToDxfPrimitives(entity: Entity): Entity[] {
   if (entity.type === 'wall') {
     const outer = entity.geometry.outerEdge.points;
     const inner = entity.geometry.innerEdge.points;
-    const loop = [...outer, ...[...inner].reverse()];
+    const loop = closedRingFromEdges(outer, inner);
     return [makeClosedLwpolyline(entity, loop, 'wall', extractHeightMm(entity))];
   }
 

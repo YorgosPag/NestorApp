@@ -19,7 +19,7 @@ import { mmScaleFor } from '../../utils/scene-units';
 // canonical rotatePoint, ADR-188). This module keeps the column-named exports as
 // thin wrappers so callers (column-grips / column-variant-grips) stay unchanged.
 import { rotateVector, projectToLocalFrame, farEdgeSign } from '../grips/grip-math';
-import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
+import { rotationHandlePerpOffset, rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
   centredCentroidWorld,
   centredLocalToWorld,
@@ -163,38 +163,45 @@ export function depthHandleWorld(params: ColumnParams): Point2D {
 }
 
 /**
- * World position of the rotation grip handle. Stands off the perpendicular face
- * OPPOSITE the depth handle (centroid + rotated(0, −signY·(dimY/2 + offset))) —
- * the depth handle (= the πάχος handle for a `shear-wall`, ADR-363 Phase 8) sits
- * on the `signY` face, so the rotation handle goes on the −signY face. Revit-style
- * clean separation: the rotation control is NEVER coincident with a dimension
- * handle (mirrors the axis-box rule — rotation → opposite perp face from
- * `width-edge` — so all 5 structural entities follow one rule). Polygon uses the
- * actual N-gon bbox dimY (`polygonBboxMm`) αντί για το meaningless `params.depth`.
+ * ADR-363/518/520 — Η ΜΙΑ world-placement της «midway» λαβής περιστροφής: `centerWorld`
+ * μετατοπισμένο κατά **local −Y** κατά `rotationHandleMidwayOffset(dimY, clearanceMm)` (= −dimY/4,
+ * φραγμένο από την clearance για κοίλα σώματα), περιστραμμένο στον world άξονα. ΜΙΑ ΠΗΓΗ που
+ * μοιράζονται **rect / shear-wall / polygon** (center = centroid, χωρίς φράγμα) **ΚΑΙ** το
+ * free-reshape `freeReshapeRotationWorld` (center = `interiorAnchorPoint`, με clearance φράγμα).
+ * `clearanceWorld` σε world units (Infinity = convex → κανένα φράγμα).
+ */
+export function columnRotationHandleMidwayWorld(
+  centerWorld: Point2D,
+  dimY: number,
+  rotationDeg: number,
+  scale: number,
+  clearanceWorld: number = Infinity,
+): Point2D {
+  const clearanceMm = Number.isFinite(clearanceWorld) ? clearanceWorld / scale : Infinity;
+  const offMm = rotationHandleMidwayOffset(dimY, clearanceMm);
+  const off = rotate({ x: 0, y: offMm * scale }, rotationDeg);
+  return { x: centerWorld.x + off.x, y: centerWorld.y + off.y };
+}
+
+/**
+ * World position of the rotation grip handle (single SSoT — emission ≡ rotation drag, ώστε η λαβή
+ * να μην «πηδά» στο πιάσιμο). Δύο πολιτικές:
+ *   - **rect / shear-wall / polygon** → «midway» −dimY/4 κάτω από το centroid
+ *     (`columnRotationHandleMidwayWorld`, ΙΔΙΟ SSoT με free-reshape· Giorgio 2026-06-15/ADR-518/520).
+ *   - **I-shape / U-parametric** → OPPOSITE perp face (`rotationHandlePerpOffset`, ADR-363 Slice F).
+ * Polygon uses the actual N-gon bbox `dimY` (`polygonBboxMm`) αντί για το meaningless `params.depth`.
  */
 export function rotationHandleWorld(params: ColumnParams): Point2D {
-  // ADR-363 — rectangular / shear-wall (Giorgio 2026-06-15): the rotation marker
-  // sits at the MIDPOINT of the imaginary line from the centre to the south
-  // edge-midpoint → local (0, −depth/4). Kept HERE (the single rotation-position
-  // SSoT) so the grip emission AND the rotation drag (`rotateAroundPosition`,
-  // which reads this) agree — otherwise the handle would jump on grab. Inlined
-  // kind check (mirror `isRectColumn`) to avoid a column-rect-adapter import cycle.
+  const scale = mmScaleFor(params);
   if (params.kind === 'rectangular' || params.kind === 'shear-wall') {
-    return localToWorld({ x: 0, y: -params.depth / 4 }, params);
+    return columnRotationHandleMidwayWorld(computeCentroidWorld(params), params.depth, params.rotation, scale);
   }
-  // ADR-518 — polygon mirror του rectangular: η λαβή περιστροφής στο μέσο της νοητής
-  // γραμμής κέντρο→κάτω edge-midpoint (local (0,−dimY/4)) — ΑΝΑΜΕΣΑ στο center MOVE
-  // (centroid) και την κάτω λαβή. ΠΟΤΕ πάνω στο centroid (όπου κάθεται το move glyph,
-  // αφού `interiorAnchorPoint` ≈ centroid για convex N-gon) ΟΥΤΕ στην περίμετρο (λαβές
-  // γωνιών/πλευρών). `dimY` = πραγματικό N-gon bbox. Emission ≡ rotation drag, αφού
-  // το `polygon` ΔΕΝ μπαίνει στο `usesFreeReshapeGrips` (διαβάζει αυτή την ίδια θέση).
   if (params.kind === 'polygon') {
     const dimY = polygonBboxMm(params.width, params.polygon?.sides).dimY;
-    return localToWorld({ x: 0, y: -dimY / 4 }, params);
+    return columnRotationHandleMidwayWorld(computeCentroidWorld(params), dimY, params.rotation, scale);
   }
-  // Depth handle face = `signY` (farEdgeSign of the anchor's dy); the shared
-  // rotation-handle policy stands the rotation handle off the OPPOSITE (−signY)
-  // face so the two never coincide for any anchor (mm local frame → `localToWorld`).
+  // I-shape / U-parametric: η λαβή περιστροφής στην ΑΠΕΝΑΝΤΙ perp παρειά από τη λαβή depth
+  // (shared `rotation-handle-policy`), ώστε να μη συμπίπτει με καμία dimension handle.
   const dy = ANCHOR_OFFSETS[params.anchor].dy;
   const signY = farEdgeSign(dy);
   return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.depth / 2, signY) }, params);

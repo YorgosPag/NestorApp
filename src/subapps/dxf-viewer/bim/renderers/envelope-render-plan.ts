@@ -15,6 +15,7 @@
  */
 
 import type { Point3D } from '../types/bim-base';
+import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import type { EnvelopeChain } from '../geometry/envelope-perimeter';
 import type { EnvelopeMaterialId } from '../types/thermal-envelope-types';
 // ADR-507 Φ7 — unified material poché· η ETICS μόνωση → INSUL batting pattern
@@ -49,7 +50,7 @@ export function buildEnvelopeRenderPlan(
   const inner = chain.exteriorFaceLoop.points;
   if (outer.length < 2 || inner.length < 2) return null;
 
-  const bandRing: Point3D[] = [...outer, ...[...inner].reverse()];
+  const bandRing: Point3D[] = closedRingFromEdges(outer, inner);
   const hatch = computeMaterialHatchSegments([bandRing], ENVELOPE_HATCH_MATERIAL, 'cut', spacingScale);
   return { bandRing, outerLoop: outer, outerClosed: chain.closed, hatch };
 }

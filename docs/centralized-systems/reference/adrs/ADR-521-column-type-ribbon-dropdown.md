@@ -43,8 +43,12 @@ split-button με top-action).
 Επιλογή τύπου → ενεργοποιεί το column tool ΜΕ αυτόν τον τύπο.
 
 ### 3.1 Reuse (full SSoT)
-- **`RibbonDropdownButton`** (νέο, μικρό) → reuse `RibbonSplitDropdown` για το μενού (μηδέν διπλό
-  portal/escape/positioning). Single trigger «Τύποι», όχι split.
+- **`RibbonSplitButton`** χειρίζεται ΚΑΙ το `type:'dropdown'` (gated by `isDropdownOnly`): το
+  trigger ανοίγει τη λίστα, χωρίς top-action/chevron. **ΕΝΑ** component για «trigger + variant
+  dropdown» — **ΟΧΙ** ξεχωριστό `RibbonDropdownButton` (θα διπλασίαζε το shell: wrapper + tooltip +
+  dropdown mount + recommended logic). _[Διορθώθηκε μετά από SSoT audit του Giorgio — το αρχικό
+  ξεχωριστό component ήταν διπλότυπο και αφαιρέθηκε.]_
+- **`RibbonSplitDropdown`** → το μενού primitive (portal/escape/positioning) — ήδη shared.
 - **`COLUMN_KIND_OPTIONS`** (8 kinds + i18n labels) → reuse ως variants (μηδέν νέα labels τύπων).
 - **`columnToolBridgeStore`** → reuse για το `setKind` εκτός React.
 
@@ -78,10 +82,11 @@ handleToolChange('column');                  // activate() (effect) κρατά p
 
 | Αρχείο | Αλλαγή |
 |---|---|
-| `ui/ribbon/components/buttons/RibbonDropdownButton.tsx` | NEW — «Τύποι» trigger + reuse `RibbonSplitDropdown` |
-| `ui/ribbon/components/RibbonPanel.tsx` | render dispatch για `type === 'dropdown'` |
+| `ui/ribbon/components/buttons/RibbonSplitButton.tsx` | χειρίζεται ΚΑΙ το `type:'dropdown'` (`isDropdownOnly`) — ΕΝΑ component για trigger+variant dropdown |
+| `ui/ribbon/components/RibbonPanel.tsx` | `'split' \|\| 'dropdown'` → `RibbonSplitButton` |
 | `ui/ribbon/hooks/bridge/column-command-keys.ts` | `COLUMN_DRAW_KIND_ACTIONS` + parser/guard |
-| `ui/ribbon/data/structural-tab.ts` | «Στήλη» → «Τύποι» dropdown (8 variants) |
+| `ui/ribbon/data/structural-tab.ts` | «Στήλη» → «Τύποι» dropdown (8 variants, reuse `COLUMN_KIND_OPTIONS`) |
+| `ui/ribbon/data/contextual-column-tab.ts` | export `COLUMN_KIND_OPTIONS` (SSoT options) |
 | `ui/ribbon/hooks/useRibbonCommands.ts` | `onAction`: setKind + handleToolChange για draw-kind |
 | `i18n/locales/{el,en}/dxf-viewer-shell.json` | νέο label «Τύποι» |
 | tests | parser + onAction draw-kind routing |
@@ -89,5 +94,8 @@ handleToolChange('column');                  // activate() (effect) κρατά p
 ## 6. Changelog
 
 - **2026-06-25** — ADR-521 δημιουργήθηκε + υλοποιήθηκε. «Στήλη» button → «Τύποι» dropdown (8
-  σχεδιάσιμοι τύποι). Νέο `'dropdown'` button type (reuse `RibbonSplitDropdown`). Activate+setKind
-  χωρίς race μέσω `columnToolBridgeStore` + `handleToolChange` στο `onAction`.
+  σχεδιάσιμοι τύποι). Activate+setKind χωρίς race μέσω `columnToolBridgeStore` + `handleToolChange`.
+- **2026-06-25 (SSoT audit fix, Giorgio)** — το αρχικό ξεχωριστό `RibbonDropdownButton` ήταν
+  **διπλότυπο** του shell του `RibbonSplitButton` (wrapper+tooltip+dropdown mount+recommended).
+  **Αφαιρέθηκε**· το `RibbonSplitButton` χειρίζεται πλέον ΚΑΙ το `type:'dropdown'` (`isDropdownOnly`)
+  → ΕΝΑ SSoT component για κάθε «trigger + variant dropdown» στο ribbon.

@@ -24,6 +24,7 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { GripInfo } from '../../hooks/useGripMovement';
 import {
   columnCenterMoveGrip,
+  columnRotationHandleMidwayWorld,
   localToWorld,
   polygonBackedBboxMm,
   projectDeltaToLocal,
@@ -70,10 +71,9 @@ export function freeReshapeRotationWorld(params: ColumnParams): Point2D {
   const verts = computeColumnGeometry(params).footprint.vertices;
   if (verts.length < 3) return localToWorld({ x: 0, y: 0 }, params);
   const { point, clearance } = interiorAnchorPointWithClearance(verts);
-  const s = mmScaleFor(params);
-  const mag = Math.min((params.depth / 4) * s, clearance * 0.85);
-  const off = rotate({ x: 0, y: -mag }, params.rotation);
-  return { x: point.x + off.x, y: point.y + off.y };
+  // ADR-520 — ΙΔΙΟ SSoT placement με rect/polygon (`columnRotationHandleMidwayWorld`), με base
+  // το body-interior σημείο + clearance φράγμα ώστε να μένει μέσα στο κοίλο σώμα.
+  return columnRotationHandleMidwayWorld(point, params.depth, params.rotation, mmScaleFor(params), clearance);
 }
 
 /**

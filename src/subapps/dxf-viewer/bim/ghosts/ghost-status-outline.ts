@@ -12,6 +12,8 @@
  * @see ./ghost-status-polygon-draw.ts — consumer (the red schematic drawer)
  */
 
+import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
+
 interface PlanVertex {
   readonly x: number;
   readonly y: number;
@@ -37,10 +39,7 @@ export function resolveStatusGhostOutline(entity: unknown): readonly PlanVertex[
   const outer = geometry.outerEdge?.points;
   const inner = geometry.innerEdge?.points;
   if (outer && inner && outer.length >= 2 && inner.length >= 2) {
-    const loop: PlanVertex[] = [
-      ...outer.map((v) => ({ x: v.x, y: v.y })),
-      ...[...inner].reverse().map((v) => ({ x: v.x, y: v.y })),
-    ];
+    const loop: PlanVertex[] = closedRingFromEdges(outer, inner).map((v) => ({ x: v.x, y: v.y }));
     return loop.length >= 3 ? loop : null;
   }
   return null;

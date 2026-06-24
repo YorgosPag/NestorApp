@@ -22,6 +22,7 @@
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../../rendering/types/Types';
 import type { Point2D } from '../../rendering/types/Types';
+import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
@@ -159,7 +160,7 @@ export class WallRenderer extends BaseEntityRenderer {
       const outer = wall.geometry.outerEdge.points;
       const inner = wall.geometry.innerEdge.points;
       if (outer.length >= 2 && inner.length >= 2) {
-        const ring = [...outer, ...[...inner].reverse()];
+        const ring = closedRingFromEdges(outer, inner);
         drawCutPlaneTiltProjection(
           this.ctx, ring, _tiltShift, (p) => this.worldToScreen(p), TILT_PROJECTION_STROKE,
         );
@@ -203,10 +204,7 @@ export class WallRenderer extends BaseEntityRenderer {
     const outer = wall.geometry?.outerEdge?.points;
     const inner = wall.geometry?.innerEdge?.points;
     if (!outer || !inner || outer.length < 2 || inner.length < 2) return false;
-    const ring: Point2D[] = [
-      ...outer.map((p) => ({ x: p.x, y: p.y })),
-      ...[...inner].reverse().map((p) => ({ x: p.x, y: p.y })),
-    ];
+    const ring: Point2D[] = closedRingFromEdges(outer, inner).map((p) => ({ x: p.x, y: p.y }));
     if (ring.length < 3) return false;
     return isPointInPolygon(point, ring);
   }
@@ -410,7 +408,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // ADR-507 Φ7 — υλικό + cutState → PAT pattern (MATERIAL_HATCH_MAP). Όριο = το wall
     // body ring (outer + reversed inner ως ΕΝΑ closed polygon)· τα segments έρχονται
     // ήδη clipped (μηδέν `ctx.clip()`).
-    const ring = [...outer, ...[...inner].reverse()];
+    const ring = closedRingFromEdges(outer, inner);
     const segments = computeMaterialHatchSegments([ring], wall.params.material, _hatchCutState);
     if (segments.length === 0) return;
 

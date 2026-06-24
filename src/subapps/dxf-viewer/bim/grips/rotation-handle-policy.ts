@@ -68,3 +68,25 @@ export function rotationHandlePerpOffset(
 ): number {
   return oppositeFace(dimensionFaceSign) * (halfExtent + offset);
 }
+
+/**
+ * Κλάσμα της clearance που επιτρέπεται να «καταναλώσει» η μετατοπισμένη λαβή ώστε να
+ * μένει ασφαλώς ΜΕΣΑ στο σώμα (ο εγγεγραμμένος δίσκος ακτίνας `clearance` είναι εντός
+ * πολυγώνου· `< 1` αφήνει περιθώριο). ADR-520.
+ */
+export const ROTATION_HANDLE_INSIDE_SAFETY = 0.85;
+
+/**
+ * ADR-363/518/520 — Η ΜΙΑ ΚΑΙ ΜΟΝΑΔΙΚΗ θέση (signed local-Y offset) της λαβής **περιστροφής**
+ * των box/free-reshape στηλών: στο **ΜΕΣΟ** της νοητής γραμμής κέντρο→κάτω-edge = `−dimY/4`
+ * (Giorgio 2026-06-15). ΠΟΤΕ πάνω στο κέντρο (όπου ο σταυρός μετακίνησης) ούτε στην περίμετρο.
+ *
+ * Πριν το ADR-520 ο κανόνας ήταν γραμμένος ΤΡΕΙΣ φορές (rect `−depth/4` inline, polygon
+ * `−dimY/4` inline, free-reshape inline) — εδώ ζει ΜΙΑ φορά. Για **κοίλα** σώματα (free-reshape)
+ * δίνεται `clearanceMm` ώστε το offset να μη βγει εκτός: φράσσεται σε `clearance·SAFETY`. Convex
+ * (rect/polygon) → `clearanceMm = Infinity` (κανένα φράγμα). `dimY` και `clearanceMm` ίδια μονάδα.
+ */
+export function rotationHandleMidwayOffset(dimY: number, clearanceMm: number = Infinity): number {
+  const bound = Number.isFinite(clearanceMm) ? clearanceMm * ROTATION_HANDLE_INSIDE_SAFETY : Infinity;
+  return -Math.min(dimY / 4, bound);
+}

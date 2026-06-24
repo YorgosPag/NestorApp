@@ -10,7 +10,6 @@ import type {
 import { RibbonLargeButton } from './buttons/RibbonLargeButton';
 import { RibbonSmallButton } from './buttons/RibbonSmallButton';
 import { RibbonSplitButton } from './buttons/RibbonSplitButton';
-import { RibbonDropdownButton } from './buttons/RibbonDropdownButton';
 import { RibbonToggleButton } from './buttons/RibbonToggleButton';
 import { RibbonCombobox } from './buttons/RibbonCombobox';
 import { ZoomControlsWidget } from './ZoomControlsWidget';
@@ -244,13 +243,10 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     return null;
   }
-  if (button.type === 'split') {
+  // ADR-345 split + ADR-521 pure dropdown («Τύποι») share ONE component — the
+  // dropdown is just a split button whose trigger opens the list (no top-action).
+  if (button.type === 'split' || button.type === 'dropdown') {
     return <RibbonSplitButton key={key} button={button} />;
-  }
-  // ADR-521 — pure dropdown («Τύποι» column-type picker): single trigger opens
-  // the variant list (no top-action). Reuses RibbonSplitDropdown for the menu.
-  if (button.type === 'dropdown') {
-    return <RibbonDropdownButton key={key} button={button} />;
   }
   if (button.type === 'toggle') {
     return <RibbonToggleButton key={key} command={button.command} />;

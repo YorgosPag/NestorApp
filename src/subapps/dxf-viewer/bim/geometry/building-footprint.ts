@@ -25,6 +25,7 @@
 import type { MultiPolygon, Ring, Pair } from 'polygon-clipping';
 
 import { safeUnion } from './shared/safe-polygon-boolean';
+import { closedRingFromEdges } from './shared/polygon-utils';
 import type { Point3D, Polyline3D } from '../types/bim-base';
 import type { BeamParams } from '../types/beam-types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -114,7 +115,7 @@ function wallFootprint(w: WallForEnvelope): Point3D[] {
   const outer = g.outerEdge.points;
   const inner = g.innerEdge.points;
   if (outer.length < 2 || inner.length < 2) return [];
-  return [...outer, ...[...inner].reverse()];
+  return closedRingFromEdges(outer, inner);
 }
 
 /** Δοκάρι → κλειστό footprint = το plan-view outline (width × length). */

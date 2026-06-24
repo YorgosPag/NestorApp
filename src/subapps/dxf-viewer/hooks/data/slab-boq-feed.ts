@@ -8,6 +8,7 @@
  */
 
 import type { SceneModel } from '../../types/entities';
+import { closedRingFromEdges } from '../../bim/geometry/shared/polygon-utils';
 import type { SlabEntity, SlabGeometry } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
@@ -48,8 +49,8 @@ function collectWallFootprints(scene: SceneModel | null): WallFootprintForSpan[]
     const outer = wall.geometry?.outerEdge?.points;
     const inner = wall.geometry?.innerEdge?.points;
     if (!outer || !inner || outer.length < 2 || inner.length < 2) continue;
-    // CCW outline: outer start→end, inner reversed (end→start)
-    const outlineVertices = [...outer, ...[...inner].reverse()];
+    // CCW outline: outer start→end, inner reversed (end→start) — SSoT closedRingFromEdges
+    const outlineVertices = closedRingFromEdges(outer, inner);
     result.push({ outline: { vertices: outlineVertices } });
   }
   return result;

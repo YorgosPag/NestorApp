@@ -6,6 +6,7 @@
 
 import type { Point2D } from '../types/Types';
 import type { Entity, DimensionEntity } from '../../types/entities';
+import { closedRingFromEdges } from '../../bim/geometry/shared/polygon-utils';
 import {
   isOpeningEntity,
   isSlabOpeningEntity,
@@ -182,8 +183,8 @@ function hitTestWall(entity: Entity, point: Point2D): Partial<HitTestResult> | n
   const outer = entity.geometry?.outerEdge?.points;
   const inner = entity.geometry?.innerEdge?.points;
   if (!outer || !inner || outer.length < 2 || inner.length < 2) return null;
-  // Build closed footprint: outer forward + inner reversed (matches buildWallShape).
-  const ring: Point2D[] = [...outer.map(to2D), ...[...inner].reverse().map(to2D)];
+  // Build closed footprint: outer forward + inner reversed (matches buildWallShape) — SSoT.
+  const ring: Point2D[] = closedRingFromEdges(outer, inner).map(to2D);
   if (ring.length < 3) return null;
   return isPointInPolygon(point, ring) ? { hitType: 'entity', hitPoint: point } : null;
 }
