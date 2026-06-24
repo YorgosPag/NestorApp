@@ -96,6 +96,8 @@ export type DrawingTool =
   // ADR-436 Slice 2 — foundation line tools (rubber-band band preview).
   | 'foundation-strip'
   | 'foundation-tie-beam'
+  // ADR-514 Φ6c — foundation pad (single-click WYSIWYG live ghost, flush σε παρειά κολόνας).
+  | 'foundation-pad'
   | 'xline'
   | 'ray'
   | 'slab-opening'

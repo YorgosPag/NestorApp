@@ -161,12 +161,18 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   // the rubber-band band reads the correct data on the very next mousemove.
 
   const syncPreview = useCallback(
-    (kind: FoundationKind, placementMode: FoundationPlacementMode, phase: FoundationToolPhase, startPoint: Point2D | null, overrides: FoundationParamOverrides) => {
-      if (phase === 'idle' || placementMode === 'from-wall' || !isLineKind(kind)) {
+    (kind: FoundationKind, placementMode: FoundationPlacementMode, phase: FoundationToolPhase, startPoint: Point2D | null, overrides: FoundationParamOverrides, anchor: FoundationAnchor) => {
+      if (phase === 'idle' || placementMode === 'from-wall') {
         foundationPreviewStore.reset();
         return;
       }
-      foundationPreviewStore.set({ startPoint, endPoint: null, kind, overrides });
+      if (isLineKind(kind)) {
+        foundationPreviewStore.set({ startPoint, endPoint: null, kind, overrides });
+        return;
+      }
+      // ADR-514 Φ6c — pad: κράτα kind + overrides(+anchor) ώστε το live pad ghost
+      // (`generateFoundationPadPreview`) να χτίζει το ΑΚΡΙΒΕΣ πέδιλο που θα κάνει commit (preview ≡ commit).
+      foundationPreviewStore.set({ startPoint: null, endPoint: null, kind, overrides: { ...overrides, anchor } });
     },
     [],
   );
@@ -175,7 +181,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     refreshSnapTargets(); // ADR-514 Φ6c — pad face-snap στόχοι έτοιμοι πριν το 1ο κλικ
     const prev = stateRef.current;
     const phase = activePhaseFor(prev.kind, prev.placementMode);
-    syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides);
+    syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides, prev.anchor);
     setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, anchor: prev.anchor, overrides: prev.overrides, phase });
     // ADR-484 — το πρώην soft warning «θεμελίωση σε υπέργειο όροφο» αφαιρέθηκε:
     // πλέον το πέδιλο δρομολογείται ΠΑΝΤΑ στον foundation level (Revit-canonical,
@@ -186,7 +192,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   const setKind = useCallback((kind: FoundationKind) => {
     setState((prev) => {
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(kind, prev.placementMode);
-      syncPreview(kind, prev.placementMode, phase, null, prev.overrides);
+      syncPreview(kind, prev.placementMode, phase, null, prev.overrides, prev.anchor);
       return { ...INITIAL_STATE, kind, placementMode: prev.placementMode, anchor: prev.anchor, overrides: prev.overrides, phase };
     });
   }, [syncPreview]);
@@ -195,23 +201,28 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     setState((prev) => {
       if (prev.placementMode === mode) return prev;
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(prev.kind, mode);
-      syncPreview(prev.kind, mode, phase, null, prev.overrides);
+      syncPreview(prev.kind, mode, phase, null, prev.overrides, prev.anchor);
       return { ...INITIAL_STATE, kind: prev.kind, placementMode: mode, anchor: prev.anchor, overrides: prev.overrides, phase };
     });
   }, [syncPreview]);
 
   const setAnchor = useCallback((anchor: FoundationAnchor) => {
-    setState((prev) => ({ ...prev, anchor }));
-  }, []);
+    setState((prev) => {
+      syncPreview(prev.kind, prev.placementMode, prev.phase, prev.startPoint, prev.overrides, anchor); // ADR-514 Φ6c — live pad ghost follows anchor
+      return { ...prev, anchor };
+    });
+  }, [syncPreview]);
 
   const cycleAnchor = useCallback((direction: 1 | -1 = 1) => {
     setState((prev) => {
       const idx = FOUNDATION_ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
       const len = FOUNDATION_ANCHOR_CYCLE_ORDER.length;
       const nextIdx = (idx + direction + len) % len;
-      return { ...prev, anchor: FOUNDATION_ANCHOR_CYCLE_ORDER[nextIdx] };
+      const anchor = FOUNDATION_ANCHOR_CYCLE_ORDER[nextIdx];
+      syncPreview(prev.kind, prev.placementMode, prev.phase, prev.startPoint, prev.overrides, anchor);
+      return { ...prev, anchor };
     });
-  }, []);
+  }, [syncPreview]);
 
   const deactivate = useCallback(() => {
     foundationPreviewStore.reset();
@@ -222,7 +233,7 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   const reset = useCallback(() => {
     setState((prev) => {
       const phase = prev.phase === 'idle' ? 'idle' : activePhaseFor(prev.kind, prev.placementMode);
-      syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides);
+      syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides, prev.anchor);
       return { ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, anchor: prev.anchor, overrides: prev.overrides, phase };
     });
   }, [syncPreview]);
@@ -230,13 +241,13 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   const setParamOverrides = useCallback((overrides: FoundationParamOverrides) => {
     setState((prev) => {
       const newOverrides = { ...prev.overrides, ...overrides };
-      if (prev.phase !== 'idle' && prev.placementMode === 'freehand' && isLineKind(prev.kind)) {
-        const current = foundationPreviewStore.get();
-        foundationPreviewStore.set({ ...current, overrides: newOverrides });
+      // ADR-514 Φ6c — live pad ghost follows overrides (διάσταση/πάχος)· line kinds αμετάβλητα (ΙΔΙΟ SSoT).
+      if (prev.phase !== 'idle' && prev.placementMode === 'freehand') {
+        syncPreview(prev.kind, prev.placementMode, prev.phase, prev.startPoint, newOverrides, prev.anchor);
       }
       return { ...prev, overrides: newOverrides };
     });
-  }, []);
+  }, [syncPreview]);
 
   // ── commit: pad single-click (Slice 1) ───────────────────────────────────
   const commitFromState = useCallback(
@@ -389,14 +400,16 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
         const idx = FOUNDATION_ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
         const len = FOUNDATION_ANCHOR_CYCLE_ORDER.length;
         const nextIdx = (idx + direction + len) % len;
-        return { ...prev, anchor: FOUNDATION_ANCHOR_CYCLE_ORDER[nextIdx] };
+        const anchor = FOUNDATION_ANCHOR_CYCLE_ORDER[nextIdx];
+        syncPreview(prev.kind, prev.placementMode, prev.phase, prev.startPoint, prev.overrides, anchor); // ADR-514 Φ6c
+        return { ...prev, anchor };
       });
       e.preventDefault();
       e.stopPropagation();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  }, [syncPreview]);
 
   return {
     state,

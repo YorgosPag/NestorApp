@@ -66,7 +66,16 @@ function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
 
 function overridesEqual(a: FoundationParamOverrides, b: FoundationParamOverrides): boolean {
   if (a === b) return true;
-  return a.kind === b.kind && a.width === b.width && a.thicknessMm === b.thicknessMm;
+  // ADR-514 Φ6c — `length` + `anchor` συμμετέχουν: το live pad ghost αλλάζει σχήμα/θέση όταν αλλάζει
+  // η διάσταση μήκους ή η λαβή (Tab anchor cycle) → χωρίς αυτά το ghost θα έμενε stale.
+  return (
+    a.kind === b.kind &&
+    a.width === b.width &&
+    a.length === b.length &&
+    a.thicknessMm === b.thicknessMm &&
+    a.anchor === b.anchor &&
+    a.rotation === b.rotation
+  );
 }
 
 export const foundationPreviewStore = {

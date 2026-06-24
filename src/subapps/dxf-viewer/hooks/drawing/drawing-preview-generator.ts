@@ -38,7 +38,8 @@ import { generateBeamPreview } from './beam-preview-helpers';
 // ADR-398 §3.8 — column WYSIWYG preview (real ColumnRenderer ghost).
 import { generateColumnPreview } from './column-preview-helpers';
 // ADR-436 Slice 2 — foundation line-tool preview (strip / tie-beam band ghost).
-import { generateFoundationPreview } from './foundation-preview-helpers';
+// ADR-514 Φ6c — foundation pad live ghost (flush σε παρειά κολόνας ζωντανά).
+import { generateFoundationPreview, generateFoundationPadPreview } from './foundation-preview-helpers';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
@@ -171,6 +172,11 @@ export function generatePreviewEntity(
   //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──
   if (tool === 'foundation-strip' || tool === 'foundation-tie-beam') {
     return generateFoundationPreview(tempPoints, cursorPoint, sceneUnits);
+  }
+  // ── ADR-514 Φ6c — Foundation pad live ghost (single-click): WYSIWYG pad που κουμπώνει ΖΩΝΤΑΝΑ
+  //    flush σε παρειά/άξονα κολόνας/μέλους (ΙΔΙΟΣ εγκέφαλος με το commit → preview ≡ commit). ──
+  if (tool === 'foundation-pad') {
+    return generateFoundationPadPreview(cursorPoint, sceneUnits);
   }
   // ── ADR-359 Phase 3 — XLine preview ──────────────────────────────────────
   if (tool === 'xline') {

@@ -21,9 +21,13 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
 import type { FoundationKind } from '../../bim/types/foundation-types';
-import { toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
+import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
+// ADR-514 Φ6c — live pad ghost: flush σε παρειά/άξονα κολόνας ΜΕΣΑ από τον ΕΝΑ εγκέφαλο έλξης
+// (ΙΔΙΟΣ resolver με το commit `useFoundationTool` pad branch → preview ≡ commit by construction).
+import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 
 const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
@@ -56,6 +60,28 @@ export function generateFoundationPreview(
   const preview = foundationPreviewStore.get();
   const startPt = tempPoints[0];
   return makeFoundationBandGhost('preview_foundation_band', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits);
+}
+
+/**
+ * ADR-514 Φ6c — **live pad ghost** (Revit-grade): WYSIWYG `FoundationEntity` (pad) στον face-snapped
+ * cursor, ώστε το πέδιλο να κουμπώνει **ζωντανά** σε παρειά/άξονα κολόνας/μέλους καθώς κινείς τον
+ * κέρσορα (όχι μόνο στο κλικ). Ο cursor περνά από `resolveEffectivePreviewCursor` (ήδη OSNAP-snapped,
+ * mirror του commit `worldPoint`) και μετά από τον ΙΔΙΟ εγκέφαλο `toolKind:'foundation-pad'` ΧΩΡΙΣ
+ * findSnapPoint (anti double-snap, ADR-514 §2). kind/overrides(+anchor) από το κοινό
+ * `foundationPreviewStore` (single-writer ο tool) → preview ≡ commit. `null` σε degenerate frame.
+ */
+export function generateFoundationPadPreview(
+  cursorPoint: Point2D,
+  sceneUnits: SceneUnits = 'mm',
+): ExtendedSceneEntity | null {
+  const preview = foundationPreviewStore.get();
+  if (preview.kind !== 'pad') return null; // safety — μόνο για το pad kind
+  const eff = resolveEffectivePreviewCursor(cursorPoint);
+  const snap = resolveBimCursorSnap({ toolKind: 'foundation-pad', cursor: eff, targets: sceneSnapTargetsStore.get(), sceneUnits });
+  const params = buildDefaultFoundationParams(snap.point, 'pad', { ...preview.overrides, kind: 'pad' }, sceneUnits);
+  const built = buildFoundationEntity(params, defaultLayerId());
+  if (!built.ok) return null;
+  return toWysiwygPreviewEntity(built.entity, 'preview_foundation_pad');
 }
 
 function makeFoundationBandGhost(
