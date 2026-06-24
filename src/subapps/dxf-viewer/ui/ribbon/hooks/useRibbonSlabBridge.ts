@@ -43,6 +43,9 @@ import {
 import { slabSlopeUnitStore } from './bridge/slab-slope-unit';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 // ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (εδαφόπλακα / δάπεδα / οροφές).
 import {
   commitFoundationMatFromGuides,
@@ -66,7 +69,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'clearByType'
 >;
 
 export interface UseRibbonSlabBridgeProps {
@@ -122,6 +125,7 @@ export function useRibbonSlabBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
   // ADR-404 Phase 5c — η μονάδα εμφάνισης κλίσης είναι ribbon pref· subscribe ώστε το
   // πεδίο «Τιμή» να ξανα-μορφοποιείται όταν αλλάζει η μονάδα (selected + drawing-mode).
@@ -323,9 +327,9 @@ export function useRibbonSlabBridge(
         t('ribbon.commands.slabEditor.deleteConfirm'),
       );
       if (!confirmed) return;
-      EventBus.emit('bim:slab-delete-requested', { slabId: slab.id });
+      ribbonDelete.deleteEntity(slab.id);
     },
-    [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid],
+    [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid, ribbonDelete],
   );
 
   // ADR-476 — structural reinforcement panel: ορατό μόνο για RC πλάκα (όχι σύμμικτη/

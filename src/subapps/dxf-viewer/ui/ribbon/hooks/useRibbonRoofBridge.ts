@@ -60,6 +60,9 @@ import {
 import { setSelectedRoofEdge } from '../../../bim/roofs/roof-edge-selection-store';
 import { useSelectedRoofEdge } from '../../../bim/roofs/useRoofEdgeSelection';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -75,7 +78,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'clearByType'
 >;
 
 export interface UseRibbonRoofBridgeProps {
@@ -133,6 +136,7 @@ export function useRibbonRoofBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
   const resolveRoof = useCallback((): RoofEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -344,9 +348,9 @@ export function useRibbonRoofBridge(
       if (!roof) return;
       const confirmed = window.confirm(t('ribbon.commands.roofEditor.deleteConfirm'));
       if (!confirmed) return;
-      EventBus.emit('bim:roof-delete-requested', { roofId: roof.id });
+      ribbonDelete.deleteEntity(roof.id);
     },
-    [resolveRoof, t],
+    [resolveRoof, t, ribbonDelete],
   );
 
   return useMemo(

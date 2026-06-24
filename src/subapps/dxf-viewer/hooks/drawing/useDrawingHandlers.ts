@@ -204,10 +204,12 @@ export function useDrawingHandlers(
       // ADR-362 hotfix (2026-05-19): the dim-line-offset click (3rd click) is a free
       // position pick — skip-snap + entity-under-cursor resolution lives in the shared
       // helper so preview & commit stay in sync (see resolveDimPickContext).
-      const { snapped, hoveredEntity } = resolveDimPickContext(
+      const { snapped, hoveredEntity, snapMode, secondEntity } = resolveDimPickContext(
         p, applySnap, findSnapPoint, currentScene?.entities,
       );
-      dimRouting.handlePoint(snapped, hoveredEntity);
+      // ADR-362 Phase J3 (gap #2) — forward snap mode + 2nd intersection host so
+      // the association capture records intersection / parametric-nearest anchors.
+      dimRouting.handlePoint(snapped, hoveredEntity, { snapMode, secondEntity });
       return;
     }
     // ADR-362 Phase L2: route center mark / centerline tools.

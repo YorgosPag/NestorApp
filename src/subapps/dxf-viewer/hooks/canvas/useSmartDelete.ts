@@ -23,13 +23,12 @@ import {
   DeleteMultipleOverlaysCommand,
   DeleteOverlayVertexCommand,
   DeleteMultipleOverlayVerticesCommand,
-  DeleteEntityCommand,
-  DeleteMultipleEntitiesCommand,
   CompoundCommand,
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { collectBimDeleteIds, emitBimDeleteEvents } from './smart-delete-bim-events';
+// ADR-032/390/401 — canonical command-based delete (SSoT shared with ribbon «Διαγραφή»).
+import { deleteEntitiesById } from './delete-entities-core';
 // ADR-459 Φ7 — cross-level (Θεμελίωση) footing delete: επιλογή πεδίλου στο 3Δ + Delete
 // ενώ ο ενεργός όροφος είναι άλλος → ο level-scoped adapter δεν το βρίσκει.
 import { DeleteCrossLevelFootingsCommand } from '../../core/commands/entity-commands/DeleteCrossLevelFootingsCommand';
@@ -39,21 +38,13 @@ import { useSelection3DStore } from '../../bim-3d/stores/Selection3DStore';
 import { isFoundationEntity, type Entity } from '../../types/entities';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
-// ADR-408 Φ4 — MEP cascade: dissolve circuits whose source is deleted + drop
-// deleted members from surviving circuits, bundled with the entity delete into
-// one CompoundCommand for a single coherent undo.
-import { resolveMepCascadeOnDelete } from '../../bim/mep-systems/mep-system-coordinator';
+// ADR-408 Φ-C EXT — circuit dissolve still lives here (PRIORITY 4); the entity
+// MEP cascade moved into delete-entities-core.ts with the rest of PRIORITY 3.
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
-import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { DissolveMepSystemCommand } from '../../core/commands/entity-commands/DissolveMepSystemCommand';
 // ADR-408 Φ-C EXT — Delete on a selected electrical CIRCUIT (the home-run wire is a
 // derived MepSystem visualization, not an entity → circuit lives in this store).
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
-// ADR-363 Phase 7A — centralized cascade resolver SSoT (Boy Scout N.0.2:
-// replaces the inline wall→opening sweep that previously lived here; adds
-// slab→slab-opening cascade alongside).
-import { findHostedOpenings, findHostedSlabOpenings } from '../../bim/cascade/bim-cascade-resolver';
 // ADR-363 Phase 3.8 — slab vertex removal
 import { removeVertexFromSlab } from '../../bim/slabs/slab-grips';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
@@ -272,7 +263,10 @@ export function useSmartDelete({
       }
     }
 
-    // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT
+    // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT.
+    // SSoT: delete-entities-core.ts — the SAME canonical path the ribbon
+    // «Διαγραφή» now uses (cascades + ADR-401 host-detach + MEP cascade +
+    // undoable + synchronous scene removal before the Firestore events).
     const selectedDxfEntityIds = universalSelectionRef.current.getSelectedEntityIds();
     if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
       const adapter = new LevelSceneManagerAdapter(
@@ -280,75 +274,16 @@ export function useSmartDelete({
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
-
-      // ADR-363 Phase 7A — BIM cascade via centralized resolver (SSoT).
-      // wall→opening: prompts user (existing wall-cascade-delete dialog).
-      // slab→slab-opening: cascades automatically (orphan prevention, no
-      // prompt — slab-openings are structurally less surprising to lose with
-      // their host than wall openings). Phase 8 may add a unified dialog.
-      const deletingWallIds = new Set(
-        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'wall'),
-      );
-      const deletingSlabIds = new Set(
-        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'slab'),
-      );
-      const needsScene = deletingWallIds.size > 0 || deletingSlabIds.size > 0;
-      const scene = needsScene
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-      const selectionSet = new Set(selectedDxfEntityIds);
-      const orphanedOpeningIds = scene != null
-        ? findHostedOpenings(deletingWallIds, scene.entities, selectionSet)
-        : [];
-      const orphanedSlabOpeningIds = scene != null
-        ? findHostedSlabOpenings(deletingSlabIds, scene.entities, selectionSet)
-        : [];
-
-      let idsToDelete = selectedDxfEntityIds;
-      if (orphanedOpeningIds.length > 0) {
-        const action = await requestWallCascadeDelete(orphanedOpeningIds.length);
-        if (action === 'cancel') return false;
-        idsToDelete = [...idsToDelete, ...orphanedOpeningIds];
-      }
-      if (orphanedSlabOpeningIds.length > 0) {
-        idsToDelete = [...idsToDelete, ...orphanedSlabOpeningIds];
-      }
-
-      // Collect BIM IDs by type BEFORE executeCommand removes them from scene
-      // (SSoT: smart-delete-bim-events.ts).
-      const collected = collectBimDeleteIds(idsToDelete, adapter);
-
-      const deleteCommand: ICommand = idsToDelete.length === 1
-        ? new DeleteEntityCommand(idsToDelete[0], adapter)
-        : new DeleteMultipleEntitiesCommand(idsToDelete, adapter);
-
-      // ADR-408 Φ4 — plan the MEP integrity cascade for the deleted panels /
-      // fixtures (the only entities that can be a circuit source or member) and
-      // bundle the dissolve / member-removal commands with the entity delete so
-      // a single Ctrl+Z reverses everything.
-      const deletedMepIds = new Set<string>([...collected.panelIds, ...collected.fixtureIds]);
-      const cascade = deletedMepIds.size > 0
-        ? resolveMepCascadeOnDelete(deletedMepIds, useMepSystemStore.getState().getSystems())
-        : { dissolve: [], memberRemovals: [] };
-      const cascadeCommands: ICommand[] = [
-        ...cascade.dissolve.map((s) => new DissolveMepSystemCommand(s)),
-        ...cascade.memberRemovals.map(
-          (r) => new UpdateMepSystemParamsCommand(r.systemId, r.nextParams, r.prevParams),
-        ),
-      ];
-
-      if (cascadeCommands.length > 0) {
-        executeCommand(new CompoundCommand('Delete MEP', [deleteCommand, ...cascadeCommands]));
-      } else {
-        executeCommand(deleteCommand);
-      }
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      const deleted = await deleteEntitiesById(selectedDxfEntityIds, {
+        adapter,
+        sceneEntities: scene?.entities ?? [],
+        executeCommand,
+      });
+      // `false` ⇒ user cancelled the wall-opening cascade prompt — keep selection.
+      if (!deleted) return false;
       universalSelectionRef.current.clearByType('dxf-entity');
       setSelectedEntityIds([]);
-
-      // Trigger Firestore deleteDoc (+ subscription re-add prevention) for each
-      // deleted BIM entity type (SSoT: smart-delete-bim-events.ts → bim-entity-lifecycle-events).
-      emitBimDeleteEvents(collected);
-
       return true;
     }
 

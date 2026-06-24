@@ -25,6 +25,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionType } from '../../types/dimension';
+import type { ExtendedSnapType } from '../../snapping/extended-types';
 import {
   detectDimensionType,
   type DetectableEntity,
@@ -44,6 +45,17 @@ export interface ClickRecord {
   readonly world: Point2D;
   /** Entity under cursor at click time (drives D11 associativity). */
   readonly pickedEntity?: DetectableEntity;
+  /**
+   * ADR-362 Phase J3 (gap #2) — active snap mode at click time. Lets the
+   * association capture distinguish an `intersection` OSNAP (→ 2-host anchor)
+   * from a generic `nearest` pick (→ parametric anchor).
+   */
+  readonly snapMode?: ExtendedSnapType;
+  /**
+   * ADR-362 Phase J3 (gap #2) — second host entity when the click snapped to an
+   * `intersection` (the curve crossing `pickedEntity` at `world`).
+   */
+  readonly pickedEntity2?: DetectableEntity;
 }
 
 export interface DimensionCreateState {
@@ -84,6 +96,10 @@ export type DimensionCreateAction =
       readonly kind: 'click';
       readonly world: Point2D;
       readonly hoveredEntity?: DetectableEntity;
+      /** ADR-362 Phase J3 — active snap mode at click time (associativity capture). */
+      readonly snapMode?: ExtendedSnapType;
+      /** ADR-362 Phase J3 — 2nd host when the click snapped to an intersection. */
+      readonly pickedEntity2?: DetectableEntity;
     }
   | { readonly kind: 'pressTab' }
   | { readonly kind: 'pressSpace' }
@@ -289,9 +305,12 @@ function handleClick(
     return state;
   }
 
-  const record: ClickRecord = action.hoveredEntity
-    ? { world: action.world, pickedEntity: action.hoveredEntity }
-    : { world: action.world };
+  const record: ClickRecord = {
+    world: action.world,
+    ...(action.hoveredEntity ? { pickedEntity: action.hoveredEntity } : {}),
+    ...(action.snapMode ? { snapMode: action.snapMode } : {}),
+    ...(action.pickedEntity2 ? { pickedEntity2: action.pickedEntity2 } : {}),
+  };
   const nextClicks = [...state.clicks, record];
   const nextHovered = action.hoveredEntity ?? null;
 

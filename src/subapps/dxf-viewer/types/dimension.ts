@@ -269,6 +269,24 @@ export interface DimensionAssociation {
   readonly associationType: DimensionAssociationType;
   /** For `intersection` / polyline `endpoint` / `nearest`: sub-element index (vertex / segment). */
   readonly subIndex?: number;
+  /**
+   * ADR-362 Phase J3 (gap #2) — parametric anchor for `nearest` re-projection:
+   *   - line / polyline edge → line parameter `t` (0 = segment start, 1 = end;
+   *     may fall outside [0,1] when the click projected past an endpoint).
+   *   - circle / arc → angle in radians (`pointOnCircle` convention, 0 = +x CCW).
+   * Absent (`undefined`) → legacy capture: recompute preserves the current
+   * defPoint (2026-05-19 hotfix back-compat).
+   */
+  readonly param?: number;
+  /**
+   * ADR-362 Phase J3 (gap #2) — second host entity `id` for `intersection`
+   * anchors. The def point rides the *intersection* of `geometryId` ×
+   * `geometryId2`; recompute re-solves that intersection on geometry change.
+   * Absent → recompute preserves the current defPoint.
+   */
+  readonly geometryId2?: string;
+  /** Sub-element index of the `geometryId2` host (vertex / segment), if any. */
+  readonly subIndex2?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

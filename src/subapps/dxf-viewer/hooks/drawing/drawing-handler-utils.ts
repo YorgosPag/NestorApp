@@ -4,6 +4,8 @@ import type { Entity } from '../../types/entities';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
+import { ExtendedSnapType } from '../../snapping/extended-types';
+import { findIntersectionSecondHost } from '../../systems/dimensions/dim-intersection-host-finder';
 
 type Pt = { x: number; y: number };
 
@@ -30,9 +32,16 @@ export const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
 export function resolveDimPickContext(
   p: Pt,
   applySnap: (pt: Pt) => Pt,
-  findSnapPoint: ((x: number, y: number) => { entityId?: string } | null | undefined) | undefined,
+  findSnapPoint:
+    | ((x: number, y: number) => { entityId?: string; activeMode?: string | null } | null | undefined)
+    | undefined,
   sceneEntities: ReadonlyArray<Entity> | undefined,
-): { snapped: Pt; hoveredEntity: DetectableEntity | undefined } {
+): {
+  snapped: Pt;
+  hoveredEntity: DetectableEntity | undefined;
+  snapMode: ExtendedSnapType | undefined;
+  secondEntity: DetectableEntity | undefined;
+} {
   const skipSnap = isDimLineRefPhase();
   const snapped = skipSnap ? p : applySnap(p);
   const snapResult = skipSnap ? undefined : findSnapPoint?.(p.x, p.y);
@@ -40,7 +49,24 @@ export function resolveDimPickContext(
   const hoveredEntity: DetectableEntity | undefined = hoveredId
     ? (sceneEntities?.find((e) => e.id === hoveredId) as DetectableEntity | undefined)
     : undefined;
-  return { snapped, hoveredEntity };
+
+  // ADR-362 Phase J3 (gap #2) — capture the active snap mode + 2nd intersection
+  // host so the association is recorded as intersection / parametric-nearest.
+  const snapMode = normalizeSnapMode(snapResult?.activeMode);
+  const secondEntity =
+    snapMode === ExtendedSnapType.INTERSECTION
+      ? findIntersectionSecondHost(snapped, sceneEntities, hoveredId)
+      : undefined;
+
+  return { snapped, hoveredEntity, snapMode, secondEntity };
+}
+
+/** Map a raw snap `activeMode` string onto the `ExtendedSnapType` enum (or undefined). */
+function normalizeSnapMode(mode: string | null | undefined): ExtendedSnapType | undefined {
+  if (!mode) return undefined;
+  return Object.values(ExtendedSnapType).includes(mode as ExtendedSnapType)
+    ? (mode as ExtendedSnapType)
+    : undefined;
 }
 
 /** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */

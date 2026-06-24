@@ -41,6 +41,9 @@ import {
   type OpeningTagStyle,
 } from '../../../bim/services/opening-tag-style-service';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -55,7 +58,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'clearByType'
 >;
 
 export interface UseRibbonOpeningBridgeProps {
@@ -99,6 +102,7 @@ export function useRibbonOpeningBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
   // React state mirror of leaderVisible — causes ribbon toggle button to
   // re-render when the service changes (sidebar dialog / ribbon both write).
@@ -309,9 +313,9 @@ export function useRibbonOpeningBridge(
         t('ribbon.commands.openingEditor.deleteConfirm'),
       );
       if (!confirmed) return;
-      EventBus.emit('bim:opening-delete-requested', { openingId: opening.id });
+      ribbonDelete.deleteEntity(opening.id);
     },
-    [resolveOpening, levelManager, t],
+    [resolveOpening, levelManager, t, ribbonDelete],
   );
 
   return useMemo(

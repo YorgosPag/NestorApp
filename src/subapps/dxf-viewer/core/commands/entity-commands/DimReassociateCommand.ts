@@ -51,7 +51,14 @@ export class DimReassociateCommand implements ICommand {
 
     const geoEntity = this.sceneManager.getEntity(this.newGeometryId);
     const updatedAssoc: DimensionAssociation = { ...assoc, geometryId: this.newGeometryId };
-    const newPt = geoEntity ? recomputeAssociatedDefPoint(updatedAssoc, geoEntity) : null;
+    const newPt = geoEntity
+      ? recomputeAssociatedDefPoint(updatedAssoc, geoEntity, {
+          // ADR-362 Phase J3 — supply the 2nd-host lookup + position hint so
+          // intersection / nearest anchors re-solve on reassociate too.
+          resolveEntity: (id) => this.sceneManager.getEntity(id),
+          currentDefPoint: this.previousDefPoint,
+        })
+      : null;
 
     const newDefPoints = [...dim.defPoints] as Point2D[];
     if (newPt) newDefPoints[assoc.defPointIndex] = newPt;

@@ -42,6 +42,7 @@ import type { DimensionEntity, DimensionType } from '../../types/dimension';
 import { generateDimensionId } from '@/services/enterprise-id-convenience';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
+import type { ExtendedSnapType } from '../../snapping/extended-types';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import { buildCommittedDimensionEntity } from './dimension-create-entity-builder';
 import { requiredClickCount } from './dimension-create-state';
@@ -57,10 +58,18 @@ export type DimensionCreateStartInput = 'smart' | DimensionType;
 /** Modifier keys recognised by the creation flow (subset of physical events). */
 export type DimensionCreateKey = 'Tab' | 'Space' | 'Escape' | 'Enter';
 
+/** ADR-362 Phase J3 — snap metadata captured at click time for associativity. */
+export interface DimClickSnapInfo {
+  /** Active snap mode (drives intersection vs nearest association capture). */
+  readonly snapMode?: ExtendedSnapType;
+  /** 2nd host entity when the click snapped to an intersection. */
+  readonly secondEntity?: DetectableEntity;
+}
+
 export interface DimensionCreateAPI {
   start(initial: DimensionCreateStartInput): void;
   onCursorMove(world: Point2D, hoveredEntity?: DetectableEntity): void;
-  onClick(world: Point2D, hoveredEntity?: DetectableEntity): void;
+  onClick(world: Point2D, hoveredEntity?: DetectableEntity, snap?: DimClickSnapInfo): void;
   onKey(key: DimensionCreateKey): void;
   cancel(): void;
 }
@@ -168,8 +177,13 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
     [],
   );
 
-  const onClick = useCallback<DimensionCreateAPI['onClick']>((world, hoveredEntity) => {
-    dimensionCreateStore.click({ world, hoveredEntity });
+  const onClick = useCallback<DimensionCreateAPI['onClick']>((world, hoveredEntity, snap) => {
+    dimensionCreateStore.click({
+      world,
+      hoveredEntity,
+      snapMode: snap?.snapMode,
+      pickedEntity2: snap?.secondEntity,
+    });
   }, []);
 
   const onKey = useCallback<DimensionCreateAPI['onKey']>((key) => {

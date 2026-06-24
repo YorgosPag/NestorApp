@@ -42,6 +42,9 @@ import {
 } from './bridge/wall-tilt-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades incl. orphan openings), shared with the keyboard Delete.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 // ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο» (στα segments).
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import {
@@ -73,7 +76,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'getSelectedEntityIds'
+  'getPrimaryId' | 'getSelectedEntityIds' | 'clearByType'
 >;
 
 export interface UseRibbonWallBridgeProps {
@@ -116,6 +119,7 @@ export function useRibbonWallBridge(
 ): RibbonWallBridge {
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
   const resolveWall = useCallback((): WallEntity | null => {
     const id = universalSelection.getPrimaryId();
     if (!id || !levelManager.currentLevelId) return null;
@@ -298,9 +302,9 @@ export function useRibbonWallBridge(
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
       const wall = resolveWall();
       if (!wall) return;
-      EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
+      ribbonDelete.deleteEntity(wall.id);
     },
-    [resolveWall, levelManager, handleDetach, handleWallsFromGrid],
+    [resolveWall, levelManager, handleDetach, handleWallsFromGrid, ribbonDelete],
   );
 
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).

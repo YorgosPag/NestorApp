@@ -14,9 +14,13 @@
  *   endpoint    → start (subIndex 0) / end (subIndex 1+) of line or polyline vertex
  *   midpoint    → midpoint of line's start/end, or midpoint of polyline edge
  *   center      → center of circle or arc
- *   intersection/ nearest → position PRESERVED (complex; deferred to Phase J+)
+ *   nearest     → parametric re-projection on the host (line/polyline `param`=t,
+ *                 circle/arc `param`=angle). Legacy capture (no `param`) → preserved.
+ *   intersection→ re-solve `geometryId` × `geometryId2` (ADR-362 Phase J3, gap #2).
+ *                 Legacy capture (no `geometryId2`) → preserved.
  *
  * @see systems/dimensions/dim-association-graph.ts  — inverse index (J1)
+ * @see systems/dimensions/dim-intersection-resolver.ts — intersection re-projection
  * @see hooks/dimensions/useDimAssociationObserver.ts — React mount point
  */
 
@@ -26,10 +30,25 @@ import type { SceneEntity } from '../../core/commands/interfaces';
 import {
   isLineEntity,
   isPolylineEntity,
+  isLWPolylineEntity,
   isCircleEntity,
   isArcEntity,
   type Entity,
 } from '../../types/entities';
+import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { resolveIntersectionDefPoint } from './dim-intersection-resolver';
+
+/**
+ * Optional context for `recomputeAssociatedDefPoint` — only the `intersection`
+ * type needs it (to fetch the 2nd host + disambiguate multi-point solutions).
+ * Omitting it keeps the legacy 2-arg signature: intersection then preserves.
+ */
+export interface RecomputeContext {
+  /** Resolve a SceneEntity by id (for the 2nd intersection host). */
+  readonly resolveEntity?: (id: string) => SceneEntity | undefined;
+  /** Current def point position — hint to pick the right intersection branch. */
+  readonly currentDefPoint?: Point2D | null;
+}
 
 // ─── Internal geometry helpers ────────────────────────────────────────────────
 
@@ -37,8 +56,41 @@ function midpt(a: Point2D, b: Point2D): Point2D {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+function lerp(a: Point2D, b: Point2D, t: number): Point2D {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
 function pointsEqual(a: Point2D, b: Point2D): boolean {
   return a.x === b.x && a.y === b.y;
+}
+
+/** Resolve the (start, end) of the polyline edge addressed by `segIndex`. */
+function polylineEdge(
+  verts: readonly Point2D[],
+  segIndex: number,
+): readonly [Point2D, Point2D] | null {
+  if (verts.length < 2) return null;
+  const i = Math.min(Math.max(segIndex, 0), verts.length - 2);
+  return [verts[i], verts[i + 1]];
+}
+
+/**
+ * `nearest` re-projection: evaluate the stored `param` on the CURRENT geometry.
+ * Returns null when `param` is absent (legacy preserve) or the shape is unknown.
+ */
+function recomputeNearest(assoc: DimensionAssociation, e: Entity): Point2D | null {
+  if (assoc.param === undefined) return null; // 2026-05-19 hotfix back-compat
+  if (isLineEntity(e)) {
+    return lerp(e.start, e.end, assoc.param);
+  }
+  if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
+    const edge = polylineEdge(e.vertices, assoc.subIndex ?? 0);
+    return edge ? lerp(edge[0], edge[1], assoc.param) : null;
+  }
+  if (isCircleEntity(e) || isArcEntity(e)) {
+    return pointOnCircle(e.center, e.radius, assoc.param);
+  }
+  return null;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -48,12 +100,15 @@ function pointsEqual(a: Point2D, b: Point2D): boolean {
  * state of the referenced geometry entity.
  *
  * Returns `null` when:
- *   - association type is `intersection` or `nearest` (position preserved by caller)
+ *   - `nearest` with no `param` / `intersection` with no `geometryId2` (legacy
+ *     capture — position preserved by caller)
+ *   - `intersection` whose hosts no longer cross (preserved)
  *   - entity shape doesn't match the expected association type
  */
 export function recomputeAssociatedDefPoint(
   assoc: DimensionAssociation,
   entity: SceneEntity,
+  ctx?: RecomputeContext,
 ): Point2D | null {
   const e = entity as unknown as Entity;
 
@@ -71,6 +126,12 @@ export function recomputeAssociatedDefPoint(
         const verts = e.vertices;
         if (!verts?.length) return null;
         return verts[Math.min(assoc.subIndex, verts.length - 1)];
+      }
+      if (isArcEntity(e)) {
+        // ADR-362 Phase J3 — arcLength anchors arcStart (subIndex 0) / arcEnd
+        // (subIndex 1) to the arc's own start/end angle so they follow re-shapes.
+        const angle = assoc.subIndex === 0 ? e.startAngle : e.endAngle;
+        return pointOnCircle(e.center, e.radius, angle);
       }
       return null;
     }
@@ -96,10 +157,22 @@ export function recomputeAssociatedDefPoint(
       return null;
     }
 
-    case 'intersection':
     case 'nearest':
-      // Position is geometry-order-dependent — preserve current defPoint.
-      return null;
+      // ADR-362 Phase J3 — parametric re-projection on the current geometry.
+      return recomputeNearest(assoc, e);
+
+    case 'intersection': {
+      // ADR-362 Phase J3 — re-solve geometryId × geometryId2. Legacy capture
+      // (no geometryId2) or missing 2nd host / no-longer-crossing → preserve.
+      if (!assoc.geometryId2) return null;
+      const e2raw = ctx?.resolveEntity?.(assoc.geometryId2);
+      if (!e2raw) return null;
+      return resolveIntersectionDefPoint(
+        e,
+        e2raw as unknown as Entity,
+        ctx?.currentDefPoint ?? null,
+      );
+    }
 
     default: {
       const _exhaustive: never = assoc.associationType;
@@ -136,11 +209,15 @@ export function applyAssociationUpdates(
       continue;
     }
 
-    const newPt = recomputeAssociatedDefPoint(assoc, geoEntity);
-    if (newPt === null) continue;
-
     const idx = assoc.defPointIndex;
     const currentPt = dim.defPoints[idx];
+
+    const newPt = recomputeAssociatedDefPoint(assoc, geoEntity, {
+      resolveEntity: getEntity,
+      currentDefPoint: currentPt ?? null,
+    });
+    if (newPt === null) continue;
+
     if (!currentPt || pointsEqual(currentPt, newPt)) continue;
 
     if (!newDefPoints) {

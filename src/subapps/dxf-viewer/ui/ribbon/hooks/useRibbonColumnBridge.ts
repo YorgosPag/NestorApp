@@ -45,6 +45,9 @@ import {
 } from './bridge/column-bridge-combobox-resolvers';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 // ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο» (στις τομές).
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
@@ -67,7 +70,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'getSelectedEntityIds'
+  'getPrimaryId' | 'getSelectedEntityIds' | 'clearByType'
 >;
 
 export interface UseRibbonColumnBridgeProps {
@@ -106,6 +109,7 @@ export function useRibbonColumnBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
   // ADR-363 Phase 8D — Reactive subscription to the drawing-tool handle so the
   // ribbon re-renders when the user switches kind in drawing mode (no selected
@@ -244,9 +248,9 @@ export function useRibbonColumnBridge(
         t('ribbon.commands.columnEditor.deleteConfirm'),
       );
       if (!confirmed) return;
-      EventBus.emit('bim:column-delete-requested', { columnId: column.id });
+      ribbonDelete.deleteEntity(column.id);
     },
-    [resolveColumn, levelManager, t, handleDetach, handleColumnsFromGrid, dispatchParams],
+    [resolveColumn, levelManager, t, handleDetach, handleColumnsFromGrid, dispatchParams, ribbonDelete],
   );
 
   /**

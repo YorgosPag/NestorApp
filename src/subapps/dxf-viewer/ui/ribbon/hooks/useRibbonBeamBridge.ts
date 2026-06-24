@@ -60,6 +60,9 @@ import {
 } from './bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
+// (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
+import { useRibbonEntityDelete } from './useRibbonEntityDelete';
 // ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο» (στα segments).
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import {
@@ -84,7 +87,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'clearByType'
 >;
 
 export interface UseRibbonBeamBridgeProps {
@@ -148,6 +151,7 @@ export function useRibbonBeamBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
   const resolveBeam = useCallback((): BeamEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -401,9 +405,9 @@ export function useRibbonBeamBridge(
         t('ribbon.commands.beamEditor.deleteConfirm'),
       );
       if (!confirmed) return;
-      EventBus.emit('bim:beam-delete-requested', { beamId: beam.id });
+      ribbonDelete.deleteEntity(beam.id);
     },
-    [resolveBeam, levelManager, t, handleBeamsFromGrid],
+    [resolveBeam, levelManager, t, handleBeamsFromGrid, ribbonDelete],
   );
 
   /**

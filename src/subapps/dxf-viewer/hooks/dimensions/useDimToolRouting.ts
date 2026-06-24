@@ -32,6 +32,7 @@ import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detect
 import { buildPreviewDimensionEntity } from './dimension-create-entity-builder';
 import {
   useDimensionCreate,
+  type DimClickSnapInfo,
   type DimensionCreateAPI,
   type DimensionCreateKey,
   type DimensionCreateStartInput,
@@ -80,7 +81,11 @@ export interface UseDimToolRoutingParams {
 
 export interface DimToolRoutingAPI {
   readonly isDimTool: boolean;
-  readonly handlePoint: (world: Point2D, hoveredEntity?: DetectableEntity) => void;
+  readonly handlePoint: (
+    world: Point2D,
+    hoveredEntity?: DetectableEntity,
+    snap?: DimClickSnapInfo,
+  ) => void;
   readonly handleHover: (world: Point2D | null, hoveredEntity?: DetectableEntity) => void;
   readonly handleCancel: () => void;
   readonly handleKey: (key: DimensionCreateKey) => void;
@@ -167,7 +172,7 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
   });
 
   const handlePoint = useCallback(
-    (world: Point2D, hoveredEntity?: DetectableEntity) => {
+    (world: Point2D, hoveredEntity?: DetectableEntity, snap?: DimClickSnapInfo) => {
       // ADR-362 hotfix (2026-05-19 round 2): use the click `world` directly,
       // not `state.cursorWorld`. The earlier hotfix substituted cursorWorld
       // for the dimLineRef click to dodge snap-mismatch between hover and
@@ -181,7 +186,7 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
       // collapses onto click#2 → dim line jumps onto the feature segment.
       // Enter-based commits keep using cursorWorld in `useDimensionCreate`
       // because there's no click event to source `world` from.
-      dimCreate.onClick(world, hoveredEntity);
+      dimCreate.onClick(world, hoveredEntity, snap);
 
       // Skip preview re-push when this click flipped the store to
       // `commit-ready`. The commit runs in a microtask (queueMicrotask in

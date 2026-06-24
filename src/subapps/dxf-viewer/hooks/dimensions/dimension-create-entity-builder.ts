@@ -26,6 +26,9 @@ import type {
 import type { LineEntity } from '../../types/entities';
 import type { ClickRecord, DimensionCreateState } from './dimension-create-state';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
+import { ExtendedSnapType } from '../../snapping/extended-types';
+import { getLineParameter, getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+import { calculateAngle, calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   buildArcLength,
   buildDiameter,
@@ -281,9 +284,8 @@ function collectAssociations(
     case 'aligned':
     case 'angular3P':
       state.clicks.forEach((click, i) => {
-        const ref = click.pickedEntity;
-        if (!ref) return;
-        out.push(makeAssociation(i, ref));
+        const a = makeAssociation(i, click);
+        if (a) out.push(a);
       });
       return out;
     case 'angular2L':
@@ -294,7 +296,8 @@ function collectAssociations(
       pushLineAssociation(out, state.clicks[1]?.pickedEntity, 3);
       // arcPoint pick (rare but possible).
       if (state.clicks[2]?.pickedEntity) {
-        out.push(makeAssociation(4, state.clicks[2].pickedEntity));
+        const a = makeAssociation(4, state.clicks[2]);
+        if (a) out.push(a);
       }
       return out;
     case 'radius':
@@ -306,10 +309,14 @@ function collectAssociations(
     }
     case 'diameter': {
       // defPoints[0,1] both ride on the picked circle (antipodal on perimeter).
-      const picked = state.clicks[0]?.pickedEntity;
+      // ADR-362 Phase J3 — anchor each via its angular `param` so they follow
+      // the circle on move/resize: side1 = direction of click 1, side2 = +π.
+      const click = state.clicks[0];
+      const picked = click?.pickedEntity;
       if (picked && picked.type === 'circle') {
-        out.push(makeNearestAssociation(0, picked, 0));
-        out.push(makeNearestAssociation(1, picked, 1));
+        const baseAngle = calculateAngle(picked.center, click.world);
+        out.push(makeCircleAngleAssociation(0, picked.id, baseAngle, 0));
+        out.push(makeCircleAngleAssociation(1, picked.id, baseAngle + Math.PI, 1));
       }
       return out;
     }
@@ -335,8 +342,8 @@ function collectAssociations(
     }
     case 'ordinate': {
       // defPoints[0] = measured feature; bind to the host entity if click 1 hovered one.
-      const picked = state.clicks[0]?.pickedEntity;
-      if (picked) out.push(makeAssociation(0, picked));
+      const a = makeAssociation(0, state.clicks[0]);
+      if (a) out.push(a);
       return out;
     }
     case 'baseline':
@@ -345,8 +352,8 @@ function collectAssociations(
       // Inherited points (extOrigin1 / dimLineRef) trace back through `parentDimensionId`
       // — chained-builder.ts:resolveChain walks the chain at render time, so no
       // associations are duplicated here.
-      const picked = state.clicks[0]?.pickedEntity;
-      if (picked) out.push(makeAssociation(0, picked));
+      const a = makeAssociation(0, state.clicks[0]);
+      if (a) out.push(a);
       return out;
     }
     default:
@@ -365,15 +372,21 @@ function makeCenterAssociation(
   };
 }
 
-function makeNearestAssociation(
+/**
+ * ADR-362 Phase J3 — `nearest` anchor on a circle/arc addressed by `angle`.
+ * Used by diameter (two antipodal perimeter points) so they orbit the circle.
+ */
+function makeCircleAngleAssociation(
   defPointIndex: number,
-  entity: DetectableEntity,
+  geometryId: string,
+  angle: number,
   subIndex: number,
 ): DimensionAssociation {
   return {
     defPointIndex,
-    geometryId: entity.id,
+    geometryId,
     associationType: 'nearest',
+    param: angle,
     subIndex,
   };
 }
@@ -392,17 +405,89 @@ function pushLineAssociation(
   });
 }
 
-function makeAssociation(defPointIndex: number, entity: DetectableEntity): DimensionAssociation {
-  // ADR-362 — 'nearest' preserves the clicked world position in
-  // `applyAssociationUpdates` (recomputeAssociatedDefPoint returns null for
-  // 'nearest'). Using 'endpoint' without a `subIndex` previously caused the
-  // observer to overwrite defPoints with `line.end`, snapping the dim to the
-  // line's far endpoint after commit. Until a snap-aware capture path
-  // resolves the exact sub-feature (endpoint subIndex 0/1, midpoint, etc.)
-  // we keep the geometry reference for orphan tracking but skip recompute.
+/**
+ * Generic geometry-pick association (linear / aligned / angular3P / ordinate /
+ * chained extOrigin). ADR-362 Phase J3 (gap #2) closes the prior placeholder:
+ *
+ *   - INTERSECTION snap → `intersection` anchor on both hosts (`geometryId` ×
+ *     `geometryId2`); recompute re-solves the crossing.
+ *   - otherwise → `nearest` anchor with a parametric `param` (line/polyline t,
+ *     circle/arc angle) computed by projecting the clicked point onto the host,
+ *     so the def point follows the geometry instead of staying frozen.
+ *
+ * Unknown host shapes fall back to a bare `nearest` (geometry ref kept for
+ * orphan tracking, recompute preserves position — matches the 2026-05-19 hotfix).
+ */
+function makeAssociation(
+  defPointIndex: number,
+  click: ClickRecord | undefined,
+): DimensionAssociation | null {
+  const entity = click?.pickedEntity;
+  if (!click || !entity) return null;
+
+  if (click.snapMode === ExtendedSnapType.INTERSECTION && click.pickedEntity2) {
+    return {
+      defPointIndex,
+      geometryId: entity.id,
+      geometryId2: click.pickedEntity2.id,
+      associationType: 'intersection',
+    };
+  }
+
+  const anchor = computeNearestParam(entity, click.world);
+  if (!anchor) {
+    return { defPointIndex, geometryId: entity.id, associationType: 'nearest' };
+  }
   return {
     defPointIndex,
     geometryId: entity.id,
     associationType: 'nearest',
+    param: anchor.param,
+    ...(anchor.subIndex !== undefined ? { subIndex: anchor.subIndex } : {}),
   };
+}
+
+/**
+ * Project `world` onto `entity` and return the parametric anchor:
+ *   - line            → { param: t }
+ *   - polyline/lwpoly → { param: t, subIndex: nearest segment index }
+ *   - circle/arc      → { param: angle }
+ * Returns null for shapes without a parametric nearest (caller preserves).
+ * Reuses the geometry SSoT (`getLineParameter` / `getNearestPointOnLine` /
+ * `calculateAngle`) — no new projection math.
+ */
+function computeNearestParam(
+  entity: DetectableEntity,
+  world: Point2D,
+): { param: number; subIndex?: number } | null {
+  switch (entity.type) {
+    case 'line':
+      return { param: getLineParameter(world, entity.start, entity.end) };
+    case 'circle':
+    case 'arc':
+      return { param: calculateAngle(entity.center, world) };
+    case 'polyline':
+    case 'lwpolyline': {
+      const verts = entity.vertices;
+      if (!verts || verts.length < 2) return null;
+      let bestSeg = 0;
+      let bestDist = Infinity;
+      const last = entity.closed ? verts.length : verts.length - 1;
+      for (let i = 0; i < last; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        const foot = getNearestPointOnLine(world, a, b, true);
+        const d = calculateDistance(world, foot);
+        if (d < bestDist) {
+          bestDist = d;
+          bestSeg = i;
+        }
+      }
+      const a = verts[bestSeg];
+      const b = verts[(bestSeg + 1) % verts.length];
+      return { param: getLineParameter(world, a, b), subIndex: bestSeg };
+    }
+    default:
+      return null;
+  }
 }

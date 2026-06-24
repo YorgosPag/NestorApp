@@ -15,8 +15,9 @@
  * dispatcher delegation path for those types.
  */
 
-import type { LineEntity } from '../../../types/entities';
+import type { LineEntity, CircleEntity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
+import { ExtendedSnapType } from '../../../snapping/extended-types';
 import type {
   Angular2LDimensionEntity,
   Angular3PDimensionEntity,
@@ -263,5 +264,73 @@ describe('buildCommittedDimensionEntity', () => {
     expect(result!.associations).toHaveLength(1);
     expect(result!.associations[0].defPointIndex).toBe(0);
     expect(result!.associations[0].geometryId).toBe('L_host');
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ADR-362 Phase J3 (gap #2) — parametric nearest + intersection capture
+// ──────────────────────────────────────────────────────────────────────────────
+
+function circle(id: string, center: Point2D, radius: number): CircleEntity {
+  return { id, type: 'circle', center, radius, layerId: 'L' } as CircleEntity;
+}
+
+describe('collectAssociations — J3 capture', () => {
+  it('linear nearest pick records a parametric `param` (line t projection)', () => {
+    const l1 = line('L1', { x: 0, y: 0 }, { x: 100, y: 0 });
+    const s = state({
+      status: 'commit-ready',
+      currentType: 'linear',
+      clicks: [
+        { world: { x: 25, y: 0 }, pickedEntity: l1 },   // t = 0.25
+        { world: { x: 75, y: 0 }, pickedEntity: l1 },   // t = 0.75
+        { world: { x: 50, y: 30 } },
+      ],
+    });
+    const result = buildCommittedDimensionEntity(s, { id: 'dim_real', layerId: 'lyr_x' });
+    expect(result!.associations).toHaveLength(2);
+    expect(result!.associations[0]).toMatchObject({
+      defPointIndex: 0, geometryId: 'L1', associationType: 'nearest', param: 0.25,
+    });
+    expect(result!.associations[1].param).toBeCloseTo(0.75);
+  });
+
+  it('intersection snap records a 2-host `intersection` association', () => {
+    const l1 = line('L1', { x: -100, y: 0 }, { x: 100, y: 0 });
+    const l2 = line('L2', { x: 50, y: -100 }, { x: 50, y: 100 });
+    const s = state({
+      status: 'commit-ready',
+      currentType: 'linear',
+      clicks: [
+        { world: { x: 50, y: 0 }, pickedEntity: l1, snapMode: ExtendedSnapType.INTERSECTION, pickedEntity2: l2 },
+        { world: { x: 100, y: 0 }, pickedEntity: l1 },
+        { world: { x: 75, y: 30 } },
+      ],
+    });
+    const result = buildCommittedDimensionEntity(s, { id: 'dim_real', layerId: 'lyr_x' });
+    expect(result!.associations[0]).toMatchObject({
+      defPointIndex: 0,
+      geometryId: 'L1',
+      geometryId2: 'L2',
+      associationType: 'intersection',
+    });
+  });
+
+  it('diameter records two antipodal angular nearest params (base, base+π)', () => {
+    const c = circle('C1', { x: 0, y: 0 }, 50);
+    const s = state({
+      status: 'commit-ready',
+      currentType: 'diameter',
+      clicks: [
+        { world: { x: 50, y: 0 }, pickedEntity: c }, // direction = angle 0
+        { world: { x: 80, y: 80 } },                 // text position
+      ],
+    });
+    const result = buildCommittedDimensionEntity(s, { id: 'dim_dia', layerId: 'lyr_x' });
+    expect(result!.associations).toHaveLength(2);
+    expect(result!.associations[0]).toMatchObject({
+      defPointIndex: 0, geometryId: 'C1', associationType: 'nearest', param: 0,
+    });
+    expect(result!.associations[1].param).toBeCloseTo(Math.PI);
   });
 });
