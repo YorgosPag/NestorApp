@@ -118,6 +118,43 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
 
 ---
 
+## 5b. Crosshair κεντρικό τετράγωνο — unify (κράτα ΛΕΥΚΟ) + «τρύπα» πάντα
+
+**Απόφαση Giorgio (2026-06-24).** Το σταυρόνημα είχε **δύο** ομόκεντρα τετράγωνα στο κέντρο:
+
+| Τετράγωνο | Πηγή | Απόφαση |
+|---|---|---|
+| 🟢 Πράσινο = **PICKBOX** | `cursor.*` (`SUCCESS_BRIGHT`), `pickboxRef` | **ΑΦΑΙΡΕΘΗΚΕ** |
+| ⬜ Λευκό = **APERTURE / APBOX** | `crosshair.color` (WHITE), `apertureRef`, `showAperture/apertureSize` | **ΚΡΑΤΗΘΗΚΕ** |
+
+### 5b.1 Ένας snap-hide μηχανισμός (μηδέν διπλότυπο)
+Η λογική «το κεντρικό τετράγωνο εξαφανίζεται όταν φωτίζεται έλξη» (snap marker «κουμπώνει» το κέντρο)
+**μεταφέρθηκε** από το pickbox στο aperture. `updatePickboxVisibility` → **`updateApertureVisibility`**:
+κρυφό αν `!showAperture || apertureSize<=0 || snapActive`. Ίδια αλυσίδα SSoT
+(`getFullSnapResult → toSnapIndicatorView → isSnapMarkerVisible`), ίδια ADR-040 συμπεριφορά
+(γράφει DOM μόνο όταν αλλάζει το active state). **Δεν υπάρχουν πλέον δύο μηχανισμοί.**
+
+### 5b.2 «Τρύπα» πάντα — οι γραμμές σταματούν στις παρειές του τετραγώνου
+Reuse του υπάρχοντος gap μηχανισμού (`computeSegmentBoxes`/`computeCenterGap`, pure + unit-tested) —
+**κανένας νέος μηχανισμός**. Άλλαξε μόνο η πηγή του gap:
+- **Πριν**: `computeCenterGap({ useCursorGap, centerGapPx, pickBoxSize })` — gap από `pickBoxSize`
+  (gripSettings) και **μόνο** όταν `use_cursor_gap` (default `false` → καμία τρύπα).
+- **Τώρα**: `computeCenterGap({ showCenterSquare, centerSquareSize, useCursorGap, centerGapPx })` —
+  όταν το κεντρικό τετράγωνο είναι ορατό, `gap = apertureSize/2 + CENTER_SQUARE_GAP_CLEARANCE` (=2px)
+  **πάντα** (ανεξάρτητα από `use_cursor_gap`) → οι 4 γραμμές σταματούν στις εξωτερικές παρειές του
+  τετραγώνου + μικρό clearance ώστε να μην ακουμπούν το περίγραμμά του → **πάντα τρύπα** στο εσωτερικό.
+  Χωρίς ορατό τετράγωνο → fallback στο προαιρετικό `use_cursor_gap` (συμπεριφορά αμετάβλητη).
+
+### 5b.3 Dead-UI flag (cursor pickbox)
+Το πράσινο pickbox ζωγραφιζόταν **μόνο** στο `CrosshairOverlay`. Μετά την αφαίρεση, το `cursor.*`
+block (shape/size/color/line_width) στο cursor settings **δεν παράγει πλέον ορατό στοιχείο**, αλλά
+παραμένει στο schema/migration γιατί το επεξεργάζεται ακόμα το settings panel
+(`ui/components/dxf-settings/settings/special/CursorSettings.tsx`) + ribbon `settings-tab-cursor.ts`.
+→ **Flagged ως dead-UI candidate** (cleanup του panel + migration = ξεχωριστό βήμα· δεν αγγίχθηκε για
+να μη σπάσει το settings migration — εντολή handoff).
+
+---
+
 ## 6. Changelog
 - **2026-06-24** — Δημιουργία ADR. Καταγραφή ευρημάτων audit (§2-§3) + απόφαση SSoT (§4).
 - **2026-06-24** — Υλοποίηση (χρωματικό μοντέλο: **type-specific / Revit-rich**, επιλογή Giorgio):
@@ -157,3 +194,18 @@ reuse από `gizmo` (`bim-gizmo-overlay-markers.createSnapMarker`) + `Placement
     το `SNAP_COLORS` δείχνει εκεί — **μηδέν hex literal** στο semantic layer.
   - **Περιττός helper**: `snapColorToThreeHex` (custom parseInt) αφαιρέθηκε — αντικαταστάθηκε με το
     standard codebase pattern `new THREE.Color(hex).getHex()` στο `snap-marker-core`.
+- **2026-06-24 (crosshair κεντρικό τετράγωνο: unify + τρύπα πάντα, Giorgio — βλ. §5b)**:
+  - `CrosshairOverlay.tsx` — **αφαιρέθηκε** το πράσινο pickbox (`pickboxRef` + JSX + style block).
+    Μένει ΕΝΑ κεντρικό τετράγωνο, το λευκό **aperture**. Η snap-hide λογική μετονομάστηκε/μεταφέρθηκε
+    `updatePickboxVisibility → updateApertureVisibility` (ΕΝΑΣ μηχανισμός, ίδια SSoT αλυσίδα).
+  - `crosshair-compositor-layout.ts` — `computeCenterGap` άλλαξε signature: τώρα δέχεται
+    `{ showCenterSquare, centerSquareSize, useCursorGap, centerGapPx }` και επιστρέφει
+    `centerSquareSize/2 + CENTER_SQUARE_GAP_CLEARANCE` όταν το τετράγωνο είναι ορατό (νέα export const
+    `CENTER_SQUARE_GAP_CLEARANCE = 2`) → οι γραμμές σταματούν στις παρειές του τετραγώνου **πάντα**.
+    Fallback στο `use_cursor_gap` χωρίς ορατό τετράγωνο. **Reuse**, όχι νέος μηχανισμός.
+  - Tests `__tests__/crosshair-compositor-layout.test.ts` — ενημερώθηκε το `computeCenterGap` describe
+    (16/16 GREEN).
+  - Dead-UI flag: το cursor pickbox `cursor.*` block παραμένει στο schema/migration (settings panel),
+    flagged ως dead-UI candidate (§5b.3).
+  - 🔴 Εκκρεμεί: browser-verify (ένα λευκό τετράγωνο, τρύπα πάντα, εξαφάνιση στο snap) + commit
+    (staging ADR-040 + ADR-515 → CHECK 6B/6D).

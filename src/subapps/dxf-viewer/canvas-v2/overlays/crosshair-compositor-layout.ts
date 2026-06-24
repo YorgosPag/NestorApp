@@ -81,16 +81,33 @@ export function computeBadgeOffset(gap: number): number {
 }
 
 /**
- * Effective half-gap (CSS px) on each side of the cursor. Zero when the gap is
- * disabled; otherwise at least large enough to clear the pick box.
+ * Extra clearance (CSS px) beyond the centre square's outer face so the arms
+ * never touch its border — guarantees a permanently visible hole inside the
+ * square (Giorgio 2026-06-24, ADR-515).
+ */
+export const CENTER_SQUARE_GAP_CLEARANCE = 2;
+
+/**
+ * Effective half-gap (CSS px) between the cursor centre and the inner edge of
+ * each crosshair arm.
+ *
+ * When the centre square (the AutoCAD aperture / APBOX) is visible, the arms
+ * ALWAYS stop at its outer faces plus a small clearance, so there is permanently
+ * a hole inside the square — the cross never crosses the centre box (Giorgio
+ * 2026-06-24, ADR-515). With no centre square it falls back to the optional
+ * user-configured cursor gap.
  */
 export function computeCenterGap(opts: {
+  readonly showCenterSquare: boolean;
+  readonly centerSquareSize: number;
   readonly useCursorGap: boolean;
   readonly centerGapPx: number;
-  readonly pickBoxSize: number;
 }): number {
+  if (opts.showCenterSquare && opts.centerSquareSize > 0) {
+    return opts.centerSquareSize / 2 + CENTER_SQUARE_GAP_CLEARANCE;
+  }
   if (!opts.useCursorGap) return 0;
-  return Math.max(opts.pickBoxSize + 4, opts.centerGapPx || 5);
+  return Math.max(0, opts.centerGapPx || 5);
 }
 
 /** Cursor position in area-local coordinates (overlay coords minus ruler margins). */

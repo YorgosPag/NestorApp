@@ -15,6 +15,7 @@ import {
   isWithinArea,
   translate3d,
   segmentBackground,
+  CENTER_SQUARE_GAP_CLEARANCE,
 } from '../crosshair-compositor-layout';
 
 describe('computeArmLength', () => {
@@ -66,15 +67,31 @@ describe('computeBadgeOffset', () => {
 });
 
 describe('computeCenterGap', () => {
-  it('is zero when the cursor gap is disabled', () => {
-    expect(computeCenterGap({ useCursorGap: false, centerGapPx: 20, pickBoxSize: 8 })).toBe(0);
+  it('stops the arms at the centre square faces + clearance (always a hole inside it)', () => {
+    // apertureSize/2 + clearance = 10/2 + 2 = 7. Independent of useCursorGap.
+    expect(
+      computeCenterGap({ showCenterSquare: true, centerSquareSize: 10, useCursorGap: false, centerGapPx: 5 }),
+    ).toBe(10 / 2 + CENTER_SQUARE_GAP_CLEARANCE);
+    // Larger square ⇒ larger hole; still ignores the cursor-gap settings.
+    expect(
+      computeCenterGap({ showCenterSquare: true, centerSquareSize: 20, useCursorGap: true, centerGapPx: 3 }),
+    ).toBe(20 / 2 + CENTER_SQUARE_GAP_CLEARANCE);
   });
 
-  it('clears the pick box and honours the configured minimum gap', () => {
-    // max(pickBox + 4, centerGapPx) = max(8+4, 5) = 12
-    expect(computeCenterGap({ useCursorGap: true, centerGapPx: 5, pickBoxSize: 8 })).toBe(12);
-    // max(8+4, 20) = 20
-    expect(computeCenterGap({ useCursorGap: true, centerGapPx: 20, pickBoxSize: 8 })).toBe(20);
+  it('falls back to no gap with no centre square and cursor gap disabled', () => {
+    expect(
+      computeCenterGap({ showCenterSquare: false, centerSquareSize: 0, useCursorGap: false, centerGapPx: 20 }),
+    ).toBe(0);
+  });
+
+  it('falls back to the configured cursor gap when there is no centre square', () => {
+    expect(
+      computeCenterGap({ showCenterSquare: false, centerSquareSize: 0, useCursorGap: true, centerGapPx: 12 }),
+    ).toBe(12);
+    // Empty/zero centerGapPx defaults to 5.
+    expect(
+      computeCenterGap({ showCenterSquare: false, centerSquareSize: 0, useCursorGap: true, centerGapPx: 0 }),
+    ).toBe(5);
   });
 });
 
