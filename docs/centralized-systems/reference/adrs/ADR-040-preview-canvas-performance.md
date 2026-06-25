@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-25 — Selection-click jank #1: gate-at-mount τα βαριά always-mounted dialogs/hosts (Root B amplifier)
+
+**Status**: IMPLEMENTED 2026-06-25 (Opus 4.8), ✅ 6 jest GREEN · 🔴 browser-verify (React DevTools profile) + commit (Giorgio) pending. Συνέχεια του `HANDOFF_2026-06-25_selection-cascade-and-always-mounted-dialogs.md` §3 #1 (το #2 — SelectionContext cascade — είναι Orchestrator-tier, χωριστά, ΜΕΤΑ από έγκριση).
+
+**Πρόβλημα (Root B, amplifier του 122ms selection commit)**: το `app/DxfViewerDialogs.tsx` mount-άρει **29 dialog/host ΧΩΡΙΣ gate**. Σε κάθε κλικ-επιλογή ο `DxfViewerContent` re-render-άρει (Root A cascade) → νέο `ui` object → **και τα 29 παιδιά re-render-άρουν**, ακόμη κι αν τα `[scene]`/`[t]`-gated memos τους δεν recompute. Το κόστος είναι το **πλήθος** των fibers που μπαίνουν στο commit, όχι recompute — άρα **gate-at-mount** (unmount κλειστών) είναι ο μόνος ουσιαστικά αποδοτικός fix εδώ· internal input-gating ΔΕΝ μειώνει το re-render count.
+
+**Fix**: (α) **Gate-at-mount τα καθαρά controlled** (open flag στον γονιό, κανένας εσωτερικός EventBus listener) στο `DxfViewerDialogs.tsx`: `{findReplaceOpen && <DxfFindReplaceHost/>}` (σάρωνε ΟΛΕΣ τις text οντότητες κλειστό), `{symbolPickerOpen && …}`, `{ui.creditsModalOpen && <CreditsDialog/>}` (un-memoized `.filter()` κάθε render). (β) **Τα EventBus-driven hosts** (open=εσωτερικό state + listener πρέπει να μείνει mounted) → **outer(listener+state)/inner(heavy+dialog) split**, gate inner στο `open`: `BimScheduleHost` → `BimScheduleContent` (O(n) scene scan + `useBimScheduleLookups` μόνο ανοιχτό)· `RenumberOpeningsHost` → `RenumberOpeningsContent` (17 i18n prefix `t()` + `currentFloor` + `handleConfirm` μόνο ανοιχτό). Ο EventBus listener + Firestore load μένουν στο always-mounted outer → μηδέν regression στο ribbon-open. Round-trip state του BIM schedule διατηρείται στο always-mounted `useBimScheduleExport` (initial* props).
+
+**ΜΗΝ πειραχτούν** τα self-subscribing confirm-dialogs (`Column{Perimeter,AdoptSize,BatchFill,Promote}ConfirmDialog`, `HatchOverlapConfirmDialog`) — έχουν ήδη φτηνό `if(!state.open) return null` μετά ΕΝΑ `useSyncExternalStore`. **Files**: MOD `app/DxfViewerDialogs.tsx`, `app/BimScheduleHost.tsx`, `ui/components/bim-openings/RenumberOpeningsHost.tsx`· NEW `app/__tests__/BimScheduleHost-gate.test.tsx` (3) + `ui/components/bim-openings/__tests__/RenumberOpeningsHost-gate.test.tsx` (3). **Κανένα** δεν είναι CHECK 6B/6D αρχείο (όχι canvas-drawing/micro-leaf) → δεν απαιτείται staging ADR-040 για τον hook, αλλά καταγράφεται εδώ ως perf του selection-cascade domain. ✅ Google-level: YES — closed dialogs εκτός per-selection render tree, EventBus lifecycle ακέραιο, idempotent, μηδέν νέο store/μηχανισμός.
+
 ### 2026-06-25 — Cursor-lag Φ12.1: hit-test index rebuild έβγαλε από το per-hover hot path (O(n)→O(1) ανά frame)
 
 **Status**: IMPLEMENTED 2026-06-25 (Opus 4.8), **code-proven root cause**. **Incident (Giorgio)**: κενός καμβάς = ομαλό· **μόλις φορτωθεί μια (ακόμα και μικρή) κάτοψη → ο κέρσορας/εφαρμογή «δυσφορεί»**, **πολύ χειρότερα στον Chrome**, **ακόμη και με τις έλξεις OFF**.

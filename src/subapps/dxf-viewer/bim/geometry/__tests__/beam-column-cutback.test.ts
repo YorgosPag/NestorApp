@@ -282,3 +282,42 @@ describe('extendBeamOutlineIntoFramingColumns (ADR-493 — κυκλική παρ
     expect(extendBeamOutlineIntoFramingColumns(FRAMED_BEAM, AX_S, AX_E, [far])).toBeNull();
   });
 });
+
+describe('extendBeamOutlineIntoFramingColumns — ασύμμετρη Γ/L boundary column (ADR-529 footprint-aware)', () => {
+  // Σενάριο προαγωγής ADR-529 (στιγμιότυπο 2026-06-25): η κολόνα έγινε Γ (reversed-L «πιστόλι») —
+  // foot πλάτους = beamWidth προς το δοκάρι (ανατολικά, x∈[−50,200], north-flush y∈[−125,125]) +
+  // κατακόρυφο σκέλος x∈[−200,−50] y∈[−400,400]. Το κεντροειδές της Γ μετατοπίζεται προς το σκέλος
+  // (x≈−56.5) — με το παλιό `polygonCentroid` η επέκταση τραβούσε το carve βαθύτερα (υπερ-επέκταση).
+  const GAMMA: Pt2[] = [
+    { x: -200, y: -400 }, { x: -50, y: -400 }, { x: -50, y: -125 },
+    { x: 200, y: -125 }, { x: 200, y: 125 }, { x: -50, y: 125 },
+    { x: -50, y: 400 }, { x: -200, y: 400 },
+  ];
+  // Δοκάρι north-flush (y∈[−125,125]), άκρο start στην ανατ. παρειά του ποδιού (x=200)· άξονας y=0.
+  const FRAMED_BEAM: Pt2[] = [
+    { x: 200, y: -125 }, { x: 1200, y: -125 }, { x: 1200, y: 125 }, { x: 200, y: 125 },
+  ];
+  const AX_S: Pt2 = { x: 200, y: 0 };
+  const AX_E: Pt2 = { x: 1200, y: 0 };
+
+  it('επεκτείνει στο footprint-midpoint (x≈0), ΟΧΙ στο μετατοπισμένο centroid (x≈−56) → μηδέν υπερ-επέκταση', () => {
+    const ext = extendBeamOutlineIntoFramingColumns(FRAMED_BEAM, AX_S, AX_E, [GAMMA]);
+    expect(ext).not.toBeNull();
+    const xs = ext!.map((p) => p.x).sort((a, b) => a - b);
+    expect(xs[0]).toBeCloseTo(0, 6);     // start edge → midpoint παρειών (0+400)/2 = 200 → x = 200−200
+    expect(xs[1]).toBeCloseTo(0, 6);
+    expect(xs[0]).toBeGreaterThan(-30);  // ΟΧΙ το centroid (~−56.5) → καμία υπερ-επέκταση μέσα στη Γ
+    expect(xs[2]).toBeCloseTo(1200, 6);  // end edge αμετάβλητο
+  });
+
+  it('cutback: north-flush ΑΜΕΤΑΒΛΗΤΟ (max y=125, min y=−125) + κομμένο στην παρειά (x=200, column wins)', () => {
+    const ext = extendBeamOutlineIntoFramingColumns(FRAMED_BEAM, AX_S, AX_E, [GAMMA])!;
+    const pieces = computeBeamCutbackOutline(ext, [GAMMA]);
+    expect(pieces).not.toBeNull();
+    const ys = pieces!.flat().map((p) => p.y);
+    expect(Math.max(...ys)).toBeCloseTo(125, 4);   // βόρεια όψη ΔΕΝ πέφτει νότια (north-flush διατηρείται)
+    expect(Math.min(...ys)).toBeCloseTo(-125, 4);
+    const minX = Math.min(...pieces!.flat().map((p) => p.x));
+    expect(minX).toBeCloseTo(200, 4);              // κομμένο στην παρειά του ποδιού, ΟΧΙ βαθύτερα στο σκέλος
+  });
+});

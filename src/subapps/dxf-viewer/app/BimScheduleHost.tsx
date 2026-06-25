@@ -63,8 +63,31 @@ function isScheduleEntity(entity: Entity): entity is AnyBimEntity {
   );
 }
 
-export function BimScheduleHost({ selectionIds }: BimScheduleHostProps): React.JSX.Element {
+/**
+ * Always-mounted lifecycle shell: owns the open state + the ribbon EventBus
+ * listener, but renders NOTHING heavy while closed. The O(n) scene scan +
+ * lookups live in {@link BimScheduleContent}, which mounts only when the dialog
+ * is open — so a closed schedule no longer re-renders on every selection commit
+ * (Root B amplifier in HANDOFF_2026-06-25_selection-cascade-and-always-mounted-dialogs).
+ */
+export function BimScheduleHost({ selectionIds }: BimScheduleHostProps): React.JSX.Element | null {
   const { openDialog, dialogProps } = useBimScheduleExport();
+
+  // Ribbon «Πίνακας BIM» → EventBus → open. Cleanup unsubscribes on unmount.
+  React.useEffect(() => EventBus.on('bim:schedule-dialog-requested', openDialog), [openDialog]);
+
+  if (!dialogProps.open) return null;
+
+  return <BimScheduleContent dialogProps={dialogProps} selectionIds={selectionIds} />;
+}
+
+interface BimScheduleContentProps {
+  readonly dialogProps: ReturnType<typeof useBimScheduleExport>['dialogProps'];
+  readonly selectionIds: readonly string[];
+}
+
+/** Mounts only while the dialog is open — carries the expensive scene scan. */
+function BimScheduleContent({ dialogProps, selectionIds }: BimScheduleContentProps): React.JSX.Element {
   const scene = useCurrentSceneModel();
 
   const entities = React.useMemo<readonly AnyBimEntity[]>(
@@ -74,9 +97,6 @@ export function BimScheduleHost({ selectionIds }: BimScheduleHostProps): React.J
 
   const { lookups, availableFloors, availableCategories, availableBuildings } =
     useBimScheduleLookups(entities);
-
-  // Ribbon «Πίνακας BIM» → EventBus → open. Cleanup unsubscribes on unmount.
-  React.useEffect(() => EventBus.on('bim:schedule-dialog-requested', openDialog), [openDialog]);
 
   return (
     <BimScheduleDialog

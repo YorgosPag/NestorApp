@@ -50,6 +50,22 @@ ${point2d([[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]])}
 </building></body>
 </tekton>`;
 
+// ADR-531 Φ5b.1 — αρχείο με 1 διάσταση + 1 τοίχο + 2 κουφώματα (όπως «Ισόγειο 312.tek»).
+const XM = (x00: number, x11: number, x20: number, x21: number) =>
+  `<xmatrix><x00>${x00}</x00><x01>0</x01><x10>0</x10><x11>${x11}</x11><x20>${x20}</x20><x21>${x21}</x21></xmatrix>`;
+const TEK_STRUCT = `<?xml version="1.0" encoding="UTF-8"?>
+<tekton><head><numfloors>1</numfloors></head><body><building><floor>
+<dim><record><type>0</type><color>00FF00</color><size>0.15875</size>
+<seg><record><end0X>-2.21</end0X><end0Y>6.98</end0Y><end1X>-0.11</end1X><end1Y>6.98</end1Y>
+<gap0X>-1.32</gap0X><gap0Y>6.98</gap0Y><gap1X>-1.0</gap1X><gap1Y>6.98</gap1Y><s>2.10</s>${XM(1, 1, -1.32, 6.39)}
+</record></seg></record></dim>
+<wall><record><type>1</type><height>3</height><elevation>0</elevation><inner_width>0.09</inner_width><color>80BCFC</color>
+${XM(5.03, 0.25, -8.25, 0.58)}<open>
+<record><type>2</type><elevation>1</elevation><top>2.2</top><style>1</style><color>50A490</color>${XM(1.4, -1, -7.86, 0.73)}</record>
+<record><type>2</type><elevation>1</elevation><top>2.2</top><style>0</style><color>50A490</color>${XM(-1.4, -1, -4.16, 0.73)}</record>
+</open></record></wall>
+</floor></building></body></tekton>`;
+
 describe('isTekFileName', () => {
   it('αναγνωρίζει .tek και .tek.txt', () => {
     expect(isTekFileName('ΣΚΑΛΑ.tek')).toBe(true);
@@ -106,5 +122,19 @@ describe('importTekContent', () => {
     // bounds καλύπτουν ΚΑΙ τα 2Δ primitives (η γραμμή φτάνει x=3m → 3000mm)
     const b = result.scene?.bounds;
     expect(b && b.max.x).toBeGreaterThanOrEqual(3000);
+  });
+
+  it('ADR-531 Φ5b.1 — εισάγει διάσταση + τοίχο + 2 κουφώματα ως 2Δ primitives', () => {
+    const result = importTekContent(TEK_STRUCT, 'level-1');
+    expect(result.success).toBe(true);
+    expect(result.stats.dimCount).toBe(1);
+    expect(result.stats.wallCount).toBe(1);
+    expect(result.stats.openingCount).toBe(2);
+    // wall: 4 footprint + 2 κουφώματα × 3 = 10· dim: 2 γραμμές + 1 κείμενο = 3.
+    const lines = result.scene?.entities.filter((e) => e.type === 'line') ?? [];
+    const texts = result.scene?.entities.filter((e) => e.type === 'text') ?? [];
+    expect(lines).toHaveLength(12);
+    expect(texts).toHaveLength(1);
+    expect(texts[0] && 'text' in texts[0] && texts[0].text).toBe('2.10');
   });
 });

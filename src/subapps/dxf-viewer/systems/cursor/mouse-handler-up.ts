@@ -274,6 +274,15 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             setColumnFaceSizing(null);
             worldPoint = snap.point; // effectiveCursor αυτούσιος (corner/grid-adjusted) — όπως το ghost
           }
+        } else if (activeTool === 'beam') {
+          // preview ≡ commit (ADR-514 §2 / Giorgio 2026-06-25) — το beam tool, ΟΠΩΣ το column,
+          // ΔΕΝ κάνει `findSnapPoint` εδώ (double-snap): ο `resolveStartAnchor` (use-beam-commit)
+          // καλεί τον ΙΔΙΟ `resolveBimCursorSnap` με τον effectiveCursor (ImmediateSnap = ό,τι έδειξε
+          // ο scheduler/ghost — corner-projection / BIM χαρακτηριστικό / grid). Με το `findSnapPoint`
+          // το commit ΞΑΝΑ-snapάριζε σε διαφορετικό σημείο (π.χ. παρειά γειτονικής κολόνας) → ο cursor
+          // άλλαζε μέλος/third στο `spanJustification` → το justified auto-span (north-flush) έβγαινε
+          // **centered** (preview≠commit). Με τον ΙΔΙΟ effectiveCursor → north-flush by construction.
+          worldPoint = resolveEffectivePreviewCursor(worldPoint);
         } else {
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
           if (snapResult && snapResult.found && snapResult.snappedPoint) {

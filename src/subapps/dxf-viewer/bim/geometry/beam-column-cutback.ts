@@ -30,8 +30,6 @@ import { safeDifference } from './shared/safe-polygon-boolean';
 import {
   multiPolygonArea,
   pointInPolygon,
-  polygonCentroid,
-  projectPointOnAxis,
   projectPolygonOnAxis,
 } from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
@@ -275,20 +273,21 @@ function outlineHalfWidth(outline: readonly Pt2[], ax: Pt2, ux: number, uy: numb
   return Math.max(Math.abs(perpMin), Math.abs(perpMax));
 }
 
-/** Pt2 footprint → Point3D[] (z=0) για το `polygonCentroid` (z-agnostic) SSoT. */
-function toXY0(fp: readonly Pt2[]): { x: number; y: number; z: number }[] {
-  return fp.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-}
-
 /**
  * Πόση εσωτερική επέκταση (canvas units) χρειάζεται το άκρο `endpoint` κατά τον
  * μοναδιαίο `(ix,iy)` (= −u για start, +u για end) ώστε το carve-outline να καλύψει
- * το footprint κολώνας που πλαισιώνει αυτό το άκρο. Επιστρέφει την προβολή του κέντρου
- * (clamp στο centroid). 0 όταν καμία κολώνα δεν πλαισιώνει: (α) κέντρο εσωτερικά του
- * άκρου, (β) κέντρο εντός μισού-πλάτους από τον άξονα, (γ) κοντινή παρειά κοντά στο άκρο.
+ * το footprint κολώνας που πλαισιώνει αυτό το άκρο. Επιστρέφει το **«κέντρο» κατά τον
+ * άξονα** = midpoint των παρειών (clamped στο εσωτερικό του άκρου). 0 όταν καμία κολώνα
+ * δεν πλαισιώνει: (α) footprint εκτός εσωτερικού του άκρου, (β) footprint εκτός μισού-
+ * πλάτους από τον άξονα, (γ) κοντινή παρειά μακριά από το άκρο.
  *
- * Reuse SSoT (N.0.2): `polygonCentroid` (κέντρο footprint) + `projectPointOnAxis`
- * (along/perp) — μηδέν διπλότυπη geometry· ίδιο projection core με `projectColumnCenterOnAxis`.
+ * **ADR-529 (footprint-aware fix):** πριν χρησιμοποιούσε `polygonCentroid` → για **ασύμμετρες
+ * διατομές** (L/T/U boundary columns, ADR-529 promotion) το κεντροειδές **μετατοπίζεται** προς το
+ * σκέλος → η επέκταση τραβούσε το carve βαθύτερα → ορατή **υπερ-επέκταση** + ασύμμετρο reprofiling
+ * του cutback (φαινομενική «πτώση» νότια του δοκαριού). Το «κέντρο κατά τον άξονα» ορίζεται πλέον
+ * **position-independent & kind-agnostic** = `(alongMin+alongMax)/2` των footprint παρειών (ίδιο
+ * SSoT root με `projectColumnFootprintOnAxis`/ADR-494). Κύκλος/ορθογώνιο: midpoint = centroid
+ * (μηδέν regression). Reuse `projectPolygonOnAxis` (N.0.2 — μηδέν διπλότυπη geometry).
  */
 function framingInwardExtent(
   endpoint: Pt2,
@@ -300,15 +299,17 @@ function framingInwardExtent(
   let best = 0;
   for (const fp of footprints) {
     if (fp.length < 3) continue;
-    const c = polygonCentroid(toXY0(fp));
-    // Κέντρο κολώνας ως προς το άκρο, προβολή στον ΕΣΩΤΕΡΙΚΟ άξονα (ix,iy): along + perp.
-    const centre = projectPointOnAxis(c.x, c.y, endpoint.x, endpoint.y, ix, iy);
-    if (centre.along <= 0) continue; // κολώνα όχι εσωτερικά αυτού του άκρου (π.χ. mid-span)
-    if (centre.perp > halfWidth) continue; // κέντρο εκτός πλάτους δοκαριού
-    // Κοντινή παρειά κολώνας κατά (ix,iy) από το άκρο = alongMin (reuse polygon SSoT).
-    const nearProj = projectPolygonOnAxis(fp, endpoint.x, endpoint.y, ix, iy).alongMin;
-    if (nearProj > halfWidth) continue; // κολώνα μακριά από το άκρο → όχι framing join
-    if (centre.along > best) best = centre.along;
+    // Footprint-aware προβολή στον ΕΣΩΤΕΡΙΚΟ άξονα (ix,iy): παρειές [alongMin,alongMax] + perp
+    // (0 όταν το footprint τέμνει τον άξονα — ίδια framing-semantic με `projectColumnFootprintOnAxis`).
+    const { alongMin, alongMax, perpMin, perpMax } = projectPolygonOnAxis(fp, endpoint.x, endpoint.y, ix, iy);
+    if (alongMax <= 0) continue; // footprint όχι εσωτερικά αυτού του άκρου (π.χ. mid-span / outward)
+    const perp = perpMin <= 0 && perpMax >= 0 ? 0 : Math.min(Math.abs(perpMin), Math.abs(perpMax));
+    if (perp > halfWidth) continue; // footprint εκτός πλάτους δοκαριού
+    if (alongMin > halfWidth) continue; // κοντινή παρειά μακριά από το άκρο → όχι framing join
+    // «Κέντρο» body εσωτερικά του άκρου = midpoint παρειών (clamp near-face στο 0 ώστε τυχόν
+    // outward σκέλος —foot πέρα από το άκρο— να μη μειώνει την επέκταση μέσα στο σώμα).
+    const centerAlong = (Math.max(alongMin, 0) + alongMax) / 2;
+    if (centerAlong > best) best = centerAlong;
   }
   return best;
 }

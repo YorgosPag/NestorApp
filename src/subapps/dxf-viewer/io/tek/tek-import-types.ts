@@ -125,6 +125,72 @@ export interface TekTextRecord {
   readonly fontFamily: string;
 }
 
+/**
+ * ADR-531 Φ5b — ένα «άνοιγμα» (κούφωμα: πόρτα/παράθυρο) μέσα σε `<wall><open><record>`
+ * (entity type 2). Matrix-placed: `<xmatrix>` x00 = πλάτος (μέτρα) κατά τον u-άξονα του τοίχου,
+ * (x20,x21) = θέση. `elevation` = στάθμη περβαζιού, `top` = ανώφλι (μέτρα). Y-up, χωρίς μετατροπή.
+ */
+export interface TekOpeningRecord {
+  /** `<xmatrix>` — θέση + πλάτος (x00) + προσανατολισμός του ανοίγματος. */
+  readonly matrix: TekXMatrix;
+  /** `<elevation>` — στάθμη περβαζιού/κατωφλιού (μέτρα). */
+  readonly elevationM: number;
+  /** `<top>` — στάθμη ανωφλιού (μέτρα). Ύψος ανοίγματος = top − elevation. */
+  readonly topM: number;
+  /** `<style>` — υπο-τύπος κουφώματος του Τέκτονα (0/1…). Πληροφοριακό. */
+  readonly style: number;
+  /** `<color>` RGB hex (όπως line/arc). */
+  readonly color: string;
+}
+
+/**
+ * ADR-531 Φ5b — ένας **3Δ τοίχος** `<wall><record>` (entity type 1). MATRIX-PLACED (ΟΧΙ
+ * polyline): start = (x20,x21), u-άξονας = (x00,x01) → end = start + u (μήκος = |u|), v-άξονας
+ * = (x10,x11) = πάχος band στην κάτοψη. Τα ανοίγματα ζουν nested στο `<open>`. Y-up, μέτρα.
+ */
+export interface TekWallRecord {
+  /** `<xmatrix>` — τοποθέτηση unit-square τοίχου σε world (μέτρα). */
+  readonly matrix: TekXMatrix;
+  /** `<height>` — ύψος τοίχου (μέτρα). */
+  readonly heightM: number;
+  /** `<elevation>` — στάθμη βάσης (μέτρα). */
+  readonly elevationM: number;
+  /** `<inner_width>` — πάχος εσωτερικού φύλλου (μέτρα)· fallback πάχους αν λείπει το v-scale. */
+  readonly innerWidthM: number;
+  /** `<color>` RGB hex. */
+  readonly color: string;
+  /** Τα `<open><record>` ανοίγματα του τοίχου (κούφωματα). */
+  readonly openings: readonly TekOpeningRecord[];
+}
+
+/** ADR-531 Φ5b — μία «πατιά» διάστασης (`<seg><record>`): η ζωγραφισμένη γραμμή + το κείμενο. */
+export interface TekDimSeg {
+  /** `<end0X/Y>`–`<end1X/Y>` — άκρα της γραμμής διάστασης (μέτρα, Y-up). */
+  readonly end0: TekPoint2D;
+  readonly end1: TekPoint2D;
+  /** `<gap0X/Y>`–`<gap1X/Y>` — το κενό όπου κάθεται το κείμενο (μέτρα). */
+  readonly gap0: TekPoint2D;
+  readonly gap1: TekPoint2D;
+  /** `<s>` — η τιμή κειμένου (π.χ. "2.10"). */
+  readonly text: string;
+  /** `<xmatrix>` του seg — θέση/μέγεθος του κειμένου τιμής. */
+  readonly textMatrix: TekXMatrix;
+}
+
+/**
+ * ADR-531 Φ5b — μία **διάσταση** `<dim><record>` (entity type 0). Αναπαριστάται πιστά από τις
+ * ήδη υπολογισμένες «πατιές» (`<seg>`) του Τέκτονα — μηδέν geometry math (όπως το preserve-and-replay
+ * των σκαλών). `color` = `<color>` της διάστασης (π.χ. 00FF00).
+ */
+export interface TekDimRecord {
+  /** Οι ζωγραφισμένες πατιές της διάστασης (συνήθως 1). */
+  readonly segs: readonly TekDimSeg[];
+  /** `<color>` RGB hex της διάστασης. */
+  readonly color: string;
+  /** `<size>` — ύψος κειμένου τιμής (μέτρα). Το seg xmatrix είναι identity για διαστάσεις. */
+  readonly textSizeM: number;
+}
+
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */
 export interface TekParseResult {
   /** Έκδοση αρχείου (`<fileversion>`) — π.χ. 516. */
@@ -151,4 +217,8 @@ export interface TekSceneParseResult extends TekParseResult {
   readonly arcs: readonly TekArcRecord[];
   /** Όλα τα `<text>` records (type 3). */
   readonly texts: readonly TekTextRecord[];
+  /** ADR-531 Φ5b — όλες οι διαστάσεις (`<dim>` type 0). */
+  readonly dims: readonly TekDimRecord[];
+  /** ADR-531 Φ5b — όλοι οι 3Δ τοίχοι (`<wall>` type 1) μαζί με τα ανοίγματά τους. */
+  readonly walls: readonly TekWallRecord[];
 }

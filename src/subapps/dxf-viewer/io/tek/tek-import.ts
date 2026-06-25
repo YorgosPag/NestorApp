@@ -25,6 +25,12 @@ export interface TekImportResult {
     readonly arcCount: number;
     /** ADR-526 Φ5a — πλήθος εισαγμένων κειμένων. */
     readonly textCount: number;
+    /** ADR-531 Φ5b — πλήθος εισαγμένων διαστάσεων. */
+    readonly dimCount: number;
+    /** ADR-531 Φ5b — πλήθος εισαγμένων 3Δ τοίχων. */
+    readonly wallCount: number;
+    /** ADR-531 Φ5b — πλήθος εισαγμένων κουφωμάτων (ανοιγμάτων). */
+    readonly openingCount: number;
     readonly parseTimeMs: number;
   };
 }
@@ -57,6 +63,9 @@ export function importTekContent(
         lineCount: parsed.lines.length,
         arcCount: parsed.arcs.length,
         textCount: parsed.texts.length,
+        dimCount: parsed.dims.length,
+        wallCount: parsed.walls.length,
+        openingCount: parsed.walls.reduce((n, w) => n + w.openings.length, 0),
         parseTimeMs,
       },
     };
@@ -67,7 +76,10 @@ export function importTekContent(
       success: false,
       error: message,
       warnings: [],
-      stats: { stairCount: 0, lineCount: 0, arcCount: 0, textCount: 0, parseTimeMs: 0 },
+      stats: {
+        stairCount: 0, lineCount: 0, arcCount: 0, textCount: 0,
+        dimCount: 0, wallCount: 0, openingCount: 0, parseTimeMs: 0,
+      },
     };
   }
 }

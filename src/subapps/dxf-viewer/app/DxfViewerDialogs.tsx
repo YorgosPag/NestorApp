@@ -101,12 +101,17 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
           showCopyableNotification={showCopyableNotification}
         />
       </React.Suspense>
-      <React.Suspense fallback={hiddenFallback}>
-        <CreditsDialog
-          isOpen={ui.creditsModalOpen}
-          onClose={() => ui.setCreditsModalOpen(false)}
-        />
-      </React.Suspense>
+      {/* Gate-at-mount: closed dialogs must NOT re-render on every selection
+          commit (Root B amplifier). CreditsDialog filters its credit list on
+          every render (un-memoized) — unmount it while closed. */}
+      {ui.creditsModalOpen && (
+        <React.Suspense fallback={hiddenFallback}>
+          <CreditsDialog
+            isOpen={ui.creditsModalOpen}
+            onClose={() => ui.setCreditsModalOpen(false)}
+          />
+        </React.Suspense>
+      )}
       <React.Suspense fallback={hiddenFallback}>
         <FloorplanBackgroundPanel
           isOpen={ui.pdfPanelOpen}
@@ -166,8 +171,12 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}><ConstructionLayerScaffoldDialog /></React.Suspense>
-      <React.Suspense fallback={hiddenFallback}><DxfFindReplaceHost open={findReplaceOpen} onOpenChange={setFindReplaceOpen} /></React.Suspense>
-      <React.Suspense fallback={hiddenFallback}><DxfSymbolPickerHost open={symbolPickerOpen} onOpenChange={setSymbolPickerOpen} /></React.Suspense>
+      {/* Gate-at-mount: both are purely controlled (open flag owned by parent,
+          no internal EventBus listener). DxfFindReplaceHost scans the whole
+          scene for text entities — unmount it while closed so it stays out of
+          the per-selection re-render tree. */}
+      {findReplaceOpen && <React.Suspense fallback={hiddenFallback}><DxfFindReplaceHost open={findReplaceOpen} onOpenChange={setFindReplaceOpen} /></React.Suspense>}
+      {symbolPickerOpen && <React.Suspense fallback={hiddenFallback}><DxfSymbolPickerHost open={symbolPickerOpen} onOpenChange={setSymbolPickerOpen} /></React.Suspense>}
       <React.Suspense fallback={hiddenFallback}><RenumberOpeningsHost projectId={projectId} floorplanId={floorplanId} /></React.Suspense>
       <React.Suspense fallback={hiddenFallback}><OpeningTagStyleHost projectId={projectId} /></React.Suspense>
       <React.Suspense fallback={hiddenFallback}><OpeningSchedulePdfHost getEntities={() => (levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []) as unknown as ReadonlyArray<Record<string, unknown>>} levels={levelManager.levels} /></React.Suspense>

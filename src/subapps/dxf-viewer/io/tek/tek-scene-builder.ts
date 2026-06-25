@@ -18,6 +18,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { tekStairToEntity } from './tek-stair-to-bim';
 import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitive-to-scene';
+// ADR-531 Φ5b.1 — 2Δ mappers για διαστάσεις + τοίχους (+ ανοίγματα). Φ5b.2 θα προσθέσει BIM mappers.
+import { tekWallToEntities, tekDimToEntities } from './tek-structural-to-scene';
 import type { TekSceneParseResult } from './tek-import-types';
 
 /** Default bounds όταν δεν υπάρχει καμία σκάλα (κενή σκηνή). */
@@ -84,6 +86,9 @@ export function buildSceneFromTekScene(
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
     ...parsed.arcs.map((rec) => tekArcToEntity(rec, units)),
     ...parsed.texts.map((rec) => tekTextToEntity(rec, units)),
+    // ADR-531 Φ5b.1 — κάθε wall/dim παράγει ΠΟΛΛΑ 2Δ primitives (footprint/jambs/seg-lines).
+    ...parsed.walls.flatMap((rec) => tekWallToEntities(rec, units)),
+    ...parsed.dims.flatMap((rec) => tekDimToEntities(rec, units)),
   ];
   const warnings = [...parsed.warnings];
   if (entities.length === 0) {

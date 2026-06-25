@@ -47,9 +47,16 @@ export interface RenumberOpeningsHostProps {
   readonly floorplanId: string | null | undefined;
 }
 
+/**
+ * Always-mounted lifecycle shell: owns open state + the ribbon EventBus
+ * listener + Firestore row load, but renders NOTHING heavy while closed. The
+ * i18n prefix map + floor resolution + confirm command live in
+ * {@link RenumberOpeningsContent}, which mounts only when the dialog is open —
+ * so a closed renumber host no longer re-renders on every selection commit
+ * (Root B amplifier in HANDOFF_2026-06-25_selection-cascade-and-always-mounted-dialogs).
+ */
 export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.ReactElement | null {
   const { projectId, floorplanId } = props;
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-shell']);
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
   const levels = useLevels();
@@ -77,6 +84,33 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
     });
     return () => cleanup();
   }, [companyId, projectId, floorplanId]);
+
+  if (!companyId || !projectId || !floorplanId || !open) return null;
+
+  return (
+    <RenumberOpeningsContent
+      levels={levels}
+      rows={rows}
+      floorMap={floorMap}
+      userId={user?.uid ?? null}
+      onOpenChange={setOpen}
+    />
+  );
+}
+
+interface RenumberOpeningsContentProps {
+  readonly levels: ReturnType<typeof useLevels>;
+  readonly rows: ReadonlyArray<RenumberOpeningRow>;
+  readonly floorMap: ReadonlyMap<string, number>;
+  readonly userId: string | null;
+  readonly onOpenChange: (open: boolean) => void;
+}
+
+/** Mounts only while the dialog is open — carries the i18n + confirm wiring. */
+function RenumberOpeningsContent({
+  levels, rows, floorMap, userId, onOpenChange,
+}: RenumberOpeningsContentProps): React.ReactElement {
+  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-shell']);
 
   const currentLevel = levels.levels.find((l) => l.id === levels.currentLevelId) ?? null;
   const currentFloorId = currentLevel?.floorId ?? null;
@@ -111,7 +145,7 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
   const basementPrefix = t('dxf-viewer:opening.tag.basementPrefix');
 
   const handleConfirm = React.useCallback((result: RenumberResult) => {
-    if (!levels.currentLevelId || !user?.uid) return;
+    if (!levels.currentLevelId || !userId) return;
     if (result.updates.length === 0) return;
     const sceneManager = createLevelSceneManagerAdapter(
       levels.getLevelScene,
@@ -119,16 +153,14 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
       levels.currentLevelId,
     );
     getGlobalCommandHistory().execute(
-      new RenumberOpeningsCommand(result.updates, sceneManager, user.uid),
+      new RenumberOpeningsCommand(result.updates, sceneManager, userId),
     );
-  }, [levels, user?.uid]);
-
-  if (!companyId || !projectId || !floorplanId) return null;
+  }, [levels, userId]);
 
   return (
     <RenumberOpeningsDialog
-      open={open}
-      onOpenChange={setOpen}
+      open
+      onOpenChange={onOpenChange}
       rows={rows}
       currentFloor={currentFloor}
       floorNumberByFloorId={floorMap}

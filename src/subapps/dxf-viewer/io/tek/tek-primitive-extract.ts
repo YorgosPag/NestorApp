@@ -20,7 +20,7 @@ const ARC_ENTITY_TYPE = 5;
 const TEXT_ENTITY_TYPE = 3;
 
 /** Διαβάζει το `<xmatrix>` ενός record → `TekXMatrix` (μηδενικά αν λείπει). */
-function readXMatrix(record: Element): TekXMatrix {
+export function readXMatrix(record: Element): TekXMatrix {
   const m = firstChild(record, 'xmatrix');
   if (!m) return { x00: 1, x01: 0, x10: 0, x11: 1, x20: 0, x21: 0 };
   return {
@@ -38,7 +38,7 @@ function floorContainerOf(root: Element): Element | null {
 }
 
 /** Όλα τα `<record>` ενός δοσμένου container-tag (π.χ. 'line'/'arc') σε όλους τους ορόφους. */
-function recordsInFloors(root: Element, containerTag: string): Element[] {
+export function recordsInFloors(root: Element, containerTag: string): Element[] {
   const floorContainer = floorContainerOf(root);
   if (!floorContainer) return [];
   const out: Element[] = [];
@@ -51,7 +51,7 @@ function recordsInFloors(root: Element, containerTag: string): Element[] {
 }
 
 /** `true` αν το record έχει την αναμενόμενη 1η `<type>` (entity type, ΟΧΙ το nested line-style). */
-function isEntityType(record: Element, expected: number): boolean {
+export function isEntityType(record: Element, expected: number): boolean {
   return Math.round(childNumber(record, 'type', -1)) === expected;
 }
 

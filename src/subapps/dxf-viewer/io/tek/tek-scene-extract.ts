@@ -12,6 +12,8 @@ import { extractStairRecords, extractTekHead } from './tek-stair-extract';
 import {
   extractLineRecords, extractArcRecords, extractTextRecords,
 } from './tek-primitive-extract';
+// ADR-531 Φ5b — διαστάσεις + 3Δ τοίχοι (+ ανοίγματα).
+import { extractDimRecords, extractWallRecords } from './tek-structural-extract';
 import type { TekSceneParseResult } from './tek-import-types';
 
 /**
@@ -24,12 +26,19 @@ export function parseTekScene(content: string): TekSceneParseResult {
   const { lines, warnings: lineWarnings } = extractLineRecords(root);
   const { arcs, warnings: arcWarnings } = extractArcRecords(root);
   const { texts, warnings: textWarnings } = extractTextRecords(root);
+  const { dims, warnings: dimWarnings } = extractDimRecords(root);
+  const { walls, warnings: wallWarnings } = extractWallRecords(root);
   return {
     ...extractTekHead(root),
     stairs,
     lines,
     arcs,
     texts,
-    warnings: [...stairWarnings, ...lineWarnings, ...arcWarnings, ...textWarnings],
+    dims,
+    walls,
+    warnings: [
+      ...stairWarnings, ...lineWarnings, ...arcWarnings, ...textWarnings,
+      ...dimWarnings, ...wallWarnings,
+    ],
   };
 }
