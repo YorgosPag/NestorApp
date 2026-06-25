@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 474 ADRs | Last Updated: 2026-06-25
+**📊 Stats**: 479 ADRs | Last Updated: 2026-06-25
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 264 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 269 | [View](#uncategorized) |
 
 ---
 
@@ -510,9 +510,10 @@
 | **ADR-526** | Εισαγωγή Tekton `.TEK` (σκάλες πρώτα) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-526-tekton-tek-import-stairs.md) |
 | **ADR-527** | ΕΝΑΣ μακρόβιος SceneManager/level (singleton adapter, Revit Document model) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-527-singleton-level-scene-manager.md) |
 | **ADR-528** | Δοκάρι γεφυρώνει αυτόματα το κενό ανάμεσα σε δύο δομικά μέλη (beam auto-span, weld στις παρειές) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-528-beam-auto-span-between-structural-members.md) |
-| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element, EC8) + span bugfix κοίλα/Γ μέλη | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
-| **ADR-530** | Revit-grade glyph-path απόδοση CAD γραμματοσειρών στον κύριο καμβά (σύνδεση glyph pipeline + Liberation/OFL substitute SSoT) | ✅ APPROVED | 2026-06-25 | Uncategorized | [📄](./adrs/ADR-530-main-canvas-glyph-font-rendering.md) |
-| **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι + κουφώματα + διαστάσεις (Φ5b.1 = 2Δ primitives· Φ5b.2 = πλήρη BIM) | ✅ APPROVED | 2026-06-25 | Uncategorized | [📄](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
+| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
+| **ADR-530** | Revit-grade glyph-path text rendering on the main DXF canvas | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-530-main-canvas-glyph-font-rendering.md) |
+| **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
+| **ADR-532** | Selection-set SSoT: zero-React `SelectedEntitiesStore` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-532-selection-set-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1007,9 +1008,10 @@
 | **ADR-526** | Εισαγωγή Tekton `.TEK` (σκάλες πρώτα) | ✅ APPROVED | [View](./adrs/ADR-526-tekton-tek-import-stairs.md) |
 | **ADR-527** | ΕΝΑΣ μακρόβιος SceneManager/level (singleton adapter, Revit Document model) | ✅ APPROVED | [View](./adrs/ADR-527-singleton-level-scene-manager.md) |
 | **ADR-528** | Δοκάρι γεφυρώνει αυτόματα το κενό ανάμεσα σε δύο δομικά μέλη (beam auto-span, weld στις παρειές) | ✅ APPROVED | [View](./adrs/ADR-528-beam-auto-span-between-structural-members.md) |
-| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element, EC8) + span bugfix κοίλα/Γ μέλη | ✅ APPROVED | [View](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
-| **ADR-530** | Revit-grade glyph-path απόδοση CAD γραμματοσειρών στον κύριο καμβά (σύνδεση glyph pipeline + Liberation/OFL substitute SSoT) | ✅ APPROVED | [View](./adrs/ADR-530-main-canvas-glyph-font-rendering.md) |
-| **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι + κουφώματα + διαστάσεις (Φ5b.1 = 2Δ primitives· Φ5b.2 = πλήρη BIM) | ✅ APPROVED | [View](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
+| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element) | ✅ APPROVED | [View](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
+| **ADR-530** | Revit-grade glyph-path text rendering on the main DXF canvas | ✅ APPROVED | [View](./adrs/ADR-530-main-canvas-glyph-font-rendering.md) |
+| **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις | ✅ APPROVED | [View](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
+| **ADR-532** | Selection-set SSoT: zero-React `SelectedEntitiesStore` | ✅ APPROVED | [View](./adrs/ADR-532-selection-set-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -16,8 +16,8 @@
 import { useMemo } from 'react';
 import type { SelectionActions, UniversalSelectionActions } from './config';
 import type { SelectionAction, SelectionContextState } from './useSelectionReducer';
-import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
-import { matchesEntityType } from './types';
+import type { SelectableEntityType, SelectionPayload } from './types';
+import { SelectedEntitiesStore, type LegacyMirror } from './SelectedEntitiesStore';
 
 export interface SelectionActionsHook {
   selectionActions: SelectionActions;
@@ -78,59 +78,61 @@ export function useSelectionActions(
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection Actions
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const universalActions = useMemo((): UniversalSelectionActions => ({
-    // Primary Selection API
-    selectEntity: (payload: SelectionPayload) =>
-      dispatch({ type: 'UNIVERSAL_SELECT_ENTITY', payload }),
+  // ADR-532: universal actions are now thin bridges over SelectedEntitiesStore
+  // (the SSoT). Each mutator writes the store, then `applyMirror` dispatches ONE
+  // legacy-sync action so `selectedRegionIds` + region-edit flags follow exactly
+  // as the old UNIVERSAL_* reducer cases did. Query methods read the store live.
+  // Deps are [dispatch] only → this object is now ref-stable across selection
+  // changes (no more re-memo on every dispatch).
+  const universalActions = useMemo((): UniversalSelectionActions => {
+    const applyMirror = (m: LegacyMirror): void => {
+      if (!m.regionIdsChanged && !m.resetEditing) return;
+      dispatch({
+        type: 'SYNC_UNIVERSAL_LEGACY',
+        regionIds: m.regionIdsChanged ? m.regionIds : undefined,
+        resetEditing: m.resetEditing,
+      });
+    };
 
-    selectEntities: (payloads: SelectionPayload[]) =>
-      dispatch({ type: 'UNIVERSAL_SELECT_ENTITIES', payloads }),
+    return {
+      // Primary Selection API → store + legacy mirror
+      selectEntity: (payload: SelectionPayload) =>
+        applyMirror(SelectedEntitiesStore.selectEntity(payload)),
 
-    addEntity: (payload: SelectionPayload) =>
-      dispatch({ type: 'UNIVERSAL_ADD_ENTITY', payload }),
+      selectEntities: (payloads: SelectionPayload[]) =>
+        applyMirror(SelectedEntitiesStore.selectEntities(payloads)),
 
-    addEntities: (payloads: SelectionPayload[]) =>
-      dispatch({ type: 'UNIVERSAL_ADD_ENTITIES', payloads }),
+      addEntity: (payload: SelectionPayload) =>
+        applyMirror(SelectedEntitiesStore.addEntity(payload)),
 
-    deselectEntity: (id: string) =>
-      dispatch({ type: 'UNIVERSAL_DESELECT_ENTITY', id }),
+      addEntities: (payloads: SelectionPayload[]) =>
+        applyMirror(SelectedEntitiesStore.addEntities(payloads)),
 
-    toggleEntity: (payload: SelectionPayload) =>
-      dispatch({ type: 'UNIVERSAL_TOGGLE_ENTITY', payload }),
+      deselectEntity: (id: string) =>
+        applyMirror(SelectedEntitiesStore.deselectEntity(id)),
 
-    clearAllSelections: () =>
-      dispatch({ type: 'UNIVERSAL_CLEAR_ALL' }),
+      toggleEntity: (payload: SelectionPayload) =>
+        applyMirror(SelectedEntitiesStore.toggleEntity(payload)),
 
-    clearByType: (entityType: SelectableEntityType) =>
-      dispatch({ type: 'UNIVERSAL_CLEAR_BY_TYPE', entityType }),
+      clearAllSelections: () =>
+        applyMirror(SelectedEntitiesStore.clearAll()),
 
-    // Query Methods
-    isEntitySelected: (id: string): boolean =>
-      state.universalSelection.has(id),
+      clearByType: (entityType: SelectableEntityType) =>
+        applyMirror(SelectedEntitiesStore.clearByType(entityType)),
 
-    getSelectedEntries: (): SelectionEntry[] =>
-      Array.from(state.universalSelection.values()),
-
-    getSelectedByType: (entityType: SelectableEntityType): SelectionEntry[] =>
-      Array.from(state.universalSelection.values())
-        .filter(entry => matchesEntityType(entry.type, entityType)),
-
-    getUniversalSelectionCount: (): number =>
-      state.universalSelection.size,
-
-    getSelectionCountByType: (entityType: SelectableEntityType): number =>
-      Array.from(state.universalSelection.values())
-        .filter(entry => matchesEntityType(entry.type, entityType))
-        .length,
-
-    getSelectedIds: (): string[] =>
-      Array.from(state.universalSelection.keys()),
-
-    getSelectedIdsByType: (entityType: SelectableEntityType): string[] =>
-      Array.from(state.universalSelection.values())
-        .filter(entry => matchesEntityType(entry.type, entityType))
-        .map(entry => entry.id),
-  }), [state.universalSelection, dispatch]);
+      // Query Methods → store (live)
+      isEntitySelected: (id: string) => SelectedEntitiesStore.isSelected(id),
+      getSelectedEntries: () => SelectedEntitiesStore.getEntries(),
+      getSelectedByType: (entityType: SelectableEntityType) =>
+        SelectedEntitiesStore.getByType(entityType),
+      getUniversalSelectionCount: () => SelectedEntitiesStore.count(),
+      getSelectionCountByType: (entityType: SelectableEntityType) =>
+        SelectedEntitiesStore.countByType(entityType),
+      getSelectedIds: () => SelectedEntitiesStore.getIds(),
+      getSelectedIdsByType: (entityType: SelectableEntityType) =>
+        SelectedEntitiesStore.getIdsByType(entityType),
+    };
+  }, [dispatch]);
 
   return {
     selectionActions,

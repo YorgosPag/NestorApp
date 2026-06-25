@@ -25,7 +25,7 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateColumnParamsCommand } from '../core/commands/entity-commands/UpdateColumnParamsCommand';
-import { detectColumnPromotionsForBeam } from '../bim/columns/column-beam-promote-junction';
+import { detectColumnPromotionsForBeam, resyncPromotedBoundaryArmsForBeam } from '../bim/columns/column-beam-promote-junction';
 import { requestColumnPromoteConfirm } from '../bim/columns/column-promote-confirm-store';
 import { isBeamEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
@@ -80,6 +80,36 @@ export function useColumnBeamPromote(props: { levelManager: LevelManagerLike }):
         }
       })();
     });
-    return () => unsub();
+
+    // ADR-529 Φ5 — **associative re-sync** (ο «ενιαίος οργανισμός», Giorgio 2026-06-25): όταν ο auto-sizer
+    // ξανα-διαστασιολογεί το δοκάρι (`bim:beam-params-updated`), το foot κάθε προαχθείσας Γ-κολόνας
+    // ξανα-ακολουθεί το **τρέχον** πλάτος δοκαριού (EC2/EC8: έδραση ≥ δοκάρι) — αλλιώς το foot έμενε stale
+    // snapshot → στενότερο από το μεγαλωμένο δοκάρι = παραβίαση. Αυτόματο (ΧΩΡΙΣ confirm — δεν αλλάζει τύπο,
+    // μόνο διατηρεί συμμόρφωση). Convergence guard στο pure helper (armLength≠width) → μηδέν κύκλος.
+    const unsubResync = EventBus.on('bim:beam-params-updated', ({ beamId }) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      const entities = scene.entities as unknown as readonly Entity[];
+      const beam = entities.find((e) => e.id === beamId);
+      if (!beam || !isBeamEntity(beam)) return;
+      const resyncs = resyncPromotedBoundaryArmsForBeam(beam, entities);
+      if (resyncs.length === 0) return;
+      const sm = createLevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelId,
+      );
+      for (const p of resyncs) {
+        execute(new UpdateColumnParamsCommand(p.columnId, p.nextParams, p.previousParams, sm, false));
+        EventBus.emit('bim:column-params-updated', { columnId: p.columnId });
+      }
+    });
+
+    return () => {
+      unsub();
+      unsubResync();
+    };
   }, [levelManager, execute]);
 }

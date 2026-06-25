@@ -104,3 +104,37 @@ export function detectColumnPromotionsForBeam(
   }
   return out;
 }
+
+/**
+ * ADR-529 Φ5 — **associative re-sync** του foot μιας ΗΔΗ-προαχθείσας Γ-κολόνας στο **τρέχον** πλάτος του
+ * δοκαριού. Όταν ο οργανισμός ξανα-διαστασιολογεί το δοκάρι (`bim:beam-params-updated` μέσω auto-sizer),
+ * το `lshape.armLength` (= πάχος ποδιού = πλάτος δοκαριού· EC2/EC8: έδραση ≥ δοκάρι) δεν πρέπει να μένει
+ * **stale snapshot** της στιγμής της προαγωγής → αλλιώς foot στενότερο από το (μεγαλωμένο) δοκάρι = παραβίαση.
+ *
+ * Pure· **ασφαλής εντοπισμός** (ΜΟΝΟ κολόνες με `lshape.promotedFromBeamId === beam.id` — user-drawn L δεν
+ * φέρει το πεδίο → δεν αγγίζεται). **Convergence guard:** επιστρέφει ΜΟΝΟ όσες χρειάζονται αλλαγή
+ * (`armLength !== beam.width`) → idempotent· όταν συγχρονιστούν, επόμενο event = no-op (μηδέν κύκλος).
+ * Το `armLength` (πάχος ποδιού) είναι ανεξάρτητο από `width`/`position` (= bearing/μήκος ποδιού) → καθαρή
+ * αλλαγή ενός πεδίου, μηδέν μετατόπιση θέσης. `bim:column-params-updated` (από τον caller) ξανα-σχεδιάζει.
+ */
+export function resyncPromotedBoundaryArmsForBeam(
+  beam: Entity,
+  entities: readonly Entity[],
+): ColumnPromotion[] {
+  if (!isBeamEntity(beam)) return [];
+  const beamWidth = (beam as BeamEntity).params.width;
+  if (!(beamWidth > 0)) return [];
+  const out: ColumnPromotion[] = [];
+  for (const ent of entities) {
+    if (!isColumnEntity(ent)) continue;
+    const ls = ent.params.lshape;
+    if (ent.params.kind !== 'L-shape' || !ls || ls.promotedFromBeamId !== beam.id) continue;
+    if ((ls.armLength ?? 0) === beamWidth) continue; // ήδη συγχρονισμένο → skip (convergence guard)
+    out.push({
+      columnId: ent.id,
+      nextParams: { ...ent.params, lshape: { ...ls, armLength: beamWidth } },
+      previousParams: ent.params,
+    });
+  }
+  return out;
+}

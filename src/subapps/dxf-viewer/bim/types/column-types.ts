@@ -84,6 +84,14 @@ export interface ColumnLshapeParams {
    * Proof: local mirror transform T[1][1] = -1 for all axisAngle+rotation.
    */
   readonly flipY?: boolean;
+  /**
+   * ADR-529 Φ5 — id του δοκαριού που **ΠΡΟΗΓΑΓΕ** αυτή την κολόνα σε Γ/L boundary element
+   * (`promoteColumnToBoundaryL`). Καθιστά το foot **associative**: όταν ο οργανισμός ξανα-
+   * διαστασιολογεί το δοκάρι (`bim:beam-params-updated`), το `armLength` (πάχος ποδιού = πλάτος
+   * δοκαριού, EC2/EC8 έδραση ≥ δοκάρι) ξανα-υπολογίζεται αυτόματα ώστε να μη μένει stale snapshot.
+   * Ασφαλής εντοπισμός (ΜΟΝΟ προαχθείσες κολόνες· user-drawn L δεν φέρει το πεδίο → δεν αγγίζεται).
+   */
+  readonly promotedFromBeamId?: string;
 }
 
 /**

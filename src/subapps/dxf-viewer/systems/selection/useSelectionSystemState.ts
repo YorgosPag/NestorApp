@@ -11,30 +11,35 @@ import { selectionReducer, type SelectionContextState } from './useSelectionRedu
 import { useSelectionActions } from './useSelectionActions';
 import { useFilterActions } from './useFilterActions';
 import { useViewActions } from './useViewActions';
+import { SelectedEntitiesStore } from './SelectedEntitiesStore';
+import type { SelectionEntry } from './types';
 
 /**
  * Combined Selection Context Type
  * 🏢 ENTERPRISE (2026-01-25): Extended with UniversalSelectionActions
+ * ADR-532: `universalSelection` / `primarySelectedId` are no longer reducer
+ * state — they live in SelectedEntitiesStore and are exposed here via live
+ * getters on the context value (back-compat for the few raw-Map readers).
  */
 export interface SelectionContextType extends
   SelectionContextState,
   SelectionActions,
   FilterActions,
   ViewActions,
-  UniversalSelectionActions {}
+  UniversalSelectionActions {
+  readonly universalSelection: Map<string, SelectionEntry>;
+  readonly primarySelectedId: string | null;
+}
 
 export interface SelectionSystemStateReturn {
   state: SelectionContextState;
   contextValue: SelectionContextType;
 }
 
-// Initial state
-// 🏢 ENTERPRISE (2026-01-25): Extended with universal selection state
+// Initial state (ADR-532: entity selection set moved to SelectedEntitiesStore)
 const initialState: SelectionContextState = {
   ...DEFAULT_SELECTION_STATE,
   filters: DEFAULT_FILTER_STATE,
-  universalSelection: new Map(),
-  primarySelectedId: null,
 };
 
 export function useSelectionSystemState(): SelectionSystemStateReturn {
@@ -45,14 +50,18 @@ export function useSelectionSystemState(): SelectionSystemStateReturn {
   const { filterActions } = useFilterActions(state, dispatch);
   const { viewActions } = useViewActions(state, dispatch);
 
-  // Combine state and actions
-  // 🏢 ENTERPRISE (2026-01-25): Extended with universal selection actions
+  // Combine state and actions.
+  // ADR-532: universalSelection/primarySelectedId are live getters onto the
+  // store (never stale) — they intentionally do NOT trigger contextValue
+  // re-memo, so the selection set no longer broadcasts through React Context.
   const contextValue = useMemo((): SelectionContextType => ({
     ...state,
     ...selectionActions,
     ...filterActions,
     ...viewActions,
     ...universalActions,
+    get universalSelection(): Map<string, SelectionEntry> { return SelectedEntitiesStore.getMap(); },
+    get primarySelectedId(): string | null { return SelectedEntitiesStore.getPrimaryId(); },
   }), [state, selectionActions, filterActions, viewActions, universalActions]);
 
   return {

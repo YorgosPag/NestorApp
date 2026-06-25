@@ -43,6 +43,17 @@ export {
   useOverlaySelection,    // 🆕 NEW: Backward compatible overlay selection hook
 } from './SelectionSystem';
 
+// ADR-532 — zero-React entity-selection SSoT (imperative store for orchestrators)
+export { SelectedEntitiesStore } from './SelectedEntitiesStore';
+// ADR-532 — leaf-subscriber hooks (ONLY for components that visually show selection)
+export {
+  useSelectedEntityIds,
+  usePrimarySelectedId,
+  useSelectionCount,
+  useIsSelected,
+  useSelectionByType,
+} from './useSelectedEntities';
+
 // ADR-420 — reset 2D selection on floor navigation (cross-floor selection leak)
 export { useSelectionLevelReset } from './useSelectionLevelReset';
 

@@ -11,7 +11,7 @@
  */
 
 import { promoteColumnToBoundaryL } from '../column-beam-align';
-import { detectColumnPromotionsForBeam } from '../column-beam-promote-junction';
+import { detectColumnPromotionsForBeam, resyncPromotedBoundaryArmsForBeam } from '../column-beam-promote-junction';
 import { rotateVector } from '../../grips/grip-math';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { BeamEntity } from '../../types/beam-types';
@@ -152,5 +152,53 @@ describe('detectColumnPromotionsForBeam (ADR-529 detector)', () => {
   it('νέο entity όχι δοκάρι → άδειο', () => {
     const col = dirColumn(0, 0, 250, 400);
     expect(detectColumnPromotionsForBeam(col as unknown as BeamEntity, [col])).toHaveLength(0);
+  });
+});
+
+describe('resyncPromotedBoundaryArmsForBeam (ADR-529 Φ5 — associative foot ↔ beam width)', () => {
+  /** Προαχθείσα Γ-κολόνα με σύνδεσμο προς το δοκάρι (foot armLength = παλιό πλάτος δοκαριού). */
+  function promotedLColumn(armLength: number, promotedFromBeamId?: string): ColumnEntity {
+    return {
+      id: 'col_L', type: 'column', kind: 'L-shape',
+      params: {
+        kind: 'L-shape', position: { x: 0, y: 0, z: 0 }, width: 450, depth: 400, rotation: 0, sceneUnits: 'mm',
+        lshape: { armWidth: 250, armLength, flipY: false, promotedFromBeamId },
+      },
+      geometry: { footprint: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }] } },
+    } as unknown as ColumnEntity;
+  }
+
+  it('δοκάρι ξανα-διαστασιολογήθηκε (200→250) → foot ακολουθεί στα 250 (EC2/EC8 έδραση ≥ δοκάρι)', () => {
+    const col = promotedLColumn(200, 'beam_1');
+    const bm = beam({ x: -1500, y: 0 }, { x: -125, y: 0 }, 250, 500); // width τώρα 250
+    const out = resyncPromotedBoundaryArmsForBeam(bm, [col, bm]);
+    expect(out).toHaveLength(1);
+    expect(out[0].columnId).toBe('col_L');
+    expect(out[0].nextParams.lshape?.armLength).toBe(250);
+    expect(out[0].nextParams.lshape?.armWidth).toBe(250); // leg αμετάβλητο
+    expect(out[0].previousParams.lshape?.armLength).toBe(200);
+  });
+
+  it('convergence guard: armLength ήδη = πλάτος δοκαριού → άδειο (idempotent, μηδέν κύκλος)', () => {
+    const col = promotedLColumn(250, 'beam_1');
+    const bm = beam({ x: -1500, y: 0 }, { x: -125, y: 0 }, 250, 500);
+    expect(resyncPromotedBoundaryArmsForBeam(bm, [col, bm])).toHaveLength(0);
+  });
+
+  it('ασφάλεια: user-drawn L (χωρίς promotedFromBeamId) ΔΕΝ αγγίζεται', () => {
+    const col = promotedLColumn(200, undefined);
+    const bm = beam({ x: -1500, y: 0 }, { x: -125, y: 0 }, 250, 500);
+    expect(resyncPromotedBoundaryArmsForBeam(bm, [col, bm])).toHaveLength(0);
+  });
+
+  it('ασφάλεια: L προαχθείσα από ΑΛΛΟ δοκάρι → δεν αγγίζεται από αυτό', () => {
+    const col = promotedLColumn(200, 'beam_OTHER');
+    const bm = beam({ x: -1500, y: 0 }, { x: -125, y: 0 }, 250, 500);
+    expect(resyncPromotedBoundaryArmsForBeam(bm, [col, bm])).toHaveLength(0);
+  });
+
+  it('entity όχι δοκάρι → άδειο', () => {
+    const col = promotedLColumn(200, 'beam_1');
+    expect(resyncPromotedBoundaryArmsForBeam(col as unknown as BeamEntity, [col])).toHaveLength(0);
   });
 });

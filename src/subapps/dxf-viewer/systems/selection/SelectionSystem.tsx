@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import { useSelectionSystemState, type SelectionContextType } from './useSelectionSystemState';
+import { SelectedEntitiesStore, subscribeSelection, getSelectionVersion } from './SelectedEntitiesStore';
 import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
 
 // Create context
@@ -161,6 +162,14 @@ export function useUniversalSelection(): UniversalSelectionHook {
     throw new Error('useUniversalSelection must be used within a SelectionSystem');
   }
 
+  // ADR-532: the selection set lives in SelectedEntitiesStore now, not context.
+  // Subscribe to the store version so consumers of this compat hook re-render on
+  // selection change exactly as before (number snapshot = safe). Keying the memo
+  // on `version` reproduces the old "new hook object per change" contract.
+  // NOTE: Stage B migrates the 4 orchestrators OFF this hook to imperative store
+  // reads + leaf subscriptions — THAT is what kills the re-render cascade.
+  const version = useSyncExternalStore(subscribeSelection, getSelectionVersion, getSelectionVersion);
+
   return useMemo((): UniversalSelectionHook => ({
     // Selection Actions - convenience wrappers
     select: (id: string, type: SelectableEntityType) =>
@@ -216,11 +225,11 @@ export function useUniversalSelection(): UniversalSelectionHook {
       }
     },
 
+    // ADR-532: atomic replace with skip-if-unchanged (no legacy region effect) —
+    // avoids the old clearByType+addEntities double-notify and prevents the 3D
+    // bridge / layer-select round-trips from looping on identical sets.
     replaceEntitySelection: (entityIds: string[]) => {
-      context.clearByType('dxf-entity');
-      if (entityIds.length > 0) {
-        context.addEntities(entityIds.map(id => ({ id, type: 'dxf-entity' as const })));
-      }
+      SelectedEntitiesStore.replaceEntitySelection(entityIds);
     },
 
     handleOverlaySelect: (overlayId: string | null) => {
@@ -261,7 +270,7 @@ export function useUniversalSelection(): UniversalSelectionHook {
 
     // Full context access
     context,
-  }), [context]);
+  }), [context, version]);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

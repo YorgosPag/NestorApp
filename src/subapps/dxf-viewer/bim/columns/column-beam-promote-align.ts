@@ -84,8 +84,9 @@ export function promoteColumnToBoundaryL(
     lshape: {
       ...column.params.lshape,
       armWidth: shortDim,        // πάχος κατακόρυφου σκέλους = στενή διάσταση αρχικής κολόνας
-      armLength: beam.params.width, // πάχος foot = πλάτος δοκαριού (δομική συνέχεια)
+      armLength: beam.params.width, // πάχος foot = πλάτος δοκαριού (δομική συνέχεια· EC2/EC8 έδραση ≥ δοκάρι)
       flipY,
+      promotedFromBeamId: beam.id, // ADR-529 Φ5 — associative: το foot ακολουθεί το πλάτος δοκαριού
     },
   };
 }
