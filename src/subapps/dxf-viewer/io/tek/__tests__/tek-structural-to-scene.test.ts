@@ -33,16 +33,16 @@ const DIM: TekDimRecord = {
 describe('tekWallToEntities (ADR-531 Φ5b.1++)', () => {
   const entities = tekWallToEntities(WALL, 'mm');
 
-  it('παράγει τοίχο-με-κουφώματα (12) + 2 παράθυρα × 7 = 26 γραμμές', () => {
-    expect(entities).toHaveLength(26);
+  it('παράγει τοίχο-με-κουφώματα (12) + πόρτα (13) + παράθυρο (7) = 32 γραμμές', () => {
+    expect(entities).toHaveLength(32);
     expect(entities.every((e) => e.type === 'line')).toBe(true);
   });
 
-  it('χωρίζει χρωματικά τοίχο (#80BCFC ×12) από παράθυρα (#50A490 ×14)', () => {
+  it('χωρίζει χρωματικά τοίχο (#80BCFC ×12) από ανοίγματα (#50A490 ×20)', () => {
     const wallLines = entities.filter((e) => e.type === 'line' && e.color === '#80BCFC');
-    const winLines = entities.filter((e) => e.type === 'line' && e.color === '#50A490');
+    const openLines = entities.filter((e) => e.type === 'line' && e.color === '#50A490');
     expect(wallLines).toHaveLength(12);
-    expect(winLines).toHaveLength(14);
+    expect(openLines).toHaveLength(20); // πόρτα 13 + παράθυρο 7
   });
 
   it('οι παρειές φτάνουν τα άκρα του τοίχου (~5.03m span)', () => {
@@ -57,7 +57,7 @@ describe('tekDimToEntities (ADR-531 Φ5b.1++)', () => {
   it('γραμμή πράσινη (×2) + end markers μπορντώ (×6) + κείμενο κίτρινο (3 χρώματα, DXF-confirmed)', () => {
     // Γραμμή = πράσινο (COLOR_2)· βέλη/extension = μπορντώ (COLOR_241)· κείμενο = κίτρινο (COLOR_20).
     expect(entities.filter((e) => e.type === 'line' && e.color === '#00FF00')).toHaveLength(2);
-    expect(entities.filter((e) => e.type === 'line' && e.color === '#800000')).toHaveLength(6);
+    expect(entities.filter((e) => e.type === 'line' && e.color === '#800000')).toHaveLength(8);
     const texts = entities.filter((e) => e.type === 'text');
     expect(texts).toHaveLength(1);
     expect(texts[0].type === 'text' && texts[0].text).toBe('2.10');

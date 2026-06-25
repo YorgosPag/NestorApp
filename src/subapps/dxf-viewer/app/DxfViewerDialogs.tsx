@@ -23,6 +23,7 @@ import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { useLevels } from '../systems/levels';
+import { useSelectedEntityIds } from '../systems/selection';
 import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
 import { EventBus } from '../systems/events/EventBus';
 import { buildDxfImportSaveContext } from './dxf-import-save-context';
@@ -50,11 +51,20 @@ export interface DxfViewerDialogsProps {
   readonly setFindReplaceOpen: (open: boolean) => void;
   readonly symbolPickerOpen: boolean;
   readonly setSymbolPickerOpen: (open: boolean) => void;
-  // ADR-363 §6 Phase 8 — live canvas selection για το selection-only φίλτρο του «Πίνακα BIM».
-  readonly selectionIds: readonly string[];
 }
 
 const hiddenFallback = <div className="hidden" />;
+
+/**
+ * ADR-532 Stage B5 — leaf that owns the live-selection subscription for the
+ * «Πίνακα BIM» selection-only filter. Isolating `useSelectedEntityIds()` here
+ * means a click-selection re-renders THIS wrapper only, not the whole
+ * `DxfViewerDialogs` portal tree (28 hosts) nor the orchestrator.
+ */
+const BimScheduleHostLeaf = React.memo(function BimScheduleHostLeaf() {
+  const selectionIds = useSelectedEntityIds();
+  return <BimScheduleHost selectionIds={selectionIds} />;
+});
 
 /**
  * Renders every always-mounted dialog/host portal for the DXF viewer shell.
@@ -66,7 +76,6 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
     ui, levelManager, perfMonitorEnabled,
     handleFileImportWithEncoding, showCopyableNotification,
     findReplaceOpen, setFindReplaceOpen, symbolPickerOpen, setSymbolPickerOpen,
-    selectionIds,
   } = props;
 
   const projectId = levelManager.saveContext?.projectId ?? undefined;
@@ -183,7 +192,7 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-396 P6 — Thermal Envelope (ETICS) authoring dialog (opened via Analyze tab). */}
       <React.Suspense fallback={hiddenFallback}><ThermalEnvelopeHost currentLevelId={levelManager.currentLevelId} levels={levelManager.levels} getLevelScene={levelManager.getLevelScene} setLevelScene={levelManager.setLevelScene} projectId={projectId} /></React.Suspense>
       {/* ADR-363 §6 Phase 8 — BIM Schedule («Πίνακας BIM») dialog (opened via Analyze tab). */}
-      <React.Suspense fallback={hiddenFallback}><BimScheduleHost selectionIds={selectionIds} /></React.Suspense>
+      <React.Suspense fallback={hiddenFallback}><BimScheduleHostLeaf /></React.Suspense>
       {/* ADR-453 — Print/Export («Εκτύπωση») dialog (opened via Analyze → Εκτύπωση). */}
       <React.Suspense fallback={hiddenFallback}><PrintHost /></React.Suspense>
       {/* ADR-505 — Export («Εξαγωγή») dialog (opened via Analyze → Εξαγωγή). */}

@@ -105,8 +105,26 @@ calibration των ίδιων pure modules (μηδέν νέα αρχεία):
   `FRAME_RAIL_FALLBACK_FRAC`, `GLASS_HALF_SEP_FRAC`.
 - **Επιβεβαιωμένα από το data (όχι μάντεμα):** v-band τοίχου = 0.25m (σωστό), **και τα 2 ανοίγματα
   = παράθυρα** (`elevation=1` ποδιά 1μ, `top=2.2` — όχι πόρτα· το «τόξο» στα στιγμιότυπα = η σκάλα).
-- **Εκκρεμεί calibration (browser-verify Giorgio):** ακριβές χρώμα/μήκος βέλους, italic κειμένου
-  (αν το `TextEntity` το υποστηρίζει), αριθμός γραμμών υαλοπίνακα ανά `style`.
+- **Εκκρεμεί calibration (browser-verify Giorgio):** italic κειμένου (αν το `TextEntity` το
+  υποστηρίζει), ακριβές μοτίβο frame ανά `side` (μονόπλευρο 0.15 ζώνη vs συμμετρικό).
+
+## 6c. Φ5b.1+++ — DXF ground-truth calibration (`Ισόγειο 312.dxf.txt`)
+
+Ο Giorgio έδωσε το **ίδιο σχέδιο σε DXF** (Tekton explode → raw LINE/ARC/TEXT) = το ΑΚΡΙΒΕΣ
+ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθωσε:
+
+- **Διάσταση = 3 ξεχωριστά χρώματα (layers):** γραμμή `COLOR_2` (πράσινο), κείμενο `COLOR_20`
+  (κίτρινο `dtext_color`), **βέλη+witness `COLOR_241` (μπορντώ)**. → `DIM_ARROW_COLOR='#800000'`
+  (η προηγούμενη «arrow=χρώμα γραμμής» ήταν λάθος).
+- **Βέλος = κλειστό τρίγωνο** (3 γραμμές: 2 πτερύγια + βάση), μήκος ≈ ύψος κειμένου (0.12m/0.119m),
+  ημιγωνία ~12° (0.025/0.12). `ARROW_LEN_FACTOR=1.0`, `ARROW_HALF_ANGLE_RAD=0.206`.
+- **🔴 Άνοιγμα #1 = ΠΟΡΤΑ, #2 = ΠΑΡΑΘΥΡΟ** (διαχωρισμός ανά `style`: 1=πόρτα, 0=παράθυρο). Το DXF
+  δείχνει για το #1 **ARC** (κέντρο=αρμός, ακτίνα=πλάτος−2·jamb=1.3, ~88°) + φύλλο. **Νέο
+  `buildDoorSymbolSegments`** (φύλλο + τεταρτοκυκλικό τόξο ως polyline, slanted-safe via û/n̂):
+  μεντεσές t=tmin+jamb/|u|, f=`frame_width`/πάχος· **DXF-validated** η κλειστή θέση πέφτει ΑΚΡΙΒΩΣ
+  στον δεύτερο αρμό. Απόφαση Giorgio: faithful (πόρτα+παράθυρο), ΟΧΙ «και τα δύο παράθυρα».
+- **Calibration flag:** πλευρά μεντεσέ/φορά ανοίγματος ανά `side` (εδώ side=3) — άλλες τιμές
+  μπορεί να χρειαστούν mirror (hinge στο tmax ή φύλλο προς −n̂).
 
 ## Changelog
 - **2026-06-25** — Φ5b.1: extract `<dim>`/`<wall>`/`<open>` + 2Δ mappers. 16 jest.
@@ -115,3 +133,7 @@ calibration των ίδιων pure modules (μηδέν νέα αρχεία):
 - **2026-06-25** — Φ5b.1++: data-driven calibration (Δρόμος Α confirmed). `<dtext_color>` κίτρινο κείμενο,
   end_style=8 → βελάκια+extension (όχι 45°), σύμβολο παραθύρου με πλαίσιο+μπινί. Tunable constants για
   browser-verify. **52 jest GREEN** (io/tek). Μηδέν νέα αρχεία — calibration των Φ5b.1+ modules.
+- **2026-06-25** — Φ5b.1+++: **DXF ground-truth calibration** (`Ισόγειο 312.dxf.txt`). 3 χρώματα διάστασης
+  (γραμμή πράσινη / κείμενο κίτρινο / βέλη μπορντώ `COLOR_241`), βέλος = κλειστό τρίγωνο (DXF αναλογίες).
+  **Άνοιγμα #1=πόρτα (νέο `buildDoorSymbolSegments` τόξο, DXF-validated) / #2=παράθυρο** — διαχωρισμός
+  ανά `style` (`isDoorStyle`). Απόφαση Giorgio: faithful πόρτα+παράθυρο. **56 jest GREEN** (io/tek).

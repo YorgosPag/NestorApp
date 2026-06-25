@@ -19,10 +19,15 @@
  */
 
 import React from 'react';
-import type { RibbonCommandsApi } from '../ui/ribbon/context/RibbonCommandContext';
-import type { RibbonTab } from '../ui/ribbon/types/ribbon-types';
 import type { SceneModel } from '../types/scene';
+import type { ToolType } from '../ui/toolbar/types';
 import type { useLevels } from '../systems/levels';
+import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
+// ADR-532 Stage B5 — top-bar self-subscribes to the selection set + owns the
+// ribbon assembly (moved here from DxfViewerContent so the orchestrator no
+// longer re-renders on click-selection).
+import { useUniversalSelection } from '../systems/selection';
+import { useDxfViewerRibbon } from './useDxfViewerRibbon';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
@@ -62,22 +67,41 @@ import { useFloorMetadata } from '../hooks/data/useFloorMetadata';
 type LevelManager = ReturnType<typeof useLevels>;
 
 export interface DxfViewerTopBarProps {
-  readonly ribbonCommands: RibbonCommandsApi;
-  readonly contextualTabs: readonly RibbonTab[];
-  readonly activeContextualTrigger: string | null;
-  readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManager;
+  readonly activeTool: ToolType;
+  readonly handleToolChange: (tool: ToolType) => void;
+  readonly handleRibbonComingSoon: (label: string) => void;
+  readonly wrappedHandleAction: DxfViewerCallbacksReturn['wrappedHandleAction'];
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly currentScene: SceneModel | null;
 }
 
 export function DxfViewerTopBar({
-  ribbonCommands,
-  contextualTabs,
-  activeContextualTrigger,
-  primarySelectedId,
-  currentScene,
   levelManager,
+  activeTool,
+  handleToolChange,
+  handleRibbonComingSoon,
+  wrappedHandleAction,
+  canUndo,
+  canRedo,
+  currentScene,
 }: DxfViewerTopBarProps) {
+  // ADR-532 Stage B5 — self-subscribe to the entity selection (compat hook =
+  // re-render on selection change). The orchestrator no longer feeds these in.
+  const universalSelection = useUniversalSelection();
+  const primarySelectedId = universalSelection.getPrimaryId();
+  const selectedEntityIds = universalSelection.getSelectedEntityIds();
+
+  // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/
+  // array/text bridges). Moved here from DxfViewerContent so its reactive
+  // selection inputs come from THIS top-bar's subscription, not the orchestrator.
+  const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
+    levelManager, universalSelection, activeTool,
+    handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
+    canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
+  });
+
   // ADR-395 Phase 1 (G3+G7) — resolve buildingId + floorId once for all BIM
   // persistence hosts. Import-σε-όροφο δίνει `saveContext.floorId` αλλά ΟΧΙ
   // `buildingId` → χωρίς resolution ο BimToBoqBridge έκανε σιωπηρό skip και η
@@ -114,7 +138,7 @@ export function DxfViewerTopBar({
     <>
       <RibbonRoot
         commands={ribbonCommands}
-        contextualTabs={contextualTabs}
+        contextualTabs={ribbonContextualTabs}
         activeContextualTrigger={activeContextualTrigger}
       />
       {/*

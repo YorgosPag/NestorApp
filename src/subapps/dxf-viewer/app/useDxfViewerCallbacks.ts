@@ -18,8 +18,10 @@ import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { NotificationContextValue } from '@/types/notifications';
 import type { LevelsHookReturn } from '../systems/levels/useLevels';
-import type { UniversalSelectionHook } from '../systems/selection/SelectionSystem';
 import type { Status, OverlayKind } from '../overlays/types';
+// ADR-532 Stage B5 — read/mutate the selection set imperatively at event time
+// (ADR-040 dual-access) instead of receiving it as a reactive prop.
+import { SelectedEntitiesStore } from '../systems/selection';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
@@ -63,7 +65,6 @@ export interface DxfViewerCallbacksParams {
   setShowLegacyImport: React.Dispatch<React.SetStateAction<boolean>>;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   currentScene: SceneModel | null;
-  selectedEntityIds: string[];
   handleSceneChange: (scene: SceneModel) => void;
   handleFileImport: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
   levelManager: LevelsHookReturn;
@@ -71,7 +72,6 @@ export interface DxfViewerCallbacksParams {
     overlays: Record<string, OverlayEntry>;
     setCurrentLevel: (id: string | null) => void;
   };
-  universalSelection: UniversalSelectionHook;
   setOverlayStatus: (s: Status) => void;
   setOverlayKind: (k: OverlayKind) => void;
   showLayers: boolean;

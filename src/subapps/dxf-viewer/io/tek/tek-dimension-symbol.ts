@@ -36,12 +36,12 @@ export interface TekDimGeom {
 }
 
 const DEFAULT_TEXT_HEIGHT_M = 0.15;
-/** Μήκος βέλους ως κλάσμα του ύψους κειμένου (calibratable· browser-verify). */
-const ARROW_LEN_FACTOR = 1.4;
-/** Μισό άνοιγμα γωνίας βέλους (rad ≈ 18°). */
-const ARROW_HALF_ANGLE_RAD = 0.32;
-/** Μήκος κάθετης extension παύλας ως κλάσμα του ύψους κειμένου. */
-const EXT_TICK_LEN_FACTOR = 2;
+/** Μήκος βέλους ως κλάσμα του ύψους κειμένου (DXF-verified ≈ 1.0· βέλος 0.12m / κείμενο 0.119m). */
+const ARROW_LEN_FACTOR = 1.0;
+/** Μισό άνοιγμα γωνίας βέλους (rad ≈ 12°· DXF half-width 0.025 / μήκος 0.12). */
+const ARROW_HALF_ANGLE_RAD = 0.206;
+/** Μήκος κάθετης extension παύλας ως κλάσμα του ύψους κειμένου (DXF ≈ 1.34, ασφαλές ~1.4). */
+const EXT_TICK_LEN_FACTOR = 1.4;
 
 const seg = (a: TekPoint2D, b: TekPoint2D): TekSeg => ({ a, b });
 const isOrigin = (p: TekPoint2D): boolean => p.x === 0 && p.y === 0;
@@ -49,15 +49,16 @@ const samePt = (a: TekPoint2D, b: TekPoint2D): boolean =>
   Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
 
 /**
- * Ανοιχτό βελάκι (2 πτερύγια) με κορυφή στο `tip`, που δείχνει προς τα **έξω** κατά τη μοναδιαία
- * διεύθυνση `(ox,oy)`. Τα πτερύγια γυρίζουν προς τα πίσω (−out) κατά ±`ARROW_HALF_ANGLE_RAD`.
+ * **Κλειστό τριγωνικό βελάκι** (2 πτερύγια + βάση) με κορυφή στο `tip`, που δείχνει προς τα **έξω**
+ * κατά τη μοναδιαία διεύθυνση `(ox,oy)` — όπως το ground-truth DXF (3 γραμμές/βέλος). Τα πτερύγια
+ * γυρίζουν προς τα πίσω (−out) κατά ±`ARROW_HALF_ANGLE_RAD`· η βάση κλείνει το τρίγωνο.
  */
 function arrowHead(tip: TekPoint2D, ox: number, oy: number, len: number): TekSeg[] {
   const c = Math.cos(ARROW_HALF_ANGLE_RAD), s = Math.sin(ARROW_HALF_ANGLE_RAD);
   const bx = -ox, by = -oy; // φορά πτερυγίων = αντίθετη του βέλους
   const b1 = { x: tip.x + (bx * c - by * s) * len, y: tip.y + (bx * s + by * c) * len };
   const b2 = { x: tip.x + (bx * c + by * s) * len, y: tip.y + (-bx * s + by * c) * len };
-  return [seg(tip, b1), seg(tip, b2)];
+  return [seg(tip, b1), seg(tip, b2), seg(b1, b2)];
 }
 
 /** Κάθετη extension παύλα μήκους `len` κεντραρισμένη στο `p` (κάθετη στη διεύθυνση `(ux,uy)`). */

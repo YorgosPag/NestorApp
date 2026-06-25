@@ -47,6 +47,9 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centr
 // whole sidebar subtree (~426 fibers) on every wheel notch — the #3 wheel-zoom freeze root cause.
 // 🏢 ADR-418: real view-scale (1:N) instead of pixel-%
 import { useViewScale } from '../systems/zoom/hooks/useViewScale';
+// ADR-532 Stage B5 — self-subscribe to the primary selection (LevelPanel
+// highlight) so the orchestrator no longer prop-drills it + re-renders on click.
+import { usePrimarySelectedId } from '../systems/selection';
 
 // ============================================================================
 // 🎯 LAYOUT CONSTANTS - Centralized, maintainable
@@ -78,8 +81,6 @@ interface SidebarSectionProps {
   // ADR-358 Phase 8 sidebar dock — Properties tab scope.
   projectId?: string;
   floorplanId?: string;
-  /** Universal-selection primary id (≠ selectedEntityIds[0] for some flows). */
-  primarySelectedId?: string | null;
 }
 
 // ============================================================================
@@ -120,10 +121,11 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   onSceneImported,
   projectId,
   floorplanId,
-  primarySelectedId,
 }) => {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // ADR-532 Stage B5 — own subscription (value-stable string snapshot).
+  const primarySelectedId = usePrimarySelectedId();
 
   // ADR-176: Drawer variant uses full width, inline uses fixed 384px
   const isDrawer = variant === 'drawer';

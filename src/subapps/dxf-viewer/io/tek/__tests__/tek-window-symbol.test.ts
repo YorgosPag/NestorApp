@@ -52,11 +52,11 @@ describe('buildWallCutoutSegments (ADR-531)', () => {
 
 describe('buildWindowSymbolSegments (ADR-531 Φ5b.1++)', () => {
   it('παράγει πλαίσιο (4) + 2 υαλοπίνακες + 1 μπινί = 7', () => {
-    expect(buildWindowSymbolSegments(OP1, WALL)).toHaveLength(7);
+    expect(buildWindowSymbolSegments(OP2, WALL)).toHaveLength(7);
   });
 
   it('το σύμβολο εκτείνεται κατά το πάχος γύρω από το κέντρο (f=0.5)', () => {
-    const segs = buildWindowSymbolSegments(OP1, WALL);
+    const segs = buildWindowSymbolSegments(OP2, WALL);
     const ys = segs.flatMap((s) => [s.a.y, s.b.y]);
     const mid = 0.58 + 0.25 * 0.5; // wall y + half thickness
     expect(Math.min(...ys)).toBeLessThan(mid);
@@ -64,10 +64,38 @@ describe('buildWindowSymbolSegments (ADR-531 Φ5b.1++)', () => {
   });
 
   it('το μπινί (τελευταίο seg) είναι κάθετο στον άξονα στο μέσο του ανοίγματος', () => {
-    const segs = buildWindowSymbolSegments(OP1, WALL);
+    const segs = buildWindowSymbolSegments(OP2, WALL);
     const mullion = segs[segs.length - 1];
     // Κάθετο στον οριζόντιο άξονα → ίδιο x, διαφορετικό y.
     expect(Math.abs(mullion.b.x - mullion.a.x)).toBeCloseTo(0, 6);
     expect(Math.abs(mullion.b.y - mullion.a.y)).toBeGreaterThan(0);
+  });
+});
+
+describe('isDoorStyle (ADR-531 Φ5b.1++)', () => {
+  it('style=1 → πόρτα, style=0 → παράθυρο (DXF ground-truth)', () => {
+    expect(isDoorStyle(1)).toBe(true);
+    expect(isDoorStyle(0)).toBe(false);
+  });
+});
+
+describe('buildDoorSymbolSegments (ADR-531 Φ5b.1++)', () => {
+  it('παράγει φύλλο (1) + τεταρτοκυκλικό τόξο (12 τμήματα) = 13', () => {
+    expect(buildDoorSymbolSegments(OP1, WALL)).toHaveLength(13);
+  });
+
+  it('το φύλλο (1ο seg) έχει μήκος ≈ πλάτος − 2·jamb (1.3m) και είναι κάθετο στον τοίχο', () => {
+    const leaf = buildDoorSymbolSegments(OP1, WALL)[0];
+    const len = Math.hypot(leaf.b.x - leaf.a.x, leaf.b.y - leaf.a.y);
+    expect(len).toBeCloseTo(1.3, 1);
+    // Οριζόντιος τοίχος (û=x) → φύλλο κάθετο = κατακόρυφο (ίδιο x).
+    expect(Math.abs(leaf.b.x - leaf.a.x)).toBeCloseTo(0, 6);
+  });
+
+  it('η κλειστή θέση (τέλος τόξου) πέφτει κατά μήκος του τοίχου στον 2ο αρμό', () => {
+    const segs = buildDoorSymbolSegments(OP1, WALL);
+    const closed = segs[segs.length - 1].b;
+    // Μεντεσές f=frame_width/thick=0.6 → y = 0.58 + 0.25·0.6 = 0.73· η κλειστή θέση μένει στο ίδιο f.
+    expect(closed.y).toBeCloseTo(0.73, 2);
   });
 });
