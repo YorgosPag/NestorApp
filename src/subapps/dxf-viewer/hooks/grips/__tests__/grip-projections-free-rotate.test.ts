@@ -13,6 +13,7 @@ import {
   buildRotateReferencePreview,
   rotateDeltaForAngleDeg,
   rotateSweepDegFromDirs,
+  resolveLiveRotationFromCursor,
 } from '../grip-projections';
 import type { UnifiedGripInfo } from '../unified-grip-types';
 
@@ -118,5 +119,56 @@ describe('ADR-397 Σ3 — pure angle helpers', () => {
     expect(rotateSweepDegFromDirs({ x: 1, y: 0 }, { x: 0, y: -1 })).toBeCloseTo(-90, 6); // CW
     expect(rotateSweepDegFromDirs({ x: 1, y: 0 }, { x: -1, y: 0 })).toBeCloseTo(180, 6); // half-turn → +180
     expect(rotateSweepDegFromDirs({ x: 1, y: 0 }, { x: 1, y: 0 })).toBeCloseTo(0, 6);
+  });
+});
+
+describe('ADR-040 Φ12 — resolveLiveRotationFromCursor (live = React parity)', () => {
+  it('rotate-free returns rotateCursorDriven so the ghost may recompute live', () => {
+    const preview = buildRotateReferencePreview(
+      rotationGrip(), 'rotate-free', PIVOT, null, null, null, { x: 0, y: 10 }, { x: 10, y: 0 },
+    );
+    expect(preview!.rotateCursorDriven).toBe(true);
+  });
+
+  it('typed-angle is NOT cursor-driven (stays on the React dragPreview)', () => {
+    const preview = buildRotateReferencePreview(
+      rotationGrip(), 'rotate-free', PIVOT, null, null, null, { x: 3, y: 4 }, { x: 1, y: 0 }, 90,
+    );
+    expect(preview!.rotateCursorDriven).toBeUndefined();
+  });
+
+  it('free rotate: live recompute at a new cursor == buildRotateReferencePreview at that cursor', () => {
+    const baseline = { x: 10, y: 0 };
+    // The drag snapshot the React path produced at the FIRST cursor.
+    const snap = buildRotateReferencePreview(
+      rotationGrip(), 'rotate-free', PIVOT, null, null, null, { x: 0, y: 10 }, baseline,
+    )!;
+    // The cursor moves to a new position — the live ghost recomputes off the snapshot.
+    const newCursor = { x: -7, y: 7 };
+    const live = resolveLiveRotationFromCursor(snap, newCursor);
+    // The React path would have produced this at the new cursor (same baseline/pivot).
+    const reactAtNew = buildRotateReferencePreview(
+      rotationGrip(), 'rotate-free', PIVOT, null, null, null, newCursor, baseline,
+    )!;
+    expect(live.delta).toEqual(reactAtNew.delta);
+    expect(live.rotateSweepDeg).toBeCloseTo(reactAtNew.rotateSweepDeg!, 6);
+    expect(live.rotateReadoutAnchor).toEqual(newCursor);
+  });
+
+  it('6-click align-end: live recompute updates the align line + matches the React path', () => {
+    const refStart = { x: 0, y: 0 };
+    const refEnd = { x: 10, y: 0 };       // refDir = East
+    const alignStart = { x: 2, y: 2 };
+    const snap = buildRotateReferencePreview(
+      rotationGrip(), 'await-align-end', PIVOT, refStart, refEnd, alignStart, { x: 5, y: 5 },
+    )!;
+    expect(snap.rotateCursorDriven).toBe(true);
+    const newCursor = { x: 2, y: 9 };     // alignDir = North (from alignStart)
+    const live = resolveLiveRotationFromCursor(snap, newCursor);
+    const reactAtNew = buildRotateReferencePreview(
+      rotationGrip(), 'await-align-end', PIVOT, refStart, refEnd, alignStart, newCursor,
+    )!;
+    expect(live.delta).toEqual(reactAtNew.delta);
+    expect(live.rotateAlignLine).toEqual({ from: alignStart, to: newCursor });
   });
 });

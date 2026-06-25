@@ -48,6 +48,35 @@ export function rotateSweepDegFromDirs(refDir: Point2D, alignDir: Point2D): numb
   return deg;
 }
 
+/**
+ * ADR-040 Φ12 — recompute a CURSOR-DRIVEN rotation sweep LIVE from the realtime
+ * effective-world cursor, so the rotating ghost tracks the cursor 1:1 (no React-state
+ * lag) exactly like the translate ghost. Produces the SAME `{delta, sweep, readout}`
+ * that `buildRotateReferencePreview` builds in the React path (parity-tested), derived
+ * purely from the drag snapshot:
+ *   refDir   = anchorPos − pivot      (the reference arm — fixed for the whole drag)
+ *   alignDir = cursor − alignOrigin   (alignOrigin = the align-line start for the 6-click
+ *                                      `await-align-end` flow, else the pivot for free rotate)
+ *   delta    = alignDir − refDir      ⇒ `apply*GripDrag` sweeps angle(align) − angle(ref)
+ * Only valid when `rotatePivot` + `anchorPos` are set (guaranteed by `rotateCursorDriven`).
+ */
+export function resolveLiveRotationFromCursor(
+  dp: DxfGripDragPreview,
+  cursor: Point2D,
+): Pick<DxfGripDragPreview, 'delta' | 'rotateSweepDeg' | 'rotateReadoutAnchor' | 'rotateAlignLine'> {
+  const pivot = dp.rotatePivot!;
+  const anchorPos = dp.anchorPos!;
+  const refDir = { x: anchorPos.x - pivot.x, y: anchorPos.y - pivot.y };
+  const alignOrigin = dp.rotateAlignLine ? dp.rotateAlignLine.from : pivot;
+  const alignDir = { x: cursor.x - alignOrigin.x, y: cursor.y - alignOrigin.y };
+  return {
+    delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
+    rotateSweepDeg: rotateSweepDegFromDirs(refDir, alignDir),
+    rotateReadoutAnchor: cursor,
+    ...(dp.rotateAlignLine ? { rotateAlignLine: { from: dp.rotateAlignLine.from, to: cursor } } : {}),
+  };
+}
+
 // ── DXF Projection Builders ──
 
 /**
@@ -234,6 +263,7 @@ export function buildRotateReferencePreview(
       delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
       rotateSweepDeg: rotateSweepDegFromDirs(refDir, alignDir),
       rotateReadoutAnchor: cursor,
+      rotateCursorDriven: true, // ADR-040 Φ12 — free rotate follows the cursor 1:1
     };
   }
   if (step === 'await-ref-end' && refStart && cursor) {
@@ -251,6 +281,7 @@ export function buildRotateReferencePreview(
       delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
       rotateRefLine: { from: refStart, to: refEnd },
       rotateAlignLine: { from: alignStart, to: cursor },
+      rotateCursorDriven: true, // ADR-040 Φ12 — align arm follows the cursor 1:1
     };
   }
   // `await-ref-start`: the rotation CENTRE has just been picked but no reference

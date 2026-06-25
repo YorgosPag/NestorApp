@@ -18,10 +18,11 @@
  * στο harness· εδώ μένει ΜΟΝΟ η draw logic.
  *
  * ADR-040 Φ12 — `cursorMode: 'world-position'`: ο harness τρέφει `effectiveCursor`
- * = το ΖΩΝΤΑΝΟ realtime effective-world (ίδιο 60fps SSoT/ρολόι με τον crosshair). Για
- * translate/resize drag το `delta` ανα-υπολογίζεται live από αυτό (byte-identical με το
- * React `dragPreview.delta`) → ghost κλειδωμένο στον κέρσορα, μηδέν React-state lag.
- * Περιστροφή + hatch-gradient drags κρατούν το React `dragPreview` (sweep/bespoke marker).
+ * = το ΖΩΝΤΑΝΟ realtime effective-world (ίδιο 60fps SSoT/ρολόι με τον crosshair). Ό,τι
+ * οδηγεί ο κέρσορας 1:1 ανα-υπολογίζεται live (byte-identical με το React `dragPreview`):
+ * translate/resize (delta) ΚΑΙ cursor-driven περιστροφή (free rotate / 6-click align-end,
+ * sweep) → ghost κλειδωμένο στον κέρσορα, μηδέν React-state lag, όπως Revit/AutoCAD.
+ * Εξαιρούνται (μένουν React): typed-angle περιστροφή (keyed, ΟΧΙ cursor) + hatch-gradient.
  *
  * @module hooks/tools/useGripGhostPreview
  * @see ADR-040 — Preview Canvas Performance
@@ -69,9 +70,9 @@ import {
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
-// ADR-040 Φ12 — SSoT grip translate-delta (shared with buildDxfDragPreview/commit),
-// so the live synchronous ghost derives the delta identically from the effective-world.
-import { resolveGripTranslateDelta } from '../grips/grip-projections';
+// ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
+// the live synchronous ghost derives translate + rotation identically from the effective-world.
+import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -218,29 +219,35 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
 
   // ADR-040 Φ12 — cursorMode 'world-position': the harness feeds `effectiveCursor`
   // = the LIVE realtime effective-world (same SSoT + same 60fps clock as the
-  // compositor crosshair). For a TRANSLATE/RESIZE drag we recompute `delta` from it
-  // synchronously so the ghost is locked to the cursor with zero React-state lag.
-  // The result is byte-identical to the React `dragPreview.delta` (the SSoT == the
-  // `moveWorldPos` that fed it) — just read live, not one React commit + RAF later.
+  // compositor crosshair). We recompute the per-frame geometry from it synchronously
+  // so the ghost is locked to the cursor with zero React-state lag — byte-identical to
+  // the React `dragPreview` (the SSoT == the `moveWorldPos` that fed it), just live.
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!dragPreview) return;
 
-    // ROTATION (sweep around a pivot, has its own ° readout) + HATCH-gradient drags
-    // (bespoke origin/angle marker geometry) keep the React `dragPreview` as-is; only
-    // 1:1 translate/resize gets the live-delta treatment.
-    const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
+    // Live recompute of whatever the cursor drives 1:1:
+    //  · CURSOR-DRIVEN ROTATION (free rotate / 6-click align-end) → recompute the sweep
+    //    (delta + angle readout) from the cursor — Revit/AutoCAD rotate tracks 1:1.
+    //  · TRANSLATE / parametric RESIZE → recompute the move delta from the cursor.
+    // Excluded (kept on the React `dragPreview`): TYPED-angle rotation (keyed value, NOT
+    // cursor-driven) and HATCH-gradient drags (bespoke origin/angle marker geometry).
     const isHatchDrag = !!dragPreview.hatchGripKind;
-    const dp =
-      !isRotation && !isHatchDrag && effectiveCursor && dragPreview.anchorPos
-        ? {
-            ...dragPreview,
-            delta: resolveGripTranslateDelta(
-              dragPreview.anchorPos,
-              effectiveCursor,
-              dragPreview.movesEntity === true || dragPreview.hotGrip === true,
-            ),
-          }
-        : dragPreview;
+    const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
+    let dp = dragPreview;
+    if (effectiveCursor) {
+      if (dragPreview.rotateCursorDriven && dragPreview.rotatePivot && dragPreview.anchorPos) {
+        dp = { ...dragPreview, ...resolveLiveRotationFromCursor(dragPreview, effectiveCursor) };
+      } else if (!isRotation && !isHatchDrag && dragPreview.anchorPos) {
+        dp = {
+          ...dragPreview,
+          delta: resolveGripTranslateDelta(
+            dragPreview.anchorPos,
+            effectiveCursor,
+            dragPreview.movesEntity === true || dragPreview.hotGrip === true,
+          ),
+        };
+      }
+    }
 
     const entity = getEntity(dp.entityId);
     if (!entity) return;

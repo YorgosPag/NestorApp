@@ -169,6 +169,15 @@ export interface DxfGripDragPreview {
   rotateSweepDeg?: number;
   /** ADR-397 Σ3 — world anchor (the cursor) for the rotate angle readout pill. */
   rotateReadoutAnchor?: Point2D;
+  /**
+   * ADR-040 Φ12 — set when this rotation sweep is CURSOR-DRIVEN (free rotate, or the
+   * 6-click reference `await-align-end` step), as opposed to a keyed-in typed angle.
+   * Lets `useGripGhostPreview` recompute the sweep LIVE from the realtime effective-world
+   * cursor (`resolveLiveRotationFromCursor`) so the rotating ghost is locked 1:1 to the
+   * crosshair — same as translate. NOT set for typed-angle (the value is keyed, not the
+   * cursor) → that flow keeps the React `dragPreview`.
+   */
+  rotateCursorDriven?: boolean;
 }
 
 /** Grip interaction state for rendering pipeline */
