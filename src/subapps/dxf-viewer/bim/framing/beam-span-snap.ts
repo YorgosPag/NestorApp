@@ -35,6 +35,12 @@
  *      των **λοξών γωνία-σε-γωνία** (το λοξό μένει fallback). Έτσι η ανατ. παρειά τοίχου → δυτ. παρειά
  *      αντικριστής κολόνας υπερισχύει της σπάνιας λοξής ανίχνευσης σε διαγώνια κολόνα.
  *
+ * **ADR-529 Φ3 — justified third-alignment (cursor-driven, mirror 9-λαβών κολόνας):** το **κάθετο offset**
+ * του δοκαριού ακολουθεί τη θέση του cursor κατά μήκος της facing-παρειάς που κοιτάζει: **lo → νότια-flush**
+ * (όψη δοκαριού στη νότια παρειά μέλους), **mid → κεντραρισμένο** στον άξονα της παρειάς, **hi → βόρεια-flush**.
+ * Reuse `pickThird` (SSoT). Χρειάζεται `beamWidthMm` (ημι-πλάτος = offset flush)· `0` → χωρίς justify (centered,
+ * back-compat). Whole-line (Shift) → πάντα centered.
+ *
  * @see ../columns/column-beam-corner-snap.ts — το αντίστροφο πρότυπο (L-κολόνα γεμίζει γωνιακό κενό)
  * @see ../columns/column-beam-promote-junction.ts — ADR-529 Φ2 (δοκάρι ΠΡΟΑΓΕΙ Ι-κολόνα σε Γ)
  * @see ../geometry/shared/polygon-axis-projection.ts — projectPolygonOnAxis/projectPointOnAxis (SSoT)
@@ -50,7 +56,9 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { polygon2DCentroid } from '../geometry/shared/polygon-utils';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { MEMBER_GHOST_CAPTURE_MM } from './member-column-face-snap';
+import { pickThird } from './member-face-third';
 import type { PlacementAlignmentGuide } from './placement-alignment-guide';
+import type { GhostFaceFrame } from './linear-member-face-snap';
 import type { SceneSnapTargets } from './scene-snap-targets';
 import { subtractPoints, addPoints, scalePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
@@ -70,6 +78,12 @@ export interface BeamSpanSnap {
   readonly guide: PlacementAlignmentGuide;
   /** Κάθετη απόσταση cursor → νοητή ευθεία (nearest-wins με άλλα ζεύγη/tiers· 0 στο whole-line chain). */
   readonly dist: number;
+  /**
+   * ADR-529 Φ3 — `GhostFaceFrame` της facing-παρειάς που κοιτάζει ο cursor → οι **σιελ listening dimensions**
+   * (leftGap/rightGap/centerToCenter) εμφανίζονται ΚΑΙ στο auto-span (ίδιο SSoT με τον T-framing), δείχνοντας
+   * ζωντανά το justified alignment (νότια/κέντρο/βόρεια). `undefined` στο whole-line chain (centered).
+   */
+  readonly faceFrame?: GhostFaceFrame;
 }
 
 /** Υποψήφιο μέλος-στήριγμα: κέντρο (centroid) + κλειστό outline (scene units). */
@@ -94,6 +108,11 @@ interface PairFrame {
    * fallback) → η ανατ. παρειά τοίχου → δυτ. παρειά κολόνας υπερισχύει της λοξής γωνία-με-γωνία.
    */
   readonly faceAligned: boolean;
+  /** ADR-529 Φ3 — facing-point του B (για επιλογή «ποιο μέλος κοιτάζει ο cursor» στο justified alignment). */
+  readonly fB: Point2D;
+  /** Άκρα της facing-ακμής του A / B (για justified third-alignment: βόρεια-flush / κέντρο / νότια-flush). */
+  readonly faceA: readonly [Point2D, Point2D];
+  readonly faceB: readonly [Point2D, Point2D];
 }
 
 /**
@@ -126,16 +145,18 @@ function closestPointOnSegment(p: Point2D, a: Point2D, b: Point2D): Point2D {
   return { x: a.x + t * dx, y: a.y + t * dy };
 }
 
-/** Πλησιέστερο σημείο του περιγράμματος + η **μοναδιαία διεύθυνση της ακμής** πάνω στην οποία πέφτει. */
+/** Πλησιέστερο σημείο του περιγράμματος + η ακμή (unit dir + άκρα) πάνω στην οποία πέφτει. */
 interface OutlineHit {
   readonly point: Point2D;
-  readonly edge: Point2D; // unit dir της ακμής στο `point` (για το face-perpendicular gate)
+  readonly edge: Point2D;            // unit dir της ακμής (για το face-perpendicular gate)
+  readonly seg: readonly [Point2D, Point2D]; // άκρα της ακμής (για το justified third-alignment)
 }
 
 /** Πλησιέστερο σημείο του **περιγράμματος** (κλειστού πολυγώνου) στο `target` — η παρειά που «κοιτάζει». */
 function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): OutlineHit {
   let best = outline[0];
   let bestEdge: Point2D = { x: 1, y: 0 };
+  let bestSeg: readonly [Point2D, Point2D] = [outline[0], outline[0]];
   let bestD = Infinity;
   for (let i = 0; i < outline.length; i++) {
     const a = outline[i];
@@ -147,9 +168,10 @@ function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): Ou
       best = q;
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       bestEdge = len > EPS ? { x: (b.x - a.x) / len, y: (b.y - a.y) / len } : { x: 1, y: 0 };
+      bestSeg = [a, b];
     }
   }
-  return { point: best, edge: bestEdge };
+  return { point: best, edge: bestEdge, seg: bestSeg };
 }
 
 /**
@@ -184,17 +206,69 @@ function pairFrame(A: SpanSupport, B: SpanSupport): PairFrame | null {
   const faceAligned =
     Math.abs(u.x * hA.edge.x + u.y * hA.edge.y) <= FACE_PERP_SIN ||
     Math.abs(u.x * hB.edge.x + u.y * hB.edge.y) <= FACE_PERP_SIN;
-  return { origin: fA, u, sA, sB, faceAligned };
+  return { origin: fA, u, sA, sB, faceAligned, fB, faceA: hA.seg, faceB: hB.seg };
 }
 
-/** Span γεωμετρία (start/end flush + guide) ενός ζεύγους. `null` αν δεν υπάρχει κενό. */
-function spanGeometry(A: SpanSupport, B: SpanSupport): Omit<BeamSpanSnap, 'dist'> | null {
-  const fr = pairFrame(A, B);
-  if (!fr) return null;
+/**
+ * ADR-529 Φ3 — **justified perp offset** (cross-axis) του δοκαριού βάσει της θέσης του cursor κατά μήκος της
+ * facing-παρειάς που κοιτάζει (lo→νότια-flush / mid→κεντραρισμένο στον άξονα παρειάς / hi→βόρεια-flush),
+ * mirror των 9 λαβών κολόνας (reuse `pickThird` SSoT). Επιλέγεται η παρειά του μέλους που είναι **πλησιέστερο
+ * στον cursor** (A ή B). `beamHalfWidthScene` = ημι-πλάτος δοκαριού (flush = όψη δοκαριού πάνω στην παρειά·
+ * αν η παρειά στενότερη του δοκαριού → κέντρο). Επιστρέφει το offset κατά την κάθετο `perpDir` (από το `origin`).
+ */
+function spanJustification(
+  fr: PairFrame,
+  cursor: Readonly<Point2D>,
+  beamHalfWidthScene: number,
+): { perpOffset: number; faceFrame: GhostFaceFrame } {
+  const axisDir: Point2D = { x: -fr.u.y, y: fr.u.x }; // κατά μήκος της παρειάς (⊥ άξονα δοκαριού)
+  // Παρειά του μέλους πλησιέστερου στον cursor (A=origin ή B=fB).
+  const useA = (cursor.x - fr.origin.x) ** 2 + (cursor.y - fr.origin.y) ** 2
+    <= (cursor.x - fr.fB.x) ** 2 + (cursor.y - fr.fB.y) ** 2;
+  const base = useA ? fr.origin : fr.fB;
+  const [e0, e1] = useA ? fr.faceA : fr.faceB;
+  const alongFrom = (p: Point2D, ref: Point2D): number => (p.x - ref.x) * axisDir.x + (p.y - ref.y) * axisDir.y;
+  const fp0 = alongFrom(e0, base);
+  const fp1 = alongFrom(e1, base);
+  const faceLo = Math.min(fp0, fp1);
+  const faceHi = Math.max(fp0, fp1);
+  // Justified κέντρο δοκαριού κατά μήκος της παρειάς (lo/mid/hi)· παρειά στενότερη του δοκαριού → κέντρο.
+  const ghostCenterAlong = faceHi - faceLo < 2 * beamHalfWidthScene
+    ? (faceLo + faceHi) / 2
+    : (() => {
+        const third = pickThird(alongFrom(cursor, base), faceLo, faceHi);
+        return third === 'lo' ? faceLo + beamHalfWidthScene
+          : third === 'hi' ? faceHi - beamHalfWidthScene
+          : (faceLo + faceHi) / 2;
+      })();
+  // perpOffset (κατά axisDir) ΣΕ ΣΧΕΣΗ ΜΕ fr.origin (το spanGeometryFromFrame μετατοπίζει από εκεί).
+  const perpOffset = ghostCenterAlong + alongFrom(base, fr.origin);
+  const faceFrame: GhostFaceFrame = {
+    origin: base,
+    axisDir,
+    perpDir: { x: fr.u.x, y: fr.u.y }, // = (axisDir.y, −axisDir.x) — «προς τα έξω» (φορά δοκαριού)
+    facePerp: 0,
+    outwardSign: 1,
+    faceAlongMin: faceLo,
+    faceAlongMax: faceHi,
+    ghostCenterAlong,
+    ghostHalfWidth: beamHalfWidthScene,
+  };
+  return { perpOffset, faceFrame };
+}
+
+/** Span γεωμετρία (start/end flush + guide) από έτοιμο frame, με προαιρετικό κάθετο offset (justified). */
+function spanGeometryFromFrame(
+  fr: PairFrame,
+  cA: Point2D,
+  cB: Point2D,
+  perpOffset: number,
+): Omit<BeamSpanSnap, 'dist'> {
+  const off: Point2D = { x: -fr.u.y * perpOffset, y: fr.u.x * perpOffset }; // κατά την κάθετο (perpDir·offset)
   return {
-    start: addPoints(fr.origin, scalePoint(fr.u, fr.sA)),
-    end: addPoints(fr.origin, scalePoint(fr.u, fr.sB)),
-    guide: { a: A.center, b: B.center }, // ο dashed οδηγός μένει κέντρο→κέντρο (σταθερό whole-line seed)
+    start: addPoints(addPoints(fr.origin, scalePoint(fr.u, fr.sA)), off),
+    end: addPoints(addPoints(fr.origin, scalePoint(fr.u, fr.sB)), off),
+    guide: { a: cA, b: cB }, // ο dashed οδηγός μένει κέντρο→κέντρο (σταθερό whole-line seed)
   };
 }
 
@@ -230,10 +304,13 @@ export function resolveBeamSpanSnap(
   cursor: Readonly<Point2D>,
   supportOutlines: readonly (readonly Point2D[])[],
   sceneUnits: SceneUnits,
+  beamWidthMm: number = 0,
 ): BeamSpanSnap | null {
   const supports = buildSupports(supportOutlines);
   if (supports.length < 2) return null;
-  const captureScene = SPAN_CAPTURE_MM * mmToSceneUnits(sceneUnits);
+  const f = mmToSceneUnits(sceneUnits);
+  const captureScene = SPAN_CAPTURE_MM * f;
+  const beamHalfWidthScene = (beamWidthMm / 2) * f;
 
   let best: BeamSpanSnap | null = null;
   let bestFace = false;
@@ -250,15 +327,18 @@ export function resolveBeamSpanSnap(
       if (cp.perp > captureScene) continue;
       // ADR-528 §adjacency — απόρριψη μη-διαδοχικού ζεύγους (τρίτη στήριξη ανάμεσα).
       if (hasSupportBetween(A, B, fr, supports, captureScene)) continue;
-      const geom = spanGeometry(A, B);
-      if (!geom) continue;
+      // ADR-529 Φ3 — justified third-alignment: το κάθετο offset του δοκαριού ακολουθεί τη θέση του cursor
+      // κατά μήκος της facing-παρειάς (νότια-flush / κέντρο / βόρεια-flush), mirror των 9 λαβών κολόνας.
+      // Το `faceFrame` δίνει τις **σιελ listening dimensions** (ίδιο SSoT με τον T-framing).
+      const { perpOffset, faceFrame } = spanJustification(fr, cursor, beamHalfWidthScene);
+      const geom = spanGeometryFromFrame(fr, A.center, B.center, perpOffset);
       // ADR-529 Φ2-refine ranking: (1) face-aligned νικά λοξό γωνία-σε-γωνία ανεξαρτήτως perp· (2) ίδια κλάση
       // → μικρότερο perp. Το λοξό μένει fallback (επιλέγεται μόνο αν δεν υπάρχει face-aligned υποψήφιο).
       const better = !best
         || (fr.faceAligned && !bestFace)
         || (fr.faceAligned === bestFace && cp.perp < best.dist);
       if (better) {
-        best = { ...geom, dist: cp.perp };
+        best = { ...geom, faceFrame, dist: cp.perp };
         bestFace = fr.faceAligned;
       }
     }
@@ -297,8 +377,11 @@ export function resolveBeamSpanChain(
 
   const out: BeamSpanSnap[] = [];
   for (let t = 0; t < onLine.length - 1; t++) {
-    const geom = spanGeometry(onLine[t].s, onLine[t + 1].s);
-    if (geom) out.push({ ...geom, dist: 0 });
+    const A = onLine[t].s;
+    const B = onLine[t + 1].s;
+    const fr = pairFrame(A, B);
+    // Whole-line: κεντραρισμένο (perpOffset 0) — η συνεχής δοκός ακολουθεί τη νοητή ευθεία, χωρίς per-bay justify.
+    if (fr) out.push({ ...spanGeometryFromFrame(fr, A.center, B.center, 0), dist: 0 });
   }
   return out;
 }

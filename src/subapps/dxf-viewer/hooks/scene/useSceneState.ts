@@ -153,7 +153,8 @@ export function useSceneState() {
       }
       
       // ADR-526 — Tekton .tek → ίδιο pipeline (level-resolution έγινε ήδη παραπάνω).
-      // Φορτώνει τη σκηνή ΚΑΙ κάνει first-save κάθε σκάλας μέσω του StairPersistenceHost.
+      // Φορτώνει τη σκηνή· οι σκάλες (BIM) κάνουν first-save μέσω StairPersistenceHost,
+      // ενώ τα 2Δ primitives (Φ5a: line/arc/circle) ζουν ΜΟΝΟ στο scene blob (DXF-style).
       if (isTekFileName(file.name)) {
         const result = await importTekFile(file, targetLevelId);
         if (!result.success || !result.scene) {
@@ -164,10 +165,24 @@ export function useSceneState() {
           notifications.warning(result.warnings.join('\n'), { duration: 5000 });
         }
         setLevelScene(targetLevelId, result.scene);
+        // BIM entities → PersistenceHost first-save (Firestore). 2Δ primitives (line/arc/
+        // circle) ΔΕΝ έχουν host → ΟΧΙ emit· σώζονται με το scene blob (linkSceneToLevel πιο κάτω).
         for (const entity of result.scene.entities) {
           if (entity.type === 'stair') {
             EventBus.emit('drawing:entity-created', { entity, tool: 'stair' });
           }
+        }
+        // 🛡️ ADR-526 Φ5a — link το level στο canonical FileRecord ΤΩΡΑ (ίδιο με το DXF branch
+        // γρ.190-205), ώστε το scene blob (2Δ γραμμές/τόξα) να επιβιώνει σε hard-refresh αντί να
+        // βασίζεται στο 2s debounced round-trip. Idempotent· skip όταν δεν υπάρχει canonical id.
+        if (resolvedFileRecordId && levelsSystem.linkSceneToLevel) {
+          const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
+          if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
+            void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
+              /* non-blocking: already deleted by floor-wipe, or permission no-op */
+            });
+          }
+          void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
         }
         setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
         return;

@@ -58,6 +58,48 @@ export interface TekStairRecord {
   readonly stepsNumbering: boolean;
 }
 
+/**
+ * Ένα `<line>` record (entity type 4) — δύο κορυφές σε **μέτρα** (Y-up), χρώμα **BGR**.
+ * Καθρέφτης (read-side) του export `TekLine` (`LINE_RECORD_TEMPLATE`). Καμία μετατροπή εδώ.
+ */
+export interface TekLineRecord {
+  /** `<v0X>` αρχή X (μέτρα). */
+  readonly v0x: number;
+  /** `<v0Y>` αρχή Y (μέτρα, Y-up). */
+  readonly v0y: number;
+  /** `<v1X>` τέλος X (μέτρα). */
+  readonly v1x: number;
+  /** `<v1Y>` τέλος Y (μέτρα, Y-up). */
+  readonly v1y: number;
+  /** `<color>` αυθεντικό **BGR** hex (μετατρέπεται σε RGB στον mapper). */
+  readonly colorBgr: string;
+}
+
+/**
+ * Ένα `<arc>` record (entity type 5) — κέντρο + 2 ακραία σημεία σε **μέτρα** (Y-up).
+ * Καθρέφτης του export `TekArc` (`ARC_RECORD_TEMPLATE`). `isCircle` ⇒ `<circle>1`.
+ * ΣΗΜ.: ο export γράφει `p0=τέλος`, `p1=αρχή` (το Y-flip αντιστρέφει τη φορά) — ο mapper
+ * το αντιστρέφει. Για κύκλο, `p0` = σημείο περιφέρειας, `p1` = (0,0) αγνοείται.
+ */
+export interface TekArcRecord {
+  /** `<circle>` — `true` (1) κύκλος, `false` (0) τόξο. */
+  readonly isCircle: boolean;
+  /** `<centreX>` κέντρο X (μέτρα). */
+  readonly centreX: number;
+  /** `<centreY>` κέντρο Y (μέτρα, Y-up). */
+  readonly centreY: number;
+  /** `<p0X>` (μέτρα) — τόξο: τέλος· κύκλος: σημείο περιφέρειας (→ ακτίνα). */
+  readonly p0x: number;
+  /** `<p0Y>` (μέτρα, Y-up). */
+  readonly p0y: number;
+  /** `<p1X>` (μέτρα) — τόξο: αρχή· κύκλος: αγνοείται. */
+  readonly p1x: number;
+  /** `<p1Y>` (μέτρα, Y-up). */
+  readonly p1y: number;
+  /** `<color>` αυθεντικό **BGR** hex. */
+  readonly colorBgr: string;
+}
+
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */
 export interface TekParseResult {
   /** Έκδοση αρχείου (`<fileversion>`) — π.χ. 516. */
@@ -70,4 +112,16 @@ export interface TekParseResult {
   readonly stairs: readonly TekStairRecord[];
   /** Μη-κρίσιμες προειδοποιήσεις (π.χ. άδειο stair, λείπει πεδίο). */
   readonly warnings: readonly string[];
+}
+
+/**
+ * Υπερσύνολο του `TekParseResult` (ADR-526 Φ5a) — προσθέτει 2Δ primitives (γραμμές/τόξα).
+ * Backward-compatible: όποιος consumer χρειάζεται μόνο σκάλες διαβάζει το `stairs` ως πριν.
+ * Επόμενες φάσεις (Φ5b) επεκτείνουν additive (walls/openings/slabs/roofs).
+ */
+export interface TekSceneParseResult extends TekParseResult {
+  /** Όλα τα `<line>` records (type 4), με σειρά ορόφου. */
+  readonly lines: readonly TekLineRecord[];
+  /** Όλα τα `<arc>` records (type 5) — τόξα ΚΑΙ κύκλοι. */
+  readonly arcs: readonly TekArcRecord[];
 }

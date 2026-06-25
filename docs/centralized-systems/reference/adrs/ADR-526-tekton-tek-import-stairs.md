@@ -1,6 +1,6 @@
 # ADR-526 — Εισαγωγή Tekton `.TEK` (σκάλες πρώτα)
 
-**Status:** 🟢 Φάση 1 (parser + stair extractor + BIM mapper + scene builder + import service) **IMPLEMENTED + UNIT-VERIFIED** (18 jest GREEN) + **REAL-FILE-VERIFIED** στο `ΣΚΑΛΑ.tek` (FESPA 9.1.0.46) 2026-06-25. 🟢 Φάση 2 (UI wiring: ribbon κουμπί «Εισαγωγή Τέκτονα» + native file picker + scene-load + stair first-save) **CODE-COMPLETE** (tsc clean) — 🔴 browser-verify εκκρεμεί. 🟢 Φάση 3 (**EXPORT** σκαλών `<stair>` type 21 → `.tek`, ο αντίστροφος του import) **CODE-COMPLETE + UNIT-VERIFIED** (νέα tek-stair-export suite + ενημερωμένα tek-export/adapter suites — όλα GREEN) 2026-06-25 — 🔴 Τέκτων round-trip verify (Giorgio) εκκρεμεί. 🟢 Φάση 4 (Wizard import wiring: `.tek` δεκτό από «Εισαγωγή Κάτοψης (Wizard)» — reuse Φ1+Φ2 pipeline· 4 jest GREEN) **CODE-COMPLETE** — 🔴 browser-verify εκκρεμεί. UNCOMMITTED. Commit μόνο Giorgio.
+**Status:** 🟢 Φάση 1 (parser + stair extractor + BIM mapper + scene builder + import service) **IMPLEMENTED + UNIT-VERIFIED** (18 jest GREEN) + **REAL-FILE-VERIFIED** στο `ΣΚΑΛΑ.tek` (FESPA 9.1.0.46) 2026-06-25. 🟢 Φάση 2 (UI wiring: ribbon κουμπί «Εισαγωγή Τέκτονα» + native file picker + scene-load + stair first-save) **CODE-COMPLETE** (tsc clean) — 🔴 browser-verify εκκρεμεί. 🟢 Φάση 3 (**EXPORT** σκαλών `<stair>` type 21 → `.tek`, ο αντίστροφος του import) **CODE-COMPLETE + UNIT-VERIFIED** (νέα tek-stair-export suite + ενημερωμένα tek-export/adapter suites — όλα GREEN) 2026-06-25 — 🔴 Τέκτων round-trip verify (Giorgio) εκκρεμεί. 🟢 Φάση 4 (Wizard import wiring: `.tek` δεκτό από «Εισαγωγή Κάτοψης (Wizard)» — reuse Φ1+Φ2 pipeline· 4 jest GREEN) **CODE-COMPLETE** — 🔴 browser-verify εκκρεμεί. 🟢 Φάση 5a (2Δ primitives import: `<line>` type 4 + `<arc>` type 5 → `LineEntity`/`ArcEntity`/`CircleEntity`· αντιστροφή export· 31 jest GREEN) **CODE-COMPLETE** — 🔴 browser-verify εκκρεμεί. UNCOMMITTED. Commit μόνο Giorgio.
 **Σχετικά:** [[ADR-512]] (Tekton `.TEK` EXPORT — ο καθρέφτης write-side· ίδιο σχήμα/μονάδες/Y-flip). Stair model: ADR-358 (stair subsystem), ADR-401 (attach-to-structural).
 
 ## Context / Πρόβλημα
@@ -152,7 +152,43 @@ wired μέσω του `onSceneImported`. **Μηδέν νέα import λογική
 ### Tests
 `useFloorplanSmartUpload.tek.test.tsx` (4 jest GREEN): `detectFloorplanFormat` → `'tek'` για `.tek`/`.tek.txt`/`.TEK` + μη-regression dxf/pdf/image/unknown· `uploadSmart` `'tek'` branch → `{success, format:'tek'}` ΧΩΡΙΣ κλήση legacy DXF uploader + μη-regression dxf path.
 
+## Φάση 5a — Εισαγωγή 2Δ primitives (γραμμές/τόξα/κύκλοι) (CODE-COMPLETE, 🔴 browser-verify)
+
+**Πρόβλημα (Giorgio):** το `ΚΑΤΟΨΗ.tek.txt` έβγαζε «Δεν βρέθηκε καμία σκάλα» — ο import ήταν **stair-first**
+(διάβαζε μόνο `<stair>` type 21). SSoT audit (grep + ανάλυση πραγματικών αρχείων): το `ΚΑΤΟΨΗ.tek.txt`
+είναι **καθαρό 2Δ σχέδιο** (1154 `<line>` type 4 + 6 `<arc>` type 5 + 9 `<text>` type 3· κενά τα BIM
+containers). Φ5a → εισαγωγή 2Δ γεωμετρίας ως **αντιστροφή του export** (`collectTekLines`/`collectTekArcs`).
+
+### Αρχιτεκτονική (generalize, stair path 100% ανέπαφος)
+- **Facade:** νέο `tek-scene-extract.ts` `parseTekScene(content)` → parse-once + ορχήστρωση των
+  `extractStairRecords` (αμετάβλητο) + `extractLineRecords` + `extractArcRecords`. Νέο SSoT `extractTekHead`
+  (εξήχθη από το `parseTekStairs`, καλείται από ΚΑΙ τους δύο parsers — μηδέν διπλό head-read).
+- **Extractors:** `tek-primitive-extract.ts` — `extractLineRecords`/`extractArcRecords` (reuse xml-reader
+  SSoT· ίδια διαδρομή ορόφων με τον stair extractor). ⚠️ line record έχει **δύο** `<type>` (1η=entity 4,
+  2η=line-style) → `firstChild` διαβάζει την πρώτη. `bgrToRgbHex` (Tekton χρώματα = **BGR**, νέο pure).
+- **Mappers:** `tek-primitive-to-scene.ts` — `tekLineToEntity`/`tekArcToEntity` (reuse SSoT `tekMetersToScene`
+  Y-flip+units). ⚠️ **Arc swap:** ο export γράφει `p0=τέλος`,`p1=αρχή` (Y-flip αντιστρέφει φορά) → ο import
+  αντιστρέφει: `startAngle` από `p1`, `endAngle` από `p0`· round-trip με export ακριβές (μαθηματικά + jest).
+- **Scene builder:** `buildSceneFromTekScene` (αντικαθιστά το `buildSceneFromTekStairs` — **dead** πλέον,
+  αφαιρέθηκε ως διπλότυπο SSoT· μία πηγή scene-build) + `primitiveBounds` (line/circle/arc bbox — το
+  `calculateBimEntity2DBounds` είναι BIM-only). `importTekContent` → `parseTekScene`/`buildSceneFromTekScene`,
+  `stats` += `lineCount`/`arcCount`.
+- **Save-path διχοτομία (κρίσιμο):** οι 2Δ primitives ζουν ΜΟΝΟ στο scene blob (DXF-style, χωρίς Firestore
+  collection/PersistenceHost) → `useSceneState handleFileImport` **ΔΕΝ** εκπέμπει `drawing:entity-created`
+  γι' αυτά (μόνο για stairs)· **+** `linkSceneToLevel` deterministically (mirror DXF branch) ώστε το blob να
+  επιβιώνει hard-refresh.
+
+### Όριο Φ5a / επόμενα
+- **Φ5b (BIM):** wall(1)+opening(2)+plane/slab(10)+autoroof(8) — xmatrix decode (αντίστροφο
+  `buildWallXMatrix`), reuse `buildWallEntity`/`buildSlabEntity`/`buildRoofEntity`, emit ανά BIM type
+  (PersistenceHosts υπάρχουν). Χρειάζεται BIM `.tek` δείγμα για browser-verify.
+- **Φ5c (DEFER):** column/pillar+beam (ο export δεν τα ξέρει)· text type 3 (`<s>N</s>` = **external string
+  pool** — το κείμενο δεν υπάρχει inline στο `.tek.txt`).
+- Polyline reconstruction (1154 disjoint `<line>` → `PolylineEntity`) = DEFER (heuristic false-positive ρίσκο).
+- ADR-040 **δεν** ενεργοποιείται (line/arc/circle έχουν ήδη renderers· μηδέν αλλαγή render pipeline).
+
 ## Changelog
+- **2026-06-25 — Φάση 5a (2Δ primitives import):** ο import δέχεται `<line>` (type 4) + `<arc>` (type 5) → `LineEntity`/`ArcEntity`/`CircleEntity` (το `ΚΑΤΟΨΗ.tek.txt` φορτώνει πλέον). Νέα modules: `tek-primitive-extract.ts` (extractors + `bgrToRgbHex` BGR→RGB), `tek-scene-extract.ts` (`parseTekScene` facade), `tek-primitive-to-scene.ts` (mappers, arc swap inversion). `+TekLineRecord`/`TekArcRecord`/`TekSceneParseResult` types· `+extractTekHead` SSoT· `+buildSceneFromTekScene` (αφαιρέθηκε το dead `buildSceneFromTekStairs`)· `+primitiveBounds`. `useSceneState` υβριδικό save (scene blob + `linkSceneToLevel`, ΟΧΙ emit για 2Δ). FULL SSoT reuse `tekMetersToScene`. 3 νέα jest suites + επέκταση `tek-import.test.ts` = **31 tek jest GREEN**. 🔴 browser-verify (`ΚΑΤΟΨΗ.tek`, Giorgio). UNCOMMITTED.
 - **2026-06-25 — Φάση 4 (Wizard import wiring):** το «Εισαγωγή Κάτοψης (Wizard)» δέχεται πλέον `.tek`. 3 wiring points (FLOORPLAN_ACCEPT += `.tek,.txt`· `detectFloorplanFormat` reuse `isTekFileName` + `FloorplanFormat`/`uploadSmart` `'tek'` branch· raster gate επιτρέπει `'tek'`) + i18n acceptedTypes. **Μηδέν νέα import/render λογική** (reuse Φ1+Φ2 `handleFileImport → importTekFile` μέσω `onSceneImported`). Νέο `useFloorplanSmartUpload.tek.test.tsx` (4 jest GREEN)· 19 tek import jest GREEN (μη-regression). 🔴 browser-verify (Giorgio). UNCOMMITTED.
 - **2026-06-25** — Φάση 1: 6 modules + 3 test suites (18 jest GREEN). Real-file verify στο `ΣΚΑΛΑ.tek`: stepCount 17, totalRise 2900 mm, tread 274, width 800, winder 90°/3. + SSoT κεντρικοποίηση (5 διπλότυπα → SSoT + median SSoT). UNCOMMITTED.
 - **2026-06-25** — Φάση 3 (EXPORT): `StairEntity` → `<stair>` type 21 στον tek exporter (`TekStair`/`TekStairPoint` types· `STAIR_RECORD_HEAD`/`TAIL` templates· `buildStairPoint2dXml`/`buildStairIntlistXml`/`buildStairRecordXml`· `collectTekStairs`/`toTekStair`· `TEK_STAIR_MARKER` + 7ο inject arg· skeleton marker). FAITHFUL (γεωμετρία από `StairGeometry`). SSoT boy-scout: νέα `sceneXYToTekMeters` (ΕΝΑ Y-flip· refactor `footprintRingToMeters`/`roofFaceRingToMeters`). `<steps>=stepCount−1`. Winders→ευθύγραμμα (Φ3b). Νέα `tek-stair-export.test.ts` + ενημερωμένα tek-export/adapter suites — GREEN (81 tek jest). 🔴 Τέκτων round-trip (Giorgio). UNCOMMITTED.

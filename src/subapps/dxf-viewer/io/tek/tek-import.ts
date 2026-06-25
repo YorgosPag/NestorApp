@@ -8,8 +8,8 @@
 
 import type { SceneUnits } from '../../utils/scene-units';
 import type { SceneModel } from '../../types/scene-types';
-import { parseTekStairs } from './tek-stair-extract';
-import { buildSceneFromTekStairs } from './tek-scene-builder';
+import { parseTekScene } from './tek-scene-extract';
+import { buildSceneFromTekScene } from './tek-scene-builder';
 import { TekParseError } from './tek-xml-reader';
 
 export interface TekImportResult {
@@ -19,6 +19,10 @@ export interface TekImportResult {
   readonly warnings: readonly string[];
   readonly stats: {
     readonly stairCount: number;
+    /** ADR-526 Φ5a — πλήθος εισαγμένων 2Δ γραμμών. */
+    readonly lineCount: number;
+    /** ADR-526 Φ5a — πλήθος εισαγμένων τόξων/κύκλων. */
+    readonly arcCount: number;
     readonly parseTimeMs: number;
   };
 }
@@ -39,19 +43,29 @@ export function importTekContent(
 ): TekImportResult {
   const startedAt = typeof performance !== 'undefined' ? performance.now() : 0;
   try {
-    const parsed = parseTekStairs(content);
-    const { scene, warnings } = buildSceneFromTekStairs(parsed, levelId, units);
+    const parsed = parseTekScene(content);
+    const { scene, warnings } = buildSceneFromTekScene(parsed, levelId, units);
     const parseTimeMs = (typeof performance !== 'undefined' ? performance.now() : 0) - startedAt;
     return {
       success: true,
       scene,
       warnings,
-      stats: { stairCount: scene.entities.length, parseTimeMs },
+      stats: {
+        stairCount: parsed.stairs.length,
+        lineCount: parsed.lines.length,
+        arcCount: parsed.arcs.length,
+        parseTimeMs,
+      },
     };
   } catch (err) {
     const message = err instanceof TekParseError ? err.message
       : `Σφάλμα ανάγνωσης .tek: ${err instanceof Error ? err.message : String(err)}`;
-    return { success: false, error: message, warnings: [], stats: { stairCount: 0, parseTimeMs: 0 } };
+    return {
+      success: false,
+      error: message,
+      warnings: [],
+      stats: { stairCount: 0, lineCount: 0, arcCount: 0, parseTimeMs: 0 },
+    };
   }
 }
 

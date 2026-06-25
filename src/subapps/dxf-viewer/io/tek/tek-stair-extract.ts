@@ -98,19 +98,26 @@ export function extractStairRecords(root: Element): {
   return { stairs, warnings };
 }
 
+/** Metadata του `<head>` (`fileversion`/`version`/`numfloors`) — SSoT για όλους τους parsers. */
+export function extractTekHead(root: Element): {
+  fileVersion: number | null;
+  tektonVersion: string | null;
+  floorCount: number;
+} {
+  const head = firstChild(root, 'head');
+  return {
+    fileVersion: head ? Math.round(childNumber(head, 'fileversion', NaN)) || null : null,
+    tektonVersion: head ? childText(head, 'version') : null,
+    floorCount: head ? Math.round(childNumber(head, 'numfloors', 0)) : 0,
+  };
+}
+
 /**
  * Top-level: parse ολόκληρο `.tek` περιεχόμενο → `TekParseResult` (stair-first scope).
  * Ρίχνει `TekParseError` μόνο αν το XML είναι άκυρο ή δεν είναι Tekton αρχείο.
  */
 export function parseTekStairs(content: string): TekParseResult {
   const root = parseTektonXml(content);
-  const head = firstChild(root, 'head');
   const { stairs, warnings } = extractStairRecords(root);
-  return {
-    fileVersion: head ? Math.round(childNumber(head, 'fileversion', NaN)) || null : null,
-    tektonVersion: head ? childText(head, 'version') : null,
-    floorCount: head ? Math.round(childNumber(head, 'numfloors', 0)) : 0,
-    stairs,
-    warnings,
-  };
+  return { ...extractTekHead(root), stairs, warnings };
 }

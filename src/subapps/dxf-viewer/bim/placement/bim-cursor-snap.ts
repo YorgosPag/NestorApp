@@ -156,11 +156,14 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
     // κενό με τα άκρα flush στις παρειές. Gated `beamSpanGhost` (μόνο straight/cantilever beam → τοίχος
     // αμετάβλητος). Νικά πριν το face-snap (το κενό είναι μακριά από παρειές → μηδέν αλληλεπικάλυψη).
     if (input.beamSpanGhost) {
-      const span = resolveBeamSpanSnap(cursor, collectSpanSupportOutlines(targets), sceneUnits);
+      // ADR-529 Φ3 — περνάμε το πλάτος δοκαριού ώστε το justified third-alignment (νότια/κέντρο/βόρεια-flush)
+      // να υπολογίζει σωστά το flush offset (ημι-πλάτος). Preview ≡ commit (ίδιο width με το `resolveStartAnchor`).
+      const span = resolveBeamSpanSnap(cursor, collectSpanSupportOutlines(targets), sceneUnits, input.memberWidthMm ?? 0);
       if (span) {
         return {
           kind: 'member-placement',
-          placement: { start: span.start, end: span.end, status: 'neutral', span: true, guide: span.guide },
+          // ADR-529 Φ3 — `faceFrame` → οι σιελ listening dimensions εμφανίζονται ΚΑΙ στο auto-span (justified).
+          placement: { start: span.start, end: span.end, status: 'neutral', span: true, guide: span.guide, faceFrame: span.faceFrame },
           point: span.start,
         };
       }

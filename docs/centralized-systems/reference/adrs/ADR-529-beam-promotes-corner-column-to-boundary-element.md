@@ -42,6 +42,22 @@ construction — επιβεβαιωμένο vs τα 11 υπάρχοντα ADR-52
    διαγώνια κολόνα αντί **οριζόντια** στην αντικριστή· (β) cursor στη μέση τοίχου↔κολόνας τραβούσε το δοκάρι
    προς τη διαγώνια αντί να ευθυγραμμίζεται face-to-face.
 
+### Φ3 — Justified third-alignment (cursor-driven, 3ο στιγμιότυπο)
+Το **κάθετο offset** του span δοκαριού ακολουθεί τη θέση του cursor κατά μήκος της facing-παρειάς που κοιτάζει
+(mirror των 9 λαβών κολόνας, reuse `pickThird` SSoT):
+- **cursor ΒΑ γωνία (hi) → βόρεια-flush** — βόρεια όψη δοκαριού = βόρεια παρειά τοίχου/κολόνας.
+- **cursor κέντρο παρειάς (mid) → κεντραρισμένο** στον άξονα της παρειάς.
+- **cursor ΝΑ γωνία (lo) → νότια-flush** — νότια όψη δοκαριού = νότια παρειά τοίχου.
+
+Επιλέγεται η παρειά του μέλους **πλησιέστερου στον cursor** (A ή B)· `beamWidthMm` (ημι-πλάτος = flush offset)
+περνά από τον εγκέφαλο (`bim-cursor-snap`, ίδιο με `resolveStartAnchor` → preview ≡ commit). Παρειά στενότερη
+του δοκαριού → κέντρο. Whole-line (Shift) → πάντα centered. `beamWidthMm=0` → centered (back-compat).
+
+**Σιελ listening dimensions στο auto-span:** το span placement εκπέμπει τώρα `GhostFaceFrame` (`BeamSpanSnap.faceFrame`)
+→ ο preview helper (`resolveGhostFaceDimensionsMeta`) ζωγραφίζει τις **γαλάζιες (σιελ) listening dimensions**
+(leftGap/rightGap/centerToCenter) ΚΑΙ στο auto-span — ίδιο SSoT με τον T-framing. Πριν, το span έδινε μόνο τον
+dashed `guide` (καμία διάσταση). Δείχνουν ζωντανά το justified alignment (north-flush → rightGap≈0 κ.ο.κ.).
+
 ### Φ2 — Προαγωγή Ι → Γ (B), FULL SSoT reuse
 1. **Γεωμετρία** — `promoteColumnToBoundaryL` (στο `bim/columns/column-beam-align.ts`, ADR-496 home):
    closed-form L (reuse `rotationDegToAlignLocalY`/`rotateVector`/`unitVector` + `beamEndsByProximity`).
@@ -88,3 +104,9 @@ construction — επιβεβαιωμένο vs τα 11 υπάρχοντα ADR-52
 - **2026-06-25** — Core implementation (Φ1 + Φ2), 37 jest GREEN. UNCOMMITTED (commit: Giorgio).
 - **2026-06-25** — Φ1 refine (2ο στιγμιότυπο): **face-perpendicular προτεραιότητα** στο span ranking (face-to-face
   νικά λοξό γωνία-σε-γωνία). +1 jest (face-preference vs diagonal). 38 jest GREEN.
+- **2026-06-25** — **Φ3 (3ο στιγμιότυπο): justified third-alignment** (cursor βόρεια/κέντρο/νότια → north-flush /
+  centered / south-flush, reuse `pickThird`· `beamWidthMm` threaded από τον εγκέφαλο). +1 jest. 15 span GREEN
+  (συν. 63 με promote/align/cursor-snap regression).
+- **2026-06-25** — **σιελ listening dimensions στο auto-span**: το span placement εκπέμπει `GhostFaceFrame`
+  (`BeamSpanSnap.faceFrame`) → οι γαλάζιες listening dims εμφανίζονται ΚΑΙ στο auto-span (πριν: μόνο dashed guide).
+  Reuse `resolveGhostFaceDimensions` SSoT. 16 span GREEN.

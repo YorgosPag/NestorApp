@@ -139,8 +139,30 @@ describe('ADR-529 Φ1 — cursor ΣΤΗΝ παρειά + κοίλα/Γ μέλη'
     const r = resolveBeamSpanSnap({ x: 200, y: -180 }, [wall1, col2, col4], 'mm');
     expect(r).not.toBeNull();
     expect(near(r!.start.x, 200, 1)).toBe(true);
-    expect(near(r!.end.x, 800, 1)).toBe(true);   // → col2 (οριζόντια), ΟΧΙ col4
-    expect(near(r!.end.y, 0, 1)).toBe(true);      // ΟΧΙ ~ −800 (λοξά προς col4)
+    expect(near(r!.end.x, 800, 1)).toBe(true);          // → col2 (οριζόντια), ΟΧΙ col4
+    expect(near(r!.end.y, r!.start.y, 1)).toBe(true);   // ΟΡΙΖΟΝΤΙΟ δοκάρι (ΟΧΙ λοξά προς col4 ~ −800)
+    expect(r!.end.y > -400).toBe(true);                 // σαφώς όχι η λοξή ευθεία προς col4
+  });
+
+  it('Φ3 justified third-alignment: cursor βόρεια/κέντρο/νότια → north-flush / centered / south-flush', () => {
+    const wall = rect(0, 0, 400, 600);     // ανατ. παρειά x=200, NS εύρος [−300,300]
+    const col = rect(1000, 0, 400, 600);   // δυτ. παρειά x=800
+    const W = 200; // πλάτος δοκαριού → ημι-πλάτος 100
+    // Βόρεια (hi): κέντρο δοκαριού = +300 − 100 = +200 → βόρεια όψη στο +300 (βόρεια παρειά τοίχου).
+    const n = resolveBeamSpanSnap({ x: 200, y: 250 }, [wall, col], 'mm', W);
+    expect(near(n!.start.y, 200, 1)).toBe(true);
+    expect(near(n!.start.y + W / 2, 300, 1)).toBe(true);
+    // ADR-529 Φ3 — το faceFrame υπάρχει → οι σιελ listening dimensions ζωγραφίζονται (justified north-flush).
+    expect(n!.faceFrame).toBeDefined();
+    expect(near(n!.faceFrame!.ghostCenterAlong, 200, 1)).toBe(true);
+    expect(near(n!.faceFrame!.faceAlongMax, 300, 1)).toBe(true);
+    // Κέντρο (mid): κεντραρισμένο στον άξονα της παρειάς (y=0).
+    const c = resolveBeamSpanSnap({ x: 200, y: 0 }, [wall, col], 'mm', W);
+    expect(near(c!.start.y, 0, 1)).toBe(true);
+    // Νότια (lo): κέντρο = −300 + 100 = −200 → νότια όψη στο −300 (νότια παρειά τοίχου).
+    const s = resolveBeamSpanSnap({ x: 200, y: -250 }, [wall, col], 'mm', W);
+    expect(near(s!.start.y, -200, 1)).toBe(true);
+    expect(near(s!.start.y - W / 2, -300, 1)).toBe(true);
   });
 
   it('κοίλος Γ τοίχος → start στην ανατολική παρειά του ΟΡΙΖΟΝΤΙΟΥ σκέλους (όχι centroid/γωνία)', () => {
