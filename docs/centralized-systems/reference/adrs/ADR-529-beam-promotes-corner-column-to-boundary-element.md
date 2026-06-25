@@ -35,6 +35,12 @@ construction — επιβεβαιωμένο vs τα 11 υπάρχοντα ADR-52
    u/start/end με πριν.
 2. **Along-margin** — ο cursor μετράει «σε αυτό το φάτνωμα» και όταν είναι **πάνω/λίγο μέσα** σε παρειά
    (`along ∈ [sA−capture, sB+capture]`), όχι μόνο αυστηρά στο κενό.
+3. **Face-perpendicular προτεραιότητα** (refine 2026-06-25, 2ο στιγμιότυπο) — ζεύγη με άξονα **κάθετο σε
+   παρειά** (το facing-point σε **εσωτερικό ακμής**, `|u·edge| ≤ sin20°`) προηγούνται των **λοξών γωνία-σε-
+   γωνία** (facing-point = κορυφή)· εντός ίδιας κλάσης, nearest-wins. Το λοξό μένει **fallback** (μηδέν
+   regression στο diagonal-2-columns test). Λύνει: (α) στη ΝΑ γωνία τοίχου το ghost γεφύρωνε **λοξά** σε
+   διαγώνια κολόνα αντί **οριζόντια** στην αντικριστή· (β) cursor στη μέση τοίχου↔κολόνας τραβούσε το δοκάρι
+   προς τη διαγώνια αντί να ευθυγραμμίζεται face-to-face.
 
 ### Φ2 — Προαγωγή Ι → Γ (B), FULL SSoT reuse
 1. **Γεωμετρία** — `promoteColumnToBoundaryL` (στο `bim/columns/column-beam-align.ts`, ADR-496 home):
@@ -80,3 +86,5 @@ construction — επιβεβαιωμένο vs τα 11 υπάρχοντα ADR-52
 
 ## 7. Changelog
 - **2026-06-25** — Core implementation (Φ1 + Φ2), 37 jest GREEN. UNCOMMITTED (commit: Giorgio).
+- **2026-06-25** — Φ1 refine (2ο στιγμιότυπο): **face-perpendicular προτεραιότητα** στο span ranking (face-to-face
+  νικά λοξό γωνία-σε-γωνία). +1 jest (face-preference vs diagonal). 38 jest GREEN.

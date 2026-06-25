@@ -149,7 +149,7 @@
     },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",
-    "acceptedTypes": "DXF, PDF, JPG, PNG (up to 50MB)",
+    "acceptedTypes": "DXF, PDF, Tekton (.tek), JPG, PNG (up to 50MB)",
     "uploading": "Uploading...",
     "success": "Floorplan uploaded successfully!",
     "error": "Upload error",

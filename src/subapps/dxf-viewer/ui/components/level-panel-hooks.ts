@@ -146,8 +146,10 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
         triggerAllFloorsBackfill(allFloorsBuilding);
       }
       // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds.
-      // The DXF scene importer must NOT run for raster.
-      if (meta.format && meta.format !== 'dxf') return;
+      // The DXF scene importer must NOT run for raster. ADR-526 Φ4: `'tek'` DOES
+      // need the scene importer — `handleFileImport` branches on `isTekFileName`
+      // → `importTekFile` — so let it through alongside `'dxf'`.
+      if (meta.format && meta.format !== 'dxf' && meta.format !== 'tek') return;
       onSceneImported(file, undefined, saveContext, targetLevelId ?? undefined);
     },
     [

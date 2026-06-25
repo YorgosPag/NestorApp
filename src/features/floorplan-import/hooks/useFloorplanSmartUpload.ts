@@ -40,6 +40,8 @@ import type {
   FloorplanUploadConfig,
   FloorplanUploadResult,
 } from '@/hooks/useFloorplanUpload';
+// ADR-526 Φ4 — reuse the Tekton filename SSoT (no duplicate ext check).
+import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-import';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -49,7 +51,9 @@ const logger = createModuleLogger('useFloorplanSmartUpload');
 // TYPES
 // ============================================================================
 
-export type FloorplanFormat = 'dxf' | 'pdf' | 'image' | 'unknown';
+// ADR-526 Φ4 — `'tek'` (Tekton) is rendered client-side via `onSceneImported`
+// (`handleFileImport` → `importTekFile`), NOT through the DXF/raster backends.
+export type FloorplanFormat = 'dxf' | 'pdf' | 'image' | 'tek' | 'unknown';
 
 export interface FloorWipePreview {
   floorplanOverlayCount: number;
@@ -109,6 +113,9 @@ function getExt(name: string): string {
 export function detectFloorplanFormat(file: File): FloorplanFormat {
   const ext = getExt(file.name);
   const mime = file.type;
+  // ADR-526 Φ4 — Tekton files (`.tek` / `.tek.txt`) BEFORE the generic ext map,
+  // since `.tek.txt` would otherwise fall through (the SSoT regex handles both).
+  if (isTekFileName(file.name)) return 'tek';
   if (DXF_EXTS.has(ext) || DXF_MIMES.has(mime)) return 'dxf';
   if (PDF_EXTS.has(ext) || PDF_MIMES.has(mime)) return 'pdf';
   if (IMAGE_EXTS.has(ext) || IMAGE_MIMES.has(mime)) return 'image';
@@ -229,6 +236,15 @@ export function useFloorplanSmartUpload(
           setRasterError(msg);
           return { success: false, format, error: msg };
         }
+      }
+
+      // ── Tekton branch (ADR-526 Φ4) ──────────────────────────────────────
+      // No backend upload: the scene is built + rendered client-side by
+      // `handleFileImport` (→ `importTekFile`) once `onSceneImported` fires,
+      // and the stairs persist themselves via StairPersistenceHost. The wipe
+      // pre-flight above already cleared any prior floor content (mirror DXF).
+      if (format === 'tek') {
+        return { success: true, format };
       }
 
       // ── DXF branch (legacy pipeline) ────────────────────────────────────

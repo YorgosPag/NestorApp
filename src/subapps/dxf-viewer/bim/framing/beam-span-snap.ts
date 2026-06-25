@@ -31,6 +31,9 @@
  *      το facing-point πέφτει στο μέσο της αντικριστής παρειάς ⇒ **ίδιο** u/start/end με πριν.
  *   2. **Along-margin** — ο cursor μετράει ως «σε αυτό το φάτνωμα» και όταν είναι **πάνω/λίγο μέσα** σε
  *      παρειά μέλους (`along ∈ [sA−capture, sB+capture]`), όχι μόνο αυστηρά στο κενό.
+ *   3. **Face-perpendicular προτεραιότητα** — ζεύγη με άξονα **κάθετο σε παρειά** (face-to-face) προηγούνται
+ *      των **λοξών γωνία-σε-γωνία** (το λοξό μένει fallback). Έτσι η ανατ. παρειά τοίχου → δυτ. παρειά
+ *      αντικριστής κολόνας υπερισχύει της σπάνιας λοξής ανίχνευσης σε διαγώνια κολόνα.
  *
  * @see ../columns/column-beam-corner-snap.ts — το αντίστροφο πρότυπο (L-κολόνα γεμίζει γωνιακό κενό)
  * @see ../columns/column-beam-promote-junction.ts — ADR-529 Φ2 (δοκάρι ΠΡΟΑΓΕΙ Ι-κολόνα σε Γ)
@@ -54,6 +57,8 @@ import { subtractPoints, addPoints, scalePoint } from '../../rendering/entities/
 /** Πόσο κοντά (mm) στη **νοητή ευθεία** κέντρο→κέντρο πρέπει να φτάσει ο cursor / να βρίσκεται στήριξη. */
 const SPAN_CAPTURE_MM = MEMBER_GHOST_CAPTURE_MM; // 600mm (tunable — ίδιο SSoT με τα υπόλοιπα member captures)
 const EPS = 1e-6;
+/** |u·edge| ≤ αυτό ⇒ ο άξονας span είναι **κάθετος σε παρειά** (~20°· sin20°≈0.342) → «κανονικό» framing. */
+const FACE_PERP_SIN = 0.342;
 
 /** Αποτέλεσμα auto-span: τα δύο centerline άκρα (flush στις παρειές) + οδηγός + nearest-wins dist. */
 export interface BeamSpanSnap {
@@ -82,6 +87,13 @@ interface PairFrame {
   readonly u: Point2D;
   readonly sA: number; // αντικριστή παρειά A (προς B) — along από `origin`
   readonly sB: number; // αντικριστή παρειά B (προς A) — along από `origin`
+  /**
+   * ADR-529 Φ2-refine — `true` όταν ο άξονας `u` είναι **κάθετος σε παρειά (ακμή) ≥ ενός μέλους** (το
+   * facing-point πέφτει σε **εσωτερικό ακμής**, όχι κορυφή): «κανονικό» framing κάθετα σε παρειά. `false` =
+   * **λοξό γωνία-σε-γωνία** (το facing-point είναι κορυφή). Προτιμώνται τα face-aligned ζεύγη (το λοξό μένει
+   * fallback) → η ανατ. παρειά τοίχου → δυτ. παρειά κολόνας υπερισχύει της λοξής γωνία-με-γωνία.
+   */
+  readonly faceAligned: boolean;
 }
 
 /**
@@ -114,19 +126,30 @@ function closestPointOnSegment(p: Point2D, a: Point2D, b: Point2D): Point2D {
   return { x: a.x + t * dx, y: a.y + t * dy };
 }
 
+/** Πλησιέστερο σημείο του περιγράμματος + η **μοναδιαία διεύθυνση της ακμής** πάνω στην οποία πέφτει. */
+interface OutlineHit {
+  readonly point: Point2D;
+  readonly edge: Point2D; // unit dir της ακμής στο `point` (για το face-perpendicular gate)
+}
+
 /** Πλησιέστερο σημείο του **περιγράμματος** (κλειστού πολυγώνου) στο `target` — η παρειά που «κοιτάζει». */
-function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): Point2D {
+function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): OutlineHit {
   let best = outline[0];
+  let bestEdge: Point2D = { x: 1, y: 0 };
   let bestD = Infinity;
   for (let i = 0; i < outline.length; i++) {
-    const q = closestPointOnSegment(target, outline[i], outline[(i + 1) % outline.length]);
+    const a = outline[i];
+    const b = outline[(i + 1) % outline.length];
+    const q = closestPointOnSegment(target, a, b);
     const d = (q.x - target.x) ** 2 + (q.y - target.y) ** 2;
     if (d < bestD) {
       bestD = d;
       best = q;
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      bestEdge = len > EPS ? { x: (b.x - a.x) / len, y: (b.y - a.y) / len } : { x: 1, y: 0 };
     }
   }
-  return best;
+  return { point: best, edge: bestEdge };
 }
 
 /**
@@ -139,9 +162,11 @@ function pairFrame(A: SpanSupport, B: SpanSupport): PairFrame | null {
   // 2-step refinement: seed από centroids → fA από closest(A,B.center)· fB από closest(B,fA)· ξανά fA από
   // closest(A,fB). Για ισχυρά κοίλα μέλη (Γ) το centroid-target άφηνε υπόλοιπη κλίση· το refinement το λύνει.
   // Κυρτά/ευθυγραμμισμένα → σταθερό σημείο (ίδιο αποτέλεσμα με πριν, μηδέν regression).
-  const fA0 = closestPointOnOutline(A.outline, B.center);
-  const fB = closestPointOnOutline(B.outline, fA0);
-  const fA = closestPointOnOutline(A.outline, fB);
+  const fA0 = closestPointOnOutline(A.outline, B.center).point;
+  const hB = closestPointOnOutline(B.outline, fA0);
+  const hA = closestPointOnOutline(A.outline, hB.point);
+  const fA = hA.point;
+  const fB = hB.point;
   let d = subtractPoints(fB, fA);
   let D = Math.hypot(d.x, d.y);
   if (D < EPS) {
@@ -154,7 +179,12 @@ function pairFrame(A: SpanSupport, B: SpanSupport): PairFrame | null {
   const sA = projectPolygonOnAxis(A.outline, fA.x, fA.y, u.x, u.y).alongMax;
   const sB = projectPolygonOnAxis(B.outline, fA.x, fA.y, u.x, u.y).alongMin;
   if (sB <= sA + EPS) return null; // επικάλυψη / μηδέν κενό → όχι span
-  return { origin: fA, u, sA, sB };
+  // ADR-529 Φ2-refine — face-perpendicular: ο `u` ∥ κάθετη ακμής (το facing-point σε εσωτερικό ακμής) ⇒
+  // |u·edge|≈0. Λοξό γωνία-σε-γωνία (facing-point = κορυφή) ⇒ |u·edge| μεγάλο. Αρκεί ≥1 μέλος face-aligned.
+  const faceAligned =
+    Math.abs(u.x * hA.edge.x + u.y * hA.edge.y) <= FACE_PERP_SIN ||
+    Math.abs(u.x * hB.edge.x + u.y * hB.edge.y) <= FACE_PERP_SIN;
+  return { origin: fA, u, sA, sB, faceAligned };
 }
 
 /** Span γεωμετρία (start/end flush + guide) ενός ζεύγους. `null` αν δεν υπάρχει κενό. */
@@ -192,8 +222,9 @@ function hasSupportBetween(
 /**
  * **Per-bay** auto-span: επιλέγει το **φάτνωμα διαδοχικών στηρίξεων** που περικλείει τον cursor (ο cursor
  * στο κενό + κάθετα κοντά στη νοητή ευθεία), απορρίπτοντας κάθε ζεύγος με **τρίτη στήριξη ανάμεσα**
- * (ποτέ span πάνω από ενδιάμεση κολόνα/τοίχο — EC2/EC8). Nearest-wins ως προς κάθετη απόσταση. Pure.
- * `null` όταν κανένα διαδοχικό ζεύγος δεν γεφυρώνεται. Ένα μέλος = το κλειστό outline του.
+ * (ποτέ span πάνω από ενδιάμεση κολόνα/τοίχο — EC2/EC8). **Ranking (ADR-529 Φ2-refine):** face-aligned
+ * ζεύγη (κάθετα σε παρειά) προηγούνται των λοξών γωνία-σε-γωνία· εντός ίδιας κλάσης, nearest-wins ως προς
+ * κάθετη απόσταση. Pure. `null` όταν κανένα διαδοχικό ζεύγος δεν γεφυρώνεται. Ένα μέλος = το κλειστό outline του.
  */
 export function resolveBeamSpanSnap(
   cursor: Readonly<Point2D>,
@@ -205,6 +236,7 @@ export function resolveBeamSpanSnap(
   const captureScene = SPAN_CAPTURE_MM * mmToSceneUnits(sceneUnits);
 
   let best: BeamSpanSnap | null = null;
+  let bestFace = false;
   for (let i = 0; i < supports.length; i++) {
     for (let j = i + 1; j < supports.length; j++) {
       const A = supports[i];
@@ -219,7 +251,16 @@ export function resolveBeamSpanSnap(
       // ADR-528 §adjacency — απόρριψη μη-διαδοχικού ζεύγους (τρίτη στήριξη ανάμεσα).
       if (hasSupportBetween(A, B, fr, supports, captureScene)) continue;
       const geom = spanGeometry(A, B);
-      if (geom && (!best || cp.perp < best.dist)) best = { ...geom, dist: cp.perp };
+      if (!geom) continue;
+      // ADR-529 Φ2-refine ranking: (1) face-aligned νικά λοξό γωνία-σε-γωνία ανεξαρτήτως perp· (2) ίδια κλάση
+      // → μικρότερο perp. Το λοξό μένει fallback (επιλέγεται μόνο αν δεν υπάρχει face-aligned υποψήφιο).
+      const better = !best
+        || (fr.faceAligned && !bestFace)
+        || (fr.faceAligned === bestFace && cp.perp < best.dist);
+      if (better) {
+        best = { ...geom, dist: cp.perp };
+        bestFace = fr.faceAligned;
+      }
     }
   }
   return best;

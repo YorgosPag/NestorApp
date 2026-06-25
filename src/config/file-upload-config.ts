@@ -192,7 +192,10 @@ export const DEFAULT_VIDEO_ACCEPT = buildAcceptString(['video']);
 
 
 /**
- * 🏢 ENTERPRISE: Accept string for floorplans (DXF, PDF, images)
- * Use for construction floorplans and technical drawings
+ * 🏢 ENTERPRISE: Accept string for floorplans (DXF, PDF, images, Tekton .tek)
+ * Use for construction floorplans and technical drawings.
+ * ADR-526 Φ4: `.tek,.txt` mirrors the ribbon picker (`DxfViewerDialogs` accept)
+ * so Tekton files (incl. `.tek.txt` exports) reach the Wizard upload step; the
+ * real gatekeeper is `isTekFileName` inside `detectFloorplanFormat`.
  */
-export const FLOORPLAN_ACCEPT = '.dxf,.pdf,.png,.jpg,.jpeg,.webp,application/pdf,application/dxf,image/vnd.dxf,image/png,image/jpeg,image/webp';
+export const FLOORPLAN_ACCEPT = '.dxf,.pdf,.png,.jpg,.jpeg,.webp,.tek,.txt,application/pdf,application/dxf,image/vnd.dxf,image/png,image/jpeg,image/webp';

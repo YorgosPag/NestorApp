@@ -1,6 +1,6 @@
 # ADR-526 — Εισαγωγή Tekton `.TEK` (σκάλες πρώτα)
 
-**Status:** 🟢 Φάση 1 (parser + stair extractor + BIM mapper + scene builder + import service) **IMPLEMENTED + UNIT-VERIFIED** (18 jest GREEN) + **REAL-FILE-VERIFIED** στο `ΣΚΑΛΑ.tek` (FESPA 9.1.0.46) 2026-06-25. 🟢 Φάση 2 (UI wiring: ribbon κουμπί «Εισαγωγή Τέκτονα» + native file picker + scene-load + stair first-save) **CODE-COMPLETE** (tsc clean) — 🔴 browser-verify εκκρεμεί. 🟢 Φάση 3 (**EXPORT** σκαλών `<stair>` type 21 → `.tek`, ο αντίστροφος του import) **CODE-COMPLETE + UNIT-VERIFIED** (νέα tek-stair-export suite + ενημερωμένα tek-export/adapter suites — όλα GREEN) 2026-06-25 — 🔴 Τέκτων round-trip verify (Giorgio) εκκρεμεί. UNCOMMITTED. Commit μόνο Giorgio.
+**Status:** 🟢 Φάση 1 (parser + stair extractor + BIM mapper + scene builder + import service) **IMPLEMENTED + UNIT-VERIFIED** (18 jest GREEN) + **REAL-FILE-VERIFIED** στο `ΣΚΑΛΑ.tek` (FESPA 9.1.0.46) 2026-06-25. 🟢 Φάση 2 (UI wiring: ribbon κουμπί «Εισαγωγή Τέκτονα» + native file picker + scene-load + stair first-save) **CODE-COMPLETE** (tsc clean) — 🔴 browser-verify εκκρεμεί. 🟢 Φάση 3 (**EXPORT** σκαλών `<stair>` type 21 → `.tek`, ο αντίστροφος του import) **CODE-COMPLETE + UNIT-VERIFIED** (νέα tek-stair-export suite + ενημερωμένα tek-export/adapter suites — όλα GREEN) 2026-06-25 — 🔴 Τέκτων round-trip verify (Giorgio) εκκρεμεί. 🟢 Φάση 4 (Wizard import wiring: `.tek` δεκτό από «Εισαγωγή Κάτοψης (Wizard)» — reuse Φ1+Φ2 pipeline· 4 jest GREEN) **CODE-COMPLETE** — 🔴 browser-verify εκκρεμεί. UNCOMMITTED. Commit μόνο Giorgio.
 **Σχετικά:** [[ADR-512]] (Tekton `.TEK` EXPORT — ο καθρέφτης write-side· ίδιο σχήμα/μονάδες/Y-flip). Stair model: ADR-358 (stair subsystem), ADR-401 (attach-to-structural).
 
 ## Context / Πρόβλημα
@@ -124,7 +124,36 @@ lossy re-parametrization): τα scalars + οι πολυγραμμές προκύ
 - Αποτέλεσμα: σκάλα Τέκτονα → Νέστωρ → Τέκτων = **ΑΚΡΙΒΩΣ ίδια** (όλα τα σύμβολα), μετατρέπεται σε 3Δ.
 - Όρια: ισχύει για **μη-τροποποιημένες** εισαγμένες σκάλες (αν ο χρήστης την επεξεργαστεί στον Νέστορα, το raw record μένει stale — μελλοντικά: invalidate on edit). Νέστωρ-native σκάλες → παραμετρικό export (αναγνωρίσιμο από Τέκτονα). 118 tek+stair jest GREEN.
 
+## Φάση 4 — Wizard import wiring (CODE-COMPLETE, 🔴 browser-verify)
+
+Το «Εισαγωγή Κάτοψης (Wizard)» της καρτέλας «Επίπεδα» δεχόταν **μόνο** DXF/PDF/εικόνες — το
+`.tek` κοβόταν στο `detectFloorplanFormat` (⇒ `'unknown'` ⇒ «Unsupported file format»). Το import/render
+**υπήρχε ήδη** (Φ1+Φ2): το `handleFileImport` (useSceneState) έχει branch `isTekFileName → importTekFile`,
+wired μέσω του `onSceneImported`. **Μηδέν νέα import λογική** — η Φ4 απλώς αφήνει το `.tek` να φτάσει εκεί.
+
+### SSoT audit (επαληθευμένο με grep — Giorgio 2026-06-25)
+Πλήρης ιχνηλάτηση `StepUpload → useFloorplanSmartUpload.uploadSmart → detectFloorplanFormat`,
+`handleUploadComplete → WizardCompleteMeta{format} → useFloorplanImportComplete (gate) → onSceneImported`.
+Επιβεβαιώθηκε ότι η μόνη απόρριψη γίνεται σε 3 σημεία (picker accept, format detection, raster gate).
+
+### Ελάχιστες αλλαγές (3 wiring points + i18n, FULL reuse)
+| Αρχείο | Αλλαγή |
+|---|---|
+| `config/file-upload-config.ts` | `FLOORPLAN_ACCEPT` += `.tek,.txt` (mirror του ribbon picker `DxfViewerDialogs accept=".tek,.txt"` ώστε να εμφανίζονται και τα `.tek.txt` exports). |
+| `features/floorplan-import/hooks/useFloorplanSmartUpload.ts` | (α) `FloorplanFormat` += `'tek'`· (β) `detectFloorplanFormat` reuse **`isTekFileName`** SSoT (ΟΧΙ νέο ext check), πριν το generic ext map (το `.tek.txt` αλλιώς πέφτει στο `'unknown'`)· (γ) `uploadSmart` branch `'tek'` → `{ success: true, format: 'tek' }` **χωρίς** backend (το render = client-side μέσω `onSceneImported`). Το wipe pre-flight τρέχει κανονικά πριν (consistent με DXF — αντικατάσταση περιεχομένου ορόφου). |
+| `subapps/dxf-viewer/ui/components/level-panel-hooks.ts` | raster gate → `meta.format !== 'dxf' && meta.format !== 'tek'` (το `'tek'` ΧΡΕΙΑΖΕΤΑΙ τον scene importer, αντίθετα από raster). |
+| i18n `files-media.json` (el/en/pseudo) | `floorplanImport.acceptedTypes` += «Τέκτων (.tek)» (N.11). |
+
+### Αποφάσεις (Φ4a)
+- **Storage:** μηδέν (όπως το ribbon Φ2 — client-side render· οι σκάλες persist μόνες τους μέσω `StairPersistenceHost`). Generic file-upload storage path = DEFER.
+- **DxfUnitsSelector:** ο selector είναι ορατός *πριν* επιλεγεί αρχείο (format άγνωστο) → δεν κρύβεται· για `.tek` είναι ούτως ή άλλως no-op (το `importTekFile` αγνοεί `userDrawingUnits`, οι μονάδες Τέκτονα = μέτρα).
+- **Scope:** stair-first (κληρονομιά Φ1) — από `.tek` εισάγονται μόνο σκάλες.
+
+### Tests
+`useFloorplanSmartUpload.tek.test.tsx` (4 jest GREEN): `detectFloorplanFormat` → `'tek'` για `.tek`/`.tek.txt`/`.TEK` + μη-regression dxf/pdf/image/unknown· `uploadSmart` `'tek'` branch → `{success, format:'tek'}` ΧΩΡΙΣ κλήση legacy DXF uploader + μη-regression dxf path.
+
 ## Changelog
+- **2026-06-25 — Φάση 4 (Wizard import wiring):** το «Εισαγωγή Κάτοψης (Wizard)» δέχεται πλέον `.tek`. 3 wiring points (FLOORPLAN_ACCEPT += `.tek,.txt`· `detectFloorplanFormat` reuse `isTekFileName` + `FloorplanFormat`/`uploadSmart` `'tek'` branch· raster gate επιτρέπει `'tek'`) + i18n acceptedTypes. **Μηδέν νέα import/render λογική** (reuse Φ1+Φ2 `handleFileImport → importTekFile` μέσω `onSceneImported`). Νέο `useFloorplanSmartUpload.tek.test.tsx` (4 jest GREEN)· 19 tek import jest GREEN (μη-regression). 🔴 browser-verify (Giorgio). UNCOMMITTED.
 - **2026-06-25** — Φάση 1: 6 modules + 3 test suites (18 jest GREEN). Real-file verify στο `ΣΚΑΛΑ.tek`: stepCount 17, totalRise 2900 mm, tread 274, width 800, winder 90°/3. + SSoT κεντρικοποίηση (5 διπλότυπα → SSoT + median SSoT). UNCOMMITTED.
 - **2026-06-25** — Φάση 3 (EXPORT): `StairEntity` → `<stair>` type 21 στον tek exporter (`TekStair`/`TekStairPoint` types· `STAIR_RECORD_HEAD`/`TAIL` templates· `buildStairPoint2dXml`/`buildStairIntlistXml`/`buildStairRecordXml`· `collectTekStairs`/`toTekStair`· `TEK_STAIR_MARKER` + 7ο inject arg· skeleton marker). FAITHFUL (γεωμετρία από `StairGeometry`). SSoT boy-scout: νέα `sceneXYToTekMeters` (ΕΝΑ Y-flip· refactor `footprintRingToMeters`/`roofFaceRingToMeters`). `<steps>=stepCount−1`. Winders→ευθύγραμμα (Φ3b). Νέα `tek-stair-export.test.ts` + ενημερωμένα tek-export/adapter suites — GREEN (81 tek jest). 🔴 Τέκτων round-trip (Giorgio). UNCOMMITTED.
 - **2026-06-25 (bugfix round-trip #1):** το 1ο export δεν άνοιγε στον Τέκτονα. Αιτία: `straightSegmentTypes` έβγαζε `κορυφές−1` (μοντέλο συνδεδεμένης πολυγραμμής)· ο Τέκτων όμως διαβάζει disjoint τμήματα (γραμμή=2 σημεία) → δηλώναμε 31 γραμμές για 32 σημεία = ζητούσε 62 → parser overrun. FIX: `segCount = κορυφές/2` (επιβεβ. ground-truth: 8 σημεία→intlist 4· 17→4 γραμμές+3 τόξα). + 6η intlist `0 0 0` (flag triple) ευθυγραμμίστηκε με το δείγμα. +regression test (point-count/segment-count invariant). 76 tek jest GREEN.
