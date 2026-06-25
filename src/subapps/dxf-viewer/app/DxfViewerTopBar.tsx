@@ -31,6 +31,7 @@ import { useDxfViewerRibbon } from './useDxfViewerRibbon';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
+import { DxfSymbolDetectHost } from './DxfSymbolDetectHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { FoundationPersistenceHost } from './FoundationPersistenceHost';
@@ -167,6 +168,8 @@ export function DxfViewerTopBar({
         buildingId={buildingId}
         floorId={floorId}
       />
+      {/* ADR-533 — ανίχνευση συμβόλου κουφώματος (DXF) μετά την τοποθέτηση τοίχου. */}
+      <DxfSymbolDetectHost levelManager={levelManager} />
       <SlabPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}

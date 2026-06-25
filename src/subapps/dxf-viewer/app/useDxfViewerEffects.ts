@@ -24,8 +24,11 @@ import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { ToolType } from '../ui/toolbar/types';
 import type { NotificationContextValue } from '@/types/notifications';
 import type { LevelsHookReturn } from '../systems/levels/useLevels';
-import type { UniversalSelectionHook } from '../systems/selection/SelectionSystem';
 import type { OverlayEditorMode } from '../overlays/types';
+// ADR-532 Stage B5 — the bus `dxf.highlightByIds` sync reads/writes the selection
+// store imperatively (no reactive selection prop). The two selection-DRIVEN
+// effects moved to SelectionSideEffectsHost (its own store subscription).
+import { SelectedEntitiesStore } from '../systems/selection';
 
 // Types used only by debug keyboard shortcuts
 interface WorkflowStepResult {
@@ -48,8 +51,6 @@ export interface DxfViewerEffectsParams {
   overlayMode: OverlayEditorMode;
   currentScene: SceneModel | null;
   showLayers: boolean;
-  selectedEntityIds: string[];
-  primarySelectedId: string | null;
 
   setOverlayMode: (mode: OverlayEditorMode) => void;
   handleToolChange: (tool: ToolType) => void;
@@ -67,11 +68,9 @@ export interface DxfViewerEffectsParams {
     setCurrentLevel: (id: string | null) => void;
     update: (id: string, data: Record<string, unknown>) => void;
   };
-  universalSelection: UniversalSelectionHook;
 
   floatingRef: React.RefObject<FloatingPanelHandle | null>;
   prevGripStateRef: React.MutableRefObject<{ shouldEnableGrips: boolean } | null>;
-  prevPrimarySelectedIdRef: React.MutableRefObject<string | null>;
   levelManagerRef: React.MutableRefObject<LevelsHookReturn>;
   handleSceneChangeRef: React.MutableRefObject<(scene: SceneModel) => void>;
 }
@@ -84,14 +83,14 @@ export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
   const { t } = useTranslation('dxf-viewer');
   const {
     activeTool, overlayMode, currentScene,
-    showLayers, selectedEntityIds, primarySelectedId,
+    showLayers,
     setOverlayMode,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
     eventBus, notifications,
-    levelManager, overlayStore, universalSelection,
+    levelManager, overlayStore,
     floatingRef,
-    prevGripStateRef, prevPrimarySelectedIdRef,
+    prevGripStateRef,
     levelManagerRef, handleSceneChangeRef,
   } = params;
 
@@ -241,13 +240,10 @@ Check console for detailed metrics`;
   // ADR-040 Phase XIII: canvas transform initialization, ref sync, and zoom
   // listener are owned by `useCanvasTransformState` (TransformStore-backed).
 
-  // Auto-expand selection in levels panel when selection changes
-  // Skip for large selections (Ctrl+A) — expanding 3000+ nodes causes 0 FPS
-  React.useEffect(() => {
-    if (!selectedEntityIds?.length) return;
-    if (selectedEntityIds.length > 50) return;
-    floatingRef.current?.expandForSelection(selectedEntityIds, currentScene);
-  }, [selectedEntityIds, currentScene, floatingRef]);
+  // ADR-532 Stage B5 — the selection-DRIVEN effects (auto-expand levels panel +
+  // auto-activate layering on overlay selection) moved to SelectionSideEffectsHost,
+  // which subscribes to the selection store as a leaf. Keeping them here would
+  // re-run this whole orchestrator hook on every click (the 122ms cascade).
 
   // Enable grips for selected entities in select, grip-edit, and layering modes
   React.useEffect(() => {
@@ -272,20 +268,6 @@ Check console for detailed metrics`;
       overlayStore.setCurrentLevel(levelManager.currentLevelId);
     }
   }, [levelManager.currentLevelId, overlayStore]);
-
-  // 🔺 AUTO-ACTIVATE LAYERING TOOL when overlay is selected
-  React.useEffect(() => {
-    const isNewSelection = primarySelectedId !== null && primarySelectedId !== prevPrimarySelectedIdRef.current;
-    prevPrimarySelectedIdRef.current = primarySelectedId;
-
-    if (isNewSelection && activeTool !== 'layering') {
-      const primaryEntry = universalSelection.context.universalSelection.get(primarySelectedId!);
-      const isOverlaySelection = primaryEntry?.type === 'overlay' || primaryEntry?.type === 'region';
-      if (isOverlaySelection) {
-        handleToolChange('layering');
-      }
-    }
-  }, [primarySelectedId, activeTool, handleToolChange, universalSelection, prevPrimarySelectedIdRef]);
 
   // 🔺 Bridge overlay edit mode to grip editing system
   React.useEffect(() => {
@@ -344,18 +326,21 @@ Check console for detailed metrics`;
     return cleanup;
   }, [eventBus, overlayStore]);
 
-  // Sync selection from bus (mode: 'select' only) — writes to universalSelection (SSoT)
+  // Sync selection from bus (mode: 'select' only) — writes to SelectedEntitiesStore (SSoT)
   React.useEffect(() => {
     const cleanup = eventBus.on('dxf.highlightByIds', ({ mode, ids }) => {
       if (mode !== 'select') return;
       const validIds: string[] = Array.isArray(ids) ? ids : [];
-      const currentIds = universalSelection.getSelectedEntityIds();
+      // ADR-532 Stage B5 — read/replace via the store (skip-if-unchanged lives in
+      // SelectedEntitiesStore.replaceEntitySelection). Equivalent to the old
+      // universalSelection.* round-trip but with zero subscription here.
+      const currentIds = SelectedEntitiesStore.getSelectedEntityIds();
       if (currentIds.length !== validIds.length || !currentIds.every((v, i) => v === validIds[i])) {
-        universalSelection.replaceEntitySelection(validIds);
+        SelectedEntitiesStore.replaceEntitySelection(validIds);
       }
     });
     return cleanup;
-  }, [eventBus, universalSelection]);
+  }, [eventBus]);
 
   // 🏢 ENTERPRISE: Centralized notification for polygon save errors
   React.useEffect(() => {

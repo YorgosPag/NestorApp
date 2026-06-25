@@ -1,7 +1,8 @@
 # HANDOFF — ADR-532 Stage B5 (DxfViewerContent severance) + B4 (CanvasSection grips)
 
 **Ημερομηνία:** 2026-06-25 · **ADR:** ADR-532 (επεκτείνει ADR-040 dual-access).
-**Κατάσταση:** B0–B3 DONE+VERIFIED (65/65 jest, UNCOMMITTED). B5 + B4 = αυτό το handoff.
+**Κατάσταση:** B0–B3 DONE+VERIFIED (65/65 jest, UNCOMMITTED). **B5 DONE (κώδικας, UNCOMMITTED 2026-06-25
+— 🔴 browser-verify εκκρεμεί).** B4 (CanvasSection grips) ΑΚΟΜΑ PENDING — δες §3.
 **Μοντέλο:** Opus. **Browser-incremental** (αλλαγή → React-DevTools profile → επόμενο βήμα). N.17: όχι full tsc.
 
 ---

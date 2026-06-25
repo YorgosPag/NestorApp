@@ -30,9 +30,12 @@ import {
 import type { ICommand, ICommandHistory } from '../core/commands/interfaces';
 import type { SceneModel } from '../types/entities';
 import { getAllLayers } from '../stores/LayerStore';
+// ADR-532 Stage B5 — read the live entity selection at keydown time from the SSoT
+// store (ADR-040 dual-access) instead of receiving it as a reactive prop, so the
+// listener registers once (not per selection change).
+import { SelectedEntitiesStore } from '../systems/selection';
 
 interface UseLayerCommandShortcutsParams {
-  selectedEntityIds: ReadonlyArray<string>;
   currentScene: SceneModel | null;
   commandHistory: ICommandHistory | null;
   /** Resolved Layer Isolate project setting (Firestore `dxfSettings.layerIsolate`). */
@@ -68,7 +71,6 @@ function resolveTargetLayerIds(
 }
 
 export function useLayerCommandShortcuts({
-  selectedEntityIds,
   currentScene,
   commandHistory,
   projectIsolateSetting,
@@ -83,6 +85,8 @@ export function useLayerCommandShortcuts({
 
     const onKeyDown = (e: KeyboardEvent): void => {
       if (isInputFocused()) return;
+      // ADR-532 Stage B5 — live selection at event time (no subscription).
+      const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
 
       if (matchesShortcut(e, 'layerIsolate')) {
         e.preventDefault();
@@ -129,5 +133,7 @@ export function useLayerCommandShortcuts({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [commandHistory, selectedEntityIds, currentScene, projectIsolateSetting, userIsolateSetting]);
+    // ADR-532 Stage B5 — `selectedEntityIds` removed from deps (read live at event
+    // time), so the listener is registered once, not re-bound on every selection.
+  }, [commandHistory, currentScene, projectIsolateSetting, userIsolateSetting]);
 }

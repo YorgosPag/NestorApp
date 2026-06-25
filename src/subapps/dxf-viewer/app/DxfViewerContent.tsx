@@ -18,7 +18,11 @@ import { useOverlayState } from '../hooks/state/useOverlayState';
 import { useCanvasTransformState } from '../hooks/state/useCanvasTransformState';
 import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
-import { useUniversalSelection, useSelectionLevelReset } from '../systems/selection';
+// ADR-532 Stage B5 — orchestrator no longer subscribes to the selection set. It
+// reads/mutates the SSoT store imperatively at event time; the reactive consumers
+// moved to leaf hosts (DxfViewerTopBar / SelectionSideEffectsHost / SidebarSection
+// / DxfViewerDialogs) that subscribe themselves.
+import { SelectedEntitiesStore, useSelectionLevelReset } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync'; // ADR-375 B.2 — per-level BIM render settings
 import { useStructuralSettingsSync } from '../state/hooks/useStructuralSettingsSync'; // ADR-456 2b — building-level structural code
@@ -74,7 +78,8 @@ import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToo
 import { use3DSelectionUniversalBridge } from '../bim-3d/systems/selection/use-3d-selection-universal-bridge';
 // ✅ N.7.1 size split — extracted UI-state + ribbon assembly + dialogs modules
 import { useDxfViewerUiState } from './useDxfViewerUiState';
-import { useDxfViewerRibbon } from './useDxfViewerRibbon';
+// ADR-532 Stage B5 — selection-driven side-effects leaf (subscribes to the store).
+import { SelectionSideEffectsHost } from './SelectionSideEffectsHost';
 import { DxfViewerDialogs } from './DxfViewerDialogs';
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 — mark the document root while the DXF viewer route is mounted
@@ -137,7 +142,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   } = state;
   // Stores and managers
   const overlayStore = useOverlayStore();
-  const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
   // ADR-442 / ADR-345 §5.4 — Revit-grade: ξεκινώντας εργαλείο οδηγών αποεπιλέγει την
   // τρέχουσα οντότητα, ώστε το priority cascade του useActiveContextualTrigger να μη
@@ -147,10 +151,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // σε effect → ADR-040-safe (μηδέν race με το render path).
   const wrappedHandleToolChange = React.useCallback((tool: ToolType) => {
     if (tool.startsWith('guide-')) {
-      universalSelection.clearAll();
+      // ADR-532 Stage B5 — imperative store mutation (same SSoT `clearAll()`).
+      SelectedEntitiesStore.clearAll();
     }
     handleToolChange(tool);
-  }, [handleToolChange, universalSelection]);
+  }, [handleToolChange]);
   // ADR-375 Phase B.2 — load BimRenderSettings for active level on every switch / Firestore push
   useBimRenderSettingsSync({
     currentLevelId: levelManager.currentLevelId,
@@ -187,51 +192,50 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   });
   // Refs for effects hook
   const prevGripStateRef = React.useRef<{ shouldEnableGrips: boolean } | null>(null);
-  const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   const levelManagerRef = React.useRef(levelManager);
   const handleSceneChangeRef = React.useRef(handleSceneChange);
-  // SSoT: selectedEntityIds derived from universalSelection — single write path
-  const selectedEntityIds = React.useMemo(
-    () => universalSelection.getSelectedEntityIds(),
-    [universalSelection]
-  );
-  // 🏢 Universal selection primary ID
-  const primarySelectedId = universalSelection.getPrimaryId();
+  // ADR-532 Stage B5 — the orchestrator no longer derives reactive
+  // selectedEntityIds / primarySelectedId. Event-time consumers read the SSoT
+  // store directly; reactive consumers (top-bar / sidebar / dialogs / side-effects
+  // host) subscribe themselves as leaves.
   // Viewport auto-fit (initial restore/fit, re-import, level-stable navigation) is
   // owned by the SINGLE `useViewportAutoFit` SSoT controller in CanvasSection (ADR-399).
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
     showCopyableNotification, wrappedHandleAction,
     wrappedHandleTransformChange, panToWorldOrigin, handleFileImportWithEncoding,
-    handleRegionClick, nudgeSelection, selectionIdSet,
+    handleRegionClick, nudgeSelection,
   } = useDxfViewerCallbacks({
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
     setTestsModalOpen: ui.setTestsModalOpen, setCreditsModalOpen: ui.setCreditsModalOpen, setPdfPanelOpen: ui.setPdfPanelOpen, setAiChatOpen: ui.setAiChatOpen,
     setShowEnhancedImport: ui.setShowEnhancedImport, setShowImportWizard: ui.setShowImportWizard, setShowLegacyImport: ui.setShowLegacyImport,
     setCanvasTransform,
-    currentScene, selectedEntityIds, handleSceneChange,
+    currentScene, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
-    universalSelection, setOverlayStatus, setOverlayKind,
+    setOverlayStatus, setOverlayKind,
     showLayers, floatingRef,
   });
   // ✅ ADR-065 SRP: Extracted effects
   useDxfViewerEffects({
     activeTool, overlayMode, currentScene,
-    showLayers, selectedEntityIds, primarySelectedId,
+    showLayers,
     setOverlayMode,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
     eventBus, notifications,
-    levelManager, overlayStore, universalSelection,
+    levelManager, overlayStore,
     floatingRef,
-    prevGripStateRef, prevPrimarySelectedIdRef,
+    prevGripStateRef,
     levelManagerRef, handleSceneChangeRef,
   });
   // ✅ PERFORMANCE: Memoize wrappedState
   const wrappedState = React.useMemo(() => ({
     ...state,
-    selectedEntityIds,  // SSoT: override stale raw useState with live universalSelection value
+    // ADR-532 Stage B5 — non-reactive store snapshot. No downstream reactive
+    // consumer exists (DXFViewerLayout hardcodes selectedEntityIds={[]}; the canvas
+    // reads its own CanvasSection subscription), so a render-time read is safe.
+    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(),
     handleAction: wrappedHandleAction,
     onAction: wrappedHandleAction,
     // ADR-442 / ADR-345 §5.4 — override BOTH handleToolChange + onToolChange alias με το
@@ -240,7 +244,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     // θα παρέκαμπτε το deselect → ίδιο bug από το πληκτρολόγιο. Ένα wrapped entry point.
     handleToolChange: wrappedHandleToolChange,
     onToolChange: wrappedHandleToolChange,
-  }), [state, selectedEntityIds, wrappedHandleAction, wrappedHandleToolChange]);
+  }), [state, wrappedHandleAction, wrappedHandleToolChange]);
   // Overlay drawing hook — retained for its registration side-effects (outputs unused here).
   useOverlayDrawing({
     overlayMode, activeTool, overlayKind, overlayStatus, overlayStore,
@@ -249,7 +253,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       setLevelScene: levelManager.setLevelScene,
       getLevelScene: levelManager.getLevelScene
     },
-    onOverlaySelect: (id: string | null) => universalSelection.handleOverlaySelect(id)
+    // ADR-532 Stage B5 — overlay select/deselect via the SSoT store (replicates
+    // the old universalSelection.handleOverlaySelect: id → select overlay, null →
+    // clear overlay-type selection only).
+    onOverlaySelect: (id: string | null) =>
+      id ? SelectedEntitiesStore.selectEntity({ id, type: 'overlay' }) : SelectedEntitiesStore.clearByType('overlay')
   });
   // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {
@@ -257,7 +265,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   }, []);
   // Keyboard shortcuts hook
   const { handleCanvasMouseMove } = useKeyboardShortcuts({
-    selectedEntityIds, currentScene,
+    // ADR-532 Stage B5 — the hook reads the live set from the store at keydown
+    // time (B1); this snapshot is an unused compat prop until Stage C.
+    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(), currentScene,
     onNudgeSelection: nudgeSelection,
     onColorMenuClose: closeColorMenu,
     onDrawingCancel: state.onDrawingCancel,
@@ -267,7 +277,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-358 §5.6.bis Phase 10 — wire Ctrl+Shift+I/U/T/O + Ctrl+Alt+I to layer commands.
   const { history: layerCommandHistory } = useCommandHistory();
   useLayerCommandShortcuts({
-    selectedEntityIds,
     currentScene,
     commandHistory: layerCommandHistory,
   });
@@ -307,21 +316,29 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
   useAutoFoundationDesign({ levelManager }); // ADR-459 Φ7 — Αυτόματος Σχεδιασμός Θεμελίωσης (level-wide auto + info)
   useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ7 — αυτόματος ενιαίος οπλισμός οργανισμού (no prompt)
-  // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
-  const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
-    levelManager, universalSelection, activeTool,
-    handleToolChange: wrappedHandleToolChange, handleRibbonComingSoon, wrappedHandleAction,
-    canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
-  });
+  // ADR-345/353/358/363 — ribbon command assembly moved INTO DxfViewerTopBar
+  // (ADR-532 Stage B5): the top-bar self-subscribes to the selection set and owns
+  // the contextual trigger + bridges, so the orchestrator no longer re-renders on
+  // click-selection.
   return (
       <div className="flex flex-col h-full min-h-0">
-        <DxfViewerTopBar
-          ribbonCommands={ribbonCommands}
-          contextualTabs={ribbonContextualTabs}
-          activeContextualTrigger={activeContextualTrigger}
-          primarySelectedId={primarySelectedId}
+        {/* ADR-532 Stage B5 — selection-driven side-effects run in this leaf host
+            (own store subscription) instead of in the orchestrator. */}
+        <SelectionSideEffectsHost
+          floatingRef={floatingRef}
           currentScene={currentScene}
+          activeTool={activeTool}
+          handleToolChange={wrappedHandleToolChange}
+        />
+        <DxfViewerTopBar
           levelManager={levelManager}
+          activeTool={activeTool}
+          handleToolChange={wrappedHandleToolChange}
+          handleRibbonComingSoon={handleRibbonComingSoon}
+          wrappedHandleAction={wrappedHandleAction}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          currentScene={currentScene}
         />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
@@ -336,7 +353,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           onSceneImported={handleFileImportWithEncoding}
           projectId={levelManager.saveContext?.projectId ?? undefined}
           floorplanId={levelManager.fileRecordId ?? undefined}
-          primarySelectedId={primarySelectedId}
         />
       ) : (
         <MobileSidebarDrawer
@@ -433,7 +449,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         setFindReplaceOpen={state.setFindReplaceOpen}
         symbolPickerOpen={state.symbolPickerOpen}
         setSymbolPickerOpen={state.setSymbolPickerOpen}
-        selectionIds={selectedEntityIds}
       />
       </section>
       </div>

@@ -246,6 +246,17 @@
     "fillAll": "Yes, all of them",
     "cancel": "No"
   },
+  "dxfSymbolDetect": {
+    "title": "Opening detected ({index}/{total})",
+    "messageDoor": "Door {width} m, hinge {hinge}, opens {dir} — add it to the wall?",
+    "messageWindow": "Window {width} m — add it to the wall?",
+    "hingeLeft": "left",
+    "hingeRight": "right",
+    "dirIn": "inward",
+    "dirOut": "outward",
+    "add": "Yes",
+    "skip": "Skip"
+  },
   "columnPromoteL": {
     "title": "Promote to corner boundary element (L)",
     "message": "The one-directional corner column receives a beam on its narrow (non-developing) face — an inadequate joint (EC8 §5.4.2). Promote it to an L boundary element so it gains a leg toward the beam?",

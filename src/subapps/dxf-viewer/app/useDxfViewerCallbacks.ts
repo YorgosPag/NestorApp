@@ -87,7 +87,6 @@ export interface DxfViewerCallbacksReturn {
   handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => Promise<void>;
   handleRegionClick: (regionId: string) => void;
   nudgeSelection: (dx: number, dy: number) => void;
-  selectionIdSet: Set<string>;
 }
 
 /**
@@ -103,9 +102,9 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
     setCanvasTransform,
-    currentScene, selectedEntityIds, handleSceneChange,
+    currentScene, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
-    universalSelection, setOverlayStatus, setOverlayKind,
+    setOverlayStatus, setOverlayKind,
     showLayers, floatingRef,
   } = params;
 
@@ -130,6 +129,8 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
 
   // 🧪 WRAP handleAction to intercept special actions
   const wrappedHandleAction = React.useCallback((action: string, data?: string | number | Record<string, unknown>) => {
+    // ADR-532 Stage B5 — live selection at event time (no reactive prop).
+    const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
     if (action === 'run-tests') {
       setTestsModalOpen(true);
       return;
@@ -193,7 +194,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     // Scope = τρέχουσα επιλογή (κενή → όλος ο οργανισμός ορόφου· το αποφασίζει ο
     // useStructuralAutoReinforce hook που εκτελεί το undoable command).
     if (action === 'organism.auto-reinforce') {
-      EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...params.selectedEntityIds] });
+      EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...selectedEntityIds] });
       return;
     }
     // ADR-464 Slice 4: «Υπολογισμός Φορτίων» — tributary load takedown σε όλα τα
@@ -221,11 +222,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     // ADR-459 Φ4f: manual κολόνα↔πέδιλο connectivity (selection-driven· ο
     // useStructuralFootingConnect hook αναλύει την επιλογή + εκτελεί το command).
     if (action === 'organism.footing-attach') {
-      EventBus.emit('bim:column-footing-attach-requested', { entityIds: [...params.selectedEntityIds] });
+      EventBus.emit('bim:column-footing-attach-requested', { entityIds: [...selectedEntityIds] });
       return;
     }
     if (action === 'organism.footing-detach') {
-      EventBus.emit('bim:column-footing-detach-requested', { entityIds: [...params.selectedEntityIds] });
+      EventBus.emit('bim:column-footing-detach-requested', { entityIds: [...selectedEntityIds] });
       return;
     }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
@@ -249,18 +250,18 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     }
     // ADR-362 Phase G1: open dimension text-override dialog
     if (action === 'dim.text.override') {
-      const entityId = params.selectedEntityIds[0];
+      const entityId = selectedEntityIds[0];
       if (entityId) openDimTextOverride(entityId);
       return;
     }
     // ADR-362 Phase K: DIMBREAK / DIMSPACE — selection-driven, the
     // `useDimensionModify` host runs the undoable command (mirrors organism.*).
     if (action === 'dim.modify.dimBreak') {
-      EventBus.emit('dim:break-requested', { entityIds: [...params.selectedEntityIds] });
+      EventBus.emit('dim:break-requested', { entityIds: [...selectedEntityIds] });
       return;
     }
     if (action === 'dim.modify.dimSpace') {
-      EventBus.emit('dim:space-requested', { entityIds: [...params.selectedEntityIds] });
+      EventBus.emit('dim:space-requested', { entityIds: [...selectedEntityIds] });
       return;
     }
     // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
@@ -334,7 +335,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen,
       setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
       setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
-      levelManager.saveContext, params.selectedEntityIds, user, t]);
+      levelManager.saveContext, user, t]);
 
   // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. Mutation writes
   // through TransformStore singleton (ImmediateTransformStore) only — no React
@@ -420,7 +421,9 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
 
   // Handle overlay region click
   const handleRegionClick = React.useCallback((regionId: string) => {
-    universalSelection.handleOverlaySelect(regionId);
+    // ADR-532 Stage B5 — overlay select via the store (mirrors the old
+    // universalSelection.handleOverlaySelect(regionId) for a non-null id).
+    SelectedEntitiesStore.selectEntity({ id: regionId, type: 'overlay' });
 
     // Auto-open levels tab when clicking on overlay in canvas
     floatingRef.current?.showTab('levels');
@@ -441,17 +444,14 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       levelManager.setCurrentLevel(selectedOverlay.levelId);
     }
   }, [overlayStore, showLayers, handleAction, levelManager,
-      universalSelection, setOverlayStatus, setOverlayKind, floatingRef]);
+      setOverlayStatus, setOverlayKind, floatingRef]);
 
-  // ✅ PERFORMANCE: Memoize selection set to avoid recreating on every call
-  const selectionIdSet = React.useMemo(() =>
-    new Set(selectedEntityIds || []),
-    [selectedEntityIds]
-  );
-
-  // ✅ PERFORMANCE: Optimize nudgeSelection with memoized selection set
+  // ✅ PERFORMANCE: nudge reads the live selection set at event time (ADR-532
+  // Stage B5) — no reactive prop, no per-render memoized set.
   const nudgeSelection = React.useCallback((dx: number, dy: number) => {
-    if (!currentScene || !selectedEntityIds?.length) return;
+    const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
+    if (!currentScene || !selectedEntityIds.length) return;
+    const selectionIdSet = new Set(selectedEntityIds);
 
     const moved = currentScene.entities.map(e => {
       if (!selectionIdSet.has(e.id)) return e;
@@ -477,7 +477,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
 
     const updated = { ...currentScene, entities: moved };
     handleSceneChange(updated);
-  }, [currentScene, selectionIdSet, handleSceneChange, selectedEntityIds]);
+  }, [currentScene, handleSceneChange]);
 
   return {
     showCopyableNotification,
@@ -487,7 +487,6 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     handleFileImportWithEncoding,
     handleRegionClick,
     nudgeSelection,
-    selectionIdSet,
   };
 }
 

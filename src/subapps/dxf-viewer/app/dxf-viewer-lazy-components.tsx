@@ -46,6 +46,8 @@ export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialo
 export const ColumnAdoptSizeDialog = React.lazy(() => import('../ui/dialogs/ColumnAdoptSizeDialog').then(mod => ({ default: mod.ColumnAdoptSizeDialog })));
 // ADR-524 — «Πολλαπλή πλήρωση όμοιων πλαισίων» confirm dialog (self-subscribing, zero props)
 export const ColumnBatchFillConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnBatchFillConfirmDialog').then(mod => ({ default: mod.ColumnBatchFillConfirmDialog })));
+// ADR-533 — «Ανίχνευση συμβόλου κουφώματος σε τοίχο» confirm dialog (self-subscribing, zero props)
+export const DxfSymbolDetectConfirmDialog = React.lazy(() => import('../ui/dialogs/DxfSymbolDetectConfirmDialog').then(mod => ({ default: mod.DxfSymbolDetectConfirmDialog })));
 // ADR-529 — «Προαγωγή γωνιακής κολόνας σε Γ (boundary element)» confirm dialog (self-subscribing, zero props)
 export const ColumnPromoteConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPromoteConfirmDialog').then(mod => ({ default: mod.ColumnPromoteConfirmDialog })));
 // ADR-507 Φ3 — «η περιοχή έχει ήδη γραμμοσκίαση» confirm dialog (warn+allow, self-subscribing)

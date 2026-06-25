@@ -34,7 +34,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, ColumnBatchFillConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, ColumnBatchFillConfirmDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -141,6 +141,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-524 — «Πολλαπλή πλήρωση όμοιων πλαισίων» confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>
         <ColumnBatchFillConfirmDialog />
+      </React.Suspense>
+      {/* ADR-533 — «Ανίχνευση συμβόλου κουφώματος σε τοίχο» confirm (self-subscribing). */}
+      <React.Suspense fallback={hiddenFallback}>
+        <DxfSymbolDetectConfirmDialog />
       </React.Suspense>
       {/* ADR-529 — «Προαγωγή γωνιακής κολόνας σε Γ (boundary element)» confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>
