@@ -527,6 +527,13 @@ export interface StairEntity extends BimEntity<StairKind, StairParams, StairGeom
   readonly editingBy?: StairEditingLock;
   /** ADR-358 Phase 9D-5c — dedicated level ID (replaces layer-field abuse). */
   readonly levelId?: string;
+  /**
+   * ADR-526 Φ3 — αυθεντικό Tekton `<stair><record>` XML, όταν η σκάλα **εισήχθη από `.tek`**
+   * (preserve-and-replay). Όταν υπάρχει κι η σκάλα δεν τροποποιήθηκε, ο tek exporter το εκπέμπει
+   * **αυτούσιο** → byte-faithful round-trip (ΑΚΡΙΒΗΣ αναπαραγωγή των ιδιόκτητων Tekton συμβόλων).
+   * `undefined` για σκάλες σχεδιασμένες στον Νέστορα (→ παραμετρικό export).
+   */
+  readonly sourceTekRecord?: string;
 }
 
 // ============================================================================
@@ -550,6 +557,8 @@ export interface StairDoc {
   readonly validation: StairValidationState;
 
   readonly editingBy?: StairEditingLock;
+  /** ADR-526 Φ3 — αυθεντικό Tekton `<record>` XML (preserve-and-replay· σκάλες εισαγμένες από .tek). */
+  readonly sourceTekRecord?: string;
 
   readonly createdBy: string;
   readonly createdAt: Timestamp;

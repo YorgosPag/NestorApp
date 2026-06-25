@@ -57,5 +57,7 @@ export function stairDocToEntity(doc: StairDoc): StairEntity {
     buildingId: doc.buildingId,
     visible: true,
     editingBy: doc.editingBy,
+    // ADR-526 Φ3 — preserve-and-replay: επαναφορά αυθεντικού Tekton record (αν εισήχθη από .tek).
+    ...(doc.sourceTekRecord ? { sourceTekRecord: doc.sourceTekRecord } : {}),
   } as StairEntity;
 }

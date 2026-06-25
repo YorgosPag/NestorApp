@@ -139,5 +139,7 @@ export function tekStairToEntity(
     variant,
     ...(rec.waistThicknessM > 0 ? { waistThickness: rec.waistThicknessM * 1000 } : {}),
   };
-  return buildStairEntity(params, levelId);
+  // preserve-and-replay (ADR-526 Φ3): κρατάμε το αυθεντικό Tekton record πάνω στο entity ώστε
+  // το export να το εκπέμψει αυτούσιο (byte-faithful round-trip, ακριβή Tekton σύμβολα).
+  return { ...buildStairEntity(params, levelId), sourceTekRecord: rec.rawXml };
 }

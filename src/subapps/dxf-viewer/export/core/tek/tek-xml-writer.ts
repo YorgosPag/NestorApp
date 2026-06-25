@@ -183,17 +183,6 @@ export function buildArcRecordXml(a: TekArc): string {
     .replace('{{COLOR}}', colorHex6(a.colorHex));
 }
 
-/**
- * Segment-types μιας πολυγραμμής σκάλας (slots 1/3) — όλα `2` (ευθεία). Ο Τέκτων διαβάζει
- * τα point2d των slots αυτών ως **ανεξάρτητα τμήματα**: μία γραμμή (type 2) καταναλώνει **2
- * σημεία** (τόξο/type 1 = 3). Άρα `segCount = κορυφές / 2` (ΟΧΙ N−1 συνδεδεμένης πολυγραμμής —
- * αλλιώς ο parser ζητά 2×segCount σημεία, βρίσκει λιγότερα και το αρχείο ΔΕΝ ανοίγει).
- * Ground-truth: slot 8 σημείων → intlist 4· slot 17 σημείων (winder) → 4 γραμμές + 3 τόξα.
- */
-function straightSegmentTypes(points: readonly TekStairPoint[]): number[] {
-  return new Array<number>(Math.floor(points.length / 2)).fill(2);
-}
-
 /** Serializes a stair polyline into `<point2d>` (empty -> `<point2d>\n</point2d>`). */
 export function buildStairPoint2dXml(points: readonly TekStairPoint[]): string {
   if (points.length === 0) return '<point2d>\n</point2d>';
@@ -211,27 +200,30 @@ export function buildStairIntlistXml(values: readonly number[]): string {
 }
 
 /**
- * Συναρμολογεί ένα stair `<record>` (type 21): κεφαλή + 3 point2d (βέλος/—/γραμμές βαθμίδων)
- * + 7 intlist (segment-types — straight ⇒ όλα `2`) + 5 point2d (εσωτ./εξωτ. περίγραμμα/πορεία
- * + 2 κενά) + scalar ουρά. Ίδια σειρά στοιχείων με το δείγμα ΣΚΑΛΑ.tek (FESPA-fixed schema).
+ * Συναρμολογεί ένα stair `<record>` (type 21) για **ευθεία σκάλα έτοιμη-για-3Δ**, καθρέφτης
+ * του ground-truth `ΜΟΝΟΝ_ΟΡΙΣΜΟΣ_ΣΚΑΛΑΣ`: 3 κενά point2d (σύμβολα 2Δ που σχεδιάζει ο Τέκτων)
+ * + 7 κενές intlist + οι **3 γραμμές ανάβασης** (αριστερή/κεντρική/δεξιά παρειά, slots 4/5/6,
+ * συνδεδεμένες πολυγραμμές με τερματικό sentinel) + 2 κενά + scalar ουρά. Ο Τέκτων ΦΤΙΑΧΝΕΙ
+ * τις βαθμίδες από τις γραμμές + scalars — δεν του δίνουμε γραμμές βαθμίδων.
  */
 export function buildStairRecordXml(s: TekStair): string {
   const blocks = [
-    buildStairPoint2dXml(s.arrow),
+    buildStairPoint2dXml(s.boundary),
     buildStairPoint2dXml([]),
-    buildStairPoint2dXml(s.stepLines),
-    buildStairIntlistXml(straightSegmentTypes(s.arrow)),
+    buildStairPoint2dXml([]),
+    // intlist 1 = segment-types του περιγράμματος (3 ανεξάρτητες ευθείες). Υπόλοιπες κενές.
+    buildStairIntlistXml(s.boundary.length >= 6 ? [2, 2, 2] : []),
     buildStairIntlistXml([]),
-    buildStairIntlistXml(straightSegmentTypes(s.stepLines)),
     buildStairIntlistXml([]),
     buildStairIntlistXml([]),
-    // 6η intlist: flag triple `0 0 0` — σταθερό από το ground-truth ΣΚΑΛΑ.tek (μετα-δεδομένα,
-    // ΟΧΙ segment-types· εμφανίζεται και σε straight & winder δείγματα).
-    buildStairIntlistXml([0, 0, 0]),
     buildStairIntlistXml([]),
-    buildStairPoint2dXml(s.innerContour),
-    buildStairPoint2dXml(s.outerContour),
-    buildStairPoint2dXml(s.walkline),
+    buildStairIntlistXml([]),
+    buildStairIntlistXml([]),
+    // slots 4/5 = οι δύο παρειές (ο Τέκτων χτίζει βαθμίδες ΑΝΑΜΕΣΑ τους → πρέπει αριστερή+δεξιά,
+    // ΟΧΙ αριστερή+walkline· αλλιώς οι βαθμίδες φτάνουν μόνο μέχρι την walkline = ~75%). slot6 = walkline.
+    buildStairPoint2dXml(s.leftLine),
+    buildStairPoint2dXml(s.rightLine),
+    buildStairPoint2dXml(s.centerLine),
     buildStairPoint2dXml([]),
     buildStairPoint2dXml([]),
   ];

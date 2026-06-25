@@ -205,14 +205,20 @@ export interface TekStair {
   readonly minStepWidthM: number;
   /** Αρίθμηση βαθμίδων — `<steps_numbering>` (1/0). */
   readonly stepsNumbering: boolean;
-  /** Βέλος κατεύθυνσης ανόδου (slot 1). */
-  readonly arrow: readonly TekStairPoint[];
-  /** Γραμμές βαθμίδων / ακμές πατημάτων (slot 3). */
-  readonly stepLines: readonly TekStairPoint[];
-  /** Εσωτερικό περίγραμμα / μηρός (slot 4). */
-  readonly innerContour: readonly TekStairPoint[];
-  /** Εξωτερικό περίγραμμα / μηρός (slot 5). */
-  readonly outerContour: readonly TekStairPoint[];
-  /** Γραμμή πορείας (slot 6). */
-  readonly walkline: readonly TekStairPoint[];
+  /**
+   * Ορατό περίγραμμα (slot 1): 3 ανεξάρτητες ευθείες (δεξιά παρειά + βάση + αριστερή παρειά,
+   * ανοιχτό στην κορυφή/άφιξη) = 6 σημεία, intlist `2 2 2`. Δίνει στον Τέκτονα ορατό 2Δ
+   * αποτύπωμα (χωρίς αυτό δεν σχεδιάζει τίποτα). Καθρέφτης slot 1 του `ΜΟΝΟΝ_ΟΡΙΣΜΟΣ_ΣΚΑΛΑΣ`.
+   */
+  readonly boundary: readonly TekStairPoint[];
+  /**
+   * Οι **3 γραμμές ανάβασης** (αριστερή παρειά / κεντρική πορεία / δεξιά παρειά), η ΜΟΝΗ
+   * γεωμετρία που χρειάζεται ο παραμετρικός 3Δ engine του Τέκτονα: από αυτές + τα scalars
+   * (πάτημα/ρίχτι/ύψος/πλήθος) **φτιάχνει μόνος του** τις βαθμίδες. Κάθε γραμμή έχει έναν
+   * κόμβο ανά βαθμίδα + τερματικό sentinel `3.4e+38` (FLT_MAX) που τη δηλώνει «ορισμένη».
+   * Καθρέφτης του `ΜΟΝΟΝ_ΟΡΙΣΜΟΣ_ΣΚΑΛΑΣ` ground-truth (slots 4/5/6). (μέτρα, Y-flipped)
+   */
+  readonly leftLine: readonly TekStairPoint[];
+  readonly centerLine: readonly TekStairPoint[];
+  readonly rightLine: readonly TekStairPoint[];
 }

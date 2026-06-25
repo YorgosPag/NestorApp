@@ -364,13 +364,20 @@ function toTekStair(stair: StairEntity, id: number, metersPerSceneUnit: number):
   // `vert_b` ΑΠΟ τη σχέση (ΟΧΙ από το `p.rise`, που με τη στρογγυλοποίηση δεν διαιρεί το ύψος
   // ορόφου ακριβώς) → διατήρηση ύψους ορόφου, ίδια λογική με το import (`rise = ΔΥψος/stepCount`).
   const steps = Math.max(1, p.stepCount - 1);
-  // Περίγραμμα/πορεία με έναν κόμβο ανά βαθμίδα (= stepCount σημεία), όπως το ground-truth —
-  // αλλιώς ο 3Δ builder του Τέκτονα κολλάει με μόνο 2 άκρα.
-  const contourCount = Math.max(2, p.stepCount);
-  const stepLines = g.risers.flatMap((r) => [
-    sceneXYToTekMeters(r.start.x, r.start.y, metersPerSceneUnit),
-    sceneXYToTekMeters(r.end.x, r.end.y, metersPerSceneUnit),
-  ]);
+  // Οι 3 γραμμές ανάβασης με έναν κόμβο ανά βαθμίδα (= stepCount σημεία), όπως το ground-truth —
+  // ο Τέκτων φτιάχνει τις βαθμίδες από αυτές + τα scalars. ΚΑΘΑΡΕΣ πολυγραμμές (ΧΩΡΙΣ sentinel:
+  // το `3.4e+38` το διαβάζει ως πραγματικό σημείο στα 3.4e38m → «οντότητες εκτός ορίων» → αόρατη).
+  const lineCount = Math.max(2, p.stepCount);
+  const left = densifyToStairPoints(g.stringers.inner, lineCount, metersPerSceneUnit);
+  const center = densifyToStairPoints(g.walkline, lineCount, metersPerSceneUnit);
+  const right = densifyToStairPoints(g.stringers.outer, lineCount, metersPerSceneUnit);
+  // Περίγραμμα (slot 1): δεξιά παρειά + βάση + αριστερή παρειά (3 ανεξάρτητες ευθείες, ανοιχτό
+  // στην κορυφή) — όπως το ground-truth, ώστε ο Τέκτων να σχεδιάζει ορατό αποτύπωμα.
+  const base = (l: readonly TekStairPoint[]): TekStairPoint => l[0];
+  const top = (l: readonly TekStairPoint[]): TekStairPoint => l[l.length - 1];
+  const boundary: TekStairPoint[] = [
+    base(right), top(right), base(left), base(right), base(left), top(left),
+  ];
   return {
     id,
     startElevationM,
@@ -385,11 +392,11 @@ function toTekStair(stair: StairEntity, id: number, metersPerSceneUnit: number):
     // Ευθεία σκάλα → χωρίς ελάχ. winder πλάτος (>0 σημαίνει ελικοειδής στον Τέκτονα).
     minStepWidthM: 0,
     stepsNumbering: p.treadLabelDisplay !== 'none',
-    arrow: ringToTekStairPoints([g.arrowSymbol.start, g.arrowSymbol.end], metersPerSceneUnit),
-    stepLines,
-    innerContour: densifyToStairPoints(g.stringers.inner, contourCount, metersPerSceneUnit),
-    outerContour: densifyToStairPoints(g.stringers.outer, contourCount, metersPerSceneUnit),
-    walkline: densifyToStairPoints(g.walkline, contourCount, metersPerSceneUnit),
+    boundary,
+    // αριστερή παρειά / κεντρική πορεία / δεξιά παρειά (Giorgio-confirmed model).
+    leftLine: left,
+    centerLine: center,
+    rightLine: right,
   };
 }
 
@@ -405,7 +412,10 @@ export function collectTekStairs(
   let id = 1;
   for (const e of entities) {
     if (!isStairEntity(e)) continue;
-    records.push(buildStairRecordXml(toTekStair(e, id, metersPerSceneUnit)));
+    // preserve-and-replay (ADR-526 Φ3): σκάλα που εισήχθη από Τέκτονα → εκπομπή του αυθεντικού
+    // record ΑΥΤΟΥΣΙΟ (byte-faithful· ακριβή Tekton σύμβολα/βέλη/τόξα). Νέστωρ-native → παραμετρικό.
+    const raw = e.sourceTekRecord;
+    records.push(raw ? raw : buildStairRecordXml(toTekStair(e, id, metersPerSceneUnit)));
     id += 1;
   }
   return { stairsXml: records.join('\n'), stairCount: records.length };

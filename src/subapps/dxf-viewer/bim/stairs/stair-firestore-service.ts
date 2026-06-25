@@ -77,6 +77,8 @@ export interface StairSaveInput {
   readonly floorId?: string;
   readonly layer?: string;
   readonly levelId?: string;
+  /** ADR-526 Φ3 — αυθεντικό Tekton record (preserve-and-replay). */
+  readonly sourceTekRecord?: string;
 }
 
 export interface StairUpdateInput {
@@ -155,6 +157,7 @@ export class StairFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.layer !== undefined) base.layer = input.layer;
     if (input.levelId !== undefined) base.levelId = input.levelId;
+    if (input.sourceTekRecord !== undefined) base.sourceTekRecord = input.sourceTekRecord;
 
     await setDoc(ref, base);
     return base as unknown as StairDoc;
@@ -249,5 +252,6 @@ export function entityToSaveInput(entity: StairEntity): StairSaveInput {
     levelId: entity.levelId,
     floorId: entity.floorId,
     buildingId: entity.buildingId,
+    sourceTekRecord: entity.sourceTekRecord,
   };
 }

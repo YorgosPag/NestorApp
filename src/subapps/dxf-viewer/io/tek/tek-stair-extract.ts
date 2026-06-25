@@ -26,12 +26,21 @@ function readPolyline(point2dEl: Element): TekPoint2D[] {
   }));
 }
 
+/** Σειριοποιεί ένα Element πίσω σε XML (preserve-and-replay)· native, καμία εξάρτηση (N.5). */
+function serializeElement(el: Element): string {
+  return typeof XMLSerializer !== 'undefined'
+    ? new XMLSerializer().serializeToString(el)
+    : el.outerHTML;
+}
+
 /** Μετατρέπει ένα stair `<record>` (type 21) → `TekStairRecord`. */
 function readStairRecord(record: Element): TekStairRecord {
   const polylines = directChildren(record, 'point2d')
     .map(readPolyline)
     .filter((pl) => pl.length > 0);
   return {
+    // Αυθεντικό XML για byte-faithful export (preserve-and-replay, ADR-526 Φ3).
+    rawXml: serializeElement(record),
     polylines,
     startElevationM: childNumber(record, 'start_elevation', 0),
     endElevationM: childNumber(record, 'end_elevation', 0),

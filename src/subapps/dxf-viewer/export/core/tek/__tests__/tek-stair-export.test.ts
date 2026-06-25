@@ -63,11 +63,14 @@ describe('buildStairRecordXml', () => {
     walklineLengthM: 4.389,
     minStepWidthM: 0,
     stepsNumbering: true,
-    arrow: [{ x: 0, y: 0 }, { x: 4, y: 0 }],
-    stepLines: [{ x: 0, y: 0 }, { x: 0, y: -0.8 }, { x: 0.274, y: 0 }, { x: 0.274, y: -0.8 }],
-    innerContour: [{ x: 0, y: 0 }, { x: 4, y: 0 }],
-    outerContour: [{ x: 0, y: -0.8 }, { x: 4, y: -0.8 }],
-    walkline: [{ x: 0, y: -0.4 }, { x: 4, y: -0.4 }],
+    boundary: [
+      { x: 0, y: -0.8 }, { x: 4, y: -0.8 }, // δεξιά παρειά
+      { x: 0, y: 0 }, { x: 0, y: -0.8 },     // βάση
+      { x: 0, y: 0 }, { x: 4, y: 0 },        // αριστερή παρειά
+    ],
+    leftLine: [{ x: 0, y: 0 }, { x: 4, y: 0 }],
+    centerLine: [{ x: 0, y: -0.4 }, { x: 4, y: -0.4 }],
+    rightLine: [{ x: 0, y: -0.8 }, { x: 4, y: -0.8 }],
   };
 
   it('type 21 + id + κανένα {{…}} leftover', () => {
@@ -92,27 +95,22 @@ describe('buildStairRecordXml', () => {
     expect(xml).toContain('<min_step_width>0</min_step_width>');
   });
 
-  it('FESPA-fixed schema: 8 point2d (3+5) + 7 intlist, σωστή σειρά', () => {
+  it('FESPA-fixed schema: 8 point2d (περίγραμμα + 2 κενά + 3 γραμμές + 2 κενά) + 7 intlist', () => {
     const xml = buildStairRecordXml(stair);
     expect((xml.match(/<point2d>/g) ?? []).length).toBe(8);
     expect((xml.match(/<intlist>/g) ?? []).length).toBe(7);
+    // ΜΟΝΟ η 1η intlist (περίγραμμα) = `2 2 2`· οι υπόλοιπες κενές (καμία segment-list βαθμίδων).
+    expect((xml.match(/<i>/g) ?? []).length).toBe(3);
+    expect(xml).toContain('<intlist>\n<i>2</i><i>2</i><i>2</i></intlist>');
     // η ουρά (start_elevation) έρχεται ΜΕΤΑ τα point2d (σειρά στοιχείων όπως το δείγμα).
     expect(xml.indexOf('<point2d>')).toBeLessThan(xml.indexOf('<start_elevation>'));
   });
 
-  it('walkline/contour κορυφές σειριοποιούνται (μέτρα, Y-flipped)', () => {
+  it('3 γραμμές ανάβασης σειριοποιούνται ΚΑΘΑΡΕΣ (χωρίς sentinel 3.4e+38 → όχι «εκτός ορίων»)', () => {
     const xml = buildStairRecordXml(stair);
-    expect(xml).toContain('<pX>0</pX><pY>-0.4</pY>'); // walkline
-    expect(xml).toContain('<pX>4</pX><pY>-0.8</pY>'); // outer contour
-  });
-
-  it('intlist segment-count = κορυφές/2 (ανεξάρτητα τμήματα, ΟΧΙ N−1) — αλλιώς ο Τέκτων δεν ανοίγει', () => {
-    // stepLines = 4 κορυφές → 2 γραμμές × 2 σημεία = "2 2" (ΟΧΙ "2 2 2"· ground-truth: 8 σημεία→4).
-    const xml = buildStairRecordXml(stair);
-    expect(xml).toContain('<intlist>\n<i>2</i><i>2</i></intlist>'); // stepLines: 4/2 = 2
-    expect(xml).toContain('<intlist>\n<i>2</i></intlist>');         // arrow: 2/2 = 1
-    // Καμία intlist με 3 "2" (το παλιό N−1 bug θα έβγαζε 3 → parser overrun).
-    expect(xml).not.toContain('<i>2</i><i>2</i><i>2</i>');
+    expect(xml).toContain('<pX>0</pX><pY>-0.4</pY>'); // centerLine (walkline)
+    expect(xml).toContain('<pX>4</pX><pY>-0.8</pY>'); // rightLine
+    expect(xml).not.toContain('e+38'); // ΚΑΝΕΝΑ sentinel — ο Τέκτων το έβλεπε ως σημείο στο άπειρο
   });
 
   it('stepsNumbering false → 0', () => {
@@ -151,11 +149,23 @@ describe('collectTekStairs', () => {
     expect((steps + 1) * vertB).toBeCloseTo(span, 6);
   });
 
-  it('περίγραμμα/πορεία ΠΥΚΝΩΜΕΝΑ (ένας κόμβος ανά βαθμίδα) — όχι 2 άκρα (αλλιώς ο Τέκτων κολλάει στο 3Δ)', () => {
+  it('3 γραμμές ανάβασης ΠΥΚΝΩΜΕΝΕΣ (ένας κόμβος ανά βαθμίδα) + ορατό περίγραμμα, ΧΩΡΙΣ sentinel', () => {
     const r = collectTekStairs([makeStraightStair()], 0.001);
-    // 3 πυκνά slots (inner/outer/walkline) × ~stepCount(16) + stepLines + arrow → πολλά σημεία.
-    // (Με μόνο 2-σημεία περιγράμματα θα ήταν ~6· τώρα ≥ 3×16.)
+    // 3 γραμμές × ~stepCount(16) κόμβοι + περίγραμμα 6 → πολλά σημεία (όχι 2-άκρα).
     expect((r.stairsXml.match(/<pX>/g) ?? []).length).toBeGreaterThanOrEqual(48);
+    // ΚΑΝΕΝΑ sentinel «εκτός ορίων».
+    expect(r.stairsXml).not.toContain('e+38');
+    // περίγραμμα → 1η intlist `2 2 2` (3 items μόνο).
+    expect((r.stairsXml.match(/<i>/g) ?? []).length).toBe(3);
+  });
+
+  it('preserve-and-replay: σκάλα με sourceTekRecord → εκπομπή ΑΥΤΟΥΣΙΑ (byte-faithful, ADR-526 Φ3)', () => {
+    const raw = '<record>\n<type>21</type><n>1</n><stair_width>0.8</stair_width>\n…ΑΥΘΕΝΤΙΚΟ…</record>';
+    const imported = { ...makeStraightStair(), sourceTekRecord: raw } as unknown as Entity;
+    const r = collectTekStairs([imported], 0.001);
+    expect(r.stairCount).toBe(1);
+    expect(r.stairsXml).toBe(raw);                 // αυτούσιο, χωρίς regeneration
+    expect(r.stairsXml).not.toContain('<point2d>'); // δεν ξαναχτίστηκε παραμετρικά
   });
 
   it('μη-stair entity αγνοείται', () => {

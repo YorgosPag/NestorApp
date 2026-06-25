@@ -13,6 +13,7 @@ function sampleRecord(overrides: Partial<TekStairRecord> = {}): TekStairRecord {
     { x: -49, y: 60 }, // outlier label anchor (~78m μακριά) — πρέπει να φιλτράρεται
   ];
   return {
+    rawXml: '<record><type>21</type></record>',
     polylines: [walkline],
     startElevationM: 0,
     endElevationM: 2.9,
@@ -41,6 +42,11 @@ describe('tekStairToEntity', () => {
   it('stepCount από το ρίχτι (round(2.9/0.17059) = 17), όχι από steps=16', () => {
     const e = tekStairToEntity(sampleRecord());
     expect(e.params.stepCount).toBe(17);
+  });
+
+  it('preserve-and-replay: κρατά το αυθεντικό record στο sourceTekRecord (ADR-526 Φ3)', () => {
+    const e = tekStairToEntity(sampleRecord({ rawXml: '<record><type>21</type><n>1</n></record>' }));
+    expect(e.sourceTekRecord).toBe('<record><type>21</type><n>1</n></record>');
   });
 
   it('διατηρεί ΑΚΡΙΒΩΣ το ύψος ορόφου (totalRise === 2900mm)', () => {

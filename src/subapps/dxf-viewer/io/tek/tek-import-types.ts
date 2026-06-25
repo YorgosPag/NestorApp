@@ -25,6 +25,13 @@ export interface TekPoint2D {
  * ώστε ο mapper να παράγει είτε πιστή 2D αναπαράσταση είτε παραμετρική σκάλα.
  */
 export interface TekStairRecord {
+  /**
+   * Το **αυθεντικό `<record>` XML** της σκάλας (ADR-526 Φ3 — preserve-and-replay). Διατηρείται
+   * αυτούσιο ώστε στο export μιας μη-τροποποιημένης εισαγόμενης σκάλας να εκπέμπεται **verbatim**
+   * → byte-faithful round-trip (ο Τέκτων τη ζωγραφίζει ΑΚΡΙΒΩΣ όπως την έδωσε, με τα δικά του
+   * σύμβολα/βέλη/τόξα). Μηδέν lossy regeneration των ιδιόκτητων Tekton συμβόλων.
+   */
+  readonly rawXml: string;
   /** Όλες οι `<point2d>` πολυγραμμές (μέτρα), με σειρά εμφάνισης· κενές παραλείπονται. */
   readonly polylines: readonly (readonly TekPoint2D[])[];
   /** `<start_elevation>` — στάθμη βάσης (μέτρα). */
