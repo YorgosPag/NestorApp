@@ -17,8 +17,11 @@
  * lifecycle + DPR-clear + canonical viewport/transform ζουν πλέον ΜΙΑ φορά
  * στο harness· εδώ μένει ΜΟΝΟ η draw logic.
  *
- * `cursorMode: 'none'` — ο cursor έρχεται μέσω `dragPreview.delta` prop (ΟΧΙ
- * μέσω `useCursorWorldPosition`). `effectiveCursor` = null στο draw frame.
+ * ADR-040 Φ12 — `cursorMode: 'world-position'`: ο harness τρέφει `effectiveCursor`
+ * = το ΖΩΝΤΑΝΟ realtime effective-world (ίδιο 60fps SSoT/ρολόι με τον crosshair). Για
+ * translate/resize drag το `delta` ανα-υπολογίζεται live από αυτό (byte-identical με το
+ * React `dragPreview.delta`) → ghost κλειδωμένο στον κέρσορα, μηδέν React-state lag.
+ * Περιστροφή + hatch-gradient drags κρατούν το React `dragPreview` (sweep/bespoke marker).
  *
  * @module hooks/tools/useGripGhostPreview
  * @see ADR-040 — Preview Canvas Performance
@@ -66,6 +69,9 @@ import {
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// ADR-040 Φ12 — SSoT grip translate-delta (shared with buildDxfDragPreview/commit),
+// so the live synchronous ghost derives the delta identically from the effective-world.
+import { resolveGripTranslateDelta } from '../grips/grip-projections';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -210,12 +216,33 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     [levelManager],
   );
 
-  // cursorMode: 'none' — cursor comes via dragPreview.delta prop, NOT via
-  // useCursorWorldPosition. effectiveCursor will always be null in the frame.
-  const draw = useCallback(({ ctx, viewport, transform: t }: GhostDrawFrame) => {
+  // ADR-040 Φ12 — cursorMode 'world-position': the harness feeds `effectiveCursor`
+  // = the LIVE realtime effective-world (same SSoT + same 60fps clock as the
+  // compositor crosshair). For a TRANSLATE/RESIZE drag we recompute `delta` from it
+  // synchronously so the ghost is locked to the cursor with zero React-state lag.
+  // The result is byte-identical to the React `dragPreview.delta` (the SSoT == the
+  // `moveWorldPos` that fed it) — just read live, not one React commit + RAF later.
+  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!dragPreview) return;
 
-    const entity = getEntity(dragPreview.entityId);
+    // ROTATION (sweep around a pivot, has its own ° readout) + HATCH-gradient drags
+    // (bespoke origin/angle marker geometry) keep the React `dragPreview` as-is; only
+    // 1:1 translate/resize gets the live-delta treatment.
+    const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
+    const isHatchDrag = !!dragPreview.hatchGripKind;
+    const dp =
+      !isRotation && !isHatchDrag && effectiveCursor && dragPreview.anchorPos
+        ? {
+            ...dragPreview,
+            delta: resolveGripTranslateDelta(
+              dragPreview.anchorPos,
+              effectiveCursor,
+              dragPreview.movesEntity === true || dragPreview.hotGrip === true,
+            ),
+          }
+        : dragPreview;
+
+    const entity = getEntity(dp.entityId);
     if (!entity) return;
 
     const vp = viewport;
@@ -223,21 +250,21 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ADR-397 — the picked rotation CENTRE (⊙). Shown for every rotate step once the
     // centre is set, so the user sees the pivot is locked (Giorgio). Same SSoT glyph
     // as the toolbar Rotate tool.
-    if (dragPreview.rotatePivot) {
-      drawRotationPivotMarker(ctx, dragPreview.rotatePivot, t, vp);
+    if (dp.rotatePivot) {
+      drawRotationPivotMarker(ctx, dp.rotatePivot, t, vp);
     }
 
     // ADR-397 Σ3 — live angle readout (°) on the cursor during a FREE rotate. Shows the
     // signed sweep (+CCW/−CW), or the typed angle while the user is keying one in, so
     // the rotation is VISIBLE (not blind typing). Same pill SSoT as the move readout.
-    if (dragPreview.rotateSweepDeg !== undefined && dragPreview.rotateReadoutAnchor) {
-      const anchorS = CoordinateTransforms.worldToScreen(dragPreview.rotateReadoutAnchor, t, vp);
-      drawDimPill(ctx, [formatMoveAngle(dragPreview.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
+    if (dp.rotateSweepDeg !== undefined && dp.rotateReadoutAnchor) {
+      const anchorS = CoordinateTransforms.worldToScreen(dp.rotateReadoutAnchor, t, vp);
+      drawDimPill(ctx, [formatMoveAngle(dp.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
     }
 
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the
     // ghost and the live home-run wire derive the SAME previewed entity.
-    const preview = toEntityPreviewTransform(dragPreview);
+    const preview = toEntityPreviewTransform(dp);
 
     // ADR-363 Φ1G.5 Slice 2 — for a hosted-opening Alt-move ghost, supply the
     // level's walls so the preview can slide / re-host the opening and recompute
@@ -253,24 +280,24 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for
     // the reference + alignment lines regardless of ghost delta (they exist even
     // while the wall is not yet rotating, e.g. tracing the reference line).
-    if (dragPreview.rotateRefLine || dragPreview.rotateAlignLine) {
-      if (dragPreview.rotateRefLine) {
-        drawDashedSegment(ctx, dragPreview.rotateRefLine.from, dragPreview.rotateRefLine.to, t, vp);
+    if (dp.rotateRefLine || dp.rotateAlignLine) {
+      if (dp.rotateRefLine) {
+        drawDashedSegment(ctx, dp.rotateRefLine.from, dp.rotateRefLine.to, t, vp);
       }
-      if (dragPreview.rotateAlignLine) {
-        drawDashedSegment(ctx, dragPreview.rotateAlignLine.from, dragPreview.rotateAlignLine.to, t, vp);
+      if (dp.rotateAlignLine) {
+        drawDashedSegment(ctx, dp.rotateAlignLine.from, dp.rotateAlignLine.to, t, vp);
       }
     } else if (
       // ADR-363 Phase 1G — dashed rubber-band leader to the cursor (corner/move
       // hot-grip). Drawn BEFORE the ghost short-circuit so it shows even when the
       // params clamp to an identical entity reference (e.g. thickness floor). The
       // start is the move/corner anchor; the end is the cursor (anchorPos + delta).
-      dragPreview.hotGrip &&
-      dragPreview.anchorPos &&
-      (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)
+      dp.hotGrip &&
+      dp.anchorPos &&
+      (dp.delta.x !== 0 || dp.delta.y !== 0)
     ) {
-      const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
-      const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
+      const fromW = dp.rotatePivot ?? dp.anchorPos;
+      const toW = { x: dp.anchorPos.x + dp.delta.x, y: dp.anchorPos.y + dp.delta.y };
       drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
@@ -279,16 +306,16 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // hot-grip. Draws a discreet base→current leader (skipped when the hot-grip already drew
     // its own) + a distance pill at the midpoint. Rotation flows (rotatePivot set) excluded.
     const isTranslate =
-      (dragPreview.movesEntity === true || dragPreview.hotGrip === true) && !dragPreview.rotatePivot;
-    if (isTranslate && dragPreview.anchorPos && (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)) {
-      const fromS = CoordinateTransforms.worldToScreen(dragPreview.anchorPos, t, vp);
+      (dp.movesEntity === true || dp.hotGrip === true) && !dp.rotatePivot;
+    if (isTranslate && dp.anchorPos && (dp.delta.x !== 0 || dp.delta.y !== 0)) {
+      const fromS = CoordinateTransforms.worldToScreen(dp.anchorPos, t, vp);
       const toS = CoordinateTransforms.worldToScreen(
-        { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y },
+        { x: dp.anchorPos.x + dp.delta.x, y: dp.anchorPos.y + dp.delta.y },
         t, vp,
       );
-      if (!dragPreview.hotGrip) drawMoveReadoutLeader(ctx, fromS, toS);
+      if (!dp.hotGrip) drawMoveReadoutLeader(ctx, fromS, toS);
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const meters = sceneDistanceToMeters(Math.hypot(dragPreview.delta.x, dragPreview.delta.y), resolveSceneUnits(scene));
+      const meters = sceneDistanceToMeters(Math.hypot(dp.delta.x, dp.delta.y), resolveSceneUnits(scene));
       const mid = moveReadoutMid(fromS, toS);
       drawDimPill(ctx, [formatMoveDistance(meters)], mid.x, mid.y);
     }
@@ -301,7 +328,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const origLine = entity as unknown as Entity;
     const tLine = transformed as unknown as Entity;
     if (
-      !dragPreview.movesEntity && !dragPreview.hotGrip && !dragPreview.rotatePivot &&
+      !dp.movesEntity && !dp.hotGrip && !dp.rotatePivot &&
       transformed !== entity && isLineEntity(origLine) && isLineEntity(tLine)
     ) {
       const startMoved = tLine.start.x !== origLine.start.x || tLine.start.y !== origLine.start.y;
@@ -324,9 +351,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // Σχεδιάζεται ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να
     // μη «εξαφανίζεται» — το committed grip κρύβεται από το main canvas στο active drag.
     const isHatchOriginDrag =
-      !!dragPreview.hatchGripKind && isHatchOriginGripKind(dragPreview.hatchGripKind) && entity.type === 'hatch';
+      !!dp.hatchGripKind && isHatchOriginGripKind(dp.hatchGripKind) && entity.type === 'hatch';
     const isHatchAngleDrag =
-      !!dragPreview.hatchGripKind && isHatchAngleGripKind(dragPreview.hatchGripKind) && entity.type === 'hatch';
+      !!dp.hatchGripKind && isHatchAngleGripKind(dp.hatchGripKind) && entity.type === 'hatch';
 
     // applyEntityPreview returns the *same* reference for zero-delta or unsupported
     // types → skip the ghost overlay (avoids a redundant paint). The hatch-origin
@@ -383,7 +410,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     getCanvas,
     getViewportElement,
     transform,
-    cursorMode: 'none',
+    // ADR-040 Φ12 — world-position: arm the live realtime effective-world stream so the
+    // ghost redraws synchronously (same frame as the crosshair) on every cursor move.
+    cursorMode: 'world-position',
     draw,
   });
 }

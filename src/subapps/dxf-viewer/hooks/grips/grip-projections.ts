@@ -50,6 +50,25 @@ export function rotateSweepDegFromDirs(refDir: Point2D, alignDir: Point2D): numb
 
 // ── DXF Projection Builders ──
 
+/**
+ * SSoT — the grip-drag translate delta (raw cursor delta → CAD constraints).
+ *
+ * `movesWhole` (Alt move-from-base / a `movesEntity` grip / a wall "move" hot-grip)
+ * ⇒ ORTHO (F8) then SNAP-MODE step; a parametric RESIZE grip keeps its geometry and
+ * gets only the step quantize. The commit path runs the identical functions, so
+ * ghost == result. Shared by `buildDxfDragPreview` (React path) AND the live
+ * synchronous grip ghost (`useGripGhostPreview`, ADR-040 Φ12) so both derive the
+ * delta from the ONE effective-world SSoT identically — no divergent re-implementation.
+ */
+export function resolveGripTranslateDelta(
+  anchorPos: Point2D,
+  world: Point2D,
+  movesWhole: boolean,
+): Point2D {
+  const rawDelta = { x: world.x - anchorPos.x, y: world.y - anchorPos.y };
+  return movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
+}
+
 export function buildDxfDragPreview(
   phase: UnifiedGripPhase,
   activeGrip: UnifiedGripInfo | null,
@@ -63,13 +82,12 @@ export function buildDxfDragPreview(
   if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
   }
-  const rawDelta = { x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y };
   // ORTHO (F8) applies only when the WHOLE entity translates (Alt move-from-base /
   // a `movesEntity` grip / a wall "move" hot-grip) — parametric resize grips keep
-  // their own geometry and get only SNAP-MODE step. ORTHO first, then step (the
-  // commit runs the identical `applyMoveConstraints`, so ghost == result).
+  // their own geometry and get only SNAP-MODE step. SSoT via `resolveGripTranslateDelta`
+  // (the live ghost reuses the SAME helper, so ghost == commit by construction).
   const movesWhole = altMove || activeGrip.movesEntity === true || hotGripMove;
-  const delta = movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
+  const delta = resolveGripTranslateDelta(anchorPos, currentWorldPos, movesWhole);
   // ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point»: emit a parametric-
   // kind-free snapshot with `movesEntity: true` so `applyEntityPreview` translates
   // the WHOLE entity by `delta` (via the move SSoT) instead of running a corner /

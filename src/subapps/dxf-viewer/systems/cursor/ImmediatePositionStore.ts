@@ -62,6 +62,22 @@ class ImmediatePositionStoreClass {
   private worldPosition: Point2D | null = null;
   private worldListeners: Set<PositionListener> = new Set();
 
+  // 🚀 ADR-040 cursor-lag Φ12 (2026-06-25): REALTIME effective-world channel.
+  // The 60fps, synchronous, post-snap effective world cursor (== `moveWorldPos`
+  // in mouse-handler-move: raw screen→world AFTER grip-snap + wall/column
+  // face-corner projection overrides). This is the ONE source every ghost reads
+  // synchronously — same value, same clock as the compositor crosshair, so the
+  // move/grip ghost can never desync from the cursor regardless of snaps on/off.
+  //
+  // WHY a 3rd channel (not the `worldPosition` one above): `worldPosition` is
+  // intentionally THROTTLED ~20fps (mouse-handler-move:148-164) because its
+  // `useSyncExternalStore` subscribers (toolbar / guides / draft-polygon) would
+  // otherwise re-render at 60fps. This channel is un-throttled + read imperatively
+  // (NO useSyncExternalStore), so it carries the full 60fps stream with zero React
+  // re-render cost. Ghosts consume it via a RAF-coalesced throttle (ADR-516).
+  private realtimeWorld: Point2D | null = null;
+  private realtimeWorldListeners: Set<PositionListener> = new Set();
+
   // 🏢 PAN LOCK (2026-01-25): Lock crosshair to WORLD position during pan
   private isPanning = false;
   private lockedWorldPosition: Point2D | null = null;
@@ -243,6 +259,28 @@ class ImmediatePositionStoreClass {
     return () => { this.worldListeners.delete(listener); };
   }
 
+  // ─── Realtime effective-world channel (ADR-040 Φ12, 2026-06-25) ─────────
+  // Written EVERY mousemove (60fps) by the central handler with the final
+  // `moveWorldPos`. Listeners fire SYNCHRONOUSLY inside the event (mirror
+  // `setPosition`), so a ghost armed off this channel draws in the same frame
+  // as the compositor crosshair.
+  setRealtimeWorld(pos: Point2D | null): void {
+    if (pointsEqual(this.realtimeWorld, pos)) return;
+    this.realtimeWorld = pos ? { x: pos.x, y: pos.y } : null;
+    this.realtimeWorldListeners.forEach((l) => {
+      try { l(this.realtimeWorld); } catch (e) { console.error('realtimeWorld listener error:', e); }
+    });
+  }
+
+  getRealtimeWorld(): Point2D | null {
+    return this.realtimeWorld;
+  }
+
+  subscribeRealtimeWorld(listener: PositionListener): () => void {
+    this.realtimeWorldListeners.add(listener);
+    return () => { this.realtimeWorldListeners.delete(listener); };
+  }
+
   /**
    * 🧹 CLEAR: Reset position to null
    */
@@ -285,6 +323,25 @@ export function subscribeToImmediateWorldPosition(
   listener: (position: Point2D | null) => void,
 ): () => void {
   return ImmediatePositionStore.subscribeWorldPosition(listener);
+}
+
+// 🚀 Realtime effective-world cursor convenience (ADR-040 Φ12, 2026-06-25).
+// The 60fps synchronous post-snap world cursor SSoT — read imperatively by every
+// ghost preview (no useSyncExternalStore, no React re-render). NOT to be confused
+// with `getImmediateWorldPosition()` above, which is the THROTTLED ~20fps React
+// channel for the toolbar/guides.
+export function setRealtimeWorldCursor(pos: Point2D | null): void {
+  ImmediatePositionStore.setRealtimeWorld(pos);
+}
+
+export function getRealtimeWorldCursor(): Point2D | null {
+  return ImmediatePositionStore.getRealtimeWorld();
+}
+
+export function subscribeRealtimeWorldCursor(
+  listener: (position: Point2D | null) => void,
+): () => void {
+  return ImmediatePositionStore.subscribeRealtimeWorld(listener);
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * ADR-398 §4 — useCanvasGhostPreview harness unit tests.
+ * ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview harness unit tests.
  *
  * Το harness κατέχει το copy-pasted scaffolding (~19 hooks): cursor-gate + RAF +
  * DPR-clear + canonical frame + snapped-cursor + clear-on-exit. Αυτά τα tests
@@ -8,20 +8,28 @@
  *   - DPR-clear γίνεται πριν το draw ('on-gate-exit') / ΟΧΙ ('skip-clear')
  *   - snapped cursor όταν useImmediateSnap
  *   - clear-on-exit όταν το gate κλείνει
- *   - cursorMode 'none' → effectiveCursor null, χωρίς cursor subscription
+ *   - cursorMode 'none' → effectiveCursor null, ΧΩΡΙΣ realtime subscription
+ *   - ADR-040 Φ12: σύγχρονο redraw όταν αλλάζει το realtime effective-world (leading-edge,
+ *     ΧΩΡΙΣ React re-render) + gating: idle → μηδέν realtime listener
  */
 
 import { renderHook } from '@testing-library/react';
 import { useCanvasGhostPreview } from '../useCanvasGhostPreview';
 import { getCanonicalPreviewFrame } from '../../../systems/preview/ghost-preview-frame';
-import { useCursorWorldPosition } from '../../../systems/cursor/useCursor';
+import {
+  getRealtimeWorldCursor,
+  subscribeRealtimeWorldCursor,
+} from '../../../systems/cursor/ImmediatePositionStore';
 import { getImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
 
 jest.mock('../../../systems/preview/ghost-preview-frame', () => ({
   getCanonicalPreviewFrame: jest.fn(),
 }));
-jest.mock('../../../systems/cursor/useCursor', () => ({
-  useCursorWorldPosition: jest.fn(),
+// ADR-040 Φ12 — the harness now reads the realtime effective-world cursor IMPERATIVELY
+// (no useSyncExternalStore) and arms a synchronous redraw off `subscribeRealtimeWorldCursor`.
+jest.mock('../../../systems/cursor/ImmediatePositionStore', () => ({
+  getRealtimeWorldCursor: jest.fn(),
+  subscribeRealtimeWorldCursor: jest.fn(),
 }));
 jest.mock('../../../systems/cursor/ImmediateSnapStore', () => ({
   getImmediateSnap: jest.fn(),
@@ -35,11 +43,12 @@ jest.mock('../../../systems/cursor/ImmediateTransformStore', () => ({
 import { subscribeTransform } from '../../../systems/cursor/ImmediateTransformStore';
 
 const mockFrame = getCanonicalPreviewFrame as jest.Mock;
-const mockCursor = useCursorWorldPosition as jest.Mock;
+const mockWorld = getRealtimeWorldCursor as jest.Mock;
+const mockSubscribeWorld = subscribeRealtimeWorldCursor as jest.Mock;
 const mockSnap = getImmediateSnap as jest.Mock;
 const mockSubscribeTransform = subscribeTransform as jest.Mock;
 
-// Synchronous RAF so drawFrame runs within the effect commit.
+// Synchronous RAF so the RAF-coalesced throttle's trailing flush runs inline.
 let rafSpy: jest.SpyInstance;
 beforeAll(() => {
   rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
@@ -72,12 +81,13 @@ const CANON = { viewport: { width: 1000, height: 800 }, transform: { scale: 3, o
 
 beforeEach(() => {
   mockFrame.mockReset().mockReturnValue(CANON);
-  mockCursor.mockReset().mockReturnValue({ x: 50, y: 60 });
+  mockWorld.mockReset().mockReturnValue({ x: 50, y: 60 });
   mockSnap.mockReset().mockReturnValue({ found: false, point: null });
   mockSubscribeTransform.mockReset().mockReturnValue(() => {});
+  mockSubscribeWorld.mockReset().mockReturnValue(() => {});
 });
 
-describe('ADR-398 §4 — useCanvasGhostPreview', () => {
+describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
   it('passes the canonical frame (viewport+transform from SSoT) to the draw delegate', () => {
     const { canvas, mock } = makeCanvas();
     const draw = jest.fn();
@@ -89,6 +99,7 @@ describe('ADR-398 §4 — useCanvasGhostPreview', () => {
     expect(frame.ctx).toBe(mock.ctx);
     expect(frame.viewport).toEqual(CANON.viewport);
     expect(frame.transform).toBe(CANON.transform); // LIVE transform, not the prop
+    expect(frame.effectiveCursor).toEqual({ x: 50, y: 60 }); // live realtime world (raw)
   });
 
   it("DPR-clears before draw in 'on-gate-exit' mode", () => {
@@ -127,7 +138,7 @@ describe('ADR-398 §4 — useCanvasGhostPreview', () => {
     expect(draw.mock.calls[0][0].effectiveCursor).toEqual({ x: 111, y: 222 });
   });
 
-  it("cursorMode 'none' → effectiveCursor null and no cursor subscription", () => {
+  it("cursorMode 'none' → effectiveCursor null and NO realtime subscription", () => {
     const { canvas } = makeCanvas();
     const draw = jest.fn();
     renderHook(() =>
@@ -136,9 +147,39 @@ describe('ADR-398 §4 — useCanvasGhostPreview', () => {
         cursorMode: 'none', draw,
       }),
     );
-    // useCursorWorldPosition called with `false` (no subscription while 'none')
-    expect(mockCursor).toHaveBeenCalledWith(false);
+    // No subscription to the 60fps world stream while 'none' (cursor comes via props).
+    expect(mockSubscribeWorld).not.toHaveBeenCalled();
     expect(draw.mock.calls[0][0].effectiveCursor).toBeNull();
+  });
+
+  it('re-draws synchronously when the realtime effective-world changes (ADR-040 Φ12)', () => {
+    let worldCb: (() => void) | null = null;
+    mockSubscribeWorld.mockImplementation((cb: () => void) => {
+      worldCb = cb;
+      return () => { worldCb = null; };
+    });
+    const { canvas } = makeCanvas();
+    const draw = jest.fn();
+    renderHook(() =>
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+    );
+    expect(draw).toHaveBeenCalledTimes(1); // initial paint
+    expect(worldCb).not.toBeNull(); // subscribed to the realtime world SSoT
+
+    mockWorld.mockReturnValue({ x: 70, y: 80 }); // simulate mousemove publishing new world
+    worldCb!();
+    expect(draw).toHaveBeenCalledTimes(2);
+    expect(draw.mock.calls[1][0].effectiveCursor).toEqual({ x: 70, y: 80 });
+  });
+
+  it('does NOT subscribe to the realtime world while inactive (idle gating)', () => {
+    const { canvas } = makeCanvas();
+    const draw = jest.fn();
+    renderHook(() =>
+      useCanvasGhostPreview({ isActive: false, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+    );
+    expect(mockSubscribeWorld).not.toHaveBeenCalled();
+    expect(draw).not.toHaveBeenCalled();
   });
 
   it('re-draws on a live transform change (mouse-wheel zoom with no mousemove)', () => {

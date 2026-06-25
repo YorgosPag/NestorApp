@@ -71,8 +71,8 @@ export interface TekLineRecord {
   readonly v1x: number;
   /** `<v1Y>` τέλος Y (μέτρα, Y-up). */
   readonly v1y: number;
-  /** `<color>` αυθεντικό **BGR** hex (μετατρέπεται σε RGB στον mapper). */
-  readonly colorBgr: string;
+  /** `<color>` αυθεντικό RGB hex (όπως το γράφει ο export `colorHex6`· `#` + normalize στον mapper). */
+  readonly color: string;
 }
 
 /**
@@ -96,8 +96,33 @@ export interface TekArcRecord {
   readonly p1x: number;
   /** `<p1Y>` (μέτρα, Y-up). */
   readonly p1y: number;
-  /** `<color>` αυθεντικό **BGR** hex. */
-  readonly colorBgr: string;
+  /** `<color>` αυθεντικό RGB hex (όπως ο export). */
+  readonly color: string;
+}
+
+/** 2×3 affine πίνακας του Τέκτονα (column-major) — `<xmatrix>` element. */
+export interface TekXMatrix {
+  readonly x00: number; readonly x01: number;
+  readonly x10: number; readonly x11: number;
+  readonly x20: number; readonly x21: number;
+}
+
+/**
+ * Ένα `<text>` record (entity type 3). Το περιεχόμενο ζει **inline** στο `<s>` (π.χ.
+ * `<s>ΚΟΥΖΙΝΑ</s>`, `<s>Ε = 70.77 τμ</s>`, ή ψηφία `<s>1</s>`). Θέση/μέγεθος/περιστροφή
+ * από το `<xmatrix>` (x20/x21 = θέση μέτρα Y-up· x00/x11 = κλίμακα γλύφου).
+ */
+export interface TekTextRecord {
+  /** `<s>` — το κείμενο αυτούσιο (inline). */
+  readonly content: string;
+  /** `<xmatrix>` — θέση + κλίμακα + περιστροφή. */
+  readonly matrix: TekXMatrix;
+  /** `<color>` RGB hex (όπως line/arc). */
+  readonly color: string;
+  /** `<hallign>` — 0=αριστερά, 1=κέντρο, 2=δεξιά. */
+  readonly hAlign: number;
+  /** `<ttfont><name>` — οικογένεια γραμματοσειράς (π.χ. "Arial"). Κενό → renderer default. */
+  readonly fontFamily: string;
 }
 
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */
@@ -124,4 +149,6 @@ export interface TekSceneParseResult extends TekParseResult {
   readonly lines: readonly TekLineRecord[];
   /** Όλα τα `<arc>` records (type 5) — τόξα ΚΑΙ κύκλοι. */
   readonly arcs: readonly TekArcRecord[];
+  /** Όλα τα `<text>` records (type 3). */
+  readonly texts: readonly TekTextRecord[];
 }

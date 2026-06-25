@@ -23,6 +23,8 @@ export interface TekImportResult {
     readonly lineCount: number;
     /** ADR-526 Φ5a — πλήθος εισαγμένων τόξων/κύκλων. */
     readonly arcCount: number;
+    /** ADR-526 Φ5a — πλήθος εισαγμένων κειμένων. */
+    readonly textCount: number;
     readonly parseTimeMs: number;
   };
 }
@@ -54,6 +56,7 @@ export function importTekContent(
         stairCount: parsed.stairs.length,
         lineCount: parsed.lines.length,
         arcCount: parsed.arcs.length,
+        textCount: parsed.texts.length,
         parseTimeMs,
       },
     };
@@ -64,7 +67,7 @@ export function importTekContent(
       success: false,
       error: message,
       warnings: [],
-      stats: { stairCount: 0, lineCount: 0, arcCount: 0, parseTimeMs: 0 },
+      stats: { stairCount: 0, lineCount: 0, arcCount: 0, textCount: 0, parseTimeMs: 0 },
     };
   }
 }

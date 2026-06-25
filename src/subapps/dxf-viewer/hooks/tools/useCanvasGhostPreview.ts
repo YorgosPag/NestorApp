@@ -24,8 +24,17 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+// 🚀 ADR-040 cursor-lag Φ12 — read the live effective-world cursor IMPERATIVELY
+// (no useSyncExternalStore → zero React re-render on the leaf) and arm a redraw
+// SYNCHRONOUSLY from the same 60fps stream that drives the compositor crosshair.
+import {
+  getRealtimeWorldCursor,
+  subscribeRealtimeWorldCursor,
+} from '../../systems/cursor/ImmediatePositionStore';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+// 🏢 ADR-516 — the ONE leading-edge/trailing-flush throttle (REUSE, μηδέν νέο RAF loop).
+import { createRafCoalescedThrottle } from '../raf-coalesced-throttle';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import {
   getCanonicalPreviewFrame,
   type GhostDrawDelegate,
@@ -84,10 +93,6 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
     cursorMode = 'world-position', useImmediateSnap = false, clearMode = 'on-gate-exit', draw,
   } = config;
 
-  // SSoT gate (ADR-040): subscribe στο 60fps cursor stream ΜΟΝΟ όσο το preview είναι
-  // ενεργό ΚΑΙ ζητείται world cursor. Idle ή cursorMode 'none' → κανένα listener.
-  const cursorWorld = useCursorWorldPosition(cursorMode === 'world-position' ? isActive : false);
-  const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 
   const clearCanvas = useCallback(() => {
@@ -105,18 +110,21 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
 
     if (!isActive) return;
 
-    // World cursor mode → χρειάζεται έγκυρο cursor (snapped αν ζητηθεί). 'none' → null.
+    // World cursor mode → διάβασε τη ΖΩΝΤΑΝΗ effective-world θέση IMPERATIVELY από το
+    // SSoT (ADR-040 Φ12) — ΟΧΙ από React snapshot· έτσι το ghost βλέπει ΤΗΝ ΙΔΙΑ τιμή με
+    // τον crosshair στο ίδιο frame. Snapped (`getImmediateSnap`) αν ζητηθεί. 'none' → null.
     let effectiveCursor: Point2D | null = null;
     if (cursorMode === 'world-position') {
-      if (!cursorWorld) return;
+      const world = getRealtimeWorldCursor();
+      if (!world) return;
       if (useImmediateSnap) {
         const snap = getImmediateSnap();
         effectiveCursor =
           snap?.found === true && snap.point != null
             ? { x: snap.point.x, y: snap.point.y }
-            : cursorWorld;
+            : world;
       } else {
-        effectiveCursor = cursorWorld;
+        effectiveCursor = world;
       }
     }
 
@@ -125,7 +133,14 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
     const { viewport, transform: liveTransform } = getCanonicalPreviewFrame(viewportEl);
 
     draw({ ctx, effectiveCursor, viewport, transform: liveTransform });
-  }, [isActive, getCanvas, getViewportElement, cursorMode, useImmediateSnap, clearMode, draw, cursorWorld]);
+  }, [isActive, getCanvas, getViewportElement, cursorMode, useImmediateSnap, clearMode, draw]);
+
+  // Latest-draw ref so the subscription lifecycle below can stay keyed on
+  // [isActive, cursorMode] only (stable through a drag) and never tears down per move.
+  const drawFrameRef = useRef(drawFrame);
+  drawFrameRef.current = drawFrame;
+  // The active throttle's `schedule` — populated while subscribed, no-op otherwise.
+  const scheduleRef = useRef<() => void>(() => {});
 
   // Clear-on-exit: σκουπίζει στάλε ghosts όταν το gate κλείνει (ΚΑΙ στα δύο clear modes).
   useEffect(() => {
@@ -134,20 +149,35 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
     prevActiveRef.current = isActive;
   }, [isActive, clearCanvas]);
 
-  // Schedule ένα draw ανά cursor / state change ενόσω ενεργό + ένα ζωγράφισμα σε
-  // ΚΑΘΕ live transform change (zoom/pan με ροδάκι, ΧΩΡΙΣ κίνηση κέρσορα). Η
-  // subscription στο `subscribeTransform` SSoT είναι zero-lag (ίδιο store με τον
-  // main canvas) → world-locked ghost σαν Revit, χωρίς εξάρτηση από React-prop lag.
+  // Subscription lifecycle — keyed on [isActive, cursorMode] (stable during a drag).
+  // Arms a SYNCHRONOUS RAF-coalesced draw (ADR-516, leading-edge ⇒ same frame as the
+  // event, like the crosshair; trailing flush ⇒ ≤1 redraw/frame) on every realtime
+  // effective-world change + every live transform change (wheel zoom/pan w/o mousemove).
+  // gating: world subscription ONLY when world-position mode → zero listener in idle/'none'.
   useEffect(() => {
     if (!isActive) return;
-    rafRef.current = requestAnimationFrame(drawFrame);
-    const unsubscribe = subscribeTransform(() => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(drawFrame);
-    });
+    const throttle = createRafCoalescedThrottle(DXF_TIMING.frame.THROTTLE_60);
+    const schedule = () => throttle.run(() => drawFrameRef.current());
+    scheduleRef.current = schedule;
+    schedule(); // initial paint
+    const offCursor =
+      cursorMode === 'world-position' ? subscribeRealtimeWorldCursor(schedule) : null;
+    const offTransform = subscribeTransform(schedule);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      unsubscribe();
+      throttle.cancel();
+      offCursor?.();
+      offTransform();
+      scheduleRef.current = () => {};
     };
+  }, [isActive, cursorMode]);
+
+  // Redraw when the draw delegate / config changes — covers 'none'-mode consumers
+  // whose cursor arrives via the `draw` closure/props (e.g. dim-annotation), plus
+  // snap/clear flips. Skips the mount run (the subscription effect already painted).
+  const drawDirtyMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isActive) { drawDirtyMountedRef.current = false; return; }
+    if (!drawDirtyMountedRef.current) { drawDirtyMountedRef.current = true; return; }
+    scheduleRef.current();
   }, [isActive, drawFrame]);
 }

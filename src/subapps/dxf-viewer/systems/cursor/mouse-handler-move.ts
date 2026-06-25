@@ -14,7 +14,7 @@ import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/Canva
 import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { setImmediatePosition } from './ImmediatePositionStore';
+import { setImmediatePosition, setRealtimeWorldCursor } from './ImmediatePositionStore';
 import { setColumnPolarShiftFractions } from './ColumnPolarStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { getLockedGripWorldPos } from './GripSnapStore';
@@ -280,6 +280,12 @@ export function useMouseMoveHandler({
       }
     }
 
+    // 🚀 ADR-040 cursor-lag Φ12 — publish the FINAL effective world (snapped +
+    // face-corner-adjusted) to the realtime SSoT EVERY frame (60fps, synchronous).
+    // Every ghost preview reads this imperatively + redraws via a RAF-coalesced
+    // throttle, so it stays locked to the compositor crosshair (same value, same
+    // clock) — no React-state / 20fps-throttle desync. Must run before onMouseMove.
+    setRealtimeWorldCursor(moveWorldPos);
     onMouseMove?.(screenPos, moveWorldPos);
 
     // Drawing preview callback

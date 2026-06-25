@@ -11,10 +11,24 @@
 import {
   directChildren, firstChild, childNumber, childText,
 } from './tek-xml-reader';
-import type { TekLineRecord, TekArcRecord } from './tek-import-types';
+import type {
+  TekLineRecord, TekArcRecord, TekTextRecord, TekXMatrix,
+} from './tek-import-types';
 
 const LINE_ENTITY_TYPE = 4;
 const ARC_ENTITY_TYPE = 5;
+const TEXT_ENTITY_TYPE = 3;
+
+/** Διαβάζει το `<xmatrix>` ενός record → `TekXMatrix` (μηδενικά αν λείπει). */
+function readXMatrix(record: Element): TekXMatrix {
+  const m = firstChild(record, 'xmatrix');
+  if (!m) return { x00: 1, x01: 0, x10: 0, x11: 1, x20: 0, x21: 0 };
+  return {
+    x00: childNumber(m, 'x00', 1), x01: childNumber(m, 'x01', 0),
+    x10: childNumber(m, 'x10', 0), x11: childNumber(m, 'x11', 1),
+    x20: childNumber(m, 'x20', 0), x21: childNumber(m, 'x21', 0),
+  };
+}
 
 /** Floors container: floors live under the building element (fallback to body). */
 function floorContainerOf(root: Element): Element | null {
@@ -82,4 +96,27 @@ export function extractArcRecords(root: Element): { arcs: TekArcRecord[]; warnin
     });
   }
   return { arcs, warnings };
+}
+
+/** Extracts all text records (type 3) — content lives inline in the s element. */
+export function extractTextRecords(root: Element): { texts: TekTextRecord[]; warnings: string[] } {
+  const texts: TekTextRecord[] = [];
+  const warnings: string[] = [];
+  for (const record of recordsInFloors(root, 'text')) {
+    if (!isEntityType(record, TEXT_ENTITY_TYPE)) {
+      warnings.push('text record χωρίς type=3 — παραλείφθηκε.');
+      continue;
+    }
+    const content = (childText(record, 's') ?? '').trim();
+    if (content === '') continue; // κενό label → χωρίς οντότητα
+    const ttfont = firstChild(record, 'ttfont');
+    texts.push({
+      content,
+      matrix: readXMatrix(record),
+      color: childText(record, 'color') ?? '',
+      hAlign: Math.round(childNumber(record, 'hallign', 0)),
+      fontFamily: (ttfont ? childText(ttfont, 'name') : null) ?? '',
+    });
+  }
+  return { texts, warnings };
 }

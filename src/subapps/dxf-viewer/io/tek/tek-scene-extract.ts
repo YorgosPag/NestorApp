@@ -9,7 +9,9 @@
 
 import { parseTektonXml } from './tek-xml-reader';
 import { extractStairRecords, extractTekHead } from './tek-stair-extract';
-import { extractLineRecords, extractArcRecords } from './tek-primitive-extract';
+import {
+  extractLineRecords, extractArcRecords, extractTextRecords,
+} from './tek-primitive-extract';
 import type { TekSceneParseResult } from './tek-import-types';
 
 /**
@@ -21,11 +23,13 @@ export function parseTekScene(content: string): TekSceneParseResult {
   const { stairs, warnings: stairWarnings } = extractStairRecords(root);
   const { lines, warnings: lineWarnings } = extractLineRecords(root);
   const { arcs, warnings: arcWarnings } = extractArcRecords(root);
+  const { texts, warnings: textWarnings } = extractTextRecords(root);
   return {
     ...extractTekHead(root),
     stairs,
     lines,
     arcs,
-    warnings: [...stairWarnings, ...lineWarnings, ...arcWarnings],
+    texts,
+    warnings: [...stairWarnings, ...lineWarnings, ...arcWarnings, ...textWarnings],
   };
 }

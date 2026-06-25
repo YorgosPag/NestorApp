@@ -185,6 +185,13 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');
       const textHeight = resolveTextHeight(entity);
       const textStyle = extractFirstRunStyle(entity);
+      // ADR-526 Φ5a — όταν η οντότητα φέρει flat `fontFamily` (π.χ. εισαγωγή Τέκτονα, χωρίς
+      // textNode) και το textNode δεν όρισε γραμματοσειρά, την περνάμε στο textStyle (η μόνη
+      // πηγή font που διαβάζει ο renderer). Additive: DXF text παίρνει font από textNode → αμετάβλητο.
+      const flatFont = withNode.fontFamily;
+      const finalStyle = flatFont && !textStyle?.fontFamily
+        ? { ...textStyle, fontFamily: flatFont }
+        : textStyle;
       return {
         ...base,
         type: 'text' as const,
@@ -192,7 +199,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
         text: flatText,
         height: textHeight,
         rotation: e.rotation,
-        ...(textStyle && { textStyle }),
+        ...(finalStyle && { textStyle: finalStyle }),
       } as DxfEntityUnion;
     }
     case 'angle-measurement': {

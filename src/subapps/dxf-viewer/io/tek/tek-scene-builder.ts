@@ -17,7 +17,7 @@ import type { Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { tekStairToEntity } from './tek-stair-to-bim';
-import { tekLineToEntity, tekArcToEntity } from './tek-primitive-to-scene';
+import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitive-to-scene';
 import type { TekSceneParseResult } from './tek-import-types';
 
 /** Default bounds όταν δεν υπάρχει καμία σκάλα (κενή σκηνή). */
@@ -39,6 +39,9 @@ function primitiveBounds(e: Entity): { min: Point2D; max: Point2D } | null {
       min: { x: e.center.x - e.radius, y: e.center.y - e.radius },
       max: { x: e.center.x + e.radius, y: e.center.y + e.radius },
     };
+  }
+  if (e.type === 'text') {
+    return { min: { x: e.position.x, y: e.position.y }, max: { x: e.position.x, y: e.position.y } };
   }
   return null;
 }
@@ -80,6 +83,7 @@ export function buildSceneFromTekScene(
     ...parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units)),
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
     ...parsed.arcs.map((rec) => tekArcToEntity(rec, units)),
+    ...parsed.texts.map((rec) => tekTextToEntity(rec, units)),
   ];
   const warnings = [...parsed.warnings];
   if (entities.length === 0) {

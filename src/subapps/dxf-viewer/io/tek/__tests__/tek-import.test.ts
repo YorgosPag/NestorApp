@@ -43,6 +43,9 @@ ${point2d([[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]])}
 <arc>
 <record><type>5</type><circle>0</circle><centreX>0</centreX><centreY>0</centreY><p0X>1</p0X><p0Y>0</p0Y><p1X>0</p1X><p1Y>1</p1Y><color>FC8000</color></record>
 </arc>
+<text>
+<record><type>3</type><s>ΚΟΥΖΙΝΑ</s><color>FC9C80</color><hallign>0</hallign><ttfont><name>Arial</name></ttfont><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>2</x20><x21>3</x21></xmatrix></record>
+</text>
 </floor>
 </building></body>
 </tekton>`;
@@ -83,18 +86,23 @@ describe('importTekContent', () => {
     expect(result.stats.stairCount).toBe(0);
     expect(result.stats.lineCount).toBe(0);
     expect(result.stats.arcCount).toBe(0);
+    expect(result.stats.textCount).toBe(0);
     expect(result.warnings.join(' ')).toMatch(/καμία οντότητα/);
   });
 
-  it('ADR-526 Φ5a — εισάγει σκάλα + 2Δ γραμμές + τόξο (mixed)', () => {
+  it('ADR-526 Φ5a — εισάγει σκάλα + 2Δ γραμμές + τόξο + κείμενο (mixed)', () => {
     const result = importTekContent(TEK_MIXED, 'level-1');
     expect(result.success).toBe(true);
     expect(result.stats.stairCount).toBe(1);
     expect(result.stats.lineCount).toBe(2);
     expect(result.stats.arcCount).toBe(1);
-    expect(result.scene?.entities).toHaveLength(4);
+    expect(result.stats.textCount).toBe(1);
+    expect(result.scene?.entities).toHaveLength(5);
     const types = result.scene?.entities.map((e) => e.type).sort();
-    expect(types).toEqual(['arc', 'line', 'line', 'stair']);
+    expect(types).toEqual(['arc', 'line', 'line', 'stair', 'text']);
+    const txt = result.scene?.entities.find((e) => e.type === 'text');
+    expect(txt && 'text' in txt && txt.text).toBe('ΚΟΥΖΙΝΑ');
+    expect(txt && 'fontFamily' in txt && txt.fontFamily).toBe('Arial');
     // bounds καλύπτουν ΚΑΙ τα 2Δ primitives (η γραμμή φτάνει x=3m → 3000mm)
     const b = result.scene?.bounds;
     expect(b && b.max.x).toBeGreaterThanOrEqual(3000);
