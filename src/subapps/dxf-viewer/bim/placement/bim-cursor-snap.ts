@@ -97,6 +97,12 @@ export interface BimCursorSnapInput {
    */
   readonly columnHead?: Readonly<HeadReferenceLines> | null;
   /**
+   * column (ADR-525): `true` όταν το ενεργό ghost είναι **L-shape** (Σχήμα Γ) → ενεργοποιεί τον
+   * corner-gap auto-junction tier (η L γεμίζει το κενό μεταξύ δύο κάθετων δοκαριών). `undefined`/`false`
+   * για κάθε άλλο kind → ο tier αδρανής.
+   */
+  readonly lShapeGhost?: boolean;
+  /**
    * wall/beam: Polar/Rect Magnet opts για το **START** του μέλους (ADR-398 §3.13/§3.15, ίδιο SSoT με
    * την κολώνα). `undefined` = χωρίς magnet (σημερινή συμπεριφορά τοίχου). Όταν δοθεί (δοκάρι), το
    * φάντασμα κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο **ΟΠΩΣ η κολώνα** — ως
@@ -133,7 +139,7 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
   // ADR-514 Φ6 — το πέδιλο (`foundation-pad`) κουμπώνει ΟΠΩΣ η κολώνα (ίδιος resolver: center-on-axis
   // / 9-handle flush) → reuse, μηδέν παράλληλο subsystem.
   if (toolKind === 'column' || toolKind === 'foundation-pad') {
-    const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts, input.columnHead);
+    const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts, input.columnHead, input.lShapeGhost);
     if (placement) return { kind: 'column-placement', placement, point: placement.position };
   } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex') {
     const members = selectGhostMembers(targets, input.memberKinds ?? DEFAULT_MEMBER_KINDS);

@@ -39,9 +39,9 @@ import {
 } from '../../bim/walls/wall-in-region';
 import {
   buildColumnFillingRect,
-  isWallColumnKind,
   splitColumnsByIntent,
 } from '../../bim/columns/column-from-faces';
+import { appendColumnsWithBreakdown } from '../../bim/columns/append-columns-with-breakdown';
 import { requestColumnDiscreteIntentConfirm } from '../../bim/columns/column-perimeter-confirm-store';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { EventBus } from '../../systems/events/EventBus';
@@ -55,6 +55,8 @@ export interface ColumnRegionClicksParams {
   readonly getSceneEntitiesRef: MutableRefObject<(() => readonly Entity[]) | undefined>;
   readonly getSceneUnitsRef: MutableRefObject<(() => SceneUnits) | undefined>;
   readonly currentLevelId: string;
+  /** ADR-524 — μετά από επιτυχές «1 κλικ μέσα», πρότεινε πλήρωση όμοιων πλαισίων. */
+  readonly suggestBatchFillAt: (point: Readonly<Point2D>) => void;
 }
 
 export interface ColumnRegionClicksApi {
@@ -76,8 +78,10 @@ function sameSeg(a: RegionLineSeg, b: RegionLineSeg): boolean {
 }
 
 export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnRegionClicksApi {
-  const { stateRef, setState, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } =
-    params;
+  const {
+    stateRef, setState, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef,
+    currentLevelId, suggestBatchFillAt,
+  } = params;
 
   // ADR-419 Layer 2 — gap-tolerant region tolerance (world units), κοινό SSoT με
   // το «από περίγραμμα» (κλείνει μικρά κενά στις παρειές, ανεξάρτητο zoom).
@@ -86,18 +90,10 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
     [getSceneUnitsRef],
   );
 
-  // Append έτοιμων columns + breakdown event (κολώνες/τοιχία) για ενημερωτικό toast.
+  // Append έτοιμων columns + breakdown event (κολώνες/τοιχία) — SSoT helper.
   const appendColumns = useCallback(
-    (entities: readonly ColumnEntity[]): void => {
-      let columns = 0;
-      let walls = 0;
-      for (const c of entities) {
-        onColumnCreatedRef.current?.(c);
-        if (isWallColumnKind(c.kind)) walls++;
-        else columns++;
-      }
-      EventBus.emit('bim:columns-discrete-from-perimeter', { columns, walls, ignored: 0 });
-    },
+    (entities: readonly ColumnEntity[]): void =>
+      appendColumnsWithBreakdown(entities, (c) => onColumnCreatedRef.current?.(c)),
     [onColumnCreatedRef],
   );
 
@@ -106,8 +102,12 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
   // δείχνουμε το ΙΔΙΟ intent-aware confirm με το «από περίγραμμα» (Giorgio: «να
   // γίνεται τοιχίο / να ρωτάει» — όχι σιωπηλή κολώνα aspect>4). Καθαρή πρόθεση
   // (μόνο κολώνες) → δημιουργία κατευθείαν. Returns true αν χειρίστηκε το κλικ.
+  // ADR-524 — opt-in callback που τρέχει ΜΟΝΟ στο πραγματικό commit (sync ή μετά
+  // το intent-resolve), αφού η/οι κολόνα/ες είναι ήδη στη scene. Έτσι το batch-fill
+  // suggestion (α) βλέπει τη νέα κολόνα στο idempotency φίλτρο και (β) δεν ανοίγει
+  // ταυτόχρονα με το intent-confirm dialog.
   const commitInRegionRects = useCallback(
-    (rects: readonly DetectedRectangle[]): boolean => {
+    (rects: readonly DetectedRectangle[], opts?: { onCommitted?: () => void }): boolean => {
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const built: ColumnEntity[] = [];
       for (const rect of rects) {
@@ -118,6 +118,7 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
       const { primary, secondary } = splitColumnsByIntent(built, 'columns');
       if (secondary.length === 0) {
         appendColumns(primary);
+        opts?.onCommitted?.();
         return true;
       }
       void (async () => {
@@ -128,7 +129,10 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
         });
         if (action === 'cancel') return;
         const toCreate = action === 'create-all' ? [...primary, ...secondary] : primary;
-        if (toCreate.length > 0) appendColumns(toCreate);
+        if (toCreate.length > 0) {
+          appendColumns(toCreate);
+          opts?.onCommitted?.();
+        }
       })();
       return true;
     },
@@ -167,14 +171,17 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
       // 'inside' — μόνο το εσώκλειστο ορθογώνιο (αγνοεί τα picks γραμμών).
       const rect = findEnclosingRectangle(segs, point, tol);
       if (rect) {
-        const ok = commitInRegionRects([rect]);
+        // ADR-524 — μετά το commit, πρότεινε πλήρωση των υπόλοιπων όμοιων πλαισίων.
+        const ok = commitInRegionRects([rect], {
+          onCommitted: () => suggestBatchFillAt(point),
+        });
         stateRef.current = { ...stateRef.current, regionPicks: [] };
         setState((prev) => ({ ...prev, regionPicks: [], error: null }));
         return ok;
       }
       return false;
     },
-    [stateRef, setState, regionTol, commitInRegionRects, getSceneEntitiesRef],
+    [stateRef, setState, regionTol, commitInRegionRects, suggestBatchFillAt, getSceneEntitiesRef],
   );
 
   // Live ids of accumulated in-region picks (selection highlight).

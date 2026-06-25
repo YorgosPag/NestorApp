@@ -84,12 +84,19 @@ export function generateColumnPreview(
 
   // entity-specific builder — ΙΔΙΟΙ builders με το commit (preview ≡ commit). λοξή ακμή → flush rotation·
   // ελεύθερη → null (ribbon/Tab rotation από τα overrides).
-  const buildColumnGhostEntity: PlacementGhostEntityBuilder = (position, anchor, rotation) => {
+  const buildColumnGhostEntity: PlacementGhostEntityBuilder = (position, anchor, rotation, sizing) => {
     const overrides: ColumnParamOverrides = {
       ...handle.overrides,
       kind: handle.kind,
       anchor,
       ...(rotation !== null ? { rotation } : {}),
+      // ADR-525 — L corner-gap auto-junction: ρητές διαστάσεις σκελών (autoSized:false → user-wins).
+      ...(sizing ? {
+        width: sizing.widthMm,
+        depth: sizing.depthMm,
+        lshape: { armWidth: sizing.armWidthMm, armLength: sizing.armLengthMm, flipY: sizing.flipY },
+        autoSized: false,
+      } : {}),
     };
     const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
     const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
@@ -138,6 +145,7 @@ export function generateColumnPreview(
     sceneUnits,
     columnOpts: polarOpts,
     columnHead: resolveColumnHeadReferences(handle.kind, handle.overrides, sceneUnits),
+    lShapeGhost: handle.kind === 'L-shape', // ADR-525 — ενεργοποίηση corner-gap auto-junction tier
   });
   return assemblePlacementGhost({
     snap,

@@ -57,7 +57,7 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
       targets: TARGETS, sceneUnits: 'mm', polarOpts: OPTS,
       fallbackAnchor: 'center', ghostId: 'preview_x', buildEntity,
     });
-    expect(buildEntity).toHaveBeenCalledWith({ x: 5, y: 7 }, 'center', null);
+    expect(buildEntity).toHaveBeenCalledWith({ x: 5, y: 7 }, 'center', null, null);
     expect(ghost).not.toBeNull();
     expect(ghost?.id).toBe('preview_x');
     expect((ghost as { preview?: boolean }).preview).toBe(true);
@@ -73,7 +73,19 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
       targets: TARGETS, sceneUnits: 'mm', polarOpts: OPTS,
       fallbackAnchor: 'center', ghostId: 'preview_x', buildEntity,
     });
-    expect(buildEntity).toHaveBeenCalledWith({ x: 10, y: 20 }, 'ne', 42);
+    expect(buildEntity).toHaveBeenCalledWith({ x: 10, y: 20 }, 'ne', 42, null);
+  });
+
+  it('ADR-525 — L corner-gap sizing περνά αυτούσιο στον builder (4ο arg)', () => {
+    const buildEntity = jest.fn(() => ({ type: 'column' }));
+    const sizing = { widthMm: 400, depthMm: 425, armWidthMm: 250, armLengthMm: 300, flipY: false };
+    assemblePlacementGhost({
+      snap: columnSnap({ position: { x: 1, y: 2 }, anchor: 'center', rotation: 0, sizing }),
+      effectiveCursor: { x: 1, y: 2 },
+      targets: TARGETS, sceneUnits: 'mm', polarOpts: OPTS,
+      fallbackAnchor: 'center', ghostId: 'preview_x', buildEntity,
+    });
+    expect(buildEntity).toHaveBeenCalledWith({ x: 1, y: 2 }, 'center', 0, sizing);
   });
 
   it('overlap status → ghostStatusColor set (🔴)', () => {

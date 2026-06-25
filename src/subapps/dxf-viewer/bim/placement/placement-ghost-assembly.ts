@@ -34,6 +34,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/drawing-types';
 import type { ColumnAnchor } from '../types/column-types';
 import type { ColumnFaceSnap } from '../columns/column-face-snap';
+import type { LCornerSizing } from '../columns/column-beam-corner-snap';
 import type { BimCursorSnap } from './bim-cursor-snap';
 import type { SceneSnapTargets } from '../framing/scene-snap-targets';
 import type { PolarDiskSnapOptions } from '../columns/polar-disk-snap';
@@ -55,11 +56,15 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
  * overrides)· `number` = flush-to-edge (face-snap) ή live (awaitingRotation). Επιστρέφει `null` σε
  * validation fail → το ghost καθαρίζει αυτό το frame. Generic επιστροφή (`object`) → wrapped από το
  * `toWysiwygPreviewEntity` χωρίς `any`.
+ *
+ * ADR-525 — `sizing` (4ο, optional): auto-διαστασιολόγηση L-κολόνας (corner-gap junction) ως one-shot
+ * override· `null`/absent = κρατά τις διαστάσεις του ribbon (μηδέν αλλαγή· ο pad builder το αγνοεί).
  */
 export type PlacementGhostEntityBuilder = (
   position: Readonly<Point2D>,
   anchor: ColumnAnchor,
   rotation: number | null,
+  sizing?: LCornerSizing | null,
 ) => object | null;
 
 /** Είσοδος του awaitingPosition assembly. */
@@ -106,7 +111,8 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
   // λοξή ακμή → flush (faceSnap.rotation)· axis-aligned → 0· ελεύθερη → null (ribbon rotation).
   const rotation: number | null = faceSnap ? faceSnap.rotation : null;
 
-  const entity = buildEntity(position, anchor, rotation);
+  // ADR-525 — auto-διαστασιολόγηση L corner-gap (one-shot)· `null` σε κάθε άλλο snap → ribbon διαστάσεις.
+  const entity = buildEntity(position, anchor, rotation, faceSnap?.sizing ?? null);
   if (!entity) return null;
 
   // 🔴 overlap → status schematic· 🟢/neutral → πλήρες WYSIWYG.

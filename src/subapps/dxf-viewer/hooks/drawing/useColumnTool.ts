@@ -23,27 +23,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import {
-  ANCHOR_CYCLE_ORDER,
   DEFAULT_COLUMN_HEIGHT_MM,
   type ColumnAnchor,
-  type ColumnKind,
 } from '../../bim/types/column-types';
-import { type ColumnParamOverrides } from './column-completion';
 // N.7.1 file-size split — pure column-from-click entity builder (extracted commitColumnAt core).
 import { buildClickColumnEntity, type ColumnSizeOverride } from './column-commit-build';
+// N.7.1 file-size split — state-mutation actions (lifecycle + ribbon setters).
+import { useColumnToolStateActions } from './use-column-tool-actions';
 import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
 // ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
 import { useColumnRegionClicks } from './use-column-region-clicks';
+// ADR-524 «Πολλαπλή πλήρωση όμοιων πλαισίων» — κοινός suggest (region 'inside' + adopt).
+import { useColumnBatchFillSuggest } from './use-column-batch-fill-suggest';
 // ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» (opt-in confirm στο 1ο κλικ μέσα σε ορθογώνιο DXF).
 import { useColumnRectAdopt } from './use-column-rect-adopt';
 import type { AdoptProposal } from '../../bim/columns/column-adopt-rect';
-import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
   getColumnGhostStatus,
   getColumnFaceAnchor,
+  getColumnFaceRotation,
+  getColumnFaceSizing,
 } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import {
   setColumnRotationLock,
@@ -64,14 +66,12 @@ import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { EventBus } from '../../systems/events/EventBus';
 // ADR-398 §3.10 sync-in-preview — pre-collect τους face-snap στόχους στο ΚΟΙΝΟ scene store
 // (κοινό με τοίχο/δοκάρι) ώστε το ghost + commit να υπολογίζουν το snap σύγχρονα.
-import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // N.7.1 file-size split — pure status-text resolver (FSM state → i18n key).
 import { resolveColumnStatusTextKey } from './column-status-text';
 // N.7.1 file-size split — state machine types + hook contract + INITIAL_STATE.
 import {
   INITIAL_STATE,
-  type ColumnPlacementMode,
   type ColumnToolState,
   type UseColumnToolOptions,
   type UseColumnToolResult,
@@ -107,124 +107,21 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // Re-sync στόχων on entity-created (rAF) + refresh on activate — SSoT hook, κοινό με τοίχο/δοκάρι.
   const refreshSnapTargets = useSceneSnapTargetSync(() => getSceneEntitiesRef.current?.() ?? []);
 
-  // ── lifecycle ────────────────────────────────────────────────────────────
-  const activate = useCallback(() => {
-    refreshSnapTargets(); // στόχοι έτοιμοι πριν το 1ο ghost frame
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      anchor: prev.anchor,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      discreteIntent: prev.discreteIntent,
-      slantMode: prev.slantMode,
-      overrides: prev.overrides,
-      phase: 'awaitingPosition',
-    }));
-  }, [refreshSnapTargets]);
-
-  const setKind = useCallback((kind: ColumnKind) => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind,
-      anchor: prev.anchor,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      discreteIntent: prev.discreteIntent,
-      slantMode: prev.slantMode,
-      overrides: prev.overrides,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
-    }));
-  }, []);
-
-  // ADR-363 Φάση 3 — switch placement mode (freehand ⇄ outer-perimeter). Resets
-  // the state machine (κρατά kind + anchor + overrides). No-op όταν δεν αλλάζει.
-  const setPlacementMode = useCallback((mode: ColumnPlacementMode) => {
-    setState((prev) => {
-      if (prev.placementMode === mode) return prev;
-      return {
-        ...INITIAL_STATE,
-        kind: prev.kind,
-        anchor: prev.anchor,
-        overrides: prev.overrides,
-        regionMethod: prev.regionMethod,
-        discreteIntent: prev.discreteIntent,
-        slantMode: prev.slantMode,
-        placementMode: mode,
-        phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
-      };
-    });
-  }, []);
-
-  // ADR-419 — set the in-region method ('lines' | 'inside' | 'box'). Driven by the
-  // active tool id (column-region-lines/inside/box). Clears accumulated picks on change.
-  const setRegionMethod = useCallback((regionMethod: RegionMethod) => {
-    setState((prev) =>
-      prev.regionMethod === regionMethod ? prev : { ...prev, regionMethod, regionPicks: [] },
-    );
-  }, []);
-
-  // ADR-419 — set the discrete-from-perimeter intent ('columns' | 'walls'). Driven by
-  // the active tool id (column-discrete-from-perimeter vs …-walls).
-  const setDiscreteIntent = useCallback((discreteIntent: 'columns' | 'walls') => {
-    setState((prev) => (prev.discreteIntent === discreteIntent ? prev : { ...prev, discreteIntent }));
-  }, []);
-
-  const setAnchor = useCallback((anchor: ColumnAnchor) => {
-    setState((prev) => ({ ...prev, anchor }));
-  }, []);
-
-  const cycleAnchor = useCallback((direction: 1 | -1 = 1) => {
-    setState((prev) => {
-      const idx = ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
-      const len = ANCHOR_CYCLE_ORDER.length;
-      const nextIdx = (idx + direction + len) % len;
-      return { ...prev, anchor: ANCHOR_CYCLE_ORDER[nextIdx] };
-    });
-  }, []);
-
-  const deactivate = useCallback(() => {
-    clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
-    clearColumnTopLeanLock(); // ADR-404 Φ5 — ακύρωση τυχόν ενεργού slant 2-click
-    sceneSnapTargetsStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
-    setState(INITIAL_STATE);
-  }, []);
-
-  const reset = useCallback(() => {
-    clearColumnRotationLock(); // ESC κατά το awaitingRotation → επιστροφή σε awaitingPosition
-    clearColumnTopLeanLock(); // ESC κατά το awaitingTopLean → επιστροφή σε awaitingPosition
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      anchor: prev.anchor,
-      placementMode: prev.placementMode,
-      regionMethod: prev.regionMethod,
-      discreteIntent: prev.discreteIntent,
-      slantMode: prev.slantMode,
-      overrides: prev.overrides,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
-    }));
-  }, []);
-
-  const setParamOverrides = useCallback((overrides: ColumnParamOverrides) => {
-    setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
-  }, []);
-
-  // ADR-404 Φ5 — ribbon toggle «Κεκλιμένη». Αλλαγή mode → ακύρωση τυχόν ενεργού 2-click
-  // (rotation ή top-lean) ώστε να μην μείνει «μισό» κλικ από προηγούμενο mode.
-  const setSlantMode = useCallback((slantMode: boolean) => {
-    setState((prev) => {
-      if (prev.slantMode === slantMode) return prev;
-      clearColumnRotationLock();
-      clearColumnTopLeanLock();
-      return {
-        ...prev,
-        slantMode,
-        phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
-        error: null,
-      };
-    });
-  }, []);
+  // ── lifecycle + ribbon setters (N.7.1 split → use-column-tool-actions) ─────
+  // Καθαροί state reducers· ίδιες υπογραφές/dependency arrays (μηδέν regression).
+  const {
+    activate,
+    setKind,
+    setPlacementMode,
+    setRegionMethod,
+    setDiscreteIntent,
+    setAnchor,
+    cycleAnchor,
+    deactivate,
+    reset,
+    setParamOverrides,
+    setSlantMode,
+  } = useColumnToolStateActions(setState, refreshSnapTargets);
 
   // ── commit ───────────────────────────────────────────────────────────────
   /**
@@ -275,6 +172,16 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     [currentLevelId, onColumnCreated, getSceneUnits],
   );
 
+  // ── ADR-524 «Πολλαπλή πλήρωση όμοιων πλαισίων» — κοινός suggest ──────────────
+  // Καλείται μετά από ΚΑΘΕ τοποθέτηση σε πλαίσιο (region 'inside' + freehand adopt):
+  // βρίσκει τα υπόλοιπα όμοια (ίδιο χρώμα) αγέμιστα πλαίσια και ρωτά αν θα γεμίσουν.
+  const { suggestBatchFillAt } = useColumnBatchFillSuggest({
+    onColumnCreatedRef,
+    getSceneEntitiesRef,
+    getSceneUnitsRef,
+    currentLevelId,
+  });
+
   // ── ADR-398 §3.17 «Υιοθέτηση μεγέθους ορθογωνίου» — opt-in confirm στο 1ο κλικ ────
   // Adopt («Ναι») → commit στο μέγεθος+κέντρο+γωνία του ορθογωνίου (anchor `center`, μηδέν 2ο κλικ:
   // το ορθογώνιο ορίζει πλήρως την κολόνα, Revit-grade). Default («Όχι») → κανονική ροή 2-κλικ.
@@ -294,14 +201,17 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       // αρχιτεκτονική πρόθεση (ο χρήστης τη σχεδίασε) → user-wins. Χωρίς αυτό, ο auto-sizer
       // (`buildColumnSizePatch`) ξανα-υπολόγιζε τη διατομή από λυγηρότητα/οπλισμό και «φούσκωνε»
       // π.χ. το 250 στο ελάχιστο επαρκές 300 (Giorgio bug 2026-06-23: 1×0,25 → 1×0,30).
-      commitColumnAt(s, proposal.center, 'center', proposal.rotationDeg, {
+      const ok = commitColumnAt(s, proposal.center, 'center', proposal.rotationDeg, {
         width: proposal.widthMm,
         depth: proposal.depthMm,
         kind: proposal.kind,
         autoSized: false,
       });
+      // ADR-524 — μετά την υιοθέτηση, πρότεινε πλήρωση των υπόλοιπων όμοιων πλαισίων
+      // (ίδιο χρώμα). Το `proposal.center` είναι μέσα στο πλαίσιο που μόλις γέμισε.
+      if (ok) suggestBatchFillAt(proposal.center);
     },
-    [commitColumnAt],
+    [commitColumnAt, suggestBatchFillAt],
   );
   const onAdoptDefault = useCallback(
     (s: ColumnToolState, point: Readonly<Point2D>, anchor: ColumnAnchor): void => {
@@ -337,6 +247,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     getSceneEntitiesRef,
     getSceneUnitsRef,
     currentLevelId,
+    suggestBatchFillAt,
   });
 
   // ── click pipeline ───────────────────────────────────────────────────────
@@ -366,6 +277,19 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         // κλάδοι επέστρεφαν face-anchor για ΟΛΟ το εσωτερικό δίσκου/ορθογωνίου → single-click παντού.]
         const faceAnchor = getColumnFaceAnchor();
         const anchor: ColumnAnchor = faceAnchor ?? (getColumnGhostStatus() === 'beam' ? 'center' : s.anchor);
+        // ADR-525 — L corner-gap auto-junction: η L είναι ΠΛΗΡΩΣ ορισμένη από τα δύο κάθετα δοκάρια
+        // (θέση + γωνία + διαστάσεις σκελών) → **single-click commit** (mirror adopt-rect §3.17, χωρίς
+        // 2ο κλικ-γωνία). `autoSized:false` (ρητές διαστάσεις → ο auto-sizer δεν τις αλλάζει).
+        const lSizing = getColumnFaceSizing();
+        if (lSizing && !s.slantMode) {
+          return commitColumnAt(s, point, anchor, getColumnFaceRotation() ?? 0, {
+            width: lSizing.widthMm,
+            depth: lSizing.depthMm,
+            kind: 'L-shape',
+            lshape: { armWidth: lSizing.armWidthMm, armLength: lSizing.armLengthMm, flipY: lSizing.flipY },
+            autoSized: false,
+          });
+        }
         // ADR-398 §3.17 — 1ο κλικ μέσα σε ορθογώνιο DXF (rectangle/polyline/4-γραμμές): opt-in confirm
         // «υιοθέτηση μεγέθους ή default;». Μόνο ΕΛΕΥΘΕΡΗ τοποθέτηση (όχι slant). Αν ανοίξει → σταμάτα
         // εδώ (η ροή συνεχίζει async στο resolve: adopt→commit / default→awaitingRotation / cancel→noop).

@@ -238,6 +238,14 @@
     "isColumnMessage": "The side ratio is {aspect}:1 (≤ 4). Per Eurocode 2 §9.6.1, this is a column, not a shear wall. Create as column?",
     "createAsColumn": "Column (rectangular)"
   },
+  "columnBatchFill": {
+    "title": "Similar frames found",
+    "messageColumns": "Found {total} more similar frames ({columns}) in the plan. Place columns in those too?",
+    "messageWalls": "Found {total} more similar frames ({walls}) in the plan. Create those too?",
+    "messageMixed": "Found {total} more similar frames ({columns} and {walls}) in the plan. Create those too?",
+    "fillAll": "Yes, all of them",
+    "cancel": "No"
+  },
   "columnAdjacency": {
     "title": "Adjacent columns → shear wall",
     "message": "The new column touches existing columns and together they form a shear wall. Per Eurocode 8 §5.4.2.4 a shear wall has different reinforcement than columns. Merge them into one shear wall?",

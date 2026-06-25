@@ -35,6 +35,8 @@ export interface ColumnSizeOverride {
   readonly kind?: ColumnKind;
   readonly finish?: ColumnParamOverrides['finish'];
   readonly autoSized?: boolean;
+  /** ADR-525 — L-shape σκέλη (armWidth/armLength/flipY) για το corner-gap auto-junction (mm). */
+  readonly lshape?: ColumnParamOverrides['lshape'];
 }
 
 export type BuildClickColumnResult =
@@ -64,6 +66,7 @@ export function buildClickColumnEntity(
     ...(sizeOverride?.depth !== undefined ? { depth: sizeOverride.depth } : {}),
     ...(sizeOverride?.finish !== undefined ? { finish: sizeOverride.finish } : {}),
     ...(sizeOverride?.autoSized !== undefined ? { autoSized: sizeOverride.autoSized } : {}),
+    ...(sizeOverride?.lshape !== undefined ? { lshape: sizeOverride.lshape } : {}),
     kind: buildKind,
     anchor,
     rotation: rotationDeg,

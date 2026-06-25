@@ -57,17 +57,15 @@ import {
   type FootprintBounds,
 } from '../geometry/shared/footprint-face-frame';
 import { pickThird, type MemberGhostThird } from '../framing/member-face-third';
-import { MEMBER_GHOST_CAPTURE_MM, MEMBER_GHOST_LEN_MM } from '../framing/member-column-face-snap';
+import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
 import {
   collectSceneSnapTargets,
   type SceneSnapTargets,
 } from '../framing/scene-snap-targets';
 import {
-  resolveLinearMemberFaceSnap,
   type LinearMemberSnapTarget,
   type GhostFaceFrame,
 } from '../framing/linear-member-face-snap';
-import { pointOnCircle, calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { PolarDiskSnapOptions } from './polar-disk-snap';
 import { resolveCircularTangentHit, resolveQuadrantEndAlignment, type PlacementAlignmentGuide } from './column-tangent-snap';
 import { resolvePolarDiskHit, resolveRectHit } from './column-magnet-snap';
@@ -75,10 +73,11 @@ import {
   resolveColumnHeadReferenceSnap,
   type HeadReferenceLines,
 } from './column-reference-lines';
+import { resolveColumnBeamCornerSnap, type LCornerSizing } from './column-beam-corner-snap';
+// N.7.1 file-size split — zero-width edge resolvers (slab/line + footprint ακμές).
+import { resolveColumnEdgeSnap, resolveFootprintEdgeSnap } from './column-face-snap-edges';
 import {
   clamp,
-  SLAB_EDGE_CENTER_THRESHOLD_MM,
-  isAxisAligned,
   axisAlignmentRotationDeg,
   resolveAxisCenterFoot,
   buildCenteredAxisFaceFrame,
@@ -89,8 +88,6 @@ import {
   anchorForHorizontalFace,
   anchorForVerticalFace,
   isShortEndFace,
-  edgeNearFace,
-  edgeFlushAnchor,
   type MemberAxisFrame,
   type ColumnFaceSide,
 } from './column-face-snap-helpers';
@@ -128,6 +125,13 @@ export interface ColumnFaceSnap {
    * u-edge + v-edge κουμπώνουν ταυτόχρονα). `undefined` σε όλα τα άλλα snaps (preview-only overlay).
    */
   readonly alignmentGuide?: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[] | null;
+  /**
+   * ADR-525 — auto-διαστασιολόγηση L-κολόνας ώστε τα σκέλη της να γεμίζουν το γωνιακό κενό μεταξύ δύο
+   * κάθετων δοκαριών (width/depth/armWidth/armLength σε mm + flipY). Παρόν ΜΟΝΟ στο `lCornerHit`· ο
+   * caller (preview/commit) το εφαρμόζει ως one-shot override (`autoSized:false`). `undefined`/`null`
+   * σε όλα τα άλλα snaps → η κολώνα κρατά τις διαστάσεις του ribbon (μηδέν regression).
+   */
+  readonly sizing?: LCornerSizing | null;
 }
 
 /** Στόχος: world-aligned bbox + ο άξονας των κοντών άκρων (`null` = κολόνα, καμία άκρη). */
@@ -174,7 +178,7 @@ function buildFaceTargets(
 }
 
 /** ADR-398 §3.20c — opts κυκλικού ghost για quadrant-to-end alignment στο center-on-axis (radius + zoom). */
-interface CircleGhostOpts {
+export interface CircleGhostOpts {
   readonly radius: number;
   readonly wpp: number;
   readonly scaleF: number;
@@ -241,148 +245,6 @@ function resolveForTarget(cursor: Readonly<Point2D>, t: FaceTarget, circle?: Cir
   return { position, anchor: anchorForVerticalFace(face, third), rotation: 0, status, targetId: t.id, face, third, faceFrame: buildColumnBboxFaceFrame(t.bounds, face, position) };
 }
 
-/**
- * ADR-398 §3.11 — center-on-axis snap σε ακμή πλάκας: κέντρο κολώνας στον foot πάνω στον άξονα,
- * `anchor:'center'`, `rotation` = γωνία ακμής (0 axis-aligned / λοξή — §3.10b ευθυγράμμιση).
- * faceFrame κεντραρισμένο (`facePerp 0`, `ghostHalfWidth 0` → listening dims προς κέντρο, Revit
- * centerline· `ghostCenterAlong` = foot.along κατά μήκος του άξονα).
- */
-function buildEdgeCenterSnap(
-  ff: GhostFaceFrame,
-  foot: { position: Point2D; along: number },
-  rotation: number,
-  face: ColumnFaceSide,
-  align?: { along: number; guide: PlacementAlignmentGuide | null } | null,
-): ColumnFaceSnap {
-  // ADR-398 §3.20d — κυκλικό ghost: το διαμήκες `along` κουμπώνει στο άκρο/μέσον (quadrant-to-end) →
-  // γραμμή-οδηγός ΚΑΙ στο center-on-axis γραμμής/ακμής πλάκας (mirror του τοίχου §3.20c). `core-not-band`:
-  // η θέση πάνω στον ΑΞΟΝΑ της ακμής (perp 0), στο (πιθανώς κουμπωμένο) `along` — όχι στη μπάντα ±eps.
-  const along = align ? align.along : foot.along;
-  const axisPt: Point2D = { x: ff.origin.x + along * ff.axisDir.x, y: ff.origin.y + along * ff.axisDir.y };
-  // ADR-398 §3.12 — σε κύκλο/τόξο η κολώνα κάθεται ΑΚΡΙΒΩΣ στην περιφέρεια (radial reprojection:
-  // διορθώνει το chord-inset· η γωνία θέσης διατηρείται). Ευθείς στόχοι → axisPt αυτούσιο.
-  const position = ff.arc
-    ? pointOnCircle(ff.arc.center, ff.arc.radius, calculateAngle(ff.arc.center, axisPt))
-    : axisPt;
-  return {
-    position,
-    anchor: 'center',
-    rotation,
-    status: 'beam',
-    targetId: null,
-    face,
-    third: 'mid',
-    ...(align?.guide ? { alignmentGuide: align.guide } : {}),
-    faceFrame: buildCenteredAxisFaceFrame(
-      ff.origin, ff.axisDir, ff.perpDir, ff.faceAlongMin, ff.faceAlongMax, along, ff.arc,
-    ),
-  };
-}
-
-/**
- * ADR-508 §slab / ADR-398 §3.11 — **zero-width edges** (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) μέσα από τον
- * **ΙΔΙΟ axis-relative resolver** που χρησιμοποιούν τοίχος/δοκάρι (`resolveLinearMemberFaceSnap`) —
- * δουλεύει σε ΚΑΘΕ προσανατολισμό (και διαγώνιες). `memberWidthScene=0` → η κολώνα μετριέται στο
- * **κέντρο** της (Revit centerline). Ακμή πλάκας ≡ γραμμή (ίδιο zero-width band, `edgeBandTarget`).
- *
- * **§3.11 nearest-reference-wins (mirror §3.9, αλλά axis-relative):**
- *   · cursor κάθετα κοντά στον άξονα (±`SLAB_EDGE_CENTER_THRESHOLD_MM`) → **center-on-axis**: κέντρο
- *     κολώνας στον άξονα + ολίσθηση **κατά μήκος** (`anchor:'center'`)·
- *   · αλλιώς → **flush** σε μία πλευρά (§3.10b· η σημερινή συμπεριφορά, anchor face × third).
- *
- * Επιστρέφει + απόσταση για σύγκριση προτεραιότητας με το bbox path. `null` όταν καμία ακμή εντός
- * capture. Function ≤40 γραμμές (N.7.1) μέσω helpers `edgeNearFace`/`edgeFlushAnchor`/
- * `buildEdgeCenterSnap` + κοινός `resolveAxisCenterFoot`.
- */
-function resolveColumnEdgeSnap(
-  cursor: Readonly<Point2D>,
-  edges: readonly LinearMemberSnapTarget[],
-  sceneUnits: SceneUnits,
-  circle?: CircleGhostOpts | null,
-): { snap: ColumnFaceSnap; dist: number } | null {
-  if (edges.length === 0) return null;
-  const f = mmToSceneUnits(sceneUnits);
-  const r = resolveLinearMemberFaceSnap(cursor, edges, {
-    ghostLenScene: MEMBER_GHOST_LEN_MM * f,
-    captureScene: MEMBER_GHOST_CAPTURE_MM * f,
-    memberWidthScene: 0,
-  });
-  if (!r || !r.faceFrame) return null;
-  const ff = r.faceFrame;
-  const axisAligned = isAxisAligned(ff.axisDir);
-  const rotation = axisAlignmentRotationDeg(ff.axisDir); // κοινός SSoT (μηδέν διπλό atan2)
-  const face = edgeNearFace(ff);
-  // §3.11 — center-on-axis (cursor κάθετα κοντά στον άξονα). Αλλιώς πέφτει στο flush παρακάτω.
-  const foot = resolveAxisCenterFoot(
-    cursor, ff.origin, ff.axisDir, ff.faceAlongMin, ff.faceAlongMax, SLAB_EDGE_CENTER_THRESHOLD_MM * f,
-  );
-  if (foot) {
-    // ADR-398 §3.20d — κυκλικό ghost: quadrant-to-end alignment + γραμμή-οδηγός (zero-width edge → halfThickness 0).
-    const align = circle
-      ? resolveQuadrantEndAlignment(foot.along, ff.faceAlongMin, ff.faceAlongMax, circle.radius, ff.origin, ff.axisDir, 0, circle.wpp, circle.scaleF)
-      : null;
-    return { snap: buildEdgeCenterSnap(ff, foot, rotation, face, align), dist: foot.perp };
-  }
-  // §3.10b flush — η κολώνα κάθεται με μία παρειά flush στην ακμή, στην πλευρά του cursor.
-  const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
-  const snap: ColumnFaceSnap = {
-    position: r.start,
-    anchor: edgeFlushAnchor(face, third, axisAligned, ff.outwardSign),
-    rotation,
-    status: r.status === 'overlap' ? 'overlap' : 'beam',
-    targetId: null,
-    face,
-    third,
-    faceFrame: ff,
-  };
-  return { snap, dist: Math.hypot(cursor.x - r.start.x, cursor.y - r.start.y) };
-}
-
-/**
- * ADR-514 Φ6d / ADR-398 §3.18 — face-snap σε υφιστάμενο **ΠΕΔΙΛΟ / ΜΗ-ΚΥΚΛΙΚΗ ΚΟΛΟΝΑ / ΤΟΙΧΟ** μέσω
- * των zero-width edges του πραγματικού (world-baked, στραμμένου, **πολυγωνικού/Γ/Τ/Π/λοξού**) footprint.
- * Σε αντίθεση με slab/line edges (center-on-axis straddle), το νέο μέλος κάθεται **flush ΔΙΠΛΑ** στην
- * παρειά (ΟΧΙ κεντραρισμένο πάνω της) και, κοντά σε **ΓΩΝΙΑ** (εξωτερικό τρίτο της παρειάς), κουμπώνει
- * **γωνία-με-γωνία**: το `centerAlong` κουμπώνει στην ΚΟΡΥΦΗ → **δύο παρειές flush** (η κοινή + η
- * συγγραμμική). **ΑΚΟΛΟΥΘΕΙ ΤΗ ΛΟΞΑΔΑ** (rotation από τον άξονα ακμής· axis-relative) → το φάντασμα
- * στρέφεται flush στην πραγματική (λοξή) παρειά αντί να ισιώνει σε ορθογώνιο bbox. Reuse
- * `resolveLinearMemberFaceSnap` + `pickThird` + `edgeFlushAnchor` + `edgeNearFace` — ΜΗΔΕΝ center-on-axis
- * (no straddle), μηδέν νέα geometry. `dist` = κάθετη απόσταση στην παρειά (η γωνία «κολλάει» στο εξωτ. τρίτο).
- */
-function resolveFootprintEdgeSnap(
-  cursor: Readonly<Point2D>,
-  edges: readonly LinearMemberSnapTarget[],
-  sceneUnits: SceneUnits,
-): { snap: ColumnFaceSnap; dist: number } | null {
-  if (edges.length === 0) return null;
-  const f = mmToSceneUnits(sceneUnits);
-  const r = resolveLinearMemberFaceSnap(cursor, edges, {
-    ghostLenScene: MEMBER_GHOST_LEN_MM * f,
-    captureScene: MEMBER_GHOST_CAPTURE_MM * f,
-    memberWidthScene: 0,
-  });
-  if (!r || !r.faceFrame) return null;
-  const ff = r.faceFrame;
-  const axisAligned = isAxisAligned(ff.axisDir);
-  const rotation = axisAlignmentRotationDeg(ff.axisDir);
-  const face = edgeNearFace(ff);
-  // εξωτερικό τρίτο → ΚΟΡΥΦΗ (corner-to-corner)· μεσαίο → flush κατά μήκος (beside). ΧΩΡΙΣ center-on-axis.
-  const third = pickThird(ff.ghostCenterAlong, ff.faceAlongMin, ff.faceAlongMax);
-  const centerAlong = third === 'lo' ? ff.faceAlongMin : third === 'hi' ? ff.faceAlongMax : ff.ghostCenterAlong;
-  // ΑΚΡΙΒΕΣ flush (facePerp 0): ο άξονας ακμής ΕΙΝΑΙ το όριο footprint του πεδίλου → η λαβή κάθεται πάνω
-  // στην παρειά (0 κενό), όχι ±eps του zero-width band. Το outward extension το ορίζει το anchor.
-  const position: Point2D = {
-    x: ff.origin.x + centerAlong * ff.axisDir.x,
-    y: ff.origin.y + centerAlong * ff.axisDir.y,
-  };
-  const faceFrame: GhostFaceFrame = { ...ff, ghostCenterAlong: centerAlong, facePerp: 0 };
-  const perpDist = Math.abs((cursor.x - ff.origin.x) * ff.perpDir.x + (cursor.y - ff.origin.y) * ff.perpDir.y - ff.facePerp);
-  return {
-    snap: { position, anchor: edgeFlushAnchor(face, third, axisAligned, ff.outwardSign), rotation, status: 'beam', targetId: null, face, third, faceFrame },
-    dist: perpDist,
-  };
-}
-
 /** Το ΠΛΗΣΙΕΣΤΕΡΟ hit (μικρότερο dist) ανάμεσα στα tiers (edge / bbox / polar / rect) — nearest-wins. */
 function nearestHit(...hits: readonly ({ snap: ColumnFaceSnap; dist: number } | null)[]): ColumnFaceSnap | null {
   let best: { snap: ColumnFaceSnap; dist: number } | null = null;
@@ -402,7 +264,23 @@ export function resolveColumnFaceSnapFromTargets(
   sceneUnits: SceneUnits,
   opts?: Readonly<PolarDiskSnapOptions>,
   columnHead?: Readonly<HeadReferenceLines> | null,
+  lShapeGhost?: boolean,
 ): ColumnFaceSnap | null {
+  // ADR-525 — L-κολόνα: όταν το ghost είναι «Σχήμα Γ» και υπάρχουν ≥2 ΚΑΘΕΤΑ δοκάρια που σχηματίζουν
+  // γωνιακό κενό κοντά στον cursor, η L αυτο-τοποθετείται+διαστασιολογείται ώστε η κορυφή της να πέσει
+  // στην τομή των εξωτερικών-παρειών-προεκτάσεων και τα σκέλη της να ενωθούν flush με τα άκρα των δοκαριών.
+  // Gated `lShapeGhost` → ο tier αδρανής για κάθε άλλο kind (μηδέν regression). Priority ΠΡΩΤΟ (auto-junction).
+  const lCornerHit = (() => {
+    if (!lShapeGhost) return null;
+    const r = resolveColumnBeamCornerSnap(cursor, t.beamTargets, sceneUnits);
+    if (!r) return null;
+    const snap: ColumnFaceSnap = {
+      position: r.position, anchor: 'center', status: 'beam', rotation: r.rotation,
+      targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame,
+      alignmentGuide: r.guides, sizing: r.sizing,
+    };
+    return { snap, dist: r.dist };
+  })();
   // ADR-523 — Τ-κολόνα: η κεφαλή (flange) κουμπώνει Revit-style με ΤΡΕΙΣ reference lines στις τρεις του
   // τοίχου (nearest-wins κάθετα + ολίσθηση κατά μήκος). Όταν υπάρχει `columnHead`, οι ΤΟΙΧΟΙ φεύγουν από
   // το bbox center-on-axis (παρακάτω) και πάνε εδώ (priority + μηδέν διπλό handling)· το flush περιμετρικά
@@ -473,7 +351,9 @@ export function resolveColumnFaceSnapFromTargets(
   // στη ΓΩΝΙΑ (όπου θέλουμε 2 οδηγούς u+v). Ο μαγνήτης «cursor ΕΝΤΟΣ ορθογωνίου» κερδίζει την εφαπτομένη
   // στο ΙΔΙΟ του το όριο (Revit-grade «inside-shape»). Ο rect είναι null κοντά στο χείλος → εκεί tangent.
   // `headRefHit` ΠΡΩΤΟ: ισοπαλία dist → η Τ multi-reference (κεφαλή↔τοίχος) κερδίζει (Revit alignment refs).
-  return nearestHit(headRefHit, edgeHit, footprintEdgeHit, rectHit, tangentHit, bboxHit, polarHit);
+  // ADR-525 — `lCornerHit` ΠΡΩΤΙΣΤΟ: η L auto-junction (κορυφή σε τομή εξωτ. παρειών + auto-size) είναι
+  // ρητή πρόθεση τοποθέτησης· σε ισοπαλία/εγγύτητα στο κενό κερδίζει κάθε ανταγωνιστικό beam-face hit.
+  return nearestHit(lCornerHit, headRefHit, edgeHit, footprintEdgeHit, rectHit, tangentHit, bboxHit, polarHit);
 }
 
 /**

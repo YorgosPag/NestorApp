@@ -19,6 +19,7 @@
  */
 
 import type { ColumnAnchor } from '../../bim/types/column-types';
+import type { LCornerSizing } from '../../bim/columns/column-beam-corner-snap';
 
 /** Σημασιολογικό status του ghost κατά την τοποθέτηση κολώνας. */
 export type ColumnGhostStatus = 'beam' | 'overlap' | 'neutral';
@@ -71,9 +72,27 @@ export function getColumnFaceRotation(): number | null {
   return faceRotation;
 }
 
+/**
+ * ADR-525 — auto-διαστασιολόγηση L-κολόνας στο γωνιακό κενό δύο κάθετων δοκαριών (`null` όταν δεν υπάρχει
+ * corner-gap snap). Γράφεται από τον `mouse-handler-up` (commit) — διαβάζεται από το `useColumnTool` 1ο
+ * κλικ: όταν παρόν → **single-click commit** (rotation+διαστάσεις πλήρως ορισμένες, mirror adopt-rect).
+ */
+let faceSizing: LCornerSizing | null = null;
+
+/** Write — corner-gap auto-διαστασιολόγηση (`null` όταν δεν υπάρχει). */
+export function setColumnFaceSizing(next: LCornerSizing | null): void {
+  faceSizing = next;
+}
+
+/** Read — imperatively στο `useColumnTool` 1ο κλικ (single-click L auto-junction commit). */
+export function getColumnFaceSizing(): LCornerSizing | null {
+  return faceSizing;
+}
+
 /** Clear — reset σε `neutral` + καμία face λαβή/rotation (έξοδος από snappable mode / cleanup). */
 export function clearColumnGhostStatus(): void {
   status = 'neutral';
   faceAnchor = null;
   faceRotation = null;
+  faceSizing = null;
 }

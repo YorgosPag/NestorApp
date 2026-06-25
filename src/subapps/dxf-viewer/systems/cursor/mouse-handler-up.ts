@@ -38,7 +38,7 @@ import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts
 import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completion';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
-import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation } from './ColumnPlacementGhostStatusStore';
+import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation, setColumnFaceSizing } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
@@ -259,16 +259,19 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             columnOpts: polarOpts,
             // ADR-523 — Τ-κεφαλή multi-reference (ίδιες refs με το ghost → preview ≡ commit).
             columnHead: resolveColumnHeadReferences(colHandle.kind, colHandle.overrides, colHandle.getSceneUnits()),
+            lShapeGhost: colHandle.kind === 'L-shape', // ADR-525 — corner-gap auto-junction tier
           });
           if (snap.kind === 'column-placement') {
             worldPoint = snap.placement.position;
             setColumnFaceAnchor(snap.placement.anchor);
             setColumnFaceRotation(snap.placement.rotation); // §3.10b flush-to-edge γωνία (0 axis-aligned)
             setColumnGhostStatus(snap.placement.status);
+            setColumnFaceSizing(snap.placement.sizing ?? null); // ADR-525 — L auto-διαστασιολόγηση (single-click)
           } else {
             setColumnFaceAnchor(null);
             setColumnFaceRotation(null);
             setColumnGhostStatus('neutral');
+            setColumnFaceSizing(null);
             worldPoint = snap.point; // effectiveCursor αυτούσιος (corner/grid-adjusted) — όπως το ghost
           }
         } else {
