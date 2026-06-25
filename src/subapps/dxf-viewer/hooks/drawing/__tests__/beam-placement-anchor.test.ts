@@ -47,17 +47,26 @@ describe('anchorBeamPlacementAxis — edge-anchored placement (ADR-363 §5.7)', 
 });
 
 describe('buildAnchoredBeamParams — η γραμμή κλικ γίνεται παρειά του outline', () => {
-  it('L→R: το outline ακουμπά τη γραμμή κλικ (min y = 0), σώμα προς +y', () => {
+  it('L→R (ADR-529): αποθηκεύει RAW location line (y=0) + justification "left", outline ακουμπά τη γραμμή', () => {
     const params = buildAnchoredBeamParams(S, E, 'straight', {}, 'mm');
-    // η stored centerline είναι μετατοπισμένη κατά +width/2
-    expect(params.startPoint.y).toBeCloseTo(HALF, 6);
+    // ADR-529 — ΟΧΙ πλέον baking: αποθηκεύεται η raw γραμμή κλικ (location line) + justification.
+    // Έτσι το flush είναι associative με το πλάτος (το computeBeamGeometry παράγει το body axis).
+    expect(params.startPoint.y).toBeCloseTo(0, 6);
+    expect(params.justification).toBe('left');
 
     const ys = computeBeamGeometry(params).outline.vertices.map((v) => v.y);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    // μία παρειά πάνω στη γραμμή κλικ (y=0), το σώμα εκτείνεται κατά πλήρες width προς +y
+    // μία παρειά πάνω στη γραμμή κλικ (y=0), το σώμα εκτείνεται κατά πλήρες width προς +y (αμετάβλητο)
     expect(minY).toBeCloseTo(0, 6);
     expect(maxY).toBeCloseTo(DEFAULT_BEAM_WIDTH_MM, 6);
+  });
+
+  it('ADR-529 associative: μικρότερο πλάτος → η flush παρειά (y=0) ΜΕΝΕΙ', () => {
+    const params = buildAnchoredBeamParams(S, E, 'straight', { width: 160 }, 'mm');
+    const ys = computeBeamGeometry(params).outline.vertices.map((v) => v.y);
+    expect(Math.min(...ys)).toBeCloseTo(0, 6);   // location line σταθερή
+    expect(Math.max(...ys)).toBeCloseTo(160, 6); // μόνο η ελεύθερη παρειά κινείται
   });
 
   it('vs legacy centered: το κέντρο ήταν συμμετρικό γύρω από τη γραμμή κλικ (±width/2)', () => {
