@@ -417,10 +417,16 @@ export function resolveColumnFaceSnapFromTargets(
     };
     return { snap, dist: r.dist };
   })();
+  const scaleF = mmToSceneUnits(sceneUnits);
+  // ADR-398 §3.20c/d — κυκλικό ghost → quadrant-to-end alignment + οδηγός ΚΑΙ στο center-on-axis (κέντρο
+  // μέσα στο σώμα τοίχου / πάνω σε γραμμή/ακμή πλάκας / πλευρά ορθογωνίου). Gated `circleRadiusScene>0`.
+  const circleOpts: CircleGhostOpts | null = opts?.circleRadiusScene
+    ? { radius: opts.circleRadiusScene, wpp: opts.worldPerPixel ?? 0, scaleF }
+    : null;
   // Τα zero-width edges (ΑΚΜΕΣ ΠΛΑΚΑΣ + σκέτες ΓΡΑΜΜΕΣ) πάνε ΞΕΧΩΡΙΣΤΑ μέσα από τον axis-relative
   // resolver (ίδιος με τοίχο/δοκάρι). slab+line edges → center-on-axis/flush (ίδιο zero-width μοντέλο,
-  // ακμή πλάκας ≡ γραμμή). Βλ. `resolveColumnEdgeSnap`.
-  const edgeHit = resolveColumnEdgeSnap(cursor, [...t.slabTargets, ...t.lineTargets], sceneUnits);
+  // ακμή πλάκας ≡ γραμμή). Κυκλικό ghost → §3.20d quadrant-to-end οδηγός. Βλ. `resolveColumnEdgeSnap`.
+  const edgeHit = resolveColumnEdgeSnap(cursor, [...t.slabTargets, ...t.lineTargets], sceneUnits, circleOpts);
   // ADR-514 Φ6d / ADR-398 §3.18 — υφιστάμενα ΠΕΔΙΛΑ + ΜΗ-ΚΥΚΛΙΚΕΣ ΚΟΛΟΝΕΣ + ΤΟΙΧΟΙ → ΞΕΧΩΡΙΣΤΟ footprint
   // edge face-snap: flush-beside + γωνία-με-γωνία + slant-following (ΟΧΙ center-on-axis straddle). Έτσι το
   // φάντασμα ακολουθεί τις πραγματικές (λοξές/πολυγωνικές) παρειές. `?? []` για partial test objects.
@@ -431,12 +437,7 @@ export function resolveColumnFaceSnapFromTargets(
   // (multi-reference) → εκτός bbox center-on-axis ώστε να μην ανταγωνίζονται δύο μηχανισμοί στον ίδιο τοίχο.
   const bboxWalls = columnHead ? [] : t.wallTargets;
   const targets = buildFaceTargets(t.circularFootprints ?? [], t.beamTargets, bboxWalls);
-  const scaleF = mmToSceneUnits(sceneUnits);
   const captureScene = MEMBER_GHOST_CAPTURE_MM * scaleF;
-  // ADR-398 §3.20c — κυκλικό ghost → quadrant-to-end alignment + οδηγός ΚΑΙ στο center-on-axis (κέντρο μέσα στο σώμα).
-  const circleOpts: CircleGhostOpts | null = opts?.circleRadiusScene
-    ? { radius: opts.circleRadiusScene, wpp: opts.worldPerPixel ?? 0, scaleF }
-    : null;
   let best: FaceTarget | null = null;
   let bestDist = Infinity;
   for (const ft of targets) {
@@ -467,8 +468,12 @@ export function resolveColumnFaceSnapFromTargets(
   // ΛΟΞΑ μέλη το AABB είναι μεγαλύτερο από το στερεό → ο `bboxHit` δίνει spurious `dist=0` cursor-εντός·
   // σε ισοπαλία (tangent στο ιδανικό = dist 0) θέλουμε να κερδίζει το tangent. Χάνει όμως από γνήσιο
   // μικρότερο edge/center dist (flush/center-on-axis), οπότε μηδέν regression στα center modes.
+  // ADR-398 §3.20d — `rectHit` ΠΡΙΝ το `tangentHit`: ένα ορθογώνιο παράγει ΚΑΙ `lineTargets` (4 ακμές) →
+  // ο tangent θα κούμπωνε στην πλησιέστερη ΜΙΑ ακμή (dist 0) και θα προ-κατελάμβανε τον Cartesian Magnet
+  // στη ΓΩΝΙΑ (όπου θέλουμε 2 οδηγούς u+v). Ο μαγνήτης «cursor ΕΝΤΟΣ ορθογωνίου» κερδίζει την εφαπτομένη
+  // στο ΙΔΙΟ του το όριο (Revit-grade «inside-shape»). Ο rect είναι null κοντά στο χείλος → εκεί tangent.
   // `headRefHit` ΠΡΩΤΟ: ισοπαλία dist → η Τ multi-reference (κεφαλή↔τοίχος) κερδίζει (Revit alignment refs).
-  return nearestHit(headRefHit, edgeHit, footprintEdgeHit, tangentHit, bboxHit, polarHit, rectHit);
+  return nearestHit(headRefHit, edgeHit, footprintEdgeHit, rectHit, tangentHit, bboxHit, polarHit);
 }
 
 /**

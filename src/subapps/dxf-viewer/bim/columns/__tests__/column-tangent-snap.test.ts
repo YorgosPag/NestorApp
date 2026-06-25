@@ -6,12 +6,26 @@
  * συμπεριφορά μη-κυκλικών κολόνων (gated `circleRadiusScene`).
  */
 
-import { resolveColumnFaceSnapFromTargets } from '../column-face-snap';
+import { resolveColumnFaceSnapFromTargets, type ColumnFaceSnap } from '../column-face-snap';
 import type { PolarDiskSnapOptions } from '../polar-disk-snap';
+import type { PlacementAlignmentGuide } from '../column-tangent-snap';
 import { resolveGhostFaceDimensions } from '../../framing/ghost-face-dim-references';
 import { collectSceneSnapTargets } from '../../framing/scene-snap-targets';
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
+
+// ── Alignment-guide narrowing (το πεδίο είναι 1 οδηγός Ή array — §3.20d γωνία ορθογωνίου) ──────────
+/** Narrow σε ΕΝΑΝ οδηγό (γραμμικοί στόχοι / single-axis). Αποτυγχάνει αν είναι array/κενό. */
+function single(g: ColumnFaceSnap['alignmentGuide']): PlacementAlignmentGuide {
+  expect(g).toBeDefined();
+  expect(Array.isArray(g)).toBe(false);
+  return g as PlacementAlignmentGuide;
+}
+/** Narrow σε ΠΟΛΛΟΥΣ οδηγούς (γωνία ορθογωνίου). */
+function many(g: ColumnFaceSnap['alignmentGuide']): readonly PlacementAlignmentGuide[] {
+  expect(Array.isArray(g)).toBe(true);
+  return g as readonly PlacementAlignmentGuide[];
+}
 
 // ── Fixtures (scene units = mm → factor 1) ───────────────────────────────────
 
@@ -140,22 +154,21 @@ describe('ADR-398 §3.20 — quadrant-to-end alignment (τεταρτημόριο
     expect(s!.position.x).toBeCloseTo(-800, 3);          // κέντρο
     expect(s!.position.x - R).toBeCloseTo(-1000, 3);     // δυτικό ακραίο σημείο ≡ δυτική παρειά
     expect(s!.anchor).toBe('center');
-    expect(s!.alignmentGuide).toBeDefined();
-    expect(s!.alignmentGuide!.a.x).toBeCloseTo(-1000, 3); // κατακόρυφη γραμμή-οδηγός στο δυτικό άκρο
-    expect(s!.alignmentGuide!.b.x).toBeCloseTo(-1000, 3);
+    expect(single(s!.alignmentGuide).a.x).toBeCloseTo(-1000, 3); // κατακόρυφη γραμμή-οδηγός στο δυτικό άκρο
+    expect(single(s!.alignmentGuide).b.x).toBeCloseTo(-1000, 3);
   });
 
   it('Α-τεταρτημόριο ↔ ανατολικό άκρο: cursor (800,200) → κέντρο x≈800, ανατολικό ακραίο σημείο=x=1000', () => {
     const s = snapWall({ x: 800, y: 200 }, circularOpts(R));
     expect(s!.position.x).toBeCloseTo(800, 3);
     expect(s!.position.x + R).toBeCloseTo(1000, 3);      // ανατολικό ακραίο σημείο ≡ ανατολική παρειά
-    expect(s!.alignmentGuide!.a.x).toBeCloseTo(1000, 3);
+    expect(single(s!.alignmentGuide).a.x).toBeCloseTo(1000, 3);
   });
 
   it('κέντρο ↔ μέσον: cursor (0,200) → κέντρο x≈0 + γραμμή-οδηγός στο μέσον x=0', () => {
     const s = snapWall({ x: 0, y: 200 }, circularOpts(R));
     expect(s!.position.x).toBeCloseTo(0, 3);
-    expect(s!.alignmentGuide!.a.x).toBeCloseTo(0, 3);
+    expect(single(s!.alignmentGuide).a.x).toBeCloseTo(0, 3);
   });
 
   it('μακριά από άκρα/μέσον: cursor (-400,200) → ελεύθερο γλίστρημα, ΧΩΡΙΣ οδηγό', () => {
@@ -170,8 +183,7 @@ describe('ADR-398 §3.20 — quadrant-to-end alignment (τεταρτημόριο
     expect(s!.anchor).toBe('center');
     expect(s!.position.y).toBeCloseTo(0, 3);          // κέντρο στον άξονα (μέσα στο σώμα)
     expect(s!.position.x).toBeCloseTo(800, 3);        // Α-τεταρτημόριο (800+200=1000) στο ανατ. άκρο
-    expect(s!.alignmentGuide).toBeDefined();
-    expect(s!.alignmentGuide!.a.x).toBeCloseTo(1000, 3); // οδηγός στο ανατολικό άκρο
+    expect(single(s!.alignmentGuide).a.x).toBeCloseTo(1000, 3); // οδηγός στο ανατολικό άκρο
   });
 });
 
@@ -207,5 +219,84 @@ describe('ADR-398 §3.19 — ΛΟΞΟΣ τοίχος 45° (tangent σε κάθε
     // περιφέρεια εφάπτεται στη λοξή παρειά (perp ≈ ημι-πάχος+R ≈ 300)· tangent, ΟΧΙ flush(~100)/AABB junk.
     expect(distToSlantAxis(s!.position)).toBeGreaterThan(290);
     expect(distToSlantAxis(s!.position)).toBeLessThan(310);
+  });
+});
+
+// ── ADR-398 §3.20d — quadrant-to-end οδηγός ΚΑΙ σε γραμμή / ακμή πλάκας / ορθογώνιο ────────────────
+
+/** Οριζόντια ΓΡΑΜΜΗ x −1000..1000, y=0 (zero-width edge — ίδιο μοντέλο με ακμή πλάκας). */
+function horizontalLine(id = 'line-h'): Entity {
+  return { id, type: 'line', start: { x: -1000, y: 0 }, end: { x: 1000, y: 0 } } as unknown as Entity;
+}
+
+/** ΟΡΘΟΓΩΝΙΟ 1000×600 με κέντρο (0,0): παρειές x=±500, y=±300 → RectFrame halfW=500, halfV=300. */
+function rect1000x600(id = 'rect'): Entity {
+  return { id, type: 'rectangle', x: -500, y: -300, width: 1000, height: 600 } as unknown as Entity;
+}
+
+const snapEntities = (cursor: Point2D, entities: Entity[], opts?: PolarDiskSnapOptions) =>
+  resolveColumnFaceSnapFromTargets(cursor, collectSceneSnapTargets(entities), 'mm', opts);
+
+describe('ADR-398 §3.20d — center-on-axis σε ΓΡΑΜΜΗ: quadrant-to-end γραμμή-οδηγός', () => {
+  const R = 200;
+
+  it('κυκλικό ghost στον άξονα, Α-τεταρτημόριο ↔ ανατ. άκρο (x=1000) → κατακόρυφος οδηγός', () => {
+    const s = snapEntities({ x: 800, y: 0 }, [horizontalLine()], circularOpts(R));
+    expect(s).not.toBeNull();
+    expect(s!.anchor).toBe('center');
+    expect(s!.position.y).toBeCloseTo(0, 3);   // κέντρο ΠΑΝΩ στη γραμμή (perp 0)
+    expect(s!.position.x).toBeCloseTo(800, 3); // 800 + R(200) = 1000 = ανατ. άκρο
+    const g = single(s!.alignmentGuide);
+    expect(g.a.x).toBeCloseTo(g.b.x, 6);       // κατακόρυφος (ίδιο x στα δύο άκρα)
+    expect(g.a.x).toBeCloseTo(1000, 3);        // στο ανατολικό άκρο
+  });
+
+  it('μακριά από άκρα/μέσον (x=−400) → ελεύθερο γλίστρημα, ΧΩΡΙΣ οδηγό', () => {
+    const s = snapEntities({ x: -400, y: 0 }, [horizontalLine()], circularOpts(R));
+    expect(s!.position.x).toBeCloseTo(-400, 3);
+    expect(s!.alignmentGuide ?? null).toBeNull();
+  });
+
+  it('regression: ΜΗ-κυκλικό ghost → center-on-axis ΧΩΡΙΣ οδηγό (μηδέν αλλαγή)', () => {
+    const s = snapEntities({ x: 800, y: 0 }, [horizontalLine()]);
+    expect(s!.anchor).toBe('center');
+    expect(s!.position.y).toBeCloseTo(0, 3);
+    expect(s!.alignmentGuide ?? null).toBeNull();
+  });
+});
+
+describe('ADR-398 §3.20d — ΟΡΘΟΓΩΝΙΟ 2D quadrant-to-edge (γωνία = 2 οδηγοί)', () => {
+  const R = 200;
+  const rectOpts: PolarDiskSnapOptions = { worldPerPixel: 1, circleRadiusScene: R };
+
+  it('γωνία (cursor 300,100): u→δεξιά πλευρά x=500, v→πάνω πλευρά y=300 → 2 οδηγοί (κατακόρυφος+οριζόντιος)', () => {
+    const s = snapEntities({ x: 300, y: 100 }, [rect1000x600()], rectOpts);
+    expect(s).not.toBeNull();
+    expect(s!.anchor).toBe('center');
+    expect(s!.position.x).toBeCloseTo(300, 3); // 300 + R = 500 (δεξιά πλευρά)
+    expect(s!.position.y).toBeCloseTo(100, 3); // 100 + R = 300 (πάνω πλευρά)
+    const gs = many(s!.alignmentGuide);
+    expect(gs.length).toBe(2);
+    const vert = gs.find((g) => Math.abs(g.a.x - g.b.x) < 1e-6);
+    const horiz = gs.find((g) => Math.abs(g.a.y - g.b.y) < 1e-6);
+    expect(vert).toBeDefined();
+    expect(horiz).toBeDefined();
+    expect(vert!.a.x).toBeCloseTo(500, 3);     // u-edge (δεξιά πλευρά)
+    expect(horiz!.a.y).toBeCloseTo(300, 3);    // v-edge (πάνω πλευρά)
+  });
+
+  it('μόνο u κουμπώνει (cursor 300,0 στον οριζόντιο άξονα) → 1 οδηγός (κατακόρυφος x=500)', () => {
+    const s = snapEntities({ x: 300, y: 0 }, [rect1000x600()], rectOpts);
+    expect(s!.position.x).toBeCloseTo(300, 3);
+    const gs = many(s!.alignmentGuide); // το rect path εκπέμπει πάντα array (εδώ μήκους 1)
+    expect(gs.length).toBe(1);
+    expect(gs[0].a.x).toBeCloseTo(gs[0].b.x, 6); // κατακόρυφος
+    expect(gs[0].a.x).toBeCloseTo(500, 3);
+  });
+
+  it('regression: ΜΗ-κυκλικό ghost στο ορθογώνιο → καμία γραμμή-οδηγός', () => {
+    const s = snapEntities({ x: 300, y: 100 }, [rect1000x600()], { worldPerPixel: 1 });
+    expect(s).not.toBeNull();
+    expect(s!.alignmentGuide ?? null).toBeNull();
   });
 });

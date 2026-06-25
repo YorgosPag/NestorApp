@@ -331,8 +331,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (rectGrid) {
           previewCanvasRef.current.drawRectGrid(rectGrid);
         }
-        // ADR-398 §3.20 — circumference quadrant-to-end alignment: dashed οδηγός στο άκρο/μέσον παρειάς.
-        const alignGuide = (previewEntity as { alignmentGuide?: PlacementAlignmentGuide }).alignmentGuide;
+        // ADR-398 §3.20/§3.20d — alignment guide(s): dashed οδηγός στο άκρο/μέσον παρειάς ή πλευρά(ές)
+        // ορθογωνίου (έως 2 στη γωνία). Ο renderer κάνει normalize σε array.
+        const alignGuide = (previewEntity as { alignmentGuide?: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[] }).alignmentGuide;
         if (alignGuide) {
           previewCanvasRef.current.drawAlignmentGuide(alignGuide);
         }

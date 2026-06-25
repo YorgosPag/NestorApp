@@ -26,6 +26,7 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-vect
 import type { GhostFaceDimension } from '../framing/ghost-face-dim-references';
 import { rectLocalToWorld, type RectFrame } from '../framing/rect-frame';
 import { COLUMN_SNAP_COVER_MM, COLUMN_SNAP_CENTER_CAPTURE_PX } from './polar-disk-snap';
+import { snapAlongToEnds, alignZone, type PlacementAlignmentGuide } from './column-tangent-snap';
 
 export type { RectFrame };
 
@@ -37,6 +38,12 @@ export interface RectCartesianSnapOptions {
   readonly worldPerPixel: number;
   readonly shiftFractions?: boolean;
   readonly clearanceScene?: number;
+  /**
+   * ADR-398 §3.20d — ακτίνα κυκλικού ghost (scene units). >0 → quadrant-to-edge alignment: το ακραίο
+   * τεταρτημόριο της κυκλικής κολόνας κουμπώνει σε πλευρά ±halfW/±halfV + γραμμή(ές)-οδηγός. `undefined`/0
+   * → καμία (μη-κυκλικό ghost, μηδέν regression).
+   */
+  readonly circleRadiusScene?: number;
 }
 
 /** Αποτέλεσμα rect snap: θέση + local συντεταγμένες + flags + dist (nearest-wins). */
@@ -47,6 +54,11 @@ export interface RectCartesianSnap {
   readonly isCenter: boolean;
   readonly isNode: boolean;
   readonly dist: number;
+  /**
+   * ADR-398 §3.20d — γραμμή(ές)-οδηγός ευθυγράμμισης όταν κυκλικό ghost κουμπώνει σε πλευρά: ένας οδηγός
+   * ανά άξονα (u/v) που κουμπώνει· **δύο** στη γωνία (u-edge + v-edge ταυτόχρονα). `undefined` αλλιώς.
+   */
+  readonly guides?: readonly PlacementAlignmentGuide[];
 }
 
 /** Το ορατό πλέγμα για τον overlay painter (§3.15 A6). */
@@ -99,6 +111,36 @@ const local = (p: Readonly<Point2D>, c: Readonly<Point2D>, axis: Readonly<Point2
   (p.x - c.x) * axis.x + (p.y - c.y) * axis.y;
 
 /**
+ * ADR-398 §3.20d — **quadrant-to-edge** (2D): εφαρμόζει το 1D `snapAlongToEnds` SSoT **ξεχωριστά** σε u
+ * και v ώστε το ακραίο τεταρτημόριο της κυκλικής κολόνας (κέντρο ∓R) να αγγίζει την πλευρά `±half`. Κάθε
+ * άξονας που κουμπώνει σε **πλευρά** (όχι μέσον) → κουμπωμένο local + ένας **οδηγός = όλη η πλευρά** (full
+ * edge μέσω `rectLocalToWorld`). Δύο άξονες → δύο οδηγοί (γωνία). `radius < half` ανά άξονα (αλλιώς ο κύκλος
+ * δεν χωρά → κανένας οδηγός εκείνου του άξονα). `x`/`y` = `null` όταν δεν κουμπώνει (κρατά το grid snap).
+ */
+function rectQuadrantEdges(
+  rect: Readonly<RectFrame>, lx: number, ly: number, radius: number, zone: number,
+): { x: number | null; y: number | null; guides: PlacementAlignmentGuide[] } {
+  const guides: PlacementAlignmentGuide[] = [];
+  let x: number | null = null;
+  let y: number | null = null;
+  if (radius < rect.halfW) {
+    const q = snapAlongToEnds(lx, -rect.halfW, rect.halfW, radius, zone);
+    if (q.guideAlong !== null && Math.abs(q.guideAlong) > 1e-6) { // πλευρά (όχι μέσον=0)
+      x = q.along;
+      guides.push({ a: rectLocalToWorld(rect, q.guideAlong, -rect.halfV), b: rectLocalToWorld(rect, q.guideAlong, rect.halfV) });
+    }
+  }
+  if (radius < rect.halfV) {
+    const q = snapAlongToEnds(ly, -rect.halfV, rect.halfV, radius, zone);
+    if (q.guideAlong !== null && Math.abs(q.guideAlong) > 1e-6) {
+      y = q.along;
+      guides.push({ a: rectLocalToWorld(rect, -rect.halfW, q.guideAlong), b: rectLocalToWorld(rect, rect.halfW, q.guideAlong) });
+    }
+  }
+  return { x, y, guides };
+}
+
+/**
  * Καρτεσιανό snap κολώνας μέσα στο ορθογώνιο: κέντρο (εντός capture) ή 9-point / grid∩ (snap localX,
  * localY ανεξάρτητα). `null` όταν ο cursor είναι **εκτός** της cover-ζώνης (κοντά στο χείλος) → ο caller
  * πέφτει στο §3.11 edge. Pure. Μονάδες: scene units.
@@ -128,14 +170,22 @@ export function resolveRectCartesianSnap(
   const step = adaptiveDistanceStep(wpp);
   const sx = nearest(lx, axisCandidates(rect.halfW, clearance, step, !!opts.shiftFractions));
   const sy = nearest(ly, axisCandidates(rect.halfV, clearance, step, !!opts.shiftFractions));
-  const position = rectLocalToWorld(rect, sx.value, sy.value);
+  // ADR-398 §3.20d — κυκλικό ghost: το quadrant-to-edge alignment υπερισχύει ανά άξονα (μαγνήτης πλευράς) +
+  // οδηγός. Κρατά το grid snap στους άξονες που δεν κουμπώνουν σε πλευρά. Reuse 1D `snapAlongToEnds` SSoT.
+  const q = opts.circleRadiusScene && opts.circleRadiusScene > 0
+    ? rectQuadrantEdges(rect, lx, ly, opts.circleRadiusScene, alignZone(wpp, f))
+    : null;
+  const fx = q?.x ?? sx.value;
+  const fy = q?.y ?? sy.value;
+  const position = rectLocalToWorld(rect, fx, fy);
   return {
     position,
-    localX: sx.value,
-    localY: sy.value,
-    isCenter: sx.value === 0 && sy.value === 0,
-    isNode: sx.node && sy.node,
+    localX: fx,
+    localY: fy,
+    isCenter: fx === 0 && fy === 0,
+    isNode: (q?.x != null || sx.node) && (q?.y != null || sy.node),
     dist: calculateDistance(cursor, position),
+    ...(q && q.guides.length ? { guides: q.guides } : {}),
   };
 }
 

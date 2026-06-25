@@ -285,12 +285,18 @@ export class PreviewRenderer {
   }
 
   /**
-   * ADR-398 §3.20 — ζωγράφισε τη γραμμή-οδηγό ευθυγράμμισης (τεταρτημόριο κυκλικής ↔ άκρο/μέσον
-   * παρειάς). Called AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   * ADR-398 §3.20/§3.20d — ζωγράφισε τη γραμμή(ές)-οδηγό ευθυγράμμισης (τεταρτημόριο κυκλικής ↔ άκρο/
+   * μέσον παρειάς ή πλευρά ορθογωνίου — **έως 2** στη γωνία). Called AFTER `drawPreview`· wiped στο επόμενο
+   * `drawPreview`/`clear`. Normalize σε array (ΕΝΑ painter SSoT ανά τμήμα).
    */
-  drawAlignmentGuide(guide: PlacementAlignmentGuide, transform: ViewTransform, viewport: Viewport): void {
+  drawAlignmentGuide(
+    guide: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[],
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
     if (!this.ctx) return;
-    paintAlignmentGuide(this.ctx, guide, transform, viewport);
+    const guides: readonly PlacementAlignmentGuide[] = Array.isArray(guide) ? guide : [guide];
+    for (const g of guides) paintAlignmentGuide(this.ctx, g, transform, viewport);
   }
 
   /** Clear preview immediately */

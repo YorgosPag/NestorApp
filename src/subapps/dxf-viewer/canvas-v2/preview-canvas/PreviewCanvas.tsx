@@ -145,10 +145,10 @@ export interface PreviewCanvasHandle {
    */
   drawRectGrid: (grid: RectGrid) => void;
   /**
-   * ADR-398 §3.20 — draw the circumference quadrant-to-end alignment guide (dashed end/center line).
-   * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   * ADR-398 §3.20/§3.20d — draw the alignment guide(s) (dashed end/center line, or up to 2 rectangle
+   * sides at a corner). Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
-  drawAlignmentGuide: (guide: PlacementAlignmentGuide) => void;
+  drawAlignmentGuide: (guide: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[]) => void;
 }
 
 // ============================================================================
@@ -433,8 +433,8 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           renderer.drawRectGrid(grid, transformRef.current, viewportRef.current);
         },
 
-        /** ADR-398 §3.20: circumference quadrant-to-end alignment guide overlay */
-        drawAlignmentGuide: (guide: PlacementAlignmentGuide) => {
+        /** ADR-398 §3.20/§3.20d: alignment guide(s) overlay (έως 2 πλευρές στη γωνία ορθογωνίου) */
+        drawAlignmentGuide: (guide: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[]) => {
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawAlignmentGuide(guide, transformRef.current, viewportRef.current);

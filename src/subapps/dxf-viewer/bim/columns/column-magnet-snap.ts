@@ -49,6 +49,9 @@ export function resolvePolarDiskHit(
  * ADR-398 §3.15 — **Cartesian Magnet**: cursor ΕΝΤΟΣ ορθογωνίου → καρτεσιανό πλέγμα (κέντρο / 9-point /
  * grid∩), `anchor:'center'`, rotation = γωνία του u (0 axis-aligned). Τα 4 dx/dy dims παράγονται ξεχωριστά
  * στο `generateColumnPreview` (faceFrame εδώ = degenerate). Reuse `resolveRectCartesianSnap` SSoT.
+ *
+ * ADR-398 §3.20d — κυκλικό ghost (`opts.circleRadiusScene>0`): το `resolveRectCartesianSnap` επιστρέφει
+ * **γραμμή(ές)-οδηγός** (1 ανά πλευρά που κουμπώνει, 2 στη γωνία) → surface ως `alignmentGuide` στο snap.
  */
 export function resolveRectHit(
   cursor: Readonly<Point2D>,
@@ -65,6 +68,7 @@ export function resolveRectHit(
           position: r.position, anchor: 'center', status: 'beam',
           rotation: axisAlignmentRotationDeg(rect.u), targetId: null, face: 'N', third: 'mid',
           faceFrame: buildCenteredAxisFaceFrame(r.position, { x: 1, y: 0 }, { x: 0, y: 1 }, 0, 0, 0),
+          ...(r.guides && r.guides.length ? { alignmentGuide: r.guides } : {}),
         },
         dist: r.dist,
       };
