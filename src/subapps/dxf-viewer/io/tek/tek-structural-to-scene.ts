@@ -18,7 +18,8 @@ import type { Entity, LineEntity, TextEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { TekDimRecord, TekWallRecord, TekPoint2D } from './tek-import-types';
 import {
-  buildWallCutoutSegments, buildWindowSymbolSegments, type TekSeg,
+  buildWallCutoutSegments, buildWindowSymbolSegments, buildDoorSymbolSegments, isDoorStyle,
+  type TekSeg,
 } from './tek-window-symbol';
 import { buildDimensionSymbol } from './tek-dimension-symbol';
 
@@ -49,7 +50,10 @@ function segToLine(s: TekSeg, color: string, units: SceneUnits): LineEntity {
 
 // ─── Wall + window ──────────────────────────────────────────────────────────────
 
-/** `<wall>` → παρειές με κομμένα ανοίγματα (χρώμα τοίχου) + σύμβολο παραθύρου ανά κούφωμα. */
+/**
+ * `<wall>` → παρειές με κομμένα ανοίγματα (χρώμα τοίχου) + σύμβολο **πόρτας** (τόξο, `style=1`) ή
+ * **παραθύρου** (πλαίσιο+μπινί, `style=0`) ανά κούφωμα — DXF-verified διαχωρισμός ανά `style`.
+ */
 export function tekWallToEntities(rec: TekWallRecord, units: SceneUnits): Entity[] {
   const wallColor = tekColorToHex(rec.color);
   const out: Entity[] = buildWallCutoutSegments(rec.matrix, rec.openings).map(
@@ -57,9 +61,10 @@ export function tekWallToEntities(rec: TekWallRecord, units: SceneUnits): Entity
   );
   for (const opening of rec.openings) {
     const openColor = tekColorToHex(opening.color);
-    for (const s of buildWindowSymbolSegments(opening, rec.matrix)) {
-      out.push(segToLine(s, openColor, units));
-    }
+    const segs = isDoorStyle(opening.style)
+      ? buildDoorSymbolSegments(opening, rec.matrix)
+      : buildWindowSymbolSegments(opening, rec.matrix);
+    for (const s of segs) out.push(segToLine(s, openColor, units));
   }
   return out;
 }

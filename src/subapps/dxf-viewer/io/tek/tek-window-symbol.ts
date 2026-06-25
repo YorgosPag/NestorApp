@@ -27,6 +27,19 @@ const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > 
 const FRAME_RAIL_FALLBACK_FRAC = 1 / 8;
 /** Μισός διαχωρισμός των 2 γραμμών υαλοπίνακα (κλάσμα πάχους). */
 const GLASS_HALF_SEP_FRAC = 1 / 14;
+/** Τμήματα προσέγγισης του τεταρτοκυκλικού τόξου ανοίγματος πόρτας (polyline → slanted-safe). */
+const DOOR_ARC_SEGMENTS = 12;
+/**
+ * `<style>` τιμές ανοιγμάτων που είναι **πόρτες** (DXF ground-truth: style=1 → πόρτα με τόξο,
+ * style=0 → παράθυρο). Calibrated από `Ισόγειο 312`· άλλες τιμές θεωρούνται παράθυρα μέχρι
+ * να εμφανιστούν δείγματα.
+ */
+const DOOR_STYLES = new Set<number>([1]);
+
+/** `true` αν το `style` του ανοίγματος αντιστοιχεί σε πόρτα (DXF: style=1). */
+export function isDoorStyle(style: number): boolean {
+  return DOOR_STYLES.has(style);
+}
 
 /** Σημείο στις τοπικές συντεταγμένες (t κατά μήκος u, f κατά πάχος v) → Tekton μέτρα. */
 function localPoint(m: TekXMatrix, t: number, f: number): TekPoint2D {
@@ -113,4 +126,43 @@ export function buildWindowSymbolSegments(opening: TekOpeningRecord, wall: TekXM
     // Κεντρικό μπινί (mullion): κάθετο στο μέσο, σε όλο το ύψος του πλαισίου.
     seg(localPoint(wall, tMid, railF), localPoint(wall, tMid, 1 - railF)),
   ];
+}
+
+/**
+ * Σύμβολο **πόρτας** (faithful, DXF-verified `Ισόγειο 312`): **φύλλο** (γραμμή κάθετη στον τοίχο,
+ * μήκος = πλάτος − 2·jamb) + **τεταρτοκυκλικό τόξο ανοίγματος** (polyline). Μεντεσές στον αρμό
+ * `tmin` (t = tmin + jamb/|u|, f = `frame_width`/πάχος)· το φύλλο ανοίγει προς +n̂ (μέσα στο δωμάτιο)
+ * και η κλειστή θέση πέφτει κατά μήκος του τοίχου (+û) ακριβώς στον δεύτερο αρμό. Slanted-safe
+ * (û/n̂ από τον πίνακα). Τα jamb returns ζωγραφίζονται από το {@link buildWallCutoutSegments}.
+ *
+ * ⚠️ Calibration (browser-verify): η πλευρά μεντεσέ + φορά ανοίγματος ανά `side` (εδώ side=3) —
+ * άλλες τιμές `side` μπορεί να χρειαστούν mirror (hinge στο tmax ή φύλλο προς −n̂).
+ */
+export function buildDoorSymbolSegments(opening: TekOpeningRecord, wall: TekXMatrix): TekSeg[] {
+  const [tmin, tmax] = openingAxisInterval(opening, wall);
+  if (tmax - tmin < 1e-6) return [];
+  const uLen = Math.hypot(wall.x00, wall.x01) || 1;
+  const thick = Math.hypot(wall.x10, wall.x11) || 1;
+  const ux = wall.x00 / uLen, uy = wall.x01 / uLen; // û (κατά μήκος τοίχου)
+  const nx = wall.x10 / thick, ny = wall.x11 / thick; // n̂ (κατά το πάχος)
+  const jambFrac = opening.jambWidthM / uLen;
+  const hingeT = tmin + jambFrac;
+  const hingeF = clamp(opening.frameWidthM > 0 ? opening.frameWidthM / thick : 0.5, 0, 1);
+  const hinge = localPoint(wall, hingeT, hingeF);
+  const leafW = (tmax - tmin) * uLen - 2 * opening.jambWidthM;
+  if (leafW <= 1e-6) return [];
+  // Φύλλο (ανοιχτό, κάθετο στον τοίχο προς +n̂).
+  const leafTip = { x: hinge.x + nx * leafW, y: hinge.y + ny * leafW };
+  const out: TekSeg[] = [seg(hinge, leafTip)];
+  // Τεταρτοκυκλικό τόξο: από ανοιχτό (+n̂) σε κλειστό (+û), N τμήματα.
+  let prev = leafTip;
+  for (let k = 1; k <= DOOR_ARC_SEGMENTS; k++) {
+    const ang = (k / DOOR_ARC_SEGMENTS) * (Math.PI / 2);
+    const dx = ux * Math.sin(ang) + nx * Math.cos(ang);
+    const dy = uy * Math.sin(ang) + ny * Math.cos(ang);
+    const p = { x: hinge.x + dx * leafW, y: hinge.y + dy * leafW };
+    out.push(seg(prev, p));
+    prev = p;
+  }
+  return out;
 }

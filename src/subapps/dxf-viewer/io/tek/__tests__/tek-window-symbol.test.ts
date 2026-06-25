@@ -4,22 +4,23 @@
 
 import {
   openingAxisInterval, buildWallCutoutSegments, buildWindowSymbolSegments,
+  buildDoorSymbolSegments, isDoorStyle,
 } from '../tek-window-symbol';
 import type { TekXMatrix, TekOpeningRecord } from '../tek-import-types';
 
 const mat = (x00: number, x11: number, x20: number, x21: number): TekXMatrix =>
   ({ x00, x01: 0, x10: 0, x11, x20, x21 });
 
-const opening = (x00: number, x20: number): TekOpeningRecord => ({
+const opening = (x00: number, x20: number, style = 1): TekOpeningRecord => ({
   matrix: mat(x00, -1, x20, 0.73),
-  elevationM: 1, topM: 2.2, style: 1, side: 3,
+  elevationM: 1, topM: 2.2, style, side: 3,
   frameWidthM: 0.15, frameThicknessM: 0.03, jambWidthM: 0.05, jambThicknessM: 0.05,
   ledgeHeightM: 0.03, color: '50A490',
 });
 
 const WALL = mat(5.03, 0.25, -8.25, 0.58);
-const OP1 = opening(1.4, -7.86);
-const OP2 = opening(-1.4, -4.16);
+const OP1 = opening(1.4, -7.86);       // style=1 → πόρτα
+const OP2 = opening(-1.4, -4.16, 0);   // style=0 → παράθυρο
 
 describe('openingAxisInterval (ADR-531)', () => {
   it('προβάλλει το άνοιγμα σε [tmin,tmax] κατά μήκος του άξονα', () => {
