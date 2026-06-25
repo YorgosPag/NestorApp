@@ -44,6 +44,7 @@ import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
+import { useColumnBeamPromote } from '../hooks/useColumnBeamPromote';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
 import { useStructuralAutoStudy } from '../hooks/useStructuralAutoStudy';
 import { useProactiveOrganismReinforce } from '../hooks/useProactiveOrganismReinforce';
@@ -284,6 +285,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
+  useColumnBeamPromote({ levelManager }); // ADR-529 — δοκάρι ΠΡΟΑΓΕΙ γωνιακή Ι-κολόνα σε Γ (boundary element)
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (ribbon manual trigger)
   useStructuralAutoStudy({ levelManager }); // ADR-500 (ADR-487 §7) — «Αυτόματη Μελέτη» (ντετερμινιστικός βρόχος σύγκλισης)
   useProactiveMemberSizing({ levelManager }); // ADR-475 — PROACTIVE auto-size διατομής (ΠΡΙΝ τον οπλισμό ⇒ οπλίζεται στη νέα διατομή)

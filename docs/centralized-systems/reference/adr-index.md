@@ -510,6 +510,7 @@
 | **ADR-526** | Εισαγωγή Tekton `.TEK` (σκάλες πρώτα) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-526-tekton-tek-import-stairs.md) |
 | **ADR-527** | ΕΝΑΣ μακρόβιος SceneManager/level (singleton adapter, Revit Document model) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-527-singleton-level-scene-manager.md) |
 | **ADR-528** | Δοκάρι γεφυρώνει αυτόματα το κενό ανάμεσα σε δύο δομικά μέλη (beam auto-span, weld στις παρειές) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-528-beam-auto-span-between-structural-members.md) |
+| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element, EC8) + span bugfix κοίλα/Γ μέλη | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1004,6 +1005,7 @@
 | **ADR-526** | Εισαγωγή Tekton `.TEK` (σκάλες πρώτα) | ✅ APPROVED | [View](./adrs/ADR-526-tekton-tek-import-stairs.md) |
 | **ADR-527** | ΕΝΑΣ μακρόβιος SceneManager/level (singleton adapter, Revit Document model) | ✅ APPROVED | [View](./adrs/ADR-527-singleton-level-scene-manager.md) |
 | **ADR-528** | Δοκάρι γεφυρώνει αυτόματα το κενό ανάμεσα σε δύο δομικά μέλη (beam auto-span, weld στις παρειές) | ✅ APPROVED | [View](./adrs/ADR-528-beam-auto-span-between-structural-members.md) |
+| **ADR-529** | Δοκάρι προάγει γωνιακή κολόνα μίας κατεύθυνσης (Ι → Γ boundary element, EC8) + span bugfix κοίλα/Γ μέλη | ✅ APPROVED | [View](./adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

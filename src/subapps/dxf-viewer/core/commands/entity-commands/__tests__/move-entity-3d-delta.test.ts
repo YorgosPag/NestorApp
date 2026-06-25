@@ -12,33 +12,16 @@
 
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../MoveEntityCommand';
 import type { ISceneManager, SceneEntity } from '../interfaces';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 // validate / mergeWith / getDelta never touch the scene manager.
 const sm = {} as unknown as ISceneManager;
 
 // Minimal in-memory scene for the execute/undo/redo spine (no MEP/slab → follower
 // cascades no-op, so a plain DXF circle exercises the move geometry + snapshot restore).
-function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  const sm = {
-    getEntity: (id: string) => scene.get(id),
-    getEntities: () => [...scene.values()],
-    addEntity: (e: SceneEntity) => { scene.set(e.id, e); },
-    removeEntity: (id: string) => { scene.delete(id); },
-    updateEntity: (id: string, u: Partial<SceneEntity>) => {
-      const e = scene.get(id);
-      if (e) scene.set(id, { ...e, ...(u as SceneEntity) });
-    },
-    updateEntities: (u: Map<string, Partial<SceneEntity>>) => {
-      u.forEach((partial, id) => {
-        const e = scene.get(id);
-        if (e) scene.set(id, { ...e, ...(partial as SceneEntity) });
-      });
-    },
-    getVertices: () => undefined, insertVertex: () => {}, removeVertex: () => {}, updateVertex: () => {},
-    getEntityIndex: () => -1, reorderEntity: () => {}, moveEntityToIndex: () => {},
-  } as unknown as ISceneManager;
-  return { scene, sm };
+function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ReturnType<typeof createMockSceneManager> } {
+  const localSm = createMockSceneManager(initial, { getEntityIndex: () => -1 });
+  return { scene: localSm.store, sm: localSm };
 }
 
 const circleAt = (id: string, x: number, y: number): SceneEntity =>

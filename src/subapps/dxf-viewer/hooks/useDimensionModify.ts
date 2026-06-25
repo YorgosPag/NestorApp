@@ -28,7 +28,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { levelSceneManagerFor } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateEntityCommand } from '../core/commands/entity-commands/UpdateEntityCommand';
 import { CompositeCommand } from '../core/commands/CompositeCommand';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
@@ -130,7 +130,7 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       if (!levelId) return null;
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return null;
-      const sm = levelSceneManagerFor(levelManager, levelId);
+      const sm = createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
       const entities = scene.entities as unknown as readonly Entity[];
       const selected = new Set(entityIds);
       const dims = entities.filter((e): e is DimensionEntity => selected.has(e.id) && isDimensionEntity(e));

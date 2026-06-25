@@ -9,29 +9,16 @@ import { TrimEntityCommand } from '../TrimEntityCommand';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import type { TrimOperation } from '../../../../systems/trim/trim-types';
 import type { LineEntity, ArcEntity } from '../../../../types/entities';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 // ── Mock scene manager ────────────────────────────────────────────────────────
 
 function makeSceneManager(initial: Array<{ id: string }> = []): { sm: ISceneManager; store: Map<string, SceneEntity> } {
-  const store = new Map<string, SceneEntity>(initial.map((e) => [e.id, e as unknown as SceneEntity]));
-  const sm: ISceneManager = {
-    addEntity: (e) => { store.set(e.id, e); },
-    removeEntity: (id) => { store.delete(id); },
-    getEntity: (id) => store.get(id),
-    updateEntity: (id, updates) => {
-      const cur = store.get(id);
-      if (cur) store.set(id, { ...cur, ...updates });
-    },
-    updateVertex: () => {},
-    insertVertex: () => {},
-    removeVertex: () => {},
-    getVertices: () => undefined,
-    updateEntities: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { sm, store };
+  const sm = createMockSceneManager(
+    initial as unknown as SceneEntity[],
+    { getEntityIndex: () => -1, updateEntities: () => {} },
+  );
+  return { sm, store: sm.store };
 }
 
 // ── Entity fixtures ───────────────────────────────────────────────────────────

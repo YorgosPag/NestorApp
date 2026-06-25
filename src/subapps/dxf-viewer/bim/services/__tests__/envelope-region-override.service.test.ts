@@ -23,6 +23,7 @@ import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/
 import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { UpdateBeamParamsCommand } from '../../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -127,9 +128,7 @@ describe('buildRegionOverrideTargets', () => {
 // ── Command builder ───────────────────────────────────────────────────────
 
 function mockSceneManager(entities: Record<string, SceneEntity>): ISceneManager {
-  return {
-    getEntity: (id: string) => entities[id],
-  } as unknown as ISceneManager;
+  return createMockSceneManager(Object.values(entities));
 }
 
 function entity(id: string, type: string): SceneEntity {

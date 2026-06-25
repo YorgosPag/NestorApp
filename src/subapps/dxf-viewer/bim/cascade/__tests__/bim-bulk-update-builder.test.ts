@@ -13,24 +13,11 @@ import { UpdateSlabParamsCommand } from '../../../core/commands/entity-commands/
 import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { UpdateBeamParamsCommand } from '../../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
-import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
+import type { SceneEntity } from '../../../core/commands/interfaces';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
-function makeMockScene(entities: SceneEntity[]): ISceneManager {
-  const map = new Map<string, SceneEntity>(entities.map((e) => [e.id, e]));
-  return {
-    getEntity: (id) => map.get(id),
-    addEntity: () => {},
-    removeEntity: () => {},
-    updateEntity: () => {},
-    updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
+function makeMockScene(entities: SceneEntity[]) {
+  return createMockSceneManager(entities, { getEntityIndex: () => -1 });
 }
 
 // Minimal entity stubs — builder reads `type` + `params` only.

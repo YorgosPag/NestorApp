@@ -19,6 +19,7 @@ import { findAttachedWalls } from '../../cascade/bim-cascade-resolver';
 import { EventBus, type DrawingEventPayload } from '../../../systems/events/EventBus';
 import type { ISceneManager } from '../../../core/commands/interfaces';
 import type { Entity } from '../../../types/entities';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 import type { BeamEntity } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { RoofEntity } from '../../types/roof-types';
@@ -30,13 +31,13 @@ interface FakeEntity {
 }
 
 function makeSceneManager(entities: FakeEntity[]): ISceneManager {
-  const byId = new Map(entities.map((e) => [e.id, e]));
-  return {
-    getEntity: (id: string) => byId.get(id) ?? null,
-    getEntities: () => [...byId.values()],
-    updateEntities: () => {},
-    updateEntity: () => {},
-  } as unknown as ISceneManager;
+  return createMockSceneManager(
+    entities as unknown as import('../../../core/commands/interfaces').SceneEntity[],
+    {
+      updateEntity: () => {},
+      updateEntities: () => {},
+    },
+  );
 }
 
 /** Capture every `bim:wall-attach-host-missing` payload during `fn`. */

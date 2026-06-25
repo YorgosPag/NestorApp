@@ -119,6 +119,34 @@ describe('resolveBeamSpanSnap — per-bay (ADR-528)', () => {
   });
 });
 
+describe('ADR-529 Φ1 — cursor ΣΤΗΝ παρειά + κοίλα/Γ μέλη', () => {
+  it('cursor ΠΑΝΩ/μέσα στην παρειά μέλους (όχι στο κενό) → γεφυρώνει', () => {
+    const colA = rect(0, 0, 400, 400);      // δεξιά παρειά x=200
+    const colB = rect(2000, 0, 400, 400);   // αριστερή παρειά x=1800
+    // cursor x=150 = ΜΕΣΑ στην colA (έως x=200), όχι στο γεωμετρικό κενό — με την along-margin γεφυρώνει.
+    const r = resolveBeamSpanSnap({ x: 150, y: 0 }, [colA, colB], 'mm');
+    expect(r).not.toBeNull();
+    expect(near(r!.start.x, 200)).toBe(true);
+    expect(near(r!.end.x, 1800)).toBe(true);
+  });
+
+  it('κοίλος Γ τοίχος → start στην ανατολική παρειά του ΟΡΙΖΟΝΤΙΟΥ σκέλους (όχι centroid/γωνία)', () => {
+    // Γ (κεφαλαίο): κατακόρυφο σκέλος δυτικά [0,200]×[0,1000] + οριζόντιο σκέλος βόρεια [0,1000]×[800,1000].
+    // Ανατολική παρειά οριζόντιου σκέλους: x=1000, y∈[800,1000]. Το centroid (~322,678) θα έγερνε τον άξονα.
+    const gamma: Point2D[] = [
+      { x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 800 },
+      { x: 1000, y: 800 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 },
+    ];
+    const col = rect(2000, 900, 400, 400); // αντικριστή κολόνα — δυτική παρειά x=1800
+    const r = resolveBeamSpanSnap({ x: 1000, y: 900 }, [gamma, col], 'mm');
+    expect(r).not.toBeNull();
+    expect(near(r!.start.x, 1000, 1)).toBe(true);  // ανατ. παρειά οριζόντιου σκέλους (ΟΧΙ γωνία/centroid)
+    expect(near(r!.start.y, 900, 1)).toBe(true);
+    expect(near(r!.end.x, 1800, 1)).toBe(true);    // δυτική παρειά κολόνας
+    expect(near(r!.end.y, 900, 1)).toBe(true);
+  });
+});
+
 describe('resolveBeamSpanChain — whole-line (ADR-528 §whole-line)', () => {
   const four = [rect(0, 0, 400, 400), rect(0, 2000, 400, 400), rect(0, 4000, 400, 400), rect(0, 6000, 400, 400)];
 

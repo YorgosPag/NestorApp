@@ -19,6 +19,7 @@ import { UpdateMepManifoldParamsCommand } from '../../../core/commands/entity-co
 import type { MepManifoldEntity, MepManifoldParams } from '../../types/mep-manifold-types';
 import type { ISceneManager } from '../../../core/commands/interfaces';
 import { resolveManifoldConnectedPipePatches } from '../../mep-segments/mep-elevation-propagation';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 jest.mock('../../mep-segments/mep-elevation-propagation', () => ({
   resolveManifoldConnectedPipePatches: jest.fn(() => []),
@@ -36,13 +37,11 @@ function manifold(outletCount = 4): MepManifoldEntity {
 
 /** Minimal scene manager — only `updateEntity` is exercised (on `command.execute`). */
 function capturingSceneManager(captured: { params?: MepManifoldParams }): ISceneManager {
-  return {
+  return createMockSceneManager([], {
     updateEntity: (_id: string, updates: unknown) => {
       captured.params = (updates as { params?: MepManifoldParams }).params;
     },
-    getEntity: () => undefined,
-    getEntities: () => [],
-  } as unknown as ISceneManager;
+  });
 }
 
 beforeEach(() => {

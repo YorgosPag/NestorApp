@@ -11,6 +11,7 @@ import type {
 import type { DxfTextNode, TextParagraph, TextRun } from '../../../../text-engine/types';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import type { Point2D } from '../../../../rendering/types/Types';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -69,26 +70,11 @@ function makeScene(): {
   scene: ISceneManager;
   added: Map<string, SceneEntity>;
 } {
-  const added = new Map<string, SceneEntity>();
-  const scene: ISceneManager = {
-    addEntity: (e) => {
-      added.set(e.id, e);
-    },
-    removeEntity: (id) => {
-      added.delete(id);
-    },
-    getEntity: (id) => added.get(id),
-    updateEntity: () => {},
-    updateVertex: () => {},
-    insertVertex: () => {},
-    removeVertex: () => {},
-    getVertices: () => undefined,
-    updateEntities: () => {},
+  const sm = createMockSceneManager([], {
+    // Tests assert on `added` by name; alias store → added via shared reference.
     getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, added };
+  });
+  return { scene: sm, added: sm.store };
 }
 
 function makeRecorder(): IDxfTextAuditRecorder & { calls: number; lastAction?: string } {

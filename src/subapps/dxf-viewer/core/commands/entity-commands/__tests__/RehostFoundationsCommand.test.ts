@@ -7,32 +7,15 @@
  */
 
 import { RehostFoundationsCommand } from '../RehostFoundationsCommand';
-import type { ISceneManager, SceneEntity } from '../../interfaces';
+import type { SceneEntity } from '../../interfaces';
 import type { FoundationEntity } from '../../../../bim/types/foundation-types';
 import type { RehostedStrip } from '../../../../bim/foundations/foundation-grid-rehost';
 import type { GuideBinding } from '../../../../bim/hosting/guide-binding-types';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
-function makeMockScene(seed: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
-  const scene = new Map<string, SceneEntity>();
-  for (const e of seed) scene.set(e.id, e);
-  const sm: ISceneManager = {
-    getEntity: (id) => scene.get(id),
-    addEntity: (e) => { scene.set(e.id, e); },
-    removeEntity: (id) => { scene.delete(id); },
-    updateEntity: (id, updates) => {
-      const cur = scene.get(id);
-      if (cur) scene.set(id, { ...cur, ...updates } as SceneEntity);
-    },
-    updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, sm };
+function makeMockScene(seed: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ReturnType<typeof createMockSceneManager> } {
+  const sm = createMockSceneManager(seed, { getEntityIndex: () => -1 });
+  return { scene: sm.store, sm };
 }
 
 const BIND: GuideBinding[] = [

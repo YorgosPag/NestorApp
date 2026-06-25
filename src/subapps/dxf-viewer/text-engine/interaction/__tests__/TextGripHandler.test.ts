@@ -16,6 +16,7 @@ import type {
 } from '../../../core/commands/interfaces';
 import type { Rect } from '../../layout/attachment-point';
 import type { DxfTextNode } from '../../types';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -80,28 +81,13 @@ function makeDeps(initial: DxfTextSceneEntity[] = []): {
   commandHistory: ICommandHistory & { executed: ICommand[] };
   layerProvider: ILayerAccessProvider;
 } {
-  const store = new Map<string, DxfTextSceneEntity>();
-  for (const e of initial) store.set(e.id, e);
-  const scene: ISceneManager = {
-    addEntity: (e) => store.set(e.id, e as DxfTextSceneEntity),
-    removeEntity: (id) => {
-      store.delete(id);
-    },
-    getEntity: (id) => store.get(id),
-    updateEntity: (id, u) => {
-      const cur = store.get(id);
-      if (!cur) return;
-      store.set(id, { ...cur, ...u } as DxfTextSceneEntity);
-    },
-    updateVertex: () => {},
-    insertVertex: () => {},
-    removeVertex: () => {},
-    getVertices: () => undefined,
+  // SSoT (ADR-527): one Map-backed ISceneManager mock. Overrides replicate this
+  // file's original local stub exactly (no-op updateEntities, getEntityIndex → -1).
+  const sceneManager = createMockSceneManager(initial, {
     updateEntities: () => {},
     getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
+  });
+  const store = sceneManager.store as Map<string, DxfTextSceneEntity>;
   const executed: ICommand[] = [];
   const history: ICommandHistory & { executed: ICommand[] } = {
     executed,
@@ -125,7 +111,7 @@ function makeDeps(initial: DxfTextSceneEntity[] = []): {
     getLayer: () => ({ name: '0', locked: false, frozen: false }),
     canUnlockLayer: true,
   };
-  return { sceneManager: scene, store, commandHistory: history, layerProvider: provider };
+  return { sceneManager, store, commandHistory: history, layerProvider: provider };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

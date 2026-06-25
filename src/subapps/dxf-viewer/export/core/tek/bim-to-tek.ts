@@ -24,7 +24,7 @@ import type { StairEntity } from '../../../bim/types/stair-types';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../../bim/stairs/stair-boq-quantities';
-import { polylineLength } from '../../../bim/geometry/shared/polyline-frame';
+import { polylineLength, samplePolylineFrame } from '../../../bim/geometry/shared/polyline-frame';
 import { roofSlopeToRatio } from '../../../bim/geometry/roof-slope-units';
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
 import { extractEntityFootprintRing, extractHeightMm } from '../bim-to-dxf-primitives';
@@ -323,6 +323,28 @@ function ringToTekStairPoints(
 }
 
 /**
+ * Πυκνώνει μια πολυγραμμή (περίγραμμα/πορεία) σε `count` ισαπέχοντα κατά μήκος-τόξου σημεία →
+ * `TekStairPoint[]` (μέτρα, Y-flipped). Ο παραμετρικός 3Δ engine του Τέκτονα περιμένει
+ * **έναν κόμβο ανά βαθμίδα** (το ground-truth ΣΚΑΛΑ.tek έχει `stepCount` σημεία/πολυγραμμή)·
+ * με μόνο 2 άκρα ο builder κολλάει. Reuse SSoT `samplePolylineFrame` + `polylineLength`
+ * (μηδέν re-impl resample). Για ευθεία σκάλα (2-σημεία stringer) δίνει `count` συγγραμμικά σημεία.
+ */
+function densifyToStairPoints(
+  ring: readonly { x: number; y: number }[], count: number, metersPerSceneUnit: number,
+): TekStairPoint[] {
+  const pts = ring.map((v) => ({ x: v.x, y: v.y }));
+  const total = polylineLength(pts);
+  if (pts.length < 2 || count < 2 || total <= 0) return ringToTekStairPoints(ring, metersPerSceneUnit);
+  const out: TekStairPoint[] = [];
+  for (let k = 0; k < count; k++) {
+    const frame = samplePolylineFrame(pts, (total * k) / (count - 1));
+    const p = frame?.point ?? pts[pts.length - 1];
+    out.push(sceneXYToTekMeters(p.x, p.y, metersPerSceneUnit));
+  }
+  return out;
+}
+
+/**
  * Μία `StairEntity` → `TekStair` (faithful). Τα scalars (πάτημα/ρίχτι/πλάτος/στάθμες/πλήθος)
  * + οι πολυγραμμές προκύπτουν από την **ήδη υπολογισμένη** `StairGeometry` (recompute μόνο ως
  * fallback). Οι διαστάσεις της σκάλας ζουν σε **scene units** (όχι per-entity mm όπως οι
@@ -342,6 +364,9 @@ function toTekStair(stair: StairEntity, id: number, metersPerSceneUnit: number):
   // `vert_b` ΑΠΟ τη σχέση (ΟΧΙ από το `p.rise`, που με τη στρογγυλοποίηση δεν διαιρεί το ύψος
   // ορόφου ακριβώς) → διατήρηση ύψους ορόφου, ίδια λογική με το import (`rise = ΔΥψος/stepCount`).
   const steps = Math.max(1, p.stepCount - 1);
+  // Περίγραμμα/πορεία με έναν κόμβο ανά βαθμίδα (= stepCount σημεία), όπως το ground-truth —
+  // αλλιώς ο 3Δ builder του Τέκτονα κολλάει με μόνο 2 άκρα.
+  const contourCount = Math.max(2, p.stepCount);
   const stepLines = g.risers.flatMap((r) => [
     sceneXYToTekMeters(r.start.x, r.start.y, metersPerSceneUnit),
     sceneXYToTekMeters(r.end.x, r.end.y, metersPerSceneUnit),
@@ -362,9 +387,9 @@ function toTekStair(stair: StairEntity, id: number, metersPerSceneUnit: number):
     stepsNumbering: p.treadLabelDisplay !== 'none',
     arrow: ringToTekStairPoints([g.arrowSymbol.start, g.arrowSymbol.end], metersPerSceneUnit),
     stepLines,
-    innerContour: ringToTekStairPoints(g.stringers.inner, metersPerSceneUnit),
-    outerContour: ringToTekStairPoints(g.stringers.outer, metersPerSceneUnit),
-    walkline: ringToTekStairPoints(g.walkline, metersPerSceneUnit),
+    innerContour: densifyToStairPoints(g.stringers.inner, contourCount, metersPerSceneUnit),
+    outerContour: densifyToStairPoints(g.stringers.outer, contourCount, metersPerSceneUnit),
+    walkline: densifyToStairPoints(g.walkline, contourCount, metersPerSceneUnit),
   };
 }
 

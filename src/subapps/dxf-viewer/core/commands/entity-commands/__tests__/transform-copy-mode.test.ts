@@ -9,24 +9,11 @@
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import { ScaleEntityCommand } from '../ScaleEntityCommand';
 import { MirrorEntityCommand } from '../MirrorEntityCommand';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 function makeMockScene(initial: SceneEntity[]): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  const sm: ISceneManager = {
-    getEntity: (id) => scene.get(id),
-    addEntity: (e) => { scene.set(e.id, e); },
-    removeEntity: (id) => { scene.delete(id); },
-    updateEntity: (id, u) => { const e = scene.get(id); if (e) scene.set(id, { ...e, ...(u as SceneEntity) }); },
-    updateEntities: (u) => { u.forEach((p, id) => { const e = scene.get(id); if (e) scene.set(id, { ...e, ...(p as SceneEntity) }); }); },
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, sm };
+  const sm = createMockSceneManager(initial, { getEntityIndex: () => -1 });
+  return { scene: sm.store, sm };
 }
 
 const line = (id: string): SceneEntity =>

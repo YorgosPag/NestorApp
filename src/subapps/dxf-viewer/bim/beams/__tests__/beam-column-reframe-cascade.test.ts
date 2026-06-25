@@ -17,6 +17,7 @@ import { EventBus } from '../../../systems/events/EventBus';
 import type { SceneEntity } from '../../../core/commands/interfaces';
 import type { BeamEntity } from '../../types/beam-types';
 import type { ColumnEntity } from '../../types/column-types';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 function beam(startX: number, endX: number): BeamEntity {
   return {
@@ -45,13 +46,12 @@ function column(id: string, cx: number, h = 200): ColumnEntity {
 
 function mockSceneManager(entities: SceneEntity[]) {
   const updated = new Map<string, Partial<SceneEntity>>();
-  return {
-    getEntities: () => entities,
-    updateEntities: (patches: ReadonlyMap<string, Partial<SceneEntity>>) => {
+  const sm = createMockSceneManager(entities, {
+    updateEntities: (patches) => {
       for (const [id, p] of patches) updated.set(id, p);
     },
-    updated,
-  };
+  });
+  return Object.assign(sm, { updated });
 }
 
 describe('cascadeBeamReframe', () => {

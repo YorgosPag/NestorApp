@@ -14,10 +14,11 @@ import {
   type FamilyTypeDeleteDeps,
 } from '../DeleteWallFamilyTypeCommand';
 import { AssignWallTypeCommand, type WallTypeAssignment } from '../AssignWallTypeCommand';
-import type { ISceneManager, SceneEntity } from '../../interfaces';
+import type { SceneEntity } from '../../interfaces';
 import { completeWallFromTwoClicks } from '../../../../hooks/drawing/wall-completion';
 import type { WallEntity, WallParams } from '../../../../bim/types/wall-types';
 import type { BimFamilyType } from '../../../../bim/types/bim-family-type';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 const TYPE_ID = 'bimftype-wall-1';
 
@@ -34,26 +35,9 @@ function makeType(): BimFamilyType<'wall'> {
   };
 }
 
-function makeMockScene(initial: SceneEntity[]): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  const sm = {
-    getEntity: (id: string) => scene.get(id),
-    addEntity: (e: SceneEntity) => { scene.set(e.id, e); },
-    removeEntity: (id: string) => { scene.delete(id); },
-    updateEntity: (id: string, updates: unknown) => {
-      const e = scene.get(id);
-      if (e) scene.set(id, { ...e, ...(updates as SceneEntity) });
-    },
-    updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  } as unknown as ISceneManager;
-  return { scene, sm };
+function makeMockScene(initial: SceneEntity[]): { scene: Map<string, SceneEntity>; sm: ReturnType<typeof createMockSceneManager> } {
+  const sm = createMockSceneManager(initial, { getEntityIndex: () => -1 });
+  return { scene: sm.store, sm };
 }
 
 function makeTypedWall(): WallEntity {

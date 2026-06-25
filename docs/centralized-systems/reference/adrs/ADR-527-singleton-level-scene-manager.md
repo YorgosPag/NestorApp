@@ -125,3 +125,30 @@ exit 1.
   `createLevelSceneManagerAdapter`. 0 `new` εκτός factory. + ratchet guard module
   `level-scene-manager-adapter`. 23 colocated suites / 290 tests GREEN + `useBimCopyTool`
   mock update. Flagged: flat-staleness tooling gap + `derived-foundation-depth.ts` drift.
+- **2026-06-25 (d)** — **Ενοποίηση entry points (Giorgio order):** ο wrapper
+  `levelSceneManagerFor(access, levelId)` αφαιρέθηκε → **ΕΝΑ** canonical factory
+  `createLevelSceneManagerAdapter`. 6 production call-sites (append-entity ×2, useCanvasEditActions,
+  useDimensionModify, useStructuralFootingConnect, useStructuralOrganismNotification) +
+  test μεταφέρθηκαν να περνούν `x.getLevelScene, x.setLevelScene` ρητά. `LevelSceneAccess`
+  interface αφαιρέθηκε. 7+38 tests GREEN. **SSoT audit βρήκε 3ο duplicate** →
+  `createGripSceneAdapter` (grip-scene-adapter.ts) ξαναϋλοποιεί όλο το ISceneManager inline →
+  handoff για κεντρικοποίηση (μαζί με 56 inline test mocks).
+- **2026-06-25 (e)** — **SSoT cleanup follow-up (Giorgio order) — δύο σκέλη:**
+  - **Εργασία Α — 56 inline ISceneManager test mocks → `createMockSceneManager`.** Κάθε
+    test file είχε δικό του Map-backed 12-method ISceneManager stub (copy-paste). Όλα
+    μεταφέρθηκαν στον ΗΔΗ-υπάρχοντα SSoT helper
+    `core/commands/__tests__/mock-scene-manager.ts` με **delegate** στρατηγική (διατήρηση
+    return shape + behavior μέσω `overrides`: capturing `updateEntity`/`updateEntities`,
+    mutation-in-place για vertex/bulge tests, `getEntityIndex: () => -1` για parity). Domains:
+    entity-commands (46), bim/** (8), text (2 + `test-fixtures.makeScene` → delegate),
+    systems/grip (1). **Boy Scout:** βρέθηκε 57ο duplicate που το αρχικό grep είχε χάσει
+    (`text-engine/interaction/__tests__/TextGripHandler.test.ts` — χρησιμοποιεί
+    `Map<string, DxfTextSceneEntity>`) → migrated κι αυτό. **ΜΗΔΕΝ** εναπομείναν full inline
+    ISceneManager literal (grep-verified). ~528 tests GREEN ανά batch (jest `--runInBand`).
+  - **Εργασία Β — `createGripSceneAdapter` ΔΙΑΓΡΑΦΗΚΕ (όχι refactor).** SSoT audit απέδειξε
+    ότι ήταν **dead code**: 0 call-sites σε όλο το `src`, ο hook που ανέφερε το `@see`
+    (`useDxfGripInteraction.ts`) **δεν υπάρχει**, κανένα test δεν τον άγγιζε. Το «FULL SSoT»
+    σωστό = διαγραφή του διπλότυπου (3ου) adapter, όχι refactor νεκρού κώδικα να κάνει reuse
+    τον factory. `hooks/grip-scene-adapter.ts` αφαιρέθηκε (Giorgio approval). Ιστορικές
+    αναφορές σε ADR-510/ADR-358 αφέθηκαν (changelog narrative).
+  - Όλα UNCOMMITTED — ο Giorgio κάνει τον commit.

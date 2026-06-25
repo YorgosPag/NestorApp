@@ -9,32 +9,20 @@
  *   - Non-BIM sources skipped (returned in `skipped`).
  */
 import { buildBimCopyClones } from '../bim-copy-builder';
-import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
+import type { SceneEntity } from '../../../core/commands/interfaces';
 import type { WallEntity } from '../../types/wall-types';
 import type { OpeningEntity } from '../../types/opening-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { SlabOpeningEntity } from '../../types/slab-opening-types';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
-function makeMockScene(initial: SceneEntity[] = []): {
-  scene: Map<string, SceneEntity>;
-  sm: ISceneManager;
-} {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  const sm: ISceneManager = {
-    getEntity: (id) => scene.get(id),
-    addEntity: (e) => { scene.set(e.id, e); },
-    removeEntity: (id) => { scene.delete(id); },
+function makeMockScene(initial: SceneEntity[] = []) {
+  const sm = createMockSceneManager(initial, {
     updateEntity: () => {},
     updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
     getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, sm };
+  });
+  return { scene: sm.store, sm };
 }
 
 function makeWall(id = 'wall_src'): WallEntity {

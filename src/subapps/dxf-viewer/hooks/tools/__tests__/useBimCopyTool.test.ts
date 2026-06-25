@@ -7,16 +7,12 @@ import { useBimCopyTool } from '../useBimCopyTool';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => {
-  const makeAdapter = () => ({
-    addEntity: jest.fn(),
-    removeEntity: jest.fn(),
-    getEntity: jest.fn().mockReturnValue(null),
-    getEntities: jest.fn().mockReturnValue([]),
-    updateEntity: jest.fn(),
-  });
+  // ADR-527: production constructs via the cached factory (not `new`); reuse the SSoT
+  // mock-scene-manager helper instead of re-declaring an inline adapter stub.
+  const { createMockSceneManager } = require('../../../core/commands/__tests__/mock-scene-manager');
+  const makeAdapter = () => createMockSceneManager();
   return {
     LevelSceneManagerAdapter: jest.fn().mockImplementation(makeAdapter),
-    // ADR-527: production now constructs via the cached factory, not `new`.
     createLevelSceneManagerAdapter: jest.fn(makeAdapter),
     levelSceneManagerFor: jest.fn(makeAdapter),
   };

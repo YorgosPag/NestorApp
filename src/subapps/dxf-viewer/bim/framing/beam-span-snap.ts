@@ -20,12 +20,26 @@
  * `projectPointOnAxis`· vector-math = `geometry-vector-utils` (ΟΧΙ inline math)· guide = `PlacementAlignmentGuide`.
  * Pure (zero React/DOM/store). Ένα μέλος = το **κλειστό outline του** (κολόνα → footprint· τοίχος → ring).
  *
+ * **ADR-529 Φ1 (bugfix κοίλα/Γ μέλη + cursor-ΣΤΗΝ-παρειά):** η αρχική υλοποίηση όριζε τον άξονα ζεύγους
+ * ως **centroid→centroid** + facing παρειά = `projectPolygonOnAxis(ΟΛΟ το outline)`. Για **κοίλο/Γ** μέλος
+ * (αμβλεία γωνία) το centroid πέφτει στην εσοχή → ο άξονας γέρνει → ο cursor στην ανατολική παρειά του
+ * **οριζόντιου σκέλους** βγαίνει κάθετα μακριά (perp>capture) ή το start πέφτει σε λάθος NS. Επιπλέον, ο
+ * cursor **ΠΑΝΩ/μέσα** σε μια παρειά (όχι στο γεωμετρικό κενό) απορριπτόταν (`along<sA`). Δύο διορθώσεις,
+ * orientation-agnostic & μηδέν regression για κυρτά/ευθυγραμμισμένα μέλη (ισοδύναμο by construction):
+ *   1. **Facing-point άξονας** — ο άξονας ορίζεται από τα **πλησιέστερα σημεία των δύο outlines** (το
+ *      σκέλος/παρειά που «κοιτάζει» το άλλο μέλος), όχι από τα centroids. Για κυρτό ευθυγραμμισμένο ζεύγος
+ *      το facing-point πέφτει στο μέσο της αντικριστής παρειάς ⇒ **ίδιο** u/start/end με πριν.
+ *   2. **Along-margin** — ο cursor μετράει ως «σε αυτό το φάτνωμα» και όταν είναι **πάνω/λίγο μέσα** σε
+ *      παρειά μέλους (`along ∈ [sA−capture, sB+capture]`), όχι μόνο αυστηρά στο κενό.
+ *
  * @see ../columns/column-beam-corner-snap.ts — το αντίστροφο πρότυπο (L-κολόνα γεμίζει γωνιακό κενό)
+ * @see ../columns/column-beam-promote-junction.ts — ADR-529 Φ2 (δοκάρι ΠΡΟΑΓΕΙ Ι-κολόνα σε Γ)
  * @see ../geometry/shared/polygon-axis-projection.ts — projectPolygonOnAxis/projectPointOnAxis (SSoT)
  * @see ../geometry/shared/polygon-utils.ts — polygon2DCentroid (SSoT κέντρο 2D πολυγώνου)
  * @see ./placement-alignment-guide.ts — PlacementAlignmentGuide (canonical SSoT, paint pipeline)
  * @see ../../placement/bim-cursor-snap.ts — ο εγκέφαλος (beam branch, gated `beamSpanGhost`)
  * @see docs/centralized-systems/reference/adrs/ADR-528-beam-auto-span-between-structural-members.md
+ * @see docs/centralized-systems/reference/adrs/ADR-529-beam-promotes-corner-column-to-boundary-element.md
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -59,11 +73,15 @@ interface SpanSupport {
   readonly outline: readonly Point2D[];
 }
 
-/** Πλαίσιο ζεύγους κατά τον άξονα `u` (κέντρο A → κέντρο B), με τις αντικριστές παρειές `sA`/`sB`. */
+/**
+ * Πλαίσιο ζεύγους κατά τον άξονα `u` (facing-point A → facing-point B, ADR-529 Φ1), με τις αντικριστές
+ * παρειές `sA`/`sB` μετρημένες από το **facing-point του A** (`origin`).
+ */
 interface PairFrame {
+  readonly origin: Point2D; // facing-point του A (το σημείο της παρειάς που «κοιτάζει» το B)
   readonly u: Point2D;
-  readonly sA: number; // αντικριστή παρειά A (προς B) — along από A.center
-  readonly sB: number; // αντικριστή παρειά B (προς A) — along από A.center
+  readonly sA: number; // αντικριστή παρειά A (προς B) — along από `origin`
+  readonly sB: number; // αντικριστή παρειά B (προς A) — along από `origin`
 }
 
 /**
@@ -82,17 +100,61 @@ function buildSupports(supportOutlines: readonly (readonly Point2D[])[]): SpanSu
     .map((outline) => ({ center: polygon2DCentroid(outline), outline }));
 }
 
-/** Πλαίσιο ζεύγους (A,B): άξονας κέντρο→κέντρο + αντικριστές παρειές. `null` αν δεν υπάρχει καθαρό κενό. */
+/**
+ * Πλησιέστερο σημείο ευθυγράμμου τμήματος `[a,b]` στο `p` (clamped στα άκρα). Pure SSoT-local (ADR-529 Φ1):
+ * δεν εισάγουμε το `systems/guides/projectPointOnSegment` (λάθος layer — θα έσπαγε το bim→systems decoupling,
+ * όπως ο cross2D στο `column-beam-corner-snap`). Μικρό, καθαρό, single-consumer.
+ */
+function closestPointOnSegment(p: Point2D, a: Point2D, b: Point2D): Point2D {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  if (l2 < EPS) return { x: a.x, y: a.y };
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
+/** Πλησιέστερο σημείο του **περιγράμματος** (κλειστού πολυγώνου) στο `target` — η παρειά που «κοιτάζει». */
+function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): Point2D {
+  let best = outline[0];
+  let bestD = Infinity;
+  for (let i = 0; i < outline.length; i++) {
+    const q = closestPointOnSegment(target, outline[i], outline[(i + 1) % outline.length]);
+    const d = (q.x - target.x) ** 2 + (q.y - target.y) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = q;
+    }
+  }
+  return best;
+}
+
+/**
+ * Πλαίσιο ζεύγους (A,B): **facing-point άξονας** (ADR-529 Φ1) + αντικριστές παρειές. Ο άξονας ορίζεται από
+ * τα πλησιέστερα σημεία των δύο outlines (η παρειά/σκέλος που κοιτάζει το άλλο μέλος) → ορθό και για **κοίλα/Γ**
+ * μέλη (το centroid θα έγερνε τον άξονα). Fallback σε centroid→centroid αν τα facing-points ταυτίζονται.
+ * `null` αν δεν υπάρχει καθαρό κενό. Οι παρειές `sA`/`sB` μετριούνται από το `origin` (= facing-point A).
+ */
 function pairFrame(A: SpanSupport, B: SpanSupport): PairFrame | null {
-  const d = subtractPoints(B.center, A.center);
-  const D = Math.hypot(d.x, d.y);
-  if (D < EPS) return null; // ταυτισμένα κέντρα
+  // 2-step refinement: seed από centroids → fA από closest(A,B.center)· fB από closest(B,fA)· ξανά fA από
+  // closest(A,fB). Για ισχυρά κοίλα μέλη (Γ) το centroid-target άφηνε υπόλοιπη κλίση· το refinement το λύνει.
+  // Κυρτά/ευθυγραμμισμένα → σταθερό σημείο (ίδιο αποτέλεσμα με πριν, μηδέν regression).
+  const fA0 = closestPointOnOutline(A.outline, B.center);
+  const fB = closestPointOnOutline(B.outline, fA0);
+  const fA = closestPointOnOutline(A.outline, fB);
+  let d = subtractPoints(fB, fA);
+  let D = Math.hypot(d.x, d.y);
+  if (D < EPS) {
+    d = subtractPoints(B.center, A.center); // fallback (επικάλυψη / ταυτισμένα facing-points)
+    D = Math.hypot(d.x, d.y);
+    if (D < EPS) return null;
+  }
   const u: Point2D = { x: d.x / D, y: d.y / D };
-  // Αντικριστές παρειές = ακραίες προβολές κάθε outline στον `u`, προς το άλλο μέλος.
-  const sA = projectPolygonOnAxis(A.outline, A.center.x, A.center.y, u.x, u.y).alongMax;
-  const sB = D + projectPolygonOnAxis(B.outline, B.center.x, B.center.y, u.x, u.y).alongMin;
+  // Αντικριστές παρειές = ακραίες προβολές κάθε outline στον `u` (ΑΠΟ το ΚΟΙΝΟ origin `fA`), προς το άλλο μέλος.
+  const sA = projectPolygonOnAxis(A.outline, fA.x, fA.y, u.x, u.y).alongMax;
+  const sB = projectPolygonOnAxis(B.outline, fA.x, fA.y, u.x, u.y).alongMin;
   if (sB <= sA + EPS) return null; // επικάλυψη / μηδέν κενό → όχι span
-  return { u, sA, sB };
+  return { origin: fA, u, sA, sB };
 }
 
 /** Span γεωμετρία (start/end flush + guide) ενός ζεύγους. `null` αν δεν υπάρχει κενό. */
@@ -100,9 +162,9 @@ function spanGeometry(A: SpanSupport, B: SpanSupport): Omit<BeamSpanSnap, 'dist'
   const fr = pairFrame(A, B);
   if (!fr) return null;
   return {
-    start: addPoints(A.center, scalePoint(fr.u, fr.sA)),
-    end: addPoints(A.center, scalePoint(fr.u, fr.sB)),
-    guide: { a: A.center, b: B.center },
+    start: addPoints(fr.origin, scalePoint(fr.u, fr.sA)),
+    end: addPoints(fr.origin, scalePoint(fr.u, fr.sB)),
+    guide: { a: A.center, b: B.center }, // ο dashed οδηγός μένει κέντρο→κέντρο (σταθερό whole-line seed)
   };
 }
 
@@ -121,7 +183,7 @@ function hasSupportBetween(
 ): boolean {
   for (const k of supports) {
     if (k === A || k === B) continue;
-    const p = projectPointOnAxis(k.center.x, k.center.y, A.center.x, A.center.y, fr.u.x, fr.u.y);
+    const p = projectPointOnAxis(k.center.x, k.center.y, fr.origin.x, fr.origin.y, fr.u.x, fr.u.y);
     if (p.perp <= captureScene && p.along > fr.sA + EPS && p.along < fr.sB - EPS) return true;
   }
   return false;
@@ -149,9 +211,10 @@ export function resolveBeamSpanSnap(
       const B = supports[j];
       const fr = pairFrame(A, B);
       if (!fr) continue;
-      // Ο cursor πρέπει να είναι ΣΤΟ κενό (ανάμεσα στις παρειές) ΚΑΙ κάθετα κοντά στη νοητή ευθεία.
-      const cp = projectPointOnAxis(cursor.x, cursor.y, A.center.x, A.center.y, fr.u.x, fr.u.y);
-      if (cp.along < fr.sA || cp.along > fr.sB) continue;
+      // ADR-529 Φ1 — ο cursor μετράει «σε αυτό το φάτνωμα» στο κενό ΑΛΛΑ ΚΑΙ ΠΑΝΩ/λίγο μέσα σε παρειά μέλους
+      // (along-margin = capture), όχι μόνο αυστηρά ανάμεσα στις παρειές· ΚΑΙ κάθετα κοντά στη νοητή ευθεία.
+      const cp = projectPointOnAxis(cursor.x, cursor.y, fr.origin.x, fr.origin.y, fr.u.x, fr.u.y);
+      if (cp.along < fr.sA - captureScene || cp.along > fr.sB + captureScene) continue;
       if (cp.perp > captureScene) continue;
       // ADR-528 §adjacency — απόρριψη μη-διαδοχικού ζεύγους (τρίτη στήριξη ανάμεσα).
       if (hasSupportBetween(A, B, fr, supports, captureScene)) continue;

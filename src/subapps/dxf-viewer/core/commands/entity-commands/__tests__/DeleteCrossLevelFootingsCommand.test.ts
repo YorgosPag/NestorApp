@@ -8,27 +8,11 @@ import type { FoundationCrossLevelWriter } from '../../../../bim/foundations/fou
 import type { FoundationEntity } from '../../../../bim/types/foundation-types';
 import type { ColumnEntity } from '../../../../bim/types/column-types';
 import { buildColumnEntity, buildDefaultColumnParams } from '../../../../hooks/drawing/column-completion';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 function makeScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  const sm: ISceneManager = {
-    getEntity: (id) => scene.get(id),
-    addEntity: (e) => { scene.set(e.id, e); },
-    removeEntity: (id) => { scene.delete(id); },
-    updateEntity: (id, updates) => {
-      const e = scene.get(id);
-      if (e) scene.set(id, { ...e, ...(updates as SceneEntity) });
-    },
-    updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, sm };
+  const sm = createMockSceneManager(initial, { getEntityIndex: () => -1 });
+  return { scene: sm.store, sm };
 }
 
 function makeColumnWithFooting(footingId: string): ColumnEntity {

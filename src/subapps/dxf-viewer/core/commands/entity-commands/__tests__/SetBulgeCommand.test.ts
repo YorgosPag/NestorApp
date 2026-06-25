@@ -7,6 +7,7 @@
  */
 import { SetBulgeCommand } from '../SetBulgeCommand';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 interface TestPoly {
   id: string;
@@ -16,13 +17,13 @@ interface TestPoly {
   bulges?: number[];
 }
 
-function makeSceneManager(poly: TestPoly): { sm: ISceneManager; poly: TestPoly } {
-  const sm = {
-    getEntity: (id: string) => (id === poly.id ? (poly as unknown as SceneEntity) : undefined),
-    updateEntity: (id: string, updates: Partial<SceneEntity>) => {
-      if (id === poly.id) Object.assign(poly, updates);
+function makeSceneManager(poly: TestPoly): { sm: ReturnType<typeof createMockSceneManager>; poly: TestPoly } {
+  const sm = createMockSceneManager([poly as unknown as SceneEntity], {
+    // TRAP 2: tests read `poly` local reference after updateEntity — must mutate in place
+    updateEntity: (_id: string, updates: Partial<SceneEntity>) => {
+      if (_id === poly.id) Object.assign(poly, updates);
     },
-  } as unknown as ISceneManager;
+  });
   return { sm, poly };
 }
 

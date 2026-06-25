@@ -9,6 +9,7 @@
 import { setLayers } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/scene-types';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 import type {
   DxfTextNode,
   TextParagraph,
@@ -95,31 +96,12 @@ export function makeScene(initial: DxfTextSceneEntity[] = []): {
   scene: ISceneManager;
   store: Map<string, SceneEntity>;
 } {
-  const store = new Map<string, SceneEntity>();
-  for (const e of initial) store.set(e.id, e);
-  const scene: ISceneManager = {
-    addEntity: (e) => {
-      store.set(e.id, e);
-    },
-    removeEntity: (id) => {
-      store.delete(id);
-    },
-    getEntity: (id) => store.get(id),
-    updateEntity: (id, updates) => {
-      const cur = store.get(id);
-      if (!cur) return;
-      store.set(id, { ...cur, ...updates });
-    },
-    updateVertex: () => {},
-    insertVertex: () => {},
-    removeVertex: () => {},
-    getVertices: () => undefined,
-    updateEntities: () => {},
+  const sm = createMockSceneManager(initial, {
+    // The text command tests never rely on real entity ordering; returning -1
+    // preserves the original contract so no existing assertion can break.
     getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
-  return { scene, store };
+  });
+  return { scene: sm, store: sm.store };
 }
 
 export function makeLayerProvider(

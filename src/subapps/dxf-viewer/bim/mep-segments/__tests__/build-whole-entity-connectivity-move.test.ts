@@ -20,6 +20,7 @@
 import type { ICommand, ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
 import type { Entity } from '../../../types/entities';
 import type { MepSegmentEntity } from '../../types/mep-segment-types';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 import { deriveCenterlineElevationMm } from '../../types/mep-segment-types';
 
 // Mock the geometry mover: shift `params.position` by delta, keep everything else
@@ -75,21 +76,10 @@ function pipe(id: string, start: { x: number; y: number }, end: { x: number; y: 
 
 /** Minimal ISceneManager over a fixed entity list; records nothing (read-only here). */
 function sceneManagerOf(entities: readonly Entity[]): ISceneManager {
-  return {
-    getEntity: (id: string) => entities.find((e) => e.id === id) as unknown as SceneEntity | undefined,
-    getEntities: () => entities as unknown as readonly SceneEntity[],
-    addEntity: () => {},
-    removeEntity: () => {},
-    updateEntity: () => {},
-    updateEntities: () => {},
-    updateVertex: () => {},
-    insertVertex: () => {},
-    removeVertex: () => {},
-    getVertices: () => undefined,
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  } as unknown as ISceneManager;
+  return createMockSceneManager(
+    entities as unknown as SceneEntity[],
+    { getEntityIndex: () => -1 },
+  );
 }
 
 describe('executeWholeEntityConnectivityMove', () => {

@@ -12,6 +12,7 @@ import {
 } from '../polyline-grip-ops';
 import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
 import type { UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 interface TestPoly {
   id: string;
@@ -22,12 +23,15 @@ interface TestPoly {
 }
 
 function makeSceneManager(poly: TestPoly): { sm: ISceneManager; poly: TestPoly } {
-  const sm = {
+  // Seed the helper with the poly entity so getEntities/getEntity work by default.
+  // Override getEntity and updateEntity to use the mutable `poly` reference directly
+  // so that commands mutating via Object.assign are reflected in assertions.
+  const sm = createMockSceneManager([poly as unknown as SceneEntity], {
     getEntity: (id: string) => (id === poly.id ? (poly as unknown as SceneEntity) : undefined),
     updateEntity: (id: string, updates: Partial<SceneEntity>) => {
       if (id === poly.id) Object.assign(poly, updates);
     },
-  } as unknown as ISceneManager;
+  });
   return { sm, poly };
 }
 

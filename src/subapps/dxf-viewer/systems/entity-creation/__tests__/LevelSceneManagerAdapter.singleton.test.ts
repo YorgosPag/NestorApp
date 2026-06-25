@@ -5,7 +5,7 @@
  * + stateless pass-through στο live SSoT (`levelScenesRef`), μηδέν per-instance cache.
  *   - ίδιο (getLevelScene, setLevelScene, levelId) → ΤΟ ΙΔΙΟ instance
  *   - ίδιος accessor, άλλο levelId → διαφορετικά instances
- *   - `levelSceneManagerFor` ≡ `createLevelSceneManagerAdapter` για ίδιο accessor/level
+ *   - accessor-object fields ρητά → ίδιο cached instance (unified API, ένα entry point)
  *   - διαφορετική ταυτότητα getLevelScene/setLevelScene → νέο instance (μηδέν stale binding)
  *   - `clearLevelSceneManagerCache` → η επόμενη κλήση φτιάχνει νέο instance
  *   - shared singleton → δεύτερη κλήση βλέπει τις mutations της πρώτης (μέσω live SSoT)
@@ -13,9 +13,7 @@
 
 import {
   createLevelSceneManagerAdapter,
-  levelSceneManagerFor,
   clearLevelSceneManagerCache,
-  type LevelSceneAccess,
 } from '../LevelSceneManagerAdapter';
 import type { SceneModel } from '../../../types/scene';
 import type { SceneEntity } from '../../../core/commands/interfaces';
@@ -24,7 +22,11 @@ const LEVEL_A = 'L1';
 const LEVEL_B = 'L2';
 
 /** Live-ref scene store — mirror του `useSceneManager` (sync ref, read-after-write). */
-function makeLiveAccessor(): LevelSceneAccess & { current: Record<string, SceneModel> } {
+function makeLiveAccessor(): {
+  current: Record<string, SceneModel>;
+  getLevelScene: (levelId: string) => SceneModel | null;
+  setLevelScene: (levelId: string, scene: SceneModel) => void;
+} {
   const store: Record<string, SceneModel> = {};
   return {
     current: store,
@@ -60,18 +62,20 @@ describe('ADR-527 — singleton LevelSceneManagerAdapter cache', () => {
     expect(b.getLevelId()).toBe(LEVEL_B);
   });
 
-  it('levelSceneManagerFor ≡ createLevelSceneManagerAdapter (ίδιο cached instance)', () => {
-    const acc = makeLiveAccessor();
-    const viaFactory = createLevelSceneManagerAdapter(acc.getLevelScene, acc.setLevelScene, LEVEL_A);
-    const viaConvenience = levelSceneManagerFor(acc, LEVEL_A);
-    expect(viaConvenience).toBe(viaFactory);
+  it('περνώντας τα accessor-object fields ρητά → ίδιο cached instance (unified API)', () => {
+    // ADR-527: ο πρώην `levelSceneManagerFor(access, levelId)` wrapper ενοποιήθηκε — οι
+    // hosts περνούν πλέον `access.getLevelScene, access.setLevelScene` ρητά· ίδιο cache.
+    const access = makeLiveAccessor();
+    const viaRaw = createLevelSceneManagerAdapter(access.getLevelScene, access.setLevelScene, LEVEL_A);
+    const viaFields = createLevelSceneManagerAdapter(access.getLevelScene, access.setLevelScene, LEVEL_A);
+    expect(viaFields).toBe(viaRaw);
   });
 
   it('διαφορετική ταυτότητα accessor → νέο instance (κανένα stale binding)', () => {
     const acc1 = makeLiveAccessor();
     const acc2 = makeLiveAccessor();
-    const a1 = levelSceneManagerFor(acc1, LEVEL_A);
-    const a2 = levelSceneManagerFor(acc2, LEVEL_A);
+    const a1 = createLevelSceneManagerAdapter(acc1.getLevelScene, acc1.setLevelScene, LEVEL_A);
+    const a2 = createLevelSceneManagerAdapter(acc2.getLevelScene, acc2.setLevelScene, LEVEL_A);
     expect(a2).not.toBe(a1);
   });
 
@@ -85,9 +89,9 @@ describe('ADR-527 — singleton LevelSceneManagerAdapter cache', () => {
 
   it('clearLevelSceneManagerCache → η επόμενη κλήση φτιάχνει νέο instance', () => {
     const acc = makeLiveAccessor();
-    const before = levelSceneManagerFor(acc, LEVEL_A);
+    const before = createLevelSceneManagerAdapter(acc.getLevelScene, acc.setLevelScene, LEVEL_A);
     clearLevelSceneManagerCache(acc.getLevelScene, LEVEL_A);
-    const after = levelSceneManagerFor(acc, LEVEL_A);
+    const after = createLevelSceneManagerAdapter(acc.getLevelScene, acc.setLevelScene, LEVEL_A);
     expect(after).not.toBe(before);
   });
 
@@ -96,11 +100,11 @@ describe('ADR-527 — singleton LevelSceneManagerAdapter cache', () => {
     acc.setLevelScene(LEVEL_A, emptyScene());
 
     // 1η «κλήση»: προσθήκη οντότητας μέσω του cached adapter
-    const first = levelSceneManagerFor(acc, LEVEL_A);
+    const first = createLevelSceneManagerAdapter(acc.getLevelScene, acc.setLevelScene, LEVEL_A);
     first.addEntity(ent('e1'));
 
     // 2η «κλήση» (ίδιο sync batch): ΙΔΙΟ instance → βλέπει την e1 μέσω του live SSoT
-    const second = levelSceneManagerFor(acc, LEVEL_A);
+    const second = createLevelSceneManagerAdapter(acc.getLevelScene, acc.setLevelScene, LEVEL_A);
     expect(second).toBe(first);
     second.addEntity(ent('e2'));
 

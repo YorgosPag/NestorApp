@@ -141,10 +141,21 @@ describe('collectTekStairs', () => {
     expect(r.stairsXml).toContain('<steps>15</steps>');
   });
 
-  it('παράγει πραγματικές πολυγραμμές γεωμετρίας (περίγραμμα/πορεία)', () => {
+  it('3Δ consistency: (steps+1) × vert_b == end − start ΑΚΡΙΒΩΣ — αλλιώς ο Τέκτων δεν χτίζει 3Δ', () => {
+    const xml = collectTekStairs([makeStraightStair()], 0.001).stairsXml;
+    const num = (tag: string): number =>
+      Number((xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`)) ?? [])[1]);
+    const steps = num('steps');
+    const vertB = num('vert_b');
+    const span = num('end_elevation') - num('start_elevation');
+    expect((steps + 1) * vertB).toBeCloseTo(span, 6);
+  });
+
+  it('περίγραμμα/πορεία ΠΥΚΝΩΜΕΝΑ (ένας κόμβος ανά βαθμίδα) — όχι 2 άκρα (αλλιώς ο Τέκτων κολλάει στο 3Δ)', () => {
     const r = collectTekStairs([makeStraightStair()], 0.001);
-    // υπάρχουν point2d κορυφές (η geometry έδωσε stringers/walkline/risers).
-    expect((r.stairsXml.match(/<pX>/g) ?? []).length).toBeGreaterThan(4);
+    // 3 πυκνά slots (inner/outer/walkline) × ~stepCount(16) + stepLines + arrow → πολλά σημεία.
+    // (Με μόνο 2-σημεία περιγράμματα θα ήταν ~6· τώρα ≥ 3×16.)
+    expect((r.stairsXml.match(/<pX>/g) ?? []).length).toBeGreaterThanOrEqual(48);
   });
 
   it('μη-stair entity αγνοείται', () => {

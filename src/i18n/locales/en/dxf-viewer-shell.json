@@ -246,6 +246,12 @@
     "fillAll": "Yes, all of them",
     "cancel": "No"
   },
+  "columnPromoteL": {
+    "title": "Promote to corner boundary element (L)",
+    "message": "The one-directional corner column receives a beam on its narrow (non-developing) face — an inadequate joint (EC8 §5.4.2). Promote it to an L boundary element so it gains a leg toward the beam?",
+    "promote": "Yes, promote to L",
+    "cancel": "No"
+  },
   "columnAdjacency": {
     "title": "Adjacent columns → shear wall",
     "message": "The new column touches existing columns and together they form a shear wall. Per Eurocode 8 §5.4.2.4 a shear wall has different reinforcement than columns. Merge them into one shear wall?",

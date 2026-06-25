@@ -8,24 +8,11 @@
  */
 import { HatchLifecycleSignalCommand } from '../HatchLifecycleSignalCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
-import type { ISceneManager, SceneEntity } from '../../interfaces';
+import type { SceneEntity } from '../../interfaces';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
-function makeMockScene(initial: SceneEntity[] = []): ISceneManager {
-  const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
-  return {
-    getEntity: (id) => scene.get(id),
-    addEntity: (e) => { scene.set(e.id, e); },
-    removeEntity: (id) => { scene.delete(id); },
-    updateEntity: () => {},
-    updateEntities: () => {},
-    getVertices: () => undefined,
-    insertVertex: () => {},
-    removeVertex: () => {},
-    updateVertex: () => {},
-    getEntityIndex: () => -1,
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
-  };
+function makeMockScene(initial: SceneEntity[] = []): ReturnType<typeof createMockSceneManager> {
+  return createMockSceneManager(initial, { getEntityIndex: () => -1 });
 }
 
 function makeHatch(id = 'ent_hatch_1'): SceneEntity {

@@ -450,10 +450,11 @@ const adapterCache = new WeakMap<
 >();
 
 /**
- * Factory function to create adapter instances.
- * ADR-527: returns a cached singleton per (getLevelScene, setLevelScene, levelId) instead
- * of a fresh instance on every call. `levelSceneManagerFor` delegates here, so ALL
- * construction goes through this single site (SSoT).
+ * Factory function to create adapter instances — the SINGLE canonical construction site
+ * (SSoT). ADR-527: returns a cached singleton per (getLevelScene, setLevelScene, levelId)
+ * instead of a fresh instance on every call. There is intentionally NO second entry point
+ * (the old `levelSceneManagerFor(access, levelId)` wrapper was unified away) — every caller
+ * uses this 3-arg signature directly.
  */
 export function createLevelSceneManagerAdapter(
   getLevelScene: GetLevelSceneFunction,
@@ -490,24 +491,9 @@ export function clearLevelSceneManagerCache(
   else byLevel.clear();
 }
 
-/** Subset of the level manager needed to build a scene-manager adapter. */
-export interface LevelSceneAccess {
-  getLevelScene: GetLevelSceneFunction;
-  setLevelScene: SetLevelSceneFunction;
-}
-
-/**
- * Convenience SSoT factory — build the adapter straight from a level-manager
- * object, so command-running hosts (`useDimensionModify`, `useStructuralFootingConnect`,
- * `useStructuralOrganismNotification`, `useCanvasEditActions`, …) stop repeating
- * `new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, levelId)`.
- * Delegates to `createLevelSceneManagerAdapter` (single construction site), so it also
- * gets the ADR-527 singleton cache for free — repeated calls for the same (accessor,
- * level) return the SAME long-lived adapter.
- */
-export function levelSceneManagerFor(
-  levelManager: LevelSceneAccess,
-  levelId: string,
-): LevelSceneManagerAdapter {
-  return createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
-}
+// ADR-527 — `levelSceneManagerFor(access, levelId)` was a convenience wrapper that
+// merely destructured `access.getLevelScene/setLevelScene` into
+// `createLevelSceneManagerAdapter`. Two public entry points for ONE construction = API
+// duplication. Unified to the single canonical factory `createLevelSceneManagerAdapter`
+// above (the cache + `new` live there); call-sites pass `x.getLevelScene, x.setLevelScene`
+// explicitly. No `LevelSceneAccess` indirection — the 3-arg signature IS the SSoT.

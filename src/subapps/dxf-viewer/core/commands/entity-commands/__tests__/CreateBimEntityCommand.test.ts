@@ -10,17 +10,13 @@ import { CreateBimEntityCommand } from '../CreateBimEntityCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import type { AnySceneEntity } from '../../../../types/scene';
+import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 const flush = (): Promise<void> => Promise.resolve();
 
 function makeFakeSceneManager(): { mgr: ISceneManager; entities: Map<string, SceneEntity> } {
-  const entities = new Map<string, SceneEntity>();
-  const mgr = {
-    addEntity: (e: SceneEntity) => { entities.set(e.id, e); },
-    removeEntity: (id: string) => { entities.delete(id); },
-    getEntity: (id: string) => entities.get(id),
-  } as unknown as ISceneManager;
-  return { mgr, entities };
+  const sm = createMockSceneManager();
+  return { mgr: sm, entities: sm.store };
 }
 
 function makeColumn(id = 'col_1'): AnySceneEntity {

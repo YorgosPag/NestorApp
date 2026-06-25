@@ -64,7 +64,7 @@ interface BeamEndsByProximity {
   readonly nearDist: number;
   readonly farDist: number;
 }
-function beamEndsByProximity(beam: BeamEntity, px: number, py: number): BeamEndsByProximity {
+export function beamEndsByProximity(beam: BeamEntity, px: number, py: number): BeamEndsByProximity {
   const s = beam.params.startPoint;
   const e = beam.params.endPoint;
   const dS = Math.hypot(s.x - px, s.y - py);
@@ -419,3 +419,9 @@ export function alignColumnOnTypeChange(
     default:        return null;
   }
 }
+
+// ─── ADR-529 — Beam PROMOTES one-directional corner column (Ι → Γ boundary element) ───────────
+// Η γεωμετρία προαγωγής `promoteColumnToBoundaryL` ζει πλέον στο αδελφό module
+// `./column-beam-promote-align.ts` (SRP split, N.7.1)· re-export εδώ ώστε οι υπάρχοντες importers να
+// μένουν ανέπαφοι (το `beamEndsByProximity` που χρειάζεται γίνεται export παραπάνω).
+export { promoteColumnToBoundaryL } from './column-beam-promote-align';

@@ -19,6 +19,7 @@ import { computeWallGeometry } from '../../geometry/wall-geometry';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { OpeningEntity, OpeningParams } from '../../types/opening-types';
 import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
+import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 const TOL = 1e-6;
 
@@ -89,27 +90,16 @@ function makeSceneManager(
 ): ISceneManager & { snapshot(id: string): SceneEntity | undefined } {
   // BIM entities have `visible?` optional (BaseEntity) vs SceneEntity's required
   // `visible`; the mocks always set it, so the cast is safe at this single point.
-  const map = new Map<string, SceneEntity>(
-    entities.map((e) => [e.id, e as unknown as SceneEntity]),
-  );
-  const sm: Partial<ISceneManager> & { snapshot(id: string): SceneEntity | undefined } = {
-    getEntity: (id) => map.get(id),
-    updateEntities: (updates) => {
-      for (const [id, patch] of updates) {
-        const cur = map.get(id);
-        if (cur) map.set(id, { ...cur, ...patch });
-      }
-    },
-    updateEntity: (id, patch) => {
-      const cur = map.get(id);
-      if (cur) map.set(id, { ...cur, ...patch });
-    },
-    snapshot: (id) => map.get(id),
-  };
-  if (opts.withGetEntities) {
-    sm.getEntities = () => [...map.values()];
+  const seeded = entities.map((e) => e as unknown as SceneEntity);
+  const sm = createMockSceneManager(seeded);
+  const withSnapshot = Object.assign(sm, {
+    snapshot: (id: string) => sm.store.get(id),
+  });
+  if (!opts.withGetEntities) {
+    // Shadow getEntities so the fallback-to-hostedOpeningIds path is exercised.
+    (withSnapshot as unknown as Record<string, unknown>).getEntities = undefined;
   }
-  return sm as ISceneManager & { snapshot(id: string): SceneEntity | undefined };
+  return withSnapshot;
 }
 
 describe('ADR-363 §5.4 — recomputeHostedOpeningGeometry', () => {
