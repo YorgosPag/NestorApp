@@ -137,8 +137,20 @@ export interface TekOpeningRecord {
   readonly elevationM: number;
   /** `<top>` — στάθμη ανωφλιού (μέτρα). Ύψος ανοίγματος = top − elevation. */
   readonly topM: number;
-  /** `<style>` — υπο-τύπος κουφώματος του Τέκτονα (0/1…). Πληροφοριακό. */
+  /** `<style>` — παραλλαγή εμφάνισης κάτοψης (0/1…). */
   readonly style: number;
+  /** `<side>` — προσανατολισμός/πλευρά τοίχου (2/3…). */
+  readonly side: number;
+  /** `<frame_width>` — πλάτος πλαισίου/κάσας κατά το πάχος τοίχου (μέτρα). */
+  readonly frameWidthM: number;
+  /** `<frame_thickness>` — πάχος προφίλ πλαισίου (μέτρα). */
+  readonly frameThicknessM: number;
+  /** `<jamb_width>` — πλάτος παραστάτη (μέτρα). */
+  readonly jambWidthM: number;
+  /** `<jamb_thickness>` — πάχος παραστάτη (μέτρα). */
+  readonly jambThicknessM: number;
+  /** `<ledge_height>` — προεξοχή ποδιάς (μέτρα). */
+  readonly ledgeHeightM: number;
   /** `<color>` RGB hex (όπως line/arc). */
   readonly color: string;
 }
@@ -189,6 +201,10 @@ export interface TekDimRecord {
   readonly color: string;
   /** `<size>` — ύψος κειμένου τιμής (μέτρα). Το seg xmatrix είναι identity για διαστάσεις. */
   readonly textSizeM: number;
+  /** `<end_style>` — στυλ άκρου (βελάκι/πλάγια παύλα· 8 = πλάγια παύλα). */
+  readonly endStyle: number;
+  /** Σημεία αναφοράς από `<inter>` (pX/pY) — οι βάσεις των βοηθητικών γραμμών· κενό αν λείπουν. */
+  readonly refPoints: readonly TekPoint2D[];
 }
 
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */

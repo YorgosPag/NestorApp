@@ -130,10 +130,10 @@ describe('importTekContent', () => {
     expect(result.stats.dimCount).toBe(1);
     expect(result.stats.wallCount).toBe(1);
     expect(result.stats.openingCount).toBe(2);
-    // wall: 4 footprint + 2 κουφώματα × 3 = 10· dim: 2 γραμμές + 1 κείμενο = 3.
+    // faithful: τοίχος-με-κουφώματα 12 + 2 παράθυρα × 4 = 20· δίαστ. 2 γραμμές + 2 ticks = 4· κείμενο 1.
     const lines = result.scene?.entities.filter((e) => e.type === 'line') ?? [];
     const texts = result.scene?.entities.filter((e) => e.type === 'text') ?? [];
-    expect(lines).toHaveLength(12);
+    expect(lines).toHaveLength(24);
     expect(texts).toHaveLength(1);
     expect(texts[0] && 'text' in texts[0] && texts[0].text).toBe('2.10');
   });

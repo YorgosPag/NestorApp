@@ -46,10 +46,18 @@ export function extractDimRecords(root: Element): { dims: TekDimRecord[]; warnin
       warnings.push('dim record χωρίς <seg> πατιές — παραλείφθηκε.');
       continue;
     }
+    const interContainer = firstChild(record, 'inter');
+    const refPoints = interContainer
+      ? directChildren(interContainer, 'record').map((r) => ({
+        x: childNumber(r, 'pX', 0), y: childNumber(r, 'pY', 0),
+      }))
+      : [];
     dims.push({
       segs,
       color: childText(record, 'color') ?? '',
       textSizeM: childNumber(record, 'size', 0),
+      endStyle: Math.round(childNumber(record, 'end_style', 0)),
+      refPoints,
     });
   }
   return { dims, warnings };
@@ -64,6 +72,12 @@ function readOpening(record: Element): TekOpeningRecord {
     elevationM: childNumber(record, 'elevation', 0),
     topM: childNumber(record, 'top', 0),
     style: Math.round(childNumber(record, 'style', 0)),
+    side: Math.round(childNumber(record, 'side', 0)),
+    frameWidthM: childNumber(record, 'frame_width', 0),
+    frameThicknessM: childNumber(record, 'frame_thickness', 0),
+    jambWidthM: childNumber(record, 'jamb_width', 0),
+    jambThicknessM: childNumber(record, 'jamb_thickness', 0),
+    ledgeHeightM: childNumber(record, 'ledge_height', 0),
     color: childText(record, 'color') ?? '',
   };
 }
