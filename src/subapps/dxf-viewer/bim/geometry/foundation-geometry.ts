@@ -30,12 +30,13 @@ import type {
   TieBeamParams,
   StripJustification,
 } from '../types/foundation-types';
-import { ANCHOR_OFFSETS, JUSTIFICATION_NORMAL_SIGN } from '../types/foundation-types';
+import { ANCHOR_OFFSETS } from '../types/foundation-types';
 import type { Point3D } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { canonicalAxisNormal } from '../grid/axis-normal';
+import { justifyAxisPoints, unjustifyAxisPoints } from '../grid/axis-justify';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -131,15 +132,9 @@ function transformPad(
 export function stripJustifiedAxis(
   params: StripFootingParams | TieBeamParams,
 ): { start: Point2D; end: Point2D } {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const n = canonicalAxisNormal(params.start, params.end);
-  if (!n) return { start: { x: params.start.x, y: params.start.y }, end: { x: params.end.x, y: params.end.y } };
-  const hw = (params.width * s) / 2;
-  const j = JUSTIFICATION_NORMAL_SIGN[params.justification ?? 'center'] * hw;
-  return {
-    start: { x: params.start.x + n.nx * j, y: params.start.y + n.ny * j },
-    end: { x: params.end.x + n.nx * j, y: params.end.y + n.ny * j },
-  };
+  // SSoT delegate (ADR-441/529) — η canonical-normal × sign × hw μετατόπιση ζει πλέον ΜΟΝΟ
+  // στο `axis-justify.ts` (κοινό δοκάρι/τοίχος/πεδιλοδοκός). Forward = location line → body axis.
+  return justifyAxisPoints(params.start, params.end, params.width, params.justification, params.sceneUnits);
 }
 
 /**
@@ -155,15 +150,8 @@ export function unjustifyStripAxis(
   justification: StripJustification | undefined,
   sceneUnits: SceneUnits | undefined,
 ): { start: Point2D; end: Point2D } {
-  const s = mmToSceneUnits(sceneUnits ?? 'mm');
-  const n = canonicalAxisNormal(effStart, effEnd);
-  if (!n) return { start: { x: effStart.x, y: effStart.y }, end: { x: effEnd.x, y: effEnd.y } };
-  const hw = (widthMm * s) / 2;
-  const j = JUSTIFICATION_NORMAL_SIGN[justification ?? 'center'] * hw;
-  return {
-    start: { x: effStart.x - n.nx * j, y: effStart.y - n.ny * j },
-    end: { x: effEnd.x - n.nx * j, y: effEnd.y - n.ny * j },
-  };
+  // SSoT delegate (ADR-441/529) — inverse: body axis → location line (κοινό math με το forward).
+  return unjustifyAxisPoints(effStart, effEnd, widthMm, justification, sceneUnits);
 }
 
 /**

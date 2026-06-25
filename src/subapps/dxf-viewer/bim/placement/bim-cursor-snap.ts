@@ -163,7 +163,8 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
         return {
           kind: 'member-placement',
           // ADR-529 Φ3 — `faceFrame` → οι σιελ listening dimensions εμφανίζονται ΚΑΙ στο auto-span (justified).
-          placement: { start: span.start, end: span.end, status: 'neutral', span: true, guide: span.guide, faceFrame: span.faceFrame },
+          // ADR-529 Location-Line — `justification` ρέει στο commit (unjustify→location line + associative width).
+          placement: { start: span.start, end: span.end, status: 'neutral', span: true, guide: span.guide, faceFrame: span.faceFrame, justification: span.justification },
           point: span.start,
         };
       }

@@ -124,16 +124,16 @@ describe('importTekContent', () => {
     expect(b && b.max.x).toBeGreaterThanOrEqual(3000);
   });
 
-  it('ADR-531 Φ5b.1 — εισάγει διάσταση + τοίχο + 2 κουφώματα ως 2Δ primitives', () => {
+  it('ADR-531 Φ5b.1++ — εισάγει διάσταση + τοίχο + 2 κουφώματα ως 2Δ primitives', () => {
     const result = importTekContent(TEK_STRUCT, 'level-1');
     expect(result.success).toBe(true);
     expect(result.stats.dimCount).toBe(1);
     expect(result.stats.wallCount).toBe(1);
     expect(result.stats.openingCount).toBe(2);
-    // faithful: τοίχος-με-κουφώματα 12 + 2 παράθυρα × 4 = 20· δίαστ. 2 γραμμές + 2 ticks = 4· κείμενο 1.
+    // faithful: τοίχος-με-κουφώματα 12 + 2 παράθυρα × 7 = 26· διάσταση 2 γραμμές + 6 markers = 8· κείμενο 1.
     const lines = result.scene?.entities.filter((e) => e.type === 'line') ?? [];
     const texts = result.scene?.entities.filter((e) => e.type === 'text') ?? [];
-    expect(lines).toHaveLength(24);
+    expect(lines).toHaveLength(34);
     expect(texts).toHaveLength(1);
     expect(texts[0] && 'text' in texts[0] && texts[0].text).toBe('2.10');
   });

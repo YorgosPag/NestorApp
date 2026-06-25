@@ -48,6 +48,27 @@ export interface LegacyMirror {
 const NO_MIRROR: LegacyMirror = { regionIdsChanged: false, regionIds: [], resetEditing: false };
 const EMPTY_IDS: string[] = Object.freeze([]) as unknown as string[];
 
+// ─── Legacy sink (ADR-532 Stage B — single write path) ─────────────────────────
+// The SelectionSystem provider registers a callback that mirrors the overlay/region
+// projection (`selectedRegionIds`) + region-edit flags into the React reducer. The
+// store invokes it after EVERY mutation (via `applyAndReturn`), so every write path
+// — direct store call, `useSelectionActions` wrapper, or orchestrator — applies the
+// exact same legacy mirror. This lets orchestrators call mutators imperatively
+// (zero React) without the mirror going stale. `null` until the provider mounts
+// (and in unit tests, where no React reducer exists).
+let legacySink: ((mirror: LegacyMirror) => void) | null = null;
+
+/** Register the legacy mirror sink (provider-owned). Pass `null` to unregister. */
+function registerLegacySink(fn: ((mirror: LegacyMirror) => void) | null): void {
+  legacySink = fn;
+}
+
+/** Notify the legacy sink (if registered), then return the mirror to the caller. */
+function applyAndReturn(mirror: LegacyMirror): LegacyMirror {
+  legacySink?.(mirror);
+  return mirror;
+}
+
 // ─── Internal mutable state ───────────────────────────────────────────────────
 let entities = new Map<string, SelectionEntry>();
 let primaryId: string | null = null;
@@ -110,9 +131,9 @@ function selectEntity(payload: SelectionPayload): LegacyMirror {
   primaryId = entry.id;
   commit();
   // SELECT replaces everything + always resets region-edit (old reducer parity).
-  return isOverlayRegion(payload.type)
+  return applyAndReturn(isOverlayRegion(payload.type)
     ? overlayMirror(true)
-    : { regionIdsChanged: false, regionIds: EMPTY_IDS, resetEditing: true };
+    : { regionIdsChanged: false, regionIds: EMPTY_IDS, resetEditing: true });
 }
 
 function selectEntities(payloads: SelectionPayload[]): LegacyMirror {
@@ -124,9 +145,9 @@ function selectEntities(payloads: SelectionPayload[]): LegacyMirror {
   primaryId = payloads.length > 0 ? payloads[0].id : null;
   commit();
   const touched = payloads.some((p) => isOverlayRegion(p.type));
-  return touched
+  return applyAndReturn(touched
     ? overlayMirror(true)
-    : { regionIdsChanged: false, regionIds: EMPTY_IDS, resetEditing: true };
+    : { regionIdsChanged: false, regionIds: EMPTY_IDS, resetEditing: true });
 }
 
 function addEntity(payload: SelectionPayload): LegacyMirror {
@@ -135,11 +156,11 @@ function addEntity(payload: SelectionPayload): LegacyMirror {
   entities.set(entry.id, entry);
   primaryId = entry.id;
   commit();
-  return isOverlayRegion(payload.type) ? overlayMirror(false) : NO_MIRROR;
+  return applyAndReturn(isOverlayRegion(payload.type) ? overlayMirror(false) : NO_MIRROR);
 }
 
 function addEntities(payloads: SelectionPayload[]): LegacyMirror {
-  if (payloads.length === 0) return NO_MIRROR;
+  if (payloads.length === 0) return applyAndReturn(NO_MIRROR);
   entities = new Map(entities);
   for (const p of payloads) {
     const entry = createSelectionEntry(p);
@@ -148,12 +169,12 @@ function addEntities(payloads: SelectionPayload[]): LegacyMirror {
   primaryId = payloads[payloads.length - 1].id;
   commit();
   const touched = payloads.some((p) => isOverlayRegion(p.type));
-  return touched ? overlayMirror(false) : NO_MIRROR;
+  return applyAndReturn(touched ? overlayMirror(false) : NO_MIRROR);
 }
 
 function deselectEntity(id: string): LegacyMirror {
   const removed = entities.get(id);
-  if (!removed) return NO_MIRROR;
+  if (!removed) return applyAndReturn(NO_MIRROR);
   entities = new Map(entities);
   entities.delete(id);
   if (primaryId === id) {
@@ -161,21 +182,23 @@ function deselectEntity(id: string): LegacyMirror {
     primaryId = remaining.length > 0 ? remaining[0] : null;
   }
   commit();
-  return isOverlayRegion(removed.type) ? overlayMirror(false) : NO_MIRROR;
+  return applyAndReturn(isOverlayRegion(removed.type) ? overlayMirror(false) : NO_MIRROR);
 }
 
+// NOTE: delegates to deselectEntity/addEntity which already fire the sink — do NOT
+// wrap again here (would double-dispatch the mirror).
 function toggleEntity(payload: SelectionPayload): LegacyMirror {
   return entities.has(payload.id) ? deselectEntity(payload.id) : addEntity(payload);
 }
 
 function clearAll(): LegacyMirror {
   if (entities.size === 0 && primaryId === null) {
-    return { regionIdsChanged: true, regionIds: EMPTY_IDS, resetEditing: true };
+    return applyAndReturn({ regionIdsChanged: true, regionIds: EMPTY_IDS, resetEditing: true });
   }
   entities = new Map();
   primaryId = null;
   commit();
-  return { regionIdsChanged: true, regionIds: EMPTY_IDS, resetEditing: true };
+  return applyAndReturn({ regionIdsChanged: true, regionIds: EMPTY_IDS, resetEditing: true });
 }
 
 function clearByType(type: SelectableEntityType): LegacyMirror {
@@ -185,14 +208,14 @@ function clearByType(type: SelectableEntityType): LegacyMirror {
     if (matchesEntityType(entry.type, type)) changed = true;
     else next.set(id, entry);
   }
-  if (!changed) return NO_MIRROR;
+  if (!changed) return applyAndReturn(NO_MIRROR);
   entities = next;
   if (primaryId && !entities.has(primaryId)) {
     const remaining = Array.from(entities.keys());
     primaryId = remaining.length > 0 ? remaining[0] : null;
   }
   commit();
-  return isOverlayRegion(type) ? overlayMirror(false) : NO_MIRROR;
+  return applyAndReturn(isOverlayRegion(type) ? overlayMirror(false) : NO_MIRROR);
 }
 
 /**
@@ -204,7 +227,7 @@ function clearByType(type: SelectableEntityType): LegacyMirror {
 function replaceEntitySelection(entityIds: string[]): LegacyMirror {
   const sameLength = entityIds.length === cachedDxfIds.length;
   if (sameLength && entityIds.every((id) => entities.get(id)?.type === 'dxf-entity')) {
-    return NO_MIRROR; // identical dxf set already selected
+    return applyAndReturn(NO_MIRROR); // identical dxf set already selected
   }
   const next = new Map<string, SelectionEntry>();
   for (const [id, entry] of entities) {
@@ -219,7 +242,7 @@ function replaceEntitySelection(entityIds: string[]): LegacyMirror {
     ? entityIds[entityIds.length - 1]
     : (Array.from(entities.keys())[0] ?? null);
   commit();
-  return NO_MIRROR; // only dxf-entity touched → legacy region state unchanged
+  return applyAndReturn(NO_MIRROR); // only dxf-entity touched → legacy region state unchanged
 }
 
 // ─── Getters (reference-stable snapshots) ──────────────────────────────────────
@@ -252,11 +275,12 @@ function subscribe(cb: Listener): () => void {
   return () => { listeners.delete(cb); };
 }
 
-/** Test-only: reset to empty (no notify). */
+/** Test-only: reset to empty (no notify) + drop any registered legacy sink. */
 function _resetForTests(): void {
   entities = new Map();
   primaryId = null;
   version = 0;
+  legacySink = null;
   rebuildCaches();
 }
 
@@ -270,6 +294,8 @@ export const SelectedEntitiesStore = {
   getOverlayRegionIds, getIdsByType, getByType, count, countByType,
   // subscription
   getVersion, subscribe,
+  // legacy mirror sink (ADR-532 Stage B — provider-owned)
+  registerLegacySink,
   // test
   _resetForTests,
 } as const;

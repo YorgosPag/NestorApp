@@ -1,4 +1,4 @@
-import { useReducer, useMemo } from 'react';
+import { useReducer, useMemo, useEffect } from 'react';
 import {
   type SelectionActions,
   type FilterActions,
@@ -49,6 +49,24 @@ export function useSelectionSystemState(): SelectionSystemStateReturn {
   const { selectionActions, universalActions } = useSelectionActions(state, dispatch);
   const { filterActions } = useFilterActions(state, dispatch);
   const { viewActions } = useViewActions(state, dispatch);
+
+  // ADR-532 Stage B: register the store-owned legacy sink. The SelectedEntitiesStore
+  // calls this after EVERY mutation, so the overlay-only `selectedRegionIds`
+  // projection + region-edit flags stay in sync no matter who mutates (action
+  // wrapper OR an orchestrator calling the store imperatively). The guard mirrors
+  // the old `applyMirror` — NO_MIRROR (dxf-only / skip-if-unchanged) never dispatches.
+  // `dispatch` is reducer-stable → registered once.
+  useEffect(() => {
+    SelectedEntitiesStore.registerLegacySink((m) => {
+      if (!m.regionIdsChanged && !m.resetEditing) return;
+      dispatch({
+        type: 'SYNC_UNIVERSAL_LEGACY',
+        regionIds: m.regionIdsChanged ? m.regionIds : undefined,
+        resetEditing: m.resetEditing,
+      });
+    });
+    return () => { SelectedEntitiesStore.registerLegacySink(null); };
+  }, [dispatch]);
 
   // Combine state and actions.
   // ADR-532: universalSelection/primarySelectedId are live getters onto the

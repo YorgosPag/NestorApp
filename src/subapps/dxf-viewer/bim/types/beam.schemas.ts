@@ -117,6 +117,10 @@ export const BeamParamsSchema = z
     reinforcement: BeamReinforcementSchema.optional(),
     // ─── ADR-475 — auto διαστασιολόγηση διατομής (lock flag) ──────────────────
     autoSized: z.boolean().optional(),
+    // ─── ADR-506 — auto διαστασιολόγηση πλάτους (independent lock flag) ────────
+    autoSizedWidth: z.boolean().optional(),
+    // ─── ADR-529 — Revit Location-Line / y-Justification ─────────────────────
+    justification: z.enum(['center', 'left', 'right']).optional(),
   })
   .strict();
 

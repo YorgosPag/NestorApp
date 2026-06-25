@@ -13,8 +13,10 @@ import type { SceneModel } from '../types/scene';
 import type { Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
-// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
-import { useUniversalSelection } from '../systems/selection';
+// ADR-532 Stage B: read the selection set imperatively at keydown time from the
+// SSoT store (ADR-040 dual-access) instead of subscribing — this hook no longer
+// re-registers its window listener on every selection change.
+import { SelectedEntitiesStore } from '../systems/selection';
 // ADR-394: combined AABB over selected entities (DXF + BIM) for Z = fit-to-selection
 import { calculateCombinedEntityBounds } from '../systems/selection/shared/selection-duplicate-utils';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
@@ -65,7 +67,9 @@ const NUDGE_CONFIG = {
 } as const;
 
 export const useKeyboardShortcuts = ({
-  selectedEntityIds,
+  // ADR-532 Stage B: `selectedEntityIds` is no longer consumed here — the keydown
+  // handler reads the live set from SelectedEntitiesStore at event time. The prop
+  // remains in the config (passed by DxfViewerContent) until Stage C; harmless.
   currentScene,
   onNudgeSelection,
   onColorMenuClose,
@@ -75,9 +79,6 @@ export const useKeyboardShortcuts = ({
   overlayMode,
   overlayStore
 }: KeyboardShortcutsConfig) => {
-  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
-  const universalSelection = useUniversalSelection();
-
   // Mouse tracking για zoom
   const lastMouseRef = useRef<Point2D | null>(null);
 
@@ -89,6 +90,8 @@ export const useKeyboardShortcuts = ({
   // ⌨️ ENTERPRISE: Centralized keyboard event handler
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // ADR-532 Stage B: event-time read of the live selection set (no subscription).
+      const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
       // ✅ GUARD: Skip if typing in input fields
       const inputFocused = document.activeElement &&
         (document.activeElement.tagName === 'INPUT' ||
@@ -258,7 +261,9 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [selectedEntityIds, currentScene, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
+    // ADR-532 Stage B: `selectedEntityIds` removed from deps — read live from the
+    // store at event time, so the listener is registered once (not per selection).
+  }, [currentScene, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
 
   // ADR-364 — ESC bus registration #1: cancel drawing/measurement tool.
   // Single Source of Truth: `isInteractiveTool` reads category from

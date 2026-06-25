@@ -30,6 +30,7 @@ import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap
 import type { FootprintBounds, FootprintFace } from '../geometry/shared/footprint-face-frame';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 import type { PlacementAlignmentGuide } from './placement-alignment-guide';
+import type { StripJustification } from '../types/foundation-types';
 
 /**
  * ADR-398 §3.12 — **καμπύλος στόχος** (κύκλος/τόξο): η αληθινή γεωμετρία περιφέρειας, ώστε οι
@@ -126,6 +127,13 @@ export interface MemberGhostSnapResult {
    * Παρόν μόνο στο span placement· `undefined` αλλού.
    */
   readonly guide?: PlacementAlignmentGuide;
+  /**
+   * ADR-529 — **Revit Location-Line justification** ενός auto-span placement ('center'|'left'|'right').
+   * Το `start`/`end` είναι ο body axis (για το ghost)· ο commit κάνει `unjustifyAxisPoints` με αυτό
+   * ώστε να αποθηκεύσει location line + justification → associative με το πλάτος (north-flush δεν σπάει
+   * όταν ο οργανισμός ξανα-διαστασιολογεί). `undefined` σε μη-span placements (centerline ως τώρα).
+   */
+  readonly justification?: StripJustification;
 }
 
 export interface LinearMemberFaceSnapOptions {

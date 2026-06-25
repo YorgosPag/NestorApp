@@ -44,12 +44,19 @@ generic factory — κάθε store hand-rolls subscribe/getSnapshot/setter (συ
 reference-stable (αλλιώς `useSyncExternalStore` infinite-loop). Κενό → ένα frozen `EMPTY`.
 boolean/number snapshots (`useIsSelected`/`useSelectionCount`) value-stable.
 
-**Legacy mirror (single write path A1):** κάθε store mutator επιστρέφει `LegacyMirror`
-(`regionIdsChanged`/`regionIds`/`resetEditing`). Το `useSelectionActions` το εφαρμόζει με **ΕΝΑ**
-dispatch `SYNC_UNIVERSAL_LEGACY` → ο reducer κρατά το legacy `selectedRegionIds` (overlay-only
-projection) + region-edit flags ακριβώς όπως τα παλιά UNIVERSAL_* cases. Ο reducer ΔΕΝ κρατά πια το
-Map (μία πηγή). Τα `context.universalSelection` / `context.primarySelectedId` είναι **live getters**
-στον store (back-compat για τους λίγους raw-Map readers, π.χ. `useDxfViewerEffects`).
+**Legacy mirror — store-owned sink (single write path, Stage B):** κάθε store mutator υπολογίζει
+`LegacyMirror` (`regionIdsChanged`/`regionIds`/`resetEditing`) και καλεί ο ίδιος (μέσω `applyAndReturn`)
+τον **provider-registered sink** (`SelectedEntitiesStore.registerLegacySink`). Ο provider
+(`useSelectionSystemState`) κάνει register **μία φορά** ένα callback που — guard `NO_MIRROR` skip —
+dispatch-άρει `SYNC_UNIVERSAL_LEGACY` → ο reducer κρατά το legacy `selectedRegionIds` (overlay-only
+projection) + region-edit flags ακριβώς όπως τα παλιά UNIVERSAL_* cases. Έτσι **ΚΑΘΕ** write path —
+action wrapper Ή orchestrator που καλεί `SelectedEntitiesStore.X()` **imperatively** — εφαρμόζει το ίδιο
+mirror (zero staleness, ο orchestrator mutate-άρει χωρίς React). `toggleEntity` delegate-άρει σε
+add/deselect → fire-once (όχι double-dispatch). Ο reducer ΔΕΝ κρατά πια το Map (μία πηγή). Τα
+`context.universalSelection` / `context.primarySelectedId` = **live getters** στον store (back-compat
+για raw-Map readers, π.χ. `useDxfViewerEffects`).
+> Stage A ιστορικό: το mirror το εφάρμοζε το `useSelectionActions.applyMirror` (ένα dispatch ανά action)·
+> Stage B το μετέφερε **μέσα στον store** (sink) ώστε οι orchestrators να mutate-άρουν imperatively.
 
 ## 3. Σταδιακή υλοποίηση
 
@@ -58,10 +65,22 @@ Map (μία πηγή). Τα `context.universalSelection` / `context.primarySelec
   υπάρχοντες consumers να re-render-άρουν όπως πριν (μηδέν staleness). Universal actions → store +
   legacy mirror. `replaceEntitySelection` = atomic + skip-if-unchanged (σπάει feedback loops 3D
   bridge / layer-select). **Μηδέν perf win ακόμη** — απλώς η βάση.
-- **Stage B (pending — πιάνει το 122ms):** οι 4 orchestrators σταματούν να subscribe-άρουν → imperative
-  store reads + τα children-leaves subscribe· fix `useActiveContextualTrigger` O(N×M) με `Map<id,entity>`
-  index (διατήρηση `crossLevelEntities` fallback)· stable inputs σε `useOverlayLayers`/
-  `useCanvasContextMenu`/`useUnifiedGripInteraction`.
+- **Stage B (IN PROGRESS — πιάνει το 122ms):** οι 4 orchestrators σταματούν να subscribe-άρουν →
+  imperative store reads + τα children-leaves subscribe.
+  - **B0 (DONE):** store-owned legacy sink (`registerLegacySink`/`applyAndReturn`) — ο store εφαρμόζει
+    το mirror, ώστε οι orchestrators να mutate-άρουν imperatively. `useSelectionActions` drop `applyMirror`.
+  - **B1 (DONE):** `useKeyboardShortcuts` — drop dead subscription· event-time
+    `SelectedEntitiesStore.getSelectedEntityIds()` στον keydown· listener register-άρεται μία φορά
+    (όχι ανά επιλογή).
+  - **B2 (DONE):** `FloatingPanelsSection` → `useSelectionByType('overlay')` (re-render μόνο σε overlay
+    change)· mutations direct στον store.
+  - **B3 (DONE):** `useActiveContextualTrigger` O(N×M) → O(N+M) με local `Map<id,entity>` index
+    (`useMemo([currentScene])`, αντικατάσταση 3 `.find()`)· διατήρηση `crossLevelEntities` fallback.
+  - **B4 (PENDING — 6B):** `CanvasSection` drop subscription → store getters + push του reactive
+    `selectedEntityIds` σε canvas leaf· stable inputs σε `useOverlayLayers`/`useCanvasContextMenu`/
+    `useUnifiedGripInteraction`.
+  - **B5 (PENDING — 6D):** `DxfViewerContent`/`useDxfViewerEffects` sever prop-drill (`wrappedState`)·
+    contextual-trigger sub → `DxfViewerTopBar`· selection-driven effects → dedicated leaf host.
 - **Stage C (pending — full SSoT retire):** ~21 leaf widgets → granular hooks· bridges inject store·
   αφαίρεση των (νεκρών) universal cases· απόφαση για το legacy `selectedRegionIds`.
 
@@ -80,8 +99,19 @@ Map (μία πηγή). Τα `context.universalSelection` / `context.primarySelec
 `systems/selection/__tests__/useSelectedEntities.test.tsx` (6).
 **MOD (Stage A):** `systems/selection/{SelectionSystem.tsx, useSelectionActions.ts,
 useSelectionSystemState.ts, useSelectionReducer.ts, index.ts}`.
+**MOD (Stage B0–B3):** `systems/selection/{SelectedEntitiesStore.ts (sink), useSelectionActions.ts
+(drop applyMirror), useSelectionSystemState.ts (register sink)}`, `hooks/useKeyboardShortcuts.ts`,
+`layout/FloatingPanelsSection.tsx`, `app/ribbon-contextual-config.ts`.
+**NEW test (Stage B0):** `systems/selection/__tests__/selection-legacy-mirror.test.tsx` (4) +
+sink describe-block στο `SelectedEntitiesStore.test.ts`.
 
 ## Changelog
+- **2026-06-25** — Stage B0–B3 (Opus 4.8): store-owned legacy sink (orchestrators mutate imperatively
+  χωρίς staleness)· `useKeyboardShortcuts` event-time read (zero subscription)· `FloatingPanelsSection`
+  overlay-only sub· `useActiveContextualTrigger` O(N×M)→O(N+M) με entity index. +8 jest GREEN
+  (5 sink + 4 mirror round-trip· `selection-legacy-mirror.test.tsx` + sink block). 6D files staged με
+  αυτό το ADR. B4/B5 (CanvasSection + DxfViewerContent leaf-push, το perf-critical) PENDING —
+  χρειάζονται React-DevTools profiling στο browser. 🔴 browser-verify + commit (Giorgio).
 - **2026-06-25** — Stage A (Opus 4.8): foundation store + hooks + compat-hook rewrite + reducer slim
   (Map→store, `SYNC_UNIVERSAL_LEGACY`). 22 new jest + 45 selection-suite GREEN. Behavior-identical.
   🔴 browser-verify (baseline ~122ms profile· κλικ ίδιο) + commit (Giorgio). Stage B/C pending.

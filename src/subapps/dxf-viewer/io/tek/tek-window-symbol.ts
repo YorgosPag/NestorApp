@@ -21,6 +21,12 @@ export interface TekSeg {
 }
 
 const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
+const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
+
+/** Frame rail inset (κλάσμα πάχους) όταν λείπει `frame_thickness`. */
+const FRAME_RAIL_FALLBACK_FRAC = 1 / 8;
+/** Μισός διαχωρισμός των 2 γραμμών υαλοπίνακα (κλάσμα πάχους). */
+const GLASS_HALF_SEP_FRAC = 1 / 14;
 
 /** Σημείο στις τοπικές συντεταγμένες (t κατά μήκος u, f κατά πάχος v) → Tekton μέτρα. */
 function localPoint(m: TekXMatrix, t: number, f: number): TekPoint2D {
@@ -79,21 +85,32 @@ export function buildWallCutoutSegments(
 }
 
 /**
- * Σύμβολο παραθύρου = «τζάμι» (2 γραμμές υαλοπίνακα παράλληλες στον άξονα, στο κέντρο του πάχους)
- * + 2 caps → λεπτό ορθογώνιο φύλλου. Ο διαχωρισμός υαλοπίνακα = `frame_thickness` (fallback 1/6
- * πάχους). Τα jamb returns ζωγραφίζονται από το {@link buildWallCutoutSegments}.
+ * Σύμβολο παραθύρου (faithful, Φ5b.1++) = **πλαίσιο** (2 διαμήκεις ράγες inset κατά `frame_thickness`
+ * από κάθε παρειά + 2 caps) + **διπλός υαλοπίνακας** (2 κεντρικές γραμμές) + **κεντρικό μπινί**
+ * (κάθετο mullion στο μέσο, 2 φύλλα) — όπως το σύμβολο του Τέκτονα (target `221240`). Τα jamb returns
+ * (πλήρες πάχος στα άκρα) ζωγραφίζονται από το {@link buildWallCutoutSegments}.
  */
 export function buildWindowSymbolSegments(opening: TekOpeningRecord, wall: TekXMatrix): TekSeg[] {
   const [tmin, tmax] = openingAxisInterval(opening, wall);
   if (tmax - tmin < 1e-6) return [];
   const thickM = Math.hypot(wall.x10, wall.x11) || 1;
-  const halfSepM = opening.frameThicknessM > 0 ? opening.frameThicknessM : thickM / 6;
-  const df = Math.min(halfSepM / thickM, 0.45); // κλάσμα πάχους, με όριο
-  const f1 = 0.5 - df, f2 = 0.5 + df;
+  // Ράγες πλαισίου: inset από κάθε παρειά κατά frame_thickness (fallback 1/8 πάχους), όριο [0.04,0.3].
+  const railRaw = opening.frameThicknessM > 0 ? opening.frameThicknessM / thickM : FRAME_RAIL_FALLBACK_FRAC;
+  const railF = clamp(railRaw, 0.04, 0.3);
+  // Διπλός υαλοπίνακας: 2 γραμμές κεντραρισμένες, διαχωρισμός μέσα στο πλαίσιο.
+  const g = Math.min(GLASS_HALF_SEP_FRAC, railF * 0.7);
+  const gf1 = 0.5 - g, gf2 = 0.5 + g;
+  const tMid = (tmin + tmax) / 2;
   return [
-    seg(localPoint(wall, tmin, f1), localPoint(wall, tmax, f1)), // υαλοπίνακας 1
-    seg(localPoint(wall, tmin, f2), localPoint(wall, tmax, f2)), // υαλοπίνακας 2
-    seg(localPoint(wall, tmin, f1), localPoint(wall, tmin, f2)), // cap αρχής
-    seg(localPoint(wall, tmax, f1), localPoint(wall, tmax, f2)), // cap τέλους
+    // Πλαίσιο (frame box): 2 διαμήκεις ράγες + 2 caps στα άκρα.
+    seg(localPoint(wall, tmin, railF), localPoint(wall, tmax, railF)),
+    seg(localPoint(wall, tmin, 1 - railF), localPoint(wall, tmax, 1 - railF)),
+    seg(localPoint(wall, tmin, railF), localPoint(wall, tmin, 1 - railF)),
+    seg(localPoint(wall, tmax, railF), localPoint(wall, tmax, 1 - railF)),
+    // Υαλοπίνακας: 2 κεντρικές γραμμές.
+    seg(localPoint(wall, tmin, gf1), localPoint(wall, tmax, gf1)),
+    seg(localPoint(wall, tmin, gf2), localPoint(wall, tmax, gf2)),
+    // Κεντρικό μπινί (mullion): κάθετο στο μέσο, σε όλο το ύψος του πλαισίου.
+    seg(localPoint(wall, tMid, railF), localPoint(wall, tMid, 1 - railF)),
   ];
 }

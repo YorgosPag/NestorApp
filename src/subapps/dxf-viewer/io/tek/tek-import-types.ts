@@ -197,8 +197,13 @@ export interface TekDimSeg {
 export interface TekDimRecord {
   /** Οι ζωγραφισμένες πατιές της διάστασης (συνήθως 1). */
   readonly segs: readonly TekDimSeg[];
-  /** `<color>` RGB hex της διάστασης. */
+  /** `<color>` RGB hex της διάστασης (γραμμή + βελάκια). */
   readonly color: string;
+  /**
+   * `<dtext_color>` RGB hex του **κειμένου** τιμής (π.χ. `FFFF80` = κίτρινο). Ο Τέκτων χρωματίζει
+   * το κείμενο ΞΕΧΩΡΙΣΤΑ από τη γραμμή — κενό → fallback στο `color`. (ADR-531 Φ5b.1++ calibration.)
+   */
+  readonly dtextColor: string;
   /** `<size>` — ύψος κειμένου τιμής (μέτρα). Το seg xmatrix είναι identity για διαστάσεις. */
   readonly textSizeM: number;
   /** `<end_style>` — στυλ άκρου (βελάκι/πλάγια παύλα· 8 = πλάγια παύλα). */

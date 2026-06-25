@@ -49,17 +49,24 @@ describe('buildWallCutoutSegments (ADR-531)', () => {
   });
 });
 
-describe('buildWindowSymbolSegments (ADR-531)', () => {
-  it('παράγει υαλοπίνακα = 2 γραμμές + 2 caps = 4', () => {
-    expect(buildWindowSymbolSegments(OP1, WALL)).toHaveLength(4);
+describe('buildWindowSymbolSegments (ADR-531 Φ5b.1++)', () => {
+  it('παράγει πλαίσιο (4) + 2 υαλοπίνακες + 1 μπινί = 7', () => {
+    expect(buildWindowSymbolSegments(OP1, WALL)).toHaveLength(7);
   });
 
-  it('οι γραμμές υαλοπίνακα είναι κεντραρισμένες στο πάχος (γύρω από f=0.5)', () => {
+  it('το σύμβολο εκτείνεται κατά το πάχος γύρω από το κέντρο (f=0.5)', () => {
     const segs = buildWindowSymbolSegments(OP1, WALL);
-    // Οι 2 πρώτες είναι παράλληλες στον άξονα (ίδιο y range, διαφορετικό offset).
     const ys = segs.flatMap((s) => [s.a.y, s.b.y]);
     const mid = 0.58 + 0.25 * 0.5; // wall y + half thickness
     expect(Math.min(...ys)).toBeLessThan(mid);
     expect(Math.max(...ys)).toBeGreaterThan(mid);
+  });
+
+  it('το μπινί (τελευταίο seg) είναι κάθετο στον άξονα στο μέσο του ανοίγματος', () => {
+    const segs = buildWindowSymbolSegments(OP1, WALL);
+    const mullion = segs[segs.length - 1];
+    // Κάθετο στον οριζόντιο άξονα → ίδιο x, διαφορετικό y.
+    expect(Math.abs(mullion.b.x - mullion.a.x)).toBeCloseTo(0, 6);
+    expect(Math.abs(mullion.b.y - mullion.a.y)).toBeGreaterThan(0);
   });
 });

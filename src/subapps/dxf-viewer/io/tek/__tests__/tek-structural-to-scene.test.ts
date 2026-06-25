@@ -22,7 +22,7 @@ const WALL: TekWallRecord = {
 };
 
 const DIM: TekDimRecord = {
-  color: '00FF00', textSizeM: 0.15875, endStyle: 8, refPoints: [],
+  color: '00FF00', dtextColor: 'FFFF80', textSizeM: 0.15875, endStyle: 8, refPoints: [],
   segs: [{
     end0: { x: -2.21, y: 6.98 }, end1: { x: -0.11, y: 6.98 },
     gap0: { x: -1.32, y: 6.98 }, gap1: { x: -1.0, y: 6.98 },
@@ -30,19 +30,19 @@ const DIM: TekDimRecord = {
   }],
 };
 
-describe('tekWallToEntities (ADR-531 Φ5b.1+)', () => {
+describe('tekWallToEntities (ADR-531 Φ5b.1++)', () => {
   const entities = tekWallToEntities(WALL, 'mm');
 
-  it('παράγει τοίχο-με-κουφώματα (12) + 2 παράθυρα × 4 = 20 γραμμές', () => {
-    expect(entities).toHaveLength(20);
+  it('παράγει τοίχο-με-κουφώματα (12) + 2 παράθυρα × 7 = 26 γραμμές', () => {
+    expect(entities).toHaveLength(26);
     expect(entities.every((e) => e.type === 'line')).toBe(true);
   });
 
-  it('χωρίζει χρωματικά τοίχο (#80BCFC ×12) από παράθυρα (#50A490 ×8)', () => {
+  it('χωρίζει χρωματικά τοίχο (#80BCFC ×12) από παράθυρα (#50A490 ×14)', () => {
     const wallLines = entities.filter((e) => e.type === 'line' && e.color === '#80BCFC');
     const winLines = entities.filter((e) => e.type === 'line' && e.color === '#50A490');
     expect(wallLines).toHaveLength(12);
-    expect(winLines).toHaveLength(8);
+    expect(winLines).toHaveLength(14);
   });
 
   it('οι παρειές φτάνουν τα άκρα του τοίχου (~5.03m span)', () => {
@@ -51,15 +51,17 @@ describe('tekWallToEntities (ADR-531 Φ5b.1+)', () => {
   });
 });
 
-describe('tekDimToEntities (ADR-531 Φ5b.1+)', () => {
+describe('tekDimToEntities (ADR-531 Φ5b.1++)', () => {
   const entities = tekDimToEntities(DIM, 'mm');
 
-  it('γραμμή (πράσινο ×2) + πλάγιες παύλες (μπορντώ ×2) + κείμενο', () => {
-    expect(entities.filter((e) => e.type === 'line' && e.color === '#00FF00')).toHaveLength(2);
-    expect(entities.filter((e) => e.type === 'line' && e.color === '#800000')).toHaveLength(2);
+  it('γραμμή+βελάκια στο χρώμα διάστασης (#00FF00 ×8) + κείμενο σε κίτρινο dtext_color', () => {
+    // 2 τμήματα γραμμής + 6 end markers (4 πτερύγια βέλους + 2 extension) = 8 πράσινες γραμμές.
+    expect(entities.filter((e) => e.type === 'line' && e.color === '#00FF00')).toHaveLength(8);
     const texts = entities.filter((e) => e.type === 'text');
     expect(texts).toHaveLength(1);
     expect(texts[0].type === 'text' && texts[0].text).toBe('2.10');
+    // Το κείμενο παίρνει το <dtext_color> (FFFF80 = κίτρινο), ΟΧΙ το πράσινο της γραμμής.
+    expect(texts[0].type === 'text' && texts[0].color).toBe('#FFFF80');
   });
 
   it('το κείμενο έχει ύψος από το <size> (0.15875m → ~159mm)', () => {

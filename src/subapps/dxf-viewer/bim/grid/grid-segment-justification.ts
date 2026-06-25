@@ -29,6 +29,7 @@ import {
 } from '../types/foundation-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { canonicalAxisNormal } from './axis-normal';
+import { justifyAxisPoints } from './axis-justify';
 
 /** Κάτω από αυτό το |extend| (mm) → καμία μετατόπιση (coordinate ΠΑΝΩ στον άξονα). */
 const EXTEND_EPS_MM = 0.01;
@@ -78,15 +79,17 @@ export function justifyGridSegment(
   if (sign === 0 || !n) {
     return { start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y }, bindings };
   }
+  // SSoT point-shift delegate (ADR-441/529) — η canonical-normal × sign × hw μετατόπιση των
+  // start/end ζει πλέον ΜΟΝΟ στο `axis-justify.ts`. Εδώ μένει ΜΟΝΟ το binding-extend (binding-specific).
+  const moved = justifyAxisPoints(start, end, widthMm, justification, sceneUnits);
   const s = mmToSceneUnits(sceneUnits);
-  const hw = (widthMm * s) / 2; // scene units
-  const jScene = sign * hw; // signed offset κατά μήκος του canonical normal (scene units)
+  const jScene = sign * ((widthMm * s) / 2); // signed offset κατά μήκος του canonical normal (scene units)
   // Per-axis offset σε mm (extend μονάδα): scene offset / scale.
   const extendXmm = (n.nx * jScene) / s;
   const extendYmm = (n.ny * jScene) / s;
   return {
-    start: { x: start.x + n.nx * jScene, y: start.y + n.ny * jScene },
-    end: { x: end.x + n.nx * jScene, y: end.y + n.ny * jScene },
+    start: moved.start,
+    end: moved.end,
     bindings: bindings.map((b) =>
       slotIsX(b.slot) ? addExtend(b, extendXmm) : slotIsY(b.slot) ? addExtend(b, extendYmm) : b,
     ),

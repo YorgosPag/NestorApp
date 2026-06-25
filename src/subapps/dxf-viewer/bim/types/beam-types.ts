@@ -42,6 +42,7 @@ import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { BeamReinforcement } from '../structural/reinforcement/beam-reinforcement-types';
 import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
+import type { StripJustification } from './foundation-types';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -227,6 +228,20 @@ export interface BeamParams {
    * Default = AUTO. Lock μόνο σε χειροκίνητη αλλαγή width.
    */
   readonly autoSizedWidth?: boolean;
+  /**
+   * ADR-529 — **Revit Location Line / y-Justification.** Ορίζει ΠΟΥ κάθεται η διατομή ως προς τον
+   * αποθηκευμένο άξονα (`startPoint`/`endPoint` = location line, σταθερή αναφορά):
+   *   - `'center'` / absent → ο άξονας = centerline (συμμετρικό ±width/2· **back-compat**, byte-for-byte).
+   *   - `'left'`  → σώμα προς +canonical-normal (μία παρειά πάνω στη location line).
+   *   - `'right'` → σώμα προς −canonical-normal.
+   * **Associative by construction:** όταν αλλάζει το `width` (π.χ. ο στατικός οργανισμός ξανα-
+   * διαστασιολογεί), η location line ΜΕΝΕΙ → η flush παρειά δεν μετατοπίζεται (κανένας listener).
+   * Κοινό SSoT με πεδιλοδοκούς/τοίχους (`StripJustification`, `JUSTIFICATION_NORMAL_SIGN`,
+   * `bim/grid/axis-justify.ts`). Το `computeBeamGeometry` παράγει το **body axis** (justified
+   * centerline) στο `geometry.axisPolyline` — όλοι οι downstream consumers (3D/cutback/rebar/snap)
+   * το βλέπουν αμετάβλητο. Default 'center'.
+   */
+  readonly justification?: StripJustification;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

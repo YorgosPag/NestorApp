@@ -17,7 +17,7 @@ import { useMemo } from 'react';
 import type { SelectionActions, UniversalSelectionActions } from './config';
 import type { SelectionAction, SelectionContextState } from './useSelectionReducer';
 import type { SelectableEntityType, SelectionPayload } from './types';
-import { SelectedEntitiesStore, type LegacyMirror } from './SelectedEntitiesStore';
+import { SelectedEntitiesStore } from './SelectedEntitiesStore';
 
 export interface SelectionActionsHook {
   selectionActions: SelectionActions;
@@ -78,47 +78,48 @@ export function useSelectionActions(
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection Actions
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // ADR-532: universal actions are now thin bridges over SelectedEntitiesStore
-  // (the SSoT). Each mutator writes the store, then `applyMirror` dispatches ONE
-  // legacy-sync action so `selectedRegionIds` + region-edit flags follow exactly
-  // as the old UNIVERSAL_* reducer cases did. Query methods read the store live.
-  // Deps are [dispatch] only → this object is now ref-stable across selection
-  // changes (no more re-memo on every dispatch).
+  // ADR-532 Stage B: universal actions are thin bridges over SelectedEntitiesStore
+  // (the SSoT). The store now OWNS the legacy mirror — every mutator notifies the
+  // provider-registered legacy sink (see `useSelectionSystemState` /
+  // `SelectedEntitiesStore.registerLegacySink`), which dispatches the one
+  // `SYNC_UNIVERSAL_LEGACY` action keeping `selectedRegionIds` + region-edit flags
+  // in sync. So these wrappers just call the store (no applyMirror) — and an
+  // orchestrator calling `SelectedEntitiesStore.X()` directly gets the identical
+  // mirror. Query methods read the store live. Deps `[dispatch]` only → ref-stable.
   const universalActions = useMemo((): UniversalSelectionActions => {
-    const applyMirror = (m: LegacyMirror): void => {
-      if (!m.regionIdsChanged && !m.resetEditing) return;
-      dispatch({
-        type: 'SYNC_UNIVERSAL_LEGACY',
-        regionIds: m.regionIdsChanged ? m.regionIds : undefined,
-        resetEditing: m.resetEditing,
-      });
-    };
-
     return {
-      // Primary Selection API → store + legacy mirror
-      selectEntity: (payload: SelectionPayload) =>
-        applyMirror(SelectedEntitiesStore.selectEntity(payload)),
+      // Primary Selection API → store (mirror applied by the store-owned sink)
+      selectEntity: (payload: SelectionPayload) => {
+        SelectedEntitiesStore.selectEntity(payload);
+      },
 
-      selectEntities: (payloads: SelectionPayload[]) =>
-        applyMirror(SelectedEntitiesStore.selectEntities(payloads)),
+      selectEntities: (payloads: SelectionPayload[]) => {
+        SelectedEntitiesStore.selectEntities(payloads);
+      },
 
-      addEntity: (payload: SelectionPayload) =>
-        applyMirror(SelectedEntitiesStore.addEntity(payload)),
+      addEntity: (payload: SelectionPayload) => {
+        SelectedEntitiesStore.addEntity(payload);
+      },
 
-      addEntities: (payloads: SelectionPayload[]) =>
-        applyMirror(SelectedEntitiesStore.addEntities(payloads)),
+      addEntities: (payloads: SelectionPayload[]) => {
+        SelectedEntitiesStore.addEntities(payloads);
+      },
 
-      deselectEntity: (id: string) =>
-        applyMirror(SelectedEntitiesStore.deselectEntity(id)),
+      deselectEntity: (id: string) => {
+        SelectedEntitiesStore.deselectEntity(id);
+      },
 
-      toggleEntity: (payload: SelectionPayload) =>
-        applyMirror(SelectedEntitiesStore.toggleEntity(payload)),
+      toggleEntity: (payload: SelectionPayload) => {
+        SelectedEntitiesStore.toggleEntity(payload);
+      },
 
-      clearAllSelections: () =>
-        applyMirror(SelectedEntitiesStore.clearAll()),
+      clearAllSelections: () => {
+        SelectedEntitiesStore.clearAll();
+      },
 
-      clearByType: (entityType: SelectableEntityType) =>
-        applyMirror(SelectedEntitiesStore.clearByType(entityType)),
+      clearByType: (entityType: SelectableEntityType) => {
+        SelectedEntitiesStore.clearByType(entityType);
+      },
 
       // Query Methods → store (live)
       isEntitySelected: (id: string) => SelectedEntitiesStore.isSelected(id),

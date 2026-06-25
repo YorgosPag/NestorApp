@@ -55,6 +55,7 @@ export function extractDimRecords(root: Element): { dims: TekDimRecord[]; warnin
     dims.push({
       segs,
       color: childText(record, 'color') ?? '',
+      dtextColor: childText(record, 'dtext_color') ?? '',
       textSizeM: childNumber(record, 'size', 0),
       endStyle: Math.round(childNumber(record, 'end_style', 0)),
       refPoints,

@@ -28,6 +28,7 @@ import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
 import { iShapeCrossSectionAreaMm2 } from './shared/i-shape-profile';
+import { justifyAxisPoints } from '../grid/axis-justify';
 
 const MM_TO_M = 1 / 1000;
 const MM2_TO_M2 = 1e-6;
@@ -109,17 +110,30 @@ export function getBeamSpanDepthRatio(params: BeamParams): number {
  * Pick the axis vertices based on beam kind:
  *   - `curved` + `curveControl` → 17-vertex quadratic Bezier subdivision
  *   - else (straight / cantilever) → [startPoint, endPoint]
+ *
+ * ADR-529 — Revit Location Line: `startPoint`/`endPoint` είναι η **location line** (αναφορά)·
+ * εδώ μετατοπίζονται κάθετα κατά `justification` ώστε να προκύψει ο **body axis** (justified
+ * centerline) γύρω από τον οποίο χτίζεται η διατομή. ΟΛΟ το downstream (outline/length/bbox/3D)
+ * διαβάζει αυτόν τον body axis. `center`/absent → identity (μηδέν μετατόπιση → byte-for-byte
+ * back-compat με υπάρχοντα beams). Η μετατόπιση είναι ομοιόμορφη παράλληλη → εφαρμόζεται ΚΑΙ στο
+ * `curveControl` (ίδιο διάνυσμα) ώστε η καμπύλη να μετακινείται ακέραια.
  */
 function pickAxisVertices(params: BeamParams): readonly Point3D[] {
+  const { startPoint, endPoint } = params;
+  const body = justifyAxisPoints(startPoint, endPoint, params.width, params.justification, params.sceneUnits);
+  const offX = body.start.x - startPoint.x; // ομοιόμορφο perpendicular offset (0 αν center/degenerate)
+  const offY = body.start.y - startPoint.y;
+  const startB: Point3D = { x: body.start.x, y: body.start.y, z: startPoint.z ?? 0 };
+  const endB: Point3D = { x: body.end.x, y: body.end.y, z: endPoint.z ?? 0 };
   if (params.kind === 'curved' && params.curveControl) {
-    return subdivideQuadraticBezier(
-      params.startPoint,
-      params.curveControl,
-      params.endPoint,
-      CURVED_BEAM_SUBDIVISIONS,
-    );
+    const ctrlB: Point3D = {
+      x: params.curveControl.x + offX,
+      y: params.curveControl.y + offY,
+      z: params.curveControl.z ?? 0,
+    };
+    return subdivideQuadraticBezier(startB, ctrlB, endB, CURVED_BEAM_SUBDIVISIONS);
   }
-  return [params.startPoint, params.endPoint];
+  return [startB, endB];
 }
 
 /**

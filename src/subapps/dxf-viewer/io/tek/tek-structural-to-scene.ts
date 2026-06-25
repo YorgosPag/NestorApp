@@ -22,8 +22,12 @@ import {
 } from './tek-window-symbol';
 import { buildDimensionSymbol } from './tek-dimension-symbol';
 
-/** «Μπορντώ» χρώμα για τις πλάγιες παύλες άκρων της διάστασης (calibratable). */
-const DIM_TICK_COLOR = '#800000';
+/**
+ * Override χρώματος για τα end-markers (βελάκια+extension) της διάστασης. `null` → χρησιμοποιείται
+ * το χρώμα της γραμμής (`<color>`, faithful στο data — μία πηγή). Calibratable σε browser-verify
+ * (το target `221306` δείχνει κοκκινωπά άκρα· αλλάζει με ένα string εδώ αν το θέλει ο Giorgio).
+ */
+const DIM_ARROW_COLOR_OVERRIDE: string | null = null;
 
 /** Tekton `<color>` (RGB, χωρίς `#`) → `#RRGGBB` (reuse export SSoT `colorHex6`). */
 function tekColorToHex(raw: string): string {
@@ -62,17 +66,23 @@ export function tekWallToEntities(rec: TekWallRecord, units: SceneUnits): Entity
 
 // ─── Dimension ──────────────────────────────────────────────────────────────────
 
-/** `<dim>` → γραμμή+βοηθητικές (χρώμα διάστασης) + πλάγιες παύλες (μπορντώ) + κείμενο τιμής. */
+/**
+ * `<dim>` → γραμμή+witness (χρώμα `<color>`) + βελάκια/extension άκρων + **κείμενο τιμής σε κίτρινο
+ * `<dtext_color>`** (ο Τέκτων χρωματίζει το κείμενο ξεχωριστά). Calibration Φ5b.1++.
+ */
 export function tekDimToEntities(rec: TekDimRecord, units: SceneUnits): Entity[] {
-  const color = tekColorToHex(rec.color);
+  const lineColor = tekColorToHex(rec.color);
+  const arrowColor = DIM_ARROW_COLOR_OVERRIDE ?? lineColor;
+  // Κείμενο: ξεχωριστό `<dtext_color>` (π.χ. FFFF80 κίτρινο)· fallback στο χρώμα γραμμής αν λείπει.
+  const textColor = rec.dtextColor ? tekColorToHex(rec.dtextColor) : lineColor;
   const geom = buildDimensionSymbol(rec);
   const out: Entity[] = [];
-  for (const s of geom.lines) out.push(segToLine(s, color, units));
-  for (const s of geom.ticks) out.push(segToLine(s, DIM_TICK_COLOR, units));
+  for (const s of geom.lines) out.push(segToLine(s, lineColor, units));
+  for (const s of geom.ticks) out.push(segToLine(s, arrowColor, units));
   for (const t of geom.texts) {
     const height = metersToScene(t.heightM, units);
     const text: TextEntity = {
-      id: generateEntityId(), type: 'text', layerId: '', color,
+      id: generateEntityId(), type: 'text', layerId: '', color: textColor,
       position: toScene(t.pos, units), text: t.text,
       height, fontSize: height, alignment: 'center', rotation: 0,
     };

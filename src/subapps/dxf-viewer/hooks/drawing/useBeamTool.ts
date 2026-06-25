@@ -238,11 +238,12 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
           return true;
         }
         // ADR-398 §Smart beam ghost — face-snap το start (αν κοντά σε κολόνα).
-        const { start: startPoint, anchored, spanEnd } = resolveStartAnchor(point);
+        const { start: startPoint, anchored, spanEnd, spanJustification } = resolveStartAnchor(point);
         // ADR-528 — auto-span per-bay: ο cursor στη νοητή ευθεία δύο διαδοχικών μελών → ΕΝΑ κλικ γεφυρώνει
         // ολόκληρο το δοκάρι του φατνώματος (start→end flush στις παρειές), παρακάμπτοντας το 2-click.
+        // ADR-529 — περνάμε το Location-Line justification ώστε το commit να το αποθηκεύσει (associative flush).
         if (spanEnd) {
-          return commitSpanFromState(s, startPoint, spanEnd);
+          return commitSpanFromState(s, startPoint, spanEnd, spanJustification);
         }
         // Sync before setState: next mousemove reads correct startPoint immediately,
         // no useEffect-delay window where stale null would produce a cursor-dot flash.

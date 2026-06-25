@@ -30,8 +30,9 @@ import { TestResultsModal } from '../debug/TestResultsModal';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
 import { isFeatureEnabled } from '../config/experimental-features';
 import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
-// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
-import { useUniversalSelection } from '../systems/selection';
+// ADR-532 Stage B: overlay-only leaf subscription (re-renders on overlay-selection
+// change, NOT on dxf-entity clicks) + imperative store for mutations.
+import { useSelectionByType, SelectedEntitiesStore } from '../systems/selection';
 // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command to CanvasSection - ADR-032
 import { useEventBus } from '../systems/events';
 // 🏢 ENTERPRISE (2027-01-27): ADR-050 - Hide floating toolbar when unified toolbar is enabled
@@ -127,11 +128,12 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ENTERPRISE: Local state for panel visibility
   const [showOverlayToolbar, setShowOverlayToolbar] = useState(true);
 
-  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
-  const universalSelection = useUniversalSelection();
+  // ADR-532 Stage B: overlay-only subscription (this panel only cares about the
+  // overlay selection — dxf-entity clicks must not re-render it).
+  const overlayIds = useSelectionByType('overlay');
 
   // 🏢 Type-safe overlay selection — only overlay IDs, not dxf-entities
-  const selectedOverlayId = universalSelection.getIdsByType('overlay')[0] ?? null;
+  const selectedOverlayId = overlayIds[0] ?? null;
   const selectedOverlay = selectedOverlayId ? overlayStore.overlays[selectedOverlayId] ?? null : null;
 
   // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command - ADR-032
@@ -140,10 +142,12 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
   useEffect(() => {
     const cleanup = eventBus.on('overlay:polygon-saved', ({ overlayId }) => {
-      universalSelection.handleOverlaySelect(overlayId);
+      // handleOverlaySelect(id) parity: select the single overlay (mirror applied
+      // by the store-owned legacy sink — ADR-532 Stage B).
+      SelectedEntitiesStore.selectEntity({ id: overlayId, type: 'overlay' });
     });
     return cleanup;
-  }, [eventBus, universalSelection]);
+  }, [eventBus]);
 
   // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
   // Emits event to CanvasSection which has access to selectedGrips state
@@ -233,7 +237,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           selectedOverlayId={selectedOverlayId}
           onDuplicate={() => {}}
           onDelete={handleDelete}
-          canDelete={universalSelection.getByType('overlay').length > 0 || universalSelection.getByType('dxf-entity').length > 0}
+          canDelete={SelectedEntitiesStore.countByType('overlay') > 0 || SelectedEntitiesStore.countByType('dxf-entity') > 0}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={() => handleAction('undo')}
@@ -252,7 +256,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
             overlayStore.update(overlayId, updates)
           }
           onClose={() => {
-            universalSelection.clearByType('overlay');
+            SelectedEntitiesStore.clearByType('overlay');
           }}
         />
       )}

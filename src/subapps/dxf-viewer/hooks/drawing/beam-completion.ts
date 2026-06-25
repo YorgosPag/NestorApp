@@ -58,6 +58,12 @@ export interface BeamParamOverrides {
   /** mm. Drop-from-ceiling offset (default 0). ADR-369 §854. */
   readonly zOffset?: number;
   readonly material?: string;
+  /**
+   * ADR-529 — **Revit Location-Line justification** ('center'|'left'|'right'). Όταν δοθεί (≠center),
+   * το `startPoint`/`endPoint` αποθηκεύεται ως location line (όχι centerline) + αυτό το πεδίο → το
+   * `computeBeamGeometry` παράγει το body axis με offset → associative με το πλάτος (flush δεν σπάει).
+   */
+  readonly justification?: StripJustification;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -111,6 +117,8 @@ export function buildDefaultBeamParams(
     // ελέγχεται view-level από το master toggle «Σοβατισμένη όψη» (showFinishSkin).
     finish: createDefaultStructuralFinishSpec(),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
+    // ADR-529 — Location-Line justification (omit 'center' → byte-for-byte back-compat + stripUndefinedDeep).
+    ...(overrides.justification && overrides.justification !== 'center' ? { justification: overrides.justification } : {}),
   };
   return params;
 }
@@ -168,12 +176,15 @@ export function buildAnchoredBeamParams(
   sceneUnits: SceneUnits = 'mm',
   columnFootprints: readonly (readonly Point2D[])[] = [],
 ): BeamParams {
-  const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
   const justification = resolveBeamColumnFlushJustification(
     startPoint, endPoint, columnFootprints, DEFAULT_BEAM_PLACEMENT_JUSTIFICATION,
   );
-  const anchored = anchorBeamPlacementAxis(startPoint, endPoint, widthMm, sceneUnits, justification);
-  return buildDefaultBeamParams(anchored.start, anchored.end, kindArg, overrides, sceneUnits);
+  // ADR-529 — **ΟΧΙ πλέον baking** του offset στα start/end (`anchorBeamPlacementAxis`). Αποθηκεύουμε τη
+  // **raw location line** (γραμμή κλικ = παρειά) + το `justification` ως πεδίο → το `computeBeamGeometry`
+  // παράγει το body axis με offset. Έτσι το freehand flush γίνεται **associative με το πλάτος** (όταν ο
+  // οργανισμός ξανα-διαστασιολογεί το width η flush παρειά μένει — ίδιο fix με το auto-span). Το ghost
+  // περνά από το ΙΔΙΟ pipeline (`buildBeamEntity`→`computeBeamGeometry`) → preview ≡ commit.
+  return buildDefaultBeamParams(startPoint, endPoint, kindArg, { ...overrides, justification }, sceneUnits);
 }
 
 // ─── Entity builder ──────────────────────────────────────────────────────────

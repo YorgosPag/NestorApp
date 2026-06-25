@@ -14,14 +14,14 @@ const dim = (refPoints: TekDimRecord['refPoints']): TekDimRecord => ({
     gap0: { x: -1.32, y: 6.98 }, gap1: { x: -1.0, y: 6.98 },
     text: '2.10', textMatrix: mat(-1.32, 6.39),
   }],
-  color: '00FF00', textSizeM: 0.15875, endStyle: 8, refPoints,
+  color: '00FF00', dtextColor: 'FFFF80', textSizeM: 0.15875, endStyle: 8, refPoints,
 });
 
-describe('buildDimensionSymbol (ADR-531)', () => {
-  it('γραμμή με κενό → 2 τμήματα + 2 πλάγιες παύλες + 1 κείμενο', () => {
+describe('buildDimensionSymbol (ADR-531 Φ5b.1++)', () => {
+  it('γραμμή με κενό → 2 τμήματα + 6 end markers (2×2 βελάκια + 2 extension) + 1 κείμενο', () => {
     const g = buildDimensionSymbol(dim([]));
     expect(g.lines).toHaveLength(2);
-    expect(g.ticks).toHaveLength(2);
+    expect(g.ticks).toHaveLength(6); // arrowHead(end0)=2 + arrowHead(end1)=2 + 2 perpTick
     expect(g.texts).toHaveLength(1);
     expect(g.texts[0].text).toBe('2.10');
     expect(g.texts[0].heightM).toBeCloseTo(0.15875, 5);
@@ -37,9 +37,16 @@ describe('buildDimensionSymbol (ADR-531)', () => {
     expect(g.lines).toHaveLength(4);
   });
 
-  it('οι πλάγιες παύλες έχουν μη-μηδενικό μήκος (~textSize)', () => {
-    const t = buildDimensionSymbol(dim([])).ticks[0];
+  it('τα βελάκια έχουν μήκος ~ARROW_LEN_FACTOR×textSize (μη-μηδενικό)', () => {
+    const t = buildDimensionSymbol(dim([])).ticks[0]; // πρώτο πτερύγιο βέλους στο end0
     const len = Math.hypot(t.b.x - t.a.x, t.b.y - t.a.y);
-    expect(len).toBeCloseTo(0.15875, 3);
+    expect(len).toBeCloseTo(0.15875 * 1.4, 3);
+  });
+
+  it('οι extension παύλες είναι κάθετες στη γραμμή (κατακόρυφες για οριζόντια διάσταση)', () => {
+    const ticks = buildDimensionSymbol(dim([])).ticks;
+    const ext = ticks[4]; // 5ο = perpTick(end0)
+    expect(Math.abs(ext.b.x - ext.a.x)).toBeCloseTo(0, 6); // καμία οριζόντια συνιστώσα
+    expect(Math.abs(ext.b.y - ext.a.y)).toBeGreaterThan(0);
   });
 });

@@ -141,6 +141,54 @@ describe('SelectedEntitiesStore — replaceEntitySelection (atomic + skip-if-unc
   });
 });
 
+describe('SelectedEntitiesStore — legacy sink (ADR-532 Stage B single write path)', () => {
+  it('fires the registered sink with the mirror on a direct mutator call', () => {
+    const seen: Array<{ regionIdsChanged: boolean; regionIds: string[]; resetEditing: boolean }> = [];
+    SelectedEntitiesStore.registerLegacySink((m) => seen.push({ ...m, regionIds: [...m.regionIds] }));
+
+    // Direct store mutation (no action wrapper) must still notify the sink so an
+    // orchestrator calling the store imperatively keeps selectedRegionIds in sync.
+    SelectedEntitiesStore.selectEntity({ id: 'ov', type: 'overlay' });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual({ regionIdsChanged: true, regionIds: ['ov'], resetEditing: true });
+    SelectedEntitiesStore.registerLegacySink(null);
+  });
+
+  it('fires NO_MIRROR descriptors too (the sink itself decides to skip dispatch)', () => {
+    const seen: boolean[] = [];
+    SelectedEntitiesStore.registerLegacySink((m) => seen.push(m.regionIdsChanged || m.resetEditing));
+
+    // dxf-entity add → NO_MIRROR (false/false); replaceEntitySelection same set → NO_MIRROR.
+    SelectedEntitiesStore.replaceEntitySelection(['a']);
+    SelectedEntitiesStore.replaceEntitySelection(['a']); // skip-if-unchanged
+    SelectedEntitiesStore.addEntity({ id: 'b', type: 'dxf-entity' });
+
+    // All three call the sink; all carry "no legacy change" (guard in the provider
+    // sink suppresses the dispatch — verified there, not here).
+    expect(seen).toEqual([false, false, false]);
+    SelectedEntitiesStore.registerLegacySink(null);
+  });
+
+  it('toggleEntity fires the sink exactly once (delegates, no double-dispatch)', () => {
+    let calls = 0;
+    SelectedEntitiesStore.registerLegacySink(() => { calls += 1; });
+    SelectedEntitiesStore.toggleEntity({ id: 'ov', type: 'overlay' }); // → addEntity
+    expect(calls).toBe(1);
+    SelectedEntitiesStore.toggleEntity({ id: 'ov', type: 'overlay' }); // → deselectEntity
+    expect(calls).toBe(2);
+    SelectedEntitiesStore.registerLegacySink(null);
+  });
+
+  it('_resetForTests drops the registered sink', () => {
+    let calls = 0;
+    SelectedEntitiesStore.registerLegacySink(() => { calls += 1; });
+    SelectedEntitiesStore._resetForTests();
+    SelectedEntitiesStore.selectEntity({ id: 'a', type: 'dxf-entity' });
+    expect(calls).toBe(0);
+  });
+});
+
 describe('SelectedEntitiesStore — subscription', () => {
   it('notifies subscribers and bumps version on mutation', () => {
     let calls = 0;

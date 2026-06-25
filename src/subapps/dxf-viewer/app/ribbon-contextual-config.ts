@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SceneModel } from '../types/scene';
+import type { Entity } from '../types/entities';
 import { isColumnRegionTool, isWallDrawingTool } from '../systems/tools/region-tool-ids';
 import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
 import {
@@ -168,6 +169,14 @@ export function useActiveContextualTrigger({
   // ADR-484 — cross-level footings (foundation-level store, low-freq → ADR-040-safe)
   // ώστε ένα cross-level πέδιλο να εμφανίζει το «Ιδιότητες Θεμελίωσης» contextual tab.
   const crossLevelEntities = useFoundationLevelStore((s) => s.entities);
+  // ADR-532 Stage B: O(1) id→entity lookup built once per scene. Replaces the
+  // previous O(selectedIds × scene.entities) `.find()` scans in the mixed-selection
+  // branches below (electrical panel+fixture, pipe source+segment, multi-BIM).
+  const entityIndex = React.useMemo(() => {
+    const index = new Map<string, Entity>();
+    for (const e of currentScene?.entities ?? []) index.set(e.id, e);
+    return index;
+  }, [currentScene]);
   return React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
     // Wire-selected circuit (no competing entity selection) → «Κύκλωμα» tab.
@@ -181,7 +190,7 @@ export function useActiveContextualTrigger({
       let hasPanel = false;
       let hasFixture = false;
       for (const id of selectedEntityIds) {
-        const e = currentScene.entities.find((x) => x.id === id);
+        const e = entityIndex.get(id);
         if (e?.type === 'electrical-panel') hasPanel = true;
         else if (e?.type === 'mep-fixture') hasFixture = true;
         if (hasPanel && hasFixture) break;
@@ -197,7 +206,7 @@ export function useActiveContextualTrigger({
       let hasNetworkSource = false;
       let hasPipe = false;
       for (const id of selectedEntityIds) {
-        const e = currentScene.entities.find((x) => x.id === id);
+        const e = entityIndex.get(id);
         if (e && isPipeNetworkSourceEntity(e)) hasNetworkSource = true;
         else if (e && isMepSegmentEntity(e) && e.params.domain === 'pipe') hasPipe = true;
         if (hasNetworkSource && hasPipe) break;
@@ -221,7 +230,7 @@ export function useActiveContextualTrigger({
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
       let bimCount = 0;
       for (const id of selectedEntityIds) {
-        const e = currentScene.entities.find((x) => x.id === id);
+        const e = entityIndex.get(id);
         if (e && BIM_KIND_TYPES.has(e.type)) {
           bimCount++;
           if (bimCount >= 2) break;
@@ -330,7 +339,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, entityIndex, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

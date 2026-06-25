@@ -24,6 +24,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { DEFAULT_BEAM_WIDTH_MM } from '../../bim/types/beam-types';
 import type { BeamParams } from '../../bim/types/beam-types';
+import type { StripJustification } from '../../bim/types/foundation-types';
+import { unjustifyAxisPoints } from '../../bim/grid/axis-justify';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildMemberMagnetOptions } from '../../bim/placement/member-magnet-opts';
 import { isBeamCollinearOverlap } from '../../bim/beams/beam-beam-face-snap';
@@ -57,8 +59,8 @@ export interface UseBeamCommitResult {
   commitCurvedFromState(s: BeamToolState, controlPoint: Readonly<Point2D>): boolean;
   commitForWall(s: BeamToolState, wall: WallEntity): boolean;
   commitFromWall(s: BeamToolState, point: Readonly<Point2D>): boolean;
-  resolveStartAnchor(point: Readonly<Point2D>): { start: Point2D; anchored: boolean; spanEnd?: Point2D };
-  commitSpanFromState(s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>): boolean;
+  resolveStartAnchor(point: Readonly<Point2D>): { start: Point2D; anchored: boolean; spanEnd?: Point2D; spanJustification?: StripJustification };
+  commitSpanFromState(s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>, justification?: StripJustification): boolean;
   commitSpanChain(s: BeamToolState, point: Readonly<Point2D>): boolean;
 }
 
@@ -186,8 +188,10 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
       const snap = resolveBimCursorSnap({ toolKind: 'beam', cursor: point, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['wall', 'beam', 'slab', 'line'], magnetOpts, beamSpanGhost: stateRef.current.kind !== 'curved' });
       if (snap.kind === 'member-placement') {
         // ADR-528 — πλήρες auto-span (γέφυρα δύο μελών): single-click → commit ΚΑΙ τα δύο άκρα flush.
+        // ADR-529 — μεταφέρουμε ΚΑΙ το Location-Line justification ώστε ο commit να αποθηκεύσει location
+        // line + justification (associative north-flush — δεν σπάει στον auto-sizer).
         if (snap.placement.span) {
-          return { start: snap.placement.start, anchored: true, spanEnd: snap.placement.end };
+          return { start: snap.placement.start, anchored: true, spanEnd: snap.placement.end, spanJustification: snap.placement.justification };
         }
         return { start: snap.placement.start, anchored: true };
       }
@@ -201,8 +205,16 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
   // στις παρειές, ΟΧΙ location-line auto-flush). Επιστρέφει το αποτέλεσμα ώστε ο caller να χειριστεί
   // error/state. Μοιράζεται από per-bay (`commitSpanFromState`) ΚΑΙ whole-line (`commitSpanChain`).
   const appendCenterlineBeam = useCallback(
-    (s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>, sceneUnits: SceneUnits) => {
-      const params = buildDefaultBeamParams(start, end, s.kind, s.overrides, sceneUnits);
+    (s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>, sceneUnits: SceneUnits, justification?: StripJustification) => {
+      // ADR-529 — auto-span: το start/end που έρχεται είναι ο **body axis** (north-flush για το τρέχον
+      // πλάτος). Αποθηκεύουμε τη **location line** (`unjustifyAxisPoints`) + το `justification` ώστε όταν ο
+      // στατικός οργανισμός ξανα-διαστασιολογήσει το `width`, η location line (= flush παρειά) να ΜΕΝΕΙ —
+      // associative, χωρίς listener. `center`/undefined → identity (centerline ως τώρα, byte-for-byte).
+      const justified = justification && justification !== 'center';
+      const widthMm = s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+      const loc = justified ? unjustifyAxisPoints(start, end, widthMm, justification, sceneUnits) : { start, end };
+      const overrides = justified ? { ...s.overrides, justification } : s.overrides;
+      const params = buildDefaultBeamParams(loc.start, loc.end, s.kind, overrides, sceneUnits);
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (result.ok) onBeamCreated?.(result.entity);
       return result;
@@ -213,8 +225,8 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
   // Όταν ο cursor αναγνωρίσει το ζεύγος μελών (νοητή ευθεία), το ΠΡΩΤΟ κλικ commit-άρει ολόκληρο το δοκάρι
   // του φατνώματος. Το weld το αναλαμβάνει ο `useStructuralAutoAttach` στο entity-created. Mirror ADR-525.
   const commitSpanFromState = useCallback(
-    (s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>): boolean => {
-      const result = appendCenterlineBeam(s, start, end, getSceneUnits?.() ?? 'mm');
+    (s: BeamToolState, start: Readonly<Point2D>, end: Readonly<Point2D>, justification?: StripJustification): boolean => {
+      const result = appendCenterlineBeam(s, start, end, getSceneUnits?.() ?? 'mm', justification);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -234,7 +246,8 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
     (s: BeamToolState, point: Readonly<Point2D>): boolean => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const bays = resolveBeamSpanChain(point, collectSpanSupportOutlines(sceneSnapTargetsStore.get()), sceneUnits);
-      const any = bays.reduce((acc, bay) => appendCenterlineBeam(s, bay.start, bay.end, sceneUnits).ok || acc, false);
+      // Whole-line → πάντα 'center' (bay.justification): η συνεχής δοκός ακολουθεί τη νοητή ευθεία.
+      const any = bays.reduce((acc, bay) => appendCenterlineBeam(s, bay.start, bay.end, sceneUnits, bay.justification).ok || acc, false);
       if (!any) return false;
       resetToAwaitingStart(s);
       return true;

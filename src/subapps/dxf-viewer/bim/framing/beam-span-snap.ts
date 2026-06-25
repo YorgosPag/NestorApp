@@ -72,6 +72,8 @@ import type { PlacementAlignmentGuide } from './placement-alignment-guide';
 import type { GhostFaceFrame } from './linear-member-face-snap';
 import type { SceneSnapTargets } from './scene-snap-targets';
 import { subtractPoints, addPoints, scalePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { canonicalAxisNormal } from '../grid/axis-normal';
+import type { StripJustification } from '../types/foundation-types';
 
 /** Πόσο κοντά (mm) στη **νοητή ευθεία** κέντρο→κέντρο πρέπει να φτάσει ο cursor / να βρίσκεται στήριξη. */
 const SPAN_CAPTURE_MM = MEMBER_GHOST_CAPTURE_MM; // 600mm (tunable — ίδιο SSoT με τα υπόλοιπα member captures)
@@ -97,6 +99,14 @@ export interface BeamSpanSnap {
    * ζωντανά το justified alignment (νότια/κέντρο/βόρεια). `undefined` στο whole-line chain (centered).
    */
   readonly faceFrame?: GhostFaceFrame;
+  /**
+   * ADR-529 — **Revit Location-Line justification** του δοκαριού ως προς τον άξονα start→end:
+   * `'center'` (mid third / whole-line), `'left'`/`'right'` (north/south-flush, ανάλογα τη φορά).
+   * Το `start`/`end` εδώ είναι ο **body axis** (για το ghost)· ο commit κάνει `unjustifyAxisPoints`
+   * ώστε να αποθηκεύσει location line + αυτό το justification → associative με το πλάτος (το flush
+   * δεν σπάει όταν ο οργανισμός ξανα-διαστασιολογεί). Whole-line chain → πάντα `'center'`.
+   */
+  readonly justification: StripJustification;
 }
 
 /** Υποψήφιο μέλος-στήριγμα: κέντρο (centroid) + κλειστό outline (scene units). */
@@ -233,7 +243,7 @@ function spanJustification(
   fr: PairFrame,
   cursor: Readonly<Point2D>,
   beamHalfWidthScene: number,
-): { perpOffset: number; faceFrame: GhostFaceFrame } {
+): { perpOffset: number; faceFrame: GhostFaceFrame; justification: StripJustification } {
   const axisDir: Point2D = { x: -fr.u.y, y: fr.u.x }; // κατά μήκος της παρειάς (⊥ άξονα δοκαριού)
   // Παρειά του μέλους πλησιέστερου στον cursor (A=origin ή B=fB).
   const useA = (cursor.x - fr.origin.x) ** 2 + (cursor.y - fr.origin.y) ** 2
@@ -245,15 +255,13 @@ function spanJustification(
   const fp1 = alongFrom(e1, base);
   const faceLo = Math.min(fp0, fp1);
   const faceHi = Math.max(fp0, fp1);
-  // Justified κέντρο δοκαριού κατά μήκος της παρειάς (lo/mid/hi)· παρειά στενότερη του δοκαριού → κέντρο.
-  const ghostCenterAlong = faceHi - faceLo < 2 * beamHalfWidthScene
-    ? (faceLo + faceHi) / 2
-    : (() => {
-        const third = pickThird(alongFrom(cursor, base), faceLo, faceHi);
-        return third === 'lo' ? faceLo + beamHalfWidthScene
-          : third === 'hi' ? faceHi - beamHalfWidthScene
-          : (faceLo + faceHi) / 2;
-      })();
+  // Justified third κατά μήκος της παρειάς (lo/mid/hi)· παρειά στενότερη του δοκαριού → κέντρο.
+  const third: 'lo' | 'mid' | 'hi' = faceHi - faceLo < 2 * beamHalfWidthScene
+    ? 'mid'
+    : pickThird(alongFrom(cursor, base), faceLo, faceHi);
+  const ghostCenterAlong = third === 'lo' ? faceLo + beamHalfWidthScene
+    : third === 'hi' ? faceHi - beamHalfWidthScene
+    : (faceLo + faceHi) / 2;
   // perpOffset (κατά axisDir) ΣΕ ΣΧΕΣΗ ΜΕ fr.origin (το spanGeometryFromFrame μετατοπίζει από εκεί).
   const perpOffset = ghostCenterAlong + alongFrom(base, fr.origin);
   const faceFrame: GhostFaceFrame = {
@@ -267,7 +275,28 @@ function spanJustification(
     ghostCenterAlong,
     ghostHalfWidth: beamHalfWidthScene,
   };
-  return { perpOffset, faceFrame };
+  return { perpOffset, faceFrame, justification: thirdToJustification(third, axisDir, fr.u) };
+}
+
+/**
+ * ADR-529 — map το justified `third` (κατά μήκος της facing-παρειάς) → **Revit Location-Line**
+ * justification ('center'|'left'|'right') ως προς τον **canonical normal** του άξονα του δοκαριού
+ * (φορά `u`, orientation-invariant). 'mid' → 'center'. 'hi' = body flush στην +axisDir παρειά,
+ * 'lo' = flush στην −axisDir. Επειδή `axisDir ∥ canonicalAxisNormal(u)`, το πρόσημο `dot=±1` δίνει
+ * το JSIGN (`JUSTIFICATION_NORMAL_SIGN`: +1→'left', −1→'right'): 'hi'→−dot, 'lo'→+dot. Έτσι το
+ * `unjustifyAxisPoints(body, W, justification)` στο commit ανακτά τη location line ΠΑΝΩ στη flush παρειά.
+ */
+function thirdToJustification(
+  third: 'lo' | 'mid' | 'hi',
+  axisDir: Readonly<Point2D>,
+  u: Readonly<Point2D>,
+): StripJustification {
+  if (third === 'mid') return 'center';
+  const n = canonicalAxisNormal({ x: 0, y: 0 }, u); // canonical normal της φοράς u
+  if (!n) return 'center';
+  const dot = Math.sign(axisDir.x * n.nx + axisDir.y * n.ny); // ±1 (axisDir ∥ n)
+  const jsign = third === 'hi' ? -dot : dot;
+  return jsign > 0 ? 'left' : jsign < 0 ? 'right' : 'center';
 }
 
 /** Span γεωμετρία (start/end flush + guide) από έτοιμο frame, με προαιρετικό κάθετο offset (justified). */
@@ -352,7 +381,7 @@ export function resolveBeamSpanSnap(
       // ADR-529 Φ3 — justified third-alignment: το κάθετο offset του δοκαριού ακολουθεί τη θέση του cursor
       // κατά μήκος της facing-παρειάς (νότια-flush / κέντρο / βόρεια-flush), mirror των 9 λαβών κολόνας.
       // Το `faceFrame` δίνει τις **σιελ listening dimensions** (ίδιο SSoT με τον T-framing).
-      const { perpOffset, faceFrame } = spanJustification(fr, cursor, beamHalfWidthScene);
+      const { perpOffset, faceFrame, justification } = spanJustification(fr, cursor, beamHalfWidthScene);
       const geom = spanGeometryFromFrame(fr, A.center, B.center, perpOffset);
       // Ranking (ADR-529): (1) Φ2-refine face-aligned νικά λοξό· (2) Φ4 cursor στην πλευρά του κενού
       // (μικρότερη gapDist — η κάθετη στην παρειά που hover-άρει)· (3) ίδια gap-side → nearest perp.
@@ -363,7 +392,7 @@ export function resolveBeamSpanSnap(
             ? gapDist < bestGap
             : cp.perp < best.dist);
       if (better) {
-        best = { ...geom, faceFrame, dist: cp.perp };
+        best = { ...geom, faceFrame, dist: cp.perp, justification };
         bestFace = fr.faceAligned;
         bestGap = gapDist;
       }
@@ -407,7 +436,7 @@ export function resolveBeamSpanChain(
     const B = onLine[t + 1].s;
     const fr = pairFrame(A, B);
     // Whole-line: κεντραρισμένο (perpOffset 0) — η συνεχής δοκός ακολουθεί τη νοητή ευθεία, χωρίς per-bay justify.
-    if (fr) out.push({ ...spanGeometryFromFrame(fr, A.center, B.center, 0), dist: 0 });
+    if (fr) out.push({ ...spanGeometryFromFrame(fr, A.center, B.center, 0), dist: 0, justification: 'center' });
   }
   return out;
 }

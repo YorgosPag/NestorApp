@@ -54,6 +54,9 @@ import {
   type AxisBoxGripRole,
   type AxisBoxPatch,
 } from '../grips/axis-box-grips';
+// ADR-529 — Revit Location-Line: ο axis-box engine δουλεύει στον body axis (justified centerline)·
+// το γράψιμο ξανα-unjustify σε location line. center → identity (byte-for-byte back-compat).
+import { justifyAxisPoints, unjustifyAxisPoints } from '../grid/axis-justify';
 
 /**
  * Map a shared axis-box grip ROLE → the beam discriminator kind (stable order). Now
@@ -75,11 +78,21 @@ const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
 /** Inverse (derived ONCE — no hand-written drift). Rotation handled bespoke. */
 const BEAM_KIND_TO_AXIS_ROLE = invertAxisBoxRoleMap(BEAM_ROLE_TO_KIND);
 
-/** `BeamParams` → the minimal `AxisBoxParams` the shared SSoT reads. */
+/**
+ * `BeamParams` → the minimal `AxisBoxParams` the shared SSoT reads. ADR-529 — feeds the **body axis**
+ * (justified centerline = ό,τι βλέπει/πιάνει ο χρήστης), ΟΧΙ τη location line. `center`/absent → identity.
+ */
 function beamAxisBoxParams(params: BeamParams): AxisBoxParams {
+  const body = justifyAxisPoints(
+    project2D(params.startPoint),
+    project2D(params.endPoint),
+    params.width,
+    params.justification,
+    params.sceneUnits,
+  );
   return {
-    start: project2D(params.startPoint),
-    end: project2D(params.endPoint),
+    start: body.start,
+    end: body.end,
     width: params.width,
     sceneUnits: params.sceneUnits,
   };
@@ -307,12 +320,18 @@ function applyBeamRectGrip(
   return axisPatchToBeamParams(input.originalParams, patch);
 }
 
-/** Spread an axis-box `{start,end,width}` patch over full beam params (Z preserved). */
+/**
+ * Spread an axis-box `{start,end,width}` patch over full beam params (Z preserved). ADR-529 — ο patch
+ * είναι ο νέος **body axis**· ξανα-`unjustifyAxisPoints` σε **location line** με το ΝΕΟ πλάτος ώστε η
+ * αποθηκευμένη location line + `justification` να μένουν συνεπή → η flush παρειά σταθερή στο resize.
+ * `center`/absent → identity (η location line ταυτίζεται με τον body axis, byte-for-byte ως πριν).
+ */
 function axisPatchToBeamParams(originalParams: BeamParams, patch: AxisBoxPatch): BeamParams {
+  const loc = unjustifyAxisPoints(patch.start, patch.end, patch.width, originalParams.justification, originalParams.sceneUnits);
   return {
     ...originalParams,
-    startPoint: { x: patch.start.x, y: patch.start.y, z: originalParams.startPoint.z ?? 0 },
-    endPoint: { x: patch.end.x, y: patch.end.y, z: originalParams.endPoint.z ?? 0 },
+    startPoint: { x: loc.start.x, y: loc.start.y, z: originalParams.startPoint.z ?? 0 },
+    endPoint: { x: loc.end.x, y: loc.end.y, z: originalParams.endPoint.z ?? 0 },
     width: patch.width,
   };
 }
