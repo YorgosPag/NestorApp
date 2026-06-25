@@ -15,6 +15,15 @@ export type { MissingFontReport, CompanyFontMeta } from './font-loader';
 export { glyphToPath2D, stringToPath2D, measureText } from './glyph-renderer';
 export type { TextMetrics } from './glyph-renderer';
 
+// ADR-530 — main-canvas glyph rendering wiring.
+export { resolveEntityFont } from './font-resolver';
+export type { ResolvedFont, FontResolveStyle } from './font-resolver';
+export { getGlyphRun, clearGlyphPathCache, GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
+export type { GlyphRun } from './glyph-path-cache';
+export { subscribeFontReady, bumpFontReady, getFontReadyVersion } from './font-ready-store';
+export { preloadCadSubstituteFonts, CAD_SUBSTITUTE_FONTS } from './cad-font-preload';
+export type { CadSubstituteFont } from './cad-font-preload';
+
 export {
   subscribeMissingFontReport,
   getMissingFontReport,

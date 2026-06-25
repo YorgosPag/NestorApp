@@ -40,6 +40,10 @@ import { degToRad } from './shared/geometry-utils';
 import { buildUIFont, TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ADR-530: Revit-grade glyph-path text rendering (CAD fonts via opentype.js).
+// Reuses the text-engine font SSoT — resolver + glyph-path cache; CSS fillText
+// stays as the fallback when no loaded font matches the entity's family.
+import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont } from '../../text-engine/fonts';
 
 
 // ADR-344 Phase 6.E: rich text style shape
@@ -95,13 +99,8 @@ export class TextRenderer extends BaseEntityRenderer {
   ): void {
     const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
     const textAlignMode = richStyle?.textAlign ?? 'left';
-    // Y offsets relative to text origin, accounting for textBaseline.
-    // baselineVOffset: 0=top, 0.5=middle, 1.0=bottom (fraction of screenHeight shift from 'top').
-    const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
-    const underlineYOff   = screenHeight * ( 0.90 - baselineVOffset);
-    const overlineYOff    = screenHeight * (-0.05 - baselineVOffset);
-    const strikethroughYOff = screenHeight * (0.40 - baselineVOffset);
-    const hasDecoration = richStyle?.underline || richStyle?.overline || richStyle?.strikethrough;
+    const baselineMode = richStyle?.textBaseline ?? 'top';
+    const hasDecoration = !!(richStyle?.underline || richStyle?.overline || richStyle?.strikethrough);
 
     this.ctx.save();
     this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
@@ -109,9 +108,9 @@ export class TextRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = isHovered
       ? HOVER_HIGHLIGHT.ENTITY.glowColor
       : (richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY);
-    this.ctx.textAlign = richStyle?.textAlign ?? 'left';
+    this.ctx.textAlign = textAlignMode;
     // textBaseline from textNode.attachment[0]: T→top, M→middle, B→bottom. Default 'top' per DXF baseline fix.
-    this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';
+    this.ctx.textBaseline = baselineMode;
     // Hover glow: shadowBlur creates visible halo even for sub-pixel text (SHX/unknown fonts).
     // GPU cost acceptable: single entity hover path, not all-entity 60fps render.
     if (isHovered) {
@@ -119,30 +118,81 @@ export class TextRenderer extends BaseEntityRenderer {
       this.ctx.shadowColor = HOVER_HIGHLIGHT.TEXT.glowColor;
     }
 
+    // 🏢 ADR-530: resolve a loaded glyph font for this family; null → CSS fillText
+    // fallback (zero regression). Resolved once; the glyph paint reuses the SAME
+    // rotation/screenHeight math below — the rotation calculation is unchanged.
+    const resolved = resolveEntityFont(fontFamily, { bold: weight === 'bold', italic });
+
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
       this.ctx.rotate(degToRad(-normalizedRotation));
-      this.ctx.fillText(text, 0, 0);
-      if (hasDecoration) {
-        const w = this.ctx.measureText(text).width;
-        const thickness = Math.max(1, screenHeight * 0.07);
-        const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
-        if (richStyle?.underline)     this.ctx.fillRect(xOff, underlineYOff,    w, thickness);
-        if (richStyle?.overline)      this.ctx.fillRect(xOff, overlineYOff,     w, thickness);
-        if (richStyle?.strikethrough) this.ctx.fillRect(xOff, strikethroughYOff, w, thickness);
-      }
+      const w = this.paintText(0, 0, text, screenHeight, textAlignMode, baselineMode, resolved);
+      if (hasDecoration) this.paintDecorations(0, 0, w, screenHeight, richStyle, textAlignMode);
     } else {
-      this.ctx.fillText(text, screenPos.x, screenPos.y);
-      if (hasDecoration) {
-        const w = this.ctx.measureText(text).width;
-        const thickness = Math.max(1, screenHeight * 0.07);
-        const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
-        if (richStyle?.underline)     this.ctx.fillRect(screenPos.x + xOff, screenPos.y + underlineYOff,     w, thickness);
-        if (richStyle?.overline)      this.ctx.fillRect(screenPos.x + xOff, screenPos.y + overlineYOff,      w, thickness);
-        if (richStyle?.strikethrough) this.ctx.fillRect(screenPos.x + xOff, screenPos.y + strikethroughYOff, w, thickness);
-      }
+      const w = this.paintText(screenPos.x, screenPos.y, text, screenHeight, textAlignMode, baselineMode, resolved);
+      if (hasDecoration) this.paintDecorations(screenPos.x, screenPos.y, w, screenHeight, richStyle, textAlignMode);
     }
     this.ctx.restore();
+  }
+
+  /**
+   * 🏢 ADR-530: paint a single run at (originX, originY) — glyph path when a
+   * loaded CAD font resolved, else the legacy CSS fillText. Returns the rendered
+   * advance width in px (used to position text decorations).
+   */
+  private paintText(
+    originX: number, originY: number, text: string, screenHeight: number,
+    align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
+  ): number {
+    if (resolved) {
+      return this.fillGlyphRun(originX, originY, text, screenHeight, align, baseline, resolved);
+    }
+    this.ctx.fillText(text, originX, originY);
+    return this.ctx.measureText(text).width;
+  }
+
+  /**
+   * 🏢 ADR-530: fill a cached glyph Path2D. Paths are built once at a reference
+   * em size (zoom-stable cache); the per-frame scale = screenHeight / refSize is
+   * applied via ctx.scale, so paths are never rebuilt on zoom.
+   */
+  private fillGlyphRun(
+    originX: number, originY: number, text: string, screenHeight: number,
+    align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont,
+  ): number {
+    const run = getGlyphRun(resolved.font, resolved.cacheName, text);
+    const s = screenHeight / GLYPH_REFERENCE_SIZE;
+    const widthPx = run.metrics.width * s;
+    const ascentPx = run.metrics.ascent * s;
+    const descentPx = run.metrics.descent * s;
+    const xOff = align === 'center' ? -widthPx / 2 : align === 'right' ? -widthPx : 0;
+    // Glyph paths are baseline-anchored; map to the canvas textBaseline modes.
+    const baselineY = baseline === 'middle' ? (ascentPx - descentPx) / 2
+      : baseline === 'bottom' ? -descentPx
+        : ascentPx; // 'top' / 'alphabetic' default → drop by ascent so the top sits at originY
+    this.ctx.save();
+    this.ctx.translate(originX + xOff, originY + baselineY);
+    this.ctx.scale(s, s);
+    this.ctx.fill(run.path);
+    this.ctx.restore();
+    return widthPx;
+  }
+
+  /**
+   * Paint underline / overline / strikethrough rules. Offsets are fractions of
+   * screenHeight relative to the text origin, accounting for the textBaseline
+   * (baselineVOffset: 0=top, 0.5=middle, 1.0=bottom).
+   */
+  private paintDecorations(
+    x: number, y: number, width: number, screenHeight: number,
+    richStyle: TextRichStyle, align: CanvasTextAlign,
+  ): void {
+    const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
+    const thickness = Math.max(1, screenHeight * 0.07);
+    const xOff = align === 'center' ? -width / 2 : align === 'right' ? -width : 0;
+    if (richStyle?.underline)     this.ctx.fillRect(x + xOff, y + screenHeight * ( 0.90 - baselineVOffset), width, thickness);
+    if (richStyle?.overline)      this.ctx.fillRect(x + xOff, y + screenHeight * (-0.05 - baselineVOffset), width, thickness);
+    if (richStyle?.strikethrough) this.ctx.fillRect(x + xOff, y + screenHeight * ( 0.40 - baselineVOffset), width, thickness);
   }
 
   /**

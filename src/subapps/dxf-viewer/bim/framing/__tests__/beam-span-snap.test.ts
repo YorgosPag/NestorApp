@@ -182,6 +182,35 @@ describe('ADR-529 Φ1 — cursor ΣΤΗΝ παρειά + κοίλα/Γ μέλη'
   });
 });
 
+describe('ADR-529 Φ4 — gap-side directional disambiguation', () => {
+  // Σενάριο στιγμιότυπου 2026-06-25: Στήλη Β (κέντρο) ΚΑΤΑΚΟΡΥΦΑ στοιχισμένη με Στήλη Γ (κάτω) + Τείχιο Α
+  // (αριστερά). Δύο ΚΑΘΕΤΑ faceAligned ζεύγη: οριζόντιο Β→Α (κενό δυτικά) + κατακόρυφο Β↔Γ (κενό νότια).
+  const bCol = rect(0, 0, 400, 400);        // Β: παρειές x∈[−200,200], y∈[−200,200]
+  const wallA = rect(-2000, 0, 400, 400);   // Α αριστερά: ανατ. παρειά x=−1800 (κενό Β→Α: x∈[−1800,−200])
+  const gammaCol = rect(0, -2000, 400, 400);// Γ κάτω: βόρεια παρειά y=−1800 (κενό Β↔Γ: y∈[−1800,−200])
+  const three = [bCol, wallA, gammaCol];
+
+  it('cursor στη ΒΔ γωνία της Β (κενό Β→Α δυτικά, προς τη μεριά του cursor) → ΟΡΙΖΟΝΤΙΟ Β→Α (όχι Β↔Γ)', () => {
+    // cursor βόρεια της Β (αντίθετη πλευρά από το κενό Β↔Γ που είναι νότια) ΑΛΛΑ στη δυτική παρειά (στο κενό
+    // προς Α). Το along-margin 600mm admit-άρει ΚΑΙ τα δύο ζεύγη + αμφότερα faceAligned + perp ίσο (200) →
+    // χωρίς Φ4 ο perp-tiebreak θα διάλεγε αυθαίρετα. Με Φ4: gapDist Β→Α=0 < gapDist Β↔Γ=400 → νικά το Β→Α.
+    const r = resolveBeamSpanSnap({ x: -200, y: 200 }, three, 'mm');
+    expect(r).not.toBeNull();
+    expect(near(r!.start.x, -200, 1)).toBe(true);          // δυτ. παρειά Β
+    expect(near(r!.end.x, -1800, 1)).toBe(true);           // ανατ. παρειά Α
+    expect(near(r!.start.y, r!.end.y, 1)).toBe(true);      // ΟΡΙΖΟΝΤΙΟ (ΟΧΙ κατακόρυφο Β↔Γ)
+  });
+
+  it('cursor στη νότια παρειά της Β (κενό Β↔Γ νότια, προς τη μεριά του cursor) → ΚΑΤΑΚΟΡΥΦΟ Β↔Γ', () => {
+    // Αντίστροφη φορά: cursor στη νότια παρειά → η κάθετη δείχνει νότια → κερδίζει το κατακόρυφο Β↔Γ.
+    const r = resolveBeamSpanSnap({ x: 0, y: -200 }, three, 'mm');
+    expect(r).not.toBeNull();
+    expect(near(r!.start.x, r!.end.x, 1)).toBe(true);      // ΚΑΤΑΚΟΡΥΦΟ
+    expect(near(r!.start.y, -200, 1)).toBe(true);          // νότια παρειά Β
+    expect(near(r!.end.y, -1800, 1)).toBe(true);           // βόρεια παρειά Γ
+  });
+});
+
 describe('resolveBeamSpanChain — whole-line (ADR-528 §whole-line)', () => {
   const four = [rect(0, 0, 400, 400), rect(0, 2000, 400, 400), rect(0, 4000, 400, 400), rect(0, 6000, 400, 400)];
 

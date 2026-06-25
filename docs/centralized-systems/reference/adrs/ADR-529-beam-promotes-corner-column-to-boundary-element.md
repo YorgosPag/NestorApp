@@ -58,6 +58,24 @@ construction — επιβεβαιωμένο vs τα 11 υπάρχοντα ADR-52
 (leftGap/rightGap/centerToCenter) ΚΑΙ στο auto-span — ίδιο SSoT με τον T-framing. Πριν, το span έδινε μόνο τον
 dashed `guide` (καμία διάσταση). Δείχνουν ζωντανά το justified alignment (north-flush → rightGap≈0 κ.ο.κ.).
 
+### Φ4 — Gap-side directional disambiguation (4ο στιγμιότυπο)
+**Bug:** cursor στη **ΒΔ γωνία** Στήλης Β (κατακόρυφα στοιχισμένη με Στήλη Γ κάτω, Τείχιο Α αριστερά) → το
+auto-span στήνεται **ΚΑΤΑΚΟΡΥΦΑ** Β↔Γ αντί **ΟΡΙΖΟΝΤΙΑ** Β→Α. **Ρίζα:** το along-margin 600mm του Φ1 admit-άρει
+ζεύγος του οποίου το κενό είναι στην **αντίθετη** πλευρά του μέλους από τον cursor (cursor βόρεια της Β, ενώ το
+κενό Β↔Γ είναι νότια)· αμφότερα τα ζεύγη `faceAligned` + ίσο perp → ο perp-tiebreak διαλέγει αυθαίρετα το κατακόρυφο.
+
+**Λύση (decision Giorgio — gap-side):** η νοητή **κάθετη πάνω στην facing-παρειά** (= ο άξονας `u` του Φ1)
+δείχνει τη **φορά αναζήτησης**: cursor στη δυτική παρειά → ψάχνει δυτικά, στη βόρεια → βόρεια, σε λοξή παρειά →
+κατά το normal της. Νέο **ranking tier** ανάμεσα στο `faceAligned` και στο perp: κερδίζει το ζεύγος με τη
+μικρότερη **απόσταση-έξω-από-το-κενό** της προβολής του cursor στον `u` — `gapDist = max(sA−along, 0, along−sB)`
+(0 όταν ο cursor προβάλλεται εντός/στο όριο του κενού· μεγάλη όταν είναι στην αντίθετη πλευρά μέλους). Ισοπαλία
+gap-side (ανοχή `GAP_SIDE_TIE_MM=1`, π.χ. ακριβές κέντρο) → perp nearest-wins. **Προηγούνται τα κάθετα ζεύγη**
+(`faceAligned` tier αμετάβλητο)· τα λοξά μένουν fallback.
+
+**FULL SSoT / μηδέν νέα γεωμετρία:** reuse μόνο `cp.along`/`fr.sA`/`fr.sB` (ήδη υπολογισμένα στον resolver).
+**Μηδέν εμπλοκή με το north-flush** (το ορίζει το Φ3 κατά μήκος της παρειάς· το Φ4 ορίζει μόνο τη φορά/διεύθυνση
+του span — ορθογώνια έννοια). Μηδέν regression στα Φ1/Φ3 (cursor-στην-παρειά → `gapDist≈0`, καμία επανάταξη).
+
 ### Φ2 — Προαγωγή Ι → Γ (B), FULL SSoT reuse
 1. **Γεωμετρία** — `promoteColumnToBoundaryL` (στο `bim/columns/column-beam-align.ts`, ADR-496 home):
    closed-form L (reuse `rotationDegToAlignLocalY`/`rotateVector`/`unitVector` + `beamEndsByProximity`).
@@ -86,7 +104,7 @@ dashed `guide` (καμία διάσταση). Δείχνουν ζωντανά τ
 | 4 | Shear-walls | **Συμπεριλαμβάνονται** (kind ∈ {rectangular, shear-wall}) |
 
 ## 5. Αρχεία
-- **Φ1:** `bim/framing/beam-span-snap.ts` (+test).
+- **Φ1 + Φ4:** `bim/framing/beam-span-snap.ts` (+test).
 - **Φ2 geometry/detect:** `bim/columns/column-beam-align.ts` (`promoteColumnToBoundaryL`)·
   `bim/columns/column-beam-promote-junction.ts` (+test).
 - **Φ2 confirm/UI:** `bim/columns/column-promote-confirm-store.ts`· `ui/dialogs/ColumnPromoteConfirmDialog.tsx`·
@@ -95,9 +113,12 @@ dashed `guide` (καμία διάσταση). Δείχνουν ζωντανά τ
 
 ## 6. Επαλήθευση
 - **jest:** `column-beam-promote-junction.test.ts` (12: geometry 4 διατάξεις + detector gates)·
-  `beam-span-snap.test.ts` (+2 Φ1: cursor-στην-παρειά + κοίλο Γ)· `column-beam-align.test.ts` (25 — μηδέν regression).
+  `beam-span-snap.test.ts` (17: +2 Φ1 cursor-στην-παρειά/κοίλο Γ, +2 Φ4 gap-side directional)·
+  `column-beam-align.test.ts` (25 — μηδέν regression).
 - **Browser (Giorgio):** Δοκάρι → cursor ανατ. παρειά Γ-τοίχου → ghost γεφυρώνει μέχρι δυτ. παρειά Κολόνας 2 →
   confirm → η Κολόνα 2 γίνεται Γ (σκέλος προς το δοκάρι) → weld.
+- **Browser Φ4 (Giorgio):** Δοκάρι → cursor στη ΒΔ γωνία Στήλης Β (κατακόρυφα με Γ) → ghost **οριζόντιο Β→Α**
+  (north-flush), ΟΧΙ κατακόρυφο Β↔Γ.
 - ⚠️ CHECK 6B/6D → stage **ADR-040 + ADR-529** (+ ADR-525/528) μαζί.
 
 ## 7. Changelog
@@ -109,4 +130,9 @@ dashed `guide` (καμία διάσταση). Δείχνουν ζωντανά τ
   (συν. 63 με promote/align/cursor-snap regression).
 - **2026-06-25** — **σιελ listening dimensions στο auto-span**: το span placement εκπέμπει `GhostFaceFrame`
   (`BeamSpanSnap.faceFrame`) → οι γαλάζιες listening dims εμφανίζονται ΚΑΙ στο auto-span (πριν: μόνο dashed guide).
+- **2026-06-25** — **Φ4 (4ο στιγμιότυπο): gap-side directional disambiguation** (decision Giorgio). Όταν δύο
+  κάθετα `faceAligned` ζεύγη περνούν το γενναιόδωρο along-margin των 600mm, νικά αυτό του οποίου **το κενό είναι
+  προς τη μεριά του cursor** (μικρότερη `gapDist = max(sA−along,0,along−sB)`) — η νοητή κάθετη στη facing-παρειά
+  δείχνει τη φορά· ισοπαλία → perp nearest-wins. Reuse `cp.along`/`sA`/`sB` (μηδέν νέα γεωμετρία). +2 jest
+  (cursor ΒΔ→οριζόντιο Β→Α· cursor νότια→κατακόρυφο Β↔Γ). **17 span GREEN** (συν. 65 με promote/align/cursor-snap regression).
   Reuse `resolveGhostFaceDimensions` SSoT. 16 span GREEN.

@@ -41,6 +41,17 @@
  * Reuse `pickThird` (SSoT). Χρειάζεται `beamWidthMm` (ημι-πλάτος = offset flush)· `0` → χωρίς justify (centered,
  * back-compat). Whole-line (Shift) → πάντα centered.
  *
+ * **ADR-529 Φ4 — gap-side directional disambiguation (Giorgio 2026-06-25):** όταν δύο **κάθετα** faceAligned
+ * ζεύγη περνούν τα gates (το γενναιόδωρο along-margin των 600mm επιτρέπει cursor **ΕΞΩ** από το κενό, στην
+ * **αντίθετη** πλευρά ενός μέλους), κερδίζει αυτό του οποίου **το κενό είναι προς τη μεριά του cursor**. Η
+ * νοητή **κάθετη πάνω στην facing-παρειά** (= ο άξονας `u` του Φ1) δείχνει τη φορά αναζήτησης: cursor στη
+ * δυτική παρειά → ψάχνει δυτικά, στη βόρεια → βόρεια, σε λοξή παρειά → κατά το normal της. Μετρικό = **απόσταση
+ * -έξω-από-το-κενό** της προβολής του cursor στον `u` (`max(sA−along, 0, along−sB)`): 0 όταν ο cursor
+ * προβάλλεται εντός/στο όριο του κενού, μεγάλη όταν είναι στην **αντίθετη** πλευρά μέλους. Ranking tier
+ * **ανάμεσα** στο faceAligned και στο perp· ισοπαλία (ίδια gap-side — π.χ. ακριβές κέντρο) → perp nearest-wins.
+ * Μηδέν νέα γεωμετρία (reuse `cp.along`/`sA`/`sB`)· μηδέν εμπλοκή με το north-flush (αυτό το ορίζει το Φ3,
+ * κατά μήκος της παρειάς — ορθογώνια διεύθυνση από τη φορά του span).
+ *
  * @see ../columns/column-beam-corner-snap.ts — το αντίστροφο πρότυπο (L-κολόνα γεμίζει γωνιακό κενό)
  * @see ../columns/column-beam-promote-junction.ts — ADR-529 Φ2 (δοκάρι ΠΡΟΑΓΕΙ Ι-κολόνα σε Γ)
  * @see ../geometry/shared/polygon-axis-projection.ts — projectPolygonOnAxis/projectPointOnAxis (SSoT)
@@ -67,6 +78,8 @@ const SPAN_CAPTURE_MM = MEMBER_GHOST_CAPTURE_MM; // 600mm (tunable — ίδιο 
 const EPS = 1e-6;
 /** |u·edge| ≤ αυτό ⇒ ο άξονας span είναι **κάθετος σε παρειά** (~20°· sin20°≈0.342) → «κανονικό» framing. */
 const FACE_PERP_SIN = 0.342;
+/** ADR-529 Φ4 — ανοχή (mm) ώστε δύο ζεύγη με ~ίδια gap-side απόσταση να θεωρούνται ισόπαλα → perp tiebreak. */
+const GAP_SIDE_TIE_MM = 1;
 
 /** Αποτέλεσμα auto-span: τα δύο centerline άκρα (flush στις παρειές) + οδηγός + nearest-wins dist. */
 export interface BeamSpanSnap {
@@ -296,9 +309,11 @@ function hasSupportBetween(
 /**
  * **Per-bay** auto-span: επιλέγει το **φάτνωμα διαδοχικών στηρίξεων** που περικλείει τον cursor (ο cursor
  * στο κενό + κάθετα κοντά στη νοητή ευθεία), απορρίπτοντας κάθε ζεύγος με **τρίτη στήριξη ανάμεσα**
- * (ποτέ span πάνω από ενδιάμεση κολόνα/τοίχο — EC2/EC8). **Ranking (ADR-529 Φ2-refine):** face-aligned
- * ζεύγη (κάθετα σε παρειά) προηγούνται των λοξών γωνία-σε-γωνία· εντός ίδιας κλάσης, nearest-wins ως προς
- * κάθετη απόσταση. Pure. `null` όταν κανένα διαδοχικό ζεύγος δεν γεφυρώνεται. Ένα μέλος = το κλειστό outline του.
+ * (ποτέ span πάνω από ενδιάμεση κολόνα/τοίχο — EC2/EC8). **Ranking:** (1) [Φ2-refine] face-aligned ζεύγη
+ * (κάθετα σε παρειά) προηγούνται των λοξών γωνία-σε-γωνία· (2) [Φ4] εντός ίδιας κλάσης, κερδίζει το ζεύγος
+ * του οποίου **το κενό είναι προς τη μεριά του cursor** (μικρότερη απόσταση-έξω-από-το-κενό)· (3) ισοπαλία
+ * gap-side → nearest-wins ως προς κάθετη απόσταση. Pure. `null` όταν κανένα διαδοχικό ζεύγος δεν γεφυρώνεται.
+ * Ένα μέλος = το κλειστό outline του.
  */
 export function resolveBeamSpanSnap(
   cursor: Readonly<Point2D>,
@@ -314,6 +329,8 @@ export function resolveBeamSpanSnap(
 
   let best: BeamSpanSnap | null = null;
   let bestFace = false;
+  let bestGap = Infinity;
+  const gapTieScene = GAP_SIDE_TIE_MM * f;
   for (let i = 0; i < supports.length; i++) {
     for (let j = i + 1; j < supports.length; j++) {
       const A = supports[i];
@@ -327,19 +344,28 @@ export function resolveBeamSpanSnap(
       if (cp.perp > captureScene) continue;
       // ADR-528 §adjacency — απόρριψη μη-διαδοχικού ζεύγους (τρίτη στήριξη ανάμεσα).
       if (hasSupportBetween(A, B, fr, supports, captureScene)) continue;
+      // ADR-529 Φ4 — gap-side: η νοητή κάθετη στην facing-παρειά (ο άξονας `u`) δείχνει τη φορά αναζήτησης.
+      // Όσο πιο εντός/προς το κενό προβάλλεται ο cursor, τόσο πιο πολύ «κοιτάζει» αυτό το ζεύγος. Απορρίπτει
+      // το αντικριστό ζεύγος του οποίου το κενό είναι στην ΑΝΤΙΘΕΤΗ πλευρά (cursor βόρεια της Β, ενώ το κενό
+      // Β↔Γ είναι νότια → χάνει από το οριζόντιο Β→Α που έχει το κενό του δυτικά, προς τη μεριά του cursor).
+      const gapDist = Math.max(fr.sA - cp.along, 0, cp.along - fr.sB);
       // ADR-529 Φ3 — justified third-alignment: το κάθετο offset του δοκαριού ακολουθεί τη θέση του cursor
       // κατά μήκος της facing-παρειάς (νότια-flush / κέντρο / βόρεια-flush), mirror των 9 λαβών κολόνας.
       // Το `faceFrame` δίνει τις **σιελ listening dimensions** (ίδιο SSoT με τον T-framing).
       const { perpOffset, faceFrame } = spanJustification(fr, cursor, beamHalfWidthScene);
       const geom = spanGeometryFromFrame(fr, A.center, B.center, perpOffset);
-      // ADR-529 Φ2-refine ranking: (1) face-aligned νικά λοξό γωνία-σε-γωνία ανεξαρτήτως perp· (2) ίδια κλάση
-      // → μικρότερο perp. Το λοξό μένει fallback (επιλέγεται μόνο αν δεν υπάρχει face-aligned υποψήφιο).
+      // Ranking (ADR-529): (1) Φ2-refine face-aligned νικά λοξό· (2) Φ4 cursor στην πλευρά του κενού
+      // (μικρότερη gapDist — η κάθετη στην παρειά που hover-άρει)· (3) ίδια gap-side → nearest perp.
       const better = !best
-        || (fr.faceAligned && !bestFace)
-        || (fr.faceAligned === bestFace && cp.perp < best.dist);
+        || (fr.faceAligned !== bestFace
+          ? fr.faceAligned
+          : Math.abs(gapDist - bestGap) > gapTieScene
+            ? gapDist < bestGap
+            : cp.perp < best.dist);
       if (better) {
         best = { ...geom, faceFrame, dist: cp.perp };
         bestFace = fr.faceAligned;
+        bestGap = gapDist;
       }
     }
   }

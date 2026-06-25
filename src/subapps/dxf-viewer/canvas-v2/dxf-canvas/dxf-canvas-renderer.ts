@@ -34,6 +34,8 @@ import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsSto
 import { subscribeLayerStore } from '../../stores/LayerStore';
 // ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+// ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
+import { preloadCadSubstituteFonts, subscribeFontReady } from '../../text-engine/fonts';
 import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
@@ -386,6 +388,20 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     return useBimRenderSettingsStore.subscribe(() => {
       isDirtyRef.current = true;
     });
+  }, []);
+
+  // ADR-530 — preload the CAD glyph font(s) once on mount, then rebuild the
+  // entity layer when they land so text re-renders as glyph paths instead of the
+  // CSS fillText fallback. Font availability is NOT part of the bitmap cache key
+  // (one-time event), so a single invalidate() on the ready signal is ADR-040
+  // compliant — same contract as the LayerStore subscription above.
+  useEffect(() => {
+    const unsubscribe = subscribeFontReady(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
+    void preloadCadSubstituteFonts();
+    return unsubscribe;
   }, []);
 
   // Selection dirty-marking handled by DxfCanvas imperative SelectionStore

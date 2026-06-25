@@ -51,6 +51,15 @@ export class HitTestingService {
    * Ενημερώνει τα entities που θα χρησιμοποιηθούν για hit testing
    */
   updateScene(scene: DxfScene | null): void {
+    // 🚀 ADR-040 cursor-lag Φ12.1 — skip the O(n) re-map + spatial-index rebuild when the
+    // scene reference is UNCHANGED. This is called from the render loop on EVERY dirty
+    // frame, incl. every hover-entity change. Rebuilding the hit-test index per hover was
+    // O(n) `convertDxfEntityToEntityModel` allocation + QuadTree rebuild → heavy GC churn
+    // → cursor jank that scaled with entity count (worst on Chrome/V8, even snaps OFF).
+    // DxfScene is immutable — replaced by reference on every mutation (the SAME invariant
+    // the bitmap cache relies on via `sceneRef !== scene`), so ref-equality is a correct,
+    // sufficient guard: the index rebuilds ONLY on a real scene change.
+    if (scene === this.currentScene) return;
     this.currentScene = scene;
 
     if (!scene || !scene.entities.length) {
