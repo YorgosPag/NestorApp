@@ -33,7 +33,7 @@ import type {
 } from '../../../bim/types/electrical-panel-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateElectricalPanelParamsCommand } from '../../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   ELECTRICAL_PANEL_RIBBON_KEYS,
   ELECTRICAL_PANEL_RIBBON_KEYS_ACTIONS,
@@ -108,7 +108,7 @@ export function useRibbonElectricalPanelBridge(
   const dispatchParams = useCallback(
     (panel: ElectricalPanelEntity, nextParams: ElectricalPanelParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

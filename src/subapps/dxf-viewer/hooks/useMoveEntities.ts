@@ -34,7 +34,7 @@ import type { SceneModel } from '../types/scene';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../core/commands';
 import { useCommandHistory } from '../core/commands';
 import { useLevels } from '../systems/levels';
-// 🏢 ADR-049: canonical ISceneManager adapter SSoT (pendingScene batch-cache + full vertex ops)
+// 🏢 ADR-049: canonical ISceneManager adapter SSoT (stateless pass-through to root live SSoT + full vertex ops)
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 
 /**
@@ -77,11 +77,12 @@ export interface UseMoveEntitiesReturn {
  * Creates a SceneManager adapter from useLevels.
  *
  * 🏢 ADR-049: thin binding over the canonical `LevelSceneManagerAdapter` SSoT.
- * Previously this re-implemented the whole ISceneManager inline WITHOUT the
- * canonical's `pendingScene` batch-cache (so a multi-mutation sync batch read
- * stale scene state). Delegating gains the cache + full vertex/z-order ops with
- * zero duplicated logic. The entities-only param types are kept for the existing
- * call sites; the casts mirror the level functions' real `SceneModel` shape.
+ * Previously this re-implemented the whole ISceneManager inline. Delegating gains the
+ * canonical read-after-write behaviour (ADR-527: the adapter is a stateless pass-through
+ * to the root `levelScenesRef`, which `setLevelScene` writes synchronously so a
+ * multi-mutation sync batch always sees prior writes) + full vertex/z-order ops with zero
+ * duplicated logic. The entities-only param types are kept for the existing call sites;
+ * the casts mirror the level functions' real `SceneModel` shape.
  */
 function createSceneManagerAdapter(
   levelId: string,

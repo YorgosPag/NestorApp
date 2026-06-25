@@ -18,7 +18,7 @@ import type { useLevels } from '../systems/levels';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands';
 import { UpdateEntityPsetCommand } from '../core/commands/entity-commands/UpdateEntityPsetCommand';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import type { IfcPropertySet, IfcEntityMixin } from '../bim/types/ifc-entity-mixin';
 import type { AnySceneEntity } from '../types/entities';
 import { PsetEditorDialog } from '../ui/components/bim-pset/PsetEditorDialog';
@@ -85,7 +85,7 @@ export function PsetEditorHost({ levelManager }: PsetEditorHostProps): React.Rea
         setDialogState(CLOSED);
         return;
       }
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

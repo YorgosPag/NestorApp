@@ -28,7 +28,7 @@ import type { DimensionEntity } from '../../types/dimension';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { DimAssociationGraph } from '../../systems/dimensions/dim-association-graph';
 import { applyAssociationUpdates } from '../../systems/dimensions/dim-association-service';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ export function useDimAssociationObserver(
     }
 
     if (updates.size > 0) {
-      const adapter = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+      const adapter = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
       adapter.updateEntities(updates as ReadonlyMap<string, Partial<SceneEntity>>);
     }
 

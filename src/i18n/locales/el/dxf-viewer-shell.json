@@ -3934,6 +3934,7 @@
       "floorplanWizard": "Κάτοψη (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
+      "importTek": "Εισαγωγή Τέκτονα (.tek)",
       "pdfBackground": "PDF Υπόβαθρο",
       "exportDxf": "Εξαγωγή",
       "ifcExport": "Εξαγωγή IFC",

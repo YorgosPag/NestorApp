@@ -34,7 +34,7 @@ import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-com
 import { RehostFoundationsCommand } from '../../../core/commands/entity-commands/RehostFoundationsCommand';
 import { CompoundCommand } from '../../../core/commands/CompoundCommand';
 import type { ICommand } from '../../../core/commands/interfaces';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { computeGridJunctionExtends } from '../../../bim/foundations/foundation-grid-junctions';
 import { computeFoundationGeometry } from '../../../bim/geometry/foundation-geometry';
 import type { SceneModel } from '../../../types/scene';
@@ -194,7 +194,7 @@ export function useRibbonFoundationBridge(
     (foundation: FoundationEntity, nextParams: FoundationParams): void => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

@@ -214,6 +214,12 @@ NOTE: `bim/stairs/stair-floor-link.ts:42` + `stair-auto-fix.ts:131` χρησιμ
 
 ---
 
+### 📐 Point2D→Point3D `z:0` lift — ~20 inline αντίγραφα (priorità bassa, Boy-Scout flag 2026-06-25, ADR-528)
+
+- [ ] **Το `verts.map((p) => ({ x: p.x, y: p.y, z: 0 }))` (Point2D[]→Point3D[] z=0 lift) επαναλαμβάνεται σε ~20 σημεία** (`beam-column-cutback.ts:280` `toXY0`, `building-footprint.ts`, `column-geometry.ts`, `hatch-pattern-geometry.ts`, `polygon-interior-point.ts`, `straight-skeleton{,-faces}.ts`, `mep-*`, `column-rect-decomposition.ts`, `column-section-outline.ts`, `column-validator.ts`, …). Διαφορετικά downstream (polygonArea/triangulate/centroid) → ΟΧΙ ένα abstraction για όλα. **Πρόταση:** SSoT `liftTo3D(verts: Point2D[]): Point3D[]` στο `polygon-utils` (δίπλα στο νέο `polygon2DCentroid`) + migrate-on-touch. Μεγάλο sweep (>4 αρχεία) → ΟΧΙ inline (N.0.2). _Το centroid-specific case ΗΔΗ κεντρικοποιήθηκε στο `polygon2DCentroid` (ADR-528)._
+
+---
+
 ### 🔧 BIM GRIP GEOMETRY — shared module extraction (priorità media, ~2-3h, cross-cutting)
 
 **Discovered 2026-05-28** (ADR-393 stair extended grips SSoT review). Τα 3 BIM grip families (`bim/walls/wall-grips.ts`, `bim/beams/beam-grips.ts`, `bim/stairs/stair-grip-{math,transforms}.ts`) αντιγράφουν τα ίδια primitives αντί να μοιράζονται SSoT:

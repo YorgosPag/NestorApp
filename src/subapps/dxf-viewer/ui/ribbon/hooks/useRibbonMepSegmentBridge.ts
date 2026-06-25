@@ -41,7 +41,7 @@ import { mepSegmentToolBridgeStore } from './bridge/mep-segment-tool-bridge-stor
 import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { resolveConnectedElevationPatches } from '../../../bim/mep-segments/mep-elevation-propagation';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_SEGMENT_RIBBON_KEYS,
   MEP_SEGMENT_RIBBON_KEYS_ACTIONS,
@@ -110,7 +110,7 @@ export function useRibbonMepSegmentBridge(
   const dispatchParams = useCallback(
     (segment: MepSegmentEntity, nextParams: MepSegmentParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -136,7 +136,7 @@ export function useRibbonMepSegmentBridge(
       const scene = levelManager.getLevelScene(levelManager.currentLevelId);
       const entities = scene?.entities ?? [];
       const patches = resolveConnectedElevationPatches(entities, segment, editedNext);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

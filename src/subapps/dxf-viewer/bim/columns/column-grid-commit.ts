@@ -17,7 +17,7 @@
 
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateColumnsCommand } from '../../core/commands/entity-commands/CreateColumnsCommand';
 import { isColumnEntity } from '../../types/entities';
 import { hasGuideBindings, type GuideBinding } from '../hosting/guide-binding-types';
@@ -117,7 +117,7 @@ export function commitColumnGridFromGuides(
     return { ok: false, reason: 'up-to-date', created: 0, skipped };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   deps.executeCommand(new CreateColumnsCommand(toCreate, adapter));
   return { ok: true, created: toCreate.length, skipped };
 }

@@ -24,7 +24,7 @@ import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateSlabParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   SLAB_RIBBON_KEYS,
   SLAB_RIBBON_KEYS_ACTIONS,
@@ -150,7 +150,7 @@ export function useRibbonSlabBridge(
   const dispatchParams = useCallback(
     (slab: SlabEntity, nextParams: SlabParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

@@ -10,6 +10,7 @@
  */
 
 import type { Bim3dRenderMode } from './per-mode-promotion';
+import { median } from '../../utils/statistics';
 
 export const ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export const MIN_SAMPLES_FOR_BASELINE = 30;
@@ -46,13 +47,6 @@ function writeStored(mode: Bim3dRenderMode, data: StoredSamples): void {
   try {
     localStorage.setItem(lsKey(mode), JSON.stringify(data));
   } catch { /* quota / SSR */ }
-}
-
-function median(sorted: readonly number[]): number {
-  const n = sorted.length;
-  if (n === 0) return 0;
-  const mid = Math.floor(n / 2);
-  return n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 /** Tukey 1977 median absolute deviation — robust outlier-resistant spread. */

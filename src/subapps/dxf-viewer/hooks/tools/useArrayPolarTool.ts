@@ -29,7 +29,7 @@ import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { PolarParams } from '../../systems/array/types';
@@ -193,7 +193,7 @@ export function useArrayPolarTool(
         return;
       }
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

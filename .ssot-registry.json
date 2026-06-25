@@ -19,6 +19,17 @@
         "src/config/firestore-schema-map.ts"
       ]
     },
+    "level-scene-manager-adapter": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/entity-creation/LevelSceneManagerAdapter.ts",
+      "description": "ADR-527 — LevelSceneManagerAdapter must be constructed ONLY through the cached factory createLevelSceneManagerAdapter()/levelSceneManagerFor(). Direct `new LevelSceneManagerAdapter(...)` bypasses the singleton-per-(accessor,level) cache and reintroduces the N-adapter race (each instance had its own scene cache → stale reads). The factory is the single construction site — one long-lived adapter per level (Revit Document model). Migrate any `new` to createLevelSceneManagerAdapter(...) (identical args).",
+      "forbiddenPatterns": [
+        "new LevelSceneManagerAdapter\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/entity-creation/LevelSceneManagerAdapter.ts"
+      ],
+      "tier": 3
+    },
     "gcs-buckets": {
       "ssotFile": "src/config/gcs-buckets.ts",
       "description": "GCS bucket names and GCP project ID must use gcs-buckets.ts constants",

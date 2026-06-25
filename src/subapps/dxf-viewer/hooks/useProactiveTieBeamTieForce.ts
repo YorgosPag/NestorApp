@@ -29,7 +29,7 @@ import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { ComputeTieBeamTieForcesCommand } from '../core/commands/entity-commands/ComputeTieBeamTieForcesCommand';
 import { computeTieBeamTieForces } from '../bim/structural/loads/tie-beam-tie-force';
 import {
@@ -60,7 +60,7 @@ export function useProactiveTieBeamTieForce(props: { levelManager: LoadTakedownL
       );
       if (forces.length === 0) return; // κατηγορία A / καμία συνδετήρια
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

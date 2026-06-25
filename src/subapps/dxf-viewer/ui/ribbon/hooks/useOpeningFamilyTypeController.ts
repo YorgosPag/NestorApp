@@ -38,7 +38,7 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { recordFamilyTypeChange } from '../../../bim/family-types/bim-family-type-audit-client';
 import { findOpeningsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { requestFamilyTypeDelete } from '../../../bim/family-types/bim-family-type-delete-store';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isOpeningEntity } from '../../../types/entities';
 import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
 import {
@@ -129,7 +129,7 @@ export function useOpeningFamilyTypeController(): OpeningFamilyTypeController {
     (nextTypeId: string | undefined, nextOverrides: Partial<OpeningTypeParams> | undefined) => {
       if (!opening || !levelManager.currentLevelId) return;
       const { next, previous } = resolveOpeningTypeAssignment(opening, nextTypeId, nextOverrides, getType);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -240,7 +240,7 @@ export function useOpeningFamilyTypeController(): OpeningFamilyTypeController {
       const action = await requestFamilyTypeDelete({ typeId, affectedCount: affected.length });
       if (action !== 'delete-and-detach') return;
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

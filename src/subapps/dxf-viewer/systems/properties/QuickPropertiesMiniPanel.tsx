@@ -25,7 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { QuickPropertiesMiniPanelStore } from './QuickPropertiesMiniPanelStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { LevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
 import {
   getLayerStoreSnapshot,
   subscribeLayerStore,
@@ -214,7 +214,7 @@ export function QuickPropertiesMiniPanel({
       return;
     }
 
-    const sceneManager = new LevelSceneManagerAdapter(
+    const sceneManager = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

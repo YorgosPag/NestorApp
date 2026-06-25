@@ -19,7 +19,7 @@ import { isSlabOpeningEntity } from '../../../types/entities';
 import type { SlabOpeningEntity, SlabOpeningKind, SlabOpeningParams } from '../../../bim/types/slab-opening-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateSlabOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   SLAB_OPENING_RIBBON_KEYS,
   SLAB_OPENING_RIBBON_KEYS_ACTIONS,
@@ -90,7 +90,7 @@ export function useRibbonSlabOpeningBridge(
   const dispatchParams = useCallback(
     (opening: SlabOpeningEntity, nextParams: SlabOpeningParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

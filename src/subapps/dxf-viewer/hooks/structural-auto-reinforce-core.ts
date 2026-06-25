@@ -25,7 +25,7 @@
 
 import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/AutoReinforceOrganismCommand';
 // ADR-486/504 — DERIVED span model δοκαριού (topology-aware τύπος στήριξης incl. 'continuous'
 // + sizing-span, pure· κρατά το module jest-clean).
@@ -85,7 +85,7 @@ export function runOrganismAutoReinforce(
     return [];
   }
 
-  const sm = new LevelSceneManagerAdapter(
+  const sm = createLevelSceneManagerAdapter(
     levelManager.getLevelScene,
     levelManager.setLevelScene,
     levelId,

@@ -23,7 +23,7 @@ import { isOpeningEntity } from '../../../types/entities';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateOpeningParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { markAllCanvasDirty } from '../../../rendering/core/UnifiedFrameScheduler';
 import {
   OPENING_RIBBON_KEYS,
@@ -135,7 +135,7 @@ export function useRibbonOpeningBridge(
   const dispatchParams = useCallback(
     (opening: OpeningEntity, nextParams: OpeningParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

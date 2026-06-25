@@ -30,7 +30,7 @@ import type {
 } from '../../../bim/types/mep-water-heater-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepWaterHeaterParamsCommand } from '../../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_WATER_HEATER_RIBBON_KEYS,
   MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS,
@@ -112,7 +112,7 @@ export function useRibbonMepWaterHeaterBridge(
   const dispatchParams = useCallback(
     (waterHeater: MepWaterHeaterEntity, nextParams: MepWaterHeaterParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

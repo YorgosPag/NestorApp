@@ -42,7 +42,7 @@ import {
 } from '../../../bim/geometry/roof-geometry';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateRoofParamsCommand } from '../../../core/commands/entity-commands/UpdateRoofParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   ROOF_RIBBON_KEYS,
   ROOF_RIBBON_KEYS_ACTIONS,
@@ -156,7 +156,7 @@ export function useRibbonRoofBridge(
   const dispatchParams = useCallback(
     (roof: RoofEntity, nextParams: RoofParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

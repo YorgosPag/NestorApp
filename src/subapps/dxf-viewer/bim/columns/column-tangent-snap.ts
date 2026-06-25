@@ -50,15 +50,10 @@ import {
 // Type-only (erased) — μηδέν runtime cycle με τον core resolver που μας καλεί.
 import type { ColumnFaceSnap } from './column-face-snap';
 
-/**
- * ADR-398 §3.20 — γραμμή-οδηγός ευθυγράμμισης (world segment) που εμφανίζεται όταν το τεταρτημόριο της
- * κυκλικής κολόνας κουμπώνει σε άκρο/μέσον παρειάς. Είναι κάθετη στον άξονα ολίσθησης, στο σημείο του
- * άκρου — δηλ. **η ίδια η παρειά-άκρου** του τοίχου. Ζωγραφίζεται ως dashed overlay (Revit alignment).
- */
-export interface PlacementAlignmentGuide {
-  readonly a: Point2D;
-  readonly b: Point2D;
-}
+// ADR-398 §3.20 — `PlacementAlignmentGuide` κεντρικοποιήθηκε στο `bim/framing/placement-alignment-guide`
+// (canonical SSoT, neutral home — μοιράζεται με το framing `beam-span-snap`, ADR-528· μηδέν εξάρτηση
+// framing→columns). Re-export alias εδώ: οι ιστορικοί importers (`./column-tangent-snap`) αμετάβλητοι.
+export type { PlacementAlignmentGuide } from '../framing/placement-alignment-guide';
 
 /** Hit κοινό με τους υπόλοιπους tiers του core resolver (snap + dist για nearest-wins). */
 type TangentHit = { snap: ColumnFaceSnap; dist: number };

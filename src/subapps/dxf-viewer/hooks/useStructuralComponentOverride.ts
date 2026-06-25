@@ -19,7 +19,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { SetComponentVisibilityCommand } from '../core/commands/entity-commands/SetComponentVisibilityCommand';
 import {
   isColumnEntity, isBeamEntity, isWallEntity, isSlabEntity, isStairEntity, isFoundationEntity,
@@ -56,7 +56,7 @@ export function useStructuralComponentOverride(props: { levelManager: LevelManag
         .filter((e) => selected.has(e.id) && isStructuralEntity(e))
         .map((e) => e.id);
       if (structuralIds.length === 0) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene, levelManager.setLevelScene, levelId,
       );
       execute(new SetComponentVisibilityCommand(structuralIds, component, value ?? undefined, sm));

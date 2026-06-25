@@ -24,7 +24,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { PathParams } from '../../systems/array/types';
 import type { Entity, EntityType } from '../../types/entities';
@@ -162,7 +162,7 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
       pathEntityId: hoveredId,
     };
 
-    const sm = new LevelSceneManagerAdapter(
+    const sm = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelId,

@@ -357,8 +357,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
+    // ADR-528 §whole-line — forward `shiftKey`: Shift+κλικ → auto-span όλης της σειράς συγγραμμικών στηρίξεων.
     if (activeTool === 'beam' && beamTool?.isActive) {
-      beamTool.onCanvasClick(bimPoint);
+      beamTool.onCanvasClick(bimPoint, shiftKey);
       return;
     }
     // PRIORITY 4.91: ADR-363 «Δοκάρι από τοίχο» — 1-click pick of an existing

@@ -26,7 +26,7 @@
 import { useCallback, useEffect } from 'react';
 import { EventBus } from '../../systems/events';
 import { EntityClipboardStore } from '../../systems/clipboard/EntityClipboardStore';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { buildClonesFromEntities } from '../../bim/transforms/bim-copy-builder';
 import { PasteEntitiesCommand } from '../../core/commands/entity-commands/PasteEntitiesCommand';
 import { generateEntityId } from '../../systems/entity-creation/utils';
@@ -70,7 +70,7 @@ export function useEntityClipboard({
 }: UseEntityClipboardProps): UseEntityClipboardReturn {
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

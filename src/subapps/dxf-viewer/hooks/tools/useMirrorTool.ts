@@ -22,7 +22,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { MirrorEntityCommand } from '../../core/commands/entity-commands/MirrorEntityCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useCadToggles } from '../common/useCadToggles';
 import { orthoSnap } from '../../utils/mirror-math';
@@ -110,7 +110,7 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

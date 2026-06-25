@@ -29,7 +29,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { isWallEntity, isOpeningEntity } from '../../types/entities';
 import { WallSplitStore } from '../../systems/wall-split/WallSplitStore';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
@@ -85,7 +85,7 @@ export function useWallSplitTool({
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

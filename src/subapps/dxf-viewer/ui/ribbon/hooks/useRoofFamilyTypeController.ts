@@ -31,7 +31,7 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { recordFamilyTypeChange } from '../../../bim/family-types/bim-family-type-audit-client';
 import { findRoofsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { requestFamilyTypeDelete } from '../../../bim/family-types/bim-family-type-delete-store';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isRoofEntity } from '../../../types/entities';
 import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
 import {
@@ -106,7 +106,7 @@ export function useRoofFamilyTypeController(): RoofFamilyTypeController {
     (nextTypeId: string | undefined, nextOverrides: Partial<RoofTypeParams> | undefined) => {
       if (!roof || !levelManager.currentLevelId) return;
       const { next, previous } = resolveRoofTypeAssignment(roof, nextTypeId, nextOverrides, getType);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -211,7 +211,7 @@ export function useRoofFamilyTypeController(): RoofFamilyTypeController {
       const action = await requestFamilyTypeDelete({ typeId, affectedCount: affected.length });
       if (action !== 'delete-and-detach') return;
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

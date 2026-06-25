@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useLevels } from '../../systems/levels';
 import type { ICommand } from '../../core/commands';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   applyCenterPick as applyPolarCenterPick,
   getPickingCenterArrayId as getPolarPickingArrayId,
@@ -22,7 +22,7 @@ export function useArrayRepickHandlers({ levelManager, executeCommand }: UseArra
   const handleArrayPolarCenterRepick = useCallback((worldPoint: { x: number; y: number }): boolean => {
     if (!getPolarPickingArrayId()) return false;
     if (!levelManager.currentLevelId) return false;
-    const adapter = new LevelSceneManagerAdapter(
+    const adapter = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,
@@ -34,7 +34,7 @@ export function useArrayRepickHandlers({ levelManager, executeCommand }: UseArra
   const handleArrayPathEntityRepick = useCallback((): boolean => {
     if (!getPickingPathArrayId()) return false;
     if (!levelManager.currentLevelId) return false;
-    const adapter = new LevelSceneManagerAdapter(
+    const adapter = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

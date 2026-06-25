@@ -12,13 +12,19 @@
  */
 
 import type { Entity } from '../../../types/entities';
-import { isWallEntity, isOpeningEntity, isFurnitureEntity, isRoofEntity } from '../../../types/entities';
+import {
+  isWallEntity, isOpeningEntity, isFurnitureEntity, isRoofEntity, isStairEntity,
+} from '../../../types/entities';
 import { isWindowKind } from '../../../bim/types/opening-types';
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { RoofEntity } from '../../../bim/types/roof-types';
+import type { StairEntity } from '../../../bim/types/stair-types';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
+import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
+import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../../bim/stairs/stair-boq-quantities';
+import { polylineLength } from '../../../bim/geometry/shared/polyline-frame';
 import { roofSlopeToRatio } from '../../../bim/geometry/roof-slope-units';
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
 import { extractEntityFootprintRing, extractHeightMm } from '../bim-to-dxf-primitives';
@@ -31,11 +37,15 @@ import {
   buildGableFaces,
   signedAreaXY,
   reverseRoofFootprint,
+  sceneXYToTekMeters,
 } from './tek-geometry';
 import {
   buildWallRecordXml, buildOpenXml, buildPlaneRecordXml, buildAutoroofRecordXml,
+  buildStairRecordXml,
 } from './tek-xml-writer';
-import type { TekOpening, TekPlane, TekRoof, TekRoofFace, TekRoofPoint } from './tek-types';
+import type {
+  TekOpening, TekPlane, TekRoof, TekRoofFace, TekRoofPoint, TekStair, TekStairPoint,
+} from './tek-types';
 
 export interface TekCollectResult {
   /** Σειριοποιημένα `<record>` τοίχων (join με newline) έτοιμα για injection. */
@@ -296,4 +306,82 @@ export function collectTekRoofs(entities: readonly Entity[]): TekRoofCollectResu
     id += 1;
   }
   return { autoroofsXml: records.join('\n'), roofCount: records.length };
+}
+
+export interface TekStairCollectResult {
+  /** Serialized stair `<record>` elements (newline-joined), ready for injection into `<stair>`. */
+  readonly stairsXml: string;
+  /** Πλήθος σκαλών που εξήχθησαν. */
+  readonly stairCount: number;
+}
+
+/** Πολυγραμμή σκάλας (scene units, Y-down) → `TekStairPoint[]` (μέτρα, Y-flipped) μέσω του SSoT. */
+function ringToTekStairPoints(
+  ring: readonly { x: number; y: number }[], metersPerSceneUnit: number,
+): TekStairPoint[] {
+  return ring.map((v) => sceneXYToTekMeters(v.x, v.y, metersPerSceneUnit));
+}
+
+/**
+ * Μία `StairEntity` → `TekStair` (faithful). Τα scalars (πάτημα/ρίχτι/πλάτος/στάθμες/πλήθος)
+ * + οι πολυγραμμές προκύπτουν από την **ήδη υπολογισμένη** `StairGeometry` (recompute μόνο ως
+ * fallback). Οι διαστάσεις της σκάλας ζουν σε **scene units** (όχι per-entity mm όπως οι
+ * τοίχοι) → μετατροπή με `metersPerSceneUnit` (= `sceneUnitsToMeters(scene.units)`).
+ *
+ * Τέκτων `<steps>` = **πατήματα** = ρίχτια − 1 (το import αντιστρέφει: `stepCount = steps + 1`).
+ * Winder segment-types (τόξα) + ελάχ. winder πλάτος (`min_step_width`) + pixel-perfect ελικοειδές
+ * footprint = Φ3b (εδώ straight-faithful· winders τοποθετούνται σωστά αλλά ως ευθύγραμμα τμήματα).
+ */
+function toTekStair(stair: StairEntity, id: number, metersPerSceneUnit: number): TekStair {
+  const p = stair.params;
+  const g = stair.geometry ?? computeStairGeometry(p);
+  const startElevationM = p.basePoint.z * metersPerSceneUnit;
+  const endElevationM = startElevationM + p.totalRise * metersPerSceneUnit;
+  // Τέκτων `<steps>` = πατήματα = ρίχτια − 1· ο 3Δ engine χτίζει με **ρίχτια = steps + 1** και
+  // απαιτεί `ρίχτια × vert_b == end − start` ΑΚΡΙΒΩΣ (αλλιώς ΔΕΝ χτίζει 3Δ). Άρα παράγουμε το
+  // `vert_b` ΑΠΟ τη σχέση (ΟΧΙ από το `p.rise`, που με τη στρογγυλοποίηση δεν διαιρεί το ύψος
+  // ορόφου ακριβώς) → διατήρηση ύψους ορόφου, ίδια λογική με το import (`rise = ΔΥψος/stepCount`).
+  const steps = Math.max(1, p.stepCount - 1);
+  const stepLines = g.risers.flatMap((r) => [
+    sceneXYToTekMeters(r.start.x, r.start.y, metersPerSceneUnit),
+    sceneXYToTekMeters(r.end.x, r.end.y, metersPerSceneUnit),
+  ]);
+  return {
+    id,
+    startElevationM,
+    endElevationM,
+    steps,
+    landings: g.landings.length,
+    stairWidthM: p.width * metersPerSceneUnit,
+    treadGoingM: p.tread * metersPerSceneUnit,
+    riserHeightM: (endElevationM - startElevationM) / (steps + 1),
+    waistThicknessM: mmToMeters(p.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM),
+    walklineLengthM: polylineLength(g.walkline) * metersPerSceneUnit,
+    // Ευθεία σκάλα → χωρίς ελάχ. winder πλάτος (>0 σημαίνει ελικοειδής στον Τέκτονα).
+    minStepWidthM: 0,
+    stepsNumbering: p.treadLabelDisplay !== 'none',
+    arrow: ringToTekStairPoints([g.arrowSymbol.start, g.arrowSymbol.end], metersPerSceneUnit),
+    stepLines,
+    innerContour: ringToTekStairPoints(g.stringers.inner, metersPerSceneUnit),
+    outerContour: ringToTekStairPoints(g.stringers.outer, metersPerSceneUnit),
+    walkline: ringToTekStairPoints(g.walkline, metersPerSceneUnit),
+  };
+}
+
+/**
+ * Συλλέγει τις σκάλες μιας scope-filtered λίστας entities ως `<stair>` records (type 21).
+ * `metersPerSceneUnit` = `sceneUnitsToMeters(scene.units)` (οι σκάλες δεν φέρουν per-entity
+ * sceneUnits — ίδιο convention με `collectTekLines`/`collectTekArcs`).
+ */
+export function collectTekStairs(
+  entities: readonly Entity[], metersPerSceneUnit: number,
+): TekStairCollectResult {
+  const records: string[] = [];
+  let id = 1;
+  for (const e of entities) {
+    if (!isStairEntity(e)) continue;
+    records.push(buildStairRecordXml(toTekStair(e, id, metersPerSceneUnit)));
+    id += 1;
+  }
+  return { stairsXml: records.join('\n'), stairCount: records.length };
 }

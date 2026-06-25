@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { useCommandHistory, CompoundCommand, type ICommand } from '../../../core/commands';
 import { CreateMepSystemCommand } from '../../../core/commands/entity-commands/CreateMepSystemCommand';
 import { CreateMepSegmentsCommand } from '../../../core/commands/entity-commands/CreateMepSegmentsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getCurrentLayerId } from '../../../stores/LayerStore';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import { EventBus } from '../../../systems/events/EventBus';
@@ -105,7 +105,7 @@ export function useRibbonWaterAutoSupplyBridge(
       waterProposalStore.reset();
       return;
     }
-    const adapter = new LevelSceneManagerAdapter(
+    const adapter = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelId,

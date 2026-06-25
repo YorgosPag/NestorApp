@@ -19,7 +19,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   findWallsToAutoAttachToHost,
   findWallsToAutoAttachBaseToHost,
@@ -225,7 +225,7 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
 
       const entities = scene.entities as unknown as readonly Entity[];
       const created = entity as unknown as Entity;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

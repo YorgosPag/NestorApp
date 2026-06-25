@@ -67,7 +67,7 @@ import {
 import { isWallEntity, isColumnEntity, isBeamEntity } from '../../../types/entities';
 import type { WallDna } from '../../../bim/types/wall-dna-types';
 import { useCommandHistory } from '../../../core/commands';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useUniversalSelection } from '../../../systems/selection';
 import { useEnvelopeFloorSlabs } from '../../../hooks/data/useEnvelopeFloorSlabs';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
@@ -265,7 +265,7 @@ export function ThermalEnvelopeHost(
       if (!currentLevelId) return;
       const parsed = parseEnvelopeFunctionValue(value);
       if (!parsed) return;
-      const sm = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
+      const sm = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
       const command = buildRegionOverrideCommand(region.elementIds, parsed.fn, sm);
       if (command.size() === 0) return;
       executeCommand(command);

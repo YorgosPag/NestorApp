@@ -268,6 +268,24 @@ export function buildColumnFillingRect(
   return result.ok ? result.entity : null;
 }
 
+/**
+ * SSoT — N ορθογώνια → έτοιμα ColumnEntity (validator-rejected παραλείπονται).
+ * Κοινό σε «Κολώνα σε περιοχή» (`use-column-region-clicks`) + «Πολλαπλή πλήρωση
+ * όμοιων πλαισίων» (`use-column-batch-fill-suggest`) — ΕΝΑ build-loop, όχι δύο.
+ */
+export function buildColumnsFromRects(
+  rects: readonly DetectedRectangle[],
+  layerId: string,
+  sceneUnits: SceneUnits,
+): ColumnEntity[] {
+  const out: ColumnEntity[] = [];
+  for (const rect of rects) {
+    const entity = buildColumnFillingRect(rect, layerId, sceneUnits);
+    if (entity) out.push(entity);
+  }
+  return out;
+}
+
 // ─── Orchestrators ────────────────────────────────────────────────────────────
 
 /**

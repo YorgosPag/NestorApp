@@ -26,7 +26,7 @@ import { resolveColumnSectionLock } from '../../../../bim/structural/sizing/colu
 import { resolveActiveColumnDesignMoment } from '../../../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
-import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { useLevels } from '../../../../systems/levels';
 
@@ -50,7 +50,7 @@ export function useColumnParamsDispatcher(
   return useCallback(
     (column: ColumnEntity, nextParams: ColumnParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

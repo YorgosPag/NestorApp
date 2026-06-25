@@ -19,7 +19,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { ExtendEntityCommand } from '../../core/commands/entity-commands/ExtendEntityCommand';
 import { TrimEntityCommand } from '../../core/commands/entity-commands/TrimEntityCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
@@ -107,7 +107,7 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

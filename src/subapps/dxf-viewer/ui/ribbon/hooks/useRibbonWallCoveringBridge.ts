@@ -30,7 +30,7 @@ import {
 } from '../../../bim/wall-coverings/wall-covering-layers';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallCoveringParamsCommand } from '../../../core/commands/entity-commands/UpdateWallCoveringParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   WALL_COVERING_RIBBON_KEYS,
   isWallCoveringRibbonNumberKey,
@@ -98,7 +98,7 @@ export function useRibbonWallCoveringBridge(
   const dispatchParams = useCallback(
     (wc: WallCoveringEntity, nextParams: WallCoveringParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

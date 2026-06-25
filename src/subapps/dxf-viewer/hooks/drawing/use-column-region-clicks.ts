@@ -38,7 +38,7 @@ import {
   type RegionLineSeg,
 } from '../../bim/walls/wall-in-region';
 import {
-  buildColumnFillingRect,
+  buildColumnsFromRects,
   splitColumnsByIntent,
 } from '../../bim/columns/column-from-faces';
 import { appendColumnsWithBreakdown } from '../../bim/columns/append-columns-with-breakdown';
@@ -51,7 +51,8 @@ import type { ColumnToolState } from './useColumnTool';
 export interface ColumnRegionClicksParams {
   readonly stateRef: MutableRefObject<ColumnToolState>;
   readonly setState: Dispatch<SetStateAction<ColumnToolState>>;
-  readonly onColumnCreatedRef: MutableRefObject<((entity: ColumnEntity) => void) | undefined>;
+  /** ADR-524 — batch appender (ΕΝΑΣ adapter για όλες τις κολόνες). */
+  readonly appendColumnsRef: MutableRefObject<(entities: readonly ColumnEntity[]) => void>;
   readonly getSceneEntitiesRef: MutableRefObject<(() => readonly Entity[]) | undefined>;
   readonly getSceneUnitsRef: MutableRefObject<(() => SceneUnits) | undefined>;
   readonly currentLevelId: string;
@@ -79,7 +80,7 @@ function sameSeg(a: RegionLineSeg, b: RegionLineSeg): boolean {
 
 export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnRegionClicksApi {
   const {
-    stateRef, setState, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef,
+    stateRef, setState, appendColumnsRef, getSceneEntitiesRef, getSceneUnitsRef,
     currentLevelId, suggestBatchFillAt,
   } = params;
 
@@ -90,11 +91,11 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
     [getSceneUnitsRef],
   );
 
-  // Append έτοιμων columns + breakdown event (κολώνες/τοιχία) — SSoT helper.
+  // Append έτοιμων columns (ΕΝΑ batch → ΕΝΑΣ adapter) + breakdown event — SSoT helper.
   const appendColumns = useCallback(
     (entities: readonly ColumnEntity[]): void =>
-      appendColumnsWithBreakdown(entities, (c) => onColumnCreatedRef.current?.(c)),
-    [onColumnCreatedRef],
+      appendColumnsWithBreakdown(entities, (all) => appendColumnsRef.current(all)),
+    [appendColumnsRef],
   );
 
   // ADR-419 — ένα filling column ανά ορθογώνιο, ΜΕ στατικά τίμια ταξινόμηση: aspect>4
@@ -109,11 +110,7 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
   const commitInRegionRects = useCallback(
     (rects: readonly DetectedRectangle[], opts?: { onCommitted?: () => void }): boolean => {
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const built: ColumnEntity[] = [];
-      for (const rect of rects) {
-        const entity = buildColumnFillingRect(rect, currentLevelId, sceneUnits);
-        if (entity) built.push(entity);
-      }
+      const built = buildColumnsFromRects(rects, currentLevelId, sceneUnits);
       if (built.length === 0) return false;
       const { primary, secondary } = splitColumnsByIntent(built, 'columns');
       if (secondary.length === 0) {

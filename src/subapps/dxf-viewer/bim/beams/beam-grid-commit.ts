@@ -23,7 +23,7 @@
 
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateBeamsCommand } from '../../core/commands/entity-commands/CreateBeamsCommand';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
@@ -106,7 +106,7 @@ export function commitBeamGridFromGuides(
     return { ok: false, reason: 'up-to-date', created: 0, skipped };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   deps.executeCommand(new CreateBeamsCommand(toCreate, adapter));
   return { ok: true, created: toCreate.length, skipped };
 }

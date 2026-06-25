@@ -24,7 +24,7 @@ import {
 } from '../../../bim/stairs/stair-presets-service';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { useCommandHistory } from '../../../core/commands';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { StairEntity } from '../../../types/entities';
 import type { StairParams, StairPresetDoc } from '../../../bim/types/stair-types';
 import type { useLevels } from '../../../systems/levels';
@@ -119,7 +119,7 @@ export function useStairPresets(props: UseStairPresetsProps): UseStairPresetsRes
         basePoint: stair.params.basePoint,
         direction: stair.params.direction,
       };
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

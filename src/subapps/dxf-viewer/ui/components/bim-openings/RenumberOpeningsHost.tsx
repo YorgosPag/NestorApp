@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useLevels } from '../../../systems/levels';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getGlobalCommandHistory } from '../../../core/commands';
 import { RenumberOpeningsCommand } from '../../../core/commands/entity-commands/RenumberOpeningsCommand';
 import type { OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
@@ -113,7 +113,7 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
   const handleConfirm = React.useCallback((result: RenumberResult) => {
     if (!levels.currentLevelId || !user?.uid) return;
     if (result.updates.length === 0) return;
-    const sceneManager = new LevelSceneManagerAdapter(
+    const sceneManager = createLevelSceneManagerAdapter(
       levels.getLevelScene,
       levels.setLevelScene,
       levels.currentLevelId,

@@ -56,7 +56,7 @@ import { getOpeningCornerWorldPoints } from '../walls/opening-corner-anchors';
 import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
-import { polygonCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
+import { polygon2DCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ function edgeMidpointsFromCorners(corners: readonly Point2D[]): Point2D[] {
   return footprintEdgeMidpoints(corners);
 }
 
-/** Arithmetic-mean centroid (XY), via the polygon-utils SSoT (z ignored). */
+/** Arithmetic-mean centroid (XY), via the polygon-utils SSoT (`polygon2DCentroid` — z lift εσωτερικά). */
 function centroid2D(pts: readonly Point2D[]): Point2D {
-  return polygonCentroid(pts.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+  return polygon2DCentroid(pts);
 }

@@ -23,7 +23,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useCommandHistory } from '../../../core/commands';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { deleteEntitiesById } from '../../../hooks/canvas/delete-entities-core';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
@@ -63,7 +63,7 @@ export function useRibbonEntityDelete(
     (id: string): void => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-      const adapter = new LevelSceneManagerAdapter(
+      const adapter = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

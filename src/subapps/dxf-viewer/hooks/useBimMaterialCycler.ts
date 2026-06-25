@@ -25,7 +25,7 @@
 
 import { useEffect } from 'react';
 import { useCommandHistory } from '../core/commands';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolStateStore } from '../stores/ToolStateStore';
 import {
   isWallEntity,
@@ -119,7 +119,7 @@ export function useBimMaterialCycler({
       if (!entity) return;
 
       const dir: 1 | -1 = e.shiftKey ? -1 : 1;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

@@ -24,7 +24,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { PropertiesPaletteStore } from './PropertiesPaletteStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { LevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
 import {
   getLayerStoreSnapshot,
   subscribeLayerStore,
@@ -183,7 +183,7 @@ export function PropertiesPalette({
 
     if (Object.keys(patch).length === 0) return;
 
-    const sceneManager = new LevelSceneManagerAdapter(
+    const sceneManager = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

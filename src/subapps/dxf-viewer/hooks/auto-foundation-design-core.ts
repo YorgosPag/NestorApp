@@ -24,7 +24,7 @@
 
 import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
@@ -273,7 +273,7 @@ export function runAutoFoundationDesign(
   if (createSteps.length === 0 && updateSteps.length === 0 && removes.length === 0) return ZERO;
 
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  const adapter = new LevelSceneManagerAdapter(
+  const adapter = createLevelSceneManagerAdapter(
     levelManager.getLevelScene,
     levelManager.setLevelScene,
     levelId,

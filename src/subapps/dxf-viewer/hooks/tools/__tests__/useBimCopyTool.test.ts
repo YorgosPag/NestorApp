@@ -6,15 +6,21 @@ import { useBimCopyTool } from '../useBimCopyTool';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
-  LevelSceneManagerAdapter: jest.fn().mockImplementation(() => ({
+jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => {
+  const makeAdapter = () => ({
     addEntity: jest.fn(),
     removeEntity: jest.fn(),
     getEntity: jest.fn().mockReturnValue(null),
     getEntities: jest.fn().mockReturnValue([]),
     updateEntity: jest.fn(),
-  })),
-}));
+  });
+  return {
+    LevelSceneManagerAdapter: jest.fn().mockImplementation(makeAdapter),
+    // ADR-527: production now constructs via the cached factory, not `new`.
+    createLevelSceneManagerAdapter: jest.fn(makeAdapter),
+    levelSceneManagerFor: jest.fn(makeAdapter),
+  };
+});
 
 jest.mock('../../../core/commands/entity-commands/BimCopyCommand', () => ({
   BimCopyCommand: jest.fn().mockImplementation(() => ({

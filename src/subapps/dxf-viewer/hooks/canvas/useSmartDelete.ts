@@ -26,7 +26,7 @@ import {
   CompoundCommand,
   type ICommand,
 } from '../../core/commands';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 // ADR-032/390/401 — canonical command-based delete (SSoT shared with ribbon «Διαγραφή»).
 import { deleteEntitiesById } from './delete-entities-core';
 // ADR-459 Φ7 — cross-level (Θεμελίωση) footing delete: επιλογή πεδίλου στο 3Δ + Delete
@@ -116,7 +116,7 @@ export function useSmartDelete({
     if (hoveredDxfGrip?.slabGripKind?.startsWith('slab-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
       const idx = parseInt(hoveredDxfGrip.slabGripKind.slice('slab-vertex-'.length), 10);
       if (Number.isFinite(idx)) {
-        const adapter = new LevelSceneManagerAdapter(
+        const adapter = createLevelSceneManagerAdapter(
           levelManager.getLevelScene,
           levelManager.setLevelScene,
           levelManager.currentLevelId,
@@ -149,7 +149,7 @@ export function useSmartDelete({
     if (hoveredDxfGrip?.roofGripKind?.startsWith('roof-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
       const idx = parseInt(hoveredDxfGrip.roofGripKind.slice('roof-vertex-'.length), 10);
       if (Number.isFinite(idx)) {
-        const adapter = new LevelSceneManagerAdapter(
+        const adapter = createLevelSceneManagerAdapter(
           levelManager.getLevelScene,
           levelManager.setLevelScene,
           levelManager.currentLevelId,
@@ -241,7 +241,7 @@ export function useSmartDelete({
           });
           if (writer) {
             const footingIds = new Set(crossFootings.map((f) => f.id));
-            const adapter = new LevelSceneManagerAdapter(
+            const adapter = createLevelSceneManagerAdapter(
               levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
             );
             const detachColumnIds = activeEntities
@@ -269,7 +269,7 @@ export function useSmartDelete({
     // undoable + synchronous scene removal before the Firestore events).
     const selectedDxfEntityIds = universalSelectionRef.current.getSelectedEntityIds();
     if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
-      const adapter = new LevelSceneManagerAdapter(
+      const adapter = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

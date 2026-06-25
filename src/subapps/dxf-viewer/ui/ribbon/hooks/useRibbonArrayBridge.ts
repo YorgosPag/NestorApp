@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateArrayParamsCommand } from '../../../core/commands/entity-commands/UpdateArrayParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { ArrayStore } from '../../../systems/array/ArrayStore';
 import {
   ARRAY_RIBBON_KEYS,
@@ -132,7 +132,7 @@ export function useRibbonArrayBridge(
     (arr: ArrayEntity, previousParams: ArrayParams, nextParams: ArrayParams) => {
       if (!levelManager.currentLevelId) return;
       ArrayStore.setInProgressParams(nextParams);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

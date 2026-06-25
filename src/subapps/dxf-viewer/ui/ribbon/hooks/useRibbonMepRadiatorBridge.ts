@@ -34,7 +34,7 @@ import type {
 } from '../../../bim/types/mep-radiator-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepRadiatorParamsCommand } from '../../../core/commands/entity-commands/UpdateMepRadiatorParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_RADIATOR_RIBBON_KEYS,
   MEP_RADIATOR_RIBBON_KEYS_ACTIONS,
@@ -116,7 +116,7 @@ export function useRibbonMepRadiatorBridge(
   const dispatchParams = useCallback(
     (radiator: MepRadiatorEntity, nextParams: MepRadiatorParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

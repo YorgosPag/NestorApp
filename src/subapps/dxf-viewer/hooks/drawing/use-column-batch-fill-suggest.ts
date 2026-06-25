@@ -21,23 +21,24 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, SceneLayer } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import {
   extractLineSegments,
   findEnclosingRectangle,
 } from '../../bim/walls/wall-in-region';
-import { buildColumnFillingRect, splitColumnsByIntent } from '../../bim/columns/column-from-faces';
+import { buildColumnsFromRects, splitColumnsByIntent } from '../../bim/columns/column-from-faces';
 import { appendColumnsWithBreakdown } from '../../bim/columns/append-columns-with-breakdown';
 import { scanSameColorUnfilledRects } from '../../bim/columns/column-batch-fill';
 import { requestColumnBatchFillConfirm } from '../../bim/columns/column-batch-fill-confirm-store';
 import { resolveEntityColorHex } from '../../systems/selection/select-similar-by-color';
-import { getAllLayers } from '../../stores/LayerStore';
+import { getLayersById } from '../../stores/LayerStore';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import type { SceneUnits } from './column-completion';
 
 export interface ColumnBatchFillSuggestParams {
-  readonly onColumnCreatedRef: MutableRefObject<((entity: ColumnEntity) => void) | undefined>;
+  /** ADR-524 — batch appender (ΕΝΑΣ adapter για όλες τις κολόνες· βλ. add-column-to-scene). */
+  readonly appendColumnsRef: MutableRefObject<(entities: readonly ColumnEntity[]) => void>;
   readonly getSceneEntitiesRef: MutableRefObject<(() => readonly Entity[]) | undefined>;
   readonly getSceneUnitsRef: MutableRefObject<(() => SceneUnits) | undefined>;
   readonly currentLevelId: string;
@@ -48,20 +49,10 @@ export interface ColumnBatchFillSuggestApi {
   suggestBatchFillAt(point: Readonly<Point2D>): void;
 }
 
-/** id- και name-keyed map των layers (mirror findEntityLayer lookup του color SSoT). */
-function buildLayersMap(layers: ReadonlyArray<SceneLayer>): Record<string, SceneLayer> {
-  const map: Record<string, SceneLayer> = {};
-  for (const layer of layers) {
-    map[layer.id] = layer;
-    if (layer.name) map[layer.name] = layer;
-  }
-  return map;
-}
-
 export function useColumnBatchFillSuggest(
   params: ColumnBatchFillSuggestParams,
 ): ColumnBatchFillSuggestApi {
-  const { onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } = params;
+  const { appendColumnsRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } = params;
 
   const suggestBatchFillAt = useCallback(
     (point: Readonly<Point2D>): void => {
@@ -73,16 +64,12 @@ export function useColumnBatchFillSuggest(
       const placedRect = findEnclosingRectangle(segs, point, tol);
       if (!placedRect) return;
 
-      const layersById = buildLayersMap(getAllLayers());
+      const layersById = getLayersById();
       const colorOf = (e: Entity): string | null => resolveEntityColorHex(e, layersById);
       const { rects } = scanSameColorUnfilledRects(placedRect, segs, entities, tol, colorOf);
       if (rects.length === 0) return;
 
-      const built: ColumnEntity[] = [];
-      for (const rect of rects) {
-        const entity = buildColumnFillingRect(rect, currentLevelId, sceneUnits);
-        if (entity) built.push(entity);
-      }
+      const built = buildColumnsFromRects(rects, currentLevelId, sceneUnits);
       if (built.length === 0) return;
 
       const { primary, secondary } = splitColumnsByIntent(built, 'columns');
@@ -92,11 +79,11 @@ export function useColumnBatchFillSuggest(
           wallCount: secondary.length,
         });
         if (action === 'fill-all') {
-          appendColumnsWithBreakdown(built, (c) => onColumnCreatedRef.current?.(c));
+          appendColumnsWithBreakdown(built, (all) => appendColumnsRef.current(all));
         }
       })();
     },
-    [onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId],
+    [appendColumnsRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId],
   );
 
   return { suggestBatchFillAt };

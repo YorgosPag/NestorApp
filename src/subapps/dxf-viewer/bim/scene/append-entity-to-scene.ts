@@ -30,7 +30,7 @@
  */
 import type { SceneModel } from '../../types/scene';
 import type { AnySceneEntity } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { levelSceneManagerFor } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateBimEntityCommand } from '../../core/commands/entity-commands/CreateBimEntityCommand';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
@@ -60,7 +60,8 @@ export function appendEntityToScene<E extends { id: string }>(
   // Preserve the original no-scene no-op (the adapter would otherwise mint a
   // default scene). BIM creates always have an active floor scene.
   if (!accessor.getLevelScene(levelId)) return;
-  const adapter = new LevelSceneManagerAdapter(accessor.getLevelScene, accessor.setLevelScene, levelId);
+  // ADR-527: shared singleton adapter per (accessor, level) — not a fresh `new` per call.
+  const adapter = levelSceneManagerFor(accessor, levelId);
   const command = new CreateBimEntityCommand(entity as unknown as AnySceneEntity, tool, adapter);
   getGlobalCommandHistory().execute(command);
 }
@@ -80,7 +81,8 @@ export function appendEntitiesToScene<E extends { id: string }>(
   const levelId = accessor.currentLevelId;
   if (!levelId || entities.length === 0) return;
   if (!accessor.getLevelScene(levelId)) return;
-  const adapter = new LevelSceneManagerAdapter(accessor.getLevelScene, accessor.setLevelScene, levelId);
+  // ADR-527: shared singleton adapter per (accessor, level) — not a fresh `new` per call.
+  const adapter = levelSceneManagerFor(accessor, levelId);
   const commands = entities.map(
     (e) => new CreateBimEntityCommand(e as unknown as AnySceneEntity, tool, adapter),
   );

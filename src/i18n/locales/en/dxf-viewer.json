@@ -161,6 +161,7 @@
   },
   "callbacks": {
     "copy": "Copy",
+    "tekImportFailed": "Tekton (.tek) file import failed",
     "copiedToClipboard": "Copied to clipboard!",
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",

@@ -25,7 +25,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../../core/commands';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
 import type { EntityType } from '../../../types/entities';
@@ -171,7 +171,7 @@ export function useMultiSelectionRibbonBridge(
       if (bimEntries.length === 0) return;
       const lid = levelManager.currentLevelId;
       if (!lid) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         lid,

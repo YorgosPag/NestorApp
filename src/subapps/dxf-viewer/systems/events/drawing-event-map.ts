@@ -221,6 +221,9 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // ADR-505 — Open the Export («Εξαγωγή») dialog (ExportHost listens).
   // Emitted by the ribbon Output → «Εξαγωγή» action via wrappedHandleAction.
   'dxf:export-dialog-requested': Record<string, never>;
+  // ADR-526 — Open the native file picker for Tekton .tek import (DxfViewerDialogs
+  // listens). Emitted by the ribbon Insert → «Εισαγωγή Τέκτονα» action.
+  'dxf:import-tek-requested': Record<string, never>;
   // ADR-400 — Restore persisted viewport transform (pan+zoom) without bounds recalc.
   // Emitted by the useViewportAutoFit SSoT controller (ADR-399) when a valid persisted
   // transform is found on first scene load. Consumed by useFitToView via setTransform.

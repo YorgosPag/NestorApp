@@ -33,7 +33,7 @@ import { useLevels } from '../../../systems/levels';
 import { useUniversalSelection } from '../../../systems/selection';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isStairEntity } from '../../../types/entities';
 import type { StairEntity } from '../../../types/entities';
 import type { StairMultiStoryConfig, StairParams } from '../../../bim/types/stair-types';
@@ -100,7 +100,7 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
       linkedToFloor: true,
     };
     const params: StairParams = { ...prev, multiStoryConfig: next };
-    const sm = new LevelSceneManagerAdapter(
+    const sm = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { MergeColumnsCommand } from '../core/commands/entity-commands/MergeColumnsCommand';
 import {
   findAdjacentColumnMergeGroup,
@@ -73,7 +73,7 @@ function runMerge(
   const composite = buildCompositeFromColumns(sources, sources[0].layerId, resolveSceneUnits(scene), tol);
   if (!composite) return;
 
-  const sm = new LevelSceneManagerAdapter(
+  const sm = createLevelSceneManagerAdapter(
     levelManager.getLevelScene,
     levelManager.setLevelScene,
     levelId,

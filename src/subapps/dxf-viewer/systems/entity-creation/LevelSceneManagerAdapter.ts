@@ -12,9 +12,9 @@
  * - This adapter implements ISceneManager using concrete level functions
  * - Enables full undo/redo support for entity operations
  *
- * Usage:
+ * Usage (ADR-527 — construct ONLY through the cached factory, never `new` directly):
  * ```typescript
- * const adapter = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+ * const adapter = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
  * const command = new CreateEntityCommand(entityData, adapter);
  * commandHistory.execute(command);
  * ```
@@ -54,24 +54,25 @@ type SetLevelSceneFunction = (levelId: string, scene: SceneModel) => void;
  * This adapter allows Commands (CreateEntityCommand, DeleteEntityCommand, etc.)
  * to interact with the Level-based scene storage without tight coupling.
  *
- * 🔧 CRITICAL FIX (2026-02-17): Pending scene cache for batch mutations.
- * React's getLevelScene reads from a closure-captured state. When multiple
- * mutations happen in the same synchronous execution (e.g., JoinEntityCommand
- * doing removeEntity + removeEntity + addEntity), each call reads the STALE
- * initial scene. The pendingScene cache tracks progressive mutations within
- * a single sync batch and clears after the microtask boundary.
+ * ADR-527 — STATELESS PASS-THROUGH (single source of truth). The adapter holds NO
+ * scene state of its own: every read goes straight to `getLevelSceneFn` and every
+ * write straight to `setLevelSceneFn`. The read-after-write guarantee that batch /
+ * multi-command mutations rely on (e.g. `JoinEntityCommand` doing removeEntity +
+ * removeEntity + addEntity, or a `CompoundCommand` applying N children) is owned by
+ * the ONE live SSoT at the root — `useSceneManager.levelScenesRef`, which `setLevelScene`
+ * updates SYNCHRONOUSLY (before the React `setState`) so the very next `getLevelScene`
+ * in the same sync tick already reflects the write.
+ *
+ * Historical note: a per-instance `pendingScene` cache used to live here (2026-02-17) to
+ * paper over a stale closure. Once the root `levelScenesRef` became the synchronous SSoT,
+ * that cache was a DUPLICATE of the same read-after-write mechanism — and combined with
+ * `new`-per-call it spawned N independent caches. ADR-527 removed it: one SSoT, one
+ * singleton adapter (see `createLevelSceneManagerAdapter`).
  */
 export class LevelSceneManagerAdapter implements ISceneManager {
   private readonly getLevelSceneFn: GetLevelSceneFunction;
   private readonly setLevelSceneFn: SetLevelSceneFunction;
   private readonly levelId: string;
-
-  /**
-   * 🔧 Pending scene cache for batch mutations within same synchronous execution.
-   * Cleared via queueMicrotask after the sync batch completes.
-   */
-  private pendingScene: SceneModel | null = null;
-  private pendingClearScheduled = false;
 
   /**
    * Create a new adapter for a specific level
@@ -91,29 +92,22 @@ export class LevelSceneManagerAdapter implements ISceneManager {
   }
 
   /**
-   * 🔧 Get the latest scene, preferring the pending cache if available.
-   * This ensures multiple mutations in the same sync execution see each other's changes.
+   * ADR-527 — Read the current scene straight from the SSoT. The root
+   * `levelScenesRef` is written synchronously by `setLevelScene`, so within a single
+   * sync batch (CompoundCommand / JoinEntityCommand) each call already sees the prior
+   * mutation — no per-instance cache needed.
    */
   private getLatestScene(): SceneModel | null {
-    return this.pendingScene ?? this.getLevelSceneFn(this.levelId);
+    return this.getLevelSceneFn(this.levelId);
   }
 
   /**
-   * 🔧 Commit a scene update — stores in pending cache AND pushes to React state.
-   * The pending cache is cleared after the microtask boundary (sync batch done).
+   * ADR-527 — Commit a scene update straight to the SSoT. `setLevelSceneFn` updates the
+   * root `levelScenesRef` synchronously (then mirrors React state), so the next
+   * `getLatestScene()` in the same tick reflects this write.
    */
   private commitScene(scene: SceneModel): void {
-    this.pendingScene = scene;
     this.setLevelSceneFn(this.levelId, scene);
-
-    // Schedule pending cache clear after current sync batch
-    if (!this.pendingClearScheduled) {
-      this.pendingClearScheduled = true;
-      queueMicrotask(() => {
-        this.pendingScene = null;
-        this.pendingClearScheduled = false;
-      });
-    }
   }
 
   /**
@@ -435,15 +429,65 @@ export class LevelSceneManagerAdapter implements ISceneManager {
 }
 
 /**
- * Factory function to create adapter instances
- * Useful when you need to create adapters dynamically
+ * ADR-527 — Singleton cache: ONE long-lived adapter per (scene-accessor, levelId),
+ * the «Revit Document» model. Before this, every call site did
+ * `new LevelSceneManagerAdapter(...)`, so N× single appends (e.g. batch columns) minted
+ * N adapters → N independent (now-removed) caches → each read a stale running scene.
+ *
+ * The live-scene SSoT exists at the root (`useSceneManager.levelScenesRef` is written
+ * synchronously in `setLevelScene` and read by `getLevelScene`), so a shared singleton is
+ * safe AND removes the per-call race: all commands on a level now mutate through ONE
+ * stateless adapter that reads/writes that single root SSoT — one consistent view.
+ *
+ * Keyed by `getLevelScene` fn identity (WeakMap → GC-safe, no leak) + a `setLevelScene`
+ * identity match + `levelId`. The accessor fns are stable (`useLevels` `useCallback`
+ * empty-deps), so this yields exactly one adapter/level for the app lifetime; if the fns
+ * change (HMR / tenant switch) a fresh adapter is minted — never a stale binding.
+ */
+const adapterCache = new WeakMap<
+  GetLevelSceneFunction,
+  Map<string, { adapter: LevelSceneManagerAdapter; setFn: SetLevelSceneFunction }>
+>();
+
+/**
+ * Factory function to create adapter instances.
+ * ADR-527: returns a cached singleton per (getLevelScene, setLevelScene, levelId) instead
+ * of a fresh instance on every call. `levelSceneManagerFor` delegates here, so ALL
+ * construction goes through this single site (SSoT).
  */
 export function createLevelSceneManagerAdapter(
   getLevelScene: GetLevelSceneFunction,
   setLevelScene: SetLevelSceneFunction,
   levelId: string
 ): LevelSceneManagerAdapter {
-  return new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+  let byLevel = adapterCache.get(getLevelScene);
+  if (!byLevel) {
+    byLevel = new Map();
+    adapterCache.set(getLevelScene, byLevel);
+  }
+  const cached = byLevel.get(levelId);
+  // Reuse only when BOTH accessor fns still match — guards against a getLevelScene reused
+  // with a different setLevelScene (defensive; the pair is stable in practice).
+  if (cached && cached.setFn === setLevelScene) return cached.adapter;
+
+  const adapter = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+  byLevel.set(levelId, { adapter, setFn: setLevelScene });
+  return adapter;
+}
+
+/**
+ * ADR-527 — explicit cache invalidation for tests / teardown. Clears the cached adapter
+ * for one `levelId` (or every level of the given accessor when `levelId` is omitted).
+ * Production never needs this: the WeakMap entries are GC'd when the accessor fns die.
+ */
+export function clearLevelSceneManagerCache(
+  getLevelScene: GetLevelSceneFunction,
+  levelId?: string
+): void {
+  const byLevel = adapterCache.get(getLevelScene);
+  if (!byLevel) return;
+  if (levelId) byLevel.delete(levelId);
+  else byLevel.clear();
 }
 
 /** Subset of the level manager needed to build a scene-manager adapter. */
@@ -457,7 +501,9 @@ export interface LevelSceneAccess {
  * object, so command-running hosts (`useDimensionModify`, `useStructuralFootingConnect`,
  * `useStructuralOrganismNotification`, `useCanvasEditActions`, …) stop repeating
  * `new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, levelId)`.
- * Delegates to `createLevelSceneManagerAdapter` (single construction site).
+ * Delegates to `createLevelSceneManagerAdapter` (single construction site), so it also
+ * gets the ADR-527 singleton cache for free — repeated calls for the same (accessor,
+ * level) return the SAME long-lived adapter.
  */
 export function levelSceneManagerFor(
   levelManager: LevelSceneAccess,

@@ -21,7 +21,7 @@
  */
 
 import type { ICommand } from '../core/commands/interfaces';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoSizeMembersCommand } from '../core/commands/entity-commands/AutoSizeMembersCommand';
 import { isBeamEntity, isSlabEntity, isColumnEntity } from '../types/entities';
 import { emitBimEntityParamsUpdated } from '../systems/events/emit-bim-entity-params-updated';
@@ -61,7 +61,7 @@ export function runMemberAutoSize(
   const ids = sizeable.map((e) => e.id);
   if (ids.length === 0) return [];
 
-  const sm = new LevelSceneManagerAdapter(
+  const sm = createLevelSceneManagerAdapter(
     levelManager.getLevelScene,
     levelManager.setLevelScene,
     levelId,

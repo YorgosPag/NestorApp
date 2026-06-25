@@ -18,7 +18,7 @@
 import { useCallback } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { StairEntity } from '../../../types/entities';
 import type { StairParams } from '../../../bim/types/stair-types';
 import type { useLevels } from '../../../systems/levels';
@@ -49,7 +49,7 @@ export function useStairParamsDispatcher(
     (stair, patch) => {
       if (!levelManager.currentLevelId) return;
       const next: StairParams = { ...stair.params, ...patch };
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

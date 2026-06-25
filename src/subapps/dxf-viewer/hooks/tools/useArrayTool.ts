@@ -27,7 +27,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { computeSourceGroupBbox, defaultRectSpacing } from '../../systems/array/array-bbox';
 import { validateArrayParams } from '../../systems/array/array-validation';
@@ -73,7 +73,7 @@ export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

@@ -22,7 +22,7 @@ import { isFloorFinishEntity } from '../../../types/entities';
 import type { FloorFinishEntity, FloorFinishMaterialId, FloorFinishParams } from '../../../bim/types/floor-finish-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFloorFinishParamsCommand } from '../../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   FLOOR_FINISH_RIBBON_KEYS,
   isFloorFinishRibbonNumberKey,
@@ -83,7 +83,7 @@ export function useRibbonFloorFinishBridge(
   const dispatchParams = useCallback(
     (ff: FloorFinishEntity, nextParams: FloorFinishParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

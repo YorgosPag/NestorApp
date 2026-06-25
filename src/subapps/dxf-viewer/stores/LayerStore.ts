@@ -158,6 +158,21 @@ export function getAllLayers(): ReadonlyArray<SceneLayer> {
   return cachedSnapshot.layers;
 }
 
+/**
+ * id- **και** name-keyed map των layers — η μορφή που περιμένει το color SSoT
+ * (`resolveEntityStyle`/`resolveEntityColorHex`): id-keyed lookup με name fallback
+ * για legacy/Firestore entities. SSoT ώστε οι caller να μην ξαναχτίζουν το map
+ * (ADR-524 — μία πηγή για το «layers as Record»).
+ */
+export function getLayersById(): Record<string, SceneLayer> {
+  const map: Record<string, SceneLayer> = {};
+  for (const layer of cachedSnapshot.layers) {
+    if (layer.id) map[layer.id] = layer;
+    if (layer.name) map[layer.name] = layer;
+  }
+  return map;
+}
+
 export function getCurrentLayerId(): string | null {
   return currentLayerId;
 }

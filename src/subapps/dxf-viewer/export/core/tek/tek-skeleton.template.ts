@@ -24202,7 +24202,7 @@ export const TEK_SKELETON_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 <area>
 </area>
 <stair>
-</stair>
+<!--TEK_STAIR_RECORDS--></stair>
 <thzone>
 </thzone>
 <bmp>

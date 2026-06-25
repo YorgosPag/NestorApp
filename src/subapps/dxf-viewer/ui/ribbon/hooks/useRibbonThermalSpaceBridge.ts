@@ -46,7 +46,7 @@ import {
 } from '../../../bim/thermal/heat-load/annual-gains-config';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateThermalSpaceParamsCommand } from '../../../core/commands/entity-commands/UpdateThermalSpaceParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   THERMAL_SPACE_RIBBON_KEYS,
   isThermalSpaceRibbonNumberKey,
@@ -110,7 +110,7 @@ export function useRibbonThermalSpaceBridge(
   const dispatchParams = useCallback(
     (ts: ThermalSpaceEntity, nextParams: ThermalSpaceParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

@@ -40,6 +40,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ExtendedSnapType, ProSnapResult, SnapCandidate } from '../../snapping/extended-types';
 import { resolveMemberGhostSnapFromStore } from '../framing/member-ghost-snap';
+import { resolveBeamSpanSnap, collectSpanSupportOutlines } from '../framing/beam-span-snap';
 import { selectGhostMembers, type SceneSnapTargets } from '../framing/scene-snap-targets';
 import type { MemberGhostSnapResult } from '../framing/linear-member-face-snap';
 import { resolveColumnFaceSnapFromTargets, type ColumnFaceSnap } from '../columns/column-face-snap';
@@ -103,6 +104,14 @@ export interface BimCursorSnapInput {
    */
   readonly lShapeGhost?: boolean;
   /**
+   * beam (ADR-528): `true` όταν το ενεργό δοκάρι (straight/cantilever, awaitingStart) μπορεί να
+   * **γεφυρώσει αυτόματα** το κενό ανάμεσα σε δύο δομικά μέλη (κολόνα/τοίχο). Ενεργοποιεί τον auto-span
+   * tier **ΠΡΩΤΙΣΤΟ** στο beam branch: όταν ο cursor είναι στη νοητή ευθεία κέντρο→κέντρο, επιστρέφει
+   * πλήρες span (`start`/`end` flush στις παρειές, `span:true`). `undefined`/`false` (τοίχος, curved,
+   * from-wall) → ο tier αδρανής. Mirror του `lShapeGhost` (αντίστροφη φορά — ADR-525).
+   */
+  readonly beamSpanGhost?: boolean;
+  /**
    * wall/beam: Polar/Rect Magnet opts για το **START** του μέλους (ADR-398 §3.13/§3.15, ίδιο SSoT με
    * την κολώνα). `undefined` = χωρίς magnet (σημερινή συμπεριφορά τοίχου). Όταν δοθεί (δοκάρι), το
    * φάντασμα κουμπώνει σε πολικό/καρτεσιανό πλέγμα μέσα σε κύκλο/ορθογώνιο **ΟΠΩΣ η κολώνα** — ως
@@ -142,6 +151,20 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
     const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts, input.columnHead, input.lShapeGhost);
     if (placement) return { kind: 'column-placement', placement, point: placement.position };
   } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex') {
+    // ADR-528 — auto-span ΠΡΩΤΙΣΤΟ (mirror του column `lCornerHit`): όταν ο cursor είναι στη νοητή
+    // ευθεία ανάμεσα σε δύο δομικά μέλη (κολόνες footprints + τοίχοι outline), το δοκάρι γεφυρώνει το
+    // κενό με τα άκρα flush στις παρειές. Gated `beamSpanGhost` (μόνο straight/cantilever beam → τοίχος
+    // αμετάβλητος). Νικά πριν το face-snap (το κενό είναι μακριά από παρειές → μηδέν αλληλεπικάλυψη).
+    if (input.beamSpanGhost) {
+      const span = resolveBeamSpanSnap(cursor, collectSpanSupportOutlines(targets), sceneUnits);
+      if (span) {
+        return {
+          kind: 'member-placement',
+          placement: { start: span.start, end: span.end, status: 'neutral', span: true, guide: span.guide },
+          point: span.start,
+        };
+      }
+    }
     const members = selectGhostMembers(targets, input.memberKinds ?? DEFAULT_MEMBER_KINDS);
     // ADR-514 Φ6 — η κορυφή περιγράμματος (`polygon-vertex`) δεν έχει «πλάτος» → memberWidth 0 ώστε το
     // `.start` να πατά ΑΚΡΙΒΩΣ πάνω στην παρειά (flush), όχι σε centerline offset ημι-πλάτους.

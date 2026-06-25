@@ -34,7 +34,7 @@ import type {
 import { buildUnderfloorConnectors } from '../../../bim/mep-underfloor/mep-underfloor-geometry';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepUnderfloorParamsCommand } from '../../../core/commands/entity-commands/UpdateMepUnderfloorParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_UNDERFLOOR_RIBBON_KEYS,
   MEP_UNDERFLOOR_RIBBON_KEYS_ACTIONS,
@@ -116,7 +116,7 @@ export function useRibbonMepUnderfloorBridge(
         ...nextParams,
         connectors: buildUnderfloorConnectors(nextParams),
       };
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

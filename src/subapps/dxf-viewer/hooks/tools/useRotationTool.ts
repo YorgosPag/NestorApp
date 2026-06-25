@@ -21,7 +21,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
@@ -124,7 +124,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   // Build scene manager adapter on demand
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

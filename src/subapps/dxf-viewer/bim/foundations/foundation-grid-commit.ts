@@ -17,7 +17,7 @@
 
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateFoundationsCommand } from '../../core/commands/entity-commands/CreateFoundationsCommand';
 import { DeleteFoundationsCommand } from '../../core/commands/entity-commands/DeleteFoundationsCommand';
 import { RehostFoundationsCommand } from '../../core/commands/entity-commands/RehostFoundationsCommand';
@@ -242,7 +242,7 @@ export function commitFoundationGridFromGuides(
   if (crossLevelWriter) {
     deps.executeCommand(new ReconcileCrossLevelFoundationsCommand(create, toDelete, updates, crossLevelWriter));
   } else {
-    const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+    const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
     deps.executeCommand(buildReconcileCommand(updates, toDelete, create, adapter));
   }
   return {

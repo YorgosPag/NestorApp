@@ -36,7 +36,7 @@ import {
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepFixtureParamsCommand } from '../../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_FIXTURE_RIBBON_KEYS,
   MEP_FIXTURE_RIBBON_KEYS_ACTIONS,
@@ -121,7 +121,7 @@ export function useRibbonMepFixtureBridge(
   const dispatchParams = useCallback(
     (fixture: MepFixtureEntity, nextParams: MepFixtureParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

@@ -47,7 +47,7 @@ import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useS
 import { useSpecialToolsAreaTools, type AreaToolsReturn } from './useSpecialTools-area-tools';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
-import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import { addColumnToScene, addColumnsToScene } from '../../bim/columns/add-column-to-scene';
 import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
 import { buildFoundationWriteScope } from '../../bim/foundations/foundation-write-scope';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -266,6 +266,10 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // ADR-397 — append + broadcast via the shared SSoT (`addColumnToScene`) so
     // the DRAW path and the Ctrl-COPY hot-grip path use ONE insertion routine.
     onColumnCreated: (columnEntity) => addColumnToScene(columnEntity, levelManager),
+    // ADR-524 — multi-column paths (region box / discrete-perimeter / batch-fill) μέσω
+    // ΕΝΟΣ adapter (`addColumnsToScene`): N× single-add → stale-scene race → χάνονται
+    // κολόνες + σπάει το auto-foundation. Batch = όλες μαζί + ΕΝΑ undo.
+    onColumnsCreated: (columnEntities) => addColumnsToScene(columnEntities, levelManager),
     getSceneUnits: () => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';

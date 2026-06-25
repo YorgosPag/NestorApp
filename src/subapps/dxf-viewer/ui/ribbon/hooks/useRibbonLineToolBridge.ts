@@ -44,7 +44,7 @@ import { toDisplay, fromDisplay } from '../../../config/units';
 import { displayUnitState } from '../../../config/display-unit-state';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
 import {
@@ -187,7 +187,7 @@ export function useRibbonLineToolBridge(
   const patchEntity = useCallback(
     (entity: AnySceneEntity, patch: Record<string, unknown>): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

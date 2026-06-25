@@ -38,7 +38,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { EventBus, type DrawingEventPayload } from '../../systems/events';
 import { useCommandHistory } from '../../core/commands';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
-import { LevelSceneManagerAdapter } from './LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from './LevelSceneManagerAdapter';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { SceneEntity, CreateEntityOptions } from '../../core/commands/interfaces';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
@@ -108,7 +108,7 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
       }
 
       // Create adapter for this level
-      const adapter = new LevelSceneManagerAdapter(
+      const adapter = createLevelSceneManagerAdapter(
         getLevelSceneRef.current,
         setLevelSceneRef.current,
         levelId

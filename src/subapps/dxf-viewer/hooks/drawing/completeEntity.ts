@@ -47,7 +47,7 @@ import { perfMark, perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { SceneEntity, ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { DrawingTool } from './drawing-types';
 import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
@@ -202,7 +202,7 @@ export function completeEntity(
   const sceneBefore = getScene(levelId);
   const styledEntity = entity as Entity & Record<string, unknown>;
   const { id: existingId, ...entityWithoutId } = styledEntity as { id: string } & Record<string, unknown>;
-  const adapter = new LevelSceneManagerAdapter(getScene, setScene, levelId);
+  const adapter = createLevelSceneManagerAdapter(getScene, setScene, levelId);
   // ADR-357 Phase 17: overlay QuickStyleStore overrides when not all-ByLayer.
   const quickStyle = isQuickStyleAllByLayer() ? null : getQuickStyleSnapshot();
   const command = new CreateEntityCommand(

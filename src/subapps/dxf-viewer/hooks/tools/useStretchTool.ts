@@ -23,7 +23,7 @@ import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { StretchEntityCommand, type StretchVertexMove } from '../../core/commands/entity-commands/StretchEntityCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { enumerateVertices, getAnchorPoint } from '../../systems/stretch/stretch-vertex-classifier';
@@ -125,7 +125,7 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

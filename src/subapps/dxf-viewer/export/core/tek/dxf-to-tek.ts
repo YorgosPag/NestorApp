@@ -22,6 +22,7 @@ import type {
 import { pointOnCircle } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { buildLineRecordXml, buildArcRecordXml } from './tek-xml-writer';
+import { sceneXYToTekMeters } from './tek-geometry';
 import type { TekArc, TekLine } from './tek-types';
 
 /** Default χρώμα DXF primitive (Τέκτων line/arc) όταν λείπει — από το δείγμα. */
@@ -43,12 +44,12 @@ function entityColor(e: Entity): string {
   return (e as { color?: string }).color ?? DEFAULT_PRIMITIVE_COLOR;
 }
 
-/** Ένα ευθύγραμμο τμήμα (scene units) → `TekLine` (μέτρα). Y-flip: καμβάς Y-down → Τέκτων Y-up. */
+/** Ένα ευθύγραμμο τμήμα (scene units) → `TekLine` (μέτρα). Y-flip μέσω του SSoT `sceneXYToTekMeters`. */
 function toTekLine(a: Pt, b: Pt, colorHex: string, id: number, f: number): TekLine {
   return {
     id,
-    v0: { x: a.x * f, y: -a.y * f },
-    v1: { x: b.x * f, y: -b.y * f },
+    v0: sceneXYToTekMeters(a.x, a.y, f),
+    v1: sceneXYToTekMeters(b.x, b.y, f),
     elevation0: 0,
     elevation1: 0,
     colorHex,
@@ -105,11 +106,11 @@ export function collectTekArcs(entities: readonly Entity[], f: number): TekArcCo
     if (e.type === 'circle') {
       const c = e as CircleEntity;
       const edge = pointOnCircle(c.center, c.radius, 0); // σημείο περιφέρειας → radius = |c−edge|
-      // Y-flip: καμβάς Y-down → Τέκτων Y-up (ίδιο με buildXMatrix/lines).
+      // Y-flip (καμβάς Y-down → Τέκτων Y-up) μέσω του SSoT `sceneXYToTekMeters`.
       arc = {
         id, isCircle: true,
-        centre: { x: c.center.x * f, y: -c.center.y * f },
-        p0: { x: edge.x * f, y: -edge.y * f },
+        centre: sceneXYToTekMeters(c.center.x, c.center.y, f),
+        p0: sceneXYToTekMeters(edge.x, edge.y, f),
         p1: { x: 0, y: 0 },
         elevation: 0, colorHex: entityColor(e),
       };
@@ -117,13 +118,13 @@ export function collectTekArcs(entities: readonly Entity[], f: number): TekArcCo
       const a = e as ArcEntity;
       const start = pointOnCircle(a.center, a.radius, degToRad(a.startAngle));
       const end = pointOnCircle(a.center, a.radius, degToRad(a.endAngle));
-      // Y-flip (καμβάς Y-down → Τέκτων Y-up) + swap αρχής/τέλους: η αναστροφή Y αντιστρέφει τη
+      // Y-flip (SSoT `sceneXYToTekMeters`) + swap αρχής/τέλους: η αναστροφή Y αντιστρέφει τη
       // φορά του τόξου (CW↔CCW), άρα εναλλάσσουμε p0↔p1 ώστε να μείνει το ίδιο οπτικό τόξο.
       arc = {
         id, isCircle: false,
-        centre: { x: a.center.x * f, y: -a.center.y * f },
-        p0: { x: end.x * f, y: -end.y * f },
-        p1: { x: start.x * f, y: -start.y * f },
+        centre: sceneXYToTekMeters(a.center.x, a.center.y, f),
+        p0: sceneXYToTekMeters(end.x, end.y, f),
+        p1: sceneXYToTekMeters(start.x, start.y, f),
         elevation: 0, colorHex: entityColor(e),
       };
     }

@@ -32,7 +32,7 @@ import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { useLevels } from '../../systems/levels';
 import { DXF_TIMING } from '../../config/dxf-timing';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { GripHoverMenuStore, type GripMenuOption } from '../../systems/grip/GripHoverMenuStore';
 import { getClientPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { resolveMenuActions } from '../../systems/grip/grip-menu-resolver';
@@ -131,7 +131,7 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
       timerRef.current = null;
       if (ctrlDownRef.current) return;
 
-      const sceneManager: ISceneManager = new LevelSceneManagerAdapter(
+      const sceneManager: ISceneManager = createLevelSceneManagerAdapter(
         levelManager.getLevelScene, levelManager.setLevelScene, levelId,
       );
       const ctx: GripMenuActionContext = {

@@ -29,7 +29,7 @@ import type {
 import { useCommandHistory } from '../../../core/commands';
 import { DetachColumnsCommand, type ColumnDetachSide } from '../../../core/commands/entity-commands/DetachColumnsCommand';
 import { resolveColumnAttachTargets } from '../../../bim/walls/wall-attach-pick';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
@@ -176,7 +176,7 @@ export function useRibbonColumnBridge(
         scene.entities,
       );
       if (targets.length === 0) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

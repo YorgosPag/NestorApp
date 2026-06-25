@@ -3934,6 +3934,7 @@
       "floorplanWizard": "Floorplan (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
+      "importTek": "Import Tekton (.tek)",
       "pdfBackground": "PDF Background",
       "exportDxf": "Export",
       "ifcExport": "Export IFC",

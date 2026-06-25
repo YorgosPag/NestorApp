@@ -93,13 +93,13 @@ describe('buildWallRecordXml', () => {
 });
 
 describe('injectTekEntities', () => {
-  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G';
-  it('εγχέει walls/objects/planes/autoroofs/lines/arcs στους markers', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS', 'LINES', 'ARCS'))
-      .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSG');
+  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H';
+  it('εγχέει walls/objects/planes/autoroofs/lines/arcs/stairs στους markers', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS', 'LINES', 'ARCS', 'STAIRS'))
+      .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSGSTAIRSH');
   });
-  it('planes/autoroofs/lines/arcs default κενά όταν παραλείπονται', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCDEFG');
+  it('planes/autoroofs/lines/arcs/stairs default κενά όταν παραλείπονται', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCDEFGH');
   });
   it('throw αν λείπει marker (π.χ. autoroof)', () => {
     expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D', 'x', 'y')).toThrow();

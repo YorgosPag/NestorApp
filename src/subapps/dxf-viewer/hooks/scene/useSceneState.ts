@@ -12,6 +12,8 @@ import { useLevels } from '../../systems/levels';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
+// ADR-526 — Tekton .tek import (καθρέφτης του DXF import path)
+import { importTekFile, isTekFileName } from '../../io/tek/tek-import';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -150,6 +152,27 @@ export function useSceneState() {
         levelsSystem.setSaveContext(saveContext ?? null);
       }
       
+      // ADR-526 — Tekton .tek → ίδιο pipeline (level-resolution έγινε ήδη παραπάνω).
+      // Φορτώνει τη σκηνή ΚΑΙ κάνει first-save κάθε σκάλας μέσω του StairPersistenceHost.
+      if (isTekFileName(file.name)) {
+        const result = await importTekFile(file, targetLevelId);
+        if (!result.success || !result.scene) {
+          notifications.error(result.error ?? t('callbacks.tekImportFailed'), { duration: 6000 });
+          return;
+        }
+        if (result.warnings.length > 0) {
+          notifications.warning(result.warnings.join('\n'), { duration: 5000 });
+        }
+        setLevelScene(targetLevelId, result.scene);
+        for (const entity of result.scene.entities) {
+          if (entity.type === 'stair') {
+            EventBus.emit('drawing:entity-created', { entity, tool: 'stair' });
+          }
+        }
+        setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
+        return;
+      }
+
       const scene = await importDxfFile(file);
       if (scene) {
 

@@ -18,7 +18,7 @@
 
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateSlabsCommand } from '../../core/commands/entity-commands/CreateSlabsCommand';
 import {
   isSlabEntity,
@@ -89,7 +89,7 @@ export function commitFoundationMatFromGuides(
     return { ok: false, reason: 'no-footprint', created: 0, skipped: 0 };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   deps.executeCommand(new CreateSlabsCommand(target.slabs, adapter));
   return { ok: true, created: target.slabs.length, skipped: 0 };
 }
@@ -149,7 +149,7 @@ export function commitSlabBaysFromGuides(
     return { ok: false, reason: 'up-to-date', created: 0, skipped };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   deps.executeCommand(new CreateSlabsCommand(toCreate, adapter));
   return { ok: true, created: toCreate.length, skipped };
 }

@@ -24,7 +24,7 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { DetachWallsCommand, type WallDetachSide } from '../../../core/commands/entity-commands/DetachWallsCommand';
 import { resolveWallAttachTargets } from '../../../bim/walls/wall-attach-pick';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isWallEntity } from '../../../types/entities';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import {
@@ -143,7 +143,7 @@ export function useRibbonWallBridge(
   const dispatchParams = useCallback(
     (wall: WallEntity, next: WallEntity['params']): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -250,7 +250,7 @@ export function useRibbonWallBridge(
         scene.entities,
       );
       if (targets.length === 0) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

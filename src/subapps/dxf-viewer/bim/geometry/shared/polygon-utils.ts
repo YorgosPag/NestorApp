@@ -14,6 +14,7 @@
 
 import type { MultiPolygon, Pair } from 'polygon-clipping';
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { Point2D } from '../../../rendering/types/Types';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
@@ -263,6 +264,16 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
     sumY += v.y;
   }
   return { x: sumX / n, y: sumY / n };
+}
+
+/**
+ * Vertex-mean centroid ενός **2D** πολυγώνου (Point2D) — SSoT wrapper του {@link polygonCentroid} (z=0
+ * lift εσωτερικά). Ώστε οι 2D callers (footprints/outlines) να ΜΗΝ επαναλαμβάνουν το inline
+ * `verts.map((p) => ({ x: p.x, y: p.y, z: 0 }))` (N.0.2 dedup). Καταναλώνεται από `beam-span-snap`
+ * (κέντρο μέλους-στηρίγματος, ADR-528) + `bim-characteristic-points.centroid2D` (πρώην inline αντίγραφο).
+ */
+export function polygon2DCentroid(verts: readonly Point2D[]): Point2D {
+  return polygonCentroid(verts.map((p) => ({ x: p.x, y: p.y, z: 0 })));
 }
 
 /**

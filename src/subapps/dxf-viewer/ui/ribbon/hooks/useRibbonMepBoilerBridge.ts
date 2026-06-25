@@ -39,7 +39,7 @@ import {
 import { isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepBoilerParamsCommand } from '../../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_BOILER_RIBBON_KEYS_ACTIONS,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS,
@@ -152,7 +152,7 @@ export function useRibbonMepBoilerBridge(
   const dispatchParams = useCallback(
     (boiler: MepBoilerEntity, nextParams: MepBoilerParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

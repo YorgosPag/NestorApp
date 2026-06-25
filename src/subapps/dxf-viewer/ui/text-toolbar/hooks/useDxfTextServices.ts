@@ -27,7 +27,7 @@ import { useMemo } from 'react';
 import { useLevels } from '../../../systems/levels';
 import { useCanEditText } from '../../../hooks/useCanEditText';
 import { useCurrentSceneModel } from './useCurrentSceneModel';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   noopAuditRecorder,
   type ILayerAccessProvider,
@@ -64,7 +64,7 @@ export function useDxfTextServices(): DxfTextServices | null {
 
   return useMemo(() => {
     if (!currentLevelId) return null;
-    const sceneManager = new LevelSceneManagerAdapter(
+    const sceneManager = createLevelSceneManagerAdapter(
       getLevelScene,
       setLevelScene,
       currentLevelId,

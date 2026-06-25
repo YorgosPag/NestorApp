@@ -161,3 +161,58 @@ export interface TekArc {
   /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
   readonly colorHex: string;
 }
+
+/** Μία 2D κορυφή πολυγραμμής σκάλας σε world μέτρα (Y-flipped) — `<point2d><record>`. */
+export interface TekStairPoint {
+  /** X (world μέτρα). */
+  readonly x: number;
+  /** Y (world μέτρα, Y-flipped). */
+  readonly y: number;
+}
+
+/**
+ * Μία σκάλα έτοιμη για σειριοποίηση σε `<stair><record>` (entity **type 21**· όλα τα μήκη σε
+ * **μέτρα**, οι πολυγραμμές Y-flipped). Ο Τέκτων είναι **παραμετρικός**: ανακατασκευάζει τη
+ * σκάλα από τα scalar πεδία (πάτημα/ρίχτι/πλάτος/στάθμες/πλήθος) + τη γραμμή πορείας· οι
+ * πολυγραμμές (`stepLines`/contours/`walkline`) είναι η **ήδη υπολογισμένη** γεωμετρία μας
+ * (`StairGeometry`) ώστε η σκάλα να αναγνωρίζεται 2Δ ΑΜΕΣΩΣ (faithful, μηδέν re-parametrization).
+ *
+ * Αντίστροφο του import (ADR-526 Φ1): εκεί `TekStairRecord` → `StairEntity`· εδώ
+ * `StairEntity` → `TekStair`. Winder intlist (τόξα) + pixel-perfect ελικοειδές footprint = Φ3b.
+ */
+export interface TekStair {
+  /** Ακέραιο id (1-based, `<n>`). */
+  readonly id: number;
+  /** Στάθμη βάσης — `<start_elevation>` (μέτρα). */
+  readonly startElevationM: number;
+  /** Στάθμη άφιξης (= βάση + συνολικό ύψος) — `<end_elevation>` (μέτρα). */
+  readonly endElevationM: number;
+  /** Πλήθος πατημάτων (Τέκτων `<steps>` = ρίχτια − 1). */
+  readonly steps: number;
+  /** Πλήθος πλατύσκαλων — `<landings>`. */
+  readonly landings: number;
+  /** Καθαρό πλάτος — `<stair_width>` (μέτρα). */
+  readonly stairWidthM: number;
+  /** Πάτημα / going — `<horiz_b>` (μέτρα). */
+  readonly treadGoingM: number;
+  /** Ρίχτι / riser — `<vert_b>` (μέτρα). */
+  readonly riserHeightM: number;
+  /** Πάχος πλάκας/μηρού — `<slope_h>` (μέτρα). */
+  readonly waistThicknessM: number;
+  /** Μήκος γραμμής πορείας — `<wlength>` (μέτρα). */
+  readonly walklineLengthM: number;
+  /** Minimum winder width (>0 means spiral) — `<min_step_width>` (meters). */
+  readonly minStepWidthM: number;
+  /** Αρίθμηση βαθμίδων — `<steps_numbering>` (1/0). */
+  readonly stepsNumbering: boolean;
+  /** Βέλος κατεύθυνσης ανόδου (slot 1). */
+  readonly arrow: readonly TekStairPoint[];
+  /** Γραμμές βαθμίδων / ακμές πατημάτων (slot 3). */
+  readonly stepLines: readonly TekStairPoint[];
+  /** Εσωτερικό περίγραμμα / μηρός (slot 4). */
+  readonly innerContour: readonly TekStairPoint[];
+  /** Εξωτερικό περίγραμμα / μηρός (slot 5). */
+  readonly outerContour: readonly TekStairPoint[];
+  /** Γραμμή πορείας (slot 6). */
+  readonly walkline: readonly TekStairPoint[];
+}

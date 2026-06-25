@@ -242,6 +242,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       setShowLegacyImport(true);
       return;
     }
+    // ADR-526 — Tekton .tek import: DxfViewerDialogs opens the native file picker.
+    if (action === 'import-tek') {
+      EventBus.emit('dxf:import-tek-requested', {});
+      return;
+    }
     // ADR-362 Phase G1: open dimension text-override dialog
     if (action === 'dim.text.override') {
       const entityId = params.selectedEntityIds[0];

@@ -15,7 +15,7 @@
 import { useCallback, useMemo } from 'react';
 import { EntityMergeService, type JoinPreview } from '../services/EntityMergeService';
 import { JoinEntityCommand } from '../core/commands';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { publishHighlight } from '../events/selection-bus';
 import type { ICommand } from '../core/commands';
 import type { SceneEntity } from '../core/commands/interfaces';
@@ -121,7 +121,7 @@ export function useEntityJoin({
     });
 
     // Create adapter for command system
-    const adapter = new LevelSceneManagerAdapter(
+    const adapter = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

@@ -14,7 +14,7 @@
 import type { SceneModel } from '../../types/scene-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveExportEntities } from '../core/export-entity-scope';
-import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../core/tek/bim-to-tek';
+import { collectTekWalls, collectTekPlanes, collectTekRoofs, collectTekStairs } from '../core/tek/bim-to-tek';
 import { collectTekLines, collectTekArcs } from '../core/tek/dxf-to-tek';
 import { injectTekEntities } from '../core/tek/tek-xml-writer';
 import { buildFloorFilename } from './dxf-export-adapter';
@@ -50,8 +50,13 @@ export function assembleTekDocument(
   const f = sceneUnitsToMeters(scene.units);
   const { linesXml } = collectTekLines(selected, f);
   const { arcsXml } = collectTekArcs(selected, f);
+  // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention με lines/arcs
+  // (οι σκάλες δεν φέρουν per-entity sceneUnits· οι διαστάσεις ζουν σε scene units).
+  const { stairsXml } = collectTekStairs(selected, f);
   return {
-    xml: injectTekEntities(template, wallsXml, '', planesXml, autoroofsXml, linesXml, arcsXml),
+    xml: injectTekEntities(
+      template, wallsXml, '', planesXml, autoroofsXml, linesXml, arcsXml, stairsXml,
+    ),
     warnings,
   };
 }

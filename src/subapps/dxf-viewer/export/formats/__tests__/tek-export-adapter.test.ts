@@ -12,7 +12,7 @@ import type { FurnitureParams } from '../../../bim/types/furniture-types';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
-const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
@@ -40,6 +40,28 @@ function roof(): Entity {
       slopeUnit: 'deg', thickness: 150, basePivotZ: 3000, sceneUnits: 'mm',
     },
     geometry: { faces: [{ outline: [{ x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 }, { x: 2500, y: 2500, z: 3900 }] }] },
+  } as unknown as Entity;
+}
+function stair(): Entity {
+  // Minimal straight stair (params + cached geometry σε scene units mm) — ο tek mapper
+  // διαβάζει τα scalars + risers/stringers/walkline/arrowSymbol από τη γεωμετρία.
+  return {
+    id: 's1', type: 'stair', kind: 'straight',
+    params: {
+      basePoint: { x: 0, y: 0, z: 0 }, direction: 0,
+      rise: 181.25, tread: 274, width: 800, stepCount: 16, totalRise: 2900,
+      treadLabelDisplay: 'all', variant: { kind: 'straight' },
+    },
+    geometry: {
+      risers: [{ start: { x: 0, y: 0, z: 0 }, end: { x: 0, y: 800, z: 181.25 } }],
+      stringers: {
+        inner: [{ x: 0, y: 0, z: 0 }, { x: 4110, y: 0, z: 2900 }],
+        outer: [{ x: 0, y: 800, z: 0 }, { x: 4110, y: 800, z: 2900 }],
+      },
+      walkline: [{ x: 0, y: 400, z: 0 }, { x: 4110, y: 400, z: 2900 }],
+      arrowSymbol: { start: { x: 0, y: 400, z: 0 }, end: { x: 4110, y: 400, z: 0 }, label: 'UP' },
+      landings: [],
+    },
   } as unknown as Entity;
 }
 function scene(entities: Entity[]): SceneModel {
@@ -81,5 +103,13 @@ describe('assembleTekDocument', () => {
     expect(xml).toContain('<onev3list>');           // computed «νερό»
     expect(xml).not.toMatch(/TEK_AUTOROOF_RECORDS/); // marker καταναλώθηκε
     expect(xml).not.toContain('<type>10</type>');   // στέγη ΟΧΙ ως plane
+  });
+
+  it('both → η σκάλα εγχέεται στον stair marker ως <stair> record (type 21, ADR-526 Φ3)', () => {
+    const { xml } = assembleTekDocument(FAKE_TPL, scene([stair()]), 'both');
+    expect(xml).toContain('<type>21</type>');           // stair record
+    expect(xml).toContain('<stair_width>0.8</stair_width>'); // 800mm → 0.8m
+    expect(xml).toContain('<horiz_b>0.274</horiz_b>');  // πάτημα 274mm → 0.274m
+    expect(xml).not.toMatch(/TEK_STAIR_RECORDS/);       // marker καταναλώθηκε
   });
 });

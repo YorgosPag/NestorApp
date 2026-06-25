@@ -17,8 +17,9 @@
  * ότι χρειάζεται transpose (αλλιώς ο Τέκτων ζωγραφίζει ΡΟΜΒΟ αντί ορθογωνίου).
  */
 
-import { sceneUnitsToMeters } from '../../../utils/scene-units';
+import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
 import type { Point3D } from '../../../bim/types/bim-base';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { TekXMatrix, TekPlanePoint, TekRoofPoint } from './tek-types';
 
 /** mm → μέτρα. Reuse του SSoT (sceneUnitsToMeters('mm') = 0.001) αντί magic /1000. */
@@ -27,6 +28,33 @@ export const MM_TO_M = sceneUnitsToMeters('mm');
 /** mm → μέτρα (διαστάσεις params αποθηκεύονται σε mm). */
 export function mmToMeters(mm: number): number {
   return mm * MM_TO_M;
+}
+
+/**
+ * **ΜΕΤΡΑ Τέκτονα → scene units** (αντίστροφο της export `v.x * sceneUnitsToMeters`).
+ * SSoT μετατροπής μονάδων ΚΑΙ για το IMPORT (ADR-526) — μηδέν 2η διαδρομή.
+ */
+export function metersToScene(meters: number, units: SceneUnits): number {
+  return meters / sceneUnitsToMeters(units);
+}
+
+/**
+ * **Τέκτων point (μέτρα, Y-up) → καμβά point (scene units, Y-down).** Αντίστροφο της
+ * Y-negation του `buildXMatrix`/`footprintRingToMeters`: `canvasY = −tektonY`. ΕΝΑ σημείο
+ * για το import Y-flip (`|| 0` αποφεύγει −0). SSoT καθρέφτης του export Y-flip.
+ */
+export function tekMetersToScene(xMeters: number, yMeters: number, units: SceneUnits): Point2D {
+  return { x: metersToScene(xMeters, units), y: -metersToScene(yMeters, units) || 0 };
+}
+
+/**
+ * **Σκηνή point (x,y, scene units, Y-down) → Τέκτων point (μέτρα, Y-up).** Το ΕΝΑ SSoT
+ * σημείο της export Y-flip: `xM = x·f`, `yM = −y·f` (`|| 0` αποφεύγει −0). ΟΛΟΙ οι
+ * point/ring exporters (footprint πλάκας/στέγης, σκάλα) περνούν από εδώ — μηδέν inline
+ * Y-flip ανά builder. Αντίστροφο της `tekMetersToScene` (import).
+ */
+export function sceneXYToTekMeters(x: number, y: number, metersPerSceneUnit: number): Point2D {
+  return { x: x * metersPerSceneUnit, y: -y * metersPerSceneUnit || 0 };
 }
 
 /**
@@ -96,11 +124,10 @@ export function buildOpeningXMatrix(
 export function footprintRingToMeters(
   ring: readonly Point3D[], metersPerSceneUnit: number, elevationM: number,
 ): TekPlanePoint[] {
-  return ring.map((v) => ({
-    x: v.x * metersPerSceneUnit,
-    y: -v.y * metersPerSceneUnit || 0, // Y-flip (καμβάς→Τέκτων)· `|| 0` αποφεύγει −0
-    z: elevationM,
-  }));
+  return ring.map((v) => {
+    const p = sceneXYToTekMeters(v.x, v.y, metersPerSceneUnit); // Y-flip SSoT
+    return { x: p.x, y: p.y, z: elevationM };
+  });
 }
 
 /** Ανοχή ισότητας κορυφών σε μέτρα (1 micron) για το dedup των face rings. */
@@ -172,11 +199,10 @@ export function roofFaceRingToMeters(
   ring: readonly Point3D[], metersPerSceneUnit: number,
 ): TekPlanePoint[] {
   return dedupeFaceRing(
-    ring.map((v) => ({
-      x: v.x * metersPerSceneUnit,
-      y: -v.y * metersPerSceneUnit || 0, // Y-flip (καμβάς→Τέκτων)· `|| 0` αποφεύγει −0
-      z: (v.z ?? 0) * MM_TO_M,
-    })),
+    ring.map((v) => {
+      const p = sceneXYToTekMeters(v.x, v.y, metersPerSceneUnit); // Y-flip SSoT
+      return { x: p.x, y: p.y, z: (v.z ?? 0) * MM_TO_M };
+    }),
   );
 }
 

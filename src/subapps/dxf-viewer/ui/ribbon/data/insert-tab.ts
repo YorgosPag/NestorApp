@@ -61,6 +61,17 @@ export const INSERT_TAB: RibbonTab = {
                 action: 'import-dxf-legacy',
               },
             },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'insert.import-tek',
+                labelKey: 'ribbon.commands.importTek',
+                icon: 'import-legacy',
+                commandKey: 'import-tek',
+                action: 'import-tek',
+              },
+            },
           ],
         },
       ],

@@ -32,7 +32,7 @@ import type {
 } from '../../../../bim/types/foundation-types';
 import { useCommandHistory } from '../../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { computeFoundationGeometry } from '../../../../bim/geometry/foundation-geometry';
 import { validateFoundationParams } from '../../../../bim/validators/foundation-validator';
 import {
@@ -97,7 +97,7 @@ export function useFoundationParamsDispatcher(
       const activeScene = levelManager.getLevelScene(currentLevelId);
       const inActive = activeScene?.entities.some((e) => e.id === foundation.id) ?? false;
       if (inActive) {
-        const sm = new LevelSceneManagerAdapter(
+        const sm = createLevelSceneManagerAdapter(
           levelManager.getLevelScene,
           levelManager.setLevelScene,
           currentLevelId,

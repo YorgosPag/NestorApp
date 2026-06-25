@@ -45,7 +45,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import { removeVertexFromRoof, applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import type { RoofEntity } from '../../bim/types/roof-types';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 // ADR-510 Φ3c — polyline grip ops (add/remove/convert) → shared SSoT command builder.
 import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from '../../systems/grip/polyline-grip-ops';
 
@@ -180,7 +180,7 @@ export function useGripContextMenuController(
       const onSlabVertexOp = (targetGrip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => {
         const lm = depsRef.current.levelManager;
         if (!targetGrip.entityId || !lm.currentLevelId) return;
-        const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
+        const adapter = createLevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
         const raw = adapter.getEntity(targetGrip.entityId);
 
         // ADR-417 — roof branch (footprint vertex delete / edge-midpoint insert).
@@ -222,7 +222,7 @@ export function useGripContextMenuController(
       const onPolylineVertexOp = (targetGrip: UnifiedGripInfo, op: PolylineVertexMenuOp) => {
         const lm = depsRef.current.levelManager;
         if (!targetGrip.entityId || !lm.currentLevelId) return;
-        const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
+        const adapter = createLevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
         const cmd = buildPolylineVertexOpCommand(targetGrip, op, adapter);
         if (cmd && (cmd.validate?.() ?? null) === null) getGlobalCommandHistory().execute(cmd);
       };

@@ -26,7 +26,7 @@
 
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateFoundationsCommand } from '../../core/commands/entity-commands/CreateFoundationsCommand';
 import { RehostFoundationsCommand } from '../../core/commands/entity-commands/RehostFoundationsCommand';
 // ADR-484 Slice 6 — cross-level routing: create + miter-update μέσω του foundation writer.
@@ -179,7 +179,7 @@ export function commitTieBeamGridFromGuides(
   if (crossLevelWriter) {
     deps.executeCommand(new ReconcileCrossLevelFoundationsCommand(create, [], updates, crossLevelWriter));
   } else {
-    const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+    const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
     deps.executeCommand(buildTieCommand(updates, create, adapter));
   }
   return { ok: true, created: toCreate.length, skipped, jointed: updates.length };

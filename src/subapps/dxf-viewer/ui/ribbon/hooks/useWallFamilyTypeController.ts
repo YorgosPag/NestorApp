@@ -42,7 +42,7 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { recordFamilyTypeChange } from '../../../bim/family-types/bim-family-type-audit-client';
 import { findWallsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { requestFamilyTypeDelete } from '../../../bim/family-types/bim-family-type-delete-store';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isWallEntity } from '../../../types/entities';
 import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
 import {
@@ -159,7 +159,7 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     (nextTypeId: string | undefined, nextOverrides: Partial<WallTypeParams> | undefined) => {
       if (!wall || !levelManager.currentLevelId) return;
       const { next, previous } = resolveWallTypeAssignment(wall, nextTypeId, nextOverrides, getType);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -291,7 +291,7 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
       const action = await requestFamilyTypeDelete({ typeId, affectedCount: affected.length });
       if (action !== 'delete-and-detach') return;
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

@@ -30,7 +30,7 @@ import {
 } from '../../bim/services/opening-tag-drag-controller';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { useCommandHistory } from '../../core/commands';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 
 export interface UseOpeningTagDragInteractionParams {
   readonly transform: ViewTransform;
@@ -166,7 +166,7 @@ export function useOpeningTagDragInteraction(
         if (!levelId) return;
         const { tagOffset: _omit, ...rest } = hit.opening.params;
         void _omit;
-        const sm = new LevelSceneManagerAdapter(
+        const sm = createLevelSceneManagerAdapter(
           getLevelSceneRef.current,
           setLevelSceneRef.current,
           levelId,
@@ -254,7 +254,7 @@ export function useOpeningTagDragInteraction(
           }
         }
       }
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         getLevelSceneRef.current,
         setLevelSceneRef.current,
         levelId,

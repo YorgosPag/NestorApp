@@ -93,8 +93,15 @@ export const INITIAL_STATE: ColumnToolState = {
 // ─── Hook options + return ───────────────────────────────────────────────────
 
 export interface UseColumnToolOptions {
-  /** Callback fired μετά από επιτυχές build + commit. */
+  /** Callback fired μετά από επιτυχές build + commit (single placement). */
   readonly onColumnCreated?: (entity: ColumnEntity) => void;
+  /**
+   * ADR-524 — batch callback: προσθέτει ΠΟΛΛΕΣ κολόνες ΜΑΖΙ (ΕΝΑΣ adapter, ΕΝΑ undo).
+   * Χρησιμοποιείται από τα multi-column paths (region box / discrete-perimeter /
+   * batch-fill) ΑΝΤΙ N× `onColumnCreated` — αλλιώς N adapters → stale-scene race.
+   * Omit ⇒ τα batch paths πέφτουν πίσω σε per-entity `onColumnCreated`.
+   */
+  readonly onColumnsCreated?: (entities: readonly ColumnEntity[]) => void;
   /** Layer ID στο οποίο γράφεται η νέα column. */
   readonly currentLevelId?: string;
   /** Returns the active scene's coordinate units for correct mm→canvas conversion. */

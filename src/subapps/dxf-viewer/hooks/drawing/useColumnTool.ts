@@ -25,6 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import {
   DEFAULT_COLUMN_HEIGHT_MM,
   type ColumnAnchor,
+  type ColumnEntity,
 } from '../../bim/types/column-types';
 // N.7.1 file-size split — pure column-from-click entity builder (extracted commitColumnAt core).
 import { buildClickColumnEntity, type ColumnSizeOverride } from './column-commit-build';
@@ -89,7 +90,7 @@ export type {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnToolResult {
-  const { onColumnCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
+  const { onColumnCreated, onColumnsCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<ColumnToolState>(INITIAL_STATE);
   const stateRef = useRef<ColumnToolState>(state);
@@ -100,6 +101,20 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   getSceneEntitiesRef.current = getSceneEntities;
   const onColumnCreatedRef = useRef(onColumnCreated);
   onColumnCreatedRef.current = onColumnCreated;
+  // ADR-524 — batch appender (ΕΝΑΣ adapter). Προτιμά `onColumnsCreated`· fallback
+  // per-entity μόνο αν δεν δόθηκε batch callback. Σταθερή ref για τα multi-column hooks.
+  const onColumnsCreatedRef = useRef(onColumnsCreated);
+  onColumnsCreatedRef.current = onColumnsCreated;
+  const appendColumnsBatchRef = useRef<(entities: readonly ColumnEntity[]) => void>(() => {});
+  appendColumnsBatchRef.current = (entities) => {
+    const batch = onColumnsCreatedRef.current;
+    if (batch) {
+      batch(entities);
+      return;
+    }
+    const single = onColumnCreatedRef.current;
+    if (single) for (const e of entities) single(e);
+  };
 
   // ── scene snap targets sync (ADR-398 §3.10 — mirror useWallTool/useBeamTool) ──
   // Pre-collect κολόνες/δοκάρια/τοίχοι/πλάκες στο `columnPreviewStore` ΠΡΙΝ το 1ο κλικ, ώστε
@@ -176,7 +191,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // Καλείται μετά από ΚΑΘΕ τοποθέτηση σε πλαίσιο (region 'inside' + freehand adopt):
   // βρίσκει τα υπόλοιπα όμοια (ίδιο χρώμα) αγέμιστα πλαίσια και ρωτά αν θα γεμίσουν.
   const { suggestBatchFillAt } = useColumnBatchFillSuggest({
-    onColumnCreatedRef,
+    appendColumnsRef: appendColumnsBatchRef,
     getSceneEntitiesRef,
     getSceneUnitsRef,
     currentLevelId,
@@ -232,7 +247,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // (ΜΕ ένωση→τοιχία) και discrete-perimeter (ΧΩΡΙΣ ένωση→αυτόματη ταξινόμηση+confirm).
   const { onPerimeterClick, onDiscretePerimeterClick } = useColumnPerimeterCommit({
     stateRef,
-    onColumnCreatedRef,
+    appendColumnsRef: appendColumnsBatchRef,
     getSceneEntitiesRef,
     getSceneUnitsRef,
     currentLevelId,
@@ -243,7 +258,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const { onRegionClick, getRegionPickIds } = useColumnRegionClicks({
     stateRef,
     setState,
-    onColumnCreatedRef,
+    appendColumnsRef: appendColumnsBatchRef,
     getSceneEntitiesRef,
     getSceneUnitsRef,
     currentLevelId,

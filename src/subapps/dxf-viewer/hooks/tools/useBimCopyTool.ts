@@ -17,7 +17,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { BimCopyCommand } from '../../core/commands/entity-commands/BimCopyCommand';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Point2D } from '../../rendering/types/Types';
@@ -75,7 +75,7 @@ export function useBimCopyTool({
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

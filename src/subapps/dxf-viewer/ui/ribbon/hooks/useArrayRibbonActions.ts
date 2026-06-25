@@ -24,7 +24,7 @@ import type { ToolType } from '../../toolbar/types';
 import type { RibbonActionPayload } from '../context/RibbonCommandContext';
 import { useCommandHistory } from '../../../core/commands';
 import { ExplodeArrayCommand } from '../../../core/commands/entity-commands/ExplodeArrayCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { enterEditSource } from '../../../systems/array/array-edit-source-mode';
 import {
   enterCenterPickMode,
@@ -96,7 +96,7 @@ export function useArrayRibbonActions(
       const entity = scene.entities.find((e) => e.id === primaryId);
       if (!entity || !isArrayEntity(entity)) return;
 
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,

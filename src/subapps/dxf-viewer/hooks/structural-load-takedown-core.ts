@@ -26,7 +26,7 @@
 
 import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
-import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { ComputeLoadPathCommand } from '../core/commands/entity-commands/ComputeLoadPathCommand';
 import { computeLoadPathPatches } from '../bim/structural/loads/load-path-takedown';
 import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
@@ -69,7 +69,7 @@ export function runStructuralLoadTakedown(
     return 0;
   }
 
-  const sm = new LevelSceneManagerAdapter(
+  const sm = createLevelSceneManagerAdapter(
     levelManager.getLevelScene,
     levelManager.setLevelScene,
     levelId,

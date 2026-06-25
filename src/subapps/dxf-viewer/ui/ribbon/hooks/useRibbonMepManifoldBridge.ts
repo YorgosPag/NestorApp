@@ -36,7 +36,7 @@ import {
 } from '../../../bim/types/mep-manifold-types';
 import { useCommandHistory } from '../../../core/commands';
 import { buildManifoldParamUpdate } from '../../../bim/mep-manifolds/mep-manifold-param-update';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_MANIFOLD_RIBBON_KEYS,
   MEP_MANIFOLD_RIBBON_KEYS_ACTIONS,
@@ -116,7 +116,7 @@ export function useRibbonMepManifoldBridge(
   const dispatchParams = useCallback(
     (manifold: MepManifoldEntity, nextParams: MepManifoldParams): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

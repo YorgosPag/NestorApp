@@ -24,6 +24,7 @@ import { PerformanceCategory } from '@/core/performance/types/performance.types'
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { useLevels } from '../systems/levels';
 import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
+import { EventBus } from '../systems/events/EventBus';
 import { buildDxfImportSaveContext } from './dxf-import-save-context';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
@@ -74,8 +75,25 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
   // το Floor Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
   const buildingId = resolveActiveBuildingId(levelManager.levels);
 
+  // ADR-526 — Tekton .tek import: ribbon action emits the event; we open a native
+  // file picker and route the file through the SAME import path as DXF (level
+  // resolution + scene-load + stair persist live in useSceneState.handleFileImport).
+  const tekInputRef = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => EventBus.on('dxf:import-tek-requested', () => tekInputRef.current?.click()), []);
+
   return (
     <>
+      <input
+        ref={tekInputRef}
+        type="file"
+        accept=".tek,.txt"
+        hidden
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = ''; // allow re-picking the same file
+          if (file) await handleFileImportWithEncoding(file);
+        }}
+      />
       <React.Suspense fallback={hiddenFallback}>
         <TestsModal
           isOpen={ui.testsModalOpen}

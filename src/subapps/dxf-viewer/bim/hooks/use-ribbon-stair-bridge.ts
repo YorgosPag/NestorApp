@@ -27,7 +27,7 @@ import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../core/commands';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { DetachStairsCommand, type StairDetachSide } from '../../core/commands/entity-commands/DetachStairsCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isStairEntity } from '../../types/entities';
 import type { StairEntity } from '../../types/entities';
 import type { StairParams } from '../types/stair-types';
@@ -162,7 +162,7 @@ export function useRibbonStairBridge(
       // so the explicit value wins over the host follow. Detach + edit collapse
       // into one undo step.
       const broken = detachStairSidesAffectedByVerticalEdit(stair.params, next);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -277,7 +277,7 @@ export function useRibbonStairBridge(
         scene.entities,
       );
       if (targets.length === 0) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

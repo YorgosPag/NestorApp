@@ -17,10 +17,12 @@ import {
   AUTOROOF_V3_TEMPLATE,
   LINE_RECORD_TEMPLATE,
   ARC_RECORD_TEMPLATE,
+  STAIR_RECORD_HEAD,
+  STAIR_RECORD_TAIL,
 } from './tek-record-templates';
 import type {
   TekArc, TekLine, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace, TekRoofPoint,
-  TekWall, TekXMatrix,
+  TekStair, TekStairPoint, TekWall, TekXMatrix,
 } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
@@ -32,6 +34,7 @@ const TEK_PLANE_MARKER = '<!--TEK_PLANE_RECORDS-->';
 const TEK_AUTOROOF_MARKER = '<!--TEK_AUTOROOF_RECORDS-->';
 const TEK_LINE_MARKER = '<!--TEK_LINE_RECORDS-->';
 const TEK_ARC_MARKER = '<!--TEK_ARC_RECORDS-->';
+const TEK_STAIR_MARKER = '<!--TEK_STAIR_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -181,6 +184,73 @@ export function buildArcRecordXml(a: TekArc): string {
 }
 
 /**
+ * Segment-types μιας πολυγραμμής σκάλας (slots 1/3) — όλα `2` (ευθεία). Ο Τέκτων διαβάζει
+ * τα point2d των slots αυτών ως **ανεξάρτητα τμήματα**: μία γραμμή (type 2) καταναλώνει **2
+ * σημεία** (τόξο/type 1 = 3). Άρα `segCount = κορυφές / 2` (ΟΧΙ N−1 συνδεδεμένης πολυγραμμής —
+ * αλλιώς ο parser ζητά 2×segCount σημεία, βρίσκει λιγότερα και το αρχείο ΔΕΝ ανοίγει).
+ * Ground-truth: slot 8 σημείων → intlist 4· slot 17 σημείων (winder) → 4 γραμμές + 3 τόξα.
+ */
+function straightSegmentTypes(points: readonly TekStairPoint[]): number[] {
+  return new Array<number>(Math.floor(points.length / 2)).fill(2);
+}
+
+/** Serializes a stair polyline into `<point2d>` (empty -> `<point2d>\n</point2d>`). */
+export function buildStairPoint2dXml(points: readonly TekStairPoint[]): string {
+  if (points.length === 0) return '<point2d>\n</point2d>';
+  const recs = points
+    .map((p) => `<record>\n<pX>${tekNum(p.x)}</pX><pY>${tekNum(p.y)}</pY></record>`)
+    .join('\n');
+  return `<point2d>\n${recs}\n</point2d>`;
+}
+
+/** Serializes a segment-types list into `<intlist>` (empty -> `<intlist>\n</intlist>`). */
+export function buildStairIntlistXml(values: readonly number[]): string {
+  if (values.length === 0) return '<intlist>\n</intlist>';
+  const items = values.map((v) => `<i>${Math.round(v)}</i>`).join('');
+  return `<intlist>\n${items}</intlist>`;
+}
+
+/**
+ * Συναρμολογεί ένα stair `<record>` (type 21): κεφαλή + 3 point2d (βέλος/—/γραμμές βαθμίδων)
+ * + 7 intlist (segment-types — straight ⇒ όλα `2`) + 5 point2d (εσωτ./εξωτ. περίγραμμα/πορεία
+ * + 2 κενά) + scalar ουρά. Ίδια σειρά στοιχείων με το δείγμα ΣΚΑΛΑ.tek (FESPA-fixed schema).
+ */
+export function buildStairRecordXml(s: TekStair): string {
+  const blocks = [
+    buildStairPoint2dXml(s.arrow),
+    buildStairPoint2dXml([]),
+    buildStairPoint2dXml(s.stepLines),
+    buildStairIntlistXml(straightSegmentTypes(s.arrow)),
+    buildStairIntlistXml([]),
+    buildStairIntlistXml(straightSegmentTypes(s.stepLines)),
+    buildStairIntlistXml([]),
+    buildStairIntlistXml([]),
+    // 6η intlist: flag triple `0 0 0` — σταθερό από το ground-truth ΣΚΑΛΑ.tek (μετα-δεδομένα,
+    // ΟΧΙ segment-types· εμφανίζεται και σε straight & winder δείγματα).
+    buildStairIntlistXml([0, 0, 0]),
+    buildStairIntlistXml([]),
+    buildStairPoint2dXml(s.innerContour),
+    buildStairPoint2dXml(s.outerContour),
+    buildStairPoint2dXml(s.walkline),
+    buildStairPoint2dXml([]),
+    buildStairPoint2dXml([]),
+  ];
+  const tail = STAIR_RECORD_TAIL
+    .replace('{{START}}', tekNum(s.startElevationM))
+    .replace('{{END}}', tekNum(s.endElevationM))
+    .replace('{{WIDTH}}', tekNum(s.stairWidthM))
+    .replace('{{MIN_STEP}}', tekNum(s.minStepWidthM))
+    .replace('{{STEPS_NUMBERING}}', s.stepsNumbering ? '1' : '0')
+    .replace('{{STEPS}}', String(Math.round(s.steps)))
+    .replace('{{LANDINGS}}', String(Math.round(s.landings)))
+    .replace('{{WLENGTH}}', tekNum(s.walklineLengthM))
+    .replace('{{GOING}}', tekNum(s.treadGoingM))
+    .replace('{{RISER}}', tekNum(s.riserHeightM))
+    .replace('{{WAIST}}', tekNum(s.waistThicknessM));
+  return `${STAIR_RECORD_HEAD.replace('{{N}}', String(s.id))}${blocks.join('\n')}\n${tail}`;
+}
+
+/**
  * Εγχέει τα παραγόμενα records στους markers του skeleton template. Throws αν λείπει
  * marker (σπασμένο/λάθος template) ώστε να μην βγει σιωπηλά μισό αρχείο.
  */
@@ -192,6 +262,7 @@ export function injectTekEntities(
   autoroofsXml = '',
   linesXml = '',
   arcsXml = '',
+  stairsXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
@@ -199,9 +270,10 @@ export function injectTekEntities(
     !template.includes(TEK_PLANE_MARKER) ||
     !template.includes(TEK_AUTOROOF_MARKER) ||
     !template.includes(TEK_LINE_MARKER) ||
-    !template.includes(TEK_ARC_MARKER)
+    !template.includes(TEK_ARC_MARKER) ||
+    !template.includes(TEK_STAIR_MARKER)
   ) {
-    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc marker');
+    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair marker');
   }
   return template
     .replace(TEK_WALL_MARKER, wallsXml)
@@ -209,5 +281,6 @@ export function injectTekEntities(
     .replace(TEK_PLANE_MARKER, planesXml)
     .replace(TEK_AUTOROOF_MARKER, autoroofsXml)
     .replace(TEK_LINE_MARKER, linesXml)
-    .replace(TEK_ARC_MARKER, arcsXml);
+    .replace(TEK_ARC_MARKER, arcsXml)
+    .replace(TEK_STAIR_MARKER, stairsXml);
 }

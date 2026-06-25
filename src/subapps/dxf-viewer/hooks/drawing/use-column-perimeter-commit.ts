@@ -26,10 +26,10 @@ import {
   classifyColumnsFromPerimeters,
   perimeterColumnKind,
   perimeterAspectRatio,
-  isWallColumnKind,
   splitColumnsByIntent,
   type PerimeterColumnClassification,
 } from '../../bim/columns/column-from-faces';
+import { appendColumnsWithBreakdown } from '../../bim/columns/append-columns-with-breakdown';
 import {
   perimeterFacesToRects,
   pickRegionPerimeterAt,
@@ -48,7 +48,8 @@ import { EventBus } from '../../systems/events/EventBus';
 
 export interface ColumnPerimeterCommitParams {
   readonly stateRef: MutableRefObject<ColumnToolState>;
-  readonly onColumnCreatedRef: MutableRefObject<((entity: ColumnEntity) => void) | undefined>;
+  /** ADR-524 — batch appender (ΕΝΑΣ adapter για όλες τις κολόνες). */
+  readonly appendColumnsRef: MutableRefObject<(entities: readonly ColumnEntity[]) => void>;
   readonly getSceneEntitiesRef: MutableRefObject<(() => readonly Entity[]) | undefined>;
   readonly getSceneUnitsRef: MutableRefObject<(() => SceneUnits) | undefined>;
   readonly currentLevelId: string;
@@ -64,7 +65,7 @@ export interface ColumnPerimeterCommitResult {
 export function useColumnPerimeterCommit(
   params: ColumnPerimeterCommitParams,
 ): ColumnPerimeterCommitResult {
-  const { stateRef, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } =
+  const { stateRef, appendColumnsRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } =
     params;
 
   // ADR-419 Layer 1+2+4+5 — κοινό click-inside resolver: ανιχνεύει το ΜΙΚΡΟΤΕΡΟ
@@ -113,14 +114,14 @@ export function useColumnPerimeterCommit(
   // ── outer-perimeter (Φ3 «Τοιχίο από περίγραμμα», ΜΕ ένωση) ────────────────
   const commitPerimeterColumns = useCallback(
     (built: { columns: ColumnEntity[]; ignored: number }): boolean => {
-      for (const column of built.columns) onColumnCreatedRef.current?.(column);
+      if (built.columns.length > 0) appendColumnsRef.current(built.columns); // ΕΝΑ batch → ΕΝΑΣ adapter
       EventBus.emit('bim:columns-from-perimeter', {
         built: built.columns.length,
         ignored: built.ignored,
       });
       return built.columns.length > 0;
     },
-    [onColumnCreatedRef],
+    [appendColumnsRef],
   );
 
   const onPerimeterClick = useCallback(
@@ -150,19 +151,11 @@ export function useColumnPerimeterCommit(
   );
 
   // ── discrete-perimeter (Φ3c «Πολλαπλή δημιουργία», ΧΩΡΙΣ ένωση) ────────────
-  // Append έτοιμων entities + breakdown event (created counts).
+  // Append έτοιμων entities + breakdown event — SSoT helper (κοινό με region/batch).
   const appendColumns = useCallback(
-    (entities: readonly ColumnEntity[], ignored: number): void => {
-      let columns = 0;
-      let walls = 0;
-      for (const column of entities) {
-        onColumnCreatedRef.current?.(column);
-        if (isWallColumnKind(column.kind)) walls++;
-        else columns++;
-      }
-      EventBus.emit('bim:columns-discrete-from-perimeter', { columns, walls, ignored });
-    },
-    [onColumnCreatedRef],
+    (entities: readonly ColumnEntity[], ignored: number): void =>
+      appendColumnsWithBreakdown(entities, (all) => appendColumnsRef.current(all), ignored),
+    [appendColumnsRef],
   );
 
   // ADR-419 — intent-aware «Πολλαπλή δημιουργία»: δημιουργεί κατευθείαν ό,τι
@@ -175,7 +168,7 @@ export function useColumnPerimeterCommit(
       const { primary, secondary } = splitColumnsByIntent(built.columns, intent);
 
       if (primary.length === 0 && secondary.length === 0) {
-        EventBus.emit('bim:columns-discrete-from-perimeter', { columns: 0, walls: 0, ignored: built.ignored });
+        appendColumns([], built.ignored); // SSoT — emit {0,0,ignored} χωρίς δημιουργία
         return false;
       }
       // Καθαρή πρόθεση (μόνο primary) → δημιουργία κατευθείαν, χωρίς dialog.

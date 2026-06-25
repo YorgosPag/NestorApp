@@ -29,6 +29,7 @@ import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import type { FootprintBounds, FootprintFace } from '../geometry/shared/footprint-face-frame';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
+import type { PlacementAlignmentGuide } from './placement-alignment-guide';
 
 /**
  * ADR-398 §3.12 — **καμπύλος στόχος** (κύκλος/τόξο): η αληθινή γεωμετρία περιφέρειας, ώστε οι
@@ -112,6 +113,19 @@ export interface MemberGhostSnapResult {
    * snap (κολόνες δεν φιλοξενούν ανοίγματα).
    */
   readonly targetId?: string;
+  /**
+   * ADR-528 — `true` όταν το placement είναι **πλήρης auto-span** ανάμεσα σε δύο δομικά μέλη (το δοκάρι
+   * γεφυρώνει το κενό, `start`/`end` ήδη flush στις αντικριστές παρειές). Σηματοδοτεί στο beam FSM να
+   * κάνει **single-click commit** ολόκληρου του span (ΟΧΙ μόνο lock του start). `undefined`/`false` σε
+   * κάθε άλλο placement (face-snap/T-framing/overlap) → ο caller κρατά το κανονικό 2-click flow.
+   */
+  readonly span?: boolean;
+  /**
+   * ADR-528 — η **νοητή ευθεία** (κέντρο→κέντρο των δύο μελών) ενός auto-span, ως canonical
+   * `PlacementAlignmentGuide`. Ζωγραφίζεται από το paint pipeline (ίδιο SSoT με τους column οδηγούς).
+   * Παρόν μόνο στο span placement· `undefined` αλλού.
+   */
+  readonly guide?: PlacementAlignmentGuide;
 }
 
 export interface LinearMemberFaceSnapOptions {

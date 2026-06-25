@@ -21,7 +21,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { ScaleEntityCommand } from '../../core/commands/entity-commands/ScaleEntityCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
@@ -102,7 +102,7 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
-    return new LevelSceneManagerAdapter(
+    return createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,

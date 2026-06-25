@@ -133,6 +133,28 @@ regionMethod='inside' → onRegionClick → findEnclosingRectangle(segs, point)
 - `column-batch-fill.test.ts` (pure): majority color, same-color filtering,
   idempotency (filled vs unfilled), oversized exclusion, mixed κολόνα/τοιχίο count.
 
+## 6b. Bug fix — stale-scene race στα multi-column paths (auto-foundation)
+
+**Σύμπτωμα (Giorgio browser test):** οι batch κολόνες δημιουργήθηκαν, αλλά **δεν
+μπήκαν πέδιλα** στη θεμελίωση (ενώ η μεμονωμένη κολόνα παίρνει πέδιλο μέσω
+`useAutoFoundationDesign`, που ακούει `drawing:entity-created`).
+
+**Ρίζα:** `appendEntityToScene` δημιουργεί **νέο `LevelSceneManagerAdapter` σε κάθε
+κλήση**. Ο adapter έχει `pendingScene` cache που λύνει το React-stale-getLevelScene
+race **μόνο per-instance**. Το batch έκανε **N× `addColumnToScene`** → N adapters →
+κάθε προσθήκη διάβαζε stale scene → έμενε ουσιαστικά η τελευταία + το auto-foundation
+(διαβάζει live scene) δεν έβλεπε σωστά τις κολόνες → καμία πέδιλο. Το ίδιο race
+υπήρχε (προϋπάρχον) και σε **region box-select** + **discrete-perimeter**.
+
+**Fix (SSoT, Boy Scout):** νέο `addColumnsToScene` → `appendEntitiesToScene`
+(ADR-511 — **ΕΝΑΣ** adapter + `CompoundCommand`, «room-fill = one undo»). Νέο batch
+callback `onColumnsCreated` στο `useColumnTool` (wired στο `useSpecialTools` →
+`addColumnsToScene`). Όλα τα multi-column hooks (batch-fill **+** region **+**
+perimeter) γράφουν πλέον μέσω ΕΝΟΣ batch appender (`appendColumnsBatchRef`, με
+per-entity fallback). `appendColumnsWithBreakdown` δέχεται πλέον batch `appendAll`.
+Αποτέλεσμα: όλες οι κολόνες μπαίνουν σωστά (μηδέν data-loss), ΕΝΑ undo step, και το
+auto-foundation βλέπει όλο το set → πέδιλα για όλες.
+
 ## 7. Changelog
 - **2026-06-25** — Αρχική υλοποίηση (UNCOMMITTED). Pure orchestrator + confirm
   store/dialog + wiring στο `use-column-region-clicks.ts`. Πλήρης επανάχρηση
@@ -142,3 +164,15 @@ regionMethod='inside' → onRegionClick → findEnclosingRectangle(segs, point)
   `regionMethod='inside'`). Εξαγωγή σε κοινό point-based hook
   `useColumnBatchFillSuggest` που καλείται **και** από το adopt path
   (`useColumnTool.onAdoptRect`) **και** από το region 'inside'. SSoT append helper.
+- **2026-06-25 (SSoT audit — Giorgio)** — κεντρικοποίηση 3 διπλότυπων:
+  1. **build-loop** (`rects → ColumnEntity[]`) ήταν 2× (region + batch, δικό μου) →
+     ΕΝΑ `buildColumnsFromRects` (`column-from-faces.ts`).
+  2. **append+count+emit** ήταν **3×** (region + perimeter-commit *προϋπάρχον* + batch)
+     → ΕΝΑ `appendColumnsWithBreakdown(entities, onCreated, ignored?)`. Κεντρικοποιήθηκε
+     ΚΑΙ το προϋπάρχον `use-column-perimeter-commit` (Boy Scout — δεν το δημιούργησα εγώ).
+  3. **layers-as-Record (id+name keyed)** → ΕΝΑ `getLayersById()` SSoT στο `LayerStore`
+     (ο owner των layers), αντί τοπικού `buildLayersMap`.
+- **2026-06-25 (foundation fix)** — βλ. §6b: stale-scene race (N adapters) έσπαγε το
+  auto-foundation στα batch. Fix με `addColumnsToScene`/`appendEntitiesToScene` (ΕΝΑΣ
+  adapter) + νέο `onColumnsCreated` batch callback· κεντρικοποιήθηκαν ΚΑΙ τα προϋπάρχοντα
+  region box-select + discrete-perimeter (ίδιο race). Boy Scout.

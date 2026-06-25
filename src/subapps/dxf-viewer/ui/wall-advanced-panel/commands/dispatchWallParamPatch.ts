@@ -19,7 +19,7 @@
 import { useCallback } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import { detachSidesAffectedByVerticalEdit } from '../../../bim/walls/wall-attach-detach';
 import type { useLevels } from '../../../systems/levels';
@@ -56,7 +56,7 @@ export function useWallParamsDispatcher(
       // the full-params SSoT reset any side whose driving scalar the patch changed.
       const merged: WallParams = { ...wall.params, ...patch };
       const next = detachSidesAffectedByVerticalEdit(wall.params, merged);
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,

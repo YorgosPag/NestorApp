@@ -138,7 +138,8 @@ function makeBeamGhostBeforeClick(
   // πλάκες+γραμμές (Giorgio 2026-06-24 «ίδια συμπεριφορά με κολόνα» → σιελ ενδείξεις ΚΑΙ κοντά σε τοίχο).
   // ⚠️ ADR-514 §2 — ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap).
   // ΙΔΙΟ entry με το commit (`useBeamTool.resolveStartAnchor`) → preview ≡ commit by construction.
-  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['wall', 'beam', 'slab', 'line'], magnetOpts });
+  // ADR-528 — auto-span μόνο για straight/cantilever (curved δοκάρι δεν γεφυρώνει· ορίζεται από control).
+  const snapResult = resolveBimCursorSnap({ toolKind: 'beam', cursor: effectiveCursor, targets, sceneUnits, memberWidthMm: widthMm, memberKinds: ['wall', 'beam', 'slab', 'line'], magnetOpts, beamSpanGhost: kind !== 'curved' });
   const snap = snapResult.kind === 'member-placement' ? snapResult.placement : null;
   const start: Point2D = snap ? snap.start : { x: effectiveCursor.x, y: effectiveCursor.y };
   const end: Point2D = snap
@@ -165,7 +166,10 @@ function makeBeamGhostBeforeClick(
   const ghost = toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor, faceDimensions);
   // ADR-398 §3.13/§3.15 (Giorgio 2026-06-24) — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata
   // (ΚΟΙΝΟ SSoT helper με την κολόνα)· ο `drawing-hover-handler` το ζωγραφίζει ως overlay.
-  const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, magnetOpts);
+  const grid = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, magnetOpts);
+  // ADR-528 — η νοητή ευθεία κέντρο→κέντρο του auto-span ως `alignmentGuide` (canonical SSoT· το ίδιο
+  // paint pipeline με τους column οδηγούς ζωγραφίζει την πράσινη/dashed γραμμή· δείχνει ΠΟΙΟ φάτνωμα κούμπωσε).
+  const extra = snap?.guide ? { ...grid, alignmentGuide: snap.guide } : grid;
   return Object.keys(extra).length ? ({ ...ghost, ...extra } as typeof ghost) : ghost;
 }
 

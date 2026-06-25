@@ -27,7 +27,7 @@ import { buildStructuralGraph } from '../structural/organism/structural-graph';
 import { beamSupportColumnIds } from '../structural/loads/load-path-walk';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { CreateColumnsCommand } from '../../core/commands/entity-commands/CreateColumnsCommand';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { buildIntermediateColumns } from './intermediate-column-placement';
 
 /** Level read/write surface (injected — ο builder μένει pure/jest-clean). */
@@ -74,7 +74,7 @@ export function buildAddIntermediateColumnsCommand(
   const sceneUnits = deps.sceneUnits ?? beam.params.sceneUnits ?? 'mm';
   const columns = buildIntermediateColumns(beam, template, count, deps.levelId, sceneUnits);
   if (columns.length === 0) return null;
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  const adapter = createLevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   const command = new CompoundCommand('AddIntermediateColumns', [
     new CreateColumnsCommand(columns, adapter),
   ]);

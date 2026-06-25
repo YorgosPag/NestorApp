@@ -25,7 +25,7 @@ import { LINEWEIGHT_BYLAYER_VALUE } from '../data/lineweight-ribbon-options';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { DeleteEntityCommand } from '../../../core/commands/entity-commands/DeleteEntityCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   getHatchDrawDefaults,
   setHatchDrawDefaults,
@@ -154,7 +154,7 @@ export function useRibbonHatchBridge(
   const patchHatch = useCallback(
     (hatch: HatchEntity, patch: Record<string, unknown>): void => {
       if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
+      const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
@@ -388,7 +388,7 @@ export function useRibbonHatchBridge(
         if (!hatch || !levelManager.currentLevelId) return;
         const confirmed = window.confirm(t('ribbon.commands.hatchEditor.deleteConfirm'));
         if (!confirmed) return;
-        const sm = new LevelSceneManagerAdapter(
+        const sm = createLevelSceneManagerAdapter(
           levelManager.getLevelScene,
           levelManager.setLevelScene,
           levelManager.currentLevelId,

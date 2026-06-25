@@ -8,7 +8,11 @@
  * @see bim/scene/append-entity-to-scene.ts — generic SSoT
  * @see hooks/grips/grip-parametric-commits.ts — COPY caller (commitColumnCopy)
  */
-import { appendEntityToScene, type SceneAppendAccessor } from '../scene/append-entity-to-scene';
+import {
+  appendEntityToScene,
+  appendEntitiesToScene,
+  type SceneAppendAccessor,
+} from '../scene/append-entity-to-scene';
 import type { ColumnEntity } from '../types/column-types';
 
 /** @deprecated use `SceneAppendAccessor` — kept as an alias for existing imports. */
@@ -21,4 +25,15 @@ export type ColumnSceneAccessor = SceneAppendAccessor;
  */
 export function addColumnToScene(columnEntity: ColumnEntity, accessor: SceneAppendAccessor): void {
   appendEntityToScene(accessor, columnEntity, 'column');
+}
+
+/**
+ * ADR-511 / ADR-524 / ADR-527 — append MANY κολόνες ΣΕ ΕΝΑ batch (ΕΝΑΣ adapter →
+ * CompoundCommand → ΕΝΑ undo step, Revit «room-fill = one undo»). Με το ADR-527 ο adapter
+ * είναι ούτως ή άλλως singleton/level (stateless pass-through στο root live SSoT), οπότε το
+ * batch helper παραμένει η σωστή σημασιολογία (ΕΝΑ atomic undo για όλες τις κολόνες, αντί
+ * N ξεχωριστά). No-op σε κενό.
+ */
+export function addColumnsToScene(columns: readonly ColumnEntity[], accessor: SceneAppendAccessor): void {
+  appendEntitiesToScene(accessor, columns, 'column', 'Δημιουργία κολόνων');
 }
