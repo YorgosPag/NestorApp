@@ -23,11 +23,11 @@ import {
 import { buildDimensionSymbol } from './tek-dimension-symbol';
 
 /**
- * Override χρώματος για τα end-markers (βελάκια+extension) της διάστασης. `null` → χρησιμοποιείται
- * το χρώμα της γραμμής (`<color>`, faithful στο data — μία πηγή). Calibratable σε browser-verify
- * (το target `221306` δείχνει κοκκινωπά άκρα· αλλάζει με ένα string εδώ αν το θέλει ο Giorgio).
+ * Χρώμα των end-markers (βελάκια+extension) της διάστασης. **Μπορντώ** — επιβεβαιωμένο από το
+ * ground-truth DXF (`Ισόγειο 312.dxf.txt`): τα βέλη/witness ζουν σε ξεχωριστό layer `COLOR_241`
+ * (σκούρο κόκκινο), ΟΧΙ στο πράσινο `COLOR_2` της γραμμής ούτε στο κίτρινο `COLOR_20` του κειμένου.
  */
-const DIM_ARROW_COLOR_OVERRIDE: string | null = null;
+const DIM_ARROW_COLOR = '#800000';
 
 /** Tekton `<color>` (RGB, χωρίς `#`) → `#RRGGBB` (reuse export SSoT `colorHex6`). */
 function tekColorToHex(raw: string): string {
@@ -72,7 +72,7 @@ export function tekWallToEntities(rec: TekWallRecord, units: SceneUnits): Entity
  */
 export function tekDimToEntities(rec: TekDimRecord, units: SceneUnits): Entity[] {
   const lineColor = tekColorToHex(rec.color);
-  const arrowColor = DIM_ARROW_COLOR_OVERRIDE ?? lineColor;
+  const arrowColor = DIM_ARROW_COLOR;
   // Κείμενο: ξεχωριστό `<dtext_color>` (π.χ. FFFF80 κίτρινο)· fallback στο χρώμα γραμμής αν λείπει.
   const textColor = rec.dtextColor ? tekColorToHex(rec.dtextColor) : lineColor;
   const geom = buildDimensionSymbol(rec);

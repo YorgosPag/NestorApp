@@ -54,13 +54,13 @@ describe('tekWallToEntities (ADR-531 Φ5b.1++)', () => {
 describe('tekDimToEntities (ADR-531 Φ5b.1++)', () => {
   const entities = tekDimToEntities(DIM, 'mm');
 
-  it('γραμμή+βελάκια στο χρώμα διάστασης (#00FF00 ×8) + κείμενο σε κίτρινο dtext_color', () => {
-    // 2 τμήματα γραμμής + 6 end markers (4 πτερύγια βέλους + 2 extension) = 8 πράσινες γραμμές.
-    expect(entities.filter((e) => e.type === 'line' && e.color === '#00FF00')).toHaveLength(8);
+  it('γραμμή πράσινη (×2) + end markers μπορντώ (×6) + κείμενο κίτρινο (3 χρώματα, DXF-confirmed)', () => {
+    // Γραμμή = πράσινο (COLOR_2)· βέλη/extension = μπορντώ (COLOR_241)· κείμενο = κίτρινο (COLOR_20).
+    expect(entities.filter((e) => e.type === 'line' && e.color === '#00FF00')).toHaveLength(2);
+    expect(entities.filter((e) => e.type === 'line' && e.color === '#800000')).toHaveLength(6);
     const texts = entities.filter((e) => e.type === 'text');
     expect(texts).toHaveLength(1);
     expect(texts[0].type === 'text' && texts[0].text).toBe('2.10');
-    // Το κείμενο παίρνει το <dtext_color> (FFFF80 = κίτρινο), ΟΧΙ το πράσινο της γραμμής.
     expect(texts[0].type === 'text' && texts[0].color).toBe('#FFFF80');
   });
 
