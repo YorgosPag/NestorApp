@@ -215,6 +215,9 @@ export class SSAOModulator {
     this.cancelAnim();
     this.composer.dispose();
     this.ssaoPass.dispose();
+    // ADR-536 — EffectComposer.dispose() does not dispose user-added passes; the
+    // outline pass lives in this composer, so dispose it here (mirrors ssaoPass).
+    this.outlinePass?.dispose();
   }
 
   private cancelAnim(): void {

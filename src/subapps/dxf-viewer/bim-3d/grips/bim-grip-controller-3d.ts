@@ -197,7 +197,7 @@ export class BimGripController3D {
       ? (i: number): boolean => {
           const p = st.grips[i].position;
           const world = dxfPlanToWorld(p.x, p.y, st.elevFor(p));
-          return !isGripOccluded(world, camera, this.occluders);
+          return !isGripOccluded(world, camera, this.occluders, st.selfIds);
         }
       : undefined;
     return findGripAtScreen(st.grips, project, x - rect.left, y - rect.top, GRIP_HIT_RADIUS_PX, accept);

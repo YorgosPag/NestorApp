@@ -71,7 +71,7 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
 
-    const { grips: liveGrips, elevFor } = useGrip3DOverlayStore.getState();
+    const { grips: liveGrips, elevFor, selfIds } = useGrip3DOverlayStore.getState();
     if (liveGrips.length === 0) return;
 
     const project = makeGripPlanToCanvas(camera, canvas, elevFor);
@@ -94,8 +94,9 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
       const dragging = drag?.index === i;
       // The dragged square rides its snapped live position; the rest sit at the footprint.
       const position = dragging ? drag!.livePlanPos : grip.position;
-      // Cull grips hidden behind geometry (never the dragged one — it leads the edit).
-      if (!dragging && isGripOccluded(dxfPlanToWorld(position.x, position.y, elevFor(position)), camera, occluders)) {
+      // Cull grips hidden behind OTHER entities (never the dragged one — it leads the edit;
+      // never the edited entity's own body — Revit shows sketch grips through it).
+      if (!dragging && isGripOccluded(dxfPlanToWorld(position.x, position.y, elevFor(position)), camera, occluders, selfIds)) {
         continue;
       }
       const temperature = dragging ? 'hot' : hoverIndex === i ? 'warm' : 'cold';

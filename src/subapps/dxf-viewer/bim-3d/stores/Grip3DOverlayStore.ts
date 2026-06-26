@@ -18,14 +18,20 @@ import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
 
 /** Default elevation resolver (flat, datum 0) used when no grips are mounted. */
 const NO_ELEVATION: PlanElevationMmFor = () => 0;
+const NO_SELF_IDS: ReadonlySet<string> = new Set();
 
 interface Grip3DOverlayState {
   /** The reshape grips to draw (footprint vertices + edge-midpoints), or empty. */
   readonly grips: readonly GripInfo[];
   /** Per-grip top-surface elevation (mm) so each square hugs a tilted footprint. */
   readonly elevFor: PlanElevationMmFor;
-  /** Replace the grip set + elevation resolver (selection / re-sync). Resets interaction. */
-  setGrips(grips: readonly GripInfo[], elevFor: PlanElevationMmFor): void;
+  /**
+   * `bimId`s whose meshes must NOT occlude the grips (the edited entity + e.g. a
+   * slab-opening's host slab) — so an entity never hides its own grips (ADR-535 Φ5).
+   */
+  readonly selfIds: ReadonlySet<string>;
+  /** Replace the grip set + elevation resolver + self-ids (selection / re-sync). Resets interaction. */
+  setGrips(grips: readonly GripInfo[], elevFor: PlanElevationMmFor, selfIds: ReadonlySet<string>): void;
   /** Drop all grips (multi-select / unsupported type / deselected). Resets interaction. */
   clear(): void;
 }
@@ -33,13 +39,14 @@ interface Grip3DOverlayState {
 export const useGrip3DOverlayStore = create<Grip3DOverlayState>((set) => ({
   grips: [],
   elevFor: NO_ELEVATION,
-  setGrips: (grips, elevFor) => {
+  selfIds: NO_SELF_IDS,
+  setGrips: (grips, elevFor, selfIds) => {
     resetGrip3DInteraction();
-    set({ grips: [...grips], elevFor });
+    set({ grips: [...grips], elevFor, selfIds });
   },
   clear: () => {
     resetGrip3DInteraction();
-    set({ grips: [], elevFor: NO_ELEVATION });
+    set({ grips: [], elevFor: NO_ELEVATION, selfIds: NO_SELF_IDS });
   },
 }));
 

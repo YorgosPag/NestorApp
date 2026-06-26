@@ -46,4 +46,26 @@ describe('isGripOccluded', () => {
   it('never occludes with a null occluder group', () => {
     expect(isGripOccluded(GRIP, camera(), null)).toBe(false);
   });
+
+  it('does NOT let the edited entity own mesh occlude its grips (selfIds)', () => {
+    const surface = surfaceAt(5); // a solid mesh in front of the grip…
+    (surface.children[0] as THREE.Mesh).userData['bimId'] = 'self';
+    surface.updateMatrixWorld(true);
+    // …occludes by default, but NOT when its bimId is in selfIds (the edited entity).
+    expect(isGripOccluded(GRIP, camera(), surface)).toBe(true);
+    expect(isGripOccluded(GRIP, camera(), surface, new Set(['self']))).toBe(false);
+  });
+
+  it('ignores edge/wireframe LINES in front (a vertex grip sits on its own corner)', () => {
+    const group = new THREE.Group();
+    // A line crossing the ray at z=5 (in front of the grip) — must NOT occlude.
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-1, 0, 5),
+      new THREE.Vector3(1, 0, 5),
+    ]);
+    const line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial());
+    group.add(line);
+    group.updateMatrixWorld(true);
+    expect(isGripOccluded(GRIP, camera(), group)).toBe(false);
+  });
 });

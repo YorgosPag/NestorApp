@@ -71,8 +71,27 @@ export function refreshReshapeGrips(
   }
   const grips = reshapeGripsForFootprint(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
   // ADR-535 Φ5 — push the grips + per-vertex elevation to the overlay store; the Canvas2D
-  // overlay RAF projects + paints them every frame (continuous zoom, no scene meshes).
-  useGrip3DOverlayStore.getState().setGrips(grips, gripElevationMmFor(bimType, entityIds[0], box.max.y));
+  // overlay RAF projects + paints them every frame (continuous zoom, no scene meshes). The
+  // self-ids (the entity + a slab-opening's HOST SLAB) never occlude their own grips.
+  useGrip3DOverlayStore.getState().setGrips(
+    grips,
+    gripElevationMmFor(bimType, entityIds[0], box.max.y),
+    resolveGripSelfIds(bimType, entityIds[0]),
+  );
+}
+
+/**
+ * ADR-535 Φ5 — `bimId`s whose meshes must NOT occlude the grips: the edited entity itself
+ * (an entity never hides its own grips, Revit «Edit Sketch») plus, for a slab-opening, its
+ * HOST SLAB (the opening grips sit on the host slab's top, so the slab body must show them).
+ */
+function resolveGripSelfIds(bimType: string, entityId: string): ReadonlySet<string> {
+  const ids = new Set<string>([entityId]);
+  if (bimType === 'slab-opening') {
+    const hostId = resolveSlabOpeningHostSlabId(entityId);
+    if (hostId) ids.add(hostId);
+  }
+  return ids;
 }
 
 /**
