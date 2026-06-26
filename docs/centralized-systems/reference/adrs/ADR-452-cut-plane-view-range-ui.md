@@ -515,3 +515,20 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   (Giorgio 19/6)· settle → `'full'` μέσω `armRefine` (τα χρώματα γυρίζουν ακαριαία). Giorgio 26/6 ζήτησε
   «γκρι στην περιστροφή για ταχύτητα». 1-line αλλαγή στο `section-scene-controller.ts`. UNCOMMITTED —
   commit=Giorgio. (σχετικό: ADR-536 perf, ADR-535 grip motion-hide.)
+- **2026-06-26 (perf v2.20 — SINGLE-PASS axis-cut parity)** — Giorgio «ομαλό zoom/orbit επιπέδου
+  Revit/Maxon με ενεργό cut». **SSoT audit εύρημα:** το wheel→`'fast'` debounce που υποψιαζόταν το
+  handoff ΥΠΑΡΧΕΙ ΗΔΗ (`viewport-camera.ts pulseWheelInteraction`, `WHEEL_IDLE=220ms`) → η ροδέλα
+  ΕΙΝΑΙ ήδη `'fast'`· ο profiler (`renderObjects→renderBufferDirect→setProgram`) είναι **draw-call-bound**,
+  άρα reduced-res RT θα βοηθούσε λίγο. **Η ρίζα:** το lone axis-cut cap (`capCutSection`) μετρούσε
+  parity με **ΔΥΟ** πλήρη scene περάσματα (BackSide IncrementWrap + FrontSide DecrementWrap), ενώ το
+  box path (`renderCapForPlane`) είχε ΗΔΗ τεχνική **1-περάσματος** (warmup seed + `gl.stencilOpSeparate(FRONT→DECR)`
+  cache trick). **FIX:** `createSinglePassCutParityMaterial` (DoubleSide, `depthTest=false` για το
+  lone-plane rule) αντικαθιστά τα 2 παλιά parity materials· το `capCutSection` κάνει πλέον **1** scene
+  render (warmup + stencilOpSeparate + 1 DoubleSide pass). Η parity (Σ back-INCR − Σ front-DECR, depth
+  off) είναι ανεξάρτητη σειράς → bit-for-bit ίδιο αποτέλεσμα στο μισό κόστος. Όφελος σε **ΚΑΘΕ** frame
+  (drag/κίνηση/settle) ΚΑΙ στο per-colour loop (`'colors'`/`'full'`: 2×N→N renders). ΕΝΑΣ parity
+  μηχανισμός πλέον (σβήστηκε το `createCutParityMaterial` 2-pass διπλότυπο). 3 νέα jest
+  (`section-stencil-renderer.test.ts`: material config + single main-scene render + FRONT→DECR override),
+  section/cut/scene suites GREEN. Files: `section-stencil-materials.ts`, `section-stencil-renderer.ts`
+  (+test). tsc SKIP (N.17 — verified με ts-jest). UNCOMMITTED — 🔴 browser-verify (zoom/orbit ομαλότητα +
+  η τομή ίδια οπτικά) + commit=Giorgio. (σχετικό: ADR-366 §A.3 stencil, ADR-455 axis cuts, ADR-040.)

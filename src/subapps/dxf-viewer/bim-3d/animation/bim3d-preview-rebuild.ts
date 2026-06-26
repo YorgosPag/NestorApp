@@ -277,7 +277,10 @@ function baseElevationOf(entity: Wall | Column | Beam | Slab | Stair, s: Snapsho
  * (`floorElevationMm = 0`). Non-attached → `{}` (fast path, byte-for-byte). Host inputs
  * (beams + slabs) come from the SAME snapshot the resync reads.
  */
-function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfile; baseProfile?: WallBaseProfile } {
+// ADR-535 Φ8 — exported so the 3D wall reshape-grip preview (bim3d-grip-preview-builders)
+// reuses the SAME attach top/base profile resolution the resize/tilt/endpoint previews use
+// (one SSoT), so a reshaped attached wall previews with its real stepped/sloped top/base.
+export function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfile; baseProfile?: WallBaseProfile } {
   const topAttached = wall.params?.topBinding === 'attached';
   const baseAttached = wall.params?.baseBinding === 'attached';
   if (!topAttached && !baseAttached) return {};
@@ -301,7 +304,8 @@ function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfil
  * Built from the SAME `wallTopFaceCrossingBreakpoints` + `resolveWallNominalTopZmm`
  * SSoT the commit path uses, so the ghost === the committed footprint clip.
  */
-function wallPreviewTopClip(
+// ADR-535 Φ8 — exported alongside `wallPreviewProfiles` for the 3D wall reshape-grip preview.
+export function wallPreviewTopClip(
   wall: Wall,
   hostInputs: readonly HostFootprintInput[],
   floorElevationMm: number,
@@ -319,7 +323,9 @@ function wallPreviewTopClip(
  * Attach top/base profiles for the preview column — mirror of `BimSceneLayer.syncColumns`
  * (`floorElevationMm = 0`). Non-attached or geometry-less → `{}` (fast path).
  */
-function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile?: ColumnTopProfile; baseProfile?: ColumnBaseProfile } {
+// ADR-535 Φ7 — exported so the 3D column reshape-grip preview (bim3d-grip-preview-builders)
+// reuses the SAME attach top/base profile resolution the resize/tilt previews use (one SSoT).
+export function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile?: ColumnTopProfile; baseProfile?: ColumnBaseProfile } {
   const topAttached = column.params?.topBinding === 'attached';
   const baseAttached = column.params?.baseBinding === 'attached';
   const footVerts = column.geometry?.footprint?.vertices;

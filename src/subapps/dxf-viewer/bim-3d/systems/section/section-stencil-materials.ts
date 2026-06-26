@@ -116,20 +116,28 @@ export function createSelectedCapMaterial(): THREE.MeshBasicMaterial {
 }
 
 /**
- * ADR-452 — parity material for the single horizontal cut-plane cap.
+ * ADR-452 v2.20 — SINGLE-PASS parity material for a lone axis-aligned cut plane.
  *
- * Classic two-pass stencil capping (the algorithm Revit / the three.js
- * `webgl_clipping_stencil` example use): with the cut plane ACTIVE in clipping
- * the solid is sliced open at the plane; rendering BACK faces (`IncrementWrap`)
- * and FRONT faces (`DecrementWrap`) leaves a non-zero stencil parity exactly at
- * the cross-section opening. `depthTest = false` so the parity is counted over
- * the whole sliced solid (independent of the already-clipped depth buffer) —
- * this is the fix for the lone-plane case the box renderer's depth-based
- * single-pass trick could not handle (it polluted above the cut).
+ * Consolidates the old two-pass capping (a BackSide `IncrementWrap` material +
+ * a FrontSide `DecrementWrap` material, rendered as TWO full-scene passes) into
+ * ONE DoubleSide scene render, reusing the box path's proven Phase-7.0b trick:
+ * a zero-area warmup seeds Three.js' stencil-op cache with `IncrementWrap`, then
+ * a per-pass raw `gl.stencilOpSeparate(FRONT → DecrementWrap)` overrides only the
+ * front face. BACK faces increment, FRONT faces decrement → the SAME non-zero
+ * stencil parity at the cross-section opening, at HALF the full-scene renders.
+ * The parity (Σ back-INCR − Σ front-DECR per pixel) is order-independent with
+ * depth-testing off, so a single pass is bit-for-bit equivalent to the two.
+ *
+ * Unlike the box {@link createSinglePassMaterial} this keeps `depthTest = false`:
+ * a lone cut plane must count parity over the WHOLE sliced solid, independent of
+ * the already-clipped depth buffer (a depth-tested parity polluted ABOVE the cut —
+ * the lone-plane bug the original two-pass material was written to fix). The
+ * stencil-op cache trick is independent of depth state, so the warmup (which uses
+ * the `depthTest:true` `singlePassStencilMat`) still seeds the right op here.
  */
-export function createCutParityMaterial(side: THREE.Side, zPassOp: THREE.StencilOp): THREE.MeshBasicMaterial {
+export function createSinglePassCutParityMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial();
-  mat.side = side;
+  mat.side = THREE.DoubleSide;
   mat.colorWrite = false;
   mat.depthWrite = false;
   mat.depthTest = false;
@@ -137,6 +145,6 @@ export function createCutParityMaterial(side: THREE.Side, zPassOp: THREE.Stencil
   mat.stencilFunc = THREE.AlwaysStencilFunc;
   mat.stencilFail = THREE.KeepStencilOp;
   mat.stencilZFail = THREE.KeepStencilOp;
-  mat.stencilZPass = zPassOp;
+  mat.stencilZPass = THREE.IncrementWrapStencilOp;
   return mat;
 }

@@ -22,16 +22,25 @@
 
 import type * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind } from '../../hooks/grip-types';
+import type {
+  SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind, ColumnGripKind, WallGripKind,
+} from '../../hooks/grip-types';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
+import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { computeRoofGeometry } from '../../bim/geometry/roof-geometry';
 import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
-import { slabToMesh } from '../converters/BimToThreeConverter';
+import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
+import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
+import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { slabToMesh, wallToMesh } from '../converters/BimToThreeConverter';
 import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
+import { columnToMesh } from '../converters/bim-three-structural-converters';
+import { columnPreviewProfiles, wallPreviewProfiles, wallPreviewTopClip } from './bim3d-preview-rebuild';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { resolveEntityBuilding, type EntityWithStoreyParams } from '../../bim/utils/bim-floor-utils';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -155,4 +164,70 @@ export function buildSlabOpeningReshapePreviewObject(
   const moved = { ...opening, params: next, geometry: computeSlabOpeningGeometry(next) };
   const others = s.slabOpenings.filter((o) => o.params.slabId === slab.id && o.id !== openingId);
   return slabToMesh(slab, [...others, moved], levelId, baseElevationM(slab, s));
+}
+
+/**
+ * ADR-535 Φ7 — build the live RESHAPE preview object for a dragged COLUMN cross-section
+ * grip (corner / edge / parametric face / poly-vertex/edge), or null. Column sibling of the
+ * slab builder, but it reuses the column resize/tilt preview SSoT verbatim:
+ * `applyColumnGripDrag` produces the new `ColumnParams`, `computeColumnGeometry` recomputes
+ * the footprint cache, and `columnToMesh` rebuilds it with the SAME attach top/base profiles
+ * (`columnPreviewProfiles`) the gizmo resize/tilt previews use — so a stepped/attached column
+ * top reshapes correctly and the ghost === the committed `UpdateColumnParamsCommand` re-sync.
+ * `floorElevationMm = 0` matches the single-floor resync convention (mirror `rebuildColumn`).
+ */
+export function buildColumnReshapePreviewObject(
+  entityId: string,
+  gripKind: ColumnGripKind,
+  deltaMm: Point2D,
+): THREE.Object3D | null {
+  if (isMultiFloorScope()) return null;
+  const s = useBim3DEntitiesStore.getState();
+  const column = s.columns.find((c) => c.id === entityId);
+  if (!column) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  // `ColumnGripDragInput` has no `rectilinear` field (the rect-grip engine handles its own
+  // constraints); the Shift→ortho modifier the footprint builders read does not apply here.
+  const next = applyColumnGripDrag(gripKind, { originalParams: column.params, delta: deltaMm });
+  if (next === column.params) return null; // no-op (zero delta / out-of-range index)
+  const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
+  const { topProfile, baseProfile } = columnPreviewProfiles(preview, s);
+  return columnToMesh(preview, 0, levelId, baseElevationM(column, s), topProfile, baseProfile);
+}
+
+/**
+ * ADR-535 Φ8 — build the live RESHAPE preview object for a dragged WALL cross-section
+ * grip (corner / thickness / length edge / endpoint / curve / poly-vertex), or null.
+ * Wall sibling of the column builder, reusing the resize/tilt/endpoint preview SSoT
+ * verbatim: `applyWallGripDrag` produces the new `WallParams`, `computeWallGeometry`
+ * recomputes the solid, and `wallToMesh` rebuilds it with the SAME openings +
+ * attach top/base profiles (`wallPreviewProfiles`) + footprint clip (`wallPreviewTopClip`)
+ * the gizmo previews use — so the holes follow the reshaped wall and a stepped/attached
+ * top reshapes correctly, with ghost === the committed `UpdateWallParamsCommand` re-sync.
+ *
+ * Wall-specific (≠ column): `WallGripDragInput` requires `currentPos` for the thickness /
+ * rotation resolve, so it is derived from the grip anchor + delta — byte-identical to
+ * `commitWallGripDrag` (anchor = `grip.position`; `wall-rotation` is filtered out of the
+ * 3D reshape grips, so the picked-pivot branch never runs here). `floorElevationMm = 0`
+ * matches the single-floor resync convention (mirror `rebuildWall`).
+ */
+export function buildWallReshapePreviewObject(
+  entityId: string,
+  gripKind: WallGripKind,
+  deltaMm: Point2D,
+  originPos: Point2D,
+): THREE.Object3D | null {
+  if (isMultiFloorScope()) return null;
+  const s = useBim3DEntitiesStore.getState();
+  const wall = s.walls.find((w) => w.id === entityId);
+  if (!wall) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  const currentPos: Point2D = { x: originPos.x + deltaMm.x, y: originPos.y + deltaMm.y };
+  const next = applyWallGripDrag(gripKind, { originalParams: wall.params, delta: deltaMm, currentPos });
+  if (next === wall.params) return null; // no-op (zero delta / out-of-range vertex index)
+  const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
+  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
+  const { profile, baseProfile } = wallPreviewProfiles(preview, s);
+  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
+  return wallToMesh(preview, openings, 0, levelId, baseElevationM(wall, s), profile, baseProfile, topClip);
 }

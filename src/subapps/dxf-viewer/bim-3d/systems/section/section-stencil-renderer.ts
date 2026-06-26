@@ -42,7 +42,7 @@ import {
   createWarmupScene,
   createCapMaterial,
   createSelectedCapMaterial,
-  createCutParityMaterial,
+  createSinglePassCutParityMaterial,
   createOpaqueCutCapMaterial,
 } from './section-stencil-materials';
 import {
@@ -85,10 +85,12 @@ const FALLBACK_CAP_SIZE = 100;
 
 export class SectionStencilRenderer {
   private readonly deps: StencilRendererDeps;
-  /** ADR-452 — single horizontal cut-plane cap: back-face INCR parity pass (depthTest off). */
-  private readonly cutBackStencilMat: THREE.MeshBasicMaterial;
-  /** ADR-452 — single horizontal cut-plane cap: front-face DECR parity pass (depthTest off). */
-  private readonly cutFrontStencilMat: THREE.MeshBasicMaterial;
+  /**
+   * ADR-452 v2.20 — lone axis-cut parity in ONE DoubleSide scene render (BACK→INCR via
+   * the material, FRONT→DECR via a raw `gl.stencilOpSeparate` override + warmup seed),
+   * replacing the old two-pass back/front materials. `depthTest` off (lone-plane rule).
+   */
+  private readonly cutParitySinglePassMat: THREE.MeshBasicMaterial;
   /** ADR-452 — OPAQUE grey base cap for the horizontal cut (crisp poché, no bleed-through). */
   private readonly cutCapMat: THREE.MeshBasicMaterial;
   private readonly cutCapMesh: THREE.Mesh;
@@ -111,8 +113,7 @@ export class SectionStencilRenderer {
 
   constructor(deps: StencilRendererDeps) {
     this.deps = deps;
-    this.cutBackStencilMat = createCutParityMaterial(THREE.BackSide, THREE.IncrementWrapStencilOp);
-    this.cutFrontStencilMat = createCutParityMaterial(THREE.FrontSide, THREE.DecrementWrapStencilOp);
+    this.cutParitySinglePassMat = createSinglePassCutParityMaterial();
     this.cutCapMat = createOpaqueCutCapMaterial();
     this.cutCapMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.cutCapMat);
     this.cutCapMesh.frustumCulled = false;
@@ -233,11 +234,12 @@ export class SectionStencilRenderer {
   }
 
   /**
-   * ADR-452 — one cut-section cap pass for the horizontal plane: clear stencil,
-   * BACK-increment + FRONT-decrement parity over the (optionally isolated) solids
-   * sliced at the cut plane, then fill the cap quad where stencil != 0. Shared by
-   * the opaque grey base (all geometry) and each per-material hatch overlay
-   * (`isolate` = that material's meshes).
+   * ADR-452 — one cut-section cap pass for the horizontal plane: clear stencil, run the
+   * SINGLE-PASS back-increment / front-decrement parity (v2.20) over the (optionally
+   * isolated) solids sliced at the cut plane, then fill the cap quad where stencil != 0.
+   * Shared by the opaque grey base (all geometry) and each per-material colour overlay
+   * (`isolate` = that material's meshes), so the 2× full-scene-render saving applies to
+   * EVERY tier (grey 'fast', per-colour 'colors'/'full').
    */
   private capCutSection(
     renderer: THREE.WebGLRenderer,
@@ -277,15 +279,20 @@ export class SectionStencilRenderer {
       if (keep && ud['bimId'] !== undefined && !keep.has(obj)) { hidden.push(obj); obj.visible = false; }
     });
 
+    // ADR-452 v2.20 — SINGLE-PASS parity (was two full-scene passes). Seed Three.js'
+    // stencil-op cache with IncrementWrap via the zero-area warmup, override the FRONT
+    // face to DecrementWrap with a raw GL call (the JS cache stays IncrementWrap, so
+    // every BIM object cache-hits and our override survives), then render the sliced
+    // solid ONCE DoubleSide: back faces increment, front faces decrement → parity != 0
+    // at the cross-section. Halves the full-scene renders this hot path costs per frame
+    // (the section-nav lag). Mirrors renderCapForPlane's box trick; depthTest stays off
+    // on the parity material (lone-plane rule), independent of the cache seed.
+    const gl = renderer.getContext() as WebGL2RenderingContext;
     renderer.clearStencil();
-    // Pass 1: back faces increment, Pass 2: front faces decrement → parity != 0
-    // at the cross-section. depthTest is off on both materials (set at creation).
-    this.cutBackStencilMat.clippingPlanes = parityClip;
-    mainScene.overrideMaterial = this.cutBackStencilMat;
-    renderer.render(mainScene, camera);
-
-    this.cutFrontStencilMat.clippingPlanes = parityClip;
-    mainScene.overrideMaterial = this.cutFrontStencilMat;
+    renderer.render(this.warmupScene, camera);
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
+    this.cutParitySinglePassMat.clippingPlanes = parityClip;
+    mainScene.overrideMaterial = this.cutParitySinglePassMat;
     renderer.render(mainScene, camera);
 
     mainScene.overrideMaterial = null;
@@ -456,8 +463,7 @@ export class SectionStencilRenderer {
     if (this.disposed) return;
     this.disposed = true;
     this.capMesh.geometry.dispose();
-    this.cutBackStencilMat.dispose();
-    this.cutFrontStencilMat.dispose();
+    this.cutParitySinglePassMat.dispose();
     this.cutCapMesh.geometry.dispose();
     this.cutCapMat.dispose();
     this.singlePassStencilMat.dispose();

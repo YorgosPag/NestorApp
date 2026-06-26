@@ -37,13 +37,20 @@ import {
   buildRoofReshapePreviewObject,
   buildFloorFinishReshapePreviewObject,
   buildSlabOpeningReshapePreviewObject,
+  buildColumnReshapePreviewObject,
+  buildWallReshapePreviewObject,
 } from './bim3d-grip-preview-builders';
 import { resolveEditEntities } from './bim3d-edit-drag-snap';
 import { resolveEntityLevelId } from './bim3d-edit-live-preview-apply';
 import type { EditInteractionCtx } from './bim3d-edit-interaction-handlers';
 
-/** BIM types that expose a per-vertex footprint reshape sketch in 3D (ADR-535 Φ3a/Φ3b). */
-const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set(['slab', 'roof', 'floor-finish', 'slab-opening']);
+/**
+ * BIM types that expose a per-vertex footprint / cross-section reshape sketch in 3D
+ * (ADR-535 Φ3a/Φ3b footprints + Φ7 `column` + Φ8 `wall` cross-section).
+ */
+const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set([
+  'slab', 'roof', 'floor-finish', 'slab-opening', 'column', 'wall',
+]);
 
 /**
  * ADR-535 Φ1/Φ3 — (re)compute the 3D reshape grips for a single-select footprint entity
@@ -72,7 +79,7 @@ export function refreshReshapeGrips(
   const grips = reshapeGripsForFootprint(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
   // ADR-535 Φ5/Φ6 — push the grips + per-vertex TOP & BOTTOM elevation to the overlay store;
   // the Canvas2D overlay RAF projects + paints the twin (top+bottom) squares every frame.
-  const elevs = gripSurfaceElevationsFor(bimType, entityIds[0], box.max.y);
+  const elevs = gripSurfaceElevationsFor(bimType, entityIds[0], box);
   useGrip3DOverlayStore.getState().setGrips(grips, elevs.top, elevs.bottom);
 }
 
@@ -96,13 +103,31 @@ function flatSurfaceElevations(fallbackWorldY: number): GripSurfaceElevations {
 function gripSurfaceElevationsFor(
   bimType: string,
   entityId: string,
-  fallbackWorldY: number,
+  box: THREE.Box3,
 ): GripSurfaceElevations {
+  const fallbackWorldY = box.max.y;
   if (bimType === 'slab') return slabGripSurfaceElevations(entityId, fallbackWorldY);
   if (bimType === 'roof') return roofGripSurfaceElevations(entityId, fallbackWorldY);
   // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top & underside (the opening has no own Z).
   if (bimType === 'slab-opening') return slabOpeningGripSurfaceElevations(entityId, fallbackWorldY);
+  // ADR-535 Φ7/Φ8 — a column's / wall's grips ride its flat top & bottom faces, taken straight
+  // from the rendered mesh AABB (byte-consistent with the mesh, zero drift, no extra Z math). The
+  // squares of every plan vertex/edge sit at the SAME top (max.y) and bottom (min.y) — correct
+  // for the flat-top common case. Tilted / host-attached members (per-corner top via the vertical
+  // profile resolvers) are a flagged follow-up.
+  if (bimType === 'column' || bimType === 'wall') return bboxSurfaceElevations(box);
   return floorFinishGripSurfaceElevations(entityId, fallbackWorldY);
+}
+
+/**
+ * ADR-535 Φ7/Φ8 — TOP & BOTTOM grip elevation (mm) for a flat-top extruded member (column /
+ * wall) = its rendered mesh AABB faces. One SSoT for every member whose grips hug the mesh
+ * top/bottom directly (N.0.2 boy-scout: was `columnGripSurfaceElevations`, generalised for wall).
+ */
+function bboxSurfaceElevations(box: THREE.Box3): GripSurfaceElevations {
+  const topMm = box.max.y * 1000;
+  const bottomMm = box.min.y * 1000;
+  return { top: () => topMm, bottom: () => bottomMm };
 }
 
 /**
@@ -213,6 +238,15 @@ function buildGripReshapePreview(grip: GripInfo, deltaMm: Point2D): THREE.Object
   // ADR-535 Φ3b — slab-opening: rebuild the HOST SLAB with the moved hole (entityId = opening id).
   if (grip.slabOpeningGripKind) {
     return buildSlabOpeningReshapePreviewObject(grip.entityId, grip.slabOpeningGripKind, deltaMm);
+  }
+  // ADR-535 Φ7 — column cross-section reshape (corner / edge / parametric face / poly-vertex).
+  if (grip.columnGripKind) {
+    return buildColumnReshapePreviewObject(grip.entityId, grip.columnGripKind, deltaMm);
+  }
+  // ADR-535 Φ8 — wall cross-section reshape (corner / thickness / length / endpoint / curve /
+  // poly-vertex). The grip anchor (`grip.position`) seeds `currentPos` for the thickness resolve.
+  if (grip.wallGripKind) {
+    return buildWallReshapePreviewObject(grip.entityId, grip.wallGripKind, deltaMm, grip.position);
   }
   return null;
 }

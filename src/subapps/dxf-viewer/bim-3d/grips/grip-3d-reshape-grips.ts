@@ -16,22 +16,40 @@
 
 import type { GripInfo } from '../../hooks/grip-types';
 
-/** True when the grip carries a footprint (vertex / edge-midpoint) reshape discriminator. */
+/**
+ * True when the grip carries a footprint / cross-section reshape discriminator.
+ * ADR-535 Φ7/Φ8 — `columnGripKind` + `wallGripKind` join the four footprint kinds: a
+ * column's / wall's plan cross-section IS a footprint, so its corner/edge/thickness/length/
+ * endpoint/poly-vertex resize grips surface in 3D exactly like a slab vertex (the whole-entity
+ * `*-center` / `wall-midpoint` move is filtered out below by `movesEntity`, and `column-rotation`
+ * / `wall-rotation` are excluded explicitly — both belong to the gizmo, not the reshape grips).
+ */
 function hasFootprintGripKind(g: GripInfo): boolean {
   return (
     g.slabGripKind !== undefined ||
     g.roofGripKind !== undefined ||
     g.floorFinishGripKind !== undefined ||
-    g.slabOpeningGripKind !== undefined
+    g.slabOpeningGripKind !== undefined ||
+    g.columnGripKind !== undefined ||
+    g.wallGripKind !== undefined
   );
 }
 
 /**
- * Keep only the footprint reshape grips: a parametric vertex-translate / edge-midpoint
- * insert (`slab` / `roof` / `floor-finish` / `slab-opening` *GripKind`) that does NOT
- * move the whole entity. Returns a fresh array; input order preserved (stable grip
- * indices).
+ * Keep only the footprint / cross-section reshape grips: a parametric vertex-translate /
+ * edge-midpoint insert / parametric face resize (`slab` / `roof` / `floor-finish` /
+ * `slab-opening` / `column` / `wall` *GripKind`) that does NOT move OR rotate the whole entity.
+ * `movesEntity` drops the move glyphs (slab/.../column center, `wall-midpoint`); `column-rotation`
+ * and `wall-rotation` are whole-entity rotates (`movesEntity: false` but not a reshape) so they are
+ * excluded too — the 3D gizmo owns move + rotate. Returns a fresh array; input order preserved
+ * (stable grip indices).
  */
 export function reshapeGripsForFootprint(grips: readonly GripInfo[]): GripInfo[] {
-  return grips.filter((g) => !g.movesEntity && hasFootprintGripKind(g));
+  return grips.filter(
+    (g) =>
+      !g.movesEntity &&
+      hasFootprintGripKind(g) &&
+      g.columnGripKind !== 'column-rotation' &&
+      g.wallGripKind !== 'wall-rotation',
+  );
 }

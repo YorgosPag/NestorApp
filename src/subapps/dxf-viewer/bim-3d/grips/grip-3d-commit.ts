@@ -26,11 +26,13 @@ import { commitDxfGripDragModeAware } from '../../hooks/grips/grip-commit-adapte
 import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
 
 /**
- * Map a 2D `GripInfo` onto the unified shape the commit adapters consume. The four
- * footprint discriminators are forwarded 1:1 (ADR-535 Φ3) — `commitDxfGripDragModeAware`
- * routes on whichever `*GripKind` is present (`commitSlabGripDrag` / `commitRoofGripDrag`
- * / `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag`), so the bridge stays
- * type-agnostic.
+ * Map a 2D `GripInfo` onto the unified shape the commit adapters consume. The reshape
+ * discriminators are forwarded 1:1 — `commitDxfGripDragModeAware` routes on whichever
+ * `*GripKind` is present (`commitSlabGripDrag` / `commitRoofGripDrag` /
+ * `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag` / `commitColumnGripDrag` /
+ * `commitWallGripDrag`), so the bridge stays type-agnostic. ADR-535 Φ7/Φ8 — `columnGripKind`
+ * + `wallGripKind` are forwarded too; dropping either makes the grip fall through to the
+ * wrong stretch path.
  */
 export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
@@ -47,6 +49,8 @@ export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     roofGripKind: grip.roofGripKind,
     floorFinishGripKind: grip.floorFinishGripKind,
     slabOpeningGripKind: grip.slabOpeningGripKind,
+    columnGripKind: grip.columnGripKind,
+    wallGripKind: grip.wallGripKind,
   };
 }
 
