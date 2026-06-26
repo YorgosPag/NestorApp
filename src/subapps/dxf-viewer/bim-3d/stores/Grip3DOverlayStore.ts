@@ -22,32 +22,48 @@ const NO_ELEVATION: PlanElevationMmFor = () => 0;
 interface Grip3DOverlayState {
   /** The reshape grips to draw (footprint vertices + edge-midpoints), or empty. */
   readonly grips: readonly GripInfo[];
-  /** Per-grip top-surface elevation (mm) so each square hugs a tilted footprint. */
-  readonly elevFor: PlanElevationMmFor;
-  /** Replace the grip set + elevation resolver (selection / re-sync). Resets interaction. */
-  setGrips(grips: readonly GripInfo[], elevFor: PlanElevationMmFor): void;
+  /**
+   * Per-grip TOP-surface elevation (mm) so each square hugs a tilted footprint. ADR-535 Φ6 —
+   * each grip is now drawn TWICE (twin: top + bottom face), one elevation resolver per surface.
+   */
+  readonly topElevFor: PlanElevationMmFor;
+  /** Per-grip BOTTOM-surface elevation (mm) = top − thickness (ADR-535 Φ6 twin grips). */
+  readonly bottomElevFor: PlanElevationMmFor;
+  /** Replace the grip set + top/bottom elevation resolvers (selection / re-sync). Resets interaction. */
+  setGrips(
+    grips: readonly GripInfo[],
+    topElevFor: PlanElevationMmFor,
+    bottomElevFor: PlanElevationMmFor,
+  ): void;
   /** Drop all grips (multi-select / unsupported type / deselected). Resets interaction. */
   clear(): void;
 }
 
 export const useGrip3DOverlayStore = create<Grip3DOverlayState>((set) => ({
   grips: [],
-  elevFor: NO_ELEVATION,
-  setGrips: (grips, elevFor) => {
+  topElevFor: NO_ELEVATION,
+  bottomElevFor: NO_ELEVATION,
+  setGrips: (grips, topElevFor, bottomElevFor) => {
     resetGrip3DInteraction();
-    set({ grips: [...grips], elevFor });
+    set({ grips: [...grips], topElevFor, bottomElevFor });
   },
   clear: () => {
     resetGrip3DInteraction();
-    set({ grips: [], elevFor: NO_ELEVATION });
+    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION });
   },
 }));
 
 /**
  * High-frequency interaction state for the 3D grip overlay (ADR-040: zero React state).
- * `hoverIndex` / `drag.index` are ARRAY indices into the current `grips`; `livePlanPos`
- * is the snapped plan position the dragged square renders at. Mutated by the controller,
- * read by the overlay RAF — never via React.
+ *
+ * ADR-535 Φ6 — each footprint grip is a TWIN (one square on the top face, one on the bottom).
+ * The `N` plan grips therefore span `2N` CONCEPTUAL grips in a single FLAT index space:
+ * `0…N-1` = TOP surface, `N…2N-1` = BOTTOM surface (bottom of plan grip `i` ⇒ flat `i + N`).
+ * `hoverIndex` / `drag.index` are flat indices; `visibility` is length `2N`. The base plan
+ * grip is `flat % N`, the surface is `flat >= N ? 'bottom' : 'top'`. This keeps the shape
+ * unchanged (plain `number` indices, `boolean[]`) — top & bottom are the SAME command.
+ * `livePlanPos` is the snapped plan position the dragged vertex renders at. Mutated by the
+ * controller, read by the overlay RAF — never via React.
  */
 export interface Grip3DInteraction {
   hoverIndex: number | null;
@@ -67,7 +83,7 @@ export const grip3DOverlayInteraction: Grip3DInteraction = {
   visibility: null,
 };
 
-/** True when grip `index` is NOT occluded (or occlusion hasn't run yet). */
+/** True when FLAT grip `index` (top/bottom, see {@link Grip3DInteraction}) is NOT occluded. */
 export function isGrip3DVisible(index: number): boolean {
   const vis = grip3DOverlayInteraction.visibility;
   return vis === null || vis[index] !== false;

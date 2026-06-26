@@ -508,3 +508,10 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   κρέμονται κάτω· χρησιμοποίησε πραγματικά entity Z-extents. 6 νέα jest (Giorgio 1ος+3ος→1-3, FOUNDATION
   below-datum, degenerate), 44 cut/axis-cut GREEN. Files: NEW `multi-floor-cut-range.ts` + test, MOD
   `useCutPlaneRange.ts` + `cut-plane-3d.ts`. UNCOMMITTED — 🔴 browser-verify + commit (tsc=Giorgio).
+- **2026-06-26 (perf — cap-quality tiering split)** — Στο `renderFrameWithCaps` η quality κατά την
+  **κίνηση κάμερας** (`interacting || camMoved`, χωρίς `cutMoving`) έγινε **`'fast'`** (γκρι base) αντί
+  `'colors'`: το per-material poché re-render-άρει ΟΛΗ τη BIM σκηνή `~2×(1+N_colours)` φορές/frame →
+  ήταν ο κύριος section-nav lag. Πλέον μόνο το **cut-slider drag** (`cutMoving`) κρατά `'colors'` live
+  (Giorgio 19/6)· settle → `'full'` μέσω `armRefine` (τα χρώματα γυρίζουν ακαριαία). Giorgio 26/6 ζήτησε
+  «γκρι στην περιστροφή για ταχύτητα». 1-line αλλαγή στο `section-scene-controller.ts`. UNCOMMITTED —
+  commit=Giorgio. (σχετικό: ADR-536 perf, ADR-535 grip motion-hide.)

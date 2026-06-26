@@ -15,6 +15,34 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo } from '../../hooks/grip-types';
 
 /**
+ * Nearest-wins core: of `count` projected points, return the index of the one nearest to
+ * (`canvasX`, `canvasY`) within `hitRadiusPx`, or null. `positionAt(i)` yields point `i` in
+ * canvas-local px; `accept(i)` (optional) excludes it. Shared SSoT for the single-surface
+ * and twin (top/bottom) pickers below so the distance rule lives in ONE place.
+ */
+function nearestProjectedIndex(
+  count: number,
+  positionAt: (index: number) => Point2D,
+  canvasX: number,
+  canvasY: number,
+  hitRadiusPx: number,
+  accept?: (index: number) => boolean,
+): number | null {
+  let bestIndex: number | null = null;
+  let bestDist = hitRadiusPx;
+  for (let i = 0; i < count; i++) {
+    if (accept && !accept(i)) continue;
+    const s = positionAt(i);
+    const dist = Math.hypot(s.x - canvasX, s.y - canvasY);
+    if (dist <= bestDist) {
+      bestDist = dist;
+      bestIndex = i;
+    }
+  }
+  return bestIndex;
+}
+
+/**
  * Return the ARRAY index of the grip nearest to (`canvasX`, `canvasY`) within
  * `hitRadiusPx`, or null when none is close enough. `project` maps a grip's plan point to
  * canvas-local px (same projector as the overlay draw). Nearest-wins: every reshape grip
@@ -31,16 +59,31 @@ export function findGripAtScreen(
   hitRadiusPx: number,
   accept?: (index: number) => boolean,
 ): number | null {
-  let bestIndex: number | null = null;
-  let bestDist = hitRadiusPx;
-  for (let i = 0; i < grips.length; i++) {
-    if (accept && !accept(i)) continue;
-    const s = project(grips[i].position);
-    const dist = Math.hypot(s.x - canvasX, s.y - canvasY);
-    if (dist <= bestDist) {
-      bestDist = dist;
-      bestIndex = i;
-    }
-  }
-  return bestIndex;
+  return nearestProjectedIndex(
+    grips.length, (i) => project(grips[i].position), canvasX, canvasY, hitRadiusPx, accept,
+  );
+}
+
+/**
+ * ADR-535 Φ6 — twin (top + bottom) nearest-grip pick. Each plan grip is projectable on its
+ * TOP face (`projectTop`) and its BOTTOM face (`projectBottom`); this picks the nearest of
+ * all `2N` projected squares and returns its FLAT index (`0…N-1` = top, `N…2N-1` = bottom —
+ * see {@link Grip3DInteraction}). `accept(flatIndex)` (optional) skips occluded squares, so a
+ * grip hidden behind the slab — e.g. the bottom twin seen from above — is not pickable.
+ */
+export function findTwinGripAtScreen(
+  grips: readonly GripInfo[],
+  projectTop: (p: Point2D) => Point2D,
+  projectBottom: (p: Point2D) => Point2D,
+  canvasX: number,
+  canvasY: number,
+  hitRadiusPx: number,
+  accept?: (flatIndex: number) => boolean,
+): number | null {
+  const n = grips.length;
+  return nearestProjectedIndex(
+    2 * n,
+    (i) => (i < n ? projectTop(grips[i].position) : projectBottom(grips[i - n].position)),
+    canvasX, canvasY, hitRadiusPx, accept,
+  );
 }

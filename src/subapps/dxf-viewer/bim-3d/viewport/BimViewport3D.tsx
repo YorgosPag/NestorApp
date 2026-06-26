@@ -347,7 +347,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         {t('aria.canvas.skipLink')}
       </a>
     <div
-      className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 z-50 cursor-default"
       role="application"
       aria-label={t('aria.canvas.rootLabel')}
       onMouseMove={handleMouseMove}

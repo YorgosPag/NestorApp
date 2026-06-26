@@ -204,9 +204,51 @@ subscription/teardown · `converters/bim-three-edges.ts` (drop override in dark)
 **ADR-040.** Background flip is imperative (manager subscription, zero React render).
 Edge rebuild reuses the existing `use-bim3d-vg-resync` path. No new high-freq subscriber.
 
+### 8.1 — §2.1 Studio gradient default background (2026-06-26)
+
+**Problem.** Giorgio: the `environment` mode (the DEFAULT) painted a flat saturated sky-blue
+(`0x87ceeb`) backdrop — unpleasant to draw on. He asked for the look the "big players" use
+(Revit / Maxon Cinema 4D), **FULL ENTERPRISE + FULL SSoT**, and confirmed the right base is
+the SAME colour as the 2D canvas (just with gradient depth, not flat).
+
+**Decision — the `environment` (non-HDRI) backdrop is a neutral vertical STUDIO GRADIENT
+built AROUND the 2D-canvas base colour.** It keeps the `--canvas-background-dxf` token as the
+ONE colour SSoT shared by 2D + 3D (a theme switch moves both), but gives 3D the Cinema 4D
+depth: darker at the top, the base in the middle, lighter at the bottom. The gradient is a
+plain non-equirect `DataTexture` set as `scene.background`, so it renders **screen-fixed**
+(does not swim with the camera). The visible backdrop was decoupled from the IBL `skyColor`:
+`scene.environment` (the gradient sky/ground IBL that LIGHTS the PBR faces) is **unchanged** —
+only the backdrop you SEE changed (Giorgio: «το IBL φωτισμό/reflections μένει ίδιος»).
+
+- **Colour SSoT.** `studio-background-texture.ts` (NEW, pure `studioGradientStops` + the
+  `DataTexture` builder) reads the base via `resolveDxfCanvasBackgroundHex()` (the same helper
+  the `dark` mode uses) and spreads ±`STUDIO_BG_DELTA` (0.12) lightness around it. A pure-black
+  base clamps the top to black (upper half stays black, lower half eases to grey = dark studio).
+- **Sole writer unchanged.** `EnvmapGenerator.applyBackground()` stays the SOLE resolver of
+  `scene.background`: `dark` → flat 2D colour (unchanged); `environment` → loaded HDRI if any,
+  else the cached studio gradient (`ensureStudioBackground`, rebuilt only when the 2D base hex
+  changes — theme-aware, disposed in `dispose()`). The now-unused `currentSkyColor` field was
+  removed (boy-scout, N.0.2 — it was the old solid-background source).
+
+**Files.** `lighting/studio-background-texture.ts` (NEW, pure colour math + `DataTexture`) ·
+`lighting/envmap-generator.ts` (`applyBackground` → studio gradient, `ensureStudioBackground`
+cache, drop dead `currentSkyColor`, dispose). 6 jest (gradient stops + texture shape).
+
+**ADR-040.** No change to the render pipeline — the backdrop is a `scene.background` swap on
+the existing `EnvmapGenerator` (imperative, zero React). Section-stencil save/restore of
+`scene.background` already handles a `Texture` value (was a `Color`). 🔴 browser-verify
+(gradient orientation: darker top → lighter bottom; swap the two stops if inverted).
+
 ---
 
 ## Changelog
+- **2026-06-26** — §2.1 Studio gradient default background: the `environment` (default) backdrop
+  is now a neutral vertical studio gradient (Cinema 4D / Blender look) built AROUND the SAME
+  2D-canvas base colour (`resolveDxfCanvasBackgroundHex` — ONE token SSoT for 2D + 3D), replacing
+  the flat sky-blue `0x87ceeb`. Screen-fixed `DataTexture`; `scene.environment`/IBL untouched
+  (faces lit identically). NEW pure `studio-background-texture.ts` (±0.12 lightness, jest 6);
+  `EnvmapGenerator` caches it theme-aware + drops the dead `currentSkyColor`. 🔴 browser-verify
+  (orientation) + commit.
 - **2026-06-20** — §2 Dark «σαν 2Δ» background mode: `backgroundMode` field on the
   per-view appearance SSoT (`bim-render-settings-store`, Firestore-persisted, beside
   `visualStyle`) — NOT a separate store. FULL-SSoT 2D colours (edges drop the uniform

@@ -19,11 +19,13 @@
  */
 
 import { useRef, useEffect, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
+import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { UnifiedGripRenderer } from '../../../rendering/grips';
-import type { GripRenderConfig, GripSettings } from '../../../rendering/grips/types';
+import type { GripSettings } from '../../../rendering/grips/types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
+import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
 import { dxfPlanToWorld } from '../coordinate-transforms';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
@@ -38,6 +40,14 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
   const rafRef = useRef<number | null>(null);
   // ADR-535 Φ5b — GPU depth-occluder (one instance, lazy GPU resources, disposed on unmount).
   const occluderRef = useRef<GripDepthOccluder | null>(null);
+  // ADR-535/536 — last camera pose, to HIDE grips during camera motion (orbit/zoom/pan).
+  // While moving, the occluder's full-scene depth pre-pass + the 2D draws are skipped → the
+  // grips vanish and the navigation stays smooth; they snap back with correct occlusion the
+  // instant the camera settles. The continuous RAF guarantees that settle frame. Big-player
+  // CAD/BIM pattern («hide handles during navigation»).
+  const lastCamWorldRef = useRef(new THREE.Matrix4());
+  const lastCamProjRef = useRef(new THREE.Matrix4());
+  const camPoseValidRef = useRef(false);
 
   // ADR-040 — subscribe ONLY to the low-frequency grip set (drives the RAF on/off).
   const grips = useSyncExternalStore(
@@ -73,10 +83,25 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
 
-    const { grips: liveGrips, elevFor } = useGrip3DOverlayStore.getState();
-    if (liveGrips.length === 0) return;
+    // ADR-535/536 — skip everything (occluder depth pre-pass + 2D draws) while the camera
+    // moves: grips vanish during orbit/zoom/pan, snap back (correctly occluded) on settle.
+    const camMoving =
+      camPoseValidRef.current &&
+      (!lastCamWorldRef.current.equals(camera.matrixWorld) ||
+        !lastCamProjRef.current.equals(camera.projectionMatrix));
+    lastCamWorldRef.current.copy(camera.matrixWorld);
+    lastCamProjRef.current.copy(camera.projectionMatrix);
+    camPoseValidRef.current = true;
+    if (camMoving) return; // canvas already cleared above → grips hidden during motion
 
-    const project = makeGripPlanToCanvas(camera, canvas, elevFor);
+    const { grips: liveGrips, topElevFor, bottomElevFor } = useGrip3DOverlayStore.getState();
+    const n = liveGrips.length;
+    if (n === 0) return;
+
+    // ADR-535 Φ6 — TWO projectors: each grip is drawn on its top AND bottom face (twin), with
+    // the matching surface elevation. Same renderer, same configs logic, one pass per surface.
+    const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor);
+    const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor);
     const { hoverIndex, drag } = grip3DOverlayInteraction;
 
     // EXACT 2D settings SSoT (mirror `GripPhaseRenderer.renderStandardGrips`).
@@ -87,37 +112,31 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
       dpiScale: 1.0,
     };
 
-    // ADR-535 Φ5b — Revit / Maxon (Cinema 4D) grade depth occlusion: a grip behind a solid
-    // surface (another entity OR the selected body) is culled on the GPU. The occluder is the
-    // ONE place that runs the depth probe → it publishes per-grip visibility to the shared
-    // non-reactive interaction state, so the controller's hit-test culls the same grips.
+    // ADR-535 Φ5b/Φ6 — Revit / Maxon (Cinema 4D) grade depth occlusion over the 2N twin squares
+    // (first N = top faces, next N = bottom faces). A square behind a solid surface is culled on
+    // the GPU — this is what hides the bottom twins when looking from above (and the top twins
+    // from below) for FREE. The occluder publishes per-flat-index visibility to the shared
+    // non-reactive state, so the controller's hit-test culls the same squares.
     const occluder = occluderRef.current;
     let visibility: readonly boolean[] | null = null;
     if (occluder) {
-      const worlds = liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, elevFor(g.position)));
+      const worlds = [
+        ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, topElevFor(g.position))),
+        ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, bottomElevFor(g.position))),
+      ];
       visibility = occluder.computeVisibility(manager.renderer, manager.scene, camera, worlds);
     }
     grip3DOverlayInteraction.visibility = visibility;
 
-    const configs: GripRenderConfig[] = [];
-    for (let i = 0; i < liveGrips.length; i++) {
-      const grip = liveGrips[i];
-      const dragging = drag?.index === i;
-      // The dragged square always shows (drag leads the edit); the rest are culled if occluded.
-      if (!dragging && visibility && visibility[i] === false) continue;
-      // The dragged square rides its snapped live position; the rest sit at the footprint.
-      const position = dragging ? drag!.livePlanPos : grip.position;
-      const temperature = dragging ? 'hot' : hoverIndex === i ? 'warm' : 'cold';
-      configs.push({
-        position,
-        type: (grip.type ?? 'vertex') as GripRenderConfig['type'],
-        temperature,
-        // Footprint grips carry no shape hint → the AutoCAD square, like the 2D slab grips.
-        shape: 'square',
-      });
-    }
-
-    new UnifiedGripRenderer(ctx, project).renderGripSetBatched(configs, settings);
+    const ov = {
+      hoverIndex,
+      dragIndex: drag?.index ?? null,
+      dragLivePlanPos: drag?.livePlanPos ?? null,
+      visibility,
+    };
+    // Top pass (flat offset 0) + bottom pass (flat offset N), each through its own projector.
+    new UnifiedGripRenderer(ctx, projectTop).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, 0, ov), settings);
+    new UnifiedGripRenderer(ctx, projectBottom).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, n, ov), settings);
   }, [managerRef]);
 
   // ADR-535 Φ5b — own the GPU occluder for the overlay's lifetime (lazy GL resources inside).

@@ -27,7 +27,7 @@ import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 // ADR-535 Φ2/Φ3 — per-vertex top-surface elevation SSoT + building base resolver.
 // slab → slope plane (`slabTopZmmAt`); roof → lower-envelope (`roofZmm`).
-import { slabTopZmmAt } from '../../bim/geometry/slab-slope';
+import { slabTopZmmAt, slabUndersideZmmAt } from '../../bim/geometry/slab-slope';
 import { resolveEavePlanes, roofZmm } from '../../bim/geometry/roof-lower-envelope';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
@@ -70,73 +70,105 @@ export function refreshReshapeGrips(
     return;
   }
   const grips = reshapeGripsForFootprint(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
-  // ADR-535 Φ5 — push the grips + per-vertex elevation to the overlay store; the Canvas2D
-  // overlay RAF projects + paints them every frame (continuous zoom, no scene meshes).
-  useGrip3DOverlayStore.getState().setGrips(grips, gripElevationMmFor(bimType, entityIds[0], box.max.y));
+  // ADR-535 Φ5/Φ6 — push the grips + per-vertex TOP & BOTTOM elevation to the overlay store;
+  // the Canvas2D overlay RAF projects + paints the twin (top+bottom) squares every frame.
+  const elevs = gripSurfaceElevationsFor(bimType, entityIds[0], box.max.y);
+  useGrip3DOverlayStore.getState().setGrips(grips, elevs.top, elevs.bottom);
+}
+
+/** ADR-535 Φ6 — the two surface elevation resolvers of a footprint grip (twin top + bottom). */
+interface GripSurfaceElevations {
+  readonly top: PlanElevationMmFor;
+  readonly bottom: PlanElevationMmFor;
+}
+
+/** Degenerate twin (top === bottom) used when the entity is absent from the store. */
+function flatSurfaceElevations(fallbackWorldY: number): GripSurfaceElevations {
+  const topMm = fallbackWorldY * 1000;
+  return { top: () => topMm, bottom: () => topMm };
 }
 
 /**
- * ADR-535 Φ3 — per-bimType top-surface elevation resolver for the grip cubes. slab + roof
- * ride a per-vertex surface (slope / lower-envelope); floor-finish is a flat FFL plane so
- * the world AABB top (`fallbackWorldY`) is already exact (zero extra computation).
+ * ADR-535 Φ3/Φ6 — per-bimType TOP & BOTTOM surface elevation resolvers for the grip squares.
+ * slab + roof ride a per-vertex top surface (slope / lower-envelope) with the bottom a constant
+ * thickness below; floor-finish is a flat FFL plane minus its finish thickness.
  */
-function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: number): PlanElevationMmFor {
-  if (bimType === 'slab') return slabGripElevationMmFor(entityId, fallbackWorldY);
-  if (bimType === 'roof') return roofGripElevationMmFor(entityId, fallbackWorldY);
-  // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top (the opening has no own Z).
-  if (bimType === 'slab-opening') return slabOpeningGripElevationMmFor(entityId, fallbackWorldY);
-  return () => fallbackWorldY * 1000; // floor-finish: flat top (FFL plane).
+function gripSurfaceElevationsFor(
+  bimType: string,
+  entityId: string,
+  fallbackWorldY: number,
+): GripSurfaceElevations {
+  if (bimType === 'slab') return slabGripSurfaceElevations(entityId, fallbackWorldY);
+  if (bimType === 'roof') return roofGripSurfaceElevations(entityId, fallbackWorldY);
+  // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top & underside (the opening has no own Z).
+  if (bimType === 'slab-opening') return slabOpeningGripSurfaceElevations(entityId, fallbackWorldY);
+  return floorFinishGripSurfaceElevations(entityId, fallbackWorldY);
 }
 
 /**
- * ADR-535 Φ2 — per-grip top-surface elevation (mm) for a slab: each footprint vertex /
- * edge-midpoint rides the slab's (possibly TILTED) top plane via the `slabTopZmmAt` SSoT
- * + the building base elevation — so the cubes hug the sloped top, byte-consistent with
- * the rendered mesh (`applySlabSlope` consumes the same `slabSlopeOffsetZmm`). Reads the
- * slab from the SAME store the 3D mesh is built from (`Bim3DEntitiesStore`). Falls back to
- * the world AABB top (`fallbackWorldY`) when the slab is not in the store.
+ * ADR-535 Φ2/Φ6 — TOP & BOTTOM surface elevation (mm) for a slab: each footprint vertex /
+ * edge-midpoint rides the slab's (possibly TILTED) top plane via the `slabTopZmmAt` SSoT and
+ * its parallel underside via the `slabUndersideZmmAt` SSoT (= top − thickness), plus the
+ * building base — so the squares hug the sloped faces, byte-consistent with the rendered mesh.
+ * Reads the slab from the SAME store the 3D mesh is built from (`Bim3DEntitiesStore`).
  */
-function slabGripElevationMmFor(slabId: string, fallbackWorldY: number): PlanElevationMmFor {
+function slabGripSurfaceElevations(slabId: string, fallbackWorldY: number): GripSurfaceElevations {
   const s = useBim3DEntitiesStore.getState();
   const slab = s.slabs.find((sl) => sl.id === slabId);
-  if (!slab) return () => fallbackWorldY * 1000;
+  if (!slab) return flatSurfaceElevations(fallbackWorldY);
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
-  return (p) => slabTopZmmAt(slab.params, p) + baseMm;
+  return {
+    top: (p) => slabTopZmmAt(slab.params, p) + baseMm,
+    bottom: (p) => slabUndersideZmmAt(slab.params, p) + baseMm,
+  };
 }
 
 /**
- * ADR-535 Φ3 — per-grip top-surface elevation (mm) for a roof: each footprint vertex /
- * edge-midpoint rides the roof's lower-envelope top plane via the `roofZmm` SSoT (the SAME
- * height field `computeRoofGeometry` lifts the faces with → grip === rendered surface) +
- * the building base. Perimeter vertices land at `basePivotZ` (the eaves datum); a midpoint
- * on a sloped/gable edge rises with the roof. Falls back to the world AABB top (the ridge)
- * only when the roof is absent from the store.
+ * ADR-535 Φ3/Φ6 — TOP & BOTTOM surface elevation (mm) for a roof: the top rides the roof's
+ * lower-envelope plane via the `roofZmm` SSoT (the SAME height field `computeRoofGeometry`
+ * lifts the faces with), the bottom hangs a constant `thickness` vertically below it. Falls
+ * back to the world AABB top when the roof is absent from the store.
  */
-function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): PlanElevationMmFor {
+function roofGripSurfaceElevations(roofId: string, fallbackWorldY: number): GripSurfaceElevations {
   const s = useBim3DEntitiesStore.getState();
   const roof = s.roofs.find((r) => r.id === roofId);
-  if (!roof) return () => fallbackWorldY * 1000;
+  if (!roof) return flatSurfaceElevations(fallbackWorldY);
   const baseMm = (resolveEntityBuilding(roof, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
   const verts = roof.params.outline.vertices;
   const scaleS = mmToSceneUnits(roof.params.sceneUnits ?? 'mm');
   const { planes } = resolveEavePlanes(verts, roof.params.edges, roof.params.slopeUnit);
-  return (p) => roofZmm(planes, roof.params.basePivotZ, scaleS, p) + baseMm;
+  const thicknessMm = roof.params.thickness;
+  const top: PlanElevationMmFor = (p) => roofZmm(planes, roof.params.basePivotZ, scaleS, p) + baseMm;
+  return { top, bottom: (p) => top(p) - thicknessMm };
 }
 
 /**
- * ADR-535 Φ3b — per-grip top-surface elevation (mm) for a slab OPENING: each
- * opening-outline vertex / edge-midpoint rides the HOST SLAB's (possibly TILTED) top
- * plane via the SAME `slabTopZmmAt` SSoT the slab grips use + the building base. The
- * opening carries no Z of its own, so it borrows the host slab's surface — the grips
- * sit exactly on the slab top around the hole. Falls back to the world AABB top (the
- * opening's pick-mesh top) when the opening or its host slab is absent from the store.
+ * ADR-535 Φ6 — TOP & BOTTOM surface elevation (mm) for a FLAT floor-finish: the top is the
+ * world AABB top (the FFL plane is flat, `fallbackWorldY` is already exact), the bottom is its
+ * finish `thicknessMm` below. Reads the finish from `Bim3DEntitiesStore` for the thickness only.
  */
-function slabOpeningGripElevationMmFor(openingId: string, fallbackWorldY: number): PlanElevationMmFor {
+function floorFinishGripSurfaceElevations(finishId: string, fallbackWorldY: number): GripSurfaceElevations {
+  const topMm = fallbackWorldY * 1000;
+  const finish = useBim3DEntitiesStore.getState().floorFinishes.find((f) => f.id === finishId);
+  const thicknessMm = finish?.params.thicknessMm ?? 0;
+  return { top: () => topMm, bottom: () => topMm - thicknessMm };
+}
+
+/**
+ * ADR-535 Φ3b/Φ6 — TOP & BOTTOM surface elevation (mm) for a slab OPENING: both ride the HOST
+ * SLAB's top & underside via the SAME `slabTopZmmAt` / `slabUndersideZmmAt` SSoT the slab grips
+ * use + the building base. The opening carries no Z of its own. Falls back to the world AABB
+ * top when the opening or its host slab is absent from the store.
+ */
+function slabOpeningGripSurfaceElevations(openingId: string, fallbackWorldY: number): GripSurfaceElevations {
   const slab = resolveSlabOpeningHostSlab(openingId);
-  if (!slab) return () => fallbackWorldY * 1000;
+  if (!slab) return flatSurfaceElevations(fallbackWorldY);
   const s = useBim3DEntitiesStore.getState();
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
-  return (p) => slabTopZmmAt(slab.params, p) + baseMm;
+  return {
+    top: (p) => slabTopZmmAt(slab.params, p) + baseMm,
+    bottom: (p) => slabUndersideZmmAt(slab.params, p) + baseMm,
+  };
 }
 
 /** Resolve the host SlabEntity for a slab-opening id (null when either is missing). */

@@ -3,6 +3,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import type { LightPreset } from './lighting-presets';
 import type { BackgroundMode } from '../../config/bim-visual-style';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { buildStudioBackgroundTexture } from './studio-background-texture';
 
 const ENV_WIDTH = 512;
 const ENV_HEIGHT = 256;
@@ -15,10 +16,11 @@ export class EnvmapGenerator {
   private currentEnvmap: THREE.Texture | null = null;
   private currentBackground: THREE.Texture | null = null;
   private hdriActive = false;
-  /** Last env-derived sky colour (gradient fallback) — restored when leaving dark mode. */
-  private currentSkyColor = new THREE.Color(0x87ceeb);
   /** ADR-446 §2 — visible-background mode. `scene.background` is resolved from this. */
   private backgroundMode: BackgroundMode = 'environment';
+  /** ADR-446 §2.1 — cached studio gradient backdrop + the 2D base hex it was built for. */
+  private studioBackground: THREE.DataTexture | null = null;
+  private studioBackgroundBaseHex = '';
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.renderer = renderer;
@@ -45,13 +47,26 @@ export class EnvmapGenerator {
   /** Resolve `scene.background` from the current mode + last env-derived source. */
   private applyBackground(): void {
     if (this.backgroundMode === 'dark') {
-      // FULL SSoT — the SAME `--canvas-background-dxf` token the 2D canvas uses.
+      // FULL SSoT — the SAME `--canvas-background-dxf` token the 2D canvas uses (solid «σαν 2Δ»).
       this.scene.background = new THREE.Color(resolveDxfCanvasBackgroundHex());
       return;
     }
+    // environment: the loaded HDRI backdrop if any, else the Cinema 4D-style studio gradient
+    // built AROUND the SAME 2D-canvas base colour (ADR-446 §2.1) — screen-fixed, IBL untouched.
     this.scene.background = this.hdriActive && this.currentBackground
       ? this.currentBackground
-      : new THREE.Color(this.currentSkyColor);
+      : this.ensureStudioBackground();
+  }
+
+  /** Lazy + theme-aware studio gradient backdrop (rebuilt when the 2D base colour changes). */
+  private ensureStudioBackground(): THREE.Texture {
+    const baseHex = resolveDxfCanvasBackgroundHex();
+    if (!this.studioBackground || this.studioBackgroundBaseHex !== baseHex) {
+      this.studioBackground?.dispose();
+      this.studioBackground = buildStudioBackgroundTexture(baseHex);
+      this.studioBackgroundBaseHex = baseHex;
+    }
+    return this.studioBackground;
   }
 
   applyGradientFallback(preset: LightPreset): void {
@@ -60,7 +75,6 @@ export class EnvmapGenerator {
     const prev = this.currentEnvmap;
     this.currentEnvmap = envMap;
     this.scene.environment = this.currentEnvmap;
-    this.currentSkyColor.set(preset.skyColor);
     this.applyBackground();
     prev?.dispose();
   }
@@ -139,6 +153,8 @@ export class EnvmapGenerator {
     this.currentEnvmap = null;
     this.currentBackground?.dispose();
     this.currentBackground = null;
+    this.studioBackground?.dispose();
+    this.studioBackground = null;
     this.pmremGenerator.dispose();
   }
 }

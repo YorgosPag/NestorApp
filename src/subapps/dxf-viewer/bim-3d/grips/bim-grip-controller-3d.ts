@@ -32,14 +32,17 @@ import { worldToDxfPlan, dxfPlanToWorld } from '../viewport/coordinate-transform
 import type { SnapFn } from '../gizmo/bim3d-snap-bridge';
 import { intersectRayHorizontalPlane, planDeltaMm } from './grip-plane-projection';
 import { makeGripPlanToCanvas } from './grip-3d-screen-project';
-import { findGripAtScreen } from './grip-3d-screen-hit-test';
+import { findTwinGripAtScreen } from './grip-3d-screen-hit-test';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction, isGrip3DVisible } from '../stores/Grip3DOverlayStore';
 
 /** Screen-space pick radius (px) — generous, like the 2D grip pickbox. */
 const GRIP_HIT_RADIUS_PX = 10;
 
 interface ActiveGripDrag {
-  /** Array index into the live grip set (the overlay paints this square live). */
+  /**
+   * FLAT index into the twin grip set (`0…N-1` top, `N…2N-1` bottom — ADR-535 Φ6). The overlay
+   * paints this exact square live; both faces of the base vertex (`index % N`) follow the edit.
+   */
   readonly index: number;
   readonly grip: GripInfo;
   /** Grip world position at drag start (the square follows this + cursor delta). */
@@ -82,8 +85,10 @@ export class BimGripController3D {
    * path uses — one pick SSoT.
    */
   gripAt(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): GripInfo | null {
-    const index = this.hitTest(camera, dom, x, y);
-    return index === null ? null : (this.grips()[index] ?? null);
+    const flat = this.hitTest(camera, dom, x, y);
+    if (flat === null) return null;
+    // ADR-535 Φ6 — top & bottom twins of a vertex share the SAME `GripInfo` (same vertex op).
+    return this.grips()[flat % this.grips().length] ?? null;
   }
 
   /** Hover highlight under the cursor. Returns true when the hovered grip changed. */
@@ -100,24 +105,28 @@ export class BimGripController3D {
    * (caller disables OrbitControls + captures the pointer + skips the gizmo path).
    */
   beginDrag(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): boolean {
-    const index = this.hitTest(camera, dom, x, y);
-    if (index === null) return false;
-    const grip = this.grips()[index];
+    const flat = this.hitTest(camera, dom, x, y);
+    if (flat === null) return false;
+    const grips = this.grips();
+    const grip = grips[flat % grips.length];
     if (!grip) return false;
     if (!setNdcFromClient(this.ndc, dom, x, y)) return false;
     this.raycaster.setFromCamera(this.ndc, camera);
-    // ADR-535 Φ2 — the drag projects onto the horizontal plane through THIS grip's own
-    // elevation (a tilted slab's vertices sit at different Y). The slope re-derives the
-    // moved vertex's z on commit/preview, so a plan-only horizontal drag is correct.
-    const elevMm = useGrip3DOverlayStore.getState().elevFor(grip.position);
+    // ADR-535 Φ2/Φ6 — the drag projects onto the horizontal plane through THIS square's own
+    // surface elevation (top vs bottom face, a tilted slab's vertices sit at different Y). The
+    // slope re-derives the moved vertex's z on commit/preview, so a plan-only horizontal drag is
+    // correct AND a bottom-face drag reshapes IDENTICALLY to a top-face drag (same plan vertex).
+    const st = useGrip3DOverlayStore.getState();
+    const elevFor = flat >= grips.length ? st.bottomElevFor : st.topElevFor;
+    const elevMm = elevFor(grip.position);
     const gripStartWorld = dxfPlanToWorld(grip.position.x, grip.position.y, elevMm);
     const planeWorldY = gripStartWorld.y;
     const anchorWorld =
       intersectRayHorizontalPlane(this.raycaster.ray.origin, this.raycaster.ray.direction, planeWorldY)
       ?? gripStartWorld.clone();
-    this.drag = { index, grip, gripStartWorld, anchorWorld, planeWorldY, deltaMm: { x: 0, y: 0 } };
+    this.drag = { index: flat, grip, gripStartWorld, anchorWorld, planeWorldY, deltaMm: { x: 0, y: 0 } };
     grip3DOverlayInteraction.hoverIndex = null;
-    grip3DOverlayInteraction.drag = { index, livePlanPos: { x: grip.position.x, y: grip.position.y } };
+    grip3DOverlayInteraction.drag = { index: flat, livePlanPos: { x: grip.position.x, y: grip.position.y } };
     return true;
   }
 
@@ -171,19 +180,21 @@ export class BimGripController3D {
   }
 
   /**
-   * Screen-space nearest-grip pick (ADR-535 Φ5). Projects every grip to canvas-local px
-   * with the SAME projector the overlay draws with, then finds the nearest within the
-   * pixel radius. `x`/`y` are CLIENT px → rebased to canvas-local via the dom rect.
+   * Screen-space nearest TWIN-grip pick (ADR-535 Φ5/Φ6). Projects every grip on BOTH its top
+   * and bottom face to canvas-local px with the SAME projectors the overlay draws with, then
+   * finds the nearest of all `2N` squares within the pixel radius. Returns its FLAT index
+   * (`0…N-1` top, `N…2N-1` bottom). `x`/`y` are CLIENT px → rebased to canvas-local via the rect.
    */
   private hitTest(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): number | null {
     const st = useGrip3DOverlayStore.getState();
     if (st.grips.length === 0) return null;
     const rect = dom.getBoundingClientRect();
-    const project = makeGripPlanToCanvas(camera, dom, st.elevFor);
-    // ADR-535 Φ5b — a grip occluded by a solid surface (GPU depth, computed by the overlay
-    // RAF) is not pickable: skip it via the hit-test's `accept` predicate.
-    return findGripAtScreen(
-      st.grips, project, x - rect.left, y - rect.top, GRIP_HIT_RADIUS_PX, isGrip3DVisible,
+    const projectTop = makeGripPlanToCanvas(camera, dom, st.topElevFor);
+    const projectBottom = makeGripPlanToCanvas(camera, dom, st.bottomElevFor);
+    // ADR-535 Φ5b — a square occluded by a solid surface (GPU depth, computed by the overlay
+    // RAF) is not pickable: skip it via the `accept` predicate (e.g. the bottom twin from above).
+    return findTwinGripAtScreen(
+      st.grips, projectTop, projectBottom, x - rect.left, y - rect.top, GRIP_HIT_RADIUS_PX, isGrip3DVisible,
     );
   }
 

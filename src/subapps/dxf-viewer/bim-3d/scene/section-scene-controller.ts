@@ -34,6 +34,7 @@ import {
   type AxisCutEntry,
 } from './axis-cut-composer';
 import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
+import { unionSceneBounds } from './section-scene-bounds';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { DXF_TIMING } from '../../config/dxf-timing';
@@ -138,12 +139,8 @@ export class SectionSceneController {
   /** Καλείται από τον manager μετά από geometry sync. Idempotent. */
   ensureInit(): void {
     if (this.disposed || this.initDone) return;
-    const box = new THREE.Box3();
-    const bimBox = new THREE.Box3().setFromObject(this.deps.getBimGroup());
-    if (!bimBox.isEmpty()) box.union(bimBox);
-    const dxfBox = this.deps.getDxfBounds();
-    if (dxfBox && !dxfBox.isEmpty()) box.union(dxfBox);
-    if (box.isEmpty()) return;
+    const box = unionSceneBounds(this.deps.getBimGroup(), this.deps.getDxfBounds());
+    if (!box) return;
     const size = new THREE.Vector3();
     box.getSize(size);
     box.expandByVector(size.multiplyScalar(0.1));
@@ -333,13 +330,20 @@ export class SectionSceneController {
     this.lastCamQuat.copy(camera.quaternion);
     this.lastCamZoom = camZoom;
 
-    // Giorgio 2026-06-19: κατά το σύρσιμο του cut-slider θέλει να βλέπει τα ΧΡΩΜΑΤΙΣΤΑ cut
-    // faces σε πραγματικό χρόνο (ό,τι θα μείνει στο σταμάτημα), ΟΧΙ hollow/grey draft. Άρα ο
-    // cut drag παίρνει 'colors' (grey base + per-material όψεις) όπως ήδη η κίνηση κάμερας· το
-    // βαρύ hatch/emphasis ('full') μένει για το settle μέσω armRefine.
-    const quality: SectionCapQuality = (cutMoving || interacting || camMoved)
+    // ADR-452 cap-quality tiering:
+    //  • cut-slider drag (cutMoving) → 'colors' — live coloured cut faces while the cut
+    //    constant changes (Giorgio 2026-06-19 «κράτα τα χρώματα στο σύρσιμο»).
+    //  • camera orbit / zoom (interacting || camMoved) → 'fast' — grey base ONLY. The
+    //    coloured poché re-renders the whole BIM scene ~2×(1+N_colours) times/frame; that
+    //    is the section-nav lag. Dropping it to grey during camera motion is the big perf
+    //    win (Giorgio 2026-06-26 «γκρι στην περιστροφή»). The coloured 'full' frame snaps
+    //    back the instant motion settles, via the on-demand refine below (armRefine).
+    //  • settled → 'full' — + hatch overlays + selection emphasis.
+    const quality: SectionCapQuality = cutMoving
       ? 'colors'
-      : 'full';
+      : (interacting || camMoved)
+        ? 'fast'
+        : 'full';
 
     // ADR-452 v2.12 — fat-line edge overlays follow the cut HERE, applying the EXACT
     // gradual trim on EVERY frame the cut is live (drag AND settled). The per-overlay
@@ -425,12 +429,7 @@ export class SectionSceneController {
   }
 
   private computeSceneBounds(): THREE.Box3 | null {
-    const box = new THREE.Box3();
-    const bimBox = new THREE.Box3().setFromObject(this.deps.getBimGroup());
-    if (!bimBox.isEmpty()) box.union(bimBox);
-    const dxfBox = this.deps.getDxfBounds();
-    if (dxfBox && !dxfBox.isEmpty()) box.union(dxfBox);
-    return box.isEmpty() ? null : box;
+    return unionSceneBounds(this.deps.getBimGroup(), this.deps.getDxfBounds());
   }
 
   private subscribeStore(): () => void {
