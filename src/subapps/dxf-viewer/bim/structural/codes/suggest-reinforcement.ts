@@ -287,6 +287,17 @@ export function spanMomentDivisor(supportType: BeamSupportType): number {
 }
 
 /**
+ * ADR-534 Φ3b — πλάτος **θλιβόμενης ζώνης** στον καμπτικό έλεγχο (EC2 §5.3.2.1 T-beam):
+ * η **σαγκ. (θετική) ροπή** θλίβει το **πέλμα** (πλάκα) → `b_eff`· η **hogging** ροπή
+ * στήριξης (συνεχής/αμφίπακτη/πρόβολος — όπου το `spanMomentDivisor` αντλεί την κρίσιμη
+ * ροπή) θλίβει τον **κορμό** → `b_w`. Absent `b_eff` (γυμνή δοκός) ⇒ `b_w` (μηδέν regression).
+ */
+function flexuralCompressionWidthMm(ctx: BeamSectionContext): number {
+  const flangeInCompression = ctx.supportType === 'simple';
+  return flangeInCompression ? ctx.effectiveFlangeWidthMm ?? ctx.widthMm : ctx.widthMm;
+}
+
+/**
  * ADR-499 — ροπή σχεδιασμού ανοίγματος δοκαριού `M_Ed = w_Ed·L²/c` (N·mm) υπό UDL.
  * Extracted SSoT: τη μοιράζονται ο οπλισμός (`asStrengthBeamMm2`) και η φυσική πύλη
  * επάρκειας (`flexural-capacity`). 0 χωρίς γραμμικό φορτίο/άνοιγμα.
@@ -405,7 +416,8 @@ export function suggestBeamReinforcementFrom(
   // ψεύτικη λύση (π.χ. 4Ø32 σε 250×400)· η ανεπάρκεια διορθώνεται με μεγαλύτερη
   // διατομή (auto-size, ADR-499 Slice B). cap = 1 όταν επαρκεί ⇒ μηδέν regression.
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
-  const mLimNmm = limitMomentNmm(ctx.widthMm, effectiveDepthMm, fcd, provider.flexuralLimitMuLim());
+  // ADR-534 Φ3b — σαγκ. ροπή θλίβει το πέλμα (b_eff)· hogging τον κορμό (b_w). Absent → b_w.
+  const mLimNmm = limitMomentNmm(flexuralCompressionWidthMm(ctx), effectiveDepthMm, fcd, provider.flexuralLimitMuLim());
   const capFactor = flexuralCapacityCapFactor(beamDesignMomentNmm(ctx), mLimNmm);
   // ADR-499 §6.3-c — γωνιακός στρεπτικός χάλυβας A_sl κατανεμημένος συμμετρικά (μισό κάτω, μισό άνω).
   const torsion = resolveBeamTorsionDemand(ctx);

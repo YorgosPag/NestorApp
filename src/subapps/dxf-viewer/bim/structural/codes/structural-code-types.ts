@@ -129,6 +129,15 @@ export interface BeamSectionContext {
   /** Συνθήκη στήριξης (cantilever ⇒ κρίσιμη ζώνη μόνο στο πακτωμένο άκρο). */
   readonly supportType: BeamSupportType;
   /**
+   * ADR-534 Φ3b — DERIVED ενεργό πλάτος πέλματος `b_eff` (mm) μονολιθικής πλακοδοκού
+   * (EC2 §5.3.2.1, SSoT `computeEffectiveFlangeWidthMm`). Παρόν ΜΟΝΟ όταν καλύπτουσα
+   * πλάκα κάνει τη δοκό T-beam (caller με scene access — `beam-flange-context`)· τότε η
+   * **σαγκ. (θετική) ροπή** χρησιμοποιεί `b_eff` ως πλάτος θλιβόμενης ζώνης → υψηλότερο
+   * `M_Rd,lim` (η πλάκα = θλιβόμενο πέλμα). Absent ⇒ ορθογώνια διατομή `b_w` (μηδέν
+   * regression — γυμνή δοκός χωρίς πέλμα). Δεν αλλάζει `grossAreaMm2`/ρ (αυτά = κορμός).
+   */
+  readonly effectiveFlangeWidthMm?: number;
+  /**
    * ADR-472 — γραμμικό φορτίο σχεδιασμού w_Ed (kN/m) — ULS συνδυασμός του tributary
    * `appliedLoad` διαιρεμένο με το άνοιγμα. Absent/≤0 ⇒ μόνο ελάχιστο ρ_min (σημερινή
    * συμπεριφορά). Παρόν ⇒ `As,κάτω = max(ρ_min·b·d, strength(M_Ed))`, M_Ed = w·L²/c.

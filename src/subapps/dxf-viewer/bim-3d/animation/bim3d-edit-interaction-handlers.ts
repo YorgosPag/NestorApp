@@ -19,11 +19,7 @@
  */
 
 import * as THREE from 'three';
-import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo } from '../../hooks/grip-types';
 import type { WallEntity } from '../../bim/types/wall-types';
-import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
@@ -71,10 +67,10 @@ import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay
 // ADR-535 — 3D per-vertex reshape grips (slab footprint pilot).
 import type { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
 import type { BimGripController3D } from '../grips/bim-grip-controller-3d';
-import { reshapeGripsForSlab } from '../grips/grip-3d-reshape-grips';
-import { commitGrip3DReshape } from '../grips/grip-3d-commit';
-// ADR-402 Phase B — drag-time snap callback + edit-entity resolution (extracted, file-size N.7.1).
-import { buildDragSnapFn, resolveEditEntities } from './bim3d-edit-drag-snap';
+// ADR-535 Φ1/Φ2 — reshape-grip (re)seat + live preview + commit (extracted, file-size N.7.1).
+import { refreshReshapeGrips, applyGripReshapePreview, commitGripReshape } from './bim3d-grip-drag';
+// ADR-402 Phase B — drag-time snap callbacks (extracted, file-size N.7.1).
+import { buildDragSnapFn, buildGripReshapeSnapFn } from './bim3d-edit-drag-snap';
 
 export interface EditInteractionCtx {
   readonly manager: ThreeJsSceneManager;
@@ -186,34 +182,6 @@ function refreshStructuralEndpointHandles(ctx: EditInteractionCtx, id: string, b
   ctx.overlay.setEndpointHandles(null, null);
 }
 
-/**
- * ADR-535 Φ1 — (re)compute the 3D reshape grips for a single-select SLAB and push them
- * onto the grip overlay. Cleared for any other selection (multi / non-slab / deselected).
- * The grips ride the slab-top elevation (`box.max.y`) so the per-vertex square sits on the
- * visible top surface and the drag projects onto that one horizontal plane. The grip
- * positions reuse the 2D SSoT (`computeDxfEntityGrips`), filtered to footprint reshape
- * grips. Called after `computeEditAnchor` (selection + auto-resync re-anchor).
- */
-export function refreshReshapeGrips(
-  ctx: EditInteractionCtx,
-  entityIds: readonly string[],
-  bimType: string | null,
-): void {
-  if (entityIds.length !== 1 || bimType !== 'slab') {
-    ctx.gripOverlay.setGrips([], 0);
-    return;
-  }
-  const target = resolveEditEntities(ctx).find((t) => t.entityId === entityIds[0]);
-  const box = findBimEntityWorldBox(ctx.manager.bimLayer.group, entityIds[0]);
-  if (!target || !box) {
-    ctx.gripOverlay.setGrips([], 0);
-    return;
-  }
-  const grips = reshapeGripsForSlab(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
-  ctx.gripOverlay.setGrips(grips, box.max.y); // slab top = grip plane
-  ctx.gripOverlay.updateScale(ctx.manager.getCamera());
-}
-
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (e.button !== 0 || !ctx.overlay.visible) return;
   // ADR-408 — Ctrl+click relocates the gizmo base point / rotation centre (Revit
@@ -232,6 +200,13 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     e.stopPropagation();
     ctx.manager.viewport.setControlsEnabled(false);
     (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    // ADR-535 Φ2 — capture the slab mesh so it reshapes LIVE per frame (not just on
+    // release) + inject the snap fn so the dragged vertex magnetises to scene features.
+    const slabId = useBim3DEditStore.getState().editEntityIds[0];
+    if (slabId) {
+      ctx.preview.captureResize(ctx.manager.bimLayer.group, slabId);
+      ctx.gripController.setSnapFn(buildGripReshapeSnapFn(ctx, slabId));
+    }
     ctx.manager.markSceneDirty();
     return;
   }
@@ -305,10 +280,12 @@ function trySetBasePoint(ctx: EditInteractionCtx, e: PointerEvent): void {
 }
 
 export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): void {
-  // ADR-535 — a live grip drag owns the move (reshape preview = the square following 1:1).
+  // ADR-535 — a live grip drag owns the move (square follows 1:1 + snap). Φ2: rebuild the
+  // slab mesh every frame so the footprint reshapes LIVE (ghost === the committed result).
   if (ctx.gripController.isDragging()) {
     const changed = ctx.gripController.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
     if (changed) {
+      applyGripReshapePreview(ctx);
       e.preventDefault();
       e.stopPropagation();
       ctx.manager.markSceneDirty();
@@ -345,7 +322,12 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
     e.stopPropagation();
     ctx.canvasEl.releasePointerCapture?.(e.pointerId);
     ctx.gripController.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
-    commitGripReshape(ctx, ctx.gripController.endDrag());
+    const committed = commitGripReshape(ctx, ctx.gripController.endDrag());
+    // ADR-535 Φ2 — committed: the preview already shows the final footprint, so drop the
+    // refs and let the command's re-sync replace the meshes (no jump). No command (no-op
+    // / rejected): restore the original slab mesh, since no re-sync is coming.
+    if (committed) ctx.preview.commit();
+    else ctx.preview.reset();
     ctx.manager.viewport.setControlsEnabled(true);
     ctx.manager.markSceneDirty();
     return;
@@ -373,27 +355,12 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   ctx.manager.markSceneDirty();
 }
 
-/**
- * ADR-535 — commit a finished grip drag (or reset on a no-op). Resolves the slab's
- * level, runs `commitGrip3DReshape` (→ UpdateSlabParamsCommand), then refreshes the
- * grip squares to their canonical positions (post-commit re-sync OR snap-back of the
- * live-followed square when the delta was zero / the commit was rejected).
- */
-function commitGripReshape(ctx: EditInteractionCtx, result: { grip: GripInfo; deltaMm: Point2D } | null): void {
-  if (result) {
-    const levels = ctx.getLevels();
-    const entityId = result.grip.entityId;
-    const levelId = levels && entityId ? (resolveEntityLevelId(levels, entityId) ?? levels.currentLevelId) : null;
-    if (levels && levelId) commitGrip3DReshape(result.grip, result.deltaMm, levels, levelId);
-  }
-  const st = useBim3DEditStore.getState();
-  refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
-}
-
 export function onEditPointerCancel(ctx: EditInteractionCtx): void {
-  // ADR-535 — abort a grip drag: snap the square back, no command.
+  // ADR-535 — abort a grip drag: snap the square back, no command. Φ2: restore the
+  // original slab mesh (the live reshape preview is discarded).
   if (ctx.gripController.isDragging()) {
     ctx.gripController.cancelDrag();
+    ctx.preview.reset();
     const st = useBim3DEditStore.getState();
     refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
     ctx.manager.viewport.setControlsEnabled(true);

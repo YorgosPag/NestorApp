@@ -5071,6 +5071,7 @@
     },
     "titleFields": {
       "section": "Διατομή (mm)",
+      "effectiveFlangeWidth": "b_eff (mm)",
       "span": "Άνοιγμα (mm)",
       "concrete": "Σκυρόδεμα",
       "steel": "Χάλυβας",

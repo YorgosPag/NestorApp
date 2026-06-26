@@ -50,7 +50,7 @@ const LABELS: BeamDetailSheetLabels = {
     bottomLongitudinal: 'Bottom', topLongitudinal: 'Top', stirrups: 'Stir', total: 'Total', ratio: 'ρ',
   },
   titleFields: {
-    section: 'Section', span: 'Span', concrete: 'Concrete', steel: 'Steel',
+    section: 'Section', effectiveFlangeWidth: 'b_eff', span: 'Span', concrete: 'Concrete', steel: 'Steel',
     cover: 'Cover', longitudinal: 'Long', stirrups: 'Stir',
   },
 };
@@ -85,6 +85,15 @@ describe('buildBeamDetailSheet — layout & regions', () => {
     expect(buildBeamElevationRegion(beamEntity(), undefined, regions.elevation).primitives).toHaveLength(0);
     expect(buildBeamScheduleRegion(beamEntity(), undefined, regions.schedule, LABELS.scheduleTable).primitives).toHaveLength(0);
     expect(buildBeamTitleBlockRegion(beamEntity(), undefined, regions['title-block'], LABELS.titleFields).primitives).toHaveLength(0);
+  });
+
+  it('ADR-534 Φ3b — title block shows b_eff row only when flange width passed (T-beam)', () => {
+    const withoutFlange = buildBeamTitleBlockRegion(beamEntity(BEAM_R), BEAM_R, regions['title-block'], LABELS.titleFields);
+    expect(texts(withoutFlange.primitives)).not.toContain('b_eff');
+    // Large b_eff > b_w → row appears with the rounded value.
+    const withFlange = buildBeamTitleBlockRegion(beamEntity(BEAM_R), BEAM_R, regions['title-block'], LABELS.titleFields, 2700);
+    expect(texts(withFlange.primitives)).toContain('b_eff');
+    expect(texts(withFlange.primitives)).toContain('2700');
   });
 });
 

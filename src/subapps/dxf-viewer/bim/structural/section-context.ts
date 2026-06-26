@@ -207,6 +207,10 @@ export function resolveActiveColumnReinforcement(
  * πρακτικό ΝΟΚ + `maxWidthMm` cap κολώνας + `widthAutoSized`/`depthAutoSized` lock flags). Μόνο
  * ο sizing path τα δίνει (`resolveActiveBeamSizingLimits`)· ο reinforce path τα παραλείπει
  * → depth-only (μηδέν regression). Τα flags `false` ΠΡΕΠΕΙ να μεταφέρονται (lock semantics).
+ *
+ * ADR-534 Φ3b — `effectiveFlangeWidthMm` (προαιρετικό): DERIVED `b_eff` (EC2 §5.3.2.1) όταν
+ * καλύπτουσα μονολιθική πλάκα κάνει τη δοκό T-beam (caller με scene access — `beam-flange-context`).
+ * Μεταφέρεται ΜΟΝΟ όταν `> b_w` (αλλιώς γυμνή ορθογώνια δοκός → absent → μηδέν regression).
  */
 export function buildBeamSectionContext(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
@@ -214,6 +218,7 @@ export function buildBeamSectionContext(
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
   sizing?: Pick<BeamSectionContext, 'practicalDepthLimitMm' | 'maxWidthMm' | 'widthAutoSized' | 'depthAutoSized'>,
+  effectiveFlangeWidthMm?: number,
 ): BeamSectionContext {
   const p = beam.params;
   const fullSpanMm = beam.geometry.length * M_TO_MM;
@@ -227,6 +232,8 @@ export function buildBeamSectionContext(
     supportType: supportTypeOverride ?? p.supportType ?? 'simple',
     ...resolveBeamDesignLoad(p, fullSpanMm),
     ...(designTorsionKnm !== undefined && designTorsionKnm > 0 ? { designTorsionKnm } : {}),
+    // ADR-534 Φ3b — DERIVED b_eff (caller με scene access)· >b_w μόνο όταν πλάκα καλύπτει.
+    ...(effectiveFlangeWidthMm !== undefined && effectiveFlangeWidthMm > p.width ? { effectiveFlangeWidthMm } : {}),
     ...(sizing?.practicalDepthLimitMm !== undefined ? { practicalDepthLimitMm: sizing.practicalDepthLimitMm } : {}),
     ...(sizing?.maxWidthMm !== undefined ? { maxWidthMm: sizing.maxWidthMm } : {}),
     ...(sizing?.widthAutoSized !== undefined ? { widthAutoSized: sizing.widthAutoSized } : {}),

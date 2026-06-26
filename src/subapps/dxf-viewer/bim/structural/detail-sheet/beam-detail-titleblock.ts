@@ -54,13 +54,19 @@ export function buildBeamTitleBlockRegion(
   r: BeamReinforcement | undefined,
   region: RectMm,
   labels: BeamTitleBlockLabels,
+  effectiveFlangeWidthMm?: number,
 ): BeamTitleBlockResult {
   if (!r) return { primitives: [] };
-  const ctx = buildBeamSectionContext(beam);
+  // ADR-534 Φ3b — host περνά το DERIVED b_eff (καλύπτουσα πλάκα → T-beam)· buildBeamSectionContext
+  // το κρατά μόνο όταν > b_w. Absent → καμία γραμμή «b_eff» (γυμνή ορθογώνια δοκός).
+  const ctx = buildBeamSectionContext(beam, undefined, undefined, undefined, undefined, effectiveFlangeWidthMm);
   const round = (n: number): string => String(Math.round(n));
 
   const rows: FieldRow[] = [
     { label: labels.section, value: `${round(ctx.widthMm)}×${round(ctx.depthMm)}` },
+    ...(ctx.effectiveFlangeWidthMm !== undefined
+      ? [{ label: labels.effectiveFlangeWidth, value: round(ctx.effectiveFlangeWidthMm) }]
+      : []),
     { label: labels.span, value: round(ctx.spanMm) },
     { label: labels.concrete, value: DEFAULT_CONCRETE_GRADE },
     { label: labels.steel, value: REBAR_GRADE },

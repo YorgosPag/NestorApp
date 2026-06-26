@@ -18,11 +18,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { useLevels } from '../../../systems/levels';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isBeamEntity } from '../../../types/entities';
+import { isBeamEntity, isSlabEntity } from '../../../types/entities';
 import type { BeamEntity } from '../../../bim/types/beam-types';
 import { buildBeamDetailSheet } from '../../../bim/structural/detail-sheet/beam-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
 import { resolveActiveBeamReinforcementForEntity, resolveActiveBeamSupportType } from '../../../bim/structural/active-reinforcement';
+// ADR-534 Φ3b — DERIVED b_eff: καλύπτουσα μονολιθική πλάκα → T-beam (scene-aware report).
+import { resolveBeamEffectiveFlangeWidthMm } from '../../../bim/structural/beam-flange-context';
+import { buildCeilingSlabHosts } from '../../../bim-3d/scene/monolithic-slab-clip';
 import {
   captureBeamDetail3d,
   type BeamDetail3dCapture,
@@ -98,11 +101,18 @@ export function BeamDetailHost({
     if (!dialogState.open) return null;
     const beam = resolveBeam(levelManager, dialogState.levelId, dialogState.beamId);
     if (!beam) return null;
+    // ADR-534 Φ3b — DERIVED b_eff (T-beam) από τις καλύπτουσες πλάκες της σκηνής. Reuse του ΙΔΙΟΥ
+    // `buildCeilingSlabHosts` SSoT (§monolithic-cut). Καμία καλύπτουσα πλάκα → undefined → ορθογώνια.
+    const scene = dialogState.levelId ? levelManager.getLevelScene(dialogState.levelId) : null;
+    const coveringHosts = scene ? buildCeilingSlabHosts(scene.entities.filter(isSlabEntity)) : [];
+    const supportType = resolveActiveBeamSupportType(beam.id) ?? beam.params.supportType ?? 'simple';
+    const effectiveFlangeWidthMm = resolveBeamEffectiveFlangeWidthMm(beam, coveringHosts, supportType);
     return buildBeamDetailSheet({
       beam,
       reinforcement: resolveActiveBeamReinforcementForEntity(beam),
       // ADR-486 — topology-aware supportType ώστε η όψη/διατομή PDF === live 2Δ/3Δ.
       supportType: resolveActiveBeamSupportType(beam.id),
+      effectiveFlangeWidthMm,
       perspective3d,
       labels: {
         plan: t('beamDetail.regions.plan'),
@@ -123,6 +133,7 @@ export function BeamDetailHost({
         },
         titleFields: {
           section: t('beamDetail.titleFields.section'),
+          effectiveFlangeWidth: t('beamDetail.titleFields.effectiveFlangeWidth'),
           span: t('beamDetail.titleFields.span'),
           concrete: t('beamDetail.titleFields.concrete'),
           steel: t('beamDetail.titleFields.steel'),

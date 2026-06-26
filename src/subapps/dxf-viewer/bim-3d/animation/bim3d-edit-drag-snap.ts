@@ -83,6 +83,21 @@ export function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
 }
 
 /**
+ * ADR-535 Φ2 — snap callback for a 3D reshape-grip drag (slab footprint vertex / edge).
+ * The dragged vertex is the ONE control point, so this reuses the resize snap SSoT
+ * (`makeResizeSnapFn`, "Connect To" — the handle snaps directly to the nearest feature)
+ * + the same 3D-camera viewport sync the gizmo drag uses (`syncSnapEngineViewportFor3D`,
+ * so the magnet pull scales with the 3D zoom). `entityId` excludes the slab itself from
+ * its own snap targets. Returns null (free drag) when OSNAP is off. No new snap logic.
+ */
+export function buildGripReshapeSnapFn(ctx: EditInteractionCtx, entityId: string): SnapFn | null {
+  const engine = getGlobalSnapEngine();
+  if (!engine.getSettings().enabled) return null;
+  syncSnapEngineViewportFor3D(ctx, engine);
+  return makeResizeSnapFn(engine, entityId);
+}
+
+/**
  * ADR-363 Φ1G.5 Slice 2i-fix — give the shared snap engine a 3D-derived viewport so its
  * pixel tolerance (`worldRadiusForType = px × worldPerPixel`) scales with the 3D camera zoom
  * instead of the stale 2D value (the root cause of "δεν κολλάει"). 1 Three world metre =

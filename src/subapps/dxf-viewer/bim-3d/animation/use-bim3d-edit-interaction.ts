@@ -47,7 +47,6 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
   computeEditAnchor,
   refreshLinearEndpointHandles,
-  refreshReshapeGrips,
   onEditPointerDown,
   onEditPointerMove,
   onEditPointerUp,
@@ -55,6 +54,8 @@ import {
   onEditWheel,
   type EditInteractionCtx,
 } from './bim3d-edit-interaction-handlers';
+// ADR-535 — reshape-grip (re)seat on selection / auto-resync (extracted, file-size N.7.1).
+import { refreshReshapeGrips } from './bim3d-grip-drag';
 
 export interface UseBim3DEditInteractionParams {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;

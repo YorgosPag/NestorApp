@@ -277,6 +277,7 @@ export interface BeamScheduleLabels {
 /** Pre-resolved beam title-block (drawing data) field labels (N.11-safe). */
 export interface BeamTitleBlockLabels {
   readonly section: string;      // «Διατομή» (b×h)
+  readonly effectiveFlangeWidth: string; // ADR-534 Φ3b — «b_eff» ενεργό πλάτος πέλματος (T-beam)
   readonly span: string;         // «Άνοιγμα»
   readonly concrete: string;     // «Σκυρόδεμα»
   readonly steel: string;        // «Χάλυβας»

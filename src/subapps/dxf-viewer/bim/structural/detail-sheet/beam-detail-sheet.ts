@@ -54,6 +54,12 @@ export interface BeamDetailSheetInput {
    * PDF να ταυτίζεται με το live 2Δ/3Δ. Απών → stored fallback (graphless / pre-organism).
    */
   readonly supportType?: BeamSupportType;
+  /**
+   * ADR-534 Φ3b — DERIVED `b_eff` (mm) όταν καλύπτουσα μονολιθική πλάκα κάνει τη δοκό
+   * T-beam (host το resolve-άρει scene-aware μέσω `resolveBeamEffectiveFlangeWidthMm`).
+   * Absent → καμία γραμμή «b_eff» στο title block (γυμνή ορθογώνια δοκός).
+   */
+  readonly effectiveFlangeWidthMm?: number;
   /** Pre-resolved region headings + table/field labels (host injects — N.11-safe). */
   readonly labels: BeamDetailSheetLabels;
   /** Layout override (paper / margin / gutter); defaults to A3 landscape. */
@@ -76,7 +82,7 @@ export function buildBeamDetailSheet(input: BeamDetailSheetInput): DetailSheetMo
   const elevation = buildBeamElevationRegion(beam, r, regions.elevation, supportType);
   const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
   const schedule = buildBeamScheduleRegion(beam, r, regions.schedule, labels.scheduleTable);
-  const titleBlock = buildBeamTitleBlockRegion(beam, r, regions['title-block'], labels.titleFields);
+  const titleBlock = buildBeamTitleBlockRegion(beam, r, regions['title-block'], labels.titleFields, input.effectiveFlangeWidthMm);
 
   const sheetRegions: readonly SheetRegion[] = [
     { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },

@@ -5071,6 +5071,7 @@
     },
     "titleFields": {
       "section": "Section (mm)",
+      "effectiveFlangeWidth": "b_eff (mm)",
       "span": "Span (mm)",
       "concrete": "Concrete",
       "steel": "Steel",

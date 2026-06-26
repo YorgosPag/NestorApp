@@ -19,7 +19,7 @@ import type { GripInfo } from '../../hooks/grip-types';
 import { snapMarkerScreenScale } from '../shared/snap-marker-core';
 import {
   createGrip3DMeshes, GRIP_3D_COLOR, GRIP_3D_HOVER_COLOR,
-  type Grip3DMeshSet, type Grip3DPart,
+  type Grip3DMeshSet, type Grip3DPart, type GripElevationMmFor,
 } from './grip-mesh-factory-3d';
 
 /** Screen-constant multiplier: gripScale = cameraDistance · tan(fov/2) · this. */
@@ -28,7 +28,6 @@ const GRIP_SCREEN_SCALE = 0.025;
 export class BimGripOverlay3D {
   private readonly scene: THREE.Scene;
   private meshSet: Grip3DMeshSet | null = null;
-  private planeWorldY = 0;
   private hovered: number | null = null;
   private disposed = false;
 
@@ -38,11 +37,6 @@ export class BimGripOverlay3D {
 
   get visible(): boolean {
     return !this.disposed && !!this.meshSet && this.meshSet.root.visible;
-  }
-
-  /** Slab-top world Y the grips live on — the controller's drag projection plane. */
-  getPlaneWorldY(): number {
-    return this.planeWorldY;
   }
 
   /** Active grip hitboxes (controller hit-test view). */
@@ -56,15 +50,16 @@ export class BimGripOverlay3D {
   }
 
   /**
-   * Rebuild the grip mesh set for the current slab footprint at `planeWorldY`. Pass an
-   * empty array to clear (non-slab / multi-select / deselected). Resets hover.
+   * Rebuild the grip mesh set for the current slab footprint. Each grip rides its OWN
+   * top-surface elevation (`elevationMmFor`, mm) so the cubes hug a tilted slab's sloped
+   * top (ADR-535 Φ2). Pass an empty array to clear (non-slab / multi-select / deselected).
+   * Resets hover.
    */
-  setGrips(grips: readonly GripInfo[], planeWorldY: number): void {
+  setGrips(grips: readonly GripInfo[], elevationMmFor: GripElevationMmFor = () => 0): void {
     if (this.disposed) return;
     this.clearMeshes();
-    this.planeWorldY = planeWorldY;
     if (grips.length === 0) return;
-    this.meshSet = createGrip3DMeshes(grips, planeWorldY);
+    this.meshSet = createGrip3DMeshes(grips, elevationMmFor);
     this.scene.add(this.meshSet.root);
   }
 
@@ -101,12 +96,14 @@ export class BimGripOverlay3D {
     return true;
   }
 
-  /** Keep every grip screen-constant + camera-facing (billboard). */
+  /**
+   * Keep every grip screen-constant (fixed pixel size during zoom/orbit). The cubes
+   * stay AXIS-ALIGNED (no billboard) so they read as true 3D handles (ADR-535).
+   */
   updateScale(camera: THREE.Camera): void {
     if (!this.meshSet) return;
     for (const part of this.meshSet.parts) {
       part.group.scale.setScalar(snapMarkerScreenScale(part.world, camera, GRIP_SCREEN_SCALE));
-      part.group.quaternion.copy(camera.quaternion);
       part.group.position.copy(part.world);
       part.group.updateMatrixWorld(true);
     }
