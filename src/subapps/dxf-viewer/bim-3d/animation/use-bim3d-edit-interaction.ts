@@ -139,7 +139,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // host-aware re-host) owns it instead. Suppress the gizmo for a single opening.
       if (active && st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
-        gripOverlay.setGrips([], 0); // ADR-535 — no reshape grips for a hosted opening.
+        gripOverlay.setGrips([]); // ADR-535 — no reshape grips for a hosted opening.
         teardownListeners();
         manager.markSceneDirty();
         return;
@@ -157,11 +157,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
           refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
         } else {
           teardownListeners();
-          gripOverlay.setGrips([], 0);
+          gripOverlay.setGrips([]);
         }
       } else {
         overlay.setVisible(false);
-        gripOverlay.setGrips([], 0); // ADR-535 — deselected → drop reshape grips.
+        gripOverlay.setGrips([]); // ADR-535 — deselected → drop reshape grips.
         teardownListeners();
       }
       manager.markSceneDirty();
@@ -202,7 +202,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // would re-show the confusing cube.
       if (st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
-        gripOverlay.setGrips([], 0);
+        gripOverlay.setGrips([]);
         manager.markSceneDirty();
         return;
       }
