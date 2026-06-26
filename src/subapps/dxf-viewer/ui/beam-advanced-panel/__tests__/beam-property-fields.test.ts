@@ -4,7 +4,7 @@
  * `column-property-fields.test.ts`.
  */
 
-import { BEAM_PROPERTY_GROUPS } from '../beam-property-fields';
+import { BEAM_EFFECTIVE_FLANGE_FIELD, BEAM_PROPERTY_GROUPS } from '../beam-property-fields';
 import {
   resolveBeamPanelVisibility,
   isBeamStructuralReadoutKey,
@@ -52,6 +52,17 @@ describe('beam-property-fields descriptor (SSoT)', () => {
       expect(field.options).toHaveLength(0);
       expect(isBeamStructuralReadoutKey(field.commandKey)).toBe(true);
     }
+  });
+
+  it('το DERIVED b_eff field (Φ3c-A) είναι read-only, μη-bridge, ΕΚΤΟΣ των groups (scene-conditional)', () => {
+    expect(BEAM_EFFECTIVE_FLANGE_FIELD.readOnly).toBe(true);
+    expect(BEAM_EFFECTIVE_FLANGE_FIELD.options).toHaveLength(0);
+    expect(BEAM_EFFECTIVE_FLANGE_FIELD.labelKey.length).toBeGreaterThan(0);
+    // commandKey ΟΧΙ bridge readout key (η τιμή είναι scene-injected, όχι resolver-driven).
+    expect(isBeamStructuralReadoutKey(BEAM_EFFECTIVE_FLANGE_FIELD.commandKey)).toBe(false);
+    // Δεν διπλασιάζει commandKey κανενός group field.
+    const groupKeys = BEAM_PROPERTY_GROUPS.flatMap((g) => g.fields.map((f) => f.commandKey));
+    expect(groupKeys).not.toContain(BEAM_EFFECTIVE_FLANGE_FIELD.commandKey);
   });
 
   it('οι 2 στρώσεις διαμήκων (κάτω/άνω) υπάρχουν ως editable πεδία (vs κολόνα ενιαία)', () => {

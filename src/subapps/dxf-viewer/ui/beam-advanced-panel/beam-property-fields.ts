@@ -28,7 +28,21 @@ import {
   BEAM_LAYER_COUNT_OPTIONS,
   BEAM_STIRRUP_LEGS_OPTIONS,
 } from '../ribbon/hooks/bridge/beam-structural-param';
-import type { BimPropertyGroup } from '../bim-properties/bim-property-types';
+import type { BimPropertyField, BimPropertyGroup } from '../bim-properties/bim-property-types';
+
+/**
+ * ADR-534 Φ3c-A — DERIVED `b_eff` (πλακοδοκός) read-only γραμμή του structural group.
+ * Δηλώνεται ΞΕΧΩΡΙΣΤΑ από τα `BEAM_PROPERTY_GROUPS` readouts γιατί είναι **scene-conditional**
+ * (φαίνεται ΜΟΝΟ όταν μονολιθική πλάκα καλύπτει τη δοκό) — η τιμή έρχεται scene-injected από το
+ * `BeamPropertiesTab` (reuse `resolveBeamEffectiveFlangeWidthMm`), ΟΧΙ από τον pure-from-beam bridge.
+ * `commandKey` = derived (όχι bridge readout key) — δεν γράφεται/διαβάζεται ποτέ μέσω resolver.
+ */
+export const BEAM_EFFECTIVE_FLANGE_FIELD: BimPropertyField = {
+  commandKey: 'beam.derived.effectiveFlangeWidth',
+  labelKey: 'beamAdvancedPanel.sections.structural.fields.effectiveFlangeWidth',
+  options: [],
+  readOnly: true,
+};
 
 export const BEAM_PROPERTY_GROUPS: readonly BimPropertyGroup[] = [
   {

@@ -14,9 +14,14 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
-import { isBeamEntity } from '../../types/entities';
+import { isBeamEntity, isSlabEntity } from '../../types/entities';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 import { useBeamParamsDispatcher } from '../ribbon/hooks/bridge/useBeamParamsDispatcher';
+// ADR-534 Φ3c-A — DERIVED b_eff (πλακοδοκός) στο αριστερό panel· reuse των ΙΔΙΩΝ SSoT με το
+// title block (`BeamDetailHost`): detector + ceiling-host builder + topology-aware supportType.
+import { resolveBeamEffectiveFlangeWidthMm } from '../../bim/structural/beam-flange-context';
+import { resolveActiveBeamSupportType } from '../../bim/structural/active-reinforcement';
+import { buildCeilingSlabHosts } from '../../bim-3d/scene/monolithic-slab-clip';
 import { BeamAdvancedPanel } from './BeamAdvancedPanel';
 import type { SceneModel } from '../../types/scene';
 import type { BeamEntity } from '../../bim/types/beam-types';
@@ -47,6 +52,15 @@ export function BeamPropertiesTab({
     return entity && isBeamEntity(entity) ? entity : null;
   }, [primarySelectedId, currentScene]);
 
+  // ADR-534 Φ3c-A — DERIVED b_eff (T-beam) από τις καλύπτουσες μονολιθικές πλάκες της σκηνής.
+  // `undefined` (γυμνή ορθογώνια δοκός) → καμία γραμμή στο panel. Ίδιος υπολογισμός με το title block.
+  const effectiveFlangeWidthMm = React.useMemo<number | undefined>(() => {
+    if (!beam || !currentScene) return undefined;
+    const coveringHosts = buildCeilingSlabHosts(currentScene.entities.filter(isSlabEntity));
+    const supportType = resolveActiveBeamSupportType(beam.id) ?? beam.params.supportType ?? 'simple';
+    return resolveBeamEffectiveFlangeWidthMm(beam, coveringHosts, supportType);
+  }, [beam, currentScene]);
+
   if (!beam) {
     return (
       <p className="px-3 py-6 text-center text-xs text-muted-foreground">
@@ -60,6 +74,7 @@ export function BeamPropertiesTab({
       <BeamAdvancedPanel
         beam={beam}
         dispatch={dispatch}
+        effectiveFlangeWidthMm={effectiveFlangeWidthMm}
         containerClassName="flex flex-col gap-3 p-2"
       />
     </section>

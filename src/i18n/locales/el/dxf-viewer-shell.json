@@ -4285,7 +4285,10 @@
     "title": "Ιδιότητες Δοκαριού",
     "emptyState": "Επίλεξε ένα δοκάρι για να δεις τις ιδιότητες.",
     "sections": {
-      "structural": { "title": "Στατικά / Οπλισμός" },
+      "structural": {
+        "title": "Στατικά / Οπλισμός",
+        "fields": { "effectiveFlangeWidth": "b_eff (mm)" }
+      },
       "loads": { "title": "Φορτίο Σχεδιασμού" }
     }
   },

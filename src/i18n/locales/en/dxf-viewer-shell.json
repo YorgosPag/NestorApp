@@ -4285,7 +4285,10 @@
     "title": "Beam Properties",
     "emptyState": "Select a beam to see its properties.",
     "sections": {
-      "structural": { "title": "Structural / Reinforcement" },
+      "structural": {
+        "title": "Structural / Reinforcement",
+        "fields": { "effectiveFlangeWidth": "b_eff (mm)" }
+      },
       "loads": { "title": "Design Load" }
     }
   },
