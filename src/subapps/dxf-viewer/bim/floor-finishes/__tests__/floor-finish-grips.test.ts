@@ -6,8 +6,9 @@
 import {
   getFloorFinishGrips,
   applyFloorFinishGripDrag,
+  removeVertexFromFloorFinish,
 } from '../floor-finish-grips';
-import type { FloorFinishEntity } from '../../types/floor-finish-types';
+import type { FloorFinishEntity, FloorFinishParams } from '../../types/floor-finish-types';
 import { DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM, DEFAULT_FLOOR_FINISH_MATERIAL_ID } from '../../types/floor-finish-types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -193,6 +194,30 @@ describe('applyFloorFinishGripDrag()', () => {
         delta: { x: 100, y: 100 },
       });
       expect(result).toBe(originalParams);
+    });
+  });
+
+  // ─── ADR-535 Φ4 — removeVertexFromFloorFinish (mirror removeVertexFromSlab) ─────
+  describe('removeVertexFromFloorFinish', () => {
+    it('drops the indexed vertex (4 → 3) and preserves the rest', () => {
+      const params = makeSquareEntity(1000).params as FloorFinishParams;
+      const next = removeVertexFromFloorFinish(params, 1);
+      expect(next.footprint.vertices).toHaveLength(3);
+      expect(next.footprint.vertices.map((v) => v.x)).toEqual([0, 1000, 0]);
+      expect(next.materialId).toBe(params.materialId);
+    });
+
+    it('is a no-op at the minimum triangle (≤3 → identity)', () => {
+      const tri: FloorFinishParams = {
+        ...(makeSquareEntity(1000).params as FloorFinishParams),
+        footprint: { vertices: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 500, y: 1000 }] },
+      };
+      expect(removeVertexFromFloorFinish(tri, 1)).toBe(tri);
+    });
+
+    it('is a no-op for an out-of-range index (identity)', () => {
+      const params = makeSquareEntity(1000).params as FloorFinishParams;
+      expect(removeVertexFromFloorFinish(params, 99)).toBe(params);
     });
   });
 });

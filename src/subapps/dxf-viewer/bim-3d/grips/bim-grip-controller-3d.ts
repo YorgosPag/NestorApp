@@ -69,6 +69,19 @@ export class BimGripController3D {
     return this.drag ? { grip: this.drag.grip, deltaMm: this.drag.deltaMm } : null;
   }
 
+  /**
+   * ADR-535 Φ4 — the reshape grip under the cursor (right-click vertex menu), WITHOUT
+   * starting a drag. Returns its `GripInfo` (carries the `*GripKind` discriminator + the
+   * `vertex` / `midpoint` type that decides delete-corner vs insert-corner), or null when
+   * the cursor is off every grip / the overlay is hidden. Reuses the SAME raycast hit-test
+   * the hover / drag path uses — no new picking.
+   */
+  gripAt(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): GripInfo | null {
+    if (!this.overlay.visible) return null;
+    const gripIndex = this.cast(camera, dom, x, y);
+    return gripIndex === null ? null : this.overlay.gripByIndex(gripIndex);
+  }
+
   /** Hover highlight under the cursor. Returns true when the hovered grip changed. */
   updateHover(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): boolean {
     if (!this.overlay.visible || this.drag) return false;

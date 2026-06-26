@@ -488,6 +488,14 @@
       "aria": "Μενού επιλογών ViewCube"
     }
   },
+  "grips3d": {
+    "contextMenu": {
+      "title": "Κορυφή",
+      "deleteVertex": "Διαγραφή κορυφής",
+      "insertVertex": "Εισαγωγή κορυφής",
+      "aria": "Μενού επεξεργασίας κορυφής"
+    }
+  },
   "shortcuts": {
     "view3d": {
       "top": "Επάνω",

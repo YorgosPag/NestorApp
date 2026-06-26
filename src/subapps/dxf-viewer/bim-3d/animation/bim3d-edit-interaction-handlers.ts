@@ -68,7 +68,9 @@ import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay
 import type { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
 import type { BimGripController3D } from '../grips/bim-grip-controller-3d';
 // ADR-535 Φ1/Φ2 — reshape-grip (re)seat + live preview + commit (extracted, file-size N.7.1).
-import { refreshReshapeGrips, applyGripReshapePreview, commitGripReshape } from './bim3d-grip-drag';
+import { refreshReshapeGrips, applyGripReshapePreview, commitGripReshape, resolveSlabOpeningHostSlabId } from './bim3d-grip-drag';
+// ADR-535 Φ4 — per-vertex grip context menu store (right-click → delete/insert vertex).
+import { useGrip3DContextMenuStore } from '../stores/Grip3DContextMenuStore';
 // ADR-402 Phase B — drag-time snap callbacks (extracted, file-size N.7.1).
 import { buildDragSnapFn, buildGripReshapeSnapFn } from './bim3d-edit-drag-snap';
 
@@ -207,9 +209,16 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     // ADR-535 Φ2/Φ3 — capture the dragged entity's mesh so it reshapes LIVE per frame
     // (not just on release) + inject the snap fn so the dragged vertex magnetises to
     // scene features. Type-agnostic: slab / roof / floor-finish (ADR-535 Φ3a).
-    const entityId = useBim3DEditStore.getState().editEntityIds[0];
+    const editState = useBim3DEditStore.getState();
+    const entityId = editState.editEntityIds[0];
     if (entityId) {
-      ctx.preview.captureResize(ctx.manager.bimLayer.group, entityId);
+      // ADR-535 Φ3b — a slab-opening is a void with only an invisible pick mesh; the
+      // mesh that reshapes live is its HOST SLAB, so capture the host slab. The snap fn
+      // keeps the opening id (self-exclusion). All other footprint types capture self.
+      const captureId = editState.editBimType === 'slab-opening'
+        ? (resolveSlabOpeningHostSlabId(entityId) ?? entityId)
+        : entityId;
+      ctx.preview.captureResize(ctx.manager.bimLayer.group, captureId);
       ctx.gripController.setSnapFn(buildGripReshapeSnapFn(ctx, entityId));
     }
     ctx.manager.markSceneDirty();
@@ -384,6 +393,22 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
+}
+
+/**
+ * ADR-535 Φ4 — right-click on a 3D reshape grip opens the per-vertex context menu
+ * («Διαγραφή κορυφής» on a vertex grip / «Εισαγωγή κορυφής» on an edge-midpoint grip).
+ * Off any grip (or mid-drag) the native / other context menus are left untouched. The
+ * grip under the cursor is resolved with the SAME raycast hit-test the hover/drag path
+ * uses (`gripAt`); the React `Grip3DVertexContextMenu` leaf renders + dispatches it.
+ */
+export function onEditContextMenu(ctx: EditInteractionCtx, e: MouseEvent): void {
+  if (ctx.gripController.isDragging()) return;
+  const grip = ctx.gripController.gripAt(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
+  if (!grip) return;
+  e.preventDefault();
+  e.stopPropagation();
+  useGrip3DContextMenuStore.getState().show(grip, { x: e.clientX, y: e.clientY });
 }
 
 /** Wheel zoom changes camera distance → refresh the screen-constant gizmo scale. */

@@ -22,11 +22,13 @@
 
 import type * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SlabGripKind, RoofGripKind, FloorFinishGripKind } from '../../hooks/grip-types';
+import type { SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind } from '../../hooks/grip-types';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
+import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { computeRoofGeometry } from '../../bim/geometry/roof-geometry';
+import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
 import { slabToMesh } from '../converters/BimToThreeConverter';
 import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
@@ -121,4 +123,36 @@ export function buildFloorFinishReshapePreviewObject(
   if (next === ff.params) return null; // no-op (zero delta / out-of-range index)
   const preview = { ...ff, params: next };
   return floorFinishToMesh(preview, 0, levelId, baseElevationM(ff, s));
+}
+
+/**
+ * ADR-535 Φ3b — build the live RESHAPE preview object for a dragged slab-OPENING
+ * footprint vertex / edge grip, or null (no-op / not found / multi-floor). Special
+ * among the footprint builders: an opening has no mesh of its own (it is a void), so
+ * the preview rebuilds the HOST SLAB with the moved hole — mirror of
+ * `buildOpeningHostWallPreview` (wall analogue). `applySlabOpeningGripDrag` produces
+ * the new `SlabOpeningParams`, `computeSlabOpeningGeometry` recomputes its geometry
+ * cache, then the host slab is rebuilt through the SAME `slabToMesh` SSoT the commit
+ * re-sync uses (the moved opening replaces its old entry in the host's openings list)
+ * — so the live ghost === the committed `UpdateSlabOpeningParamsCommand` re-sync. The
+ * caller captures the HOST SLAB mesh (not the opening) so this object swaps in live.
+ */
+export function buildSlabOpeningReshapePreviewObject(
+  openingId: string,
+  gripKind: SlabOpeningGripKind,
+  deltaMm: Point2D,
+): THREE.Object3D | null {
+  if (isMultiFloorScope()) return null;
+  const s = useBim3DEntitiesStore.getState();
+  const opening = s.slabOpenings.find((o) => o.id === openingId);
+  if (!opening) return null;
+  const slab = s.slabs.find((sl) => sl.id === opening.params.slabId);
+  if (!slab) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  const rectilinear = ShiftKeyTracker.getSnapshot();
+  const next = applySlabOpeningGripDrag(gripKind, { originalParams: opening.params, delta: deltaMm, rectilinear });
+  if (next === opening.params) return null; // no-op (zero delta / out-of-range index)
+  const moved = { ...opening, params: next, geometry: computeSlabOpeningGeometry(next) };
+  const others = s.slabOpenings.filter((o) => o.params.slabId === slab.id && o.id !== openingId);
+  return slabToMesh(slab, [...others, moved], levelId, baseElevationM(slab, s));
 }

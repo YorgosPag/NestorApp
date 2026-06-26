@@ -488,6 +488,14 @@
       "aria": "ViewCube options menu"
     }
   },
+  "grips3d": {
+    "contextMenu": {
+      "title": "Vertex",
+      "deleteVertex": "Delete vertex",
+      "insertVertex": "Insert vertex",
+      "aria": "Vertex edit menu"
+    }
+  },
   "shortcuts": {
     "view3d": {
       "top": "Top",

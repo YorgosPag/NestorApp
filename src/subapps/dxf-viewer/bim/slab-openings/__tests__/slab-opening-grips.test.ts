@@ -22,6 +22,7 @@
 import {
   applySlabOpeningGripDrag,
   getSlabOpeningGrips,
+  removeVertexFromSlabOpening,
 } from '../slab-opening-grips';
 import { computeSlabOpeningGeometry } from '../../geometry/slab-opening-geometry';
 import type {
@@ -316,5 +317,28 @@ describe('slab-opening-grips (Phase 3.7a)', () => {
     expect(next.fireRating).toBe(90);
     expect(next.elevationOverride).toBe(3000);
     expect(next.multiStoreyStackGroupId).toBe('stack_42');
+  });
+
+  // ─── ADR-535 Φ4 — removeVertexFromSlabOpening (mirror removeVertexFromSlab) ─────
+
+  it('22. removeVertexFromSlabOpening drops the indexed vertex (4 → 3) and preserves the rest', () => {
+    const opening = makeRectShaft();
+    const next = removeVertexFromSlabOpening(opening.params, 1);
+    expect(next.outline.vertices).toHaveLength(3);
+    expect(next.outline.vertices.map((v) => v.x)).toEqual([0, 1500, 0]);
+    expect(next.slabId).toBe('slab_test');
+  });
+
+  it('23. removeVertexFromSlabOpening is a no-op at the minimum triangle (≤3 → identity)', () => {
+    const tri: SlabOpeningParams = {
+      ...makeRectShaft().params,
+      outline: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1500, y: 0, z: 0 }, { x: 750, y: 1200, z: 0 }] },
+    };
+    expect(removeVertexFromSlabOpening(tri, 1)).toBe(tri);
+  });
+
+  it('24. removeVertexFromSlabOpening is a no-op for an out-of-range index (identity)', () => {
+    const opening = makeRectShaft();
+    expect(removeVertexFromSlabOpening(opening.params, 99)).toBe(opening.params);
   });
 });

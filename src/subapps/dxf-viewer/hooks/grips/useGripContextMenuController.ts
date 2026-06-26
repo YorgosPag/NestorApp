@@ -37,15 +37,9 @@ import { bindContextMenuAction } from '../../systems/grip/grip-context-menu-acti
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-// ADR-363 Phase 3.8 — slab vertex ops from context menu
-import { removeVertexFromSlab, applySlabGripDrag } from '../../bim/slabs/slab-grips';
-import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
-import type { SlabEntity } from '../../bim/types/slab-types';
-// ADR-417 Φ1-part-2 #2 — roof vertex ops from context menu (mirror slab).
-import { removeVertexFromRoof, applyRoofGripDrag } from '../../bim/roofs/roof-grips';
-import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
-import type { RoofEntity } from '../../bim/types/roof-types';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-535 Φ4 — footprint vertex ops (slab / roof / floor-finish / slab-opening) → shared SSoT builder.
+import { buildFootprintVertexOpCommand, type FootprintVertexMenuOp } from '../../systems/grip/footprint-grip-ops';
 // ADR-510 Φ3c — polyline grip ops (add/remove/convert) → shared SSoT command builder.
 import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from '../../systems/grip/polyline-grip-ops';
 
@@ -177,43 +171,14 @@ export function useGripContextMenuController(
       // operations (slab / roof) dispatched through global history. Branches on
       // the grip discriminator so the right Update*ParamsCommand recomputes
       // geometry atomically (one shared dispatcher = SSoT, no per-entity wire).
-      const onSlabVertexOp = (targetGrip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => {
+      const onSlabVertexOp = (targetGrip: UnifiedGripInfo, op: FootprintVertexMenuOp) => {
         const lm = depsRef.current.levelManager;
         if (!targetGrip.entityId || !lm.currentLevelId) return;
         const adapter = createLevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
-        const raw = adapter.getEntity(targetGrip.entityId);
-
-        // ADR-417 — roof branch (footprint vertex delete / edge-midpoint insert).
-        if (targetGrip.roofGripKind) {
-          const roofCandidate = raw as unknown as Partial<RoofEntity>;
-          if (roofCandidate?.type !== 'roof' || !roofCandidate.params) return;
-          const roof = roofCandidate as RoofEntity;
-          let newParams = roof.params;
-          if (op === 'delete-corner' && targetGrip.roofGripKind.startsWith('roof-vertex-')) {
-            const idx = parseInt(targetGrip.roofGripKind.slice('roof-vertex-'.length), 10);
-            if (Number.isFinite(idx)) newParams = removeVertexFromRoof(roof.params, idx);
-          } else if (op === 'add-corner' && targetGrip.roofGripKind.startsWith('roof-edge-midpoint-')) {
-            newParams = applyRoofGripDrag(targetGrip.roofGripKind, { originalParams: roof.params, delta: { x: 0, y: 0 } });
-          }
-          if (newParams === roof.params) return;
-          const cmd = new UpdateRoofParamsCommand(targetGrip.entityId, newParams, roof.params, adapter, false);
-          if (cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
-          return;
-        }
-
-        const candidate = raw as unknown as Partial<SlabEntity>;
-        if (candidate?.type !== 'slab' || !candidate.params) return;
-        const slab = candidate as SlabEntity;
-        let newParams = slab.params;
-        if (op === 'delete-corner' && targetGrip.slabGripKind?.startsWith('slab-vertex-')) {
-          const idx = parseInt(targetGrip.slabGripKind.slice('slab-vertex-'.length), 10);
-          if (Number.isFinite(idx)) newParams = removeVertexFromSlab(slab.params, idx);
-        } else if (op === 'add-corner' && targetGrip.slabGripKind?.startsWith('slab-edge-midpoint-')) {
-          newParams = applySlabGripDrag(targetGrip.slabGripKind, { originalParams: slab.params, delta: { x: 0, y: 0 } });
-        }
-        if (newParams === slab.params) return;
-        const cmd = new UpdateSlabParamsCommand(targetGrip.entityId, newParams, slab.params, adapter, false);
-        if (cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
+        // ADR-535 Φ4 — one shared SSoT for all four footprint families (slab / roof /
+        // floor-finish / slab-opening); the builder validates + picks the right command.
+        const cmd = buildFootprintVertexOpCommand(targetGrip, op, adapter);
+        if (cmd) getGlobalCommandHistory().execute(cmd);
       };
 
       // ADR-510 Φ3c — multifunctional polyline grip ops. Shared SSoT builder picks

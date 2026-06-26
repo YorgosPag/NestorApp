@@ -40,11 +40,15 @@ type RebarBeam = Pick<BeamEntity, 'id' | 'params' | 'geometry'>;
  *
  * ADR-477 Slice 2 — thin wrapper: resolve (auto-aware) → SSoT core
  * `buildLinearMemberRebarCage` (το ίδιο core που τροφοδοτεί και η συνδετήρια δοκός).
+ *
+ * ADR-534 Φ3c-B3a — `topClipY` (world m): όταν μονολιθική πλάκα καλύπτει τη δοκό, ο κλωβός
+ * κόβεται στο soffit (ίδιο επίπεδο με το ορατό στερεό). `undefined` → χωρίς κοπή.
  */
 export function buildBeamRebarCage(
   beam: RebarBeam,
   bottomFaceY: number,
   levelId?: string,
+  topClipY?: number,
 ): THREE.Group | null {
   // ADR-471/486 — ΕΝΑΣ SSoT: ενεργός (auto-aware) οπλισμός + topology-aware layout (πρόβολος).
   const rebar = resolveActiveBeamRebarLayout(beam);
@@ -56,6 +60,7 @@ export function buildBeamRebarCage(
     layout: rebar.layout,
     stirrupType: rebar.reinforcement.stirrups.type ?? DEFAULT_STIRRUP_TYPE,
     bottomFaceY,
+    topClipY,
   });
   if (!group) return null;
 

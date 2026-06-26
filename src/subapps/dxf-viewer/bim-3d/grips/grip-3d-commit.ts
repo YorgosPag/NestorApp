@@ -32,7 +32,7 @@ import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
  * / `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag`), so the bridge stays
  * type-agnostic.
  */
-function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
+export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
     id: `dxf_${grip.entityId}_${grip.gripIndex}`,
     source: 'dxf',

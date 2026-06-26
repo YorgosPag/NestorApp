@@ -40,6 +40,12 @@ export interface LinearMemberRebarCageInput {
   readonly stirrupType: StirrupType;
   /** Κάτω παρειά του πυρήνα σε world metres (ίδιο datum με το box extrude). */
   readonly bottomFaceY: number;
+  /**
+   * ADR-534 Φ3c-B3a — απόλυτο **top-clip Y** (world metres) όταν μονολιθική πλάκα καλύπτει
+   * τη δοκό: ο κλωβός κόβεται στο soffit (ίδιο επίπεδο με το ορατό στερεό → ο οπλισμός δεν
+   * προεξέχει στην πλάκα). `undefined` → χωρίς κοπή (byte-for-byte, μηδέν regression).
+   */
+  readonly topClipY?: number;
 }
 
 /**
@@ -50,21 +56,23 @@ export interface LinearMemberRebarCageInput {
 export function buildLinearMemberRebarCage(
   input: LinearMemberRebarCageInput,
 ): THREE.Group | null {
-  const { axisPts, sceneUnits, layout, stirrupType, bottomFaceY } = input;
+  const { axisPts, sceneUnits, layout, stirrupType, bottomFaceY, topClipY } = input;
   if (axisPts.length < 2) return null;
 
   const s = mmToSceneUnits(sceneUnits ?? 'mm'); // canvas units ανά mm
   const sceneToM = sceneUnitsToMeters(sceneUnits ?? 'mm'); // metres ανά canvas unit
   const depthM = Math.max(0, layout.depthMm) * MM_TO_M;
   const centerY = bottomFaceY + depthM / 2; // κατακόρυφο κέντρο διατομής (world metres)
+  // ADR-534 Φ3c-B3a — κόψε στο soffit πλάκας (no-op όταν απών) ώστε ο κλωβός να μην προεξέχει στην πλάκα.
+  const clampY = (y: number): number => (topClipY !== undefined ? Math.min(y, topClipY) : y);
 
   // beam-local (u,v,w) [mm] → three.js Vector3 (world metres, AXIS_FLIP: z = −planY).
   const localToThree = (uMm: number, vMm: number, wMm: number): THREE.Vector3 => {
     const frame = samplePolylineFrame(axisPts, uMm * s);
-    if (!frame) return new THREE.Vector3(0, centerY + wMm * MM_TO_M, 0); // defensive (guarded ≥2)
+    if (!frame) return new THREE.Vector3(0, clampY(centerY + wMm * MM_TO_M), 0); // defensive (guarded ≥2)
     const planX = frame.point.x + vMm * s * frame.normal.x;
     const planY = frame.point.y + vMm * s * frame.normal.y;
-    return new THREE.Vector3(planX * sceneToM, centerY + wMm * MM_TO_M, -(planY * sceneToM));
+    return new THREE.Vector3(planX * sceneToM, clampY(centerY + wMm * MM_TO_M), -(planY * sceneToM));
   };
 
   const group = new THREE.Group();

@@ -140,6 +140,23 @@ function insertVertexOnEdge(
   return { ...originalParams, footprint: { vertices: next } };
 }
 
+/**
+ * ADR-535 Φ4 — Remove a vertex from the floor-finish footprint by index. Mirror of
+ * `removeVertexFromSlab`: guard returns `originalParams` unchanged when
+ * `vertices.length <= 3` (minimum triangle) or when `index` is out of range. Callers
+ * MUST check the return-value identity to detect a no-op. Geometry is recomputed by
+ * the caller's `UpdateFloorFinishParamsCommand` (math SSoT in one place).
+ */
+export function removeVertexFromFloorFinish(
+  originalParams: FloorFinishParams,
+  vertexIndex: number,
+): FloorFinishParams {
+  const verts = originalParams.footprint.vertices;
+  if (verts.length <= 3) return originalParams;
+  if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
+  return { ...originalParams, footprint: { vertices: verts.filter((_, i) => i !== vertexIndex) } };
+}
+
 function translateVertex(v: Point3D, delta: Point2D): Point3D {
   return { x: v.x + delta.x, y: v.y + delta.y, ...(v.z !== undefined ? { z: v.z } : {}) };
 }

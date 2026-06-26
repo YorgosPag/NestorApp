@@ -23,6 +23,7 @@ import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
+import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
@@ -411,6 +412,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         onToggleCompass={handleToggleCompass}
         onClose={() => setContextMenuPos(null)}
       />
+
+      {/* ADR-535 Φ4 — per-vertex reshape-grip context menu (delete / insert vertex) */}
+      <Grip3DVertexContextMenu />
 
       {/* Phase 4.5 / A.7.Q1 — keyboard focus floating label (renders only when focused) */}
       {canvasEl && managerRef.current && (

@@ -170,6 +170,27 @@ function insertVertexOnEdge(
   };
 }
 
+/**
+ * ADR-535 Φ4 — Remove a vertex from the slab-opening outline by index. Mirror of
+ * `removeVertexFromSlab` (and `removeVertexFromRoof`): guard returns
+ * `originalParams` unchanged when `vertices.length <= 3` (minimum triangle) or when
+ * `index` is out of range. Callers MUST check the return-value identity to detect a
+ * no-op. Geometry is NOT recomputed here — the caller's `UpdateSlabOpeningParamsCommand`
+ * recomputes via `computeSlabOpeningGeometry()` (math SSoT in one place).
+ */
+export function removeVertexFromSlabOpening(
+  originalParams: SlabOpeningParams,
+  vertexIndex: number,
+): SlabOpeningParams {
+  const verts = originalParams.outline.vertices;
+  if (verts.length <= 3) return originalParams;
+  if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
+  return {
+    ...originalParams,
+    outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
+  };
+}
+
 function translateVertex(v: Point3D, delta: Point2D): Point3D {
   return v.z !== undefined
     ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }

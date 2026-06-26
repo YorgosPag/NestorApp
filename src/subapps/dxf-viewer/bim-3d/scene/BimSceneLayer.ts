@@ -53,6 +53,7 @@ import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { buildEntitySystemColorIntIndex } from '../../bim/mep-systems/mep-system-color';
 import { getLayer } from '../../stores/LayerStore';
 import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
+import { slabOpeningPickMesh } from '../converters/slab-opening-pick-mesh';
 import { syncPointEntities } from './bim-scene-point-syncs';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
@@ -344,6 +345,13 @@ export class BimSceneLayer {
       );
       const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation, ctx.floorElevationMm);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+      // ADR-535 Φ3b — an opening is a void in the slab (no geometry of its own), so it
+      // was unselectable in 3D. Add an invisible pickable mesh filling each hole so a
+      // click selects the opening (→ per-vertex reshape grips). Only visible openings.
+      for (const op of openingsForSlab) {
+        const pick = slabOpeningPickMesh(op, slab, ctx.activeLevelId, r.baseElevation, ctx.floorElevationMm);
+        if (pick) { pick.userData['buildingId'] = r.buildingId; this.group.add(pick); }
+      }
     }
   }
 

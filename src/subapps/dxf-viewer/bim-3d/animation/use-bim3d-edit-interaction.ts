@@ -51,6 +51,7 @@ import {
   onEditPointerMove,
   onEditPointerUp,
   onEditPointerCancel,
+  onEditContextMenu,
   onEditWheel,
   type EditInteractionCtx,
 } from './bim3d-edit-interaction-handlers';
@@ -123,6 +124,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       canvasEl.addEventListener('pointermove', (e) => onEditPointerMove(ctx, e), { signal });
       canvasEl.addEventListener('pointerup', (e) => onEditPointerUp(ctx, e), { signal });
       canvasEl.addEventListener('pointercancel', () => onEditPointerCancel(ctx), { signal });
+      // ADR-535 Φ4 — right-click a reshape grip → per-vertex context menu (delete/insert).
+      canvasEl.addEventListener('contextmenu', (e) => onEditContextMenu(ctx, e), { signal });
       canvasEl.addEventListener('wheel', () => onEditWheel(ctx), { signal, passive: true });
     };
 

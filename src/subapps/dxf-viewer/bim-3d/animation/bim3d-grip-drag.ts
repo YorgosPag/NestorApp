@@ -35,13 +35,14 @@ import {
   buildSlabReshapePreviewObject,
   buildRoofReshapePreviewObject,
   buildFloorFinishReshapePreviewObject,
+  buildSlabOpeningReshapePreviewObject,
 } from './bim3d-grip-preview-builders';
 import { resolveEditEntities } from './bim3d-edit-drag-snap';
 import { resolveEntityLevelId } from './bim3d-edit-live-preview-apply';
 import type { EditInteractionCtx } from './bim3d-edit-interaction-handlers';
 
-/** BIM types that expose a per-vertex footprint reshape sketch in 3D (ADR-535 Φ3a). */
-const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set(['slab', 'roof', 'floor-finish']);
+/** BIM types that expose a per-vertex footprint reshape sketch in 3D (ADR-535 Φ3a/Φ3b). */
+const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set(['slab', 'roof', 'floor-finish', 'slab-opening']);
 
 /**
  * ADR-535 Φ1/Φ3 — (re)compute the 3D reshape grips for a single-select footprint entity
@@ -80,6 +81,8 @@ export function refreshReshapeGrips(
 function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: number): GripElevationMmFor {
   if (bimType === 'slab') return slabGripElevationMmFor(entityId, fallbackWorldY);
   if (bimType === 'roof') return roofGripElevationMmFor(entityId, fallbackWorldY);
+  // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top (the opening has no own Z).
+  if (bimType === 'slab-opening') return slabOpeningGripElevationMmFor(entityId, fallbackWorldY);
   return () => fallbackWorldY * 1000; // floor-finish: flat top (FFL plane).
 }
 
@@ -119,6 +122,40 @@ function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): GripEle
 }
 
 /**
+ * ADR-535 Φ3b — per-grip top-surface elevation (mm) for a slab OPENING: each
+ * opening-outline vertex / edge-midpoint rides the HOST SLAB's (possibly TILTED) top
+ * plane via the SAME `slabTopZmmAt` SSoT the slab grips use + the building base. The
+ * opening carries no Z of its own, so it borrows the host slab's surface — the grips
+ * sit exactly on the slab top around the hole. Falls back to the world AABB top (the
+ * opening's pick-mesh top) when the opening or its host slab is absent from the store.
+ */
+function slabOpeningGripElevationMmFor(openingId: string, fallbackWorldY: number): GripElevationMmFor {
+  const slab = resolveSlabOpeningHostSlab(openingId);
+  if (!slab) return () => fallbackWorldY * 1000;
+  const s = useBim3DEntitiesStore.getState();
+  const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
+  return (grip) => slabTopZmmAt(slab.params, { x: grip.position.x, y: grip.position.y }) + baseMm;
+}
+
+/** Resolve the host SlabEntity for a slab-opening id (null when either is missing). */
+function resolveSlabOpeningHostSlab(openingId: string) {
+  const s = useBim3DEntitiesStore.getState();
+  const opening = s.slabOpenings.find((o) => o.id === openingId);
+  if (!opening) return null;
+  return s.slabs.find((sl) => sl.id === opening.params.slabId) ?? null;
+}
+
+/**
+ * ADR-535 Φ3b — the id of the slab that hosts `openingId`, or null. The 3D reshape
+ * of a slab-opening rebuilds its host slab mesh (the opening is a void), so the
+ * pointerdown handler must capture the HOST SLAB — not the opening — for the live
+ * per-frame preview swap (§2.3). The snap fn keeps the opening id for self-exclusion.
+ */
+export function resolveSlabOpeningHostSlabId(openingId: string): string | null {
+  return resolveSlabOpeningHostSlab(openingId)?.id ?? null;
+}
+
+/**
  * ADR-535 Φ2/Φ3 — rebuild the dragged entity's mesh for THIS frame so its footprint
  * reshapes live (the grip sibling of `applyLivePreview`'s resize path). Reads the
  * in-progress grip + its snapped plan-mm delta from the controller, dispatches to the
@@ -138,6 +175,10 @@ function buildGripReshapePreview(grip: GripInfo, deltaMm: Point2D): THREE.Object
   if (grip.roofGripKind) return buildRoofReshapePreviewObject(grip.entityId, grip.roofGripKind, deltaMm);
   if (grip.floorFinishGripKind) {
     return buildFloorFinishReshapePreviewObject(grip.entityId, grip.floorFinishGripKind, deltaMm);
+  }
+  // ADR-535 Φ3b — slab-opening: rebuild the HOST SLAB with the moved hole (entityId = opening id).
+  if (grip.slabOpeningGripKind) {
+    return buildSlabOpeningReshapePreviewObject(grip.entityId, grip.slabOpeningGripKind, deltaMm);
   }
   return null;
 }
