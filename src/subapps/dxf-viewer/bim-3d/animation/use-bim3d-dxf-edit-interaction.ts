@@ -173,7 +173,10 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       canvasEl.addEventListener('pointercancel', onPointerCancel, { signal });
     };
 
-    function syncFromSelection(): void {
+    // Arrow (not a hoisted declaration) so the `manager` non-null narrowing from the
+    // guard above is preserved in this closure. Referenced by the pointer handlers above
+    // via closure (called at event time, after this binding initialises).
+    const syncFromSelection = (): void => {
       // Never re-seat mid-drag (the controller owns the grips).
       if (gripController.isDragging()) return;
       const entity = levelsRef.current ? resolveEligibleDxfEntity() : null;
@@ -186,7 +189,7 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       if (ownsGrips()) store().clear();
       teardownListeners();
       manager.markSceneDirty();
-    }
+    };
 
     syncFromSelection();
     const unsubSel = subscribeSelection(syncFromSelection);
