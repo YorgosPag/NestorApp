@@ -521,6 +521,7 @@
 | **ADR-537** | Επιλογή & επεξεργασία ωμών DXF οντοτήτων με λαβές στην 3D προβολή (full SSoT με 2D) | 🟢 IMPLEMENTED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-537-3d-raw-dxf-grip-editing.md) |
 | **ADR-538** | Hover-φωτισμός DXF+BIM & «+» badge στην 3D προβολή (ίδιος 2D κώδικας) | 🟢 IMPLEMENTED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-538-3d-hover-highlight-and-badge.md) |
 | **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
+| **ADR-540** | Universal Associative Geometry Reconciliation (SSoT) — εξαρτημένα μέλη ποτέ stale μετά από κάθε command | ✅ APPROVED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-540-universal-associative-geometry-reconcile.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1025,6 +1026,7 @@
 | **ADR-537** | Επιλογή & επεξεργασία ωμών DXF οντοτήτων με λαβές στην 3D προβολή (full SSoT με 2D) | 🟢 IMPLEMENTED | [View](./adrs/ADR-537-3d-raw-dxf-grip-editing.md) |
 | **ADR-538** | Hover-φωτισμός DXF+BIM & «+» badge στην 3D προβολή (ίδιος 2D κώδικας) | 🟢 IMPLEMENTED | [View](./adrs/ADR-538-3d-hover-highlight-and-badge.md) |
 | **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | [View](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
+| **ADR-540** | Universal Associative Geometry Reconciliation (SSoT) — εξαρτημένα μέλη ποτέ stale μετά από κάθε command | ✅ APPROVED | [View](./adrs/ADR-540-universal-associative-geometry-reconcile.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
