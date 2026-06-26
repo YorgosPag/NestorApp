@@ -21,10 +21,14 @@ import {
   resolveStructuralCode,
   isStructuralCodeId,
 } from '../../../../bim/structural/codes';
+import { buildBeamSectionContext } from '../../../../bim/structural/section-context';
+// ADR-534 Φ3c-B1 — store-coupled SSoT του ACTIVE topology-aware οπλισμού (b_eff/στρέψη/στήριξη/άνοιγμα)
+// ώστε ο πίνακας να καταναλώνει τα ΙΔΙΑ DERIVED μεγέθη με 2Δ/3Δ/PDF (μηδέν διπλό override-gather).
 import {
-  buildBeamSectionContext,
-  resolveActiveBeamReinforcement,
-} from '../../../../bim/structural/section-context';
+  resolveActiveBeamReinforcementForEntity,
+  resolveActiveBeamSupportType,
+  resolveActiveBeamFlangeWidthMm,
+} from '../../../../bim/structural/active-reinforcement';
 import { isConcreteGrade } from '../../../../bim/structural/concrete-grades';
 import type { BeamReinforcement } from '../../../../bim/structural/reinforcement/beam-reinforcement-types';
 import {
@@ -56,13 +60,20 @@ type DispatchParams = (nextParams: BeamParams) => void;
 /**
  * Ενεργός οπλισμός = (auto ⇒ φρέσκο code-suggested από την τρέχουσα γεωμετρία· manual ⇒
  * το stored) ή, αν απών, code-suggested ελάχιστος-έγκυρος ως live default. Δρομολογείται
- * μέσω του SSoT `resolveActiveBeamReinforcement` ώστε ο πίνακας να δείχνει τον ΙΔΙΟ
- * (real-time) οπλισμό με 2Δ/3Δ/PDF.
+ * μέσω του store-coupled SSoT `resolveActiveBeamReinforcementForEntity` ώστε ο πίνακας να
+ * δείχνει τον ΙΔΙΟ (real-time, topology-aware: b_eff/στρέψη/στήριξη/άνοιγμα) οπλισμό με 2Δ/3Δ/PDF.
  */
 function effectiveReinforcement(beam: BeamEntity): BeamReinforcement {
+  const active = resolveActiveBeamReinforcementForEntity(beam);
+  if (active) return active;
+  // Fallback (απών οπλισμός → live default): code-suggested με τον DERIVED τύπο στήριξης + b_eff.
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  const active = resolveActiveBeamReinforcement(beam, provider);
-  return active ?? provider.suggestBeamReinforcement(buildBeamSectionContext(beam));
+  return provider.suggestBeamReinforcement(
+    buildBeamSectionContext(
+      beam, resolveActiveBeamSupportType(beam.id), undefined, undefined, undefined,
+      resolveActiveBeamFlangeWidthMm(beam.id),
+    ),
+  );
 }
 
 /** Combobox state ενός editable structural key, ή `null` αν δεν ανήκει εδώ. */

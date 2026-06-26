@@ -45,6 +45,11 @@ import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
 import { BeamTorsionStore } from '../bim/structural/organism/beam-torsion-store';
+// ADR-534 Φ3c-B1 — DERIVED b_eff (πλακοδοκός) ανά δοκό → transient store για το live reinforce/ρ path.
+import { buildBeamFlangeWidthMap } from '../bim/structural/organism/derive-beam-flange-width';
+import { BeamFlangeStore } from '../bim/structural/organism/beam-flange-store';
+import { buildCeilingSlabHosts } from '../bim-3d/scene/monolithic-slab-clip';
+import { isSlabEntity } from '../types/entities';
 // ADR-506 — DERIVED άνω όριο πλάτους δοκαριού (κάθετη προβολή στηρίζουσας κολώνας) → transient store.
 import { buildBeamMaxWidthMap } from '../bim/structural/organism/derive-beam-max-width';
 import { BeamMaxWidthStore } from '../bim/structural/organism/beam-max-width-store';
@@ -131,6 +136,11 @@ export function runOrganismDiagnostics(
   SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
   BeamTorsionStore.set(computeBeamDesignTorsion(entities));
   BeamMaxWidthStore.set(buildBeamMaxWidthMap(graph, entities)); // ADR-506 — width-sizing cap
+  // ADR-534 Φ3c-B1 — DERIVED b_eff (πλακοδοκός): καλύπτουσες πλάκες οροφής → T-beam ανά δοκό. Reuse
+  // του ΙΔΙΟΥ detector με το panel/title block· ο topology-aware τύπος στήριξης (μόλις υπολογίστηκε)
+  // κρατά το l_0 του b_eff συνεπές με τον οπλισμό. Κανένα slab → άδειος χάρτης (μηδέν b_eff override).
+  const ceilingHosts = buildCeilingSlabHosts(entities.filter(isSlabEntity));
+  BeamFlangeStore.set(buildBeamFlangeWidthMap(entities, ceilingHosts, beamSupportTypes));
   ColumnSupportMomentStore.set(buildColumnSupportMomentMap(entities, graph)); // ADR-502 §Slice2
   ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
 

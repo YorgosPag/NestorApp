@@ -80,4 +80,27 @@ describe('commitGrip3DReshape', () => {
     expect(unified.type).toBe('edge');
     expect(unified.edgeVertexIndices).toEqual([0, 1]);
   });
+
+  it('forwards a roof gripKind so the commit routes to commitRoofGripDrag (ADR-535 Φ3)', () => {
+    mockCommit.mockImplementation(() => {});
+    const roof: GripInfo = {
+      entityId: 'r1', gripIndex: 0, type: 'vertex',
+      position: { x: 0, y: 0 }, movesEntity: false, roofGripKind: 'roof-vertex-0',
+    };
+    commitGrip3DReshape(roof, { x: 25, y: 0 }, LEVELS, 'L1');
+    const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
+    expect(unified.roofGripKind).toBe('roof-vertex-0');
+    expect(unified.slabGripKind).toBeUndefined();
+  });
+
+  it('forwards a floor-finish gripKind (ADR-535 Φ3)', () => {
+    mockCommit.mockImplementation(() => {});
+    const ff: GripInfo = {
+      entityId: 'f1', gripIndex: 0, type: 'vertex',
+      position: { x: 0, y: 0 }, movesEntity: false, floorFinishGripKind: 'floor-finish-vertex-0',
+    };
+    commitGrip3DReshape(ff, { x: 25, y: 0 }, LEVELS, 'L1');
+    const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
+    expect(unified.floorFinishGripKind).toBe('floor-finish-vertex-0');
+  });
 });

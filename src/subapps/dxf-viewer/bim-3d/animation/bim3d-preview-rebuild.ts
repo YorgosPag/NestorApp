@@ -42,11 +42,6 @@ import {
   type TiltDragDeg,
 } from '../gizmo/bim3d-tilt-bridge';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
-// ADR-535 Φ2 — live slab RESHAPE preview reuses the SAME pure param transform the 2D
-// grips + the commit path use (per-vertex translate / edge-midpoint insert).
-import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
-import type { SlabGripKind } from '../../hooks/grip-types';
-import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 // ADR-408 Φ-D — endpoint-move preview of the dragged MEP segment (converter SSoT).
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import {
@@ -434,32 +429,10 @@ function rebuildSlab(slab: Slab, drag: ResizeDragMm, s: Snapshot, levelId: strin
 }
 
 /**
- * ADR-535 Φ2 — build the live RESHAPE preview object for a dragged slab vertex / edge
- * grip, or null (no-op / not a slab / multi-floor). The grip sibling of `rebuildSlab`:
- * the ONLY change is the param transform — `applySlabGripDrag` (per-vertex translate /
- * edge-midpoint insert) instead of `computeSlabResizeParams`. Everything else (the
- * `slabToMesh` converter SSoT, the openings filter, `baseElevationOf`, the multi-floor
- * guard) is reused verbatim, so the ghost === the committed `UpdateSlabParamsCommand`.
- * Shift → rectilinear is read from the SAME `ShiftKeyTracker` the commit reads
- * (`commitSlabGripDrag`), so preview === commit even with the ortho modifier held.
+ * ADR-535 Φ2/Φ3 — the live RESHAPE-grip preview builders (slab / roof / floor-finish)
+ * moved to `bim3d-grip-preview-builders.ts` (Google file-size N.7.1). This module keeps
+ * the resize / tilt / endpoint preview machinery.
  */
-export function buildSlabReshapePreviewObject(
-  entityId: string,
-  gripKind: SlabGripKind,
-  deltaMm: Point2D,
-): THREE.Object3D | null {
-  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
-  const s = useBim3DEntitiesStore.getState();
-  const slab = s.slabs.find((sl) => sl.id === entityId);
-  if (!slab) return null;
-  const levelId = s.activeLevelId ?? undefined;
-  const rectilinear = ShiftKeyTracker.getSnapshot();
-  const next = applySlabGripDrag(gripKind, { originalParams: slab.params, delta: deltaMm, rectilinear });
-  if (next === slab.params) return null; // no-op (zero delta / out-of-range index)
-  const preview = { ...slab, params: next };
-  const openings = s.slabOpenings.filter((o) => o.params.slabId === slab.id);
-  return slabToMesh(preview, openings, levelId, baseElevationOf(slab, s));
-}
 
 function rebuildStair(stair: Stair, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   const next = computeStairResizeParams(stair, drag);

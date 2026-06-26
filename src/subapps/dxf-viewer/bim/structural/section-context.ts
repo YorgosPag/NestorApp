@@ -276,14 +276,17 @@ export function resolveActiveBeamReinforcement(
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
   sizingSpanOverrideMm?: number,
+  effectiveFlangeWidthMm?: number,
 ): BeamReinforcement | undefined {
   const r = beam.params.reinforcement;
   if (!r || !r.auto) return r;
   // ADR-499 §6.3-c — η DERIVED στρέψη (πρόβολος-πλάκα) προστίθεται στον code-suggested
   // οπλισμό (γωνιακοί A_sl + πυκνότεροι κλειστοί συνδετήρες A_st/s) μέσα στον suggester.
   // ADR-504 Φ2 — `sizingSpanOverrideMm`: συνεχής δοκός → ροπή από υπο-άνοιγμα (wL_sub²/10).
+  // ADR-534 Φ3c-B1 — `effectiveFlangeWidthMm`: πλακοδοκός → υψηλότερο M_Rd,lim (σαγκ. ροπή χρησιμοποιεί
+  // b_eff ως πλάτος θλιβόμενης ζώνης μέσω `flexuralCompressionWidthMm`)· absent → b_w (μηδέν regression).
   const fresh = provider.suggestBeamReinforcement(
-    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm),
+    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm, undefined, effectiveFlangeWidthMm),
   );
   return {
     ...fresh,

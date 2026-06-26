@@ -25,7 +25,13 @@ import type { UnifiedGripInfo, DxfCommitDeps } from '../../hooks/grips/unified-g
 import { commitDxfGripDragModeAware } from '../../hooks/grips/grip-commit-adapters';
 import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
 
-/** Map a 2D `GripInfo` onto the unified shape the commit adapters consume. */
+/**
+ * Map a 2D `GripInfo` onto the unified shape the commit adapters consume. The four
+ * footprint discriminators are forwarded 1:1 (ADR-535 Φ3) — `commitDxfGripDragModeAware`
+ * routes on whichever `*GripKind` is present (`commitSlabGripDrag` / `commitRoofGripDrag`
+ * / `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag`), so the bridge stays
+ * type-agnostic.
+ */
 function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
     id: `dxf_${grip.entityId}_${grip.gripIndex}`,
@@ -38,6 +44,9 @@ function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
     slabGripKind: grip.slabGripKind,
+    roofGripKind: grip.roofGripKind,
+    floorFinishGripKind: grip.floorFinishGripKind,
+    slabOpeningGripKind: grip.slabOpeningGripKind,
   };
 }
 

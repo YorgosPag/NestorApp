@@ -200,12 +200,17 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     e.stopPropagation();
     ctx.manager.viewport.setControlsEnabled(false);
     (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
-    // ADR-535 Φ2 — capture the slab mesh so it reshapes LIVE per frame (not just on
-    // release) + inject the snap fn so the dragged vertex magnetises to scene features.
-    const slabId = useBim3DEditStore.getState().editEntityIds[0];
-    if (slabId) {
-      ctx.preview.captureResize(ctx.manager.bimLayer.group, slabId);
-      ctx.gripController.setSnapFn(buildGripReshapeSnapFn(ctx, slabId));
+    // ADR-535 Φ4 — hide the whole-entity gizmo while reshaping a vertex (Revit «Edit
+    // Sketch»: the move/rotate handles step aside so they neither clutter the perimeter
+    // nor catch the cursor). Restored on release / cancel.
+    ctx.overlay.setVisible(false);
+    // ADR-535 Φ2/Φ3 — capture the dragged entity's mesh so it reshapes LIVE per frame
+    // (not just on release) + inject the snap fn so the dragged vertex magnetises to
+    // scene features. Type-agnostic: slab / roof / floor-finish (ADR-535 Φ3a).
+    const entityId = useBim3DEditStore.getState().editEntityIds[0];
+    if (entityId) {
+      ctx.preview.captureResize(ctx.manager.bimLayer.group, entityId);
+      ctx.gripController.setSnapFn(buildGripReshapeSnapFn(ctx, entityId));
     }
     ctx.manager.markSceneDirty();
     return;
@@ -325,9 +330,10 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
     const committed = commitGripReshape(ctx, ctx.gripController.endDrag());
     // ADR-535 Φ2 — committed: the preview already shows the final footprint, so drop the
     // refs and let the command's re-sync replace the meshes (no jump). No command (no-op
-    // / rejected): restore the original slab mesh, since no re-sync is coming.
+    // / rejected): restore the original mesh, since no re-sync is coming.
     if (committed) ctx.preview.commit();
     else ctx.preview.reset();
+    ctx.overlay.setVisible(true); // ADR-535 Φ4 — the whole-entity gizmo comes back.
     ctx.manager.viewport.setControlsEnabled(true);
     ctx.manager.markSceneDirty();
     return;
@@ -357,10 +363,11 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
 
 export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   // ADR-535 — abort a grip drag: snap the square back, no command. Φ2: restore the
-  // original slab mesh (the live reshape preview is discarded).
+  // original mesh (the live reshape preview is discarded). Φ4: re-show the gizmo.
   if (ctx.gripController.isDragging()) {
     ctx.gripController.cancelDrag();
     ctx.preview.reset();
+    ctx.overlay.setVisible(true);
     const st = useBim3DEditStore.getState();
     refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
     ctx.manager.viewport.setControlsEnabled(true);

@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { buildSlabReshapePreviewObject } from '../bim3d-preview-rebuild';
+import { buildSlabReshapePreviewObject } from '../bim3d-grip-preview-builders';
 import { slabToMesh } from '../../converters/BimToThreeConverter';
 import { applySlabGripDrag } from '../../../bim/slabs/slab-grips';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';

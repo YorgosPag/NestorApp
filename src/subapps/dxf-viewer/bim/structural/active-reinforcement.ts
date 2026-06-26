@@ -34,6 +34,8 @@ import { BeamSupportConditionStore } from './organism/beam-support-condition-sto
 import { SlabSupportConditionStore } from './organism/slab-support-condition-store';
 import { BeamTorsionStore } from './organism/beam-torsion-store';
 import { BeamSpanStore } from './organism/beam-span-store';
+// ADR-534 Φ3c-B1 — DERIVED b_eff (πλακοδοκός) από το organism pass → live flexural-cap auto-design.
+import { BeamFlangeStore } from './organism/beam-flange-store';
 // ADR-506 — DERIVED cap πλάτους (στηρίζουσα κολώνα) + πρακτικό όριο ύψους ΝΟΚ → sizing limits.
 import { BeamMaxWidthStore } from './organism/beam-max-width-store';
 import { practicalBeamDepthLimitMm } from './codes/clear-height-under-beam';
@@ -189,9 +191,11 @@ export function resolveActiveBeamReinforcementForEntity(
   // ADR-499 §6.3-c — + DERIVED στρέψη (πρόβολος-πλάκα) ώστε ο live 2Δ/3Δ οπλισμός να δείχνει
   // τους στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (μηδέν αλλαγή render path).
   // ADR-504 Φ2 — + DERIVED υπο-άνοιγμα συνεχούς δοκού (ροπή/βέλος από max sub-span).
+  // ADR-534 Φ3c-B1 — + DERIVED b_eff (πλακοδοκός) ώστε ο live οπλισμός/ρ (panel + 2Δ/3Δ/PDF) να
+  // ευθυγραμμίζεται με τον υψηλότερο cap σαγκ. ροπής της T-διατομής.
   return resolveActiveBeamReinforcement(
     beam, provider, resolveActiveBeamSupportType(beam.id), resolveActiveBeamTorsion(beam.id),
-    resolveActiveBeamSpanMm(beam.id),
+    resolveActiveBeamSpanMm(beam.id), resolveActiveBeamFlangeWidthMm(beam.id),
   );
 }
 
@@ -223,6 +227,17 @@ export function resolveActiveBeamSpanMm(beamId: string): number | undefined {
  */
 export function resolveActiveBeamTorsion(beamId: string): number | undefined {
   return BeamTorsionStore.get(beamId);
+}
+
+/**
+ * ADR-534 Φ3c-B1 — το DERIVED **`b_eff`** (mm, EC2 §5.3.2.1) μιας δοκού από το transient
+ * `BeamFlangeStore` (γράφεται στο organism pass από `buildBeamFlangeWidthMap`): πλακοδοκός όταν
+ * μονολιθική πλάκα την καλύπτει. `undefined` → καμία κάλυψη (γυμνή ορθογώνια δοκός) → ο consumer
+ * πέφτει στο `b_w` (μηδέν regression). Pure store read (ADR-040 safe). Mirror του
+ * `resolveActiveBeamTorsion`.
+ */
+export function resolveActiveBeamFlangeWidthMm(beamId: string): number | undefined {
+  return BeamFlangeStore.get(beamId);
 }
 
 /**

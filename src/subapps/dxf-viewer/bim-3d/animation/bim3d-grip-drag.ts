@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * bim3d-grip-drag.ts — 3D reshape-grip drag glue for the slab footprint pilot
- * (ADR-535 Φ1 grips + Φ2 live preview / snap).
+ * bim3d-grip-drag.ts — 3D reshape-grip drag glue for footprint entities
+ * (ADR-535 Φ1 grips + Φ2 live preview / snap + Φ3a slab / roof / floor-finish).
  *
  * Extracted from `bim3d-edit-interaction-handlers` (file-size N.7.1) so the grip
- * concerns live together: (re)seating the per-vertex grips on the slab top, the
- * per-frame live reshape preview, and the single commit-on-release. The interaction
+ * concerns live together: (re)seating the per-vertex grips on each type's top surface,
+ * the per-frame live reshape preview, and the single commit-on-release. The interaction
  * handlers stay the thin dispatcher (grip-first hit-test → these helpers). Pure
  * functions driven by the `EditInteractionCtx` the hook builds once.
  *
@@ -14,30 +14,41 @@
  * runtime cycle with the handlers module that imports these helpers.
  */
 
+import type * as THREE from 'three';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo } from '../../hooks/grip-types';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
-import { reshapeGripsForSlab } from '../grips/grip-3d-reshape-grips';
+import { reshapeGripsForFootprint } from '../grips/grip-3d-reshape-grips';
 import { commitGrip3DReshape } from '../grips/grip-3d-commit';
 import type { GripElevationMmFor } from '../grips/grip-mesh-factory-3d';
-// ADR-535 Φ2 — per-vertex slab-top elevation (slope plane) SSoT + building base resolver.
+// ADR-535 Φ2/Φ3 — per-vertex top-surface elevation SSoT + building base resolver.
+// slab → slope plane (`slabTopZmmAt`); roof → lower-envelope (`roofZmm`).
 import { slabTopZmmAt } from '../../bim/geometry/slab-slope';
+import { resolveEavePlanes, roofZmm } from '../../bim/geometry/roof-lower-envelope';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { findBimEntityWorldBox } from './bim3d-edit-interaction-helpers';
-import { buildSlabReshapePreviewObject } from './bim3d-preview-rebuild';
+import {
+  buildSlabReshapePreviewObject,
+  buildRoofReshapePreviewObject,
+  buildFloorFinishReshapePreviewObject,
+} from './bim3d-grip-preview-builders';
 import { resolveEditEntities } from './bim3d-edit-drag-snap';
 import { resolveEntityLevelId } from './bim3d-edit-live-preview-apply';
 import type { EditInteractionCtx } from './bim3d-edit-interaction-handlers';
 
+/** BIM types that expose a per-vertex footprint reshape sketch in 3D (ADR-535 Φ3a). */
+const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set(['slab', 'roof', 'floor-finish']);
+
 /**
- * ADR-535 Φ1 — (re)compute the 3D reshape grips for a single-select SLAB and push them
- * onto the grip overlay. Cleared for any other selection (multi / non-slab / deselected).
- * Each grip rides its OWN top-surface elevation (`slabTopZmmAt`) so the per-vertex square
- * hugs the slab top — even when the slab is TILTED (a sloped slab's vertices sit at
- * different Y; Φ1's single `box.max.y` made the low corners' grips fly). The grip plan
+ * ADR-535 Φ1/Φ3 — (re)compute the 3D reshape grips for a single-select footprint entity
+ * (slab / roof / floor-finish) and push them onto the grip overlay. Cleared for any other
+ * selection (multi / unsupported type / deselected). Each grip rides its OWN top-surface
+ * elevation (per `bimType`) so the per-vertex square hugs the surface — even when it is
+ * TILTED / sloped (Φ1's single `box.max.y` made the low corners' grips fly). The grip plan
  * positions reuse the 2D SSoT (`computeDxfEntityGrips`), filtered to footprint reshape
  * grips. Called after `computeEditAnchor` (selection + auto-resync re-anchor).
  */
@@ -46,7 +57,7 @@ export function refreshReshapeGrips(
   entityIds: readonly string[],
   bimType: string | null,
 ): void {
-  if (entityIds.length !== 1 || bimType !== 'slab') {
+  if (entityIds.length !== 1 || !bimType || !RESHAPE_BIM_TYPES.has(bimType)) {
     ctx.gripOverlay.setGrips([]);
     return;
   }
@@ -56,9 +67,20 @@ export function refreshReshapeGrips(
     ctx.gripOverlay.setGrips([]);
     return;
   }
-  const grips = reshapeGripsForSlab(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
-  ctx.gripOverlay.setGrips(grips, slabGripElevationMmFor(entityIds[0], box.max.y));
+  const grips = reshapeGripsForFootprint(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
+  ctx.gripOverlay.setGrips(grips, gripElevationMmFor(bimType, entityIds[0], box.max.y));
   ctx.gripOverlay.updateScale(ctx.manager.getCamera());
+}
+
+/**
+ * ADR-535 Φ3 — per-bimType top-surface elevation resolver for the grip cubes. slab + roof
+ * ride a per-vertex surface (slope / lower-envelope); floor-finish is a flat FFL plane so
+ * the world AABB top (`fallbackWorldY`) is already exact (zero extra computation).
+ */
+function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: number): GripElevationMmFor {
+  if (bimType === 'slab') return slabGripElevationMmFor(entityId, fallbackWorldY);
+  if (bimType === 'roof') return roofGripElevationMmFor(entityId, fallbackWorldY);
+  return () => fallbackWorldY * 1000; // floor-finish: flat top (FFL plane).
 }
 
 /**
@@ -78,18 +100,46 @@ function slabGripElevationMmFor(slabId: string, fallbackWorldY: number): GripEle
 }
 
 /**
- * ADR-535 Φ2 — rebuild the dragged slab's mesh for THIS frame so the footprint reshapes
- * live (the grip sibling of `applyLivePreview`'s resize path). Reads the in-progress grip
- * + its snapped plan-mm delta from the controller and swaps the fresh `slabToMesh` object
- * in via the live-preview SSoT (`captureResize` ran on pointerdown). A null object (no-op
- * frame / multi-floor) leaves the last preview standing.
+ * ADR-535 Φ3 — per-grip top-surface elevation (mm) for a roof: each footprint vertex /
+ * edge-midpoint rides the roof's lower-envelope top plane via the `roofZmm` SSoT (the SAME
+ * height field `computeRoofGeometry` lifts the faces with → grip === rendered surface) +
+ * the building base. Perimeter vertices land at `basePivotZ` (the eaves datum); a midpoint
+ * on a sloped/gable edge rises with the roof. Falls back to the world AABB top (the ridge)
+ * only when the roof is absent from the store.
+ */
+function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): GripElevationMmFor {
+  const s = useBim3DEntitiesStore.getState();
+  const roof = s.roofs.find((r) => r.id === roofId);
+  if (!roof) return () => fallbackWorldY * 1000;
+  const baseMm = (resolveEntityBuilding(roof, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
+  const verts = roof.params.outline.vertices;
+  const scaleS = mmToSceneUnits(roof.params.sceneUnits ?? 'mm');
+  const { planes } = resolveEavePlanes(verts, roof.params.edges, roof.params.slopeUnit);
+  return (grip) => roofZmm(planes, roof.params.basePivotZ, scaleS, { x: grip.position.x, y: grip.position.y }) + baseMm;
+}
+
+/**
+ * ADR-535 Φ2/Φ3 — rebuild the dragged entity's mesh for THIS frame so its footprint
+ * reshapes live (the grip sibling of `applyLivePreview`'s resize path). Reads the
+ * in-progress grip + its snapped plan-mm delta from the controller, dispatches to the
+ * per-type preview builder by the grip's discriminator, and swaps the fresh converter
+ * object in via the live-preview SSoT (`captureResize` ran on pointerdown). A null object
+ * (no-op frame / multi-floor / unknown grip) leaves the last preview standing.
  */
 export function applyGripReshapePreview(ctx: EditInteractionCtx): void {
   const cur = ctx.gripController.currentDrag();
-  if (!cur || !cur.grip.slabGripKind) return;
-  ctx.preview.applyResize(
-    buildSlabReshapePreviewObject(cur.grip.entityId, cur.grip.slabGripKind, cur.deltaMm),
-  );
+  if (!cur) return;
+  ctx.preview.applyResize(buildGripReshapePreview(cur.grip, cur.deltaMm));
+}
+
+/** Dispatch a reshape-grip drag to its per-type live preview builder (ghost === commit). */
+function buildGripReshapePreview(grip: GripInfo, deltaMm: Point2D): THREE.Object3D | null {
+  if (grip.slabGripKind) return buildSlabReshapePreviewObject(grip.entityId, grip.slabGripKind, deltaMm);
+  if (grip.roofGripKind) return buildRoofReshapePreviewObject(grip.entityId, grip.roofGripKind, deltaMm);
+  if (grip.floorFinishGripKind) {
+    return buildFloorFinishReshapePreviewObject(grip.entityId, grip.floorFinishGripKind, deltaMm);
+  }
+  return null;
 }
 
 /**
