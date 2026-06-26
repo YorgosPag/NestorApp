@@ -14,19 +14,15 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, hangDownMeshY } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { computeBeamCutbackOutline, extendBeamOutlineIntoFramingColumns } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
-import { applyBeamSlope, applySlabSlope, applyColumnTilt } from './mesh-slope-shear';
+import { applyBeamSlope, applyColumnTilt } from './mesh-slope-shear';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
 import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
-import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
-import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
 import { buildColumnFinishSkin, buildBeamFinishSkin } from './structural-finish-3d';
 // ADR-470 — per-component visibility resolver SSoT (σώμα/σοβάς/οπλισμός· per-element + per-view).
@@ -36,8 +32,6 @@ import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d
 import { buildColumnRebarCage } from './column-rebar-3d';
 // ADR-471 Slice 3 — 3Δ κλωβός οπλισμού δοκού (longitudinal· κοινό geometry SSoT με το 2Δ).
 import { buildBeamRebarCage } from './beam-rebar-3d';
-// ADR-476 — 3Δ κλωβός οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω· κοινό SSoT με το 2Δ).
-import { buildSlabRebarCage } from './slab-rebar-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -68,6 +62,10 @@ export function columnToMesh(
   // Όταν δοθεί & είναι ΧΑΜΗΛΟΤΕΡΗ από τη nominal βάση, η κολώνα επιμηκύνεται ΠΡΟΣ ΤΑ ΚΑΤΩ
   // ώστε να εδραστεί στο πέδιλο (στατική συνέχεια)· η ΚΟΡΥΦΗ μένει σταθερή. Μόνο flat path.
   effectiveBaseZmm?: number,
+  // ADR-534 §monolithic-cut — DERIVED effective render-top (absolute mm) όταν η κορυφή της κολόνας
+  // καλύπτεται από πλάκα οροφής: το ορατό στερεό κόβεται στο soffit της (μηδέν z-fighting). `undefined`/
+  // ≥top → καμία αλλαγή. Συνδυάζεται (min) με το υπάρχον `topProfile` (η πλάκα κόβει χαμηλότερα).
+  clipTopZmm?: number,
 ): THREE.Mesh | THREE.Group | null {
   const rawVerts = column.geometry.footprint.vertices;
   if (rawVerts.length < 3) return null;
@@ -89,7 +87,11 @@ export function columnToMesh(
   // όταν τουλάχιστον μία γωνία πήρε top/base από host (`hasAttach`)· αλλιώς πέφτει
   // στο ίσιο extrude fast-path παρακάτω (μηδέν regression — μη-attached κολώνα).
   if (topProfile?.hasAttach || baseProfile?.hasAttach) {
-    const prism = buildAttachedColumnPrism(verts, floorElevationMm, topProfile, baseProfile);
+    // ADR-534 §monolithic-cut — η καλύπτουσα πλάκα κόβει την κορυφή χαμηλότερα από το beam-attach top.
+    const clippedTopProfile = (clipTopZmm !== undefined && topProfile)
+      ? { ...topProfile, cornerTopZmm: topProfile.cornerTopZmm.map((z) => Math.min(z, clipTopZmm)) }
+      : topProfile;
+    const prism = buildAttachedColumnPrism(verts, floorElevationMm, clippedTopProfile, baseProfile);
     if (prism) {
       ensureWorldUvs(prism); // ADR-413 — custom prism has no uv → planar world UVs.
       // ADR-404 — raking column στον attached prism path: το prism ζει σε floor-local
@@ -102,8 +104,8 @@ export function columnToMesh(
       // ADR-449 Slice 6 fix — η attached κολώνα έπαιρνε ΜΟΝΟ πυρήνα (ο σοβάς ήταν flat-only,
       // DEFER Slice 2) → μόλις τα δοκάρια auto-attach-άρανε τις κολόνες, ο σοβάς εξαφανιζόταν.
       // Ύψος σοβά = το χαμηλότερο attached top (flat-top approx· per-corner sloped finish = DEFER).
-      const attachedTopMm = topProfile?.cornerTopZmm?.length
-        ? Math.min(...topProfile.cornerTopZmm)
+      const attachedTopMm = clippedTopProfile?.cornerTopZmm?.length
+        ? Math.min(...clippedTopProfile.cornerTopZmm)
         : floorElevationMm + flatColumn.params.height;
       // ADR-470 — core gate: κρύβει το σώμα της attached κολώνας αν ανενεργό
       // (σοβάς/οπλισμός μένουν ορατά).
@@ -129,7 +131,13 @@ export function columnToMesh(
   // άνω παρειά του πεδίλου — η ΚΟΡΥΦΗ μένει σταθερή. `baseDropMm=0` → byte-for-byte παλιό.
   const nominalBaseAbsMm = floorElevationMm + column.params.baseOffset;
   const baseDropMm = effectiveBaseZmm !== undefined ? Math.max(0, nominalBaseAbsMm - effectiveBaseZmm) : 0;
-  const effectiveHeightMm = flatColumn.params.height + baseDropMm;
+  const nominalHeightWithDropMm = flatColumn.params.height + baseDropMm;
+  // ADR-534 §monolithic-cut — κόψε το ορατό ύψος ώστε η κορυφή να φτάνει στο soffit της καλύπτουσας πλάκας
+  // (η βάση μένει σταθερή). `undefined`/≥top → nominal (byte-for-byte). Finish/rebar ακολουθούν.
+  const baseAbsMm = nominalBaseAbsMm - baseDropMm;
+  const effectiveHeightMm = clipTopZmm !== undefined
+    ? Math.max(0, Math.min(nominalHeightWithDropMm, clipTopZmm - baseAbsMm))
+    : nominalHeightWithDropMm;
 
   const geo = extrudeAndRotate(shape, effectiveHeightMm * MM_TO_M);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
@@ -319,8 +327,19 @@ export function beamToMesh(
   // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
   suppressFinishSkin = false,
   floorElevationMm = 0, // ADR-449 Slice 8 — height-aware wall coverage (FFL anchor)
+  // ADR-534 §monolithic-cut — DERIVED effective render-top (absolute mm) όταν η κορυφή του δοκαριού
+  // καλύπτεται από πλάκα οροφής: το ορατό στερεό κόβεται στο soffit της πλάκας (μηδέν z-fighting). Η κάτω
+  // παρειά (downstand) μένει αγκυρωμένη· `undefined`/≥top → full depth (byte-for-byte). RC box-path μόνο.
+  clipTopZmm?: number,
 ): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
+  // ADR-534 §monolithic-cut — ύψος ορατού πυρήνα: κομμένο στο soffit πλάκας (clamped ≥ 0).
+  const beamTopAbsMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+  const beamBottomAbsMm = beamTopAbsMm - beam.params.depth;
+  const renderTopMm = clipTopZmm !== undefined
+    ? Math.max(beamBottomAbsMm, Math.min(clipTopZmm, beamTopAbsMm))
+    : beamTopAbsMm;
+  const renderHeightM = (renderTopMm - beamBottomAbsMm) * MM_TO_M; // == beamDepthM αν δεν κόβεται
   // ADR-462 — outline + cutback host footprints (canvas units) → world metres.
   const sceneToM = sceneUnitsToMeters(beam.params.sceneUnits ?? 'mm');
 
@@ -349,13 +368,13 @@ export function beamToMesh(
     if (trimmed === null) {
       const shape = buildShape(verts);
       if (!shape) return null;
-      geo = extrudeAndRotate(shape, beamDepthM);
+      geo = extrudeAndRotate(shape, renderHeightM); // ADR-534 — clip στο soffit πλάκας (no-op αν δεν κόβεται)
     } else {
       // `[]` = δοκάρι εξ ολοκλήρου μέσα στην κολόνα → δεν σχεδιάζεται.
       const shapes = trimmed
         .map((ring) => buildShape(ring.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
         .filter((s): s is NonNullable<typeof s> => s !== null);
-      const trimmedGeo = extrudeShapesAndRotate(shapes, beamDepthM);
+      const trimmedGeo = extrudeShapesAndRotate(shapes, renderHeightM);
       if (!trimmedGeo) return null;
       geo = trimmedGeo;
     }
@@ -403,77 +422,6 @@ export function beamToMesh(
 }
 
 // ── Slab ──────────────────────────────────────────────────────────────────────
-
-/**
- * ADR-476 — προσθέτει τον κλωβό οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω) στο ήδη
- * συντεθειμένο slab result. Mirror του `attachBeamRebar`: επιστρέφει το ίδιο αντικείμενο
- * όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς `structuralReinforcement`).
- * `bottomFaceY` = κάτω παρειά πλάκας (= `mesh.position.y` → ίδιο datum, ευθυγράμμιση).
- * Gate μόνο στον δικό του διακόπτη `showReinforcement` (ADR-470 precedence).
- */
-function attachSlabRebar(
-  composed: THREE.Mesh | THREE.Group,
-  slab: SlabEntity,
-  bottomFaceY: number,
-  levelId: string | undefined,
-): THREE.Mesh | THREE.Group {
-  if (!isStructuralComponentVisible('reinforcement', slab)) return composed;
-  const cage = buildSlabRebarCage(slab, bottomFaceY, levelId);
-  if (!cage) return composed;
-  if (composed instanceof THREE.Group) {
-    composed.add(cage);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(cage);
-  group.userData['bimId'] = slab.id;
-  group.userData['bimType'] = 'slab';
-  return group;
-}
-
-export function slabToMesh(
-  slab: SlabEntity,
-  openings: readonly SlabOpeningEntity[] = [],
-  levelId?: string,
-  buildingBaseElevationM = 0,
-  floorElevationMm = 0, // ADR-448 §4.1 — storey FFL (datum-relative) for floor-aware placement
-): THREE.Mesh | THREE.Group | null {
-  const rawVerts = slab.params.outline.vertices;
-  if (rawVerts.length < 3) return null;
-
-  // ADR-416 — composite Floor/Slab Type: a slab carrying a multi-layer DNA renders
-  // as a vertical stack of per-layer sub-solids (Revit Compound Structure / IFC
-  // IfcMaterialLayerSet). Single-layer / untyped slabs keep the legacy single
-  // extrude below (byte-for-byte — zero regression for the existing ~30 tests).
-  if (isMultiLayerSlab(slab.params.dna)) {
-    return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM, floorElevationMm);
-  }
-
-  // ADR-462 — outline + opening holes (canvas units) → world metres.
-  const sceneToM = sceneUnitsToMeters(slab.params.sceneUnits ?? 'mm');
-  const verts = scalePoints(rawVerts, sceneToM);
-  const shape = buildShape(verts);
-  if (!shape) return null;
-  pushHoles(shape, openings, sceneToM);
-
-  const thicknessM = slab.params.thickness * MM_TO_M;
-  const geo = extrudeAndRotate(shape, thicknessM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  applySlabSlope(geo, slab.params);
-  const matId = slab.params.material ?? 'elem-slab';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
-  // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
-  // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
-  // ADR-448 §4.1 — levelElevation is FLOOR-RELATIVE, so add the storey FFL via the
-  // SSoT `hangDownMeshY` (mirror beam/column); 0 on the ground floor → zero regression.
-  const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-  mesh.position.y = hangDownMeshY(floorElevationMm, slabTopMm, slab.params.thickness * MM_TO_M, buildingBaseElevationM);
-  const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
-  attachEdgesProjection(tagged, 'slab', 'common-edges');
-  // ADR-470 — core gate: κρύβει το σώμα πλάκας αν ανενεργό (ο οπλισμός μένει ορατός).
-  // ADR-476 — κλωβός σχάρας (κάτω+άνω) στην κάτω παρειά (mesh.position.y), gated `showReinforcement`.
-  return applyStructuralCoreVisibility3D(
-    attachSlabRebar(tagged, slab, mesh.position.y, levelId), tagged, slab,
-  );
-}
+// Εξήχθη στο `bim-three-slab-converter.ts` (Google file-size SSoT, N.7.1). Re-export
+// για να μείνει η ενιαία είσοδος (`BimToThreeConverter` re-export) ανέγγιχτη.
+export { slabToMesh } from './bim-three-slab-converter';

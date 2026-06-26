@@ -32,6 +32,7 @@ const EXPECTED_COMMAND_KEYS = [
   // floors & openings (+ ADR-441 «Πλάκες από κάναβο» grid actions)
   'slab', 'slab-opening', 'opening',
   'slab.actions.fromGridMat', 'slab.actions.fromGridFloor', 'slab.actions.fromGridRoof',
+  'slab.actions.fromStructureCeiling',
   // foundation (last two = «Εσχάρα από κάναβο» + «Συνδετήριες από κάναβο» actions)
   'foundation-pad', 'foundation-strip', 'foundation-tie-beam', 'foundation-strip-from-wall',
   'foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid',

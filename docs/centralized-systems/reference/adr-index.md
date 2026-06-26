@@ -515,6 +515,7 @@
 | **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
 | **ADR-532** | Selection-set SSoT: zero-React `SelectedEntitiesStore` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-532-selection-set-ssot.md) |
 | **ADR-533** | DXF symbol → BIM opening detector (πόρτα/παράθυρο σε τοίχο) | ✅ APPROVED | 2026-06-25 | Uncategorized | [📄](./adrs/ADR-533-dxf-symbol-to-opening-detector.md) |
+| **ADR-534** | Αυτόματη πλάκα οροφής ανά φάτνωμα (auto-ceiling-slab per structural bay) | ✅ APPROVED | 2026-06-26 | Uncategorized | [📄](./adrs/ADR-534-auto-ceiling-slab-per-bay.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1014,6 +1015,7 @@
 | **ADR-531** | Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις | ✅ APPROVED | [View](./adrs/ADR-531-tekton-import-structural-walls-openings-dimensions.md) |
 | **ADR-532** | Selection-set SSoT: zero-React `SelectedEntitiesStore` | ✅ APPROVED | [View](./adrs/ADR-532-selection-set-ssot.md) |
 | **ADR-533** | DXF symbol → BIM opening detector (πόρτα/παράθυρο σε τοίχο) | ✅ APPROVED | [View](./adrs/ADR-533-dxf-symbol-to-opening-detector.md) |
+| **ADR-534** | Αυτόματη πλάκα οροφής ανά φάτνωμα (auto-ceiling-slab per structural bay) | ✅ APPROVED | [View](./adrs/ADR-534-auto-ceiling-slab-per-bay.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

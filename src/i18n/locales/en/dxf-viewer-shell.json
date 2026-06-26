@@ -1852,6 +1852,10 @@
           "label": "Roofs from grid",
           "tooltip": "One roof slab per grid bay, clipped to the beams' inner faces and notched around columns, bound so it follows (one command, one undo)."
         },
+        "slabCeilingFromStructure": {
+          "label": "Ceiling slab (auto)",
+          "tooltip": "One ceiling slab per structural bay, auto-detected from the beams & columns (not the grid), flush with the top of the beams (one command, one undo)."
+        },
         "archGroup": {
           "label": "Architectural",
           "tooltip": "Architectural envelope elements: roof and floor finish"

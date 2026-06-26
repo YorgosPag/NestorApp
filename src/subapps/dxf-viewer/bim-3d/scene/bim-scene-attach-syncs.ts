@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { wallToMesh, columnToMesh } from '../converters/BimToThreeConverter';
 import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../../bim/geometry/wall-host-plan-builder';
+// ADR-534 §monolithic-cut — top-clip κολόνας στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
+import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import { resolveWallTopProfile, resolveWallNominalTopZmm, resolveWallBaseZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
@@ -102,6 +104,9 @@ export function syncColumns(
   const resolveHostInput = hasAttached
     ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
     : undefined;
+  // ADR-534 §monolithic-cut — host inputs πλακών (soffit) → η κορυφή κάθε κολόνας κόβεται όπου την
+  // καλύπτει πλάκα οροφής (μηδέν z-fighting). Άδειο → no-op (byte-for-byte).
+  const slabHosts = buildCeilingSlabHosts(entities.slabs);
 
   for (const column of entities.columns) {
     const r = resolveEntity(column, 'column', ctx);
@@ -120,8 +125,14 @@ export function syncColumns(
     }
     // Non-attached `storey-ceiling` column render height = ceiling − base (SSoT).
     // Degenerate params → undefined → legacy fallback to params.height.
-    const rawColTop = resolveColumnNominalTopZmm(column.params, colVctx) - resolveColumnBaseZmm(column.params, colVctx);
+    const colTopMm = resolveColumnNominalTopZmm(column.params, colVctx);
+    const colBaseMm = resolveColumnBaseZmm(column.params, colVctx);
+    const rawColTop = colTopMm - colBaseMm;
     const nominalHeightMm = Number.isFinite(rawColTop) ? rawColTop : undefined;
+    // ADR-534 §monolithic-cut — clip-top στο soffit καλύπτουσας πλάκας (συνδυάζεται min με το topProfile).
+    const clipTopZmm = (footVerts && footVerts.length >= 3 && Number.isFinite(colTopMm) && Number.isFinite(colBaseMm))
+      ? resolveMemberTopClipZmm(footVerts.map((v) => ({ x: v.x, y: v.y })), colTopMm, colBaseMm, slabHosts)
+      : undefined;
     // ADR-488 §6.1 — DERIVED effective βάση (άνω παρειά στηρίζοντος πεδίλου) ώστε η κολώνα
     // να εδραστεί στο πέδιλο (στατική συνέχεια). ΟΧΙ για ρητά base-attached κολώνες (κρατούν
     // τον δικό τους attach profile). undefined → flat path κρατά τη nominal βάση.
@@ -135,6 +146,7 @@ export function syncColumns(
       // ως merged) → παίρνει per-element σοβά (suppress=false) που ακολουθεί την κλίση.
       !isColumnTilted(column.params),
       effectiveBaseZmm,
+      clipTopZmm, // ADR-534 §monolithic-cut
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

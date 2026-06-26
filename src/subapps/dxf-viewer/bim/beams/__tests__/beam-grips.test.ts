@@ -431,21 +431,43 @@ describe('beam-grips (Phase 5.5a)', () => {
 
   // ─── Phase 5.5d — rotation grip (wall parity) ──────────────────────────────
 
-  it('26. rotation grip (straight) stands off the OPPOSITE perp face from width-edge', () => {
-    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: stands
-    // off the −perp face, i.e. the OPPOSITE perp face from `beam-width` (shared
-    // rotation-handle policy — never coincident with the width handle, Revit-style).
-    const beam = makeStraight(); // (0,0)→(4000,0)
+  it('26. rotation grip (straight) sits MIDWAY centre→opposite face (column parity, −width/4)', () => {
+    // Giorgio 2026-06-26 — the beam rotation handle now mirrors the rectangular
+    // COLUMN: at the midpoint of the segment centre→opposite long face = −¼ of the
+    // width, on the perp face OPPOSITE `beam-width`. Cleanly separated from BOTH the
+    // dimension handle AND the centre move glyph (no more stand-off beyond the face).
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    const rot = grips.find((g) => g.beamGripKind === 'beam-rotation');
-    const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width');
-    expect(rot).toBeDefined();
-    // Same axial midpoint x; opposite perpendicular side, standing OFF beyond the
-    // face → |y| greater than the width-edge's and of opposite sign.
-    expect(rot!.position.x).toBeCloseTo(widthEdge!.position.x, 6);
-    expect(Math.sign(rot!.position.y)).toBe(-Math.sign(widthEdge!.position.y));
-    expect(Math.abs(rot!.position.y)).toBeGreaterThan(Math.abs(widthEdge!.position.y));
-    expect(rot!.movesEntity).toBe(false);
+    const rot = grips.find((g) => g.beamGripKind === 'beam-rotation')!;
+    const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width')!;
+    expect(widthEdge.position).toEqual({ x: 2000, y: 150 }); // +perp face midpoint
+    // Same axial x; opposite perpendicular side; exactly a quarter of the width
+    // (= half the width-edge offset) from the centreline.
+    expect(rot.position.x).toBeCloseTo(2000, 6);
+    expect(rot.position.y).toBeCloseTo(-75, 6); // −width/4
+    expect(Math.sign(rot.position.y)).toBe(-Math.sign(widthEdge.position.y));
+    expect(Math.abs(rot.position.y)).toBeLessThan(Math.abs(widthEdge.position.y));
+    expect(rot.movesEntity).toBe(false);
+  });
+
+  it('26b. straight beam centre MOVE glyph sits at the BODY centre, not the location-line midpoint (justified beam)', () => {
+    // Giorgio 2026-06-26 — for a face-justified beam the stored start/end ARE the
+    // location line (lying ON the long face), so the bare axis midpoint sat «στο μέσο
+    // της μεγάλης πλευράς». The move cross must sit at the BODY centre instead. For a
+    // 'left' beam (sign +1) the body axis shifts +width/2 along the CCW normal (0,1):
+    // location-line midpoint (2000,0) → body centre (2000,150). 'center' beams are
+    // unchanged (location line ≡ body axis), covered by every other test.
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300, justification: 'left' };
+    const beam = makeBeamEntity(params);
+    const grips = getBeamGrips(beam);
+    const move = grips.find((g) => g.beamGripKind === 'beam-midpoint')!;
+    expect(move.type).toBe('center');
+    expect(move.movesEntity).toBe(true);
+    expect(move.position.x).toBeCloseTo(2000, 6);
+    expect(move.position.y).toBeCloseTo(150, 6); // body centre, NOT 0 (the face)
   });
 
   it('27. degenerate axis (start === end) emits NO rotation grip', () => {

@@ -195,35 +195,70 @@ function collectSubtrahends(
 }
 
 /**
+ * polygon-clipping επαναλαμβάνει την πρώτη κορυφή στο τέλος (closing) → αφαίρεσέ την,
+ * αλλιώς ο slab validator απορρίπτει το zero-length edge. Ring (Pair[]) → Point2D[].
+ */
+function cleanRingToPts(ring: Ring): Point2D[] {
+  const pts: Point2D[] = ring.map(([x, y]) => ({ x, y }));
+  if (pts.length >= 2) {
+    const first = pts[0];
+    const last = pts[pts.length - 1];
+    if (first.x === last.x && first.y === last.y) pts.pop();
+  }
+  return pts;
+}
+
+/**
+ * **Generic clip SSoT** (ADR-441 / ADR-534): μια κλειστή περιοχή (ring) ΜΕΙΟΝ τα overlapping
+ * footprints (δοκάρια clip + κολώνες notch) → **ΟΛΑ** τα outer rings που απομένουν (κάθε ένα ≥3
+ * κορυφές, θετικό εμβαδόν, καθαρισμένο closing-vertex). Holes ανά ring → DEFER (slab-openings).
+ * Χρησιμοποιείται ΚΑΙ από τα grid bays (`bayOutline`, ένα φάτνωμα ανά rect) ΚΑΙ από το auto-ceiling
+ * (footprint κτιρίου ΜΕΙΟΝ εσωτερικά δοκάρια → N φατνώματα, ADR-534).
+ */
+function regionMinusSubtrahends(regionRing: Ring, subs: readonly Subtrahend[]): Point2D[][] {
+  const regionBbox = bboxOf(regionRing);
+  const overlapping = subs.filter((s) => bboxOverlap(s.bbox, regionBbox)).map((s) => s.poly);
+  if (overlapping.length === 0) {
+    const pts = cleanRingToPts(regionRing);
+    return pts.length >= 3 ? [pts] : [];
+  }
+  const result = safeDifference([regionRing], ...overlapping);
+  const out: Point2D[][] = [];
+  for (const poly of result) {
+    if (poly.length === 0) continue;
+    if (ringArea(poly[0]) <= 0) continue;
+    const pts = cleanRingToPts(poly[0]);
+    if (pts.length >= 3) out.push(pts);
+  }
+  return out;
+}
+
+/** Unsigned shoelace area ενός Point2D[] ring. */
+function ptsArea(pts: readonly Point2D[]): number {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const q = pts[(i + 1) % pts.length];
+    a += p.x * q.y - q.x * p.y;
+  }
+  return Math.abs(a) / 2;
+}
+
+/**
  * Outline ΕΝΟΣ φατνώματος = bay rect ΜΕΙΟΝ τα overlapping footprints (δοκάρια clip +
  * κολώνες notch). Επιστρέφει το **μεγαλύτερο** outer ring (ένα φάτνωμα = μία πλάκα·
  * τυχόν διάσπαση/τρύπες → DEFER slab-openings). `null` αν τίποτα δεν απομένει.
  */
 function bayOutline(bay: GridBaySpec, subs: readonly Subtrahend[]): Point2D[] | null {
   const rectRing: Ring = bay.corners.map((c): Pair => [c.x, c.y]);
-  const rectBbox = bboxOf(rectRing);
-  const overlapping = subs.filter((s) => bboxOverlap(s.bbox, rectBbox)).map((s) => s.poly);
-  if (overlapping.length === 0) {
-    return bay.corners.map((c) => ({ x: c.x, y: c.y }));
-  }
-  const result = safeDifference([rectRing], ...overlapping);
-  let best: Ring | null = null;
+  const rings = regionMinusSubtrahends(rectRing, subs);
+  let best: Point2D[] | null = null;
   let bestArea = 0;
-  for (const poly of result) {
-    if (poly.length === 0) continue;
-    const area = ringArea(poly[0]);
-    if (area > bestArea) { bestArea = area; best = poly[0]; }
+  for (const r of rings) {
+    const area = ptsArea(r);
+    if (area > bestArea) { bestArea = area; best = r; }
   }
-  if (!best || bestArea <= 0) return null;
-  const pts: Point2D[] = best.map(([x, y]) => ({ x, y }));
-  // polygon-clipping επαναλαμβάνει την πρώτη κορυφή στο τέλος (closing) → αφαίρεσέ
-  // την, αλλιώς ο slab validator απορρίπτει το zero-length edge.
-  if (pts.length >= 2) {
-    const first = pts[0];
-    const last = pts[pts.length - 1];
-    if (first.x === last.x && first.y === last.y) pts.pop();
-  }
-  return pts.length >= 3 ? pts : null;
+  return best;
 }
 
 /**

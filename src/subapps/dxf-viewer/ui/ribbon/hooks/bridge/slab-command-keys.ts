@@ -76,6 +76,9 @@ export const SLAB_RIBBON_KEYS_ACTIONS = {
   fromGridFloor: 'slab.actions.fromGridFloor',
   /** Οροφές: ΠΟΛΛΑ slab kind='roof', ένα ανά φάτνωμα (Slice ROOF). */
   fromGridRoof: 'slab.actions.fromGridRoof',
+  // ADR-534 — «Πλάκα οροφής (auto)»: ΠΟΛΛΑ slab kind='ceiling', ένα ανά φάτνωμα, **member-based**
+  // (από δοκάρια+κολόνες, ΟΧΙ κάναβο), flush στην κορυφή των δοκαριών. One-shot, δεν θέλει επιλογή.
+  fromStructureCeiling: 'slab.actions.fromStructureCeiling',
   // ADR-476 — «Αυτόματος Οπλισμός» contextual (parity με κολόνα/δοκάρι/πέδιλο):
   // routes στο undoable organism pipeline μέσω `bim:auto-reinforce-requested`.
   autoReinforce: 'slab.actions.autoReinforce',

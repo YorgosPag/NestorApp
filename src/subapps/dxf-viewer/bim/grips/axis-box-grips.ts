@@ -55,7 +55,7 @@ import {
   type RectResizeLimits,
 } from './rect-grip-engine';
 import { rotateAxisPointsAboutPivot } from './grip-math';
-import { ROTATION_HANDLE_OFFSET_MM, rotationHandlePerpOffset } from './rotation-handle-policy';
+import { ROTATION_HANDLE_OFFSET_MM, rotationHandlePerpOffset, rotationHandleMidwayOffset } from './rotation-handle-policy';
 
 const DEG_PER_RAD = 180 / Math.PI;
 
@@ -248,7 +248,19 @@ function applyAxisBoxEdgeDrag(
  */
 export function getAxisBoxGrips(
   params: AxisBoxParams,
-  opts: { readonly extraMidEdges?: boolean } = {},
+  opts: {
+    readonly extraMidEdges?: boolean;
+    /**
+     * Rotation-handle placement policy (shared `rotation-handle-policy` SSoT):
+     *   · `'opposite-face'` (default — wall / foundation strip parity): stands ON
+     *     the perp face OPPOSITE the `width-edge` dimension handle.
+     *   · `'midway-center'` (opt-in — beam, Giorgio 2026-06-26): sits at the
+     *     MIDPOINT of the segment centre→opposite-face = −¼ of the perpendicular
+     *     extent, mirroring the rectangular COLUMN rotation handle so move-cross /
+     *     dimension handle / rotation are cleanly distributed (column parity).
+     */
+    readonly rotationPlacement?: 'opposite-face' | 'midway-center';
+  } = {},
 ): AxisBoxGrip[] {
   const dx = params.end.x - params.start.x;
   const dy = params.end.y - params.start.y;
@@ -259,15 +271,21 @@ export function getAxisBoxGrips(
   // Edge positions via the shared role→edge SSoT (honours `widthFaceSign`).
   const edgePos = (role: AxisBoxGripRole): Point2D =>
     rectEdgeWorld(frame, axisBoxEdgeForRole(role, faceSign)!);
-  // Rotation handle via the shared rotation-handle policy SSoT: it stands off the
-  // perp face OPPOSITE the `width-edge`, so the two never coincide (Revit rule —
-  // rotation is a distinct control, never coincident with a dimension handle). The
-  // offset is mm → scaled to scene units to match `frame.halfLength` (also scene).
-  const rotationPerp = rotationHandlePerpOffset(
-    frame.halfLength,
-    faceSign,
-    ROTATION_HANDLE_OFFSET_MM * mmScaleFor(params),
-  );
+  // Rotation handle via the shared rotation-handle policy SSoT. Two placements,
+  // both on the perp face OPPOSITE the `width-edge` (never coincident with the
+  // dimension handle — Revit rule):
+  //   · 'opposite-face' (default) → ON the opposite face (`rotationHandlePerpOffset`);
+  //     offset is mm → scaled to scene units to match `frame.halfLength` (also scene).
+  //   · 'midway-center' → at −¼ of the perpendicular extent (column parity); the
+  //     policy returns the −Y midway offset, `faceSign` flips it to the opposite
+  //     face when the element is flipped. `frame.halfLength*2` = full perp extent.
+  const rotationPerp = opts.rotationPlacement === 'midway-center'
+    ? faceSign * rotationHandleMidwayOffset(frame.halfLength * 2)
+    : rotationHandlePerpOffset(
+        frame.halfLength,
+        faceSign,
+        ROTATION_HANDLE_OFFSET_MM * mmScaleFor(params),
+      );
   const rotationPos = rectLocalWorld(frame, 0, rotationPerp);
 
   const grips: AxisBoxGrip[] = [

@@ -16,6 +16,8 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh, foundationToMesh } from '../converters/BimToThreeConverter';
+// ADR-534 §monolithic-cut — top-clip δοκαριών/κολόνων στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
+import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import { isBeamTilted } from '../../bim/geometry/beam-slope';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 // ADR-449 Slice 7 — scene-level ενιαίος σοβάς (merged structural silhouette).
@@ -301,16 +303,22 @@ export class BimSceneLayer {
   }
 
   private syncBeams(entities: Bim3DEntities, ctx: SyncContext): void {
+    // ADR-534 §monolithic-cut — host inputs των πλακών (soffit) ώστε το ορατό δοκάρι να κόβεται όπου το
+    // καλύπτει πλάκα οροφής (μηδέν z-fighting). Άδειο όταν δεν υπάρχει πλάκα → no-op.
+    const slabHosts = buildCeilingSlabHosts(entities.slabs);
     for (const beam of entities.beams) {
       const r = this.resolveEntity(beam, 'beam', ctx);
       if (!r) continue;
+      const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+      const beamFootprint = beam.geometry.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+      const clipTopZmm = resolveMemberTopClipZmm(beamFootprint, beamTopMm, beamTopMm - beam.params.depth, slabHosts);
       // ADR-449 Slice X1 — suppress per-element σοβάς δοκαριού· η scene-level ΕΝΙΑΙΑ
       // silhouette (`syncStructuralFinishSkin`) αναλαμβάνει το συνεχές δέρμα → μηδέν overlap/
       // διπλή γραμμή στις συμβολές. (Το BOQ μένει per-element, σε ξεχωριστό path — αμετάβλητο.)
       // ADR-404 Bug A — κεκλιμένη (sloped) δοκός ΕΞΑΙΡΕΙΤΑΙ από το flat union → per-element
       // σοβάς (suppress=false) που ακολουθεί την κλίση· επίπεδη → suppress (silhouette).
       const mesh = beamToMesh(
-        beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, !isBeamTilted(beam.params), ctx.floorElevationMm,
+        beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, !isBeamTilted(beam.params), ctx.floorElevationMm, clipTopZmm,
       );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }

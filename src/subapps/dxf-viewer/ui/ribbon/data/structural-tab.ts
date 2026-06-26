@@ -208,6 +208,9 @@ export const STRUCTURAL_TAB: RibbonTab = {
             actionBtn('structuralTab.slabMatFromGrid', 'ribbon.commands.bim.slabMatFromGrid.label', 'bim-slab-mat-from-grid', 'slab.actions.fromGridMat', 'slab.actions.fromGridMat'),
             actionBtn('structuralTab.slabFloorFromGrid', 'ribbon.commands.bim.slabFloorFromGrid.label', 'bim-slab-floor-from-grid', 'slab.actions.fromGridFloor', 'slab.actions.fromGridFloor'),
             actionBtn('structuralTab.slabRoofFromGrid', 'ribbon.commands.bim.slabRoofFromGrid.label', 'bim-slab-roof-from-grid', 'slab.actions.fromGridRoof', 'slab.actions.fromGridRoof'),
+            // ADR-534 — «Πλάκα οροφής (auto)»: ΠΟΛΛΑ ceiling slab (ένα ανά φάτνωμα) από δοκάρια+κολόνες
+            // (member-based, ΟΧΙ κάναβο), flush στην κορυφή των δοκαριών.
+            actionBtn('structuralTab.slabCeilingFromStructure', 'ribbon.commands.bim.slabCeilingFromStructure.label', 'bim-slab-ceiling-from-structure', 'slab.actions.fromStructureCeiling', 'slab.actions.fromStructureCeiling'),
           ],
         },
       ],

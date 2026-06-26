@@ -52,6 +52,8 @@ import {
   commitSlabBaysFromGuides,
   type SlabGridCommitResult,
 } from '../../../bim/slabs/slab-grid-commit';
+// ADR-534 — «Πλάκα οροφής (auto)» member-based (από δοκάρια+κολόνες, ΟΧΙ κάναβο).
+import { commitCeilingSlabsFromStructure } from '../../../bim/slabs/ceiling-slab-commit';
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { shouldWarnFoundationOnStorey } from '../../../systems/levels/storey-creation-defaults';
 import { resolveSceneUnits } from '../../../utils/scene-units';
@@ -286,12 +288,36 @@ export function useRibbonSlabBridge(
     emitSlabsFromGridToast(result);
   }, [levelManager, executeCommand]);
 
+  // ADR-534 — «Πλάκα οροφής (auto)»: ΠΟΛΛΕΣ `ceiling` πλάκες (μία ανά φάτνωμα) **από τα δομικά
+  // μέλη** (δοκάρια+κολόνες, ΟΧΙ κάναβο), flush στην κορυφή των δοκαριών. Idempotent. Χωρίς επιλογή.
+  const handleCeilingSlabsFromStructure = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitCeilingSlabsFromStructure({
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    // Reuse του grid toast SSoT (ίδιο shape)· 'no-bays' → 'no-footprint' για το event payload.
+    emitSlabsFromGridToast({
+      ok: result.ok,
+      reason: result.reason === 'no-bays' ? 'no-footprint' : result.reason,
+      created: result.created,
+      skipped: result.skipped,
+    });
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
       // ADR-441 Slice GEN-SLAB — grid actions: ΔΕΝ θέλουν επιλεγμένη πλάκα (πριν resolveSlab).
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridMat) { handleFoundationMatFromGrid(); return; }
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridFloor) { handleSlabBaysFromGrid('floor'); return; }
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridRoof) { handleSlabBaysFromGrid('roof'); return; }
+      // ADR-534 — «Πλάκα οροφής (auto)» member-based (δεν θέλει επιλογή slab).
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.fromStructureCeiling) { handleCeilingSlabsFromStructure(); return; }
       // ADR-476 — «Αυτόματος Οπλισμός» (parity με κολόνα/δοκάρι/πέδιλο): δρομολογεί στο
       // ΥΠΑΡΧΟΝ undoable organism pipeline (ήδη χειρίζεται πλάκες — `isReinforceable`).
       if (action === SLAB_RIBBON_KEYS_ACTIONS.autoReinforce) {
@@ -329,7 +355,7 @@ export function useRibbonSlabBridge(
       if (!confirmed) return;
       ribbonDelete.deleteEntity(slab.id);
     },
-    [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid, ribbonDelete],
+    [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid, handleCeilingSlabsFromStructure, ribbonDelete],
   );
 
   // ADR-476 — structural reinforcement panel: ορατό μόνο για RC πλάκα (όχι σύμμικτη/

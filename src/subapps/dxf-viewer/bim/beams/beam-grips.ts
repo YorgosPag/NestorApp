@@ -181,7 +181,14 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
     // 7 standard + 2 opt-in column-parity mid-edges (ALL 4 faces carry a midpoint
     // handle) via the shared axis-box SSoT — ίδιος κώδικας με τοίχο/πεδιλοδοκό, μηδέν
     // διπλότυπο (η sign-logic των αντίθετων παρειών ζει στο axis-box, όχι εδώ).
-    const grips: GripInfo[] = getAxisBoxGrips(axisParams, { extraMidEdges: true }).map((g, i) => ({
+    // ADR-363 (Giorgio 2026-06-26) — ΚΑΤΑΝΟΜΗ ΛΑΒΩΝ ΟΡΘΟΓΩΝΙΑΣ ΚΟΛΟΝΑΣ: η λαβή
+    // περιστροφής μετακινείται στο ΜΕΣΟ της νοητής γραμμής κέντρο→μεγάλη παρειά
+    // (`rotationPlacement: 'midway-center'`), ώστε να μη στριμώχνεται με τη λαβή της
+    // μεγάλης πλευράς και τον σταυρό μετακίνησης (όπως ακριβώς σε ορθογώνια κολόνα).
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams, {
+      extraMidEdges: true,
+      rotationPlacement: 'midway-center',
+    }).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,
@@ -193,9 +200,17 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
     // Centre 4-arrow MOVE glyph (`beam-midpoint`) — appended last (gripIndex 9). Moves
     // start+end+curveControl (see `moveMidpoint`); the shared move-glyph render /
     // hover-zone / click→dialog SSoT activates the moment the kind is emitted.
+    // ADR-363 (Giorgio 2026-06-26) — ο σταυρός κάθεται στο ΣΩΜΑΤΙΚΟ ΚΕΝΤΡΟ (μέσο του
+    // body axis), ΟΧΙ στο midpoint της location line: για justified δοκάρι η location
+    // line κάθεται ΠΑΝΩ στη μεγάλη παρειά, οπότε ο σταυρός έπεφτε «στο μέσο της μεγάλης
+    // πλευράς» αντί στο κέντρο. `axisParams` = ο body axis (≡ location line για 'center').
+    const bodyCenter: Point2D = {
+      x: (axisParams.start.x + axisParams.end.x) / 2,
+      y: (axisParams.start.y + axisParams.end.y) / 2,
+    };
     grips.push({
       entityId: entity.id, gripIndex: grips.length, type: 'center',
-      position: axisMidpoint2D(params),
+      position: bodyCenter,
       movesEntity: true, beamGripKind: 'beam-midpoint',
     });
     return grips;
