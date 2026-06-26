@@ -13,6 +13,12 @@ import * as THREE from 'three';
 export interface RaycastHit {
   readonly bimId: string;
   readonly bimType: string;
+  /**
+   * ADR-539 — present only on a faced-prism hit (Polygon Mode): the `FaceKey`
+   * of the picked όψη, resolved from `hit.face.materialIndex` via the mesh's
+   * `userData.faceKeyByMaterialIndex`. Absent on legacy single-material meshes.
+   */
+  readonly faceKey?: string;
 }
 
 const _raycaster = new THREE.Raycaster();
@@ -70,6 +76,48 @@ export function raycastBimGroup(
       if (bimId && bimType) return { bimId, bimType };
       obj = obj.parent;
     }
+  }
+  return null;
+}
+
+/**
+ * ADR-539 — face-level raycast for Cinema 4D «Polygon Mode». Like `raycastBimGroup`
+ * but ALSO resolves the picked `FaceKey` from `hit.face.materialIndex` against the
+ * mesh's `userData.faceKeyByMaterialIndex` (set by the faced-prism converter). Returns
+ * `faceKey` only when the first solid hit is a faced mesh; otherwise behaves like the
+ * plain entity pick (so a click on a non-faced solid still selects the entity).
+ * Active ONLY in Polygon mode (`use-bim3d-pointer-handlers`).
+ */
+export function raycastBimFace(
+  group: THREE.Group,
+  camera: THREE.Camera,
+  domElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+): RaycastHit | null {
+  const ndc = clientToNdc(domElement, clientX, clientY);
+  if (!ndc) return null;
+
+  _raycaster.setFromCamera(ndc, camera);
+  const hits = _raycaster.intersectObjects(group.children, true);
+
+  for (const hit of hits) {
+    // Walk up to the tagged mesh (mirror raycastBimGroup) to resolve bimId/bimType.
+    let obj: THREE.Object3D | null = hit.object;
+    let bimId: string | undefined;
+    let bimType: string | undefined;
+    while (obj) {
+      const id = obj.userData['bimId'] as string | undefined;
+      const type = obj.userData['bimType'] as string | undefined;
+      if (id && type) { bimId = id; bimType = type; break; }
+      obj = obj.parent;
+    }
+    if (!bimId || !bimType) continue;
+    // ADR-539 — faceKey from the hit mesh's group→materialIndex map (faced prism only).
+    const faceKeys = hit.object.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
+    const matIndex = hit.face?.materialIndex;
+    const faceKey = faceKeys && matIndex !== undefined ? faceKeys[matIndex] : undefined;
+    return faceKey !== undefined ? { bimId, bimType, faceKey } : { bimId, bimType };
   }
   return null;
 }

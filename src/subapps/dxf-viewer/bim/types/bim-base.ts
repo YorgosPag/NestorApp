@@ -11,6 +11,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { BaseEntity } from '../../types/base-entity';
 import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { FaceAppearanceMap } from './face-appearance-types';
 
 // ─── 3D Geometry primitives ───────────────────────────────────────────────────
 
@@ -143,6 +144,12 @@ export interface BimEntity<TKind extends string, TParams, TGeometry>
   readonly editingBy?: BimLock;
   /** Per-element style override (ADR-375 Phase C.5). Persisted in Firestore entity doc. */
   readonly styleOverride?: BimElementStyleOverride;
+  /**
+   * Per-face appearance override (ADR-539 — Cinema 4D «Polygon Mode»). Cosmetic
+   * χρώμα/υλικό ανά όψη (top/bottom/side:i). Δεν συμμετέχει στο geometry derivation
+   * — ζει εδώ δίπλα στο `styleOverride`. Absent → legacy single-material render.
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
   /**
    * Associative grid hosting (ADR-441). Δηλώνει σε ποιους άξονες κανάβου είναι
    * «κρεμασμένη» η entity ώστε να ακολουθεί όταν ο άξονας μετακινείται.

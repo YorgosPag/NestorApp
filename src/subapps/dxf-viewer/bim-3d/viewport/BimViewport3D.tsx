@@ -15,6 +15,8 @@ import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό toggle + material library (leaf).
+import { PolygonModeToggle3D } from './PolygonModeToggle3D';
 import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
@@ -393,6 +395,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         </TooltipTrigger>
         <TooltipContent>{t('modeToggle.tooltip3d')}</TooltipContent>
       </Tooltip>
+
+      {/* ADR-539 — Cinema 4D «Polygon Mode»: toggle button + per-face material library (leaf). */}
+      <PolygonModeToggle3D managerRef={managerRef} externalEntitiesMode={externalEntitiesMode} bimEntities={bimEntities} />
 
       {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
       <QuickProperties3DHoverPopover />

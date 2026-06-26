@@ -34,6 +34,22 @@ describe('buildTwinSurfaceConfigs', () => {
     expect(top.every((c) => c.shape === 'square')).toBe(true);
   });
 
+  it('render-type: resize edge grips → vertex (μπλε), insert midpoints stay (ADR-535, Giorgio 2026-06-27)', () => {
+    // beam width / length-edge = type 'edge' → στο 3D ζωγραφίζονταν ΠΡΑΣΙΝΑ (GripColorManager cold
+    // edge → green) ενώ στο 2D + κολόνες μπλε. Normalize 'edge'→'vertex' (square μπλε). Τα insert
+    // 'midpoint' (slab/roof) ΔΕΝ είναι resize → μένουν ως έχουν.
+    const mixed = [
+      { position: { x: 0, y: 0 }, type: 'vertex' },   // corner
+      { position: { x: 5, y: 0 }, type: 'edge' },      // beam width / length resize
+      { position: { x: 8, y: 0 }, type: 'midpoint' },  // slab insert-vertex
+    ] as unknown as GripInfo[];
+    const top = buildTwinSurfaceConfigs(mixed, 0, IDLE);
+    expect(top[0].type).toBe('vertex');
+    expect(top[1].type).toBe('vertex'); // 'edge' → 'vertex' (μπλε, όχι πράσινο)
+    expect(top[2].type).toBe('midpoint'); // insert grip αμετάβλητο
+    expect(top.every((c) => c.shape === 'square')).toBe(true);
+  });
+
   it('warms ONLY the hovered surface (flat index)', () => {
     // Hover the bottom face of grip 1 → flat N+1.
     const hover: TwinOverlayInteraction = { ...IDLE, hoverIndex: N + 1 };

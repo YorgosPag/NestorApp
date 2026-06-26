@@ -41,6 +41,7 @@ import type {
 import type { SlabTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 
 // ============================================================================
 // TYPES
@@ -69,6 +70,8 @@ export interface SlabDoc {
   readonly typeOverrides?: Partial<SlabTypeParams>;
   /** ADR-441 Slice GEN-SLAB — grid hosting bindings (born-bound πλάκες φατνώματος από κάναβο). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -98,6 +101,8 @@ export interface SlabSaveInput {
   readonly typeOverrides?: Partial<SlabTypeParams>;
   /** ADR-441 Slice GEN-SLAB — grid hosting bindings (born-bound πλάκες φατνώματος). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface SlabUpdateInput {
@@ -177,6 +182,8 @@ export class SlabFirestoreService {
     if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
     // ADR-441 Slice GEN-SLAB — persist grid hosting bindings (Firestore rejects undefined).
     if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
+    // ADR-539 — persist per-face appearance (Firestore rejects undefined).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as SlabDoc;
@@ -234,5 +241,7 @@ export function entityToSaveInput(entity: SlabEntity): SlabSaveInput {
     ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
     // ADR-441 Slice GEN-SLAB — carry grid hosting bindings into the persisted doc.
     ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
+    // ADR-539 — carry per-face appearance into the persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

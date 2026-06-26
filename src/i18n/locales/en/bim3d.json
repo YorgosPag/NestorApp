@@ -496,6 +496,14 @@
       "aria": "Vertex edit menu"
     }
   },
+  "polygonMode": {
+    "toggle": "Faces",
+    "tooltip": "Polygon Mode (Cinema 4D) — click a face and apply colour/material",
+    "title": "Face materials",
+    "hintPickFace": "Click a face of the element",
+    "hintApply": "Pick a colour/material for the face",
+    "clearFace": "Clear face"
+  },
   "shortcuts": {
     "view3d": {
       "top": "Top",

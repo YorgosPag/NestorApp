@@ -520,6 +520,7 @@
 | **ADR-536** | Cinema 4D / Revit-style selection silhouette outline στο BIM 3D viewport | ✅ APPROVED | 2026-06-26 | Uncategorized | [📄](./adrs/ADR-536-3d-selection-silhouette-outline.md) |
 | **ADR-537** | Επιλογή & επεξεργασία ωμών DXF οντοτήτων με λαβές στην 3D προβολή (full SSoT με 2D) | 🟢 IMPLEMENTED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-537-3d-raw-dxf-grip-editing.md) |
 | **ADR-538** | Hover-φωτισμός DXF+BIM & «+» badge στην 3D προβολή (ίδιος 2D κώδικας) | 🟢 IMPLEMENTED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-538-3d-hover-highlight-and-badge.md) |
+| **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1023,6 +1024,7 @@
 | **ADR-535** | Λαβές (grips) επεξεργασίας οντοτήτων στην 3D προβολή (slab pilot) | 🔬 RESEARCH | [View](./adrs/ADR-535-3d-viewport-entity-grips.md) |
 | **ADR-537** | Επιλογή & επεξεργασία ωμών DXF οντοτήτων με λαβές στην 3D προβολή (full SSoT με 2D) | 🟢 IMPLEMENTED | [View](./adrs/ADR-537-3d-raw-dxf-grip-editing.md) |
 | **ADR-538** | Hover-φωτισμός DXF+BIM & «+» badge στην 3D προβολή (ίδιος 2D κώδικας) | 🟢 IMPLEMENTED | [View](./adrs/ADR-538-3d-hover-highlight-and-badge.md) |
+| **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | [View](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

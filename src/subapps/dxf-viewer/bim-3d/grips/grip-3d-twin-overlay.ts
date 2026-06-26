@@ -58,7 +58,13 @@ export function buildTwinSurfaceConfigs(
     const temperature = isDragVertex ? 'hot' : hoverIndex === flat ? 'warm' : 'cold';
     configs.push({
       position,
-      type: (grip.type ?? 'vertex') as GripRenderConfig['type'],
+      // ADR-535 — render-type normalization (match 2D `BeamRenderer.getGrips` else→'vertex' + τις
+      // κολόνες): τα axis-box RESIZE `'edge'` grips (beam width / length-edge) ζωγραφίζονται ως square
+      // VERTEX (μπλε), ΟΧΙ ως edge-midpoint (πράσινο — `GripColorManager`: cold `'edge'` → green). Το
+      // πράσινο αφορά μόνο insert-midpoint grips (slab/roof, type `'midpoint'`), που δεν είναι resize και
+      // μένουν ως έχουν. Χωρίς αυτό τα δοκάρια έδειχναν μπλε+πράσινες λαβές ενώ το 2D + οι κολόνες
+      // αποκλειστικά μπλε (Giorgio 2026-06-27).
+      type: (grip.type === 'edge' ? 'vertex' : (grip.type ?? 'vertex')) as GripRenderConfig['type'],
       temperature,
       // Footprint grips carry no shape hint → the AutoCAD square, like the 2D slab grips.
       shape: 'square',

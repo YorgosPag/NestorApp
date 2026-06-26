@@ -27,6 +27,10 @@ import { buildSlabRebarCage } from './slab-rebar-3d';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-534 Φ4 — soffit finish (ceiling): χρώμα από το shared paint/plaster catalog SSoT.
 import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-material-catalog';
+// ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό μέσω faced multi-material prism.
+import { buildFacedPrism } from './bim-three-faced-prism';
+import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 
 const MM_TO_M = 0.001;
 
@@ -102,6 +106,39 @@ function attachSoffitFinish(
   return group;
 }
 
+/** Legacy single-material slab body (ExtrudeGeometry + slope + world UVs). Unchanged path. */
+function buildLegacySlabBody(
+  shape: THREE.Shape,
+  thicknessM: number,
+  params: SlabEntity['params'],
+): THREE.Mesh {
+  const geo = extrudeAndRotate(shape, thicknessM);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  applySlabSlope(geo, params);
+  return new THREE.Mesh(geo, getElementMaterial3D('slab'));
+}
+
+/**
+ * ADR-539 Φ1 — per-face slab body: faced multi-material prism (top/bottom/side:i).
+ * ΧΩΡΙΣ holes/slope (Φ2). Outline (metres) → top ring στο +Y cap (world z = −plan y),
+ * πάχος προς τα κάτω. Κάθε όψη παίρνει `resolveFaceMaterial`· αβαφές = base material.
+ * `faceKeyByMaterialIndex` αποθηκεύεται στο userData για raycast + face highlight.
+ */
+function buildFacedSlabBody(
+  verts: readonly { readonly x: number; readonly y: number }[],
+  thicknessM: number,
+  appearance: FaceAppearanceMap,
+): THREE.Mesh | null {
+  const topRing = verts.map((v) => new THREE.Vector3(v.x, thicknessM, -v.y));
+  const prism = buildFacedPrism(topRing, thicknessM);
+  if (!prism) return null;
+  const baseMat = getElementMaterial3D('slab');
+  const materials = prism.faceKeyByMaterialIndex.map((fk) => resolveFaceMaterial(fk, appearance, baseMat));
+  const mesh = new THREE.Mesh(prism.geometry, materials);
+  mesh.userData['faceKeyByMaterialIndex'] = [...prism.faceKeyByMaterialIndex];
+  return mesh;
+}
+
 export function slabToMesh(
   slab: SlabEntity,
   openings: readonly SlabOpeningEntity[] = [],
@@ -128,11 +165,14 @@ export function slabToMesh(
   pushHoles(shape, openings, sceneToM);
 
   const thicknessM = slab.params.thickness * MM_TO_M;
-  const geo = extrudeAndRotate(shape, thicknessM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  applySlabSlope(geo, slab.params);
   const matId = slab.params.material ?? 'elem-slab';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
+  // ADR-539 Φ1 — per-face appearance present → faced multi-material prism (no holes/slope,
+  // Φ2). Absent → legacy single-material extrude (byte-for-byte, zero regression).
+  const fa = slab.faceAppearance;
+  const mesh = (fa && Object.keys(fa).length > 0)
+    ? buildFacedSlabBody(verts, thicknessM, fa)
+    : buildLegacySlabBody(shape, thicknessM, slab.params);
+  if (!mesh) return null;
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   // ADR-448 §4.1 — levelElevation is FLOOR-RELATIVE, so add the storey FFL via the

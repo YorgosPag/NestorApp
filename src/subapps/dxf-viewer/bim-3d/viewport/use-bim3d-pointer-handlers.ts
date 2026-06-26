@@ -12,6 +12,8 @@ import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-539 — Cinema 4D «Polygon Mode»: click picks a FACE instead of the whole entity.
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
@@ -99,6 +101,20 @@ export function useBim3DPointerHandlers(
     }
     const manager = managerRef.current;
     if (!manager) return;
+    // ADR-539 — Polygon Mode: a click selects a FACE of a faced solid (for paint), not
+    // the whole entity. A miss clears the face selection. The entity selection is left
+    // untouched so the «Polygon» panel stays anchored to the same solid.
+    if (usePolygonMode3DStore.getState().active) {
+      const faceHit = manager.raycastBimFace(e.clientX, e.clientY);
+      if (faceHit?.bimId && faceHit.faceKey) {
+        usePolygonMode3DStore.getState().selectFace({ bimId: faceHit.bimId, faceKey: faceHit.faceKey });
+        manager.setSelectedFace(faceHit.bimId, faceHit.faceKey);
+      } else {
+        usePolygonMode3DStore.getState().selectFace(null);
+        manager.setSelectedFace(null, null);
+      }
+      return;
+    }
     const hit = manager.raycastBimEntities(e.clientX, e.clientY);
     // ADR-402 Phase C — Shift+click adds/removes from the multi-selection;
     // a plain click replaces it (or clears on empty space).

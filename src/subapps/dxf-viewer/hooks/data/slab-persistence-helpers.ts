@@ -107,6 +107,8 @@ export function docToEntity(doc: SlabDoc): SlabEntity {
     // ADR-441 Slice GEN-SLAB — re-hydrate grid hosting bindings so floor/roof bays
     // keep following the grid after reload (mirror foundation/beam round-trip).
     ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
+    // ADR-539 — re-hydrate per-face appearance so painted faces survive reload.
+    ...(doc.faceAppearance !== undefined && { faceAppearance: doc.faceAppearance }),
   } as SlabEntity;
 }
 

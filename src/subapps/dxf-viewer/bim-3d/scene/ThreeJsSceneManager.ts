@@ -15,8 +15,10 @@ import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
-import { raycastBimGroup, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
+// ADR-539 — per-face highlight overlay (Cinema 4D «Polygon Mode»).
+import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
@@ -74,6 +76,8 @@ export class ThreeJsSceneManager {
   readonly selectionHighlighter: BimSelectionHighlighter;
   /** ADR-538 — YELLOW hover silhouette (same pass/machinery as selection). Driven by `applyBimHover`. */
   readonly hoverHighlighter: BimSelectionHighlighter;
+  /** ADR-539 — per-face highlight overlay (Cinema 4D «Polygon Mode»). */
+  readonly faceHighlighter: FaceSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
   private readonly sun: THREE.DirectionalLight;
@@ -151,6 +155,8 @@ export class ThreeJsSceneManager {
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
     // ADR-538 — hover highlighter → SAME pass, yellow silhouette (via `setHovered`).
     this.hoverHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass, (p, o) => p.setHovered(o));
+    // ADR-539 — per-face overlay highlighter (Polygon Mode).
+    this.faceHighlighter = new FaceSelectionHighlighter(this.bimLayer.group);
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
@@ -223,8 +229,7 @@ export class ThreeJsSceneManager {
 
   /** ADR-366 §C.1.b — combined BIM + DXF bounds για animation actions (turntable). */
   getSceneFramingBounds(): THREE.Box3 | null {
-    if (this.disposed) return null;
-    return computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds());
+    return this.disposed ? null : computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds());
   }
 
   // ── Phase 4.5 / A.7 — Accessibility public surface (logic in scene-manager-a11y) ──
@@ -242,9 +247,7 @@ export class ThreeJsSceneManager {
   }
 
   /** A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
-  selectFocusedEntity(): void {
-    if (!this.disposed) a11ySelectFocused(this.keyboardFocusManager, (id) => this.selectBimEntity(id));
-  }
+  selectFocusedEntity(): void { if (!this.disposed) a11ySelectFocused(this.keyboardFocusManager, (id) => this.selectBimEntity(id)); }
 
   /** A.7.Q1 — Esc clears focus ring (selection untouched). */
   clearKeyboardFocus(): void { if (!this.disposed) this.keyboardFocusManager.clear(); }
@@ -261,9 +264,7 @@ export class ThreeJsSceneManager {
   getCamera(): THREE.Camera { return this.viewport.camera; }
 
   // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (logic in scene-manager-waypoint) ──
-  getWaypointHandlesRoot(): THREE.Group | null {
-    return wpHandlesRoot(this.disposed, this.waypointDragHandleRenderer);
-  }
+  getWaypointHandlesRoot(): THREE.Group | null { return wpHandlesRoot(this.disposed, this.waypointDragHandleRenderer); }
   setWaypointHoverState(role: 'position' | 'target' | null): void { wpHoverState(this.disposed, this.waypointDragHandleRenderer, role, () => this.markSceneDirty()); }
   setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void { wpAxisLock(this.disposed, this.waypointDragHandleRenderer, axis, () => this.markSceneDirty()); }
   pickWaypointAxisArrow(
@@ -276,9 +277,7 @@ export class ThreeJsSceneManager {
   setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void { this.viewCubeContextMenuCb = cb; }
 
   /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
-  setViewCubeCompassVisible(visible: boolean): void {
-    this.viewCube.setCompassVisible(visible); this.markSceneDirty();
-  }
+  setViewCubeCompassVisible(visible: boolean): void { this.viewCube.setCompassVisible(visible); this.markSceneDirty(); }
 
   /**
    * ADR-040 Phase XXIII / ADR-366 Phase 4.2 — driven by UnifiedFrameScheduler.
@@ -328,6 +327,8 @@ export class ThreeJsSceneManager {
     syncBimEntitiesIntoScene(this.bimSyncDeps(),
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
+    // ADR-539 — re-attach the face highlight overlay (the faced mesh was just rebuilt).
+    this.faceHighlighter.refresh();
     // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
     this.ssaoModulator.warmUp();
     this.markSceneDirty();
@@ -353,18 +354,17 @@ export class ThreeJsSceneManager {
     syncMultiFloorBimEntitiesIntoScene(this.bimSyncDeps(),
       { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
+    this.faceHighlighter.refresh(); // ADR-539 — re-attach face overlay after rebuild.
     this.ssaoModulator.warmUp();
     this.markSceneDirty();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
-    if (this.disposed) return;
-    applyFloorVisibility(this.bimLayer.group, modes); this.markSceneDirty();
+    if (!this.disposed) { applyFloorVisibility(this.bimLayer.group, modes); this.markSceneDirty(); }
   }
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
-    if (this.disposed) return;
-    applyBuildingVisibility(this.bimLayer.group, modes); this.markSceneDirty();
+    if (!this.disposed) { applyBuildingVisibility(this.bimLayer.group, modes); this.markSceneDirty(); }
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
@@ -390,20 +390,25 @@ export class ThreeJsSceneManager {
 
   /** Replace the selection with one entity (plain click), or clear it (null). */
   selectBimEntity(bimId: string | null): void {
-    if (this.disposed) return;
-    this.markSceneDirty();
-    applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'replace');
+    if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'replace'); }
   }
   /** ADR-402 Phase C — Shift+click: add/remove one entity from the selection. */
   toggleBimEntity(bimId: string | null): void {
-    if (this.disposed) return;
-    this.markSceneDirty();
-    applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'toggle');
+    if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'toggle'); }
   }
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
-    if (this.disposed) return null;
-    return raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
+    return this.disposed ? null : raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
+  }
+
+  /** ADR-539 — face-level pick (Polygon Mode): RaycastHit carrying the `faceKey`. */
+  raycastBimFace(clientX: number, clientY: number): RaycastHit | null {
+    return this.disposed ? null : raycastBimFace(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
+  }
+
+  /** ADR-539 — highlight (or clear) one face of a faced solid (Polygon Mode). */
+  setSelectedFace(bimId: string | null, faceKey: string | null): void {
+    if (!this.disposed) { this.faceHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); }
   }
 
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
@@ -424,29 +429,21 @@ export class ThreeJsSceneManager {
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
-    if (this.disposed) return;
-    updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.markSceneDirty();
+    if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.markSceneDirty(); }
   }
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
   initSectionBox(): void {
-    if (this.disposed) return;
-    this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty();
+    if (!this.disposed) { this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty(); }
   }
 
   async loadHdriEnvironment(url: string): Promise<void> {
-    if (this.disposed) return;
-    await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty());
+    if (!this.disposed) await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty());
   }
 
   applyLightPreset(preset: LightPreset): void {
     if (this.disposed) return;
-    applyLightPresetToScene(
-      { sun: this.sun, ambient: this.ambient, hemi: this.hemi },
-      preset,
-      this.envmapGenerator,
-    );
-    this.markSceneDirty();
+    applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.markSceneDirty();
   }
 
   getRendererCanvas(): HTMLCanvasElement { return this.renderer.domElement; }
@@ -477,6 +474,7 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.faceHighlighter.dispose(); // ADR-539 — release the face overlay geometry/material.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({
