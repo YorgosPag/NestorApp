@@ -1,6 +1,6 @@
 # ADR-535 — Λαβές (grips) επεξεργασίας οντοτήτων στην 3D προβολή
 
-**Status:** 🟢 Φ1+Φ2+Φ3a+Φ3b+Φ4(hide-gizmo+context-menu)+Φ5(2D-overlay) IMPLEMENTED (UNCOMMITTED) · Φ5b (GPU depth occlusion) + Φ4 (edit-mode toggle) DEFER · **Date:** 2026-06-26
+**Status:** 🟢 Φ1+Φ2+Φ3a+Φ3b+Φ4(hide-gizmo+context-menu)+Φ5(2D-overlay)+Φ5b(GPU depth occlusion) IMPLEMENTED (UNCOMMITTED) · Φ4 (edit-mode toggle) DEFER · **Date:** 2026-06-26
 **Type:** Feature (DXF/BIM Viewer — 3D viewport editing). Revit/Forge-grade per-vertex sketch editing.
 **Builds on:** ADR-402 (3D Viewport BIM Element Editing — gizmo port) · ADR-404 (tilt rings) · ADR-408 (endpoint shape handles / Revit DOF) · ADR-363 (BIM drawing mode — 2D slab/wall/opening grips) · ADR-183 (Unified Grip System) · ADR-366 (3D coordinate transforms) · ADR-040 (canvas performance / leaf renderers)
 **Related:** ADR-049 (unified move SSoT DXF+BIM) · ADR-417/419/436 (roof / floor-finish / foundation grips — γενίκευση)
@@ -138,7 +138,7 @@ handle — «footprint → 2D per-vertex sketch» (σχόλιο `bim-gizmo-overl
 | **Φ4 (μερικό)** | **Hide gizmo όσο είσαι σε reshape** (`setVisible(false/true)` στο grip pointerdown/up/cancel) | ✅ **DONE** (UNCOMMITTED 2026-06-26) |
 | **Φ4 (context-menu)** | Context-menu κορυφής «διαγραφή / εισαγωγή κορυφής» (shared SSoT `buildFootprintVertexOpCommand`, νέο 3D popup `Grip3DVertexContextMenu` + i18n N.11) | ✅ **DONE** (UNCOMMITTED 2026-06-26) |
 | **Φ5** | Λαβές = **Canvas2D overlay πάνω από το WebGL** με τον **ΙΔΙΟ** 2D `UnifiedGripRenderer` (μία πηγή draw → ίδιο μέγεθος/σχήμα/χρώμα, συνεχές zoom, screen-space hit-test). Λαβές ON TOP (χωρίς occlusion) | ✅ **DONE** (UNCOMMITTED 2026-06-26) |
-| **Φ5b** | **Depth occlusion** λαβών (μόνο πρώτο πλάνο, Revit/Maxon-grade GPU depth-buffer — CPU raycast απέτυχε) | 🔴 **DEFER** (νέο session, SSoT audit πρώτα) |
+| **Φ5b** | **Depth occlusion** λαβών (μόνο πρώτο πλάνο, Revit/Maxon-grade **GPU depth-buffer** — κρατά τον Canvas2D overlay SSoT· CPU raycast απέτυχε) | ✅ **DONE** (UNCOMMITTED 2026-06-26) |
 | **Φ4 (υπόλοιπο)** | Edit-mode toggle «Επεξεργασία σκίτσου» (χαμηλή προτεραιότητα — οι grips ήδη εμφανίζονται στο selection) | DEFER |
 
 ### 4.1 Ροή συντεταγμένων (η καρδιά)
