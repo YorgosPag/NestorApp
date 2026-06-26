@@ -80,8 +80,9 @@ const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
  *              Width/depth (X/Z) → Type. Length n/a (a column is a point in plan).
  *   - wall   → Y-top height + Y-base offset ONLY (ADR-401 E.3). Thickness (X/Z) →
  *              Type. LENGTH → the endpoint shape handles (`ENDPOINT_HANDLES_BY_TYPE`).
- *   - beam   → NO resize handle. LENGTH → endpoint handles; width/depth → Type;
- *              top elevation → the vertical move arrow.
+ *   - beam   → NO resize handle. ADR-535 Φ9: LENGTH + width → the 2D Canvas2D reshape
+ *              grips (top/bottom faces, mirror slab/wall); depth → Type; top elevation →
+ *              the vertical move arrow. (Endpoint rings removed — see ENDPOINT_HANDLES_BY_TYPE.)
  *   - slab   → NO resize handle. Thickness → Type; footprint → 2D per-vertex sketch.
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
@@ -116,13 +117,15 @@ const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> =
  * the other end stays). Single-select only (the hook passes `editBimType = null` for a
  * multi-selection → no endpoint handles, mirror resize).
  *   - `mep-segment` → Revit pipe shape handles (free-3D drag: κάτοψη + υψόμετρο).
- *   - `wall` / `beam` → Revit LENGTH shape handles (horizontal drag: το μήκος είναι plan
+ *   - `wall` → Revit LENGTH shape handles (horizontal drag: το μήκος είναι plan
  *     dimension· το ύψος είναι ξεχωριστή λαβή/Τύπος).
+ *   - `beam` → ΧΩΡΙΣ endpoint rings (ADR-535 Φ9): το δοκάρι πλέον εκθέτει τις ΙΔΙΕΣ
+ *     2D reshape grips (γωνίες/πλάτος/μήκος-άκρα) ως Canvas2D overlay top+bottom, όπως η
+ *     πλάκα/τοίχος — οι σιελ endpoint-σφαιρες του gizmo θα ήταν διπλή/συγκρουόμενη λαβή μήκους.
  */
 const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
   'mep-segment': ['endpoint-start', 'endpoint-end'],
   wall: ['endpoint-start', 'endpoint-end'],
-  beam: ['endpoint-start', 'endpoint-end'],
 };
 
 /** Active handle id set for a selected entity: base move/rotate + 3D move + resize + tilt + endpoint. */

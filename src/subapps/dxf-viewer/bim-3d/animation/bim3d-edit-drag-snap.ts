@@ -104,9 +104,21 @@ export function buildGripReshapeSnapFn(ctx: EditInteractionCtx, entityId: string
  * 1000 DXF-plan mm. Self-healing: the 2D snap path re-sets the viewport on its next mouse move.
  */
 function syncSnapEngineViewportFor3D(ctx: EditInteractionCtx, engine: ReturnType<typeof getGlobalSnapEngine>): void {
-  const camera = ctx.manager.getCamera();
-  const canvas = ctx.manager.getRendererCanvas();
-  const anchorWorld = ctx.overlay.getPosition();
+  syncSnapEngineViewport3D(engine, ctx.manager.getCamera(), ctx.manager.getRendererCanvas(), ctx.overlay.getPosition());
+}
+
+/**
+ * ADR-402 / ADR-537 — SSoT: give the shared snap engine a 3D-camera-derived viewport
+ * (pixel tolerance scales with the 3D zoom) anchored at `anchorWorld`. Used by BOTH the
+ * BIM gizmo drag (anchor = gizmo position) and the raw-DXF reshape-grip drag (anchor =
+ * dragged grip world). 1 Three world metre = 1000 DXF-plan mm.
+ */
+export function syncSnapEngineViewport3D(
+  engine: ReturnType<typeof getGlobalSnapEngine>,
+  camera: THREE.Camera,
+  canvas: HTMLElement,
+  anchorWorld: THREE.Vector3,
+): void {
   const dist = camera.position.distanceTo(anchorWorld);
   const mmPerPx = getPixelWorldSize(dist, camera, canvas) * 1000; // metres/px → DXF mm/px
   if (!(mmPerPx > 0)) return;

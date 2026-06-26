@@ -23,7 +23,7 @@
 import type * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
-  SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind, ColumnGripKind, WallGripKind,
+  SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind, ColumnGripKind, WallGripKind, BeamGripKind,
 } from '../../hooks/grip-types';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
@@ -31,12 +31,14 @@ import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { computeRoofGeometry } from '../../bim/geometry/roof-geometry';
 import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
+import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
-import { slabToMesh, wallToMesh } from '../converters/BimToThreeConverter';
+import { slabToMesh, wallToMesh, beamToMesh } from '../converters/BimToThreeConverter';
 import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
 import { columnToMesh } from '../converters/bim-three-structural-converters';
@@ -230,4 +232,38 @@ export function buildWallReshapePreviewObject(
   const { profile, baseProfile } = wallPreviewProfiles(preview, s);
   const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
   return wallToMesh(preview, openings, 0, levelId, baseElevationM(wall, s), profile, baseProfile, topClip);
+}
+
+/**
+ * ADR-535 Φ9 — build the live RESHAPE preview object for a dragged BEAM cross-section grip
+ * (corner / width / length edge / endpoint / poly-vertex), or null. Beam sibling of the wall
+ * builder: a straight beam IS a linear extruded member, so it reuses the SAME SSoT pair the
+ * commit path uses — `applyBeamGripDrag` produces the new `BeamParams`, `computeBeamGeometry`
+ * recomputes the outline cache, and `beamToMesh` rebuilds it — so the live ghost === the
+ * committed `UpdateBeamParamsCommand` re-sync.
+ *
+ * Beam-specific (mirror wall): `BeamGripDragInput.currentPos` is derived from the grip anchor
+ * + delta (the width / rotation resolves read it) — byte-identical to `commitBeamGripDrag`
+ * (`beam-rotation` is filtered out of the 3D reshape grips, so the picked-pivot branch never
+ * runs here). The preview keeps the per-element σοβάς (`suppressFinishSkin = false`, like the
+ * other ghosts) and `floorElevationMm = 0` matches the single-floor resync convention. The
+ * ceiling-slab top clip is omitted (live ghost shows the full member; the clip re-applies on
+ * the committed re-sync).
+ */
+export function buildBeamReshapePreviewObject(
+  entityId: string,
+  gripKind: BeamGripKind,
+  deltaMm: Point2D,
+  originPos: Point2D,
+): THREE.Object3D | null {
+  if (isMultiFloorScope()) return null;
+  const s = useBim3DEntitiesStore.getState();
+  const beam = s.beams.find((b) => b.id === entityId);
+  if (!beam) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  const currentPos: Point2D = { x: originPos.x + deltaMm.x, y: originPos.y + deltaMm.y };
+  const next = applyBeamGripDrag(gripKind, { originalParams: beam.params, delta: deltaMm, currentPos });
+  if (next === beam.params) return null; // no-op (zero delta / out-of-range vertex index)
+  const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
+  return beamToMesh(preview, levelId, baseElevationM(beam, s), s.walls, s.columns, false, 0);
 }

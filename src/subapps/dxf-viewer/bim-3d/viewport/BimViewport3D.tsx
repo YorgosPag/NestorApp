@@ -36,6 +36,7 @@ import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-
 import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
+import { useBim3DDxfEditInteraction } from '../animation/use-bim3d-dxf-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
 import { ClashMarkers3DOverlay } from '../coordination/ClashMarkers3DOverlay';
 import { ProposalGhost3DMount } from '../proposal/ProposalGhost3DMount';
@@ -276,6 +277,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // handle + pointer drag → view-agnostic MoveEntityCommand (auto-resync,
   // openings cascade). Disabled when there is no levels context (ADR-371).
   useBim3DEditInteraction({ managerRef, canvasEl });
+
+  // ADR-537 — RAW DXF (line/polyline/circle/arc) selection + grip editing in 3D with
+  // the SAME grips + commit as 2D. Mutually exclusive with the BIM edit path above
+  // (grips seated only when there is no BIM selection + a single dxf entity is selected).
+  useBim3DDxfEditInteraction({ managerRef, canvasEl });
 
   // ADR-403/406/410/408/401/363 — all 3D placement and pick hooks (aggregated,
   // N.7.1): column, MEP fixtures, furniture, electrical panel, manifold, segment,

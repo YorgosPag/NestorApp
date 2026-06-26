@@ -39,6 +39,7 @@ import {
   buildSlabOpeningReshapePreviewObject,
   buildColumnReshapePreviewObject,
   buildWallReshapePreviewObject,
+  buildBeamReshapePreviewObject,
 } from './bim3d-grip-preview-builders';
 import { resolveEditEntities } from './bim3d-edit-drag-snap';
 import { resolveEntityLevelId } from './bim3d-edit-live-preview-apply';
@@ -46,10 +47,10 @@ import type { EditInteractionCtx } from './bim3d-edit-interaction-handlers';
 
 /**
  * BIM types that expose a per-vertex footprint / cross-section reshape sketch in 3D
- * (ADR-535 Φ3a/Φ3b footprints + Φ7 `column` + Φ8 `wall` cross-section).
+ * (ADR-535 Φ3a/Φ3b footprints + Φ7 `column` + Φ8 `wall` + Φ9 `beam` cross-section).
  */
 const RESHAPE_BIM_TYPES: ReadonlySet<string> = new Set([
-  'slab', 'roof', 'floor-finish', 'slab-opening', 'column', 'wall',
+  'slab', 'roof', 'floor-finish', 'slab-opening', 'column', 'wall', 'beam',
 ]);
 
 /**
@@ -110,12 +111,12 @@ function gripSurfaceElevationsFor(
   if (bimType === 'roof') return roofGripSurfaceElevations(entityId, fallbackWorldY);
   // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top & underside (the opening has no own Z).
   if (bimType === 'slab-opening') return slabOpeningGripSurfaceElevations(entityId, fallbackWorldY);
-  // ADR-535 Φ7/Φ8 — a column's / wall's grips ride its flat top & bottom faces, taken straight
-  // from the rendered mesh AABB (byte-consistent with the mesh, zero drift, no extra Z math). The
-  // squares of every plan vertex/edge sit at the SAME top (max.y) and bottom (min.y) — correct
+  // ADR-535 Φ7/Φ8/Φ9 — a column's / wall's / beam's grips ride its flat top & bottom faces, taken
+  // straight from the rendered mesh AABB (byte-consistent with the mesh, zero drift, no extra Z math).
+  // The squares of every plan vertex/edge sit at the SAME top (max.y) and bottom (min.y) — correct
   // for the flat-top common case. Tilted / host-attached members (per-corner top via the vertical
   // profile resolvers) are a flagged follow-up.
-  if (bimType === 'column' || bimType === 'wall') return bboxSurfaceElevations(box);
+  if (bimType === 'column' || bimType === 'wall' || bimType === 'beam') return bboxSurfaceElevations(box);
   return floorFinishGripSurfaceElevations(entityId, fallbackWorldY);
 }
 
@@ -247,6 +248,11 @@ function buildGripReshapePreview(grip: GripInfo, deltaMm: Point2D): THREE.Object
   // poly-vertex). The grip anchor (`grip.position`) seeds `currentPos` for the thickness resolve.
   if (grip.wallGripKind) {
     return buildWallReshapePreviewObject(grip.entityId, grip.wallGripKind, deltaMm, grip.position);
+  }
+  // ADR-535 Φ9 — beam cross-section reshape (corner / width / length edge / endpoint / poly-vertex).
+  // The grip anchor (`grip.position`) seeds `currentPos` for the width resolve (mirror wall).
+  if (grip.beamGripKind) {
+    return buildBeamReshapePreviewObject(grip.entityId, grip.beamGripKind, deltaMm, grip.position);
   }
   return null;
 }

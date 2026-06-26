@@ -11,6 +11,10 @@ import { useCallback } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
+import { useSelection3DStore } from '../stores/Selection3DStore';
+import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+import { pickDxfEntityAt } from '../grips/dxf-wireframe-hit-test';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
@@ -54,14 +58,34 @@ export function useBim3DPointerHandlers(
       managerRef.current?.setOrbitPivotAt(e.clientX, e.clientY);
       return;
     }
-    const hit = managerRef.current?.raycastBimEntities(e.clientX, e.clientY);
+    const manager = managerRef.current;
+    if (!manager) return;
+    const hit = manager.raycastBimEntities(e.clientX, e.clientY);
     // ADR-402 Phase C — Shift+click adds/removes from the multi-selection;
     // a plain click replaces it (or clears on empty space).
-    if (e.shiftKey && hit?.bimId) {
-      managerRef.current?.toggleBimEntity(hit.bimId);
-    } else {
-      managerRef.current?.selectBimEntity(hit?.bimId ?? null);
+    if (hit?.bimId) {
+      // ADR-537 — a BIM pick wins; clear any unified DXF selection so the single grip
+      // overlay is exclusively BIM's.
+      SelectedEntitiesStore.clearByType('dxf-entity');
+      if (e.shiftKey) manager.toggleBimEntity(hit.bimId);
+      else manager.selectBimEntity(hit.bimId);
+      return;
     }
+    // ADR-537 — BIM miss → try a RAW DXF entity (plan-space pick over the floor wireframe).
+    // A hit selects it in the SAME `SelectedEntitiesStore` the 2D grips use (unified
+    // selection) + clears the 3D BIM selection so the DXF edit hook owns the grip overlay.
+    const camera = manager.getCamera();
+    const dom = manager.getRendererCanvas();
+    const dxfScene = useDxfOverlay3DStore.getState().dxfScene;
+    const dxfId = camera && dom ? pickDxfEntityAt(dxfScene, camera, dom, e.clientX, e.clientY) : null;
+    if (dxfId) {
+      useSelection3DStore.getState().clearSelection();
+      SelectedEntitiesStore.replaceEntitySelection([dxfId]);
+      return;
+    }
+    // Empty space → clear both selections.
+    manager.selectBimEntity(null);
+    SelectedEntitiesStore.clearByType('dxf-entity');
   }, [managerRef]);
 
   const handleMouseLeave = useCallback(() => {

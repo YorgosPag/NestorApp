@@ -13,15 +13,20 @@ import {
   buildRoofReshapePreviewObject,
   buildFloorFinishReshapePreviewObject,
   buildSlabOpeningReshapePreviewObject,
+  buildBeamReshapePreviewObject,
 } from '../bim3d-grip-preview-builders';
 import { applyRoofGripDrag } from '../../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../../bim/floor-finishes/floor-finish-grips';
 import { applySlabOpeningGripDrag } from '../../../bim/slab-openings/slab-opening-grips';
+import { applyBeamGripDrag, getBeamGrips } from '../../../bim/beams/beam-grips';
 import { applyRoofShapePreset, computeRoofGeometry } from '../../../bim/geometry/roof-geometry';
 import { computeSlabOpeningGeometry } from '../../../bim/geometry/slab-opening-geometry';
+import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
+import { buildDefaultBeamParams } from '../../../hooks/drawing/beam-completion';
 import { roofToMesh } from '../../converters/roof-to-three';
 import { floorFinishToMesh } from '../../converters/floor-finish-to-three';
-import { slabToMesh } from '../../converters/BimToThreeConverter';
+import { slabToMesh, beamToMesh } from '../../converters/BimToThreeConverter';
+import type { BeamEntity } from '../../../bim/types/beam-types';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../../stores/ViewMode3DStore';
 import type { Point3D, Polygon3D } from '../../../bim/types/bim-base';
@@ -268,5 +273,67 @@ describe('buildSlabOpeningReshapePreviewObject (ADR-535 Φ3b)', () => {
   it('falls back to commit-on-release for the multi-floor scope', () => {
     useViewMode3DStore.getState().setFloor3DScope('all');
     expect(buildSlabOpeningReshapePreviewObject('op', 'slab-opening-vertex-2', { x: 400, y: 250 })).toBeNull();
+  });
+});
+
+// ─── ADR-535 Φ9 — beam (linear member cross-section reshape, mirror wall) ─────────
+
+function makeBeam(): BeamEntity {
+  const params = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+  return {
+    id: 'bm', type: 'beam', kind: params.kind, layerId: '0', params,
+    geometry: computeBeamGeometry(params),
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null }, visible: true,
+  } as unknown as BeamEntity;
+}
+
+function seedBeam(): void {
+  useBim3DEntitiesStore.setState({
+    slabs: [], slabOpenings: [], roofs: [], floorFinishes: [], beams: [makeBeam()],
+    walls: [], columns: [], floors: [], buildings: [], activeLevelId: null,
+  });
+  useViewMode3DStore.getState().setFloor3DScope('single');
+}
+
+describe('buildBeamReshapePreviewObject (ADR-535 Φ9)', () => {
+  beforeEach(seedBeam);
+
+  it('width drag === the commit transform (applyBeamGripDrag + computeBeamGeometry + beamToMesh) — ghost === commit', () => {
+    const beam = makeBeam();
+    const widthGrip = getBeamGrips(beam).find((g) => g.beamGripKind === 'beam-width');
+    expect(widthGrip).toBeDefined();
+    const delta = { x: 0, y: 300 };
+    const originPos = widthGrip!.position;
+    const currentPos = { x: originPos.x + delta.x, y: originPos.y + delta.y };
+    const preview = buildBeamReshapePreviewObject('bm', 'beam-width', delta, originPos);
+    expect(preview).not.toBeNull();
+    const next = applyBeamGripDrag('beam-width', { originalParams: beam.params, delta, currentPos });
+    const expected = beamToMesh(
+      { ...beam, params: next, geometry: computeBeamGeometry(next) }, undefined, 0, [], [], false, 0,
+    );
+    expect(expected).not.toBeNull();
+    const a = positions(preview!);
+    const b = positions(expected!);
+    expect(a.length).toBe(b.length);
+    for (let i = 0; i < a.length; i++) {
+      expect(a[i].x).toBeCloseTo(b[i].x, 6);
+      expect(a[i].y).toBeCloseTo(b[i].y, 6);
+      expect(a[i].z).toBeCloseTo(b[i].z, 6);
+    }
+  });
+
+  it('returns null for a zero-delta no-op', () => {
+    const originPos = getBeamGrips(makeBeam()).find((g) => g.beamGripKind === 'beam-width')!.position;
+    expect(buildBeamReshapePreviewObject('bm', 'beam-width', { x: 0, y: 0 }, originPos)).toBeNull();
+  });
+
+  it('returns null for an unknown entity id', () => {
+    expect(buildBeamReshapePreviewObject('missing', 'beam-width', { x: 0, y: 300 }, { x: 0, y: 0 })).toBeNull();
+  });
+
+  it('falls back to commit-on-release for the multi-floor scope', () => {
+    useViewMode3DStore.getState().setFloor3DScope('all');
+    const originPos = getBeamGrips(makeBeam()).find((g) => g.beamGripKind === 'beam-width')!.position;
+    expect(buildBeamReshapePreviewObject('bm', 'beam-width', { x: 0, y: 300 }, originPos)).toBeNull();
   });
 });

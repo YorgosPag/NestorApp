@@ -29,13 +29,22 @@ interface Grip3DOverlayState {
   readonly topElevFor: PlanElevationMmFor;
   /** Per-grip BOTTOM-surface elevation (mm) = top − thickness (ADR-535 Φ6 twin grips). */
   readonly bottomElevFor: PlanElevationMmFor;
-  /** Replace the grip set + top/bottom elevation resolvers (selection / re-sync). Resets interaction. */
+  /**
+   * ADR-537 — when the seated grips belong to a RAW DXF entity (line/polyline/circle/arc),
+   * its id (so the overlay can stroke a live ghost of the entity-in-progress during a grip
+   * drag). `null` for BIM grips (the BIM path has its own live mesh preview). Reset by
+   * `setGrips` / `clear`; the DXF seater sets it explicitly via `setDxfGhostEntityId`.
+   */
+  readonly dxfGhostEntityId: string | null;
+  /** Replace the grip set + top/bottom elevation resolvers (selection / re-sync). Resets interaction + ghost. */
   setGrips(
     grips: readonly GripInfo[],
     topElevFor: PlanElevationMmFor,
     bottomElevFor: PlanElevationMmFor,
   ): void;
-  /** Drop all grips (multi-select / unsupported type / deselected). Resets interaction. */
+  /** ADR-537 — mark the seated grips as belonging to raw DXF entity `id` (ghost source), or null. */
+  setDxfGhostEntityId(id: string | null): void;
+  /** Drop all grips (multi-select / unsupported type / deselected). Resets interaction + ghost. */
   clear(): void;
 }
 
@@ -43,13 +52,16 @@ export const useGrip3DOverlayStore = create<Grip3DOverlayState>((set) => ({
   grips: [],
   topElevFor: NO_ELEVATION,
   bottomElevFor: NO_ELEVATION,
+  dxfGhostEntityId: null,
   setGrips: (grips, topElevFor, bottomElevFor) => {
     resetGrip3DInteraction();
-    set({ grips: [...grips], topElevFor, bottomElevFor });
+    // ADR-537 — a new grip set is BIM by default; the DXF seater opts in afterwards.
+    set({ grips: [...grips], topElevFor, bottomElevFor, dxfGhostEntityId: null });
   },
+  setDxfGhostEntityId: (dxfGhostEntityId) => set({ dxfGhostEntityId }),
   clear: () => {
     resetGrip3DInteraction();
-    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION });
+    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION, dxfGhostEntityId: null });
   },
 }));
 

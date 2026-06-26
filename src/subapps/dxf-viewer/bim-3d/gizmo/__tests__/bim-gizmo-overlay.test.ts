@@ -160,7 +160,7 @@ describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faith
     },
   );
 
-  it('beam exposes NO resize handles — length is an endpoint handle, section + elevation are Type/move', () => {
+  it('beam exposes NO resize handles — length + width are 2D reshape grips (ADR-535 Φ9), section + elevation are Type/move', () => {
     const ids = activeHandlesFor('beam');
     expect(ids.has('resize-x')).toBe(false);
     expect(ids.has('resize-z')).toBe(false);
@@ -194,15 +194,17 @@ describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faith
 
 describe('activeHandlesFor — endpoint LENGTH shape handles (ADR-408 Φ-D/Φ1, Revit)', () => {
   // A linear element exposes a draggable handle at each axis end (Revit shape handle):
-  // mep-segment (free-3D pipe) + wall/beam (horizontal length). Point/area elements do not.
-  it.each(['mep-segment', 'wall', 'beam'])('linear element %s exposes both endpoint handles', (bimType) => {
+  // mep-segment (free-3D pipe) + wall (horizontal length). ADR-535 Φ9 — `beam` was REMOVED:
+  // its length + width are now the 2D Canvas2D reshape grips (mirror slab/wall), so the cyan
+  // endpoint rings would be a duplicate/conflicting length handle. Point/area elements never had them.
+  it.each(['mep-segment', 'wall'])('linear element %s exposes both endpoint handles', (bimType) => {
     const ids = activeHandlesFor(bimType);
     expect(ids.has('endpoint-start')).toBe(true);
     expect(ids.has('endpoint-end')).toBe(true);
   });
 
-  it.each(['column', 'slab', 'stair', 'mep-fixture'])(
-    'non-linear element %s exposes NO endpoint handles',
+  it.each(['column', 'slab', 'stair', 'mep-fixture', 'beam'])(
+    '%s exposes NO endpoint handles (beam → 2D reshape grips, ADR-535 Φ9)',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
       expect(ids.has('endpoint-start')).toBe(false);

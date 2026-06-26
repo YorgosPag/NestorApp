@@ -23,15 +23,61 @@ import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { UnifiedGripRenderer } from '../../../rendering/grips';
 import type { GripSettings } from '../../../rendering/grips/types';
+import type { Point2D } from '../../../rendering/types/Types';
+import type { GripInfo } from '../../../hooks/grip-types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
+import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
 import { dxfPlanToWorld } from '../coordinate-transforms';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
+import { useDxfOverlay3DStore } from '../../stores/DxfOverlay3DStore';
 
 export interface BimGripOverlay2DProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
+}
+
+/** ADR-537 — raw DXF live-ghost stroke (Revit-blue dashed, mirror the cold grip hue). */
+const DXF_GHOST_STROKE = 'rgba(80, 160, 255, 0.9)';
+
+/**
+ * ADR-537 — stroke the live ghost of a raw DXF entity being grip-dragged. Reads the
+ * ghost entity id (low-freq store) + the live drag (non-reactive singleton); builds the
+ * entity-in-progress geometry via the pure `buildDxfGhostSegments` and projects every
+ * point with the SAME projector the grips use (so the ghost tracks the squares pixel-for-
+ * pixel). No-op for BIM grips (`dxfGhostEntityId === null`) or when no drag is in flight.
+ */
+function paintDxfGhost(
+  ctx: CanvasRenderingContext2D,
+  project: (p: Point2D) => Point2D,
+  grips: readonly GripInfo[],
+): void {
+  const ghostId = useGrip3DOverlayStore.getState().dxfGhostEntityId;
+  const drag = grip3DOverlayInteraction.drag;
+  if (!ghostId || !drag || grips.length === 0) return;
+  const grip = grips[drag.index % grips.length];
+  if (!grip) return;
+  const entity = useDxfOverlay3DStore.getState().dxfScene?.entities.find((e) => e.id === ghostId);
+  if (!entity) return;
+  const segments = buildDxfGhostSegments(entity, grip, drag.livePlanPos);
+  if (segments.length === 0) return;
+  ctx.save();
+  ctx.strokeStyle = DXF_GHOST_STROKE;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  for (const seg of segments) {
+    if (seg.length < 2) continue;
+    ctx.beginPath();
+    const p0 = project(seg[0]);
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < seg.length; i++) {
+      const p = project(seg[i]);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
@@ -134,6 +180,9 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
       dragLivePlanPos: drag?.livePlanPos ?? null,
       visibility,
     };
+    // ADR-537 — raw DXF live ghost (entity-in-progress) UNDER the grip squares, so the
+    // 7px handles stay crisp on top. No-op for BIM grips / when idle.
+    paintDxfGhost(ctx, projectTop, liveGrips);
     // Top pass (flat offset 0) + bottom pass (flat offset N), each through its own projector.
     new UnifiedGripRenderer(ctx, projectTop).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, 0, ov), settings);
     new UnifiedGripRenderer(ctx, projectBottom).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, n, ov), settings);

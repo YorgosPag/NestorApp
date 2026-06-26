@@ -113,6 +113,27 @@ describe('reshapeGripsForFootprint', () => {
     ];
     expect(reshapeGripsForFootprint(grips)).toHaveLength(0);
   });
+
+  // ADR-535 Φ9 — beams: a beam's plan cross-section IS a footprint, so its corner / width /
+  // length-edge / endpoint / poly-vertex reshape grips surface in 3D — but the whole-entity
+  // glyphs (center MOVE `beam-midpoint`, `beam-rotation`) stay with the gizmo.
+  it('keeps beam cross-section reshape grips (corner / width / length-edge / endpoint)', () => {
+    const grips: GripInfo[] = [
+      { entityId: 'b1', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, beamGripKind: 'beam-corner-start-pos' },
+      { entityId: 'b1', gripIndex: 1, type: 'edge', position: { x: 0, y: 0 }, movesEntity: false, beamGripKind: 'beam-width' },
+      { entityId: 'b1', gripIndex: 2, type: 'edge', position: { x: 0, y: 0 }, movesEntity: false, beamGripKind: 'beam-edge-length' },
+      { entityId: 'b1', gripIndex: 3, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, beamGripKind: 'beam-start' },
+    ];
+    expect(reshapeGripsForFootprint(grips)).toHaveLength(4);
+  });
+
+  it('drops the whole-entity beam glyphs: midpoint (movesEntity) + rotation (explicit)', () => {
+    const grips: GripInfo[] = [
+      { entityId: 'b1', gripIndex: 0, type: 'center', position: { x: 0, y: 0 }, movesEntity: true, beamGripKind: 'beam-midpoint' },
+      { entityId: 'b1', gripIndex: 1, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, beamGripKind: 'beam-rotation' },
+    ];
+    expect(reshapeGripsForFootprint(grips)).toHaveLength(0);
+  });
 });
 
 describe('toUnifiedGrip — forwards columnGripKind (ADR-535 Φ7)', () => {
@@ -143,5 +164,15 @@ describe('toUnifiedGrip — forwards wallGripKind (ADR-535 Φ8)', () => {
       movesEntity: false, wallGripKind: 'wall-corner-end-neg',
     };
     expect(toUnifiedGrip(grip).wallGripKind).toBe('wall-corner-end-neg');
+  });
+});
+
+describe('toUnifiedGrip — forwards beamGripKind (ADR-535 Φ9)', () => {
+  it('carries beamGripKind so commitDxfGripDragModeAware routes to commitBeamGripDrag', () => {
+    const grip: GripInfo = {
+      entityId: 'b1', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 },
+      movesEntity: false, beamGripKind: 'beam-corner-end-neg',
+    };
+    expect(toUnifiedGrip(grip).beamGripKind).toBe('beam-corner-end-neg');
   });
 });

@@ -1,0 +1,47 @@
+/**
+ * grip-3d-dxf-raw-grips.ts — PURE filter: which `GripInfo`s of a RAW DXF entity
+ * (line / polyline / circle / arc) surface as editable grips in the 3D viewport
+ * (ADR-537 — raw DXF selection + grip editing in 3D).
+ *
+ * The raw-DXF analogue of `reshapeGripsForFootprint` (which conversely *requires* a
+ * BIM `*GripKind`). A raw DXF entity wants FULL 2D parity: every endpoint / vertex
+ * grip (reshape) AND every whole-entity move grip (line midpoint, circle/arc centre)
+ * — the 3D viewport has no separate move gizmo for raw DXF, so the move grips must
+ * stay. The ONLY thing we strip is a BIM-structural footprint discriminator, which a
+ * raw DXF entity never carries (defensive: if a wrapped BIM entity ever reached this
+ * path its grips belong to the BIM gizmo, not here).
+ *
+ * `polylineGripKind` is KEPT — it is a raw-DXF discriminator (drives the polyline
+ * arc-apex bulge commit + vertex/segment stretch), not a BIM-structural kind.
+ *
+ * Pure — no THREE, no React, no store. Jest-friendly.
+ */
+
+import type { GripInfo } from '../../hooks/grip-types';
+
+/**
+ * True when the grip carries a BIM-structural footprint / cross-section discriminator
+ * (slab / roof / floor-finish / slab-opening / column / wall / beam). Such grips belong
+ * to the BIM 3D edit path (`refreshReshapeGrips` + the gizmo), never to the raw-DXF path.
+ */
+function hasBimStructuralGripKind(g: GripInfo): boolean {
+  return (
+    g.slabGripKind !== undefined ||
+    g.roofGripKind !== undefined ||
+    g.floorFinishGripKind !== undefined ||
+    g.slabOpeningGripKind !== undefined ||
+    g.columnGripKind !== undefined ||
+    g.wallGripKind !== undefined ||
+    g.beamGripKind !== undefined
+  );
+}
+
+/**
+ * Keep every grip of a raw DXF entity (vertices + edge-midpoints + whole-entity move
+ * centres) — full 2D parity — except any BIM-structural grip (which a raw DXF entity
+ * never has; the guard keeps the path honest). Returns a fresh array; input order
+ * preserved (stable grip indices for the controller's flat hit-test).
+ */
+export function rawDxfReshapeGrips(grips: readonly GripInfo[]): GripInfo[] {
+  return grips.filter((g) => !hasBimStructuralGripKind(g));
+}

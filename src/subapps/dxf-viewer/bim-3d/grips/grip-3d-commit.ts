@@ -30,9 +30,9 @@ import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
  * discriminators are forwarded 1:1 — `commitDxfGripDragModeAware` routes on whichever
  * `*GripKind` is present (`commitSlabGripDrag` / `commitRoofGripDrag` /
  * `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag` / `commitColumnGripDrag` /
- * `commitWallGripDrag`), so the bridge stays type-agnostic. ADR-535 Φ7/Φ8 — `columnGripKind`
- * + `wallGripKind` are forwarded too; dropping either makes the grip fall through to the
- * wrong stretch path.
+ * `commitWallGripDrag` / `commitBeamGripDrag`), so the bridge stays type-agnostic. ADR-535
+ * Φ7/Φ8/Φ9 — `columnGripKind` + `wallGripKind` + `beamGripKind` are forwarded too; dropping any
+ * makes the grip fall through to the wrong stretch path.
  */
 export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
@@ -51,6 +51,7 @@ export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     slabOpeningGripKind: grip.slabOpeningGripKind,
     columnGripKind: grip.columnGripKind,
     wallGripKind: grip.wallGripKind,
+    beamGripKind: grip.beamGripKind,
   };
 }
 
