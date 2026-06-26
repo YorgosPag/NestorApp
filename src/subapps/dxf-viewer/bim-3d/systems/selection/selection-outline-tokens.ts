@@ -16,7 +16,7 @@
 // ============================================================================
 
 /** Selection outline color as Three.js numeric hex — for OutlinePass / material consumers. */
-export const BIM_SELECTION_OUTLINE_COLOR_THREE = 0xffd700;
+export const BIM_SELECTION_OUTLINE_COLOR_THREE = 0xffaa16; // RGB(255, 170, 22)
 
 /** Selection outline color as CSS hex string — for canvas-2d / CSS consumers. */
-export const BIM_SELECTION_OUTLINE_COLOR_CSS = '#ffd700' as const;
+export const BIM_SELECTION_OUTLINE_COLOR_CSS = '#ffaa16' as const;

@@ -35,7 +35,7 @@ function makeGroup(): { group: THREE.Group; meshes: Record<string, THREE.Mesh> }
 
 // ADR-536 — highlight = silhouette outline membership (NOT material mutation).
 const highlighted = (outline: SelectionOutlinePass, m: THREE.Mesh): boolean =>
-  outline.pass.selectedObjects.includes(m);
+  outline.selectedObjects.includes(m);
 
 beforeEach(() => {
   useSelection3DStore.getState().clearSelection();

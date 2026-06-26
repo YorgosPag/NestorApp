@@ -36,8 +36,8 @@ describe('BimSelectionHighlighter — silhouette outline', () => {
 
     h.onSelect(new Set(['a', 'b']));
 
-    expect(new Set(outline.pass.selectedObjects)).toEqual(new Set([a, b]));
-    expect(outline.pass.selectedObjects).not.toContain(c);
+    expect(new Set(outline.selectedObjects)).toEqual(new Set([a, b]));
+    expect(outline.selectedObjects).not.toContain(c);
     expect(outline.hasSelection()).toBe(true);
   });
 
@@ -67,7 +67,7 @@ describe('BimSelectionHighlighter — silhouette outline', () => {
     h.onSelect(new Set(['a', 'b']));
     h.onSelect(new Set(['b'])); // drop 'a'
 
-    expect(new Set(outline.pass.selectedObjects)).toEqual(new Set([b]));
+    expect(new Set(outline.selectedObjects)).toEqual(new Set([b]));
   });
 
   it('onClear empties the outline selection', () => {
@@ -79,7 +79,7 @@ describe('BimSelectionHighlighter — silhouette outline', () => {
     h.onSelect(new Set(['a']));
     h.onClear();
 
-    expect(outline.pass.selectedObjects).toHaveLength(0);
+    expect(outline.selectedObjects).toHaveLength(0);
     expect(outline.hasSelection()).toBe(false);
   });
 });

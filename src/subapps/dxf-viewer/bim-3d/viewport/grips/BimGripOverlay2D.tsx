@@ -23,9 +23,9 @@ import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { UnifiedGripRenderer } from '../../../rendering/grips';
 import type { GripRenderConfig, GripSettings } from '../../../rendering/grips/types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
-import { dxfPlanToWorld } from '../../viewport/coordinate-transforms';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
-import { isGripOccluded } from '../../grips/grip-3d-occlusion';
+import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
+import { dxfPlanToWorld } from '../coordinate-transforms';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
 
 export interface BimGripOverlay2DProps {
@@ -36,6 +36,8 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  // ADR-535 Φ5b — GPU depth-occluder (one instance, lazy GPU resources, disposed on unmount).
+  const occluderRef = useRef<GripDepthOccluder | null>(null);
 
   // ADR-040 — subscribe ONLY to the low-frequency grip set (drives the RAF on/off).
   const grips = useSyncExternalStore(
@@ -71,14 +73,11 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
 
-    const { grips: liveGrips, elevFor, selfIds } = useGrip3DOverlayStore.getState();
+    const { grips: liveGrips, elevFor } = useGrip3DOverlayStore.getState();
     if (liveGrips.length === 0) return;
 
     const project = makeGripPlanToCanvas(camera, canvas, elevFor);
     const { hoverIndex, drag } = grip3DOverlayInteraction;
-    // ADR-535 Φ5 — depth occlusion: only front-most grips show (Giorgio). Grips hidden
-    // behind BIM geometry are culled; the actively dragged grip is always drawn.
-    const occluders = manager.bimLayer.group;
 
     // EXACT 2D settings SSoT (mirror `GripPhaseRenderer.renderStandardGrips`).
     const style = getGripPreviewStyle();
@@ -88,17 +87,26 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
       dpiScale: 1.0,
     };
 
+    // ADR-535 Φ5b — Revit / Maxon (Cinema 4D) grade depth occlusion: a grip behind a solid
+    // surface (another entity OR the selected body) is culled on the GPU. The occluder is the
+    // ONE place that runs the depth probe → it publishes per-grip visibility to the shared
+    // non-reactive interaction state, so the controller's hit-test culls the same grips.
+    const occluder = occluderRef.current;
+    let visibility: readonly boolean[] | null = null;
+    if (occluder) {
+      const worlds = liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, elevFor(g.position)));
+      visibility = occluder.computeVisibility(manager.renderer, manager.scene, camera, worlds);
+    }
+    grip3DOverlayInteraction.visibility = visibility;
+
     const configs: GripRenderConfig[] = [];
     for (let i = 0; i < liveGrips.length; i++) {
       const grip = liveGrips[i];
       const dragging = drag?.index === i;
+      // The dragged square always shows (drag leads the edit); the rest are culled if occluded.
+      if (!dragging && visibility && visibility[i] === false) continue;
       // The dragged square rides its snapped live position; the rest sit at the footprint.
       const position = dragging ? drag!.livePlanPos : grip.position;
-      // Cull grips hidden behind OTHER entities (never the dragged one — it leads the edit;
-      // never the edited entity's own body — Revit shows sketch grips through it).
-      if (!dragging && isGripOccluded(dxfPlanToWorld(position.x, position.y, elevFor(position)), camera, occluders, selfIds)) {
-        continue;
-      }
       const temperature = dragging ? 'hot' : hoverIndex === i ? 'warm' : 'cold';
       configs.push({
         position,
@@ -111,6 +119,15 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
 
     new UnifiedGripRenderer(ctx, project).renderGripSetBatched(configs, settings);
   }, [managerRef]);
+
+  // ADR-535 Φ5b — own the GPU occluder for the overlay's lifetime (lazy GL resources inside).
+  useEffect(() => {
+    occluderRef.current = new GripDepthOccluder();
+    return () => {
+      occluderRef.current?.dispose();
+      occluderRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasGrips) {

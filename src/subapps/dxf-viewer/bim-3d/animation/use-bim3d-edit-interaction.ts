@@ -82,9 +82,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const controller = new BimGizmoController(overlay);
     // ADR-535 Φ5 — 3D reshape-grip FSM (screen-space). The grips render on the Canvas2D
     // `BimGripOverlay2D` leaf (mounted in BimViewport3D) from the `Grip3DOverlayStore`.
-    // The BIM entity group occludes grips hidden behind geometry (pick parity with the draw).
     const gripController = new BimGripController3D();
-    gripController.setOccluders(manager.bimLayer.group);
     const preview = new Bim3DEditLivePreview();
     // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
     const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);

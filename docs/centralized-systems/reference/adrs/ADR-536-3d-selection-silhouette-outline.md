@@ -68,25 +68,37 @@ Routing στο `scene-render-frame.ts`:
 - `bim-3d/systems/selection/SelectionOutlinePass.ts` — thin wrapper γύρω από `OutlinePass`
   (color token, edgeStrength 4 / edgeThickness 1.5 / edgeGlow 0.3 / `pulsePeriod = 0`·
   `setSelected` → `selectedObjects` + `enabled = length>0`· `setCamera`/`setSize`/`hasSelection`/
-  `get pass`/`dispose`).
+  `get pass`/`dispose`· **`renderOverlayToScreen(renderer)`** — edges→transparent RT → additive
+  blit to screen, για τον section path· lazy edge-RT + `FullScreenQuad` additive blit material).
 - `__tests__/SelectionOutlinePass.test.ts` (6) + ξαναγραμμένο `__tests__/BimSelectionHighlighter.test.ts` (4).
 
 **MODIFY**
 - `BimSelectionHighlighter.ts` — emissive/material-clone **αφαιρέθηκε**· τώρα συλλέγει τα matching
   meshes ανά bimId → `outlinePass.setSelected(meshes)`. Constructor: `(group, outlinePass)`. API ίδιο.
 - `ssao-modulator.ts` — δέχεται optional `outlinePass`, το προσθέτει στο composer **πριν** το copyPass·
-  sync camera/size· `isOutlineActive()`. (Το pass disposed από τον owner, όχι εδώ.)
-- `scene-render-frame.ts` — routing `ssaoActive || isOutlineActive()` → composer.
+  sync camera/size· `isOutlineActive()`· `renderOutlineOverlayToScreen()` (delegation για section path)·
+  dispose του outline pass (ζει στο composer του).
+- `scene-render-frame.ts` — routing `ssaoActive || isOutlineActive()` → composer· **+ section branch:
+  μετά το `renderFrameWithCaps` καλεί `renderOutlineOverlayToScreen()`** ώστε το outline να φαίνεται
+  και με ενεργό cut.
 - `scene-rendering-subsystems.ts` — δημιουργεί το `SelectionOutlinePass` + το περνά στο `SSAOModulator`.
 - `ThreeJsSceneManager.ts` — instantiate `BimSelectionHighlighter(group, outlinePass)` μετά τα subsystems.
 - `scene-dispose.ts` — dispose του outline pass (μετά το `selectionHighlighter.dispose()`).
 
-## Out of scope (γνωστοί περιορισμοί)
-- Το outline εμφανίζεται στα interactive paths (raster + SSAO-idle). **ΟΧΙ** στο **path-tracer**
-  (final-render) & **section-stencil** path — διαφορετικός render κόσμος. Αν χρειαστεί αργότερα,
-  ξεχωριστό follow-up.
-- Composite entity (πυρήνας+σοβάς+οπλισμός με ίδιο bimId): όλα τα matching meshes μπαίνουν μαζί →
-  ΕΝΑ ενιαίο εξωτερικό silhouette (ο οπλισμός μέσα occluded). Σωστό.
+## Render-path coverage
+Το outline εμφανίζεται σε **ΟΛΑ** τα interactive render paths:
+- **raster** (navigation) & **SSAO-idle**: μέσω του OutlinePass μέσα στο composer (routing
+  `isSsaoActive() || isOutlineActive()`).
+- **section-cut stencil path** (ADR-452/455): αυτός ο path κάνει direct render + stencil caps και
+  **παρακάμπτει το composer** (το RT του δεν έχει stencil). → `SelectionOutlinePass.renderOverlayToScreen()`
+  υπολογίζει τις ακμές σε διάφανο RT και τις κάνει **additive blit** πάνω στο τελικό καρέ, μετά το
+  `renderFrameWithCaps`. (Κρίσιμο: ο section ήταν ο **κύριος** path του χρήστη — όχι edge case.)
+
+**Out of scope:** το **path-tracer** (final-render) path — διαφορετικός render κόσμος, ξεχωριστό
+follow-up αν χρειαστεί.
+
+**Composite entity** (πυρήνας+σοβάς+οπλισμός με ίδιο bimId): όλα τα matching meshes μπαίνουν μαζί →
+ΕΝΑ ενιαίο εξωτερικό silhouette (ο οπλισμός μέσα occluded). Σωστό.
 
 ## Verification
 - **jest (ts-jest):** 10/10 GREEN (`SelectionOutlinePass.test.ts` 6 + `BimSelectionHighlighter.test.ts` 4).
@@ -101,5 +113,11 @@ Routing στο `scene-render-frame.ts`:
 
 ## Changelog
 - **2026-06-26** — Initial. emissive whole-body highlight → OutlinePass silhouette (ADR-366 A.1
-  mechanism replaced). Unified composer + preserved raster fast-path. 10 jest GREEN. UNCOMMITTED —
-  περιμένει browser-verify + commit από Giorgio.
+  mechanism replaced). Unified composer + preserved raster fast-path. 14 jest GREEN.
+- **2026-06-26 (v2, browser-verified)** — **Section-cut path fix:** ο χρήστης δούλευε με ενεργό
+  section cut → όλα τα frames περνούσαν από τον section stencil path (bypass composer) → το outline
+  ΔΕΝ φαινόταν. Προστέθηκε `SelectionOutlinePass.renderOverlayToScreen()` (edges→transparent RT →
+  additive blit) + `SSAOModulator.renderOutlineOverlayToScreen()` delegation + κλήση στο section
+  branch του `scene-render-frame`. **✅ Browser-verified από Giorgio** (περίγραμμα ορατό).
+- **2026-06-26 (v3)** — Χρώμα token: gold `#FFD700` → πορτοκαλί **`#FFAA16`** (RGB 255,170,22)
+  κατ' απαίτηση Giorgio. UNCOMMITTED — περιμένει commit από Giorgio.

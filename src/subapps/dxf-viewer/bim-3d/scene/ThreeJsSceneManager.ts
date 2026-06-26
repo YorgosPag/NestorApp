@@ -145,7 +145,7 @@ export class ThreeJsSceneManager {
     this.pathTracerRenderer = subs.pathTracerRenderer;
     this.idleDetector = subs.idleDetector;
     this.performanceCollector = subs.performanceCollector;
-    // ADR-536 — highlighter feeds selected meshes into the outline pass (in the SSAO composer).
+    // ADR-536 — highlighter feeds the selected meshes into the silhouette outline.
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
     this.poi = createPoi();
     this.scene.add(this.poi.root);

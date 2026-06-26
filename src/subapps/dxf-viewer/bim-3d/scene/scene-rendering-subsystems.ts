@@ -31,7 +31,7 @@ export interface SceneRenderingSubsystemsDeps {
 export interface SceneRenderingSubsystems {
   readonly qualityModulator: QualityModulator;
   readonly ssaoModulator: SSAOModulator;
-  /** ADR-536 — selection silhouette outline pass (lives inside the SSAO composer). */
+  /** ADR-536 — selection silhouette outline (composited after the scene render). */
   readonly selectionOutlinePass: SelectionOutlinePass;
   readonly envmapGenerator: EnvmapGenerator;
   readonly pathTracerRenderer: PathTracerRenderer;

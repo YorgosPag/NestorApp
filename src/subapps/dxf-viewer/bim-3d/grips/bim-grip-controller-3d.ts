@@ -33,8 +33,7 @@ import type { SnapFn } from '../gizmo/bim3d-snap-bridge';
 import { intersectRayHorizontalPlane, planDeltaMm } from './grip-plane-projection';
 import { makeGripPlanToCanvas } from './grip-3d-screen-project';
 import { findGripAtScreen } from './grip-3d-screen-hit-test';
-import { isGripOccluded } from './grip-3d-occlusion';
-import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../stores/Grip3DOverlayStore';
+import { useGrip3DOverlayStore, grip3DOverlayInteraction, isGrip3DVisible } from '../stores/Grip3DOverlayStore';
 
 /** Screen-space pick radius (px) — generous, like the 2D grip pickbox. */
 const GRIP_HIT_RADIUS_PX = 10;
@@ -57,19 +56,9 @@ export class BimGripController3D {
   private drag: ActiveGripDrag | null = null;
   /** Injected snap callback (ADR-535 Φ2). Null = free drag (OSNAP off / unsupported). */
   private snapFn: SnapFn | null = null;
-  /** Scene geometry for the depth-occlusion test (ADR-535 Φ5). Null = no occlusion. */
-  private occluders: THREE.Object3D | null = null;
 
   isDragging(): boolean {
     return this.drag !== null;
-  }
-
-  /**
-   * Set the scene geometry used to occlude grips (ADR-535 Φ5) — the BIM entity group. A
-   * grip hidden behind geometry becomes neither pickable (here) nor drawn (overlay).
-   */
-  setOccluders(occluders: THREE.Object3D | null): void {
-    this.occluders = occluders;
   }
 
   /**
@@ -191,16 +180,11 @@ export class BimGripController3D {
     if (st.grips.length === 0) return null;
     const rect = dom.getBoundingClientRect();
     const project = makeGripPlanToCanvas(camera, dom, st.elevFor);
-    // ADR-535 Φ5 — a grip hidden behind geometry must not be pickable either (mirror the
-    // overlay's draw cull), so an occluded grip is skipped by the nearest-wins search.
-    const accept = this.occluders
-      ? (i: number): boolean => {
-          const p = st.grips[i].position;
-          const world = dxfPlanToWorld(p.x, p.y, st.elevFor(p));
-          return !isGripOccluded(world, camera, this.occluders, st.selfIds);
-        }
-      : undefined;
-    return findGripAtScreen(st.grips, project, x - rect.left, y - rect.top, GRIP_HIT_RADIUS_PX, accept);
+    // ADR-535 Φ5b — a grip occluded by a solid surface (GPU depth, computed by the overlay
+    // RAF) is not pickable: skip it via the hit-test's `accept` predicate.
+    return findGripAtScreen(
+      st.grips, project, x - rect.left, y - rect.top, GRIP_HIT_RADIUS_PX, isGrip3DVisible,
+    );
   }
 
   /**

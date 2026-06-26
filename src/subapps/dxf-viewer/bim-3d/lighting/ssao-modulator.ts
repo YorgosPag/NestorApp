@@ -82,11 +82,10 @@ export class SSAOModulator {
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.ssaoPass);
-    // ADR-536 — selection silhouette composites AFTER SSAO, BEFORE the final copy
-    // (so the gold outline overlays the SSAO-modulated scene). enabled only when
-    // there is a selection → EffectComposer skips it on an empty selection.
-    if (outlinePass) this.composer.addPass(outlinePass.pass);
     this.composer.addPass(copyPass);
+    // ADR-536 — the outline is NOT a composer pass: it is composited after the scene
+    // render on every path (incl. the section-cut path that bypasses this composer),
+    // via renderOutlineOverlayToScreen(). Kept here only to drive size/camera/dispose.
   }
 
   onCameraActive(): void {
@@ -125,7 +124,7 @@ export class SSAOModulator {
   resize(width: number, height: number): void {
     this.composer.setSize(width, height);
     this.ssaoPass.setSize(width, height);
-    this.outlinePass?.setSize(width, height);
+    // ADR-536 — the outline mask RT auto-sizes per frame from the drawing buffer.
   }
 
   /** Emergency SSAO disable — called from scene-render-frame when composer throws. */
@@ -146,13 +145,15 @@ export class SSAOModulator {
   }
 
   /**
-   * ADR-536 — true when the selection silhouette has objects to draw, so the
-   * composer path must run (the outline must stay visible even during orbit,
-   * Cinema 4D / Revit-style). The raster fast-path is kept for the common
-   * no-selection navigation case where this returns false.
+   * ADR-536 — composite the selection silhouette onto the screen, ON TOP of whatever
+   * the current frame rendered (raster / SSAO / section caps). Caller invokes it AFTER
+   * the scene render. Syncs the outline camera to the live camera first. No-op without
+   * a selection.
    */
-  isOutlineActive(): boolean {
-    return this.outlinePass?.hasSelection() ?? false;
+  renderOutlineOverlayToScreen(): void {
+    if (!this.outlinePass) return;
+    this.outlinePass.setCamera(this.getCamera());
+    this.outlinePass.renderOverlayToScreen(this.composer.renderer);
   }
 
   /**
@@ -201,7 +202,6 @@ export class SSAOModulator {
     const isPerspective = camera instanceof THREE.PerspectiveCamera;
     this.renderPass.camera = camera;
     this.ssaoPass.camera = camera as THREE.PerspectiveCamera;
-    this.outlinePass?.setCamera(camera); // ADR-536 — keep outline camera in sync
     if (!isPerspective) this.ssaoPass.enabled = false;
     this.composer.render();
     // Safety: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during
@@ -215,9 +215,7 @@ export class SSAOModulator {
     this.cancelAnim();
     this.composer.dispose();
     this.ssaoPass.dispose();
-    // ADR-536 — EffectComposer.dispose() does not dispose user-added passes; the
-    // outline pass lives in this composer, so dispose it here (mirrors ssaoPass).
-    this.outlinePass?.dispose();
+    this.outlinePass?.dispose(); // ADR-536 — owned here (composited after the scene render).
   }
 
   private cancelAnim(): void {

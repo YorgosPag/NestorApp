@@ -1,77 +1,206 @@
 /**
- * SelectionOutlinePass — Cinema 4D / Revit-style silhouette outline for the
- * selected BIM entities. Thin wrapper around Three.js `OutlinePass`.
+ * SelectionOutlinePass — Cinema 4D / Revit / Unreal-style silhouette outline for
+ * the selected BIM entities, drawn with a fast, crisp **mask + dilate** technique
+ * (the approach the big real-time engines use — NOT the heavier OutlinePass).
  *
- * Draws ONLY the outer silhouette of the selected objects with a gold edge —
- * the body material is left UNTOUCHED (unlike the old emissive highlight that
- * painted the whole mesh). The pass lives inside `SSAOModulator`'s EffectComposer
- * (RenderPass → SSAOPass → OutlinePass → CopyPass) so the outline composites on
- * top of whatever the scene render produced.
+ * Per frame, with a selection:
+ *   1. Render ONLY the selected meshes (solid white, depth-less) into a mask RT —
+ *      a handful of objects, NOT the whole scene, NO depth re-render, NO blur.
+ *   2. One full-screen dilate pass draws a constant-width orange line just OUTSIDE
+ *      the silhouette (premultiplied "over" blend). The colour is a uniform, so it
+ *      never mixes with the scene behind it.
  *
- * `enabled` is driven by the selection: false when nothing is selected, so the
- * EffectComposer skips the pass entirely (zero cost on an empty selection).
+ * Why not OutlinePass: it re-rendered the ENTIRE scene's depth + ran 2 blur passes
+ * every frame → too slow at full-res on weaker GPUs, and noisy/unclear at half-res.
+ * This mask+dilate path is both faster (only selected objects) and crisper
+ * (full-res, exact pixel width). The body material is left UNTOUCHED.
+ *
+ * `renderOverlayToScreen()` is called AFTER the scene render on every interactive
+ * path (raster / SSAO-idle / section-cut), so the outline is identical everywhere.
  *
  * ADR-536. Replaces the emissive mechanism of ADR-366 A.1 (BimSelectionHighlighter).
  */
 
 import * as THREE from 'three';
-import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { BIM_SELECTION_OUTLINE_COLOR_THREE } from './selection-outline-tokens';
 
-// Cinema 4D-grade tuning: crisp, strong silhouette with a subtle glow, no pulse.
-const EDGE_STRENGTH = 4.0;
-const EDGE_THICKNESS = 1.5;
-const EDGE_GLOW = 0.3;
-/** Occluded portion of the silhouette, shown faintly (× the visible color). */
-const HIDDEN_EDGE_DIM = 0.25;
+/** Outline width in device pixels (exact, resolution-independent). */
+const OUTLINE_WIDTH_PX = 2.0;
+
+// sRGB components of the outline colour, passed RAW to the shader. A raw
+// ShaderMaterial does not apply the sRGB output transfer (unlike built-in
+// materials), and THREE.Color would convert the hex to LINEAR — both would
+// darken/desaturate the hue. Feeding the sRGB bytes directly displays the
+// exact authored orange on the (sRGB) canvas.
+const OUTLINE_COLOR_SRGB = new THREE.Vector3(
+  ((BIM_SELECTION_OUTLINE_COLOR_THREE >> 16) & 0xff) / 255,
+  ((BIM_SELECTION_OUTLINE_COLOR_THREE >> 8) & 0xff) / 255,
+  (BIM_SELECTION_OUTLINE_COLOR_THREE & 0xff) / 255,
+);
+
+const DILATE_VERTEX_SHADER = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+  }
+`;
+
+// Dilate: an outside pixel within uRadius of the white silhouette mask becomes a
+// solid constant-colour line. The colour is the uColor uniform (never the scene),
+// so the hue is identical regardless of what is behind it. Output is premultiplied
+// for the matching One / 1-SrcAlpha "over" blend.
+const DILATE_FRAGMENT_SHADER = /* glsl */ `
+  uniform sampler2D tMask;
+  uniform vec2 uTexel;
+  uniform vec3 uColor;
+  uniform float uRadius;
+  varying vec2 vUv;
+
+  const int DIRS = 8;
+  const int RINGS = 2;
+
+  void main() {
+    float center = texture2D( tMask, vUv ).r;
+    float maxN = 0.0;
+    for ( int r = 1; r <= RINGS; r++ ) {
+      float rr = uRadius * float( r ) / float( RINGS );
+      for ( int d = 0; d < DIRS; d++ ) {
+        float ang = ( float( d ) + 0.5 * float( r ) ) / float( DIRS ) * 6.2831853;
+        vec2 off = vec2( cos( ang ), sin( ang ) ) * rr * uTexel;
+        maxN = max( maxN, texture2D( tMask, vUv + off ).r );
+      }
+    }
+    float outside = 1.0 - smoothstep( 0.3, 0.7, center );
+    float near = smoothstep( 0.3, 0.7, maxN );
+    float a = outside * near;
+    gl_FragColor = vec4( uColor * a, a );
+  }
+`;
 
 export class SelectionOutlinePass {
-  private readonly _pass: OutlinePass;
+  private readonly _scene: THREE.Scene;
+  private _camera: THREE.Camera;
+  private _selected: THREE.Object3D[] = [];
 
-  constructor(resolution: THREE.Vector2, scene: THREE.Scene, camera: THREE.Camera) {
-    const pass = new OutlinePass(resolution, scene, camera, []);
-    pass.visibleEdgeColor.set(BIM_SELECTION_OUTLINE_COLOR_THREE);
-    pass.hiddenEdgeColor
-      .set(BIM_SELECTION_OUTLINE_COLOR_THREE)
-      .multiplyScalar(HIDDEN_EDGE_DIM);
-    pass.edgeStrength = EDGE_STRENGTH;
-    pass.edgeThickness = EDGE_THICKNESS;
-    pass.edgeGlow = EDGE_GLOW;
-    pass.pulsePeriod = 0; // static highlight (no breathing animation)
-    pass.enabled = false; // nothing selected initially
-    this._pass = pass;
+  private _maskRT: THREE.WebGLRenderTarget | null = null;
+  private readonly _maskMaterial: THREE.MeshBasicMaterial;
+  private _dilateQuad: FullScreenQuad | null = null;
+  private _dilateMaterial: THREE.ShaderMaterial | null = null;
+
+  private readonly _sizeVec = new THREE.Vector2();
+  private readonly _prevClearColor = new THREE.Color();
+
+  constructor(_resolution: THREE.Vector2, scene: THREE.Scene, camera: THREE.Camera) {
+    this._scene = scene;
+    this._camera = camera;
+    // Solid-white, depth-less, double-sided → the union of selected meshes forms a
+    // gap-free silhouette mask regardless of draw order or face winding.
+    this._maskMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false,
+    });
   }
 
-  /** The underlying pass — added to the EffectComposer chain by `SSAOModulator`. */
-  get pass(): OutlinePass {
-    return this._pass;
-  }
-
-  /**
-   * Set the silhouetted objects. Empty array disables the pass so the composer
-   * skips it (zero cost). A defensive copy is taken because OutlinePass mutates
-   * its `selectedObjects` reference internally (visibility cache).
-   */
+  /** Set the silhouetted objects (the meshes whose bimId is selected). */
   setSelected(objects: readonly THREE.Object3D[]): void {
-    this._pass.selectedObjects = objects.slice();
-    this._pass.enabled = objects.length > 0;
+    this._selected = objects.slice();
   }
 
-  /** True when there is an active silhouette to draw (drives composer routing). */
+  /** True when there is an active silhouette to draw. */
   hasSelection(): boolean {
-    return this._pass.enabled && this._pass.selectedObjects.length > 0;
+    return this._selected.length > 0;
+  }
+
+  /** The current silhouetted objects (read-only; used by tests + diagnostics). */
+  get selectedObjects(): readonly THREE.Object3D[] {
+    return this._selected;
   }
 
   /** Keep the outline camera in sync with the live viewport camera. */
   setCamera(camera: THREE.Camera): void {
-    this._pass.renderCamera = camera;
+    this._camera = camera;
   }
 
-  setSize(width: number, height: number): void {
-    this._pass.setSize(width, height);
+  /**
+   * ADR-536 — composite the selection silhouette onto the CURRENT framebuffer
+   * (screen), ON TOP of whatever the scene path rendered. No-op without a selection.
+   */
+  renderOverlayToScreen(renderer: THREE.WebGLRenderer): void {
+    if (this._selected.length === 0) return;
+    const size = renderer.getDrawingBufferSize(this._sizeVec);
+    const maskRT = this._ensureMaskTarget(size.x, size.y);
+    const prevTarget = renderer.getRenderTarget();
+    const prevAutoClear = renderer.autoClear;
+    renderer.getClearColor(this._prevClearColor);
+    const prevAlpha = renderer.getClearAlpha();
+
+    // 1. Render only the selected meshes as a solid-white silhouette mask.
+    renderer.setRenderTarget(maskRT);
+    renderer.setClearColor(0x000000, 1);
+    renderer.clear();
+    renderer.autoClear = false;
+    for (const obj of this._selected) {
+      if (!(obj instanceof THREE.Mesh)) continue;
+      const saved = obj.material;
+      obj.material = this._maskMaterial;
+      try {
+        renderer.render(obj, this._camera);
+      } finally {
+        obj.material = saved; // guarantee restore — a leaked white material is very visible
+      }
+    }
+
+    // 2. Dilate the mask into a constant-width orange line over the existing frame.
+    renderer.setRenderTarget(prevTarget);
+    this._ensureDilateQuad(maskRT.texture, size.x, size.y).render(renderer);
+
+    renderer.autoClear = prevAutoClear;
+    renderer.setClearColor(this._prevClearColor, prevAlpha);
+  }
+
+  private _ensureMaskTarget(w: number, h: number): THREE.WebGLRenderTarget {
+    if (!this._maskRT) {
+      this._maskRT = new THREE.WebGLRenderTarget(w, h);
+    } else if (this._maskRT.width !== w || this._maskRT.height !== h) {
+      this._maskRT.setSize(w, h);
+    }
+    return this._maskRT;
+  }
+
+  private _ensureDilateQuad(texture: THREE.Texture, w: number, h: number): FullScreenQuad {
+    if (!this._dilateMaterial) {
+      this._dilateMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          tMask: { value: texture },
+          uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
+          uColor: { value: OUTLINE_COLOR_SRGB.clone() },
+          uRadius: { value: OUTLINE_WIDTH_PX },
+        },
+        vertexShader: DILATE_VERTEX_SHADER,
+        fragmentShader: DILATE_FRAGMENT_SHADER,
+        transparent: true,
+        blending: THREE.CustomBlending,
+        blendEquation: THREE.AddEquation,
+        blendSrc: THREE.OneFactor,
+        blendDst: THREE.OneMinusSrcAlphaFactor,
+        depthTest: false,
+        depthWrite: false,
+      });
+    }
+    this._dilateMaterial.uniforms['tMask'].value = texture;
+    this._dilateMaterial.uniforms['uTexel'].value.set(1 / w, 1 / h);
+    if (!this._dilateQuad) this._dilateQuad = new FullScreenQuad(this._dilateMaterial);
+    return this._dilateQuad;
   }
 
   dispose(): void {
-    this._pass.dispose();
+    this._maskMaterial.dispose();
+    this._maskRT?.dispose();
+    this._dilateMaterial?.dispose();
+    this._dilateQuad?.dispose();
   }
 }
