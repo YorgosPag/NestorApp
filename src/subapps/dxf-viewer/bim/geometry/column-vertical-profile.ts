@@ -161,6 +161,17 @@ function classifyTopHosts(
   const framingTops: number[] = [];
   const coveringHosts: HostFootprintInput[] = [];
   for (const h of hosts) {
+    // ADR-529 §top-attach-fix — ένα ΔΟΚΑΡΙ πλαισιώνεται (frames-into) στον στύλο· δεν τον
+    // «καπακώνει» από πάνω. Ο στύλος (boundary element / κόμβος δοκού-στύλου) περνά τον κόμβο
+    // και φτάνει την ΑΝΩ παρειά του δοκαριού (beam-top) → ΠΑΝΤΑ framing, ΠΟΤΕ covering — ακόμη κι
+    // όταν το πόδι μιας προαχθείσας Γ (ADR-529) εκτείνεται γεωμετρικά κάτω από το δοκάρι
+    // (`hostUndersideAt(beam,corner)!==null`). Αλλιώς ΜΟΝΟ οι καλυπτόμενες κορυφές του ποδιού
+    // κόβονταν per-corner στο soffit → στρεβλή/βαθμιδωτή κορυφή (Giorgio 2026-06-27). Το soffit
+    // clip (covering) αφορά ΜΟΝΟ πλάκες/στέγες (μονολιθική πλακοδοκός T-beam, ADR-534).
+    if (h.hostType === 'beam') {
+      if (h.topsideZmm !== undefined) framingTops.push(h.topsideZmm);
+      continue;
+    }
     const covers = footprint.some((pt) => hostUndersideAt(h, pt) !== null);
     if (covers) coveringHosts.push(h);
     else if (h.topsideZmm !== undefined) framingTops.push(h.topsideZmm);

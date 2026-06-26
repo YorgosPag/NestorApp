@@ -40,11 +40,15 @@ function params(p: Partial<ColumnVerticalParams> = {}): ColumnVerticalParams {
   };
 }
 
-/** Host που καλύπτει ΟΛΟ το footprint (μεγάλο τετράγωνο). */
+/**
+ * Host που καλύπτει ΟΛΟ το footprint (μεγάλο τετράγωνο). Default `hostType:'slab'` —
+ * ADR-529 §top-attach-fix: ΜΟΝΟ πλάκες/στέγες είναι covering (κόβουν per-corner στο soffit)·
+ * ένα δοκάρι frames-into → πάντα framing. Τα beam-specific tests κάνουν `hostType:'beam'` override.
+ */
 function fullHost(id: string, p: Partial<HostFootprintInput> = {}): HostFootprintInput {
   return {
     hostId: id,
-    hostType: 'beam',
+    hostType: 'slab',
     footprint: [
       { x: -1000, y: -1000 },
       { x: 2000, y: -1000 },
@@ -56,11 +60,11 @@ function fullHost(id: string, p: Partial<HostFootprintInput> = {}): HostFootprin
   };
 }
 
-/** Host που καλύπτει μόνο τις γωνίες με x ≥ 200 (SE + NE). */
+/** Host που καλύπτει μόνο τις γωνίες με x ≥ 200 (SE + NE). Default `hostType:'slab'` (βλ. fullHost). */
 function halfHost(id: string, p: Partial<HostFootprintInput> = {}): HostFootprintInput {
   return {
     hostId: id,
-    hostType: 'beam',
+    hostType: 'slab',
     footprint: [
       { x: 200, y: -1000 },
       { x: 2000, y: -1000 },
@@ -236,6 +240,48 @@ describe('resolveColumnTopProfile — framing beam (column→beam attach)', () =
     // baseline 5000· s1 καλύπτει SE/NE (x≥200) → 4500· SW/NW μένουν 5000.
     expect(prof.cornerTopZmm).toEqual([5000, 4500, 4500, 5000]);
     expect(prof.hasAttach).toBe(true);
+  });
+});
+
+// ─── ADR-529 §top-attach-fix — δοκάρι frames-into, ΠΟΤΕ covering (Giorgio 2026-06-27) ──
+// Bug: η ΝΔ πάνω κορυφή του ποδιού μιας προαχθείσας Γ-κολώνας (ADR-529) «έπεφτε» κατά το ύψος
+// του δοκαριού (top→soffit). Αιτία: επειδή το πόδι εκτείνεται γεωμετρικά ΚΑΤΩ από το δοκάρι,
+// το δοκάρι ταξινομούνταν ως covering host → οι covered γωνίες κόβονταν per-corner στο soffit
+// → στρεβλή/βαθμιδωτή κορυφή. Σωστό: ο στύλος (κόμβος δοκού-στύλου) περνά τον κόμβο, φτάνει το
+// beam-top σε ΟΛΕΣ τις κορυφές. Το soffit-clip αφορά ΜΟΝΟ πλάκες/στέγες (T-beam, ADR-534).
+describe('resolveColumnTopProfile — δοκάρι frames-into ΠΟΤΕ covering (ADR-529 fix)', () => {
+  test('δοκάρι καλύπτει ΜΕΡΙΚΕΣ γωνίες (πόδι Γ κάτω από δοκάρι) → framing beam-top, ΟΧΙ σκαλωτό soffit', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([halfHost('b1', { hostType: 'beam', topsideZmm: 3000, undersideZmm: 2600 })]),
+    );
+    // Πριν το fix: [4000, 2600, 2600, 4000] (σκαλωτό — οι covered SE/NE έπεφταν στο soffit 2600).
+    // Τώρα: όλες οι γωνίες στο beam-top 3000 (ο στύλος περνά τον κόμβο δοκού-στύλου).
+    expect(prof.cornerTopZmm).toEqual([3000, 3000, 3000, 3000]);
+    expect(prof.maxTopZmm).toBe(3000);
+    expect(prof.minTopZmm).toBe(3000);
+    expect(prof.hasAttach).toBe(true);
+  });
+
+  test('δοκάρι καλύπτει ΟΛΕΣ τις γωνίες → επίσης framing beam-top (όχι soffit)', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([fullHost('b1', { hostType: 'beam', topsideZmm: 3000, undersideZmm: 2600 })]),
+    );
+    expect(prof.cornerTopZmm).toEqual([3000, 3000, 3000, 3000]);
+    expect(prof.hasAttach).toBe(true);
+  });
+
+  test('legacy δοκάρι χωρίς topsideZmm → δεν συνεισφέρει top (ούτε framing ούτε covering)', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1'], height: 2850 }),
+      FOOTPRINT,
+      ctxWith([halfHost('b1', { hostType: 'beam', undersideZmm: 2400 })]),
+    );
+    expect(prof.cornerTopZmm).toEqual([2850, 2850, 2850, 2850]);
+    expect(prof.hasAttach).toBe(false);
   });
 });
 
