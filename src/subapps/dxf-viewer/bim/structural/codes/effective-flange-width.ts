@@ -54,7 +54,8 @@ export interface EffectiveFlangeInput {
   /**
    * Πλήθος πλευρών με πέλμα: εσωτερική δοκός (πλάκα εκατέρωθεν) = **2** (T-beam)·
    * ακραία/περιμετρική (πλάκα μία πλευρά) = **1** (L-beam). Default 2 (μονολιθική
-   * πλάκα οροφής που καλύπτει — ADR-534). Edge/L auto-detection = DEFER.
+   * πλάκα οροφής που καλύπτει — ADR-534). Edge/L auto-detection: ADR-534 Φ3c-B2
+   * (`resolveFlangeSides` στο `beam-flange-context.ts`).
    */
   readonly flangeSides?: 1 | 2;
   /**

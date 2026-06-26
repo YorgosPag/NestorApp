@@ -1,5 +1,5 @@
 /**
- * ADR-534 Φ3b — beam T-beam flange detector tests (covering-slab → b_eff).
+ * ADR-534 Φ3b + Φ3c-B2 — beam T-/L-beam flange detector tests (covering-slab → b_eff).
  */
 
 import { resolveBeamEffectiveFlangeWidthMm } from '../beam-flange-context';
@@ -37,6 +37,22 @@ const coveringSlab: HostFootprintInput = {
   undersideZmm: 2800,
 };
 
+/**
+ * Περιμετρική πλάκα — καλύπτει τη δοκό + το εσωτερικό (y≥0) αλλά **όχι** την εξωτερική
+ * πλευρά (y<0). Edge/L-beam: το δείγμα στην εξωτερική πλευρά (y≈−75) μένει ακάλυπτο.
+ */
+const edgeSlab: HostFootprintInput = {
+  hostId: 'slab_edge',
+  hostType: 'slab',
+  footprint: [
+    { x: -100, y: 0 },
+    { x: 6100, y: 0 },
+    { x: 6100, y: 4000 },
+    { x: -100, y: 4000 },
+  ],
+  undersideZmm: 2800,
+};
+
 /** Πλάκα μακριά από τη δοκό (δεν την καλύπτει). */
 const farSlab: HostFootprintInput = {
   hostId: 'slab_far',
@@ -55,6 +71,12 @@ describe('resolveBeamEffectiveFlangeWidthMm (ADR-534 Φ3b)', () => {
     const bEff = resolveBeamEffectiveFlangeWidthMm(makeBeam(), [coveringSlab], 'simple');
     // l_0 = 6000; 0.2·l_0 = 1200; 300 + 2·1200 = 2700.
     expect(bEff).toBeCloseTo(2700, 6);
+  });
+
+  it('edge slab (covers one side of axis) → L-beam b_eff (b_w + 1·0.2·l_0)', () => {
+    const bEff = resolveBeamEffectiveFlangeWidthMm(makeBeam(), [edgeSlab], 'simple');
+    // flangeSides 1: l_0 = 6000; 0.2·l_0 = 1200; 300 + 1·1200 = 1500.
+    expect(bEff).toBeCloseTo(1500, 6);
   });
 
   it('continuous support shortens l_0 → smaller b_eff', () => {
