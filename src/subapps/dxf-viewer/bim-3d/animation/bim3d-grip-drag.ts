@@ -23,7 +23,8 @@ import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { reshapeGripsForFootprint } from '../grips/grip-3d-reshape-grips';
 import { commitGrip3DReshape } from '../grips/grip-3d-commit';
-import type { GripElevationMmFor } from '../grips/grip-mesh-factory-3d';
+import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
+import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 // ADR-535 Φ2/Φ3 — per-vertex top-surface elevation SSoT + building base resolver.
 // slab → slope plane (`slabTopZmmAt`); roof → lower-envelope (`roofZmm`).
 import { slabTopZmmAt } from '../../bim/geometry/slab-slope';
@@ -59,18 +60,19 @@ export function refreshReshapeGrips(
   bimType: string | null,
 ): void {
   if (entityIds.length !== 1 || !bimType || !RESHAPE_BIM_TYPES.has(bimType)) {
-    ctx.gripOverlay.setGrips([]);
+    useGrip3DOverlayStore.getState().clear();
     return;
   }
   const target = resolveEditEntities(ctx).find((t) => t.entityId === entityIds[0]);
   const box = findBimEntityWorldBox(ctx.manager.bimLayer.group, entityIds[0]);
   if (!target || !box) {
-    ctx.gripOverlay.setGrips([]);
+    useGrip3DOverlayStore.getState().clear();
     return;
   }
   const grips = reshapeGripsForFootprint(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
-  ctx.gripOverlay.setGrips(grips, gripElevationMmFor(bimType, entityIds[0], box.max.y));
-  ctx.gripOverlay.updateScale(ctx.manager.getCamera());
+  // ADR-535 Φ5 — push the grips + per-vertex elevation to the overlay store; the Canvas2D
+  // overlay RAF projects + paints them every frame (continuous zoom, no scene meshes).
+  useGrip3DOverlayStore.getState().setGrips(grips, gripElevationMmFor(bimType, entityIds[0], box.max.y));
 }
 
 /**
@@ -78,7 +80,7 @@ export function refreshReshapeGrips(
  * ride a per-vertex surface (slope / lower-envelope); floor-finish is a flat FFL plane so
  * the world AABB top (`fallbackWorldY`) is already exact (zero extra computation).
  */
-function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: number): GripElevationMmFor {
+function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: number): PlanElevationMmFor {
   if (bimType === 'slab') return slabGripElevationMmFor(entityId, fallbackWorldY);
   if (bimType === 'roof') return roofGripElevationMmFor(entityId, fallbackWorldY);
   // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top (the opening has no own Z).
@@ -94,12 +96,12 @@ function gripElevationMmFor(bimType: string, entityId: string, fallbackWorldY: n
  * slab from the SAME store the 3D mesh is built from (`Bim3DEntitiesStore`). Falls back to
  * the world AABB top (`fallbackWorldY`) when the slab is not in the store.
  */
-function slabGripElevationMmFor(slabId: string, fallbackWorldY: number): GripElevationMmFor {
+function slabGripElevationMmFor(slabId: string, fallbackWorldY: number): PlanElevationMmFor {
   const s = useBim3DEntitiesStore.getState();
   const slab = s.slabs.find((sl) => sl.id === slabId);
   if (!slab) return () => fallbackWorldY * 1000;
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
-  return (grip) => slabTopZmmAt(slab.params, { x: grip.position.x, y: grip.position.y }) + baseMm;
+  return (p) => slabTopZmmAt(slab.params, p) + baseMm;
 }
 
 /**
@@ -110,7 +112,7 @@ function slabGripElevationMmFor(slabId: string, fallbackWorldY: number): GripEle
  * on a sloped/gable edge rises with the roof. Falls back to the world AABB top (the ridge)
  * only when the roof is absent from the store.
  */
-function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): GripElevationMmFor {
+function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): PlanElevationMmFor {
   const s = useBim3DEntitiesStore.getState();
   const roof = s.roofs.find((r) => r.id === roofId);
   if (!roof) return () => fallbackWorldY * 1000;
@@ -118,7 +120,7 @@ function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): GripEle
   const verts = roof.params.outline.vertices;
   const scaleS = mmToSceneUnits(roof.params.sceneUnits ?? 'mm');
   const { planes } = resolveEavePlanes(verts, roof.params.edges, roof.params.slopeUnit);
-  return (grip) => roofZmm(planes, roof.params.basePivotZ, scaleS, { x: grip.position.x, y: grip.position.y }) + baseMm;
+  return (p) => roofZmm(planes, roof.params.basePivotZ, scaleS, p) + baseMm;
 }
 
 /**
@@ -129,12 +131,12 @@ function roofGripElevationMmFor(roofId: string, fallbackWorldY: number): GripEle
  * sit exactly on the slab top around the hole. Falls back to the world AABB top (the
  * opening's pick-mesh top) when the opening or its host slab is absent from the store.
  */
-function slabOpeningGripElevationMmFor(openingId: string, fallbackWorldY: number): GripElevationMmFor {
+function slabOpeningGripElevationMmFor(openingId: string, fallbackWorldY: number): PlanElevationMmFor {
   const slab = resolveSlabOpeningHostSlab(openingId);
   if (!slab) return () => fallbackWorldY * 1000;
   const s = useBim3DEntitiesStore.getState();
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
-  return (grip) => slabTopZmmAt(slab.params, { x: grip.position.x, y: grip.position.y }) + baseMm;
+  return (p) => slabTopZmmAt(slab.params, p) + baseMm;
 }
 
 /** Resolve the host SlabEntity for a slab-opening id (null when either is missing). */

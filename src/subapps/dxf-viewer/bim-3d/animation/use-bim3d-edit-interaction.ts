@@ -25,8 +25,9 @@ import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { BimGizmoOverlay, activeHandlesFor } from '../gizmo/bim-gizmo-overlay';
 import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 // ADR-535 — 3D per-vertex reshape grips (slab footprint), coexists with the gizmo.
-import { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
+// Φ5 — the grips are a Canvas2D overlay driven by `Grip3DOverlayStore` (no scene meshes).
 import { BimGripController3D } from '../grips/bim-grip-controller-3d';
+import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
 import { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
@@ -79,9 +80,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
 
     const overlay = new BimGizmoOverlay(manager.scene);
     const controller = new BimGizmoController(overlay);
-    // ADR-535 — 3D reshape-grip overlay + FSM (slab footprint per-vertex editing).
-    const gripOverlay = new BimGripOverlay3D(manager.scene);
-    const gripController = new BimGripController3D(gripOverlay);
+    // ADR-535 Φ5 — 3D reshape-grip FSM (screen-space). The grips render on the Canvas2D
+    // `BimGripOverlay2D` leaf (mounted in BimViewport3D) from the `Grip3DOverlayStore`.
+    // The BIM entity group occludes grips hidden behind geometry (pick parity with the draw).
+    const gripController = new BimGripController3D();
+    gripController.setOccluders(manager.bimLayer.group);
     const preview = new Bim3DEditLivePreview();
     // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
     const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);
@@ -96,7 +99,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       return resolveSnapLabelText(tRef.current, (type ?? '') as ExtendedSnapType, description);
     };
     const ctx: EditInteractionCtx = {
-      manager, canvasEl, overlay, controller, gripOverlay, gripController, preview,
+      manager, canvasEl, overlay, controller, gripController, preview,
       wallMoveDim, alignmentLine, snapLabel, moveReadout, resolveSnapLabel,
       getLevels: () => levelsRef.current,
     };
@@ -142,7 +145,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // host-aware re-host) owns it instead. Suppress the gizmo for a single opening.
       if (active && st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
-        gripOverlay.setGrips([]); // ADR-535 — no reshape grips for a hosted opening.
+        useGrip3DOverlayStore.getState().clear(); // ADR-535 — no reshape grips for a hosted opening.
         teardownListeners();
         manager.markSceneDirty();
         return;
@@ -160,11 +163,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
           refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
         } else {
           teardownListeners();
-          gripOverlay.setGrips([]);
+          useGrip3DOverlayStore.getState().clear();
         }
       } else {
         overlay.setVisible(false);
-        gripOverlay.setGrips([]); // ADR-535 — deselected → drop reshape grips.
+        useGrip3DOverlayStore.getState().clear(); // ADR-535 — deselected → drop reshape grips.
         teardownListeners();
       }
       manager.markSceneDirty();
@@ -205,7 +208,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // would re-show the confusing cube.
       if (st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
-        gripOverlay.setGrips([]);
+        useGrip3DOverlayStore.getState().clear();
         manager.markSceneDirty();
         return;
       }
@@ -224,7 +227,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       unsubEntities();
       teardownListeners();
       overlay.dispose();
-      gripOverlay.dispose(); // ADR-535 — drop the reshape-grip meshes.
+      useGrip3DOverlayStore.getState().clear(); // ADR-535 Φ5 — drop the reshape-grip overlay state.
       wallMoveDim.dispose();
       alignmentLine.dispose();
       snapLabel.dispose();

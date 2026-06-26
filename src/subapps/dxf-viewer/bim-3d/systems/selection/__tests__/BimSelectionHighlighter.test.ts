@@ -1,11 +1,16 @@
 /**
- * ADR-402 Phase C — BimSelectionHighlighter multi-select + diff.
- * Verifies it highlights an arbitrary set of bimIds and that a Shift+click toggle
- * (set diff) only restores the meshes that left the set, leaving the rest highlighted.
+ * ADR-536 — BimSelectionHighlighter silhouette mechanism.
+ * The highlighter now feeds the matching meshes into a `SelectionOutlinePass`
+ * (gold silhouette outline) and NEVER mutates mesh materials. Verifies the
+ * outline selection tracks an arbitrary set of bimIds, that the body materials
+ * are left untouched, and that onClear empties the outline.
+ *
+ * (Multi-select set behaviour is inherited from ADR-402 Phase C.)
  */
 
 import * as THREE from 'three';
 import { BimSelectionHighlighter } from '../BimSelectionHighlighter';
+import { SelectionOutlinePass } from '../SelectionOutlinePass';
 
 function mesh(bimId: string): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
@@ -13,54 +18,68 @@ function mesh(bimId: string): THREE.Mesh {
   return m;
 }
 
-function isHighlighted(m: THREE.Mesh): boolean {
-  const mat = m.material as THREE.MeshStandardMaterial;
-  return mat.emissiveIntensity === 0.3 && mat.emissive.getHex() === 0xffd700;
+function makeOutline(): SelectionOutlinePass {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  return new SelectionOutlinePass(new THREE.Vector2(800, 600), scene, camera);
 }
 
-describe('BimSelectionHighlighter — multi-select', () => {
-  it('highlights every mesh whose bimId is in the set', () => {
+describe('BimSelectionHighlighter — silhouette outline', () => {
+  it('outlines exactly the meshes whose bimId is in the set', () => {
     const group = new THREE.Group();
     const a = mesh('a');
     const b = mesh('b');
     const c = mesh('c');
     group.add(a, b, c);
-    const h = new BimSelectionHighlighter(group);
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
 
     h.onSelect(new Set(['a', 'b']));
 
-    expect(isHighlighted(a)).toBe(true);
-    expect(isHighlighted(b)).toBe(true);
-    expect(isHighlighted(c)).toBe(false);
+    expect(new Set(outline.pass.selectedObjects)).toEqual(new Set([a, b]));
+    expect(outline.pass.selectedObjects).not.toContain(c);
+    expect(outline.hasSelection()).toBe(true);
   });
 
-  it('diff: restores only meshes that left the set, keeps the rest highlighted', () => {
+  it('NEVER mutates the body materials (only the silhouette is drawn)', () => {
+    const group = new THREE.Group();
+    const a = mesh('a');
+    group.add(a);
+    const origMaterial = a.material;
+    const origEmissive = (a.material as THREE.MeshStandardMaterial).emissive.getHex();
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
+
+    h.onSelect(new Set(['a']));
+
+    expect(a.material).toBe(origMaterial); // same reference — no clone
+    expect((a.material as THREE.MeshStandardMaterial).emissive.getHex()).toBe(origEmissive);
+  });
+
+  it('updates the outline when the selection changes', () => {
     const group = new THREE.Group();
     const a = mesh('a');
     const b = mesh('b');
     group.add(a, b);
-    const origA = a.material;
-    const h = new BimSelectionHighlighter(group);
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
 
     h.onSelect(new Set(['a', 'b']));
-    const highlightedB = b.material; // clone applied on first select
     h.onSelect(new Set(['b'])); // drop 'a'
 
-    expect(a.material).toBe(origA); // restored original
-    expect(b.material).toBe(highlightedB); // untouched (no re-clone)
-    expect(isHighlighted(b)).toBe(true);
+    expect(new Set(outline.pass.selectedObjects)).toEqual(new Set([b]));
   });
 
-  it('onClear restores all originals', () => {
+  it('onClear empties the outline selection', () => {
     const group = new THREE.Group();
-    const a = mesh('a');
-    group.add(a);
-    const origA = a.material;
-    const h = new BimSelectionHighlighter(group);
+    group.add(mesh('a'));
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
 
     h.onSelect(new Set(['a']));
     h.onClear();
 
-    expect(a.material).toBe(origA);
+    expect(outline.pass.selectedObjects).toHaveLength(0);
+    expect(outline.hasSelection()).toBe(false);
   });
 });

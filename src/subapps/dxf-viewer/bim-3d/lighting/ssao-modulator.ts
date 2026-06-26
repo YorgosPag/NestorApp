@@ -5,6 +5,7 @@ import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/addons/shaders/CopyShader.js';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import type { SelectionOutlinePass } from '../systems/selection/SelectionOutlinePass';
 
 const SSAO_TRANSITION_MS = DXF_TIMING.animation.DEFAULT; // ADR-516
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
@@ -42,6 +43,8 @@ export class SSAOModulator {
   private readonly renderPass: RenderPass;
   private readonly getCamera: () => THREE.Camera;
   private readonly onNeedsRender: () => void;
+  /** ADR-536 — silhouette selection outline, composited inside this composer. */
+  private readonly outlinePass: SelectionOutlinePass | undefined;
   private animFrame: number | null = null;
   private warmedUp = false;
 
@@ -52,9 +55,11 @@ export class SSAOModulator {
     width: number,
     height: number,
     onNeedsRender: () => void = () => {},
+    outlinePass?: SelectionOutlinePass,
   ) {
     this.getCamera = getCamera;
     this.onNeedsRender = onNeedsRender;
+    this.outlinePass = outlinePass;
     const camera = getCamera();
 
     this.renderPass = new RenderPass(scene, camera);
@@ -77,6 +82,10 @@ export class SSAOModulator {
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.ssaoPass);
+    // ADR-536 — selection silhouette composites AFTER SSAO, BEFORE the final copy
+    // (so the gold outline overlays the SSAO-modulated scene). enabled only when
+    // there is a selection → EffectComposer skips it on an empty selection.
+    if (outlinePass) this.composer.addPass(outlinePass.pass);
     this.composer.addPass(copyPass);
   }
 
@@ -116,6 +125,7 @@ export class SSAOModulator {
   resize(width: number, height: number): void {
     this.composer.setSize(width, height);
     this.ssaoPass.setSize(width, height);
+    this.outlinePass?.setSize(width, height);
   }
 
   /** Emergency SSAO disable — called from scene-render-frame when composer throws. */
@@ -133,6 +143,16 @@ export class SSAOModulator {
   /** True when SSAO is on and the composer path must run this frame. */
   isSsaoActive(): boolean {
     return this.ssaoPass.enabled;
+  }
+
+  /**
+   * ADR-536 — true when the selection silhouette has objects to draw, so the
+   * composer path must run (the outline must stay visible even during orbit,
+   * Cinema 4D / Revit-style). The raster fast-path is kept for the common
+   * no-selection navigation case where this returns false.
+   */
+  isOutlineActive(): boolean {
+    return this.outlinePass?.hasSelection() ?? false;
   }
 
   /**
@@ -181,6 +201,7 @@ export class SSAOModulator {
     const isPerspective = camera instanceof THREE.PerspectiveCamera;
     this.renderPass.camera = camera;
     this.ssaoPass.camera = camera as THREE.PerspectiveCamera;
+    this.outlinePass?.setCamera(camera); // ADR-536 — keep outline camera in sync
     if (!isPerspective) this.ssaoPass.enabled = false;
     this.composer.render();
     // Safety: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during

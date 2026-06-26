@@ -1,72 +1,47 @@
 /**
- * BimSelectionHighlighter — material highlight for selected BIM meshes.
+ * BimSelectionHighlighter — silhouette outline highlight for selected BIM meshes.
  *
- * Clones materials before modifying — NEVER mutates originals.
- * Tracks cloned materials in a UUID→original map for safe restore.
- * Must be cleared before BimSceneLayer.sync() rebuilds the group
- * (old mesh refs die in clearGroup — stale UUIDs cause leaks).
+ * Cinema 4D / Revit-style: collects every mesh whose `userData.bimId` is in the
+ * selection and feeds them to a `SelectionOutlinePass` (gold silhouette outline).
+ * The mesh materials are NEVER touched — only the outer silhouette is drawn.
  *
- * ADR-366 A.1.
+ * (Previously this painted the whole body with emissive gold. ADR-536 replaced
+ * that mechanism with the OutlinePass silhouette; the `onSelect/onClear` API is
+ * preserved so callers in `scene-manager-actions.ts` stay unchanged.)
+ *
+ * Must be cleared before BimSceneLayer.sync() rebuilds the group (old mesh refs
+ * die in clearGroup — stale refs in the outline pass would leak / mis-render).
+ *
+ * ADR-366 A.1 / ADR-402 Phase C (multi-select) / ADR-536 (silhouette mechanism).
  */
 
 import * as THREE from 'three';
 import { dequal } from 'dequal';
-
-const HIGHLIGHT_EMISSIVE = new THREE.Color(0xffd700);
-const HIGHLIGHT_EMISSIVE_INTENSITY = 0.3;
+import type { SelectionOutlinePass } from './SelectionOutlinePass';
 
 export class BimSelectionHighlighter {
-  private readonly _originals = new Map<
-    string,
-    THREE.Material | THREE.Material[]
-  >();
   /** ADR-402 Phase C — the set of currently highlighted bimIds (multi-select). */
   private _currentBimIds = new Set<string>();
 
-  constructor(private readonly group: THREE.Group) {}
+  constructor(
+    private readonly group: THREE.Group,
+    private readonly outlinePass: SelectionOutlinePass,
+  ) {}
 
   /**
-   * Highlight exactly the given set of bimIds, diffing against the current set so
-   * a Shift+click toggle only touches the meshes that changed (no full re-traverse
-   * + re-clone of the whole selection on every click). ADR-402 Phase C.
+   * Outline exactly the given set of bimIds. Diffs against the current set so a
+   * repeated identical selection (e.g. a re-sync) is a no-op. On change it
+   * re-collects the matching meshes and hands them to the OutlinePass — cheap
+   * (collecting object refs, no material clone). ADR-402 Phase C / ADR-536.
    */
   onSelect(bimIds: ReadonlySet<string>): void {
     if (dequal(bimIds, this._currentBimIds)) return;
-
-    this.group.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      const bimId = obj.userData['bimId'] as string | undefined;
-      if (bimId === undefined) return;
-
-      const shouldHighlight = bimIds.has(bimId);
-      const isHighlighted = this._originals.has(obj.uuid);
-
-      if (shouldHighlight && !isHighlighted) {
-        this._originals.set(obj.uuid, obj.material);
-        obj.material = this._cloneWithHighlight(obj.material);
-      } else if (!shouldHighlight && isHighlighted) {
-        const orig = this._originals.get(obj.uuid);
-        if (orig !== undefined) {
-          this._disposeClone(obj.material);
-          obj.material = orig;
-          this._originals.delete(obj.uuid);
-        }
-      }
-    });
-
+    this.outlinePass.setSelected(this._collectMeshes(bimIds));
     this._currentBimIds = new Set(bimIds);
   }
 
   onClear(): void {
-    this.group.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      const orig = this._originals.get(obj.uuid);
-      if (orig === undefined) return;
-
-      this._disposeClone(obj.material);
-      obj.material = orig;
-    });
-    this._originals.clear();
+    this.outlinePass.setSelected([]);
     this._currentBimIds.clear();
   }
 
@@ -74,28 +49,14 @@ export class BimSelectionHighlighter {
     this.onClear();
   }
 
-  private _cloneWithHighlight(
-    mat: THREE.Material | THREE.Material[],
-  ): THREE.Material | THREE.Material[] {
-    if (Array.isArray(mat)) {
-      return mat.map((m) => this._applyHighlight(m.clone()));
-    }
-    return this._applyHighlight(mat.clone());
-  }
-
-  private _applyHighlight(mat: THREE.Material): THREE.Material {
-    if (mat instanceof THREE.MeshStandardMaterial) {
-      mat.emissive.copy(HIGHLIGHT_EMISSIVE);
-      mat.emissiveIntensity = HIGHLIGHT_EMISSIVE_INTENSITY;
-    }
-    return mat;
-  }
-
-  private _disposeClone(mat: THREE.Material | THREE.Material[]): void {
-    if (Array.isArray(mat)) {
-      for (const m of mat) m.dispose();
-    } else {
-      mat.dispose();
-    }
+  /** Every mesh under the group whose `userData.bimId` is in the set. */
+  private _collectMeshes(bimIds: ReadonlySet<string>): THREE.Object3D[] {
+    const meshes: THREE.Object3D[] = [];
+    this.group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const bimId = obj.userData['bimId'] as string | undefined;
+      if (bimId !== undefined && bimIds.has(bimId)) meshes.push(obj);
+    });
+    return meshes;
   }
 }

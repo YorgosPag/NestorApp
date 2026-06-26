@@ -517,6 +517,7 @@
 | **ADR-533** | DXF symbol → BIM opening detector (πόρτα/παράθυρο σε τοίχο) | ✅ APPROVED | 2026-06-25 | Uncategorized | [📄](./adrs/ADR-533-dxf-symbol-to-opening-detector.md) |
 | **ADR-534** | Αυτόματη πλάκα οροφής ανά φάτνωμα (auto-ceiling-slab per structural bay) | ✅ APPROVED | 2026-06-26 | Uncategorized | [📄](./adrs/ADR-534-auto-ceiling-slab-per-bay.md) |
 | **ADR-535** | Λαβές (grips) επεξεργασίας οντοτήτων στην 3D προβολή (slab pilot) | 🔬 RESEARCH | 2026-06-26 | Uncategorized | [📄](./adrs/ADR-535-3d-viewport-entity-grips.md) |
+| **ADR-536** | Cinema 4D / Revit-style selection silhouette outline στο BIM 3D viewport | ✅ APPROVED | 2026-06-26 | Uncategorized | [📄](./adrs/ADR-536-3d-selection-silhouette-outline.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

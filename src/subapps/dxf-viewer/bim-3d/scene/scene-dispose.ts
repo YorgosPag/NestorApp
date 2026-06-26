@@ -19,6 +19,7 @@ import type { EnvmapGenerator } from '../lighting/envmap-generator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { PerformanceCollector } from '../performance/PerformanceCollector';
 import type { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
+import type { SelectionOutlinePass } from '../systems/selection/SelectionOutlinePass';
 import type { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
@@ -42,6 +43,8 @@ export interface SceneManagerDisposeDeps {
   readonly envmapGenerator: EnvmapGenerator;
   readonly performanceCollector: PerformanceCollector;
   readonly selectionHighlighter: BimSelectionHighlighter;
+  /** ADR-536 — silhouette outline pass (disposed after the highlighter clears it). */
+  readonly selectionOutlinePass: SelectionOutlinePass;
   readonly bimLayer: BimSceneLayer;
   readonly dxfConverter: DxfToThreeConverter;
   readonly viewport: ViewportCamera;
@@ -67,6 +70,7 @@ export function disposeSceneManagerResources(deps: SceneManagerDisposeDeps): voi
   deps.envmapGenerator.dispose();
   deps.performanceCollector.dispose();
   deps.selectionHighlighter.dispose();
+  deps.selectionOutlinePass.dispose(); // ADR-536 — after highlighter clears its selection
   deps.bimLayer.dispose();
   deps.dxfConverter.dispose();
   deps.viewport.dispose();

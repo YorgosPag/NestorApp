@@ -47,6 +47,7 @@ import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-l
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
+import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
 import { isSceneDirtyFromState } from './scene-dirty-state';
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import {
@@ -118,7 +119,6 @@ export class ThreeJsSceneManager {
     this.hemi = lights.hemi;
     this.scene = createBimScene(lights);
     this.bimLayer = new BimSceneLayer(this.scene);
-    this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
     this.viewport = initViewportCamera({
       rendererDomElement: this.renderer.domElement,
@@ -145,6 +145,8 @@ export class ThreeJsSceneManager {
     this.pathTracerRenderer = subs.pathTracerRenderer;
     this.idleDetector = subs.idleDetector;
     this.performanceCollector = subs.performanceCollector;
+    // ADR-536 — highlighter feeds selected meshes into the outline pass (in the SSAO composer).
+    this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
@@ -254,22 +256,16 @@ export class ThreeJsSceneManager {
   /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
   getCamera(): THREE.Camera { return this.viewport.camera; }
 
-  // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (delegations to WaypointDragHandleRenderer) ──
+  // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (logic in scene-manager-waypoint) ──
   getWaypointHandlesRoot(): THREE.Group | null {
-    return this.disposed ? null : this.waypointDragHandleRenderer.getHandlesGroup();
+    return wpHandlesRoot(this.disposed, this.waypointDragHandleRenderer);
   }
-  setWaypointHoverState(role: 'position' | 'target' | null): void {
-    if (this.disposed) return;
-    this.waypointDragHandleRenderer.setHoverState(role); this.markSceneDirty();
-  }
-  setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void {
-    if (this.disposed) return;
-    this.waypointDragHandleRenderer.setAxisLockVisual(axis); this.markSceneDirty();
-  }
+  setWaypointHoverState(role: 'position' | 'target' | null): void { wpHoverState(this.disposed, this.waypointDragHandleRenderer, role, () => this.markSceneDirty()); }
+  setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void { wpAxisLock(this.disposed, this.waypointDragHandleRenderer, axis, () => this.markSceneDirty()); }
   pickWaypointAxisArrow(
     domElement: HTMLElement, camera: import('three').Camera, clientX: number, clientY: number,
   ): 'X' | 'Y' | 'Z' | null {
-    return this.disposed ? null : this.waypointDragHandleRenderer.pickAxisArrow(domElement, camera, clientX, clientY);
+    return wpPickAxisArrow(this.disposed, this.waypointDragHandleRenderer, domElement, camera, clientX, clientY);
   }
 
   /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */

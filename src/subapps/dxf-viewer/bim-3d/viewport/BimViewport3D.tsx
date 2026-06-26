@@ -24,6 +24,8 @@ import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
+// ADR-535 Φ5 — 3D reshape grips drawn as a Canvas2D overlay (one render code with the 2D canvas).
+import { BimGripOverlay2D } from './grips/BimGripOverlay2D';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
@@ -364,6 +366,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         role="presentation"
       />
       <CropRegionOverlay />
+      {/* ADR-535 Φ5 — 3D reshape grips: Canvas2D overlay over the WebGL viewport, drawn with
+          the SAME 2D UnifiedGripRenderer (identical size/shape/colour, continuous zoom). */}
+      <BimGripOverlay2D managerRef={managerRef} />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
         <TooltipTrigger asChild>

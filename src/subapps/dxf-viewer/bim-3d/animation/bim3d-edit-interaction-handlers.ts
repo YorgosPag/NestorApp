@@ -65,7 +65,6 @@ import type { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
 // ADR-363 — live move-distance readout (line base→current + distance label).
 import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
 // ADR-535 — 3D per-vertex reshape grips (slab footprint pilot).
-import type { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
 import type { BimGripController3D } from '../grips/bim-grip-controller-3d';
 // ADR-535 Φ1/Φ2 — reshape-grip (re)seat + live preview + commit (extracted, file-size N.7.1).
 import { refreshReshapeGrips, applyGripReshapePreview, commitGripReshape, resolveSlabOpeningHostSlabId } from './bim3d-grip-drag';
@@ -91,9 +90,7 @@ export interface EditInteractionCtx {
   readonly moveReadout: TempMoveReadoutOverlay;
   /** ADR-363 Φ1G.5 Slice 2i — localise a snap type+description into a label (React `t` SSoT). */
   readonly resolveSnapLabel: (type?: string, description?: string) => string;
-  /** ADR-535 — 3D per-vertex reshape grip overlay (slab footprint) — coexists with the gizmo. */
-  readonly gripOverlay: BimGripOverlay3D;
-  /** ADR-535 — 3D reshape-grip interaction FSM (hover/drag). */
+  /** ADR-535 — 3D reshape-grip interaction FSM (hover/drag, screen-space). */
   readonly gripController: BimGripController3D;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
@@ -321,10 +318,10 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
   // Idle hover + screen-constant scale (also keeps the gizmo sized during orbit-drag).
   if (!ctx.overlay.visible) return;
   const hoverChanged = ctx.controller.updateHover(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
-  // ADR-535 — grip hover highlight + keep the squares screen-constant during orbit.
+  // ADR-535 Φ5 — grip hover highlight (screen-space). The overlay RAF redraws the grips
+  // every frame from the live camera, so there is no per-grip screen-constant scale to keep.
   const gripHoverChanged = ctx.gripController.updateHover(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
   ctx.overlay.updateScale(ctx.manager.getCamera());
-  ctx.gripOverlay.updateScale(ctx.manager.getCamera());
   if (hoverChanged || gripHoverChanged) ctx.manager.markSceneDirty();
 }
 
@@ -415,7 +412,8 @@ export function onEditContextMenu(ctx: EditInteractionCtx, e: MouseEvent): void 
 export function onEditWheel(ctx: EditInteractionCtx): void {
   if (!ctx.overlay.visible || ctx.controller.isDragging()) return;
   ctx.overlay.updateScale(ctx.manager.getCamera());
-  ctx.gripOverlay.updateScale(ctx.manager.getCamera()); // ADR-535 — keep grips screen-constant.
+  // ADR-535 Φ5 — the grip overlay RAF reads the live camera each frame, so a zoom needs no
+  // explicit grip rescale here (continuous zoom replaced the old event-driven stepped scale).
   ctx.manager.markSceneDirty();
 }
 

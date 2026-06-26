@@ -69,8 +69,11 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
     }
   } else if (sectionController.isStencilActive()) {
     sectionController.renderFrameWithCaps(viewport.camera, interacting);
-  } else if (ssaoModulator.isSsaoActive()) {
-    // Camera settled → full composer pass with SSAO (Revit-style refine-on-idle).
+  } else if (ssaoModulator.isSsaoActive() || ssaoModulator.isOutlineActive()) {
+    // Composer path runs when EITHER: (a) camera settled → SSAO refine-on-idle
+    // (Revit-style), OR (b) there is a selection → the gold silhouette outline
+    // must stay visible even during orbit (Cinema 4D / Revit, ADR-536). During
+    // pure navigation SSAO is disabled, so the only cost is RenderPass + Outline.
     try {
       ssaoModulator.render();
     } catch (err) {
@@ -78,7 +81,7 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
       ssaoModulator.disableSSAO();
     }
   } else {
-    // Navigating (or pre-idle window) → direct raster, no post-FX. Skips the
+    // Navigating with no selection → direct raster, no post-FX. Skips the
     // composer FBO round-trip + program churn that caused zoom/orbit lag.
     ssaoModulator.renderRaster();
   }
