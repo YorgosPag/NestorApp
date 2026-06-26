@@ -26,6 +26,7 @@ import { computeStructuralHorizontalFinishFaces } from '../../bim/finishes/struc
 import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
 import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import type { SceneUnits } from '../../utils/scene-units';
 
 /**
@@ -69,6 +70,9 @@ export function syncStructuralFinishSkin(
   // rendered πυρήνα (`syncColumns`): storey-ceiling κολώνα → top = nextFloorElevationMm,
   // ΟΧΙ raw `params.height`. Έτσι σοβάς (silhouette + caps/soffit) = πυρήνας πάντα.
   const columnExtents = buildColumnVerticalExtents(entities, ctx);
+  // ADR-534 Φ3c-B3b — soffit top-clip ανά δοκό (ΙΔΙΑ SSoT με το ορατό στερεό): όπου μονολιθική
+  // πλάκα καλύπτει τη δοκό, η κορυφή του σοβά κόβεται στο soffit (μηδέν προεξοχή στην πλάκα).
+  const beamTopClipById = buildBeamTopClipById(entities);
   const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[]; walls: WallEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);
@@ -99,7 +103,7 @@ export function syncStructuralFinishSkin(
     if (r) groupFor(r.buildingId, r.baseElevation).walls.push(wall);
   }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents);
+    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById);
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
@@ -129,6 +133,26 @@ function buildColumnVerticalExtents(entities: Bim3DEntities, ctx: SyncContext): 
     nextFloorElevationMm: ctx.nextFloorElevationMm,
     resolveHostInput,
   });
+}
+
+/**
+ * ADR-534 Φ3c-B3b — `Map<beamId, clipZmm>` (building-relative mm) με το soffit top-clip κάθε
+ * δοκού που καλύπτεται από μονολιθική πλάκα οροφής. **FULL SSoT reuse** του ίδιου
+ * `resolveMemberTopClipZmm` + `buildCeilingSlabHosts` (§monolithic-cut) που κόβει το ορατό
+ * στερεό (B3a) — beamTop = `topElevation + zOffset`, ίδια τιμή. Entry μόνο όταν υπάρχει
+ * πραγματική κάλυψη (`clip < top`) → απών = πλήρες ύψος σοβά (byte-for-byte, μηδέν regression).
+ */
+function buildBeamTopClipById(entities: Bim3DEntities): ReadonlyMap<string, number> {
+  const map = new Map<string, number>();
+  const slabHosts = buildCeilingSlabHosts(entities.slabs);
+  if (slabHosts.length === 0) return map;
+  for (const beam of entities.beams) {
+    const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+    const footprint = beam.geometry.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+    const clip = resolveMemberTopClipZmm(footprint, beamTopMm, beamTopMm - beam.params.depth, slabHosts);
+    if (clip < beamTopMm) map.set(beam.id, clip);
+  }
+  return map;
 }
 
 /**

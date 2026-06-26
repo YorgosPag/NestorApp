@@ -149,10 +149,17 @@ function columnZExtent(
   return { zBotMm, zTopMm: zBotMm + column.params.height };
 }
 
-/** Κατακόρυφη έκταση δοκαριού (building-relative mm): κρέμεται depth κάτω από topElevation. */
-function beamZExtent(beam: SilhouetteBeamSource): { zBotMm: number; zTopMm: number } {
-  const zTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  return { zBotMm: zTopMm - beam.params.depth, zTopMm };
+/**
+ * Κατακόρυφη έκταση δοκαριού (building-relative mm): κρέμεται depth κάτω από topElevation.
+ *
+ * ADR-534 Φ3c-B3b — `topClipMm` (soffit καλύπτουσας πλάκας): η **κορυφή** του σοβά κόβεται
+ * στο soffit (ίδια τιμή με το ορατό στερεό/B3a → ο σοβάς δεν προεξέχει στην πλάκα). Η κάτω
+ * παρειά (downstand) μένει αγκυρωμένη στο πλήρες βάθος. `undefined` → πλήρες ύψος (byte-for-byte).
+ */
+function beamZExtent(beam: SilhouetteBeamSource, topClipMm?: number): { zBotMm: number; zTopMm: number } {
+  const zTopRawMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+  const zTopMm = topClipMm !== undefined ? Math.min(zTopRawMm, topClipMm) : zTopRawMm;
+  return { zBotMm: zTopRawMm - beam.params.depth, zTopMm };
 }
 
 /**
@@ -209,6 +216,12 @@ export function computeStructuralFinishSilhouette(
    * παραμένουν στις δικές τους z-bands.
    */
   dropPlanHiddenFaces = false,
+  /**
+   * ADR-534 Φ3c-B3b — pre-resolved soffit top-clip ανά δοκό (building-relative mm), ΙΔΙΑ SSoT με το
+   * ορατό στερεό (`resolveMemberTopClipZmm`): όπου μονολιθική πλάκα καλύπτει τη δοκό, η κορυφή του
+   * σοβά κόβεται στο soffit. Absent / χωρίς entry → πλήρες ύψος (2Δ plan & DXF export: undefined).
+   */
+  beamTopClipById?: ReadonlyMap<string, number>,
 ): SilhouetteBand[] {
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
@@ -216,7 +229,7 @@ export function computeStructuralFinishSilhouette(
     if (m) members.push(m);
   }
   for (const b of beams) {
-    const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b));
+    const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b, beamTopClipById?.get(b.id)));
     if (m) members.push(m);
   }
 
