@@ -28,6 +28,14 @@ jest.mock('../../converters/BimToThreeConverter', () => ({
 jest.mock('../../converters/StairToThreeConverter', () => ({
   stairToMeshes: (...a: unknown[]) => stairToMeshes(...a),
 }));
+// Derived structural-finish silhouette (ADR-449) is downstream GEOMETRY decoration that runs
+// inside sync() and reads full member footprints — out of scope for these visibility-resolver
+// unit tests (it does not call the category converters). Mock it to a no-op, exactly like the
+// converters above, so the test stays isolated to the visibility resolver and robust to geometry
+// changes. The silhouette has its own dedicated geometry tests.
+jest.mock('../bim-scene-structural-finish-sync', () => ({
+  syncStructuralFinishSkin: jest.fn(),
+}));
 jest.mock('../../../bim/utils/bim-floor-utils', () => ({
   resolveEntityBuilding: (...a: unknown[]) => resolveEntityBuilding(...a),
 }));
@@ -40,8 +48,9 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
-import { EMPTY_BIM_ENTITIES } from '../../stores/Bim3DEntitiesStore';
 import type { Bim3DEntities } from '../../stores/Bim3DEntitiesStore';
+// SSoT minimal-but-realistic fixtures shared with the other BimSceneLayer suites (N.0.2).
+import { makeMinimalBimEntities } from './minimal-bim-entities';
 import type { FloorVisMode } from '../../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../../utils/building-visibility-state';
 
@@ -80,18 +89,9 @@ function setBuildingResolution(map: Record<string, string>): void {
   });
 }
 
-function makeEntities(): Bim3DEntities {
-  return {
-    ...EMPTY_BIM_ENTITIES,
-    walls:        [{ id: 'w1', layerId: 'walls-layer' } as unknown as Bim3DEntities['walls'][number]],
-    columns:      [{ id: 'c1', layerId: 'cols-layer' } as unknown as Bim3DEntities['columns'][number]],
-    beams:        [{ id: 'b1', layerId: 'beams-layer' } as unknown as Bim3DEntities['beams'][number]],
-    slabs:        [{ id: 's1', layerId: 'slabs-layer' } as unknown as Bim3DEntities['slabs'][number]],
-    slabOpenings: [{ id: 'so1', layerId: 'so-layer', params: { slabId: 's1' } } as unknown as Bim3DEntities['slabOpenings'][number]],
-    openings:     [{ id: 'o1', layerId: 'op-layer', params: { wallId: 'w1' } } as unknown as Bim3DEntities['openings'][number]],
-    stairs:       [{ id: 'st1', layerId: 'stairs-layer' } as unknown as Bim3DEntities['stairs'][number]],
-  };
-}
+// Minimal-but-realistic entity set from the shared SSoT factory, WITH canonical layer ids
+// (`walls-layer`, `cols-layer`, …) so the Layer-source visibility tests can target them.
+const makeEntities = (): Bim3DEntities => makeMinimalBimEntities({ layerIds: true });
 
 const FAKE_MESH = (): THREE.Mesh => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
