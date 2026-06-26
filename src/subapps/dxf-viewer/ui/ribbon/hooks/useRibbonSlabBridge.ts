@@ -43,6 +43,7 @@ import {
 } from './bridge/slab-slope-param';
 import { slabSlopeUnitStore } from './bridge/slab-slope-unit';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { EventBus } from '../../../systems/events/EventBus';
 // ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
 // (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
@@ -176,9 +177,10 @@ export function useRibbonSlabBridge(
       const slab = resolveSlab();
       if (!slab) return null;
       if (isSlabRibbonStringKey(commandKey)) {
-        // ADR-534 Φ4 — soffitFinish = {materialId} object → expose materialId ('' = χωρίς finish).
+        // ADR-534 Φ4 — soffitFinish = {materialId} object → expose materialId. «Χωρίς finish»
+        // → SELECT_CLEAR_VALUE (Radix Select απαγορεύει value='', mirror του fireRating).
         if (commandKey === SLAB_RIBBON_KEYS.stringParams.soffitFinish) {
-          return { value: slab.params.soffitFinish?.materialId ?? '', options: [] };
+          return { value: slab.params.soffitFinish?.materialId ?? SELECT_CLEAR_VALUE, options: [] };
         }
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = slab.params[field];
@@ -210,10 +212,12 @@ export function useRibbonSlabBridge(
 
       if (isSlabRibbonStringKey(commandKey)) {
         // ADR-534 Φ4 — soffitFinish → {materialId} object (ή undefined για «χωρίς finish»).
+        // SELECT_CLEAR_VALUE / '' → undefined (mirror του fireRating round-trip).
         if (commandKey === SLAB_RIBBON_KEYS.stringParams.soffitFinish) {
+          const cleared = value === SELECT_CLEAR_VALUE || value === '';
           const nextParams: SlabParams = {
             ...slab.params,
-            soffitFinish: value ? { materialId: value as WallCoveringMaterialId } : undefined,
+            soffitFinish: cleared ? undefined : { materialId: value as WallCoveringMaterialId },
           };
           dispatchParams(slab, nextParams);
           return;

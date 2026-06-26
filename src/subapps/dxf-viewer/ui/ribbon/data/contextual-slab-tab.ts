@@ -24,6 +24,7 @@ import {
   SLAB_STRUCTURAL_VISIBILITY_KEYS,
 } from '../hooks/bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 // ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκα: option sentinels (SSoT, reused από τον resolver).
 import { SLOPE_ENABLED_ON, SLOPE_ENABLED_OFF } from '../hooks/bridge/slab-slope-param';
 import {
@@ -71,9 +72,11 @@ const SLAB_MATERIAL_OPTIONS = [
 ] as const;
 
 // ADR-534 Φ4 — φινίρισμα παρειάς οροφής (soffit finish). Curated subset του shared paint/plaster
-// catalog (μπογιές + σοβάς + σπατουλαριστό + γυψοσανίδα)· '' = χωρίς finish (raw σκυρόδεμα).
+// catalog (μπογιές + σοβάς + σπατουλαριστό + γυψοσανίδα)· SELECT_CLEAR_VALUE = χωρίς finish (raw
+// σκυρόδεμα). Radix Select απαγορεύει value='' (select.tsx guard) → χρησιμοποιούμε τον SSoT
+// sentinel «no selection», όπως το fireRating του slab-opening (contextual-slab-opening-tab.ts).
 const SOFFIT_FINISH_OPTIONS = [
-  { value: '',                    labelKey: 'ribbon.commands.slabEditor.soffitFinish.none', isLiteralLabel: false },
+  { value: SELECT_CLEAR_VALUE,    labelKey: 'ribbon.commands.slabEditor.soffitFinish.none', isLiteralLabel: false },
   { value: 'paint-white',         labelKey: 'wallCovering.materials.paintWhite',            isLiteralLabel: false },
   { value: 'paint-blue',          labelKey: 'wallCovering.materials.paintBlue',             isLiteralLabel: false },
   { value: 'paint-yellow',        labelKey: 'wallCovering.materials.paintYellow',           isLiteralLabel: false },

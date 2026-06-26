@@ -1261,6 +1261,7 @@
       "slabType": "Slab Type",
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
+      "slabSoffitFinish": "Ceiling finish",
       "slabSlope": "Slope",
       "slabActions": "Actions",
       "slabStructural": "Structural",
@@ -2681,6 +2682,12 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this slab? This action cannot be undone.",
+        "soffitFinish": {
+          "section": {
+            "title": "Ceiling finish"
+          },
+          "none": "None (concrete)"
+        },
         "kind": {
           "section": {
             "title": "Type"
@@ -4675,7 +4682,9 @@
       "paintRed": "Red paint",
       "paintGreen": "Green paint",
       "paintBlue": "Blue paint",
+      "paintYellow": "Yellow paint",
       "plasterTraditional": "Traditional plaster",
+      "plasterSpackle": "Spackle skim coat",
       "knaufGypsumBoard": "Gypsum board (Knauf)",
       "tileCeramic": "Ceramic tile",
       "adhesiveMortar": "Adhesive mortar"

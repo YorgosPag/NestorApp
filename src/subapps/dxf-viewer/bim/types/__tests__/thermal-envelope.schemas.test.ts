@@ -162,6 +162,18 @@ describe('entity param schemas — envelopeLayer/revealInsulation round-trip (.s
     expect(parsed.envelopeLayer).toEqual(Z2_LAYER);
   });
 
+  // ADR-534 Φ4 — το .strict() slab schema πρέπει να διατηρεί το soffitFinish (όχι να το σβήνει).
+  it('SlabParamsSchema διατηρεί soffitFinish (ceiling finish)', () => {
+    const params = {
+      kind: 'ceiling',
+      outline: { vertices: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }] },
+      levelElevation: 3000, thickness: 200, geometryType: 'box',
+      soffitFinish: { materialId: 'paint-blue' },
+    };
+    const parsed = SlabParamsSchema.parse(params);
+    expect(parsed.soffitFinish).toEqual({ materialId: 'paint-blue' });
+  });
+
   it('OpeningParamsSchema διατηρεί revealInsulation (Z4)', () => {
     const params = {
       kind: 'window', wallId: 'w1', offsetFromStart: 500,

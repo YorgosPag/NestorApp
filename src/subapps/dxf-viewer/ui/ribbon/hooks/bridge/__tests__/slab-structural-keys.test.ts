@@ -96,6 +96,25 @@ describe('resolveSlabPanelVisibility — RC gating (ADR-476 S4)', () => {
   });
 });
 
+describe('resolveSlabPanelVisibility — ceiling finish gating (ADR-534 Φ4)', () => {
+  const key = SLAB_STRUCTURAL_VISIBILITY_KEYS.ceilingFinish;
+  const withKind = (kind: SlabParams['kind']): SlabParams => ({ ...makeParams(), kind });
+
+  it('shows soffit-finish panel ONLY for ceiling slabs', () => {
+    expect(resolveSlabPanelVisibility(key, withKind('ceiling'))).toBe(true);
+    expect(resolveSlabPanelVisibility(key, withKind('floor'))).toBe(false);
+    expect(resolveSlabPanelVisibility(key, withKind('roof'))).toBe(false);
+  });
+
+  it('hides when no slab is selected (null params)', () => {
+    expect(resolveSlabPanelVisibility(key, null)).toBe(false);
+  });
+
+  it('ceilingFinish is a registered visibility key', () => {
+    expect(isSlabStructuralVisibilityKey(key)).toBe(true);
+  });
+});
+
 describe('slab reinforcement labels (ADR-476 S4)', () => {
   const mesh = (diameterMm: number, spacingMm: number) => ({ diameterMm, spacingMm });
   const r: SlabFoundationReinforcement = {
