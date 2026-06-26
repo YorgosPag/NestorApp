@@ -166,8 +166,17 @@ export class SSAOModulator {
    */
   renderRaster(): void {
     const camera = this.getCamera();
-    this.composer.renderer.setRenderTarget(null);
-    this.composer.renderer.render(this.renderPass.scene, camera);
+    const renderer = this.composer.renderer;
+    renderer.setRenderTarget(null);
+    // The EffectComposer leaves `renderer.autoClear = false` after it runs (it clears per-pass,
+    // not globally) — incl. the one-shot `warmUp()` on init. Without forcing it back on here, this
+    // direct raster pass NEVER clears the colour/depth buffer, so SEMI-TRANSPARENT overlays (the DXF
+    // floor-plan LineSegments, opacity 0.65) blend over their own previous frame every tick and
+    // accumulate to WHITE — while opaque geometry overwrites and stays correct. The section-cut
+    // path stayed correct because it sets `autoClear = true` itself. (Only bites weak GPUs, where
+    // SSAO never enables so EVERY settled frame also goes through here.)
+    renderer.autoClear = true;
+    renderer.render(this.renderPass.scene, camera);
     this.renderPass.scene.overrideMaterial = null;
   }
 
