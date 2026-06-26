@@ -88,65 +88,19 @@ export function cascadeBeamReframe(
 }
 
 /**
- * ADR-492 Φ2 — command-time SSoT για «transform → reframe → announce»: τρέχει τον cascade,
- * συγχωνεύει τα reframed δοκάρια με τα μετασχηματισμένα entities **ανά id** (το reframed
- * αντίγραφο νικά — όταν το ίδιο το δοκάρι μετασχηματίστηκε ΚΑΙ ξανα-κόπηκε, στέλνεται μία
- * φορά με την τελική framed γεωμετρία, ΟΧΙ διπλό) και εκπέμπει **ΕΝΑ** `bim:entities-moved`.
+ * ADR-492 Φ2 / ADR-540 — undo-side race-guard: εκπέμπει τα restored (snapshot) entities **ΠΡΙΝ**
+ * ο caller αγγίξει τη σκηνή, ώστε τα persistence hooks να τα μαρκάρουν dirty πριν φτάσει τυχόν
+ * ca9-reset Firestore snapshot (που ακόμη κρατά την transformed γεωμετρία και θα την ξανα-εφάρμοζε).
+ * No-op σε άδειο σύνολο.
  *
- * Αυτό είναι το «πότε» για τα `Rotate`/`Scale`/`Mirror`EntityCommand (execute/redo) και για
- * τα `Move*`Command (execute/redo) — ένας κοινός announce αντί για 4 ανά εντολή. Command-time,
- * **ΕΝΑ emit, μηδέν reactive re-trigger** (το μάθημα ADR-492: ΠΟΤΕ reactive effect που
- * re-emit-άρει geometry event μέσα σε proactive analysis cycle → freeze).
+ * Μένει εδώ (ΟΧΙ μέσα στο `reconcileAssociativeGeometry`) γιατί πρέπει να τρέξει ΠΡΙΝ το
+ * scene-restore: ο caller κάνει restore + reconcile **μετά**. Έτσι το restore emit μένει ΠΑΝΤΑ
+ * πρώτο και το reframed emit (από το reconcile) ξεχωριστό — μηδέν reactive loop (μάθημα ADR-492 §4).
  *
- * Το `bim:entities-moved` ανήκει ΚΑΙ στα `ORGANISM_EVENTS` ΚΑΙ στα `AUTO_DESIGN_EVENTS`, οπότε
- * ο ίδιος announce καλύπτει: per-entity Firestore persist (μη-επιλεγμένα reframed δοκάρια),
- * organism re-derive (M/V/N, στήριξη), auto-foundation designer + footing-follow.
- *
- * No-op (μηδέν emit) όταν δεν υπάρχει ούτε μετασχηματισμένο entity ούτε reframed δοκάρι.
- */
-export function reframeBeamsAndEmit(
-  transformedEntities: readonly SceneEntity[],
-  movedEntityIds: readonly string[],
-  sceneManager: CascadeSceneManager,
-): void {
-  const reframed = cascadeBeamReframe(movedEntityIds, sceneManager);
-  const byId = new Map<string, SceneEntity>();
-  for (const e of transformedEntities) byId.set(e.id, e);
-  // reframed νικά: το ξανα-κομμένο δοκάρι αντικαθιστά το (pre-reframe) μετασχηματισμένο.
-  for (const b of reframed) byId.set(b.id, b as unknown as SceneEntity);
-  if (byId.size === 0) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  EventBus.emit('bim:entities-moved', { movedEntities: [...byId.values()] as any });
-}
-
-/**
- * ADR-492 Φ2 — undo-side **first** half του race-guarded two-emit ordering: εκπέμπει τα restored
- * (snapshot) entities **ΠΡΙΝ** ο caller αγγίξει τη σκηνή, ώστε τα persistence hooks να τα μαρκάρουν
- * dirty πριν φτάσει τυχόν ca9-reset Firestore snapshot (που ακόμη κρατά την transformed γεωμετρία
- * και θα την ξανα-εφάρμοζε). No-op σε άδειο σύνολο.
- *
- * Ζεύγος με το `reframeBeamsAndEmitAfterRestore` (second half). Δύο helpers — ΟΧΙ ένας — γιατί
- * ανάμεσά τους ο caller κάνει το scene-restore + τον openings cascade (ο reframe χρειάζεται την
- * επαναφερμένη σκηνή). Έτσι το restore emit μένει ΠΑΝΤΑ πρώτο και το reframed emit ξεχωριστό
- * (μηδέν reactive loop — το μάθημα §4).
+ * @see bim/cascade/associative-geometry-reconcile.ts — `reconcileAssociativeGeometry` (το «μετά»)
  */
 export function emitRestoredEntities(restored: readonly SceneEntity[]): void {
   if (restored.length === 0) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   EventBus.emit('bim:entities-moved', { movedEntities: [...restored] as any });
-}
-
-/**
- * ADR-492 Φ2 — undo-side **second** half: reframe όλων των δοκαριών έναντι της ΕΠΑΝΑΦΕΡΜΕΝΗΣ
- * σκηνής + εκπομπή ΜΟΝΟ των reframed σε ξεχωριστό `bim:entities-moved` (το restore emit του
- * `emitRestoredEntities` πρέπει να έχει ήδη προηγηθεί). No-op όταν τίποτα δεν χρειάστηκε reframe.
- */
-export function reframeBeamsAndEmitAfterRestore(
-  movedEntityIds: readonly string[],
-  sceneManager: CascadeSceneManager,
-): void {
-  const reframed = cascadeBeamReframe(movedEntityIds, sceneManager);
-  if (reframed.length === 0) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  EventBus.emit('bim:entities-moved', { movedEntities: reframed as any });
 }

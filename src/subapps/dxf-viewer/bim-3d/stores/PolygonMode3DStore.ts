@@ -24,23 +24,31 @@ export interface SelectedFace3D {
 interface PolygonMode3DState {
   /** True όταν το Polygon Mode είναι ενεργό (κλικ → επιλογή όψης αντί entity). */
   readonly active: boolean;
+  /**
+   * Το solid πάνω στο οποίο είναι ανοιχτό το Polygon Mode. Ο slab converter το διαβάζει
+   * ώστε να render-άρει ΑΥΤΟ το solid faced (pickable όψεις) ακόμη κι αν δεν έχει βαφή —
+   * λύνει το chicken-and-egg (faced render ↔ faceAppearance). null όταν off.
+   */
+  readonly targetBimId: string | null;
   /** Η τρέχουσα επιλεγμένη όψη, ή null. */
   readonly selectedFace: SelectedFace3D | null;
-  /** Toggle του mode (καθαρίζει την επιλογή όψης όταν απενεργοποιείται). */
-  toggle(): void;
-  /** Ρητό set του active (καθαρίζει επιλογή όταν off). */
-  setActive(active: boolean): void;
+  /** Ρητό set του active + target solid (καθαρίζει επιλογή/target όταν off). */
+  setActive(active: boolean, bimId?: string | null): void;
   /** Set/clear της επιλεγμένης όψης. */
   selectFace(face: SelectedFace3D | null): void;
-  /** Πλήρες reset (off + καμία όψη). */
+  /** Πλήρες reset (off + κανένα target/όψη). */
   reset(): void;
 }
 
 export const usePolygonMode3DStore = create<PolygonMode3DState>((set) => ({
   active: false,
+  targetBimId: null,
   selectedFace: null,
-  toggle: () => set((s) => ({ active: !s.active, selectedFace: s.active ? null : s.selectedFace })),
-  setActive: (active) => set((s) => ({ active, selectedFace: active ? s.selectedFace : null })),
+  setActive: (active, bimId) => set((s) => ({
+    active,
+    targetBimId: active ? (bimId ?? s.targetBimId) : null,
+    selectedFace: active ? s.selectedFace : null,
+  })),
   selectFace: (face) => set({ selectedFace: face }),
-  reset: () => set({ active: false, selectedFace: null }),
+  reset: () => set({ active: false, targetBimId: null, selectedFace: null }),
 }));

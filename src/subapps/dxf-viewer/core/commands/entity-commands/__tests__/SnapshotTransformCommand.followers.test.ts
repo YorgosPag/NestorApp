@@ -23,26 +23,23 @@ jest.mock('../../../../bim/mep-segments/cascade-connected-pipes', () => ({
 jest.mock('../../../../bim/cascade/cascade-transformed-slab-openings', () => ({
   cascadeTransformedSlabOpenings: jest.fn(() => ({ moved: [], snapshots: [] })),
 }));
-jest.mock('../../../../bim/walls/wall-opening-coordinator', () => ({
-  cascadeHostedOpeningsForWalls: jest.fn(),
+// ADR-540 — the scene-derived reconcile (openings + beam-reframe + single emit) is now ONE SSoT.
+jest.mock('../../../../bim/cascade/associative-geometry-reconcile', () => ({
+  reconcileAssociativeGeometry: jest.fn(),
 }));
 jest.mock('../../../../bim/beams/beam-column-reframe-cascade', () => ({
-  reframeBeamsAndEmit: jest.fn(),
   emitRestoredEntities: jest.fn(),
-  reframeBeamsAndEmitAfterRestore: jest.fn(),
 }));
 
 import { SnapshotTransformCommand } from '../SnapshotTransformCommand';
 import { cascadeConnectedPipes } from '../../../../bim/mep-segments/cascade-connected-pipes';
 import { cascadeTransformedSlabOpenings } from '../../../../bim/cascade/cascade-transformed-slab-openings';
-import {
-  reframeBeamsAndEmit,
-  emitRestoredEntities,
-} from '../../../../bim/beams/beam-column-reframe-cascade';
+import { reconcileAssociativeGeometry } from '../../../../bim/cascade/associative-geometry-reconcile';
+import { emitRestoredEntities } from '../../../../bim/beams/beam-column-reframe-cascade';
 
 const mockPipes = cascadeConnectedPipes as jest.Mock;
 const mockSlab = cascadeTransformedSlabOpenings as jest.Mock;
-const mockReframe = reframeBeamsAndEmit as jest.Mock;
+const mockReconcile = reconcileAssociativeGeometry as jest.Mock;
 const mockEmitRestored = emitRestoredEntities as jest.Mock;
 
 function makeScene(initial: SceneEntity[]): {
@@ -76,7 +73,7 @@ class ShiftMep extends SnapshotTransformCommand {
 beforeEach(() => {
   mockPipes.mockReset().mockReturnValue({ moved: [], snapshots: [] });
   mockSlab.mockReset().mockReturnValue({ moved: [], snapshots: [] });
-  mockReframe.mockReset();
+  mockReconcile.mockReset();
   mockEmitRestored.mockReset();
 });
 
@@ -99,7 +96,7 @@ describe('SnapshotTransformCommand — follower self-cascade', () => {
     expect((slabCb as (e: SceneEntity) => unknown)(host('h', 0))).toEqual({ params: { x: 5 } });
   });
 
-  it('threads the moved followers into the single reframe/emit', () => {
+  it('threads the moved followers into the single reconcile announce', () => {
     const pipeMoved = { id: 'p1', type: 'mep-segment' } as unknown as SceneEntity;
     const openMoved = { id: 'o1', type: 'slab-opening' } as unknown as SceneEntity;
     mockPipes.mockReturnValue({ moved: [pipeMoved], snapshots: [] });
@@ -108,8 +105,9 @@ describe('SnapshotTransformCommand — follower self-cascade', () => {
 
     new ShiftMep(['h'], 5, sm).execute();
 
-    const [emitList] = mockReframe.mock.calls[0] as [SceneEntity[]];
-    expect(emitList.map((e) => e.id)).toEqual(expect.arrayContaining(['h', 'p1', 'o1']));
+    // ADR-540 — reconcile is called (entityIds, sm, { announceEntities }); the followers ride in announce.
+    const [, , opts] = mockReconcile.mock.calls[0] as [string[], ISceneManager, { announceEntities: SceneEntity[] }];
+    expect(opts.announceEntities.map((e) => e.id)).toEqual(expect.arrayContaining(['h', 'p1', 'o1']));
   });
 
   it('undo restores followers from snapshot and emits them first', () => {

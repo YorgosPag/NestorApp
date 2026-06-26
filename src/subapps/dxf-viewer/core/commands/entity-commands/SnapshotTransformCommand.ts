@@ -37,7 +37,7 @@
  * the 3D gizmo wrapper, and slab-openings never followed a transform.
  *
  * @see core/commands/entity-commands/MergeableUpdateCommand.ts — the params-family sibling base
- * @see bim/beams/beam-column-reframe-cascade — reframe/emit SSoT (reused, not duplicated)
+ * @see bim/cascade/associative-geometry-reconcile.ts — universal reconcile SSoT (ADR-540, reused)
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md §8
  */
 
@@ -46,15 +46,13 @@ import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { canMergeDragSamples, sameEntityIdSet } from '../merge-window';
 import { geometryFromSnapshot } from './snapshot-geometry';
-// ADR-363 §5.4 — recompute hosted openings against the transformed walls.
-import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
-// ADR-492 — reframe the beams that frame into the transformed columns/beams and announce
-// transformed + reframed in ONE `bim:entities-moved`. This whole family shares this SSoT.
-import {
-  reframeBeamsAndEmit,
-  emitRestoredEntities,
-  reframeBeamsAndEmitAfterRestore,
-} from '../../../bim/beams/beam-column-reframe-cascade';
+// ADR-540 — universal SSoT: after the transform lands, re-derive every scene-derived
+// dependent (openings → wall, beams → column faces) and announce transformed + followers +
+// reframed in ONE `bim:entities-moved`. Absorbs the former inline `cascadeHostedOpeningsForWalls`
+// + `reframeBeamsAndEmit` calls (which are now shared with the Update*Params family).
+import { reconcileAssociativeGeometry } from '../../../bim/cascade/associative-geometry-reconcile';
+// ADR-492 — undo race-guard: emit the restored snapshots FIRST (before the scene is mutated).
+import { emitRestoredEntities } from '../../../bim/beams/beam-column-reframe-cascade';
 // ADR-408 Φ-C / ADR-507 §8 — the associative followers of a transform live INSIDE the
 // command (Revit «connected ends move with the element»): pipes snapped to a transformed
 // MEP host/segment, and a transformed slab's independent-coord slab-openings. Both reuse
@@ -161,9 +159,11 @@ export abstract class SnapshotTransformCommand implements ICommand {
       // Followers retarget on the OLD host pose — run BEFORE the host patch lands.
       const followers = this.runForwardFollowerCascades();
       this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // ADR-492 — reframe + announce transformed hosts + followers + reframed in ONE emit.
-      reframeBeamsAndEmit([...transformed, ...followers], this.entityIds, this.sceneManager);
+      // ADR-540 — reconcile scene-derived dependents + announce transformed hosts + followers
+      // + reframed in ONE emit.
+      reconcileAssociativeGeometry(this.entityIds, this.sceneManager, {
+        announceEntities: [...transformed, ...followers],
+      });
     }
   }
 
@@ -188,9 +188,9 @@ export abstract class SnapshotTransformCommand implements ICommand {
     }
     this.sceneManager.updateEntities(updatesMap);
 
-    cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-    // ADR-492 — re-frame beams against the restored geometry; separate emit (restore stays first).
-    reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
+    // ADR-540 — reconcile scene-derived dependents against the restored geometry; no
+    // `announceEntities` → emits ONLY the re-derived members (the restore emit above stays first).
+    reconcileAssociativeGeometry(this.entityIds, this.sceneManager);
   }
 
   /** redo in-place: re-apply the patch from the snapshots (deterministic) + re-run followers. */
@@ -212,8 +212,10 @@ export abstract class SnapshotTransformCommand implements ICommand {
       // retarget identically to execute — run BEFORE the host patch lands.
       const followers = this.runForwardFollowerCascades();
       this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      reframeBeamsAndEmit([...transformed, ...followers], this.entityIds, this.sceneManager);
+      // ADR-540 — same reconcile + single emit as execute (scene is at pre-transform pose).
+      reconcileAssociativeGeometry(this.entityIds, this.sceneManager, {
+        announceEntities: [...transformed, ...followers],
+      });
     }
   }
 

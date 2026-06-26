@@ -7,9 +7,10 @@
  * σιωπηλά γεωμετρία) — την προαγωγή της σε **Γ/L** ώστε να αποκτήσει σκέλος προς το δοκάρι (boundary
  * element). Στο «Ναι» εκτελεί ΕΝΑ undoable `UpdateColumnParamsCommand` ανά κολόνα + emit
  * `bim:column-params-updated`· το weld το αναλαμβάνει ο `useStructuralAutoAttach` (μηδέν νέος κώδικας
- * ένωσης). **ADR-529 §reframe (2026-06-27):** αμέσως μετά, ξανα-πλαισιώνει το δοκάρι στη ΝΕΑ παρειά του
- * σκέλους (`reframeBeamEndpointsToColumns` SSoT + `UpdateBeamParamsCommand`) — command-time, ΟΧΙ reactive
- * (ADR-492 §4)· χωρίς αυτό το beam endpoint έμενε stale στην παλιά παρειά (λαβές ≠ ορατό cut άκρο).
+ * ένωσης). **ADR-540 (2026-06-27):** το reframe του δοκαριού στη ΝΕΑ παρειά του σκέλους γίνεται πλέον
+ * **αυτόματα** — το `UpdateColumnParamsCommand` τρέχει το universal `reconcileAssociativeGeometry` (base
+ * reconcile) → `cascadeBeamReframe`. Ο πρώην ad-hoc reframe block (ADR-529 §reframe) αφαιρέθηκε (ΕΝΑ undo
+ * step, μηδέν σκόρπιος κώδικας)· χωρίς αυτό το beam endpoint έμενε stale στην παλιά παρειά.
  *
  * **Detection + γεωμετρία ζουν στα SSoT modules** (`column-beam-promote-junction` + `column-beam-align`)·
  * εδώ μόνο event → confirm → command. **Re-detect στο execute-time** (μετά το confirm): το σύγχρονο weld/
@@ -27,11 +28,9 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateColumnParamsCommand } from '../core/commands/entity-commands/UpdateColumnParamsCommand';
-import { UpdateBeamParamsCommand } from '../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { detectColumnPromotionsForBeam, resyncPromotedBoundaryArmsForBeam } from '../bim/columns/column-beam-promote-junction';
-import { reframeBeamEndpointsToColumns } from '../bim/beams/beam-column-reframe';
 import { requestColumnPromoteConfirm } from '../bim/columns/column-promote-confirm-store';
-import { isBeamEntity, isColumnEntity } from '../types/entities';
+import { isBeamEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 
@@ -78,30 +77,15 @@ export function useColumnBeamPromote(props: { levelManager: LevelManagerLike }):
           levelManager.setLevelScene,
           freshLevelId,
         );
+        // ADR-540 — το reframe του προαχθέντος δοκαριού γίνεται **αυτόματα** πλέον: κάθε
+        // `UpdateColumnParamsCommand.execute()` τρέχει το universal `reconcileAssociativeGeometry`
+        // (μέσω `MergeableUpdateCommand` base) → `cascadeBeamReframe` ξανα-κόβει το δοκάρι στη ΝΕΑ
+        // παρειά της Γ + εκπέμπει `bim:entities-moved` (persist). Έτσι ο πρώην ad-hoc reframe block
+        // (ADR-529 §reframe, ξεχωριστό `UpdateBeamParamsCommand`) αφαιρέθηκε — ΕΝΑ undo step αντί δύο,
+        // μηδέν σκόρπιος κώδικας. Idempotent (από τη θέση της κολόνας) → αμετάβλητο δοκάρι = μηδέν churn.
         for (const p of fresh) {
           execute(new UpdateColumnParamsCommand(p.columnId, p.nextParams, p.previousParams, sm, false));
           EventBus.emit('bim:column-params-updated', { columnId: p.columnId });
-        }
-
-        // ADR-529 §reframe — μετά την προαγωγή το footprint της Γ μεγάλωσε (πόδι/σκέλος προς το
-        // δοκάρι) → η στηρίζουσα παρειά μετακινήθηκε. Το `BeamParams.endPoint` πρέπει να ξανα-κοπεί
-        // στη ΝΕΑ παρειά· αλλιώς μένει stale στην παλιά (= λαβές + αναλυτικό μήκος μέλους λάθος, μόνο
-        // ο ADR-458 cutback το κρύβει οπτικά → λαβές «σημείο 1» ≠ ορατό άκρο «σημείο 2», Giorgio
-        // 2026-06-27). Ο reframe cascade (ADR-492) τρέχει ΜΟΝΟ command-time μέσα στα transform commands,
-        // ΟΧΙ reactive στο `bim:column-params-updated` (ADR-492 §4: reactive reframe σε analysis cycle →
-        // freeze). Εδώ καλούμε τον ΙΔΙΟ pure SSoT (`reframeBeamEndpointsToColumns`) command-time μέσα στο
-        // promote handler (μετά τα promotion commands) → undoable `UpdateBeamParamsCommand`, μηδέν reactive
-        // loop. Idempotent (από τη θέση της κολόνας) → αμετάβλητο δοκάρι = null = μηδέν persist churn.
-        const afterScene = levelManager.getLevelScene(freshLevelId);
-        if (!afterScene) return;
-        const afterEntities = afterScene.entities as unknown as readonly Entity[];
-        const beamAfter = afterEntities.find((e) => e.id === created.id);
-        if (!beamAfter || !isBeamEntity(beamAfter)) return;
-        const reframed = reframeBeamEndpointsToColumns(beamAfter, afterEntities.filter(isColumnEntity));
-        if (reframed) {
-          const nextParams = { ...beamAfter.params, startPoint: reframed.startPoint, endPoint: reframed.endPoint };
-          execute(new UpdateBeamParamsCommand(created.id, nextParams, beamAfter.params, sm, false));
-          EventBus.emit('bim:beam-params-updated', { beamId: created.id });
         }
       })();
     });

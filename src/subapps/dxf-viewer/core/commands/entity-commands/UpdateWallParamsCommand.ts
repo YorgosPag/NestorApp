@@ -17,11 +17,6 @@ import type { ISceneManager } from '../interfaces';
 import type { WallGeometry, WallKind, WallParams } from '../../../bim/types/wall-types';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../../bim/validators/wall-validator';
-// ADR-363 §5.4 — hosted-opening cascade SSoT. After the wall geometry is
-// patched, every opening hosted on this wall is recomputed atomically so it
-// follows the wall (grip / endpoint / length-edit / ribbon / bulk all funnel
-// through this command). Same offsetFromStart, new wall → computeOpeningGeometry.
-import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 // ADR-412/414 — auto family-type policy (SSoT). A cross-section edit (thickness/dna)
 // must re-flow the AUTO link, otherwise «type always wins» (docToEntity) overwrites
 // the new params from the stale built-in on reload → the edit "doesn't save".
@@ -71,8 +66,9 @@ export class UpdateWallParamsCommand extends MergeableUpdateCommand<WallParams> 
       updates.typeOverrides = undefined;
     }
     this.sceneManager.updateEntity(this.entityId, updates);
-    // ADR-363 §5.4 — recompute hosted openings against the now-updated wall.
-    cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
+    // ADR-540 — hosted openings (+ any other scene-derived dependent) are recomputed against the
+    // now-updated wall by the `MergeableUpdateCommand` base reconcile (former inline
+    // `cascadeHostedOpeningsForWalls` call, now the universal SSoT).
   }
 
   protected withMergedPatch(nextPatch: WallParams): UpdateWallParamsCommand {

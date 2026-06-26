@@ -33,6 +33,12 @@
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { isWithinMergeWindow } from '../merge-window';
+// ADR-540 — universal associative reconcile. A params edit on a host (column/beam/foundation/
+// wall) re-derives its scene-derived dependents (openings → wall, beams → column faces) so their
+// grips never go stale. The transform family already reconciles; this base closes the gap for the
+// params family (the root of the «handles stale after promote / param edit» bug). Idempotent +
+// command-time (ΟΧΙ reactive) → μηδέν churn, μηδέν freeze (ADR-492 §4).
+import { reconcileAssociativeGeometry } from '../../../bim/cascade/associative-geometry-reconcile';
 
 export abstract class MergeableUpdateCommand<TPatch> implements ICommand {
   readonly id: string;
@@ -104,15 +110,21 @@ export abstract class MergeableUpdateCommand<TPatch> implements ICommand {
   execute(): void {
     this.applyPatch(this.patch);
     this.wasExecuted = true;
+    // ADR-540 — re-derive scene-derived dependents against the now-patched host.
+    reconcileAssociativeGeometry([this.entityId], this.sceneManager);
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     this.applyPatch(this.previousPatch);
+    // ADR-540 — re-derive dependents against the restored host (idempotent → previous geometry).
+    reconcileAssociativeGeometry([this.entityId], this.sceneManager);
   }
 
   redo(): void {
     this.applyPatch(this.patch);
+    // ADR-540 — re-derive dependents against the re-patched host.
+    reconcileAssociativeGeometry([this.entityId], this.sceneManager);
   }
 
   canMergeWith(other: ICommand): boolean {

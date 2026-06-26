@@ -31,6 +31,7 @@ import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-mat
 import { buildFacedPrism } from './bim-three-faced-prism';
 import { resolveFaceMaterial } from '../materials/face-appearance-material';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 
 const MM_TO_M = 0.001;
 
@@ -166,11 +167,16 @@ export function slabToMesh(
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const matId = slab.params.material ?? 'elem-slab';
-  // ADR-539 Φ1 — per-face appearance present → faced multi-material prism (no holes/slope,
-  // Φ2). Absent → legacy single-material extrude (byte-for-byte, zero regression).
+  // ADR-539 Φ1 — render faced (multi-material prism, pickable per-face) when EITHER the slab
+  // already carries a `faceAppearance` OR it is the live Polygon-Mode target (so its faces
+  // become pickable even before any paint — solves the chicken-and-egg). Otherwise the legacy
+  // single-material extrude (byte-for-byte, zero regression). Faced path: no holes/slope (Φ2).
   const fa = slab.faceAppearance;
-  const mesh = (fa && Object.keys(fa).length > 0)
-    ? buildFacedSlabBody(verts, thicknessM, fa)
+  const poly = usePolygonMode3DStore.getState();
+  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
+  const facedByPolygonTarget = poly.active && poly.targetBimId === slab.id;
+  const mesh = (facedByAppearance || facedByPolygonTarget)
+    ? buildFacedSlabBody(verts, thicknessM, fa ?? {})
     : buildLegacySlabBody(shape, thicknessM, slab.params);
   if (!mesh) return null;
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.

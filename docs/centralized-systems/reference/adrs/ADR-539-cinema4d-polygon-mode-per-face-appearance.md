@@ -129,6 +129,15 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ1 FIX — chicken-and-egg face picking, UNCOMMITTED)** — Bug (browser): σε **άβαφη** πλάκα
+  το κλικ σε όψη δεν φώτιζε, γιατί ο faced render (που δίνει `faceKeyByMaterialIndex` → pickable όψεις)
+  ήταν gated ΜΟΝΟ σε `faceAppearance` present· χωρίς βαφή → legacy single-material mesh → ο `raycastBimFace`
+  δεν επέστρεφε `faceKey`. **Fix:** ο slab renders faced ΚΑΙ όταν είναι ο live Polygon-Mode target
+  (`PolygonMode3DStore.targetBimId === slab.id`), με κενό appearance (ίδια εμφάνιση, αλλά pickable). Νέο
+  `targetBimId` στο store (set στο `setActive(active, bimId)`)· το toggle κάνει `resyncBimScene` (το
+  `bimLayer.sync()` = rebuild-all) ώστε η πλάκα να γίνει faced ↔ legacy. Αρχεία: `PolygonMode3DStore.ts`,
+  `bim-three-slab-converter.ts` (gate `facedByAppearance || facedByPolygonTarget`), `BimViewport3D.tsx`
+  (pass `selectedBimId` + resync σε toggle/auto-exit).
 - **2026-06-27 (Φ1 MVP IMPLEMENTED, UNCOMMITTED)** — Υλοποίηση per-face appearance για **slab**,
   click-to-apply. Νέα: `bim/types/face-appearance-types.ts` (FaceKey/FaceAppearance/FaceAppearanceMap),
   `bim-3d/converters/bim-three-faced-prism.ts` (`buildFacedPrism` → groups + `faceKeyByMaterialIndex`,
