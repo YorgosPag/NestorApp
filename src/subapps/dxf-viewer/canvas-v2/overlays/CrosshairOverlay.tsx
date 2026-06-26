@@ -43,6 +43,8 @@ import { toSnapIndicatorView, isSnapMarkerVisible } from '../../snapping/extende
 // ADR-513 — κρύψε το σταυρόνημα όταν ο κέρσορας μπαίνει στα πλήκτρα του «Δαχτυλιδιού Εντολών».
 import { isCrosshairSuppressed, subscribeCrosshairSuppression } from '../../systems/cursor/CrosshairSuppressionStore';
 import { getHoveredEntity, subscribeHoveredEntity, getHoveredOverlay, subscribeHoveredOverlay } from '../../systems/hover/HoverStore';
+// ADR-538 — the "+"/"−" badge text+colours are a shared SSoT (reused by the 3D viewport badge).
+import { resolveHoverBadge } from '../../systems/hover/hover-add-badge';
 import {
   computeArmLength,
   computeSegmentBoxes,
@@ -227,12 +229,15 @@ export default function CrosshairOverlay({
   const applyBadge = useCallback(() => {
     const badge = badgeRef.current;
     if (!badge) return;
-    const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
-    if (hoveredId) {
-      const add = !shiftHeldRef.current;
-      badge.textContent = add ? '+' : '−';
-      badge.style.color = add ? '#44FF88' : '#FF5555';
-      badge.style.backgroundColor = add ? '#0d2b0d' : '#2b0d0d';
+    // ADR-538 — text/colour decision via the shared SSoT (mirrors the 3D viewport badge).
+    const view = resolveHoverBadge(
+      hoveredEntityIdRef.current || hoveredOverlayIdRef.current,
+      shiftHeldRef.current,
+    );
+    if (view.visible) {
+      badge.textContent = view.text;
+      badge.style.color = view.color;
+      badge.style.backgroundColor = view.backgroundColor;
       badge.style.display = '';
     } else {
       badge.style.display = 'none';

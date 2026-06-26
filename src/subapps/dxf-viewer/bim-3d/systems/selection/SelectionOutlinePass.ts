@@ -23,21 +23,22 @@
 
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { BIM_SELECTION_OUTLINE_COLOR_THREE } from './selection-outline-tokens';
+import { BIM_SELECTION_OUTLINE_COLOR_THREE, BIM_HOVER_OUTLINE_COLOR_THREE } from './selection-outline-tokens';
 
 /** Outline width in device pixels (exact, resolution-independent). */
 const OUTLINE_WIDTH_PX = 2.0;
 
-// sRGB components of the outline colour, passed RAW to the shader. A raw
-// ShaderMaterial does not apply the sRGB output transfer (unlike built-in
-// materials), and THREE.Color would convert the hex to LINEAR — both would
-// darken/desaturate the hue. Feeding the sRGB bytes directly displays the
-// exact authored orange on the (sRGB) canvas.
-const OUTLINE_COLOR_SRGB = new THREE.Vector3(
-  ((BIM_SELECTION_OUTLINE_COLOR_THREE >> 16) & 0xff) / 255,
-  ((BIM_SELECTION_OUTLINE_COLOR_THREE >> 8) & 0xff) / 255,
-  (BIM_SELECTION_OUTLINE_COLOR_THREE & 0xff) / 255,
-);
+// sRGB components of an outline colour, passed RAW to the shader. A raw ShaderMaterial
+// does not apply the sRGB output transfer (unlike built-in materials), and THREE.Color
+// would convert the hex to LINEAR — both would darken/desaturate the hue. Feeding the
+// sRGB bytes directly displays the exact authored colour on the (sRGB) canvas.
+function srgbVec(hex: number): THREE.Vector3 {
+  return new THREE.Vector3(((hex >> 16) & 0xff) / 255, ((hex >> 8) & 0xff) / 255, (hex & 0xff) / 255);
+}
+
+const OUTLINE_COLOR_SRGB = srgbVec(BIM_SELECTION_OUTLINE_COLOR_THREE); // selection = gold
+// ADR-538 — hover = yellow (mirrors the 2D entity hover glow #FFFF00).
+const HOVER_COLOR_SRGB = srgbVec(BIM_HOVER_OUTLINE_COLOR_THREE);
 
 const DILATE_VERTEX_SHADER = /* glsl */ `
   varying vec2 vUv;
@@ -83,6 +84,9 @@ export class SelectionOutlinePass {
   private readonly _scene: THREE.Scene;
   private _camera: THREE.Camera;
   private _selected: THREE.Object3D[] = [];
+  // ADR-538 — the hovered meshes, drawn in a SECOND silhouette pass (yellow) within the
+  // same `renderOverlayToScreen`. Coexists with the selection silhouette (gold).
+  private _hover: THREE.Object3D[] = [];
 
   private _maskRT: THREE.WebGLRenderTarget | null = null;
   private readonly _maskMaterial: THREE.MeshBasicMaterial;
@@ -110,6 +114,11 @@ export class SelectionOutlinePass {
     this._selected = objects.slice();
   }
 
+  /** ADR-538 — set the HOVER silhouette objects (drawn yellow, alongside the selection). */
+  setHovered(objects: readonly THREE.Object3D[]): void {
+    this._hover = objects.slice();
+  }
+
   /** True when there is an active silhouette to draw. */
   hasSelection(): boolean {
     return this._selected.length > 0;
@@ -130,7 +139,7 @@ export class SelectionOutlinePass {
    * (screen), ON TOP of whatever the scene path rendered. No-op without a selection.
    */
   renderOverlayToScreen(renderer: THREE.WebGLRenderer): void {
-    if (this._selected.length === 0) return;
+    if (this._selected.length === 0 && this._hover.length === 0) return;
     const size = renderer.getDrawingBufferSize(this._sizeVec);
     const maskRT = this._ensureMaskTarget(size.x, size.y);
     const prevTarget = renderer.getRenderTarget();
@@ -138,12 +147,36 @@ export class SelectionOutlinePass {
     renderer.getClearColor(this._prevClearColor);
     const prevAlpha = renderer.getClearAlpha();
 
-    // 1. Render only the selected meshes as a solid-white silhouette mask.
+    // ADR-536 selection (gold) + ADR-538 hover (yellow): two independent silhouettes,
+    // each its own mask+dilate, sharing one RT. Selection drawn first so a hovered-AND-
+    // selected mesh (filtered out of the hover set upstream) keeps its gold outline.
+    this._renderSilhouette(renderer, this._selected, OUTLINE_COLOR_SRGB, maskRT, prevTarget, size);
+    this._renderSilhouette(renderer, this._hover, HOVER_COLOR_SRGB, maskRT, prevTarget, size);
+
+    renderer.autoClear = prevAutoClear;
+    renderer.setClearColor(this._prevClearColor, prevAlpha);
+  }
+
+  /**
+   * One silhouette: render `objects` as a solid-white mask, then dilate it into a
+   * constant-width `colorVec` line over the current frame. No-op for an empty set.
+   * Shared by the selection (gold) and hover (yellow) passes — ADR-536 / ADR-538.
+   */
+  private _renderSilhouette(
+    renderer: THREE.WebGLRenderer,
+    objects: readonly THREE.Object3D[],
+    colorVec: THREE.Vector3,
+    maskRT: THREE.WebGLRenderTarget,
+    prevTarget: THREE.WebGLRenderTarget | null,
+    size: THREE.Vector2,
+  ): void {
+    if (objects.length === 0) return;
+    // 1. Render only these meshes as a solid-white silhouette mask.
     renderer.setRenderTarget(maskRT);
     renderer.setClearColor(0x000000, 1);
     renderer.clear();
     renderer.autoClear = false;
-    for (const obj of this._selected) {
+    for (const obj of objects) {
       if (!(obj instanceof THREE.Mesh)) continue;
       const saved = obj.material;
       obj.material = this._maskMaterial;
@@ -153,13 +186,9 @@ export class SelectionOutlinePass {
         obj.material = saved; // guarantee restore — a leaked white material is very visible
       }
     }
-
-    // 2. Dilate the mask into a constant-width orange line over the existing frame.
+    // 2. Dilate the mask into a constant-width coloured line over the existing frame.
     renderer.setRenderTarget(prevTarget);
-    this._ensureDilateQuad(maskRT.texture, size.x, size.y).render(renderer);
-
-    renderer.autoClear = prevAutoClear;
-    renderer.setClearColor(this._prevClearColor, prevAlpha);
+    this._ensureDilateQuad(maskRT.texture, size.x, size.y, colorVec).render(renderer);
   }
 
   private _ensureMaskTarget(w: number, h: number): THREE.WebGLRenderTarget {
@@ -171,13 +200,13 @@ export class SelectionOutlinePass {
     return this._maskRT;
   }
 
-  private _ensureDilateQuad(texture: THREE.Texture, w: number, h: number): FullScreenQuad {
+  private _ensureDilateQuad(texture: THREE.Texture, w: number, h: number, colorVec: THREE.Vector3): FullScreenQuad {
     if (!this._dilateMaterial) {
       this._dilateMaterial = new THREE.ShaderMaterial({
         uniforms: {
           tMask: { value: texture },
           uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
-          uColor: { value: OUTLINE_COLOR_SRGB.clone() },
+          uColor: { value: colorVec.clone() },
           uRadius: { value: OUTLINE_WIDTH_PX },
         },
         vertexShader: DILATE_VERTEX_SHADER,
@@ -193,6 +222,8 @@ export class SelectionOutlinePass {
     }
     this._dilateMaterial.uniforms['tMask'].value = texture;
     this._dilateMaterial.uniforms['uTexel'].value.set(1 / w, 1 / h);
+    // ADR-538 — colour set per silhouette (selection gold vs hover yellow); one material reused.
+    this._dilateMaterial.uniforms['uColor'].value.copy(colorVec);
     if (!this._dilateQuad) this._dilateQuad = new FullScreenQuad(this._dilateMaterial);
     return this._dilateQuad;
   }

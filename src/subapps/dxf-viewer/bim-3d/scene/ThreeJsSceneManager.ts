@@ -72,6 +72,8 @@ export class ThreeJsSceneManager {
   readonly bimLayer: BimSceneLayer;
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
+  /** ADR-538 — YELLOW hover silhouette (same pass/machinery as selection). Driven by `applyBimHover`. */
+  readonly hoverHighlighter: BimSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
   private readonly sun: THREE.DirectionalLight;
@@ -147,6 +149,8 @@ export class ThreeJsSceneManager {
     this.performanceCollector = subs.performanceCollector;
     // ADR-536 — highlighter feeds the selected meshes into the silhouette outline.
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
+    // ADR-538 — hover highlighter → SAME pass, yellow silhouette (via `setHovered`).
+    this.hoverHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass, (p, o) => p.setHovered(o));
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
@@ -332,7 +336,7 @@ export class ThreeJsSceneManager {
   /** Shared sync deps (BIM layer + selection/focus/render subsystems). */
   private bimSyncDeps() {
     return { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
-      keyboardFocusManager: this.keyboardFocusManager,
+      hoverHighlighter: this.hoverHighlighter, keyboardFocusManager: this.keyboardFocusManager,
       pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController };
   }
 

@@ -28,6 +28,8 @@ import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaste
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
   readonly selectionHighlighter: BimSelectionHighlighter;
+  /** ADR-538 — hover silhouette highlighter; cleared on rebuild so no stale mesh ref renders. */
+  readonly hoverHighlighter: BimSelectionHighlighter;
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
   readonly pathTracerRenderer: PathTracerRenderer;
   readonly sectionController: SectionSceneController;
@@ -53,6 +55,7 @@ export function syncBimEntitiesIntoScene(
 ): void {
   const selectedIds = useSelection3DStore.getState().selectedBimIds;
   deps.selectionHighlighter.onClear();
+  deps.hoverHighlighter.onClear(); // ADR-538 — drop stale hovered mesh ref before rebuild
   // Phase 4.5: stale bimId refs die on rebuild — clear focus before new traversal.
   deps.keyboardFocusManager.clear();
   deps.bimLayer.sync(
@@ -95,6 +98,7 @@ export function syncMultiFloorBimEntitiesIntoScene(
 ): void {
   const selectedIds = useSelection3DStore.getState().selectedBimIds;
   deps.selectionHighlighter.onClear();
+  deps.hoverHighlighter.onClear(); // ADR-538 — drop stale hovered mesh ref before rebuild
   deps.keyboardFocusManager.clear();
   deps.bimLayer.syncMultiFloor(
     args.stack,
@@ -236,6 +240,17 @@ export function applyBimSelection(
   const ids = useSelection3DStore.getState().selectedBimIds;
   if (ids.length === 0) deps.selectionHighlighter.onClear();
   else deps.selectionHighlighter.onSelect(new Set(ids));
+}
+
+/**
+ * ADR-538 — drive the YELLOW hover silhouette: outline `bimId`, but NOT when it is already
+ * selected (it keeps its gold selection outline — same `!selected` rule as the 2D
+ * `determinePhase`). `null` clears. The hover sibling of {@link applyBimSelection}; the
+ * caller marks the scene dirty.
+ */
+export function applyBimHover(highlighter: BimSelectionHighlighter, bimId: string | null): void {
+  const selected = bimId !== null && useSelection3DStore.getState().selectedBimIds.includes(bimId);
+  highlighter.onSelect(bimId !== null && !selected ? new Set([bimId]) : new Set());
 }
 
 export async function loadHdriIntoStore(

@@ -23,9 +23,16 @@ export class BimSelectionHighlighter {
   /** ADR-402 Phase C — the set of currently highlighted bimIds (multi-select). */
   private _currentBimIds = new Set<string>();
 
+  /**
+   * @param apply — how to feed the collected meshes into the pass. Defaults to the
+   *   SELECTION silhouette (`setSelected`); a HOVER instance passes `setHovered` so the
+   *   SAME diff/collect machinery drives the yellow hover outline (ADR-538). One class.
+   */
   constructor(
     private readonly group: THREE.Group,
     private readonly outlinePass: SelectionOutlinePass,
+    private readonly apply: (pass: SelectionOutlinePass, objects: THREE.Object3D[]) => void =
+      (pass, objects) => pass.setSelected(objects),
   ) {}
 
   /**
@@ -36,12 +43,12 @@ export class BimSelectionHighlighter {
    */
   onSelect(bimIds: ReadonlySet<string>): void {
     if (dequal(bimIds, this._currentBimIds)) return;
-    this.outlinePass.setSelected(this._collectMeshes(bimIds));
+    this.apply(this.outlinePass, this._collectMeshes(bimIds));
     this._currentBimIds = new Set(bimIds);
   }
 
   onClear(): void {
-    this.outlinePass.setSelected([]);
+    this.apply(this.outlinePass, []);
     this._currentBimIds.clear();
   }
 

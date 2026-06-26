@@ -153,4 +153,48 @@ describe('reframeBeamEndpointsToColumns', () => {
     expect(r!.startPoint).toEqual({ x: 200, y: 0, z: 0 });
     expect(r!.endPoint).toEqual({ x: 3800, y: 0, z: 0 });
   });
+
+  // ─── ADR-529 §reframe — προαγωγή σε Γ → endpoint ακολουθεί τη ΝΕΑ παρειά (Giorgio 2026-06-27) ──
+  it('ADR-529: προαγωγή σε Γ → το άκρο ξανα-κόβεται στη ΝΕΑ (δυτική) παρειά του ποδιού (όχι stale)', () => {
+    // Σενάριο: το δοκάρι ήταν φλας στην ΠΑΛΙΑ δυτική παρειά της κολόνας (x=4000 = «σημείο 1»). Η
+    // προαγωγή σε Γ πρόσθεσε πόδι/σκέλος που εκτείνεται δυτικά (footprint min x=3600). Χωρίς reframe
+    // το endpoint μένει stale στο 4000 → λαβές «σημείο 1» ≠ ορατό cut άκρο «σημείο 2». Reframe → 3600.
+    const promotedGamma = {
+      id: 'cGamma', type: 'column', kind: 'L-shape',
+      params: { kind: 'L-shape', position: { x: 3900, y: 0, z: 0 }, sceneUnits: 'mm' },
+      geometry: {
+        footprint: {
+          vertices: [
+            // κύριο κατακόρυφο σκέλος x[4000,4200] y[-250,250] + πόδι x[3600,4000] y[-100,100]
+            { x: 4000, y: -250, z: 0 }, { x: 4200, y: -250, z: 0 }, { x: 4200, y: 250, z: 0 },
+            { x: 4000, y: 250, z: 0 }, { x: 4000, y: 100, z: 0 }, { x: 3600, y: 100, z: 0 },
+            { x: 3600, y: -100, z: 0 }, { x: 4000, y: -100, z: 0 },
+          ],
+        },
+      },
+    } as unknown as ColumnEntity;
+    const b = beam({ x: 0, y: 0 }, { x: 4000, y: 0 }); // φλας στην ΠΑΛΙΑ παρειά (σημείο 1)
+    const r = reframeBeamEndpointsToColumns(b, [column('c1', 0, 0, 200), promotedGamma]);
+    expect(r).not.toBeNull();
+    expect(r!.startPoint).toEqual({ x: 200, y: 0, z: 0 });
+    expect(r!.endPoint).toEqual({ x: 3600, y: 0, z: 0 }); // ΝΕΑ δυτική παρειά ποδιού (σημείο 2)
+  });
+
+  it('ADR-529: idempotent μετά την προαγωγή — άκρο ήδη στο 3600 → null (μηδέν churn/loop)', () => {
+    const promotedGamma = {
+      id: 'cGamma', type: 'column', kind: 'L-shape',
+      params: { kind: 'L-shape', position: { x: 3900, y: 0, z: 0 }, sceneUnits: 'mm' },
+      geometry: {
+        footprint: {
+          vertices: [
+            { x: 4000, y: -250, z: 0 }, { x: 4200, y: -250, z: 0 }, { x: 4200, y: 250, z: 0 },
+            { x: 4000, y: 250, z: 0 }, { x: 4000, y: 100, z: 0 }, { x: 3600, y: 100, z: 0 },
+            { x: 3600, y: -100, z: 0 }, { x: 4000, y: -100, z: 0 },
+          ],
+        },
+      },
+    } as unknown as ColumnEntity;
+    const b = beam({ x: 200, y: 0 }, { x: 3600, y: 0 }); // ήδη reframed
+    expect(reframeBeamEndpointsToColumns(b, [column('c1', 0, 0, 200), promotedGamma])).toBeNull();
+  });
 });

@@ -26,6 +26,9 @@ import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
 // ADR-535 Φ5 — 3D reshape grips drawn as a Canvas2D overlay (one render code with the 2D canvas).
 import { BimGripOverlay2D } from './grips/BimGripOverlay2D';
+// ADR-538 — 3D hover: DXF entity glow (Canvas2D, same 2D code) + the "+"/"−" hover badge.
+import { DxfHoverGlowOverlay2D } from './grips/DxfHoverGlowOverlay2D';
+import { HoverAddBadge3D } from './HoverAddBadge3D';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
@@ -38,10 +41,7 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DDxfEditInteraction } from '../animation/use-bim3d-dxf-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
-import { ClashMarkers3DOverlay } from '../coordination/ClashMarkers3DOverlay';
-import { ProposalGhost3DMount } from '../proposal/ProposalGhost3DMount';
-import { ColumnDiagram3DOverlay } from '../diagrams/ColumnDiagram3DOverlay';
-import { BeamDiagram3DOverlay } from '../diagrams/BeamDiagram3DOverlay';
+import { BimViewport3DProjectedOverlays } from './BimViewport3DProjectedOverlays';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -375,6 +375,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       {/* ADR-535 Φ5 — 3D reshape grips: Canvas2D overlay over the WebGL viewport, drawn with
           the SAME 2D UnifiedGripRenderer (identical size/shape/colour, continuous zoom). */}
       <BimGripOverlay2D managerRef={managerRef} />
+      {/* ADR-538 — hovered RAW DXF entity lights up with the EXACT 2D yellow glow (projected). */}
+      <DxfHoverGlowOverlay2D managerRef={managerRef} />
+      {/* ADR-538 — the "+"/"−" hover badge NE of the cursor (shared SSoT with the 2D crosshair). */}
+      <HoverAddBadge3D />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -400,18 +404,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
       <CutPlaneSlider3DLeaf />
 
-      {/* ADR-435 Slice 1b — 3D clash markers (DOM ⊙ projected via camera; same glyph as 2D). */}
-      <ClashMarkers3DOverlay managerRef={managerRef} />
-
-      {/* MEP auto-design 3D proposal ghost (SSoT twin of the 2D ProposalGhostOverlay). */}
-      <ProposalGhost3DMount managerRef={managerRef} />
-
-      {/* ADR-483 Slice 5 — 3D column M/V/N diagrams (κατακόρυφος άξονας· twin του 2Δ StructuralDiagramOverlay). */}
-      <ColumnDiagram3DOverlay managerRef={managerRef} />
-
-      {/* ADR-483 Slice 6 — 3D beam M/V/N diagrams (κάθετο επίπεδο ανοίγματος· δίδυμο των κολωνών). */}
-      <BeamDiagram3DOverlay managerRef={managerRef} />
-
+      {/* ADR-435/483 — camera-projected DOM overlays (clash + proposal ghost + M/V/N diagrams). */}
+      <BimViewport3DProjectedOverlays managerRef={managerRef} />
 
       {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}
       <Section2DPanel />

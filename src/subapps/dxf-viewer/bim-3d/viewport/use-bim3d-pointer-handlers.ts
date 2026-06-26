@@ -7,18 +7,23 @@
  * an entity (or sets the orbit pivot when Alt is held), leave clears the hover.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+// ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
+import { setHoveredEntity } from '../../systems/hover/HoverStore';
 import { pickDxfEntityAt } from '../grips/dxf-wireframe-hit-test';
+import { applyBimHover } from '../scene/scene-manager-actions';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
-const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516
+const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516 (popover reveal)
+// ADR-538 — hover-HIGHLIGHT pick throttle, mirror the 2D HOVER_HITTEST cadence (SSoT).
+const HOVER_HIGHLIGHT_THROTTLE_MS = DXF_TIMING.frame.HOVER_HITTEST;
 
 interface PointerHandlers {
   handleMouseMove: (e: ReactMouseEvent) => void;
@@ -30,9 +35,43 @@ export function useBim3DPointerHandlers(
   managerRef: RefObject<ThreeJsSceneManager | null>,
   debounceTimerRef: { current: ReturnType<typeof setTimeout> | null },
 ): PointerHandlers {
+  // ADR-538 — last hover-highlight pick timestamp (throttle, mirror 2D HOVER_HITTEST).
+  const hoverThrottleRef = useRef(0);
+
+  /**
+   * ADR-538 — resolve the entity under the cursor (BIM raycast, else raw-DXF plan pick)
+   * and drive the UNIFIED hover state: `HoverStore` (badge + DXF glow overlay + 2D parity)
+   * + the BIM yellow silhouette (`applyBimHover` on the hover highlighter). One pick, both.
+   */
+  const pickHover = useCallback((clientX: number, clientY: number): void => {
+    const manager = managerRef.current;
+    if (!manager) return;
+    const bimHit = manager.raycastBimEntities(clientX, clientY);
+    if (bimHit?.bimId) {
+      setHoveredEntity(bimHit.bimId);
+      applyBimHover(manager.hoverHighlighter, bimHit.bimId); // yellow 3D silhouette
+      manager.markSceneDirty();
+      return;
+    }
+    const camera = manager.getCamera();
+    const dom = manager.getRendererCanvas();
+    const dxfScene = useDxfOverlay3DStore.getState().dxfScene;
+    const dxfId = camera && dom ? pickDxfEntityAt(dxfScene, camera, dom, clientX, clientY) : null;
+    setHoveredEntity(dxfId); // DXF glow overlay + badge read this; null clears
+    applyBimHover(manager.hoverHighlighter, null);
+    manager.markSceneDirty();
+  }, [managerRef]);
+
   const handleMouseMove = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
+    // ADR-538 — throttled hover-highlight pick (instant, ~50ms) — separate from the
+    // popover's longer reveal debounce below.
+    const now = performance.now();
+    if (now - hoverThrottleRef.current >= HOVER_HIGHLIGHT_THROTTLE_MS) {
+      hoverThrottleRef.current = now;
+      pickHover(clientX, clientY);
+    }
     if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       debounceTimerRef.current = null;
@@ -94,7 +133,14 @@ export function useBim3DPointerHandlers(
       debounceTimerRef.current = null;
     }
     useQuickProperties3DStore.getState().clearHover();
-  }, [debounceTimerRef]);
+    // ADR-538 — leaving the viewport clears the hover highlight (badge + glow + silhouette).
+    setHoveredEntity(null);
+    const manager = managerRef.current;
+    if (manager) {
+      applyBimHover(manager.hoverHighlighter, null);
+      manager.markSceneDirty();
+    }
+  }, [debounceTimerRef, managerRef]);
 
   return { handleMouseMove, handleClick, handleMouseLeave };
 }
