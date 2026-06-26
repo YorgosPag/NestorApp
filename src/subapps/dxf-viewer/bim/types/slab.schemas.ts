@@ -116,6 +116,8 @@ const SlabParamsBaseSchema = z
     offsetFromStorey: z.number().finite().optional(),
     // ─── ADR-396 P7 — ETICS exposed-slab insulation layer (Z2 soffit / Z3 top)
     envelopeLayer: EnvelopeLayerSchema.optional(),
+    // ─── ADR-534 Φ4 — soffit finish (ceiling paint/plaster, references wall-covering catalog)
+    soffitFinish: z.object({ materialId: z.string().min(1) }).optional(),
   })
   .strict();
 

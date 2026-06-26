@@ -38,6 +38,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { SlabDna } from './slab-dna-types';
+import type { WallCoveringMaterialId } from './wall-covering-types';
 import type { SlabTypeParams } from './bim-family-type';
 import type { SlabFoundationReinforcement } from '../structural/reinforcement/slab-foundation-reinforcement-types';
 import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
@@ -76,6 +77,17 @@ export interface SlabSlope {
   readonly direction: number;
   readonly angle: number;
   readonly pivotEdge?: 'N' | 'S' | 'E' | 'W' | 'center';
+}
+
+/**
+ * ADR-534 Φ4 — **Φινίρισμα παρειάς οροφής** (soffit finish), Revit «Paint on face» / RCP.
+ * Non-structural βαφή/επίχρισμα στην ΚΑΤΩ παρειά μιας `kind='ceiling'` πλάκας (ανά φάτνωμα).
+ * Αποσυνδεδεμένο από το δομικό `dna`/`thickness` (το soffit finish ΔΕΝ είναι φέρουσα στρώση).
+ * `materialId` → **shared paint/plaster catalog SSoT** (`wall-covering-material-catalog`, ΙΔΙΟ
+ * με τους τοίχους). Absent ⇒ raw σκυρόδεμα (μηδέν finish).
+ */
+export interface SoffitFinish {
+  readonly materialId: WallCoveringMaterialId;
 }
 
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────
@@ -170,6 +182,11 @@ export interface SlabParams {
    * `thickness_m` σε ΜΕΤΡΑ (SSoT unit), όχι mm.
    */
   readonly envelopeLayer?: EnvelopeLayer;
+  /**
+   * ADR-534 Φ4 — Φινίρισμα κάτω παρειάς (soffit) για `kind='ceiling'` πλάκες (ανά φάτνωμα).
+   * Non-structural· δείχνει στο shared paint/plaster catalog. Absent ⇒ raw σκυρόδεμα.
+   */
+  readonly soffitFinish?: SoffitFinish;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

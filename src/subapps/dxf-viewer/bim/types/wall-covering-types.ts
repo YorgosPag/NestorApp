@@ -33,7 +33,9 @@ export type WallCoveringMaterialId =
   | 'paint-red'
   | 'paint-green'
   | 'paint-blue'
+  | 'paint-yellow'
   | 'plaster-traditional'
+  | 'plaster-spackle'
   | 'knauf-gypsum-board'
   | 'tile-ceramic'
   | 'adhesive-mortar';
@@ -43,7 +45,9 @@ export const WALL_COVERING_MATERIAL_IDS: readonly WallCoveringMaterialId[] = [
   'paint-red',
   'paint-green',
   'paint-blue',
+  'paint-yellow',
   'plaster-traditional',
+  'plaster-spackle',
   'knauf-gypsum-board',
   'tile-ceramic',
   'adhesive-mortar',
@@ -192,7 +196,7 @@ export function resolveWallCoveringKind(layers: readonly WallCoveringLayer[]): W
   for (const l of layers) {
     if (l.materialId === 'tile-ceramic') hasTiles = true;
     else if (l.materialId === 'knauf-gypsum-board') hasKnauf = true;
-    else if (l.materialId === 'plaster-traditional') hasPlaster = true;
+    else if (l.materialId.startsWith('plaster-')) hasPlaster = true;
     else if (l.materialId.startsWith('paint-')) hasPaint = true;
   }
   if (hasTiles) return 'tiles';

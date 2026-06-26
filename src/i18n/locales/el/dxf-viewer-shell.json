@@ -1261,6 +1261,7 @@
       "slabType": "Τύπος Πλάκας",
       "slabGeometry": "Γεωμετρία",
       "slabMaterial": "Υλικό",
+      "slabSoffitFinish": "Φινίρισμα οροφής",
       "slabSlope": "Κλίση",
       "slabActions": "Ενέργειες",
       "slabStructural": "Στατικά/Οπλισμός",
@@ -2681,6 +2682,12 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή πλάκας; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "soffitFinish": {
+          "section": {
+            "title": "Φινίρισμα οροφής"
+          },
+          "none": "Χωρίς (σκυρόδεμα)"
+        },
         "kind": {
           "section": {
             "title": "Τύπος"
@@ -4675,7 +4682,9 @@
       "paintRed": "Μπογιά κόκκινη",
       "paintGreen": "Μπογιά πράσινη",
       "paintBlue": "Μπογιά γαλάζια",
+      "paintYellow": "Μπογιά κίτρινη",
       "plasterTraditional": "Παραδοσιακός σοβάς",
+      "plasterSpackle": "Σπατουλαριστό",
       "knaufGypsumBoard": "Γυψοσανίδα (Knauf)",
       "tileCeramic": "Κεραμικό πλακίδιο",
       "adhesiveMortar": "Κόλλα"

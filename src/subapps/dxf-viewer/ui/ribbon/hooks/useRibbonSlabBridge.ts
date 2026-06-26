@@ -22,6 +22,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
+import type { WallCoveringMaterialId } from '../../../bim/types/wall-covering-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateSlabParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -175,6 +176,10 @@ export function useRibbonSlabBridge(
       const slab = resolveSlab();
       if (!slab) return null;
       if (isSlabRibbonStringKey(commandKey)) {
+        // ADR-534 Φ4 — soffitFinish = {materialId} object → expose materialId ('' = χωρίς finish).
+        if (commandKey === SLAB_RIBBON_KEYS.stringParams.soffitFinish) {
+          return { value: slab.params.soffitFinish?.materialId ?? '', options: [] };
+        }
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = slab.params[field];
         return raw == null ? null : { value: String(raw), options: [] };
@@ -204,6 +209,15 @@ export function useRibbonSlabBridge(
       if (!slab) return;
 
       if (isSlabRibbonStringKey(commandKey)) {
+        // ADR-534 Φ4 — soffitFinish → {materialId} object (ή undefined για «χωρίς finish»).
+        if (commandKey === SLAB_RIBBON_KEYS.stringParams.soffitFinish) {
+          const nextParams: SlabParams = {
+            ...slab.params,
+            soffitFinish: value ? { materialId: value as WallCoveringMaterialId } : undefined,
+          };
+          dispatchParams(slab, nextParams);
+          return;
+        }
         const field = STRING_KEY_TO_FIELD[commandKey];
         if (field === 'kind') {
           const nextParams: SlabParams = { ...slab.params, kind: value as SlabKind };

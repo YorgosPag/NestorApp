@@ -60,4 +60,39 @@ describe('ADR-534 ceiling slab — building outline (DXF + BIM combined)', () =>
     expect(r.ok).toBe(false);
     expect(r.reason).toBe('no-bays');
   });
+
+  // ─── ADR-534 Φ2 — υποδιαίρεση σε φατνώματα + per-bay πάχος ──────────────────────
+  const frame = [
+    beam('s', 0, 0, 12 * M, 0), beam('e', 12 * M, 0, 12 * M, 12 * M),
+    beam('n', 12 * M, 12 * M, 0, 12 * M), beam('w', 0, 12 * M, 0, 0),
+  ];
+
+  it('Φ2: σταυρός εσωτερικών δοκαριών → 4 φατνώματα (όχι 1 ενιαία)', () => {
+    const cross = [beam('iv', 6 * M, 0, 6 * M, 12 * M), beam('ih', 0, 6 * M, 12 * M, 6 * M)];
+    const r = buildCeilingSlabsFromStructure(ents([...frame, ...cross]), {}, 'lvl', 'mm');
+    expect(r.ok).toBe(true);
+    expect(r.slabs.length).toBe(4);
+    for (const sl of r.slabs) expect(sl.params.levelElevation).toBe(TOP); // κοινή κορυφή
+  });
+
+  it('Φ2: per-bay πάχος από span (callback) — μικρότερα φατνώματα → λεπτότερη πλάκα', () => {
+    const cross = [beam('iv', 4 * M, 0, 4 * M, 12 * M), beam('ih', 0, 6 * M, 12 * M, 6 * M)];
+    const r = buildCeilingSlabsFromStructure(
+      ents([...frame, ...cross]), {}, 'lvl', 'mm',
+      (bay) => (bay.spanMm < 5 * M ? 180 : 250),
+    );
+    expect(r.slabs.length).toBe(4);
+    const thicknesses = new Set(r.slabs.map((sl) => sl.params.thickness));
+    expect(thicknesses.size).toBeGreaterThanOrEqual(2); // 4m-στενά (180) vs 6m+ (250)
+    expect(thicknesses.has(180)).toBe(true);
+    expect(thicknesses.has(250)).toBe(true);
+  });
+
+  it('Φ2: εσωτερικό DXF χώρισμα (γραμμή) ΔΕΝ φτιάχνει φάτνωμα — μόνο δομικά μέλη', () => {
+    const r = buildCeilingSlabsFromStructure(
+      ents([...frame, line('part', 6 * M, 0, 6 * M, 12 * M)]), {}, 'lvl', 'mm',
+    );
+    expect(r.ok).toBe(true);
+    expect(r.slabs.length).toBe(1); // η DXF γραμμή δεν είναι κόπτης → 1 ενιαία
+  });
 });

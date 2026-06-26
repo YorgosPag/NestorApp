@@ -25,8 +25,13 @@ import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d
 // ADR-476 — 3Δ κλωβός οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω· κοινό SSoT με το 2Δ).
 import { buildSlabRebarCage } from './slab-rebar-3d';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+// ADR-534 Φ4 — soffit finish (ceiling): χρώμα από το shared paint/plaster catalog SSoT.
+import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-material-catalog';
 
 const MM_TO_M = 0.001;
+
+/** ADR-534 Φ4 — πάχος ορατής στρώσης φινιρίσματος οροφής στο 3D (mm). Non-structural. */
+const SOFFIT_FINISH_THICKNESS_MM = 10;
 
 // ADR-462 canonical-mm — plan vertices (outline/opening) are CANVAS UNITS (mm under
 // canonical-mm), NOT meters. Convert plan XY → Three.js world metres with `× sceneToM`
@@ -56,6 +61,42 @@ function attachSlabRebar(
   const group = new THREE.Group();
   group.add(composed);
   group.add(cage);
+  group.userData['bimId'] = slab.id;
+  group.userData['bimType'] = 'slab';
+  return group;
+}
+
+/**
+ * ADR-534 Φ4 — προσθέτει λεπτή στρώση φινιρίσματος στην κάτω παρειά (soffit) μιας ceiling πλάκας
+ * (Revit «Paint on face» / RCP). Κρέμεται κάτω από το soffit (top face στο soffit, μεγαλώνει προς
+ * τα κάτω) ώστε να φαίνεται από κάτω. Χρώμα από το shared paint/plaster catalog SSoT. No-op όταν
+ * δεν είναι ceiling ή δεν έχει `soffitFinish`. Mirror του `attachSlabRebar` (Mesh ↔ Group upgrade).
+ */
+function attachSoffitFinish(
+  composed: THREE.Mesh | THREE.Group,
+  slab: SlabEntity,
+  shape: THREE.Shape,
+  soffitY: number,
+): THREE.Mesh | THREE.Group {
+  if (slab.kind !== 'ceiling' || !slab.params.soffitFinish) return composed;
+  const ft = SOFFIT_FINISH_THICKNESS_MM * MM_TO_M;
+  const geo = extrudeAndRotate(shape, ft);
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(getWallCoveringColor(slab.params.soffitFinish.materialId)),
+    roughness: 0.92,
+    metalness: 0,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = soffitY - ft; // top face στο soffit, μεγαλώνει προς τα κάτω (ορατό από κάτω)
+  mesh.userData['bimId'] = slab.id;
+  mesh.userData['bimType'] = 'slab-soffit-finish';
+  if (composed instanceof THREE.Group) {
+    composed.add(mesh);
+    return composed;
+  }
+  const group = new THREE.Group();
+  group.add(composed);
+  group.add(mesh);
   group.userData['bimId'] = slab.id;
   group.userData['bimType'] = 'slab';
   return group;
@@ -102,7 +143,9 @@ export function slabToMesh(
   attachEdgesProjection(tagged, 'slab', 'common-edges');
   // ADR-470 — core gate: κρύβει το σώμα πλάκας αν ανενεργό (ο οπλισμός μένει ορατός).
   // ADR-476 — κλωβός σχάρας (κάτω+άνω) στην κάτω παρειά (mesh.position.y), gated `showReinforcement`.
-  return applyStructuralCoreVisibility3D(
+  const composed = applyStructuralCoreVisibility3D(
     attachSlabRebar(tagged, slab, mesh.position.y, levelId), tagged, slab,
   );
+  // ADR-534 Φ4 — soffit finish (ceiling): λεπτή χρωματιστή στρώση κάτω από το soffit (RCP/3D).
+  return attachSoffitFinish(composed, slab, shape, mesh.position.y);
 }

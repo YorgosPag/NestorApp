@@ -6,7 +6,7 @@
  */
 
 import { EUROCODE_PROVIDER } from '../../codes/eurocode-provider';
-import { suggestSlabThickness } from '../slab-sizing';
+import { suggestSlabThickness, suggestSupportedSlabThickness } from '../slab-sizing';
 import type { SlabFoundationSectionContext } from '../../codes/structural-code-types';
 
 function cantileverCtx(over: Partial<SlabFoundationSectionContext> = {}): SlabFoundationSectionContext {
@@ -53,5 +53,52 @@ describe('suggestSlabThickness — ADR-499', () => {
   it('clamp στο πρακτικό μέγιστο (1200mm) σε ακραίο πρόβολο', () => {
     const s = suggestSlabThickness(EUROCODE_PROVIDER, cantileverCtx({ cantileverSpanMm: 20000 }));
     expect(s!.thicknessMm).toBeLessThanOrEqual(1200);
+  });
+});
+
+// ─── ADR-534 Φ2 — supported (αμφιέρειστη/συνεχής) πλάκα οροφής ──────────────────
+function supportedCtx(over: Partial<SlabFoundationSectionContext> = {}): SlabFoundationSectionContext {
+  return {
+    widthMm: 4000, lengthMm: 4000, thicknessMm: 0, grossAreaMm2: 16e6,
+    kind: 'suspended', maxFreeSpanMm: 4000, supportType: 'simple',
+    ...over,
+  };
+}
+
+describe('suggestSupportedSlabThickness — ADR-534 Φ2', () => {
+  it('αμφιέρειστη 4m χωρίς φορτίο → 230mm (serviceability l/d=20)', () => {
+    const s = suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx());
+    expect(s).toBeDefined();
+    expect(s!.thicknessMm).toBe(230); // 4000/20 + 25 cover = 225 → module 10 → 230
+    expect(s!.governedBy).toBe('serviceability');
+  });
+
+  it('συνεχής (continuous, K=1.5) → λεπτότερη από αμφιέρειστη (l/d=30)', () => {
+    const simple = suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ supportType: 'simple' }));
+    const cont = suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ supportType: 'continuous' }));
+    expect(cont!.thicknessMm).toBeLessThan(simple!.thicknessMm);
+  });
+
+  it('μονότονο: μεγαλύτερο άνοιγμα → παχύτερη πλάκα', () => {
+    const small = suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ maxFreeSpanMm: 3000 }));
+    const big = suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ maxFreeSpanMm: 7000 }));
+    expect(big!.thicknessMm).toBeGreaterThan(small!.thicknessMm);
+  });
+
+  it('πρόβολος → undefined (περνά από το suggestSlabThickness)', () => {
+    const s = suggestSupportedSlabThickness(
+      EUROCODE_PROVIDER, supportedCtx({ supportType: 'cantilever', cantileverSpanMm: 3000 }),
+    );
+    expect(s).toBeUndefined();
+  });
+
+  it('μηδέν άνοιγμα / εδαφόπλακα → undefined', () => {
+    expect(suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ maxFreeSpanMm: 0 }))).toBeUndefined();
+    expect(suggestSupportedSlabThickness(EUROCODE_PROVIDER, supportedCtx({ kind: 'foundation' }))).toBeUndefined();
+  });
+
+  it('REGRESSION: suggestSlabThickness(simple ΜΕ maxFreeSpan) ΑΚΟΜΗ undefined — proactive auto-sizer άθικτος', () => {
+    // Ο πραγματικός ctx των floor slabs έχει maxFreeSpanMm > 0· ο proactive sizer ΔΕΝ τις πειράζει.
+    expect(suggestSlabThickness(EUROCODE_PROVIDER, supportedCtx({ supportType: 'simple' }))).toBeUndefined();
   });
 });

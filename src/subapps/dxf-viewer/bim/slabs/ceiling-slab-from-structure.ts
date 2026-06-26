@@ -19,8 +19,11 @@
  *
  * **Flush top:** `levelElevation = max(beam.topElevation)`.
  *
- * **DEFER:** υποδιαίρεση σε φατνώματα από **εσωτερικά** δοκάρια/τοιχία (τώρα → ΕΝΙΑΙΑ)· per-bay πάχος·
- * monolithic BOQ net + T-beam beff + soffit step· ceiling finishes.
+ * **Φ2 (ADR-534):** το ενιαίο περίγραμμα **υποδιαιρείται σε φατνώματα** από τους **άξονες των
+ * εσωτερικών δοκαριών** (location lines) + τις **κεντρικές γραμμές τοιχίων** (`subdivideIntoBays`).
+ * Κάθε φάτνωμα παίρνει **per-bay πάχος** (EC2 §7.4.2 l/d) μέσω του optional `bayThickness` callback.
+ *
+ * **DEFER:** monolithic BOQ net + T-beam beff + clip boundary-beam στο χαμηλότερο soffit· ceiling finishes.
  *
  * @see ../../systems/auto-area/auto-area-geometry.ts — findClosedPolygonsFromLines (room faces SSoT)
  * @see ../walls/wall-in-region.ts — extractLineSegments · ../walls/region-tolerance.ts — tol SSoT
@@ -33,7 +36,7 @@ import type { Pair, Polygon, Ring } from 'polygon-clipping';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
-import { isBeamEntity, isColumnEntity } from '../../types/entities';
+import { isBeamEntity, isColumnEntity, isWallEntity } from '../../types/entities';
 import type { SlabEntity } from '../types/slab-types';
 import type { BeamEntity } from '../types/beam-types';
 import {
@@ -47,14 +50,16 @@ import { resolveRegionLoopTolWorld } from '../walls/region-tolerance';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
+import { computeWallGeometry } from '../geometry/wall-geometry';
 import { polygonArea } from '../walls/perimeter-polygon-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { subdivideIntoBays, type CeilingBay } from './ceiling-bay-subdivision';
 
 export interface BuildCeilingSlabsResult {
   readonly ok: boolean;
   /** `no-bays` = δεν προέκυψε κλειστό περίγραμμα κτιρίου (ανύπαρκτα/ανοιχτά όρια). */
   readonly reason?: 'no-bays';
-  /** Οι πλάκες οροφής (`kind='ceiling'`, flush top) — συνήθως 1 ενιαία ανά κτίριο/component. */
+  /** Οι πλάκες οροφής (`kind='ceiling'`, flush top) — μία ανά φάτνωμα (Φ2), κοινή κορυφή. */
   readonly slabs: readonly SlabEntity[];
   /** Περιγράμματα που απορρίφθηκαν (πολύ μικρά / degenerate / slab validator). */
   readonly ignoredCount: number;
@@ -81,6 +86,31 @@ function addRingEdges(verts: readonly Point3D[] | undefined, out: [Point2D, Poin
     const b = verts[(i + 1) % verts.length];
     out.push([{ x: a.x, y: a.y }, { x: b.x, y: b.y }]);
   }
+}
+
+/** Πρόσθεσε τις ακμές μιας **ανοιχτής** πολυγραμμής (άξονας μέλους) ως segments (χωρίς wrap). */
+function addPolylineEdges(verts: readonly Point3D[] | undefined, out: [Point2D, Point2D][]): void {
+  if (!verts || verts.length < 2) return;
+  for (let i = 0; i < verts.length - 1; i++) {
+    const a = verts[i];
+    const b = verts[i + 1];
+    out.push([{ x: a.x, y: a.y }, { x: b.x, y: b.y }]);
+  }
+}
+
+/** Μάζεψε τους **κόπτες υποδιαίρεσης** (ADR-534 Φ2): άξονες δοκαριών (location lines) + κεντρικές
+ *  γραμμές τοιχίων. DXF γραμμές/τόξα ΔΕΝ μπαίνουν — μόνο δομικά μέλη χωρίζουν φατνώματα. */
+function collectBayCutters(entities: readonly Entity[]): [Point2D, Point2D][] {
+  const cutters: [Point2D, Point2D][] = [];
+  for (const b of entities.filter(isBeamEntity)) {
+    try { addPolylineEdges(computeBeamGeometry(b.params).axisPolyline.points, cutters); }
+    catch { /* skip degenerate beam */ }
+  }
+  for (const w of entities.filter(isWallEntity)) {
+    try { addPolylineEdges(computeWallGeometry(w.params).axisPolyline.points, cutters); }
+    catch { /* skip degenerate wall */ }
+  }
+  return cutters;
 }
 
 /** Καθάρισε διπλή κλείνουσα κορυφή (polygon-clipping) Ring → Point2D[]. */
@@ -114,55 +144,99 @@ function flushTopElevation(beams: readonly BeamEntity[]): number | undefined {
   return top > -Infinity ? top : undefined;
 }
 
+/** Per-master-region αποτέλεσμα: οι πλάκες-φατνώματα + πόσα φατνώματα απορρίφθηκαν. */
+interface RegionBaysResult { readonly slabs: SlabEntity[]; readonly ignored: number; }
+
 /**
- * Παράγει την **ενιαία πλάκα οροφής** (ανά building component) από το κλειστό περίγραμμα που σχηματίζουν
- * DXF γραμμές + δομικά μέλη (δοκάρια/κολόνες). Pure (ο caller persist-άρει μέσω command).
+ * Υποδιαίρεσε ΕΝΑ master region (outer ring κτιρίου) σε φατνώματα (ADR-534 Φ2) και φτιάξε
+ * μία πλάκα οροφής ανά φάτνωμα, με per-bay πάχος (αν δοθεί `bayThickness`). Κοινή κορυφή
+ * (`levelElevation`) → το πάχος επεκτείνεται προς τα κάτω (soffit step στη γραμμή του δοκαριού).
+ */
+function buildBaySlabsForRegion(
+  masterPts: readonly Point2D[],
+  cutters: readonly [Point2D, Point2D][],
+  ctx: { overrides: SlabParamOverrides; layerId: string; sceneUnits: SceneUnits; mergeTol: number },
+  levelElevation: number | undefined,
+  bayThickness: ((bay: CeilingBay) => number | undefined) | undefined,
+): RegionBaysResult {
+  const slabs: SlabEntity[] = [];
+  let ignored = 0;
+  const bays = subdivideIntoBays(masterPts, cutters, ctx.mergeTol, ctx.sceneUnits);
+  for (const bay of bays) {
+    const thickness = bayThickness?.(bay);
+    const result = completeSlabFromPolygonClicks(
+      bay.ring,
+      ctx.layerId,
+      {
+        ...ctx.overrides,
+        kind: 'ceiling',
+        ...(levelElevation !== undefined ? { levelElevation } : {}),
+        ...(thickness !== undefined ? { thickness } : {}),
+      },
+      ctx.sceneUnits,
+    );
+    if (result.ok) slabs.push(result.entity);
+    else ignored++;
+  }
+  return { slabs, ignored };
+}
+
+/**
+ * Βήματα 1-3: ΕΝΑ γράφημα ακμών (DXF γραμμές + ΑΚΜΕΣ δοκαριών/κολόνων) → planar faces (gap-bridging
+ * πορτών) → `safeUnion` = **ενιαίο/-α περίγραμμα κτιρίου** (διαλύονται εσωτερικά χωρίσματα + τόξα + οι
+ * ακμές μελών· η πλάκα καλύπτει & τα δομικά μέλη — μονολιθικά). `null` αν τίποτα δεν κλείνει.
+ */
+function buildBuildingOutline(
+  entities: readonly Entity[],
+  sceneUnits: SceneUnits,
+): { union: Polygon[]; mergeTol: number; s: number } | null {
+  const segments: [Point2D, Point2D][] = extractLineSegments(entities, { tessellateCurves: true }).map(
+    (sg) => [sg.start, sg.end] as [Point2D, Point2D],
+  );
+  for (const b of entities.filter(isBeamEntity)) {
+    try { addRingEdges(computeBeamGeometry(b.params).outline.vertices, segments); }
+    catch { /* skip degenerate beam */ }
+  }
+  for (const c of entities.filter(isColumnEntity)) {
+    try { addRingEdges(computeColumnGeometry(c.params).footprint.vertices, segments); }
+    catch { /* skip degenerate column */ }
+  }
+  const mergeTol = resolveRegionLoopTolWorld(sceneUnits);
+  const s = mmToSceneUnits(sceneUnits);
+  const faces = findClosedPolygonsFromLines(segments, mergeTol, ROOM_GAP_BRIDGE_MM * s);
+  if (faces.length === 0) return null;
+  const polys: Polygon[] = faces
+    .filter((f) => f.length >= 3)
+    .map((f) => [f.map((p): Pair => [p.x, p.y])] as Polygon);
+  return { union: safeUnion(polys[0], ...polys.slice(1)), mergeTol, s };
+}
+
+/**
+ * Παράγει τις **πλάκες οροφής ανά φάτνωμα** (ADR-534 Φ2) από το κλειστό περίγραμμα που σχηματίζουν
+ * DXF γραμμές + δομικά μέλη: ενιαίο περίγραμμα κτιρίου → υποδιαίρεση από εσωτερικά δοκάρια/τοιχία.
+ * Optional `bayThickness` → per-bay πάχος (EC2 l/d)· absent → default πάχος του override (single).
+ * Pure (ο caller persist-άρει μέσω command).
  */
 export function buildCeilingSlabsFromStructure(
   entities: readonly Entity[],
   overrides: SlabParamOverrides,
   layerId: string,
   sceneUnits: SceneUnits,
+  bayThickness?: (bay: CeilingBay) => number | undefined,
 ): BuildCeilingSlabsResult {
-  // 1. ΕΝΑ γράφημα ακμών: DXF γραμμές (κάτοψη) + ΑΚΜΕΣ δομικών μελών (δοκάρια/κολόνες). Έτσι μια πλευρά
-  // που κλείνει από DXF τοίχο ΚΑΙ μια που κλείνει από δοκάρι συνδέονται στον ΙΔΙΟ βρόχο (μικτό κτίριο).
-  const segments: [Point2D, Point2D][] = extractLineSegments(entities, { tessellateCurves: true }).map(
-    (sg) => [sg.start, sg.end] as [Point2D, Point2D],
-  );
-  const beams = entities.filter(isBeamEntity);
-  const columns = entities.filter(isColumnEntity);
-  for (const b of beams) {
-    try { addRingEdges(computeBeamGeometry(b.params).outline.vertices, segments); }
-    catch { /* skip degenerate beam */ }
-  }
-  for (const c of columns) {
-    try { addRingEdges(computeColumnGeometry(c.params).footprint.vertices, segments); }
-    catch { /* skip degenerate column */ }
-  }
+  const outline = buildBuildingOutline(entities, sceneUnits);
+  if (!outline) return { ok: false, reason: 'no-bays', slabs: [], ignoredCount: 0 };
+  const { union, mergeTol, s } = outline;
 
-  // 2. Half-edge planar faces (με gap-bridging για ευθύ άνοιγμα πόρτας).
-  const mergeTol = resolveRegionLoopTolWorld(sceneUnits);
-  const s = mmToSceneUnits(sceneUnits);
-  const gapTol = ROOM_GAP_BRIDGE_MM * s;
-  const faces = findClosedPolygonsFromLines(segments, mergeTol, gapTol);
-  if (faces.length === 0) {
-    return { ok: false, reason: 'no-bays', slabs: [], ignoredCount: 0 };
-  }
-
-  // 3. Union ΟΛΩΝ των faces → ενιαίο περίγραμμα κτιρίου (διαλύονται εσωτερικά χωρίσματα + τόξα πορτών +
-  // οι ακμές δοκαριών/κολόνων· η πλάκα καλύπτει & τα δομικά μέλη — μονολιθικά).
-  const polys: Polygon[] = faces
-    .filter((f) => f.length >= 3)
-    .map((f) => [f.map((p): Pair => [p.x, p.y])] as Polygon);
-  const union = safeUnion(polys[0], ...polys.slice(1));
-
-  // 4. Outer ring κάθε union polygon (γεμάτο, αγνοώντας holes) → 1 πλάκα.
+  // Outer ring κάθε union polygon = master region κτιρίου → υποδιαίρεση σε φατνώματα (Φ2).
   const minAreaScene = MIN_BAY_AREA_MM2 * s * s;
-  const levelElevation = overrides.levelElevation ?? flushTopElevation(beams);
+  const minWidthScene = MIN_BUILDING_WIDTH_MM * s;
+  const levelElevation = overrides.levelElevation ?? flushTopElevation(entities.filter(isBeamEntity));
+  const cutters = collectBayCutters(entities); // άξονες δοκαριών + κεντρικές γραμμές τοιχίων
+  const regionCtx = { overrides, layerId, sceneUnits, mergeTol };
 
   const slabs: SlabEntity[] = [];
   let ignoredCount = 0;
-  const minWidthScene = MIN_BUILDING_WIDTH_MM * s;
   for (const poly of union) {
     if (poly.length === 0) continue;
     const pts = cleanRing(poly[0]);
@@ -171,14 +245,9 @@ export function buildCeilingSlabsFromStructure(
     // Κόψε λεπτά περιγράμματα (μεμονωμένο δοκάρι/μέλος): υδραυλικό πλάτος < όριο κτιρίου.
     const perim = ringPerimeter(pts);
     if (perim <= 0 || (2 * areaScene) / perim < minWidthScene) { ignoredCount++; continue; }
-    const result = completeSlabFromPolygonClicks(
-      pts,
-      layerId,
-      { ...overrides, kind: 'ceiling', ...(levelElevation !== undefined ? { levelElevation } : {}) },
-      sceneUnits,
-    );
-    if (result.ok) slabs.push(result.entity);
-    else ignoredCount++;
+    const region = buildBaySlabsForRegion(pts, cutters, regionCtx, levelElevation, bayThickness);
+    slabs.push(...region.slabs);
+    ignoredCount += region.ignored;
   }
 
   if (slabs.length === 0) {

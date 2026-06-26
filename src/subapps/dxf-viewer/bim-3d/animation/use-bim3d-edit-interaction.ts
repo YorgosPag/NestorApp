@@ -24,6 +24,9 @@ import { useTranslation } from 'react-i18next';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { BimGizmoOverlay, activeHandlesFor } from '../gizmo/bim-gizmo-overlay';
 import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
+// ADR-535 — 3D per-vertex reshape grips (slab footprint), coexists with the gizmo.
+import { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
+import { BimGripController3D } from '../grips/bim-grip-controller-3d';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
 import { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
@@ -44,6 +47,7 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
   computeEditAnchor,
   refreshLinearEndpointHandles,
+  refreshReshapeGrips,
   onEditPointerDown,
   onEditPointerMove,
   onEditPointerUp,
@@ -73,6 +77,9 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
 
     const overlay = new BimGizmoOverlay(manager.scene);
     const controller = new BimGizmoController(overlay);
+    // ADR-535 — 3D reshape-grip overlay + FSM (slab footprint per-vertex editing).
+    const gripOverlay = new BimGripOverlay3D(manager.scene);
+    const gripController = new BimGripController3D(gripOverlay);
     const preview = new Bim3DEditLivePreview();
     // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
     const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);
@@ -87,8 +94,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       return resolveSnapLabelText(tRef.current, (type ?? '') as ExtendedSnapType, description);
     };
     const ctx: EditInteractionCtx = {
-      manager, canvasEl, overlay, controller, preview, wallMoveDim, alignmentLine,
-      snapLabel, moveReadout, resolveSnapLabel,
+      manager, canvasEl, overlay, controller, gripOverlay, gripController, preview,
+      wallMoveDim, alignmentLine, snapLabel, moveReadout, resolveSnapLabel,
       getLevels: () => levelsRef.current,
     };
     let activeAbort: AbortController | null = null;
@@ -131,6 +138,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // host-aware re-host) owns it instead. Suppress the gizmo for a single opening.
       if (active && st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
+        gripOverlay.setGrips([], 0); // ADR-535 — no reshape grips for a hosted opening.
         teardownListeners();
         manager.markSceneDirty();
         return;
@@ -142,10 +150,17 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
         // ADR-408 Φ-D/Φ1 — single-select linear element: place the endpoint shape handles.
         refreshLinearEndpointHandles(ctx, st.editEntityIds, st.editBimType);
         overlay.setVisible(ok);
-        if (ok) setupListeners();
-        else teardownListeners();
+        if (ok) {
+          setupListeners();
+          // ADR-535 — single-select slab → per-vertex reshape grips (cleared otherwise).
+          refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
+        } else {
+          teardownListeners();
+          gripOverlay.setGrips([], 0);
+        }
       } else {
         overlay.setVisible(false);
+        gripOverlay.setGrips([], 0); // ADR-535 — deselected → drop reshape grips.
         teardownListeners();
       }
       manager.markSceneDirty();
@@ -177,7 +192,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     // Re-anchor the gizmo after auto-resync (move/rotate commit OR a panel param
     // edit), but never while the user is mid-drag.
     const unsubEntities = useBim3DEntitiesStore.subscribe(() => {
-      if (controller.isDragging()) return;
+      // ADR-535 — a live grip drag owns the meshes; never re-seat mid-reshape.
+      if (controller.isDragging() || gripController.isDragging()) return;
       const st = useBim3DEditStore.getState();
       if (!st.editToolActive || st.editEntityIds.length === 0) return;
       // ADR-363 Φ1G.5 Slice 2d — keep the gizmo suppressed for a single hosted opening
@@ -185,12 +201,15 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       // would re-show the confusing cube.
       if (st.editBimType === 'opening' && st.editEntityIds.length === 1) {
         overlay.setVisible(false);
+        gripOverlay.setGrips([], 0);
         manager.markSceneDirty();
         return;
       }
       overlay.setVisible(computeEditAnchor(ctx, st.editEntityIds));
       // ADR-408 Φ-D/Φ1 — keep the endpoint handles on the element ends after a resync.
       refreshLinearEndpointHandles(ctx, st.editEntityIds, st.editBimType);
+      // ADR-535 — re-seat the reshape grips on the new footprint (vertex insert changes count).
+      refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
       manager.markSceneDirty();
     });
 
@@ -201,6 +220,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       unsubEntities();
       teardownListeners();
       overlay.dispose();
+      gripOverlay.dispose(); // ADR-535 — drop the reshape-grip meshes.
       wallMoveDim.dispose();
       alignmentLine.dispose();
       snapLabel.dispose();

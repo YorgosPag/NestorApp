@@ -20,12 +20,10 @@
 
 import * as THREE from 'three';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Entity } from '../../types/entities';
+import type { Point2D } from '../../rendering/types/Types';
+import type { GripInfo } from '../../hooks/grip-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
-import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
-import { worldToDxfPlan, dxfPlanToWorld, getPixelWorldSize, worldToScreen as worldToScreen3D } from '../viewport/coordinate-transforms';
-import { makeMoveSnapFn, makeResizeSnapFn, type SnapFn } from '../gizmo/bim3d-snap-bridge';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
@@ -70,8 +68,13 @@ import type { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOve
 import type { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
 // ADR-363 — live move-distance readout (line base→current + distance label).
 import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
-import { isWallEntity } from '../../types/entities';
-import { getWallCornerWorldPoints } from '../../bim/walls/wall-corner-anchors';
+// ADR-535 — 3D per-vertex reshape grips (slab footprint pilot).
+import type { BimGripOverlay3D } from '../grips/bim-grip-overlay-3d';
+import type { BimGripController3D } from '../grips/bim-grip-controller-3d';
+import { reshapeGripsForSlab } from '../grips/grip-3d-reshape-grips';
+import { commitGrip3DReshape } from '../grips/grip-3d-commit';
+// ADR-402 Phase B — drag-time snap callback + edit-entity resolution (extracted, file-size N.7.1).
+import { buildDragSnapFn, resolveEditEntities } from './bim3d-edit-drag-snap';
 
 export interface EditInteractionCtx {
   readonly manager: ThreeJsSceneManager;
@@ -90,6 +93,10 @@ export interface EditInteractionCtx {
   readonly moveReadout: TempMoveReadoutOverlay;
   /** ADR-363 Φ1G.5 Slice 2i — localise a snap type+description into a label (React `t` SSoT). */
   readonly resolveSnapLabel: (type?: string, description?: string) => string;
+  /** ADR-535 — 3D per-vertex reshape grip overlay (slab footprint) — coexists with the gizmo. */
+  readonly gripOverlay: BimGripOverlay3D;
+  /** ADR-535 — 3D reshape-grip interaction FSM (hover/drag). */
+  readonly gripController: BimGripController3D;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
 }
@@ -179,6 +186,34 @@ function refreshStructuralEndpointHandles(ctx: EditInteractionCtx, id: string, b
   ctx.overlay.setEndpointHandles(null, null);
 }
 
+/**
+ * ADR-535 Φ1 — (re)compute the 3D reshape grips for a single-select SLAB and push them
+ * onto the grip overlay. Cleared for any other selection (multi / non-slab / deselected).
+ * The grips ride the slab-top elevation (`box.max.y`) so the per-vertex square sits on the
+ * visible top surface and the drag projects onto that one horizontal plane. The grip
+ * positions reuse the 2D SSoT (`computeDxfEntityGrips`), filtered to footprint reshape
+ * grips. Called after `computeEditAnchor` (selection + auto-resync re-anchor).
+ */
+export function refreshReshapeGrips(
+  ctx: EditInteractionCtx,
+  entityIds: readonly string[],
+  bimType: string | null,
+): void {
+  if (entityIds.length !== 1 || bimType !== 'slab') {
+    ctx.gripOverlay.setGrips([], 0);
+    return;
+  }
+  const target = resolveEditEntities(ctx).find((t) => t.entityId === entityIds[0]);
+  const box = findBimEntityWorldBox(ctx.manager.bimLayer.group, entityIds[0]);
+  if (!target || !box) {
+    ctx.gripOverlay.setGrips([], 0);
+    return;
+  }
+  const grips = reshapeGripsForSlab(computeDxfEntityGrips(target.entity as unknown as DxfEntityUnion));
+  ctx.gripOverlay.setGrips(grips, box.max.y); // slab top = grip plane
+  ctx.gripOverlay.updateScale(ctx.manager.getCamera());
+}
+
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (e.button !== 0 || !ctx.overlay.visible) return;
   // ADR-408 — Ctrl+click relocates the gizmo base point / rotation centre (Revit
@@ -187,6 +222,17 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     trySetBasePoint(ctx, e);
     e.preventDefault();
     e.stopPropagation();
+    return;
+  }
+  // ADR-535 — try a 3D reshape grip FIRST (small, specific perimeter targets that
+  // would otherwise be shadowed by the gizmo). A hit starts a grip drag (commit on
+  // release) and bypasses the gizmo path entirely. Coexists with the gizmo (centre).
+  if (ctx.gripController.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY)) {
+    e.preventDefault();
+    e.stopPropagation();
+    ctx.manager.viewport.setControlsEnabled(false);
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    ctx.manager.markSceneDirty();
     return;
   }
   const started = ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
@@ -258,103 +304,17 @@ function trySetBasePoint(ctx: EditInteractionCtx, e: PointerEvent): void {
   ctx.manager.markSceneDirty();
 }
 
-/**
- * Build the drag snap callback (ADR-402 Phase B). Reuses the ONE snap engine
- * (`getGlobalSnapEngine`) — no new snap logic. Move reuses the element's
- * characteristic points (grips, the 2D SSoT) as plan-mm offsets from the gizmo
- * anchor so ANY corner/endpoint may grab a target (AutoCAD-style); horizontal
- * resize snaps the dragged handle. Returns null (free drag) for rotate, vertical
- * resize, OSNAP-off, or an unresolved target.
- */
-function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
-  const constraint = ctx.controller.getActiveConstraint();
-  if (!constraint || constraint.kind === 'rotate') return null;
-  if (constraint.kind === 'resize' && constraint.axis === 'y') return null;
-  // ADR-402 — vertical (axis-Y) move is a pure elevation drag; plan snapping is moot.
-  if (constraint.kind === 'axis' && constraint.axis === 'y') return null;
-  const engine = getGlobalSnapEngine();
-  if (!engine.getSettings().enabled) return null;
-  // ADR-363 Φ1G.5 Slice 2i-fix — the snap engine's pixel→world tolerance comes from its
-  // viewport's `worldPerPixelAt`, which is owned by the 2D canvas. In 3D nobody set it →
-  // it fell back to ~1 mm/px → tolerance ~10 mm → the wall never "stuck" (Giorgio). Sync a
-  // 3D-camera-derived viewport at drag start so the magnet pull scales with the 3D zoom.
-  syncSnapEngineViewportFor3D(ctx, engine);
-  const targets = resolveEditEntities(ctx);
-  if (targets.length === 0) return null;
-  // Resize + endpoint are single-entity only (multi-select hides those handles). Both
-  // snap the ONE dragged control point to scene features ("Connect To", ADR-408 Φ-D).
-  if (constraint.kind === 'resize' || constraint.kind === 'endpoint') {
-    return makeResizeSnapFn(engine, targets[0].entityId);
-  }
-  // move (axis / plane / free): characteristic points of EVERY selected element as
-  // plan-mm offsets from the group anchor (ADR-402 Phase C — snap from all, nearest-wins).
-  const anchorPlan = worldToDxfPlan(ctx.overlay.getPosition());
-  // ADR-408 — a relocated base point snaps THAT single point (Revit Move base→dest),
-  // not all grips. The gizmo anchor IS the override, so the offset is ~0; computing it
-  // explicitly stays robust if the two ever diverge.
-  const override = useBim3DEditStore.getState().basePointOverride;
-  if (override) {
-    const op = worldToDxfPlan(new THREE.Vector3(override.x, override.y, override.z));
-    const offset = { x: op.x - anchorPlan.x, y: op.y - anchorPlan.y };
-    return makeMoveSnapFn(engine, [offset], targets[0].entityId);
-  }
-  const offsets = targets.flatMap((t) =>
-    computeDxfEntityGrips(t.entity as unknown as DxfEntityUnion).map((g) => ({
-      x: g.position.x - anchorPlan.x,
-      y: g.position.y - anchorPlan.y,
-    })),
-  );
-  // ADR-363 Φ1G.5 Slice 2i — also probe with the dragged wall's FACE corners so a face
-  // (not just an axis grip) can grab a static wall's face line → flush face-to-face
-  // magnetism (Revit). The grips alone only snapped axis points (corners/endpoints).
-  const faceOffsets = targets.flatMap((t) =>
-    isWallEntity(t.entity)
-      ? getWallCornerWorldPoints(t.entity).map((c) => ({ x: c.point.x - anchorPlan.x, y: c.point.y - anchorPlan.y }))
-      : [],
-  );
-  return makeMoveSnapFn(engine, [...offsets, ...faceOffsets], targets[0].entityId);
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2i-fix — give the shared snap engine a 3D-derived viewport so its
- * pixel tolerance (`worldRadiusForType = px × worldPerPixel`) scales with the 3D camera zoom
- * instead of the stale 2D value (the root cause of "δεν κολλάει"). 1 Three world metre =
- * 1000 DXF-plan mm. Self-healing: the 2D snap path re-sets the viewport on its next mouse move.
- */
-function syncSnapEngineViewportFor3D(ctx: EditInteractionCtx, engine: ReturnType<typeof getGlobalSnapEngine>): void {
-  const camera = ctx.manager.getCamera();
-  const canvas = ctx.manager.getRendererCanvas();
-  const anchorWorld = ctx.overlay.getPosition();
-  const dist = camera.position.distanceTo(anchorWorld);
-  const mmPerPx = getPixelWorldSize(dist, camera, canvas) * 1000; // metres/px → DXF mm/px
-  if (!(mmPerPx > 0)) return;
-  const elevMm = worldToDxfPlan(anchorWorld).z;
-  engine.setViewport({
-    scale: 1 / mmPerPx,
-    worldPerPixelAt: () => mmPerPx,
-    worldToScreen: (p) => worldToScreen3D(dxfPlanToWorld(p.x, p.y, elevMm), camera, canvas) ?? { x: 0, y: 0 },
-  });
-}
-
-/**
- * Resolve every active edit entity + id (snap-source grips / self-exclusion).
- * Single-element selection returns one; multi-select returns all. [0] = primary.
- */
-function resolveEditEntities(ctx: EditInteractionCtx): { entity: Entity; entityId: string }[] {
-  const levels = ctx.getLevels();
-  const ids = useBim3DEditStore.getState().editEntityIds;
-  if (!levels || ids.length === 0) return [];
-  const out: { entity: Entity; entityId: string }[] = [];
-  for (const entityId of ids) {
-    const levelId = resolveEntityLevelId(levels, entityId) ?? levels.currentLevelId;
-    if (!levelId) continue;
-    const entity = levels.getLevelScene(levelId)?.entities?.find((en) => en.id === entityId);
-    if (entity) out.push({ entity, entityId });
-  }
-  return out;
-}
-
 export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): void {
+  // ADR-535 — a live grip drag owns the move (reshape preview = the square following 1:1).
+  if (ctx.gripController.isDragging()) {
+    const changed = ctx.gripController.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
+    if (changed) {
+      e.preventDefault();
+      e.stopPropagation();
+      ctx.manager.markSceneDirty();
+    }
+    return;
+  }
   if (ctx.controller.isDragging()) {
     // ADR-404 — track Shift live so the tilt snap can be toggled mid-drag.
     ctx.controller.setShiftHeld(e.shiftKey);
@@ -370,11 +330,26 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
   // Idle hover + screen-constant scale (also keeps the gizmo sized during orbit-drag).
   if (!ctx.overlay.visible) return;
   const hoverChanged = ctx.controller.updateHover(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
+  // ADR-535 — grip hover highlight + keep the squares screen-constant during orbit.
+  const gripHoverChanged = ctx.gripController.updateHover(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
   ctx.overlay.updateScale(ctx.manager.getCamera());
-  if (hoverChanged) ctx.manager.markSceneDirty();
+  ctx.gripOverlay.updateScale(ctx.manager.getCamera());
+  if (hoverChanged || gripHoverChanged) ctx.manager.markSceneDirty();
 }
 
 export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void {
+  // ADR-535 — finish a 3D reshape-grip drag: project the release point, commit ONE
+  // UpdateSlabParamsCommand (scene re-syncs automatically), then re-seat the grips.
+  if (ctx.gripController.isDragging()) {
+    e.preventDefault();
+    e.stopPropagation();
+    ctx.canvasEl.releasePointerCapture?.(e.pointerId);
+    ctx.gripController.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
+    commitGripReshape(ctx, ctx.gripController.endDrag());
+    ctx.manager.viewport.setControlsEnabled(true);
+    ctx.manager.markSceneDirty();
+    return;
+  }
   if (!ctx.controller.isDragging()) return;
   e.preventDefault();
   e.stopPropagation();
@@ -398,7 +373,33 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   ctx.manager.markSceneDirty();
 }
 
+/**
+ * ADR-535 — commit a finished grip drag (or reset on a no-op). Resolves the slab's
+ * level, runs `commitGrip3DReshape` (→ UpdateSlabParamsCommand), then refreshes the
+ * grip squares to their canonical positions (post-commit re-sync OR snap-back of the
+ * live-followed square when the delta was zero / the commit was rejected).
+ */
+function commitGripReshape(ctx: EditInteractionCtx, result: { grip: GripInfo; deltaMm: Point2D } | null): void {
+  if (result) {
+    const levels = ctx.getLevels();
+    const entityId = result.grip.entityId;
+    const levelId = levels && entityId ? (resolveEntityLevelId(levels, entityId) ?? levels.currentLevelId) : null;
+    if (levels && levelId) commitGrip3DReshape(result.grip, result.deltaMm, levels, levelId);
+  }
+  const st = useBim3DEditStore.getState();
+  refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
+}
+
 export function onEditPointerCancel(ctx: EditInteractionCtx): void {
+  // ADR-535 — abort a grip drag: snap the square back, no command.
+  if (ctx.gripController.isDragging()) {
+    ctx.gripController.cancelDrag();
+    const st = useBim3DEditStore.getState();
+    refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
+    ctx.manager.viewport.setControlsEnabled(true);
+    ctx.manager.markSceneDirty();
+    return;
+  }
   if (!ctx.controller.isDragging()) return;
   ctx.controller.cancelDrag();
   ctx.preview.reset(); // Esc / cancel → entity snaps back, no command (ADR-402).
@@ -415,6 +416,7 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
 export function onEditWheel(ctx: EditInteractionCtx): void {
   if (!ctx.overlay.visible || ctx.controller.isDragging()) return;
   ctx.overlay.updateScale(ctx.manager.getCamera());
+  ctx.gripOverlay.updateScale(ctx.manager.getCamera()); // ADR-535 — keep grips screen-constant.
   ctx.manager.markSceneDirty();
 }
 

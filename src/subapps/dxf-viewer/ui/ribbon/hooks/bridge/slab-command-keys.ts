@@ -20,6 +20,9 @@ export const SLAB_RIBBON_KEYS = {
     reinforcement: 'slab.params.reinforcement',
     /** Material key (rc / composite / wood). */
     material: 'slab.params.material',
+    // ADR-534 Φ4 — φινίρισμα παρειάς οροφής (soffit finish), μόνο σε kind='ceiling'.
+    /** Soffit finish material (none + paints + σοβάς/σπατουλαριστό/gypsum). */
+    soffitFinish: 'slab.params.soffitFinish',
   },
   params: {
     /** mm — slab thickness. */
@@ -53,7 +56,8 @@ export type SlabRibbonNumberCommandKey =
 export type SlabRibbonStringCommandKey =
   | typeof SLAB_RIBBON_KEYS.stringParams.kind
   | typeof SLAB_RIBBON_KEYS.stringParams.reinforcement
-  | typeof SLAB_RIBBON_KEYS.stringParams.material;
+  | typeof SLAB_RIBBON_KEYS.stringParams.material
+  | typeof SLAB_RIBBON_KEYS.stringParams.soffitFinish;
 
 export const SLAB_RIBBON_NUMBER_KEYS: readonly SlabRibbonNumberCommandKey[] = [
   SLAB_RIBBON_KEYS.params.thickness,
@@ -64,6 +68,7 @@ export const SLAB_RIBBON_STRING_KEYS: readonly SlabRibbonStringCommandKey[] = [
   SLAB_RIBBON_KEYS.stringParams.kind,
   SLAB_RIBBON_KEYS.stringParams.reinforcement,
   SLAB_RIBBON_KEYS.stringParams.material,
+  SLAB_RIBBON_KEYS.stringParams.soffitFinish,
 ];
 
 export const SLAB_RIBBON_KEYS_ACTIONS = {
@@ -220,6 +225,8 @@ export function isSlabStructuralReadoutKey(commandKey: string): boolean {
  */
 export const SLAB_STRUCTURAL_VISIBILITY_KEYS = {
   structural: 'slab.visibility.structural',
+  // ADR-534 Φ4 — «Φινίρισμα οροφής» panel: ορατό ΜΟΝΟ σε kind='ceiling'.
+  ceilingFinish: 'slab.visibility.ceilingFinish',
 } as const;
 
 const SLAB_STRUCTURAL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -241,6 +248,10 @@ export function resolveSlabPanelVisibility(visibilityKey: string, params: SlabPa
   if (visibilityKey === SLAB_STRUCTURAL_VISIBILITY_KEYS.structural) {
     // material undefined → default RC (οι περισσότερες πλάκες)· composite/wood → κρυφό.
     return params.material === undefined || params.material === 'rc';
+  }
+  if (visibilityKey === SLAB_STRUCTURAL_VISIBILITY_KEYS.ceilingFinish) {
+    // ADR-534 Φ4 — φινίρισμα soffit μόνο σε πλάκα οροφής.
+    return params.kind === 'ceiling';
   }
   return false;
 }

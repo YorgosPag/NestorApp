@@ -27,7 +27,7 @@ const SLAB_LEVER_ARM_FACTOR = 0.9;
  * Άνοιγμα σχεδιασμού (mm) που οδηγεί τη ροπή της αναρτημένης πλάκας: **πρόβολος** (ADR-498) →
  * το μήκος προβόλου `cantileverSpanMm` (κάθετη προβολή)· αλλιώς το ελεύθερο `maxFreeSpanMm`.
  */
-function slabDesignSpanMm(ctx: SlabFoundationSectionContext): number {
+export function slabDesignSpanMm(ctx: SlabFoundationSectionContext): number {
   return ctx.supportType === 'cantilever'
     ? (ctx.cantileverSpanMm ?? 0)
     : (ctx.maxFreeSpanMm ?? 0);

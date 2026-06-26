@@ -29,7 +29,7 @@
 
 import { DEFAULT_CONCRETE_GRADE, concreteFcdMpa } from '../concrete-grades';
 import { capacityDepthMm } from '../codes/flexural-capacity';
-import { slabDesignMomentNmmPerM } from '../codes/suggest-slab-reinforcement';
+import { slabDesignMomentNmmPerM, slabDesignSpanMm } from '../codes/suggest-slab-reinforcement';
 import { footingEffectiveDepthMm } from '../codes/suggest-reinforcement';
 import type { SlabFoundationSectionContext, StructuralCodeProvider } from '../codes/structural-code-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../types/slab-types';
@@ -54,16 +54,17 @@ export interface SlabSizing {
 }
 
 /**
- * Πρόταση ελάχιστου επαρκούς πάχους **πλάκας-προβόλου**. `undefined` όταν δεν εφαρμόζεται
- * (μη-αναρτημένη / μη-πρόβολος / μηδενικό άνοιγμα) ⇒ ο caller κρατά το stored πάχος.
- * `governedBy` = ο έλεγχος που καθόρισε το raw βάθος (προ-clamp).
+ * Κοινός πυρήνας διαστασιολόγησης πάχους **αναρτημένης** πλάκας — ΕΝΑ SSoT μηχανικής
+ * (N.0.2), τον μοιράζονται ο πρόβολος (`suggestSlabThickness`) & η στηριζόμενη πλάκα
+ * (`suggestSupportedSlabThickness`). Το άνοιγμα σχεδιασμού βγαίνει από το `slabDesignSpanMm`
+ * (cantilever → `cantileverSpanMm`· supported → `maxFreeSpanMm`). `undefined` αν span ≤ 0.
+ * Ικανοποιεί ΤΑΥΤΟΧΡΟΝΑ SLS βέλος (l/d) + ULS κάμψη· χωρίς φορτίο → κυριαρχεί το l/d.
  */
-export function suggestSlabThickness(
+function sizeSlabFromContext(
   provider: StructuralCodeProvider,
   ctx: SlabFoundationSectionContext,
 ): SlabSizing | undefined {
-  if (ctx.kind !== 'suspended' || ctx.supportType !== 'cantilever') return undefined;
-  const spanMm = ctx.cantileverSpanMm ?? 0;
+  const spanMm = slabDesignSpanMm(ctx);
   if (spanMm <= 0) return undefined;
 
   const ldLimit = provider.slabSpanDepthLimit(ctx);
@@ -86,4 +87,38 @@ export function suggestSlabThickness(
   const governedBy: SlabSizingGovernedBy =
     footingEffectiveDepthMm(thicknessMm, cover) <= 0 || winner.dEff <= 0 ? 'minimum' : winner.governedBy;
   return { thicknessMm, governedBy };
+}
+
+/**
+ * Πρόταση ελάχιστου επαρκούς πάχους **πλάκας-προβόλου**. `undefined` όταν δεν εφαρμόζεται
+ * (μη-αναρτημένη / μη-πρόβολος / μηδενικό άνοιγμα) ⇒ ο caller κρατά το stored πάχος.
+ * `governedBy` = ο έλεγχος που καθόρισε το raw βάθος (προ-clamp).
+ *
+ * ⚠️ **Cantilever-only by design** (ADR-499): ο proactive auto-sizer (`buildSlabSizePatch`)
+ * δεν πειράζει στηριζόμενες πλάκες (μηδέν regression). Η per-bay διαστασιολόγηση στηριζόμενης
+ * πλάκας οροφής (ADR-534 Φ2) περνά από το ξεχωριστό `suggestSupportedSlabThickness`.
+ */
+export function suggestSlabThickness(
+  provider: StructuralCodeProvider,
+  ctx: SlabFoundationSectionContext,
+): SlabSizing | undefined {
+  if (ctx.kind !== 'suspended' || ctx.supportType !== 'cantilever') return undefined;
+  return sizeSlabFromContext(provider, ctx);
+}
+
+/**
+ * ADR-534 Φ2 — πρόταση πάχους **στηριζόμενης** αναρτημένης πλάκας (αμφιέρειστη/συνεχής, ΟΧΙ
+ * πρόβολος) από τον έλεγχο βέλους EC2 §7.4.2 (l/d): `t ≈ maxFreeSpanMm / (K·basic) + cover`.
+ * K από `provider.slabSpanDepthLimit` (simple 1.0 / continuous 1.5). Χωρίς φορτίο → κυριαρχεί
+ * το βέλος (η ULS πύλη δίνει 0). `undefined` σε μη-αναρτημένη / πρόβολο / μηδέν άνοιγμα.
+ *
+ * **Scoped** (Giorgio 2026-06-26): χρησιμοποιείται ΜΟΝΟ στη δημιουργία της auto-πλάκας οροφής
+ * — δεν αγγίζει τον proactive auto-sizer (που μένει cantilever-only μέσω `suggestSlabThickness`).
+ */
+export function suggestSupportedSlabThickness(
+  provider: StructuralCodeProvider,
+  ctx: SlabFoundationSectionContext,
+): SlabSizing | undefined {
+  if (ctx.kind !== 'suspended' || ctx.supportType === 'cantilever') return undefined;
+  return sizeSlabFromContext(provider, ctx);
 }

@@ -50,6 +50,9 @@ import { getSlabGrips } from '../slabs/slab-grips';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { KIND_STROKE, KIND_FILL } from '../slabs/slab-render-palette';
+import { getWallCoveringColor } from '../wall-coverings/wall-covering-material-catalog';
+import { hexToRgba } from '../utils/bim-vg-fill-tint';
+import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 
 /**
  * Hatch line stroke (light gray, low-opacity) — non-intrusive against the
@@ -143,6 +146,9 @@ export class SlabRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
+    // ADR-534 Φ4 — soffit finish swatch (reflected ceiling plan): tint πάνω από το body fill.
+    this.drawSoffitFinishTint(slab, verts);
+
     if (slab.params.reinforcement) {
       this.drawReinforcementHatch(slab);
     }
@@ -168,6 +174,21 @@ export class SlabRenderer extends BaseEntityRenderer {
     this.ctx.restore();
 
     this.finalizeRender(entity, options);
+  }
+
+  /**
+   * ADR-534 Φ4 — RCP swatch: λεπτό tint στο χρώμα του soffit finish (μόνο ceiling πλάκα).
+   * FULL SSoT reuse (`getWallCoveringColor` + `hexToRgba` + `adaptFillTintForCanvas`, ΙΔΙΟ με
+   * `FloorFinishRenderer`). No-op όταν δεν είναι ceiling ή δεν έχει finish (raw σκυρόδεμα).
+   */
+  private drawSoffitFinishTint(slab: SlabEntity, verts: readonly Point2D[]): void {
+    if (slab.kind !== 'ceiling' || !slab.params.soffitFinish) return;
+    const hex = getWallCoveringColor(slab.params.soffitFinish.materialId);
+    this.ctx.save();
+    this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(hex, 0.18) ?? hex);
+    this.drawPolygonPath(verts);
+    this.ctx.fill();
+    this.ctx.restore();
   }
 
   /**

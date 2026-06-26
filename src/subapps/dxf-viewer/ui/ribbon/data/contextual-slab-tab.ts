@@ -70,6 +70,20 @@ const SLAB_MATERIAL_OPTIONS = [
   { value: 'wood',      labelKey: 'ribbon.commands.slabEditor.material.wood',      isLiteralLabel: false },
 ] as const;
 
+// ADR-534 Φ4 — φινίρισμα παρειάς οροφής (soffit finish). Curated subset του shared paint/plaster
+// catalog (μπογιές + σοβάς + σπατουλαριστό + γυψοσανίδα)· '' = χωρίς finish (raw σκυρόδεμα).
+const SOFFIT_FINISH_OPTIONS = [
+  { value: '',                    labelKey: 'ribbon.commands.slabEditor.soffitFinish.none', isLiteralLabel: false },
+  { value: 'paint-white',         labelKey: 'wallCovering.materials.paintWhite',            isLiteralLabel: false },
+  { value: 'paint-blue',          labelKey: 'wallCovering.materials.paintBlue',             isLiteralLabel: false },
+  { value: 'paint-yellow',        labelKey: 'wallCovering.materials.paintYellow',           isLiteralLabel: false },
+  { value: 'paint-red',           labelKey: 'wallCovering.materials.paintRed',              isLiteralLabel: false },
+  { value: 'paint-green',         labelKey: 'wallCovering.materials.paintGreen',            isLiteralLabel: false },
+  { value: 'plaster-traditional', labelKey: 'wallCovering.materials.plasterTraditional',    isLiteralLabel: false },
+  { value: 'plaster-spackle',     labelKey: 'wallCovering.materials.plasterSpackle',        isLiteralLabel: false },
+  { value: 'knauf-gypsum-board',  labelKey: 'wallCovering.materials.knaufGypsumBoard',      isLiteralLabel: false },
+] as const;
+
 const ELEVATION_MM_OPTIONS = [
   { value: '-500', labelKey: '-500', isLiteralLabel: true },
   { value: '0',    labelKey: '0',    isLiteralLabel: true },
@@ -305,6 +319,31 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: SLAB_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-534 Φ4 — «Φινίρισμα οροφής» (soffit finish): μπογιά/σοβάς/σπατουλαριστό στην κάτω
+      // παρειά. Visible ΜΟΝΟ σε kind='ceiling' (reflected ceiling plan). Reuse shared catalog.
+      id: 'slab-soffit-finish',
+      labelKey: 'ribbon.panels.slabSoffitFinish',
+      visibilityKey: SLAB_STRUCTURAL_VISIBILITY_KEYS.ceilingFinish,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab.soffitFinish',
+                labelKey: 'ribbon.commands.slabEditor.soffitFinish.section.title',
+                commandKey: SLAB_RIBBON_KEYS.stringParams.soffitFinish,
+                comboboxWidthPx: 180,
+                options: SOFFIT_FINISH_OPTIONS,
               },
             },
           ],

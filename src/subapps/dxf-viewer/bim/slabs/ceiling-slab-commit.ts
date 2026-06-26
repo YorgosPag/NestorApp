@@ -22,6 +22,9 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { polygonCentroid } from '../geometry/shared/polygon-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { buildCeilingSlabsFromStructure } from './ceiling-slab-from-structure';
+import { resolveStructuralCode } from '../structural/codes';
+import { useStructuralSettingsStore } from '../../state/structural-settings-store';
+import { suggestCeilingBayThickness } from './ceiling-bay-thickness';
 
 export interface CeilingSlabCommitDeps {
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -62,11 +65,14 @@ export function commitCeilingSlabsFromStructure(
 ): CeilingSlabCommitResult {
   const entities = deps.getLevelScene(deps.levelId)?.entities ?? [];
 
+  // ADR-534 Φ2 — per-bay πάχος (EC2 l/d) μέσω του active code provider (ίδιο SSoT με τον auto-sizer).
+  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
   const target = buildCeilingSlabsFromStructure(
     entities,
     deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
+    (bay) => suggestCeilingBayThickness(provider, { spanMm: bay.spanMm, interior: bay.interior }),
   );
   if (!target.ok || target.slabs.length === 0) {
     return { ok: false, reason: target.reason ?? 'no-bays', created: 0, skipped: 0 };
