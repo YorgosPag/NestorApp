@@ -26,15 +26,16 @@ import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 const TOP_FACE_PLAN_ALPHA = 0.55;
 
 /**
- * Το 2D plan body-fill για τη βαμμένη ΑΝΩ όψη ενός solid, ή `null` όταν δεν έχει `top`
- * paint (→ ο caller κρατά το legacy body fill). Pure· ίδιο adaptive layer με τα υπόλοιπα
+ * Το 2D plan body-fill για τη βαμμένη ΑΝΩ όψη ενός solid, ή `null` όταν δεν έχει top
+ * paint (→ ο caller κρατά το legacy body fill). Cascade: per-face `['top']` → αλλιώς base
+ * `['*']` («βάψε όλο» → χρωματίζει και την κάτοψη). Pure· ίδιο adaptive layer με τα υπόλοιπα
  * BIM body fills ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο.
  */
 export function topFacePlanFill(
   entity: { readonly faceAppearance?: FaceAppearanceMap },
   bgHex?: string,
 ): string | null {
-  const top = entity.faceAppearance?.['top'];
+  const top = entity.faceAppearance?.['top'] ?? entity.faceAppearance?.[BASE_FACE_KEY];
   if (!top) return null;
   const hex = faceAppearanceColorHex(top);
   if (!hex) return null;

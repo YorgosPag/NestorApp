@@ -30,6 +30,7 @@ import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
 import { applyFaceAppearanceToFaces } from './apply-face-appearance';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 
