@@ -83,10 +83,14 @@ export function raycastBimGroup(
 /**
  * ADR-539 — face-level raycast for Cinema 4D «Polygon Mode». Like `raycastBimGroup`
  * but ALSO resolves the picked `FaceKey` from `hit.face.materialIndex` against the
- * mesh's `userData.faceKeyByMaterialIndex` (set by the faced-prism converter). Returns
- * `faceKey` only when the first solid hit is a faced mesh; otherwise behaves like the
- * plain entity pick (so a click on a non-faced solid still selects the entity).
- * Active ONLY in Polygon mode (`use-bim3d-pointer-handlers`).
+ * mesh's `userData.faceKeyByMaterialIndex` (set by the faced-prism converter).
+ *
+ * Φ2 — a FACED face wins over any non-faced hit in front of it: the invisible slab-opening
+ * pick-mesh (no `faceKeyByMaterialIndex`) sits over each opening, so a naive «first hit»
+ * would let it steal the click on a hole wall and return no faceKey. We therefore iterate
+ * the depth-sorted hits and return the FIRST one carrying a faceKey; only if none is faced
+ * do we fall back to the first plain entity hit (so a click on a non-faced solid still
+ * selects the entity). Active ONLY in Polygon mode (`use-bim3d-pointer-handlers`).
  */
 export function raycastBimFace(
   group: THREE.Group,
@@ -101,6 +105,7 @@ export function raycastBimFace(
   _raycaster.setFromCamera(ndc, camera);
   const hits = _raycaster.intersectObjects(group.children, true);
 
+  let entityFallback: RaycastHit | null = null;
   for (const hit of hits) {
     // Walk up to the tagged mesh (mirror raycastBimGroup) to resolve bimId/bimType.
     let obj: THREE.Object3D | null = hit.object;
@@ -117,9 +122,10 @@ export function raycastBimFace(
     const faceKeys = hit.object.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
     const matIndex = hit.face?.materialIndex;
     const faceKey = faceKeys && matIndex !== undefined ? faceKeys[matIndex] : undefined;
-    return faceKey !== undefined ? { bimId, bimType, faceKey } : { bimId, bimType };
+    if (faceKey !== undefined) return { bimId, bimType, faceKey }; // faced face wins immediately
+    entityFallback ??= { bimId, bimType }; // remember the nearest non-faced hit
   }
-  return null;
+  return entityFallback;
 }
 
 /**

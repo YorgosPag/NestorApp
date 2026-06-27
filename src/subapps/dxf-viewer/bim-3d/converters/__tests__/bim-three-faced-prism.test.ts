@@ -61,6 +61,23 @@ describe('buildFacedPrism', () => {
     expect(minY).toBeCloseTo(0.8); // 1 − depth(0.2)
   });
 
+  // ADR-539 Φ2 FIX — caps must be correctly oriented: the `top` faceKey cap (the visible
+  // sky-facing surface) needs an UP normal so it is NOT back-face-culled when clicked from
+  // above (a down normal made the click fall through to the bottom cap → wrong face painted).
+  it('orients the top cap UP (+Y) and the bottom cap DOWN (−Y)', () => {
+    const { geometry, faceKeyByMaterialIndex } = buildFacedPrism(squareTopRing(), 0.2)!;
+    const nrm = geometry.getAttribute('normal');
+    const avgNormalY = (faceKey: string): number => {
+      const matIdx = faceKeyByMaterialIndex.indexOf(faceKey as never);
+      const g = geometry.groups.find((gr) => gr.materialIndex === matIdx)!;
+      let sum = 0;
+      for (let i = g.start; i < g.start + g.count; i++) sum += nrm.getY(i);
+      return sum / g.count;
+    };
+    expect(avgNormalY('top')).toBeGreaterThan(0.5);   // visible top surface faces the sky
+    expect(avgNormalY('bottom')).toBeLessThan(-0.5);  // bottom surface faces the ground
+  });
+
   it('is deterministic (same faceKey ordering across builds)', () => {
     const a = buildFacedPrism(squareTopRing(), 0.2)!;
     const b = buildFacedPrism(squareTopRing(), 0.2)!;
@@ -77,22 +94,24 @@ describe('buildFacedSolidBody', () => {
     expect(buildFacedSolidBody([{ x: 0, y: 0 }, { x: 1, y: 0 }], 0.2, {}, base)).toBeNull();
   });
 
-  it('uses the base material on every UNPAINTED face (byte-for-byte legacy look)', () => {
+  it('uses ONE shared double-sided body material on every UNPAINTED face (pickable hole walls)', () => {
     const base = new THREE.MeshStandardMaterial({ color: 0x123456 });
     const mesh = buildFacedSolidBody(squareVerts, 0.2, {}, base)!;
-    const mats = mesh.material as THREE.Material[];
-    expect(mats).toHaveLength(6); // bottom, top, side:0..3
-    expect(mats.every((m) => m === base)).toBe(true);
+    const mats = mesh.material as THREE.MeshStandardMaterial[];
+    expect(mats).toHaveLength(6);                  // bottom, top, side:0..3
+    expect(new Set(mats).size).toBe(1);            // all unpainted share ONE body material
+    expect(mats[0].side).toBe(THREE.DoubleSide);   // double-sided → interior faces pickable
+    expect(mats[0].color.getHexString()).toBe('123456'); // same look as base (cloned)
   });
 
-  it('overrides ONLY the painted face, keeps base instance elsewhere', () => {
+  it('overrides ONLY the painted face, keeps the shared body mat elsewhere (both double-sided)', () => {
     const base = new THREE.MeshStandardMaterial({ color: 0x123456 });
     const mesh = buildFacedSolidBody(squareVerts, 0.2, { top: { colorHex: '#ff0000' } }, base)!;
     const mats = mesh.material as THREE.MeshStandardMaterial[];
-    expect(mats[0]).toBe(base);                                  // bottom unpainted → base
-    expect(mats[1]).not.toBe(base);                              // top painted → fresh material
+    expect(mats[1]).not.toBe(mats[0]);             // top painted → distinct material
     expect(mats[1].color.getHexString()).toBe('ff0000');
-    expect(mats[2]).toBe(base);                                  // side:0 unpainted → base
+    expect(mats[1].side).toBe(THREE.DoubleSide);
+    expect(mats[0]).toBe(mats[2]);                 // unpainted faces share the body mat
   });
 
   it('stamps faceKeyByMaterialIndex onto userData for raycast + highlight', () => {

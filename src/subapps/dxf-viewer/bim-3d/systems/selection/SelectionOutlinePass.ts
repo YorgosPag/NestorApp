@@ -25,8 +25,14 @@ import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { BIM_SELECTION_OUTLINE_COLOR_THREE, BIM_HOVER_OUTLINE_COLOR_THREE } from './selection-outline-tokens';
 
-/** Outline width in device pixels (exact, resolution-independent). */
+/** Selection outline width in device pixels (exact, resolution-independent). */
 const OUTLINE_WIDTH_PX = 2.0;
+/** Selection outline opacity (committed state = fully solid). */
+const OUTLINE_ALPHA = 1.0;
+// ADR-538 — HOVER outline reads as TRANSIENT vs the committed selection (Revit / Cinema 4D
+// distinguish rollover from selection): a thinner + dimmer line, same yellow hue.
+const HOVER_OUTLINE_WIDTH_PX = 1.4;
+const HOVER_OUTLINE_ALPHA = 0.65;
 
 // sRGB components of an outline colour, passed RAW to the shader. A raw ShaderMaterial
 // does not apply the sRGB output transfer (unlike built-in materials), and THREE.Color
@@ -57,6 +63,7 @@ const DILATE_FRAGMENT_SHADER = /* glsl */ `
   uniform vec2 uTexel;
   uniform vec3 uColor;
   uniform float uRadius;
+  uniform float uAlpha;
   varying vec2 vUv;
 
   const int DIRS = 8;
@@ -75,7 +82,8 @@ const DILATE_FRAGMENT_SHADER = /* glsl */ `
     }
     float outside = 1.0 - smoothstep( 0.3, 0.7, center );
     float near = smoothstep( 0.3, 0.7, maxN );
-    float a = outside * near;
+    // uAlpha dims the whole line (premultiplied) — hover is dimmer than selection (ADR-538).
+    float a = outside * near * uAlpha;
     gl_FragColor = vec4( uColor * a, a );
   }
 `;
@@ -147,11 +155,11 @@ export class SelectionOutlinePass {
     renderer.getClearColor(this._prevClearColor);
     const prevAlpha = renderer.getClearAlpha();
 
-    // ADR-536 selection (gold) + ADR-538 hover (yellow): two independent silhouettes,
-    // each its own mask+dilate, sharing one RT. Selection drawn first so a hovered-AND-
-    // selected mesh (filtered out of the hover set upstream) keeps its gold outline.
-    this._renderSilhouette(renderer, this._selected, OUTLINE_COLOR_SRGB, maskRT, prevTarget, size);
-    this._renderSilhouette(renderer, this._hover, HOVER_COLOR_SRGB, maskRT, prevTarget, size);
+    // ADR-536 selection (gold, solid 2px) + ADR-538 hover (yellow, thinner 1.4px + dimmer):
+    // two independent silhouettes, each its own mask+dilate, sharing one RT. Selection drawn
+    // first so a hovered-AND-selected mesh (filtered out of the hover set upstream) keeps gold.
+    this._renderSilhouette(renderer, this._selected, OUTLINE_COLOR_SRGB, OUTLINE_WIDTH_PX, OUTLINE_ALPHA, maskRT, prevTarget, size);
+    this._renderSilhouette(renderer, this._hover, HOVER_COLOR_SRGB, HOVER_OUTLINE_WIDTH_PX, HOVER_OUTLINE_ALPHA, maskRT, prevTarget, size);
 
     renderer.autoClear = prevAutoClear;
     renderer.setClearColor(this._prevClearColor, prevAlpha);
@@ -166,6 +174,8 @@ export class SelectionOutlinePass {
     renderer: THREE.WebGLRenderer,
     objects: readonly THREE.Object3D[],
     colorVec: THREE.Vector3,
+    widthPx: number,
+    alpha: number,
     maskRT: THREE.WebGLRenderTarget,
     prevTarget: THREE.WebGLRenderTarget | null,
     size: THREE.Vector2,
@@ -188,7 +198,7 @@ export class SelectionOutlinePass {
     }
     // 2. Dilate the mask into a constant-width coloured line over the existing frame.
     renderer.setRenderTarget(prevTarget);
-    this._ensureDilateQuad(maskRT.texture, size.x, size.y, colorVec).render(renderer);
+    this._ensureDilateQuad(maskRT.texture, size.x, size.y, colorVec, widthPx, alpha).render(renderer);
   }
 
   private _ensureMaskTarget(w: number, h: number): THREE.WebGLRenderTarget {
@@ -200,14 +210,17 @@ export class SelectionOutlinePass {
     return this._maskRT;
   }
 
-  private _ensureDilateQuad(texture: THREE.Texture, w: number, h: number, colorVec: THREE.Vector3): FullScreenQuad {
+  private _ensureDilateQuad(
+    texture: THREE.Texture, w: number, h: number, colorVec: THREE.Vector3, widthPx: number, alpha: number,
+  ): FullScreenQuad {
     if (!this._dilateMaterial) {
       this._dilateMaterial = new THREE.ShaderMaterial({
         uniforms: {
           tMask: { value: texture },
           uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
           uColor: { value: colorVec.clone() },
-          uRadius: { value: OUTLINE_WIDTH_PX },
+          uRadius: { value: widthPx },
+          uAlpha: { value: alpha },
         },
         vertexShader: DILATE_VERTEX_SHADER,
         fragmentShader: DILATE_FRAGMENT_SHADER,
@@ -222,8 +235,11 @@ export class SelectionOutlinePass {
     }
     this._dilateMaterial.uniforms['tMask'].value = texture;
     this._dilateMaterial.uniforms['uTexel'].value.set(1 / w, 1 / h);
-    // ADR-538 — colour set per silhouette (selection gold vs hover yellow); one material reused.
+    // ADR-538 — colour/width/alpha set per silhouette (selection: gold 2px solid · hover:
+    // yellow 1.4px dim); one material reused across both draws.
     this._dilateMaterial.uniforms['uColor'].value.copy(colorVec);
+    this._dilateMaterial.uniforms['uRadius'].value = widthPx;
+    this._dilateMaterial.uniforms['uAlpha'].value = alpha;
     if (!this._dilateQuad) this._dilateQuad = new FullScreenQuad(this._dilateMaterial);
     return this._dilateQuad;
   }

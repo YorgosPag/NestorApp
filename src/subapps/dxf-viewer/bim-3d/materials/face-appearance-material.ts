@@ -43,5 +43,7 @@ export function resolveFaceMaterial(
     color: new THREE.Color(hex),
     roughness: 0.92,
     metalness: 0,
+    // ADR-539 Φ2 — double-sided so a painted hole-wall renders + raycasts from inside the void.
+    side: THREE.DoubleSide,
   });
 }

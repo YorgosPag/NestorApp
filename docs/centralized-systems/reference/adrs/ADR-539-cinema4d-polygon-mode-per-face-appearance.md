@@ -159,9 +159,22 @@ slab persistence serialize path (αν whitelist).
     GREEN· regression slab-slope/multilayer/units + SetFaceAppearanceCommand + Φ1.5 = 0 break.
   - **N.7.1:** `ThreeJsSceneManager.ts` ανέβηκε στο όριο → συμπιέστηκε σε **499** γρ· `BimViewport3D.tsx`
     **498**. Νέα αρχεία όλα <135γρ.
+  - **FIX 1 (browser-report Giorgio): κλικ στην ΠΑΝΩ όψη έβαφε την ΚΑΤΩ.** Root (diagnostic test): τα
+    cap normals ήταν **αντεστραμμένα** — η `top` όψη (cap στο `y=thicknessM`, ορατή προς ουρανό) είχε normal
+    προς τα **κάτω** → με FrontSide ήταν back-face-culled όταν κλικ από πάνω → η ακτίνα «έπεφτε» στο κάτω cap
+    → επιστρεφόταν `bottom`. **Λύση:** flip του cap winding στο `buildFacedIndex` (bottom `a→b→c` = −Y,
+    top `a→c→b` = +Y) + μόνιμο regression test (avg normal.y top>0.5, bottom<−0.5).
+  - **FIX 2 (browser-report Giorgio): η τρύπα δεν επιλεγόταν/βαφόταν.** Root: πάνω από κάθε opening υπάρχει
+    ένα **αόρατο pick-mesh** (`bimType='slab-opening'`, ADR-535) που «έκλεβε» το κλικ — ο `raycastBimFace`
+    επέστρεφε το πρώτο hit (το pick-mesh, χωρίς `faceKey`) → ο handler καθάριζε την επιλογή. **Λύση:** ο
+    `raycastBimFace` πλέον επιστρέφει το **πρώτο hit με `faceKey`** (faced face wins)· non-faced hits = fallback
+    μόνο αν κανένα faced. Έτσι το τοίχωμα της τρύπας κερδίζει το αόρατο opening mesh.
+  - **FIX 3 (defense-in-depth): hole-wall culling.** Τα faced υλικά έγιναν **`DoubleSide`**
+    (`ensureDoubleSided(baseMat)` — ΕΝΑ shared body clone· `resolveFaceMaterial` painted `side: DoubleSide`)
+    ώστε οι παρειές της τρύπας να είναι ορατές + επιλέξιμες + βάψιμες από μέσα ανεξαρτήτως winding.
   - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (drag swatch→όψη· πλάκα με άνοιγμα σε Polygon Mode δείχνει το κενό +
-    τοιχώματα· custom color dialog· yellow hover· **hole-wall normals** — αν φαίνονται «κούφια» από κάποια
-    γωνία = flip winding) + commit (Giorgio· stage **ADR-040 + ADR-539**, CHECK 6B/6D).
+    **τοιχώματα επιλέξιμα/βάψιμα**· custom color dialog· yellow hover) + commit (Giorgio· stage
+    **ADR-040 + ADR-539**, CHECK 6B/6D).
 - **2026-06-27 (Φ1.5 — FOUNDATION, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance σε
   **foundation** (πέδιλα/θεμέλια pad/strip/tie-beam). Η αρχιτεκτονική ήταν ήδη solid-agnostic →
   μόνο converter + persistence wiring.

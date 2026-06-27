@@ -65,8 +65,12 @@ function buildFacedIndex(
 
   const tris = THREE.ShapeUtils.triangulateShape([...contour2d], holes2d.map((h) => [...h]));
   const index: number[] = [];
-  for (const [a, b, c] of tris) index.push(N + a, N + c, N + b); // bottom cap (reversed)
-  for (const [a, b, c] of tris) index.push(a, b, c); // top cap (direct)
+  // Cap winding verified by `DIAG` test: the bottom ring (N+…) cap must wind a→b→c for a
+  // DOWN-facing normal (faces the ground), and the top ring a→c→b for an UP-facing normal
+  // (faces the sky). The earlier a/b/c order was inverted (top normal pointed down) → clicking
+  // the visible top cap was back-face-culled and the click fell through to the bottom cap.
+  for (const [a, b, c] of tris) index.push(N + a, N + b, N + c); // bottom cap → normal −Y (ground)
+  for (const [a, b, c] of tris) index.push(a, c, b); // top cap → normal +Y (sky)
 
   const capLen = tris.length * 3;
   const faceKeyByMaterialIndex: FaceKey[] = ['bottom', 'top'];
@@ -181,8 +185,22 @@ export function buildFacedSolidBody(
   const topRing = verts.map((v) => new THREE.Vector3(v.x, thicknessM, -v.y));
   const prism = buildFacedPrism(topRing, thicknessM, holes);
   if (!prism) return null;
-  const materials = prism.faceKeyByMaterialIndex.map((fk) => resolveFaceMaterial(fk, appearance, baseMat));
+  // ADR-539 Φ2 — faced solids render + RAYCAST double-sided so the interior hole-wall faces
+  // are both visible and pickable from inside the opening. With FrontSide, a hole wall whose
+  // flat normal faces away from the cursor is back-face-culled → invisible AND un-pickable
+  // (THREE.Mesh.raycast honours `material.side`). One shared double-sided body material covers
+  // every unpainted face (incl. hole walls); painted faces get their own double-sided material.
+  const bodyMat = ensureDoubleSided(baseMat);
+  const materials = prism.faceKeyByMaterialIndex.map((fk) => resolveFaceMaterial(fk, appearance, bodyMat));
   const mesh = new THREE.Mesh(prism.geometry, materials);
   mesh.userData['faceKeyByMaterialIndex'] = [...prism.faceKeyByMaterialIndex];
   return mesh;
+}
+
+/** Return `mat` if already double-sided, else a double-sided clone (shared base look, both faces). */
+function ensureDoubleSided(mat: THREE.Material): THREE.Material {
+  if (mat.side === THREE.DoubleSide) return mat;
+  const clone = mat.clone();
+  clone.side = THREE.DoubleSide;
+  return clone;
 }

@@ -79,3 +79,7 @@
 
 - **2026-06-27** — Φ1 implemented (uncommitted). Ενοποιημένο 3D hover πάνω στο HoverStore + reuse 2D glow/badge +
   ADR-536 outline pass (δεύτερο κίτρινο silhouette). 18 jest GREEN. Browser-verify + commit εκκρεμούν.
+- **2026-06-27** — Φ1b refinement (Giorgio «τι θα έκαναν Revit/Maxon;»): το hover silhouette έγινε **λεπτότερο
+  (1.4px vs 2.0px) + αχνότερο (alpha 0.65)** ώστε να διαβάζεται ως **παροδικό** έναντι του δεσμευμένου selection
+  (Revit/C4D rollover-vs-selection). Νέο `uAlpha` uniform + per-draw `uRadius` στο `SelectionOutlinePass` (ΕΝΑ
+  material reused, μηδέν νέο pass). Selection αμετάβλητο (gold 2px solid). 5/5 SelectionOutlinePass tests GREEN.
