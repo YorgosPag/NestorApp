@@ -21,7 +21,7 @@ import type {
   OptimizationAction,
   PerformanceAlert
 } from './dxf-perf-types';
-import { hasMemoryAPI } from './dxf-perf-types';
+import { readCpuMemoryMb } from '../utils/cpu-memory';
 import {
   generateOptimizationActions,
   shouldApplyOptimization,
@@ -136,17 +136,14 @@ export class DxfPerformanceOptimizer {
     if (!this.config.memory.enableMemoryProfiling) return;
 
     setInterval(() => {
-      const perf = performance;
-      if (hasMemoryAPI(perf) && perf.memory) {
-        const memoryUsage = perf.memory.usedJSHeapSize / (1024 * 1024);
+      // SSoT CPU-memory read (shared with the 3D + 2D performance collectors).
+      const memoryUsage = readCpuMemoryMb();
+      if (this.currentMetrics && memoryUsage !== null) {
+        this.currentMetrics.memoryUsage = memoryUsage;
 
-        if (this.currentMetrics) {
-          this.currentMetrics.memoryUsage = Math.round(memoryUsage * 100) / 100;
-
-          const gcThreshold = this.config.memory.maxMemoryUsage * PERFORMANCE_THRESHOLDS.memory.gcTriggerPercent;
-          if (memoryUsage > gcThreshold) {
-            triggerGarbageCollection();
-          }
+        const gcThreshold = this.config.memory.maxMemoryUsage * PERFORMANCE_THRESHOLDS.memory.gcTriggerPercent;
+        if (memoryUsage > gcThreshold) {
+          triggerGarbageCollection();
         }
       }
     }, this.config.memory.memoryCheckInterval);

@@ -13,25 +13,9 @@
 // BROWSER API TYPES (Chrome-specific)
 // ============================================================================
 
-/**
- * Chrome-specific Performance Memory Info
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Performance/memory
- */
-export interface PerformanceMemoryInfo {
-  readonly jsHeapSizeLimit: number;
-  readonly totalJSHeapSize: number;
-  readonly usedJSHeapSize: number;
-}
-
-/** Extended Performance interface with Chrome memory API */
-export interface PerformanceWithMemory extends Performance {
-  memory?: PerformanceMemoryInfo;
-}
-
-/** Type guard to check if performance has memory API */
-export function hasMemoryAPI(perf: Performance): perf is PerformanceWithMemory {
-  return 'memory' in perf && perf.memory !== undefined;
-}
+// CPU-memory access centralized in `utils/cpu-memory.ts` (readCpuMemoryMb) — the
+// SSoT used by the optimizer + the 3D/2D performance collectors (ADR-366 §B.5.U).
+// The old PerformanceMemoryInfo / PerformanceWithMemory / hasMemoryAPI were removed.
 
 /** Window with optional garbage collection (Chrome DevTools) */
 export interface WindowWithGC extends Window {
