@@ -32,7 +32,26 @@ interface Snap3DOverlayState {
   setSnap(snap: Snap3DMarker | null): void;
 }
 
-export const useSnap3DOverlayStore = create<Snap3DOverlayState>((set) => ({
+/**
+ * 🚀 PERF (2026-06-28) — value-equality so `setSnap` is a NO-OP when the marker is unchanged.
+ * The pointer scheduler republishes every ~50ms pick (a fresh object, or `null` over empty space);
+ * without this, the snap subscribers (`BimCrosshairOverlay3D`/`BimSnapIndicatorOverlay3D`) re-render
+ * every 50ms even when nothing changed → the crosshair «swam». Keeping the SAME reference for an
+ * equal marker means a still cursor (over a point or over empty space) produces zero re-renders.
+ */
+function snapMarkersEqual(a: Snap3DMarker | null, b: Snap3DMarker | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.elevMm === b.elevMm
+    && a.view.point.x === b.view.point.x
+    && a.view.point.y === b.view.point.y
+    && a.view.type === b.view.type;
+}
+
+export const useSnap3DOverlayStore = create<Snap3DOverlayState>((set, get) => ({
   snap: null,
-  setSnap: (snap) => set({ snap }),
+  setSnap: (snap) => {
+    if (snapMarkersEqual(get().snap, snap)) return; // unchanged → keep reference, no re-render
+    set({ snap });
+  },
 }));

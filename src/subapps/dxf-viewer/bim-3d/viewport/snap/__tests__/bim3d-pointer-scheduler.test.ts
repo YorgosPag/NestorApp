@@ -158,6 +158,30 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(mockRegisteredIsDirty?.()).toBe(true); // retried next frame
   });
 
+  it('re-renders the scene ONLY when the hover target changes (no swim — ADR-040 Φ-3D-pointer)', () => {
+    mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
+    requestPointerPick({ manager, clientX: 50, clientY: 50 });
+    mockRegisteredCb?.();
+    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
+
+    // Second pick over the SAME entity (past the throttle) → NO extra render / hover write.
+    nowMs += 100;
+    requestPointerPick({ manager, clientX: 51, clientY: 51 });
+    mockRegisteredCb?.();
+    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
+
+    // Hover changes to empty space → exactly one more render + a null hover write.
+    mockBimHit = null;
+    mockDxfPick = null;
+    nowMs += 100;
+    requestPointerPick({ manager, clientX: 300, clientY: 300 });
+    mockRegisteredCb?.();
+    expect(markSceneDirty).toHaveBeenCalledTimes(2);
+    expect(mockSetHoveredEntity).toHaveBeenLastCalledWith(null);
+  });
+
   it('clearPointerPick makes the RAF callback a no-op', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
     requestPointerPick({ manager, clientX: 50, clientY: 50 });

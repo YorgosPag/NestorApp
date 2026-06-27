@@ -100,20 +100,15 @@ async function safeExecuteTest(
 async function runCanvasAlignmentTest(): Promise<TestResult> {
   return safeExecuteTest('Τεστ Ευθυγράμμισης Canvas', async () => {
     const module = await import('./canvas-alignment-test');
-    const { CanvasAlignmentTester } = module;
-
-    const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
-    const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
-    const greenBorder = CanvasAlignmentTester.findGreenBorder();
-
-    const allPass = alignmentResult.isAligned && zIndexResult.isCorrectOrder && greenBorder;
+    // 🎯 SSoT CORE: ίδια εκτέλεση + verdict με DebugToolbar/Tests Modal (green border = informational)
+    const { alignment, zIndex, greenBorder, passed } = module.runCanvasAlignmentTestCore();
 
     return {
-      success: allPass,
-      alignment: alignmentResult,
-      zIndex: zIndexResult,
+      success: passed,
+      alignment,
+      zIndex,
       greenBorder: !!greenBorder,
-      summary: allPass ? 'Όλοι οι έλεγχοι πέρασαν' : 'Κάποιοι έλεγχοι απέτυχαν'
+      summary: passed ? 'Όλοι οι έλεγχοι πέρασαν' : 'Κάποιοι έλεγχοι απέτυχαν'
     };
   });
 }

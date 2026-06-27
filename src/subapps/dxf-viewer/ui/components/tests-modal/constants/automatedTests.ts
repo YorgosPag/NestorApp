@@ -63,13 +63,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       icon: Target,
       action: async () => {
         const module = await import('../../../../debug/canvas-alignment-test');
-        const { CanvasAlignmentTester } = module;
-        const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
-        const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
-        const greenBorder = CanvasAlignmentTester.findGreenBorder();
-        // ℹ️ Green border = debug-only visual για layering mode → informational, ΟΧΙ pass/fail κριτήριο
-        const testMessage = `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\nZ-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\nGreen Border (layering mode): ${greenBorder ? '✅ active' : 'ℹ️ inactive'}`;
-        showCopyableNotification(testMessage, alignmentResult.isAligned && zIndexResult.isCorrectOrder ? 'success' : 'warning');
+        // 🎯 SSoT: ΕΝΑ helper τρέχει το test + παράγει message/pass (κοινό με το DebugToolbar)
+        const { message, passed } = module.runCanvasAlignmentTestNotification();
+        showCopyableNotification(message, passed ? 'success' : 'warning');
       }
     },
     {

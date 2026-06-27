@@ -280,30 +280,31 @@ export class CanvasAlignmentTester {
   }
 }
 
-export interface CanvasTestNotificationResult {
-  /** Έτοιμο multi-line μήνυμα για showCopyableNotification */
-  message: string;
-  /** true μόνο αν alignment + z-index είναι σωστά (green border = informational) */
+/** Raw αποτελέσματα + verdict από το canvas alignment/z-index/green-border test. */
+export interface CanvasAlignmentTestResults {
+  alignment: ReturnType<typeof CanvasAlignmentTester.testCanvasAlignment>;
+  zIndex: ReturnType<typeof CanvasAlignmentTester.testCanvasZIndex>;
+  greenBorder: ReturnType<typeof CanvasAlignmentTester.findGreenBorder>;
+  /** true μόνο αν alignment + z-index είναι σωστά (green border = informational, ΟΧΙ pass/fail) */
   passed: boolean;
 }
 
 /**
- * 🎯 SSoT: ΕΝΑ σημείο που τρέχει το canvas alignment + z-index + green-border test
- * και παράγει το notification payload (message + pass/fail). Καλείται ΚΑΙ από το
- * κουμπί «Canvas Test» του DebugToolbar ΚΑΙ από το Tests Modal → ΕΝΑ format, ΕΝΑ
- * pass/fail κριτήριο, μηδέν drift.
+ * 🎯 SSoT CORE: ΕΝΑ σημείο που τρέχει τα 3 canvas tests (+ diagnostics) και επιστρέφει
+ * raw results + verdict. ΟΛΑ τα call sites (DebugToolbar κουμπί, Tests Modal,
+ * UnifiedTestRunner) ΠΡΕΠΕΙ να καλούν αυτό — μηδέν διπλότυπη εκτέλεση/κριτήριο.
  *
  * ℹ️ Green border = debug-only visual για layering mode → informational, ΟΧΙ pass/fail.
  */
-export function runCanvasAlignmentTestNotification(): CanvasTestNotificationResult {
-  const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
-  const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
+export function runCanvasAlignmentTestCore(): CanvasAlignmentTestResults {
+  const alignment = CanvasAlignmentTester.testCanvasAlignment();
+  const zIndex = CanvasAlignmentTester.testCanvasZIndex();
   const greenBorder = CanvasAlignmentTester.findGreenBorder();
 
   // Diagnostics (πρώην inline μόνο στο DebugToolbar) — τώρα κεντρικά για ΟΛΑ τα call sites
   console.log('🔍 DETAILED Z-INDEX DEBUG:', {
-    alignmentResult,
-    zIndexResult,
+    alignmentResult: alignment,
+    zIndexResult: zIndex,
     greenBorder: !!greenBorder,
   });
   const dxfEl = document.querySelector('canvas[data-canvas-type="dxf"]');
@@ -321,13 +322,30 @@ export function runCanvasAlignmentTestNotification(): CanvasTestNotificationResu
     } : 'NOT FOUND',
   });
 
-  const message =
-    `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\n` +
-    `Z-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\n` +
-    `Green Border (layering mode): ${greenBorder ? '✅ active' : 'ℹ️ inactive'}`;
-
   // ⚠️ Green border ΔΕΝ μετράει στο pass/fail (debug-only visual για layering mode)
-  const passed = alignmentResult.isAligned && zIndexResult.isCorrectOrder;
+  const passed = alignment.isAligned && zIndex.isCorrectOrder;
+
+  return { alignment, zIndex, greenBorder, passed };
+}
+
+export interface CanvasTestNotificationResult {
+  /** Έτοιμο multi-line μήνυμα για showCopyableNotification */
+  message: string;
+  /** true μόνο αν alignment + z-index είναι σωστά (green border = informational) */
+  passed: boolean;
+}
+
+/**
+ * 🎯 SSoT PRESENTER (notification): thin wrapper γύρω από το {@link runCanvasAlignmentTestCore}
+ * που παράγει το έτοιμο showCopyableNotification payload. Κοινό σε DebugToolbar + Tests Modal.
+ */
+export function runCanvasAlignmentTestNotification(): CanvasTestNotificationResult {
+  const { alignment, zIndex, greenBorder, passed } = runCanvasAlignmentTestCore();
+
+  const message =
+    `Canvas Alignment: ${alignment.isAligned ? '✅ OK' : '❌ MISALIGNED'}\n` +
+    `Z-Index Order: ${zIndex.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\n` +
+    `Green Border (layering mode): ${greenBorder ? '✅ active' : 'ℹ️ inactive'}`;
 
   return { message, passed };
 }

@@ -47,6 +47,11 @@ let latest: Bim3DPickInput | null = null;
 let dirty = false;
 let lastRunMs = 0;
 let registered = false;
+// 🚀 PERF (2026-06-28) — last resolved hover target (bimId | dxfId | null). The hover
+// silhouette + `markSceneDirty` (a FULL WebGL re-render) must fire ONLY when this CHANGES,
+// not on every 50ms pick. Re-rendering the whole scene every pick (even with an unchanged
+// hover, e.g. over empty space) produced a periodic frame hitch → the crosshair «swam».
+let lastHoverId: string | null = null;
 
 /** The heavy work — runs in the RAF slot, NEVER inside the mousemove handler. */
 function runPick(input: Bim3DPickInput): void {
@@ -71,15 +76,17 @@ function runPick(input: Bim3DPickInput): void {
   const hit = raycastBimHitAndWorld(group, camera, dom, clientX, clientY);
 
   // ADR-538 — unified hover: BIM silhouette when a tagged entity is hit, else the raw-DXF glow.
-  if (hit?.bimId) {
-    setHoveredEntity(hit.bimId);
-    applyBimHover(manager.hoverHighlighter, hit.bimId);
-  } else {
-    const dxfId = pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId ?? null;
-    setHoveredEntity(dxfId);
-    applyBimHover(manager.hoverHighlighter, null);
+  // Resolve the hover target first; only TOUCH the hover state + request a WebGL re-render when it
+  // actually CHANGED (idle hover over the same entity / empty space ⇒ zero renders → no swim).
+  const hoverId = hit?.bimId
+    ?? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId
+    ?? null;
+  if (hoverId !== lastHoverId) {
+    lastHoverId = hoverId;
+    setHoveredEntity(hoverId);
+    applyBimHover(manager.hoverHighlighter, hit?.bimId ?? null);
+    manager.markSceneDirty();
   }
-  manager.markSceneDirty();
 
   // ADR-544 — while a placement tool (column/wall) owns the snap glyph, the hover-handler yields.
   const placing = toolStateStore.get().activeTool;
@@ -138,4 +145,6 @@ export function requestPointerPick(input: Bim3DPickInput): void {
 export function clearPointerPick(): void {
   latest = null;
   dirty = false;
+  // The leave handler clears the hover itself; reset so a re-entry re-applies it.
+  lastHoverId = null;
 }
