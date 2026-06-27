@@ -24,14 +24,11 @@
  */
 
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
-import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import { readCpuMemoryMb, commitPerformanceSnapshot } from './performance-collector-shared';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
-
-// Chrome-only Performance API extension (mirrors PerformanceCollector).
-type ChromePerformance = Performance & { memory?: { usedJSHeapSize: number } };
 
 /** Match the 3D collector tick so the 60s history window (240 × 4Hz) is identical
  *  across modes. Single source: DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL (ADR-516). */
@@ -74,12 +71,6 @@ export class Performance2DCollector {
 
     const fps = Math.max(0, Math.round(this.latestAverageFps));
 
-    // CPU heap — Chrome-only (performance.memory API).
-    const chromePerf = performance as ChromePerformance;
-    const cpuMemoryMb = chromePerf.memory
-      ? parseFloat((chromePerf.memory.usedJSHeapSize / 1_048_576).toFixed(1))
-      : null;
-
     const snapshot: PerformanceMetricsSnapshot = {
       fps,
       frameTimeMs: parseFloat((1000 / Math.max(1, fps)).toFixed(1)),
@@ -90,11 +81,10 @@ export class Performance2DCollector {
       objectsVisible: null,
       objectsTotal: null,
       gpuMemoryMb: null,
-      cpuMemoryMb,
+      cpuMemoryMb: readCpuMemoryMb(),
       samplesPerSec: null,
     };
 
-    usePerformanceHUDStore.getState().updateMetrics(snapshot);
-    usePerformanceHistoryStore.getState().pushSample(snapshot);
+    commitPerformanceSnapshot(snapshot);
   };
 }

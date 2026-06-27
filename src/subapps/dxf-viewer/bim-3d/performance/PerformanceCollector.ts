@@ -15,17 +15,14 @@
 
 import * as THREE from 'three';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
-import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
 import { baselineTracker } from './baseline-tracker';
 import { createRegressionDetector } from './regression-detector';
 import { regressionAlertBus } from './regression-alert-bus';
 import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
 import { telemetryBatcher } from '../telemetry/telemetry-batcher';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import { readCpuMemoryMb, commitPerformanceSnapshot } from './performance-collector-shared';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
-
-// Chrome-only Performance API extension
-type ChromePerformance = Performance & { memory?: { usedJSHeapSize: number } };
 
 // Three.js render info may include vertices in older builds
 type ExtendedRenderInfo = THREE.WebGLRenderer['info']['render'] & { vertices?: number };
@@ -92,11 +89,8 @@ export class PerformanceCollector {
       ((info.memory.geometries * 50_000 + info.memory.textures * 4_194_304) / 1_048_576).toFixed(1),
     );
 
-    // CPU heap — Chrome-only (performance.memory API).
-    const chromePerf = performance as ChromePerformance;
-    const cpuMemoryMb = chromePerf.memory
-      ? parseFloat((chromePerf.memory.usedJSHeapSize / 1_048_576).toFixed(1))
-      : null;
+    // CPU heap — Chrome-only (performance.memory API). SSoT shared with the 2D collector.
+    const cpuMemoryMb = readCpuMemoryMb();
 
     const snapshot: PerformanceMetricsSnapshot = {
       fps,
@@ -112,10 +106,10 @@ export class PerformanceCollector {
       samplesPerSec: null, // Path-tracer Phase 4 — not yet implemented
     };
 
-    const hudState = usePerformanceHUDStore.getState();
-    hudState.updateMetrics(snapshot);
-    usePerformanceHistoryStore.getState().pushSample(snapshot);
+    // Write to the shared HUD + history stores (SSoT, shared with the 2D collector).
+    commitPerformanceSnapshot(snapshot);
 
+    const hudState = usePerformanceHUDStore.getState();
     // Baseline + regression detection feed the same sample stream. Baseline
     // records always when HUD is on; alerts are gated by the user toggle.
     baselineTracker.recordSample(hudState.renderMode, snapshot.fps, now);
