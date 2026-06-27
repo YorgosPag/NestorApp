@@ -64,8 +64,9 @@ browser-verify** (Profiler: μόνο `RibbonTabsRegion` updater στο click-sel
 - **Σχέδιο:** το `activeContextualTrigger` (και το `contextualTabs`) να ΜΗΝ είναι props που αλλάζουν στο `RibbonRoot`. Αντ' αυτού ένα **leaf component μέσα στο RibbonRoot** να κάνει `useActiveContextualTrigger`/self-subscribe → μόνο το tab-bar + contextual-tab area re-renderάρει, ΟΧΙ τα static panel buttons. Έτσι τα props του `RibbonRoot` γίνονται ΟΛΑ σταθερά (commands ήδη σταθερό από Stage 1) → `React.memo` holds → `RibbonRootInner` ΔΕΝ re-renderάρει.
 - **Στόχος profile:** ribbon fibers 96→~0 + tooltips 302→~λίγα στο selection commit.
 - **Προσοχή:** ο auto-activate `useEffect` (RibbonRoot γρ. 77-100) χρειάζεται το `visibleContextualTabs` — μετακίνησέ τον μαζί με το trigger στο leaf, ΟΧΙ να σπάσει.
+</details>
 
-### Stage 3 — `DxfViewerDialogs` (117 dialog fibers)
+### Stage 3 — `DxfViewerDialogs` (117 dialog fibers) (ΤΟ ΕΠΟΜΕΝΟ)
 - **Αρχείο:** `app/DxfViewerDialogs.tsx`. Βρες ΓΙΑΤΙ re-renderάρει στο select (πιθανώς subscribe σε selection ή parent prop) → memoize τα always-mounted dialog hosts ή granular subscription (κάθε dialog host να self-subscribe ΜΟΝΟ αν ανοιχτό).
 - **Στόχος:** dialogs 117→~0 στο selection commit.
 
