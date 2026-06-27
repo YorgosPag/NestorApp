@@ -21,6 +21,8 @@ import { dwarn } from '../../debug';
 import type { Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
+// ADR-532 B4 — event-time selection read (NO subscription — Shell is 6C-protected).
+import { isStoreSelected } from '../../systems/selection/SelectedEntitiesStore';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -52,12 +54,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   showDxfCanvas, showLayerCanvas,
   containerRef, dxfCanvasRef, overlayCanvasRef, previewCanvasRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
   dxfScene, colorLayers, draftPolygon, currentStatus,
-  settings, gripState, entityState,
+  settings, gripState,
   zoomSystem, dxfGripInteraction, universalSelection, setTransform,
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu,
-  drawingState, entityJoin, floorId, onMouseMove,
+  drawingState, floorId, onMouseMove,
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
@@ -73,7 +75,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo,
     draggingOverlayBody, dragPreviewPosition,
   } = gripState;
-  const { selectedEntityIds } = entityState;
   const {
     drawingHandlers, handleDrawingFinish, handleDrawingClose,
     handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
@@ -241,16 +242,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // DxfCanvasSubscriber's useMemo on { ...base, hoveredEntityId } stays effective.
   // ADR-049 SSOT: dragPreview removed — grip-drag ghost lives on PreviewCanvas
   // via GripDragPreviewMount, same path as toolbar Move tool.
-  const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId'>>(
+  // ADR-532 B4 — selectedEntityIds is injected by DxfCanvasSubscriber (leaf
+  // self-subscribes useSelectedEntityIds) so the Shell — and the orchestrator —
+  // stay inert on entity selection. Base omits it (and hoveredEntityId).
+  const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId' | 'selectedEntityIds'>>(
     () => ({
       showGrid: false,
       showLayerNames: false,
       wireframeMode: false,
-      selectedEntityIds,
       gripInteractionState: dxfGripInteraction.gripInteractionState,
       movePreviewActive: movePreview.phase === 'awaiting-destination',
     }),
-    [selectedEntityIds, dxfGripInteraction.gripInteractionState, movePreview.phase],
+    [dxfGripInteraction.gripInteractionState, movePreview.phase],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({
@@ -367,7 +370,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             slabOpeningGhost={slabOpeningGhostPreview}
             openingGhost={openingGhostPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
-            selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}
             transform={transform}
             viewport={viewport}
@@ -381,7 +383,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               top: 0,
               bottom: 0,
             }}
-            isEntitySelected={(id) => selectedEntityIds.includes(id)}
+            isEntitySelected={(id) => isStoreSelected(id)}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{
               height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,

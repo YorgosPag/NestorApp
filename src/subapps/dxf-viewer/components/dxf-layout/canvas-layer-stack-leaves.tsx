@@ -24,6 +24,9 @@ import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowCom
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
+// ADR-532 B4 — grip render is selection-driven; the leaf self-subscribes so the
+// orchestrator (CanvasSection) no longer re-renders on entity selection.
+import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { DxfCanvasRef } from '../../canvas-v2';
@@ -140,7 +143,9 @@ interface DxfCanvasSubscriberProps {
   activeTool?: string;
   overlayMode?: 'select' | 'draw' | 'edit';
   colorLayers?: ColorLayer[];
-  renderOptionsBase: Omit<DxfRenderOptions, 'hoveredEntityId'>;
+  // ADR-532 B4 — selectedEntityIds is NOT in the base: this leaf subscribes to it
+  // (useSelectedEntityIds) and injects it, alongside hoveredEntityId/selectedRoofEdge.
+  renderOptionsBase: Omit<DxfRenderOptions, 'hoveredEntityId' | 'selectedEntityIds'>;
   crosshairSettings?: CrosshairSettings;
   gridSettings?: GridSettings;
   rulerSettings?: RulerSettings;
@@ -203,6 +208,10 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
 
   const guideComputed = useGuideWorkflowComputed(localComputedParams);
   const hoveredEntityId = useHoveredEntity();
+  // ADR-532 B4 — selection-set leaf subscription (reference-stable until the dxf
+  // selection changes). Grips/selection highlight redraw without re-rendering the
+  // CanvasSection orchestrator.
+  const selectedEntityIds = useSelectedEntityIds();
   // ADR-417 Φ-per-edge — micro-leaf subscription στο roofEdgeSelectionStore ώστε
   // η αλλαγή επιλεγμένης ακμής να ξανατρέχει το δυναμικό «selected» pass (live
   // edge highlight). Μόνο αυτό το leaf re-renders, ΟΧΙ ο orchestrator (ADR-040).
@@ -211,8 +220,8 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): stable identity prevents the
   // dxf-canvas-renderer dirty-tracking effect from re-running every parent render.
   const renderOptions = useMemo(
-    () => ({ ...renderOptionsBase, hoveredEntityId, selectedRoofEdge }),
-    [renderOptionsBase, hoveredEntityId, selectedRoofEdge],
+    () => ({ ...renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds }),
+    [renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds],
   );
 
   return (

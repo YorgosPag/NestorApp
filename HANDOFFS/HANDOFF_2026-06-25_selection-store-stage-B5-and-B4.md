@@ -93,6 +93,29 @@ organism.* actions· nudge.
 
 ## 4. ΚΑΝΟΝΕΣ
 - Commit/push = Giorgio. Shared tree: read φρέσκο, μην αγγίξεις beam-column-cutback/ADR-458/529.
+  ⚠️ 2026-06-27: HEAD προχώρησε (ADR-538/539/540/541, 3D/face-appearance άλλων agents) — **read φρέσκο**
+  το CanvasSection/leaves πριν το B4 (γραμμές μπορεί να μετακινήθηκαν· το «γρ.139» είναι ενδεικτικό).
 - 6D files (`DxfViewerContent`, `useDxfViewerEffects`, `useKeyboardShortcuts`) → stage ADR-532.
   TopBar/Sidebar/Dialogs/callbacks/ribbon = ΟΧΙ 6B/6D.
 - Ενημέρωσε ADR-532 §3/§5/changelog (B5/B4) στο ίδιο commit.
+
+---
+
+## 5. PAN LAG — Phase XXII.B (διαγνωσμένο 2026-06-26, ΕΚΚΡΕΜΕΙ· ΞΕΧΩΡΙΣΤΟ από B4)
+**Σύμπτωμα (Giorgio):** μεγάλο lag «χέρι–κέρσορας» στο pan, **παντού ακόμα & μικρό σχέδιο**.
+**Ρίζα (τεκμηριωμένη):** ADR-040 **Phase XXII.B δεν υλοποιήθηκε**. Ο `CanvasLayerStackTransformBridge`
+(sole `useTransformValue()` subscriber) περνά το `transform` ως **prop** στο `CanvasLayerStack` (Shell) →
+σε **κάθε** pan/zoom frame re-render-άρει ΟΛΟΚΛΗΡΟ το canvas subtree (~20 children) → κορεσμός main
+thread → ο compositor-driven crosshair (`CrosshairOverlay` translate3d) καθυστερεί.
+**ΑΠΟΚΛΕΙΣΤΗΚΑΝ:** (α) ΟΧΙ από B5 (transform sub isolated σε leaf· τα selection subs δεν αγγίζουν
+transform). (β) ΟΧΙ multiple-renders/frame (pan ήδη RAF-coalesced: `mouse-handler-move` γρ.~421-437,
+1 setTransform/frame). (γ) bridge αμετάβλητο από 2026-05-27.
+**ΑΝΟΙΧΤΟ ΕΡΩΤΗΜΑ (χρειάζεται React-DevTools Profiler κατά pan):** ένα Shell re-render σε ΜΙΚΡΟ σχέδιο
+θα έπρεπε ~2-3ms, όχι ορατό lag → πιθανό **συγκεκριμένο child** με βαρύ sync work/frame (ύποπτα:
+forced reflow `getBoundingClientRect()` στο `CanvasLayerStack` render path· `preview-canvas` dirty που
+μπήκε 2026-06-21 στο `TRANSFORM_CANVAS_IDS`). Το profiling κρίνει: «μικρό στοχευμένο fix» vs «ολόκληρο
+Phase XXII.B».
+**ΛΥΣΗ:** Phase XXII.B — κάθε transform-dependent leaf (`GridUnderlayCanvas`/`DxfCanvasSubscriber`/
+`SnapIndicatorSubscriber`/`PreviewCanvas`/overlays) self-subscribe `useTransformValue()` αντί prop →
+ο Shell σταματά να re-render-άρει στο pan/zoom. **6B/6C-protected, 5+ leaves, browser-incremental** →
+dedicated session (orchestrator-tier, approval N.8). **Πρώτα ζήτα profiling number από Giorgio.**

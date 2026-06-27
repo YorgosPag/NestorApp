@@ -19,6 +19,8 @@
 import { useCallback, useEffect, type RefObject, type MutableRefObject } from 'react';
 
 import { isDrawingTool, isMeasurementTool } from '../../systems/tools/ToolStateManager';
+// ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -44,8 +46,6 @@ export interface UseCanvasContextMenuParams {
   hasUnifiedDrawingPointsRef: MutableRefObject<() => boolean>;
   /** Ref to draft polygon array (overlay drawing system) */
   draftPolygonRef: MutableRefObject<Array<[number, number]>>;
-  /** Currently selected DXF entity IDs (for entity context menu) */
-  selectedEntityIds?: string[];
   /** Imperative ref to DrawingContextMenu */
   drawingMenuRef: RefObject<DrawingContextMenuHandle | null>;
   /** Imperative ref to EntityContextMenu */
@@ -90,7 +90,6 @@ export function useCanvasContextMenu({
   overlayMode,
   hasUnifiedDrawingPointsRef,
   draftPolygonRef,
-  selectedEntityIds = [],
   drawingMenuRef,
   entityMenuRef,
   rotationPhase,
@@ -222,7 +221,8 @@ export function useCanvasContextMenu({
       }
 
       // PRIORITY 2: Entity context menu (select mode with entities selected)
-      if (activeTool === 'select' && selectedEntityIds.length > 0) {
+      // ADR-532 B4 — read the selection at event time (no stale render snapshot).
+      if (activeTool === 'select' && SelectedEntitiesStore.getSelectedEntityIds().length > 0) {
         // 🏢 PERF: Imperative call — no setState, no parent re-render
         entityMenuRef.current?.open(e.clientX, e.clientY);
         return;
@@ -238,7 +238,7 @@ export function useCanvasContextMenu({
       container.removeEventListener('mousemove', handleRightMouseMove);
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds, dimContextMenuRef, selectedDimensionIds]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds, dimContextMenuRef, selectedDimensionIds]);
 
   return {
     handleDrawingContextMenu,

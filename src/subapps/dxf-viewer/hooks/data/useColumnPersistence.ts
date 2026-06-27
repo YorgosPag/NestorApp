@@ -212,6 +212,9 @@ export function useColumnPersistence(
           validation: entity.validation,
           geometry: entity.geometry,
           layerId: entity.layerId,
+          // ADR-539 — carry the per-face appearance edit so painted faces persist on
+          // re-edit (faced paint fires `bim:entities-attached` → persist → updateDoc).
+          faceAppearance: entity.faceAppearance,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);

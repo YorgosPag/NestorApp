@@ -11,7 +11,7 @@ import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-065: Extracted circle construction
 import { circleFrom3Points } from './geometry-circle-utils';
 // 🏢 ADR-065: Extracted angle utilities
-import { radToDeg, normalizeAngleDiff, normalizeAngleRad } from './geometry-angle-utils';
+import { degToRad, radToDeg, normalizeAngleDiff, normalizeAngleRad } from './geometry-angle-utils';
 
 // ===== ARC GEOMETRY =====
 
@@ -157,6 +157,72 @@ export function arcVisibleCcwRange(
   return counterclockwise === true
     ? { start: endAngle, end: startAngle }
     : { start: startAngle, end: endAngle };
+}
+
+/**
+ * 🏢 ENTERPRISE SSoT — bulge-preserving single-endpoint arc reshape (ADR-349 / ADR-537).
+ *
+ * Drag ONE arc endpoint by `(dx, dy)` while the OTHER endpoint stays put; the included
+ * (signed) sweep angle is preserved and the centre / radius / angles are recomputed so the
+ * new arc still passes through both endpoints on the SAME geometric side as before. This is
+ * the SSoT for BOTH the 2D/3D commit (`stretchArcSingleEndpoint`) and the 3D live ghost
+ * (`buildDxfGhostSegments`) — preview ≡ commit.
+ *
+ * Angles are in DEGREES in and out (matching `ArcEntity` / the DXF scene); the trig runs in
+ * radians internally. Returns null for degenerate input (zero/full sweep, collapsed chord).
+ *
+ * @param arc    centre / radius / start+end angles (DEGREES)
+ * @param moved  which endpoint the cursor drags
+ * @param dx,dy  endpoint displacement (plan units)
+ */
+export function arcFromMovedEndpoint(
+  arc: { center: Point2D; radius: number; startAngle: number; endAngle: number },
+  moved: 'start' | 'end',
+  dx: number,
+  dy: number,
+): { center: Point2D; radius: number; startAngle: number; endAngle: number } | null {
+  const a0 = degToRad(arc.startAngle);
+  const a1 = degToRad(arc.endAngle);
+  const pStartOld = { x: arc.center.x + arc.radius * Math.cos(a0), y: arc.center.y + arc.radius * Math.sin(a0) };
+  const pEndOld = { x: arc.center.x + arc.radius * Math.cos(a1), y: arc.center.y + arc.radius * Math.sin(a1) };
+  const pStartNew = moved === 'start' ? { x: pStartOld.x + dx, y: pStartOld.y + dy } : pStartOld;
+  const pEndNew = moved === 'end' ? { x: pEndOld.x + dx, y: pEndOld.y + dy } : pEndOld;
+
+  const theta = a1 - a0; // signed sweep (radians)
+  if (Math.abs(theta) < 1e-9) return null; // degenerate
+  if (Math.abs(theta) >= TAU - 1e-9) return null; // full circle
+
+  const vx = pEndNew.x - pStartNew.x;
+  const vy = pEndNew.y - pStartNew.y;
+  const L = Math.hypot(vx, vy);
+  if (L < 1e-9) return null; // chord collapsed
+
+  const sinHalf = Math.sin(Math.abs(theta) / 2);
+  if (sinHalf < 1e-9) return null;
+  const newRadius = L / (2 * sinHalf);
+
+  // Keep the original geometric side of the centre relative to the chord (preserves bulge
+  // convention regardless of CW/CCW).
+  const oldCross = (pEndOld.x - pStartOld.x) * (arc.center.y - pStartOld.y)
+    - (pEndOld.y - pStartOld.y) * (arc.center.x - pStartOld.x);
+  const side = oldCross >= 0 ? 1 : -1;
+
+  const distSq = newRadius * newRadius - (L / 2) * (L / 2);
+  const dist = distSq > 0 ? Math.sqrt(distSq) : 0;
+  const perpX = -vy / L;
+  const perpY = vx / L;
+  const mx = (pStartNew.x + pEndNew.x) / 2;
+  const my = (pStartNew.y + pEndNew.y) / 2;
+  const newCenter: Point2D = { x: mx + side * dist * perpX, y: my + side * dist * perpY };
+
+  const newStart = Math.atan2(pStartNew.y - newCenter.y, pStartNew.x - newCenter.x);
+  let newEnd = Math.atan2(pEndNew.y - newCenter.y, pEndNew.x - newCenter.x);
+  let sweep = newEnd - newStart; // preserve signed sweep (atan2 collapses to (-π, π])
+  if (theta > 0 && sweep < 0) sweep += TAU;
+  else if (theta < 0 && sweep > 0) sweep -= TAU;
+  newEnd = newStart + sweep;
+
+  return { center: newCenter, radius: newRadius, startAngle: radToDeg(newStart), endAngle: radToDeg(newEnd) };
 }
 
 /**

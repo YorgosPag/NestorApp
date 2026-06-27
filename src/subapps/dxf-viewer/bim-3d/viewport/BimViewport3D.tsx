@@ -26,15 +26,17 @@ import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
+import { FaceContextMenu } from './grips/FaceContextMenu';
 // ADR-535 Φ5 — 3D reshape grips drawn as a Canvas2D overlay (one render code with the 2D canvas).
 import { BimGripOverlay2D } from './grips/BimGripOverlay2D';
 // ADR-538 — 3D hover: DXF entity glow (Canvas2D, same 2D code) + the "+"/"−" hover badge.
 import { DxfHoverGlowOverlay2D } from './grips/DxfHoverGlowOverlay2D';
 import { HoverAddBadge3D } from './HoverAddBadge3D';
+// ADR-542 — 3D snap marker (column corner/midpoint/centroid) drawn with the EXACT 2D glyph + label.
+import { BimSnapIndicatorOverlay3D } from './snap/BimSnapIndicatorOverlay3D';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
-import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
-import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
+import { FocusIndicator3D } from '../accessibility/FocusIndicator3D'; import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
 import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
 import { useCropRegionTool } from '../render/crop-region/useCropRegionTool';
 import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
@@ -327,7 +329,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   });
 
   // Pointer interaction (hover-raycast + click-select + Alt+click pivot) — ADR-366 §A.6.Q5.
-  const { handleMouseMove, handleClick, handleMouseLeave } = useBim3DPointerHandlers(
+  const { handleMouseMove, handleClick, handleContextMenu, handleMouseLeave } = useBim3DPointerHandlers(
     managerRef,
     debounceTimerRef,
   );
@@ -369,7 +371,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       onDrop={handlePolygonDrop}
       onMouseDown={(e) => e.stopPropagation()}
       onMouseUp={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.stopPropagation()}
+      onContextMenu={(e) => { handleContextMenu(e); e.stopPropagation(); }}
       onDoubleClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
@@ -380,13 +382,14 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         role="presentation"
       />
       <CropRegionOverlay />
-      {/* ADR-535 Φ5 — 3D reshape grips: Canvas2D overlay over the WebGL viewport, drawn with
-          the SAME 2D UnifiedGripRenderer (identical size/shape/colour, continuous zoom). */}
+      {/* ADR-535 Φ5 — 3D reshape grips: Canvas2D overlay drawn with the SAME 2D UnifiedGripRenderer. */}
       <BimGripOverlay2D managerRef={managerRef} />
       {/* ADR-538 — hovered RAW DXF entity lights up with the EXACT 2D yellow glow (projected). */}
       <DxfHoverGlowOverlay2D managerRef={managerRef} />
       {/* ADR-538 — the "+"/"−" hover badge NE of the cursor (shared SSoT with the 2D crosshair). */}
       <HoverAddBadge3D />
+      {/* ADR-542 — snap marker (┘/▲/⊕): EXACT 2D glyph+label, same engine, projected, occlusion-culled. */}
+      <BimSnapIndicatorOverlay3D managerRef={managerRef} />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -404,13 +407,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* ADR-539 — Cinema 4D «Polygon Mode»: toggle button + per-face material library (leaf). */}
       <PolygonModeToggle3D managerRef={managerRef} externalEntitiesMode={externalEntitiesMode} bimEntities={bimEntities} />
-
-      {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
+      {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position. ADR-366: BIM
+          entity card lives in the left Properties palette (single Revit-grade panel, none here). */}
       <QuickProperties3DHoverPopover />
-
-      {/* ADR-366 — BIM entity card μεταφέρθηκε στο αριστερό Properties palette
-          (BimPropertiesShell: Παράμετροι | ΒΚΕ | Σχόλια | Ιστορικό). Μηδέν
-          δεύτερο panel στον καμβά (Revit-grade single palette). */}
 
       {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
       <CutPlaneSlider3DLeaf />
@@ -429,8 +428,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         onClose={() => setContextMenuPos(null)}
       />
 
-      {/* ADR-535 Φ4 — per-vertex reshape-grip context menu (delete / insert vertex) */}
+      {/* ADR-535 Φ4 — per-vertex reshape-grip context menu (delete / insert vertex). */}
       <Grip3DVertexContextMenu />
+      {/* ADR-539 Φ3f — per-face context menu (Polygon Mode: clear / copy / paste appearance). */}
+      <FaceContextMenu />
 
       {/* Phase 4.5 / A.7.Q1 — keyboard focus floating label (renders only when focused) */}
       {canvasEl && managerRef.current && (

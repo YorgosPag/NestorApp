@@ -298,6 +298,38 @@ export function clearCanvasDpr(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+/**
+ * Size `canvas` to fill `container` at the device pixel ratio and return a 2D context ready to
+ * draw in CSS px (origin pre-scaled by dpr + cleared), or null if no 2D context.
+ *
+ * ΜΙΑ πηγή για το «overlay canvas που καλύπτει το viewport»: backing store = clientW/H × dpr,
+ * draw space = CSS px (ώστε ένα 7px grip = πραγματικά 7 CSS px). Ήταν copy-pasted verbatim στα
+ * Canvas2D overlays (`BimGripOverlay2D`, `DxfHoverGlowOverlay2D`, …) με σκόρπιο
+ * `window.devicePixelRatio || 1` — εδώ χρησιμοποιεί τον κανονικό `getDevicePixelRatio()`.
+ *
+ * @param canvas    το overlay canvas
+ * @param container ο γονέας που καθορίζει το CSS μέγεθος (clientWidth/Height)
+ */
+export function sizeCanvasToContainerDpr(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+): CanvasRenderingContext2D | null {
+  const dpr = getDevicePixelRatio();
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const dw = Math.round(cw * dpr);
+  const dh = Math.round(ch * dpr);
+  if (canvas.width !== dw || canvas.height !== dh) {
+    canvas.width = dw;
+    canvas.height = dh;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  return ctx;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================

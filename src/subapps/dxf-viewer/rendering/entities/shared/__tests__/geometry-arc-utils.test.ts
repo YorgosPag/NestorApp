@@ -2,12 +2,45 @@ import {
   arcFrom3Points,
   arcFromCenterStartEnd,
   arcFromStartCenterEnd,
+  arcFromMovedEndpoint,
   calculateArcLength,
   isAngleBetween
 } from '../geometry-arc-utils';
 import { degToRad } from '../geometry-angle-utils';
 
 describe('geometry-arc-utils', () => {
+  // ===== arcFromMovedEndpoint (ADR-537 single-endpoint bulge-preserving reshape) =====
+  describe('arcFromMovedEndpoint', () => {
+    // Quarter arc: centre (0,0), r=50, 0°→90°. start=(50,0), end=(0,50).
+    const arc = { center: { x: 0, y: 0 }, radius: 50, startAngle: 0, endAngle: 90 };
+
+    it('treats angles as DEGREES (zero-delta is a no-op on geometry)', () => {
+      const next = arcFromMovedEndpoint(arc, 'start', 0, 0);
+      expect(next).not.toBeNull();
+      // Same endpoints + same 90° sweep → unchanged centre / radius.
+      expect(next!.center.x).toBeCloseTo(0);
+      expect(next!.center.y).toBeCloseTo(0);
+      expect(next!.radius).toBeCloseTo(50);
+    });
+
+    it('moving the start endpoint keeps the end fixed and preserves the 90° sweep', () => {
+      const next = arcFromMovedEndpoint(arc, 'start', 10, 0)!; // start → (60,0)
+      // Recomputed arc must pass through the moved start (60,0) and untouched end (0,50).
+      const s = degToRad(next.startAngle);
+      const e = degToRad(next.endAngle);
+      expect(next.center.x + next.radius * Math.cos(s)).toBeCloseTo(60);
+      expect(next.center.y + next.radius * Math.sin(s)).toBeCloseTo(0);
+      expect(next.center.x + next.radius * Math.cos(e)).toBeCloseTo(0);
+      expect(next.center.y + next.radius * Math.sin(e)).toBeCloseTo(50);
+      // Sweep magnitude preserved (still a quarter arc).
+      expect(Math.abs(next.endAngle - next.startAngle)).toBeCloseTo(90);
+    });
+
+    it('returns null for a full-circle (degenerate) sweep', () => {
+      expect(arcFromMovedEndpoint({ ...arc, startAngle: 0, endAngle: 360 }, 'start', 5, 5)).toBeNull();
+    });
+  });
+
   // ===== arcFrom3Points =====
   describe('arcFrom3Points', () => {
     it('finds semicircle arc through 3 points', () => {

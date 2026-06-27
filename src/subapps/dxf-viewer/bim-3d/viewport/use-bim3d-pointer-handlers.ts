@@ -14,10 +14,15 @@ import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 // ADR-539 — Cinema 4D «Polygon Mode»: click picks a FACE instead of the whole entity.
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+// ADR-539 Φ3f — right-click on a face → per-face context menu (clear/copy/paste appearance).
+import { useFaceContextMenuStore } from '../stores/FaceContextMenuStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
+// ADR-542 — 3D snap marker: same global snap engine + same glyph/label as the 2D canvas.
+import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
+import { computeSnap3DHover } from './snap/bim-3d-snap-hover';
 import { pickDxfEntityAt } from '../grips/dxf-wireframe-hit-test';
 import { applyBimHover } from '../scene/scene-manager-actions';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
@@ -30,6 +35,7 @@ const HOVER_HIGHLIGHT_THROTTLE_MS = DXF_TIMING.frame.HOVER_HITTEST;
 interface PointerHandlers {
   handleMouseMove: (e: ReactMouseEvent) => void;
   handleClick: (e: ReactMouseEvent) => void;
+  handleContextMenu: (e: ReactMouseEvent) => void;
   handleMouseLeave: () => void;
 }
 
@@ -71,6 +77,24 @@ export function useBim3DPointerHandlers(
     manager.markSceneDirty();
   }, [managerRef]);
 
+  /**
+   * ADR-542 — publish the snap marker under the cursor (column corner / edge midpoint /
+   * centroid…). Reuses the ONE global snap engine + the 2D glyph/label via `computeSnap3DHover`
+   * — `BimSnapIndicatorOverlay3D` projects + draws it. Suppressed in Polygon Mode (face paint).
+   */
+  const updateSnap3D = useCallback((clientX: number, clientY: number): void => {
+    const manager = managerRef.current;
+    const camera = manager?.getCamera();
+    const dom = manager?.getRendererCanvas();
+    if (!manager || !camera || !dom || usePolygonMode3DStore.getState().active) {
+      useSnap3DOverlayStore.getState().setSnap(null);
+      return;
+    }
+    useSnap3DOverlayStore.getState().setSnap(
+      computeSnap3DHover(manager.bimLayer.group, camera, dom, clientX, clientY),
+    );
+  }, [managerRef]);
+
   const handleMouseMove = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
@@ -80,6 +104,7 @@ export function useBim3DPointerHandlers(
     if (now - hoverThrottleRef.current >= HOVER_HIGHLIGHT_THROTTLE_MS) {
       hoverThrottleRef.current = now;
       pickHover(clientX, clientY);
+      updateSnap3D(clientX, clientY); // ADR-542 — 3D snap marker (corner/midpoint/centroid)
     }
     if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -150,6 +175,30 @@ export function useBim3DPointerHandlers(
     SelectedEntitiesStore.clearByType('dxf-entity');
   }, [managerRef]);
 
+  // ADR-539 Φ3f — right-click on a face (Polygon Mode) opens the per-face context menu
+  // (clear/copy/paste appearance) at the cursor. Outside Polygon Mode the contextmenu is
+  // left to the default (no BIM action). A miss closes any open menu. The native browser
+  // menu is suppressed so the Radix menu is the only one shown.
+  const handleContextMenu = useCallback((e: ReactMouseEvent) => {
+    if (!usePolygonMode3DStore.getState().active) return;
+    const manager = managerRef.current;
+    if (!manager) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const faceHit = manager.raycastBimFace(e.clientX, e.clientY);
+    if (faceHit?.bimId && faceHit.faceKey) {
+      // Anchor the menu on the right-clicked face (also select it, mirror left-click).
+      usePolygonMode3DStore.getState().selectFace({ bimId: faceHit.bimId, faceKey: faceHit.faceKey });
+      manager.setSelectedFace(faceHit.bimId, faceHit.faceKey);
+      useFaceContextMenuStore.getState().show(
+        { bimId: faceHit.bimId, faceKey: faceHit.faceKey },
+        { x: e.clientX, y: e.clientY },
+      );
+    } else {
+      useFaceContextMenuStore.getState().hide();
+    }
+  }, [managerRef]);
+
   const handleMouseLeave = useCallback(() => {
     if (debounceTimerRef.current !== null) {
       clearTimeout(debounceTimerRef.current);
@@ -158,6 +207,8 @@ export function useBim3DPointerHandlers(
     useQuickProperties3DStore.getState().clearHover();
     // ADR-538 — leaving the viewport clears the hover highlight (badge + glow + silhouette).
     setHoveredEntity(null);
+    // ADR-542 — clear the 3D snap marker when the cursor leaves the viewport.
+    useSnap3DOverlayStore.getState().setSnap(null);
     const manager = managerRef.current;
     if (manager) {
       applyBimHover(manager.hoverHighlighter, null);
@@ -166,5 +217,5 @@ export function useBim3DPointerHandlers(
     }
   }, [debounceTimerRef, managerRef]);
 
-  return { handleMouseMove, handleClick, handleMouseLeave };
+  return { handleMouseMove, handleClick, handleContextMenu, handleMouseLeave };
 }

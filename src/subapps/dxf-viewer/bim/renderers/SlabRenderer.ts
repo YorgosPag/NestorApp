@@ -42,6 +42,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -142,7 +143,9 @@ export class SlabRenderer extends BaseEntityRenderer {
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
     // FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με όλα τα BIM (V/G tint ??
     // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
-    this.ctx.fillStyle = resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
+    // ADR-539 Φ3e — η βαμμένη ΑΝΩ όψη (Cinema 4D «Polygon Mode») γίνεται το χρώμα γεμίσματος
+    // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
+    this.ctx.fillStyle = topFacePlanFill(slab) ?? resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

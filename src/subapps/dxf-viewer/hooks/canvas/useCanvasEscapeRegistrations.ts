@@ -27,6 +27,8 @@ import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/Canv
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
+// ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import type { SelectedGrip } from '../grips/unified-grip-types';
 
 interface DxfGripInteractionLike {
@@ -40,7 +42,6 @@ export interface UseCanvasEscapeRegistrationsParams {
   readonly setDraftPolygon: Dispatch<SetStateAction<Array<[number, number]>>>;
   readonly selectedGrips: readonly SelectedGrip[];
   readonly setSelectedGrips: (grips: SelectedGrip[]) => void;
-  readonly selectedEntityIds: readonly string[];
   readonly hasAnySelection: boolean;
   /**
    * Event-time getter — true when a MEP circuit is selected via wire-click
@@ -159,14 +160,14 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
     canHandle: () =>
       p.draftPolygon.length > 0 ||
       p.selectedGrips.length > 0 ||
-      p.selectedEntityIds.length > 0 ||
+      SelectedEntitiesStore.getSelectedEntityIds().length > 0 ||
       p.hasAnySelection ||
       (p.hasActiveCircuit?.() ?? false),
     handle: () => {
       p.setDraftPolygon([]);
       p.onExitDrawMode?.();
       if (p.selectedGrips.length > 0) p.setSelectedGrips([]);
-      if (p.selectedEntityIds.length > 0 || p.hasAnySelection || (p.hasActiveCircuit?.() ?? false)) {
+      if (SelectedEntitiesStore.getSelectedEntityIds().length > 0 || p.hasAnySelection || (p.hasActiveCircuit?.() ?? false)) {
         p.clearEntitySelection?.();
       }
       return true;

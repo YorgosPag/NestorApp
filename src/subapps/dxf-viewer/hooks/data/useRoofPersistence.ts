@@ -210,6 +210,9 @@ export function useRoofPersistence(
           // (deleteField) so the link is removed rather than left stale.
           typeId: entity.typeId ?? null,
           typeOverrides: entity.typeOverrides ?? null,
+          // ADR-539 Φ3b — carry the per-«νερό» appearance edit so painted faces persist on
+          // re-edit (faced paint fires `bim:entities-attached` → persist → updateDoc).
+          faceAppearance: entity.faceAppearance,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);

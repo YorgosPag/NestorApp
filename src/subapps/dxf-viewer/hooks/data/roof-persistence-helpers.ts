@@ -103,6 +103,8 @@ export function docToEntity(doc: RoofDoc): RoofEntity {
     visible: true,
     ...(typeId !== undefined && { typeId }),
     ...(doc.typeOverrides !== undefined && { typeOverrides: doc.typeOverrides }),
+    // ADR-539 Φ3b — re-hydrate per-«νερό» appearance so painted faces survive reload.
+    ...(doc.faceAppearance !== undefined && { faceAppearance: doc.faceAppearance }),
   } as RoofEntity;
 }
 

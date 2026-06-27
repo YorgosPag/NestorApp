@@ -19,28 +19,16 @@
  */
 
 import * as THREE from 'three';
+import type { Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { ACI_PALETTE } from '../../settings/standards/aci';
+import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
+import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
-const CIRCLE_SEGMENTS = 48;
-const ARC_SEGMENTS_FULL = 48;
-const DEG2RAD = Math.PI / 180;
 const WIREFRAME_OPACITY = 0.65;
-
-// DXF files use various world units; the Three.js BIM world uses metres.
-// This map converts each DXF unit to metres so the DXF wireframe overlay
-// is spatially aligned with BIM geometry (walls, slabs, etc.).
-// Default 'mm' matches the back-compat assumption in DxfScene.units.
-const DXF_UNIT_TO_METRES: Readonly<Record<string, number>> = {
-  mm: 0.001,
-  cm: 0.01,
-  m:  1,
-  in: 0.0254,
-  ft: 0.3048,
-};
 
 // ACI_PALETTE values are CSS hex strings '#RRGGBB'. Cast for numeric index access.
 const ACI_MAP = ACI_PALETTE as unknown as Record<number, string | undefined>;
@@ -102,6 +90,14 @@ function pushSeg(buf: number[], ax: number, az: number, bx: number, bz: number):
   buf.push(ax, 0, az, bx, 0, bz);
 }
 
+/** Push a plan-mm poly-line (from the canonical sampler) as consecutive line segments,
+ *  applying the DXF y → −Z floor-plane mapping. */
+function pushPolyline(buf: number[], pts: readonly Point2D[]): void {
+  for (let i = 0; i < pts.length - 1; i++) {
+    pushSeg(buf, pts[i].x, -pts[i].y, pts[i + 1].x, -pts[i + 1].y);
+  }
+}
+
 /** Append line-segment pairs for a single entity into a flat position buffer.
  *  Coordinate mapping: DXF x → X, DXF y → −Z (Y-up floor plane).
  *  Exported for unit testing. */
@@ -113,42 +109,15 @@ export function appendEntitySegments(buf: number[], entity: DxfEntityUnion): voi
     }
 
     case 'circle': {
-      const { center, radius } = entity;
-      for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
-        const a0 = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
-        const a1 = ((i + 1) / CIRCLE_SEGMENTS) * Math.PI * 2;
-        pushSeg(
-          buf,
-          center.x + Math.cos(a0) * radius, -(center.y + Math.sin(a0) * radius),
-          center.x + Math.cos(a1) * radius, -(center.y + Math.sin(a1) * radius),
-        );
-      }
+      // Canonical tessellation SSoT (shared with hover-outline + grip-ghost).
+      pushPolyline(buf, circlePolyline(entity.center, entity.radius));
       break;
     }
 
     case 'arc': {
-      const { center, radius, startAngle, endAngle } = entity;
-      const startRad = startAngle * DEG2RAD;
-      const endRad = endAngle * DEG2RAD;
-      const ccw = entity.counterclockwise !== false;
-      let sweep = endRad - startRad;
-      if (ccw) {
-        if (sweep <= 0) sweep += Math.PI * 2;
-      } else {
-        if (sweep >= 0) sweep -= Math.PI * 2;
-      }
-      const segs = Math.max(4, Math.round(
-        (Math.abs(sweep) / (Math.PI * 2)) * ARC_SEGMENTS_FULL,
+      pushPolyline(buf, arcPolyline(
+        entity.center, entity.radius, entity.startAngle, entity.endAngle, entity.counterclockwise,
       ));
-      for (let i = 0; i < segs; i++) {
-        const a0 = startRad + sweep * (i / segs);
-        const a1 = startRad + sweep * ((i + 1) / segs);
-        pushSeg(
-          buf,
-          center.x + Math.cos(a0) * radius, -(center.y + Math.sin(a0) * radius),
-          center.x + Math.cos(a1) * radius, -(center.y + Math.sin(a1) * radius),
-        );
-      }
       break;
     }
 
@@ -264,7 +233,8 @@ export class DxfToThreeConverter {
     // Scale the wireframe overlay from DXF world units → metres so it aligns
     // with BIM geometry. appendEntitySegments stores raw DXF coordinates;
     // the group-level transform converts them to the Three.js metre world.
-    const unitScale = DXF_UNIT_TO_METRES[dxfScene.units ?? 'mm'] ?? 0.001;
+    // Scene-units → metres via the SSoT (`scene-units.ts`); declared unit, else mm default.
+    const unitScale = sceneUnitsToMeters(resolveSceneUnits({ units: dxfScene.units }));
     group.scale.set(unitScale, 1, unitScale);
     return group;
   }

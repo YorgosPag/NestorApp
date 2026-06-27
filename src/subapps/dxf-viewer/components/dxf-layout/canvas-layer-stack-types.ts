@@ -129,10 +129,11 @@ export interface CanvasLayerStackProps {
   // via useHoveredEntity() / useHoveredOverlay() inside nano-leaf subscribers,
   // so CanvasSection and CanvasLayerStack do NOT re-render on hover changes.
   // 🔴 SSoT (2026-05-24): setSelectedEntityIds REMOVED — universalSelection is the
-  // single write path. selectedEntityIds is read-only snapshot for rendering.
-  entityState: {
-    selectedEntityIds: string[];
-  };
+  // single write path. ADR-532 B4 (2026-06-27): the `entityState.selectedEntityIds`
+  // render snapshot was REMOVED — grip render (DxfCanvasSubscriber), ghost mounts
+  // (PreviewCanvasMounts) and the crosshair now read the selection at the leaf
+  // (useSelectedEntityIds) / event time (isStoreSelected), so neither the Shell nor
+  // CanvasSection re-renders on entity selection.
 
   // === System objects ===
   zoomSystem: ZoomSystemForStack;
@@ -174,13 +175,9 @@ export interface CanvasLayerStackProps {
     handleFlipArc: () => void;
   };
 
-  // === Entity context menu (ADR-161) ===
-  entityJoin: {
-    canJoin: boolean;
-    joinResultLabel?: string;
-    onJoin: () => void;
-    onDelete: () => void;
-  };
+  // ADR-532 B4 (2026-06-27): the `entityJoin` prop was REMOVED — it was dead (passed
+  // by CanvasSection but never rendered by the Shell). The entity join UI lives in
+  // the EntityContextMenuHost leaf (selection-subscribed).
 
   // === Floorplan background (ADR-340 — replaces legacy `pdf`) ===
   /** Active level/floor ID for the floorplan-background system. Null = no level. */

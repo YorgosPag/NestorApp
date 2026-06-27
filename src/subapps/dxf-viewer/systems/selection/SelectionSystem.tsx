@@ -156,21 +156,17 @@ export interface UniversalSelectionHook {
   context: SelectionContextType;
 }
 
-export function useUniversalSelection(): UniversalSelectionHook {
-  const context = useContext(SelectionContext);
-  if (!context) {
-    throw new Error('useUniversalSelection must be used within a SelectionSystem');
-  }
-
-  // ADR-532: the selection set lives in SelectedEntitiesStore now, not context.
-  // Subscribe to the store version so consumers of this compat hook re-render on
-  // selection change exactly as before (number snapshot = safe). Keying the memo
-  // on `version` reproduces the old "new hook object per change" contract.
-  // NOTE: Stage B migrates the 4 orchestrators OFF this hook to imperative store
-  // reads + leaf subscriptions — THAT is what kills the re-render cascade.
-  const version = useSyncExternalStore(subscribeSelection, getSelectionVersion, getSelectionVersion);
-
-  return useMemo((): UniversalSelectionHook => ({
+/**
+ * ADR-532 Stage B4 — SSoT builder for the {@link UniversalSelectionHook} facade.
+ *
+ * Pure: wraps a {@link SelectionContextType} into the convenience hook surface.
+ * The query methods read live state (`context.*` + `SelectedEntitiesStore`) at
+ * call time, so the SAME object works for BOTH the reactive `useUniversalSelection`
+ * (version-subscribed) and the non-reactive `useUniversalSelectionStable` (memo on
+ * `[context]` only). One wrapper source — no drift between the two hooks.
+ */
+function buildUniversalSelection(context: SelectionContextType): UniversalSelectionHook {
+  return {
     // Selection Actions - convenience wrappers
     select: (id: string, type: SelectableEntityType) =>
       context.selectEntity({ id, type }),
@@ -270,7 +266,41 @@ export function useUniversalSelection(): UniversalSelectionHook {
 
     // Full context access
     context,
-  }), [context, version]);
+  };
+}
+
+/**
+ * Reactive universal selection hook (compat). Subscribes to the store version so
+ * consumers re-render on every selection change exactly as before (number snapshot
+ * = safe). NOTE: Stage B migrates orchestrators OFF this hook to imperative store
+ * reads + leaf subscriptions — THAT is what kills the per-click re-render cascade.
+ */
+export function useUniversalSelection(): UniversalSelectionHook {
+  const context = useContext(SelectionContext);
+  if (!context) {
+    throw new Error('useUniversalSelection must be used within a SelectionSystem');
+  }
+  const version = useSyncExternalStore(subscribeSelection, getSelectionVersion, getSelectionVersion);
+  return useMemo(() => buildUniversalSelection(context), [context, version]);
+}
+
+/**
+ * ADR-532 Stage B4 — NON-reactive universal selection facade.
+ *
+ * Same method surface as {@link useUniversalSelection}, but does NOT subscribe to
+ * the store version → the host component does NOT re-render on dxf-entity selection
+ * changes (`contextValue` is stable for entity selection; it only changes on the
+ * overlay/region legacy mirror, deliberately kept reactive). Orchestrators
+ * (CanvasSection) use THIS so event-time consumers keep reading current selection
+ * via the live `context.*` getters, while grip render / hit-test move to leaves.
+ * Memoized on `[context]` so the returned identity stays stable across renders.
+ */
+export function useUniversalSelectionStable(): UniversalSelectionHook {
+  const context = useContext(SelectionContext);
+  if (!context) {
+    throw new Error('useUniversalSelectionStable must be used within a SelectionSystem');
+  }
+  return useMemo(() => buildUniversalSelection(context), [context]);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

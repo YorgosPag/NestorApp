@@ -14,7 +14,6 @@
  */
 import { useState, useCallback, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Overlay } from '../../overlays/types';
 import { GRIP_CONFIG } from '../useGripMovement';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type {
@@ -29,8 +28,12 @@ import type {
   DraggingOverlayBodyState,
   GripHoverThrottle,
 } from './unified-grip-types';
-import { useGripRegistry } from './grip-registry';
-import { hotGripKindOf, isWallHotGripKind, type WallHotGripOp, type HotGripStep } from './wall-hot-grip-fsm';
+import { type WallHotGripOp, type HotGripStep } from './wall-hot-grip-fsm';
+// ADR-532 B4 — the grip registry now lives in the GripRegistryPublisher leaf; this
+// hook reads the published grip set at event time (hit-testing) so CanvasSection
+// stays inert on selection. Selection-change resets are driven off subscribeSelection.
+import { AllGripsStore } from '../../systems/grip/AllGripsStore';
+import { subscribeSelection } from '../../systems/selection/SelectedEntitiesStore';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 // ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
@@ -42,9 +45,6 @@ import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 // ADR-501 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
-// ADR-501 Slice 2 — publish the armable (standard, non-hot-kind) DXF grips so the
-// marquee mouse-up handler can arm the ones a rubber-band catches (read at event time).
-import { ArmableGripsStore } from '../../systems/grip/ArmableGripsStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
@@ -85,8 +85,10 @@ export function useUnifiedGripInteraction(
   params: UseUnifiedGripInteractionParams,
 ): UseUnifiedGripInteractionReturn {
   // ADR-040 XXII.A: `transform` param retained for signature compat; reads via SSoT.
+  // ADR-532 B4: `selectedEntityIds`/`dxfScene` no longer drive a registry here — the
+  // GripRegistryPublisher leaf owns that and publishes to AllGripsStore.
   const {
-    selectedEntityIds, dxfScene, transform: _transform,
+    transform: _transform,
     currentOverlays, universalSelection, overlayStore, overlayStoreRef,
     activeTool, gripSettings, executeCommand, movementDetectionThreshold,
     onToolChange,
@@ -109,28 +111,12 @@ export function useUnifiedGripInteraction(
     () => ({ overlayStore, executeCommand, movementDetectionThreshold }),
     [overlayStore, executeCommand, movementDetectionThreshold],
   );
-  // ── Selected overlays ──
-  const selectedOverlays = useMemo(() => {
-    const overlayIds = universalSelection.getIdsByType('overlay');
-    return overlayIds
-      .map((id) => currentOverlays.find((o) => o.id === id))
-      .filter((o): o is Overlay => o !== undefined);
-  }, [universalSelection, currentOverlays]);
-  // ── Grip registry ──
-  const allGrips = useGripRegistry({ dxfScene, selectedEntityIds, selectedOverlays });
-  // ADR-501 Slice 2 — publish the armable grips (standard, non-hot-kind DXF grips —
-  // the same kinds Slice 1 arms on click; hot-kind wall/column move/rotate/corner
-  // grips keep their dedicated flow and are excluded) so the marquee mouse-up
-  // handler can arm those a rubber-band catches. LOW-frequency write (selection /
-  // scene change), no React subscription → ADR-040 compliant. Cleared on unmount.
-  useEffect(() => {
-    ArmableGripsStore.set(
-      allGrips
-        .filter((g) => g.source === 'dxf' && g.entityId !== undefined && !isWallHotGripKind(hotGripKindOf(g)))
-        .map((g) => ({ entityId: g.entityId as string, gripIndex: g.gripIndex, position: g.position })),
-    );
-  }, [allGrips]);
-  useEffect(() => () => { ArmableGripsStore.clear(); }, []);
+  // ── Grip set (ADR-532 B4) ──
+  // The unified grip registry is computed by the GripRegistryPublisher leaf (which
+  // subscribes to the selection set) and published to AllGripsStore. Event handlers
+  // below read `AllGripsStore.get()` at call time — never a render-time snapshot —
+  // so this hook (hosted by the inert CanvasSection orchestrator) needs no selection
+  // subscription. The armable-grips publish moved to the publisher as well.
   // ── Core state ──
   const [phase, setPhase] = useState<UnifiedGripPhase>('idle');
   const [hoveredGrip, setHoveredGrip] = useState<UnifiedGripInfo | null>(null);
@@ -192,10 +178,13 @@ export function useUnifiedGripInteraction(
   const isGripMode = activeTool === 'select' || activeTool === 'layering';
   // ADR-349 Phase 1c-A: spacebar cycles grip-hot mode (Stretch → Move → Rotate → Scale → Mirror).
   useGripSpacebarCycle({ phase, activeTool });
-  // ── Reset on selection change ──
-  const entitySelectionKey = selectedEntityIds.join(',');
-  const overlaySelectionKey = selectedOverlays.map((o) => o.id).join(',');
-  useEffect(() => {
+  // ── Reset on selection change (ADR-532 B4) ──
+  // CanvasSection no longer re-renders on selection, so the reset is driven off the
+  // SelectedEntitiesStore subscription instead of a render-time selection key. The
+  // body sets state to its idle defaults: when no grip session is active these are
+  // no-ops (React bails out → CanvasSection does NOT re-render), so only an active
+  // grip session that gets a new selection forces the one reset re-render it needs.
+  const resetGripSessionOnSelectionChange = useCallback(() => {
     setPhase('idle');
     setHoveredGrip(null);
     setActiveGrip(null);
@@ -222,7 +211,11 @@ export function useUnifiedGripInteraction(
     // ADR-397 Σ3 — selection change ends any in-progress typed rotation angle.
     rotateDdeRef.current.reset();
     setTypedRotate(null);
-  }, [entitySelectionKey, overlaySelectionKey]);
+  }, []);
+  useEffect(
+    () => subscribeSelection(resetGripSessionOnSelectionChange),
+    [resetGripSessionOnSelectionChange],
+  );
   // ADR-357 Phase 12 — keep `GripSessionUndoStore.currentSize` synced with the
   // global CommandHistory so the right-click `Undo` extra knows whether any
   // commands have been produced since the session began. Subscribed once for
@@ -278,21 +271,25 @@ export function useUnifiedGripInteraction(
   const handleMouseMove = useCallback(
     (worldPos: Point2D, _screenPos: Point2D) =>
       runGripMouseMove(worldPos, {
-        isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance,
+        // ADR-532 B4: grip set read at event time from AllGripsStore (published by
+        // GripRegistryPublisher) — never a render snapshot.
+        isGripMode, allGrips: AllGripsStore.get(), phase, activeGrip, hoveredGrip, effectiveTolerance,
         gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
         gripHoverThrottleRef, anchorRef, hotGripStepRef, hotGripMovedRef,
         hotGripRotateBaseRef, hotGripBaseRef, warmTimerRef,
         setCurrentWorldPos, setDragPreviewPosition, setHoveredGrip, setPhase,
       }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, gripSettings.gripSize, gripSettings.dpiScale],
+    // ADR-532 B4: allGrips removed from deps — read from AllGripsStore at call time.
+    [isGripMode, phase, activeGrip, hoveredGrip, effectiveTolerance, gripSettings.gripSize, gripSettings.dpiScale],
   );
   // ── MOUSE DOWN ──
   const handleMouseDown = useCallback(
     (worldPos: Point2D, isShift: boolean): boolean =>
       runGripMouseDown(worldPos, isShift, {
         mouseDownInProgressRef, activeGrip, anchorRef, onToolChangeRef, resetToIdle,
-        isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
+        // ADR-532 B4: grip set read at event time from AllGripsStore.
+        isGripMode, allGrips: AllGripsStore.get(), phase, effectiveTolerance, hoveredGrip, selectedGrips,
         setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
         hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
         hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
@@ -303,7 +300,8 @@ export function useUnifiedGripInteraction(
         markDragFinished,
       }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle, dxfCommitDeps, gripSettings.gripSize, gripSettings.dpiScale, markDragFinished],
+    // ADR-532 B4: allGrips removed from deps — read from AllGripsStore at call time.
+    [isGripMode, phase, activeGrip, hoveredGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle, dxfCommitDeps, gripSettings.gripSize, gripSettings.dpiScale, markDragFinished],
   );
   // ── MOUSE UP ──
   const handleMouseUp = useCallback(
@@ -319,14 +317,15 @@ export function useUnifiedGripInteraction(
         // step can arm the rotation snap targets (pivot ⊙ + grips).
         rotatingEntityGripsWorld: () =>
           activeGrip?.source === 'dxf' && activeGrip.entityId
-            ? allGrips
+            ? AllGripsStore.get()
                 .filter((g) => g.source === 'dxf' && g.entityId === activeGrip.entityId)
                 .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }))
             : [],
         // ADR-397 Σ3 — a terminal click commits the typed angle if one was keyed in.
         typedRotateDeg: typedRotate?.deg ?? null,
       }),
-    [phase, activeGrip, allGrips, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished, typedRotate],
+    // ADR-532 B4: allGrips removed from deps — read from AllGripsStore at call time.
+    [phase, activeGrip, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished, typedRotate],
   );
   // ── ESCAPE ──
   const handleEscape = useCallback((): boolean => {

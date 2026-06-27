@@ -49,6 +49,9 @@ import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId, subscribeGuideDrag } from '../../systems/guides/guide-drag-store';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
+// SSoT canvas-DPR helpers (αντί για σκόρπιο `window.devicePixelRatio || 1` + inline clear).
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
+import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { GHOST_DEFAULTS } from '../../rendering/ghost';
 
@@ -66,10 +69,6 @@ export interface GuideFollowGhostOverlayProps {
 /** ms να μείνει το ghost μετά το release, ώστε να προσγειωθεί το committed commit. */
 const LINGER_MS = DXF_TIMING.gesture.LINGER; // ADR-516
 const GHOST_FILL = 'rgba(74, 144, 217, 0.18)';
-
-function devicePixelRatioSafe(): number {
-  return typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-}
 
 /** Current X/Y offset ενός άξονα (XZ/διαγραμμένος → undefined). */
 function makeOffsetLookup(): GuideOffsetLookup {
@@ -150,10 +149,7 @@ function GuideFollowGhostOverlayInner({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const dpr = devicePixelRatioSafe();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    clearCanvasDpr(canvas, ctx);
     const vp = viewportRef.current;
     if (vp.width <= 0 || vp.height <= 0) return;
     const lm = levelManagerRef.current;
@@ -199,7 +195,7 @@ function GuideFollowGhostOverlayInner({
     };
   }, [schedule, repaint]);
 
-  const dpr = devicePixelRatioSafe();
+  const dpr = getDevicePixelRatio();
   return (
     <canvas
       ref={canvasRef}

@@ -19,7 +19,6 @@
  */
 
 import { useRef, useEffect, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
-import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { UnifiedGripRenderer } from '../../../rendering/grips';
 import type { GripSettings } from '../../../rendering/grips/types';
@@ -31,6 +30,8 @@ import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
 import { dxfPlanToWorld } from '../coordinate-transforms';
+import { sizeCanvasToContainerDpr } from '../../../rendering/canvas/withCanvasState';
+import { useRafWhile, useCameraMotionGate } from '../overlay-raf';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
 import { useDxfOverlay3DStore } from '../../stores/DxfOverlay3DStore';
 
@@ -83,17 +84,14 @@ function paintDxfGhost(
 export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
   // ADR-535 Φ5b — GPU depth-occluder (one instance, lazy GPU resources, disposed on unmount).
   const occluderRef = useRef<GripDepthOccluder | null>(null);
-  // ADR-535/536 — last camera pose, to HIDE grips during camera motion (orbit/zoom/pan).
-  // While moving, the occluder's full-scene depth pre-pass + the 2D draws are skipped → the
-  // grips vanish and the navigation stays smooth; they snap back with correct occlusion the
-  // instant the camera settles. The continuous RAF guarantees that settle frame. Big-player
-  // CAD/BIM pattern («hide handles during navigation»).
-  const lastCamWorldRef = useRef(new THREE.Matrix4());
-  const lastCamProjRef = useRef(new THREE.Matrix4());
-  const camPoseValidRef = useRef(false);
+  // ADR-535/536 — HIDE grips during camera motion (orbit/zoom/pan): while moving, the occluder's
+  // full-scene depth pre-pass + the 2D draws are skipped → the grips vanish and navigation stays
+  // smooth; they snap back with correct occlusion the instant the camera settles (the continuous
+  // RAF guarantees that settle frame). Big-player CAD/BIM «hide handles during navigation» —
+  // shared SSoT with the snap overlay (ADR-542 `useCameraMotionGate`).
+  const isCameraMoving = useCameraMotionGate();
 
   // ADR-040 — subscribe ONLY to the low-frequency grip set (drives the RAF on/off).
   const grips = useSyncExternalStore(
@@ -113,32 +111,15 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     const camera = manager.getCamera();
     if (!camera) return;
 
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    const dpr = window.devicePixelRatio || 1;
-    const dw = Math.round(cw * dpr);
-    const dh = Math.round(ch * dpr);
-    if (canvas.width !== dw || canvas.height !== dh) {
-      canvas.width = dw;
-      canvas.height = dh;
-    }
-    const ctx = canvas.getContext('2d');
+    // Size the overlay canvas to the viewport at DPR + clear (shared SSoT). Work in CSS px (the
+    // projector returns CSS-px canvas-local coords); the renderer's 7px grip is then real 7 CSS
+    // px, identical to the 2D canvas (which also uses dpiScale 1).
+    const ctx = sizeCanvasToContainerDpr(canvas, container);
     if (!ctx) return;
-    // Work in CSS px (the projector returns CSS-px canvas-local coords); the renderer's
-    // 7px grip is then real 7 CSS px, identical to the 2D canvas (which also uses dpiScale 1).
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cw, ch);
 
     // ADR-535/536 — skip everything (occluder depth pre-pass + 2D draws) while the camera
     // moves: grips vanish during orbit/zoom/pan, snap back (correctly occluded) on settle.
-    const camMoving =
-      camPoseValidRef.current &&
-      (!lastCamWorldRef.current.equals(camera.matrixWorld) ||
-        !lastCamProjRef.current.equals(camera.projectionMatrix));
-    lastCamWorldRef.current.copy(camera.matrixWorld);
-    lastCamProjRef.current.copy(camera.projectionMatrix);
-    camPoseValidRef.current = true;
-    if (camMoving) return; // canvas already cleared above → grips hidden during motion
+    if (isCameraMoving(camera)) return; // canvas already cleared above → grips hidden during motion
 
     const { grips: liveGrips, topElevFor, bottomElevFor } = useGrip3DOverlayStore.getState();
     const n = liveGrips.length;
@@ -186,7 +167,7 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     // Top pass (flat offset 0) + bottom pass (flat offset N), each through its own projector.
     new UnifiedGripRenderer(ctx, projectTop).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, 0, ov), settings);
     new UnifiedGripRenderer(ctx, projectBottom).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, n, ov), settings);
-  }, [managerRef]);
+  }, [managerRef, isCameraMoving]);
 
   // ADR-535 Φ5b — own the GPU occluder for the overlay's lifetime (lazy GL resources inside).
   useEffect(() => {
@@ -197,27 +178,13 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!hasGrips) {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-    const loop = () => {
-      draw();
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
-  }, [hasGrips, draw]);
+  // Clear the canvas when the grip set empties / on unmount (shared overlay RAF SSoT, ADR-542).
+  const onStop = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+  useRafWhile(hasGrips, draw, onStop);
 
   return (
     <div

@@ -40,6 +40,7 @@ export {
   useSelection,
   useSelectionContext,
   useUniversalSelection,  // 🆕 NEW: Primary universal selection hook
+  useUniversalSelectionStable, // ADR-532 B4 — non-reactive facade (orchestrators)
   useOverlaySelection,    // 🆕 NEW: Backward compatible overlay selection hook
 } from './SelectionSystem';
 

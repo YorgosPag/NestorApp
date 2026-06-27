@@ -10,33 +10,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-
-/** Circle/arc sampling resolution (matches DxfToThreeConverter's 48-seg circle). */
-const CIRCLE_SEGMENTS = 48;
-
-/** Sample a full circle into a closed plan-mm poly-line. */
-function circlePolyline(center: Point2D, radius: number): Point2D[] {
-  const pts: Point2D[] = [];
-  for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
-    const a = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
-    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
-  }
-  return pts;
-}
-
-/** Sample an arc (degrees, CCW from start→end) into a plan-mm poly-line. */
-function arcPolyline(center: Point2D, radius: number, startDeg: number, endDeg: number): Point2D[] {
-  const a0 = (startDeg * Math.PI) / 180;
-  let a1 = (endDeg * Math.PI) / 180;
-  if (a1 < a0) a1 += Math.PI * 2;
-  const steps = Math.max(2, Math.ceil(((a1 - a0) / (Math.PI * 2)) * CIRCLE_SEGMENTS));
-  const pts: Point2D[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const a = a0 + ((a1 - a0) * i) / steps;
-    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
-  }
-  return pts;
-}
+import { circlePolyline, arcPolyline } from '../converters/dxf-arc-circle-sample';
 
 /**
  * Plan-mm outline poly-lines of a raw DXF entity (one array per disjoint stroke), or `[]`
@@ -54,7 +28,7 @@ export function dxfEntityOutlineSegments(entity: DxfEntityUnion): Point2D[][] {
     case 'circle':
       return [circlePolyline(entity.center, entity.radius)];
     case 'arc':
-      return [arcPolyline(entity.center, entity.radius, entity.startAngle, entity.endAngle)];
+      return [arcPolyline(entity.center, entity.radius, entity.startAngle, entity.endAngle, entity.counterclockwise)];
     default:
       return [];
   }

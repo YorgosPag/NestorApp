@@ -359,15 +359,15 @@ export interface UnifiedGripState {
 // ============================================================================
 
 import type { ViewTransform } from '../../rendering/types/Types';
-import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Overlay } from '../../overlays/types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection';
 
 export interface UseUnifiedGripInteractionParams {
-  selectedEntityIds: string[];
-  dxfScene: DxfScene | null;
+  // ADR-532 B4: `selectedEntityIds` + `dxfScene` removed — the grip registry moved
+  // to the GripRegistryPublisher leaf (reads selection + scene there, publishes to
+  // AllGripsStore). This hook is selection-agnostic now (event-time store reads).
   transform: ViewTransform;
   currentOverlays: Overlay[];
   universalSelection: UniversalSelectionHook;

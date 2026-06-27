@@ -52,6 +52,8 @@ export function columnDocToEntity(doc: ColumnDoc): ColumnEntity {
     // ADR-441 Slice COL — restore grid hosting bindings so the reconciler keeps the
     // column following its axes after reload.
     ...(doc.guideBindings !== undefined ? { guideBindings: doc.guideBindings } : {}),
+    // ADR-539 — re-hydrate per-face appearance so painted faces survive reload.
+    ...(doc.faceAppearance !== undefined ? { faceAppearance: doc.faceAppearance } : {}),
   } as ColumnEntity;
 }
 

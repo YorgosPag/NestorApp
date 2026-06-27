@@ -1,7 +1,46 @@
 # HANDOFF — 3D DXF editing/hover: deferred follow-ups (arc ghost, text, non-mm units, multi-floor)
 
 **Ημερομηνία:** 2026-06-27
-**Status:** READY — 4 ανεξάρτητα follow-ups πάνω σε ΥΛΟΠΟΙΗΜΕΝΗ βάση (ADR-537 + ADR-538). Enterprise + FULL SSOT.
+**Status:** IN PROGRESS — **α ✅ DONE** (uncommitted)· σειρά **α→γ→δ→β** (εγκεκριμένη). γ/δ/β εκκρεμούν.
+
+---
+
+## ⏱️ PROGRESS (ενημέρωση 2026-06-27)
+
+### ✅ α (Arc ghost) — ΟΛΟΚΛΗΡΩΘΗΚΕ (uncommitted· commit→Giorgio)
+**Εύρος επεκτάθηκε με έγκριση Giorgio:** trace του full pipeline (`grip-to-vertex-refs`→`stretch-entity-transform`)
+αποκάλυψε **deg/rad bug** — το single-endpoint/midpoint arc reshape αντιμετώπιζε τις γωνίες ως **ακτίνια** ενώ
+ο `ArcEntity` τις κρατά **μοίρες** (παραμόρφωνε reshape, **2D+3D**). Διορθώθηκε.
+
+**Αλλαγές (όλα full SSoT):**
+- NEW `bim-3d/converters/dxf-arc-circle-sample.ts` — **canonical tessellation SSoT** (`circlePolyline`/`arcPolyline`,
+  ccw-faithful). Τροφοδοτεί ΚΑΙ ΤΑ 3: wireframe (`appendEntitySegments`) + outline + ghost. **Δεν** υπάρχει πλέον
+  παράλληλο αντίγραφο tessellation.
+- NEW SSoT `arcFromMovedEndpoint` στο `rendering/entities/shared/geometry-arc-utils.ts` (bulge-preserving,
+  μοίρες). Καλείται από commit ΚΑΙ ghost → **preview ≡ commit**.
+- `systems/stretch/stretch-entity-transform.ts` — delegate σε `arcFromMovedEndpoint`/`arcFrom3Points`· αφαιρέθηκαν
+  αχρησιμοποίητα `arcEndpoint`(rad) + `circumcenter`(dup του `circleFrom3Points`).
+- `DxfToThreeConverter.ts` — wireframe→canonical sampler· `DXF_UNIT_TO_METRES` (dup) → `sceneUnitsToMeters`
+  (`scene-units.ts`, υπάρχον SSoT). Output byte-identical.
+- `dxf-grip-ghost-paint.ts` (arc case) + `dxf-entity-outline.ts` (ccw) → reuse sampler.
+- Tests: **82/82 GREEN** στα σχετικά suites (νέα: stretch arc regression + arcFromMovedEndpoint + arc ghost cases).
+- tsc: 🟡 serialized πίσω από tsc άλλου agent (N.17) — ts-jest ήδη type-checks· έλεγξε `grep -E '<τα 6 αρχεία>'`.
+- ADR-537 ενημερωμένο (Φ1.1 + changelog). 🔴 browser-verify + commit → Giorgio (stage ADR-537 + 3D αρχεία, CHECK 6B/6D).
+
+### ▶️ γ (Non-mm units) — ΕΠΟΜΕΝΟ· design έτοιμο
+- **Audit done:** `scene-units.ts` έχει ήδη `sceneUnitsToMeters` (= dedup έγινε στο α). Πρόσθεσε `dxfUnitToMm(units)`
+  = `sceneUnitsToMeters(units)*1000` (canonical, στο `scene-units.ts`).
+- **Αρχιτεκτονική (χαμηλό ρίσκο, ο shared ADR-535 controller ΜΕΝΕΙ ΑΘΙΚΤΟΣ):** seat DXF grips σε **mm**
+  (×unitToMm στο `seatGrips`, `use-bim3d-dxf-edit-interaction.ts`) → ο controller δουλεύει σε mm όπως τα BIM.
+  `buildDxfGhostSegments`/`dxfEntityOutlineSegments` παίρνουν **optional `unitToMm=1`** (default→υπάρχοντα tests
+  μένουν GREEN), κλιμακώνουν entity coords σε mm. `pickDxfEntityAt`: plan(mm)÷unitToMm→entity units + tol÷unitToMm.
+  commit: deltaMm÷unitToMm. **Σήκωσε 3 gates:** `pickDxfEntityAt:~100`, `resolveEligibleDxfEntity:~55`,
+  `DxfHoverGlowOverlay2D`/`use-bim3d-dxf-edit-interaction` (mm checks). ~6 αρχεία + tests.
+- **ΠΡΟΣΟΧΗ (γιατί ΟΧΙ «scale μόνο τα grips»):** το ghost μειγνύει entity-unit coords + delta· αν κλιμακώσεις
+  μόνο τα grips, σπάει. Όλα σε mm consistently (ή entity-units παντού + scale στον projector — απορρίφθηκε,
+  αγγίζει τον shared controller).
+
+### δ / β — όπως στο §2 παρακάτω (αμετάβλητα).
 **⚠️ SHARED WORKING TREE:** δουλεύει ταυτόχρονα κι άλλος agent (ADR-539 «Polygon Mode» per-face + structural). **ΞΑΝΑΔΙΑΒΑΣΕ
 κάθε αρχείο πριν το edit** — μπορεί να έχει αλλάξει από το handoff. **COMMIT ΤΟΝ ΚΑΝΕΙ Ο GIORGIO, ΟΧΙ ΕΣΥ** (N.(-1)).
 

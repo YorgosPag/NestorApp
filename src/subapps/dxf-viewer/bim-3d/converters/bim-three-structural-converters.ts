@@ -35,6 +35,9 @@ import { buildBeamRebarCage } from './beam-rebar-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+// ADR-539 Φ3a — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
+import { buildFacedSolidBody } from './bim-three-faced-prism';
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 
 const MM_TO_M = 0.001;
 
@@ -44,6 +47,38 @@ const MM_TO_M = 0.001;
 // keep `× MM_TO_M`. Invariant: `mmToSceneUnits(u) × sceneUnitsToMeters(u) = MM_TO_M`.
 
 // ── Column ────────────────────────────────────────────────────────────────────
+
+/**
+ * ADR-539 Φ3a — column core body: faced multi-material prism (per-face paint) when the
+ * column already carries a `faceAppearance` OR is the live Polygon-Mode target (so its
+ * faces become pickable even before any paint — chicken-and-egg), else the legacy
+ * single-material extrude (byte-for-byte, zero regression). Η κολώνα = ΚΑΤΑΚΟΡΥΦΟ prism →
+ * IDENTICAL local span [0, heightM] με το `extrudeAndRotate`, άρα ο caller κρατά την ΙΔΙΑ
+ * `position.y`. Το tilt (ADR-404) εφαρμόζεται και στα δύο geometries (ίδιο local Y span →
+ * ίδιο shear). Delegate στο shared `buildFacedSolidBody` SSoT (μηδέν copy-paste ανά kind).
+ */
+function buildColumnCoreBody(
+  column: ColumnEntity,
+  flatColumn: ColumnEntity,
+  shape: THREE.Shape,
+  verts: readonly Point3D[],
+  heightM: number,
+): THREE.Mesh | null {
+  const fa = column.faceAppearance;
+  const poly = usePolygonMode3DStore.getState();
+  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
+  const facedByPolygonTarget = poly.active && poly.targetBimId === column.id;
+  if (facedByAppearance || facedByPolygonTarget) {
+    const mesh = buildFacedSolidBody(verts, heightM, fa ?? {}, getElementMaterial3D('column'));
+    // ADR-404 — raking column shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.
+    if (mesh) applyColumnTilt(mesh.geometry, flatColumn.params);
+    return mesh;
+  }
+  const geo = extrudeAndRotate(shape, heightM);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  applyColumnTilt(geo, flatColumn.params); // ADR-404 — raking column shear. No-op flat.
+  return new THREE.Mesh(geo, getElementMaterial3D('column'));
+}
 
 export function columnToMesh(
   column: ColumnEntity,
@@ -139,11 +174,10 @@ export function columnToMesh(
     ? Math.max(0, Math.min(nominalHeightWithDropMm, clipTopZmm - baseAbsMm))
     : nominalHeightWithDropMm;
 
-  const geo = extrudeAndRotate(shape, effectiveHeightMm * MM_TO_M);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
-  applyColumnTilt(geo, flatColumn.params);
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
+  // ADR-539 Φ3a — faced (per-face paint) core when painted/targeted, else legacy extrude
+  // (ADR-413 UVs + ADR-404 tilt baked inside the helper). Same [0, height] span → same position.y.
+  const mesh = buildColumnCoreBody(column, flatColumn, shape, verts, effectiveHeightMm * MM_TO_M);
+  if (!mesh) return null;
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
   // ADR-488 §6.1 — −baseDropMm κατεβάζει τη βάση στο πέδιλο (κορυφή αμετάβλητη).

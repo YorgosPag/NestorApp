@@ -33,6 +33,9 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
+// SSoT canvas-DPR helpers (αντί για σκόρπιο `window.devicePixelRatio || 1` + inline clear).
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
+import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
 
 /** Discipline-supplied paint: strokes the proposal onto the cleared, dpr-scaled context. */
 export type ProposalGhostPaint = (
@@ -56,11 +59,6 @@ export interface ProposalGhostOverlayProps {
   readonly dataOverlay: string;
 }
 
-/** Current device-pixel ratio (1 on the server / when unavailable). */
-function devicePixelRatioSafe(): number {
-  return typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-}
-
 export const ProposalGhostOverlay = React.memo(function ProposalGhostOverlay({
   active,
   viewport,
@@ -81,10 +79,7 @@ export const ProposalGhostOverlay = React.memo(function ProposalGhostOverlay({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const dpr = devicePixelRatioSafe();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    clearCanvasDpr(canvas, ctx);
     const vp = viewportRef.current;
     if (vp.width <= 0 || vp.height <= 0) return;
     paintRef.current(ctx, getImmediateTransform(), vp);
@@ -111,7 +106,7 @@ export const ProposalGhostOverlay = React.memo(function ProposalGhostOverlay({
 
   // High-DPI: backing store = CSS px × dpr, drawn in CSS px via `setTransform(dpr)`. CSS
   // `w-full h-full` stretches the element to the (CSS-sized) viewport container.
-  const dpr = devicePixelRatioSafe();
+  const dpr = getDevicePixelRatio();
   return (
     <canvas
       ref={canvasRef}

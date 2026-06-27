@@ -29,12 +29,7 @@
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { RoofEntity, RoofFace, RoofRidgeLine } from '../../bim/types/roof-types';
-import {
-  DEFAULT_EAVE_MATERIAL_ID,
-  DEFAULT_FASCIA_HEIGHT_MM,
-  DEFAULT_ROOF_TILE_SIZE_M,
-  DEFAULT_SOFFIT_MODE,
-} from '../../bim/types/roof-types';
+import { DEFAULT_EAVE_MATERIAL_ID, DEFAULT_FASCIA_HEIGHT_MM, DEFAULT_ROOF_TILE_SIZE_M, DEFAULT_SOFFIT_MODE } from '../../bim/types/roof-types';
 import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
 import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry';
 import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
@@ -51,6 +46,10 @@ import {
   type RoofOverhangOffsetLine,
 } from '../../bim/geometry/roof-eave-detail';
 import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
+// ADR-539 Φ3b — Cinema 4D «Polygon Mode»: per-«νερό» (face) appearance override.
+import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
+import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
@@ -269,6 +268,31 @@ interface RoofFaceMeshContext {
   readonly levelId?: string;
   /** ADR-417 #5 — roof-level tile sizing/rotation (physical W×H). */
   readonly tileAppearance: RoofTileAppearance;
+  /**
+   * ADR-539 Φ3b — true όταν το roof είναι σε Polygon Mode (έχει `faceAppearance` Ή είναι ο
+   * live target): τα «νερά» γίνονται pickable per-face + βάφονται. False → legacy.
+   */
+  readonly faced: boolean;
+  /** ADR-539 Φ3b — per-«νερό» appearance override (faceKey `sub:${i}:top`). */
+  readonly faceAppearance?: FaceAppearanceMap;
+}
+
+/**
+ * ADR-539 Φ3b — per-«νερό» face paint (Cinema 4D «Polygon Mode»). Σε faced roof κάθε mesh
+ * του νερού `faceIndex` γίνεται pickable με faceKey `sub:${faceIndex}:top` (ο `raycastBimFace`
+ * διαβάζει το `userData.faceKeyByMaterialIndex`· single-material mesh → materialIndex 0)· αν το
+ * νερό έχει βαφή, το flat painted material αντικαθιστά το legacy κεραμίδι/DNA look (μηδέν νέα
+ * γεωμετρία — reuse `resolveFaceMaterial` SSoT). Μη-faced roof → καμία αλλαγή (byte-for-byte).
+ */
+function applyRoofFacePaint(meshes: readonly THREE.Mesh[], faceIndex: number, ctx: RoofFaceMeshContext): void {
+  if (!ctx.faced) return;
+  const faceKey = `sub:${faceIndex}:top`;
+  const appearance = ctx.faceAppearance ?? {};
+  const painted = appearance[faceKey] !== undefined;
+  for (const mesh of meshes) {
+    mesh.userData['faceKeyByMaterialIndex'] = [faceKey];
+    if (painted) mesh.material = resolveFaceMaterial(faceKey, appearance, mesh.material as THREE.Material);
+  }
 }
 
 /**
@@ -280,9 +304,18 @@ interface RoofFaceMeshContext {
  * ADR-417 #6 — when `realisticMaterials=true` AND `tileReliefMm > 0`, the top
  * layer is split: tessellated cap (displacement material) + sides-only prism.
  */
-function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshContext): void {
+function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshContext, faceIndex: number): void {
+  const meshes = buildFaceMeshes(face, ctx);
+  // ADR-539 Φ3b — tag/paint the whole «νερό» (per-face pick + paint) before adding.
+  applyRoofFacePaint(meshes, faceIndex, ctx);
+  for (const mesh of meshes) group.add(mesh);
+}
+
+/** Build the (1..n) meshes for ONE roof face/«νερό» (DNA layers / relief cap+sides / mono). */
+function buildFaceMeshes(face: RoofFace, ctx: RoofFaceMeshContext): THREE.Mesh[] {
   const reliefMm = ctx.tileAppearance.tileReliefMm ?? 0;
   const wantRelief = reliefMm > 0 && useBimRenderSettingsStore.getState().realisticMaterials;
+  const meshes: THREE.Mesh[] = [];
 
   if (ctx.layers) {
     for (const ls of buildFaceLayerSolids(face, ctx.layers, ctx.sceneToM, ctx.baseElevationM, ctx.tileAppearance, wantRelief)) {
@@ -291,9 +324,9 @@ function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshCont
         : getMaterial3D(ls.materialId);
       const mesh = new THREE.Mesh(ls.geo, mat);
       tagRoofMesh(mesh, ctx.roofId, ls.materialId, ctx.levelId);
-      group.add(mesh);
+      meshes.push(mesh);
     }
-    return;
+    return meshes;
   }
   const monoTileOpts = resolveRoofTileUvOpts(ctx.monoMaterialId ?? 'elem-roof', ctx.tileAppearance);
   if (wantRelief && ctx.monoMaterialId) {
@@ -302,22 +335,23 @@ function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshCont
     if (topCap) {
       const capMesh = new THREE.Mesh(topCap, getRoofTileMaterial3D(ctx.monoMaterialId, reliefMm));
       tagRoofMesh(capMesh, ctx.roofId, ctx.monoMaterialId, ctx.levelId);
-      group.add(capMesh);
+      meshes.push(capMesh);
     }
     const sidesPrism = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM, monoTileOpts, true);
     if (sidesPrism) {
       const sidesMesh = new THREE.Mesh(sidesPrism, getMaterial3D(ctx.monoMaterialId));
       tagRoofMesh(sidesMesh, ctx.roofId, ctx.monoMaterialId, ctx.levelId);
-      group.add(sidesMesh);
+      meshes.push(sidesMesh);
     }
-    return;
+    return meshes;
   }
   const geo = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM, monoTileOpts);
-  if (!geo) return;
+  if (!geo) return meshes;
   const mat = ctx.monoMaterialId ? getMaterial3D(ctx.monoMaterialId) : getElementMaterial3D('roof');
   const mesh = new THREE.Mesh(geo, mat);
   tagRoofMesh(mesh, ctx.roofId, ctx.monoMaterialId ?? 'elem-roof', ctx.levelId);
-  group.add(mesh);
+  meshes.push(mesh);
+  return meshes;
 }
 
 /**
@@ -413,6 +447,11 @@ export function roofToMesh(
   if (!roof.geometry || roof.geometry.faces.length === 0) return null;
 
   const layers = roof.params.dna?.layers ?? null;
+  // ADR-539 Φ3b — faced render (per-«νερό» pick + paint) όταν το roof έχει `faceAppearance`
+  // Ή είναι ο live Polygon-Mode target (faces pickable πριν από κάθε βαφή — chicken-and-egg).
+  const fa = roof.faceAppearance;
+  const poly = usePolygonMode3DStore.getState();
+  const faced = (fa !== undefined && Object.keys(fa).length > 0) || (poly.active && poly.targetBimId === roof.id);
   const ctx: RoofFaceMeshContext = {
     roofId: roof.id,
     layers: layers && layers.length > 0 ? layers : null,
@@ -427,6 +466,8 @@ export function roofToMesh(
       tileRotate90: roof.params.tileRotate90,
       tileReliefMm: roof.params.tileReliefMm,
     },
+    faced,
+    faceAppearance: fa,
   };
 
   // Όριο προέκτασης γείσου ανά footprint edge → επεκτείνει τους κορφιάδες/hips
@@ -439,7 +480,9 @@ export function roofToMesh(
   );
 
   const group = new THREE.Group();
-  for (const face of roof.geometry.faces) addFaceMeshes(group, face, ctx);
+  // ADR-539 Φ3b — ο index ταυτοποιεί κάθε «νερό» (faceKey `sub:${i}:top`) ώστε raycast + paint
+  // να αντιστοιχούν ντετερμινιστικά στο ίδιο νερό (ίδια σειρά με το `roof.geometry.faces`).
+  roof.geometry.faces.forEach((face, i) => addFaceMeshes(group, face, ctx, i));
   addRidgeCaps(group, roof.geometry.ridges, roof.geometry.faces, ctx, footprint, offLines); // κορφιάδες on ridge + hip lines (+ προέκταση)
   addEaveDetails(group, roof, ctx); // γείσο: overhang + fascia + soffit (όλες οι περιμετρικές ακμές)
 

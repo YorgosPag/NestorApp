@@ -34,12 +34,11 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleFlipArc: () => void;
   /** Legacy finish drawing for overlay polygons */
   finishDrawing: () => Promise<void>;
-  /** ADR-161: Selected entity IDs for join shortcut */
-  selectedEntityIds?: string[];
-  /** ADR-161: Join handler (J key) */
+  /** ADR-161: Join handler (J key). ADR-532 B4 — reads the selection at event time. */
   handleEntityJoin?: () => void;
-  /** ADR-161: Check if join is possible */
-  canEntityJoin?: boolean;
+  /** ADR-161: Check if join is possible. ADR-532 B4 — getter, evaluated at keydown
+   *  against the live selection (no stale render snapshot). */
+  canEntityJoin?: () => boolean;
   /** Callback to exit overlay draw mode on Escape (resets overlayMode to 'select') */
   onExitDrawMode?: () => void;
   /** ADR-188: Rotation tool cancel handler */

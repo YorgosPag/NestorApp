@@ -30,6 +30,9 @@ import {
   subscribeLayerStore,
 } from '../../stores/LayerStore';
 import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
+// ADR-532 B4 — this micro-leaf self-subscribes to the selection set so the
+// CanvasSection orchestrator no longer re-renders to feed it selectedEntityIds.
+import { useSelectedEntityIds } from '../selection/useSelectedEntities';
 import { fromDisplay, DISPLAY_UNIT_LABELS, type DisplayUnit } from '../../config/units';
 import {
   COMMON_LINETYPES,
@@ -50,7 +53,6 @@ interface LevelManagerLike {
 
 interface Props {
   dxfScene: DxfScene | null;
-  selectedEntityIds: string[];
   activeTool: string;
   executeCommand: (cmd: ICommand) => void;
   levelManager: LevelManagerLike;
@@ -58,11 +60,12 @@ interface Props {
 
 export function PropertiesPalette({
   dxfScene,
-  selectedEntityIds,
   activeTool,
   executeCommand,
   levelManager,
 }: Props) {
+  // ADR-532 B4 — selection-set leaf subscription (was a prop from CanvasSection).
+  const selectedEntityIds = useSelectedEntityIds();
   const paletteSnap = useSyncExternalStore(
     PropertiesPaletteStore.subscribe,
     PropertiesPaletteStore.getSnapshot,

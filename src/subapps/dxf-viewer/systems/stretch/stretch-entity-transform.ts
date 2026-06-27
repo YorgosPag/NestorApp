@@ -25,6 +25,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { VertexRef } from './stretch-vertex-classifier';
+import { arcFromMovedEndpoint, arcFrom3Points } from '../../rendering/entities/shared/geometry-arc-utils';
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 
 export interface WorldVector {
   readonly x: number;
@@ -185,100 +187,40 @@ function stretchArc(
   return {};
 }
 
+/**
+ * Single-endpoint arc reshape — delegates to the SSoT `arcFromMovedEndpoint`
+ * (`geometry-arc-utils.ts`), the SAME bulge-preserving recompute the 3D live ghost uses
+ * (preview ≡ commit). Angles are DEGREES (matching `ArcEntity` / the DXF scene).
+ */
 function stretchArcSingleEndpoint(
   arc: Entity & { type: 'arc' },
   movedKind: 'arc-start' | 'arc-end',
   d: WorldVector,
 ): Partial<SceneEntity> {
-  const pStartOld = arcEndpoint(arc, arc.startAngle);
-  const pEndOld = arcEndpoint(arc, arc.endAngle);
-  const pStartNew = movedKind === 'arc-start' ? translatePoint(pStartOld, d) : pStartOld;
-  const pEndNew = movedKind === 'arc-end' ? translatePoint(pEndOld, d) : pEndOld;
-
-  const theta = arc.endAngle - arc.startAngle;        // signed sweep
-  if (Math.abs(theta) < 1e-9) return {};               // degenerate
-  if (Math.abs(theta) >= 2 * Math.PI - 1e-9) return {}; // full circle
-
-  const vx = pEndNew.x - pStartNew.x;
-  const vy = pEndNew.y - pStartNew.y;
-  const L = Math.hypot(vx, vy);
-  if (L < 1e-9) return {};                             // chord collapsed
-
-  const halfAbs = Math.abs(theta) / 2;
-  const sinHalf = Math.sin(halfAbs);
-  if (sinHalf < 1e-9) return {};
-
-  const newRadius = L / (2 * sinHalf);
-
-  // Side selection: keep the original geometric side of the center relative
-  // to the chord (preserves bulge convention regardless of CW/CCW).
-  const oldChordX = pEndOld.x - pStartOld.x;
-  const oldChordY = pEndOld.y - pStartOld.y;
-  const oldOffsetX = arc.center.x - pStartOld.x;
-  const oldOffsetY = arc.center.y - pStartOld.y;
-  const oldCross = oldChordX * oldOffsetY - oldChordY * oldOffsetX;
-  const side = oldCross >= 0 ? 1 : -1;
-
-  // Distance from new chord midpoint to new center.
-  const halfChordSq = (L / 2) * (L / 2);
-  const distSq = newRadius * newRadius - halfChordSq;
-  const dist = distSq > 0 ? Math.sqrt(distSq) : 0;
-
-  // Left perpendicular to (vx, vy) is (-vy, vx); flip with `side`.
-  const perpX = -vy / L;
-  const perpY = vx / L;
-  const mx = (pStartNew.x + pEndNew.x) / 2;
-  const my = (pStartNew.y + pEndNew.y) / 2;
-  const newCenter: Point2D = {
-    x: mx + side * dist * perpX,
-    y: my + side * dist * perpY,
-  };
-
-  const newStart = Math.atan2(pStartNew.y - newCenter.y, pStartNew.x - newCenter.x);
-  let newEnd = Math.atan2(pEndNew.y - newCenter.y, pEndNew.x - newCenter.x);
-  // Preserve signed sweep (atan2 collapses to (-π, π] so we may need to wrap).
-  let sweep = newEnd - newStart;
-  if (theta > 0 && sweep < 0) sweep += 2 * Math.PI;
-  else if (theta < 0 && sweep > 0) sweep -= 2 * Math.PI;
-  newEnd = newStart + sweep;
-
-  return {
-    center: newCenter,
-    radius: newRadius,
-    startAngle: newStart,
-    endAngle: newEnd,
-  } as Partial<SceneEntity>;
+  const next = arcFromMovedEndpoint(arc, movedKind === 'arc-start' ? 'start' : 'end', d.x, d.y);
+  return (next ?? {}) as Partial<SceneEntity>;
 }
 
+/**
+ * Arc-midpoint reshape — 3-point circumcircle through the dragged (visible) midpoint,
+ * delegating to the SSoT `arcFrom3Points` (degrees + direction). The original midpoint is
+ * the angular average of start/end; the cursor displaces it.
+ */
 function stretchArcMidpoint(
   arc: Entity & { type: 'arc' },
   d: WorldVector,
 ): Partial<SceneEntity> {
-  const pStart = arcEndpoint(arc, arc.startAngle);
-  const pEnd = arcEndpoint(arc, arc.endAngle);
-  const pMidOld = arcEndpoint(arc, (arc.startAngle + arc.endAngle) / 2);
-  const pMidNew = translatePoint(pMidOld, d);
-
-  const theta = arc.endAngle - arc.startAngle;
-  if (Math.abs(theta) < 1e-9) return {};
-
-  const newCenter = circumcenter(pStart, pMidNew, pEnd);
-  if (!newCenter) return {};                           // collinear → degenerate
-  const newRadius = Math.hypot(pStart.x - newCenter.x, pStart.y - newCenter.y);
-  if (newRadius < 1e-9) return {};
-
-  const newStart = Math.atan2(pStart.y - newCenter.y, pStart.x - newCenter.x);
-  let newEnd = Math.atan2(pEnd.y - newCenter.y, pEnd.x - newCenter.x);
-  let sweep = newEnd - newStart;
-  if (theta > 0 && sweep < 0) sweep += 2 * Math.PI;
-  else if (theta < 0 && sweep > 0) sweep -= 2 * Math.PI;
-  newEnd = newStart + sweep;
-
+  const pStart = arcPointDeg(arc, arc.startAngle);
+  const pEnd = arcPointDeg(arc, arc.endAngle);
+  const pMidNew = translatePoint(arcPointDeg(arc, (arc.startAngle + arc.endAngle) / 2), d);
+  const next = arcFrom3Points(pStart, pMidNew, pEnd);
+  if (!next) return {};                                // collinear → degenerate
   return {
-    center: newCenter,
-    radius: newRadius,
-    startAngle: newStart,
-    endAngle: newEnd,
+    center: next.center,
+    radius: next.radius,
+    startAngle: next.startAngle,
+    endAngle: next.endAngle,
+    counterclockwise: next.counterclockwise,
   } as Partial<SceneEntity>;
 }
 
@@ -376,25 +318,11 @@ function wrapUpdate(updates: Partial<SceneEntity>): StretchUpdate {
     : { kind: 'update', updates };
 }
 
-function arcEndpoint(arc: { center: Point2D; radius: number }, angleRad: number): Point2D {
+/** Point on an arc at `angleDeg` (DEGREES) — angles are stored in degrees on `ArcEntity`. */
+function arcPointDeg(arc: { center: Point2D; radius: number }, angleDeg: number): Point2D {
+  const a = degToRad(angleDeg);
   return {
-    x: arc.center.x + arc.radius * Math.cos(angleRad),
-    y: arc.center.y + arc.radius * Math.sin(angleRad),
+    x: arc.center.x + arc.radius * Math.cos(a),
+    y: arc.center.y + arc.radius * Math.sin(a),
   };
-}
-
-/**
- * Circumcenter of three points. Returns null when the three points are
- * collinear (denominator → 0), which is the only degenerate case for a
- * 3-point circle.
- */
-function circumcenter(a: Point2D, b: Point2D, c: Point2D): Point2D | null {
-  const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
-  if (Math.abs(d) < 1e-12) return null;
-  const aSq = a.x * a.x + a.y * a.y;
-  const bSq = b.x * b.x + b.y * b.y;
-  const cSq = c.x * c.x + c.y * c.y;
-  const ux = (aSq * (b.y - c.y) + bSq * (c.y - a.y) + cSq * (a.y - b.y)) / d;
-  const uy = (aSq * (c.x - b.x) + bSq * (a.x - c.x) + cSq * (b.x - a.x)) / d;
-  return { x: ux, y: uy };
 }

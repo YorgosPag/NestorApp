@@ -36,6 +36,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { FOUNDATION_KIND_FILL, FOUNDATION_KIND_STROKE } from '../foundations/foundation-render-palette';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
@@ -105,7 +106,9 @@ export class FoundationRenderer extends BaseEntityRenderer {
     // distinction (Giorgio: «συνδετήριες == πεδιλοδοκοί»). Per-element/layer overrides
     // are honoured by the stroke; the fill follows the kind identity.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(FOUNDATION_KIND_FILL[foundation.kind]);
+    // ADR-539 Φ3e — η βαμμένη ΑΝΩ όψη (Cinema 4D «Polygon Mode») γίνεται το χρώμα γεμίσματος
+    // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy kind body fill.
+    this.ctx.fillStyle = topFacePlanFill(foundation) ?? adaptFillTintForCanvas(FOUNDATION_KIND_FILL[foundation.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

@@ -42,6 +42,7 @@ import type {
 } from '../types/column-types';
 import type { BimValidation } from '../types/bim-base';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 
 // ============================================================================
 // TYPES
@@ -66,6 +67,8 @@ export interface ColumnDoc {
   readonly layerId?: string;
   /** ADR-441 Slice COL — associative grid hosting bindings (host-on-snap). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -92,6 +95,8 @@ export interface ColumnSaveInput {
   readonly layerId?: string;
   /** ADR-441 Slice COL — grid hosting bindings (host-on-snap at create). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface ColumnUpdateInput {
@@ -101,6 +106,12 @@ export interface ColumnUpdateInput {
   readonly layerId?: string;
   /** ADR-441 Slice COL — grid hosting bindings (update on re-host, if ever). */
   readonly guideBindings?: readonly GuideBinding[];
+  /**
+   * ADR-539 — per-face appearance edit on an EXISTING column. The faced paint fires
+   * `bim:entities-attached` → persist → `updateColumn` (non-first writes use updateDoc),
+   * so the patch MUST carry it or the painted faces would be lost on reload (mirror foundation).
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 // ============================================================================
@@ -173,6 +184,8 @@ export class ColumnFirestoreService {
     if (input.layerId !== undefined) base.layerId = input.layerId;
     // ADR-441 Slice COL — persist grid hosting bindings (Firestore rejects undefined).
     if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
+    // ADR-539 — persist per-face appearance (Firestore rejects undefined).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as ColumnDoc;
@@ -193,6 +206,8 @@ export class ColumnFirestoreService {
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice COL — persist grid hosting bindings on update (Firestore rejects undefined).
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
+    // ADR-539 — persist per-face appearance edit (Firestore rejects undefined).
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(ref, payload);
   }
@@ -230,5 +245,7 @@ export function entityToSaveInput(entity: ColumnEntity): ColumnSaveInput {
     layerId: entity.layerId,
     // ADR-441 Slice COL — carry grid hosting bindings into the persisted doc.
     guideBindings: entity.guideBindings,
+    // ADR-539 — carry per-face appearance into the persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

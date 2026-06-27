@@ -13,17 +13,9 @@
  */
 
 import * as THREE from 'three';
-import type { FaceAppearance, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
-import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-material-catalog';
-import type { WallCoveringMaterialId } from '../../bim/types/wall-covering-types';
-
-/** Χρώμα (CSS hex) μιας όψης ή `null` όταν δεν υπάρχει override (→ base material). */
-function faceColorHex(face: FaceAppearance): string | null {
-  if (face.colorHex) return face.colorHex;
-  // materialId προέρχεται από `listWallCoveringMaterials()` (panel) → ασφαλές narrowing.
-  if (face.materialId) return getWallCoveringColor(face.materialId as WallCoveringMaterialId);
-  return null;
-}
+import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
+// ADR-539 — shared color SSoT (Boy-Scout N.0.2: κοινό με το 2D plan fill της Φ3e).
+import { faceAppearanceColorHex } from '../../bim/utils/face-appearance-color';
 
 /**
  * Material για ΜΙΑ όψη. `appearance[faceKey]` με χρώμα/υλικό → flat MeshStandardMaterial·
@@ -37,7 +29,7 @@ export function resolveFaceMaterial(
 ): THREE.Material {
   const face = appearance[faceKey];
   if (!face) return baseMaterial;
-  const hex = faceColorHex(face);
+  const hex = faceAppearanceColorHex(face);
   if (!hex) return baseMaterial;
   return new THREE.MeshStandardMaterial({
     color: new THREE.Color(hex),

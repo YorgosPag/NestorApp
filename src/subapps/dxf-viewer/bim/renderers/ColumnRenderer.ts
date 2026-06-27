@@ -43,6 +43,7 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -138,7 +139,9 @@ export class ColumnRenderer extends BaseEntityRenderer {
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
     // ADR-509 / FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με τον τοίχο &
     // όλα τα BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια.
-    this.ctx.fillStyle = resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
+    // ADR-539 Φ3e — η βαμμένη ΑΝΩ όψη (Cinema 4D «Polygon Mode») γίνεται το χρώμα γεμίσματος
+    // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
+    this.ctx.fillStyle = topFacePlanFill(column) ?? resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

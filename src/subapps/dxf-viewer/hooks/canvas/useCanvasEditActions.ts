@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import type React from 'react';
 import type { MutableRefObject } from 'react';
 import type { ICommand } from '../../core/commands';
@@ -13,22 +13,13 @@ import { useTextCreationTool } from './useTextCreationTool';
 import { useArrayRepickHandlers } from './useArrayRepickHandlers';
 import { useSmartDelete } from './useSmartDelete';
 import { useEntityJoin } from '../useEntityJoin';
+// ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 // ADR-344 Phase 13 — feed active scene units into ribbon text creation so 2.5
 // paper-mm default lands in world units regardless of DXF unit system.
 import { resolveSceneUnits } from '../../utils/scene-units';
-
-/**
- * Perf guard — `getJoinPreview` runs an O(n²) segment-chain (force-connect) just
- * to derive a context-menu label. On large selections (e.g. marquee-selecting a
- * whole floorplan before a mass-delete) that chaining saturates the main thread
- * and drops FPS to ~1, which in turn starves the auto-save fetch into a 60s
- * timeout. The label is only meaningful for the small "join these few segments"
- * case, so above this size we keep the menu enabled (cheap `canJoin`) but skip
- * the preview. See HANDOFF 2026-06-16 perf FPS-1 + ADR-186.
- */
-const JOIN_PREVIEW_MAX_SELECTION = 64;
 
 interface Params {
   activeTool: ToolType;
@@ -38,7 +29,6 @@ interface Params {
   containerRef: React.RefObject<HTMLDivElement | null>;
   onToolChange: ((tool: string) => void) | undefined;
   executeCommand: (command: ICommand) => void;
-  selectedEntityIds: string[];
   selectedGrips: SelectedGrip[];
   setSelectedGrips: (grips: SelectedGrip[]) => void;
   overlayStoreRef: MutableRefObject<ReturnType<typeof useOverlayStore>>;
@@ -55,7 +45,7 @@ interface Params {
 export function useCanvasEditActions({
   activeTool, overlayMode, setOverlayMode,
   transformRef, containerRef, onToolChange, executeCommand,
-  selectedEntityIds, selectedGrips, setSelectedGrips,
+  selectedGrips, setSelectedGrips,
   overlayStoreRef, universalSelectionRef,
   levelManager, setSelectedEntityIds, eventBus,
   notifyWarning, notifySuccess,
@@ -75,24 +65,20 @@ export function useCanvasEditActions({
     overlayStoreRef, universalSelectionRef, levelManager, setSelectedEntityIds, eventBus,
     hoveredDxfGrip,
   });
+  // ADR-532 B4 — `entityJoinHook` is selection-agnostic (takes ids as args). The
+  // join-STATE display moved to the selection-subscribed `EntityContextMenuHost`
+  // leaf (computeEntityJoinState), and the keyboard join reads the selection at
+  // event time — so this orchestrator hook no longer derives a join-state snapshot.
   const entityJoinHook = useEntityJoin({ levelManager, executeCommand, setSelectedEntityIds, onWarning: notifyWarning, onSuccess: notifySuccess });
-  const entityJoinState = useMemo(() => {
-    const canJoin = entityJoinHook.canJoin(selectedEntityIds);
-    // Perf: skip the expensive O(n²) join-preview chain on large selections —
-    // it only produces a context-menu label and otherwise starves the main
-    // thread (FPS-1) during marquee-select before a mass-delete.
-    const preview = canJoin && selectedEntityIds.length <= JOIN_PREVIEW_MAX_SELECTION
-      ? entityJoinHook.getJoinPreview(selectedEntityIds)
-      : null;
-    return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
-  }, [entityJoinHook, selectedEntityIds]);
   const handleExitDrawMode = useCallback(() => {
     if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select');
   }, [overlayMode, setOverlayMode]);
   const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
-    if (selectedEntityIds.length !== 1 || !levelManager.currentLevelId) return;
+    // ADR-532 B4 — read the selection at event time (no stale render snapshot).
+    const ids = SelectedEntitiesStore.getSelectedEntityIds();
+    if (ids.length !== 1 || !levelManager.currentLevelId) return;
     const adapter = createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
-    executeCommand(new ReorderEntityCommand(selectedEntityIds[0], direction, adapter));
-  }, [selectedEntityIds, levelManager, executeCommand]);
-  return { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, entityJoinState, handleExitDrawMode, handleReorderEntity };
+    executeCommand(new ReorderEntityCommand(ids[0], direction, adapter));
+  }, [levelManager, executeCommand]);
+  return { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, handleExitDrawMode, handleReorderEntity };
 }

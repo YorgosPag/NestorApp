@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-27 — N.7.1 file-size split: ZOOM Window wiring → `useCanvasZoomWindow` (CanvasSection 512→497)
+
+**Status**: IMPLEMENTED 2026-06-27 (Opus 4.8), commit batch ADR-539/ADR-542. CHECK 6B trigger — micro-leaf αρχεία τροποποιήθηκαν στο batch (`CanvasLayerStack`, `CanvasSection`, `CanvasSectionOverlays`, `canvas-layer-stack-leaves`, `canvas-layer-stack-types`, `useCanvasContextMenu`).
+
+**Πρόβλημα**: το `CanvasSection.tsx` orchestrator ξεπέρασε το 500-line budget (512). Η pre-commit CHECK 4 μπλόκαρε το commit.
+
+**Fix**: εξαγωγή του ZOOM Window tool wiring (το combined transform handler `setTransform`+`zoomSystem.setTransform` που πρέπει να καθρεφτίζει το `CanvasLayerStack.handleTransformChange`, μαζί με το `useZoomWindowTool`) σε νέο thin hook `hooks/canvas/useCanvasZoomWindow.ts`. Ίδιο pattern με `useCanvasSectionUI`/`useCanvasSection2DFocus`/`useModifyTools` («extracted to keep this orchestrator <500 lines»). **ADR-040 compliance**: ο νέος hook ΔΕΝ προσθέτει subscription — μόνο composes callbacks + forward στο subscription-free `useZoomWindowTool`· ο orchestrator μένει inert σε wheel-zoom. Επιπλέον cosmetic import-pairing (file's own multi-import-per-line style) για margin. **Files**: NEW `hooks/canvas/useCanvasZoomWindow.ts`· MOD `CanvasSection.tsx` (512→497). ✅ Google-level: YES — καθαρό SRP split, μηδέν store subscription στον orchestrator, ίδια συμπεριφορά.
+
 ### 2026-06-25 — Selection-click jank #1: gate-at-mount τα βαριά always-mounted dialogs/hosts (Root B amplifier)
 
 **Status**: IMPLEMENTED 2026-06-25 (Opus 4.8), ✅ 6 jest GREEN · 🔴 browser-verify (React DevTools profile) + commit (Giorgio) pending. Συνέχεια του `HANDOFF_2026-06-25_selection-cascade-and-always-mounted-dialogs.md` §3 #1 (το #2 — SelectionContext cascade — είναι Orchestrator-tier, χωριστά, ΜΕΤΑ από έγκριση).

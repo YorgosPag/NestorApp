@@ -20,6 +20,8 @@ import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/Canv
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 // ADR-357 Phase 3: DDE — cursor world position + unit conversion
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
+// ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import { fromDisplay } from '../../config/units';
 import type { DisplayUnit } from '../../config/units';
 // ADR-364 — Escape Command Bus SSoT (priority chain extracted to registrations module)
@@ -47,9 +49,8 @@ export function useCanvasKeyboardShortcuts({
   handleDrawingFinish,
   handleFlipArc,
   finishDrawing,
-  selectedEntityIds = [],
   handleEntityJoin,
-  canEntityJoin = false,
+  canEntityJoin,
   onExitDrawMode,
   handleRotationEscape,
   rotationIsActive = false,
@@ -197,7 +198,7 @@ export function useCanvasKeyboardShortcuts({
       // Εδώ κρατάμε ΜΟΝΟ local shortcuts για drawing mode (Escape, Enter)
 
       // Z-order: PageUp = bring to front, PageDown = send to back
-      if ((e.key === 'PageUp' || e.key === 'PageDown') && selectedEntityIds.length === 1 && handleReorderEntity) {
+      if ((e.key === 'PageUp' || e.key === 'PageDown') && SelectedEntitiesStore.getSelectedEntityIds().length === 1 && handleReorderEntity) {
         e.preventDefault();
         handleReorderEntity(e.key === 'PageUp' ? 'front' : 'back');
         return;
@@ -277,7 +278,7 @@ export function useCanvasKeyboardShortcuts({
         // ADR-161: "J" key for Join entities in select mode
         case 'j':
         case 'J':
-          if (activeTool === 'select' && canEntityJoin && handleEntityJoin) {
+          if (activeTool === 'select' && canEntityJoin?.() && handleEntityJoin) {
             e.preventDefault();
             handleEntityJoin();
           }
@@ -303,7 +304,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
 
   // ADR-364 — auto-clear DDE buffer when the active drawing flow resets
   // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.
@@ -321,7 +322,6 @@ export function useCanvasKeyboardShortcuts({
     setDraftPolygon,
     selectedGrips,
     setSelectedGrips,
-    selectedEntityIds,
     hasAnySelection,
     hasActiveCircuit,
     onExitDrawMode,

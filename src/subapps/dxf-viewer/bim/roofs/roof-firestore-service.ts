@@ -38,6 +38,7 @@ import type {
 } from '../types/roof-types';
 import type { RoofTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 
 // ============================================================================
 // TYPES
@@ -64,6 +65,8 @@ export interface RoofDoc {
   readonly typeId?: string;
   /** ADR-417 §10 #3 — per-instance overrides of type-level params. */
   readonly typeOverrides?: Partial<RoofTypeParams>;
+  /** ADR-539 Φ3b — per-«νερό» appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -90,6 +93,8 @@ export interface RoofSaveInput {
   readonly layerId?: string;
   readonly typeId?: string;
   readonly typeOverrides?: Partial<RoofTypeParams>;
+  /** ADR-539 Φ3b — per-«νερό» appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface RoofUpdateInput {
@@ -101,6 +106,12 @@ export interface RoofUpdateInput {
   readonly typeId?: string | null;
   /** `null` → `deleteField()` (clear all per-instance overrides). */
   readonly typeOverrides?: Partial<RoofTypeParams> | null;
+  /**
+   * ADR-539 Φ3b — per-«νερό» appearance edit on an EXISTING roof. The faced paint fires
+   * `bim:entities-attached` → persist → `updateRoof` (non-first writes use updateDoc), so
+   * the patch MUST carry it or the painted νερά would be lost on reload (mirror foundation/column).
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 // ============================================================================
@@ -164,6 +175,8 @@ export class RoofFirestoreService {
     if (input.layerId !== undefined) base.layerId = input.layerId;
     if (input.typeId !== undefined) base.typeId = input.typeId;
     if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
+    // ADR-539 Φ3b — persist per-«νερό» appearance (Firestore rejects undefined).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as RoofDoc;
@@ -186,6 +199,8 @@ export class RoofFirestoreService {
     if (patch.typeOverrides !== undefined) {
       payload.typeOverrides = patch.typeOverrides === null ? deleteField() : patch.typeOverrides;
     }
+    // ADR-539 Φ3b — persist per-«νερό» appearance edit (Firestore rejects undefined).
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(ref, payload);
   }
@@ -224,5 +239,7 @@ export function entityToSaveInput(entity: RoofEntity): RoofSaveInput {
     // untyped/legacy roofs so `setDoc` writes no `typeId`/`typeOverrides`.
     ...(entity.typeId !== undefined && { typeId: entity.typeId }),
     ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
+    // ADR-539 Φ3b — carry per-«νερό» appearance into the persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

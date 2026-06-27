@@ -505,7 +505,14 @@
     "clearFace": "Clear face",
     "customColor": "Custom colour",
     "customColorTitle": "Pick face colour",
-    "dragHint": "Drag a material onto the face"
+    "dragHint": "Drag a material onto the face",
+    "contextMenu": {
+      "title": "Face",
+      "clear": "Clear face",
+      "copy": "Copy appearance",
+      "paste": "Paste appearance",
+      "aria": "Face appearance menu"
+    }
   },
   "shortcuts": {
     "view3d": {

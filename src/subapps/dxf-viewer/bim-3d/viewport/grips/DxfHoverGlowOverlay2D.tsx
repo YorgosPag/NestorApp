@@ -16,13 +16,15 @@
  * geometry is read imperatively each frame.
  */
 
-import { useRef, useEffect, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
+import { useRef, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import type { Point2D } from '../../../rendering/types/Types';
 import { drawEntityGlowPrePass } from '../../../rendering/entities/base-entity-style-helpers';
 import { getHoveredEntity, subscribeHoveredEntity } from '../../../systems/hover/HoverStore';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { dxfEntityOutlineSegments } from '../../grips/dxf-entity-outline';
+import { sizeCanvasToContainerDpr } from '../../../rendering/canvas/withCanvasState';
+import { useRafWhile } from '../overlay-raf';
 import { useDxfOverlay3DStore } from '../../stores/DxfOverlay3DStore';
 
 export interface DxfHoverGlowOverlay2DProps {
@@ -35,7 +37,6 @@ const FLAT_ELEVATION = (): number => 0;
 export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
 
   // ADR-040 — subscribe ONLY to the hovered entity id (drives the RAF on/off).
   const hoveredId = useSyncExternalStore(subscribeHoveredEntity, getHoveredEntity, getHoveredEntity);
@@ -49,19 +50,9 @@ export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps
     const camera = manager.getCamera();
     if (!camera) return;
 
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    const dpr = window.devicePixelRatio || 1;
-    const dw = Math.round(cw * dpr);
-    const dh = Math.round(ch * dpr);
-    if (canvas.width !== dw || canvas.height !== dh) {
-      canvas.width = dw;
-      canvas.height = dh;
-    }
-    const ctx = canvas.getContext('2d');
+    // Size the overlay canvas to the viewport at DPR + clear (shared SSoT).
+    const ctx = sizeCanvasToContainerDpr(canvas, container);
     if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cw, ch);
 
     // Resolve the hovered id to a RAW DXF entity (BIM ids are absent → no-op here).
     const id = getHoveredEntity();
@@ -76,27 +67,13 @@ export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps
     drawEntityGlowPrePass(ctx, { lineWidth: entity.lineWidth }, () => strokeSegments(ctx, project, segments));
   }, [managerRef]);
 
-  useEffect(() => {
-    if (!active) {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-    const loop = () => {
-      draw();
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
-  }, [active, draw]);
+  // Clear the glow when the hover ends / on unmount (shared overlay RAF SSoT, ADR-542).
+  const onStop = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+  useRafWhile(active, draw, onStop);
 
   return (
     <div

@@ -15,7 +15,6 @@
 
 import React from 'react';
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
-import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import { PromptDialog } from '../../systems/prompt-dialog';
@@ -24,6 +23,8 @@ import { GripContextMenu } from '../grip/GripContextMenu';
 import { QuickPropertiesHoverPopover } from '../../systems/properties/QuickPropertiesHoverPopover';
 import { QuickPropertiesMiniPanel } from '../../systems/properties/QuickPropertiesMiniPanel';
 import { PropertiesPalette } from '../../systems/properties/PropertiesPalette';
+// ADR-532 B4 — the entity context menu is a selection-subscribed leaf now.
+import { EntityContextMenuHost, type EntityContextMenuHostProps } from './EntityContextMenuHost';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
@@ -32,7 +33,6 @@ type QuickHoverProps = React.ComponentProps<typeof QuickPropertiesHoverPopover>;
 type QuickMiniProps = React.ComponentProps<typeof QuickPropertiesMiniPanel>;
 type PalettePropsT = React.ComponentProps<typeof PropertiesPalette>;
 type DrawingMenuProps = React.ComponentProps<typeof DrawingContextMenu>;
-type EntityMenuProps = React.ComponentProps<typeof EntityContextMenu>;
 type GuideMenuProps = React.ComponentProps<typeof GuideContextMenu>;
 type GuideBatchMenuProps = React.ComponentProps<typeof GuideBatchContextMenu>;
 type MirrorOverlayProps = React.ComponentProps<typeof MirrorConfirmOverlay>;
@@ -41,11 +41,11 @@ type CyclingProps = React.ComponentProps<typeof SelectionCyclingPopover>;
 
 export interface CanvasSectionOverlaysProps {
   drawingMenuRef: React.RefObject<DrawingContextMenuHandle | null>;
-  entityMenuRef: React.RefObject<EntityContextMenuHandle | null>;
   guideMenuRef: React.RefObject<GuideContextMenuHandle | null>;
   guideBatchMenuRef: React.RefObject<GuideBatchContextMenuHandle | null>;
   drawingMenu: Omit<DrawingMenuProps, 'ref'>;
-  entityMenu: Omit<EntityMenuProps, 'ref'>;
+  // ADR-532 B4 — entity menu is a selection-subscribed leaf (own props bag, incl. ref).
+  entityMenuHost: EntityContextMenuHostProps;
   guideMenu: Omit<GuideMenuProps, 'ref'>;
   guideBatchMenu: Omit<GuideBatchMenuProps, 'ref'>;
   quickHover: QuickHoverProps;
@@ -61,7 +61,7 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
   return (
     <>
       <DrawingContextMenu ref={p.drawingMenuRef as React.Ref<DrawingContextMenuHandle>} {...p.drawingMenu} />
-      <EntityContextMenu ref={p.entityMenuRef as React.Ref<EntityContextMenuHandle>} {...p.entityMenu} />
+      <EntityContextMenuHost {...p.entityMenuHost} />
       <GuideContextMenu ref={p.guideMenuRef as React.Ref<GuideContextMenuHandle>} {...p.guideMenu} />
       <GuideBatchContextMenu ref={p.guideBatchMenuRef as React.Ref<GuideBatchContextMenuHandle>} {...p.guideBatchMenu} />
       <PromptDialog />

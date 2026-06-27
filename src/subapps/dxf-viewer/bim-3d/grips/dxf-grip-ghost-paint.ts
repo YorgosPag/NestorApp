@@ -11,7 +11,7 @@
  * vertices; a plain vertex grip moves its one point (by `gripIndex`).
  *
  * Returns an array of poly-lines (each a plan-mm point list) to stroke. Empty array =
- * no ghost for this case (e.g. arc reshape — the grip square alone follows in v1).
+ * no ghost for this case (e.g. text — no wireframe, the grip square alone follows).
  *
  * Pure — no THREE, no React, no canvas. Jest-friendly.
  */
@@ -19,22 +19,11 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo } from '../../hooks/grip-types';
-
-/** Circle approximation segment count (matches DxfToThreeConverter's 48). */
-const CIRCLE_SEGMENTS = 48;
+import { circlePolyline, arcPolyline } from '../converters/dxf-arc-circle-sample';
+import { arcFromMovedEndpoint } from '../../rendering/entities/shared/geometry-arc-utils';
 
 function translate(p: Point2D, dx: number, dy: number): Point2D {
   return { x: p.x + dx, y: p.y + dy };
-}
-
-/** Sample a circle into a closed plan-mm poly-line. */
-function circlePolyline(center: Point2D, radius: number): Point2D[] {
-  const pts: Point2D[] = [];
-  for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
-    const a = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
-    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
-  }
-  return pts;
 }
 
 /** Ghost for a line: move start / end / both (midpoint = whole-entity). */
@@ -85,7 +74,22 @@ export function buildDxfGhostSegments(
       const r = Math.hypot(livePlanPos.x - entity.center.x, livePlanPos.y - entity.center.y);
       return [circlePolyline(entity.center, r)];
     }
+    case 'arc': {
+      // Mirrors the commit (`stretchArc` via `gripToVertexRefs`):
+      //   centre (grip 0) + mid (grip 3) are `movesEntity` → rigid translate of the arc;
+      //   start (grip 1) / end (grip 2) → bulge-preserving single-endpoint recompute (SSoT
+      //   `arcFromMovedEndpoint`, the SAME helper the commit resolves through).
+      if (grip.movesEntity) {
+        return [arcPolyline(translate(entity.center, dx, dy), entity.radius,
+          entity.startAngle, entity.endAngle, entity.counterclockwise)];
+      }
+      const next = arcFromMovedEndpoint(entity, grip.gripIndex === 1 ? 'start' : 'end', dx, dy);
+      if (!next) return [];
+      // The commit keeps the original `counterclockwise` flag (only centre/radius/angles
+      // change), so sample with it to match the post-commit wireframe.
+      return [arcPolyline(next.center, next.radius, next.startAngle, next.endAngle, entity.counterclockwise)];
+    }
     default:
-      return []; // arc / text — grip square alone follows in v1
+      return []; // text — grip square alone follows (no wireframe)
   }
 }

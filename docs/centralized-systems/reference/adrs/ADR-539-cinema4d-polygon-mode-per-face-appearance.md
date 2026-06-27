@@ -102,7 +102,11 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ1 (MVP)** | **slab** · click-to-apply · `face-appearance-types` · `faceAppearance?` base · `buildFacedPrism` (χωρίς holes) · `slabToMesh` group path · `raycastBimFace` · `PolygonMode3DStore`+toggle · `FaceSelectionHighlighter` · `SetFaceAppearanceCommand`+persist · `PolygonMaterialPanel` | 🟢 COMMITTED (slab) |
 | **Φ1.5** | **foundation** (πέδιλα/θεμέλια) · converter faced branch + persistence wiring · `buildFacedSolidBody` shared SSoT (Boy-Scout extraction· slab+foundation delegate) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ2** | HTML5 drag-drop · holes (slab-openings) · `EnterpriseColorDialog` custom color · face hover | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ3** | full scope (wall/column/beam/foundation/roof converters → faced groups) · roof `sub:i:*` · 2D plan fill από `faceAppearance['top']` · context-menu σε face | ⬜ PLANNED |
+| **Φ3a** | **column** (κατακόρυφο prism· converter faced branch + 8-point persistence round-trip + gate) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3b** | **roof** (per-«νερό» `sub:${i}:top`· κάθε face mesh pickable+paintable· reuse `resolveFaceMaterial` + persistence + gate) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3e** | **2D plan fill** — η βαμμένη `faceAppearance['top']` γίνεται χρώμα γεμίσματος στην κάτοψη (slab/foundation/column· SSoT `topFacePlanFill`) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3f** | **face context-menu** — δεξί-κλικ σε όψη (Polygon Mode) → καθαρισμός / αντιγραφή / επικόλληση εμφάνισης (mirror `Grip3DVertexContextMenu`) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3 (υπόλοιπο)** | wall (Φ3c) · beam (Φ3d) — Plan Mode πρώτα | ⬜ PLANNED |
 | **Φ4** | multi-face select (Shift) · copy/paste appearance · `bmat_*` drag · per-face PBR textures | ⬜ PLANNED |
 
 ## 5. Συνέπειες
@@ -129,6 +133,81 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
+
+- **2026-06-27 (Φ3f — FACE CONTEXT-MENU, IMPLEMENTED UNCOMMITTED)** — Δεξί-κλικ σε όψη (σε Polygon
+  Mode) → menu εμφάνισης όψης (Revit «Paint on face» right-click). Mirror του `Grip3DVertexContextMenu`:
+  - **Store** `bim-3d/stores/FaceContextMenuStore.ts` (mirror `Grip3DContextMenuStore`): open/screen/
+    target {bimId, faceKey} + **clipboard** (copy/paste appearance, επιβιώνει του open/close).
+  - **Leaf** `bim-3d/viewport/grips/FaceContextMenu.tsx`: 1×1 anchor + Radix dropdown με 3 ενέργειες
+    μέσω του SHARED SSoT `applyFaceAppearance` (undoable, scene re-sync): «Καθαρισμός όψης» (value=null),
+    «Αντιγραφή εμφάνισης» (clipboard = live face appearance από το scene), «Επικόλληση εμφάνισης»
+    (apply clipboard· disabled όταν άδειο).
+  - **Handler:** `use-bim3d-pointer-handlers.ts` νέο `handleContextMenu` — σε Polygon Mode raycast face
+    → select + `show()` στο menu (preventDefault → όχι native menu)· miss → hide. Wired στο
+    `BimViewport3D` `onContextMenu` + mount `<FaceContextMenu/>`. **N.7.1:** το `BimViewport3D` ξεπέρασε
+    τις 500γρ με τα νέα mounts → συμπίεση verbose JSX comments → **500γρ** (εντός ορίου).
+  - **i18n:** `polygonMode.contextMenu.{title,clear,copy,paste,aria}` σε el+en (N.11· keys-first).
+  - **Tests:** `FaceContextMenuStore.test.ts` (3 — show anchor, hide κρατά clipboard, setClipboard
+    set/clear) GREEN.
+
+- **2026-06-27 (Φ3e — 2D PLAN TOP-FACE FILL, IMPLEMENTED UNCOMMITTED)** — Στην κάτοψη το solid
+  φαίνεται από πάνω → η βαμμένη ΑΝΩ όψη (`faceAppearance['top']`) γίνεται το χρώμα γεμίσματος του
+  σώματος (Revit «Paint on face» seen in plan):
+  - **SSoT color extraction (Boy-Scout N.0.2):** το ιδιωτικό `faceColorHex` του 3D material resolver
+    εξήχθη σε `bim/utils/face-appearance-color.ts` (`faceAppearanceColorHex` — colorHex wins, αλλιώς
+    catalog `getWallCoveringColor`)· ΚΑΙ ο 3D resolver ΚΑΙ το 2D fill το καλούν (μηδέν διπλότυπο).
+  - **Νέο SSoT** `bim/utils/bim-face-plan-fill.ts` `topFacePlanFill(entity, bgHex?)` → translucent
+    poché (`hexToRgba` alpha 0.55) + `adaptFillTintForCanvas` (ΙΔΙΟ background-adaptive layer με το
+    `resolveBimBodyFill`), ή `null` χωρίς `top` paint.
+  - **Wiring:** `SlabRenderer` / `ColumnRenderer` / `FoundationRenderer` → `topFacePlanFill(e) ??
+    <legacy body fill>` (ένα injection point ο καθένας). Το roof (per-«νερό» `sub:i:top`, χωρίς
+    ενιαίο `top`) ΔΕΝ καλύπτεται — out of scope (multi-νερό κάτοψη = future).
+  - **CHECK 6D:** οι 2D renderers ζουν στο `bim/renderers/` (ΟΧΙ `rendering/entities/`) → δεν πιάνει·
+    το ADR-539 staged ούτως ή άλλως.
+  - **Tests:** `bim-face-plan-fill.test.ts` (9 — color SSoT priority, null χωρίς top, rgba fill,
+    distinct colors) + regression Slab/Column hatch + envelope + foundation-to-three (refactored
+    color) = 0 break (57 GREEN).
+
+- **2026-06-27 (Φ3b — ROOF, IMPLEMENTED UNCOMMITTED)** — Per-«νερό» appearance στη **στέγη**. Το roof
+  ΔΕΝ χρησιμοποιεί `buildFacedSolidBody` (έχει sloped sub-solids ανά νερό· κρατά το proven
+  `buildPrismIndex` + DNA/relief/tile pipeline) — αντί:
+  - **Converter** `roof-to-three.ts`: `RoofFaceMeshContext += faced + faceAppearance`· `roofToMesh`
+    υπολογίζει `faced = hasAppearance || isPolygonTarget`· ο per-face loop έγινε **indexed**
+    (`faces.forEach((face, i) => …)`)· extract `buildFaceMeshes` (collect τα 1..n meshes ενός νερού)
+    + νέος `applyRoofFacePaint(meshes, i, ctx)`: σε faced roof κάθε mesh του νερού i παίρνει
+    `userData.faceKeyByMaterialIndex = ['sub:${i}:top']` (single-material → materialIndex 0 → ο
+    `raycastBimFace` το επιλύει) και, αν `faceAppearance['sub:${i}:top']` υπάρχει, το flat painted
+    material (reuse `resolveFaceMaterial` SSoT) αντικαθιστά το legacy κεραμίδι/DNA look. Μη-faced
+    roof = byte-for-byte legacy (κανένα faceKey στα meshes). Ridge caps/eaves μένουν legacy (trim).
+  - **Persistence (8 σημεία, mirror column/foundation):** `RoofDoc` / `RoofSaveInput` /
+    `RoofUpdateInput` += `faceAppearance?` · `saveRoof` + `updateRoof` Firestore-safe writes ·
+    `entityToSaveInput` + `docToEntity` round-trip · `useRoofPersistence` `updateRoof` patch +=
+    `faceAppearance` (το roof persist χρησιμοποιεί `updateDoc` για re-edits· params-only diff-merge
+    δεν κλομπάρει τη βαφή). **Gate:** `POLYGON_FACED_KINDS += 'roof'`.
+  - **Tests:** `roof-faced-3d.test.ts` (4 — legacy μη-tagged, polygon-target distinct `sub:i:top`
+    keys, paint sub:0 flat override, άλλα νερά αβαφή) GREEN + regression roof-ridge-cap = 0 break.
+    tsc SKIP (άλλος agent tsc, N.17)· verified via ts-jest.
+
+- **2026-06-27 (Φ3a — COLUMN, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance στην
+  **κολώνα** (κατακόρυφο prism· solid-agnostic core, μηδέν νέα γεωμετρία):
+  - **Converter:** `bim-three-structural-converters.ts` νέος helper `buildColumnCoreBody` — faced
+    branch (`facedByAppearance || facedByPolygonTarget`) → `buildFacedSolidBody(verts, heightM,
+    fa, getElementMaterial3D('column'))`, αλλιώς legacy `extrudeAndRotate`. Το faced prism έχει
+    IDENTICAL local span `[0, effectiveHeightMm·MM_TO_M]` με το legacy → η `position.y` (base datum
+    ADR-402/488) μένει αναλλοίωτη. Το tilt (ADR-404 `applyColumnTilt`) εφαρμόζεται και στα δύο
+    geometries (ίδιο local Y span → ίδιο shear). Ο σοβάς/οπλισμός (`composeColumnWithFinish` /
+    `attachColumnRebar`) wrap-άρουν αμετάβλητα — additive siblings, ανεξάρτητα του core body.
+    Ο attached-prism path (top/baseProfile) μένει legacy (MVP — όπως multilayer slab).
+  - **Persistence (8 σημεία, mirror foundation Φ1.5):** `ColumnDoc` / `ColumnSaveInput` /
+    `ColumnUpdateInput` += `faceAppearance?` · `saveColumn` + `updateColumn` Firestore-safe writes ·
+    `entityToSaveInput` + `columnDocToEntity` round-trip · `useColumnPersistence.persistOnce`
+    `updateColumn` patch += `faceAppearance` (κρίσιμο: ο column persist χρησιμοποιεί `updateDoc` για
+    re-edits → χωρίς αυτό η βαφή χανόταν σε reload).
+  - **Gate:** `POLYGON_FACED_KINDS = {'slab','foundation','column'}` στο `PolygonModeToggle3D.tsx`.
+  - **Tests:** `column-faced-3d.test.ts` (5 — faced render/material-array, IDENTICAL datum, empty-map
+    legacy, polygon-target chicken-and-egg, different-target legacy) GREEN· regression
+    column-base-continuity / structural-finish / storey-ceiling / units / SetFaceAppearance = 0 break
+    (47 GREEN). tsc SKIP — άλλος agent έτρεχε tsc (N.17)· verified via ts-jest type-check.
 
 - **2026-06-27 (Φ2 — DRAG-DROP / HOLES / CUSTOM COLOR / FACE HOVER, IMPLEMENTED UNCOMMITTED)** — Η Cinema 4D
   υπογραφή. Τέσσερα increments, FULL SSoT reuse:

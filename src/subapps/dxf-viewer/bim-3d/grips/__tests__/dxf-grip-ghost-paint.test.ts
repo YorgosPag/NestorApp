@@ -65,8 +65,45 @@ describe('buildDxfGhostSegments — circle', () => {
     expect(seg[0].y).toBeCloseTo(0);
   });
 
-  it('returns no ghost for an arc (v1 — grip square alone follows)', () => {
-    const arc = { id: 'e', type: 'arc', visible: true, center: { x: 0, y: 0 }, radius: 50, startAngle: 0, endAngle: 90 } as unknown as DxfEntityUnion;
-    expect(buildDxfGhostSegments(arc, grip({}), { x: 1, y: 1 })).toEqual([]);
+});
+
+describe('buildDxfGhostSegments — arc', () => {
+  const arc = (): DxfEntityUnion =>
+    ({ id: 'e', type: 'arc', visible: true, center: { x: 0, y: 0 }, radius: 50, startAngle: 0, endAngle: 90 }) as unknown as DxfEntityUnion;
+
+  it('translates the whole arc for the centre grip (gripIndex 0, movesEntity)', () => {
+    const g = grip({ gripIndex: 0, type: 'center', movesEntity: true, position: { x: 0, y: 0 } });
+    const [seg] = buildDxfGhostSegments(arc(), g, { x: 10, y: 20 }); // delta (10,20)
+    // First sample = start angle 0 → (cx+dx + r, cy+dy) = (60, 20).
+    expect(seg[0].x).toBeCloseTo(60);
+    expect(seg[0].y).toBeCloseTo(20);
+  });
+
+  it('translates the whole arc for the mid grip too (gripIndex 3, movesEntity)', () => {
+    const g = grip({ gripIndex: 3, type: 'edge', movesEntity: true, position: { x: 0, y: 0 } });
+    const [seg] = buildDxfGhostSegments(arc(), g, { x: 10, y: 20 });
+    expect(seg[0].x).toBeCloseTo(60);
+    expect(seg[0].y).toBeCloseTo(20);
+  });
+
+  it('moves the start endpoint, keeping the end fixed (gripIndex 1)', () => {
+    const g = grip({ gripIndex: 1, type: 'vertex', position: { x: 50, y: 0 } }); // start endpoint
+    const [seg] = buildDxfGhostSegments(arc(), g, { x: 60, y: 0 }); // drag start +10 in x
+    // Ghost starts at the moved start endpoint and ends at the untouched end endpoint (0,50).
+    expect(seg[0].x).toBeCloseTo(60);
+    expect(seg[0].y).toBeCloseTo(0);
+    const last = seg[seg.length - 1];
+    expect(last.x).toBeCloseTo(0);
+    expect(last.y).toBeCloseTo(50);
+  });
+
+  it('moves the end endpoint, keeping the start fixed (gripIndex 2)', () => {
+    const g = grip({ gripIndex: 2, type: 'vertex', position: { x: 0, y: 50 } }); // end endpoint
+    const [seg] = buildDxfGhostSegments(arc(), g, { x: 0, y: 60 }); // drag end +10 in y
+    expect(seg[0].x).toBeCloseTo(50); // start untouched (50,0)
+    expect(seg[0].y).toBeCloseTo(0);
+    const last = seg[seg.length - 1];
+    expect(last.x).toBeCloseTo(0);
+    expect(last.y).toBeCloseTo(60);
   });
 });

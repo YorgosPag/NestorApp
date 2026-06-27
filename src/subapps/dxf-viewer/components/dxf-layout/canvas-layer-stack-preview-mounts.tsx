@@ -14,6 +14,9 @@
 
 'use client';
 import React from 'react';
+// ADR-532 B4 — Move/Rotate/Mirror ghosts are selection-driven; this composite
+// self-subscribes so the Shell/orchestrator stay inert on entity selection.
+import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
 import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
@@ -87,7 +90,6 @@ export interface PreviewCanvasMountsProps {
   slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   openingGhost: Omit<OpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
-  selectedEntityIds: string[];
   levelManager: MovePreviewMountProps['levelManager'] & {
     setLevelScene: (levelId: string, scene: SceneModel) => void;
   };
@@ -105,7 +107,10 @@ export interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  // ADR-532 B4 — leaf subscription: ghost mounts need the CURRENT selection at the
+  // moment a Move/Rotate/Mirror tool engages, without re-rendering CanvasSection.
+  const selectedEntityIds = useSelectedEntityIds();
   return (
     <>
       <RotationPreviewMount

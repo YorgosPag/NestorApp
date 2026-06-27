@@ -5,7 +5,7 @@
  * After any architectural change → update the ADR changelog (same commit).
  */
 'use client';
-import React, { useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 // ADR-040 Phase XXII.A: rendering CanvasLayerStack via the TransformBridge so the
 // transform subscription lives below CanvasSection — CanvasSection stays inert on
 // wheel zoom. Direct render is preserved as the historical reference point.
@@ -27,13 +27,11 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
-import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
-import { useGripStyles } from '../../settings-provider';
+import { MOVEMENT_DETECTION } from '../../config/tolerance-config'; import { useGripStyles } from '../../settings-provider';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-import { useZoom } from '../../systems/zoom';
-import { dwarn, derr } from '../../debug';
+import { useZoom } from '../../systems/zoom'; import { dwarn, derr } from '../../debug';
 import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
-import { useEventBus } from '../../systems/events'; import { useUniversalSelection } from '../../systems/selection';
+import { useEventBus } from '../../systems/events'; import { useUniversalSelectionStable, SelectedEntitiesStore } from '../../systems/selection';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
@@ -42,11 +40,10 @@ import {
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
-import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
-import { DEFAULT_DUCT_WIDTH_MM, DEFAULT_PIPE_DIAMETER_MM } from '../../bim/types/mep-segment-types';
+import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units'; import { DEFAULT_DUCT_WIDTH_MM, DEFAULT_PIPE_DIAMETER_MM } from '../../bim/types/mep-segment-types';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf (subscription lives in DraftLayerSubscriber, canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
-import { useZoomWindowTool } from '../../hooks/tools/useZoomWindowTool';
+import { useCanvasZoomWindow } from '../../hooks/canvas/useCanvasZoomWindow';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController'; import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
@@ -60,17 +57,16 @@ import { type EntityContextMenuHandle } from '../../ui/components/EntityContextM
 import { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
-import { isWallEntity } from '../../types/entities';
-import { buildEntityContextMenuProps } from './canvas-section-entity-menu';
-import type { WallEntity } from '../../bim/types/wall-types';
+import { isWallEntity } from '../../types/entities'; import type { WallEntity } from '../../bim/types/wall-types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { useViewportAutoFit } from '../../hooks/canvas/useViewportAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
-import { useEntityLayerCommands } from '../../hooks/canvas/useEntityLayerCommands';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
 import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
 import { CanvasSectionOverlays } from './CanvasSectionOverlays';
+// ADR-532 B4 — selection-subscribed grip registry leaf (publishes AllGripsStore).
+import { GripRegistryPublisher } from './GripRegistryPublisher';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -123,7 +119,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
   // === Core stores + state ===
   const overlayStore = useOverlayStore();
-  const universalSelection = useUniversalSelection();
+  // ADR-532 B4 — NON-reactive selection facade: CanvasSection no longer re-renders
+  // on dxf-entity selection. Render consumers moved to leaves (DxfCanvasSubscriber
+  // grips, PreviewCanvasMounts ghosts, PropertiesPalette, EntityContextMenuHost,
+  // GripRegistryPublisher); event-time consumers read the store at call time.
+  const universalSelection = useUniversalSelectionStable();
   const { execute: executeCommand } = useCommandHistory();
   const { warning: notifyWarning, success: notifySuccess } = useNotifications();
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -135,8 +135,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const levelManager = useLevels();
   // ADR-281: filter out overlays linked to soft-deleted properties
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
-  // === Selection (SSoT: UniversalSelection — selectedEntityIds derived, no local state) ===
-  const selectedEntityIds = useMemo(() => universalSelection.getSelectedEntityIds(), [universalSelection]);
+  // === Selection (SSoT: SelectedEntitiesStore) ===
+  // ADR-532 B4 — read fresh from the store each render (NOT memoized on the stable
+  // facade). The store getter returns a REFERENCE-STABLE array (cachedDxfIds) until
+  // the selection actually changes, so downstream memos in the modify tools don't
+  // thrash, yet whenever CanvasSection re-renders (tool/scene/phase change) the value
+  // is current. Truly in-place event handlers (keyboard/context-menu/reorder/grips)
+  // read the store directly at event time instead of this snapshot.
+  const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
   // SSoT: thin alias — delegates to replaceEntitySelection (SelectionSystem is the sole owner).
   // No functional-updater form: all consumers pass string[] directly.
   const setSelectedEntityIds = useCallback((ids: string[]) => {
@@ -185,8 +191,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-366 Phase 4.6 / A.7.Q1 — 2D keyboard focus (Tab/Enter/Esc); wiring + ADR-030 toggle SSoT extracted to keep this orchestrator <500 lines.
   useCanvasSection2DFocus({ dxfSceneRef, transformRef, transform, viewport, universalSelectionRef });
   // === Unified Grip System ===
+  // ADR-532 B4: useUnifiedGripInteraction is selection-agnostic — the grip set is
+  // computed/published by the GripRegistryPublisher leaf (rendered below) and read
+  // here at event time via AllGripsStore. No selectedEntityIds/dxfScene needed.
   const unified = useUnifiedGripInteraction({
-    selectedEntityIds, dxfScene, transform, currentOverlays, universalSelection,
+    transform, currentOverlays, universalSelection,
     overlayStore, overlayStoreRef, activeTool, gripSettings, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
@@ -285,7 +294,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
-    selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase: rotationTool.phase,
+    drawingMenuRef, entityMenuRef, rotationPhase: rotationTool.phase,
     onRotationAnglePrompt: handleRotationAnglePrompt, guideMenuRef, getGuides,
     transformRef, guideBatchMenuRef, selectedGuideIds: guideWorkflows.selectedGuideIds,
   });
@@ -297,10 +306,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hoveredEdgeInfo, transformScale: transform.scale, fitToOverlay,
     setDraggingOverlayBody: unified.setDraggingOverlayBody, setDragPreviewPosition: unified.setDragPreviewPosition,
   });
-  const { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, entityJoinState, handleExitDrawMode, handleReorderEntity } = useCanvasEditActions({
+  const { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, handleExitDrawMode, handleReorderEntity } = useCanvasEditActions({
     activeTool, overlayMode, setOverlayMode, transformRef, containerRef,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
-    executeCommand, selectedEntityIds, selectedGrips: unified.selectedGrips,
+    executeCommand, selectedGrips: unified.selectedGrips,
     setSelectedGrips: unified.setSelectedGrips, overlayStoreRef, universalSelectionRef,
     levelManager, setSelectedEntityIds, eventBus, notifyWarning, notifySuccess, hoveredDxfGrip: unified.hoveredGrip,
   });
@@ -379,8 +388,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
     setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
-    activeTool, handleDrawingFinish, handleFlipArc, finishDrawing, selectedEntityIds,
-    handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds), canEntityJoin: entityJoinState.canJoin,
+    activeTool, handleDrawingFinish, handleFlipArc, finishDrawing,
+    // ADR-532 B4 — join reads the live selection at keydown (no stale snapshot).
+    handleEntityJoin: () => entityJoinHook.joinEntities(SelectedEntitiesStore.getSelectedEntityIds()),
+    canEntityJoin: () => entityJoinHook.canJoin(SelectedEntitiesStore.getSelectedEntityIds()),
     onExitDrawMode: handleExitDrawMode,
     handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
     handleMoveEscape: moveTool.handleMoveEscape, moveIsActive: moveTool.isCollectingInput,
@@ -422,25 +433,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
   });
-  const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, dxfScene, executeCommand);
-  // ADR-374 — ZOOM Window tool lifecycle (EventBus listener + Escape + return-to-select).
-  // Combined transform handler: must mirror CanvasLayerStack.handleTransformChange — bare
-  // setTransform leaves zoomSystem with stale internal transform, so the next wheel zoom
-  // computes from the pre-zoom-window state and snaps the drawing far away.
-  const handleZoomWindowTransform = useCallback((newTransform: import('../../rendering/types/Types').ViewTransform) => {
-    setTransform(newTransform);
-    zoomSystem.setTransform(newTransform);
-  }, [setTransform, zoomSystem]);
-  useZoomWindowTool({
-    activeTool,
-    onTransformChange: handleZoomWindowTransform,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
-  });
-  // === Entity context menu props (extracted — ADR-040-safe, N.7.1 size budget) ===
-  const entityMenuProps = buildEntityContextMenuProps({ selectedEntityIds, currentScene: props.currentScene ?? null, dxfScene, entityJoinState, entityJoinHook, handleSmartDelete, entityMenuRef, onToolChange: props.onToolChange as ((tool: string) => void) | undefined, replaceEntitySelection: (ids) => universalSelection.replaceEntitySelection(ids), executeCommand, t, entityLayerCommands });
+  // ADR-374 — ZOOM Window tool lifecycle (wiring extracted to keep orchestrator <500 lines, ADR-040).
+  useCanvasZoomWindow({ activeTool, setTransform, zoomSystem, onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
   // === Render ===
   return (
     <>
+      {/* ADR-532 B4 — selection-subscribed grip registry publisher (renders null;
+          keeps AllGripsStore current without re-rendering this orchestrator). */}
+      <GripRegistryPublisher dxfScene={dxfScene} currentOverlays={currentOverlays} />
       <CanvasLayerStack
         viewport={viewport} activeTool={activeTool} overlayMode={overlayMode}
         showLayers={showLayers} showDxfCanvas={showDxfCanvas} showLayerCanvas={showLayerCanvas}
@@ -451,7 +451,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         draftPolygon={draftPolygon} currentStatus={currentStatus}
         settings={{ crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings }}
         gripState={unified.gripStateForStack}
-        entityState={{ selectedEntityIds }}
         zoomSystem={zoomSystem} dxfGripInteraction={unified.dxfProjection} universalSelection={universalSelection}
         setTransform={setTransform}
         containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave, onDoubleClick: handleDoubleClick }}
@@ -459,7 +458,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={handleMouseMoveWithAutoArea}
         handleDrawingContextMenu={handleDrawingContextMenu}
         drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
-        entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
         entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'wall-on-entity' || isWallRegionTool(activeTool) || activeTool === 'beam-from-wall' || wallAttachTool.isActive || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center' || isDimTool(activeTool)}
@@ -483,12 +481,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         levelManager={levelManager}
       />
       <CanvasSectionOverlays
-        drawingMenuRef={drawingMenuRef} entityMenuRef={entityMenuRef} guideMenuRef={guideMenuRef} guideBatchMenuRef={guideBatchMenuRef}
+        drawingMenuRef={drawingMenuRef} guideMenuRef={guideMenuRef} guideBatchMenuRef={guideBatchMenuRef}
         drawingMenu={{ activeTool: (overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType, pointCount: overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0), onFinish: activeTool === 'line' ? handleDrawingCancel : handleDrawingFinish, onClose: handleDrawingClose, onUndoLastPoint: handleDrawingUndoLastPoint, onCancel: handleDrawingCancel, onFlipArc: handleFlipArc, onSnapOverride: (mode) => { SnapOverrideOrchestrator.setOverride(mode); } }}
-        entityMenu={entityMenuProps}
+        entityMenuHost={{ entityMenuRef, currentScene: props.currentScene ?? null, dxfScene, entityJoinHook, handleSmartDelete, onToolChange: props.onToolChange as ((tool: string) => void) | undefined, replaceEntitySelection: (ids) => universalSelectionRef.current.replaceEntitySelection(ids), executeCommand, t }}
         guideMenu={{ onDelete: guideWorkflows.handleGuideContextDelete, onToggleLock: guideWorkflows.handleGuideContextToggleLock, onEditLabel: guideWorkflows.handleGuideContextEditLabel, onChangeColor: guideWorkflows.handleGuideContextChangeColor, onToggleVisibility: guideState.toggleVisibility, guidesVisible: guideState.guidesVisible, onCancel: () => guideMenuRef.current?.close() }}
         guideBatchMenu={{ onDeleteSelected: () => { if (guideWorkflows.selectedGuideIds.size > 0) { guideState.batchDeleteGuides(Array.from(guideWorkflows.selectedGuideIds)); guideWorkflows.setSelectedGuideIds(new Set()); } }, onLockSelected: () => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), true); }, onUnlockSelected: () => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), false); }, onChangeColor: (color) => { guideState.getStore().setGuidesColor(Array.from(guideWorkflows.selectedGuideIds), color); }, onGroupSelected: () => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }, onCancel: () => guideBatchMenuRef.current?.close() }}
-        quickHover={{ dxfScene, activeTool }} quickMini={{ dxfScene, activeTool, executeCommand, levelManager }} propertiesPalette={{ dxfScene, selectedEntityIds, activeTool, executeCommand, levelManager }}
+        quickHover={{ dxfScene, activeTool }} quickMini={{ dxfScene, activeTool, executeCommand, levelManager }} propertiesPalette={{ dxfScene, activeTool, executeCommand, levelManager }}
         mirrorOverlay={mirrorTool.phase === 'awaiting-keep-originals' ? { onConfirm: mirrorTool.handleMirrorConfirm, onCancel: mirrorTool.handleMirrorEscape } : null}
         textEditorOverlay={textEditor.editingState ? { entityId: textEditor.editingState.entityId, initial: textEditor.editingState.initial, anchorRect: textEditor.editingState.anchorRect, onCommit: textEditor.onCommit, onCancel: textEditor.onCancel } : null}
         textCreationOverlay={textCreation.creatingState ? { entityId: textCreation.creatingState.entityId, initial: textCreation.creatingState.initial, anchorRect: textCreation.creatingState.anchorRect, onCommit: textCreation.onCommit, onCancel: textCreation.onCancel } : null}
