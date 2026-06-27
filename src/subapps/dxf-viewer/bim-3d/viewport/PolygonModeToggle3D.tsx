@@ -29,9 +29,10 @@ import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { PolygonMaterialPanel } from '../ui/PolygonMaterialPanel';
 
-// ADR-539 Φ1 — solid kinds που υποστηρίζουν per-face appearance (faced render path).
-// Φ1 = slab μόνο· foundation/wall/column/beam/roof έρχονται στα επόμενα increments.
-const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab']);
+// ADR-539 — solid kinds που υποστηρίζουν per-face appearance (faced render path).
+// Φ1 = slab· Φ1.5 += foundation (πέδιλα/θεμέλια· solid-agnostic core)· wall/column/beam/roof
+// έρχονται στα επόμενα increments.
+const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab', 'foundation']);
 
 export interface PolygonModeToggle3DProps {
   readonly managerRef: RefObject<ThreeJsSceneManager | null>;

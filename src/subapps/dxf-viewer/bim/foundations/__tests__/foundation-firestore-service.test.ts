@@ -294,3 +294,52 @@ describe('FoundationFirestoreService.saveFoundation — guideBindings (ADR-441 S
     expect(mockSetDoc.mock.calls[0][1]).not.toHaveProperty('guideBindings');
   });
 });
+
+// ADR-539 Φ1.5 — per-face appearance (Cinema 4D «Polygon Mode») round-trips through
+// BOTH write paths: setDoc (first save) AND updateDoc (re-edit on an existing doc —
+// foundation-specific, slab uses setDoc-always).
+describe('FoundationFirestoreService — faceAppearance (ADR-539)', () => {
+  const FACE = { 'side:0': { colorHex: '#C0392B' }, top: { materialId: 'paint-red' } };
+
+  it('saveFoundation persists faceAppearance when present, omits the key when absent', async () => {
+    const svc = createFoundationFirestoreService(CONFIG);
+    await svc.saveFoundation({ kind: 'pad', params: PAD_PARAMS, validation: VALIDATION, faceAppearance: FACE });
+    expect(mockSetDoc.mock.calls[0][1].faceAppearance).toEqual(FACE);
+
+    mockSetDoc.mockClear();
+    await svc.saveFoundation({ kind: 'pad', params: PAD_PARAMS, validation: VALIDATION });
+    expect(mockSetDoc.mock.calls[0][1]).not.toHaveProperty('faceAppearance');
+  });
+
+  it('updateFoundation persists faceAppearance edit on an existing doc, omits when absent', async () => {
+    const svc = createFoundationFirestoreService(CONFIG);
+    await svc.updateFoundation('fnd_1', { faceAppearance: FACE });
+    expect(mockUpdateDoc.mock.calls[0][1].faceAppearance).toEqual(FACE);
+
+    mockUpdateDoc.mockClear();
+    await svc.updateFoundation('fnd_1', { params: PAD_PARAMS });
+    expect(mockUpdateDoc.mock.calls[0][1]).not.toHaveProperty('faceAppearance');
+  });
+
+  it('entityToSaveInput carries faceAppearance when painted, undefined when unpainted', () => {
+    const painted = {
+      id: 'fnd_f', type: 'foundation', kind: 'pad', layerId: '0',
+      params: PAD_PARAMS, validation: VALIDATION, faceAppearance: FACE,
+    } as unknown as FoundationEntity;
+    expect(entityToSaveInput(painted).faceAppearance).toEqual(FACE);
+
+    const plain = {
+      id: 'fnd_g', type: 'foundation', kind: 'pad', layerId: '0',
+      params: PAD_PARAMS, validation: VALIDATION,
+    } as unknown as FoundationEntity;
+    expect(entityToSaveInput(plain).faceAppearance).toBeUndefined();
+  });
+
+  it('foundationDocToEntity re-hydrates faceAppearance so painted faces survive reload', () => {
+    const doc = {
+      id: 'fnd_x', companyId: 'c1', projectId: 'p1', floorplanId: 'fp1',
+      kind: 'pad', params: PAD_PARAMS, validation: VALIDATION, faceAppearance: FACE,
+    } as unknown as FoundationDoc;
+    expect(foundationDocToEntity(doc).faceAppearance).toEqual(FACE);
+  });
+});

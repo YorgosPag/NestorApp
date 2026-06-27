@@ -501,8 +501,11 @@
     "tooltip": "Polygon Mode (Cinema 4D) — click a face and apply colour/material",
     "title": "Face materials",
     "hintPickFace": "Click a face of the element",
-    "hintApply": "Pick a colour/material for the face",
-    "clearFace": "Clear face"
+    "hintApply": "Pick a colour/material — or drag it onto the face",
+    "clearFace": "Clear face",
+    "customColor": "Custom colour",
+    "customColorTitle": "Pick face colour",
+    "dragHint": "Drag a material onto the face"
   },
   "shortcuts": {
     "view3d": {

@@ -59,3 +59,28 @@ describe('foundationToMesh — elevation (hang-down)', () => {
     expect(mesh!.userData['levelId']).toBe('level-1');
   });
 });
+
+// ADR-539 Φ1.5 — Cinema 4D «Polygon Mode»: foundation per-face appearance (faced prism).
+describe('foundationToMesh — ADR-539 Φ1.5 faced (per-face appearance)', () => {
+  it('renders a multi-material faced prism when faceAppearance carries a painted face', () => {
+    const pad = { ...makePad(-1000, 500), faceAppearance: { top: { colorHex: '#C0392B' } } } as FoundationEntity;
+    const mesh = foundationToMesh(pad, 0, 'l', 0) as THREE.Mesh;
+    expect(Array.isArray(mesh.material)).toBe(true);
+    // bottom, top, side:0..n — the faceKey↔materialIndex SSoT survives onto userData.
+    expect(mesh.userData['faceKeyByMaterialIndex']).toBeDefined();
+    expect((mesh.userData['faceKeyByMaterialIndex'] as string[]).slice(0, 2)).toEqual(['bottom', 'top']);
+  });
+
+  it('keeps the IDENTICAL hang-down elevation as the legacy single-material path', () => {
+    const faced = { ...makePad(-1000, 500), faceAppearance: { 'side:0': { colorHex: '#123456' } } } as FoundationEntity;
+    const legacy = foundationToMesh(makePad(-1000, 500), 0, 'l', 0)!;
+    const mesh = foundationToMesh(faced, 0, 'l', 0)!;
+    expect(mesh.position.y).toBeCloseTo(legacy.position.y, 5); // (-1000 − 500)·0.001 = -1.5
+  });
+
+  it('stays legacy single-material when faceAppearance is an empty map (byte-for-byte)', () => {
+    const pad = { ...makePad(-1000, 500), faceAppearance: {} } as FoundationEntity;
+    const mesh = foundationToMesh(pad, 0, 'l', 0) as THREE.Mesh;
+    expect(Array.isArray(mesh.material)).toBe(false);
+  });
+});

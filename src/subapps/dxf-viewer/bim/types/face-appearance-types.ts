@@ -19,12 +19,14 @@
  * Ντετερμινιστικό κλειδί όψης, κοινό για όλα τα solids.
  *   - `top` / `bottom` — οι δύο οριζόντιες παρειές (caps).
  *   - `side:${i}` — η i-οστή περιμετρική πλευρά (edge ordering του `buildFacedPrism`).
+ *   - `hole:${h}:${k}` — το k-οστό τοίχωμα του h-οστού ανοίγματος (slab opening, Φ2).
  *   - `sub:${i}:${string}` — per-«νερό» roof sub-solid (Φ3· δηλωμένο τώρα για σταθερό SSoT).
  */
 export type FaceKey =
   | 'top'
   | 'bottom'
   | `side:${number}`
+  | `hole:${number}:${number}`
   | `sub:${number}:${string}`;
 
 /**

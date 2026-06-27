@@ -28,6 +28,9 @@ import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { isStructuralComponentVisible } from '../../bim/visibility/structural-component-visibility';
 import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 import { buildFootingRebarCage } from './footing-rebar-3d';
+// ADR-539 Φ1.5 — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
+import { buildFacedSolidBody } from './bim-three-faced-prism';
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 
 const MM_TO_M = 0.001;
 
@@ -83,12 +86,31 @@ export function foundationToMesh(
   if (!shape) return null;
 
   const thicknessMm = Math.max(0, foundation.params.thicknessMm);
-  const geo = extrudeAndRotate(shape, thicknessMm * MM_TO_M);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  const thicknessM = thicknessMm * MM_TO_M;
 
   // ADR-445 — per-kind sienna face material (pad/strip/tie-beam ΔΙΑΚΡΙΤΑ, ίδια
   // οικογένεια με την 2Δ κάτοψη). `elem-foundation-${kind}` catalog keys.
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D(`foundation-${foundation.kind}`));
+  const baseMat = getElementMaterial3D(`foundation-${foundation.kind}`);
+
+  // ADR-539 Φ1.5 — render faced (multi-material prism, pickable per-face) when EITHER the
+  // foundation already carries a `faceAppearance` OR it is the live Polygon-Mode target (so
+  // its faces become pickable even before any paint — solves the chicken-and-egg). Otherwise
+  // the legacy single-material extrude (byte-for-byte, zero regression). The faced prism has
+  // the SAME local span [0, thicknessM] as `extrudeAndRotate`, so `position.y` is unchanged.
+  // Πέδιλο = flat (κανένα opening) → καμία ανάγκη holes/slope (αρχιτεκτονική solid-agnostic).
+  const fa = foundation.faceAppearance;
+  const poly = usePolygonMode3DStore.getState();
+  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
+  const facedByPolygonTarget = poly.active && poly.targetBimId === foundation.id;
+  let mesh: THREE.Mesh | null;
+  if (facedByAppearance || facedByPolygonTarget) {
+    mesh = buildFacedSolidBody(verts, thicknessM, fa ?? {}, baseMat);
+  } else {
+    const geo = extrudeAndRotate(shape, thicknessM);
+    ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+    mesh = new THREE.Mesh(geo, baseMat);
+  }
+  if (!mesh) return null;
   // Hang-down: top face στο topElevationMm, βάση στο (topElevationMm − thickness).
   mesh.position.y =
     (foundation.params.topElevationMm - thicknessMm) * MM_TO_M + buildingBaseElevationM;

@@ -207,6 +207,9 @@ export function useFoundationPersistence(
           layerId: entity.layerId,
           // ADR-441 Slice 6b — re-host writes hosting bindings into the existing doc.
           guideBindings: entity.guideBindings,
+          // ADR-539 — carry the per-face appearance edit so painted faces persist on
+          // re-edit (faced paint fires `bim:entities-attached` → persist → updateDoc).
+          faceAppearance: entity.faceAppearance,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);

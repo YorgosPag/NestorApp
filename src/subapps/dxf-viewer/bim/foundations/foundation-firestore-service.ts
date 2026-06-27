@@ -46,6 +46,7 @@ import type {
 } from '../types/foundation-types';
 import type { BimValidation } from '../types/bim-base';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 
 // ============================================================================
 // TYPES
@@ -74,6 +75,8 @@ export interface FoundationDoc {
    * slot}` objects → Firestore-safe.
    */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -99,6 +102,8 @@ export interface FoundationSaveInput {
   readonly layerId?: string;
   /** ADR-441 Slice 3 — grid hosting bindings (born-hosted strips from grid). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface FoundationUpdateInput {
@@ -111,6 +116,14 @@ export interface FoundationUpdateInput {
    * hosting bindings (χωρίς νέο doc). Persist-άρει σε υπάρχον doc μέσω `updateDoc`.
    */
   readonly guideBindings?: readonly GuideBinding[];
+  /**
+   * ADR-539 — per-face appearance edit on an EXISTING foundation. The faced paint
+   * fires `bim:entities-attached` → persist → `updateFoundation` (the foundation
+   * persist path uses updateDoc for non-first writes), so the patch MUST carry it
+   * or the painted faces would be lost on reload (slab always setDoc, so this gap
+   * is foundation-specific).
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 // ============================================================================
@@ -179,6 +192,8 @@ export class FoundationFirestoreService {
     if (input.layerId !== undefined) base.layerId = input.layerId;
     // ADR-441 Slice 3 — persist hosting bindings (Firestore rejects undefined).
     if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
+    // ADR-539 — persist per-face appearance (Firestore rejects undefined).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as FoundationDoc;
@@ -196,6 +211,8 @@ export class FoundationFirestoreService {
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice 6b — persist hosting bindings on re-host (Firestore rejects undefined).
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
+    // ADR-539 — persist per-face appearance edit (Firestore rejects undefined).
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(ref, payload);
   }
@@ -245,6 +262,8 @@ export function foundationDocToEntity(doc: FoundationDoc): FoundationEntity {
   const hosted = doc.guideBindings ? { ...entity, guideBindings: doc.guideBindings } : entity;
   return {
     ...hosted,
+    // ADR-539 — re-hydrate per-face appearance so painted faces survive reload.
+    ...(doc.faceAppearance !== undefined ? { faceAppearance: doc.faceAppearance } : {}),
     ...(doc.floorId ? { floorId: doc.floorId } : {}),
     floorplanId: doc.floorplanId,
   };
@@ -264,5 +283,7 @@ export function entityToSaveInput(entity: FoundationEntity): FoundationSaveInput
     layerId: entity.layerId,
     // ADR-441 Slice 3 — carry grid hosting bindings into the persisted doc.
     guideBindings: entity.guideBindings,
+    // ADR-539 — carry per-face appearance into the persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

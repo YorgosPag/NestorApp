@@ -3,47 +3,52 @@
 /**
  * PolygonMaterialPanel — ADR-539 (Cinema 4D «Polygon Mode» material library).
  *
- * Floating βιβλιοθήκη υλικών/χρωμάτων στον 3D κάμβα. Όταν το Polygon Mode είναι ενεργό
- * και ο χρήστης έχει επιλέξει μία όψη (κλικ), ένα κλικ σε swatch εφαρμόζει το χρώμα/υλικό
- * σε εκείνη την όψη μέσω του undoable `SetFaceAppearanceCommand` (κοινό command history +
- * level-scene adapter — ίδιο pattern με `Grip3DVertexContextMenu`). MVP fallback =
- * click-to-apply· το HTML5 drag-drop έρχεται στη Φ2.
+ * Floating βιβλιοθήκη υλικών/χρωμάτων στον 3D κάμβα. Όταν το Polygon Mode είναι ενεργό,
+ * εφαρμόζεις χρώμα/υλικό σε μία όψη με ΔΥΟ τρόπους (Cinema 4D parity):
+ *   1. **click-to-apply** — επίλεξε όψη (κλικ) → κλικ σε swatch / «Προσαρμοσμένο χρώμα».
+ *   2. **drag-drop (Φ2)** — σύρε ένα swatch πάνω στην όψη (HTML5 `application/x-bim-material`·
+ *      ο drop handler ζει στο `use-polygon-drag-drop`). Το drag δουλεύει χωρίς προ-επιλογή όψης.
  *
- * Reuse: `listWallCoveringMaterials()` (catalog SSoT) + i18n labels του ribbon
- * (`dxf-viewer-shell:wallCovering.materials.*`). ADR-040: leaf React component.
+ * Όλες οι εφαρμογές περνούν από το shared `applyFaceAppearance` SSoT (undoable command +
+ * level-scene adapter). Reuse: `listWallCoveringMaterials()` (catalog SSoT) + i18n labels
+ * του ribbon (`dxf-viewer-shell:wallCovering.materials.*`) + `EnterpriseColorDialog` (custom
+ * colour). ADR-040: leaf React component.
  *
+ * @see ./apply-face-appearance.ts — apply SSoT (κοινό με drag-drop)
+ * @see ./polygon-material-dnd.ts — drag MIME + serialize SSoT
  * @see bim-3d/stores/PolygonMode3DStore.ts
- * @see core/commands/entity-commands/SetFaceAppearanceCommand.ts
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { EnterpriseColorDialog } from '../../ui/color/EnterpriseColorDialog';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { getGlobalCommandHistory } from '../../core/commands';
-import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import { applyFaceAppearance } from './apply-face-appearance';
+import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
+
+/** Default seed for the custom-colour dialog (a warm Cinema 4D red). */
+const DEFAULT_CUSTOM_COLOR = '#C0392B';
 
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
   const levels = useLevelsOptional();
   const active = usePolygonMode3DStore((s) => s.active);
   const selectedFace = usePolygonMode3DStore((s) => s.selectedFace);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
 
   if (!active) return null;
 
+  /** Apply to the CLICKED-selected face (click-to-apply / custom colour / clear). */
   const apply = (value: FaceAppearance | null): void => {
     const face = usePolygonMode3DStore.getState().selectedFace;
-    if (!face || !levels?.currentLevelId) return;
-    const adapter = createLevelSceneManagerAdapter(
-      levels.getLevelScene, levels.setLevelScene, levels.currentLevelId,
-    );
-    getGlobalCommandHistory().execute(
-      new SetFaceAppearanceCommand(face.bimId, face.faceKey, value, adapter),
-    );
+    if (!face) return;
+    applyFaceAppearance(levels, face.bimId, face.faceKey, value);
   };
 
   const hasFace = selectedFace !== null;
@@ -66,11 +71,17 @@ export function PolygonMaterialPanel() {
             <li key={m.id}>
               <Tooltip>
                 <TooltipTrigger asChild>
+                  {/* draggable ALWAYS (Cinema 4D: drag onto any face, no pre-select needed);
+                      click applies only when a face is already selected (apply() guards). */}
                   <button
                     type="button"
-                    disabled={!hasFace}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(BIM_MATERIAL_MIME, serializeFaceAppearanceDrag({ materialId: m.id }));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
                     onClick={() => apply({ materialId: m.id })}
-                    className="flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex w-full cursor-grab items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 active:cursor-grabbing"
                   >
                     {/* Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch). */}
                     <span
@@ -87,14 +98,37 @@ export function PolygonMaterialPanel() {
           );
         })}
       </ul>
+      {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the selected face. */}
+      <button
+        type="button"
+        disabled={!hasFace}
+        onClick={() => setColorOpen(true)}
+        className="mt-1.5 flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <span
+          className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
+          style={{ backgroundColor: customHex }}
+          aria-hidden="true"
+        />
+        <span className="truncate">{t('polygonMode.customColor')}</span>
+      </button>
       <button
         type="button"
         disabled={!hasFace}
         onClick={() => apply(null)}
-        className="mt-1.5 w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-1 w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {t('polygonMode.clearFace')}
       </button>
+
+      <EnterpriseColorDialog
+        isOpen={colorOpen}
+        onClose={() => setColorOpen(false)}
+        value={customHex}
+        onChange={setCustomHex}
+        onChangeEnd={(hex) => apply({ colorHex: hex })}
+        title={t('polygonMode.customColorTitle')}
+      />
     </section>
   );
 }

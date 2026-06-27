@@ -1,6 +1,6 @@
 # ADR-539 — Cinema 4D «Polygon Mode»: Per-Face Appearance (χρώμα/υλικό ανά όψη) σε δομικά solids
 
-**Status:** 🟢 Φ1 (MVP) IMPLEMENTED (UNCOMMITTED 2026-06-27· slab click-to-apply) · **Date:** 2026-06-27
+**Status:** 🟢 Φ1 (MVP, slab) COMMITTED · Φ1.5 (foundation) + Φ2 (drag-drop/holes/custom-color/hover) IMPLEMENTED UNCOMMITTED 2026-06-27 · **Date:** 2026-06-27
 **Type:** Feature (DXF/BIM Viewer — 3D appearance). Cinema 4D Maxon-grade per-polygon material.
 **Builds on:** ADR-534 (soffit finish — per-face πρότυπο) · ADR-416 (multi-layer slab solid) · ADR-417 (parametric roof prism) · ADR-511 (wall-covering material catalog) · ADR-040 (3D/canvas perf)
 **Related:** ADR-535/536/537/538 (3D viewport selection/grips/hover) · ADR-375 (per-element style override) · ADR-413 (PBR materials)
@@ -99,8 +99,9 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 
 | Φάση | Περιεχόμενο | Κατάσταση |
 |------|-------------|-----------|
-| **Φ1 (MVP)** | **slab** · click-to-apply · `face-appearance-types` · `faceAppearance?` base · `buildFacedPrism` (χωρίς holes) · `slabToMesh` group path · `raycastBimFace` · `PolygonMode3DStore`+toggle · `FaceSelectionHighlighter` · `SetFaceAppearanceCommand`+persist · `PolygonMaterialPanel` | 🟢 IMPLEMENTED (slab· foundation→Φ1.5) |
-| **Φ2** | HTML5 drag-drop · holes (slab-openings) · `EnterpriseColorDialog` custom color · face hover | ⬜ PLANNED |
+| **Φ1 (MVP)** | **slab** · click-to-apply · `face-appearance-types` · `faceAppearance?` base · `buildFacedPrism` (χωρίς holes) · `slabToMesh` group path · `raycastBimFace` · `PolygonMode3DStore`+toggle · `FaceSelectionHighlighter` · `SetFaceAppearanceCommand`+persist · `PolygonMaterialPanel` | 🟢 COMMITTED (slab) |
+| **Φ1.5** | **foundation** (πέδιλα/θεμέλια) · converter faced branch + persistence wiring · `buildFacedSolidBody` shared SSoT (Boy-Scout extraction· slab+foundation delegate) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ2** | HTML5 drag-drop · holes (slab-openings) · `EnterpriseColorDialog` custom color · face hover | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3** | full scope (wall/column/beam/foundation/roof converters → faced groups) · roof `sub:i:*` · 2D plan fill από `faceAppearance['top']` · context-menu σε face | ⬜ PLANNED |
 | **Φ4** | multi-face select (Shift) · copy/paste appearance · `bmat_*` drag · per-face PBR textures | ⬜ PLANNED |
 
@@ -129,6 +130,62 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ2 — DRAG-DROP / HOLES / CUSTOM COLOR / FACE HOVER, IMPLEMENTED UNCOMMITTED)** — Η Cinema 4D
+  υπογραφή. Τέσσερα increments, FULL SSoT reuse:
+  - **(α) HTML5 drag-drop υλικού πάνω σε όψη** (Giorgio το ζήτησε ρητά): νέο SSoT
+    `bim-3d/ui/polygon-material-dnd.ts` (MIME `application/x-bim-material` + serialize/parse
+    `FaceAppearance`). Τα swatches του `PolygonMaterialPanel` έγιναν `draggable` (drag χωρίς προ-επιλογή
+    όψης). Drop target = νέο hook `bim-3d/viewport/use-polygon-drag-drop.ts` (`onDragOver`/`onDrop` →
+    `raycastBimFace` → apply· live yellow face-highlight στο dragover «κουμπώνει στην όψη»). Wiring 3
+    γραμμές στο `BimViewport3D` root div (κρατά <500). Το drag ξεκινά ΕΚΤΟΣ canvas → καμία σύγκρουση
+    OrbitControls. **Click-to-apply διατηρείται** ως fallback.
+  - **(β) Holes / slab-openings στο faced path:** `buildFacedPrism(topRing, depthM, holes?)` —
+    `THREE.ShapeUtils.triangulateShape(contour, holes)` (cap cut-outs) + hole-wall side faces με νέο
+    FaceKey variant `hole:${h}:${k}` (SSoT union). Winding: τα holes normalize-άρονται στο ΑΝΤΙΘΕΤΟ
+    του contour (`ShapeUtils.isClockWise`) → ίδιο wall-formula με τα outer δίνει normals ΜΕΣΑ στο κενό
+    (ExtrudeGeometry pattern). `buildFacedSolidBody` + `buildFacedSlabBody` παίρνουν `holes?`· ο slab
+    converter περνά τα ΗΔΗ-διαθέσιμα `openings` ως `Vector2(x, −y)` (ίδιο cap-plane transform).
+  - **(γ) Custom color** μέσω `EnterpriseColorDialog`: κουμπί «Προσαρμοσμένο χρώμα» στο panel →
+    dialog → `onChangeEnd` → `apply({ colorHex })`. i18n `polygonMode.customColor`/`customColorTitle`
+    (el+en ΠΡΩΤΑ, N.11).
+  - **(δ) Face hover preview:** 2ος `FaceSelectionHighlighter` instance (κίτρινος `0xffd400`,
+    constructor color/opacity params) ως `ThreeJsSceneManager.faceHoverHighlighter` + `setHoveredFace`.
+    Στο `pickHover` (use-bim3d-pointer-handlers), σε Polygon Mode, highlight την όψη κάτω από τον κέρσορα
+    (mirror ADR-538). Καθαρισμός σε mouse-leave.
+  - **SSoT apply:** νέο `bim-3d/ui/apply-face-appearance.ts` — ΕΝΑ wiring (`createLevelSceneManagerAdapter`
+    + `getGlobalCommandHistory` + `SetFaceAppearanceCommand`), κοινό για click / custom-color / drag-drop
+    (το παλιό inline του panel αφαιρέθηκε).
+  - **Tests:** `bim-three-faced-prism.test.ts` (+4 holes), `polygon-material-dnd.test.ts` (6, νέο) →
+    GREEN· regression slab-slope/multilayer/units + SetFaceAppearanceCommand + Φ1.5 = 0 break.
+  - **N.7.1:** `ThreeJsSceneManager.ts` ανέβηκε στο όριο → συμπιέστηκε σε **499** γρ· `BimViewport3D.tsx`
+    **498**. Νέα αρχεία όλα <135γρ.
+  - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (drag swatch→όψη· πλάκα με άνοιγμα σε Polygon Mode δείχνει το κενό +
+    τοιχώματα· custom color dialog· yellow hover· **hole-wall normals** — αν φαίνονται «κούφια» από κάποια
+    γωνία = flip winding) + commit (Giorgio· stage **ADR-040 + ADR-539**, CHECK 6B/6D).
+- **2026-06-27 (Φ1.5 — FOUNDATION, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance σε
+  **foundation** (πέδιλα/θεμέλια pad/strip/tie-beam). Η αρχιτεκτονική ήταν ήδη solid-agnostic →
+  μόνο converter + persistence wiring.
+  - **Boy-Scout SSoT (N.0.2):** το foundation έγινε ο 2ος caller του faced body → εξήχθη το shared
+    **`buildFacedSolidBody(verts, thicknessM, appearance, baseMat)`** στο `bim-three-faced-prism.ts`
+    (ΕΝΑ faced-body SSoT)· ο slab `buildFacedSlabBody` πλέον delegate-άρει (μηδέν copy-paste).
+  - **Converter:** `foundation-to-three.ts` faced branch (`facedByAppearance || facedByPolygonTarget`,
+    διαβάζει `usePolygonMode3DStore.getState()`)· baseMat = `getElementMaterial3D('foundation-${kind}')`.
+    Το faced prism έχει **IDENTICAL local span [0, thicknessM]** με το `extrudeAndRotate` → `position.y`
+    αναλλοίωτο (hang-down `(topElevationMm − thicknessMm)·MM_TO_M + base`· πέδιλο flat → κανένα hole/slope).
+  - **Persistence round-trip:** `+faceAppearance` σε `FoundationDoc`/`FoundationSaveInput`/**`FoundationUpdateInput`**/
+    `saveFoundation`/**`updateFoundation`**/`entityToSaveInput`/`foundationDocToEntity`. ⚠️ **Foundation-specific gap
+    (vs slab):** το foundation persist χρησιμοποιεί `updateDoc` για re-edits (ADR-397 immutable createdAt), όχι
+    setDoc-always όπως ο slab → το `faceAppearance` έπρεπε να μπει ΚΑΙ στο `FoundationUpdateInput`/`updateFoundation`
+    ΚΑΙ στο `persist()` patch του `useFoundationPersistence.ts`, αλλιώς η βαφή χανόταν σε reload. Το foundation
+    persist ήδη ακούει `bim:entities-attached` (μέσω `useBimEntityMovedPersistEffect`), που εκπέμπει το
+    `SetFaceAppearanceCommand` → καμία νέα subscription.
+  - **Gate:** `POLYGON_FACED_KINDS = {'slab', 'foundation'}` στο `PolygonModeToggle3D.tsx`.
+  - **Tests:** `bim-three-faced-prism.test.ts` (+4 `buildFacedSolidBody`), `foundation-to-three.test.ts`
+    (+3 faced), `foundation-firestore-service.test.ts` (+4 round-trip) → **41/41 GREEN** (3 suites).
+  - **Generic (μηδέν foundation-specific αλλαγή):** `SetFaceAppearanceCommand` + `PolygonMaterialPanel`
+    (level-scene adapter) δουλεύουν για foundation αυτούσια (base-field writer).
+  - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (foundation → Όψεις → click όψη → swatch → χρώμα → refresh → undo) + commit
+    (Giorgio· stage **ADR-040 + ADR-539**, CHECK 6B/6D).
 - **2026-06-27 (Φ1 FIX — chicken-and-egg face picking, UNCOMMITTED)** — Bug (browser): σε **άβαφη** πλάκα
   το κλικ σε όψη δεν φώτιζε, γιατί ο faced render (που δίνει `faceKeyByMaterialIndex` → pickable όψεις)
   ήταν gated ΜΟΝΟ σε `faceAppearance` present· χωρίς βαφή → legacy single-material mesh → ο `raycastBimFace`

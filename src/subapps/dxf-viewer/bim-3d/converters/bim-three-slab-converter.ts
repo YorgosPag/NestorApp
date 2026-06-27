@@ -28,8 +28,7 @@ import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-534 Φ4 — soffit finish (ceiling): χρώμα από το shared paint/plaster catalog SSoT.
 import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-material-catalog';
 // ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό μέσω faced multi-material prism.
-import { buildFacedPrism } from './bim-three-faced-prism';
-import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import { buildFacedSolidBody } from './bim-three-faced-prism';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 
@@ -120,24 +119,33 @@ function buildLegacySlabBody(
 }
 
 /**
- * ADR-539 Φ1 — per-face slab body: faced multi-material prism (top/bottom/side:i).
- * ΧΩΡΙΣ holes/slope (Φ2). Outline (metres) → top ring στο +Y cap (world z = −plan y),
- * πάχος προς τα κάτω. Κάθε όψη παίρνει `resolveFaceMaterial`· αβαφές = base material.
- * `faceKeyByMaterialIndex` αποθηκεύεται στο userData για raycast + face highlight.
+ * ADR-539 Φ1/Φ2 — per-face slab body: faced multi-material prism (top/bottom/side:i/hole:h:k).
+ * ΧΩΡΙΣ slope (slope=legacy path). Delegate στο shared `buildFacedSolidBody` SSoT (Boy-Scout
+ * N.0.2 — foundation = 2ος caller)· baseMat = το slab single-material. Φ2: τα slab-openings
+ * περνούν ως holes (cap cut-outs + hole-wall faces) — μετασχηματισμένα στο ΙΔΙΟ (x, −y)
+ * cap-plane με το contour του `buildFacedSolidBody`.
  */
 function buildFacedSlabBody(
   verts: readonly { readonly x: number; readonly y: number }[],
   thicknessM: number,
   appearance: FaceAppearanceMap,
+  holes?: readonly (readonly THREE.Vector2[])[],
 ): THREE.Mesh | null {
-  const topRing = verts.map((v) => new THREE.Vector3(v.x, thicknessM, -v.y));
-  const prism = buildFacedPrism(topRing, thicknessM);
-  if (!prism) return null;
-  const baseMat = getElementMaterial3D('slab');
-  const materials = prism.faceKeyByMaterialIndex.map((fk) => resolveFaceMaterial(fk, appearance, baseMat));
-  const mesh = new THREE.Mesh(prism.geometry, materials);
-  mesh.userData['faceKeyByMaterialIndex'] = [...prism.faceKeyByMaterialIndex];
-  return mesh;
+  return buildFacedSolidBody(verts, thicknessM, appearance, getElementMaterial3D('slab'), holes);
+}
+
+/**
+ * ADR-539 Φ2 — slab-openings → hole rings στο cap-plane του faced prism. Κάθε opening
+ * outline (canvas units) → world metres (ίδιο `sceneToM` με το contour) → `Vector2(x, −y)`
+ * (mirror του `topRing` transform `world z = −plan y`). Degenerate (<3) απορρίπτεται κάτω.
+ */
+function slabOpeningHoles(
+  openings: readonly SlabOpeningEntity[],
+  sceneToM: number,
+): readonly THREE.Vector2[][] {
+  return openings.map((op) =>
+    scalePoints(op.params.outline.vertices, sceneToM).map((p) => new THREE.Vector2(p.x, -p.y)),
+  );
 }
 
 export function slabToMesh(
@@ -170,13 +178,14 @@ export function slabToMesh(
   // ADR-539 Φ1 — render faced (multi-material prism, pickable per-face) when EITHER the slab
   // already carries a `faceAppearance` OR it is the live Polygon-Mode target (so its faces
   // become pickable even before any paint — solves the chicken-and-egg). Otherwise the legacy
-  // single-material extrude (byte-for-byte, zero regression). Faced path: no holes/slope (Φ2).
+  // single-material extrude (byte-for-byte, zero regression). Φ2: το faced path ΚΟΒΕΙ τα
+  // slab-openings (cap cut-outs + hole-walls)· slope μένει legacy-only.
   const fa = slab.faceAppearance;
   const poly = usePolygonMode3DStore.getState();
   const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
   const facedByPolygonTarget = poly.active && poly.targetBimId === slab.id;
   const mesh = (facedByAppearance || facedByPolygonTarget)
-    ? buildFacedSlabBody(verts, thicknessM, fa ?? {})
+    ? buildFacedSlabBody(verts, thicknessM, fa ?? {}, slabOpeningHoles(openings, sceneToM))
     : buildLegacySlabBody(shape, thicknessM, slab.params);
   if (!mesh) return null;
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.

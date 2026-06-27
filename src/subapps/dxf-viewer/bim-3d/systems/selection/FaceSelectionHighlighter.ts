@@ -48,10 +48,15 @@ export class FaceSelectionHighlighter {
   private targetBimId: string | null = null;
   private targetFaceKey: string | null = null;
 
-  constructor(bimGroup: THREE.Group) {
+  /**
+   * @param color overlay χρώμα — default μπλε `0x2ea1ff` (selection)· ADR-539 Φ2 hover
+   *   instance περνά κίτρινο `0xffd400` (mirror ADR-538 hover) με χαμηλότερο opacity.
+   * @param opacity overlay opacity (default 0.4).
+   */
+  constructor(bimGroup: THREE.Group, color = 0x2ea1ff, opacity = 0.4) {
     this.bimGroup = bimGroup;
     this.material = new THREE.MeshBasicMaterial({
-      color: 0x2ea1ff, transparent: true, opacity: 0.4, depthWrite: false,
+      color, transparent: true, opacity, depthWrite: false,
       side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     });
   }

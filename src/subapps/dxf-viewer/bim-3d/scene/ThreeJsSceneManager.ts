@@ -17,8 +17,7 @@ import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
-// ADR-539 — per-face highlight overlay (Cinema 4D «Polygon Mode»).
-import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter';
+import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
@@ -76,8 +75,9 @@ export class ThreeJsSceneManager {
   readonly selectionHighlighter: BimSelectionHighlighter;
   /** ADR-538 — YELLOW hover silhouette (same pass/machinery as selection). Driven by `applyBimHover`. */
   readonly hoverHighlighter: BimSelectionHighlighter;
-  /** ADR-539 — per-face highlight overlay (Cinema 4D «Polygon Mode»). */
+  /** ADR-539 — per-face overlays (Cinema 4D «Polygon Mode»): blue selection + (Φ2) yellow hover. */
   readonly faceHighlighter: FaceSelectionHighlighter;
+  readonly faceHoverHighlighter: FaceSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
   private readonly sun: THREE.DirectionalLight;
@@ -155,8 +155,8 @@ export class ThreeJsSceneManager {
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
     // ADR-538 — hover highlighter → SAME pass, yellow silhouette (via `setHovered`).
     this.hoverHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass, (p, o) => p.setHovered(o));
-    // ADR-539 — per-face overlay highlighter (Polygon Mode).
     this.faceHighlighter = new FaceSelectionHighlighter(this.bimLayer.group);
+    this.faceHoverHighlighter = new FaceSelectionHighlighter(this.bimLayer.group, 0xffd400, 0.3); // ADR-539 Φ2 hover
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
@@ -327,8 +327,7 @@ export class ThreeJsSceneManager {
     syncBimEntitiesIntoScene(this.bimSyncDeps(),
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
-    // ADR-539 — re-attach the face highlight overlay (the faced mesh was just rebuilt).
-    this.faceHighlighter.refresh();
+    this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
     // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
     this.ssaoModulator.warmUp();
     this.markSceneDirty();
@@ -354,7 +353,7 @@ export class ThreeJsSceneManager {
     syncMultiFloorBimEntitiesIntoScene(this.bimSyncDeps(),
       { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
-    this.faceHighlighter.refresh(); // ADR-539 — re-attach face overlay after rebuild.
+    this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
     this.ssaoModulator.warmUp();
     this.markSceneDirty();
   }
@@ -410,6 +409,9 @@ export class ThreeJsSceneManager {
   setSelectedFace(bimId: string | null, faceKey: string | null): void {
     if (!this.disposed) { this.faceHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); }
   }
+
+  /** ADR-539 Φ2 — yellow hover preview on the face under the cursor / drag (Polygon Mode). */
+  setHoveredFace(bimId: string | null, faceKey: string | null): void { if (!this.disposed) { this.faceHoverHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); } }
 
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
@@ -474,7 +476,7 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.faceHighlighter.dispose(); // ADR-539 — release the face overlay geometry/material.
+    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); // ADR-539 — release face overlays.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({

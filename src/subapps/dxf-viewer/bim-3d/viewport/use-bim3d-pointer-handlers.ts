@@ -48,6 +48,13 @@ export function useBim3DPointerHandlers(
   const pickHover = useCallback((clientX: number, clientY: number): void => {
     const manager = managerRef.current;
     if (!manager) return;
+    // ADR-539 Φ2 — in Polygon Mode the hover drives the YELLOW per-face preview (Cinema 4D),
+    // not the whole-entity silhouette: highlight the face under the cursor before the click.
+    if (usePolygonMode3DStore.getState().active) {
+      const faceHit = manager.raycastBimFace(clientX, clientY);
+      manager.setHoveredFace(faceHit?.bimId ?? null, faceHit?.faceKey ?? null);
+      return;
+    }
     const bimHit = manager.raycastBimEntities(clientX, clientY);
     if (bimHit?.bimId) {
       setHoveredEntity(bimHit.bimId);
@@ -154,6 +161,7 @@ export function useBim3DPointerHandlers(
     const manager = managerRef.current;
     if (manager) {
       applyBimHover(manager.hoverHighlighter, null);
+      manager.setHoveredFace(null, null); // ADR-539 Φ2 — clear the per-face hover preview.
       manager.markSceneDirty();
     }
   }, [debounceTimerRef, managerRef]);

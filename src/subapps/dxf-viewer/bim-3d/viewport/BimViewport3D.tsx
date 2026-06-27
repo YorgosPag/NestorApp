@@ -51,6 +51,8 @@ import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
+// ADR-539 Φ2 — Cinema 4D «Polygon Mode» HTML5 drag-drop υλικού πάνω σε όψη (drop target).
+import { usePolygonDragDrop } from './use-polygon-drag-drop';
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 
@@ -329,6 +331,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     managerRef,
     debounceTimerRef,
   );
+  // ADR-539 Φ2 — drop-target handlers for dragging a material onto a face (no-op outside Polygon Mode).
+  const { onDragOver: handlePolygonDragOver, onDrop: handlePolygonDrop } = usePolygonDragDrop(managerRef);
 
   if (!effectiveVisible) return null;
 
@@ -361,6 +365,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
+      onDragOver={handlePolygonDragOver}
+      onDrop={handlePolygonDrop}
       onMouseDown={(e) => e.stopPropagation()}
       onMouseUp={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.stopPropagation()}
