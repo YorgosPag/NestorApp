@@ -66,10 +66,7 @@ function isNonSolidPrimitive(obj: THREE.Object3D): boolean {
     obj instanceof THREE.Line ||
     obj instanceof THREE.LineSegments ||
     obj instanceof THREE.Points ||
-    obj instanceof THREE.Sprite ||
-    // ADR-537 β — flat DXF text-annotation planes are labels, not solids: they must not occlude
-    // grips (a coplanar text quad would otherwise cull its own centre grip at grazing angles).
-    obj.userData?.isDxfAnnotation === true
+    obj instanceof THREE.Sprite
   );
 }
 

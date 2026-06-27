@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import {
   getTextHeightWithFallback,
-  estimateTextWidth,
   TEXT_FONTS,
 } from '../../config/text-rendering-config';
 
@@ -49,39 +48,52 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   if (!text.trim()) return null;
 
   const heightUnits = getTextHeightWithFallback(undefined, entity.height);
-  const widthUnits = Math.max(heightUnits, estimateTextWidth(text, heightUnits));
 
   const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return null;
 
-  canvas.width = Math.max(8, Math.round(widthUnits * TEXTURE_PX_PER_UNIT));
-  canvas.height = Math.max(8, Math.round(heightUnits * TEXTURE_PX_PER_UNIT));
+  // Font px = text height × texture resolution. Pad so glyph side-bearings / anti-aliasing never
+  // touch the canvas edge (Greek caps like Π are wider than a 0.6×height estimate → clipped).
+  const fontPx = Math.max(1, Math.round(heightUnits * TEXTURE_PX_PER_UNIT));
+  const padPx = Math.ceil(fontPx * 0.25);
+  const font = `${fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
+  // Measure the ACTUAL rendered width (not an estimate) so the quad fits the glyphs exactly.
+  ctx.font = font;
+  const textPx = Math.ceil(ctx.measureText(text).width);
+
+  canvas.width = Math.max(8, textPx + padPx * 2);
+  canvas.height = Math.max(8, fontPx + padPx * 2);
+  // Resizing the canvas resets the 2D context → re-apply all draw state before filling.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = intToHex(colorInt);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `${Math.round(heightUnits * TEXTURE_PX_PER_UNIT)}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
+  ctx.font = font;
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter; // non power-of-two canvas → no mipmaps
   texture.magFilter = THREE.LinearFilter;
 
-  const geometry = new THREE.PlaneGeometry(widthUnits, heightUnits);
+  // Plane spans the canvas in world units (same px→unit factor) so the texture never distorts
+  // and never clips. Anchored so its lower-left ≈ entity.position (matches the 2D text anchor).
+  const widthUnits = canvas.width / TEXTURE_PX_PER_UNIT;
+  const heightUnitsPadded = canvas.height / TEXTURE_PX_PER_UNIT;
+  const geometry = new THREE.PlaneGeometry(widthUnits, heightUnitsPadded);
+  // ADR-537 β — render as an ALWAYS-VISIBLE annotation (Revit/CAD convention): a flat text quad
+  // on the floor plane is coplanar with the wireframe + BIM bases at Y=0, so plain depth-testing
+  // makes it z-fight / vanish at some camera angles & zooms ("something covers it"). `depthTest:
+  // false` + a high `renderOrder` draws it last, on top, so labels stay readable from any view.
   const material = new THREE.MeshBasicMaterial({
-    map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    map: texture, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.renderOrder = 999;
   // rotateX(-90°) maps plane-local (x, y) → world (x, 0, -y) — EXACTLY the DXF→Three mapping
   // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(entity.position.x + widthUnits / 2, 0, -(entity.position.y + heightUnits / 2));
-  // ADR-537 β — flag as an annotation so the grip depth-occluder skips it (the same rule that
-  // already exempts wireframe lines / sprite labels). Otherwise this flat coplanar quad occludes
-  // its OWN centre grip at grazing view angles (depth-gradient across the probed pixel > bias),
-  // making the text's grip vanish from both draw AND pick.
-  mesh.userData.isDxfAnnotation = true;
+  mesh.position.set(entity.position.x + widthUnits / 2, 0, -(entity.position.y + heightUnitsPadded / 2));
 
   return { mesh, geometry, material, texture };
 }

@@ -15,7 +15,7 @@
  */
 
 import { create } from 'zustand';
-import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import type { FaceAppearance, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 
 /** Η όψη που στοχεύει το menu: ποια entity + ποιο `FaceKey`. */
 export interface FaceMenuTarget {
@@ -31,16 +31,24 @@ interface FaceContextMenuState {
   /** Η όψη που αφορά το menu, ή null όταν κλειστό. */
   readonly target: FaceMenuTarget | null;
   /**
-   * Copy/paste clipboard: η αντιγραμμένη εμφάνιση όψης (ή null = άδειο). Επιβιώνει
-   * του open/close ώστε «αντιγραφή» από μία όψη → «επικόλληση» σε άλλη.
+   * Per-face clipboard: η αντιγραμμένη εμφάνιση ΜΙΑΣ όψης (ή null = άδειο). Επιβιώνει
+   * του open/close ώστε «αντιγραφή» από μία όψη → «επικόλληση» σε άλλη (Ctrl+C / Ctrl+V).
    */
   readonly clipboard: FaceAppearance | null;
+  /**
+   * Entity-level clipboard (ADR-539 Φ4a): το αντιγραμμένο ΟΛΟΚΛΗΡΟ map μιας entity
+   * (όλες οι όψεις) ή null = άδειο. Ξεχωριστό slot από το per-face clipboard ώστε
+   * Ctrl+Shift+C/V (entity) να μην πατάει το Ctrl+C/V (face).
+   */
+  readonly entityClipboard: FaceAppearanceMap | null;
   /** Άνοιγμα του menu στο `screen` για `target` (δεξί-κλικ σε όψη σε Polygon Mode). */
   show(target: FaceMenuTarget, screen: { x: number; y: number }): void;
-  /** Κλείσιμο του menu (το clipboard ΜΕΝΕΙ). */
+  /** Κλείσιμο του menu (τα clipboards ΜΕΝΟΥΝ). */
   hide(): void;
-  /** Set του clipboard (copy). */
+  /** Set του per-face clipboard (copy face). */
   setClipboard(appearance: FaceAppearance | null): void;
+  /** Set του entity-level clipboard (copy entity). */
+  setEntityClipboard(map: FaceAppearanceMap | null): void;
 }
 
 export const useFaceContextMenuStore = create<FaceContextMenuState>((set) => ({
@@ -48,7 +56,9 @@ export const useFaceContextMenuStore = create<FaceContextMenuState>((set) => ({
   screen: null,
   target: null,
   clipboard: null,
+  entityClipboard: null,
   show: (target, screen) => set({ open: true, target, screen }),
   hide: () => set({ open: false, target: null, screen: null }),
   setClipboard: (appearance) => set({ clipboard: appearance }),
+  setEntityClipboard: (map) => set({ entityClipboard: map }),
 }));

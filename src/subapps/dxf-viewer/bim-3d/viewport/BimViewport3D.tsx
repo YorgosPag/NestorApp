@@ -40,21 +40,19 @@ import { FocusIndicator3D } from '../accessibility/FocusIndicator3D'; import { A
 import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
 import { useCropRegionTool } from '../render/crop-region/useCropRegionTool';
 import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
-import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
-import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
-import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
-import { useBim3DDxfEditInteraction } from '../animation/use-bim3d-dxf-edit-interaction';
+import { useAnimationQueueProcessor } from '../animation/animation-queue-processor'; import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
+import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction'; import { useBim3DDxfEditInteraction } from '../animation/use-bim3d-dxf-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
 import { BimViewport3DProjectedOverlays } from './BimViewport3DProjectedOverlays';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { useBim3DStoreSync } from './use-bim3d-store-sync';
-import { useBim3DVgResync } from './use-bim3d-vg-resync';
-import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
+import { useBim3DStoreSync } from './use-bim3d-store-sync'; import { useBim3DVgResync } from './use-bim3d-vg-resync'; import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
 // ADR-539 Φ2 — Cinema 4D «Polygon Mode» HTML5 drag-drop υλικού πάνω σε όψη (drop target).
 import { usePolygonDragDrop } from './use-polygon-drag-drop';
+// ADR-539 Φ4a — Cinema 4D «Polygon Mode» keyboard copy/paste εμφάνισης όψης (face + entity).
+import { usePolygonClipboardShortcuts } from './use-polygon-clipboard-shortcuts';
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 
@@ -335,6 +333,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   );
   // ADR-539 Φ2 — drop-target handlers for dragging a material onto a face (no-op outside Polygon Mode).
   const { onDragOver: handlePolygonDragOver, onDrop: handlePolygonDrop } = usePolygonDragDrop(managerRef);
+  // ADR-539 Φ4a — keyboard copy/paste face appearance (Ctrl+C/V face, Ctrl+Shift+C/V entity).
+  usePolygonClipboardShortcuts();
 
   if (!effectiveVisible) return null;
 

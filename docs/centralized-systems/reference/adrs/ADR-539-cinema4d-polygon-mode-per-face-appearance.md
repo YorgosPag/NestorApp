@@ -109,7 +109,10 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ3c** | **wall** (απλός flat path: single-layer straight· κλειστό footprint ring `buildWallFootprintRing` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: πολυστρωματικοί/με κουφώματα = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3d** | **beam** (box single-piece· `beamToMesh` faced branch `buildBeamCoreBody` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: I-shape/multi-cutback = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3 (ΟΛΟΚΛΗΡΩΘΗΚΕ)** | slab + foundation + column + roof + wall + beam = όλα τα δομικά solids faced (+ 2D fill Φ3e + context-menu Φ3f) | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ4** | multi-face select (Shift) · copy/paste appearance · `bmat_*` drag · per-face PBR textures | ⬜ PLANNED |
+| **Φ4a** | keyboard copy/paste εμφάνισης όψης (Ctrl+C/V face) + **entity-level** copy/paste (Ctrl+Shift+C/V, όλες οι όψεις, ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ4b** | multi-face select (Shift) + N overlays + batch command (ένα undo) | ⬜ PLANNED |
+| **Φ4c** | `bmat_*` library drag swatches + `faceAppearanceColorHex` resolve extend | ⬜ PLANNED |
+| **Φ4d** | per-face PBR textures (γέφυρα `MaterialCatalog3D`, ADR-413) | ⬜ PLANNED |
 
 ## 5. Συνέπειες
 
@@ -129,6 +132,13 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 `bim-3d/systems/selection/FaceSelectionHighlighter.ts` · `bim-3d/ui/PolygonMaterialPanel.tsx` ·
 `core/commands/entity-commands/SetFaceAppearanceCommand.ts`.
 
+**Νέα (Φ4a):** `bim-3d/ui/read-face-appearance.ts` · `bim-3d/ui/is-typing-in-form-field.ts` ·
+`bim-3d/ui/apply-entity-face-appearance-map.ts` · `bim-3d/viewport/polygon-clipboard-key.ts` ·
+`bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` ·
+`core/commands/entity-commands/SetEntityFaceAppearanceMapCommand.ts`. **Τροποποίηση (Φ4a):**
+`bim-3d/stores/FaceContextMenuStore.ts` (+`entityClipboard`) · `bim-3d/viewport/grips/FaceContextMenu.tsx`
+(dedupe read) · `bim-3d/shortcuts/use3DShortcuts.ts` (dedupe guard) · `bim-3d/viewport/BimViewport3D.tsx` (mount).
+
 **Τροποποίηση:** `bim/types/bim-base.ts` · `bim-3d/converters/bim-three-slab-converter.ts` ·
 `bim-3d/systems/raycaster/BimEntityRaycaster.ts` · `bim-3d/scene/ThreeJsSceneManager.ts` ·
 `bim-3d/viewport/use-bim3d-pointer-handlers.ts` · `bim-3d/viewport/BimViewport3D.tsx` ·
@@ -136,6 +146,35 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ4a — KEYBOARD + ENTITY-LEVEL COPY/PASTE, IMPLEMENTED UNCOMMITTED)** — «Advanced polygon
+  editing» layer (1/4): copy/paste εμφάνισης από πληκτρολόγιο + entity-level. **FULL SSoT reuse, μηδέν
+  διπλότυπα** (το per-face cross-entity clipboard υπήρχε ΗΔΗ από Φ3f — δεν ξαναχτίστηκε).
+  - **SSoT audit εύρημα:** το `readFaceAppearance` ήταν **private** μέσα στο `FaceContextMenu.tsx` →
+    εξήχθη σε `bim-3d/ui/read-face-appearance.ts` (read counterpart του `applyFaceAppearance`· +
+    `readEntityFaceAppearanceMap`). Το context-menu το ξανα-χρησιμοποιεί (Boy-Scout dedupe). Επίσης το
+    inline «skip typing in input» guard του `use3DShortcuts` → SSoT `bim-3d/ui/is-typing-in-form-field.ts`
+    (κοινό με τον νέο keyboard leaf).
+  - **Keyboard leaf:** `bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` — window keydown leaf (mirror
+    `usePolygonDragDrop`: `useLevelsOptional` + store `getState`, **μηδέν React re-render**, ADR-040 leaf),
+    mount στο `BimViewport3D`. Pure classifier `polygon-clipboard-key.ts` (`classifyFaceClipboardKey`,
+    `event.code` → layout-independent ελληνικό πληκτρολόγιο· mirror `shortcut-dispatcher` pure-vs-hook):
+    - **Ctrl/Cmd+C / Ctrl/Cmd+V** → copy/paste **ΜΙΑΣ** όψης (reuse `FaceContextMenuStore.clipboard` +
+      `applyFaceAppearance`).
+    - **Ctrl/Cmd+Shift+C / +V** → copy/paste **ΟΛΗΣ** entity (νέο slot `entityClipboard` στο
+      `FaceContextMenuStore` + νέο whole-map writer).
+    - Ενεργό ΜΟΝΟ σε Polygon Mode + `selectedFace`· `preventDefault` μόνο όταν όντως χειρίζεται.
+  - **Entity-level writer:** `core/commands/entity-commands/SetEntityFaceAppearanceMapCommand.ts` — undoable
+    **whole-map replace** (αντί N per-face commands → **ένα atomic undo**)· αδελφό του `SetFaceAppearanceCommand`
+    σε map granularity· clone-isolation από το clipboard· reuse `signalEntitiesAttached` persist SSoT. Wiring:
+    `bim-3d/ui/apply-entity-face-appearance-map.ts` (mirror `apply-face-appearance.ts`).
+  - **Tests:** `SetEntityFaceAppearanceMapCommand.test.ts` (7), `polygon-clipboard-key.test.ts` (9),
+    `read-face-appearance.test.ts` (7), `FaceContextMenuStore.test.ts` (+4 → entity clipboard) — **36/36 GREEN**
+    + regression (keyboard-shortcuts-3d, shortcut-dispatcher-edit, polygon-material-dnd, SetFaceAppearanceCommand)
+    = 0 break. i18n: **καμία** νέα visible string (keyboard, silent — match drag-drop UX· N.2/N.11 clean).
+  - **ADR-040:** ο νέος leaf + `BimViewport3D` mount **δεν** πιάνονται από CHECK 6B/6D (δεν αγγίζω
+    pointer-handler/HoverStore). `use3DShortcuts` dedupe = behavior-preserving.
+  - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (Όψεις → επίλεξε όψη → Ctrl+C → άλλη όψη/entity → Ctrl+V· Ctrl+Shift+C/V
+    entity-level· undo) + commit (Giorgio· stage **ADR-539** + νέα/τροποποιημένα).
 - **2026-06-27 (Φ3d — BEAM, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance στο **δοκάρι**,
   τελευταίο δομικό solid → **το Φ3 ΟΛΟΚΛΗΡΩΘΗΚΕ** (slab + foundation + column + roof + wall + beam όλα faced).
   Mirror wall Φ3c / column Φ3a, **μηδέν διπλότυπα** (FULL SSoT reuse).

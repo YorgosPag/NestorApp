@@ -26,19 +26,7 @@ import {
 import { useLevelsOptional } from '../../../systems/levels/useLevels';
 import { useFaceContextMenuStore } from '../../stores/FaceContextMenuStore';
 import { applyFaceAppearance } from '../../ui/apply-face-appearance';
-import type { FaceAppearance, FaceAppearanceMap } from '../../../bim/types/face-appearance-types';
-
-/** Η τρέχουσα εμφάνιση μιας όψης από το live scene (ή null όταν αβαφής). */
-function readFaceAppearance(
-  levels: ReturnType<typeof useLevelsOptional>,
-  bimId: string,
-  faceKey: string,
-): FaceAppearance | null {
-  if (!levels?.currentLevelId) return null;
-  const entity = levels.getLevelScene(levels.currentLevelId)?.entities.find((e) => e.id === bimId);
-  const fa = (entity as { faceAppearance?: FaceAppearanceMap } | undefined)?.faceAppearance;
-  return fa?.[faceKey] ?? null;
-}
+import { readFaceAppearance } from '../../ui/read-face-appearance';
 
 export function FaceContextMenu() {
   const { t } = useTranslation('bim3d');

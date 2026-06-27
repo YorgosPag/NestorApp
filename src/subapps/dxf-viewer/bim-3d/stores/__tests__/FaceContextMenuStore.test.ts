@@ -5,9 +5,10 @@
 import { useFaceContextMenuStore } from '../FaceContextMenuStore';
 
 afterEach(() => {
-  // full reset (hide + clear clipboard) between tests
+  // full reset (hide + clear both clipboards) between tests
   useFaceContextMenuStore.getState().hide();
   useFaceContextMenuStore.getState().setClipboard(null);
+  useFaceContextMenuStore.getState().setEntityClipboard(null);
 });
 
 describe('FaceContextMenuStore', () => {
@@ -35,5 +36,31 @@ describe('FaceContextMenuStore', () => {
     expect(useFaceContextMenuStore.getState().clipboard).toEqual({ materialId: 'paint-red' });
     useFaceContextMenuStore.getState().setClipboard(null);
     expect(useFaceContextMenuStore.getState().clipboard).toBeNull();
+  });
+
+  it('setEntityClipboard() stores then clears the entity-level map (Φ4a)', () => {
+    const map = { top: { materialId: 'paint-red' }, bottom: { colorHex: '#000000' } };
+    useFaceContextMenuStore.getState().setEntityClipboard(map);
+    expect(useFaceContextMenuStore.getState().entityClipboard).toEqual(map);
+    useFaceContextMenuStore.getState().setEntityClipboard(null);
+    expect(useFaceContextMenuStore.getState().entityClipboard).toBeNull();
+  });
+
+  it('per-face and entity clipboards are independent slots', () => {
+    useFaceContextMenuStore.getState().setClipboard({ colorHex: '#C0392B' });
+    useFaceContextMenuStore.getState().setEntityClipboard({ top: { materialId: 'paint-blue' } });
+    expect(useFaceContextMenuStore.getState().clipboard).toEqual({ colorHex: '#C0392B' });
+    expect(useFaceContextMenuStore.getState().entityClipboard).toEqual({ top: { materialId: 'paint-blue' } });
+    // clearing one leaves the other intact
+    useFaceContextMenuStore.getState().setClipboard(null);
+    expect(useFaceContextMenuStore.getState().clipboard).toBeNull();
+    expect(useFaceContextMenuStore.getState().entityClipboard).toEqual({ top: { materialId: 'paint-blue' } });
+  });
+
+  it('hide() keeps the entity clipboard too (survives close)', () => {
+    useFaceContextMenuStore.getState().setEntityClipboard({ top: { colorHex: '#27AE60' } });
+    useFaceContextMenuStore.getState().show({ bimId: 'b', faceKey: 'top' }, { x: 0, y: 0 });
+    useFaceContextMenuStore.getState().hide();
+    expect(useFaceContextMenuStore.getState().entityClipboard).toEqual({ top: { colorHex: '#27AE60' } });
   });
 });

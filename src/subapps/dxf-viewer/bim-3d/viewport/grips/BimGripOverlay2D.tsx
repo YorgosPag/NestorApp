@@ -148,9 +148,15 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     // the GPU — this is what hides the bottom twins when looking from above (and the top twins
     // from below) for FREE. The occluder publishes per-flat-index visibility to the shared
     // non-reactive state, so the controller's hit-test culls the same squares.
+    // ADR-535 Φ5b/Φ6 occlusion applies to BIM solids (grips on top/bottom faces of 3D bodies).
+    // ADR-537 — a RAW DXF selection is a FLAT underlay: every grip lies on ONE floor plane, so
+    // depth-occlusion only mis-culls them (a coplanar floor-level grip at a grazing view angle, or
+    // a grip sitting over any BIM solid that the flat underlay is referenced against). The 2D canvas
+    // has no grip occlusion either → match it: skip occlusion for raw DXF, keep it for BIM.
+    const isRawDxfSelection = useGrip3DOverlayStore.getState().dxfGhostEntityId !== null;
     const occluder = occluderRef.current;
     let visibility: readonly boolean[] | null = null;
-    if (occluder) {
+    if (occluder && !isRawDxfSelection) {
       const worlds = [
         ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, topElevFor(g.position))),
         ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, bottomElevFor(g.position))),

@@ -18,6 +18,7 @@ import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+import { isTypingInFormField } from '../ui/is-typing-in-form-field';
 import {
   dispatchShortcut,
   panStepToScreenDelta,
@@ -48,15 +49,7 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
 
     const onKeyDown = (event: KeyboardEvent) => {
       // Skip while typing in inputs / textareas / contenteditable elements.
-      const focused = document.activeElement;
-      if (
-        focused &&
-        (focused.tagName === 'INPUT' ||
-          focused.tagName === 'TEXTAREA' ||
-          focused.getAttribute('contenteditable') === 'true')
-      ) {
-        return;
-      }
+      if (isTypingInFormField(document.activeElement)) return;
 
       const manager = getManager();
       if (!manager) return;
