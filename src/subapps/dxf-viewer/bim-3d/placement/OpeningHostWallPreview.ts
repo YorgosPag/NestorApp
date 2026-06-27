@@ -18,6 +18,7 @@
  */
 
 import * as THREE from 'three';
+import { disposeObjectTree } from '../scene/dispose-object-tree';
 
 /** One wall to preview: the bimIds to hide (wall + its opening bodies) + the rebuilt mesh. */
 export interface OpeningHostWallRebuild {
@@ -85,9 +86,8 @@ export class OpeningHostWallPreview {
   private clearPreviews(): void {
     for (const obj of this.previews) {
       this.group.remove(obj);
-      obj.traverse((o) => {
-        if (o instanceof THREE.Mesh) o.geometry.dispose();
-      });
+      // Geometry is per-frame rebuilt → free it; materials are shared converter singletons.
+      disposeObjectTree(obj);
     }
     this.previews.length = 0;
   }

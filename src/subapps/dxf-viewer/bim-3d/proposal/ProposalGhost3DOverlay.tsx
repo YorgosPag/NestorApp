@@ -21,6 +21,7 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 // ADR-537 — the translucent proposal ghost is a post-FX UI overlay (same mustard root cause as the
 // placement ghosts / underlay / gizmo): drawn AFTER SSAO so the warm lighting + AO never tint it.
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
+import { disposeObjectTree } from '../scene/dispose-object-tree';
 
 export interface ProposalGhost3DOverlayProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -30,17 +31,6 @@ export interface ProposalGhost3DOverlayProps {
 
 /** Name stamped on the throwaway ghost group (never persisted, never raycast). */
 const GHOST_GROUP_NAME = '__proposal-ghost-3d__';
-
-/** Dispose every geometry + material in the subtree (the overlay owns the ghost objects). */
-function disposeSubtree(root: THREE.Object3D): void {
-  root.traverse((node) => {
-    const mesh = node as THREE.Mesh;
-    if (mesh.geometry) mesh.geometry.dispose();
-    const mat = mesh.material;
-    if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-    else if (mat) mat.dispose();
-  });
-}
 
 export function ProposalGhost3DOverlay({ managerRef, objects }: ProposalGhost3DOverlayProps): null {
   useEffect(() => {
@@ -58,7 +48,8 @@ export function ProposalGhost3DOverlay({ managerRef, objects }: ProposalGhost3DO
     return () => {
       unregister();
       manager.scene.remove(group);
-      disposeSubtree(group);
+      // The overlay OWNS the ghost objects' geometry + materials (+ textures) → free them all.
+      disposeObjectTree(group, { materials: true });
     };
   }, [managerRef, objects]);
 

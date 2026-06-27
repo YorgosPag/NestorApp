@@ -36,6 +36,7 @@
  */
 
 import * as THREE from 'three';
+import { disposeObjectTree } from '../scene/dispose-object-tree';
 
 interface CapturedTransform {
   readonly obj: THREE.Object3D;
@@ -199,7 +200,7 @@ export class Bim3DEditLivePreview {
     for (const o of this.dependentHidden) o.visible = false;
     for (const o of this.dependentObjects) {
       this.parent.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     this.dependentObjects = [];
     for (const o of rebuilt) {
@@ -235,7 +236,7 @@ export class Bim3DEditLivePreview {
     for (const o of this.wireHidden) o.visible = false;
     for (const o of this.wireObjects) {
       this.parent.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     this.wireObjects = [];
     for (const o of rebuilt) {
@@ -270,7 +271,7 @@ export class Bim3DEditLivePreview {
     for (const o of this.pipeHidden) o.visible = false;
     for (const o of this.pipeObjects) {
       this.parent.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     this.pipeObjects = [];
     for (const o of rebuilt) {
@@ -304,7 +305,7 @@ export class Bim3DEditLivePreview {
     for (const o of this.fittingHidden) o.visible = false;
     for (const o of this.fittingObjects) {
       this.parent.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     this.fittingObjects = [];
     for (const o of rebuilt) {
@@ -336,7 +337,7 @@ export class Bim3DEditLivePreview {
     for (const o of this.hidden) o.visible = false;
     if (this.previewObject) {
       this.parent.remove(this.previewObject);
-      disposeObject(this.previewObject);
+      disposeObjectTree(this.previewObject);
     }
     this.previewObject = rebuilt;
     this.parent.add(rebuilt);
@@ -364,31 +365,31 @@ export class Bim3DEditLivePreview {
     for (const o of this.hidden) o.visible = true;
     if (this.previewObject) {
       this.parent?.remove(this.previewObject);
-      disposeObject(this.previewObject);
+      disposeObjectTree(this.previewObject);
     }
     // ADR-401 — un-hide the dependents and drop their swapped-in preview meshes.
     for (const o of this.dependentHidden) o.visible = true;
     for (const o of this.dependentObjects) {
       this.parent?.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     // ADR-408 Φ7 P2 — un-hide the circuit conduits and drop their re-routed meshes.
     for (const o of this.wireHidden) o.visible = true;
     for (const o of this.wireObjects) {
       this.parent?.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     // ADR-408 Φ-C — un-hide the connected pipes and drop their stretched preview meshes.
     for (const o of this.pipeHidden) o.visible = true;
     for (const o of this.pipeObjects) {
       this.parent?.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     // ADR-408 Φ-D/Φ-E — un-hide the incident fittings and drop their rebuilt preview meshes.
     for (const o of this.fittingHidden) o.visible = true;
     for (const o of this.fittingObjects) {
       this.parent?.remove(o);
-      disposeObject(o);
+      disposeObjectTree(o);
     }
     this.clearState();
   }
@@ -412,11 +413,4 @@ export class Bim3DEditLivePreview {
     this.fittingObjects = [];
     this.fittingIds = [];
   }
-}
-
-/** Recursively dispose a temporary preview object's geometries (materials are shared SSoT). */
-function disposeObject(obj: THREE.Object3D): void {
-  obj.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.geometry.dispose();
-  });
 }

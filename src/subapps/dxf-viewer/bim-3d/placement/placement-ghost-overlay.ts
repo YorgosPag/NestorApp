@@ -31,6 +31,7 @@
 
 import * as THREE from 'three';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
+import { disposeObjectTree } from '../scene/dispose-object-tree';
 
 /** Options for {@link PlacementGhostOverlay.setObject}. */
 export interface SetGhostObjectOptions {
@@ -117,12 +118,9 @@ export class PlacementGhostOverlay {
   private removeObject(): void {
     if (!this.object) return;
     this.scene.remove(this.object);
-    // Dispose every geometry in the subtree. Materials are shared singletons from the converter (or the
-    // ghost's own material, disposed once in `dispose`) — never disposed here.
-    this.object.traverse((child) => {
-      const g = (child as THREE.Mesh | THREE.LineSegments).geometry;
-      if (g) g.dispose();
-    });
+    // Geometry is per-instance → freed via the SSoT. Materials are shared singletons from the
+    // converter (or the ghost's own `this.material`, disposed once in `dispose`) → NOT freed here.
+    disposeObjectTree(this.object);
     this.object = null;
   }
 }
