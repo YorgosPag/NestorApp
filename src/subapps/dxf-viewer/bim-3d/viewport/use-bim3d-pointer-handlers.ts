@@ -88,10 +88,12 @@ export function useBim3DPointerHandlers(
    * — `BimSnapIndicatorOverlay3D` projects + draws it. Suppressed in Polygon Mode (face paint).
    */
   const updateSnap3D = useCallback((clientX: number, clientY: number): void => {
-    // ADR-544 — όσο το εργαλείο κολόνας είναι ενεργό, ο `use-bim3d-column-placement` είναι ο
-    // ΜΟΝΑΔΙΚΟΣ κάτοχος του snap glyph (δημοσιεύει plan-space OSNAP view που πιάνει ΚΑΙ την επίπεδη
-    // DXF κάτοψη — εδώ ο BIM raycast θα την έχανε). Μην το σβήνεις/αντικαθιστάς.
-    if (toolStateStore.get().activeTool === 'column') return;
+    // ADR-544 — όσο ένα εργαλείο τοποθέτησης (κολόνα/τοίχος) είναι ενεργό, ο αντίστοιχος placement
+    // hook (`use-bim3d-column-placement` / `use-bim3d-wall-placement`) είναι ο ΜΟΝΑΔΙΚΟΣ κάτοχος
+    // του snap glyph (δημοσιεύει plan-space OSNAP view που πιάνει ΚΑΙ την επίπεδη DXF κάτοψη — εδώ ο
+    // BIM raycast θα την έχανε). Μην το σβήνεις/αντικαθιστάς.
+    const placing = toolStateStore.get().activeTool;
+    if (placing === 'column' || placing === 'wall') return;
     const manager = managerRef.current;
     const camera = manager?.getCamera();
     const dom = manager?.getRendererCanvas();

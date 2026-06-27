@@ -31,12 +31,10 @@ import { hardOrtho } from './drawing-handler-utils';
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
 // there so the rubber-band preview honours F8/F10 (preview == commit).
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
-// ADR-508 §dim — wall-ghost listening dimensions metadata (attached to the ghost entity).
-import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
+// ADR-544 — ΕΝΑΣ canonical type για τα overlay-meta πεδία του placement ghost (πλέγμα/διαστάσεις/
+// οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
+import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
-import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
-import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -293,7 +291,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         previewCanvasRef.current.drawPreview(previewEntity);
         // ADR-508 §dim: wall-ghost listening dimensions overlay (gap-left / gap-right /
         // centre-to-centre along the existing member's face). Attached as ghost metadata.
-        const faceDims = (previewEntity as { faceDimensions?: GhostFaceDimensionsMeta }).faceDimensions;
+        // ADR-544 — ΕΝΑ structural read των overlay πεδίων (πλέγμα/διαστάσεις/οδηγός) μέσω canonical type.
+        const overlay = previewEntity as PlacementOverlayFields;
+        const faceDims = overlay.faceDimensions;
         if (faceDims) {
           previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
         }
@@ -319,18 +319,18 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         }
         // ADR-398 §3.13 — Polar Magnet: όταν ο cursor είναι μέσα σε κυκλικό δίσκο, overlay πολικό
         // πλέγμα (κέντρο/δακτύλιοι/ακτίνες). Attached ως ghost metadata από το `generateColumnPreview`.
-        const polarGrid = (previewEntity as { polarDiskGrid?: PolarDiskGrid }).polarDiskGrid;
+        const polarGrid = overlay.polarDiskGrid;
         if (polarGrid) {
           previewCanvasRef.current.drawPolarDisk(polarGrid);
         }
         // ADR-398 §3.15 — Cartesian Magnet: cursor μέσα σε ορθογώνιο → overlay καρτεσιανό πλέγμα.
-        const rectGrid = (previewEntity as { rectGrid?: RectGrid }).rectGrid;
+        const rectGrid = overlay.rectGrid;
         if (rectGrid) {
           previewCanvasRef.current.drawRectGrid(rectGrid);
         }
         // ADR-398 §3.20/§3.20d — alignment guide(s): dashed οδηγός στο άκρο/μέσον παρειάς ή πλευρά(ές)
         // ορθογωνίου (έως 2 στη γωνία). Ο renderer κάνει normalize σε array.
-        const alignGuide = (previewEntity as { alignmentGuide?: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[] }).alignmentGuide;
+        const alignGuide = overlay.alignmentGuide;
         if (alignGuide) {
           previewCanvasRef.current.drawAlignmentGuide(alignGuide);
         }

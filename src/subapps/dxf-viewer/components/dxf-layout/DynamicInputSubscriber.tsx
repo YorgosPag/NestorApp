@@ -31,6 +31,10 @@ import type { AnySceneEntity } from '../../rendering/types/Types';
 import { useWallPreview } from '../../bim/walls/wall-preview-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
 import type { SceneUnits } from '../../utils/scene-units';
+// ADR-513 (3D parity) — όταν είμαστε σε 3D προβολή, το ΙΔΙΟ overlay mountάρεται στο `BimViewport3D`
+// (`DynamicInput3DLeaf`)· αυτός ο 2D subscriber υποχωρεί ώστε να μην τρέχουν ΔΥΟ radial rings μαζί
+// (διπλά window listeners / intercepts → σπασμένο commit). ΕΝΑ `RadialCommandRing` ανά view.
+import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 
 interface DynamicInputSubscriberProps {
   activeTool: string;
@@ -56,6 +60,8 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   getCanvasEl,
 }: DynamicInputSubscriberProps) {
   const { dynInput } = useCadToggles();
+  // ADR-513 (3D parity) — σε 3D προβολή ο 3D `DynamicInput3DLeaf` κατέχει το overlay· υποχώρησε.
+  const is3D = useViewMode3DStore(selectIs3D);
 
   // SSoT gate (ADR-040): the dynamic-input readout only consumes the 60fps cursor
   // stream while it is actually shown (toggle ON + an interactive tool). When idle
@@ -95,7 +101,9 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
     onEntityCreated: noopEntityCreated,
   });
 
-  if (!interactive) {
+  // In 3D the `DynamicInput3DLeaf` (mounted in BimViewport3D) owns this overlay — yield to avoid
+  // two RadialCommandRings (double window intercepts). The 2D canvas isn't the drawing surface in 3D.
+  if (!interactive || is3D) {
     return null;
   }
 

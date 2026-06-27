@@ -12,7 +12,7 @@
  * @since 2026-01-02
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

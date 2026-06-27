@@ -17,19 +17,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/drawing-types';
-import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
-import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
-import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
-import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
+// ADR-544 — ΕΝΑΣ canonical type για τα overlay πεδία του ghost (SSoT· κοινός με το 2D handler).
+import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { Placement3DMeta } from '../stores/Placement3DOverlayStore';
-
-/** Τα overlay πεδία όπως προσαρτώνται στο preview ghost (δομική ανάγνωση — μηδέν `any`). */
-type PreviewOverlayFields = {
-  readonly polarDiskGrid?: PolarDiskGrid;
-  readonly rectGrid?: RectGrid;
-  readonly faceDimensions?: GhostFaceDimensionsMeta;
-  readonly alignmentGuide?: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[];
-};
 
 /**
  * Συσκεύασε το overlay meta του preview ghost για το 3D store. `null` όταν `preview` λείπει ή
@@ -42,7 +32,7 @@ export function extractPlacement3DMeta(
   sceneUnits: SceneUnits,
 ): Placement3DMeta | null {
   if (!preview) return null;
-  const f = preview as PreviewOverlayFields;
+  const f = preview as PlacementOverlayFields;
   const polarDiskGrid = f.polarDiskGrid ?? null;
   const rectGrid = f.rectGrid ?? null;
   const faceDimensions = f.faceDimensions ?? null;

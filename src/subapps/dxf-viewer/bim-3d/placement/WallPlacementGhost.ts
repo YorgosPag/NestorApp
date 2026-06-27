@@ -30,6 +30,10 @@ import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint'
 import { generateWallPreview } from '../../hooks/drawing/wall-preview-helpers';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { wallToMesh } from '../converters/BimToThreeConverter';
+// ADR-537 — Revit/Maxon-grade: the translucent ghost is a post-FX UI overlay, NOT shaded
+// geometry. Drawn in the dedicated forward pass AFTER SSAO so the warm sun/ground lighting +
+// AO multiply never tint it "mustard" at idle (same SSoT the underlay + edit gizmo use).
+import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 
 /** mm → Three.js world metres (shared constant, same as all converters). */
 const MM_TO_M = 0.001;
@@ -39,20 +43,31 @@ const WALL_GHOST_HEX = 0x2f6fed;
 
 export class WallPlacementGhost {
   private readonly scene: THREE.Scene;
-  private readonly material: THREE.MeshStandardMaterial;
+  /**
+   * UNLIT translucent ghost material. The post-FX overlay pass renders each root standalone
+   * (`renderer.render(root, camera)`) with no lights in the subtree, so a lit `MeshStandardMaterial`
+   * would render black — a flat `MeshBasicMaterial` is the correct CAD-preview look AND the reason
+   * the mustard root cause is gone (no PBR lighting to blend through the SSAO composite). depthTest
+   * stays on so the ghost is occluded by closer geometry; depthWrite off so it never pollutes depth.
+   */
+  private readonly material: THREE.MeshBasicMaterial;
   private mesh: THREE.Object3D | null = null;
+  /** Flag-based visibility (ADR-537 overlay mechanism): the mesh root stays `visible=false` so the
+   *  MAIN render skips it; the post-FX pass flips it on transiently. Show/hide toggles this flag. */
+  private shown = false;
   private disposed = false;
+  private readonly unregisterOverlay: () => void;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    this.material = new THREE.MeshStandardMaterial({
+    this.material = new THREE.MeshBasicMaterial({
       color: WALL_GHOST_HEX,
       transparent: true,
       opacity: 0.4,
       depthWrite: false,
-      roughness: 0.6,
-      metalness: 0.0,
     });
+    // Register as a post-FX overlay: return the live mesh only while shown (root kept visible=false).
+    this.unregisterOverlay = registerPostFxOverlay(scene, () => (this.shown && this.mesh ? [this.mesh] : []));
   }
 
   /**
@@ -103,18 +118,22 @@ export class WallPlacementGhost {
       obj.userData = {};
       obj.raycast = () => {};
     });
+    // Root kept invisible to the MAIN render (ADR-537): the post-FX pass flips it on for its own draw.
+    mesh.visible = false;
     this.mesh = mesh;
     this.scene.add(mesh);
     return hudMeta;
   }
 
+  /** Show/hide via the overlay flag — the mesh root stays `visible=false`; the post-FX pass draws it. */
   setVisible(visible: boolean): void {
-    if (this.mesh) this.mesh.visible = visible;
+    this.shown = visible;
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.unregisterOverlay();
     this.removeMesh();
     this.material.dispose();
   }

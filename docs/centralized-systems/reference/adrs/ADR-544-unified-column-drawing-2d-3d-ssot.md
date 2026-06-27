@@ -251,3 +251,16 @@ const project: OverlayProjector = makeGripPlanToCanvas(camera, canvas, () => ele
     `use-bim3d-pointer-handlers.updateSnap3D`: όσο το εργαλείο κολόνας είναι ενεργό, ο placement hook είναι
     ο **μοναδικός** κάτοχος του snap glyph (αλλιώς ο hover BIM-raycast θα το έσβηνε σε null).
   - Tests: +3 `resolvePlacementSnapWithView` (single-query + view), ενημέρωση column-placement mock. Σύνολο GREEN.
+- **2026-06-27 (SSoT dedup μετά από hard audit Giorgio «κεντρικοποίησε»).** Εξάλειψη 3 διπλοτυπιών
+  (2 μικρές δικές μου + 1 προϋπάρχουσα, κατά διαταγή «τα προϋπάρχοντα τα κεντρικοποιείς κι αυτά»):
+  - **Occluder lifecycle** ήταν **verbatim σε 4 overlays** (grip/snap/crosshair + placement). → νέο
+    `useGripDepthOccluder()` στο `overlay-raf.ts` (overlay-lifecycle SSoT)· `new GripDepthOccluder()`
+    υπάρχει πλέον **σε 1 σημείο**· refactor και των 4.
+  - **`scenePointToPlanMm`** (inverse του `planMmToScenePoint`) είχε μπει στο `placement-overlay-project`·
+    → **μετακινήθηκε** στο `world-to-scene-point.ts` (coordinate-bridge SSoT, δίπλα στο sibling)· ο
+    projector το reuse-άρει (μηδέν inline `/ mmToSceneUnits`).
+  - **Overlay meta field-set** (`polarDiskGrid`/`rectGrid`/`faceDimensions`/`alignmentGuide`) διαβαζόταν
+    με inline structural casts σε 2 σημεία (2D `drawing-hover-handler` + 3D extractor). → νέο canonical
+    `PlacementOverlayFields` (`bim/placement/placement-overlay-fields.ts`)· και οι δύο readers το κάνουν
+    `entity as PlacementOverlayFields` (2D: 4 casts → 1). Μηδέν διπλή γνώση πεδίων.
+  - 43/43 jest GREEN μετά το dedup. Pre-commit CHECK 6D → ADR-544 staged.

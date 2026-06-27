@@ -18,6 +18,8 @@ import { WallHudOverlay3D } from './wall-hud/WallHudOverlay3D';
 import { Tracking3DOverlay } from './tracking/Tracking3DOverlay';
 // ADR-544 — 3D column placement overlay (magnetic grid / live dims / guides) drawn with the SAME 2D painters.
 import { BimPlacementOverlay2D } from './placement/BimPlacementOverlay2D';
+// ADR-513/537 — 3D Radial Command Ring (wall dynamic input L/θ/πάχος/ύψος): the SAME 2D SSoT component.
+import { DynamicInput3DLeaf } from './DynamicInput3DLeaf';
 
 export interface BimViewport3DCanvasOverlaysProps {
   managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -50,6 +52,9 @@ export function BimViewport3DCanvasOverlays({ managerRef }: BimViewport3DCanvasO
       {/* ADR-544 — column placement overlay (magnetic grid / live dims / alignment guides) while drawing
           a column in 3D, painted with the SAME 2D painters projected through the perspective camera. */}
       <BimPlacementOverlay2D managerRef={managerRef} />
+      {/* ADR-513/537 — wall dynamic input: the SAME 2D Radial Command Ring (Μήκος/Γωνία/Πάχος/Ύψος),
+          gated to wall `awaitingEnd`. The 2D DynamicInputSubscriber yields in 3D (one ring per view). */}
+      <DynamicInput3DLeaf managerRef={managerRef} />
     </>
   );
 }

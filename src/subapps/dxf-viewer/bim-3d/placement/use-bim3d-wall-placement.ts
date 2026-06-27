@@ -40,12 +40,15 @@ import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-brid
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { dxfPlanToWorld, getPixelWorldSize } from '../viewport/coordinate-transforms';
+import { getPixelWorldSize } from '../viewport/coordinate-transforms';
 import { WallPlacementGhost } from './WallPlacementGhost';
-import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
-import { resolvePlacementSnap } from './placement-snap';
+import { resolvePlacementSnapWithView } from './placement-snap';
+// ADR-544/542 — ίδιο OSNAP glyph+label («Γωνία/Μέσο κολόνας/τοίχου») με το 2D & την κολόνα, μέσω
+// του κοινού Snap3DOverlayStore + BimSnapIndicatorOverlay3D (αντικαθιστά τον 3D κύβο PlacementSnapMarker).
+import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
+import type { SnapIndicatorView } from '../../snapping/extended-types';
 import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
 import { setWall3DHud, clearWall3DHud } from '../viewport/wall-hud/wall-3d-hud-store';
 // ADR-543 (COL traces 3D) — Revit-style ambient alignment tracking, SAME brain as 2D.
@@ -72,7 +75,6 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
     if (!canvasEl || !manager) return;
 
     const ghost = new WallPlacementGhost(manager.scene);
-    const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 
@@ -98,15 +100,17 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       clientX: number,
       clientY: number,
       elev: number,
-    ): { scenePt: Point2D; markerMm: Point2D | null; trackingPayload: Tracking3DPayload | null } | null => {
+    ): { scenePt: Point2D; view: SnapIndicatorView | null; trackingPayload: Tracking3DPayload | null } | null => {
       const camera = manager.getCamera();
       const world = raycastFloorPoint(camera, canvasEl, clientX, clientY, elev);
       if (!world) return null;
       const units = unitsNow();
       const rawMm = worldToPlanMm(world);
-      const snap = resolvePlacementSnap(rawMm);
+      // ADR-544 — ΜΙΑ engine query → snapped θέση + OSNAP view (glyph ┘/▲/⊕ + label). Ίδιος snap
+      // engine με το 2D & την κολόνα· το view δημοσιεύεται στο Snap3DOverlayStore (κοινό ADR-542 overlay).
+      const snap = resolvePlacementSnapWithView(rawMm);
       let scenePt = planMmToScenePoint(snap ? snap.snappedMm : rawMm, units);
-      let markerMm: Point2D | null = snap ? snap.markerMm : null;
+      let view: SnapIndicatorView | null = snap ? snap.view : null;
 
       // Ambient COL traces (ADR-357): scene-units domain, screen scale derived from the
       // live camera at the cursor (mirror of `WallHudOverlay3D`'s `scenePerPx`), so the
@@ -136,9 +140,9 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       let trackingPayload: Tracking3DPayload | null = null;
       if (composed) {
         // Tracking wins → the ghost AND the commit adopt the aligned point (ghost == commit);
-        // the alignment line supersedes the OSNAP dot.
+        // the alignment line supersedes the OSNAP glyph.
         scenePt = composed.point;
-        markerMm = null;
+        view = null;
         const r = composed.result;
         const distScene = Math.hypot(composed.point.x - r.anchorPoint.x, composed.point.y - r.anchorPoint.y);
         const distMm = distScene / Math.max(mmToSceneUnits(units), 1e-9);
@@ -153,7 +157,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
           label,
         };
       }
-      return { scenePt, markerMm, trackingPayload };
+      return { scenePt, view, trackingPayload };
     };
 
     const onMove = (e: PointerEvent): void => {
@@ -161,7 +165,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       const res = resolvePlacement(e.clientX, e.clientY, elev);
       if (!res) {
         ghost.setVisible(false);
-        snapMarker.hide();
+        useSnap3DOverlayStore.getState().setSnap(null);
         clearWall3DHud();
         clearTracking3D();
         manager.markSceneDirty();
@@ -175,8 +179,9 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       const hud = ghost.update(res.scenePt, elev, levelId, units);
       ghost.setVisible(true);
       setWall3DHud(hud, elev, units);
-      if (res.markerMm) snapMarker.show(dxfPlanToWorld(res.markerMm.x, res.markerMm.y, elev), manager.getCamera());
-      else snapMarker.hide();
+      // ADR-544/542 — ΙΔΙΟ OSNAP glyph+label με το 2D (┘/▲/⊕ «Γωνία/Μέσο τοίχου») στο σημείο έλξης,
+      // μέσω του κοινού Snap3DOverlayStore + BimSnapIndicatorOverlay3D. `null` view = tracking/no-snap.
+      useSnap3DOverlayStore.getState().setSnap(res.view ? { view: res.view, elevMm: elev } : null);
       // ADR-543 (COL traces 3D) — publish the active alignment lines for the 3D overlay.
       setTracking3D(res.trackingPayload, elev, units);
       manager.markSceneDirty();
@@ -184,7 +189,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
 
     const onLeave = (): void => {
       ghost.setVisible(false);
-      snapMarker.hide();
+      useSnap3DOverlayStore.getState().setSnap(null);
       clearWall3DHud();
       clearTracking3D();
       manager.markSceneDirty();
@@ -230,7 +235,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       abort = null;
       downPos = null;
       ghost.setVisible(false);
-      snapMarker.hide();
+      useSnap3DOverlayStore.getState().setSnap(null);
       clearWall3DHud();
       clearTracking3D();
       if (wasActive) releasePlacementCursor(cursorEl);
@@ -254,7 +259,6 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       unsubView();
       teardown();
       ghost.dispose();
-      snapMarker.dispose();
     };
   }, [canvasEl, managerRef]);
 }

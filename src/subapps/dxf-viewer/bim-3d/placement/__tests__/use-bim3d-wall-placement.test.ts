@@ -51,12 +51,10 @@ jest.mock('../WallPlacementGhost', () => ({
     dispose(): void {}
   },
 }));
-jest.mock('../PlacementSnapMarker', () => ({
-  PlacementSnapMarker: class {
-    show(): void {}
-    hide(): void {}
-    dispose(): void {}
-  },
+// ADR-544/542 — the cube marker is gone; the hook publishes the OSNAP view to Snap3DOverlayStore.
+const mockSetSnap = jest.fn();
+jest.mock('../../stores/Snap3DOverlayStore', () => ({
+  useSnap3DOverlayStore: { getState: () => ({ setSnap: mockSetSnap }) },
 }));
 jest.mock('../raycast-floor-point', () => ({
   raycastFloorPoint: jest.fn(() => ({ x: 1, y: 2, z: 3 })),
@@ -69,12 +67,11 @@ jest.mock('../world-to-scene-point', () => ({
 }));
 // OSNAP off by default → raw point flows through (free-placement path under test).
 jest.mock('../placement-snap', () => ({
-  resolvePlacementSnap: jest.fn(() => null),
+  resolvePlacementSnapWithView: jest.fn(() => null),
 }));
-import { resolvePlacementSnap } from '../placement-snap';
-const mockResolvePlacementSnap = resolvePlacementSnap as jest.MockedFunction<typeof resolvePlacementSnap>;
+import { resolvePlacementSnapWithView } from '../placement-snap';
+const mockResolvePlacementSnap = resolvePlacementSnapWithView as jest.MockedFunction<typeof resolvePlacementSnapWithView>;
 jest.mock('../../viewport/coordinate-transforms', () => ({
-  dxfPlanToWorld: jest.fn(() => ({ x: 0, y: 0, z: 0 })),
   // ADR-543 COL-traces-3D: camera-derived scene-units-per-pixel for the ambient screen scale.
   getPixelWorldSize: jest.fn(() => 0.01),
 }));
@@ -104,6 +101,7 @@ describe('useBim3DWallPlacement', () => {
     mockToolListeners.clear();
     mockViewListeners.clear();
     mockEmit.mockClear();
+    mockSetSnap.mockClear();
     mockResolvePlacementSnap.mockReset();
     mockResolvePlacementSnap.mockReturnValue(null);
   });
@@ -148,7 +146,7 @@ describe('useBim3DWallPlacement', () => {
     const canvas = document.createElement('canvas');
     mockState.activeTool = 'wall';
     mockState.is3D = true;
-    mockResolvePlacementSnap.mockReturnValue({ snappedMm: { x: 42, y: -7 }, markerMm: { x: 42, y: -7 } });
+    mockResolvePlacementSnap.mockReturnValue({ snappedMm: { x: 42, y: -7 }, markerMm: { x: 42, y: -7 }, view: null });
     renderHook(() => useBim3DWallPlacement(makeParams(canvas)));
     canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
     expect(mockEmit).toHaveBeenCalledWith('bim:place-wall-3d', { point: { x: 42, y: -7 } });
