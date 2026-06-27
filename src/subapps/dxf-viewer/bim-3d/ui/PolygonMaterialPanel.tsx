@@ -42,18 +42,28 @@ export function PolygonMaterialPanel() {
   const levels = useLevelsOptional();
   const active = usePolygonMode3DStore((s) => s.active);
   const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
+  const targetBimId = usePolygonMode3DStore((s) => s.targetBimId);
   const [colorOpen, setColorOpen] = useState(false);
   const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
 
   if (!active) return null;
 
-  /** Apply to ALL selected faces (click-to-apply / custom colour / clear) — Φ4b: ΕΝΑ undo. */
+  /**
+   * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool:
+   *   - N όψεις επιλεγμένες → βάψε ΑΥΤΕΣ (per-face overrides),
+   *   - καμία όψη → βάψε ΟΛΟ το ενεργό στοιχείο (base `'*'`, Cinema 4D base material tag).
+   * Και τα δύο μέσω του ΙΔΙΟΥ batch SSoT (`applyFaceAppearanceToFaces`) = ΕΝΑ undo.
+   */
   const apply = (value: FaceAppearance | null): void => {
-    applyFaceAppearanceToFaces(levels, usePolygonMode3DStore.getState().selectedFaces, value);
+    const faces = usePolygonMode3DStore.getState().selectedFaces;
+    const target = usePolygonMode3DStore.getState().targetBimId;
+    if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
+    else if (target) applyFaceAppearanceToFaces(levels, [{ bimId: target, faceKey: BASE_FACE_KEY }], value);
   };
 
   const faceCount = selectedFaces.length;
-  const hasFace = faceCount > 0;
+  /** Μπορούμε να εφαρμόσουμε όταν υπάρχουν όψεις Ή ενεργό στοιχείο για «βάψε όλο». */
+  const canApply = faceCount > 0 || targetBimId !== null;
 
   return (
     <section
@@ -65,7 +75,11 @@ export function PolygonMaterialPanel() {
         <p className="mt-0.5 text-[10px] text-white/60">
           {faceCount > 1
             ? t('polygonMode.hintMultiFace', { count: faceCount })
-            : hasFace ? t('polygonMode.hintApply') : t('polygonMode.hintPickFace')}
+            : faceCount === 1
+              ? t('polygonMode.hintApply')
+              : targetBimId
+                ? t('polygonMode.hintWholeElement')
+                : t('polygonMode.hintPickFace')}
         </p>
       </header>
       <ul className="grid grid-cols-2 gap-1">
@@ -76,7 +90,7 @@ export function PolygonMaterialPanel() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   {/* draggable ALWAYS (Cinema 4D: drag onto any face, no pre-select needed);
-                      click applies only when a face is already selected (apply() guards). */}
+                      click → selected faces, or the WHOLE active solid when none (apply() guards). */}
                   <button
                     type="button"
                     draggable
@@ -102,10 +116,10 @@ export function PolygonMaterialPanel() {
           );
         })}
       </ul>
-      {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the selected face. */}
+      {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the faces, or whole solid. */}
       <button
         type="button"
-        disabled={!hasFace}
+        disabled={!canApply}
         onClick={() => setColorOpen(true)}
         className="mt-1.5 flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
       >
@@ -118,11 +132,11 @@ export function PolygonMaterialPanel() {
       </button>
       <button
         type="button"
-        disabled={!hasFace}
+        disabled={!canApply}
         onClick={() => apply(null)}
         className="mt-1 w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {t('polygonMode.clearFace')}
+        {faceCount > 0 ? t('polygonMode.clearFace') : t('polygonMode.clearWhole')}
       </button>
 
       <EnterpriseColorDialog
