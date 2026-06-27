@@ -27,7 +27,8 @@ import {
   PerformanceSubscription
 } from '../types/performance.types';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { PerformanceWithMemory, PerformanceEntryWithLoad, BudgetThreshold } from './enterprise-perf-types';
+import type { PerformanceEntryWithLoad, BudgetThreshold } from './enterprise-perf-types';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 import {
   mapEntryTypeToCategory,
   estimateMemoryUsage,
@@ -213,7 +214,7 @@ export class EnterprisePerformanceManager {
   }
 
   private collectSystemMetrics(): void {
-    const mem = (performance as PerformanceWithMemory).memory;
+    const mem = readPerformanceMemory();
     if (mem) {
       this.recordMetric({ name: 'heap_used', value: mem.usedJSHeapSize, unit: PerformanceUnit.BYTES, source: PerformanceSource.BROWSER_API, category: PerformanceCategory.MEMORY });
       this.recordMetric({ name: 'heap_total', value: mem.totalJSHeapSize, unit: PerformanceUnit.BYTES, source: PerformanceSource.BROWSER_API, category: PerformanceCategory.MEMORY });

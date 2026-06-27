@@ -526,6 +526,7 @@
 | **ADR-543** | Σχεδίαση τοίχου με ΜΙΑ πηγή αλήθειας 2D ↔ 3D — ίδιος FSM/builders/geometry/snap/commit + 3D ghost (`wallToMesh`) + HUD overlay (`paintWallHudCore`) | ✅ APPROVED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-543-wall-drawing-ssot-2d-3d.md) |
 | **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
 | **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers, snap-jump + badge) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
+| **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (ΕΝΑΣ platform type + reader στο `src/lib/platform`, 4 type + 12 reader διπλότυπα ενοποιήθηκαν) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | Platform / Performance SSoT | [📄](./adrs/ADR-546-browser-performance-memory-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1035,6 +1036,7 @@
 | **ADR-543** | Σχεδίαση τοίχου με ΜΙΑ πηγή αλήθειας 2D ↔ 3D (ίδιος FSM/builders/snap/commit + 3D ghost + HUD overlay) | ✅ APPROVED (UNCOMMITTED) | [View](./adrs/ADR-543-wall-drawing-ssot-2d-3d.md) |
 | **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | [View](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
 | **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
+| **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (platform type + reader στο `src/lib/platform`) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-546-browser-performance-memory-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

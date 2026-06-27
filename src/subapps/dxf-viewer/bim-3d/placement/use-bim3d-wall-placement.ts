@@ -51,6 +51,10 @@ import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
 import type { SnapIndicatorView } from '../../snapping/extended-types';
 import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
 import { setWall3DHud, clearWall3DHud } from '../viewport/wall-hud/wall-3d-hud-store';
+// ADR-543 ① — ΕΝΑ cursor-snap SSoT 2D+3D: ο smart-ghost (`resolveEffectivePreviewCursor`) διαβάζει
+// το `ImmediateSnap`. Αν το 3D δεν το ενημερώσει, ο ghost κουμπώνει σε stale 2D σημείο (μακριά από
+// τον κέρσορα). Συγχρονίζουμε το store με το 3D snapped point → ghost ταυτίζεται με το σταυρόνημα.
+import { setImmediateSnap, clearImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-543 (COL traces 3D) — Revit-style ambient alignment tracking, SAME brain as 2D.
 import { setTracking3D, clearTracking3D, type Tracking3DPayload } from '../viewport/tracking/tracking-3d-store';
 import { composeTrackingSnap } from '../../systems/tracking/ambient-tracking-compose';
@@ -166,6 +170,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       if (!res) {
         ghost.setVisible(false);
         useSnap3DOverlayStore.getState().setSnap(null);
+        clearImmediateSnap();
         clearWall3DHud();
         clearTracking3D();
         manager.markSceneDirty();
@@ -173,6 +178,11 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       }
       const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
       const units = unitsNow();
+      // ADR-543 ① — sync the cursor-snap SSoT BEFORE building the ghost: the smart-ghost reads
+      // `getImmediateSnap()` via `resolveEffectivePreviewCursor`. `found` only when OSNAP/tracking
+      // actually hit; `point` is always the resolved cursor so the ghost axis lands on the crosshair.
+      const snapHit = res.view !== null || res.trackingPayload !== null;
+      setImmediateSnap({ found: snapHit, point: res.scenePt, mode: res.trackingPayload ? 'tracking' : 'osnap' });
       // The ghost decides its own visibility by FSM phase (smart-ghost before the
       // first click, rubber-band in awaitingEnd) via the shared wallPreviewStore. The
       // returned `wallHud` meta (length/angle/thickness·height) feeds the 3D HUD overlay.
@@ -190,6 +200,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
     const onLeave = (): void => {
       ghost.setVisible(false);
       useSnap3DOverlayStore.getState().setSnap(null);
+      clearImmediateSnap();
       clearWall3DHud();
       clearTracking3D();
       manager.markSceneDirty();
@@ -236,6 +247,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       downPos = null;
       ghost.setVisible(false);
       useSnap3DOverlayStore.getState().setSnap(null);
+      clearImmediateSnap();
       clearWall3DHud();
       clearTracking3D();
       if (wasActive) releasePlacementCursor(cursorEl);

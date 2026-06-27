@@ -91,7 +91,17 @@ overlays ενδείξεων.
 - Browser (`/dxf/viewer`): 2D μηδέν regression· 3D «Τοίχος» → ghost + snap markers + ζωντανές διαστάσεις + 2-κλικ commit + persist (refresh)· ταυτόσημος committed τοίχος 2D vs 3D.
 - ⚠️ N.17: μην τρέξεις tsc αν τρέχει άλλος (shared tree).
 
+## Browser-verify findings (2026-06-27) — 3D ghost/marker fixes
+
+Από στιγμιότυπο του Giorgio (3D «Τοίχος»): (①) ghost τοίχου **μακριά από τον κέρσορα**, (②) ανεπιθύμητος cyan **wireframe κύβος**, (③) μουσταρδί **«σκουπίδι»**. Διάγνωση + fixes (full SSoT, μηδέν διπλότυπα):
+
+- **① Ghost μακριά → cursor-snap SSoT 2D+3D.** Root: ο smart-ghost (`makeWallGhostBeforeClick` → `resolveEffectivePreviewCursor`) διαβάζει το `ImmediateSnapStore` (`getImmediateSnap`), που στο 3D κρατούσε **stale 2D** τιμή → ο ghost κούμπωνε εκεί. Fix: το `use-bim3d-wall-placement` **συγχρονίζει** το `ImmediateSnapStore` (`setImmediateSnap` με το 3D snapped point στο move· `clearImmediateSnap` σε miss/leave/teardown) → ΕΝΑ cursor-snap SSoT, ghost ≡ σταυρόνημα ≡ 2D.
+- **② Wireframe κύβος → 2D glyph (ADR-544/542).** Ο cyan `PlacementSnapMarker` (3D κύβος, ADR-403) ήταν διπλότυπο του ADR-542 2D glyph. Αντικαταστάθηκε: `resolvePlacementSnapWithView` (ΜΙΑ engine query → snapped point + `SnapIndicatorView`) → `Snap3DOverlayStore.setSnap` → ο κοινός `BimSnapIndicatorOverlay3D` ζωγραφίζει το ΙΔΙΟ ┘/▲/⊕ με το 2D. *(κοινό column+wall — υλοποιήθηκε από τον παράλληλο ADR-544 agent· το wall hook το χρησιμοποιεί).*
+- **③ Μουσταρδί «σκουπίδι» → base-point marker leak.** Ήταν το `basePointMarker` (πορτοκαλί ⊙, `0xe8731a`) του `BimGizmoOverlay`: το `setVisible(false)` καθάριζε `snapShown` αλλά **όχι** `basePointShown` → έμενε ορατό (post-FX overlay) μετά το `clearSelection()` του placement. Fix (`bim-gizmo-overlay.ts setVisible`): στο `if(!visible)` καλείται και `setBasePointMarker(null)` (mirror του `hideSnapMarker`).
+- **Crosshair/βελάκι (④):** `BimCrosshairOverlay3D` (ADR-545) — επικράτεια άλλου agent, εκτός scope εδώ.
+
 ## Changelog
 
 - **2026-06-27** — Αρχική υλοποίηση. Φάση 1 (πυρήνας: event + listener + `use-bim3d-wall-placement` + `WallPlacementGhost` + register). Φάση 2 (HUD: projector seam `paintWallHudCore`/`paintProjectedAlignedDim` + `wall-3d-hud-store` + `WallHudOverlay3D` + mount). UNCOMMITTED.
+- **2026-06-27** — **Browser-verify 3D ghost/marker fixes — UNCOMMITTED.** ① cursor-snap SSoT (`ImmediateSnapStore` sync στο 3D placement) → ghost στον κέρσορα· ② cyan cube → 2D glyph (κοινό ADR-544/542)· ③ base-point marker leak (`bim-gizmo-overlay.ts setVisible` → `setBasePointMarker(null)`). Δες §«Browser-verify findings». Pre-existing test drift (useWallTool 8, bim-gizmo-overlay 3) επιβεβαιωμένα στο HEAD — άσχετα με τις αλλαγές.
 - **2026-06-27** — **Φάση 3 (COL/alignment traces 3D) ΥΛΟΠΟΙΗΘΗΚΕ — UNCOMMITTED.** SSoT audit (grep) → εύρημα: ο ADR-544 agent (κολώνα) είχε ήδη κάνει το `tracking-paint` projection-agnostic + τον `makePlacementOverlayProjector`, αλλά **δεν** τροφοδοτούσε tracking στο 3D (§8 του). Reuse ΟΛΗΣ αυτής της υποδομής + του `resolveTrackingSnap`/`collectAmbientAlignmentAnchors`/`adaptiveDistanceStep`. NEW pure `composeTrackingSnap` (extracted από το 2D handler — zero behavior change, ΕΝΑΣ εγκέφαλος 2D+3D) + `tracking-3d-store` + `Tracking3DOverlay` (mirror `WallHudOverlay3D`). `getSceneEntities` δημοσιεύτηκε στο wall bridge ώστε 3D ambient = 2D ambient. 18/18 jest GREEN (10 νέα + 8 Φάση-1 με ενημερωμένο mock). tsc SKIP (N.17, shared tree). Εκκρεμεί: browser-verify (2D μηδέν regression + 3D COL traces), commit (Giorgio· stage code+tests+ADR-040+ADR-543).

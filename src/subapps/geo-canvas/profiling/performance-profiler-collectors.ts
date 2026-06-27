@@ -14,11 +14,11 @@ import type {
   ResourceMetrics,
   ProfileSession,
   NavigatorWithConnection,
-  PerformanceWithMemory,
   MemoryMetrics,
   FirstInputEntry,
   LayoutShiftEntry,
 } from './performance-profiler-types';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 
 // ============================================================================
 // METRIC INITIALIZATION
@@ -259,16 +259,13 @@ export function getMemoryInfo(): MemoryMetrics['heap'] {
     };
   }
 
-  if (typeof window !== 'undefined' && 'performance' in window) {
-    const perf = window.performance as PerformanceWithMemory;
-    if (perf.memory) {
-      const memory = perf.memory;
-      return {
-        used: memory.usedJSHeapSize || 0,
-        total: memory.totalJSHeapSize || 0,
-        limit: memory.jsHeapSizeLimit || 0,
-      };
-    }
+  const memory = readPerformanceMemory();
+  if (memory) {
+    return {
+      used: memory.usedJSHeapSize || 0,
+      total: memory.totalJSHeapSize || 0,
+      limit: memory.jsHeapSizeLimit || 0,
+    };
   }
 
   return { used: 0, total: 0, limit: 0 };

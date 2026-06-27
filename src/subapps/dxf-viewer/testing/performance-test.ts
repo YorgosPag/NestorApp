@@ -13,6 +13,7 @@ import { TAU } from '../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized viewport defaults
 import { TRANSFORM_SCALE_LIMITS } from '../config/transform-config';
 import { getErrorMessage } from '@/lib/error-utils';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 
 interface PerformanceTestResult {
   testName: string;
@@ -184,7 +185,7 @@ export class DxfPerformanceTestRunner {
     const startTime = performance.now();
 
     try {
-      const memoryInfo = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+      const memoryInfo = readPerformanceMemory();
       const usedMB = memoryInfo ? memoryInfo.usedJSHeapSize / (1024 * 1024) : 0;
       const limitMB = memoryInfo ? memoryInfo.jsHeapSizeLimit / (1024 * 1024) : 0;
 

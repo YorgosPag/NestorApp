@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useMemo } from 'react';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 
 // NOTE: useDebounce removed — use `@/hooks/useDebounce` instead (ADR-209 Phase 8)
 
@@ -287,7 +288,7 @@ export interface PerformanceMetrics {
 }
 
 export function getPerformanceMetrics(): PerformanceMetrics {
-  const memory = (performance as { memory?: { usedJSHeapSize: number } }).memory;
+  const memory = readPerformanceMemory();
 
   return {
     fps: 60, // Calculate actual FPS

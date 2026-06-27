@@ -9,7 +9,6 @@
 import { PerformanceObserver } from 'perf_hooks';
 
 import type {
-  PerformanceWithMemory,
   WindowWithGC,
   MemorySnapshot,
   ComponentMemoryUsage,
@@ -20,6 +19,7 @@ import type {
   MemoryExportData,
 } from './memory-leak-detector-types';
 import { MEMORY_ENTRY_TYPES } from './memory-leak-detector-types';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 
 import {
   analyzeComponentMemory,
@@ -195,18 +195,15 @@ export class GeoAlertMemoryLeakDetector {
       return process.memoryUsage();
     }
 
-    if (typeof window !== 'undefined' && 'performance' in window) {
-      const perf = window.performance as PerformanceWithMemory;
-      if (perf.memory) {
-        const memory = perf.memory;
-        return {
-          rss: 0,
-          heapTotal: memory.totalJSHeapSize || 0,
-          heapUsed: memory.usedJSHeapSize || 0,
-          external: 0,
-          arrayBuffers: 0,
-        };
-      }
+    const memory = readPerformanceMemory();
+    if (memory) {
+      return {
+        rss: 0,
+        heapTotal: memory.totalJSHeapSize || 0,
+        heapUsed: memory.usedJSHeapSize || 0,
+        external: 0,
+        arrayBuffers: 0,
+      };
     }
 
     return {

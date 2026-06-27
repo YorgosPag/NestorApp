@@ -12,11 +12,11 @@
 import { PerformanceAlertManager } from './PerformanceAlertManager';
 import type {
   PerformanceMetrics,
-  PerformanceWithMemory,
   PerformanceEventTimingEntry,
   ComponentPerformanceData,
   PerformanceThresholds,
 } from './performance-monitor-types';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 
 // Re-export types
 export type {
@@ -59,9 +59,9 @@ export class PerformanceMonitor {
   private initializeMonitoring(): void {
     if (typeof window === 'undefined') return;
     this.setupPerformanceObservers();
-    const perfWithMemory = performance as PerformanceWithMemory;
-    if (perfWithMemory.memory) {
-      this.memoryBaseline = perfWithMemory.memory.usedJSHeapSize;
+    const memory = readPerformanceMemory();
+    if (memory) {
+      this.memoryBaseline = memory.usedJSHeapSize;
     }
     this.startFrameMonitoring();
   }
@@ -140,7 +140,7 @@ export class PerformanceMonitor {
   }
 
   private collectRuntimeMetrics(): PerformanceMetrics['runtime'] {
-    const memory = (performance as PerformanceWithMemory).memory;
+    const memory = readPerformanceMemory();
     return {
       heapUsed: memory ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 0,
       heapTotal: memory ? Math.round(memory.totalJSHeapSize / 1024 / 1024) : 0,
@@ -181,7 +181,7 @@ export class PerformanceMonitor {
   }
 
   private collectMemoryLeakMetrics(): PerformanceMetrics['memoryLeaks'] {
-    const currentMemory = (performance as PerformanceWithMemory).memory?.usedJSHeapSize ?? 0;
+    const currentMemory = readPerformanceMemory()?.usedJSHeapSize ?? 0;
     const memoryGrowth = currentMemory - this.memoryBaseline;
     this.memoryGrowthHistory.push(memoryGrowth);
     if (this.memoryGrowthHistory.length > 10) this.memoryGrowthHistory.shift();
@@ -215,7 +215,7 @@ export class PerformanceMonitor {
   // --- MEMORY LEAK DETECTION ---
 
   private detectMemoryLeaks(): void {
-    const mem = (performance as PerformanceWithMemory).memory;
+    const mem = readPerformanceMemory();
     if (!mem) return;
     const growthMB = (mem.usedJSHeapSize - this.memoryBaseline) / 1024 / 1024;
     this.alertManager.checkMemoryLeak(growthMB, this.collectRuntimeMetrics());

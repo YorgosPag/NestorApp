@@ -164,7 +164,14 @@ export class BimGizmoOverlay {
     // ADR-537 — toggle the SHOWN flag, NOT root.visible (kept false so the main render skips it;
     // the post-FX overlay pass draws it). hide the snap marker when the gizmo goes away.
     this.active = visible;
-    if (!visible) this.hideSnapMarker();
+    if (!visible) {
+      this.hideSnapMarker();
+      // ADR-543 fix — also clear the relocated base-point marker. Without this, a Ctrl-clicked
+      // base point (`basePointShown=true`) leaks as an orange ⊙ that stays drawn by the post-FX
+      // overlay after the gizmo deactivates (e.g. when a placement tool clears the selection),
+      // appearing as a stray mustard marker during wall/column drawing.
+      this.setBasePointMarker(null);
+    }
   }
 
   /**

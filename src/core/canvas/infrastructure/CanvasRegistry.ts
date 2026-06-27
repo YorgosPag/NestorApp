@@ -19,6 +19,7 @@ import type {
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 const logger = createModuleLogger('CanvasRegistry');
 
 /**
@@ -367,13 +368,9 @@ export class CanvasRegistry implements ICanvasRegistry {
    * Estimate memory usage (simplified)
    */
   private estimateMemoryUsage(): number {
-    if (typeof performance !== 'undefined') {
-      const memory = (performance as Performance & {
-        memory?: { usedJSHeapSize: number };
-      }).memory;
-      if (memory) {
-        return memory.usedJSHeapSize;
-      }
+    const memory = readPerformanceMemory();
+    if (memory) {
+      return memory.usedJSHeapSize;
     }
     return 0;
   }

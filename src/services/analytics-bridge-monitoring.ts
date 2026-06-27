@@ -11,6 +11,7 @@
 'use client';
 
 import { getErrorMessage } from '@/lib/error-utils';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 import type { PerformanceTrackable } from './analytics-bridge-types';
 
 // ============================================================================
@@ -75,8 +76,8 @@ function monitorWebVitals(tracker: PerformanceTrackable): void {
 // ============================================================================
 
 function monitorMemoryUsage(tracker: PerformanceTrackable): void {
-  if ('memory' in performance) {
-    const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
+  const memory = readPerformanceMemory();
+  if (memory) {
     const memoryUsage = memory.usedJSHeapSize;
     const threshold = 50 * 1024 * 1024; // 50MB
 

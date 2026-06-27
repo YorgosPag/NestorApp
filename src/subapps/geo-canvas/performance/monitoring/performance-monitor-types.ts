@@ -13,15 +13,8 @@ export interface PerformanceEventTimingEntry extends PerformanceEntry {
   target?: EventTarget | null;
 }
 
-export interface PerformanceMemory {
-  usedJSHeapSize: number;
-  totalJSHeapSize: number;
-  jsHeapSizeLimit: number;
-}
-
-export interface PerformanceWithMemory extends Performance {
-  memory?: PerformanceMemory;
-}
+// Chrome `performance.memory` shape — SSoT in src/lib/platform (ADR-546), re-exported here.
+export type { PerformanceMemory, PerformanceWithMemory } from '@/lib/platform/browser-performance-memory';
 
 export interface PerformanceReportSummary {
   currentMemory: number;

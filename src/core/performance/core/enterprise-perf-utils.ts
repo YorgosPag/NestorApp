@@ -16,7 +16,8 @@ import {
   SystemInfo,
   ApplicationContext,
 } from '../types/performance.types';
-import type { PerformanceWithMemory, WindowWithGC } from './enterprise-perf-types';
+import type { WindowWithGC } from './enterprise-perf-types';
+import { readPerformanceMemory } from '@/lib/platform/browser-performance-memory';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('EnterprisePerformanceUtils');
@@ -55,14 +56,14 @@ export function getSystemInfo(): SystemInfo {
     return { userAgent: 'server', platform: 'server', screen: { width: 0, height: 0, pixelRatio: 1 } };
   }
 
-  const perfWithMemory = performance as PerformanceWithMemory;
+  const memory = readPerformanceMemory();
   return {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
-    memory: perfWithMemory.memory ? {
-      total: perfWithMemory.memory.totalJSHeapSize,
-      used: perfWithMemory.memory.usedJSHeapSize,
-      available: perfWithMemory.memory.jsHeapSizeLimit
+    memory: memory ? {
+      total: memory.totalJSHeapSize,
+      used: memory.usedJSHeapSize,
+      available: memory.jsHeapSizeLimit
     } : undefined,
     screen: { width: screen.width, height: screen.height, pixelRatio: devicePixelRatio || 1 }
   };

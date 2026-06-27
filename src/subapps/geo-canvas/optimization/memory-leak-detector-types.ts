@@ -10,17 +10,9 @@ import { type EntryType } from 'perf_hooks';
 // ============================================================================
 
 /**
- * Chrome Performance Memory API
+ * Chrome Performance Memory API — SSoT in src/lib/platform (ADR-546), re-exported here.
  */
-export interface PerformanceMemory {
-  readonly jsHeapSizeLimit: number;
-  readonly totalJSHeapSize: number;
-  readonly usedJSHeapSize: number;
-}
-
-export interface PerformanceWithMemory extends Performance {
-  readonly memory?: PerformanceMemory;
-}
+export type { PerformanceMemory, PerformanceWithMemory } from '@/lib/platform/browser-performance-memory';
 
 /**
  * Window with gc() exposed (Chrome --expose-gc flag)
