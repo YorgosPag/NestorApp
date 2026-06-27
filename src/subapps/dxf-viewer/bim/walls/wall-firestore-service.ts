@@ -55,6 +55,7 @@ import type {
 import type { WallTypeParams } from '../types/bim-family-type';
 import type { BimValidation, SoftLock } from '../types/bim-base';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 
 // ============================================================================
 // TYPES
@@ -84,6 +85,8 @@ export interface WallDoc {
   readonly typeOverrides?: Partial<WallTypeParams>;
   /** ADR-441 Slice WALL — associative grid hosting bindings (host-on-snap). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 Φ3c — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -114,6 +117,8 @@ export interface WallSaveInput {
   readonly typeOverrides?: Partial<WallTypeParams>;
   /** ADR-441 Slice WALL — grid hosting bindings (host-on-snap at create). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 Φ3c — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface WallUpdateInput {
@@ -132,6 +137,11 @@ export interface WallUpdateInput {
   readonly typeOverrides?: Partial<WallTypeParams> | null;
   /** ADR-441 Slice WALL — grid hosting bindings (update on re-host, if ever). */
   readonly guideBindings?: readonly GuideBinding[];
+  /**
+   * ADR-539 Φ3c — per-face appearance edit. The update path uses `updateDoc`, so the patch
+   * MUST carry it or the painted faces would be lost on reload (mirror column/foundation).
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 // ============================================================================
@@ -207,6 +217,8 @@ export class WallFirestoreService {
     if (input.typeOverrides !== undefined) base.typeOverrides = stripUndefinedDeep(input.typeOverrides);
     // ADR-441 Slice WALL — persist grid hosting bindings (Firestore rejects undefined).
     if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
+    // ADR-539 Φ3c — persist per-face appearance (Firestore rejects undefined).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as WallDoc;
@@ -238,6 +250,8 @@ export class WallFirestoreService {
     }
     // ADR-441 Slice WALL — persist grid hosting bindings on update (Firestore rejects undefined).
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
+    // ADR-539 Φ3c — persist per-face appearance edit (Firestore rejects undefined).
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(ref, payload);
   }
@@ -306,5 +320,7 @@ export function entityToSaveInput(entity: WallEntity): WallSaveInput {
     ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
     // ADR-441 Slice WALL — carry grid hosting bindings into the persisted doc.
     ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
+    // ADR-539 Φ3c — carry per-face appearance into the persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

@@ -46,7 +46,10 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
 import { applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
-import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, buildWallShape, buildWallFootprintRing } from './bim-three-shape-helpers';
+// ADR-539 Φ3c — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
+import { buildFacedSolidBody } from './bim-three-faced-prism';
+import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
@@ -299,6 +302,44 @@ function attachOpeningMeshes(
 
 // ── Public converters ─────────────────────────────────────────────────────────
 
+/**
+ * ADR-539 Φ3c — wall core body: faced multi-material prism (per-face paint) when the wall
+ * already carries a `faceAppearance` OR is the live Polygon-Mode target (so its faces become
+ * pickable even before any paint — chicken-and-egg), else the legacy single-material extrude
+ * (byte-for-byte, zero regression). Ο τοίχος = ΚΑΤΑΚΟΡΥΦΟ prism (κλειστό footprint ring:
+ * outer forward + inner backward) → IDENTICAL local span [0, heightM] με το `extrudeAndRotate`,
+ * άρα ο caller κρατά την ΙΔΙΑ `position.y`. Tilt (ADR-404) εφαρμόζεται και στα δύο geometries
+ * (ίδιο local Y span → ίδιο shear). Delegate στο shared `buildFacedSolidBody` SSoT (μηδέν
+ * copy-paste ανά kind). MVP scope: ΜΟΝΟ ο απλός flat path (single-layer, χωρίς ανοίγματα/
+ * profile)· πολυστρωματικοί/με κουφώματα τοίχοι ακολουθούν τα group paths (legacy render).
+ */
+function buildWallCoreBody(
+  wall: WallEntity,
+  renderWall: WallEntity,
+  outer: readonly Point3D[],
+  inner: readonly Point3D[],
+  heightM: number,
+  material: THREE.Material,
+): THREE.Mesh | null {
+  const fa = wall.faceAppearance;
+  const poly = usePolygonMode3DStore.getState();
+  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
+  const facedByPolygonTarget = poly.active && poly.targetBimId === wall.id;
+  if (facedByAppearance || facedByPolygonTarget) {
+    const ring = buildWallFootprintRing(outer, inner);
+    const mesh = buildFacedSolidBody(ring, heightM, fa ?? {}, material);
+    // ADR-404 — battered wall shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.
+    if (mesh) applyWallTilt(mesh.geometry, renderWall.params);
+    return mesh;
+  }
+  const shape = buildWallShape(outer, inner);
+  if (!shape) return null;
+  const geo = extrudeAndRotate(shape, heightM);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  applyWallTilt(geo, renderWall.params); // ADR-404 — battered wall shear. No-op flat.
+  return new THREE.Mesh(geo, material);
+}
+
 export function wallToMesh(
   wall: WallEntity,
   openings: readonly OpeningEntity[] = [],
@@ -398,17 +439,14 @@ export function wallToMesh(
   }
 
   // ADR-462 — outer/inner edge points (canvas units) → world metres.
-  const shape = buildWallShape(
-    scalePoints(renderWall.geometry.outerEdge.points, sceneToM),
-    scalePoints(renderWall.geometry.innerEdge.points, sceneToM),
+  const outerScaled = scalePoints(renderWall.geometry.outerEdge.points, sceneToM);
+  const innerScaled = scalePoints(renderWall.geometry.innerEdge.points, sceneToM);
+  // ADR-539 Φ3c — faced (per-face paint) core when painted/targeted, else legacy extrude
+  // (ADR-413 UVs + ADR-404 tilt baked inside the helper). Same [0, height] span → same position.y.
+  const mesh = buildWallCoreBody(
+    wall, renderWall, outerScaled, innerScaled, renderWall.params.height * MM_TO_M, material,
   );
-  if (!shape) return null;
-
-  const geo = extrudeAndRotate(shape, renderWall.params.height * MM_TO_M);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  // ADR-404 — battered wall: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
-  applyWallTilt(geo, renderWall.params);
-  const mesh = new THREE.Mesh(geo, material);
+  if (!mesh) return null;
   // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the
   // vertical (axis-Y) move arrow shows in 3D. ONLY on this flat solid path: the
   // profiled/pieces path (makeWallBaseLocalFn) already bakes baseOffset into the

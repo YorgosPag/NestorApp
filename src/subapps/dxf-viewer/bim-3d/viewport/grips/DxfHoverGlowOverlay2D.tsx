@@ -23,16 +23,14 @@ import { drawEntityGlowPrePass } from '../../../rendering/entities/base-entity-s
 import { getHoveredEntity, subscribeHoveredEntity } from '../../../systems/hover/HoverStore';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { dxfEntityOutlineSegments } from '../../grips/dxf-entity-outline';
+import { dxfSceneUnitToMm } from '../../../utils/scene-units';
+import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
 import { sizeCanvasToContainerDpr } from '../../../rendering/canvas/withCanvasState';
 import { useRafWhile } from '../overlay-raf';
-import { useDxfOverlay3DStore } from '../../stores/DxfOverlay3DStore';
 
 export interface DxfHoverGlowOverlay2DProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
 }
-
-/** DXF wireframe is flat on the floor plane (Y=0, single floor) — one elevation. */
-const FLAT_ELEVATION = (): number => 0;
 
 export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,14 +55,17 @@ export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps
     // Resolve the hovered id to a RAW DXF entity (BIM ids are absent → no-op here).
     const id = getHoveredEntity();
     if (!id) return;
-    const entity = useDxfOverlay3DStore.getState().dxfScene?.entities.find((e) => e.id === id);
-    if (!entity) return;
-    const segments = dxfEntityOutlineSegments(entity);
+    // ADR-537 δ — resolve across the active floor scope (the hovered entity may be on a stacked
+    // floor). Carries the floor elevation (project the glow at the right Y) + scene (unit scale).
+    const found = findDxfEntityInScope(id);
+    if (!found) return;
+    // ADR-537 γ — scale native DXF coords to mm so the glow aligns with the mm plan projector.
+    const segments = dxfEntityOutlineSegments(found.entity, dxfSceneUnitToMm(found.scene));
     if (segments.length === 0) return;
 
-    const project = makeGripPlanToCanvas(camera, canvas, FLAT_ELEVATION);
+    const project = makeGripPlanToCanvas(camera, canvas, () => found.floorElevationMm);
     // Reuse the EXACT 2D glow SSoT: the yellow halo is drawn by stroking the projected outline.
-    drawEntityGlowPrePass(ctx, { lineWidth: entity.lineWidth }, () => strokeSegments(ctx, project, segments));
+    drawEntityGlowPrePass(ctx, { lineWidth: found.entity.lineWidth }, () => strokeSegments(ctx, project, segments));
   }, [managerRef]);
 
   // Clear the glow when the hover ends / on unmount (shared overlay RAF SSoT, ADR-542).

@@ -153,6 +153,8 @@ export function docToEntity(doc: WallDoc): WallEntity {
     // ADR-441 Slice WALL — restore grid hosting bindings so the reconciler keeps the
     // wall following its axes after reload.
     ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
+    // ADR-539 Φ3c — restore per-face appearance so painted faces survive reload.
+    ...(doc.faceAppearance !== undefined && { faceAppearance: doc.faceAppearance }),
   } as WallEntity;
 }
 
@@ -180,6 +182,10 @@ export function wallUpdatePatch(entity: WallEntity): WallUpdateInput {
     layerId: entity.layerId,
     typeId: entity.typeId ?? null,
     typeOverrides: entity.typeOverrides ?? null,
+    // ADR-539 Φ3c — carry the per-face appearance so a paint edit (propagated via
+    // `bim:entities-attached` → `useBimEntityMovedPersistEffect` → this patch) persists.
+    // Undefined (never painted) → `updateWall` skips it, leaving the stored field untouched.
+    faceAppearance: entity.faceAppearance,
   };
 }
 

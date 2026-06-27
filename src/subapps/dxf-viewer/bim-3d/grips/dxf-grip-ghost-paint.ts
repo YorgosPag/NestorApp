@@ -55,35 +55,50 @@ function polylineGhost(
  * Build the live ghost poly-lines (plan-mm) for a raw DXF grip drag, or `[]` when there
  * is no ghost for the case. `livePlanPos` is the snapped position the dragged grip renders
  * at; `delta = livePlanPos − grip.position` drives the vertex moves.
+ *
+ * `unitToMm` (ADR-537 γ) scales the entity's native DXF coordinates to millimetres BEFORE
+ * the grip delta (which is already in mm, since grips are seated in mm) is applied — the
+ * ghost otherwise mixes entity-unit geometry with an mm delta and breaks on non-mm scenes.
+ * Defaults to `1` (mm scenes) — a no-op that keeps the geometry byte-identical.
  */
 export function buildDxfGhostSegments(
   entity: DxfEntityUnion,
   grip: GripInfo,
   livePlanPos: Point2D,
+  unitToMm = 1,
 ): Point2D[][] {
   const dx = livePlanPos.x - grip.position.x;
   const dy = livePlanPos.y - grip.position.y;
+  const s = (p: Point2D): Point2D => ({ x: p.x * unitToMm, y: p.y * unitToMm });
   switch (entity.type) {
     case 'line':
-      return [lineGhost(entity.start, entity.end, grip, dx, dy)];
+      return [lineGhost(s(entity.start), s(entity.end), grip, dx, dy)];
     case 'polyline':
-      return [polylineGhost(entity.vertices, entity.closed, grip, dx, dy)];
+      return [polylineGhost(entity.vertices.map(s), entity.closed, grip, dx, dy)];
     case 'circle': {
       // Centre grip → translate; quadrant grip → resize radius to the live point.
-      if (grip.movesEntity) return [circlePolyline(translate(entity.center, dx, dy), entity.radius)];
-      const r = Math.hypot(livePlanPos.x - entity.center.x, livePlanPos.y - entity.center.y);
-      return [circlePolyline(entity.center, r)];
+      const center = s(entity.center);
+      const radius = entity.radius * unitToMm;
+      if (grip.movesEntity) return [circlePolyline(translate(center, dx, dy), radius)];
+      const r = Math.hypot(livePlanPos.x - center.x, livePlanPos.y - center.y);
+      return [circlePolyline(center, r)];
     }
     case 'arc': {
       // Mirrors the commit (`stretchArc` via `gripToVertexRefs`):
       //   centre (grip 0) + mid (grip 3) are `movesEntity` → rigid translate of the arc;
       //   start (grip 1) / end (grip 2) → bulge-preserving single-endpoint recompute (SSoT
-      //   `arcFromMovedEndpoint`, the SAME helper the commit resolves through).
+      //   `arcFromMovedEndpoint`, the SAME helper the commit resolves through). Angles are
+      //   unit-agnostic (degrees); only centre/radius scale to mm.
+      const center = s(entity.center);
+      const radius = entity.radius * unitToMm;
       if (grip.movesEntity) {
-        return [arcPolyline(translate(entity.center, dx, dy), entity.radius,
+        return [arcPolyline(translate(center, dx, dy), radius,
           entity.startAngle, entity.endAngle, entity.counterclockwise)];
       }
-      const next = arcFromMovedEndpoint(entity, grip.gripIndex === 1 ? 'start' : 'end', dx, dy);
+      const next = arcFromMovedEndpoint(
+        { center, radius, startAngle: entity.startAngle, endAngle: entity.endAngle },
+        grip.gripIndex === 1 ? 'start' : 'end', dx, dy,
+      );
       if (!next) return [];
       // The commit keeps the original `counterclockwise` flag (only centre/radius/angles
       // change), so sample with it to match the post-commit wireframe.

@@ -150,16 +150,28 @@ export function pushHoles(
   }
 }
 
-// Wall footprint: outerEdge and innerEdge are each open polylines (not closed polygons).
-// Combine: trace outer forward → inner backward → close to form a proper solid cross-section.
-export function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
-  if (outer.length < 2 || inner.length < 2) return null;
+// Wall footprint ring (closed polygon): trace outer forward → inner backward.
+// outerEdge and innerEdge are each open polylines (not closed polygons). ADR-539 Φ3c —
+// SSoT for BOTH the THREE.Shape cross-section (legacy solid) AND the faced prism ring
+// (`buildFacedSolidBody`), so a faced wall's per-face `side:i` indices match the legacy
+// solid exactly (outer faces first, then the closing end + inner faces).
+export function buildWallFootprintRing(
+  outer: readonly Point3D[],
+  inner: readonly Point3D[],
+): { x: number; y: number }[] {
   const outerPts = toShapePoints(outer);
   const innerPts = toShapePoints(inner);
+  const ring = [...outerPts];
+  for (let i = innerPts.length - 1; i >= 0; i--) ring.push(innerPts[i]);
+  return ring;
+}
+
+export function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
+  if (outer.length < 2 || inner.length < 2) return null;
+  const ring = buildWallFootprintRing(outer, inner);
   const shape = new THREE.Shape();
-  shape.moveTo(outerPts[0].x, outerPts[0].y);
-  for (let i = 1; i < outerPts.length; i++) shape.lineTo(outerPts[i].x, outerPts[i].y);
-  for (let i = innerPts.length - 1; i >= 0; i--) shape.lineTo(innerPts[i].x, innerPts[i].y);
+  shape.moveTo(ring[0].x, ring[0].y);
+  for (let i = 1; i < ring.length; i++) shape.lineTo(ring[i].x, ring[i].y);
   shape.closePath();
   return shape;
 }

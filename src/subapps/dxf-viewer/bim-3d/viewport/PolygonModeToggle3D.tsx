@@ -31,8 +31,9 @@ import { PolygonMaterialPanel } from '../ui/PolygonMaterialPanel';
 
 // ADR-539 — solid kinds που υποστηρίζουν per-face appearance (faced render path).
 // Φ1 = slab· Φ1.5 += foundation (πέδιλα/θεμέλια· solid-agnostic core)· Φ3a += column
-// (κατακόρυφο prism)· Φ3b += roof (per-«νερό» `sub:i:top`)· wall/beam έρχονται στα επόμενα.
-const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab', 'foundation', 'column', 'roof']);
+// (κατακόρυφο prism)· Φ3b += roof (per-«νερό» `sub:i:top`)· Φ3c += wall (απλός flat path:
+// single-layer, χωρίς ανοίγματα/profile· πολυστρωματικοί/με κουφώματα = legacy)· beam = επόμενο.
+const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab', 'foundation', 'column', 'roof', 'wall']);
 
 export interface PolygonModeToggle3DProps {
   readonly managerRef: RefObject<ThreeJsSceneManager | null>;

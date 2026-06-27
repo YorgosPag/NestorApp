@@ -48,14 +48,22 @@ export function toRawDxfUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
  * Commit a raw-DXF 3D reshape-grip drag for `levelId`. Returns the executed command (for
  * an undo-step assertion in tests), or null on a no-op (zero delta / validation reject).
  * Single command = single undo step.
+ *
+ * `unitToMm` (ADR-537 γ) is the scene's mm-per-DXF-unit factor. Grips are seated in mm, so
+ * the controller's `deltaMm` is in millimetres, but the stretch command applies the
+ * displacement directly to NATIVE-unit entity vertices (`gripToVertexRefs` is index-based —
+ * only the delta needs conversion). We divide back to entity units before committing.
+ * Defaults to `1` (mm scenes) — a no-op.
  */
 export function commitDxfGrip3D(
   grip: GripInfo,
   deltaMm: Point2D,
   levels: LevelsHookReturn,
   levelId: string,
+  unitToMm = 1,
 ): ICommand | null {
   if (deltaMm.x === 0 && deltaMm.y === 0) return null;
+  const delta = unitToMm === 1 ? deltaMm : { x: deltaMm.x / unitToMm, y: deltaMm.y / unitToMm };
   let executed: ICommand | null = null;
   const deps: DxfCommitDeps = {
     ...buildDeps(levels, levelId),
@@ -65,6 +73,6 @@ export function commitDxfGrip3D(
       getGlobalCommandHistory().execute(command);
     },
   };
-  commitDxfGripDragModeAware(toRawDxfUnifiedGrip(grip), deltaMm, deps, 'stretch');
+  commitDxfGripDragModeAware(toRawDxfUnifiedGrip(grip), delta, deps, 'stretch');
   return executed;
 }

@@ -29,11 +29,12 @@ import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
+import { dxfSceneUnitToMm } from '../../../utils/scene-units';
+import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
 import { dxfPlanToWorld } from '../coordinate-transforms';
 import { sizeCanvasToContainerDpr } from '../../../rendering/canvas/withCanvasState';
 import { useRafWhile, useCameraMotionGate } from '../overlay-raf';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
-import { useDxfOverlay3DStore } from '../../stores/DxfOverlay3DStore';
 
 export interface BimGripOverlay2DProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -59,9 +60,12 @@ function paintDxfGhost(
   if (!ghostId || !drag || grips.length === 0) return;
   const grip = grips[drag.index % grips.length];
   if (!grip) return;
-  const entity = useDxfOverlay3DStore.getState().dxfScene?.entities.find((e) => e.id === ghostId);
-  if (!entity) return;
-  const segments = buildDxfGhostSegments(entity, grip, drag.livePlanPos);
+  // ADR-537 δ — resolve across the active floor scope (the dragged entity may be on a stacked
+  // floor, not the active one). The ghost's elevation rides the seated `topElevFor` already.
+  const found = findDxfEntityInScope(ghostId);
+  if (!found) return;
+  // ADR-537 γ — scale native DXF coords to mm (this floor's factor) so the ghost aligns with grips.
+  const segments = buildDxfGhostSegments(found.entity, grip, drag.livePlanPos, dxfSceneUnitToMm(found.scene));
   if (segments.length === 0) return;
   ctx.save();
   ctx.strokeStyle = DXF_GHOST_STROKE;

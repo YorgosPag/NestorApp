@@ -6,6 +6,7 @@
  */
 
 import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfCommitDeps, UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
 
@@ -75,6 +76,24 @@ describe('commitDxfGrip3D', () => {
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
     expect(unified.polylineGripKind).toBe('polyline-arc-midpoint-0');
     expect(unified.type).toBe('edge');
+  });
+
+  it('converts the mm drag delta back to native units in commit (ADR-537 γ, unitToMm = 10)', () => {
+    mockCommit.mockImplementation(() => {});
+    const grip: GripInfo = { entityId: 'l1', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false };
+    // Grips seated in mm → controller reports deltaMm; commit divides by unitToMm for the
+    // index-based stretch command (entity vertices are in native cm units).
+    commitDxfGrip3D(grip, { x: 50, y: 100 }, LEVELS, 'L1', 10);
+    const [, delta] = mockCommit.mock.calls[0] as [UnifiedGripInfo, Point2D];
+    expect(delta).toEqual({ x: 5, y: 10 });
+  });
+
+  it('leaves the delta untouched at unitToMm = 1 (mm scenes, default)', () => {
+    mockCommit.mockImplementation(() => {});
+    const grip: GripInfo = { entityId: 'l1', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false };
+    commitDxfGrip3D(grip, { x: 7, y: 3 }, LEVELS, 'L1');
+    const [, delta] = mockCommit.mock.calls[0] as [UnifiedGripInfo, Point2D];
+    expect(delta).toEqual({ x: 7, y: 3 });
   });
 
   it("preserves a circle centre grip's 'center' type + movesEntity", () => {

@@ -228,6 +228,36 @@ export function sceneUnitsToMeters(units: SceneUnits): number {
 }
 
 /**
+ * mm-per-DXF-unit for a unit identifier. Inverse-scale partner of the wireframe
+ * group scale: `DxfToThreeConverter` lays raw entity coordinates (native DXF units)
+ * and scales the whole group by `sceneUnitsToMeters(units)` to reach the Three.js
+ * metre world, while the 3D grip/ghost/outline/pick path projects through the
+ * **mm-based** `dxfPlanToWorld` (×0.001). Multiplying an entity coordinate by
+ * `dxfUnitToMm(units)` expresses it in millimetres, so the grips align with the
+ * wireframe at ANY scene unit (cm / m / in / ft), not just mm.
+ *
+ *   `valueEntityUnits × dxfUnitToMm(units) = valueMm`
+ *
+ * By construction `dxfUnitToMm = sceneUnitsToMeters × 1000`, which is exactly the
+ * metre→mm relationship baked into `dxfPlanToWorld` — so the two scales can never
+ * drift apart. mm→1, cm→10, m→1000, in→25.4, ft→304.8. (ADR-537 γ.)
+ */
+export function dxfUnitToMm(units: SceneUnits): number {
+  return sceneUnitsToMeters(units) * 1000;
+}
+
+/**
+ * mm-per-DXF-unit resolved straight from a DXF scene, mirroring EXACTLY the unit
+ * resolution `DxfToThreeConverter.buildColorGroup` uses for the wireframe scale
+ * (`resolveSceneUnits({ units })` — declared unit only, no bounds heuristic). This
+ * is the single entry point every 3D raw-DXF consumer (grip seat / ghost / hover
+ * outline / plan-pick) calls, so they all agree with the wireframe. (ADR-537 γ.)
+ */
+export function dxfSceneUnitToMm(scene: { units?: string | null } | null | undefined): number {
+  return dxfUnitToMm(resolveSceneUnits({ units: scene?.units }));
+}
+
+/**
  * AutoCAD `$INSUNITS` code → SceneUnits. Used by `dxf-scene-builder` to
  * propagate the real drawing units into `SceneModel.units` (ADR-358 Phase 8
  * SSoT fix; previously the builder hardcoded `'mm'`).

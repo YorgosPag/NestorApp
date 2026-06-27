@@ -67,6 +67,23 @@ describe('buildDxfGhostSegments — circle', () => {
 
 });
 
+describe('buildDxfGhostSegments — non-mm units (ADR-537 γ)', () => {
+  it('scales native line coords to mm before applying the mm delta (cm scene, unitToMm = 10)', () => {
+    // Grip seated in mm: a cm line end at native (100,0) sits at plan-mm (1000,0). Dragging
+    // the end grip from mm (1000,0) to (1100,0) → delta (100,0) in mm.
+    const g = grip({ gripIndex: 1, position: { x: 1000, y: 0 } });
+    const [seg] = buildDxfGhostSegments(line(), g, { x: 1100, y: 0 }, 10);
+    expect(seg[0]).toEqual({ x: 0, y: 0 });    // start: native (0,0) → mm (0,0), untouched
+    expect(seg[1]).toEqual({ x: 1100, y: 0 }); // end: native (100,0) → mm (1000,0) + delta (100,0)
+  });
+
+  it('is byte-identical to the default mm path at unitToMm = 1', () => {
+    const g = grip({ gripIndex: 0, position: { x: 0, y: 0 } });
+    expect(buildDxfGhostSegments(line(), g, { x: 10, y: 20 }, 1))
+      .toEqual(buildDxfGhostSegments(line(), g, { x: 10, y: 20 }));
+  });
+});
+
 describe('buildDxfGhostSegments — arc', () => {
   const arc = (): DxfEntityUnion =>
     ({ id: 'e', type: 'arc', visible: true, center: { x: 0, y: 0 }, radius: 50, startAngle: 0, endAngle: 90 }) as unknown as DxfEntityUnion;

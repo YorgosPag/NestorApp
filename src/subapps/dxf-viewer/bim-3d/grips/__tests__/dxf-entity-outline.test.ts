@@ -52,4 +52,21 @@ describe('dxfEntityOutlineSegments', () => {
     const t = { id: 't', type: 'text', visible: true } as unknown as DxfEntityUnion;
     expect(dxfEntityOutlineSegments(t)).toEqual([]);
   });
+
+  // ADR-537 γ — non-mm scenes: native DXF coords scaled to mm by `unitToMm`.
+  it('scales line endpoints to mm for a cm scene (unitToMm = 10)', () => {
+    expect(dxfEntityOutlineSegments(line(), 10)).toEqual([[{ x: 0, y: 0 }, { x: 1000, y: 0 }]]);
+  });
+
+  it('scales circle centre + radius to mm for an m scene (unitToMm = 1000)', () => {
+    const c = { id: 'c', type: 'circle', visible: true, center: { x: 5, y: 5 }, radius: 10 } as unknown as DxfEntityUnion;
+    const [seg] = dxfEntityOutlineSegments(c, 1000);
+    // first sample at angle 0 → (cx*k + r*k, cy*k) = (5000 + 10000, 5000)
+    expect(seg[0].x).toBeCloseTo(15000);
+    expect(seg[0].y).toBeCloseTo(5000);
+  });
+
+  it('is identity at unitToMm = 1 (default) — byte-identical to the no-arg call', () => {
+    expect(dxfEntityOutlineSegments(line(), 1)).toEqual(dxfEntityOutlineSegments(line()));
+  });
 });

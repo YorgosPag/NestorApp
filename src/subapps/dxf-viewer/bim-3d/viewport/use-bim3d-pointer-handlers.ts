@@ -16,14 +16,15 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 // ADR-539 Φ3f — right-click on a face → per-face context menu (clear/copy/paste appearance).
 import { useFaceContextMenuStore } from '../stores/FaceContextMenuStore';
-import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
 // ADR-542 — 3D snap marker: same global snap engine + same glyph/label as the 2D canvas.
 import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
 import { computeSnap3DHover } from './snap/bim-3d-snap-hover';
-import { pickDxfEntityAt } from '../grips/dxf-wireframe-hit-test';
+import { pickDxfEntityAcrossFloors } from '../grips/dxf-wireframe-hit-test';
+// ADR-537 δ — pick over the active floor scope (single active floor, or every stacked floor).
+import { getDxfFloorScope } from '../scene/dxf-3d-floor-scope';
 import { applyBimHover } from '../scene/scene-manager-actions';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
@@ -70,8 +71,9 @@ export function useBim3DPointerHandlers(
     }
     const camera = manager.getCamera();
     const dom = manager.getRendererCanvas();
-    const dxfScene = useDxfOverlay3DStore.getState().dxfScene;
-    const dxfId = camera && dom ? pickDxfEntityAt(dxfScene, camera, dom, clientX, clientY) : null;
+    const dxfId = camera && dom
+      ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId ?? null
+      : null;
     setHoveredEntity(dxfId); // DXF glow overlay + badge read this; null clears
     applyBimHover(manager.hoverHighlighter, null);
     manager.markSceneDirty();
@@ -163,8 +165,9 @@ export function useBim3DPointerHandlers(
     // selection) + clears the 3D BIM selection so the DXF edit hook owns the grip overlay.
     const camera = manager.getCamera();
     const dom = manager.getRendererCanvas();
-    const dxfScene = useDxfOverlay3DStore.getState().dxfScene;
-    const dxfId = camera && dom ? pickDxfEntityAt(dxfScene, camera, dom, e.clientX, e.clientY) : null;
+    const dxfId = camera && dom
+      ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, e.clientX, e.clientY)?.entityId ?? null
+      : null;
     if (dxfId) {
       useSelection3DStore.getState().clearSelection();
       SelectedEntitiesStore.replaceEntitySelection([dxfId]);

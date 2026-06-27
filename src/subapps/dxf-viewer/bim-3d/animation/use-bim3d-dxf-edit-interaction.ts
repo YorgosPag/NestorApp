@@ -30,8 +30,13 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 import { BimGripController3D } from '../grips/bim-grip-controller-3d';
-import { rawDxfReshapeGrips } from '../grips/grip-3d-dxf-raw-grips';
+import { rawDxfReshapeGrips, scaleDxfGripsToMm } from '../grips/grip-3d-dxf-raw-grips';
 import { commitDxfGrip3D } from '../grips/grip-3d-dxf-commit';
+import { dxfSceneUnitToMm } from '../../utils/scene-units';
+import { findDxfEntityInScope } from '../scene/dxf-3d-floor-scope';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { subscribeMultiFloorDxfStack } from '../scene/multi-floor-dxf-source';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
 import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { syncSnapEngineViewport3D } from './bim3d-edit-drag-snap';
@@ -43,31 +48,43 @@ export interface UseBim3DDxfEditInteractionParams {
   readonly canvasEl: HTMLCanvasElement | null;
 }
 
-/** DXF wireframe lives flat on the floor plane (Y=0, single floor) — one elevation. */
-const DXF_PLAN_ELEVATION: PlanElevationMmFor = () => 0;
+/** The selected raw-DXF entity together with its floor's elevation + owning scene (ADR-537 δ). */
+interface EligibleDxfEntity {
+  readonly entity: DxfEntityUnion;
+  readonly floorElevationMm: number;
+  readonly scene: DxfScene;
+}
 
-/** Resolve the single selected raw-DXF entity (no BIM selection + exactly one dxf id), or null. */
-function resolveEligibleDxfEntity(): DxfEntityUnion | null {
+/**
+ * Resolve the single selected raw-DXF entity (no BIM selection + exactly one dxf id) across
+ * the active floor scope — so an entity on ANY stacked floor is editable, not just the active
+ * one (ADR-537 δ). Carries the floor elevation + scene for unit-correct, elevation-correct
+ * grip seating. Null when not eligible.
+ */
+function resolveEligibleDxfEntity(): EligibleDxfEntity | null {
   if (useSelection3DStore.getState().selectedBimIds.length > 0) return null;
   const ids = SelectedEntitiesStore.getSelectedEntityIds();
   if (ids.length !== 1) return null;
-  const scene = useDxfOverlay3DStore.getState().dxfScene;
-  if (scene?.units && scene.units !== 'mm') return null; // v1: mm scenes only
-  return scene?.entities.find((e) => e.id === ids[0]) ?? null;
+  return findDxfEntityInScope(ids[0]);
 }
 
-/** Build the per-drag OSNAP callback from the ONE snap engine (null = free drag). */
+/**
+ * Build the per-drag OSNAP callback from the ONE snap engine (null = free drag). The snap
+ * viewport is anchored at the dragged grip's floor elevation (ADR-537 δ) so OSNAP aligns with
+ * the stacked plan, not the Y=0 datum.
+ */
 function buildDxfReshapeSnapFn(
   manager: ThreeJsSceneManager,
   canvas: HTMLElement,
   entityId: string,
   anchor: Point2D,
+  floorElevationMm: number,
 ): SnapFn | null {
   const engine = getGlobalSnapEngine();
   if (!engine.getSettings().enabled) return null;
   const camera = manager.getCamera();
   if (!camera) return null;
-  syncSnapEngineViewport3D(engine, camera, canvas, dxfPlanToWorld(anchor.x, anchor.y, 0));
+  syncSnapEngineViewport3D(engine, camera, canvas, dxfPlanToWorld(anchor.x, anchor.y, floorElevationMm));
   return makeResizeSnapFn(engine, entityId); // dragged vertex = the one control point
 }
 
@@ -81,6 +98,10 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
     if (!canvasEl || !manager) return;
     const gripController = new BimGripController3D();
     let activeAbort: AbortController | null = null;
+    // ADR-537 δ — the elevation (mm) of the floor whose entity is currently seated, so the
+    // drag's snap viewport anchors on the right plane (the grips/ghost already ride it via
+    // the elevation closures stored on `setGrips`).
+    let seatedFloorElevMm = 0;
 
     const store = () => useGrip3DOverlayStore.getState();
     /** True when WE own the current grip set (raw DXF) — guards against wiping BIM grips. */
@@ -95,10 +116,18 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       }
     };
 
-    const seatGrips = (entity: DxfEntityUnion): boolean => {
-      const grips = rawDxfReshapeGrips(computeDxfEntityGrips(entity));
+    const seatGrips = (eligible: EligibleDxfEntity): boolean => {
+      const { entity, floorElevationMm, scene } = eligible;
+      // ADR-537 γ — seat grips in mm (scale native DXF coords by THIS floor's mm-per-unit
+      // factor) so they align with the mm-based plan projector at any scene unit.
+      const unitToMm = dxfSceneUnitToMm(scene);
+      const grips = scaleDxfGripsToMm(rawDxfReshapeGrips(computeDxfEntityGrips(entity)), unitToMm);
       if (grips.length === 0) return false;
-      store().setGrips(grips, DXF_PLAN_ELEVATION, DXF_PLAN_ELEVATION);
+      // ADR-537 δ — seat at the entity's floor elevation (single floor → 0). The controller +
+      // overlay read these closures, so grips/ghost/drag all ride the correct stacked plane.
+      seatedFloorElevMm = floorElevationMm;
+      const elevFor: PlanElevationMmFor = () => floorElevationMm;
+      store().setGrips(grips, elevFor, elevFor);
       store().setDxfGhostEntityId(entity.id);
       return true;
     };
@@ -114,7 +143,9 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
       const cur = gripController.currentDrag();
       if (cur?.grip.entityId) {
-        gripController.setSnapFn(buildDxfReshapeSnapFn(manager, canvasEl, cur.grip.entityId, cur.grip.position));
+        gripController.setSnapFn(
+          buildDxfReshapeSnapFn(manager, canvasEl, cur.grip.entityId, cur.grip.position, seatedFloorElevMm),
+        );
       }
       manager.markSceneDirty();
     };
@@ -138,7 +169,10 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       const lv = levelsRef.current;
       if (!result || !lv || !result.grip.entityId) return;
       const levelId = resolveEntityLevelId(lv, result.grip.entityId) ?? lv.currentLevelId;
-      if (levelId) commitDxfGrip3D(result.grip, result.deltaMm, lv, levelId);
+      // ADR-537 γ/δ — convert the mm drag delta back to native DXF units using THIS entity's
+      // floor scene (across the active scope, not just the active floor).
+      const unitToMm = dxfSceneUnitToMm(findDxfEntityInScope(result.grip.entityId)?.scene);
+      if (levelId) commitDxfGrip3D(result.grip, result.deltaMm, lv, levelId, unitToMm);
     };
 
     const onPointerUp = (e: PointerEvent): void => {
@@ -179,8 +213,8 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
     const syncFromSelection = (): void => {
       // Never re-seat mid-drag (the controller owns the grips).
       if (gripController.isDragging()) return;
-      const entity = levelsRef.current ? resolveEligibleDxfEntity() : null;
-      if (entity && seatGrips(entity)) {
+      const eligible = levelsRef.current ? resolveEligibleDxfEntity() : null;
+      if (eligible && seatGrips(eligible)) {
         setupListeners();
         manager.markSceneDirty();
         return;
@@ -196,11 +230,17 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
     const unsubBim = useSelection3DStore.subscribe(syncFromSelection);
     // Auto-resync (commit / external edit) rebuilds the dxfScene → re-seat on the new geometry.
     const unsubScene = useDxfOverlay3DStore.subscribe(syncFromSelection);
+    // ADR-537 δ — re-seat when the active floor scope toggles (single↔all changes the seated
+    // elevation) or the stacked DXF set changes (a floor's plan loads/updates).
+    const unsubScope = useViewMode3DStore.subscribe((s) => s.floor3DScope, syncFromSelection);
+    const unsubStack = subscribeMultiFloorDxfStack(syncFromSelection);
 
     return () => {
       unsubSel();
       unsubBim();
       unsubScene();
+      unsubScope();
+      unsubStack();
       teardownListeners();
       if (ownsGrips()) store().clear();
     };

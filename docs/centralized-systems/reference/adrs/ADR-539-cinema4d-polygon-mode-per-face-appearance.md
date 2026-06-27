@@ -106,7 +106,8 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ3b** | **roof** (per-«νερό» `sub:${i}:top`· κάθε face mesh pickable+paintable· reuse `resolveFaceMaterial` + persistence + gate) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3e** | **2D plan fill** — η βαμμένη `faceAppearance['top']` γίνεται χρώμα γεμίσματος στην κάτοψη (slab/foundation/column· SSoT `topFacePlanFill`) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3f** | **face context-menu** — δεξί-κλικ σε όψη (Polygon Mode) → καθαρισμός / αντιγραφή / επικόλληση εμφάνισης (mirror `Grip3DVertexContextMenu`) | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ3 (υπόλοιπο)** | wall (Φ3c) · beam (Φ3d) — Plan Mode πρώτα | ⬜ PLANNED |
+| **Φ3c** | **wall** (απλός flat path: single-layer straight· κλειστό footprint ring `buildWallFootprintRing` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: πολυστρωματικοί/με κουφώματα = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3 (υπόλοιπο)** | beam (Φ3d) — Plan Mode πρώτα (οριζόντιο prism· γενίκευση axis) | ⬜ PLANNED |
 | **Φ4** | multi-face select (Shift) · copy/paste appearance · `bmat_*` drag · per-face PBR textures | ⬜ PLANNED |
 
 ## 5. Συνέπειες
@@ -133,6 +134,36 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
+
+- **2026-06-27 (Φ3c — WALL, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance στον
+  **τοίχο** (κατακόρυφο prism· solid-agnostic core, μηδέν νέα γεωμετρία). MVP scope: ΜΟΝΟ ο απλός
+  flat path (single-layer straight, χωρίς ανοίγματα/profile)· πολυστρωματικοί/με κουφώματα τοίχοι
+  ακολουθούν τα group paths → legacy render (όπως multilayer slab/attached column):
+  - **Footprint ring SSoT (Boy-Scout N.0.2):** `bim-three-shape-helpers.ts` νέος pure
+    `buildWallFootprintRing(outer, inner)` (outer forward + inner backward) — ΕΝΑ source ΚΑΙ για το
+    `THREE.Shape` cross-section (legacy solid) ΚΑΙ για το faced prism ring. Ο `buildWallShape`
+    έγινε delegate (μηδέν behavior change· ίδια traversal). Έτσι τα `side:i` indices του faced
+    τοίχου ταυτίζονται με το legacy solid.
+  - **Converter:** `BimToThreeConverter.ts` νέος helper `buildWallCoreBody` (mirror
+    `buildColumnCoreBody`) — faced branch (`facedByAppearance || facedByPolygonTarget`) →
+    `buildFacedSolidBody(ring, heightM, fa, material)`, αλλιώς legacy `buildWallShape` +
+    `extrudeAndRotate` + `ensureWorldUvs`. Το faced prism έχει IDENTICAL local span `[0, height·
+    MM_TO_M]` με το legacy → η `position.y` (base datum ADR-402) μένει αναλλοίωτη. Το tilt
+    (ADR-404 `applyWallTilt`) εφαρμόζεται και στα δύο geometries (ίδιο local Y span → ίδιο shear).
+    Ο simple-path return (`applyStructuralCoreVisibility3D`) μένει αμετάβλητος.
+  - **Persistence (6 σημεία, mirror column Φ3a):** `WallDoc` / `WallSaveInput` / `WallUpdateInput`
+    += `faceAppearance?` · `saveWall` + `updateWall` Firestore-safe writes · `entityToSaveInput`
+    (`wall-firestore-service.ts`) + `docToEntity` round-trip + `wallUpdatePatch`
+    (`wall-persistence-helpers.ts`) += `faceAppearance` (κρίσιμο: ο wall persist χρησιμοποιεί
+    `updateDoc` για re-edits → χωρίς αυτό η βαφή χανόταν σε reload· ο paint persist περνά από
+    `bim:entities-attached` → `useBimEntityMovedPersistEffect` → `wallUpdatePatch`). Το `WallEntity`
+    κληρονομεί ήδη `faceAppearance` από το base `BimEntity` (`bim-base.ts`) → μηδέν type change.
+  - **Gate:** `POLYGON_FACED_KINDS += 'wall'` στο `PolygonModeToggle3D.tsx`. `SetFaceAppearanceCommand`
+    + `raycastBimFace` είναι kind-agnostic → καμία αλλαγή. Μηδέν νέα i18n keys.
+  - **Tests:** `wall-faced-3d.test.ts` (5 — multi-material όταν painted, identical datum vs legacy,
+    legacy σε empty map, faced σε polygon-target, legacy σε άλλο target) GREEN + regression
+    `wall-opening-coordinator` (9) = 0 break. **CHECK 6B/6D δεν πιάνουν** αυτά τα paths
+    (`bim-3d/converters/`, `bim/walls/`, `hooks/data/`)· το ADR-539 staged ούτως ή άλλως.
 
 - **2026-06-27 (Φ3f — FACE CONTEXT-MENU, IMPLEMENTED UNCOMMITTED)** — Δεξί-κλικ σε όψη (σε Polygon
   Mode) → menu εμφάνισης όψης (Revit «Paint on face» right-click). Mirror του `Grip3DVertexContextMenu`:

@@ -45,3 +45,16 @@ function hasBimStructuralGripKind(g: GripInfo): boolean {
 export function rawDxfReshapeGrips(grips: readonly GripInfo[]): GripInfo[] {
   return grips.filter((g) => !hasBimStructuralGripKind(g));
 }
+
+/**
+ * ADR-537 γ — seat raw DXF grips in MILLIMETRES. `computeDxfEntityGrips` returns grip
+ * positions in the entity's NATIVE DXF units, but the 3D grip overlay + drag controller
+ * project through the mm-based `dxfPlanToWorld`. Scaling each grip's plan position by
+ * `unitToMm` (= `dxfSceneUnitToMm(scene)`) aligns the grips with the wireframe for non-mm
+ * scenes (cm / m / in / ft). Only `position` is geometric — every other field is an index /
+ * discriminator and stays as-is. `unitToMm === 1` (mm scenes) returns the input untouched.
+ */
+export function scaleDxfGripsToMm(grips: readonly GripInfo[], unitToMm: number): GripInfo[] {
+  if (unitToMm === 1) return [...grips];
+  return grips.map((g) => ({ ...g, position: { x: g.position.x * unitToMm, y: g.position.y * unitToMm } }));
+}

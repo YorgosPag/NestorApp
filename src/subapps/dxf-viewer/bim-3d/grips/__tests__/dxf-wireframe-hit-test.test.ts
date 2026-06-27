@@ -6,7 +6,7 @@
  */
 
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
-import { distanceToDxfEntityMm, nearestDxfEntityWithin } from '../dxf-wireframe-hit-test';
+import { distanceToDxfEntityMm, nearestDxfEntityWithin, nearestDxfEntityDetailed } from '../dxf-wireframe-hit-test';
 
 const line = (id: string, x1: number, y1: number, x2: number, y2: number): DxfEntityUnion =>
   ({ id, type: 'line', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } }) as unknown as DxfEntityUnion;
@@ -60,5 +60,20 @@ describe('nearestDxfEntityWithin', () => {
   it('skips invisible entities', () => {
     const hidden = [{ ...(line('a', 0, 0, 100, 0) as object), visible: false } as unknown as DxfEntityUnion];
     expect(nearestDxfEntityWithin(hidden, { x: 50, y: 0 }, 10)).toBeNull();
+  });
+});
+
+// ADR-537 δ — the detailed variant returns the distance so the multi-floor pick can compare
+// hits across stacked floors.
+describe('nearestDxfEntityDetailed', () => {
+  const entities = [line('a', 0, 0, 100, 0), line('b', 0, 50, 100, 50)];
+
+  it('returns the nearest id together with its distance', () => {
+    expect(nearestDxfEntityDetailed(entities, { x: 50, y: 4 }, 10)).toEqual({ id: 'a', dist: 4 });
+    expect(nearestDxfEntityDetailed(entities, { x: 50, y: 47 }, 10)).toEqual({ id: 'b', dist: 3 });
+  });
+
+  it('returns null when nothing is within tolerance', () => {
+    expect(nearestDxfEntityDetailed(entities, { x: 50, y: 25 }, 5)).toBeNull();
   });
 });
