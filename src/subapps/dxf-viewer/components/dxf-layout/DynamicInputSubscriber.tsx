@@ -28,7 +28,7 @@ import { useDynamicInputHandler } from '../../systems/dynamic-input/hooks/useDyn
 import DynamicInputSystem from '../../systems/dynamic-input/DynamicInputSystem';
 import type { AnySceneEntity } from '../../rendering/types/Types';
 // ADR-513 — «Δαχτυλίδι Εντολών»: ραδιακό in-canvas dynamic input στη σχεδίαση τοίχου (awaitingEnd).
-import { useWallPreview } from '../../bim/walls/wall-preview-store';
+import { useWallPreview, isWallAwaitingEnd } from '../../bim/walls/wall-preview-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-513 (3D parity) — όταν είμαστε σε 3D προβολή, το ΙΔΙΟ overlay mountάρεται στο `BimViewport3D`
@@ -85,10 +85,10 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const { context } = useDrawingMachine({ useGlobal: true });
   const tempPoints = context.points as Point2D[];
 
-  // ADR-513 — wall awaitingEnd (1ο κλικ έγινε): low-freq reactive read (click-time).
+  // ADR-513 — wall awaitingEnd (1ο κλικ έγινε): low-freq reactive read (click-time). ΕΝΑΣ SSoT gate
+  // (`isWallAwaitingEnd`), κοινός με τον 3D `DynamicInput3DLeaf` — μηδέν διπλότυπο κριτήριο.
   const wallPreview = useWallPreview();
-  const wallAwaitingEnd =
-    activeTool === 'wall' && !!wallPreview.startPoint && !wallPreview.endPoint;
+  const wallAwaitingEnd = isWallAwaitingEnd(activeTool, wallPreview);
 
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.

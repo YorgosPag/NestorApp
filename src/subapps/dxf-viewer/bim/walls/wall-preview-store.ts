@@ -186,3 +186,12 @@ export const wallPreviewStore = {
 export function useWallPreview(): WallPreviewState {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
+
+/**
+ * ADR-513 — `true` όταν το εργαλείο τοίχου είναι σε `awaitingEnd` (έγινε το 1ο κλικ, εκκρεμεί το 2ο):
+ * ο ΕΝΑΣ gate για το live «Δαχτυλίδι Εντολών» / dynamic-input overlay. Κοινή SSoT πηγή για τον 2D
+ * `DynamicInputSubscriber` και τον 3D `DynamicInput3DLeaf` ώστε το κριτήριο να μην αποκλίνει ποτέ.
+ */
+export function isWallAwaitingEnd(activeTool: string, preview: WallPreviewState): boolean {
+  return activeTool === 'wall' && preview.startPoint !== null && preview.endPoint === null;
+}

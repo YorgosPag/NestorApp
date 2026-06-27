@@ -18,9 +18,9 @@
  * the high-frequency cursor follow lives inside `RadialCommandRing`'s own window listener.
  */
 
-import { useSyncExternalStore, type MutableRefObject } from 'react';
-import { toolStateStore } from '../../stores/ToolStateStore';
-import { useWallPreview } from '../../bim/walls/wall-preview-store';
+import { type MutableRefObject } from 'react';
+import { useToolState } from '../../stores/ToolStateStore';
+import { useWallPreview, isWallAwaitingEnd } from '../../bim/walls/wall-preview-store';
 import { useCadToggles } from '../../hooks/common/useCadToggles';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
@@ -31,19 +31,13 @@ export interface DynamicInput3DLeafProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
 }
 
-/** Reactive read of the active tool (low-freq — changes only on tool switch). */
-function selectActiveTool(): string {
-  return toolStateStore.get().activeTool;
-}
-
 export function DynamicInput3DLeaf({ managerRef }: DynamicInput3DLeafProps) {
   const { dynInput } = useCadToggles();
-  const activeTool = useSyncExternalStore(toolStateStore.subscribe, selectActiveTool, selectActiveTool);
+  // Reuse the SSoT tool-state hook + the SSoT wall-awaitingEnd gate (shared with DynamicInputSubscriber).
+  const { activeTool } = useToolState();
   const wallPreview = useWallPreview();
-  const wallAwaitingEnd =
-    activeTool === 'wall' && !!wallPreview.startPoint && !wallPreview.endPoint;
 
-  if (!dynInput.on || !wallAwaitingEnd) return null;
+  if (!dynInput.on || !isWallAwaitingEnd(activeTool, wallPreview)) return null;
 
   const sceneUnits: SceneUnits = wallToolBridgeStore.get()?.getSceneUnits() ?? 'mm';
   return (
