@@ -17,6 +17,7 @@
  */
 
 import type { FaceAppearanceMap } from '../types/face-appearance-types';
+import { BASE_FACE_KEY } from '../types/face-appearance-types';
 import { faceAppearanceColorHex } from './face-appearance-color';
 import { hexToRgba } from './bim-vg-fill-tint';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';

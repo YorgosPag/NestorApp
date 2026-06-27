@@ -42,7 +42,21 @@ export interface FaceAppearance {
 }
 
 /**
- * Map όψη → εμφάνιση. Όψεις που λείπουν = κανένα override (legacy single-material
- * render, byte-for-byte). Κλειδί = `FaceKey` (string at runtime, Firestore-safe).
+ * Reserved «base» κλειδί (Cinema 4D base material tag / Revit type material): η εμφάνιση
+ * που ισχύει για **ΟΛΕΣ** τις όψεις του solid, ΕΚΤΟΣ όσων έχουν δικό τους per-face override.
+ * «Βάψε όλο το στοιχείο» = θέσε `faceAppearance['*']`. Δεν είναι πραγματική όψη — δεν είναι
+ * pickable (`faceGroupRange` το αγνοεί), δεν εμφανίζεται στις λαβές· consulted ΜΟΝΟ ως
+ * fallback στο `resolveFaceMaterial`. Το `'*'` δεν συγκρούεται με κανένα `FaceKey`
+ * (`top`/`bottom`/`side:i`/…) και είναι Firestore-safe.
+ *
+ * Cascade (όπως Revit «Paint» + type material / Cinema 4D material tags):
+ *   resolve(face) = appearance[face]  ??  appearance['*']  ??  base entity material
+ */
+export const BASE_FACE_KEY = '*';
+
+/**
+ * Map όψη → εμφάνιση. Όψεις που λείπουν = κανένα override (πέφτουν στο `'*'` base, αλλιώς
+ * legacy single-material render byte-for-byte). Κλειδί = `FaceKey` ή `BASE_FACE_KEY`
+ * (string at runtime, Firestore-safe).
  */
 export type FaceAppearanceMap = Readonly<Record<string, FaceAppearance>>;

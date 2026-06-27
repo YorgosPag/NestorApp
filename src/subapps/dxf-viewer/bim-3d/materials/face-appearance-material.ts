@@ -14,20 +14,21 @@
 
 import * as THREE from 'three';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
+import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
 // ADR-539 — shared color SSoT (Boy-Scout N.0.2: κοινό με το 2D plan fill της Φ3e).
 import { faceAppearanceColorHex } from '../../bim/utils/face-appearance-color';
 
 /**
- * Material για ΜΙΑ όψη. `appearance[faceKey]` με χρώμα/υλικό → flat MeshStandardMaterial·
- * αλλιώς το `baseMaterial` (κοινό instance, μηδέν regression). Pure (καμία mutation
- * του base). Ο caller είναι υπεύθυνος για το dispose των νέων materials στο rebuild.
+ * Material για ΜΙΑ όψη. Cascade (Revit/Cinema 4D base+override): `appearance[faceKey]` →
+ * αλλιώς το base `appearance['*']` («βάψε όλο») → αλλιώς το `baseMaterial` (κοινό instance,
+ * μηδέν regression). Pure (καμία mutation του base). Ο caller dispose-άρει τα νέα materials.
  */
 export function resolveFaceMaterial(
   faceKey: string,
   appearance: FaceAppearanceMap,
   baseMaterial: THREE.Material,
 ): THREE.Material {
-  const face = appearance[faceKey];
+  const face = appearance[faceKey] ?? appearance[BASE_FACE_KEY];
   if (!face) return baseMaterial;
   const hex = faceAppearanceColorHex(face);
   if (!hex) return baseMaterial;
