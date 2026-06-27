@@ -224,6 +224,10 @@ export function useBeamPersistence(
           // ADR-441 Slice GEN-BEAM — round-trip hosting bindings on every update
           // (follow-move edits keep the born-bound link persisted).
           guideBindings: entity.guideBindings,
+          // ADR-539 Φ3d — carry per-face appearance (paint via bim:entities-attached →
+          // useBimEntityMovedPersistEffect → εδώ) ώστε η βαφή να επιβιώνει του reload
+          // (updateDoc gap: χωρίς αυτό, re-edit χάνει το faceAppearance).
+          faceAppearance: entity.faceAppearance,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);

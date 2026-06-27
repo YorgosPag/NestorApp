@@ -33,7 +33,8 @@ import { PolygonMaterialPanel } from '../ui/PolygonMaterialPanel';
 // Φ1 = slab· Φ1.5 += foundation (πέδιλα/θεμέλια· solid-agnostic core)· Φ3a += column
 // (κατακόρυφο prism)· Φ3b += roof (per-«νερό» `sub:i:top`)· Φ3c += wall (απλός flat path:
 // single-layer, χωρίς ανοίγματα/profile· πολυστρωματικοί/με κουφώματα = legacy)· beam = επόμενο.
-const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab', 'foundation', 'column', 'roof', 'wall']);
+// Φ3d += beam (box single-piece· I-shape/multi-cutback = legacy).
+const POLYGON_FACED_KINDS: ReadonlySet<string> = new Set(['slab', 'foundation', 'column', 'roof', 'wall', 'beam']);
 
 export interface PolygonModeToggle3DProps {
   readonly managerRef: RefObject<ThreeJsSceneManager | null>;

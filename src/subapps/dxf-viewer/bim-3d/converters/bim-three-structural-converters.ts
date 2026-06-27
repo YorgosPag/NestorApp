@@ -369,6 +369,21 @@ function buildBeam3DCarveOutline(
   return ext ?? flat;
 }
 
+/**
+ * ADR-539 Φ3d — faced beam core (mirror `buildColumnCoreBody`): multi-material box prism όταν painted
+ * Ή live Polygon-Mode target (faces pickable πριν τη βαφή), αλλιώς `null` → ο caller πέφτει στο legacy
+ * extrude. Ίδιο local span [0, renderHeightM] → ίδια `position.y`· slope (ADR-401) εφαρμόζεται κι εδώ.
+ */
+function buildBeamCoreBody(beam: BeamEntity, verts: readonly Point3D[], renderHeightM: number): THREE.Mesh | null {
+  const fa = beam.faceAppearance;
+  const poly = usePolygonMode3DStore.getState();
+  const faced = (fa !== undefined && Object.keys(fa).length > 0) || (poly.active && poly.targetBimId === beam.id);
+  if (!faced) return null;
+  const mesh = buildFacedSolidBody(verts, renderHeightM, fa ?? {}, getElementMaterial3D('beam'));
+  if (mesh) applyBeamSlope(mesh.geometry, beam.params);
+  return mesh;
+}
+
 export function beamToMesh(
   beam: BeamEntity,
   levelId?: string,
@@ -399,6 +414,7 @@ export function beamToMesh(
   // (όχι κουτί). Curved/degenerate → null ⇒ fallback στο ίσιο box extrude παρακάτω.
   let geo: THREE.BufferGeometry | null =
     beam.params.sectionKind === 'I-shape' ? buildSweptIBeamGeometry(beam) : null;
+  let facedMesh: THREE.Mesh | null = null;
 
   if (!geo) {
     const rawVerts = beam.geometry.outline.vertices;
@@ -417,11 +433,15 @@ export function beamToMesh(
     // σκαλίσει την ακριβή υποχωρούσα παρειά (κυκλική/λοξή) ΚΑΙ στο 3Δ. Straight axis μόνο.
     const carveVerts = buildBeam3DCarveOutline(beam, verts, hostFootprints, sceneToM);
     const trimmed = computeBeamCutbackOutline(carveVerts, hostFootprints);
-    if (trimmed === null) {
+    // ADR-539 Φ3d — faced multi-material μόνο στο box single-piece (full ή single trimmed ring).
+    const singleRing: readonly Point3D[] | null =
+      trimmed === null ? verts : trimmed.length === 1 ? trimmed[0].map((p) => ({ x: p.x, y: p.y, z: 0 })) : null;
+    if (singleRing) facedMesh = buildBeamCoreBody(beam, singleRing, renderHeightM);
+    if (!facedMesh && trimmed === null) {
       const shape = buildShape(verts);
       if (!shape) return null;
       geo = extrudeAndRotate(shape, renderHeightM); // ADR-534 — clip στο soffit πλάκας (no-op αν δεν κόβεται)
-    } else {
+    } else if (!facedMesh) {
       // `[]` = δοκάρι εξ ολοκλήρου μέσα στην κολόνα → δεν σχεδιάζεται.
       const shapes = trimmed
         .map((ring) => buildShape(ring.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
@@ -432,25 +452,24 @@ export function beamToMesh(
     }
   }
 
-  ensureWorldUvs(geo); // ADR-413 — box-extrude auto-UVs OR planar for swept-I custom geo.
-  applyBeamSlope(geo, beam.params);
   const matId = beam.params.material ?? 'elem-beam';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
-  // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
-  // beam hangs DOWN from (topElevation + zOffset) by depth. ADR-448 §4.1 — the
-  // beam top is FLOOR-RELATIVE, so the storey FFL (`floorElevationMm`) must be added
-  // (SSoT `hangDownMeshY`, mirroring column/wall). Without it a foundation beam (FFL
-  // world −1m) landed 1m too high and was clipped by the View-Range cut plane.
+  // ADR-539 Φ3d — faced body (per-face paint) όταν εφαρμόσιμο, αλλιώς legacy single-material.
+  let mesh = facedMesh;
+  if (!mesh) {
+    if (!geo) return null; // defensive — faced ή geo πάντα ορίζονται παραπάνω.
+    ensureWorldUvs(geo); // ADR-413 — box-extrude auto-UVs OR planar for swept-I custom geo.
+    applyBeamSlope(geo, beam.params);
+    mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
+  }
+  // ADR-369 §2.2 / ADR-448 §4.1: το δοκάρι κρέμεται ΚΑΤΩ από (topElevation + zOffset) κατά depth· το
+  // top είναι FLOOR-RELATIVE → προστίθεται η storey FFL (SSoT `hangDownMeshY`, mirror column/wall).
   const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
   mesh.position.y = hangDownMeshY(floorElevationMm, beamTopMm, beamDepthM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
   attachEdgesProjection(tagged, 'beam');
 
-  // ADR-449 Slice 4 — additive σοβάς (2 πλάγιες όψεις) ΕΞΩ από τον στατικό πυρήνα.
-  // Ενεργό μόνο όταν το δοκάρι έχει ενεργό `finish` (απών → πυρήνας-only Mesh, μηδέν
-  // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
-  // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
-  // ADR-470 — per-element σοβάς override → per-view flag (Revit precedence).
+  // ADR-449 Slice 4/5 — additive σοβάς (2 πλάγιες όψεις) ΕΞΩ από τον πυρήνα, gated «Σοβατισμένη
+  // όψη» (showFinishSkin)· απών → πυρήνας-only. ADR-470 — per-element override → per-view flag.
   const finishSkin = (!suppressFinishSkin && isStructuralComponentVisible('plaster', beam))
     ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId, floorElevationMm)
     : null;

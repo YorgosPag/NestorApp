@@ -40,6 +40,7 @@ import type {
   BeamParams,
 } from '../types/beam-types';
 import type { BimValidation } from '../types/bim-base';
+import type { FaceAppearanceMap } from '../types/face-appearance-types';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
@@ -65,6 +66,8 @@ export interface BeamDoc {
   readonly layerId?: string;
   /** ADR-441 Slice GEN-BEAM — associative grid hosting bindings (born-bound δοκοί). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 Φ3d — per-face appearance (Polygon-Mode paint), mirror column/wall. */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -91,6 +94,8 @@ export interface BeamSaveInput {
   readonly layerId?: string;
   /** ADR-441 Slice GEN-BEAM — grid hosting bindings (host-on-create). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 Φ3d — per-face appearance (Polygon-Mode paint). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface BeamUpdateInput {
@@ -100,6 +105,8 @@ export interface BeamUpdateInput {
   readonly layerId?: string;
   /** ADR-441 Slice GEN-BEAM — grid hosting bindings (round-trip on update). */
   readonly guideBindings?: readonly GuideBinding[];
+  /** ADR-539 Φ3d — per-face appearance round-trip (paint persists across re-edits). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 // ============================================================================
@@ -168,6 +175,8 @@ export class BeamFirestoreService {
     if (input.layerId !== undefined) base.layerId = input.layerId;
     // ADR-441 Slice GEN-BEAM — persist grid hosting bindings (Firestore rejects undefined).
     if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
+    // ADR-539 Φ3d — persist per-face appearance (mirror saveWall/saveColumn).
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as BeamDoc;
@@ -186,6 +195,8 @@ export class BeamFirestoreService {
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice GEN-BEAM — round-trip grid hosting bindings on update.
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
+    // ADR-539 Φ3d — round-trip per-face appearance (paint edit persists, mirror updateWall/updateColumn).
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(ref, payload);
   }
@@ -223,5 +234,7 @@ export function entityToSaveInput(entity: BeamEntity): BeamSaveInput {
     layerId: entity.layerId,
     // ADR-441 Slice GEN-BEAM — carry grid hosting bindings into the persisted doc.
     ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
+    // ADR-539 Φ3d — carry per-face appearance into the persisted doc.
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

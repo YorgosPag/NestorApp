@@ -77,6 +77,11 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(entity.position.x + widthUnits / 2, 0, -(entity.position.y + heightUnits / 2));
+  // ADR-537 β — flag as an annotation so the grip depth-occluder skips it (the same rule that
+  // already exempts wireframe lines / sprite labels). Otherwise this flat coplanar quad occludes
+  // its OWN centre grip at grazing view angles (depth-gradient across the probed pixel > bias),
+  // making the text's grip vanish from both draw AND pick.
+  mesh.userData.isDxfAnnotation = true;
 
   return { mesh, geometry, material, texture };
 }

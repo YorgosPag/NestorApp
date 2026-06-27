@@ -30,5 +30,7 @@ export function beamDocToEntity(doc: BeamDoc): BeamEntity {
     // ADR-441 Slice GEN-BEAM — restore grid hosting bindings ώστε ο born-bound
     // δοκός να ξανα-ακολουθεί τον άξονα μετά reload (αλλιώς χάνει το hosting).
     ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
+    // ADR-539 Φ3d — restore per-face appearance ώστε η βαφή όψεων να επιβιώνει του reload.
+    ...(doc.faceAppearance !== undefined && { faceAppearance: doc.faceAppearance }),
   } as BeamEntity;
 }
