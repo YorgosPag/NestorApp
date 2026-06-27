@@ -20,7 +20,13 @@ interface RibbonBodyProps {
   onPinToggle: (panelId: string) => void;
 }
 
-export const RibbonBody: React.FC<RibbonBodyProps> = ({
+// ADR-532 Stage 2 (perf) — memoized so that when the in-shell RibbonTabsRegion
+// re-renders on a contextual-trigger change but the active tab object is
+// referentially unchanged (e.g. trigger flips while the body stays on Home until
+// the auto-activate effect runs), the body + its panel/button/tooltip subtree is
+// skipped. Command/panel-visibility updates still flow via RibbonCommandContext
+// (context consumers re-render regardless of memo).
+const RibbonBodyInner: React.FC<RibbonBodyProps> = ({
   activeTab,
   minimizeState,
   settingsTabContent,
@@ -79,3 +85,5 @@ export const RibbonBody: React.FC<RibbonBodyProps> = ({
     </div>
   );
 };
+
+export const RibbonBody = React.memo(RibbonBodyInner);

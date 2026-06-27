@@ -20,14 +20,15 @@
 
 import { useCallback } from 'react';
 import { useLevels } from '../systems/levels';
-import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import type { RibbonCommandsApi } from '../ui/ribbon/context/RibbonCommandContext';
 import type { RibbonTab } from '../ui/ribbon/types/ribbon-types';
 import type { UniversalSelectionHook } from '../systems/selection/SelectionSystem';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
-// 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
-import { RIBBON_CONTEXTUAL_TABS, useActiveContextualTrigger } from './ribbon-contextual-config';
+// 📐 ADR-345/353: contextual tabs config (SSoT). The active trigger is computed
+// in `RibbonContextualTabScope` (ADR-532 Stage 2), NOT here, so the ribbon
+// command assembly stays decoupled from the selection reference.
+import { RIBBON_CONTEXTUAL_TABS } from './ribbon-contextual-config';
 import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
@@ -50,16 +51,12 @@ export interface DxfViewerRibbonParams {
   readonly wrappedHandleAction: DxfViewerCallbacksReturn['wrappedHandleAction'];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  readonly primarySelectedId: string | null;
-  readonly selectedEntityIds: string[];
-  readonly currentScene: SceneModel | null;
 }
 
 /** Bundle returned by useDxfViewerRibbon. */
 export interface DxfViewerRibbonReturn {
   readonly ribbonCommands: RibbonCommandsApi;
   readonly ribbonContextualTabs: readonly RibbonTab[];
-  readonly activeContextualTrigger: string | null;
 }
 
 /**
@@ -72,14 +69,12 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   const {
     levelManager, universalSelection, activeTool,
     handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
-    canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
+    canUndo, canRedo,
   } = params;
 
-  // ADR-345 Fase 5B + ADR-353 Phase A — contextual tab list.
+  // ADR-345 Fase 5B + ADR-353 Phase A — contextual tab list (the active trigger
+  // is owned by `RibbonContextualTabScope`, ADR-532 Stage 2).
   const ribbonContextualTabs = RIBBON_CONTEXTUAL_TABS;
-  const activeContextualTrigger = useActiveContextualTrigger({
-    primarySelectedId, selectedEntityIds, currentScene, activeTool,
-  });
 
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
@@ -118,5 +113,5 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, xlineModeBridge,
   });
 
-  return { ribbonCommands, ribbonContextualTabs, activeContextualTrigger };
+  return { ribbonCommands, ribbonContextualTabs };
 }

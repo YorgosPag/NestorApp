@@ -142,6 +142,15 @@ SelectionSideEffectsHost· top-bar/dialogs/sidebar props slimmed), DxfViewerTopB
 owns useDxfViewerRibbon), DxfViewerDialogs.tsx (BimScheduleHostLeaf), useDxfViewerCallbacks.ts,
 useDxfViewerEffects.ts}`, `layout/SidebarSection.tsx`, `hooks/useLayerCommandShortcuts.ts`.
 
+**NEW (Stage 2):** `ui/ribbon/context/RibbonContextualTabContext.tsx` (ui-layer trigger context +
+`useRibbonContextualTrigger` leaf hook), `app/RibbonContextualTabScope.tsx` (app-layer scope:
+self-subscribes selection + `useActiveContextualTrigger`, provides trigger).
+**MOD (Stage 2):** `ui/ribbon/components/RibbonRoot.tsx` (split shell `RibbonRootInner` + leaf
+`RibbonTabsRegion`· drop `activeContextualTrigger` prop), `ui/ribbon/components/RibbonBody.tsx`
+(`React.memo`), `app/useDxfViewerRibbon.ts` (drop trigger compute + `primarySelectedId`/
+`selectedEntityIds`/`currentScene` params + `activeContextualTrigger` return),
+`app/DxfViewerTopBar.tsx` (wrap RibbonRoot in scope· drop `useSelectedEntityIds`).
+
 **NEW (Stage B4):** `systems/grip/AllGripsStore.ts` (zero-React grip-set SSoT),
 `components/dxf-layout/GripRegistryPublisher.tsx` (selection-subscribed registry leaf),
 `components/dxf-layout/EntityContextMenuHost.tsx` (selection-subscribed entity-menu leaf),
@@ -158,6 +167,56 @@ reset), unified-grip-types.ts (drop params)}`· `hooks/canvas/{useCanvasEditActi
 useCanvasKeyboardShortcuts.ts(+.types), useCanvasEscapeRegistrations.ts}` (event-time store reads).
 
 ## Changelog
+- **2026-06-28** — Stage 2 (Opus 4.8): **ribbon contextual trigger → leaf subscription** (root #2,
+  βήμα 2· συνέχεια του Stage B6/Stage 1). Stage 1 έκανε σταθερό το `ribbonCommands`, αλλά το
+  `activeContextualTrigger` ΕΜΕΝΕ prop του `RibbonRoot` → άλλαζε σε κάθε επιλογή → έσπαγε το
+  `React.memo` → re-render όλου του ribbon shell + `RibbonCommandProvider` + tab body (τα ~96 ribbon
+  fibers + ~300 tooltips του profile). FIX (ADR-040 micro-leaf doctrine, μηδέν νέα store — context
+  routing): ο trigger φεύγει από τα props του `RibbonRoot` και περνά μέσω **νέου ui-layer context**
+  (`ui/ribbon/context/RibbonContextualTabContext.tsx`) που τον τροφοδοτεί ένα **νέο app-layer scope**
+  (`app/RibbonContextualTabScope.tsx`, self-subscribe `usePrimarySelectedId`/`useSelectedEntityIds` +
+  `useActiveContextualTrigger` SSoT). Μέσα στο `RibbonRoot`, νέο leaf `RibbonTabsRegion` = ο ΜΟΝΑΔΙΚΟΣ
+  consumer (`useRibbonContextualTrigger()`) που κρατά τα `visibleContextualTabs`/`orderedTabs`/`activeTab`
+  + τον auto-activate effect + `RibbonTabBar`/`RibbonBody`· το `useRibbonState`/`useRibbonTabDrag` μένουν
+  στο shell (`RibbonRootInner`) και περνούν ως σταθερά props. ΑΠΟΤΕΛΕΣΜΑ: σε click-select τα props του
+  `RibbonRoot` μένουν reference-stable → `React.memo` ΚΡΑΤΑΕΙ → shell + command provider ΔΕΝ
+  re-renderάρουν· αντιδρά ΜΟΝΟ το `RibbonTabsRegion` και ΜΟΝΟ όταν αλλάζει πραγματικά το trigger string
+  (string identity → ο React παρακάμπτει τους context consumers όταν η τιμή είναι ίδια). Boy-scout:
+  `RibbonBody` → `React.memo` (skip body subtree όταν το `activeTab` object μένει ίδιο — π.χ. trigger
+  flip πριν τρέξει ο auto-activate effect· command/visibility updates ρέουν ακόμη μέσω context). Το
+  `useDxfViewerRibbon` έχασε τα params `primarySelectedId`/`selectedEntityIds`/`currentScene` + το
+  `activeContextualTrigger` return· το `DxfViewerTopBar` έχασε το `useSelectedEntityIds` sub (κρατά
+  `usePrimarySelectedId` για τους 28 hosts). 7 αρχεία (2 NEW), type-clean. Δεν γίνεται jest-verify
+  (TopBar render σε jsdom τραβά Firestore/auth· κανένα υπάρχον test δεν αγγίζει RibbonRoot/Body).
+  **🔴 browser-verify (React-DevTools Profiler: στο click-select το `RibbonRoot`/`RibbonRootInner`/
+  `RibbonCommandProvider`/`RibbonBody` ΟΧΙ updaters — μόνο το `RibbonTabsRegion` όταν εμφανίζεται/αλλάζει
+  contextual tab· λειτουργικά: select τοίχο→καρτέλα «Τοίχος», widgets σωστά, dialogs ανοίγουν)** +
+  commit (Giorgio). Επόμενο → Stage 3 (`DxfViewerDialogs`, 117 dialog fibers).
+- **2026-06-28** — Stage A-fix (Opus 4.8): **idempotent `SYNC_UNIVERSAL_LEGACY` reducer**. Chrome
+  trace (`Trace-20260628T012423`, dev) έδειξε ότι ένα dxf-entity κλικ προκαλεί τεράστιο σύγχρονο React
+  commit· root #1 = ο reducer επέστρεφε `{ ...state }` (νέα αναφορά) σε **ΚΑΘΕ** dxf-click ακόμα κι όταν
+  τίποτα δεν άλλαζε (regionIds omitted· resetEditing:true με τα edit-flags ήδη null) → memoized
+  `SelectionContext` value rebuild → re-render ΟΛΩΝ των `useContext(SelectionContext)` consumers χωρίς
+  λόγο. FIX: το case υπολογίζει next region/edit/drag και **επιστρέφει το ίδιο `state`** όταν δεν αλλάζει
+  τίποτα· νέο object μόνο σε πραγματική αλλαγή (π.χ. edit-flag null-ισμα από μη-null). +1 jest
+  (`selection-legacy-mirror`: 5/5 GREEN). **ΕΚΚΡΕΜΕΙ root #2 (το βαρύ, ~1015ms commit):** το ribbon
+  assembly (μεταφερμένο στο `DxfViewerTopBar` self-subscriber στο Stage B5) ξαναχτίζει 30+ BIM bridges
+  → νέο `ribbonCommands` → σπάει το `React.memo` του `RibbonRoot` → re-render όλου του ribbon+tooltips
+  σε κάθε επιλογή.
+- **2026-06-28** — Stage B6 (Opus 4.8): **ribbon command tree decoupled από το selection reference**
+  (root #2, Stage 1). Το `DxfViewerTopBar` τράβαγε το reactive `useUniversalSelection()` (νέα αναφορά
+  σε κάθε click) και την περνούσε στον ribbon assembler → 30+ BIM bridges ξαναχτίζονταν → νέο
+  `ribbonCommands` → έσπαγε το `React.memo` του `RibbonRoot`. FIX (ADR-040 micro-leaf doctrine, μηδέν
+  νέα υποδομή — reuse Stage B4): `useUniversalSelectionStable()` (reference-stable facade· τα query
+  methods διαβάζουν `SelectedEntitiesStore` live σε event-time, οπότε τα bridges κρατούν σταθερά
+  `useCallback` deps → `ribbonCommands` memo holds → RibbonRoot memo ΔΕΝ σπάει) + reactive
+  `usePrimarySelectedId()`/`useSelectedEntityIds()` ΜΟΝΟ για όσα ΠΡΕΠΕΙ να ακολουθούν την επιλογή
+  (contextual-tab trigger + BIM persistence hosts). Type-clean (`UniversalSelectionHook`/`string|null`/
+  `string[]`), 1 αρχείο. Δεν γίνεται jest-verify (TopBar render σε jsdom τραβά Firestore/auth).
+  **🔴 browser-verify (React-DevTools: στο click-select το `RibbonRoot`/`RibbonPanel`/buttons ΟΧΙ
+  updaters — μόνο το contextual-tab area)**· αν παραμένει βαρύ → Stage 2 = το `activeContextualTrigger`
+  γίνεται leaf-subscription ΜΕΣΑ στο RibbonRoot ώστε το `RibbonRootInner` να μη re-renderάρει το
+  `RibbonBody` (active-tab buttons) σε κάθε επιλογή. + commit (Giorgio).
 - **2026-06-27** — Stage B4 (Opus 4.8): **`CanvasSection` severance (6B)** — ο canvas orchestrator
   έπαψε να subscribe-άρει στο selection set. NEW `useUniversalSelectionStable()` (non-reactive facade,
   ίδιο `buildUniversalSelection` SSoT)· `selectedEntityIds` = fresh ref-stable `SelectedEntitiesStore`

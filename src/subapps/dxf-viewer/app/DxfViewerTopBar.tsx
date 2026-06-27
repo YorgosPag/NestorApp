@@ -26,9 +26,10 @@ import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 // ADR-532 Stage B5 — top-bar self-subscribes to the selection set + owns the
 // ribbon assembly (moved here from DxfViewerContent so the orchestrator no
 // longer re-renders on click-selection).
-import { useUniversalSelection } from '../systems/selection';
+import { useUniversalSelectionStable, usePrimarySelectedId } from '../systems/selection';
 import { useDxfViewerRibbon } from './useDxfViewerRibbon';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
+import { RibbonContextualTabScope } from './RibbonContextualTabScope';
 import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { DxfSymbolDetectHost } from './DxfSymbolDetectHost';
@@ -88,19 +89,28 @@ export function DxfViewerTopBar({
   canRedo,
   currentScene,
 }: DxfViewerTopBarProps) {
-  // ADR-532 Stage B5 — self-subscribe to the entity selection (compat hook =
-  // re-render on selection change). The orchestrator no longer feeds these in.
-  const universalSelection = useUniversalSelection();
-  const primarySelectedId = universalSelection.getPrimaryId();
-  const selectedEntityIds = universalSelection.getSelectedEntityIds();
+  // ADR-532 Stage B6/Stage 2 (perf) — split the selection access so a click does
+  // NOT rebuild the ribbon command tree:
+  //  • `useUniversalSelectionStable()` = REFERENCE-STABLE facade (no version
+  //    subscription). Its query methods read SelectedEntitiesStore live at event
+  //    time, so the 30+ BIM bridges keep stable `useCallback` deps → `ribbonCommands`
+  //    memo holds → RibbonRoot's `React.memo` is NOT defeated → the ribbon command
+  //    tree stops re-rendering on every selection (the ~1s commit in the trace).
+  //  • `usePrimarySelectedId()` (and ONLY this) re-renders this top-bar so the BIM
+  //    persistence hosts still follow selection. The contextual-tab trigger moved
+  //    OUT of here into `RibbonContextualTabScope` (Stage 2), which self-subscribes
+  //    to the selection set and feeds `RibbonRoot` via context — so the trigger no
+  //    longer flows through a RibbonRoot prop that would defeat its `React.memo`.
+  const universalSelection = useUniversalSelectionStable();
+  const primarySelectedId = usePrimarySelectedId();
 
-  // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/
-  // array/text bridges). Moved here from DxfViewerContent so its reactive
-  // selection inputs come from THIS top-bar's subscription, not the orchestrator.
-  const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
+  // ADR-345/353/358/363 — ribbon command assembly (BIM/array/text bridges).
+  // Moved here from DxfViewerContent; the bridges read the stable selection
+  // facade, so this assembly is selection-reference-stable.
+  const { ribbonCommands, ribbonContextualTabs } = useDxfViewerRibbon({
     levelManager, universalSelection, activeTool,
     handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
-    canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
+    canUndo, canRedo,
   });
 
   // ADR-395 Phase 1 (G3+G7) — resolve buildingId + floorId once for all BIM
@@ -137,11 +147,15 @@ export function DxfViewerTopBar({
 
   return (
     <>
-      <RibbonRoot
-        commands={ribbonCommands}
-        contextualTabs={ribbonContextualTabs}
-        activeContextualTrigger={activeContextualTrigger}
-      />
+      {/* ADR-532 Stage 2 — the scope owns the contextual-trigger subscription and
+          feeds RibbonRoot via context, keeping RibbonRoot's props (and `React.memo`)
+          stable across click-selection. */}
+      <RibbonContextualTabScope currentScene={currentScene} activeTool={activeTool}>
+        <RibbonRoot
+          commands={ribbonCommands}
+          contextualTabs={ribbonContextualTabs}
+        />
+      </RibbonContextualTabScope>
       {/*
         ADR-358 Phase 8 sidebar dock (2026-05-17) — Stair properties moved
         from a right-floating overlay into the left sidebar as the third

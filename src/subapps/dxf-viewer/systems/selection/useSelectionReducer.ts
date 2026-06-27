@@ -228,14 +228,29 @@ export function selectionReducer(state: SelectionContextState, action: Selection
     // region-edit flags following a SelectedEntitiesStore mutation. `regionIds`
     // omitted → keep existing (dxf-entity-only change).
     case 'SYNC_UNIVERSAL_LEGACY': {
-      const next: SelectionContextState = action.regionIds !== undefined
-        ? { ...state, selectedRegionIds: action.regionIds }
-        : { ...state };
-      if (action.resetEditing) {
-        next.editingRegionId = null;
-        next.draggedVertexIndex = null;
+      // ADR-532 + perf (ADR-040 doctrine): idempotent. Allocate a NEW state object
+      // ONLY when something actually changes. A dxf-entity click arrives here with
+      // `regionIds` omitted + `resetEditing:true` even when the edit flags are
+      // already null — the previous `{ ...state }` returned a fresh reference every
+      // time, rebuilding the memoized SelectionContext value and re-rendering EVERY
+      // `useContext(SelectionContext)` consumer for nothing. Returning the same
+      // reference when nothing changed stops that cascade.
+      const nextRegionIds = action.regionIds !== undefined ? action.regionIds : state.selectedRegionIds;
+      const nextEditingRegionId = action.resetEditing ? null : state.editingRegionId;
+      const nextDraggedVertexIndex = action.resetEditing ? null : state.draggedVertexIndex;
+      if (
+        nextRegionIds === state.selectedRegionIds &&
+        nextEditingRegionId === state.editingRegionId &&
+        nextDraggedVertexIndex === state.draggedVertexIndex
+      ) {
+        return state;
       }
-      return next;
+      return {
+        ...state,
+        selectedRegionIds: nextRegionIds,
+        editingRegionId: nextEditingRegionId,
+        draggedVertexIndex: nextDraggedVertexIndex,
+      };
     }
 
     default:

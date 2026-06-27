@@ -37,6 +37,16 @@ describe('selection legacy mirror (store-owned sink → reducer)', () => {
     expect(result.current.state.editingRegionId).toBeNull();        // editing reset
   });
 
+  it('dxf-entity select with NO active region-editing keeps state referentially stable (idempotent reducer — no SelectionContext churn)', () => {
+    const { result } = renderHook(() => useSelectionSystemState());
+    // No overlay selected, no editing/dragging staged → edit flags already null.
+    const before = result.current.state;
+    act(() => { SelectedEntitiesStore.selectEntity({ id: 'dx', type: 'dxf-entity' }); });
+    // SYNC_UNIVERSAL_LEGACY fired (resetEditing:true) but nothing actually changed →
+    // reducer must return the SAME reference, so the memoized context value does not rebuild.
+    expect(result.current.state).toBe(before);
+  });
+
   it('dxf-entity add does NOT dispatch (NO_MIRROR) — region state stays referentially stable', () => {
     const { result } = renderHook(() => useSelectionSystemState());
     const before = result.current.state;
