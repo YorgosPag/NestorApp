@@ -136,6 +136,39 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ3d — BEAM, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance στο **δοκάρι**,
+  τελευταίο δομικό solid → **το Φ3 ΟΛΟΚΛΗΡΩΘΗΚΕ** (slab + foundation + column + roof + wall + beam όλα faced).
+  Mirror wall Φ3c / column Φ3a, **μηδέν διπλότυπα** (FULL SSoT reuse).
+  - **Κρίσιμο εύρημα (SSoT audit, grep-verified):** το master handoff έλεγε «beam ΔΥΣΚΟΛΟ — το faced body
+    υποθέτει ΚΑΤΑΚΟΡΥΦΗ έκταση». **Λάθος.** Το `BeamGeometry.outline` είναι **plan footprint (width×length)**
+    και ο box path του `beamToMesh` κάνει `buildShape(verts)` + `extrudeAndRotate(verts, renderHeightM)` —
+    **IDENTICAL pattern με column/slab**. Άρα `buildFacedSolidBody(outlineVerts, renderHeightM, fa, mat)`
+    δίνει `bottom/top/side:0..3` (πάνω/κάτω/2 μακριές παρειές/2 άκρα) — ό,τι θες να βάψεις.
+  - **Converter:** `bim-three-structural-converters.ts` νέος helper `buildBeamCoreBody` (mirror
+    `buildColumnCoreBody`): faced branch (`faceAppearance` painted Ή live Polygon-Mode target) →
+    `buildFacedSolidBody(verts, renderHeightM, fa, getElementMaterial3D('beam'))`, αλλιώς `null` → ο caller
+    πέφτει στο legacy `extrudeAndRotate` (byte-for-byte). Slope (ADR-401 `applyBeamSlope`) εφαρμόζεται και
+    στα δύο geometries (ίδιο local Y span [0, renderHeightM] → ίδιο shear). Η `position.y`
+    (`hangDownMeshY(...beamDepthM)`) + finish skin + rebar μένουν ΑΜΕΤΑΒΛΗΤΑ (additive siblings).
+  - **MVP scope (ρητό, mirror wall):** faced ΜΟΝΟ στο **box single-piece**. I-shape (`sectionKind==='I-shape'`
+    → `buildSweptIBeamGeometry` custom swept, ΟΧΙ prism) → legacy. Multi-piece cutback (`computeBeamCutbackOutline`
+    > 1 ring → `extrudeShapesAndRotate`) → legacy. Faced gate = single full outline Ή single trimmed ring.
+  - **Persistence (6 σημεία):** `BeamDoc` / `BeamSaveInput` / `BeamUpdateInput` += `faceAppearance?` ·
+    `saveBeam` + `updateBeam` Firestore-safe writes · `entityToSaveInput` (`beam-firestore-service.ts`) +
+    `beamDocToEntity` round-trip (`beam-persistence-helpers.ts`) + inline `updateBeam` patch
+    (`useBeamPersistence.ts`) += `faceAppearance` (κρίσιμο **updateDoc gap**: ο beam persist χρησιμοποιεί
+    `updateDoc` για re-edits· χωρίς το πεδίο στο patch η βαφή χανόταν σε reload — paint folds μέσω
+    `bim:entities-attached` → `useBimEntityMovedPersistEffect` → patch). Το `BeamEntity` κληρονομεί ήδη
+    `faceAppearance` από `BimEntity` → **μηδέν type change** στο `beam-types.ts`.
+  - **Gate:** `POLYGON_FACED_KINDS += 'beam'` στο `PolygonModeToggle3D.tsx`. `SetFaceAppearanceCommand` /
+    `FaceSelectionHighlighter` / `raycastBimFace` = kind-agnostic → καμία αλλαγή.
+  - **N.7.1:** `bim-three-structural-converters.ts` έφτασε 511γρ → συμπυκνώθηκαν δικά μου + γειτονικά
+    verbose σχόλια (boy-scout, μηδέν απώλεια ουσίας) → **498γρ** (< 500).
+  - **Tests:** `beam-faced-3d.test.ts` (6 — multi-material όταν painted, identical datum vs legacy, legacy
+    σε empty map, faced σε polygon-target, legacy σε άλλο target, **legacy σε I-shape**). Regression:
+    beam/wall converter + scene + persistence suites (158 tests) = 0 break. **CHECK 6B/6D δεν πιάνουν** αυτά
+    τα paths (`bim-3d/converters/`, `bim/beams/`, `hooks/data/`)· το ADR-539 staged ούτως ή άλλως (N.0.1).
+
 - **2026-06-27 (Φ3f FIX — right-click pre-empted by 2D entity menu, browser-found)** — Σε Polygon
   Mode το δεξί-κλικ σε όψη έβγαζε το **γενικό** `EntityContextMenu` (Join/Χωρισμός/Απομόνωση/Delete),
   ΟΧΙ το per-face menu. **Root cause:** ο 2D handler `useCanvasContextMenu.handleNativeContextMenu`

@@ -165,9 +165,18 @@ export function useBim3DPointerHandlers(
     // selection) + clears the 3D BIM selection so the DXF edit hook owns the grip overlay.
     const camera = manager.getCamera();
     const dom = manager.getRendererCanvas();
-    const dxfId = camera && dom
-      ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, e.clientX, e.clientY)?.entityId ?? null
-      : null;
+    // TEMP DEBUG (ADR-537 β) — remove after diagnosing text selection.
+    const _scope = getDxfFloorScope();
+    const _hit = camera && dom ? pickDxfEntityAcrossFloors(_scope, camera, dom, e.clientX, e.clientY) : null;
+    // eslint-disable-next-line no-console
+    console.log('[DXF-PICK]', {
+      scopeFloors: _scope.length,
+      totalEntities: _scope.reduce((n, f) => n + f.scene.entities.length, 0),
+      textIds: _scope.flatMap((f) => f.scene.entities.filter((en) => en.type === 'text').map((en) => en.id)),
+      types: Array.from(new Set(_scope.flatMap((f) => f.scene.entities.map((en) => en.type)))),
+      hit: _hit,
+    });
+    const dxfId = _hit?.entityId ?? null;
     if (dxfId) {
       useSelection3DStore.getState().clearSelection();
       SelectedEntitiesStore.replaceEntitySelection([dxfId]);
