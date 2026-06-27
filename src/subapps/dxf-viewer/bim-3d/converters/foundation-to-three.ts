@@ -30,7 +30,7 @@ import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d
 import { buildFootingRebarCage } from './footing-rebar-3d';
 // ADR-539 Φ1.5 — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { shouldRenderFaced } from './should-render-faced';
 
 const MM_TO_M = 0.001;
 
@@ -99,11 +99,8 @@ export function foundationToMesh(
   // the SAME local span [0, thicknessM] as `extrudeAndRotate`, so `position.y` is unchanged.
   // Πέδιλο = flat (κανένα opening) → καμία ανάγκη holes/slope (αρχιτεκτονική solid-agnostic).
   const fa = foundation.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
-  const facedByPolygonTarget = poly.active && poly.targetBimId === foundation.id;
   let mesh: THREE.Mesh | null;
-  if (facedByAppearance || facedByPolygonTarget) {
+  if (shouldRenderFaced(fa)) {
     mesh = buildFacedSolidBody(verts, thicknessM, fa ?? {}, baseMat);
   } else {
     const geo = extrudeAndRotate(shape, thicknessM);

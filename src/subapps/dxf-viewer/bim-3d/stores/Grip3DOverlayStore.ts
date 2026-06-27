@@ -30,20 +30,21 @@ interface Grip3DOverlayState {
   /** Per-grip BOTTOM-surface elevation (mm) = top − thickness (ADR-535 Φ6 twin grips). */
   readonly bottomElevFor: PlanElevationMmFor;
   /**
-   * ADR-537 — when the seated grips belong to a RAW DXF entity (line/polyline/circle/arc),
-   * its id (so the overlay can stroke a live ghost of the entity-in-progress during a grip
-   * drag). `null` for BIM grips (the BIM path has its own live mesh preview). Reset by
-   * `setGrips` / `clear`; the DXF seater sets it explicitly via `setDxfGhostEntityId`.
+   * ADR-537 — when the seated grips belong to RAW DXF entities (line/polyline/circle/arc),
+   * their ids (so the overlay can stroke a live ghost of the entity-in-progress during a grip
+   * drag). ADR-543 — a list, because TWO selected lines (articulated joint) seat grips for
+   * BOTH. Empty `[]` for BIM grips (the BIM path has its own live mesh preview). Reset by
+   * `setGrips` / `clear`; the DXF seater sets it explicitly via `setDxfGhostEntityIds`.
    */
-  readonly dxfGhostEntityId: string | null;
+  readonly dxfGhostEntityIds: readonly string[];
   /** Replace the grip set + top/bottom elevation resolvers (selection / re-sync). Resets interaction + ghost. */
   setGrips(
     grips: readonly GripInfo[],
     topElevFor: PlanElevationMmFor,
     bottomElevFor: PlanElevationMmFor,
   ): void;
-  /** ADR-537 — mark the seated grips as belonging to raw DXF entity `id` (ghost source), or null. */
-  setDxfGhostEntityId(id: string | null): void;
+  /** ADR-537/543 — mark the seated grips as belonging to raw DXF entities `ids` (ghost sources), or []. */
+  setDxfGhostEntityIds(ids: readonly string[]): void;
   /** Drop all grips (multi-select / unsupported type / deselected). Resets interaction + ghost. */
   clear(): void;
 }
@@ -52,16 +53,16 @@ export const useGrip3DOverlayStore = create<Grip3DOverlayState>((set) => ({
   grips: [],
   topElevFor: NO_ELEVATION,
   bottomElevFor: NO_ELEVATION,
-  dxfGhostEntityId: null,
+  dxfGhostEntityIds: [],
   setGrips: (grips, topElevFor, bottomElevFor) => {
     resetGrip3DInteraction();
     // ADR-537 — a new grip set is BIM by default; the DXF seater opts in afterwards.
-    set({ grips: [...grips], topElevFor, bottomElevFor, dxfGhostEntityId: null });
+    set({ grips: [...grips], topElevFor, bottomElevFor, dxfGhostEntityIds: [] });
   },
-  setDxfGhostEntityId: (dxfGhostEntityId) => set({ dxfGhostEntityId }),
+  setDxfGhostEntityIds: (dxfGhostEntityIds) => set({ dxfGhostEntityIds: [...dxfGhostEntityIds] }),
   clear: () => {
     resetGrip3DInteraction();
-    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION, dxfGhostEntityId: null });
+    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION, dxfGhostEntityIds: [] });
   },
 }));
 

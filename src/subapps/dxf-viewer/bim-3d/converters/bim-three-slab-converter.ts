@@ -30,7 +30,7 @@ import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-mat
 // ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό μέσω faced multi-material prism.
 import { buildFacedSolidBody } from './bim-three-faced-prism';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { shouldRenderFaced } from './should-render-faced';
 
 const MM_TO_M = 0.001;
 
@@ -175,16 +175,12 @@ export function slabToMesh(
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const matId = slab.params.material ?? 'elem-slab';
-  // ADR-539 Φ1 — render faced (multi-material prism, pickable per-face) when EITHER the slab
-  // already carries a `faceAppearance` OR it is the live Polygon-Mode target (so its faces
-  // become pickable even before any paint — solves the chicken-and-egg). Otherwise the legacy
-  // single-material extrude (byte-for-byte, zero regression). Φ2: το faced path ΚΟΒΕΙ τα
-  // slab-openings (cap cut-outs + hole-walls)· slope μένει legacy-only.
+  // ADR-539 Φ1/Φ4b — render faced (multi-material prism, pickable per-face) όταν το slab είναι
+  // βαμμένο Ή το Polygon Mode είναι ενεργό (cross-entity multi-face select· βλ. `shouldRenderFaced`
+  // SSoT). Αλλιώς legacy single-material extrude (byte-for-byte, zero regression). Φ2: το faced
+  // path ΚΟΒΕΙ τα slab-openings (cap cut-outs + hole-walls)· slope μένει legacy-only.
   const fa = slab.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
-  const facedByPolygonTarget = poly.active && poly.targetBimId === slab.id;
-  const mesh = (facedByAppearance || facedByPolygonTarget)
+  const mesh = shouldRenderFaced(fa)
     ? buildFacedSlabBody(verts, thicknessM, fa ?? {}, slabOpeningHoles(openings, sceneToM))
     : buildLegacySlabBody(shape, thicknessM, slab.params);
   if (!mesh) return null;

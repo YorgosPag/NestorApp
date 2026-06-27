@@ -6,7 +6,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/addons/shaders/CopyShader.js';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import type { SelectionOutlinePass } from '../systems/selection/SelectionOutlinePass';
-import { UnderlayPass, renderUnderlay } from '../scene/underlay-pass';
+import { UnderlayPass, renderUnderlay, type UnderlayRootGetter } from '../scene/underlay-pass';
 
 const SSAO_TRANSITION_MS = DXF_TIMING.animation.DEFAULT; // ADR-516
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
@@ -44,6 +44,8 @@ export class SSAOModulator {
   private readonly renderPass: RenderPass;
   /** ADR-537 underlay-depth — draws the DXF underlay AFTER SSAO, depth-correct, AO-immune. */
   private readonly underlayPass: UnderlayPass;
+  /** ADR-537 underlay-depth — owner accessor for the underlay root (mirror of `getDxfBounds`). */
+  private readonly getUnderlayRoot: UnderlayRootGetter;
   private readonly getCamera: () => THREE.Camera;
   private readonly onNeedsRender: () => void;
   /** ADR-536 — silhouette selection outline, composited inside this composer. */
@@ -59,10 +61,12 @@ export class SSAOModulator {
     height: number,
     onNeedsRender: () => void = () => {},
     outlinePass?: SelectionOutlinePass,
+    getUnderlayRoot: UnderlayRootGetter = () => null,
   ) {
     this.getCamera = getCamera;
     this.onNeedsRender = onNeedsRender;
     this.outlinePass = outlinePass;
+    this.getUnderlayRoot = getUnderlayRoot;
     const camera = getCamera();
 
     this.renderPass = new RenderPass(scene, camera);
@@ -86,7 +90,7 @@ export class SSAOModulator {
     // but BEFORE the final CopyPass, into the composer readBuffer (which still holds the RenderPass
     // scene depth). So it is depth-tested against the model (walls occlude it) yet never AO-shaded
     // — identical to the raster path. Like a Revit/Cinema-4D CAD underlay.
-    this.underlayPass = new UnderlayPass(scene, getCamera);
+    this.underlayPass = new UnderlayPass(getUnderlayRoot, getCamera);
 
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(this.renderPass);
@@ -147,7 +151,7 @@ export class SSAOModulator {
       this.composer.renderer.setRenderTarget(null);
       this.composer.renderer.render(this.renderPass.scene, camera);
       // ADR-537 underlay-depth — keep the underlay visible on the emergency fallback path too.
-      renderUnderlay(this.composer.renderer, this.renderPass.scene, camera);
+      renderUnderlay(this.composer.renderer, this.getUnderlayRoot(), camera);
     } catch { /* ignore fallback failures */ }
   }
 
@@ -192,7 +196,7 @@ export class SSAOModulator {
     this.renderPass.scene.overrideMaterial = null;
     // ADR-537 underlay-depth — draw the DXF underlay on top of the just-rendered scene (screen
     // depth intact), so the navigation/raster path matches the idle/SSAO composer path exactly.
-    renderUnderlay(renderer, this.renderPass.scene, camera);
+    renderUnderlay(renderer, this.getUnderlayRoot(), camera);
   }
 
   /**

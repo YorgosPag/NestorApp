@@ -70,15 +70,15 @@ describe('wallToMesh — ADR-539 Φ3c faced (per-face appearance)', () => {
     expect(Array.isArray(mesh.material)).toBe(false);
   });
 
-  it('renders faced when it is the live Polygon-Mode target even without paint (chicken-and-egg)', () => {
+  it('renders faced while Polygon Mode is active, even unpainted (chicken-and-egg)', () => {
     const wall = flatWall();
     usePolygonMode3DStore.getState().setActive(true, wall.id);
     expect(Array.isArray((wallToMesh(wall) as THREE.Mesh).material)).toBe(true);
   });
 
-  it('stays legacy when a DIFFERENT solid is the Polygon-Mode target', () => {
+  it('renders faced for ANY solid while Polygon Mode is active (Φ4b cross-entity)', () => {
     const wall = flatWall();
-    usePolygonMode3DStore.getState().setActive(true, 'some-other-id');
-    expect(Array.isArray((wallToMesh(wall) as THREE.Mesh).material)).toBe(false);
+    usePolygonMode3DStore.getState().setActive(true, 'some-other-id'); // another solid opened the mode
+    expect(Array.isArray((wallToMesh(wall) as THREE.Mesh).material)).toBe(true);
   });
 });

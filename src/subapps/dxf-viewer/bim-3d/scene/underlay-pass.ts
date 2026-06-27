@@ -11,12 +11,16 @@
  * SOLUTION (how Revit / Cinema 4D draw CAD linework): the underlay is NOT shaded geometry — it is
  * reference linework drawn in a DEDICATED FORWARD PASS *after* the lit scene + post-FX, depth-
  * tested against the scene depth but never touched by SSAO / GI / tone-mapping. The underlay group
- * stays a normal child of the scene (so picking / bounds / section keep seeing it) but is marked
- * `visible = false` so the MAIN render skips it; this module renders ONLY that subtree, on top of
- * the already-laid scene depth, into whichever target the caller has bound:
+ * stays a normal child of the scene (so picking / bounds / section keep seeing it) but the converter
+ * keeps it `visible = false` so the MAIN render skips it; this module renders ONLY that subtree, on
+ * top of the already-laid scene depth, into whichever target the caller has bound:
  *   • composer path  → `UnderlayPass` inserted before the final CopyPass renders into the composer
  *                      readBuffer (which still holds the RenderPass scene depth) → no AO multiply.
  *   • raster/section → `renderUnderlay()` called after the direct scene render (screen depth intact).
+ *
+ * The underlay root is resolved through its OWNER (`DxfToThreeConverter.getRoot()`, mirror of
+ * `getBounds()`) — the same accessor-dep SSoT the section renderer uses for `getDxfBounds` /
+ * `getBimGroup`; this module never re-scans the scene graph for it.
  *
  * Because the underlay is drawn AFTER the scene depth with the default `LessEqualDepth` func, a
  * coplanar line at exactly the floor plane deterministically WINS the equal-depth test (drawn on
@@ -27,40 +31,21 @@
 import type * as THREE from 'three';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
 
-/** userData flag marking the active DXF underlay root (set by `DxfToThreeConverter`). */
-const UNDERLAY_FLAG = 'dxfUnderlay';
-
-/**
- * Tag a converter-built root as the DXF underlay + take it out of the main render path.
- * Kept `visible = false` so the lit-scene render (RenderPass / raster / section) skips it;
- * `renderUnderlay` flips it on only for its dedicated pass. Raycasting + `Box3.setFromObject`
- * ignore `.visible`, so picking and fit-to-bounds are unaffected.
- */
-export function markUnderlayRoot(root: THREE.Object3D): void {
-  root.userData[UNDERLAY_FLAG] = true;
-  root.visible = false;
-}
-
-/** Resolve the active underlay root among a scene's direct children (O(children), no deep walk). */
-export function findUnderlayRoot(scene: THREE.Object3D): THREE.Object3D | null {
-  for (const child of scene.children) {
-    if (child.userData[UNDERLAY_FLAG] === true) return child;
-  }
-  return null;
-}
+/** Resolves the underlay root from its owner (`DxfToThreeConverter.getRoot()`); null = nothing to draw. */
+export type UnderlayRootGetter = () => THREE.Object3D | null;
 
 /**
  * Render the DXF underlay subtree into the CURRENTLY BOUND render target, on top of the existing
  * depth, without clearing. No-op when there is no underlay. The group is rendered standalone
  * (`renderer.render(root, camera)`) so only its linework/text is drawn — a Group root carries no
- * background/fog/overrideMaterial, so nothing else in the bound target is disturbed.
+ * background/fog/overrideMaterial, so nothing else in the bound target is disturbed. The converter
+ * keeps the root `visible=false` (so the main render skips it); this flips it on only for this pass.
  */
 export function renderUnderlay(
   renderer: THREE.WebGLRenderer,
-  scene: THREE.Object3D,
+  root: THREE.Object3D | null,
   camera: THREE.Camera,
 ): void {
-  const root = findUnderlayRoot(scene);
   if (!root) return;
   const prevAutoClear = renderer.autoClear;
   const prevVisible = root.visible;
@@ -78,12 +63,12 @@ export function renderUnderlay(
  * correct yet untouched by the AO composite.
  */
 export class UnderlayPass extends Pass {
-  private readonly scene: THREE.Object3D;
+  private readonly getRoot: UnderlayRootGetter;
   private readonly getCamera: () => THREE.Camera;
 
-  constructor(scene: THREE.Object3D, getCamera: () => THREE.Camera) {
+  constructor(getRoot: UnderlayRootGetter, getCamera: () => THREE.Camera) {
     super();
-    this.scene = scene;
+    this.getRoot = getRoot;
     this.getCamera = getCamera;
     this.needsSwap = false;
   }
@@ -94,6 +79,6 @@ export class UnderlayPass extends Pass {
     readBuffer: THREE.WebGLRenderTarget,
   ): void {
     renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
-    renderUnderlay(renderer, this.scene, this.getCamera());
+    renderUnderlay(renderer, this.getRoot(), this.getCamera());
   }
 }

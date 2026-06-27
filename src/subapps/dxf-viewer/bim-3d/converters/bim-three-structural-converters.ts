@@ -37,7 +37,7 @@ import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/col
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-539 Φ3a — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { shouldRenderFaced } from './should-render-faced';
 
 const MM_TO_M = 0.001;
 
@@ -65,10 +65,7 @@ function buildColumnCoreBody(
   heightM: number,
 ): THREE.Mesh | null {
   const fa = column.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
-  const facedByPolygonTarget = poly.active && poly.targetBimId === column.id;
-  if (facedByAppearance || facedByPolygonTarget) {
+  if (shouldRenderFaced(fa)) {
     const mesh = buildFacedSolidBody(verts, heightM, fa ?? {}, getElementMaterial3D('column'));
     // ADR-404 — raking column shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.
     if (mesh) applyColumnTilt(mesh.geometry, flatColumn.params);
@@ -376,9 +373,7 @@ function buildBeam3DCarveOutline(
  */
 function buildBeamCoreBody(beam: BeamEntity, verts: readonly Point3D[], renderHeightM: number): THREE.Mesh | null {
   const fa = beam.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const faced = (fa !== undefined && Object.keys(fa).length > 0) || (poly.active && poly.targetBimId === beam.id);
-  if (!faced) return null;
+  if (!shouldRenderFaced(fa)) return null;
   const mesh = buildFacedSolidBody(verts, renderHeightM, fa ?? {}, getElementMaterial3D('beam'));
   if (mesh) applyBeamSlope(mesh.geometry, beam.params);
   return mesh;

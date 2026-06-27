@@ -50,6 +50,10 @@ import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marke
 // ADR-408 Φ-C — connected pipe ends follow a moving plumbing host (SSoT builder,
 // shared with the commit + any future 3D pipe ghost), so the run stretches live.
 import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
+// ADR-543 — coincident-endpoint co-move: the partner line(s) sharing the dragged endpoint
+// follow live during the drag (SSoT pure builder, shared with the commit + 3D ghost).
+import { buildCoincidentPartnerGhostEntities } from '../../systems/stretch/coincident-endpoint-comove';
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
 import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 // ADR-363 — live move-distance readout pill at the grip-drag / Alt-drag leader midpoint
@@ -198,6 +202,40 @@ function drawGradientOriginMarker(ctx: CanvasRenderingContext2D, screenPt: { x: 
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * ADR-543 — articulated joint: when a single line endpoint is reshaped and another selected
+ * line shares that endpoint, draw the partner line(s) reshaping by the same delta (live preview
+ * matching the co-move commit). The `startMoved === endMoved` guard keeps this to single-endpoint
+ * reshapes only (excludes whole-entity move where both ends shift, and zero-delta). Reuses the
+ * SSoT `buildCoincidentPartnerGhostEntities` so the preview geometry equals the commit.
+ */
+function drawComovePartnerGhosts(
+  ctx: CanvasRenderingContext2D,
+  origEntity: Entity,
+  transformed: Entity,
+  getEntity: (id: string) => Entity | undefined,
+  t: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  if (!isLineEntity(origEntity) || !isLineEntity(transformed)) return;
+  const startMoved = transformed.start.x !== origEntity.start.x || transformed.start.y !== origEntity.start.y;
+  const endMoved = transformed.end.x !== origEntity.end.x || transformed.end.y !== origEntity.end.y;
+  if (startMoved === endMoved) return; // both (whole move) or neither (idle) → not a single-endpoint reshape
+  const kind = startMoved ? 'line-start' : 'line-end';
+  const origMoved = startMoved ? origEntity.start : origEntity.end;
+  const newMoved = startMoved ? transformed.start : transformed.end;
+  const ghosts = buildCoincidentPartnerGhostEntities({
+    draggedEntity: origEntity,
+    draggedRefs: [{ entityId: origEntity.id, kind }],
+    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(),
+    getEntity,
+    delta: { x: newMoved.x - origMoved.x, y: newMoved.y - origMoved.y },
+  });
+  for (const ghost of ghosts) {
+    drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -388,6 +426,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       for (const ghost of pipeGhosts) {
         drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
       }
+
+      // ADR-543 — co-move partner line(s) sharing the dragged endpoint follow live.
+      drawComovePartnerGhosts(
+        ctx,
+        entity as unknown as Entity,
+        transformed as unknown as Entity,
+        (id) => getEntity(id) as unknown as Entity | undefined,
+        t, vp,
+      );
       ctx.restore();
     }
 

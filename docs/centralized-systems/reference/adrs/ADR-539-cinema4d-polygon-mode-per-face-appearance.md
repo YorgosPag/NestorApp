@@ -139,13 +139,15 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 `bim-3d/stores/FaceContextMenuStore.ts` (+`entityClipboard`) · `bim-3d/viewport/grips/FaceContextMenu.tsx`
 (dedupe read) · `bim-3d/shortcuts/use3DShortcuts.ts` (dedupe guard) · `bim-3d/viewport/BimViewport3D.tsx` (mount).
 
+**Νέα (Φ4b):** `bim-3d/converters/should-render-faced.ts` (SSoT faced-gate· cross-entity).
 **Τροποποίηση (Φ4b):** `bim-3d/stores/PolygonMode3DStore.ts` (+`selectedFaces` set, `toggleFace`, `clearFaces`,
 anchor `selectedFace`) · `bim-3d/systems/selection/FaceSelectionHighlighter.ts` (`setTargets` N overlays) ·
 `bim-3d/scene/ThreeJsSceneManager.ts` (`setSelectedFaces` + `setSelectedFace` delegate) ·
 `bim-3d/ui/apply-face-appearance.ts` (+`applyFaceAppearanceToFaces` = `CompositeCommand`) ·
 `bim-3d/ui/PolygonMaterialPanel.tsx` (apply σε ΟΛΕΣ τις όψεις + multi-hint) ·
 `bim-3d/viewport/use-bim3d-pointer-handlers.ts` (Shift-toggle) ·
-`bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` (paste-face σε ΟΛΕΣ) · i18n `polygonMode.hintMultiFace`.
+`bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` (paste-face σε ΟΛΕΣ) · i18n `polygonMode.hintMultiFace` ·
+**6 converters** (slab/structural[column+beam]/wall/foundation/roof → `shouldRenderFaced` SSoT, cross-entity facing).
 
 **Τροποποίηση:** `bim/types/bim-base.ts` · `bim-3d/converters/bim-three-slab-converter.ts` ·
 `bim-3d/systems/raycaster/BimEntityRaycaster.ts` · `bim-3d/scene/ThreeJsSceneManager.ts` ·
@@ -180,10 +182,19 @@ slab persistence serialize path (αν whitelist).
     `SetFaceAppearanceCommand` → `CompositeCommand` → `execute` (length≤1 → απλό command, μηδέν overhead). Κοινός
     level-scene adapter. Consumers: `PolygonMaterialPanel.apply` (swatch/custom-color/clear) + Φ4a keyboard paste-face
     → ΟΛΕΣ οι όψεις· copy-face/entity μένουν anchor.
+  - **🐛 FIX cross-entity facing (browser-verify):** το faced gate ήταν `poly.active && targetBimId === id` →
+    **μόνο ΕΝΑ solid** (αυτό που άνοιξε το mode) γινόταν pickable, άρα Shift+κλικ σε όψη ΑΛΛΟΥ solid δεν έπιανε
+    (το `raycastBimFace` γύριζε entity-fallback χωρίς `faceKey`). **Boy-Scout κεντρικοποίηση (N.0.2):** το gate
+    ήταν inline-διπλό σε **6 converters** → ΕΝΑ SSoT `bim-3d/converters/should-render-faced.ts`
+    (`shouldRenderFaced(faceAppearance)` = painted **Ή** `poly.active`). Νέα πολιτική: όσο το Polygon Mode είναι
+    active, **ΟΛΑ** τα solids γίνονται faced (Cinema 4D: όλες οι όψεις όλων των αντικειμένων επιλέξιμες) → cross-entity
+    multi-select δουλεύει. `targetBimId` = πλέον μόνο anchor (δεν οδηγεί το facing). Άβαφο + mode off → legacy
+    (zero regression· slab/column/foundation/roof faced≡legacy look άβαφα μέσω `resolveFaceMaterial` fallback).
   - **Tests:** `PolygonMode3DStore.test.ts` (8), `FaceSelectionHighlighter.test.ts` (7),
-    `apply-face-appearance-batch.test.ts` (6, cross-entity + same-entity one-undo) — **21/21 GREEN** + regression
-    (FaceContextMenuStore, polygon-clipboard-key, read-face-appearance, SetFaceAppearance, SetEntityFaceAppearanceMap)
-    **36/36 GREEN** = 0 break. i18n `polygonMode.hintMultiFace` (el+en, `{{count}}` ICU).
+    `apply-face-appearance-batch.test.ts` (6, cross-entity + same-entity one-undo), `should-render-faced.test.ts` (3)
+    — **24/24 GREEN** + regression (FaceContextMenuStore, polygon-clipboard-key, read-face-appearance, SetFaceAppearance,
+    SetEntityFaceAppearanceMap, beam/column/wall/roof-faced-3d [updated: active→cross-entity faced], faced-prism)
+    **0 break**. i18n `polygonMode.hintMultiFace` (el+en, `{{count}}` ICU).
 - **2026-06-27 (Φ4a — KEYBOARD + ENTITY-LEVEL COPY/PASTE, IMPLEMENTED UNCOMMITTED)** — «Advanced polygon
   editing» layer (1/4): copy/paste εμφάνισης από πληκτρολόγιο + entity-level. **FULL SSoT reuse, μηδέν
   διπλότυπα** (το per-face cross-entity clipboard υπήρχε ΗΔΗ από Φ3f — δεν ξαναχτίστηκε).

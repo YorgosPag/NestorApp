@@ -20,6 +20,8 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import { type GripMode } from '../../systems/grip/grip-mode-cycle';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
+import { collectCoincidentLinePartnerMoves } from '../../systems/stretch/coincident-endpoint-comove';
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
@@ -52,6 +54,16 @@ export function commitDxfGripDragViaStretchCommand(
   const anchorMoves = refs.length === 0 && grip.movesEntity ? [grip.entityId] : [];
   if (vertexMoves.length === 0 && anchorMoves.length === 0) return;
 
+  // ADR-543 — articulated joint: when ≥2 lines are selected and the dragged
+  // endpoint is coincident with another selected line's endpoint, co-move both
+  // endpoints in ONE command. Works in 2D AND 3D (both pass through this seam).
+  const partnerMoves = collectCoincidentLinePartnerMoves({
+    draggedEntity: entity as unknown as Entity,
+    draggedRefs: refs,
+    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(),
+    getEntity: (id) => sceneManager.getEntity(id) as unknown as Entity | undefined,
+  });
+
   // ADR-357 Phase 12 — when the grip-context-menu "Copy" toggle is ON, route
   // through `CopyEntityCommand` so the source entity is preserved and a fresh
   // clone receives the displacement. Same vertex / anchor split as Stretch.
@@ -64,7 +76,13 @@ export function commitDxfGripDragViaStretchCommand(
     return;
   }
 
-  const params: StretchParams = { vertexMoves, anchorMoves, displacement: delta };
+  // Co-move partners ride only the StretchEntityCommand path. Copy-mode (above)
+  // keeps single-entity clone semantics intentionally.
+  const params: StretchParams = {
+    vertexMoves: [...vertexMoves, ...partnerMoves],
+    anchorMoves,
+    displacement: delta,
+  };
   const command = new StretchEntityCommand(params, sceneManager);
   if (command.validate() !== null) return;
   deps.execute(command);

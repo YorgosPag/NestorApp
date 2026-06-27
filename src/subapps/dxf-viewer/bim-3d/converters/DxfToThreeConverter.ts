@@ -26,7 +26,6 @@ import { ACI_PALETTE } from '../../settings/standards/aci';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
-import { markUnderlayRoot } from '../scene/underlay-pass';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
@@ -170,9 +169,10 @@ export class DxfToThreeConverter {
     // Flat structure (named group holds the LineSegments directly) — unchanged
     // from the pre-multi-floor layout so existing consumers / tests keep working.
     group.name = 'dxf-wireframe';
-    // ADR-537 underlay-depth — render via the dedicated post-FX underlay pass, not the lit
-    // scene (`underlay-pass.ts`). Marks the root + hides it from the main render.
-    markUnderlayRoot(group);
+    // ADR-537 underlay-depth — drawn by the dedicated post-FX underlay pass (`underlay-pass.ts`),
+    // not the lit scene. `visible=false` hides it from the main render; the pass reads the root
+    // via `getRoot()` (the owner accessor, mirror of `getBounds`) and flips it on for its own pass.
+    group.visible = false;
     this.root = group;
     this.scene.add(group);
   }
@@ -195,7 +195,7 @@ export class DxfToThreeConverter {
     }
     if (root.children.length === 0) return;
     // ADR-537 underlay-depth — same dedicated underlay pass for the stacked multi-floor root.
-    markUnderlayRoot(root);
+    root.visible = false;
     this.root = root;
     this.scene.add(root);
   }
@@ -260,6 +260,15 @@ export class DxfToThreeConverter {
     if (!this.root) return null;
     const box = new THREE.Box3().setFromObject(this.root);
     return box.isEmpty() ? null : box;
+  }
+
+  /**
+   * ADR-537 underlay-depth — the underlay root (or null). Owner accessor consumed by the
+   * dedicated underlay pass (`underlay-pass.ts`), mirroring `getBounds()` so the render pipeline
+   * locates the underlay through its OWNER, not a parallel scene lookup. Kept `visible=false`.
+   */
+  getRoot(): THREE.Object3D | null {
+    return this.root;
   }
 
   private disposeRoot(): void {

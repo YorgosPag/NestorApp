@@ -24,11 +24,15 @@ import { UnifiedGripRenderer } from '../../../rendering/grips';
 import type { GripSettings } from '../../../rendering/grips/types';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
+import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
+import { collectCoincidentLinePartnerMoves } from '../../../systems/stretch/coincident-endpoint-comove';
+import type { StretchVertexMove } from '../../../core/commands/entity-commands/StretchEntityCommand';
+import type { Entity } from '../../../types/entities';
 import { dxfSceneUnitToMm } from '../../../utils/scene-units';
 import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
 import { dxfPlanToWorld } from '../coordinate-transforms';
@@ -43,29 +47,12 @@ export interface BimGripOverlay2DProps {
 /** ADR-537 — raw DXF live-ghost stroke (Revit-blue dashed, mirror the cold grip hue). */
 const DXF_GHOST_STROKE = 'rgba(80, 160, 255, 0.9)';
 
-/**
- * ADR-537 — stroke the live ghost of a raw DXF entity being grip-dragged. Reads the
- * ghost entity id (low-freq store) + the live drag (non-reactive singleton); builds the
- * entity-in-progress geometry via the pure `buildDxfGhostSegments` and projects every
- * point with the SAME projector the grips use (so the ghost tracks the squares pixel-for-
- * pixel). No-op for BIM grips (`dxfGhostEntityId === null`) or when no drag is in flight.
- */
-function paintDxfGhost(
+/** Stroke a set of plan-mm poly-lines through `project` with the Revit-blue dashed ghost style. */
+function strokeGhostSegments(
   ctx: CanvasRenderingContext2D,
   project: (p: Point2D) => Point2D,
-  grips: readonly GripInfo[],
+  segments: Point2D[][],
 ): void {
-  const ghostId = useGrip3DOverlayStore.getState().dxfGhostEntityId;
-  const drag = grip3DOverlayInteraction.drag;
-  if (!ghostId || !drag || grips.length === 0) return;
-  const grip = grips[drag.index % grips.length];
-  if (!grip) return;
-  // ADR-537 δ — resolve across the active floor scope (the dragged entity may be on a stacked
-  // floor, not the active one). The ghost's elevation rides the seated `topElevFor` already.
-  const found = findDxfEntityInScope(ghostId);
-  if (!found) return;
-  // ADR-537 γ — scale native DXF coords to mm (this floor's factor) so the ghost aligns with grips.
-  const segments = buildDxfGhostSegments(found.entity, grip, drag.livePlanPos, dxfSceneUnitToMm(found.scene));
   if (segments.length === 0) return;
   ctx.save();
   ctx.strokeStyle = DXF_GHOST_STROKE;
@@ -83,6 +70,90 @@ function paintDxfGhost(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/**
+ * ADR-537 — stroke the live ghost of a raw DXF entity being grip-dragged. Reads the dragged
+ * grip (its own `entityId` is the source — robust to multi-line selections, ADR-543) + the
+ * live drag (non-reactive singleton); builds the entity-in-progress geometry via the pure
+ * `buildDxfGhostSegments` and projects with the SAME projector the grips use (pixel-for-pixel).
+ * No-op for BIM grips (`dxfGhostEntityIds` empty) or when no drag is in flight. ADR-543 — also
+ * strokes the coincident PARTNER lines reshaping (articulated joint co-move preview).
+ */
+function paintDxfGhost(
+  ctx: CanvasRenderingContext2D,
+  project: (p: Point2D) => Point2D,
+  grips: readonly GripInfo[],
+): void {
+  const ids = useGrip3DOverlayStore.getState().dxfGhostEntityIds;
+  const drag = grip3DOverlayInteraction.drag;
+  if (ids.length === 0 || !drag || grips.length === 0) return;
+  const grip = grips[drag.index % grips.length];
+  if (!grip?.entityId) return;
+  // ADR-537 δ — resolve across the active floor scope (the dragged entity may be on a stacked
+  // floor, not the active one). The ghost's elevation rides the seated `topElevFor` already.
+  const found = findDxfEntityInScope(grip.entityId);
+  if (!found) return;
+  // ADR-537 γ — scale native DXF coords to mm (this floor's factor) so the ghost aligns with grips.
+  strokeGhostSegments(ctx, project,
+    buildDxfGhostSegments(found.entity, grip, drag.livePlanPos, dxfSceneUnitToMm(found.scene)));
+  paintPartnerGhosts(ctx, project, found.entity, grip, drag.livePlanPos, ids);
+}
+
+/** The dragged endpoint's vertex kind, or null when it is not a single line endpoint. */
+function draggedLineEndpointKind(grip: GripInfo): 'line-start' | 'line-end' | null {
+  if (grip.movesEntity) return null;
+  if (grip.gripIndex === 0) return 'line-start';
+  if (grip.gripIndex === 1) return 'line-end';
+  return null;
+}
+
+/**
+ * ADR-543 — synthesize a ghost grip for a coincident partner line so `buildDxfGhostSegments`
+ * reshapes the partner's matching endpoint(s) by the same `deltaMm`. The grip `position` is
+ * irrelevant (only `livePlanPos − position = deltaMm` drives the move), so it is left at the
+ * origin and `livePlanPos = deltaMm`. Both endpoints coincident ⇒ a whole-entity (midpoint) grip.
+ */
+function buildPartnerGhostGrip(move: StretchVertexMove, deltaMm: Point2D): { grip: GripInfo; live: Point2D } {
+  const hasStart = move.refs.some((r) => r.kind === 'line-start');
+  const hasEnd = move.refs.some((r) => r.kind === 'line-end');
+  const whole = hasStart && hasEnd;
+  const grip: GripInfo = {
+    entityId: move.entityId,
+    gripIndex: whole ? 2 : hasStart ? 0 : 1,
+    type: whole ? 'edge' : 'vertex',
+    position: { x: 0, y: 0 },
+    movesEntity: whole,
+    ...(whole ? { edgeVertexIndices: [0, 1] as [number, number] } : {}),
+  };
+  return { grip, live: { x: deltaMm.x, y: deltaMm.y } };
+}
+
+/** ADR-543 — stroke each coincident partner line reshaping by the same world delta as the dragged line. */
+function paintPartnerGhosts(
+  ctx: CanvasRenderingContext2D,
+  project: (p: Point2D) => Point2D,
+  draggedEntity: DxfEntityUnion,
+  grip: GripInfo,
+  livePlanPos: Point2D,
+  ids: readonly string[],
+): void {
+  if (ids.length < 2) return;
+  const kind = draggedLineEndpointKind(grip);
+  if (!kind || draggedEntity.type !== 'line') return;
+  const deltaMm = { x: livePlanPos.x - grip.position.x, y: livePlanPos.y - grip.position.y };
+  const partnerMoves = collectCoincidentLinePartnerMoves({
+    draggedEntity: draggedEntity as unknown as Entity,
+    draggedRefs: [{ entityId: draggedEntity.id, kind }],
+    selectedEntityIds: ids,
+    getEntity: (id) => findDxfEntityInScope(id)?.entity as unknown as Entity | undefined,
+  });
+  for (const move of partnerMoves) {
+    const found = findDxfEntityInScope(move.entityId);
+    if (!found || found.entity.type !== 'line') continue;
+    const { grip: synth, live } = buildPartnerGhostGrip(move, deltaMm);
+    strokeGhostSegments(ctx, project, buildDxfGhostSegments(found.entity, synth, live, dxfSceneUnitToMm(found.scene)));
+  }
 }
 
 export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
@@ -153,7 +224,7 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     // depth-occlusion only mis-culls them (a coplanar floor-level grip at a grazing view angle, or
     // a grip sitting over any BIM solid that the flat underlay is referenced against). The 2D canvas
     // has no grip occlusion either → match it: skip occlusion for raw DXF, keep it for BIM.
-    const isRawDxfSelection = useGrip3DOverlayStore.getState().dxfGhostEntityId !== null;
+    const isRawDxfSelection = useGrip3DOverlayStore.getState().dxfGhostEntityIds.length > 0;
     const occluder = occluderRef.current;
     let visibility: readonly boolean[] | null = null;
     if (occluder && !isRawDxfSelection) {

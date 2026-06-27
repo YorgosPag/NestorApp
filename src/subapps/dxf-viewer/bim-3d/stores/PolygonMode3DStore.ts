@@ -34,9 +34,10 @@ interface PolygonMode3DState {
   /** True όταν το Polygon Mode είναι ενεργό (κλικ → επιλογή όψης αντί entity). */
   readonly active: boolean;
   /**
-   * Το solid πάνω στο οποίο είναι ανοιχτό το Polygon Mode. Ο slab converter το διαβάζει
-   * ώστε να render-άρει ΑΥΤΟ το solid faced (pickable όψεις) ακόμη κι αν δεν έχει βαφή —
-   * λύνει το chicken-and-egg (faced render ↔ faceAppearance). null όταν off.
+   * Το solid πάνω στο οποίο **άνοιξε** το Polygon Mode (primary anchor, π.χ. για framing/UX).
+   * Φ4b: το faced render ΔΕΝ εξαρτάται πλέον από αυτό — όσο το mode είναι active, ΟΛΑ τα solids
+   * γίνονται faced (`shouldRenderFaced` SSoT) ώστε το multi-face select να δουλεύει cross-entity.
+   * null όταν off.
    */
   readonly targetBimId: string | null;
   /** Όλες οι επιλεγμένες όψεις (SSoT· Cinema 4D multi-face select). Κενό = καμία. */

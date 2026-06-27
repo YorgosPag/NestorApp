@@ -49,7 +49,7 @@ import { applyWallTilt } from './mesh-slope-shear';
 import { buildShape, extrudeAndRotate, tagMesh, buildWallShape, buildWallFootprintRing } from './bim-three-shape-helpers';
 // ADR-539 Φ3c — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { shouldRenderFaced } from './should-render-faced';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
@@ -322,10 +322,7 @@ function buildWallCoreBody(
   material: THREE.Material,
 ): THREE.Mesh | null {
   const fa = wall.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const facedByAppearance = fa !== undefined && Object.keys(fa).length > 0;
-  const facedByPolygonTarget = poly.active && poly.targetBimId === wall.id;
-  if (facedByAppearance || facedByPolygonTarget) {
+  if (shouldRenderFaced(fa)) {
     const ring = buildWallFootprintRing(outer, inner);
     const mesh = buildFacedSolidBody(ring, heightM, fa ?? {}, material);
     // ADR-404 — battered wall shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.

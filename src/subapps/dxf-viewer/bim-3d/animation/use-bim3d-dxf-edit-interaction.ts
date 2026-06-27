@@ -56,16 +56,25 @@ interface EligibleDxfEntity {
 }
 
 /**
- * Resolve the single selected raw-DXF entity (no BIM selection + exactly one dxf id) across
- * the active floor scope — so an entity on ANY stacked floor is editable, not just the active
- * one (ADR-537 δ). Carries the floor elevation + scene for unit-correct, elevation-correct
- * grip seating. Null when not eligible.
+ * Resolve the selected raw-DXF entities (no BIM selection) across the active floor scope —
+ * so an entity on ANY stacked floor is editable, not just the active one (ADR-537 δ). Each
+ * carries the floor elevation + scene for unit-correct, elevation-correct grip seating.
+ *
+ * ADR-543 — multi-select: a single selection keeps the original behavior (any supported
+ * type). Two or more entities seat grips ONLY when ALL are lines (the articulated-joint
+ * case); any other multi-select returns [] = today's "no 3D grips" behavior (regression-safe).
+ * Returns [] when any selected id is not a raw-DXF entity in scope.
  */
-function resolveEligibleDxfEntity(): EligibleDxfEntity | null {
-  if (useSelection3DStore.getState().selectedBimIds.length > 0) return null;
+function resolveEligibleDxfEntities(): EligibleDxfEntity[] {
+  if (useSelection3DStore.getState().selectedBimIds.length > 0) return [];
   const ids = SelectedEntitiesStore.getSelectedEntityIds();
-  if (ids.length !== 1) return null;
-  return findDxfEntityInScope(ids[0]);
+  if (ids.length === 0) return [];
+  const resolved = ids
+    .map((id) => findDxfEntityInScope(id))
+    .filter((e): e is EligibleDxfEntity => e !== null);
+  if (resolved.length !== ids.length) return [];
+  if (ids.length === 1) return resolved;
+  return resolved.every((e) => e.entity.type === 'line') ? resolved : [];
 }
 
 /**
@@ -105,7 +114,7 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
 
     const store = () => useGrip3DOverlayStore.getState();
     /** True when WE own the current grip set (raw DXF) — guards against wiping BIM grips. */
-    const ownsGrips = (): boolean => store().dxfGhostEntityId !== null;
+    const ownsGrips = (): boolean => store().dxfGhostEntityIds.length > 0;
 
     const teardownListeners = (): void => {
       activeAbort?.abort();
@@ -116,19 +125,23 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       }
     };
 
-    const seatGrips = (eligible: EligibleDxfEntity): boolean => {
-      const { entity, floorElevationMm, scene } = eligible;
-      // ADR-537 γ — seat grips in mm (scale native DXF coords by THIS floor's mm-per-unit
-      // factor) so they align with the mm-based plan projector at any scene unit.
-      const unitToMm = dxfSceneUnitToMm(scene);
-      const grips = scaleDxfGripsToMm(rawDxfReshapeGrips(computeDxfEntityGrips(entity)), unitToMm);
+    const seatGrips = (eligibles: EligibleDxfEntity[]): boolean => {
+      if (eligibles.length === 0) return false;
+      // ADR-537 γ — seat grips in mm (scale native DXF coords by EACH floor's mm-per-unit
+      // factor) so they align with the mm-based plan projector at any scene unit. ADR-543 —
+      // concat the grips of all selected lines into one set (each GripInfo carries its own
+      // entityId, so the combined flat set stays unambiguous for hit-test + commit).
+      const grips = eligibles.flatMap((el) =>
+        scaleDxfGripsToMm(rawDxfReshapeGrips(computeDxfEntityGrips(el.entity)), dxfSceneUnitToMm(el.scene)),
+      );
       if (grips.length === 0) return false;
-      // ADR-537 δ — seat at the entity's floor elevation (single floor → 0). The controller +
-      // overlay read these closures, so grips/ghost/drag all ride the correct stacked plane.
+      // ADR-537 δ — seat at the floor elevation (single floor → 0). ADR-543 — coincident
+      // joints are same-floor in practice, so all grips ride the first entity's floor plane.
+      const floorElevationMm = eligibles[0].floorElevationMm;
       seatedFloorElevMm = floorElevationMm;
       const elevFor: PlanElevationMmFor = () => floorElevationMm;
       store().setGrips(grips, elevFor, elevFor);
-      store().setDxfGhostEntityId(entity.id);
+      store().setDxfGhostEntityIds(eligibles.map((el) => el.entity.id));
       return true;
     };
 
@@ -213,8 +226,8 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
     const syncFromSelection = (): void => {
       // Never re-seat mid-drag (the controller owns the grips).
       if (gripController.isDragging()) return;
-      const eligible = levelsRef.current ? resolveEligibleDxfEntity() : null;
-      if (eligible && seatGrips(eligible)) {
+      const eligible = levelsRef.current ? resolveEligibleDxfEntities() : [];
+      if (eligible.length > 0 && seatGrips(eligible)) {
         setupListeners();
         manager.markSceneDirty();
         return;

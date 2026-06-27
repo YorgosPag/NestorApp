@@ -48,15 +48,15 @@ describe('columnToMesh — ADR-539 Φ3a faced (per-face appearance)', () => {
     expect(Array.isArray(coreMesh(empty).material)).toBe(false);
   });
 
-  it('renders faced when it is the live Polygon-Mode target even without paint (chicken-and-egg)', () => {
+  it('renders faced while Polygon Mode is active, even unpainted (chicken-and-egg)', () => {
     const column = flatColumn();
     usePolygonMode3DStore.getState().setActive(true, column.id);
     expect(Array.isArray(coreMesh(column).material)).toBe(true);
   });
 
-  it('stays legacy when a DIFFERENT solid is the Polygon-Mode target', () => {
+  it('renders faced for ANY solid while Polygon Mode is active (Φ4b cross-entity)', () => {
     const column = flatColumn();
-    usePolygonMode3DStore.getState().setActive(true, 'some-other-id');
-    expect(Array.isArray(coreMesh(column).material)).toBe(false);
+    usePolygonMode3DStore.getState().setActive(true, 'some-other-id'); // another solid opened the mode
+    expect(Array.isArray(coreMesh(column).material)).toBe(true);
   });
 });

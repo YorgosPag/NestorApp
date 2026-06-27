@@ -49,7 +49,7 @@ import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 // ADR-539 Φ3b — Cinema 4D «Polygon Mode»: per-«νερό» (face) appearance override.
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { resolveFaceMaterial } from '../materials/face-appearance-material';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { shouldRenderFaced } from './should-render-faced';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
@@ -450,8 +450,7 @@ export function roofToMesh(
   // ADR-539 Φ3b — faced render (per-«νερό» pick + paint) όταν το roof έχει `faceAppearance`
   // Ή είναι ο live Polygon-Mode target (faces pickable πριν από κάθε βαφή — chicken-and-egg).
   const fa = roof.faceAppearance;
-  const poly = usePolygonMode3DStore.getState();
-  const faced = (fa !== undefined && Object.keys(fa).length > 0) || (poly.active && poly.targetBimId === roof.id);
+  const faced = shouldRenderFaced(fa);
   const ctx: RoofFaceMeshContext = {
     roofId: roof.id,
     layers: layers && layers.length > 0 ? layers : null,

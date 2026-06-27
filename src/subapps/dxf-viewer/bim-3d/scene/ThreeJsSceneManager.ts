@@ -16,8 +16,7 @@ import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } f
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { useSelection3DStore } from '../stores/Selection3DStore';
-import { applyFloorVisibility } from '../utils/applyFloorVisibility';
-import type { FloorVisMode } from '../utils/floor-visibility-state';
+import { applyFloorVisibility } from '../utils/applyFloorVisibility'; import type { FloorVisMode } from '../utils/floor-visibility-state';
 import { applyBuildingVisibility } from '../utils/applyBuildingVisibility';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
@@ -138,6 +137,7 @@ export class ThreeJsSceneManager {
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
       getCamera: () => this.viewport.camera, viewportSize: getRendererViewportSize(this.renderer.domElement),
       onNeedsRender: () => this.markSceneDirty(),
+      getUnderlayRoot: () => this.dxfConverter.getRoot(), // ADR-537 underlay-depth (owner accessor)
     });
     this.qualityModulator = subs.qualityModulator;
     this.ssaoModulator = subs.ssaoModulator;
@@ -189,6 +189,7 @@ export class ThreeJsSceneManager {
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
       getBimGroup: () => this.bimLayer.group, getDxfBounds: () => this.dxfConverter.getBounds(),
+      getUnderlayRoot: () => this.dxfConverter.getRoot(), // ADR-537 underlay-depth (owner accessor)
       invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(), markDirty: () => this.markSceneDirty(), // ADR-452 cut-plane drag → repaint
     });
     // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
