@@ -45,13 +45,6 @@ jest.mock('../ColumnPlacementGhost', () => ({
     dispose(): void {}
   },
 }));
-jest.mock('../PlacementSnapMarker', () => ({
-  PlacementSnapMarker: class {
-    show(): void {}
-    hide(): void {}
-    dispose(): void {}
-  },
-}));
 jest.mock('../raycast-floor-point', () => ({
   raycastFloorPoint: jest.fn(() => ({ x: 1, y: 2, z: 3 })),
   resolveActiveFloorElevationMm: jest.fn(() => 0),
@@ -62,13 +55,15 @@ jest.mock('../world-to-scene-point', () => ({
   planMmToScenePoint: jest.fn((mm: { x: number; y: number }) => mm),
 }));
 // OSNAP off by default → raw point flows through (free-placement path under test).
+// ADR-544 — ο hook χρησιμοποιεί πλέον το view-aware resolver (snapped θέση + OSNAP glyph view).
 jest.mock('../placement-snap', () => ({
-  resolvePlacementSnap: jest.fn(() => null),
+  resolvePlacementSnapWithView: jest.fn(() => null),
 }));
-import { resolvePlacementSnap } from '../placement-snap';
-const mockResolvePlacementSnap = resolvePlacementSnap as jest.MockedFunction<typeof resolvePlacementSnap>;
-jest.mock('../../viewport/coordinate-transforms', () => ({
-  dxfPlanToWorld: jest.fn(() => ({ x: 0, y: 0, z: 0 })),
+import { resolvePlacementSnapWithView } from '../placement-snap';
+const mockResolvePlacementSnap = resolvePlacementSnapWithView as jest.MockedFunction<typeof resolvePlacementSnapWithView>;
+// ADR-544 — onMove καλεί το ΕΝΑ 2D preview· εδώ mock (τα tests ελέγχουν μόνο το click→EventBus wiring).
+jest.mock('../../../hooks/drawing/column-preview-helpers', () => ({
+  generateColumnPreview: jest.fn(() => null),
 }));
 
 import { useBim3DColumnPlacement } from '../use-bim3d-column-placement';
@@ -125,7 +120,7 @@ describe('useBim3DColumnPlacement', () => {
     const canvas = document.createElement('canvas');
     mockState.activeTool = 'column';
     mockState.is3D = true;
-    mockResolvePlacementSnap.mockReturnValue({ snappedMm: { x: 42, y: -7 }, markerMm: { x: 42, y: -7 } });
+    mockResolvePlacementSnap.mockReturnValue({ snappedMm: { x: 42, y: -7 }, markerMm: { x: 42, y: -7 }, view: null });
     renderHook(() => useBim3DColumnPlacement(makeParams(canvas)));
     canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
     expect(mockEmit).toHaveBeenCalledWith('bim:place-column-3d', { point: { x: 42, y: -7 } });

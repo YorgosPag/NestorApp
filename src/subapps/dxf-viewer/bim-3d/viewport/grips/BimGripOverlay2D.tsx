@@ -18,7 +18,7 @@
  * — interaction stays on the WebGL canvas below (the controller hit-tests in screen space).
  */
 
-import { useRef, useEffect, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
+import { useRef, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { UnifiedGripRenderer } from '../../../rendering/grips';
 import type { GripSettings } from '../../../rendering/grips/types';
@@ -28,7 +28,6 @@ import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
-import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
 import { collectCoincidentLinePartnerMoves } from '../../../systems/stretch/coincident-endpoint-comove';
 import type { StretchVertexMove } from '../../../core/commands/entity-commands/StretchEntityCommand';
@@ -37,7 +36,7 @@ import { dxfSceneUnitToMm } from '../../../utils/scene-units';
 import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
 import { dxfPlanToWorld } from '../coordinate-transforms';
 import { sizeCanvasToContainerDpr } from '../../../rendering/canvas/withCanvasState';
-import { useRafWhile, useCameraMotionGate } from '../overlay-raf';
+import { useRafWhile, useCameraMotionGate, useGripDepthOccluder } from '../overlay-raf';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
 
 export interface BimGripOverlay2DProps {
@@ -159,8 +158,8 @@ function paintPartnerGhosts(
 export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // ADR-535 Φ5b — GPU depth-occluder (one instance, lazy GPU resources, disposed on unmount).
-  const occluderRef = useRef<GripDepthOccluder | null>(null);
+  // ADR-535 Φ5b — GPU depth-occluder via το shared lifecycle SSoT (overlay-raf, ADR-544 dedup).
+  const occluderRef = useGripDepthOccluder();
   // ADR-535/536 — HIDE grips during camera motion (orbit/zoom/pan): while moving, the occluder's
   // full-scene depth pre-pass + the 2D draws are skipped → the grips vanish and navigation stays
   // smooth; they snap back with correct occlusion the instant the camera settles (the continuous
@@ -249,15 +248,6 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     new UnifiedGripRenderer(ctx, projectTop).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, 0, ov), settings);
     new UnifiedGripRenderer(ctx, projectBottom).renderGripSetBatched(buildTwinSurfaceConfigs(liveGrips, n, ov), settings);
   }, [managerRef, isCameraMoving]);
-
-  // ADR-535 Φ5b — own the GPU occluder for the overlay's lifetime (lazy GL resources inside).
-  useEffect(() => {
-    occluderRef.current = new GripDepthOccluder();
-    return () => {
-      occluderRef.current?.dispose();
-      occluderRef.current = null;
-    };
-  }, []);
 
   // Clear the canvas when the grip set empties / on unmount (shared overlay RAF SSoT, ADR-542).
   const onStop = useCallback(() => {

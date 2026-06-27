@@ -32,13 +32,18 @@ import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { ColumnPlacementGhost } from './ColumnPlacementGhost';
-import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
-import { resolvePlacementSnap } from './placement-snap';
+import { resolvePlacementSnapWithView } from './placement-snap';
 import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
+// ADR-544 — ίδιο 2D meta (πλέγμα/διαστάσεις/οδηγοί) στο 3D μέσω του ΕΝΟΣ `generateColumnPreview`.
+import { generateColumnPreview } from '../../hooks/drawing/column-preview-helpers';
+import { extractPlacement3DMeta } from './placement-overlay-meta';
+import { usePlacement3DOverlayStore } from '../stores/Placement3DOverlayStore';
+// ADR-544 — ίδιο OSNAP glyph+label («Γωνία κολόνας») με το 2D, μέσω του κοινού ADR-542 overlay.
+import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
+import type { SnapIndicatorView } from '../../snapping/extended-types';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an
  *  orbit drag, not a placement — skip it (avoids accidental columns). */
@@ -55,9 +60,16 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
     if (!canvasEl || !manager) return;
 
     const ghost = new ColumnPlacementGhost(manager.scene);
-    const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
+
+    // ADR-544 — καθάρισε ΟΛΟ το placement feedback (meta πλέγματος/διαστάσεων + OSNAP glyph)
+    // σε miss / leave / teardown. Αυτό το hook είναι ο μοναδικός κάτοχος του snap glyph όσο το
+    // εργαλείο κολόνας είναι ενεργό (ο hover-handler `updateSnap3D` υποχωρεί — βλ. guard εκεί).
+    const clearOverlay = (): void => {
+      usePlacement3DOverlayStore.getState().setMeta(null);
+      useSnap3DOverlayStore.getState().setSnap(null);
+    };
 
     // The visible cursor is owned by the viewport interaction surface (the
     // `role="application"` overlay carries the Tailwind `cursor-grab`), NOT the
@@ -78,14 +90,16 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       clientX: number,
       clientY: number,
       elev: number,
-    ): { planMm: { x: number; y: number }; markerMm: { x: number; y: number } | null } | null => {
+    ): { planMm: { x: number; y: number }; view: SnapIndicatorView | null } | null => {
       const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, elev);
       if (!world) return null;
       const rawMm = worldToPlanMm(world);
-      const snap = resolvePlacementSnap(rawMm);
+      // ADR-544 — ΜΙΑ engine query → snapped θέση + OSNAP view (glyph «Γωνία κολόνας»). Ίδιος snap
+      // engine με το 2D· το view δημοσιεύεται στο Snap3DOverlayStore για το κοινό ADR-542 overlay.
+      const snap = resolvePlacementSnapWithView(rawMm);
       return snap
-        ? { planMm: snap.snappedMm, markerMm: snap.markerMm }
-        : { planMm: rawMm, markerMm: null };
+        ? { planMm: snap.snappedMm, view: snap.view }
+        : { planMm: rawMm, view: null };
     };
 
     const onMove = (e: PointerEvent): void => {
@@ -93,21 +107,28 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       const hit = resolveFloorPlanMm(e.clientX, e.clientY, elev);
       if (!hit) {
         ghost.setVisible(false);
-        snapMarker.hide();
+        clearOverlay();
         manager.markSceneDirty();
         return;
       }
+      const units = unitsNow();
+      const scenePt = planMmToScenePoint(hit.planMm, units);
       const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
-      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), elev, levelId);
+      ghost.update(scenePt, elev, levelId);
       ghost.setVisible(true);
-      if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, elev), manager.getCamera());
-      else snapMarker.hide();
+      // ADR-544/542 — ΙΔΙΟ OSNAP glyph+label με το 2D (┘/▲/⊕ «Γωνία κολόνας») στο σημείο έλξης,
+      // μέσω του κοινού Snap3DOverlayStore + BimSnapIndicatorOverlay3D. `null` view = grid/no-snap.
+      useSnap3DOverlayStore.getState().setSnap(hit.view ? { view: hit.view, elevMm: elev } : null);
+      // ADR-544 — ΙΔΙΟ 2D placement feedback στο 3D: το ΕΝΑ `generateColumnPreview` με τον ΗΔΗ-snapped
+      // 3D cursor (override → ΟΧΙ stale 2D ImmediateSnap) παράγει πλέγμα/διαστάσεις στο σωστό σημείο.
+      const preview = generateColumnPreview(scenePt, units, scenePt);
+      usePlacement3DOverlayStore.getState().setMeta(extractPlacement3DMeta(preview, scenePt, elev, units));
       manager.markSceneDirty();
     };
 
     const onLeave = (): void => {
       ghost.setVisible(false);
-      snapMarker.hide();
+      clearOverlay();
       manager.markSceneDirty();
     };
 
@@ -154,7 +175,7 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       abort = null;
       downPos = null;
       ghost.setVisible(false);
-      snapMarker.hide();
+      clearOverlay();
       // Release the placement cursor ONLY if we held it (balanced acquire/release).
       if (wasActive) releasePlacementCursor(cursorEl);
       manager.markSceneDirty();
@@ -177,7 +198,6 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       unsubView();
       teardown();
       ghost.dispose();
-      snapMarker.dispose();
     };
   }, [canvasEl, managerRef]);
 }

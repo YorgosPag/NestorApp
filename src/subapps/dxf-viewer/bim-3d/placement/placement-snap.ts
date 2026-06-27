@@ -19,8 +19,9 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ExtendedSnapType } from '../../snapping/extended-types';
+import type { ExtendedSnapType, SnapIndicatorView } from '../../snapping/extended-types';
 import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
+import { toSnapIndicatorView } from '../../snapping/extended-types';
 
 /** Snap-corrected placement point + the snap target (for the 3D marker), mm. */
 export interface PlacementSnapResolution {
@@ -79,4 +80,28 @@ export function resolvePlacementSnap(
     snapEntityId: r.snapPoint.entityId,
     snapType: r.snapPoint.type,
   };
+}
+
+/** Snap-corrected point + OSNAP indicator view (glyph+label), από ΜΙΑ engine query (ADR-544). */
+export interface PlacementSnapWithView {
+  readonly snappedMm: Point2D;
+  readonly markerMm: Point2D;
+  /** OSNAP view (┘/▲/⊕ + «Γωνία/Μέσο…») για το `Snap3DOverlayStore` — `null` σε σιωπηλό grid snap. */
+  readonly view: SnapIndicatorView | null;
+}
+
+/**
+ * ADR-544 — όπως το `resolvePlacementSnap`, αλλά επιστρέφει **και** το OSNAP `SnapIndicatorView`
+ * (glyph ┘/▲/⊕ + label «Γωνία/Μέσο κολόνας/τοίχου») από την **ΙΔΙΑ μοναδική** engine query, ώστε
+ * το 3D placement να δείχνει το ΙΔΙΟ σήμα έλξης με το 2D (μέσω `Snap3DOverlayStore` + ADR-542
+ * overlay) χωρίς δεύτερο snap. Χρησιμοποιεί τον πραγματικό global engine (επιστρέφει `ProSnapResult`
+ * με `description`), γι' αυτό είναι ξεχωριστή από τον δομικά-typed `resolvePlacementSnap` (που
+ * μοιράζονται 11 hooks). `null` όταν OSNAP κλειστό / καμία έλξη — ο caller κρατά τον raw cursor.
+ */
+export function resolvePlacementSnapWithView(planMm: Readonly<Point2D>): PlacementSnapWithView | null {
+  const engine = getGlobalSnapEngine();
+  if (!engine.getSettings().enabled) return null;
+  const r = engine.findSnapPoint({ x: planMm.x, y: planMm.y });
+  if (!r.found || !r.snapPoint) return null;
+  return { snappedMm: r.snapPoint.point, markerMm: r.snapPoint.point, view: toSnapIndicatorView(r) };
 }

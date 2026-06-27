@@ -17,7 +17,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 5b
  */
 
-import type { WallParamOverrides } from '../../../../hooks/drawing/wall-completion';
+import type { WallParamOverrides, SceneUnits } from '../../../../hooks/drawing/wall-completion';
+import type { Entity } from '../../../../types/entities';
 
 /**
  * Snapshot του user-editable state του wall tool που χρειάζεται το ribbon για να
@@ -27,6 +28,21 @@ export interface WallToolBridgeHandle {
   readonly isActive: boolean;
   readonly overrides: WallParamOverrides;
   setParamOverrides(overrides: WallParamOverrides): void;
+  /**
+   * ADR-543 — active scene units, so the 3D wall placement bridge
+   * (`use-bim3d-wall-placement`) can convert the raycast floor point (DXF plan mm)
+   * to the SAME scene units the 2D `onCanvasClick` expects (mirror of
+   * `columnToolBridgeStore.getSceneUnits`). The round-trip cannot disagree on units.
+   */
+  getSceneUnits(): SceneUnits;
+  /**
+   * ADR-543 (COL traces 3D) — active-floor scene entities, so the 3D wall placement
+   * hook (`use-bim3d-wall-placement`) can feed the SAME `collectAmbientAlignmentAnchors`
+   * the 2D `drawing-hover-handler` uses for ambient (Revit-style) alignment traces. The
+   * SSoT source: the `useWallTool` `getSceneEntities` prop (current-level scene), so 2D
+   * and 3D align to the identical member set.
+   */
+  getSceneEntities(): readonly Entity[];
 }
 
 type Listener = () => void;

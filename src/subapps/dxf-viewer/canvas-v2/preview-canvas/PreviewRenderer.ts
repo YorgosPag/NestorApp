@@ -71,6 +71,9 @@ import { paintPolarTrackingLine } from './polar-tracking-line-paint';
 // ADR-398 §3.20 — circumference quadrant-to-end alignment guide (dashed, same overlay SSoT).
 import { paintAlignmentGuide } from './alignment-guide-paint';
 import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
+// ADR-544 — projector seam: οι placement painters δέχονται έτοιμο `OverlayProjector`· εδώ (2D)
+// τον χτίζουμε από το live `transform`+`viewport` (ίδιο αποτέλεσμα με τον παλιό inline `worldToScreen`).
+import { fromTransform } from './overlay-projector';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -196,9 +199,10 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     const palette = getTrackingPalette(detectTrackingTheme());
-    paintAlignmentPaths(this.ctx, paths, transform, viewport, palette);
-    paintIntersections(this.ctx, intersections, transform, viewport, palette);
-    paintTooltip(this.ctx, snappedPoint, label, transform, viewport, palette);
+    const project = fromTransform(transform, viewport);
+    paintAlignmentPaths(this.ctx, paths, project, palette);
+    paintIntersections(this.ctx, intersections, project, palette);
+    paintTooltip(this.ctx, snappedPoint, label, project, palette);
   }
 
   /**
@@ -255,7 +259,7 @@ export class PreviewRenderer {
    */
   drawPolarDisk(grid: PolarDiskGrid, transform: ViewTransform, viewport: Viewport): void {
     if (!this.ctx) return;
-    paintPolarDisk(this.ctx, grid, transform, viewport);
+    paintPolarDisk(this.ctx, grid, fromTransform(transform, viewport));
   }
 
   /**
@@ -264,7 +268,7 @@ export class PreviewRenderer {
    */
   drawRectGrid(grid: RectGrid, transform: ViewTransform, viewport: Viewport): void {
     if (!this.ctx) return;
-    paintRectGrid(this.ctx, grid, transform, viewport);
+    paintRectGrid(this.ctx, grid, fromTransform(transform, viewport));
   }
 
   /**
@@ -296,7 +300,8 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     const guides: readonly PlacementAlignmentGuide[] = Array.isArray(guide) ? guide : [guide];
-    for (const g of guides) paintAlignmentGuide(this.ctx, g, transform, viewport);
+    const project = fromTransform(transform, viewport);
+    for (const g of guides) paintAlignmentGuide(this.ctx, g, project);
   }
 
   /** Clear preview immediately */
@@ -346,7 +351,7 @@ export class PreviewRenderer {
     // renders on top and the markers anchor the visual feedback.
     if (this.trackingMarkers.length > 0) {
       const palette = getTrackingPalette(detectTrackingTheme());
-      paintTrackingMarkers(ctx, this.trackingMarkers, transform, viewport, palette);
+      paintTrackingMarkers(ctx, this.trackingMarkers, fromTransform(transform, viewport), palette);
     }
 
     if (!this.currentPreview) {

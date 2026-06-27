@@ -24,7 +24,7 @@ import { formatLengthForDisplay } from '../../config/display-length-format';
 import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
 import { drawOverlayLabel } from './overlay-text-style';
-import { OVERLAY_LINE_COLORS } from './overlay-line-style';
+import { OVERLAY_LINE_COLORS, applyOverlayLineStyle, strokeOverlaySegment } from './overlay-line-style';
 
 /** Καθαρά αριθμητικά δεδομένα HUD (κρέμονται στο ghost entity· N.11-clean — καμία μετάφραση εδώ). */
 export interface WallHudMeta {
@@ -50,6 +50,59 @@ const LABEL_CLEAR_PX = 16;
 const HUD_COLOR = OVERLAY_LINE_COLORS.alignment;
 
 /**
+ * ADR-543 — projection seam ώστε η ΔΙΑΤΑΞΗ του wall HUD (offsets/κάθετη/θέσεις ετικετών) να ζει
+ * ΜΙΑ φορά και να ζωγραφίζεται ΚΑΙ στον 2D καμβά (affine transform) ΚΑΙ στο 3D viewport
+ * (perspective camera). Ο caller ενίει:
+ *   · `toScreen`  : world (scene units) → canvas px,
+ *   · `worldPerPixel` : scene units ανά pixel οθόνης (screen-constant clearances),
+ *   · `drawAlignedDim`: η aligned διάσταση μήκους μεταξύ 2 world σημείων (2D → ISO-129
+ *     `paintAlignedOverlayDimension`· 3D → projected overlay γραμμή `paintProjectedAlignedDim`).
+ */
+export interface WallHudProjector {
+  toScreen(p: Point2D): Point2D;
+  readonly worldPerPixel: number;
+  drawAlignedDim(p1: Point2D, p2: Point2D, dimRef: Point2D, label: string, color: string): void;
+}
+
+/**
+ * SSoT διάταξη + ετικέτες του wall HUD, παραμετροποιημένη στον viewport projector. Ένας
+ * κώδικας διάταξης για 2D + 3D — μηδέν διπλό HUD-layout (N.0.2).
+ */
+export function paintWallHudCore(
+  ctx: CanvasRenderingContext2D,
+  meta: WallHudMeta,
+  specLabel: string,
+  proj: WallHudProjector,
+): void {
+  const { start, end, lengthMm, angleDeg, thicknessMm, sceneUnits } = meta;
+  const dx = end.x - start.x, dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return; // εκφυλισμένος (1ο pixel) — τίποτα να διαστασιολογήσω
+  const ux = dx / len, uy = dy / len;
+  const px = uy, py = -ux; // μοναδιαία κάθετη
+  const wpp = proj.worldPerPixel;
+  const halfT = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
+  const dimOff = halfT + DIM_CLEAR_PX * wpp;
+  const labelOff = halfT + LABEL_CLEAR_PX * wpp;
+  const mid: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+
+  // (1) aligned διάσταση μήκους — κάτω από τον τοίχο (πλευρά +κάθετη), μέσω του injected drawer.
+  const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
+  proj.drawAlignedDim(start, end, dimRef, formatLengthForDisplay(lengthMm), HUD_COLOR);
+
+  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά, στη μέση.
+  const specW: Point2D = { x: mid.x - px * labelOff, y: mid.y - py * labelOff };
+  const sSpec = proj.toScreen(specW);
+  drawOverlayLabel(ctx, specLabel, sSpec.x, sSpec.y, { textColor: HUD_COLOR, align: 'center' });
+
+  // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά.
+  const angW: Point2D = { x: start.x - px * labelOff, y: start.y - py * labelOff };
+  const sAng = proj.toScreen(angW);
+  drawOverlayLabel(ctx, `∠ ${formatAngleLocale(angleDeg)}`, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
+}
+
+/**
+ * 2D adapter (PreviewCanvas) — ΑΜΕΤΑΒΛΗΤΗ συμπεριφορά: ISO-129 aligned dim + affine projection.
  * Ζωγράφισε το HUD πάνω από το ghost (called AFTER `drawPreview`· wiped στο επόμενο
  * `drawPreview`/`clear`). `specLabel` = ΗΔΗ μεταφρασμένο «πάχος X · ύψος Y» (i18n στον handler).
  */
@@ -60,29 +113,41 @@ export function paintWallHud(
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
 ): void {
-  const { start, end, lengthMm, angleDeg, thicknessMm, sceneUnits } = meta;
-  const dx = end.x - start.x, dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-9) return; // εκφυλισμένος (1ο pixel) — τίποτα να διαστασιολογήσω
-  const ux = dx / len, uy = dy / len;
-  const px = uy, py = -ux; // μοναδιαία κάθετη
-  const wpp = worldPerPixel(transform.scale);
-  const halfT = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
-  const dimOff = halfT + DIM_CLEAR_PX * wpp;
-  const labelOff = halfT + LABEL_CLEAR_PX * wpp;
-  const mid: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  paintWallHudCore(ctx, meta, specLabel, {
+    toScreen: (p) => CoordinateTransforms.worldToScreen(p, transform, viewport),
+    worldPerPixel: worldPerPixel(transform.scale),
+    drawAlignedDim: (p1, p2, dimRef, label, color) =>
+      paintAlignedOverlayDimension(ctx, p1, p2, dimRef, label, transform, viewport, color),
+  });
+}
 
-  // (1) aligned διάσταση μήκους — κάτω από τον τοίχο (πλευρά +κάθετη), reuse κοινού SSoT.
-  const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
-  paintAlignedOverlayDimension(ctx, start, end, dimRef, formatLengthForDisplay(lengthMm), transform, viewport, HUD_COLOR);
-
-  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά, στη μέση.
-  const specW: Point2D = { x: mid.x - px * labelOff, y: mid.y - py * labelOff };
-  const sSpec = CoordinateTransforms.worldToScreen(specW, transform, viewport);
-  drawOverlayLabel(ctx, specLabel, sSpec.x, sSpec.y, { textColor: HUD_COLOR, align: 'center' });
-
-  // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά.
-  const angW: Point2D = { x: start.x - px * labelOff, y: start.y - py * labelOff };
-  const sAng = CoordinateTransforms.worldToScreen(angW, transform, viewport);
-  drawOverlayLabel(ctx, `∠ ${formatAngleLocale(angleDeg)}`, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
+/**
+ * ADR-543 — projected aligned διάσταση για viewports ΧΩΡΙΣ affine transform (3D). Reuse των ΚΟΙΝΩΝ
+ * overlay SSoTs (`applyOverlayLineStyle` 0.5px dashed + `strokeOverlaySegment` + `drawOverlayLabel`)
+ * → ίδιο line-style/χρώμα/αριθμός με τις 2D listening dims / alignment traces. Η ISO-129 μηχανή
+ * (arrowheads/extension lines, `renderPreviewDimension`) είναι θεμελιωδώς affine (uniform
+ * `transform.scale`) και ΔΕΝ προβάλλεται μέσα από perspective camera, οπότε η 3D dim line είναι η
+ * κοινή overlay γραμμή μεταξύ των προβεβλημένων άκρων.
+ */
+export function paintProjectedAlignedDim(
+  ctx: CanvasRenderingContext2D,
+  p1: Point2D,
+  p2: Point2D,
+  dimRef: Point2D,
+  label: string,
+  toScreen: (p: Point2D) => Point2D,
+  color: string,
+): void {
+  // Η dim line είναι παράλληλη στο p1→p2, μετατοπισμένη κατά (dimRef − mid). Προβάλλουμε 4 γωνίες.
+  const mid: Point2D = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+  const off: Point2D = { x: dimRef.x - mid.x, y: dimRef.y - mid.y };
+  const s1 = toScreen(p1), s2 = toScreen(p2);
+  const sd1 = toScreen({ x: p1.x + off.x, y: p1.y + off.y });
+  const sd2 = toScreen({ x: p2.x + off.x, y: p2.y + off.y });
+  applyOverlayLineStyle(ctx, color);
+  strokeOverlaySegment(ctx, sd1, sd2); // dim line
+  strokeOverlaySegment(ctx, s1, sd1);  // extension line @ start
+  strokeOverlaySegment(ctx, s2, sd2);  // extension line @ end
+  const sRef = toScreen(dimRef);
+  drawOverlayLabel(ctx, label, sRef.x, sRef.y, { textColor: color, align: 'center' });
 }

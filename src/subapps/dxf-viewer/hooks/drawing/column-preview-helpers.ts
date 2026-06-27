@@ -69,10 +69,15 @@ const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
  *
  * @param cursorPoint raw cursor world position (fallback when no snap is armed).
  * @param sceneUnits  active scene units (mm→scene conversion inside the builder).
+ * @param effectiveCursorOverride ADR-544 — ΗΔΗ-snapped cursor από το **3D** placement (το 3D snap
+ *   ζει εκτός του 2D `ImmediateSnapStore`, οπότε το `resolveEffectivePreviewCursor` εκεί θα διάβαζε
+ *   stale 2D snap). Όταν δίνεται, παρακάμπτει το `getImmediateSnap()` → οι διαστάσεις/πλέγμα
+ *   υπολογίζονται στο σωστό 3D σημείο. 2D: παραλείπεται → ίδια συμπεριφορά με πριν.
  */
 export function generateColumnPreview(
   cursorPoint: Readonly<Point2D>,
   sceneUnits: SceneUnits = 'mm',
+  effectiveCursorOverride?: Readonly<Point2D>,
 ): ExtendedSceneEntity | null {
   const handle = columnToolBridgeStore.get();
   if (!handle?.isActive) return null;
@@ -137,7 +142,7 @@ export function generateColumnPreview(
   // ADR-398 §3.10 — awaitingPosition: sync-in-preview face-snap (ΕΝΑΣ εγκέφαλος, ΙΔΙΑ opts/targets/cursor
   // με το commit) → κοινή assembly (ghost + CL listening dims + polar/rect grid). ⚠️ effectiveCursor ΗΔΗ
   // snapped → ΧΩΡΙΣ findSnapPoint (no double-snap, ADR-514 §2).
-  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
+  const effectiveCursor = effectiveCursorOverride ?? resolveEffectivePreviewCursor(cursorPoint);
   const snap = resolveBimCursorSnap({
     toolKind: 'column',
     cursor: effectiveCursor,

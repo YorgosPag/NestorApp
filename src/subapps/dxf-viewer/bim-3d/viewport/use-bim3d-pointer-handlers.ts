@@ -17,8 +17,11 @@ import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 // ADR-539 Φ3f — right-click on a face → per-face context menu (clear/copy/paste appearance).
 import { useFaceContextMenuStore } from '../stores/FaceContextMenuStore';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+import { applyDxfEntityClickSelection } from '../../systems/selection/resolve-dxf-entity-click';
 // ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
+// ADR-544 — while a placement tool owns the snap glyph, the hover-handler must yield (see updateSnap3D).
+import { toolStateStore } from '../../stores/ToolStateStore';
 // ADR-542 — 3D snap marker: same global snap engine + same glyph/label as the 2D canvas.
 import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
 import { computeSnap3DHover } from './snap/bim-3d-snap-hover';
@@ -85,6 +88,10 @@ export function useBim3DPointerHandlers(
    * — `BimSnapIndicatorOverlay3D` projects + draws it. Suppressed in Polygon Mode (face paint).
    */
   const updateSnap3D = useCallback((clientX: number, clientY: number): void => {
+    // ADR-544 — όσο το εργαλείο κολόνας είναι ενεργό, ο `use-bim3d-column-placement` είναι ο
+    // ΜΟΝΑΔΙΚΟΣ κάτοχος του snap glyph (δημοσιεύει plan-space OSNAP view που πιάνει ΚΑΙ την επίπεδη
+    // DXF κάτοψη — εδώ ο BIM raycast θα την έχανε). Μην το σβήνεις/αντικαθιστάς.
+    if (toolStateStore.get().activeTool === 'column') return;
     const manager = managerRef.current;
     const camera = manager?.getCamera();
     const dom = manager?.getRendererCanvas();
@@ -175,8 +182,21 @@ export function useBim3DPointerHandlers(
       ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, e.clientX, e.clientY)?.entityId ?? null
       : null;
     if (dxfId) {
-      useSelection3DStore.getState().clearSelection();
-      SelectedEntitiesStore.replaceEntitySelection([dxfId]);
+      // ADR-543 — only clear the BIM selection when it actually holds something. Calling
+      // clearSelection() when already empty fires the universal bridge → replaceEntitySelection([])
+      // which WIPES the accumulated DXF multi-selection on every click (blocked 3D multi-select).
+      if (useSelection3DStore.getState().selectedBimIds.length > 0) {
+        useSelection3DStore.getState().clearSelection();
+      }
+      // SSoT parity with the 2D canvas: SAME PICKADD=1 + Shift-toggle decision as
+      // SelectionSystem.handleEntityClick, so 3D picks accumulate two lines just like 2D.
+      applyDxfEntityClickSelection(dxfId, e.shiftKey, {
+        toggle: (id) => SelectedEntitiesStore.toggleEntity({ id, type: 'dxf-entity' }),
+        add: (id) => SelectedEntitiesStore.addEntity({ id, type: 'dxf-entity' }),
+        replaceWithSingle: (id) => SelectedEntitiesStore.replaceEntitySelection([id]),
+        isSelected: (id) => SelectedEntitiesStore.isSelected(id),
+        selectedDxfCount: () => SelectedEntitiesStore.countByType('dxf-entity'),
+      });
       return;
     }
     // Empty space → clear both selections.

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useMemo, useSyncExternalStore } from 
 import { useSelectionSystemState, type SelectionContextType } from './useSelectionSystemState';
 import { SelectedEntitiesStore, subscribeSelection, getSelectionVersion } from './SelectedEntitiesStore';
 import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
+import { applyDxfEntityClickSelection } from './resolve-dxf-entity-click';
 
 // Create context
 export const SelectionContext = createContext<SelectionContextType | null>(null);
@@ -192,19 +193,17 @@ function buildUniversalSelection(context: SelectionContextType): UniversalSelect
     clearByType: (type: SelectableEntityType) =>
       context.clearByType(type),
 
-    // DXF canvas semantic actions — AutoCAD behavior rules live here
+    // DXF canvas semantic actions — AutoCAD behavior rules live in the shared SSoT
+    // `applyDxfEntityClickSelection` (ADR-543), so the 3D viewport pick uses the SAME decision.
     handleEntityClick: (entityId: string, opts: { shiftKey: boolean }) => {
-      if (opts.shiftKey) {
-        context.toggleEntity({ id: entityId, type: 'dxf-entity' });
-      } else if (context.getSelectionCountByType('dxf-entity') > 0) {
-        // PICKADD=1: existing selection → add without clearing
-        if (!context.isEntitySelected(entityId)) {
-          context.addEntity({ id: entityId, type: 'dxf-entity' });
-        }
-      } else {
-        // No prior selection → single select (clears all including overlays)
-        context.selectEntity({ id: entityId, type: 'dxf-entity' });
-      }
+      applyDxfEntityClickSelection(entityId, opts.shiftKey, {
+        toggle: (id) => context.toggleEntity({ id, type: 'dxf-entity' }),
+        add: (id) => context.addEntity({ id, type: 'dxf-entity' }),
+        // Replace clears ALL types (incl. overlays) — the 2D single-select semantics.
+        replaceWithSingle: (id) => context.selectEntity({ id, type: 'dxf-entity' }),
+        isSelected: (id) => context.isEntitySelected(id),
+        selectedDxfCount: () => context.getSelectionCountByType('dxf-entity'),
+      });
     },
 
     handleMarqueeResult: (layerIds: string[], entityIds: string[], opts: { subtract: boolean }) => {

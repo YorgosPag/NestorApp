@@ -17,15 +17,13 @@
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.13
  */
 
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import type { OverlayProjector } from './overlay-projector';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from './overlay-line-style';
-
-type Viewport = { readonly width: number; readonly height: number };
 
 /** Δείγματα ανά δακτύλιο (πυκνό αρκετά για ομαλό κύκλο σε κάθε zoom). */
 const RING_SEGMENTS = 64;
@@ -57,19 +55,17 @@ function strokeRing(
 export function paintPolarDisk(
   ctx: CanvasRenderingContext2D,
   grid: PolarDiskGrid,
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
 ): void {
   if (grid.rings.length === 0) return;
-  const toScreen = (p: Point2D): Point2D => CoordinateTransforms.worldToScreen(p, transform, viewport);
   applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.listeningDim);
 
-  for (const ringR of grid.rings) strokeRing(ctx, grid.center, ringR, toScreen);
+  for (const ringR of grid.rings) strokeRing(ctx, grid.center, ringR, project);
 
-  const sCenter = toScreen(grid.center);
+  const sCenter = project(grid.center);
   for (const deg of grid.spokesDeg) {
     const tip = pointOnCircle(grid.center, grid.outerR, degToRad(deg));
-    strokeOverlaySegment(ctx, sCenter, toScreen(tip));
+    strokeOverlaySegment(ctx, sCenter, project(tip));
   }
 
   // Κέντρο = μικρός σταυρός σε σταθερό screen μέγεθος (zoom-invariant).

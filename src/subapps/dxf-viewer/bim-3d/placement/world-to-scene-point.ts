@@ -50,6 +50,17 @@ export function planMmToScenePoint(planMm: Readonly<Point2D>, units: SceneUnits)
 }
 
 /**
+ * Inverse του `planMmToScenePoint` — scene-unit σημείο → DXF plan **mm** (`÷ mmToSceneUnits`).
+ * Ζει εδώ (coordinate-bridge SSoT) δίπλα στο forward sibling ώστε να μην ξαναγραφεί inline. Το
+ * χρειάζεται το 3D placement overlay (ADR-544): το 2D meta είναι σε scene units, ο camera projector
+ * θέλει plan-mm.
+ */
+export function scenePointToPlanMm(pScene: Readonly<Point2D>, units: SceneUnits): Point2D {
+  const factor = mmToSceneUnits(units) || 1;
+  return { x: pScene.x / factor, y: pScene.y / factor };
+}
+
+/**
  * Convert a Three.js world point (metres) to a 2D plan point in `units`.
  * Only the horizontal plane matters for placement; the world-Y (elevation) is
  * dropped because the floor plane already fixed the height.

@@ -523,6 +523,9 @@
 | **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
 | **ADR-540** | Universal Associative Geometry Reconciliation (SSoT) — εξαρτημένα μέλη ποτέ stale μετά από κάθε command | ✅ APPROVED | 2026-06-27 | Uncategorized | [📄](./adrs/ADR-540-universal-associative-geometry-reconcile.md) |
 | **ADR-541** | Smooth 3D/2D Navigation Baseline — regression guide + git baseline (commit `b2d7b850`, tag `smooth-3d-baseline-2026-06-27`) για ομαλή περιστροφή/pan/zoom 3D+2D | ✅ APPROVED (BASELINE) | 2026-06-27 | Performance / DXF Viewer | [📄](./adrs/ADR-541-smooth-3d-2d-navigation-baseline.md) |
+| **ADR-543** | Σχεδίαση τοίχου με ΜΙΑ πηγή αλήθειας 2D ↔ 3D — ίδιος FSM/builders/geometry/snap/commit + 3D ghost (`wallToMesh`) + HUD overlay (`paintWallHudCore`) | ✅ APPROVED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-543-wall-drawing-ssot-2d-3d.md) |
+| **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
+| **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers, snap-jump + badge) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1029,6 +1032,9 @@
 | **ADR-539** | Cinema 4D «Polygon Mode» — per-face χρώμα/υλικό ανά όψη σε δομικά solids | 🔬 RESEARCH | [View](./adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md) |
 | **ADR-540** | Universal Associative Geometry Reconciliation (SSoT) — εξαρτημένα μέλη ποτέ stale μετά από κάθε command | ✅ APPROVED | [View](./adrs/ADR-540-universal-associative-geometry-reconcile.md) |
 | **ADR-541** | Smooth 3D/2D Navigation Baseline — regression guide + git baseline | ✅ APPROVED (BASELINE) | [View](./adrs/ADR-541-smooth-3d-2d-navigation-baseline.md) |
+| **ADR-543** | Σχεδίαση τοίχου με ΜΙΑ πηγή αλήθειας 2D ↔ 3D (ίδιος FSM/builders/snap/commit + 3D ghost + HUD overlay) | ✅ APPROVED (UNCOMMITTED) | [View](./adrs/ADR-543-wall-drawing-ssot-2d-3d.md) |
+| **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | [View](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
+| **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

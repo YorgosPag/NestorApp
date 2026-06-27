@@ -4,8 +4,8 @@
  * overlay-raf — shared SSoT for the 3D Canvas2D/DOM overlay lifecycle (ADR-542).
  *
  * Every "draw the 2D thing over the WebGL viewport each frame" overlay (`BimGripOverlay2D`,
- * `DxfHoverGlowOverlay2D`, `BimSnapIndicatorOverlay3D`) shared the SAME two pieces of
- * boilerplate verbatim. They now live here, in one place:
+ * `DxfHoverGlowOverlay2D`, `BimSnapIndicatorOverlay3D`, `BimCrosshairOverlay3D`,
+ * `BimPlacementOverlay2D`) shared the SAME boilerplate verbatim. It now lives here, in one place:
  *
  *   - `useRafWhile(active, draw, onStop?)` — run `draw` in a `requestAnimationFrame` loop while
  *     `active`, cancel when it turns false / on unmount, and call `onStop` on deactivation
@@ -18,8 +18,9 @@
  * Pure React hooks + Three.js — no store, no scene mutation.
  */
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, type MutableRefObject } from 'react';
 import * as THREE from 'three';
+import { GripDepthOccluder } from '../grips/grip-3d-depth-occluder';
 
 /**
  * Drive `draw` on every animation frame while `active`. Cancels the loop when `active` turns
@@ -47,6 +48,24 @@ export function useRafWhile(active: boolean, draw: () => void, onStop?: () => vo
       rafRef.current = null;
     };
   }, [active, draw, onStop]);
+}
+
+/**
+ * Own a GPU depth-occluder for an overlay's lifetime (lazy GL resources inside, disposed on
+ * unmount). SSoT — ΟΛΑ τα Canvas2D-over-WebGL overlays (grips ADR-535, snap ADR-542, crosshair,
+ * column placement ADR-544) χρειάζονται ΕΝΑ occluder instance με ΙΔΕΝΤΙΚΟ lifecycle· πριν ήταν
+ * copy-pasted verbatim σε 4 αρχεία. Επιστρέφει το ref ώστε το `draw()` να διαβάζει `.current`.
+ */
+export function useGripDepthOccluder(): MutableRefObject<GripDepthOccluder | null> {
+  const ref = useRef<GripDepthOccluder | null>(null);
+  useEffect(() => {
+    ref.current = new GripDepthOccluder();
+    return () => {
+      ref.current?.dispose();
+      ref.current = null;
+    };
+  }, []);
+  return ref;
 }
 
 /**

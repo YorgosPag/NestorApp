@@ -16,6 +16,7 @@
 import type { RefObject } from 'react';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
+import { useBim3DWallPlacement } from '../placement/use-bim3d-wall-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
 import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
@@ -50,6 +51,14 @@ export function useBim3DPlacementAndPickHooks({
   // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
   // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
   useBim3DColumnPlacement({ managerRef, canvasEl });
+
+  // ADR-543 — 3D wall drawing. Armed only while the wall tool is active AND the
+  // viewport is in 3D: raycasts the active floor plane, shows a WYSIWYG wall ghost
+  // on pointer move (the SAME `generateWallPreview` + `wallToMesh` as 2D/committed),
+  // and on each click routes the scene-units point through the existing 2D wall FSM
+  // (`useWallTool.onCanvasClick`) via the `bim:place-wall-3d` EventBus bridge —
+  // 2-click chain, zero duplication, full commit + persistence path.
+  useBim3DWallPlacement({ managerRef, canvasEl });
 
   // ADR-406 — 3D MEP fixture placement (mirror of column placement above).
   useBim3DMepFixturePlacement({ managerRef, canvasEl });

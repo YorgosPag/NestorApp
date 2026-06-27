@@ -9,7 +9,18 @@
  * (the placed element does not exist yet).
  */
 
-import { resolvePlacementSnap, type PlacementSnapEngine } from '../placement-snap';
+// ADR-544 — resolvePlacementSnapWithView uses the REAL global engine (ProSnapResult w/ description);
+// mock it so we can assert the OSNAP view is surfaced from the SAME single query.
+const mockFindSnapPoint = jest.fn();
+const mockEnabled = { value: true };
+jest.mock('../../../snapping/global-snap-engine', () => ({
+  getGlobalSnapEngine: () => ({
+    getSettings: () => ({ enabled: mockEnabled.value }),
+    findSnapPoint: (p: unknown) => mockFindSnapPoint(p),
+  }),
+}));
+
+import { resolvePlacementSnap, resolvePlacementSnapWithView, type PlacementSnapEngine } from '../placement-snap';
 import type { Point2D } from '../../../rendering/types/Types';
 import { ExtendedSnapType } from '../../../snapping/extended-types';
 
@@ -78,5 +89,32 @@ describe('resolvePlacementSnap', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].cursor).toEqual({ x: 12345, y: -6789 });
     expect(calls[0].excludeEntityId).toBeUndefined();
+  });
+});
+
+describe('resolvePlacementSnapWithView (ADR-544)', () => {
+  beforeEach(() => { mockFindSnapPoint.mockReset(); mockEnabled.value = true; });
+
+  it('returns null when OSNAP is disabled', () => {
+    mockEnabled.value = false;
+    expect(resolvePlacementSnapWithView({ x: 1, y: 2 })).toBeNull();
+    expect(mockFindSnapPoint).not.toHaveBeenCalled();
+  });
+
+  it('surfaces snapped point + OSNAP view (glyph+label) from ONE engine query', () => {
+    const pt = { x: 100, y: 200 };
+    mockFindSnapPoint.mockReturnValue({
+      found: true, snapPoint: { point: pt, description: 'Γωνία κολόνας' },
+      snappedPoint: pt, activeMode: 'endpoint', allCandidates: [], originalPoint: { x: 0, y: 0 }, timestamp: 0,
+    });
+    const r = resolvePlacementSnapWithView({ x: 90, y: 210 });
+    expect(mockFindSnapPoint).toHaveBeenCalledTimes(1); // single query → position + view
+    expect(r?.snappedMm).toEqual(pt);
+    expect(r?.view).toEqual({ point: pt, type: 'endpoint', description: 'Γωνία κολόνας' });
+  });
+
+  it('returns null when no feature is within tolerance', () => {
+    mockFindSnapPoint.mockReturnValue({ found: false, snapPoint: null });
+    expect(resolvePlacementSnapWithView({ x: 0, y: 0 })).toBeNull();
   });
 });

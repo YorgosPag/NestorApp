@@ -10,8 +10,8 @@
  * @see systems/tracking/TrackingPointStore — acquired markers source
  */
 
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import type { Point2D } from '../../rendering/types/Types';
+import type { OverlayProjector } from './overlay-projector';
 import type { TrackingPalette } from './tracking-colors';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
@@ -22,8 +22,7 @@ import { drawOverlayLabel } from './overlay-text-style';
 export function paintTrackingMarkers(
   ctx: CanvasRenderingContext2D,
   markers: readonly AcquiredTrackingPoint[],
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
   palette: TrackingPalette,
 ): void {
   const SIZE = 7;
@@ -33,7 +32,7 @@ export function paintTrackingMarkers(
   ctx.lineWidth = OVERLAY_LINE_WIDTH_PX; // SSoT 0.5px (shared width)
   ctx.globalAlpha = 0.95;
   for (const m of markers) {
-    const s = CoordinateTransforms.worldToScreen({ x: m.x, y: m.y }, transform, viewport);
+    const s = project({ x: m.x, y: m.y });
     ctx.beginPath();
     ctx.moveTo(s.x - SIZE, s.y);
     ctx.lineTo(s.x + SIZE, s.y);
@@ -48,8 +47,7 @@ export function paintTrackingMarkers(
 export function paintAlignmentPaths(
   ctx: CanvasRenderingContext2D,
   paths: readonly TrackingAlignmentPath[],
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
   palette: TrackingPalette,
 ): void {
   if (paths.length === 0) return;
@@ -58,13 +56,17 @@ export function paintAlignmentPaths(
   applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.alignment); // SSoT: 0.5px dashed [8,5], light grey
   ctx.globalAlpha = 0.75;
   for (const path of paths) {
-    const origin = CoordinateTransforms.worldToScreen(path.origin, transform, viewport);
-    // Flip Y for screen space (world is Y-up, screen Y-down).
-    const sdx = path.dx;
-    const sdy = -path.dy;
+    const origin = project(path.origin);
+    // Screen-space direction derived from the projector (projection-agnostic, ADR-544): project a
+    // 2nd point one world-unit along the path dir and subtract → the projector owns the Y-flip.
+    const ahead = project({ x: path.origin.x + path.dx, y: path.origin.y + path.dy });
+    const sdx = ahead.x - origin.x;
+    const sdy = ahead.y - origin.y;
+    const len = Math.hypot(sdx, sdy) || 1;
+    const ux = sdx / len, uy = sdy / len;
     ctx.beginPath();
-    ctx.moveTo(origin.x - sdx * EXTEND, origin.y - sdy * EXTEND);
-    ctx.lineTo(origin.x + sdx * EXTEND, origin.y + sdy * EXTEND);
+    ctx.moveTo(origin.x - ux * EXTEND, origin.y - uy * EXTEND);
+    ctx.lineTo(origin.x + ux * EXTEND, origin.y + uy * EXTEND);
     ctx.stroke();
   }
   ctx.restore();
@@ -74,8 +76,7 @@ export function paintAlignmentPaths(
 export function paintIntersections(
   ctx: CanvasRenderingContext2D,
   intersections: readonly Point2D[],
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
   palette: TrackingPalette,
 ): void {
   if (intersections.length === 0) return;
@@ -87,7 +88,7 @@ export function paintIntersections(
   ctx.lineWidth = OVERLAY_LINE_WIDTH_PX; // SSoT 0.5px (shared width)
   ctx.globalAlpha = 0.9;
   for (const pt of intersections) {
-    const s = CoordinateTransforms.worldToScreen(pt, transform, viewport);
+    const s = project(pt);
     ctx.beginPath();
     ctx.arc(s.x, s.y, RADIUS, 0, Math.PI * 2);
     ctx.fill();
@@ -101,12 +102,11 @@ export function paintTooltip(
   ctx: CanvasRenderingContext2D,
   snappedPoint: Point2D,
   label: string | null,
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
   palette: TrackingPalette,
 ): void {
   if (!label) return;
-  const screen = CoordinateTransforms.worldToScreen(snappedPoint, transform, viewport);
+  const screen = project(snappedPoint);
   // SSoT overlay label (font only, no background). Light grey to match the alignment line.
   drawOverlayLabel(ctx, label, screen.x + 14, screen.y - 12, {
     textColor: OVERLAY_LINE_COLORS.alignment,

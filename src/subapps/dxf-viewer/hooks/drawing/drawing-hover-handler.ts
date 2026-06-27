@@ -14,10 +14,9 @@ import {
   TrackingPointStore,
   ACQUISITION_DURATION_MS,
 } from '../../systems/tracking/TrackingPointStore';
-import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
+import { composeTrackingSnap } from '../../systems/tracking/ambient-tracking-compose';
 import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
-import { adaptiveDistanceStep, quantizeAlongPath } from '../../systems/tracking/adaptive-distance-snap';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-362 — dim entity pick reads the entity-under-cursor from the hit-test SSoT
@@ -242,26 +241,24 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         })
       : [];
     const _ambMs = performance.now() - _ambT0;
-    const merged = ambient.length > 0 ? [...acquired, ...ambient] : acquired;
+    // ADR-357 / ADR-543 — merge (acquired + ambient) → resolve alignment path →
+    // adaptive-distance quantize, via the SHARED tracking SSoT (`composeTrackingSnap`),
+    // the EXACT same brain the 3D wall placement reuses. Returns null when no anchor /
+    // no path within tolerance. The "magic" quantize (AutoCAD PolarSnap / Revit temp-dim,
+    // projection slides only) lives inside the helper.
     const _trkT0 = performance.now();
-    const trackingResult = merged.length > 0
-      ? resolveTrackingSnap(previewPt, merged, {
-          incrementAngle: polarTrackingStore.incrementAngle,
-          additionalAngles: polarTrackingStore.additionalAngles,
-          polarEnabled: polarOnRef.current && !orthoOnRef.current,
-        }, worldTolerance)
-      : null;
+    const composedTracking = composeTrackingSnap(previewPt, acquired, ambient, {
+      polar: {
+        incrementAngle: polarTrackingStore.incrementAngle,
+        additionalAngles: polarTrackingStore.additionalAngles,
+        polarEnabled: polarOnRef.current && !orthoOnRef.current,
+      },
+      worldTolerance,
+      worldPerPixel: worldPerPixel(liveScale),
+    });
     const _trkMs = performance.now() - _trkT0;
-    // ADR-357 ambient: "magic" adaptive distance snap (AutoCAD PolarSnap / Revit
-    // temp-dim). Round the slide distance along a projection track to a nice value
-    // whose on-screen spacing stays ~constant (step grows zoomed-out, shrinks
-    // zoomed-in). Only projection slides — intersections are already fixed.
-    let trackingPoint: Pt | null = trackingResult ? trackingResult.point : null;
-    if (trackingResult && trackingResult.kind === 'projection' && trackingResult.activePaths.length > 0) {
-      const path = trackingResult.activePaths[0];
-      const step = adaptiveDistanceStep(worldPerPixel(liveScale));
-      trackingPoint = quantizeAlongPath(trackingResult.point, trackingResult.anchorPoint, path.dx, path.dy, step);
-    }
+    const trackingResult = composedTracking?.result ?? null;
+    const trackingPoint = composedTracking?.point ?? null;
     if (trackingResult && trackingPoint) {
       previewPt = trackingPoint;
     }

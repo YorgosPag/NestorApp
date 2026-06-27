@@ -18,14 +18,12 @@
  * of the grip overlay's «hide handles during navigation» pattern.
  */
 
-import { useRef, useEffect, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
+import { useRef, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { SnapIndicatorGlyph } from '../../../canvas-v2/overlays/SnapIndicatorGlyph';
 import { isSnapMarkerVisible } from '../../../snapping/extended-types';
-import { makeGripPlanToCanvas, GRIP_OFFSCREEN } from '../../grips/grip-3d-screen-project';
-import { GripDepthOccluder } from '../../grips/grip-3d-depth-occluder';
-import { dxfPlanToWorld } from '../coordinate-transforms';
-import { useRafWhile, useCameraMotionGate } from '../overlay-raf';
+import { useRafWhile, useCameraMotionGate, useGripDepthOccluder } from '../overlay-raf';
+import { projectSnap3DMarker } from './project-snap3d-marker';
 import { useSnap3DOverlayStore } from '../../stores/Snap3DOverlayStore';
 
 export interface BimSnapIndicatorOverlay3DProps {
@@ -37,8 +35,8 @@ const ORIGIN = { x: 0, y: 0 } as const;
 
 export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverlay3DProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // GPU depth-occluder (one instance, lazy GL resources, disposed on unmount) — same as grips.
-  const occluderRef = useRef<GripDepthOccluder | null>(null);
+  // GPU depth-occluder via το shared lifecycle SSoT (overlay-raf, ADR-544 dedup) — same as grips.
+  const occluderRef = useGripDepthOccluder();
   // Hide the marker during camera motion (shared SSoT with BimGripOverlay2D).
   const isCameraMoving = useCameraMotionGate();
 
@@ -50,45 +48,24 @@ export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverla
   );
   const active = snap !== null && isSnapMarkerVisible(snap.view);
 
-  // One frame: project the stored plan point through the live camera, occlusion-cull, and
-  // position the marker imperatively. Reads the store fresh each call (no deps).
+  // One frame: project the stored snap marker via the shared SSoT (project + occlusion-cull +
+  // camera-gate), and position the glyph imperatively. Reads the store fresh each call (no deps).
   const draw = useCallback(() => {
     const wrapper = wrapperRef.current;
     const manager = managerRef.current;
     if (!wrapper || !manager) return;
     const camera = manager.getCamera();
-    const canvas = manager.getRendererCanvas();
     const cur = useSnap3DOverlayStore.getState().snap;
-    if (!camera || !canvas || !cur) { wrapper.style.display = 'none'; return; }
+    if (!camera || !cur) { wrapper.style.display = 'none'; return; }
 
-    // Hide while the camera moves (orbit/zoom/pan) → reappears, correctly occluded, on settle.
-    if (isCameraMoving(camera)) { wrapper.style.display = 'none'; return; }
-
-    // Project plan→canvas-local px via the SAME projector the grips use (one projection SSoT).
-    const project = makeGripPlanToCanvas(camera, canvas, () => cur.elevMm);
-    const p = project(cur.view.point);
-    if (p === GRIP_OFFSCREEN) { wrapper.style.display = 'none'; return; }
-
-    // Occlusion (μόνο μπροστινά): cull a marker behind a solid surface — same GPU SSoT as grips.
-    const occluder = occluderRef.current;
-    if (occluder) {
-      const world = dxfPlanToWorld(cur.view.point.x, cur.view.point.y, cur.elevMm);
-      const vis = occluder.computeVisibility(manager.renderer, manager.scene, camera, [world]);
-      if (vis && vis[0] === false) { wrapper.style.display = 'none'; return; }
-    }
+    // ADR-545 — ONE projection SSoT shared with the 3D crosshair (off-screen + occlusion +
+    // camera-motion all decided in `projectSnap3DMarker`).
+    const screen = projectSnap3DMarker(manager, cur, isCameraMoving(camera), occluderRef.current);
+    if (!screen || !screen.visible) { wrapper.style.display = 'none'; return; }
 
     wrapper.style.display = '';
-    wrapper.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    wrapper.style.transform = `translate(${screen.point.x}px, ${screen.point.y}px)`;
   }, [managerRef, isCameraMoving]);
-
-  // Own the GPU occluder for the overlay's lifetime (lazy GL resources inside).
-  useEffect(() => {
-    occluderRef.current = new GripDepthOccluder();
-    return () => {
-      occluderRef.current?.dispose();
-      occluderRef.current = null;
-    };
-  }, []);
 
   // Hide the marker when the snap clears / on unmount (shared overlay RAF SSoT).
   const onStop = useCallback(() => {

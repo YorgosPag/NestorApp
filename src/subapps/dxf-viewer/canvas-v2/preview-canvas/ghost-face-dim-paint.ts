@@ -28,6 +28,16 @@ import { formatAngleLocale } from '../../rendering/entities/shared/distance-labe
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from './overlay-line-style';
+import type { OverlayProjector } from './overlay-projector';
+
+/** Projection helper: ο 3D projector όταν δίνεται (ADR-544), αλλιώς το 2D `worldToScreen`. */
+function resolveToScreen(
+  transform: ViewTransform,
+  viewport: { readonly width: number; readonly height: number },
+  project: OverlayProjector | undefined,
+): (p: Point2D) => Point2D {
+  return project ?? ((p) => CoordinateTransforms.worldToScreen(p, transform, viewport));
+}
 
 /** Extra screen-px the number sits BEYOND the dim line (so it never overlaps it — no bg chip). */
 const LABEL_CLEARANCE_PX = 9;
@@ -59,13 +69,14 @@ export function paintGhostFaceDimensions(
   meta: GhostFaceDimensionsMeta,
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
+  project?: OverlayProjector,
 ): void {
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
   const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
   const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {
-    if (d.arc) paintArcDimension(ctx, d, transform, viewport, mmPerScene, labelMode, textColor);
-    else paintStraightDimension(ctx, d, transform, viewport, mmPerScene, textColor);
+    if (d.arc) paintArcDimension(ctx, d, transform, viewport, mmPerScene, labelMode, textColor, project);
+    else paintStraightDimension(ctx, d, transform, viewport, mmPerScene, textColor, project);
   }
 }
 
@@ -99,6 +110,7 @@ export function paintAlignedOverlayDimension(
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
   color: string = OVERLAY_LINE_COLORS.listeningDim,
+  project?: OverlayProjector,
 ): void {
   renderPreviewDimension({
     ctx,
@@ -107,9 +119,11 @@ export function paintAlignedOverlayDimension(
     transform,
     viewport,
     opts: { overlayLineStyle: true, color },
+    project, // ADR-544 — 3D camera projector (καμία αλλαγή στο 2D path όταν undefined)
   });
-  const sRef = CoordinateTransforms.worldToScreen(dimLineRef, transform, viewport);
-  const sMid = CoordinateTransforms.worldToScreen({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }, transform, viewport);
+  const toScreen = resolveToScreen(transform, viewport, project);
+  const sRef = toScreen(dimLineRef);
+  const sMid = toScreen({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 });
   drawLabelBeyond(ctx, label, sRef, sMid, color);
 }
 
@@ -121,9 +135,10 @@ function paintStraightDimension(
   viewport: { readonly width: number; readonly height: number },
   mmPerScene: number,
   textColor: string,
+  project: OverlayProjector | undefined,
 ): void {
   const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
-  paintAlignedOverlayDimension(ctx, d.p1, d.p2, d.dimLineRef, label, transform, viewport, textColor);
+  paintAlignedOverlayDimension(ctx, d.p1, d.p2, d.dimLineRef, label, transform, viewport, textColor, project);
 }
 
 /** Αριθμός δειγμάτων της καμπύλης dim line (πυκνό αρκετά ώστε να φαίνεται ομαλή σε κάθε zoom). */
@@ -151,10 +166,11 @@ function paintArcDimension(
   mmPerScene: number,
   labelMode: 'length' | 'angle' | 'both',
   textColor: string,
+  project: OverlayProjector | undefined,
 ): void {
   const arc = d.arc;
   if (!arc) return;
-  const toScreen = (p: Point2D): Point2D => CoordinateTransforms.worldToScreen(p, transform, viewport);
+  const toScreen = resolveToScreen(transform, viewport, project);
   const dimRadius = Math.hypot(d.dimLineRef.x - arc.center.x, d.dimLineRef.y - arc.center.y);
   const curve = arcToPolyline(
     { center: arc.center, radius: dimRadius, startAngle: arc.startAngleDeg, endAngle: arc.endAngleDeg },

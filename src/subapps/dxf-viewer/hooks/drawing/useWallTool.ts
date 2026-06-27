@@ -31,13 +31,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { EventBus } from '../../systems/events/EventBus';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα 2Δ» geometry bridge.
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { radToDeg } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { resolveWallThicknessMm } from './wall-completion';
+import { resolveWallThicknessMm, type SceneUnits } from './wall-completion';
 // ADR-508 unified linear-member framing — smart ghost-before-click + 2-κλικ (mirror δοκαριού).
 // ADR-398 §3.10 — face-snap στόχοι από το ΚΟΙΝΟ scene store (κοινό με κολώνα/δοκάρι).
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
@@ -56,6 +57,7 @@ import {
   type UseWallToolOptions,
   type UseWallToolResult,
 } from './wall-tool-types';
+import type { Entity } from '../../types/entities';
 import { useWallCommit } from './use-wall-commit';
 // ADR-363 — in-region / perimeter click handlers extracted for N.7.1 (≤500 lines).
 import { useWallRegionClicks } from './use-wall-region-clicks';
@@ -68,6 +70,8 @@ import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-brid
 import { applyLengthAngleLock, isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 // ADR-508 — endpoint face-snap (point snap, ΙΔΙΟΣ dispatcher με το start → preview ≡ commit).
 import { resolveWallEndpointSnap, resolveWallEndpointWithFineStep } from '../../bim/walls/wall-endpoint-snap';
+// ADR-363 — status-text resolver extracted for N.7.1 (≤500 lines).
+import { resolveWallToolStatusKey } from './wall-tool-status-text';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -383,54 +387,51 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     return commitPolylineFromState(s);
   }, [commitPolylineFromState]);
 
-  // ── status text (i18n keys returned for caller-resolved translation) ─────
-  const getStatusText = useCallback((): string => {
-    const s = stateRef.current;
-    // ADR-419 — in-region prompts ανά τρόπο (4 γραμμές / κλικ μέσα / πλαίσιο).
-    if (s.placementMode === 'in-region') {
-      if (s.regionMethod === 'inside') return 'tools.wall.statusRegionInsidePick';
-      if (s.regionMethod === 'box') return 'tools.wall.statusRegionBoxPick';
-      return s.regionPicks.length > 0
-        ? 'tools.wall.statusRegionMore'
-        : 'tools.wall.statusRegionLinesPick';
-    }
-    // ADR-363 «Τοίχος από περίγραμμα» — box-select prompt.
-    if (s.placementMode === 'outer-perimeter') {
-      return 'tools.wall.statusPerimeterPick';
-    }
-    // ADR-363 Phase 1J — on-entity prompts.
-    if (s.placementMode === 'on-entity') {
-      if (s.phase === 'awaitingStart') return 'tools.wall.statusPickEntity';
-      if (s.phase === 'awaitingSide') return 'tools.wall.statusPickSide';
-      return '';
-    }
-    switch (s.phase) {
-      case 'awaitingStart':
-        return 'tools.wall.statusStart';
-      case 'awaitingEnd':
-        return s.kind === 'curved'
-          ? 'tools.wall.statusCurveEnd'
-          : 'tools.wall.statusEnd';
-      case 'awaitingAlignment':
-        return 'tools.wall.statusAlignment';
-      case 'awaitingCurveControl':
-        return 'tools.wall.statusCurveControl';
-      case 'awaitingNextVertex':
-        return 'tools.wall.statusPolyNext';
-      default:
-        return '';
-    }
+  // ── ADR-543 — 3D placement bridge ─────────────────────────────────────────
+  // The 3D viewport (`useBim3DWallPlacement`) raycasts the active floor plane and
+  // emits the (OSNAP-resolved) scene-units point; route it through the SAME
+  // `onCanvasClick` commit path so 2D and 3D share ONE wall FSM (zero duplication —
+  // awaitingStart → awaitingEnd → commit, face-snap, length/angle lock, opening-
+  // conflict, trims, persistence all run once). Mirror of the `bim:place-column-3d`
+  // listener in `useColumnTool`. Ref keeps the listener stable while always calling
+  // the latest callback.
+  const onCanvasClickRef = useRef(onCanvasClick);
+  onCanvasClickRef.current = onCanvasClick;
+  useEffect(() => {
+    return EventBus.on('bim:place-wall-3d', ({ point }) => {
+      onCanvasClickRef.current(point);
+    });
   }, []);
+
+  // ── status text (i18n keys returned for caller-resolved translation) ─────
+  // ADR-363 — resolver extracted to ./wall-tool-status-text for N.7.1 (≤500 lines).
+  const getStatusText = useCallback((): string => resolveWallToolStatusKey(stateRef.current), []);
 
   // ── ADR-404 Phase 5b — publish handle στο ribbon bridge store ────────────
   // Single writer (mirror columnToolBridgeStore). Ο bridge διαβάζει μέσω
   // `wallToolBridgeStore.get()` όταν δεν υπάρχει επιλεγμένος τοίχος, ώστε το panel
   // «Κλίση» να οδηγεί τα overrides σε drawing mode (ο επόμενος τοίχος born-tilted).
+  // ADR-543 — stable getter for the 3D bridge: reads the latest `getSceneUnits`
+  // through a ref so the published handle's identity churn stays minimal and the
+  // 3D placement hook always resolves the current scene units.
+  const getSceneUnitsRef = useRef(getSceneUnits);
+  getSceneUnitsRef.current = getSceneUnits;
+  const getSceneUnitsStable = useCallback((): SceneUnits => getSceneUnitsRef.current?.() ?? 'mm', []);
+  // ADR-543 (COL traces 3D) — stable scene-entities getter for the 3D bridge: the 3D wall
+  // placement hook reads the SAME current-level entity set the 2D ambient pass uses (the
+  // `getSceneEntitiesRef` already mirrors `options.getSceneEntities` each render).
+  const getSceneEntitiesStable = useCallback(
+    (): readonly Entity[] => getSceneEntitiesRef.current?.() ?? [],
+    [],
+  );
+
   useEffect(() => {
     wallToolBridgeStore.set({
       isActive: state.phase !== 'idle',
       overrides: state.overrides,
       setParamOverrides,
+      getSceneUnits: getSceneUnitsStable,
+      getSceneEntities: getSceneEntitiesStable,
     });
     return () => {
       // Καθάρισε μόνο αν είμαστε ο τρέχων publisher (μην σβήσεις νεότερο mount).
@@ -438,7 +439,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         wallToolBridgeStore.set(null);
       }
     };
-  }, [state.phase, state.overrides, setParamOverrides]);
+  }, [state.phase, state.overrides, setParamOverrides, getSceneUnitsStable, getSceneEntitiesStable]);
 
   // ── side-effect listeners (extracted for N.7.1, parity preserved) ────────
   useWallToolDynamicInputListener({

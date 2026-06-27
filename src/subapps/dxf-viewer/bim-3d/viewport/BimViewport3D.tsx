@@ -27,13 +27,10 @@ import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
 import { FaceContextMenu } from './grips/FaceContextMenu';
-// ADR-535 Φ5 — 3D reshape grips drawn as a Canvas2D overlay (one render code with the 2D canvas).
-import { BimGripOverlay2D } from './grips/BimGripOverlay2D';
-// ADR-538 — 3D hover: DXF entity glow (Canvas2D, same 2D code) + the "+"/"−" hover badge.
-import { DxfHoverGlowOverlay2D } from './grips/DxfHoverGlowOverlay2D';
-import { HoverAddBadge3D } from './HoverAddBadge3D';
-// ADR-542 — 3D snap marker (column corner/midpoint/centroid) drawn with the EXACT 2D glyph + label.
-import { BimSnapIndicatorOverlay3D } from './snap/BimSnapIndicatorOverlay3D';
+// ADR-535/538/542/543/544/545 — cluster of Canvas2D overlays (grips, DXF hover glow, CAD
+// crosshair, snap marker, wall HUD, ambient tracking, column placement) drawn with the SAME
+// 2D painters projected through the perspective camera. Extracted as a leaf for N.7.1.
+import { BimViewport3DCanvasOverlays } from './BimViewport3DCanvasOverlays';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D'; import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
@@ -375,21 +372,19 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       onDoubleClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      {/* Three.js appends renderer canvas + ViewCube canvas directly into this div. */}
+      {/* Three.js appends renderer canvas + ViewCube canvas directly into this div.
+          ADR-545: cursor-none over the canvas so the CAD crosshair replaces the OS arrow
+          (Revit/AutoCAD). Sibling buttons/overlays keep the root's cursor-default. */}
       <div
         ref={containerRef}
-        className="absolute inset-0"
+        className="absolute inset-0 cursor-none"
         role="presentation"
       />
       <CropRegionOverlay />
-      {/* ADR-535 Φ5 — 3D reshape grips: Canvas2D overlay drawn with the SAME 2D UnifiedGripRenderer. */}
-      <BimGripOverlay2D managerRef={managerRef} />
-      {/* ADR-538 — hovered RAW DXF entity lights up with the EXACT 2D yellow glow (projected). */}
-      <DxfHoverGlowOverlay2D managerRef={managerRef} />
-      {/* ADR-538 — the "+"/"−" hover badge NE of the cursor (shared SSoT with the 2D crosshair). */}
-      <HoverAddBadge3D />
-      {/* ADR-542 — snap marker (┘/▲/⊕): EXACT 2D glyph+label, same engine, projected, occlusion-culled. */}
-      <BimSnapIndicatorOverlay3D managerRef={managerRef} />
+      {/* ADR-535/538/542/543/544/545 — Canvas2D overlay cluster (grips, DXF hover glow, CAD crosshair,
+          snap marker, wall HUD, ambient tracking, column placement), each drawn with the SAME 2D
+          painter projected through the perspective camera. */}
+      <BimViewport3DCanvasOverlays managerRef={managerRef} />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
         <TooltipTrigger asChild>

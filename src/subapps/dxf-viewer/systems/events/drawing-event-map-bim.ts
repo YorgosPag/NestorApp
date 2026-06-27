@@ -171,6 +171,12 @@ export interface BimEventMap {
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
   // path (enterprise id + scene append + auto 3D-resync) — no logic duplicated.
   'bim:place-column-3d': { point: Point2D };
+  // ADR-543 — 3D wall placement (linear 2-click bridge, mirror of bim:place-column-3d
+  // + bim:place-mep-segment-3d). The 3D viewport projects each click onto the active
+  // floor plane (no per-click z — a wall stands on the storey datum, height from params)
+  // and routes the scene-units point through the SAME `useWallTool.onCanvasClick` FSM
+  // (awaitingStart → awaitingEnd → commit) — one source of truth, zero duplication.
+  'bim:place-wall-3d': { point: Point2D };
   // ADR-406 — 3D MEP fixture placement (mirror of bim:place-column-3d).
   'bim:place-mep-fixture-3d': { point: Point2D };
   // ADR-408 Φ3 — 3D electrical panel placement (mirror of bim:place-column-3d).

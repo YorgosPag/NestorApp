@@ -12,9 +12,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md §3.20
  */
 
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import type { OverlayProjector } from './overlay-projector';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
 
 /**
@@ -24,11 +23,10 @@ import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style
 export function paintAlignmentGuide(
   ctx: CanvasRenderingContext2D,
   guide: PlacementAlignmentGuide,
-  transform: ViewTransform,
-  viewport: Viewport,
+  project: OverlayProjector,
 ): void {
-  const a = CoordinateTransforms.worldToScreen(guide.a, transform, viewport);
-  const b = CoordinateTransforms.worldToScreen(guide.b, transform, viewport);
+  const a = project(guide.a);
+  const b = project(guide.b);
   ctx.save();
   applyOverlayLineStyle(ctx, OVERLAY_LINE_COLORS.drawingGuide); // SSoT: 0.5px dashed [8,5], ORANGE
   ctx.globalAlpha = 0.75;

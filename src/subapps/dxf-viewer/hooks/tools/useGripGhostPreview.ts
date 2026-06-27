@@ -226,19 +226,12 @@ function drawComovePartnerGhosts(
   const kind = startMoved ? 'line-start' : 'line-end';
   const origMoved = startMoved ? origEntity.start : origEntity.end;
   const newMoved = startMoved ? transformed.start : transformed.end;
-  const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
   const ghosts = buildCoincidentPartnerGhostEntities({
     draggedEntity: origEntity,
     draggedRefs: [{ entityId: origEntity.id, kind }],
-    selectedEntityIds,
+    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(),
     getEntity,
     delta: { x: newMoved.x - origMoved.x, y: newMoved.y - origMoved.y },
-  });
-  // TEMP ADR-543 diagnostic — remove after the 2D partner-ghost issue is pinned.
-  console.warn('[ADR-543 2D]', {
-    draggedId: origEntity.id, kind, selectedEntityIds,
-    foundInScene: selectedEntityIds.map((id) => ({ id, type: getEntity(id)?.type ?? null })),
-    ghosts: ghosts.length,
   });
   for (const ghost of ghosts) {
     drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);

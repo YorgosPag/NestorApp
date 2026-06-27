@@ -2,9 +2,9 @@
  * hover-add-badge.ts — PURE SSOT for the AutoCAD-style "+"/"−" hover badge.
  *
  * The badge shown just NE of the cursor when a DXF/BIM entity is hovered: green "+"
- * (plain hover = add to selection) or red "−" (Shift held = remove). Extracted from
- * `CrosshairOverlay.applyBadge` so BOTH the 2D crosshair AND the 3D viewport badge
- * (`HoverAddBadge3D`) decide the text/colours from ONE place (ADR-538).
+ * (plain hover = add to selection) or red "−" (Shift held = remove). Lives in the shared
+ * `CrosshairCompositor.applyBadge` so BOTH the 2D crosshair AND the 3D crosshair
+ * (`BimCrosshairOverlay3D`) decide the text/colours from ONE place (ADR-538 / ADR-545).
  *
  * Pure — no DOM, no React. Jest-friendly.
  */

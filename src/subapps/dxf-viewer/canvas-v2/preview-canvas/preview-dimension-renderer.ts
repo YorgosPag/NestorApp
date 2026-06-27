@@ -43,6 +43,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { applyOverlayLineStyle } from './overlay-line-style';
+import { projectorScaleAt, type OverlayProjector } from './overlay-projector';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -81,6 +82,20 @@ export interface PreviewDimensionRenderParams {
    * `DimensionRenderer` path. Default `'mm'`.
    */
   readonly sceneUnits?: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+  /**
+   * ADR-544 — όταν δίνεται, η προβολή world→screen + το sizing (arrows/arc radius) περνούν από
+   * αυτόν τον projector αντί για `transform` (3D camera overlay). Όταν `undefined`, το 2D path
+   * μένει **byte-identical** (χρησιμοποιεί `transform.scale` + `worldToScreen` όπως πάντα). Το
+   * text (`renderDimensionText`) εξακολουθεί να διαβάζει `transform`· οι overlay listening dims
+   * καταστέλλουν το text (`userText: ''`), οπότε στο 3D δεν ζωγραφίζεται text μέσω αυτού.
+   */
+  readonly project?: OverlayProjector;
+}
+
+/** Screen px ανά 1 world/scene unit: από τον projector (ADR-544) όταν υπάρχει, αλλιώς `transform.scale`. */
+function viewScaleOf(params: PreviewDimensionRenderParams): number {
+  if (!params.project) return params.transform.scale;
+  return projectorScaleAt(params.project, params.entity.defPoints[0] ?? { x: 0, y: 0 });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -128,7 +143,7 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
   // Auto-scale DIMSCALE so arrows + text appear at ~10 px on screen regardless
   // of the drawing's unit scale. Formula: target_px = dimasz * dimscale * scale
   // → dimscale = 4 / scale keeps arrows ≈ 10px (2.5 * 4 = 10).
-  const autoScale = 4 / Math.max(params.transform.scale, 1e-6);
+  const autoScale = 4 / Math.max(viewScaleOf(params), 1e-6);
   const scaledParams: PreviewDimensionRenderParams = {
     ...params,
     style: { ...params.style, dimscale: autoScale },
@@ -229,7 +244,7 @@ function drawArrowheads(
   const block2Name = params.style.dimblk2 || params.style.dimblk;
   const block1 = getArrowheadBlock(block1Name);
   const block2 = getArrowheadBlock(block2Name);
-  const unitPx = params.style.dimasz * params.style.dimscale * params.transform.scale;
+  const unitPx = params.style.dimasz * params.style.dimscale * viewScaleOf(params);
   const a1 = toScreen(params, geometry.arrowAnchor1);
   const a2 = toScreen(params, geometry.arrowAnchor2);
 
@@ -323,7 +338,7 @@ function strokeSegment(params: PreviewDimensionRenderParams, seg: DimLineSegment
 
 function strokeArc(params: PreviewDimensionRenderParams, geom: AngularDimGeometry): void {
   const centre = toScreen(params, geom.arcCenter);
-  const radiusPx = geom.arcRadius * params.transform.scale;
+  const radiusPx = geom.arcRadius * viewScaleOf(params);
   // Mirror DimensionRenderer: Y-flip → negate angles + invert orientation.
   const start = -geom.arcStartAngle;
   const end = -geom.arcEndAngle;
@@ -346,7 +361,8 @@ function strokeLeader(params: PreviewDimensionRenderParams, geom: RadialDimGeome
 }
 
 function toScreen(params: PreviewDimensionRenderParams, p: Point2D): Point2D {
-  return CoordinateTransforms.worldToScreen(p, params.transform, params.viewport);
+  // ADR-544 — 3D camera projector όταν υπάρχει· αλλιώς το 2D `worldToScreen` (αμετάβλητο).
+  return params.project ? params.project(p) : CoordinateTransforms.worldToScreen(p, params.transform, params.viewport);
 }
 
 function readExtLine(geom: DimGeometry, side: 1 | 2): DimLineSegment | null {
