@@ -42,4 +42,16 @@ describe('topFacePlanFill (ADR-539 Φ3e)', () => {
     const b = topFacePlanFill({ faceAppearance: { top: { colorHex: '#123456' } } });
     expect(a).not.toBe(b);
   });
+
+  it('falls back to the base "*" paint when there is no explicit top (Φ4b «βάψε όλο»)', () => {
+    const fill = topFacePlanFill({ faceAppearance: { '*': { colorHex: '#C0392B' } } });
+    expect(fill).not.toBeNull();
+    expect(fill).toMatch(/^rgba?\(/);
+  });
+
+  it('an explicit top paint wins over the base "*"', () => {
+    const base = topFacePlanFill({ faceAppearance: { '*': { colorHex: '#111111' } } });
+    const top = topFacePlanFill({ faceAppearance: { '*': { colorHex: '#111111' }, top: { colorHex: '#C0392B' } } });
+    expect(top).not.toBe(base);
+  });
 });
