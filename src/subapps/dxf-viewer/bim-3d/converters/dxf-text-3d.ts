@@ -81,15 +81,14 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   const widthUnits = canvas.width / TEXTURE_PX_PER_UNIT;
   const heightUnitsPadded = canvas.height / TEXTURE_PX_PER_UNIT;
   const geometry = new THREE.PlaneGeometry(widthUnits, heightUnitsPadded);
-  // ADR-537 β — render as an ALWAYS-VISIBLE annotation (Revit/CAD convention): a flat text quad
-  // on the floor plane is coplanar with the wireframe + BIM bases at Y=0, so plain depth-testing
-  // makes it z-fight / vanish at some camera angles & zooms ("something covers it"). `depthTest:
-  // false` + a high `renderOrder` draws it last, on top, so labels stay readable from any view.
+  // ADR-537 underlay-depth — text is part of the DXF underlay and is drawn by the dedicated
+  // underlay pass (`underlay-pass.ts`) AFTER the lit scene + SSAO, so it needs NO `depthTest:false`
+  // band-aid: depth-TESTED (walls in front occlude it, unified with the wireframe) but
+  // `depthWrite:false` so the translucent quad never self-z-fights the linework it labels.
   const material = new THREE.MeshBasicMaterial({
-    map: texture, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
+    map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.renderOrder = 999;
   // rotateX(-90°) maps plane-local (x, y) → world (x, 0, -y) — EXACTLY the DXF→Three mapping
   // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
   mesh.rotation.x = -Math.PI / 2;

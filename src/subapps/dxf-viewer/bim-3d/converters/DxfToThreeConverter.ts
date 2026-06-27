@@ -170,6 +170,9 @@ export class DxfToThreeConverter {
     // Flat structure (named group holds the LineSegments directly) — unchanged
     // from the pre-multi-floor layout so existing consumers / tests keep working.
     group.name = 'dxf-wireframe';
+    // ADR-537 underlay-depth — render via the dedicated post-FX underlay pass, not the lit
+    // scene (`underlay-pass.ts`). Marks the root + hides it from the main render.
+    markUnderlayRoot(group);
     this.root = group;
     this.scene.add(group);
   }
@@ -191,6 +194,8 @@ export class DxfToThreeConverter {
       root.add(group);
     }
     if (root.children.length === 0) return;
+    // ADR-537 underlay-depth — same dedicated underlay pass for the stacked multi-floor root.
+    markUnderlayRoot(root);
     this.root = root;
     this.scene.add(root);
   }
@@ -223,7 +228,11 @@ export class DxfToThreeConverter {
       if (positions.length === 0) continue;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: WIREFRAME_OPACITY });
+      // ADR-537 underlay-depth — drawn in the dedicated underlay pass: depth-TESTED (walls in
+      // front occlude it) but `depthWrite:false` so overlapping linework never self-z-fights.
+      const mat = new THREE.LineBasicMaterial({
+        color, transparent: true, opacity: WIREFRAME_OPACITY, depthWrite: false,
+      });
       this.activeMaterials.push(mat);
       group.add(new THREE.LineSegments(geo, mat));
     }
