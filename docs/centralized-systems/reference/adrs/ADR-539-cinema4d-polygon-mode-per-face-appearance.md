@@ -148,6 +148,10 @@ anchor `selectedFace`) · `bim-3d/systems/selection/FaceSelectionHighlighter.ts`
 `bim-3d/viewport/use-bim3d-pointer-handlers.ts` (Shift-toggle) ·
 `bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` (paste-face σε ΟΛΕΣ) · i18n `polygonMode.hintMultiFace` ·
 **6 converters** (slab/structural[column+beam]/wall/foundation/roof → `shouldRenderFaced` SSoT, cross-entity facing).
+**Base+override ενοποίηση (Φ4b):** `bim/types/face-appearance-types.ts` (+`BASE_FACE_KEY '*'`) ·
+`bim-3d/materials/face-appearance-material.ts` (`resolveFaceMaterial` base fallback) ·
+`bim/utils/bim-face-plan-fill.ts` (`topFacePlanFill` base fallback) · `bim-3d/ui/PolygonMaterialPanel.tsx`
+(no-face → βάψε ΟΛΟ το στοιχείο) · i18n `polygonMode.hintWholeElement`/`clearWhole`.
 
 **Τροποποίηση:** `bim/types/bim-base.ts` · `bim-3d/converters/bim-three-slab-converter.ts` ·
 `bim-3d/systems/raycaster/BimEntityRaycaster.ts` · `bim-3d/scene/ThreeJsSceneManager.ts` ·
@@ -182,6 +186,18 @@ slab persistence serialize path (αν whitelist).
     `SetFaceAppearanceCommand` → `CompositeCommand` → `execute` (length≤1 → απλό command, μηδέν overhead). Κοινός
     level-scene adapter. Consumers: `PolygonMaterialPanel.apply` (swatch/custom-color/clear) + Φ4a keyboard paste-face
     → ΟΛΕΣ οι όψεις· copy-face/entity μένουν anchor.
+  - **✅ ΕΝΟΠΟΙΗΣΗ object-paint + face-paint = ΕΝΑ tool (Revit/Cinema 4D «base + override», Giorgio):** «βάψε ΟΛΟ
+    το στοιχείο» και «βάψε κάποιες όψεις» δεν είναι δύο μηχανισμοί — είναι **ΕΝΑ cascade πάνω σε ΕΝΑ data model**.
+    Νέο reserved **base key `'*'`** (`BASE_FACE_KEY`, `face-appearance-types.ts`) μέσα στο **ΙΔΙΟ** `FaceAppearanceMap`:
+    `resolve(face) = appearance[face] ?? appearance['*'] ?? base entity material`. **Μηδέν νέο field/command/persistence**
+    — το `'*'` ταξιδεύει στο υπάρχον map, μέσω του υπάρχοντος `SetFaceAppearanceCommand` + `applyFaceAppearanceToFaces`.
+    - **ΕΝΑ σημείο cascade:** `resolveFaceMaterial` (το καλούν ΟΛΟΙ οι faced converters + roof) + `topFacePlanFill`
+      (2D κάτοψη) απέκτησαν το `?? appearance['*']` fallback. `'*'` δεν είναι pickable (`faceGroupRange.indexOf=-1`),
+      δεν εμφανίζεται σε λαβές, καμία iteration των appearance keys πουθενά (verified) → zero side-effects.
+    - **Panel = ΕΝΑ tool:** `PolygonMaterialPanel.apply` → N όψεις επιλεγμένες ? βάψε τις όψεις : βάψε το base
+      (`targetBimId` = το ενεργό solid, set στο `setActive`). Custom-color/clear/swatch ίδιο path· clear label +
+      hint προσαρμόζονται (i18n `hintWholeElement`/`clearWhole`, el+en). Όλα μέσω του ΙΔΙΟΥ batch SSoT = ΕΝΑ undo.
+    - **Tests:** `face-appearance-material.test.ts` (4, cascade) + `bim-face-plan-fill.test.ts` (+2 base) GREEN.
   - **🐛 FIX cross-entity facing (browser-verify):** το faced gate ήταν `poly.active && targetBimId === id` →
     **μόνο ΕΝΑ solid** (αυτό που άνοιξε το mode) γινόταν pickable, άρα Shift+κλικ σε όψη ΑΛΛΟΥ solid δεν έπιανε
     (το `raycastBimFace` γύριζε entity-fallback χωρίς `faceKey`). **Boy-Scout κεντρικοποίηση (N.0.2):** το gate

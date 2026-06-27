@@ -26,6 +26,7 @@ import { ACI_PALETTE } from '../../settings/standards/aci';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
+import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
@@ -155,9 +156,15 @@ export class DxfToThreeConverter {
   private readonly scene: THREE.Scene;
   private root: THREE.Group | null = null;
   private readonly activeMaterials: THREE.LineBasicMaterial[] = [];
+  /** ADR-537 underlay-depth — unregister the post-FX overlay provider on dispose. */
+  private readonly unregisterOverlay: () => void;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+    // ADR-537 underlay-depth — the wireframe/text underlay is drawn by the dedicated post-FX
+    // overlay pass (`post-fx-overlay-pass.ts`), never the lit scene. Register the current root as
+    // a provider (kept `visible=false`); the pass draws it on top of the scene depth, AO-immune.
+    this.unregisterOverlay = registerPostFxOverlay(scene, () => (this.root ? [this.root] : []));
   }
 
   /** Single-floor overlay sitting on the floor plane (Y=0). */
@@ -169,7 +176,7 @@ export class DxfToThreeConverter {
     // Flat structure (named group holds the LineSegments directly) — unchanged
     // from the pre-multi-floor layout so existing consumers / tests keep working.
     group.name = 'dxf-wireframe';
-    // ADR-537 underlay-depth — drawn by the dedicated post-FX underlay pass (`underlay-pass.ts`),
+    // ADR-537 underlay-depth — drawn by the dedicated post-FX overlay pass (`post-fx-overlay-pass.ts`),
     // not the lit scene. `visible=false` hides it from the main render; the pass reads the root
     // via `getRoot()` (the owner accessor, mirror of `getBounds`) and flips it on for its own pass.
     group.visible = false;
@@ -262,15 +269,6 @@ export class DxfToThreeConverter {
     return box.isEmpty() ? null : box;
   }
 
-  /**
-   * ADR-537 underlay-depth — the underlay root (or null). Owner accessor consumed by the
-   * dedicated underlay pass (`underlay-pass.ts`), mirroring `getBounds()` so the render pipeline
-   * locates the underlay through its OWNER, not a parallel scene lookup. Kept `visible=false`.
-   */
-  getRoot(): THREE.Object3D | null {
-    return this.root;
-  }
-
   private disposeRoot(): void {
     if (!this.root) return;
     this.root.traverse((obj) => {
@@ -290,6 +288,7 @@ export class DxfToThreeConverter {
   }
 
   dispose(): void {
+    this.unregisterOverlay();
     this.disposeRoot();
   }
 }

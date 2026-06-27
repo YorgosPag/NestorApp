@@ -137,7 +137,6 @@ export class ThreeJsSceneManager {
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
       getCamera: () => this.viewport.camera, viewportSize: getRendererViewportSize(this.renderer.domElement),
       onNeedsRender: () => this.markSceneDirty(),
-      getUnderlayRoot: () => this.dxfConverter.getRoot(), // ADR-537 underlay-depth (owner accessor)
     });
     this.qualityModulator = subs.qualityModulator;
     this.ssaoModulator = subs.ssaoModulator;
@@ -189,7 +188,6 @@ export class ThreeJsSceneManager {
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
       getBimGroup: () => this.bimLayer.group, getDxfBounds: () => this.dxfConverter.getBounds(),
-      getUnderlayRoot: () => this.dxfConverter.getRoot(), // ADR-537 underlay-depth (owner accessor)
       invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(), markDirty: () => this.markSceneDirty(), // ADR-452 cut-plane drag → repaint
     });
     // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.

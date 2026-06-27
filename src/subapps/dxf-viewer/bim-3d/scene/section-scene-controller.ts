@@ -28,7 +28,7 @@ import { resolveAllAxisCuts, type ResolvedAxisCut } from './cut-plane-3d';
 import { composeCutEntries, axisCutCompositionKey, detectCutMoving, composeClipPlanes, MAX_CLIP_PLANES, type AxisCutEntry } from './axis-cut-composer';
 import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
 import { unionSceneBounds } from './section-scene-bounds';
-import { renderUnderlay, type UnderlayRootGetter } from './underlay-pass';
+import { renderPostFxOverlays } from './post-fx-overlay-pass';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { DXF_TIMING } from '../../config/dxf-timing';
@@ -39,8 +39,6 @@ export interface SectionControllerDeps {
   readonly getCamera: () => THREE.Camera;
   readonly getBimGroup: () => THREE.Object3D;
   readonly getDxfBounds: () => THREE.Box3 | null;
-  /** ADR-537 underlay-depth — owner accessor for the DXF underlay root (`DxfToThreeConverter.getRoot`). */
-  readonly getUnderlayRoot: UnderlayRootGetter;
   readonly invalidatePathTracer: () => void;
   /** ADR-452 — request an on-demand raster repaint (slider drag drives clip change). */
   readonly markDirty: () => void;
@@ -398,10 +396,10 @@ export class SectionSceneController {
       }
     }
 
-    // ADR-537 underlay-depth — draw the DXF underlay on top of the section frame (screen depth
-    // intact from the caps render) so the reference linework stays visible + depth-correct in
-    // section mode too, exactly as on the raster / SSAO paths.
-    renderUnderlay(renderer, this.deps.getUnderlayRoot(), camera);
+    // ADR-537 — draw the post-FX overlays (DXF underlay + gizmo) on top of the section frame
+    // (screen depth intact from the caps render) so the reference linework + manipulators stay
+    // visible + correct-coloured in section mode too, exactly as on the raster / SSAO paths.
+    renderPostFxOverlays(renderer, this.deps.scene, camera);
 
     // Any draft frame (slider drag with caps skipped, 'fast' grey, or 'colors' camera
     // motion) schedules one FULL-quality refine once motion stops, so the solid/coloured

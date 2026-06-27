@@ -32,126 +32,12 @@ import { snapMarkerScreenScale } from '../shared/snap-marker-core';
 import {
   createSnapMarker, createBasePointMarker, disposeBasePointMarker, defaultColorOf,
 } from './bim-gizmo-overlay-markers';
+import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
+// ADR-402/408 — per-type handle-set tables + resolvers (split out for the 500-line budget, N.7.1).
+import { BASE_HANDLES, activeHandlesFor, isPlanarMoveType } from './bim-gizmo-overlay-handles';
 
-/**
- * Move/rotate handles active for every selected entity.
- * ADR-402 — `axis-y` (green, world-up) is the VERTICAL move arrow: dragging it
- * changes the element's elevation (per-type field, see `bim3d-vertical-move`).
- * `axis-x`/`axis-z` are the horizontal (plan) move arrows; `plane-xz` the plan
- * drag; `rotate-y` the plan rotation.
- */
-/**
- * Move/rotate handles active for EVERY selected entity (the planar baseline).
- * ADR-402/408 Φ-E — Revit DOF model: structural + non-MEP elements move in PLAN
- * only (2-axis): the two horizontal arrows (`axis-x`/`axis-z`), the horizontal plane
- * drag (`plane-xz`) and the plan rotation ring (`rotate-y`). Their vertical position
- * is a constraint/offset edited via the contextual tab — NOT a free 3D drag — so the
- * vertical move arrow (`axis-y`) and the vertical plane handles are NOT in the base.
- * (`center` orange free-move pyramid hidden per Giorgio.)
- */
-const BASE_HANDLES: readonly GizmoHandleId[] = [
-  'axis-x', 'axis-z', 'plane-xz', 'rotate-y',
-];
-
-/**
- * ADR-408 Φ-E — handles that turn a selection into a FULL 3D move: the vertical move
- * arrow (`axis-y`) + the two vertical plane drags (`plane-xy`, `plane-yz`). Added only
- * for the `FREE_3D_MOVE_TYPES` below.
- */
-const FREE_3D_MOVE_HANDLES: readonly GizmoHandleId[] = ['axis-y', 'plane-xy', 'plane-yz'];
-
-/**
- * ADR-408 Φ-E — entity types that move freely in ALL THREE axes (Revit: ducts/pipes +
- * mechanical equipment placed at an arbitrary elevation). Everything else is planar
- * (2-axis). Multi-select (`editBimType = null`) → planar (mirror resize/tilt).
- */
-const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
-  'mep-segment', 'mep-fixture', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
-]);
-
-/**
- * ADR-402 Phase B / ADR-408 Φ1 — extra resize handles shown per entity type. The
- * mapping is Revit-FAITHFUL: a shape handle edits ONLY a "stretch" (length/height);
- * cross-section thickness/width/depth is NEVER a drag — it is a Type parameter
- * (contextual ribbon). So the structural plan-section handles (`resize-x`/`resize-z`
- * = wall/column thickness, beam width) and the slab thickness handle were REMOVED
- * (ADR-408 Φ1, «πιστή αντιγραφή Revit»):
- *   - column → Y-top height + Y-base offset ONLY (ADR-401 F.3 top/base octahedra).
- *              Width/depth (X/Z) → Type. Length n/a (a column is a point in plan).
- *   - wall   → Y-top height + Y-base offset ONLY (ADR-401 E.3). Thickness (X/Z) →
- *              Type. LENGTH → the endpoint shape handles (`ENDPOINT_HANDLES_BY_TYPE`).
- *   - beam   → NO resize handle. ADR-535 Φ9: LENGTH + width → the 2D Canvas2D reshape
- *              grips (top/bottom faces, mirror slab/wall); depth → Type; top elevation →
- *              the vertical move arrow. (Endpoint rings removed — see ENDPOINT_HANDLES_BY_TYPE.)
- *   - slab   → NO resize handle. Thickness → Type; footprint → 2D per-vertex sketch.
- */
-const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  // `resize-m-y` = the second (base) vertical grip below the centroid (top + base).
-  column: ['resize-y', 'resize-m-y'],
-  wall: ['resize-y', 'resize-m-y'],
-  // ADR-402 Sub-Phase 1 — stair: plan handles (perp → width, axial → run/stepCount).
-  // ADR-401 Phase G.3 — + vertical top/base octahedra: dragging re-steps to the new
-  // height (Revit «Desired number of risers») and detaches the side if attached.
-  // Unchanged by ADR-408 Φ1 (a stair's incline IS its parametric run, not a section).
-  stair: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
-};
-
-/**
- * ADR-404 Phase 2 — X/Z rotate rings shown per entity type so the user can TILT
- * (rake a column, batter a wall, ramp a beam, slope a slab). Both X and Z rings are
- * offered; the drag bridge maps each to the type's tilt DOF and treats a roll ring
- * (axis along the element) as a no-op. A stair has NO tilt (its incline is parametric
- * via run/stepCount — Revit-correct), so it is absent here. Single-select only: a
- * multi-selection reports `editBimType = null` → no tilt rings (mirror resize).
- */
-const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  column: ['rotate-x', 'rotate-z'],
-  wall: ['rotate-x', 'rotate-z'],
-  beam: ['rotate-x', 'rotate-z'],
-  slab: ['rotate-x', 'rotate-z'],
-};
-
-/**
- * ADR-408 Φ-D/Φ1 — per-endpoint shape handles shown per entity type. A linear element
- * exposes a draggable handle at each axis end (drag ONE end → it stretches from there,
- * the other end stays). Single-select only (the hook passes `editBimType = null` for a
- * multi-selection → no endpoint handles, mirror resize).
- *   - `mep-segment` → Revit pipe shape handles (free-3D drag: κάτοψη + υψόμετρο).
- *   - `wall` → Revit LENGTH shape handles (horizontal drag: το μήκος είναι plan
- *     dimension· το ύψος είναι ξεχωριστή λαβή/Τύπος).
- *   - `beam` → ΧΩΡΙΣ endpoint rings (ADR-535 Φ9): το δοκάρι πλέον εκθέτει τις ΙΔΙΕΣ
- *     2D reshape grips (γωνίες/πλάτος/μήκος-άκρα) ως Canvas2D overlay top+bottom, όπως η
- *     πλάκα/τοίχος — οι σιελ endpoint-σφαιρες του gizmo θα ήταν διπλή/συγκρουόμενη λαβή μήκους.
- */
-const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  'mep-segment': ['endpoint-start', 'endpoint-end'],
-  wall: ['endpoint-start', 'endpoint-end'],
-};
-
-/** Active handle id set for a selected entity: base move/rotate + 3D move + resize + tilt + endpoint. */
-export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandleId> {
-  const ids = new Set<GizmoHandleId>(BASE_HANDLES);
-  // ADR-408 Φ-E — full 3D move (vertical arrow + vertical planes) only for free-3D types.
-  if (bimType && FREE_3D_MOVE_TYPES.has(bimType)) for (const id of FREE_3D_MOVE_HANDLES) ids.add(id);
-  const resize = (bimType && RESIZE_HANDLES_BY_TYPE[bimType]) || [];
-  for (const id of resize) ids.add(id);
-  const tilt = (bimType && TILT_HANDLES_BY_TYPE[bimType]) || [];
-  for (const id of tilt) ids.add(id);
-  const endpoints = (bimType && ENDPOINT_HANDLES_BY_TYPE[bimType]) || [];
-  for (const id of endpoints) ids.add(id);
-  return ids;
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2h — a PLANAR (non-free-3D) single selection whose move handles
- * are all in `BASE_HANDLES`. Such a drag can safely collapse the gizmo to the move
- * arrows (hiding resize/endpoint/tilt clutter, Revit-style) without ever hiding the
- * handle being dragged. Free-3D MEP types keep their handles (their active handle may
- * be `axis-y`/`plane-xy`/`plane-yz`, which are NOT in the base).
- */
-export function isPlanarMoveType(bimType: string | null): boolean {
-  return bimType !== null && !FREE_3D_MOVE_TYPES.has(bimType);
-}
+// Re-export the pure handle resolvers so existing importers keep their `bim-gizmo-overlay` path.
+export { activeHandlesFor, isPlanarMoveType };
 
 export class BimGizmoOverlay {
   private readonly scene: THREE.Scene;
@@ -202,6 +88,17 @@ export class BimGizmoOverlay {
    * screen scale for the collapsed move drag (null = full size).
    */
   private snapMarkerScaleOverride: number | null = null;
+  /**
+   * ADR-537 post-FX overlay — the gizmo is a translucent UI manipulator: rendered inside the lit
+   * scene it gets AO/tone-shaded at idle (axes turn "mustard"). It is instead drawn by the dedicated
+   * post-FX overlay pass (`post-fx-overlay-pass.ts`). Its scene objects are kept `visible=false` so
+   * the MAIN render skips them; these flags carry the real SHOWN state and the registered provider
+   * returns the currently-shown roots for the pass to draw (always-on-top, AO-immune).
+   */
+  private active = false;
+  private snapShown = false;
+  private basePointShown = false;
+  private readonly unregisterOverlay: () => void;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -215,10 +112,25 @@ export class BimGizmoOverlay {
     this.scene.add(this.meshSet.root);
 
     this.snapMarker = createSnapMarker();
+    this.snapMarker.visible = false; // ADR-537 — shown via the post-FX pass, not the main render.
     this.scene.add(this.snapMarker);
 
     this.basePointMarker = createBasePointMarker();
+    this.basePointMarker.visible = false; // ADR-537 — shown via the post-FX pass.
     this.scene.add(this.basePointMarker);
+
+    // ADR-537 — register the SHOWN gizmo roots with the post-FX overlay pass (drawn after SSAO).
+    this.unregisterOverlay = registerPostFxOverlay(scene, () => this.collectOverlayRoots());
+  }
+
+  /** ADR-537 — the gizmo roots currently shown (provider for the post-FX overlay pass). */
+  private collectOverlayRoots(): THREE.Object3D[] {
+    if (this.disposed) return [];
+    const roots: THREE.Object3D[] = [];
+    if (this.active) roots.push(this.meshSet.root);
+    if (this.snapShown) roots.push(this.snapMarker);
+    if (this.basePointShown) roots.push(this.basePointMarker);
+    return roots;
   }
 
   /** Cache the visual + hitbox object of each endpoint handle (built once). */
@@ -237,7 +149,9 @@ export class BimGizmoOverlay {
   }
 
   get visible(): boolean {
-    return !this.disposed && this.meshSet.root.visible;
+    // ADR-537 — `active` is the real shown-state (root.visible is kept false so the main render
+    // skips it; the post-FX overlay pass flips it on only for its own draw).
+    return !this.disposed && this.active;
   }
 
   /** View passed to `testGizmoHit` — only active (Phase A) hitboxes. */
@@ -247,7 +161,9 @@ export class BimGizmoOverlay {
 
   setVisible(visible: boolean): void {
     if (this.disposed) return;
-    this.meshSet.root.visible = visible;
+    // ADR-537 — toggle the SHOWN flag, NOT root.visible (kept false so the main render skips it;
+    // the post-FX overlay pass draws it). hide the snap marker when the gizmo goes away.
+    this.active = visible;
     if (!visible) this.hideSnapMarker();
   }
 
@@ -262,14 +178,14 @@ export class BimGizmoOverlay {
     const screenScale = this.snapMarkerScaleOverride ?? SNAP_MARKER_SCREEN_SCALE;
     this.snapMarker.position.copy(world);
     this.snapMarker.scale.setScalar(snapMarkerScreenScale(world, camera, screenScale));
-    this.snapMarker.visible = true;
+    this.snapShown = true; // ADR-537 — shown via the post-FX overlay pass (root.visible stays false).
     this.snapMarker.updateMatrixWorld(true);
   }
 
   /** Hide the drag snap marker. */
   hideSnapMarker(): void {
     if (this.disposed) return;
-    this.snapMarker.visible = false;
+    this.snapShown = false; // ADR-537 — post-FX overlay shown-flag.
   }
 
   /**
@@ -280,7 +196,7 @@ export class BimGizmoOverlay {
   setBasePointMarker(world: THREE.Vector3 | null): void {
     if (this.disposed) return;
     this.basePointWorld = world ? world.clone() : null;
-    this.basePointMarker.visible = world !== null;
+    this.basePointShown = world !== null; // ADR-537 — post-FX overlay shown-flag (root.visible stays false).
     if (world) {
       this.basePointMarker.position.copy(world);
       this.basePointMarker.updateMatrixWorld(true);
@@ -446,6 +362,7 @@ export class BimGizmoOverlay {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.unregisterOverlay(); // ADR-537 — stop the post-FX overlay pass from drawing this gizmo.
     this.scene.remove(this.meshSet.root);
     this.meshSet.dispose();
     this.scene.remove(this.snapMarker);

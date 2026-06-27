@@ -16,7 +16,6 @@ import { PerformanceCollector } from '../performance/PerformanceCollector';
 import { createSceneIdleDetector } from './scene-idle-handlers';
 import type { IdleDetector } from '../lighting/idle-detector';
 import type { BimSceneLayer } from './BimSceneLayer';
-import type { UnderlayRootGetter } from './underlay-pass';
 
 export interface SceneRenderingSubsystemsDeps {
   readonly renderer: THREE.WebGLRenderer;
@@ -27,8 +26,6 @@ export interface SceneRenderingSubsystemsDeps {
   readonly viewportSize: { readonly width: number; readonly height: number };
   /** Marks the scene dirty so the master scheduler renders an SSAO ramp frame. */
   readonly onNeedsRender: () => void;
-  /** ADR-537 underlay-depth — owner accessor for the DXF underlay root (`DxfToThreeConverter.getRoot`). */
-  readonly getUnderlayRoot: UnderlayRootGetter;
 }
 
 export interface SceneRenderingSubsystems {
@@ -60,7 +57,6 @@ export function createSceneRenderingSubsystems(
     deps.viewportSize.height,
     deps.onNeedsRender,
     selectionOutlinePass,
-    deps.getUnderlayRoot,
   );
   const envmapGenerator = new EnvmapGenerator(deps.renderer, deps.scene);
   const pathTracerRenderer = new PathTracerRenderer(deps.renderer, deps.scene, deps.getCamera);

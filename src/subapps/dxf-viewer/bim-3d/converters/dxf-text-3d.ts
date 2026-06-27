@@ -82,7 +82,7 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   const heightUnitsPadded = canvas.height / TEXTURE_PX_PER_UNIT;
   const geometry = new THREE.PlaneGeometry(widthUnits, heightUnitsPadded);
   // ADR-537 underlay-depth — text is part of the DXF underlay and is drawn by the dedicated
-  // underlay pass (`underlay-pass.ts`) AFTER the lit scene + SSAO, so it needs NO `depthTest:false`
+  // overlay pass (`post-fx-overlay-pass.ts`) AFTER the lit scene + SSAO, so it needs NO `depthTest:false`
   // band-aid: depth-TESTED (walls in front occlude it, unified with the wireframe) but
   // `depthWrite:false` so the translucent quad never self-z-fights the linework it labels.
   const material = new THREE.MeshBasicMaterial({
