@@ -3,11 +3,11 @@
  * το Cinema 4D «Polygon Mode». Window-level keydown leaf (mirror του `usePolygonDragDrop`:
  * `useLevelsOptional` + store `getState` — μηδέν React re-render, ADR-040 leaf).
  *
- * Ενεργό ΜΟΝΟ όταν Polygon Mode active + υπάρχει επιλεγμένη όψη (`selectedFace`):
- *   - Ctrl/Cmd+C        → copy ΜΙΑΣ όψης    → `FaceContextMenuStore.clipboard`
- *   - Ctrl/Cmd+V        → paste ΜΙΑΣ όψης   → `applyFaceAppearance` (per-face SSoT)
- *   - Ctrl/Cmd+Shift+C  → copy ΟΛΗΣ entity  → `FaceContextMenuStore.entityClipboard`
- *   - Ctrl/Cmd+Shift+V  → paste ΟΛΗΣ entity → `applyEntityFaceAppearanceMap` (ένα undo)
+ * Ενεργό ΜΟΝΟ όταν Polygon Mode active + υπάρχει επιλεγμένη όψη (`selectedFace` anchor):
+ *   - Ctrl/Cmd+C        → copy ΜΙΑΣ όψης (anchor)        → `FaceContextMenuStore.clipboard`
+ *   - Ctrl/Cmd+V        → paste σε ΟΛΕΣ τις όψεις (Φ4b)  → `applyFaceAppearanceToFaces` (ΕΝΑ undo)
+ *   - Ctrl/Cmd+Shift+C  → copy ΟΛΗΣ entity (anchor)      → `FaceContextMenuStore.entityClipboard`
+ *   - Ctrl/Cmd+Shift+V  → paste ΟΛΗΣ entity (anchor)     → `applyEntityFaceAppearanceMap` (ένα undo)
  *
  * Τα clipboards είναι cross-entity (global) → αντιγραφή από entity A, επικόλληση σε B.
  * `preventDefault` ΜΟΝΟ όταν όντως χειρίζεται (αλλιώς ο browser copy/paste μένει ανέγγιχτος).
@@ -24,7 +24,7 @@ import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { useFaceContextMenuStore } from '../stores/FaceContextMenuStore';
 import { isTypingInFormField } from '../ui/is-typing-in-form-field';
 import { readFaceAppearance, readEntityFaceAppearanceMap } from '../ui/read-face-appearance';
-import { applyFaceAppearance } from '../ui/apply-face-appearance';
+import { applyFaceAppearanceToFaces } from '../ui/apply-face-appearance';
 import { applyEntityFaceAppearanceMap } from '../ui/apply-entity-face-appearance-map';
 import { classifyFaceClipboardKey } from './polygon-clipboard-key';
 
@@ -54,7 +54,10 @@ export function usePolygonClipboardShortcuts(): void {
           break;
         case 'paste-face':
           if (store.clipboard) {
-            applyFaceAppearance(levels, face.bimId, face.faceKey, store.clipboard);
+            // Φ4b — paste σε ΟΛΕΣ τις επιλεγμένες όψεις με ΕΝΑ undo (όχι μόνο στην anchor).
+            applyFaceAppearanceToFaces(
+              levels, usePolygonMode3DStore.getState().selectedFaces, store.clipboard,
+            );
             handled = true;
           }
           break;

@@ -136,16 +136,22 @@ export function useBim3DPointerHandlers(
     const manager = managerRef.current;
     if (!manager) return;
     // ADR-539 — Polygon Mode: a click selects a FACE of a faced solid (for paint), not
-    // the whole entity. A miss clears the face selection. The entity selection is left
-    // untouched so the «Polygon» panel stays anchored to the same solid.
+    // the whole entity. The entity selection is left untouched so the «Polygon» panel stays
+    // anchored to the same solid.
+    // Φ4b — Shift+click adds/removes the face from the multi-selection (Cinema 4D Polygon Mode),
+    // mirroring the entity-level shift-toggle below (`toggleBimEntity`/`selectBimEntity`); a plain
+    // click replaces it. Shift+miss keeps the set (Cinema 4D); a plain miss clears it.
     if (usePolygonMode3DStore.getState().active) {
+      const store = usePolygonMode3DStore.getState();
       const faceHit = manager.raycastBimFace(e.clientX, e.clientY);
       if (faceHit?.bimId && faceHit.faceKey) {
-        usePolygonMode3DStore.getState().selectFace({ bimId: faceHit.bimId, faceKey: faceHit.faceKey });
-        manager.setSelectedFace(faceHit.bimId, faceHit.faceKey);
-      } else {
-        usePolygonMode3DStore.getState().selectFace(null);
-        manager.setSelectedFace(null, null);
+        const face = { bimId: faceHit.bimId, faceKey: faceHit.faceKey };
+        if (e.shiftKey) store.toggleFace(face);
+        else store.selectFace(face);
+        manager.setSelectedFaces(usePolygonMode3DStore.getState().selectedFaces);
+      } else if (!e.shiftKey) {
+        store.clearFaces();
+        manager.setSelectedFaces([]);
       }
       return;
     }

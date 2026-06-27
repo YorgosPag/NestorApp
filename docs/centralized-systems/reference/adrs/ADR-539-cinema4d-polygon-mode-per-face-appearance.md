@@ -110,7 +110,7 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ3d** | **beam** (box single-piece· `beamToMesh` faced branch `buildBeamCoreBody` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: I-shape/multi-cutback = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3 (ΟΛΟΚΛΗΡΩΘΗΚΕ)** | slab + foundation + column + roof + wall + beam = όλα τα δομικά solids faced (+ 2D fill Φ3e + context-menu Φ3f) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4a** | keyboard copy/paste εμφάνισης όψης (Ctrl+C/V face) + **entity-level** copy/paste (Ctrl+Shift+C/V, όλες οι όψεις, ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ4b** | multi-face select (Shift) + N overlays + batch command (ένα undo) | ⬜ PLANNED |
+| **Φ4b** | multi-face select (Shift) + N overlays + batch command (ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4c** | `bmat_*` library drag swatches + `faceAppearanceColorHex` resolve extend | ⬜ PLANNED |
 | **Φ4d** | per-face PBR textures (γέφυρα `MaterialCatalog3D`, ADR-413) | ⬜ PLANNED |
 
@@ -139,6 +139,14 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 `bim-3d/stores/FaceContextMenuStore.ts` (+`entityClipboard`) · `bim-3d/viewport/grips/FaceContextMenu.tsx`
 (dedupe read) · `bim-3d/shortcuts/use3DShortcuts.ts` (dedupe guard) · `bim-3d/viewport/BimViewport3D.tsx` (mount).
 
+**Τροποποίηση (Φ4b):** `bim-3d/stores/PolygonMode3DStore.ts` (+`selectedFaces` set, `toggleFace`, `clearFaces`,
+anchor `selectedFace`) · `bim-3d/systems/selection/FaceSelectionHighlighter.ts` (`setTargets` N overlays) ·
+`bim-3d/scene/ThreeJsSceneManager.ts` (`setSelectedFaces` + `setSelectedFace` delegate) ·
+`bim-3d/ui/apply-face-appearance.ts` (+`applyFaceAppearanceToFaces` = `CompositeCommand`) ·
+`bim-3d/ui/PolygonMaterialPanel.tsx` (apply σε ΟΛΕΣ τις όψεις + multi-hint) ·
+`bim-3d/viewport/use-bim3d-pointer-handlers.ts` (Shift-toggle) ·
+`bim-3d/viewport/use-polygon-clipboard-shortcuts.ts` (paste-face σε ΟΛΕΣ) · i18n `polygonMode.hintMultiFace`.
+
 **Τροποποίηση:** `bim/types/bim-base.ts` · `bim-3d/converters/bim-three-slab-converter.ts` ·
 `bim-3d/systems/raycaster/BimEntityRaycaster.ts` · `bim-3d/scene/ThreeJsSceneManager.ts` ·
 `bim-3d/viewport/use-bim3d-pointer-handlers.ts` · `bim-3d/viewport/BimViewport3D.tsx` ·
@@ -146,6 +154,36 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ4b — MULTI-FACE SELECT + BATCH PAINT = ΕΝΑ UNDO, IMPLEMENTED UNCOMMITTED)** — «Advanced polygon
+  editing» layer (2/4): Cinema 4D «Polygon Mode» multi-select. Shift+κλικ προσθέτει/αφαιρεί όψεις, N highlight
+  overlays ταυτόχρονα, και κάθε βαφή/καθαρισμός/paste εφαρμόζεται σε **ΟΛΕΣ** τις επιλεγμένες όψεις με **ΕΝΑ
+  atomic undo step** — cross-entity (όψεις από διαφορετικά solids) ΚΑΙ same-entity. **FULL SSoT — μηδέν νέα
+  geometry, κανένα νέο command primitive· μόνο σύνθεση υπαρχόντων SSoT.**
+  - **SSoT audit εύρημα (κρίσιμο):** το `CommandHistory.execute(cmd)` καλεί `cmd.execute()` και το
+    `CompositeCommand.execute()` τρέχει όλα τα children forward → ένα **fresh** `CompositeCommand` που εκτελείται
+    ΜΙΑ φορά δίνει ΕΝΑ undo step. ΔΕΝ χρειάστηκε νέο multi-face command (το `appendToLast` μονοπάτι του
+    CompositeCommand doc είναι για ΗΔΗ-εκτελεσμένα derived children — διαφορετική περίπτωση). Same-entity
+    multi-face αναιρείται σωστά: κάθε `SetFaceAppearanceCommand` κάνει **lazy snapshot** του `prev` στο πρώτο
+    `execute()` και τα children τρέχουν σειριακά μέσα στο composite → reverse-order undo = nested unwind.
+  - **Store (`PolygonMode3DStore`):** `selectedFaces: readonly SelectedFace3D[]` = SSoT· `selectedFace` = anchor
+    (τελευταία προστιθέμενη, primary· panel custom-color seed + Φ4a entity-copy το διαβάζουν). `toggleFace`
+    (add/remove key=`${bimId}|${faceKey}`)· `selectFace` κρατά replace-semantics· `clearFaces`. Μηδέν high-freq (ADR-040).
+  - **Click (`use-bim3d-pointer-handlers`, ADR-040 6B/6D):** Polygon-Mode branch → `e.shiftKey ? toggleFace : selectFace`
+    (mirror ΑΚΡΙΒΩΣ το entity-level `toggleBimEntity`/`selectBimEntity`)· Shift+miss κρατά το set (Cinema 4D), plain
+    miss το καθαρίζει· `manager.setSelectedFaces(...)`.
+  - **Highlighter (`FaceSelectionHighlighter`):** `setTargets(faces[])` κρατά **array** overlays (reuse `faceGroupRange`
+    + `sliceFaceGeometry` αυτούσια)· `setTarget` = single-face convenience (hover/context-menu/drag-drop αμετάβλητα)·
+    `refresh`/`dispose` σε ΟΛΑ τα overlays (μηδέν leak). Ο hover highlighter μένει single.
+  - **Manager (`ThreeJsSceneManager`):** `setSelectedFaces(faces)` → `faceHighlighter.setTargets`· `setSelectedFace`
+    delegate (backward-compat).
+  - **Batch apply (`apply-face-appearance.ts`):** `applyFaceAppearanceToFaces(levels, faces, value|null)` — N
+    `SetFaceAppearanceCommand` → `CompositeCommand` → `execute` (length≤1 → απλό command, μηδέν overhead). Κοινός
+    level-scene adapter. Consumers: `PolygonMaterialPanel.apply` (swatch/custom-color/clear) + Φ4a keyboard paste-face
+    → ΟΛΕΣ οι όψεις· copy-face/entity μένουν anchor.
+  - **Tests:** `PolygonMode3DStore.test.ts` (8), `FaceSelectionHighlighter.test.ts` (7),
+    `apply-face-appearance-batch.test.ts` (6, cross-entity + same-entity one-undo) — **21/21 GREEN** + regression
+    (FaceContextMenuStore, polygon-clipboard-key, read-face-appearance, SetFaceAppearance, SetEntityFaceAppearanceMap)
+    **36/36 GREEN** = 0 break. i18n `polygonMode.hintMultiFace` (el+en, `{{count}}` ICU).
 - **2026-06-27 (Φ4a — KEYBOARD + ENTITY-LEVEL COPY/PASTE, IMPLEMENTED UNCOMMITTED)** — «Advanced polygon
   editing» layer (1/4): copy/paste εμφάνισης από πληκτρολόγιο + entity-level. **FULL SSoT reuse, μηδέν
   διπλότυπα** (το per-face cross-entity clipboard υπήρχε ΗΔΗ από Φ3f — δεν ξαναχτίστηκε).

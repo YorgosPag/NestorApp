@@ -4,12 +4,9 @@ import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { BimSceneLayer } from './BimSceneLayer';
-import type { PerformanceCollector } from '../performance/PerformanceCollector';
-import type { IdleDetector } from '../lighting/idle-detector';
-import type { QualityModulator } from '../lighting/quality-modulator';
-import type { SSAOModulator } from '../lighting/ssao-modulator';
-import type { EnvmapGenerator } from '../lighting/envmap-generator';
-import type { PathTracerRenderer } from '../render/PathTracerRenderer';
+import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
+import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
+import type { EnvmapGenerator } from '../lighting/envmap-generator'; import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
@@ -31,17 +28,14 @@ import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { VIEWCUBE_HIDE_WIDTH_PX } from '../viewport/viewport-constants';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
-import { createCanonicalViewService } from '../viewport/CanonicalViewService';
-import type { CanonicalViewService } from '../viewport/CanonicalViewService';
+import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId } from '../viewport/viewport-types';
-import { createAnimationManager } from '../viewport/animation-manager';
-import type { AnimationManager } from '../viewport/animation-manager';
+import { createAnimationManager } from '../viewport/animation-manager'; import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
 import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
-import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
-import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
+import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelectFocused } from './scene-manager-a11y';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
@@ -405,9 +399,14 @@ export class ThreeJsSceneManager {
     return this.disposed ? null : raycastBimFace(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
   }
 
-  /** ADR-539 — highlight (or clear) one face of a faced solid (Polygon Mode). */
+  /** ADR-539 Φ4b — highlight (or clear) ΟΛΕΣ τις επιλεγμένες όψεις (multi-face Polygon Mode). */
+  setSelectedFaces(faces: readonly { bimId: string; faceKey: string }[]): void {
+    if (!this.disposed) { this.faceHighlighter.setTargets(faces); this.markSceneDirty(); }
+  }
+
+  /** ADR-539 — highlight (or clear) one face (context-menu / drag-drop / Φ4a· delegates to Φ4b). */
   setSelectedFace(bimId: string | null, faceKey: string | null): void {
-    if (!this.disposed) { this.faceHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); }
+    this.setSelectedFaces(bimId && faceKey ? [{ bimId, faceKey }] : []);
   }
 
   /** ADR-539 Φ2 — yellow hover preview on the face under the cursor / drag (Polygon Mode). */

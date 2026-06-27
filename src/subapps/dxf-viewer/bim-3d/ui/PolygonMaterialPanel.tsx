@@ -4,13 +4,15 @@
  * PolygonMaterialPanel — ADR-539 (Cinema 4D «Polygon Mode» material library).
  *
  * Floating βιβλιοθήκη υλικών/χρωμάτων στον 3D κάμβα. Όταν το Polygon Mode είναι ενεργό,
- * εφαρμόζεις χρώμα/υλικό σε μία όψη με ΔΥΟ τρόπους (Cinema 4D parity):
- *   1. **click-to-apply** — επίλεξε όψη (κλικ) → κλικ σε swatch / «Προσαρμοσμένο χρώμα».
+ * εφαρμόζεις χρώμα/υλικό με ΔΥΟ τρόπους (Cinema 4D parity):
+ *   1. **click-to-apply** — επίλεξε όψη/όψεις (κλικ· Shift+κλικ multi, Φ4b) → κλικ σε swatch /
+ *      «Προσαρμοσμένο χρώμα». Εφαρμόζεται σε ΟΛΕΣ τις επιλεγμένες όψεις με ΕΝΑ undo.
  *   2. **drag-drop (Φ2)** — σύρε ένα swatch πάνω στην όψη (HTML5 `application/x-bim-material`·
  *      ο drop handler ζει στο `use-polygon-drag-drop`). Το drag δουλεύει χωρίς προ-επιλογή όψης.
  *
- * Όλες οι εφαρμογές περνούν από το shared `applyFaceAppearance` SSoT (undoable command +
- * level-scene adapter). Reuse: `listWallCoveringMaterials()` (catalog SSoT) + i18n labels
+ * Οι εφαρμογές περνούν από το shared `applyFaceAppearanceToFaces` SSoT (Φ4b batch = `CompositeCommand`
+ * → ΕΝΑ undo, cross-entity· το drag-drop μένει per-face `applyFaceAppearance`). Reuse:
+ * `listWallCoveringMaterials()` (catalog SSoT) + i18n labels
  * του ribbon (`dxf-viewer-shell:wallCovering.materials.*`) + `EnterpriseColorDialog` (custom
  * colour). ADR-040: leaf React component.
  *
@@ -28,7 +30,7 @@ import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
-import { applyFaceAppearance } from './apply-face-appearance';
+import { applyFaceAppearanceToFaces } from './apply-face-appearance';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 
 /** Default seed for the custom-colour dialog (a warm Cinema 4D red). */
@@ -38,20 +40,19 @@ export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
   const levels = useLevelsOptional();
   const active = usePolygonMode3DStore((s) => s.active);
-  const selectedFace = usePolygonMode3DStore((s) => s.selectedFace);
+  const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
   const [colorOpen, setColorOpen] = useState(false);
   const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
 
   if (!active) return null;
 
-  /** Apply to the CLICKED-selected face (click-to-apply / custom colour / clear). */
+  /** Apply to ALL selected faces (click-to-apply / custom colour / clear) — Φ4b: ΕΝΑ undo. */
   const apply = (value: FaceAppearance | null): void => {
-    const face = usePolygonMode3DStore.getState().selectedFace;
-    if (!face) return;
-    applyFaceAppearance(levels, face.bimId, face.faceKey, value);
+    applyFaceAppearanceToFaces(levels, usePolygonMode3DStore.getState().selectedFaces, value);
   };
 
-  const hasFace = selectedFace !== null;
+  const faceCount = selectedFaces.length;
+  const hasFace = faceCount > 0;
 
   return (
     <section
@@ -61,7 +62,9 @@ export function PolygonMaterialPanel() {
       <header className="mb-1.5">
         <h3 className="text-xs font-semibold">{t('polygonMode.title')}</h3>
         <p className="mt-0.5 text-[10px] text-white/60">
-          {hasFace ? t('polygonMode.hintApply') : t('polygonMode.hintPickFace')}
+          {faceCount > 1
+            ? t('polygonMode.hintMultiFace', { count: faceCount })
+            : hasFace ? t('polygonMode.hintApply') : t('polygonMode.hintPickFace')}
         </p>
       </header>
       <ul className="grid grid-cols-2 gap-1">

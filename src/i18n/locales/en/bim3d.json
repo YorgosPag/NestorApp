@@ -502,6 +502,7 @@
     "title": "Face materials",
     "hintPickFace": "Click a face of the element",
     "hintApply": "Pick a colour/material — or drag it onto the face",
+    "hintMultiFace": "{count} faces selected — apply paints them all",
     "clearFace": "Clear face",
     "customColor": "Custom colour",
     "customColorTitle": "Pick face colour",

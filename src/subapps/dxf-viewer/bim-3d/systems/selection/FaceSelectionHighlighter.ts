@@ -1,14 +1,17 @@
 /**
  * FaceSelectionHighlighter — ADR-539 (Cinema 4D «Polygon Mode» face highlight).
  *
- * Translucent overlay πάνω στην ΕΠΙΛΕΓΜΕΝΗ όψη ενός faced solid. Το `SelectionOutlinePass`
+ * Translucent overlays πάνω στις ΕΠΙΛΕΓΜΕΝΕΣ όψεις faced solids. Το `SelectionOutlinePass`
  * είναι per-object silhouette → δεν κάνει για μία όψη· εδώ χτίζουμε ένα μικρό overlay
- * sub-mesh από το vertex range του αντίστοιχου geometry group (`materialIndex` ↔ `FaceKey`).
+ * sub-mesh ανά όψη από το vertex range του αντίστοιχου geometry group (`materialIndex` ↔ `FaceKey`).
  *
- * Το overlay προσαρτάται ΩΣ ΠΑΙΔΙ του target mesh → κληρονομεί αυτόματα το transform του
+ * Φ4b — multi-face select (Cinema 4D Polygon Mode): ο selection highlighter κρατά **N**
+ * overlays (`setTargets`)· ο hover highlighter μένει single (`setTarget` = convenience).
+ *
+ * Κάθε overlay προσαρτάται ΩΣ ΠΑΙΔΙ του target mesh → κληρονομεί αυτόματα το transform του
  * (position.y κ.λπ.), είναι non-pickable, και με `polygonOffset` αποφεύγει το z-fighting.
- * Στο rebuild της σκηνής το mesh ξαναφτιάχνεται, οπότε ο caller καλεί `refresh()` (μετά το
- * sync) για να ξαναδέσει το overlay στο νέο mesh — ο highlighter κρατά το δικό του target.
+ * Στο rebuild της σκηνής τα meshes ξαναφτιάχνονται, οπότε ο caller καλεί `refresh()` (μετά το
+ * sync) για να ξαναδέσει τα overlays στα νέα meshes — ο highlighter κρατά τα δικά του targets.
  *
  * @see bim-3d/converters/bim-three-faced-prism.ts — groups + faceKeyByMaterialIndex
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
@@ -41,12 +44,17 @@ function sliceFaceGeometry(geometry: THREE.BufferGeometry, start: number, count:
   return geo;
 }
 
+/** Στόχος όψης highlight: ποιο solid + ποια όψη. */
+interface FaceTarget {
+  readonly bimId: string;
+  readonly faceKey: string;
+}
+
 export class FaceSelectionHighlighter {
   private readonly bimGroup: THREE.Group;
   private readonly material: THREE.MeshBasicMaterial;
-  private overlay: THREE.Mesh | null = null;
-  private targetBimId: string | null = null;
-  private targetFaceKey: string | null = null;
+  private overlays: THREE.Mesh[] = [];
+  private targets: readonly FaceTarget[] = [];
 
   /**
    * @param color overlay χρώμα — default μπλε `0x2ea1ff` (selection)· ADR-539 Φ2 hover
@@ -61,39 +69,54 @@ export class FaceSelectionHighlighter {
     });
   }
 
-  /** Set/clear the highlighted face. `null` bimId or faceKey clears the overlay. */
-  setTarget(bimId: string | null, faceKey: string | null): void {
-    this.targetBimId = bimId;
-    this.targetFaceKey = faceKey;
+  /**
+   * Set/clear ΟΛΕΣ τις highlighted όψεις (Φ4b multi-face). Άκυρα targets (κενό bimId/faceKey)
+   * αγνοούνται· κενό array καθαρίζει όλα τα overlays.
+   */
+  setTargets(faces: readonly FaceTarget[]): void {
+    this.targets = faces.filter((f) => f.bimId && f.faceKey);
     this.rebuild();
   }
 
-  /** Re-attach the overlay after a scene rebuild (the faced mesh was recreated). */
-  refresh(): void {
-    if (this.targetBimId && this.targetFaceKey) this.rebuild();
+  /** Convenience single-face set (hover + context-menu/drag-drop). `null` καθαρίζει. */
+  setTarget(bimId: string | null, faceKey: string | null): void {
+    this.setTargets(bimId && faceKey ? [{ bimId, faceKey }] : []);
   }
 
-  private clearOverlay(): void {
-    if (!this.overlay) return;
-    this.overlay.parent?.remove(this.overlay);
-    this.overlay.geometry.dispose();
-    this.overlay = null;
+  /** Re-attach τα overlays μετά από scene rebuild (τα faced meshes ξαναφτιάχτηκαν). */
+  refresh(): void {
+    if (this.targets.length > 0) this.rebuild();
+  }
+
+  private clearOverlays(): void {
+    for (const overlay of this.overlays) {
+      overlay.parent?.remove(overlay);
+      overlay.geometry.dispose();
+    }
+    this.overlays = [];
   }
 
   private rebuild(): void {
-    this.clearOverlay();
-    if (!this.targetBimId || !this.targetFaceKey) return;
-    const mesh = this.findFacedMesh(this.targetBimId);
-    if (!mesh) return;
-    const range = faceGroupRange(mesh, this.targetFaceKey);
-    if (!range) return;
+    this.clearOverlays();
+    for (const target of this.targets) {
+      const overlay = this.buildOverlay(target);
+      if (overlay) this.overlays.push(overlay);
+    }
+  }
+
+  /** Χτίζει ΕΝΑ overlay sub-mesh για μία όψη (slice του group range), ή null αν δεν βρεθεί. */
+  private buildOverlay(target: FaceTarget): THREE.Mesh | null {
+    const mesh = this.findFacedMesh(target.bimId);
+    if (!mesh) return null;
+    const range = faceGroupRange(mesh, target.faceKey);
+    if (!range) return null;
     const geo = sliceFaceGeometry(mesh.geometry, range.start, range.count);
-    if (!geo) return;
+    if (!geo) return null;
     const overlay = new THREE.Mesh(geo, this.material);
     overlay.raycast = () => undefined; // non-pickable
     overlay.renderOrder = 999;
     mesh.add(overlay); // inherit the target mesh transform (position.y etc.)
-    this.overlay = overlay;
+    return overlay;
   }
 
   private findFacedMesh(bimId: string): THREE.Mesh | null {
@@ -107,7 +130,7 @@ export class FaceSelectionHighlighter {
   }
 
   dispose(): void {
-    this.clearOverlay();
+    this.clearOverlays();
     this.material.dispose();
   }
 }

@@ -26,6 +26,7 @@ import { ACI_PALETTE } from '../../settings/standards/aci';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
+import { markUnderlayRoot } from '../scene/underlay-pass';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
