@@ -21,6 +21,10 @@ import { useCallback, useEffect, type RefObject, type MutableRefObject } from 'r
 import { isDrawingTool, isMeasurementTool } from '../../systems/tools/ToolStateManager';
 // ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+// ADR-539 Φ3f — when the 3D Cinema 4D «Polygon Mode» is active, the per-face context menu
+// (BimViewport3D) owns the right-click; this 2D capture-phase handler must yield so it does
+// not pre-empt it with the generic entity menu.
+import { usePolygonMode3DStore } from '../../bim-3d/stores/PolygonMode3DStore';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -137,6 +141,13 @@ export function useCanvasContextMenu({
     };
 
     const handleNativeContextMenu = (e: MouseEvent) => {
+      // ADR-539 Φ3f — yield to the 3D per-face context menu when Polygon Mode is active.
+      // This listener is capture-phase on an ancestor of the BimViewport3D canvas, so without
+      // this bail it pre-empts the 3D face menu (BimViewport3D `onContextMenu`) and opens the
+      // generic entity menu instead. Returning WITHOUT preventDefault/stopPropagation lets the
+      // event fall through to the bubble-phase 3D handler.
+      if (usePolygonMode3DStore.getState().active) return;
+
       if (rightDragMoved) {
         rightDragMoved = false;
         e.preventDefault();

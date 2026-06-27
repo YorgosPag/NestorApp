@@ -48,9 +48,9 @@ describe('dxfEntityOutlineSegments', () => {
     expect(last.y).toBeCloseTo(10);
   });
 
-  it('returns [] for an unsupported type (text)', () => {
-    const t = { id: 't', type: 'text', visible: true } as unknown as DxfEntityUnion;
-    expect(dxfEntityOutlineSegments(t)).toEqual([]);
+  it('returns [] for an unsupported type (e.g. dimension — text is now supported, ADR-537 β)', () => {
+    const d = { id: 'd', type: 'dimension', visible: true } as unknown as DxfEntityUnion;
+    expect(dxfEntityOutlineSegments(d)).toEqual([]);
   });
 
   // ADR-537 γ — non-mm scenes: native DXF coords scaled to mm by `unitToMm`.
@@ -68,5 +68,22 @@ describe('dxfEntityOutlineSegments', () => {
 
   it('is identity at unitToMm = 1 (default) — byte-identical to the no-arg call', () => {
     expect(dxfEntityOutlineSegments(line(), 1)).toEqual(dxfEntityOutlineSegments(line()));
+  });
+
+  // ADR-537 β — text glows as its closed bounding box (same box the pick uses).
+  it('returns a closed bbox rectangle for text', () => {
+    const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
+    const [seg] = dxfEntityOutlineSegments(t);
+    // bbox x∈[10,17], y∈[15,25]; 5 corners (closed loop).
+    expect(seg).toEqual([
+      { x: 10, y: 15 }, { x: 17, y: 15 }, { x: 17, y: 25 }, { x: 10, y: 25 }, { x: 10, y: 15 },
+    ]);
+  });
+
+  it('scales the text bbox to mm for a cm scene (unitToMm = 10)', () => {
+    const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
+    const [seg] = dxfEntityOutlineSegments(t, 10);
+    expect(seg[0]).toEqual({ x: 100, y: 150 });
+    expect(seg[2]).toEqual({ x: 170, y: 250 });
   });
 });

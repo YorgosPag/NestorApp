@@ -135,6 +135,18 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-06-27 (Φ3f FIX — right-click pre-empted by 2D entity menu, browser-found)** — Σε Polygon
+  Mode το δεξί-κλικ σε όψη έβγαζε το **γενικό** `EntityContextMenu` (Join/Χωρισμός/Απομόνωση/Delete),
+  ΟΧΙ το per-face menu. **Root cause:** ο 2D handler `useCanvasContextMenu.handleNativeContextMenu`
+  είναι **capture-phase** native listener σε ancestor του `BimViewport3D` canvas → τρέχει ΠΡΙΝ τον
+  bubble-phase 3D React `onContextMenu` και, με tool='select' + επιλεγμένο entity, άνοιγε το entity
+  menu + `stopPropagation` (ο 3D handler δεν έτρεχε ποτέ). **Fix:** guard στην κορυφή του handler —
+  `if (usePolygonMode3DStore.getState().active) return;` (early-return ΧΩΡΙΣ preventDefault/
+  stopPropagation → το event πέφτει στον 3D face handler). Event-time getter read (ADR-040 compliant).
+  Ο 3D τοίχος/κολώνα/πλάκα κ.λπ. πλέον δείχνουν σωστά το μενού όψης· εκτός Polygon Mode το entity
+  menu λειτουργεί ως πριν. ⚠️ `useCanvasContextMenu.ts` = ADR-040 αρχείο → stage ADR (το ADR-539 αρκεί
+  για CHECK 6D).
+
 - **2026-06-27 (Φ3c — WALL, IMPLEMENTED UNCOMMITTED)** — Επέκταση του per-face appearance στον
   **τοίχο** (κατακόρυφο prism· solid-agnostic core, μηδέν νέα γεωμετρία). MVP scope: ΜΟΝΟ ο απλός
   flat path (single-layer straight, χωρίς ανοίγματα/profile)· πολυστρωματικοί/με κουφώματα τοίχοι

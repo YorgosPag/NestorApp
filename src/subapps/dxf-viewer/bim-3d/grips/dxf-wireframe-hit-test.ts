@@ -14,7 +14,7 @@
  * coordinates (the wireframe group is unit-scaled to metres). We therefore convert the
  * cursor's plan-mm point + tolerance back to entity units via `dxfSceneUnitToMm` before the
  * entity-space proximity test — one factor at the boundary, no second projector.
- * Types: line / polyline / circle / arc (text has no 3D wireframe).
+ * Types: line / polyline / circle / arc + text (bbox pick, ADR-537 β).
  *
  * The proximity core is pure (no THREE) → Jest-friendly; the wrapper does the ray/plane
  * projection + tolerance derivation.
@@ -26,6 +26,7 @@ import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-ty
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
+import { getEntityBBox } from '../../canvas-v2/dxf-canvas/dxf-viewport-culling';
 import { clientToNdc } from '../systems/raycaster/BimEntityRaycaster';
 import { getPixelWorldSize, worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { dxfSceneUnitToMm } from '../../utils/scene-units';
@@ -61,6 +62,14 @@ export function distanceToDxfEntityMm(entity: DxfEntityUnion, p: Point2D): numbe
       return Math.abs(calculateDistance(p, entity.center) - entity.radius);
     case 'arc':
       return pointToArcDistance(p, entity);
+    case 'text': {
+      // ADR-537 β — text has no stroke; pick its (generous) bounding box. 0 inside, else the
+      // perpendicular distance to the rectangle. Reuses the 2D bbox SSoT (`getEntityBBox`).
+      const b = getEntityBBox(entity);
+      const dx = Math.max(b.minX - p.x, 0, p.x - b.maxX);
+      const dy = Math.max(b.minY - p.y, 0, p.y - b.maxY);
+      return Math.hypot(dx, dy);
+    }
     default:
       return null;
   }

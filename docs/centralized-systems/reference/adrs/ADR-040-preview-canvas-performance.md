@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-27 — ADR-539 Φ3f: `useCanvasContextMenu` yields to 3D per-face menu σε Polygon Mode (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-27. Όταν το Cinema 4D «Polygon Mode» είναι ενεργό, το per-face context menu του `BimViewport3D` (bubble-phase `onContextMenu`) πρέπει να κερδίζει το δεξί-κλικ. Ο 2D capture-phase `handleNativeContextMenu` (ancestor του 3D canvas) το pre-empt-άρε με το generic entity menu. **Fix**: early-return ΧΩΡΙΣ `preventDefault`/`stopPropagation` όταν `usePolygonMode3DStore.getState().active` → το event πέφτει στον bubble-phase 3D handler. **ADR-040 compliance**: event-time `getState()` read (κανόνας 2), ΟΧΙ subscription — ο orchestrator μένει inert. **File**: MOD `hooks/canvas/useCanvasContextMenu.ts`.
+
 ### 2026-06-27 — N.7.1 file-size split: ZOOM Window wiring → `useCanvasZoomWindow` (CanvasSection 512→497)
 
 **Status**: IMPLEMENTED 2026-06-27 (Opus 4.8), commit batch ADR-539/ADR-542. CHECK 6B trigger — micro-leaf αρχεία τροποποιήθηκαν στο batch (`CanvasLayerStack`, `CanvasSection`, `CanvasSectionOverlays`, `canvas-layer-stack-leaves`, `canvas-layer-stack-types`, `useCanvasContextMenu`).

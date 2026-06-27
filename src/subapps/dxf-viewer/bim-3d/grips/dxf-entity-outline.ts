@@ -11,6 +11,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { circlePolyline, arcPolyline } from '../converters/dxf-arc-circle-sample';
+import { getEntityBBox } from '../../canvas-v2/dxf-canvas/dxf-viewport-culling';
 
 /**
  * Plan-mm outline poly-lines of a raw DXF entity (one array per disjoint stroke), or `[]`
@@ -34,6 +35,16 @@ export function dxfEntityOutlineSegments(entity: DxfEntityUnion, unitToMm = 1): 
       return [circlePolyline(s(entity.center), entity.radius * unitToMm)];
     case 'arc':
       return [arcPolyline(s(entity.center), entity.radius * unitToMm, entity.startAngle, entity.endAngle, entity.counterclockwise)];
+    case 'text': {
+      // ADR-537 β — text glows as its (closed) bounding box, the SAME box the pick uses
+      // (`getEntityBBox` SSoT) → hover halo === click target.
+      const b = getEntityBBox(entity);
+      return [[
+        s({ x: b.minX, y: b.minY }), s({ x: b.maxX, y: b.minY }),
+        s({ x: b.maxX, y: b.maxY }), s({ x: b.minX, y: b.maxY }),
+        s({ x: b.minX, y: b.minY }),
+      ]];
+    }
     default:
       return [];
   }

@@ -25,6 +25,7 @@ import type { SceneLayer } from '../../types/entities';
 import { ACI_PALETTE } from '../../settings/standards/aci';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
+import { buildDxfTextMesh } from './dxf-text-3d';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
@@ -214,8 +215,6 @@ export class DxfToThreeConverter {
       appendEntitySegments(bucket, entity);
     }
 
-    if (colorBuckets.size === 0) return null;
-
     const group = new THREE.Group();
     group.name = 'dxf-wireframe-floor';
 
@@ -226,6 +225,14 @@ export class DxfToThreeConverter {
       const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: WIREFRAME_OPACITY });
       this.activeMaterials.push(mat);
       group.add(new THREE.LineSegments(geo, mat));
+    }
+
+    // ADR-537 β — text entities have no stroke; render each as a flat textured plane (laid on
+    // the floor plane in native units) so it is visible + selectable/hoverable in 3D.
+    for (const entity of dxfScene.entities) {
+      if (entity.type !== 'text' || !entity.visible) continue;
+      const bundle = buildDxfTextMesh(entity, resolveEntityColor(entity, layersById));
+      if (bundle) group.add(bundle.mesh);
     }
 
     if (group.children.length === 0) return null;
@@ -249,6 +256,13 @@ export class DxfToThreeConverter {
     if (!this.root) return;
     this.root.traverse((obj) => {
       if (obj instanceof THREE.LineSegments) obj.geometry.dispose();
+      // ADR-537 β — text meshes own their geometry + material + CanvasTexture.
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry.dispose();
+        const mat = obj.material as THREE.Material & { map?: THREE.Texture | null };
+        mat.map?.dispose();
+        mat.dispose();
+      }
     });
     for (const mat of this.activeMaterials) mat.dispose();
     this.activeMaterials.length = 0;

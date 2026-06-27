@@ -39,9 +39,23 @@ describe('distanceToDxfEntityMm', () => {
     expect(distanceToDxfEntityMm(square, { x: -5, y: 50 })).toBeCloseTo(5);
   });
 
-  it('returns null for an unsupported type (text)', () => {
-    const text = { id: 't', type: 'text', visible: true } as unknown as DxfEntityUnion;
-    expect(distanceToDxfEntityMm(text, { x: 0, y: 0 })).toBeNull();
+  // ADR-537 β — text is picked by its bounding box (`getEntityBBox` SSoT).
+  const text = (): DxfEntityUnion =>
+    ({ id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' }) as unknown as DxfEntityUnion;
+
+  it('returns 0 for a point inside the text bbox', () => {
+    expect(distanceToDxfEntityMm(text(), { x: 12, y: 21 })).toBe(0);
+  });
+
+  it('measures the perpendicular distance to the text bbox from outside', () => {
+    // bbox: x∈[10,17], y∈[15,25] (w = 5×2×0.7 = 7; minY = 20−5, maxY = 20+5)
+    expect(distanceToDxfEntityMm(text(), { x: 5, y: 20 })).toBeCloseTo(5);  // 5 left of minX
+    expect(distanceToDxfEntityMm(text(), { x: 12, y: 30 })).toBeCloseTo(5); // 5 above maxY
+  });
+
+  it('returns null for an unsupported type (still no wireframe — e.g. dimension)', () => {
+    const dim = { id: 'd', type: 'dimension', visible: true } as unknown as DxfEntityUnion;
+    expect(distanceToDxfEntityMm(dim, { x: 0, y: 0 })).toBeNull();
   });
 });
 

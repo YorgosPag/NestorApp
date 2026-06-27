@@ -1,7 +1,8 @@
 # HANDOFF — 3D DXF editing/hover: deferred follow-ups (arc ghost, text, non-mm units, multi-floor)
 
 **Ημερομηνία:** 2026-06-27
-**Status:** IN PROGRESS — **α ✅ DONE** (uncommitted)· σειρά **α→γ→δ→β** (εγκεκριμένη). γ/δ/β εκκρεμούν.
+**Status:** ✅ **ΟΛΑ DONE** (uncommitted) — α (arc ghost) + γ (non-mm units) + δ (multi-floor) + β (text σε 3D)
+υλοποιήθηκαν σειρά α→γ→δ→β. 🔴 ΜΟΝΟ browser-verify + commit (Giorgio). Λεπτομέρειες ανά φάση: ADR-537 changelog.
 
 ---
 
@@ -27,7 +28,7 @@
 - tsc: 🟡 serialized πίσω από tsc άλλου agent (N.17) — ts-jest ήδη type-checks· έλεγξε `grep -E '<τα 6 αρχεία>'`.
 - ADR-537 ενημερωμένο (Φ1.1 + changelog). 🔴 browser-verify + commit → Giorgio (stage ADR-537 + 3D αρχεία, CHECK 6B/6D).
 
-### ▶️ γ (Non-mm units) — ΕΠΟΜΕΝΟ· design έτοιμο
+### ✅ γ (Non-mm units) — ΟΛΟΚΛΗΡΩΘΗΚΕ (uncommitted)· δες ADR-537 changelog. + ✅ δ (multi-floor) + ✅ β (text σε 3D). Design (ιστορικό) παρακάτω:
 - **Audit done:** `scene-units.ts` έχει ήδη `sceneUnitsToMeters` (= dedup έγινε στο α). Πρόσθεσε `dxfUnitToMm(units)`
   = `sceneUnitsToMeters(units)*1000` (canonical, στο `scene-units.ts`).
 - **Αρχιτεκτονική (χαμηλό ρίσκο, ο shared ADR-535 controller ΜΕΝΕΙ ΑΘΙΚΤΟΣ):** seat DXF grips σε **mm**
