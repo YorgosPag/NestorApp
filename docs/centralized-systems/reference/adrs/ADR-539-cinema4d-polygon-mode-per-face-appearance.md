@@ -1,6 +1,6 @@
 # ADR-539 — Cinema 4D «Polygon Mode»: Per-Face Appearance (χρώμα/υλικό ανά όψη) σε δομικά solids
 
-**Status:** 🟢 Φ1 (MVP, slab) COMMITTED · Φ1.5 (foundation) + Φ2 (drag-drop/holes/custom-color/hover) IMPLEMENTED UNCOMMITTED 2026-06-27 · **Date:** 2026-06-27
+**Status:** 🟢 Φ1 (MVP, slab) COMMITTED · Φ1.5 (foundation) + Φ2 (drag-drop/holes/custom-color/hover) + Φ3a-f (column/roof/wall/**beam**/2D-fill/context-menu) IMPLEMENTED UNCOMMITTED 2026-06-27 — **Φ3 ΟΛΟΚΛΗΡΩΘΗΚΕ (όλα τα δομικά solids faced)** · **Date:** 2026-06-27
 **Type:** Feature (DXF/BIM Viewer — 3D appearance). Cinema 4D Maxon-grade per-polygon material.
 **Builds on:** ADR-534 (soffit finish — per-face πρότυπο) · ADR-416 (multi-layer slab solid) · ADR-417 (parametric roof prism) · ADR-511 (wall-covering material catalog) · ADR-040 (3D/canvas perf)
 **Related:** ADR-535/536/537/538 (3D viewport selection/grips/hover) · ADR-375 (per-element style override) · ADR-413 (PBR materials)
@@ -107,7 +107,8 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ3e** | **2D plan fill** — η βαμμένη `faceAppearance['top']` γίνεται χρώμα γεμίσματος στην κάτοψη (slab/foundation/column· SSoT `topFacePlanFill`) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3f** | **face context-menu** — δεξί-κλικ σε όψη (Polygon Mode) → καθαρισμός / αντιγραφή / επικόλληση εμφάνισης (mirror `Grip3DVertexContextMenu`) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ3c** | **wall** (απλός flat path: single-layer straight· κλειστό footprint ring `buildWallFootprintRing` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: πολυστρωματικοί/με κουφώματα = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ3 (υπόλοιπο)** | beam (Φ3d) — Plan Mode πρώτα (οριζόντιο prism· γενίκευση axis) | ⬜ PLANNED |
+| **Φ3d** | **beam** (box single-piece· `beamToMesh` faced branch `buildBeamCoreBody` → `buildFacedSolidBody`· 6-point persistence + gate· MVP: I-shape/multi-cutback = legacy) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ3 (ΟΛΟΚΛΗΡΩΘΗΚΕ)** | slab + foundation + column + roof + wall + beam = όλα τα δομικά solids faced (+ 2D fill Φ3e + context-menu Φ3f) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4** | multi-face select (Shift) · copy/paste appearance · `bmat_*` drag · per-face PBR textures | ⬜ PLANNED |
 
 ## 5. Συνέπειες
