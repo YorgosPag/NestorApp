@@ -36,7 +36,7 @@ export interface EntityContextMenuHostProps {
   t: (key: string, opts?: { count?: number }) => string;
 }
 
-export const EntityContextMenuHost: React.FC<EntityContextMenuHostProps> = ({
+const EntityContextMenuHostInner: React.FC<EntityContextMenuHostProps> = ({
   entityMenuRef, currentScene, dxfScene, entityJoinHook, handleSmartDelete,
   onToolChange, replaceEntitySelection, executeCommand, t,
 }) => {
@@ -47,10 +47,19 @@ export const EntityContextMenuHost: React.FC<EntityContextMenuHostProps> = ({
     [entityJoinHook, selectedEntityIds],
   );
   const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, dxfScene, executeCommand);
-  const entityMenuProps = buildEntityContextMenuProps({
+  // 🚀 PERF (2026-06-28, ADR-040): memoize the props build. `canIsolateCategory`/`canSplit` do
+  // O(k×n) entity scans (`collectBimCategories`, `entities.find`); previously they re-ran on EVERY
+  // parent re-render (incl. the now-fixed cursor cascade). Now only on a real selection/scene change.
+  const entityMenuProps = useMemo(() => buildEntityContextMenuProps({
     selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
     handleSmartDelete, entityMenuRef, onToolChange, replaceEntitySelection,
     executeCommand, t, entityLayerCommands,
-  });
+  }), [selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
+    handleSmartDelete, entityMenuRef, onToolChange, replaceEntitySelection, executeCommand, t, entityLayerCommands]);
   return <EntityContextMenu ref={entityMenuRef as React.Ref<EntityContextMenuHandle>} {...entityMenuProps} />;
 };
+
+// 🚀 PERF (2026-06-28, ADR-040): memoized — does NOT re-render when the CanvasSection orchestrator
+// re-renders with unchanged props (the menu opens imperatively via ref, so it must stay mounted —
+// gate-at-mount is not an option; React.memo is the correct lever).
+export const EntityContextMenuHost = React.memo(EntityContextMenuHostInner);

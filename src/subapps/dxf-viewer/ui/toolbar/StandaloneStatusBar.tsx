@@ -5,7 +5,7 @@ import type { ToolType } from './types';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { MobileToolbarLayout } from './MobileToolbarLayout';
 import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration';
-import { useCursor } from '../../systems/cursor';
+import { useCursorSettings } from '../../systems/cursor';
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
 interface StandaloneStatusBarProps {
@@ -26,7 +26,8 @@ export const StandaloneStatusBar: React.FC<StandaloneStatusBarProps> = ({
   // 🏢 ADR-418/ADR-040: zoom is read by the StatusBarViewScaleLeaf micro-leaf inside
   // ToolbarStatusBar — this orchestrator no longer subscribes to zoom (no re-render per notch).
   const { snapEnabled } = useProSnapIntegration();
-  const { settings } = useCursor();
+  // 🚀 PERF (2026-06-28, ADR-040): split settings context — no re-render on cursor activity.
+  const { settings } = useCursorSettings();
   const { layoutMode } = useResponsiveLayout();
 
   if (layoutMode !== 'desktop') {

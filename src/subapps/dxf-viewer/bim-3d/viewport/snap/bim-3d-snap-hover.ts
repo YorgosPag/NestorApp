@@ -35,12 +35,16 @@ export function computeSnap3DHover(
   dom: HTMLElement,
   clientX: number,
   clientY: number,
+  // ADR-040 Φ-3D-pointer — when the caller already raycast the BIM group (unified hover+snap pick),
+  // it passes the front-most world point here so we DON'T fire a second raycast. Omitted ⇒ legacy
+  // self-raycast path (back-compatible for any other caller).
+  precomputedWorld?: THREE.Vector3 | null,
 ): Snap3DMarker | null {
   const engine = getGlobalSnapEngine();
   if (!engine.getSettings().enabled) return null;
 
   // Front-most surface under the cursor → its plan (x,y) + elevation. No hit ⇒ no snap.
-  const world = raycastWorldPoint(group, camera, dom, clientX, clientY);
+  const world = precomputedWorld ?? raycastWorldPoint(group, camera, dom, clientX, clientY);
   if (!world) return null;
   const plan = worldToDxfPlan(world);
 

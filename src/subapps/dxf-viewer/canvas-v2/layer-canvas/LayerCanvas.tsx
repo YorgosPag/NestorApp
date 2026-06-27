@@ -279,6 +279,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       }}
       className={`layer-canvas ${className}`}
       {...props}
+      data-canvas-type="layer" // 🎯 DEBUG: stable identifier για alignment/stacking tests (μετά το spread ώστε να μην παρακάμπτεται)
       style={{
         ...canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
         touchAction: 'none',

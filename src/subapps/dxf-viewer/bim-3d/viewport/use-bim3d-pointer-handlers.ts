@@ -7,7 +7,7 @@
  * an entity (or sets the orbit pivot when Alt is held), leave clears the hover.
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
@@ -20,21 +20,18 @@ import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesS
 import { applyDxfEntityClickSelection } from '../../systems/selection/resolve-dxf-entity-click';
 // ADR-538 — unified hover state SSoT (same store the 2D canvas writes/reads).
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
-// ADR-544 — while a placement tool owns the snap glyph, the hover-handler must yield (see updateSnap3D).
-import { toolStateStore } from '../../stores/ToolStateStore';
 // ADR-542 — 3D snap marker: same global snap engine + same glyph/label as the 2D canvas.
 import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
-import { computeSnap3DHover } from './snap/bim-3d-snap-hover';
 import { pickDxfEntityAcrossFloors } from '../grips/dxf-wireframe-hit-test';
 // ADR-537 δ — pick over the active floor scope (single active floor, or every stacked floor).
 import { getDxfFloorScope } from '../scene/dxf-3d-floor-scope';
 import { applyBimHover } from '../scene/scene-manager-actions';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
+// ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
+import { requestPointerPick, clearPointerPick } from './snap/bim3d-pointer-scheduler';
 
 const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516 (popover reveal)
-// ADR-538 — hover-HIGHLIGHT pick throttle, mirror the 2D HOVER_HITTEST cadence (SSoT).
-const HOVER_HIGHLIGHT_THROTTLE_MS = DXF_TIMING.frame.HOVER_HITTEST;
 
 interface PointerHandlers {
   handleMouseMove: (e: ReactMouseEvent) => void;
@@ -47,76 +44,15 @@ export function useBim3DPointerHandlers(
   managerRef: RefObject<ThreeJsSceneManager | null>,
   debounceTimerRef: { current: ReturnType<typeof setTimeout> | null },
 ): PointerHandlers {
-  // ADR-538 — last hover-highlight pick timestamp (throttle, mirror 2D HOVER_HITTEST).
-  const hoverThrottleRef = useRef(0);
-
-  /**
-   * ADR-538 — resolve the entity under the cursor (BIM raycast, else raw-DXF plan pick)
-   * and drive the UNIFIED hover state: `HoverStore` (badge + DXF glow overlay + 2D parity)
-   * + the BIM yellow silhouette (`applyBimHover` on the hover highlighter). One pick, both.
-   */
-  const pickHover = useCallback((clientX: number, clientY: number): void => {
-    const manager = managerRef.current;
-    if (!manager) return;
-    // ADR-539 Φ2 — in Polygon Mode the hover drives the YELLOW per-face preview (Cinema 4D),
-    // not the whole-entity silhouette: highlight the face under the cursor before the click.
-    if (usePolygonMode3DStore.getState().active) {
-      const faceHit = manager.raycastBimFace(clientX, clientY);
-      manager.setHoveredFace(faceHit?.bimId ?? null, faceHit?.faceKey ?? null);
-      return;
-    }
-    const bimHit = manager.raycastBimEntities(clientX, clientY);
-    if (bimHit?.bimId) {
-      setHoveredEntity(bimHit.bimId);
-      applyBimHover(manager.hoverHighlighter, bimHit.bimId); // yellow 3D silhouette
-      manager.markSceneDirty();
-      return;
-    }
-    const camera = manager.getCamera();
-    const dom = manager.getRendererCanvas();
-    const dxfId = camera && dom
-      ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId ?? null
-      : null;
-    setHoveredEntity(dxfId); // DXF glow overlay + badge read this; null clears
-    applyBimHover(manager.hoverHighlighter, null);
-    manager.markSceneDirty();
-  }, [managerRef]);
-
-  /**
-   * ADR-542 — publish the snap marker under the cursor (column corner / edge midpoint /
-   * centroid…). Reuses the ONE global snap engine + the 2D glyph/label via `computeSnap3DHover`
-   * — `BimSnapIndicatorOverlay3D` projects + draws it. Suppressed in Polygon Mode (face paint).
-   */
-  const updateSnap3D = useCallback((clientX: number, clientY: number): void => {
-    // ADR-544 — όσο ένα εργαλείο τοποθέτησης (κολόνα/τοίχος) είναι ενεργό, ο αντίστοιχος placement
-    // hook (`use-bim3d-column-placement` / `use-bim3d-wall-placement`) είναι ο ΜΟΝΑΔΙΚΟΣ κάτοχος
-    // του snap glyph (δημοσιεύει plan-space OSNAP view που πιάνει ΚΑΙ την επίπεδη DXF κάτοψη — εδώ ο
-    // BIM raycast θα την έχανε). Μην το σβήνεις/αντικαθιστάς.
-    const placing = toolStateStore.get().activeTool;
-    if (placing === 'column' || placing === 'wall') return;
-    const manager = managerRef.current;
-    const camera = manager?.getCamera();
-    const dom = manager?.getRendererCanvas();
-    if (!manager || !camera || !dom || usePolygonMode3DStore.getState().active) {
-      useSnap3DOverlayStore.getState().setSnap(null);
-      return;
-    }
-    useSnap3DOverlayStore.getState().setSnap(
-      computeSnap3DHover(manager.bimLayer.group, camera, dom, clientX, clientY),
-    );
-  }, [managerRef]);
-
   const handleMouseMove = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
-    // ADR-538 — throttled hover-highlight pick (instant, ~50ms) — separate from the
-    // popover's longer reveal debounce below.
-    const now = performance.now();
-    if (now - hoverThrottleRef.current >= HOVER_HIGHLIGHT_THROTTLE_MS) {
-      hoverThrottleRef.current = now;
-      pickHover(clientX, clientY);
-      updateSnap3D(clientX, clientY); // ADR-542 — 3D snap marker (corner/midpoint/centroid)
-    }
+    // ADR-040 Φ-3D-pointer — ARM the decoupled pick scheduler (cheap: store + flag). The heavy,
+    // BVH-accelerated hover+snap raycast runs in a RAF slot, never blocking this handler, so the
+    // cursor/crosshair stays 1:1 with the physical mouse (parity with the 2D canvas).
+    const manager = managerRef.current;
+    if (manager) requestPointerPick({ manager, clientX, clientY });
+    // ADR-366 §B.2 — the hover popover stays debounced (off the hot path) with its own pick.
     if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       debounceTimerRef.current = null;
@@ -235,6 +171,8 @@ export function useBim3DPointerHandlers(
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
+    // ADR-040 Φ-3D-pointer — stop the decoupled pick scheduler (no stale work while off-canvas).
+    clearPointerPick();
     useQuickProperties3DStore.getState().clearHover();
     // ADR-538 — leaving the viewport clears the hover highlight (badge + glow + silhouette).
     setHoveredEntity(null);
@@ -247,6 +185,10 @@ export function useBim3DPointerHandlers(
       manager.markSceneDirty();
     }
   }, [debounceTimerRef, managerRef]);
+
+  // ADR-040 Φ-3D-pointer — clear the scheduler on unmount (manager teardown / route change), so a
+  // stale manager reference is never picked against after the viewport is gone.
+  useEffect(() => clearPointerPick, []);
 
   return { handleMouseMove, handleClick, handleContextMenu, handleMouseLeave };
 }

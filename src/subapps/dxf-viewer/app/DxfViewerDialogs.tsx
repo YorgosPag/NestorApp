@@ -154,32 +154,41 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}>
         <CalibrationDialog />
       </React.Suspense>
-      {/* ADR-345 Fase 6: Import dialogs — SSOT owner (migrated from EnhancedDXFToolbar) */}
-      <React.Suspense fallback={hiddenFallback}>
-        <DxfImportModal
-          isOpen={ui.showLegacyImport}
-          onClose={() => ui.setShowLegacyImport(false)}
-          onImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={hiddenFallback}>
-        <SimpleProjectDialog
-          isOpen={ui.showEnhancedImport}
-          onClose={() => ui.setShowEnhancedImport(false)}
-          onFileImport={(file: File) => handleFileImportWithEncoding(file)}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={hiddenFallback}>
-        <FloorplanImportWizard
-          isOpen={ui.showImportWizard}
-          onClose={() => ui.setShowImportWizard(false)}
-          onComplete={(file, meta) => {
-            ui.setShowImportWizard(false);
-            if (meta.format && meta.format !== 'dxf') return;
-            void handleFileImportWithEncoding(file, undefined, buildDxfImportSaveContext(meta));
-          }}
-        />
-      </React.Suspense>
+      {/* ADR-345 Fase 6: Import dialogs — SSOT owner (migrated from EnhancedDXFToolbar).
+          🚀 PERF (2026-06-28): gate-at-mount (same pattern as CreditsDialog/FindReplace above) —
+          these are purely controlled (open flag owned by `ui`), and the import modal/wizard are
+          heavy trees that otherwise re-rendered on every scene/level commit while closed. */}
+      {ui.showLegacyImport && (
+        <React.Suspense fallback={hiddenFallback}>
+          <DxfImportModal
+            isOpen={ui.showLegacyImport}
+            onClose={() => ui.setShowLegacyImport(false)}
+            onImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
+          />
+        </React.Suspense>
+      )}
+      {ui.showEnhancedImport && (
+        <React.Suspense fallback={hiddenFallback}>
+          <SimpleProjectDialog
+            isOpen={ui.showEnhancedImport}
+            onClose={() => ui.setShowEnhancedImport(false)}
+            onFileImport={(file: File) => handleFileImportWithEncoding(file)}
+          />
+        </React.Suspense>
+      )}
+      {ui.showImportWizard && (
+        <React.Suspense fallback={hiddenFallback}>
+          <FloorplanImportWizard
+            isOpen={ui.showImportWizard}
+            onClose={() => ui.setShowImportWizard(false)}
+            onComplete={(file, meta) => {
+              ui.setShowImportWizard(false);
+              if (meta.format && meta.format !== 'dxf') return;
+              void handleFileImportWithEncoding(file, undefined, buildDxfImportSaveContext(meta));
+            }}
+          />
+        </React.Suspense>
+      )}
       <React.Suspense fallback={hiddenFallback}><ConstructionLayerScaffoldDialog /></React.Suspense>
       {/* Gate-at-mount: both are purely controlled (open flag owned by parent,
           no internal EventBus listener). DxfFindReplaceHost scans the whole

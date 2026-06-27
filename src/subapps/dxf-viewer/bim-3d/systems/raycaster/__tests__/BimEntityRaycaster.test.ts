@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { raycastWorldPoint, raycastWorldPointOrPlane, raycastBimGroup } from '../BimEntityRaycaster';
+import { raycastWorldPoint, raycastWorldPointOrPlane, raycastBimGroup, raycastBimHitAndWorld } from '../BimEntityRaycaster';
 
 function mockDom(width = 100, height = 100): HTMLElement {
   return {
@@ -170,5 +170,66 @@ describe('raycastBimGroup — regression after clientToNdc SSoT extraction', () 
   it('returns null on zero-area dom element', () => {
     const group = new THREE.Group();
     expect(raycastBimGroup(group, cameraLookingAtOrigin(), mockDom(0, 0), 50, 50)).toBeNull();
+  });
+});
+
+describe('raycastBimHitAndWorld — ADR-040 Φ-3D-pointer unified hover+snap pick', () => {
+  it('returns bimId/bimType AND the front-most world point in ONE pass', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    box.userData['bimId'] = 'col-7';
+    box.userData['bimType'] = 'column';
+    group.add(box);
+    box.updateMatrixWorld(true);
+
+    const res = raycastBimHitAndWorld(group, cameraLookingAtOrigin(), mockDom(), 50, 50);
+    expect(res).not.toBeNull();
+    expect(res!.bimId).toBe('col-7');
+    expect(res!.bimType).toBe('column');
+    // Same front-face point raycastWorldPoint resolves (z = +0.5 half-extent toward camera).
+    expect(res!.worldPoint.z).toBeCloseTo(0.5, 5);
+    expect(res!.worldPoint.x).toBeCloseTo(0, 5);
+  });
+
+  it('returns a valid world point with null bimId over an UNTAGGED mesh (DXF fallback case)', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)); // no userData tags
+    group.add(box);
+    box.updateMatrixWorld(true);
+
+    const res = raycastBimHitAndWorld(group, cameraLookingAtOrigin(), mockDom(), 50, 50);
+    expect(res).not.toBeNull();
+    expect(res!.bimId).toBeNull();
+    expect(res!.bimType).toBeNull();
+    expect(res!.worldPoint.z).toBeCloseTo(0.5, 5); // world point still resolved
+  });
+
+  it('returns null when the ray misses all geometry', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    box.position.set(100, 100, 0);
+    group.add(box);
+    box.updateMatrixWorld(true);
+    expect(raycastBimHitAndWorld(group, cameraLookingAtOrigin(), mockDom(), 50, 50)).toBeNull();
+  });
+
+  it('returns null on a zero-area dom element', () => {
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    expect(raycastBimHitAndWorld(group, cameraLookingAtOrigin(), mockDom(0, 0), 50, 50)).toBeNull();
+  });
+
+  it('matches raycastWorldPoint on the world point (single-source parity) and clones it fresh', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    box.userData['bimId'] = 'w-1';
+    box.userData['bimType'] = 'wall';
+    group.add(box);
+    box.updateMatrixWorld(true);
+
+    const unified = raycastBimHitAndWorld(group, cameraLookingAtOrigin(), mockDom(), 50, 50)!;
+    const legacy = raycastWorldPoint(group, cameraLookingAtOrigin(), mockDom(), 50, 50)!;
+    expect(unified.worldPoint.distanceTo(legacy)).toBeCloseTo(0, 6);
+    expect(unified.worldPoint).not.toBe(legacy); // distinct fresh instances
   });
 });

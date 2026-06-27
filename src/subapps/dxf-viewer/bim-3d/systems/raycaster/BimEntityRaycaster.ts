@@ -80,6 +80,58 @@ export function raycastBimGroup(
   return null;
 }
 
+/** ADR-040 Φ-3D-pointer — one-pass result: hover entity (nullable) + front-most world point. */
+export interface BimHitAndWorld {
+  /** Tagged entity id of the first hit carrying `userData.bimId`, or null (untagged/helper mesh). */
+  readonly bimId: string | null;
+  readonly bimType: string | null;
+  /** Front-most surface point (closest to camera) — a fresh Vector3, safe to retain. */
+  readonly worldPoint: THREE.Vector3;
+}
+
+/**
+ * ADR-040 Φ-3D-pointer — UNIFIED hover+snap raycast. The hover-highlight pick
+ * (`raycastBimGroup`) and the snap world-point (`raycastWorldPoint`) used to fire TWO separate
+ * `intersectObjects` passes over the SAME geometry on every move; this does it in ONE.
+ *
+ * Returns the front-most surface point (mirror `raycastWorldPoint`) AND the first tagged
+ * bimId/bimType (mirror `raycastBimGroup`), or null when the ray misses geometry. `bimId` may be
+ * null on a hit over an untagged mesh while `worldPoint` is still valid — the caller decides
+ * (DXF fallback for hover; the world point still drives the snap engine).
+ */
+export function raycastBimHitAndWorld(
+  group: THREE.Group,
+  camera: THREE.Camera,
+  domElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+): BimHitAndWorld | null {
+  const ndc = clientToNdc(domElement, clientX, clientY);
+  if (!ndc) return null;
+
+  _raycaster.setFromCamera(ndc, camera);
+  const hits = _raycaster.intersectObjects(group.children, true);
+  if (hits.length === 0) return null;
+
+  // Front-most hit point (intersectObjects is distance-sorted ascending).
+  const worldPoint = hits[0].point.clone();
+
+  // First hit whose tagged mesh resolves a bimId (walk up parents) — mirror raycastBimGroup.
+  let bimId: string | null = null;
+  let bimType: string | null = null;
+  for (const hit of hits) {
+    let obj: THREE.Object3D | null = hit.object;
+    while (obj) {
+      const id = obj.userData['bimId'] as string | undefined;
+      const type = obj.userData['bimType'] as string | undefined;
+      if (id && type) { bimId = id; bimType = type; break; }
+      obj = obj.parent;
+    }
+    if (bimId) break;
+  }
+  return { bimId, bimType, worldPoint };
+}
+
 /**
  * ADR-539 — face-level raycast for Cinema 4D «Polygon Mode». Like `raycastBimGroup`
  * but ALSO resolves the picked `FaceKey` from `hit.face.materialIndex` against the

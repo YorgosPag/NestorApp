@@ -22,10 +22,8 @@ import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
 import { telemetryBatcher } from '../telemetry/telemetry-batcher';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { readCpuMemoryMb, commitPerformanceSnapshot } from './performance-collector-shared';
+import { computeSceneRenderStats } from './scene-render-stats';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
-
-// Three.js render info may include vertices in older builds
-type ExtendedRenderInfo = THREE.WebGLRenderer['info']['render'] & { vertices?: number };
 
 // Single source: DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL (ADR-516) — shared with Performance2DCollector.
 const TICK_MS = DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL;
@@ -78,10 +76,12 @@ export class PerformanceCollector {
     const fps = Math.max(0, Math.round(this.smoothFps));
 
     const info = this.renderer.info;
-    const render = info.render as ExtendedRenderInfo;
 
-    // Vertices: use native field if available (older Three.js), otherwise estimate.
-    const vertices = render.vertices ?? render.triangles * 3;
+    // Triangles/vertices/object counts: derived from the scene graph, NOT renderer.info.
+    // The scene renders via EffectComposer (SSAO + overlay passes), so info.render
+    // reflects only the final pass (triangles=0, drawCalls=3 for the whole scene).
+    // Scene traversal is composer-independent and stable. See scene-render-stats.ts.
+    const stats = computeSceneRenderStats(this.scene);
 
     // GPU memory rough estimate from geometry + texture counts.
     // Each geometry ≈ 50 KB avg, each texture ≈ 4 MB avg.
@@ -95,12 +95,11 @@ export class PerformanceCollector {
     const snapshot: PerformanceMetricsSnapshot = {
       fps,
       frameTimeMs: parseFloat((1000 / Math.max(1, fps)).toFixed(1)),
-      triangles:     render.triangles,
-      vertices,
-      drawCalls:     render.calls,
-      objectsVisible: this.scene.children.length,
-      // info.programs is the array of compiled shader programs — proxy for distinct materials.
-      objectsTotal:  info.programs?.length ?? 0,
+      triangles:     stats.triangles,
+      vertices:      stats.vertices,
+      drawCalls:     info.render.calls,
+      objectsVisible: stats.meshVisible,
+      objectsTotal:  stats.meshTotal,
       gpuMemoryMb,
       cpuMemoryMb,
       samplesPerSec: null, // Path-tracer Phase 4 — not yet implemented

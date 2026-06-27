@@ -86,26 +86,34 @@ function checkCanvasStacking() {
   // Visual stacking
   const visualCheck = verifyCanvasStacking(dxfCanvas, layerCanvas);
 
-  // ✅ ENTERPRISE: Νέα λογική - ελέγχουμε z-index hierarchy + visibility
-  // ΔΕΝ απαιτούμε το canvas να είναι TOP element (overlays πρέπει να είναι πάνω!)
+  // ✅ ENTERPRISE: z-index hierarchy + visibility check.
+  // ⚠️ ADR-040 Φ12 / canvas-ui.ts: ο DxfCanvas (zIndex.docked = 10, pointerEvents:'auto',
+  // SOLE authoritative pointer handler) ΠΡΕΠΕΙ να στοιβάζεται ΠΑΝΩ από τον LayerCanvas
+  // (zIndex.base = 0, read-only render layer, pointerEvents:'none'). Δηλαδή το ΣΩΣΤΟ
+  // είναι dxf > layer — ΟΧΙ layer > dxf (αυτή ήταν παλιά, ανάποδη υπόθεση που έβγαζε
+  // ψεύτικο WRONG). Τα overlays (crosshair/snap) είναι ξεχωριστά portals πάνω από τα δύο.
   let isCorrectOrder = false;
   let reason = "";
 
   // Ελέγχουμε αν τα canvases είναι ορατά
   const canvasesVisible = visualCheck.dxfVisible && visualCheck.layerVisible;
 
-  if (dxfZ === "auto" && layerZ === "auto") {
-    // Και τα δύο auto: ελέγχουμε DOM order + visibility
-    isCorrectOrder = layerAfterDxf && canvasesVisible;
-    reason = "Both auto; DOM order correct + canvases visible";
-  } else if (dxfZ !== "auto" && layerZ !== "auto") {
-    // Numeric z-index: Layer πρέπει να είναι > DXF + visibility
-    isCorrectOrder = layerZ > dxfZ && canvasesVisible;
-    reason = `Z-index hierarchy OK (layer:${layerZ} > dxf:${dxfZ}) + canvases visible`;
+  // `layerAfterDxf === true` σημαίνει (compareDocumentPosition) ότι ο dxf ΑΚΟΛΟΥΘΕΙ τον
+  // layer στο DOM → ο dxf στοιβάζεται πάνω όταν τα z-index είναι ίσα/auto.
+  const dxfAfterLayerInDom = layerAfterDxf;
+
+  if (dxfZ !== "auto" && layerZ !== "auto") {
+    // Numeric z-index (το πραγματικό setup: dxf=docked=10, layer=base=0): dxf πρέπει > layer
+    isCorrectOrder = dxfZ > layerZ && canvasesVisible;
+    reason = `Z-index hierarchy ${dxfZ > layerZ ? "OK" : "WRONG"} (dxf:${dxfZ} > layer:${layerZ}) + canvases visible`;
+  } else if (dxfZ === "auto" && layerZ === "auto") {
+    // Και τα δύο auto: ο dxf πρέπει να είναι ΜΕΤΑ τον layer στο DOM (→ πάνω)
+    isCorrectOrder = dxfAfterLayerInDom && canvasesVisible;
+    reason = "Both auto; DXF after layer in DOM (dxf on top) + canvases visible";
   } else {
-    // Mixed case
-    isCorrectOrder = (layerZ !== "auto" || layerAfterDxf) && canvasesVisible;
-    reason = "Mixed z-index; fallback to DOM order + visibility";
+    // Mixed case: αν ο dxf έχει numeric z-index → πάνω· αλλιώς fallback σε DOM order
+    isCorrectOrder = (dxfZ !== "auto" || dxfAfterLayerInDom) && canvasesVisible;
+    reason = "Mixed z-index; dxf numeric on top OR DOM-order fallback + visibility";
   }
 
   const result = {
@@ -118,7 +126,7 @@ function checkCanvasStacking() {
     topElement: visualCheck.topElement,
     topElementIsOverlay: visualCheck.topElementIsOverlay,
     coordsTested: visualCheck.coordsTested,
-    domOrder: layerAfterDxf ? "layer after dxf" : "dxf after layer",
+    domOrder: layerAfterDxf ? "dxf after layer (dxf on top)" : "layer after dxf (layer on top)",
     note: visualCheck.topElementIsOverlay
       ? "✅ Overlay on top (expected - crosshair/snap indicators)"
       : visualCheck.topElementIsCanvas
@@ -270,6 +278,58 @@ export class CanvasAlignmentTester {
     const greenTest = findGreenBorder();
     return greenTest.elements.length > 0 ? greenTest.elements[0] : null;
   }
+}
+
+export interface CanvasTestNotificationResult {
+  /** Έτοιμο multi-line μήνυμα για showCopyableNotification */
+  message: string;
+  /** true μόνο αν alignment + z-index είναι σωστά (green border = informational) */
+  passed: boolean;
+}
+
+/**
+ * 🎯 SSoT: ΕΝΑ σημείο που τρέχει το canvas alignment + z-index + green-border test
+ * και παράγει το notification payload (message + pass/fail). Καλείται ΚΑΙ από το
+ * κουμπί «Canvas Test» του DebugToolbar ΚΑΙ από το Tests Modal → ΕΝΑ format, ΕΝΑ
+ * pass/fail κριτήριο, μηδέν drift.
+ *
+ * ℹ️ Green border = debug-only visual για layering mode → informational, ΟΧΙ pass/fail.
+ */
+export function runCanvasAlignmentTestNotification(): CanvasTestNotificationResult {
+  const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
+  const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
+  const greenBorder = CanvasAlignmentTester.findGreenBorder();
+
+  // Diagnostics (πρώην inline μόνο στο DebugToolbar) — τώρα κεντρικά για ΟΛΑ τα call sites
+  console.log('🔍 DETAILED Z-INDEX DEBUG:', {
+    alignmentResult,
+    zIndexResult,
+    greenBorder: !!greenBorder,
+  });
+  const dxfEl = document.querySelector('canvas[data-canvas-type="dxf"]');
+  const layerEl = document.querySelector('canvas[data-canvas-type="layer"]');
+  console.log('🔍 DIRECT DOM INSPECTION:', {
+    dxfCanvas: dxfEl ? {
+      inlineStyle: (dxfEl as HTMLElement).style.cssText,
+      computedZIndex: window.getComputedStyle(dxfEl).zIndex,
+      computedPosition: window.getComputedStyle(dxfEl).position,
+    } : 'NOT FOUND',
+    layerCanvas: layerEl ? {
+      inlineStyle: (layerEl as HTMLElement).style.cssText,
+      computedZIndex: window.getComputedStyle(layerEl).zIndex,
+      computedPosition: window.getComputedStyle(layerEl).position,
+    } : 'NOT FOUND',
+  });
+
+  const message =
+    `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\n` +
+    `Z-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\n` +
+    `Green Border (layering mode): ${greenBorder ? '✅ active' : 'ℹ️ inactive'}`;
+
+  // ⚠️ Green border ΔΕΝ μετράει στο pass/fail (debug-only visual για layering mode)
+  const passed = alignmentResult.isAligned && zIndexResult.isCorrectOrder;
+
+  return { message, passed };
 }
 
 // ✅ ENTERPRISE: Type-safe window extension

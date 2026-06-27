@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useCursor } from '../../systems/cursor';
+import { useCursorSettings } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -39,7 +39,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   compact = false,
 }) => {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const { settings } = useCursor();
+  // 🚀 PERF (2026-06-28, ADR-040): split settings context — no re-render on cursor activity.
+  const { settings } = useCursorSettings();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 

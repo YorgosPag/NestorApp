@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-06-05 |
+| **Last Updated** | 2026-06-28 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,14 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-06-28 — Επαναφορά `data-canvas-type` debug markers στα canvas-v2 leaves (CHECK 6D)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (Canvas Test button) + commit (Giorgio) pending.
+
+**Πρόβλημα**: το diagnostic «Canvas Test» (`debug/canvas-alignment-test.ts` + `DebugToolbar.tsx`) έβγαζε ψεύτικα **❌ MISALIGNED / ❌ WRONG / ❌ NO**. Αιτία: το τεστ ψάχνει `canvas[data-canvas-type="dxf"|"layer"]`, αλλά μετά το refactor σε canvas-v2 (micro-leaf, ADR-040) τα `DxfCanvas`/`LayerCanvas` αποδίδονται με className `dxf-canvas`/`layer-canvas` **χωρίς** το `data-canvas-type`. Οι selectors επέστρεφαν `null` → `checkGeometricAlignment`/`checkCanvasStacking` έβγαζαν `status:"ERROR"` → false negatives. Επιπλέον το `findGreenBorder` (debug-only visual για layering mode) ήταν λανθασμένα hard pass/fail κριτήριο.
+
+**Fix**: (α) επαναφορά σταθερών markers `data-canvas-type="dxf"` / `="layer"` **μετά** το `{...props}` spread (ώστε να μην παρακάμπτονται) στα `canvas-v2/dxf-canvas/DxfCanvas.tsx` & `canvas-v2/layer-canvas/LayerCanvas.tsx`. (β) στο `DebugToolbar.tsx` το green-border έγινε **informational** (ℹ️ active/inactive), εκτός `allTestsPass`. (γ) **διόρθωση ανάποδου z-index oracle** στο `debug/canvas-alignment-test.ts`: το τεστ απαιτούσε `layerZ > dxfZ` (layer-on-top), ενώ η τεκμηριωμένη αρχιτεκτονική (Φ12, `canvas-ui.ts`) ορίζει `dxfZ (docked=10) > layerZ (base=0)` (dxf-on-top, μοναδικός pointer handler). Το κριτήριο έγινε `dxfZ > layerZ` + διορθώθηκε το ανάποδο `domOrder` label. **Ground truth (3 ανεξάρτητες πηγές που συμφωνούν)**: `canvas-ui.ts:101` (dxf `zIndex.docked`, σχόλιο "Higher than layer canvas"), `canvas-ui.ts:79-87` (layer `zIndex.base`, "DxfCanvas sits on top… base < docked"), `LayerCanvas.tsx:288` ("interaction owned by the DxfCanvas above") + `layout.ts:14-15` (base=0, docked=10). **ADR-040 compliance**: καμία store subscription, καμία αλλαγή σε bitmap cache-key / scheduler / orchestrator — μόνο static DOM attribute στο leaf `<canvas>` + debug-test oracle. **Files**: MOD `DxfCanvas.tsx`, `LayerCanvas.tsx`, `debug/DebugToolbar.tsx`, `debug/canvas-alignment-test.ts`, `ui/components/tests-modal/constants/automatedTests.ts` (διπλότυπο green-border message — N.0.2 Boy Scout). ✅ Google-level: YES — SSoT debug identifier στο ίδιο το component, το oracle ευθυγραμμίστηκε με την τεκμηριωμένη αρχιτεκτονική, μηδέν επίδραση στο render path.
 
 ### 2026-06-27 — ADR-366 §B.5.U: unified 2D+3D Performance HUD sibling leaf στο `CanvasLayerStack` (CHECK 6B)
 
@@ -3442,3 +3450,30 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 ## 2026-06-27: ADR-539 Φ4b — `ThreeJsSceneManager.setSelectedFaces` multi-face highlight (additive, CHECK 6B stage)
 
 **Καμία αρχιτεκτονική αλλαγή — additive μέθοδος, μηδέν νέα subscription.** Cinema 4D «Polygon Mode» multi-face select: ο `ThreeJsSceneManager` (6B αρχείο) απέκτησε `setSelectedFaces(faces[])` που προωθεί στο `faceHighlighter.setTargets(faces)` (N translucent overlays αντί ενός) + `markSceneDirty`. Το υπάρχον `setSelectedFace(bimId,faceKey)` έγινε **thin delegate** → `setSelectedFaces(...)` (backward-compat για context-menu/drag-drop/Φ4a). Ο highlighter ζει στο `systems/selection` (ΟΧΙ orchestrator)· καμία `useSyncExternalStore` (CHECK 6C safe)· κανένα high-freq store δεν διαβάζεται εδώ (το `selectedFaces` set είναι low-freq UI κατάσταση στο `PolygonMode3DStore`, ADR-040 zero-React-state· ο pointer handler το γράφει στο click event-time). Bitmap cache άθικτο (rule 3 N/A). Το batch βάψιμο = `CompositeCommand` (ΕΝΑ undo, cross-entity) εκτός preview path. 21 jest GREEN + 36 regression. Βλ. ADR-539 §7 Φ4b changelog. Staged για CHECK 6B.
+
+## 2026-06-28: Φ-3D-pointer — αποσύνδεση hover+snap pick του 3D καμβά από το mousemove (cursor 1:1, CHECK 6B/6D stage)
+
+**Πρόβλημα (Giorgio repro):** στον **3D** καμβά (`/dxf/viewer` → 3D) ο κέρσορας «βάραινε»/lag-άρε ενώ στον **2D** πάει 1:1. Ρίζα: ο 3D pointer-handler έτρεχε **σύγχρονα μέσα στο event** δύο full-scene raycasts (`pickHover` → `intersectObjects` ΚΑΙ `updateSnap3D` → δεύτερο `raycastWorldPoint` στο **ίδιο** geometry) + O(N) snap search, χωρίς spatial index. Σε πυκνή σκηνή κάθε move μπλόκαρε το main thread για δεκάδες ms → λιμοκτονούσε το compositing **και** τον window-listener του ίδιου του crosshair → ορατό lag. Το 2D δεν είχε ποτέ αυτό: η βαριά δουλειά του (snap) είναι **αποσυνδεδεμένη** σε RAF slot (`systems/cursor/snap-scheduler.ts`).
+
+**Fix (mirror του 2D snap-scheduler — FULL SSoT reuse, μηδέν νέα αρχιτεκτονική):**
+- **Φ1 — ένα raycast αντί για δύο:** NEW `raycastBimHitAndWorld` στον `BimEntityRaycaster` (6B): ΕΝΑ `intersectObjects` → `{ bimId, bimType, worldPoint }`. Το `pickHover`/`updateSnap3D` ένωσαν την πηγή τους· raycast cost του hot path **/2**. Τα `raycastBimGroup`/`raycastWorldPoint` μένουν (orbit-pivot callers).
+- **Φ2 — decoupling σε RAF slot:** NEW `bim-3d/viewport/snap/bim3d-pointer-scheduler.ts` (αδελφός του 2D snap-scheduler) — module-level singleton (`latest`+`dirty`, zero-React) που οπλίζεται από το thin `handleMouseMove` (`requestPointerPick`, φθηνό store+flag) και τρέχει το ενοποιημένο pick σε **registered slot** του ΥΠΑΡΧΟΝΤΟΣ `UnifiedFrameScheduler` (`registerRenderCallback`, `RENDER_PRIORITIES.NORMAL`, throttle `DXF_TIMING.frame.HOVER_HITTEST` 50ms — ίδιο cadence με πριν). Το `use-bim3d-pointer-handlers.ts` (6B) έγινε thin (αφαιρέθηκαν τα inline `pickHover`/`updateSnap3D`)· `clearPointerPick` σε mouse-leave + unmount. Το `computeSnap3DHover` (6D) δέχεται optional προ-υπολογισμένο `precomputedWorld` (reuse του ενιαίου raycast — **κανένα δεύτερο raycast**, πίσω-συμβατό). Διατηρούνται όλα τα gates: Polygon Mode (face hover + snap null), `activeTool==='column'|'wall'` yield (ADR-544), DXF fallback (`pickDxfEntityAcrossFloors`).
+- **Φ3 — BVH spatial acceleration:** NEW `bim-3d/systems/raycaster/bvh-setup.ts` (SSoT, idempotent) — `installBvh()` (prototype patch· **`three-mesh-bvh@0.7.4` ήδη dependency**, MIT, μηδέν νέα npm) + lazy `ensureBoundsTrees(group)` (χτίζει `boundsTree` μόνο σε indexed meshes χωρίς ένα· κλήση στην αρχή του pick slot). `intersectObjects` O(N)→O(log N). `acceleratedRaycast` πέφτει πίσω στο default για meshes χωρίς tree → app-wide ασφαλές· lazy build → νέα meshes μετά από `BimSceneLayer.sync*` παίρνουν tree στο επόμενο pick (καμία ρητή rebuild hook).
+
+**Αποτέλεσμα:** το mousemove handler **δεν μπλοκάρει ποτέ** → main thread ελεύθερο → ο imperative crosshair (`BimCrosshairOverlay3D`, ADR-545) πάει 1:1, parity με 2D. **Καμία `useSyncExternalStore` σε orchestrator** (CHECK 6C safe — ο `ThreeJsSceneManager` μένει subscription-free)· **καμία αλλαγή σε bitmap cache key** (rule 3 N/A — 3D scene). 35 jest GREEN (Φ1/Φ2/Φ3 + back-compat snap-hover). Staged για CHECK 6B/6D. Βλ. `cozy-sleeping-karp` plan.
+
+## 2026-06-28: 🐛 FIX — cursor lag = React re-render storms από CursorContext fan-out (split contexts + gate-at-mount, ΟΧΙ raycasting)
+
+**Πρόβλημα (Giorgio repro + React DevTools profile):** ο κέρσορας στον 3D (και 2D) «βάραινε». Το profile (`profiling-data.28-06-2026`) έδειξε ότι το lag **ΔΕΝ** ήταν το raycasting (η Φ-3D-pointer δούλεψε: 34/35 hover commits = 1-2ms) αλλά **React re-render storms**: 6 commits >100ms (max **278ms**), με updater **`CursorSystem`** να re-render-άρει **250 fibers / 178ms** (όλο τον 2D canvas stack — ακόμα mounted πίσω από το 3D — + overlays) και `EntityContextMenu` **133ms self** σε ένα render.
+
+**Ρίζα (ADR-040 violation):** ο `CursorSystem` reducer dispatch-άρει σε `SET_ACTIVE` (canvas enter/leave) + `SET_MOUSE_DOWN` (click), αλλάζοντας το **combined** `CursorContext` value identity → **κάθε** `useContext(CursorContext)` consumer re-render-άρει — συμπεριλαμβανομένου του **`CanvasSection` orchestrator** (subscribe σε `:163 useCursorSettings()` + `:212 useCursorActions()`) → cascade 250 fibers. (`SET_SNAP_POINT` αποδείχθηκε dead — κανείς δεν καλεί `setSnapPoint`.)
+
+**Fix (4 άξονες, FULL reuse υπαρχόντων patterns):**
+- **#1 — SPLIT CONTEXTS (`CursorSystem.tsx` + `useCursor.ts`):** NEW `CursorActionsContext` (value = `actions`, **permanently stable** — useMemo deps=[]) + `CursorSettingsContext` (value = `{settings, updateSettings, resetToDefaults}`, αλλάζει ΜΟΝΟ σε UPDATE_SETTINGS). `useCursorActions()` → **ποτέ** re-render σε cursor activity· `useCursorSettings()` → re-render ΜΟΝΟ σε real settings change. **Μηδέν αλλαγή στο `CanvasSection`** (τα ίδια hooks, σταθερά πλέον context). Το combined `CursorContext` μένει για τους ελάχιστους state consumers. Ίδιο pattern στα `StandaloneStatusBar`/`ToolbarStatusBar` (`useCursor()` → `useCursorSettings()`).
+- **#2 — `EntityContextMenuHost`:** `React.memo` (το μενού ανοίγει imperative via ref → ΠΡΕΠΕΙ να μένει mounted, gate-at-mount αδύνατο) + `useMemo` στο `buildEntityContextMenuProps` (τα `collectBimCategories`/`entities.find` O(k×n) έτρεχαν σε ΚΑΘΕ render).
+- **#3 — `DxfViewerDialogs.tsx`:** gate-at-mount τα 3 controlled import modals (`DxfImportModal`/`SimpleProjectDialog`/`FloorplanImportWizard`) — ίδιο pattern με το υπάρχον `CreditsDialog` (open flag στο `ui`)· βαριά trees που έβγαιναν εκτός tree όταν κλειστά.
+- **#4 — `ThermalEnvelopeHost`:** `useUniversalSelection()` (reactive) → `useUniversalSelectionStable()` — το `getPrimaryId()` διαβάζεται ΜΟΝΟ imperatively σε EventBus listener (το ίδιο το comment έλεγε «ΜΗΔΕΝ reactive subscription»), οπότε ο always-mounted host δεν πρέπει να re-render-άρει σε κάθε selection.
+
+**Εκτός scope (flagged):** το ribbon (`DxfViewerTopBar`/`RibbonRoot`) re-render-άρει σε selection **by-design** (ADR-532 B5 contextual tabs)· memoize των selection-dependent `ribbonCommands` δεν βοηθά (busts ακριβώς στο selection). Πραγματικό fix = leaf-split του ribbon = ξεχωριστό refactor.
+
+**Αποτέλεσμα:** ο `CanvasSection` (+ status bars + EntityContextMenuHost) **δεν re-render-άρει πια σε cursor activity** → το 178ms/250-fiber cascade εξαλείφεται· ο 3D κέρσορας 1:1. **Καμία νέα `useSyncExternalStore` σε orchestrator** (CHECK 6C safe — το #1 ΑΦΑΙΡΕΙ subscriptions). NEW jest `CursorSystem-split-context.test.tsx` (2 tests: actions/settings δεν re-render σε SET_ACTIVE/SET_TOOL· actions identity stable) GREEN· tsc 0. Staged για CHECK 6B/6D.

@@ -77,7 +77,11 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
  * (Three.js default is already true, set explicit για future-proofing.)
  */
 export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
+  // preserveDrawingBuffer:true so canvas.toBlob()/toDataURL() captures the rendered
+  // frame for the Performance HUD screenshot + diagnostics (ADR-366 §B.5). Without it
+  // WebGL clears the drawing buffer after compositing → screenshots come out blank.
+  // Same choice as the MP4 exporter renderer.
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
   renderer.setClearColor(0x1a1a1a, 1);

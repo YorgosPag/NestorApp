@@ -338,6 +338,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       ref={canvasRef}
       className={`dxf-canvas ${className}`}
       {...props}
+      data-canvas-type="dxf" // 🎯 DEBUG: stable identifier για alignment/stacking tests (μετά το spread ώστε να μην παρακάμπτεται)
       style={canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}

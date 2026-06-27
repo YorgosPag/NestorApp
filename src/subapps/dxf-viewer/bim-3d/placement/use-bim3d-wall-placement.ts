@@ -195,6 +195,19 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       // ADR-543 (COL traces 3D) — publish the active alignment lines for the 3D overlay.
       setTracking3D(res.trackingPayload, elev, units);
       manager.markSceneDirty();
+
+      // TEMP DIAGNOSTIC (ADR-543 origin-ghost) — remove after Giorgio confirms. Lists the LEVEL-SCENE
+      // wall entities near plan origin (the source BimSceneLayer renders), with their id → reveals if
+      // the "garbage" is a real/preview entity in the scene and which one.
+      type Wallish = { id?: string; type?: string; preview?: boolean; params?: { start?: { x: number; y: number }; end?: { x: number; y: number } } };
+      const ents = (wallToolBridgeStore.get()?.getSceneEntities() ?? []) as readonly Wallish[];
+      const originWalls = ents
+        .filter((en) => {
+          const s = en.params?.start; const e2 = en.params?.end;
+          return en.type === 'wall' && s && e2 && (Math.hypot(s.x, s.y) < 600 || Math.hypot(e2.x, e2.y) < 600);
+        })
+        .map((en) => `${en.id} preview=${en.preview ?? false} start=${JSON.stringify(en.params?.start)} end=${JSON.stringify(en.params?.end)}`);
+      if (originWalls.length) console.log('[ORIGIN-WALL-ENT]', originWalls.length, originWalls, 'totalWalls=', ents.filter((e2) => e2.type === 'wall').length);
     };
 
     const onLeave = (): void => {

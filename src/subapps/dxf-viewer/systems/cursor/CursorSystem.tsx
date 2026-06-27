@@ -86,6 +86,24 @@ function cursorReducer(state: CursorState & { settings: CursorSettings }, action
 // Create context
 export const CursorContext = createContext<CursorContextType | null>(null);
 
+// 🚀 PERF (2026-06-28, ADR-040): SPLIT CONTEXTS. The combined `CursorContext`
+// value changes identity on EVERY reducer dispatch (SET_ACTIVE on canvas
+// enter/leave, SET_MOUSE_DOWN on click, …), so every `useContext(CursorContext)`
+// consumer re-renders — including the `CanvasSection` orchestrator, cascading a
+// ~250-fiber / ~178ms commit (React Profiler, Giorgio repro). The actions object
+// is permanently stable (useMemo deps=[]) and settings change only on the rare
+// UPDATE_SETTINGS. Exposing them via dedicated contexts lets `useCursorActions()`
+// NEVER re-render and `useCursorSettings()` re-render ONLY on a real settings
+// change — the combined context stays for the few true state consumers.
+export type CursorActions = Omit<CursorContextType, keyof CursorState | 'settings'>;
+export interface CursorSettingsBundle {
+  settings: CursorSettings;
+  updateSettings: (updates: Partial<CursorSettings>) => void;
+  resetToDefaults: () => void;
+}
+export const CursorActionsContext = createContext<CursorActions | null>(null);
+export const CursorSettingsContext = createContext<CursorSettingsBundle | null>(null);
+
 // Initial state
 const initialState = {
   ...createDefaultCursorState(),
@@ -189,10 +207,22 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
     get selectionCurrent() { return SelectionStore.getSelectionCurrent(); },
   }), [state, actions]);
 
+  // 🚀 PERF (2026-06-28): settings bundle — identity changes ONLY on a real
+  // settings change (state.settings), NOT on SET_ACTIVE/SET_MOUSE_DOWN ticks.
+  const settingsBundle = useMemo<CursorSettingsBundle>(() => ({
+    settings: state.settings,
+    updateSettings: actions.updateSettings,
+    resetToDefaults: actions.resetToDefaults,
+  }), [state.settings, actions]);
+
   return (
-    <CursorContext.Provider value={contextValue}>
-      {children}
-    </CursorContext.Provider>
+    <CursorActionsContext.Provider value={actions}>
+      <CursorSettingsContext.Provider value={settingsBundle}>
+        <CursorContext.Provider value={contextValue}>
+          {children}
+        </CursorContext.Provider>
+      </CursorSettingsContext.Provider>
+    </CursorActionsContext.Provider>
   );
 }
 

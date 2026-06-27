@@ -144,7 +144,9 @@ export function PerformanceHUDExpanded({
                 ⋮
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs">
+            {/* z-[2000] (elevated tier) — the HUD lives inside the high-stacking canvas
+                viewport, so the default z-50 dropdown portal opens behind it. */}
+            <DropdownMenuContent align="end" className="text-xs z-[2000]">
               <DropdownMenuItem onSelect={onCopyStats}>
                 {t('performance.menu.copyStats')}
               </DropdownMenuItem>

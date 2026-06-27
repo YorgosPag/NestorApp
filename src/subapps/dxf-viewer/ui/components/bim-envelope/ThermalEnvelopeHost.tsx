@@ -68,7 +68,7 @@ import { isWallEntity, isColumnEntity, isBeamEntity } from '../../../types/entit
 import type { WallDna } from '../../../bim/types/wall-dna-types';
 import { useCommandHistory } from '../../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useUniversalSelectionStable } from '../../../systems/selection';
 import { useEnvelopeFloorSlabs } from '../../../hooks/data/useEnvelopeFloorSlabs';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
 import type { SceneModel } from '../../../types/scene';
@@ -117,7 +117,10 @@ export function ThermalEnvelopeHost(
   // ενώ ο dialog είναι ανοιχτός. null → fallback στο REFERENCE_BARE_WALL_LAYERS.
   const [wallDna, setWallDna] = React.useState<WallDna | null>(null);
   // Getter για imperative read επιλογής (ADR-040: leaf — επιτρέπεται, ΟΧΙ high-freq).
-  const universalSelection = useUniversalSelection();
+  // 🚀 PERF (2026-06-28): NON-reactive variant — `getPrimaryId()` is read imperatively inside the
+  // EventBus listener only (never in render), so the always-mounted host must NOT re-render on every
+  // selection commit. `useUniversalSelectionStable` keeps a stable identity (memo on [context]).
+  const universalSelection = useUniversalSelectionStable();
 
   // ADR-396 P8 — κλιματική ζώνη = ρύθμιση κτιρίου (OQ-7a). Resolve από το
   // building doc του τρέχοντος ορόφου· optimistic override μέχρι να γυρίσει

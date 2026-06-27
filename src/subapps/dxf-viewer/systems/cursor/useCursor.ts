@@ -5,7 +5,7 @@
 
 import { useContext, useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { CursorContext } from './CursorSystem';
+import { CursorContext, CursorActionsContext, CursorSettingsContext } from './CursorSystem';
 import { ImmediatePositionStore } from './ImmediatePositionStore';
 import { SelectionStore } from './SelectionStore';
 
@@ -68,24 +68,32 @@ export function useCursorState() {
   };
 }
 
+// 🚀 PERF (2026-06-28, ADR-040): read from the SPLIT settings context. Re-renders
+// ONLY on a real UPDATE_SETTINGS (rare — Firestore sync / settings panel), NOT on
+// the SET_ACTIVE/SET_MOUSE_DOWN reducer ticks that the combined context fires.
 export function useCursorSettings() {
-  const cursor = useCursor();
-  return {
-    settings: cursor.settings,
-    updateSettings: cursor.updateSettings,
-    resetToDefaults: cursor.resetToDefaults,
-  };
+  const ctx = useContext(CursorSettingsContext);
+  if (!ctx) {
+    throw new Error('useCursorSettings must be used within a CursorSystem');
+  }
+  return ctx;
 }
 
+// 🚀 PERF (2026-06-28, ADR-040): read from the SPLIT actions context. The actions
+// object identity is permanently stable (provider useMemo deps=[]), so consumers
+// (incl. the CanvasSection orchestrator) NEVER re-render from cursor activity.
 export function useCursorActions() {
-  const cursor = useCursor();
+  const ctx = useContext(CursorActionsContext);
+  if (!ctx) {
+    throw new Error('useCursorActions must be used within a CursorSystem');
+  }
   return {
-    updatePosition: cursor.updatePosition,
-    updateViewport: cursor.updateViewport,
-    setActive: cursor.setActive,
-    setTool: cursor.setTool,
-    setSnapPoint: cursor.setSnapPoint,
-    setWorldPosition: cursor.setWorldPosition,
+    updatePosition: ctx.updatePosition,
+    updateViewport: ctx.updateViewport,
+    setActive: ctx.setActive,
+    setTool: ctx.setTool,
+    setSnapPoint: ctx.setSnapPoint,
+    setWorldPosition: ctx.setWorldPosition,
   };
 }
 

@@ -67,7 +67,8 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
         const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
         const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
         const greenBorder = CanvasAlignmentTester.findGreenBorder();
-        const testMessage = `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\nZ-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\nGreen Border: ${greenBorder ? '✅ YES' : '❌ NO'}`;
+        // ℹ️ Green border = debug-only visual για layering mode → informational, ΟΧΙ pass/fail κριτήριο
+        const testMessage = `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\nZ-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\nGreen Border (layering mode): ${greenBorder ? '✅ active' : 'ℹ️ inactive'}`;
         showCopyableNotification(testMessage, alignmentResult.isAligned && zIndexResult.isCorrectOrder ? 'success' : 'warning');
       }
     },

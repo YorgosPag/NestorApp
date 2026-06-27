@@ -131,36 +131,9 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         onClick={() => {
           console.log('🎯 MANUAL CANVAS ALIGNMENT TEST TRIGGERED FROM HEADER');
           import('./canvas-alignment-test').then(module => {
-            const CanvasAlignmentTester = module.CanvasAlignmentTester;
-            const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
-            const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
-            const greenBorder = CanvasAlignmentTester.findGreenBorder();
-
-            console.log('🔍 DETAILED Z-INDEX DEBUG:', {
-              alignmentResult,
-              zIndexResult,
-              greenBorder: !!greenBorder
-            });
-
-            // Direct DOM inspection
-            const dxfEl = document.querySelector('canvas[data-canvas-type="dxf"]');
-            const layerEl = document.querySelector('canvas[data-canvas-type="layer"]');
-            console.log('🔍 DIRECT DOM INSPECTION:', {
-              dxfCanvas: dxfEl ? {
-                inlineStyle: (dxfEl as HTMLElement).style.cssText,
-                computedZIndex: window.getComputedStyle(dxfEl).zIndex,
-                computedPosition: window.getComputedStyle(dxfEl).position
-              } : 'NOT FOUND',
-              layerCanvas: layerEl ? {
-                inlineStyle: (layerEl as HTMLElement).style.cssText,
-                computedZIndex: window.getComputedStyle(layerEl).zIndex,
-                computedPosition: window.getComputedStyle(layerEl).position
-              } : 'NOT FOUND'
-            });
-
-            const testMessage = `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\nZ-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\nGreen Border Found: ${greenBorder ? '✅ YES' : '❌ NO'}`;
-            const allTestsPass = alignmentResult.isAligned && zIndexResult.isCorrectOrder && greenBorder;
-            showCopyableNotification(testMessage, allTestsPass ? 'success' : 'warning');
+            // 🎯 SSoT: ΕΝΑ helper τρέχει το test + παράγει message/pass (κοινό με το Tests Modal)
+            const { message, passed } = module.runCanvasAlignmentTestNotification();
+            showCopyableNotification(message, passed ? 'success' : 'warning');
           }).catch(err => {
             console.error('Failed to load CanvasAlignmentTester:', err);
             showCopyableNotification('Failed to load test module', 'error');
