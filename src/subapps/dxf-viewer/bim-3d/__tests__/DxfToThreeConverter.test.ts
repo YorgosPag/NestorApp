@@ -265,6 +265,15 @@ describe('DxfToThreeConverter', () => {
     expect(scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe')).toBeDefined();
   });
 
+  // ADR-537 underlay-depth — the underlay root is marked + hidden from the main render so it is
+  // drawn only by the dedicated post-FX underlay pass (depth-correct, never AO/tone-shaded).
+  it('sync marks the underlay root + hides it from the main render', () => {
+    converter.sync(makeScene([makeLine({ color: '#ffffff' })]));
+    const group = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    expect(group?.userData.dxfUnderlay).toBe(true);
+    expect(group?.visible).toBe(false);
+  });
+
   it('sync with only invisible entities → no group added', () => {
     converter.sync(makeScene([makeLine({ visible: false })]));
     expect(scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe')).toBeUndefined();
