@@ -21,6 +21,7 @@ import { createRegressionDetector } from './regression-detector';
 import { regressionAlertBus } from './regression-alert-bus';
 import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
 import { telemetryBatcher } from '../telemetry/telemetry-batcher';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 // Chrome-only Performance API extension
@@ -29,7 +30,8 @@ type ChromePerformance = Performance & { memory?: { usedJSHeapSize: number } };
 // Three.js render info may include vertices in older builds
 type ExtendedRenderInfo = THREE.WebGLRenderer['info']['render'] & { vertices?: number };
 
-const TICK_MS = 250;
+// Single source: DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL (ADR-516) — shared with Performance2DCollector.
+const TICK_MS = DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL;
 /** EMA smoothing factor: 0.1 = heavily smoothed (reacts slowly to spikes). */
 const EMA_ALPHA = 0.1;
 

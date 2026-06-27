@@ -16,26 +16,27 @@
  */
 
 import type { PerformanceMetricsSnapshot } from '../performance/PerformanceHUDStore';
-import type { Bim3dRenderMode } from '../performance/per-mode-promotion';
+import type { HudRenderMode } from '../performance/hud-render-mode';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface AnonymizedTelemetrySample {
   sessionId: string;
   timestamp: number;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
   browser: { family: string; major: number | null };
   os: { family: string };
   gpuTier: number | null;
   metrics: {
     fps: number;
     frameTimeMs: number;
-    triangles: number;
-    vertices: number;
-    drawCalls: number;
-    objectsVisible: number;
-    objectsTotal: number;
-    gpuMemoryMb: number;
+    /** WebGL-only — null in 2D Canvas2D mode. */
+    triangles: number | null;
+    vertices: number | null;
+    drawCalls: number | null;
+    objectsVisible: number | null;
+    objectsTotal: number | null;
+    gpuMemoryMb: number | null;
     cpuMemoryMb: number | null;
     samplesPerSec: number | null;
   };
@@ -44,7 +45,7 @@ export interface AnonymizedTelemetrySample {
 export interface AnonymizerInput {
   sessionId: string;
   snapshot: PerformanceMetricsSnapshot;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
   now: number;
   userAgent: string;
   gpuTier: number | null;

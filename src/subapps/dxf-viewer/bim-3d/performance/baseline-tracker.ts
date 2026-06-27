@@ -9,7 +9,7 @@
  * browsing; absent storage degrades gracefully to no-baseline.
  */
 
-import type { Bim3dRenderMode } from './per-mode-promotion';
+import type { HudRenderMode } from './hud-render-mode';
 import { median } from '../../utils/statistics';
 
 export const ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,11 +27,11 @@ interface StoredSamples {
   samples: { t: number; fps: number }[];
 }
 
-function lsKey(mode: Bim3dRenderMode): string {
+function lsKey(mode: HudRenderMode): string {
   return `bim3d.performanceBaseline.${mode}`;
 }
 
-function readStored(mode: Bim3dRenderMode): StoredSamples {
+function readStored(mode: HudRenderMode): StoredSamples {
   try {
     const raw = localStorage.getItem(lsKey(mode));
     if (!raw) return { samples: [] };
@@ -43,7 +43,7 @@ function readStored(mode: Bim3dRenderMode): StoredSamples {
   }
 }
 
-function writeStored(mode: Bim3dRenderMode, data: StoredSamples): void {
+function writeStored(mode: HudRenderMode, data: StoredSamples): void {
   try {
     localStorage.setItem(lsKey(mode), JSON.stringify(data));
   } catch { /* quota / SSR */ }
@@ -68,14 +68,14 @@ function pruneOld(samples: { t: number; fps: number }[], now: number): { t: numb
 }
 
 export const baselineTracker = {
-  recordSample(mode: Bim3dRenderMode, fps: number, now: number = Date.now()): void {
+  recordSample(mode: HudRenderMode, fps: number, now: number = Date.now()): void {
     const data = readStored(mode);
     data.samples.push({ t: now, fps });
     const pruned = pruneOld(data.samples, now);
     writeStored(mode, { samples: pruned });
   },
 
-  getBaseline(mode: Bim3dRenderMode, now: number = Date.now()): BaselineStats | null {
+  getBaseline(mode: HudRenderMode, now: number = Date.now()): BaselineStats | null {
     const data = readStored(mode);
     const pruned = pruneOld(data.samples, now);
     if (pruned.length < MIN_SAMPLES_FOR_BASELINE) return null;
@@ -90,7 +90,7 @@ export const baselineTracker = {
     };
   },
 
-  clear(mode: Bim3dRenderMode): void {
+  clear(mode: HudRenderMode): void {
     try { localStorage.removeItem(lsKey(mode)); } catch { /* ignore */ }
   },
 };

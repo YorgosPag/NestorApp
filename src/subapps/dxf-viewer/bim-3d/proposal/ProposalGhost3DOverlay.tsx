@@ -18,6 +18,9 @@
 import { useEffect, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+// ADR-537 — the translucent proposal ghost is a post-FX UI overlay (same mustard root cause as the
+// placement ghosts / underlay / gizmo): drawn AFTER SSAO so the warm lighting + AO never tint it.
+import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 
 export interface ProposalGhost3DOverlayProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -48,7 +51,12 @@ export function ProposalGhost3DOverlay({ managerRef, objects }: ProposalGhost3DO
     group.raycast = () => {};
     for (const obj of objects) group.add(obj);
     manager.scene.add(group);
+    // ADR-537 — keep the root invisible to the MAIN render and expose it through the post-FX overlay
+    // pass instead (AO-immune, depth-correct), so the translucent ghost never turns "mustard" at idle.
+    group.visible = false;
+    const unregister = registerPostFxOverlay(manager.scene, () => [group]);
     return () => {
+      unregister();
       manager.scene.remove(group);
       disposeSubtree(group);
     };

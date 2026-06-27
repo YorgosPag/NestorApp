@@ -42,7 +42,6 @@ import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResp
 // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. ImmediateTransformStore
 // (Phase XIII) is the sole transform SSoT. Legacy React Context Provider deleted to kill
 // per-notch useState cascade + duplicate EventBus.emit on wheel zoom.
-import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
@@ -120,8 +119,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { layoutMode } = useResponsiveLayout();
   // ✅ N.7.1 size split — ephemeral UI/dialog/canvas-visibility toggle state (SSoT).
   const ui = useDxfViewerUiState();
-  // 🏢 Performance Monitor Toggle
-  const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
   // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
   const { overlayMode, overlayStatus, overlayKind, setOverlayMode, setOverlayStatus, setOverlayKind } = useOverlayState();
   // ADR-040 Phase XIII: setCanvasTransform writes through to TransformStore.
@@ -207,7 +204,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     handleRegionClick, nudgeSelection,
   } = useDxfViewerCallbacks({
     notifications, copyToClipboard, handleAction,
-    togglePerfMonitor, perfMonitorEnabled, fullscreen,
+    fullscreen,
     setTestsModalOpen: ui.setTestsModalOpen, setCreditsModalOpen: ui.setCreditsModalOpen, setPdfPanelOpen: ui.setPdfPanelOpen, setAiChatOpen: ui.setAiChatOpen,
     setShowEnhancedImport: ui.setShowEnhancedImport, setShowImportWizard: ui.setShowImportWizard, setShowLegacyImport: ui.setShowLegacyImport,
     setCanvasTransform,
@@ -442,7 +439,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       <DxfViewerDialogs
         ui={ui}
         levelManager={levelManager}
-        perfMonitorEnabled={perfMonitorEnabled}
         handleFileImportWithEncoding={handleFileImportWithEncoding}
         showCopyableNotification={showCopyableNotification}
         findReplaceOpen={state.findReplaceOpen}

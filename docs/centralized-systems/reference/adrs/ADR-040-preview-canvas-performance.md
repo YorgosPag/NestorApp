@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-27 — ADR-366 §B.5.U: unified 2D+3D Performance HUD sibling leaf στο `CanvasLayerStack` (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-27. Ο ενοποιημένος Performance HUD (ίδιο `PerformanceHUDStore`/`PerformanceHistoryStore` και για τις δύο όψεις) προσαρτάται ως **νέο isolated micro-leaf** `UnifiedPerformanceHudLeaf` δίπλα στο `CanvasLayerStack3dLeaf` — ζει σε 2D **και** 3D και επιλέγει collector ανά mode. **ADR-040 compliance**: το leaf δέχεται **getter** `getCanvas2D={() => dxfCanvasRef…getCanvas()}` (draw-time read, Cardinal rule #2), ΟΧΙ snapshot· καμία νέα `useSyncExternalStore` στον orchestrator — η όποια store subscription ζει μέσα στο leaf (Cardinal rule #1). Καμία αλλαγή σε bitmap cache-key / scheduler. Timing SSoT: ο 2D+3D collector tick (4Hz) ενοποιήθηκε σε `DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL` (ADR-516). **Files**: MOD `CanvasLayerStack.tsx` (+ sibling leaf mount)· NEW `UnifiedPerformanceHudLeaf.tsx`, `Performance2DCollector.ts`, `hud-render-mode.ts`, `usePerformanceModeBridge.ts`. ✅ Google-level: YES — leaf-only reactivity, μηδέν orchestrator subscription.
+
 ### 2026-06-27 — ADR-539 Φ3f: `useCanvasContextMenu` yields to 3D per-face menu σε Polygon Mode (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-27. Όταν το Cinema 4D «Polygon Mode» είναι ενεργό, το per-face context menu του `BimViewport3D` (bubble-phase `onContextMenu`) πρέπει να κερδίζει το δεξί-κλικ. Ο 2D capture-phase `handleNativeContextMenu` (ancestor του 3D canvas) το pre-empt-άρε με το generic entity menu. **Fix**: early-return ΧΩΡΙΣ `preventDefault`/`stopPropagation` όταν `usePolygonMode3DStore.getState().active` → το event πέφτει στον bubble-phase 3D handler. **ADR-040 compliance**: event-time `getState()` read (κανόνας 2), ΟΧΙ subscription — ο orchestrator μένει inert. **File**: MOD `hooks/canvas/useCanvasContextMenu.ts`.

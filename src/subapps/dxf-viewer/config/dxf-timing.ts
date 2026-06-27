@@ -192,6 +192,9 @@ export const DXF_TIMING = {
     MEASURE_INTERVAL: 1000,
     /** Performance monitoring interval. */
     PERFORMANCE_MONITOR: 1000,
+    /** Performance HUD metrics poll cadence (4Hz) — shared by the 2D + 3D
+     *  collectors so the 60s history window (240 × 4Hz) is identical across modes. */
+    PERFORMANCE_HUD_POLL: 250,
     /** Collaboration presence heartbeat. */
     PRESENCE_HEARTBEAT: 5000,
     /** Service initialization timeout. */

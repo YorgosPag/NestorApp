@@ -3,13 +3,15 @@
 /**
  * MepManifoldPlacementGhost — translucent 3D preview of the manifold about to
  * be placed. ADR-408 Φ12, mirror of `ElectricalPanelPlacementGhost`. Scene-side
- * leaf object: added to the live scene in the constructor, follows the cursor via
- * `update`, removed on `dispose`. Pure Three.js — no React, no store subscription.
+ * leaf object: follows the cursor via `update`, removed on `dispose`. Pure
+ * Three.js — no React, no store subscription.
  *
  * The ghost mesh is built by the SAME SSoT path the commit uses
  * (`buildDefaultMepManifoldParams` → `computeMepManifoldGeometry` →
  * `manifoldToMesh`) and reads overrides from the SAME `mepManifoldToolBridgeStore`
- * — so the preview is exactly what the click creates (WYSIWYG).
+ * — so the preview is exactly what the click creates (WYSIWYG). Translucent
+ * material + post-FX overlay + non-pickable + disposal live in the shared
+ * `PlacementGhostOverlay` SSoT (ADR-537).
  */
 
 import * as THREE from 'three';
@@ -24,73 +26,40 @@ import { computeMepManifoldGeometry } from '../../bim/mep-manifolds/mep-manifold
 import { resolveManifoldPalette } from '../../bim/mep-manifolds/mep-manifold-symbol';
 import { manifoldToMesh } from '../converters/BimToThreeConverter';
 import { mepManifoldToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-manifold-tool-bridge-store';
+import { PlacementGhostOverlay } from './placement-ghost-overlay';
 
 /** Layer id stamped on the throwaway ghost entity (never persisted). */
 const GHOST_LAYER_ID = '__ghost-mep-manifold__';
 
 export class MepManifoldPlacementGhost {
-  private readonly scene: THREE.Scene;
-  private readonly material: THREE.MeshStandardMaterial;
-  private mesh: THREE.Mesh | null = null;
+  private readonly overlay: PlacementGhostOverlay;
   private entity: MepManifoldEntity | null = null;
-  private disposed = false;
 
   constructor(scene: THREE.Scene) {
-    this.scene = scene;
-    this.material = new THREE.MeshStandardMaterial({
-      color: 0x14b8a6,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-      roughness: 0.6,
-      metalness: 0.0,
-    });
+    this.overlay = new PlacementGhostOverlay(scene, 0x14b8a6, 0.45);
   }
 
   /** Rebuild the ghost at `scenePoint` (active scene units) on the active floor. */
   update(scenePoint: Readonly<Point2D>, floorElevationMm: number, levelId: string | undefined): void {
-    if (this.disposed) return;
+    if (this.overlay.isDisposed) return;
     const entity = this.buildGhostEntity(scenePoint);
     if (!entity) {
-      this.setVisible(false);
+      this.overlay.setVisible(false);
       return;
     }
     this.entity = entity;
     // ADR-408 Φ14 — recolour the ghost to match the committed equipment (water =
     // cyan-teal, drainage collector = brown) via the shared palette SSoT.
-    this.material.color.set(resolveManifoldPalette(entity.params.kind).strokeHex);
-    this.removeMesh();
-    const mesh = manifoldToMesh(entity, floorElevationMm, levelId);
-    if (!mesh) return;
-    mesh.material = this.material;
-    mesh.userData = {};
-    mesh.raycast = () => {};
-    this.mesh = mesh;
-    this.scene.add(mesh);
+    this.overlay.setColor(resolveManifoldPalette(entity.params.kind).strokeHex);
+    this.overlay.setObject(manifoldToMesh(entity, floorElevationMm, levelId));
   }
 
   setVisible(visible: boolean): void {
-    if (this.mesh) this.mesh.visible = visible;
+    this.overlay.setVisible(visible);
   }
 
   dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    this.removeMesh();
-    this.material.dispose();
-  }
-
-  private removeMesh(): void {
-    if (!this.mesh) return;
-    this.scene.remove(this.mesh);
-    // Dispose every geometry in the subtree, not just the box: the mesh carries an
-    // edge-overlay child (all manifolds) and a grating-overlay child (ADR-408 Φ14
-    // drainage collectors). Materials are shared singletons — never disposed here.
-    this.mesh.traverse((obj) => {
-      const g = (obj as THREE.Mesh | THREE.LineSegments).geometry;
-      if (g) g.dispose();
-    });
-    this.mesh = null;
+    this.overlay.dispose();
   }
 
   private buildGhostEntity(scenePoint: Readonly<Point2D>): MepManifoldEntity | null {

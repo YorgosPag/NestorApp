@@ -14,16 +14,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
-import type { Bim3dRenderMode } from './per-mode-promotion';
+import type { HudRenderMode } from './hud-render-mode';
 import { getEmphasis, EMPHASIS_CLASS } from './per-mode-promotion';
-import { getMetricTier, TIER_TEXT_CLASS } from './performance-thresholds';
+import { getMetricTier, TIER_TEXT_CLASS, type MetricTier } from './performance-thresholds';
 import { formatBytes, formatCount, formatMs } from './metric-formatters';
 import { PerformanceHUDSparklines } from './PerformanceHUDSparklines';
 import { SPARKLINE_METRICS, type SparklineMetric } from './PerformanceHistoryStore';
 
 const SPARKLINE_METRIC_SET: ReadonlySet<string> = new Set(SPARKLINE_METRICS);
 
-const RENDER_MODE_KEY: Record<Bim3dRenderMode, string> = {
+const RENDER_MODE_KEY: Record<HudRenderMode, string> = {
+  '2d':         '2d',
   '3d-raster':  'raster',
   '3d-preview': 'preview',
   '3d-final':   'final',
@@ -31,7 +32,7 @@ const RENDER_MODE_KEY: Record<Bim3dRenderMode, string> = {
 
 interface PerformanceHUDExpandedProps {
   metrics: PerformanceMetricsSnapshot | null;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
   historyEnabled: boolean;
   onCollapse: () => void;
   onCopyStats: () => void;
@@ -43,7 +44,7 @@ interface MetricRow {
   key: string;
   label: string;
   format: (m: PerformanceMetricsSnapshot) => string;
-  tier: (m: PerformanceMetricsSnapshot) => 'good' | 'warn' | 'critical';
+  tier: (m: PerformanceMetricsSnapshot) => MetricTier;
 }
 
 function buildRows(t: (k: string) => string): MetricRow[] {
@@ -63,38 +64,38 @@ function buildRows(t: (k: string) => string): MetricRow[] {
     {
       key: 'triangles',
       label: t('performance.metric.triangles'),
-      format: (m) => formatCount(m.triangles),
-      tier:   (m) => getMetricTier('triangles', m.triangles),
+      format: (m) => m.triangles !== null ? formatCount(m.triangles) : t('performance.notFound'),
+      tier:   (m) => m.triangles !== null ? getMetricTier('triangles', m.triangles) : 'good',
     },
     {
       key: 'vertices',
       label: t('performance.metric.vertices'),
-      format: (m) => formatCount(m.vertices),
+      format: (m) => m.vertices !== null ? formatCount(m.vertices) : t('performance.notFound'),
       tier:   () => 'good',
     },
     {
       key: 'drawCalls',
       label: t('performance.metric.drawCalls'),
-      format: (m) => formatCount(m.drawCalls),
-      tier:   (m) => getMetricTier('drawCalls', m.drawCalls),
+      format: (m) => m.drawCalls !== null ? formatCount(m.drawCalls) : t('performance.notFound'),
+      tier:   (m) => m.drawCalls !== null ? getMetricTier('drawCalls', m.drawCalls) : 'good',
     },
     {
       key: 'objectsVisible',
       label: t('performance.metric.objectsVisible'),
-      format: (m) => formatCount(m.objectsVisible),
+      format: (m) => m.objectsVisible !== null ? formatCount(m.objectsVisible) : t('performance.notFound'),
       tier:   () => 'good',
     },
     {
       key: 'gpuMemoryMb',
       label: t('performance.metric.gpuMemory'),
-      format: (m) => formatBytes(m.gpuMemoryMb),
+      format: (m) => m.gpuMemoryMb !== null ? formatBytes(m.gpuMemoryMb) : t('performance.notFound'),
       tier:   () => 'good',
     },
     {
       key: 'cpuMemoryMb',
       label: t('performance.metric.cpuMemory'),
       format: (m) => m.cpuMemoryMb !== null ? formatBytes(m.cpuMemoryMb) : t('performance.notFound'),
-      tier:   () => 'good',
+      tier:   (m) => m.cpuMemoryMb !== null ? getMetricTier('cpuMemoryMb', m.cpuMemoryMb) : 'good',
     },
     {
       key: 'samplesPerSec',
@@ -105,7 +106,7 @@ function buildRows(t: (k: string) => string): MetricRow[] {
     {
       key: 'objectsTotal',
       label: t('performance.metric.objectsTotal'),
-      format: (m) => formatCount(m.objectsTotal),
+      format: (m) => m.objectsTotal !== null ? formatCount(m.objectsTotal) : t('performance.notFound'),
       tier:   () => 'good',
     },
   ];

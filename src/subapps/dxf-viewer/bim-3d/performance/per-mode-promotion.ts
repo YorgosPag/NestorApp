@@ -7,9 +7,9 @@
  * No React, no side effects.
  */
 
-export type MetricEmphasis = 'bold' | 'normal' | 'greyed';
+import type { HudRenderMode } from './hud-render-mode';
 
-export type Bim3dRenderMode = '3d-raster' | '3d-preview' | '3d-final';
+export type MetricEmphasis = 'bold' | 'normal' | 'greyed';
 
 /** Maps Tailwind class per emphasis level. */
 export const EMPHASIS_CLASS: Record<MetricEmphasis, string> = {
@@ -18,7 +18,21 @@ export const EMPHASIS_CLASS: Record<MetricEmphasis, string> = {
   greyed: 'text-muted-foreground opacity-50',
 };
 
-const EMPHASIS_MAP: Record<Bim3dRenderMode, Partial<Record<string, MetricEmphasis>>> = {
+const EMPHASIS_MAP: Record<HudRenderMode, Partial<Record<string, MetricEmphasis>>> = {
+  // 2D Canvas2D viewport — only fps/frameTime/cpuMemory are real; WebGL-only
+  // metrics are greyed (the 2D collector reports them as null).
+  '2d': {
+    fps:           'bold',
+    frameTimeMs:   'bold',
+    cpuMemoryMb:   'normal',
+    triangles:     'greyed',
+    vertices:      'greyed',
+    drawCalls:     'greyed',
+    objectsVisible:'greyed',
+    objectsTotal:  'greyed',
+    gpuMemoryMb:   'greyed',
+    samplesPerSec: 'greyed',
+  },
   '3d-raster': {
     fps:          'bold',
     frameTimeMs:  'bold',
@@ -36,6 +50,6 @@ const EMPHASIS_MAP: Record<Bim3dRenderMode, Partial<Record<string, MetricEmphasi
   },
 };
 
-export function getEmphasis(metric: string, mode: Bim3dRenderMode): MetricEmphasis {
+export function getEmphasis(metric: string, mode: HudRenderMode): MetricEmphasis {
   return EMPHASIS_MAP[mode][metric] ?? 'normal';
 }

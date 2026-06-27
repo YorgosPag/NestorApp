@@ -9,22 +9,28 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Bim3dRenderMode } from './per-mode-promotion';
+import type { HudRenderMode } from './hud-render-mode';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface PerformanceMetricsSnapshot {
   fps: number;
   frameTimeMs: number;
-  triangles: number;
-  vertices: number;
-  drawCalls: number;
-  objectsVisible: number;
-  objectsTotal: number;
-  gpuMemoryMb: number;
+  /** WebGL-only (three.js renderer.info). null in 2D Canvas2D mode. */
+  triangles: number | null;
+  /** WebGL-only. null in 2D Canvas2D mode. */
+  vertices: number | null;
+  /** WebGL-only. null in 2D Canvas2D mode. */
+  drawCalls: number | null;
+  /** WebGL-only (scene graph). null in 2D Canvas2D mode. */
+  objectsVisible: number | null;
+  /** WebGL-only (compiled shader programs). null in 2D Canvas2D mode. */
+  objectsTotal: number | null;
+  /** WebGL-only (estimated GPU memory). null in 2D Canvas2D mode. */
+  gpuMemoryMb: number | null;
   /** Chrome-only (performance.memory API). null on other browsers. */
   cpuMemoryMb: number | null;
-  /** Path-tracer only. null in raster / preview modes. */
+  /** Path-tracer only. null in raster / preview / 2D modes. */
   samplesPerSec: number | null;
 }
 
@@ -51,7 +57,7 @@ interface PerformanceHUDState {
   expanded: boolean;
   regressionAlertsEnabled: boolean;
   metrics: PerformanceMetricsSnapshot | null;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
 }
 
 interface PerformanceHUDActions {
@@ -59,7 +65,7 @@ interface PerformanceHUDActions {
   toggleExpanded(): void;
   setRegressionAlertsEnabled(v: boolean): void;
   updateMetrics(snapshot: PerformanceMetricsSnapshot): void;
-  setRenderMode(mode: Bim3dRenderMode): void;
+  setRenderMode(mode: HudRenderMode): void;
 }
 
 type PerformanceHUDStoreType = PerformanceHUDState & PerformanceHUDActions;

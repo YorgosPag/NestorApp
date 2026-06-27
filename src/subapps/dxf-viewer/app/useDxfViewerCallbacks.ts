@@ -38,6 +38,8 @@ import {
   type AnimationActionDeps,
 } from '../bim-3d/animation/animation-action-handlers';
 import { useAuth } from '@/auth/hooks/useAuth';
+// ADR-366 §B.5.U — unified Performance HUD store (one toggle source for 2D + 3D).
+import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
 // ADR-391 — open AdminLayerManager dialog via store SSoT
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 
@@ -53,8 +55,6 @@ export interface DxfViewerCallbacksParams {
   notifications: NotificationContextValue;
   copyToClipboard: (text: string) => Promise<boolean>;
   handleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
-  togglePerfMonitor: () => void;
-  perfMonitorEnabled: boolean;
   fullscreen: { toggle: () => void };
   setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setCreditsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -98,7 +98,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   const { user } = useAuth();
   const {
     notifications, copyToClipboard, handleAction,
-    togglePerfMonitor, perfMonitorEnabled, fullscreen,
+    fullscreen,
     setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
     setCanvasTransform,
@@ -140,10 +140,10 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       setCreditsModalOpen(true);
       return;
     }
-    // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+    // 🏢 ENTERPRISE: Unified Performance HUD toggle (ADR-366 §B.5.U) — one store.
     if (action === 'toggle-perf') {
-      togglePerfMonitor();
-      const newState = !perfMonitorEnabled;
+      const newState = !usePerformanceHUDStore.getState().enabled;
+      usePerformanceHUDStore.getState().setEnabled(newState);
       notifications.success(
         `Performance Monitor: ${newState ? 'ON ✅' : 'OFF ❌'}`,
         { content: newState ? t('callbacks.perfMonitorOn') : t('callbacks.perfMonitorOff') }
@@ -332,7 +332,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     }
     // Pass all other actions to original handleAction
     handleAction(action, data);
-  }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen,
+  }, [handleAction, notifications, fullscreen,
       setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
       setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
       levelManager.saveContext, user, t]);

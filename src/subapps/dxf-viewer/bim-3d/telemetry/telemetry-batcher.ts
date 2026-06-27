@@ -20,7 +20,7 @@ import { computeAnonymousSessionId } from './session-id-generator';
 import { telemetryStore } from './telemetry-store';
 import { uploadTelemetryBatch } from './telemetry-uploader';
 import type { PerformanceMetricsSnapshot } from '../performance/PerformanceHUDStore';
-import type { Bim3dRenderMode } from '../performance/per-mode-promotion';
+import type { HudRenderMode } from '../performance/hud-render-mode';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 export const BATCH_SIZE = 5;
@@ -28,7 +28,7 @@ export const FLUSH_INTERVAL_MS = DXF_TIMING.lifecycle.TELEMETRY_FLUSH; // ADR-51
 
 interface PendingSample {
   snapshot: PerformanceMetricsSnapshot;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
   now: number;
 }
 
@@ -100,7 +100,7 @@ export const telemetryBatcher = {
    */
   observe(
     snapshot: PerformanceMetricsSnapshot,
-    renderMode: Bim3dRenderMode,
+    renderMode: HudRenderMode,
     now: number = Date.now(),
   ): boolean {
     if (!telemetryStore.getState().optIn) return false;

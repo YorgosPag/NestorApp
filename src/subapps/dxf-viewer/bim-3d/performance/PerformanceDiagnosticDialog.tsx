@@ -58,11 +58,12 @@ export function PerformanceDiagnosticDialog({
     }
   }
 
+  const na = t('performance.notFound');
   const summaryMetrics = [
     { label: t('performance.metric.fps'),        value: `${formatCount(metrics.fps)} FPS` },
-    { label: t('performance.metric.triangles'),  value: formatCount(metrics.triangles) },
-    { label: t('performance.metric.drawCalls'),  value: formatCount(metrics.drawCalls) },
-    { label: t('performance.metric.gpuMemory'),  value: formatBytes(metrics.gpuMemoryMb) },
+    { label: t('performance.metric.triangles'),  value: metrics.triangles !== null ? formatCount(metrics.triangles) : na },
+    { label: t('performance.metric.drawCalls'),  value: metrics.drawCalls !== null ? formatCount(metrics.drawCalls) : na },
+    { label: t('performance.metric.gpuMemory'),  value: metrics.gpuMemoryMb !== null ? formatBytes(metrics.gpuMemoryMb) : na },
     { label: t('performance.metric.frameTime'),  value: formatMs(metrics.frameTimeMs) },
   ];
 

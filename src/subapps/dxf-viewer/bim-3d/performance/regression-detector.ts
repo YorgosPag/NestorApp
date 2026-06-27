@@ -8,7 +8,7 @@
  * Pure-ish: no React, no DOM. Persists last-alert timestamps in LocalStorage.
  */
 
-import type { Bim3dRenderMode } from './per-mode-promotion';
+import type { HudRenderMode } from './hud-render-mode';
 import { baselineTracker, type BaselineStats } from './baseline-tracker';
 
 const SUSTAINED_LOW_MS = 30_000;
@@ -17,7 +17,7 @@ const MAD_OUTLIER_K = 2;
 const LS_LAST_ALERT_PREFIX = 'bim3d.regressionAlert.';
 
 export interface RegressionAlertPayload {
-  mode: Bim3dRenderMode;
+  mode: HudRenderMode;
   fps: number;
   baseline: BaselineStats;
   threshold: number;
@@ -25,27 +25,27 @@ export interface RegressionAlertPayload {
 
 type AlertHandler = (payload: RegressionAlertPayload) => void;
 
-function readLastAlert(mode: Bim3dRenderMode): number {
+function readLastAlert(mode: HudRenderMode): number {
   try {
     const raw = localStorage.getItem(LS_LAST_ALERT_PREFIX + mode);
     return raw ? Number(raw) : 0;
   } catch { return 0; }
 }
 
-function writeLastAlert(mode: Bim3dRenderMode, ts: number): void {
+function writeLastAlert(mode: HudRenderMode, ts: number): void {
   try { localStorage.setItem(LS_LAST_ALERT_PREFIX + mode, String(ts)); } catch { /* ignore */ }
 }
 
 export function createRegressionDetector(onAlert: AlertHandler) {
   let lowSince: number | null = null;
-  let lastMode: Bim3dRenderMode | null = null;
+  let lastMode: HudRenderMode | null = null;
 
   return {
     /**
      * Evaluate one sample. Should be called at the Collector's tick rate.
      * Returns true iff an alert was just fired (for telemetry / tests).
      */
-    evaluate(mode: Bim3dRenderMode, fps: number, now: number = Date.now()): boolean {
+    evaluate(mode: HudRenderMode, fps: number, now: number = Date.now()): boolean {
       // Mode change resets the sustained-low window.
       if (lastMode !== mode) {
         lowSince = null;

@@ -94,13 +94,14 @@ export const usePerformanceHistoryStore = create<PerformanceHistoryStoreType>()(
       const { buffers, writeIndex, samplesWritten } = get();
       const i = writeIndex;
 
+      // WebGL-only metrics are null in 2D Canvas2D mode → store 0 in the sparkline buffer.
       buffers.fps[i]            = snapshot.fps;
       buffers.frameTimeMs[i]    = snapshot.frameTimeMs;
-      buffers.triangles[i]      = snapshot.triangles;
-      buffers.vertices[i]       = snapshot.vertices;
-      buffers.drawCalls[i]      = snapshot.drawCalls;
-      buffers.objectsVisible[i] = snapshot.objectsVisible;
-      buffers.gpuMemoryMb[i]    = snapshot.gpuMemoryMb;
+      buffers.triangles[i]      = snapshot.triangles ?? 0;
+      buffers.vertices[i]       = snapshot.vertices ?? 0;
+      buffers.drawCalls[i]      = snapshot.drawCalls ?? 0;
+      buffers.objectsVisible[i] = snapshot.objectsVisible ?? 0;
+      buffers.gpuMemoryMb[i]    = snapshot.gpuMemoryMb ?? 0;
       buffers.cpuMemoryMb[i]    = snapshot.cpuMemoryMb ?? 0;
 
       set({

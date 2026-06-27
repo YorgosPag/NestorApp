@@ -7,10 +7,11 @@
 
 import { useTranslation } from 'react-i18next';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
-import type { Bim3dRenderMode } from './per-mode-promotion';
+import type { HudRenderMode } from './hud-render-mode';
 import { getMetricTier } from './performance-thresholds';
 
-const RENDER_MODE_KEY: Record<Bim3dRenderMode, string> = {
+const RENDER_MODE_KEY: Record<HudRenderMode, string> = {
+  '2d':         '2d',
   '3d-raster':  'raster',
   '3d-preview': 'preview',
   '3d-final':   'final',
@@ -24,7 +25,7 @@ const TIER_DOT: Record<string, string> = {
 
 interface PerformanceHUDMiniProps {
   metrics: PerformanceMetricsSnapshot | null;
-  renderMode: Bim3dRenderMode;
+  renderMode: HudRenderMode;
   onExpand: () => void;
 }
 

@@ -20,8 +20,6 @@
 import React from 'react';
 // 🤖 ADR-185: AI Drawing Assistant feature flag
 import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
-import { PerformanceCategory } from '@/core/performance/types/performance.types';
-import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { useLevels } from '../systems/levels';
 import { useSelectedEntityIds } from '../systems/selection';
 import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
@@ -43,7 +41,6 @@ type LevelManager = ReturnType<typeof useLevels>;
 export interface DxfViewerDialogsProps {
   readonly ui: DxfViewerUiState;
   readonly levelManager: LevelManager;
-  readonly perfMonitorEnabled: boolean;
   readonly handleFileImportWithEncoding: DxfViewerCallbacksReturn['handleFileImportWithEncoding'];
   readonly showCopyableNotification: DxfViewerCallbacksReturn['showCopyableNotification'];
   // ADR-344/353 text-toolbar hosts (find & replace / symbol picker) — state owned by useDxfViewerState.
@@ -73,7 +70,7 @@ const BimScheduleHostLeaf = React.memo(function BimScheduleHostLeaf() {
  */
 export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Element {
   const {
-    ui, levelManager, perfMonitorEnabled,
+    ui, levelManager,
     handleFileImportWithEncoding, showCopyableNotification,
     findReplaceOpen, setFindReplaceOpen, symbolPickerOpen, setSymbolPickerOpen,
   } = props;
@@ -223,16 +220,6 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
             levelId={levelManager.currentLevelId || '0'}
           />
         </React.Suspense>
-      )}
-      {perfMonitorEnabled && (
-        <ClientOnlyPerformanceDashboard
-          showDetails
-          updateInterval={2000}
-          categories={[
-            PerformanceCategory.RENDERING,
-            PerformanceCategory.MEMORY,
-          ]}
-        />
       )}
     </>
   );

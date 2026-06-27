@@ -15,8 +15,9 @@ import {
   Home,
   Activity  // 🏢 ENTERPRISE: Performance Monitor icon
 } from 'lucide-react';
-// 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
-import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
+// 🏢 ENTERPRISE: Unified Performance HUD toggle (ADR-366 §B.5.U) — same store the
+// 3D Quality panel drives, so the PERF button and the 3D switch are one source.
+import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
@@ -24,48 +25,12 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
-import type { WorkflowResult } from './layering-workflow-test';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
-// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
-import { matchesShortcut } from '../config/keyboard-shortcuts';
+import { useDebugToolbarShortcuts } from './useDebugToolbarShortcuts';
+import type { DOMInspectionResult, EnterpriseCursorTestModule } from './debug-toolbar-types';
 
-// ============================================================================
-// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
-// ============================================================================
-
-/** Workflow test step result */
-type WorkflowTestStep = WorkflowResult['steps'][number];
-
-/** Layering workflow test result */
-type LayeringWorkflowResult = WorkflowResult;
-
-/** Enterprise cursor test results */
-interface EnterpriseCursorTestResults {
-  overallStatus: 'PASS' | 'FAIL' | 'WARNING';
-  passedScenarios: number;
-  totalScenarios: number;
-  avgPerformance: number;
-  maxError: number;
-  minPassRate: number;
-}
-
-/** Enterprise cursor test module */
-interface EnterpriseCursorTestModule {
-  runEnterpriseMouseCrosshairTests: () => EnterpriseCursorTestResults;
-  startEnterpriseInteractiveTest: () => void;
-}
-
-/** DOM inspection result */
-interface DOMInspectionResult {
-  floatingPanels: Array<{ selector: string; found: boolean; element?: HTMLElement }>;
-  tabs: Array<{ text: string; element: HTMLElement; className: string }>;
-  cards: Array<{ text: string; element: HTMLElement; className: string }>;
-  canvases: Array<{ type: string; element: HTMLCanvasElement; rect: DOMRect }>;
-  overlayContainers: Array<{ selector: string; found: boolean; element?: HTMLElement }>;
-}
-
-// Window.runLayeringWorkflowTest is declared globally in src/types/window.d.ts
-// Result is typed as Promise<unknown> — cast inside .then() for type safety
+// Type definitions live in ./debug-toolbar-types.ts (CHECK 4 file-size SRP split).
+// Window.runLayeringWorkflowTest is declared globally in src/types/window.d.ts.
 
 interface DebugToolbarProps {
   showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
@@ -112,77 +77,16 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const iconSizes = useIconSizes();  // 🏢 ENTERPRISE: Centralized icon sizing
 
-  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - OFF by default)
-  const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
-  // ⌨️ ENTERPRISE: Keyboard shortcuts using centralized keyboard-shortcuts.ts
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // ⌨️ Ctrl+F2 or Ctrl+Shift+T: Layering Workflow Test
-      if (matchesShortcut(event, 'debugLayeringTest') || matchesShortcut(event, 'debugLayeringTestAlt')) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Direct call to global window function (typed as Promise<unknown> in window.d.ts)
-        if (window.runLayeringWorkflowTest) {
-          window.runLayeringWorkflowTest().then((rawResult: unknown) => {
-            const result = rawResult as LayeringWorkflowResult;
-            const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
-            const totalSteps = result.steps.length;
-            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-            showCopyableNotification(summary, result.success ? 'success' : 'error');
-          });
-        } else {
-          // Fallback to import
-          import('./layering-workflow-test').then(module => {
-            const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
-            runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
-              const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
-              const totalSteps = result.steps.length;
-              const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-              showCopyableNotification(summary, result.success ? 'success' : 'error');
-            });
-          });
-        }
-        return;
-      }
-
-      // ⌨️ F3: Cursor-Crosshair Alignment Test
-      if (matchesShortcut(event, 'debugCursorTest')) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        import('./enterprise-cursor-crosshair-test').then(module => {
-          const defaultExport = module.default as EnterpriseCursorTestModule;
-          const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
-
-          const results = runEnterpriseMouseCrosshairTests();
-
-          const summary = `Enterprise Test: ${results.overallStatus}
-Scenarios: ${results.passedScenarios}/${results.totalScenarios} passed
-Avg Performance: ${results.avgPerformance.toFixed(1)}ms
-Max Error: ${results.maxError.toFixed(3)}px
-Min Pass Rate: ${(results.minPassRate * 100).toFixed(1)}%
-
-Check console for detailed metrics`;
-
-          startEnterpriseInteractiveTest();
-
-          showCopyableNotification(summary, results.overallStatus === 'PASS' ? 'success' : 'warning');
-        }).catch(error => {
-          console.error('Failed to load enterprise cursor-crosshair test:', error);
-          showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
-        });
-        return;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown, true);
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-      window.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [showCopyableNotification]);
+  // 🏢 ENTERPRISE: Unified Performance HUD enabled state (ADR-366 §B.5.U) — reactive
+  // read of the shared store (zero React state of its own; OFF by default).
+  const perfMonitorEnabled = React.useSyncExternalStore(
+    usePerformanceHUDStore.subscribe,
+    () => usePerformanceHUDStore.getState().enabled,
+    () => false,
+  );
+  // ⌨️ ENTERPRISE: Keyboard shortcuts (Ctrl+F2/Ctrl+Shift+T layering, F3 cursor)
+  // extracted to ./useDebugToolbarShortcuts (centralized keyboard-shortcuts.ts).
+  useDebugToolbarShortcuts(showCopyableNotification);
 
   return (
     <nav className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card}`} role="toolbar" aria-label="Debug Tools">
@@ -548,8 +452,8 @@ Check console for detailed metrics`;
           - State persisted in localStorage */}
       <button
         onClick={() => {
-          togglePerfMonitor();
           const newState = !perfMonitorEnabled;
+          usePerformanceHUDStore.getState().setEnabled(newState);
           showCopyableNotification(
             `Performance Monitor: ${newState ? 'ENABLED ✅' : 'DISABLED ❌'}\n\n${newState ? '📊 FPS, Memory, Render metrics now visible' : '⚡ Better performance - monitoring disabled'}`,
             newState ? 'success' : 'info'

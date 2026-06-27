@@ -392,6 +392,7 @@
   "performance": {
     "toggleLabel": "Εμφάνιση πίνακα απόδοσης",
     "mode": {
+      "2d": "2D",
       "raster": "Γρήγορη",
       "preview": "Προεπισκόπηση",
       "final": "Τελική"

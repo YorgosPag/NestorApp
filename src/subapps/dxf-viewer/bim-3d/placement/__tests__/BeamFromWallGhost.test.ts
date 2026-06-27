@@ -30,6 +30,7 @@ jest.mock('../raycast-floor-point', () => ({
 }));
 
 import { BeamFromWallGhost } from '../BeamFromWallGhost';
+import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
 import type { WallEntity } from '../../../bim/types/wall-types';
 
 const wallA = { id: 'wall-A' } as unknown as WallEntity;
@@ -73,14 +74,17 @@ describe('BeamFromWallGhost', () => {
     expect(scene.children).toHaveLength(1);
   });
 
-  it('hide() toggles mesh visibility; re-show restores it', () => {
+  it('hide() toggles the post-FX overlay exposure (ADR-537); re-show restores it', () => {
     const scene = new THREE.Scene();
     const ghost = new BeamFromWallGhost(scene);
     ghost.showForWall(wallA);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
     ghost.hide();
-    expect((scene.children[0] as THREE.Mesh).visible).toBe(false);
+    // The mesh stays in the scene (reuse) but the overlay no longer exposes it.
+    expect(scene.children).toHaveLength(1);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(0);
     ghost.showForWall(wallA);
-    expect((scene.children[0] as THREE.Mesh).visible).toBe(true);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
   });
 
   it('build failure hides instead of adding a mesh', () => {

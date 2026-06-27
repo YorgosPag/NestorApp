@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
-import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 // ADR-453 — register the live manager so the print engine can snapshot the 3D view.
 import { setActiveSceneManager } from '../scene/active-scene-manager-registry';
@@ -471,13 +470,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         />
       )}
 
-      {/* Performance HUD (ADR-366 B.5) — micro-leaf, bottom-right */}
-      <PerformanceHUD
-        canvas={canvasEl}
-        projectId={projectId ?? null}
-        userId={user?.uid ?? null}
-        companyId={user?.companyId ?? null}
-      />
+      {/* Performance HUD — ADR-366 §B.5.U: now mounted ONCE by UnifiedPerformanceHudLeaf
+          (sibling of CanvasLayerStack3dLeaf) so the SAME HUD serves 2D and 3D. */}
 
       {/* Phase 8.0+8.1 / A.7.Q2 — ARIA live regions + entity descriptions on Tab focus */}
       <AriaLiveRegion

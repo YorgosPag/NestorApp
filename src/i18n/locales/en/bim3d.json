@@ -392,6 +392,7 @@
   "performance": {
     "toggleLabel": "Show Performance HUD",
     "mode": {
+      "2d": "2D",
       "raster": "Raster",
       "preview": "Preview",
       "final": "Final"

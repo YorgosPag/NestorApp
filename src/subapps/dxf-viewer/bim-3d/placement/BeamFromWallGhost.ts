@@ -5,16 +5,18 @@
  * (ADR-363) is about to create on the hovered wall's axis.
  *
  * Scene-side leaf object (the BimGizmoOverlay / ColumnPlacementGhost pattern,
- * ADR-403): added to the live scene in the constructor, follows the hovered
- * wall via `showForWall`, hidden when no wall is under the cursor, removed on
- * `dispose`. Pure Three.js — no React, no store subscription (the hook drives it).
+ * ADR-403): follows the hovered wall via `showForWall`, hidden when no wall is
+ * under the cursor, removed on `dispose`. Pure Three.js — no React, no store
+ * subscription (the hook drives it).
  *
  * The ghost mesh is built by the SAME SSoT the commit path uses
  * (`buildBeamFromWall` → `beamToMesh`) and reads overrides + scene units from
  * the SAME `beamToolBridgeStore` the 2D `useBeamTool` publishes — so the preview
- * is exactly the beam the click will create (WYSIWYG). Only the material is
- * swapped for a translucent one; the mesh is made non-pickable so it never
- * intercepts the wall hover/selection raycast underneath.
+ * is exactly the beam the click will create (WYSIWYG). Translucent material +
+ * post-FX overlay + non-pickable + disposal live in the shared
+ * `PlacementGhostOverlay` SSoT (ADR-537). `beamToMesh` builds a FRESH per-piece
+ * material (multi-piece cutback Group, ADR-458), so the overlay swap disposes the
+ * replaced materials (`disposePrevMaterials`) to avoid a leak.
  *
  * Unlike ColumnPlacementGhost (cursor-driven), this ghost depends only on the
  * hovered wall, so it is rebuilt only when the wall reference changes — after a
@@ -29,39 +31,27 @@ import { beamToolBridgeStore } from '../../bim/beams/beam-tool-bridge-store';
 import { beamToMesh } from '../converters/BimToThreeConverter';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { resolveActiveFloorElevationMm } from './raycast-floor-point';
+import { PlacementGhostOverlay } from './placement-ghost-overlay';
 
 /** Layer id stamped on the throwaway ghost beam (never persisted). */
 const GHOST_LAYER_ID = '__ghost-beam__';
 const MM_TO_M = 0.001;
 
 export class BeamFromWallGhost {
-  private readonly scene: THREE.Scene;
-  private readonly material: THREE.MeshStandardMaterial;
-  // beamToMesh returns a multi-piece Group when the beam is cut by columns
-  // (ADR-458 cutback), or a single Mesh otherwise — hold the Object3D root.
-  private mesh: THREE.Object3D | null = null;
+  private readonly overlay: PlacementGhostOverlay;
   /** Wall the current ghost was built for — rebuild only when the ref changes. */
   private wall: WallEntity | null = null;
-  private disposed = false;
 
   constructor(scene: THREE.Scene) {
-    this.scene = scene;
-    this.material = new THREE.MeshStandardMaterial({
-      color: 0x3b82f6,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-      roughness: 0.6,
-      metalness: 0.0,
-    });
+    this.overlay = new PlacementGhostOverlay(scene, 0x3b82f6, 0.45);
   }
 
   /** Build (or reuse) the ghost beam on `wall`'s axis and show it. */
   showForWall(wall: WallEntity): void {
-    if (this.disposed) return;
-    // Same wall object as last frame → keep the existing mesh visible (no churn).
-    if (this.wall === wall && this.mesh) {
-      this.mesh.visible = true;
+    if (this.overlay.isDisposed) return;
+    // Same wall object as last frame → keep the existing ghost shown (no churn).
+    if (this.wall === wall) {
+      this.overlay.setVisible(true);
       return;
     }
     const handle = beamToolBridgeStore.get();
@@ -73,7 +63,6 @@ export class BeamFromWallGhost {
       this.hide();
       return;
     }
-    this.removeMesh();
     // Active-floor datum (m) — mirrors BimSceneLayer.syncBeams base elevation so
     // the ghost sits exactly where the committed beam will render.
     const baseElevationM = resolveActiveFloorElevationMm() * MM_TO_M;
@@ -82,47 +71,21 @@ export class BeamFromWallGhost {
       this.hide();
       return;
     }
-    // Swap in the translucent ghost material + make non-pickable on every mesh
-    // (a multi-piece cutback Group has one child mesh per segment).
-    mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const prev = child.material;
-        child.material = this.material;
-        // The converter built a fresh material per piece — dispose it so the
-        // override doesn't leak (the shared ghost material is disposed once).
-        if (prev && prev !== this.material) {
-          (Array.isArray(prev) ? prev : [prev]).forEach((m) => m.dispose());
-        }
-      }
-      // Non-pickable: the ghost must not intercept hover/selection object raycasts.
-      child.userData = {};
-      child.raycast = () => {};
-    });
-    this.mesh = mesh;
+    // The converter builds a fresh material per piece — dispose it on the override
+    // so it doesn't leak (the shared ghost material is disposed once in dispose()).
+    this.overlay.setObject(mesh, { disposePrevMaterials: true });
+    this.overlay.setVisible(true);
     this.wall = wall;
-    this.scene.add(mesh);
   }
 
   hide(): void {
-    if (this.mesh) this.mesh.visible = false;
+    // Keep `wall` + the built object so a re-hover of the SAME wall reuses it (no churn);
+    // the flag just stops the post-FX pass from drawing it.
+    this.overlay.setVisible(false);
   }
 
   dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    this.removeMesh();
-    this.material.dispose();
-  }
-
-  // ── internals ──────────────────────────────────────────────────────────────
-
-  private removeMesh(): void {
-    if (!this.mesh) return;
-    this.scene.remove(this.mesh);
-    this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) child.geometry.dispose();
-    });
-    this.mesh = null;
+    this.overlay.dispose();
     this.wall = null;
   }
 }

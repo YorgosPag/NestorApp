@@ -25,6 +25,7 @@ jest.mock('../../../ui/ribbon/hooks/bridge/column-tool-bridge-store', () => ({
 }));
 
 import { ColumnPlacementGhost } from '../ColumnPlacementGhost';
+import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
 
 describe('ColumnPlacementGhost', () => {
   it('adds nothing to the scene until update() is called', () => {
@@ -33,13 +34,15 @@ describe('ColumnPlacementGhost', () => {
     expect(scene.children).toHaveLength(0);
   });
 
-  it('update() adds one translucent, non-pickable mesh', () => {
+  it('update() adds one translucent, non-pickable mesh kept invisible to the main render', () => {
     const scene = new THREE.Scene();
     const ghost = new ColumnPlacementGhost(scene);
     ghost.update({ x: 1, y: 2 }, 0, 'L1');
     expect(scene.children).toHaveLength(1);
     const mesh = scene.children[0] as THREE.Mesh;
     expect((mesh.material as THREE.Material).transparent).toBe(true);
+    // ADR-537 — root kept visible=false so the MAIN render skips it (post-FX pass draws it).
+    expect(mesh.visible).toBe(false);
     // raycast is stubbed out so the ghost never intercepts picks.
     const hits: THREE.Intersection[] = [];
     mesh.raycast(new THREE.Raycaster(), hits);
@@ -55,22 +58,26 @@ describe('ColumnPlacementGhost', () => {
     expect(scene.children).toHaveLength(1);
   });
 
-  it('setVisible toggles the mesh visibility', () => {
+  it('setVisible toggles the post-FX overlay exposure (ADR-537), not the root visibility', () => {
     const scene = new THREE.Scene();
     const ghost = new ColumnPlacementGhost(scene);
     ghost.update({ x: 1, y: 2 }, 0, 'L1');
-    ghost.setVisible(false);
-    expect((scene.children[0] as THREE.Mesh).visible).toBe(false);
     ghost.setVisible(true);
-    expect((scene.children[0] as THREE.Mesh).visible).toBe(true);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
+    // The root never becomes visible to the main render — the pass flips it on transiently.
+    expect((scene.children[0] as THREE.Mesh).visible).toBe(false);
+    ghost.setVisible(false);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(0);
   });
 
-  it('dispose() removes the mesh from the scene', () => {
+  it('dispose() removes the mesh + unregisters the overlay', () => {
     const scene = new THREE.Scene();
     const ghost = new ColumnPlacementGhost(scene);
     ghost.update({ x: 1, y: 2 }, 0, 'L1');
+    ghost.setVisible(true);
     ghost.dispose();
     expect(scene.children).toHaveLength(0);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(0);
   });
 
   it('update() after dispose is a no-op', () => {

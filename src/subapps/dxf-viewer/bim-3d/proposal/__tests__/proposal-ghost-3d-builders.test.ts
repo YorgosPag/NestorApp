@@ -41,7 +41,7 @@ describe('buildElectricalGhost3D', () => {
 
   it('tints each conduit with the circuit colour, translucent + non-pickable', () => {
     const [mesh] = buildElectricalGhost3D([wirePath('#ff0000')], 'm') as THREE.Mesh[];
-    const mat = mesh.material as THREE.MeshStandardMaterial;
+    const mat = mesh.material as THREE.MeshBasicMaterial;
     expect(mat.color.getHex()).toBe(0xff0000);
     expect(mat.transparent).toBe(true);
     expect(mat.opacity).toBeLessThan(1);
@@ -115,7 +115,7 @@ describe('buildSegmentGhost3D', () => {
   it('tints with the classification colour, falling back to neutral when absent', () => {
     const hex = resolveSegmentClassificationColor('fire-sprinkler')!;
     const [coloured] = buildSegmentGhost3D([tube(50, 0, hex)], 'm') as THREE.Mesh[];
-    expect((coloured.material as THREE.MeshStandardMaterial).color.getHex()).toBe(hexToThreeInt(hex));
+    expect((coloured.material as THREE.MeshBasicMaterial).color.getHex()).toBe(hexToThreeInt(hex));
     // No colour ⇒ a mesh still builds (neutral default), never throws.
     expect(buildSegmentGhost3D([tube(50)], 'm')).toHaveLength(1);
   });

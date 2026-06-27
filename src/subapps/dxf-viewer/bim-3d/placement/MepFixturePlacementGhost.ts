@@ -3,13 +3,15 @@
 /**
  * MepFixturePlacementGhost — translucent 3D preview of the fixture about to be
  * placed. ADR-406, mirror of `ColumnPlacementGhost` (ADR-403). Scene-side leaf
- * object: added to the live scene in the constructor, follows the cursor via
- * `update`, removed on `dispose`. Pure Three.js — no React, no store subscription.
+ * object: follows the cursor via `update`, removed on `dispose`. Pure Three.js —
+ * no React, no store subscription.
  *
  * The ghost mesh is built by the SAME SSoT path the commit uses
  * (`buildDefaultMepFixtureParams` → `computeMepFixtureGeometry` → `fixtureToMesh`)
  * and reads shape/overrides from the SAME `mepFixtureToolBridgeStore` — so the
- * preview is exactly what the click creates (WYSIWYG).
+ * preview is exactly what the click creates (WYSIWYG). The translucent material +
+ * post-FX overlay registration + non-pickable + disposal live in the shared
+ * `PlacementGhostOverlay` SSoT (ADR-537) — no mustard, no duplicate.
  */
 
 import * as THREE from 'three';
@@ -23,64 +25,37 @@ import {
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import { fixtureToMesh } from '../converters/BimToThreeConverter';
 import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
+import { PlacementGhostOverlay } from './placement-ghost-overlay';
 
 /** Layer id stamped on the throwaway ghost entity (never persisted). */
 const GHOST_LAYER_ID = '__ghost-mep-fixture__';
 
 export class MepFixturePlacementGhost {
-  private readonly scene: THREE.Scene;
-  private readonly material: THREE.MeshStandardMaterial;
-  private mesh: THREE.Mesh | null = null;
+  private readonly overlay: PlacementGhostOverlay;
   private entity: MepFixtureEntity | null = null;
-  private disposed = false;
 
   constructor(scene: THREE.Scene) {
-    this.scene = scene;
-    this.material = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-      roughness: 0.6,
-      metalness: 0.0,
-    });
+    this.overlay = new PlacementGhostOverlay(scene, 0xf59e0b, 0.45);
   }
 
   /** Rebuild the ghost at `scenePoint` (active scene units) on the active floor. */
   update(scenePoint: Readonly<Point2D>, floorElevationMm: number, levelId: string | undefined): void {
-    if (this.disposed) return;
+    if (this.overlay.isDisposed) return;
     const entity = this.buildGhostEntity(scenePoint);
     if (!entity) {
-      this.setVisible(false);
+      this.overlay.setVisible(false);
       return;
     }
     this.entity = entity;
-    this.removeMesh();
-    const mesh = fixtureToMesh(entity, floorElevationMm, levelId);
-    if (!mesh) return;
-    mesh.material = this.material;
-    mesh.userData = {};
-    mesh.raycast = () => {};
-    this.mesh = mesh;
-    this.scene.add(mesh);
+    this.overlay.setObject(fixtureToMesh(entity, floorElevationMm, levelId));
   }
 
   setVisible(visible: boolean): void {
-    if (this.mesh) this.mesh.visible = visible;
+    this.overlay.setVisible(visible);
   }
 
   dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    this.removeMesh();
-    this.material.dispose();
-  }
-
-  private removeMesh(): void {
-    if (!this.mesh) return;
-    this.scene.remove(this.mesh);
-    this.mesh.geometry.dispose();
-    this.mesh = null;
+    this.overlay.dispose();
   }
 
   private buildGhostEntity(scenePoint: Readonly<Point2D>): MepFixtureEntity | null {

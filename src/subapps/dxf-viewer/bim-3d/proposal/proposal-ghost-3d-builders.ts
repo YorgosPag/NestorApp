@@ -107,15 +107,18 @@ export function pipeNetworksToGhostTubes(
   return out;
 }
 
-/** Build a fresh translucent ghost material (caller/overlay owns disposal). */
-function ghostMaterial(colorInt: number): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+/**
+ * Build a fresh UNLIT translucent ghost material (caller/overlay owns disposal). ADR-537 — the
+ * proposal ghost is drawn in the post-FX overlay pass (see {@link ProposalGhost3DOverlay}) which
+ * renders each root standalone with no lights, so a lit material would render black; a flat
+ * `MeshBasicMaterial` is the correct preview look AND removes the idle SSAO "mustard" tint.
+ */
+function ghostMaterial(colorInt: number): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
     color: colorInt,
     transparent: true,
     opacity: GHOST_OPACITY,
     depthWrite: false,
-    roughness: 0.6,
-    metalness: 0,
   });
 }
 
@@ -163,7 +166,7 @@ export function buildSegmentGhost3D(
 ): THREE.Object3D[] {
   const sceneToM = sceneUnitsToMeters(sceneUnits);
   // One material per colour within this build (disposed together by the overlay).
-  const matByColour = new Map<number, THREE.MeshStandardMaterial>();
+  const matByColour = new Map<number, THREE.MeshBasicMaterial>();
   const out: THREE.Object3D[] = [];
   for (const tube of tubes) {
     const colorInt = hexToThreeInt(tube.colorHex ?? DEFAULT_GHOST_HEX) ?? DEFAULT_GHOST_INT;

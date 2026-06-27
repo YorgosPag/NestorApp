@@ -12,6 +12,8 @@ export const PERFORMANCE_THRESHOLDS = {
   drawCalls:    { good: 1500,      warn: 3000,      invert: false },
   gpuMemoryPct: { good: 60,        warn: 85,        invert: false },
   triangles:    { good: 1_000_000, warn: 3_000_000, invert: false },
+  // §B.5.U — CPU heap (MB). Primary memory metric in 2D (no GPU memory there).
+  cpuMemoryMb:  { good: 256,       warn: 512,       invert: false },
 } as const;
 
 export type MetricTier = 'good' | 'warn' | 'critical';

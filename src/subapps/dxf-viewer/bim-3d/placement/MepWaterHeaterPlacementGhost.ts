@@ -3,16 +3,16 @@
 /**
  * MepWaterHeaterPlacementGhost — translucent 3D preview of the domestic hot water
  * heater (θερμοσίφωνας) about to be placed. ADR-408 DHW, mirror of
- * `MepBoilerPlacementGhost`. Scene-side leaf object: added to the live scene in the
- * constructor, follows the cursor via `update`, removed on `dispose`. Pure Three.js —
- * no React, no store subscription.
+ * `MepBoilerPlacementGhost`. Scene-side leaf object: follows the cursor via
+ * `update`, removed on `dispose`. Pure Three.js — no React, no store subscription.
  *
  * The ghost mesh is built by the SAME SSoT path the commit uses
  * (`buildDefaultMepWaterHeaterParams` → `computeMepWaterHeaterGeometry` →
  * `waterHeaterToMesh`) and reads overrides from the SAME
  * `mepWaterHeaterToolBridgeStore` — so the preview is exactly what the click creates
- * (WYSIWYG). A water heater keeps a fixed blue DHW-equipment colour (no per-kind
- * palette, mirror converter).
+ * (WYSIWYG). A water heater keeps a fixed blue DHW-equipment colour. Translucent
+ * material + post-FX overlay + non-pickable + disposal live in the shared
+ * `PlacementGhostOverlay` SSoT (ADR-537).
  */
 
 import * as THREE from 'three';
@@ -26,6 +26,7 @@ import {
 import { computeMepWaterHeaterGeometry } from '../../bim/mep-water-heaters/mep-water-heater-geometry';
 import { waterHeaterToMesh } from '../converters/BimToThreeConverter';
 import { mepWaterHeaterToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-water-heater-tool-bridge-store';
+import { PlacementGhostOverlay } from './placement-ghost-overlay';
 
 /** Blue DHW-equipment ghost tint (matches the committed water heater material family). */
 const GHOST_COLOR = 0x2563eb;
@@ -34,64 +35,31 @@ const GHOST_COLOR = 0x2563eb;
 const GHOST_LAYER_ID = '__ghost-mep-water-heater__';
 
 export class MepWaterHeaterPlacementGhost {
-  private readonly scene: THREE.Scene;
-  private readonly material: THREE.MeshStandardMaterial;
-  private mesh: THREE.Mesh | null = null;
+  private readonly overlay: PlacementGhostOverlay;
   private entity: MepWaterHeaterEntity | null = null;
-  private disposed = false;
 
   constructor(scene: THREE.Scene) {
-    this.scene = scene;
-    this.material = new THREE.MeshStandardMaterial({
-      color: GHOST_COLOR,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-      roughness: 0.6,
-      metalness: 0.0,
-    });
+    this.overlay = new PlacementGhostOverlay(scene, GHOST_COLOR, 0.45);
   }
 
   /** Rebuild the ghost at `scenePoint` (active scene units) on the active floor. */
   update(scenePoint: Readonly<Point2D>, floorElevationMm: number, levelId: string | undefined): void {
-    if (this.disposed) return;
+    if (this.overlay.isDisposed) return;
     const entity = this.buildGhostEntity(scenePoint);
     if (!entity) {
-      this.setVisible(false);
+      this.overlay.setVisible(false);
       return;
     }
     this.entity = entity;
-    this.removeMesh();
-    const mesh = waterHeaterToMesh(entity, floorElevationMm, levelId);
-    if (!mesh) return;
-    mesh.material = this.material;
-    mesh.userData = {};
-    mesh.raycast = () => {};
-    this.mesh = mesh;
-    this.scene.add(mesh);
+    this.overlay.setObject(waterHeaterToMesh(entity, floorElevationMm, levelId));
   }
 
   setVisible(visible: boolean): void {
-    if (this.mesh) this.mesh.visible = visible;
+    this.overlay.setVisible(visible);
   }
 
   dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    this.removeMesh();
-    this.material.dispose();
-  }
-
-  private removeMesh(): void {
-    if (!this.mesh) return;
-    this.scene.remove(this.mesh);
-    // Dispose every geometry in the subtree, not just the box: the mesh carries an
-    // edge-overlay child. Materials are shared singletons — never disposed here.
-    this.mesh.traverse((obj) => {
-      const g = (obj as THREE.Mesh | THREE.LineSegments).geometry;
-      if (g) g.dispose();
-    });
-    this.mesh = null;
+    this.overlay.dispose();
   }
 
   private buildGhostEntity(scenePoint: Readonly<Point2D>): MepWaterHeaterEntity | null {
