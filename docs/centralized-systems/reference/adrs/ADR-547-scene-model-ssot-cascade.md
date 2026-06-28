@@ -163,6 +163,35 @@ Radix `<SelectValue>`/value-sync/keyboard/a11y **ανέπαφα** (το selected
 🔴 **Browser-verify ΥΠΟΧΡΕΩΤΙΚΟ** (Radix open/display/keyboard) + family/type widgets (RibbonWall/Slab/Opening
 FamilyType) = ίδιο pattern follow-up αν συνεισφέρουν.
 
+## 5.quater Υλοποίηση (Stage 4 Option B — full retained-mode / per-key binding — 2026-06-28)
+
+**Κίνητρο (Giorgio «full Revit-grade»):** μετά τα A + lazy-items, το μόνο μη-retained κομμάτι ήταν τα **live
+πεδία του ενεργού contextual panel**: μοιράζονταν το volatile `RibbonFieldContext` → edit **ενός** πεδίου
+(π.χ. πάχος τοίχου) ξαναζωγράφιζε **όλα** τα ~7-11 value widgets μαζί (React equivalent ενός non-retained UI).
+Στόχος: `INotifyPropertyChanged`/signal — κάθε control ενημερώνεται **μόνο** όταν αλλάξει η δική του ιδιότητα.
+
+**SSoT reuse (ΟΧΙ νέος μηχανισμός):** μίμηση του **`useSceneSelectors`** (ADR-547 Stage 2/3) = `useSyncExternalStore`
+πάνω σε zero-React store με per-key **reference-stable slices** (ίδιο doctrine με canvas micro-leaf, ADR-040).
+
+**Υλοποίηση:**
+- NEW `context/ribbon-command-types.ts` — value types (`RibbonComboboxState`/`RibbonToggleState`/`RibbonActionPayload`)
+  εκτός React module (σπάει context↔store cycle)· το `RibbonCommandContext` τα re-export-άρει (backward compat).
+- NEW `context/RibbonFieldStore.ts` — zero-React store· `setRibbonFieldReaders` (push από provider) + per-key
+  `getRibbon{Combobox,Toggle,Badge,PanelVisibility}Slice`. Combobox slice = **signature-gated stable ref**
+  (`value|disabled|optionValues`) → ίδιο ref όσο δεν κινείται η τιμή (gate για useSyncExternalStore· no loop).
+- NEW `context/useRibbonFieldSelectors.ts` — `useRibbon{Combobox,Toggle,Badge,PanelVisibility}State(key)` leaves.
+- NEW `context/__tests__/RibbonFieldStore.test.ts` — **9 jest**: per-key isolation (edit A → B ίδιο ref),
+  stable-ref invariant, value/option/disabled signature, primitives, subscribe/unsub, reset.
+- `RibbonCommandContext.tsx` — οι field WRITERS (`onToggle`/`onComboboxChange`) → STABLE dispatch context
+  (useEventCallback)· οι field READERS βγήκαν από context → push στον store (useLayoutEffect κάθε commit).
+- `useRibbonCommands.ts` — `onToggle`/`onComboboxChange` → `useEventCallback`.
+- `RibbonCombobox.tsx`/`RibbonToggleButton.tsx`/`RibbonTabItem.tsx` — writer από `useRibbonDispatch()`, value από
+  per-key selector, **`React.memo`** → edit άλλου πεδίου = no-op.
+
+**Αποτέλεσμα:** edit «πάχος τοίχου» → store notify → **μόνο** το thickness slice αλλάζει → **μόνο** το thickness
+combobox re-render-άρει· material/type/badge bail (slice ίδιο ref). Πλήρες per-control binding = retained-mode
+parity για το panel. **Tests:** 33/33 (9 store + 17 combobox + 7 action). 🔴 browser-verify.
+
 ## 6. Εκκρεμή / ρίσκα
 
 - 🔴 **Browser-verify:** edit column → μόνο ColumnHost + canvas + column panel re-render (όχι οι 26 άλλοι)·
@@ -173,6 +202,11 @@ FamilyType) = ίδιο pattern follow-up αν συνεισφέρουν.
 
 ## 7. Changelog
 
+- **2026-06-28** — Stage 4 **Option B** IMPLEMENTED (UNCOMMITTED, Opus 4.8): full retained-mode / per-key field
+  binding. NEW `RibbonFieldStore` + `useRibbonFieldSelectors` (μίμηση `useSceneSelectors`)· value widgets
+  (Combobox/Toggle/TabItem-badge) → per-`commandKey` `useSyncExternalStore` + `React.memo` → edit ενός πεδίου
+  re-render-άρει ΜΟΝΟ αυτό το control. Writers → stable dispatch (useEventCallback). 9 store jest / 33 σύνολο.
+  Βλ. §5.quater. 🔴 browser-verify.
 - **2026-06-28** — Stage 4 Option A **follow-up** (UNCOMMITTED, Opus 4.8): lazy combobox options. Profile 12:13
   επαλήθευσε ότι ο cascade έσπασε (edit #9: 72 fibers/8.8ms)· νέος κυρίαρχος = 76 eager SelectItems στο panel
   mount. `RibbonCombobox.tsx`: κρατάμε mounted μόνο το selected item όταν κλειστό + controlled `open` → 76→~7.
