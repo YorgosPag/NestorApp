@@ -14,7 +14,13 @@ import { publishHighlight } from '../../events/selection-bus';
 import { handleLayerServiceResult } from '../utils/selection-update-utils';
 // ADR-129: Centralized entity layer filtering
 import { countEntitiesInLayer } from '../../services/shared/layer-operation-utils';
-import { useUniversalSelection } from '../../systems/selection';
+// ADR-532 Stage 5b — non-reactive facade. The selection is read/written ONLY
+// inside the layer/entity callbacks below (event-time `getSelectedEntityIds()` +
+// `replaceEntitySelection`), never during render. The reactive
+// `useUniversalSelection` subscription forced `FloatingPanelContainer` (which
+// calls this hook) to re-render on every click — the last selection-leak hook of
+// the left panel. The stable facade exposes the same methods (live store reads).
+import { useUniversalSelectionStable } from '../../systems/selection';
 
 export interface LayerOperationsCallbacks {
   // Layer operations
@@ -55,7 +61,7 @@ export function useLayerOperations({
   setLevelScene
 }: UseLayerOperationsParams): LayerOperationsCallbacks {
 
-  const universalSelection = useUniversalSelection();
+  const universalSelection = useUniversalSelectionStable();
 
   // ✅ ENTERPRISE MIGRATION: Services από ServiceRegistry (lazy initialization + caching)
   const layerService = useMemo(() => serviceRegistry.get('layer-operations'), []);
