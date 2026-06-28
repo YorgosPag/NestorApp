@@ -341,14 +341,14 @@ function useLevelsSystemState({
     [handleError]
   );
 
-  // Stable getters for sceneManager fields — referenced via ref-stable closures
-  // so the memoized return object below stays referentially stable when
-  // sceneManager itself does not change identity.
-  const getCurrentFileName = useCallback(() => sceneManager.currentFileName, [sceneManager]);
-  const getAutoSaveStatus = useCallback(
-    () => ({ lastSaveTime: sceneManager.lastSaveTime, saveStatus: sceneManager.saveStatus }),
-    [sceneManager],
-  );
+  // 🚀 Ribbon-cascade fix (profiler 2026-06-28): the volatile scene save-status
+  // (currentFileName / saveStatus / lastSaveTime) no longer rides on this context.
+  // It used to be exposed through `getCurrentFileName` / `getAutoSaveStatus` getters
+  // that depended on `sceneManager` — which changes identity on every save cycle —
+  // so the whole `LevelsHookReturn` memo recomputed on each edit, churning ~40
+  // ribbon-command bridges → `RibbonRoot` memo broke → the entire ribbon re-rendered
+  // (69% of session time). The status now lives in `AutoSaveStatusStore`, consumed
+  // directly by `AutoSaveStatus` via `useAutoSaveStatus()`.
 
   // ADR-040 Phase XVI — memoize the Context value so consumers don't re-render
   // on every Provider render. Root cause of idle render-loop (2026-05-16):
@@ -395,9 +395,7 @@ function useLevelsSystemState({
 
       // Auto-save functionality
       setCurrentFileName: sceneManager.setCurrentFileName,
-      getCurrentFileName,
       setAutoSaveEnabled: sceneManager.setAutoSaveEnabled,
-      getAutoSaveStatus,
       setFileRecordId: sceneManager.setFileRecordId,
       fileRecordId: sceneManager.fileRecordId,
       setSaveContext: sceneManager.setSaveContext,
@@ -429,7 +427,7 @@ function useLevelsSystemState({
       updateLevelContext,
       addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
       setLevelScene, getLevelScene, clearLevelScene,
-      getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
+      linkSceneToLevel,
       // ADR-358 Phase 8: reactive scope inputs so `useStairPersistence` re-runs
       // when a new floorplan loads or the wizard updates the project context.
       sceneManager.fileRecordId, sceneManager.saveContext,

@@ -60,10 +60,11 @@ export interface LevelSystemActions extends ImportWizardActions {
   clearLevelScene: (levelId: string) => void;
   
   // Auto-save functionality
+  // 🚀 The volatile scene save-status (currentFileName / saveStatus / lastSaveTime)
+  // was moved out of this context into `AutoSaveStatusStore` to stop a ribbon
+  // re-render cascade (profiler 2026-06-28). Read it via `useAutoSaveStatus()`.
   setCurrentFileName?: (fileName: string | null) => void;
-  getCurrentFileName?: () => string | null;
   setAutoSaveEnabled?: (enabled: boolean) => void;
-  getAutoSaveStatus?: () => { lastSaveTime: Date | null; saveStatus: string };
   /** 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection */
   setFileRecordId?: (id: string | null) => void;
   /** 🪜 ADR-358 Phase 8: reactive read of injected FileRecord id (for stair persistence floorplanId scope) */

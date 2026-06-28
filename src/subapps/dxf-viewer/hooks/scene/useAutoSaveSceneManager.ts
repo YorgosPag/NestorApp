@@ -14,6 +14,11 @@ import type { SceneModel } from '../../types/scene';
 // guard· αποτρέπει cross-level πέδιλα να «ψηθούν» στο snapshot λάθος ορόφου).
 import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
 import { useAuth } from '@/auth/hooks/useAuth';
+// 🚀 Ribbon-cascade fix (profiler 2026-06-28): the volatile scene save-status is
+// mirrored into a dedicated zero-React store so the AutoSaveStatus widget can
+// subscribe to it WITHOUT the status flowing through the LevelsSystem context
+// (which churned ~40 ribbon bridges on every save cycle). See AutoSaveStatusStore.
+import { autoSaveStatusStore } from '../../stores/AutoSaveStatusStore';
 
 export interface AutoSaveSceneManagerState extends SceneManagerState {
   currentFileName: string | null;
@@ -380,6 +385,14 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
       }
     };
   }, []);
+
+  // 🚀 Ribbon-cascade fix (profiler 2026-06-28): mirror the save-status into the
+  // dedicated reactive channel. This is the SINGLE writer — the React state above
+  // stays the owner; the store is a projection consumed only by AutoSaveStatus, so
+  // status changes no longer churn the LevelsSystem context / ribbon bridges.
+  useEffect(() => {
+    autoSaveStatusStore.set({ currentFileName, lastSaveTime, saveStatus });
+  }, [currentFileName, lastSaveTime, saveStatus]);
   
   return useMemo(() => ({
     ...sceneManager,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText, Save } from 'lucide-react';
 import { useLevels } from '../../systems/levels/useLevels';
+import { useAutoSaveStatus } from '../../stores/AutoSaveStatusStore';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -13,13 +14,12 @@ export function AutoSaveStatus() {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const levelsSystem = useLevels();
-  
-  const currentFileName = levelsSystem.getCurrentFileName?.() || null;
-  const autoSaveStatus = levelsSystem.getAutoSaveStatus?.() || { 
-    lastSaveTime: null, 
-    saveStatus: 'idle' 
-  };
-  
+  // 🚀 Ribbon-cascade fix (profiler 2026-06-28): read the volatile save-status from
+  // its dedicated reactive store instead of LevelsSystem getters, so a save cycle
+  // re-renders only this widget — not the levels context / whole ribbon.
+  const { currentFileName, lastSaveTime, saveStatus } = useAutoSaveStatus();
+  const autoSaveStatus = { lastSaveTime, saveStatus };
+
   if (!currentFileName) {
     return null; // No file loaded, don't show anything
   }
