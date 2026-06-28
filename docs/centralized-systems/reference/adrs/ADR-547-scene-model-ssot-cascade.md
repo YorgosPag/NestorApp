@@ -151,6 +151,18 @@ re-render κανονικά σε selection/edit. Μόνο τα tool buttons (Home
 `RibbonSmallButton.tsx`, `RibbonSplitButton.tsx`. **Tests:** ribbon action+combobox 24/24 GREEN. ADR-040:
 μη-canvas (ribbon UI) → CHECK 6B/6D off.
 
+**Επαλήθευση profile 12:13:** wall EDIT (#9) → `RibbonRootInner` **ΔΕΝ render-άρει**, ribbon subtree
+**72 fibers / 8.8ms** (ήταν ~400-800 / 55-101ms)· tool buttons + 75 Tooltips bail ✅. Wall SELECT (#8, 259ms)
+→ tool buttons ΕΦΥΓΑΝ από top-18, αλλά νέος κυρίαρχος = mount των Radix Select comboboxes του contextual panel.
+
+### Follow-up (lazy combobox options — `RibbonCombobox.tsx`)
+Το #8 (259ms) είχε `SelectItem ×76` (19.7ms) + SelectItemText/CollectionSlot: 7× `RibbonComboboxDefault`
+mount-άρουν ~11 options έκαστο **eager**. Fix: κρατάμε mounted **μόνο το επιλεγμένο item** όταν κλειστό
+(`renderedOptions = open ? options : [selectedOption]`) + **controlled `open`** → 76→~7 items στο mount.
+Radix `<SelectValue>`/value-sync/keyboard/a11y **ανέπαφα** (το selected item μένει registered στο collection).
+🔴 **Browser-verify ΥΠΟΧΡΕΩΤΙΚΟ** (Radix open/display/keyboard) + family/type widgets (RibbonWall/Slab/Opening
+FamilyType) = ίδιο pattern follow-up αν συνεισφέρουν.
+
 ## 6. Εκκρεμή / ρίσκα
 
 - 🔴 **Browser-verify:** edit column → μόνο ColumnHost + canvas + column panel re-render (όχι οι 26 άλλοι)·
@@ -161,6 +173,10 @@ re-render κανονικά σε selection/edit. Μόνο τα tool buttons (Home
 
 ## 7. Changelog
 
+- **2026-06-28** — Stage 4 Option A **follow-up** (UNCOMMITTED, Opus 4.8): lazy combobox options. Profile 12:13
+  επαλήθευσε ότι ο cascade έσπασε (edit #9: 72 fibers/8.8ms)· νέος κυρίαρχος = 76 eager SelectItems στο panel
+  mount. `RibbonCombobox.tsx`: κρατάμε mounted μόνο το selected item όταν κλειστό + controlled `open` → 76→~7.
+  17/17 combobox jest. 🔴 browser-verify (Radix). Βλ. §5.ter follow-up.
 - **2026-06-28** — Stage 4 **Option A** IMPLEMENTED (UNCOMMITTED, Opus 4.8): leaf-button memo + context split.
   Profile 11:51 απέδειξε ότι το wrappedHandleAction fix ήταν ανεπαρκές (ribbon churn-άρε ακόμα μέσω 36 bridges).
   `RibbonCommandContext` → dispatch(σταθερό)+field(volatile)· `onAction`→`useEventCallback`· Large/Small/Split→

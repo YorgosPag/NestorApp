@@ -22,7 +22,7 @@
  * the no-inline-style rule (CLAUDE.md SOS N.3).
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Select,
@@ -81,6 +81,15 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const widthPx = command.comboboxWidthPx ?? DEFAULT_WIDTH_PX;
+  // ADR-547 Stage 4 (Option A follow-up) — lazy option list. Mounting a wall/
+  // column contextual panel mounted 7 Radix Selects × ~11 options ≈ 76 SelectItems
+  // eagerly (profile 12:13 commit#8 = 122ms ribbon self-time, the dominant cost
+  // AFTER the tool-button memo win). We keep ONLY the currently-selected item
+  // mounted while closed — so `<SelectValue>`, value sync, keyboard and a11y stay
+  // intact — and render the full option list only when the dropdown is open.
+  // Controlled `open` (not just observed) renders the items in the SAME commit the
+  // popup opens → no one-frame flash of a single item.
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const el = triggerRef.current;
@@ -112,6 +121,14 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
   // the (collapsed) trigger too, and let the trigger grow to fit it.
   const selectedOption = value !== null ? options.find((o) => o.value === value) : undefined;
   const selectedImageUrl = selectedOption?.imageUrl;
+  // Closed → only the selected item is mounted (keeps Radix value↔label + a11y);
+  // open → the full list. `selectedOption` already includes an injected free-form
+  // value (see `options` above), so the trigger label never goes blank.
+  const renderedOptions: readonly RibbonComboboxOption[] = open
+    ? options
+    : selectedOption
+      ? [selectedOption]
+      : [];
 
   const handleValueChange = useCallback(
     (next: string) => {
@@ -154,6 +171,8 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
       <Select
         value={value ?? undefined}
         onValueChange={handleValueChange}
+        open={open}
+        onOpenChange={setOpen}
         disabled={command.comingSoon || dynamicState?.disabled === true}
       >
         <SelectTrigger
@@ -189,7 +208,7 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
          * width; `whitespace-nowrap` items keep each label on one line.
          */}
         <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[28rem]">
-          {options.map((opt) => (
+          {renderedOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value} className="whitespace-nowrap">
               {opt.imageUrl ? (
                 <span className="flex items-center gap-3 py-1">
