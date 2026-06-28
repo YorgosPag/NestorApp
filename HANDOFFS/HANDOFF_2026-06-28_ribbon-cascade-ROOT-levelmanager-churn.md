@@ -21,8 +21,23 @@
 `useLevels.ts` (2 optional type fields removed). **ADR-548** + adr-index ενημερωμένα.
 `CentralizedAutoSaveStatus` = ΑΣΧΕΤΟ (διαβάζει `useSettingsSaveStatusOptional`, ADR-341) → μηδέν regression εκεί.
 
-🔴 ΕΚΚΡΕΜΕΙ: browser re-profile («record why» ON, self-time top-25) — επιβεβαίωση ότι save cycle re-render-άρει
-ΜΟΝΟ το AutoSaveStatus, όχι ribbon/tooltips · μετά commit (Giorgio).
+## ✅ UPDATE 2 — re-profile 12:43 αποκάλυψε ΤΡΙΤΟ vector (το handoff το είχε χάσει)
+
+Το re-profile (`profiling-data.28-06-2026.12-43-36.json`) έδειξε ότι το `levelManager` churn-άρει **ακόμη**
+(`RibbonCommandProvider :: props:commands`, 28 hosts `props:levelManager`). Root-cause audit:
+
+- **ΧΑΜΕΝΗ ΠΗΓΗ:** `systems/levels/hooks/useLevelOperations.ts` — `removeLevel` + `clearAllLevels` είχαν
+  **`sceneManager` στα dep arrays** (το handoff υπέθεσε «level-ops = `[levels]` μόνο»). `deleteLevel`
+  κληρονομούσε (`dep [removeLevel]`). `sceneManager` αλλάζει ref κάθε edit → memo churn.
+- **FIX:** event-time ref pattern (`sceneManagerRef.current.clearLevelScene/clearAllScenes`) + αφαίρεση
+  `sceneManager` από deps — ίδιο pattern με LevelsSystem `setLevelScene` κ.λπ.
+- **Boy-scout:** `useLevelSceneLoader.ts` super-admin effect `[sceneManager]` → `[resetSceneSession]`.
+
+Επιβεβαιωμένο ότι ΟΛΟΙ οι vectors κλειστοί: (a) import-wizard [Fix A], (b) getters [Fix C], (c) level-ops
+sceneManager dep [τώρα]. Όλα τα υπόλοιπα memo deps stable σε edit (audited).
+
+🔴 ΕΚΚΡΕΜΕΙ: **νέο** browser re-profile («record why» ON) — επιβεβαίωση ότι σε edit κολόνας ΔΕΝ ξανα-render-άρει
+το ribbon (έλεγξε: `RibbonCommandProvider` ΧΩΡΙΣ `props:commands`, hosts ΧΩΡΙΣ `props:levelManager`). Μετά commit (Giorgio).
 
 ---
 

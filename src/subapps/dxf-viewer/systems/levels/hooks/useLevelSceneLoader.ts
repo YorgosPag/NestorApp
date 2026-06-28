@@ -330,14 +330,19 @@ export function useLevelSceneLoader({
   // previous tenant's DXF. resetSceneSession atomically: engages the load guard, cancels
   // the pending debounced save, clears scenes + fileRecordId + saveContext + filename +
   // per-file caches, and releases the guard on the next animation frame.
+  // Depend on the stable `resetSceneSession` ref (useCallback [] in
+  // useAutoSaveSceneManager) — NOT the full `sceneManager` object, which changes
+  // identity on every edit and would needlessly re-subscribe this listener each
+  // time (same rationale as the setOnSceneSaved wiring above).
+  const { resetSceneSession } = sceneManager;
   useEffect(() => {
     const unsub = onSuperAdminActiveCompanyChange(() => {
       sceneLoadAbortRef.current?.abort();
       loadedSceneLevelsRef.current.clear();
-      sceneManager.resetSceneSession();
+      resetSceneSession();
     });
     return unsub;
-  }, [sceneManager]);
+  }, [resetSceneSession]);
 
   return { sceneLoading, linkSceneToLevel };
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { LevelOperations, FloorplanOperations } from '../utils';
@@ -83,6 +83,17 @@ export function useLevelOperations({
   // 🔒 TENANT SCOPING (ADR-286): companyId + createdBy are set server-side by
   // createEntity('dxfLevel', …) — no client-side auth plumbing required.
 
+  // 🚀 Ribbon-cascade fix (profiler 2026-06-28): `sceneManager` (the
+  // useAutoSaveSceneManager return) changes identity on EVERY edit/save cycle. If
+  // `removeLevel`/`clearAllLevels` listed it as a dependency, they would get new
+  // references each edit → the LevelsSystem `useMemo` (which lists them as deps)
+  // recomputes → `levelManager` churns → ~40 ribbon bridges → whole ribbon
+  // re-renders. These callbacks only ever *call* scene methods (never read scene
+  // state at render time), so an event-time ref read keeps them stable. Same
+  // pattern LevelsSystem already uses for setLevelScene/getLevelScene/clearLevelScene.
+  const sceneManagerRef = useRef(sceneManager);
+  sceneManagerRef.current = sceneManager;
+
   const addLevel = useCallback(
     async (name: string, setAsDefault = false, floorId?: string): Promise<string | null> => {
       try {
@@ -147,7 +158,7 @@ export function useLevelOperations({
     async (levelId: string): Promise<void> => {
       try {
         setIsLoading(true);
-        sceneManager.clearLevelScene(levelId);
+        sceneManagerRef.current.clearLevelScene(levelId);
 
         if (enableFirestore) {
           // 🏢 ENTERPRISE (ADR-286): Route delete through gateway → /api/dxf-levels DELETE
@@ -170,7 +181,7 @@ export function useLevelOperations({
         setIsLoading(false);
       }
     },
-    [levels, currentLevelId, enableFirestore, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]
+    [levels, currentLevelId, enableFirestore, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]
   );
 
   const deleteLevel = useCallback(
@@ -193,7 +204,7 @@ export function useLevelOperations({
         setLevels([]);
       }
 
-      sceneManager.clearAllScenes();
+      sceneManagerRef.current.clearAllScenes();
       setFloorplans({});
       setCurrentLevelId(null);
       onLevelChange?.(null);
@@ -202,7 +213,7 @@ export function useLevelOperations({
     } finally {
       setIsLoading(false);
     }
-  }, [levels, enableFirestore, sceneManager, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]);
+  }, [levels, enableFirestore, handleError, onLevelChange, setIsLoading, setLevels, setFloorplans, setCurrentLevelId]);
 
   const reorderLevels = useCallback(
     async (levelIds: string[]): Promise<void> => {

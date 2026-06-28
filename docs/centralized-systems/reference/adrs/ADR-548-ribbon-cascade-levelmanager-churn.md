@@ -52,10 +52,30 @@ auto-save status «κουβαλιόταν» πάνω στο levels context.
 settings save-status, ADR-341) → **δεν** επηρεάζεται. Άρα αφαίρεση (όχι dead ref-stable getters) =
 η SSoT-σωστή έκβαση: σκοτώνει τον churn vector + καθαρίζει dead code.
 
+## 3b. ΔΕΥΤΕΡΗ ρίζα — `sceneManager` dep σε level-ops (αποκαλύφθηκε στο re-profile 12:43)
+
+Το re-profile (`profiling-data.28-06-2026.12-43-36.json`) **μετά** το §3 έδειξε ότι το `levelManager`
+churn-άρει **ακόμη** (`RibbonCommandProvider :: props:commands`, 28 hosts `props:levelManager`). Root-cause
+audit βρήκε **τρίτο** vector που το αρχικό handoff είχε χάσει (υπέθεσε «level-ops = dep `[levels]` μόνο»):
+
+`systems/levels/hooks/useLevelOperations.ts` — `removeLevel` (dep array) ΚΑΙ `clearAllLevels` (dep array)
+περιείχαν **`sceneManager`** (το useAutoSaveSceneManager return, που αλλάζει identity κάθε edit/save).
+`deleteLevel` κληρονομούσε το churn (`dep [removeLevel]`). Αυτά τα 3 είναι στα deps του LevelsSystem
+`useMemo` → `levelManager` νέο κάθε edit.
+
+**Fix:** ίδιο event-time ref pattern που ήδη χρησιμοποιεί το LevelsSystem για
+`setLevelScene`/`getLevelScene`/`clearLevelScene`: `sceneManagerRef.current.clearLevelScene(...)` /
+`.clearAllScenes()` + αφαίρεση `sceneManager` από τα dep arrays. Τα callbacks μόνο *καλούν* scene methods
+σε event time (ποτέ render-time read) → ασφαλές.
+
+**Boy-scout:** `useLevelSceneLoader.ts` super-admin effect άλλαξε `[sceneManager]` → `[resetSceneSession]`
+(stable method) ώστε να μην ξανα-subscribe-άρει κάθε edit (precedent: το ήδη υπάρχον `setOnSceneSaved` wiring).
+
 ## 4. Συμπληρωματικό (Fix A)
 
-`hooks/common/useImportWizard.ts` — 9 functions σε `useCallback` + return σε `useMemo` (1 από τις 2
-πηγές churn· από μόνο του δεν έσπαγε το cascade — ο cascade-killer είναι το §3).
+`hooks/common/useImportWizard.ts` — 9 functions σε `useCallback` + return σε `useMemo` (η ΠΡΩΤΗ από τις
+3 πηγές churn). Και οι 3 vectors (§3 getters, §3b level-ops sceneManager dep, §4 import-wizard) έπρεπε να
+κλείσουν μαζί — οποιοδήποτε ένα ανοιχτό κρατά το `levelManager` ασταθές.
 
 ## 5. Εκτός scope
 
@@ -71,3 +91,6 @@ re-profile δείξει ότι αξίζει.
 ## Changelog
 
 - **2026-06-28** — Δημιουργία. §3 dedicated store + getter removal (IMPLEMENTED, UNCOMMITTED). 5 jest GREEN.
+- **2026-06-28 (re-profile)** — §3b: re-profile 12:43 αποκάλυψε ότι `levelManager` churn-άρει ακόμη·
+  βρέθηκε `sceneManager` dep σε `removeLevel`/`clearAllLevels` (useLevelOperations) → ref pattern fix +
+  boy-scout super-admin effect dep. Και οι 3 vectors πλέον κλειστοί.
