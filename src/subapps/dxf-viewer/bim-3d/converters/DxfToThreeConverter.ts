@@ -27,6 +27,13 @@ import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
+import {
+  toDxfOverlaySyncKey,
+  isSameDxfOverlaySync,
+  isSameMultiKey,
+  type DxfOverlaySyncKey,
+  type DxfOverlayFloorKey,
+} from './dxf-overlay-sync-guard';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
@@ -158,6 +165,12 @@ export class DxfToThreeConverter {
   private readonly activeMaterials: THREE.LineBasicMaterial[] = [];
   /** ADR-537 underlay-depth — unregister the post-FX overlay provider on dispose. */
   private readonly unregisterOverlay: () => void;
+  // 🚀 PERF (ADR-040, 2026-06-28) — idempotency guards. `sync()`/`syncMultiFloor()`
+  // skip the full teardown + GPU re-upload when handed an overlay-equivalent input
+  // (e.g. a BIM column moved but no DXF line/text changed). Cross-mode: each path
+  // nulls the OTHER's key so a single↔multi scope switch always rebuilds.
+  private lastSyncKey: DxfOverlaySyncKey | null = null;
+  private lastMultiKey: readonly DxfOverlayFloorKey[] | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -169,6 +182,12 @@ export class DxfToThreeConverter {
 
   /** Single-floor overlay sitting on the floor plane (Y=0). */
   sync(dxfScene: DxfScene | null): void {
+    // 🚀 PERF (ADR-040) — idempotent: identical overlay input ⇒ identical output ⇒
+    // keep the existing geometry + GPU textures (no `texSubImage2D` re-upload).
+    const key = toDxfOverlaySyncKey(dxfScene);
+    if (this.lastMultiKey === null && isSameDxfOverlaySync(this.lastSyncKey, key)) return;
+    this.lastSyncKey = key;
+    this.lastMultiKey = null; // leaving multi-floor mode
     this.disposeRoot();
     const group = dxfScene ? this.buildColorGroup(dxfScene) : null;
     if (!group) return;
@@ -191,6 +210,12 @@ export class DxfToThreeConverter {
    * `BimSceneLayer.syncMultiFloor`).
    */
   syncMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
+    // 🚀 PERF (ADR-040) — idempotent stacked variant: skip the rebuild when every
+    // floor's overlay input AND elevation is unchanged since the last multi sync.
+    const keys = entries.map((e) => ({ key: toDxfOverlaySyncKey(e.scene), elev: e.floorElevationMm }));
+    if (this.lastSyncKey === null && isSameMultiKey(this.lastMultiKey, keys)) return;
+    this.lastMultiKey = keys;
+    this.lastSyncKey = null; // leaving single-floor mode
     this.disposeRoot();
     const root = new THREE.Group();
     root.name = 'dxf-wireframe-multifloor';
@@ -290,5 +315,7 @@ export class DxfToThreeConverter {
   dispose(): void {
     this.unregisterOverlay();
     this.disposeRoot();
+    this.lastSyncKey = null;
+    this.lastMultiKey = null;
   }
 }
