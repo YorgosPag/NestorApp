@@ -6,6 +6,26 @@
 
 ---
 
+## ✅ STATUS UPDATE 2026-06-28 (Opus 4.8) — Fix C ΥΛΟΠΟΙΗΘΗΚΕ (ADR-548)
+
+Και οι 2 churn vectors σε edit έκλεισαν:
+- **(a) Fix A** — `useImportWizard.ts` memoized (ήδη, UNCOMMITTED).
+- **(b) Fix C** — οι `getCurrentFileName`/`getAutoSaveStatus` **αφαιρέθηκαν** εντελώς (όχι ref-stable —
+  μόνος consumer ήταν το AutoSaveStatus). Το volatile save-status πήγε σε **NEW `stores/AutoSaveStatusStore.ts`**
+  (zero-React, `useSyncExternalStore`, mirror του `CompletionStyleStore`). Writer = ΕΝΑΣ effect στο
+  `useAutoSaveSceneManager`. Reader = `AutoSaveStatus.tsx` via `useAutoSaveStatus()`.
+- **(c)** δεν χτυπά σε edit (μόνο Firestore snapshot) → ΟΚ.
+
+Αρχεία: NEW `stores/AutoSaveStatusStore.ts` + test (5 jest GREEN) · `useAutoSaveSceneManager.ts` (writer effect) ·
+`AutoSaveStatus.tsx` (store reader) · `LevelsSystem.tsx` (getters removed: def+return+deps) ·
+`useLevels.ts` (2 optional type fields removed). **ADR-548** + adr-index ενημερωμένα.
+`CentralizedAutoSaveStatus` = ΑΣΧΕΤΟ (διαβάζει `useSettingsSaveStatusOptional`, ADR-341) → μηδέν regression εκεί.
+
+🔴 ΕΚΚΡΕΜΕΙ: browser re-profile («record why» ON, self-time top-25) — επιβεβαίωση ότι save cycle re-render-άρει
+ΜΟΝΟ το AutoSaveStatus, όχι ribbon/tooltips · μετά commit (Giorgio).
+
+---
+
 ## 0. Συμπτώματα (profile 11:47)
 - **69% του session σε render** (2.595ms / 3.776ms wall). 10 commits >150ms (έως 236ms), ~1.600 fibers ο καθένας.
 - Top self-time = **Ribbon + Radix tree**: `Tooltip/TooltipTrigger/TooltipContent ×903`, `RibbonSplitButtonInner`,

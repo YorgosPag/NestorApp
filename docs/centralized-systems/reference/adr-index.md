@@ -528,6 +528,7 @@
 | **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers, snap-jump + badge) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
 | **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (ΕΝΑΣ platform type + reader στο `src/lib/platform`, 4 type + 12 reader διπλότυπα ενοποιήθηκαν) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | Platform / Performance SSoT | [📄](./adrs/ADR-546-browser-performance-memory-ssot.md) |
 | **ADR-547** | Scene-model SSoT — σπάσιμο του scene-change re-render cascade (granular `useSceneEntitiesByType`/`useSceneEntityById` selectors + `React.memo` σε 27 persistence hosts· drop μονολιθικό `currentScene` prop) | 🟡 IN PROGRESS (Stage 0 COMMITTED, Stage 2/3 UNCOMMITTED) | 2026-06-28 | DXF Viewer / Scene SSoT / Perf | [📄](./adrs/ADR-547-scene-model-ssot-cascade.md) |
+| **ADR-548** | Ribbon re-render cascade — σπάσιμο του levelManager churn (auto-save status βγαίνει από το levels context σε dedicated `AutoSaveStatusStore`· getters αφαιρέθηκαν· 69% session σε render) | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-28 | DXF Viewer / Levels / Perf | [📄](./adrs/ADR-548-ribbon-cascade-levelmanager-churn.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
