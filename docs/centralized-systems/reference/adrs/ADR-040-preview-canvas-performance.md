@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-28 — Grid Enterprise Test: ειλικρινές reporting + SSoT presenter (debug infra)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify + commit (Giorgio) pending.
+
+**Πρόβλημα (3 ψεύτικα/παραπλανητικά σήματα)**: (1) το summary έδειχνε `Passed 12/13, Failed 0` αλλά **έκρυβε το 1 warning** (12 success + 0 failed + 1 warning = 13) — τα warnings δεν εμφανίζονταν. (2) `success = failed === 0` → πράσινο ✅ ακόμη και με warnings + χαμηλό wiring %. (3) «Topological Integrity» ήταν **ψεύτικη ετικέτα**: το `testGridCanvasIntegration` μετράει 4 boolean heuristics (gridSettings exist + canvas exist + grid enabled + both), ΟΧΙ γεωμετρική τοπολογία — 50% σήμαινε απλώς «grid off / `window.__GRID_SETTINGS__.visual.enabled` false», όχι σπασμένη γεωμετρία. Επιπλέον το reporting ήταν **διπλότυπο σε 3 call sites** (`automatedTests.ts`, `DebugToolbar.tsx`, `unified-test-runner.ts`) με drift (διαφορετικά labels/πεδία).
+
+**Fix**: (α) `success = failed === 0 && warnings === 0`. (β) μετονομασία πεδίου `topologicalIntegrity` → `gridCanvasWiring` (+ doc-comment ότι είναι heuristic wiring score, ΟΧΙ τοπολογία) σε `GridTestReport` + 3 consumers. (γ) **SSoT presenter** `formatGridTestSummary(report): { message, severity }` στο `grid-enterprise-test.qa.ts` — δείχνει ρητά τα warnings, ειλικρινές label «Grid–Canvas wiring (heuristic)», severity που ακολουθεί το πραγματικό verdict (warning ≠ success). Τα 2 UI call sites (DebugToolbar κουμπί + Tests Modal) καλούν τον presenter· ο `unified-test-runner` χρησιμοποιεί το νέο field. **Files**: MOD `debug/grid-enterprise-test.qa.ts` (success logic + field rename + SSoT presenter + export `GridTestReport`/`GridTestSummary`), `debug/DebugToolbar.tsx`, `ui/components/tests-modal/constants/automatedTests.ts`, `debug/unified-test-runner.ts`. ✅ Google-level: YES — ειλικρινές reporting (no hidden warnings, no fake green, no misleading label), ΕΝΑ presenter (μηδέν drift). Δεν αγγίζει render path / micro-leaf αρχεία.
+
 ### 2026-06-28 — Επαναφορά `data-canvas-type` debug markers στα canvas-v2 leaves (CHECK 6D)
 
 **Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (Canvas Test button) + commit (Giorgio) pending.

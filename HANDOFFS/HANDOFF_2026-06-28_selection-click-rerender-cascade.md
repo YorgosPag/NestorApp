@@ -66,7 +66,23 @@ browser-verify** (Profiler: μόνο `RibbonTabsRegion` updater στο click-sel
 - **Προσοχή:** ο auto-activate `useEffect` (RibbonRoot γρ. 77-100) χρειάζεται το `visibleContextualTabs` — μετακίνησέ τον μαζί με το trigger στο leaf, ΟΧΙ να σπάσει.
 </details>
 
-### Stage 3 — `DxfViewerDialogs` (117 dialog fibers) (ΤΟ ΕΠΟΜΕΝΟ)
+### ✅ ΝΕΟ EUREMA + FIX — `EnterpriseDxfSettingsProvider` God-context full-tree cascade (2026-06-28)
+**Re-profile (02-42-14.json) μετά Stage 2:** Stage 2 ΕΠΙΒΕΒΑΙΩΘΗΚΕ — Ribbon στο click-select 96→**24 fibers**,
+`RibbonBody` re-renders **0/64 commits** (memo), `RibbonTabsRegion` (νέο leaf) μόνο 7/64. **ΟΜΩΣ** το handoff
+απέδιδε λάθος τα ~786 "Other" fibers σε «ribbon children» — στην πραγματικότητα είναι StatusBar/HUD/toggles/
+Radix scattered app-wide (όχι ribbon). Τα **βαρύτερα** commits (#26/#30/#46/#47 = **267-322ms, ~1980 fibers**)
+πυροδοτούνται από **`EnterpriseDxfSettingsProvider`** (God context ψηλά στο δέντρο): το monolithic `contextValue`
+έψηνε `saveStatus`/`lastSaved`/`isSaving`/`lastError` στο `settings` spread + memo deps → autosave (`SAVE_START→
+SAVE_SUCCESS`, 2 dispatch/edit) ξαναχτίζει ΟΛΟ το context → re-render ~28 consumer-subtrees.
+**FIX (ΕΓΙΝΕ, ADR-341 changelog):** νέο `SettingsSaveStatusContext` (`useSettingsSaveStatus`/`...Optional`) —
+save-status βγήκε από το main value+deps → main value αλλάζει ΜΟΝΟ σε πραγματικό settings edit· `CentralizedAutoSaveStatus`
+διαβάζει settings-content από main + status από νέο context (behaviour-identical). 3 αρχεία
+(`EnterpriseDxfSettingsProvider.tsx`, `settings-provider/index.tsx`, `CentralizedAutoSaveStatus.tsx`), tsc-clean.
+🔴 browser-verify (autosave commit → μόνο `CentralizedAutoSaveStatus`, ΟΧΙ ~1980 fibers) + commit.
+**ΜΕΝΕΙ follow-up:** η αλλαγή ΡΥΘΜΙΣΗΣ (combobox, commit#47) ξαναχτίζει το main value → όλοι οι ~28 consumers·
+χρειάζεται domain-split ή selector-context (μεγαλύτερο refactor).
+
+### Stage 3 — `DxfViewerDialogs` (117 dialog fibers)
 - **Αρχείο:** `app/DxfViewerDialogs.tsx`. Βρες ΓΙΑΤΙ re-renderάρει στο select (πιθανώς subscribe σε selection ή parent prop) → memoize τα always-mounted dialog hosts ή granular subscription (κάθε dialog host να self-subscribe ΜΟΝΟ αν ανοιχτό).
 - **Στόχος:** dialogs 117→~0 στο selection commit.
 

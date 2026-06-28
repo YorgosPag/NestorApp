@@ -13,6 +13,9 @@ export {
   EnterpriseDxfSettingsProvider,
   useEnterpriseDxfSettings,
   useEnterpriseDxfSettingsOptional,
+  // ADR-341 perf — volatile autosave status (split context)
+  useSettingsSaveStatus,
+  useSettingsSaveStatusOptional,
   useEnterpriseLineSettings,
   useEnterpriseTextSettings,
   useEnterpriseGripSettings,
@@ -32,7 +35,8 @@ export type {
   StorageMode,
   LineSettings,
   TextSettings,
-  GripSettings
+  GripSettings,
+  SettingsSaveStatusValue
 } from './EnterpriseDxfSettingsProvider';
 
 // Constants

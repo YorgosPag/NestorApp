@@ -29,8 +29,6 @@
 
 import React from 'react';
 import {
-  createContext,
-  useContext,
   useMemo,
   useRef,
   useEffect,
@@ -70,85 +68,36 @@ import type { ViewerMode, StorageMode, SettingsState } from '../settings/core/ty
 import type { LineSettings, TextSettings } from '../settings-core/types';
 import type { GripSettings } from '../types/gripSettings'; // Full GripSettings (with all properties)
 
+// Context objects + value types (SSoT — shared with the consumer hooks)
+import {
+  EnterpriseDxfSettingsContext,
+  SettingsSaveStatusContext,
+  type EnterpriseDxfSettingsContextType,
+  type SettingsSaveStatusValue,
+} from './enterprise-settings-context';
+
 // Re-export types for backward compatibility
 export type { ViewerMode, StorageMode, LineSettings, TextSettings, GripSettings };
+export type { EnterpriseSettingsWithMetadata, SettingsSaveStatusValue } from './enterprise-settings-context';
 export { ENTERPRISE_CONSTANTS } from './constants';
 
-// ============================================================================
-// CONTEXT TYPE
-// ============================================================================
-
-/**
- * ✅ ENTERPRISE: Extended settings state with metadata
- */
-export interface EnterpriseSettingsWithMetadata extends SettingsState {
-  mode: ViewerMode;
-  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
-  lastSaved: Date | null;
-}
-
-/**
- * Enterprise context type (backward compatible with old DxfSettingsProvider)
- */
-interface EnterpriseDxfSettingsContextType {
-  // Core settings state
-  settings: EnterpriseSettingsWithMetadata;
-
-  // Actions
-  updateLineSettings: {
-    (updates: Partial<LineSettings>): void;
-    (mode: StorageMode, updates: Partial<LineSettings>, layer?: 'general' | 'specific' | 'overrides'): void;
-  };
-  updateTextSettings: {
-    (updates: Partial<TextSettings>): void;
-    (mode: StorageMode, updates: Partial<TextSettings>, layer?: 'general' | 'specific' | 'overrides'): void;
-  };
-  updateGripSettings: {
-    (updates: Partial<GripSettings>): void;
-    (mode: StorageMode, updates: Partial<GripSettings>, layer?: 'general' | 'specific' | 'overrides'): void;
-  };
-
-  // ✅ ENTERPRISE FIX: Missing specific update methods used by hooks
-  updateSpecificLineSettings: (mode: StorageMode, updates: Partial<LineSettings>) => void;
-  updateSpecificTextSettings: (mode: StorageMode, updates: Partial<TextSettings>) => void;
-  updateSpecificGripSettings: (mode: StorageMode, updates: Partial<GripSettings>) => void;
-
-  toggleLineOverride: (mode: StorageMode, enabled: boolean) => void;
-  toggleTextOverride: (mode: StorageMode, enabled: boolean) => void;
-  toggleGripOverride: (mode: StorageMode, enabled: boolean) => void;
-  resetToDefaults: () => void;
-  resetToFactory: () => void; // ✅ ENTERPRISE FIX: Added missing resetToFactory interface member
-
-  // Computed
-  getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
-  getEffectiveTextSettings: (mode?: ViewerMode) => TextSettings;
-  getEffectiveGripSettings: (mode?: ViewerMode) => GripSettings;
-
-  // Mode management (backward compatibility with usePreviewMode)
-  setMode: (mode: ViewerMode) => void;
-
-  // Metadata
-  isLoaded: boolean;
-  isSaving: boolean;
-  isAutoSaving: boolean; // ✅ ENTERPRISE FIX: Added for CentralizedAutoSaveStatus.tsx
-  hasUnsavedChanges: boolean; // ✅ ENTERPRISE FIX: Added for CentralizedAutoSaveStatus.tsx
-  lastError: string | null;
-
-  // Storage Quota (Enterprise)
-  storageQuota?: {
-    available: number;
-    usage: number;
-    usagePercent: number;
-    isStorageCritical: boolean;
-    isMemoryMode: boolean;
-  };
-}
-
-// ============================================================================
-// CONTEXT
-// ============================================================================
-
-const EnterpriseDxfSettingsContext = createContext<EnterpriseDxfSettingsContextType | null>(null);
+// Re-export consumer hooks for backward compatibility (split out 2026-06-28, N.7.1)
+export {
+  useEnterpriseDxfSettings,
+  useEnterpriseDxfSettingsOptional,
+  useSettingsSaveStatusOptional,
+  useSettingsSaveStatus,
+  useEnterpriseLineSettings,
+  useEnterpriseTextSettings,
+  useEnterpriseGripSettings,
+  useDxfSettings,
+  useLineSettingsFromProvider,
+  useTextSettingsFromProvider,
+  useGripSettingsFromProvider,
+  useLineStyles,
+  useTextStyles,
+  useGripStyles,
+} from './enterprise-settings-hooks';
 
 // ============================================================================
 // PROVIDER
@@ -322,8 +271,6 @@ export function EnterpriseDxfSettingsProvider({
     settings: {
       ...state.settings,
       mode: currentMode,
-      saveStatus,
-      lastSaved
     },
 
     // Actions
@@ -338,26 +285,35 @@ export function EnterpriseDxfSettingsProvider({
 
     // Metadata
     isLoaded: state.isLoaded,
-    isSaving: state.isSaving,
-    isAutoSaving: state.isSaving, // ✅ ENTERPRISE FIX: Use same value as isSaving for compatibility
-    hasUnsavedChanges: false, // ✅ ENTERPRISE FIX: For now, default to false
-    lastError: state.lastError,
 
     // Storage Quota (Enterprise) - Using stable reference
     storageQuota: stableQuotaInfo
   }), [
+    // ADR-341 perf (2026-06-28) — save-status deps (state.isSaving, state.lastError,
+    // saveStatus, lastSaved) REMOVED. They drive `SettingsSaveStatusContext` instead,
+    // so an autosave cycle no longer rebuilds this value → the ~28 settings consumers
+    // stop re-rendering on every save.
     state.settings,
     state.isLoaded,
-    state.isSaving,
-    state.lastError,
     currentMode,
     setCurrentMode,
-    saveStatus,
-    lastSaved,
     actions,
     effectiveSettings,
     stableQuotaInfo // ✅ ENTERPRISE: Stable quota reference prevents infinite loops
   ]);
+
+  // ADR-341 perf — volatile autosave status. Its own memo + provider so a save
+  // cycle re-renders ONLY `CentralizedAutoSaveStatus`, not the settings tree.
+  // `isAutoSaving`/`hasUnsavedChanges` preserve the exact prior semantics
+  // (derived from `saveStatus`), so the widget is behaviour-identical.
+  const saveStatusValue = useMemo<SettingsSaveStatusValue>(() => ({
+    saveStatus,
+    lastSaved,
+    isSaving: state.isSaving,
+    isAutoSaving: saveStatus === 'saving',
+    hasUnsavedChanges: saveStatus !== 'saved',
+    lastError: state.lastError,
+  }), [saveStatus, lastSaved, state.isSaving, state.lastError]);
 
   // ========================================================================
   // RENDER
@@ -376,119 +332,10 @@ export function EnterpriseDxfSettingsProvider({
   });
 
   return (
-    <EnterpriseDxfSettingsContext.Provider value={contextValue}>
-      {children}
-    </EnterpriseDxfSettingsContext.Provider>
+    <SettingsSaveStatusContext.Provider value={saveStatusValue}>
+      <EnterpriseDxfSettingsContext.Provider value={contextValue}>
+        {children}
+      </EnterpriseDxfSettingsContext.Provider>
+    </SettingsSaveStatusContext.Provider>
   );
-}
-
-// ============================================================================
-// HOOKS
-// ============================================================================
-
-/**
- * Access enterprise settings context
- *
- * @throws Error if used outside EnterpriseDxfSettingsProvider
- */
-export function useEnterpriseDxfSettings(): EnterpriseDxfSettingsContextType {
-  const context = useContext(EnterpriseDxfSettingsContext);
-
-  if (!context) {
-    derr('[Enterprise] useEnterpriseDxfSettings called outside provider context!');
-    console.trace('[Enterprise] Call stack:');
-    throw new Error(
-      'useEnterpriseDxfSettings must be used within EnterpriseDxfSettingsProvider'
-    );
-  }
-
-  return context;
-}
-
-/**
- * Optional access - does not throw error if provider is missing
- */
-export function useEnterpriseDxfSettingsOptional(): EnterpriseDxfSettingsContextType | null {
-  return useContext(EnterpriseDxfSettingsContext);
-}
-
-/**
- * Convenience hooks for specific settings
- */
-export function useEnterpriseLineSettings(mode: ViewerMode = ENTERPRISE_CONSTANTS.DEFAULT_VIEWER_MODE) {
-  const { getEffectiveLineSettings } = useEnterpriseDxfSettings();
-  return getEffectiveLineSettings(mode);
-}
-
-export function useEnterpriseTextSettings(mode: ViewerMode = ENTERPRISE_CONSTANTS.DEFAULT_VIEWER_MODE) {
-  const { getEffectiveTextSettings } = useEnterpriseDxfSettings();
-  return getEffectiveTextSettings(mode);
-}
-
-export function useEnterpriseGripSettings(mode: ViewerMode = ENTERPRISE_CONSTANTS.DEFAULT_VIEWER_MODE) {
-  const { getEffectiveGripSettings } = useEnterpriseDxfSettings();
-  return getEffectiveGripSettings(mode);
-}
-
-// ============================================================================
-// BACKWARD COMPATIBLE EXPORTS
-// ============================================================================
-
-export const useDxfSettings = useEnterpriseDxfSettings;
-
-/**
- * Backward compatible provider hooks
- */
-export function useLineSettingsFromProvider(mode?: ViewerMode) {
-  const { getEffectiveLineSettings, updateLineSettings, resetToDefaults, resetToFactory } = useEnterpriseDxfSettings();
-  const effectiveSettings = getEffectiveLineSettings(mode);
-
-  return {
-    settings: effectiveSettings,
-    updateSettings: updateLineSettings as (updates: Partial<LineSettings>) => void,
-    resetToDefaults,
-    resetToFactory, // ✅ ENTERPRISE FIX: Added missing resetToFactory για LineSettingsContext.tsx
-    getCurrentDashPattern: () => {
-      const { getDashArray } = require('../settings-core/defaults');
-      return getDashArray(effectiveSettings.lineType, effectiveSettings.dashScale);
-    },
-    applyTemplate: () => {} // ✅ ENTERPRISE FIX: Added missing applyTemplate για LineSettingsContext.tsx
-  };
-}
-
-export function useTextSettingsFromProvider(mode?: ViewerMode) {
-  const { getEffectiveTextSettings, updateTextSettings, resetToDefaults } = useEnterpriseDxfSettings();
-  return {
-    settings: getEffectiveTextSettings(mode),
-    updateSettings: updateTextSettings as (updates: Partial<TextSettings>) => void,
-    resetToDefaults,
-    resetToFactory: resetToDefaults
-  };
-}
-
-export function useGripSettingsFromProvider() {
-  const { getEffectiveGripSettings, updateGripSettings, resetToDefaults } = useEnterpriseDxfSettings();
-  return {
-    settings: getEffectiveGripSettings(),
-    updateSettings: updateGripSettings as (updates: Partial<GripSettings>) => void,
-    resetToDefaults
-  };
-}
-
-/**
- * Style hooks (backward compatible)
- */
-export function useLineStyles(mode?: ViewerMode) {
-  const { getEffectiveLineSettings } = useEnterpriseDxfSettings();
-  return getEffectiveLineSettings(mode);
-}
-
-export function useTextStyles(mode?: ViewerMode) {
-  const { getEffectiveTextSettings } = useEnterpriseDxfSettings();
-  return getEffectiveTextSettings(mode);
-}
-
-export function useGripStyles(mode?: ViewerMode) {
-  const { getEffectiveGripSettings } = useEnterpriseDxfSettings();
-  return getEffectiveGripSettings(mode);
 }

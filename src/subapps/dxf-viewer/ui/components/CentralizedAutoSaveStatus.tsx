@@ -17,7 +17,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
-import { useDxfSettings } from '../../settings-provider';
+import { useDxfSettings, useSettingsSaveStatusOptional } from '../../settings-provider';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🚀 ADR-040 cursor-lag Φ6: modal presence via SSoT store (replaces the
@@ -61,24 +61,26 @@ export function CentralizedAutoSaveStatus() {
   const { radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const dxfSettings = useDxfSettingsSafe();
+  // ADR-341 perf (2026-06-28) — save-status now lives in its own context, so this
+  // widget re-renders on a save cycle WITHOUT dragging the whole settings tree.
+  const saveStatusCtx = useSettingsSaveStatusOptional();
   // 🚀 ADR-040 cursor-lag Φ6: subscribe to the modal-presence SSoT instead of a
   // body-wide MutationObserver — re-renders only on real modal open/close.
   const isModalOpen = useModalPresence();
 
-  if (!dxfSettings) return null;
+  if (!dxfSettings || !saveStatusCtx) return null;
 
-  // ✅ ENTERPRISE FIX: Extract only existing properties from EnterpriseDxfSettingsContextType
+  // ✅ ENTERPRISE FIX: settings content (line/text/grip) from the main context,
+  // volatile save-status from the dedicated context.
   const { settings } = dxfSettings;
-  // TODO: Add isAutoSaving and hasUnsavedChanges to context type in future
-  const isAutoSaving = settings?.saveStatus === 'saving';
-  const hasUnsavedChanges = settings?.saveStatus !== 'saved';
+  const { saveStatus, lastSaved, isAutoSaving, hasUnsavedChanges } = saveStatusCtx;
 
   const getStatusIcon = () => {
     if (isAutoSaving) {
       return <AnimatedSpinner size="small" className={iconSizes.xs} />;
     }
 
-    if (settings.saveStatus === 'saved') {
+    if (saveStatus === 'saved') {
       return (
         <svg className={`${iconSizes.xs} ${colors.text.success}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -86,7 +88,7 @@ export function CentralizedAutoSaveStatus() {
       );
     }
 
-    if (settings.saveStatus === 'error') {
+    if (saveStatus === 'error') {
       return (
         <svg className={`${iconSizes.xs} ${colors.text.error}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -106,11 +108,11 @@ export function CentralizedAutoSaveStatus() {
       return t('autoSave.saving');
     }
 
-    if (settings.saveStatus === 'saved') {
+    if (saveStatus === 'saved') {
       return t('autoSave.title');
     }
 
-    if (settings.saveStatus === 'error') {
+    if (saveStatus === 'error') {
       return t('autoSave.error');
     }
 
@@ -124,11 +126,11 @@ export function CentralizedAutoSaveStatus() {
       return `${colors.text.info} ${useBorderTokens().getStatusBorder('info')}`;
     }
 
-    if (settings.saveStatus === 'saved') {
+    if (saveStatus === 'saved') {
       return `${colors.text.success} ${useBorderTokens().getStatusBorder('success')}`;
     }
 
-    if (settings.saveStatus === 'error') {
+    if (saveStatus === 'error') {
       return `${colors.text.error} ${useBorderTokens().getStatusBorder('error')}`;
     }
 
@@ -190,9 +192,9 @@ export function CentralizedAutoSaveStatus() {
           {getStatusMessage()}
         </h3>
 
-        {settings.lastSaved && settings.saveStatus === 'saved' && (
+        {lastSaved && saveStatus === 'saved' && (
           <time className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
-            {t('autoSave.lastSaved')} {formatLastSaveTime(settings.lastSaved)}
+            {t('autoSave.lastSaved')} {formatLastSaveTime(lastSaved)}
           </time>
         )}
       </article>
@@ -237,20 +239,22 @@ export function CentralizedAutoSaveStatusCompact() {
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
+  // ADR-341 perf — volatile save-status from its own context (see main variant).
+  const saveStatusCtx = useSettingsSaveStatusOptional();
   // 🚀 ADR-040 cursor-lag Φ6: same modal detection as the main component, now via
   // the shared SSoT store (no per-component body observer).
   const isModalOpen = useModalPresence();
 
-  if (!dxfSettings) return null;
+  if (!dxfSettings || !saveStatusCtx) return null;
 
-  const { isAutoSaving, settings } = dxfSettings;
+  const { isAutoSaving, saveStatus } = saveStatusCtx;
 
   const getIcon = () => {
     if (isAutoSaving) {
       return <AnimatedSpinner size="small" className={iconSizes.xxs} />;
     }
 
-    if (settings.saveStatus === 'error') {
+    if (saveStatus === 'error') {
       return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.error}`} />;
     }
 
@@ -262,7 +266,7 @@ export function CentralizedAutoSaveStatusCompact() {
       return t('autoSave.savingAllSettings');
     }
 
-    if (settings.saveStatus === 'error') {
+    if (saveStatus === 'error') {
       return t('autoSave.errorSavingSettings');
     }
 
@@ -280,10 +284,10 @@ export function CentralizedAutoSaveStatusCompact() {
     <div
       className={`flex items-center justify-center ${iconSizes.sm} relative`}
       style={{ ...centralizedAutoSaveStatusStyles.compactContainer, zIndex: getCompactDynamicZIndex() }}
-      title={getCompactTooltipText(isAutoSaving, settings.saveStatus)}
+      title={getCompactTooltipText(isAutoSaving, saveStatus)}
       {...getStatusContainerProps()}
     >
-      <div style={getCompactStatusStyle(isAutoSaving, settings.saveStatus)} />
+      <div style={getCompactStatusStyle(isAutoSaving, saveStatus)} />
     </div>
   );
 }

@@ -46,7 +46,7 @@ interface TestResult {
   durationMs: number;
 }
 
-interface GridTestReport {
+export interface GridTestReport {
   success: boolean;
   timestamp: string;
   totalTests: number;
@@ -73,7 +73,11 @@ interface GridTestReport {
     withinTolerance: boolean;
     maxDistance: number;
   };
-  topologicalIntegrity: {
+  /**
+   * ⚠️ Heuristic wiring score (gridSettings exist + canvas exist + grid enabled),
+   * ΟΧΙ γεωμετρική τοπολογία γραμμών. Χαμηλό % συνήθως σημαίνει «grid off», όχι σπασμένη γεωμετρία.
+   */
+  gridCanvasWiring: {
     score: number;
     maxScore: number;
     percentage: number;
@@ -778,13 +782,15 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
   const topologyTest = results.find(r => r.test === 'Grid-Canvas Integration');
   const integrityScore = (topologyTest?.details?.integrityScore as number) ?? 0;
   const maxScore = (topologyTest?.details?.maxScore as number) ?? 4;
-  const topologicalIntegrity = {
+  const gridCanvasWiring = {
     score: integrityScore,
     maxScore,
     percentage: maxScore > 0 ? (integrityScore / maxScore * 100) : 0
   };
 
-  const success = failed === 0;
+  // ⚠️ success = ΚΑΝΕΝΑ failed ΚΑΙ ΚΑΝΕΝΑ warning. Πριν ήταν μόνο `failed === 0`,
+  // οπότε τα warnings «εξαφανίζονταν» πίσω από πράσινο ✅ (π.χ. 50% wiring → warning αλλά success).
+  const success = failed === 0 && warnings === 0;
 
   console.log('\n🎯 ========================================');
   console.log(`🎯 GRID ENTERPRISE TEST SUITE - ${success ? 'SUCCESS ✅' : 'ISSUES FOUND ⚠️'}`);
@@ -824,6 +830,36 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
     gridState,
     canvasState,
     coordinatePrecision,
-    topologicalIntegrity
+    gridCanvasWiring
   };
+}
+
+export interface GridTestSummary {
+  /** Έτοιμο multi-line μήνυμα για showCopyableNotification */
+  message: string;
+  /** Σοβαρότητα για το notification (failed → error, warning → warning, αλλιώς success) */
+  severity: 'success' | 'warning' | 'error';
+}
+
+/**
+ * 🎯 SSoT PRESENTER: παράγει το έτοιμο grid-test notification (message + severity) από το
+ * {@link GridTestReport}. Κοινό σε DebugToolbar κουμπί + Tests Modal → ΕΝΑ format, μηδέν drift.
+ *
+ * Σε αντίθεση με τα παλιά inline strings: (α) δείχνει ΡΗΤΑ τα warnings (αλλιώς «εξαφανίζονταν»),
+ * (β) χρησιμοποιεί ειλικρινές label «Grid–Canvas wiring» (heuristic, ΟΧΙ τοπολογία),
+ * (γ) η severity ακολουθεί το πραγματικό verdict (warning ≠ πράσινο success).
+ */
+export function formatGridTestSummary(report: GridTestReport): GridTestSummary {
+  const severity: GridTestSummary['severity'] =
+    report.failed > 0 ? 'error' : report.warnings > 0 ? 'warning' : 'success';
+
+  const message =
+    `Grid Tests Complete!\n` +
+    `✅ Passed: ${report.passed}/${report.totalTests}\n` +
+    `⚠️ Warnings: ${report.warnings}\n` +
+    `❌ Failed: ${report.failed}\n` +
+    `🔌 Grid–Canvas wiring: ${report.gridCanvasWiring.percentage.toFixed(0)}% (heuristic, ΟΧΙ τοπολογία)\n` +
+    `📏 Precision: ${report.coordinatePrecision.withinTolerance ? '✅ OK' : '⚠️ WARNING'}`;
+
+  return { message, severity };
 }

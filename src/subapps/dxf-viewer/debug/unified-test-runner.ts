@@ -191,10 +191,10 @@ async function runGridEnterpriseTest(): Promise<TestResult> {
       passed: report.passed,
       failed: report.failed,
       warnings: report.warnings,
-      topologicalIntegrity: report.topologicalIntegrity.percentage,
+      gridCanvasWiring: report.gridCanvasWiring.percentage,
       coordinatePrecision: report.coordinatePrecision.withinTolerance,
       gridPixelsDetected: report.canvasState.gridPixelsDetected,
-      summary: `${report.passed}/${report.totalTests} τεστ πέρασαν, ${report.topologicalIntegrity.percentage.toFixed(0)}% ακεραιότητα`
+      summary: `${report.passed}/${report.totalTests} τεστ πέρασαν, ${report.warnings} warnings, ${report.gridCanvasWiring.percentage.toFixed(0)}% grid-canvas wiring`
     };
   });
 }

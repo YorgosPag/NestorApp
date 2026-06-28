@@ -117,10 +117,10 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       icon: Triangle,
       action: async () => {
         const module = await import('../../../../debug/grid-enterprise-test.qa');
-        const { runGridEnterpriseTests } = module;
-        const report = await runGridEnterpriseTests();
-        const summary = `Grid Tests Complete!\n✅ Passed: ${report.passed}/${report.totalTests}\n❌ Failed: ${report.failed}\n🏗️ Topological Integrity: ${report.topologicalIntegrity.percentage.toFixed(0)}%\n📏 Precision: ${report.coordinatePrecision.withinTolerance ? '✅ OK' : '⚠️ WARNING'}`;
-        showCopyableNotification(summary, report.success ? 'success' : (report.failed > 0 ? 'error' : 'info'));
+        const report = await module.runGridEnterpriseTests();
+        // 🎯 SSoT presenter (κοινό με DebugToolbar) — δείχνει warnings + ειλικρινές wiring label
+        const { message, severity } = module.formatGridTestSummary(report);
+        showCopyableNotification(message, severity);
       }
     },
     {

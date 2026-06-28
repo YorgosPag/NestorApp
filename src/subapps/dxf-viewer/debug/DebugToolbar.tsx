@@ -346,24 +346,14 @@ Check console for detailed metrics`;
         onClick={() => {
           console.log('🎯 GRID ENTERPRISE TEST TRIGGERED FROM HEADER');
           import('./grid-enterprise-test').then(module => {
-            const { runGridEnterpriseTests } = module;
+            const { runGridEnterpriseTests, formatGridTestSummary } = module;
 
             runGridEnterpriseTests().then(report => {
               console.log('📊 GRID ENTERPRISE TEST REPORT:', report);
 
-              const summary = `Grid Enterprise Tests Complete!\n\n` +
-                `✅ Passed: ${report.passed}/${report.totalTests}\n` +
-                `❌ Failed: ${report.failed}\n` +
-                `⚠️ Warnings: ${report.warnings}\n\n` +
-                `🏗️ Topological Integrity: ${report.topologicalIntegrity.percentage.toFixed(0)}%\n` +
-                `📏 Coordinate Precision: ${report.coordinatePrecision.withinTolerance ? '✅ OK' : '⚠️ WARNING'}\n` +
-                `🎨 Grid Pixels Detected: ${report.canvasState.gridPixelsDetected}\n\n` +
-                `Check console for detailed report.`;
-
-              showCopyableNotification(
-                summary,
-                report.success ? 'success' : (report.failed > 0 ? 'error' : 'info')
-              );
+              // 🎯 SSoT presenter (κοινό με το Tests Modal) — δείχνει warnings + ειλικρινές wiring label
+              const { message, severity } = formatGridTestSummary(report);
+              showCopyableNotification(message, severity);
             }).catch(err => {
               console.error('Failed to run grid enterprise tests:', err);
               showCopyableNotification('Failed to run grid tests', 'error');
