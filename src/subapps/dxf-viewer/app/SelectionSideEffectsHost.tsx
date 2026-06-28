@@ -14,6 +14,9 @@
  *  2. Auto-activate the layering tool when an overlay/region becomes primary.
  *  3. Auto-switch the left panel to the Properties palette when a BIM/stair
  *     element becomes primary (Revit-grade: Properties pops on selection).
+ *  4. Selection→text-toolbar populate bridge (ADR-344 6.E / ADR-532 Stage 5),
+ *     relocated here off the orchestrator so its selection reactivity lives in
+ *     this leaf instead of re-rendering DxfViewerContent on every click.
  *
  * Related files:
  * - DxfViewerContent.tsx (renders this host)
@@ -22,6 +25,13 @@
 
 import React from 'react';
 import { useSelectedEntityIds, usePrimarySelectedId, SelectedEntitiesStore } from '../systems/selection';
+// ADR-532 Stage 5 — selection→text-toolbar populate bridge. Genuinely
+// selection-reactive (re-derives toolbar values when the pick-set changes), so
+// it must live in a LEAF, not in the `DxfViewerContent` orchestrator (where its
+// `useUniversalSelection` subscription was one of the 3 hooks re-rendering the
+// whole subtree on every click). This null leaf already subscribes to the
+// selection, so the reactivity is correctly contained here.
+import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { isBimEntity, isStairEntity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
@@ -45,6 +55,8 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
   activeTool,
   handleToolChange,
 }) => {
+  // ADR-532 Stage 5 — selection→text-toolbar populate (moved off the orchestrator).
+  useTextToolbarSelectionSync();
   const selectedEntityIds = useSelectedEntityIds();
   const primarySelectedId = usePrimarySelectedId();
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);

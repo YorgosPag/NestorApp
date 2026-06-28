@@ -26,10 +26,17 @@
 
 import { useEffect } from 'react';
 import { useSelection3DStore } from '../../stores/Selection3DStore';
-import { useUniversalSelection } from '../../../systems/selection/SelectionSystem';
+// ADR-532 Stage 5 — non-reactive facade. This bridge reacts to the 3D zustand
+// store (not to the universal selection), and only ever reads/writes the
+// selection via methods INSIDE the effect. Subscribing reactively re-rendered
+// the `DxfViewerContent` orchestrator on every 2D click AND re-subscribed the
+// zustand listener each time (the `[universal]` dep churned). The stable facade
+// keeps the object identity fixed (live store reads) → the effect subscribes
+// once, and the orchestrator is severed from the selection set.
+import { useUniversalSelectionStable } from '../../../systems/selection/SelectionSystem';
 
 export function use3DSelectionUniversalBridge(): void {
-  const universal = useUniversalSelection();
+  const universal = useUniversalSelectionStable();
 
   useEffect(() => {
     const sync = (): void => {

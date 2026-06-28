@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useUniversalSelection } from './SelectionSystem';
+// ADR-532 Stage 5 — non-reactive facade: this hook needs ONLY the stable
+// `clearAll` method (read through a ref), never the reactive selection value.
+// Subscribing via `useUniversalSelection` re-rendered the `DxfViewerContent`
+// orchestrator on every click (one of its 3 selection-leak hooks). The stable
+// facade exposes the same methods (live store reads) without the version sub.
+import { useUniversalSelectionStable } from './SelectionSystem';
 
 /**
  * ADR-420 — reset the 2D universal selection whenever the active floor changes.
@@ -15,7 +20,7 @@ import { useUniversalSelection } from './SelectionSystem';
  *
  * Mirrors `useLevelId3DSync` (the 3D side already re-targets its store on level
  * switch). Single instance — call it once from `DxfViewerContent`, which lives
- * inside BOTH the `SelectionSystem` provider (for `useUniversalSelection`) and
+ * inside BOTH the `SelectionSystem` provider (for the selection facade) and
  * the `LevelsSystem` provider (for `currentLevelId`).
  *
  * The clear runs only on an ACTUAL level change, not on first mount, so an empty
@@ -24,7 +29,7 @@ import { useUniversalSelection } from './SelectionSystem';
  * changes every selection edit and must NOT re-trigger the reset).
  */
 export function useSelectionLevelReset(currentLevelId: string | null): void {
-  const selection = useUniversalSelection();
+  const selection = useUniversalSelectionStable();
   const clearRef = useRef(selection.clearAll);
   clearRef.current = selection.clearAll;
 

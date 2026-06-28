@@ -166,6 +166,15 @@ PropertiesPalette prop slim)}`· `systems/properties/PropertiesPalette.tsx (self
 reset), unified-grip-types.ts (drop params)}`· `hooks/canvas/{useCanvasEditActions.ts, useCanvasContextMenu.ts,
 useCanvasKeyboardShortcuts.ts(+.types), useCanvasEscapeRegistrations.ts}` (event-time store reads).
 
+**MOD (Stage 5b):** `ui/hooks/useLayerOperations.ts` (`useUniversalSelection`→`useUniversalSelectionStable`·
+selection used only in event-time callbacks → severs `FloatingPanelContainer` from the selection set).
+
+**MOD (Stage 5):** `systems/selection/useSelectionLevelReset.ts` (`useUniversalSelection`→
+`useUniversalSelectionStable`), `bim-3d/systems/selection/use-3d-selection-universal-bridge.ts`
+(`useUniversalSelection`→`useUniversalSelectionStable`), `app/SelectionSideEffectsHost.tsx` (+
+`useTextToolbarSelectionSync()` call· 4ο selection-driven effect), `app/DxfViewerContent.tsx`
+(drop `useTextToolbarSelectionSync` import+call — moved to the leaf· `useTextToolbarCommandBridge` stays).
+
 **NEW (Stage 4a.1):** `src/hooks/useEventCallback.ts` (SSoT stable-event-handler hook),
 `src/hooks/__tests__/useEventCallback.test.tsx` (4).
 **MOD (Stage 4a.1):** `app/useDxfViewerCallbacks.ts` (`handleFileImportWithEncoding` →
@@ -195,6 +204,43 @@ unmount· `data` στο return). Έτσι **ο `RenumberOpeningsHost` ΜΠΗΚΕ
 hosts** σε ΕΝΑ gate· μηδέν inline open-gate πλέον.
 
 ## Changelog
+- **2026-06-28** — Stage 5b (Opus 4.8): **`FloatingPanelContainer` (αριστερό panel) severed — ο τελευταίος
+  selection-leak hook σβήστηκε**. Στο ίδιο profile, το `FloatingPanelContainer` (id=2088) έμενε true-root με
+  `hooks#15` στο βαρύ commit #8 (19.7ms tree), αν και τα Stage 4a/4a.1 είχαν αφαιρέσει το `primarySelectedId`
+  prop. ΡΙΖΑ (code-verified): ο `useLayerOperations` (που καλεί ο container) έκανε reactive
+  `useUniversalSelection()` (= το hook#15), αν και χρησιμοποιεί την επιλογή **ΜΟΝΟ μέσα σε callbacks**
+  (event-time `getSelectedEntityIds()` + `replaceEntitySelection` στα layer/entity/color-group delete+merge
+  handlers) — **ποτέ σε render**. **FIX:** swap σε **`useUniversalSelectionStable()`** (ίδιο SSoT facade, live
+  store reads → μηδέν staleness, μηδέν αλλαγή συμπεριφοράς). 1 αρχείο. Σημείωση: το ξεχωριστό μικρό commit #9
+  (`hooks#10` = `useFloatingPanelState.activePanel` → auto-switch στην καρτέλα Properties) είναι **legit**
+  (η καρτέλα όντως αλλάζει), όχι leak. 🔴 browser-verify (Profiler: `FloatingPanelContainer` ΟΧΙ updater στο
+  κλικ· layer/entity delete+merge + selection cleanup λειτουργικά) + commit (Giorgio).
+- **2026-06-28** — Stage 5 (Opus 4.8): **`DxfViewerContent` orchestrator severed από την επιλογή — οι 3
+  εναπομείναντες selection-leak hooks σβήστηκαν**. Καθαρό re-profile (`profiling-data…12-01-21.json`,
+  changeDescriptions ON, single wall→wall click, χωρίς mouse-move) έδειξε στο βαρύ commit #8 (247ms / 1779
+  fibers) ΔΥΟ ανεξάρτητα cascades: (Α) Ribbon (`DxfViewerTopBar` 124ms → `RibbonContextualTabScope` 118ms →
+  `RibbonBodyInner` 111ms CONTEXT → Combobox/Wall widgets → ~1500 props-victims) = **ADR-547, άλλος agent**·
+  (Β) **`DxfViewerContent` (Anonymous id=1723) re-render με `hooks#220,326,330`** που περνούσε ΝΕΑ props στο
+  `CanvasSection` (props-changed → 44.8ms tree) + στα context menus (`EntityContextMenu`/`Guide*`/`Drawing*`).
+  ΡΙΖΑ (code-verified): ο orchestrator καλούσε **ακριβώς 3** reactive `useUniversalSelection()` (= τα 3 changed
+  hooks, τέλειο match), αν και κανένα δεν χρειαζόταν reactive render:
+  1. `useSelectionLevelReset` — μόνο `clearAll` (ref· effect dep `[currentLevelId]`)· subscription περιττό.
+  2. `useTextToolbarSelectionSync` — `selection.getIds()` σε render → idsKey → effect· **γνήσια
+     selection-reactive** (πρέπει σε leaf, όχι orchestrator).
+  3. `use3DSelectionUniversalBridge` — `getSelectedEntityIds`/`replaceEntitySelection` ΜΕΣΑ σε effect·
+     αντιδρά στο 3D zustand store, όχι στην universal selection· subscription περιττό.
+  **FIX (full SSoT reuse, ZERO νέος μηχανισμός):** (#1+#3) swap σε **`useUniversalSelectionStable()`** (υπάρχον
+  non-reactive facade πάνω στο ΙΔΙΟ `buildUniversalSelection`· live store reads μέσω getters → μηδέν staleness·
+  το ίδιο που χρησιμοποίησαν τα B4/B6)· bonus στο #3: το effect σταματά να re-subscribe-άρει το zustand σε κάθε
+  επιλογή (`[universal]` σταθερό) = strictly βελτίωση. (#2) **μετακόμιση** της κλήσης `useTextToolbarSelectionSync()`
+  → **`SelectionSideEffectsHost`** (υπάρχον null-leaf που ήδη subscribe-άρει την επιλογή· self-contained hook,
+  μηδέν νέα prop)· το `useTextToolbarCommandBridge` (effect-only, χωρίς selection sub) **μένει** στον orchestrator.
+  Αποτέλεσμα: και τα 3 changed-hooks φεύγουν → ο `DxfViewerContent` (React.memo, props ήδη σταθερά) **παύει να
+  re-render-άρει στο κλικ** → `CanvasSection` (44.8ms) + context menus παύουν· αντιδρούν ΜΟΝΟ τα leaves που
+  δείχνουν επιλογή. 4 αρχεία code, type-clean (όσα δικά μου). CHECK 6D → stage ADR-040+532. 🔴 browser-verify
+  (Profiler: `DxfViewerContent`/`Anonymous 1723` ΟΧΙ updater/true-root στο κλικ· `CanvasSection` ΟΧΙ props-render·
+  text-toolbar populate + 3D→2D bridge + level-switch deselect λειτουργικά) + commit (Giorgio). Εκτός scope →
+  Stage 5b (`FloatingPanelContainer` `hooks#15`, ξεχωριστό true-root, 19.7ms).
 - **2026-06-28** — Stage 4a.1 (Opus 4.8): **`onSceneImported` stabilized → left panel πλήρως severed**.
   Καθαρό re-profile (`11-27-22.json`, changeDescriptions ON) ΕΠΙΒΕΒΑΙΩΣΕ ότι το Stage 4a σκότωσε τον
   `primarySelectedId` memo-break (πλέον το `BimPropertiesShell` re-render-άρει από το ΔΙΚΟ του

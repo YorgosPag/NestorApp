@@ -71,8 +71,9 @@ import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + persistence hosts) — N.7.1 size split
 import { DxfViewerTopBar } from './DxfViewerTopBar';
-// ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
-import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
+// ADR-344 Phase 6.E: toolbar→CommandHistory always-on bridge. The selection→toolbar
+// bridge (useTextToolbarSelectionSync) moved to SelectionSideEffectsHost (ADR-532
+// Stage 5) — it was selection-reactive and re-rendered this orchestrator on click.
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
 import { use3DSelectionUniversalBridge } from '../bim-3d/systems/selection/use-3d-selection-universal-bridge';
 // ✅ N.7.1 size split — extracted UI-state + ribbon assembly + dialogs modules
@@ -106,8 +107,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     },
     [notifications, tShell],
   );
-  // ADR-344 Phase 6.E — selection→toolbar (L1) + toolbar→CommandHistory (L2); always-on orchestrator.
-  useTextToolbarSelectionSync();
+  // ADR-344 Phase 6.E — toolbar→CommandHistory (L2); always-on orchestrator.
+  // L1 (selection→toolbar) moved to SelectionSideEffectsHost (ADR-532 Stage 5).
   useTextToolbarCommandBridge();
   useDxfViewerNotifications(); // ADR-401 Phase C — decoupled host-missing warning toast bridge
   const eventBus = useEventBus();
