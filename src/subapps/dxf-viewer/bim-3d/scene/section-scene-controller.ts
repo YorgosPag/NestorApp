@@ -31,6 +31,8 @@ import { unionSceneBounds } from './section-scene-bounds';
 import { renderPostFxOverlays } from './post-fx-overlay-pass';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
+import { isPointerActive } from '../systems/pointer-activity';
+import { createSectionBoxDragHandlers } from './section-box-drag-handlers';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface SectionControllerDeps {
@@ -76,6 +78,9 @@ export class SectionSceneController {
   private lastRenderedCutConstants: number[] = [];
   private refineTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly REFINE_DELAY_MS = DXF_TIMING.ui.SECTION_REFINE; // ADR-516
+  // ADR-452 — a cursor sweep within this window counts as motion → cheap grey caps. MUST stay
+  // below REFINE_DELAY_MS so the refine frame (fired after the cursor stops) reads as settled.
+  private static readonly POINTER_SETTLE_MS = DXF_TIMING.gesture.POINTER_SETTLE; // ADR-516
   /**
    * ADR-452 v2.12 — throttle for the GPU-heavy EXACT edge trim WHILE the slider is
    * actively dragging (`cutMoving`). On a dense floor, re-uploading every crossing edge
@@ -121,10 +126,15 @@ export class SectionSceneController {
       (s) => s.editState,
       () => this.applyState(),
     );
-    this.pointerDown = (e) => this.onPointerDown(e);
-    this.pointerMove = (e) => this.onPointerMove(e);
-    this.pointerUp = (e) => this.onPointerUp(e);
     const dom = deps.renderer.domElement;
+    const dragHandlers = createSectionBoxDragHandlers({
+      sectionBox: this.sectionBox,
+      dom,
+      getCamera: deps.getCamera,
+    });
+    this.pointerDown = dragHandlers.onPointerDown;
+    this.pointerMove = dragHandlers.onPointerMove;
+    this.pointerUp = dragHandlers.onPointerUp;
     dom.addEventListener('pointerdown', this.pointerDown, { capture: true });
     dom.addEventListener('pointermove', this.pointerMove, { capture: true });
     dom.addEventListener('pointerup', this.pointerUp, { capture: true });
@@ -333,9 +343,18 @@ export class SectionSceneController {
     //    win (Giorgio 2026-06-26 «γκρι στην περιστροφή»). The coloured 'full' frame snaps
     //    back the instant motion settles, via the on-demand refine below (armRefine).
     //  • settled → 'full' — + hatch overlays + selection emphasis.
+    // ADR-452 (2026-06-28) — a moving cursor (hover sweep) is a motion signal too: the per-hover
+    // markSceneDirty repaints the whole frame, and an active axis-cut would otherwise run the
+    // 2×(1+N) coloured 'full' caps on EVERY hover frame (the «swim»). Treat it like camera motion →
+    // cheap grey 'fast' caps while sweeping; the existing refine-on-settle restores colour the
+    // instant the cursor stops. POINTER_SETTLE_MS < REFINE_DELAY_MS → the refine frame reads settled.
+    const pointerActive = isPointerActive(
+      typeof performance !== 'undefined' ? performance.now() : 0,
+      SectionSceneController.POINTER_SETTLE_MS,
+    );
     const quality: SectionCapQuality = cutMoving
       ? 'colors'
-      : (interacting || camMoved)
+      : (interacting || camMoved || pointerActive)
         ? 'fast'
         : 'full';
 
@@ -444,37 +463,6 @@ export class SectionSceneController {
     const u5 = useBimRenderSettingsStore.subscribe(cb);
     const u6 = useActiveStoreyStore.subscribe(cb);
     return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
-  }
-
-  private onPointerDown(e: PointerEvent): void {
-    const { enabled, mode } = useSectionStore.getState();
-    if (!enabled || mode !== 'box') return;
-    const dom = this.deps.renderer.domElement;
-    const claimed = this.sectionBox.handlePointerDown(e.clientX, e.clientY, this.deps.getCamera(), dom);
-    if (!claimed) return;
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    dom.setPointerCapture(e.pointerId);
-  }
-
-  private onPointerMove(e: PointerEvent): void {
-    const { enabled, mode } = useSectionStore.getState();
-    if (!enabled || mode !== 'box') return;
-    const dom = this.deps.renderer.domElement;
-    const wasDragging = this.sectionBox.isDragging();
-    this.sectionBox.handlePointerMove(e.clientX, e.clientY, this.deps.getCamera(), dom, e.shiftKey, {
-      onAxisDrag: (axis, side, value) => {
-        useSectionStore.getState().setBoxBoundsAxis(axis, side, value);
-      },
-    });
-    if (wasDragging || this.sectionBox.isDragging()) e.stopImmediatePropagation();
-  }
-
-  private onPointerUp(e: PointerEvent): void {
-    if (!this.sectionBox.isDragging()) return;
-    this.sectionBox.handlePointerUp();
-    try { this.deps.renderer.domElement.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    e.stopImmediatePropagation();
   }
 
   dispose(): void {

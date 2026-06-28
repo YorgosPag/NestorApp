@@ -276,6 +276,9 @@ export const DXF_TIMING = {
     WHEEL_IDLE: 220,
     /** Camera idle threshold before bim-3d quality escalation (IdleDetector, ADR-516 Group 6). */
     CAMERA_IDLE: 800,
+    /** Pointer-sweep settle window — a cursor move within this counts as motion → cheap
+     *  grey section caps (bim-3d section controller). MUST stay below ui.SECTION_REFINE. */
+    POINTER_SETTLE: 100,
   },
 
   // ──────────────────────────────────────────────────────────────────────────
