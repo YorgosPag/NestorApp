@@ -13,6 +13,7 @@
  */
 
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
+import { getActiveSceneManager } from '../scene/active-scene-manager-registry';
 
 export interface DiagnosticInput {
   companyId: string;
@@ -29,7 +30,13 @@ export interface DiagnosticInput {
 export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
   const { metrics, renderMode, canvas, comment, projectId, source = 'manual' } = input;
 
-  const dataUrl = canvas.toDataURL('image/png', 0.92);
+  // ADR-366 §B.5 — the main renderer runs with `preserveDrawingBuffer:false` (per-frame
+  // fill-rate win), so a bare `canvas.toDataURL()` here (a user click, outside the render
+  // loop) would read a cleared buffer. Capture via the active manager, which force-renders
+  // ONE frame and reads it in the same task. Fallback to the raw canvas if no manager is
+  // registered (e.g. read-only Properties pipeline) — harmless, may be blank.
+  const dataUrl = getActiveSceneManager()?.captureFrameDataURL('image/png', 0.92)
+    ?? canvas.toDataURL('image/png', 0.92);
   const screenshotBase64 = dataUrl.split(',')[1] ?? dataUrl;
 
   const response = await fetch('/api/performance-diagnostics', {

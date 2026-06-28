@@ -41,18 +41,19 @@ describe('createSceneIdleDetector — auto-preview gate', () => {
     useEnvironmentStore.getState().setHdriUrl(null);
   });
 
-  it('skips ALL idle escalation (path tracer + SSAO + quality) when auto-preview is OFF', () => {
+  it('restores shadow quality on idle but skips the EXPENSIVE escalation (path tracer + SSAO) when auto-preview is OFF', () => {
     const { deps, start } = makeDeps();
     const detector = createSceneIdleDetector(deps);
 
     detector.notifyIdle();
     jest.advanceTimersByTime(THRESHOLD_MS);
 
-    // OFF → idle leaves the fast interaction raster untouched: no path-trace, no
-    // SSAO refine-on-idle composer pass, no render-quality bump.
+    // OFF → the cheap shadow-quality RESTORE still runs (symmetric with the always-on degrade,
+    // else shadows stay stuck at moving-quality during ordinary editing)...
+    expect(deps.qualityModulator.onCameraIdle).toHaveBeenCalledTimes(1);
+    // ...but the expensive idle escalation is skipped: no path-trace, no SSAO composer pass.
     expect(start).not.toHaveBeenCalled();
     expect(deps.ssaoModulator.onCameraIdle).not.toHaveBeenCalled();
-    expect(deps.qualityModulator.onCameraIdle).not.toHaveBeenCalled();
     detector.dispose();
   });
 

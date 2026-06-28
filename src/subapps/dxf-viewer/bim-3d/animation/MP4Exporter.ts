@@ -31,6 +31,7 @@
 
 import * as THREE from 'three';
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { createOffscreenCaptureRenderer } from '../scene/scene-setup';
 import type { AnimationCodec, AnimationFps, InterpolatedFrame } from './animation-types';
 
 // ---------------------------------------------------------------------------
@@ -211,15 +212,8 @@ function createOffscreenRenderTarget(
   height: number,
   firstFrame: InterpolatedFrame,
 ): { renderer: THREE.WebGLRenderer; camera: THREE.PerspectiveCamera } {
-  const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    preserveDrawingBuffer: true,
-    alpha: false,
-  });
-  renderer.setSize(width, height, false);
-  renderer.setPixelRatio(1);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  // ADR-366 §B.5 — shared offscreen-capture renderer SSoT (same config as the print/PDF capture).
+  const renderer = createOffscreenCaptureRenderer(width, height);
 
   const camera = new THREE.PerspectiveCamera(firstFrame.fov, width / height, 0.1, 5000);
   return { renderer, camera };

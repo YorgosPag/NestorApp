@@ -77,17 +77,51 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
  * (Three.js default is already true, set explicit για future-proofing.)
  */
 export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
-  // preserveDrawingBuffer:true so canvas.toBlob()/toDataURL() captures the rendered
-  // frame for the Performance HUD screenshot + diagnostics (ADR-366 §B.5). Without it
-  // WebGL clears the drawing buffer after compositing → screenshots come out blank.
-  // Same choice as the MP4 exporter renderer.
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: true });
+  // ADR-366 §B.5 (2026-06-28): antialias:TRUE — επαναφορά MSAA μετά από regression (Giorgio
+  // «3D ποιότητα πολύ χαμηλή, ακμές blurry»). Round-1 το είχε σβήσει με λογική fill-rate, αλλά
+  // η σκηνή είναι ΜΙΚΡΟΣΚΟΠΙΚΗ (546 τρίγωνα / 5 draw calls) → το MSAA είναι τετριμμένα φθηνό και
+  // δίνει την καλύτερη ποιότητα ακμών. Big players σε τόσο μικρή σκηνή κρατούν crisp full-quality
+  // viewport· το post-AA (FXAA/SMAA) θα πρόσθετε full-screen fill-rate + θόλωμα χωρίς λόγο εδώ.
+  //
+  // preserveDrawingBuffer:FALSE — true ανάγκαζε τον browser να ΑΝΤΙΓΡΑΦΕΙ (αντί swap) τον
+  // drawing buffer ΚΑΘΕ καρέ (full-framebuffer cost που κλιμακώνεται με το μέγεθος παραθύρου).
+  // Το χρειάζονταν μόνο 2 ΣΠΑΝΙΑ captures του ΚΥΡΙΟΥ renderer (HUD diagnostic screenshot +
+  // path-tracer «Save Render»). Λύση χωρίς το per-frame κόστος:
+  //   • path-tracer save → το capture γίνεται ΣΥΓΧΡΟΝΑ μέσα στο render tick (renderSample →
+  //     onComplete → toBlob, πριν το compositing) → ο buffer είναι έγκυρος ΧΩΡΙΣ preserve.
+  //   • HUD diagnostic (user click, εκτός loop) → `manager.captureFrameDataURL()` κάνει ένα
+  //     force-render + toDataURL στο ΙΔΙΟ task.
+  //   • MP4 export → δικός του renderer (MP4Exporter), ανεπηρέαστος.
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
   renderer.setClearColor(0x1a1a1a, 1);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // PCF (single-tap) αντί PCFSoft (πολλαπλά taps ανά σκιασμένο pixel) = μείωση shadow
+  // fill-rate, αμελητέα οπτική διαφορά σε CAD μοντέλο. (mapSize 2048→1024 στο createBimLights.)
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
+  return renderer;
+}
+
+/**
+ * Offscreen capture renderer SSoT (ADR-366 §B.5) — shared by the MP4 exporter
+ * (`MP4Exporter.ts`) and the print/PDF 3D capture (`print/capture/capture-3d.ts`).
+ *
+ * Both genuinely need their OWN renderer (export resolution, and must not disturb
+ * the live viewport — whose renderer runs `preserveDrawingBuffer:false`). The
+ * INSTANCES are correct to be separate; what was duplicated was the IDENTICAL
+ * construction (options + size + pixel-ratio + SRGB output + ACES tone mapping).
+ * One source so export-image and video colour can never drift apart. Unlike the
+ * interactive renderer, `preserveDrawingBuffer:true` IS required here: the capture
+ * (`toDataURL`/`VideoFrame`) may read after the render task yields.
+ */
+export function createOffscreenCaptureRenderer(width: number, height: number): THREE.WebGLRenderer {
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
+  renderer.setSize(width, height, false);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   return renderer;
 }
 
@@ -106,7 +140,10 @@ export function createBimLights(): SceneLights {
   sun.castShadow = true;
   sun.shadow.bias = -0.002;
   sun.shadow.normalBias = 0.1;
-  sun.shadow.mapSize.set(2048, 2048);
+  // ADR-366 §B.5 perf — 1024 αντί 2048: 4× λιγότερα shadow texels → δραστική μείωση
+  // shadow-pass fill-rate σε αδύναμη GPU, αμελητέα διαφορά σε CAD κλίμακα (browser-verified
+  // fill-rate-bound). Ο QualityModulator ούτως ή άλλως πέφτει στα 1024 κατά την κίνηση.
+  sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 0.1;
   sun.shadow.camera.far = 200;
   sun.shadow.camera.left = -60;

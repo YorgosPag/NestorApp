@@ -25,7 +25,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { VIEWCUBE_HIDE_WIDTH_PX } from '../viewport/viewport-constants';
-import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
+import { useViewMode3DStore, type FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId } from '../viewport/viewport-types';
@@ -66,9 +66,8 @@ export class ThreeJsSceneManager {
   readonly bimLayer: BimSceneLayer;
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
-  /** ADR-538 — YELLOW hover silhouette (same pass/machinery as selection). Driven by `applyBimHover`. */
+  // ADR-538 hover silhouette / ADR-539 per-face overlays (Cinema4D «Polygon Mode»).
   readonly hoverHighlighter: BimSelectionHighlighter;
-  /** ADR-539 — per-face overlays (Cinema 4D «Polygon Mode»): blue selection + (Φ2) yellow hover. */
   readonly faceHighlighter: FaceSelectionHighlighter;
   readonly faceHoverHighlighter: FaceSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
@@ -81,27 +80,19 @@ export class ThreeJsSceneManager {
   private readonly ssaoModulator: SSAOModulator;
   private readonly envmapGenerator: EnvmapGenerator;
   private readonly pathTracerRenderer: PathTracerRenderer;
-
   private readonly performanceCollector: PerformanceCollector;
   private readonly envStoreUnsub: () => void;
-  /** ADR-446 §2 — visible-background mode subscription (dark «σαν 2Δ» ↔ environment). */
-  private readonly bgModeUnsub: () => void;
+  private readonly bgModeUnsub: () => void; // ADR-446 §2 — visible-background mode subscription.
   private readonly sectionController: SectionSceneController;
-  /** Phase 4.2: single animation manager, ticked by main RAF (ADR-040 compliant). */
   private readonly animationManager: AnimationManager;
-  /** Phase 4.4: shared canonical-view dispatcher (ViewCube + keyboard shortcuts). */
   private readonly canonicalViewService: CanonicalViewService;
-  /** Phase 4.5 A.7.Q1: keyboard focus state machine + Three.js outline. */
   private readonly keyboardFocusManager: KeyboardFocusManagerApi;
   private readonly focusOutlineRenderer: FocusOutlineRenderer;
   private readonly focusUnsub: () => void;
-  /** ADR-366 §C.1.b — waypoint drag-handle sprites (visualization only για C.1.b). */
   private readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
-  /** ADR-040 Phase XXIII — render-frame ctx cached once, reused per tick (zero per-frame alloc). */
+  // ADR-040 Phase XXIII — render-frame ctx cached once; `_sceneDirty` set by mutators, cleared per tick.
   private readonly frameContext: RenderFrameContext;
-  /** ADR-040 Phase XXIII — true when scene needs draw; set by mutators, cleared after tick. */
   private _sceneDirty = true;
-  /** ADR-040 Phase XXIII — last frame time used to derive delta when scheduler provides 0. */
   private lastTickTime = performance.now();
   private disposed = false;
   private reducedMotionOverride: ReducedMotionOverride = 'auto';
@@ -253,8 +244,11 @@ export class ThreeJsSceneManager {
     return this.disposed ? null : findFocusedEntityData(this.bimLayer.group, bimId);
   }
 
-  /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
   getCamera(): THREE.Camera { return this.viewport.camera; }
+
+  /** ADR-366 §B.5 — true while navigating the camera (orbit/zoom/pan). `bim3d-pointer-scheduler`
+   *  reads it to suspend OSNAP/hover picking during navigation (big-player Revit/Cinema4D). */
+  isCameraInteracting(): boolean { return this.isInteracting; }
 
   // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (logic in scene-manager-waypoint) ──
   getWaypointHandlesRoot(): THREE.Group | null { return wpHandlesRoot(this.disposed, this.waypointDragHandleRenderer); }
@@ -266,10 +260,7 @@ export class ThreeJsSceneManager {
     return wpPickAxisArrow(this.disposed, this.waypointDragHandleRenderer, domElement, camera, clientX, clientY);
   }
 
-  /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */
   setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void { this.viewCubeContextMenuCb = cb; }
-
-  /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
   setViewCubeCompassVisible(visible: boolean): void { this.viewCube.setCompassVisible(visible); this.markSceneDirty(); }
 
   /**
@@ -305,6 +296,16 @@ export class ThreeJsSceneManager {
   /** ADR-040 Phase XXIII — flag the scene as needing render. Idempotent. */
   markSceneDirty(): void { if (!this.disposed) this._sceneDirty = true; }
 
+  /**
+   * ADR-366 §B.5 — capture the current frame as a data-URL (Performance HUD screenshot). Forces ONE
+   * sync render + reads the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`.
+   */
+  captureFrameDataURL(type = 'image/png', quality?: number): string {
+    if (this.disposed) return '';
+    renderSceneFrame(this.frameContext, performance.now(), 0);
+    return this.renderer.domElement.toDataURL(type, quality);
+  }
+
   syncBimEntities(
     entities: Bim3DEntities,
     floorElevationMm = 0,
@@ -321,8 +322,10 @@ export class ThreeJsSceneManager {
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
     this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
-    // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
-    this.ssaoModulator.warmUp();
+    // ADR-366 §B.5 — pre-compile SSAO programs ONLY when idle photorealism is opted in
+    // (`autoPreviewEnabled`, default OFF): the warm-up is a heavy sync GPU render, pure waste on
+    // the 2D→3D transition when SSAO never runs (lazy compile on first idle is the fallback).
+    if (useViewMode3DStore.getState().autoPreviewEnabled) this.ssaoModulator.warmUp();
     this.markSceneDirty();
   }
 
@@ -414,8 +417,7 @@ export class ThreeJsSceneManager {
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
     if (this.disposed) return false;
-    // DXF overlay floor-plane elevation (Y) so a BIM-miss click on the DXF
-    // wireframe orbits around the real cursor point, not a wrong-depth fallback.
+    // DXF floor-plane elevation (Y) so a BIM-miss DXF-wireframe click orbits around the real point.
     const dxfBounds = this.dxfConverter.getBounds();
     const groundY = dxfBounds ? dxfBounds.min.y : null;
     return setBimOrbitPivot(

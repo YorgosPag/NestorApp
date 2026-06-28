@@ -24,6 +24,18 @@ import {
 /** Texture resolution: canvas pixels per drawing unit of text height (crisp at typical zoom). */
 const TEXTURE_PX_PER_UNIT = 16;
 
+/**
+ * ADR-366 §B.5 — hard cap on the CanvasTexture's largest dimension. A tall DXF annotation
+ * (e.g. a 300-unit title at 16 px/unit) produced an ~18760×6000 canvas → a ~340 MB RGBA GPU
+ * upload that Three.js then clamps to maxTextureSize — a catastrophic per-texture stall on a
+ * weak/integrated GPU (browser-verified: a single such upload spiked the click handler to
+ * 616 ms and starved the cursor). The cap scales `pxPerUnit` down UNIFORMLY so the texture
+ * fits; because the plane's world size is derived from `canvas / pxPerUnit`, the text keeps
+ * the EXACT same physical footprint — only its texel resolution drops (a label never needs
+ * thousands of px). 2048 is plenty crisp for an underlay annotation.
+ */
+const MAX_TEXTURE_DIM = 2048;
+
 /** Disposable bundle for one text mesh (the converter disposes these on re-sync / unmount). */
 export interface DxfTextMeshBundle {
   readonly mesh: THREE.Mesh;
@@ -55,15 +67,29 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
 
   // Font px = text height × texture resolution. Pad so glyph side-bearings / anti-aliasing never
   // touch the canvas edge (Greek caps like Π are wider than a 0.6×height estimate → clipped).
-  const fontPx = Math.max(1, Math.round(heightUnits * TEXTURE_PX_PER_UNIT));
-  const padPx = Math.ceil(fontPx * 0.25);
-  const font = `${fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
-  // Measure the ACTUAL rendered width (not an estimate) so the quad fits the glyphs exactly.
-  ctx.font = font;
-  const textPx = Math.ceil(ctx.measureText(text).width);
+  // `measureCanvas` returns the canvas px footprint for a given px/unit resolution.
+  const measureCanvas = (pxPerUnit: number) => {
+    const fontPx = Math.max(1, Math.round(heightUnits * pxPerUnit));
+    const padPx = Math.ceil(fontPx * 0.25);
+    ctx.font = `${fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
+    const textPx = Math.ceil(ctx.measureText(text).width);
+    return { fontPx, padPx, width: Math.max(8, textPx + padPx * 2), height: Math.max(8, fontPx + padPx * 2) };
+  };
 
-  canvas.width = Math.max(8, textPx + padPx * 2);
-  canvas.height = Math.max(8, fontPx + padPx * 2);
+  // ADR-366 §B.5 — measure at full resolution, then if the canvas would exceed MAX_TEXTURE_DIM
+  // scale px/unit down uniformly so the GPU upload stays bounded. The plane world size below is
+  // derived from `canvas / pxPerUnit`, so it is INVARIANT under this scale — only texel density drops.
+  let pxPerUnit = TEXTURE_PX_PER_UNIT;
+  let m = measureCanvas(pxPerUnit);
+  const maxDim = Math.max(m.width, m.height);
+  if (maxDim > MAX_TEXTURE_DIM) {
+    pxPerUnit *= MAX_TEXTURE_DIM / maxDim;
+    m = measureCanvas(pxPerUnit);
+  }
+  const font = `${m.fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
+
+  canvas.width = m.width;
+  canvas.height = m.height;
   // Resizing the canvas resets the 2D context → re-apply all draw state before filling.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = intToHex(colorInt);
@@ -78,8 +104,8 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
 
   // Plane spans the canvas in world units (same px→unit factor) so the texture never distorts
   // and never clips. Anchored so its lower-left ≈ entity.position (matches the 2D text anchor).
-  const widthUnits = canvas.width / TEXTURE_PX_PER_UNIT;
-  const heightUnitsPadded = canvas.height / TEXTURE_PX_PER_UNIT;
+  const widthUnits = canvas.width / pxPerUnit;
+  const heightUnitsPadded = canvas.height / pxPerUnit;
   const geometry = new THREE.PlaneGeometry(widthUnits, heightUnitsPadded);
   // ADR-537 underlay-depth — text is part of the DXF underlay and is drawn by the dedicated
   // overlay pass (`post-fx-overlay-pass.ts`) AFTER the lit scene + SSAO, so it needs NO `depthTest:false`

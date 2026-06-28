@@ -32,7 +32,7 @@ import { getDxfFloorScope } from '../../scene/dxf-3d-floor-scope';
 import { pickDxfEntityAcrossFloors } from '../../grips/dxf-wireframe-hit-test';
 import { raycastBimHitAndWorld } from '../../systems/raycaster/BimEntityRaycaster';
 import { ensureBoundsTrees } from '../../systems/raycaster/bvh-setup';
-import { markPointerMoved } from '../../systems/pointer-activity';
+import { markPointerMoved, isPointerActive } from '../../systems/pointer-activity';
 import { computeSnap3DHover } from './bim-3d-snap-hover';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 
@@ -54,12 +54,28 @@ let registered = false;
 // hover, e.g. over empty space) produced a periodic frame hitch → the crosshair «swam».
 let lastHoverId: string | null = null;
 
-/** The heavy work — runs in the RAF slot, NEVER inside the mousemove handler. */
-function runPick(input: Bim3DPickInput): void {
+/**
+ * The heavy work — runs in the RAF slot, NEVER inside the mousemove handler.
+ * Returns `true` when a hover-highlight refresh is PENDING (deferred because the cursor is
+ * still sweeping) so the scheduler keeps ticking until the cursor settles — see `onPickFrame`.
+ */
+function runPick(input: Bim3DPickInput): boolean {
   const { manager, clientX, clientY } = input;
   const camera = manager.getCamera();
   const dom = manager.getRendererCanvas();
-  if (!camera || !dom) return;
+  if (!camera || !dom) return false;
+
+  // ADR-366 §B.5 — suspend hover/snap picking WHILE NAVIGATING the camera (orbit/zoom/pan).
+  // Big-player CAD practice (Revit/Cinema4D): no object snap during view navigation. This skips
+  // the per-frame BVH raycast + O(N) snap search — the dominant main-thread cost during rotation,
+  // which ALSO starved the crosshair's RAF/window-listener → «stepped»/«swim» (Giorgio 2026-06-28).
+  // The snap glyph was already hidden visually by the camera-motion gate; here we drop the wasted
+  // compute too and clear any lingering snap so navigation shows a clean crosshair.
+  if (manager.isCameraInteracting()) {
+    if (useSnap3DOverlayStore.getState().snap) useSnap3DOverlayStore.getState().setSnap(null);
+    return false;
+  }
+
   const group = manager.bimLayer.group;
 
   // ADR-539 Φ2 — Polygon Mode: hover drives the YELLOW per-face preview, not the entity
@@ -69,7 +85,7 @@ function runPick(input: Bim3DPickInput): void {
     manager.setHoveredFace(faceHit?.bimId ?? null, faceHit?.faceKey ?? null);
     useSnap3DOverlayStore.getState().setSnap(null);
     manager.markSceneDirty();
-    return;
+    return false;
   }
 
   // ADR-040 Φ-3D-pointer — ONE BVH-accelerated raycast feeds BOTH hover and snap.
@@ -82,22 +98,34 @@ function runPick(input: Bim3DPickInput): void {
   const hoverId = hit?.bimId
     ?? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId
     ?? null;
+  // ADR-366 §B.5 — REFINE-ON-SETTLE hover: the highlight swap is a FULL-scene WebGL re-render
+  // (heavy at fullscreen on a weak GPU). While the cursor is still sweeping we DEFER it — we do
+  // NOT advance `lastHoverId`, so when the cursor settles the change is still pending and gets
+  // applied once. Big-player CAD (Revit/Cinema4D): the hover silhouette resolves on settle, not on
+  // every entity the cursor flies over. The snap glyph below is a Canvas2D overlay (no WebGL
+  // render) so it keeps updating live — snapping stays responsive while sweeping.
+  let resettlePending = false;
   if (hoverId !== lastHoverId) {
-    lastHoverId = hoverId;
-    setHoveredEntity(hoverId);
-    applyBimHover(manager.hoverHighlighter, hit?.bimId ?? null);
-    manager.markSceneDirty();
+    if (isPointerActive(performance.now(), DXF_TIMING.gesture.POINTER_SETTLE)) {
+      resettlePending = true; // keep ticking; apply once the cursor stops
+    } else {
+      lastHoverId = hoverId;
+      setHoveredEntity(hoverId);
+      applyBimHover(manager.hoverHighlighter, hit?.bimId ?? null);
+      manager.markSceneDirty();
+    }
   }
 
   // ADR-544 — while a placement tool (column/wall) owns the snap glyph, the hover-handler yields.
   const placing = toolStateStore.get().activeTool;
-  if (placing === 'column' || placing === 'wall') return;
+  if (placing === 'column' || placing === 'wall') return resettlePending;
 
   // ADR-542 — snap marker reuses the SAME world point from the unified raycast (no 2nd raycast).
   const snap = hit?.worldPoint
     ? computeSnap3DHover(group, camera, dom, clientX, clientY, hit.worldPoint)
     : null;
   useSnap3DOverlayStore.getState().setSnap(snap);
+  return resettlePending;
 }
 
 /**
@@ -114,7 +142,9 @@ function onPickFrame(): void {
   lastRunMs = now;
   dirty = false;
   try {
-    runPick(input);
+    // A pending hover refresh (cursor still sweeping) keeps the slot armed so the scheduler
+    // ticks until the cursor settles and the deferred highlight is applied exactly once.
+    if (runPick(input)) dirty = true;
   } catch {
     useSnap3DOverlayStore.getState().setSnap(null);
   }

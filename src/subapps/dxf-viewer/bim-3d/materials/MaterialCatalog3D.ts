@@ -110,7 +110,15 @@ function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
     metalness: def.metalness,
     transparent: def.transparent ?? false,
     opacity: def.opacity ?? 1,
-    side: THREE.DoubleSide,
+    // ADR-366 §B.5 perf — FrontSide (backface culling) on the SOLE face factory. BIM
+    // solids (walls/columns/slabs/beams/roofs/mep) are CLOSED extrusions with outward
+    // CCW winding, so the inner faces are never seen from outside; DoubleSide doubled
+    // the fragment-shader work and disabled culling → ~2× overdraw on a fill-rate-bound
+    // GPU (browser-verified «3D βαρύ»). Section-cut interiors stay solid via the stencil
+    // cap pipeline (section-stencil-renderer), and the hidden-line / occluder variants
+    // keep their explicit DoubleSide where both faces must write depth. Like Revit /
+    // Cinema4D realtime viewports (single-sided shading + caps for cuts).
+    side: THREE.FrontSide,
     polygonOffset: true,
     polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
     polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,

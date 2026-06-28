@@ -71,6 +71,32 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-28 — Cursor↔crosshair PHASE probe (μέτρηση 3D cursor lag, Chrome INP / Event Timing — Phase A reuse)
+
+**Status**: IMPLEMENTED 2026-06-28 (Sonnet-scope, UNCOMMITTED). 🔴 browser-verify (`localStorage 'dxf-perf-trace'='1'` → κούνα ποντίκι → διάβασε `console.table`) + commit (Giorgio· stage ADR-040 — CHECK 6B/6D) pending.
+
+**Πρόβλημα (Giorgio)**: το 3D σταυρόνημα «lag-άρει» — αλλά πριν διορθώσουμε, πρέπει να **μετρήσουμε ΠΟΥ** είναι η διαφορά φάσης ποντίκι↔σταυρόνημα (render-bound vs path-bound), όχι να μαντέψουμε.
+
+**Fix (SSoT reuse, ΟΧΙ νέος μηχανισμός)**: ο dev-only perf aggregator του Phase A (`systems/cursor/mouse-handler-perf.ts`, toggle `dxf-perf-trace`, `console.table` p95 ανά 60 samples) επεκτάθηκε με export `recordSample(stage, value)` — raw sample στον **ίδιο** `accumulators` Map που τροφοδοτεί το `withPerf` (το `withPerf` τώρα delegate σε αυτό). Ο capture-phase `window mousemove` listener που οδηγεί το 3D σταυρόνημα (`BimCrosshairOverlay3D`) καταγράφει, gated από `isPerfEnabled()` (μηδέν overhead όταν off):
+- `cursor.inputLatency` = `performance.now() − e.timeStamp` → καθυστέρηση ουράς event (μεγάλο ⇒ main thread busy = βαρύ render· ~0 ενώ σταυρόνημα lag ⇒ φταίει το update path του σταυρονήματος).
+- `cursor.totalLag` = `paint(rAF) − e.timeStamp` → OS→ζωγραφισμένο σταυρόνημα.
+- `cursor.coalesced` = `getCoalescedEvents().length` (μόνο σε PointerEvent → ξεχωριστός gated `pointermove` probe) → «κολύμπι»/πήδημα.
+
+**Files**: MOD `systems/cursor/mouse-handler-perf.ts` (export `recordSample`, `withPerf` delegate), `bim-3d/viewport/BimCrosshairOverlay3D.tsx` (gated `probeCursorLag` + coalesced probe). ✅ Google-level: YES — μηδέν διπλότυπος μηχανισμός (ένα toggle, ένα report, ένα p95), zero production overhead (gated boolean check), δεν αγγίζει render/orchestrator/bitmap-cache path. Επόμενο βήμα διάγνωσης: διάβασε το report → αν `inputLatency` p95 = δεκάδες ms → render-bound (fill-rate/σκιές)· αλλιώς path-bound.
+
+### 2026-06-28 — `preserveDrawingBuffer:false` στον κύριο 3D renderer (per-frame fill-rate, browser-verified fill-rate-bound)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (3D feel + HUD «Send diagnostic» screenshot ΟΧΙ λευκό) + commit (Giorgio) pending.
+
+**Πρόβλημα (Giorgio, μήνες «3D βαρύ»· browser-verified fill-rate-bound: μικρό παράθυρο→ομαλό, zoom→βαρύ, σκηνή 546 τριγώνων· cores=4, pixelRatio=0.8)**: ο κύριος renderer (`createBimRenderer`) είχε `preserveDrawingBuffer:true`. Αυτό αναγκάζει τον browser να **ΑΝΤΙΓΡΑΦΕΙ** (αντί swap) ΟΛΟΚΛΗΡΟ τον drawing buffer **κάθε καρέ** — full-framebuffer κόστος που **κλιμακώνεται με το μέγεθος παραθύρου** (= ακριβώς το σύμπτωμα), ανεξάρτητα γεωμετρίας. Το `true` υπήρχε μόνο για 2 ΣΠΑΝΙΑ async captures του κύριου renderer.
+
+**Fix (big-player: off + on-demand capture)**: `preserveDrawingBuffer:false`. Όλοι οι capture consumers καλύφθηκαν χωρίς το per-frame κόστος:
+- **path-tracer «Save Render»** → ασφαλές ΧΩΡΙΣ αλλαγή: το capture γίνεται ΣΥΓΧΡΟΝΑ μέσα στο render tick (`PathTracerRenderer.renderSample` → `onFinalComplete` → `writeRenderOutput`→`toBlob`, ΟΛΑ στο ίδιο task πριν το compositing → ο buffer είναι έγκυρος).
+- **HUD diagnostic screenshot** (user click, ΕΚΤΟΣ render loop) → ΝΕΟ `ThreeJsSceneManager.captureFrameDataURL()` (force one `renderSceneFrame` + `toDataURL` στο ΙΔΙΟ task)· το `performance-snapshot-service` το καλεί μέσω `getActiveSceneManager()` (fallback στο raw canvas).
+- **MP4 export** + **print `capture-3d`** → δικός τους offscreen renderer (το `capture-3d` σχόλιο ήδη ανέφερε «the live renderer has it off» → η αλλαγή είναι ΣΥΓΚΛΙΝΟΥΣΑ, όχι σύγκρουση).
+
+**Files**: MOD `bim-3d/scene/scene-setup.ts` (flag false + rationale), `bim-3d/scene/ThreeJsSceneManager.ts` (`captureFrameDataURL`), `bim-3d/performance/performance-snapshot-service.ts` (active-manager capture). ✅ Google-level: YES — αφαίρεση per-frame κόστους χωρίς να σπάσει κανένα capture feature (καθένα κρατά έγκυρο buffer στο σωστό task), SSoT capture μέσω του υπάρχοντος active-manager registry, μηδέν αλλαγή σε bitmap cache / orchestrator.
+
 ### 2026-06-28 — Section/axis-cut caps: γκρι `'fast'` tier στο hover-sweep (ο νέος #1 ένοχος μετά το DXF fix)
 
 **Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (trace: `renderAxisCutCap`/`capCutSection` % πριν/μετά) + commit (Giorgio) pending.

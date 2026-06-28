@@ -50,13 +50,26 @@ export function withPerf<T>(stage: string, fn: () => T): T {
     return fn();
   } finally {
     const dur = performance.now() - start;
-    let arr = accumulators.get(stage);
-    if (!arr) {
-      arr = [];
-      accumulators.set(stage, arr);
-    }
-    arr.push(dur);
+    recordSample(stage, dur);
   }
+}
+
+/**
+ * Record a raw measurement `value` for `stage` into the SAME aggregator that `withPerf`
+ * feeds — so non-function-timing metrics (event-queue latency, coalesced counts, paint lag)
+ * surface in the shared `console.table` report with the same count/avg/p95 stats.
+ *
+ * No-op when the perf flag is off (zero overhead beyond a boolean check). Callers that read
+ * the flag themselves to skip building `value` should still guard the call site.
+ */
+export function recordSample(stage: string, value: number): void {
+  if (!perfEnabled) return;
+  let arr = accumulators.get(stage);
+  if (!arr) {
+    arr = [];
+    accumulators.set(stage, arr);
+  }
+  arr.push(value);
 }
 
 export function perfTick(): void {

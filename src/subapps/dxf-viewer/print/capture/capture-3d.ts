@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../../bim-3d/scene/ThreeJsSceneManager';
+import { createOffscreenCaptureRenderer } from '../../bim-3d/scene/scene-setup';
 import type { RasterTargetPx } from '../config/paper-types';
 import type { CaptureResult } from './capture-types';
 
@@ -40,17 +41,9 @@ export function captureCurrent3dView(
   raster: RasterTargetPx,
 ): CaptureResult {
   const { widthPx, heightPx } = raster;
-  const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    preserveDrawingBuffer: true,
-    alpha: false,
-  });
+  // ADR-366 §B.5 — shared offscreen-capture renderer SSoT (same config as the MP4 exporter).
+  const renderer = createOffscreenCaptureRenderer(widthPx, heightPx);
   try {
-    renderer.setSize(widthPx, heightPx, false);
-    renderer.setPixelRatio(1);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-
     const camera = prepareCamera(sceneManager.getCamera(), widthPx, heightPx);
     renderer.render(sceneManager.scene, camera);
 

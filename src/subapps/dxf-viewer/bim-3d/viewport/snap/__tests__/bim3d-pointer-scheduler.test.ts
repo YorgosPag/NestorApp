@@ -29,7 +29,8 @@ let mockPolygonActive = false;
 jest.mock('../../../stores/PolygonMode3DStore', () => ({ usePolygonMode3DStore: { getState: () => ({ active: mockPolygonActive }) } }));
 
 const mockSetSnap = jest.fn();
-jest.mock('../../../stores/Snap3DOverlayStore', () => ({ useSnap3DOverlayStore: { getState: () => ({ setSnap: mockSetSnap }) } }));
+let mockCurrentSnap: unknown = null;
+jest.mock('../../../stores/Snap3DOverlayStore', () => ({ useSnap3DOverlayStore: { getState: () => ({ setSnap: mockSetSnap, snap: mockCurrentSnap }) } }));
 
 const mockApplyBimHover = jest.fn();
 jest.mock('../../../scene/scene-manager-actions', () => ({ applyBimHover: (...a: unknown[]) => mockApplyBimHover(...a) }));
@@ -59,6 +60,7 @@ function mockDom(): HTMLElement {
 const group = new THREE.Group();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
 const dom = mockDom();
+let mockInteracting = false;
 const raycastBimFace = jest.fn<{ bimId: string; faceKey: string } | null, []>(() => null);
 const setHoveredFace = jest.fn();
 const markSceneDirty = jest.fn();
@@ -66,6 +68,9 @@ const hoverHighlighter = {};
 const manager = {
   getCamera: () => camera,
   getRendererCanvas: () => dom,
+  // ADR-366 §B.5 — default: not navigating, so hover/snap picking runs (the suspend-on-orbit
+  // gate is exercised by the dedicated test below).
+  isCameraInteracting: () => mockInteracting,
   bimLayer: { group },
   hoverHighlighter,
   raycastBimFace: () => raycastBimFace(),
@@ -74,6 +79,20 @@ const manager = {
 } as unknown as ThreeJsSceneManager;
 
 const WORLD = new THREE.Vector3(1, 2, 3);
+
+/** POINTER_SETTLE (DXF_TIMING.gesture) — the refine-on-settle window the scheduler reads. */
+const SETTLE_MS = 100;
+
+/**
+ * Drive one pick AFTER the cursor has settled (past POINTER_SETTLE) so the DEFERRED hover-highlight
+ * refresh is applied — mirrors the real refine-on-settle timing (the hover silhouette resolves when
+ * the cursor stops, not on every entity it sweeps over). Snap is NOT gated and applies on any pick.
+ */
+function settledPick(clientX: number, clientY: number): void {
+  requestPointerPick({ manager, clientX, clientY });
+  nowMs += SETTLE_MS + 50; // > POINTER_SETTLE (100) and > HOVER_HITTEST (50)
+  mockRegisteredCb?.();
+}
 
 // Deterministic clock so the throttle is controllable across tests.
 let nowMs = 0;
@@ -87,6 +106,8 @@ beforeEach(() => {
   mockPolygonActive = false;
   mockBimHit = null;
   mockDxfPick = null;
+  mockInteracting = false;
+  mockCurrentSnap = null;
   raycastBimFace.mockReturnValue(null);
   nowMs += 10_000; // jump well past the HOVER_HITTEST throttle window
   clearPointerPick();
@@ -98,6 +119,7 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     requestPointerPick({ manager, clientX: 50, clientY: 50 });
     expect(mockRegisteredIsDirty?.()).toBe(true);
 
+    nowMs += SETTLE_MS + 50; // cursor settles → the deferred hover refresh applies
     mockRegisteredCb?.();
 
     expect(mockEnsureBoundsTrees).toHaveBeenCalledWith(group);
@@ -107,14 +129,59 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     // Snap reuses the SAME world point — 6th arg — no second raycast.
     expect(mockComputeSnap).toHaveBeenCalledWith(group, camera, dom, 50, 50, WORLD);
     expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 });
-    expect(mockRegisteredIsDirty?.()).toBe(false); // dirty cleared after a successful run
+    expect(mockRegisteredIsDirty?.()).toBe(false); // dirty cleared after a settled run
+  });
+
+  it('REFINE-ON-SETTLE: defers the hover-highlight render while sweeping, applies it on settle (ADR-366 §B.5)', () => {
+    mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
+
+    // Pick FIRES right after a move (cursor still sweeping) → snap updates live, but the heavy
+    // hover-highlight render is DEFERRED and the slot stays armed so it retries.
+    requestPointerPick({ manager, clientX: 50, clientY: 50 });
+    mockRegisteredCb?.();
+    expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap is live while sweeping
+    expect(mockSetHoveredEntity).not.toHaveBeenCalled();                // hover highlight deferred
+    expect(markSceneDirty).not.toHaveBeenCalled();                      // no WebGL re-render while sweeping
+    expect(mockRegisteredIsDirty?.()).toBe(true);                       // re-armed → waits for settle
+
+    // Cursor settles (no further moves): the next pick past POINTER_SETTLE applies the hover once.
+    nowMs += SETTLE_MS + 50;
+    mockRegisteredCb?.();
+    expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');
+    expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1');
+    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(mockRegisteredIsDirty?.()).toBe(false); // settled → slot disarmed
+  });
+
+  it('suspends ALL picking while the camera is navigating (ADR-366 §B.5) — clears a lingering snap', () => {
+    mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
+    mockInteracting = true;     // orbit/zoom/pan in flight
+    mockCurrentSnap = { view: {}, elevMm: 0 }; // a snap glyph was up before navigation began
+    requestPointerPick({ manager, clientX: 50, clientY: 50 });
+    mockRegisteredCb?.();
+
+    // No BVH raycast, no hover write, no snap search — pure wasted work during navigation.
+    expect(mockEnsureBoundsTrees).not.toHaveBeenCalled();
+    expect(mockRaycast).not.toHaveBeenCalled();
+    expect(mockSetHoveredEntity).not.toHaveBeenCalled();
+    expect(mockComputeSnap).not.toHaveBeenCalled();
+    // The lingering snap glyph is cleared so navigation shows a clean crosshair.
+    expect(mockSetSnap).toHaveBeenCalledWith(null);
+  });
+
+  it('does not re-clear the snap while navigating when none is set (no redundant store write)', () => {
+    mockInteracting = true;
+    mockCurrentSnap = null;
+    requestPointerPick({ manager, clientX: 50, clientY: 50 });
+    mockRegisteredCb?.();
+
+    expect(mockSetSnap).not.toHaveBeenCalled();
   });
 
   it('BIM miss → DXF fallback hover; no world point → snap cleared, no snap compute', () => {
     mockBimHit = null;
     mockDxfPick = { entityId: 'dxf-9' };
-    requestPointerPick({ manager, clientX: 10, clientY: 10 });
-    mockRegisteredCb?.();
+    settledPick(10, 10);
 
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('dxf-9');
     expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, null);
@@ -125,8 +192,7 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
   it('a placement tool (column/wall) yields the snap glyph — leaves the snap store untouched (ADR-544)', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
     mockActiveTool = 'column';
-    requestPointerPick({ manager, clientX: 50, clientY: 50 });
-    mockRegisteredCb?.();
+    settledPick(50, 50);
 
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1'); // hover still updates
     expect(mockComputeSnap).not.toHaveBeenCalled();
@@ -147,8 +213,7 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
 
   it('throttles: a second pick within the HOVER_HITTEST window is skipped, dirty stays set', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
-    requestPointerPick({ manager, clientX: 50, clientY: 50 });
-    mockRegisteredCb?.(); // first run executes
+    settledPick(50, 50); // first run executes (settled → hover applied)
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
 
     nowMs += 10; // < 50ms HOVER_HITTEST
@@ -160,24 +225,19 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
 
   it('re-renders the scene ONLY when the hover target changes (no swim — ADR-040 Φ-3D-pointer)', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
-    requestPointerPick({ manager, clientX: 50, clientY: 50 });
-    mockRegisteredCb?.();
+    settledPick(50, 50);
     expect(markSceneDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
 
-    // Second pick over the SAME entity (past the throttle) → NO extra render / hover write.
-    nowMs += 100;
-    requestPointerPick({ manager, clientX: 51, clientY: 51 });
-    mockRegisteredCb?.();
+    // Second settled pick over the SAME entity → NO extra render / hover write.
+    settledPick(51, 51);
     expect(markSceneDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
 
     // Hover changes to empty space → exactly one more render + a null hover write.
     mockBimHit = null;
     mockDxfPick = null;
-    nowMs += 100;
-    requestPointerPick({ manager, clientX: 300, clientY: 300 });
-    mockRegisteredCb?.();
+    settledPick(300, 300);
     expect(markSceneDirty).toHaveBeenCalledTimes(2);
     expect(mockSetHoveredEntity).toHaveBeenLastCalledWith(null);
   });

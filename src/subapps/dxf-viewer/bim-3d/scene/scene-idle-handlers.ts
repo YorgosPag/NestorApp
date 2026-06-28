@@ -16,14 +16,21 @@ export function createSceneIdleDetector(deps: {
   return new IdleDetector({
     thresholdMs: DXF_TIMING.gesture.CAMERA_IDLE, // ADR-516
     onIdle: () => {
-      // ADR-366 — ALL idle quality escalation is opt-in via `autoPreviewEnabled`
-      // (default OFF): the SSAO refine-on-idle composer pass, the render-quality
-      // bump AND the photorealism path tracer. When OFF the idle leaves the fast
-      // interaction raster untouched, so the machine never re-renders / grinds on a
-      // camera pause during ordinary editing (the SSAO composer pass alone — heavy
-      // FBO round-trip — was what kept "doing photorealism" on every stop).
-      if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
+      // ADR-366 — the shadow-quality RESTORE is the cheap, one-shot COUNTERPART of the
+      // always-on `onCameraActive()` degrade (soft shadows 2048/r4 ⇄ moving 1024/r0.5). It
+      // must run on EVERY idle, decoupled from `autoPreviewEnabled` — otherwise the degrade
+      // fires on every camera move but the restore never does, so shadows stay stuck at the
+      // sharp/low moving-quality during ordinary editing (asymmetry bug). It is NOT the grind
+      // culprit: it only rebuilds the shadow map once on settle (on-demand), it never re-renders
+      // per frame the way the SSAO composer pass does.
       deps.qualityModulator.onCameraIdle();
+
+      // ADR-366 — the EXPENSIVE idle escalation stays opt-in via `autoPreviewEnabled` (default
+      // OFF): the SSAO refine-on-idle composer pass (the heavy per-frame FBO round-trip that
+      // kept "doing photorealism" on every stop), the photorealism path tracer AND preview mode.
+      // When OFF the idle leaves the fast interaction raster untouched, so the machine never
+      // grinds on a camera pause during ordinary editing.
+      if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
       deps.ssaoModulator.onCameraIdle();
       const hasBimMesh = deps.bimLayer.hasMesh;
       const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
