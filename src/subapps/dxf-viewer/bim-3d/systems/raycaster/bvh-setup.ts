@@ -24,6 +24,14 @@ import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-
 let installed = false;
 
 /**
+ * Roots whose every indexed mesh already has a `boundsTree` (built since the last scene rebuild).
+ * A clean root lets {@link ensureBoundsTrees} skip the per-pick `traverse()` entirely — the walk
+ * itself, not the (already-skipped) tree builds, was the residual ~20fps cost on dense scenes.
+ * `markBvhDirty(root)` re-arms the walk after the scene layer adds/replaces meshes.
+ */
+const cleanRoots = new WeakSet<THREE.Object3D>();
+
+/**
  * Install the three-mesh-bvh prototype extensions ONCE. The `BufferGeometry`/`Mesh` augmentations
  * ship with three-mesh-bvh's own d.ts (`boundsTree`/`computeBoundsTree`/`disposeBoundsTree`), so no
  * `any` / `@ts-ignore` is needed. Idempotent.
@@ -38,15 +46,28 @@ export function installBvh(): void {
 
 /**
  * Lazily build a BVH `boundsTree` for every indexed mesh under `root` that lacks one. Cheap to call
- * every pick: meshes that already have a tree are skipped, non-indexed geometry is skipped (the BVH
- * builder requires an index buffer; such meshes keep the default raycast).
+ * every pick: a `root` clean since its last scene rebuild skips the whole `traverse()`; otherwise
+ * meshes that already have a tree are skipped, non-indexed geometry is skipped (the BVH builder
+ * requires an index buffer; such meshes keep the default raycast). After a full pass the root is
+ * marked clean so subsequent picks are O(1) until {@link markBvhDirty} re-arms it.
  */
 export function ensureBoundsTrees(root: THREE.Object3D): void {
   installBvh();
+  if (cleanRoots.has(root)) return; // every indexed mesh already has a tree — no walk needed
   root.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     const geom = obj.geometry;
     if (!geom || geom.boundsTree || !geom.index) return;
     geom.computeBoundsTree();
   });
+  cleanRoots.add(root);
+}
+
+/**
+ * Re-arm the per-pick BVH walk for `root` — call AFTER the scene layer adds or replaces meshes
+ * (`BimSceneLayer.sync*`), so the next pick rebuilds trees for the fresh geometry. Idempotent.
+ * A missed call only degrades the new meshes to the (correct) default raycast, never a wrong hit.
+ */
+export function markBvhDirty(root: THREE.Object3D): void {
+  cleanRoots.delete(root);
 }

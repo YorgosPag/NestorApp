@@ -36,8 +36,25 @@
 Επιβεβαιωμένο ότι ΟΛΟΙ οι vectors κλειστοί: (a) import-wizard [Fix A], (b) getters [Fix C], (c) level-ops
 sceneManager dep [τώρα]. Όλα τα υπόλοιπα memo deps stable σε edit (audited).
 
-🔴 ΕΚΚΡΕΜΕΙ: **νέο** browser re-profile («record why» ON) — επιβεβαίωση ότι σε edit κολόνας ΔΕΝ ξανα-render-άρει
-το ribbon (έλεγξε: `RibbonCommandProvider` ΧΩΡΙΣ `props:commands`, hosts ΧΩΡΙΣ `props:levelManager`). Μετά commit (Giorgio).
+## ✅ UPDATE 3 — re-profile 12:57: levelManager VERIFIED· δεύτερος cascade = ribbon `commands` → ΟΛΟΚΛΗΡΩΘΗΚΕ (ADR-547 Stage 4)
+
+Re-profile 12:57: τα 28 hosts **χωρίς** `props:levelManager` ✅ (το levelManager fix δούλεψε). Νέα ρίζα:
+`RibbonCommandProvider :: props:commands`. Giorgio: «ανάλαβε το εσύ» → ολοκλήρωσα το ADR-547 Stage 4:
+
+- **`useRibbonCommands.ts`**: 4 volatile getters out of returned `commands` (object+deps) + νέο `useLayoutEffect`
+  → `setRibbonFieldReaders` από το hook. → `commands` σταθερό → `RibbonRoot.memo` ΚΡΑΤΑ.
+- **`RibbonCommandContext.tsx`**: αφαιρέθηκαν `RibbonFieldContext`/`useRibbonField`/`useRibbonCommand`/fieldValue/
+  provider store-push/dead NOOPs/4 getter fields. Provider = μόνο `RibbonDispatchContext`.
+- **6 consumers migrated** (all-or-nothing): UndoRedo/ZoomControls/SplitDropdown → `useRibbonDispatch`·
+  HatchPatternPicker/DxfColorPicker → dispatch + per-key `useRibbonComboboxState`· RibbonBody → visibility μέσα
+  στο `RibbonPanel` (per-key `useRibbonPanelVisibility` + self-hide).
+
+Verification: 445 ribbon jest GREEN. **2 pre-existing failures ΕΚΤΟΣ domain** (`data/architecture-tab` λείπουν
+`wall-covering` keys· `data/structural-tab` `dropdown` vs `simple` ADR-521 — άλλος agent, committed data-drift, ΟΧΙ δικά μου).
+tsc: σε εξέλιξη.
+
+🔴 ΕΚΚΡΕΜΕΙ: browser re-profile («record why» ON) — edit κολόνας → `RibbonCommandProvider` ΧΩΡΙΣ `props:commands`,
+re-render μόνο το επηρεαζόμενο widget. (hosts `:: hooks` από `currentScene` = ADR-547 ξεχωριστά, άλλος agent.) Μετά commit (Giorgio).
 
 ---
 

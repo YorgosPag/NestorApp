@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { installBvh, ensureBoundsTrees } from '../bvh-setup';
+import { installBvh, ensureBoundsTrees, markBvhDirty } from '../bvh-setup';
 
 describe('bvh-setup — ADR-040 Φ-3D-pointer spatial-acceleration SSoT', () => {
   it('installBvh patches the BufferGeometry/Mesh prototypes (idempotent)', () => {
@@ -51,5 +51,21 @@ describe('bvh-setup — ADR-040 Φ-3D-pointer spatial-acceleration SSoT', () => 
 
     expect(() => ensureBoundsTrees(group)).not.toThrow();
     expect(indexed.geometry.boundsTree).toBeDefined();
+  });
+
+  it('once clean, a mesh added AFTER the pass is skipped until markBvhDirty re-arms the walk', () => {
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    ensureBoundsTrees(group); // builds the first mesh's tree → root now clean
+
+    // Simulate a scene rebuild that adds a fresh mesh without re-arming.
+    const fresh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    group.add(fresh);
+    ensureBoundsTrees(group); // clean root → traverse skipped → fresh mesh NOT built
+    expect(fresh.geometry.boundsTree).toBeUndefined();
+
+    markBvhDirty(group); // BimSceneLayer.sync* does this after adding meshes
+    ensureBoundsTrees(group);
+    expect(fresh.geometry.boundsTree).toBeDefined();
   });
 });

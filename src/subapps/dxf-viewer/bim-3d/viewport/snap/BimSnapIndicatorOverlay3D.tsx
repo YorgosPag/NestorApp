@@ -21,10 +21,10 @@
 import { useRef, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { SnapIndicatorGlyph } from '../../../canvas-v2/overlays/SnapIndicatorGlyph';
-import { isSnapMarkerVisible } from '../../../snapping/extended-types';
 import { useRafWhile, useCameraMotionGate, useGripDepthOccluder } from '../overlay-raf';
 import { projectSnap3DMarker } from './project-snap3d-marker';
 import { useSnap3DOverlayStore } from '../../stores/Snap3DOverlayStore';
+import { snapGlyphKey, parseSnapGlyphKey } from './snap-3d-glyph-key';
 
 export interface BimSnapIndicatorOverlay3DProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -40,13 +40,15 @@ export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverla
   // Hide the marker during camera motion (shared SSoT with BimGripOverlay2D).
   const isCameraMoving = useCameraMotionGate();
 
-  // ADR-040 — subscribe ONLY to the low-frequency snap marker (drives the RAF on/off + glyph).
-  const snap = useSyncExternalStore(
+  // ADR-040 — subscribe ONLY to the glyph IDENTITY (type + description, or null when nothing to
+  // draw). The marker's plan position/elevation are applied imperatively in the RAF, so a
+  // position-only change (e.g. nearest-on-edge slide) keeps the SAME key ⇒ zero re-render.
+  const glyphKey = useSyncExternalStore(
     useSnap3DOverlayStore.subscribe,
-    () => useSnap3DOverlayStore.getState().snap,
+    () => snapGlyphKey(useSnap3DOverlayStore.getState().snap),
     () => null,
   );
-  const active = snap !== null && isSnapMarkerVisible(snap.view);
+  const active = glyphKey !== null;
 
   // One frame: project the stored snap marker via the shared SSoT (project + occlusion-cull +
   // camera-gate), and position the glyph imperatively. Reads the store fresh each call (no deps).
@@ -73,7 +75,9 @@ export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverla
   }, []);
   useRafWhile(active, draw, onStop);
 
-  if (!active || !snap) return null;
+  if (glyphKey === null) return null;
+  // Recover the glyph fields from the subscribed key (no store read during render → tearing-safe).
+  const { type, description } = parseSnapGlyphKey(glyphKey);
   return (
     <div
       ref={wrapperRef}
@@ -81,7 +85,7 @@ export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverla
       style={{ display: 'none', willChange: 'transform' }}
       aria-hidden="true"
     >
-      <SnapIndicatorGlyph screenPos={ORIGIN} type={snap.view.type} description={snap.view.description} />
+      <SnapIndicatorGlyph screenPos={ORIGIN} type={type} description={description} />
     </div>
   );
 }

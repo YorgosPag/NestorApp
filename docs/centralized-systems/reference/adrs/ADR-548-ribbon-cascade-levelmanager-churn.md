@@ -77,6 +77,35 @@ audit βρήκε **τρίτο** vector που το αρχικό handoff είχε
 3 πηγές churn). Και οι 3 vectors (§3 getters, §3b level-ops sceneManager dep, §4 import-wizard) έπρεπε να
 κλείσουν μαζί — οποιοδήποτε ένα ανοιχτό κρατά το `levelManager` ασταθές.
 
+## 4b. ΔΕΥΤΕΡΟΣ cascade — ribbon `commands` churn (ολοκλήρωση ADR-547 Stage 4)
+
+Re-profile 12:57 (μετά το levelManager fix): τα 28 hosts **έπαψαν** να δείχνουν `props:levelManager` ✅,
+αλλά εμφανίστηκε **διαφορετική** ρίζα: `RibbonCommandProvider :: props:commands` + `RibbonRootInner :: props:commands`.
+
+**Ρίζα:** ο ADR-547 agent είχε ήδη σπάσει το `RibbonCommandContext` σε `RibbonDispatchContext` (stable) +
+`RibbonFieldContext` (volatile) + `RibbonFieldStore` (zero-React per-key, sig-cache), και είχε migrate-άρει
+τα στατικά κουμπιά. ΟΜΩΣ το `ribbonCommands` `useMemo` (`useRibbonCommands.ts`) **ακόμη περιείχε** τους 4
+volatile getters (`getToggleState`/`getComboboxState`/`getBadgeState`/`getPanelVisibility`) στο returned object +
+deps → το `commands` prop churn-άρε κάθε edit → `RibbonRoot` `React.memo` έσπαγε → `RibbonCommandProvider` +
+`RibbonBody` re-render.
+
+**Fix (Giorgio: «ανάλαβε το εσύ» — ολοκλήρωση Stage 4):**
+- `useRibbonCommands.ts`: οι 4 getters **βγήκαν** από το returned `commands` (object + deps)· νέο
+  `useLayoutEffect(() => setRibbonFieldReaders({...4}), [...4])` σπρώχνει τους readers στο `RibbonFieldStore`
+  από το hook (όχι από τον provider render). → `commands` σταθερό σε edit → `RibbonRoot.memo` ΚΡΑΤΑ.
+- `RibbonCommandContext.tsx`: αφαιρέθηκαν `RibbonFieldContext` + `useRibbonField()` + `useRibbonCommand()`
+  combiner + `fieldValue` useMemo + το provider store-push + dead NOOP field constants + οι 4 getter fields
+  του `RibbonCommandsApi`. Ο provider κρατά **μόνο** το `RibbonDispatchContext`.
+- Migration **και των 6** combiner consumers (all-or-nothing): `RibbonUndoRedoButtons`/`ZoomControlsWidget`/
+  `RibbonSplitDropdown` → `useRibbonDispatch()` (stable-only)· `HatchPatternPicker`/`RibbonDxfColorPickerWidget`
+  → `useRibbonDispatch()` + per-key `useRibbonComboboxState()`· `RibbonBody` → το φιλτράρισμα ορατότητας
+  μεταφέρθηκε **μέσα στο `RibbonPanel`** (per-key `useRibbonPanelVisibility()` + self-hide), ώστε το body να
+  μην είναι πια context subscriber.
+
+**Outcome:** edit κολόνας → re-render **μόνο** το widget του οποίου το per-key slice κινήθηκε· το ribbon shell
++ tool buttons κρατούν (memo bail). Verification: 445 ribbon jest GREEN (πλην 2 **pre-existing** data-tests drift —
+`architecture-tab`/`structural-tab`, ADR-521 dropdown + wall-covering keys, ΑΛΛΟ domain/agent).
+
 ## 5. Εκτός scope
 
 God-context split (ADR-341 pattern) — λάθος target για αυτό το cascade· optional Layer 2, ΜΟΝΟ αν
@@ -94,3 +123,7 @@ re-profile δείξει ότι αξίζει.
 - **2026-06-28 (re-profile)** — §3b: re-profile 12:43 αποκάλυψε ότι `levelManager` churn-άρει ακόμη·
   βρέθηκε `sceneManager` dep σε `removeLevel`/`clearAllLevels` (useLevelOperations) → ref pattern fix +
   boy-scout super-admin effect dep. Και οι 3 vectors πλέον κλειστοί.
+- **2026-06-28 (re-profile 12:57 + §4b)** — levelManager VERIFIED (hosts χωρίς `props:levelManager`).
+  Δεύτερος cascade = ribbon `commands` churn → ολοκλήρωση ADR-547 Stage 4: getters out of `commands` +
+  store-push relocated στο hook + 6 consumers migrated + `RibbonFieldContext`/combiner removed. 445 ribbon
+  jest GREEN (2 pre-existing data-drift εκτός domain). 🔴 browser re-profile εκκρεμεί.

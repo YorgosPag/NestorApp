@@ -24,6 +24,7 @@ import type { DxfToThreeConverter, DxfOverlayFloorEntry } from '../converters/Dx
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
+import { markBvhDirty } from '../systems/raycaster/bvh-setup';
 
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
@@ -69,6 +70,8 @@ export function syncBimEntitiesIntoScene(
     args.floorVisModes,
     args.nextFloorElevationMm,
   );
+  // ADR-040 Φ-3D-pointer — fresh meshes need BVH trees; re-arm the per-pick walk.
+  markBvhDirty(deps.bimLayer.group);
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
   // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
   if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
@@ -108,6 +111,8 @@ export function syncMultiFloorBimEntitiesIntoScene(
     args.buildingVisModes,
     args.floorVisModes,
   );
+  // ADR-040 Φ-3D-pointer — fresh meshes need BVH trees; re-arm the per-pick walk.
+  markBvhDirty(deps.bimLayer.group);
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
   // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
   if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));

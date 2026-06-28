@@ -45,13 +45,15 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
   // Hide the snap glue during camera motion (shared SSoT with BimSnapIndicatorOverlay3D).
   const isCameraMoving = useCameraMotionGate();
 
-  // ADR-040 — subscribe ONLY to the low-frequency snap marker (drives the RAF on/off).
-  const snap = useSyncExternalStore(
+  // ADR-040 — subscribe ONLY to the on/off boolean (snap present + visual). The crosshair reads
+  // nothing else from the marker reactively: its centre position is owned by the RAF, so a marker
+  // whose position/type changes mid-hover must NOT re-render here. `Object.is` on the boolean
+  // snapshot ⇒ a re-render only on the off→on / on→off transition.
+  const snapActive = useSyncExternalStore(
     useSnap3DOverlayStore.subscribe,
-    () => useSnap3DOverlayStore.getState().snap,
-    () => null,
+    () => isSnapMarkerVisible(useSnap3DOverlayStore.getState().snap?.view ?? null),
+    () => false,
   );
-  const snapActive = snap !== null && isSnapMarkerVisible(snap.view);
 
   /** Convert client px → canvas-local px (same base as the snap projector's rebase). */
   const toCanvasLocal = useCallback((clientX: number, clientY: number): Point2D | null => {
