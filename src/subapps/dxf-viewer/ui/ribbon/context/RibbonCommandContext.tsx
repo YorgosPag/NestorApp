@@ -6,7 +6,7 @@
  * Provider lives in RibbonRoot; leaves consume via useRibbonCommand().
  */
 
-import React, { createContext, useContext, useLayoutEffect, useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import type { ToolType } from '../../toolbar/types';
 import { useSplitLastUsed } from '../hooks/useSplitLastUsed';
 // ADR-547 Stage 4 Option B — value types extracted to a React-free module so the
@@ -16,7 +16,6 @@ import type {
   RibbonToggleState,
   RibbonComboboxState,
 } from './ribbon-command-types';
-import { setRibbonFieldReaders } from './RibbonFieldStore';
 
 export type { RibbonActionPayload, RibbonToggleState, RibbonComboboxState };
 
@@ -55,33 +54,12 @@ export interface RibbonCommandsApi {
    * ADR-345 §4.5 Fase 5.5 — combobox value change.
    */
   onComboboxChange?: (commandKey: string, value: string) => void;
-  /**
-   * ADR-345 §4.4 Fase 5.5 — read current toggle state for a commandKey.
-   * Returns `null` for mixed/indeterminate selections.
-   */
-  getToggleState?: (commandKey: string) => RibbonToggleState;
-  /**
-   * ADR-345 §4.5 Fase 5.5 — read current combobox state for a commandKey
-   * (value + dynamic options if any). When the bridge returns `null` (or
-   * the handler itself is undefined), the button falls back to
-   * `command.options` static list and renders an empty value.
-   */
-  getComboboxState?: (commandKey: string) => RibbonComboboxState | null;
-  /**
-   * ADR-358 Phase 7b1 — read current validation badge state for a `badgeKey`
-   * declared on a `RibbonTab`. Returns `true` to render a red "!" badge on
-   * the tab button. Owning bridge (e.g. `useRibbonStairBridge`) maps badge
-   * keys to domain validators (e.g. `StairEntity.validation.hasCodeViolations`).
-   */
-  getBadgeState?: (badgeKey: string) => boolean;
-  /**
-   * ADR-358 Phase 7b2b-β Stream F — read panel visibility for a
-   * `visibilityKey` declared on `RibbonPanelDef`. Returns `false` to skip
-   * rendering the panel. Owning bridge (e.g. `useRibbonStairBridge`) maps
-   * visibility keys to domain predicates (e.g. variant.kind != 'straight').
-   * Default behavior when no bridge owns the key: panel always visible.
-   */
-  getPanelVisibility?: (visibilityKey: string) => boolean;
+  // ADR-547 Stage 4 (completion) — the VOLATILE field READERS (getToggleState /
+  // getComboboxState / getBadgeState / getPanelVisibility) no longer ride on this
+  // object. `useRibbonCommands` pushes them straight into the zero-React
+  // `RibbonFieldStore` (see `RibbonFieldReaders`); value widgets subscribe per-key
+  // via `useRibbonFieldSelectors`. Keeping them OUT of `commands` is what lets the
+  // `commands` prop stay stable across BIM edits so `RibbonRoot.memo` holds.
   /**
    * ADR-461 Phase C4 — Revit-style ADVISORY recommendation: returns `false` when a
    * creation tool's discipline does not belong on the active storey kind (foundation
@@ -132,36 +110,13 @@ interface RibbonDispatchContextValue {
   onComboboxChange: (commandKey: string, value: string) => void;
 }
 
-// ADR-547 Stage 4 Option B — the field READERS no longer live in a React context.
-// They are pushed into the zero-React `RibbonFieldStore`; value widgets subscribe
-// per-`commandKey` via `useRibbonFieldSelectors`. This interface is retained only
-// so the `useRibbonCommand()` combiner can keep its historical shape for the few
-// non-migrated consumers (pickers / split-dropdown).
-interface RibbonFieldContextValue {
-  getToggleState: (commandKey: string) => RibbonToggleState;
-  getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  getBadgeState: (badgeKey: string) => boolean;
-  getPanelVisibility: (visibilityKey: string) => boolean;
-}
-
-type RibbonCommandContextValue = RibbonDispatchContextValue & RibbonFieldContextValue;
-
 const NOOP_TOGGLE = () => {};
 const NOOP_COMBOBOX_CHANGE = () => {};
-const NOOP_TOGGLE_STATE = (): RibbonToggleState => false;
-const NOOP_COMBOBOX_STATE = (): RibbonComboboxState | null => null;
-const NOOP_BADGE_STATE = (): boolean => false;
-// ADR-358 Phase 7b2b-β Stream F — default = always visible (no breaking
-// change for existing panels without `visibilityKey`).
-const DEFAULT_PANEL_VISIBILITY = (): boolean => true;
 // ADR-461 Phase C4 — default = every command recommended (no breaking change for
 // counted storeys / when no bridge owns the active-storey kind).
 const DEFAULT_COMMAND_RECOMMENDATION = (): boolean => true;
 
 const RibbonDispatchContext = createContext<RibbonDispatchContextValue | null>(
-  null,
-);
-const RibbonFieldContext = createContext<RibbonFieldContextValue | null>(
   null,
 );
 
@@ -208,42 +163,13 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
     ],
   );
 
-  // VOLATILE half — retained only for the `useRibbonCommand()` combiner (pickers /
-  // split-dropdown). Migrated value widgets read these via `RibbonFieldStore`.
-  const fieldValue = useMemo<RibbonFieldContextValue>(
-    () => ({
-      getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
-      getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
-      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
-      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
-    }),
-    [
-      commands.getToggleState,
-      commands.getComboboxState,
-      commands.getBadgeState,
-      commands.getPanelVisibility,
-    ],
-  );
-
-  // ADR-547 Stage 4 Option B — push the field READERS into the zero-React store on
-  // every commit so per-key subscribers (`useRibbonFieldSelectors`) re-pull. The
-  // store's per-key signature cache gates which widgets actually re-render, so an
-  // over-notify costs only a cheap getSnapshot compare. Layout effect (not render)
-  // keeps the push StrictMode/concurrent-safe.
-  useLayoutEffect(() => {
-    setRibbonFieldReaders({
-      getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
-      getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
-      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
-      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
-    });
-  });
-
+  // ADR-547 Stage 4 (completion) — the volatile field READERS are pushed into the
+  // zero-React `RibbonFieldStore` from `useRibbonCommands` (not here), so this
+  // provider only carries the STABLE dispatch half. `commands` no longer churns on
+  // BIM edits → `RibbonRoot.memo` holds → this provider does not re-render on edits.
   return (
     <RibbonDispatchContext.Provider value={dispatchValue}>
-      <RibbonFieldContext.Provider value={fieldValue}>
-        {children}
-      </RibbonFieldContext.Provider>
+      {children}
     </RibbonDispatchContext.Provider>
   );
 };

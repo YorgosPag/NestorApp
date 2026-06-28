@@ -18,7 +18,8 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RibbonColorField } from '../RibbonColorField';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
+import { useRibbonComboboxState } from '../../context/useRibbonFieldSelectors';
 import type { RibbonCommand } from '../../types/ribbon-types';
 
 const FALLBACK_HEX = '#808080';
@@ -29,9 +30,10 @@ interface RibbonDxfColorPickerWidgetProps {
 
 export const RibbonDxfColorPickerWidget: React.FC<RibbonDxfColorPickerWidgetProps> = ({ command }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onComboboxChange, getComboboxState } = useRibbonCommand();
+  const { onComboboxChange } = useRibbonDispatch();
 
-  const state = getComboboxState(command.commandKey);
+  // ADR-547 Stage 4 — per-key leaf subscription (re-renders only on THIS color field).
+  const state = useRibbonComboboxState(command.commandKey);
   const hex = state?.value && state.value !== '' ? state.value : FALLBACK_HEX;
 
   const handleChange = useCallback(

@@ -9,6 +9,7 @@ import type {
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import type { UseRibbonCommandsProps } from './useRibbonCommands-types';
+import { setRibbonFieldReaders } from '../context/RibbonFieldStore';
 import { isStairBadgeKey, isStairPanelVisibilityKey } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
 import { isOpeningBadgeKey } from './useRibbonOpeningBridge';
@@ -437,6 +438,20 @@ export function useRibbonCommands({
     },
   );
 
+  // ADR-547 Stage 4 (completion) — push the VOLATILE field readers into the
+  // zero-React `RibbonFieldStore` from HERE (the hook), not from the provider's
+  // render. This decouples the store-update path from the React prop flow: the 4
+  // getters are NO LONGER part of the returned `commands` object, so `commands`
+  // stays referentially stable across BIM edits → `RibbonRoot` `React.memo` HOLDS
+  // → the ribbon shell + tool buttons stop re-rendering. The per-key store +
+  // signature cache (`useRibbonFieldSelectors`) re-render only the value widgets
+  // whose own slice actually moved. This effect re-runs whenever a getter's
+  // identity changes (i.e. on every edit, via the bridge deps), keeping the store
+  // current. Layout effect → in sync before subscribers read on the same commit.
+  React.useLayoutEffect(() => {
+    setRibbonFieldReaders({ getComboboxState, getToggleState, getBadgeState, getPanelVisibility });
+  }, [getComboboxState, getToggleState, getBadgeState, getPanelVisibility]);
+
   return React.useMemo(
     () => ({
       activeTool,
@@ -447,10 +462,6 @@ export function useRibbonCommands({
       canRedo,
       onToggle,
       onComboboxChange,
-      getToggleState,
-      getComboboxState,
-      getBadgeState,
-      getPanelVisibility,
       getCommandRecommendation,
     }),
     [
@@ -462,10 +473,6 @@ export function useRibbonCommands({
       canRedo,
       onToggle,
       onComboboxChange,
-      getToggleState,
-      getComboboxState,
-      getBadgeState,
-      getPanelVisibility,
       getCommandRecommendation,
     ],
   );

@@ -4,7 +4,7 @@ import React from 'react';
 import { Undo2, Redo2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
-import { useRibbonCommand } from '../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../context/RibbonCommandContext';
 
 /**
  * ADR-345 Fase 5.7 — Undo / Redo buttons in the ribbon tab bar, between the
@@ -15,7 +15,7 @@ import { useRibbonCommand } from '../context/RibbonCommandContext';
  */
 export const RibbonUndoRedoButtons: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onAction, canUndo, canRedo } = useRibbonCommand();
+  const { onAction, canUndo, canRedo } = useRibbonDispatch();
   return (
     <div className="dxf-ribbon-tabbar-actions" role="group">
       <Tooltip>

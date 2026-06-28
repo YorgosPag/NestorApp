@@ -7,7 +7,6 @@ import type {
   RibbonTab,
 } from '../types/ribbon-types';
 import { RibbonPanel } from './RibbonPanel';
-import { useRibbonCommand } from '../context/RibbonCommandContext';
 
 interface RibbonBodyProps {
   activeTab: RibbonTab | undefined;
@@ -34,17 +33,16 @@ const RibbonBodyInner: React.FC<RibbonBodyProps> = ({
   onPinToggle,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { getPanelVisibility } = useRibbonCommand();
   if (!activeTab) return null;
 
   const isSettingsMode = activeTab.id === 'settings' && !!settingsTabContent;
 
-  // ADR-358 Phase 7b2b-β Stream F — filter panels by `visibilityKey`. Panels
-  // without a key (most panels) are always visible. Panels with a key are
-  // shown only when the owning bridge returns `true`.
-  const visiblePanels = activeTab.panels.filter(
-    (panel) => panel.visibilityKey === undefined || getPanelVisibility(panel.visibilityKey),
-  );
+  // ADR-547 Stage 4 — panel `visibilityKey` filtering moved INTO `RibbonPanel`
+  // (each panel does a per-key `useRibbonPanelVisibility` leaf subscription and
+  // self-hides). `RibbonBody` no longer subscribes to the volatile field context,
+  // so a BIM edit no longer re-renders the whole body. Panels self-hide → render
+  // them all here; a hidden panel returns null.
+  const allPanels = activeTab.panels;
 
   return (
     <div
@@ -56,9 +54,9 @@ const RibbonBodyInner: React.FC<RibbonBodyProps> = ({
     >
       {isSettingsMode ? (
         <>
-          {visiblePanels.length > 0 && (
+          {allPanels.length > 0 && (
             <div className="dxf-ribbon-settings-panels">
-              {visiblePanels.map((panel) => (
+              {allPanels.map((panel) => (
                 <RibbonPanel
                   key={panel.id}
                   panel={panel}
@@ -73,7 +71,7 @@ const RibbonBodyInner: React.FC<RibbonBodyProps> = ({
           </div>
         </>
       ) : (
-        visiblePanels.map((panel) => (
+        allPanels.map((panel) => (
           <RibbonPanel
             key={panel.id}
             panel={panel}

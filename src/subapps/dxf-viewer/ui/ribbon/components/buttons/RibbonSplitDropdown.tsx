@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../../../../systems/escape-bus';
@@ -42,7 +42,7 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction, setSplitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, setSplitLastUsed } = useRibbonDispatch();
   const rootRef = useRef<HTMLMenuElement>(null);
   const [ready, setReady] = useState(false);
 

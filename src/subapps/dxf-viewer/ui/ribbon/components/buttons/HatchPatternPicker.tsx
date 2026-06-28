@@ -33,7 +33,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { RibbonCommand, RibbonComboboxOption } from '../../types/ribbon-types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
+import { useRibbonComboboxState } from '../../context/useRibbonFieldSelectors';
 import { buildHatchPatternThumbnail } from '../../../../bim/hatch/hatch-pattern-thumbnail';
 
 const MIXED_PLACEHOLDER = '—';
@@ -72,10 +73,12 @@ const PatternThumbnail: React.FC<{ name: string }> = ({ name }) => {
 
 export const HatchPatternPicker: React.FC<HatchPatternPickerProps> = ({ command }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onComboboxChange, getComboboxState } = useRibbonCommand();
+  const { onComboboxChange } = useRibbonDispatch();
   const [open, setOpen] = useState(false);
 
-  const state = getComboboxState(command.commandKey);
+  // ADR-547 Stage 4 — per-key leaf subscription: re-renders only when THIS hatch
+  // pattern field's value moves, not on every BIM edit.
+  const state = useRibbonComboboxState(command.commandKey);
   const value = state?.value && state.value !== '' ? state.value : null;
   const options = command.options ?? [];
   const selected = value !== null ? options.find((o) => o.value === value) : undefined;

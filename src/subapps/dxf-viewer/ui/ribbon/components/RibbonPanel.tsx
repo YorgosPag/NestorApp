@@ -64,6 +64,7 @@ import { RibbonHatchListWidget } from './RibbonHatchListWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
+import { useRibbonPanelVisibility } from '../context/useRibbonFieldSelectors';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
@@ -272,6 +273,10 @@ export const RibbonPanel: React.FC<RibbonPanelProps> = ({
   onPinToggle,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
+  // ADR-547 Stage 4 — per-key visibility leaf subscription (moved out of RibbonBody
+  // so a BIM edit re-renders only the affected panel, not the whole body). Panels
+  // without a `visibilityKey` resolve to the default `true` slice (never changes).
+  const isVisible = useRibbonPanelVisibility(panel.visibilityKey ?? '');
   const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
   const containerRef = useRef<HTMLElement>(null);
 
@@ -306,6 +311,10 @@ export const RibbonPanel: React.FC<RibbonPanelProps> = ({
   }, [isFlyoutOpen, isPinned]);
 
   const hasContent = normalRows.length > 0;
+
+  // ADR-547 Stage 4 — self-hide when the owning bridge marks this panel hidden.
+  // Placed after all hooks so hook order stays stable.
+  if (!isVisible) return null;
 
   return (
     <section
