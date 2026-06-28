@@ -17,7 +17,7 @@
 
 import * as React from 'react';
 
-import { EventBus } from '../systems/events/EventBus';
+import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../systems/levels';
 import { useCurrentSceneModel } from '../ui/text-toolbar/hooks/useCurrentSceneModel';
 import { nowISO } from '@/lib/date-local';
@@ -27,17 +27,23 @@ import { getActiveSceneManager } from '../bim-3d/scene/active-scene-manager-regi
 import { captureCurrent3dView } from '../print/capture/capture-3d';
 import { PrintDialog } from '../ui/components/print/PrintDialog';
 
-export function PrintHost(): React.JSX.Element {
+/**
+ * Thin gate (ADR-532 Stage 3): listens for «Εκτύπωση» and mounts the dialog body
+ * ONLY while open. Closed → `null` (was re-rendering PrintDialog while closed).
+ * Same SSoT gate as ExportHost — the two are mirrors (ADR-453/505).
+ */
+export function PrintHost(): React.ReactElement | null {
+  const { open, close } = useEventGatedDialog('dxf:print-dialog-requested');
+  if (!open) return null;
+  return <PrintBody onClose={close} />;
+}
+
+function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
-  const [open, setOpen] = React.useState(false);
   const scene = useCurrentSceneModel();
   const { currentLevelId, levels } = useLevels();
 
-  // Ribbon «Εκτύπωση» → action 'open-print-dialog' → EventBus → open.
-  React.useEffect(() => EventBus.on('dxf:print-dialog-requested', () => setOpen(true)), []);
-
-  // 3D source is available only while a 3D scene is mounted. Read at render time
-  // (re-evaluated each time the dialog opens via setOpen → re-render).
+  // 3D source is available only while a 3D scene is mounted (read at open-time).
   const sceneManager3d = getActiveSceneManager();
   const canPrint3d = sceneManager3d !== null;
 
@@ -70,7 +76,12 @@ export function PrintHost(): React.JSX.Element {
     [scene, projectName, t],
   );
 
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => { if (!next) onClose(); },
+    [onClose],
+  );
+
   return (
-    <PrintDialog open={open} onOpenChange={setOpen} canPrint3d={canPrint3d} onSubmit={handleSubmit} />
+    <PrintDialog open onOpenChange={handleOpenChange} canPrint3d={canPrint3d} onSubmit={handleSubmit} />
   );
 }

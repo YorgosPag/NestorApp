@@ -82,9 +82,32 @@ save-status βγήκε από το main value+deps → main value αλλάζει
 **ΜΕΝΕΙ follow-up:** η αλλαγή ΡΥΘΜΙΣΗΣ (combobox, commit#47) ξαναχτίζει το main value → όλοι οι ~28 consumers·
 χρειάζεται domain-split ή selector-context (μεγαλύτερο refactor).
 
-### Stage 3 — `DxfViewerDialogs` (117 dialog fibers)
-- **Αρχείο:** `app/DxfViewerDialogs.tsx`. Βρες ΓΙΑΤΙ re-renderάρει στο select (πιθανώς subscribe σε selection ή parent prop) → memoize τα always-mounted dialog hosts ή granular subscription (κάθε dialog host να self-subscribe ΜΟΝΟ αν ανοιχτό).
-- **Στόχος:** dialogs 117→~0 στο selection commit.
+### Stage 3 — `DxfViewerDialogs` dialog hosts ✅ ΕΓΙΝΕ (2026-06-28, UNCOMMITTED)
+**Re-profile (`03-15-26.json`) μετά Stage 1/2 + ADR-341:** click-select = **commit 212ms / 883 fibers**
+(από 243ms/~1500 → 322ms/~1980 στα ενδιάμεσα → **212/883**). Τα closed dialogs που ζωγραφίζονταν ακόμη:
+`ExportDialog, ThermalEnvelopeDialog, OpeningTagStyleDialog, DetailSheetDialog ×3` → 1-προς-1 με
+always-mounted hosts στο `DxfViewerDialogs`. Root: κάθε host είναι always-listed (για να ακούει το
+open-event) αλλά κρατούσε ζωντανό ΟΛΟ το βαρύ body ΚΑΙ κλειστό.
+
+**FIX (Split pattern, SSoT — Giorgio approved):** NEW `app/dialog-hosts/useEventGatedDialog.ts` (typed
+EventBus mount-gate `{open, payload, close}`, ref-stable `accept`). Κάθε host → **thin gate (always-listed)
++ heavy Body (mounted ΜΟΝΟ όταν open)**· closed → `null` → μηδέν subtree στο selection commit:
+- `ColumnDetailHost`/`FoundationDetailHost`/`BeamDetailHost`/`SlabDetailHost` → `*DetailBody` (payload
+  `{id, levelId}`· 3D capture + model μόνο στο body).
+- `ExportHost` → `ExportBody` (no payload).
+- `ThermalEnvelopeHost` → `ThermalEnvelopeBody`· **`useEnvelopeFloorSlabs()` ΜΕΝΕΙ always-on** στον thin
+  host (cross-floor slab producer για 2D/3D κέλυφος)· init-on-open = lazy `useState(draft)` + mount-effect
+  (regions + wallDna snapshot, ισοδύναμο με το παλιό event-time read).
+- `OpeningTagStyleHost` → hydration + repaint-subscribe ΜΕΝΟΥΝ always-on· μόνο ο dialog gate-άρεται.
+
+`DxfViewerDialogs.tsx` **αμετάβλητο** (hosts self-gate). Trade-off: close=unmount (χωρίς Radix exit-anim)
+— ίδιο με το υπάρχον gate-at-mount (Credits/import). 5/5 jest GREEN (`useEventGatedDialog.test.tsx`).
+ADR-532 changelog + Files ενημερωμένα.
+- **Στόχος:** dialogs 117→~0 στο selection commit. **🔴 ΕΚΚΡΕΜΕΙ browser-verify** (Profiler: closed dialogs
+  ΟΧΙ updaters/renders στο click· κάθε dialog ανοίγει/εφαρμόζει/κλείνει σωστά — ειδικά Thermal apply +
+  per-region override, που μετακινήθηκαν σε mount-init) + commit (Giorgio· stage ADR-040+532, CHECK 6B/6D).
+- **Follow-up:** `React.memo` στους hosts (να μην re-render-άρουν καν ως null)· λοιποί always-mounted hosts
+  (Renumber/Print/Admin/FloorMgmt/Calibration) αν φανούν σε re-profile.
 
 ### Stage 4 (αν χρειαστεί) — canvas/3D/panels/statusbar leaves
 Μικρότερα (43+85 fibers). Ίδιο μοτίβο: granular subscription / memo boundaries.

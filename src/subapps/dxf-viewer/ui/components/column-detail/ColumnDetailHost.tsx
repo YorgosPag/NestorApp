@@ -20,7 +20,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { useLevels } from '../../../systems/levels';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isColumnEntity } from '../../../types/entities';
 import type { ColumnEntity } from '../../../bim/types/column-types';
@@ -43,14 +43,6 @@ type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'>;
 export interface ColumnDetailHostProps {
   readonly levelManager: LevelManagerLike;
 }
-
-interface DialogState {
-  open: boolean;
-  columnId: string | null;
-  levelId: string | null;
-}
-
-const CLOSED: DialogState = { open: false, columnId: null, levelId: null };
 
 /** Resolves the target column entity from a level scene, or `null` if missing. */
 function resolveColumn(
@@ -87,39 +79,56 @@ function captureSizePx(): { widthPx: number; heightPx: number } {
     : { widthPx: Math.round(CAPTURE_LONG_EDGE_PX * aspect), heightPx: CAPTURE_LONG_EDGE_PX };
 }
 
+/**
+ * Thin gate (ADR-532 Stage 3): listens for the open event and mounts the heavy
+ * body ONLY while open. Closed → `null` → zero subtree in the per-selection
+ * commit (was re-rendering as a closed dialog before — see HANDOFF Stage 3).
+ */
 export function ColumnDetailHost({
   levelManager,
 }: ColumnDetailHostProps): React.ReactElement | null {
+  const { open, payload, close } = useEventGatedDialog(
+    'bim:column-detail-requested',
+    ({ columnId, levelId }) => resolveColumn(levelManager, levelId, columnId) !== null,
+  );
+  if (!open || !payload) return null;
+  return (
+    <ColumnDetailBody
+      levelManager={levelManager}
+      columnId={payload.columnId}
+      levelId={payload.levelId}
+      onClose={close}
+    />
+  );
+}
+
+interface ColumnDetailBodyProps {
+  readonly levelManager: LevelManagerLike;
+  readonly columnId: string;
+  readonly levelId: string;
+  readonly onClose: () => void;
+}
+
+/** Heavy body — mounted ONLY while the dialog is open (3D capture + model build). */
+function ColumnDetailBody({
+  levelManager,
+  columnId,
+  levelId,
+  onClose,
+}: ColumnDetailBodyProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   // Offscreen 3D perspective capture (ADR-457 Slice 3) — async, null while pending.
   const [perspective3d, setPerspective3d] = useState<ColumnDetail3dCapture | null>(null);
 
-  useEffect(() => {
-    return EventBus.on('bim:column-detail-requested', ({ columnId, levelId }) => {
-      if (!resolveColumn(levelManager, levelId, columnId)) return;
-      setDialogState({ open: true, columnId, levelId });
-    });
-  }, [levelManager]);
-
-  // Capture the column's reinforcement in 3D once the dialog opens, off the
+  // Capture the column's reinforcement in 3D on mount (dialog just opened), off the
   // synchronous model build (WebGL render is one-shot; null → no cage).
   useEffect(() => {
-    if (!dialogState.open) {
-      setPerspective3d(null);
-      return;
-    }
-    const column = resolveColumn(levelManager, dialogState.levelId, dialogState.columnId);
-    if (!column) {
-      setPerspective3d(null);
-      return;
-    }
-    setPerspective3d(captureColumnDetail3d(toEffectiveColumn(column), captureSizePx()));
-  }, [dialogState, levelManager]);
+    const column = resolveColumn(levelManager, levelId, columnId);
+    setPerspective3d(column ? captureColumnDetail3d(toEffectiveColumn(column), captureSizePx()) : null);
+  }, [levelManager, levelId, columnId]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
-    if (!dialogState.open) return null;
-    const column = resolveColumn(levelManager, dialogState.levelId, dialogState.columnId);
+    const column = resolveColumn(levelManager, levelId, columnId);
     if (!column) return null;
     return buildColumnDetailSheet({
       params: toEffectiveColumn(column).params,
@@ -154,15 +163,15 @@ export function ColumnDetailHost({
         },
       },
     });
-  }, [dialogState, levelManager, t, perspective3d]);
+  }, [levelManager, levelId, columnId, t, perspective3d]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
-    if (!next) setDialogState(CLOSED);
-  }, []);
+    if (!next) onClose();
+  }, [onClose]);
 
   return (
     <ColumnDetailDialog
-      open={dialogState.open}
+      open
       onOpenChange={handleOpenChange}
       model={model}
     />

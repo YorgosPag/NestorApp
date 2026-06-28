@@ -16,7 +16,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { useLevels } from '../../../systems/levels';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isFoundationEntity } from '../../../types/entities';
 import type { Entity } from '../../../types/entities';
@@ -47,14 +47,6 @@ export interface FoundationDetailHostProps {
   readonly levelManager: LevelManagerLike;
 }
 
-interface DialogState {
-  open: boolean;
-  foundationId: string | null;
-  levelId: string | null;
-}
-
-const CLOSED: DialogState = { open: false, foundationId: null, levelId: null };
-
 /** Resolves the target footing entity from a level scene, or `null` if missing. */
 function resolveFooting(
   levelManager: LevelManagerLike,
@@ -76,41 +68,61 @@ function captureSizePx(): { widthPx: number; heightPx: number } {
     : { widthPx: Math.round(CAPTURE_LONG_EDGE_PX * aspect), heightPx: CAPTURE_LONG_EDGE_PX };
 }
 
+/**
+ * Thin gate (ADR-532 Stage 3): listens for the open event and mounts the heavy
+ * body ONLY while open. Closed → `null` → zero subtree in the per-selection commit.
+ */
 export function FoundationDetailHost({
   levelManager,
 }: FoundationDetailHostProps): React.ReactElement | null {
+  const { open, payload, close } = useEventGatedDialog(
+    'bim:foundation-detail-requested',
+    ({ foundationId, levelId }) => resolveFooting(levelManager, levelId, foundationId) !== null,
+  );
+  if (!open || !payload) return null;
+  return (
+    <FoundationDetailBody
+      levelManager={levelManager}
+      foundationId={payload.foundationId}
+      levelId={payload.levelId}
+      onClose={close}
+    />
+  );
+}
+
+interface FoundationDetailBodyProps {
+  readonly levelManager: LevelManagerLike;
+  readonly foundationId: string;
+  readonly levelId: string;
+  readonly onClose: () => void;
+}
+
+/** Heavy body — mounted ONLY while the dialog is open (3D capture + model build). */
+function FoundationDetailBody({
+  levelManager,
+  foundationId,
+  levelId,
+  onClose,
+}: FoundationDetailBodyProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   const [perspective3d, setPerspective3d] = useState<FootingDetail3dCapture | null>(null);
   // ADR-464 Slice 5 — building-level σ_allow + κανονισμός για τον πίνακα ελέγχων σχεδιασμού.
   const codeId = useStructuralSettingsStore((s) => s.codeId);
   const soilBearingCapacityKpa = useStructuralSettingsStore((s) => s.soilBearingCapacityKpa);
 
+  // Capture the footing's reinforcement in 3D on mount (one-shot WebGL).
   useEffect(() => {
-    return EventBus.on('bim:foundation-detail-requested', ({ foundationId, levelId }) => {
-      if (!resolveFooting(levelManager, levelId, foundationId)) return;
-      setDialogState({ open: true, foundationId, levelId });
-    });
-  }, [levelManager]);
-
-  // Capture the footing's reinforcement in 3D once the dialog opens (one-shot WebGL).
-  useEffect(() => {
-    if (!dialogState.open) {
-      setPerspective3d(null);
-      return;
-    }
-    const footing = resolveFooting(levelManager, dialogState.levelId, dialogState.foundationId);
+    const footing = resolveFooting(levelManager, levelId, foundationId);
     setPerspective3d(footing ? captureFootingDetail3d(footing, captureSizePx()) : null);
-  }, [dialogState, levelManager]);
+  }, [levelManager, levelId, foundationId]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
-    if (!dialogState.open) return null;
-    const footing = resolveFooting(levelManager, dialogState.levelId, dialogState.foundationId);
+    const footing = resolveFooting(levelManager, levelId, foundationId);
     if (!footing) return null;
     // ADR-464 Slice 5 — DERIVED έλεγχοι σχεδιασμού (αδρανές χωρίς σ_allow / φορτίο).
     let design: FootingDesignResult | null = null;
-    if (soilBearingCapacityKpa && dialogState.levelId) {
-      const entities = (levelManager.getLevelScene(dialogState.levelId)?.entities ?? []) as unknown as readonly Entity[];
+    if (soilBearingCapacityKpa && levelId) {
+      const entities = (levelManager.getLevelScene(levelId)?.entities ?? []) as unknown as readonly Entity[];
       // ADR-497 — engaged FEM αντίδραση βάσης (πρόβολος → single source of truth, αλλιώς tributary).
       const femAxial = resolveActiveFootingFemAxial(footing.id, entities);
       const input = buildPadFootingDesignInput(footing, resolveStructuralCode(codeId), soilBearingCapacityKpa, entities, femAxial);
@@ -171,15 +183,15 @@ export function FoundationDetailHost({
         },
       },
     });
-  }, [dialogState, levelManager, t, perspective3d, codeId, soilBearingCapacityKpa]);
+  }, [levelManager, levelId, foundationId, t, perspective3d, codeId, soilBearingCapacityKpa]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
-    if (!next) setDialogState(CLOSED);
-  }, []);
+    if (!next) onClose();
+  }, [onClose]);
 
   return (
     <DetailSheetDialog
-      open={dialogState.open}
+      open
       onOpenChange={handleOpenChange}
       model={model}
       pdfFilename={PDF_FILENAME}

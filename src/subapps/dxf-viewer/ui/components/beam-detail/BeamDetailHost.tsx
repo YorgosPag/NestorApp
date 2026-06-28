@@ -16,7 +16,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { useLevels } from '../../../systems/levels';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isBeamEntity, isSlabEntity } from '../../../types/entities';
 import type { BeamEntity } from '../../../bim/types/beam-types';
@@ -44,14 +44,6 @@ export interface BeamDetailHostProps {
   readonly levelManager: LevelManagerLike;
 }
 
-interface DialogState {
-  open: boolean;
-  beamId: string | null;
-  levelId: string | null;
-}
-
-const CLOSED: DialogState = { open: false, beamId: null, levelId: null };
-
 /** Resolves the target beam entity from a level scene, or `null` if missing. */
 function resolveBeam(
   levelManager: LevelManagerLike,
@@ -73,37 +65,57 @@ function captureSizePx(): { widthPx: number; heightPx: number } {
     : { widthPx: Math.round(CAPTURE_LONG_EDGE_PX * aspect), heightPx: CAPTURE_LONG_EDGE_PX };
 }
 
+/**
+ * Thin gate (ADR-532 Stage 3): listens for the open event and mounts the heavy
+ * body ONLY while open. Closed → `null` → zero subtree in the per-selection commit.
+ */
 export function BeamDetailHost({
   levelManager,
 }: BeamDetailHostProps): React.ReactElement | null {
+  const { open, payload, close } = useEventGatedDialog(
+    'bim:beam-detail-requested',
+    ({ beamId, levelId }) => resolveBeam(levelManager, levelId, beamId) !== null,
+  );
+  if (!open || !payload) return null;
+  return (
+    <BeamDetailBody
+      levelManager={levelManager}
+      beamId={payload.beamId}
+      levelId={payload.levelId}
+      onClose={close}
+    />
+  );
+}
+
+interface BeamDetailBodyProps {
+  readonly levelManager: LevelManagerLike;
+  readonly beamId: string;
+  readonly levelId: string;
+  readonly onClose: () => void;
+}
+
+/** Heavy body — mounted ONLY while the dialog is open (3D capture + model build). */
+function BeamDetailBody({
+  levelManager,
+  beamId,
+  levelId,
+  onClose,
+}: BeamDetailBodyProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   const [perspective3d, setPerspective3d] = useState<BeamDetail3dCapture | null>(null);
 
+  // Capture the beam's reinforcement in 3D on mount (one-shot WebGL).
   useEffect(() => {
-    return EventBus.on('bim:beam-detail-requested', ({ beamId, levelId }) => {
-      if (!resolveBeam(levelManager, levelId, beamId)) return;
-      setDialogState({ open: true, beamId, levelId });
-    });
-  }, [levelManager]);
-
-  // Capture the beam's reinforcement in 3D once the dialog opens (one-shot WebGL).
-  useEffect(() => {
-    if (!dialogState.open) {
-      setPerspective3d(null);
-      return;
-    }
-    const beam = resolveBeam(levelManager, dialogState.levelId, dialogState.beamId);
+    const beam = resolveBeam(levelManager, levelId, beamId);
     setPerspective3d(beam ? captureBeamDetail3d(beam, captureSizePx()) : null);
-  }, [dialogState, levelManager]);
+  }, [levelManager, levelId, beamId]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
-    if (!dialogState.open) return null;
-    const beam = resolveBeam(levelManager, dialogState.levelId, dialogState.beamId);
+    const beam = resolveBeam(levelManager, levelId, beamId);
     if (!beam) return null;
     // ADR-534 Φ3b — DERIVED b_eff (T-beam) από τις καλύπτουσες πλάκες της σκηνής. Reuse του ΙΔΙΟΥ
     // `buildCeilingSlabHosts` SSoT (§monolithic-cut). Καμία καλύπτουσα πλάκα → undefined → ορθογώνια.
-    const scene = dialogState.levelId ? levelManager.getLevelScene(dialogState.levelId) : null;
+    const scene = levelId ? levelManager.getLevelScene(levelId) : null;
     const coveringHosts = scene ? buildCeilingSlabHosts(scene.entities.filter(isSlabEntity)) : [];
     const supportType = resolveActiveBeamSupportType(beam.id) ?? beam.params.supportType ?? 'simple';
     const effectiveFlangeWidthMm = resolveBeamEffectiveFlangeWidthMm(beam, coveringHosts, supportType);
@@ -143,15 +155,15 @@ export function BeamDetailHost({
         },
       },
     });
-  }, [dialogState, levelManager, t, perspective3d]);
+  }, [levelManager, levelId, beamId, t, perspective3d]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
-    if (!next) setDialogState(CLOSED);
-  }, []);
+    if (!next) onClose();
+  }, [onClose]);
 
   return (
     <DetailSheetDialog
-      open={dialogState.open}
+      open
       onOpenChange={handleOpenChange}
       model={model}
       pdfFilename={PDF_FILENAME}

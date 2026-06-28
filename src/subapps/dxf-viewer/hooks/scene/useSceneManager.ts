@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useSyncExternalStore, useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from './scene-write-origin';
-import { countSceneEntities } from '../../utils/scene-entity-count';
+import { SceneStore, subscribeScene, getSceneRecord } from '../../systems/scene/SceneStore';
 
 export interface SceneManagerState {
   levelScenes: Record<string, SceneModel>;
@@ -18,63 +18,34 @@ export interface SceneManagerState {
   getSceneEntityCount: (levelId: string) => number;
 }
 
+/**
+ * ADR-547 Stage 0 — thin adapter over the zero-React {@link SceneStore} SSoT.
+ *
+ * Previously this hook owned a per-instance `useState<Record<levelId, SceneModel>>`,
+ * which meant each `useSceneManager()` call site had its OWN scene record (the
+ * `useProSnapIntegration` site held a permanently-empty one — a latent two-source
+ * SSoT violation). The state now lives in the module-level `SceneStore`, so every
+ * call site shares ONE source of truth and later stages can subscribe to granular
+ * slices (per-type / per-entity) instead of the whole record.
+ *
+ * Behaviour-preserving: the reactive `levelScenes` snapshot still changes on every
+ * scene mutation (so existing consumers re-render exactly as before — zero perf win
+ * here, that lands in Stage 1+). The mutators/getters are stable module functions,
+ * and `getLevelScene` reads the store synchronously so a sequential CompoundCommand
+ * still sees its own prior write within the tick (the old `levelScenesRef`
+ * invariant). `setLevelScene`'s `origin` is accepted for signature compatibility
+ * and ignored by the base manager (the auto-save override reads it).
+ */
 export function useSceneManager(): SceneManagerState {
-  const [levelScenes, setLevelScenes] = useState<Record<string, SceneModel>>({});
+  const levelScenes = useSyncExternalStore(subscribeScene, getSceneRecord, getSceneRecord);
 
-  // CRITICAL: Ref ensures getLevelScene ALWAYS reads latest scenes,
-  // even when called from stale closures (e.g., after await in AI executor).
-  // Without this, getLevelScene captures old levelScenes and returns stale data.
-  const levelScenesRef = useRef(levelScenes);
-  levelScenesRef.current = levelScenes;
-
-  const setLevelScene = useCallback((levelId: string, scene: SceneModel, _origin?: SceneWriteOrigin) => {
-    // ADR-040: base manager ignores `_origin` (state-only); the auto-save override
-    // reads it to gate the debounce. Param kept for signature compatibility.
-    const prev = levelScenesRef.current;
-    // No-op if pointer unchanged (avoids rerender loops)
-    if (prev[levelId] === scene) return;
-    const next = { ...prev, [levelId]: scene };
-    // Update the ref SYNCHRONOUSLY so getLevelScene() reflects this write within
-    // the same tick. Critical for multi-entity commands: a CompoundCommand
-    // applies its children sequentially (e.g. wall then hosted opening) and each
-    // child reads getLevelScene() to rebuild the scene — if the ref still held
-    // the pre-write value, the 2nd child would clobber the 1st's change (wall
-    // reverted to its original position). React state mirrors the ref to render.
-    levelScenesRef.current = next;
-    setLevelScenes(next);
-  }, []);
-
-  const getLevelScene = useCallback((levelId: string): SceneModel | null => {
-    // Read from ref → safe even when called from stale closures (after await)
-    return levelScenesRef.current[levelId] || null;
-  }, []); // ← STABILE: reads from ref, no deps needed
-
-  const clearLevelScene = useCallback((levelId: string) => {
-    const { [levelId]: _removed, ...rest } = levelScenesRef.current;
-    levelScenesRef.current = rest;
-    setLevelScenes(rest);
-  }, []);
-
-  const clearAllScenes = useCallback(() => {
-    levelScenesRef.current = {};
-    setLevelScenes({});
-  }, []);
-
-  const hasSceneForLevel = useCallback((levelId: string): boolean => {
-    return !!levelScenes[levelId];
-  }, [levelScenes]);
-
-  const getSceneEntityCount = useCallback((levelId: string): number => {
-    return countSceneEntities(levelScenes[levelId]);
-  }, [levelScenes]);
-
-  return useMemo(() => ({
+  return useMemo<SceneManagerState>(() => ({
     levelScenes,
-    setLevelScene,
-    getLevelScene,
-    clearLevelScene,
-    clearAllScenes,
-    hasSceneForLevel,
-    getSceneEntityCount
-  }), [levelScenes, setLevelScene, getLevelScene, clearLevelScene, clearAllScenes, hasSceneForLevel, getSceneEntityCount]);
+    setLevelScene: SceneStore.setLevelScene,
+    getLevelScene: SceneStore.getLevelScene,
+    clearLevelScene: SceneStore.clearLevelScene,
+    clearAllScenes: SceneStore.clearAllScenes,
+    hasSceneForLevel: SceneStore.hasSceneForLevel,
+    getSceneEntityCount: SceneStore.getSceneEntityCount,
+  }), [levelScenes]);
 }

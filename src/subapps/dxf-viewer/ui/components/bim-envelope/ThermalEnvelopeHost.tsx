@@ -37,6 +37,7 @@ import { updateBuildingWithPolicy } from '@/services/building/building-mutation-
 import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
 import type { ClimateZone } from '../../../bim/thermal/kenak-thermal-config';
 import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import {
   buildDefaultSpec,
   getEnvelopeSpec,
@@ -97,19 +98,45 @@ export interface ThermalEnvelopeHostProps {
   readonly projectId: string | null | undefined;
 }
 
+/**
+ * Thin gate (ADR-532 Stage 3): keeps the always-on cross-floor slab producer
+ * mounted, but renders the heavy dialog body ONLY while open. Closed → `null`, so
+ * the always-listed host costs nothing in the per-selection commit (was
+ * re-rendering ThermalEnvelopeDialog while closed — see HANDOFF Stage 3).
+ */
 export function ThermalEnvelopeHost(
   props: ThermalEnvelopeHostProps,
 ): React.ReactElement | null {
-  const { currentLevelId, levels, getLevelScene, setLevelScene, projectId } = props;
   // ADR-396 v2 Φ5C — always-on producer των cross-floor slabs (αίθριο vs δωμάτιο)
   // για το envelope store. Mounted εδώ (always-on host, εντός LevelsSystem) αντί
   // στο DxfViewerContent (N.7.1 — εκείνο στο όριο 500 γρ.). No-op εκτός LevelsSystem.
+  // ΜΕΝΕΙ ζωντανό ΚΑΙ με κλειστό dialog ώστε το 2D/3D κέλυφος να τροφοδοτείται.
   useEnvelopeFloorSlabs();
+  const { open, close } = useEventGatedDialog('bim:thermal-envelope-requested');
+  if (!open) return null;
+  return <ThermalEnvelopeBody {...props} onClose={close} />;
+}
+
+interface ThermalEnvelopeBodyProps extends ThermalEnvelopeHostProps {
+  readonly onClose: () => void;
+}
+
+/** Heavy body — mounted ONLY while the dialog is open (draft + per-region apply). */
+function ThermalEnvelopeBody({
+  currentLevelId,
+  levels,
+  getLevelScene,
+  setLevelScene,
+  projectId,
+  onClose,
+}: ThermalEnvelopeBodyProps): React.ReactElement {
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
   const { execute: executeCommand } = useCommandHistory();
-  const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState<ThermalEnvelopeSpec>(buildDefaultSpec);
+  // Draft seeded from the current floor's spec at open (was set in the event handler).
+  const [draft, setDraft] = React.useState<ThermalEnvelopeSpec>(
+    () => getEnvelopeSpec(currentLevelId) ?? buildDefaultSpec(),
+  );
   // ADR-396 v2 Φ6b — ανιχνευμένα όρια τρέχοντος ορόφου (per-region override panel).
   const [regions, setRegions] = React.useState<readonly RegionOverrideTarget[]>([]);
   // ADR-396 P10 — DNA επιλεγμένου τοίχου κατά το άνοιγμα του dialog. Snapshot
@@ -185,25 +212,23 @@ export function ThermalEnvelopeHost(
     setRegions(buildRegionOverrideTargets(classification, overrides));
   }, [currentLevelId, getLevelScene, levels]);
 
-  // EventBus listener — ribbon button → init draft από το spec του ορόφου +
-  // υπολογισμός ορίων (Φ6b) + snapshot επιλεγμένου τοίχου (P10) + open.
+  // Snapshot the open-moment regions (Φ6b) + selected-wall DNA (P10). Mount-only:
+  // the ribbon just fired the request, so selection/scene are read imperatively
+  // here exactly as the old EventBus handler did — never tracked while open.
   React.useEffect(() => {
-    return EventBus.on('bim:thermal-envelope-requested', () => {
-      setDraft(getEnvelopeSpec(currentLevelId) ?? buildDefaultSpec());
-      recomputeRegions();
-      // ADR-396 P10 — imperative snapshot: αν είναι επιλεγμένος τοίχος, πάρε το DNA
-      // του για ακριβέστερο per-type U-value στον dialog. Μηδέν reactive subscription.
-      const primaryId = universalSelection.getPrimaryId();
-      if (primaryId && currentLevelId) {
-        const scene = getLevelScene(currentLevelId);
-        const entity = scene?.entities.find((e) => e.id === primaryId);
-        setWallDna(entity !== undefined && isWallEntity(entity) ? (entity.params.dna ?? null) : null);
-      } else {
-        setWallDna(null);
-      }
-      setOpen(true);
-    });
-  }, [currentLevelId, recomputeRegions, universalSelection, getLevelScene]);
+    recomputeRegions();
+    // ADR-396 P10 — imperative snapshot: αν είναι επιλεγμένος τοίχος, πάρε το DNA
+    // του για ακριβέστερο per-type U-value στον dialog. Μηδέν reactive subscription.
+    const primaryId = universalSelection.getPrimaryId();
+    if (primaryId && currentLevelId) {
+      const scene = getLevelScene(currentLevelId);
+      const entity = scene?.entities.find((e) => e.id === primaryId);
+      setWallDna(entity !== undefined && isWallEntity(entity) ? (entity.params.dna ?? null) : null);
+    } else {
+      setWallDna(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only open-moment snapshot
+  }, []);
 
   // P7 Part B — per-element apply + BOQ για έναν όροφο (idempotent).
   const applyPerElement = React.useCallback(
@@ -245,9 +270,9 @@ export function ThermalEnvelopeHost(
         applyPerElement(id, draft);
       }
       markAllCanvasDirty();
-      setOpen(false);
+      onClose();
     },
-    [draft, applyPerElement],
+    [draft, applyPerElement, onClose],
   );
 
   const handleApply = React.useCallback(() => {
@@ -280,10 +305,15 @@ export function ThermalEnvelopeHost(
     [currentLevelId, getLevelScene, setLevelScene, executeCommand, applyPerElement, recomputeRegions],
   );
 
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => { if (!next) onClose(); },
+    [onClose],
+  );
+
   return (
     <ThermalEnvelopeDialog
-      open={open}
-      onOpenChange={setOpen}
+      open
+      onOpenChange={handleOpenChange}
       value={draft}
       onChange={setDraft}
       onApply={handleApply}

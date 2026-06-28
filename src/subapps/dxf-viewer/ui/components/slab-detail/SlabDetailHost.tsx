@@ -17,7 +17,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { useLevels } from '../../../systems/levels';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity } from '../../../bim/types/slab-types';
@@ -41,14 +41,6 @@ export interface SlabDetailHostProps {
   readonly levelManager: LevelManagerLike;
 }
 
-interface DialogState {
-  open: boolean;
-  slabId: string | null;
-  levelId: string | null;
-}
-
-const CLOSED: DialogState = { open: false, slabId: null, levelId: null };
-
 /** Resolves the target slab entity from a level scene, or `null` if missing. */
 function resolveSlab(
   levelManager: LevelManagerLike,
@@ -70,33 +62,53 @@ function captureSizePx(): { widthPx: number; heightPx: number } {
     : { widthPx: Math.round(CAPTURE_LONG_EDGE_PX * aspect), heightPx: CAPTURE_LONG_EDGE_PX };
 }
 
+/**
+ * Thin gate (ADR-532 Stage 3): listens for the open event and mounts the heavy
+ * body ONLY while open. Closed → `null` → zero subtree in the per-selection commit.
+ */
 export function SlabDetailHost({
   levelManager,
 }: SlabDetailHostProps): React.ReactElement | null {
+  const { open, payload, close } = useEventGatedDialog(
+    'bim:slab-detail-requested',
+    ({ slabId, levelId }) => resolveSlab(levelManager, levelId, slabId) !== null,
+  );
+  if (!open || !payload) return null;
+  return (
+    <SlabDetailBody
+      levelManager={levelManager}
+      slabId={payload.slabId}
+      levelId={payload.levelId}
+      onClose={close}
+    />
+  );
+}
+
+interface SlabDetailBodyProps {
+  readonly levelManager: LevelManagerLike;
+  readonly slabId: string;
+  readonly levelId: string;
+  readonly onClose: () => void;
+}
+
+/** Heavy body — mounted ONLY while the dialog is open (3D capture + model build). */
+function SlabDetailBody({
+  levelManager,
+  slabId,
+  levelId,
+  onClose,
+}: SlabDetailBodyProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   const [perspective3d, setPerspective3d] = useState<SlabDetail3dCapture | null>(null);
 
+  // Capture the slab's reinforcement in 3D on mount (one-shot WebGL).
   useEffect(() => {
-    return EventBus.on('bim:slab-detail-requested', ({ slabId, levelId }) => {
-      if (!resolveSlab(levelManager, levelId, slabId)) return;
-      setDialogState({ open: true, slabId, levelId });
-    });
-  }, [levelManager]);
-
-  // Capture the slab's reinforcement in 3D once the dialog opens (one-shot WebGL).
-  useEffect(() => {
-    if (!dialogState.open) {
-      setPerspective3d(null);
-      return;
-    }
-    const slab = resolveSlab(levelManager, dialogState.levelId, dialogState.slabId);
+    const slab = resolveSlab(levelManager, levelId, slabId);
     setPerspective3d(slab ? captureSlabDetail3d(slab, captureSizePx()) : null);
-  }, [dialogState, levelManager]);
+  }, [levelManager, levelId, slabId]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
-    if (!dialogState.open) return null;
-    const slab = resolveSlab(levelManager, dialogState.levelId, dialogState.slabId);
+    const slab = resolveSlab(levelManager, levelId, slabId);
     if (!slab) return null;
     return buildSlabDetailSheet({
       slab,
@@ -138,15 +150,15 @@ export function SlabDetailHost({
         },
       },
     });
-  }, [dialogState, levelManager, t, perspective3d]);
+  }, [levelManager, levelId, slabId, t, perspective3d]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
-    if (!next) setDialogState(CLOSED);
-  }, []);
+    if (!next) onClose();
+  }, [onClose]);
 
   return (
     <DetailSheetDialog
-      open={dialogState.open}
+      open
       onOpenChange={handleOpenChange}
       model={model}
       pdfFilename={PDF_FILENAME}

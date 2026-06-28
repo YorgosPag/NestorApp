@@ -25,7 +25,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import {
   getOpeningTagStyleService,
   type OpeningTagStyle,
@@ -40,7 +40,6 @@ export function OpeningTagStyleHost(
   props: OpeningTagStyleHostProps,
 ): React.ReactElement | null {
   const { projectId } = props;
-  const [open, setOpen] = React.useState(false);
 
   // Hydration + persister wiring on projectId change. One-shot getDoc — no
   // real-time subscription (style edits are rare, cross-tab sync not critical).
@@ -78,14 +77,19 @@ export function OpeningTagStyleHost(
   // Ensure any style mutation (ribbon or dialog) immediately repaints the canvas.
   React.useEffect(() => getOpeningTagStyleService().subscribe(markAllCanvasDirty), []);
 
-  // EventBus listener — ribbon button → open dialog.
-  React.useEffect(() => {
-    return EventBus.on('bim:opening-tag-style-requested', () => {
-      if (projectId) setOpen(true);
-    });
-  }, [projectId]);
+  // ADR-532 Stage 3 — mount-gate the dialog (the hydration/repaint effects above
+  // stay always-on; only the Radix dialog subtree is gated so a closed style
+  // dialog costs nothing in the per-selection commit).
+  const { open, close } = useEventGatedDialog(
+    'bim:opening-tag-style-requested',
+    () => Boolean(projectId),
+  );
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => { if (!next) close(); },
+    [close],
+  );
 
-  if (!projectId) return null;
+  if (!projectId || !open) return null;
 
-  return <OpeningTagStyleDialog open={open} onOpenChange={setOpen} />;
+  return <OpeningTagStyleDialog open onOpenChange={handleOpenChange} />;
 }

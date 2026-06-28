@@ -23,6 +23,7 @@
 import * as React from 'react';
 
 import { EventBus } from '../systems/events/EventBus';
+import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../systems/levels';
 import { nowISO } from '@/lib/date-local';
 import { runExport } from '../export/export-service';
@@ -36,12 +37,25 @@ export interface ExportHostProps {
   readonly buildingId?: string;
 }
 
-export function ExportHost({ projectId, buildingId }: ExportHostProps): React.JSX.Element {
-  const [open, setOpen] = React.useState(false);
-  const { levels, currentLevelId, getLevelScene } = useLevels();
+/**
+ * Thin gate (ADR-532 Stage 3): listens for «Εξαγωγή» and mounts the dialog body
+ * ONLY while open. Closed → `null`, so the always-listed host costs nothing in
+ * the per-selection commit (was re-rendering ExportDialog while closed).
+ */
+export function ExportHost({ projectId, buildingId }: ExportHostProps): React.ReactElement | null {
+  const { open, close } = useEventGatedDialog('dxf:export-dialog-requested');
+  if (!open) return null;
+  return <ExportBody projectId={projectId} buildingId={buildingId} onClose={close} />;
+}
 
-  // Ribbon «Εξαγωγή» → action 'open-export-dialog' → EventBus → open.
-  React.useEffect(() => EventBus.on('dxf:export-dialog-requested', () => setOpen(true)), []);
+interface ExportBodyProps {
+  readonly projectId?: string;
+  readonly buildingId?: string;
+  readonly onClose: () => void;
+}
+
+function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.JSX.Element {
+  const { levels, currentLevelId, getLevelScene } = useLevels();
 
   const projectName = React.useMemo(() => {
     const level = levels.find((l) => l.id === currentLevelId);
@@ -81,5 +95,10 @@ export function ExportHost({ projectId, buildingId }: ExportHostProps): React.JS
     [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId],
   );
 
-  return <ExportDialog open={open} onOpenChange={setOpen} onSubmit={handleSubmit} />;
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => { if (!next) onClose(); },
+    [onClose],
+  );
+
+  return <ExportDialog open onOpenChange={handleOpenChange} onSubmit={handleSubmit} />;
 }
