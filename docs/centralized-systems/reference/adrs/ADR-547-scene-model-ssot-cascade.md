@@ -1,6 +1,6 @@
 # ADR-547 — Scene-model SSoT: σπάσιμο του scene-change re-render cascade
 
-**Status:** 🟡 IN PROGRESS (Stage 0 COMMITTED `d0913846` · Stage 2/3 IMPLEMENTED UNCOMMITTED 2026-06-28)
+**Status:** 🟡 IN PROGRESS (Stage 0 COMMITTED `d0913846` · Stage 2/3 + Stage 4 IMPLEMENTED UNCOMMITTED 2026-06-28)
 **Domains:** scene state (SceneModel SSoT), perf (re-render cascade), BIM persistence hosts
 **Σχετικά:** ADR-532 (selection-set SSoT — το pattern που μιμούμαστε), ADR-040 (micro-leaf doctrine), ADR-341 (God-context split προηγούμενο)
 **Πηγή:** `HANDOFFS/PLAN_2026-06-28_scene-model-ssot-cascade.md` · React-DevTools Profiler `profiling-data.28-06-2026.03-09-14.json` (commit#24 = **252ms / 2695 fibers** σε **μία** αλλαγή παραμέτρου κολόνας)
@@ -54,6 +54,7 @@ entities με `entities.map(e => e.id === id ? {...e, ...updates} : e)` → κά
 | **0** | `SceneStore.ts` zero-React SSoT· `useSceneManager` → thin adapter | ✅ COMMITTED `d0913846` |
 | **2** | 27 persistence hosts → granular slices + `React.memo`, drop `currentScene` prop | ✅ UNCOMMITTED |
 | **3** | Properties panel/ribbon bridges → `useSceneEntityById` (μέσω host hooks) | ✅ (μέσω host migration) |
+| **4** | Ribbon/TopBar cascade: σταθεροποίηση `wrappedHandleAction` (`useEventCallback`) → `RibbonRoot` memo κρατά | ✅ UNCOMMITTED |
 | **1** | Orchestrator severance (event-time read) | ⏸️ ΑΝΑΘΕΩΡΗΘΗΚΕ — βλ. §2 (memo, όχι severance) |
 | **MepSystem hooks** | `useMepConnectorReconciliation`/`useMepCircuitEditorSync` → self-subscribe SceneStore | 🔴 FOLLOW-UP |
 | **5** | Retire `currentScene` prop εντελώς (μένει μόνο για MepSystem + RibbonContextualTabScope) | 🔴 μετά MepSystem hooks |
@@ -85,6 +86,38 @@ SlabOpening, Stair + MepSystem (μόνο `React.memo`). Καθένας: drop `cu
 **ADR-040:** κανένα migrated αρχείο δεν είναι canvas-drawing/micro-leaf (hosts/TopBar/selectors) →
 CHECK 6B/6D δεν ενεργοποιούνται.
 
+## 5.bis Υλοποίηση (Stage 4 — ribbon/TopBar cascade — 2026-06-28)
+
+**Εύρημα profile 11:32 (record-why ON):** το Stage 2/3 έλυσε τον host-cascade (wall edit → 1 host),
+ΑΛΛΑ το πραγματικό self-time bottleneck ήταν το **Ribbon + Radix UI tree** (Tooltip ×63, Primitive.button
+×33, Switch, SelectItem, DialogPortal…). Το `RibbonRoot` ΕΙΝΑΙ `React.memo`, αλλά defeat-αρόταν.
+
+**Πλήρες ίχνος (audit, όχι υπόθεση):**
+- `RibbonRoot = React.memo` σε props `{commands, contextualTabs}`. `contextualTabs` = σταθερά. Άρα μόνο το
+  `commands` (= `ribbonCommands`) κρίνει το bail-out.
+- `ribbonCommands` = `useMemo` με dep `onAction` (+ composers). `onAction` dep `wrappedHandleAction`
+  (= `arrayActionInterceptor`). Ο interceptor (`useArrayRibbonActions`) έχει dep `levelManager` (memoized,
+  γρ.358 `LevelsSystem` → σταθερό σε scene-edit χάρη στο Stage 0 SceneStore) + `fallback = wrappedHandleAction`.
+- **Root cause:** το base `wrappedHandleAction` (`useDxfViewerCallbacks`) ήταν `useCallback` με dep
+  `fullscreen`. Το `useFullscreen()` επιστρέφει **νέο object literal κάθε render** (μη-memoized) →
+  `wrappedHandleAction` churn κάθε render → `arrayActionInterceptor` → `onAction` → `ribbonCommands` →
+  defeat `RibbonRoot.memo` → re-render όλου του Radix subtree σε κάθε edit/selection.
+
+**Fix (SSoT, 1 αρχείο):** `wrappedHandleAction` → `useEventCallback` (canonical `useEffectEvent`, ήδη στο
+ίδιο αρχείο για `handleFileImportWithEncoding`, ADR-532 Stage 4a.1). Ταυτότητα μόνιμα σταθερή· διαβάζει
+latest `fullscreen`/`levelManager`/`user`/`t` στο click-time → μηδέν αλλαγή συμπεριφοράς. Event-only →
+ασφαλές. Αποτέλεσμα: `arrayActionInterceptor` σταθερό → `onAction` σταθερό → `ribbonCommands` ref-stable →
+`RibbonRoot.memo` κρατά → το ribbon μένει στατικό σε document edits (Revit / Cinema4D command-bar doctrine).
+
+**Αρχείο:** `app/useDxfViewerCallbacks.ts` (swap `React.useCallback(…, [deps])` → `useEventCallback(…)`).
+**Tests:** useEventCallback 4/4 + scene-selectors 10/10 GREEN. ADR-040: μη-canvas αρχείο → CHECK 6B/6D off.
+
+**File-size split (N.7.1):** το `useEventCallback` σχόλιο έσπρωξε το `useDxfViewerCallbacks.ts` στις 506 γρ.
+(> 500, CHECK 4). Ο μεγάλος special-action switch εξήχθη σε νέο SRP module
+`app/dxf-special-actions.ts` → `dispatchDxfSpecialAction(action, deps): boolean` (true=handled, false=fall
+through στο base `handleAction`). Pure dispatch, μηδέν hooks/state· deps διαβάζονται event-time. Host 299 γρ.,
+module 271 γρ. Συμπεριφορά αμετάβλητη (ίδιοι κλάδοι, ίδια σειρά).
+
 ## 6. Εκκρεμή / ρίσκα
 
 - 🔴 **Browser-verify:** edit column → μόνο ColumnHost + canvas + column panel re-render (όχι οι 26 άλλοι)·
@@ -95,6 +128,12 @@ CHECK 6B/6D δεν ενεργοποιούνται.
 
 ## 7. Changelog
 
+- **2026-06-28** — Stage 4 IMPLEMENTED (UNCOMMITTED, Opus 4.8): ribbon/TopBar cascade. `wrappedHandleAction`
+  → `useEventCallback` (root cause: `useFullscreen()` fresh-object dep churn). `ribbonCommands` ref-stable →
+  `RibbonRoot.memo` κρατά → Radix/Tooltip subtree μένει στατικό σε edits. 1 αρχείο, 14/14 jest GREEN. Βλ. §5.bis.
+- **2026-06-28** — Stage 4 file-size split (UNCOMMITTED, Opus 4.8): special-action switch → νέο
+  `app/dxf-special-actions.ts` (`dispatchDxfSpecialAction`) ώστε `useDxfViewerCallbacks.ts` 506→299 γρ. (CHECK 4).
+  Καθαρό SRP extract, μηδέν αλλαγή συμπεριφοράς. Βλ. §5.bis.
 - **2026-06-28** — Stage 2/3 IMPLEMENTED (UNCOMMITTED, Opus 4.8): granular selectors + 27 hosts migrated +
   `React.memo`. Διορθωμένη ρίζα (§2: memo, όχι context-ref). 10 νέα jest / 20 scene jest GREEN / tsc 0.
 - **2026-06-28** — Stage 0 COMMITTED `d0913846`: `SceneStore` SSoT + thin `useSceneManager` adapter.
