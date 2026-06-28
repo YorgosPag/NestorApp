@@ -82,7 +82,7 @@ export function BimPlacementOverlay2D({ managerRef }: BimPlacementOverlay2DProps
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
-  useRafWhile(active, draw, onStop);
+  useRafWhile(active, draw, onStop, 'placement'); // 🔬 ADR-549 Phase 0
 
   return (
     <div

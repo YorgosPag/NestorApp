@@ -16,13 +16,7 @@
 
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
-import { RiserThroughOverlay } from './RiserThroughOverlay';
-import { HeatLoadOverlay } from './HeatLoadOverlay';
-import { PipeSizingOverlay } from './PipeSizingOverlay';
-import { HydraulicBalancingOverlay } from './HydraulicBalancingOverlay';
-import { StructuralDiagramOverlay } from './StructuralDiagramOverlay';
-import { StructuralUtilizationOverlay } from './StructuralUtilizationOverlay';
-import { StructuralWarningOverlay } from './StructuralWarningOverlay';
+import { AnalyticalDispatchCanvas } from './analytical-overlays/AnalyticalDispatchCanvas';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
 export interface CanvasLayerStack2DOverlaysProps {
@@ -39,38 +33,14 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
     <>
       <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
       <RegionPerimeterPreviewOverlay transform={transform} viewport={viewport} />
-      {/* ADR-408 Φ15 Task B — cross-floor «riser through» glyphs (derived from
-          other floors' vertical risers crossing the active FFL). Read-only,
-          pointer-events-none. Self-gated to mode==='2d'. STAGE ADR-040. */}
-      <RiserThroughOverlay transform={transform} viewport={viewport} />
-      {/* ADR-422 L1 — analytical heat-load heat-map + Φ labels per thermal
-          space. Read-only, pointer-events-none. Self-gated to
-          showHeatLoad && mode==='2d'. STAGE ADR-040. */}
-      <HeatLoadOverlay transform={transform} viewport={viewport} />
-      {/* ADR-422 L3 — pipe-sizing badges (προτεινόμενη DN + ταχύτητα) ανά
-          σωλήνα θέρμανσης. Read-only, pointer-events-none. Self-gated to
-          showPipeSizing && mode==='2d'. STAGE ADR-040. */}
-      <PipeSizingOverlay transform={transform} viewport={viewport} />
-      {/* ADR-422 L4 — hydraulic-balancing badges (ΔP κυκλώματος + kv balancing
-          valve) ανά καλοριφέρ + index-circuit highlight + μανομετρικό στην πηγή.
-          Read-only, pointer-events-none. Self-gated to showBalancing && mode==='2d'.
-          STAGE ADR-040. */}
-      <HydraulicBalancingOverlay transform={transform} viewport={viewport} />
-      {/* ADR-485 T3-UI Slice 4c — reinforcement-utilization fill (As,req/As,prov)
-          ανά φέρον μέλος + υπόμνημα. Read-only, pointer-events-none. Self-gated
-          to showUtilization && mode==='2d'. Πριν τα διαγράμματα ώστε το γέμισμα να
-          μένει κάτω από τις καμπύλες. STAGE ADR-040. */}
-      <StructuralUtilizationOverlay transform={transform} viewport={viewport} />
-      {/* ADR-483 T3-UI Slice 4/4b — static-analysis M/V/N diagrams ανά δοκάρι +
-          ζώνες T/C + βέλη φορτίου (Robot/Revit results overlay). Read-only,
-          pointer-events-none. Self-gated to showAnalysisDiagrams && mode==='2d'.
-          STAGE ADR-040. */}
-      <StructuralDiagramOverlay transform={transform} viewport={viewport} />
-      {/* ADR-490 — structural warning highlight (κόκκινο/amber halo + badge ⚠ ανά
-          μέλος με στατικό σφάλμα, π.χ. δοκάρι στον αέρα = μηχανισμός). Read-only,
-          pointer-events-none, always-on (self-gated mode==='2d'). Τελευταίο =
-          topmost ώστε η επισήμανση να φαίνεται πάνω από τα άλλα overlays. STAGE ADR-040. */}
-      <StructuralWarningOverlay transform={transform} viewport={viewport} />
+      {/* ADR-552 — ΕΝΑΣ analytical dispatch canvas αντικαθιστά τα 7 ξεχωριστά
+          analytical overlays (riser-through ADR-408 Φ15 · heat-load ADR-422 L1 ·
+          pipe-sizing ADR-422 L3 · hydraulic-balancing ADR-422 L4 · utilization
+          ADR-485 · M/V/N diagrams ADR-483 · warnings ADR-490). Κάθε painter
+          self-subscribes + self-gates· ο dispatch κάνει size+clear ΜΙΑ φορά και
+          ζωγραφίζει με σειρά z-order (warnings topmost). Read-only,
+          pointer-events-none. STAGE ADR-040 + ADR-552. */}
+      <AnalyticalDispatchCanvas transform={transform} viewport={viewport} />
     </>
   );
 }

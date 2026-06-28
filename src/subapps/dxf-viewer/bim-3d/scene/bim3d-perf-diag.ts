@@ -19,8 +19,6 @@
  *   window.__bim3dPerf.dump()
  */
 
-import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
-
 export interface Bim3DRenderSample {
   readonly isInteracting: boolean;
   readonly viewportAnimating: boolean;
@@ -154,23 +152,21 @@ export function recordOverlayDraw(label: string, durationMs: number): void {
   if (s) bump(s.overlays, label, durationMs);
 }
 
-// ── (2) UnifiedFrameScheduler per-system watch via the EXISTING onFrame metrics ──
-// `collectMetrics` defaults true, so every frame emits `systemMetrics` (per-system renderTime,
-// skipped flag) + `totalFrameTime`. We subscribe ONCE and accumulate the rendered (non-skipped)
-// systems — pinpoints which registered system is the 50-130ms scheduler rAF long task.
-let schedulerWatched = false;
-function startSchedulerWatch(): void {
-  if (schedulerWatched || typeof window === 'undefined') return;
-  schedulerWatched = true;
-  UnifiedFrameScheduler.onFrame((m) => {
-    const s = getState();
-    if (!s) return;
-    bump(s.schedFrame, '_frame', m.totalFrameTime);
-    m.systemMetrics.forEach((sm, id) => { if (!sm.skipped) bump(s.scheduler, id, sm.renderTime); });
-  });
+// ── (2) UnifiedFrameScheduler per-system metrics ──
+// The subscription is OWNED BY `BimViewport3D` (right next to its `register('bim-3d-scene')`) — that
+// is the SAME singleton instance that runs the frames, which matters because dev/Turbopack/HMR can
+// load `UnifiedFrameScheduler` as a DUPLICATE module: a subscription from here would land on a dead
+// instance (observed: `scheduler frames=0`). `BimViewport3D` pushes each frame's metrics in here.
+export function recordSchedulerFrame(m: {
+  totalFrameTime: number;
+  systemMetrics: Map<string, { renderTime: number; skipped: boolean }>;
+}): void {
+  const s = getState();
+  if (!s) return;
+  bump(s.schedFrame, '_frame', m.totalFrameTime);
+  m.systemMetrics.forEach((sm, id) => { if (!sm.skipped) bump(s.scheduler, id, sm.renderTime); });
 }
 
-// EAGER attach + scheduler watch at module load (statically imported by ThreeJsSceneManager) so the
-// console handle + per-frame metrics are live the instant the 3D viewport mounts.
+// EAGER attach at module load (statically imported by ThreeJsSceneManager) so `window.__bim3dPerf`
+// is live the instant the 3D viewport mounts, even before the first render.
 getState();
-startSchedulerWatch();

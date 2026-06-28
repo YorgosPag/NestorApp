@@ -163,10 +163,15 @@
 - **Placement ghosts:** `placement-ghost-overlay.ts` ΕΝΑ SSoT για κάθε translucent ghost (ADR-537).
 - **Z-fighting/depth-bias:** per-category bias στο `MaterialCatalog3D` (ένα σημείο).
 - **2D dispatch:** ΕΝΑ `EntityRendererComposite` map — όχι σκορπισμένα `switch`.
+- **Geometry ανά οντότητα (επιβεβαιωμένο 2026-06-29):** κάθε entity έχει `bim/geometry/{entity}-geometry.ts` (`computeColumnGeometry`/`computeBeamGeometry`/`computeSlabGeometry`) που υπολογίζει το geometry **μία φορά**, cached στο `entity.geometry.footprint.vertices`. Ο 2D renderer (αμιγώς drawing) **και** ο 3D converter διαβάζουν το **ίδιο** field — **όχι** διπλός υπολογισμός. (Ανέτρεψε την αρχική υπόθεση «διπλό geometry» του ADR-550.)
 
 ### 4.2 ⚠️ Ρίσκα / ευκαιρίες ενοποίησης
-1. **Διπλό `StairRenderer`** — υπάρχει `rendering/entities/StairRenderer.ts` **και** `bim/renderers/StairRenderer.ts`. Το composite χρησιμοποιεί το **bim**. Το `rendering/entities/StairRenderer.ts` είναι πιθανό orphan → επιβεβαίωση & διαγραφή (dead-code ratchet).
-2. **4 BIM renderers εκτός του ενιαίου 2D dispatch** — `OpeningTagRenderer`, `FloorplanSymbolRenderer`, `MepWireRenderer`, `EnvelopeRenderer` δεν εγγράφονται στο `EntityRendererComposite`· τρέχουν μέσω scene-level passes. Δικαιολογημένο για annotations/scene overlays, αλλά **τεκμηρίωση απαιτείται** ώστε να μην θεωρηθεί «λείπει renderer» και φτιαχτεί διπλότυπο.
+1. **~~Διπλό `StairRenderer`~~ → ΛΥΘΗΚΕ (2026-06-29, ADR-550 Φ4).** Το `rendering/entities/StairRenderer.ts` ήταν re-export shim (`export * from '../../bim/renderers/StairRenderer'`, ADR-363 Φ0.5 μετακίνηση) — **κανένα call-site** (grep: όλες οι χρήσεις δείχνουν στο `bim/renderers/StairRenderer`). **Διαγράφηκε.** Canonical: `bim/renderers/StairRenderer.ts`.
+2. **4 BIM renderers εκτός του ενιαίου 2D dispatch — ΤΕΚΜΗΡΙΩΘΗΚΑΝ (2026-06-29).** Δεν εγγράφονται στο `EntityRendererComposite` γιατί **δεν είναι per-entity dispatch targets** — είναι σκόπιμα διαφορετικοί μηχανισμοί:
+   - **`OpeningTagRenderer`** — **sub-renderer μέσα στο `OpeningRenderer`** (`static tagRenderer`, γρ. 150)· το tag ζωγραφίζεται ως μέρος του opening, όχι ως αυτόνομη οντότητα.
+   - **`EnvelopeRenderer`** — **dedicated overlay** `components/dxf-layout/EnvelopeOverlay.tsx` (`new EnvelopeRenderer(ctx)`, scene-level layer).
+   - **`MepWireRenderer`** — **function-based** (`drawCircuitWires`), scene-level overlay `components/dxf-layout/HomeRunWiresOverlay.tsx`· τα home-run wires είναι derived geometry, όχι persistent entity.
+   - **`FloorplanSymbolRenderer`** — class `extends BaseEntityRenderer` (ADR-415 Φ1)· **δεν εντοπίστηκε ενεργό call-site** (ούτε composite ούτε overlay) → πιθανό dormant/partial Φ1· εκκρεμεί επιβεβαίωση πριν θεωρηθεί ενεργό.
 3. **Καμία ενιαία entity-type registry 2D↔3D** — το 2D dispatch (`EntityRendererComposite` map) και το 3D dispatch (`scene-manager-actions` + converters) είναι **ανεξάρτητα**. Δεν υπάρχει εγγύηση ότι μια νέα οντότητα αποκτά ΚΑΙ 2D renderer ΚΑΙ 3D converter. **Σύσταση:** ένα type-coverage test (ένα `EntityType` union → assert ύπαρξη και στα δύο dispatch) ή SSoT registry module.
 4. **DXF text διπλό path** — `TextRenderer` (2D) vs `dxf-text-3d.ts` (3D): δύο ανεξάρτητες υλοποιήσεις glyph (αναμενόμενο λόγω Canvas2D vs WebGL, αλλά να μη διαφύγουν διαφορές μετρικών).
 5. **Ghost διπλασιασμός 2D vs 3D** — 2D ghosts (`*-ghost-renderer`) vs 3D `placement-ghost-overlay`: διαφορετικά seams ανά διάσταση· ευκαιρία για κοινό «ghost spec» abstraction μακροπρόθεσμα.
@@ -188,3 +193,9 @@
 **Αποτέλεσμα:** 2 pipelines · ~57 entity-level renderers/converters (38 σε 2D + 19 σε 3D) · ~182 συνολικά render αρχεία. Εντοπίστηκαν 5 ρίσκα/ευκαιρίες SSoT (διπλό StairRenderer, 4 BIM renderers off-composite, απουσία ενιαίας 2D↔3D type registry, διπλό DXF-text path, ghost διπλασιασμός).
 
 **Επόμενα (προτεινόμενα, εκτός scope τρέχουσας εντολής):** (1) dead-code έλεγχος `rendering/entities/StairRenderer.ts`· (2) 2D↔3D entity-type coverage test· (3) σύντομη τεκμηρίωση των off-composite scene-level renderers.
+
+### 2026-06-29 — Διόρθωση & follow-up (ADR-550 Φ0/Φ3)
+**Διόρθωση:** προστέθηκε στο §4.1 το επιβεβαιωμένο εύρημα ότι το geometry είναι **ήδη SSoT ανά οντότητα** (cached, κοινό 2D/3D) — ανέτρεψε την αρχική υπόθεση «διπλό geometry» του ADR-550.
+**Follow-up:** το coverage test του finding #3 (§4.2) **υλοποιήθηκε** ως ADR-550 Φ3 (`rendering/contract/__tests__/entity-render-coverage.test.ts`, 7 GREEN), με canonical `RenderableEntityType` (Φ0).
+
+**ADR-550 Φ4 (cleanup):** finding #1 **λύθηκε** (διαγραφή orphan `rendering/entities/StairRenderer.ts`)· finding #2 **τεκμηριώθηκε** (οι 4 off-composite = sub-renderer / overlays / function-based, βλ. §4.2). Νέο εκκρεμές: επιβεβαίωση call-site `FloorplanSymbolRenderer` (πιθανό dead-code).

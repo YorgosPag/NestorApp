@@ -94,7 +94,7 @@ export function Tracking3DOverlay({ managerRef }: Tracking3DOverlayProps) {
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
-  useRafWhile(active, draw, onStop);
+  useRafWhile(active, draw, onStop, 'tracking'); // 🔬 ADR-549 Phase 0
 
   return (
     <div

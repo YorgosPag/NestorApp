@@ -255,7 +255,7 @@ export function BimGripOverlay2D({ managerRef }: BimGripOverlay2DProps) {
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
-  useRafWhile(hasGrips, draw, onStop);
+  useRafWhile(hasGrips, draw, onStop, 'grips'); // 🔬 ADR-549 Phase 0
 
   return (
     <div

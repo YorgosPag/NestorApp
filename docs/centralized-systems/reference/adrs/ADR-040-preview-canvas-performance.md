@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — Analytical overlay dispatch canvas (7 leaf canvases → 1, ADR-552)
+Τα 7 analytical 2D overlays (heat-load/pipe-sizing/balancing/utilization/diagrams/warnings/riser) ενοποιήθηκαν σε ΕΝΑΝ `AnalyticalDispatchCanvas` (leaf, **όχι** ο shell → CHECK 6C ασφαλές). Pull model: dispatch κάνει size+clear ΜΙΑ φορά + 7 painter hooks με σειρά z-order· αθροιστικά ίδιες low-freq subscriptions. Βλ. **ADR-552** / **ADR-551 §5.2 #1**. 🟡 UNCOMMITTED.
+
 ### 2026-06-28 — Cursor↔crosshair PHASE probe (μέτρηση 3D cursor lag, Chrome INP / Event Timing — Phase A reuse)
 
 **Status**: IMPLEMENTED 2026-06-28 (Sonnet-scope, UNCOMMITTED). 🔴 browser-verify (`localStorage 'dxf-perf-trace'='1'` → κούνα ποντίκι → διάβασε `console.table`) + commit (Giorgio· stage ADR-040 — CHECK 6B/6D) pending.

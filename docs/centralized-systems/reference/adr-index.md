@@ -531,6 +531,7 @@
 | **ADR-548** | Ribbon re-render cascade — σπάσιμο του levelManager churn (auto-save status βγαίνει από το levels context σε dedicated `AutoSaveStatusStore`· getters αφαιρέθηκαν· 69% session σε render) | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-28 | DXF Viewer / Levels / Perf | [📄](./adrs/ADR-548-ribbon-cascade-levelmanager-churn.md) |
 | **ADR-549** | 3D cursor «swim» — render-loop profiling & on-demand fix (bisection απέδειξε render pass = ένοχος, διαψεύστηκε «μόνο σκιές»· Phase 0 = PROFILE πριν fix) | 🔬 PROFILING (data pending) | 2026-06-29 | DXF Viewer / BIM 3D / Rendering Perf | [📄](./adrs/ADR-549-3d-cursor-swim-render-loop.md) |
 | **ADR-551** | Απογραφή Καμβάδων (`<canvas>`) & Viewports (2D+3D) στο /dxf/viewer — 1 viewport (swap 2D↔3D)· 2D έως 24 canvases· 3D 7–8 (2 WebGL + 5–6 2D overlays)· + ViewCube· 0 minimap. 6 ευκαιρίες ενοποίησης + σύσταση «3D → ΕΝΑΣ shared overlay canvas» | ✏️ DRAFT (census) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
+| **ADR-552** | Analytical Overlay Dispatch Canvas — 7 analytical canvases → 1 (υλοποίηση ADR-551 §5.2 #1)· pull model dispatch + 7 painter hooks + pure `paintAnalyticalFrame`· 2D max 24→18· 6/6 jest | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-552-analytical-overlay-dispatch-canvas.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1043,6 +1044,7 @@
 | **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (platform type + reader στο `src/lib/platform`) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-546-browser-performance-memory-ssot.md) |
 | **ADR-549** | 3D cursor «swim» — render-loop profiling & on-demand fix (Phase 0 = PROFILE· render pass αποδεδειγμένος ένοχος) | 🔬 PROFILING (data pending) | [View](./adrs/ADR-549-3d-cursor-swim-render-loop.md) |
 | **ADR-551** | Απογραφή Καμβάδων & Viewports (2D+3D) /dxf/viewer — census + 6 ευκαιρίες ενοποίησης | ✏️ DRAFT (census) | [View](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
+| **ADR-552** | Analytical Overlay Dispatch Canvas — 7 analytical canvases → 1 (ADR-551 §5.2 #1) | 🟡 IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-552-analytical-overlay-dispatch-canvas.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -74,7 +74,7 @@ export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
-  useRafWhile(active, draw, onStop);
+  useRafWhile(active, draw, onStop, 'hover-glow'); // 🔬 ADR-549 Phase 0
 
   return (
     <div

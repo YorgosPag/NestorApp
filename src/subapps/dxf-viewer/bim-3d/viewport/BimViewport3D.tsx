@@ -51,6 +51,7 @@ import { usePolygonDragDrop } from './use-polygon-drag-drop';
 import { usePolygonClipboardShortcuts } from './use-polygon-clipboard-shortcuts';
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
+import { recordSchedulerFrame } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -158,6 +159,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       (deltaTime) => managerRef.current?.tick(performance.now(), deltaTime),
       () => managerRef.current?.isSceneDirty() ?? false,
     );
+    // 🔬 ADR-549 Phase 0 (REVERTIBLE) — push per-frame scheduler metrics into the diag from THIS
+    // (the running) instance. A diag-side onFrame can land on a dev/HMR-duplicated dead module.
+    UnifiedFrameScheduler.configure({ collectMetrics: true });
+    const schedDiagUnsub = UnifiedFrameScheduler.onFrame((m) => recordSchedulerFrame(m));
 
     setCanvasEl(managerRef.current.getRendererCanvas());
     // ADR-453 — expose this manager to the print engine (cleared on unmount).
@@ -205,6 +210,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       // so no in-flight tick can race a disposed Three.js renderer.
       unregisterSchedulerRef.current?.();
       unregisterSchedulerRef.current = null;
+      schedDiagUnsub(); // 🔬 ADR-549 Phase 0 (revertible)
       managerRef.current?.dispose();
       managerRef.current = null;
       errorRef.current = null;

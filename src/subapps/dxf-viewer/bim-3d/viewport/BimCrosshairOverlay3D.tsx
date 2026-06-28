@@ -196,7 +196,7 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
     handleRef.current?.setSnapActive(false);
     handleRef.current?.applyTransform(cursorRef.current);
   }, []);
-  useRafWhile(snapActive, draw, onStop);
+  useRafWhile(snapActive, draw, onStop, 'crosshair'); // 🔬 ADR-549 Phase 0
 
   return (
     <CrosshairCompositor

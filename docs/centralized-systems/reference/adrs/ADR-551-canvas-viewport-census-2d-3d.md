@@ -132,7 +132,7 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 ### 5.2 ⚠️ Ευκαιρίες ενοποίησης (canvases)
 
 **2D:**
-1. ⭐ **7 analytical overlays (#6–#12) → 1 shared «analytical dispatch canvas».** Πανομοιότυπο CSS/size/data-flow, **αμοιβαία αποκλειόμενα** στην πράξη, αλλά **6 άδειοι canvas backing stores μένουν μόνιμα στο DOM** ακόμα κι όταν ανενεργά. Ένας dispatch canvas (όπως ο PreviewCanvas) θα καλεί τον τρέχοντα painter. Κόστος σήμερα: επιλέχθηκε για καθαρή ADR-040 leaf isolation.
+1. ✅ **IMPLEMENTED (ADR-552, 2026-06-29)** — **7 analytical overlays (#6–#12) → 1 shared «analytical dispatch canvas».** Πανομοιότυπο CSS/size/data-flow, **αμοιβαία αποκλειόμενα** στην πράξη, αλλά **6 άδειοι canvas backing stores έμεναν μόνιμα στο DOM** ακόμα κι όταν ανενεργά. Υλοποιήθηκε με pull model (dispatch κάνει size+clear ΜΙΑ φορά, καλεί 7 painter hooks με σειρά z-order)· paint κώδικας verbatim· 6/6 jest. **2D max 24→18, typical ~16→~10.** Βλ. **ADR-552**.
 2. **7 ProposalGhostOverlay (#15–#21) → 1 shared proposal canvas.** Μόνο 1 proposal review κάθε φορά· το component είναι ήδη κοινό SSoT — μόνο το mount trigger + paint closure διαφέρει. (Trade-off: το ξεχωριστό unmount καθαρίζει αυτόματα τον καμβά.)
 3. EnvelopeOverlay + HomeRunWires (#13–#14) → 1 z=11 BIM-annotation canvas με 2 sequential passes (οριακό κέρδος).
 
@@ -173,3 +173,6 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 **Αποτέλεσμα:** 1 viewport (swap 2D↔3D) · 2D έως 24 φυσικά canvases (typ ~16, min 3) · 3D 7–8 (2 WebGL + 5–6 2D overlays) · + 1 ViewCube nav gizmo + 2 dialog previews · 0 minimap/split/PiP. Εντοπίστηκαν 6 ευκαιρίες ενοποίησης + 1 cross-cutting σύσταση (3D → ΕΝΑΣ shared overlay canvas, όπως ο 2D PreviewCanvas).
 
 **Επόμενα (προτεινόμενα, εκτός scope):** (1) 2D analytical dispatch canvas· (2) 2D proposal dispatch canvas· (3) 3D grip+hover merge· (4) 3D drawing-feedback canvas (wallHud+tracking+placement)· (5) ViewCube scissored sub-viewport.
+
+### 2026-06-29 — §5.2 #1 IMPLEMENTED (ADR-552)
+Η ευκαιρία #1 (7 analytical overlays → 1 dispatch canvas) υλοποιήθηκε — βλ. **ADR-552**. 2D max 24→18, typical ~16→~10. Οι υπόλοιπες 5 ευκαιρίες παραμένουν προτεινόμενες.

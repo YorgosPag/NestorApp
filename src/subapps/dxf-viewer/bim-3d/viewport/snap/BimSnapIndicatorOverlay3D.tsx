@@ -73,7 +73,7 @@ export function BimSnapIndicatorOverlay3D({ managerRef }: BimSnapIndicatorOverla
   const onStop = useCallback(() => {
     if (wrapperRef.current) wrapperRef.current.style.display = 'none';
   }, []);
-  useRafWhile(active, draw, onStop);
+  useRafWhile(active, draw, onStop, 'snap-indicator'); // 🔬 ADR-549 Phase 0
 
   if (glyphKey === null) return null;
   // Recover the glyph fields from the subscribed key (no store read during render → tearing-safe).

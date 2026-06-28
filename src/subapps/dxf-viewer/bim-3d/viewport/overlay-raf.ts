@@ -21,13 +21,14 @@
 import { useRef, useEffect, useCallback, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { GripDepthOccluder } from '../grips/grip-3d-depth-occluder';
+import { recordOverlayDraw } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 
 /**
  * Drive `draw` on every animation frame while `active`. Cancels the loop when `active` turns
  * false or on unmount; `onStop` (if given) runs on deactivation for cleanup (clear canvas /
  * hide marker). `draw` and `onStop` should be stable (`useCallback`) — they are effect deps.
  */
-export function useRafWhile(active: boolean, draw: () => void, onStop?: () => void): void {
+export function useRafWhile(active: boolean, draw: () => void, onStop?: () => void, diagLabel?: string): void {
   const rafRef = useRef<number | null>(null);
   useEffect(() => {
     if (!active) {
@@ -39,7 +40,15 @@ export function useRafWhile(active: boolean, draw: () => void, onStop?: () => vo
       return;
     }
     const loop = () => {
-      draw();
+      // 🔬 ADR-549 Phase 0 (REVERTIBLE) — time each overlay's per-frame draw, keyed by label, so we
+      // can see which of the 7 private rAF loops is the long task (these live OUTSIDE the scheduler).
+      if (diagLabel) {
+        const t0 = performance.now();
+        draw();
+        recordOverlayDraw(diagLabel, performance.now() - t0);
+      } else {
+        draw();
+      }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -47,7 +56,7 @@ export function useRafWhile(active: boolean, draw: () => void, onStop?: () => vo
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [active, draw, onStop]);
+  }, [active, draw, onStop, diagLabel]);
 }
 
 /**
