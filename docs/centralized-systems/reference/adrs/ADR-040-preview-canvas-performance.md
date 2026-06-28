@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-28 — 3D pointer: BVH per-pick walk skip + snap-overlay React subscription granularity (δευτερεύοντα του hover-lag)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify + commit (Giorgio) pending.
+
+**(α) BVH `ensureBoundsTrees` — skip του per-pick `root.traverse()`**: το `bvh-setup.ts` έκανε `traverse()` ΟΛΗΣ της σκηνής σε ΚΑΘΕ pick (~20×/sec) ακόμη κι όταν όλα τα δέντρα ήταν χτισμένα — η ίδια η διάσχιση (όχι τα skip-αρισμένα builds) ήταν το υπόλοιπο κόστος σε πυκνά μοντέλα. Fix: per-root `WeakSet<Object3D>` «clean» — μετά από πλήρες pass ο root γίνεται clean → τα επόμενα picks είναι O(1). ΝΕΟ `markBvhDirty(root)` ξανα-οπλίζει το walk· καλείται στα `syncBimEntitiesIntoScene`/`syncMultiFloorBimEntitiesIntoScene` (μετά το `bimLayer.sync*`, που προσθέτει/αντικαθιστά meshes). Lifecycle-owned (όχι global flag χωρίς reset)· missed call = νέα meshes πέφτουν στο σωστό default raycast (μηδέν λάθος hit, μόνο πιο αργά). `bimLayer.group` = σταθερό ref (constructor `new Group()`, `sync` κάνει `clearGroup()`+rebuild) → το WeakSet δουλεύει.
+
+**(β) Snap overlays — subscription granularity (ADR-040 zero high-freq React)**: `BimCrosshairOverlay3D` + `BimSnapIndicatorOverlay3D` έκαναν `useSyncExternalStore` σε ΟΛΟ το `Snap3DMarker` (περιλαμβάνει θέση/elevation που το RAF χειρίζεται imperatively) → re-render σε κάθε position-only αλλαγή (π.χ. nearest-on-edge ολίσθηση: ίδιο glyph, αλλάζει θέση). Fix: **crosshair** → subscribe σε **boolean on/off** μόνο (`isSnapMarkerVisible(view)`)· δεν διαβάζει τίποτα άλλο reactively (το κέντρο ανήκει στο RAF) → re-render μόνο στο off↔on. **snap-indicator** → subscribe σε **glyph-key** (ΝΕΟ pure SSoT `snap-3d-glyph-key.ts`: `type`+`description` ή null· θέση/elevation εξαιρούνται) → position-only αλλαγή = ίδιο string ⇒ μηδέν re-render· `parseSnapGlyphKey` ανακτά τα fields για render ΧΩΡΙΣ store read mid-render (tearing-safe). Το store είχε ήδη value-equality (still cursor → μηδέν re-render)· αυτό κόβει και τα moving-along-same-glyph re-renders.
+
+**Files**: MOD `bim-3d/systems/raycaster/bvh-setup.ts` (`cleanRoots` WeakSet + `markBvhDirty`) + `__tests__/bvh-setup.test.ts` (6 jest), MOD `bim-3d/scene/scene-manager-actions.ts` (2× `markBvhDirty`), MOD `bim-3d/viewport/BimCrosshairOverlay3D.tsx` (boolean sub), MOD `bim-3d/viewport/snap/BimSnapIndicatorOverlay3D.tsx` (glyph-key sub), NEW `bim-3d/viewport/snap/snap-3d-glyph-key.ts` + `__tests__/snap-3d-glyph-key.test.ts` (7 jest). ✅ Google-level: YES — lifecycle-owned BVH invalidation (idempotent, correctness-safe fallback), precise subscription granularity (on/off + glyph-identity), pure tearing-safe key SSoT, μηδέν αλλαγή σε bitmap cache-key / orchestrator.
+
 ### 2026-06-28 — 3D DXF underlay: idempotent `DxfToThreeConverter.sync()` (σταματά το `texSubImage2D` re-upload στο hover)
 
 **Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (Chrome Performance trace: `texSubImage2D` πριν/μετά) + commit (Giorgio) pending.
