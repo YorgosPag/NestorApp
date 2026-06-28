@@ -8,6 +8,7 @@
 import type * as THREE from 'three';
 import { Vector2 } from 'three';
 import { QualityModulator } from '../lighting/quality-modulator';
+import { ShadowModulator } from '../lighting/shadow-modulator';
 import { SSAOModulator } from '../lighting/ssao-modulator';
 import { SelectionOutlinePass } from '../systems/selection/SelectionOutlinePass';
 import { EnvmapGenerator } from '../lighting/envmap-generator';
@@ -30,6 +31,8 @@ export interface SceneRenderingSubsystemsDeps {
 
 export interface SceneRenderingSubsystems {
   readonly qualityModulator: QualityModulator;
+  /** ADR-366 §B.5 — adaptive shadows: ON at rest, OFF while navigating (the ~40ms PCF cost). */
+  readonly shadowModulator: ShadowModulator;
   readonly ssaoModulator: SSAOModulator;
   /** ADR-536 — selection silhouette outline (composited after the scene render). */
   readonly selectionOutlinePass: SelectionOutlinePass;
@@ -43,6 +46,7 @@ export function createSceneRenderingSubsystems(
   deps: SceneRenderingSubsystemsDeps,
 ): SceneRenderingSubsystems {
   const qualityModulator = new QualityModulator(deps.sun);
+  const shadowModulator = new ShadowModulator(deps.renderer, deps.scene, deps.onNeedsRender);
   // ADR-536 — built before the SSAO modulator so it can be inserted into the composer chain.
   const selectionOutlinePass = new SelectionOutlinePass(
     new Vector2(deps.viewportSize.width, deps.viewportSize.height),
@@ -70,6 +74,7 @@ export function createSceneRenderingSubsystems(
   performanceCollector.start();
   return {
     qualityModulator,
+    shadowModulator,
     ssaoModulator,
     selectionOutlinePass,
     envmapGenerator,

@@ -279,6 +279,10 @@ export const DXF_TIMING = {
     /** Pointer-sweep settle window — a cursor move within this counts as motion → cheap
      *  grey section caps (bim-3d section controller). MUST stay below ui.SECTION_REFINE. */
     POINTER_SETTLE: 100,
+    /** ADR-366 §B.5 — adaptive-shadow settle window. Shadows (the ~40ms PCF cost) stay OFF while
+     *  the cursor moves within this; they only «pop in» after GENUINE stillness, so the 40ms
+     *  shadowed frame never fires on the micro-pauses of normal work. Longer than POINTER_SETTLE. */
+    SHADOW_SETTLE: 350,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame'
 import { BimSceneLayer } from './BimSceneLayer';
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
+import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { EnvmapGenerator } from '../lighting/envmap-generator'; import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
@@ -77,6 +78,7 @@ export class ThreeJsSceneManager {
   private readonly hemi: THREE.HemisphereLight;
   private readonly idleDetector: IdleDetector;
   private readonly qualityModulator: QualityModulator;
+  private readonly shadowModulator: ShadowModulator;
   private readonly ssaoModulator: SSAOModulator;
   private readonly envmapGenerator: EnvmapGenerator;
   private readonly pathTracerRenderer: PathTracerRenderer;
@@ -130,6 +132,7 @@ export class ThreeJsSceneManager {
       onNeedsRender: () => this.markSceneDirty(),
     });
     this.qualityModulator = subs.qualityModulator;
+    this.shadowModulator = subs.shadowModulator;
     this.ssaoModulator = subs.ssaoModulator;
     this.envmapGenerator = subs.envmapGenerator;
     this.pathTracerRenderer = subs.pathTracerRenderer;
@@ -188,6 +191,7 @@ export class ThreeJsSceneManager {
       viewport: this.viewport, viewCube: this.viewCube,
       animationManager: this.animationManager, focusOutlineRenderer: this.focusOutlineRenderer,
       idleDetector: this.idleDetector, ssaoModulator: this.ssaoModulator,
+      shadowModulator: this.shadowModulator,
       pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController,
       poi: this.poi, isInteracting: () => this.isInteracting,
     };
@@ -246,8 +250,7 @@ export class ThreeJsSceneManager {
 
   getCamera(): THREE.Camera { return this.viewport.camera; }
 
-  /** ADR-366 §B.5 — true while navigating the camera (orbit/zoom/pan). `bim3d-pointer-scheduler`
-   *  reads it to suspend OSNAP/hover picking during navigation (big-player Revit/Cinema4D). */
+  /** ADR-366 §B.5 — true while navigating the camera; suspends OSNAP/hover picking during nav. */
   isCameraInteracting(): boolean { return this.isInteracting; }
 
   // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (logic in scene-manager-waypoint) ──
@@ -263,13 +266,14 @@ export class ThreeJsSceneManager {
   setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void { this.viewCubeContextMenuCb = cb; }
   setViewCubeCompassVisible(visible: boolean): void { this.viewCube.setCompassVisible(visible); this.markSceneDirty(); }
 
-  /**
-   * ADR-040 Phase XXIII / ADR-366 Phase 4.2 — driven by UnifiedFrameScheduler.
-   * Called once per master-rAF tick **only when `isSceneDirty()` returns true**.
-   * Scheduler skips this system entirely while the scene is idle.
-   */
+  /** ADR-040 Phase XXIII — driven by UnifiedFrameScheduler once per rAF tick, ONLY when dirty. */
   tick(now: number, scheduledDelta: number): void {
     if (this.disposed) return;
+    // 🔬 DIAG (UNCOMMITTED) — `dxf-no-render`='1' skips the whole scene render (A/B the render cost).
+    if (typeof window !== 'undefined' && window.localStorage.getItem('dxf-no-render') === '1') {
+      this._sceneDirty = false;
+      return;
+    }
     // Scheduler may pass deltaTime=0 on first frame; derive locally as safety net.
     const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime;
     this.lastTickTime = now;
@@ -277,11 +281,7 @@ export class ThreeJsSceneManager {
     this._sceneDirty = false;
   }
 
-  /**
-   * ADR-040 Phase XXIII — true when the scene must be redrawn this frame.
-   * Industry pattern: Forge Viewer SDK / Three.js Editor / iModel.js / AutoCAD Web —
-   * single master rAF + per-subsystem dirty-check + on-demand rendering.
-   */
+  /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
   isSceneDirty(): boolean {
     if (this.disposed) return false;
     return isSceneDirtyFromState({
@@ -293,13 +293,10 @@ export class ThreeJsSceneManager {
     });
   }
 
-  /** ADR-040 Phase XXIII — flag the scene as needing render. Idempotent. */
-  markSceneDirty(): void { if (!this.disposed) this._sceneDirty = true; }
+  markSceneDirty(): void { if (!this.disposed) this._sceneDirty = true; } // ADR-040 — flag for redraw.
 
-  /**
-   * ADR-366 §B.5 — capture the current frame as a data-URL (Performance HUD screenshot). Forces ONE
-   * sync render + reads the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`.
-   */
+  /** ADR-366 §B.5 — capture the frame as a data-URL (HUD screenshot): force ONE sync render + read
+   *  the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`. */
   captureFrameDataURL(type = 'image/png', quality?: number): string {
     if (this.disposed) return '';
     renderSceneFrame(this.frameContext, performance.now(), 0);
@@ -322,10 +319,11 @@ export class ThreeJsSceneManager {
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
     this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
-    // ADR-366 §B.5 — pre-compile SSAO programs ONLY when idle photorealism is opted in
-    // (`autoPreviewEnabled`, default OFF): the warm-up is a heavy sync GPU render, pure waste on
-    // the 2D→3D transition when SSAO never runs (lazy compile on first idle is the fallback).
+    // ADR-366 §B.5 — SSAO warm-up only when idle photorealism is opted in (heavy sync GPU render).
     if (useViewMode3DStore.getState().autoPreviewEnabled) this.ssaoModulator.warmUp();
+    // ADR-366 §B.5 — pre-compile the OFF shadow variant so the adaptive toggle is a cache hit (no
+    // ~400ms first-compile stall). Idempotent.
+    this.shadowModulator.warmUp(this.viewport.camera);
     this.markSceneDirty();
   }
 
@@ -488,6 +486,7 @@ export class ThreeJsSceneManager {
       focusOutlineRenderer: this.focusOutlineRenderer,
       keyboardFocusManager: this.keyboardFocusManager,
       idleDetector: this.idleDetector, qualityModulator: this.qualityModulator,
+      shadowModulator: this.shadowModulator,
       pathTracerRenderer: this.pathTracerRenderer, ssaoModulator: this.ssaoModulator,
       envmapGenerator: this.envmapGenerator,
       performanceCollector: this.performanceCollector,

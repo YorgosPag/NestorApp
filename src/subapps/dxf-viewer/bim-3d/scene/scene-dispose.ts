@@ -14,6 +14,7 @@ import type { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer
 import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator';
+import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { EnvmapGenerator } from '../lighting/envmap-generator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
@@ -37,6 +38,7 @@ export interface SceneManagerDisposeDeps {
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
   readonly idleDetector: IdleDetector;
   readonly qualityModulator: QualityModulator;
+  readonly shadowModulator: ShadowModulator;
   readonly pathTracerRenderer: PathTracerRenderer;
   readonly ssaoModulator: SSAOModulator;
   readonly envmapGenerator: EnvmapGenerator;
@@ -62,6 +64,7 @@ export function disposeSceneManagerResources(deps: SceneManagerDisposeDeps): voi
   deps.keyboardFocusManager.dispose();
   deps.idleDetector.dispose();
   deps.qualityModulator.dispose();
+  deps.shadowModulator.dispose();
   deps.pathTracerRenderer.dispose();
   deps.ssaoModulator.dispose();
   deps.envmapGenerator.dispose();

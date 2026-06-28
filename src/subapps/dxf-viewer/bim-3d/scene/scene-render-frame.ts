@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useCameraTargetStore } from '../stores/CameraTargetStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
+import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import type { AnimationManager } from '../viewport/animation-manager';
@@ -25,6 +26,7 @@ export interface RenderFrameContext {
   readonly focusOutlineRenderer: FocusOutlineRenderer;
   readonly idleDetector: IdleDetector;
   readonly ssaoModulator: SSAOModulator;
+  readonly shadowModulator: ShadowModulator;
   readonly pathTracerRenderer: PathTracerRenderer;
   readonly sectionController: SectionSceneController;
   readonly poi: {
@@ -45,6 +47,13 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   const interacting = ctx.isInteracting();
   if (interacting) idleDetector.notifyActive();
   else idleDetector.notifyIdle();
+  // ADR-366 §B.5 — adaptive shadows: OFF while the view moves (camera drag OR cursor sweep — the
+  // ~40ms PCF cost that saturated the main thread → cursor «swim»), ON the instant it settles.
+  // Pre-warmed (`ShadowModulator.warmUp`) so the toggle is a shader-cache hit, no recompile stall.
+  // ADR-366 §B.5 — adaptive shadows: OFF while the view moves (camera drag / damping fed here;
+  // cursor sweep self-detected inside the modulator), ON at rest. `dxf-no-shadows`='1' forces OFF.
+  const diagNoShadows = typeof window !== 'undefined' && window.localStorage.getItem('dxf-no-shadows') === '1';
+  ctx.shadowModulator.update(diagNoShadows || interacting || viewport.isAnimating);
   poi.updateTarget(viewport.target);
   poi.updateCamera(viewport.camera);
   poi.updateFade(delta);
