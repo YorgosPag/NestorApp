@@ -17,10 +17,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { SlabEntity } from '../bim/types/slab-types';
 import { isSlabEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useSlabPersistence } from '../hooks/data/useSlabPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 import { EditSlabTypeDialog } from '../ui/ribbon/components/EditSlabTypeDialog';
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface SlabPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -40,9 +39,8 @@ export interface SlabPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function SlabPersistenceHost({
+function SlabPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -50,18 +48,19 @@ export function SlabPersistenceHost({
   floorId,
 }: SlabPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the slab slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedSlab: SlabEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isSlabEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedSlab: SlabEntity | null =
+    selectedEntity && isSlabEntity(selectedEntity) ? selectedEntity : null;
 
+  const slabs = useSceneEntitiesByType<SlabEntity>(currentLevelId, isSlabEntity);
   React.useEffect(() => {
-    const slabs = currentScene?.entities.filter(isSlabEntity) ?? [];
     useBim3DEntitiesStore.getState().setSlabs(slabs);
-  }, [currentScene]);
+  }, [slabs]);
 
   useSlabPersistence({
     companyId: user?.companyId ?? null,
@@ -78,3 +77,15 @@ export function SlabPersistenceHost({
   // ribbon «Edit type…» button → `openEditSlabType`). Renders only when open.
   return <EditSlabTypeDialog />;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-slab edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const SlabPersistenceHost = React.memo(SlabPersistenceHostImpl);
+SlabPersistenceHost.displayName = 'SlabPersistenceHost';

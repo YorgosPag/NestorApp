@@ -17,10 +17,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { ThermalSpaceEntity } from '../bim/types/thermal-space-types';
 import { isThermalSpaceEntity } from '../types/entities';
+import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useThermalSpacePersistence } from '../hooks/data/useThermalSpacePersistence';
 
 type LevelManagerLike = Pick<
@@ -30,7 +30,6 @@ type LevelManagerLike = Pick<
 
 export interface ThermalSpacePersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -38,9 +37,8 @@ export interface ThermalSpacePersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function ThermalSpacePersistenceHost({
+function ThermalSpacePersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -48,13 +46,16 @@ export function ThermalSpacePersistenceHost({
   floorId,
 }: ThermalSpacePersistenceHostProps): null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity
+  // changes, never when an unrelated entity type is edited. No 3D feed —
+  // `useSceneEntitiesByType` not needed (thermal space is a 2D analytical
+  // overlay — ADR-422 L0).
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelected: ThermalSpaceEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isThermalSpaceEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelected: ThermalSpaceEntity | null =
+    selectedEntity && isThermalSpaceEntity(selectedEntity) ? selectedEntity : null;
 
   useThermalSpacePersistence({
     companyId: user?.companyId ?? null,
@@ -69,3 +70,15 @@ export function ThermalSpacePersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized parent does; with it, a non-thermal-space edit (which leaves
+ * `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. Scene reactivity arrives through the leaf
+ * selector (`useSceneEntityById`). Pairs with dropping `currentScene` from
+ * the mount in DxfViewerTopBar.
+ */
+export const ThermalSpacePersistenceHost = React.memo(ThermalSpacePersistenceHostImpl);
+ThermalSpacePersistenceHost.displayName = 'ThermalSpacePersistenceHost';

@@ -166,6 +166,12 @@ PropertiesPalette prop slim)}`· `systems/properties/PropertiesPalette.tsx (self
 reset), unified-grip-types.ts (drop params)}`· `hooks/canvas/{useCanvasEditActions.ts, useCanvasContextMenu.ts,
 useCanvasKeyboardShortcuts.ts(+.types), useCanvasEscapeRegistrations.ts}` (event-time store reads).
 
+**MOD (Stage 4a):** `ui/bim-properties/BimPropertiesShell.tsx` (self-subscribe `usePrimarySelectedId()`·
+drop `primarySelectedId` prop), `ui/hooks/usePanelContentRenderer.tsx` (drop param+pass),
+`ui/FloatingPanelContainer.tsx` (drop prop + memo-comparator key + auto-switch effect + `isBimEntity/isStairEntity`
+import), `app/SelectionSideEffectsHost.tsx` (NEW 3rd effect: auto-switch Properties on new BIM/stair primary,
+`prevPrimaryForPropsRef`), `layout/SidebarSection.tsx` (drop `usePrimarySelectedId()` subscription + prop pass).
+
 **NEW (Stage 3):** `app/dialog-hosts/useEventGatedDialog.ts` (typed EventBus mount-gate SSoT· `accept` +
 async `beforeOpen`), `app/dialog-hosts/__tests__/useEventGatedDialog.test.tsx` (9).
 **MOD (Stage 3):** `ui/components/column-detail/ColumnDetailHost.tsx`,
@@ -184,6 +190,27 @@ unmount· `data` στο return). Έτσι **ο `RenumberOpeningsHost` ΜΠΗΚΕ
 hosts** σε ΕΝΑ gate· μηδέν inline open-gate πλέον.
 
 ## Changelog
+- **2026-06-28** — Stage 4a (Opus 4.8): **`FloatingPanelContainer` + `SidebarSection` selection-severance**
+  (Stage C leaf-push, root «left panel»). Clean re-analysis του profile `03-59-50.json` (changeDescriptions
+  ήταν OFF → root-cause βγήκε από τον ΚΩΔΙΚΑ, το profile απλώς το επιβεβαιώνει στα νούμερα): τα 8 πραγματικά
+  selection-commits κυριαρχούνταν από **`FloatingPanelContainer` (100→456ms)** + **`SidebarSection` (232→308ms)**
+  (τα υπόλοιπα 30 commits = HUD ticks + cursor leaves + autosave, θόρυβος). ΡΙΖΑ (code-verified):
+  `FloatingPanelContainer` ήταν `React.memo` με custom comparator που περιείχε **`primarySelectedId`** → ΚΑΘΕ
+  κλικ άλλαζε το prop → έσπαγε το memo → re-render ΟΛΟΥ του panel subtree. Το prop χρειαζόταν μόνο (α) τον
+  auto-switch-to-Properties effect + (β) το BIM/stair Properties tab. **FIX (full SSoT reuse, ZERO νέος
+  μηχανισμός):** (1) `BimPropertiesShell` self-subscribe `usePrimarySelectedId()` (reuse leaf hook), drop prop·
+  (2) `usePanelContentRenderer` drop param+pass· (3) `FloatingPanelContainer` drop prop + **από τον memo
+  comparator** + drop effect· (4) ο auto-switch effect μετακόμισε στον **`SelectionSideEffectsHost`** (έχει ήδη
+  `floatingRef`+`usePrimarySelectedId()`+`currentScene`· καλεί `floatingRef.current?.showTab('properties')`)·
+  (5) `SidebarSection` drop `usePrimarySelectedId()`+pass → **σταματά να re-render-άρει στην επιλογή**.
+  **Behavior change (Revit-correct, Giorgio-approved):** ο auto-switch fire-on-NEW-primary (`prevRef`, mirror
+  του sibling auto-activate-layering) αντί για το παλιό `activePanel`-dep guard που «κόλλαγε» τον χρήστη στην
+  Properties όσο ήταν επιλεγμένο BIM στοιχείο· τώρα switch μία φορά, μετά ελεύθερη πλοήγηση. Αποτέλεσμα: σε
+  κλικ αντιδρά ΜΟΝΟ το `BimPropertiesShell` leaf, και ΜΟΝΟ όταν η καρτέλα Properties είναι ανοιχτή. 5 αρχεία,
+  type-clean. CHECK 6D → stage ADR-040+532. 🔴 browser-verify (Profiler: `FloatingPanelContainer`/`SidebarSection`
+  ΟΧΙ updaters σε κλικ· select BIM→ανοίγει Properties μία φορά, μετά ελεύθερος· stair/wall params σωστά) +
+  commit (Giorgio). Επόμενο → Stage 4b (Ribbon `RibbonCommandProvider`/`#4216-4283` cluster, co-occurs· shared
+  tree — προσοχή σε άλλον agent).
 - **2026-06-28** — Stage 3 (Opus 4.8): **always-mounted dialog hosts → mount-gated** (root #3, dialogs
   cascade). Profile `03-15-26.json` confirmed που, μετά τα Stage 1/2 + ADR-341 settings-split, το
   click-select έπεσε σε **commit 212ms / 883 fibers** — αλλά **κλειστά** dialogs ζωγραφίζονταν ακόμη

@@ -19,10 +19,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { HatchEntity } from '../types/entities';
 import { isHatchEntity } from '../types/entities';
+import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useHatchPersistence } from '../hooks/data/useHatchPersistence';
 
 type LevelManagerLike = Pick<
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface HatchPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -40,9 +39,8 @@ export interface HatchPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function HatchPersistenceHost({
+function HatchPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -50,13 +48,14 @@ export function HatchPersistenceHost({
   floorId,
 }: HatchPersistenceHostProps): null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity
+  // changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelected: HatchEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isHatchEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelected: HatchEntity | null =
+    selectedEntity && isHatchEntity(selectedEntity) ? selectedEntity : null;
 
   useHatchPersistence({
     companyId: user?.companyId ?? null,
@@ -71,3 +70,14 @@ export function HatchPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host bails when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-hatch edit
+ * (which leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no
+ * longer re-renders this host at all. The scene reactivity it DOES need now
+ * arrives through the leaf selector (`useSceneEntityById`), not a prop.
+ */
+export const HatchPersistenceHost = React.memo(HatchPersistenceHostImpl);
+HatchPersistenceHost.displayName = 'HatchPersistenceHost';

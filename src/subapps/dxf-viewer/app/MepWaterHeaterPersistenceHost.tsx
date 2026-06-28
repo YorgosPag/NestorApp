@@ -18,10 +18,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { MepWaterHeaterEntity } from '../bim/types/mep-water-heater-types';
 import { isMepWaterHeaterEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepWaterHeaterPersistence } from '../hooks/data/useMepWaterHeaterPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface MepWaterHeaterPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -42,9 +41,8 @@ export interface MepWaterHeaterPersistenceHostProps {
   readonly buildingId?: string;
 }
 
-export function MepWaterHeaterPersistenceHost({
+function MepWaterHeaterPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -52,18 +50,22 @@ export function MepWaterHeaterPersistenceHost({
   buildingId,
 }: MepWaterHeaterPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the water-heater slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedWaterHeater: MepWaterHeaterEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isMepWaterHeaterEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedWaterHeater: MepWaterHeaterEntity | null =
+    selectedEntity && isMepWaterHeaterEntity(selectedEntity) ? selectedEntity : null;
 
+  const waterHeaters = useSceneEntitiesByType<MepWaterHeaterEntity>(
+    currentLevelId,
+    isMepWaterHeaterEntity,
+  );
   React.useEffect(() => {
-    const waterHeaters = currentScene?.entities.filter(isMepWaterHeaterEntity) ?? [];
     useBim3DEntitiesStore.getState().setWaterHeaters(waterHeaters);
-  }, [currentScene]);
+  }, [waterHeaters]);
 
   useMepWaterHeaterPersistence({
     companyId: user?.companyId ?? null,
@@ -78,3 +80,15 @@ export function MepWaterHeaterPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-water-heater edit
+ * (which leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no
+ * longer re-renders this host at all. The scene reactivity it DOES need now
+ * arrives through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const MepWaterHeaterPersistenceHost = React.memo(MepWaterHeaterPersistenceHostImpl);
+MepWaterHeaterPersistenceHost.displayName = 'MepWaterHeaterPersistenceHost';

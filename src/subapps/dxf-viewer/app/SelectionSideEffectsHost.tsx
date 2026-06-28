@@ -12,6 +12,8 @@
  *
  *  1. Auto-expand the levels panel for the current selection (≤50 entities).
  *  2. Auto-activate the layering tool when an overlay/region becomes primary.
+ *  3. Auto-switch the left panel to the Properties palette when a BIM/stair
+ *     element becomes primary (Revit-grade: Properties pops on selection).
  *
  * Related files:
  * - DxfViewerContent.tsx (renders this host)
@@ -20,6 +22,7 @@
 
 import React from 'react';
 import { useSelectedEntityIds, usePrimarySelectedId, SelectedEntitiesStore } from '../systems/selection';
+import { isBimEntity, isStairEntity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
@@ -45,6 +48,7 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
   const selectedEntityIds = useSelectedEntityIds();
   const primarySelectedId = usePrimarySelectedId();
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
+  const prevPrimaryForPropsRef = React.useRef<string | null>(null);
 
   // Auto-expand selection in levels panel when selection changes.
   // Skip for large selections (Ctrl+A) — expanding 3000+ nodes causes 0 FPS.
@@ -67,6 +71,25 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
       }
     }
   }, [primarySelectedId, activeTool, handleToolChange]);
+
+  // 🪟 AUTO-SWITCH to the Properties palette on a NEW BIM/stair primary selection
+  // (ADR-358/363/366 — Revit Properties palette pops on selection). Moved here
+  // from FloatingPanelContainer so the container no longer needs `primarySelectedId`
+  // as a prop (its memo no longer breaks on every click). Revit-correct: fires
+  // ONCE per new primary (prevRef), so the user can freely navigate to another
+  // tab afterwards without being bounced back (the old activePanel-dep guard
+  // pinned the user on Properties). Plain DXF/layer selections are left alone.
+  React.useEffect(() => {
+    const isNewPrimary =
+      primarySelectedId !== null && primarySelectedId !== prevPrimaryForPropsRef.current;
+    prevPrimaryForPropsRef.current = primarySelectedId;
+    if (!isNewPrimary || !currentScene) return;
+    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
+    if (!entity) return;
+    if (isBimEntity(entity) || isStairEntity(entity)) {
+      floatingRef.current?.showTab('properties');
+    }
+  }, [primarySelectedId, currentScene, floatingRef]);
 
   return null;
 });

@@ -23,10 +23,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { StairEntity } from '../bim/types/stair-types';
 import { isStairEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useStairPersistence } from '../bim/hooks/use-stair-persistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 import { useBimPersistenceStateStore } from '../bim/persistence/bim-persistence-state-store';
@@ -38,7 +38,6 @@ type LevelManagerLike = Pick<
 
 export interface StairPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -48,9 +47,8 @@ export interface StairPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function StairPersistenceHost({
+function StairPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -58,18 +56,19 @@ export function StairPersistenceHost({
   floorId,
 }: StairPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the stair slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedStair: StairEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isStairEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedStair: StairEntity | null =
+    selectedEntity && isStairEntity(selectedEntity) ? selectedEntity : null;
 
+  const stairs = useSceneEntitiesByType<StairEntity>(currentLevelId, isStairEntity);
   React.useEffect(() => {
-    const stairs = (currentScene?.entities.filter(isStairEntity) ?? []) as readonly StairEntity[];
     useBim3DEntitiesStore.getState().setStairs(stairs);
-  }, [currentScene]);
+  }, [stairs]);
 
   const stairPersistence = useStairPersistence({
     companyId: user?.companyId ?? null,
@@ -95,3 +94,14 @@ export function StairPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized parent does; with it, a non-stair edit (which leaves
+ * `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. Scene reactivity arrives through leaf selectors.
+ * Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const StairPersistenceHost = React.memo(StairPersistenceHostImpl);
+StairPersistenceHost.displayName = 'StairPersistenceHost';

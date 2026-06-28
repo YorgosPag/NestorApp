@@ -164,9 +164,11 @@ export function DxfViewerTopBar({
         disabled to free the canvas right side; flip the conditional back
         on if a future option wants both surfaces.
       */}
+      {/* ADR-547 Stage 2 — no `currentScene` prop: the host subscribes to its
+          own scene slices (wall list + selected entity) via leaf selectors, so a
+          non-wall edit no longer re-renders it. */}
       <WallPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -175,7 +177,6 @@ export function DxfViewerTopBar({
       />
       <OpeningPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -186,7 +187,6 @@ export function DxfViewerTopBar({
       <DxfSymbolDetectHost levelManager={levelManager} />
       <SlabPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -195,7 +195,6 @@ export function DxfViewerTopBar({
       />
       <ColumnPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -204,7 +203,6 @@ export function DxfViewerTopBar({
       />
       <FoundationPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -218,7 +216,6 @@ export function DxfViewerTopBar({
       <HostingReconcilerHost levelManager={levelManager} />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -227,7 +224,6 @@ export function DxfViewerTopBar({
       />
       <MepFixturePersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -235,7 +231,6 @@ export function DxfViewerTopBar({
       />
       <FurniturePersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -243,7 +238,6 @@ export function DxfViewerTopBar({
       />
       <FloorplanSymbolPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -251,7 +245,6 @@ export function DxfViewerTopBar({
       />
       <ElectricalPanelPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -259,7 +252,6 @@ export function DxfViewerTopBar({
       />
       <MepManifoldPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -268,7 +260,6 @@ export function DxfViewerTopBar({
       />
       <MepRadiatorPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -277,7 +268,6 @@ export function DxfViewerTopBar({
       />
       <MepBoilerPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -286,7 +276,6 @@ export function DxfViewerTopBar({
       />
       <MepWaterHeaterPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -295,7 +284,6 @@ export function DxfViewerTopBar({
       />
       <MepUnderfloorPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -304,7 +292,6 @@ export function DxfViewerTopBar({
       />
       <MepSegmentPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -313,12 +300,16 @@ export function DxfViewerTopBar({
       />
       <MepFittingPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
+      {/* ADR-547 Stage 2 — OUTLIER: still takes `currentScene` because it
+          forwards it reactively to useMepConnectorReconciliation +
+          useMepCircuitEditorSync (effect/memo triggers). React.memo on the host
+          therefore cannot bail yet; it will once those two hooks self-subscribe
+          to SceneStore (follow-up). All other hosts are scene-free. */}
       <MepSystemPersistenceHost
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -329,7 +320,6 @@ export function DxfViewerTopBar({
       />
       <RailingPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -338,7 +328,6 @@ export function DxfViewerTopBar({
       />
       <RoofPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -347,7 +336,6 @@ export function DxfViewerTopBar({
       />
       <FloorFinishPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -356,7 +344,6 @@ export function DxfViewerTopBar({
       />
       <WallCoveringPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -365,7 +352,6 @@ export function DxfViewerTopBar({
       />
       <HatchPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -374,7 +360,6 @@ export function DxfViewerTopBar({
       />
       <ThermalSpacePersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -383,7 +368,6 @@ export function DxfViewerTopBar({
       />
       <SpaceSeparatorPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -392,7 +376,6 @@ export function DxfViewerTopBar({
       />
       <SlabOpeningPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
@@ -402,7 +385,6 @@ export function DxfViewerTopBar({
       <SlabOpeningStackHost levelManager={levelManager} />
       <StairPersistenceHost
         primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
         levelManager={levelManager}
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}

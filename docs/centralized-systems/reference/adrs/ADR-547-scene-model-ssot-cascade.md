@@ -1,0 +1,100 @@
+# ADR-547 — Scene-model SSoT: σπάσιμο του scene-change re-render cascade
+
+**Status:** 🟡 IN PROGRESS (Stage 0 COMMITTED `d0913846` · Stage 2/3 IMPLEMENTED UNCOMMITTED 2026-06-28)
+**Domains:** scene state (SceneModel SSoT), perf (re-render cascade), BIM persistence hosts
+**Σχετικά:** ADR-532 (selection-set SSoT — το pattern που μιμούμαστε), ADR-040 (micro-leaf doctrine), ADR-341 (God-context split προηγούμενο)
+**Πηγή:** `HANDOFFS/PLAN_2026-06-28_scene-model-ssot-cascade.md` · React-DevTools Profiler `profiling-data.28-06-2026.03-09-14.json` (commit#24 = **252ms / 2695 fibers** σε **μία** αλλαγή παραμέτρου κολόνας)
+
+---
+
+## 1. Πρόβλημα
+
+Το `SceneModel` ανά level prop-drillάρεται μονολιθικά ως `currentScene` από τον orchestrator
+(`DxfViewerContent` → `DxfViewerTopBar`) σε **~28 persistence hosts** + το BIM properties panel +
+`RibbonContextualTabScope`. Κάθε edit οντότητας παράγει νέα αναφορά `SceneModel`, άρα **κάθε** host
+ξανα-εκτελούσε `useMemo(find-by-id)` + `useEffect(filter-by-type)` σε **κάθε** edit — ακόμη κι όταν
+άλλαζε εντελώς άσχετος τύπος (column edit → re-render όλων των Wall/Slab/Mep/… hosts).
+
+## 2. Διορθωμένη ρίζα (CODE = source of truth)
+
+Το αρχικό plan §1 περιέγραφε τον **προ-Stage-0** κόσμο («memo dep `[levelScenes]` → νέα context
+αναφορά»). **Audit μετά το Stage 0** έδειξε ότι η μηχανική άλλαξε:
+
+- Το `LevelsContext` value είναι **ήδη σταθερό** σε entity edit (deps: μόνο `fileRecordId`/`saveContext`·
+  `getLevelScene`/`setLevelScene` = ref-based stable callbacks). Δεν περιέχει reactive `levelScenes`.
+- Το πραγματικό waste **δεν** είναι «νέο context ref». Είναι ότι **κανένας host δεν ήταν `React.memo`**
+  και έπαιρνε το συνεχώς-μεταβαλλόμενο `currentScene` prop → re-render όποτε re-renderάρει ο
+  μη-memoized `DxfViewerTopBar`.
+
+**Συνέπεια για τη θεραπεία:** η σωστή λύση = **granular slice subscription + `React.memo`** (όχι απλώς
+severance του orchestrator). Το slice-only χωρίς memo ΔΕΝ μειώνει re-renders· το memo χωρίς αφαίρεση του
+changing prop ΔΕΝ bail-άρει. Χρειάζονται **και τα δύο**.
+
+**Reference-stability invariant (το κλειδί):** ο `LevelSceneManagerAdapter.updateEntity` ξαναχτίζει τα
+entities με `entities.map(e => e.id === id ? {...e, ...updates} : e)` → κάθε **αμετάβλητο** entity κρατά
+την **ίδια** αναφορά· μόνο το επεξεργασμένο αλλάζει. Άρα ένα per-type `filter` slice μένει
+**element-wise ίδιο** όταν αλλάζει άλλος τύπος.
+
+## 3. Απόφαση
+
+Κάνε το `SceneModel` SSoT store με **granular, reference-stable selectors** (μίμηση ADR-532
+`SelectedEntitiesStore`):
+
+- **`SceneStore`** (Stage 0) — zero-React singleton SSoT για το `Record<levelId, SceneModel>`.
+- **Granular leaf selectors** (Stage 2/3):
+  - `getSceneEntitiesByType(levelId, guard)` + `useSceneEntitiesByType` — per-type slice, version-gated
+    cache (WeakMap ανά guard), επιστρέφει **ίδιο reference** όταν τα στοιχεία δεν άλλαξαν.
+  - `getSceneEntityById(levelId, id)` + `useSceneEntityById` — single entity, stable ref για αμετάβλητα.
+- **Hosts → `React.memo`** ώστε να bail-άρουν όταν τα (πλέον scene-free) props είναι shallow-equal.
+
+## 4. Στάδια
+
+| Stage | Τι | Κατάσταση |
+|---|---|---|
+| **0** | `SceneStore.ts` zero-React SSoT· `useSceneManager` → thin adapter | ✅ COMMITTED `d0913846` |
+| **2** | 27 persistence hosts → granular slices + `React.memo`, drop `currentScene` prop | ✅ UNCOMMITTED |
+| **3** | Properties panel/ribbon bridges → `useSceneEntityById` (μέσω host hooks) | ✅ (μέσω host migration) |
+| **1** | Orchestrator severance (event-time read) | ⏸️ ΑΝΑΘΕΩΡΗΘΗΚΕ — βλ. §2 (memo, όχι severance) |
+| **MepSystem hooks** | `useMepConnectorReconciliation`/`useMepCircuitEditorSync` → self-subscribe SceneStore | 🔴 FOLLOW-UP |
+| **5** | Retire `currentScene` prop εντελώς (μένει μόνο για MepSystem + RibbonContextualTabScope) | 🔴 μετά MepSystem hooks |
+
+## 5. Υλοποίηση (Stage 2/3 — 2026-06-28)
+
+**Νέα αρχεία:**
+- `systems/scene/scene-selectors.ts` — `getSceneEntitiesByType`/`getSceneEntityById` (pure, version-gated,
+  reference-stable).
+- `systems/scene/useSceneSelectors.ts` — `useSceneEntitiesByType`/`useSceneEntityById` (useSyncExternalStore leaves).
+- `systems/scene/__tests__/scene-selectors.test.ts` — **10 jest** (invariant: column edit → wall slice
+  ίδιο ref· wall edit → νέο ref· per-id stability· null/empty). **20/20 scene jest GREEN**, tsc 0.
+
+**Migrated hosts (27):** Wall, Opening, Slab, Column, Foundation, Beam, MepFixture, Furniture,
+FloorplanSymbol, ElectricalPanel, MepManifold, MepRadiator, MepBoiler, MepWaterHeater, MepUnderfloor,
+MepSegment, MepFitting, Railing, Roof, FloorFinish, WallCovering, Hatch, ThermalSpace, SpaceSeparator,
+SlabOpening, Stair + MepSystem (μόνο `React.memo`). Καθένας: drop `currentScene` prop → `useSceneEntityById`
+(selected) + `useSceneEntitiesByType` (3D-sync, όπου υπάρχει) + `React.memo` + `displayName`.
+
+**Παρατηρήσεις:**
+- Hosts χωρίς 3D feed (μόνο `useSceneEntityById`): WallCovering, Hatch, SpaceSeparator, FloorplanSymbol,
+  ThermalSpace (2D-only/μελλοντικά).
+- **OUTLIER `MepSystemPersistenceHost`:** κρατά το `currentScene` prop — το forwardάρει reactively σε
+  `useMepConnectorReconciliation` (effect trigger) + `useMepCircuitEditorSync` (memo dep). Το `React.memo`
+  δεν bail-άρει μέχρι αυτά τα 2 hooks να self-subscribe στο `SceneStore` (follow-up).
+- `MepFitting`: αφαιρέθηκε ένα `fittingsSig` signature-trick (περιττό — το slice είναι ήδη ref-stable).
+- `GridGuidePersistenceHost`: δεν χρησιμοποιεί `currentScene` → εκτός scope.
+
+**ADR-040:** κανένα migrated αρχείο δεν είναι canvas-drawing/micro-leaf (hosts/TopBar/selectors) →
+CHECK 6B/6D δεν ενεργοποιούνται.
+
+## 6. Εκκρεμή / ρίσκα
+
+- 🔴 **Browser-verify:** edit column → μόνο ColumnHost + canvas + column panel re-render (όχι οι 26 άλλοι)·
+  re-profile (React-DevTools «Record why each component rendered» **ON** — τα προηγούμενα exports ήταν OFF).
+  Ρεαλιστικός στόχος: **2695 → ~600-800 fibers**, ΟΧΙ →0 (canvas+panel+widget είναι εγγενή).
+- 🔴 **MepSystem hooks** follow-up (τότε Stage 5 retire του prop).
+- ⚠️ Multi-agent shared tree (ADR-040/532/3D agents).
+
+## 7. Changelog
+
+- **2026-06-28** — Stage 2/3 IMPLEMENTED (UNCOMMITTED, Opus 4.8): granular selectors + 27 hosts migrated +
+  `React.memo`. Διορθωμένη ρίζα (§2: memo, όχι context-ref). 10 νέα jest / 20 scene jest GREEN / tsc 0.
+- **2026-06-28** — Stage 0 COMMITTED `d0913846`: `SceneStore` SSoT + thin `useSceneManager` adapter.

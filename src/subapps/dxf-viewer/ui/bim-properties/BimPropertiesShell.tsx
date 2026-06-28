@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { isBimEntity } from '../../types/entities';
+import { usePrimarySelectedId } from '../../systems/selection';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter';
 import { BimBoqTab } from '../../bim-3d/properties/tabs/BimBoqTab';
@@ -40,7 +41,6 @@ import {
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesShellProps {
-  readonly primarySelectedId: string | null;
   readonly currentScene: SceneModel | null;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -61,7 +61,13 @@ function isSubTab(value: string): value is SubTab {
 export function BimPropertiesShell(
   props: BimPropertiesShellProps,
 ): React.ReactElement {
-  const { primarySelectedId, currentScene } = props;
+  const { currentScene } = props;
+  // ADR-532 Stage C — self-subscribe to the selection set (leaf). The Properties
+  // palette is the ONLY consumer that must follow the primary selection, so it
+  // reads it here instead of receiving it as a prop. This keeps the prop off the
+  // FloatingPanelContainer → SidebarSection path, so a click no longer breaks
+  // their memo (Revit Properties palette = isolated leaf).
+  const primarySelectedId = usePrimarySelectedId();
   const { t } = useTranslation('dxf-viewer-shell');
   const { user } = useAuth();
   const hierarchy = useProjectHierarchyOptional();

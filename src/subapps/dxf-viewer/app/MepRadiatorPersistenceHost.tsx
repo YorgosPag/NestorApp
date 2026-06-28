@@ -18,10 +18,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { MepRadiatorEntity } from '../bim/types/mep-radiator-types';
 import { isMepRadiatorEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepRadiatorPersistence } from '../hooks/data/useMepRadiatorPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface MepRadiatorPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -42,9 +41,8 @@ export interface MepRadiatorPersistenceHostProps {
   readonly buildingId?: string;
 }
 
-export function MepRadiatorPersistenceHost({
+function MepRadiatorPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -52,18 +50,19 @@ export function MepRadiatorPersistenceHost({
   buildingId,
 }: MepRadiatorPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the radiator slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedRadiator: MepRadiatorEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isMepRadiatorEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedRadiator: MepRadiatorEntity | null =
+    selectedEntity && isMepRadiatorEntity(selectedEntity) ? selectedEntity : null;
 
+  const radiators = useSceneEntitiesByType<MepRadiatorEntity>(currentLevelId, isMepRadiatorEntity);
   React.useEffect(() => {
-    const radiators = currentScene?.entities.filter(isMepRadiatorEntity) ?? [];
     useBim3DEntitiesStore.getState().setRadiators(radiators);
-  }, [currentScene]);
+  }, [radiators]);
 
   useMepRadiatorPersistence({
     companyId: user?.companyId ?? null,
@@ -78,3 +77,15 @@ export function MepRadiatorPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-radiator edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const MepRadiatorPersistenceHost = React.memo(MepRadiatorPersistenceHostImpl);
+MepRadiatorPersistenceHost.displayName = 'MepRadiatorPersistenceHost';

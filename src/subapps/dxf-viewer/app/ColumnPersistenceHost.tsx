@@ -17,10 +17,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { ColumnEntity } from '../bim/types/column-types';
 import { isColumnEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useColumnPersistence } from '../hooks/data/useColumnPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -31,7 +31,6 @@ type LevelManagerLike = Pick<
 
 export interface ColumnPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -39,9 +38,8 @@ export interface ColumnPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function ColumnPersistenceHost({
+function ColumnPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -49,18 +47,19 @@ export function ColumnPersistenceHost({
   floorId,
 }: ColumnPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the column slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedColumn: ColumnEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isColumnEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedColumn: ColumnEntity | null =
+    selectedEntity && isColumnEntity(selectedEntity) ? selectedEntity : null;
 
+  const columns = useSceneEntitiesByType<ColumnEntity>(currentLevelId, isColumnEntity);
   React.useEffect(() => {
-    const columns = currentScene?.entities.filter(isColumnEntity) ?? [];
     useBim3DEntitiesStore.getState().setColumns(columns);
-  }, [currentScene]);
+  }, [columns]);
 
   useColumnPersistence({
     companyId: user?.companyId ?? null,
@@ -75,3 +74,15 @@ export function ColumnPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-column edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const ColumnPersistenceHost = React.memo(ColumnPersistenceHostImpl);
+ColumnPersistenceHost.displayName = 'ColumnPersistenceHost';

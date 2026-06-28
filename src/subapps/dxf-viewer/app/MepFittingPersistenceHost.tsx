@@ -23,9 +23,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
+import type { MepFittingEntity } from '../bim/types/mep-fitting-types';
 import { isMepFittingEntity } from '../types/entities';
+import { useSceneEntitiesByType } from '../systems/scene/useSceneSelectors';
 import { useMepFittingAutoReconciliation } from '../hooks/data/useMepFittingAutoReconciliation';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -36,7 +37,6 @@ type LevelManagerLike = Pick<
 
 export interface MepFittingPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -44,30 +44,22 @@ export interface MepFittingPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function MepFittingPersistenceHost({
-  currentScene,
+function MepFittingPersistenceHostImpl({
   levelManager,
   projectId,
   floorplanId,
   floorId,
 }: MepFittingPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2 — `useSceneEntitiesByType` returns a reference-stable slice
+  // (only a new array reference when the fitting set actually changes), so the
+  // previous `fittingsSig` churn-guard is no longer necessary.
+  const currentLevelId = levelManager.currentLevelId;
 
-  // `currentScene` is a new reference on every render (getLevelScene returns a
-  // fresh object), so keying the 3D-store push on it churned `setMepFittings`
-  // every render. Push only when the fitting set actually changes (id + params).
-  const fittings = React.useMemo(
-    () => currentScene?.entities.filter(isMepFittingEntity) ?? [],
-    [currentScene],
-  );
-  const fittingsSig = React.useMemo(
-    () => fittings.map((f) => `${f.id}:${JSON.stringify(f.params)}`).join('|'),
-    [fittings],
-  );
+  const fittings = useSceneEntitiesByType<MepFittingEntity>(currentLevelId, isMepFittingEntity);
   React.useEffect(() => {
     useBim3DEntitiesStore.getState().setMepFittings(fittings);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- push keyed on content signature, not the per-render array ref
-  }, [fittingsSig]);
+  }, [fittings]);
 
   useMepFittingAutoReconciliation({
     companyId: user?.companyId ?? null,
@@ -80,3 +72,11 @@ export function MepFittingPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host bails when the (now scene-free)
+ * props are shallow-equal. Scene reactivity arrives through the leaf selector
+ * (`useSceneEntitiesByType`), not a prop.
+ */
+export const MepFittingPersistenceHost = React.memo(MepFittingPersistenceHostImpl);
+MepFittingPersistenceHost.displayName = 'MepFittingPersistenceHost';

@@ -18,10 +18,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
 import { isMepManifoldEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepManifoldPersistence } from '../hooks/data/useMepManifoldPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface MepManifoldPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -42,9 +41,8 @@ export interface MepManifoldPersistenceHostProps {
   readonly buildingId?: string;
 }
 
-export function MepManifoldPersistenceHost({
+function MepManifoldPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -52,18 +50,19 @@ export function MepManifoldPersistenceHost({
   buildingId,
 }: MepManifoldPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the manifold slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedManifold: MepManifoldEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isMepManifoldEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedManifold: MepManifoldEntity | null =
+    selectedEntity && isMepManifoldEntity(selectedEntity) ? selectedEntity : null;
 
+  const manifolds = useSceneEntitiesByType<MepManifoldEntity>(currentLevelId, isMepManifoldEntity);
   React.useEffect(() => {
-    const manifolds = currentScene?.entities.filter(isMepManifoldEntity) ?? [];
     useBim3DEntitiesStore.getState().setManifolds(manifolds);
-  }, [currentScene]);
+  }, [manifolds]);
 
   useMepManifoldPersistence({
     companyId: user?.companyId ?? null,
@@ -78,3 +77,11 @@ export function MepManifoldPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host bails when the (now scene-free)
+ * props are shallow-equal. Scene reactivity arrives through the leaf selectors
+ * (`useSceneEntitiesByType` / `useSceneEntityById`), not a prop.
+ */
+export const MepManifoldPersistenceHost = React.memo(MepManifoldPersistenceHostImpl);
+MepManifoldPersistenceHost.displayName = 'MepManifoldPersistenceHost';

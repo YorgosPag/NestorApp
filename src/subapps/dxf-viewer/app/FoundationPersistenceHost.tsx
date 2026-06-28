@@ -4,7 +4,7 @@
  * ADR-436 — Always-on host για Foundation persistence (renders `null`).
  *
  * Mounted στο `DxfViewerTopBar`. Δύο responsibilities:
- *   1. **3D push** (Slice 1): όποτε αλλάζει το `currentScene`, σπρώχνει τα
+ *   1. **3D push** (Slice 1): όποτε αλλάζει το scene, σπρώχνει τα
  *      `FoundationEntity` στο `Bim3DEntitiesStore` (→ `BimSceneLayer.syncFoundations`).
  *   2. **Firestore persistence** (Slice 1-persist, mirror `ColumnPersistenceHost`):
  *      - listens για `drawing:entity-created` (tool: 'foundation') → first-save
@@ -22,10 +22,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { FoundationEntity } from '../bim/types/foundation-types';
 import { isFoundationEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useFoundationPersistence } from '../hooks/data/useFoundationPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -36,34 +36,33 @@ type LevelManagerLike = Pick<
 
 export interface FoundationPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly floorId?: string;
 }
 
-export function FoundationPersistenceHost({
+function FoundationPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
   floorId,
 }: FoundationPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the foundation slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedFoundation: FoundationEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isFoundationEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedFoundation: FoundationEntity | null =
+    selectedEntity && isFoundationEntity(selectedEntity) ? selectedEntity : null;
 
+  const foundations = useSceneEntitiesByType<FoundationEntity>(currentLevelId, isFoundationEntity);
   React.useEffect(() => {
-    const foundations = currentScene?.entities.filter(isFoundationEntity) ?? [];
     useBim3DEntitiesStore.getState().setFoundations(foundations);
-  }, [currentScene]);
+  }, [foundations]);
 
   useFoundationPersistence({
     companyId: user?.companyId ?? null,
@@ -77,3 +76,15 @@ export function FoundationPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-foundation edit
+ * (which leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no
+ * longer re-renders this host at all. The scene reactivity it DOES need now
+ * arrives through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const FoundationPersistenceHost = React.memo(FoundationPersistenceHostImpl);
+FoundationPersistenceHost.displayName = 'FoundationPersistenceHost';

@@ -22,10 +22,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { WallEntity } from '../bim/types/wall-types';
 import { isWallEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useWallPersistence } from '../hooks/data/useWallPersistence';
 import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
 import { useBimFamilyTypes } from '../bim/family-types/useBimFamilyTypes';
@@ -43,7 +43,6 @@ type LevelManagerLike = Pick<
 
 export interface WallPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -51,9 +50,8 @@ export interface WallPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function WallPersistenceHost({
+function WallPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -61,6 +59,10 @@ export function WallPersistenceHost({
   floorId,
 }: WallPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the wall slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
   // ADR-412 — load the company's BIM family types into the resolution store so
   // typed walls resolve their type-governed params at scene-sync time («type
@@ -83,12 +85,9 @@ export function WallPersistenceHost({
     buildingId,
   });
 
-  const primarySelectedWall: WallEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isWallEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedWall: WallEntity | null =
+    selectedEntity && isWallEntity(selectedEntity) ? selectedEntity : null;
 
   const wallPersistence = useWallPersistence({
     companyId: user?.companyId ?? null,
@@ -112,10 +111,10 @@ export function WallPersistenceHost({
     };
   }, [wallPersistence]);
 
+  const walls = useSceneEntitiesByType<WallEntity>(currentLevelId, isWallEntity);
   React.useEffect(() => {
-    const walls = currentScene?.entities.filter(isWallEntity) ?? [];
     useBim3DEntitiesStore.getState().setWalls(walls);
-  }, [currentScene]);
+  }, [walls]);
 
   useWallSplitPersistence({
     companyId: user?.companyId ?? null,
@@ -134,3 +133,15 @@ export function WallPersistenceHost({
     </>
   );
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-wall edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const WallPersistenceHost = React.memo(WallPersistenceHostImpl);
+WallPersistenceHost.displayName = 'WallPersistenceHost';

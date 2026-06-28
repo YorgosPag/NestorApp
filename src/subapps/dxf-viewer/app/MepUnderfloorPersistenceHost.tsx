@@ -18,10 +18,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { MepUnderfloorEntity } from '../bim/types/mep-underfloor-types';
 import { isMepUnderfloorEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepUnderfloorPersistence } from '../hooks/data/useMepUnderfloorPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface MepUnderfloorPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -42,9 +41,8 @@ export interface MepUnderfloorPersistenceHostProps {
   readonly buildingId?: string;
 }
 
-export function MepUnderfloorPersistenceHost({
+function MepUnderfloorPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -52,18 +50,22 @@ export function MepUnderfloorPersistenceHost({
   buildingId,
 }: MepUnderfloorPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the underfloor slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedUnderfloor: MepUnderfloorEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isMepUnderfloorEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedUnderfloor: MepUnderfloorEntity | null =
+    selectedEntity && isMepUnderfloorEntity(selectedEntity) ? selectedEntity : null;
 
+  const underfloors = useSceneEntitiesByType<MepUnderfloorEntity>(
+    currentLevelId,
+    isMepUnderfloorEntity,
+  );
   React.useEffect(() => {
-    const underfloors = currentScene?.entities.filter(isMepUnderfloorEntity) ?? [];
     useBim3DEntitiesStore.getState().setUnderfloors(underfloors);
-  }, [currentScene]);
+  }, [underfloors]);
 
   useMepUnderfloorPersistence({
     companyId: user?.companyId ?? null,
@@ -78,3 +80,11 @@ export function MepUnderfloorPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host bails when the (now scene-free)
+ * props are shallow-equal. Scene reactivity arrives through the leaf selectors
+ * (`useSceneEntitiesByType` / `useSceneEntityById`), not a prop.
+ */
+export const MepUnderfloorPersistenceHost = React.memo(MepUnderfloorPersistenceHostImpl);
+MepUnderfloorPersistenceHost.displayName = 'MepUnderfloorPersistenceHost';

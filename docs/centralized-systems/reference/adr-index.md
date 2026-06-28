@@ -527,6 +527,7 @@
 | **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
 | **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers, snap-jump + badge) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | DXF Viewer / 2D↔3D SSoT | [📄](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
 | **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (ΕΝΑΣ platform type + reader στο `src/lib/platform`, 4 type + 12 reader διπλότυπα ενοποιήθηκαν) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | Platform / Performance SSoT | [📄](./adrs/ADR-546-browser-performance-memory-ssot.md) |
+| **ADR-547** | Scene-model SSoT — σπάσιμο του scene-change re-render cascade (granular `useSceneEntitiesByType`/`useSceneEntityById` selectors + `React.memo` σε 27 persistence hosts· drop μονολιθικό `currentScene` prop) | 🟡 IN PROGRESS (Stage 0 COMMITTED, Stage 2/3 UNCOMMITTED) | 2026-06-28 | DXF Viewer / Scene SSoT / Perf | [📄](./adrs/ADR-547-scene-model-ssot-cascade.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

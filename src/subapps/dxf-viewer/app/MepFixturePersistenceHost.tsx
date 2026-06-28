@@ -18,10 +18,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import { isMepFixtureEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepFixturePersistence } from '../hooks/data/useMepFixturePersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -32,7 +32,6 @@ type LevelManagerLike = Pick<
 
 export interface MepFixturePersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -40,27 +39,27 @@ export interface MepFixturePersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function MepFixturePersistenceHost({
+function MepFixturePersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
   floorId,
 }: MepFixturePersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the fixture slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedFixture: MepFixtureEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isMepFixtureEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedFixture: MepFixtureEntity | null =
+    selectedEntity && isMepFixtureEntity(selectedEntity) ? selectedEntity : null;
 
+  const fixtures = useSceneEntitiesByType<MepFixtureEntity>(currentLevelId, isMepFixtureEntity);
   React.useEffect(() => {
-    const fixtures = currentScene?.entities.filter(isMepFixtureEntity) ?? [];
     useBim3DEntitiesStore.getState().setFixtures(fixtures);
-  }, [currentScene]);
+  }, [fixtures]);
 
   useMepFixturePersistence({
     companyId: user?.companyId ?? null,
@@ -74,3 +73,15 @@ export function MepFixturePersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-fixture edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const MepFixturePersistenceHost = React.memo(MepFixturePersistenceHostImpl);
+MepFixturePersistenceHost.displayName = 'MepFixturePersistenceHost';

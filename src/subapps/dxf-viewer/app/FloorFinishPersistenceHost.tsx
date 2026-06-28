@@ -17,10 +17,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { FloorFinishEntity } from '../bim/types/floor-finish-types';
 import { isFloorFinishEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useFloorFinishPersistence } from '../hooks/data/useFloorFinishPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -31,7 +31,6 @@ type LevelManagerLike = Pick<
 
 export interface FloorFinishPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -39,9 +38,8 @@ export interface FloorFinishPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function FloorFinishPersistenceHost({
+function FloorFinishPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -49,18 +47,22 @@ export function FloorFinishPersistenceHost({
   floorId,
 }: FloorFinishPersistenceHostProps): null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the floor-finish slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelected: FloorFinishEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isFloorFinishEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelected: FloorFinishEntity | null =
+    selectedEntity && isFloorFinishEntity(selectedEntity) ? selectedEntity : null;
 
+  const floorFinishes = useSceneEntitiesByType<FloorFinishEntity>(
+    currentLevelId,
+    isFloorFinishEntity,
+  );
   React.useEffect(() => {
-    const floorFinishes = currentScene?.entities.filter(isFloorFinishEntity) ?? [];
     useBim3DEntitiesStore.getState().setFloorFinishes(floorFinishes);
-  }, [currentScene]);
+  }, [floorFinishes]);
 
   useFloorFinishPersistence({
     companyId: user?.companyId ?? null,
@@ -75,3 +77,15 @@ export function FloorFinishPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host bails when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-floor-finish edit
+ * (which leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no
+ * longer re-renders this host at all. The scene reactivity it DOES need now
+ * arrives through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop.
+ */
+export const FloorFinishPersistenceHost = React.memo(FloorFinishPersistenceHostImpl);
+FloorFinishPersistenceHost.displayName = 'FloorFinishPersistenceHost';

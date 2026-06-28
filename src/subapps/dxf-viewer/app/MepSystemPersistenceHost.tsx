@@ -36,7 +36,7 @@ export interface MepSystemPersistenceHostProps {
   readonly primarySelectedId: string | null;
 }
 
-export function MepSystemPersistenceHost({
+function MepSystemPersistenceHostImpl({
   projectId,
   floorplanId,
   floorId,
@@ -64,3 +64,13 @@ export function MepSystemPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` wrapper so unchanged-props renders are
+ * short-circuited. NOTE: `currentScene` intentionally remains a prop here —
+ * it is forwarded verbatim to `useMepConnectorReconciliation` (useEffect
+ * trigger) and `useMepCircuitEditorSync` (useMemo dep). Full leaf-selector
+ * migration requires those two hooks to subscribe to SceneStore internally.
+ */
+export const MepSystemPersistenceHost = React.memo(MepSystemPersistenceHostImpl);
+MepSystemPersistenceHost.displayName = 'MepSystemPersistenceHost';

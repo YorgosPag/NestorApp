@@ -11,7 +11,6 @@ import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
-import { isBimEntity, isStairEntity } from '../types/entities';
 import { isWallDrawingTool } from '../systems/tools/region-tool-ids';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
@@ -36,8 +35,6 @@ interface FloatingPanelContainerProps {
   // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
   projectId?: string;
   floorplanId?: string;
-  /** Universal-selection primary id (used by stair Properties tab). */
-  primarySelectedId?: string | null;
 }
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
@@ -46,7 +43,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   onSceneImported,
   projectId,
   floorplanId,
-  primarySelectedId,
 }, ref) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -89,23 +85,13 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     onSceneImported,
     projectId,
     floorplanId,
-    primarySelectedId,
   });
 
-  // ADR-358 Phase 8 / ADR-363 Phase 4 / ADR-366 — auto-switch to the Properties
-  // palette when the user selects any BIM element (industry pattern: Revit /
-  // AutoCAD Properties palette pops on selection). Covers every BIM type so the
-  // merged Παράμετροι/ΒΚΕ/Σχόλια/Ιστορικό sub-tabs surface for 3D selections too.
-  // Stays out of the way for plain DXF/layer selections (not BIM) so the user is
-  // not bounced off the Levels tab while doing layer work.
-  React.useEffect(() => {
-    if (!scene || !primarySelectedId) return;
-    const entity = scene.entities.find((e) => e.id === primarySelectedId);
-    if (!entity) return;
-    if ((isBimEntity(entity) || isStairEntity(entity)) && activePanel !== 'properties') {
-      setActivePanel('properties');
-    }
-  }, [primarySelectedId, scene, activePanel, setActivePanel]);
+  // ADR-532 Stage C — the selection-driven «auto-switch to Properties on BIM
+  // select» effect moved to `SelectionSideEffectsHost` (a null leaf that
+  // self-subscribes to the selection set). Keeping it here forced this whole
+  // container to take `primarySelectedId` as a prop → broke its memo on every
+  // click. The host drives the switch imperatively via `showTab('properties')`.
 
   // ADR-363 — auto-open the Properties palette when the user ACTIVATES the wall
   // tool (Revit «set the type, then draw»): the left panel surfaces the draft
@@ -172,7 +158,6 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
     prevProps.currentTool === nextProps.currentTool &&
     prevProps.onSceneImported === nextProps.onSceneImported &&
     prevProps.projectId === nextProps.projectId &&
-    prevProps.floorplanId === nextProps.floorplanId &&
-    prevProps.primarySelectedId === nextProps.primarySelectedId
+    prevProps.floorplanId === nextProps.floorplanId
   );
 });

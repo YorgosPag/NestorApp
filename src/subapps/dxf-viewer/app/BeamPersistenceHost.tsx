@@ -17,10 +17,10 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import type { BeamEntity } from '../bim/types/beam-types';
 import { isBeamEntity } from '../types/entities';
+import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useBeamPersistence } from '../hooks/data/useBeamPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
@@ -31,7 +31,6 @@ type LevelManagerLike = Pick<
 
 export interface BeamPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
@@ -39,9 +38,8 @@ export interface BeamPersistenceHostProps {
   readonly floorId?: string;
 }
 
-export function BeamPersistenceHost({
+function BeamPersistenceHostImpl({
   primarySelectedId,
-  currentScene,
   levelManager,
   projectId,
   floorplanId,
@@ -49,18 +47,19 @@ export function BeamPersistenceHost({
   floorId,
 }: BeamPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+  // ADR-547 Stage 2/3 — leaf scene subscriptions REPLACE the monolithic
+  // `currentScene` prop: this host re-renders only when the selected entity or
+  // the beam slice changes, never when an unrelated entity type is edited.
+  const currentLevelId = levelManager.currentLevelId;
 
-  const primarySelectedBeam: BeamEntity | null = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
-    if (!e || !isBeamEntity(e)) return null;
-    return e;
-  }, [primarySelectedId, currentScene]);
+  const selectedEntity = useSceneEntityById(currentLevelId, primarySelectedId);
+  const primarySelectedBeam: BeamEntity | null =
+    selectedEntity && isBeamEntity(selectedEntity) ? selectedEntity : null;
 
+  const beams = useSceneEntitiesByType<BeamEntity>(currentLevelId, isBeamEntity);
   React.useEffect(() => {
-    const beams = currentScene?.entities.filter(isBeamEntity) ?? [];
     useBim3DEntitiesStore.getState().setBeams(beams);
-  }, [currentScene]);
+  }, [beams]);
 
   useBeamPersistence({
     companyId: user?.companyId ?? null,
@@ -75,3 +74,15 @@ export function BeamPersistenceHost({
 
   return null;
 }
+
+/**
+ * ADR-547 Stage 2 — `React.memo` so the host BAILS when the (now scene-free)
+ * props are shallow-equal. Without it, the host would re-render whenever the
+ * non-memoized `DxfViewerTopBar` parent does; with it, a non-beam edit (which
+ * leaves `primarySelectedId` + `levelManager` + scope ids unchanged) no longer
+ * re-renders this host at all. The scene reactivity it DOES need now arrives
+ * through the leaf selectors (`useSceneEntitiesByType`/`useSceneEntityById`),
+ * not a prop. Pairs with dropping `currentScene` from the mount in DxfViewerTopBar.
+ */
+export const BeamPersistenceHost = React.memo(BeamPersistenceHostImpl);
+BeamPersistenceHost.displayName = 'BeamPersistenceHost';
