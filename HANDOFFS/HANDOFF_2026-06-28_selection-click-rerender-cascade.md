@@ -101,8 +101,17 @@ EventBus mount-gate `{open, payload, close}`, ref-stable `accept`). Κάθε hos
 - `OpeningTagStyleHost` → hydration + repaint-subscribe ΜΕΝΟΥΝ always-on· μόνο ο dialog gate-άρεται.
 
 `DxfViewerDialogs.tsx` **αμετάβλητο** (hosts self-gate). Trade-off: close=unmount (χωρίς Radix exit-anim)
-— ίδιο με το υπάρχον gate-at-mount (Credits/import). 5/5 jest GREEN (`useEventGatedDialog.test.tsx`).
+— ίδιο με το υπάρχον gate-at-mount (Credits/import). 9/9 jest GREEN (`useEventGatedDialog.test.tsx`).
 ADR-532 changelog + Files ενημερωμένα.
+
+**Boy-Scout SSoT (Giorgio order «κεντρικοποίησε & τα προϋπάρχοντα διπλότυπα»):** βρέθηκαν 2 pre-existing
+duplicates του open-gate pattern → μπήκαν στο ΙΔΙΟ SSoT:
+- `app/PrintHost.tsx` (raw inline `useState`+`EventBus.on`, twin του Export) → thin gate + `PrintBody`.
+- `ui/components/bim-openings/RenumberOpeningsHost.tsx` (ήδη split αλλά inline + async pre-load) → το hook
+  απέκτησε optional async **`beforeOpen`** (load-then-open: opens ΜΟΝΟ όταν resolve· `null`→abort· token
+  invalidation σε νεότερο event/`close`/unmount· `data` στο return· back-compat option-form). Renumber τώρα
+  consumer, μηδέν inline. **Σύνολο 9 hosts σε ΕΝΑ gate.** (`createConfirmStore` = ΔΙΑΦΟΡΕΤΙΚΟ pattern,
+  store-based await/resolve confirm — ΟΧΙ duplicate, δεν αγγίχτηκε.)
 - **Στόχος:** dialogs 117→~0 στο selection commit. **🔴 ΕΚΚΡΕΜΕΙ browser-verify** (Profiler: closed dialogs
   ΟΧΙ updaters/renders στο click· κάθε dialog ανοίγει/εφαρμόζει/κλείνει σωστά — ειδικά Thermal apply +
   per-region override, που μετακινήθηκαν σε mount-init) + commit (Giorgio· stage ADR-040+532, CHECK 6B/6D).
