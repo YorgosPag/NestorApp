@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonTab } from '../types/ribbon-types';
 import type { TabDragHandlers } from '../hooks/useRibbonTabDrag';
-import { useRibbonCommand } from '../context/RibbonCommandContext';
+import { useRibbonBadgeState } from '../context/useRibbonFieldSelectors';
 
 interface RibbonTabItemProps {
   tab: RibbonTab;
@@ -24,11 +24,13 @@ export const RibbonTabItem: React.FC<RibbonTabItemProps> = ({
   drag,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { getBadgeState } = useRibbonCommand();
+  // ADR-547 Stage 4 Option B — per-key badge subscription (was the volatile field
+  // context → re-rendered every tab on any field change). '' = no badge → false.
+  const badgeState = useRibbonBadgeState(tab.badgeKey ?? '');
   const isDragging = drag.draggingId === tab.id;
   const isDropTarget = drag.dropTargetId === tab.id;
   // ADR-358 Phase 7b1 — Validation badge surfacing.
-  const showBadge = tab.badgeKey ? getBadgeState(tab.badgeKey) : false;
+  const showBadge = tab.badgeKey ? badgeState : false;
   const badgeAriaLabel = tab.badgeKey
     ? t('ribbon.tabs.validationBadge', { defaultValue: '' })
     : '';

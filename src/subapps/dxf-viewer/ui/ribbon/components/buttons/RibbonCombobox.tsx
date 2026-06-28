@@ -35,7 +35,8 @@ import type {
   RibbonCommand,
   RibbonComboboxOption,
 } from '../../types/ribbon-types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
+import { useRibbonComboboxState } from '../../context/useRibbonFieldSelectors';
 import { RibbonEditableCombobox } from './RibbonEditableCombobox';
 import { HatchPatternPicker } from './HatchPatternPicker';
 import { RibbonDxfColorPickerWidget } from './RibbonDxfColorPickerWidget';
@@ -61,7 +62,10 @@ function resolveLabel(
  * (ADR-507 Φ2), else renders the standard Select / editable-numeric combobox.
  * Hook-free wrapper → keeps rules-of-hooks satisfied for both branches.
  */
-export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
+// ADR-547 Stage 4 Option B — memoized on the (static) `command`. Combined with the
+// per-key `RibbonFieldStore` subscription inside `RibbonComboboxDefault` + the
+// stable dispatch context, editing ANOTHER field no longer re-renders this combobox.
+const RibbonComboboxInner: React.FC<RibbonComboboxProps> = ({ command }) => {
   if (command.comboboxVariant === 'hatch-pattern') {
     return <HatchPatternPicker command={command} />;
   }
@@ -71,13 +75,15 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
   return <RibbonComboboxDefault command={command} />;
 };
 
+export const RibbonCombobox = React.memo(RibbonComboboxInner);
+
 const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const {
-    onComboboxChange,
-    onComingSoon,
-    getComboboxState,
-  } = useRibbonCommand();
+  // ADR-547 Stage 4 Option B — writers from the STABLE dispatch context; the
+  // reactive VALUE from a per-key `RibbonFieldStore` subscription. Editing another
+  // field never re-renders this widget.
+  const { onComboboxChange, onComingSoon } = useRibbonDispatch();
+  const dynamicState = useRibbonComboboxState(command.commandKey);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const widthPx = command.comboboxWidthPx ?? DEFAULT_WIDTH_PX;
@@ -97,7 +103,6 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
     el.style.setProperty('--ribbon-combobox-width', `${widthPx}px`);
   }, [widthPx]);
 
-  const dynamicState = getComboboxState(command.commandKey);
   const dynamicOpts = dynamicState?.options;
   const baseOptions: readonly RibbonComboboxOption[] =
     (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];

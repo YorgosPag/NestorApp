@@ -127,7 +127,10 @@ export function useRibbonCommands({
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
   // no-op on keys they don't own, but the prefix checks short-circuit.
-  const onComboboxChange = React.useCallback(
+  // ADR-547 Stage 4 Option B — stable identity (useEventCallback): the field
+  // WRITERS live in the STABLE dispatch context so memoized value widgets get a
+  // stable `onChange` and re-render ONLY from their own `RibbonFieldStore` slice.
+  const onComboboxChange = useEventCallback(
     (key: string, value: string) => {
       if (key === 'animation.snap-step') {
         const step = parseFloat(value);
@@ -258,7 +261,6 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -302,7 +304,7 @@ export function useRibbonCommands({
     [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
-  const onToggle = React.useCallback(
+  const onToggle = useEventCallback(
     (key: string, next: boolean) => {
       if (isWallRibbonToggleKey(key)) {
         wallBridge.onToggle(key, next);
@@ -330,7 +332,6 @@ export function useRibbonCommands({
       }
       textEditorBridge.onToggle(key, next);
     },
-    [wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, textEditorBridge],
   );
 
   const getToggleState = React.useCallback(

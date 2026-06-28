@@ -19,7 +19,8 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
+import { useRibbonToggleState } from '../../context/useRibbonFieldSelectors';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 
@@ -27,16 +28,18 @@ interface RibbonToggleButtonProps {
   command: RibbonCommand;
 }
 
-export const RibbonToggleButton: React.FC<RibbonToggleButtonProps> = ({
+// ADR-547 Stage 4 Option B — writers from the STABLE dispatch context, reactive
+// state from a per-key `RibbonFieldStore` subscription, memoized on the static
+// `command` → editing another field never re-renders this toggle.
+const RibbonToggleButtonInner: React.FC<RibbonToggleButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToggle, onComingSoon, onAction, getToggleState } =
-    useRibbonCommand();
+  const { onToggle, onComingSoon, onAction } = useRibbonDispatch();
+  const state = useRibbonToggleState(command.commandKey);
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
-  const state = getToggleState(command.commandKey);
   const isMixed = state === null;
   const pressed = state === true;
 
@@ -86,3 +89,5 @@ export const RibbonToggleButton: React.FC<RibbonToggleButtonProps> = ({
     </Tooltip>
   );
 };
+
+export const RibbonToggleButton = React.memo(RibbonToggleButtonInner);

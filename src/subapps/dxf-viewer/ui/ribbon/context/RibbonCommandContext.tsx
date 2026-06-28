@@ -6,30 +6,19 @@
  * Provider lives in RibbonRoot; leaves consume via useRibbonCommand().
  */
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useMemo } from 'react';
 import type { ToolType } from '../../toolbar/types';
-import type { RibbonComboboxOption } from '../types/ribbon-types';
 import { useSplitLastUsed } from '../hooks/useSplitLastUsed';
+// ADR-547 Stage 4 Option B — value types extracted to a React-free module so the
+// zero-React field store can share them; re-exported here for backward compat.
+import type {
+  RibbonActionPayload,
+  RibbonToggleState,
+  RibbonComboboxState,
+} from './ribbon-command-types';
+import { setRibbonFieldReaders } from './RibbonFieldStore';
 
-export type RibbonActionPayload = number | string | Record<string, unknown>;
-
-/**
- * ADR-345 §4.4-4.5 Fase 5.5 — Runtime state for a toggle/combobox.
- * Bridges (e.g. useRibbonTextEditorBridge) build these readers from
- * domain stores so button leaves stay declarative.
- */
-export type RibbonToggleState = boolean | null;        // null = mixed/indeterminate
-export interface RibbonComboboxState {
-  value: string | null;                                // null = mixed
-  options: readonly RibbonComboboxOption[];
-  /**
-   * ADR-421 SLICE C follow-up (a) — when `true`, the combobox renders
-   * read-only (value still visible) because its value is governed elsewhere
-   * (e.g. a typed BIM family Type, Revit-style). Owning bridge decides; bridges
-   * that omit it keep the field fully editable (no breaking change).
-   */
-  disabled?: boolean;
-}
+export type { RibbonActionPayload, RibbonToggleState, RibbonComboboxState };
 
 export interface RibbonCommandsApi {
   /**
@@ -136,11 +125,19 @@ interface RibbonDispatchContextValue {
   getCommandRecommendation: (commandKey: string) => boolean;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
-}
-
-interface RibbonFieldContextValue {
+  // ADR-547 Stage 4 Option B — the field WRITERS are stable (`useEventCallback`
+  // in useRibbonCommands), so they live in the STABLE dispatch half. Value widgets
+  // get their writer from here and their reactive VALUE from `RibbonFieldStore`.
   onToggle: (commandKey: string, nextValue: boolean) => void;
   onComboboxChange: (commandKey: string, value: string) => void;
+}
+
+// ADR-547 Stage 4 Option B — the field READERS no longer live in a React context.
+// They are pushed into the zero-React `RibbonFieldStore`; value widgets subscribe
+// per-`commandKey` via `useRibbonFieldSelectors`. This interface is retained only
+// so the `useRibbonCommand()` combiner can keep its historical shape for the few
+// non-migrated consumers (pickers / split-dropdown).
+interface RibbonFieldContextValue {
   getToggleState: (commandKey: string) => RibbonToggleState;
   getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   getBadgeState: (badgeKey: string) => boolean;
@@ -180,7 +177,8 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
   const { splitLastUsed, setSplitLastUsed } = useSplitLastUsed();
 
   // STABLE half — holds across edits/selection because each method reference is
-  // stable (`onAction` = useEventCallback). Tool buttons subscribe to this only.
+  // stable (`onAction`/`onToggle`/`onComboboxChange` = useEventCallback). Tool
+  // buttons + the WRITER side of value widgets subscribe to this only.
   const dispatchValue = useMemo<RibbonDispatchContextValue>(
     () => ({
       activeTool: commands.activeTool ?? null,
@@ -192,6 +190,8 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       getCommandRecommendation: commands.getCommandRecommendation ?? DEFAULT_COMMAND_RECOMMENDATION,
       splitLastUsed,
       setSplitLastUsed,
+      onToggle: commands.onToggle ?? NOOP_TOGGLE,
+      onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
     }),
     [
       commands.activeTool,
@@ -203,29 +203,41 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.getCommandRecommendation,
       splitLastUsed,
       setSplitLastUsed,
+      commands.onToggle,
+      commands.onComboboxChange,
     ],
   );
 
-  // VOLATILE half — churns on selection/edit so the active contextual panel's
-  // value widgets re-read the current entity value.
+  // VOLATILE half — retained only for the `useRibbonCommand()` combiner (pickers /
+  // split-dropdown). Migrated value widgets read these via `RibbonFieldStore`.
   const fieldValue = useMemo<RibbonFieldContextValue>(
     () => ({
-      onToggle: commands.onToggle ?? NOOP_TOGGLE,
-      onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
       getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
       getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
       getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
       getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
     }),
     [
-      commands.onToggle,
-      commands.onComboboxChange,
       commands.getToggleState,
       commands.getComboboxState,
       commands.getBadgeState,
       commands.getPanelVisibility,
     ],
   );
+
+  // ADR-547 Stage 4 Option B — push the field READERS into the zero-React store on
+  // every commit so per-key subscribers (`useRibbonFieldSelectors`) re-pull. The
+  // store's per-key signature cache gates which widgets actually re-render, so an
+  // over-notify costs only a cheap getSnapshot compare. Layout effect (not render)
+  // keeps the push StrictMode/concurrent-safe.
+  useLayoutEffect(() => {
+    setRibbonFieldReaders({
+      getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
+      getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
+      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
+      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
+    });
+  });
 
   return (
     <RibbonDispatchContext.Provider value={dispatchValue}>
