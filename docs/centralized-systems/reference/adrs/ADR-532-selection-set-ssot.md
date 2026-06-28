@@ -166,6 +166,11 @@ PropertiesPalette prop slim)}`· `systems/properties/PropertiesPalette.tsx (self
 reset), unified-grip-types.ts (drop params)}`· `hooks/canvas/{useCanvasEditActions.ts, useCanvasContextMenu.ts,
 useCanvasKeyboardShortcuts.ts(+.types), useCanvasEscapeRegistrations.ts}` (event-time store reads).
 
+**NEW (Stage 4a.1):** `src/hooks/useEventCallback.ts` (SSoT stable-event-handler hook),
+`src/hooks/__tests__/useEventCallback.test.tsx` (4).
+**MOD (Stage 4a.1):** `app/useDxfViewerCallbacks.ts` (`handleFileImportWithEncoding` →
+`useEventCallback`, drop `[levelManager, overlayStore, handleFileImport]` deps).
+
 **MOD (Stage 4a):** `ui/bim-properties/BimPropertiesShell.tsx` (self-subscribe `usePrimarySelectedId()`·
 drop `primarySelectedId` prop), `ui/hooks/usePanelContentRenderer.tsx` (drop param+pass),
 `ui/FloatingPanelContainer.tsx` (drop prop + memo-comparator key + auto-switch effect + `isBimEntity/isStairEntity`
@@ -190,6 +195,22 @@ unmount· `data` στο return). Έτσι **ο `RenumberOpeningsHost` ΜΠΗΚΕ
 hosts** σε ΕΝΑ gate· μηδέν inline open-gate πλέον.
 
 ## Changelog
+- **2026-06-28** — Stage 4a.1 (Opus 4.8): **`onSceneImported` stabilized → left panel πλήρως severed**.
+  Καθαρό re-profile (`11-27-22.json`, changeDescriptions ON) ΕΠΙΒΕΒΑΙΩΣΕ ότι το Stage 4a σκότωσε τον
+  `primarySelectedId` memo-break (πλέον το `BimPropertiesShell` re-render-άρει από το ΔΙΚΟ του
+  `usePrimarySelectedId()` hook[0], το auto-switch→Properties γίνεται σε ξεχωριστό legit commit). ΟΜΩΣ
+  `FloatingPanelContainer` (42ms) + `SidebarSection` (25ms, **React.memo**) ΑΚΟΜΑ re-render-άρανε — η
+  changeDescription έδειξε **μοναδικό changed prop: `onSceneImported`**. Ρίζα: το `handleFileImportWithEncoding`
+  (`useDxfViewerCallbacks`) είχε deps `[levelManager, overlayStore, handleFileImport]` που άλλαζαν reference
+  όταν ο wrapper `NormalView` re-render-άρει στο κλικ → νέο `onSceneImported` → έσπαγε και τα 2 memos.
+  **FIX (SSoT, big-player = React `useEffectEvent`):** NEW κεντρικό `src/hooks/useEventCallback.ts`
+  (referentially-stable handler που καλεί πάντα το latest callback· αντικαθιστά hand-rolled `useRef(fn)`
+  stabilizers όπως το `handleSceneChangeRef`)· `handleFileImportWithEncoding` → `useEventCallback` (drop deps).
+  Τώρα το `onSceneImported` έχει μόνιμα σταθερή ταυτότητα → `SidebarSection`/`FloatingPanelContainer` memos
+  κρατούν → **μηδέν re-render του αριστερού panel στο κλικ**. 4/4 jest (νέο hook). 🔴 browser-verify
+  (re-profile: `FloatingPanelContainer`+`SidebarSection` ΟΧΙ updaters) + commit (Giorgio). Επόμενο → Stage 4b
+  (Ribbon: `DxfViewerTopBar` 140ms + `RibbonContextualTabScope`/`RibbonCommandProvider`/wall-widgets — ο
+  κυρίαρχος όγκος του #9· shared tree, νέα συνεδρία).
 - **2026-06-28** — Stage 4a (Opus 4.8): **`FloatingPanelContainer` + `SidebarSection` selection-severance**
   (Stage C leaf-push, root «left panel»). Clean re-analysis του profile `03-59-50.json` (changeDescriptions
   ήταν OFF → root-cause βγήκε από τον ΚΩΔΙΚΑ, το profile απλώς το επιβεβαιώνει στα νούμερα): τα 8 πραγματικά

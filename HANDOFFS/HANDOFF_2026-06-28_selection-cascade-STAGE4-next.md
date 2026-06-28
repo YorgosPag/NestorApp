@@ -18,7 +18,8 @@
 | A-fix | idempotent `SYNC_UNIVERSAL_LEGACY` reducer (return same `state`) | context broadcast σταμάτησε |
 | ADR-341 | `EnterpriseDxfSettingsProvider` save-status → ξεχωριστό context | autosave δεν ξαναχτίζει God-context |
 | **3** | **always-mounted dialog hosts → mount-gated (SSoT `useEventGatedDialog`)** | **6 βαριά dialogs = 0 renders** ✅ |
-| **4a** | **`FloatingPanelContainer` + `SidebarSection` selection-severance** (drop `primarySelectedId` prop· `BimPropertiesShell` self-subscribes· auto-switch effect → `SelectionSideEffectsHost`) | left panel ΟΧΙ updater σε κλικ (🔴 verify) |
+| **4a** | **`FloatingPanelContainer` + `SidebarSection` selection-severance** (drop `primarySelectedId` prop· `BimPropertiesShell` self-subscribes· auto-switch effect → `SelectionSideEffectsHost`) | ✅ primarySelectedId memo-break χάθηκε (clean profile `11-27-22`) |
+| **4a.1** | **`onSceneImported` stabilized** (NEW SSoT `useEventCallback`· `handleFileImportWithEncoding` drop deps) | left panel πλήρως severed (🔴 verify) |
 
 ### Stage 3 SSoT (το πιο πρόσφατο — δικό μου session)
 - **NEW** `src/subapps/dxf-viewer/app/dialog-hosts/useEventGatedDialog.ts` — **typed EventBus mount-gate

@@ -22,6 +22,7 @@ import type { Status, OverlayKind } from '../overlays/types';
 // ADR-532 Stage B5 — read/mutate the selection set imperatively at event time
 // (ADR-040 dual-access) instead of receiving it as a reactive prop.
 import { SelectedEntitiesStore } from '../systems/selection';
+import { useEventCallback } from '@/hooks/useEventCallback';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
@@ -389,8 +390,13 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     );
   }, [wrappedHandleTransformChange, showCopyableNotification]);
 
-  // 🏢 ADR-240: Wrapper για handleFileImport with encoding + saveContext
-  const handleFileImportWithEncoding = React.useCallback(async (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => {
+  // 🏢 ADR-240: Wrapper για handleFileImport with encoding + saveContext.
+  // ADR-532 Stage 4a.1 — stabilized via useEventCallback: this is passed as
+  // `onSceneImported` down to SidebarSection → FloatingPanelContainer. Its old
+  // `[levelManager, overlayStore, handleFileImport]` deps changed reference on a
+  // selection click → broke those memos → the whole left panel re-rendered. The
+  // stable identity (reading latest at call time) lets both memos hold.
+  const handleFileImportWithEncoding = useEventCallback(async (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => {
     try {
       // ADR-420 — the wizard resolves the level that OWNS the selected floor and
       // passes it explicitly. Target THAT level (race-free) rather than whatever is
@@ -417,7 +423,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       console.error('⛔ [Enhanced Import] Error in enhanced DXF import:', error);
       handleFileImport(file, undefined, saveContext, targetLevelId);
     }
-  }, [levelManager, overlayStore, handleFileImport]);
+  });
 
   // Handle overlay region click
   const handleRegionClick = React.useCallback((regionId: string) => {
