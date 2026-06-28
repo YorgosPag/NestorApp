@@ -1,6 +1,6 @@
 # ADR-548 — Ribbon re-render cascade: σπάσιμο του levelManager churn (auto-save status)
 
-**Status:** 🟡 IMPLEMENTED (UNCOMMITTED 2026-06-28) — pending browser-verify + commit (Giorgio)
+**Status:** 🟢 IMPLEMENTED + BROWSER-VERIFIED (UNCOMMITTED 2026-06-28) — pending commit (Giorgio)
 **Domains:** perf (re-render cascade), levels/auto-save context, DXF ribbon
 **Σχετικά:** ADR-040 (micro-leaf subscriber doctrine), ADR-547 (scene-model SSoT cascade — ΑΔΕΛΦΗ ρίζα, διαφορετικός vector), ADR-345 (DXF ribbon interface), ADR-341 (God-context split)
 **Πηγή:** `HANDOFFS/HANDOFF_2026-06-28_ribbon-cascade-ROOT-levelmanager-churn.md` · React-DevTools Profiler `profiling-data.28-06-2026.11-47-13.json` (69% session σε render, ribbon + ~903 tooltips)
@@ -114,8 +114,14 @@ re-profile δείξει ότι αξίζει.
 ## 6. Verification
 
 - 5 jest (`stores/__tests__/AutoSaveStatusStore.test.ts`) GREEN — snapshot/notify/no-op/unsubscribe/stable-ref.
-- 🔴 Browser re-profile («record why» ON, self-time top-25) εκκρεμεί: επιβεβαίωση ότι save cycle πλέον
-  re-render-άρει **μόνο** το AutoSaveStatus, όχι ribbon/tooltips.
+- ✅ Browser re-profile («record why each component rendered» ON) — `profiling-data.28-06-2026.13-51-07.json`,
+  255 commits. **254/255 commits ΚΑΘΑΡΑ**: ΚΑΝΕΝΑ `RibbonRootInner :: props:commands` / `RibbonCommandProvider ::
+  props:commands`. Ο per-edit cascade ΕΞΑΛΕΙΦΘΗΚΕ — το βαρύτερο commit (#196, 219ms = steady-state edit) δεν
+  churn-άρει το `commands`· το `RibbonRoot` `React.memo` ΚΡΑΤΑ.
+- ⚠️ 1/255 (commit#72) churn-άρει `commands` ΜΙΑ φορά — μαζικό γεγονός σκηνής/ορόφου (ΟΛΑ τα 28 persistence
+  hosts + `LevelsSystem[hooks=7]` + bulk `DxfViewerTopBar` churn = ADR-547 scene-model cascade). Εκεί το rebuild
+  του `commands` είναι **σημασιολογικά ορθό**: legit dep flip (`canUndo`/`canRedo` ή `activeStorey` →
+  `getCommandRecommendation`), ΟΧΙ broad invalidation. Μη-pathological· δεν επαναλαμβάνεται σε edits.
 
 ## Changelog
 
@@ -127,3 +133,7 @@ re-profile δείξει ότι αξίζει.
   Δεύτερος cascade = ribbon `commands` churn → ολοκλήρωση ADR-547 Stage 4: getters out of `commands` +
   store-push relocated στο hook + 6 consumers migrated + `RibbonFieldContext`/combiner removed. 445 ribbon
   jest GREEN (2 pre-existing data-drift εκτός domain). 🔴 browser re-profile εκκρεμεί.
+- **2026-06-28 (re-profile 13:51 — VERIFIED ✅)** — Ρίζα Β ΕΠΙΒΕΒΑΙΩΘΗΚΕ. 254/255 commits χωρίς `props:commands`·
+  per-edit cascade εξαλείφθηκε (βαρύτερο commit#196/219ms καθαρό). Μόνο commit#72 (μαζικό scene/level event)
+  ξαναχτίζει `commands` μία φορά = legit dep flip (canUndo/redo/activeStorey), όχι pathological. Status → 🟢
+  BROWSER-VERIFIED. Έτοιμο για commit (Giorgio).

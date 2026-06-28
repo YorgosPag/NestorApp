@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-28 — Section/axis-cut caps: γκρι `'fast'` tier στο hover-sweep (ο νέος #1 ένοχος μετά το DXF fix)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (trace: `renderAxisCutCap`/`capCutSection` % πριν/μετά) + commit (Giorgio) pending.
+
+**Πρόβλημα (Firefox profiler trace 2026-06-28, μετά το DXF fix — `texSubImage2D` ✅εξαφανισμένο)**: με **ενεργό axis cut**, ο νέος κυρίαρχος ένοχος = `renderFrameWithCaps → renderAxisCutCap → capCutSection` = **20% / 138 δείγματα** ανά frame. Αιτία: όταν η κάμερα είναι **ακίνητη** (η περίπτωση hover) το quality = `'full'` → οι coloured caps ξανα-renderάρουν ΟΛΗ τη BIM σκηνή **2×(1+N χρώματα) φορές/frame**. Το hover κάνει `markSceneDirty` σε κάθε αλλαγή hoverId → ο dirty-gated render τρέχει ένα `'full'` frame ανά hover-βήμα → ο σταυρός «κολυμπάει» (Giorgio: «ΑΠΑΡΑΔΕΚΤΟ, ΒΑΡΥ»).
+
+**Fix (επέκταση του υπάρχοντος motion-tier ladder ADR-452 v2.9)**: «ο κέρσορας κινείται» = σήμα κίνησης, ακριβώς όπως orbit/zoom (που ήδη πέφτει σε γκρι `'fast'` — Giorgio «γκρι στην κίνηση» 2026-06-26). ΝΕΟ zero-dep leaf `bim-3d/systems/pointer-activity.ts` (`markPointerMoved`/`isPointerActive`, χωρίς clock dep — ο caller δίνει `now`, testable)· ο `bim3d-pointer-scheduler.requestPointerPick` (καλείται ανά move) στάμπα κίνηση· ο `section-scene-controller.renderFrameWithCaps` διαβάζει `isPointerActive(now, POINTER_SETTLE_MS=100)` και το προσθέτει στο tier → `cutMoving?'colors' : (interacting||camMoved||pointerActive)?'fast' : 'full'`. Έτσι όσο σαρώνεις → φθηνά γκρι caps (main render + 1 γκρι pass αντί 2×(1+N))· το **υπάρχον refine-on-settle** (`armRefine`, 150ms) επαναφέρει τα coloured `'full'` caps μόλις σταματήσει ο κέρσορας. `POINTER_SETTLE_MS(100) < REFINE_DELAY_MS(150)` → το refine frame διαβάζει «settled» → `'full'`. Layering: leaf module → κανένας scene↔viewport cycle.
+
+**Files**: NEW `bim-3d/systems/pointer-activity.ts` + `__tests__/pointer-activity.test.ts` (4 jest), MOD `bim-3d/viewport/snap/bim3d-pointer-scheduler.ts` (stamp), MOD `bim-3d/scene/section-scene-controller.ts` (tier + `POINTER_SETTLE_MS`). ✅ Google-level: YES — επαναχρησιμοποίηση του ίδιου motion-ladder + refine-on-settle SSoT (μηδέν νέος μηχανισμός), zero-dep testable signal, μηδέν αλλαγή σε bitmap cache / orchestrator· συνεπές UX με το camera-motion που ο Giorgio ήδη ενέκρινε.
+
 ### 2026-06-28 — 3D pointer: BVH per-pick walk skip + snap-overlay React subscription granularity (δευτερεύοντα του hover-lag)
 
 **Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify + commit (Giorgio) pending.

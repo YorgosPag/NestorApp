@@ -21,22 +21,27 @@ import { regressionAlertBus } from './regression-alert-bus';
 import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
 import { telemetryBatcher } from '../telemetry/telemetry-batcher';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
 import { readCpuMemoryMb, commitPerformanceSnapshot } from './performance-collector-shared';
 import { computeSceneRenderStats } from './scene-render-stats';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 // Single source: DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL (ADR-516) — shared with Performance2DCollector.
 const TICK_MS = DXF_TIMING.lifecycle.PERFORMANCE_HUD_POLL;
-/** EMA smoothing factor: 0.1 = heavily smoothed (reacts slowly to spikes). */
-const EMA_ALPHA = 0.1;
 
 export class PerformanceCollector {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private lastTickTime: number = performance.now();
-  private smoothFps: number = 60;
+  private unsubscribeFrame: (() => void) | null = null;
+  /**
+   * REAL fps from the master RAF loop (`UnifiedFrameScheduler.processFrame` →
+   * `averageFps`), the SAME SSoT source the 2D collector consumes. The previous
+   * `1000 / (setInterval elapsed)` formula measured the 250ms poll cadence, NOT
+   * rendered frames — it pinned fps at ~4 (1000/250) regardless of real speed.
+   */
+  private latestAverageFps = 0;
   private readonly regressionDetector = createRegressionDetector((payload) =>
     regressionAlertBus.emit(payload),
   );
@@ -48,11 +53,19 @@ export class PerformanceCollector {
 
   start(): void {
     if (this.intervalId !== null) return;
-    this.lastTickTime = performance.now();
+    // Reuse the exact frame-metrics SSoT the master scheduler already drives
+    // (same pattern as Performance2DCollector / DxfPerformanceOptimizer).
+    this.unsubscribeFrame = UnifiedFrameScheduler.onFrame((m) => {
+      this.latestAverageFps = m.averageFps;
+    });
     this.intervalId = setInterval(this.tick, TICK_MS);
   }
 
   stop(): void {
+    if (this.unsubscribeFrame) {
+      this.unsubscribeFrame();
+      this.unsubscribeFrame = null;
+    }
     if (this.intervalId === null) return;
     clearInterval(this.intervalId);
     this.intervalId = null;
@@ -67,13 +80,7 @@ export class PerformanceCollector {
     if (!usePerformanceHUDStore.getState().enabled) return;
 
     const now = performance.now();
-    const elapsed = now - this.lastTickTime;
-    this.lastTickTime = now;
-
-    // EMA-smoothed FPS. elapsed is in ms, so fps = 1000/elapsed.
-    const rawFps = elapsed > 0 ? 1000 / elapsed : this.smoothFps;
-    this.smoothFps = this.smoothFps * (1 - EMA_ALPHA) + rawFps * EMA_ALPHA;
-    const fps = Math.max(0, Math.round(this.smoothFps));
+    const fps = Math.max(0, Math.round(this.latestAverageFps));
 
     const info = this.renderer.info;
 

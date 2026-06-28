@@ -32,6 +32,7 @@ import { getDxfFloorScope } from '../../scene/dxf-3d-floor-scope';
 import { pickDxfEntityAcrossFloors } from '../../grips/dxf-wireframe-hit-test';
 import { raycastBimHitAndWorld } from '../../systems/raycaster/BimEntityRaycaster';
 import { ensureBoundsTrees } from '../../systems/raycaster/bvh-setup';
+import { markPointerMoved } from '../../systems/pointer-activity';
 import { computeSnap3DHover } from './bim-3d-snap-hover';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 
@@ -139,6 +140,9 @@ export function requestPointerPick(input: Bim3DPickInput): void {
   ensureRegistered();
   latest = input;
   dirty = true;
+  // ADR-452 — flag active pointer motion so the section controller renders the cheap grey caps
+  // while sweeping (refine-on-settle restores the coloured 'full' caps). Mirror of camera-motion.
+  markPointerMoved(performance.now());
 }
 
 /** Stop the scheduler (cursor left the viewport / component unmount). Idempotent. */
