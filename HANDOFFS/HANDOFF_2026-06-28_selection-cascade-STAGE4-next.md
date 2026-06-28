@@ -72,11 +72,23 @@ fire-on-NEW-primary, `prevPrimaryForPropsRef`)· `SidebarSection` drop subscript
 ΟΧΙ updaters σε κλικ· BIM select→Properties μία φορά μετά ελεύθερη πλοήγηση) + commit (Giorgio,
 stage ADR-040+532, CHECK 6D).
 
-## 🔴 ΕΠΟΜΕΝΟΙ ΣΤΟΧΟΙ (Stage 4b+ — υποψήφιοι, με σειρά ROI· επιβεβαίωσε με καθαρό profile)
+## ✅ STAGE 4a.1 ΕΓΙΝΕ (UNCOMMITTED 2026-06-28, Opus 4.8) — onSceneImported stabilized
+**ΚΑΘΑΡΟ profile `11-27-22.json` (changeDescriptions ON) — το κλικ = commit #9 (289ms) + #10 (21ms).**
+ΕΠΙΒΕΒΑΙΩΣΕ: ο `primarySelectedId` memo-break ΧΑΘΗΚΕ (το `BimPropertiesShell` re-render-άρει από το ΔΙΚΟ
+του hook· auto-switch→Properties = legit #10). ΟΜΩΣ `FloatingPanelContainer`(42ms)+`SidebarSection`(25ms)
+ακόμα re-render-άρανε — changeDescription: μοναδικό changed prop **`onSceneImported`** (deps
+`[levelManager,overlayStore,handleFileImport]` άλλαζαν όταν ο wrapper `NormalView` re-render-άρει).
+**FIX:** NEW SSoT `src/hooks/useEventCallback.ts` (React `useEffectEvent` pattern)· `handleFileImportWithEncoding`
+→ `useEventCallback` (drop deps). 4/4 jest. 🔴 re-profile verify (`FloatingPanelContainer`+`SidebarSection`
+ΟΧΙ updaters) + commit.
 
-Updaters του click-cascade που ΜΕΝΟΥΝ (commit #21): `SelectionSideEffectsHost, RibbonContextualTabScope,
-DxfViewerTopBar, FloatingPanelContainer, SidebarSection, GripRegistryPublisher, DxfCanvasSubscriber,
-MepWireWaypointDragMount, PreviewCanvasMounts, EntityContextMenuHostInner, PropertiesPalette, BimScheduleHostLeaf`.
+## 🔴 ΕΠΟΜΕΝΟΙ ΣΤΟΧΟΙ (Stage 4b — ΕΠΙΒΕΒΑΙΩΜΕΝΟ από καθαρό profile `11-27-22`)
+
+**Ο κυρίαρχος όγκος του τυπικού κλικ (#9, 289ms) είναι ΤΟ RIBBON** (changeDescriptions roots: `DxfViewerTopBar`
+140ms[hooks], `RibbonContextualTabScope`/`RibbonRootInner`/`RibbonCommandProvider`/`RibbonTabsRegion`/
+`RibbonBodyInner` ~132ms, `RibbonWallFamilyTypeWidget`/`RibbonWallTypePropertiesWidget`/`RibbonWallDimensionWidget`
+[hooks]). Δηλ. σε κλικ σε ΑΛΛΟ τοίχο, ΟΛΗ η contextual καρτέλα «Τοίχος» + τα widgets της + `RibbonCommandProvider`
+ξαναχτίζονται. ⚠️ **SHARED TREE** (ίσως άλλος agent) — **νέα συνεδρία**, νέο καθαρό profile πρώτα.
 
 1. **Ribbon contextual-tab tooltip/button explosion** (το βαρύτερο unnamed cluster ~280ms στο first-select).
    Όταν αλλάζει ο contextual trigger → ~300 tooltips + buttons re-render. **Big-player pattern (Revit/C4D):**
