@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEventCallback } from '@/hooks/useEventCallback';
 import { useAnimationStore } from '../../../bim-3d/animation/AnimationStore';
 import { SNAP_STEP_COMBOBOX_OPTIONS } from './useRibbonCommands-snap-options';
 import type {
@@ -398,7 +399,15 @@ export function useRibbonCommands({
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
   // falling through to the generic DxfViewerContent action handler.
-  const onAction = React.useCallback(
+  // ADR-547 Stage 4 (Option A) — stabilized via `useEventCallback`: `onAction`
+  // feeds the STABLE `RibbonDispatchContext` consumed by every tool button
+  // (Large/Small/Split). A plain `useCallback` churned on every edit/selection
+  // (its bridge deps change reference) → dispatch context churned → all tool
+  // buttons + their Radix Tooltips (×75) re-rendered. Stable identity (reads the
+  // latest bridges/wrappedHandleAction at click time) lets `React.memo` on the
+  // tool buttons bail when the ribbon shell re-renders for a field-value change.
+  // Event-only (button click) → never called during render → safe.
+  const onAction = useEventCallback(
     (action: string, data?: RibbonActionPayload) => {
       // ADR-521 — «Τύποι» dropdown: επιλογή τύπου κολώνας → set kind + activate column
       // tool, ΧΩΡΙΣ race. `setKind` ενημερώνει το FSM state.kind (idle → μένει idle)·
@@ -425,7 +434,6 @@ export function useRibbonCommands({
         wrappedHandleAction,
       });
     },
-    [handleToolChange, closeContextualTab, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

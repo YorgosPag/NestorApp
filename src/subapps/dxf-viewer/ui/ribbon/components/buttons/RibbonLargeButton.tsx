@@ -9,7 +9,7 @@ import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
@@ -18,12 +18,14 @@ interface RibbonLargeButtonProps {
   command: RibbonCommand;
 }
 
-export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
+// ADR-547 Stage 4 (Option A) — subscribes to the STABLE dispatch context only +
+// `React.memo` on the (stable) `command` prop, so this button + its Radix
+// Tooltip bail out when the ribbon shell re-renders for a field-value change.
+const RibbonLargeButtonInner: React.FC<RibbonLargeButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const ribbonCtx = useRibbonCommand();
-  const { onToolChange, onComingSoon, onAction, activeTool, getCommandRecommendation } = ribbonCtx;
+  const { onToolChange, onComingSoon, onAction, activeTool, getCommandRecommendation } = useRibbonDispatch();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
@@ -79,3 +81,5 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
     </Tooltip>
   );
 };
+
+export const RibbonLargeButton = React.memo(RibbonLargeButtonInner);

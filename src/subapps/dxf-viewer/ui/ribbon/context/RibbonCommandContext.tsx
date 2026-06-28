@@ -103,7 +103,29 @@ export interface RibbonCommandsApi {
   getCommandRecommendation?: (commandKey: string) => boolean;
 }
 
-interface RibbonCommandContextValue {
+/**
+ * ADR-547 Stage 4 (Option A) — the context is SPLIT into two halves so the
+ * expensive ribbon tree (tool buttons + their Radix Tooltips ×75) stops
+ * re-rendering on every scene edit / selection:
+ *
+ *  • `RibbonDispatchContextValue` — STABLE across edits/selection. Holds the
+ *    dispatch handlers + tool-mode flags that the tool buttons (Large / Small /
+ *    Split) consume. All its methods are reference-stable (`onAction` is now an
+ *    `useEventCallback` in `useRibbonCommands`), so its provider `useMemo` holds
+ *    across edits/selection → memoized tool buttons BAIL → their Tooltips don't
+ *    re-render. It churns only on the rare events that genuinely change a tool
+ *    button (tool change → `activeTool`, undo-state → `canUndo/Redo`, storey →
+ *    `getCommandRecommendation`, split pick → `splitLastUsed`).
+ *
+ *  • `RibbonFieldContextValue` — VOLATILE. Holds the per-entity field readers /
+ *    writers consumed ONLY by value widgets (Combobox / Toggle) that live in the
+ *    active contextual panel. It SHOULD churn on selection/edit so those few
+ *    widgets re-read the current entity value (correctness preserved).
+ *
+ * `useRibbonCommand()` stays as a backward-compatible combiner for the remaining
+ * widgets (split-dropdown, pickers) that need both halves.
+ */
+interface RibbonDispatchContextValue {
   /** ADR-345 Fase 5.6 — see RibbonCommandsApi.activeTool. */
   activeTool: ToolType | null;
   onToolChange: (tool: ToolType) => void;
@@ -111,16 +133,21 @@ interface RibbonCommandContextValue {
   onAction: (action: string, data?: RibbonActionPayload) => void;
   canUndo: boolean;
   canRedo: boolean;
+  getCommandRecommendation: (commandKey: string) => boolean;
+  splitLastUsed: Record<string, string>;
+  setSplitLastUsed: (commandId: string, variantId: string) => void;
+}
+
+interface RibbonFieldContextValue {
   onToggle: (commandKey: string, nextValue: boolean) => void;
   onComboboxChange: (commandKey: string, value: string) => void;
   getToggleState: (commandKey: string) => RibbonToggleState;
   getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   getBadgeState: (badgeKey: string) => boolean;
   getPanelVisibility: (visibilityKey: string) => boolean;
-  getCommandRecommendation: (commandKey: string) => boolean;
-  splitLastUsed: Record<string, string>;
-  setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
+
+type RibbonCommandContextValue = RibbonDispatchContextValue & RibbonFieldContextValue;
 
 const NOOP_TOGGLE = () => {};
 const NOOP_COMBOBOX_CHANGE = () => {};
@@ -134,7 +161,10 @@ const DEFAULT_PANEL_VISIBILITY = (): boolean => true;
 // counted storeys / when no bridge owns the active-storey kind).
 const DEFAULT_COMMAND_RECOMMENDATION = (): boolean => true;
 
-const RibbonCommandContext = createContext<RibbonCommandContextValue | null>(
+const RibbonDispatchContext = createContext<RibbonDispatchContextValue | null>(
+  null,
+);
+const RibbonFieldContext = createContext<RibbonFieldContextValue | null>(
   null,
 );
 
@@ -149,7 +179,9 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
 }) => {
   const { splitLastUsed, setSplitLastUsed } = useSplitLastUsed();
 
-  const value = useMemo<RibbonCommandContextValue>(
+  // STABLE half — holds across edits/selection because each method reference is
+  // stable (`onAction` = useEventCallback). Tool buttons subscribe to this only.
+  const dispatchValue = useMemo<RibbonDispatchContextValue>(
     () => ({
       activeTool: commands.activeTool ?? null,
       onToolChange: commands.onToolChange,
@@ -157,12 +189,6 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       onAction: commands.onAction,
       canUndo: commands.canUndo ?? false,
       canRedo: commands.canRedo ?? false,
-      onToggle: commands.onToggle ?? NOOP_TOGGLE,
-      onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
-      getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
-      getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
-      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
-      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
       getCommandRecommendation: commands.getCommandRecommendation ?? DEFAULT_COMMAND_RECOMMENDATION,
       splitLastUsed,
       setSplitLastUsed,
@@ -174,31 +200,72 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.onAction,
       commands.canUndo,
       commands.canRedo,
-      commands.onToggle,
-      commands.onComboboxChange,
-      commands.getToggleState,
-      commands.getComboboxState,
-      commands.getBadgeState,
-      commands.getPanelVisibility,
       commands.getCommandRecommendation,
       splitLastUsed,
       setSplitLastUsed,
     ],
   );
 
+  // VOLATILE half — churns on selection/edit so the active contextual panel's
+  // value widgets re-read the current entity value.
+  const fieldValue = useMemo<RibbonFieldContextValue>(
+    () => ({
+      onToggle: commands.onToggle ?? NOOP_TOGGLE,
+      onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
+      getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
+      getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
+      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
+      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
+    }),
+    [
+      commands.onToggle,
+      commands.onComboboxChange,
+      commands.getToggleState,
+      commands.getComboboxState,
+      commands.getBadgeState,
+      commands.getPanelVisibility,
+    ],
+  );
+
   return (
-    <RibbonCommandContext.Provider value={value}>
-      {children}
-    </RibbonCommandContext.Provider>
+    <RibbonDispatchContext.Provider value={dispatchValue}>
+      <RibbonFieldContext.Provider value={fieldValue}>
+        {children}
+      </RibbonFieldContext.Provider>
+    </RibbonDispatchContext.Provider>
   );
 };
 
-export function useRibbonCommand(): RibbonCommandContextValue {
-  const ctx = useContext(RibbonCommandContext);
+/**
+ * ADR-547 Stage 4 — subscribe to the STABLE dispatch half only. Tool buttons
+ * (Large/Small/Split) use this + `React.memo` so they bail on edits/selection.
+ */
+export function useRibbonDispatch(): RibbonDispatchContextValue {
+  const ctx = useContext(RibbonDispatchContext);
   if (!ctx) {
     throw new Error(
-      'useRibbonCommand must be used inside <RibbonCommandProvider>',
+      'useRibbonDispatch must be used inside <RibbonCommandProvider>',
     );
   }
   return ctx;
+}
+
+/** ADR-547 Stage 4 — subscribe to the VOLATILE field half (value widgets). */
+export function useRibbonField(): RibbonFieldContextValue {
+  const ctx = useContext(RibbonFieldContext);
+  if (!ctx) {
+    throw new Error(
+      'useRibbonField must be used inside <RibbonCommandProvider>',
+    );
+  }
+  return ctx;
+}
+
+/**
+ * Backward-compatible combiner — returns both halves. Consumers that read fields
+ * (split-dropdown, pickers) keep working unchanged; they re-render when EITHER
+ * half changes (acceptable — they are few and live in the active panel).
+ */
+export function useRibbonCommand(): RibbonCommandContextValue {
+  return { ...useRibbonDispatch(), ...useRibbonField() };
 }

@@ -8,7 +8,7 @@ import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
@@ -17,11 +17,13 @@ interface RibbonSmallButtonProps {
   command: RibbonCommand;
 }
 
-export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
+// ADR-547 Stage 4 (Option A) — STABLE dispatch context + `React.memo`: bails
+// (with its Tooltip) on edits/selection while the ribbon shell re-renders.
+const RibbonSmallButtonInner: React.FC<RibbonSmallButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction, activeTool } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, activeTool } = useRibbonDispatch();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
@@ -68,3 +70,5 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
     </Tooltip>
   );
 };
+
+export const RibbonSmallButton = React.memo(RibbonSmallButtonInner);

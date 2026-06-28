@@ -16,7 +16,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonButton, RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
-import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { isAnyVariantActive, flattenLeafVariants } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { RibbonSplitDropdown } from './RibbonSplitDropdown';
@@ -44,7 +44,7 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction, splitLastUsed, activeTool, getCommandRecommendation } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, splitLastUsed, activeTool, getCommandRecommendation } = useRibbonDispatch();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
