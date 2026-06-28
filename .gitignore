@@ -179,3 +179,9 @@ firestore.rules.compiled
 
 # Local scratch — CC0 mesh-import working dir (binary GLBs trip the secret scanner; not source)
 .sofa-lib/
+
+# Fleet coordination runtime state (shared between terminals via filesystem, NOT git)
+.claude-rules/fleet/locks.json
+.claude-rules/fleet/.mutex/
+.claude-rules/fleet/*.tmp
+.claude-rules/fleet/fleet-board.md
