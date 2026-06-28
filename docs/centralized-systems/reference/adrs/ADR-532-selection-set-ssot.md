@@ -166,19 +166,22 @@ PropertiesPalette prop slim)}`· `systems/properties/PropertiesPalette.tsx (self
 reset), unified-grip-types.ts (drop params)}`· `hooks/canvas/{useCanvasEditActions.ts, useCanvasContextMenu.ts,
 useCanvasKeyboardShortcuts.ts(+.types), useCanvasEscapeRegistrations.ts}` (event-time store reads).
 
-**NEW (Stage 3):** `app/dialog-hosts/useEventGatedDialog.ts` (typed EventBus mount-gate SSoT),
-`app/dialog-hosts/__tests__/useEventGatedDialog.test.tsx` (5).
+**NEW (Stage 3):** `app/dialog-hosts/useEventGatedDialog.ts` (typed EventBus mount-gate SSoT· `accept` +
+async `beforeOpen`), `app/dialog-hosts/__tests__/useEventGatedDialog.test.tsx` (9).
 **MOD (Stage 3):** `ui/components/column-detail/ColumnDetailHost.tsx`,
 `ui/components/foundation-detail/FoundationDetailHost.tsx`, `ui/components/beam-detail/BeamDetailHost.tsx`,
 `ui/components/slab-detail/SlabDetailHost.tsx` (thin gate + `*DetailBody`), `app/ExportHost.tsx`
 (`ExportBody`), `app/PrintHost.tsx` (`PrintBody` — pre-existing duplicate, twin του Export· Boy-Scout
 migration), `ui/components/bim-envelope/ThermalEnvelopeHost.tsx` (`ThermalEnvelopeBody`·
 `useEnvelopeFloorSlabs` stays always-on), `ui/components/bim-openings/OpeningTagStyleHost.tsx`
-(hydration/repaint stay always-on· dialog gated). `DxfViewerDialogs.tsx` αμετάβλητο (hosts self-gate).
-**SSoT audit (Giorgio order):** `RenumberOpeningsHost` ΗΔΗ κάνει thin-host+Content split (HANDOFF
-2026-06-25) αλλά με inline `useState`+manual `EventBus.on` ΚΑΙ async pre-load (rows→THEN open) — δεν
-ταιριάζει στο current gate (opens-then-loads). Υποψήφιο για adoption ΑΝ το hook αποκτήσει optional async
-`beforeOpen` — flagged follow-up (να μην αλλάξει το load-then-open UX χωρίς verify).
+(hydration/repaint stay always-on· dialog gated), `ui/components/bim-openings/RenumberOpeningsHost.tsx`
+(inline split → `beforeOpen`). `DxfViewerDialogs.tsx` αμετάβλητο (hosts self-gate).
+**SSoT audit (Giorgio order) → ΕΓΙΝΕ:** το hook απέκτησε optional async `beforeOpen` (load-then-open:
+τρέχει στο emit, opens ΜΟΝΟ όταν resolve-άρει· `null`→abort· token invalidation σε νεότερο event/`close()`/
+unmount· `data` στο return). Έτσι **ο `RenumberOpeningsHost` ΜΠΗΚΕ κι αυτός στο ΙΔΙΟ SSoT** (`beforeOpen`
+φορτώνει openings+floorMap· διέγραψε inline `useState`+manual `EventBus.on`+`levelsRef`). 2η option-form
+(`{accept, beforeOpen}`) back-compatible με την function-form (accept) των 8 πρώτων consumers. Σύνολο **9
+hosts** σε ΕΝΑ gate· μηδέν inline open-gate πλέον.
 
 ## Changelog
 - **2026-06-28** — Stage 3 (Opus 4.8): **always-mounted dialog hosts → mount-gated** (root #3, dialogs
@@ -189,8 +192,9 @@ migration), `ui/components/bim-envelope/ThermalEnvelopeHost.tsx` (`ThermalEnvelo
   βαρύ body (i18n labels + `useMemo` model builds + Radix `<Dialog>` subtree) ΚΑΙ κλειστό → re-render
   σε κάθε selection commit. **FIX (SSoT):** NEW `app/dialog-hosts/useEventGatedDialog.ts` — typed
   mount-gate (`{open, payload, close}`, ref-stable `accept` → δεν re-subscribe-άρει) που προάγει το
-  inline gate-at-mount pattern (CreditsDialog/import) σε ΕΝΑ μηχανισμό. Κάθε host έγινε **thin gate
-  (always-listed) + heavy Body (mounted ΜΟΝΟ όταν open)**: closed → `null` → μηδέν subtree στο commit.
+  inline gate-at-mount pattern (CreditsDialog/import) σε ΕΝΑ μηχανισμό (`accept` + async `beforeOpen`).
+  **9 hosts** σε ΕΝΑ gate. Κάθε host έγινε **thin gate (always-listed) + heavy Body (mounted ΜΟΝΟ όταν
+  open)**: closed → `null` → μηδέν subtree στο commit.
   Detail hosts (Column/Foundation/Beam/Slab) — payload `{id, levelId}` + 3D capture/model μόνο στο
   Body. ExportHost — no-payload. ThermalEnvelopeHost & OpeningTagStyleHost — τα **always-on side-effects**
   (`useEnvelopeFloorSlabs` cross-floor producer· tag-style hydration + repaint subscribe) ΜΕΝΟΥΝ στον
@@ -198,8 +202,10 @@ migration), `ui/components/bim-envelope/ThermalEnvelopeHost.tsx` (`ThermalEnvelo
   με το παλιό event-time read). Trade-off: close = unmount (χωρίς Radix exit-anim) — ίδιο με το
   υπάρχον gate-at-mount. 5/5 jest GREEN (gate hook). 🔴 browser-verify (Profiler: closed dialogs ΟΧΙ
   στο click commit· κάθε dialog ανοίγει/εφαρμόζει/κλείνει σωστά) + commit (Giorgio· stage ADR-040+532,
-  CHECK 6B/6D). Follow-up: React.memo στους hosts + λοιποί always-mounted hosts (Renumber/Print/Admin/
-  FloorMgmt) αν φανούν σε re-profile.
+  CHECK 6B/6D). Boy-Scout (Giorgio SSoT order): pre-existing duplicates `PrintHost` (twin Export) +
+  `RenumberOpeningsHost` (inline split → `beforeOpen`) μπήκαν στο ΙΔΙΟ gate → **9 hosts, μηδέν inline
+  open-gate**. Follow-up: React.memo στους hosts + λοιποί always-mounted (Admin/FloorMgmt/Calibration)
+  αν φανούν σε re-profile.
 - **2026-06-28** — Stage 2 (Opus 4.8): **ribbon contextual trigger → leaf subscription** (root #2,
   βήμα 2· συνέχεια του Stage B6/Stage 1). Stage 1 έκανε σταθερό το `ribbonCommands`, αλλά το
   `activeContextualTrigger` ΕΜΕΝΕ prop του `RibbonRoot` → άλλαζε σε κάθε επιλογή → έσπαγε το

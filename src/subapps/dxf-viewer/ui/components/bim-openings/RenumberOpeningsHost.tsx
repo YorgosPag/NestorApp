@@ -19,7 +19,7 @@ import { collection, doc, getDoc, getDocs, query, where, type Timestamp } from '
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { EventBus } from '../../../systems/events/EventBus';
+import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../../../systems/levels';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getGlobalCommandHistory } from '../../../core/commands';
@@ -47,53 +47,56 @@ export interface RenumberOpeningsHostProps {
   readonly floorplanId: string | null | undefined;
 }
 
+/** Data loaded by `beforeOpen` before the dialog mounts (load-then-open). */
+interface RenumberOpenData {
+  readonly rows: ReadonlyArray<RenumberOpeningRow>;
+  readonly floorMap: ReadonlyMap<string, number>;
+}
+
 /**
- * Always-mounted lifecycle shell: owns open state + the ribbon EventBus
- * listener + Firestore row load, but renders NOTHING heavy while closed. The
- * i18n prefix map + floor resolution + confirm command live in
- * {@link RenumberOpeningsContent}, which mounts only when the dialog is open —
- * so a closed renumber host no longer re-renders on every selection commit
- * (Root B amplifier in HANDOFF_2026-06-25_selection-cascade-and-always-mounted-dialogs).
+ * Thin gate (ADR-532 Stage 3): the ribbon EventBus listener + Firestore row load
+ * live in the shared `useEventGatedDialog` SSoT via `beforeOpen` (load-then-open).
+ * Renders NOTHING heavy while closed. The i18n prefix map + floor resolution +
+ * confirm command live in {@link RenumberOpeningsContent}, which mounts only once
+ * the rows are loaded — so a closed renumber host no longer re-renders on every
+ * selection commit (Root B amplifier).
  */
 export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.ReactElement | null {
   const { projectId, floorplanId } = props;
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
   const levels = useLevels();
-  const levelsRef = React.useRef(levels);
-  levelsRef.current = levels;
-  const [open, setOpen] = React.useState(false);
-  const [rows, setRows] = React.useState<ReadonlyArray<RenumberOpeningRow>>([]);
-  const [floorMap, setFloorMap] = React.useState<ReadonlyMap<string, number>>(new Map());
 
-  // Subscribe to ribbon event — opens dialog + lazy-loads rows.
-  React.useEffect(() => {
-    const cleanup = EventBus.on('bim:opening-renumber-requested', () => {
-      if (!companyId || !projectId || !floorplanId) return;
-      void loadRows(companyId, projectId, floorplanId).then(({ rows: loaded, floorIds }) => {
-        setRows(loaded);
-        // Belt-and-suspenders: also include floor IDs from the level list so
-        // currentFloor resolves even when no openings exist yet on that floor.
-        const allFloorIds = new Set(floorIds);
-        for (const lvl of levelsRef.current.levels) {
-          if (lvl.floorId) allFloorIds.add(lvl.floorId);
-        }
-        void loadFloorMap(Array.from(allFloorIds)).then(setFloorMap);
-        setOpen(true);
-      });
-    });
-    return () => cleanup();
-  }, [companyId, projectId, floorplanId]);
+  const { open, data, close } = useEventGatedDialog('bim:opening-renumber-requested', {
+    // Load openings + floor numbers BEFORE the dialog mounts (null → no open).
+    beforeOpen: async (): Promise<RenumberOpenData | null> => {
+      if (!companyId || !projectId || !floorplanId) return null;
+      const { rows, floorIds } = await loadRows(companyId, projectId, floorplanId);
+      // Belt-and-suspenders: also include floor IDs from the level list so
+      // currentFloor resolves even when no openings exist yet on that floor.
+      const allFloorIds = new Set(floorIds);
+      for (const lvl of levels.levels) {
+        if (lvl.floorId) allFloorIds.add(lvl.floorId);
+      }
+      const floorMap = await loadFloorMap(Array.from(allFloorIds));
+      return { rows, floorMap };
+    },
+  });
 
-  if (!companyId || !projectId || !floorplanId || !open) return null;
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => { if (!next) close(); },
+    [close],
+  );
+
+  if (!open || !data) return null;
 
   return (
     <RenumberOpeningsContent
       levels={levels}
-      rows={rows}
-      floorMap={floorMap}
+      rows={data.rows}
+      floorMap={data.floorMap}
       userId={user?.uid ?? null}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
     />
   );
 }

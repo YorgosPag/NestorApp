@@ -80,4 +80,74 @@ describe('useEventGatedDialog', () => {
     });
     expect(result.current.open).toBe(false); // rejected by the updated accept
   });
+
+  describe('beforeOpen (load-then-open)', () => {
+    it('exposes the sync beforeOpen result as data', () => {
+      const { result } = renderHook(() =>
+        useEventGatedDialog('dxf:export-dialog-requested', {
+          beforeOpen: () => ({ rows: 3 }),
+        }),
+      );
+
+      act(() => {
+        EventBus.emit('dxf:export-dialog-requested', {});
+      });
+
+      expect(result.current.open).toBe(true);
+      expect(result.current.data).toEqual({ rows: 3 });
+    });
+
+    it('aborts the open when beforeOpen returns null', () => {
+      const { result } = renderHook(() =>
+        useEventGatedDialog('dxf:export-dialog-requested', {
+          beforeOpen: () => null,
+        }),
+      );
+
+      act(() => {
+        EventBus.emit('dxf:export-dialog-requested', {});
+      });
+
+      expect(result.current.open).toBe(false);
+      expect(result.current.data).toBeNull();
+    });
+
+    it('opens with data once an async beforeOpen resolves', async () => {
+      const { result } = renderHook(() =>
+        useEventGatedDialog('dxf:export-dialog-requested', {
+          beforeOpen: async () => ({ rows: 7 }),
+        }),
+      );
+
+      await act(async () => {
+        EventBus.emit('dxf:export-dialog-requested', {});
+        await Promise.resolve();
+      });
+
+      expect(result.current.open).toBe(true);
+      expect(result.current.data).toEqual({ rows: 7 });
+    });
+
+    it('honours accept alongside beforeOpen (options form)', () => {
+      const beforeOpen = jest.fn(() => ({ ok: true }));
+      const { result } = renderHook(() =>
+        useEventGatedDialog('bim:column-detail-requested', {
+          accept: (p) => p.columnId === 'yes',
+          beforeOpen,
+        }),
+      );
+
+      act(() => {
+        EventBus.emit('bim:column-detail-requested', { columnId: 'no', levelId: 'l' });
+      });
+      expect(result.current.open).toBe(false);
+      expect(beforeOpen).not.toHaveBeenCalled(); // rejected before beforeOpen runs
+
+      act(() => {
+        EventBus.emit('bim:column-detail-requested', { columnId: 'yes', levelId: 'l' });
+      });
+      expect(result.current.open).toBe(true);
+      expect(result.current.data).toEqual({ ok: true });
+    });
+  });
 });
