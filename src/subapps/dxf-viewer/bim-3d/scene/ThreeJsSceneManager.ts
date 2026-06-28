@@ -43,6 +43,7 @@ import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
 import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
 import { isSceneDirtyFromState } from './scene-dirty-state';
+import { recordRender as diagRecordRender, recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import {
   setBimOrbitPivot,
@@ -274,23 +275,25 @@ export class ThreeJsSceneManager {
     // Scheduler may pass deltaTime=0 on first frame; derive locally as safety net.
     const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime;
     this.lastTickTime = now;
+    // 🔬 ADR-549 Phase 0 (REVERTIBLE) — capture dirty-reason BEFORE clearing + time the render.
+    const diagSample = { ...this.dirtyState(), ssaoActive: this.ssaoModulator.isSsaoActive() };
+    const diagStart = performance.now();
     renderSceneFrame(this.frameContext, now, delta);
+    diagRecordRender(performance.now() - diagStart, diagSample);
     this._sceneDirty = false;
   }
 
-  /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
-  isSceneDirty(): boolean {
-    if (this.disposed) return false;
-    return isSceneDirtyFromState({
-      isInteracting: this.isInteracting,
-      viewportAnimating: this.viewport.isAnimating,
+  /** ADR-040 Phase XXIII — render-gating state (SSoT for isSceneDirty + ADR-549 diag sample). */
+  private dirtyState() {
+    return { isInteracting: this.isInteracting, viewportAnimating: this.viewport.isAnimating,
       animationManagerActive: this.animationManager.isAnimating,
-      pathTracerActive: this.pathTracerRenderer.isActive,
-      explicitDirty: this._sceneDirty,
-    });
+      pathTracerActive: this.pathTracerRenderer.isActive, explicitDirty: this._sceneDirty };
   }
 
-  markSceneDirty(): void { if (!this.disposed) this._sceneDirty = true; } // ADR-040 — flag for redraw.
+  /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
+  isSceneDirty(): boolean { return this.disposed ? false : isSceneDirtyFromState(this.dirtyState()); }
+
+  markSceneDirty(): void { if (!this.disposed) { diagRecordMarkDirty(); this._sceneDirty = true; } } // ADR-040 — flag for redraw. (🔬 ADR-549 Phase 0 trace, revertible)
 
   /** ADR-366 §B.5 — capture the frame as a data-URL (HUD screenshot): force ONE sync render + read
    *  the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`. */

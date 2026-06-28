@@ -529,6 +529,8 @@
 | **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (ΕΝΑΣ platform type + reader στο `src/lib/platform`, 4 type + 12 reader διπλότυπα ενοποιήθηκαν) | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-06-27 | Platform / Performance SSoT | [📄](./adrs/ADR-546-browser-performance-memory-ssot.md) |
 | **ADR-547** | Scene-model SSoT — σπάσιμο του scene-change re-render cascade (granular `useSceneEntitiesByType`/`useSceneEntityById` selectors + `React.memo` σε 27 persistence hosts· drop μονολιθικό `currentScene` prop) | 🟡 IN PROGRESS (Stage 0 COMMITTED, Stage 2/3 UNCOMMITTED) | 2026-06-28 | DXF Viewer / Scene SSoT / Perf | [📄](./adrs/ADR-547-scene-model-ssot-cascade.md) |
 | **ADR-548** | Ribbon re-render cascade — σπάσιμο του levelManager churn (auto-save status βγαίνει από το levels context σε dedicated `AutoSaveStatusStore`· getters αφαιρέθηκαν· 69% session σε render) | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-28 | DXF Viewer / Levels / Perf | [📄](./adrs/ADR-548-ribbon-cascade-levelmanager-churn.md) |
+| **ADR-549** | 3D cursor «swim» — render-loop profiling & on-demand fix (bisection απέδειξε render pass = ένοχος, διαψεύστηκε «μόνο σκιές»· Phase 0 = PROFILE πριν fix) | 🔬 PROFILING (data pending) | 2026-06-29 | DXF Viewer / BIM 3D / Rendering Perf | [📄](./adrs/ADR-549-3d-cursor-swim-render-loop.md) |
+| **ADR-551** | Απογραφή Καμβάδων (`<canvas>`) & Viewports (2D+3D) στο /dxf/viewer — 1 viewport (swap 2D↔3D)· 2D έως 24 canvases· 3D 7–8 (2 WebGL + 5–6 2D overlays)· + ViewCube· 0 minimap. 6 ευκαιρίες ενοποίησης + σύσταση «3D → ΕΝΑΣ shared overlay canvas» | ✏️ DRAFT (census) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1039,6 +1041,8 @@
 | **ADR-544** | Ενιαία πηγή αλήθειας σχεδίασης κολώνας 2D ↔ 3D (ένας paint-κώδικας, projector abstraction) | ✅ IMPLEMENTED (UNCOMMITTED, Φ1-Φ3) | [View](./adrs/ADR-544-unified-column-drawing-2d-3d-ssot.md) |
 | **ADR-545** | Ενιαίο CAD σταυρόνημα 2D ↔ 3D (κοινός `CrosshairCompositor`, 2D/3D thin wrappers) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-545-unified-2d-3d-crosshair-ssot.md) |
 | **ADR-546** | Cross-subapp SSoT για το Chrome `performance.memory` (platform type + reader στο `src/lib/platform`) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-546-browser-performance-memory-ssot.md) |
+| **ADR-549** | 3D cursor «swim» — render-loop profiling & on-demand fix (Phase 0 = PROFILE· render pass αποδεδειγμένος ένοχος) | 🔬 PROFILING (data pending) | [View](./adrs/ADR-549-3d-cursor-swim-render-loop.md) |
+| **ADR-551** | Απογραφή Καμβάδων & Viewports (2D+3D) /dxf/viewer — census + 6 ευκαιρίες ενοποίησης | ✏️ DRAFT (census) | [View](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
