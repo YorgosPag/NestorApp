@@ -17,8 +17,7 @@ import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } f
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { useSelection3DStore } from '../stores/Selection3DStore';
-import { applyFloorVisibility } from '../utils/applyFloorVisibility'; import type { FloorVisMode } from '../utils/floor-visibility-state';
-import { applyBuildingVisibility } from '../utils/applyBuildingVisibility';
+import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
@@ -26,7 +25,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { VIEWCUBE_HIDE_WIDTH_PX } from '../viewport/viewport-constants';
-import { useViewMode3DStore, type FinalRenderConfig } from '../stores/ViewMode3DStore';
+import { type FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId } from '../viewport/viewport-types';
@@ -46,14 +45,12 @@ import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHov
 import { isSceneDirtyFromState } from './scene-dirty-state';
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import {
-  syncBimEntitiesIntoScene,
-  syncMultiFloorBimEntitiesIntoScene,
-  syncDxfOverlayIntoScene,
-  syncDxfOverlayMultiFloorIntoScene,
   setBimOrbitPivot,
   applyBimSelection,
   loadHdriIntoStore,
+  type SyncDxfOverlayDeps,
 } from './scene-manager-actions';
+import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import type { DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
 
@@ -315,16 +312,11 @@ export class ThreeJsSceneManager {
     nextFloorElevationMm: number | undefined = undefined,
   ): void {
     if (this.disposed) return;
-    syncBimEntitiesIntoScene(this.bimSyncDeps(),
+    runSyncBimEntities(
+      this.bimSyncDeps(),
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+      this.syncSideEffects(),
     );
-    this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
-    // ADR-366 §B.5 — SSAO warm-up only when idle photorealism is opted in (heavy sync GPU render).
-    if (useViewMode3DStore.getState().autoPreviewEnabled) this.ssaoModulator.warmUp();
-    // ADR-366 §B.5 — pre-compile the OFF shadow variant so the adaptive toggle is a cache hit (no
-    // ~400ms first-compile stall). Idempotent.
-    this.shadowModulator.warmUp(this.viewport.camera);
-    this.markSceneDirty();
   }
 
   /** Shared sync deps (BIM layer + selection/focus/render subsystems). */
@@ -332,6 +324,13 @@ export class ThreeJsSceneManager {
     return { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
       hoverHighlighter: this.hoverHighlighter, keyboardFocusManager: this.keyboardFocusManager,
       pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController };
+  }
+
+  /** ADR-366 §B.5 — post-sync side-effect subsystems handed to scene-manager-sync. */
+  private syncSideEffects(): SceneSyncSideEffects {
+    return { faceHighlighter: this.faceHighlighter, faceHoverHighlighter: this.faceHoverHighlighter,
+      ssaoModulator: this.ssaoModulator, shadowModulator: this.shadowModulator,
+      camera: this.viewport.camera, markDirty: () => this.markSceneDirty() };
   }
 
   /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
@@ -344,41 +343,39 @@ export class ThreeJsSceneManager {
     floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
   ): void {
     if (this.disposed) return;
-    syncMultiFloorBimEntitiesIntoScene(this.bimSyncDeps(),
+    runSyncBimEntitiesMultiFloor(
+      this.bimSyncDeps(),
       { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+      this.syncSideEffects(),
     );
-    this.faceHighlighter.refresh(); this.faceHoverHighlighter.refresh(); // ADR-539 — re-attach overlays after rebuild.
-    this.ssaoModulator.warmUp();
-    this.markSceneDirty();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
-    if (!this.disposed) { applyFloorVisibility(this.bimLayer.group, modes); this.markSceneDirty(); }
+    if (!this.disposed) applyFloorVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty());
   }
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
-    if (!this.disposed) { applyBuildingVisibility(this.bimLayer.group, modes); this.markSceneDirty(); }
+    if (!this.disposed) applyBuildingVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty());
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
-    if (this.disposed) return;
-    syncDxfOverlayIntoScene(
-      { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
-        sectionController: this.sectionController, viewport: this.viewport },
-      dxfScene, this.initialCameraFitDone, () => { this.initialCameraFitDone = true; },
-    );
-    this.markSceneDirty();
+    if (!this.disposed) runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty());
   }
 
   /** ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). */
   syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
-    if (this.disposed) return;
-    syncDxfOverlayMultiFloorIntoScene(
-      { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
-        sectionController: this.sectionController, viewport: this.viewport },
-      entries, this.initialCameraFitDone, () => { this.initialCameraFitDone = true; },
-    );
-    this.markSceneDirty();
+    if (!this.disposed) runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty());
+  }
+
+  /** Shared DXF overlay deps (converter + path-tracer + section + viewport). */
+  private dxfOverlayDeps(): SyncDxfOverlayDeps {
+    return { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
+      sectionController: this.sectionController, viewport: this.viewport };
+  }
+
+  /** First-frame camera-fit latch (read + set `initialCameraFitDone`). */
+  private dxfFitState(): DxfOverlayFitState {
+    return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } };
   }
 
   /** Replace the selection with one entity (plain click), or clear it (null). */
@@ -429,7 +426,7 @@ export class ThreeJsSceneManager {
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
-    if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.markSceneDirty(); }
+    if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); }
   }
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
@@ -443,7 +440,7 @@ export class ThreeJsSceneManager {
 
   applyLightPreset(preset: LightPreset): void {
     if (this.disposed) return;
-    applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.markSceneDirty();
+    applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty();
   }
 
   getRendererCanvas(): HTMLCanvasElement { return this.renderer.domElement; }

@@ -22,6 +22,11 @@ import { DXF_TIMING } from '../../config/dxf-timing';
  * pre-compiles the OFF variant once (the ON one is built by the first real render), so every runtime
  * toggle is a program-cache hit — zero per-toggle stall.
  *
+ * STATIC SHADOW MAP: the renderer runs with `shadowMap.autoUpdate=false` (scene-setup) so the depth
+ * map is NOT regenerated every frame for a static scene. This modulator owns the rebuild triggers:
+ * the OFF→ON {@link update} toggle (first crisp frame after navigation) and {@link invalidateShadowMap}
+ * (called at the geometry/light mutation SSoT).
+ *
  * Pure renderer/scene state, zero React. Complements `QualityModulator` (soft↔sharp radius ramp);
  * this owns only the ON↔OFF enable.
  */
@@ -87,6 +92,17 @@ export class ShadowModulator {
     this.renderer.shadowMap.enabled = want;
     if (want) this.renderer.shadowMap.needsUpdate = true; // rebuild the map for the first crisp frame
     this.invalidateMaterials();
+  }
+
+  /**
+   * ADR-366 §B.5 — force a ONE-shot shadow depth-map rebuild on the next render. With the renderer's
+   * `shadowMap.autoUpdate=false` (scene-setup) the map is otherwise frozen across renders; call this
+   * whenever shadow-casting geometry or the sun changes (the geometry/light mutation SSoT in
+   * `ThreeJsSceneManager`) so the shadows are never stale. The {@link update} OFF→ON toggle already
+   * flags it for the first crisp frame after navigation; this covers mutations while shadows are ON.
+   */
+  invalidateShadowMap(): void {
+    this.renderer.shadowMap.needsUpdate = true;
   }
 
   dispose(): void {

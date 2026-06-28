@@ -104,9 +104,16 @@ function runPick(input: Bim3DPickInput): boolean {
   // applied once. Big-player CAD (Revit/Cinema4D): the hover silhouette resolves on settle, not on
   // every entity the cursor flies over. The snap glyph below is a Canvas2D overlay (no WebGL
   // render) so it keeps updating live — snapping stays responsive while sweeping.
+  //
+  // COALESCE WITH SHADOW SETTLE (2026-06-28): the settle window is SHADOW_SETTLE (not the shorter
+  // POINTER_SETTLE) so this deferred hover render fires at the SAME moment the adaptive shadows turn
+  // back ON. Otherwise the scene rendered TWICE per settle — an unshadowed hover frame at
+  // POINTER_SETTLE(100ms) THEN a shadowed frame at SHADOW_SETTLE(350ms). Aligning them collapses it
+  // to ONE shadowed render with the hover already applied → halves settle work + removes the early
+  // render that could block resumed motion during a slow exploratory sweep (the p95 ~75ms tail).
   let resettlePending = false;
   if (hoverId !== lastHoverId) {
-    if (isPointerActive(performance.now(), DXF_TIMING.gesture.POINTER_SETTLE)) {
+    if (isPointerActive(performance.now(), DXF_TIMING.gesture.SHADOW_SETTLE)) {
       resettlePending = true; // keep ticking; apply once the cursor stops
     } else {
       lastHoverId = hoverId;

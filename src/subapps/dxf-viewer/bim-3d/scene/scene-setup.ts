@@ -100,6 +100,14 @@ export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   // PCF (single-tap) αντί PCFSoft (πολλαπλά taps ανά σκιασμένο pixel) = μείωση shadow
   // fill-rate, αμελητέα οπτική διαφορά σε CAD μοντέλο. (mapSize 2048→1024 στο createBimLights.)
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  // ADR-366 §B.5 (2026-06-28) — autoUpdate:FALSE. Το BIM μοντέλο είναι ΣΤΑΤΙΚΟ σε ηρεμία, αλλά το
+  // Three.js by-default ξαναχτίζει ΟΛΟ το shadow depth-map σε ΚΑΘΕ render όσο οι σκιές είναι ON.
+  // Big-player practice (Three.js docs / iModel.js / Forge): render το shadow map ΜΟΝΟ on-demand.
+  // Το `ShadowModulator` κάνει `needsUpdate=true` στο OFF→ON toggle (πρώτο crisp frame) και
+  // `invalidateShadowMap()` καλείται στα geometry/light mutation SSoT (sync/sun/preset). Έτσι τα
+  // επαναλαμβανόμενα at-rest renders (π.χ. hover σε διαφορετικά entities ενώ ακίνητος) ΔΕΝ
+  // πληρώνουν περιττό depth-pass regen.
+  renderer.shadowMap.autoUpdate = false;
   container.appendChild(renderer.domElement);
   return renderer;
 }

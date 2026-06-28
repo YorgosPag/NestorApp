@@ -281,7 +281,9 @@ export const DXF_TIMING = {
     POINTER_SETTLE: 100,
     /** ADR-366 §B.5 — adaptive-shadow settle window. Shadows (the ~40ms PCF cost) stay OFF while
      *  the cursor moves within this; they only «pop in» after GENUINE stillness, so the 40ms
-     *  shadowed frame never fires on the micro-pauses of normal work. Longer than POINTER_SETTLE. */
+     *  shadowed frame never fires on the micro-pauses of normal work. Longer than POINTER_SETTLE.
+     *  Also governs the 3D hover-silhouette refine-on-settle (bim3d-pointer-scheduler) so the
+     *  deferred hover render COALESCES with the shadow-on render → ONE settle frame, not two. */
     SHADOW_SETTLE: 350,
   },
 

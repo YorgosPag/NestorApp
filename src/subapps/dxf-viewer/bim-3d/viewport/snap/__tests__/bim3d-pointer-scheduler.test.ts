@@ -80,17 +80,19 @@ const manager = {
 
 const WORLD = new THREE.Vector3(1, 2, 3);
 
-/** POINTER_SETTLE (DXF_TIMING.gesture) — the refine-on-settle window the scheduler reads. */
-const SETTLE_MS = 100;
+/** SHADOW_SETTLE (DXF_TIMING.gesture) — the refine-on-settle window the scheduler reads. The hover
+ *  highlight defers to this (not the shorter POINTER_SETTLE) so it COALESCES with the shadow-on
+ *  render into ONE settle frame (ADR-366 §B.5, 2026-06-28). */
+const SETTLE_MS = 350;
 
 /**
- * Drive one pick AFTER the cursor has settled (past POINTER_SETTLE) so the DEFERRED hover-highlight
+ * Drive one pick AFTER the cursor has settled (past SHADOW_SETTLE) so the DEFERRED hover-highlight
  * refresh is applied — mirrors the real refine-on-settle timing (the hover silhouette resolves when
  * the cursor stops, not on every entity it sweeps over). Snap is NOT gated and applies on any pick.
  */
 function settledPick(clientX: number, clientY: number): void {
   requestPointerPick({ manager, clientX, clientY });
-  nowMs += SETTLE_MS + 50; // > POINTER_SETTLE (100) and > HOVER_HITTEST (50)
+  nowMs += SETTLE_MS + 50; // > SHADOW_SETTLE (350) and > HOVER_HITTEST (50)
   mockRegisteredCb?.();
 }
 
@@ -144,7 +146,7 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(markSceneDirty).not.toHaveBeenCalled();                      // no WebGL re-render while sweeping
     expect(mockRegisteredIsDirty?.()).toBe(true);                       // re-armed → waits for settle
 
-    // Cursor settles (no further moves): the next pick past POINTER_SETTLE applies the hover once.
+    // Cursor settles (no further moves): the next pick past SHADOW_SETTLE applies the hover once.
     nowMs += SETTLE_MS + 50;
     mockRegisteredCb?.();
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');
