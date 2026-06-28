@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-28 — 3D DXF underlay: idempotent `DxfToThreeConverter.sync()` (σταματά το `texSubImage2D` re-upload στο hover)
+
+**Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify (Chrome Performance trace: `texSubImage2D` πριν/μετά) + commit (Giorgio) pending.
+
+**Πρόβλημα (hard evidence — Chrome trace 2026-06-28, ~5s καθαρό 3D hover)**: το σταυρόνημα «κολυμπούσε» στην κίνηση κέρσορα. Top self-time = **`texSubImage2D` 3414ms ← 100% από `renderPostFxOverlays`** (texture upload στην GPU) + `clearRect` 455ms ← `buildDxfTextMesh`. Ρίζα: `DxfToThreeConverter.sync(dxfScene)` έκανε **πλήρες `disposeRoot()` + rebuild ΟΛΟΥ του DXF underlay σε ΚΑΘΕ κλήση** — ξαναέφτιαχνε κάθε `BufferGeometry` γραμμής ΚΑΙ κάθε `CanvasTexture` ετικέτας (νέα → re-upload στην GPU). Το `sync` τροφοδοτείται μέσω `useDxfOverlay3DSync` → `DxfOverlay3DStore` → `resyncDxfOverlay`, και το `dxfScene` ξαναπαράγεται (νέο wrapper object) όποτε αλλάζει το `SceneModel` για **οποιονδήποτε** λόγο — π.χ. μετακινείται BIM κολόνα (που το DXF underlay ΔΕΝ σχεδιάζει) ή το `applyBeamColumnCutback2D` (ADR-458) churn-άρει beam refs. Αποτέλεσμα: το overlay κατεδαφιζόταν + ξαναανέβαινε στην GPU ακόμη κι όταν **καμία** γραμμή/ετικέτα DXF δεν είχε αλλάξει.
+
+**Fix (Google-level idempotency, N.7.2 #3 — «calling twice = same result»)**: ΝΕΟ pure SSoT `bim-3d/converters/dxf-overlay-sync-guard.ts` — υπολογίζει φθηνό key από **μόνο** τα inputs που διαβάζει το `buildColorGroup` (drawn entities + `layersById` + `units`). Στο key μετέχουν **μόνο** οι τύποι που σχεδιάζει το underlay (`line`/`circle`/`arc`/`polyline`/`text`, mirror του `appendEntitySegments` + text pass)· τα BIM wrappers (wall/beam/column/slab…) **εξαιρούνται** ώστε το churn τους να μην ακυρώνει το overlay. Οι entity references είναι σταθερές για αμετάβλητες οντότητες (WeakMap cache στο `useDxfSceneConversion`), οπότε ένα O(N) reference scan (μηδέν GPU work) αρκεί. Ο `sync()` πλέον κάνει skip το teardown/rebuild όταν το key είναι αμετάβλητο (`buildColorGroup` = καθαρή συνάρτηση αυτών → ίδιο key ⇒ byte-identical output ⇒ provably safe να κρατήσει τα GPU resources). Ίδιος guard στο `syncMultiFloor()` («Όλοι οι όροφοι»: ανά-όροφο key + elevation). Cross-mode invalidation: κάθε μονοπάτι μηδενίζει το key του άλλου ώστε single↔multi scope switch να ξαναχτίζει πάντα.
+
+**Files**: NEW `bim-3d/converters/dxf-overlay-sync-guard.ts` (`toDxfOverlaySyncKey`/`isSameDxfOverlaySync`/`isSameMultiKey`) + NEW `__tests__/dxf-overlay-sync-guard.test.ts` (17 jest GREEN). MOD `bim-3d/converters/DxfToThreeConverter.ts` (guard fields + `sync`/`syncMultiFloor`/`dispose`). ✅ Google-level: YES — idempotent (μηδέν re-upload σε αμετάβλητο underlay), provably-safe skip (key = πλήρες input του pure builder), SSoT pure guard, μηδέν αλλαγή σε bitmap cache-key / scheduler / orchestrator / micro-leaf.
+
 ### 2026-06-28 — Grid Enterprise Test: ειλικρινές reporting + SSoT presenter (debug infra)
 
 **Status**: IMPLEMENTED 2026-06-28 (Opus 4.8). 🔴 browser-verify + commit (Giorgio) pending.

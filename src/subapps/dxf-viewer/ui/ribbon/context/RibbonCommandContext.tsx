@@ -3,7 +3,8 @@
 /**
  * ADR-345 Fase 3 — Bridge between ribbon button components and the
  * DXF viewer state (`handleToolChange` / split-last-used persistence).
- * Provider lives in RibbonRoot; leaves consume via useRibbonCommand().
+ * Provider lives in RibbonRoot; dispatch/handlers via useRibbonDispatch(), volatile
+ * field state per-key via useRibbonFieldSelectors (RibbonFieldStore).
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
@@ -71,26 +72,22 @@ export interface RibbonCommandsApi {
 }
 
 /**
- * ADR-547 Stage 4 (Option A) — the context is SPLIT into two halves so the
- * expensive ribbon tree (tool buttons + their Radix Tooltips ×75) stops
- * re-rendering on every scene edit / selection:
+ * ADR-547 Stage 4 (completion) — the only React context here is the STABLE
+ * `RibbonDispatchContextValue`. It holds the dispatch handlers + tool-mode flags
+ * that the tool buttons (Large / Small / Split) consume. All its methods are
+ * reference-stable (`onAction` / `onToggle` / `onComboboxChange` are
+ * `useEventCallback` in `useRibbonCommands`), so its provider `useMemo` holds
+ * across BIM edits/selection → memoized tool buttons BAIL. It churns only on the
+ * rare events that genuinely change a tool button (tool change → `activeTool`,
+ * undo-state → `canUndo/Redo`, storey → `getCommandRecommendation`, split pick →
+ * `splitLastUsed`).
  *
- *  • `RibbonDispatchContextValue` — STABLE across edits/selection. Holds the
- *    dispatch handlers + tool-mode flags that the tool buttons (Large / Small /
- *    Split) consume. All its methods are reference-stable (`onAction` is now an
- *    `useEventCallback` in `useRibbonCommands`), so its provider `useMemo` holds
- *    across edits/selection → memoized tool buttons BAIL → their Tooltips don't
- *    re-render. It churns only on the rare events that genuinely change a tool
- *    button (tool change → `activeTool`, undo-state → `canUndo/Redo`, storey →
- *    `getCommandRecommendation`, split pick → `splitLastUsed`).
- *
- *  • `RibbonFieldContextValue` — VOLATILE. Holds the per-entity field readers /
- *    writers consumed ONLY by value widgets (Combobox / Toggle) that live in the
- *    active contextual panel. It SHOULD churn on selection/edit so those few
- *    widgets re-read the current entity value (correctness preserved).
- *
- * `useRibbonCommand()` stays as a backward-compatible combiner for the remaining
- * widgets (split-dropdown, pickers) that need both halves.
+ * The VOLATILE per-entity field state (combobox/toggle/badge/panel-visibility) no
+ * longer lives in a context: `useRibbonCommands` pushes the readers into the
+ * zero-React `RibbonFieldStore`, and value widgets subscribe per-`commandKey` via
+ * `useRibbonFieldSelectors`. That keeps the `commands` prop stable so
+ * `RibbonRoot.memo` holds and a single field edit re-renders only the one widget
+ * whose slice moved (Revit-grade retained binding / ADR-040 micro-leaf doctrine).
  */
 interface RibbonDispatchContextValue {
   /** ADR-345 Fase 5.6 — see RibbonCommandsApi.activeTool. */
@@ -188,22 +185,8 @@ export function useRibbonDispatch(): RibbonDispatchContextValue {
   return ctx;
 }
 
-/** ADR-547 Stage 4 — subscribe to the VOLATILE field half (value widgets). */
-export function useRibbonField(): RibbonFieldContextValue {
-  const ctx = useContext(RibbonFieldContext);
-  if (!ctx) {
-    throw new Error(
-      'useRibbonField must be used inside <RibbonCommandProvider>',
-    );
-  }
-  return ctx;
-}
-
-/**
- * Backward-compatible combiner — returns both halves. Consumers that read fields
- * (split-dropdown, pickers) keep working unchanged; they re-render when EITHER
- * half changes (acceptable — they are few and live in the active panel).
- */
-export function useRibbonCommand(): RibbonCommandContextValue {
-  return { ...useRibbonDispatch(), ...useRibbonField() };
-}
+// ADR-547 Stage 4 (completion) — `useRibbonField()` / `useRibbonCommand()` were
+// removed. The VOLATILE field state now lives ONLY in `RibbonFieldStore`; read it
+// per-key via `useRibbonComboboxState` / `useRibbonToggleState` /
+// `useRibbonBadgeState` / `useRibbonPanelVisibility` (`useRibbonFieldSelectors`).
+// Dispatch/handlers come from `useRibbonDispatch()`.
