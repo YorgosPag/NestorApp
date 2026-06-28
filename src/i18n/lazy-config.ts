@@ -231,6 +231,8 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'dxf-viewer-settings',
     'dxf-viewer-wizard',
     'dxf-viewer-guides',
+    'dxf-schedule',       // 🏢 BIM schedule headers + entity labels (ADR-363 §6) — keep in sync with config.ts boot list
+    'tool-hints',         // 🏢 DXF step-by-step tool hints (ADR-082) — keep in sync with config.ts boot list
     'bim3d',
     'bim-3d-aria',
     'bim-materials',

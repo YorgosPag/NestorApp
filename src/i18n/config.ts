@@ -125,6 +125,8 @@ if (typeof window !== 'undefined') {
       'dxf-viewer-settings', // 🏢 Split from dxf-viewer (ADR-280)
       'dxf-viewer-wizard',  // 🏢 Split from dxf-viewer (ADR-280)
       'dxf-viewer-guides',  // 🏢 Split from dxf-viewer (ADR-280)
+      'dxf-schedule',       // 🏢 BIM schedule headers + entity labels (ADR-363 §6) — preloaded to avoid first-selection lazy-merge (ADR-547)
+      'tool-hints',         // 🏢 DXF step-by-step tool hints (ADR-082) — preloaded to avoid first-selection lazy-merge (ADR-547)
       'bim3d',              // 🏢 BIM 3D Viewer toggle + viewport (ADR-366)
       'bim-3d-aria',        // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
       'bim-materials',      // 🏢 BIM Material Library editor (ADR-363 Phase 6.5)
