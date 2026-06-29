@@ -28,6 +28,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { Viewport } from '../../rendering/types/Types';
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
 
 // ============================================================================
 // TYPES
@@ -152,6 +153,11 @@ export function useCanvasResize({
       }
     };
   }, [viewportProp?.width, viewportProp?.height, canvasRef, onSetupCanvas]);
+
+  // ADR-549 Phase 7 — re-run canvas setup on a devicePixelRatio CHANGE (monitor/scaling switch).
+  // No ResizeObserver fires then (CSS size unchanged), so the backing store would keep the old dpr
+  // → blurry / stale-region. `onSetupCanvas` re-reads `getDevicePixelRatio()` and resizes the buffer.
+  useEffect(() => subscribeDevicePixelRatio(() => onSetupCanvas?.()), [onSetupCanvas]);
 
   // ============================================================================
   // RETURN

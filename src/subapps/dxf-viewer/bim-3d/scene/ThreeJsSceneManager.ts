@@ -23,7 +23,6 @@ import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
-import { VIEWCUBE_HIDE_WIDTH_PX } from '../viewport/viewport-constants';
 import { type FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
@@ -31,7 +30,7 @@ import type { CanonicalViewId } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager'; import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
-import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
+import { applyViewportResize, applyDevicePixelRatioSync, type SceneResizeDeps } from './scene-manager-resize';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
@@ -453,14 +452,18 @@ export class ThreeJsSceneManager {
   cancelFinalRender(): void { if (!this.disposed) this.pathTracerRenderer.cancelFinal(); }
 
   resize(width: number, height: number): void {
-    if (this.disposed || width === 0 || height === 0) return;
-    this.viewport.updateAspect(width, height);
-    this.renderer.setSize(width, height);
-    this.ssaoModulator.resize(width, height);
-    this.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
-    // ADR-375 Phase C.7 — feed renderer size into BIM edge LineMaterial resolution.
-    bimEdgeResolutionStore.setSize(width, height);
-    this.markSceneDirty();
+    if (!this.disposed) applyViewportResize(this.resizeDeps(), width, height);
+  }
+
+  /** ADR-549 Phase 7 / ADR-556 — re-apply dpr after a `devicePixelRatio` CHANGE (logic in scene-manager-resize). */
+  syncDevicePixelRatio(): void {
+    if (!this.disposed) applyDevicePixelRatioSync(this.resizeDeps());
+  }
+
+  /** Shared renderer-sizing deps for the resize helpers (scene-manager-resize). */
+  private resizeDeps(): SceneResizeDeps {
+    return { renderer: this.renderer, viewport: this.viewport, viewCube: this.viewCube,
+      ssaoModulator: this.ssaoModulator, markDirty: () => this.markSceneDirty() };
   }
 
   dispose(): void {

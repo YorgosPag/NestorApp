@@ -51,6 +51,7 @@ import { usePolygonDragDrop } from './use-polygon-drag-drop';
 import { usePolygonClipboardShortcuts } from './use-polygon-clipboard-shortcuts';
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
 import { recordSchedulerFrame } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
@@ -195,8 +196,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     });
     observer.observe(container);
 
+    // ADR-549 Phase 7 — DPR change (monitor/scaling switch) fires no ResizeObserver; re-apply the
+    // renderer pixel ratio so the WebGL drawing buffer never stays sized for the old dpr.
+    const unsubDpr = subscribeDevicePixelRatio(() => managerRef.current?.syncDevicePixelRatio());
+
     return () => {
       observer.disconnect();
+      unsubDpr();
       if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -478,13 +484,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* Performance HUD — ADR-366 §B.5.U: now mounted ONCE by UnifiedPerformanceHudLeaf
           (sibling of CanvasLayerStack3dLeaf) so the SAME HUD serves 2D and 3D. */}
-
       {/* Phase 8.0+8.1 / A.7.Q2 — ARIA live regions + entity descriptions on Tab focus */}
       <AriaLiveRegion
         focusManager={managerRef.current?.getKeyboardFocusManager() ?? null}
         getEntityData={managerRef.current ? (id) => managerRef.current!.getFocusedEntityData(id) : null}
       />
-
     </div>
 
     {/* Skip-link target — placed after the 3D viewport div. */}

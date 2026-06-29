@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — `devicePixelRatio` change re-sync + crosshair comment refresh (ADR-556)
+`subscribeDevicePixelRatio` SSoT (`systems/cursor/device-pixel-ratio.ts`) → ο 3D renderer ξανα-εφαρμόζει `setPixelRatio`+`setSize` όταν αλλάξει το dpr (drag σε οθόνη με άλλο OS scaling) — δεν πυροδοτείται ResizeObserver τότε, οπότε ο drawing buffer θα έμενε στο παλιό dpr (blurry). Η λογική resize/dpr του `ThreeJsSceneManager` εξήχθη σε `bim-3d/scene/scene-manager-resize.ts` (SRP, <500 γρ.). **ADR-040 touch (comment-only):** το `ImmediatePositionStore` σχόλιο ανανεώθηκε — ο compositor `<CrosshairOverlay>` ζωγραφίζει πλέον ΣΥΓΧΡΟΝΑ σε `desynchronized` Canvas2D (ADR-549 Phase 6), όχι promoted DOM `translate3d`· **zero subscriptions, zero hot-path αλλαγή**. 🟡 UNCOMMITTED.
+
 ### 2026-06-29 — Analytical overlay dispatch canvas (7 leaf canvases → 1, ADR-552)
 Τα 7 analytical 2D overlays (heat-load/pipe-sizing/balancing/utilization/diagrams/warnings/riser) ενοποιήθηκαν σε ΕΝΑΝ `AnalyticalDispatchCanvas` (leaf, **όχι** ο shell → CHECK 6C ασφαλές). Pull model: dispatch κάνει size+clear ΜΙΑ φορά + 7 painter hooks με σειρά z-order· αθροιστικά ίδιες low-freq subscriptions. Βλ. **ADR-552** / **ADR-551 §5.2 #1**. 🟡 UNCOMMITTED.
 

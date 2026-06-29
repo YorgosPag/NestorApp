@@ -33,6 +33,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
 import { updateImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
 import { dlog, dwarn } from '../../debug';
 
 // ============================================================================
@@ -185,6 +186,12 @@ export function useViewportManager({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Setup once — ResizeObserver handles updates
+
+  // ── ADR-549 Phase 7: devicePixelRatio change → re-emit viewport ─────────
+  // A DPR change (monitor/scaling switch) fires no ResizeObserver. Re-emit the SAME dimensions as a
+  // NEW viewport object so viewport-prop consumers keyed on the object (e.g. FloorUnderlayOverlay)
+  // re-run their DPR-aware sizing. (DxfCanvas/LayerCanvas/Preview re-size via their own DPR hooks.)
+  useEffect(() => subscribeDevicePixelRatio(() => applyViewport({ ...viewportRef.current })), [applyViewport]);
 
   // ── RAF-delayed initial measurement ────────────────────────────────────
   // Ensures correct dimensions after browser layout stabilization (server restart edge case)

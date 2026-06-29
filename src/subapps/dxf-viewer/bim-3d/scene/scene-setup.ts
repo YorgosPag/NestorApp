@@ -82,6 +82,16 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
  * stencil:true required for ADR-366 §A.3 Phase 7.0a stencil cap pipeline.
  * (Three.js default is already true, set explicit για future-proofing.)
  */
+/**
+ * Live-viewport WebGL pixel ratio — SSoT for the `min(devicePixelRatio, 2)` clamp (ADR-549).
+ * Clamped to 2: a tiny CAD scene (≈546 tris) gains nothing visible above 2× but pays quadratic
+ * fill-rate on HiDPI. Shared by `createBimRenderer` and `ThreeJsSceneManager.syncDevicePixelRatio`
+ * (the DPR-change handler) so the live ratio can never drift between init and re-sync.
+ */
+export function bimPixelRatio(): number {
+  return Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 2);
+}
+
 export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   // ADR-366 §B.5 (2026-06-28): antialias:TRUE — επαναφορά MSAA μετά από regression (Giorgio
   // «3D ποιότητα πολύ χαμηλή, ακμές blurry»). Round-1 το είχε σβήσει με λογική fill-rate, αλλά
@@ -126,7 +136,7 @@ export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   const renderer = context
     ? new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' })
     : new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(bimPixelRatio());
   renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
   renderer.setClearColor(0x1a1a1a, 1);
   renderer.shadowMap.enabled = true;

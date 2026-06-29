@@ -29,6 +29,7 @@ import { projectSnap3DMarker } from './snap/project-snap3d-marker';
 import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
 import { resolveCrosshair3DCenter } from './crosshair-3d-center';
 import { isPerfEnabled, recordSample, perfTick } from '../../systems/cursor/mouse-handler-perf';
+import { sizeCanvasToContainerDpr } from '../../rendering/canvas/withCanvasState'; // 🔬 ADR-549 red A/B reference
 
 export interface BimCrosshairOverlay3DProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -62,6 +63,11 @@ function probeCursorLag(e: MouseEvent): void {
 
 export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps) {
   const handleRef = useRef<CrosshairCompositorHandle>(null);
+  // 🔬🔴 ADR-549 — TEMPORARY red A/B reference crosshair (UNCOMMITTED, REVERTIBLE). Drawn SYNCHRONOUSLY
+  // στο ίδιο onMove με το λευκό (πλέον canvas-based, Phase 6). Σκοπός verification: το λευκό πρέπει να
+  // ακολουθεί ΑΚΡΙΒΩΣ το κόκκινο· αν συμπίπτουν → ο shared compositor δεν προσθέτει latency. Αφαίρεσέ
+  // το όταν κλείσουν οι έλεγχοι: αυτό το ref + το draw block στον onMove + το import + το <canvas>.
+  const expCanvasRef = useRef<HTMLCanvasElement>(null);
   // Last cursor position in canvas-local px (raw mouse), shared by the move handler + RAF.
   const cursorRef = useRef<Point2D | null>(null);
   // Cached canvas client rect. `getBoundingClientRect()` is a LAYOUT READ; calling it on EVERY
@@ -159,6 +165,21 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
       const { point, snapped } = resolveCrosshair3DCenter({ cursor, snapProjected: snapProjectedRef.current });
       handleRef.current?.setSnapActive(snapped);
       handleRef.current?.applyTransform(point);
+      // 🔬🔴 ADR-549 — red A/B reference: full-viewport κόκκινο σταυρόνημα, σύγχρονο, desynchronized.
+      const expCanvas = expCanvasRef.current;
+      if (expCanvas && point) {
+        const ctx = sizeCanvasToContainerDpr(expCanvas, expCanvas, true);
+        if (ctx) {
+          const w = expCanvas.clientWidth;
+          const h = expCanvas.clientHeight;
+          ctx.strokeStyle = '#ff2d2d';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(point.x + 0.5, 0); ctx.lineTo(point.x + 0.5, h);
+          ctx.moveTo(0, point.y + 0.5); ctx.lineTo(w, point.y + 0.5);
+          ctx.stroke();
+        }
+      }
       if (isPerfEnabled()) probeCursorLag(e);
     };
     window.addEventListener('mousemove', onMove, true);
@@ -208,10 +229,18 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
   useRafWhile(snapActive, draw, onStop, 'crosshair'); // 🔬 ADR-549 Phase 0
 
   return (
-    <CrosshairCompositor
-      ref={handleRef}
-      rulerMargins={NO_RULER_MARGINS}
-      className="absolute inset-0 pointer-events-none"
-    />
+    <>
+      <CrosshairCompositor
+        ref={handleRef}
+        rulerMargins={NO_RULER_MARGINS}
+        className="absolute inset-0 pointer-events-none"
+      />
+      {/* 🔬🔴 ADR-549 — TEMPORARY red A/B reference crosshair. Αφαίρεσε όταν κλείσουν οι έλεγχοι. */}
+      <canvas
+        ref={expCanvasRef}
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full pointer-events-none z-[9999]"
+      />
+    </>
   );
 }

@@ -116,10 +116,12 @@ class ImmediatePositionStoreClass {
     this.debugCallCount++;
 
     // 🚀 DIRECT RENDER: Call crosshair render IMMEDIATELY (no RAF wait!)
-    // The compositor <CrosshairOverlay> moves the crosshair off-main-thread via
-    // translate3d. Phase E (ADR-040, 2026-06-04): no canvas is marked dirty on a
-    // plain cursor move — the layer-canvas has no cursor-frequency content left
-    // (see PAN_SYNC_CANVAS_IDS comment above). This is the cursor-lag Φ4 win.
+    // The compositor <CrosshairOverlay> repaints the crosshair SYNCHRONOUSLY into a
+    // `desynchronized` Canvas2D context (ADR-549 Phase 6 — low-latency present; the old
+    // promoted DOM `translate3d` layer was retired). Phase E (ADR-040, 2026-06-04): no
+    // canvas is marked dirty on a plain cursor move — the layer-canvas has no
+    // cursor-frequency content left (see PAN_SYNC_CANVAS_IDS comment above). This is the
+    // cursor-lag Φ4 win.
     if (this.directRenderCallback) {
       try {
         this.directRenderCallback(this.position);

@@ -28,6 +28,7 @@
  */
 
 import { useEffect, type RefObject } from 'react';
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -82,8 +83,15 @@ export function useCanvasSizeObserver({
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(canvas);
 
+    // ADR-549 Phase 7 — a devicePixelRatio change fires no ResizeObserver; re-run setup so the
+    // backing store re-rasterizes at the new dpr (monitor/scaling switch → no stale region).
+    const unsubDpr = subscribeDevicePixelRatio(handleResize);
+
     // Cleanup
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      unsubDpr();
+    };
   }, [canvasRef, onSizeChange, skipZeroDimensions]);
 }
 

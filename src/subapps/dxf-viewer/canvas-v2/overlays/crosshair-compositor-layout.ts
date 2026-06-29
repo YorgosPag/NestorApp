@@ -1,16 +1,20 @@
 /**
- * CROSSHAIR COMPOSITOR LAYOUT — pure geometry/style helpers (ADR-040).
+ * CROSSHAIR COMPOSITOR LAYOUT — pure geometry/style helpers (ADR-040 / ADR-549).
  *
- * The AutoCAD/Revit-grade crosshair is drawn ONCE as promoted DOM elements and
- * moved purely with `transform: translate3d(...)` on the GPU compositor — off the
- * main thread — so it tracks the pointer 1:1 regardless of main-thread load.
+ * The AutoCAD/Revit-grade crosshair is repainted SYNCHRONOUSLY into a
+ * `desynchronized` Canvas2D context on every move (ADR-549 Phase 6 — low-latency
+ * present). These pure functions compute the geometry (arm length / centre gap)
+ * consumed by `crosshair-compositor-paint`; they own no DOM and no canvas, so they
+ * are unit-testable and shared verbatim by the 2D + 3D hosts.
  *
- * The center gap is preserved by splitting each axis into TWO fixed-size segments
- * (left/right, top/bottom): the gap is simply the distance between them, applied
- * via the translate offset. Because every segment is a FIXED-size box that only
- * ever changes its `transform`, there is zero layout/paint work per mouse move.
+ * The centre gap is preserved by stopping each arm `gap` px before the cursor
+ * centre (the AutoCAD hole). `gap` changes only on settings / pick-box changes
+ * (rare), never per mouse move.
  *
- * These functions are pure (no DOM) so they are unit-testable.
+ * NOTE — the `computeSegmentBoxes` / `translate3d` / `segmentBackground` helpers
+ * below are legacy DOM-era geometry (promoted `translate3d` layers); the Phase 6
+ * canvas paint no longer uses them. Kept until the DOM crosshair fallback is
+ * deleted; do not add new callers.
  *
  * @module canvas-v2/overlays/crosshair-compositor-layout
  */
