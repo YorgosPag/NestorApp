@@ -39,18 +39,20 @@ describe('distanceToDxfEntityMm', () => {
     expect(distanceToDxfEntityMm(square, { x: -5, y: 50 })).toBeCloseTo(5);
   });
 
-  // ADR-537 β — text is picked by its bounding box (`getEntityBBox` SSoT).
+  // ADR-557 Φ-attachment — text is picked by its attachment-aware box (`textBoxAABB` SSoT).
+  // No textStyle → default TL (top-left): the box extends RIGHT + DOWN from position (10,20),
+  // w = 2×5×0.6 = 6 → x∈[10,16], y∈[15,20]. (Was the old symmetric ±h, attachment-blind box.)
   const text = (): DxfEntityUnion =>
     ({ id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' }) as unknown as DxfEntityUnion;
 
   it('returns 0 for a point inside the text bbox', () => {
-    expect(distanceToDxfEntityMm(text(), { x: 12, y: 21 })).toBe(0);
+    expect(distanceToDxfEntityMm(text(), { x: 12, y: 17 })).toBe(0);
   });
 
   it('measures the perpendicular distance to the text bbox from outside', () => {
-    // bbox: x∈[10,17], y∈[15,25] (w = 5×2×0.7 = 7; minY = 20−5, maxY = 20+5)
-    expect(distanceToDxfEntityMm(text(), { x: 5, y: 20 })).toBeCloseTo(5);  // 5 left of minX
-    expect(distanceToDxfEntityMm(text(), { x: 12, y: 30 })).toBeCloseTo(5); // 5 above maxY
+    // box: x∈[10,16], y∈[15,20]
+    expect(distanceToDxfEntityMm(text(), { x: 5, y: 17 })).toBeCloseTo(5);   // 5 left of minX
+    expect(distanceToDxfEntityMm(text(), { x: 12, y: 10 })).toBeCloseTo(5);  // 5 below minY
   });
 
   it('returns null for an unsupported type (still no wireframe — e.g. dimension)', () => {

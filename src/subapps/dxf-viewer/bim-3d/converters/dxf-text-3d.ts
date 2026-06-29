@@ -20,6 +20,9 @@ import {
   getTextHeightWithFallback,
   TEXT_FONTS,
 } from '../../config/text-rendering-config';
+// ADR-557 Φ-attachment — the attachment-aware text-box SSoT the 2D grips + hover frame
+// also consume, so the 3D plane sits on the SAME box centre (2D ≡ 3D parity).
+import { resolveTextBox } from '../../bim/text/text-box';
 
 /** Texture resolution: canvas pixels per drawing unit of text height (crisp at typical zoom). */
 const TEXTURE_PX_PER_UNIT = 16;
@@ -103,7 +106,8 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   texture.magFilter = THREE.LinearFilter;
 
   // Plane spans the canvas in world units (same px→unit factor) so the texture never distorts
-  // and never clips. Anchored so its lower-left ≈ entity.position (matches the 2D text anchor).
+  // and never clips. Centred on the attachment-aware box centre (below) — the padded plane
+  // extends symmetrically around it (transparent margin), matching the 2D glyph block.
   const widthUnits = canvas.width / pxPerUnit;
   const heightUnitsPadded = canvas.height / pxPerUnit;
   const geometry = new THREE.PlaneGeometry(widthUnits, heightUnitsPadded);
@@ -118,7 +122,11 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // rotateX(-90°) maps plane-local (x, y) → world (x, 0, -y) — EXACTLY the DXF→Three mapping
   // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(entity.position.x + widthUnits / 2, 0, -(entity.position.y + heightUnitsPadded / 2));
+  // ADR-557 Φ-attachment — anchor the plane CENTRE at the attachment-aware text-box centre
+  // SSoT (`resolveTextBox`), the SAME box the 2D grips + hover frame use, so the 3D glyph
+  // block coincides with them and 2D ≡ 3D (was: lower-left at position → ignored attachment).
+  const boxCenter = resolveTextBox(entity).center;
+  mesh.position.set(boxCenter.x, 0, -boxCenter.y);
 
   return { mesh, geometry, material, texture };
 }

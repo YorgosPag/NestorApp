@@ -11,7 +11,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { circlePolyline, arcPolyline } from '../converters/dxf-arc-circle-sample';
-import { getEntityBBox } from '../../canvas-v2/dxf-canvas/dxf-viewport-culling';
+// ADR-557 Φ-attachment — attachment-aware text-box corners SSoT (the SAME box the 2D
+// grips + hover frame + 3D mesh use), so the 3D hover halo coincides with the handles.
+import { textBoxCornersWorld } from '../../bim/text/text-box';
 
 /**
  * Plan-mm outline poly-lines of a raw DXF entity (one array per disjoint stroke), or `[]`
@@ -36,14 +38,10 @@ export function dxfEntityOutlineSegments(entity: DxfEntityUnion, unitToMm = 1): 
     case 'arc':
       return [arcPolyline(s(entity.center), entity.radius * unitToMm, entity.startAngle, entity.endAngle, entity.counterclockwise)];
     case 'text': {
-      // ADR-537 β — text glows as its (closed) bounding box, the SAME box the pick uses
-      // (`getEntityBBox` SSoT) → hover halo === click target.
-      const b = getEntityBBox(entity);
-      return [[
-        s({ x: b.minX, y: b.minY }), s({ x: b.maxX, y: b.minY }),
-        s({ x: b.maxX, y: b.maxY }), s({ x: b.minX, y: b.maxY }),
-        s({ x: b.minX, y: b.minY }),
-      ]];
+      // ADR-557 Φ-attachment — text glows as its attachment-aware box (the SAME box the
+      // grips + 2D hover frame + 3D mesh use), rotation-aware → hover halo === handles.
+      const c = textBoxCornersWorld(entity); // NE, NW, SW, SE
+      return [[s(c[0]), s(c[1]), s(c[2]), s(c[3]), s(c[0])]];
     }
     default:
       return [];

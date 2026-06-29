@@ -37,7 +37,7 @@ import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { buildUIFont, TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+import { buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-530: Revit-grade glyph-path text rendering (CAD fonts via opentype.js).
@@ -48,6 +48,10 @@ import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont
 // 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
 // squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
 import { getTextGrips } from '../../bim/text/text-grips';
+// ADR-557 Φ-attachment — attachment-aware text-box SSoT: the hitTest hit-box + the 2D
+// hover frame use the SAME box as the grips / 3D mesh / culling (one geometry, N consumers).
+import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
+import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 
@@ -83,7 +87,34 @@ export class TextRenderer extends BaseEntityRenderer {
 
     this.setupStyle(entity, options);
     this.renderTextContent(entity, text, screenPos, screenHeight, normalizedRotation, richStyle, fontFamily, weight, italic, options.hovered);
+    // ADR-557 Φ-attachment — 2D hover frame: stroke the attachment-aware box (the SAME box
+    // the grips / 3D mesh use) so the glowing rectangle now appears in 2D too (was: only the
+    // glyph turned yellow — no frame), and it coincides exactly with the handles + 3D halo.
+    if (options.hovered) this.renderHoverFrame(entity);
     this.finalizeRendering(entity, options);
+  }
+
+  /**
+   * ADR-557 Φ-attachment — stroke the attachment-aware text box (screen space) as the
+   * hover frame. Reuses `textBoxCornersWorld` (rotation-aware) so the rectangle matches
+   * the grip box + the 3D `dxfEntityOutlineSegments` halo exactly (one geometry SSoT).
+   */
+  private renderHoverFrame(entity: EntityModel): void {
+    if (!('position' in entity) || !(entity.position as Point2D)) return;
+    const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
+    const pts = textBoxCornersWorld(dxfText).map((c) => this.worldToScreen(c));
+    if (pts.length < 4) return;
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
+    this.ctx.closePath();
+    this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+    this.ctx.lineWidth = 1;
+    this.ctx.shadowBlur = HOVER_HIGHLIGHT.TEXT.glowShadowBlur;
+    this.ctx.shadowColor = HOVER_HIGHLIGHT.TEXT.glowColor;
+    this.ctx.stroke();
+    this.ctx.restore();
   }
 
   private extractRichStyle(entity: EntityModel): TextRichStyle {
@@ -276,49 +307,17 @@ export class TextRenderer extends BaseEntityRenderer {
     // 🏢 ADR-102: Use centralized type guards
     const e = entity as Entity;
     if (!isTextEntity(e) && !isMTextEntity(e)) return false;
+    if (!('position' in entity) || !(entity.position as Point2D)) return false;
 
-    if (!('position' in entity) || !('text' in entity)) return false;
-
-    const position = entity.position as Point2D;
-    const text = entity.text as string;
-    const height = this.extractTextHeight(entity);
-    const rotation = ('rotation' in entity) ? entity.rotation as number : 0;
-
-    if (!position || !text) return false;
-
-    // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-    // ADR-557 — honour the TEXT X-scale so a horizontally-stretched glyph stays clickable.
-    const widthFactor = ('widthFactor' in entity && typeof entity.widthFactor === 'number' && entity.widthFactor > 0)
-      ? entity.widthFactor
-      : 1;
-    const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE * widthFactor;
-
-    // 🏢 FIX (2026-02-20): Rotation-aware hit testing.
-    // Transform the test point into the text's LOCAL coordinate system before
-    // checking the axis-aligned bounding box. Without this, vertical dimension
-    // text (rotated 90°) had a horizontal hit zone — catching clicks from far away.
-    let testPoint = point;
-    if (rotation !== 0) {
-      const rad = degToRad(-rotation); // Inverse rotation to go from world → local
-      const dx = point.x - position.x;
-      const dy = point.y - position.y;
-      testPoint = {
-        x: position.x + dx * Math.cos(rad) - dy * Math.sin(rad),
-        y: position.y + dx * Math.sin(rad) + dy * Math.cos(rad),
-      };
-    }
-
-    // Check if point is within text bounds (local coordinates, axis-aligned)
-    const minX = position.x;
-    const maxX = position.x + width;
-    const minY = position.y - height;
-    const maxY = position.y;
-
+    // ADR-557 Φ-attachment — test against the attachment-aware text box SSoT (the SAME box
+    // the grips / hover frame / 3D mesh / culling use). The box is rotation-aware and honours
+    // the TEXT X-scale (widthFactor) + MTEXT width, so the hit zone === the drawn glyphs.
+    const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
+    const box = resolveTextBox(dxfText);
+    // World → box-local: the click is inside iff |localX| ≤ halfWidth and |localY| ≤ halfLength.
+    const local = projectToLocalFrame({ x: point.x - box.center.x, y: point.y - box.center.y }, box.rotationDeg);
     const worldTolerance = tolerance / this.transform.scale;
-
-    return testPoint.x >= minX - worldTolerance &&
-           testPoint.x <= maxX + worldTolerance &&
-           testPoint.y >= minY - worldTolerance &&
-           testPoint.y <= maxY + worldTolerance;
+    return Math.abs(local.x) <= box.halfWidth + worldTolerance &&
+           Math.abs(local.y) <= box.halfLength + worldTolerance;
   }
 }

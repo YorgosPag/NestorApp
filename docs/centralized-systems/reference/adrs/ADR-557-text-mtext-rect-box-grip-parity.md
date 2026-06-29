@@ -2,11 +2,11 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 Slices 1-5 IMPLEMENTED (UNCOMMITTED) — browser-verified 2D + 3D grips (Giorgio 2026-06-30) |
+| **Status** | 🟢 Slices 1-5 + **Φ-attachment** IMPLEMENTED (UNCOMMITTED) — grips browser-verified· Φ-attachment 🔴 εκκρεμεί browser-verify (Giorgio 2026-06-30) |
 | **Date** | 2026-06-30 |
 | **Last Updated** | 2026-06-30 |
 | **Category** | Canvas & Rendering / Grips |
-| **Location** | `src/subapps/dxf-viewer/` (`bim/text/`, `hooks/grips/`, `rendering/{entities,ghost}/`, `core/commands/text/`) |
+| **Location** | `src/subapps/dxf-viewer/` (`bim/text/`, `hooks/grips/`, `rendering/{entities,ghost}/`, `core/commands/text/`, `bim-3d/{converters,grips}/`, `canvas-v2/dxf-canvas/`) |
 | **Author** | Claude (κατόπιν εντολής Giorgio) |
 | **Related ADRs** | **ADR-363** (rect-grip-engine + column adapter = το πρότυπο), ADR-436 (pad adapter), ADR-397 (glyph registry SSoT), ADR-507 §8 (`MergeableUpdateCommand`), ADR-040 (preview canvas), ADR-537 (3D raw-dxf grips), ADR-530 (glyph text render), ADR-108 (text-metrics ratios) |
 
@@ -73,11 +73,55 @@
 
 ---
 
+## Φ-attachment — Attachment-aware Text-Box SSoT (2026-06-30)
+
+### Πρόβλημα (Giorgio)
+«ΚΕΙΜΕΝΑ, ΦΩΤΕΙΝΟ ΠΛΑΙΣΙΟ HOVER ΚΑΙ ΛΑΒΕΣ δεν συμπίπτουν, ούτε 2Δ ούτε 3Δ· και είναι σε **διαφορετικές θέσεις** 2Δ vs 3Δ (όχι full parity)· το hover frame δεν εμφανίζεται καθόλου στο 2Δ.»
+
+### Root cause (διόρθωση του ευρήματος #2 πιο πάνω)
+Η `position` ενός κειμένου είναι το **attachment point** (9-point grid TL/TC/.../BR, MTEXT group 71) — **ΟΧΙ** πάντα κάτω-αριστερά. Το Slice-1 finding #2 κωδικοποίησε σταθερά **BL** (lower-left, box προς τα πάνω) βασισμένο στο σχόλιο του `dxf-text-3d.ts`. Αυτό είναι σωστό **μόνο** για baseline-left κείμενο· για κάθε άλλο attachment (π.χ. **BR** στο screenshot) η BL σύμβαση τοποθετεί το box σε λάθος μεριά. Επιπλέον υπήρχαν **4 ασύμφωνες πηγές** box, όλες attachment-blind:
+
+| Σημείο | Σύμβαση πριν | Σύμπτωμα |
+|---|---|---|
+| `textToRectFrame` (grips) | BL (lower-left, +x/+y) | λαβές σε λάθος μεριά |
+| `dxf-text-3d.ts` (3D mesh) | BL (lower-left, +x/+y) | 3D κείμενο σε λάθος θέση |
+| `TextRenderer.hitTest` | TL (top-left, +x/−y) | άλλη σύμβαση |
+| `getEntityBBox` (cull + 3D hover frame) | συμμετρικό ±h | λάθος, αλλά ορατό frame |
+
+Ο **2D renderer** είναι η μόνη σωστή πηγή: διαβάζει `textStyle.textAlign`(L/C/R) + `textStyle.textBaseline`(T/M/B) (παράγωγα attachment, `extractFirstRunStyle`). Default renderer = `top/left` (**TL**) → κείμενο **κάτω-δεξιά**, ενώ grips+3D (BL) → **πάνω-δεξιά** → εξ ου 2Δ(κάτω)≠3Δ(πάνω) **και** λαβές≠κείμενο ακόμη και χωρίς attachment.
+
+### Λύση — ΕΝΑ box SSoT, N consumers (reuse, μηδέν διπλότυπο)
+ΝΕΟ `bim/text/text-box.ts` (pure):
+- `resolveTextBox(entity): RectFrame` — attachment-aware centre. **Reuse** του υπάρχοντος `offsetForJustification` (`text-engine/layout/attachment-point.ts`, ADR-344 Φ3· **κανένα** re-implement του 9-point πίνακα). Mapping y-down→world y-up:
+  ```
+  {dx,dy} = offsetForJustification(just,{w,h})   // y-down → top-left corner
+  localCenter = { x: dx + w/2, y: -(dy + h/2) }   // → world y-up box centre
+  center = position + R(rotationDeg)·localCenter
+  ```
+  `just` = `textBaseline`{T,M,B}+`textAlign`{L,C,R}, default **TL**. Επαλήθευση: **BL** → (+w/2,+h/2) = ταυτόσημο με την παλιά συμπεριφορά (μηδέν regression baseline-left)· **TL** → (+w/2,−h/2)· **BR** → (−w/2,+h/2).
+- `textBoxToPosition(frame, entity)` — inverse με το ΙΔΙΟ `offsetForJustification` στα νέα w,h → resize/rotate κρατά καρφωμένο το attachment point (Revit/AutoCAD).
+- `textBoxCornersWorld` / `textBoxAABB` — rotation-aware γωνίες + AABB.
+- Width/height SSoT (`effectiveTextWidth`/`resolveBoxHeight`/`naturalTextWidth`) μετακινήθηκαν εδώ· `text-grips.ts` τα re-exports.
+
+**Consumers (όλοι διαβάζουν το ΕΝΑ box):**
+- `text-grips.ts` — `textToRectFrame` = re-export του `resolveTextBox`· `rectFrameToPosition` → `textBoxToPosition`.
+- `dxf-text-3d.ts` — anchor mesh στο `resolveTextBox().center` (plane size font-measured αμετάβλητο· μόνο re-center → 2Δ≡3Δ).
+- `TextRenderer.hitTest` — rotation-aware test στο SSoT box· **ΝΕΟ 2D hover frame** (stroke `textBoxCornersWorld`, `HOVER_HIGHLIGHT`) → το φωτεινό πλαίσιο εμφανίζεται πλέον και στο 2Δ.
+- `getEntityBBox` (`dxf-viewport-culling.ts`) → `textBoxAABB` (culling/pick = ό,τι ζωγραφίζεται).
+- `dxf-entity-outline.ts` (3D hover halo) → `textBoxCornersWorld` (rotation-aware = λαβές).
+
+**ΟΧΙ αλλαγή** στη rotation/zoom/scale math του `renderTextContent` (guard αρχείου τηρήθηκε — μόνο anchor/box/hitTest + additive hover frame).
+
+**Tests:** ΝΕΟ `bim/text/__tests__/text-box.test.ts` (9-point grid centre, default=TL, corners pin anchor, 2Δ≡3Δ move-grip===centre, inverse round-trip incl. rotation, AABB). Updated: `text-grips.test.ts` (`text()` helper ρητά BL), `dxf-wireframe-hit-test.test.ts` (νέο attachment-aware bbox). 83 jest GREEN.
+
+---
+
 ## Boy-Scout / γνωστά εκκρεμή
 - `text-engine/interaction/TextGripGeometry.ts` + `TextGripHandler.ts` = ασύνδετο παλιό σύστημα (4 γωνίες+move+rotation+mirror, δική του math). **Μερικώς αντικαθιστούμενο** — να αποσυρθεί όταν επιβεβαιωθεί zero-usage.
-- `TextRenderer.hitTest` + `entity-bounds.ts` κρατούν ακόμα τη **down** σύμβαση Y (η διόρθωση μπήκε μόνο στις λαβές). Αν το κίτρινο πλαίσιο επιλογής φανεί μετατοπισμένο vs λαβές → ενοποίηση σε lower-left σε επόμενο γύρο (επηρεάζει selection/zoom/snap → ξεχωριστή απόφαση).
+- ✅ **ΛΥΘΗΚΕ (Φ-attachment):** `TextRenderer.hitTest` + `getEntityBBox` ενοποιήθηκαν στο attachment-aware `text-box.ts` SSoT (τέλος της down/lower-left/±h ασυμφωνίας· hover frame πλέον ορατό στο 2Δ).
 
 ---
 
 ## Changelog
+- **2026-06-30 (Φ-attachment)** — Attachment-aware text-box SSoT. ΝΕΟ `bim/text/text-box.ts` (`resolveTextBox`/`textBoxToPosition`/`textBoxCornersWorld`/`textBoxAABB`) reuse `offsetForJustification` (ADR-344). Ενοποίησε 4 ασύμφωνες box πηγές (grips/3D mesh/hitTest/getEntityBBox) σε ΕΝΑ· νέο 2D hover frame· grip box + 3D mesh + hitTest + cull + 3D outline όλα attachment-aware → λαβές=κείμενο=hover frame, 2Δ≡3Δ. 83 jest GREEN. 🔴 εκκρεμεί browser-verify (BR/TL/MC/rotation) + commit (Giorgio).
 - **2026-06-30** — Slices 1-5 υλοποιήθηκαν (UNCOMMITTED). Browser-verified: 10 λαβές σωστά τοποθετημένες 2D + 3D (Giorgio). Renumber ADR-551→**557** (collision με census ADR στο shared tree). Εκκρεμεί commit (Giorgio).

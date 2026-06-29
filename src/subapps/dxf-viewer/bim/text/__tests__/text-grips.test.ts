@@ -19,8 +19,15 @@ import {
 } from '../text-grips';
 
 // CHAR_WIDTH_MONOSPACE = 0.6 (TEXT_METRICS_RATIOS). "DDD" (3) × height 10 × 0.6 = 18.
+// ADR-557 Φ-attachment: the box is now attachment-aware. These adapter tests pin the
+// classic baseline-left case explicitly (`textStyle` BL → box extends +x/+y, the old
+// default), so the resize/rotation/patch math is verified on a known box; the full
+// attachment matrix (TL..BR, 2D≡3D) is covered by `text-box.test.ts`.
 function text(extra: Partial<DxfText> = {}): DxfText {
-  return { id: 't1', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'DDD', height: 10, ...extra };
+  return {
+    id: 't1', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'DDD', height: 10,
+    textStyle: { textAlign: 'left', textBaseline: 'bottom' }, ...extra,
+  };
 }
 
 const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
@@ -158,7 +165,7 @@ describe('applyTextGripDrag — corner resize (opposite corner fixed)', () => {
 describe('applyTextGripDrag — rotation (pivot = bbox-centre)', () => {
   it('sweeps rotation by the cursor angle and holds the centre fixed', () => {
     const t = text();
-    const center = textToRectFrame(t).center; // (9, -5)
+    const center = textToRectFrame(t).center; // BL box → (9, 5)
     // start angle 0° (east of centre), current 90° (north of centre) → sweep +90°.
     const start = { x: center.x + 10, y: center.y };
     const currentPos = { x: center.x, y: center.y + 10 };

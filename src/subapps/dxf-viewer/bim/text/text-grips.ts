@@ -31,8 +31,13 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, TextGripKind } from '../../hooks/useGripMovement';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { rotateVector } from '../grips/grip-math';
+import {
+  resolveTextBox,
+  textBoxToPosition,
+  effectiveTextWidth,
+  naturalTextWidth,
+} from './text-box';
 import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
   rectCornerWorld,
@@ -49,7 +54,6 @@ import {
 } from '../grips/rect-grip-engine';
 
 const RAD_TO_DEG = 180 / Math.PI;
-const CHAR_WIDTH = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
 /**
  * Minimum box dimension (world units) — the engine clamp floor so a resize can
@@ -86,50 +90,14 @@ function isMTextBox(entity: DxfText): boolean {
   return entity.width != null;
 }
 
-/** Fallback height (world units) when a text carries no usable height (AutoCAD DIMTXT default). */
-const DEFAULT_TEXT_HEIGHT = 2.5;
-
-/** Natural (widthFactor = 1) rendered width of a simple TEXT at a given height. */
-function naturalTextWidth(text: string | undefined | null, height: number): number {
-  const len = text ? text.length : 0;
-  return Math.max(len, 1) * height * CHAR_WIDTH;
-}
-
-/** A finite, positive box height (world units) — guards undefined/0/NaN at the source. */
-function resolveBoxHeight(text: DxfText): number {
-  return Number.isFinite(text.height) && text.height > 0 ? text.height : DEFAULT_TEXT_HEIGHT;
-}
-
 /**
- * Effective grip-box width (world units): the MTEXT frame `width` when carried,
- * else the simple-TEXT `len·height·CHAR_WIDTH·widthFactor`. Robust to a missing
- * flat `text` (content lives in a `textNode` on some scene shapes) — never throws.
+ * The attachment-aware text-box geometry lives in the `text-box.ts` SSoT
+ * (`resolveTextBox` / `textBoxToPosition` — they honour `textStyle.textAlign/
+ * textBaseline`, ADR-557 Φ-attachment). Re-exported here so existing callers + tests
+ * keep importing `textToRectFrame` / `effectiveTextWidth` from `text-grips`.
  */
-export function effectiveTextWidth(text: DxfText): number {
-  if (text.width != null && text.width > 0) return text.width;
-  return naturalTextWidth(text.text, resolveBoxHeight(text)) * (text.widthFactor ?? 1);
-}
-
-/** `DxfText` → bbox-centre `RectFrame` (world units). See module header for geometry. */
-export function textToRectFrame(text: DxfText): RectFrame {
-  const w = effectiveTextWidth(text);
-  const h = resolveBoxHeight(text);
-  const rotationDeg = text.rotation ?? 0;
-  // `position` = lower-left; the box extends +x (right) and +y (UP) → centre offset +h/2.
-  const rel = rotateVector({ x: w / 2, y: h / 2 }, rotationDeg);
-  return {
-    center: { x: text.position.x + rel.x, y: text.position.y + rel.y },
-    rotationDeg,
-    halfWidth: w / 2,
-    halfLength: h / 2,
-  };
-}
-
-/** Inverse of `textToRectFrame`'s centre derivation: bbox-centre → LOWER-LEFT `position`. */
-function rectFrameToPosition(frame: RectFrame): Point2D {
-  const rel = rotateVector({ x: frame.halfWidth, y: frame.halfLength }, frame.rotationDeg);
-  return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };
-}
+export { effectiveTextWidth };
+export { resolveTextBox as textToRectFrame };
 
 function textResizeLimits(): RectResizeLimits {
   const half = MIN_TEXT_DIMENSION_WORLD / 2;
@@ -159,7 +127,7 @@ const EDGE_MAP: Partial<Record<TextGripKind, RectEdge>> = {
  * centre and bottom edge (`rotationHandleMidwayOffset`, same policy as the column).
  */
 export function getTextGrips(entity: DxfText): GripInfo[] {
-  const frame = textToRectFrame(entity);
+  const frame = resolveTextBox(entity);
   const { id } = entity;
   const rotOffsetY = rotationHandleMidwayOffset(frame.halfLength * 2);
   const grips: GripInfo[] = [
@@ -181,7 +149,7 @@ export function getTextGrips(entity: DxfText): GripInfo[] {
 function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
   const newWidth = newFrame.halfWidth * 2;
   const newHeight = newFrame.halfLength * 2;
-  const patch: TextTransformPatch = { position: rectFrameToPosition(newFrame), height: newHeight };
+  const patch: TextTransformPatch = { position: textBoxToPosition(newFrame, entity), height: newHeight };
   if (isMTextBox(entity)) {
     patch.width = newWidth;
   } else {
@@ -211,7 +179,7 @@ function applyTextRotation(frame: RectFrame, input: TextGripDragInput): TextTran
     halfWidth: frame.halfWidth,
     halfLength: frame.halfLength,
   };
-  return { rotation: newFrame.rotationDeg, position: rectFrameToPosition(newFrame) };
+  return { rotation: newFrame.rotationDeg, position: textBoxToPosition(newFrame, entity) };
 }
 
 /**
@@ -224,7 +192,7 @@ export function applyTextGripDrag(kind: TextGripKind, input: TextGripDragInput):
   if (kind === 'text-move') {
     return { position: { x: entity.position.x + delta.x, y: entity.position.y + delta.y } };
   }
-  const frame = textToRectFrame(entity);
+  const frame = resolveTextBox(entity);
   if (kind === 'text-rotation') return applyTextRotation(frame, input);
   const corner = CORNER_MAP[kind];
   if (corner) return framePatch(entity, applyRectCornerDrag(frame, corner, delta, textResizeLimits(), input.ortho));

@@ -21,6 +21,9 @@
 
 import type { DxfEntityUnion } from './dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+// ADR-557 Φ-attachment — attachment-aware text-box SSoT (same box the grips + hover
+// frame use), so culling / picking match exactly what the renderer draws.
+import { textBoxAABB } from '../../bim/text/text-box';
 
 interface BBox {
   minX: number;
@@ -77,15 +80,10 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
       return { minX, minY, maxX, maxY };
     }
     case 'text': {
-      // Text width is renderer-dependent; use a generous estimate based on
-      // height × text length so we never cull a partially-visible glyph.
-      const w = entity.height * Math.max(1, entity.text?.length ?? 0) * 0.7;
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y - entity.height,
-        maxX: entity.position.x + w,
-        maxY: entity.position.y + entity.height,
-      };
+      // ADR-557 Φ-attachment — AABB of the attachment-aware text box SSoT (honours
+      // textStyle align/baseline + rotation + widthFactor), the SAME box the grips,
+      // hover frame and 3D mesh use → culling / picking match the drawn glyphs.
+      return textBoxAABB(entity);
     }
     case 'angle-measurement': {
       const xs = [entity.vertex.x, entity.point1.x, entity.point2.x];
