@@ -2,7 +2,11 @@
 
 **Ημερομηνία:** 2026-06-30 (νέα/καθαρή συνεδρία)
 **Subapp:** DXF Viewer (`src/subapps/dxf-viewer`)
-**Status:** 🟢 PLAN LOCKED — audit ΟΛΟΚΛΗΡΩΘΗΚΕ, αποφάσεις κλειδωμένες. Ξεκίνα ΚΑΤΕΥΘΕΙΑΝ κώδικα (ΟΧΙ ξανά audit). Model = Opus (cross-cutting).
+**Status:** ✅ ΥΛΟΠΟΙΗΘΗΚΕ (Slices 1-5, UNCOMMITTED 2026-06-30) → **ADR-557** (renumber από 551· collision census στο shared tree). Browser-verified 2D+3D 10 λαβές σωστά (Giorgio). 54 jest GREEN. Πλήρης τεκμηρίωση + αρχεία: `ADR-557-text-mtext-rect-box-grip-parity.md`.
+> ⚠️ ΔΥΟ διορθώσεις πέρα από το αρχικό πλάνο (δες ADR-557 §Context): (1) **δύο grip συστήματα** — το 2D VISUAL render περνά από `BaseEntityRenderer.getGrips()` per-entity, ΟΧΙ μόνο `computeDxfEntityGrips`· (2) **λάθος σύμβαση bbox** — το `entity-bounds.ts` §7 ήταν top-left/down· η πραγματική άγκυρα είναι **lower-left/up** (3D converter authoritative). Εκκρεμεί: commit (Giorgio)· προαιρετική ενοποίηση hitTest/bounds σε lower-left.
+
+---
+**(αρχικό LOCKED PLAN — ιστορικό):** 🟢 audit ΟΛΟΚΛΗΡΩΘΗΚΕ, αποφάσεις κλειδωμένες. Model = Opus (cross-cutting).
 **Αντικαθιστά:** `HANDOFF_2026-06-30_text-entity-rect-grips-parity-with-wall.md` (εκείνο ήταν NOT STARTED· οι οδηγίες audit του είναι πλέον DONE εδώ).
 
 ---

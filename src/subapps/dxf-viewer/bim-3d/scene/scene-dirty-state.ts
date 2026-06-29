@@ -24,6 +24,28 @@ export interface SceneDirtyState {
 }
 
 /**
+ * ADR-040 Phase XXIII — snapshot the five render-gating flags from the manager's
+ * live subsystems. Reads `.isAnimating`/`.isActive` here (not at the call site) so
+ * ThreeJsSceneManager keeps a one-line wrapper and stays under the 500-line cap (N.7.1).
+ * Structural param types avoid importing the heavy Three.js subsystem classes.
+ */
+export function buildSceneDirtyState(
+  isInteracting: boolean,
+  viewport: { readonly isAnimating: boolean },
+  animationManager: { readonly isAnimating: boolean },
+  pathTracerRenderer: { readonly isActive: boolean },
+  explicitDirty: boolean,
+): SceneDirtyState {
+  return {
+    isInteracting,
+    viewportAnimating: viewport.isAnimating,
+    animationManagerActive: animationManager.isAnimating,
+    pathTracerActive: pathTracerRenderer.isActive,
+    explicitDirty,
+  };
+}
+
+/**
  * Returns true when the BIM 3D scene must be redrawn this frame.
  * Five-input OR — order chosen for short-circuit evaluation against the
  * most common case (user input).

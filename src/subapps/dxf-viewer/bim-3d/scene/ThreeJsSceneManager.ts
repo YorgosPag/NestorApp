@@ -5,6 +5,7 @@ import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { DxfBackdropCache } from './dxf-backdrop-cache';
 import { BimSceneLayer } from './BimSceneLayer';
+import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -31,7 +32,7 @@ import type { CanonicalViewId, ProjectionMode } from '../viewport/viewport-types
 import { createAnimationManager } from '../viewport/animation-manager'; import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
-import { applyViewportResize, applyDevicePixelRatioSync, type SceneResizeDeps } from './scene-manager-resize';
+import { applyViewportResize, applyDevicePixelRatioSync, buildSceneResizeDeps, type SceneResizeDeps } from './scene-manager-resize';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
@@ -41,7 +42,7 @@ import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion'
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
 import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
-import { isSceneDirtyFromState } from './scene-dirty-state';
+import { isSceneDirtyFromState, buildSceneDirtyState } from './scene-dirty-state';
 import { recordRender as diagRecordRender, recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import {
@@ -51,7 +52,7 @@ import {
   initBackgroundModeSubscription,
   type SyncDxfOverlayDeps,
 } from './scene-manager-actions';
-import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
+import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, buildBimSyncDeps, buildSceneSyncSideEffects, buildSyncDxfOverlayDeps, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import type { DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
 
@@ -63,6 +64,7 @@ export class ThreeJsSceneManager {
   readonly scene: THREE.Scene;
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
+  private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
   // ADR-538 hover silhouette / ADR-539 per-face overlays (Cinema4D «Polygon Mode»).
@@ -154,6 +156,13 @@ export class ThreeJsSceneManager {
     this.faceHoverHighlighter = new FaceSelectionHighlighter(this.bimLayer.group, 0xffd400, 0.3); // ADR-539 Φ2 hover
     this.poi = createPoi();
     this.scene.add(this.poi.root);
+    // ADR-558 — Cinema-4D-style ground grid. Registers itself as a post-FX 'underlay' overlay
+    // (AO-immune, depth-tested → occluded by the building). Window follows the orbit target.
+    this.gridFloor = new Cinema4DGridFloor(
+      this.scene,
+      () => this.viewport.camera,
+      () => this.viewport.target,
+    );
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
     this.animationManager = createAnimationManager();
     // Phase 4.4: instantiated once, shared by ViewCube and keyboard dispatcher.
@@ -275,9 +284,7 @@ export class ThreeJsSceneManager {
 
   /** ADR-040 Phase XXIII — render-gating state (SSoT for isSceneDirty + ADR-549 diag sample). */
   private dirtyState() {
-    return { isInteracting: this.isInteracting, viewportAnimating: this.viewport.isAnimating,
-      animationManagerActive: this.animationManager.isAnimating,
-      pathTracerActive: this.pathTracerRenderer.isActive, explicitDirty: this._sceneDirty };
+    return buildSceneDirtyState(this.isInteracting, this.viewport, this.animationManager, this.pathTracerRenderer, this._sceneDirty);
   }
 
   /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
@@ -328,16 +335,12 @@ export class ThreeJsSceneManager {
 
   /** Shared sync deps (BIM layer + selection/focus/render subsystems). */
   private bimSyncDeps() {
-    return { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
-      hoverHighlighter: this.hoverHighlighter, keyboardFocusManager: this.keyboardFocusManager,
-      pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController };
+    return buildBimSyncDeps(this.bimLayer, this.selectionHighlighter, this.hoverHighlighter, this.keyboardFocusManager, this.pathTracerRenderer, this.sectionController);
   }
 
   /** ADR-366 §B.5 — post-sync side-effect subsystems handed to scene-manager-sync. */
   private syncSideEffects(): SceneSyncSideEffects {
-    return { faceHighlighter: this.faceHighlighter, faceHoverHighlighter: this.faceHoverHighlighter,
-      ssaoModulator: this.ssaoModulator, shadowModulator: this.shadowModulator,
-      camera: this.viewport.camera, markDirty: () => this.markSceneDirty() };
+    return buildSceneSyncSideEffects(this.faceHighlighter, this.faceHoverHighlighter, this.ssaoModulator, this.shadowModulator, this.viewport, () => this.markSceneDirty());
   }
 
   /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
@@ -368,14 +371,11 @@ export class ThreeJsSceneManager {
 
   /** Shared DXF overlay deps (converter + path-tracer + section + viewport). */
   private dxfOverlayDeps(): SyncDxfOverlayDeps {
-    return { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
-      sectionController: this.sectionController, viewport: this.viewport };
+    return buildSyncDxfOverlayDeps(this.dxfConverter, this.pathTracerRenderer, this.sectionController, this.viewport);
   }
 
   /** First-frame camera-fit latch (read + set `initialCameraFitDone`). */
-  private dxfFitState(): DxfOverlayFitState {
-    return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } };
-  }
+  private dxfFitState(): DxfOverlayFitState { return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } }; }
 
   /** Replace (plain click) or toggle (ADR-402 Φ-C Shift+click) one entity in the selection; null clears. */
   selectBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'replace'); }
@@ -467,14 +467,14 @@ export class ThreeJsSceneManager {
 
   /** Shared renderer-sizing deps for the resize helpers (scene-manager-resize). */
   private resizeDeps(): SceneResizeDeps {
-    return { renderer: this.renderer, viewport: this.viewport, viewCube: this.viewCube,
-      ssaoModulator: this.ssaoModulator, markDirty: () => this.markSceneDirty() };
+    return buildSceneResizeDeps(this.renderer, this.viewport, this.viewCube, this.ssaoModulator, () => this.markSceneDirty());
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); // ADR-539 + ADR-516 Phase 2 — release face overlays + backdrop cache.
+    this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({

@@ -1,0 +1,62 @@
+/**
+ * cinema4d-grid-config.ts — Cinema-4D-style 3D viewport ground grid (ADR-558).
+ *
+ * Colour SSoT:
+ *  - major / minor grid colours are SHARED with the 2D grid through the design-tokens CSS
+ *    vars `--canvas-grid-cinema4d-major` / `--canvas-grid-cinema4d-minor` (#414141 / #4B4B4B),
+ *    resolved live via {@link resolveCssVarColor} so a theme switch moves 2D + 3D together.
+ *  - axis / horizon colours are the C4D R15 dark-scheme VIEWCOLORS (source of truth:
+ *    `…\\MAXON\\CINEMA 4D R15\\resource\\schemes\\Dark\\dark.col`, VIEWCOLORS section). They are
+ *    not yet design tokens, so they live here as named constants citing that source.
+ *
+ * Dynamic model: per-fragment DECADE LOD (Blender / Maya / Ben Golus "pristine grid"). The shader
+ * derives the line spacing from the screen-space derivative PER PIXEL, so the grid subdivides
+ * continuously with zoom AND auto-coarsens toward the horizon under camera tilt — exactly the C4D
+ * "Dynamic Grid 1..10" behaviour. (The 2D ortho single-scale cascade cannot express this; see ADR.)
+ *
+ * @module bim-3d/scene/grid/cinema4d-grid-config
+ */
+
+// ── Colours ──────────────────────────────────────────────────────────────────
+
+/** Minor-grid colour — token `canvas.grid.cinema4d-minor` (#4B4B4B, VIEWCOLOR_GRID_MINOR 75,75,75). */
+export const GRID3D_MINOR_COLOR_VAR = 'var(--canvas-grid-cinema4d-minor)';
+export const GRID3D_MINOR_COLOR_FALLBACK = '#4B4B4B';
+/** Major-grid colour — token `canvas.grid.cinema4d-major` (#414141, VIEWCOLOR_GRID_MAJOR 65,65,65).
+ *  NOTE C4D: major is DARKER than minor; the visual weight comes from {@link GRID3D_MAJOR_LINE_PX}. */
+export const GRID3D_MAJOR_COLOR_VAR = 'var(--canvas-grid-cinema4d-major)';
+export const GRID3D_MAJOR_COLOR_FALLBACK = '#414141';
+
+/** World X axis — VIEWCOLOR_XAXIS (229,45,45). */
+export const GRID3D_AXIS_X_COLOR = '#E52D2D';
+/** World Z axis (north = −Z) — VIEWCOLOR_ZAXIS (45,45,229). */
+export const GRID3D_AXIS_Z_COLOR = '#2D2DE5';
+/** Horizon band the grid dissolves into — VIEWCOLOR_HORIZON (150,150,150). */
+export const GRID3D_HORIZON_COLOR = '#969696';
+
+// ── Geometry / decade LOD / fade (world metres unless noted) ──────────────────
+
+/** Ground-plane half-size (m). Bounded but large; the distance fog dissolves it before the edge,
+ *  and the mesh re-centres on the camera target each frame so the window always covers the view. */
+export const GRID3D_PLANE_HALF_SIZE_M = 2000;
+
+/** Decade anchor cell (m). The per-fragment LOD multiplies this by powers of ten, so the visible
+ *  minor spacing is always a clean 1 / 10 / 100 … m (or 0.1 / 0.01 m when zoomed in). C4D decade model. */
+export const GRID3D_BASE_CELL_M = 1;
+/** Minor decade ratio — C4D "Major Lines Every nth" = 10 (major line every 10th minor). Decade grid. */
+export const GRID3D_MAJOR_EVERY = 10;
+/** Minimum on-screen px for the finest minor cell before the LOD subdivides one decade finer. */
+export const GRID3D_MINOR_TARGET_PX = 14;
+
+/** Line widths (screen px, derivative AA). Thin — C4D uses ~1px lines; major only slightly bolder. */
+export const GRID3D_MINOR_LINE_PX = 1.0;
+export const GRID3D_MAJOR_LINE_PX = 1.3;
+export const GRID3D_AXIS_LINE_PX = 1.4;
+
+/** Distance fog → horizon (ΟΧΙ infinite): grid fades between K_START·d and K_END·d from the camera
+ *  target (d = camera→target). Dynamism comes from the per-fragment LOD, NOT from this fog. */
+export const GRID3D_FADE_START_K = 6;
+export const GRID3D_FADE_END_K = 30;
+
+/** Peak grid opacity (subtle, C4D-like — lines sit just above the grey studio background). */
+export const GRID3D_MAX_OPACITY = 0.9;

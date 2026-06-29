@@ -16,6 +16,17 @@ export interface SceneResizeDeps {
   markDirty: () => void;
 }
 
+/** Assemble the renderer-sizing deps bundle from the manager's subsystems (keeps the manager wrapper one line, N.7.1). */
+export function buildSceneResizeDeps(
+  renderer: SceneResizeDeps['renderer'],
+  viewport: SceneResizeDeps['viewport'],
+  viewCube: SceneResizeDeps['viewCube'],
+  ssaoModulator: SceneResizeDeps['ssaoModulator'],
+  markDirty: () => void,
+): SceneResizeDeps {
+  return { renderer, viewport, viewCube, ssaoModulator, markDirty };
+}
+
 /** ResizeObserver-driven viewport resize (aspect + renderer + SSAO + ViewCube + edge resolution). */
 export function applyViewportResize(deps: SceneResizeDeps, width: number, height: number): void {
   if (width === 0 || height === 0) return;

@@ -38,6 +38,43 @@ export interface SceneSyncSideEffects {
   readonly markDirty: () => void;
 }
 
+/**
+ * Assemble the shared BIM-sync deps bundle from the manager's subsystems. Indexed-access
+ * param types (no class imports) keep the manager's wrapper a single line (N.7.1).
+ */
+export function buildBimSyncDeps(
+  bimLayer: SyncBimEntitiesDeps['bimLayer'],
+  selectionHighlighter: SyncBimEntitiesDeps['selectionHighlighter'],
+  hoverHighlighter: SyncBimEntitiesDeps['hoverHighlighter'],
+  keyboardFocusManager: SyncBimEntitiesDeps['keyboardFocusManager'],
+  pathTracerRenderer: SyncBimEntitiesDeps['pathTracerRenderer'],
+  sectionController: SyncBimEntitiesDeps['sectionController'],
+): SyncBimEntitiesDeps {
+  return { bimLayer, selectionHighlighter, hoverHighlighter, keyboardFocusManager, pathTracerRenderer, sectionController };
+}
+
+/** Assemble the post-sync side-effect bundle; derives `camera` from the viewport. */
+export function buildSceneSyncSideEffects(
+  faceHighlighter: SceneSyncSideEffects['faceHighlighter'],
+  faceHoverHighlighter: SceneSyncSideEffects['faceHoverHighlighter'],
+  ssaoModulator: SceneSyncSideEffects['ssaoModulator'],
+  shadowModulator: SceneSyncSideEffects['shadowModulator'],
+  viewport: { readonly camera: THREE.Camera },
+  markDirty: () => void,
+): SceneSyncSideEffects {
+  return { faceHighlighter, faceHoverHighlighter, ssaoModulator, shadowModulator, camera: viewport.camera, markDirty };
+}
+
+/** Assemble the DXF-overlay deps bundle (converter + path-tracer + section + viewport). */
+export function buildSyncDxfOverlayDeps(
+  dxfConverter: SyncDxfOverlayDeps['dxfConverter'],
+  pathTracerRenderer: SyncDxfOverlayDeps['pathTracerRenderer'],
+  sectionController: SyncDxfOverlayDeps['sectionController'],
+  viewport: SyncDxfOverlayDeps['viewport'],
+): SyncDxfOverlayDeps {
+  return { dxfConverter, pathTracerRenderer, sectionController, viewport };
+}
+
 /** ADR-539 — re-attach both per-face overlays after the geometry rebuild. */
 function refreshFaceOverlays(fx: SceneSyncSideEffects): void {
   fx.faceHighlighter.refresh();
