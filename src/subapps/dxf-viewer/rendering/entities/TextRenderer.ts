@@ -44,6 +44,12 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // Reuses the text-engine font SSoT — resolver + glyph-path cache; CSS fillText
 // stays as the fallback when no loaded font matches the entity's family.
 import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont } from '../../text-engine/fonts';
+// ADR-551 — 2D grip render parity: the SAME 10-grip set the interaction +
+// 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
+// squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
+import { getTextGrips } from '../../bim/text/text-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 
 
 // ADR-344 Phase 6.E: rich text style shape
@@ -226,28 +232,25 @@ export class TextRenderer extends BaseEntityRenderer {
     // 🏢 ADR-102: Use centralized type guards
     const e = entity as Entity;
     if (!isTextEntity(e) && !isMTextEntity(e)) return [];
+    if (!('position' in entity) || !(entity.position as Point2D)) return [];
 
-    const grips: GripInfo[] = [];
-    // ✅ ENTERPRISE FIX: Use type guard for safe property access
-    if (!('position' in entity)) return [];
-    const position = entity.position as Point2D;
-    
-    if (!position) return grips;
-    
-    // Position grip
-    grips.push({
-      id: `${entity.id}-position`,
-      entityId: entity.id,
-      type: 'vertex',
-      gripIndex: 0,
-      position: position,
+    // ADR-551 — FULL rect-box parity with the interaction + 3D paths: render the
+    // SAME 10 grips `computeDxfEntityGrips` emits (4 corners + 4 edge midpoints +
+    // centre MOVE + rotation), mapped to the render `GripInfo` shape (mirror
+    // `ColumnRenderer.getGrips`). `extractTextHeight` guarantees a positive height
+    // for the box even when the flat `height` is absent.
+    const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
+    return getTextGrips(dxfText).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
       isVisible: true,
-      isHovered: false,
-      isSelected: false,
-      gripType: 'vertex' // ✅ ENTERPRISE FIX: Backward compatibility alias
-    });
-    
-    return grips;
+      gripIndex: g.gripIndex,
+      // ADR-551 — centre → 4-arrow MOVE glyph, rotation → curved-arrow glyph (shared
+      // registry SSoT, mirror Column/Wall); corners + edges stay square.
+      shape: gripGlyphShape(g.textGripKind),
+    }));
   }
 
   /**

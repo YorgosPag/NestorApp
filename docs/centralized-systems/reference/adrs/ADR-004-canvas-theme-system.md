@@ -61,3 +61,13 @@ grips) are intentionally NOT overridden — the app keeps its own deliberate pal
   envmap-generator.ts. 9 jest. ⚠️ Live-refresh note: 2D background + grid update on theme
   switch (CSS / context); the 3D studio backdrop repaints on the next 3D lighting/preset
   re-apply (envmap cache keys on base+stops). 🔴 browser-verify + commit.
+- **2026-06-30** (same change, SSoT audit pass) — removed 3 duplicates rather than add them:
+  (a) NEW `readRootCssVar(name, fallback)` primitive — the SINGLE `:root` custom-property read;
+  `resolveDxfCanvasBackgroundHex` + `resolveDxfCanvasGradientStops` + `resolveCssVarColor` now
+  all delegate to it (was 3× inline `getComputedStyle`). (b) `studio-background-texture.explicitToStops`
+  reuses `color-math` `parseHex` + `mixHex` (ADR-509) instead of private THREE colour-mean math.
+  (c) PRE-EXISTING duplicate folded: `axis-cut-line-renderer.resolveCanvasBgColor` was an inline
+  re-read of `--canvas-background-dxf` → now delegates to `resolveDxfCanvasBackgroundHex`; its
+  `--viewcube-accent` read uses `readRootCssVar`. ⏳ FLAGGED (pending-ratchet): ~6 other files
+  (debug/modal/a11y/eyedropper) read `:root` vars inline for non-theme purposes — candidate to
+  migrate to `readRootCssVar` + a registry guard, but out of this task's canvas-theme domain.

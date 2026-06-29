@@ -18,6 +18,7 @@ import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/Co
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { AxisCutKey, AxisCutSetting } from '../../config/bim-render-settings-types';
 import { getAxisCutGripRect } from './axis-cut-grip';
+import { readRootCssVar, resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 const SECTION_LINE_WIDTH = 1.5;
 const SECTION_LINE_DASH: readonly number[] = [10, 6];
@@ -28,8 +29,6 @@ const GRIP_RADIUS = 3;
 const FADE_ALPHA = 0.82;
 /** Fallback for SSR / missing token — the ViewCube accent default (globals.css). */
 const SECTION_ACCENT_FALLBACK = 'hsl(33 100% 50%)';
-/** Fallback for SSR / missing token — AutoCAD-style black canvas (color-config.ts). */
-const CANVAS_BG_FALLBACK = '#000000';
 
 /**
  * Section-line colour = the SAME ViewCube accent the cut sliders use
@@ -38,19 +37,17 @@ const CANVAS_BG_FALLBACK = '#000000';
  * when a cut is active (the caller early-returns otherwise), so it costs nothing idle.
  */
 function resolveSectionAccentColor(): string {
-  if (typeof document === 'undefined') return SECTION_ACCENT_FALLBACK;
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--viewcube-accent').trim();
+  const v = readRootCssVar('--viewcube-accent');
   return v ? `hsl(${v})` : SECTION_ACCENT_FALLBACK;
 }
 
 /**
- * Canvas background colour (`--canvas-background-dxf`) — the hue the fade rect blends the
- * cut-away side toward, so it fades to "empty canvas" in any theme. No hardcoded hex.
+ * Canvas background colour — the hue the fade rect blends the cut-away side toward, so it
+ * fades to "empty canvas" in any theme. Reuses the `--canvas-background-dxf` SSoT resolver
+ * (was an inline duplicate of `resolveDxfCanvasBackgroundHex`).
  */
 function resolveCanvasBgColor(): string {
-  if (typeof document === 'undefined') return CANVAS_BG_FALLBACK;
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--canvas-background-dxf').trim();
-  return v || CANVAS_BG_FALLBACK;
+  return resolveDxfCanvasBackgroundHex();
 }
 
 /** Render the active X/Y section fade + lines + arrows + handles. No-op when both off. */

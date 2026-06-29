@@ -612,6 +612,19 @@ export type CanvasThemeKey = keyof typeof CANVAS_THEME;
 export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
 
 /**
+ * SSoT primitive — read a CSS custom property from `:root` (trimmed). Returns `fallback`
+ * off-DOM (SSR / tests / workers) or when the variable is unset/empty. The SINGLE place that
+ * touches `getComputedStyle(documentElement).getPropertyValue` for theme tokens, so every
+ * theme-colour resolver below — and external consumers (e.g. `axis-cut-line-renderer`) —
+ * share one read path instead of re-inlining it.
+ */
+export function readRootCssVar(name: string, fallback = ''): string {
+  if (typeof document === 'undefined') return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+/**
  * ADR-446 §2 — resolve the LIVE 2D DXF canvas background colour as a concrete hex.
  *
  * `CANVAS_THEME.DXF_CANVAS` is the CSS variable `--canvas-background-dxf` (default
@@ -621,11 +634,7 @@ export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
  * both views together. Falls back to the token default off-DOM (SSR / tests / workers).
  */
 export function resolveDxfCanvasBackgroundHex(): string {
-  if (typeof document === 'undefined') return UI_COLORS_BASE.CANVAS_BACKGROUND;
-  const v = getComputedStyle(document.documentElement)
-    .getPropertyValue('--canvas-background-dxf')
-    .trim();
-  return v || UI_COLORS_BASE.CANVAS_BACKGROUND;
+  return readRootCssVar('--canvas-background-dxf', UI_COLORS_BASE.CANVAS_BACKGROUND);
 }
 
 /** Explicit per-theme vertical canvas gradient stops (top→bottom). */
@@ -647,10 +656,8 @@ export interface CanvasGradientStops {
  * on the SAME two stops (a theme switch moves both views together).
  */
 export function resolveDxfCanvasGradientStops(): CanvasGradientStops | null {
-  if (typeof document === 'undefined') return null;
-  const root = getComputedStyle(document.documentElement);
-  const top = root.getPropertyValue('--canvas-gradient-top').trim();
-  const bottom = root.getPropertyValue('--canvas-gradient-bottom').trim();
+  const top = readRootCssVar('--canvas-gradient-top');
+  const bottom = readRootCssVar('--canvas-gradient-bottom');
   return top && bottom ? { top, bottom } : null;
 }
 
@@ -658,13 +665,12 @@ export function resolveDxfCanvasGradientStops(): CanvasGradientStops | null {
  * Resolve a concrete hex from a `var(--name)` reference (or pass a hex through). Used by the
  * canvas-theme switch to read a per-theme PALETTE token (e.g. `--canvas-grid-cinema4d-major`)
  * into a concrete colour for consumers that cannot use CSS variables — notably Canvas2D
- * `ctx.strokeStyle` (the grid renderer). Off-DOM (SSR/tests) returns the input unchanged.
+ * `ctx.strokeStyle` (the grid renderer). Reuses {@link readRootCssVar}; a non-`var()` input
+ * (a plain hex) passes through unchanged.
  */
 export function resolveCssVarColor(ref: string): string {
   const match = ref.match(/^var\((--[\w-]+)\)$/);
-  if (!match || typeof document === 'undefined') return ref;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
-  return v || ref;
+  return match ? readRootCssVar(match[1], ref) : ref;
 }
 
 // ============================================================================

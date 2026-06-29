@@ -17,6 +17,7 @@
 
 import * as THREE from 'three';
 import type { CanvasGradientStops } from '../../config/color-config';
+import { parseHex, mixHex } from '../../config/color-math';
 
 /** Lightness spread of each end from the base (sRGB [0..1]). ±0.12 ≈ ±31/255 — subtle depth. */
 export const STUDIO_BG_DELTA = 0.12;
@@ -65,28 +66,25 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** Parse any `THREE.Color`-accepted string to sRGB bytes [0..255]. */
-function toRgb255(hex: string): readonly [number, number, number] {
-  _parse.set(hex);
-  _parse.getRGB(_rgb, THREE.SRGBColorSpace);
-  return [clamp255(_rgb.r * 255), clamp255(_rgb.g * 255), clamp255(_rgb.b * 255)];
+/** `#rrggbb` → sRGB byte tuple [0..255], reusing the `color-math` SSoT parser (hex stops). */
+function rgbTuple(hex: string): readonly [number, number, number] {
+  const c = parseHex(hex);
+  return c ? [c.r, c.g, c.b] : [0, 0, 0];
 }
 
 /**
  * Build the SAME three-stop shape from EXPLICIT top/bottom stops (e.g. the exact Cinema 4D
- * `#5B5B5B`→`#868686`). The mid is the arithmetic mean of the two ends, so the existing
+ * `#5B5B5B`→`#868686`). The mid is the linear midpoint of the two ends, so the existing
  * bottom→mid→top texture loop collapses into a single straight bottom→top line — a pure
- * 2-stop linear gradient with zero new rendering code. ADR-446 §2.1.
+ * 2-stop linear gradient with zero new rendering code. Channel math reuses `color-math`
+ * (`parseHex` + `mixHex`, ADR-509 SSoT) — no private colour arithmetic here. ADR-446 §2.1.
  */
 export function explicitToStops(stops: CanvasGradientStops): StudioGradientStops {
-  const top = toRgb255(stops.top);
-  const bottom = toRgb255(stops.bottom);
-  const mid: readonly [number, number, number] = [
-    clamp255((top[0] + bottom[0]) / 2),
-    clamp255((top[1] + bottom[1]) / 2),
-    clamp255((top[2] + bottom[2]) / 2),
-  ];
-  return { top, mid, bottom };
+  return {
+    top: rgbTuple(stops.top),
+    mid: rgbTuple(mixHex(stops.top, stops.bottom, 0.5)),
+    bottom: rgbTuple(stops.bottom),
+  };
 }
 
 /**
