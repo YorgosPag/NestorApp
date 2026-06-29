@@ -34,6 +34,8 @@ import {
   buildPipeFollowPreviewObjects,
   buildFittingFollowPreviewObjects,
 } from './bim3d-pipe-follow-preview-rebuild';
+// ADR-535 Φ7 / ADR-516 — keep the per-vertex reshape grips glued to the entity during a move.
+import { setGrip3DLiveMoveWorld } from '../stores/Grip3DOverlayStore';
 import type { EditInteractionCtx } from './bim3d-edit-interaction-handlers';
 
 /** The full entity list of the edited entities' floor (for the connected-pipe resolver). */
@@ -72,6 +74,10 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
     if (lock === 'X') t.z = 0;
     else if (lock === 'Z') t.x = 0;
     ctx.preview.applyMove(t);
+    // ADR-535 Φ7 / ADR-516 — shift the per-vertex reshape grips by the SAME locked world
+    // translation the mesh just got, so the squares stay glued to the moving entity (rigid
+    // handle-follow, ghost === grips). Cleared on drag settle; re-seated by the commit re-sync.
+    setGrip3DLiveMoveWorld({ x: t.x, y: t.y, z: t.z });
     // ADR-401 — re-clip the captured attached walls with the hosts at the preview
     // position (host footprint shifted by `t`). Same converter SSoT as the commit
     // re-sync (ghost === commit). No dependents → the array is empty (fast path).

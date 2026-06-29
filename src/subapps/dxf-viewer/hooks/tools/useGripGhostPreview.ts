@@ -41,6 +41,7 @@ import type { DxfGripDragPreview } from '../grip-computation';
 import {
   applyEntityPreview,
   drawGhostEntity,
+  resolveGhostSolidColor,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -405,11 +406,23 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // marker below still draws (it must follow even on a zero-delta press).
     if (transformed !== entity) {
       ctx.save();
+      // ADR-049 (inverted ghost) — AutoCAD/Revit parity: the MOVING copy that follows the
+      // cursor wears the entity's REAL colour at full opacity; the copy left at the original
+      // position is the ghost (dimmed on the main canvas via `gripDraggedEntityId`). Mirrors
+      // useMovePreview — same `resolveGhostSolidColor` SSoT, one colour rule for both flows.
+      const solidColor = resolveGhostSolidColor(entity);
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = solidColor;
+      ctx.fillStyle = solidColor;
+      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+      drawGhostEntity(ctx, transformed, t, vp);
+
+      // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
+      // NOT the selected dragged entity, so their originals stay SOLID on the main canvas.
+      // Keep them translucent ghosts to avoid a confusing solid-on-solid double image.
       ctx.globalAlpha = GHOST_DEFAULTS.alpha;
       ctx.strokeStyle = GHOST_DEFAULTS.color;
       ctx.fillStyle = GHOST_DEFAULTS.color;
-      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
-      drawGhostEntity(ctx, transformed, t, vp);
 
       // ADR-408 Φ-C — when the dragged entity is a plumbing connector host, draw the
       // connected pipe ends following it so the run visibly stretches WITH the host

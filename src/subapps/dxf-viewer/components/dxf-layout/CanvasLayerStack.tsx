@@ -245,6 +245,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // ADR-532 B4 — selectedEntityIds is injected by DxfCanvasSubscriber (leaf
   // self-subscribes useSelectedEntityIds) so the Shell — and the orchestrator —
   // stay inert on entity selection. Base omits it (and hoveredEntityId).
+  // ADR-049 inverted ghost: the grip-dragged entity dims at its origin (ghost) while its
+  // SOLID moving copy is drawn on PreviewCanvas. A STRING id (not the live dragPreview
+  // object) keeps the memo stable through the drag — the main canvas re-renders only on
+  // drag start/end (id flips), never per-frame, preserving the ADR-040 static-main-canvas.
+  const gripDraggedEntityId = dxfGripInteraction.dragPreview?.entityId ?? null;
   const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId' | 'selectedEntityIds'>>(
     () => ({
       showGrid: false,
@@ -252,8 +257,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       wireframeMode: false,
       gripInteractionState: dxfGripInteraction.gripInteractionState,
       movePreviewActive: movePreview.phase === 'awaiting-destination',
+      gripDraggedEntityId,
     }),
-    [dxfGripInteraction.gripInteractionState, movePreview.phase],
+    [dxfGripInteraction.gripInteractionState, movePreview.phase, gripDraggedEntityId],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({

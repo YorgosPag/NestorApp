@@ -592,6 +592,14 @@ export interface DxfRenderOptions {
    * The solid preview at the cursor is drawn on PreviewCanvas by useMovePreview.
    */
   movePreviewActive?: boolean;
+  /**
+   * Id of the entity currently being GRIP-DRAGGED (null when idle). ADR-049 inverted
+   * ghost: this one entity renders as a ghost at its original position, while its SOLID
+   * real-colour moving copy is drawn on PreviewCanvas by useGripGhostPreview. Distinct
+   * from `movePreviewActive` (which dims ALL selected) because a grip drag moves only the
+   * single grabbed entity — not the rest of the selection.
+   */
+  gripDraggedEntityId?: string | null;
 }
 
 // === DXF SELECTION ===

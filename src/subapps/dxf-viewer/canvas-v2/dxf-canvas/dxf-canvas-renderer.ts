@@ -225,7 +225,12 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
               gripInteractionState: curRenderOptions.gripInteractionState,
               layersById: curLayersById,
               suppressGrips: !gripsAllowed,
-              movePreviewActive: curRenderOptions.movePreviewActive,
+              // ADR-049 inverted ghost: dim the original at its origin when this entity is
+              // the one being move-previewed. The 2-click Move tool dims ALL selected
+              // (movePreviewActive); a grip drag dims ONLY the single grabbed entity
+              // (gripDraggedEntityId) — its solid moving copy lives on PreviewCanvas.
+              movePreviewActive:
+                curRenderOptions.movePreviewActive || selId === curRenderOptions.gripDraggedEntityId,
             });
           }
         }

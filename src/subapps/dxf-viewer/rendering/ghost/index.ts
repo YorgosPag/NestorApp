@@ -17,6 +17,7 @@
 export { applyEntityPreview, makeTranslationPreview } from './apply-entity-preview';
 export type { EntityPreviewTransform } from './apply-entity-preview';
 export { drawGhostEntity } from './draw-ghost-entity';
+export { resolveGhostSolidColor } from './ghost-solid-color';
 
 /**
  * Canonical ghost-preview style. Caller pre-applies these on the 2D context

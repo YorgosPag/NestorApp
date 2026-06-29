@@ -14,7 +14,7 @@
 import { create } from 'zustand';
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo } from '../../hooks/grip-types';
-import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
+import type { PlanElevationMmFor, GripWorldOffset } from '../grips/grip-3d-screen-project';
 
 /** Default elevation resolver (flat, datum 0) used when no grips are mounted. */
 const NO_ELEVATION: PlanElevationMmFor = () => 0;
@@ -88,13 +88,31 @@ export interface Grip3DInteraction {
    * occlusion SSoT. `null` = not computed yet / occlusion off ⇒ every grip is visible.
    */
   visibility: readonly boolean[] | null;
+  /**
+   * ADR-535 Φ7 / ADR-516 — live RIGID-move world translation applied to the gizmo'd entity's
+   * mesh during a MOVE drag. The overlay RAF shifts EVERY grip by this same world delta so the
+   * squares stay glued to the moving entity (ghost === grips — big-player handle-follow). `null`
+   * = no move in flight (static / reshape / committed). Set by `applyLivePreview` (move branch),
+   * cleared on drag settle; the commit re-sync re-seats the grips at the new position.
+   */
+  liveMoveWorld: GripWorldOffset | null;
 }
 
 export const grip3DOverlayInteraction: Grip3DInteraction = {
   hoverIndex: null,
   drag: null,
   visibility: null,
+  liveMoveWorld: null,
 };
+
+/**
+ * ADR-535 Φ7 / ADR-516 — set (or clear with `null`) the live rigid-move world offset for the
+ * grip overlay. Mutates the non-reactive singleton (zero React state); the overlay RAF reads it
+ * each frame so the grips follow the moving entity with no re-render.
+ */
+export function setGrip3DLiveMoveWorld(offset: GripWorldOffset | null): void {
+  grip3DOverlayInteraction.liveMoveWorld = offset;
+}
 
 /** True when FLAT grip `index` (top/bottom, see {@link Grip3DInteraction}) is NOT occluded. */
 export function isGrip3DVisible(index: number): boolean {
@@ -107,4 +125,5 @@ export function resetGrip3DInteraction(): void {
   grip3DOverlayInteraction.hoverIndex = null;
   grip3DOverlayInteraction.drag = null;
   grip3DOverlayInteraction.visibility = null;
+  grip3DOverlayInteraction.liveMoveWorld = null; // ADR-535 Φ7 — re-seated grips drop any live offset.
 }

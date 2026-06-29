@@ -33,9 +33,9 @@ import {
   applyEntityPreview,
   drawGhostEntity,
   makeTranslationPreview,
+  resolveGhostSolidColor,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
-import { getLayer } from '../../stores/LayerStore';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
@@ -170,10 +170,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         if (!entity) continue;
         const preview = makeTranslationPreview(entityId, delta);
         const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
-        const useLayerColor = !entity.color || entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
-        const color: string = useLayerColor
-          ? (getLayer(entity.layerId)?.color ?? '#FFFFFF')
-          : (entity.color ?? '#FFFFFF');
+        const color = resolveGhostSolidColor(entity);
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
         drawGhostEntity(ctx, transformed, t, viewport);

@@ -176,9 +176,11 @@ function paintGripOverlay(frame: BimOverlayFrame): void {
   const n = liveGrips.length;
   if (n === 0) return;
 
-  const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor);
-  const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor);
-  const { hoverIndex, drag } = grip3DOverlayInteraction;
+  // ADR-535 Φ7 / ADR-516 — during a gizmo MOVE drag the grips ride the SAME live world
+  // translation as the mesh (rigid handle-follow); null on the static / reshape paths.
+  const { hoverIndex, drag, liveMoveWorld } = grip3DOverlayInteraction;
+  const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor, liveMoveWorld);
+  const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor, liveMoveWorld);
 
   const visibility = computeGripVisibility(frame, liveGrips, topElevFor, bottomElevFor);
   grip3DOverlayInteraction.visibility = visibility;

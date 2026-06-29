@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — Grip-drag inverted ghost: solid moving copy + dimmed origin (ADR-049, CHECK 6B)
+Παράλληλα με το 2-click Move tool, τώρα και το **grip drag** (center/vertex/edge/quadrant λαβές) ακολουθεί τη σύμβαση «ανεστραμμένου φαντάσματος» AutoCAD/Revit (ADR-049): το **ένα** entity που σέρνεται ζωγραφίζεται ως **συμπαγές αντίγραφο στο πραγματικό του χρώμα** πάνω στο PreviewCanvas (ακολουθεί τον κέρσορα), ενώ το πρωτότυπο στη θέση εκκίνησης γίνεται **dimmed ghost** στον main canvas. **SSoT:** νέο `rendering/ghost/ghost-solid-color.ts` (`resolveGhostSolidColor` — ByLayer/ByBlock→layer color cascade) που τώρα τρέφει **και** `useMovePreview` **και** `useGripGhostPreview` (ΕΝΑΣ κανόνας χρώματος, καμία διπλή cascade· ο παλιός inline `getLayer` cascade στο `useMovePreview` αφαιρέθηκε).
+
+**ADR-040 touch (CHECK 6B):**
+- `dxf-types.ts` — νέο **low-freq** `gripDraggedEntityId?: string | null` στα `DxfRenderOptions` (distinct από `movePreviewActive` που dims ΟΛΗ την επιλογή· εδώ μόνο το ένα grabbed entity).
+- `CanvasLayerStack.tsx` (shell) — περνά **STRING id** (`dragPreview?.entityId`, όχι το live `dragPreview` object) ώστε το memo να μένει σταθερό μέσα στο drag: ο main canvas ξανα-renders **μόνο στο drag start/end** (το id flip-άρει), **ποτέ per-frame** → διατηρείται ο static-main-canvas κανόνας του ADR-040. **Μηδέν νέο `useSyncExternalStore`** (CHECK 6C ασφαλές).
+- `dxf-canvas-renderer.ts` (leaf) — το `movePreviewActive` περνά πλέον `|| selId === gripDraggedEntityId` ώστε το grabbed entity να dim-άρει στο origin. Καμία αλλαγή σε bitmap cache-key / scheduler. Followers (connected pipes / co-move partners) μένουν translucent ghosts — δεν είναι το dragged entity, τα originals τους μένουν solid στον main canvas. Βλ. **ADR-049**. 🟡 UNCOMMITTED.
+
 ### 2026-06-29 — 3D camera persistence touch (ADR-400 §3D, CHECK 6B)
 Το `ThreeJsSceneManager` απέκτησε `restoreCameraView()` (instant pose + latch `initialCameraFitDone`) + `setCameraSettledCallback()` (fired στο υπάρχον `onInteractionEnd`), και το `BimViewport3D` mount effect κάνει restore-on-mount + debounced persist της 3D κάμερας (ADR-400 §3D). **Μηδέν αλλαγή στο subscription pattern / bitmap cache-key / scheduler / renderer** — μόνο νέα μέθοδος + ένα low-freq callback που τρέχει στο interaction-end (όχι 60fps). CHECK 6C ασφαλές (κανένα νέο `useSyncExternalStore` σε orchestrator). Βλ. **ADR-400**. 🟡 UNCOMMITTED.
 
