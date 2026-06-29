@@ -96,4 +96,9 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   // interactive path. No-op when nothing is selected. (Path-tracer is handled above
   // and intentionally excluded — final-render mode.)
   if (!pathTracerRenderer.isActive) ssaoModulator.renderOutlineOverlayToScreen();
+  // ADR-553 — ViewCube as a scissored sub-viewport of the MAIN renderer (single WebGL context).
+  // Drawn LAST, into the corner of the final framebuffer, so it is untouched by SSAO/outline/post-FX
+  // (AO-immune by construction, like the outline overlay above). Runs on every path incl. path-trace
+  // (writes the screen AFTER the accumulation blit → no accumulation corruption).
+  viewCube.composite();
 }

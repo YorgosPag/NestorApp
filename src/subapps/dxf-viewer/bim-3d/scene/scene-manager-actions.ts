@@ -7,6 +7,7 @@
 import type * as THREE from 'three';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { applyBuildingVisibility } from '../utils/applyBuildingVisibility';
 import { applyDxfOverlayFraming } from './scene-sync-dxf-overlay';
 import type { BimSceneLayer } from './BimSceneLayer';
@@ -256,6 +257,28 @@ export function applyBimSelection(
 export function applyBimHover(highlighter: BimSelectionHighlighter, bimId: string | null): void {
   const selected = bimId !== null && useSelection3DStore.getState().selectedBimIds.includes(bimId);
   highlighter.onSelect(bimId !== null && !selected ? new Set([bimId]) : new Set());
+}
+
+/**
+ * ADR-446 §2 — visible-background mode subscription (dark «σαν 2Δ» ↔ environment).
+ * Per-view SSoT on `bim-render-settings-store` alongside `visualStyle`. The
+ * EnvmapGenerator owns `scene.background`; flip it imperatively + repaint. The
+ * matching edge-colour swap is rebuilt React-side (use-bim3d-vg-resync). Plain
+ * zustand store → manual prev-guard. Extracted to keep the manager under the
+ * 500-line cap (N.7.1). Returns the unsubscribe handle.
+ */
+export function initBackgroundModeSubscription(
+  envmapGenerator: EnvmapGenerator,
+  markDirty: () => void,
+): () => void {
+  envmapGenerator.setBackgroundMode(useBimRenderSettingsStore.getState().backgroundMode);
+  let prevBgMode = useBimRenderSettingsStore.getState().backgroundMode;
+  return useBimRenderSettingsStore.subscribe((s) => {
+    if (s.backgroundMode === prevBgMode) return;
+    prevBgMode = s.backgroundMode;
+    envmapGenerator.setBackgroundMode(s.backgroundMode);
+    markDirty();
+  });
 }
 
 export async function loadHdriIntoStore(

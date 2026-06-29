@@ -10,7 +10,6 @@ import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { EnvmapGenerator } from '../lighting/envmap-generator'; import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
-import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
@@ -49,6 +48,7 @@ import {
   setBimOrbitPivot,
   applyBimSelection,
   loadHdriIntoStore,
+  initBackgroundModeSubscription,
   type SyncDxfOverlayDeps,
 } from './scene-manager-actions';
 import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
@@ -156,6 +156,8 @@ export class ThreeJsSceneManager {
     });
     this.viewCube = initViewCube({
       container,
+      renderer: this.renderer, // ADR-553 — scissored sub-viewport of the main renderer (1 WebGL context).
+      onRenderNeeded: () => this.markSceneDirty(),
       viewport: this.viewport,
       canonicalViewService: this.canonicalViewService,
       onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
@@ -164,18 +166,8 @@ export class ThreeJsSceneManager {
       (s) => s.hdriUrl,
       (url) => { if (url) void this.loadHdriEnvironment(url); },
     );
-    // ADR-446 §2 — visible-background mode (dark «σαν 2Δ» ↔ environment), per-view SSoT
-    // on `bim-render-settings-store` alongside `visualStyle`. The EnvmapGenerator owns
-    // `scene.background`; flip it imperatively + repaint. The matching edge-colour swap
-    // is rebuilt React-side (use-bim3d-vg-resync). Plain-zustand store → manual prev-guard.
-    this.envmapGenerator.setBackgroundMode(useBimRenderSettingsStore.getState().backgroundMode);
-    let prevBgMode = useBimRenderSettingsStore.getState().backgroundMode;
-    this.bgModeUnsub = useBimRenderSettingsStore.subscribe((s) => {
-      if (s.backgroundMode === prevBgMode) return;
-      prevBgMode = s.backgroundMode;
-      this.envmapGenerator.setBackgroundMode(s.backgroundMode);
-      this.markSceneDirty();
-    });
+    // ADR-446 §2 — visible-background mode subscription (logic in scene-manager-actions).
+    this.bgModeUnsub = initBackgroundModeSubscription(this.envmapGenerator, () => this.markSceneDirty());
     // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,

@@ -134,25 +134,47 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(mockRegisteredIsDirty?.()).toBe(false); // dirty cleared after a settled run
   });
 
-  it('REFINE-ON-SETTLE: defers the hover-highlight render while sweeping, applies it on settle (ADR-366 §B.5)', () => {
+  it('DECOUPLED (ADR-549 Φ2): the unified hover id updates LIVE while sweeping; only the BIM silhouette defers (ADR-366 §B.5)', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
 
-    // Pick FIRES right after a move (cursor still sweeping) → snap updates live, but the heavy
-    // hover-highlight render is DEFERRED and the slot stays armed so it retries.
+    // Pick FIRES right after a move (cursor still sweeping). The cheap unified hover id (drives the
+    // Canvas2D glow) updates LIVE — like the snap glyph — so the highlight never sticks on a stale
+    // entity. The heavy BIM silhouette WebGL re-render is DEFERRED and the slot stays armed.
     requestPointerPick({ manager, clientX: 50, clientY: 50 });
     mockRegisteredCb?.();
-    expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap is live while sweeping
-    expect(mockSetHoveredEntity).not.toHaveBeenCalled();                // hover highlight deferred
-    expect(markSceneDirty).not.toHaveBeenCalled();                      // no WebGL re-render while sweeping
-    expect(mockRegisteredIsDirty?.()).toBe(true);                       // re-armed → waits for settle
+    expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap live while sweeping
+    expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');           // hover id LIVE while sweeping
+    expect(mockApplyBimHover).not.toHaveBeenCalled();                  // silhouette deferred
+    expect(markSceneDirty).not.toHaveBeenCalled();                     // no WebGL re-render while sweeping
+    expect(mockRegisteredIsDirty?.()).toBe(true);                      // re-armed → waits for settle
 
-    // Cursor settles (no further moves): the next pick past SHADOW_SETTLE applies the hover once.
+    // Cursor settles (no further moves): the next pick past SHADOW_SETTLE applies the silhouette once.
     nowMs += SETTLE_MS + 50;
     mockRegisteredCb?.();
-    expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');
     expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1');
     expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1); // id unchanged → not written again
     expect(mockRegisteredIsDirty?.()).toBe(false); // settled → slot disarmed
+  });
+
+  it('DXF-only hover updates the glow id live with ZERO WebGL re-render (Canvas2D overlay — ADR-549 Φ2)', () => {
+    mockBimHit = null;
+    mockDxfPick = { entityId: 'dxf-7' };
+
+    // Sweeping over a raw DXF entity: the glow id is written live; no BIM silhouette → no markSceneDirty.
+    requestPointerPick({ manager, clientX: 20, clientY: 20 });
+    mockRegisteredCb?.();
+    expect(mockSetHoveredEntity).toHaveBeenCalledWith('dxf-7');
+    expect(mockApplyBimHover).not.toHaveBeenCalled();
+    expect(markSceneDirty).not.toHaveBeenCalled();
+
+    // Move to empty space (still sweeping): the glow id clears live — it does NOT wait for settle.
+    mockDxfPick = null;
+    nowMs += 60; // past HOVER_HITTEST, still within SHADOW_SETTLE (pointer active)
+    requestPointerPick({ manager, clientX: 300, clientY: 300 });
+    mockRegisteredCb?.();
+    expect(mockSetHoveredEntity).toHaveBeenLastCalledWith(null);
+    expect(markSceneDirty).not.toHaveBeenCalled(); // still zero WebGL renders for pure-DXF hover
   });
 
   it('suspends ALL picking while the camera is navigating (ADR-366 §B.5) — clears a lingering snap', () => {
@@ -186,9 +208,22 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     settledPick(10, 10);
 
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('dxf-9');
-    expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, null);
+    // ADR-549 Φ2 — no BIM hit and no prior silhouette → the WebGL silhouette path is untouched.
+    expect(mockApplyBimHover).not.toHaveBeenCalled();
     expect(mockComputeSnap).not.toHaveBeenCalled();
     expect(mockSetSnap).toHaveBeenCalledWith(null);
+  });
+
+  it('leaving a BIM entity for empty space clears the silhouette once on settle (ADR-549 Φ2)', () => {
+    mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
+    settledPick(50, 50); // silhouette ON for c1
+    expect(mockApplyBimHover).toHaveBeenLastCalledWith(hoverHighlighter, 'c1');
+
+    mockBimHit = null;
+    mockDxfPick = null;
+    settledPick(300, 300); // empty space → silhouette cleared exactly once
+    expect(mockApplyBimHover).toHaveBeenLastCalledWith(hoverHighlighter, null);
+    expect(mockApplyBimHover).toHaveBeenCalledTimes(2);
   });
 
   it('a placement tool (column/wall) yields the snap glyph — leaves the snap store untouched (ADR-544)', () => {

@@ -16,7 +16,7 @@
  * geometry is read imperatively each frame.
  */
 
-import { useRef, useSyncExternalStore, useCallback, type MutableRefObject } from 'react';
+import { useRef, useSyncExternalStore, useCallback, useMemo, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import type { Point2D } from '../../../rendering/types/Types';
 import { drawEntityGlowPrePass } from '../../../rendering/entities/base-entity-style-helpers';
@@ -38,7 +38,10 @@ export function DxfHoverGlowOverlay2D({ managerRef }: DxfHoverGlowOverlay2DProps
 
   // ADR-040 — subscribe ONLY to the hovered entity id (drives the RAF on/off).
   const hoveredId = useSyncExternalStore(subscribeHoveredEntity, getHoveredEntity, getHoveredEntity);
-  const active = hoveredId !== null;
+  // ADR-549 Φ2 — the glow is ONLY for raw DXF entities (BIM meshes get the WebGL silhouette). Resolve
+  // DXF-ness once per hover change (NOT per frame) so the RAF stays OFF for a BIM hover — otherwise it
+  // would clear the full-DPR overlay canvas every frame for a no-op draw.
+  const active = useMemo(() => hoveredId !== null && findDxfEntityInScope(hoveredId) !== null, [hoveredId]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;

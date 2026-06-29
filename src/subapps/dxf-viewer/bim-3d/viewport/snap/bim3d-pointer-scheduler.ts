@@ -48,11 +48,15 @@ let latest: Bim3DPickInput | null = null;
 let dirty = false;
 let lastRunMs = 0;
 let registered = false;
-// 🚀 PERF (2026-06-28) — last resolved hover target (bimId | dxfId | null). The hover
-// silhouette + `markSceneDirty` (a FULL WebGL re-render) must fire ONLY when this CHANGES,
-// not on every 50ms pick. Re-rendering the whole scene every pick (even with an unchanged
-// hover, e.g. over empty space) produced a periodic frame hitch → the crosshair «swam».
+// 🚀 PERF (2026-06-28) — last resolved UNIFIED hover id (bimId | dxfId | null). Drives the DXF
+// glow (a Canvas2D overlay, NO WebGL render) so it updates LIVE every pick — like the snap glyph.
 let lastHoverId: string | null = null;
+// 🚀 PERF (ADR-549 Φ2, 2026-06-29) — last BIM silhouette target (bimId | null). The silhouette
+// (`applyBimHover` + `markSceneDirty`) is a FULL WebGL re-render, so it fires ONLY when THIS
+// changes AND the cursor has settled (refine-on-settle). Kept SEPARATE from `lastHoverId` so the
+// cheap glow can track live while the heavy silhouette defers — otherwise a stale glow stuck on the
+// old entity during a sweep kept the overlay RAF running per-frame → the cursor lagged.
+let lastBimHoverId: string | null = null;
 
 /**
  * The heavy work — runs in the RAF slot, NEVER inside the mousemove handler.
@@ -93,32 +97,38 @@ function runPick(input: Bim3DPickInput): boolean {
   const hit = raycastBimHitAndWorld(group, camera, dom, clientX, clientY);
 
   // ADR-538 — unified hover: BIM silhouette when a tagged entity is hit, else the raw-DXF glow.
-  // Resolve the hover target first; only TOUCH the hover state + request a WebGL re-render when it
-  // actually CHANGED (idle hover over the same entity / empty space ⇒ zero renders → no swim).
   const hoverId = hit?.bimId
     ?? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId
     ?? null;
-  // ADR-366 §B.5 — REFINE-ON-SETTLE hover: the highlight swap is a FULL-scene WebGL re-render
-  // (heavy at fullscreen on a weak GPU). While the cursor is still sweeping we DEFER it — we do
-  // NOT advance `lastHoverId`, so when the cursor settles the change is still pending and gets
-  // applied once. Big-player CAD (Revit/Cinema4D): the hover silhouette resolves on settle, not on
-  // every entity the cursor flies over. The snap glyph below is a Canvas2D overlay (no WebGL
-  // render) so it keeps updating live — snapping stays responsive while sweeping.
+  const bimHoverId = hit?.bimId ?? null;
+
+  // ADR-549 Φ2 (2026-06-29) — DECOUPLE the cheap hover id from the heavy silhouette. The unified
+  // hover id drives the DXF glow, which is a Canvas2D overlay (NO WebGL render) → like the snap
+  // glyph it updates LIVE on every pick. The OLD refine-on-settle lumped this with the WebGL
+  // re-render and deferred BOTH while sweeping, so the glow stuck on a stale entity and the
+  // overlay's RAF kept drawing per-frame → the cursor lagged until the cursor stopped (Giorgio).
+  if (hoverId !== lastHoverId) {
+    lastHoverId = hoverId;
+    setHoveredEntity(hoverId);
+  }
+
+  // ADR-366 §B.5 — REFINE-ON-SETTLE for the BIM SILHOUETTE ONLY: `applyBimHover` + `markSceneDirty`
+  // are a FULL-scene WebGL re-render (heavy at fullscreen on a weak GPU). While the cursor is still
+  // sweeping we DEFER it — we do NOT advance `lastBimHoverId`, so the change stays pending and is
+  // applied once the cursor settles. Big-player CAD (Revit/Cinema4D): the silhouette resolves on
+  // settle, not on every entity flown over. (Pure-DXF hover keeps `bimHoverId` null → no WebGL
+  // re-render at all, since the glow is Canvas2D.)
   //
   // COALESCE WITH SHADOW SETTLE (2026-06-28): the settle window is SHADOW_SETTLE (not the shorter
-  // POINTER_SETTLE) so this deferred hover render fires at the SAME moment the adaptive shadows turn
-  // back ON. Otherwise the scene rendered TWICE per settle — an unshadowed hover frame at
-  // POINTER_SETTLE(100ms) THEN a shadowed frame at SHADOW_SETTLE(350ms). Aligning them collapses it
-  // to ONE shadowed render with the hover already applied → halves settle work + removes the early
-  // render that could block resumed motion during a slow exploratory sweep (the p95 ~75ms tail).
+  // POINTER_SETTLE) so this deferred render fires at the SAME moment the adaptive shadows turn back
+  // ON — collapsing an unshadowed hover frame + a later shadowed frame into ONE shadowed render.
   let resettlePending = false;
-  if (hoverId !== lastHoverId) {
+  if (bimHoverId !== lastBimHoverId) {
     if (isPointerActive(performance.now(), DXF_TIMING.gesture.SHADOW_SETTLE)) {
       resettlePending = true; // keep ticking; apply once the cursor stops
     } else {
-      lastHoverId = hoverId;
-      setHoveredEntity(hoverId);
-      applyBimHover(manager.hoverHighlighter, hit?.bimId ?? null);
+      lastBimHoverId = bimHoverId;
+      applyBimHover(manager.hoverHighlighter, bimHoverId);
       manager.markSceneDirty();
     }
   }
@@ -188,4 +198,5 @@ export function clearPointerPick(): void {
   dirty = false;
   // The leave handler clears the hover itself; reset so a re-entry re-applies it.
   lastHoverId = null;
+  lastBimHoverId = null;
 }

@@ -112,7 +112,7 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 | Φυσικά `<canvas>` (max) | **24** | **8** | 3D = 2 WebGL + 6 × 2D overlay |
 | Φυσικά `<canvas>` (typical/idle) | ~16 | 7 | |
 | Φυσικά `<canvas>` (min) | 3 | 7 | |
-| WebGL contexts | 0 | **2** | main + ViewCube |
+| WebGL contexts | 0 | **2 → 1** (ADR-553) | ήταν main + ViewCube· ο ViewCube έγινε scissored sub-viewport του main → **1** context |
 | Interactive viewports | colspan → **1** (swap) | | |
 | Nav gizmo | colspan → **1** (ViewCube) | | |
 | Dialog-preview canvases | colspan → **2** | | |
@@ -139,7 +139,7 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 **3D:**
 4. **BimGripOverlay2D + DxfHoverGlowOverlay2D (#3+#4) → merge.** Ίδιος projector (`makeGripPlanToCanvas`), ίδιο sizing, **αμοιβαία αποκλειόμενα** (hover όταν τίποτα selected· grips σε selection). Το grip canvas ήδη ζωγραφίζει το DXF ghost → πρόσθεσε το glow ως ένα conditional paint step.
 5. **WallHud + Tracking + Placement (#5+#6+#7) → 1 «drawing-feedback canvas».** Όλα gated σε wall/column draw, **ποτέ ταυτόχρονα**· κοινή `makePlacementOverlayProjector` οικογένεια. Sequential passes σε ΕΝΑ καμβά.
-6. **ViewCube 2ο WebGL context → scissored sub-viewport του main renderer.** Εξάλειψη 2ου GPU context (το `ThreeJsSceneManager.tick()` ήδη καλεί `viewCube.sync()` ανά frame). Κόστος: composite στο main render loop.
+6. ✅ **IMPLEMENTED (ADR-553, 2026-06-29)** — **ViewCube 2ο WebGL context → scissored sub-viewport του main renderer.** Ο 2ος `WebGLRenderer` αφαιρέθηκε· ο cube ζωγραφίζεται από τον main renderer ως scissored sub-viewport (Three.js `webgl_multiple_views` pattern), στο τέλος του frame μετά το post-FX (AO-immune, όπως ο selection-outline pass). Το DOM element κρατιέται ως **διάφανο hit-layer** (κανένα context) → hit-test byte-identical, zero coordinate-remap. Pure `computeViewCubeScissorRect` 5/5 jest. **3D WebGL contexts 2→1.** Βλ. **ADR-553**.
 
 ### 5.3 ⭐ Cross-cutting σύσταση (ισχυρότερο εύρημα)
 Το **2D** έχει ΕΝΑ shared `PreviewCanvas` με dispatch· το **3D** αντίθετα έσπασε σε **5–6 ξεχωριστά overlay canvases**. **Σύσταση:** το 3D viewport να υιοθετήσει το 2D pattern — **ΕΝΑΣ shared projected-overlay canvas με dispatch**. Τα #4 + #5 μαζί καταλήγουν φυσικά εκεί (5–6 overlay canvases → 1–2). Ίδιο SSoT πρότυπο και στα δύο pipelines.
@@ -176,3 +176,6 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 
 ### 2026-06-29 — §5.2 #1 IMPLEMENTED (ADR-552)
 Η ευκαιρία #1 (7 analytical overlays → 1 dispatch canvas) υλοποιήθηκε — βλ. **ADR-552**. 2D max 24→18, typical ~16→~10. Οι υπόλοιπες 5 ευκαιρίες παραμένουν προτεινόμενες.
+
+### 2026-06-29 — §5.2 #6 IMPLEMENTED (ADR-553)
+Η ευκαιρία #6 (ViewCube 2ο WebGL context → scissored sub-viewport) υλοποιήθηκε — βλ. **ADR-553**. **3D WebGL contexts 2→1.** Ο 2ος `WebGLRenderer` αφαιρέθηκε· ο cube ζωγραφίζεται από τον main renderer (Three.js `webgl_multiple_views` pattern, AO-immune τελευταίο pass)· το DOM element έμεινε διάφανο hit-layer (zero context, hit-test byte-identical). Απομένουν προτεινόμενες: #2, #3, #4, #5.

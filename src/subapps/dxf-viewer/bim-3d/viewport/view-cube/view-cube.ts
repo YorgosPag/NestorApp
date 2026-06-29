@@ -15,9 +15,9 @@ import {
 import { createRollArrows, createFaceNavArrows, computeCompassDirection, NAV_ARROW_COLOR } from './view-cube-overlay';
 import { computeHighlights, VIEWCUBE_HOVER_COLOR_HEX } from './view-cube-highlight';
 import { matchIsoCanonicalView } from '../canonical-views';
+import { computeViewCubeScissorRect } from './view-cube-scissor';
 
 const CUBE_CANVAS_SIZE = 160;
-const MAX_PIXEL_RATIO = 1.5;
 
 const FACE_TO_PROJECTION: Record<number, ProjectionMode> = {
   0: 'right', 1: 'left', 2: 'top', 3: 'bottom', 4: 'front', 5: 'back',
@@ -30,6 +30,16 @@ const FACE_INDEX_TO_VIEW_ID: Record<number, CanonicalViewId> = {
 
 export interface ViewCubeOptions {
   readonly container: HTMLElement;
+  /**
+   * ADR-553 — the MAIN scene renderer. The ViewCube no longer owns a second WebGLRenderer
+   * (2nd GPU context); it draws as a scissored sub-viewport of this renderer via `composite()`.
+   */
+  readonly renderer: THREE.WebGLRenderer;
+  /**
+   * ADR-553 — request a main-loop frame (→ `markSceneDirty`). The cube has no independent
+   * render anymore, so hover/enter/leave repaints must run through the main render loop.
+   */
+  readonly onRenderNeeded: () => void;
   readonly getCamera: () => THREE.PerspectiveCamera | THREE.OrthographicCamera;
   readonly getTarget: () => THREE.Vector3;
   readonly onFaceSnap: (mode: ProjectionMode) => void;
@@ -63,6 +73,11 @@ export interface ViewCubeOptions {
 
 export interface ViewCubeEngine {
   sync(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera, target: THREE.Vector3): void;
+  /**
+   * ADR-553 — draw the cube as a scissored sub-viewport of the MAIN renderer. Must be called at
+   * the END of the frame (after all post-FX / outline) so the gizmo is AO-immune. No-op when hidden.
+   */
+  composite(): void;
   /** Phase 4.3: programmatically toggle compass ring visibility. */
   setCompassVisible(visible: boolean): void;
   /** ADR-366 Polish Item #6: hide/show canvas on narrow viewports (<600px). */
@@ -71,14 +86,16 @@ export interface ViewCubeEngine {
 }
 
 export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
-  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onRoll, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
+  const { container, renderer, onRenderNeeded, getCamera, getTarget, onFaceSnap, onDirSnap, onRoll, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
 
+  // ADR-553 — transparent DOM HIT-LAYER (no WebGL context). It only captures pointer events
+  // (face/edge/corner/compass/home/roll/drag/right-click) exactly as before; the cube PIXELS are
+  // drawn by the MAIN renderer in `composite()`. A `<canvas>` element with no `getContext` call
+  // allocates no GPU context → eliminates the 2nd WebGL context (ADR-551 census #6). It keeps the
+  // `dxf-view-cube` testid so it stays the stable anchor for floating-panel positioning.
   const canvas = document.createElement('canvas');
-  // Stable anchor for floating-panel positioning (e.g. the Guide panel sits below it).
   canvas.dataset.testid = 'dxf-view-cube';
-  const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   const size = CUBE_CANVAS_SIZE;
-  canvas.width = size * dpr; canvas.height = size * dpr;
   Object.assign(canvas.style, {
     width: `${size}px`, height: `${size}px`, position: 'absolute',
     top: '12px', right: '12px', pointerEvents: 'auto',
@@ -86,10 +103,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   });
   container.appendChild(canvas);
 
-  const miniRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  miniRenderer.setPixelRatio(dpr);
-  miniRenderer.setSize(size, size, false);
-  miniRenderer.setClearColor(0x000000, 0);
+  let visibleState = true;
 
   const scene = new THREE.Scene();
   const miniCam = new THREE.OrthographicCamera(-1.95, 1.95, 1.95, -1.95, 0.1, 20);
@@ -250,7 +264,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
       canvas.style.cursor = 'grab';
     }
     applyControlHighlight(newMesh);
-    miniRenderer.render(scene, miniCam);
+    onRenderNeeded(); // ADR-553 — repaint via the main loop (no independent render anymore).
   }
 
   function handleClick(e: PointerEvent): void {
@@ -352,8 +366,8 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     for (const m of faceNavMats) m.opacity = cubeHovered ? 0.7 : 0;
   }
 
-  canvas.addEventListener('mouseenter', () => { cubeHovered = true; applyHoverChrome(); miniRenderer.render(scene, miniCam); });
-  canvas.addEventListener('mouseleave', () => { cubeHovered = false; applyHoverChrome(); miniRenderer.render(scene, miniCam); });
+  canvas.addEventListener('mouseenter', () => { cubeHovered = true; applyHoverChrome(); onRenderNeeded(); });
+  canvas.addEventListener('mouseleave', () => { cubeHovered = false; applyHoverChrome(); onRenderNeeded(); });
 
   const _q = new THREE.Quaternion();
 
@@ -370,16 +384,52 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     for (const mat of cubeMaterials) { mat.opacity += (tgtAlpha - mat.opacity) * lerp; }
     ringMaterial.opacity += ((cubeHovered ? 0.8 : 0.4) - ringMaterial.opacity) * lerp;
     applyHoverChrome();
-    miniRenderer.render(scene, miniCam);
+    // ADR-553 — NO render here: `sync()` runs BEFORE the main scene render. The actual pixels are
+    // drawn by `composite()` at the end of the frame (after post-FX), reusing the main renderer.
+  }
+
+  // ADR-553 — scratch objects reused across frames (no per-frame allocation in the render path).
+  const _scissorPrevTarget = { value: null as THREE.WebGLRenderTarget | null };
+  const _rendererSize = new THREE.Vector2();
+
+  /**
+   * Draw the cube as a scissored sub-viewport of the MAIN renderer into the default framebuffer.
+   * Called at the END of `renderSceneFrame` (after outline/post-FX) so it is AO-immune. The scissor
+   * box tracks the hit-layer rect (single source of position). Only depth is cleared inside the box
+   * (not colour), so the 3D scene shows through the cube's transparent background — matching the old
+   * stacked-canvas look. No-op when hidden or when the rect is degenerate (narrow viewport).
+   */
+  function composite(): void {
+    if (!visibleState) return;
+    const canvasRect = renderer.domElement.getBoundingClientRect();
+    renderer.getSize(_rendererSize);
+    const rect = computeViewCubeScissorRect(canvas.getBoundingClientRect(), canvasRect, _rendererSize.y);
+    if (!rect) return;
+
+    const prevAutoClear = renderer.autoClear;
+    _scissorPrevTarget.value = renderer.getRenderTarget();
+    renderer.setRenderTarget(null);
+    renderer.autoClear = false;
+    renderer.setScissorTest(true);
+    renderer.setScissor(rect.x, rect.y, rect.w, rect.h);
+    renderer.setViewport(rect.x, rect.y, rect.w, rect.h);
+    renderer.clearDepth(); // scissored → clears depth only in the corner, keeps the scene colour.
+    renderer.render(scene, miniCam);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, _rendererSize.x, _rendererSize.y);
+    renderer.setScissor(0, 0, _rendererSize.x, _rendererSize.y);
+    renderer.autoClear = prevAutoClear;
+    renderer.setRenderTarget(_scissorPrevTarget.value);
   }
 
   function setCompassVisible(visible: boolean): void {
     compassVisibleState = visible;
     compassGroup.visible = visible;
-    miniRenderer.render(scene, miniCam);
+    onRenderNeeded(); // ADR-553 — repaint via the main loop.
   }
 
   function setVisible(visible: boolean): void {
+    visibleState = visible; // ADR-553 — gate `composite()` so the scissor pass skips when hidden.
     canvas.style.display = visible ? '' : 'none';
   }
 
@@ -398,9 +448,9 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     for (const s of rollSprites) { s.material.map?.dispose(); s.material.dispose(); }
     for (const hm of rollHitMeshes) hm.geometry.dispose();
     for (const hm of faceNavHitMeshes) hm.geometry.dispose();
-    miniRenderer.dispose();
+    // ADR-553 — no miniRenderer to dispose (the main renderer is owned by ThreeJsSceneManager).
     if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
   }
 
-  return { sync, setCompassVisible, setVisible, dispose };
+  return { sync, composite, setCompassVisible, setVisible, dispose };
 }

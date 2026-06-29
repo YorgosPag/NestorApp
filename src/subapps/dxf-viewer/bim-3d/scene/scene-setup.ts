@@ -51,6 +51,10 @@ export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera
 
 export interface InitViewCubeDeps {
   readonly container: HTMLElement;
+  /** ADR-553 — main renderer; the ViewCube draws as a scissored sub-viewport of it (no 2nd context). */
+  readonly renderer: THREE.WebGLRenderer;
+  /** ADR-553 — request a main-loop frame (→ markSceneDirty) for cube hover/compass repaints. */
+  readonly onRenderNeeded: () => void;
   readonly viewport: ViewportCamera;
   readonly canonicalViewService: CanonicalViewService;
   readonly onContextMenuRequest: (x: number, y: number) => void;
@@ -60,6 +64,8 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
   const { viewport, canonicalViewService } = deps;
   return createViewCube({
     container: deps.container,
+    renderer: deps.renderer,
+    onRenderNeeded: deps.onRenderNeeded,
     getCamera: () => viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
     getTarget: () => viewport.target,
     onFaceSnap: (mode) => viewport.setProjection(mode),
