@@ -2,13 +2,13 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 Φ0+Φ2+Φ3+Φ4 IMPLEMENTED (UNCOMMITTED) — Φ1 άνευ αντικειμένου |
+| **Status** | 🟢 Φ0+Φ2+Φ3+Φ4+Φ-Ghost IMPLEMENTED (UNCOMMITTED) — Φ1 άνευ αντικειμένου |
 | **Date** | 2026-06-29 |
 | **Last Updated** | 2026-06-29 |
 | **Category** | Canvas & Rendering |
 | **Location** | `src/subapps/dxf-viewer/` (`rendering/`, `bim/renderers/`, `bim-3d/converters/`, `bim/geometry/shared/`) |
 | **Author** | Claude (σχεδιασμός κατόπιν εντολής Giorgio) |
-| **Related ADRs** | **ADR-549** (census — το «before»), ADR-040 (2D perf), ADR-366 (3D viewer), ADR-527 (SceneManager SSoT δεδομένων), ADR-535/542/545 (ήδη-ενοποιημένα overlays = proof-of-pattern), ADR-539 (faced-prism geometry) |
+| **Related ADRs** | **ADR-549** (census — το «before»), ADR-040 (2D perf), ADR-366 (3D viewer), ADR-527 (SceneManager SSoT δεδομένων), ADR-535/542/545 (ήδη-ενοποιημένα overlays = proof-of-pattern), ADR-537 (κεντρικοποίηση 3D ghosts — ο Φ-Ghost seam), ADR-539 (faced-prism geometry) |
 
 ---
 
@@ -85,7 +85,7 @@ interface EntityRenderContract<E> {
 - **Realized = δηλωτικό contract registry** (`entity-render-contract.ts`): ΕΝΑ `EntityRenderContract` ανά renderable type — `{ d2, d3, d3Builder: 'point'|'bespoke'|'none' }`. Απορροφά το `entity-render-surfaces.ts` (τώρα derived view). Invariant: `d3Builder !== 'none'` ⟺ `d3`.
 - **Auto-wiring (Option B):** οι 11 ομοιόμορφες point-entity 3D factories (foundation/panel/manifold/radiator/boiler/water-heater/railing/roof/floor-finish/underfloor/furniture) δηλώνονται ΜΙΑ φορά σε executable registry (`bim-scene-point-contracts.ts`)· ο `BimSceneLayer` τις επαναλαμβάνει με ΕΝΑ loop αντί 11 χειροκίνητων `sync*()` μεθόδων (διαγράφηκαν). Adapter: ίδιος `syncPointEntities` SSoT, ίδιες factory κλήσεις.
 - **Bespoke (10):** wall/opening/slab/slab-opening/column/beam/stair/mep-fixture/mep-segment/mep-fitting μένουν ρητά (host context) — δηλωμένα `d3Builder:'bespoke'`.
-- **Ghost:** ΔΕΝ μπήκε στο contract — κανένα introspectable live dispatcher (2D per-family, 3D ενιαίο overlay)· μη-ελεγχόμενο πεδίο θα σάπιζε. Μελλοντικό Φ.
+- **Ghost:** ΔΕΝ μπήκε στο contract στο Φ2 — κανένα introspectable live dispatcher (2D per-family, 3D ενιαίο overlay)· μη-ελεγχόμενο πεδίο θα σάπιζε. **Υλοποιήθηκε αργότερα ως Φ-Ghost** (3D placement ghost only — βλ. παρακάτω), αφού φτιάχτηκε ο introspectable seam.
 - Παραδοτέα (NEW): `rendering/contract/entity-render-contract.ts`, `bim-3d/scene/bim-scene-point-contracts.ts`. (MOD): `entity-render-surfaces.ts` (derived), `BimSceneLayer.ts` (loop, −11 μέθοδοι), `bim-scene-point-syncs.ts` (export types), coverage test (+5 asserts).
 
 ### Φ3 — Coverage guarantee ✅ IMPLEMENTED (2026-06-29)
@@ -96,6 +96,14 @@ interface EntityRenderContract<E> {
 ### Φ4 — Cleanup ✅ IMPLEMENTED (2026-06-29)
 - **Διαγράφηκε** το orphan `rendering/entities/StairRenderer.ts` (re-export shim, κανένα call-site· canonical = `bim/renderers/StairRenderer.ts`).
 - **Τεκμηριώθηκαν** οι 4 off-composite renderers (βλ. ADR-549 §4.2): `OpeningTag` = sub-renderer μέσα στο `OpeningRenderer`· `Envelope` = overlay `EnvelopeOverlay.tsx`· `MepWire` = function `drawCircuitWires` στο `HomeRunWiresOverlay.tsx`· `FloorplanSymbol` = πιθανό dormant Φ1 (εκκρεμεί επιβεβαίωση).
+
+### Φ-Ghost — Ghost capability στο contract (3D placement ghost) ✅ IMPLEMENTED (2026-06-29)
+- **SSoT audit (2 Explore agents):** το ghost dispatch ΗΤΑΝ κατακερματισμένο, χωρίς introspectable seam. **3D:** 11 per-family κλάσεις (`*PlacementGhost`), single switchboard, κανένα type-keyed registry. **2D:** triply-scattered (generator if-chain σε `DrawingTool` + wysiwyg-BIM + 9 bespoke Canvas2D renderers) — **όχι** introspectable.
+- **Απόφαση (Giorgio):** «κεντρικοποίηση τώρα». Δημιουργήθηκε genuine introspectable type-keyed registry για το **3D placement ghost** (όπου υπάρχει bindable seam) + δηλωτικό πεδίο `placementGhost3D` + coverage binding — mirror του Φ2. Το **2D ghost μένει ρητά εκτός** (δεν υπάρχει introspectable 2D seam· ένα 2D πεδίο θα σάπιζε — ακριβώς ο λόγος που το Φ2 το άφησε έξω).
+- **Adapter, ΟΧΙ rewrite:** το `PLACEMENT_GHOST_3D_FACTORIES` είναι factory-per-key (`satisfies Record<GhostBimType, …>` → completeness + concrete return type ανά key, no `any`). Τα 11 placement hooks instantiate-άρουν ΜΕΣΩ του registry (`new XxxPlacementGhost(scene)` → `FACTORIES.<type>(scene)`, one-line swap) → το μητρώο είναι **ζωντανό** (production-used)· νέο ghost εκτός registry δεν συνδέεται (κλείνει το orphan gap). Μηδέν αλλαγή build/update logic.
+- **Coverage binding (3 asserts):** invariant `placementGhost3D ⟹ d3`· no-drift `PLACEMENT_GHOST_3D_TYPES === GHOST_BUILT_TYPES`· liveness `new THREE.Scene()` → κάθε factory `toBeInstanceOf(Cls)` + `dispose()` (no-lie, no-orphan).
+- Παραδοτέα (NEW): `bim-3d/placement/placement-ghost-3d-contracts.ts`. (MOD): `entity-render-contract.ts` (`+placementGhost3D`, `+GHOST_BUILT_TYPES`, shorthand 2ο param, doc comment)· 11 hooks (one-line swap)· coverage test (+1 describe / 3 asserts).
+- **Σημείωση:** μόνο instantiation seam άλλαξε — η συμπεριφορά του ghost είναι αμετάβλητη· browser-verify προαιρετικό (regression-safe).
 
 ---
 
@@ -112,7 +120,7 @@ interface EntityRenderContract<E> {
 ---
 
 ## Σύσταση εκκίνησης
-**Φ0+Φ2+Φ3+Φ4 υλοποιήθηκαν (2026-06-29).** Φ0/Φ3/Φ4 μηδέν ρίσκο. Φ2 αγγίζει `BimSceneLayer` (render-critical, ADR-366) → **απαιτείται browser-verify** των 11 point-entity οικογενειών πριν θεωρηθεί κλειστό. Επόμενο προαιρετικό: ghost capability στο contract όταν προκύψει bindable seam.
+**Φ0+Φ2+Φ3+Φ4+Φ-Ghost υλοποιήθηκαν (2026-06-29).** Φ0/Φ3/Φ4 μηδέν ρίσκο. Φ2 αγγίζει `BimSceneLayer` (render-critical, ADR-366) → **απαιτείται browser-verify** των 11 point-entity οικογενειών πριν θεωρηθεί κλειστό. Φ-Ghost = regression-safe (μόνο instantiation seam, browser-verify προαιρετικό). Επόμενο προαιρετικό: 2D ghost binding αν/όταν κεντρικοποιηθεί ο 2D dispatch (3 μηχανισμοί → 1 introspectable seam).
 
 ---
 
@@ -173,3 +181,18 @@ interface EntityRenderContract<E> {
 **Αποτέλεσμα:** golden δείχνει **και τις 11 οικογένειες ως 3D solids** (στέγη/δάπεδο/ενδοδαπέδιο/πίνακας/πέδιλο/καλοριφέρ/λέβητα/θερμοσίφωνα/κιγκλίδωμα/συλλέκτη/έπιπλο). Επιβεβαιώθηκε `groupChildren:11, meshes:43` (registry loop = ίδιο dispatch με τις 11 διαγραμμένες μεθόδους → μηδέν regression). Test PASS deterministic (χωρίς --update-snapshots).
 
 **Bug fix στο fixture (όχι production):** ο `floorFinishToMesh` κάνει default `sceneUnits ?? 'm'` (μοναδικός· οι άλλοι default `'mm'`)· το mm footprint ερμηνευόταν ως meters → 3 km plate που εκτόξευε το scene bbox → κάμερα 13 km μακριά → όλα μικροσκοπικά. Pin `sceneUnits:'mm'` στο floor-finish fixture entity.
+
+### 2026-06-29 — Φ-Ghost: Ghost capability (3D placement ghost) IMPLEMENTED (UNCOMMITTED)
+**SSoT audit (2 Explore agents, grep):** το ghost dispatch δεν είχε introspectable seam. **3D** = 11 per-family `*PlacementGhost` κλάσεις (column/wall/beam/furniture/electrical-panel/mep-fixture/mep-segment/mep-manifold/mep-radiator/mep-boiler/mep-water-heater), single switchboard `use-bim3d-placement-and-pick-hooks.ts`, κανένα type-keyed registry. **2D** = triply-scattered (generator if-chain + wysiwyg-BIM + 9 bespoke Canvas2D renderers), όχι introspectable. Επιβεβαίωσε το σχόλιο του Φ2 («ghost θα σάπιζε χωρίς bindable seam»).
+
+**Απόφαση (Giorgio «κεντρικοποίηση τώρα»):** φτιάχνεται ο seam → contract binding. Εύρος = **3D placement ghost only**· το 2D μένει εκτός (κανένα introspectable 2D seam — προσθήκη θα ήταν το «πεδίο που σαπίζει»).
+
+**Files (NEW):**
+- `bim-3d/placement/placement-ghost-3d-contracts.ts` — `PLACEMENT_GHOST_3D_FACTORIES` (factory-per-key, `satisfies Record<GhostBimType, (scene)=>PlacementGhost3D>` → completeness + concrete return type ανά key), `PLACEMENT_GHOST_3D_TYPES`, `PlacementGhost3D` interface (μόνο `dispose` — ο beam δεν έχει `setVisible`).
+
+**Files (MOD):**
+- `rendering/contract/entity-render-contract.ts` — `+readonly placementGhost3D: boolean` (invariant ghost ⟹ d3)· `point()`/`bespoke()` 2ο optional param `ghost3D`· 11 types `true`· `+GHOST_BUILT_TYPES`· ενημ. doc comment (ghost τώρα modeled, 2D εκτός με λόγο).
+- 10× `bim-3d/placement/use-bim3d-*-placement.ts` + `bim-3d/viewport/use-bim3d-beam-from-wall-pick.ts` — one-line swap `new XxxPlacementGhost(scene)` → `PLACEMENT_GHOST_3D_FACTORIES.<type>(scene)` (adapter· concrete type διατηρείται· hook tests αμετάβλητα — Jest absolute-path mock propagation).
+- `rendering/contract/__tests__/entity-render-coverage.test.ts` — +1 describe / 3 asserts (invariant, no-drift, liveness instanceof+dispose).
+
+**Verify:** jest 15/15 contract (+3 Φ-Ghost) GREEN· 127/127 placement+beam GREEN (μηδέν αλλαγή test)· single tsc (N.17) καθαρό στα Φ-Ghost αρχεία. Regression-safe (μόνο instantiation seam). Commit → εντολή Giorgio (stage ADR-040 + ADR-366 + ADR-550 + ADR-537 για CHECK 6B/6D).
