@@ -175,6 +175,20 @@ export interface DxfText extends DxfEntity {
   rotation?: number; // in degrees
   /** ADR-344 Phase 6.E: style derived from textNode first-run, used by TextRenderer. */
   textStyle?: DxfTextStyle;
+  /**
+   * ADR-551 — effective box width (world units) of the grip rectangle. Carried by
+   * the scene→DxfText converter so `getTextGrips` / `applyTextGripDrag` read the
+   * box width directly (DxfEntityUnion has no `mtext` variant): for MTEXT = the
+   * real `MTextEntity.width`; for TEXT = `text.length·height·CHAR_WIDTH·widthFactor`.
+   * Absent on legacy paths → the adapter falls back to the TEXT formula.
+   */
+  width?: number;
+  /**
+   * ADR-551 — AutoCAD TEXT X-scale (horizontal stretch factor, default 1). Drives
+   * the e/w edge resize on a simple TEXT (MTEXT uses `width` instead). Read by the
+   * grip adapter and `TextRenderer` (horizontal `ctx.scale(widthFactor, 1)`).
+   */
+  widthFactor?: number;
 }
 
 export interface DxfAngleMeasurement extends DxfEntity {

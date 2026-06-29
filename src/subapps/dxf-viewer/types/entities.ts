@@ -150,6 +150,12 @@ export interface TextEntity extends BaseEntity {
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right';
   rotation?: number;
+  /**
+   * ADR-551 — AutoCAD TEXT X-scale (horizontal stretch factor, default 1). Set by
+   * the e/w text grip resize (`applyTextGripDrag`) and the toolbar Scale tool
+   * (`scaleText`). MTEXT uses its own `width` frame instead of this.
+   */
+  widthFactor?: number;
   // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
   isAnnotative?: boolean;
   annotationScales?: readonly EntityAnnotationScale[];

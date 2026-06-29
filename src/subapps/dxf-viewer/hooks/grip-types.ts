@@ -35,6 +35,7 @@ import type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  TextGripKind,
 } from './grip-kinds';
 
 // Re-export the grip-kind unions for backward compatibility (call-sites import
@@ -66,6 +67,7 @@ export type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  TextGripKind,
 } from './grip-kinds';
 
 /** Grip information */
@@ -248,6 +250,13 @@ export interface GripInfo {
    * curvature). Straight-segment grips keep the standard stretch/move path.
    */
   polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-551 — parametric text/mtext grip discriminator. Present only when the
+   * grip belongs to a `DxfText` (TEXT or MTEXT normalised to 'text'); routes the
+   * commit through `applyTextGripDrag()` + `UpdateTextTransformCommand` (rect-box
+   * parity: corner/edge resize + center move + rotation via `rect-grip-engine`).
+   */
+  textGripKind?: TextGripKind;
 }
 
 /** Grip drag state */

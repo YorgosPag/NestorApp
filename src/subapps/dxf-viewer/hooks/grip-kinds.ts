@@ -450,6 +450,33 @@ export type PolylineGripKind =
   | `polyline-segment-midpoint-${number}`
   | `polyline-arc-midpoint-${number}`;
 
+/**
+ * ADR-551 — Text / MText grip kind (parametric grip type). Routes commit through
+ * `applyTextGripDrag()` + `UpdateTextTransformCommand` instead of the standard
+ * `StretchEntityCommand` vertex path. FULL rectangular-box parity με τον τοίχο /
+ * κολόνα (Giorgio 2026-06-30: «ίδιες λαβές, ίδιος κώδικας»): 4 γωνίες (opposite
+ * corner fixed) + 4 μεσοπλευρικές (opposite edge fixed) + center MOVE + rotation,
+ * όλα μέσω του κοινού `rect-grip-engine` SSoT. ΧΩΡΙΣ mirror (δεν ζητήθηκε).
+ *
+ * Grips exposed by `getTextGrips` (`bim/text/text-grips.ts`):
+ *   - `text-move`     → translate `position` (4-arrow MOVE glyph)
+ *   - `text-rotation` → rotate γύρω από το bbox-center (re-homes `position`)
+ *   - `text-corner-{ne,nw,sw,se}` → 2-DOF γωνία resize (opposite corner fixed)
+ *   - `text-edge-{e,w,n,s}`       → edge-midpoint resize (opposite edge fixed):
+ *       e/w → πλάτος (MTEXT `width` / TEXT `widthFactor`), n/s → ύψος (`height`).
+ */
+export type TextGripKind =
+  | 'text-move'
+  | 'text-rotation'
+  | 'text-corner-ne'
+  | 'text-corner-nw'
+  | 'text-corner-sw'
+  | 'text-corner-se'
+  | 'text-edge-e'
+  | 'text-edge-w'
+  | 'text-edge-n'
+  | 'text-edge-s';
+
 // ADR-406/408/410/415/359 — placeable-object + linear-element grip kinds live in
 // the sibling module `grip-kinds-placeable.ts` (SRP / N.7.1) and are re-exported
 // here for backward compatibility (existing `import { … } from '../grip-kinds'`).
