@@ -96,9 +96,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
   // ADR-549 Phase 8 — HARDWARE-CURSOR crosshair: draw the crosshair as the OS cursor on the
   // viewport container (overrides the `cursor-none` class) → perfect 1:1 tracking like the ViewCube
-  // «hand», with zero compositor-present latency. Coexists with the canvas crosshair during A/B.
-  // 🔬 A/B: forced bright-green + bold + bigger so it is unmistakable vs the white/red canvas crosshairs.
-  useCrosshairCursor(containerRef, { color: '#00ff66', lineWidth: 2, size: 32 });
+  // «hand», with zero compositor-present latency. Colour/width/pickbox from cursor settings.
+  useCrosshairCursor(containerRef);
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3DFromStore = useSyncExternalStore(

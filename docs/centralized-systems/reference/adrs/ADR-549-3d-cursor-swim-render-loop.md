@@ -415,3 +415,29 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   `BimViewport3D.tsx` ξεπέρασε ξανά τις 500 γρ. → εξαγωγή των ViewCube compass/accessibility prefs σε νέο
   hook `use-bim3d-viewcube-prefs.ts` (load-effect + compass-wiring effect + optimistic toggle + state). CHECK
   6D → stage αυτό το ADR + τα cursor αρχεία. 🔴 browser-verify (A/B hardware vs canvas crosshair feel).
+- **2026-06-29** — ✅ **Phase 8 ΟΡΙΣΤΙΚΟ — hardware cursor ΚΑΙ στο 2D + retire canvas crosshair (UNCOMMITTED).**
+  Το A/B έκλεισε: ο **OS hardware cursor** (CSS `cursor: url(png)`, PNG υποχρεωτικό ≤32px σε Chrome/Windows)
+  είναι **τέλειο 1:1** (GPU cursor plane, μηδέν compositor-present latency) → υιοθετείται ΚΑΙ στο 2D, ο
+  Canvas2D `CrosshairCompositor` **αποσύρεται** (βλ. ADR-545).
+  **2D root cause (SSoT audit, grep ΠΡΙΝ τον κώδικα):** το hook έβαζε σωστά το hardware cursor inline στον
+  `.canvas-stack` container (`CanvasLayerStack`), ΑΛΛΑ το `DxfCanvas` (z-`docked`, `pointerEvents:'auto'`, το
+  **topmost στοιχείο κάτω από τον δείκτη**) όριζε δικό του inline `cursor:'none'` → το explicit cursor του child
+  νικά το inherited → σταυρόνημα αόρατο. Στο 3D δούλευε γιατί το three.js canvas είναι child ΧΩΡΙΣ δικό του cursor
+  → κληρονομεί. **FIX (1 αρχείο, SSoT):** `styles/design-tokens/modules/canvas-ui.ts` — `dxfCanvasWithTools` +
+  `layerCanvasWithTools` cursor fallback `'none'` → **`'inherit'`** (pan→`grab`/zoom→`zoom-in` αμετάβλητα). ΕΝΑ
+  στοιχείο (ο container) ορίζει τον cursor, όλα τα canvases τον κληρονομούν — ακριβώς όπως το 3D. Big-player:
+  Figma/Google web tools βασίζονται στον OS/CSS cursor (ποτέ canvas), ΕΝΑ owner + inherit.
+  **Gate:** αφαιρέθηκε το `!!dxfScene` από το `useCrosshairCursor` στο 2D → φαίνεται πάντα (parity με 3D, ο
+  χρήστης το επιβεβαίωσε), όπως σε άδειο canvas στο 3D.
+  **Τίμημα (web-platform limit, αποδεκτό):** PNG ≤32px (όχι full-screen βραχίονες), όχι center snap-glue (ο
+  hardware cursor είναι πάντα στην πραγματική θέση) — ΟΜΩΣ το snap marker ανάβει + το κλικ πιάνει το snap.
+  **Retire/cleanup (dead-code ratchet CHECK 3.22):** διαγράφηκαν 11 νεκρά αρχεία — `CrosshairOverlay`,
+  `CrosshairCompositor`, `crosshair-compositor-paint`/`-layout` (+2 tests), `BimCrosshairOverlay3D`, και το
+  cascade που υπηρετούσε ΜΟΝΟ τον retired compositor: `crosshair-3d-center` (snap-vs-cursor center — άχρηστο,
+  ο hardware cursor μένει στην πραγματική θέση) + `hover-add-badge` ("+"/"−" badge — δεν ζωγραφίζεται σε PNG
+  cursor) (+2 tests). Grep επιβεβαίωσε μηδέν live importers.
+  **ΕΚΚΡΕΜΕΙ (ξεχωριστά):** revert των Phase 0 διαγνωστικών (`bim3d-perf-diag` wiring σε 4 committed perf-critical
+  3D αρχεία + flags `dxf-no-render`/`dxf-no-overlays` + `mouse-handler-perf` hold-window) — flag-gated, μηδέν
+  production impact, ΔΕΝ μπλοκάρει commit· shared-tree risk → δική του εστιασμένη συνεδρία.
+  CHECK 6B/6D → stage αυτό το ADR + ADR-545 + canvas-ui.ts + CanvasLayerStack.tsx + τις διαγραφές. 🔴 browser-verify
+  (2D 1:1 όπως το «χέρι» του ViewCube) + commit (Giorgio).

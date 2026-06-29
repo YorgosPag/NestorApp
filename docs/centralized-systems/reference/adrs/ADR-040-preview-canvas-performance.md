@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — Hardware-cursor crosshair: canvas `CrosshairOverlay` retired (ADR-549 Phase 8 finish)
+Το CAD σταυρόνημα γίνεται πλέον ο **OS hardware cursor** (`useCrosshairCursor` → CSS `cursor: url(png)` στο canvas-stack div) για τέλειο 1:1 tracking — αντικαθιστά τον canvas `CrosshairOverlay`. **ADR-040 touch (`CanvasLayerStack.tsx`, CHECK 6B):** ο shell καλεί `useCrosshairCursor(containerRef, { enabled })` — **low-freq settings μόνο, μηδέν νέο `useSyncExternalStore`** (CHECK 6C ασφαλές)· αφαιρέθηκε το `<CrosshairOverlay>` mount + το event-time `isStoreSelected` import. **Διαγραφές** (2D/3D unification): `CrosshairOverlay`/`CrosshairCompositor`(+`-layout`/`-paint`/tests), `BimCrosshairOverlay3D`/`crosshair-3d-center`(+test), `hover-add-badge`(+test). Καμία αλλαγή σε bitmap cache-key / renderer / scheduler. Βλ. **ADR-549** / **ADR-545**. 🟡 UNCOMMITTED.
+
 ### 2026-06-29 — `devicePixelRatio` change re-sync + crosshair comment refresh (ADR-556)
 `subscribeDevicePixelRatio` SSoT (`systems/cursor/device-pixel-ratio.ts`) → ο 3D renderer ξανα-εφαρμόζει `setPixelRatio`+`setSize` όταν αλλάξει το dpr (drag σε οθόνη με άλλο OS scaling) — δεν πυροδοτείται ResizeObserver τότε, οπότε ο drawing buffer θα έμενε στο παλιό dpr (blurry). Η λογική resize/dpr του `ThreeJsSceneManager` εξήχθη σε `bim-3d/scene/scene-manager-resize.ts` (SRP, <500 γρ.). **ADR-040 touch (comment-only):** το `ImmediatePositionStore` σχόλιο ανανεώθηκε — ο compositor `<CrosshairOverlay>` ζωγραφίζει πλέον ΣΥΓΧΡΟΝΑ σε `desynchronized` Canvas2D (ADR-549 Phase 6), όχι promoted DOM `translate3d`· **zero subscriptions, zero hot-path αλλαγή**. 🟡 UNCOMMITTED.
 

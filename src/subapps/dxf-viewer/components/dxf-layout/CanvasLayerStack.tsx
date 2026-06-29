@@ -2,8 +2,10 @@
 'use client';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
-import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
+// ADR-549 Phase 8 — the CAD crosshair is the OS HARDWARE cursor (CSS `cursor: url(png)`) for perfect
+// 1:1 tracking; replaces the old canvas `CrosshairOverlay`. Low-freq settings only (no CHECK 6C store).
+import { useCrosshairCursor } from '../../systems/cursor/useCrosshairCursor';
 // 🏢 ADR-418: resolve active scene units imperatively at zoom time (no subscription)
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { FloorplanBackgroundCanvas } from '../../floorplan-background';
@@ -21,8 +23,6 @@ import { dwarn } from '../../debug';
 import type { Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
-// ADR-532 B4 — event-time selection read (NO subscription — Shell is 6C-protected).
-import { isStoreSelected } from '../../systems/selection/SelectedEntitiesStore';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -263,6 +263,13 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     transform,
     state: guideWorkflowState,
   }), [activeTool, guideStateObj, cpStateObj, transform, guideWorkflowState]);
+
+  // ADR-549 Phase 8 — hardware-cursor crosshair on the canvas-stack div (overrides `cursor-none`).
+  // Perfect 1:1 tracking (OS cursor plane). Shown whenever the crosshair is enabled — no scene
+  // gate, for full parity with the 3D viewport (the crosshair shows on an empty canvas too).
+  useCrosshairCursor(containerRef as React.RefObject<HTMLElement | null>, {
+    enabled: crosshairSettings.enabled,
+  });
   return (
     <>
       <div className="flex-1 relative">
@@ -376,19 +383,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             getCanvas={getPreviewCanvas}
             getViewportElement={getViewportEl}
           />
-          <CrosshairOverlay
-            isActive={crosshairSettings.enabled && !!dxfScene}
-            rulerMargins={{
-              left: rulerSettings.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
-              top: 0,
-              bottom: 0,
-            }}
-            isEntitySelected={(id) => isStoreSelected(id)}
-            className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-            style={{
-              height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
-            }}
-          />
+          {/* ADR-549 Phase 8 — the CAD crosshair is now the OS hardware cursor (see useCrosshairCursor
+              above); the canvas `CrosshairOverlay` is retired. The snap marker overlay stays. */}
           <SnapIndicatorSubscriber
             viewport={viewport}
             dxfCanvasRef={dxfCanvasRef}

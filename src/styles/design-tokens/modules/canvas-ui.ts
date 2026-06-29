@@ -85,11 +85,13 @@ export const canvasUI = {
         // + zIndex.base < zIndex.docked). 'none' enforces that structurally so a future
         // z-order change cannot silently revive the dead handler. SSoT: ONE handler.
         pointerEvents: 'none',
-        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
-        // Το σταυρόνημα εμφανίζεται μόνο από το CrosshairOverlay component
+        // ADR-549 Φ8 — the CAD crosshair is the OS HARDWARE cursor on the `.canvas-stack`
+        // container (`useCrosshairCursor`). This layer must INHERIT it (never set `none`),
+        // so ONE element owns the cursor and every canvas inherits it — exactly like the 3D
+        // viewport. pan/zoom keep their operation cursors (CAD-standard).
         cursor: activeTool === 'pan' ? 'grab' :
                 activeTool === 'zoom' ? 'zoom-in' :
-                'none', // ✅ CAD-GRADE: Always hide CSS cursor, crosshair is the only cursor
+                'inherit',
         touchAction: 'none', // Prevent browser touch gestures
         userSelect: 'none' as const
       }),
@@ -100,11 +102,13 @@ export const canvasUI = {
         height: '100%',
         zIndex: zIndex.docked, // Higher than layer canvas for DXF content
         pointerEvents: 'auto', // DXF canvas captures events for drawing
-        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
-        // Το σταυρόνημα εμφανίζεται μόνο από το CrosshairOverlay component
+        // ADR-549 Φ8 — DxfCanvas is the topmost pointer target, so the cursor the browser
+        // shows is THIS element's cursor. It must INHERIT the container's hardware-cursor
+        // crosshair (OS plane, perfect 1:1) — never `none`, or it would mask the crosshair.
+        // ONE source (the `.canvas-stack` container) owns the cursor, like the 3D viewport.
         cursor: activeTool === 'pan' ? 'grab' :
                 activeTool === 'zoom' ? 'zoom-in' :
-                'none', // ✅ CAD-GRADE: Always hide CSS cursor, crosshair is the only cursor
+                'inherit',
         touchAction: 'none', // Prevent browser touch gestures
         userSelect: 'none' as const
         // ❌ REMOVED: backgroundColor - ADR-004 requires CANVAS_THEME from color-config.ts

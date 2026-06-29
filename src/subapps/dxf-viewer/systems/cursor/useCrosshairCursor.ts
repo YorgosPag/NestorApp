@@ -17,6 +17,7 @@
 import { useEffect, type RefObject } from 'react';
 import { getCursorSettings, subscribeToCursorSettings } from './config';
 import { useGripContext } from '../../providers/GripProvider';
+import { isCrosshairSuppressed, subscribeCrosshairSuppression } from './CrosshairSuppressionStore';
 import { buildCrosshairCursorValue } from './crosshair-cursor-image';
 
 export interface UseCrosshairCursorOptions {
@@ -36,25 +37,36 @@ export interface UseCrosshairCursorOptions {
  */
 export function useCrosshairCursor(
   targetRef: RefObject<HTMLElement | null>,
-  { enabled = true, size, color, lineWidth }: UseCrosshairCursorOptions = {},
+  // Default 32px: browser-verified to render in Chrome (larger images can be silently rejected →
+  // the whole `cursor` declaration drops and the `cursor-none` class wins ⇒ no cursor at all).
+  { enabled = true, size = 32, color, lineWidth }: UseCrosshairCursorOptions = {},
 ): void {
   const { gripSettings } = useGripContext();
   const { showAperture, apertureSize } = gripSettings;
 
   useEffect(() => {
-    const el = targetRef.current;
-    if (!el) return;
     if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let el: HTMLElement | null = null;
+    let unsubSettings: () => void = () => {};
+    let unsubSuppress: () => void = () => {};
 
     const apply = (): void => {
+      if (!el) return;
       const cross = getCursorSettings().crosshair;
+      // ADR-513 — πάνω στα πλήκτρα του «Δαχτυλιδιού Εντολών» (NavWheel) δείξε κανονικό δείκτη
+      // ώστε ο χρήστης να μπορεί να κλικάρει τα πλήκτρα (το σταυρόνημα «εξαφανίζεται»).
+      if (isCrosshairSuppressed()) {
+        el.style.cursor = 'default';
+        return;
+      }
       if (!cross?.enabled) {
         el.style.cursor = 'none';
         return;
       }
       el.style.cursor = buildCrosshairCursorValue({
-        color: color ?? cross.color,
-        lineWidth: lineWidth ?? cross.line_width || 1,
+        color: color ?? cross.color ?? '#ffffff',
+        lineWidth: lineWidth ?? (cross.line_width || 1),
         gap: cross.use_cursor_gap ? cross.center_gap_px ?? 6 : (showAperture && apertureSize > 0 ? apertureSize / 2 + 2 : 6),
         pickbox: showAperture && apertureSize > 0 ? apertureSize : 0,
         opacity: cross.opacity ?? 1,
@@ -62,11 +74,26 @@ export function useCrosshairCursor(
       });
     };
 
-    apply();
-    const unsub = subscribeToCursorSettings(apply);
+    // The target element may not exist yet: the host returns null until its viewport becomes visible
+    // (e.g. BimViewport3D `if (!effectiveVisible) return null`), and a ref assignment does NOT re-fire
+    // this effect. So poll until the element mounts, then attach + subscribe ONCE.
+    const attach = (): void => {
+      el = targetRef.current;
+      if (!el) {
+        timer = setTimeout(attach, 120);
+        return;
+      }
+      apply();
+      unsubSettings = subscribeToCursorSettings(apply);
+      unsubSuppress = subscribeCrosshairSuppression(apply); // ADR-513
+    };
+    attach();
+
     return () => {
-      unsub();
-      el.style.cursor = ''; // restore (class-defined cursor takes over again)
+      if (timer) clearTimeout(timer);
+      unsubSettings();
+      unsubSuppress();
+      if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
   }, [targetRef, enabled, size, color, lineWidth, showAperture, apertureSize]);
 }
