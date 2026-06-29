@@ -13,8 +13,6 @@ import {
   RESIZE_TICK_COUNT, RESIZE_TICK_SPACING,
   RESIZE_TICK_HALF_MAJOR, RESIZE_TICK_HALF_MINOR,
   RESIZE_MIRROR_COLOR,
-  RETICLE_RADIUS, RETICLE_CROSS_INNER, RETICLE_CROSS_OUTER,
-  RETICLE_COLOR, RETICLE_SEGMENTS,
   GIZMO_RENDER_ORDER,
   ENDPOINT_RING_RADIUS, ENDPOINT_RING_TUBE, ENDPOINT_HITBOX_SIZE,
 } from './gizmo-constants';
@@ -318,46 +316,6 @@ export function buildCenterHandle(color: number): THREE.Group {
   );
   edges.renderOrder = GIZMO_RENDER_ORDER;
   group.add(edges);
-
-  return group;
-}
-
-// ---------------------------------------------------------------------------
-// Origin reticle -- circle + crosshair in XZ plane
-// ---------------------------------------------------------------------------
-
-export function buildOriginReticle(): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'gizmo-reticle';
-
-  const mat = makeLineMat(RETICLE_COLOR);
-
-  const circlePts: number[] = [];
-  for (let i = 0; i <= RETICLE_SEGMENTS; i++) {
-    const angle = (i / RETICLE_SEGMENTS) * Math.PI * 2;
-    circlePts.push(
-      Math.cos(angle) * RETICLE_RADIUS, 0,
-      Math.sin(angle) * RETICLE_RADIUS,
-    );
-  }
-  const circleGeo = new THREE.BufferGeometry();
-  circleGeo.setAttribute('position', new THREE.Float32BufferAttribute(circlePts, 3));
-  const circle = new THREE.Line(circleGeo, mat);
-  circle.renderOrder = GIZMO_RENDER_ORDER;
-  group.add(circle);
-
-  const crossDirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  for (const [dx, dz] of crossDirs) {
-    const pts = new Float32Array([
-      dx * RETICLE_CROSS_INNER, 0, dz * RETICLE_CROSS_INNER,
-      dx * RETICLE_CROSS_OUTER, 0, dz * RETICLE_CROSS_OUTER,
-    ]);
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-    const seg = new THREE.Line(geo, mat);
-    seg.renderOrder = GIZMO_RENDER_ORDER;
-    group.add(seg);
-  }
 
   return group;
 }

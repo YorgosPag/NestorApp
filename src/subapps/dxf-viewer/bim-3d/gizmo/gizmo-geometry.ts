@@ -15,8 +15,6 @@ import {
   RESIZE_IDLE_COLORS, RESIZE_HANDLE_OFFSET,
   GIZMO_ENDPOINT_COLOR,
   PYRAMID_OFFSET,
-  NEG_AXIS_LENGTH, NEG_AXIS_OPACITY,
-  GIZMO_RENDER_ORDER,
 } from './gizmo-constants';
 import {
   makeMaterial, applyRenderOrder,
@@ -27,7 +25,6 @@ import {
   buildResizeHandle,
   buildEndpointHandle,
   buildCenterHandle,
-  buildOriginReticle,
 } from './gizmo-handle-builders';
 
 // ---------------------------------------------------------------------------
@@ -90,24 +87,9 @@ export function createGizmoMeshes(): GizmoMeshSet {
     root.add(wrapper, hitbox);
   }
 
-  // --- Negative axis indicators (subtle directional hints) -----------------
-
-  for (const axis of AXIS_KEYS) {
-    const color = AXIS_COLORS[axis];
-    const pts = new Float32Array(6); // [0,0,0, nx,ny,nz]
-    if (axis === 'x') pts[3] = -NEG_AXIS_LENGTH;
-    if (axis === 'y') pts[4] = -NEG_AXIS_LENGTH;
-    if (axis === 'z') pts[5] = -NEG_AXIS_LENGTH;
-    const lineGeo = new THREE.BufferGeometry();
-    lineGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-    const lineMat = new THREE.LineBasicMaterial({
-      color, depthTest: false, depthWrite: false,
-      transparent: true, opacity: NEG_AXIS_OPACITY,
-    });
-    const line = new THREE.Line(lineGeo, lineMat);
-    line.renderOrder = GIZMO_RENDER_ORDER;
-    root.add(line);
-  }
+  // ADR-552 (Giorgio 2026-06-29) — the negative-axis indicator stubs were removed:
+  // the faint half-lines reading "behind" the origin (axes που «προχωράνε προς τα πίσω»)
+  // were visual noise. The axes now stop at the join.
 
   // --- Plane handles (L-bracket + diagonal + arm extensions) ---------------
 
@@ -272,12 +254,10 @@ export function createGizmoMeshes(): GizmoMeshSet {
 
   root.add(centerGroup, centerHitbox);
 
-  // --- Origin reticle (circle + crosshair) ---------------------------------
-
-  const reticle = buildOriginReticle();
-  root.add(reticle);
-
-  // Make reticle area pickable as center-handle (hover + drag activation).
+  // --- Origin centre pick zone ---------------------------------------------
+  // ADR-552 (Giorgio 2026-06-29) — the visible origin reticle (circle «κυκλάκι» +
+  // crosshair) was removed; only the invisible pick zone below stays so the gizmo
+  // centre remains hover/drag-activatable.
   const centerOriginHit = new THREE.Mesh(
     new THREE.CircleGeometry(0.17, 24),
     makeMaterial(0x000000, { visible: false, side: THREE.DoubleSide }),

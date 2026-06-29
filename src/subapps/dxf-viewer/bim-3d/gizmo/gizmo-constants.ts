@@ -79,13 +79,6 @@ export const RESIZE_TICK_HALF_MINOR = 0.4;
 /** Mirror-corner accent (from reference HTML scale_mir corner color). */
 export const RESIZE_MIRROR_COLOR = 0xa07840;
 
-// -- Origin Reticle (circle + crosshair) ---------------------------------------
-export const RETICLE_RADIUS = 0.03;
-export const RETICLE_CROSS_INNER = 0.045;
-export const RETICLE_CROSS_OUTER = 0.075;
-export const RETICLE_COLOR = 0x444444;
-export const RETICLE_SEGMENTS = 24;
-
 // -- Screen-Space Scaling ------------------------------------------------------
 /** Multiplier: gizmoScale = cameraDistance * tan(fov/2) * GIZMO_SCREEN_SCALE */
 export const GIZMO_SCREEN_SCALE = 0.45;
@@ -164,10 +157,6 @@ export const GIZMO_DRAG_THRESHOLD_SQ = 9;
 
 // -- Geometry Segments (level of detail for cylinders) -------------------------
 export const CYLINDER_SEGMENTS = 8;
-
-// -- Negative Axis Indicators (subtle directional hints) -----------------------
-export const NEG_AXIS_LENGTH = 0.15;
-export const NEG_AXIS_OPACITY = 0.14;
 
 // -- Handle ID -> Color Maps ---------------------------------------------------
 export const AXIS_COLORS: Record<string, number> = {

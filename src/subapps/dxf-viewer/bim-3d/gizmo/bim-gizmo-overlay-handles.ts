@@ -45,19 +45,20 @@ const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
  * (contextual ribbon). So the structural plan-section handles (`resize-x`/`resize-z`
  * = wall/column thickness, beam width) and the slab thickness handle were REMOVED
  * (ADR-408 Φ1, «πιστή αντιγραφή Revit»):
- *   - column → Y-top height + Y-base offset ONLY (ADR-401 F.3 top/base octahedra).
- *              Width/depth (X/Z) → Type. Length n/a (a column is a point in plan).
- *   - wall   → Y-top height + Y-base offset ONLY (ADR-401 E.3). Thickness (X/Z) →
- *              Type. LENGTH → the endpoint shape handles (`ENDPOINT_HANDLES_BY_TYPE`).
+ *   - column → NO resize handle. ADR-552 (Giorgio 2026-06-29): the vertical height
+ *              octahedra («κίτρινα διαμαντάκια» στη θέση του κάθετου άξονα) read as
+ *              confusing clutter. Height + base offset → contextual tab («Ύψος»);
+ *              width/depth (X/Z) → Type. A column is a point in plan (no length).
+ *   - wall   → NO resize handle. ADR-552: same — the vertical octahedra removed.
+ *              Height/base → tab; thickness (X/Z) → Type; LENGTH → the endpoint shape
+ *              handles (`ENDPOINT_HANDLES_BY_TYPE`).
  *   - beam   → NO resize handle. ADR-535 Φ9: LENGTH + width → the 2D Canvas2D reshape
  *              grips (top/bottom faces, mirror slab/wall); depth → Type; top elevation →
  *              the vertical move arrow. (Endpoint rings removed — see ENDPOINT_HANDLES_BY_TYPE.)
  *   - slab   → NO resize handle. Thickness → Type; footprint → 2D per-vertex sketch.
+ *   - stair  → KEEPS plan + vertical handles (incline is a parametric run, not a section).
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  // `resize-m-y` = the second (base) vertical grip below the centroid (top + base).
-  column: ['resize-y', 'resize-m-y'],
-  wall: ['resize-y', 'resize-m-y'],
   // ADR-402 Sub-Phase 1 — stair: plan handles (perp → width, axial → run/stepCount).
   // ADR-401 Phase G.3 — + vertical top/base octahedra: dragging re-steps to the new
   // height (Revit «Desired number of risers») and detaches the side if attached.
@@ -86,15 +87,13 @@ const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> =
  * the other end stays). Single-select only (the hook passes `editBimType = null` for a
  * multi-selection → no endpoint handles, mirror resize).
  *   - `mep-segment` → Revit pipe shape handles (free-3D drag: κάτοψη + υψόμετρο).
- *   - `wall` → Revit LENGTH shape handles (horizontal drag: το μήκος είναι plan
- *     dimension· το ύψος είναι ξεχωριστή λαβή/Τύπος).
- *   - `beam` → ΧΩΡΙΣ endpoint rings (ADR-535 Φ9): το δοκάρι πλέον εκθέτει τις ΙΔΙΕΣ
- *     2D reshape grips (γωνίες/πλάτος/μήκος-άκρα) ως Canvas2D overlay top+bottom, όπως η
- *     πλάκα/τοίχος — οι σιελ endpoint-σφαιρες του gizmo θα ήταν διπλή/συγκρουόμενη λαβή μήκους.
+ *   - `wall` / `beam` → ΧΩΡΙΣ endpoint rings (ADR-535 Φ9 beam· Φ8 follow-up wall): εκθέτουν
+ *     πλέον τις ΙΔΙΕΣ 2D reshape grips (γωνίες/πάχος/μήκος-άκρα) ως Canvas2D overlay top+bottom,
+ *     όπως η πλάκα — οι σιελ endpoint-σφαιρες του gizmo θα ήταν διπλή/συγκρουόμενη λαβή μήκους.
+ *     (Το μήκος/άκρα του τοίχου τα καλύπτουν οι Φ8 reshape grips· τα openings ακολουθούν.)
  */
 const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
   'mep-segment': ['endpoint-start', 'endpoint-end'],
-  wall: ['endpoint-start', 'endpoint-end'],
 };
 
 /** Active handle id set for a selected entity: base move/rotate + 3D move + resize + tilt + endpoint. */

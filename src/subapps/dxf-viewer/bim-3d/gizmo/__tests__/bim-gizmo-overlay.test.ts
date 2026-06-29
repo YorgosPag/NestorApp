@@ -37,15 +37,16 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 
-  // ADR-408 Φ1 — a column shows ONLY the vertical (height) octahedra; its X/Z section
-  // (width/depth) is a Type parameter, never a drag.
-  it('shows resize-y but HIDES resize-x / resize-z for a column selection (Revit: section = Type)', () => {
+  // ADR-552 (Giorgio 2026-06-29) — a column shows NO resize octahedra at all: the
+  // vertical height «διαμαντάκια» were removed (height → tab, section → Type).
+  it('HIDES every resize octahedron for a column selection (ADR-552)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
     overlay.setActiveHandles(activeHandlesFor('column'));
 
-    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true);
+    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(false);
+    expect(findByName(scene, 'gizmo-resize-m-y')?.visible).toBe(false);
     expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(false);
     expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(false);
 
@@ -145,16 +146,16 @@ describe('BimGizmoOverlay — relocatable base-point marker (ADR-408)', () => {
   });
 });
 
-describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faithful)', () => {
-  // Revit: a section (thickness/width/depth) is NEVER a drag — only a Type parameter.
-  // So wall/column keep only the vertical HEIGHT octahedra (top + base); the X/Z
-  // plan-section handles were removed.
+describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1 / ADR-552, Revit-faithful)', () => {
+  // ADR-552 (Giorgio 2026-06-29): column + wall expose NO resize handles. The vertical
+  // height octahedra («κίτρινα διαμαντάκια» στη θέση του κάθετου άξονα) were removed —
+  // height/base → contextual tab, section (X/Z) → Type. Only stair keeps resize handles.
   it.each(['column', 'wall'])(
-    'exposes ONLY the vertical height handles (resize-y + resize-m-y) for %s — section is Type',
+    'exposes NO resize handles for %s — height is tab, section is Type (ADR-552)',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
-      expect(ids.has('resize-y')).toBe(true);
-      expect(ids.has('resize-m-y')).toBe(true);
+      expect(ids.has('resize-y')).toBe(false);
+      expect(ids.has('resize-m-y')).toBe(false);
       expect(ids.has('resize-x')).toBe(false);
       expect(ids.has('resize-z')).toBe(false);
     },
@@ -193,18 +194,18 @@ describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faith
 });
 
 describe('activeHandlesFor — endpoint LENGTH shape handles (ADR-408 Φ-D/Φ1, Revit)', () => {
-  // A linear element exposes a draggable handle at each axis end (Revit shape handle):
-  // mep-segment (free-3D pipe) + wall (horizontal length). ADR-535 Φ9 — `beam` was REMOVED:
-  // its length + width are now the 2D Canvas2D reshape grips (mirror slab/wall), so the cyan
-  // endpoint rings would be a duplicate/conflicting length handle. Point/area elements never had them.
-  it.each(['mep-segment', 'wall'])('linear element %s exposes both endpoint handles', (bimType) => {
+  // Only the free-3D pipe (`mep-segment`) still exposes draggable endpoint shape handles.
+  // ADR-535 Φ9 REMOVED `beam` + Φ8 follow-up REMOVED `wall`: their length/ends are now the
+  // 2D Canvas2D reshape grips (mirror slab), so the cyan endpoint rings would be a
+  // duplicate/conflicting length handle. Point/area elements never had them.
+  it.each(['mep-segment'])('linear element %s exposes both endpoint handles', (bimType) => {
     const ids = activeHandlesFor(bimType);
     expect(ids.has('endpoint-start')).toBe(true);
     expect(ids.has('endpoint-end')).toBe(true);
   });
 
-  it.each(['column', 'slab', 'stair', 'mep-fixture', 'beam'])(
-    '%s exposes NO endpoint handles (beam → 2D reshape grips, ADR-535 Φ9)',
+  it.each(['column', 'slab', 'stair', 'mep-fixture', 'beam', 'wall'])(
+    '%s exposes NO endpoint handles (beam/wall → 2D reshape grips, ADR-535 Φ9/Φ8)',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
       expect(ids.has('endpoint-start')).toBe(false);
@@ -261,7 +262,9 @@ describe('BimGizmoOverlay — collapse to move handles during a drag (ADR-363 Φ
   it('hides the resize/shape handles while keeping the move arrows, then restores them', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
-    overlay.setActiveHandles(activeHandlesFor('wall')); // wall: resize-y + arrows + endpoint rings
+    // ADR-552 — column/wall no longer expose resize handles; stair still does, so it is
+    // the type that exercises the collapse-to-move-arrows clutter-hide path.
+    overlay.setActiveHandles(activeHandlesFor('stair')); // stair: resize-y + move arrows
 
     expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true);
 
