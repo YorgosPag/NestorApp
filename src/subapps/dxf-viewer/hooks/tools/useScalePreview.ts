@@ -17,10 +17,16 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity } from '../../types/entities';
+import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
+import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
-import { scalePoint } from '../../systems/scale/scale-entity-transform';
+// ADR-348 SSoT — the SAME per-entity scale the commit (`ScaleEntityCommand`) applies, so the
+// WYSIWYG preview cannot diverge from the committed result (incl. circle → ellipse).
+import { scaleEntity } from '../../systems/scale/scale-entity-transform';
+// ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import type { useLevels } from '../../systems/levels';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -49,6 +55,14 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     if (!levelManager.currentLevelId) return null;
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
     return scene?.entities.find(e => e.id === id) ?? null;
+  }, [levelManager]);
+
+  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  const getBimPreview = useBimPreviewRenderer();
+
+  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
+    if (!levelManager.currentLevelId) return undefined;
+    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
   }, [levelManager]);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
@@ -95,20 +109,21 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     ctx.fillText(`×${liveSx.toFixed(3)}`, cursorPt.x + 12, cursorPt.y - 8);
     ctx.restore();
 
-    // Ghost entities
+    // Real WYSIWYG copies (full fidelity) — originals dim to ghosts at their source.
     ctx.save();
-    ctx.globalAlpha = 0.4;
-    ctx.strokeStyle = '#00BFFF';
-    ctx.lineWidth = 1.5;
-
+    const bimPreview = getBimPreview(ctx);
+    const layers = layersById();
     for (const entityId of s.selectedEntityIds) {
       const entity = getEntity(entityId);
       if (!entity) continue;
-      drawGhostEntity(ctx, entity, s.basePoint, liveSx, liveSy, t, viewport);
+      const scaled = {
+        ...(entity as object),
+        ...scaleEntity(entity as Entity, s.basePoint, liveSx, liveSy),
+      } as unknown as DxfEntityUnion;
+      drawRealEntityPreview(bimPreview, scaled, layers, t, viewport);
     }
-
     ctx.restore();
-  }, [getEntity]);
+  }, [getEntity, getBimPreview, layersById]);
 
   useCanvasGhostPreview({
     isActive: phase !== 'idle',
@@ -117,65 +132,4 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     transform,
     draw,
   });
-}
-
-// ── Ghost entity drawing ──────────────────────────────────────────────────────
-
-function drawGhostEntity(
-  ctx: CanvasRenderingContext2D,
-  entity: AnySceneEntity,
-  base: Point2D,
-  sx: number,
-  sy: number,
-  transform: ViewTransform,
-  viewport: { width: number; height: number },
-): void {
-  const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
-  const sp = (p: Point2D) => toScreen(scalePoint(p, base, sx, sy));
-
-  switch (entity.type) {
-    case 'line': {
-      const s = sp(entity.start); const e = sp(entity.end);
-      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
-      break;
-    }
-    case 'circle': {
-      const c = sp(entity.center);
-      const r = entity.radius * Math.abs(sx) * transform.scale;
-      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
-      break;
-    }
-    case 'arc': {
-      const c = sp(entity.center);
-      const r = entity.radius * Math.abs(sx) * transform.scale;
-      const startRad = (entity.startAngle * Math.PI) / 180;
-      const endRad = (entity.endAngle * Math.PI) / 180;
-      ctx.beginPath(); ctx.arc(c.x, c.y, r, -startRad, -endRad, entity.counterclockwise ?? false); ctx.stroke();
-      break;
-    }
-    case 'polyline':
-    case 'lwpolyline': {
-      if (entity.vertices.length < 2) break;
-      ctx.beginPath();
-      const first = sp(entity.vertices[0]);
-      ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < entity.vertices.length; i++) {
-        const p = sp(entity.vertices[i]);
-        ctx.lineTo(p.x, p.y);
-      }
-      if (entity.closed) ctx.closePath();
-      ctx.stroke();
-      break;
-    }
-    case 'text': {
-      const pos = sp(entity.position);
-      const fontSize = Math.max(8, (entity.height ?? entity.fontSize ?? 12) * Math.abs(sy) * transform.scale);
-      ctx.save();
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.fillStyle = '#00BFFF';
-      ctx.fillText(entity.text, pos.x, pos.y);
-      ctx.restore();
-      break;
-    }
-  }
 }

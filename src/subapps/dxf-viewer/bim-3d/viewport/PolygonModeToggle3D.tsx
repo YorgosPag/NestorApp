@@ -21,7 +21,6 @@
 
 import { useEffect, useCallback, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { useSelection3DStore } from '../stores/Selection3DStore';
@@ -75,26 +74,22 @@ export function PolygonModeToggle3D({ managerRef, externalEntitiesMode, bimEntit
 
   return (
     <>
-      {/* Toggle button (left, below the 2D exit button). Visible only when a faced-capable solid is selected. */}
+      {/* Toggle button (left, below the 2D exit button). Visible only when a faced-capable solid is selected.
+          ADR-539 — tooltip removed per Giorgio (2026-06-29): the `aria-label` keeps it accessible. */}
       {canPolygon && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleTogglePolygon}
-              aria-pressed={polygonActive}
-              aria-label={t('polygonMode.toggle')}
-              className={`absolute left-3 top-12 z-30 flex select-none items-center gap-1 rounded border px-2 py-1 text-xs font-medium backdrop-blur-sm transition-colors ${
-                polygonActive
-                  ? 'border-[hsl(var(--text-info))]/60 bg-[hsl(var(--bg-info))]/30 text-white'
-                  : 'border-white/20 bg-black/40 text-white/80 hover:bg-black/60 hover:text-white'
-              }`}
-            >
-              <span aria-hidden="true">⬢</span>
-              {t('polygonMode.toggle')}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('polygonMode.tooltip')}</TooltipContent>
-        </Tooltip>
+        <button
+          onClick={handleTogglePolygon}
+          aria-pressed={polygonActive}
+          aria-label={t('polygonMode.toggle')}
+          className={`absolute left-3 top-12 z-30 flex select-none items-center gap-1 rounded border px-2 py-1 text-xs font-medium backdrop-blur-sm transition-colors ${
+            polygonActive
+              ? 'border-[hsl(var(--text-info))]/60 bg-[hsl(var(--bg-info))]/30 text-white'
+              : 'border-white/20 bg-black/40 text-white/80 hover:bg-black/60 hover:text-white'
+          }`}
+        >
+          <span aria-hidden="true">⬢</span>
+          {t('polygonMode.toggle')}
+        </button>
       )}
 
       {/* Per-face material library (click-to-apply). Renders only in Polygon Mode. */}

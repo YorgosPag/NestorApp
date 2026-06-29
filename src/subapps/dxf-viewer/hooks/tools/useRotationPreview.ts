@@ -19,11 +19,17 @@
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { AnySceneEntity } from '../../types/entities';
-import { rotatePoint } from '../../utils/rotation-math';
+import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
+// ADR-188 SSoT — the SAME per-entity rotate the commit (`RotateEntityCommand.computeUpdates`)
+// applies: BIM-aware pivot rotate first, generic `rotateEntity` fallback. Preview ≡ commit.
+import { rotateEntity } from '../../utils/rotation-math';
+import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geometry';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import type { RotationPhase } from './useRotationTool';
 import type { useLevels } from '../../systems/levels';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -74,6 +80,14 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
     if (!scene?.entities) return null;
     return scene.entities.find(e => e.id === entityId) ?? null;
+  }, [levelManager]);
+
+  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  const getBimPreview = useBimPreviewRenderer();
+
+  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
+    if (!levelManager.currentLevelId) return undefined;
+    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
   }, [levelManager]);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
@@ -157,24 +171,24 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.restore();
     }
 
-    // Ghost entities (semi-transparent rotated copies)
+    // Real WYSIWYG rotated copies (full fidelity) — originals dim to ghosts at their source.
     if (Math.abs(currentAngle) > 0.01) {
       ctx.save();
-      ctx.globalAlpha = 0.4;
-      ctx.strokeStyle = '#00BFFF';
-      ctx.lineWidth = 1.5;
-
+      const bimPreview = getBimPreview(ctx);
+      const layers = layersById();
       for (const entityId of selectedEntityIds) {
         const entity = getEntity(entityId);
         if (!entity) continue;
-
-        const dxfEntity = entity as unknown as DxfEntityUnion;
-        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, t, viewport);
+        const e = entity as unknown as Entity;
+        // Preview ≡ commit: BIM-aware pivot rotate first, generic rotate fallback.
+        const patch = calculateBimRotatedGeometry(e, basePoint, currentAngle)
+          ?? rotateEntity(e, basePoint, currentAngle);
+        const rotated = { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+        drawRealEntityPreview(bimPreview, rotated, layers, t, viewport);
       }
-
       ctx.restore();
     }
-  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity]);
+  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, getBimPreview, layersById]);
 
   useCanvasGhostPreview({
     isActive: PREVIEW_PHASES.has(phase),
@@ -183,97 +197,4 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     transform,
     draw,
   });
-}
-
-// ============================================================================
-// GHOST ENTITY DRAWING (per entity type)
-// ============================================================================
-
-function drawGhostEntity(
-  ctx: CanvasRenderingContext2D,
-  entity: DxfEntityUnion,
-  pivot: Point2D,
-  angleDeg: number,
-  transform: ViewTransform,
-  viewport: { width: number; height: number },
-): void {
-  const toScreen = (p: Point2D) =>
-    CoordinateTransforms.worldToScreen(p, transform, viewport);
-
-  switch (entity.type) {
-    case 'line': {
-      const s = toScreen(rotatePoint(entity.start, pivot, angleDeg));
-      const e = toScreen(rotatePoint(entity.end, pivot, angleDeg));
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(e.x, e.y);
-      ctx.stroke();
-      break;
-    }
-
-    case 'circle': {
-      const c = toScreen(rotatePoint(entity.center, pivot, angleDeg));
-      const radiusScreen = entity.radius * transform.scale;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, radiusScreen, 0, Math.PI * 2);
-      ctx.stroke();
-      break;
-    }
-
-    case 'arc': {
-      const c = toScreen(rotatePoint(entity.center, pivot, angleDeg));
-      const radiusScreen = entity.radius * transform.scale;
-      const startRad = degToRad(entity.startAngle + angleDeg);
-      const endRad = degToRad(entity.endAngle + angleDeg);
-      ctx.beginPath();
-      // Canvas Y-flip: negate angles
-      ctx.arc(c.x, c.y, radiusScreen, -startRad, -endRad, entity.counterclockwise ?? false);
-      ctx.stroke();
-      break;
-    }
-
-    case 'polyline': {
-      if (entity.vertices.length < 2) break;
-      ctx.beginPath();
-      const first = toScreen(rotatePoint(entity.vertices[0], pivot, angleDeg));
-      ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < entity.vertices.length; i++) {
-        const p = toScreen(rotatePoint(entity.vertices[i], pivot, angleDeg));
-        ctx.lineTo(p.x, p.y);
-      }
-      if (entity.closed) {
-        ctx.closePath();
-      }
-      ctx.stroke();
-      break;
-    }
-
-    case 'text': {
-      const pos = toScreen(rotatePoint(entity.position, pivot, angleDeg));
-      ctx.save();
-      const fontSize = Math.max(8, entity.height * transform.scale);
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.fillStyle = '#00BFFF';
-      const totalRotation = (entity.rotation ?? 0) + angleDeg;
-      ctx.translate(pos.x, pos.y);
-      // Canvas Y-flip
-      ctx.rotate(-degToRad(totalRotation));
-      ctx.fillText(entity.text, 0, 0);
-      ctx.restore();
-      break;
-    }
-
-    case 'angle-measurement': {
-      // Draw rotated arms
-      const v = toScreen(rotatePoint(entity.vertex, pivot, angleDeg));
-      const p1 = toScreen(rotatePoint(entity.point1, pivot, angleDeg));
-      const p2 = toScreen(rotatePoint(entity.point2, pivot, angleDeg));
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(v.x, v.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-      break;
-    }
-  }
 }

@@ -39,7 +39,11 @@ import {
   applyVertexDisplacement,
   translateEntityByAnchor,
 } from '../../systems/stretch/stretch-entity-transform';
-import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
+// ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity,
+// byte-identical to commit), the same SSoT as the Move tool / grip drag.
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { useBimPreviewRenderer } from './useBimPreviewRenderer';
+import type { SceneLayer } from '../../types/entities';
 import type { useLevels } from '../../systems/levels';
 import type { VertexRef } from '../../systems/stretch/stretch-vertex-classifier';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -79,6 +83,14 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
       entityMapRef.current = new Map(scene.entities.map(e => [e.id, e]));
     }
     return entityMapRef.current.get(id) ?? null;
+  }, [levelManager]);
+
+  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  const getBimPreview = useBimPreviewRenderer();
+
+  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
+    if (!levelManager.currentLevelId) return undefined;
+    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
   }, [levelManager]);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
@@ -122,12 +134,10 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
 
     if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
-    // ── Ghost entities ──
+    // ── Real WYSIWYG copies (full fidelity) — originals dim to ghosts at their source ──
     ctx.save();
-    ctx.globalAlpha = GHOST_DEFAULTS.alpha;
-    ctx.strokeStyle = GHOST_DEFAULTS.color;
-    ctx.fillStyle = GHOST_DEFAULTS.color;
-    ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+    const bimPreview = getBimPreview(ctx);
+    const layers = layersById();
 
     // Group captured vertices by entityId once per frame.
     const refsByEntity = groupRefsByEntity(s.capturedVertices);
@@ -136,20 +146,20 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
     for (const entityId of s.capturedEntities) {
       const entity = getEntity(entityId);
       if (!entity) continue;
-      const ghost = buildAnchorGhost(entity as Entity, delta);
-      if (ghost) drawGhostEntity(ctx, ghost, t, viewport);
+      const moved = buildAnchorGhost(entity as Entity, delta);
+      if (moved) drawRealEntityPreview(bimPreview, moved, layers, t, viewport);
     }
 
     // Per-vertex entities → partial deformation
     for (const [entityId, refs] of refsByEntity) {
       const entity = getEntity(entityId);
       if (!entity) continue;
-      const ghost = buildVertexGhost(entity as Entity, refs, delta);
-      if (ghost) drawGhostEntity(ctx, ghost, t, viewport);
+      const moved = buildVertexGhost(entity as Entity, refs, delta);
+      if (moved) drawRealEntityPreview(bimPreview, moved, layers, t, viewport);
     }
 
     ctx.restore();
-  }, [getEntity]);
+  }, [getEntity, getBimPreview, layersById]);
 
   useCanvasGhostPreview({
     isActive: phase !== 'idle',
