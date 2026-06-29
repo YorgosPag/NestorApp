@@ -79,7 +79,10 @@ export function BimOverlayDispatchCanvas({ managerRef }: BimOverlayDispatchCanva
   // Clear the canvas when every layer is off / on unmount (shared overlay RAF SSoT, ADR-542).
   const onStop = useCallback(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
+    // ADR-549 Phase 5 — ίδιο attribute με το draw-path (desynchronized) ώστε το context να μη
+    // δημιουργηθεί ποτέ ασυγχρόνιστο αν το onStop τύχει να τρέξει πρώτο (getContext cache-άρει το
+    // πρώτο attribute set).
+    const ctx = canvas?.getContext('2d', { desynchronized: true });
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     lastSigRef.current = '';
   }, []);

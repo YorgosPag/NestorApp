@@ -309,10 +309,14 @@ export function clearCanvasDpr(
  *
  * @param canvas    το overlay canvas
  * @param container ο γονέας που καθορίζει το CSS μέγεθος (clientWidth/Height)
+ * @param desynchronized ADR-549 Phase 5 — low-latency present hint (αποσυνδέει το cursor-layer
+ *   compositing από τον vsync-locked compositor). Default `false`· true μόνο για cursor-critical
+ *   overlays (π.χ. το unified 3D overlay-dispatch). Εφαρμόζεται στην ΠΡΩΤΗ δημιουργία context.
  */
 export function sizeCanvasToContainerDpr(
   canvas: HTMLCanvasElement,
   container: HTMLElement,
+  desynchronized = false,
 ): CanvasRenderingContext2D | null {
   const dpr = getDevicePixelRatio();
   const cw = container.clientWidth;
@@ -323,7 +327,7 @@ export function sizeCanvasToContainerDpr(
     canvas.width = dw;
     canvas.height = dh;
   }
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { desynchronized });
   if (!ctx) return null;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cw, ch);

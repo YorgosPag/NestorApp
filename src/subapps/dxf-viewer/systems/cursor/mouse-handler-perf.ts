@@ -42,6 +42,10 @@ export function isPerfEnabled(): boolean {
 const accumulators: Map<string, number[]> = new Map();
 let sampleCount = 0;
 const REPORT_EVERY = 60;
+// ADR-549 diag: once a `resetPerf()` opens a measurement window, STOP the rolling-60 auto-clear so
+// `__bim3dPerf.download()` captures the FULL window (else only the trailing <60 samples survive →
+// noisy avg/p95). Default false ⇒ normal perf mode is unchanged (clears every 60). Re-armed by reset.
+let holdWindow = false;
 
 export function withPerf<T>(stage: string, fn: () => T): T {
   if (!perfEnabled) return fn();
@@ -80,6 +84,7 @@ export function recordSample(stage: string, value: number): void {
 export function resetPerf(): void {
   accumulators.clear();
   sampleCount = 0;
+  holdWindow = true; // diag window open → accumulate the whole sweep until the next reset()
 }
 
 export function perfTick(): void {
@@ -87,7 +92,7 @@ export function perfTick(): void {
   sampleCount++;
   if (sampleCount >= REPORT_EVERY) {
     perfReport();
-    accumulators.clear();
+    if (!holdWindow) accumulators.clear();
     sampleCount = 0;
   }
 }

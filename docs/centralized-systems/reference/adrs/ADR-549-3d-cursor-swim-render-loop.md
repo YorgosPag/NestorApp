@@ -284,10 +284,65 @@ snap σε νέο `snapProjectedRef` (η βαριά projection — camera + GPU d
 Το πλέον-νεκρό `gluedRef` (write-only μετά) **αφαιρέθηκε** (Boy-Scout). Το RAF παραμένει για το μόνο
 σενάριο όπου το κέντρο κινείται χωρίς mousemove: **κάμερα κινείται ενώ ο κέρσορας στέκεται**.
 
-**Στόχος:** BIM crosshair == DXF crosshair (κλείσιμο του ~10ms gap). ⚠️ Το residual ~30ms floor είναι
-**render-bound** → δεν κινείται από αυτό· χρειάζεται μείωση κόστους/συχνότητας render (Finding 3
-unification + adaptive degradation). CHECK 6D → stage αυτό το ADR. 🔴 browser-verify (Giorgio: BIM dump
-πριν/μετά).
+**Στόχος:** BIM crosshair == DXF crosshair (κλείσιμο του ~10ms gap). CHECK 6D → stage αυτό το ADR.
+
+### 🔬 Phase 4 — ΜΕΤΡΗΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ (641-sample window, 2026-06-29) — διόρθωση υπόθεσης
+Νέο tooling: `__bim3dPerf.download()` (flat `.txt` στις Λήψεις, reuse `triggerExportDownload`+`nowISO`) +
+`resetPerf()`/hold-window στο `mouse-handler-perf.ts` (το `reset()` μηδενίζει ΚΑΙ τον cursor + κρατά ΟΛΟ
+το παράθυρο, όχι μόνο τα τελευταία <60). Καθαρό δείγμα BIM sweep 26.6s:
+
+| Μετρική | Τιμή |
+|---|---|
+| `cursor.totalLag` | avg **31.6ms** · **min 1.3ms** · p95 62 · max 100 (641 samples) |
+| `cursor.inputLatency` | avg **1.9ms** (input ΟΚ) |
+| renders | 14/26.6s (μερικά camera frames) · overlays όλα <1ms |
+
+**Διόρθωση:** το «spikes» (από sparse 10-sample dumps) **διαψεύστηκε**. Αφαιρώντας τα ~7% render-frames,
+τα υπόλοιπα ~600 frames βγάζουν **σταθερό πάτωμα ~28ms ≈ 1.7 frames**. inputLatency ~2ms αλλά paint ~28ms
+→ **καθαρά present/compositor latency** (το σταυρόνημα-DOM layer συνθέτεται μαζί με το vsync-locked WebGL
+present σε αδύναμη GPU). **Επιβεβαιώνει την αρχική υπόθεση «GPU present» του handoff — με δεδομένα.**
+Το §2.2 δρα ΠΡΙΝ το compositing → δεν μειώνει αυτό το πάτωμα (σωστό & ασφαλές, αλλά όχι το ψάρι· επιπλέον
+το snap-glue path δεν ασκήθηκε στα samples — κανένα `crosshair` overlay-draw).
+
+### Phase 5 — ΕΠΟΜΕΝΟΣ ΜΟΧΛΟΣ (low-latency presentation, καθαρή session)
+Στόχος = το ~28ms πάτωμα present-latency. Υποψήφια (browser-verify απαραίτητο):
+1. **`desynchronized: true`** στα Canvas2D overlay contexts (hover-glow/snap/grips) + **low-latency WebGL**
+   (`powerPreference:'high-performance'`, `desynchronized`) στο `THREE.WebGLRenderer` creation — αποσυνδέει
+   το cursor-layer compositing από το vsync-locked WebGL render.
+2. Ο `CrosshairCompositor` είναι **DOM** (translate3d), όχι canvas → εξέτασε αν απομονώνεται σε δικό του
+   compositor layer ανεξάρτητο του WebGL present.
+3. Επιβεβαίωση με Chrome DevTools → Performance → GPU/compositor track (το `performance.now()` diag δεν το πιάνει).
+
+### ✅ Phase 5 — IMPLEMENTED (low-latency presentation, 2026-06-29, UNCOMMITTED)
+**Big-player doctrine:** ο `desynchronized` hint = web-platform ισοδύναμο του native low-latency present
+(DXGI flip-model / waitable swap-chain που χρησιμοποιούν Revit & Cinema 4D), και του `desynchronized`
+canvas που χρησιμοποιεί η Figma για cursor/stylus latency· `powerPreference:'high-performance'` = πρακτική
+Autodesk Forge/APS & Onshape.
+
+**SSoT audit (grep ΠΡΙΝ τον κώδικα):**
+- Live WebGL renderer = `scene-setup.ts:101` (`createBimRenderer`)· ο capture renderer (γρ.134,
+  `preserveDrawingBuffer:true`) **δεν** αγγίχτηκε.
+- 2D overlay context SSoT = `sizeCanvasToContainerDpr` (`rendering/canvas/withCanvasState.ts`), μοναδικός
+  runtime caller = το unified 3D overlay-dispatch (ADR-555). Precedent `desynchronized:true` ήδη στο
+  `PreviewRenderer.ts:112` (2D DXF preview).
+- **Κρίσιμο για three r0.170:** ο `THREE.WebGLRenderer` **ΔΕΝ προωθεί** το `desynchronized` στο
+  `getContext` (μόνο alpha/depth/stencil/antialias/premultipliedAlpha/preserveDrawingBuffer/
+  powerPreference/failIfMajorPerformanceCaveat — `three.module.js:29090`). Γι' αυτό δημιουργούμε ΕΜΕΙΣ το
+  `webgl2` context με το flag και το περνάμε via την παράμετρο `context`.
+
+**Αλλαγές (4 αρχεία, FULL SSoT, μηδέν `any`):**
+1. `bim-3d/scene/scene-setup.ts` (`createBimRenderer`) — manual `getContext('webgl2', {…desynchronized:true,
+   powerPreference:'high-performance'})` → `new THREE.WebGLRenderer({ canvas, context, … })`. Belt-and-suspenders
+   fallback στο default three path αν αποτύχει το context.
+2. `rendering/canvas/withCanvasState.ts` (`sizeCanvasToContainerDpr`) — προαιρετικό `desynchronized = false`
+   param → `getContext('2d', { desynchronized })`. Default false ⇒ μηδέν regression.
+3. `bim-3d/viewport/overlay-dispatch/bim-overlay-pass.ts` (`paintBimOverlayFrame`) — περνά `true` (cursor-critical).
+4. `bim-3d/viewport/overlay-dispatch/BimOverlayDispatchCanvas.tsx` (onStop) — ίδιο `{desynchronized:true}` για συνέπεια.
+
+🔴 **Browser-verify (Giorgio):** (α) μέτρηση πριν/μετά με `__bim3dPerf.download()` (baseline `cursor.totalLag`
+avg ~31ms → στόχος <16ms)· (β) οπτικός έλεγχος για tearing (trade-off αποδεκτό για CAD viewer)· (γ) Chrome
+DevTools → Performance → GPU/compositor track για επιβεβαίωση. Caveats: `desynchronized` × `alpha:true`
+compositing — αν big-player πρακτική το διαψεύδει, ακολουθούμε αυτήν.
 
 ---
 
@@ -334,3 +389,19 @@ unification + adaptive degradation). CHECK 6D → stage αυτό το ADR. 🔴 
   καταναλώνει μέσω `resolveCrosshair3DCenter` → κλείνει το ~10ms BIM>DXF gap (extra RAF frame). Νεκρό
   `gluedRef` αφαιρέθηκε. Pure `crosshair-3d-center.test.ts` αμετάβλητο (resolver δεν άλλαξε). CHECK 6D →
   stage αυτό το ADR + το αρχείο. 🔴 browser-verify (BIM dump πριν/μετά).
+- **2026-06-29** — 🔬 **Phase 4 ΜΕΤΡΗΜΕΝΟ + tooling.** NEW `__bim3dPerf.download()` (flat `.txt` στις Λήψεις,
+  reuse `triggerExportDownload`+`nowISO`· καθαρό αρχείο αντί για console expand-arrows) + `resetPerf()`/
+  hold-window στο `mouse-handler-perf.ts` (reset μηδενίζει cursor + κρατά ΟΛΟ το window). Καθαρό 641-sample
+  BIM sweep: `cursor.totalLag` avg **31.6ms** min **1.3** p95 62, inputLatency **1.9ms**, renders 14/26.6s.
+  **Διόρθωση «spikes»→λάθος:** σταθερό **~28ms present-latency πάτωμα** (paint-bound, όχι render/CPU) →
+  επιβεβαιώνει «GPU present» με δεδομένα. §2.2 δεν το μειώνει (δρα προ-compositing· snap-glue path δεν
+  ασκήθηκε). **Phase 5 (επόμενη session): low-latency presentation** — `desynchronized` Canvas2D overlays +
+  low-latency `THREE.WebGLRenderer` + DevTools GPU track. Stage: αυτό το ADR + diag files.
+- **2026-06-29** — ✅ **Phase 5 IMPLEMENTED (low-latency presentation, UNCOMMITTED).** Στόχος = το ~28ms
+  present-latency πάτωμα. `desynchronized:true` + `powerPreference:'high-performance'` στον live WebGL
+  renderer (`scene-setup.ts createBimRenderer` — manual webgl2 context + `context` param, γιατί three r0.170
+  δεν προωθεί `desynchronized`) **και** στο 2D overlay-dispatch context (`sizeCanvasToContainerDpr` optional
+  param, default false· `paintBimOverlayFrame` + onStop περνούν true). SSoT reuse: `PreviewRenderer` precedent,
+  ΕΝΑΣ context-factory util. Big-player: native low-latency present (Revit/C4D) ≈ Figma desynchronized canvas ≈
+  Forge/Onshape high-performance. 4 αρχεία, μηδέν `any`. CHECK 6B/6D → stage αυτό το ADR + τα 4 αρχεία.
+  🔴 browser-verify (dump πριν/μετά + tearing + GPU track).

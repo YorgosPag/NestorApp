@@ -98,7 +98,34 @@ export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   //   • HUD diagnostic (user click, εκτός loop) → `manager.captureFrameDataURL()` κάνει ένα
   //     force-render + toDataURL στο ΙΔΙΟ task.
   //   • MP4 export → δικός του renderer (MP4Exporter), ανεπηρέαστος.
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false });
+  // ADR-549 Phase 5 — LOW-LATENCY PRESENTATION. Μετρημένο (641 samples): το residual cursor lag
+  // ήταν σταθερό ~28ms present/compositor latency (input ~2ms, paint ~28ms) — δηλαδή GPU present
+  // vsync-locked μέσω compositor, ΟΧΙ CPU/render/overlays. Big-player ισοδύναμο: ο `desynchronized`
+  // hint αποσυνδέει το present του canvas από τον vsync-locked compositor (low-latency mode) — το
+  // web-platform αντίστοιχο του native low-latency present (DXGI flip-model / waitable swap-chain)
+  // που χρησιμοποιούν Revit & Cinema 4D, και ο `desynchronized` canvas που χρησιμοποιεί η Figma για
+  // cursor/stylus latency. `powerPreference:'high-performance'` = πρακτική Autodesk Forge/APS &
+  // Onshape (force discrete-GPU path). ΣΗΜΕΙΩΣΗ: το three r0.170 ΔΕΝ προωθεί το `desynchronized`
+  // στο getContext (μόνο alpha/depth/stencil/antialias/premultipliedAlpha/preserveDrawingBuffer/
+  // powerPreference/failIfMajorPerformanceCaveat). Γι' αυτό φτιάχνουμε ΕΜΕΙΣ το webgl2 context με
+  // το flag και το περνάμε στον renderer μέσω της παραμέτρου `context`.
+  const canvas = document.createElement('canvas');
+  const glAttributes: WebGLContextAttributes = {
+    antialias: true,
+    alpha: true,
+    stencil: true,
+    premultipliedAlpha: true,
+    preserveDrawingBuffer: false,
+    powerPreference: 'high-performance',
+    desynchronized: true,
+    failIfMajorPerformanceCaveat: false,
+  };
+  const context = canvas.getContext('webgl2', glAttributes);
+  // Belt-and-suspenders: αν το webgl2 context δεν δημιουργηθεί (απίθανο σε σύγχρονο browser), αφήνουμε
+  // το three να ακολουθήσει το δικό του fallback path με τα ίδια params (χωρίς desynchronized).
+  const renderer = context
+    ? new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' })
+    : new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
   renderer.setClearColor(0x1a1a1a, 1);

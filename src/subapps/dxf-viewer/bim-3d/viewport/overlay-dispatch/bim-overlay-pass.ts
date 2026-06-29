@@ -100,7 +100,9 @@ export function paintBimOverlayFrame(
   // skip (canvas already cleared on the frame the set emptied, via `forcePaint`).
   if (!forcePaint && !moving && !visible.some((p) => p.isDirty?.() !== false)) return false;
 
-  const ctx = sizeCanvasToContainerDpr(canvas, container);
+  // ADR-549 Phase 5 — το unified 3D overlay-dispatch είναι cursor-critical: ζητάμε desynchronized
+  // (low-latency present) ώστε το cursor-layer compositing να μην περιμένει το vsync-locked WebGL frame.
+  const ctx = sizeCanvasToContainerDpr(canvas, container, true);
   if (!ctx) return false;
 
   for (const pass of visible) {
