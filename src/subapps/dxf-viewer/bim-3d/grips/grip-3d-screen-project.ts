@@ -33,7 +33,7 @@ export const GRIP_OFFSCREEN: Point2D = { x: -100000, y: -100000 };
 export type PlanElevationMmFor = (p: Point2D) => number;
 
 /**
- * ADR-535 Φ7 / ADR-516 — a live RIGID-move world translation (THREE units) added to every
+ * ADR-535 Φ10 / ADR-516 — a live RIGID-move world translation (THREE units) added to every
  * grip's world point before projection. During a gizmo MOVE drag the mesh is shifted by this
  * exact vector; applying the SAME shift to the grips keeps the squares glued to the moving
  * entity (ghost === grips, the big-player «handles follow the element» behaviour). `null` /
@@ -46,12 +46,34 @@ export interface GripWorldOffset {
 }
 
 /**
+ * Lift a grip plan point (mm) + its surface elevation (mm) to a WORLD point, optionally
+ * shifted by a live rigid-move `worldOffset` (ADR-535 Φ10). This is the ONE place that maps a
+ * grip to world space — shared by BOTH the draw projector ({@link makeGripPlanToCanvas}) AND
+ * the GPU occluder's visibility probe (use-grip-pass), so a grip is drawn, picked, and
+ * occlusion-tested at the SAME world point during a move drag (no ghost/occlusion drift).
+ */
+export function liftGripPlanToWorld(
+  p: Point2D,
+  elevMm: number,
+  worldOffset?: GripWorldOffset | null,
+): THREE.Vector3 {
+  const world = dxfPlanToWorld(p.x, p.y, elevMm);
+  if (worldOffset) {
+    // Fresh Vector3 from `dxfPlanToWorld` → safe to translate in place (ghost === grips).
+    world.x += worldOffset.x;
+    world.y += worldOffset.y;
+    world.z += worldOffset.z;
+  }
+  return world;
+}
+
+/**
  * Build a plan(mm) → canvas-local(px) projector for the given camera + overlay canvas.
  * The returned closure is what the `UnifiedGripRenderer` calls as its `worldToScreen`
  * (it maps each grip's plan point to the overlay pixel). Lifts each point to its own
- * top-surface elevation via `elevFor`, projects through the camera, and rebases to
- * canvas-local px. Behind-camera → {@link GRIP_OFFSCREEN}. `worldOffset` (optional) rigidly
- * shifts every projected grip — see {@link GripWorldOffset} (live move-drag follow).
+ * top-surface elevation via `elevFor` (+ optional rigid `worldOffset`, see
+ * {@link liftGripPlanToWorld}), projects through the camera, and rebases to canvas-local px.
+ * Behind-camera → {@link GRIP_OFFSCREEN}.
  */
 export function makeGripPlanToCanvas(
   camera: THREE.Camera,
@@ -61,14 +83,7 @@ export function makeGripPlanToCanvas(
 ): (p: Point2D) => Point2D {
   const rect = canvas.getBoundingClientRect();
   return (p) => {
-    const world = dxfPlanToWorld(p.x, p.y, elevFor(p));
-    if (worldOffset) {
-      // Fresh Vector3 from `dxfPlanToWorld` → safe to translate in place (ghost === grips).
-      world.x += worldOffset.x;
-      world.y += worldOffset.y;
-      world.z += worldOffset.z;
-    }
-    const screen = worldToScreen(world, camera, canvas);
+    const screen = worldToScreen(liftGripPlanToWorld(p, elevFor(p), worldOffset), camera, canvas);
     if (!screen) return GRIP_OFFSCREEN;
     return { x: screen.x - rect.left, y: screen.y - rect.top };
   };

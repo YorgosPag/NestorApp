@@ -59,7 +59,7 @@ describe('makeGripPlanToCanvas', () => {
   it('rigidly shifts every grip by the live world offset (move-drag handle-follow)', () => {
     const cam = frontCamera();
     const canvas = fakeCanvas(0, 0, 800, 600);
-    // ADR-535 Φ7 — a +0.5 world-X offset equals a +500mm plan-X shift (dxfPlanToWorld: x_mm*0.001),
+    // ADR-535 Φ10 — a +0.5 world-X offset equals a +500mm plan-X shift (dxfPlanToWorld: x_mm*0.001),
     // so the on-axis grip projects to the SAME pixel as the un-offset grip at plan x=500.
     const viaOffset = makeGripPlanToCanvas(cam, canvas, () => 0, { x: 0.5, y: 0, z: 0 })({ x: 0, y: 0 });
     const viaPlan = makeGripPlanToCanvas(cam, canvas, () => 0)({ x: 500, y: 0 });

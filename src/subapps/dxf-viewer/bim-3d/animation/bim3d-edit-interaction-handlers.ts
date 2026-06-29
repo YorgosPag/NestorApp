@@ -38,7 +38,7 @@ import {
   resolveEntityLevelId,
 } from './bim3d-edit-live-preview-apply';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
-// ADR-535 Φ7 / ADR-516 — drop the live rigid-move grip offset when a drag settles.
+// ADR-535 Φ10 / ADR-516 — drop the live rigid-move grip offset when a drag settles.
 import { setGrip3DLiveMoveWorld } from '../stores/Grip3DOverlayStore';
 // Capture helpers + buildDeps + findBimEntityWorldBox (extracted for file-size N.7.1).
 import {
@@ -319,7 +319,7 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
  * permanently (see ADR-516 §8 bugfix). SSoT for the drag-end teardown (was inlined ×4).
  */
 function settleAfterEditDrag(ctx: EditInteractionCtx): void {
-  // ADR-535 Φ7 — drop any live rigid-move grip offset. On a committed move the re-sync has
+  // ADR-535 Φ10 — drop any live rigid-move grip offset. On a committed move the re-sync has
   // already re-seated the grips at the new position (resetGrip3DInteraction → offset null);
   // on cancel / no-op this returns the static grips to the entity's original footprint.
   setGrip3DLiveMoveWorld(null);

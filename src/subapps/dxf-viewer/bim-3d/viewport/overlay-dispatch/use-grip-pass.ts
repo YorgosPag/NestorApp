@@ -21,7 +21,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
-import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
+import { makeGripPlanToCanvas, liftGripPlanToWorld, type GripWorldOffset } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
 import { collectCoincidentLinePartnerMoves } from '../../../systems/stretch/coincident-endpoint-comove';
@@ -29,7 +29,6 @@ import type { StretchVertexMove } from '../../../core/commands/entity-commands/S
 import type { Entity } from '../../../types/entities';
 import { dxfSceneUnitToMm } from '../../../utils/scene-units';
 import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
-import { dxfPlanToWorld } from '../coordinate-transforms';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
 import type { BimOverlayFrame, BimOverlayPass } from './bim-overlay-pass';
 
@@ -152,13 +151,16 @@ function computeGripVisibility(
   liveGrips: readonly GripInfo[],
   topElevFor: (p: Point2D) => number,
   bottomElevFor: (p: Point2D) => number,
+  worldOffset: GripWorldOffset | null,
 ): readonly boolean[] | null {
   const isRawDxfSelection = useGrip3DOverlayStore.getState().dxfGhostEntityIds.length > 0;
   const { occluder, manager, camera } = frame;
   if (!occluder || isRawDxfSelection) return null;
+  // ADR-535 Φ10 — probe occlusion at the SAME world point the overlay DRAWS (incl. the live
+  // move offset) via the shared `liftGripPlanToWorld` SSoT → no occlusion/ghost drift mid-move.
   const worlds = [
-    ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, topElevFor(g.position))),
-    ...liveGrips.map((g) => dxfPlanToWorld(g.position.x, g.position.y, bottomElevFor(g.position))),
+    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, topElevFor(g.position), worldOffset)),
+    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, bottomElevFor(g.position), worldOffset)),
   ];
   return occluder.computeVisibility(manager.renderer, manager.scene, camera, worlds);
 }
@@ -176,13 +178,13 @@ function paintGripOverlay(frame: BimOverlayFrame): void {
   const n = liveGrips.length;
   if (n === 0) return;
 
-  // ADR-535 Φ7 / ADR-516 — during a gizmo MOVE drag the grips ride the SAME live world
+  // ADR-535 Φ10 / ADR-516 — during a gizmo MOVE drag the grips ride the SAME live world
   // translation as the mesh (rigid handle-follow); null on the static / reshape paths.
   const { hoverIndex, drag, liveMoveWorld } = grip3DOverlayInteraction;
   const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor, liveMoveWorld);
   const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor, liveMoveWorld);
 
-  const visibility = computeGripVisibility(frame, liveGrips, topElevFor, bottomElevFor);
+  const visibility = computeGripVisibility(frame, liveGrips, topElevFor, bottomElevFor, liveMoveWorld);
   grip3DOverlayInteraction.visibility = visibility;
   const ov = { hoverIndex, dragIndex: drag?.index ?? null, dragLivePlanPos: drag?.livePlanPos ?? null, visibility };
   const settings = gripRenderSettings();

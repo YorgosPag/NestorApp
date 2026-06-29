@@ -89,7 +89,7 @@ export interface Grip3DInteraction {
    */
   visibility: readonly boolean[] | null;
   /**
-   * ADR-535 Φ7 / ADR-516 — live RIGID-move world translation applied to the gizmo'd entity's
+   * ADR-535 Φ10 / ADR-516 — live RIGID-move world translation applied to the gizmo'd entity's
    * mesh during a MOVE drag. The overlay RAF shifts EVERY grip by this same world delta so the
    * squares stay glued to the moving entity (ghost === grips — big-player handle-follow). `null`
    * = no move in flight (static / reshape / committed). Set by `applyLivePreview` (move branch),
@@ -106,7 +106,7 @@ export const grip3DOverlayInteraction: Grip3DInteraction = {
 };
 
 /**
- * ADR-535 Φ7 / ADR-516 — set (or clear with `null`) the live rigid-move world offset for the
+ * ADR-535 Φ10 / ADR-516 — set (or clear with `null`) the live rigid-move world offset for the
  * grip overlay. Mutates the non-reactive singleton (zero React state); the overlay RAF reads it
  * each frame so the grips follow the moving entity with no re-render.
  */
@@ -125,5 +125,5 @@ export function resetGrip3DInteraction(): void {
   grip3DOverlayInteraction.hoverIndex = null;
   grip3DOverlayInteraction.drag = null;
   grip3DOverlayInteraction.visibility = null;
-  grip3DOverlayInteraction.liveMoveWorld = null; // ADR-535 Φ7 — re-seated grips drop any live offset.
+  grip3DOverlayInteraction.liveMoveWorld = null; // ADR-535 Φ10 — re-seated grips drop any live offset.
 }
