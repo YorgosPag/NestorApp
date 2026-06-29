@@ -335,6 +335,12 @@ export class Bim3DEditLivePreview {
     for (const child of group.children) {
       if ((child.userData['bimId'] as string | undefined) === entityId) this.hidden.push(child);
     }
+    // ADR-550 — same policy as the rigid move: the original stays behind as a dimmed ghost
+    // (frozen clone at the pre-edit pose) instead of vanishing. The grip reshape / center-move
+    // path (ADR-535) hides the original in `applyResize` and swaps in the rebuilt REAL preview;
+    // the parked ghost is what the user sees at the source. Captured while still visible (BEFORE
+    // `applyResize` hides them), so the clone takes the real on-screen colour. View-agnostic.
+    this.originalGhost.show(this.hidden);
   }
 
   /**

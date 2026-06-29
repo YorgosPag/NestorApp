@@ -138,11 +138,24 @@ describe('Bim3DEditLivePreview — ADR-550 original-stays-as-ghost (2D move pari
     expect(collectPostFxOverlayRoots(scene)).toEqual([]);
   });
 
-  it('resize does NOT park a ghost (only move/rotate leave the original behind)', () => {
-    const orig = taggedMesh('w1', [0, 0, 0]);
+  it('resize ALSO parks a ghost — grip reshape/center-move leaves the original behind (2D parity)', () => {
+    const orig = taggedMesh('w1', [2, 0, 3]);
     const { scene, group: g } = scenedGroup(orig);
     const p = new Bim3DEditLivePreview();
+
     p.captureResize(g, 'w1');
+    const roots = collectPostFxOverlayRoots(scene);
+    expect(roots).toHaveLength(1); // frozen ghost at the pre-edit pose
+    expect((roots[0].children[0] as THREE.Mesh).position.toArray()).toEqual([2, 0, 3]);
+
+    // applyResize hides the real original + swaps in the rebuilt preview; the ghost stays.
+    p.applyResize(taggedMesh('w1', [9, 0, 0]));
+    expect(orig.visible).toBe(false);
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
+
+    // reset restores the original and drops the ghost.
+    p.reset();
+    expect(orig.visible).toBe(true);
     expect(collectPostFxOverlayRoots(scene)).toEqual([]);
   });
 
