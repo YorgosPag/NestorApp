@@ -14,45 +14,14 @@
  * τους — ο λόγος που το imperative push του PreviewCanvas δεν ταιριάζει εδώ).
  */
 
-import { getDevicePixelRatio } from '../../../systems/cursor/utils';
-import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
+// ADR-554 — the frame renderer is now the SHARED `paintOverlayDispatchFrame` (one SSoT for both
+// the analytical dispatch canvas and the MEP proposal dispatch canvas, no duplicate). The names
+// below are kept as analytical-domain aliases so the 7 analytical painter hooks + dispatch +
+// test import unchanged.
+import { paintOverlayDispatchFrame, type OverlayDispatchPainter } from '../overlay-dispatch/overlay-dispatch-frame';
 
-/**
- * Ζωγράφος ενός analytical layer. Λαμβάνει `transform`/`viewport` ως args (όχι capture)
- * ώστε ο painter να μένει memoized στα low-freq δεδομένα του και να μην αλλάζει
- * ταυτότητα σε κάθε pan/zoom — ο dispatch effect ξανατρέχει στο transform/viewport.
- * Ο painter ΔΕΝ κάνει clear/resize — μόνο σχεδιάζει το περιεχόμενό του.
- */
-export type AnalyticalPainter = (
-  ctx: CanvasRenderingContext2D,
-  transform: ViewTransform,
-  viewport: Viewport,
-) => void;
+/** Analytical layer painter — alias of the shared {@link OverlayDispatchPainter}. */
+export type AnalyticalPainter = OverlayDispatchPainter;
 
-/**
- * Size (DPR-aware) + clear ΜΙΑ φορά, μετά paint κάθε ενεργού painter με σειρά. `null`
- * painters (ανενεργό layer) παραλείπονται. Mirror του canonical pattern που είχαν τα
- * 7 overlays ξεχωριστά (`getDevicePixelRatio` → conditional resize → `setTransform` →
- * `clearRect`), τώρα μία φορά για όλους.
- */
-export function paintAnalyticalFrame(
-  canvas: HTMLCanvasElement,
-  painters: ReadonlyArray<AnalyticalPainter | null>,
-  transform: ViewTransform,
-  viewport: Viewport,
-): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  const dpr = getDevicePixelRatio();
-  const w = Math.max(1, Math.round(viewport.width * dpr));
-  const h = Math.max(1, Math.round(viewport.height * dpr));
-  if (canvas.width !== w) canvas.width = w;
-  if (canvas.height !== h) canvas.height = h;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, viewport.width, viewport.height);
-
-  for (const paint of painters) {
-    if (paint) paint(ctx, transform, viewport);
-  }
-}
+/** Analytical dispatch frame renderer — alias of the shared {@link paintOverlayDispatchFrame}. */
+export const paintAnalyticalFrame = paintOverlayDispatchFrame;

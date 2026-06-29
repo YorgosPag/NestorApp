@@ -533,6 +533,7 @@
 | **ADR-551** | Απογραφή Καμβάδων (`<canvas>`) & Viewports (2D+3D) στο /dxf/viewer — 1 viewport (swap 2D↔3D)· 2D έως 24 canvases· 3D 7–8 (2 WebGL + 5–6 2D overlays)· + ViewCube· 0 minimap. 6 ευκαιρίες ενοποίησης + σύσταση «3D → ΕΝΑΣ shared overlay canvas» | ✏️ DRAFT (census) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
 | **ADR-552** | Analytical Overlay Dispatch Canvas — 7 analytical canvases → 1 (υλοποίηση ADR-551 §5.2 #1)· pull model dispatch + 7 painter hooks + pure `paintAnalyticalFrame`· 2D max 24→18· 6/6 jest | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-552-analytical-overlay-dispatch-canvas.md) |
 | **ADR-553** | ViewCube single WebGL context — 2ος WebGLRenderer → scissored sub-viewport του main renderer (υλοποίηση ADR-551 §5.2 #6)· DOM hit-layer κρατιέται (hit-test byte-identical, zero remap)· pure `computeViewCubeScissorRect`· 3D 2 WebGL → 1· 5/5 jest | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-553-viewcube-single-webgl-context.md) |
+| **ADR-554** | MEP Proposal-Ghost Dispatch Canvas — 7 proposal ghosts → 1 zero-lag dispatch (υλοποίηση ADR-551 §5.2 #2)· shared `paintOverlayDispatchFrame` SSoT με ADR-552 (μηδέν duplicate)· 2D max 18→12· 12/12 jest | 🟡 IMPLEMENTED (UNCOMMITTED) | 2026-06-29 | Canvas & Rendering | [📄](./adrs/ADR-554-proposal-dispatch-canvas.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1047,6 +1048,7 @@
 | **ADR-551** | Απογραφή Καμβάδων & Viewports (2D+3D) /dxf/viewer — census + 6 ευκαιρίες ενοποίησης | ✏️ DRAFT (census) | [View](./adrs/ADR-551-canvas-viewport-census-2d-3d.md) |
 | **ADR-552** | Analytical Overlay Dispatch Canvas — 7 analytical canvases → 1 (ADR-551 §5.2 #1) | 🟡 IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-552-analytical-overlay-dispatch-canvas.md) |
 | **ADR-553** | ViewCube single WebGL context — scissored sub-viewport του main renderer (ADR-551 §5.2 #6) | 🟡 IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-553-viewcube-single-webgl-context.md) |
+| **ADR-554** | MEP Proposal-Ghost Dispatch Canvas — 7 → 1 zero-lag dispatch (ADR-551 §5.2 #2) | 🟡 IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-554-proposal-dispatch-canvas.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

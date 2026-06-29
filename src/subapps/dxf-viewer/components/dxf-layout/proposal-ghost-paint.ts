@@ -8,7 +8,7 @@
  * the renderer wiring lives in ONE place (the electrical discipline paints wires instead, via
  * `drawCircuitWires`, so it does not use this helper).
  *
- * @see ./ProposalGhostOverlay.tsx — the dedicated-canvas overlay that calls the paint closure
+ * @see ./proposal-overlays/ProposalDispatchCanvas.tsx — the dispatch canvas that calls the painter hooks (ADR-554)
  * @see ../../bim/mep-segments/MepSegmentGhostRenderer.ts — the shared pure renderer
  */
 

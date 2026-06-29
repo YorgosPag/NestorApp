@@ -133,8 +133,8 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 
 **2D:**
 1. ✅ **IMPLEMENTED (ADR-552, 2026-06-29)** — **7 analytical overlays (#6–#12) → 1 shared «analytical dispatch canvas».** Πανομοιότυπο CSS/size/data-flow, **αμοιβαία αποκλειόμενα** στην πράξη, αλλά **6 άδειοι canvas backing stores έμεναν μόνιμα στο DOM** ακόμα κι όταν ανενεργά. Υλοποιήθηκε με pull model (dispatch κάνει size+clear ΜΙΑ φορά, καλεί 7 painter hooks με σειρά z-order)· paint κώδικας verbatim· 6/6 jest. **2D max 24→18, typical ~16→~10.** Βλ. **ADR-552**.
-2. **7 ProposalGhostOverlay (#15–#21) → 1 shared proposal canvas.** Μόνο 1 proposal review κάθε φορά· το component είναι ήδη κοινό SSoT — μόνο το mount trigger + paint closure διαφέρει. (Trade-off: το ξεχωριστό unmount καθαρίζει αυτόματα τον καμβά.)
-3. EnvelopeOverlay + HomeRunWires (#13–#14) → 1 z=11 BIM-annotation canvas με 2 sequential passes (οριακό κέρδος).
+2. ✅ **IMPLEMENTED (ADR-554, 2026-06-29)** — **7 ProposalGhostOverlay (#15–#21) → 1 zero-lag proposal dispatch canvas.** Pull model (ίδιο με #1), αλλά zero-lag (`subscribeImmediateTransformFrame`) γιατί τα proposals ακολουθούν pan/zoom frame-for-frame· 7 painter hooks· **shared `paintOverlayDispatchFrame` SSoT με το ADR-552** (μηδέν duplicate). **2D max 18→12, typical ~10→~4.** Βλ. **ADR-554**.
+3. ⛔ **DEFERRED (2026-06-29)** — **EnvelopeOverlay + HomeRunWires (#13–#14) → 1 z=11 BIM-annotation canvas.** SSoT audit: **ασύμβατες repaint αρχιτεκτονικές** (Envelope=React `useEffect`· HomeRunWires=zero-lag scheduler/`getImmediateTransform()` — force στο pull model θα επανέφερε το wire pan-lag bug του ADR-408 Φ7)· **ΔΕΝ είναι mutually exclusive** (συνυπάρχουν σε πραγματικό έργο → 0 άδειοι backing stores, ο waste argument δεν ισχύει)· μηδέν shared painter/projector/store· κίνδυνος perf regression (`computeEnvelopeShell` σε κάθε pan frame). Κερδίζεις 1 canvas, ρισκάρεις cross-domain coupling. **Preconditions για revisit:** (1) EnvelopeOverlay → memoized painter hook (geometry memoized, projection via args)· (2) `paintOverlayDispatchFrame` variant για zero-lag scheduler dispatch. Μέχρι τότε → ξεχωριστοί καμβάδες.
 
 **3D:**
 4. **BimGripOverlay2D + DxfHoverGlowOverlay2D (#3+#4) → merge.** Ίδιος projector (`makeGripPlanToCanvas`), ίδιο sizing, **αμοιβαία αποκλειόμενα** (hover όταν τίποτα selected· grips σε selection). Το grip canvas ήδη ζωγραφίζει το DXF ghost → πρόσθεσε το glow ως ένα conditional paint step.
@@ -179,3 +179,9 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 
 ### 2026-06-29 — §5.2 #6 IMPLEMENTED (ADR-553)
 Η ευκαιρία #6 (ViewCube 2ο WebGL context → scissored sub-viewport) υλοποιήθηκε — βλ. **ADR-553**. **3D WebGL contexts 2→1.** Ο 2ος `WebGLRenderer` αφαιρέθηκε· ο cube ζωγραφίζεται από τον main renderer (Three.js `webgl_multiple_views` pattern, AO-immune τελευταίο pass)· το DOM element έμεινε διάφανο hit-layer (zero context, hit-test byte-identical). Απομένουν προτεινόμενες: #2, #3, #4, #5.
+
+### 2026-06-29 — §5.2 #2 IMPLEMENTED (ADR-554)
+Η ευκαιρία #2 (7 proposal ghosts → 1 zero-lag dispatch canvas) υλοποιήθηκε — βλ. **ADR-554**. **2D max 18→12, typical ~10→~4.** Εξήχθη shared `paintOverlayDispatchFrame` SSoT (analytical ADR-552 + proposal, μηδέν duplicate). Απομένουν: #4, #5 (3D unified dispatch).
+
+### 2026-06-29 — §5.2 #3 DEFERRED
+Η ευκαιρία #3 (EnvelopeOverlay + HomeRunWires) **αναβλήθηκε** μετά από SSoT audit: ασύμβατες repaint αρχιτεκτονικές (React `useEffect` vs zero-lag scheduler — force θα επανέφερε το wire pan-lag bug), **ΔΕΝ είναι mutually exclusive** (συνυπάρχουν → μηδέν όφελος μνήμης), μηδέν shared infra, κίνδυνος perf regression. Κερδίζεις 1 canvas, ρισκάρεις cross-domain coupling — δεν αξίζει χωρίς τα preconditions (§5.2 #3). Big-player honesty: δεν ενοποιούμε δύο ανεξάρτητα domains με ασύμβατα μοντέλα μόνο για −1 canvas.

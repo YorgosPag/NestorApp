@@ -31,7 +31,12 @@ import { recordOverlayDraw } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Ph
 export function useRafWhile(active: boolean, draw: () => void, onStop?: () => void, diagLabel?: string): void {
   const rafRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!active) {
+    // 🔬 ADR-549 Phase 0 (REVERTIBLE) — A/B DEFINITIVE: όταν `localStorage['dxf-no-overlays']==='1'`,
+    // κατάστειλε ΚΑΘΕ ιδιωτικό overlay rAF (cleanup + `onStop` καθαρίζει canvas/marker) ώστε ένα
+    // hover-sweep να απομονώσει το κόστος overlay-compositing. Απαιτεί reload (read-once flag).
+    const suppressed =
+      typeof window !== 'undefined' && window.localStorage.getItem('dxf-no-overlays') === '1';
+    if (!active || suppressed) {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;

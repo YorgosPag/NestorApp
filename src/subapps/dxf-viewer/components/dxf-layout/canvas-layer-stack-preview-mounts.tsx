@@ -24,13 +24,9 @@ import { MepRadiatorGhostPreviewMount, type MepRadiatorGhostPreviewMountProps } 
 import { MepBoilerGhostPreviewMount, type MepBoilerGhostPreviewMountProps } from './canvas-layer-stack-mep-boiler-ghost';
 import { MepWaterHeaterGhostPreviewMount, type MepWaterHeaterGhostPreviewMountProps } from './canvas-layer-stack-mep-water-heater-ghost';
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps } from './canvas-layer-stack-mep-segment-ghost';
-import { WaterProposalGhostPreviewMount } from './canvas-layer-stack-water-proposal-ghost';
-import { DrainageProposalGhostPreviewMount } from './canvas-layer-stack-drainage-proposal-ghost';
-import { HeatingProposalGhostPreviewMount } from './canvas-layer-stack-heating-proposal-ghost';
-import { ElectricalProposalGhostPreviewMount } from './canvas-layer-stack-electrical-proposal-ghost';
-import { HvacProposalGhostPreviewMount } from './canvas-layer-stack-hvac-proposal-ghost';
-import { FireProposalGhostPreviewMount } from './canvas-layer-stack-fire-proposal-ghost';
-import { GasProposalGhostPreviewMount } from './canvas-layer-stack-gas-proposal-ghost';
+// ADR-554 — the 7 separate proposal-ghost canvases (water/drainage/heating/electrical/hvac/fire/gas)
+// are folded into ONE zero-lag dispatch canvas (ADR-551 §5.2 #2).
+import { ProposalDispatchCanvas } from './proposal-overlays/ProposalDispatchCanvas';
 // ADR-441 Slice 3-perf — zero-lag associative follow ghost (hosted foundation strips
 // follow a dragged guide frame-for-frame on a dedicated canvas).
 import { GuideFollowGhostPreviewMount } from './GuideFollowGhostOverlay';
@@ -221,22 +217,11 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
-      {/* ADR-040 SSoT: every proposal ghost now owns its OWN dedicated canvas (ProposalGhostOverlay),
-          so it persists across idle/pan/zoom instead of being wiped by the shared PreviewCanvas. */}
-      {/* ADR-426 Slice 2 — water auto-design proposal ghost (low-freq store, inert while idle). */}
-      <WaterProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-427 Slice 2 — drainage auto-design proposal ghost (low-freq store, inert while idle). */}
-      <DrainageProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-428 Slice 2 — heating auto-design proposal ghost (low-freq store, inert while idle). */}
-      <HeatingProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-430 Slice 2 — electrical auto-design proposal ghost (low-freq store, inert while idle). */}
-      <ElectricalProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-432 Slice 2 — HVAC (ventilation) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <HvacProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-433 Slice 2 — fire-protection (sprinkler) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <FireProposalGhostPreviewMount transform={transform} viewport={viewport} />
-      {/* ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <GasProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-554 — ONE proposal dispatch canvas replaces the 7 separate ProposalGhostOverlay canvases
+          (water/drainage/heating/electrical/hvac/fire/gas — ADR-426–434 Slice 2). Pull model with
+          zero-lag immediate transform; paint verbatim; z-order water→gas (topmost). Persists across
+          idle/pan/zoom on its own canvas, never wiped by the shared PreviewCanvas. */}
+      <ProposalDispatchCanvas viewport={viewport} />
       {/* ADR-441 Slice 3-perf — zero-lag follow ghost: hosted πεδιλοδοκοί ακολουθούν
           τον dragged οδηγό frame-for-frame (dedicated canvas, mount μόνο όσο σύρεται). */}
       <GuideFollowGhostPreviewMount transform={transform} viewport={viewport} levelManager={levelManager} />
