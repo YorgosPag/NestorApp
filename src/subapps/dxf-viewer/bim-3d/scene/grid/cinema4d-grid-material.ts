@@ -28,7 +28,7 @@ import {
   GRID3D_HORIZON_COLOR,
   GRID3D_BASE_CELL_M,
   GRID3D_MAJOR_EVERY,
-  GRID3D_MINOR_TARGET_PX,
+  GRID3D_MIN_CELL_PX,
   GRID3D_MINOR_LINE_PX,
   GRID3D_MAJOR_LINE_PX,
   GRID3D_AXIS_LINE_PX,
@@ -55,7 +55,7 @@ uniform vec3 uAxisZColor;
 uniform vec3 uHorizonColor;
 uniform float uBaseCell;       // decade anchor (m)
 uniform float uMajorEvery;     // major every nth minor (10 → decade)
-uniform float uMinorTargetPx;  // min screen px for the finest minor cell before subdividing
+uniform float uMinCellPx;      // minimum on-screen px between the finest minor lines (sparse)
 uniform float uMinorLinePx;
 uniform float uMajorLinePx;
 uniform float uAxisLinePx;
@@ -82,23 +82,25 @@ float axisCoverage(float coord, float widthPx) {
 void main() {
   vec2 p = vWorld.xz;
 
-  // ── Per-fragment decade LOD ────────────────────────────────────────────────
+  // ── Per-fragment decade LOD (sparse, big-player density) ───────────────────
   // World units covered by one pixel at this fragment (isotropic upper bound).
   float worldPerPx = max(max(fwidth(p.x), fwidth(p.y)), 1e-6);
-  // Decade level so the minor cell is ≈ uMinorTargetPx on screen; continuous (fract = cross-fade).
-  float lod = log2((worldPerPx * uMinorTargetPx) / uBaseCell) / log2(10.0);
-  float lf = floor(lod);
-  float frac = clamp(lod - lf, 0.0, 1.0);
-  float cellMinor = uBaseCell * pow(10.0, lf);          // current minor decade
-  float cellSub = cellMinor / uMajorEvery;              // finer subdivisions (fade in as frac → 0)
-  float cellMajor = cellMinor * uMajorEvery;            // major: every 10th minor
+  // Keep the finest minor lines ≥ uMinCellPx apart on screen → sparse, never a solid sheet.
+  float lod = log2((worldPerPx * uMinCellPx) / uBaseCell) / log2(10.0);
+  float lf = ceil(lod);
+  float blend = clamp(lf - lod, 0.0, 1.0);              // 0 just after a decade step, 1 just before
+  float cellMinor = uBaseCell * pow(10.0, lf);          // minor spacing ∈ [uMinCellPx, 10·uMinCellPx)
+  float cellMajor = cellMinor * uMajorEvery;            // major: every 10th minor (decade)
+  float cellFiner = cellMinor / uMajorEvery;            // next finer decade — cross-fades the transition
 
-  float subC = lineCoverage(p, cellSub, uMinorLinePx) * (1.0 - frac);
   float minorC = lineCoverage(p, cellMinor, uMinorLinePx);
+  // The finer decade only appears once it ALSO clears uMinCellPx (× blend so it grows in smoothly).
+  float finerPx = cellFiner / worldPerPx;
+  float finerC = lineCoverage(p, cellFiner, uMinorLinePx) * blend * smoothstep(uMinCellPx * 0.5, uMinCellPx, finerPx);
   float majorC = lineCoverage(p, cellMajor, uMajorLinePx);
 
   vec3 color = uMinorColor;
-  float a = max(subC, minorC);
+  float a = max(minorC, finerC);
   if (majorC >= a) { color = uMajorColor; a = majorC; }
 
   // ── World axes from origin: line at z==0 runs along X (red); x==0 runs along Z (blue) ─────────
@@ -131,7 +133,7 @@ export interface Cinema4DGridUniforms {
   uHorizonColor: { value: THREE.Color };
   uBaseCell: { value: number };
   uMajorEvery: { value: number };
-  uMinorTargetPx: { value: number };
+  uMinCellPx: { value: number };
   uMinorLinePx: { value: number };
   uMajorLinePx: { value: number };
   uAxisLinePx: { value: number };
@@ -152,7 +154,7 @@ export function createCinema4DGridMaterial(): { material: THREE.ShaderMaterial; 
     uHorizonColor: { value: new THREE.Color(GRID3D_HORIZON_COLOR) },
     uBaseCell: { value: GRID3D_BASE_CELL_M },
     uMajorEvery: { value: GRID3D_MAJOR_EVERY },
-    uMinorTargetPx: { value: GRID3D_MINOR_TARGET_PX },
+    uMinCellPx: { value: GRID3D_MIN_CELL_PX },
     uMinorLinePx: { value: GRID3D_MINOR_LINE_PX },
     uMajorLinePx: { value: GRID3D_MAJOR_LINE_PX },
     uAxisLinePx: { value: GRID3D_AXIS_LINE_PX },

@@ -45,13 +45,19 @@ export const GRID3D_PLANE_HALF_SIZE_M = 2000;
 export const GRID3D_BASE_CELL_M = 1;
 /** Minor decade ratio — C4D "Major Lines Every nth" = 10 (major line every 10th minor). Decade grid. */
 export const GRID3D_MAJOR_EVERY = 10;
-/** Minimum on-screen px for the finest minor cell before the LOD subdivides one decade finer. */
-export const GRID3D_MINOR_TARGET_PX = 14;
+/** Minimum on-screen px between the FINEST minor lines. The LOD keeps minor spacing in
+ *  [MIN_CELL_PX, 10·MIN_CELL_PX); the next finer decade only cross-fades in once it too clears this
+ *  gap → never a solid sheet. Tuned to C4D's "~5–15 lines across the window" target density
+ *  (research: GetGridStep). Larger = sparser. */
+export const GRID3D_MIN_CELL_PX = 64;
 
-/** Line widths (screen px, derivative AA). Thin — C4D uses ~1px lines; major only slightly bolder. */
+/** Line widths (screen px, derivative AA). C4D R15 draws ALL grid lines at 1px and distinguishes
+ *  major from minor by COLOUR ONLY (verified: no thicker-major directive anywhere in the resources;
+ *  #414141 major is darker than #4B4B4B minor on the grey background → reads as the heavier line).
+ *  Axes get a hair more presence (different element, colour-keyed). */
 export const GRID3D_MINOR_LINE_PX = 1.0;
-export const GRID3D_MAJOR_LINE_PX = 1.3;
-export const GRID3D_AXIS_LINE_PX = 1.4;
+export const GRID3D_MAJOR_LINE_PX = 1.0;
+export const GRID3D_AXIS_LINE_PX = 1.2;
 
 /** Distance fog → horizon (ΟΧΙ infinite): grid fades between K_START·d and K_END·d from the camera
  *  target (d = camera→target). Dynamism comes from the per-fragment LOD, NOT from this fog. */
