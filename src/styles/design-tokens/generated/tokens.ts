@@ -120,14 +120,20 @@ export interface DesignTokens {
   zIndex_tooltip: string;
   zIndex_critical: string;
   canvas_background_dxf: string;
+  canvas_background_dxf_image: string;
   canvas_background_layer: string;
   canvas_background_overlay: string;
   canvas_background_container: string;
+  canvas_gradient_cinema4d_top: string;
+  canvas_gradient_cinema4d_bottom: string;
+  canvas_grid_cinema4d_major: string;
+  canvas_grid_cinema4d_minor: string;
   canvas_themes_autocad_classic: string;
   canvas_themes_autocad_dark: string;
   canvas_themes_solidworks: string;
   canvas_themes_blender: string;
   canvas_themes_light: string;
+  canvas_themes_cinema4d: string;
 }
 
 export const designTokens: DesignTokens = {
@@ -245,14 +251,20 @@ export const designTokens: DesignTokens = {
   zIndex_tooltip: 'var(--z-index-tooltip)',
   zIndex_critical: 'var(--z-index-critical)',
   canvas_background_dxf: 'var(--canvas-background-dxf)',
+  canvas_background_dxf_image: 'var(--canvas-background-dxf-image)',
   canvas_background_layer: 'var(--canvas-background-layer)',
   canvas_background_overlay: 'var(--canvas-background-overlay)',
   canvas_background_container: 'var(--canvas-background-container)',
+  canvas_gradient_cinema4d_top: 'var(--canvas-gradient-cinema4d-top)',
+  canvas_gradient_cinema4d_bottom: 'var(--canvas-gradient-cinema4d-bottom)',
+  canvas_grid_cinema4d_major: 'var(--canvas-grid-cinema4d-major)',
+  canvas_grid_cinema4d_minor: 'var(--canvas-grid-cinema4d-minor)',
   canvas_themes_autocad_classic: 'var(--canvas-themes-autocad-classic)',
   canvas_themes_autocad_dark: 'var(--canvas-themes-autocad-dark)',
   canvas_themes_solidworks: 'var(--canvas-themes-solidworks)',
   canvas_themes_blender: 'var(--canvas-themes-blender)',
   canvas_themes_light: 'var(--canvas-themes-light)',
+  canvas_themes_cinema4d: 'var(--canvas-themes-cinema4d)',
 };
 
 export default designTokens;

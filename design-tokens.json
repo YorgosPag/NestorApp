@@ -210,6 +210,11 @@
         "type": "color",
         "description": "Main DXF canvas - Pure black (AutoCAD standard) for maximum color contrast"
       },
+      "dxf-image": {
+        "value": "none",
+        "type": "other",
+        "description": "Active canvas background IMAGE (vertical gradient) — `none` for solid themes, set to a linear-gradient by the theme switch (Cinema 4D). ADR-446 §2.1"
+      },
       "layer": {
         "value": "transparent",
         "type": "color",
@@ -226,13 +231,24 @@
         "description": "Parent container divs - Must be transparent"
       }
     },
+    "gradient": {
+      "_description": "Per-theme vertical canvas gradient stops (Cinema 4D-style). Read by the 2D canvas (CSS linear-gradient) AND the 3D studio background (studio-background-texture.ts) so both views share one SSoT. ADR-446 §2.1",
+      "cinema4d-top": { "value": "#5B5B5B", "type": "color", "description": "Cinema 4D viewport gradient TOP — VIEWCOLOR_C4DBACKGROUND_GRAD1 (RGB 91,91,91)" },
+      "cinema4d-bottom": { "value": "#868686", "type": "color", "description": "Cinema 4D viewport gradient BOTTOM — VIEWCOLOR_C4DBACKGROUND_GRAD2 (RGB 134,134,134)" }
+    },
+    "grid": {
+      "_description": "Per-theme canvas grid line colours (mirrors Cinema 4D scheme VIEWCOLORS). Active grid colour resolved via --canvas-grid-major / --canvas-grid-minor set by the theme switch.",
+      "cinema4d-major": { "value": "#414141", "type": "color", "description": "Cinema 4D VIEWCOLOR_GRID_MAJOR (RGB 65,65,65)" },
+      "cinema4d-minor": { "value": "#4B4B4B", "type": "color", "description": "Cinema 4D VIEWCOLOR_GRID_MINOR (RGB 75,75,75)" }
+    },
     "themes": {
       "_description": "Alternative canvas themes for user preferences",
       "autocad-classic": { "value": "#000000", "type": "color", "description": "AutoCAD Classic - Pure black" },
       "autocad-dark": { "value": "#1a1a1a", "type": "color", "description": "AutoCAD Dark Gray" },
       "solidworks": { "value": "#2d3748", "type": "color", "description": "SolidWorks style - Dark blue-gray" },
       "blender": { "value": "#232323", "type": "color", "description": "Blender style - Dark gray" },
-      "light": { "value": "#ffffff", "type": "color", "description": "Light theme - For print preview" }
+      "light": { "value": "#ffffff", "type": "color", "description": "Light theme - For print preview" },
+      "cinema4d": { "value": "#555555", "type": "color", "description": "Cinema 4D — solid base / gradient mid (VIEWCOLOR_C4DBACKGROUND, RGB 85,85,85)" }
     }
   }
 }

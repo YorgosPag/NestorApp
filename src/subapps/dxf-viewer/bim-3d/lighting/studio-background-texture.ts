@@ -16,6 +16,7 @@
  */
 
 import * as THREE from 'three';
+import type { CanvasGradientStops } from '../../config/color-config';
 
 /** Lightness spread of each end from the base (sRGB [0..1]). ±0.12 ≈ ±31/255 — subtle depth. */
 export const STUDIO_BG_DELTA = 0.12;
@@ -64,14 +65,45 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/** Parse any `THREE.Color`-accepted string to sRGB bytes [0..255]. */
+function toRgb255(hex: string): readonly [number, number, number] {
+  _parse.set(hex);
+  _parse.getRGB(_rgb, THREE.SRGBColorSpace);
+  return [clamp255(_rgb.r * 255), clamp255(_rgb.g * 255), clamp255(_rgb.b * 255)];
+}
+
+/**
+ * Build the SAME three-stop shape from EXPLICIT top/bottom stops (e.g. the exact Cinema 4D
+ * `#5B5B5B`→`#868686`). The mid is the arithmetic mean of the two ends, so the existing
+ * bottom→mid→top texture loop collapses into a single straight bottom→top line — a pure
+ * 2-stop linear gradient with zero new rendering code. ADR-446 §2.1.
+ */
+export function explicitToStops(stops: CanvasGradientStops): StudioGradientStops {
+  const top = toRgb255(stops.top);
+  const bottom = toRgb255(stops.bottom);
+  const mid: readonly [number, number, number] = [
+    clamp255((top[0] + bottom[0]) / 2),
+    clamp255((top[1] + bottom[1]) / 2),
+    clamp255((top[2] + bottom[2]) / 2),
+  ];
+  return { top, mid, bottom };
+}
+
 /**
  * Build the 1×N sRGB gradient `DataTexture` for `scene.background`. Row 0 is screen-BOTTOM
  * (`flipY=false` → the first row maps to v=0 = bottom of the full-screen background quad), so
  * the gradient runs bottom→mid→top = lighter→base→darker. Linear-filtered, no mipmaps, sRGB
  * colour-space (so it displays identically to the solid `THREE.Color(base)` path).
+ *
+ * When `explicit` stops are supplied (a theme with an exact gradient, e.g. Cinema 4D), they
+ * drive a pure 2-stop linear gradient; otherwise the gradient is derived symmetrically from
+ * `baseHex` (the legacy «σαν 2Δ» depth look). ADR-446 §2.1.
  */
-export function buildStudioBackgroundTexture(baseHex: string): THREE.DataTexture {
-  const { top, mid, bottom } = studioGradientStops(baseHex);
+export function buildStudioBackgroundTexture(
+  baseHex: string,
+  explicit?: CanvasGradientStops | null,
+): THREE.DataTexture {
+  const { top, mid, bottom } = explicit ? explicitToStops(explicit) : studioGradientStops(baseHex);
   const data = new Uint8Array(GRADIENT_HEIGHT * 4);
   for (let row = 0; row < GRADIENT_HEIGHT; row++) {
     const v = row / (GRADIENT_HEIGHT - 1); // 0 = screen-bottom, 1 = screen-top

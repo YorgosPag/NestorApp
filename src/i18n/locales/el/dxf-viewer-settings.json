@@ -779,6 +779,7 @@
       "solidworks": "SolidWorks",
       "blender": "Blender",
       "light": "Ανοιχτό",
+      "cinema4d": "Cinema 4D",
       "custom": "Προσαρμοσμένο"
     },
     "customDialogTitle": "Επιλογή χρώματος φόντου"

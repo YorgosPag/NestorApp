@@ -9,12 +9,20 @@ import { EnterpriseColorDialog } from '../../../color/EnterpriseColorDialog';
 
 // ─── Theme definitions ────────────────────────────────────────────────────────
 
-type ThemeKey = 'autocadClassic' | 'autocadDark' | 'solidworks' | 'blender' | 'light' | 'custom';
+type ThemeKey = 'autocadClassic' | 'autocadDark' | 'solidworks' | 'blender' | 'light' | 'cinema4d' | 'custom';
 
 interface ThemeConfig {
   key: ThemeKey;
-  /** CSS value applied to `--canvas-background-dxf` (CSS var or hex). */
+  /** CSS value applied to `--canvas-background-dxf` (solid base — CSS var or hex). */
   cssValue: string;
+  /** Optional vertical gradient image for `--canvas-background-dxf-image` (2D canvas). */
+  gradientImage?: string;
+  /** Optional explicit gradient stops for the 3D studio background (`--canvas-gradient-*`). */
+  gradientTop?: string;
+  gradientBottom?: string;
+  /** Optional theme grid colours (`--canvas-grid-major/minor`) — mirrors Cinema 4D scheme. */
+  gridMajor?: string;
+  gridMinor?: string;
   swatchClass: string;
   textClass: string;
 }
@@ -25,15 +33,53 @@ const PRESET_THEMES: ThemeConfig[] = [
   { key: 'solidworks',     cssValue: 'var(--canvas-themes-solidworks)',      swatchClass: 'bg-[#2d3748] border-border',          textClass: 'text-muted-foreground' },
   { key: 'blender',        cssValue: 'var(--canvas-themes-blender)',         swatchClass: 'bg-[#232323] border-border',          textClass: 'text-muted-foreground' },
   { key: 'light',          cssValue: 'var(--canvas-themes-light)',           swatchClass: 'bg-white border-border',              textClass: 'text-foreground' },
+  {
+    key: 'cinema4d',
+    cssValue: 'var(--canvas-themes-cinema4d)',
+    gradientImage: 'linear-gradient(to bottom, var(--canvas-gradient-cinema4d-top), var(--canvas-gradient-cinema4d-bottom))',
+    gradientTop: 'var(--canvas-gradient-cinema4d-top)',
+    gradientBottom: 'var(--canvas-gradient-cinema4d-bottom)',
+    gridMajor: 'var(--canvas-grid-cinema4d-major)',
+    gridMinor: 'var(--canvas-grid-cinema4d-minor)',
+    swatchClass: 'bg-gradient-to-b from-[#5b5b5b] to-[#868686] border-border',
+    textClass: 'text-muted-foreground',
+  },
 ];
 
 const DEFAULT_THEME: ThemeKey = 'autocadClassic';
 const DEFAULT_CUSTOM_COLOR = '#1e293b';
 
-function applyBackground(cssValue: string): void {
-  if (typeof document !== 'undefined') {
-    document.documentElement.style.setProperty('--canvas-background-dxf', cssValue);
-  }
+/** Active canvas-theme CSS variables (set on :root by the theme switch). */
+const CANVAS_THEME_VARS = {
+  base: '--canvas-background-dxf',
+  image: '--canvas-background-dxf-image',
+  gradientTop: '--canvas-gradient-top',
+  gradientBottom: '--canvas-gradient-bottom',
+  gridMajor: '--canvas-grid-major',
+  gridMinor: '--canvas-grid-minor',
+} as const;
+
+function setOrClear(root: CSSStyleDeclaration, name: string, value?: string): void {
+  if (value) root.setProperty(name, value);
+  else root.removeProperty(name);
+}
+
+/**
+ * Apply a full canvas theme (Cinema 4D-style scheme): solid base + optional vertical gradient
+ * (2D image + 3D stops) + optional grid colours — all in one place so 2D and 3D move together.
+ * Solid themes clear the gradient/grid vars (→ flat background, generic grid).
+ */
+function applyCanvasTheme(
+  theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom' | 'gridMajor' | 'gridMinor'>,
+): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement.style;
+  root.setProperty(CANVAS_THEME_VARS.base, theme.cssValue);
+  root.setProperty(CANVAS_THEME_VARS.image, theme.gradientImage ?? 'none');
+  setOrClear(root, CANVAS_THEME_VARS.gradientTop, theme.gradientTop);
+  setOrClear(root, CANVAS_THEME_VARS.gradientBottom, theme.gradientBottom);
+  setOrClear(root, CANVAS_THEME_VARS.gridMajor, theme.gridMajor);
+  setOrClear(root, CANVAS_THEME_VARS.gridMinor, theme.gridMinor);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -55,34 +101,34 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
     setActiveTheme(savedTheme);
     setCustomColor(savedCustom);
     if (savedTheme === 'custom') {
-      applyBackground(savedCustom);
+      applyCanvasTheme({ cssValue: savedCustom });
     } else {
       const preset = PRESET_THEMES.find(th => th.key === savedTheme) ?? PRESET_THEMES[0];
-      applyBackground(preset.cssValue);
+      applyCanvasTheme(preset);
     }
   }, []);
 
   const handleSelectPreset = useCallback((theme: ThemeConfig) => {
     setActiveTheme(theme.key);
-    applyBackground(theme.cssValue);
+    applyCanvasTheme(theme);
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, theme.key);
   }, []);
 
   const handleSelectCustom = useCallback(() => {
     setActiveTheme('custom');
-    applyBackground(customColor);
+    applyCanvasTheme({ cssValue: customColor });
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, 'custom');
     setIsPickerOpen(true);
   }, [customColor]);
 
   const handleCustomColorChange = useCallback((color: string) => {
     setCustomColor(color);
-    applyBackground(color);
+    applyCanvasTheme({ cssValue: color });
   }, []);
 
   const handleCustomColorCommit = useCallback((color: string) => {
     setCustomColor(color);
-    applyBackground(color);
+    applyCanvasTheme({ cssValue: color });
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND_CUSTOM, color);
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, 'custom');
   }, []);

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import {
   studioGradientStops,
+  explicitToStops,
   buildStudioBackgroundTexture,
   STUDIO_BG_DELTA,
 } from '../studio-background-texture';
@@ -55,6 +56,36 @@ describe('buildStudioBackgroundTexture', () => {
     const bottomRow = data[0]; // row 0 red
     const topRow = data[(256 - 1) * 4]; // last row red
     expect(bottomRow).toBeGreaterThan(topRow);
+    tex.dispose();
+  });
+});
+
+describe('explicitToStops (exact Cinema 4D gradient)', () => {
+  it('keeps the explicit top/bottom ends and sets mid to their mean', () => {
+    // Cinema 4D: GRAD1 #5B5B5B (91) top → GRAD2 #868686 (134) bottom.
+    const { top, mid, bottom } = explicitToStops({ top: '#5B5B5B', bottom: '#868686' });
+    expect(top).toEqual([91, 91, 91]);
+    expect(bottom).toEqual([134, 134, 134]);
+    expect(mid).toEqual([113, 113, 113]); // round((91+134)/2)
+  });
+});
+
+describe('buildStudioBackgroundTexture — explicit stops', () => {
+  it('paints the EXACT Cinema 4D stops at the screen ends, ignoring baseHex', () => {
+    // baseHex is intentionally black to prove the explicit stops drive the gradient.
+    const tex = buildStudioBackgroundTexture('#000000', { top: '#5B5B5B', bottom: '#868686' });
+    const data = tex.image.data as Uint8Array;
+    expect(data[0]).toBe(134); // row 0 = screen-bottom = #868686
+    expect(data[(256 - 1) * 4]).toBe(91); // last row = screen-top = #5B5B5B
+    tex.dispose();
+  });
+
+  it('is a pure straight line: the mid row sits at the mean of the two ends', () => {
+    const tex = buildStudioBackgroundTexture('#000000', { top: '#5B5B5B', bottom: '#868686' });
+    const data = tex.image.data as Uint8Array;
+    const midRow = data[128 * 4];
+    expect(midRow).toBeGreaterThanOrEqual(112);
+    expect(midRow).toBeLessThanOrEqual(114);
     tex.dispose();
   });
 });

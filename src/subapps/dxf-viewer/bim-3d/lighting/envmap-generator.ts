@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import type { LightPreset } from './lighting-presets';
 import type { BackgroundMode } from '../../config/bim-visual-style';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { resolveDxfCanvasBackgroundHex, resolveDxfCanvasGradientStops } from '../../config/color-config';
 import { buildStudioBackgroundTexture } from './studio-background-texture';
 
 const ENV_WIDTH = 512;
@@ -18,9 +18,9 @@ export class EnvmapGenerator {
   private hdriActive = false;
   /** ADR-446 §2 — visible-background mode. `scene.background` is resolved from this. */
   private backgroundMode: BackgroundMode = 'environment';
-  /** ADR-446 §2.1 — cached studio gradient backdrop + the 2D base hex it was built for. */
+  /** ADR-446 §2.1 — cached studio gradient backdrop + the base+stops key it was built for. */
   private studioBackground: THREE.DataTexture | null = null;
-  private studioBackgroundBaseHex = '';
+  private studioBackgroundKey = '';
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.renderer = renderer;
@@ -58,13 +58,20 @@ export class EnvmapGenerator {
       : this.ensureStudioBackground();
   }
 
-  /** Lazy + theme-aware studio gradient backdrop (rebuilt when the 2D base colour changes). */
+  /**
+   * Lazy + theme-aware studio gradient backdrop. Rebuilt when the 2D base colour OR the
+   * explicit per-theme gradient stops change (so switching to/from Cinema 4D repaints). The
+   * exact stops (Cinema 4D `#5B5B5B`→`#868686`) drive a pure 2-stop linear gradient; absent
+   * stops fall back to the symmetric base±delta look. ADR-446 §2.1.
+   */
   private ensureStudioBackground(): THREE.Texture {
     const baseHex = resolveDxfCanvasBackgroundHex();
-    if (!this.studioBackground || this.studioBackgroundBaseHex !== baseHex) {
+    const stops = resolveDxfCanvasGradientStops();
+    const key = `${baseHex}|${stops?.top ?? ''}|${stops?.bottom ?? ''}`;
+    if (!this.studioBackground || this.studioBackgroundKey !== key) {
       this.studioBackground?.dispose();
-      this.studioBackground = buildStudioBackgroundTexture(baseHex);
-      this.studioBackgroundBaseHex = baseHex;
+      this.studioBackground = buildStudioBackgroundTexture(baseHex, stops);
+      this.studioBackgroundKey = key;
     }
     return this.studioBackground;
   }

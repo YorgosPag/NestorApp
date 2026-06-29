@@ -602,6 +602,8 @@ export const CANVAS_THEME = {
     BLENDER: 'var(--canvas-themes-blender)' as const,
     /** Light theme - For print preview */
     LIGHT: 'var(--canvas-themes-light)' as const,
+    /** Cinema 4D — neutral grey solid base, paired with a vertical studio gradient (ADR-446 §2.1) */
+    CINEMA4D: 'var(--canvas-themes-cinema4d)' as const,
   },
 } as const;
 
@@ -624,6 +626,51 @@ export function resolveDxfCanvasBackgroundHex(): string {
     .getPropertyValue('--canvas-background-dxf')
     .trim();
   return v || UI_COLORS_BASE.CANVAS_BACKGROUND;
+}
+
+/** Explicit per-theme vertical canvas gradient stops (top→bottom). */
+export interface CanvasGradientStops {
+  /** Screen-TOP colour. */
+  readonly top: string;
+  /** Screen-BOTTOM colour. */
+  readonly bottom: string;
+}
+
+/**
+ * ADR-446 §2.1 — resolve the LIVE explicit canvas gradient stops as concrete hex.
+ *
+ * The theme switch sets `--canvas-gradient-top` / `--canvas-gradient-bottom` for themes that
+ * carry an exact vertical gradient (e.g. Cinema 4D: `#5B5B5B`→`#868686`). Returns `null` for
+ * solid themes (the variables are unset) — callers then fall back to their own behaviour: the
+ * 2D canvas paints the flat `--canvas-background-dxf`, the 3D studio background derives a
+ * symmetric base±delta gradient. Read here so 2D CSS and the 3D WebGL texture stay FULL SSoT
+ * on the SAME two stops (a theme switch moves both views together).
+ */
+export function resolveDxfCanvasGradientStops(): CanvasGradientStops | null {
+  if (typeof document === 'undefined') return null;
+  const root = getComputedStyle(document.documentElement);
+  const top = root.getPropertyValue('--canvas-gradient-top').trim();
+  const bottom = root.getPropertyValue('--canvas-gradient-bottom').trim();
+  return top && bottom ? { top, bottom } : null;
+}
+
+/**
+ * Theme-aware active MAJOR grid colour (Cinema 4D scheme parity). The theme switch sets
+ * `--canvas-grid-major`; absent (other themes / SSR) → the generic `GRID_MAJOR` default. An
+ * explicit user grid-colour setting still wins upstream in `useCanvasSettings` (the scheme
+ * supplies the default, an explicit override beats it) — mirrors Cinema 4D's scheme model.
+ */
+export function resolveGridMajorColor(): string {
+  if (typeof document === 'undefined') return UI_COLORS_BASE.GRID_MAJOR;
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--canvas-grid-major').trim();
+  return v || UI_COLORS_BASE.GRID_MAJOR;
+}
+
+/** Theme-aware active MINOR grid colour — sibling of {@link resolveGridMajorColor}. */
+export function resolveGridMinorColor(): string {
+  if (typeof document === 'undefined') return UI_COLORS_BASE.GRID_MINOR;
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--canvas-grid-minor').trim();
+  return v || UI_COLORS_BASE.GRID_MINOR;
 }
 
 // ============================================================================

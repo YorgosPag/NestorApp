@@ -242,6 +242,15 @@ the existing `EnvmapGenerator` (imperative, zero React). Section-stencil save/re
 ---
 
 ## Changelog
+- **2026-06-30** — §2.1 EXACT-gradient theme support (Cinema 4D «σχήμα» parity): the studio
+  background now accepts EXPLICIT per-theme stops, not just a symmetric base±delta derivation.
+  NEW `resolveDxfCanvasGradientStops()` (color-config) reads `--canvas-gradient-top/bottom`;
+  `buildStudioBackgroundTexture(baseHex, explicit?)` collapses the 3-stop loop into a pure
+  2-stop linear gradient when stops are present (via NEW `explicitToStops` — mid = mean of the
+  ends → straight line, ZERO new render code). `EnvmapGenerator` cache key now keys on
+  `base|top|bottom` (rebuilds on theme switch). Drives the new **Cinema 4D canvas theme**
+  (`#5B5B5B`→`#868686`, VIEWCOLOR_C4DBACKGROUND_GRAD1/2) shared FULL-SSoT with the 2D canvas.
+  See ADR-004 for the 2D side + theme switcher + grid. 9 jest. 🔴 browser-verify (3D backdrop) + commit.
 - **2026-06-26** — §2.1 Studio gradient default background: the `environment` (default) backdrop
   is now a neutral vertical studio gradient (Cinema 4D / Blender look) built AROUND the SAME
   2D-canvas base colour (`resolveDxfCanvasBackgroundHex` — ONE token SSoT for 2D + 3D), replacing

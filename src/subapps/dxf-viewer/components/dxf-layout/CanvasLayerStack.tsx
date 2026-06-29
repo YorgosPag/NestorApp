@@ -285,7 +285,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       <div className="flex-1 relative">
         <div
           ref={containerRef as React.RefObject<HTMLDivElement>}
-          className={`canvas-stack relative w-full h-full cursor-none bg-[var(--canvas-background-dxf)] ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
+          className={`canvas-stack relative w-full h-full cursor-none bg-[var(--canvas-background-dxf)] bg-[image:var(--canvas-background-dxf-image)] ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           onMouseMove={containerHandlers.onMouseMove}
           onMouseDown={containerHandlers.onMouseDown}
           onMouseUp={containerHandlers.onMouseUp}
