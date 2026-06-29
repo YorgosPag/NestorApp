@@ -34,6 +34,7 @@ import { raycastBimHitAndWorld } from '../../systems/raycaster/BimEntityRaycaste
 import { ensureBoundsTrees } from '../../systems/raycaster/bvh-setup';
 import { markPointerMoved, isPointerActive } from '../../systems/pointer-activity';
 import { computeSnap3DHover } from './bim-3d-snap-hover';
+import { recordOverlayDraw } from '../../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0.3 (revertible)
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 
 /** Inputs for one pick pass — the manager + the latest cursor position (client px). */
@@ -93,13 +94,17 @@ function runPick(input: Bim3DPickInput): boolean {
   }
 
   // ADR-040 Φ-3D-pointer — ONE BVH-accelerated raycast feeds BOTH hover and snap.
+  const tRay = performance.now(); // 🔬 ADR-549 Phase 0.3
   ensureBoundsTrees(group);
   const hit = raycastBimHitAndWorld(group, camera, dom, clientX, clientY);
+  recordOverlayDraw('pick:raycast', performance.now() - tRay); // 🔬
 
   // ADR-538 — unified hover: BIM silhouette when a tagged entity is hit, else the raw-DXF glow.
+  const tDxf = performance.now(); // 🔬 ADR-549 Phase 0.3 (DXF wireframe pick only runs on a BIM miss)
   const hoverId = hit?.bimId
     ?? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId
     ?? null;
+  recordOverlayDraw('pick:dxf-resolve', performance.now() - tDxf); // 🔬
   const bimHoverId = hit?.bimId ?? null;
 
   // ADR-549 Φ2 (2026-06-29) — DECOUPLE the cheap hover id from the heavy silhouette. The unified
@@ -138,9 +143,11 @@ function runPick(input: Bim3DPickInput): boolean {
   if (placing === 'column' || placing === 'wall') return resettlePending;
 
   // ADR-542 — snap marker reuses the SAME world point from the unified raycast (no 2nd raycast).
+  const tSnap = performance.now(); // 🔬 ADR-549 Phase 0.3
   const snap = hit?.worldPoint
     ? computeSnap3DHover(group, camera, dom, clientX, clientY, hit.worldPoint)
     : null;
+  recordOverlayDraw('pick:snap', performance.now() - tSnap); // 🔬
   useSnap3DOverlayStore.getState().setSnap(snap);
   return resettlePending;
 }

@@ -64,6 +64,29 @@ export default defineConfig({
       testMatch: ['**/dxf-viewer/e2e/dxf-visual-regression.spec.ts'],
       timeout: 120000,
     },
+    {
+      // ADR-550 Φ2 — 3D BIM golden-image harness. Needs WebGL; bundled chromium
+      // renders it via swiftshader (software) so the screenshot works headless.
+      name: 'visual-bim-3d',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 1,
+        navigationTimeout: 120000,
+        actionTimeout: 30000,
+        launchOptions: {
+          args: [
+            '--use-gl=angle',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-swiftshader',
+            '--ignore-gpu-blocklist',
+          ],
+        },
+      },
+      snapshotPathTemplate: 'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}{ext}',
+      testMatch: ['**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts'],
+      timeout: 180000,
+    },
   ],
   webServer: {
     command: 'npm run dev:fast',
