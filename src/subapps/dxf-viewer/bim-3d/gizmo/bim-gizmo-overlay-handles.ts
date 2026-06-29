@@ -45,11 +45,11 @@ const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
  * (contextual ribbon). So the structural plan-section handles (`resize-x`/`resize-z`
  * = wall/column thickness, beam width) and the slab thickness handle were REMOVED
  * (ADR-408 Φ1, «πιστή αντιγραφή Revit»):
- *   - column → NO resize handle. ADR-552 (Giorgio 2026-06-29): the vertical height
+ *   - column → NO resize handle. ADR-402 §gizmo-cleanup (Giorgio 2026-06-29): the vertical height
  *              octahedra («κίτρινα διαμαντάκια» στη θέση του κάθετου άξονα) read as
  *              confusing clutter. Height + base offset → contextual tab («Ύψος»);
  *              width/depth (X/Z) → Type. A column is a point in plan (no length).
- *   - wall   → NO resize handle. ADR-552: same — the vertical octahedra removed.
+ *   - wall   → NO resize handle. ADR-402 §gizmo-cleanup: same — the vertical octahedra removed.
  *              Height/base → tab; thickness (X/Z) → Type; LENGTH → the endpoint shape
  *              handles (`ENDPOINT_HANDLES_BY_TYPE`).
  *   - beam   → NO resize handle. ADR-535 Φ9: LENGTH + width → the 2D Canvas2D reshape

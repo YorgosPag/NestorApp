@@ -37,9 +37,9 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 
-  // ADR-552 (Giorgio 2026-06-29) — a column shows NO resize octahedra at all: the
+  // ADR-402 §gizmo-cleanup (Giorgio 2026-06-29) — a column shows NO resize octahedra at all: the
   // vertical height «διαμαντάκια» were removed (height → tab, section → Type).
-  it('HIDES every resize octahedron for a column selection (ADR-552)', () => {
+  it('HIDES every resize octahedron for a column selection (ADR-402 §gizmo-cleanup)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
@@ -146,12 +146,12 @@ describe('BimGizmoOverlay — relocatable base-point marker (ADR-408)', () => {
   });
 });
 
-describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1 / ADR-552, Revit-faithful)', () => {
-  // ADR-552 (Giorgio 2026-06-29): column + wall expose NO resize handles. The vertical
+describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1 / ADR-402 §gizmo-cleanup, Revit-faithful)', () => {
+  // ADR-402 §gizmo-cleanup (Giorgio 2026-06-29): column + wall expose NO resize handles. The vertical
   // height octahedra («κίτρινα διαμαντάκια» στη θέση του κάθετου άξονα) were removed —
   // height/base → contextual tab, section (X/Z) → Type. Only stair keeps resize handles.
   it.each(['column', 'wall'])(
-    'exposes NO resize handles for %s — height is tab, section is Type (ADR-552)',
+    'exposes NO resize handles for %s — height is tab, section is Type (ADR-402 §gizmo-cleanup)',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
       expect(ids.has('resize-y')).toBe(false);
@@ -262,7 +262,7 @@ describe('BimGizmoOverlay — collapse to move handles during a drag (ADR-363 Φ
   it('hides the resize/shape handles while keeping the move arrows, then restores them', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
-    // ADR-552 — column/wall no longer expose resize handles; stair still does, so it is
+    // ADR-402 §gizmo-cleanup — column/wall no longer expose resize handles; stair still does, so it is
     // the type that exercises the collapse-to-move-arrows clutter-hide path.
     overlay.setActiveHandles(activeHandlesFor('stair')); // stair: resize-y + move arrows
 

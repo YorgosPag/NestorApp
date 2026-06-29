@@ -87,7 +87,7 @@ export function createGizmoMeshes(): GizmoMeshSet {
     root.add(wrapper, hitbox);
   }
 
-  // ADR-552 (Giorgio 2026-06-29) — the negative-axis indicator stubs were removed:
+  // ADR-402 §gizmo-cleanup (Giorgio 2026-06-29) — the negative-axis indicator stubs were removed:
   // the faint half-lines reading "behind" the origin (axes που «προχωράνε προς τα πίσω»)
   // were visual noise. The axes now stop at the join.
 
@@ -255,7 +255,7 @@ export function createGizmoMeshes(): GizmoMeshSet {
   root.add(centerGroup, centerHitbox);
 
   // --- Origin centre pick zone ---------------------------------------------
-  // ADR-552 (Giorgio 2026-06-29) — the visible origin reticle (circle «κυκλάκι» +
+  // ADR-402 §gizmo-cleanup (Giorgio 2026-06-29) — the visible origin reticle (circle «κυκλάκι» +
   // crosshair) was removed; only the invisible pick zone below stays so the gizmo
   // centre remains hover/drag-activatable.
   const centerOriginHit = new THREE.Mesh(
