@@ -177,7 +177,7 @@ export function buildDxfDragPreview(
     // (useDimGripGhostPreview → applyDimensionGripDrag + renderPreviewDimension). anchorPos
     // = grip world pos at mouseDown (gripPos for the linear rotation handle).
     ...(activeGrip.dimGripKind         ? { dimGripKind:         activeGrip.dimGripKind,         anchorPos } : {}),
-    // ADR-551 — text/mtext rect-box grip kind + anchor for the live box ghost
+    // ADR-557 — text/mtext rect-box grip kind + anchor for the live box ghost
     // (applyEntityPreview → applyTextGripDrag, the SAME transform the commit runs).
     // `anchorPos` = the grabbed grip world pos at mouseDown (rotation sweep start).
     ...(activeGrip.textGripKind        ? { textGripKind:        activeGrip.textGripKind,        anchorPos } : {}),

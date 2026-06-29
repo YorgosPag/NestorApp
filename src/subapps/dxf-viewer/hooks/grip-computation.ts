@@ -200,7 +200,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'text': {
-      // ADR-551 — full rect-box parity grips (4 corners + 4 edge midpoints +
+      // ADR-557 — full rect-box parity grips (4 corners + 4 edge midpoints +
       // centre MOVE + rotation) via the shared text↔RectFrame adapter, the SAME
       // `rect-grip-engine` SSoT the wall / rectangular column use. Covers BOTH
       // TEXT (X-scale `widthFactor`) and MTEXT (real `width` frame) — the converter

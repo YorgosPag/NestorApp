@@ -362,7 +362,7 @@ export function applyEntityPreview(
     return { ...(entity as object), boundaryPaths: newBoundaryPaths } as unknown as DxfEntityUnion;
   }
 
-  // ── ADR-551 — text/mtext rect-box live preview (move / rotation / resize) ──
+  // ── ADR-557 — text/mtext rect-box live preview (move / rotation / resize) ──
   // Routes through the SAME `applyTextGripDrag` the commit runs (preview ≡ commit),
   // then folds the top-level patch onto the cloned `DxfText` so the ghost shows the
   // new position / rotation / height (+ width|widthFactor). `anchorPos` = the grabbed

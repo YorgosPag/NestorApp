@@ -84,7 +84,7 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   'opening-move': 'move',
   'opening-rotation': 'rotation',
   'opening-facing': 'rotation',
-  // Text / MText (ADR-551) — rect-box parity: centre = MOVE glyph, rotation =
+  // Text / MText (ADR-557) — rect-box parity: centre = MOVE glyph, rotation =
   // ROTATION glyph; the 4 corners + 4 edge midpoints render the default 'square'.
   'text-move': 'move',
   'text-rotation': 'rotation',

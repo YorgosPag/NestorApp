@@ -1,5 +1,5 @@
 /**
- * ADR-551 — Text / MText ⇄ RectFrame adapter (FULL rectangular-box grip parity).
+ * ADR-557 — Text / MText ⇄ RectFrame adapter (FULL rectangular-box grip parity).
  *
  * Bridges a flat `DxfText` (TEXT, or MTEXT normalised to 'text' by the
  * scene→DxfText converter) to the shared `rect-grip-engine` / `rect-frame` SSoT so
@@ -7,11 +7,14 @@
  * rectangular column use — Giorgio 2026-06-30: «τον ΙΔΙΟ ΑΚΡΙΒΩΣ κώδικα στα
  * κείμενα, μία πηγή αλήθειας». Mirrors `bim/columns/column-rect-adapter.ts`.
  *
- * GEOMETRY (audit §7): `position` is the un-rotated TOP-LEFT anchor; the box
- * extends +x (right) and −y (down, world is y-up). The renderer rotates the box
- * around `position`, so the visual centre = `position + R(θ)·(w/2, −h/2)`. We work
- * on that bbox-centre `RectFrame` and re-home `position` on every transform so the
- * pivot is the box centre (Figma-like), independent of the renderer's corner pivot.
+ * GEOMETRY: `position` is the un-rotated LOWER-LEFT (baseline-left) anchor; the box
+ * extends +x (right) and +y (UP). This matches the app's real text placement — the
+ * 3D text mesh seats its lower-left at `position` (`dxf-text-3d.ts`: centre =
+ * `position + (w/2, +h/2)`) and the 2D renderer + `getEntityBBox` use the same
+ * lower-left corner. (NOT the `entity-bounds.ts` top-left convention the original
+ * plan cited — that put the grip box BELOW the glyphs.) The visual centre =
+ * `position + R(θ)·(w/2, +h/2)`. We work on that bbox-centre `RectFrame` and re-home
+ * `position` on every transform so the pivot is the box centre (Figma-like).
  *
  * WIDTH SEMANTICS (audit §4.2 / decision #3):
  *   - MTEXT → the real box `width` (carried on `DxfText.width`). Discriminator:
@@ -83,26 +86,37 @@ function isMTextBox(entity: DxfText): boolean {
   return entity.width != null;
 }
 
+/** Fallback height (world units) when a text carries no usable height (AutoCAD DIMTXT default). */
+const DEFAULT_TEXT_HEIGHT = 2.5;
+
 /** Natural (widthFactor = 1) rendered width of a simple TEXT at a given height. */
-function naturalTextWidth(text: string, height: number): number {
-  return Math.max(text.length, 1) * height * CHAR_WIDTH;
+function naturalTextWidth(text: string | undefined | null, height: number): number {
+  const len = text ? text.length : 0;
+  return Math.max(len, 1) * height * CHAR_WIDTH;
+}
+
+/** A finite, positive box height (world units) — guards undefined/0/NaN at the source. */
+function resolveBoxHeight(text: DxfText): number {
+  return Number.isFinite(text.height) && text.height > 0 ? text.height : DEFAULT_TEXT_HEIGHT;
 }
 
 /**
  * Effective grip-box width (world units): the MTEXT frame `width` when carried,
- * else the simple-TEXT `len·height·CHAR_WIDTH·widthFactor`.
+ * else the simple-TEXT `len·height·CHAR_WIDTH·widthFactor`. Robust to a missing
+ * flat `text` (content lives in a `textNode` on some scene shapes) — never throws.
  */
 export function effectiveTextWidth(text: DxfText): number {
   if (text.width != null && text.width > 0) return text.width;
-  return naturalTextWidth(text.text, text.height) * (text.widthFactor ?? 1);
+  return naturalTextWidth(text.text, resolveBoxHeight(text)) * (text.widthFactor ?? 1);
 }
 
 /** `DxfText` → bbox-centre `RectFrame` (world units). See module header for geometry. */
 export function textToRectFrame(text: DxfText): RectFrame {
   const w = effectiveTextWidth(text);
-  const h = text.height;
+  const h = resolveBoxHeight(text);
   const rotationDeg = text.rotation ?? 0;
-  const rel = rotateVector({ x: w / 2, y: -h / 2 }, rotationDeg);
+  // `position` = lower-left; the box extends +x (right) and +y (UP) → centre offset +h/2.
+  const rel = rotateVector({ x: w / 2, y: h / 2 }, rotationDeg);
   return {
     center: { x: text.position.x + rel.x, y: text.position.y + rel.y },
     rotationDeg,
@@ -111,9 +125,9 @@ export function textToRectFrame(text: DxfText): RectFrame {
   };
 }
 
-/** Inverse of `textToRectFrame`'s centre derivation: bbox-centre → TOP-LEFT `position`. */
+/** Inverse of `textToRectFrame`'s centre derivation: bbox-centre → LOWER-LEFT `position`. */
 function rectFrameToPosition(frame: RectFrame): Point2D {
-  const rel = rotateVector({ x: frame.halfWidth, y: -frame.halfLength }, frame.rotationDeg);
+  const rel = rotateVector({ x: frame.halfWidth, y: frame.halfLength }, frame.rotationDeg);
   return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };
 }
 

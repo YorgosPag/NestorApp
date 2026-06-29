@@ -67,6 +67,9 @@ import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotif
 import { useAutoFoundationDesign } from '../hooks/useAutoFoundationDesign';
 import { useStructuralOrganismNotification } from '../hooks/useStructuralOrganismNotification';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
+// 🏢 ADR-004 — restore the saved canvas background theme (CSS side) on a cold load, so it
+// survives a hard refresh WITHOUT opening the lazy BackgroundCategory settings panel.
+import { applySavedCanvasThemeCss } from '../config/canvas-theme';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + persistence hosts) — N.7.1 size split
@@ -96,6 +99,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         root.dataset.appRoute = previous;
       }
     };
+  }, []);
+  // ADR-004 — apply the saved canvas background theme (CSS side) once on cold mount. The
+  // value was always persisted; only its application used to be coupled to the lazy
+  // BackgroundCategory mount, so a hard refresh fell back to the default until that tab
+  // was reopened. CSS-only write to `:root` → no store subscription (ADR-040 safe).
+  React.useEffect(() => {
+    applySavedCanvasThemeCss();
   }, []);
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();

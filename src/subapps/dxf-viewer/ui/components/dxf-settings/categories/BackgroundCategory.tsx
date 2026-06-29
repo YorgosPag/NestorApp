@@ -8,78 +8,16 @@ import { storageGet, storageSet, STORAGE_KEYS } from '../../../../utils/storage-
 import { EnterpriseColorDialog } from '../../../color/EnterpriseColorDialog';
 import { resolveCssVarColor } from '../../../../config/color-config';
 import { useRulersGridContext } from '../../../../systems/rulers-grid/RulersGridSystem';
-
-// ─── Theme definitions ────────────────────────────────────────────────────────
-
-type ThemeKey = 'autocadClassic' | 'autocadDark' | 'solidworks' | 'blender' | 'light' | 'cinema4d' | 'custom';
-
-interface ThemeConfig {
-  key: ThemeKey;
-  /** CSS value applied to `--canvas-background-dxf` (solid base — CSS var or hex). */
-  cssValue: string;
-  /** Optional vertical gradient image for `--canvas-background-dxf-image` (2D canvas). */
-  gradientImage?: string;
-  /** Optional explicit gradient stops for the 3D studio background (`--canvas-gradient-*`). */
-  gradientTop?: string;
-  gradientBottom?: string;
-  /** Optional theme grid colours (palette `var(--canvas-grid-*)`, resolved to hex → RulersGrid context). */
-  gridMajor?: string;
-  gridMinor?: string;
-  swatchClass: string;
-  textClass: string;
-}
-
-const PRESET_THEMES: ThemeConfig[] = [
-  { key: 'autocadClassic', cssValue: 'var(--canvas-themes-autocad-classic)', swatchClass: 'bg-black border-border',             textClass: 'text-muted-foreground' },
-  { key: 'autocadDark',    cssValue: 'var(--canvas-themes-autocad-dark)',    swatchClass: 'bg-[#1a1a1a] border-border',          textClass: 'text-muted-foreground' },
-  { key: 'solidworks',     cssValue: 'var(--canvas-themes-solidworks)',      swatchClass: 'bg-[#2d3748] border-border',          textClass: 'text-muted-foreground' },
-  { key: 'blender',        cssValue: 'var(--canvas-themes-blender)',         swatchClass: 'bg-[#232323] border-border',          textClass: 'text-muted-foreground' },
-  { key: 'light',          cssValue: 'var(--canvas-themes-light)',           swatchClass: 'bg-white border-border',              textClass: 'text-foreground' },
-  {
-    key: 'cinema4d',
-    cssValue: 'var(--canvas-themes-cinema4d)',
-    gradientImage: 'linear-gradient(to bottom, var(--canvas-gradient-cinema4d-top), var(--canvas-gradient-cinema4d-bottom))',
-    gradientTop: 'var(--canvas-gradient-cinema4d-top)',
-    gradientBottom: 'var(--canvas-gradient-cinema4d-bottom)',
-    gridMajor: 'var(--canvas-grid-cinema4d-major)',
-    gridMinor: 'var(--canvas-grid-cinema4d-minor)',
-    swatchClass: 'bg-gradient-to-b from-[#5b5b5b] to-[#868686] border-border',
-    textClass: 'text-muted-foreground',
-  },
-];
-
-const DEFAULT_THEME: ThemeKey = 'autocadClassic';
-const DEFAULT_CUSTOM_COLOR = '#1e293b';
-
-/** Active canvas-theme CSS variables (set on :root by the theme switch). */
-const CANVAS_THEME_VARS = {
-  base: '--canvas-background-dxf',
-  image: '--canvas-background-dxf-image',
-  gradientTop: '--canvas-gradient-top',
-  gradientBottom: '--canvas-gradient-bottom',
-} as const;
-
-function setOrClear(root: CSSStyleDeclaration, name: string, value?: string): void {
-  if (value) root.setProperty(name, value);
-  else root.removeProperty(name);
-}
-
-/**
- * Apply the CSS side of a canvas theme (Cinema 4D-style scheme): solid base + optional vertical
- * gradient (2D image + 3D stops) — one place so 2D and 3D move together. Solid themes clear the
- * gradient vars (→ flat background). Grid colours are applied separately into the RulersGrid
- * context (Canvas2D `ctx.strokeStyle` cannot read CSS vars).
- */
-function applyCanvasTheme(
-  theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom'>,
-): void {
-  if (typeof document === 'undefined') return;
-  const root = document.documentElement.style;
-  root.setProperty(CANVAS_THEME_VARS.base, theme.cssValue);
-  root.setProperty(CANVAS_THEME_VARS.image, theme.gradientImage ?? 'none');
-  setOrClear(root, CANVAS_THEME_VARS.gradientTop, theme.gradientTop);
-  setOrClear(root, CANVAS_THEME_VARS.gradientBottom, theme.gradientBottom);
-}
+// 🏢 ADR-004 SSoT — theme catalogue + CSS apply shared with the startup restore
+// (`applySavedCanvasThemeCss`), so the chosen background survives a hard refresh.
+import {
+  type ThemeKey,
+  type ThemeConfig,
+  PRESET_THEMES,
+  DEFAULT_THEME,
+  DEFAULT_CUSTOM_COLOR,
+  applyCanvasTheme,
+} from '../../../../config/canvas-theme';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

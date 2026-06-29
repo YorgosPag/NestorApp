@@ -81,6 +81,10 @@ function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: 
     position: scalePoint(e.position, base, sx, sy),
     height: (e.height ?? e.fontSize ?? 1) * Math.abs(sy),
     fontSize: (e.fontSize ?? e.height ?? 1) * Math.abs(sy),
+    // ADR-557 — a non-uniform Scale stretches the glyph horizontally via the TEXT
+    // X-scale (mirror `scaleMText`'s `width *= sx`), so the toolbar Scale tool and the
+    // e/w grip resize share one width model. Uniform scale (sx===sy) leaves it at 1×.
+    widthFactor: ((e as { widthFactor?: number }).widthFactor ?? 1) * Math.abs(sx),
   };
 }
 

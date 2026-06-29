@@ -309,7 +309,7 @@ export interface UnifiedGripInfo {
    */
   readonly polylineGripKind?: PolylineGripKind;
   /**
-   * ADR-551 — parametric text/mtext grip discriminator (forwarded from
+   * ADR-557 — parametric text/mtext grip discriminator (forwarded from
    * `GripInfo.textGripKind` in `grip-registry.wrapDxfGrip`). Routes commit through
    * `applyTextGripDrag()` + `UpdateTextTransformCommand` (rect-box parity:
    * corner/edge resize + centre move + rotation via the shared `rect-grip-engine`).

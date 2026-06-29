@@ -1,5 +1,5 @@
 /**
- * ADR-551 — `text-grips` adapter tests (pure, Slice 1).
+ * ADR-557 — `text-grips` adapter tests (pure, Slice 1).
  *
  * Covers the SSoT text↔RectFrame bridge:
  *   - `getTextGrips` → exactly 10 grips (4 corners + 4 edges + move + rotation),
@@ -40,9 +40,9 @@ describe('effectiveTextWidth', () => {
 });
 
 describe('textToRectFrame', () => {
-  it('axis-aligned box: centre + half-extents from top-left position', () => {
+  it('axis-aligned box: centre + half-extents from lower-left position', () => {
     const f = textToRectFrame(text());
-    expect(nearP(f.center, 9, -5)).toBe(true);
+    expect(nearP(f.center, 9, 5)).toBe(true); // box extends +x (right) and +y (up)
     expect(f.halfWidth).toBeCloseTo(9, 9);
     expect(f.halfLength).toBeCloseTo(5, 9);
     expect(f.rotationDeg).toBe(0);
@@ -74,26 +74,26 @@ describe('getTextGrips', () => {
     ]);
   });
 
-  it('places corners at the box extremes (top-left = position)', () => {
+  it('places corners at the box extremes (lower-left = position)', () => {
     const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
-    expect(nearP(by('text-corner-nw'), 0, 0)).toBe(true);    // top-left = position
-    expect(nearP(by('text-corner-ne'), 18, 0)).toBe(true);   // top-right
-    expect(nearP(by('text-corner-sw'), 0, -10)).toBe(true);  // bottom-left
-    expect(nearP(by('text-corner-se'), 18, -10)).toBe(true); // bottom-right
+    expect(nearP(by('text-corner-sw'), 0, 0)).toBe(true);    // lower-left = position
+    expect(nearP(by('text-corner-se'), 18, 0)).toBe(true);   // lower-right
+    expect(nearP(by('text-corner-nw'), 0, 10)).toBe(true);   // upper-left
+    expect(nearP(by('text-corner-ne'), 18, 10)).toBe(true);  // upper-right
   });
 
   it('places edge midpoints + move on the box centre lines', () => {
     const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
-    expect(nearP(by('text-edge-e'), 18, -5)).toBe(true);
-    expect(nearP(by('text-edge-w'), 0, -5)).toBe(true);
-    expect(nearP(by('text-edge-n'), 9, 0)).toBe(true);
-    expect(nearP(by('text-edge-s'), 9, -10)).toBe(true);
-    expect(nearP(by('text-move'), 9, -5)).toBe(true);
+    expect(nearP(by('text-edge-e'), 18, 5)).toBe(true);
+    expect(nearP(by('text-edge-w'), 0, 5)).toBe(true);
+    expect(nearP(by('text-edge-n'), 9, 10)).toBe(true); // top edge
+    expect(nearP(by('text-edge-s'), 9, 0)).toBe(true);  // bottom edge (baseline)
+    expect(nearP(by('text-move'), 9, 5)).toBe(true);
   });
 
   it('rotation handle sits midway between centre and bottom edge (−height/4)', () => {
     const rot = grips.find(g => g.textGripKind === 'text-rotation')!.position;
-    expect(nearP(rot, 9, -7.5)).toBe(true);
+    expect(nearP(rot, 9, 2.5)).toBe(true); // centre (9,5) − height/4 (2.5) → (9, 2.5)
   });
 
   it('the move grip is the only one that moves the entity', () => {
@@ -125,7 +125,7 @@ describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
     expect(patch.height).toBeCloseTo(14, 9);
     // box width stays 18 → widthFactor = 18 / (3·14·0.6) = 18/25.2
     expect(patch.widthFactor).toBeCloseTo(18 / 25.2, 9);
-    expect(patch.position!.y).toBeCloseTo(4, 9);        // top edge moved up by 4
+    expect(patch.position!.y).toBeCloseTo(0, 9);        // bottom edge (baseline) held at y=0
   });
 
   it('MTEXT east edge → patches width directly (no widthFactor)', () => {
@@ -142,13 +142,16 @@ describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
 });
 
 describe('applyTextGripDrag — corner resize (opposite corner fixed)', () => {
-  it('SE corner grows both dims; NW corner stays pinned at (0,0)', () => {
-    const patch = applyTextGripDrag('text-corner-se', { entity: text(), delta: { x: 6, y: -4 } });
+  it('SE corner grows both dims; NW corner (opposite) stays pinned at (0,10)', () => {
+    const t = text();
+    const patch = applyTextGripDrag('text-corner-se', { entity: t, delta: { x: 6, y: -4 } });
     expect(patch.height).toBeCloseTo(14, 9);
     // box width 24 → widthFactor = 24 / (3·14·0.6) = 24/25.2
     expect(patch.widthFactor).toBeCloseTo(24 / 25.2, 9);
-    // NW corner (the opposite, pinned) = patched position (top-left).
-    expect(nearP(patch.position!, 0, 0)).toBe(true);
+    // Re-frame the patched entity: the opposite (NW, upper-left) corner must hold.
+    const f = textToRectFrame({ ...t, ...patch });
+    const nw = { x: f.center.x - f.halfWidth, y: f.center.y + f.halfLength };
+    expect(nearP(nw, 0, 10)).toBe(true);
   });
 });
 

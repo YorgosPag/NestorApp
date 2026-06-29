@@ -1,5 +1,5 @@
 /**
- * ADR-551 — UpdateTextTransformCommand (minimal, top-level fields).
+ * ADR-557 — UpdateTextTransformCommand (minimal, top-level fields).
  *
  * Commits a text/mtext grip-box transform (move / rotate / corner+edge resize) by
  * patching the TOP-LEVEL geometry fields the renderer + scene→DxfText converter

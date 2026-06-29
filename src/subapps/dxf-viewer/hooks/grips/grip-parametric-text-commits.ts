@@ -1,5 +1,5 @@
 /**
- * ADR-551 — parametric text/mtext grip commit (rect-box parity).
+ * ADR-557 — parametric text/mtext grip commit (rect-box parity).
  *
  * Bypasses the generic stretch/move path because the text box transform (move /
  * rotate / corner+edge resize) is computed by the shared `applyTextGripDrag`
@@ -88,7 +88,7 @@ function mergeTextTransform(prev: TextTransformState, patch: TextTransformPatch)
   };
 }
 
-/** ADR-551 — parametric text/mtext grip commit via `UpdateTextTransformCommand`. */
+/** ADR-557 — parametric text/mtext grip commit via `UpdateTextTransformCommand`. */
 export function commitTextGripDrag(
   grip: UnifiedGripInfo,
   delta: Point2D,

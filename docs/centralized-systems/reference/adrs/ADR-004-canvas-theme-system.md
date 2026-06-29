@@ -20,8 +20,10 @@
 ## Theme model (a theme = a full canvas «scheme», Cinema 4D-style)
 
 A canvas theme is no longer just a solid colour — it is a scheme bundling **background +
-gradient + grid**, applied atomically by the theme switch (`BackgroundCategory.tsx →
-applyCanvasTheme`). All values live in `design-tokens.json` (`canvas.themes`,
+gradient + grid**, applied atomically by the theme switch. The catalogue + CSS apply live in
+`config/canvas-theme.ts` (SSoT: `PRESET_THEMES`, `applyCanvasTheme`, `applySavedCanvasThemeCss`),
+consumed by `BackgroundCategory.tsx` (settings UI, live pick) and `DxfViewerContent.tsx`
+(startup restore on cold mount). All values live in `design-tokens.json` (`canvas.themes`,
 `canvas.gradient`, `canvas.grid`) → generated CSS vars (SSoT).
 
 Active runtime CSS variables (set on `:root` by the switch):
@@ -48,6 +50,23 @@ grips) are intentionally NOT overridden — the app keeps its own deliberate pal
 
 ## Changelog
 
+- **2026-06-30** — FIX **«background resets after hard refresh»** + theme-catalogue SSoT
+  extraction. **Root cause:** the chosen theme was always persisted (`localStorage`
+  `dxf-viewer:canvas-background-theme`), but the *application* of it (writing the CSS vars to
+  `:root`) lived ONLY in `BackgroundCategory`'s mount effect — and `BackgroundCategory` is
+  **lazy-loaded** (`SpecificSettingsPanel` → `lazy()`), mounting only when that exact settings
+  tab is opened. On a cold load nothing re-applied the saved CSS, so the canvas fell back to the
+  `variables.css` default (`--canvas-background-dxf: #000000`) until the user reopened the panel.
+  **Fix (SSoT):** extracted the theme catalogue + CSS apply into NEW `config/canvas-theme.ts`
+  (`PRESET_THEMES`, `DEFAULT_THEME`, `DEFAULT_CUSTOM_COLOR`, `applyCanvasTheme`, +
+  `applySavedCanvasThemeCss()`); `BackgroundCategory.tsx` now imports from it (no duplicated
+  defs); `DxfViewerContent.tsx` calls `applySavedCanvasThemeCss()` once on mount (CSS-only write
+  to `:root`, no store subscription → ADR-040 safe). **Grid colours are NOT re-applied at startup**
+  — they round-trip through the RulersGrid persistence (`rulers-grid-persistence`); re-applying
+  them here would clobber the user's own grid edits. The settings UI still applies grid colours
+  live on pick (it owns the RulersGrid context). Files: NEW `config/canvas-theme.ts`,
+  `BackgroundCategory.tsx`, `DxfViewerContent.tsx`. 🔴 browser-verify (pick Cinema 4D → hard
+  refresh → background persists) + commit (stage ADR-004 + ADR-040 per CHECK 6D).
 - **2026-06-30** — NEW **Cinema 4D canvas theme** (exact copy of the C4D viewport scheme:
   background gradient + grid). Tokens: `canvas.themes.cinema4d`, `canvas.gradient.cinema4d-*`,
   `canvas.grid.cinema4d-*`, `canvas.background.dxf-image`. 2D gradient = `canvas-stack`

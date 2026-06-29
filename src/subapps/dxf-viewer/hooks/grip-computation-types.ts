@@ -142,7 +142,7 @@ export interface DxfGripDragPreview {
    */
   mepUnderfloorGripKind?: MepUnderfloorGripKind;
   /**
-   * ADR-551 — parametric text/mtext grip discriminator. Routes the live ghost
+   * ADR-557 — parametric text/mtext grip discriminator. Routes the live ghost
    * through `applyTextGripDrag` (the SAME pure transform the commit runs), so the
    * dragged box (corner/edge resize, move, rotation) is byte-identical preview ≡
    * commit. `anchorPos` carries the grip world position at mouseDown so the

@@ -451,7 +451,7 @@ export type PolylineGripKind =
   | `polyline-arc-midpoint-${number}`;
 
 /**
- * ADR-551 — Text / MText grip kind (parametric grip type). Routes commit through
+ * ADR-557 — Text / MText grip kind (parametric grip type). Routes commit through
  * `applyTextGripDrag()` + `UpdateTextTransformCommand` instead of the standard
  * `StretchEntityCommand` vertex path. FULL rectangular-box parity με τον τοίχο /
  * κολόνα (Giorgio 2026-06-30: «ίδιες λαβές, ίδιος κώδικας»): 4 γωνίες (opposite

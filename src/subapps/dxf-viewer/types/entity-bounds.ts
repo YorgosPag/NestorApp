@@ -63,7 +63,12 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
         maxY: entity.position.y,
       };
     case 'text': {
-      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+      // ADR-557 — honour the TEXT X-scale (`widthFactor`) so bounds (zoom-to-fit /
+      // selection extent) track a horizontally-stretched glyph.
+      const textWidthFactor = ('widthFactor' in entity && typeof entity.widthFactor === 'number' && entity.widthFactor > 0)
+        ? entity.widthFactor
+        : 1;
+      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE * textWidthFactor;
       const textHeight = entity.height || entity.fontSize || 2.5;
       return {
         minX: entity.position.x,

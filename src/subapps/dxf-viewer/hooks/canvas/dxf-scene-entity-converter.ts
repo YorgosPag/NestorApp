@@ -55,7 +55,7 @@ import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
-// ADR-551 — TEXT/MTEXT → DxfText projection extracted to a sibling (SRP, ≤500 LOC).
+// ADR-557 — TEXT/MTEXT → DxfText projection extracted to a sibling (SRP, ≤500 LOC).
 import { convertTextEntity } from './dxf-text-entity-converter';
 import { dwarn } from '../../debug';
 
@@ -179,7 +179,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
     }
     case 'mtext':
     case 'text':
-      // ADR-551 — TEXT/MTEXT projection lives in the sibling converter (SRP).
+      // ADR-557 — TEXT/MTEXT projection lives in the sibling converter (SRP).
       return convertTextEntity(entity, base);
     case 'angle-measurement': {
       const e = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };

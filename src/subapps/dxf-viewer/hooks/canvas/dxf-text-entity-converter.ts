@@ -7,7 +7,7 @@
  *
  * Resolves: flat text (CreateTextCommand entities carry only a textNode), text
  * height + first-run style (ADR-344 Phase 6.E), flat-font fallback (ADR-526 Φ5a),
- * and the ADR-551 grip-box width discriminator (MTEXT `width` vs TEXT `widthFactor`).
+ * and the ADR-557 grip-box width discriminator (MTEXT `width` vs TEXT `widthFactor`).
  */
 
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -35,7 +35,7 @@ export function convertTextEntity(entity: SceneEntity, base: DxfBaseFields): Dxf
   const finalStyle = flatFont && !textStyle?.fontFamily
     ? { ...textStyle, fontFamily: flatFont }
     : textStyle;
-  // ADR-551 — grip-box width discriminator: MTEXT → its real `width` frame; simple
+  // ADR-557 — grip-box width discriminator: MTEXT → its real `width` frame; simple
   // TEXT → its AutoCAD X-scale `widthFactor` (adapter derives the box width from
   // char-count). Never both.
   const mtextWidth = entity.type === 'mtext'

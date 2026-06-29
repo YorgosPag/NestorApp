@@ -44,7 +44,7 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // Reuses the text-engine font SSoT — resolver + glyph-path cache; CSS fillText
 // stays as the fallback when no loaded font matches the entity's family.
 import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont } from '../../text-engine/fonts';
-// ADR-551 — 2D grip render parity: the SAME 10-grip set the interaction +
+// ADR-557 — 2D grip render parity: the SAME 10-grip set the interaction +
 // 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
 // squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
 import { getTextGrips } from '../../bim/text/text-grips';
@@ -129,9 +129,24 @@ export class TextRenderer extends BaseEntityRenderer {
     // rotation/screenHeight math below — the rotation calculation is unchanged.
     const resolved = resolveEntityFont(fontFamily, { bold: weight === 'bold', italic });
 
+    // 🏢 ADR-557 — AutoCAD TEXT X-scale (`widthFactor`). ONLY a horizontal stretch is
+    // added here (the guard's «μόνο πρόσθεση horizontal scale»): around the text
+    // origin (screenPos), AFTER the existing rotation, so the rotation/zoom math is
+    // untouched. `widthFactor === 1` (every legacy TEXT + every MTEXT, which has none)
+    // keeps the original byte-identical paint path — zero regression.
+    const widthFactor = ('widthFactor' in entity && typeof entity.widthFactor === 'number' && entity.widthFactor > 0)
+      ? entity.widthFactor
+      : 1;
+
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
       this.ctx.rotate(degToRad(-normalizedRotation));
+      if (widthFactor !== 1) this.ctx.scale(widthFactor, 1);
+      const w = this.paintText(0, 0, text, screenHeight, textAlignMode, baselineMode, resolved);
+      if (hasDecoration) this.paintDecorations(0, 0, w, screenHeight, richStyle, textAlignMode);
+    } else if (widthFactor !== 1) {
+      this.ctx.translate(screenPos.x, screenPos.y);
+      this.ctx.scale(widthFactor, 1);
       const w = this.paintText(0, 0, text, screenHeight, textAlignMode, baselineMode, resolved);
       if (hasDecoration) this.paintDecorations(0, 0, w, screenHeight, richStyle, textAlignMode);
     } else {
@@ -234,7 +249,7 @@ export class TextRenderer extends BaseEntityRenderer {
     if (!isTextEntity(e) && !isMTextEntity(e)) return [];
     if (!('position' in entity) || !(entity.position as Point2D)) return [];
 
-    // ADR-551 — FULL rect-box parity with the interaction + 3D paths: render the
+    // ADR-557 — FULL rect-box parity with the interaction + 3D paths: render the
     // SAME 10 grips `computeDxfEntityGrips` emits (4 corners + 4 edge midpoints +
     // centre MOVE + rotation), mapped to the render `GripInfo` shape (mirror
     // `ColumnRenderer.getGrips`). `extractTextHeight` guarantees a positive height
@@ -247,7 +262,7 @@ export class TextRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      // ADR-551 — centre → 4-arrow MOVE glyph, rotation → curved-arrow glyph (shared
+      // ADR-557 — centre → 4-arrow MOVE glyph, rotation → curved-arrow glyph (shared
       // registry SSoT, mirror Column/Wall); corners + edges stay square.
       shape: gripGlyphShape(g.textGripKind),
     }));
@@ -272,7 +287,11 @@ export class TextRenderer extends BaseEntityRenderer {
     if (!position || !text) return false;
 
     // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-    const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+    // ADR-557 — honour the TEXT X-scale so a horizontally-stretched glyph stays clickable.
+    const widthFactor = ('widthFactor' in entity && typeof entity.widthFactor === 'number' && entity.widthFactor > 0)
+      ? entity.widthFactor
+      : 1;
+    const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE * widthFactor;
 
     // 🏢 FIX (2026-02-20): Rotation-aware hit testing.
     // Transform the test point into the text's LOCAL coordinate system before

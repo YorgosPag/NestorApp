@@ -1,5 +1,5 @@
 /**
- * ADR-551 — `computeDxfEntityGrips` emits the full text/mtext rect-box grip set.
+ * ADR-557 — `computeDxfEntityGrips` emits the full text/mtext rect-box grip set.
  *
  * Regression guard for «I only see ONE grip on a text»: the `case 'text'` must
  * route through `getTextGrips` (10 grips), not the legacy single centre grip.

@@ -53,7 +53,7 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 // split). Re-exported here so the commit API stays one import.
 export { commitOpeningGripDrag, commitOpeningAltMove } from './grip-parametric-opening-commits';
 
-// ADR-551 — parametric text/mtext grip commit (rect-box parity) lives in
+// ADR-557 — parametric text/mtext grip commit (rect-box parity) lives in
 // grip-parametric-text-commits.ts (N.7.1 file-size split). Re-exported here.
 export { commitTextGripDrag } from './grip-parametric-text-commits';
 

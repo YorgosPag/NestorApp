@@ -251,7 +251,7 @@ export interface GripInfo {
    */
   polylineGripKind?: PolylineGripKind;
   /**
-   * ADR-551 — parametric text/mtext grip discriminator. Present only when the
+   * ADR-557 — parametric text/mtext grip discriminator. Present only when the
    * grip belongs to a `DxfText` (TEXT or MTEXT normalised to 'text'); routes the
    * commit through `applyTextGripDrag()` + `UpdateTextTransformCommand` (rect-box
    * parity: corner/edge resize + center move + rotation via `rect-grip-engine`).
