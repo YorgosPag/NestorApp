@@ -73,14 +73,11 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 |---|---|---|---|---|---|
 | 1 | Main `WebGLRenderer.domElement` | **WebGL2** | `bim-3d/scene/scene-setup.ts` (`new THREE.WebGLRenderer` → `container.appendChild`) | Πλήρες scene BIM/DXF render. **Path-tracer/SSAO/SelectionOutline/Envmap reuse το ΙΔΙΟ context (FBOs) → 0 νέα canvas** | Πάντα |
 | 2 | **ViewCube** mini-renderer 160×160 | **WebGL2 (2ο context)** | `bim-3d/viewport/view-cube/view-cube.ts` (`document.createElement('canvas')` + ξεχωριστός `WebGLRenderer`) | Navigation gizmo (face/edge/corner snap). Οι face/arrow textures είναι offscreen `CanvasTexture` — **όχι** στο DOM | Πάντα (3D) |
-| 3 | `BimGripOverlay2D` | 2D | `bim-3d/viewport/grips/BimGripOverlay2D.tsx` | 3D reshape grips + DXF drag-ghost· reuse **`UnifiedGripRenderer`** (ADR-535) | Πάντα |
-| 4 | `DxfHoverGlowOverlay2D` | 2D | `bim-3d/viewport/grips/DxfHoverGlowOverlay2D.tsx` | Hover glow halo· reuse **`drawEntityGlowPrePass`** (ADR-538) | Πάντα |
-| 5 | `WallHudOverlay3D` | 2D | `bim-3d/viewport/wall-hud/WallHudOverlay3D.tsx` | Live wall HUD· reuse **`paintWallHudCore`** (ADR-543) | Πάντα (draw σε wall) |
-| 6 | `Tracking3DOverlay` | 2D | `bim-3d/viewport/tracking/Tracking3DOverlay.tsx` | OTRACK alignment paths· reuse **`paintAlignmentPaths`** (ADR-543) | Πάντα (draw σε wall) |
-| 7 | `BimPlacementOverlay2D` | 2D | `bim-3d/viewport/placement/BimPlacementOverlay2D.tsx` | Column placement grid/dims· reuse placement painters (ADR-544) | Πάντα (draw σε placement) |
-| 8 | `CropRegionOverlay` | 2D | `bim-3d/render/crop-region/CropRegionOverlay.tsx` | Photoshop crop dim/handles | **Μόνο σε crop** |
+| 3 | ✅ **`BimOverlayDispatchCanvas`** (ADR-555) | 2D | `bim-3d/viewport/overlay-dispatch/BimOverlayDispatchCanvas.tsx` | **ΕΝΑΣ** dispatch canvas — folds grips (ADR-535) + DXF hover-glow (ADR-538) + wall-HUD (ADR-543) + tracking (ADR-543) + placement (ADR-544) σε z-ordered multi-pass· reuse όλους τους 2D painters | Πάντα |
+| ~~4–7~~ | ~~`DxfHoverGlowOverlay2D` / `WallHudOverlay3D` / `Tracking3DOverlay` / `BimPlacementOverlay2D`~~ | — | — | **ΑΦΑΙΡΕΘΗΚΑΝ** — folded στο #3 (ADR-555) | — |
+| 8 | `CropRegionOverlay` | 2D | `bim-3d/render/crop-region/CropRegionOverlay.tsx` | Photoshop crop dim/handles (interactive pointer-events → ΜΕΝΕΙ ξεχωριστό, §5.4) | **Μόνο σε crop** |
 
-**Καταμέτρηση 3D:** idle **7** (2 WebGL + 5 2D) · max **8** (crop). 
+**Καταμέτρηση 3D:** idle **2** (1 WebGL μετά ADR-553 + 1 2D dispatch μετά ADR-555) · max **3** (crop). _(Ιστορικά: idle 7 = 2 WebGL + 5 2D πριν ADR-553/555.)_ 
 
 **Μη-canvas overlays (HTML/SVG):** `BimCrosshairOverlay3D` (HTML div, ADR-545), `BimSnapIndicatorOverlay3D` (SVG, ADR-542), `DynamicInput3DLeaf`/`RadialCommandRing` (DOM, ADR-513), `ClashMarkers3D`/`ProposalGhost3D`/`Column/BeamDiagram3D` (DOM transforms).
 
@@ -137,12 +134,12 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 3. ⛔ **DEFERRED (2026-06-29)** — **EnvelopeOverlay + HomeRunWires (#13–#14) → 1 z=11 BIM-annotation canvas.** SSoT audit: **ασύμβατες repaint αρχιτεκτονικές** (Envelope=React `useEffect`· HomeRunWires=zero-lag scheduler/`getImmediateTransform()` — force στο pull model θα επανέφερε το wire pan-lag bug του ADR-408 Φ7)· **ΔΕΝ είναι mutually exclusive** (συνυπάρχουν σε πραγματικό έργο → 0 άδειοι backing stores, ο waste argument δεν ισχύει)· μηδέν shared painter/projector/store· κίνδυνος perf regression (`computeEnvelopeShell` σε κάθε pan frame). Κερδίζεις 1 canvas, ρισκάρεις cross-domain coupling. **Preconditions για revisit:** (1) EnvelopeOverlay → memoized painter hook (geometry memoized, projection via args)· (2) `paintOverlayDispatchFrame` variant για zero-lag scheduler dispatch. Μέχρι τότε → ξεχωριστοί καμβάδες.
 
 **3D:**
-4. **BimGripOverlay2D + DxfHoverGlowOverlay2D (#3+#4) → merge.** Ίδιος projector (`makeGripPlanToCanvas`), ίδιο sizing, **αμοιβαία αποκλειόμενα** (hover όταν τίποτα selected· grips σε selection). Το grip canvas ήδη ζωγραφίζει το DXF ghost → πρόσθεσε το glow ως ένα conditional paint step.
-5. **WallHud + Tracking + Placement (#5+#6+#7) → 1 «drawing-feedback canvas».** Όλα gated σε wall/column draw, **ποτέ ταυτόχρονα**· κοινή `makePlacementOverlayProjector` οικογένεια. Sequential passes σε ΕΝΑ καμβά.
+4. ✅ **IMPLEMENTED (ADR-555, 2026-06-29)** — **BimGripOverlay2D + DxfHoverGlowOverlay2D (#3+#4) → 1 dispatch.** ⚠️ Η αρχική υπόθεση «αμοιβαία αποκλειόμενα» ήταν **ΛΑΘΟΣ** (verified από κώδικα): grip + hover **ΣΥΝΥΠΑΡΧΟΥΝ** (hover entity B ενώ A selected). → ΟΧΙ conditional switch αλλά **z-order layering** (glow κάτω, grips πάνω). Folded μαζί με #5 σε ΕΝΑΝ dispatch canvas. Βλ. **ADR-555**.
+5. ✅ **IMPLEMENTED (ADR-555, 2026-06-29)** — **WallHud + Tracking + Placement (#5+#6+#7) → ίδιος dispatch.** ⚠️ «ποτέ ταυτόχρονα» = **ΛΑΘΟΣ**: wallHud + tracking **ΣΥΝΥΠΑΡΧΟΥΝ** (tracking όλο το `tool==='wall'`, wallHud το subset `&& hasStart`)· placement genuinely exclusive. → z-ordered passes. Ενοποιήθηκαν με #4 (αντί 2 ξεχωριστά merges, **ΕΝΑΣ** unified dispatch — §5.3). Βλ. **ADR-555**.
 6. ✅ **IMPLEMENTED (ADR-553, 2026-06-29)** — **ViewCube 2ο WebGL context → scissored sub-viewport του main renderer.** Ο 2ος `WebGLRenderer` αφαιρέθηκε· ο cube ζωγραφίζεται από τον main renderer ως scissored sub-viewport (Three.js `webgl_multiple_views` pattern), στο τέλος του frame μετά το post-FX (AO-immune, όπως ο selection-outline pass). Το DOM element κρατιέται ως **διάφανο hit-layer** (κανένα context) → hit-test byte-identical, zero coordinate-remap. Pure `computeViewCubeScissorRect` 5/5 jest. **3D WebGL contexts 2→1.** Βλ. **ADR-553**.
 
-### 5.3 ⭐ Cross-cutting σύσταση (ισχυρότερο εύρημα)
-Το **2D** έχει ΕΝΑ shared `PreviewCanvas` με dispatch· το **3D** αντίθετα έσπασε σε **5–6 ξεχωριστά overlay canvases**. **Σύσταση:** το 3D viewport να υιοθετήσει το 2D pattern — **ΕΝΑΣ shared projected-overlay canvas με dispatch**. Τα #4 + #5 μαζί καταλήγουν φυσικά εκεί (5–6 overlay canvases → 1–2). Ίδιο SSoT πρότυπο και στα δύο pipelines.
+### 5.3 ⭐ Cross-cutting σύσταση (ισχυρότερο εύρημα) — ✅ IMPLEMENTED (ADR-555, 2026-06-29)
+Το **2D** έχει ΕΝΑ shared `PreviewCanvas` με dispatch· το **3D** αντίθετα έσπασε σε **5 ξεχωριστά overlay canvases**. **Σύσταση (υλοποιήθηκε):** το 3D viewport υιοθέτησε το 2D pattern — **ΕΝΑΣ shared projected-overlay canvas με dispatch** (`BimOverlayDispatchCanvas`, 3D αδελφός του `paintOverlayDispatchFrame`). Τα #4 + #5 ενοποιήθηκαν μαζί σε **ΕΝΑΝ** dispatch (όχι 2 pairwise merges) με z-ordered multi-pass (5 overlay canvases → 1). Ίδιο SSoT πρότυπο και στα δύο pipelines. Κρίσιμο: το frame-level dirty/skip gate διατήρησε το ADR-549 Φ3 (no hover-lag). Βλ. **ADR-555**.
 
 ### 5.4 No-merge (τεκμηριωμένα σωστά — μην «ενοποιηθούν»)
 - **GridUnderlayCanvas vs DxfCanvas:** ο grid σπάστηκε επίτηδες για z-order **κάτω** από το floorplan background. Merge → grid πάνω από την εικόνα. Σωστό ως έχει.
@@ -172,7 +169,7 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 
 **Αποτέλεσμα:** 1 viewport (swap 2D↔3D) · 2D έως 24 φυσικά canvases (typ ~16, min 3) · 3D 7–8 (2 WebGL + 5–6 2D overlays) · + 1 ViewCube nav gizmo + 2 dialog previews · 0 minimap/split/PiP. Εντοπίστηκαν 6 ευκαιρίες ενοποίησης + 1 cross-cutting σύσταση (3D → ΕΝΑΣ shared overlay canvas, όπως ο 2D PreviewCanvas).
 
-**Επόμενα (προτεινόμενα, εκτός scope):** (1) 2D analytical dispatch canvas· (2) 2D proposal dispatch canvas· (3) 3D grip+hover merge· (4) 3D drawing-feedback canvas (wallHud+tracking+placement)· (5) ViewCube scissored sub-viewport.
+**Επόμενα (προτεινόμενα, εκτός scope):** (1) 2D analytical dispatch canvas [✅ ADR-552]· (2) 2D proposal dispatch canvas [✅ ADR-554]· (3) 3D grip+hover merge [✅ ADR-555]· (4) 3D drawing-feedback canvas (wallHud+tracking+placement) [✅ ADR-555]· (5) ViewCube scissored sub-viewport [✅ ADR-553]. _(#3+#4 ενοποιήθηκαν σε ΕΝΑΝ dispatch — §5.3.)_
 
 ### 2026-06-29 — §5.2 #1 IMPLEMENTED (ADR-552)
 Η ευκαιρία #1 (7 analytical overlays → 1 dispatch canvas) υλοποιήθηκε — βλ. **ADR-552**. 2D max 24→18, typical ~16→~10. Οι υπόλοιπες 5 ευκαιρίες παραμένουν προτεινόμενες.
@@ -185,3 +182,6 @@ Mount root: `bim-3d/viewport/BimViewport3D.tsx` + `BimViewport3DCanvasOverlays.t
 
 ### 2026-06-29 — §5.2 #3 DEFERRED
 Η ευκαιρία #3 (EnvelopeOverlay + HomeRunWires) **αναβλήθηκε** μετά από SSoT audit: ασύμβατες repaint αρχιτεκτονικές (React `useEffect` vs zero-lag scheduler — force θα επανέφερε το wire pan-lag bug), **ΔΕΝ είναι mutually exclusive** (συνυπάρχουν → μηδέν όφελος μνήμης), μηδέν shared infra, κίνδυνος perf regression. Κερδίζεις 1 canvas, ρισκάρεις cross-domain coupling — δεν αξίζει χωρίς τα preconditions (§5.2 #3). Big-player honesty: δεν ενοποιούμε δύο ανεξάρτητα domains με ασύμβατα μοντέλα μόνο για −1 canvas.
+
+### 2026-06-29 — §5.2 #4 + #5 + §5.3 IMPLEMENTED (ADR-555)
+Οι ευκαιρίες #4 + #5 + η cross-cutting σύσταση §5.3 υλοποιήθηκαν **μαζί** σε **ΕΝΑΝ** unified dispatch (όχι 2 pairwise merges) — βλ. **ADR-555**. Τα 5 camera-projected Canvas2D overlays (#3–#7: grip/hover-glow/wall-HUD/tracking/placement) → **1** `BimOverlayDispatchCanvas` (3D αδελφός του 2D `paintOverlayDispatchFrame`), z-ordered multi-pass. **SSoT audit διόρθωσε δύο λάθος υποθέσεις του census:** grip+hover **συνυπάρχουν**, wallHud+tracking **συνυπάρχουν** → z-order layering, όχι switch. Frame-level dirty/skip gate διατήρησε το ADR-549 Φ3 (no hover-lag regression). **3D idle overlay canvases 5→1** (συνολικά 3D idle 7→2 μαζί με ADR-553). 17/17 jest + projection tests GREEN. **ΟΛΕΣ οι ευκαιρίες §5.2 πλέον IMPLEMENTED (#1–#6), εκτός #3 (DEFERRED, τεκμηριωμένο).**

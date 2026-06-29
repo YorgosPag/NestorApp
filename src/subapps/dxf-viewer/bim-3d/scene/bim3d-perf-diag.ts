@@ -16,8 +16,13 @@
  *   localStorage.setItem('dxf-trace-dirty','1')      // (optional) capture markSceneDirty callers
  *   window.__bim3dPerf.reset()
  *   // ... sweep the cursor over the 3D viewport ~6s, NO camera move ...
- *   window.__bim3dPerf.dump()
+ *   window.__bim3dPerf.dump()      // console.table (expandable arrows)
+ *   window.__bim3dPerf.download()  // → clean flat .txt in Downloads (no arrows to unfold)
  */
+
+import { snapshotPerfRows, resetPerf } from '../../systems/cursor/mouse-handler-perf';
+import { nowISO } from '@/lib/date-local';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 
 export interface Bim3DRenderSample {
   readonly isInteracting: boolean;
@@ -42,6 +47,7 @@ interface Bim3DPerfState {
   schedFrame: Stat;                   // (2) whole-scheduler frame time
   reset(): void;
   dump(): void;
+  download(): void;                   // flat .txt to Downloads (same data as dump, no expand arrows)
 }
 
 const isTracingDirty = (): boolean =>
@@ -69,6 +75,58 @@ function logStatMap(title: string, map: Map<string, Stat>): void {
   console.table(rows);
 }
 
+// ── plain-text report (for `download()`) — flat aligned tables, ZERO nested objects ──
+type Cell = string | number;
+
+/** Monospace-aligned text table: header row + body, columns padded to the widest cell. */
+function tableText(headers: string[], rows: Cell[][]): string {
+  const widths = headers.map((h, i) =>
+    Math.max(h.length, ...rows.map((r) => String(r[i] ?? '').length)));
+  const fmt = (r: Cell[]): string => r.map((c, i) => String(c ?? '').padEnd(widths[i])).join('  ');
+  return [fmt(headers), ...rows.map(fmt)].join('\n');
+}
+
+function statMapToText(map: Map<string, Stat>): string {
+  if (map.size === 0) return '(none)';
+  const rows: Cell[][] = [...map.entries()]
+    .map(([k, s]): Cell[] => [k, s.count, Number((s.total / s.count).toFixed(2)), Number(s.max.toFixed(2)), Number(s.total.toFixed(1))])
+    .sort((a, b) => (b[4] as number) - (a[4] as number));
+  return tableText(['key', 'count', 'avg', 'max', 'total'], rows);
+}
+
+/** Build the full flat-text report (same content as `dump()` + the cursor mouse-perf rows). */
+function buildReportText(s: Bim3DPerfState): string {
+  const now = typeof performance !== 'undefined' ? performance.now() : 0;
+  const elapsedS = (now - s.windowStartMs) / 1000;
+  const rps = elapsedS > 0 ? s.renderCount / elapsedS : 0;
+  const avg = s.renderCount > 0 ? s.totalMs / s.renderCount : 0;
+  const stamp = nowISO();
+  const lines: string[] = [];
+  lines.push(`=== ADR-549 3D PERF REPORT — ${stamp} ===`, '');
+  lines.push('[3D SCENE RENDER]');
+  lines.push(`renders=${s.renderCount} over ${elapsedS.toFixed(1)}s → ${rps.toFixed(1)}/s | avg=${avg.toFixed(2)}ms max=${s.maxMs.toFixed(2)}ms`, '');
+
+  lines.push('[DIRTY-REASON HISTOGRAM]');
+  const reasonRows: Cell[][] = (Object.entries(s.reasons) as Array<[string, number]>)
+    .filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  lines.push(reasonRows.length ? tableText(['reason', 'count'], reasonRows) : '(all zero)', '');
+
+  lines.push('[markSceneDirty CALLERS (top 12)]');
+  const callerRows: Cell[][] = [...s.markDirtyCallers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+  lines.push(callerRows.length ? tableText(['caller', 'count'], callerRows) : '(none — set localStorage dxf-trace-dirty=1)', '');
+
+  const sf = s.schedFrame;
+  lines.push(`[SCHEDULER FRAME] frames=${sf.count} avg=${sf.count ? (sf.total / sf.count).toFixed(2) : '0'}ms max=${sf.max.toFixed(2)}ms`, '');
+  lines.push('[SCHEDULER SYSTEMS (per render)]', statMapToText(s.scheduler), '');
+  lines.push('[OVERLAY DRAWS (useRafWhile, per frame)]', statMapToText(s.overlays), '');
+
+  lines.push('[CURSOR (mouse-perf — current window)]');
+  const cursorRows: Cell[][] = snapshotPerfRows().map((r): Cell[] => [r.stage, r.count, r.avg, r.min, r.max, r.p95, r.total]);
+  lines.push(cursorRows.length ? tableText(['stage', 'count', 'avg', 'min', 'max', 'p95', 'total'], cursorRows) : '(none — set localStorage dxf-perf-trace=1 + reload)', '');
+
+  return lines.join('\n');
+}
+
 function createState(): Bim3DPerfState {
   const state: Bim3DPerfState = {
     renderCount: 0, totalMs: 0, maxMs: 0,
@@ -86,7 +144,8 @@ function createState(): Bim3DPerfState {
       this.overlays.clear();
       this.scheduler.clear();
       this.schedFrame = { count: 0, total: 0, max: 0 };
-      console.log('[ADR-549] __bim3dPerf reset');
+      resetPerf(); // zero the cursor window too → one reset() = one clean window for BOTH
+      console.log('[ADR-549] __bim3dPerf reset (renders + cursor zeroed) — now sweep, then .download()');
     },
     dump() {
       const elapsedS = ((typeof performance !== 'undefined' ? performance.now() : 0) - this.windowStartMs) / 1000;
@@ -110,6 +169,13 @@ function createState(): Bim3DPerfState {
       );
       logStatMap('scheduler systems (per render)', this.scheduler);
       logStatMap('overlay draws (useRafWhile, per frame)', this.overlays);
+    },
+    download() {
+      const text = buildReportText(this);
+      if (typeof document === 'undefined') { console.log(text); return; }
+      const name = `bim3d-perf-${nowISO().replace(/[:.]/g, '-')}.txt`;
+      triggerExportDownload({ blob: new Blob([text], { type: 'text/plain;charset=utf-8' }), filename: name });
+      console.log(`[ADR-549] perf report downloaded → Λήψεις/${name}`);
     },
   };
   return state;

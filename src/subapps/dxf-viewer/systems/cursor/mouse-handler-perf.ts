@@ -72,6 +72,16 @@ export function recordSample(stage: string, value: number): void {
   arr.push(value);
 }
 
+/**
+ * Clear the cursor accumulator window (and the sample counter). Lets the ADR-549 diag tie the
+ * cursor stats to the SAME window as the 3D-render stats — one `__bim3dPerf.reset()` zeroes both,
+ * so a downloaded report can't carry stale samples from before the sweep.
+ */
+export function resetPerf(): void {
+  accumulators.clear();
+  sampleCount = 0;
+}
+
 export function perfTick(): void {
   if (!perfEnabled) return;
   sampleCount++;
@@ -82,7 +92,7 @@ export function perfTick(): void {
   }
 }
 
-interface PerfRow {
+export interface PerfRow {
   stage: string;
   count: number;
   avg: number;
@@ -92,7 +102,12 @@ interface PerfRow {
   total: number;
 }
 
-export function perfReport(): void {
+/**
+ * Compute the aggregated per-stage rows from the CURRENT accumulator window WITHOUT clearing it
+ * (sorted by total desc). Shared by `perfReport()` (console) and the ADR-549 diag `download()`
+ * (so the downloaded report carries the SAME cursor stats as the console table, no copy-paste).
+ */
+export function snapshotPerfRows(): PerfRow[] {
   const rows: PerfRow[] = [];
   for (const [stage, arr] of accumulators) {
     if (arr.length === 0) continue;
@@ -114,10 +129,11 @@ export function perfReport(): void {
     });
   }
   rows.sort((a, b) => b.total - a.total);
+  return rows;
+}
 
+export function perfReport(): void {
   console.groupCollapsed(`[mouse-perf] ${REPORT_EVERY}-sample report`);
-
-  console.table(rows);
-
+  console.table(snapshotPerfRows());
   console.groupEnd();
 }
