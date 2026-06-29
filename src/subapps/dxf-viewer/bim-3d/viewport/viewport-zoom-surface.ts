@@ -9,7 +9,8 @@
  * Revit instead makes the zoom step proportional to the distance to the SURFACE under the
  * cursor: as you approach, the step shrinks, so you converge on the face asymptotically and
  * never enter it. This module is the pure step math; the wheel wiring lives in
- * `viewport-camera.ts` (raycasts the cursor via the SSoT `raycastWorldPoint`).
+ * `viewport-camera.ts` (resolves the cursor anchor via the SSoT `raycastWorldPointOrPlane`:
+ * BIM surface → DXF ground-plane → camera-facing plane, so empty/DXF/BIM share this one dolly).
  *
  * Pure: zero DOM / controls / scene deps — just vector arithmetic, fully unit-tested.
  */

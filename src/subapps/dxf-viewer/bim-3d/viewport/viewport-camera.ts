@@ -38,9 +38,13 @@ export interface ViewportCameraOptions {
   /** Alt+left pointer-down → re-centre orbit pivot on the cursor point (forwarded to tumble). */
   readonly onAltPress?: (clientX: number, clientY: number) => void;
   /**
-   * ADR-363 Φ1G.5 — resolve the world point of the geometry under the cursor (SSoT
-   * `raycastWorldPoint`), used by the Revit surface-anchored wheel zoom. Returns null on a
-   * miss → the wheel falls back to the default OrbitControls dolly. Optional / back-compat.
+   * ADR-363 Φ1G.5 / §empty-dxf — resolve the world ANCHOR point under the cursor for the Revit
+   * surface-anchored wheel zoom. SSoT `raycastWorldPointOrPlane`: BIM surface hit → DXF ground-plane
+   * → camera-facing plane through the orbit target. So a BIM surface, the DXF underlay AND empty
+   * canvas all yield a real anchor → the ONE exponential dolly runs everywhere (Revit/Figma: zoom in
+   * empty space anchors to a work/target plane, never switches to a different zoom mechanism).
+   * Returns null only in degenerate cases (canvas not laid out) → the wheel falls back to the default
+   * OrbitControls dolly. Optional / back-compat.
    */
   readonly resolveSurfacePoint?: (clientX: number, clientY: number) => THREE.Vector3 | null;
 }
@@ -95,11 +99,13 @@ export function createViewportCamera(
   controls.addEventListener('end', onInteractionEnd);
 
   /**
-   * ADR-363 Φ1G.5 — Revit surface-anchored wheel zoom. Runs in the CAPTURE phase so it
-   * pre-empts OrbitControls' own (bubble-phase) wheel listener: on a geometry hit we dolly
-   * the camera ourselves (step ∝ distance-to-surface, clamped → never crosses the face) and
-   * `stopImmediatePropagation` so OrbitControls does NOT also dolly. On a miss / ortho /
-   * disabled nav we do nothing → OrbitControls' default `zoomToCursor` dolly runs as before.
+   * ADR-363 Φ1G.5 / §empty-dxf — Revit surface-anchored wheel zoom. Runs in the CAPTURE phase so it
+   * pre-empts OrbitControls' own (bubble-phase) wheel listener: `resolveSurfacePoint` resolves an
+   * anchor under the cursor — BIM surface, DXF ground-plane, or camera-facing plane through the orbit
+   * target — and we dolly the camera ourselves (step ∝ distance-to-anchor, clamped → never crosses a
+   * real face; on a plane it bottoms out at the same min distance) then `stopImmediatePropagation` so
+   * OrbitControls does NOT also dolly. So empty canvas + DXF underlay + BIM all feel IDENTICAL. The
+   * OrbitControls fallback now only runs in ortho / disabled nav / a degenerate null (no canvas size).
    */
   function onSurfaceWheel(e: WheelEvent): void {
     // ADR-452 v2.7 — flag interaction on EVERY wheel tick (before any early return,
