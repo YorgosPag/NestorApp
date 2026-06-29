@@ -256,10 +256,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       showLayerNames: false,
       wireframeMode: false,
       gripInteractionState: dxfGripInteraction.gripInteractionState,
-      movePreviewActive: movePreview.phase === 'awaiting-destination',
+      // ADR-550 — dim ALL selected originals while a real moving copy is shown: the 2-click Move
+      // (awaiting-destination) AND the Rotate tool (awaiting-angle). Scale/Stretch are store-driven
+      // → the leaf OR-s them in (CHECK 6C forbids useSyncExternalStore in this Shell).
+      movePreviewActive:
+        movePreview.phase === 'awaiting-destination' || rotationPreview.phase === 'awaiting-angle',
       gripDraggedEntityId,
     }),
-    [dxfGripInteraction.gripInteractionState, movePreview.phase, gripDraggedEntityId],
+    [dxfGripInteraction.gripInteractionState, movePreview.phase, rotationPreview.phase, gripDraggedEntityId],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({

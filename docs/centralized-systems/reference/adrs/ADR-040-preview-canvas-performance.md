@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — Transform tools dim originals (Rotate/Scale/Stretch) — `movePreviewActive` parity (ADR-550, CHECK 6B)
+Επέκταση της σύμβασης «ανεστραμμένου φαντάσματος» (το πρωτότυπο γίνεται dimmed ghost ενώ ζωγραφίζεται πραγματικό κινούμενο αντίγραφο) από το 2-click Move στα υπόλοιπα 2D transform tools, ώστε όλα να συμπεριφέρονται ομοιόμορφα.
+
+**ADR-040 touch (CHECK 6B):**
+- `CanvasLayerStack.tsx` (shell) — το `movePreviewActive` του `renderOptionsBase` κάνει πλέον OR με `rotationPreview.phase === 'awaiting-angle'` (το Rotate tool περνά ήδη μέσω props στο shell). **Μηδέν νέο `useSyncExternalStore`** στο shell (CHECK 6C ασφαλές)· το `rotationPreview.phase` προστέθηκε στο memo dep array.
+- `canvas-layer-stack-leaves.tsx` (leaf) — τα **store-driven** Scale/Stretch tools δεν περνούν από props, οπότε το **leaf** (ο μοναδικός επιτρεπτός subscriber κατά ADR-040) self-subscribes `ScaleToolStore` + `StretchToolStore` μέσω `useSyncExternalStore` και κάνει OR το `transformPreviewActive` (`scale_input` / `displacement`) μέσα στο `movePreviewActive` του `renderOptions`. **Low-freq phase reads** (μία μετάβαση ανά κλικ, η ενεργή φάση μένει σταθερή μέσα στο 60fps drag) → ο orchestrator (CanvasSection) μένει inert. CHECK 6C ασφαλές: το `useSyncExternalStore` ζει στο leaf, ΟΧΙ σε shell/orchestrator. Καμία αλλαγή σε bitmap cache-key / scheduler. Βλ. **ADR-550**. 🟡 UNCOMMITTED.
+
 ### 2026-06-29 — Grip-drag inverted ghost: WYSIWYG real moving copy + dimmed origin (ADR-049/550, CHECK 6B)
 Παράλληλα με το 2-click Move tool, τώρα και το **grip drag** (center/vertex/edge/quadrant λαβές) ακολουθεί τη σύμβαση «ανεστραμμένου φαντάσματος» AutoCAD/Revit (ADR-049): το **ένα** entity που σέρνεται ζωγραφίζεται ως **συμπαγές αντίγραφο** πάνω στο PreviewCanvas (ακολουθεί τον κέρσορα), ενώ το πρωτότυπο στη θέση εκκίνησης γίνεται **dimmed ghost** στον main canvas.
 

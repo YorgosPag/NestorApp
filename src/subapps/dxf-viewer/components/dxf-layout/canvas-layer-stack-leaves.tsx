@@ -27,6 +27,11 @@ import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
 // ADR-532 B4 — grip render is selection-driven; the leaf self-subscribes so the
 // orchestrator (CanvasSection) no longer re-renders on entity selection.
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
+// ADR-550 — the leaf self-subscribes the store-driven transform tools (scale / stretch) so their
+// originals dim to ghosts while the real moving copy is shown (mirror of `movePreviewActive`).
+// Low-freq phase reads (one transition per click) → ADR-040-safe; the orchestrator stays inert.
+import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
+import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { DxfCanvasRef } from '../../canvas-v2';
@@ -216,12 +221,24 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // η αλλαγή επιλεγμένης ακμής να ξανατρέχει το δυναμικό «selected» pass (live
   // edge highlight). Μόνο αυτό το leaf re-renders, ΟΧΙ ο orchestrator (ADR-040).
   const selectedRoofEdge = useSelectedRoofEdge();
+  // ADR-550 — store-driven transform tools dim their selected originals (a real moving copy is on
+  // PreviewCanvas). Phase reads are low-freq; the active phase holds steady through the 60fps drag.
+  const scalePhase = useSyncExternalStore(ScaleToolStore.subscribe, () => ScaleToolStore.getState().phase);
+  const stretchPhase = useSyncExternalStore(StretchToolStore.subscribe, () => StretchToolStore.getState().phase);
+  const transformPreviewActive = scalePhase === 'scale_input' || stretchPhase === 'displacement';
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): stable identity prevents the
   // dxf-canvas-renderer dirty-tracking effect from re-running every parent render.
   const renderOptions = useMemo(
-    () => ({ ...renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds }),
-    [renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds],
+    () => ({
+      ...renderOptionsBase,
+      hoveredEntityId,
+      selectedRoofEdge,
+      selectedEntityIds,
+      // OR-in the store-driven transform tools (the Shell already OR-ed move + rotate).
+      movePreviewActive: renderOptionsBase.movePreviewActive || transformPreviewActive,
+    }),
+    [renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds, transformPreviewActive],
   );
 
   return (
