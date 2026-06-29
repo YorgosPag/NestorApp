@@ -199,3 +199,6 @@
 **Follow-up:** το coverage test του finding #3 (§4.2) **υλοποιήθηκε** ως ADR-550 Φ3 (`rendering/contract/__tests__/entity-render-coverage.test.ts`, 7 GREEN), με canonical `RenderableEntityType` (Φ0).
 
 **ADR-550 Φ4 (cleanup):** finding #1 **λύθηκε** (διαγραφή orphan `rendering/entities/StairRenderer.ts`)· finding #2 **τεκμηριώθηκε** (οι 4 off-composite = sub-renderer / overlays / function-based, βλ. §4.2). Νέο εκκρεμές: επιβεβαίωση call-site `FloorplanSymbolRenderer` (πιθανό dead-code).
+
+### 2026-06-29 — ADR-550 Φ2 (contract registry + point auto-wiring)
+**Follow-up:** το dispatch-fragmentation εύρημα (§4.2 finding #2 — «3D imperative loops, εύκολο να ξεχαστεί συμμετρία») **μετριάστηκε δομικά** ως ADR-550 Φ2: δηλωτικό `EntityRenderContract` registry (`d2/d3/d3Builder`) + auto-wiring των 11 ομοιόμορφων point-entity 3D builders μέσα από ΕΝΑ registry (`bim-scene-point-contracts.ts`), αντί 11 χειροκίνητων `BimSceneLayer.sync*()` μεθόδων. Coverage test +5 asserts δένει declaration↔execution. Βλ. ADR-550 Changelog.

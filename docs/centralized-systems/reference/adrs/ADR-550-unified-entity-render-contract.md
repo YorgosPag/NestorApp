@@ -80,9 +80,13 @@ interface EntityRenderContract<E> {
 - **Διαψεύστηκε (2026-06-29):** το geometry **δεν** είναι διπλό. Κάθε entity έχει ήδη `bim/geometry/{entity}-geometry.ts` (`compute*Geometry`), cached στο `entity.geometry`, διαβασμένο από 2D **και** 3D. Δεν υπάρχει τίποτα να εξαχθεί.
 - Συνέπεια: το «πραγματικό κέρδος» μετατοπίζεται στο **contract/coverage** (Φ2/Φ3), όχι στο geometry.
 
-### Φ2 — Entity contract + adapter registry (PROPOSED)
-- Δηλωτικό μητρώο surfaces ανά type (`entity-render-surfaces.ts`) — **έγινε ως Φ2-lite** (υποστηρίζει το Φ3).
-- Επόμενο: πλήρες `EntityContractRegistry` (`draw2D`/`build3D`/`getGrips`/`ghost`), οι υπάρχοντες renderers γίνονται adapters (wrap, όχι rewrite). Νέα οντότητα = **ένα** registration.
+### Φ2 — Entity contract registry + point auto-wiring ✅ IMPLEMENTED (2026-06-29)
+- **Διόρθωση σχεδιασμού (audit):** το «παχύ» contract με ενιαία εκτελέσιμη `build3D(entity)` **ΑΠΟΡΡΙΦΘΗΚΕ** — θα ήταν rewrite. Η 3D πλευρά (`BimSceneLayer.syncFloorEntities`) είναι ετερογενής (cross-entity host-join σε batch). Οι μεγάλοι το ίδιο: AutoCAD `worldDraw` per-element αλλά Revit regen (join resolution) **δεν** εκτίθεται per-element.
+- **Realized = δηλωτικό contract registry** (`entity-render-contract.ts`): ΕΝΑ `EntityRenderContract` ανά renderable type — `{ d2, d3, d3Builder: 'point'|'bespoke'|'none' }`. Απορροφά το `entity-render-surfaces.ts` (τώρα derived view). Invariant: `d3Builder !== 'none'` ⟺ `d3`.
+- **Auto-wiring (Option B):** οι 11 ομοιόμορφες point-entity 3D factories (foundation/panel/manifold/radiator/boiler/water-heater/railing/roof/floor-finish/underfloor/furniture) δηλώνονται ΜΙΑ φορά σε executable registry (`bim-scene-point-contracts.ts`)· ο `BimSceneLayer` τις επαναλαμβάνει με ΕΝΑ loop αντί 11 χειροκίνητων `sync*()` μεθόδων (διαγράφηκαν). Adapter: ίδιος `syncPointEntities` SSoT, ίδιες factory κλήσεις.
+- **Bespoke (10):** wall/opening/slab/slab-opening/column/beam/stair/mep-fixture/mep-segment/mep-fitting μένουν ρητά (host context) — δηλωμένα `d3Builder:'bespoke'`.
+- **Ghost:** ΔΕΝ μπήκε στο contract — κανένα introspectable live dispatcher (2D per-family, 3D ενιαίο overlay)· μη-ελεγχόμενο πεδίο θα σάπιζε. Μελλοντικό Φ.
+- Παραδοτέα (NEW): `rendering/contract/entity-render-contract.ts`, `bim-3d/scene/bim-scene-point-contracts.ts`. (MOD): `entity-render-surfaces.ts` (derived), `BimSceneLayer.ts` (loop, −11 μέθοδοι), `bim-scene-point-syncs.ts` (export types), coverage test (+5 asserts).
 
 ### Φ3 — Coverage guarantee ✅ IMPLEMENTED (2026-06-29)
 - Jest: το δηλωτικό μητρώο δένεται με τα ζωντανά dispatchers — 2D `EntityRendererComposite.getSupportedEntityTypes()`, 3D `BIM_3D_CONVERTER_TYPES`. Symmetry: κάθε BIM type (εκτός ρητών 2D-only) έχει ΚΑΙ 2D ΚΑΙ 3D.
@@ -108,7 +112,7 @@ interface EntityRenderContract<E> {
 ---
 
 ## Σύσταση εκκίνησης
-**Φ0 + Φ3 υλοποιήθηκαν (2026-06-29)** — μηδέν ρίσκο (δεν αγγίζουν render hot path). Επόμενα προαιρετικά: Φ2 (πλήρες contract registry) + Φ4 (cleanup orphan StairRenderer).
+**Φ0+Φ2+Φ3+Φ4 υλοποιήθηκαν (2026-06-29).** Φ0/Φ3/Φ4 μηδέν ρίσκο. Φ2 αγγίζει `BimSceneLayer` (render-critical, ADR-366) → **απαιτείται browser-verify** των 11 point-entity οικογενειών πριν θεωρηθεί κλειστό. Επόμενο προαιρετικό: ghost capability στο contract όταν προκύψει bindable seam.
 
 ---
 
@@ -139,4 +143,21 @@ interface EntityRenderContract<E> {
 
 **Τεκμηρίωση (ADR-549 §4.2):** οι 4 off-composite renderers δεν είναι «λείπει renderer» — είναι σκόπιμα διαφορετικοί μηχανισμοί: `OpeningTagRenderer` (sub-renderer στο `OpeningRenderer`), `EnvelopeRenderer` (`EnvelopeOverlay.tsx`), `MepWireRenderer` (`drawCircuitWires` → `HomeRunWiresOverlay.tsx`), `FloorplanSymbolRenderer` (πιθανό dormant ADR-415 Φ1).
 
-**Εκκρεμές:** επιβεβαίωση αν το `FloorplanSymbolRenderer` έχει ενεργό call-site (αλλιώς dead-code υποψήφιο)· Φ2 (πλήρες contract registry) PROPOSED.
+**Εκκρεμές:** επιβεβαίωση αν το `FloorplanSymbolRenderer` έχει ενεργό call-site (αλλιώς dead-code υποψήφιο).
+
+### 2026-06-29 — Φ2 Contract Registry + Point Auto-wiring IMPLEMENTED (UNCOMMITTED)
+**SSoT audit (grep):** κανένας υπάρχων contract/registry/`worldDraw` μηχανισμός πέρα από τα Φ0/Φ3 δηλωτικά. 2D = ήδη ομοιόμορφο `EntityRendererComposite` map. 3D = ετερογενές imperative `syncFloorEntities` (11 ομοιόμορφες point families μέσω `syncPointEntities` + 10 bespoke host-context syncs).
+
+**Απόφαση (Giorgio, Option B):** το «παχύ» `build3D(entity)` απορρίφθηκε (rewrite). Realized: δηλωτικό `EntityRenderContract` registry + auto-wiring **μόνο** του ομοιόμορφου point υποσυνόλου.
+
+**Files (NEW):**
+- `rendering/contract/entity-render-contract.ts` — `ENTITY_RENDER_CONTRACTS` (`{d2,d3,d3Builder}`), `POINT_BUILT_TYPES`, `BESPOKE_BUILT_TYPES`, `surfacesOf()`. Invariant `d3Builder!=='none' ⟺ d3`.
+- `bim-3d/scene/bim-scene-point-contracts.ts` — `POINT_ENTITY_CONTRACTS` (11 entries, typed `pointContract` registrar, closure-erased `run`), `POINT_CONTRACT_TYPES`.
+
+**Files (MOD):**
+- `rendering/contract/entity-render-surfaces.ts` → `ENTITY_RENDER_SURFACES` derived από το contract (ΕΝΑ source).
+- `bim-3d/scene/BimSceneLayer.ts` → ΕΝΑ loop `for (const c of POINT_ENTITY_CONTRACTS) c.run(...)`· **−11** thin private μέθοδοι + τα 11 αχρησιμοποίητα factory imports. Bespoke calls αμετάβλητα.
+- `bim-3d/scene/bim-scene-point-syncs.ts` → export `ResolveEntity`/`PointMeshFactory` types για reuse.
+- `__tests__/entity-render-coverage.test.ts` → +5 asserts (invariant, derived parity, point declaration↔execution binding, point∪bespoke===live 3D, ξένα σύνολα).
+
+**Verify:** jest 12/12 contract (7 Φ3 + 5 Φ2) GREEN· 108/108 scene GREEN· single tsc (N.17). **Browser-verify εκκρεμεί** (Option B αγγίζει render path· opaque depth-sort → insertion order αδιάφορο, αλλά οπτική επιβεβαίωση των 11 families απαιτείται). Commit → εντολή Giorgio (stage ADR-366 + ADR-550 για CHECK 6B/6D).

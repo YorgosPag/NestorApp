@@ -81,6 +81,14 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
     let planeY = 0;
     let rafId: number | null = null;
     let pendingWorld: THREE.Vector3 | null = null;
+    // ADR-549 Phase 1 — idempotent redraw guard. `onMove` used to call
+    // `markSceneDirty()` on EVERY pointermove, forcing ~7 full 3D re-renders/s
+    // (~26ms each) during a plain cursor sweep — the measured cause of the cursor
+    // «swim». We now mark the scene dirty ONLY when the visible state (handles
+    // shown / hovered node / insert ghost) actually changes.
+    let shownHandles = false;
+    let shownHovered: number | null = null;
+    let shownInsert: string | null = null; // null = hidden; else rounded "x,y,z"
 
     /** Build the active-circuit context (hosts → resolver → host segments). */
     const getActiveContext = (): Active3DContext | null => {
@@ -190,6 +198,10 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       if (rafId === null) rafId = requestAnimationFrame(flush);
     };
 
+    /** Rounded world-point signature for the insert ghost (null when hidden). */
+    const insertSig = (w: THREE.Vector3): string =>
+      `${w.x.toFixed(3)},${w.y.toFixed(3)},${w.z.toFixed(3)}`;
+
     const onMove = (e: PointerEvent): void => {
       if (gesture) {
         if (!setRay(e)) return;
@@ -198,22 +210,36 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
         return;
       }
       const ctx = getActiveContext();
-      if (!ctx) { handles.hideAll(); manager.markSceneDirty(); return; }
-      handles.updateNodes(collectHandleNodes(ctx), manager.getCamera());
-      if (!setRay(e)) return;
-      const nodeHit = raycaster.intersectObjects(handles.getPickables(), false)[0];
-      if (nodeHit) {
-        const idx = handles.getPickables().indexOf(nodeHit.object);
-        handles.setHoveredIndex(idx);
-        handles.hideInsert();
-        manager.markSceneDirty();
+      if (!ctx) {
+        // No editable circuit: hide handles; redraw ONLY if something was showing.
+        if (shownHandles || shownHovered !== null || shownInsert !== null) {
+          handles.hideAll();
+          shownHandles = false; shownHovered = null; shownInsert = null;
+          manager.markSceneDirty();
+        }
         return;
       }
-      handles.setHoveredIndex(null);
-      const wireHit = raycastWire(ctx.system.id);
-      if (wireHit) handles.showInsert(wireHit, manager.getCamera());
-      else handles.hideInsert();
-      manager.markSceneDirty();
+      handles.updateNodes(collectHandleNodes(ctx), manager.getCamera());
+      if (!setRay(e)) return;
+      let nextHovered: number | null = null;
+      let nextInsert: string | null = null;
+      const nodeHit = raycaster.intersectObjects(handles.getPickables(), false)[0];
+      if (nodeHit) {
+        nextHovered = handles.getPickables().indexOf(nodeHit.object);
+        handles.setHoveredIndex(nextHovered);
+        handles.hideInsert();
+      } else {
+        handles.setHoveredIndex(null);
+        const wireHit = raycastWire(ctx.system.id);
+        if (wireHit) { handles.showInsert(wireHit, manager.getCamera()); nextInsert = insertSig(wireHit); }
+        else handles.hideInsert();
+      }
+      // Redraw only on a real visual change (handles just appeared, hover moved,
+      // or the insert ghost moved/toggled) — never on a no-op hover.
+      if (!shownHandles || nextHovered !== shownHovered || nextInsert !== shownInsert) {
+        shownHandles = true; shownHovered = nextHovered; shownInsert = nextInsert;
+        manager.markSceneDirty();
+      }
     };
 
     const startDrag = (e: PointerEvent): boolean => {
@@ -350,11 +376,20 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
       pendingWorld = null;
       handles.hideAll();
+      shownHandles = false; shownHovered = null; shownInsert = null;
       manager.markSceneDirty();
     };
 
     const apply = (): void => {
-      const armed = selectIs3D(useViewMode3DStore.getState()) && toolStateStore.get().activeTool === 'select';
+      // ADR-549 Phase 1 — arm ONLY when a circuit is actually being edited. In the
+      // default `select` tool with no active circuit the hook was still listening
+      // and force-redrawing on every move (spurious dirty). `getActiveContext()`
+      // can still resolve to null even with an id (e.g. non-electrical), so the
+      // in-handler idempotent guard remains the second line of defence.
+      const armed =
+        selectIs3D(useViewMode3DStore.getState()) &&
+        toolStateStore.get().activeTool === 'select' &&
+        useMepCircuitEditorStore.getState().activeSystemId !== null;
       if (armed) setup();
       else teardown();
     };
@@ -362,10 +397,12 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
     apply();
     const unsubTool = toolStateStore.subscribe(apply);
     const unsubView = useViewMode3DStore.subscribe(apply);
+    const unsubCircuit = useMepCircuitEditorStore.subscribe(apply);
 
     return () => {
       unsubTool();
       unsubView();
+      unsubCircuit();
       teardown();
       handles.dispose();
     };
