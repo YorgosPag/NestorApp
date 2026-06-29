@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useSyncExternalStore, useState } from 'react';
+import { useEffect, useRef, useSyncExternalStore, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -30,7 +30,7 @@ import { FaceContextMenu } from './grips/FaceContextMenu';
 // crosshair, snap marker, wall HUD, ambient tracking, column placement) drawn with the SAME
 // 2D painters projected through the perspective camera. Extracted as a leaf for N.7.1.
 import { BimViewport3DCanvasOverlays } from './BimViewport3DCanvasOverlays';
-import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
+import { useBim3DViewCubePrefs } from './use-bim3d-viewcube-prefs';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D'; import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
 import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
@@ -52,6 +52,7 @@ import { usePolygonClipboardShortcuts } from './use-polygon-clipboard-shortcuts'
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
+import { useCrosshairCursor } from '../../systems/cursor/useCrosshairCursor'; // ADR-549 Phase 8 (hardware cursor)
 import { recordSchedulerFrame } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
@@ -85,8 +86,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   const unregisterSchedulerRef = useRef<(() => void) | null>(null);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const [compassVisible, setCompassVisible] = useState(true);
   const { user } = useAuth();
   const hierarchy = useProjectHierarchyOptional();
   const projectId = projectIdProp ?? hierarchy?.selectedProject?.id ?? null;
@@ -94,6 +93,12 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
   // ADR-369 Q2.2 — feed buildings + floors to store whenever project changes.
   useBuildingFloors3DSync(projectId);
+
+  // ADR-549 Phase 8 — HARDWARE-CURSOR crosshair: draw the crosshair as the OS cursor on the
+  // viewport container (overrides the `cursor-none` class) → perfect 1:1 tracking like the ViewCube
+  // «hand», with zero compositor-present latency. Coexists with the canvas crosshair during A/B.
+  // 🔬 A/B: forced bright-green + bold + bigger so it is unmistakable vs the white/red canvas crosshairs.
+  useCrosshairCursor(containerRef, { color: '#00ff66', lineWidth: 2, size: 32 });
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3DFromStore = useSyncExternalStore(
@@ -104,29 +109,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-371: `visible` prop overrides global store (read-only Properties pipeline).
   const effectiveVisible = visible !== undefined ? visible : is3DFromStore;
 
-  // Phase 4.3 + C.5: load persisted preferences (ViewCube + accessibility) on user mount.
-  useEffect(() => {
-    if (!user?.uid) return;
-    Bim3DPreferencesService.load(user.uid).then((prefs) => {
-      if (!prefs) return;
-      setCompassVisible(prefs.compassRingVisible);
-      if (prefs.accessibility) {
-        const a = prefs.accessibility;
-        const store = useViewMode3DStore.getState();
-        store.setAnnouncementsEnabled(a.announcementsEnabled);
-        store.setAccessibilityReducedMotion(a.reducedMotion);
-        store.setAccessibilityEntityNavOrder(a.entityNavOrder);
-        managerRef.current?.setReducedMotionOverride(a.reducedMotion);
-      }
-    }).catch(() => { /* silently ignore — defaults apply */ });
-  }, [user?.uid]);
-
-  // Phase 4.3: wire context menu callback + initial compass state into manager on 3D activation.
-  // Also re-applies when compassVisible changes so prefs loaded async before 3D opens take effect.
-  useEffect(() => {
-    managerRef.current?.setViewCubeContextMenuCallback((x, y) => setContextMenuPos({ x, y }));
-    managerRef.current?.setViewCubeCompassVisible(compassVisible);
-  }, [effectiveVisible, compassVisible]);
+  // ADR-366 Phase 4.3 / C.5 — ViewCube compass + accessibility prefs (extracted hook, N.7.1).
+  const { compassVisible, contextMenuPos, setContextMenuPos, handleToggleCompass } =
+    useBim3DViewCubePrefs(managerRef, user?.uid, effectiveVisible);
 
   const isRendering = useSyncExternalStore(
     useViewMode3DStore.subscribe,
@@ -258,19 +243,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-366 §B.4/§B.6 — final-render control callbacks (extracted hook, N.7.1).
   const { handleRenderConfirm, handleRenderCancel, handleCalibrateSample } =
     useBim3DRenderControls({ managerRef, user, projectId });
-
-  // Phase 4.3: compass ring toggle — optimistic update + Firestore persistence
-  const handleToggleCompass = useCallback(() => {
-    const next = !compassVisible;
-    setCompassVisible(next);
-    setContextMenuPos(null);
-    if (user?.uid) {
-      Bim3DPreferencesService.save(user.uid, { compassRingVisible: next }).catch(() => {
-        // On save failure revert optimistic update
-        setCompassVisible(!next);
-      });
-    }
-  }, [compassVisible, user?.uid]);
 
   // Phase 9 / C.5: entity DOM proxy + keyboard navigator (accessibility for AT).
   useBimEntityProxyAccessibility({

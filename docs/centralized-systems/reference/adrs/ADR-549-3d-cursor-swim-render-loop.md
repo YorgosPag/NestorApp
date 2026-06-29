@@ -405,3 +405,13 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   ΕΝΑΣ context-factory util. Big-player: native low-latency present (Revit/C4D) ≈ Figma desynchronized canvas ≈
   Forge/Onshape high-performance. 4 αρχεία, μηδέν `any`. CHECK 6B/6D → stage αυτό το ADR + τα 4 αρχεία.
   🔴 browser-verify (dump πριν/μετά + tearing + GPU track).
+- **2026-06-29** — 🔬 **Phase 8 A/B IMPLEMENTED (HARDWARE-cursor crosshair, UNCOMMITTED).** Δοκιμή να
+  παρακαμφθεί τελείως το present-latency πάτωμα: ζωγραφίζουμε το σταυρόνημα ως **OS cursor** πάνω στον
+  3D container (CSS `cursor: url(...)`, παρακάμπτει το `cursor-none`) → 1:1 tracking όπως το «χέρι» του
+  ViewCube, μηδέν compositor-present latency. NEW `systems/cursor/crosshair-cursor-image.ts` (pure —
+  φτιάχνει το data-URL του σταυρού + hotspot) + `systems/cursor/useCrosshairCursor.ts` (hook — εφαρμόζει/
+  καθαρίζει το cursor style στον container) + colocated test. Συνυπάρχει με το Canvas2D σταυρόνημα στο A/B
+  (forced bright-green/bold/big για να ξεχωρίζει). Wired στο `BimViewport3D`. **Boy-Scout (N.7.1):** το
+  `BimViewport3D.tsx` ξεπέρασε ξανά τις 500 γρ. → εξαγωγή των ViewCube compass/accessibility prefs σε νέο
+  hook `use-bim3d-viewcube-prefs.ts` (load-effect + compass-wiring effect + optimistic toggle + state). CHECK
+  6D → stage αυτό το ADR + τα cursor αρχεία. 🔴 browser-verify (A/B hardware vs canvas crosshair feel).
