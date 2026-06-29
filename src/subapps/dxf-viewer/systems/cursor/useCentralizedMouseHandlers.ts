@@ -20,7 +20,8 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { TRANSFORM_SCALE_LIMITS, ZOOM_FACTORS } from '../../config/transform-config';
+import { TRANSFORM_SCALE_LIMITS } from '../../config/transform-config';
+import { computeWheelZoomFactor } from '../zoom/utils/calculations';
 import { EventBus } from '../../systems/events';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -255,11 +256,19 @@ export function useCentralizedMouseHandlers(
     const zoomCenter = getScreenPosFromEvent(e, pointerSnap);
     const modifiers = { ctrlKey: e.ctrlKey || e.metaKey, shiftKey: e.shiftKey };
 
+    // Normalize deltaMode → pixels ώστε η magnitude-aware συμπεριφορά να είναι ίδια σε κάθε browser/ποντίκι
+    // (Chrome=pixels, Firefox μπορεί lines/pages). 16px/γραμμή, viewport.height/σελίδα (DOM standard).
+    const deltaY = e.deltaMode === 1
+      ? e.deltaY * 16
+      : e.deltaMode === 2
+        ? e.deltaY * (viewport.height || 800)
+        : e.deltaY;
+
     // Shift+Wheel = Horizontal Pan (AutoCAD standard)
     if (modifiers.shiftKey) {
       e.preventDefault();
       const panSpeed = 2;
-      const panDeltaX = e.deltaY * panSpeed;
+      const panDeltaX = deltaY * panSpeed;
       const newTransform = { ...transform, offsetX: transform.offsetX - panDeltaX };
       onTransformChange?.(newTransform);
       canvasEventBus.emitTransformChange(
@@ -271,10 +280,10 @@ export function useCentralizedMouseHandlers(
     }
 
     if (props.onWheelZoom) {
-      props.onWheelZoom(e.deltaY, zoomCenter, undefined, modifiers);
+      props.onWheelZoom(deltaY, zoomCenter, undefined, modifiers);
     } else {
-      // Fallback: Basic wheel zoom — canonical factors from transform-config
-      const zoomFactor = e.deltaY > 0 ? ZOOM_FACTORS.WHEEL_OUT : ZOOM_FACTORS.WHEEL_IN;
+      // Fallback: AutoCAD-parity magnitude-aware factor (ΕΝΑΣ SSoT helper — ίδιο με το ZoomManager path)
+      const zoomFactor = computeWheelZoomFactor(deltaY, modifiers.ctrlKey);
       const canvas = e.currentTarget;
       const rawTransform = CoordinateTransforms.calculateZoomTransform(
         transform, zoomFactor, zoomCenter,

@@ -6,6 +6,8 @@
 
 import type { ZoomPreset } from './viewport-types';
 import { DXF_TIMING } from '../../config/dxf-timing';
+// 🎯 SSoT: το «πόσο ζουμάρει μια εγκοπή» ορίζεται ΜΙΑ φορά για όλη την εφαρμογή (2D + 3D).
+import { WHEEL_ZOOM_PER_NOTCH, WHEEL_NOTCH_DELTA_PX } from '../../config/transform-config';
 
 export const ZOOM_PRESETS: readonly ZoomPreset[] = [
   { label: '12.5%', value: 0.125 },
@@ -50,12 +52,23 @@ export const PERSP_MAX_DISTANCE = 500;
 
 // ADR-363 Φ1G.5 — Revit-grade surface-anchored wheel zoom (viewport-zoom-surface.ts).
 /** Closest the camera may approach the surface under the cursor (metres ≈ 120 mm). Prevents
- *  punch-through: you can hug a face but never enter the solid. Above CAMERA_NEAR (0.1). */
+ *  punch-through: you can hug a face but never enter the solid. Above CAMERA_NEAR (0.1).
+ *  (Δοκιμή 0.11 → ο χρήστης έμπαινε μέσα στην οντότητα· 0.12 = ασφαλές κατώφλι.) */
 export const ZOOM_SURFACE_MARGIN = 0.12;
 /** Geometric base per wheel step (mirrors OrbitControls' 0.95 feel). */
 export const ZOOM_WHEEL_BASE = 0.95;
-/** Wheel-delta → exponent sensitivity (tuned so one mouse notch ≈ 5–8 % distance change). */
-export const ZOOM_WHEEL_SENSITIVITY = 0.01;
+/**
+ * Wheel-delta → exponent sensitivity, **ΠΑΡΑΓΩΓΟ του app-wide `WHEEL_ZOOM_PER_NOTCH` SSoT** ώστε το 3D
+ * να νιώθει ΙΔΙΑ με το 2D ανά εγκοπή (feel-parity, ΜΙΑ πηγή αλήθειας — άλλαξε εκεί, όχι εδώ).
+ *
+ * Το 3D dolly-άρει την ΑΠΟΣΤΑΣΗ κάμερας→επιφάνειας· ο οπτικός μεγεθυντικός ≈ 1/distanceFactor. Θέλουμε
+ * μία εγκοπή (|deltaY| = WHEEL_NOTCH_DELTA_PX) → distanceFactor = 1/WHEEL_ZOOM_PER_NOTCH, δηλ.
+ *   ZOOM_WHEEL_BASE^(notch × sensitivity) = 1 / WHEEL_ZOOM_PER_NOTCH
+ *   ⇒ sensitivity = −ln(perNotch) / (notch × ln(base))
+ * Το surface-anchoring + margin clamp (ZOOM_SURFACE_MARGIN) μένει → δεν περνάς ποτέ μέσα από τοίχο.
+ */
+export const ZOOM_WHEEL_SENSITIVITY =
+  -Math.log(WHEEL_ZOOM_PER_NOTCH) / (WHEEL_NOTCH_DELTA_PX * Math.log(ZOOM_WHEEL_BASE));
 export const ORTHO_MIN_ZOOM = 0.01;
 export const ORTHO_MAX_ZOOM = 100;
 

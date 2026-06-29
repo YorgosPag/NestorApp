@@ -14,6 +14,7 @@ import React, { useRef, useEffect, useCallback, useImperativeHandle, useMemo } f
 import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
+import { wheelDeltaForFactor } from '../../systems/zoom/utils/calculations';
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import { LassoStore } from '../../systems/cursor/LassoStore';
@@ -189,8 +190,9 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     },
     zoomAtScreenPoint: (factor: number, screenPoint: Point2D) => {
       if (onWheelZoom) {
-        const wheelDelta = factor > 1 ? -120 : 120;
-        onWheelZoom(wheelDelta, screenPoint);
+        // Περνά τον ΑΚΡΙΒΗ factor μέσα από τον ΕΝΑ wheel-zoom δρόμο (αντίστροφο του exp), ώστε τα
+        // κουμπιά zoom (BUTTON_IN/OUT) να τιμούν το 20% τους — όχι το παλιό ψεύτικο ±120 που γινόταν 10%.
+        onWheelZoom(wheelDeltaForFactor(factor), screenPoint);
       }
     }
   }), [scene, colorLayers, viewport, onTransformChange, onWheelZoom]);

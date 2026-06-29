@@ -108,26 +108,52 @@ export const TRANSFORM_OFFSET_LIMITS = {
 /**
  * Zoom factors για διάφορα input methods
  *
- * INDUSTRY STANDARDS:
- * - AutoCAD: ~1.1 per wheel step
- * - Blender: ~1.1 per wheel step
- * - Figma: ~1.1 per wheel step
- *
- * 1.1 = 10% zoom change (smooth και predictable)
+ * MOUSE WHEEL — AutoCAD-parity exponential zoom (magnitude-aware):
+ * Το πραγματικό ροδάκι ΔΕΝ χρησιμοποιεί τα WHEEL_IN/OUT (σταθερό 10% — πολύ αργό vs AutoCAD).
+ * Χρησιμοποιεί `factor = exp(-deltaY × SENSITIVITY)` (μοντέλο Google Maps/Figma): όσο πιο γρήγορα/
+ * δυνατά γυρίζεις το ροδάκι, τόσο μεγαλύτερο βήμα, συμμετρικά (in × out = 1). Δες WHEEL_SENSITIVITY.
  */
+/**
+ * 🎯 ΕΝΑ knob για την «επιθετικότητα» του wheel zoom σε ΟΛΗ την εφαρμογή (2D + 3D).
+ *
+ * Επιθυμητός **οπτικός** πολλαπλασιασμός zoom-IN ανά τυπική εγκοπή ροδιού. **Μία και μοναδική πηγή
+ * αλήθειας:** από αυτό παράγονται ΚΑΙ το 2D scale-zoom (`WHEEL_SENSITIVITY` παρακάτω) ΚΑΙ το 3D
+ * camera-dolly (`ZOOM_WHEEL_SENSITIVITY` στο `bim-3d/viewport/viewport-constants.ts`). Άλλαξε ΑΥΤΟ
+ * το νούμερο → αλλάζουν μαζί 2D & 3D, σε feel-parity. Big-player: cursor-anchored εκθετικό zoom
+ * (Figma/Google Maps/Revit/C4D). 1.20 ≈ +20%/εγκοπή (ήπιο· 1.30/1.42 = πιο επιθετικά).
+ */
+export const WHEEL_ZOOM_PER_NOTCH = 1.20;
+
+/** Τυπικό |deltaY| (px) μιας φυσικής εγκοπής ροδιού (Chrome/Windows ≈ 100). Reference για τα παράγωγα. */
+export const WHEEL_NOTCH_DELTA_PX = 100;
+
 export const ZOOM_FACTORS = {
-  // === MOUSE WHEEL ===
-  /** Normal wheel zoom in (10% increase) */
+  // === MOUSE WHEEL — AutoCAD/Figma-parity exponential (magnitude-aware), DERIVED από το SSoT ===
+  /**
+   * 2D scale-zoom: `factor = exp(-deltaY × WHEEL_SENSITIVITY)`. ΠΑΡΑΓΩΓΟ του `WHEEL_ZOOM_PER_NOTCH`
+   * ώστε μία εγκοπή (|deltaY| = WHEEL_NOTCH_DELTA_PX) → ακριβώς `WHEEL_ZOOM_PER_NOTCH` zoom-in.
+   * **Μην το αλλάζεις εδώ** — άλλαξε το `WHEEL_ZOOM_PER_NOTCH` (οδηγεί 2D ΚΑΙ 3D μαζί).
+   */
+  WHEEL_SENSITIVITY: Math.log(WHEEL_ZOOM_PER_NOTCH) / WHEEL_NOTCH_DELTA_PX,
+
+  /** Ctrl+Wheel = 2× sensitivity (≈ διπλασιασμός του εκθέτη ανά εγκοπή). */
+  CTRL_WHEEL_SENSITIVITY: (2 * Math.log(WHEEL_ZOOM_PER_NOTCH)) / WHEEL_NOTCH_DELTA_PX,
+
+  /** Clamp |deltaY| ανά event (≈3 εγκοπές) ώστε ένα «fling» να μην τινάζει υπερβολικά το zoom. */
+  WHEEL_MAX_DELTA: 300,
+
+  // === MOUSE WHEEL — discrete fallback (legacy· keyboard/synthetic reference) ===
+  /** Normal wheel zoom in (10% increase) — fallback μόνο όταν δεν υπάρχει magnitude path. */
   WHEEL_IN: 1.1,
 
-  /** Normal wheel zoom out (10% decrease) */
+  /** Normal wheel zoom out (10% decrease) — fallback. */
   WHEEL_OUT: 0.9,
 
-  // === CTRL + WHEEL (ENTERPRISE: Faster zoom) ===
-  /** Ctrl+Wheel zoom in (20% increase - 2x faster) */
+  // === CTRL + WHEEL (legacy discrete fallback) ===
+  /** Ctrl+Wheel zoom in (20% increase - 2x faster). */
   CTRL_WHEEL_IN: 1.2,
 
-  /** Ctrl+Wheel zoom out (20% decrease - 2x faster) */
+  /** Ctrl+Wheel zoom out (20% decrease - 2x faster). */
   CTRL_WHEEL_OUT: 0.8,
 
   // === KEYBOARD ===

@@ -19,6 +19,39 @@ import { clamp } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
+// === WHEEL ZOOM (AutoCAD-parity exponential, magnitude-aware) ===
+
+/**
+ * AutoCAD-parity wheel-zoom factor (exponential, magnitude-aware — Google Maps / Figma model).
+ *
+ * `factor = exp(-deltaY × sensitivity)`. Όσο πιο δυνατά/γρήγορα το ροδάκι, τόσο μεγαλύτερο βήμα·
+ * συμμετρικό (in × out = 1). Αντικαθιστά το σταθερό 10% που έκανε το zoom να νιώθει αργό έναντι AutoCAD.
+ *
+ * @param deltaY - normalized wheel delta σε pixels (sign: <0 → zoom IN, >0 → zoom OUT)
+ * @param ctrlKey - Ctrl πατημένο → 2× sensitivity
+ * @returns scale multiplier (`newScale = currentScale × factor`)
+ */
+export function computeWheelZoomFactor(deltaY: number, ctrlKey: boolean = false): number {
+  const sensitivity = ctrlKey ? ZOOM_FACTORS.CTRL_WHEEL_SENSITIVITY : ZOOM_FACTORS.WHEEL_SENSITIVITY;
+  const clamped = clamp(deltaY, -ZOOM_FACTORS.WHEEL_MAX_DELTA, ZOOM_FACTORS.WHEEL_MAX_DELTA);
+  return Math.exp(-clamped * sensitivity);
+}
+
+/**
+ * Inverse of {@link computeWheelZoomFactor}: the wheel `deltaY` that yields exactly `factor`.
+ *
+ * Επιτρέπει στους factor-based callers (κουμπιά zoom μέσω `zoomAtScreenPoint`, π.χ. BUTTON_IN = 1.2)
+ * να περνούν από τον ΕΝΑ wheel-zoom δρόμο και να τιμούν τον ΑΚΡΙΒΗ factor τους, αντί για ένα ψεύτικο
+ * ±120 που το παλιό sign-based `wheelZoom` αγνοούσε (latent bug: κουμπιά έκαναν 10% αντί 20%).
+ *
+ * @param factor - επιθυμητός scale multiplier (>0)
+ * @param ctrlKey - πρέπει να ταιριάζει με το sensitivity που θα χρησιμοποιηθεί στην κατανάλωση
+ */
+export function wheelDeltaForFactor(factor: number, ctrlKey: boolean = false): number {
+  const sensitivity = ctrlKey ? ZOOM_FACTORS.CTRL_WHEEL_SENSITIVITY : ZOOM_FACTORS.WHEEL_SENSITIVITY;
+  return -Math.log(factor) / sensitivity;
+}
+
 // === TRANSFORM CALCULATIONS ===
 
 /**

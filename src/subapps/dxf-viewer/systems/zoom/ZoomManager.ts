@@ -28,6 +28,8 @@ import type {
 } from './zoom-types';
 // 🏢 ADR-043: Direct import from centralized config (eliminated zoom-constants middleman)
 import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS, VIEWPORT_DEFAULTS } from '../../config/transform-config';
+// AutoCAD-parity exponential wheel zoom (magnitude-aware) — ΕΝΑΣ SSoT helper.
+import { computeWheelZoomFactor } from './utils/calculations';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση centralized CoordinateTransforms για zoom calculations
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
@@ -223,11 +225,10 @@ export class ZoomManager implements IZoomManager {
     constraints?: ZoomConstraints,
     modifiers?: { ctrlKey?: boolean; shiftKey?: boolean }
   ): ZoomResult {
-    // 🏢 ENTERPRISE: Ctrl+Wheel = 2x faster zoom
+    // AutoCAD-parity: magnitude-aware exponential factor (όχι σταθερό 10%). Ctrl = 2× sensitivity.
+    // Το πρόσημο του wheelDelta ορίζει κατεύθυνση μέσα στο exp· το μέγεθος ορίζει ταχύτητα.
     const useCtrlZoom = modifiers?.ctrlKey === true;
-    const factor = wheelDelta > 0
-      ? (useCtrlZoom ? ZOOM_FACTORS.CTRL_WHEEL_OUT : ZOOM_FACTORS.WHEEL_OUT)
-      : (useCtrlZoom ? ZOOM_FACTORS.CTRL_WHEEL_IN : ZOOM_FACTORS.WHEEL_IN);
+    const factor = computeWheelZoomFactor(wheelDelta, useCtrlZoom);
 
     const newScale = Math.max(
       constraints?.minScale || this.config.minScale,
