@@ -11,8 +11,8 @@ import { useTranslation } from '@/i18n';
 import { useToolHints } from '../../hooks/useToolHints';
 // ADR-040 Phase H: leaf subscriber for live cursor coordinates
 import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
-// ADR-366 B.2.Q1 follow-up: hovered 3D BIM entity info inline in the status bar
-import { StatusBarBim3DHoverLeaf } from './StatusBarBim3DHoverLeaf';
+// ADR-366 B.2.Q1 / ADR-357: hovered BIM entity info inline in the status bar (3D + 2D)
+import { StatusBarBimHoverLeaf } from './StatusBarBimHoverLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
@@ -159,11 +159,13 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           </>
         )}
 
-        {/* ADR-366 B.2.Q1 follow-up — hovered 3D BIM entity info, inline right of the
-            coordinates (replaces the floating cursor card). Renders nothing in 2D. */}
-        <StatusBarBim3DHoverLeaf
+        {/* ADR-366 B.2.Q1 / ADR-357 — hovered BIM entity info, inline right of the
+            coordinates (replaces the floating card in BOTH 3D and 2D). The 2D readout is
+            gated on the select tool to mirror the popover it replaces. */}
+        <StatusBarBimHoverLeaf
           className={colors.text.info}
           separatorClassName={colors.text.muted}
+          activeTool={activeTool}
         />
       </div>
       
