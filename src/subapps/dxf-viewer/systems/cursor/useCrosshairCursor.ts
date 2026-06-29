@@ -20,6 +20,13 @@ import { useGripContext } from '../../providers/GripProvider';
 import { isCrosshairSuppressed, subscribeCrosshairSuppression } from './CrosshairSuppressionStore';
 import { buildCrosshairCursorValue } from './crosshair-cursor-image';
 
+/**
+ * Σταθερή διάσταση (CSS px) του κεντρικού τετραγωνιδίου (pickbox) στο σταυρόνημα — αίτημα Giorgio.
+ * Αποσυνδεδεμένο από το osnap `apertureSize` (ανοχή έλξης, ρυθμιζόμενη ≥8): το οπτικό κουτί του
+ * κέρσορα είναι πάντα 7×7. Ο toggle `showAperture` εξακολουθεί να το δείχνει/κρύβει.
+ */
+const CURSOR_PICKBOX_PX = 7;
+
 export interface UseCrosshairCursorOptions {
   /** When false, the hook is inert (leaves the element's cursor untouched). Default true. */
   enabled?: boolean;
@@ -42,7 +49,7 @@ export function useCrosshairCursor(
   { enabled = true, size = 32, color, lineWidth }: UseCrosshairCursorOptions = {},
 ): void {
   const { gripSettings } = useGripContext();
-  const { showAperture, apertureSize } = gripSettings;
+  const { showAperture } = gripSettings;
 
   useEffect(() => {
     if (!enabled) return;
@@ -64,11 +71,14 @@ export function useCrosshairCursor(
         el.style.cursor = 'none';
         return;
       }
+      // Κεντρικό τετραγωνάκι σταθερά 7×7 px· κρύβεται όταν `showAperture` = false.
+      const pickbox = showAperture ? CURSOR_PICKBOX_PX : 0;
       el.style.cursor = buildCrosshairCursorValue({
         color: color ?? cross.color ?? '#ffffff',
         lineWidth: lineWidth ?? (cross.line_width || 1),
-        gap: cross.use_cursor_gap ? cross.center_gap_px ?? 6 : (showAperture && apertureSize > 0 ? apertureSize / 2 + 2 : 6),
-        pickbox: showAperture && apertureSize > 0 ? apertureSize : 0,
+        // Κενό γύρω από το κέντρο = μισό κουτί + 2px, ώστε οι βραχίονες να μην ακουμπούν το κουτί.
+        gap: cross.use_cursor_gap ? (cross.center_gap_px ?? 6) : (pickbox > 0 ? pickbox / 2 + 2 : 6),
+        pickbox,
         opacity: cross.opacity ?? 1,
         size,
       });
@@ -95,5 +105,5 @@ export function useCrosshairCursor(
       unsubSuppress();
       if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
-  }, [targetRef, enabled, size, color, lineWidth, showAperture, apertureSize]);
+  }, [targetRef, enabled, size, color, lineWidth, showAperture]);
 }

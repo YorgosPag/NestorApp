@@ -61,16 +61,9 @@ export const canvasUI = {
   },
   positioning: {
     layers: {
-      canvasOverlayWithPointerControl: (activeTool?: string): React.CSSProperties => ({
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: zIndex.overlay,
-        pointerEvents: activeTool === 'select' || activeTool === 'layering' ? 'auto' : 'none',
-        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
-        cursor: activeTool === 'pan' ? 'grab' : 'none'
-      }),
+      // ADR-549 Φ8 — `canvasOverlayWithPointerControl` (3ο αντίγραφο του ίδιου `cursor:'none'` μοτίβου)
+      // αφαιρέθηκε: ήταν νεκρό (μηδέν consumers, grep-verified). Μένουν μόνο τα 2 ζωντανά παρακάτω,
+      // και τα δύο `cursor:'inherit'` ώστε να κληρονομούν τον hardware-cursor σταυρόνημα του container.
       layerCanvasWithTools: (activeTool?: string, crosshairEnabled?: boolean): React.CSSProperties => ({
         position: 'absolute',
         inset: 0,

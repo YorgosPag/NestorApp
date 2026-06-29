@@ -347,6 +347,12 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
 ---
 
 ## Changelog
+- **2026-06-29** — Phase 8 polish: σταθερό pickbox 7×7 px (αίτημα Giorgio). Το κεντρικό τετραγωνάκι
+  του hardware-cursor σταυρονήματος (`useCrosshairCursor`) αποσυνδέθηκε από το osnap `apertureSize`
+  (ανοχή έλξης, ρυθμιζόμενη) → νέα σταθερά `CURSOR_PICKBOX_PX = 7`· ο toggle `showAperture` το
+  δείχνει/κρύβει· το κενό βραχιόνων = pickbox/2 + 2. Boy-Scout: αφαιρέθηκε το νεκρό 3ο αντίγραφο
+  `canvasOverlayWithPointerControl` (`design-tokens/modules/canvas-ui.ts`, μηδέν consumers,
+  grep-verified)· τα 2 ζωντανά overlays γίνονται `cursor:'inherit'`. 🟡 UNCOMMITTED.
 - **2026-06-29** — ADR δημιουργήθηκε. Phase 0 (PROFILE) ορίστηκε. Καταγράφηκε η bisection (render
   pass = αποδεδειγμένος ένοχος) + η διάψευση της «μόνο σκιές» υπόθεσης + το SSOT audit. Fix pending data.
 - **2026-06-29** — Phase 0 instrumentation IMPLEMENTED (UNCOMMITTED, revertible). NEW
