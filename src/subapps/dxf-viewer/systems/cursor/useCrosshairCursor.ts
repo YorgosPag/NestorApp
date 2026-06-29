@@ -73,11 +73,16 @@ export function useCrosshairCursor(
       }
       // Κεντρικό τετραγωνάκι σταθερά 7×7 px· κρύβεται όταν `showAperture` = false.
       const pickbox = showAperture ? CURSOR_PICKBOX_PX : 0;
+      // Όταν υπάρχει κουτί, οι 4 βραχίονες του σταυρού ΚΟΛΛΑΝΕ στις παρειές του (gap = μισό κουτί):
+      // η άκρη κάθε γραμμής πέφτει ακριβώς πάνω στην πλευρά του τετραγώνου, χωρίς κενό (αίτημα Giorgio).
+      // Χωρίς κουτί: ισχύει το κενό του χρήστη (center_gap_px) ή προεπιλογή 6.
+      const gap = pickbox > 0
+        ? pickbox / 2
+        : (cross.use_cursor_gap ? (cross.center_gap_px ?? 6) : 6);
       el.style.cursor = buildCrosshairCursorValue({
         color: color ?? cross.color ?? '#ffffff',
         lineWidth: lineWidth ?? (cross.line_width || 1),
-        // Κενό γύρω από το κέντρο = μισό κουτί + 2px, ώστε οι βραχίονες να μην ακουμπούν το κουτί.
-        gap: cross.use_cursor_gap ? (cross.center_gap_px ?? 6) : (pickbox > 0 ? pickbox / 2 + 2 : 6),
+        gap,
         pickbox,
         opacity: cross.opacity ?? 1,
         size,
