@@ -108,7 +108,7 @@ void main() {
   if (axZ > 0.001) { color = mix(color, uAxisZColor, axZ); a = max(a, axZ); }
 
   // ── Hard finite extent — C4D STOPS the grid; lines do NOT distance-fade toward the horizon ────
-  // (GetGridStep's `fade` is the LOD-transition crossfade only, never a distance fade.) Square
+  // (GetGridStep fade is the LOD-transition crossfade only, never a distance fade.) Square
   // boundary that tracks the view; a worldPerPx-wide AA keeps the cut edge clean, not jagged.
   float edgeDist = max(abs(p.x - uTarget.x), abs(p.y - uTarget.z)); // p = world XZ → p.y is world Z
   float inside = 1.0 - smoothstep(uExtent - worldPerPx * 1.5, uExtent, edgeDist);
