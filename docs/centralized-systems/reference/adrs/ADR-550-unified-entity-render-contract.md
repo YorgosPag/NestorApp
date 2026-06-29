@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 Φ0+Φ2+Φ3+Φ4+Φ-Ghost IMPLEMENTED (UNCOMMITTED) — Φ1 άνευ αντικειμένου |
+| **Status** | 🟢 Φ0+Φ2+Φ3+Φ4+Φ-Ghost+Φ-Preview2D+Φ-Ghost3D+Φ-Preview2D-B IMPLEMENTED (UNCOMMITTED) — Φ1 άνευ αντικειμένου |
 | **Date** | 2026-06-29 |
 | **Last Updated** | 2026-06-29 |
 | **Category** | Canvas & Rendering |
@@ -125,6 +125,20 @@ interface EntityRenderContract<E> {
 ---
 
 ## Changelog
+
+### 2026-06-29 — Φ-Ghost3D (3D «original μένει φάντασμα») + Φ-Preview2D-B (Stretch/Scale/Rotate real renderer) (UNCOMMITTED)
+**Πλαίσιο (Giorgio):** (Α) στην 3D προβολή, κατά το rigid move/rotate, το αντικείμενο **εξαφανιζόταν** από την αρχική θέση (έμεναν μόνο οι 2D λαβές) αντί να μένει **dimmed φάντασμα** όπως στον 2D καμβά — σε **οποιαδήποτε** όψη (top/perspective). (Β) τα ribbon εργαλεία Stretch/Scale/Rotate κρατούσαν δικό τους **simplified ghost** (το «Out of scope» της προηγούμενης εγγραφής).
+
+**Ρίζα (Α):** στο `bim3d-edit-live-preview.ts` το rigid move μετακινεί τα **ΙΔΙΑ** τα meshes του entity (real, ghost≡commit) → τίποτα δεν μένει στην αρχή. (Όχι τα `o.visible=false`, που αφορούν resize/followers.)
+
+**Απόφαση/υλοποίηση — ΜΙΑ πολιτική «original=φάντασμα, moving=real» 2D+3D (μηδέν νέο pipeline/διπλότυπο):**
+- **Κοινή πολιτική alpha:** NEW `rendering/ghost/ghost-policy.ts` → `GHOST_ALPHA = 0.45` (ένωσε **2 σκόρπια `0.45`**: 2D `GHOST_DEFAULTS.alpha` + 3D `PlacementGhostOverlay` default). 2D Canvas + 3D WebGL = χωριστά backends, **ΜΙΑ** UX policy (Revit/C4D pattern).
+- **Part A (3D):** NEW `bim-3d/animation/edit-original-ghost.ts` (`EditOriginalGhost`, pure THREE) — παγώνει **clone** των captured meshes στην αρχική pose ως translucent ghost ενώ τα πραγματικά ακολουθούν τον κέρσορα. **Reuse `PlacementGhostOverlay` (ADR-537)** για unlit material + post-FX overlay (AO-immune, anti-mustard) + non-pickable· πρόσθεσα option **`borrowedGeometry`** (+`hasObject` getter) ώστε το teardown να **μην** κάνει dispose την geometry που το clone **μοιράζεται** με το ζωντανό entity. Χρώμα ghost = το **πραγματικό χρώμα του mesh** (`material.color`, ακριβές on-screen· fallback cyan). Wire: `captureTransform`→show, `commit`/`reset`→clear, νέο `dispose()` (στο teardown του `use-bim3d-edit-interaction`). **Μόνο** move/rotate αφήνει ghost (όχι resize — Revit/C4D practice). View-agnostic (material, όχι projection).
+- **Part B (2D Stretch/Scale/Rotate):** τα 3 hooks περνούν στο **ίδιο `drawRealEntityPreview`** (= move/grip). Transform **preview ≡ commit by construction**: Scale→`scaleEntity` (=`ScaleEntityCommand`), Rotate→`calculateBimRotatedGeometry ?? rotateEntity` (=`RotateEntityCommand.computeUpdates`), Stretch→`translateEntityByAnchor`/`applyVertexDisplacement` (commit SSoT). **Διαγράφηκαν 3 τοπικές `drawGhostEntity`** (silhouette διπλότυπα).
+- **Original dimming (επέκταση `movePreviewActive`, ADR-049 — όχι νέος μηχανισμός):** Shell `CanvasLayerStack` OR-άρει το prop-driven Rotate (`awaiting-angle`)· leaf `canvas-layer-stack-leaves` self-subscribes τα store-driven Scale (`scale_input`)/Stretch (`displacement`) — CHECK 6C: **μηδέν** `useSyncExternalStore` σε Shell/orchestrator (μόνο στο leaf).
+- **Κεντρικοποίηση διπλότυπου (Boy-Scout, εντολή Giorgio):** NEW SSoT `hooks/tools/useLevelLayersById.ts` — ένωσε **6** αντίγραφα του `layersById` getter (3 νέα + προϋπάρχοντα `useMovePreview`/`useGripGhostPreview`) σε ΜΙΑ πηγή (αδελφός του `useBimPreviewRenderer`).
+
+**Verify:** 37 jest (placement-ghost-overlay +borrowedGeometry/hasObject, νέο edit-original-ghost, bim3d-edit-live-preview +ghost) GREEN· tsc SKIP (N.17). ⚠️ CHECK 6B/6C/6D → stage **ADR-040 + 537 + 550 + 049**. 🔴 PENDING: browser-verify (3D move **top + perspective** → original=ghost ορατό σε κάθε όψη· 2D Stretch/Scale/Rotate real + dimmed origin) + commit (Giorgio).
 
 ### 2026-06-29 — Φ-Preview2D: WYSIWYG moving-copy preview μέσω του ΕΝΟΣ renderer (UNCOMMITTED)
 **Πλαίσιο (Giorgio):** κατά το grip-reshape/move ο χρήστης έβλεπε **απλοποιημένο περίγραμμα** (silhouette stroke) αντί της πραγματικής μορφής. Ρίζα: **δεύτερο, φτωχότερο 2D pipeline** (`rendering/ghost/draw-ghost-entity.ts`) παράλληλο με τον πραγματικό `EntityRendererComposite`.

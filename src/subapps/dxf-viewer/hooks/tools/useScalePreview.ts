@@ -17,7 +17,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
@@ -27,6 +27,7 @@ import { scaleEntity } from '../../systems/scale/scale-entity-transform';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
+import { useLevelLayersById } from './useLevelLayersById';
 import type { useLevels } from '../../systems/levels';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -57,13 +58,9 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     return scene?.entities.find(e => e.id === id) ?? null;
   }, [levelManager]);
 
-  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
-
-  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
-    if (!levelManager.currentLevelId) return undefined;
-    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
-  }, [levelManager]);
+  const layersById = useLevelLayersById(levelManager);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const s = ScaleToolStore.getState();

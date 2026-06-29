@@ -46,6 +46,7 @@ import {
 // Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
+import { useLevelLayersById } from './useLevelLayersById';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
 // tool draws (useRotationPreview), so both rotation flows look identical.
@@ -258,8 +259,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     [levelManager],
   );
 
-  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
+  const getLayersById = useLevelLayersById(levelManager);
 
   // ADR-040 Φ12 — cursorMode 'world-position': the harness feeds `effectiveCursor`
   // = the LIVE realtime effective-world (same SSoT + same 60fps clock as the
@@ -415,10 +417,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
       // the preview matches the committed form, not a silhouette. The original-position copy is
       // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
-      const layersById = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)?.layersById
-        : undefined;
-      drawRealEntityPreview(getBimPreview(ctx), transformed, layersById, t, vp);
+      drawRealEntityPreview(getBimPreview(ctx), transformed, getLayersById(), t, vp);
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
       // NOT the selected dragged entity, so their originals stay SOLID on the main canvas.
@@ -473,7 +472,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         }
       }
     }
-  }, [dragPreview, getEntity, levelManager, getBimPreview]);
+  }, [dragPreview, getEntity, levelManager, getBimPreview, getLayersById]);
 
   useCanvasGhostPreview({
     isActive,

@@ -19,7 +19,7 @@
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 // ADR-188 SSoT — the SAME per-entity rotate the commit (`RotateEntityCommand.computeUpdates`)
 // applies: BIM-aware pivot rotate first, generic `rotateEntity` fallback. Preview ≡ commit.
 import { rotateEntity } from '../../utils/rotation-math';
@@ -30,6 +30,7 @@ import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
+import { useLevelLayersById } from './useLevelLayersById';
 import type { RotationPhase } from './useRotationTool';
 import type { useLevels } from '../../systems/levels';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -82,13 +83,9 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     return scene.entities.find(e => e.id === entityId) ?? null;
   }, [levelManager]);
 
-  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
-
-  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
-    if (!levelManager.currentLevelId) return undefined;
-    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
-  }, [levelManager]);
+  const layersById = useLevelLayersById(levelManager);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const isReferencePhase = phase === 'awaiting-reference';

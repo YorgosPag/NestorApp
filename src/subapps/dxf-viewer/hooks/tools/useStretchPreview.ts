@@ -43,7 +43,7 @@ import {
 // byte-identical to commit), the same SSoT as the Move tool / grip drag.
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
-import type { SceneLayer } from '../../types/entities';
+import { useLevelLayersById } from './useLevelLayersById';
 import type { useLevels } from '../../systems/levels';
 import type { VertexRef } from '../../systems/stretch/stretch-vertex-classifier';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -85,13 +85,9 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
     return entityMapRef.current.get(id) ?? null;
   }, [levelManager]);
 
-  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
-
-  const layersById = useCallback((): Record<string, SceneLayer> | undefined => {
-    if (!levelManager.currentLevelId) return undefined;
-    return levelManager.getLevelScene(levelManager.currentLevelId)?.layersById;
-  }, [levelManager]);
+  const layersById = useLevelLayersById(levelManager);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     const s = StretchToolStore.getState();

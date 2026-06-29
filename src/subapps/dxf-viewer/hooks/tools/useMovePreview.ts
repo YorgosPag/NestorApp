@@ -37,6 +37,7 @@ import {
 // Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
+import { useLevelLayersById } from './useLevelLayersById';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
@@ -108,8 +109,9 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     [levelManager],
   );
 
-  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
+  const getLayersById = useLevelLayersById(levelManager);
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!PREVIEW_PHASES.has(phase)) return;
@@ -168,9 +170,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // dim to ghosts at their source via `movePreviewActive`.
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
-      const layersById = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)?.layersById
-        : undefined;
+      const layersById = getLayersById();
       const bimPreview = getBimPreview(ctx);
 
       for (const entityId of selectedEntityIds) {
@@ -204,7 +204,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         ctx.restore();
       }
     }
-  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview]);
+  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview, getLayersById]);
 
   useCanvasGhostPreview({
     isActive: PREVIEW_PHASES.has(phase),
