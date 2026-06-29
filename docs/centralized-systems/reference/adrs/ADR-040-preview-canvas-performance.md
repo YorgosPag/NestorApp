@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-29 — 3D camera persistence touch (ADR-400 §3D, CHECK 6B)
+Το `ThreeJsSceneManager` απέκτησε `restoreCameraView()` (instant pose + latch `initialCameraFitDone`) + `setCameraSettledCallback()` (fired στο υπάρχον `onInteractionEnd`), και το `BimViewport3D` mount effect κάνει restore-on-mount + debounced persist της 3D κάμερας (ADR-400 §3D). **Μηδέν αλλαγή στο subscription pattern / bitmap cache-key / scheduler / renderer** — μόνο νέα μέθοδος + ένα low-freq callback που τρέχει στο interaction-end (όχι 60fps). CHECK 6C ασφαλές (κανένα νέο `useSyncExternalStore` σε orchestrator). Βλ. **ADR-400**. 🟡 UNCOMMITTED.
+
 ### 2026-06-29 — Hardware-cursor crosshair: canvas `CrosshairOverlay` retired (ADR-549 Phase 8 finish)
 Το CAD σταυρόνημα γίνεται πλέον ο **OS hardware cursor** (`useCrosshairCursor` → CSS `cursor: url(png)` στο canvas-stack div) για τέλειο 1:1 tracking — αντικαθιστά τον canvas `CrosshairOverlay`. **ADR-040 touch (`CanvasLayerStack.tsx`, CHECK 6B):** ο shell καλεί `useCrosshairCursor(containerRef, { enabled })` — **low-freq settings μόνο, μηδέν νέο `useSyncExternalStore`** (CHECK 6C ασφαλές)· αφαιρέθηκε το `<CrosshairOverlay>` mount + το event-time `isStoreSelected` import. **Διαγραφές** (2D/3D unification): `CrosshairOverlay`/`CrosshairCompositor`(+`-layout`/`-paint`/tests), `BimCrosshairOverlay3D`/`crosshair-3d-center`(+test), `hover-add-badge`(+test). Καμία αλλαγή σε bitmap cache-key / renderer / scheduler. Βλ. **ADR-549** / **ADR-545**. 🟡 UNCOMMITTED.
 

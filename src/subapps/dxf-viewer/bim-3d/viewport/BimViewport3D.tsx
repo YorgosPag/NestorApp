@@ -54,6 +54,8 @@ import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/U
 import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
 import { useCrosshairCursor } from '../../systems/cursor/useCrosshairCursor'; // ADR-549 Phase 8 (hardware cursor)
 import { recordSchedulerFrame } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
+// ADR-400 §3D — persist/restore the 3D camera view (URL deep-link + localStorage) across reload + 2D↔3D toggle.
+import { attachCamera3DPersistence } from './camera3d-persistence-wiring';
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -156,6 +158,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
     setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);
 
+    // ADR-400 §3D — persist/restore the 3D camera view (URL deep-link + per-level localStorage)
+    // across reload + 2D↔3D toggle. Restores BEFORE the initial DXF auto-fit (extracted, N.7.1).
+    const camera3dPersistence = attachCamera3DPersistence(managerRef.current);
+
     // Initial entity sync — ADR-399 scope-aware SSoT (single active level OR the
     // stacked building). External prop overrides global store when provided (ADR-371).
     const initialFloorModes = useViewMode3DStore.getState().floorVisibilityModes;
@@ -187,6 +193,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     return () => {
       observer.disconnect();
       unsubDpr();
+      // ADR-400 §3D — flush any pending camera persist BEFORE the manager is disposed (a 2D toggle
+      // or unmount is itself the "save moment"), then detach the settle callback.
+      camera3dPersistence.dispose();
       if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;

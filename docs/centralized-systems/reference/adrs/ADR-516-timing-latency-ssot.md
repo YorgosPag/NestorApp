@@ -336,6 +336,51 @@ bypass timing constants ώστε να δείχνουν στο `DXF_TIMING`, + pa
 
 ## 8. Changelog
 
+- **2026-06-29 (BUGFIX — `isInteracting` flag leak έκρυβε ΜΟΝΙΜΑ outline + 3D grips)** —
+  Regression από το interaction-gate (παρακάτω): το `setInteracting(true)` (gizmo/grip drag begin,
+  `bim3d-edit-interaction-handlers.ts:209/236`) ήταν **ασύμμετρο**. Στα early-return paths του
+  `onEditPointerUp` (`!ctx.controller.isDragging()` → return) και `onEditPointerCancel` (ίδιο guard)
+  ο κώδικας έκανε `return` **χωρίς** `setInteracting(false)`. Αν ένα drag χανόταν ενδιάμεσα (δεύτερο
+  `pointerdown`, remount, OS pointer-capture loss → ο controller γίνεται μη-dragging πριν το pointer-up),
+  το `isInteracting` **κολλούσε σε true** μέχρι reload. Συνέπεια: το `scene-render-frame.ts:111`
+  (`!pathTracerRenderer.isActive && !interacting`, adaptive-quality skip του silhouette FBO) **δεν
+  ξαναζωγράφιζε ποτέ** το gold selection-outline· μαζί με το `hideOnMotion` των grip squares (camera
+  damping), ο χρήστης έβλεπε «**εξαφανίστηκαν οι λαβές**» στην 3D προβολή (το 2D pipeline ΑΘΙΚΤΟ).
+  ΛΥΣΗ (belt-and-suspenders, idempotent, N.7.2 #3/#4 + SSoT): NEW `settleAfterEditDrag(ctx)` =
+  **ΕΝΑ exit point** για κάθε pointer-up/cancel branch (controls-on + flag-off + scene-dirty). Το
+  teardown ήταν inlined **×4** (4 ενεργές διαδρομές) + τα 2 early-return guards το παρέλειπαν εντελώς·
+  τώρα **και οι 6 διαδρομές** περνούν από τον helper → το flag δεν μπορεί να μείνει stuck (single
+  source, μηδέν διπλότυπο). Ο πυρήνας του grip rendering (`UnifiedGripRenderer`, κοινός 2D+3D μέσω
+  `use-grip-pass.ts`) δεν άλλαξε — η ρίζα ήταν αποκλειστικά το flag leak. ⚠️ Flagged (όχι σε αυτό το
+  fix): `use-bim3d-opening-move.ts` / `use-bim3d-wire-waypoint-interaction-3d.ts` /
+  `use-bim3d-dxf-edit-interaction.ts` καλούν `setControlsEnabled(true)` σε drag-end ΧΩΡΙΣ
+  `setInteracting` → δεν έχουν το leak (δεν ανάβουν ποτέ το flag) αλλά πληρώνουν full-SSAO κόστος
+  ενώ σέρνουν = **ημιτελές ADR-516 rollout** (ξεχωριστή perf εργασία, χρειάζεται δική της αξιολόγηση).
+  Related: ADR-536 (silhouette outline), ADR-555 (overlay dispatch), ADR-040.
+- **2026-06-29 (Phase 2 — FROZEN DXF BACKDROP· big-player static-scene caching· §1.1-A 1:1 follow)** —
+  Μετά το interaction-gate (παρακάτω), browser diag έδειξε residual lag = **GPU back-pressure**: η
+  DXF κάτοψη (χιλιάδες static `LineSegments`) ξαναζωγραφιζόταν **κάθε frame** στο `renderPostFxOverlays`
+  ενώ ο χρήστης έσερνε → throughput/draw-queue saturation σε αδύναμη GPU (όχι fill-rate· dpr 0.8, buffer
+  μικρός). Το BIM είναι μικρό (≈546 tris). Web research (Maxon/Corona/Redshift IPR — undersampling +
+  AI-upscale· three.js render-to-texture· CAD web viewers): η big-player λύση για «βαριά **στατική**
+  σκηνή + ένα κινούμενο αντικείμενο» = **static-scene caching**. Σε entity drag η κάμερα είναι ακίνητη
+  (`setControlsEnabled(false)`) → η κάτοψη είναι 100% στατική. ΛΥΣΗ: NEW `scene/dxf-backdrop-cache.ts`
+  (`DxfBackdropCache`) — render της κάτοψης **μία φορά** σε `WebGLRenderTarget`, και κάθε drag frame
+  σύνθεση **blit cache → render BIM ζωντανά → gizmo** (κάτοψη στο έδαφος + opaque BIM → σωστή occlusion,
+  μηδέν re-draw των γραμμών). Cache **μόνο** της κάτοψης → όλη η δυναμική (`Bim3DEditLivePreview`: move/
+  resize/εξαρτήματα/σωλήνες/wires/fittings) δουλεύει αμετάβλητη (το BIM = live). SSoT: `post-fx-overlay-pass.ts`
+  απέκτησε προαιρετικό `kind: 'underlay' | 'gizmo'` (η κάτοψη=`'underlay'`, ghosts/gizmo default=`'gizmo'`)
+  ώστε το capture να ζωγραφίζει μόνο την κάτοψη και το frame μόνο το live gizmo. Wiring: επεκτείνει το
+  Phase-1 `setInteracting` SSoT (arm/disarm)· `invalidate()` σε DXF re-sync/resize· gated OFF σε
+  section-cut/path-trace. Reuse: `FullScreenQuad`, `renderPostFxOverlays`/`collectPostFxOverlayRoots`.
+  4/4 jest (`dxf-backdrop-cache.test.ts`), 55/55 regression (post-fx/converter/ghost). Κάτοψη ΠΑΝΤΑ
+  ορατή ως οδηγός σε πλήρη ποιότητα (απαίτηση Giorgio). Related: ADR-366 §B.5, ADR-040, ADR-549.
+  **Part B (resolution-scaling/undersampling για camera orbit/zoom): ΥΛΟΠΟΙΗΘΗΚΕ & ΑΝΑΙΡΕΘΗΚΕ** —
+  ο Giorgio το απέρριψε άμεσα στο browser («μείωσε την ποιότητα της σκηνής κατά το ζουμ»). Η μείωση
+  ανάλυσης κατά την πλοήγηση κάμερας ΔΕΝ είναι αποδεκτή εδώ (ρητή απαίτηση «μηδέν πτώση ποιότητας»,
+  όπως το OpenGL viewport της Maxon). Διαγράφηκαν `lighting/resolution-modulator.ts` + test· το
+  active/idle SSoT (`scene-idle-handlers`/`scene-rendering-subsystems`) επανήλθε ακριβώς στο pre-Part-B.
+  Το frozen backdrop (Part A) μένει — δεν αγγίζει το zoom (armed μόνο σε entity drag).
 - **2026-06-29 (ΡΙΖΑ — interaction gate στο non-camera drag· §1.1-A «μηδέν lag στη μετακίνηση»)** —
   Browser diag (console, 2026-06-29) εντόπισε ΟΡΙΣΤΙΚΑ τη ρίζα του gizmo-move lag: **`render: 30-108ms`
   ανά frame** (work=2-7ms φθηνό· events αραιά dt=80-332ms ΩΣ ΣΥΝΕΠΕΙΑ του blocking render). Αιτία:

@@ -37,30 +37,46 @@ import { Pass } from 'three/addons/postprocessing/Pass.js';
 /** Returns the overlay roots to draw THIS frame (empty = nothing shown right now). */
 export type OverlayRootsProvider = () => readonly THREE.Object3D[];
 
-/** Per-scene set of overlay providers (scene-scoped → no cross-viewport bleed). */
-const registries = new WeakMap<THREE.Object3D, Set<OverlayRootsProvider>>();
+/**
+ * ADR-516 Phase 2 — overlay class, so the frozen-DXF-backdrop (`dxf-backdrop-cache.ts`) can render
+ * the static `'underlay'` once into its cache and the live `'gizmo'` on top every drag frame, while
+ * the normal raster/composer paths still draw BOTH (kind filter omitted).
+ */
+export type PostFxOverlayKind = 'underlay' | 'gizmo';
+
+/** Per-scene map of overlay provider → its class (scene-scoped → no cross-viewport bleed). */
+const registries = new WeakMap<THREE.Object3D, Map<OverlayRootsProvider, PostFxOverlayKind>>();
 
 /**
  * Register a post-FX overlay provider for `scene`. The owner keeps its roots `visible=false` (so
  * the main render skips them) and returns, each frame, the subset that should currently be drawn.
- * Returns an unregister function (call it on dispose).
+ * `kind` defaults to `'gizmo'` (the always-on-top manipulator class); the DXF underlay owner passes
+ * `'underlay'`. Returns an unregister function (call it on dispose).
  */
-export function registerPostFxOverlay(scene: THREE.Object3D, provider: OverlayRootsProvider): () => void {
-  let set = registries.get(scene);
-  if (!set) {
-    set = new Set();
-    registries.set(scene, set);
+export function registerPostFxOverlay(
+  scene: THREE.Object3D,
+  provider: OverlayRootsProvider,
+  kind: PostFxOverlayKind = 'gizmo',
+): () => void {
+  let map = registries.get(scene);
+  if (!map) {
+    map = new Map();
+    registries.set(scene, map);
   }
-  set.add(provider);
-  return () => { set?.delete(provider); };
+  map.set(provider, kind);
+  return () => { map?.delete(provider); };
 }
 
-/** Collect every overlay root currently shown for `scene` (flattened across providers). */
-export function collectPostFxOverlayRoots(scene: THREE.Object3D): THREE.Object3D[] {
-  const set = registries.get(scene);
-  if (!set || set.size === 0) return [];
+/**
+ * Collect every overlay root currently shown for `scene` (flattened across providers). When `kind`
+ * is given, only that class is collected (undefined = all kinds — the normal render paths).
+ */
+export function collectPostFxOverlayRoots(scene: THREE.Object3D, kind?: PostFxOverlayKind): THREE.Object3D[] {
+  const map = registries.get(scene);
+  if (!map || map.size === 0) return [];
   const out: THREE.Object3D[] = [];
-  for (const provider of set) {
+  for (const [provider, providerKind] of map) {
+    if (kind !== undefined && providerKind !== kind) continue;
     for (const root of provider()) out.push(root);
   }
   return out;
@@ -77,8 +93,9 @@ export function renderPostFxOverlays(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Object3D,
   camera: THREE.Camera,
+  kind?: PostFxOverlayKind,
 ): void {
-  const roots = collectPostFxOverlayRoots(scene);
+  const roots = collectPostFxOverlayRoots(scene, kind);
   if (roots.length === 0) return;
   const prevAutoClear = renderer.autoClear;
   renderer.autoClear = false; // never wipe the lit scene already in the target

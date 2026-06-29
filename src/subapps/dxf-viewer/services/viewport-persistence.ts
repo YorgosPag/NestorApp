@@ -39,7 +39,8 @@ export interface PersistedViewport {
 
 // ─── Guards ──────────────────────────────────────────────────────────────────
 
-function isFiniteNumber(n: unknown): n is number {
+/** Shared finite-number guard (reused by the 3D `camera3d-persistence` sibling). */
+export function isFiniteNumber(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n);
 }
 
@@ -58,8 +59,13 @@ function isValidTransform(
 
 // ─── Rounding (keep URL/storage payloads small + stable) ─────────────────────
 
+/** Round a scalar to `SCALE_SIG_FIGS` (5) significant figures — shared by the 2D scale and
+ *  the 3D camera zoom (`camera3d-persistence`) so the rounding rule has ONE home. */
+export function roundToSignificantFigures(value: number): number {
+  return Number(value.toPrecision(SCALE_SIG_FIGS));
+}
 function roundScale(scale: number): number {
-  return Number(scale.toPrecision(SCALE_SIG_FIGS));
+  return roundToSignificantFigures(scale);
 }
 
 function roundOffset(value: number): number {
@@ -110,9 +116,27 @@ export function parseViewportFromParams(
   return result;
 }
 
-function currentSearchParams(): URLSearchParams {
+/** Live URL search params (empty on the server). Shared by the 2D + 3D persistence readers. */
+export function currentSearchParams(): URLSearchParams {
   if (typeof window === 'undefined') return new URLSearchParams();
   return new URLSearchParams(window.location.search);
+}
+
+/**
+ * SSoT for writing query state to the URL without a navigation/re-render: read the
+ * live search params, let `mutate` add/remove keys, then `history.replaceState`
+ * preserving pathname + hash + unrelated keys. Shared by the 2D viewport transform
+ * and the 3D camera deep-link (`camera3d-persistence.ts`) so there is ONE replaceState
+ * path. No-op on the server.
+ */
+export function replaceUrlSearchParams(mutate: (params: URLSearchParams) => void): void {
+  if (typeof window === 'undefined') return;
+  const params = currentSearchParams();
+  mutate(params);
+  const query = params.toString();
+  const { pathname, hash } = window.location;
+  const url = query ? `${pathname}?${query}${hash}` : `${pathname}${hash}`;
+  window.history.replaceState(window.history.state, '', url);
 }
 
 /** Read viewport state from the current page URL. */
@@ -128,12 +152,13 @@ export function writeViewportToUrl(
   transform: ViewTransform,
   levelId: string | null,
 ): void {
-  if (typeof window === 'undefined') return;
-  const params = serializeViewportToParams(transform, levelId, currentSearchParams());
-  const query = params.toString();
-  const { pathname, hash } = window.location;
-  const url = query ? `${pathname}?${query}${hash}` : `${pathname}${hash}`;
-  window.history.replaceState(window.history.state, '', url);
+  replaceUrlSearchParams((params) => {
+    params.set(URL_KEYS.scale, String(roundScale(transform.scale)));
+    params.set(URL_KEYS.offsetX, String(roundOffset(transform.offsetX)));
+    params.set(URL_KEYS.offsetY, String(roundOffset(transform.offsetY)));
+    if (levelId) params.set(URL_KEYS.level, levelId);
+    else params.delete(URL_KEYS.level);
+  });
 }
 
 // ─── localStorage fallback (per FileRecord) ──────────────────────────────────

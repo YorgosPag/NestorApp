@@ -68,6 +68,55 @@ floor (`currentLevelId`) to:
   level differs from the current one and exists in `levels` — it never fights the
   Firestore level re-election in `useLevelsFirestoreSync`.
 
+## §3D — 3D Camera Persistence (2026-06-29)
+
+The original ADR persisted only the **2D** `ViewTransform`. The 3D BIM viewport
+persisted **nothing**: the camera always started at `INITIAL_CAMERA_POSITION (15,10,15)`
+and auto-framed extents, and the 3D viewport **fully remounts on every 2D↔3D toggle**, so
+the view reset even mid-session. Same doctrine as 2D (Giorgio: big-player level — Figma /
+Forge / Speckle camera deep-link): **URL deep-link + localStorage fallback**, ONE
+persistence philosophy across 2D & 3D.
+
+| Concern | Implementation |
+|---|---|
+| SSoT service | `services/camera3d-persistence.ts` — `Camera3DPose {position[3], target[3], zoom, projection}`, compact URL CSV + localStorage, finite/positive/projection guards |
+| URL schema | single compact key `?c3d=<px>,<py>,<pz>,<tx>,<ty>,<tz>,<zoom>,<modeCode>` (coords 3-dp ≈ mm, zoom 5 s.f., 1-char mode code) — keeps shared links short |
+| Shared URL write | `viewport-persistence.ts` → `replaceUrlSearchParams(mutate)` — extracted so 2D & 3D share ONE `history.replaceState` path (SSoT, no re-render) |
+| Storage key | `STORAGE_KEYS.CAMERA3D_STATE_PREFIX = 'dxf-viewer:camera3d-state'` (suffix `:{docId}`; docId = active level id from the URL `lvl`) |
+| Absolute pose setter | `ViewportCamera.setPose(position, target, zoom, projection)` (viewport-camera.ts) — **instant**, no animation; internal `applyProjectionInstant` is the non-animated sibling of `setProjection`'s camera-swap |
+| Restore (mount) | `BimViewport3D` mount effect → `readPersistedCamera3D(lvl)` BEFORE `resyncDxfOverlay`; applies via `ThreeJsSceneManager.restoreCameraView(...)` which **latches `initialCameraFitDone`** so the Zoom-Extents auto-fit never animates the restored pose away |
+| Persist | `ThreeJsSceneManager.setCameraSettledCallback` fired on `onInteractionEnd` (orbit/pan/wheel-idle/tumble) → `BimViewport3D` debounces (reuses `URL_DEBOUNCE`) → `persistCamera3D`; flushed on teardown (2D toggle / unmount) |
+
+**Why URL alone covers reload + toggle:** `replaceState` keeps `c3d` in the URL across an
+in-session 2D↔3D toggle (no navigation) → on the next 3D mount `readCamera3DFromUrl` wins, so
+the localStorage fallback is only needed when the URL lost `c3d` (fresh link / cross-session).
+
+**Perspective zoom** is implicit in the camera→target distance (restored via position), so
+`zoom` is only consumed for orthographic projections (Top/Front/Side).
+
+### 2D restore race — ROOT CAUSE FOUND (🔴 open, needs fix)
+The 2D transform restore lives in `hooks/canvas/useViewportAutoFit.ts` (`performInitialDecision`,
+ADR-399/418), not the legacy `useAutoFitOnFileChange.ts` named in the Architecture table above.
+
+A deep trace (2026-06-29) found the 2D restore **IS** deterministically overridden on hard reload
+by a dual-Firestore-snapshot race (an initial static trace wrongly concluded "no override" — it
+missed the snapshot id swap):
+1. On reload Firestore delivers TWO `levels` snapshots — cached IndexedDB (`sceneFileId='fid_A'`)
+   then server (`sceneFileId='fid_B'`, differs because `linkSceneToLevel` writes via Admin SDK,
+   bypassing the client cache).
+2. The 2nd snapshot changes `fileRecordId` fid_A→fid_B on the SAME level AFTER `hasFittedRef=true`.
+3. `resolveAutoFitAction` (`viewport-autofit-policy.ts:53`) sees `fileChanged && !levelChanged` →
+   returns **`'fit'`** (misclassifies the bare id-swap as a genuine re-import).
+4. That cancels the pending `performInitialDecision` restore timer (or overrides the already-applied
+   restore) → `fitCurrentContent` → `canvas-fit-to-view {auto}` → `setTransform` = Zoom-Extents wins.
+
+**Proposed fix (next step):** the policy/hook must NOT treat a `fileRecordId`-only swap on the same
+level with unchanged scene content as a re-import — e.g. gate the `'fit'` action when a valid
+persisted viewport exists and the scene reference did not actually change, or suppress the spurious
+2nd-snapshot `fileRecordId` change at the loader/query-dedup layer. NOT YET IMPLEMENTED (high-risk,
+needs its own focused session + browser repro). The `canvas-fit-to-view {auto}` emits in
+`useSceneState` are import-only and are NOT the cause.
+
 ## Alternatives considered
 - **localStorage only** — no shareable link. Rejected (Giorgio chose full).
 - **URL only** — lost if the query string is cleared. Rejected.
@@ -91,6 +140,23 @@ floor (`currentLevelId`) to:
 5. FPS during pan/zoom unchanged (ADR-040 — no re-render regression).
 
 ## Changelog
+- **2026-06-29** — **§3D camera persistence (UNCOMMITTED, Opus 4.8).** Extended the SSoT to the
+  3D BIM camera (was ephemeral → reset on every reload AND 2D↔3D toggle). NEW
+  `services/camera3d-persistence.ts` (`Camera3DPose`, compact `c3d` URL CSV + per-level
+  localStorage, guards) reusing the extracted `replaceUrlSearchParams` shared `replaceState`
+  helper + `STORAGE_KEYS.CAMERA3D_STATE_PREFIX`. NEW `ViewportCamera.setPose` (instant absolute
+  pose + internal `applyProjectionInstant`). `ThreeJsSceneManager.restoreCameraView` (latches
+  `initialCameraFitDone` to suppress Zoom-Extents) + `setCameraSettledCallback`. `BimViewport3D`:
+  restore-on-mount before `resyncDxfOverlay`, debounced persist on settle (`URL_DEBOUNCE`),
+  flush-on-teardown. SSoT dedup: `camera3d-persistence` reuses `currentSearchParams` /
+  `isFiniteNumber` / `roundToSignificantFigures` exported from `viewport-persistence` (no
+  duplicate helpers); `viewport-camera` extracts shared `applyProjectionModeFlags`. **2D race —
+  ROOT CAUSE FOUND (🔴 open):** dual-Firestore-snapshot `fileRecordId` swap → `resolveAutoFitAction`
+  returns `'fit'` → overrides the restore (see §3D «2D restore race»). Fix NOT yet implemented
+  (high-risk, needs focused session). Tests:
+  `camera3d-persistence.test.ts` (15/15) + `viewport-persistence.test.ts` (18/18) green. CHECK 6B
+  → ADR-040 staged (ThreeJsSceneManager touched). 🔴 browser-verify (3D reload + Top View +
+  2D↔3D toggle + share-link) + commit.
 - **2026-05-30** — Initial implementation. New `viewport-persistence.ts` SSoT +
   `useViewportUrlSync.ts`; restore-vs-fit in `useAutoFitOnFileChange.ts`;
   `canvas-restore-viewport` handler in `useFitToView.ts`; mount + floor

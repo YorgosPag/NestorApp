@@ -47,11 +47,8 @@ import {
   buildDeps,
   findBimEntityWorldBox,
 } from './bim3d-edit-interaction-helpers';
-// ADR-408 Φ-D — endpoint shape handles: world positions of a segment's two axis ends.
-import { segmentAxisEndpointsWorld } from '../converters/mep-segment-to-mesh';
-// ADR-408 Φ1 — structural length handles (wall/beam): horizontal endpoint world SSoT.
-import { linearEndpointHandleWorld } from '../gizmo/linear-endpoint-world';
-import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
+// ADR-408 Φ-D/Φ1 — per-endpoint shape handles (segment + wall/beam), extracted (file-size N.7.1).
+import { refreshSegmentEndpointHandles, refreshStructuralEndpointHandles } from './bim3d-edit-endpoint-handles';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
 import { emitStructuralChangeAfterEdit } from './bim3d-edit-structural-emit';
@@ -151,38 +148,6 @@ export function refreshLinearEndpointHandles(
   }
   if (bimType === 'mep-segment') return refreshSegmentEndpointHandles(ctx, entityIds[0]);
   if (bimType === 'wall' || bimType === 'beam') return refreshStructuralEndpointHandles(ctx, entityIds[0], bimType);
-  ctx.overlay.setEndpointHandles(null, null);
-}
-
-/** MEP pipe end handles (free-3D, per-endpoint elevation — the run may slope). */
-function refreshSegmentEndpointHandles(ctx: EditInteractionCtx, id: string): void {
-  const s = useBim3DEntitiesStore.getState();
-  const segment = s.mepSegments.find((seg) => seg.id === id);
-  if (!segment) {
-    ctx.overlay.setEndpointHandles(null, null);
-    return;
-  }
-  const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
-  const { startW, endW } = segmentAxisEndpointsWorld(segment.params, baseElevationM);
-  ctx.overlay.setEndpointHandles(startW, endW, 'free-3d');
-}
-
-/** Wall/beam LENGTH handles (horizontal; both ends at the gizmo-anchor Y). */
-function refreshStructuralEndpointHandles(ctx: EditInteractionCtx, id: string, bimType: 'wall' | 'beam'): void {
-  const s = useBim3DEntitiesStore.getState();
-  const worldY = ctx.overlay.getPosition().y;
-  const wall = bimType === 'wall' ? s.walls.find((w) => w.id === id) : undefined;
-  if (wall) {
-    const { startW, endW } = linearEndpointHandleWorld(wall.params.start, wall.params.end, wall.params.sceneUnits, worldY);
-    ctx.overlay.setEndpointHandles(startW, endW, 'horizontal');
-    return;
-  }
-  const beam = bimType === 'beam' ? s.beams.find((b) => b.id === id) : undefined;
-  if (beam) {
-    const { startW, endW } = linearEndpointHandleWorld(beam.params.startPoint, beam.params.endPoint, beam.params.sceneUnits, worldY);
-    ctx.overlay.setEndpointHandles(startW, endW, 'horizontal');
-    return;
-  }
   ctx.overlay.setEndpointHandles(null, null);
 }
 
@@ -320,9 +285,6 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
     // ADR-516 — input prediction (latency compensation): feed the gizmo the position the
     // cursor WILL reach in ~1 frame so the entity coincides with the 0ms OS cursor instead
     // of trailing it by the WebGL present latency. VISUAL-ONLY — pointer-up commits RAW.
-    // ADR-516 — input prediction (latency compensation): feed the gizmo the position the
-    // cursor WILL reach in ~1 frame so the entity coincides with the 0ms OS cursor instead
-    // of trailing it by the WebGL present latency. VISUAL-ONLY — pointer-up commits RAW.
     const p = DXF_TIMING.prediction.ENABLED
       ? ctx.pointerPredictor.predict(e.clientX, e.clientY, e.timeStamp)
       : { x: e.clientX, y: e.clientY };
@@ -345,6 +307,21 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
   if (hoverChanged || gripHoverChanged) ctx.manager.markSceneDirty();
 }
 
+/**
+ * ADR-516 — single exit point for an edit-drag gesture (pointer-up / cancel, EVERY
+ * branch incl. the no-active-drag guard). Re-enables OrbitControls, clears the
+ * `isInteracting` flag so the adaptive-quality SSAO + silhouette-outline path resumes
+ * (one crisp outlined frame at rest), and marks the scene dirty. Idempotent +
+ * belt-and-suspenders: routing every exit through here means the flag can never leak
+ * `true` — a stuck flag is exactly what suppressed the selection outline + 3D grips
+ * permanently (see ADR-516 §8 bugfix). SSoT for the drag-end teardown (was inlined ×4).
+ */
+function settleAfterEditDrag(ctx: EditInteractionCtx): void {
+  ctx.manager.viewport.setControlsEnabled(true);
+  ctx.manager.setInteracting(false);
+  ctx.manager.markSceneDirty();
+}
+
 export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void {
   // ADR-535 — finish a 3D reshape-grip drag: project the release point, commit ONE
   // UpdateSlabParamsCommand (scene re-syncs automatically), then re-seat the grips.
@@ -360,12 +337,17 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
     if (committed) ctx.preview.commit();
     else ctx.preview.reset();
     ctx.overlay.setVisible(true); // ADR-535 Φ4 — the whole-entity gizmo comes back.
-    ctx.manager.viewport.setControlsEnabled(true);
-    ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
-    ctx.manager.markSceneDirty();
+    settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
     return;
   }
-  if (!ctx.controller.isDragging()) return;
+  if (!ctx.controller.isDragging()) {
+    // ADR-516 — belt-and-suspenders: a drag may have been lost mid-gesture (a second
+    // pointerdown, remount, or OS pointer-capture loss can null the controller before
+    // pointer-up fires). Never leave `isInteracting` stuck true, or the silhouette
+    // outline + 3D grips stay suppressed forever (scene-render-frame `&& !interacting`).
+    settleAfterEditDrag(ctx);
+    return;
+  }
   e.preventDefault();
   e.stopPropagation();
   ctx.canvasEl.releasePointerCapture?.(e.pointerId);
@@ -384,9 +366,7 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   ctx.snapLabel.hide(); // …and the snap-type label.
   ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
-  ctx.manager.viewport.setControlsEnabled(true);
-  ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
-  ctx.manager.markSceneDirty();
+  settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
 }
 
 export function onEditPointerCancel(ctx: EditInteractionCtx): void {
@@ -398,12 +378,16 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
     ctx.overlay.setVisible(true);
     const st = useBim3DEditStore.getState();
     refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
-    ctx.manager.viewport.setControlsEnabled(true);
-    ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
-    ctx.manager.markSceneDirty();
+    settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
     return;
   }
-  if (!ctx.controller.isDragging()) return;
+  if (!ctx.controller.isDragging()) {
+    // ADR-516 — belt-and-suspenders (mirror of onEditPointerUp): never leave
+    // `isInteracting` stuck true on a cancel where no drag was active, or the
+    // silhouette outline + 3D grips stay suppressed forever.
+    settleAfterEditDrag(ctx);
+    return;
+  }
   ctx.controller.cancelDrag();
   ctx.preview.reset(); // Esc / cancel → entity snaps back, no command (ADR-402).
   ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on cancel.
@@ -411,9 +395,7 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   ctx.snapLabel.hide(); // …and the snap-type label.
   ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
-  ctx.manager.viewport.setControlsEnabled(true);
-  ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
-  ctx.manager.markSceneDirty();
+  settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
 }
 
 /**

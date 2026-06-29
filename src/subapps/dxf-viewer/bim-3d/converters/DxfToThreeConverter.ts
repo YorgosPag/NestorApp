@@ -177,7 +177,9 @@ export class DxfToThreeConverter {
     // ADR-537 underlay-depth — the wireframe/text underlay is drawn by the dedicated post-FX
     // overlay pass (`post-fx-overlay-pass.ts`), never the lit scene. Register the current root as
     // a provider (kept `visible=false`); the pass draws it on top of the scene depth, AO-immune.
-    this.unregisterOverlay = registerPostFxOverlay(scene, () => (this.root ? [this.root] : []));
+    // ADR-516 Phase 2 — class `'underlay'` so the frozen-DXF-backdrop caches it once per entity drag
+    // (the thousands of static line segments = the GPU back-pressure root) instead of re-drawing it.
+    this.unregisterOverlay = registerPostFxOverlay(scene, () => (this.root ? [this.root] : []), 'underlay');
   }
 
   /** Single-floor overlay sitting on the floor plane (Y=0). */

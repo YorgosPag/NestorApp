@@ -20,6 +20,7 @@
  */
 
 import * as THREE from 'three';
+import { ensureSizedRenderTarget } from '../scene/sized-render-target';
 import {
   projectGripToProbe,
   decodeGripVisibility,
@@ -213,15 +214,12 @@ export class GripDepthOccluder {
   // ── lazy GPU resources ───────────────────────────────────────────────────────
   private ensureDepthTarget(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarget {
     const size = renderer.getDrawingBufferSize(this.drawSize);
-    const w = Math.max(1, Math.floor(size.x));
-    const h = Math.max(1, Math.floor(size.y));
-    if (!this.depthRT) {
+    // ADR-516 Phase 2 — size-managed RT SSoT (shared with selection outline + DXF backdrop).
+    this.depthRT = ensureSizedRenderTarget(this.depthRT, size.x, size.y, (w, h) => {
       const rt = new THREE.WebGLRenderTarget(w, h);
       rt.depthTexture = new THREE.DepthTexture(w, h);
-      this.depthRT = rt;
-    } else if (this.depthRT.width !== w || this.depthRT.height !== h) {
-      this.depthRT.setSize(w, h);
-    }
+      return rt;
+    });
     return this.depthRT;
   }
 

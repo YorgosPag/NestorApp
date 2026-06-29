@@ -19,12 +19,10 @@ import {
   DEFAULT_PAN_SPEED, DEFAULT_ROTATE_SPEED, DEFAULT_ZOOM_SPEED,
   SPEED_MODIFIER_FAST, SPEED_MODIFIER_PRECISE,
   TUMBLE_BASE_SPEED,
-  ZOOM_SURFACE_MARGIN, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY,
 } from './viewport-constants';
-import { computeSurfaceZoomPose, wheelZoomFactor } from './viewport-zoom-surface';
+import { attachSurfaceWheelZoom } from './viewport-camera-wheel-zoom';
 import { getPixelWorldSize } from './coordinate-transforms';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
-import { DXF_TIMING } from '../../config/dxf-timing';
 
 export interface ViewportCameraOptions {
   readonly initialPosition: THREE.Vector3;
@@ -52,13 +50,6 @@ export interface ViewportCameraOptions {
 
 const _snapDir = new THREE.Vector3();
 const _direction = new THREE.Vector3();
-
-/**
- * ADR-452 v2.7 — how long after the last wheel tick we keep "interacting" true.
- * Wheel events arrive in bursts ~50–120 ms apart; this debounce keeps the cheap
- * navigation path alive across the whole zoom gesture, then lets it settle.
- */
-const WHEEL_INTERACTION_IDLE_MS = DXF_TIMING.gesture.WHEEL_IDLE; // ADR-516
 
 export function createViewportCamera(
   domElement: HTMLElement,
@@ -99,54 +90,6 @@ export function createViewportCamera(
   controls.addEventListener('start', onInteractionStart);
   controls.addEventListener('end', onInteractionEnd);
 
-  /**
-   * ADR-363 Φ1G.5 / §empty-dxf — Revit surface-anchored wheel zoom. Runs in the CAPTURE phase so it
-   * pre-empts OrbitControls' own (bubble-phase) wheel listener: `resolveSurfacePoint` resolves an
-   * anchor under the cursor — BIM surface, DXF ground-plane, or camera-facing plane through the orbit
-   * target — and we dolly the camera ourselves (step ∝ distance-to-anchor, clamped → never crosses a
-   * real face; on a plane it bottoms out at the same min distance) then `stopImmediatePropagation` so
-   * OrbitControls does NOT also dolly. So empty canvas + DXF underlay + BIM all feel IDENTICAL. The
-   * OrbitControls fallback now only runs in ortho / disabled nav / a degenerate null (no canvas size).
-   */
-  function onSurfaceWheel(e: WheelEvent): void {
-    // ADR-452 v2.7 — flag interaction on EVERY wheel tick (before any early return,
-    // so it also covers the ortho / OrbitControls-fallback dolly). Wheel-zoom marks
-    // the scene dirty via `onRenderNeeded` but never fires OrbitControls 'start'/'end',
-    // so without this the IdleDetector keeps SSAO active AND the section caps stay
-    // full-quality on every zoom frame → heavy frames (the observed RAF jank). The
-    // debounced end lets both refine once the wheel goes quiet.
-    pulseWheelInteraction();
-    if (currentMode !== 'perspective' || !controls.enabled || !controls.enableZoom) return;
-    const hit = options.resolveSurfacePoint?.(e.clientX, e.clientY);
-    if (!hit) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    animation.cancel();
-    const factor = wheelZoomFactor(e.deltaY, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY, controls.zoomSpeed);
-    // Revit zoom-to-cursor: dolly along cam→hit AND slide the target by the same
-    // delta → view direction unchanged (no lookAt re-aim → no jump), while the point
-    // under the cursor stays anchored. Snapping target = hit would swing the view.
-    const pose = computeSurfaceZoomPose(
-      activeCamera.position, controls.target, hit, factor, ZOOM_SURFACE_MARGIN, PERSP_MAX_DISTANCE,
-    );
-    activeCamera.position.copy(pose.position);
-    controls.target.copy(pose.target);
-    controls.update();           // resync OrbitControls' spherical from the new pose
-    onRenderNeeded();
-  }
-  domElement.addEventListener('wheel', onSurfaceWheel, { capture: true, passive: false });
-
-  // ADR-452 v2.7 — debounced "interacting" pulse for wheel-zoom (see onSurfaceWheel).
-  let wheelIdleTimer: ReturnType<typeof setTimeout> | null = null;
-  function pulseWheelInteraction(): void {
-    onInteractionStart();
-    if (wheelIdleTimer !== null) clearTimeout(wheelIdleTimer);
-    wheelIdleTimer = setTimeout(() => {
-      wheelIdleTimer = null;
-      onInteractionEnd();
-    }, WHEEL_INTERACTION_IDLE_MS);
-  }
-
   const tumble = createTumbleRotation({
     getCamera: () => activeCamera,
     getTarget: () => controls.target,
@@ -160,6 +103,16 @@ export function createViewportCamera(
 
   const animation = createViewportAnimation();
   const rm = () => options.getReducedMotion?.() ?? false;
+
+  // ADR-363 Φ1G.5 — Revit surface-anchored wheel zoom (capture-phase; pre-empts OrbitControls).
+  const surfaceWheelZoom = attachSurfaceWheelZoom({
+    domElement, controls,
+    getActiveCamera: () => activeCamera,
+    getMode: () => currentMode,
+    resolveSurfacePoint: options.resolveSurfacePoint,
+    cancelAnimation: () => animation.cancel(),
+    onRenderNeeded, onInteractionStart, onInteractionEnd,
+  });
 
   function getZoom(): number {
     if (activeCamera instanceof THREE.OrthographicCamera) return activeCamera.zoom;
@@ -237,11 +190,7 @@ export function createViewportCamera(
       const finalPos = target.clone().addScaledVector(_direction, dist);
       perspCamera.position.copy(orthoCamera.position);
       perspCamera.lookAt(target);
-      activeCamera = perspCamera;
-      swapControlsCamera(perspCamera);
-      tumble.setEnabled(true);
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-      currentMode = mode;
+      applyProjectionModeFlags('perspective'); // SSoT flags (active cam + controls + currentMode)
       animation.start(
         { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
         { position: finalPos, target, zoom: getZoom() },
@@ -283,6 +232,59 @@ export function createViewportCamera(
       controls.enabled = false;
       currentMode = mode;
     }
+    onRenderNeeded();
+  }
+
+  /**
+   * SSoT for the projection-mode bookkeeping (active camera + control flags + ortho up vector +
+   * `currentMode`). Pure flag-setting — NO camera position/animation. Shared by the animated
+   * `setProjection` (perspective branch) and the instant `applyProjectionInstant`, so the «what a
+   * projection mode means for the controls» rule lives in ONE place.
+   */
+  function applyProjectionModeFlags(mode: ProjectionMode): void {
+    if (mode === 'perspective') {
+      activeCamera = perspCamera;
+      swapControlsCamera(perspCamera);
+      tumble.setEnabled(true);
+      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    } else {
+      const up = ORTHO_CAMERA_UP[mode];
+      if (up) orthoCamera.up.set(up[0], up[1], up[2]);
+      activeCamera = orthoCamera;
+      swapControlsCamera(orthoCamera);
+      tumble.setEnabled(false);
+      controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    }
+    currentMode = mode;
+  }
+
+  function applyProjectionInstant(mode: ProjectionMode): void {
+    if (mode === currentMode) return;
+    applyProjectionModeFlags(mode);
+  }
+
+  /**
+   * ADR-400 §3D — apply an ABSOLUTE pose instantly (restore a persisted 3D view).
+   * Cancels any running tween, switches projection if needed, then sets position +
+   * orbit target. Ortho zoom is applied explicitly; perspective zoom is implicit in the
+   * camera→target distance. `controls.update()` re-syncs the spherical + clamps to limits.
+   */
+  function setPose(
+    position: THREE.Vector3,
+    target: THREE.Vector3,
+    zoom: number,
+    projection: ProjectionMode,
+  ): void {
+    animation.cancel();
+    applyProjectionInstant(projection);
+    activeCamera.position.copy(position);
+    controls.target.copy(target);
+    if (activeCamera instanceof THREE.OrthographicCamera) {
+      activeCamera.zoom = Math.max(zoom, 0.001);
+      updateOrthoFrustum(domElement.clientWidth, domElement.clientHeight);
+    }
+    activeCamera.lookAt(target);
+    controls.update();
     onRenderNeeded();
   }
 
@@ -472,8 +474,7 @@ export function createViewportCamera(
     controls.removeEventListener('change', onRenderNeeded);
     controls.removeEventListener('start', onInteractionStart);
     controls.removeEventListener('end', onInteractionEnd);
-    domElement.removeEventListener('wheel', onSurfaceWheel, { capture: true });
-    if (wheelIdleTimer !== null) { clearTimeout(wheelIdleTimer); wheelIdleTimer = null; }
+    surfaceWheelZoom.dispose();
     animation.dispose();
     tumble.dispose();
     controls.dispose();
@@ -484,7 +485,7 @@ export function createViewportCamera(
     get target() { return controls.target; },
     get projectionMode() { return currentMode; },
     get isAnimating() { return animation.isAnimating; },
-    setProjection, getZoom, setZoom, setZoomPreset,
+    setProjection, setPose, getZoom, setZoom, setZoomPreset,
     updateAspect, update, dispose,
     frameBounds, cancelAnimation, setSpeedModifier,
     snapToViewDirection, rollView, goHome,

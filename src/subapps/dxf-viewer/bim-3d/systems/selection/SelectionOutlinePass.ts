@@ -23,6 +23,7 @@
 
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { ensureSizedRenderTarget } from '../../scene/sized-render-target';
 import { BIM_SELECTION_OUTLINE_COLOR_THREE, BIM_HOVER_OUTLINE_COLOR_THREE } from './selection-outline-tokens';
 
 /** Selection outline width in device pixels (exact, resolution-independent). */
@@ -202,11 +203,8 @@ export class SelectionOutlinePass {
   }
 
   private _ensureMaskTarget(w: number, h: number): THREE.WebGLRenderTarget {
-    if (!this._maskRT) {
-      this._maskRT = new THREE.WebGLRenderTarget(w, h);
-    } else if (this._maskRT.width !== w || this._maskRT.height !== h) {
-      this._maskRT.setSize(w, h);
-    }
+    // ADR-516 Phase 2 — size-managed RT SSoT (shared with grip occluder + DXF backdrop).
+    this._maskRT = ensureSizedRenderTarget(this._maskRT, w, h, (cw, ch) => new THREE.WebGLRenderTarget(cw, ch));
     return this._maskRT;
   }
 

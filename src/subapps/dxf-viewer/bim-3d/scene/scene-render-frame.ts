@@ -18,8 +18,13 @@ import type { IdleDetector } from '../lighting/idle-detector';
 import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { SectionSceneController } from './section-scene-controller';
+import type { DxfBackdropCache } from './dxf-backdrop-cache';
 
 export interface RenderFrameContext {
+  readonly renderer: THREE.WebGLRenderer;
+  readonly scene: THREE.Scene;
+  /** ADR-516 Phase 2 — frozen DXF backdrop (entity-drag 1:1 follow); inert until armed. */
+  readonly dxfBackdrop: DxfBackdropCache;
   readonly viewport: ViewportCamera;
   readonly viewCube: ViewCubeEngine;
   readonly animationManager: AnimationManager;
@@ -64,7 +69,12 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   if (!interacting && !viewport.isAnimating) {
     detectSnapCandidate(viewport.camera.position, viewport.target);
   }
-  if (pathTracerRenderer.isActive) {
+  if (ctx.dxfBackdrop.isActive()) {
+    // ADR-516 Phase 2 — frozen DXF backdrop: blit the cached static underlay + render only the live
+    // BIM and gizmo on top, so the thousands of underlay lines are NOT re-drawn each drag frame
+    // (GPU back-pressure root). Camera is fixed during an entity drag → the cache stays valid.
+    ctx.dxfBackdrop.renderFrame(ctx.renderer, ctx.scene, viewport.camera);
+  } else if (pathTracerRenderer.isActive) {
     if (viewport.isAnimating) {
       pathTracerRenderer.cancel();
       useViewMode3DStore.getState().enterRasterMode();

@@ -39,6 +39,18 @@ export interface ViewportCamera {
   readonly target: THREE.Vector3;
   readonly projectionMode: ProjectionMode;
   readonly setProjection: (mode: ProjectionMode) => void;
+  /**
+   * ADR-400 §3D — apply an ABSOLUTE camera pose INSTANTLY (no animation), used to
+   * restore a persisted 3D view on mount. Switches projection if needed, then sets
+   * position + orbit target (+ ortho zoom). Perspective zoom is implicit in the
+   * camera→target distance, so `zoom` is only consumed for orthographic projections.
+   */
+  readonly setPose: (
+    position: THREE.Vector3,
+    target: THREE.Vector3,
+    zoom: number,
+    projection: ProjectionMode,
+  ) => void;
   readonly getZoom: () => number;
   readonly setZoom: (zoom: number) => void;
   readonly setZoomPreset: (presetIndex: number) => void;

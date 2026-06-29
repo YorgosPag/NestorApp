@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
+import { DxfBackdropCache } from './dxf-backdrop-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
@@ -26,7 +27,7 @@ import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { type FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
-import type { CanonicalViewId } from '../viewport/viewport-types';
+import type { CanonicalViewId, ProjectionMode } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager'; import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
@@ -89,6 +90,7 @@ export class ThreeJsSceneManager {
   private readonly focusOutlineRenderer: FocusOutlineRenderer;
   private readonly focusUnsub: () => void;
   private readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
+  private readonly dxfBackdrop: DxfBackdropCache; // ADR-516 Phase 2 — frozen DXF backdrop (armed on entity drag).
   // ADR-040 Phase XXIII — render-frame ctx cached once; `_sceneDirty` set by mutators, cleared per tick.
   private readonly frameContext: RenderFrameContext;
   private _sceneDirty = true;
@@ -99,6 +101,9 @@ export class ThreeJsSceneManager {
   private initialCameraFitDone = false;
   /** Phase 4.3: mutable callback for ViewCube right-click context menu. */
   private viewCubeContextMenuCb: ((x: number, y: number) => void) | null = null;
+  /** ADR-400 §3D — fired on every camera interaction-end (orbit/pan/wheel-idle/tumble) so the
+   *  owner can debounce-persist the view. Set via {@link setCameraSettledCallback}. */
+  private cameraSettledCb: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.renderer = createBimRenderer(container);
@@ -114,7 +119,7 @@ export class ThreeJsSceneManager {
       initialPosition: INITIAL_CAMERA_POSITION,
       initialTarget: INITIAL_CAMERA_TARGET,
       onInteractionStart: () => { this.isInteracting = true; this.poi.onNavigationActive(); this.markSceneDirty(); },
-      onInteractionEnd: () => { this.isInteracting = false; this.markSceneDirty(); }, // ADR-040 XXIII: keeps dirty for damping inertia
+      onInteractionEnd: () => { this.isInteracting = false; this.cameraSettledCb?.(); this.markSceneDirty(); }, // ADR-040 XXIII: keeps dirty for damping inertia; ADR-400 §3D: persist camera on settle
       onRenderNeeded: () => this.markSceneDirty(),
       getReducedMotionOverride: () => this.reducedMotionOverride,
       onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // ADR-366 §A.6.Q5
@@ -181,8 +186,11 @@ export class ThreeJsSceneManager {
     });
     // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
     this.waypointDragHandleRenderer = new WaypointDragHandleRenderer(this.scene);
+    // ADR-516 Phase 2 — frozen DXF backdrop. Gated OFF while section-cut / path-trace own the frame.
+    this.dxfBackdrop = new DxfBackdropCache({ isSectionActive: () => this.sectionController.isStencilActive(), isPathTracerActive: () => this.pathTracerRenderer.isActive });
     // ADR-040 Phase XXIII — cache render-frame context once. Scheduler drives tick().
     this.frameContext = {
+      renderer: this.renderer, scene: this.scene, dxfBackdrop: this.dxfBackdrop,
       viewport: this.viewport, viewCube: this.viewCube,
       animationManager: this.animationManager, focusOutlineRenderer: this.focusOutlineRenderer,
       idleDetector: this.idleDetector, ssaoModulator: this.ssaoModulator,
@@ -201,13 +209,8 @@ export class ThreeJsSceneManager {
   /** ADR-366 A.6.Q4 selection-aware F — bounds math in `scene-framing-bounds.ts`. */
   frameSelectionOrFitExtents(): void {
     if (this.disposed) return;
-    const bounds = computeFramingTargetBounds(
-      this.bimLayer.group,
-      this.dxfConverter.getBounds(),
-      useSelection3DStore.getState().selectedBimIds,
-    );
-    if (!bounds || bounds.isEmpty()) return;
-    this.viewport.frameBounds(bounds.min, bounds.max);
+    const bounds = computeFramingTargetBounds(this.bimLayer.group, this.dxfConverter.getBounds(), useSelection3DStore.getState().selectedBimIds);
+    if (bounds && !bounds.isEmpty()) this.viewport.frameBounds(bounds.min, bounds.max);
   }
 
   /** ADR-366 §C.1.b — combined BIM + DXF bounds για animation actions (turntable). */
@@ -221,9 +224,7 @@ export class ThreeJsSceneManager {
   getEntityFocusOrder(): readonly string[] { return this.disposed ? [] : computeFocusOrder(this.bimLayer.group, this.viewport.camera); }
 
   /** A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
-  cycleKeyboardFocus(direction: 'next' | 'prev'): void {
-    if (!this.disposed) a11yCycleFocus(this.bimLayer.group, this.viewport.camera, this.keyboardFocusManager, direction);
-  }
+  cycleKeyboardFocus(direction: 'next' | 'prev'): void { if (!this.disposed) a11yCycleFocus(this.bimLayer.group, this.viewport.camera, this.keyboardFocusManager, direction); }
 
   /** A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
   selectFocusedEntity(): void { if (!this.disposed) a11ySelectFocused(this.keyboardFocusManager, (id) => this.selectBimEntity(id)); }
@@ -246,9 +247,7 @@ export class ThreeJsSceneManager {
   getWaypointHandlesRoot(): THREE.Group | null { return wpHandlesRoot(this.disposed, this.waypointDragHandleRenderer); }
   setWaypointHoverState(role: 'position' | 'target' | null): void { wpHoverState(this.disposed, this.waypointDragHandleRenderer, role, () => this.markSceneDirty()); }
   setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void { wpAxisLock(this.disposed, this.waypointDragHandleRenderer, axis, () => this.markSceneDirty()); }
-  pickWaypointAxisArrow(
-    domElement: HTMLElement, camera: import('three').Camera, clientX: number, clientY: number,
-  ): 'X' | 'Y' | 'Z' | null {
+  pickWaypointAxisArrow(domElement: HTMLElement, camera: import('three').Camera, clientX: number, clientY: number): 'X' | 'Y' | 'Z' | null {
     return wpPickAxisArrow(this.disposed, this.waypointDragHandleRenderer, domElement, camera, clientX, clientY);
   }
 
@@ -296,7 +295,8 @@ export class ThreeJsSceneManager {
    * setInteracting(true) at begin, (false) at end (→ one final crisp SSAO frame at rest).
    */
   setInteracting(active: boolean): void {
-    if (!this.disposed) { this.isInteracting = active; this.markSceneDirty(); }
+    // ADR-516 Phase 2 — an entity drag (camera fixed) arms the frozen DXF backdrop; release disarms it.
+    if (!this.disposed) { this.isInteracting = active; if (active) this.dxfBackdrop.arm(); else this.dxfBackdrop.disarm(); this.markSceneDirty(); }
   }
 
   /** ADR-366 §B.5 — capture the frame as a data-URL (HUD screenshot): force ONE sync render + read
@@ -361,10 +361,10 @@ export class ThreeJsSceneManager {
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void { if (!this.disposed) applyBuildingVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty()); }
 
-  syncDxfOverlay(dxfScene: DxfScene | null): void { if (!this.disposed) runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty()); }
+  syncDxfOverlay(dxfScene: DxfScene | null): void { if (!this.disposed) { runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty()); this.dxfBackdrop.invalidate(); } }
 
   /** ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). */
-  syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void { if (!this.disposed) runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty()); }
+  syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void { if (!this.disposed) { runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty()); this.dxfBackdrop.invalidate(); } }
 
   /** Shared DXF overlay deps (converter + path-tracer + section + viewport). */
   private dxfOverlayDeps(): SyncDxfOverlayDeps {
@@ -384,22 +384,16 @@ export class ThreeJsSceneManager {
     if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, mode); }
   }
 
-  raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
-    return this.disposed ? null : raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
-  }
+  raycastBimEntities(clientX: number, clientY: number): RaycastHit | null { return this.disposed ? null : raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY); }
 
   /** ADR-539 — face-level pick (Polygon Mode): RaycastHit carrying the `faceKey`. */
-  raycastBimFace(clientX: number, clientY: number): RaycastHit | null {
-    return this.disposed ? null : raycastBimFace(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
-  }
+  raycastBimFace(clientX: number, clientY: number): RaycastHit | null { return this.disposed ? null : raycastBimFace(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY); }
 
   /** ADR-539 Φ4b — highlight (or clear) ΟΛΕΣ τις επιλεγμένες όψεις (multi-face Polygon Mode). */
   setSelectedFaces(faces: readonly { bimId: string; faceKey: string }[]): void { if (!this.disposed) { this.faceHighlighter.setTargets(faces); this.markSceneDirty(); } }
 
   /** ADR-539 — highlight (or clear) one face (context-menu / drag-drop / Φ4a· delegates to Φ4b). */
-  setSelectedFace(bimId: string | null, faceKey: string | null): void {
-    this.setSelectedFaces(bimId && faceKey ? [{ bimId, faceKey }] : []);
-  }
+  setSelectedFace(bimId: string | null, faceKey: string | null): void { this.setSelectedFaces(bimId && faceKey ? [{ bimId, faceKey }] : []); }
 
   /** ADR-539 Φ2 — yellow hover preview on the face under the cursor / drag (Polygon Mode). */
   setHoveredFace(bimId: string | null, faceKey: string | null): void { if (!this.disposed) { this.faceHoverHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); } }
@@ -428,21 +422,29 @@ export class ThreeJsSceneManager {
     );
   }
 
-  updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
-    if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); }
+  updateSunPosition(azimuthDeg: number, elevationDeg: number): void { if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); } }
+
+  /**
+   * ADR-400 §3D — restore a persisted 3D camera view instantly AND latch the initial-fit
+   * flag so the subsequent `syncDxfOverlay` auto-framing does NOT animate the restored pose
+   * away (the framing only fires while `initialCameraFitDone` is false). No-op when disposed.
+   */
+  restoreCameraView(position: THREE.Vector3, target: THREE.Vector3, zoom: number, projection: ProjectionMode): void {
+    if (this.disposed) return;
+    this.viewport.setPose(position, target, zoom, projection);
+    this.initialCameraFitDone = true; // suppress the one-shot Zoom-Extents framing
+    this.markSceneDirty();
   }
 
+  /** ADR-400 §3D — register a callback fired when the camera settles (debounced persist owner). */
+  setCameraSettledCallback(cb: (() => void) | null): void { this.cameraSettledCb = cb; }
+
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
-  initSectionBox(): void {
-    if (!this.disposed) { this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty(); }
-  }
+  initSectionBox(): void { if (!this.disposed) { this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty(); } }
 
   async loadHdriEnvironment(url: string): Promise<void> { if (!this.disposed) await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty()); }
 
-  applyLightPreset(preset: LightPreset): void {
-    if (this.disposed) return;
-    applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty();
-  }
+  applyLightPreset(preset: LightPreset): void { if (!this.disposed) { applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); } }
 
   getRendererCanvas(): HTMLCanvasElement { return this.renderer.domElement; }
 
@@ -458,10 +460,10 @@ export class ThreeJsSceneManager {
 
   cancelFinalRender(): void { if (!this.disposed) this.pathTracerRenderer.cancelFinal(); }
 
-  resize(width: number, height: number): void { if (!this.disposed) applyViewportResize(this.resizeDeps(), width, height); }
+  resize(width: number, height: number): void { if (!this.disposed) { applyViewportResize(this.resizeDeps(), width, height); this.dxfBackdrop.invalidate(); } }
 
   /** ADR-549 Phase 7 / ADR-556 — re-apply dpr after a `devicePixelRatio` CHANGE (logic in scene-manager-resize). */
-  syncDevicePixelRatio(): void { if (!this.disposed) applyDevicePixelRatioSync(this.resizeDeps()); }
+  syncDevicePixelRatio(): void { if (!this.disposed) { applyDevicePixelRatioSync(this.resizeDeps()); this.dxfBackdrop.invalidate(); } }
 
   /** Shared renderer-sizing deps for the resize helpers (scene-manager-resize). */
   private resizeDeps(): SceneResizeDeps {
@@ -472,7 +474,7 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); // ADR-539 — release face overlays.
+    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); // ADR-539 + ADR-516 Phase 2 — release face overlays + backdrop cache.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({
