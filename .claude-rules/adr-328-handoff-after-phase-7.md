@@ -51,7 +51,7 @@ Per §7.11 validation checklist:
 - [ ] Search «12500» → matches by price; «Q-2026» → by quote number; «boiler» → free text — **needs manual QA**
 - [ ] No matches → empty state with suggestions — **needs manual QA** (type nonexistent vendor name)
 - [ ] Refresh preserves sort + search — **needs manual QA** (F5 after setting sort+search)
-- [ ] TypeScript: no new errors — **not yet run; tsc --noEmit recommended**
+- [ ] TypeScript: ΟΧΙ έλεγχος από πράκτορα (N.17 — ο Giorgio ελέγχει περιοδικά + pre-commit hook)
 - [ ] Pre-commit hook (i18n ratchet, ssot ratchet, file size) — runs on commit; expected pass
 
 ## Files modified / created

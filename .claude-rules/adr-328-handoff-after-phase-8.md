@@ -65,7 +65,7 @@ Per §7.12 validation checklist:
 - [ ] Award non-cheapest → reason modal first, then optimistic + Undo — **needs manual QA**
 - [ ] Header banner appears with «Δημιουργία Εντολής Αγοράς» CTA — **needs manual QA**
 - [ ] Concurrent test: simulate stale write → ConflictDialog from Phase 5 fires — **needs manual QA**
-- [ ] TypeScript: no new errors — **not yet run; tsc --noEmit recommended**
+- [ ] TypeScript: ΟΧΙ έλεγχος από πράκτορα (N.17 — ο Giorgio ελέγχει περιοδικά + pre-commit hook)
 
 ## Files modified / created
 

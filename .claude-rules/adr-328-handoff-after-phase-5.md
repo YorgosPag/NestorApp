@@ -65,7 +65,7 @@ Per §7.9 validation checklist:
 - [ ] Two browsers open same RFQ → change in one reflects in other within 1s — **needs manual QA**
 - [ ] Conflict scenario: simulate stale write → ConflictDialog appears — **needs Phase 8 award flow to be wired (current state: primitives exist, no caller)**
 - [ ] Live-change toast appears for remote changes, NOT for self changes — **needs manual QA**
-- [ ] TypeScript: no new errors — **not yet run; tsc --noEmit recommended in next session**
+- [ ] TypeScript: ΟΧΙ έλεγχος από πράκτορα (N.17 — ο Giorgio ελέγχει περιοδικά + pre-commit hook)
 - [ ] Pre-commit hook (i18n ratchet, ssot ratchet, file size) — **runs on commit; expected pass**
 
 ## Files modified / created

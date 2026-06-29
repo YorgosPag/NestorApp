@@ -83,7 +83,7 @@ Per §7.13 validation checklist:
 - [ ] Scan with only name fuzzy match → modal asks user — **needs integration wiring**
 - [ ] Scan with PO → blocked with explanatory modal — **QuoteRevisionDetectedDialog blocks hasPO = true**
 - [ ] Older versions hidden by default; expandable via chevron — **implemented, needs manual QA**
-- [ ] TypeScript: no new errors — **not yet run; tsc --noEmit recommended**
+- [ ] TypeScript: ΟΧΙ έλεγχος από πράκτορα (N.17 — ο Giorgio ελέγχει περιοδικά + pre-commit hook)
 
 ## Files modified / created
 

@@ -55,7 +55,7 @@ Per §7.10 validation checklist:
 - [ ] Tab «Προσφορές» shows red badge with count when any `under_review` — **needs manual QA**
 - [ ] Tab «Σύγκριση» shows yellow dot when recommendation pending — **needs manual QA**
 - [ ] Tab «Ρύθμιση» shows yellow badge when invites need attention — **needs manual QA**
-- [ ] TypeScript: no new errors — **not yet run; tsc --noEmit recommended**
+- [ ] TypeScript: ΟΧΙ έλεγχος από πράκτορα (N.17 — ο Giorgio ελέγχει περιοδικά + pre-commit hook)
 - [ ] Pre-commit hook (i18n ratchet, ssot ratchet, file size) — runs on commit; expected pass
 
 ## Files modified / created
