@@ -939,14 +939,23 @@ export const isThermalSpaceEntity = (entity: Entity): entity is ThermalSpaceEnti
 export const isSpaceSeparatorEntity = (entity: Entity): entity is SpaceSeparatorEntity =>
   entity.type === 'space-separator';
 
+/**
+ * SSoT list of BIM parametric entity `type` discriminators (ADR-363/406/407/408/410/415/
+ * 417/419/422/437). Operates on the raw `type` string so callers that hold only a type
+ * (e.g. the 2D `DxfEntity` in `QuickPropertiesHoverPopover`, not the scene `Entity`) can
+ * reuse the SAME list instead of re-hardcoding it. `isBimEntity` delegates here.
+ */
+export const isBimEntityType = (type: string): boolean =>
+  type === 'wall' || type === 'opening' || type === 'slab' ||
+  type === 'slab-opening' || type === 'column' || type === 'beam' ||
+  type === 'foundation' ||
+  type === 'mep-fixture' || type === 'electrical-panel' || type === 'mep-manifold' || type === 'mep-radiator' || type === 'mep-boiler' || type === 'mep-water-heater' || type === 'mep-underfloor' || type === 'railing' ||
+  type === 'furniture' || type === 'mep-segment' || type === 'mep-fitting' ||
+  type === 'floorplan-symbol' || type === 'roof' || type === 'floor-finish' || type === 'wall-covering' || type === 'thermal-space' || type === 'space-separator';
+
 /** True for any ADR-363/406/407/408/410/415/417/419/422/437 BIM parametric entity */
 export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | WallCoveringEntity | ThermalSpaceEntity | SpaceSeparatorEntity =>
-  entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
-  entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
-  entity.type === 'foundation' ||
-  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'mep-radiator' || entity.type === 'mep-boiler' || entity.type === 'mep-water-heater' || entity.type === 'mep-underfloor' || entity.type === 'railing' ||
-  entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
-  entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish' || entity.type === 'wall-covering' || entity.type === 'thermal-space' || entity.type === 'space-separator';
+  isBimEntityType(entity.type);
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

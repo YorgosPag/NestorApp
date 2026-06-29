@@ -120,7 +120,10 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     // handle) via the shared axis-box SSoT — IDENTICAL code to beam + foundation strip.
     // The far-thickness face respects `flip` through `widthFaceSign` inside the SSoT,
     // so there is zero wall-only sign logic here («παντού ίδιος κώδικας, μηδέν διπλότυπα»).
-    const grips: GripInfo[] = getAxisBoxGrips(axisParams, { extraMidEdges: true }).map((g, i) => ({
+    // `rotationPlacement: 'axis-quarter'` (Giorgio 2026-06-30) → the rotation handle sits on
+    // the centreline at ¼ axis length toward the east end, so it no longer overlaps the
+    // long-side edge midpoint grip.
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams, { extraMidEdges: true, rotationPlacement: 'axis-quarter' }).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,

@@ -101,6 +101,38 @@ describe('getAxisBoxGrips', () => {
     expect(byRole['width-edge']).toEqual({ x: 50, y: -10 }); // flipped to −perp
     expect(byRole['width-edge-far']).toEqual({ x: 50, y: 10 }); // far face is now +perp
   });
+
+  // ADR-363 (Giorgio 2026-06-30) — wall rotation handle on the centreline at ¼ axis
+  // length toward the EAST end (no longer overlapping the long-side edge midpoint).
+  describe("rotationPlacement: 'axis-quarter'", () => {
+    const rotationOf = (p: AxisBoxParams) =>
+      getAxisBoxGrips(p, { rotationPlacement: 'axis-quarter' }).find((g) => g.role === 'rotation')!.position;
+
+    it('places rotation on the centreline at ¼-length toward the east end (E→W axis)', () => {
+      // centre (50,0), halfWidth 50 → +X end is east (x=100); ¼ length = +25 → (75,0).
+      expect(rotationOf(horizontalBox())).toEqual({ x: 75, y: 0 });
+    });
+
+    it('still resolves to the east end when the axis is drawn west→east reversed', () => {
+      // (100,0)→(0,0): −X end is east → axial sign flips, lands at the SAME world point.
+      const pos = rotationOf({ start: { x: 100, y: 0 }, end: { x: 0, y: 0 }, width: 20, sceneUnits: 'mm' });
+      expect(pos.x).toBeCloseTo(75);
+      expect(pos.y).toBeCloseTo(0);
+    });
+
+    it('tie-breaks toward north for a vertical axis (no east/west bias)', () => {
+      // (0,0)→(0,100): centre (0,50), ¼ length toward north → (0,75), on the centreline.
+      const pos = rotationOf({ start: { x: 0, y: 0 }, end: { x: 0, y: 100 }, width: 20, sceneUnits: 'mm' });
+      expect(pos.x).toBeCloseTo(0);
+      expect(pos.y).toBeCloseTo(75);
+    });
+
+    it('keeps the standard 9-grip layout when combined with extraMidEdges (wall call site)', () => {
+      const grips = getAxisBoxGrips(horizontalBox(), { extraMidEdges: true, rotationPlacement: 'axis-quarter' });
+      expect(grips).toHaveLength(9);
+      expect(grips.find((g) => g.role === 'rotation')!.position).toEqual({ x: 75, y: 0 });
+    });
+  });
 });
 
 describe('applyAxisBoxGripDrag', () => {

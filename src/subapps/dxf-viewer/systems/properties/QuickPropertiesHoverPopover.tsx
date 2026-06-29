@@ -18,6 +18,7 @@ import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { QuickPropertiesStore } from './QuickPropertiesStore';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { isBimEntityType } from '../../types/entities';
 import type { DxfScene, DxfEntity, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
 import styles from './QuickPropertiesHoverPopover.module.css';
 
@@ -53,6 +54,11 @@ export function QuickPropertiesHoverPopover({ dxfScene, activeTool }: Props) {
 
   const entity = dxfScene.entities.find(e => e.id === entityId);
   if (!entity) return null;
+
+  // BIM entities (wall/column/beam/slab/…) do NOT show this floating card — their info
+  // reads in the status bar instead (StatusBarBimHoverLeaf, Giorgio 2026-06-30). Plain
+  // DXF geometry (line/circle/…) keeps the popover. Reuses the `.type`-based BIM SSoT.
+  if (isBimEntityType(entity.type)) return null;
 
   const layerId = entity.layerId;
   const layer = layerId != null ? dxfScene.layersById?.[layerId] : undefined;

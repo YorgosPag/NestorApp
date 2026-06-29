@@ -84,11 +84,18 @@ export function effectiveTextWidth(text: DxfText): number {
 export { naturalTextWidth };
 
 /**
- * Reconstruct the 9-point justification from the renderer's style fields. The 2D
- * renderer maps `attachment` → `textAlign`/`textBaseline`; we invert that mapping.
- * Defaults to `TL` (the renderer's default baseline = 'top', align = 'left').
+ * Resolve the 9-point justification of a text. Sources, in priority order:
+ *   1. `textNode.attachment` — the canonical 9-point code carried by the SCENE
+ *      entity (TextEntity/MTextEntity, MTEXT group 71). This is what the live ghost
+ *      + commit see, so the dragged box matches the rendered glyphs.
+ *   2. `textStyle.textAlign/textBaseline` — the renderer's derived style fields on
+ *      the flat `DxfText` (render + interaction-grip path). We invert that mapping.
+ *   3. Default `TL` (the renderer's default baseline = 'top', align = 'left').
  */
-function justificationOf(style: DxfTextStyle | undefined): TextJustification {
+function justificationOf(text: DxfText): TextJustification {
+  const att = (text as { textNode?: { attachment?: TextJustification } }).textNode?.attachment;
+  if (att) return att;
+  const style: DxfTextStyle | undefined = text.textStyle;
   const col = style?.textAlign === 'center' ? 'C' : style?.textAlign === 'right' ? 'R' : 'L';
   const row = style?.textBaseline === 'middle' ? 'M' : style?.textBaseline === 'bottom' ? 'B' : 'T';
   return `${row}${col}` as TextJustification;
@@ -112,7 +119,7 @@ export function resolveTextBox(text: DxfText): RectFrame {
   const w = effectiveTextWidth(text);
   const h = resolveBoxHeight(text);
   const rotationDeg = text.rotation ?? 0;
-  const rel = rotateVector(localCenterOffset(justificationOf(text.textStyle), w, h), rotationDeg);
+  const rel = rotateVector(localCenterOffset(justificationOf(text), w, h), rotationDeg);
   return {
     center: { x: text.position.x + rel.x, y: text.position.y + rel.y },
     rotationDeg,
@@ -128,7 +135,7 @@ export function resolveTextBox(text: DxfText): RectFrame {
  */
 export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
   const rel = rotateVector(
-    localCenterOffset(justificationOf(text.textStyle), frame.halfWidth * 2, frame.halfLength * 2),
+    localCenterOffset(justificationOf(text), frame.halfWidth * 2, frame.halfLength * 2),
     frame.rotationDeg,
   );
   return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };

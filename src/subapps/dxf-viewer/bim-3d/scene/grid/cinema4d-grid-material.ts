@@ -9,8 +9,9 @@
  *   • camera tilt → far fragments have a larger derivative → they auto-coarsen toward the horizon,
  *     so the ground never turns into a solid moiré sheet.
  * Two line classes only: MINOR every decade cell, MAJOR (slightly bolder + darker token colour)
- * every 10th — the C4D "Major Lines Every 10th" model. A distance fog dissolves the bounded plane
- * into the horizon (NOT infinite). Lines are ~1px via the derivative, never thickening with zoom.
+ * every 10th — the C4D "Major Lines Every 10th" model. The grid STOPS at a hard finite square
+ * extent (C4D does NOT distance-fade toward the horizon — the lines just end). Lines are ~1px via
+ * the derivative, never thickening with zoom; major vs minor by colour only (C4D-faithful).
  *
  * Rendered AO-immune via the post-FX `'underlay'` overlay pass (depth-tested → occluded by the
  * building, never tinted by SSAO). `toneMapped:false` + THREE.Color uniforms + the
@@ -25,7 +26,6 @@ import {
   GRID3D_MAJOR_COLOR_FALLBACK,
   GRID3D_AXIS_X_COLOR,
   GRID3D_AXIS_Z_COLOR,
-  GRID3D_HORIZON_COLOR,
   GRID3D_BASE_CELL_M,
   GRID3D_MAJOR_EVERY,
   GRID3D_MIN_CELL_PX,
@@ -52,7 +52,6 @@ uniform vec3 uMinorColor;
 uniform vec3 uMajorColor;
 uniform vec3 uAxisXColor;
 uniform vec3 uAxisZColor;
-uniform vec3 uHorizonColor;
 uniform float uBaseCell;       // decade anchor (m)
 uniform float uMajorEvery;     // major every nth minor (10 → decade)
 uniform float uMinCellPx;      // minimum on-screen px between the finest minor lines (sparse)
@@ -61,8 +60,7 @@ uniform float uMajorLinePx;
 uniform float uAxisLinePx;
 uniform float uMaxOpacity;
 uniform vec3 uTarget;
-uniform float uFadeStart;
-uniform float uFadeEnd;
+uniform float uExtent;         // hard finite half-size (m) around the target — grid STOPS here
 
 // AA coverage of the nearest line of a square grid with the given world cell, ~widthPx wide.
 float lineCoverage(vec2 p, float cell, float widthPx) {
@@ -109,11 +107,12 @@ void main() {
   if (axX > 0.001) { color = mix(color, uAxisXColor, axX); a = max(a, axX); }
   if (axZ > 0.001) { color = mix(color, uAxisZColor, axZ); a = max(a, axZ); }
 
-  // ── Distance fog → horizon (bounded, not infinite) + horizon tint near the dissolving edge ────
-  float dist = length(p - uTarget.xz);
-  float edge = smoothstep(uFadeStart, uFadeEnd, dist);
-  color = mix(color, uHorizonColor, edge * 0.5);
-  a *= (1.0 - edge) * uMaxOpacity;
+  // ── Hard finite extent — C4D STOPS the grid; lines do NOT distance-fade toward the horizon ────
+  // (GetGridStep's `fade` is the LOD-transition crossfade only, never a distance fade.) Square
+  // boundary that tracks the view; a worldPerPx-wide AA keeps the cut edge clean, not jagged.
+  float edgeDist = max(abs(p.x - uTarget.x), abs(p.y - uTarget.z)); // p = world XZ → p.y is world Z
+  float inside = 1.0 - smoothstep(uExtent - worldPerPx * 1.5, uExtent, edgeDist);
+  a *= inside * uMaxOpacity;
 
   if (a < 0.002) discard;
   gl_FragColor = vec4(color, a);
@@ -130,7 +129,6 @@ export interface Cinema4DGridUniforms {
   uMajorColor: { value: THREE.Color };
   uAxisXColor: { value: THREE.Color };
   uAxisZColor: { value: THREE.Color };
-  uHorizonColor: { value: THREE.Color };
   uBaseCell: { value: number };
   uMajorEvery: { value: number };
   uMinCellPx: { value: number };
@@ -139,8 +137,7 @@ export interface Cinema4DGridUniforms {
   uAxisLinePx: { value: number };
   uMaxOpacity: { value: number };
   uTarget: { value: THREE.Vector3 };
-  uFadeStart: { value: number };
-  uFadeEnd: { value: number };
+  uExtent: { value: number };
 }
 
 /** Build the grid ShaderMaterial. Returns the typed `uniforms` reference alongside the material
@@ -151,7 +148,6 @@ export function createCinema4DGridMaterial(): { material: THREE.ShaderMaterial; 
     uMajorColor: { value: new THREE.Color(GRID3D_MAJOR_COLOR_FALLBACK) },
     uAxisXColor: { value: new THREE.Color(GRID3D_AXIS_X_COLOR) },
     uAxisZColor: { value: new THREE.Color(GRID3D_AXIS_Z_COLOR) },
-    uHorizonColor: { value: new THREE.Color(GRID3D_HORIZON_COLOR) },
     uBaseCell: { value: GRID3D_BASE_CELL_M },
     uMajorEvery: { value: GRID3D_MAJOR_EVERY },
     uMinCellPx: { value: GRID3D_MIN_CELL_PX },
@@ -160,8 +156,7 @@ export function createCinema4DGridMaterial(): { material: THREE.ShaderMaterial; 
     uAxisLinePx: { value: GRID3D_AXIS_LINE_PX },
     uMaxOpacity: { value: GRID3D_MAX_OPACITY },
     uTarget: { value: new THREE.Vector3(0, 0, 0) },
-    uFadeStart: { value: 120 },
-    uFadeEnd: { value: 600 },
+    uExtent: { value: 350 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,

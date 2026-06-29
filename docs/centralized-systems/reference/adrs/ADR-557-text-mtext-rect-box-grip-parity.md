@@ -112,7 +112,12 @@
 
 **ΟΧΙ αλλαγή** στη rotation/zoom/scale math του `renderTextContent` (guard αρχείου τηρήθηκε — μόνο anchor/box/hitTest + additive hover frame).
 
-**Tests:** ΝΕΟ `bim/text/__tests__/text-box.test.ts` (9-point grid centre, default=TL, corners pin anchor, 2Δ≡3Δ move-grip===centre, inverse round-trip incl. rotation, AABB). Updated: `text-grips.test.ts` (`text()` helper ρητά BL), `dxf-wireframe-hit-test.test.ts` (νέο attachment-aware bbox). 83 jest GREEN.
+### Drag-response fix (Giorgio: «πιάνω τις λαβές και τις μετακινώ, το κείμενο ΔΕΝ ανταποκρίνεται»)
+Εμπειρικό trace ΟΛΟΥ του pipeline (όχι μεμονωμένα) βρήκε **2 κενά** στο live ghost / commit:
+1. **MTEXT αγνοούνταν στο live ghost.** Ο `applyEntityPreview` λαμβάνει το **scene entity**, του οποίου ο τύπος είναι `'text'` **Ή** `'mtext'`. Το branch έλεγχε μόνο `entity.type === 'text'` → για MTEXT επέστρεφε το ίδιο ref → `transformed === entity` → ο ghost παρακάμπτεται → **καμία ζωντανή απόκριση** (το commit όμως ήδη δεχόταν `'mtext'` → ασυμφωνία). FIX: `entity.type === 'text' || entity.type === 'mtext'` (mirror του commit).
+2. **Το box έχανε το attachment στο drag.** Το scene entity κουβαλά το attachment στο `textNode.attachment` (όχι στο `textStyle`), και το `projectSceneTextToDxf` (commit) δεν το περνούσε → `resolveTextBox` έπεφτε σε TL. FIX: ο `resolveTextBox` διαβάζει `textNode.attachment` πρώτα (scene path), μετά `textStyle` (flat path)· το commit `projectSceneTextToDxf` κουβαλά `textStyle` μέσω του υπάρχοντος `extractFirstRunStyle`. Έτσι το box στο ghost + commit ταυτίζεται με τις λαβές που έπιασε ο χρήστης (TL..BR).
+
+**Tests:** ΝΕΟ `bim/text/__tests__/text-box.test.ts` (9-point grid centre, default=TL, corners pin anchor, 2Δ≡3Δ move-grip===centre, inverse round-trip incl. rotation, AABB, `textNode.attachment`). ΝΕΟ `rendering/ghost/__tests__/apply-entity-preview-text.test.ts` (TEXT+**MTEXT** move/corner ghost regression). Updated: `text-grips.test.ts` (`text()` helper ρητά BL), `dxf-wireframe-hit-test.test.ts` (νέο attachment-aware bbox). 87 jest GREEN.
 
 ---
 
@@ -123,5 +128,6 @@
 ---
 
 ## Changelog
-- **2026-06-30 (Φ-attachment)** — Attachment-aware text-box SSoT. ΝΕΟ `bim/text/text-box.ts` (`resolveTextBox`/`textBoxToPosition`/`textBoxCornersWorld`/`textBoxAABB`) reuse `offsetForJustification` (ADR-344). Ενοποίησε 4 ασύμφωνες box πηγές (grips/3D mesh/hitTest/getEntityBBox) σε ΕΝΑ· νέο 2D hover frame· grip box + 3D mesh + hitTest + cull + 3D outline όλα attachment-aware → λαβές=κείμενο=hover frame, 2Δ≡3Δ. 83 jest GREEN. 🔴 εκκρεμεί browser-verify (BR/TL/MC/rotation) + commit (Giorgio).
+- **2026-06-30 (Φ-attachment, drag-response fix)** — «το κείμενο δεν ανταποκρίνεται στις λαβές»: το live ghost (`applyEntityPreview`) αγνοούσε MTEXT (έλεγχε μόνο `type==='text'`, ενώ το commit δεχόταν `'mtext'`) → καμία ζωντανή απόκριση· + το box έχανε το attachment στο drag (scene entity → `textNode.attachment`, commit δεν το περνούσε). FIX: ghost δέχεται `'text'|'mtext'`· `resolveTextBox` διαβάζει `textNode.attachment` → `textStyle` → TL· commit `projectSceneTextToDxf` κουβαλά `textStyle` (`extractFirstRunStyle`). ΝΕΟ `apply-entity-preview-text.test.ts`. 87 jest GREEN.
+- **2026-06-30 (Φ-attachment)** — Attachment-aware text-box SSoT. ΝΕΟ `bim/text/text-box.ts` (`resolveTextBox`/`textBoxToPosition`/`textBoxCornersWorld`/`textBoxAABB`) reuse `offsetForJustification` (ADR-344). Ενοποίησε 4 ασύμφωνες box πηγές (grips/3D mesh/hitTest/getEntityBBox) σε ΕΝΑ· νέο 2D hover frame· grip box + 3D mesh + hitTest + cull + 3D outline όλα attachment-aware → λαβές=κείμενο=hover frame, 2Δ≡3Δ. 🔴 εκκρεμεί browser-verify (BR/TL/MC/rotation) + commit (Giorgio).
 - **2026-06-30** — Slices 1-5 υλοποιήθηκαν (UNCOMMITTED). Browser-verified: 10 λαβές σωστά τοποθετημένες 2D + 3D (Giorgio). Renumber ADR-551→**557** (collision με census ADR στο shared tree). Εκκρεμεί commit (Giorgio).

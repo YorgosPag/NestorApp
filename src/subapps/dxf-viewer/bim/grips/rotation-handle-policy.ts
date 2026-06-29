@@ -90,3 +90,21 @@ export function rotationHandleMidwayOffset(dimY: number, clearanceMm: number = I
   const bound = Number.isFinite(clearanceMm) ? clearanceMm * ROTATION_HANDLE_INSIDE_SAFETY : Infinity;
   return -Math.min(dimY / 4, bound);
 }
+
+/**
+ * ADR-363 — Local-X (axial) sign that points toward the EAST-most axis end (Giorgio
+ * 2026-06-30: η λαβή περιστροφής τοίχου πάνω στον κεντρικό άξονα, προς την ανατολική παρειά).
+ *
+ * For an axis `RectFrame`, local +X = the axis direction (start→end) rotated by `rotationDeg`,
+ * so its world vector is `(cos θ, sin θ)`. The +X end is more to the east (greater world x)
+ * iff `cos θ > 0`. Returns `+1` toward the +X end, `-1` toward the −X end. For a (near-)vertical
+ * axis (`cos θ ≈ 0`, no east/west bias) it tie-breaks toward NORTH via `sin θ`. Pure, unit-agnostic;
+ * the caller multiplies by `halfWidth/2` and feeds it through `rectLocalWorld` to land on the
+ * centreline at quarter-length (the `'axis-quarter'` rotation placement).
+ */
+export function rotationHandleAxialEastSign(rotationDeg: number): FaceSign {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  if (Math.abs(cos) > 1e-9) return cos > 0 ? 1 : -1;
+  return Math.sin(rad) >= 0 ? 1 : -1;
+}

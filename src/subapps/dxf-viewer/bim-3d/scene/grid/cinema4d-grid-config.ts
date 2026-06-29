@@ -31,8 +31,6 @@ export const GRID3D_MAJOR_COLOR_FALLBACK = '#414141';
 export const GRID3D_AXIS_X_COLOR = '#E52D2D';
 /** World Z axis (north = −Z) — VIEWCOLOR_ZAXIS (45,45,229). */
 export const GRID3D_AXIS_Z_COLOR = '#2D2DE5';
-/** Horizon band the grid dissolves into — VIEWCOLOR_HORIZON (150,150,150). */
-export const GRID3D_HORIZON_COLOR = '#969696';
 
 // ── Geometry / decade LOD / fade (world metres unless noted) ──────────────────
 
@@ -59,10 +57,11 @@ export const GRID3D_MINOR_LINE_PX = 1.0;
 export const GRID3D_MAJOR_LINE_PX = 1.0;
 export const GRID3D_AXIS_LINE_PX = 1.2;
 
-/** Distance fog → horizon (ΟΧΙ infinite): grid fades between K_START·d and K_END·d from the camera
- *  target (d = camera→target). Dynamism comes from the per-fragment LOD, NOT from this fog. */
-export const GRID3D_FADE_START_K = 6;
-export const GRID3D_FADE_END_K = 30;
+/** Finite grid extent as a multiple of the camera→target distance (d). C4D STOPS the grid at a hard
+ *  boundary — it does NOT distance-fade toward the horizon (verified: GetGridStep's `fade` is the
+ *  LOD-transition crossfade only, never a distance fade). Square half-size = K·d, tracking the view
+ *  so the hard edge sits near the horizon at any zoom. Larger = the edge sits further out. */
+export const GRID3D_EXTENT_K = 16;
 
 /** Peak grid opacity (subtle, C4D-like — lines sit just above the grey studio background). */
 export const GRID3D_MAX_OPACITY = 0.9;

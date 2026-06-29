@@ -25,7 +25,7 @@ import {
   UpdateTextTransformCommand,
   type TextTransformState,
 } from '../../core/commands/text/UpdateTextTransformCommand';
-import { resolveTextHeight } from '../canvas/dxf-text-style-extractor';
+import { resolveTextHeight, extractFirstRunStyle } from '../canvas/dxf-text-style-extractor';
 import { extractFlatText } from '../../utils/text-node-utils';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
@@ -51,6 +51,11 @@ interface TextSceneShape {
 function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
   const text = e.text ?? (e.textNode ? extractFlatText(e.textNode) : '') ?? '';
   const height = resolveTextHeight(e);
+  // ADR-557 Φ-attachment — carry the derived style (textAlign/textBaseline) so the box
+  // SSoT (`resolveTextBox`, via `applyTextGripDrag`) is attachment-aware in the commit
+  // too — i.e. the committed transform matches the box the user grabbed (TL..BR), not a
+  // hard TL. (The grip positions the user clicked already honour the attachment.)
+  const textStyle = extractFirstRunStyle(e);
   return {
     id,
     type: 'text',
@@ -59,6 +64,7 @@ function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
     text,
     height,
     rotation: e.rotation,
+    ...(textStyle ? { textStyle } : {}),
     ...(e.type === 'mtext' ? { width: e.width } : { widthFactor: e.widthFactor }),
   };
 }

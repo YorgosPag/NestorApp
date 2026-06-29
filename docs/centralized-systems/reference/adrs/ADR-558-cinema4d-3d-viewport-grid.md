@@ -11,7 +11,7 @@
 
 Η 3D προβολή **δεν είχε κανένα grid/ground reference** (επιβεβαιωμένο grep — μηδέν `GridHelper`/floor mesh· ο debug `AxesHelper` αφαιρέθηκε στο ADR-452). Ο Giorgio ζήτησε grid **πανομοιότυπο με το εγκατεστημένο Cinema 4D R15**: ίδια χρώματα, major/minor γραμμές, world άξονες, ορίζοντας — big-player επίπεδο.
 
-**Κρίσιμη απαίτηση (από screenshot του Giorgio):** το C4D grid **ΔΕΝ πάει στο άπειρο** — έχει πεπερασμένη έκταση και **σβήνει (radial fade) προς τον ορίζοντα**.
+**Κρίσιμη απαίτηση (από screenshot + browser-verify του Giorgio):** το C4D grid **ΔΕΝ πάει στο άπειρο** — έχει **πεπερασμένη έκταση** και οι γραμμές **ΣΤΑΜΑΤΟΥΝ** σε σκληρό όριο προς τον ορίζοντα (**δεν** σβήνουν με fade).
 
 ### Πηγή αλήθειας χρωμάτων (διαβάστηκε από την εγκατάσταση του Giorgio)
 `…\MAXON\CINEMA 4D R15\resource\schemes\Dark\dark.col` → ενότητα `VIEWCOLORS`:
@@ -44,7 +44,7 @@
   - zoom-out → ανεβαίνει το LOD → οι λεπτές συγχωνεύονται, μένουν οι χονδρότερες δεκάδες·
   - **κλίση κάμερας** → τα μακρινά fragments έχουν μεγαλύτερο derivative → **αυτο-αραιώνουν προς τον ορίζοντα** (ποτέ συμπαγές moiré). Αυτό είναι το C4D «Dynamic Grid 1..10».
 - **2 τύποι γραμμών** (όπως οι μεγάλοι παίκτες): **minor** κάθε decade cell + **major** (λίγο πιο χοντρό + σκουρότερο token χρώμα) κάθε **10η** — C4D «Major Lines Every 10th». Cross-fade των finer subdivisions με `(1 − fract(lod))`.
-- **distance fog → ορίζοντας** (πεπερασμένο, ΟΧΙ άπειρο): σβήνει μεταξύ `K_START·d` και `K_END·d` (d = camera→target). Η **δυναμική προέρχεται από το per-fragment LOD, ΟΧΙ από το fog**.
+- **hard finite extent** (πεπερασμένο, ΟΧΙ άπειρο, **ΟΧΙ distance-fade**): οι γραμμές **ΣΤΑΜΑΤΟΥΝ** σε square όριο `±K·d` γύρω από τον target (~1px AA edge). Το C4D **δεν** σβήνει τις γραμμές προς τον ορίζοντα — απλώς τελειώνουν (verified: το `GetGridStep(step,fade)` έχει `fade` = LOD-transition crossfade, **όχι** distance). Η δυναμική προέρχεται από το per-fragment LOD.
 - **world άξονες** στο origin (z=0 → X κόκκινο, x=0 → Z μπλε)· mesh **re-centre στον target** κάθε frame (lines world-locked).
 
 ### Γιατί ΟΧΙ ο 2D ortho cascade (διόρθωση v1)
@@ -83,7 +83,7 @@ major/minor διαβάζονται **ζωντανά** από τα υπάρχον
 
 ## 5. Συνέπειες
 
-- **+** ΕΝΑ draw-call, AO-immune, theme-live, finite-with-horizon όπως C4D· πλήρης 2D↔3D parity στη grid math.
+- **+** ΕΝΑ draw-call, AO-immune, theme-live, **hard finite extent** (γραμμές σταματούν όπως C4D)· per-fragment LOD δυναμικό σε zoom+tilt.
 - **−** `resolveCssVarColor` (getComputedStyle) καλείται ανά frame όταν το grid φαίνεται — αμελητέο (on-demand render loop, μη-layout-dirty DOM στο orbit). Future: cache + theme-switch subscription αν χρειαστεί.
 - Toggle ON by default (όπως C4D)· `setEnabled()` εκτεθειμένο για μελλοντικό settings wiring (δεν προστέθηκε UI — shared tree).
 
@@ -93,6 +93,7 @@ major/minor διαβάζονται **ζωντανά** από τα υπάρχον
 - Πιθανό follow-up: tokenize axis/horizon χρώματα· settings toggle· cache χρωμάτων με theme-switch subscription.
 
 ## Changelog
+- **2026-06-30 (v5)** — **Hard finite extent αντί distance-fade** (Giorgio: «οι γραμμές προς τον ορίζοντα δεν σβήνουν με fade — σταματούν»). Επιβεβαίωση από C4D deep-dive: το `GetGridStep`'s `fade` είναι **LOD-only**, όχι distance. Αντικατάσταση radial fog + horizon tint με **square hard cutoff** `±GRID3D_EXTENT_K·d` (~1px AA edge)· αφαιρέθηκε `GRID3D_HORIZON_COLOR`/`uHorizonColor` (ο gradient bg = ορίζοντας). `computeGrid3DFog`→`computeGrid3DExtent`. 3/3 jest. 🔴 browser-verify.
 - **2026-06-30 (v4)** — **Κούρδισμα στα πραγματικά C4D νούμερα** (deep-dive στα installed resources). **Πάχος → 1px για major & minor** (C4D: colour-only διάκριση, μηδέν thicker-major — διόρθωση του v1/v2/v3 που είχαν major 1.3–1.6px). `MIN_CELL_PX 48→64` (C4D target ~5–15 γραμμές/παράθυρο). Επιβεβαίωση `MAJOR_EVERY=10` (ROUGHSUB) + decade-LOD = Dynamic Grid «1..10». 4/4 jest. 🔴 browser-verify.
 - **2026-06-30 (v3)** — **Πυκνότητα fix** (Giorgio: «πολύ πυκνό· δες πόσο αραιά χρησιμοποιούν οι μεγάλοι»). Ρίζα: το v2 sub-layer ζωγραφιζόταν στο `cellMinor/10` σχεδόν πλήρως → 10× πυκνό = συμπαγές. Λύση big-player: `GRID3D_MIN_CELL_PX=48` (οι λεπτότερες minor ≥48px μεταξύ τους — minor spacing ∈ [48, 480)px· major 480–4800px), και η επόμενη finer δεκάδα κάνει cross-fade-in **μόνο όταν κι αυτή ξεπεράσει το gap** (`blend · smoothstep`) → ποτέ solid. `ceil`-based LOD. 4/4 jest.
 - **2026-06-30 (v2)** — **Δυναμικότητα fix** (Giorgio browser-verify: «δεν αλλάζει πλήθος γραμμών με zoom/κλίση· πολύ χοντρές»). Αντικατάσταση του 2D ortho cascade με **per-fragment decade-LOD** μέσα στον fragment shader (Blender/Golus)· λεπτές γραμμές (minor 1.0 / major 1.3 / axis 1.4 px)· 2 τύποι (minor + major κάθε 10η, decade)· cross-fade subdivisions. `cinema4d-grid-frame.ts` απλοποιήθηκε σε distance-fog μόνο. 4/4 jest GREEN. UNCOMMITTED.

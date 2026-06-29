@@ -55,7 +55,7 @@ import {
   type RectResizeLimits,
 } from './rect-grip-engine';
 import { rotateAxisPointsAboutPivot } from './grip-math';
-import { ROTATION_HANDLE_OFFSET_MM, rotationHandlePerpOffset, rotationHandleMidwayOffset } from './rotation-handle-policy';
+import { ROTATION_HANDLE_OFFSET_MM, rotationHandlePerpOffset, rotationHandleMidwayOffset, rotationHandleAxialEastSign } from './rotation-handle-policy';
 
 const DEG_PER_RAD = 180 / Math.PI;
 
@@ -258,8 +258,12 @@ export function getAxisBoxGrips(
      *     MIDPOINT of the segment centre→opposite-face = −¼ of the perpendicular
      *     extent, mirroring the rectangular COLUMN rotation handle so move-cross /
      *     dimension handle / rotation are cleanly distributed (column parity).
+     *   · `'axis-quarter'` (opt-in — wall, Giorgio 2026-06-30): on the LONGITUDINAL
+     *     centreline (perp = 0), at ¼ of the axis length toward the EAST-most end —
+     *     i.e. the midpoint between the centre and the east end-face midpoint. Moves
+     *     the handle off the long-side edge midpoint it used to overlap.
      */
-    readonly rotationPlacement?: 'opposite-face' | 'midway-center';
+    readonly rotationPlacement?: 'opposite-face' | 'midway-center' | 'axis-quarter';
   } = {},
 ): AxisBoxGrip[] {
   const dx = params.end.x - params.start.x;
@@ -279,14 +283,21 @@ export function getAxisBoxGrips(
   //   · 'midway-center' → at −¼ of the perpendicular extent (column parity); the
   //     policy returns the −Y midway offset, `faceSign` flips it to the opposite
   //     face when the element is flipped. `frame.halfLength*2` = full perp extent.
-  const rotationPerp = opts.rotationPlacement === 'midway-center'
-    ? faceSign * rotationHandleMidwayOffset(frame.halfLength * 2)
-    : rotationHandlePerpOffset(
-        frame.halfLength,
-        faceSign,
-        ROTATION_HANDLE_OFFSET_MM * mmScaleFor(params),
+  // 'axis-quarter' (wall) → ON the centreline (perp = 0), at ¼ axis length toward the
+  // east-most end. The other two placements keep perp = the policy offset at x = 0.
+  const rotationPos = opts.rotationPlacement === 'axis-quarter'
+    ? rectLocalWorld(frame, rotationHandleAxialEastSign(frame.rotationDeg) * (frame.halfWidth / 2), 0)
+    : rectLocalWorld(
+        frame,
+        0,
+        opts.rotationPlacement === 'midway-center'
+          ? faceSign * rotationHandleMidwayOffset(frame.halfLength * 2)
+          : rotationHandlePerpOffset(
+              frame.halfLength,
+              faceSign,
+              ROTATION_HANDLE_OFFSET_MM * mmScaleFor(params),
+            ),
       );
-  const rotationPos = rectLocalWorld(frame, 0, rotationPerp);
 
   const grips: AxisBoxGrip[] = [
     // width edge (perpendicular dimension, `widthFaceSign` face midpoint)

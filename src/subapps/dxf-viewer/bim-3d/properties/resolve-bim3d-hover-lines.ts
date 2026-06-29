@@ -47,3 +47,24 @@ export function resolveBim3DHoverLines(
       return null;
   }
 }
+
+/**
+ * Resolve the 3-line tooltip from JUST a BIM id (no type) — the 2D hover path carries only
+ * the hovered entity id (`HoverStore`/`QuickPropertiesStore`), not its BIM type. Searches the
+ * supported slices (wall → column → beam → slab) in `Bim3DEntitiesStore` (live in 2D, fed by
+ * the always-mounted PersistenceHosts) and reuses the SAME formatters as the typed resolver —
+ * one lookup+format path for both views. Returns null when the id is none of the 4 (e.g. a
+ * BIM type without a formatter yet, or a plain DXF entity). Giorgio 2026-06-30.
+ */
+export function resolveBimHoverLinesById(bimId: string, t: TFn): TooltipLines | null {
+  const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
+  const wall = walls.find((w) => w.id === bimId);
+  if (wall) return formatWallTooltip(wall, t);
+  const column = columns.find((c) => c.id === bimId);
+  if (column) return formatColumnTooltip(column, t);
+  const beam = beams.find((b) => b.id === bimId);
+  if (beam) return formatBeamTooltip(beam, t);
+  const slab = slabs.find((s) => s.id === bimId);
+  if (slab) return formatSlabTooltip(slab, t);
+  return null;
+}

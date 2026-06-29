@@ -368,7 +368,7 @@ export function applyEntityPreview(
   // new position / rotation / height (+ width|widthFactor). `anchorPos` = the grabbed
   // grip world pos at mouseDown so the rotation sweep matches the commit. text-move
   // also routes here (its patch = position+delta) for one transform path, not two.
-  if (textGripKind && entity.type === 'text') {
+  if (textGripKind && (entity.type === 'text' || entity.type === 'mtext')) {
     const t = entity as unknown as DxfText;
     const currentPos: Point2D = anchorPos
       ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
