@@ -69,12 +69,12 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
   // browser-verified) because the crosshair's own DOM writes dirty layout first → the cursor
   // «swims». We compute it ONCE and reuse it, invalidating only on resize/scroll (below).
   const rectRef = useRef<DOMRect | null>(null);
-  // ADR-545 — true ONLY while the RAF currently has the centre glued to a live, projected snap
-  // point. Distinct from `snapActive` (a snap is merely PUBLISHED): a snap can be published yet
-  // not a valid jump target this frame (occluded / off-screen / camera moving) → the crosshair
-  // must still track the cursor 1:1. The move handler reads this (not `snapActive`) so it only
-  // yields to the RAF when the centre is ACTUALLY magnetised. Non-reactive (ADR-040, zero React).
-  const gluedRef = useRef(false);
+  // ADR-549 §2.2 — last VALID projected snap point in canvas-local px (or null when there is no
+  // valid jump target this frame: no snap / occluded / off-screen / camera moving). The RAF
+  // (`draw`) keeps it fresh by reprojecting through the live camera; the SYNCHRONOUS move handler
+  // consumes it to glue the centre WITHOUT re-projecting on the hot path (no GPU depth readback on
+  // mousemove). Non-reactive (ADR-040, zero React state).
+  const snapProjectedRef = useRef<Point2D | null>(null);
   // GPU depth-occluder via το shared lifecycle SSoT (overlay-raf, ADR-544 dedup) — same as grips.
   const occluderRef = useGripDepthOccluder();
   // Hide the snap glue during camera motion (shared SSoT with BimSnapIndicatorOverlay3D).
@@ -143,16 +143,22 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
   // that stopPropagation, so the cursor is always updated — over BIM, over raw DXF, and
   // over the empty 3D canvas alike (previously the crosshair only appeared over BIM,
   // because only BIM produced a snap → the RAF path; the cursor path was dead).
-  // 1:1 CURSOR TRACKING (CAD-grade): apply the move SYNCHRONOUSLY on every event so the crosshair
-  // is painted with the mouse, never a frame behind. We yield to the RAF ONLY while the centre is
-  // ACTUALLY glued to a snap (`gluedRef`) — then the RAF keeps it pinned to the snap point instead
-  // of it being yanked back to the raw cursor each move. Gating on `gluedRef` (not `snapActive`)
-  // means hovering over geometry whose snap is momentarily not a valid jump target still tracks 1:1.
-  // The listener is bound once (stable `toCanvasLocal`); it reads `gluedRef.current` live.
+  // 1:1 CURSOR TRACKING + SYNC SNAP-GLUE (CAD-grade, ADR-549 §2.2): resolve snap-vs-cursor AND
+  // apply the transform SYNCHRONOUSLY on every event, so the crosshair is painted with the mouse,
+  // never a frame behind — for BOTH the free cursor AND the snap glue. The handler reads the last
+  // projected snap point (`snapProjectedRef`, kept fresh by the RAF) and the pure
+  // `resolveCrosshair3DCenter` SSoT picks snap-vs-cursor; the heavy projection (camera + GPU depth
+  // readback) stays in the RAF, off this hot path. Previously, while glued the handler yielded
+  // ENTIRELY to the RAF, so the centre advanced only at RAF cadence → one extra frame of lag on
+  // every BIM snap-hover (the measured BIM > DXF gap). Now the BIM crosshair tracks like the DXF one.
+  // The listener is bound once (stable `toCanvasLocal`); it reads the refs live.
   useEffect(() => {
     const onMove = (e: MouseEvent): void => {
-      cursorRef.current = toCanvasLocal(e.clientX, e.clientY);
-      if (!gluedRef.current) handleRef.current?.applyTransform(cursorRef.current);
+      const cursor = toCanvasLocal(e.clientX, e.clientY);
+      cursorRef.current = cursor;
+      const { point, snapped } = resolveCrosshair3DCenter({ cursor, snapProjected: snapProjectedRef.current });
+      handleRef.current?.setSnapActive(snapped);
+      handleRef.current?.applyTransform(point);
       if (isPerfEnabled()) probeCursorLag(e);
     };
     window.addEventListener('mousemove', onMove, true);
@@ -177,22 +183,25 @@ export function BimCrosshairOverlay3D({ managerRef }: BimCrosshairOverlay3DProps
     const manager = managerRef.current;
     const camera = manager?.getCamera();
     const cur = useSnap3DOverlayStore.getState().snap;
-    if (!manager || !camera || !cur) return;
+    if (!manager || !camera || !cur) { snapProjectedRef.current = null; return; }
 
     // ADR-545 — ONE projection SSoT shared with the snap-indicator glyph: the snap is a valid
-    // «jump» target only when it is visible (on-screen, camera settled, not occluded).
+    // «jump» target only when it is visible (on-screen, camera settled, not occluded). ADR-549
+    // §2.2 — cache the result in `snapProjectedRef` so the synchronous move handler glues without
+    // re-projecting; the RAF still owns re-projection while the camera moves (the only time a
+    // still cursor's snap point shifts on screen).
     const screen = projectSnap3DMarker(manager, cur, isCameraMoving(camera), occluderRef.current);
     const snapProjected = screen && screen.visible ? screen.point : null;
+    snapProjectedRef.current = snapProjected;
 
     const { point, snapped } = resolveCrosshair3DCenter({ cursor: cursorRef.current, snapProjected });
-    gluedRef.current = snapped; // tell the move handler whether the centre is magnetised this frame
     handleRef.current?.setSnapActive(snapped);
     handleRef.current?.applyTransform(point);
   }, [managerRef, isCameraMoving]);
 
   // When the snap clears, release the glue + drop the centre square and fall back to cursor follow.
   const onStop = useCallback(() => {
-    gluedRef.current = false;
+    snapProjectedRef.current = null; // ADR-549 §2.2 — release the cached snap; the move handler now tracks the cursor
     handleRef.current?.setSnapActive(false);
     handleRef.current?.applyTransform(cursorRef.current);
   }, []);

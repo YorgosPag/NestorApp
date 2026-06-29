@@ -252,6 +252,45 @@ silhouette-clear-on-leave). 🔴 browser-verify (Giorgio).
 
 ---
 
+## 🔬 Phase 4 — A/B overlay isolation + crosshair sync-decouple (2026-06-29)
+
+### A/B DEFINITIVE — `dxf-no-overlays` flag (browser-measured, dev)
+Νέο revertible gate στο `overlay-raf.ts::useRafWhile`: `localStorage['dxf-no-overlays']==='1'` →
+κατάστειλε ΚΑΘΕ ιδιωτικό overlay rAF (cleanup + `onStop`). Σάρωση πάνω σε οντότητες, dump πριν/μετά:
+
+| Μέτρηση | overlays ON | overlays OFF |
+|---|---|---|
+| 3D-scene `renders` | **676** (avg **21.88ms**/render) | **3** |
+| `cursor.totalLag` (steady) | ~40ms | **16–21ms** (best) … 32–38ms (typ.) |
+| overlay draws (CPU) | όλα **<1ms** (crosshair 0.94 / hover-glow 0.26 / snap 0.25 / grips 0.29) | — |
+
+### Διορθωμένο συμπέρασμα (διάψευση «GPU compositing των layers»)
+Τα overlay Canvas2D draws κοστίζουν **<1ms CPU** το καθένα → **ΔΕΝ** φταίει το compositing των στρωμάτων.
+Ο ένοχος = **πλήρη WebGL scene re-renders ~22ms** (όχι CPU path → αόρατα στο `performance.now()` diag,
+γι' αυτό «όλα φαίνονταν φθηνά»). Με overlays OFF → renders 676→3 → best-case lag 40→16ms· το residual
+~32ms = το **καθαρό κόστος ενός scene-render** που περνά μέσα από OrbitControls damping / shadow-modulator /
+settle. **Το BIM silhouette είναι ήδη refine-on-settle (Phase 2) — δεν φταίει στο sweep.** Το σκληρό όριο =
+κόστος/συχνότητα render σε αδύναμη GPU, **όχι** τα overlays.
+
+### §2.2 FIX — crosshair snap-glue → 100% σύγχρονο (1 αρχείο: `BimCrosshairOverlay3D.tsx`)
+Ο cursor-follow ήταν **ήδη** σύγχρονος (window `mousemove`, capture). Το RAF έμπαινε **μόνο** στο
+snap-glue (`gluedRef`): ενώ glued, ο move-handler υποχωρούσε **εντελώς** στο RAF → το κέντρο
+προχωρούσε μόνο σε RAF cadence → **ένα extra frame lag ανά BIM snap-hover** (το μετρημένο BIM > DXF gap).
+
+**Big-player decouple, FULL SSoT (μηδέν νέο store):** το RAF (`draw`) κρατά **φρέσκια** την προβολή του
+snap σε νέο `snapProjectedRef` (η βαριά projection — camera + GPU depth readback μέσω `GripDepthOccluder`
+— μένει στο RAF, εκτός hot path)· ο **σύγχρονος** move-handler την καταναλώνει μέσω του pure
+`resolveCrosshair3DCenter` SSoT → glue-vs-cursor αποφασίζεται **on-the-event**, χωρίς GPU stall.
+Το πλέον-νεκρό `gluedRef` (write-only μετά) **αφαιρέθηκε** (Boy-Scout). Το RAF παραμένει για το μόνο
+σενάριο όπου το κέντρο κινείται χωρίς mousemove: **κάμερα κινείται ενώ ο κέρσορας στέκεται**.
+
+**Στόχος:** BIM crosshair == DXF crosshair (κλείσιμο του ~10ms gap). ⚠️ Το residual ~30ms floor είναι
+**render-bound** → δεν κινείται από αυτό· χρειάζεται μείωση κόστους/συχνότητας render (Finding 3
+unification + adaptive degradation). CHECK 6D → stage αυτό το ADR. 🔴 browser-verify (Giorgio: BIM dump
+πριν/μετά).
+
+---
+
 ## Changelog
 - **2026-06-29** — ADR δημιουργήθηκε. Phase 0 (PROFILE) ορίστηκε. Καταγράφηκε η bisection (render
   pass = αποδεδειγμένος ένοχος) + η διάψευση της «μόνο σκιές» υπόθεσης + το SSOT audit. Fix pending data.
@@ -286,3 +325,12 @@ silhouette-clear-on-leave). 🔴 browser-verify (Giorgio).
   `bim3d-pointer-scheduler.ts` αποσύνδεση (hover id live, silhouette refine-on-settle με `lastBimHoverId`) +
   `DxfHoverGlowOverlay2D.tsx` `active` gated σε `findDxfEntityInScope` (rAF OFF σε BIM hover). Pure-DXF hover =
   μηδέν WebGL render. 12/12 jest. CHECK 6D → stage αυτό το ADR + τα 2 αρχεία + το test. 🔴 browser-verify.
+- **2026-06-29** — 🔬 **Phase 4: A/B overlay isolation + crosshair sync-decouple (§2.2).** Νέο revertible
+  `dxf-no-overlays` flag στο `overlay-raf.ts` → A/B: overlays OFF ρίχνει renders **676→3** & best-case
+  `totalLag` **40→16ms**, αλλά τα overlay draws κοστίζουν **<1ms CPU** → **διάψευση «GPU compositing των
+  layers»**. Ένοχος = **πλήρη WebGL scene re-renders ~22ms** (residual ~32ms = render-bound floor, όχι
+  overlays). FIX §2.2 (1 αρχείο `BimCrosshairOverlay3D.tsx`): το snap-glue έγινε **σύγχρονο** — RAF κρατά
+  φρέσκια την projection σε `snapProjectedRef` (GPU readback μένει στο RAF), ο σύγχρονος move-handler την
+  καταναλώνει μέσω `resolveCrosshair3DCenter` → κλείνει το ~10ms BIM>DXF gap (extra RAF frame). Νεκρό
+  `gluedRef` αφαιρέθηκε. Pure `crosshair-3d-center.test.ts` αμετάβλητο (resolver δεν άλλαξε). CHECK 6D →
+  stage αυτό το ADR + το αρχείο. 🔴 browser-verify (BIM dump πριν/μετά).

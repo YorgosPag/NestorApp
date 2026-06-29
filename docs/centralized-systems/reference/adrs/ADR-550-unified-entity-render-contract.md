@@ -160,4 +160,16 @@ interface EntityRenderContract<E> {
 - `bim-3d/scene/bim-scene-point-syncs.ts` → export `ResolveEntity`/`PointMeshFactory` types για reuse.
 - `__tests__/entity-render-coverage.test.ts` → +5 asserts (invariant, derived parity, point declaration↔execution binding, point∪bespoke===live 3D, ξένα σύνολα).
 
-**Verify:** jest 12/12 contract (7 Φ3 + 5 Φ2) GREEN· 108/108 scene GREEN· single tsc (N.17). **Browser-verify εκκρεμεί** (Option B αγγίζει render path· opaque depth-sort → insertion order αδιάφορο, αλλά οπτική επιβεβαίωση των 11 families απαιτείται). Commit → εντολή Giorgio (stage ADR-366 + ADR-550 για CHECK 6B/6D).
+**Verify:** jest 12/12 contract (7 Φ3 + 5 Φ2) GREEN· 108/108 scene GREEN· single tsc (N.17). Commit → εντολή Giorgio (stage ADR-366 + ADR-550 για CHECK 6B/6D). **COMMITTED** `f15395aa`.
+
+### 2026-06-29 — Φ2 Browser-verify DONE (golden-image 3D harness, big-player practice)
+**Πρακτική μεγάλων παικτών (Autodesk/Maxon):** επαλήθευση 3D rendering = **golden-image regression** σε headless render harness (offscreen render deterministic σκηνής, pixel-diff vs baseline). Επεκτάθηκε **το ίδιο pattern** με το υπάρχον 2D `dxf-canvas` harness (full SSoT, όχι νέος μηχανισμός).
+
+**Files (NEW, reusable infra, UNCOMMITTED):**
+- `src/app/test-harness/bim-3d/page.tsx` + `Bim3DHarness.tsx` — mount του ΠΡΑΓΜΑΤΙΚΟΥ `BimViewport3D` με `bimEntities` prop (externalEntitiesMode, ADR-371) μέσα σε `AuthProvider`+`UnifiedProviders` (Grip/Snap/ProjectHierarchy)· χωρίς Firebase/auth/Firestore. Dev-only (404 σε prod). Imperative handle `window.__bim3dTest` (isReady/frame/capture) μέσω `getActiveSceneManager()`.
+- `bim-3d/__fixtures__/point-entities-scene-fixture.ts` — 11 point-entity families με έγκυρη `compute*Geometry`.
+- `e2e/bim-3d-visual-regression.spec.ts` + `visual-bim-3d` Playwright project (WebGL/swiftshader headless). Συγκρίνει το **GL framebuffer capture** (`captureFrameDataURL` = forced render + readPixels) — ντετερμινιστικό υπό swiftshader, παρακάμπτει το `preserveDrawingBuffer:false` DOM-screenshot πρόβλημα.
+
+**Αποτέλεσμα:** golden δείχνει **και τις 11 οικογένειες ως 3D solids** (στέγη/δάπεδο/ενδοδαπέδιο/πίνακας/πέδιλο/καλοριφέρ/λέβητα/θερμοσίφωνα/κιγκλίδωμα/συλλέκτη/έπιπλο). Επιβεβαιώθηκε `groupChildren:11, meshes:43` (registry loop = ίδιο dispatch με τις 11 διαγραμμένες μεθόδους → μηδέν regression). Test PASS deterministic (χωρίς --update-snapshots).
+
+**Bug fix στο fixture (όχι production):** ο `floorFinishToMesh` κάνει default `sceneUnits ?? 'm'` (μοναδικός· οι άλλοι default `'mm'`)· το mm footprint ερμηνευόταν ως meters → 3 km plate που εκτόξευε το scene bbox → κάμερα 13 km μακριά → όλα μικροσκοπικά. Pin `sceneUnits:'mm'` στο floor-finish fixture entity.

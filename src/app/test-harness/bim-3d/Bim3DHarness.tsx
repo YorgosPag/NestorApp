@@ -3,15 +3,19 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/auth/contexts/AuthContext';
+import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProviders';
 import { getActiveSceneManager } from '@/subapps/dxf-viewer/bim-3d/scene/active-scene-manager-registry';
 import { POINT_ENTITIES_FIXTURE } from '@/subapps/dxf-viewer/bim-3d/__fixtures__/point-entities-scene-fixture';
 
 /**
  * 3D BIM render harness (ADR-550 Φ2). Mounts the REAL `BimViewport3D` with the
  * external-entities prop (`bimEntities`) so it renders the fixture scene WITHOUT
- * Firebase/Firestore/auth project data (ADR-371 read-only pipeline). Once the
- * Three.js scene manager appears (registered globally via `setActiveSceneManager`),
- * the camera is fit-framed and a `bim-3d-ready` marker is exposed for Playwright.
+ * Firebase/Firestore/auth project data (ADR-371 read-only pipeline). `UnifiedProviders`
+ * supplies the contexts the viewport overlays need (Grip/Snap/ProjectHierarchy).
+ *
+ * Once the Three.js scene manager appears (registered globally via
+ * `setActiveSceneManager`), the camera is fit-framed and a `bim-3d-ready` marker is
+ * exposed for Playwright, alongside an imperative `__bim3dTest` test handle.
  */
 const BimViewport3D = dynamic(
   () => import('@/subapps/dxf-viewer/bim-3d/viewport/BimViewport3D').then((m) => m.BimViewport3D),
@@ -23,8 +27,10 @@ declare global {
     __bim3dTest: {
       /** True once the Three.js scene manager is mounted. */
       isReady: () => boolean;
-      /** Fit-frame the camera to the whole scene (zoom-extents). */
+      /** Fit-frame the camera to the whole scene + kick the on-demand scheduler. */
       frame: () => void;
+      /** Force a render + return the GL framebuffer as a PNG data URL (bypasses compositing). */
+      capture: () => string;
     };
   }
 }
@@ -36,7 +42,15 @@ export default function Bim3DHarness() {
   useEffect(() => {
     window.__bim3dTest = {
       isReady: () => !!getActiveSceneManager(),
-      frame: () => getActiveSceneManager()?.frameSelectionOrFitExtents(),
+      frame: () => {
+        const m = getActiveSceneManager();
+        // frameBounds() animates via the on-demand scheduler (onRenderNeeded per
+        // step). In a static harness nothing else marks the scene dirty, so kick
+        // it once — the animation then re-marks dirty until it settles.
+        m?.frameSelectionOrFitExtents();
+        m?.markSceneDirty();
+      },
+      capture: () => getActiveSceneManager()?.captureFrameDataURL('image/png') ?? '',
     };
   });
 
@@ -50,7 +64,8 @@ export default function Bim3DHarness() {
       if (mgr) {
         // Let the initial entity sync complete a tick, then fit-frame.
         settleTimer = setTimeout(() => {
-          getActiveSceneManager()?.frameSelectionOrFitExtents();
+          mgr.frameSelectionOrFitExtents();
+          mgr.markSceneDirty();
           setReady(true);
         }, 250);
         return;
@@ -66,16 +81,18 @@ export default function Bim3DHarness() {
 
   return (
     <AuthProvider>
-      <main className="fixed inset-0 overflow-hidden bg-background">
-        <section className="relative h-full w-full">
-          <BimViewport3D visible readOnly bimEntities={POINT_ENTITIES_FIXTURE} />
-          {ready ? (
-            <div data-testid="bim-3d-ready" className="absolute left-0 top-0 h-px w-px" />
-          ) : (
-            <div data-testid="loading" />
-          )}
-        </section>
-      </main>
+      <UnifiedProviders>
+        <main className="fixed inset-0 overflow-hidden bg-background">
+          <section className="relative h-full w-full">
+            <BimViewport3D visible readOnly bimEntities={POINT_ENTITIES_FIXTURE} />
+            {ready ? (
+              <div data-testid="bim-3d-ready" className="absolute left-0 top-0 h-px w-px" />
+            ) : (
+              <div data-testid="loading" />
+            )}
+          </section>
+        </main>
+      </UnifiedProviders>
     </AuthProvider>
   );
 }

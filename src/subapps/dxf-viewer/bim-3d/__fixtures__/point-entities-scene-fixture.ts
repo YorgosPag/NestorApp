@@ -335,6 +335,10 @@ const roofEntity: RoofEntity = {
 
 // 9. Floor Finish — ceramic tile 3000×3000 mm at (5000, 6000)
 const _floorFinishParams = {
+  // ⚠ floorFinishToMesh defaults `sceneUnits ?? 'm'` (unlike the other converters
+  // which default 'mm'). Without this, the mm footprint is read as METRES → a 3 km
+  // plate that blows up the scene bbox. Pin it to 'mm' for consistency.
+  sceneUnits: 'mm' as const,
   footprint: {
     vertices: [
       { x: 5000, y: 6000, z: 0 },
