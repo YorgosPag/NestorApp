@@ -6,6 +6,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 import { storageGet, storageSet, STORAGE_KEYS } from '../../../../utils/storage-utils';
 import { EnterpriseColorDialog } from '../../../color/EnterpriseColorDialog';
+import { resolveCssVarColor } from '../../../../config/color-config';
+import { useRulersGridContext } from '../../../../systems/rulers-grid/RulersGridSystem';
 
 // ─── Theme definitions ────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ interface ThemeConfig {
   /** Optional explicit gradient stops for the 3D studio background (`--canvas-gradient-*`). */
   gradientTop?: string;
   gradientBottom?: string;
-  /** Optional theme grid colours (`--canvas-grid-major/minor`) — mirrors Cinema 4D scheme. */
+  /** Optional theme grid colours (palette `var(--canvas-grid-*)`, resolved to hex → RulersGrid context). */
   gridMajor?: string;
   gridMinor?: string;
   swatchClass: string;
@@ -55,8 +57,6 @@ const CANVAS_THEME_VARS = {
   image: '--canvas-background-dxf-image',
   gradientTop: '--canvas-gradient-top',
   gradientBottom: '--canvas-gradient-bottom',
-  gridMajor: '--canvas-grid-major',
-  gridMinor: '--canvas-grid-minor',
 } as const;
 
 function setOrClear(root: CSSStyleDeclaration, name: string, value?: string): void {
@@ -65,12 +65,13 @@ function setOrClear(root: CSSStyleDeclaration, name: string, value?: string): vo
 }
 
 /**
- * Apply a full canvas theme (Cinema 4D-style scheme): solid base + optional vertical gradient
- * (2D image + 3D stops) + optional grid colours — all in one place so 2D and 3D move together.
- * Solid themes clear the gradient/grid vars (→ flat background, generic grid).
+ * Apply the CSS side of a canvas theme (Cinema 4D-style scheme): solid base + optional vertical
+ * gradient (2D image + 3D stops) — one place so 2D and 3D move together. Solid themes clear the
+ * gradient vars (→ flat background). Grid colours are applied separately into the RulersGrid
+ * context (Canvas2D `ctx.strokeStyle` cannot read CSS vars).
  */
 function applyCanvasTheme(
-  theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom' | 'gridMajor' | 'gridMinor'>,
+  theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom'>,
 ): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement.style;
@@ -78,8 +79,6 @@ function applyCanvasTheme(
   root.setProperty(CANVAS_THEME_VARS.image, theme.gradientImage ?? 'none');
   setOrClear(root, CANVAS_THEME_VARS.gradientTop, theme.gradientTop);
   setOrClear(root, CANVAS_THEME_VARS.gradientBottom, theme.gradientBottom);
-  setOrClear(root, CANVAS_THEME_VARS.gridMajor, theme.gridMajor);
-  setOrClear(root, CANVAS_THEME_VARS.gridMinor, theme.gridMinor);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -94,6 +93,29 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
   const [activeTheme, setActiveTheme] = useState<ThemeKey>(DEFAULT_THEME);
   const [customColor, setCustomColor] = useState<string>(DEFAULT_CUSTOM_COLOR);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const { state: { grid }, updateGridSettings } = useRulersGridContext();
+
+  /**
+   * Apply a whole canvas theme as a Cinema 4D-style scheme: the CSS side (solid base + 2D/3D
+   * gradient) plus — for themes that define them — the scheme grid colours written straight
+   * into the RulersGrid context (resolved to concrete hex for Canvas2D `ctx.strokeStyle`).
+   * Themes without grid colours leave the user's grid untouched.
+   */
+  const applyTheme = useCallback(
+    (theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom' | 'gridMajor' | 'gridMinor'>) => {
+      applyCanvasTheme(theme);
+      if (theme.gridMajor && theme.gridMinor) {
+        updateGridSettings({
+          visual: {
+            ...grid.visual,
+            majorGridColor: resolveCssVarColor(theme.gridMajor),
+            minorGridColor: resolveCssVarColor(theme.gridMinor),
+          },
+        });
+      }
+    },
+    [grid.visual, updateGridSettings],
+  );
 
   useEffect(() => {
     const savedTheme = storageGet<ThemeKey>(STORAGE_KEYS.CANVAS_BACKGROUND, DEFAULT_THEME);
@@ -101,37 +123,39 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
     setActiveTheme(savedTheme);
     setCustomColor(savedCustom);
     if (savedTheme === 'custom') {
-      applyCanvasTheme({ cssValue: savedCustom });
+      applyTheme({ cssValue: savedCustom });
     } else {
       const preset = PRESET_THEMES.find(th => th.key === savedTheme) ?? PRESET_THEMES[0];
-      applyCanvasTheme(preset);
+      applyTheme(preset);
     }
+    // Run once on mount — re-applying on every grid change would fight live grid edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectPreset = useCallback((theme: ThemeConfig) => {
     setActiveTheme(theme.key);
-    applyCanvasTheme(theme);
+    applyTheme(theme);
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, theme.key);
-  }, []);
+  }, [applyTheme]);
 
   const handleSelectCustom = useCallback(() => {
     setActiveTheme('custom');
-    applyCanvasTheme({ cssValue: customColor });
+    applyTheme({ cssValue: customColor });
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, 'custom');
     setIsPickerOpen(true);
-  }, [customColor]);
+  }, [customColor, applyTheme]);
 
   const handleCustomColorChange = useCallback((color: string) => {
     setCustomColor(color);
-    applyCanvasTheme({ cssValue: color });
-  }, []);
+    applyTheme({ cssValue: color });
+  }, [applyTheme]);
 
   const handleCustomColorCommit = useCallback((color: string) => {
     setCustomColor(color);
-    applyCanvasTheme({ cssValue: color });
+    applyTheme({ cssValue: color });
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND_CUSTOM, color);
     storageSet(STORAGE_KEYS.CANVAS_BACKGROUND, 'custom');
-  }, []);
+  }, [applyTheme]);
 
   return (
     <section className={`flex flex-col ${PANEL_LAYOUT.GAP.MD} p-3 ${className}`}>

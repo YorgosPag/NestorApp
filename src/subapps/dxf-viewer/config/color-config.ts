@@ -655,22 +655,16 @@ export function resolveDxfCanvasGradientStops(): CanvasGradientStops | null {
 }
 
 /**
- * Theme-aware active MAJOR grid colour (Cinema 4D scheme parity). The theme switch sets
- * `--canvas-grid-major`; absent (other themes / SSR) → the generic `GRID_MAJOR` default. An
- * explicit user grid-colour setting still wins upstream in `useCanvasSettings` (the scheme
- * supplies the default, an explicit override beats it) — mirrors Cinema 4D's scheme model.
+ * Resolve a concrete hex from a `var(--name)` reference (or pass a hex through). Used by the
+ * canvas-theme switch to read a per-theme PALETTE token (e.g. `--canvas-grid-cinema4d-major`)
+ * into a concrete colour for consumers that cannot use CSS variables — notably Canvas2D
+ * `ctx.strokeStyle` (the grid renderer). Off-DOM (SSR/tests) returns the input unchanged.
  */
-export function resolveGridMajorColor(): string {
-  if (typeof document === 'undefined') return UI_COLORS_BASE.GRID_MAJOR;
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--canvas-grid-major').trim();
-  return v || UI_COLORS_BASE.GRID_MAJOR;
-}
-
-/** Theme-aware active MINOR grid colour — sibling of {@link resolveGridMajorColor}. */
-export function resolveGridMinorColor(): string {
-  if (typeof document === 'undefined') return UI_COLORS_BASE.GRID_MINOR;
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--canvas-grid-minor').trim();
-  return v || UI_COLORS_BASE.GRID_MINOR;
+export function resolveCssVarColor(ref: string): string {
+  const match = ref.match(/^var\((--[\w-]+)\)$/);
+  if (!match || typeof document === 'undefined') return ref;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
+  return v || ref;
 }
 
 // ============================================================================

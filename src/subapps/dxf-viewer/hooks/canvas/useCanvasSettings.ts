@@ -22,7 +22,7 @@ import { useMemo } from 'react';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
-import { UI_COLORS, resolveGridMajorColor, resolveGridMinorColor } from '../../config/color-config';
+import { UI_COLORS } from '../../config/color-config';
 // 🏢 SSoT: Axis/origin defaults — single source of truth
 import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
 
@@ -255,11 +255,11 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     // ✅ SIZE: From panel settings
     size: gridContextSettings?.visual?.step ?? 10,
 
-    // ✅ COLORS: explicit panel setting wins; otherwise the active canvas-theme grid colour
-    // (Cinema 4D scheme → #414141 / #4B4B4B), resolved from --canvas-grid-major/minor. SSoT.
+    // ✅ COLORS: From panel settings (NOT hardcoded!). The active canvas theme (e.g. Cinema 4D)
+    // writes its scheme grid colours straight into the RulersGrid context via the theme switch.
     color: gridContextSettings?.visual?.color ?? UI_COLORS.BLUE_DEFAULT,
-    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? resolveGridMajorColor(),
-    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? resolveGridMinorColor(),
+    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? UI_COLORS.MEDIUM_GRAY,
+    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? UI_COLORS.LIGHT_GRAY_ALT,
 
     // ✅ OPACITY: From panel settings
     opacity: gridContextSettings?.visual?.opacity ?? 0.6,
