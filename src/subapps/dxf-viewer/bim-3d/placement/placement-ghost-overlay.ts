@@ -32,6 +32,8 @@
 import * as THREE from 'three';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 import { disposeObjectTree } from '../scene/dispose-object-tree';
+// Cross-backend ghost opacity policy (shared with the 2D `GHOST_DEFAULTS.alpha`) — SSoT.
+import { GHOST_ALPHA } from '../../rendering/ghost/ghost-policy';
 
 /** Options for {@link PlacementGhostOverlay.setObject}. */
 export interface SetGhostObjectOptions {
@@ -54,9 +56,22 @@ export class PlacementGhostOverlay {
   private shown = false;
   private disposed = false;
   private readonly unregister: () => void;
+  /**
+   * When `true`, the root's geometry is BORROWED (e.g. cloned committed meshes that share their
+   * `BufferGeometry` with the live scene): teardown only `scene.remove`s the root and never
+   * `disposeObjectTree`s it, since disposing the shared geometry would blank the real entity.
+   * Default `false` — a freshly-built placement ghost OWNS its geometry and must free it.
+   */
+  private readonly borrowedGeometry: boolean;
 
-  constructor(scene: THREE.Scene, colorHex: THREE.ColorRepresentation, opacity = 0.45) {
+  constructor(
+    scene: THREE.Scene,
+    colorHex: THREE.ColorRepresentation,
+    opacity = GHOST_ALPHA,
+    borrowedGeometry = false,
+  ) {
     this.scene = scene;
+    this.borrowedGeometry = borrowedGeometry;
     this.material = new THREE.MeshBasicMaterial({
       color: colorHex,
       transparent: true,
@@ -69,6 +84,11 @@ export class PlacementGhostOverlay {
 
   get isDisposed(): boolean {
     return this.disposed;
+  }
+
+  /** True while a ghost root is set (built + parented), regardless of the show/hide flag. */
+  get hasObject(): boolean {
+    return this.object !== null;
   }
 
   /**
@@ -120,7 +140,9 @@ export class PlacementGhostOverlay {
     this.scene.remove(this.object);
     // Geometry is per-instance → freed via the SSoT. Materials are shared singletons from the
     // converter (or the ghost's own `this.material`, disposed once in `dispose`) → NOT freed here.
-    disposeObjectTree(this.object);
+    // BORROWED geometry (cloned committed meshes) shares its `BufferGeometry` with the live
+    // entity → only detach the root, never dispose (disposal would blank the real entity).
+    if (!this.borrowedGeometry) disposeObjectTree(this.object);
     this.object = null;
   }
 }

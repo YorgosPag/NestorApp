@@ -1,44 +1,50 @@
 /**
  * bim3d-cursor-readout-writer — feed the status-bar X/Y/Z readout in 3D.
  *
- * Projects the cursor onto the ACTIVE floor work-plane (Giorgio 2026-06-29: CAD
- * default — the cursor's vertical coordinate is the work-plane elevation, stable and
- * real-time, like AutoCAD/Revit) and writes the DXF-plan triple (mm) to
- * `Bim3DCursorReadoutStore`.
+ * The vertical (Z) coordinate reflects the REAL point under the cursor: when the cursor
+ * is over geometry the readout uses the actual surface hit (so Z = surface height and
+ * changes as you sweep up/down an element, Giorgio 2026-06-29); in empty space it falls
+ * back to the active-floor work-plane (Z = floor elevation). Without the geometry hit Z
+ * would be pinned to the floor (0 on the ground storey) — the «πάντα μηδέν» symptom.
  *
  * Pure SSoT reuse — no new raycast / coordinate math:
- *   - `raycastFloorPoint` (ADR-403) — screen → active-floor plane → world point.
+ *   - `hit.worldPoint` — REUSED from the 3D pointer scheduler's unified BVH raycast
+ *     (`raycastBimHitAndWorld`), so no second raycast is spent here.
+ *   - `raycastFloorPoint` (ADR-403) — screen → active-floor plane → world point (fallback).
  *   - `resolveActiveFloorElevationMm` (ADR-403) — the active floor's elevation.
  *   - `worldToDxfPlan` (ADR-366 §4) — world (m, Y-up) → DXF plan (mm): {x,y,z}.
- *
- * Cheap enough for the hot mousemove path (one ray↔plane intersect, no BVH), so the
- * readout stays 1:1 with the cursor (parity with the 2D world-position channel).
  *
  * ADR-366 §B.2.Q1 follow-up (3D status-bar coordinates).
  */
 
+import type * as THREE from 'three';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from '../placement/raycast-floor-point';
 import { worldToDxfPlan } from './coordinate-transforms';
 import { setBim3DCursorReadout } from '../stores/Bim3DCursorReadoutStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 /**
- * Recompute + publish the 3D cursor readout for a client-pixel position. Clears the
- * readout when the cursor ray is parallel to the floor (no plane hit) or the manager
- * has no camera/canvas yet.
+ * Recompute + publish the 3D cursor readout for a client-pixel position. Prefers the
+ * geometry hit point (`worldPoint`, from the scheduler's BVH raycast) so Z tracks the
+ * real surface height; falls back to the active-floor plane in empty space. Clears the
+ * readout when neither resolves (ray parallel to the floor / no camera-canvas yet).
  */
 export function updateBim3DCursorReadout(
   manager: ThreeJsSceneManager,
   clientX: number,
   clientY: number,
+  worldPoint?: THREE.Vector3 | null,
 ): void {
-  const camera = manager.getCamera();
-  const dom = manager.getRendererCanvas();
-  if (!camera || !dom) {
-    setBim3DCursorReadout(null);
-    return;
+  let world: THREE.Vector3 | null = worldPoint ?? null;
+  if (!world) {
+    const camera = manager.getCamera();
+    const dom = manager.getRendererCanvas();
+    if (!camera || !dom) {
+      setBim3DCursorReadout(null);
+      return;
+    }
+    world = raycastFloorPoint(camera, dom, clientX, clientY, resolveActiveFloorElevationMm());
   }
-  const world = raycastFloorPoint(camera, dom, clientX, clientY, resolveActiveFloorElevationMm());
   if (!world) {
     setBim3DCursorReadout(null);
     return;

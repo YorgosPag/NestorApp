@@ -17,6 +17,9 @@
 export { applyEntityPreview, makeTranslationPreview } from './apply-entity-preview';
 export type { EntityPreviewTransform } from './apply-entity-preview';
 export { drawGhostEntity } from './draw-ghost-entity';
+// Cross-backend ghost opacity policy (shared with the 3D WebGL overlays) — SSoT.
+import { GHOST_ALPHA } from './ghost-policy';
+export { GHOST_ALPHA } from './ghost-policy';
 // NOTE: `drawRealEntityPreview` is intentionally NOT re-exported here — it pulls in the full
 // EntityRendererComposite (41 leaf renderers). Import it directly from
 // './draw-real-entity-preview' to keep this lightweight barrel free of that heavy graph.
@@ -29,8 +32,8 @@ export { drawGhostEntity } from './draw-ghost-entity';
 export const GHOST_DEFAULTS = {
   /** Stroke + fill color (cyan-blue, matches AutoCAD MOVE preview). */
   color: '#00BFFF',
-  /** Opacity multiplier for the whole ghost layer. */
-  alpha: 0.45,
+  /** Opacity multiplier for the whole ghost layer (shared 2D+3D policy SSoT). */
+  alpha: GHOST_ALPHA,
   /** Stroke width in screen pixels. */
   lineWidth: 1.5,
 } as const;

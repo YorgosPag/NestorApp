@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { PlacementGhostOverlay } from '../placement-ghost-overlay';
 import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
+import { GHOST_ALPHA } from '../../../rendering/ghost/ghost-policy';
 
 function buildTree(): { root: THREE.Group; body: THREE.Mesh; edges: THREE.LineSegments } {
   const root = new THREE.Group();
@@ -84,6 +85,43 @@ describe('PlacementGhostOverlay', () => {
     const disposeB = jest.spyOn(prevB, 'dispose');
     drop.setObject(b.root, { disposePrevMaterials: true });
     expect(disposeB).toHaveBeenCalled();
+  });
+
+  it('hasObject reflects whether a root is set', () => {
+    const scene = new THREE.Scene();
+    const overlay = new PlacementGhostOverlay(scene, 0x444444);
+    expect(overlay.hasObject).toBe(false);
+    overlay.setObject(buildTree().root);
+    expect(overlay.hasObject).toBe(true);
+    overlay.setObject(null);
+    expect(overlay.hasObject).toBe(false);
+  });
+
+  it('borrowedGeometry skips geometry disposal on clear (shared BufferGeometry safety)', () => {
+    const scene = new THREE.Scene();
+
+    // Default (owned): geometry IS disposed when the root is cleared.
+    const owned = new PlacementGhostOverlay(scene, 0x111111);
+    const a = buildTree();
+    const disposeOwned = jest.spyOn(a.body.geometry, 'dispose');
+    owned.setObject(a.root);
+    owned.setObject(null);
+    expect(disposeOwned).toHaveBeenCalled();
+
+    // borrowedGeometry: geometry is NEVER disposed (clones share it with the live entity).
+    const borrowed = new PlacementGhostOverlay(scene, 0x222222, GHOST_ALPHA, true);
+    const b = buildTree();
+    const disposeBorrowed = jest.spyOn(b.body.geometry, 'dispose');
+    borrowed.setObject(b.root);
+    borrowed.setObject(null);
+    expect(disposeBorrowed).not.toHaveBeenCalled();
+    expect(scene.children).toHaveLength(0); // still detached from the scene
+  });
+
+  it('defaults opacity to the shared GHOST_ALPHA policy', () => {
+    const scene = new THREE.Scene();
+    const overlay = new PlacementGhostOverlay(scene, 0x555555);
+    expect(overlay.material.opacity).toBe(GHOST_ALPHA);
   });
 
   it('dispose unregisters the provider and clears the scene', () => {

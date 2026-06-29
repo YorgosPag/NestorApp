@@ -50,6 +50,11 @@ jest.mock('../../../systems/raycaster/bvh-setup', () => ({ ensureBoundsTrees: (.
 const mockComputeSnap = jest.fn(() => ({ view: {}, elevMm: 0 }));
 jest.mock('../bim-3d-snap-hover', () => ({ computeSnap3DHover: (...a: unknown[]) => mockComputeSnap(...a) }));
 
+// ADR-366 §B.2.Q1 follow-up — the status-bar X/Y/Z readout is fed from runPick but is NOT the
+// subject here (it has its own store test); mock it so the scheduler test stays isolated.
+const mockUpdateReadout = jest.fn();
+jest.mock('../../bim3d-cursor-readout-writer', () => ({ updateBim3DCursorReadout: (...a: unknown[]) => mockUpdateReadout(...a) }));
+
 import { requestPointerPick, clearPointerPick } from '../bim3d-pointer-scheduler';
 import type { ThreeJsSceneManager } from '../../../scene/ThreeJsSceneManager';
 

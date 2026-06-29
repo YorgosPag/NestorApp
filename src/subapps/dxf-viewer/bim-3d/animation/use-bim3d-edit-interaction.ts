@@ -229,6 +229,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       unsubSelection();
       unsubEntities();
       teardownListeners();
+      preview.dispose(); // ADR-550 — free the original-stays-as-ghost overlay.
       overlay.dispose();
       useGrip3DOverlayStore.getState().clear(); // ADR-535 Φ5 — drop the reshape-grip overlay state.
       wallMoveDim.dispose();

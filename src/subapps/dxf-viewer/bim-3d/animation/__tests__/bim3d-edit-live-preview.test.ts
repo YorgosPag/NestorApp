@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import { Bim3DEditLivePreview } from '../bim3d-edit-live-preview';
+import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
 
 function taggedMesh(bimId: string, pos: [number, number, number]): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
@@ -91,6 +92,67 @@ describe('Bim3DEditLivePreview — rigid move/rotate', () => {
     p.commit();
     expect(a.position.toArray()).toEqual([11, 2, 3]); // left at the final pose
     expect(p.isActive).toBe(false);
+  });
+});
+
+describe('Bim3DEditLivePreview — ADR-550 original-stays-as-ghost (2D move parity)', () => {
+  /** A scene-parented group (the ghost only activates when the meshes have a root scene). */
+  function scenedGroup(...children: THREE.Object3D[]): { scene: THREE.Scene; group: THREE.Group } {
+    const scene = new THREE.Scene();
+    const g = new THREE.Group();
+    for (const c of children) g.add(c);
+    scene.add(g);
+    return { scene, group: g };
+  }
+
+  it('captureTransform parks a frozen ghost clone at the source pose', () => {
+    const a = taggedMesh('a', [2, 0, 3]);
+    const { scene, group: g } = scenedGroup(a);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['a']));
+    const roots = collectPostFxOverlayRoots(scene);
+    expect(roots).toHaveLength(1); // the parked ghost
+    const clone = roots[0].children[0] as THREE.Mesh;
+    expect(clone.position.toArray()).toEqual([2, 0, 3]);
+
+    // The real mesh moves; the ghost stays frozen at the source pose.
+    p.applyMove(new THREE.Vector3(40, 0, 0));
+    expect(a.position.x).toBe(42);
+    expect(clone.position.toArray()).toEqual([2, 0, 3]);
+  });
+
+  it('commit() and reset() both drop the parked ghost', () => {
+    const a = taggedMesh('a', [0, 0, 0]);
+    const { scene, group: g } = scenedGroup(a);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['a']));
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
+    p.commit();
+    expect(collectPostFxOverlayRoots(scene)).toEqual([]);
+
+    p.captureTransform(g, new Set(['a']));
+    expect(collectPostFxOverlayRoots(scene)).toHaveLength(1);
+    p.reset();
+    expect(collectPostFxOverlayRoots(scene)).toEqual([]);
+  });
+
+  it('resize does NOT park a ghost (only move/rotate leave the original behind)', () => {
+    const orig = taggedMesh('w1', [0, 0, 0]);
+    const { scene, group: g } = scenedGroup(orig);
+    const p = new Bim3DEditLivePreview();
+    p.captureResize(g, 'w1');
+    expect(collectPostFxOverlayRoots(scene)).toEqual([]);
+  });
+
+  it('dispose() frees the ghost overlay', () => {
+    const a = taggedMesh('a', [0, 0, 0]);
+    const { scene, group: g } = scenedGroup(a);
+    const p = new Bim3DEditLivePreview();
+    p.captureTransform(g, new Set(['a']));
+    p.dispose();
+    expect(collectPostFxOverlayRoots(scene)).toEqual([]);
   });
 });
 

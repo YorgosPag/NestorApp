@@ -30,8 +30,8 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
 import { requestPointerPick, clearPointerPick } from './snap/bim3d-pointer-scheduler';
-// ADR-366 §B.2.Q1 follow-up — live X/Y/Z status-bar readout (cursor → active-floor plane).
-import { updateBim3DCursorReadout } from './bim3d-cursor-readout-writer';
+// ADR-366 §B.2.Q1 follow-up — clear the live X/Y/Z status-bar readout on leave (the writer
+// itself runs in the pointer scheduler's RAF slot, reusing its geometry-hit world point).
 import { clearBim3DCursorReadout } from '../stores/Bim3DCursorReadoutStore';
 
 const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516 (popover reveal)
@@ -54,12 +54,7 @@ export function useBim3DPointerHandlers(
     // BVH-accelerated hover+snap raycast runs in a RAF slot, never blocking this handler, so the
     // cursor/crosshair stays 1:1 with the physical mouse (parity with the 2D canvas).
     const manager = managerRef.current;
-    if (manager) {
-      requestPointerPick({ manager, clientX, clientY });
-      // ADR-366 §B.2.Q1 follow-up — live X/Y/Z readout, synchronous (cheap ray↔plane, no BVH)
-      // so the status-bar coordinates stay 1:1 with the cursor (parity with the 2D channel).
-      updateBim3DCursorReadout(manager, clientX, clientY);
-    }
+    if (manager) requestPointerPick({ manager, clientX, clientY });
     // ADR-366 §B.2 — the hover popover stays debounced (off the hot path) with its own pick.
     if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {

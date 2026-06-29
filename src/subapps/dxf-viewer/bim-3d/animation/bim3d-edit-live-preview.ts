@@ -37,6 +37,8 @@
 
 import * as THREE from 'three';
 import { disposeObjectTree } from '../scene/dispose-object-tree';
+// ADR-550 — the original stays behind as a dimmed ghost during a rigid move/rotate (2D parity).
+import { EditOriginalGhost } from './edit-original-ghost';
 
 interface CapturedTransform {
   readonly obj: THREE.Object3D;
@@ -89,6 +91,10 @@ export class Bim3DEditLivePreview {
   private fittingObjects: THREE.Object3D[] = [];
   /** Ids of the incident fitting entities to rebuild per frame (cap/elbow/tee at a moved junction). */
   private fittingIds: string[] = [];
+
+  // ── ADR-550 — original-stays-as-ghost (2D move parity) ────────────────────────
+  /** Parks a dimmed clone of the edited meshes at the source pose during a rigid move/rotate. */
+  private readonly originalGhost = new EditOriginalGhost();
 
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
@@ -149,6 +155,10 @@ export class Bim3DEditLivePreview {
         });
       }
     }
+    // ADR-550 — park a dimmed clone of the captured meshes at the source pose, BEFORE any
+    // applyMove/applyRotate transforms them. The real meshes follow the cursor (ghost === commit)
+    // while the original "stays behind" as a ghost — the 3D mirror of the 2D `movePreviewActive`.
+    this.originalGhost.show(this.transforms.map((t) => t.obj));
   }
 
   /** Live move: each captured mesh sits at `original + translation` (world space). */
@@ -394,7 +404,15 @@ export class Bim3DEditLivePreview {
     this.clearState();
   }
 
+  /** Free the original-ghost overlay (its post-FX registration + ghost material). */
+  dispose(): void {
+    this.originalGhost.clear();
+    this.originalGhost.dispose();
+  }
+
   private clearState(): void {
+    // ADR-550 — drop the parked "stays behind" ghost (the command re-sync / restore takes over).
+    this.originalGhost.clear();
     this.transforms = [];
     this.hidden = [];
     this.previewObject = null;

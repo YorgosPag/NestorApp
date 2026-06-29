@@ -34,6 +34,8 @@ import { raycastBimHitAndWorld } from '../../systems/raycaster/BimEntityRaycaste
 import { ensureBoundsTrees } from '../../systems/raycaster/bvh-setup';
 import { markPointerMoved, isPointerActive } from '../../systems/pointer-activity';
 import { computeSnap3DHover } from './bim-3d-snap-hover';
+// ADR-366 §B.2.Q1 follow-up — live X/Y/Z status-bar readout, fed from THIS pick's hit world point.
+import { updateBim3DCursorReadout } from '../bim3d-cursor-readout-writer';
 import { recordOverlayDraw } from '../../scene/bim3d-perf-diag'; // 🔬 ADR-549 Phase 0.3 (revertible)
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 
@@ -98,6 +100,11 @@ function runPick(input: Bim3DPickInput): boolean {
   ensureBoundsTrees(group);
   const hit = raycastBimHitAndWorld(group, camera, dom, clientX, clientY);
   recordOverlayDraw('pick:raycast', performance.now() - tRay); // 🔬
+
+  // ADR-366 §B.2.Q1 follow-up — feed the status-bar X/Y/Z readout from THIS unified raycast:
+  // the geometry hit point (Z = real surface height) when over an element, else the active-floor
+  // plane (Z = floor elevation). Reuses `hit.worldPoint` — no second raycast.
+  updateBim3DCursorReadout(manager, clientX, clientY, hit?.worldPoint ?? null);
 
   // ADR-538 — unified hover: BIM silhouette when a tagged entity is hit, else the raw-DXF glow.
   const tDxf = performance.now(); // 🔬 ADR-549 Phase 0.3 (DXF wireframe pick only runs on a BIM miss)
