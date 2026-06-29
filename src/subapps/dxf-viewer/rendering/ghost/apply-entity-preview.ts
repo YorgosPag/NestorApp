@@ -21,8 +21,9 @@
  */
 
 import type { Point2D } from '../types/Types';
-import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfEntityUnion, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Entity } from '../../types/entities';
+import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
 import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
@@ -109,7 +110,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, textGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -359,6 +360,22 @@ export function applyEntityPreview(
     const newBoundaryPaths = applyHatchGripDrag(hatchGripKind, { originalBoundaryPaths: hatch.boundaryPaths, delta });
     if (newBoundaryPaths === hatch.boundaryPaths) return entity;
     return { ...(entity as object), boundaryPaths: newBoundaryPaths } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-551 — text/mtext rect-box live preview (move / rotation / resize) ──
+  // Routes through the SAME `applyTextGripDrag` the commit runs (preview ≡ commit),
+  // then folds the top-level patch onto the cloned `DxfText` so the ghost shows the
+  // new position / rotation / height (+ width|widthFactor). `anchorPos` = the grabbed
+  // grip world pos at mouseDown so the rotation sweep matches the commit. text-move
+  // also routes here (its patch = position+delta) for one transform path, not two.
+  if (textGripKind && entity.type === 'text') {
+    const t = entity as unknown as DxfText;
+    const currentPos: Point2D = anchorPos
+      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      : { x: delta.x, y: delta.y };
+    const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos });
+    if (Object.keys(patch).length === 0) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
