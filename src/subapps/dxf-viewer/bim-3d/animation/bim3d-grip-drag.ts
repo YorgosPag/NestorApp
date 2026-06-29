@@ -23,12 +23,15 @@ import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { reshapeGripsForFootprint } from '../grips/grip-3d-reshape-grips';
 import { commitGrip3DReshape } from '../grips/grip-3d-commit';
-import type { PlanElevationMmFor } from '../grips/grip-3d-screen-project';
+import type { PlanElevationMmFor, GripWorldOffset } from '../grips/grip-3d-screen-project';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 // ADR-535 Φ2/Φ3 — per-vertex top-surface elevation SSoT + building base resolver.
 // slab → slope plane (`slabTopZmmAt`); roof → lower-envelope (`roofZmm`).
 import { slabTopZmmAt, slabUndersideZmmAt } from '../../bim/geometry/slab-slope';
 import { resolveEavePlanes, roofZmm } from '../../bim/geometry/roof-lower-envelope';
+// ADR-535 Φ11 — battered-wall TOP face is plan-sheared (base stays); the top grips ride it.
+import { isWallTilted, wallTiltShearAt } from '../../bim/geometry/wall-tilt';
+import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { findBimEntityWorldBox } from './bim3d-edit-interaction-helpers';
@@ -81,13 +84,20 @@ export function refreshReshapeGrips(
   // ADR-535 Φ5/Φ6 — push the grips + per-vertex TOP & BOTTOM elevation to the overlay store;
   // the Canvas2D overlay RAF projects + paints the twin (top+bottom) squares every frame.
   const elevs = gripSurfaceElevationsFor(bimType, entityIds[0], box);
-  useGrip3DOverlayStore.getState().setGrips(grips, elevs.top, elevs.bottom);
+  useGrip3DOverlayStore.getState().setGrips(grips, elevs.top, elevs.bottom, elevs.topWorldShift ?? null);
 }
 
 /** ADR-535 Φ6 — the two surface elevation resolvers of a footprint grip (twin top + bottom). */
 interface GripSurfaceElevations {
   readonly top: PlanElevationMmFor;
   readonly bottom: PlanElevationMmFor;
+  /**
+   * ADR-535 Φ11 — a constant WORLD plan-shift applied to the TOP grips only (the BOTTOM/base
+   * footprint stays put). Non-null only for a battered (tilted) wall, whose top face is sheared
+   * ⟂ to the run by `height·tan(angle)` — so the top squares hug the leaned top edge instead of
+   * flying off above the base. Absent ⇒ flat-top member (top sits straight above the base).
+   */
+  readonly topWorldShift?: GripWorldOffset;
 }
 
 /** Degenerate twin (top === bottom) used when the entity is absent from the store. */
@@ -111,12 +121,14 @@ function gripSurfaceElevationsFor(
   if (bimType === 'roof') return roofGripSurfaceElevations(entityId, fallbackWorldY);
   // ADR-535 Φ3b — an opening's grips ride its HOST SLAB top & underside (the opening has no own Z).
   if (bimType === 'slab-opening') return slabOpeningGripSurfaceElevations(entityId, fallbackWorldY);
-  // ADR-535 Φ7/Φ8/Φ9 — a column's / wall's / beam's grips ride its flat top & bottom faces, taken
-  // straight from the rendered mesh AABB (byte-consistent with the mesh, zero drift, no extra Z math).
+  // ADR-535 Φ11 — a WALL adds the battered-top plan-shear on top of the flat AABB faces (its
+  // top edge leans ⟂ to the run; the base stays). Flat-top common case → no shift (fast path).
+  if (bimType === 'wall') return wallGripSurfaceElevations(entityId, box);
+  // ADR-535 Φ7/Φ9 — a column's / beam's grips ride its flat top & bottom faces, taken straight
+  // from the rendered mesh AABB (byte-consistent with the mesh, zero drift, no extra Z math).
   // The squares of every plan vertex/edge sit at the SAME top (max.y) and bottom (min.y) — correct
-  // for the flat-top common case. Tilted / host-attached members (per-corner top via the vertical
-  // profile resolvers) are a flagged follow-up.
-  if (bimType === 'column' || bimType === 'wall' || bimType === 'beam') return bboxSurfaceElevations(box);
+  // for the flat-top case. A tilted column/beam top-shear is a flagged follow-up (mirror the wall).
+  if (bimType === 'column' || bimType === 'beam') return bboxSurfaceElevations(box);
   return floorFinishGripSurfaceElevations(entityId, fallbackWorldY);
 }
 
@@ -129,6 +141,23 @@ function bboxSurfaceElevations(box: THREE.Box3): GripSurfaceElevations {
   const topMm = box.max.y * 1000;
   const bottomMm = box.min.y * 1000;
   return { top: () => topMm, bottom: () => bottomMm };
+}
+
+/**
+ * ADR-535 Φ11 — TOP & BOTTOM grip surfaces for a WALL. The flat AABB elevations (mm) are the
+ * base; for a BATTERED wall the TOP face is plan-sheared ⟂ to the run by `height·tan(angle)`
+ * (the `wallTiltShearAt` SSoT, the SAME shear the 3D mesh + 2D cut use, ADR-404). That shear is
+ * a constant plan delta in mm → converted to a WORLD offset via `dxfPlanToWorld` and applied to
+ * the top squares only, so they hug the leaned top edge. Vertical wall ⇒ no shift (flat path).
+ */
+function wallGripSurfaceElevations(wallId: string, box: THREE.Box3): GripSurfaceElevations {
+  const flat = bboxSurfaceElevations(box);
+  const wall = useBim3DEntitiesStore.getState().walls.find((w) => w.id === wallId);
+  if (!wall || !isWallTilted(wall.params)) return flat;
+  const shearMm = wallTiltShearAt(wall.params, wall.params.height);
+  // Plan-mm delta → world offset (plan x→world x, plan y→world −z, mm→m); elevation handled by `top`.
+  const w = dxfPlanToWorld(shearMm.dx, shearMm.dy, 0);
+  return { ...flat, topWorldShift: { x: w.x, y: 0, z: w.z } };
 }
 
 /**

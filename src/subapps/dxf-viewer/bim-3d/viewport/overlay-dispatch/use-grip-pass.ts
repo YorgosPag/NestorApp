@@ -21,7 +21,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
-import { makeGripPlanToCanvas, liftGripPlanToWorld, type GripWorldOffset } from '../../grips/grip-3d-screen-project';
+import { makeGripPlanToCanvas, liftGripPlanToWorld, addGripWorldOffsets, type GripWorldOffset } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
 import { collectCoincidentLinePartnerMoves } from '../../../systems/stretch/coincident-endpoint-comove';
@@ -151,16 +151,18 @@ function computeGripVisibility(
   liveGrips: readonly GripInfo[],
   topElevFor: (p: Point2D) => number,
   bottomElevFor: (p: Point2D) => number,
-  worldOffset: GripWorldOffset | null,
+  topOffset: GripWorldOffset | null,
+  bottomOffset: GripWorldOffset | null,
 ): readonly boolean[] | null {
   const isRawDxfSelection = useGrip3DOverlayStore.getState().dxfGhostEntityIds.length > 0;
   const { occluder, manager, camera } = frame;
   if (!occluder || isRawDxfSelection) return null;
-  // ADR-535 Φ10 — probe occlusion at the SAME world point the overlay DRAWS (incl. the live
-  // move offset) via the shared `liftGripPlanToWorld` SSoT → no occlusion/ghost drift mid-move.
+  // ADR-535 Φ10/Φ11 — probe occlusion at the SAME world point the overlay DRAWS: the top face
+  // carries `topOffset` (live move + battered-wall tilt shear), the bottom carries `bottomOffset`
+  // (live move only), both through the shared `liftGripPlanToWorld` SSoT → no occlusion/ghost drift.
   const worlds = [
-    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, topElevFor(g.position), worldOffset)),
-    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, bottomElevFor(g.position), worldOffset)),
+    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, topElevFor(g.position), topOffset)),
+    ...liveGrips.map((g) => liftGripPlanToWorld(g.position, bottomElevFor(g.position), bottomOffset)),
   ];
   return occluder.computeVisibility(manager.renderer, manager.scene, camera, worlds);
 }
@@ -174,17 +176,21 @@ function gripRenderSettings(): Partial<GripSettings> {
 /** One dispatch frame for the grip layer — projects + paints the twin grip surfaces (ADR-535 Φ6). */
 function paintGripOverlay(frame: BimOverlayFrame): void {
   const { ctx, camera, canvas } = frame;
-  const { grips: liveGrips, topElevFor, bottomElevFor } = useGrip3DOverlayStore.getState();
+  const { grips: liveGrips, topElevFor, bottomElevFor, topWorldShift } = useGrip3DOverlayStore.getState();
   const n = liveGrips.length;
   if (n === 0) return;
 
   // ADR-535 Φ10 / ADR-516 — during a gizmo MOVE drag the grips ride the SAME live world
   // translation as the mesh (rigid handle-follow); null on the static / reshape paths.
+  // ADR-535 Φ11 — the TOP grips additionally carry the battered-wall tilt shear (static), so a
+  // leaned top edge keeps its squares; the BOTTOM/base grips never shear. Both stack the move.
   const { hoverIndex, drag, liveMoveWorld } = grip3DOverlayInteraction;
-  const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor, liveMoveWorld);
-  const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor, liveMoveWorld);
+  const topOffset = addGripWorldOffsets(liveMoveWorld, topWorldShift);
+  const bottomOffset = liveMoveWorld;
+  const projectTop = makeGripPlanToCanvas(camera, canvas, topElevFor, topOffset);
+  const projectBottom = makeGripPlanToCanvas(camera, canvas, bottomElevFor, bottomOffset);
 
-  const visibility = computeGripVisibility(frame, liveGrips, topElevFor, bottomElevFor, liveMoveWorld);
+  const visibility = computeGripVisibility(frame, liveGrips, topElevFor, bottomElevFor, topOffset, bottomOffset);
   grip3DOverlayInteraction.visibility = visibility;
   const ov = { hoverIndex, dragIndex: drag?.index ?? null, dragLivePlanPos: drag?.livePlanPos ?? null, visibility };
   const settings = gripRenderSettings();

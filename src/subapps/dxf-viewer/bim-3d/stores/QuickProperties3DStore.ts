@@ -2,7 +2,7 @@
  * QuickProperties3DStore — hover state for the 3D viewport BIM entity tooltip.
  *
  * Updated by BimViewport3D (800ms debounced raycasting on mousemove).
- * Consumed by QuickProperties3DHoverPopover (ADR-040 micro-leaf).
+ * Consumed by StatusBarBim3DHoverLeaf (ADR-040 micro-leaf, status-bar readout).
  *
  * ADR-366 B.2.Q1.
  */

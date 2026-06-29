@@ -11,6 +11,8 @@ import { useTranslation } from '@/i18n';
 import { useToolHints } from '../../hooks/useToolHints';
 // ADR-040 Phase H: leaf subscriber for live cursor coordinates
 import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
+// ADR-366 B.2.Q1 follow-up: hovered 3D BIM entity info inline in the status bar
+import { StatusBarBim3DHoverLeaf } from './StatusBarBim3DHoverLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
@@ -156,6 +158,13 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
             </span>
           </>
         )}
+
+        {/* ADR-366 B.2.Q1 follow-up — hovered 3D BIM entity info, inline right of the
+            coordinates (replaces the floating cursor card). Renders nothing in 2D. */}
+        <StatusBarBim3DHoverLeaf
+          className={colors.text.info}
+          separatorClassName={colors.text.muted}
+        />
       </div>
       
       {/* 🏢 ADR-082: Dynamic tool hints section */}

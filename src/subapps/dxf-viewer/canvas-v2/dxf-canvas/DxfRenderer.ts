@@ -8,21 +8,9 @@ import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DConte
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity, SceneLayer } from '../../types/entities';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
-import { CAD_UI_COLORS } from '../../config/color-config';
-// ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver
-import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
-import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 // ADR-510 Φ2 — canvas linetype dash: metric pattern (mm) → setLineDash px (zoom + LTSCALE aware).
 import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
-// ADR-510 Φ2E — entity-own linetype → mm pattern SSoT (same resolver the BIM
-// renderers + legacy preview use); drives the layer-less render fallback.
-import { resolveAnyDashMm } from '../../config/linetype-aliases';
 import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
-// ADR-454 — Print Plot Style: white-safe colour remap + print-DPI lineweights.
-// Singleton is null during interactive render (single boolean branch, zero hot-path cost).
-import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
-// ADR-509 — background-adaptive entity color (near-black imported DXF visible on dark canvas).
-import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
@@ -31,9 +19,10 @@ import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bi
 // ADR-452 — cut-plane (Revit View Range) hide gate SSoT.
 import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, transparencyToAlpha } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById } from './dxf-renderer-frame-builders';
+// ADR-550 / ADR-358 §G7 — entity render-style SSoT (shared with the WYSIWYG preview path).
+import { resolveEntityRenderStyle, type ResolvedRenderStyle } from './dxf-renderer-style-resolve';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
 import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
@@ -340,93 +329,17 @@ export class DxfRenderer {
     return buildEntityModelFromDxf(entity, isSelected, resolved);
   }
   // Per-frame index builders extracted to ./dxf-renderer-frame-builders.ts.
-  /** ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution; falls back to literal values when no layersById. */
+  /**
+   * ADR-358 §G7 — ByLayer/ByBlock style resolution. Delegates to the SSoT
+   * `resolveEntityRenderStyle` (extracted to `dxf-renderer-style-resolve.ts`)
+   * so the committed canvas and the live WYSIWYG preview resolve style through
+   * ONE function and cannot diverge. Isolate-alpha + print policy live there too.
+   */
   private resolveStyleForRender(
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
-  ): { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } {
-    // ADR-454 — active only during offscreen print render (null otherwise).
-    const printPolicy = getPrintColorPolicy();
-    const fallback = {
-      colorHex: printPolicy
-        ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
-        : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
-      lineWidthPx: Math.max(1, entity.lineWidth || 1),
-      // ADR-510 Φ2E — even without a layer/cascade context, the entity's OWN
-      // linetype must still render dashed. Both the bitmap-cache rebuild (drops
-      // layersById by design, ADR-040 Phase D) and freshly-drawn primitives whose
-      // layerId is absent from scene.layersById land here; the old `[]` silently
-      // dropped a selected line's linetype change to solid (Φ2E bug). Reuses the
-      // SAME `resolveAnyDashMm` SSoT as the BIM renderers + legacy preview —
-      // ByLayer/ByBlock/Continuous/unknown ⇒ [] (solid) intrinsically.
-      dashMm: resolveAnyDashMm(entity.linetypeName),
-      alpha: 1,
-    };
-    if (!layersById) return this.applyIsolateAlpha(fallback, entity);
-    // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder).
-    // Name-keyed fallback handles legacy/Firestore scenes without layersById.
-    const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
-    const layer = layerById ?? (() => {
-      const name = resolveEntityLayerName(entity);
-      return name ? layersById[name] : undefined;
-    })();
-    if (!layer) return this.applyIsolateAlpha(fallback, entity);
-    const styleInput = entityToStyleInput({
-      color: entity.color,
-      colorMode: entity.colorMode,
-      colorAci: entity.colorAci,
-      colorTrueColor: entity.colorTrueColor,
-      linetypeName: entity.linetypeName,
-      lineweightMm: entity.lineweightMm,
-      transparency: entity.transparency,
-    });
-    const resolved = resolveEntityStyle(styleInput, layer);
-    // ADR-454 — print render: convert ISO mm at the real print DPI (not screen 96)
-    // and remap colour to a white-safe print colour. No-op when policy is null.
-    const px = lineweightToPx(resolved.lineweight, printPolicy ? printPolicy.dpi : 96);
-    const colorHex = printPolicy
-      ? applyPlotColor(resolved.color, resolved.colorAci, printPolicy)
-      : adaptEntityColorForCanvas(resolved.color);
-    const baseAlpha = transparencyToAlpha(resolved.transparency);
-    return this.applyIsolateAlpha(
-      {
-        colorHex,
-        lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
-        alpha: baseAlpha,
-        // ADR-510 Φ2 — resolved metric dash pattern ([] for Continuous).
-        dashMm: resolved.linetype.pattern,
-      },
-      entity,
-    );
-  }
-
-  /**
-   * ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime alpha override.
-   * Zero-cost passthrough when isolate is inactive (single boolean branch).
-   * In `dim` mode, multiplies alpha for layers NOT in the isolated set by the
-   * configured dimOpacityPercent. `freeze` mode is handled by the skip-path
-   * (see `isEntityLayerSkipped`).
-   */
-  private applyIsolateAlpha(
-    style: { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> },
-    entity: DxfEntityUnion,
-  ): { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } {
-    const isolate = getIsolateEffectsSnapshot();
-    if (!isolate.active || isolate.mode !== 'dim') return style;
-    // ADR-358 §5.6.bis — entity-scope isolate (Revit "Isolate Element") takes
-    // precedence; then category-scope ("Isolate Category"); then layer-scope.
-    // Keep the isolated members at full alpha, dim everything else.
-    if (isolate.isolatedEntityIds.size > 0) {
-      if (entity.id && isolate.isolatedEntityIds.has(entity.id)) return style;
-    } else if (isolate.isolatedCategories.size > 0) {
-      const cat = resolveEntityBimCategory(entity);
-      if (cat !== null && isolate.isolatedCategories.has(cat)) return style;
-    } else {
-      const layerId = entity.layerId;
-      if (layerId && isolate.isolatedLayerIds.has(layerId)) return style;
-    }
-    const dimAlpha = transparencyToAlpha(dimOpacityToTransparency(isolate.dimOpacityPercent));
-    return { ...style, alpha: Math.min(style.alpha, dimAlpha) };
+  ): ResolvedRenderStyle {
+    return resolveEntityRenderStyle(entity, layersById);
   }
 
   /**

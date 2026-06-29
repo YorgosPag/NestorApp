@@ -111,6 +111,17 @@ export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandl
 }
 
 /**
+ * SSoT gate — TRUE when `bimType` exposes draggable endpoint shape handles. The ONE source of
+ * truth is `ENDPOINT_HANDLES_BY_TYPE` (only `mep-segment` after wall/beam moved to 2D reshape
+ * grips, ADR-535 Φ8/Φ9). The endpoint-handle positioner reads THIS instead of its own type
+ * list, so it never computes offsets for a type whose rings `applyActiveHandles` would hide
+ * (was: wall/beam still positioned hidden handles — dead work + a 2nd source of the truth).
+ */
+export function hasEndpointHandles(bimType: string | null): boolean {
+  return !!(bimType && ENDPOINT_HANDLES_BY_TYPE[bimType]?.length);
+}
+
+/**
  * ADR-363 Φ1G.5 Slice 2h — a PLANAR (non-free-3D) single selection whose move handles
  * are all in `BASE_HANDLES`. Such a drag can safely collapse the gizmo to the move
  * arrows (hiding resize/endpoint/tilt clutter, Revit-style) without ever hiding the

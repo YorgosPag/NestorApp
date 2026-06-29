@@ -37,11 +37,19 @@ interface Grip3DOverlayState {
    * `setGrips` / `clear`; the DXF seater sets it explicitly via `setDxfGhostEntityIds`.
    */
   readonly dxfGhostEntityIds: readonly string[];
-  /** Replace the grip set + top/bottom elevation resolvers (selection / re-sync). Resets interaction + ghost. */
+  /**
+   * ADR-535 Φ11 — constant WORLD plan-shift of the TOP grips (the base/bottom stays). Non-null
+   * only for a battered (tilted) wall, whose top face is sheared ⟂ to the run. `null` = flat-top
+   * (top sits straight above the base). Low-frequency (changes on selection / re-sync, like the
+   * elevation resolvers), so it lives here, not in the high-frequency interaction singleton.
+   */
+  readonly topWorldShift: GripWorldOffset | null;
+  /** Replace the grip set + top/bottom elevation resolvers + top tilt-shift (selection / re-sync). Resets interaction + ghost. */
   setGrips(
     grips: readonly GripInfo[],
     topElevFor: PlanElevationMmFor,
     bottomElevFor: PlanElevationMmFor,
+    topWorldShift?: GripWorldOffset | null,
   ): void;
   /** ADR-537/543 — mark the seated grips as belonging to raw DXF entities `ids` (ghost sources), or []. */
   setDxfGhostEntityIds(ids: readonly string[]): void;
@@ -54,15 +62,16 @@ export const useGrip3DOverlayStore = create<Grip3DOverlayState>((set) => ({
   topElevFor: NO_ELEVATION,
   bottomElevFor: NO_ELEVATION,
   dxfGhostEntityIds: [],
-  setGrips: (grips, topElevFor, bottomElevFor) => {
+  topWorldShift: null,
+  setGrips: (grips, topElevFor, bottomElevFor, topWorldShift = null) => {
     resetGrip3DInteraction();
     // ADR-537 — a new grip set is BIM by default; the DXF seater opts in afterwards.
-    set({ grips: [...grips], topElevFor, bottomElevFor, dxfGhostEntityIds: [] });
+    set({ grips: [...grips], topElevFor, bottomElevFor, topWorldShift, dxfGhostEntityIds: [] });
   },
   setDxfGhostEntityIds: (dxfGhostEntityIds) => set({ dxfGhostEntityIds: [...dxfGhostEntityIds] }),
   clear: () => {
     resetGrip3DInteraction();
-    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION, dxfGhostEntityIds: [] });
+    set({ grips: [], topElevFor: NO_ELEVATION, bottomElevFor: NO_ELEVATION, topWorldShift: null, dxfGhostEntityIds: [] });
   },
 }));
 

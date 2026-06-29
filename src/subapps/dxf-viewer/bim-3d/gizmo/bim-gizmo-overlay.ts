@@ -34,10 +34,10 @@ import {
 } from './bim-gizmo-overlay-markers';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 // ADR-402/408 — per-type handle-set tables + resolvers (split out for the 500-line budget, N.7.1).
-import { BASE_HANDLES, activeHandlesFor, isPlanarMoveType } from './bim-gizmo-overlay-handles';
+import { BASE_HANDLES, activeHandlesFor, isPlanarMoveType, hasEndpointHandles } from './bim-gizmo-overlay-handles';
 
 // Re-export the pure handle resolvers so existing importers keep their `bim-gizmo-overlay` path.
-export { activeHandlesFor, isPlanarMoveType };
+export { activeHandlesFor, isPlanarMoveType, hasEndpointHandles };
 
 export class BimGizmoOverlay {
   private readonly scene: THREE.Scene;

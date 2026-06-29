@@ -18,7 +18,6 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { PolygonModeToggle3D } from './PolygonModeToggle3D';
 import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
-import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { CutPlaneSlider3DLeaf } from './CutPlaneSlider3DLeaf';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
@@ -393,9 +392,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* ADR-539 — Cinema 4D «Polygon Mode»: toggle button + per-face material library (leaf). */}
       <PolygonModeToggle3D managerRef={managerRef} externalEntitiesMode={externalEntitiesMode} bimEntities={bimEntities} />
-      {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position. ADR-366: BIM
-          entity card lives in the left Properties palette (single Revit-grade panel, none here). */}
-      <QuickProperties3DHoverPopover />
+      {/* ADR-366 B.2.Q1 follow-up (Giorgio 2026-06-29) — the floating hover card was removed;
+          the hovered BIM entity info now reads inline in the status bar (StatusBarBim3DHoverLeaf),
+          right of the cursor coordinates. The hover store is still written here (pointer handler). */}
 
       {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
       <CutPlaneSlider3DLeaf />

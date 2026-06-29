@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { makeGripPlanToCanvas, GRIP_OFFSCREEN } from '../grip-3d-screen-project';
+import { makeGripPlanToCanvas, addGripWorldOffsets, GRIP_OFFSCREEN } from '../grip-3d-screen-project';
 
 /** Minimal canvas stub — only `getBoundingClientRect` is read by `worldToScreen`. */
 function fakeCanvas(left: number, top: number, width: number, height: number): HTMLElement {
@@ -76,5 +76,23 @@ describe('makeGripPlanToCanvas', () => {
     expect(omitted.x).toBeCloseTo(explicitNull.x, 6);
     expect(omitted.y).toBeCloseTo(explicitNull.y, 6);
     expect(explicitNull.x).toBeCloseTo(400, 3); // unchanged centre
+  });
+});
+
+describe('addGripWorldOffsets — stack live move + battered-wall tilt shear (ADR-535 Φ11)', () => {
+  it('sums two offsets component-wise', () => {
+    expect(addGripWorldOffsets({ x: 1, y: 2, z: 3 }, { x: 10, y: 20, z: 30 }))
+      .toEqual({ x: 11, y: 22, z: 33 });
+  });
+
+  it('returns the other operand when one is null (no allocation of a zero offset)', () => {
+    const a = { x: 1, y: 2, z: 3 };
+    expect(addGripWorldOffsets(a, null)).toBe(a);
+    expect(addGripWorldOffsets(null, a)).toBe(a);
+  });
+
+  it('returns null when BOTH are absent (vertical wall, static → no offset work)', () => {
+    expect(addGripWorldOffsets(null, null)).toBeNull();
+    expect(addGripWorldOffsets(undefined, undefined)).toBeNull();
   });
 });

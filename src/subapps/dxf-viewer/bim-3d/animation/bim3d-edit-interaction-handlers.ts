@@ -25,7 +25,8 @@ import { getGlobalCommandHistory } from '../../core/commands';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { BimGizmoOverlay } from '../gizmo/bim-gizmo-overlay';
 // ADR-363 Φ1G.5 Slice 2h — planar move/rotate drag → collapse gizmo to move arrows.
-import { isPlanarMoveType } from '../gizmo/bim-gizmo-overlay';
+// ADR-535 Φ8/Φ9 — `hasEndpointHandles` = SSoT gate for which types expose endpoint rings.
+import { isPlanarMoveType, hasEndpointHandles } from '../gizmo/bim-gizmo-overlay';
 import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
@@ -50,7 +51,7 @@ import {
   findBimEntityWorldBox,
 } from './bim3d-edit-interaction-helpers';
 // ADR-408 Φ-D/Φ1 — per-endpoint shape handles (segment + wall/beam), extracted (file-size N.7.1).
-import { refreshSegmentEndpointHandles, refreshStructuralEndpointHandles } from './bim3d-edit-endpoint-handles';
+import { refreshSegmentEndpointHandles } from './bim3d-edit-endpoint-handles';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
 import { emitStructuralChangeAfterEdit } from './bim3d-edit-structural-emit';
@@ -129,28 +130,25 @@ export function computeEditAnchor(ctx: EditInteractionCtx, entityIds: readonly s
 }
 
 /**
- * ADR-408 Φ-D/Φ1 — position the per-endpoint shape handles for a single-select
- * LINEAR element (Revit shape handles at each axis end). Cleared (null) for any
- * other selection. Two disciplines, one entry point:
- *   - `mep-segment` → free-3D pipe handles via `segmentAxisEndpointsWorld` (per-end
- *     elevation, the run may slope) — drag = κάτοψη + υψόμετρο.
- *   - `wall` / `beam` → horizontal LENGTH handles via `linearEndpointHandleWorld`
- *     (both ends share the gizmo-anchor Y; the height is a separate handle/Type).
- * Called after `computeEditAnchor` + `setActiveHandles` (and on auto-resync re-anchor),
- * so `ctx.overlay.getPosition()` already holds the world box centre.
+ * ADR-408 Φ-D/Φ1 — position the per-endpoint shape handles for a single-select LINEAR
+ * element (Revit shape handles at each axis end). SSoT: whether a type HAS endpoint rings
+ * is owned by `ENDPOINT_HANDLES_BY_TYPE` (read via `hasEndpointHandles`) — this positioner
+ * never re-decides it. Only `mep-segment` (free-3D pipe) remains; `wall`/`beam` length+ends
+ * moved to the 2D Canvas2D reshape grips (ADR-535 Φ8/Φ9), so their hidden handles are no
+ * longer positioned (dead-offset removed). Cleared (null) for every non-endpoint selection.
+ * Called after `computeEditAnchor` + `setActiveHandles` (and on auto-resync re-anchor).
  */
 export function refreshLinearEndpointHandles(
   ctx: EditInteractionCtx,
   entityIds: readonly string[],
   bimType: string | null,
 ): void {
-  if (entityIds.length !== 1) {
+  if (entityIds.length !== 1 || !hasEndpointHandles(bimType)) {
     ctx.overlay.setEndpointHandles(null, null);
     return;
   }
-  if (bimType === 'mep-segment') return refreshSegmentEndpointHandles(ctx, entityIds[0]);
-  if (bimType === 'wall' || bimType === 'beam') return refreshStructuralEndpointHandles(ctx, entityIds[0], bimType);
-  ctx.overlay.setEndpointHandles(null, null);
+  // Only `mep-segment` exposes endpoint handles (the SSoT gate above guarantees it).
+  refreshSegmentEndpointHandles(ctx, entityIds[0]);
 }
 
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {

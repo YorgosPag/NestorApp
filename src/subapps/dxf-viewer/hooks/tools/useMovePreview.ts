@@ -31,11 +31,12 @@ import type { useLevels } from '../../systems/levels';
 import type { Overlay } from '../../overlays/types';
 import {
   applyEntityPreview,
-  drawGhostEntity,
   makeTranslationPreview,
-  resolveGhostSolidColor,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
+// Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
@@ -107,6 +108,15 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     [levelManager],
   );
 
+  // ADR-550 — one real-entity renderer bound to the preview ctx, reused across frames.
+  const bimPreviewRef = useRef<{ ctx: CanvasRenderingContext2D; renderer: BimPreviewRenderer } | null>(null);
+  const getBimPreview = useCallback((ctx: CanvasRenderingContext2D): BimPreviewRenderer => {
+    if (!bimPreviewRef.current || bimPreviewRef.current.ctx !== ctx) {
+      bimPreviewRef.current = { ctx, renderer: new BimPreviewRenderer(ctx) };
+    }
+    return bimPreviewRef.current.renderer;
+  }, []);
+
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!PREVIEW_PHASES.has(phase)) return;
     if (!basePoint) return;
@@ -159,21 +169,22 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
     drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
 
-    // Solid preview entities at destination — AutoCAD parity.
+    // ADR-550 (WYSIWYG preview) — solid REAL-renderer copies at the destination (full
+    // fidelity, byte-identical to the committed render), AutoCAD/Revit parity. The originals
+    // dim to ghosts at their source via `movePreviewActive`.
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
-      ctx.globalAlpha = 1.0;
-      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+      const layersById = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)?.layersById
+        : undefined;
+      const bimPreview = getBimPreview(ctx);
 
       for (const entityId of selectedEntityIds) {
         const entity = getEntity(entityId);
         if (!entity) continue;
         const preview = makeTranslationPreview(entityId, delta);
         const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
-        const color = resolveGhostSolidColor(entity);
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-        drawGhostEntity(ctx, transformed, t, viewport);
+        drawRealEntityPreview(bimPreview, transformed, layersById, t, viewport);
       }
 
       ctx.restore();
@@ -199,7 +210,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         ctx.restore();
       }
     }
-  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager]);
+  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview]);
 
   useCanvasGhostPreview({
     isActive: PREVIEW_PHASES.has(phase),

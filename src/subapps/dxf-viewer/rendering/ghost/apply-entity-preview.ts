@@ -41,13 +41,16 @@ import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips'
 import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
+import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
+import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
+import { computeRoofGeometry } from '../../bim/geometry/roof-geometry';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
-import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
+import { computeFloorFinishGeometry, type FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import {
   applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
@@ -283,7 +286,9 @@ export function applyEntityPreview(
     const slab = entity as unknown as SlabEntity;
     const newParams = applySlabGripDrag(slabGripKind, { originalParams: slab.params, delta });
     if (newParams === slab.params) return entity;
-    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+    // ADR-550 — recompute geometry so the WYSIWYG preview (real renderer reads
+    // `.geometry`) tracks the reshape; the simplified ghost reads params and ignores this.
+    return { ...(entity as object), params: newParams, geometry: computeSlabGeometry(newParams) } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-363 Phase 3.7a — parametric slab-opening live preview ─────────────
@@ -291,7 +296,8 @@ export function applyEntityPreview(
     const so = entity as unknown as SlabOpeningEntity;
     const newParams = applySlabOpeningGripDrag(slabOpeningGripKind, { originalParams: so.params, delta });
     if (newParams === so.params) return entity;
-    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+    // ADR-550 — recompute geometry for the WYSIWYG preview (real renderer reads `.geometry`).
+    return { ...(entity as object), params: newParams, geometry: computeSlabOpeningGeometry(newParams) } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-417 Φ1-part-2 #2 — parametric roof live preview ───────────────────
@@ -303,7 +309,9 @@ export function applyEntityPreview(
     const roof = entity as unknown as RoofEntity;
     const newParams = applyRoofGripDrag(roofGripKind, { originalParams: roof.params, delta });
     if (newParams === roof.params) return entity;
-    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+    // ADR-550 — recompute geometry for the WYSIWYG preview (real renderer reads `.geometry`).
+    // Roof uses a straight-skeleton solve → heavier per-frame; browser-verify perf.
+    return { ...(entity as object), params: newParams, geometry: computeRoofGeometry(newParams) } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-419 — parametric floor-finish live preview ─────────────────────────
@@ -315,7 +323,8 @@ export function applyEntityPreview(
     const finish = entity as unknown as FloorFinishEntity;
     const newParams = applyFloorFinishGripDrag(floorFinishGripKind, { originalParams: finish.params, delta });
     if (newParams === finish.params) return entity;
-    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+    // ADR-550 — recompute geometry for the WYSIWYG preview (real renderer reads `.geometry`).
+    return { ...(entity as object), params: newParams, geometry: computeFloorFinishGeometry(newParams) } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-507 — parametric hatch live preview ────────────────────────────────

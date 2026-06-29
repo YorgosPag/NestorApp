@@ -46,6 +46,21 @@ export interface GripWorldOffset {
 }
 
 /**
+ * Sum two grip world-offsets (either may be null). Used to stack the live move-drag offset
+ * (ADR-535 Φ10) onto the static TOP-surface tilt shear of a battered wall (ADR-535 Φ11), so the
+ * top grips ride `base + tilt + move` while the bottom grips ride `base + move`. Returns null
+ * when both are absent (the common vertical, static case → no offset work).
+ */
+export function addGripWorldOffsets(
+  a: GripWorldOffset | null | undefined,
+  b: GripWorldOffset | null | undefined,
+): GripWorldOffset | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+}
+
+/**
  * Lift a grip plan point (mm) + its surface elevation (mm) to a WORLD point, optionally
  * shifted by a live rigid-move `worldOffset` (ADR-535 Φ10). This is the ONE place that maps a
  * grip to world space — shared by BOTH the draw projector ({@link makeGripPlanToCanvas}) AND

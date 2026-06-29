@@ -3484,6 +3484,7 @@
       "allowlist": [
         "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
         "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-renderer-style-resolve.ts",
         "src/subapps/dxf-viewer/systems/properties/__tests__/resolve-entity-style.test.ts",
         "src/subapps/dxf-viewer/hooks/canvas/__tests__/useDxfSceneConversion-bylayer-emission.test.ts"
       ],

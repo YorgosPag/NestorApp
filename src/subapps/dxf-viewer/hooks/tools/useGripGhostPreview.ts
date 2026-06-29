@@ -31,7 +31,7 @@
  * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -41,9 +41,11 @@ import type { DxfGripDragPreview } from '../grip-computation';
 import {
   applyEntityPreview,
   drawGhostEntity,
-  resolveGhostSolidColor,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
+// Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
 // tool draws (useRotationPreview), so both rotation flows look identical.
@@ -256,6 +258,16 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     [levelManager],
   );
 
+  // ADR-550 — one real-entity renderer bound to the preview ctx, reused across frames
+  // (the ctx is stable per canvas; rebuild only if it changes on remount/resize).
+  const bimPreviewRef = useRef<{ ctx: CanvasRenderingContext2D; renderer: BimPreviewRenderer } | null>(null);
+  const getBimPreview = useCallback((ctx: CanvasRenderingContext2D): BimPreviewRenderer => {
+    if (!bimPreviewRef.current || bimPreviewRef.current.ctx !== ctx) {
+      bimPreviewRef.current = { ctx, renderer: new BimPreviewRenderer(ctx) };
+    }
+    return bimPreviewRef.current.renderer;
+  }, []);
+
   // ADR-040 Φ12 — cursorMode 'world-position': the harness feeds `effectiveCursor`
   // = the LIVE realtime effective-world (same SSoT + same 60fps clock as the
   // compositor crosshair). We recompute the per-frame geometry from it synchronously
@@ -406,16 +418,14 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // marker below still draws (it must follow even on a zero-delta press).
     if (transformed !== entity) {
       ctx.save();
-      // ADR-049 (inverted ghost) — AutoCAD/Revit parity: the MOVING copy that follows the
-      // cursor wears the entity's REAL colour at full opacity; the copy left at the original
-      // position is the ghost (dimmed on the main canvas via `gripDraggedEntityId`). Mirrors
-      // useMovePreview — same `resolveGhostSolidColor` SSoT, one colour rule for both flows.
-      const solidColor = resolveGhostSolidColor(entity);
-      ctx.globalAlpha = 1.0;
-      ctx.strokeStyle = solidColor;
-      ctx.fillStyle = solidColor;
-      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
-      drawGhostEntity(ctx, transformed, t, vp);
+      // ADR-550 (WYSIWYG preview) — the MOVING copy renders through the REAL entity renderer
+      // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
+      // the preview matches the committed form, not a silhouette. The original-position copy is
+      // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
+      const layersById = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)?.layersById
+        : undefined;
+      drawRealEntityPreview(getBimPreview(ctx), transformed, layersById, t, vp);
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
       // NOT the selected dragged entity, so their originals stay SOLID on the main canvas.
@@ -470,7 +480,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         }
       }
     }
-  }, [dragPreview, getEntity, levelManager]);
+  }, [dragPreview, getEntity, levelManager, getBimPreview]);
 
   useCanvasGhostPreview({
     isActive,
