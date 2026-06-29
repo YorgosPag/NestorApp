@@ -336,6 +336,24 @@ bypass timing constants ώστε να δείχνουν στο `DXF_TIMING`, + pa
 
 ## 8. Changelog
 
+- **2026-06-29 (ΡΙΖΑ — interaction gate στο non-camera drag· §1.1-A «μηδέν lag στη μετακίνηση»)** —
+  Browser diag (console, 2026-06-29) εντόπισε ΟΡΙΣΤΙΚΑ τη ρίζα του gizmo-move lag: **`render: 30-108ms`
+  ανά frame** (work=2-7ms φθηνό· events αραιά dt=80-332ms ΩΣ ΣΥΝΕΠΕΙΑ του blocking render). Αιτία:
+  το `renderSceneFrame` (`scene-render-frame.ts:47-93`) διαλέγει quality path από το `isInteracting` —
+  true → φθηνό raster (SSAO+shadows OFF, ~3ms)· false → πλήρες refine-on-idle SSAO+shadow composer
+  (~30-108ms σε αδύναμη GPU, N.17). Το `isInteracting` το ανάβουν ΜΟΝΟ τα OrbitControls
+  (`onInteractionStart`), αλλά ένα **gizmo/grip drag κάνει `setControlsEnabled(false)`** → το flag μένει
+  false → η σκηνή πλήρωνε το idle-refine SSAO **κάθε frame ενώ ο χρήστης έσερνε**. ΛΥΣΗ: NEW
+  `ThreeJsSceneManager.setInteracting(active)`· τα drag handlers το ανάβουν στο begin (gizmo + grip,
+  `onEditPointerDown`) και το σβήνουν στο end (up/cancel → ένα τελικό crisp SSAO frame). Render στο drag:
+  30-108ms → ~3ms → 60fps → 1:1 follow.
+  **ΑΝΑΙΡΕΘΗΚΑΝ ως λάθος-ρίζα** (κρατήθηκε ΜΟΝΟ ό,τι είναι ορθό & φθηνό): (α) το `renderNow()`
+  render-on-input αφαιρέθηκε — με render 30-108ms ΜΠΛΟΚΑΡΕ το main thread → αραίωνε τα pointer events
+  (το «σέρνεται» που ανέφερε ο Giorgio)· επαναφορά σε `markSceneDirty()`. (β) Το input-prediction
+  (`pointer-prediction.ts` + `DXF_TIMING.prediction`) **κρατήθηκε** (visual-only, decay-to-zero, ENABLED
+  toggle, 6/6 jest) ως δευτερεύουσα αντιστάθμιση του residual present latency — ΟΧΙ ο κύριος μοχλός.
+  ΜΑΘΗΜΑ (Giorgio SSoT-audit pattern): μέτρα ΠΡΩΤΑ (`render:` ms) πριν υποθέσεις present-latency/RAF.
+  Related: ADR-366 §B.5 (adaptive shadows/SSAO refine-on-idle), ADR-549, ADR-402, ADR-040.
 - **2026-06-24 (Group 6)** — Κεντρικοποίηση 17 αρχείων / 21 γνήσιων production one-off timings → `DXF_TIMING`
   (18 νέα categorized keys, καμία αλλαγή τιμής, §8.quater). Baseline `.dxf-timing-baseline.json`: **24/30 → 7/9**.
   Τα εναπομείναντα 7/9 σκόπιμα baselined (dev-instrumentation + ADR-366 telemetry FSM internals — cohesion).

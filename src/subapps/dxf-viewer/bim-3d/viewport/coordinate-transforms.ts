@@ -78,18 +78,36 @@ export function worldToNdc(
 }
 
 /**
- * Compute world-space size of one pixel at the given distance from camera.
- * Useful for gizmo hit-testing and snap distance in world units.
+ * Compute world-space size (metres) of one screen pixel — the inverse of the on-screen
+ * scale. Drives constant-px annotation sizing (`Temp*Overlay` labels), wall-HUD scaling and
+ * snap/hit-test tolerances in world units.
+ *
+ * Mode-aware:
+ *  - **Perspective**: visible height grows with `distance` → `2·tan(fov/2)·distance / heightPx`.
+ *  - **Orthographic** (Top/Front/Side & canonical views): `distance` is irrelevant; the visible
+ *    height is the zoomed frustum `(top − bottom) / zoom`. Previously this returned a placeholder
+ *    `1` (≈ 1 m/px) → in ortho the constant-px label sprites blew up to dozens of metres and
+ *    covered the whole viewport (ADR-363 §empty-dxf follow-up — «τεράστια νούμερα μετακίνησης»),
+ *    and snap tolerances read ~1000 mm/px. Same formula the ortho branch of `pan()` uses.
+ *
+ * `clientHeight` is floored at 1 so a not-yet-laid-out canvas can't divide by zero → Infinity.
  */
 export function getPixelWorldSize(
   distance: number,
   camera: THREE.Camera,
   canvas: HTMLElement,
 ): number {
-  if (!(camera instanceof THREE.PerspectiveCamera)) return 1;
-  const vFovRad = (camera.fov * Math.PI) / 180;
-  const visibleHeight = 2 * Math.tan(vFovRad / 2) * distance;
-  return visibleHeight / canvas.clientHeight;
+  const heightPx = Math.max(canvas.clientHeight, 1);
+  if (camera instanceof THREE.PerspectiveCamera) {
+    const vFovRad = (camera.fov * Math.PI) / 180;
+    const visibleHeight = 2 * Math.tan(vFovRad / 2) * distance;
+    return visibleHeight / heightPx;
+  }
+  if (camera instanceof THREE.OrthographicCamera) {
+    const visibleHeight = (camera.top - camera.bottom) / camera.zoom;
+    return visibleHeight / heightPx;
+  }
+  return 1;
 }
 
 /**

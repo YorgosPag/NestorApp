@@ -79,9 +79,25 @@ describe('getPixelWorldSize', () => {
     expect(size).toBeGreaterThan(0);
   });
 
-  it('returns 1 for non-perspective cameras', () => {
-    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1000);
+  it('orthographic: visible frustum height ÷ pixels, independent of distance', () => {
+    // top−bottom = 30 world units, zoom 1, 600px tall → 30/600 = 0.05 m/px.
+    const cam = new THREE.OrthographicCamera(-20, 20, 15, -15, 0.01, 1000);
     const canvas = { clientHeight: 600 } as HTMLElement;
-    expect(getPixelWorldSize(10, cam, canvas)).toBe(1);
+    expect(getPixelWorldSize(10, cam, canvas)).toBeCloseTo(0.05, 6);
+    // `distance` must NOT affect the ortho result (the bug: it blew up the labels).
+    expect(getPixelWorldSize(999, cam, canvas)).toBeCloseTo(0.05, 6);
+  });
+
+  it('orthographic: zoom shrinks the world-per-pixel proportionally', () => {
+    const cam = new THREE.OrthographicCamera(-20, 20, 15, -15, 0.01, 1000);
+    cam.zoom = 2; // zoomed 2× → half the world per pixel.
+    const canvas = { clientHeight: 600 } as HTMLElement;
+    expect(getPixelWorldSize(10, cam, canvas)).toBeCloseTo(0.025, 6);
+  });
+
+  it('floors clientHeight at 1 so an unlaid-out canvas never divides by zero', () => {
+    const cam = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+    const canvas = { clientHeight: 0 } as HTMLElement;
+    expect(Number.isFinite(getPixelWorldSize(10, cam, canvas))).toBe(true);
   });
 });

@@ -22,6 +22,7 @@ import {
   ZOOM_SURFACE_MARGIN, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY,
 } from './viewport-constants';
 import { computeSurfaceZoomPose, wheelZoomFactor } from './viewport-zoom-surface';
+import { getPixelWorldSize } from './coordinate-transforms';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
@@ -353,16 +354,12 @@ export function createViewportCamera(
     const up = new THREE.Vector3();
     activeCamera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
 
-    let pxToWorld: number;
-    const canvasHeight = Math.max(domElement.clientHeight, 1);
-    if (activeCamera instanceof THREE.OrthographicCamera) {
-      const visibleHeight = (activeCamera.top - activeCamera.bottom) / activeCamera.zoom;
-      pxToWorld = visibleHeight / canvasHeight;
-    } else {
-      const dist = activeCamera.position.distanceTo(controls.target);
-      const vFovRad = (activeCamera.fov * Math.PI) / 180;
-      pxToWorld = (2 * Math.tan(vFovRad / 2) * dist) / canvasHeight;
-    }
+    // World metres per screen pixel — SSoT `getPixelWorldSize` (mode-aware: ortho ignores
+    // distance, perspective scales by cam→target distance). Distance only matters for perspective.
+    const dist = activeCamera instanceof THREE.PerspectiveCamera
+      ? activeCamera.position.distanceTo(controls.target)
+      : 0;
+    const pxToWorld = getPixelWorldSize(dist, activeCamera, domElement);
 
     const offset = new THREE.Vector3()
       .addScaledVector(right, dxScreenPx * pxToWorld)

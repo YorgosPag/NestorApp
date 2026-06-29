@@ -66,6 +66,9 @@ import type { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
 import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
 // ADR-535 — 3D per-vertex reshape grips (slab footprint pilot).
 import type { BimGripController3D } from '../grips/bim-grip-controller-3d';
+// ADR-516 — input prediction (latency compensation) for the gizmo-move drag.
+import type { PointerPredictor } from '../gizmo/pointer-prediction';
+import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-535 Φ1/Φ2 — reshape-grip (re)seat + live preview + commit (extracted, file-size N.7.1).
 import { refreshReshapeGrips, applyGripReshapePreview, commitGripReshape, resolveSlabOpeningHostSlabId } from './bim3d-grip-drag';
 // ADR-535 Φ4 — per-vertex grip context menu store (right-click → delete/insert vertex).
@@ -92,6 +95,8 @@ export interface EditInteractionCtx {
   readonly resolveSnapLabel: (type?: string, description?: string) => string;
   /** ADR-535 — 3D reshape-grip interaction FSM (hover/drag, screen-space). */
   readonly gripController: BimGripController3D;
+  /** ADR-516 — input prediction (latency compensation) for the gizmo-move drag. */
+  readonly pointerPredictor: PointerPredictor;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
 }
@@ -198,6 +203,10 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     e.preventDefault();
     e.stopPropagation();
     ctx.manager.viewport.setControlsEnabled(false);
+    // ADR-516 — a gizmo/grip drag disables OrbitControls, so the camera `isInteracting`
+    // flag stays false and the scene pays the full SSAO+shadow idle-refine cost (~30-108ms)
+    // EVERY frame while dragging. Signal interacting → cheap raster path (~3ms) → 1:1 follow.
+    ctx.manager.setInteracting(true);
     (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
     // ADR-535 Φ4 — hide the whole-entity gizmo while reshaping a vertex (Revit «Edit
     // Sketch»: the move/rotate handles step aside so they neither clutter the perimeter
@@ -223,6 +232,8 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
   }
   const started = ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
   if (!started) return; // missed the gizmo → leave the event for selection / orbit
+  ctx.pointerPredictor.reset(); // ADR-516 — fresh velocity history for this drag.
+  ctx.manager.setInteracting(true); // ADR-516 — cheap raster path while dragging (see grip branch).
   // ADR-402 Phase B — build the snap callback for this drag from the snap-engine
   // SSoT (null = OSNAP off / rotate / vertical resize → free drag).
   ctx.controller.setSnapFn(buildDragSnapFn(ctx));
@@ -306,7 +317,16 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
   if (ctx.controller.isDragging()) {
     // ADR-404 — track Shift live so the tilt snap can be toggled mid-drag.
     ctx.controller.setShiftHeld(e.shiftKey);
-    const changed = ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
+    // ADR-516 — input prediction (latency compensation): feed the gizmo the position the
+    // cursor WILL reach in ~1 frame so the entity coincides with the 0ms OS cursor instead
+    // of trailing it by the WebGL present latency. VISUAL-ONLY — pointer-up commits RAW.
+    // ADR-516 — input prediction (latency compensation): feed the gizmo the position the
+    // cursor WILL reach in ~1 frame so the entity coincides with the 0ms OS cursor instead
+    // of trailing it by the WebGL present latency. VISUAL-ONLY — pointer-up commits RAW.
+    const p = DXF_TIMING.prediction.ENABLED
+      ? ctx.pointerPredictor.predict(e.clientX, e.clientY, e.timeStamp)
+      : { x: e.clientX, y: e.clientY };
+    const changed = ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, p.x, p.y);
     if (changed) {
       applyLivePreview(ctx);
       e.preventDefault();
@@ -341,6 +361,7 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
     else ctx.preview.reset();
     ctx.overlay.setVisible(true); // ADR-535 Φ4 — the whole-entity gizmo comes back.
     ctx.manager.viewport.setControlsEnabled(true);
+    ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
     ctx.manager.markSceneDirty();
     return;
   }
@@ -364,6 +385,7 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
+  ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
   ctx.manager.markSceneDirty();
 }
 
@@ -377,6 +399,7 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
     const st = useBim3DEditStore.getState();
     refreshReshapeGrips(ctx, st.editEntityIds, st.editBimType);
     ctx.manager.viewport.setControlsEnabled(true);
+    ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
     ctx.manager.markSceneDirty();
     return;
   }
@@ -389,6 +412,7 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
+  ctx.manager.setInteracting(false); // ADR-516 — drag end → one final crisp SSAO frame at rest.
   ctx.manager.markSceneDirty();
 }
 

@@ -12,7 +12,7 @@ import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
-import { raycastBimGroup, raycastBimFace, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastBimGroup, raycastBimFace, raycastWorldPointOrPlane, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { useSelection3DStore } from '../stores/Selection3DStore';
@@ -119,9 +119,15 @@ export class ThreeJsSceneManager {
       getReducedMotionOverride: () => this.reducedMotionOverride,
       onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // ADR-366 §A.6.Q5
       onAltPress: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // re-centre pivot before drag
-      // ADR-363 Φ1G.5 — geometry hit under the cursor for the Revit surface-anchored wheel zoom.
+      // ADR-363 Φ1G.5 — anchor point under the cursor for the Revit surface-anchored wheel zoom.
+      // BIM hit → DXF ground-plane → camera-facing plane through the orbit target (SAME resolver as
+      // the Alt+drag orbit-pivot, `setOrbitPivotAt`). So empty canvas + DXF underlay + BIM surface ALL
+      // feed the ONE exponential dolly — no fall-through to OrbitControls' divergent zoom (ADR-363 §empty-dxf).
       resolveSurfacePoint: (clientX, clientY) =>
-        raycastWorldPoint(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY),
+        raycastWorldPointOrPlane(
+          this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY,
+          this.viewport.target, this.dxfGroundY(),
+        ),
     });
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
@@ -205,18 +211,14 @@ export class ThreeJsSceneManager {
   }
 
   /** ADR-366 §C.1.b — combined BIM + DXF bounds για animation actions (turntable). */
-  getSceneFramingBounds(): THREE.Box3 | null {
-    return this.disposed ? null : computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds());
-  }
+  getSceneFramingBounds(): THREE.Box3 | null { return this.disposed ? null : computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds()); }
 
   // ── Phase 4.5 / A.7 — Accessibility public surface (logic in scene-manager-a11y) ──
   /** A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
   panViewportByPixels(dxPx: number, dyPx: number): void { if (!this.disposed) this.viewport.pan(dxPx, dyPx); }
 
   /** C.5.Q3 — current frustum-culled entity order for keyboard navigator. */
-  getEntityFocusOrder(): readonly string[] {
-    return this.disposed ? [] : computeFocusOrder(this.bimLayer.group, this.viewport.camera);
-  }
+  getEntityFocusOrder(): readonly string[] { return this.disposed ? [] : computeFocusOrder(this.bimLayer.group, this.viewport.camera); }
 
   /** A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
   cycleKeyboardFocus(direction: 'next' | 'prev'): void {
@@ -233,9 +235,7 @@ export class ThreeJsSceneManager {
   getKeyboardFocusManager(): KeyboardFocusManagerApi { return this.keyboardFocusManager; }
 
   /** Resolve label data for the floating focus label (entity type + name + world center). */
-  getFocusedEntityData(bimId: string): FocusEntityLabelData | null {
-    return this.disposed ? null : findFocusedEntityData(this.bimLayer.group, bimId);
-  }
+  getFocusedEntityData(bimId: string): FocusEntityLabelData | null { return this.disposed ? null : findFocusedEntityData(this.bimLayer.group, bimId); }
 
   getCamera(): THREE.Camera { return this.viewport.camera; }
 
@@ -285,6 +285,19 @@ export class ThreeJsSceneManager {
   isSceneDirty(): boolean { return this.disposed ? false : isSceneDirtyFromState(this.dirtyState()); }
 
   markSceneDirty(): void { if (!this.disposed) { diagRecordMarkDirty(); this._sceneDirty = true; } } // ADR-040 — flag for redraw. (🔬 ADR-549 Phase 0 trace, revertible)
+
+  /**
+   * ADR-516 — INTERACTION GATE for NON-camera drags (gizmo/grip entity edit). The render
+   * frame uses `isInteracting` to pick its quality path: true → cheap raster (SSAO + shadows
+   * OFF, ~3ms), false → full refine-on-idle SSAO+shadow composer (~30-108ms on a weak GPU).
+   * Camera drags flip it via OrbitControls `onInteractionStart/End`; a gizmo drag disables
+   * those controls, so WITHOUT this the scene paid the idle-refine cost EVERY frame while the
+   * user dragged — the real cursor↔entity lag (diag 2026-06-29). Drag handlers call
+   * setInteracting(true) at begin, (false) at end (→ one final crisp SSAO frame at rest).
+   */
+  setInteracting(active: boolean): void {
+    if (!this.disposed) { this.isInteracting = active; this.markSceneDirty(); }
+  }
 
   /** ADR-366 §B.5 — capture the frame as a data-URL (HUD screenshot): force ONE sync render + read
    *  the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`. */
@@ -344,22 +357,14 @@ export class ThreeJsSceneManager {
     );
   }
 
-  applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
-    if (!this.disposed) applyFloorVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty());
-  }
+  applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void { if (!this.disposed) applyFloorVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty()); }
 
-  applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
-    if (!this.disposed) applyBuildingVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty());
-  }
+  applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void { if (!this.disposed) applyBuildingVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty()); }
 
-  syncDxfOverlay(dxfScene: DxfScene | null): void {
-    if (!this.disposed) runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty());
-  }
+  syncDxfOverlay(dxfScene: DxfScene | null): void { if (!this.disposed) runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty()); }
 
   /** ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). */
-  syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
-    if (!this.disposed) runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty());
-  }
+  syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void { if (!this.disposed) runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty()); }
 
   /** Shared DXF overlay deps (converter + path-tracer + section + viewport). */
   private dxfOverlayDeps(): SyncDxfOverlayDeps {
@@ -372,13 +377,11 @@ export class ThreeJsSceneManager {
     return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } };
   }
 
-  /** Replace the selection with one entity (plain click), or clear it (null). */
-  selectBimEntity(bimId: string | null): void {
-    if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'replace'); }
-  }
-  /** ADR-402 Phase C — Shift+click: add/remove one entity from the selection. */
-  toggleBimEntity(bimId: string | null): void {
-    if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'toggle'); }
+  /** Replace (plain click) or toggle (ADR-402 Φ-C Shift+click) one entity in the selection; null clears. */
+  selectBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'replace'); }
+  toggleBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'toggle'); }
+  private applyBimSelectionMode(bimId: string | null, mode: 'replace' | 'toggle'): void {
+    if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, mode); }
   }
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
@@ -391,9 +394,7 @@ export class ThreeJsSceneManager {
   }
 
   /** ADR-539 Φ4b — highlight (or clear) ΟΛΕΣ τις επιλεγμένες όψεις (multi-face Polygon Mode). */
-  setSelectedFaces(faces: readonly { bimId: string; faceKey: string }[]): void {
-    if (!this.disposed) { this.faceHighlighter.setTargets(faces); this.markSceneDirty(); }
-  }
+  setSelectedFaces(faces: readonly { bimId: string; faceKey: string }[]): void { if (!this.disposed) { this.faceHighlighter.setTargets(faces); this.markSceneDirty(); } }
 
   /** ADR-539 — highlight (or clear) one face (context-menu / drag-drop / Φ4a· delegates to Φ4b). */
   setSelectedFace(bimId: string | null, faceKey: string | null): void {
@@ -403,15 +404,23 @@ export class ThreeJsSceneManager {
   /** ADR-539 Φ2 — yellow hover preview on the face under the cursor / drag (Polygon Mode). */
   setHoveredFace(bimId: string | null, faceKey: string | null): void { if (!this.disposed) { this.faceHoverHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); } }
 
+  /**
+   * DXF overlay floor elevation (Y, metres) or null when no DXF is loaded — the horizontal
+   * plane where the DXF wireframe lives. SSoT for both the wheel-zoom anchor (`resolveSurfacePoint`)
+   * and the Alt+drag orbit pivot (`setOrbitPivotAt`), so a BIM-miss over the floor plan resolves the
+   * real cursor point at floor depth (not a wrong-depth fallback). ADR-363 §empty-dxf / ADR-366 §A.6.Q5.
+   */
+  private dxfGroundY(): number | null {
+    const dxfBounds = this.dxfConverter.getBounds();
+    return dxfBounds ? dxfBounds.min.y : null;
+  }
+
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
     if (this.disposed) return false;
-    // DXF floor-plane elevation (Y) so a BIM-miss DXF-wireframe click orbits around the real point.
-    const dxfBounds = this.dxfConverter.getBounds();
-    const groundY = dxfBounds ? dxfBounds.min.y : null;
     return setBimOrbitPivot(
       { bimGroup: this.bimLayer.group, camera: this.viewport.camera, canvas: this.renderer.domElement,
-        currentTarget: this.viewport.target, groundY,
+        currentTarget: this.viewport.target, groundY: this.dxfGroundY(),
         setOrbitPivot: (p) => this.viewport.setOrbitPivot(p),
         onNavigationActive: () => this.poi.onNavigationActive(),
         markDirty: () => this.markSceneDirty() },
@@ -428,9 +437,7 @@ export class ThreeJsSceneManager {
     if (!this.disposed) { this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty(); }
   }
 
-  async loadHdriEnvironment(url: string): Promise<void> {
-    if (!this.disposed) await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty());
-  }
+  async loadHdriEnvironment(url: string): Promise<void> { if (!this.disposed) await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty()); }
 
   applyLightPreset(preset: LightPreset): void {
     if (this.disposed) return;
@@ -451,14 +458,10 @@ export class ThreeJsSceneManager {
 
   cancelFinalRender(): void { if (!this.disposed) this.pathTracerRenderer.cancelFinal(); }
 
-  resize(width: number, height: number): void {
-    if (!this.disposed) applyViewportResize(this.resizeDeps(), width, height);
-  }
+  resize(width: number, height: number): void { if (!this.disposed) applyViewportResize(this.resizeDeps(), width, height); }
 
   /** ADR-549 Phase 7 / ADR-556 — re-apply dpr after a `devicePixelRatio` CHANGE (logic in scene-manager-resize). */
-  syncDevicePixelRatio(): void {
-    if (!this.disposed) applyDevicePixelRatioSync(this.resizeDeps());
-  }
+  syncDevicePixelRatio(): void { if (!this.disposed) applyDevicePixelRatioSync(this.resizeDeps()); }
 
   /** Shared renderer-sizing deps for the resize helpers (scene-manager-resize). */
   private resizeDeps(): SceneResizeDeps {

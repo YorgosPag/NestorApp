@@ -27,6 +27,9 @@ import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 // ADR-535 — 3D per-vertex reshape grips (slab footprint), coexists with the gizmo.
 // Φ5 — the grips are a Canvas2D overlay driven by `Grip3DOverlayStore` (no scene meshes).
 import { BimGripController3D } from '../grips/bim-grip-controller-3d';
+// ADR-516 — input prediction (latency compensation) for the gizmo-move drag.
+import { createPointerPredictor } from '../gizmo/pointer-prediction';
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
@@ -83,6 +86,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     // ADR-535 Φ5 — 3D reshape-grip FSM (screen-space). The grips render on the Canvas2D
     // `BimGripOverlay2D` leaf (mounted in BimViewport3D) from the `Grip3DOverlayStore`.
     const gripController = new BimGripController3D();
+    // ADR-516 — one predictor per interaction session; reset at each drag begin.
+    const pointerPredictor = createPointerPredictor(DXF_TIMING.prediction);
     const preview = new Bim3DEditLivePreview();
     // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
     const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);
@@ -97,7 +102,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       return resolveSnapLabelText(tRef.current, (type ?? '') as ExtendedSnapType, description);
     };
     const ctx: EditInteractionCtx = {
-      manager, canvasEl, overlay, controller, gripController, preview,
+      manager, canvasEl, overlay, controller, gripController, pointerPredictor, preview,
       wallMoveDim, alignmentLine, snapLabel, moveReadout, resolveSnapLabel,
       getLevels: () => levelsRef.current,
     };

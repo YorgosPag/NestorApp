@@ -295,6 +295,26 @@ export const DXF_TIMING = {
     /** Pixels to move before a drag starts. */
     DRAG_PX: 5,
   },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // INPUT PREDICTION (latency compensation) — ADR-516 lag «type A», solved
+  // architecturally. The 3D entity (WebGL) trails the 0ms OS cursor by the
+  // measured present latency (~28ms, ADR-549). We draw it where the cursor WILL
+  // be in `PRESENT_LATENCY_MS` so they coincide on present. See
+  // `bim-3d/gizmo/pointer-prediction.ts`.
+  // ──────────────────────────────────────────────────────────────────────────
+  prediction: {
+    /** Horizon (ms): measured WebGL present latency (ADR-549, 641 samples). */
+    PRESENT_LATENCY_MS: 28,
+    /** EMA smoothing of velocity (0..1) — higher = more responsive, lower = smoother. */
+    EMA_ALPHA: 0.4,
+    /** Clamp: max prediction distance (px) — caps overshoot on sharp moves. */
+    MAX_AHEAD_PX: 40,
+    /** Below this speed (px/ms) the prediction is zeroed (settle exactly on the cursor). */
+    STOP_VEL_PX_PER_MS: 0.02,
+    /** A/B toggle — false = raw position (old behaviour, visible lag). */
+    ENABLED: true,
+  },
 } as const;
 
 // ============================================================================

@@ -95,7 +95,10 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   // rendered (raster / SSAO / section caps), so the outline looks identical on every
   // interactive path. No-op when nothing is selected. (Path-tracer is handled above
   // and intentionally excluded — final-render mode.)
-  if (!pathTracerRenderer.isActive) ssaoModulator.renderOutlineOverlayToScreen();
+  // ADR-516 — adaptive quality: the silhouette FBO + edge pass spikes to ~88ms on a weak
+  // GPU and is the dominant drag cost; skip it while interacting (camera/gizmo drag), like
+  // SSAO + shadows. Restored the instant the view settles (one crisp outlined frame).
+  if (!pathTracerRenderer.isActive && !interacting) ssaoModulator.renderOutlineOverlayToScreen();
   // ADR-553 — ViewCube as a scissored sub-viewport of the MAIN renderer (single WebGL context).
   // Drawn LAST, into the corner of the final framebuffer, so it is untouched by SSAO/outline/post-FX
   // (AO-immune by construction, like the outline overlay above). Runs on every path incl. path-trace
