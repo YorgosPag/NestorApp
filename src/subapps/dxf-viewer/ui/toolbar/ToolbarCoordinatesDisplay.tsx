@@ -24,6 +24,11 @@ import {
   currentDisplayUnitLabel,
 } from '../../config/display-length-format';
 import { displayUnitState } from '../../config/display-unit-state';
+// ADR-366 §B.2.Q1 follow-up — in 3D the cursor readout carries a third (vertical) axis.
+import {
+  getBim3DCursorReadout,
+  subscribeBim3DCursorReadout,
+} from '../../bim-3d/stores/Bim3DCursorReadoutStore';
 
 interface ToolbarCoordinatesDisplayProps {
   precision: number;
@@ -42,25 +47,31 @@ export const ToolbarCoordinatesDisplay: React.FC<ToolbarCoordinatesDisplayProps>
     const ref = useRef<HTMLElement>(null);
 
     useEffect(() => {
+      const fmt = (v: number): string => formatCoordinateForDisplay(v, { precision, withUnit: false });
       const render = (): void => {
-        const wp = getImmediateWorldPosition();
-        const x = wp?.x ?? 0;
-        const y = wp?.y ?? 0;
-        if (ref.current) {
-          // ADR-462: convert canonical-mm → active display unit + locale; a single
-          // unit label trails both axes (Revit/AutoCAD status-bar convention).
-          const fx = formatCoordinateForDisplay(x, { precision, withUnit: false });
-          const fy = formatCoordinateForDisplay(y, { precision, withUnit: false });
-          ref.current.textContent = `X: ${fx}, Y: ${fy} ${currentDisplayUnitLabel()}`;
+        if (!ref.current) return;
+        // ADR-462: convert canonical-mm → active display unit + locale; a single unit
+        // label trails all axes (Revit/AutoCAD status-bar convention).
+        // ADR-366 §B.2.Q1 follow-up — in the 3D viewport the cursor readout carries a
+        // third (vertical) axis; the 3D channel takes precedence when active, else the
+        // 2D world-position channel renders the usual X/Y.
+        const r3d = getBim3DCursorReadout();
+        if (r3d) {
+          ref.current.textContent = `X: ${fmt(r3d.x)}, Y: ${fmt(r3d.y)}, Z: ${fmt(r3d.z)} ${currentDisplayUnitLabel()}`;
+          return;
         }
+        const wp = getImmediateWorldPosition();
+        ref.current.textContent = `X: ${fmt(wp?.x ?? 0)}, Y: ${fmt(wp?.y ?? 0)} ${currentDisplayUnitLabel()}`;
       };
       render();
       const offPosition = subscribeToImmediateWorldPosition(render);
+      const off3D = subscribeBim3DCursorReadout(render);
       // Live unit switch: repaint the readout the moment the selector changes,
       // not only on the next mousemove.
       const offUnit = displayUnitState.subscribe(render);
       return () => {
         offPosition();
+        off3D();
         offUnit();
       };
     }, [precision]);

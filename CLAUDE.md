@@ -486,39 +486,27 @@ Giorgio κάνει commits μέσω agent (ποτέ χειροκίνητα). Hai
 
 ---
 
-## 🚨🚨🚨 SOS. SOS. N.17 — ΕΝΑΣ ΚΑΙ ΜΟΝΟ ΕΝΑΣ ΕΛΕΓΧΟΣ TSC ΤΗΝ ΦΟΡΑ (single-tsc serialization)
+## 🚨🚨🚨 SOS. SOS. N.17 — ΑΠΑΓΟΡΕΥΣΗ ΕΛΕΓΧΟΥ TypeScript ΣΦΑΛΜΑΤΩΝ (ΟΧΙ tsc ΑΠΟ ΠΡΑΚΤΟΡΑ)
 
-**ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΠΟΛΥΤΩΣ** να τρέχουν **2+ ταυτόχρονοι έλεγχοι `tsc` / `tsc --noEmit`** στον υπολογιστή — είτε από τον ίδιο πράκτορα είτε από διαφορετικούς πράκτορες που δουλεύουν ταυτόχρονα στην εφαρμογή.
+**ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΠΟΛΥΤΩΣ** ένας πράκτορας να τρέχει έλεγχο TypeScript σφαλμάτων όταν γράφει/αλλάζει κώδικα.
+Συγκεκριμένα **ΠΟΤΕ** μην τρέξεις:
+- `tsc`, `tsc --noEmit`, `npx tsc`, `npx tsc --noEmit`
+- `npm run typecheck` / `type-check` / οποιοδήποτε script κάνει type-check
+- οποιαδήποτε άλλη εντολή «ελέγχου σφαλμάτων TypeScript» (foreground **Ή** background, targeted **Ή** full-project)
 
-**Ο υπολογιστής του Giorgio ΔΕΝ είναι δυνατός — γονατίζει με πολλαπλά tsc. ΕΝΑ tsc τη φορά. ΠΟΤΕ δύο.**
+**Ισχύει για ΟΛΟΥΣ τους πράκτορες, σε ΚΑΘΕ εργασία, ΧΩΡΙΣ ΕΞΑΙΡΕΣΕΙΣ.**
 
-### ΥΠΟΧΡΕΩΤΙΚΟΣ ΕΛΕΓΧΟΣ ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΕΚΚΙΝΗΣΗ TSC:
+### ΤΙ ΕΠΙΤΡΕΠΕΤΑΙ:
+- ✅ Γράψε/άλλαξε κώδικα κανονικά και **ΣΤΑΜΑΤΑ** — μην επικυρώνεις με tsc.
+- ✅ Τρέξε **jest tests** (στοχευμένα, γρήγορα) όπου χρειάζεται — αυτά **δεν** απαγορεύονται.
+- ✅ Εμπιστεύσου τους τύπους που γράφεις (enterprise TypeScript: όχι `any`/`as any`/`@ts-ignore`).
 
-**ΠΑΝΤΑ** πριν τρέξεις `tsc`, έλεγξε αν ήδη τρέχει άλλος (από εσένα ή από άλλον πράκτορα):
-
-```powershell
-Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*tsc*' } | Select-Object ProcessId, CommandLine
-```
-
-- **Αν επιστρέψει αποτέλεσμα** → τρέχει ήδη tsc. **ΜΗΝ ξεκινήσεις νέο.** Έχεις 2 επιλογές:
-  1. **ΠΕΡΙΜΕΝΕ** να τελειώσει ο τρέχων ΠΡΙΝ ξεκινήσεις τον δικό σου, **Ή**
-  2. **ΣΤΑΜΑΤΗΣΕ** τον τρέχοντα (μόνο αν είναι δικός σου / παρωχημένος) και ξεκίνησε τον νέο:
-     ```powershell
-     Stop-Process -Id <ProcessId> -Force
-     ```
-  ⚠️ Μην σκοτώνεις tsc άλλου πράκτορα χωρίς λόγο — προτίμησε να περιμένεις.
-- **Αν ΔΕΝ επιστρέψει τίποτα** → ελεύθερος. Ξεκίνα τον δικό σου tsc.
-
-### ΣΕΙΡΙΑΚΑ, ΠΟΤΕ ΠΑΡΑΛΛΗΛΑ (ίδιος πράκτορας):
-- Αν έχεις ήδη ξεκινήσει tsc → **ΜΗΝ** ξεκινήσεις δεύτερο. Περίμενε να τελειώσει ο πρώτος.
-
-### TSC ΜΟΝΟ ΟΤΑΝ ΕΙΝΑΙ ΑΠΑΡΑΙΤΗΤΟ:
-- Τρέξε `tsc` **ΜΟΝΟ** στις πραγματικά απαραίτητες περιπτώσεις (βλ. TYPESCRIPT CHECK WORKFLOW: 🟡 4-10 αρχεία/type changes, 🔴 10+ αρχεία).
-- **ΟΧΙ** tsc «με το παραμικρό» — μικρές αλλαγές 1-3 αρχείων → **SKIP** tsc.
-- Προτίμησε targeted έλεγχο όπου γίνεται, αντί full-project tsc.
+### ΠΟΙΟΣ ΚΑΝΕΙ ΤΟΝ ΕΛΕΓΧΟ:
+- **Ο Giorgio** τρέχει τον έλεγχο TypeScript **ο ίδιος, ανά τακτά χρονικά διαστήματα** — όχι κάθε φορά που γράφεται κώδικας.
+- Η type-safety επικυρώνεται επίσης από το **pre-commit hook** την ώρα του commit (που κάνει ο Giorgio).
 
 ### WHY:
-Πολλαπλοί πράκτορες δουλεύουν ταυτόχρονα στην ίδια εφαρμογή. Κάθε `tsc --noEmit` είναι βαρύς (full type-check, 60-90s, υψηλό CPU/RAM). 2+ ταυτόχρονα → ο υπολογιστής γονατίζει, παγώνει, ο Giorgio χάνει χρόνο. **ΕΝΑ tsc τη φορά = υπολογιστής ζωντανός.**
+Κάθε `tsc --noEmit` είναι βαρύς (full type-check, 60-90s, υψηλό CPU/RAM σε αδύναμο PC) και τρέχει σε **κάθε** μικρή αλλαγή → **χάνεται τεράστιος χρόνος**. Τα σφάλματα τύπου που προκύπτουν είναι **πολύ λίγα** και πιάνονται είτε στον περιοδικό έλεγχο του Giorgio είτε στο pre-commit hook. Άρα ο ανά-εργασία έλεγχος από πράκτορα είναι **καθαρή σπατάλη χρόνου**.
 
 **ΖΕΡΟ ΕΞΑΙΡΕΣΕΙΣ. Κάθε πράκτορας πρέπει να γνωρίζει αυτόν τον κανόνα στην αρχή κάθε session.**
 
@@ -590,7 +578,7 @@ export function myFunction(value: string | number): Result {
 
 1. **SEARCH FIRST**: Grep/Glob for existing code
 2. **CENTRALIZED SYSTEMS**: `docs/centralized-systems/README.md` — don't create duplicates
-3. **COMPILATION CHECK**: Follow TYPESCRIPT CHECK WORKFLOW below
+3. **COMPILATION CHECK**: ❌ ΜΗΝ τρέχεις `tsc` / έλεγχο TypeScript σφαλμάτων (βλ. N.17 — απαγορεύεται για πράκτορες· jest επιτρέπεται)
 4. **ACTIVATION > CREATION**: Search if something disabled exists
 5. **CENTRALIZATION**: If you find duplicates → centralize
 6. **DOCUMENTATION**: Update `docs/centralized-systems/` when you centralize
@@ -604,31 +592,18 @@ export function myFunction(value: string | number): Result {
 
 ---
 
-## ⚡ TYPESCRIPT CHECK WORKFLOW
+## ⚡ TYPESCRIPT CHECK WORKFLOW — ΑΠΑΓΟΡΕΥΜΕΝΟΣ ΓΙΑ ΠΡΑΚΤΟΡΕΣ (βλ. N.17)
 
-**RULE**: DO NOT wait for tsc — work in parallel. `npx tsc --noEmit` takes 60-90s.
+**ΚΑΝΟΝΑΣ**: Ο πράκτορας **ΠΟΤΕ** δεν τρέχει έλεγχο TypeScript σφαλμάτων (`tsc` / `tsc --noEmit` /
+`npx tsc` / typecheck scripts) — ούτε foreground, ούτε background, ούτε targeted, ούτε full-project.
+Γράψε τον κώδικα και **σταμάτα**. Δες **N.17** για το πλήρες σκεπτικό.
 
-**⚠️ ΠΡΟΑΠΑΙΤΟΥΜΕΝΟ (N.17)**: ΠΡΙΝ ξεκινήσεις tsc → έλεγξε ότι **δεν τρέχει ήδη άλλος tsc** (από εσένα ή άλλον πράκτορα). **ΕΝΑ tsc τη φορά, ΠΟΤΕ παράλληλα.** Δες N.17 για τον έλεγχο διεργασίας + serialization protocol.
+- 🟢🟡🔴 **Όλες οι περιπτώσεις (1, 10 ή 100 αρχεία)** → **ΟΧΙ tsc.** Καμία εξαίρεση.
+- ✅ **jest tests** επιτρέπονται (γρήγορα, στοχευμένα) — τρέξ' τα όπου έχει νόημα.
+- 🧑‍🔧 Τον έλεγχο TypeScript τον κάνει **ο Giorgio ανά τακτά διαστήματα** + το **pre-commit hook** στο commit.
 
-### 🟢 Small changes (1-3 files, no type changes):
-- **SKIP** tsc, commit immediately
-
-### 🟡 Medium changes (4-10 files or type changes):
-- Run `npx tsc --noEmit` in **background** (`run_in_background: true`)
-- Commit **without waiting**
-- If error found → fix in next commit
-
-### 🔴 Large refactorings (10+ files):
-- `tsc --noEmit` in **background**
-- Commit **without waiting**
-- Error → fix + new commit immediately
-
-**⚠️ NEVER blocking wait on tsc.** The user doesn't wait.
-
-**Known pre-existing errors** (ignored):
-- `FloorplanGallery.tsx(727)` — RefObject null
-- `ParkingHistoryTab.tsx(121,172)` — unknown toDate
-- `LayerCanvas.tsx(220)` — arg type '5' vs '4'
+**WHY**: full type-check = 60-90s σε αδύναμο PC, σε κάθε μικρή αλλαγή = τεράστια σπατάλη χρόνου, ενώ τα
+σφάλματα τύπου είναι ελάχιστα και πιάνονται αλλού (περιοδικός έλεγχος Giorgio / pre-commit hook).
 
 ---
 

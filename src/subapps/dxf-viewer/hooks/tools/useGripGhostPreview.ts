@@ -31,7 +31,7 @@
  * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -45,7 +45,7 @@ import {
 } from '../../rendering/ghost';
 // Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
-import { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
+import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
 // tool draws (useRotationPreview), so both rotation flows look identical.
@@ -258,15 +258,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     [levelManager],
   );
 
-  // ADR-550 — one real-entity renderer bound to the preview ctx, reused across frames
-  // (the ctx is stable per canvas; rebuild only if it changes on remount/resize).
-  const bimPreviewRef = useRef<{ ctx: CanvasRenderingContext2D; renderer: BimPreviewRenderer } | null>(null);
-  const getBimPreview = useCallback((ctx: CanvasRenderingContext2D): BimPreviewRenderer => {
-    if (!bimPreviewRef.current || bimPreviewRef.current.ctx !== ctx) {
-      bimPreviewRef.current = { ctx, renderer: new BimPreviewRenderer(ctx) };
-    }
-    return bimPreviewRef.current.renderer;
-  }, []);
+  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  const getBimPreview = useBimPreviewRenderer();
 
   // ADR-040 Φ12 — cursorMode 'world-position': the harness feeds `effectiveCursor`
   // = the LIVE realtime effective-world (same SSoT + same 60fps clock as the

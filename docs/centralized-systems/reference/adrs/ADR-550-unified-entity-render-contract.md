@@ -126,6 +126,24 @@ interface EntityRenderContract<E> {
 
 ## Changelog
 
+### 2026-06-29 — Φ-Preview2D: WYSIWYG moving-copy preview μέσω του ΕΝΟΣ renderer (UNCOMMITTED)
+**Πλαίσιο (Giorgio):** κατά το grip-reshape/move ο χρήστης έβλεπε **απλοποιημένο περίγραμμα** (silhouette stroke) αντί της πραγματικής μορφής. Ρίζα: **δεύτερο, φτωχότερο 2D pipeline** (`rendering/ghost/draw-ghost-entity.ts`) παράλληλο με τον πραγματικό `EntityRendererComposite`.
+
+**Απόφαση/υλοποίηση (το ίδιο contract, 2D preview facet):** το moving copy ζωγραφίζεται πλέον από τον **ΙΔΙΟ** πραγματικό renderer που ήδη χρησιμοποιούσαν τα **placement** previews (`BimPreviewRenderer` → composite), όχι από ξεχωριστό ghost path. Καθολικό για όλους τους τύπους (ο composite κάνει dispatch). Το πρωτότυπο στην αρχική θέση μένει dimmed ghost (inverted-ghost, ADR-049/040).
+
+**SSoT (μηδέν νέο pipeline, μηδέν διπλότυπο):**
+- NEW thin `rendering/ghost/draw-real-entity-preview.ts` → `drawRealEntityPreview(bimPreview, transformed, layersById, t, vp)` = κοινός glue για useGripGhostPreview + useMovePreview (ΕΝΑ render path, δεν αποκλίνουν).
+- NEW `canvas-v2/dxf-canvas/dxf-renderer-style-resolve.ts` → **εξαγωγή** του πρώην **private** `DxfRenderer.resolveStyleForRender` (+`applyIsolateAlpha`) σε exported `resolveEntityRenderStyle(entity, layersById?)`. Τώρα committed-canvas **και** preview μοιράζονται ΕΝΑΝ resolver → ByLayer/ACI/TrueColor byte-identical. `DxfRenderer` = one-line delegate (call-sites αμετάβλητα).
+- NEW `hooks/tools/useBimPreviewRenderer.ts` → κοινό lazy `BimPreviewRenderer`-per-ctx (ref-holder boilerplate ΜΙΑ φορά αντί copy-paste στα 2 hooks).
+- Reuse: `buildEntityModelFromDxf` (committed path), `EntityRendererComposite`, `BimPreviewRenderer` (placement previews), `compute*Geometry`.
+- `apply-entity-preview.ts`: recompute geometry για slab/slab-opening/roof/floor-finish (διάβαζαν μόνο `params` → ο real renderer διαβάζει `.geometry`). Reuse των υπαρχόντων `computeSlabGeometry/computeSlabOpeningGeometry/computeRoofGeometry/computeFloorFinishGeometry`.
+- **Cleanup:** διαγραφή του dead `rendering/ghost/ghost-solid-color.ts` (+test) — το `resolveGhostSolidColor` (inverted-ghost interim) superseded από τον real renderer.
+- `draw-real-entity-preview` deep-imported (όχι από το ghost barrel) ώστε ο barrel να μη σέρνει τον βαρύ composite.
+
+**Out of scope (Φ2 follow-up, flagged):** τα ribbon Stretch/Scale/Rotate hooks (`useStretchPreview`/`useScalePreview`/`useRotationPreview`) διατηρούν δικό τους simplified ghost — pre-existing, να περάσουν από το ίδιο `drawRealEntityPreview` σε επόμενο pass.
+
+**Verify:** 60 jest (νέο `draw-real-entity-preview.test.ts` + 59 ghost/preview/dxf-canvas regression) GREEN· tsc καθαρό στα touched αρχεία (project OOM στα 8GB λόγω άλλων uncommitted agent errors — όχι δικά μου). ⚠️ CHECK 6B/6D → stage ADR-040+049+550. 🔴 PENDING: browser-verify (wall reshape → πλήρες πάχος+γέμισμα+hatch ακολουθεί κέρσορα· roof perf· raw DXF ByLayer χρώμα· MOVE multi-select) + commit.
+
 ### 2026-06-29 — Αρχικό roadmap (DRAFT/PROPOSED)
 **Πλαίσιο:** Μετά το census (ADR-549), ερώτηση Giorgio «μπορούμε να ενοποιήσουμε όλους τους μηχανισμούς σε έναν;». Απάντηση: όχι ένας μηχανισμός (κανείς μεγάλος δεν το κάνει), αλλά ΕΝΑ entity contract + κοινό geometry SSoT (AutoCAD/Revit pattern).
 

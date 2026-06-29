@@ -32,8 +32,8 @@
 ## Pre-commit Hook
 - [Disable slow pre-commit checks](feedback_disable_slow_precommit.md) — No tsc/prettier/madge/eslint in hook. Run on-demand only.
 
-## TSC Serialization (N.17 — ΑΠΑΡΑΒΑΤΟ)
-- [ΕΝΑΣ tsc τη φορά, ΠΟΤΕ παράλληλα](feedback_single_tsc_at_a_time.md) — Πριν από ΚΑΘΕ tsc → έλεγξε αν τρέχει ήδη άλλος (process check). Αν ναι → περίμενε ή σταμάτα τον. Ο υπολογιστής γονατίζει με 2+ ταυτόχρονα tsc. tsc ΜΟΝΟ όταν είναι απαραίτητο. CLAUDE.md N.17.
+## TSC — ΑΠΑΓΟΡΕΥΜΕΝΟ ΓΙΑ ΠΡΑΚΤΟΡΕΣ (N.17 — ΑΠΑΡΑΒΑΤΟ)
+- [ΠΟΤΕ tsc από πράκτορα](feedback_single_tsc_at_a_time.md) — ❌ ΑΠΑΓΟΡΕΥΕΤΑΙ να τρέχεις `tsc`/`tsc --noEmit`/typecheck (foreground ή background, 1 ή 100 αρχεία). Γράψε κώδικα & σταμάτα. ✅ jest επιτρέπεται. Τον TS έλεγχο τον κάνει ο Giorgio περιοδικά + pre-commit hook. Χάνεται τεράστιος χρόνος, τα σφάλματα είναι λίγα. CLAUDE.md N.17.
 
 ## Firestore Security
 - **CHECK 3.10**: Every `query()` + `where()` MUST include `where('companyId', '==', companyId)` — otherwise permission-denied
@@ -149,10 +149,9 @@
 - myDATA ΑΑΔΕ: stub ready, credentials pending
 - withStandardRateLimit: `segmentData?: { params: Promise<{ id: string }> }`
 
-### TypeScript Check Workflow
-- RULE: commit+push FIRST → then `tsc --noEmit` in background
-- User doesn't wait — Vercel build catches errors anyway
-- If error found in background → fix + new commit immediately
+### TypeScript Check Workflow (ΑΝΑΘΕΩΡΗΘΗΚΕ 2026-06-29 — βλ. N.17)
+- ❌ ΑΠΑΓΟΡΕΥΕΤΑΙ ο πράκτορας να τρέχει `tsc`/`tsc --noEmit`/typecheck (foreground ή background, ποτέ).
+- Τον TypeScript έλεγχο τον κάνει ο Giorgio περιοδικά + το pre-commit hook στο commit. Ο πράκτορας: γράψε κώδικα & σταμάτα (jest επιτρέπεται).
 - Known pre-existing errors (ignored): FloorplanGallery.tsx(727), ParkingHistoryTab.tsx(121,172), LayerCanvas.tsx(220)
 
 ## Pending Tasks

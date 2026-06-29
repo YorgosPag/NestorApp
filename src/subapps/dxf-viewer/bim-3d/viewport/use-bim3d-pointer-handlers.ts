@@ -30,6 +30,9 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
 import { requestPointerPick, clearPointerPick } from './snap/bim3d-pointer-scheduler';
+// ADR-366 §B.2.Q1 follow-up — live X/Y/Z status-bar readout (cursor → active-floor plane).
+import { updateBim3DCursorReadout } from './bim3d-cursor-readout-writer';
+import { clearBim3DCursorReadout } from '../stores/Bim3DCursorReadoutStore';
 
 const HOVER_DEBOUNCE_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516 (popover reveal)
 
@@ -51,7 +54,12 @@ export function useBim3DPointerHandlers(
     // BVH-accelerated hover+snap raycast runs in a RAF slot, never blocking this handler, so the
     // cursor/crosshair stays 1:1 with the physical mouse (parity with the 2D canvas).
     const manager = managerRef.current;
-    if (manager) requestPointerPick({ manager, clientX, clientY });
+    if (manager) {
+      requestPointerPick({ manager, clientX, clientY });
+      // ADR-366 §B.2.Q1 follow-up — live X/Y/Z readout, synchronous (cheap ray↔plane, no BVH)
+      // so the status-bar coordinates stay 1:1 with the cursor (parity with the 2D channel).
+      updateBim3DCursorReadout(manager, clientX, clientY);
+    }
     // ADR-366 §B.2 — the hover popover stays debounced (off the hot path) with its own pick.
     if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -173,6 +181,8 @@ export function useBim3DPointerHandlers(
     }
     // ADR-040 Φ-3D-pointer — stop the decoupled pick scheduler (no stale work while off-canvas).
     clearPointerPick();
+    // ADR-366 §B.2.Q1 follow-up — clear the X/Y/Z readout (status bar falls back to 2D channel).
+    clearBim3DCursorReadout();
     useQuickProperties3DStore.getState().clearHover();
     // ADR-538 — leaving the viewport clears the hover highlight (badge + glow + silhouette).
     setHoveredEntity(null);
@@ -187,8 +197,9 @@ export function useBim3DPointerHandlers(
   }, [debounceTimerRef, managerRef]);
 
   // ADR-040 Φ-3D-pointer — clear the scheduler on unmount (manager teardown / route change), so a
-  // stale manager reference is never picked against after the viewport is gone.
-  useEffect(() => clearPointerPick, []);
+  // stale manager reference is never picked against after the viewport is gone. Also clear the
+  // X/Y/Z readout so the status bar reverts to the 2D channel when 3D is torn down.
+  useEffect(() => () => { clearPointerPick(); clearBim3DCursorReadout(); }, []);
 
   return { handleMouseMove, handleClick, handleContextMenu, handleMouseLeave };
 }

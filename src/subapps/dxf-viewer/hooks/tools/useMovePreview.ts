@@ -36,7 +36,7 @@ import {
 } from '../../rendering/ghost';
 // Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
-import { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
+import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
@@ -108,14 +108,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     [levelManager],
   );
 
-  // ADR-550 — one real-entity renderer bound to the preview ctx, reused across frames.
-  const bimPreviewRef = useRef<{ ctx: CanvasRenderingContext2D; renderer: BimPreviewRenderer } | null>(null);
-  const getBimPreview = useCallback((ctx: CanvasRenderingContext2D): BimPreviewRenderer => {
-    if (!bimPreviewRef.current || bimPreviewRef.current.ctx !== ctx) {
-      bimPreviewRef.current = { ctx, renderer: new BimPreviewRenderer(ctx) };
-    }
-    return bimPreviewRef.current.renderer;
-  }, []);
+  // ADR-550 — lazy real-entity renderer bound to the preview ctx (shared SSoT hook).
+  const getBimPreview = useBimPreviewRenderer();
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!PREVIEW_PHASES.has(phase)) return;
