@@ -11,7 +11,7 @@
 
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneModel, TextEntity, HatchEntity } from '../../types/entities';
+import type { SceneModel, HatchEntity } from '../../types/entities';
 import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
@@ -51,17 +51,18 @@ import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
-import { extractFlatText } from '../../utils/text-node-utils';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
-// ADR-344 Phase 6.E — textNode style/height resolution (SRP extraction, ≤500 LOC).
-import { extractFirstRunStyle, resolveTextHeight } from './dxf-text-style-extractor';
+// ADR-551 — TEXT/MTEXT → DxfText projection extracted to a sibling (SRP, ≤500 LOC).
+import { convertTextEntity } from './dxf-text-entity-converter';
 import { dwarn } from '../../debug';
 
 export type SceneEntity = NonNullable<SceneModel['entities']>[number];
 export type SceneLayers = NonNullable<SceneModel['layersById']>;
+/** Shared base fields produced by {@link buildBase}; consumed by sibling converters. */
+export type DxfBaseFields = ReturnType<typeof buildBase>;
 
 /**
  * ADR-358 §G7 Phase 6 — sentinel-aware projection from SceneModel → DxfScene.
@@ -177,31 +178,9 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       return { ...base, type: 'arc' as const, center: e.center, radius: e.radius, startAngle: e.startAngle, endAngle: e.endAngle, counterclockwise: e.counterclockwise } as DxfEntityUnion;
     }
     case 'mtext':
-    case 'text': {
-      const e = entity as typeof entity & { position: Point2D; text?: string; rotation?: number };
-      const withNode = entity as TextEntity;
-      // ADR-344 Phase 6.E: entities from CreateTextCommand have no flat text — derive it.
-      // mtext normalised to 'text' because DxfEntityUnion has no mtext variant.
-      const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');
-      const textHeight = resolveTextHeight(entity);
-      const textStyle = extractFirstRunStyle(entity);
-      // ADR-526 Φ5a — όταν η οντότητα φέρει flat `fontFamily` (π.χ. εισαγωγή Τέκτονα, χωρίς
-      // textNode) και το textNode δεν όρισε γραμματοσειρά, την περνάμε στο textStyle (η μόνη
-      // πηγή font που διαβάζει ο renderer). Additive: DXF text παίρνει font από textNode → αμετάβλητο.
-      const flatFont = withNode.fontFamily;
-      const finalStyle = flatFont && !textStyle?.fontFamily
-        ? { ...textStyle, fontFamily: flatFont }
-        : textStyle;
-      return {
-        ...base,
-        type: 'text' as const,
-        position: e.position,
-        text: flatText,
-        height: textHeight,
-        rotation: e.rotation,
-        ...(finalStyle && { textStyle: finalStyle }),
-      } as DxfEntityUnion;
-    }
+    case 'text':
+      // ADR-551 — TEXT/MTEXT projection lives in the sibling converter (SRP).
+      return convertTextEntity(entity, base);
     case 'angle-measurement': {
       const e = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };
       return { ...base, type: 'angle-measurement' as const, vertex: e.vertex, point1: e.point1, point2: e.point2, angle: e.angle } as DxfEntityUnion;

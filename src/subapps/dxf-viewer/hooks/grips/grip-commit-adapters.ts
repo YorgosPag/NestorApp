@@ -116,6 +116,7 @@ import {
   commitRayGripDrag,
   commitDimensionGripDrag,
   commitPolylineBulgeGripDrag,
+  commitTextGripDrag,
 } from './grip-parametric-commits';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
@@ -400,6 +401,14 @@ export function commitDxfGripDragModeAware(
   // stretch path below (move vertex / move both edge vertices).
   if (grip.polylineGripKind?.startsWith('polyline-arc-midpoint-')) {
     commitPolylineBulgeGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-551 — text/mtext rect-box grip path (4 corners + 4 edges + centre move +
+  // rotation). Bypasses stretch because the box transform is computed by the shared
+  // `applyTextGripDrag` and written to the flat top-level fields atomically by
+  // `UpdateTextTransformCommand`. Covers BOTH TEXT (`widthFactor`) and MTEXT (`width`).
+  if (grip.textGripKind) {
+    commitTextGripDrag(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.

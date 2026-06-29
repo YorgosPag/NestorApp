@@ -52,6 +52,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.floorFinishGripKind ? { floorFinishGripKind: dp.floorFinishGripKind } : {}),
     // ADR-507 — hatch boundary parametric ghost (vertex translate).
     ...(dp.hatchGripKind       ? { hatchGripKind:       dp.hatchGripKind }        : {}),
+    // ADR-551 — text/mtext rect-box parametric ghost (move / rotation / corner+edge resize).
+    ...(dp.textGripKind        ? { textGripKind:        dp.textGripKind }         : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

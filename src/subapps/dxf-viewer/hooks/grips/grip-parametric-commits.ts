@@ -53,6 +53,10 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 // split). Re-exported here so the commit API stays one import.
 export { commitOpeningGripDrag, commitOpeningAltMove } from './grip-parametric-opening-commits';
 
+// ADR-551 — parametric text/mtext grip commit (rect-box parity) lives in
+// grip-parametric-text-commits.ts (N.7.1 file-size split). Re-exported here.
+export { commitTextGripDrag } from './grip-parametric-text-commits';
+
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.
 export { commitWallCopy, commitBeamCopy, commitColumnCopy, commitMepFixtureCopy, commitElectricalPanelCopy, commitMepManifoldCopy, commitMepRadiatorCopy, commitMepBoilerCopy, commitFurnitureCopy, commitFloorplanSymbolCopy, commitHotGripCopy } from './grip-parametric-copy';

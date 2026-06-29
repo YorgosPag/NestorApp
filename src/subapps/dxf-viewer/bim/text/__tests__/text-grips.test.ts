@@ -1,0 +1,181 @@
+/**
+ * ADR-551 — `text-grips` adapter tests (pure, Slice 1).
+ *
+ * Covers the SSoT text↔RectFrame bridge:
+ *   - `getTextGrips` → exactly 10 grips (4 corners + 4 edges + move + rotation),
+ *     correct kinds + world positions for an axis-aligned box,
+ *   - `effectiveTextWidth` — MTEXT frame `width` vs simple-TEXT formula,
+ *   - `textToRectFrame` ⇄ position round-trip (no drift, incl. rotated),
+ *   - `applyTextGripDrag` — move / edge (width & height) / corner / rotation,
+ *     and the MTEXT `width` vs TEXT `widthFactor` patch split.
+ */
+
+import type { DxfText } from '../../../canvas-v2/dxf-canvas/dxf-types';
+import {
+  getTextGrips,
+  effectiveTextWidth,
+  textToRectFrame,
+  applyTextGripDrag,
+} from '../text-grips';
+
+// CHAR_WIDTH_MONOSPACE = 0.6 (TEXT_METRICS_RATIOS). "DDD" (3) × height 10 × 0.6 = 18.
+function text(extra: Partial<DxfText> = {}): DxfText {
+  return { id: 't1', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'DDD', height: 10, ...extra };
+}
+
+const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
+const nearP = (p: { x: number; y: number }, x: number, y: number, eps = 1e-9) =>
+  near(p.x, x, eps) && near(p.y, y, eps);
+
+describe('effectiveTextWidth', () => {
+  it('TEXT → len·height·0.6·widthFactor (default factor 1)', () => {
+    expect(effectiveTextWidth(text())).toBeCloseTo(18, 9);
+  });
+  it('TEXT → honours widthFactor', () => {
+    expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(36, 9);
+  });
+  it('MTEXT → the real box width (ignores char formula)', () => {
+    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(50, 9);
+  });
+});
+
+describe('textToRectFrame', () => {
+  it('axis-aligned box: centre + half-extents from top-left position', () => {
+    const f = textToRectFrame(text());
+    expect(nearP(f.center, 9, -5)).toBe(true);
+    expect(f.halfWidth).toBeCloseTo(9, 9);
+    expect(f.halfLength).toBeCloseTo(5, 9);
+    expect(f.rotationDeg).toBe(0);
+  });
+  it('position round-trips through the frame for a rotated box', () => {
+    const t = text({ rotation: 30, position: { x: 12, y: -7 } });
+    const f = textToRectFrame(t);
+    // Re-derive position via the same inverse the adapter uses (move with zero delta).
+    const patch = applyTextGripDrag('text-move', { entity: t, delta: { x: 0, y: 0 } });
+    expect(nearP(patch.position!, 12, -7)).toBe(true);
+    // Sanity: centre is offset from the top-left by the rotated (w/2,−h/2).
+    expect(near(Math.hypot(f.center.x - 12, f.center.y + 7), Math.hypot(9, 5))).toBe(true);
+  });
+});
+
+describe('getTextGrips', () => {
+  const grips = getTextGrips(text());
+
+  it('emits exactly 10 grips', () => {
+    expect(grips).toHaveLength(10);
+  });
+
+  it('emits every expected kind once', () => {
+    const kinds = grips.map(g => g.textGripKind).sort();
+    expect(kinds).toEqual([
+      'text-corner-ne', 'text-corner-nw', 'text-corner-se', 'text-corner-sw',
+      'text-edge-e', 'text-edge-n', 'text-edge-s', 'text-edge-w',
+      'text-move', 'text-rotation',
+    ]);
+  });
+
+  it('places corners at the box extremes (top-left = position)', () => {
+    const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
+    expect(nearP(by('text-corner-nw'), 0, 0)).toBe(true);    // top-left = position
+    expect(nearP(by('text-corner-ne'), 18, 0)).toBe(true);   // top-right
+    expect(nearP(by('text-corner-sw'), 0, -10)).toBe(true);  // bottom-left
+    expect(nearP(by('text-corner-se'), 18, -10)).toBe(true); // bottom-right
+  });
+
+  it('places edge midpoints + move on the box centre lines', () => {
+    const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
+    expect(nearP(by('text-edge-e'), 18, -5)).toBe(true);
+    expect(nearP(by('text-edge-w'), 0, -5)).toBe(true);
+    expect(nearP(by('text-edge-n'), 9, 0)).toBe(true);
+    expect(nearP(by('text-edge-s'), 9, -10)).toBe(true);
+    expect(nearP(by('text-move'), 9, -5)).toBe(true);
+  });
+
+  it('rotation handle sits midway between centre and bottom edge (−height/4)', () => {
+    const rot = grips.find(g => g.textGripKind === 'text-rotation')!.position;
+    expect(nearP(rot, 9, -7.5)).toBe(true);
+  });
+
+  it('the move grip is the only one that moves the entity', () => {
+    expect(grips.filter(g => g.movesEntity).map(g => g.textGripKind)).toEqual(['text-move']);
+  });
+});
+
+describe('applyTextGripDrag — move', () => {
+  it('translates position only', () => {
+    const patch = applyTextGripDrag('text-move', { entity: text(), delta: { x: 5, y: 7 } });
+    expect(nearP(patch.position!, 5, 7)).toBe(true);
+    expect(patch.width).toBeUndefined();
+    expect(patch.height).toBeUndefined();
+    expect(patch.rotation).toBeUndefined();
+  });
+});
+
+describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
+  it('TEXT east edge → grows box width via widthFactor, height untouched, west edge fixed', () => {
+    const patch = applyTextGripDrag('text-edge-e', { entity: text(), delta: { x: 6, y: 0 } });
+    expect(patch.height).toBeCloseTo(10, 9);            // height untouched
+    expect(patch.widthFactor).toBeCloseTo(24 / 18, 9);  // new box width 24 / natural 18
+    expect(patch.width).toBeUndefined();                // TEXT patches widthFactor, not width
+    expect(nearP(patch.position!, 0, 0)).toBe(true);    // west (left) edge held at x=0
+  });
+
+  it('TEXT north edge → grows height, box width held constant (widthFactor compensates)', () => {
+    const patch = applyTextGripDrag('text-edge-n', { entity: text(), delta: { x: 0, y: 4 } });
+    expect(patch.height).toBeCloseTo(14, 9);
+    // box width stays 18 → widthFactor = 18 / (3·14·0.6) = 18/25.2
+    expect(patch.widthFactor).toBeCloseTo(18 / 25.2, 9);
+    expect(patch.position!.y).toBeCloseTo(4, 9);        // top edge moved up by 4
+  });
+
+  it('MTEXT east edge → patches width directly (no widthFactor)', () => {
+    const patch = applyTextGripDrag('text-edge-e', { entity: text({ width: 20, text: 'X' }), delta: { x: 4, y: 0 } });
+    expect(patch.width).toBeCloseTo(24, 9);
+    expect(patch.widthFactor).toBeUndefined();
+    expect(patch.height).toBeCloseTo(10, 9);
+  });
+
+  it('clamps at the minimum dimension on an over-shrink drag', () => {
+    const patch = applyTextGripDrag('text-edge-e', { entity: text({ width: 5, text: 'X' }), delta: { x: -100, y: 0 } });
+    expect(patch.width!).toBeGreaterThan(0);            // never collapses/inverts
+  });
+});
+
+describe('applyTextGripDrag — corner resize (opposite corner fixed)', () => {
+  it('SE corner grows both dims; NW corner stays pinned at (0,0)', () => {
+    const patch = applyTextGripDrag('text-corner-se', { entity: text(), delta: { x: 6, y: -4 } });
+    expect(patch.height).toBeCloseTo(14, 9);
+    // box width 24 → widthFactor = 24 / (3·14·0.6) = 24/25.2
+    expect(patch.widthFactor).toBeCloseTo(24 / 25.2, 9);
+    // NW corner (the opposite, pinned) = patched position (top-left).
+    expect(nearP(patch.position!, 0, 0)).toBe(true);
+  });
+});
+
+describe('applyTextGripDrag — rotation (pivot = bbox-centre)', () => {
+  it('sweeps rotation by the cursor angle and holds the centre fixed', () => {
+    const t = text();
+    const center = textToRectFrame(t).center; // (9, -5)
+    // start angle 0° (east of centre), current 90° (north of centre) → sweep +90°.
+    const start = { x: center.x + 10, y: center.y };
+    const currentPos = { x: center.x, y: center.y + 10 };
+    const delta = { x: currentPos.x - start.x, y: currentPos.y - start.y };
+    const patch = applyTextGripDrag('text-rotation', { entity: t, delta, currentPos });
+    expect(patch.rotation).toBeCloseTo(90, 6);
+    // Re-frame the patched entity: the centre must be unchanged (re-homed position).
+    const after = textToRectFrame({ ...t, ...patch });
+    expect(nearP(after.center, center.x, center.y, 1e-6)).toBe(true);
+  });
+
+  it('Shift (ortho) snaps the sweep to 45°', () => {
+    const t = text();
+    const center = textToRectFrame(t).center;
+    const start = { x: center.x + 10, y: center.y };
+    // ~50° current → snaps to 45°.
+    const ang = (50 * Math.PI) / 180;
+    const currentPos = { x: center.x + 10 * Math.cos(ang), y: center.y + 10 * Math.sin(ang) };
+    const delta = { x: currentPos.x - start.x, y: currentPos.y - start.y };
+    const patch = applyTextGripDrag('text-rotation', { entity: t, delta, currentPos, ortho: true });
+    expect(patch.rotation).toBeCloseTo(45, 6);
+  });
+});

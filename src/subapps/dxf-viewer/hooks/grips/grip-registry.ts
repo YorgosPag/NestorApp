@@ -93,6 +93,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.rayGripKind ? { rayGripKind: grip.rayGripKind } : {}),
     // ADR-510 Φ3c — forward multifunctional polyline grip discriminator.
     ...(grip.polylineGripKind ? { polylineGripKind: grip.polylineGripKind } : {}),
+    // ADR-551 — forward text/mtext rect-box grip discriminator.
+    ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
   };
 }
 

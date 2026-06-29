@@ -55,6 +55,7 @@ import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
 import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
+import { getTextGrips } from '../bim/text/text-grips';
 import {
   hatchBoundsCenter, hatchGradientAngleGripPos,
   HATCH_GRADIENT_ORIGIN_KIND, HATCH_GRADIENT_ANGLE_KIND,
@@ -199,10 +200,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'text': {
-      grips.push({
-        entityId: entity.id, gripIndex: 0, type: 'center',
-        position: entity.position, movesEntity: true,
-      });
+      // ADR-551 — full rect-box parity grips (4 corners + 4 edge midpoints +
+      // centre MOVE + rotation) via the shared text↔RectFrame adapter, the SAME
+      // `rect-grip-engine` SSoT the wall / rectangular column use. Covers BOTH
+      // TEXT (X-scale `widthFactor`) and MTEXT (real `width` frame) — the converter
+      // carries the discriminator onto `DxfText`.
+      grips.push(...getTextGrips(entity));
       break;
     }
 

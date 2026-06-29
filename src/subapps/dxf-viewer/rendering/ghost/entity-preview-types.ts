@@ -26,6 +26,7 @@ import type {
   MepManifoldGripKind,
   MepSegmentGripKind,
   FurnitureGripKind,
+  TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
 
@@ -126,5 +127,12 @@ export interface EntityPreviewTransform {
    * picked centre.
    */
   readonly furnitureGripKind?: FurnitureGripKind;
+  /**
+   * ADR-551 — parametric text/mtext discriminator. Routes preview through
+   * `applyTextGripDrag` (the SAME pure transform the commit runs) to produce the
+   * live box ghost — move / rotation (pivot = bbox-centre) / corner+edge resize.
+   * `anchorPos` = the grabbed grip world pos at mouseDown (rotation sweep start).
+   */
+  readonly textGripKind?: TextGripKind;
   readonly anchorPos?: Point2D;
 }
