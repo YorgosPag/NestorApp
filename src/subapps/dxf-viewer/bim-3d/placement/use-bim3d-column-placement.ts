@@ -32,7 +32,7 @@ import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { ColumnPlacementGhost } from './ColumnPlacementGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
 import { resolvePlacementSnapWithView } from './placement-snap';
@@ -59,7 +59,7 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new ColumnPlacementGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES.column(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 

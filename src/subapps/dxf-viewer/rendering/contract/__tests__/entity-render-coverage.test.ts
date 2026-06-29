@@ -34,9 +34,26 @@ import {
   ENTITY_RENDER_CONTRACTS,
   POINT_BUILT_TYPES,
   BESPOKE_BUILT_TYPES,
+  GHOST_BUILT_TYPES,
 } from '../entity-render-contract';
 import { BIM_3D_CONVERTER_TYPES } from '../../../bim-3d/scene/bim-3d-renderable-types';
 import { POINT_CONTRACT_TYPES } from '../../../bim-3d/scene/bim-scene-point-contracts';
+import {
+  PLACEMENT_GHOST_3D_FACTORIES,
+  PLACEMENT_GHOST_3D_TYPES,
+} from '../../../bim-3d/placement/placement-ghost-3d-contracts';
+import { ColumnPlacementGhost } from '../../../bim-3d/placement/ColumnPlacementGhost';
+import { WallPlacementGhost } from '../../../bim-3d/placement/WallPlacementGhost';
+import { BeamFromWallGhost } from '../../../bim-3d/placement/BeamFromWallGhost';
+import { FurniturePlacementGhost } from '../../../bim-3d/placement/FurniturePlacementGhost';
+import { ElectricalPanelPlacementGhost } from '../../../bim-3d/placement/ElectricalPanelPlacementGhost';
+import { MepFixturePlacementGhost } from '../../../bim-3d/placement/MepFixturePlacementGhost';
+import { MepSegmentPlacementGhost } from '../../../bim-3d/placement/MepSegmentPlacementGhost';
+import { MepManifoldPlacementGhost } from '../../../bim-3d/placement/MepManifoldPlacementGhost';
+import { MepRadiatorPlacementGhost } from '../../../bim-3d/placement/MepRadiatorPlacementGhost';
+import { MepBoilerPlacementGhost } from '../../../bim-3d/placement/MepBoilerPlacementGhost';
+import { MepWaterHeaterPlacementGhost } from '../../../bim-3d/placement/MepWaterHeaterPlacementGhost';
+import * as THREE from 'three';
 
 const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 
@@ -151,5 +168,45 @@ describe('Entity Render Contract Registry (ADR-550 Φ2)', () => {
       const overlap = POINT_BUILT_TYPES.filter((t) => bespoke.has(t));
       expect(overlap).toEqual([]);
     });
+  });
+});
+
+describe('Φ-Ghost binding: declaration ↔ 3D ghost factory registry (ADR-550 Φ-Ghost)', () => {
+  it('placementGhost3D ⟹ d3 (κανένα ghost χωρίς 3D geometry)', () => {
+    const broken = RENDERABLE_ENTITY_TYPES.filter((t) => {
+      const c = ENTITY_RENDER_CONTRACTS[t];
+      return c.placementGhost3D && !c.d3;
+    });
+    expect(broken).toEqual([]);
+  });
+
+  it('το σύνολο των placementGhost3D:true ταυτίζεται με τα types του PLACEMENT_GHOST_3D_FACTORIES (no drift)', () => {
+    expect(asSorted(PLACEMENT_GHOST_3D_TYPES)).toEqual(asSorted(GHOST_BUILT_TYPES));
+  });
+
+  it('κάθε factory παράγει instance της αντίστοιχης ghost class (liveness — no lie, no orphan)', () => {
+    const scene = new THREE.Scene();
+    const checks: Array<
+      [keyof typeof PLACEMENT_GHOST_3D_FACTORIES, new (s: THREE.Scene) => { dispose(): void }]
+    > = [
+      ['column', ColumnPlacementGhost],
+      ['wall', WallPlacementGhost],
+      ['beam', BeamFromWallGhost],
+      ['furniture', FurniturePlacementGhost],
+      ['electrical-panel', ElectricalPanelPlacementGhost],
+      ['mep-fixture', MepFixturePlacementGhost],
+      ['mep-segment', MepSegmentPlacementGhost],
+      ['mep-manifold', MepManifoldPlacementGhost],
+      ['mep-radiator', MepRadiatorPlacementGhost],
+      ['mep-boiler', MepBoilerPlacementGhost],
+      ['mep-water-heater', MepWaterHeaterPlacementGhost],
+    ];
+    // Κάθε δηλωμένος ghost type έχει check (η λίστα καλύπτει όλο το registry).
+    expect(asSorted(checks.map(([t]) => t))).toEqual(asSorted([...PLACEMENT_GHOST_3D_TYPES]));
+    for (const [type, Cls] of checks) {
+      const instance = PLACEMENT_GHOST_3D_FACTORIES[type](scene);
+      expect(instance).toBeInstanceOf(Cls);
+      instance.dispose();
+    }
   });
 });

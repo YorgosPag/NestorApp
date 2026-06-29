@@ -29,7 +29,7 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { electricalPanelToolBridgeStore } from '../../ui/ribbon/hooks/bridge/electrical-panel-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
-import { ElectricalPanelPlacementGhost } from './ElectricalPanelPlacementGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
@@ -51,7 +51,7 @@ export function useBim3DElectricalPanelPlacement(
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new ElectricalPanelPlacementGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES['electrical-panel'](manager.scene);
     const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;

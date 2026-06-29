@@ -30,7 +30,7 @@ import { toolStateStore } from '../../stores/ToolStateStore';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import type { WallEntity } from '../../bim/types/wall-types';
-import { BeamFromWallGhost } from '../placement/BeamFromWallGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from '../placement/placement-ghost-3d-contracts';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an
@@ -54,7 +54,7 @@ export function useBim3DBeamFromWallPick({ managerRef, canvasEl }: UseBim3DBeamF
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new BeamFromWallGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES.beam(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 

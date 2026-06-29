@@ -30,7 +30,7 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { furnitureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/furniture-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
-import { FurniturePlacementGhost } from './FurniturePlacementGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
@@ -50,7 +50,7 @@ export function useBim3DFurniturePlacement({ managerRef, canvasEl }: UseBim3DFur
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new FurniturePlacementGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES.furniture(manager.scene);
     const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;

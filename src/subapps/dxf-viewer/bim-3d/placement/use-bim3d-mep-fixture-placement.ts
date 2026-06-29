@@ -29,7 +29,7 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
-import { MepFixturePlacementGhost } from './MepFixturePlacementGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
@@ -49,7 +49,7 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new MepFixturePlacementGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES['mep-fixture'](manager.scene);
     const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;

@@ -23,9 +23,13 @@
  * (`__tests__/entity-render-coverage.test.ts`) δένει το μητρώο με τα ΖΩΝΤΑΝΑ
  * dispatchers + το executable point registry, ώστε να μην μπορεί να αποκλίνει.
  *
- * Ghost: ΔΕΝ μοντελοποιείται ακόμη εδώ — δεν υπάρχει introspectable live dispatcher
- * (2D per-family ghost renderers, 3D ενιαίο `placement-ghost-overlay`)· ένα μη-
- * ελεγχόμενο πεδίο θα σάπιζε. Μελλοντικό Φ όταν προκύψει bindable seam.
+ * Ghost (Φ-Ghost): το `placementGhost3D` δηλώνει αν ο type έχει 3D φάντασμα
+ * τοποθέτησης. Δένεται με το ΖΩΝΤΑΝΟ type-keyed registry
+ * `PLACEMENT_GHOST_3D_FACTORIES` (`bim-3d/placement/placement-ghost-3d-contracts.ts`,
+ * 11 per-family ghost classes) μέσω του coverage test — όπως το `d3Builder` με το
+ * point registry. Το **2D ghost** δεν μοντελοποιείται: το 2D preview dispatch είναι
+ * triply-scattered (generator if-chain + wysiwyg-BIM + bespoke Canvas2D renderers)
+ * χωρίς introspectable seam· ένα 2D πεδίο θα «σάπιζε».
  *
  * @see ADR-549 (census) · ADR-550 (Unified Entity Render Contract)
  * @see entity-render-surfaces.ts — derived {d2,d3} view (back-compat)
@@ -47,17 +51,22 @@ export interface EntityRenderContract {
   readonly d3: boolean;
   /** Ο μηχανισμός 3D build. Invariant: `d3Builder !== 'none'` ⟺ `d3 === true`. */
   readonly d3Builder: D3BuilderKind;
+  /**
+   * Έχει 3D φάντασμα τοποθέτησης (per-family `*PlacementGhost`, δεμένο στο ζωντανό
+   * `PLACEMENT_GHOST_3D_FACTORIES`). Invariant: `placementGhost3D` ⟹ `d3`.
+   */
+  readonly placementGhost3D: boolean;
 }
 
 /** Συντομογραφίες κατασκευής (κρατούν το Record ευανάγνωστο + invariant-safe). */
 const dxf = (type: RenderableEntityType): EntityRenderContract =>
-  ({ type, d2: true, d3: false, d3Builder: 'none' });
+  ({ type, d2: true, d3: false, d3Builder: 'none', placementGhost3D: false });
 const only2D = (type: RenderableEntityType): EntityRenderContract =>
-  ({ type, d2: true, d3: false, d3Builder: 'none' });
-const point = (type: RenderableEntityType): EntityRenderContract =>
-  ({ type, d2: true, d3: true, d3Builder: 'point' });
-const bespoke = (type: RenderableEntityType): EntityRenderContract =>
-  ({ type, d2: true, d3: true, d3Builder: 'bespoke' });
+  ({ type, d2: true, d3: false, d3Builder: 'none', placementGhost3D: false });
+const point = (type: RenderableEntityType, ghost3D = false): EntityRenderContract =>
+  ({ type, d2: true, d3: true, d3Builder: 'point', placementGhost3D: ghost3D });
+const bespoke = (type: RenderableEntityType, ghost3D = false): EntityRenderContract =>
+  ({ type, d2: true, d3: true, d3Builder: 'bespoke', placementGhost3D: ghost3D });
 
 /**
  * Το μητρώο. DXF primitives = 2D-only. BIM = 2D + 3D εκτός των ρητά 2D-only.
@@ -86,15 +95,15 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   ray: dxf('ray'),
 
   // ── BIM — bespoke 3D (cross-entity host context) ──
-  wall: bespoke('wall'),
+  wall: bespoke('wall', true), // 3D placement ghost: WallPlacementGhost
   opening: bespoke('opening'), // cutout/reveal μέσα στο wall group (syncWalls)
   slab: bespoke('slab'),
   'slab-opening': bespoke('slab-opening'), // pick-mesh στο κενό (syncSlabs, ADR-535 Φ3b)
-  column: bespoke('column'),
-  beam: bespoke('beam'),
+  column: bespoke('column', true), // 3D placement ghost: ColumnPlacementGhost
+  beam: bespoke('beam', true), // 3D placement ghost: BeamFromWallGhost
   stair: bespoke('stair'),
-  'mep-fixture': bespoke('mep-fixture'), // dual mesh-path + resolveFixtureBimCategory
-  'mep-segment': bespoke('mep-segment'),
+  'mep-fixture': bespoke('mep-fixture', true), // dual mesh-path + resolveFixtureBimCategory · ghost: MepFixturePlacementGhost
+  'mep-segment': bespoke('mep-segment', true), // 3D placement ghost: MepSegmentPlacementGhost
   'mep-fitting': bespoke('mep-fitting'),
 
   // ── BIM — point 3D (ομοιόμορφο, auto-wired) ──
@@ -102,12 +111,12 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   railing: point('railing'),
   roof: point('roof'),
   'floor-finish': point('floor-finish'),
-  furniture: point('furniture'),
-  'electrical-panel': point('electrical-panel'),
-  'mep-manifold': point('mep-manifold'),
-  'mep-radiator': point('mep-radiator'),
-  'mep-boiler': point('mep-boiler'),
-  'mep-water-heater': point('mep-water-heater'),
+  furniture: point('furniture', true), // 3D placement ghost: FurniturePlacementGhost
+  'electrical-panel': point('electrical-panel', true), // ghost: ElectricalPanelPlacementGhost
+  'mep-manifold': point('mep-manifold', true), // ghost: MepManifoldPlacementGhost
+  'mep-radiator': point('mep-radiator', true), // ghost: MepRadiatorPlacementGhost
+  'mep-boiler': point('mep-boiler', true), // ghost: MepBoilerPlacementGhost
+  'mep-water-heater': point('mep-water-heater', true), // ghost: MepWaterHeaterPlacementGhost
   'mep-underfloor': point('mep-underfloor'),
 
   // ── BIM — σκόπιμα 2D-only ──
@@ -123,6 +132,10 @@ export const POINT_BUILT_TYPES: readonly RenderableEntityType[] =
 /** Renderable types με `d3Builder: 'bespoke'` (χειροκίνητο host-context sync). */
 export const BESPOKE_BUILT_TYPES: readonly RenderableEntityType[] =
   RENDERABLE_ENTITY_TYPES.filter((t) => ENTITY_RENDER_CONTRACTS[t].d3Builder === 'bespoke');
+
+/** Renderable types με 3D placement ghost (δένονται με `PLACEMENT_GHOST_3D_TYPES`). */
+export const GHOST_BUILT_TYPES: readonly RenderableEntityType[] =
+  RENDERABLE_ENTITY_TYPES.filter((t) => ENTITY_RENDER_CONTRACTS[t].placementGhost3D);
 
 /** Render surfaces {d2,d3} ενός type (SSoT για το derived `ENTITY_RENDER_SURFACES`). */
 export function surfacesOf(type: RenderableEntityType): { d2: boolean; d3: boolean } {

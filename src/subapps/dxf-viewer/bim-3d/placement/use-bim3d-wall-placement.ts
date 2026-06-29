@@ -41,7 +41,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { getPixelWorldSize } from '../viewport/coordinate-transforms';
-import { WallPlacementGhost } from './WallPlacementGhost';
+import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
 import { resolvePlacementSnapWithView } from './placement-snap';
@@ -78,7 +78,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new WallPlacementGhost(manager.scene);
+    const ghost = PLACEMENT_GHOST_3D_FACTORIES.wall(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 
