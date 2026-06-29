@@ -1,222 +1,42 @@
 import type { Config } from 'jest';
 
+// Canonical, proven test runner = το root `jest.config.js` (SSoT). Το φορτώνουμε και το
+// επεκτείνουμε αντί να συντηρούμε δεύτερο, αποκλίνον config.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const rootConfig = require('../../../jest.config.js') as Config;
+
 /**
- * 🏢 ENTERPRISE JEST CONFIGURATION για DXF Viewer
- * Comprehensive testing setup με coverage, reports και CI/CD integration
+ * 🏢 DXF Viewer Jest config — thin extension του canonical root `jest.config.js`.
+ *
+ * ── FIX 2026-06-29 (ADR-552 follow-up) ─────────────────────────────────────────
+ * Το παλιό config ήταν divergent & ΠΟΤΕ δεν δούλεψε από τον subapp φάκελο:
+ *   1. Τα `projects[]` sub-configs ΔΕΝ κληρονομούν transform/preset → έπεφταν σε
+ *      babel-jest (χωρίς TypeScript) → SyntaxError σε `.ts` tests.
+ *   2. Το `moduleNameMapper['^@/']` έδειχνε σε ανύπαρκτο `<rootDir>/src` (ο subapp ΔΕΝ
+ *      έχει `src/`· το `@/` = root `src`).
+ *   3. Τα `projects[].testPathIgnorePatterns` ήταν glob patterns — άκυρα ως regex →
+ *      "Nothing to repeat" crash μόλις περνούσες test-name filter.
+ *   4. Τα `test/setupTests.ts` έκαναν `const jest = …` που συγκρούεται με το CJS jest
+ *      param injection (το root τρέχει ESM → δεν σπάει).
+ *
+ * Λύση (SSoT): κληρονομούμε ΟΛΑ από το root config (transform @swc/jest, ESM handling,
+ * `jest.setup.js`, asset/server-only mocks, `@/`→root src, ignore patterns) και απλώς
+ * σκοπεύουμε τη test discovery στον subapp φάκελο. `rootDir` = repo root ώστε όλα τα
+ * `<rootDir>` tokens του root config να resolve-άρουν ακριβώς όπως στο canonical run.
+ *
+ * Σημ.: τα `@rendering`/`@debug`/`@test` aliases ΔΕΝ χρησιμοποιούνται πουθενά στο dxf
+ * (επιβεβαιωμένο grep) — δεν χρειάζονται mappers. Τα `test/setupTests.ts` &
+ * `test/setupCanvas.ts` (legacy, σπασμένα, αχρησιμοποίητα) αντικαθίστανται από το
+ * proven `<repo>/jest.setup.js` που κληρονομείται.
  */
 const config: Config = {
-  // Basic configuration
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
-  setupFilesAfterEnv: [
-    '<rootDir>/test/setupCanvas.ts',
-    '<rootDir>/test/setupTests.ts'
-  ],
-
-  // Test discovery - includes property-based και visual regression tests
-  testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/__tests__/**/*.test.tsx',
-    '**/__tests__/**/*.prop.test.ts',  // 🎲 Property-based tests
-    '**/*.test.ts',
-    '**/*.test.tsx',
-    '**/*.prop.test.ts'                // 🎲 Property-based tests
-  ],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/build/',
-    '/coverage/'
-  ],
-
-  // Coverage configuration
-  collectCoverage: true,
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    'debug/**/*.{ts,tsx}',
-    'rendering/**/*.{ts,tsx}',
-    '!**/node_modules/**',
-    '!**/dist/**',
-    '!**/build/**',
-    '!**/*.d.ts',
-    '!**/index.ts', // Index files συνήθως είναι re-exports
-    '!**/__tests__/**',
-    '!**/test/**'
-  ],
-  coverageDirectory: 'coverage',
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'lcov',
-    'html',
-    'json',
-    'cobertura' // Για CI/CD integration
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 85,
-      lines: 85,
-      statements: 85
-    },
-    // Specific thresholds για critical modules
-    './rendering/core/CoordinateTransforms.ts': {
-      branches: 95,
-      functions: 95,
-      lines: 95,
-      statements: 95
-    }
-  },
-
-  // Reporters για enterprise-level reporting
-  reporters: [
-    'default',
-    [
-      'jest-junit',
-      {
-        outputDirectory: 'reports/junit',
-        outputName: 'jest-junit.xml',
-        ancestorSeparator: ' › ',
-        uniqueOutputName: 'false',
-        includeConsoleOutput: 'true',
-        includeShortConsoleOutput: 'true'
-      }
-    ],
-    [
-      'jest-html-reporters',
-      {
-        publicPath: 'reports/html',
-        filename: 'test-report.html',
-        expand: true,
-        hideIcon: false,
-        pageTitle: 'DXF Viewer Test Report',
-        logoImgPath: undefined,
-        includeFailureMsg: true,
-        includeSuiteFailure: true
-      }
-    ]
-  ],
-
-  // TypeScript configuration
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        // Override tsconfig για testing
-        compilerOptions: {
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          experimentalDecorators: true,
-          emitDecoratorMetadata: true,
-          // 🎲 Additional config για property-based tests
-          target: 'ES2020',  // Modern JS για fast-check
-          lib: ['ES2020', 'DOM'],
-          types: ['jest', 'node']
-        }
-      },
-      isolatedModules: true
-    }
-  },
-
-  // 🎲 PROPERTY-BASED TEST SPECIFIC SETTINGS
-  testRunner: 'jest-circus/runner', // Better για async property tests
-
-  // ✅ ENTERPRISE FIX: Global timeout για όλα τα test types
-  testTimeout: 180000, // 3 minutes max για visual regression tests
-
-  // Special test matching patterns για different test types
-  projects: [
-    {
-      displayName: 'unit',
-      testMatch: [
-        '**/__tests__/**/*.test.ts',
-        '**/__tests__/**/*.test.tsx',
-        '**/*.test.ts',
-        '**/*.test.tsx'
-      ],
-      testPathIgnorePatterns: [
-        '**/*visual-regression*',
-        '**/*.prop.test.ts'
-      ],
-      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
-    },
-    {
-      displayName: 'property-based',
-      testMatch: [
-        '**/__tests__/**/*.prop.test.ts',
-        '**/*.prop.test.ts'
-      ],
-      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
-      // 🎯 Property-based tests may need more time
-    },
-    {
-      displayName: 'visual-regression',
-      testMatch: [
-        '**/__tests__/**/visual-regression.test.ts',
-        '**/*visual-regression*.test.ts'
-      ],
-      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
-      setupFilesAfterEnv: ['<rootDir>/test/setupTests.ts'],
-      // 🎨 Visual regression tests need more time για image processing
-    }
-  ],
-
-  // Module resolution
-  moduleNameMapper: {
-    // Path mapping για cleaner imports στα tests
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@debug/(.*)$': '<rootDir>/debug/$1',
-    '^@rendering/(.*)$': '<rootDir>/rendering/$1',
-    '^@test/(.*)$': '<rootDir>/test/$1'
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-
-  // Transform configuration
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
-    '^.+\\.(js|jsx)$': 'babel-jest'
-  },
-  transformIgnorePatterns: [
-    'node_modules/(?!(module-that-needs-to-be-transformed)/)'
-  ],
-
-  // Performance settings
-  maxWorkers: '50%', // Use half of available cores για CI efficiency
-
-  // 🎲 PROPERTY-BASED TEST CONFIGURATION
-  // Special handling για fast-check tests
-  testEnvironmentOptions: {
-    // Increase memory για property-based testing
-    // fast-check may generate many test cases
-  },
-
-  // Verbose output για detailed testing feedback
-  verbose: true,
-  silent: false,
-
-  // Cache configuration για faster subsequent runs
-  cache: true,
-  cacheDirectory: '<rootDir>/.jest-cache',
-
-  // Error handling
-  errorOnDeprecated: true,
-  bail: false, // Continue running tests even if some fail
-
-  // Watch mode configuration (for development)
-  watchPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/dist/',
-    '<rootDir>/coverage/',
-    '<rootDir>/reports/',
-    '<rootDir>/test/baselines/' // Visual regression baselines
-  ],
-
-  // Custom environment variables για tests
-  setupFiles: [],
-
-  // Clear mocks between tests
-  clearMocks: true,
-  resetMocks: false,
-  restoreMocks: true
+  ...rootConfig,
+  // rootDir relative στο αρχείο config → repo root (3 επίπεδα πάνω).
+  rootDir: '../../../',
+  // Σκόπευσε τη discovery ΜΟΝΟ στον DXF subapp (αλλιώς θα έτρεχε όλο το repo).
+  roots: ['<rootDir>/src/subapps/dxf-viewer'],
+  // Visual-regression image diffing μπορεί να ξεπεράσει το root 10s ceiling.
+  testTimeout: 180000,
 };
 
 export default config;

@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✏️ DRAFT / PROPOSED — roadmap, καμία γραμμή κώδικα χωρίς έγκριση φάσης |
+| **Status** | 🟢 Φ0+Φ2+Φ3+Φ4 IMPLEMENTED (UNCOMMITTED) — Φ1 άνευ αντικειμένου |
 | **Date** | 2026-06-29 |
 | **Last Updated** | 2026-06-29 |
 | **Category** | Canvas & Rendering |

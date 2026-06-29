@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh, foundationToMesh } from '../converters/BimToThreeConverter';
+import { beamToMesh, slabToMesh, fixtureToMesh } from '../converters/BimToThreeConverter';
 // ADR-534 §monolithic-cut — top-clip δοκαριών/κολόνων στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import { isBeamTilted } from '../../bim/geometry/beam-slope';
@@ -25,11 +25,6 @@ import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
 // ADR-473 — joint rebar post-pass (dowels / laps / anchorages at structural joints).
 import { syncJointRebar, buildStructuralEntitySet } from './bim-scene-joint-rebar-sync';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
-import { railingToMesh } from '../converters/railing-to-three';
-import { roofToMesh } from '../converters/roof-to-three';
-import { floorFinishToMesh } from '../converters/floor-finish-to-three';
-import { underfloorToObject3D } from '../converters/mep-underfloor-to-three';
-import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { resolveFixtureBimCategory } from '../../bim/types/mep-fixture-types';
 import { syncCircuitWires } from './sync-circuit-wires';
@@ -54,7 +49,7 @@ import { buildEntitySystemColorIntIndex } from '../../bim/mep-systems/mep-system
 import { getLayer } from '../../stores/LayerStore';
 import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
 import { slabOpeningPickMesh } from '../converters/slab-opening-pick-mesh';
-import { syncPointEntities } from './bim-scene-point-syncs';
+import { POINT_ENTITY_CONTRACTS } from './bim-scene-point-contracts';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
 
@@ -175,21 +170,18 @@ export class BimSceneLayer {
     syncColumns(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     this.syncBeams(entities, ctx);
     syncStructuralFinishSkin(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
-    this.syncFoundations(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
-    this.syncPanels(entities, ctx);
-    this.syncManifolds(entities, ctx);
-    this.syncRadiators(entities, ctx);
-    this.syncBoilers(entities, ctx);
-    this.syncWaterHeaters(entities, ctx);
+    // ADR-550 Φ2 — auto-wired ομοιόμορφες point-entity οικογένειες (foundation/panel/
+    // manifold/radiator/boiler/water-heater/railing/roof/floor-finish/underfloor/
+    // furniture) μέσω ΕΝΟΣ registry, αντί για 11 χειροκίνητες sync*() μεθόδους. Κάθε
+    // entry καλεί τον ίδιο `syncPointEntities` SSoT — μηδέν αλλαγή drawing logic.
+    const resolvePoint = this.resolveEntity.bind(this);
+    for (const contract of POINT_ENTITY_CONTRACTS) {
+      contract.run(this.group, entities, ctx, resolvePoint);
+    }
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
-    this.syncRailings(entities, ctx);
-    this.syncRoofs(entities, ctx);
-    this.syncFloorFinishes(entities, ctx);
-    this.syncUnderfloors(entities, ctx);
-    this.syncFurnitures(entities, ctx);
     const resolve = (e: { layerId?: string; discipline?: Discipline }, c: BimCategory) =>
       this.resolveEntity(e, c, ctx);
     syncMepSegments(this.group, entities, ctx, resolve);
@@ -261,48 +253,6 @@ export class BimSceneLayer {
     }
   }
 
-  /** ADR-408 Φ3/Φ5 — electrical panels: circuit sources, excluded from colour-by-system. */
-  private syncPanels(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.panels, 'electrical-panel', ctx, this.resolveEntity.bind(this),
-      (p, c, r) => panelToMesh(p, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-408 Φ12 — plumbing manifolds: distribution sources, excluded from colour-by-system. */
-  private syncManifolds(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.manifolds, 'mep-manifold', ctx, this.resolveEntity.bind(this),
-      (m, c, r) => manifoldToMesh(m, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-408 Εύρος Β — heating radiators (hydronic terminals). */
-  private syncRadiators(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.radiators, 'mep-radiator', ctx, this.resolveEntity.bind(this),
-      (rad, c, r) => radiatorToMesh(rad, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-408 Εύρος Β — heating boilers (hydronic source). */
-  private syncBoilers(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.boilers, 'mep-boiler', ctx, this.resolveEntity.bind(this),
-      (b, c, r) => boilerToMesh(b, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-408 DHW — domestic hot water heaters (DHW source). */
-  private syncWaterHeaters(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.waterHeaters, 'mep-water-heater', ctx, this.resolveEntity.bind(this),
-      (wh, c, r) => waterHeaterToMesh(wh, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-407 — standalone path-based railings (posts + balusters + rails). */
-  private syncRailings(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.railings, 'railing', ctx, this.resolveEntity.bind(this),
-      (rail, c, r) => railingToMesh(rail, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /** ADR-410 — mesh-based CC0 furniture (glTF cache; bbox placeholder on miss). */
-  private syncFurnitures(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.furnitures, 'furniture', ctx, this.resolveEntity.bind(this),
-      (f, c, r) => furnitureToObject3D(f, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
   private syncBeams(entities: Bim3DEntities, ctx: SyncContext): void {
     // ADR-534 §monolithic-cut — host inputs των πλακών (soffit) ώστε το ορατό δοκάρι να κόβεται όπου το
     // καλύπτει πλάκα οροφής (μηδέν z-fighting). Άδειο όταν δεν υπάρχει πλάκα → no-op.
@@ -325,17 +275,6 @@ export class BimSceneLayer {
     }
   }
 
-  /**
-   * ADR-436 — structural foundations (pad/strip/tie-beam, IfcFooting). Hang-down
-   * solid below grade (`topElevationMm − thickness`). Own V/G category
-   * `'foundation'` (structural discipline). `?? []` guards legacy floor-stack
-   * entries predating ADR-436.
-   */
-  private syncFoundations(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.foundations, 'foundation', ctx, this.resolveEntity.bind(this),
-      (f, c, r) => foundationToMesh(f, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
   private syncSlabs(entities: Bim3DEntities, ctx: SyncContext): void {
     for (const slab of entities.slabs) {
       const r = this.resolveEntity(slab, 'slab', ctx);
@@ -353,35 +292,6 @@ export class BimSceneLayer {
         if (pick) { pick.userData['buildingId'] = r.buildingId; this.group.add(pick); }
       }
     }
-  }
-
-  /**
-   * ADR-417 — parametric pitched roofs (faces extruded down by thickness). §10 #4:
-   * own V/G category `'roof'` (architectural discipline) — independent visibility
-   * from slab (Revit-parity). buildingBaseElevation passed through like slab/railing.
-   */
-  private syncRoofs(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.roofs, 'roof', ctx, this.resolveEntity.bind(this),
-      (roof, c, r) => roofToMesh(roof, c.activeLevelId, r.baseElevation));
-  }
-
-  /**
-   * ADR-419 — floor-finish coverings (IfcCovering FLOORING). Thin polygon solid
-   * per room, sits at FFL. Own V/G category `'floor-finish'` (architectural).
-   */
-  private syncFloorFinishes(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.floorFinishes, 'floor-finish', ctx, this.resolveEntity.bind(this),
-      (ff, c, r) => floorFinishToMesh(ff, c.floorElevationMm, c.activeLevelId, r.baseElevation));
-  }
-
-  /**
-   * ADR-408 Εύρος Β #3 — underfloor radiant heating loops. A `THREE.Group` of the
-   * REAL serpentine pipes (swept tubes along `geometry.loopPath`) + a faint screed
-   * band, at FFL + screedOffset. Own V/G category `'mep-underfloor'` (plumbing).
-   */
-  private syncUnderfloors(entities: Bim3DEntities, ctx: SyncContext): void {
-    syncPointEntities(this.group, entities.underfloors, 'mep-underfloor', ctx, this.resolveEntity.bind(this),
-      (uf, c, r) => underfloorToObject3D(uf, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   private syncStairs(entities: Bim3DEntities, ctx: SyncContext): void {

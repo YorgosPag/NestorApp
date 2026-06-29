@@ -15,14 +15,14 @@ import type { Discipline } from '../../bim/discipline/bim-discipline';
 import type { EntityResolution } from './BimSceneLayer';
 
 /** Per-entity visibility + building binding resolver (BimSceneLayer.resolveEntity). */
-type ResolveEntity = (
+export type ResolveEntity = (
   entity: { id?: string; layerId?: string; discipline?: Discipline },
   category: BimCategory,
   ctx: SyncContext,
 ) => EntityResolution | null;
 
 /** Converts one resolved point entity to its Three.js object (null = skip). */
-type PointMeshFactory<T> = (
+export type PointMeshFactory<T> = (
   entity: T,
   ctx: SyncContext,
   resolution: EntityResolution,

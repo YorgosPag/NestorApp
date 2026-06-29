@@ -30,7 +30,15 @@ import {
   RENDERABLE_ENTITY_TYPES,
 } from '../renderable-entity-type';
 import { ENTITY_RENDER_SURFACES, BIM_2D_ONLY_TYPES } from '../entity-render-surfaces';
+import {
+  ENTITY_RENDER_CONTRACTS,
+  POINT_BUILT_TYPES,
+  BESPOKE_BUILT_TYPES,
+} from '../entity-render-contract';
 import { BIM_3D_CONVERTER_TYPES } from '../../../bim-3d/scene/bim-3d-renderable-types';
+import { POINT_CONTRACT_TYPES } from '../../../bim-3d/scene/bim-scene-point-contracts';
+
+const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 
 function createMockCtx(): CanvasRenderingContext2D {
   const canvas = {
@@ -104,6 +112,44 @@ describe('Entity render coverage — declarative registry ↔ live dispatchers (
         (t) => !(ENTITY_RENDER_SURFACES[t].d2 && !ENTITY_RENDER_SURFACES[t].d3),
       );
       expect(wrong).toEqual([]);
+    });
+  });
+});
+
+describe('Entity Render Contract Registry (ADR-550 Φ2)', () => {
+  describe('Invariants', () => {
+    it('d3Builder !== "none" ⟺ d3 === true (κανένα 3D χωρίς builder, κανένας builder χωρίς 3D)', () => {
+      const broken = RENDERABLE_ENTITY_TYPES.filter((t) => {
+        const c = ENTITY_RENDER_CONTRACTS[t];
+        return (c.d3Builder !== 'none') !== c.d3;
+      });
+      expect(broken).toEqual([]);
+    });
+
+    it('το derived ENTITY_RENDER_SURFACES ταυτίζεται με το contract (μία πηγή)', () => {
+      const drift = RENDERABLE_ENTITY_TYPES.filter((t) => {
+        const c = ENTITY_RENDER_CONTRACTS[t];
+        const s = ENTITY_RENDER_SURFACES[t];
+        return s.d2 !== c.d2 || s.d3 !== c.d3;
+      });
+      expect(drift).toEqual([]);
+    });
+  });
+
+  describe('Auto-wiring binding: declaration ↔ executable point registry', () => {
+    it('το σύνολο των d3Builder:"point" ταυτίζεται με τα types του POINT_ENTITY_CONTRACTS (no drift)', () => {
+      expect(asSorted(POINT_CONTRACT_TYPES)).toEqual(asSorted(POINT_BUILT_TYPES));
+    });
+
+    it('point ∪ bespoke ταξινομεί ΑΚΡΙΒΩΣ τους ζωντανούς 3D converter types', () => {
+      const classified = asSorted([...POINT_BUILT_TYPES, ...BESPOKE_BUILT_TYPES]);
+      expect(classified).toEqual(asSorted(BIM_3D_CONVERTER_TYPES));
+    });
+
+    it('κανένας point type δεν είναι ταυτόχρονα bespoke (ξένα σύνολα)', () => {
+      const bespoke = new Set<string>(BESPOKE_BUILT_TYPES);
+      const overlap = POINT_BUILT_TYPES.filter((t) => bespoke.has(t));
+      expect(overlap).toEqual([]);
     });
   });
 });
