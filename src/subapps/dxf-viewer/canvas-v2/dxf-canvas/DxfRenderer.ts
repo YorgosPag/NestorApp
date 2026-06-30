@@ -1,5 +1,9 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import { GHOST_DEFAULTS } from '../../rendering/ghost';
+// ADR-559 — AutoCAD GRIPOBJLIMIT: suppress ALL visible grips when the selection holds more
+// objects than the limit. Read at render time (event-time getter, no subscription).
+import { isGripObjLimitExceeded } from '../../hooks/grips/grip-obj-limit';
+import { gripStyleStore } from '../../stores/GripStyleStore';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
@@ -37,6 +41,9 @@ export class DxfRenderer {
   private renderContext: Canvas2DContext; // ✅ ΝΕΟ: Backend abstraction
   // O(1) selection lookup — rebuilt before each render pass to avoid O(n²) Array.includes
   private _selectionSet: Set<string> = new Set();
+  // ADR-559 — AutoCAD GRIPOBJLIMIT: true for this frame when the selection-object count
+  // exceeds the limit ⇒ no grips drawn for ANY selected entity (objects stay selected).
+  private _gripsSuppressedByObjLimit = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -125,6 +132,9 @@ export class DxfRenderer {
     this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip, armedKeys: gripOpts.armedKeys } : {});
     // Rebuild selection Set for O(1) lookups in renderEntityUnified
     this._selectionSet = new Set(effectiveOptions.selectedEntityIds);
+    // ADR-559 — AutoCAD GRIPOBJLIMIT: decide ONCE per frame whether the selection is too
+    // large to draw grips for (Ctrl+A on a big drawing). Read the live limit at frame time.
+    this._gripsSuppressedByObjLimit = isGripObjLimitExceeded(this._selectionSet.size, gripStyleStore.get().gripObjLimit);
     // ADR-040 Phase IX: viewport culling — skip entities whose bbox does not
     // intersect the screen-space viewport. Computed once per frame.
     const worldViewport = viewportToWorldBBox(transform, actualViewport);
@@ -270,6 +280,9 @@ export class DxfRenderer {
       movePreviewActive: interaction.movePreviewActive,
     };
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
+    // ADR-559 — single-entity overlay path: never exceeds the limit (size ≤ 1), but keep
+    // the per-frame flag consistent so renderEntityUnified reads a fresh value.
+    this._gripsSuppressedByObjLimit = isGripObjLimitExceeded(this._selectionSet.size, gripStyleStore.get().gripObjLimit);
     this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
     this.ctx.restore();
   }
@@ -295,7 +308,9 @@ export class DxfRenderer {
     const resolved = this.resolveStyleForRender(entity, options.layersById);
     const entityModel: EntityModel = this.toEntityModel(entity, isSelected, resolved);
 
-    const gripsVisible = isSelected && !options.suppressGrips;
+    // ADR-559 — AutoCAD GRIPOBJLIMIT: hide grips for ALL selected entities once the
+    // selection-object count exceeds the limit (entity stays selected, only grips are skipped).
+    const gripsVisible = isSelected && !options.suppressGrips && !this._gripsSuppressedByObjLimit;
     const ghostMult = options.movePreviewActive && isSelected ? GHOST_DEFAULTS.alpha : 1.0;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',

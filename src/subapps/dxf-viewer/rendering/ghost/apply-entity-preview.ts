@@ -380,12 +380,16 @@ export function applyEntityPreview(
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
 
-  // ── ADR-363 Slice F — plain DXF line rotation live ghost ──────────────────
+  // ── ADR-363 Slice F — plain DXF line ROTATION live ghost ──────────────────
   // The line is a primitive (start/end, no params); the rotation ghost spins both
   // endpoints about `rotatePivot` (the picked centre) via the SAME shared
   // `rotateAxisPointsAboutPivot` SSoT the commit (RotateEntityCommand) runs, so the
   // preview ≡ commit. `anchorPos` = the reference anchor (swept angle starts at 0).
-  if (lineGripKind && anchorPos && entity.type === 'line') {
+  // ⚠️ Slice G.5: gate to `'line-rotation'` ONLY — the MOVE grip (`'line-move'`) is a
+  // whole-entity translate (movesEntity + edgeVertexIndices); it must fall through to
+  // the `movesEntity` / classic ghost below (preview ≡ the centre midpoint grip), NOT
+  // spin. A bare `if (lineGripKind)` rotated the move ghost.
+  if (lineGripKind === 'line-rotation' && anchorPos && entity.type === 'line') {
     const line = entity as unknown as DxfLine;
     const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
     const rotated = applyLineRotationDrag({ start: line.start, end: line.end, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });

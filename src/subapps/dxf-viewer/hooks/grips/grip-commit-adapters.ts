@@ -412,12 +412,28 @@ export function commitDxfGripDragModeAware(
     commitTextGripDrag(grip, delta, deps);
     return;
   }
-  // ADR-363 Slice F — plain DXF line rotation grip path. Bypasses stretch/move
+  // ADR-363 Slice F — plain DXF line ROTATION grip path. Bypasses stretch/move
   // because rotation is not a single displacement: routes through the canonical
   // `RotateEntityCommand` (undoable, merge-coalescing) reading the picked pivot
   // from `BimRotateHotGripStore`. Full wall-rotation parity, no bespoke transform.
-  if (grip.lineGripKind) {
+  // ⚠️ Slice G.5: gate to `'line-rotation'` ONLY — the line MOVE grip ALSO carries a
+  // `lineGripKind` (`'line-move'`) but is a whole-entity TRANSLATE (movesEntity +
+  // edgeVertexIndices [0,1]); it must fall through to the move/stretch path below,
+  // exactly like the centre midpoint grip. A bare `if (grip.lineGripKind)` here sent
+  // the move grip into rotation → the ¼-west arms produced a swept-angle no-op/spin.
+  if (grip.lineGripKind === 'line-rotation') {
     commitLineGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Slice G.5 — plain DXF line ¼-west MOVE cross → whole-line TRANSLATE,
+  // committed DETERMINISTICALLY (mode-independent) via the canonical vertex-stretch
+  // SSoT (`StretchEntityCommand`, moving start+end by `delta` — the SAME path the
+  // centre midpoint grip uses; a line is a primitive, NOT a BIM params move). Mirrors
+  // how the wall's `wallGripKind` branch commits `wall-midpoint` regardless of the
+  // active GripMode, so the directional move-by-value always moves (never falls into a
+  // rotate/scale/mirror tool-handoff if the user cycled grip mode first).
+  if (grip.lineGripKind === 'line-move') {
+    commitDxfGripDragViaStretchCommand(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.

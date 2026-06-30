@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-30 — Grip-object-limit gate στον `DxfRenderer` (ADR-559, CHECK 6B/6D)
+AutoCAD `GRIPOBJLIMIT`: όταν το πλήθος επιλεγμένων οντοτήτων ξεπερνά το όριο (Ctrl+A σε μεγάλο σχέδιο), δεν ζωγραφίζονται grips. **ADR-040 touch (`DxfRenderer.ts`, CHECK 6B):** στο `renderEntityUnified` το `gripsVisible` κάνει AND με `!this._gripsSuppressedByObjLimit` (per-frame flag, υπολογίζεται **μία φορά/frame** μετά το `_selectionSet` build μέσω `gripStyleStore.get()` event-time getter — **όχι** subscription, CHECK 6C ασφαλές). **Καμία αλλαγή σε bitmap cache-key** (το flag δεν μπαίνει στο key· τα selected entities ζωγραφίζονται live, εκτός cache). Βλ. **ADR-559**. 🟡 UNCOMMITTED.
+
 ### 2026-06-30 — Canvas background image layer (ADR-004/446, CHECK 6B)
 Ο χρήστης μπορεί πλέον να ορίσει εικόνα φόντου στον 2D καμβά (BackgroundCategory setting), με parity στο 3D studio background (`studio-background-texture.ts` + `envmap-generator.ts`). **ADR-040 touch (`CanvasLayerStack.tsx`, CHECK 6B):** στο canvas-stack `div` προστέθηκε **μόνο** το static CSS utility `bg-[image:var(--canvas-background-dxf-image)]` δίπλα στο υπάρχον `bg-[var(--canvas-background-dxf)]` — καθαρά δηλωτικό styling μέσω CSS var (ο token resolver το γεμίζει). **Μηδέν νέο `useSyncExternalStore`** (CHECK 6C ασφαλές), καμία αλλαγή σε subscription pattern / bitmap cache-key / scheduler / renderer / micro-leaf δομή. Βλ. **ADR-004** / **ADR-446**. 🟡 UNCOMMITTED.
 

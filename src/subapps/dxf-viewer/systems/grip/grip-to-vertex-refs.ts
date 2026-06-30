@@ -29,7 +29,13 @@ import type { VertexRef } from '../stretch/stretch-vertex-classifier';
 function refsForLine(entityId: string, grip: UnifiedGripInfo): VertexRef[] {
   if (grip.gripIndex === 0) return [{ entityId, kind: 'line-start' }];
   if (grip.gripIndex === 1) return [{ entityId, kind: 'line-end' }];
-  if (grip.gripIndex === 2) {
+  // Whole-line translate grips → move BOTH endpoints by `delta`. Keyed off
+  // `edgeVertexIndices` ([0,1]) — NOT a hardcoded gripIndex — so EVERY whole-line
+  // move grip resolves identically: the centre midpoint (#2) AND the ¼-west MOVE
+  // cross (#4, ADR-363 Slice G.5). Mirrors the preview path (`applyClassicEntityPreview`
+  // also reads `edgeVertexIndices`), so commit ≡ ghost. The rotation handle (#3) has
+  // no `edgeVertexIndices` and its own commit, so it never reaches here.
+  if (grip.edgeVertexIndices) {
     return [
       { entityId, kind: 'line-start' },
       { entityId, kind: 'line-end' },

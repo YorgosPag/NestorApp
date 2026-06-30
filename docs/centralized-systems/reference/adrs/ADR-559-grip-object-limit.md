@@ -30,11 +30,14 @@
 
 | Producer | Αρχείο | Μετρητής |
 |---|---|---|
-| 2D DXF + overlays | `hooks/grips/grip-registry.ts` (early return πριν τα loops) | `selectedEntityIds.length + selectedOverlays.length` |
+| **2D DXF canvas — ΟΡΑΤΑ grips (ο πραγματικός render)** | `canvas-v2/dxf-canvas/DxfRenderer.ts` → `renderEntityUnified` (`gripsVisible`) | `this._selectionSet.size` (per-frame flag `_gripsSuppressedByObjLimit`) |
+| 2D hit-test / snap store | `hooks/grips/grip-registry.ts` (early return πριν τα loops) | `selectedEntityIds.length + selectedOverlays.length` |
 | 3D raw-DXF (multi-select, ADR-543) | `bim-3d/animation/use-bim3d-dxf-edit-interaction.ts` → `seatGrips` | `eligibles.length` |
 | 3D BIM footprint reshape | `bim-3d/animation/bim3d-grip-drag.ts` → `refreshReshapeGrips` | `entityIds.length` (single-select σήμερα — parity/future-proof) |
 
-Τα 3D σημεία διαβάζουν το limit **event-time** μέσω `gripStyleStore.get().gripObjLimit` (ADR-040 getter, **όχι** subscription).
+**⚠️ ΔΙΟΡΘΩΣΗ (browser-verify Giorgio):** Το handoff υπέθετε ότι το `grip-registry.ts` είναι ο **μοναδικός** producer 2D grips — **ΛΑΘΟΣ**. Το `grip-registry`→`AllGripsStore` τροφοδοτεί μόνο **hit-testing/snap**· τα **ορατά** grips στο DXF canvas τα ζωγραφίζει το `DxfRenderer.renderEntityUnified` (`gripsVisible = isSelected && !suppressGrips`) → `BaseEntityRenderer.renderPhaseGrips` → `GripPhaseRenderer`. Χωρίς gate **εκεί**, το Ctrl+A εμφάνιζε όλα τα grips. Πλέον το `DxfRenderer` υπολογίζει **μία φορά/frame** `_gripsSuppressedByObjLimit = isGripObjLimitExceeded(selectionSet.size, gripObjLimit)` και μηδενίζει το `gripsVisible` για ΟΛΕΣ τις επιλεγμένες (entity μένει επιλεγμένη). Και τα δύο gates μένουν (ορατά + hit-test = consistent: αόρατη λαβή ≠ pickable).
+
+Όλα τα event-time σημεία διαβάζουν το limit μέσω `gripStyleStore.get().gripObjLimit` (ADR-040 getter, **όχι** subscription).
 
 ## 3. Settings chain (mirror του `maxGripsPerEntity`)
 
@@ -45,7 +48,7 @@
 **Πρόβλημα που εντόπισε ο SSoT audit:** το grip-settings *shape* ήταν re-declared ως **8 ξεχωριστά interfaces** (5 «κανονικά» + 3 UI-local) → κάθε νέο field (όπως το `gripObjLimit`) έπρεπε να προστεθεί χειροκίνητα σε όλα.
 
 **Λύση — ΕΝΑ schema + projections (composition, μηδέν αλλαγή τιμών/συμπεριφοράς):** νέο `types/grip-settings-schema.ts` ορίζει το shape **μία φορά**:
-- `GripColors` (sentinel `cold:string|null`) / `ResolvedGripColors` (`cold:string`)
+- `GripColors` (sentinel `cold:string|null`) · `ResolvedGripColors` (`cold:string`) **re-exported από το υπάρχον SSoT `config/color-config.ts`** (όπου ζει με τον resolver `resolveGripColors()`) — ΟΧΙ re-declared (αρχικά το είχα διπλασιάσει· διορθώθηκε στο SSoT audit)
 - `GripSettingsBase` (τα 14 stored fields — **εδώ μπαίνει κάθε νέο grip field**)
 - `GripStyleExtras` (`showGripTips`/`dpiScale`) · `GripSettingsLegacyCompat` (legacy optional)
 - `GripSettingsFull = Base & Extras & Legacy & {colors:GripColors}` (input DTO)
@@ -76,3 +79,4 @@
 
 - **2026-06-30** — Αρχική υλοποίηση: setting `gripObjLimit` (default 100) + predicate SSoT + 3 gates (2D + 2×3D) + UI slider + i18n + 7 jest. UNCOMMITTED.
 - **2026-06-30 (follow-up, Giorgio SSoT order)** — Κεντρικοποίηση grip-settings shape (§3b): νέο `types/grip-settings-schema.ts` (canonical) + 6 projections + 2 de-collision renames + ratchet guard module. Zero behavior change (μόνο types, όχι default values). 261/262 jest GREEN (1 προϋπάρχον MEP mock fail, άσχετο). UNCOMMITTED.
+- **2026-06-30 (bugfix, Giorgio browser-verify)** — **Ctrl+A εμφάνιζε όλα τα grips:** ο αρχικός gate ήταν σε λάθος producer (`grip-registry`→hit-test μόνο). Προστέθηκε ο **πραγματικός** gate στο `DxfRenderer.renderEntityUnified` (`gripsVisible`, per-frame `_gripsSuppressedByObjLimit`) — ο visible-grips render path. ADR-040 changelog ενημερωμένο (CHECK 6B/6D). UNCOMMITTED.
