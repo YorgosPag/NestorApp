@@ -63,8 +63,13 @@ export type FindSnapPointFn = (worldX: number, worldY: number) => ProSnapResult 
  *     Κοινό για πλάκα ΚΑΙ στέγη (ταυτόσημο polygon FSM) — ΕΝΑ kind, λιγότερη επιφάνεια.
  *   · `foundation-pad` → το πέδιλο (1-κλικ) κουμπώνει σε παρειά/άξονα κολόνας/μέλους ΟΠΩΣ η κολώνα
  *     (reuse `resolveColumnFaceSnapFromTargets` — center-on-axis / 9-handle flush).
+ *
+ * ADR-508 §line-cyan — `line` (σκέτη γραμμή σχεδίασης) = γραμμικό μέλος **μηδενικού πλάτους**: κουμπώνει
+ *   **flush/κάθετα** σε υφιστάμενη γραμμή/μέλος ΟΠΩΣ ο τοίχος (ίδιος `resolveMemberGhostSnapFromStore`,
+ *   `memberWidthMm` πάντα 0 → το σημείο πατά ΑΚΡΙΒΩΣ πάνω στην παρειά + `faceFrame` → κυανές listening
+ *   dimensions). Ταυτόσημο zero-width behavior με το `polygon-vertex`, ξεχωριστό όνομα για σαφήνεια εργαλείου.
  */
-export type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'polygon-vertex' | 'foundation-pad' | 'point-only';
+export type BimSnapToolKind = 'wall' | 'beam' | 'column' | 'polygon-vertex' | 'foundation-pad' | 'line' | 'point-only';
 
 /** Τύπος των member kinds που δέχεται ο `selectGhostMembers` (reuse — μηδέν re-declare). */
 type MemberSnapKinds = Parameters<typeof selectGhostMembers>[1];
@@ -150,7 +155,7 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
   if (toolKind === 'column' || toolKind === 'foundation-pad') {
     const placement = resolveColumnFaceSnapFromTargets(cursor, targets, sceneUnits, input.columnOpts, input.columnHead, input.lShapeGhost);
     if (placement) return { kind: 'column-placement', placement, point: placement.position };
-  } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex') {
+  } else if (toolKind === 'wall' || toolKind === 'beam' || toolKind === 'polygon-vertex' || toolKind === 'line') {
     // ADR-528 — auto-span ΠΡΩΤΙΣΤΟ (mirror του column `lCornerHit`): όταν ο cursor είναι στη νοητή
     // ευθεία ανάμεσα σε δύο δομικά μέλη (κολόνες footprints + τοίχοι outline), το δοκάρι γεφυρώνει το
     // κενό με τα άκρα flush στις παρειές. Gated `beamSpanGhost` (μόνο straight/cantilever beam → τοίχος
@@ -170,9 +175,10 @@ export function resolveBimCursorSnap(input: BimCursorSnapInput): BimCursorSnap {
       }
     }
     const members = selectGhostMembers(targets, input.memberKinds ?? DEFAULT_MEMBER_KINDS);
-    // ADR-514 Φ6 — η κορυφή περιγράμματος (`polygon-vertex`) δεν έχει «πλάτος» → memberWidth 0 ώστε το
-    // `.start` να πατά ΑΚΡΙΒΩΣ πάνω στην παρειά (flush), όχι σε centerline offset ημι-πλάτους.
-    const widthMm = toolKind === 'polygon-vertex' ? 0 : input.memberWidthMm ?? 0;
+    // ADR-514 Φ6 / ADR-508 §line-cyan — η κορυφή περιγράμματος (`polygon-vertex`) ΚΑΙ η σκέτη γραμμή
+    // (`line`) δεν έχουν «πλάτος» → memberWidth 0 ώστε το `.start` να πατά ΑΚΡΙΒΩΣ πάνω στην παρειά
+    // (flush), όχι σε centerline offset ημι-πλάτους.
+    const widthMm = toolKind === 'polygon-vertex' || toolKind === 'line' ? 0 : input.memberWidthMm ?? 0;
     const placement = resolveMemberGhostSnapFromStore(
       cursor,
       targets.footprints,

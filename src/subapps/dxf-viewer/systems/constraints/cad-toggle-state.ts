@@ -1,6 +1,6 @@
 /**
  * Subscribable in-memory SSoT for the ORTHO (F8) / POLAR (F10) / SNAP-MODE (F9)
- * CAD toggle state.
+ * / DYNAMIC INPUT (Dyn) CAD toggle state.
  *
  * WHY a shared store (2026-06-12): `useCadToggles` is a plain React hook with
  * its own `useState`, so every call site (`CadStatusBar`, `useDrawingHandlers`,
@@ -36,6 +36,7 @@ let orthoOn = false;
 let polarOn = false;
 let snapOn = false;
 let snapStep = 0;
+let dynInputOn = false;
 
 const listeners = new Set<Listener>();
 
@@ -67,9 +68,26 @@ export const cadToggleState = {
     snapStep = step;
     notify();
   },
+  /**
+   * Writer — called by `useCadToggles` synchronously on every DYNAMIC INPUT
+   * change (local toggle or Firestore hydrate). Mirrors the ortho/polar fix:
+   * `dynInput` is read by a SEPARATE hook instance (`DynamicInputSubscriber`)
+   * than the one that toggles it (`CadStatusBar`); without this shared store the
+   * toggle turned green but the overlay/ring never activated (it waited on the
+   * Firestore echo, which never lands unauthenticated). No-op when unchanged.
+   */
+  setDynInput(on: boolean): void {
+    if (on === dynInputOn) return;
+    dynInputOn = on;
+    notify();
+  },
   /** F8 ORTHO live state. */
   isOrthoOn(): boolean {
     return orthoOn;
+  },
+  /** Dynamic Input live state. */
+  isDynInputOn(): boolean {
+    return dynInputOn;
   },
   /** F10 POLAR live state. */
   isPolarOn(): boolean {

@@ -93,6 +93,54 @@ function normalizeSnapMode(mode: string | null | undefined): ExtendedSnapType | 
     : undefined;
 }
 
+/**
+ * Tools that finish a multi-point operation on double-click (continuous polyline /
+ * polygon / hatch / measurement families + best-fit circle). SSoT for the
+ * `onDrawingDoubleClick` routing so the hook stays a thin wrapper.
+ */
+const DOUBLE_CLICK_FINISH_TOOLS = new Set<string>([
+  'polyline', 'polygon', 'hatch', 'measure-area', 'measure-angle',
+  'measure-angle-measuregeom', 'measure-distance-continuous', 'circle-best-fit',
+]);
+
+/**
+ * Double-click "finish" for continuous tools. Overlay completion takes priority; then
+ * `measure-distance-continuous` (ADR-053) just stops drawing (entities are auto-created
+ * every 2 points), while the standard DXF polyline family commits the finished entity.
+ * Extracted from `useDrawingHandlers` (SSoT, keeps the hook under the file-size budget).
+ */
+export function performDoubleClickFinish(
+  activeTool: ToolType,
+  ops: {
+    finishPolyline: () => object | null | undefined;
+    onEntityCreated: (entity: Entity) => void;
+    cancelDrawing: () => void;
+    clearPreview: () => void;
+  },
+): void {
+  if (!DOUBLE_CLICK_FINISH_TOOLS.has(activeTool)) return;
+
+  // Check for overlay completion callback first.
+  const { toolStyleStore } = require('../../stores/ToolStyleStore');
+  if (toolStyleStore.triggerOverlayCompletion()) return;
+
+  // ADR-053 FIX (2026-01-30): measure-distance-continuous auto-creates entities every
+  // 2 points, so "finish" just means stop drawing — no entity creation needed.
+  if (activeTool === 'measure-distance-continuous') {
+    ops.cancelDrawing();
+    ops.clearPreview();
+    handleToolCompletion(activeTool);
+    return;
+  }
+
+  // Standard DXF polyline completion (polyline, polygon, measure-area, measure-angle).
+  const newEntity = ops.finishPolyline();
+  if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
+    ops.onEntityCreated(newEntity as Entity);
+  }
+  handleToolCompletion(activeTool);
+}
+
 /** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */
 export function hardOrtho(point: Pt, ref: Pt): Pt {
   const dx = point.x - ref.x;

@@ -24,6 +24,8 @@ import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometrySer
 import type { SceneUnits, StairParamOverrides } from './stair-completion';
 // ADR-363 Phase 1C — wall preview extracted to wall-preview-helpers.ts.
 import { generateWallPreview } from './wall-preview-helpers';
+// ADR-508 §line-cyan — line flush/κάθετο κούμπωμα + κυανές listening dims (ίδιος εγκέφαλος με τον τοίχο).
+import { generateLinePreview } from './line-preview-helpers';
 // ADR-363 Phase 6.5.B — slab preview.
 import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-514 Φ6 — face-snap κορυφών στο preview (flush + edge-slide): ΙΔΙΟΣ resolver + ΙΔΙΟ store με
@@ -56,10 +58,8 @@ import {
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { UI_COLORS } from '../../config/color-config';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 // ─── Callback types for dependency injection ───────────────────────────────
 /** Creates an entity from tool + points. Injected to avoid circular dependency. */
 export type CreateEntityFn = (tool: DrawingTool, points: Point2D[]) => ExtendedSceneEntity | null;
@@ -73,7 +73,7 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
     vertices,
     closed: false,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 1.0,
@@ -168,6 +168,14 @@ export function generatePreviewEntity(
   if (tool === 'column') {
     return generateColumnPreview(cursorPoint, sceneUnits);
   }
+  // ── ADR-508 §line-cyan — Line tool flush/κάθετο κούμπωμα σε υφιστάμενη γραμμή/μέλος + κυανές
+  //    listening dimensions (ΙΔΙΟΣ εγκέφαλος έλξης με τον τοίχο → preview ≡ commit). Επιστρέφει το
+  //    stub/awaiting-end ghost ΜΟΝΟ όταν υπάρχει παρειά εντός capture· αλλιώς `null` → fall-through
+  //    στη γενική διαδρομή (τελεία αφετηρίας / κανονική ελεύθερη γραμμή). ──────────────────────────
+  if (tool === 'line') {
+    const lineGhost = generateLinePreview(tempPoints, cursorPoint, sceneUnits);
+    if (lineGhost) return lineGhost;
+  }
   // ── ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) preview branch.
   //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──
   if (tool === 'foundation-strip' || tool === 'foundation-tie-beam') {
@@ -210,7 +218,7 @@ export function generatePreviewEntity(
         position: cursorPoint,
         size: 4,
         visible: true,
-        layerId: defaultLayerId(),
+        layerId: getDefaultLayerId(),
         preview: true,
         showPreviewGrips: true,
         ...(isMeasurementTool && { measurement: true }),
@@ -234,7 +242,7 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layerId: defaultLayerId(),
+          layerId: getDefaultLayerId(),
           preview: true,
           showPreviewGrips: true,
         } as ExtendedCircleEntity;
@@ -257,7 +265,7 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layerId: defaultLayerId(),
+          layerId: getDefaultLayerId(),
           preview: true,
           showPreviewGrips: true,
         } as ExtendedCircleEntity;
@@ -279,7 +287,7 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layerId: defaultLayerId(),
+          layerId: getDefaultLayerId(),
           preview: true,
           showPreviewGrips: true,
         } as ExtendedCircleEntity;
@@ -301,7 +309,7 @@ export function generatePreviewEntity(
         center: circleResult.center,
         radius: circleResult.radius,
         visible: true,
-        layerId: defaultLayerId(),
+        layerId: getDefaultLayerId(),
         preview: true,
         showPreviewGrips: true,
       } as ExtendedCircleEntity;
@@ -365,7 +373,7 @@ export function generatePreviewEntity(
           startAngle: arcResult.startAngle,
           endAngle: arcResult.endAngle,
           visible: true,
-          layerId: defaultLayerId(),
+          layerId: getDefaultLayerId(),
           preview: true,
           showPreviewGrips: true,
           constructionVertices: constructionVerts,
@@ -410,7 +418,7 @@ function generateStairPreview(
       position: cursorPoint,
       size: 6,
       visible: true,
-      layerId: defaultLayerId(),
+      layerId: getDefaultLayerId(),
       preview: true,
       showPreviewGrips: true,
     } as PreviewPoint;
@@ -427,7 +435,7 @@ function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolyl
     vertices: [...vertices],
     closed: false,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 0.6,
@@ -453,7 +461,7 @@ function makeStairWalklinePreview(
     vertices,
     closed: false,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     color: UI_COLORS.BRIGHT_GREEN,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 0.8,

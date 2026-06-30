@@ -34,6 +34,7 @@ import {
 import {
   getLinetypeRegistrySnapshot,
   subscribeLinetypeRegistry,
+  listSelectableLinetypeNames,
 } from '../../../stores/LinetypeRegistry';
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
@@ -76,14 +77,11 @@ export interface RibbonLineToolBridge {
 
 const BYLAYER = 'ByLayer';
 
-/** Live linetype options (ByLayer + every registered linetype, ISO + custom). */
-function buildLinetypeOptions(
-  names: ReadonlyArray<{ readonly name: string }>,
-): readonly RibbonComboboxOption[] {
-  return [
-    { value: BYLAYER, labelKey: BYLAYER, isLiteralLabel: true },
-    ...names.map((d) => ({ value: d.name, labelKey: d.name, isLiteralLabel: true })),
-  ];
+/** Live linetype options — ΙΔΙΟΣ SSoT enumerator με το radial-ring (ByLayer + registry, ISO + custom). */
+function buildLinetypeOptions(): readonly RibbonComboboxOption[] {
+  return listSelectableLinetypeNames().map((name) => ({
+    value: name, labelKey: name, isLiteralLabel: true,
+  }));
 }
 
 /** Combobox display value for an entity's linetype (declared, not resolved — Revit shows «By Layer»). */
@@ -170,7 +168,7 @@ export function useRibbonLineToolBridge(
   );
 
   const linetypeOptions = useMemo(
-    () => buildLinetypeOptions(registry.linetypes),
+    () => buildLinetypeOptions(),
     [registry],
   );
 

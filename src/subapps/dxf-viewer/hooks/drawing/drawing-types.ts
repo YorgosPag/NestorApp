@@ -10,6 +10,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, ArcEntity } from '../../types/scene';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 
 // ─── Preview Point ──────────────────────────────────────────────────────────
 
@@ -56,6 +57,14 @@ export interface ExtendedLineEntity extends LineEntity {
    * (όχι measure-distance) στο `applyPreviewStyling`.
    */
   liveDimHud?: WallHudMeta;
+  /**
+   * ADR-508 §line-cyan — κυανές listening dimensions (gap-left / gap-right / κέντρο-προς-κέντρο
+   * κατά μήκος της παρειάς υπάρχοντος μέλους) όταν το φάντασμα της γραμμής κουμπώνει flush/κάθετα
+   * πάνω σε υφιστάμενη γραμμή/μέλος. ΙΔΙΟ πεδίο (`faceDimensions`) με το canonical `PlacementOverlayFields`
+   * του τοίχου → ο tool-agnostic reader στο `drawing-hover-handler` τις ζωγραφίζει χωρίς νέο μηχανισμό.
+   * Set στο line preview helper μέσω του ΚΟΙΝΟΥ `resolveGhostFaceDimensionsMeta`.
+   */
+  faceDimensions?: GhostFaceDimensionsMeta;
 }
 
 // Extended Arc Entity for preview with construction lines

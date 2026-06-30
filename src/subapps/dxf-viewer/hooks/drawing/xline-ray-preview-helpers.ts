@@ -10,10 +10,8 @@ import type { PolylineEntity } from '../../types/scene';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolylineEntity {
   const base: PolylineEntity = {
@@ -22,7 +20,7 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
     vertices,
     closed: false,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 1.0,
@@ -67,7 +65,7 @@ export function generateXLinePreview(
       basePoint: p1,
       direction: normDir(d2x / len2 + dcx / lenc, d2y / len2 + dcy / lenc),
       visible: true,
-      layerId: defaultLayerId(),
+      layerId: getDefaultLayerId(),
       preview: true,
     } as XLineEntity & { preview: true };
   }
@@ -82,7 +80,7 @@ export function generateXLinePreview(
       basePoint,
       direction: dir,
       visible: true,
-      layerId: defaultLayerId(),
+      layerId: getDefaultLayerId(),
       preview: true,
     } as XLineEntity & { preview: true };
   }
@@ -94,7 +92,7 @@ export function generateXLinePreview(
         basePoint: cursorPoint,
         direction: { x: 1, y: 0 },
         visible: true,
-        layerId: defaultLayerId(),
+        layerId: getDefaultLayerId(),
         preview: true,
       } as XLineEntity & { preview: true };
     }
@@ -105,7 +103,7 @@ export function generateXLinePreview(
         basePoint: cursorPoint,
         direction: { x: 0, y: 1 },
         visible: true,
-        layerId: defaultLayerId(),
+        layerId: getDefaultLayerId(),
         preview: true,
       } as XLineEntity & { preview: true };
     }
@@ -123,7 +121,7 @@ export function generateXLinePreview(
     basePoint: firstPoint,
     direction: dir,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     preview: true,
   } as XLineEntity & { preview: true };
 }
@@ -141,7 +139,7 @@ export function generateRayPreview(
     basePoint: firstPoint,
     direction: dir,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     preview: true,
   } as RayEntity & { preview: true };
 }

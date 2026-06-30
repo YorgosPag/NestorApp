@@ -24,6 +24,8 @@ import { useWallPreview, isWallAwaitingEnd } from '../../bim/walls/wall-preview-
 import { useCadToggles } from '../../hooks/common/useCadToggles';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
+import { WALL_RING_CONFIG } from '../../systems/dynamic-input/wall-ring-config';
+import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
@@ -42,6 +44,8 @@ export function DynamicInput3DLeaf({ managerRef }: DynamicInput3DLeafProps) {
   const sceneUnits: SceneUnits = wallToolBridgeStore.get()?.getSceneUnits() ?? 'mm';
   return (
     <RadialCommandRing
+      config={WALL_RING_CONFIG}
+      startKey={ringStartKey(wallPreview.startPoint)}
       sceneUnits={sceneUnits}
       getCanvasEl={() => managerRef.current?.getRendererCanvas() ?? null}
     />

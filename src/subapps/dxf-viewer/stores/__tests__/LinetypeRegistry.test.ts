@@ -18,6 +18,8 @@ import {
   listLinetypes,
   registerLinetype,
   registerLinetypes,
+  listSelectableLinetypeNames,
+  BYLAYER_LINETYPE,
   __resetLinetypeRegistryForTesting,
 } from '../LinetypeRegistry';
 import {
@@ -34,6 +36,15 @@ describe('LinetypeRegistry — ISO baseline pre-load', () => {
     const snap = getLinetypeRegistrySnapshot();
     expect(snap.linetypes).toHaveLength(8);
     expect(snap.linetypes.map((d) => d.name)).toEqual([...LINETYPE_ISO_NAMES]);
+  });
+
+  // SSoT enumerator for pickers (ribbon combobox + radial-ring drop-down share this).
+  it('listSelectableLinetypeNames = ByLayer + registry names (ISO + custom), live', () => {
+    expect(listSelectableLinetypeNames()).toEqual([BYLAYER_LINETYPE, ...LINETYPE_ISO_NAMES]);
+    registerLinetype({ name: 'MyDash', description: '', pattern: [2, -1], origin: 'user-created' });
+    const names = listSelectableLinetypeNames();
+    expect(names[0]).toBe(BYLAYER_LINETYPE);
+    expect(names).toContain('MyDash'); // custom registration surfaces live
   });
 
   it('marks every baseline entry with origin "iso-baseline"', () => {

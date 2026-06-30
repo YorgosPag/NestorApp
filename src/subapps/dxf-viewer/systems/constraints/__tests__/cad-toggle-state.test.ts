@@ -19,6 +19,7 @@ describe('cad-toggle-state', () => {
     cadToggleState.set(true, false);
     cadToggleState.set(false, false);
     cadToggleState.setSnap(false, 0);
+    cadToggleState.setDynInput(false);
   });
 
   it('1. getters reflect the last set()', () => {
@@ -81,6 +82,30 @@ describe('cad-toggle-state', () => {
     const fn = jest.fn();
     const unsub = cadToggleState.subscribe(fn);
     cadToggleState.setSnap(true, 50); // unchanged
+    expect(fn).not.toHaveBeenCalled();
+    unsub();
+  });
+
+  // ADR-513 §line-parity (2026-06-30): Dynamic Input joined the shared store — same
+  // multi-instance fix as ortho/polar (toggle in CadStatusBar → DynamicInputSubscriber sees it).
+  it('8. setDynInput reflects + notifies, independent of ortho/polar/snap', () => {
+    cadToggleState.set(true, false);
+    cadToggleState.setSnap(true, 50);
+    const fn = jest.fn();
+    const unsub = cadToggleState.subscribe(fn);
+    cadToggleState.setDynInput(true);
+    expect(cadToggleState.isDynInputOn()).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(cadToggleState.isOrthoOn()).toBe(true); // unchanged by setDynInput
+    expect(cadToggleState.isSnapOn()).toBe(true); // unchanged by setDynInput
+    unsub();
+  });
+
+  it('9. setDynInput no-op guard suppresses redundant notify', () => {
+    cadToggleState.setDynInput(true);
+    const fn = jest.fn();
+    const unsub = cadToggleState.subscribe(fn);
+    cadToggleState.setDynInput(true); // unchanged
     expect(fn).not.toHaveBeenCalled();
     unsub();
   });

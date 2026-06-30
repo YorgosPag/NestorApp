@@ -56,10 +56,8 @@ import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defa
 import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 /**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a
@@ -104,7 +102,7 @@ export function generateColumnPreview(
       } : {}),
     };
     const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
-    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
+    const built = buildColumnEntity(params, getDefaultLayerId(), sceneUnits);
     return built.ok ? built.entity : null;
   };
 
@@ -135,7 +133,7 @@ export function generateColumnPreview(
       ...handle.overrides, kind: handle.kind, anchor: lean.anchor, rotation: lean.rotationDeg, tilt,
     };
     const params = buildDefaultColumnParams(lean.basePoint, handle.kind, overrides, sceneUnits);
-    const built = buildColumnEntity(params, defaultLayerId(), sceneUnits);
+    const built = buildColumnEntity(params, getDefaultLayerId(), sceneUnits);
     return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
   }
 

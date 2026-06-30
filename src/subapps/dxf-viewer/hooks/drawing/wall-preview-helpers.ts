@@ -27,11 +27,11 @@ import type { WallKind, WallParams } from '../../bim/types/wall-types';
 // ADR-513 — ελάχιστο μήκος για clamp του PREVIEW (το commit μένει αυστηρό μέσω validator).
 import { MIN_WALL_LENGTH_MM } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+import { resizeSegmentToLength } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
@@ -66,7 +66,6 @@ import {
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 /**
  * ADR-508 — SSoT overlap decision for EVERY wall-ghost path: 🔴 when the ghost lies
@@ -121,7 +120,7 @@ function buildWallGhostEntity(
   conflictCtx: WallGhostConflictCtx | null = null,
   wantHud = false,
 ): ExtendedSceneEntity | null {
-  const built = buildWallEntity(params, defaultLayerId(), kind, sceneUnits);
+  const built = buildWallEntity(params, getDefaultLayerId(), kind, sceneUnits);
   if (!built.ok) return null;
   // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
   const conflict = conflictCtx
@@ -164,13 +163,10 @@ function buildWallGhostEntity(
  */
 function clampPreviewMinLength(start: Readonly<Point2D>, end: Readonly<Point2D>, sceneUnits: SceneUnits): Point2D {
   const minLen = MIN_WALL_LENGTH_MM * mmToSceneUnits(sceneUnits);
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
+  const len = Math.hypot(end.x - start.x, end.y - start.y);
   if (len >= minLen) return { x: end.x, y: end.y };
-  const ux = len > 1e-9 ? dx / len : 1;
-  const uy = len > 1e-9 ? dy / len : 0;
-  return { x: start.x + ux * minLen, y: start.y + uy * minLen };
+  // Reuse του geometry SSoT (ίδιο με το line stub max-clamp)· εδώ μόνο η συνθήκη min-clamp.
+  return resizeSegmentToLength(start, end, minLen);
 }
 
 export function generateWallPreview(

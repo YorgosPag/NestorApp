@@ -162,6 +162,21 @@ export function offsetPoint(point: Point2D, direction: Point2D, distance: number
 }
 
 /**
+ * Επανατοποθετεί το `end` ώστε το ευθύγραμμο τμήμα `start→end` να έχει ακριβώς `length` (διατηρώντας τη
+ * φορά). Εκφυλισμένο (`start≈end`) → +X (ντετερμινιστικό). **SSoT** για το «μετακίνησε το άκρο σε δοθέν
+ * μήκος κατά μήκος της διεύθυνσης», που πριν ήταν αντιγραμμένο ως min-clamp (wall preview) και max-clamp
+ * (line ghost stub). Ο caller κρατά τη δική του συνθήκη clamp (≥min ή ≤max) — εδώ ζει μόνο η γεωμετρία.
+ */
+export function resizeSegmentToLength(start: Point2D, end: Point2D, length: number): Point2D {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const cur = Math.hypot(dx, dy);
+  const ux = cur > 1e-9 ? dx / cur : 1;
+  const uy = cur > 1e-9 ? dy / cur : 0;
+  return { x: start.x + ux * length, y: start.y + uy * length };
+}
+
+/**
  * Calculate midpoint between two points.
  */
 export function calculateMidpoint(point1: Point2D, point2: Point2D): Point2D {

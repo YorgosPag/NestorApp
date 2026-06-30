@@ -73,7 +73,9 @@ export function applyPreviewStyling(
     // μήκους+γωνίας με τον τοίχο. Σκηνή = canonical mm (γραμμή: sceneUnits='mm'). Παρουσία του
     // `liveDimHud` → η `renderLine` παραλείπει τα inline labels (μηδέν διπλό) + ο handler ζωγραφίζει
     // το aligned HUD μέσω του ΚΟΙΝΟΥ `paintWallHudCore`.
-    if (tool === 'line') {
+    // ADR-508 §line-cyan — ΟΧΙ HUD πριν το 1ο κλικ (`worldPoints = [cursor]` → length 1): το κάθετο
+    // stub-φάντασμα δείχνει μόνο κυανές, ΟΧΙ HUD (mirror του έξυπνου φαντάσματος τοίχου, wantHud=false).
+    if (tool === 'line' && worldPoints.length >= 2) {
       extLine.liveDimHud = buildSegmentHudMeta(extLine.start, extLine.end, 'mm');
     }
   } else if (entity.type === 'circle') {

@@ -672,6 +672,12 @@
     "polygon": "Polygon",
     "stair": "Stair",
     "stairStatus": "Stair tool active (stub) — Phase 0",
+    "ring": {
+      "length": "Length",
+      "angle": "Angle",
+      "linetype": "Linetype",
+      "lineLabel": "Line command ring"
+    },
     "wall": {
       "statusStart": "Pick wall start point",
       "statusEnd": "Pick wall end point",

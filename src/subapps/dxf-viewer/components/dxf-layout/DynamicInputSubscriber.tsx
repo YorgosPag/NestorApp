@@ -30,6 +30,9 @@ import type { AnySceneEntity } from '../../rendering/types/Types';
 // ADR-513 — «Δαχτυλίδι Εντολών»: ραδιακό in-canvas dynamic input στη σχεδίαση τοίχου (awaitingEnd).
 import { useWallPreview, isWallAwaitingEnd } from '../../bim/walls/wall-preview-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
+import { WALL_RING_CONFIG } from '../../systems/dynamic-input/wall-ring-config';
+import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
+import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-513 (3D parity) — όταν είμαστε σε 3D προβολή, το ΙΔΙΟ overlay mountάρεται στο `BimViewport3D`
 // (`DynamicInput3DLeaf`)· αυτός ο 2D subscriber υποχωρεί ώστε να μην τρέχουν ΔΥΟ radial rings μαζί
@@ -110,7 +113,30 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // ADR-513 — στη σχεδίαση τοίχου μετά το 1ο κλικ δείξε το ραδιακό «Δαχτυλίδι Εντολών»
   // (Μήκος/Γωνία/Πάχος/Ύψος) αντί του γραμμικού overlay — μηδέν διπλό UI.
   if (wallAwaitingEnd && getSceneUnits) {
-    return <RadialCommandRing sceneUnits={getSceneUnits()} getCanvasEl={getCanvasEl} />;
+    return (
+      <RadialCommandRing
+        config={WALL_RING_CONFIG}
+        startKey={ringStartKey(wallPreview.startPoint)}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+      />
+    );
+  }
+
+  // ADR-513 §line-parity — η ΓΡΑΜΜΗ δείχνει **ΠΑΝΤΑ** το «Δαχτυλίδι Εντολών» (Giorgio 2026-06-30:
+  // «πάντα το δαχτυλίδι· το παλιό DOM overlay καταργείται για τη γραμμή»). Πεδία Μήκος/Γωνία/**Τύπος
+  // γραμμής** (drop-down). Πριν το 1ο κλικ → δαχτυλίδι χωρίς anchor (σταθερό startKey)· μετά → με anchor.
+  // Κλικ ΕΞΩ από τον τροχό (annulus/outside) = τοποθέτηση σημείου (αρχή ΚΑΙ τέλος), ίδιο idiom με τον τοίχο·
+  // κλικ ΣΕ wedge = popup. Άρα δεν πέφτουμε ΠΟΤΕ στο DynamicInputSystem όταν το εργαλείο είναι γραμμή.
+  if (activeTool === 'line' && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={LINE_RING_CONFIG}
+        startKey={ringStartKey(tempPoints[0], 'line-pending')}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+      />
+    );
   }
 
   return (

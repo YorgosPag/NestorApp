@@ -58,6 +58,13 @@ export const useCadToggles = (): CadToggles => {
   const polarOn = useSyncExternalStore(
     cadToggleState.subscribe, cadToggleState.isPolarOn, cadToggleState.isPolarOn,
   );
+  // Dynamic Input live truth — SAME multi-instance fix as ortho/polar: the status-bar
+  // toggle and the `DynamicInputSubscriber` are different hook instances, so a local-only
+  // `state.dynInput` flipped green but never reached the consumer (it waited on the Firestore
+  // echo, which never lands unauthenticated → the overlay/ring stayed off). Shared store = instant.
+  const dynInputOn = useSyncExternalStore(
+    cadToggleState.subscribe, cadToggleState.isDynInputOn, cadToggleState.isDynInputOn,
+  );
 
   // Subscribe to Firestore slice — hydrate on load, guard echo-loops
   useEffect(() => {
@@ -77,6 +84,7 @@ export const useCadToggles = (): CadToggles => {
           // clobber — the trap the SNAP-MODE note below documents). The
           // synchronous setter push already covers the live in-session window.
           cadToggleState.set(remote.ortho, remote.polar);
+          cadToggleState.setDynInput(remote.dynInput);
         } else if (firstSnapshot) {
           const hash = stableHash(DEFAULTS);
           lastHashRef.current = hash;
@@ -136,8 +144,13 @@ export const useCadToggles = (): CadToggles => {
   }, []);
   const togglePolar = useCallback(() => setPolar(!cadToggleState.isPolarOn()), [setPolar]);
 
-  const toggleDynInput = useCallback(() => setState(prev => ({ ...prev, dynInput: !prev.dynInput })), []);
-  const setDynInput = useCallback((v: boolean) => setState(prev => ({ ...prev, dynInput: v })), []);
+  // Dynamic Input — push to the shared store SYNCHRONOUSLY (so the consumer instance sees it on
+  // this same click) + mirror into `state` for Firestore persistence (parity με ortho/polar setters).
+  const setDynInput = useCallback((v: boolean) => {
+    cadToggleState.setDynInput(v);
+    setState(prev => ({ ...prev, dynInput: v }));
+  }, []);
+  const toggleDynInput = useCallback(() => setDynInput(!cadToggleState.isDynInputOn()), [setDynInput]);
 
   // SNAP-MODE step — clamp to ≥0; non-finite input falls back to the default.
   const setSnapStep = useCallback((v: number) => setState(prev => ({
@@ -150,7 +163,7 @@ export const useCadToggles = (): CadToggles => {
     snap:     { on: state.snap,     toggle: toggleSnap,     set: setSnap     },
     ortho:    { on: orthoOn,        toggle: toggleOrtho,    set: setOrtho    },
     polar:    { on: polarOn,        toggle: togglePolar,    set: setPolar    },
-    dynInput: { on: state.dynInput, toggle: toggleDynInput, set: setDynInput },
+    dynInput: { on: dynInputOn,     toggle: toggleDynInput, set: setDynInput },
     snapStep: state.snapStep ?? DEFAULT_GRIP_SNAP_STEP,
     setSnapStep,
   };

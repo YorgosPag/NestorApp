@@ -22,8 +22,7 @@ import { foundationPreviewStore } from '../../bim/foundations/foundation-preview
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
 import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM, type FoundationKind } from '../../bim/types/foundation-types';
 import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 // ADR-514 Φ6c/Φ6d — live pad ghost: flush σε παρειά/άξονα κολόνας ΜΕΣΑ από τον ΕΝΑ εγκέφαλο έλξης +
 // ΚΟΙΝΗ assembly (ghost + CL dims + polar/rect grid + place→rotate) με την κολώνα — μηδέν διπλότυπο.
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
@@ -36,7 +35,6 @@ import {
   type PlacementGhostEntityBuilder,
 } from '../../bim/placement/placement-ghost-assembly';
 
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 /**
  * Build a foundation line preview entity from `tempPoints` + cursor. State map:
@@ -58,7 +56,7 @@ export function generateFoundationPreview(
       position: cursorPoint,
       size: 6,
       visible: true,
-      layerId: defaultLayerId(),
+      layerId: getDefaultLayerId(),
       preview: true,
       showPreviewGrips: true,
     } as PreviewPoint;
@@ -106,7 +104,7 @@ export function generateFoundationPadPreview(
       ...(rotation !== null ? { rotation } : {}),
     };
     const params = buildDefaultFoundationParams(position, 'pad', overrides, sceneUnits);
-    const built = buildFoundationEntity(params, defaultLayerId());
+    const built = buildFoundationEntity(params, getDefaultLayerId());
     return built.ok ? built.entity : null;
   };
 
@@ -156,7 +154,7 @@ function makeFoundationBandGhost(
 ): ExtendedSceneEntity | null {
   const axisEnd: Point3D = { x: endPt.x, y: endPt.y, z: 0 };
   const params = buildDefaultFoundationParams(startPt, kind, { ...overrides, kind, axisEnd }, sceneUnits);
-  const built = buildFoundationEntity(params, defaultLayerId());
+  const built = buildFoundationEntity(params, getDefaultLayerId());
   if (!built.ok) return null;
   return toWysiwygPreviewEntity(built.entity, id);
 }

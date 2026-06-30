@@ -58,6 +58,12 @@ import { useCadToggles } from '../common/useCadToggles';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
+// ADR-508 §line-cyan — commit-time flush/κάθετο κούμπωμα γραμμής (ίδιος εγκέφαλος με το preview).
+import { resolveLineCommitPoint } from './line-preview-helpers';
+// ADR-508 §line-cyan — η γραμμή συλλέγει τους ΙΔΙΟΥΣ face-snap στόχους σκηνής με τον τοίχο (κοινό store).
+import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
+// ADR-513 §line-parity — length/angle lock της γραμμής στο commit (mirror του preview & του τοίχου).
+import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
 import { useUnifiedDrawing } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -88,7 +94,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish } from './drawing-handler-utils';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -110,6 +116,20 @@ export function useDrawingHandlers(
   const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef, onToolChange });
   // ADR-362 Phase L2: center mark + centerline tools
   const centerMarkCreate = useCenterMarkCreate({ activeTool, onEntityCreated, previewCanvasRef });
+
+  // ADR-508 §line-cyan — η ΓΡΑΜΜΗ χρειάζεται τους ΙΔΙΟΥΣ face-snap στόχους με τον τοίχο για το flush
+  // κούμπωμα + κυανές. Τα BIM tools (wall/beam/...) γεμίζουν το κοινό `sceneSnapTargetsStore` μέσω
+  // `useSceneSnapTargetSync`· η γενική drawing διαδρομή ΔΕΝ το έκανε → στόχοι άδειοι όταν σχεδιαζόταν
+  // γραμμή → καμία παρειά → καμία κυανή. Mount-άρουμε τον ΙΔΙΟ sync εδώ (μία πηγή) + refresh on
+  // line-activate (στόχοι έτοιμοι πριν το 1ο ghost). Ο εσωτερικός `drawing:entity-created` listener
+  // κρατά τους στόχους φρέσκους μετά.
+  const refreshSnapTargets = useSceneSnapTargetSync(() => currentScene?.entities ?? []);
+  // refresh on line-activate ΚΑΙ όταν αλλάζει το πλήθος οντοτήτων (νέα γραμμή committed στο ίδιο session —
+  // το γενικό `completeEntity` δεν εκπέμπει `drawing:entity-created`, οπότε δεν αρκεί ο εσωτερικός listener).
+  const lineSceneEntityCount = activeTool === 'line' ? (currentScene?.entities.length ?? 0) : -1;
+  useEffect(() => {
+    if (activeTool === 'line') refreshSnapTargets();
+  }, [activeTool, lineSceneEntityCount, refreshSnapTargets]);
 
   // Drawing system
   const {
@@ -347,6 +367,22 @@ export function useDrawingHandlers(
       if (trackingResult) finalPoint = trackingResult.point;
     }
 
+    // ADR-513 §line-parity — length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush face-snap, ΑΚΡΙΒΩΣ
+    // όπως το preview (drawing-hover-handler:268 → updatePreview → generateLinePreview). Χωρίς αυτό, lock
+    // μέσω δαχτυλιδιού + κλικ θα κατέληγε στο μη-κλειδωμένο snapped σημείο → preview ≢ commit. No-op όταν
+    // δεν υπάρχει ενεργό lock (ο helper επιστρέφει το σημείο αυτούσιο).
+    if (activeTool === 'line' && lastRef) {
+      finalPoint = applyLengthAngleLock(finalPoint, lastRef);
+    }
+
+    // ADR-508 §line-cyan — flush/κάθετο κούμπωμα της ΓΡΑΜΜΗΣ σε υφιστάμενη γραμμή/μέλος ΜΟΝΟ στο **1ο κλικ**
+    // (η αρχή κάθεται flush στην παρειά, ΙΔΙΟΣ εγκέφαλος με το preview → preview ≡ commit). ΜΕΤΑ το 1ο κλικ
+    // (awaiting-end, υπάρχει ήδη tempPoint) η γραμμή περιστρέφεται ΕΛΕΥΘΕΡΑ — ΟΧΙ flush κατά μήκος του
+    // σώματος (Giorgio). Μακριά από μέλος → σημείο αυτούσιο (αμετάβλητο).
+    if (activeTool === 'line' && drawingState.tempPoints.length === 0) {
+      finalPoint = resolveLineCommitPoint(finalPoint, resolveSceneUnits(currentScene));
+    }
+
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(finalPoint, transformUtils);
 
@@ -424,43 +460,15 @@ export function useDrawingHandlers(
     handleToolCompletion(activeTool, true); // forceSelect=true for cancel
   }, [activeTool, cancelDrawing, dimRouting, onToolChange]);
 
-  // Double click handler for finishing operations
+  // Double click handler for finishing operations (SSoT: drawing-handler-utils)
   const onDrawingDoubleClick = useCallback(() => {
-    // 🏢 ENTERPRISE (2026-01-27): Continuous tools that finish with double-click
-    // 🏢 ENTERPRISE (2026-01-31): Added circle-best-fit - ADR-083
-    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'hatch' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-angle-measuregeom' || activeTool === 'measure-distance-continuous' || activeTool === 'circle-best-fit') {
-      // Check for overlay completion callback first
-      const { toolStyleStore } = require('../../stores/ToolStyleStore');
-      const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();
-
-      if (!isOverlayCompletion) {
-        // 🏢 ADR-053 FIX (2026-01-30): Special handling for measure-distance-continuous
-        // This tool auto-creates entities every 2 points, so "finish" just means stop drawing
-        // No entity creation needed - just cancel and switch to select
-        if (activeTool === 'measure-distance-continuous') {
-          cancelDrawing();
-          // Clear preview canvas
-          if (previewCanvasRef?.current) {
-            previewCanvasRef.current.clear();
-          }
-          // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
-          handleToolCompletion(activeTool);
-          return;
-        }
-
-        // Standard DXF polyline completion (polyline, polygon, measure-area, measure-angle)
-        const newEntity = finishPolyline();
-        if(newEntity) {
-          // Filter out extended types that are not compatible with base Entity type
-          if ('type' in newEntity && typeof newEntity.type === 'string') {
-            onEntityCreated(newEntity as Entity);
-          }
-        }
-        // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
-        handleToolCompletion(activeTool);
-      }
-    }
-  }, [activeTool, finishPolyline, onEntityCreated, onToolChange, cancelDrawing, previewCanvasRef]);
+    performDoubleClickFinish(activeTool, {
+      finishPolyline,
+      onEntityCreated,
+      cancelDrawing,
+      clearPreview: () => previewCanvasRef?.current?.clear(),
+    });
+  }, [activeTool, finishPolyline, onEntityCreated, cancelDrawing, previewCanvasRef]);
 
   // Cancel all operations
   const cancelAllOperations = useCallback(() => {

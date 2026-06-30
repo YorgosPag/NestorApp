@@ -21,6 +21,7 @@ import {
   getIsolateEffectsSnapshot
 } from '../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../services/layer-isolate-resolver';
+import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 
 type Listener = () => void;
 
@@ -124,6 +125,16 @@ export function subscribeLayerStore(cb: Listener): () => void {
 
 export function getLayer(idOrName: string): SceneLayer | null {
   return layersById.get(idOrName) ?? null;
+}
+
+/**
+ * SSoT για το id του προεπιλεγμένου layer (`DXF_DEFAULT_LAYER`) — `''` αν δεν έχει αρχικοποιηθεί.
+ * Πριν, το ίδιο one-liner (`getLayer(DXF_DEFAULT_LAYER)?.id ?? ''`) ήταν αντιγραμμένο σε 9+ preview
+ * helpers (beam/column/foundation/slab/wall/line/xline/wall-covering/generator). Ζει εδώ μία φορά
+ * (ADR-358 id-only WRITE)· οι preview helpers το καλούν αντί να ξανα-δηλώνουν τον getter.
+ */
+export function getDefaultLayerId(): string {
+  return getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 }
 
 /** Find a layer by display name (O(n) scan). Use `getLayer(id)` when id is known. */

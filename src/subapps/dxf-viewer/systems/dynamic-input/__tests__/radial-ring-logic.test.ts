@@ -22,6 +22,8 @@ import {
   pushWheelCenter,
   advanceWheelCenter,
   RING_INSIDE_FOLLOW_RATIO,
+  WEDGE_POSITION_ANGLES,
+  wedgePositionAtAngle,
 } from '../radial-ring-logic';
 
 describe('RING_TAB_ORDER', () => {
@@ -169,6 +171,36 @@ describe('WEDGE_ANGLES', () => {
   });
   it('every wedge spans exactly 90° (4 wedges = full circle, no overlap)', () => {
     for (const w of Object.values(WEDGE_ANGLES)) expect(w.a1 - w.a0).toBe(90);
+  });
+  it('derives from WEDGE_POSITION_ANGLES (μηδέν διπλότυπο)', () => {
+    expect(WEDGE_ANGLES.length).toBe(WEDGE_POSITION_ANGLES.top);
+    expect(WEDGE_ANGLES.angle).toBe(WEDGE_POSITION_ANGLES.right);
+    expect(WEDGE_ANGLES.thickness).toBe(WEDGE_POSITION_ANGLES.left);
+    expect(WEDGE_ANGLES.height).toBe(WEDGE_POSITION_ANGLES.bottom);
+  });
+});
+
+describe('WEDGE_POSITION_ANGLES (tool-agnostic γεωμετρία)', () => {
+  it('top=N(270), right=E(0), bottom=S(90), left=W(180)', () => {
+    expect(WEDGE_POSITION_ANGLES.top.centerDeg).toBe(270);
+    expect(WEDGE_POSITION_ANGLES.right.centerDeg).toBe(0);
+    expect(WEDGE_POSITION_ANGLES.bottom.centerDeg).toBe(90);
+    expect(WEDGE_POSITION_ANGLES.left.centerDeg).toBe(180);
+  });
+  it('κάθε θέση καλύπτει 90° (4 = πλήρης κύκλος)', () => {
+    for (const w of Object.values(WEDGE_POSITION_ANGLES)) expect(w.a1 - w.a0).toBe(90);
+  });
+});
+
+describe('wedgePositionAtAngle (cardinal θέσεις)', () => {
+  it('270° → top', () => expect(wedgePositionAtAngle(270)).toBe('top'));
+  it('0° → right', () => expect(wedgePositionAtAngle(0)).toBe('right'));
+  it('90° → bottom', () => expect(wedgePositionAtAngle(90)).toBe('bottom'));
+  it('180° → left', () => expect(wedgePositionAtAngle(180)).toBe('left'));
+  it('wraps negatives/over-360 (−10° → right)', () => expect(wedgePositionAtAngle(-10)).toBe('right'));
+  it('συμφωνεί με το wall-keyed wedgeAtAngle ανά θέση', () => {
+    expect(wedgePositionAtAngle(270)).toBe('top'); // length
+    expect(wedgePositionAtAngle(180)).toBe('left'); // thickness
   });
 });
 

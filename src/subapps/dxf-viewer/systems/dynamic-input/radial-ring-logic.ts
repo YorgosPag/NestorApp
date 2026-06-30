@@ -28,12 +28,41 @@ export const RING_OUTER_R = 96;
 export const RING_OPACITY = 0.28;
 export const RING_HOVER_OPACITY = 0.55;
 
-/** Γωνιακό εύρος κάθε wedge (μοίρες, y-κάτω, 0°=Ανατολή): Μήκος πάνω, Γωνία δεξιά, Πάχος αριστερά, Ύψος κάτω. */
+// ── Tool-agnostic wedge geometry (ADR-513 §line parity) ──────────────────────
+// Το δαχτυλίδι έχει 4 cardinal θέσεις (90° η καθεμία). Κάθε εργαλείο (τοίχος/γραμμή)
+// χαρτογραφεί τα πεδία του σε θέσεις μέσω `RingConfig` (ring-config.ts) — η γεωμετρία
+// εδώ είναι **ανεξάρτητη πεδίου**, ώστε ΕΝΑ component να εξυπηρετεί όλα τα εργαλεία.
+
+/** Cardinal θέση wedge στο δαχτυλίδι (y-κάτω, οθόνη). */
+export type RingWedgePosition = 'top' | 'right' | 'bottom' | 'left';
+
+/** Γωνιακό εύρος ανά θέση (μοίρες, y-κάτω, 0°=Ανατολή): top=N, right=E, bottom=S, left=W. */
+export const WEDGE_POSITION_ANGLES: Record<RingWedgePosition, { centerDeg: number; a0: number; a1: number }> = {
+  top: { centerDeg: 270, a0: 225, a1: 315 }, // N
+  right: { centerDeg: 0, a0: -45, a1: 45 }, // E
+  bottom: { centerDeg: 90, a0: 45, a1: 135 }, // S
+  left: { centerDeg: 180, a0: 135, a1: 225 }, // W
+};
+
+/** Σε ποια cardinal θέση πέφτει μια γωνία (μοίρες, y-κάτω). */
+export function wedgePositionAtAngle(deg: number): RingWedgePosition {
+  const a = ((deg % 360) + 360) % 360;
+  if (a >= 225 && a < 315) return 'top';
+  if (a >= 45 && a < 135) return 'bottom';
+  if (a >= 135 && a < 225) return 'left';
+  return 'right'; // 315..360, 0..45
+}
+
+/**
+ * Γωνιακό εύρος κάθε wedge ΤΟΙΧΟΥ (μοίρες, y-κάτω): Μήκος πάνω, Γωνία δεξιά, Πάχος αριστερά,
+ * Ύψος κάτω. Παράγεται από το `WEDGE_POSITION_ANGLES` (μηδέν διπλότυπο) — κρατείται για
+ * back-compat με όποιον reader διαβάζει ανά πεδίο τοίχου.
+ */
 export const WEDGE_ANGLES: Record<RingFieldKey, { centerDeg: number; a0: number; a1: number }> = {
-  length: { centerDeg: 270, a0: 225, a1: 315 }, // top (N)
-  angle: { centerDeg: 0, a0: -45, a1: 45 }, // right (E)
-  thickness: { centerDeg: 180, a0: 135, a1: 225 }, // left (W)
-  height: { centerDeg: 90, a0: 45, a1: 135 }, // bottom (S)
+  length: WEDGE_POSITION_ANGLES.top,
+  angle: WEDGE_POSITION_ANGLES.right,
+  thickness: WEDGE_POSITION_ANGLES.left,
+  height: WEDGE_POSITION_ANGLES.bottom,
 };
 
 /** Σημείο σε πολικές → καρτεσιανές (y-κάτω, οθόνη). */

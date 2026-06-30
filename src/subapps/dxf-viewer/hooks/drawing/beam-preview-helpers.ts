@@ -27,8 +27,7 @@ import {
 import { DEFAULT_BEAM_WIDTH_MM, type BeamKind, type BeamParams } from '../../bim/types/beam-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { BEAM_GHOST_LEN_MM } from '../../bim/beams/beam-column-face-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
@@ -48,7 +47,6 @@ import {
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 /**
  * Build a beam preview entity from `tempPoints` + cursor. State machine map:
@@ -146,7 +144,7 @@ function makeBeamGhostBeforeClick(
     ? snap.end
     : { x: effectiveCursor.x + BEAM_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
   const params = buildDefaultBeamParams(start, end, kind, overrides, sceneUnits);
-  const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
+  const built = buildBeamEntity(params, getDefaultLayerId(), sceneUnits);
   if (!built.ok) return null;
   // ADR-398 §3.6 — 🔴 `overlap` όταν: (α) short-end συγγραμμική συνέχεια (`snap.status`), Ή
   // (β) το φάντασμα κείτεται ομοαξονικά/πάνω σε υφιστάμενο δοκάρι (`isBeamCollinearOverlap` —
@@ -207,7 +205,7 @@ function makeBeamWysiwygGhost(
     // auto-flush identical σε preview & committed (preview === commit).
     params = buildAnchoredBeamParams(startPt, endPt, kind, overrides, sceneUnits, columnFootprints);
   }
-  const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
+  const built = buildBeamEntity(params, getDefaultLayerId(), sceneUnits);
   if (!built.ok) return null;
   const entity = built.entity;
 

@@ -90,6 +90,19 @@ export function listLinetypes(): ReadonlyArray<LinetypeDef> {
   return cachedSnapshot.linetypes;
 }
 
+/** ByLayer sentinel — entity inherits its linetype from the active layer (AutoCAD convention). */
+export const BYLAYER_LINETYPE = 'ByLayer';
+
+/**
+ * Canonical ordered list of **selectable** linetype names for any picker
+ * (ribbon combobox, radial-ring drop-down, …): `ByLayer` + every registered
+ * linetype (ISO baseline + custom), live. SSoT for the "ByLayer + registry"
+ * enumeration — consumers map this to their own option shape, never re-derive it.
+ */
+export function listSelectableLinetypeNames(): readonly string[] {
+  return [BYLAYER_LINETYPE, ...cachedSnapshot.linetypes.map((d) => d.name)];
+}
+
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 /**

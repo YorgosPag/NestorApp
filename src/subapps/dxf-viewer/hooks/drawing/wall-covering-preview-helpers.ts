@@ -12,13 +12,11 @@ import type { PolylineEntity } from '../../types/scene';
 import type { ExtendedSceneEntity, ExtendedPolylineEntity, PreviewPoint } from './drawing-types';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import { UI_COLORS } from '../../config/color-config';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 import { wallCoveringPreviewStore } from '../../bim/wall-coverings/wall-covering-preview-store';
 import { computeWallCoveringStrip } from '../../bim/wall-coverings/wall-covering-strip-geometry';
 import { alongMmOnWall } from '../../bim/wall-coverings/wall-covering-pick';
 
-const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 /**
  * Build a wall-covering preview entity από το draw-context + cursor:
@@ -34,7 +32,7 @@ export function generateWallCoveringPreview(cursorPoint: Point2D): ExtendedScene
       position: cursorPoint,
       size: 6,
       visible: true,
-      layerId: defaultLayerId(),
+      layerId: getDefaultLayerId(),
       preview: true,
       showPreviewGrips: true,
     } as PreviewPoint;
@@ -58,7 +56,7 @@ export function generateWallCoveringPreview(cursorPoint: Point2D): ExtendedScene
     vertices: [...strip.quad],
     closed: true,
     visible: true,
-    layerId: defaultLayerId(),
+    layerId: getDefaultLayerId(),
     color: UI_COLORS.BRIGHT_GREEN,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 0.65,

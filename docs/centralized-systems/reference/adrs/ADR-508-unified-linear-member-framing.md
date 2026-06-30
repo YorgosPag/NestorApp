@@ -105,6 +105,49 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-06-30 (§line-cyan — κυανές listening dimensions + flush/κάθετο κούμπωμα ΚΑΙ στη ΓΡΑΜΜΗ, ίδιος εγκέφαλος έλξης με τον τοίχο)**
+  - **Αίτημα Giorgio**: «όταν σχεδιάζω τοίχο κοντά σε υφιστάμενη οντότητα βλέπω ΚΥΑΝΕΣ ενδείξεις (gap-left/
+    gap-right/κέντρο) και το φάντασμα κάθεται κάθετα/flush πάνω στην παρειά. Θέλω την ΙΔΙΑ συμπεριφορά στη
+    γραμμή — τον ίδιο κώδικα, μια πηγή αλήθειας. (Πλήρης parity: κάθετο stub πριν το κλικ.)»
+  - **SSoT audit (2 Explore agents)**: (§A) η αλυσίδα των κυανών είναι **ήδη tool-agnostic** από άκρη σε άκρη
+    (`GhostFaceFrame → resolveGhostFaceDimensions → resolveGhostFaceDimensionsMeta → faceDimensions →
+    drawing-hover-handler:294-298 → paintGhostFaceDimensions`)· ο consumer ΔΕΝ έχει `if (tool==='wall')`. (§B) το
+    flush κούμπωμα είναι ο **«Εγκέφαλος Έλξης» ADR-514** (`resolveBimCursorSnap`)· ο τοίχος τον καλεί στο
+    `resolveWallStartAnchor`/`resolveWallEndpointSnap`. **Η ΜΟΝΗ ασυμμετρία**: η γραμμή έκανε μόνο Layer-1 OSNAP,
+    ποτέ Layer-2 member face-snap.
+  - **Fix (ZERO new mechanism — όλα τα anti-goals του handoff τηρήθηκαν)**:
+    (1) NEW `BimSnapToolKind 'line'` στο `bim-cursor-snap.ts` — zero-width (ταυτόσημο με `polygon-vertex`,
+    ξεχωριστό όνομα για σαφήνεια)· το σημείο πατά ΑΚΡΙΒΩΣ στην παρειά + `faceFrame` → κυανές.
+    (2) NEW SSoT `hooks/drawing/line-preview-helpers.ts` (αδελφός του `wall-preview-helpers`): ΕΝΑΣ πυρήνας
+    `resolveLineFaceSnapAt` (`resolveBimCursorSnap` zero-width, ΧΩΡΙΣ `findSnapPoint` anti-double-snap),
+    `generateLinePreview` (πριν το κλικ → κάθετο stub flush· awaiting-end → άκρο flush· κυανές μέσω του ΚΟΙΝΟΥ
+    `resolveGhostFaceDimensionsMeta`), `resolveLineCommitPoint` (commit entry — ΙΔΙΟΣ πυρήνας → preview ≡ commit).
+    (3) `ExtendedLineEntity.faceDimensions` (ΙΔΙΟ canonical πεδίο με `PlacementOverlayFields`).
+    (4) `drawing-preview-generator` → νέος `tool==='line'` branch (stub/awaiting-end ghost ή fall-through).
+    (5) `applyPreviewStyling` → το `liveDimHud` gate-άρεται σε `worldPoints.length>=2` (ΟΧΙ HUD στο pre-click stub,
+    mirror του wall `wantHud=false`).
+    (6) `useDrawingHandlers.onDrawingPoint` → commit-time `resolveLineCommitPoint` (μετά tracking + length/angle lock).
+  - **Συνέπεια**: μηδέν νέος painter, μηδέν νέο overlay-meta πεδίο, μηδέν δεύτερος snap μηχανισμός. **preview ≡ commit
+    by construction** (ίδιος πυρήνας έλξης στον ίδιο OSNAP-snapped cursor). `drawing-hover-handler` ΑΜΕΤΑΒΛΗΤΟΣ.
+  - ✅ Google-level: YES — full reuse του ADR-514 εγκεφάλου + ADR-508 §dim SSoT· η γραμμή = γραμμικό μέλος μηδενικού πλάτους.
+  - **Scope: ΜΟΝΟ στο 1ο κλικ (Giorgio follow-up «μετά το 1ο κλικ να μην κολλάει, να περιστρέφεται»)**: το flush/
+    κάθετο κούμπωμα + κυανές ισχύουν **ΜΟΝΟ πριν/στο 1ο κλικ** (η αρχή κάθεται flush στην παρειά). ΜΕΤΑ το 1ο κλικ
+    (awaiting-end) η γραμμή περιστρέφεται **ΕΛΕΥΘΕΡΑ** γύρω από την αρχή — καμία έλξη flush κατά μήκος του σώματος της
+    υφιστάμενης γραμμής (μόνο κανονικό OSNAP). `generateLinePreview` → `null` όταν `tempPoints.length≠0`· το commit
+    face-snap gate-άρεται σε `drawingState.tempPoints.length===0`. (Διαφορά από τον τοίχο, που έχει ΚΑΙ endpoint face-snap.)
+  - **Stub length (Giorgio follow-up «πολύ μεγάλο»)**: ο εγκέφαλος παράγει stub `MEMBER_GHOST_LEN_MM`=1200mm (ΑΚΡΙΒΩΣ
+    όσο ο τοίχος — αριθμητικά επιβεβαιωμένο), αλλά η **λεπτή** γραμμή στα 1.2m διαβάζεται οπτικά υπερμεγέθης (ο χοντρός
+    τοίχος όχι). NEW tunable `LINE_GHOST_STUB_LEN_MM`=300mm κόβει ΜΟΝΟ το οπτικό stub πριν το κλικ (`clampStubLength`,
+    διατηρεί την κάθετη φορά)· η διαμήκης θέση + οι κυανές (`faceFrame`) ΔΕΝ επηρεάζονται· το πραγματικό μήκος της
+    γραμμής μετά το κλικ ΑΜΕΤΑΒΛΗΤΟ.
+  - **Tests**: NEW `line-preview-helpers.test.ts` (8/8 GREEN): stub flush/κάθετο + κοντό μήκος (~300mm), faceFrame→dims, awaiting-end flush,
+    preview≡commit, μακριά→null/αυτούσιο, armed ImmediateSnap. Regression: brain + column/foundation preview suites 58/58 GREEN.
+    tsc DEFERRED (N.17).
+  - **🔴 Browser-verify + commit (Giorgio)**. Όρια/flag: η precedence «length/angle lock (Δαχτυλίδι) vs face-snap» στη
+    γραμμή = lock-then-face-snap (symmetric preview/commit)· πιθανή μελλοντική ευθυγράμμιση με τον τοίχο («lock νικά»).
+    **NEW**: `line-preview-helpers.ts`, `BimSnapToolKind 'line'`, `ExtendedLineEntity.faceDimensions`. **MOD**:
+    `bim-cursor-snap.ts`, `drawing-types.ts`, `drawing-preview-generator.ts`, `drawing-preview-partial.ts`, `useDrawingHandlers.ts`.
+
 - **2026-06-30 (§line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, κοινός painter)**
   - **Αίτημα Giorgio**: «όταν σχεδιάζω τοίχο βλέπω μήκος/πάχος/γωνία στο φάντασμα· στη γραμμή όχι. Βάλε
     τις ίδιες ενδείξεις στη γραμμή με τον ΙΔΙΟ κώδικα, μία πηγή αλήθειας. Ναι ή όχι;» → **ΝΑΙ**, ο painter

@@ -180,6 +180,8 @@ export const wallPreviewStore = {
   get(): WallPreviewState {
     return currentState;
   },
+  /** Non-React subscription (parity με `useWallPreview`) — για readers εκτός React (ADR-513 ring config). */
+  subscribe,
 };
 
 /** React subscription. Returns the latest wall-preview state. */
