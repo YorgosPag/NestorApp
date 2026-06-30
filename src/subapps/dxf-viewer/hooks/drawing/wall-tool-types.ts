@@ -14,6 +14,7 @@ import type { WallSource } from '../../bim/walls/wall-from-entity';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import type { SceneUnits, WallParamOverrides } from './wall-completion';
+import type { StripJustification } from '../../bim/types/foundation-types';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -60,6 +61,14 @@ export interface WallToolState {
    */
   readonly startAnchored: boolean;
   /**
+   * ADR-508 §end-reference — Revit location-line justification όταν το `startPoint` κλείδωσε με
+   * **end-cap 3-tier snap** (κορυφή τοίχου). `'left'`/`'right'` → το σώμα «κρέμεται» στην αντίστοιχη
+   * παρειά ώστε το pivot να μένει στην κορυφή (3γ ή 1α ≡ κορυφή)· `'center'`/`null` → κεντραρισμένος
+   * (2β ≡ κορυφή ή κοινό face-snap). Το awaitingEnd ghost + commit το μετατρέπουν σε alignmentPoint
+   * (`alignmentPointForWallJustification`) → preview ≡ commit. `null` σε free / body T-framing / overlap.
+   */
+  readonly startJustification: StripJustification | null;
+  /**
    * ADR-508 (2026-06-21) — η γωνία (μοίρες, world) της **κάθετης-στην-παρειά** κατεύθυνσης
    * όταν το `startPoint` κλειδώθηκε με face-snap σε υφιστάμενο μέλος (`end - start` του ghost).
    * Τροφοδοτεί το relative-polar του 2ου κλικ (Revit «angle relative to face»): `0°` relative =
@@ -90,6 +99,7 @@ export const INITIAL_STATE: WallToolState = {
   startPoint: null,
   endPoint: null,
   startAnchored: false,
+  startJustification: null,
   startFaceAngle: null,
   anchoredHostId: null,
   polylineVertices: [],

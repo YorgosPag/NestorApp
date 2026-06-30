@@ -74,6 +74,7 @@ import {
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
 import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
+import { paintRotationDirectionArc } from './rotation-direction-arc';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -89,11 +90,6 @@ import {
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
 import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-/** ADR-397 Σ3 — screen offset of the free-rotate angle readout pill from the cursor. */
-const ROTATE_READOUT_OFFSET_PX = 18;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,12 +187,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawRotationPivotMarker(ctx, dp.rotatePivot, t, vp);
     }
 
-    // ADR-397 Σ3 — live angle readout (°) on the cursor during a FREE rotate. Shows the
-    // signed sweep (+CCW/−CW), or the typed angle while the user is keying one in, so
-    // the rotation is VISIBLE (not blind typing). Same pill SSoT as the move readout.
-    if (dp.rotateSweepDeg !== undefined && dp.rotateReadoutAnchor) {
-      const anchorS = CoordinateTransforms.worldToScreen(dp.rotateReadoutAnchor, t, vp);
-      drawDimPill(ctx, [formatMoveAngle(dp.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
+    // ADR-397 §15 — χρωματισμένο τόξο ΦΟΡΑΣ περιστροφής (🟢 +CCW / 🔴 −CW) + βελάκι + διακεκομμένη
+    // baseline 0° + ΧΡΩΜΑΤΙΣΤΗ ζωντανή γωνία (2 δεκαδικά), από τον άξονα αναφοράς (pivot→anchorPos)
+    // προς τον κέρσορα (rotateReadoutAnchor). Το πρόσημο/χρώμα οδηγείται από το signed `rotateSweepDeg`
+    // (ως προς τον άξονα αναφοράς, όχι world-X). Αντικαθιστά το παλιό λευκό readout pill (Giorgio
+    // 2026-07-01: «σβήσε το λευκό label, γράψε τις μοίρες κόκκινες/πράσινες»).
+    if (dp.rotatePivot && dp.anchorPos && dp.rotateReadoutAnchor && dp.rotateSweepDeg !== undefined) {
+      paintRotationDirectionArc(ctx, dp.rotatePivot, dp.anchorPos, dp.rotateReadoutAnchor, dp.rotateSweepDeg, t, vp);
     }
 
     // ADR-397 / ADR-357 — πορτοκαλί POLAR γραμμή + λευκές AutoAlign γραμμές/intersection/tooltip κατά

@@ -21,7 +21,7 @@ import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wa
 import { extendFillingWallToNeighbors } from '../../bim/walls/wall-region-autojoin';
 import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { EventBus } from '../../systems/events/EventBus';
-import { buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, resolveWallThicknessMm, type SceneUnits } from './wall-completion';
+import { alignmentPointForWallJustification, buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, resolveWallThicknessMm, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-snap';
@@ -119,12 +119,16 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         return false;
       }
       // ADR-508 — params: explicit alignmentPoint (legacy/dynamic-input precision) >
-      // startAnchored centerline (face-snapped start) > free auto-flush σε κολόνα.
+      // startAnchored (face-snapped start: centerline ή — §end-reference — location-line justification
+      // για κορυφή 3-tier ώστε το pivot να μένει στην κορυφή) > free auto-flush σε κολόνα.
       const params =
         alignmentPoint != null
           ? buildDefaultWallParams(s.startPoint, endPoint, s.overrides, sceneUnits, alignmentPoint)
           : s.startAnchored
-            ? buildDefaultWallParams(s.startPoint, endPoint, s.overrides, sceneUnits)
+            ? buildDefaultWallParams(
+                s.startPoint, endPoint, s.overrides, sceneUnits,
+                alignmentPointForWallJustification(s.startPoint, endPoint, s.startJustification),
+              )
             : buildAnchoredWallParams(s.startPoint, endPoint, s.overrides, sceneUnits, targets.footprints);
       const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
       if (!result.ok) {

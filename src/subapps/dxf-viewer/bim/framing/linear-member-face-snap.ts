@@ -165,8 +165,12 @@ export function proportionalSlideStep(faceLen: number, memberWidth: number, domi
   return memberWidth / n;
 }
 
-/** Πλαίσιο άξονα ενός υποψήφιου μέλους-στόχου (όλα σε scene units). */
-interface TargetFrame {
+/**
+ * Πλαίσιο άξονα ενός υποψήφιου μέλους-στόχου (όλα σε scene units). Εκτίθεται (ADR-508 §end-reference)
+ * ώστε να το ξαναχρησιμοποιεί ΚΑΙ ο `resolveMemberEndReferenceSnap` (κορυφή 3-tier flush) — ΕΝΑ
+ * projection SSoT (a/u/p + cursor along/perp + outline along/perp έκταση), μηδέν διπλό math.
+ */
+export interface MemberTargetFrame {
   readonly a: Point2D; // axis origin (axis[0])
   readonly u: Point2D; // unit axis direction (chord)
   readonly p: Point2D; // unit perpendicular = (u.y, -u.x) — η φορά του signedPerp
@@ -180,7 +184,7 @@ interface TargetFrame {
 }
 
 /** Χτίζει το axis frame + προβολές cursor για έναν στόχο· `null` σε εκφυλισμένο άξονα. */
-function buildTargetFrame(cursor: Readonly<Point2D>, target: LinearMemberSnapTarget): TargetFrame | null {
+export function buildMemberTargetFrame(cursor: Readonly<Point2D>, target: LinearMemberSnapTarget): MemberTargetFrame | null {
   const pts = target.axis;
   const a = pts[0];
   const last = pts[pts.length - 1];
@@ -219,12 +223,12 @@ export function resolveLinearMemberFaceSnap(
   targets: readonly LinearMemberSnapTarget[],
   opts: Readonly<LinearMemberFaceSnapOptions>,
 ): MemberGhostSnapResult | null {
-  let best: TargetFrame | null = null;
+  let best: MemberTargetFrame | null = null;
   let bestArc: ArcMeta | undefined; // ADR-398 §3.12 — γεωμετρία περιφέρειας του επιλεγμένου στόχου
   let bestId: string | undefined;   // ADR-508 §opening-conflict — id του επιλεγμένου host μέλους
   for (const t of targets) {
     if (t.axis.length < 2 || t.outline.length < 3) continue;
-    const fr = buildTargetFrame(cursor, t);
+    const fr = buildMemberTargetFrame(cursor, t);
     if (fr && fr.distance <= opts.captureScene && (!best || fr.distance < best.distance)) {
       best = fr;
       bestArc = t.arc;

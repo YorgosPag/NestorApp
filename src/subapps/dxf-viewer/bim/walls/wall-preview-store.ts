@@ -29,6 +29,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
+import type { StripJustification } from '../types/foundation-types';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -62,6 +63,12 @@ export interface WallPreviewState {
    */
   readonly startAnchored: boolean;
   /**
+   * ADR-508 §end-reference — Revit location-line justification όταν το `startPoint` κλείδωσε με end-cap
+   * 3-tier snap (κορυφή τοίχου). Το awaitingEnd ghost το μετατρέπει σε alignmentPoint ώστε το σώμα να
+   * «κρέμεται» στη σωστή παρειά (preview ≡ commit). `null` σε free / body T-framing / overlap / center.
+   */
+  readonly startJustification: StripJustification | null;
+  /**
    * ADR-508 (2026-06-21) — γωνία (μοίρες, world) της κάθετης-στην-παρειά κατεύθυνσης όταν το
    * `startPoint` κλειδώθηκε από face-snap (`end - start` του ghost). Τροφοδοτεί το relative-polar
    * του 2ου κλικ (preview === commit): `getBimOrthoReference('wall')` δίνει το ref (= start) και το
@@ -85,6 +92,7 @@ const EMPTY: WallPreviewState = Object.freeze({
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
+  startJustification: null,
   startFaceAngle: null,
   anchoredHostId: null,
 });
@@ -134,8 +142,9 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startFaceAngle' | 'anchoredHostId'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startJustification' | 'startFaceAngle' | 'anchoredHostId'> & {
   readonly startAnchored?: boolean;
+  readonly startJustification?: StripJustification | null;
   readonly startFaceAngle?: number | null;
   readonly anchoredHostId?: string | null;
 };
@@ -144,6 +153,7 @@ export const wallPreviewStore = {
   /** Writer — called by `useWallTool` on every relevant state transition (FSM state only). */
   set(next: WallPreviewSet): void {
     const nextAnchored = next.startAnchored ?? false;
+    const nextJustification = next.startJustification ?? null;
     const nextFaceAngle = next.startFaceAngle ?? null;
     const nextHostId = next.anchoredHostId ?? null;
     if (
@@ -152,6 +162,7 @@ export const wallPreviewStore = {
       pointsEqual(currentState.curveControl, next.curveControl) &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       currentState.startAnchored === nextAnchored &&
+      currentState.startJustification === nextJustification &&
       currentState.startFaceAngle === nextFaceAngle &&
       currentState.anchoredHostId === nextHostId &&
       overridesEqual(currentState.overrides, next.overrides)
@@ -165,6 +176,7 @@ export const wallPreviewStore = {
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
+      startJustification: nextJustification,
       startFaceAngle: nextFaceAngle,
       anchoredHostId: nextHostId,
     };

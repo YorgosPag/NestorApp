@@ -27,6 +27,7 @@ import {
   type MemberGhostSnapResult,
   type LinearMemberSnapTarget,
 } from './linear-member-face-snap';
+import { resolveMemberEndReferenceSnap } from './member-end-reference-snap';
 
 /**
  * Dispatcher: mm→scene conversion + επιλογή στόχου face-snap (column-priority, μετά member).
@@ -62,12 +63,18 @@ export function resolveMemberGhostSnapFromStore(
     if (cs) return { start: cs.start, end: cs.end, status: 'neutral', faceFrame: cs.faceFrame };
   }
   if (memberTargets.length > 0) {
-    return resolveLinearMemberFaceSnap(cursor, memberTargets, {
+    const memberOpts = {
       ghostLenScene,
       captureScene,
       memberWidthScene: memberWidthMm * f,
       dominantUnitScene,
-    });
+    };
+    // ADR-508 §end-reference — η κορυφή (κοντή άκρη) **νικά** το body Τ-framing ΚΟΝΤΑ στα άκρα: 3-tier
+    // flush (1α/2β/3γ ≡ κορυφή, nearest-wins). Επιστρέφει `null` μακριά από κορυφή/στον άξονα → ομαλή
+    // παράδοση στο body Τ-framing (🟢) ή στη συγγραμμική επέκταση (🔴). ΕΝΑΣ dispatcher → preview ≡ commit.
+    const endRef = resolveMemberEndReferenceSnap(cursor, memberTargets, memberOpts);
+    if (endRef) return endRef;
+    return resolveLinearMemberFaceSnap(cursor, memberTargets, memberOpts);
   }
   return null;
 }

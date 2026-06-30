@@ -250,6 +250,22 @@ function edgeAlignmentPointForJustification(
 }
 
 /**
+ * ADR-508 §end-reference — alignmentPoint από `StripJustification` για το location-line μοντέλο του
+ * τοίχου (Revit). `'center'`/absent → `null` (κεντραρισμένος άξονας, καμία μετατόπιση — διατηρεί την
+ * υπάρχουσα `startAnchored` συμπεριφορά)· `'left'`/`'right'` → η αντίστοιχη παρειά (delegate στο SSoT
+ * `edgeAlignmentPointForJustification`). Τροφοδοτεί το ΥΠΑΡΧΟΝ `buildDefaultWallParams(..., alignmentPoint)`
+ * — μηδέν νέα offset math. Καλείται ΙΔΙΑ από before-click ghost / awaitingEnd ghost / commit (preview ≡ commit).
+ */
+export function alignmentPointForWallJustification(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  justification: StripJustification | null | undefined,
+): Point2D | null {
+  if (!justification || justification === 'center') return null;
+  return edgeAlignmentPointForJustification(startPoint, endPoint, justification);
+}
+
+/**
  * ADR-508 — free-placement auto-flush (mirror του `buildAnchoredBeamParams`): όταν ένα άκρο
  * πατά μέσα σε κολόνα, η πλευρική παρειά του τοίχου ευθυγραμμίζεται flush με την παρειά της
  * (full bearing) μέσω του geometric SSoT `resolveMemberColumnFlushJustification`. Χωρίς κολόνα

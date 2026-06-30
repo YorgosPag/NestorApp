@@ -36,7 +36,8 @@ status }`. Η μόνη «beam» σύνδεση ήταν τα **ονόματα**.
 | Module | Ρόλος |
 |--------|-------|
 | `member-face-third.ts` | `pickThird` — 3-ζωνική αγκύρωση (zero-import leaf, cycle-proof) |
-| `linear-member-face-snap.ts` | `resolveLinearMemberFaceSnap` (T-framing 🟢 / κοντή άκρη 🔴) + `isMemberCollinearOverlap` |
+| `linear-member-face-snap.ts` | `resolveLinearMemberFaceSnap` (T-framing 🟢 / κοντή άκρη 🔴) + `isMemberCollinearOverlap` + `buildMemberTargetFrame` (ΕΝΑ projection SSoT, exported για §end-reference) |
+| `member-end-reference-snap.ts` | `resolveMemberEndReferenceSnap` (§end-reference — κορυφή 3-tier flush 1α/2β/3γ, αδελφό ADR-523) |
 | `member-column-face-snap.ts` | `resolveMemberColumnFaceSnap` (12-θέσεων face snap) + `MEMBER_GHOST_LEN_MM/CAPTURE_MM` |
 | `member-ghost-snap.ts` | `resolveMemberGhostSnapFromStore` — column-priority dispatcher |
 | `member-snap-targets.ts` | `collectMemberSnapTargets(entities, { memberKinds })` — generic scene collector |
@@ -104,6 +105,52 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   browser-verified δοκάρι.
 
 ## Changelog
+
+- **2026-07-01 (§end-reference — κορυφή κάθετου τοίχου: 3-tier flush 1α/2β/3γ, end-cap αδελφό του ADR-523)**
+  - **Αίτημα Giorgio (2 στιγμιότυπα)**: «σχεδιάζω οριζόντιο τοίχο κοντά στη **βόρεια μικρή παρειά (κορυφή)**
+    υφιστάμενου κάθετου τοίχου. Καθώς κατεβάζω τον κέρσορα θέλω 3 διαδοχικά κουμπώματα: (A) **νότια παρειά
+    φαντάσματος 3γ ≡ κορυφή** (φάντασμα όλο πάνω), (B) **κέντρο άξονα 2β ≡ κορυφή** (μισό-μισό), (Γ) **βόρεια
+    παρειά 1α ≡ κορυφή** (φάντασμα όλο μέσα).» Η γραμμή αναφοράς = **ΙΔΙΑ κορυφή** και στα 3 στάδια (επιβεβ.).
+  - **Ρίζα (3 Explore agents — SSoT audit)**: η συμπεριφορά είναι ο **end-cap** αντίστοιχος της μακριάς-παρειάς
+    ADR-523 (column-head). Ο dispatcher `resolveMemberGhostSnapFromStore` (καλείται από before-click ghost ΚΑΙ
+    endpoint) είχε **μόνο** body Τ-framing (🟢, στη μακριά παρειά) + συγγραμμική επέκταση (🔴, στην άκρη)· **κανένα**
+    κάθετο 3-tier κούμπωμα στην κορυφή. Το υπάρχον end branch (`status:'overlap'`) δίνει το κέντρο της κοντής άκρης,
+    όχι reference-line alignment.
+  - **Fix (ZERO new mechanism, FULL SSoT reuse)**: NEW pure `member-end-reference-snap.ts →
+    resolveMemberEndReferenceSnap`. Reuse `buildMemberTargetFrame` (το ήδη-υπάρχον private frame builder του
+    `linear-member-face-snap` — **exported**, μηδέν διπλό projection: a/u/p + cursor along/perp + outline έκταση).
+    Καρδιά: για κορυφή `E ∈ {alongMin, alongMax}` και ghostHalf = πάχος_νέου/2, οι **3 υποψήφιες θέσεις άξονα
+    φαντάσματος** κατά `u` = `E + {−ghostHalf, 0, +ghostHalf}` (φέρνουν 1α/2β/3γ flush)· **nearest-wins** στο
+    `|cursorAlong − υποψήφια|`. Η αντιστοίχιση γίνεται κατά τον **άξονα** `u` του υφιστάμενου (όχι τον κάθετο `n`
+    όπως ADR-523) — γιατί η κορυφή κείτεται στο `alongMin/alongMax`. Το stub βγαίνει κάθετα προς την πλευρά του
+    κέρσορα (`side = sign(cPerp)`), start πάνω στην παρειά εκείνης της πλευράς.
+  - **Gate (συνύπαρξη χωρίς μάχη)**: (a) perp — `|cPerp| ≥ h/2` (on-axis → αφήνεται στη συγγραμμική επέκταση 🔴)
+    & `|cPerp| ≤ h + capture`· (b) along — `residual ≤ max(ghostHalf, capture/2)` (βαθιά στο σώμα → αφήνεται στο
+    body Τ-framing 🟢). **Wire**: tier ΠΡΙΝ το `resolveLinearMemberFaceSnap` στον dispatcher → **ΕΝΑΣ** chokepoint,
+    preview ≡ commit by construction (καλύπτει ΚΑΙ το before-click ghost ΚΑΙ το endpoint snap).
+  - **Tests**: +12 `member-end-reference-snap.test.ts` (3 στάδια A/B/Γ ανατολικά + δυτική πλευρά + κάτω κορυφή ×2
+    + on-axis null + deep-body null + far null + zero-width null + 2 dispatcher wiring). 69/69 GREEN (12 νέα + 57
+    προϋπάρχοντα framing regression — το rename `TargetFrame→MemberTargetFrame`/`buildTargetFrame→
+    buildMemberTargetFrame` δεν έσπασε τίποτα).
+  - **Follow-up (Giorgio): κέντρο περιστροφής = κορυφή σε ΟΛΕΣ τις βαθμίδες (Revit location line)**: μετά το
+    1ο κλικ το pivot ΔΕΝ είναι ο άξονας του φαντάσματος αλλά το **σημείο επαφής στην κορυφή** — Στάδιο A→ΝΔ
+    γωνία, Στάδιο B→μέσο δυτικής, Στάδιο Γ→ΒΔ γωνία (ίδιο physical σημείο, διαφορετική γραμμή φαντάσματος
+    πάνω του). Υλοποίηση = **Revit «location line + justification»** (ZERO new mechanism, reuse `axis-justify`/
+    `computeWallAlignmentOffset`): ο snap επιστρέφει πλέον `start`/`end` = η **location line ΠΑΝΩ στην κορυφή**
+    (pivot) + `justification` ανά βαθμίδα (`off=0→'center'`, `off≠0→'left'/'right'` ανάλογα με `side`, ώστε ο
+    canonical normal να «κρεμάσει» το σώμα σωστά)· το σώμα προκύπτει με τον ΥΠΑΡΧΟΝΤΑ `alignmentPoint`
+    (NEW SSoT `alignmentPointForWallJustification` στο `wall-completion.ts`· 'center'→null=κεντραρισμένο).
+    Threading: `MemberGhostSnapResult.justification` (υπήρχε) → `resolveWallStartAnchor` → `WallToolState.
+    startJustification` + `wallPreviewStore.startJustification` → before-click ghost + awaitingEnd ghost
+    (`makeWallWysiwygGhost`) + commit (`commitStraightFromState`). **preview ≡ commit** (ΙΔΙΟ alignmentPoint και
+    στα 3 σημεία). +6 tests (justification ανά βαθμίδα/πλευρά + **full-chain**: snap→alignment→`buildDefaultWallParams`
+    βάζει τον body axis ΑΚΡΙΒΩΣ στο `g` ∈ {1150,1000,850} → επικυρώνει το sign του justification). 16/16 GREEN.
+  - ✅ Google-level: YES — αδελφό ενός proven pattern (ADR-523), ΕΝΑ projection SSoT (zero διπλό geometry),
+    nearest-wins, orientation-agnostic, location line = Revit-grade associative pivot (reuse axis-justify SSoT),
+    gate ώστε μηδέν regression σε body/overlap. ⚠️ faceFrame (listening dims ανά-βαθμίδα) = follow-up TODO.
+    🔴 browser-verify (Giorgio). ⚠️ Pre-existing (ΟΧΙ από εδώ): 10 obsolete failures σε `useWallTool.test.tsx`/
+    `floorplan-symbol-completion.test.ts` (περιμένουν legacy 3-click `awaitingAlignment`).
+  - **Cross-ref**: ADR-523 (η μακριάς-παρειάς column-head αδελφή)· ADR-441/ADR-529 (`axis-justify` location-line SSoT).
 
 - **2026-07-01 (§center-snap — κέντρο άξονα ΤΟΙΧΟΥ ↔ ΚΕΝΤΡΟ κολόνας, nearest-wins με τις παρειές)**
   - **Αίτημα Giorgio (στιγμιότυπο)**: «σχεδιάζω κάθετο τοίχο προς κολόνα· καθώς κατεβαίνω, αντί να κεντράρει

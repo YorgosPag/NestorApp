@@ -15,12 +15,14 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
 import {
+  alignmentPointForWallJustification,
   buildAnchoredWallParams,
   buildDefaultWallParams,
   buildWallEntity,
   resolveWallThicknessMm,
   type WallParamOverrides,
 } from './wall-completion';
+import type { StripJustification } from '../../bim/types/foundation-types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from '../../bim/framing/scene-snap-targets';
 import type { WallKind, WallParams } from '../../bim/types/wall-types';
@@ -234,7 +236,7 @@ export function generateWallPreview(
   return makeWallWysiwygGhost(
     'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
     preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
-    endFaceFrame,
+    endFaceFrame, preview.startJustification,
   );
 }
 
@@ -271,7 +273,11 @@ function makeWallGhostBeforeClick(
   const end: Point2D = snap
     ? snap.end
     : { x: effectiveCursor.x + MEMBER_GHOST_LEN_MM * mmToSceneUnits(sceneUnits), y: effectiveCursor.y };
-  const params = buildDefaultWallParams(start, end, overrides, sceneUnits);
+  // ADR-508 §end-reference — όταν το snap κούμπωσε στην κορυφή (3-tier), το `start`/`end` είναι η
+  // **location line** πάνω στην κορυφή· το σώμα «κρέμεται» στη σωστή παρειά μέσω του justification
+  // (ίδιο alignmentPoint με το commit → preview ≡ commit). `null` (κοινό face-snap) → κεντραρισμένο.
+  const alignmentPoint = alignmentPointForWallJustification(start, end, snap?.justification);
+  const params = buildDefaultWallParams(start, end, overrides, sceneUnits, alignmentPoint);
   // 🔴 `overlap` ΜΟΝΟ για ΔΟΜΙΚΑ μέλη (collisionTargets), ΟΧΙ για reference γραμμές: η γραμμή είναι
   // οδηγός στοίχισης, ΟΧΙ εμπόδιο. (α) short-end συγγραμμική συνέχεια ΜΟΝΟ αν snap-άρισε σε μέλος·
   // (β) ομοαξονικά/πάνω σε υφιστάμενο μέλος. Έτσι ο τοίχος κατά μήκος γραμμής μένει 🟢 (commit-able).
@@ -305,6 +311,7 @@ function makeWallWysiwygGhost(
   host: WallEntity | null,
   openings: readonly OpeningEntity[],
   endFaceFrame: GhostFaceFrame | null = null,
+  startJustification: StripJustification | null = null,
 ): ExtendedSceneEntity | null {
   let params: WallParams;
   if (kind === 'curved') {
@@ -313,7 +320,10 @@ function makeWallWysiwygGhost(
       ? { ...base, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
       : base;
   } else if (startAnchored) {
-    params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
+    // ADR-508 §end-reference — κορυφή 3-tier: το σώμα «κρέμεται» στη σωστή παρειά (justification →
+    // alignmentPoint) ώστε το pivot να μένει στην κορυφή· `null` → κεντραρισμένος (κοινό face-snap).
+    const alignmentPoint = alignmentPointForWallJustification(startPt, endPt, startJustification);
+    params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits, alignmentPoint);
   } else {
     params = buildAnchoredWallParams(startPt, endPt, overrides, sceneUnits, columnFootprints);
   }
