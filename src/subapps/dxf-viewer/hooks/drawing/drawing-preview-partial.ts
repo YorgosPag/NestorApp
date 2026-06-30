@@ -18,6 +18,7 @@ import type {
   PreviewPoint,
 } from './drawing-types';
 import { circleBestFit } from '../../rendering/entities/shared';
+import { buildSegmentHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { ICON_CLICK_COLORS } from '../../config/color-config';
 import type { PreviewGripPoint } from '../../types/entities';
@@ -68,6 +69,13 @@ export function applyPreviewStyling(
     extLine.showPreviewGrips = true;
     extLine.isOverlayPreview = isOverlayMode;
     applySettings(extLine as unknown as Record<string, unknown>);
+    // ADR-508 §line-hud — ΜΟΝΟ το line tool (όχι measure-distance) δείχνει το ίδιο live HUD
+    // μήκους+γωνίας με τον τοίχο. Σκηνή = canonical mm (γραμμή: sceneUnits='mm'). Παρουσία του
+    // `liveDimHud` → η `renderLine` παραλείπει τα inline labels (μηδέν διπλό) + ο handler ζωγραφίζει
+    // το aligned HUD μέσω του ΚΟΙΝΟΥ `paintWallHudCore`.
+    if (tool === 'line') {
+      extLine.liveDimHud = buildSegmentHudMeta(extLine.start, extLine.end, 'mm');
+    }
   } else if (entity.type === 'circle') {
     const extCircle = entity as ExtendedCircleEntity;
     extCircle.preview = true;

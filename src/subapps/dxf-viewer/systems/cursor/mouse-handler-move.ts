@@ -19,7 +19,7 @@ import { setColumnPolarShiftFractions } from './ColumnPolarStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { getLockedGripWorldPos } from './GripSnapStore';
 import { getGripStepAnchor } from './GripStepAnchorStore';
-import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
+import { applyPointStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { projectPointOntoGuide, isGuideEditTool, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
@@ -114,13 +114,12 @@ export function useMouseMoveHandler({
         setImmediatePosition(gripScreenPos);
       } else if (isGripDragging && stepAnchor && isGripStepActive()) {
         // ADR-363 — snap-to-grid crosshair (AutoCAD F9 parity). While a grip drag is
-        // active and SNAP-MODE (F9) + Q are held, quantize the FRESH cursor delta
-        // from the drag anchor with the SAME `applyGripStepSnap` the ghost uses, so
-        // the crosshair "clicks" onto the step grid at the identical point as the
-        // ghost (WYSIWYG, zero-lag). Disengaging F9/Q falls through to the raw cursor.
+        // active and SNAP-MODE (F9) + Q are held, quantize the FRESH cursor point onto
+        // the step grid relative to the drag anchor via the SAME `applyPointStepSnap`
+        // SSoT the drawing ghost uses, so the crosshair "clicks" onto the identical
+        // grid point as the ghost (WYSIWYG, zero-lag). F9/Q off → identity → raw cursor.
         const w = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
-        const q = applyGripStepSnap({ x: w.x - stepAnchor.x, y: w.y - stepAnchor.y });
-        const qWorld = { x: stepAnchor.x + q.x, y: stepAnchor.y + q.y };
+        const qWorld = applyPointStepSnap(w, stepAnchor);
         setImmediatePosition(CoordinateTransforms.worldToScreen(qWorld, transform, freshViewport));
       } else if (isGuideEditTool(activeTool)) {
         // ADR-189 — guide hover-lock: while a guide-edit tool is active, the moment a

@@ -21,7 +21,10 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
-import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
+// SSoT γεωμετρίας: ίδια helpers με renderLine/polyline/dimensions — μηδέν inline atan2/hypot/normalize.
+import { formatAngleLocale, calculateWorldDistance } from '../../rendering/entities/shared/distance-label-utils';
+import { calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
 import { drawOverlayLabel } from './overlay-text-style';
 import { OVERLAY_LINE_COLORS, applyOverlayLineStyle, strokeOverlaySegment } from './overlay-line-style';
@@ -40,6 +43,34 @@ export interface WallHudMeta {
   /** mm — ύψος (στο specLabel). */
   readonly heightMm: number;
   readonly sceneUnits: SceneUnits;
+}
+
+/**
+ * SSoT factory των αριθμητικών HUD δεδομένων από ΕΝΑ ευθύγραμμο τμήμα (start→end). Ένας
+ * υπολογισμός μήκους(mm)/γωνίας για ΚΑΘΕ καταναλωτή του live HUD — τοίχο (`thicknessMm/heightMm`
+ * από τα BIM params) ΚΑΙ γραμμή (0 = χωρίς BIM ταυτότητα). N.11-clean: καθαρά νούμερα, καμία
+ * μετάφραση/μορφοποίηση εδώ (γίνεται στον renderer/handler).
+ *
+ * Γεωμετρία ΑΠΟΚΛΕΙΣΤΙΚΑ μέσω των κοινών SSoT: `calculateWorldDistance` (απόσταση),
+ * `calculateAngle`→`radToDeg`→`normalizeAngleDeg` (ADR-068 normalization) — η ΙΔΙΑ αλυσίδα με
+ * `renderLine`/dimensions, μηδέν inline `Math.atan2`/`hypot`/`%360`.
+ */
+export function buildSegmentHudMeta(
+  start: Point2D,
+  end: Point2D,
+  sceneUnits: SceneUnits,
+  thicknessMm = 0,
+  heightMm = 0,
+): WallHudMeta {
+  return {
+    start: { x: start.x, y: start.y },
+    end: { x: end.x, y: end.y },
+    lengthMm: calculateWorldDistance(start, end) / mmToSceneUnits(sceneUnits),
+    angleDeg: normalizeAngleDeg(radToDeg(calculateAngle(start, end))),
+    thicknessMm,
+    heightMm,
+    sceneUnits,
+  };
 }
 
 /** Screen-px clearance της dim line / ετικετών πέρα από την παρειά του τοίχου (zoom-constant). */
@@ -90,10 +121,13 @@ export function paintWallHudCore(
   const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
   proj.drawAlignedDim(start, end, dimRef, formatLengthForDisplay(lengthMm), HUD_COLOR);
 
-  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά, στη μέση.
-  const specW: Point2D = { x: mid.x - px * labelOff, y: mid.y - py * labelOff };
-  const sSpec = proj.toScreen(specW);
-  drawOverlayLabel(ctx, specLabel, sSpec.x, sSpec.y, { textColor: HUD_COLOR, align: 'center' });
+  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά, στη μέση. Κενό specLabel → η οντότητα δεν έχει
+  // BIM ταυτότητα (π.χ. γραμμή: μηδέν πάχος/ύψος) → παραλείπεται· μόνο μήκος + γωνία.
+  if (specLabel) {
+    const specW: Point2D = { x: mid.x - px * labelOff, y: mid.y - py * labelOff };
+    const sSpec = proj.toScreen(specW);
+    drawOverlayLabel(ctx, specLabel, sSpec.x, sSpec.y, { textColor: HUD_COLOR, align: 'center' });
+  }
 
   // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά.
   const angW: Point2D = { x: start.x - px * labelOff, y: start.y - py * labelOff };

@@ -47,9 +47,7 @@ import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-
-const DEG_PER_RAD = 180 / Math.PI;
+import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 
 /**
  * ADR-508 §wall-hud — εξαγωγή των αριθμητικών HUD δεδομένων από τον ΧΤΙΣΜΕΝΟ τοίχο (μήκος/γωνία/
@@ -57,19 +55,8 @@ const DEG_PER_RAD = 180 / Math.PI;
  */
 function buildWallHudMeta(entity: WallEntity, sceneUnits: SceneUnits): WallHudMeta {
   const p = entity.params;
-  const start = { x: p.start.x, y: p.start.y };
-  const end = { x: p.end.x, y: p.end.y };
-  const lenScene = Math.hypot(end.x - start.x, end.y - start.y);
-  const angle = Math.atan2(end.y - start.y, end.x - start.x) * DEG_PER_RAD;
-  return {
-    start,
-    end,
-    lengthMm: lenScene / mmToSceneUnits(sceneUnits),
-    angleDeg: ((angle % 360) + 360) % 360,
-    thicknessMm: p.thickness,
-    heightMm: p.height,
-    sceneUnits,
-  };
+  // SSoT: ίδια length/angle μηχανή με τη γραμμή — ο τοίχος προσθέτει μόνο πάχος/ύψος.
+  return buildSegmentHudMeta(p.start, p.end, sceneUnits, p.thickness, p.height);
 }
 import {
   resolveEffectivePreviewCursor,

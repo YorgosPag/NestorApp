@@ -105,6 +105,36 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-06-30 (§line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, κοινός painter)**
+  - **Αίτημα Giorgio**: «όταν σχεδιάζω τοίχο βλέπω μήκος/πάχος/γωνία στο φάντασμα· στη γραμμή όχι. Βάλε
+    τις ίδιες ενδείξεις στη γραμμή με τον ΙΔΙΟ κώδικα, μία πηγή αλήθειας. Ναι ή όχι;» → **ΝΑΙ**, ο painter
+    ήταν ήδη tool-agnostic.
+  - **SSoT audit (2 Explore agents)**: ο `paintWallHudCore` (`wall-hud-paint.ts`) παίρνει μόνο 2 σημεία +
+    γωνία + labels μέσω generic `WallHudProjector` — **μηδέν wall import**. Η γραμμή ήδη έδειχνε ΦΤΩΧΟ
+    inline label (μήκος+γωνία ως κείμενο, ADR-510 Φ1) μέσω `renderLine`· έλειπε η πλούσια **aligned ISO-129
+    διάσταση** που έχει ο τοίχος. Διαφορά τοίχου↔γραμμής = ΜΟΝΟ πάχος/ύψος (BIM στερεό· η γραμμή δεν έχει).
+  - **Fix (ZERO new mechanism)**: (1) NEW SSoT factory `buildSegmentHudMeta(start,end,sceneUnits,thicknessMm=0,
+    heightMm=0)` στο `wall-hud-paint.ts` — ΕΝΑΣ υπολογισμός μήκους(mm)/γωνίας για τοίχο ΚΑΙ γραμμή,
+    **reuse των κοινών SSoT** `calculateWorldDistance` + `calculateAngle`→`radToDeg`→`normalizeAngleDeg`
+    (ADR-068· ίδια αλυσίδα με `renderLine`/dimensions — μηδέν inline `Math.atan2`/`hypot`/`%360`)· ο wall
+    `buildWallHudMeta` τώρα **delegate** (εξάλειψη διπλού atan2/length). (2) `paintWallHudCore` παραλείπει το
+    spec label όταν είναι κενό (γραμμή = χωρίς BIM ταυτότητα). (3) `applyPreviewStyling` κρεμάει `liveDimHud`
+    (`ExtendedLineEntity`) **ΜΟΝΟ** στο line tool (όχι measure-distance), thickness/height=0, scene canonical-mm.
+    (4) `renderLine` παραλείπει τα δικά του inline labels όταν υπάρχει `liveDimHud` (**μηδέν διπλό μήκος/γωνία**·
+    measure-distance κρατά τα δικά του). (5) `drawing-hover-handler` ζωγραφίζει το `liveDimHud` μέσω του **ΙΔΙΟΥ**
+    `drawWallHud → paintWallHudCore` (κενό specLabel).
+  - **Συνέπεια**: το HUD δείχνει τον **ίδιο** αριθμό μήκους με το παλιό label (`formatLengthForDisplay`, canonical mm).
+    Ο radial command ring (ADR-513) ΔΕΝ αντιγράφηκε — είναι wall-specific (πάχος/ύψος wedges)· εκτός εμβέλειας.
+  - ✅ Google-level: YES — ΕΝΑΣ painter + ΜΙΑ factory για τοίχο+γραμμή, μηδέν διπλότυπη μηχανή/inline label.
+  - **Tests**: +5 στο `wall-hud-paint-projector.test.ts` (factory length/angle/normalize/wall-passthrough + κενό
+    specLabel → μόνο μήκος+γωνία). **9/9 GREEN.** Pre-existing red suites `useWallTool`/`floorplan-symbol-completion`
+    επιβεβαιωμένα ΑΣΧΕΤΑ (stash-verified: αποτυγχάνουν & χωρίς αυτές τις αλλαγές). tsc DEFERRED (N.17).
+  - **🔴 Φ2 / όρια**: angular/ordinate άσχετα· η γραμμή=canonical-mm (όπως το προϋπάρχον label). Πιθανή μελλοντική
+    μετονομασία `wallHud`/`drawWallHud`→`liveDimHud`/`drawLiveDimHud` (cosmetic, ευρύ rename) flagged, όχι blocker.
+    **NEW**: `buildSegmentHudMeta`, `ExtendedLineEntity.liveDimHud`. **MOD**: `wall-hud-paint.ts`, `wall-preview-helpers.ts`,
+    `drawing-preview-partial.ts`, `preview-entity-renderers.ts`, `drawing-hover-handler.ts`, `drawing-types.ts`.
+    **🔴 Pending (Giorgio)**: browser-verify (σχεδίασε γραμμή → aligned διάσταση μήκους + γωνία όπως τοίχος) + commit.
+
 - **2026-06-20** — Δημιουργία. Εξαγωγή `bim/framing/` SSoT· beam files → aliases· wall ghost + 2-κλικ FSM.
 - **2026-06-21** — Wall 2nd-click **relative-polar-to-face** (Revit «angle relative to face»):
   `applyPolar` +optional `baseAngle` (SSoT, backward-compat)· capture `startFaceAngle` στο 1ο κλικ
@@ -292,3 +322,17 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   `resolveMemberGhostSnapFromStore` call· canonical END leaf, distinct από τον brain). 16 jest νέα/re-export
   (member+wall endpoint) + 76 beam/framing regression GREEN. 🔴 tsc + browser-verify + commit (CHECK 6D:
   stage ADR-508 + ADR-040· + `.ssot-registry.json`).
+- **2026-06-30 (§wall-hud — DECISION RECORD: γιατί ΛΕΥΚΟ/γκρι vs ΣΙΕΛ διαστάσεις — ΟΧΙ bug)** — ο Giorgio
+  ρώτησε αν είναι σωστός ο διπλός χρωματισμός των live wall-ghost διαστάσεων (screenshot 2026-06-30): οι
+  **δικές** του τοίχου (μήκος `2.695 m`, spec `πάχος · ύψος`, γωνία `∠`) είναι **ουδέτερο γκρι**
+  (`OVERLAY_LINE_COLORS.alignment = '#CCCCCC'`, near-white σε σκούρο καμβά), οι **σχεσιακές** αποστάσεις
+  προς γειτονικές παρειές (`0,181 / 0,354 / 0,717 m`) είναι **ΣΙΕΛ** (`OVERLAY_LINE_COLORS.listeningDim =
+  '#29B6F6'`). **Συμπέρασμα: ΣΩΣΤΟ — ΚΑΜΙΑ αλλαγή.** (1) SSoT audit (grep): ΕΝΑ palette
+  `OVERLAY_LINE_COLORS`, 2 μηχανισμοί (`wall-hud-paint` γκρι vs `ghost-face-dim-paint` σιελ), μηδέν inline
+  hex / 3ος μηχανισμός — η διαφοροποίηση είναι εσκεμμένη («distinct mechanism colour»). (2) Big-player
+  επιβεβαίωση: **Revit** «listening dimensions» = ξεχωριστό μπλε temporary για system-driven μετρήσεις·
+  **Figma** οι red measurement lines (απόσταση-σε-γείτονα) είναι **σκόπιμα ξεχωριστό, μη-παραμετροποιήσιμο**
+  χρώμα από το selection/own χρώμα· **AutoCAD** otrack/polar tracking traces = διακριτό accent. Η universal
+  αρχή: **own identity ≠ relational/inference dims** → διαφορετικό χρώμα. Η ορολογία μας (`listeningDim`)
+  ήδη καθρεφτίζει τις Revit listening dimensions. Συνεπώς το «όλα σιελ» θα **έχανε** τη διάκριση «τι χτίζω»
+  vs «πού βρίσκομαι ως προς υπάρχουσα γεωμετρία». Καμία αλλαγή κώδικα/jest (decision-only).

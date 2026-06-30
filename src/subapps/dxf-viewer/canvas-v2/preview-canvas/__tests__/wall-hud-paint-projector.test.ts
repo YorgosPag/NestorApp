@@ -8,7 +8,7 @@
  * lines + a label.
  */
 
-import { paintWallHudCore, paintProjectedAlignedDim, type WallHudMeta } from '../wall-hud-paint';
+import { paintWallHudCore, paintProjectedAlignedDim, buildSegmentHudMeta, type WallHudMeta } from '../wall-hud-paint';
 import type { Point2D } from '../../../rendering/types/Types';
 
 /** Permissive Canvas2D mock — records nothing we assert on, just must not throw. */
@@ -83,6 +83,52 @@ describe('paintWallHudCore — projector seam', () => {
     refs.push(run(1), run(10));
     // Larger worldPerPixel → dim line sits farther from the wall axis (|y| grows).
     expect(Math.abs(refs[1].y)).toBeGreaterThan(Math.abs(refs[0].y));
+  });
+});
+
+describe('paintWallHudCore — empty specLabel (line case: no BIM identity)', () => {
+  it('with an empty specLabel, draws ONLY length + angle (no spec label projection)', () => {
+    const drawAlignedDim = jest.fn();
+    const toScreen = jest.fn((p: Point2D) => p);
+    // Line HUD meta: thickness/height 0, empty spec label.
+    paintWallHudCore(fakeCtx(), { ...META, thicknessMm: 0, heightMm: 0 }, '', {
+      toScreen,
+      worldPerPixel: 1,
+      drawAlignedDim,
+    });
+    // length dim still drawn...
+    expect(drawAlignedDim).toHaveBeenCalledTimes(1);
+    // ...but only the angle label projects a world point (spec label skipped) → toScreen === 1.
+    expect(toScreen).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('buildSegmentHudMeta — SSoT length/angle factory (wall + line)', () => {
+  it('horizontal segment → length in mm + angle 0, thickness/height default 0 (line)', () => {
+    const meta = buildSegmentHudMeta({ x: 0, y: 0 }, { x: 1000, y: 0 }, 'mm');
+    expect(meta.lengthMm).toBeCloseTo(1000);
+    expect(meta.angleDeg).toBeCloseTo(0);
+    expect(meta.thicknessMm).toBe(0);
+    expect(meta.heightMm).toBe(0);
+    expect(meta.sceneUnits).toBe('mm');
+  });
+
+  it('45° segment → angle 45, length = hypotenuse', () => {
+    const meta = buildSegmentHudMeta({ x: 0, y: 0 }, { x: 100, y: 100 }, 'mm');
+    expect(meta.angleDeg).toBeCloseTo(45);
+    expect(meta.lengthMm).toBeCloseTo(Math.hypot(100, 100));
+  });
+
+  it('negative-Y heading normalised to 0..360', () => {
+    const meta = buildSegmentHudMeta({ x: 0, y: 0 }, { x: 100, y: -100 }, 'mm');
+    expect(meta.angleDeg).toBeCloseTo(315);
+  });
+
+  it('wall usage → carries thickness + height through (same factory)', () => {
+    const meta = buildSegmentHudMeta({ x: 0, y: 0 }, { x: 500, y: 0 }, 'mm', 200, 2800);
+    expect(meta.thicknessMm).toBe(200);
+    expect(meta.heightMm).toBe(2800);
+    expect(meta.lengthMm).toBeCloseTo(500);
   });
 });
 

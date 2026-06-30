@@ -30,7 +30,10 @@ import { hardOrtho } from './drawing-handler-utils';
 // ADR-363: BIM tools (wall/stair/beam/slab) keep their points in dedicated
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
 // there so the rubber-band preview honours F8/F10 (preview == commit).
-import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
+import { getBimOrthoReference, resolveWallFaceRelativePolar, isBimOrthoTool } from './bim-ortho-reference';
+// ADR-363 — fixed SNAP-MODE (F9 + Q) step grid for the BIM drawing ghost, the SAME
+// SSoT the grip-drag uses (preview ≡ commit via `applyBimDrawingConstraint`).
+import { applyPointStepSnap } from '../../bim/grips/grip-step-quantize';
 // ADR-544 — ΕΝΑΣ canonical type για τα overlay-meta πεδία του placement ghost (πλέγμα/διαστάσεις/
 // οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
@@ -167,6 +170,15 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         angleTolerance: 3,
       });
       previewPt = polarSnapResult.point;
+    }
+    // ADR-363 — fixed SNAP-MODE (F9 + Q) step grid: quantize the (ORTHO/POLAR/free)
+    // length onto the user-defined increment (e.g. 5 cm) via the SAME step SSoT the
+    // grip-drag uses. Skipped when the face-relative magnet is active (it owns its own
+    // zoom-adaptive step so the wall stays flush to the face). No-op unless F9 armed +
+    // Q held → free movement by default. Mirror of the commit (`applyBimDrawingConstraint`)
+    // so preview ≡ committed geometry (WYSIWYG).
+    if (lastRefPt && isBimOrthoTool(activeTool) && !faceRel) {
+      previewPt = applyPointStepSnap(previewPt, lastRefPt);
     }
     // ADR-357 Phase 7: Snap Override — filter preview snap to override engine.
     // Only applies to single-use engine overrides (not 'from'/'m2p' which have
@@ -307,6 +319,13 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
             ns: 'dxf-viewer-shell',
           });
           previewCanvasRef.current.drawWallHud(wallHud, specLabel);
+        }
+        // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
+        // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)
+        // → κενό specLabel (παραλείπεται). Το `liveDimHud` τέθηκε στο applyPreviewStyling (line tool).
+        const lineHud = (previewEntity as { liveDimHud?: WallHudMeta }).liveDimHud;
+        if (lineHud) {
+          previewCanvasRef.current.drawWallHud(lineHud, '');
         }
         // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
         // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.

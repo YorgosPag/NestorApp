@@ -43,7 +43,11 @@ export function renderLine(
     h.renderGrip(ctx, end, opts);
   }
 
-  if (entity.measurement || entity.showEdgeDistances) {
+  // ADR-508 §line-hud — όταν το line tool έχει το live aligned HUD (μήκος+γωνία ως ISO-129
+  // διάσταση, ίδιο με τον τοίχο), ο handler το ζωγραφίζει μέσω `paintWallHudCore`· εδώ ΠΑΡΑΛΕΙΠΟΥΜΕ
+  // τα παλιά inline text labels ώστε να μην εμφανίζεται διπλό μήκος/γωνία. measure-distance (χωρίς
+  // `liveDimHud`) κρατά τα inline labels του.
+  if ((entity.measurement || entity.showEdgeDistances) && !entity.liveDimHud) {
     h.renderDistanceLabelFromWorld(ctx, entity.start, entity.end, start, end);
     // ADR-510 Φ1 (Q7): show the live heading alongside the length, so the ghost
     // reports BOTH μήκος + γωνία directly on the canvas (locale-aware via SSoT).

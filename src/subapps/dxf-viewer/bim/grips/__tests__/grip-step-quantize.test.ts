@@ -4,7 +4,7 @@
  * consumers' integration tests; here we pin the deterministic math.
  */
 
-import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap, isGripStepActive } from '../grip-step-quantize';
+import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap, applyPointStepSnap, isGripStepActive } from '../grip-step-quantize';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../../keyboard/QKeyTracker';
@@ -82,6 +82,55 @@ describe('applyGripStepSnap — activation wiring (F9 toggle + Q hold + unit sca
     const r = applyGripStepSnap({ x: 0.137, y: -0.212 });
     expect(r.x).toBeCloseTo(0.1);
     expect(r.y).toBeCloseTo(-0.2);
+  });
+});
+
+describe('applyPointStepSnap — anchor-relative point step grid (crosshair + drawing ghost)', () => {
+  afterEach(() => {
+    cadToggleState.setSnap(false, 0);
+    immediateSceneScale.set(1);
+    QKeyTracker._setForTest(false);
+  });
+
+  it('quantizes the point displacement from the anchor onto the step grid', () => {
+    immediateSceneScale.set(1); // mm scene
+    cadToggleState.setSnap(true, 50); // 5 cm
+    QKeyTracker._setForTest(true);
+    const anchor = { x: 1000, y: 2000 };
+    // displacement (137, -212) → snaps to (150, -200) → point = anchor + that.
+    expect(applyPointStepSnap({ x: 1137, y: 1788 }, anchor)).toEqual({ x: 1150, y: 1800 });
+  });
+
+  it('moves freely (point unchanged) when SNAP off or Q not held', () => {
+    immediateSceneScale.set(1);
+    const anchor = { x: 0, y: 0 };
+    const p = { x: 137, y: -212 };
+    cadToggleState.setSnap(false, 50);
+    QKeyTracker._setForTest(true);
+    expect(applyPointStepSnap(p, anchor)).toEqual(p);
+    cadToggleState.setSnap(true, 50);
+    QKeyTracker._setForTest(false); // F9 on, Q off → free
+    expect(applyPointStepSnap(p, anchor)).toEqual(p);
+  });
+
+  it('keeps a point already on the grid unchanged (idempotent, preview ≡ commit)', () => {
+    immediateSceneScale.set(1);
+    cadToggleState.setSnap(true, 50);
+    QKeyTracker._setForTest(true);
+    const anchor = { x: 500, y: 500 };
+    const onGrid = { x: 650, y: 400 }; // +150 / -100 = clean multiples of 50
+    expect(applyPointStepSnap(onGrid, anchor)).toEqual(onGrid);
+  });
+
+  it('converts the mm step to scene units (metre-scale drawing)', () => {
+    cadToggleState.setSnap(true, 50); // 50 mm = 5 cm
+    QKeyTracker._setForTest(true);
+    immediateSceneScale.set(0.001); // metre scene
+    const anchor = { x: 10, y: 10 };
+    // step = 50mm = 0.05 units → displacement 0.137 snaps to 0.15.
+    const r = applyPointStepSnap({ x: 10.137, y: 9.788 }, anchor);
+    expect(r.x).toBeCloseTo(10.15);
+    expect(r.y).toBeCloseTo(9.8);
   });
 });
 

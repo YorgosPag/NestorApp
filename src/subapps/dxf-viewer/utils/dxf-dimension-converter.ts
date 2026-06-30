@@ -1,142 +1,167 @@
 /**
- * 🏢 ENTERPRISE: DXF Dimension Converter
+ * 🏢 ENTERPRISE: DXF Dimension Converter (ADR-362 Phase R-import).
  *
- * Converts DIMENSION entities to TEXT + geometry lines.
- * Extracted from dxf-entity-converters.ts for SRP compliance (ADR-065 Phase 4).
+ * Converts a DXF DIMENSION entity into a SINGLE first-class `DimensionEntity`
+ * (`type:'dimension'`) so imported dims flow through the SAME Revit-grade
+ * pipeline as Ribbon-created dims: `DimensionRenderer` draws dim line +
+ * extension lines + REAL ARROWHEADS + formatted text (ADR-362), instead of the
+ * pre-ADR-362 decomposition into dumb `text` + `line` primitives.
  *
- * Supports DIMSTYLE-aware text height calculation:
- * - Entity override (code 140)
- * - DIMSTYLE entry (dimStyles[styleName].dimtxt)
- * - Header $DIMTXT
- * - Fallback 0.18mm
+ * Style resolution: the entity carries `styleId: ''`. At render time
+ * `resolveDimStyle()` falls back to the registry's ACTIVE style, which the
+ * import pipeline has already seeded from the file's DIMSTYLE table via
+ * `registerImportedDimStyles()` (useDxfSceneConversion). So an imported dim
+ * renders with the file's own DIMTXT / DIMASZ / colours (ByLayer → layer
+ * colour) — exactly like AutoCAD/Revit. Per-entity multi-DIMSTYLE fidelity
+ * (mapping code-3 style name → registry id) is Phase 2.
  *
- * @see dxf-entity-converters.ts - Master converter
+ * Coverage (Phase 1 — the architectural ~90% of floor-plan dims):
+ *   - linear   (type 0) → LinearDimensionEntity   defPoints [o1, o2, dimLineRef] + rotation
+ *   - aligned  (type 1) → AlignedDimensionEntity  defPoints [o1, o2, dimLineRef]
+ *   - diameter (type 3) → DiameterDimensionEntity defPoints [side1, side2]
+ *   - radius   (type 4) → RadiusDimensionEntity   defPoints [center, arcPoint]
+ * Best-effort (angular 2/5, ordinate 6) → `convertDimensionLegacy()` (text+lines,
+ * no regression) until Phase 2 maps their defPoints through the builder.
+ *
+ * @see types/dimension.ts — DimensionEntity union + defPoints semantics
+ * @see systems/dimensions/dim-style-importer.ts — registry seeding
+ * @see dxf-dimension-legacy-fallback.ts — angular/ordinate decomposition
  * @see AutoCAD DXF Reference for DIMENSION entity codes
  */
 
 import type { AnySceneEntity } from '../types/scene';
+import type { Point2D } from '../rendering/types/Types';
+import type {
+  AlignedDimensionEntity,
+  DiameterDimensionEntity,
+  DimensionType,
+  LinearDimensionEntity,
+  RadiusDimensionEntity,
+} from '../types/dimension';
 import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
-import { calculateDistance, calculateAngle } from '../rendering/entities/shared/geometry-rendering-utils';
-import { radToDeg } from '../rendering/entities/shared/geometry-utils';
-import { extractEntityColor } from './dxf-converter-helpers';
-import { dlog, dwarn } from '../debug';
+import { convertDimensionLegacy } from './dxf-dimension-legacy-fallback';
 
 // ============================================================================
-// DEFAULT HEADER VALUES
+// DXF DIMENSION TYPE (group code 70, bits 0-2) → DimensionType
 // ============================================================================
 
-const DEFAULT_HEADER: DxfHeaderData = {
-  insunits: 4,      // mm (default)
-  dimscale: 1,      // No scaling
-  dimtxt: 2.5,      // AutoCAD Standard DIMTXT default (mm)
-  annoScale: 1,     // 1:1
-  measurement: 1    // Metric
+/** Variants handled by the first-class `DimensionEntity` path. Others fall back. */
+const DIM_TYPE_MAP: Record<number, Extract<DimensionType, 'linear' | 'aligned' | 'radius' | 'diameter'>> = {
+  0: 'linear',
+  1: 'aligned',
+  3: 'diameter',
+  4: 'radius',
 };
 
 // ============================================================================
-// DIMENSION TEXT HEIGHT CALCULATION
+// FIELD HELPERS
 // ============================================================================
 
+/** Parse a DXF (xCode, yCode) coordinate pair → Point2D, or null when either is NaN. */
+function point(data: Record<string, string>, xCode: string, yCode: string): Point2D | null {
+  const x = parseFloat(data[xCode]);
+  const y = parseFloat(data[yCode]);
+  if (isNaN(x) || isNaN(y)) return null;
+  return { x, y };
+}
+
 /**
- * Calculate effective text height from DIMSTYLE priority chain.
- *
- * Priority:
- * 1. Entity code 140 (if non-zero = explicit override)
- * 2. DIMSTYLE entry dimtxt (from parsed TABLES section)
- * 3. Header $DIMTXT (global default)
- * 4. Fallback 0.18 (common architectural DXF default)
+ * Resolve the DIMSTYLE user-text token (DXF code 1) to the renderer convention:
+ *   - absent / empty  → `undefined` (renderer draws the MEASURED value)
+ *   - '<>'            → measured (passed through)
+ *   - anything else   → literal override
  */
-function calculateDimensionTextHeight(
+function resolveUserText(raw: string | undefined): string | undefined {
+  return raw === undefined || raw === '' ? undefined : raw;
+}
+
+/** Common fields shared by every imported `DimensionEntity` variant. */
+function buildCommonFields(
   data: Record<string, string>,
-  header: DxfHeaderData,
-  dimStyles?: DimStyleMap
-): { textHeight: number; heightSource: string } {
-  const styleName = data['3'] || 'Standard';
-  const entityDimtxt = parseFloat(data['140']) || 0;
-
-  let baseDimtxt: number;
-  let heightSource: string;
-
-  if (entityDimtxt > 0) {
-    baseDimtxt = entityDimtxt;
-    heightSource = 'entity-override';
-  } else if (dimStyles && dimStyles[styleName]) {
-    baseDimtxt = dimStyles[styleName].dimtxt;
-    heightSource = `dimstyle:${styleName}`;
-  } else if (dimStyles && dimStyles['Standard']) {
-    baseDimtxt = dimStyles['Standard'].dimtxt;
-    heightSource = 'dimstyle:Standard';
-  } else if (header.dimtxt > 0) {
-    baseDimtxt = header.dimtxt;
-    heightSource = 'header-$DIMTXT';
-  } else {
-    baseDimtxt = 0.18;
-    heightSource = 'fallback';
-  }
-
-  const dimscale = header.dimscale > 0 ? header.dimscale : 1;
-  const textHeight = baseDimtxt * dimscale;
-
-  return { textHeight, heightSource };
+  layer: string,
+  index: number,
+): {
+  id: string;
+  type: 'dimension';
+  layerId: string;
+  visible: true;
+  styleId: string;
+  textMidpoint?: Point2D;
+  userText?: string;
+  measurementValue?: number;
+} {
+  const textMid = point(data, '11', '21');
+  const userText = resolveUserText(data['1']);
+  const measurement = parseFloat(data['42']);
+  return {
+    id: `dimension_${index}`,
+    type: 'dimension',
+    layerId: layer,
+    visible: true,
+    // '' → resolveDimStyle() falls back to the active (file-imported) DIMSTYLE.
+    styleId: '',
+    ...(textMid && { textMidpoint: textMid }),
+    ...(userText !== undefined && { userText }),
+    ...(isNaN(measurement) ? {} : { measurementValue: measurement }),
+  };
 }
 
 // ============================================================================
-// DIMENSION GEOMETRY HELPERS
+// PER-VARIANT BUILDERS
 // ============================================================================
 
 /**
- * Calculate projected dimension line endpoints based on dimension type.
+ * Linear / aligned share defPoints [extOrigin1 (13/23), extOrigin2 (14/24),
+ * dimLineRef (10/20)]. Legacy `startPoint`/`endPoint`/`textPosition` are filled
+ * too so the Phase-A1 consumers (PathCache hash, InsertionSnapEngine) keep
+ * working until they migrate to `defPoints`.
  */
-function calculateDimensionLinePoints(
-  dimType: number,
-  dimLineAngle: number,
-  dimLineX: number,
-  dimLineY: number,
-  defPt1X: number,
-  defPt1Y: number,
-  defPt2X: number,
-  defPt2Y: number,
-): { p1: { x: number; y: number }; p2: { x: number; y: number } } {
-  if (dimType === 1) {
-    // Aligned: dimension line parallel to measured feature, offset perpendicular
-    const featureDx = defPt2X - defPt1X;
-    const featureDy = defPt2Y - defPt1Y;
-    const featureLen = Math.sqrt(featureDx * featureDx + featureDy * featureDy);
-    if (featureLen > 0) {
-      const perpX = -featureDy / featureLen;
-      const perpY = featureDx / featureLen;
-      const dist = (dimLineX - defPt1X) * perpX + (dimLineY - defPt1Y) * perpY;
-      return {
-        p1: { x: defPt1X + dist * perpX, y: defPt1Y + dist * perpY },
-        p2: { x: defPt2X + dist * perpX, y: defPt2Y + dist * perpY },
-      };
-    }
-    return { p1: { x: defPt1X, y: defPt1Y }, p2: { x: defPt2X, y: defPt2Y } };
-  }
+function buildLinearOrAligned(
+  variant: 'linear' | 'aligned',
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): LinearDimensionEntity | AlignedDimensionEntity | null {
+  const o1 = point(data, '13', '23');
+  const o2 = point(data, '14', '24');
+  const dimRef = point(data, '10', '20');
+  if (!o1 || !o2 || !dimRef) return null;
 
-  if (dimType === 0) {
-    // Linear (horizontal/vertical/rotated)
-    const absAngle = Math.abs(dimLineAngle % 360);
-    if (absAngle < 1 || Math.abs(absAngle - 180) < 1 || Math.abs(absAngle - 360) < 1) {
-      return { p1: { x: defPt1X, y: dimLineY }, p2: { x: defPt2X, y: dimLineY } };
-    }
-    if (Math.abs(absAngle - 90) < 1 || Math.abs(absAngle - 270) < 1) {
-      return { p1: { x: dimLineX, y: defPt1Y }, p2: { x: dimLineX, y: defPt2Y } };
-    }
-    // Rotated — project definition points onto line through dimLine point
-    const rad = dimLineAngle * Math.PI / 180;
-    const dx = Math.cos(rad);
-    const dy = Math.sin(rad);
-    const t1 = (defPt1X - dimLineX) * dx + (defPt1Y - dimLineY) * dy;
-    const t2 = (defPt2X - dimLineX) * dx + (defPt2Y - dimLineY) * dy;
-    return {
-      p1: { x: dimLineX + t1 * dx, y: dimLineY + t1 * dy },
-      p2: { x: dimLineX + t2 * dx, y: dimLineY + t2 * dy },
-    };
-  }
+  const common = buildCommonFields(data, layer, index);
+  const defPoints = [o1, o2, dimRef] as const;
+  const legacy = { startPoint: o1, endPoint: o2, ...(common.textMidpoint && { textPosition: common.textMidpoint }) };
 
-  // Angular, radial, diameter — connect definition points directly
-  return { p1: { x: defPt1X, y: defPt1Y }, p2: { x: defPt2X, y: defPt2Y } };
+  if (variant === 'linear') {
+    const rot = parseFloat(data['50']);
+    return { ...common, dimensionType: 'linear', defPoints: [...defPoints], rotation: isNaN(rot) ? 0 : rot, ...legacy };
+  }
+  return { ...common, dimensionType: 'aligned', defPoints: [...defPoints], ...legacy };
+}
+
+/** Radius — defPoints [center (15/25), arcPoint (10/20)]. */
+function buildRadius(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): RadiusDimensionEntity | null {
+  const center = point(data, '15', '25');
+  const arcPoint = point(data, '10', '20');
+  if (!center || !arcPoint) return null;
+  const common = buildCommonFields(data, layer, index);
+  return { ...common, dimensionType: 'radius', defPoints: [center, arcPoint], startPoint: center, endPoint: arcPoint };
+}
+
+/** Diameter — defPoints [side1 (10/20), side2 (15/25)]. */
+function buildDiameter(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): DiameterDimensionEntity | null {
+  const side1 = point(data, '10', '20');
+  const side2 = point(data, '15', '25');
+  if (!side1 || !side2) return null;
+  const common = buildCommonFields(data, layer, index);
+  return { ...common, dimensionType: 'diameter', defPoints: [side1, side2], startPoint: side1, endPoint: side2 };
 }
 
 // ============================================================================
@@ -144,13 +169,15 @@ function calculateDimensionLinePoints(
 // ============================================================================
 
 /**
- * Convert DIMENSION entity to TEXT + geometry lines.
+ * Convert a DXF DIMENSION entity to a first-class `DimensionEntity` (linear /
+ * aligned / radius / diameter), or fall back to the legacy text+line
+ * decomposition for the angular / ordinate families.
  *
- * @param data - Raw DXF entity data
+ * @param data - Raw DXF entity data (flat code→value map)
  * @param layer - Layer name
  * @param index - Entity index for ID generation
- * @param header - Optional DXF header data for DIMSCALE normalization
- * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
+ * @param header - Optional DXF header (legacy fallback DIMSCALE/DIMTXT)
+ * @param dimStyles - Optional parsed DIMSTYLE map (legacy fallback text height)
  */
 export function convertDimension(
   data: Record<string, string>,
@@ -159,142 +186,22 @@ export function convertDimension(
   header?: DxfHeaderData,
   dimStyles?: DimStyleMap
 ): AnySceneEntity[] {
-  const h = header || DEFAULT_HEADER;
-
-  // Definition points (start and end of dimension)
-  const x1 = parseFloat(data['13']) || parseFloat(data['10']);
-  const y1 = parseFloat(data['23']) || parseFloat(data['20']);
-  const x2 = parseFloat(data['14']) || parseFloat(data['11']);
-  const y2 = parseFloat(data['24']) || parseFloat(data['21']);
-
-  // Middle point (text position)
-  const textX = parseFloat(data['11']);
-  const textY = parseFloat(data['21']);
-
-  // Dimension text and measurement
-  const customText = data['1'] || '';
-  const measurement = parseFloat(data['42']);
-
-  // Angles
-  const dimLineAngle = parseFloat(data['50']) || 0;
-  const dimTextRotation = parseFloat(data['53']) || 0;
-
-  // Calculate text height via DIMSTYLE priority chain
-  const { textHeight, heightSource } = calculateDimensionTextHeight(data, h, dimStyles);
-
-  dlog('EntityConverter', '📐 DIM HEIGHT CALC:', {
-    entityId: `dimension_${index}`,
-    code140: data['140'] || '(none)',
-    styleName: data['3'] || 'Standard',
-    dimStyleTxt: dimStyles?.[data['3'] || 'Standard']?.dimtxt || '(no style)',
-    headerDimtxt: h.dimtxt,
-    baseDimtxt: textHeight / (h.dimscale > 0 ? h.dimscale : 1),
-    dimscale: h.dimscale,
-    heightSource,
-    finalHeight: textHeight
-  });
-
-  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
-    dwarn('EntityConverter', `⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
-    return [];
-  }
-
-  const entities: AnySceneEntity[] = [];
-  const color = extractEntityColor(data);
-
-  // ── TEXT ENTITY ──
-  let dimensionText = customText;
-  if (!dimensionText && !isNaN(measurement)) {
-    dimensionText = measurement.toFixed(2);
-  }
-  if (!dimensionText) {
-    const distance = calculateDistance({ x: x1, y: y1 }, { x: x2, y: y2 });
-    dimensionText = distance.toFixed(2);
-  }
-
-  let rotation = dimLineAngle;
-  if (dimLineAngle === 0 && dimTextRotation === 0) {
-    rotation = radToDeg(calculateAngle({ x: x1, y: y1 }, { x: x2, y: y2 }));
-    if (rotation > 90) rotation -= 180;
-    if (rotation < -90) rotation += 180;
-  } else if (dimTextRotation !== 0) {
-    rotation = dimTextRotation;
-  }
-
-  const posX = !isNaN(textX) ? textX : (x1 + x2) / 2;
-  const posY = !isNaN(textY) ? textY : (y1 + y2) / 2;
-
-  entities.push({
-    id: `dimension_${index}`,
-    type: 'text',
-    layerId: layer,
-    visible: true,
-    position: { x: posX, y: posY },
-    text: dimensionText,
-    fontSize: textHeight,
-    height: textHeight,
-    rotation,
-    alignment: 'center',
-    ...(color && { color })
-  });
-
-  // ── DIMENSION GEOMETRY (lines + extension lines) ──
-  const dimLineX = parseFloat(data['10']);
-  const dimLineY = parseFloat(data['20']);
-  const defPt1X = parseFloat(data['13']);
-  const defPt1Y = parseFloat(data['23']);
-  const defPt2X = parseFloat(data['14']);
-  const defPt2Y = parseFloat(data['24']);
   const dimType = parseInt(data['70'] || '0', 10) & 0x07;
+  const variant = DIM_TYPE_MAP[dimType];
 
-  const hasGeometryData = !isNaN(dimLineX) && !isNaN(dimLineY)
-    && !isNaN(defPt1X) && !isNaN(defPt1Y)
-    && !isNaN(defPt2X) && !isNaN(defPt2Y);
-
-  if (hasGeometryData) {
-    const { p1, p2 } = calculateDimensionLinePoints(
-      dimType, dimLineAngle, dimLineX, dimLineY, defPt1X, defPt1Y, defPt2X, defPt2Y
-    );
-
-    // Dimension line
-    entities.push({
-      id: `dim_line_${index}`,
-      type: 'line',
-      layerId: layer,
-      visible: true,
-      start: p1,
-      end: p2,
-      ...(color && { color })
-    });
-
-    // Extension line 1
-    const ext1Sq = (defPt1X - p1.x) ** 2 + (defPt1Y - p1.y) ** 2;
-    if (ext1Sq > 0.001) {
-      entities.push({
-        id: `dim_ext1_${index}`,
-        type: 'line',
-        layerId: layer,
-        visible: true,
-        start: { x: defPt1X, y: defPt1Y },
-        end: p1,
-        ...(color && { color })
-      });
-    }
-
-    // Extension line 2
-    const ext2Sq = (defPt2X - p2.x) ** 2 + (defPt2Y - p2.y) ** 2;
-    if (ext2Sq > 0.001) {
-      entities.push({
-        id: `dim_ext2_${index}`,
-        type: 'line',
-        layerId: layer,
-        visible: true,
-        start: { x: defPt2X, y: defPt2Y },
-        end: p2,
-        ...(color && { color })
-      });
-    }
+  if (variant === 'linear' || variant === 'aligned') {
+    const entity = buildLinearOrAligned(variant, data, layer, index);
+    return entity ? [entity] : [];
+  }
+  if (variant === 'radius') {
+    const entity = buildRadius(data, layer, index);
+    return entity ? [entity] : [];
+  }
+  if (variant === 'diameter') {
+    const entity = buildDiameter(data, layer, index);
+    return entity ? [entity] : [];
   }
 
-  return entities;
+  // Angular (2-line / 3-point) + ordinate — best-effort until Phase 2.
+  return convertDimensionLegacy(data, layer, index, header, dimStyles);
 }

@@ -9,6 +9,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, ArcEntity } from '../../types/scene';
+import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 
 // ─── Preview Point ──────────────────────────────────────────────────────────
 
@@ -47,6 +48,14 @@ export interface ExtendedCircleEntity extends CircleEntity {
 
 export interface ExtendedLineEntity extends LineEntity {
   showEdgeDistances?: boolean;
+  /**
+   * ADR-508 §line-hud — ζωντανό HUD μήκους + γωνίας κατά τη σχεδίαση γραμμής, ΙΔΙΟ με τον τοίχο
+   * (aligned ISO-129 διάσταση + γωνία), μέσω του ΚΟΙΝΟΥ `paintWallHudCore` SSoT. Η γραμμή δεν έχει
+   * πάχος/ύψος (όχι BIM στερεό) → `thicknessMm/heightMm = 0`, κανένα spec label. Όταν υπάρχει, η
+   * `renderLine` παραλείπει τα δικά της inline labels (μηδέν διπλό). Set ΜΟΝΟ για το line tool
+   * (όχι measure-distance) στο `applyPreviewStyling`.
+   */
+  liveDimHud?: WallHudMeta;
 }
 
 // Extended Arc Entity for preview with construction lines

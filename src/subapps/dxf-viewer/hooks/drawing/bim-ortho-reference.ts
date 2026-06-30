@@ -46,6 +46,10 @@ import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 // (no duplicate): the wall length grows in nice round steps that keep a constant
 // on-screen spacing. @see systems/tracking/adaptive-distance-snap.ts
 import { adaptiveDistanceStep, quantizeAlongPath, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
+// ADR-363 — fixed SNAP-MODE (F9 + Q) step grid, the SAME SSoT the grip-drag uses,
+// so the committed wall length "clicks" onto the user-defined increment exactly
+// like the rubber-band ghost. No-op unless F9 is armed and Q is held.
+import { applyPointStepSnap } from '../../bim/grips/grip-step-quantize';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
 const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor']);
@@ -186,17 +190,22 @@ export function applyBimDrawingConstraint(
   if (!isBimOrthoTool(tool)) return point;
   const ref = getBimOrthoReference(tool);
   if (!ref) return point;
-  if (cadToggleState.isOrthoOn()) return hardOrtho(point, ref);
+  // ADR-363 — the fixed SNAP-MODE (F9 + Q) step grid is applied on top of the
+  // ORTHO/POLAR/free direction so the length lands on the user-defined increment
+  // (e.g. 5 cm). Skipped for the face-relative magnet, which owns its own
+  // (zoom-adaptive) step so the wall stays flush to the member face. No-op unless
+  // F9 is armed + Q held → free movement by default.
+  if (cadToggleState.isOrthoOn()) return applyPointStepSnap(hardOrtho(point, ref), ref);
   // ADR-508 — wall 2nd click anchored to a face → relative-polar-to-face (auto magnet)
   // + zoom-adaptive length step (same SSoT as alignment traces).
   const faceRel = resolveWallFaceRelativePolar(point, worldPerPixel);
   if (faceRel) return faceRel.result.point;
   if (cadToggleState.isPolarOn()) {
-    return applyPolar(point, ref, {
+    return applyPointStepSnap(applyPolar(point, ref, {
       incrementAngle: polarTrackingStore.incrementAngle,
       additionalAngles: polarTrackingStore.additionalAngles,
       angleTolerance: 3,
-    }).point;
+    }).point, ref);
   }
-  return point;
+  return applyPointStepSnap(point, ref);
 }

@@ -82,3 +82,24 @@ export function applyGripStepSnap(delta: Point2D): Point2D {
   const result = !isGripStepActive() ? { x: delta.x, y: delta.y } : quantizeDeltaToStep(delta, stepScene);
   return result;
 }
+
+/**
+ * Anchor-relative POINT variant of the SNAP-MODE step (ADR-363) — quantize a
+ * resolved point so its displacement from `anchor` lands on the fixed step grid,
+ * returning the snapped POINT (not the delta). Delegates to {@link applyGripStepSnap}
+ * verbatim (SAME F9 + Q-held activation, SAME mm→scene scale, SAME rectangular
+ * quantization) → ONE step SSoT, zero duplicate rounding logic.
+ *
+ * Returns `point` unchanged when SNAP-MODE (F9) is OFF or Q is not held, so movement
+ * is free by default and "clicks" onto the step grid only while Q is held.
+ *
+ * Used wherever a point must ride the step grid relative to a fixed anchor:
+ *   - the grip-drag CROSSHAIR (`mouse-handler-move`), anchored at the drag start,
+ *   - the BIM drawing ghost — preview (`drawing-hover-handler`) AND commit
+ *     (`applyBimDrawingConstraint`), anchored at the previous point — so the
+ *     rubber-band equals the committed geometry (WYSIWYG).
+ */
+export function applyPointStepSnap(point: Point2D, anchor: Point2D): Point2D {
+  const d = applyGripStepSnap({ x: point.x - anchor.x, y: point.y - anchor.y });
+  return { x: anchor.x + d.x, y: anchor.y + d.y };
+}
