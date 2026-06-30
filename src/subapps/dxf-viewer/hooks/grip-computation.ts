@@ -110,7 +110,9 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       ];
       quadrants.forEach((pos, i) => {
         grips.push({
-          entityId: entity.id, gripIndex: i + 1, type: 'vertex',
+          // ADR-559 — quadrant grips (gripIndex 1-4 still drives radius edit) typed `'quadrant'`
+          // so the «Εμφάνιση Quadrants» toggle gates them in hit-test too (visible ≡ pickable).
+          entityId: entity.id, gripIndex: i + 1, type: 'quadrant',
           position: pos, movesEntity: false,
         });
       });

@@ -96,6 +96,10 @@ export interface GripMouseUpCtx {
   // ADR-397 — rotating entity's grip world-points provider, consumed by
   // advanceHotGripPick to arm the rotation snap targets at centre-pick.
   rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
+  // ADR-363 Slice G.6 — resolve the free-rotate reference baseline along the active
+  // entity's major axis (toward its body); consumed by advanceHotGripPick to seed
+  // `hotGripRotateBaseRef` at centre-pick. Null → legacy first-move baseline.
+  resolveRotateBaselineAnchor?: (pivot: Point2D) => Point2D | null;
   // ADR-397 Σ3 — typed rotation angle (signed deg) so a terminal click commits the
   // keyed-in value (parity with Enter). Null → cursor free rotate.
   typedRotateDeg?: number | null;

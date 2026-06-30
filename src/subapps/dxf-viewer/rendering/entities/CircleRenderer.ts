@@ -19,7 +19,7 @@ interface ExtendedCircleEntity extends CircleEntity {
 
 // 🏢 ADR-102: Duplicate type guard REMOVED - using centralized isCircleEntity from types/entities.ts
 // 🏢 ADR-099: HoverManager import removed - CircleRenderer has no hover rendering
-import { createGripsFromPoints } from './shared/grip-utils';
+import { createQuadrantGrips } from './shared/grip-utils';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
@@ -174,7 +174,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       { x: center.x, y: center.y - radius }      // South
     ];
     
-    grips.push(...createGripsFromPoints(entity.id, quadrants));
+    // ADR-559 — cardinal points are QUADRANT grips (gated by «Εμφάνιση Quadrants»), not vertices.
+    grips.push(...createQuadrantGrips(entity.id, quadrants));
     return grips;
   }
 

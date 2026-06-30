@@ -7,7 +7,7 @@
  * @compliance CLAUDE.md Enterprise Standards - NO any, Full TypeScript
  */
 
-import type { Point2D } from '../types/Types';
+import type { Point2D, GripKind } from '../types/Types';
 
 // ============================================================================
 // GRIP TYPE DEFINITIONS
@@ -17,13 +17,9 @@ import type { Point2D } from '../types/Types';
  * Grip type classification
  * Determines visual style and behavior of grip points
  */
-export type GripType =
-  | 'vertex'    // Standard vertex grip (corners, endpoints)
-  | 'edge'      // Edge/midpoint grip (between vertices)
-  | 'midpoint'  // Explicit midpoint (same as edge, for clarity)
-  | 'center'    // Center point grip (circles, arcs, etc.)
-  | 'corner'    // Corner grip (rectangles, special cases)
-  | 'close';    // Close polygon grip (ADR-047 green indicator)
+// ADR-559 — projection of the canonical `GripKind` SSoT (rendering/types/Types.ts). The render
+// layer covers every kind EXCEPT the data-model-only 'control' point (splines edit via vertices).
+export type GripType = Exclude<GripKind, 'control'>;
 
 /**
  * Grip temperature state

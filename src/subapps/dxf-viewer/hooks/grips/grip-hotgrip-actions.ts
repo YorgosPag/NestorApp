@@ -59,6 +59,15 @@ export interface HotGripActionCtx {
    */
   rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
   /**
+   * ADR-363 Slice G.6 — resolve the FREE-rotate reference baseline anchor for the
+   * entity being rotated, given the just-picked pivot: `pivot + majorAxisUnit`
+   * (toward the body), so the imaginary reference line starts PARALLEL to the
+   * entity's longest axis (Giorgio «παράλληλη στον μεγαλύτερο άξονα»). Returns null
+   * when the entity has no orientation → caller keeps the legacy first-move baseline.
+   * Supplied by the unified grip hook (which can read the active entity).
+   */
+  resolveRotateBaselineAnchor?: (pivot: Point2D) => Point2D | null;
+  /**
    * ADR-397 Σ3 — the typed rotation angle (signed deg, +CCW) if the user keyed one
    * in, else null. When set, a terminal CLICK commits this exact value instead of
    * the cursor sweep (parity with the Enter commit). Null → cursor free rotate.
@@ -123,7 +132,12 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
       // 6-click reference flow. `rotate-free` is terminal (next click commits).
       anchorRef.current = null;
       hotGripStepRef.current = 'rotate-free';
-      ctx.hotGripRotateBaseRef.current = null;       // baseline set on the first move
+      // ADR-363 Slice G.6 — seed the sweep baseline along the entity's MAJOR axis
+      // (toward its body), so the imaginary reference line starts PARALLEL to the
+      // long side and the far end tracks the cursor (Giorgio «παράλληλη στον
+      // μεγαλύτερο άξονα»). Null (no orientation) → legacy first-move baseline
+      // (`grip-mouse-move-handler` sets it on the first cursor move).
+      ctx.hotGripRotateBaseRef.current = ctx.resolveRotateBaselineAnchor?.(p) ?? null;
       setCurrentWorldPos(null);
       // Arm the snap targets: the pivot ⊙ and the entity's grips become snap
       // candidates (cursor magnetism via the existing snap pipeline) AND render cyan
@@ -192,7 +206,12 @@ export function commitFreeRotate(worldPos: Point2D, grip: UnifiedGripInfo, ctx: 
     resetToIdle();
     return;
   }
-  const baseline = hotGripRotateBaseRef.current;
+  // ADR-363 Slice G.7 — DETERMINISTIC axis baseline (toward the body), the SAME
+  // source the live preview uses (`useUnifiedGripInteraction` → `resolveRotateReferenceAnchor`),
+  // so commit ≡ preview. Falls back to the first-move baseline only when the entity
+  // has no orientation. This makes the committed sweep align the entity's major axis
+  // with the pivot→cursor reference line (Giorgio «οι δύο ευθείες να ταυτίζονται»).
+  const baseline = ctx.resolveRotateBaselineAnchor?.(pivot) ?? hotGripRotateBaseRef.current;
   if (!baseline) { GripBasePointStore.clear(); resetToIdle(); return; }
   const refDir = { x: baseline.x - pivot.x, y: baseline.y - pivot.y };
   const alignDir = { x: worldPos.x - pivot.x, y: worldPos.y - pivot.y };

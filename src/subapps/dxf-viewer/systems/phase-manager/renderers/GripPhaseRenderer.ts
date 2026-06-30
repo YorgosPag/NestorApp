@@ -171,6 +171,10 @@ export class GripPhaseRenderer {
   ): void {
     if (grips.length === 0) return;
     const style = getGripPreviewStyle();
+    // ADR-559 — honour the «Εμφάνιση Χερουλιών» toggle (grip style `showGrips`/`enabled`):
+    // when grips are switched off in settings, draw nothing for selected entities either.
+    // Before this, the render path ignored the toggle, so OFF still painted selection grips.
+    if (!style.showGrips || !style.enabled) return;
     const settings: Partial<GripSettings> = {
       colors: style.colors,
       gripSize: style.gripSize,
@@ -196,7 +200,18 @@ export class GripPhaseRenderer {
         ...(moveHoveredZone ? { hoveredZone: moveHoveredZone } : {}),
       };
     });
-    this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
+    // ADR-559 — honour the «Διαφάνεια» (grip opacity) setting. `UnifiedGripRenderer` has no
+    // per-grip alpha, so apply it once around the whole batch via the canvas globalAlpha
+    // (save/restore so it never leaks into later draws). `1` = fully opaque (no-op).
+    const gripOpacity = style.opacity ?? 1;
+    if (gripOpacity >= 1) {
+      this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
+    } else {
+      this.ctx.save();
+      this.ctx.globalAlpha = gripOpacity;
+      this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
+      this.ctx.restore();
+    }
   }
 
   /**

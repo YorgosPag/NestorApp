@@ -17,8 +17,10 @@ import { syncGripStyleStoreFromSettings as gripWriterDirect } from '../grip-styl
 import { toolStyleStore } from '../ToolStyleStore';
 import { textStyleStore } from '../TextStyleStore';
 import { completionStyleStore } from '../CompletionStyleStore';
+import { gripStyleStore } from '../GripStyleStore';
 import { withOpacity } from '../../config/color-config';
 import { DEFAULT_LINE_SETTINGS } from '../../settings-core/defaults';
+import { DEFAULT_GRIP_SETTINGS } from '../../types/gripSettings';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextStyleSyncInput } from '../style-store-sync';
 
@@ -134,6 +136,30 @@ describe('style-store-sync SSoT writers', () => {
     it('re-exports the SINGLE grip writer (no second implementation)', () => {
       // Identity: the barrel export must be the very same function as the leaf.
       expect(syncGripStyleStoreFromSettings).toBe(gripWriterDirect);
+    });
+  });
+
+  describe('syncGripStyleStoreFromSettings field mapping (ADR-559 settings→store sync)', () => {
+    it('maps `enabled` and `showGrips` INDEPENDENTLY — the «Εμφάνιση Χερουλιών» toggle writes `enabled`', () => {
+      // Toggle OFF: enabled=false must reach the store even when showGrips stays true.
+      gripWriterDirect({ ...DEFAULT_GRIP_SETTINGS, enabled: false, showGrips: true });
+      let s = gripStyleStore.get();
+      expect(s.enabled).toBe(false); // renderer gate `!showGrips || !enabled` → no grips
+      expect(s.showGrips).toBe(true);
+
+      // Independent axis: showGrips=false with enabled=true must also pass through.
+      gripWriterDirect({ ...DEFAULT_GRIP_SETTINGS, enabled: true, showGrips: false });
+      s = gripStyleStore.get();
+      expect(s.enabled).toBe(true);
+      expect(s.showGrips).toBe(false);
+    });
+
+    it('forwards opacity / gripSize / gripObjLimit to the runtime store (panel sliders take effect)', () => {
+      gripWriterDirect({ ...DEFAULT_GRIP_SETTINGS, opacity: 0.6, gripSize: 12, gripObjLimit: 10 });
+      const s = gripStyleStore.get();
+      expect(s.opacity).toBe(0.6);
+      expect(s.gripSize).toBe(12);
+      expect(s.gripObjLimit).toBe(10);
     });
   });
 });

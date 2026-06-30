@@ -34,6 +34,26 @@ export function createGripsFromPoints(
 }
 
 /**
+ * 🔺 ADR-559 — ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΔΗΜΙΟΥΡΓΙΑ QUADRANT GRIPS (circle/ellipse cardinal points).
+ * Same shape as `createGripsFromPoints` but tags the grips as `'quadrant'` so the «Εμφάνιση
+ * Quadrants» toggle can gate them via `isGripTypeVisible` — without affecting real polyline vertices.
+ */
+export function createQuadrantGrips(
+  entityId: string,
+  points: Point2D[],
+  startIndex: number = 1
+): GripInfo[] {
+  return points.map((position, index) => ({
+    id: `${entityId}-quadrant-${index + startIndex}`,
+    entityId,
+    type: 'quadrant' as const,
+    gripIndex: index + startIndex,
+    position,
+    isVisible: true,
+  }));
+}
+
+/**
  * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΔΗΜΙΟΥΡΓΊΑ CENTER GRIP - για όλα τα circular entities
  */
 export function createCenterGrip(entityId: string, center: Point2D, gripIndex: number = 0): GripInfo {

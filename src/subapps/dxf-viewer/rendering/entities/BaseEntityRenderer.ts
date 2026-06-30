@@ -19,6 +19,10 @@ import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
 import { worldZoneToLocalArm } from '../../bim/grips/move-glyph-zones';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
+// ADR-559 — VISIBLE grip-type gating («Εμφάνιση Midpoints/Centers/Quadrants»): the SSoT predicate
+// + live grip style, shared with the hit-test producer (grip-registry) so visible ≡ pickable.
+import { gripStyleStore } from '../../stores/GripStyleStore';
+import { isGripTypeVisible } from '../../hooks/grips/grip-type-visibility';
 // ADR-510 Φ2 — canvas linetype dash + glow pre-pass (SRP extraction, ≤500 LOC).
 import { applyEntityLinetypeDash, drawEntityGlowPrePass } from './base-entity-style-helpers';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -204,7 +208,15 @@ export abstract class BaseEntityRenderer {
       snappableKeys: snappedKey ? new Set([snappedKey]) : undefined,
     };
 
-    this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);
+    // ADR-559 — honour the «Grip Types» toggles on the VISIBLE path. Read the live flags at frame
+    // time (ADR-040 getter, no subscription) and filter by type via the SSoT predicate. Endpoint
+    // grips ('vertex'/'corner'/'control') always pass; only midpoint/center/quadrant are gated.
+    const { showMidpoints, showCenters, showQuadrants } = gripStyleStore.get();
+    const visibleGrips = grips.filter((g) =>
+      isGripTypeVisible(g.type, { showMidpoints, showCenters, showQuadrants })
+    );
+
+    this.phaseManager.renderPhaseGrips(entity as Entity, visibleGrips, phaseState);
   }
 
   /**

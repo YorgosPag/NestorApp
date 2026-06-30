@@ -41,6 +41,10 @@ import { runGripMouseDown } from './grip-mouse-handlers';
 import { runGripMouseUp } from './grip-mouseup-handler';
 import { runGripMouseMove } from './grip-mouse-move-handler';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
+// ADR-363 Slice G.6 — free-rotate reference baseline along the entity's major axis.
+import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
+import type { Entity } from '../../types/entities';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 // ADR-501 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
@@ -55,14 +59,14 @@ import { runHotGripKeyDown } from './grip-hotgrip-actions';
 // ADR-397 Σ3 — typed-angle digit buffer SSoT (ADR-344, «angle for rotation»).
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
 import {
-  buildDxfDragPreview,
-  buildRotateReferencePreview,
   buildGripInteractionState,
   buildOverlayHoveredVertex,
   buildOverlayHoveredEdge,
   buildOverlayProjection,
   buildGripStateForStack,
 } from './grip-projections';
+// ADR-363/397 — DXF drag-preview resolver extracted for file-size (N.7.1).
+import { resolveDxfDragPreview } from './grip-dxf-drag-preview-resolver';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
@@ -321,6 +325,16 @@ export function useUnifiedGripInteraction(
                 .filter((g) => g.source === 'dxf' && g.entityId === activeGrip.entityId)
                 .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }))
             : [],
+        // ADR-363 Slice G.6 — seed the free-rotate reference baseline along the active
+        // entity's MAJOR axis (toward its body). Reads the entity via the same scene
+        // manager adapter the commit uses; null entity / no orientation → null (legacy
+        // first-move baseline). Pure resolver, no new orientation maths.
+        resolveRotateBaselineAnchor: (pivot: Point2D): Point2D | null => {
+          if (activeGrip?.source !== 'dxf' || !activeGrip.entityId) return null;
+          const sm = createSceneManagerAdapter(dxfCommitDeps);
+          const entity = sm?.getEntity(activeGrip.entityId);
+          return entity ? resolveRotateReferenceAnchor(entity as unknown as Entity, pivot) : null;
+        },
         // ADR-397 Σ3 — a terminal click commits the typed angle if one was keyed in.
         typedRotateDeg: typedRotate?.deg ?? null,
       }),
@@ -367,34 +381,19 @@ export function useUnifiedGripInteraction(
   // hook; the fine op/step check happens inside `handleHotGripKeyDown` (refs).
   const hotGripIsActive = phase === 'hotGrip';
   // ── PROJECTIONS (from grip-projections.ts) ──
+  // ADR-363/397 — preview resolver extracted → grip-dxf-drag-preview-resolver (file-size
+  // N.7.1). typedRotate re-triggers the memo so the typed ghost updates (keystrokes don't
+  // change currentWorldPos); dxfCommitDeps drives the deterministic axis-baseline read.
   const dxfDragPreview = useMemo(
-    () => {
-      // ADR-363 Phase 1G.3 — wall-rotation uses the 6-click reference flow with its
-      // own guide-line + rotating-ghost preview (built from the hot-grip refs).
-      if (phase === 'hotGrip' && hotGripOpRef.current === 'rotate' && activeGrip?.source === 'dxf') {
-        return buildRotateReferencePreview(
-          activeGrip,
-          hotGripStepRef.current,
-          hotGripBaseRef.current,
-          hotGripRefStartRef.current,
-          hotGripRefEndRef.current,
-          hotGripAlignStartRef.current,
-          currentWorldPos,
-          hotGripRotateBaseRef.current,
-          typedRotate?.deg ?? null,
-        );
-      }
-      // ADR-363 Phase 1G.5 — Alt drag → whole-entity move ghost (base = grabbed grip).
-      // The last flag marks a wall "move" hot-grip so ORTHO (F8) locks its ghost too.
-      return buildDxfDragPreview(
-        phase, activeGrip, anchorRef.current, currentWorldPos,
-        GripAltMoveStore.getActive(),
-        phase === 'hotGrip' && hotGripOpRef.current === 'move',
-      );
-    },
-    // ADR-397 Σ3 — typedRotate re-triggers the memo so the typed ghost updates
-    // (keystrokes don't change currentWorldPos).
-    [phase, activeGrip, currentWorldPos, typedRotate],
+    () => resolveDxfDragPreview({
+      phase, activeGrip, anchorPos: anchorRef.current, currentWorldPos,
+      hotGripOp: hotGripOpRef.current, hotGripStep: hotGripStepRef.current,
+      hotGripBase: hotGripBaseRef.current,
+      hotGripRefStart: hotGripRefStartRef.current, hotGripRefEnd: hotGripRefEndRef.current,
+      hotGripAlignStart: hotGripAlignStartRef.current, hotGripRotateBase: hotGripRotateBaseRef.current,
+      typedRotateDeg: typedRotate?.deg ?? null, dxfCommitDeps,
+    }),
+    [phase, activeGrip, currentWorldPos, typedRotate, dxfCommitDeps],
   );
   // ADR-501 — subscribe to the armed-grip set so the canvas repaints (orange grips)
   // when the user clicks/shift-clicks/marquees grips. Low-frequency (click), not a

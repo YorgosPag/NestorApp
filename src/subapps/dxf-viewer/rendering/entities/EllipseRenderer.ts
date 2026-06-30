@@ -8,7 +8,7 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 // 🏢 ADR-099: HoverManager import removed - EllipseRenderer has no hover rendering
 import { renderDotAtPoint, renderDotsAtPoints } from './shared/dot-rendering-utils';
-import { createGripsFromPoints, createCenterGrip } from './shared/grip-utils';
+import { createQuadrantGrips, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from './shared/geometry-rendering-utils';
@@ -141,8 +141,11 @@ export class EllipseRenderer extends BaseEntityRenderer {
     
     // Use helper method to calculate grip positions on ellipse
     const { majorPoints, minorPoints } = this.calculateAxisEndpoints(center, majorAxis, minorAxis, rotation);
-    
-    return createGripsFromPoints(entity.id, [...majorPoints, ...minorPoints]);
+
+    // ADR-559 — axis endpoints are QUADRANT grips (gated by «Εμφάνιση Quadrants»). Push onto `grips`
+    // (preserving the center grip — it was previously discarded by returning a fresh array).
+    grips.push(...createQuadrantGrips(entity.id, [...majorPoints, ...minorPoints]));
+    return grips;
   }
 
   // ✅ ENTERPRISE FIX: Implement required abstract method

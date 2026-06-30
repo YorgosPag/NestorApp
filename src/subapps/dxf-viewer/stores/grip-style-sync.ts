@@ -28,7 +28,12 @@ import type { GripSettings } from '../types/gripSettings';
  */
 export function syncGripStyleStoreFromSettings(settings: GripSettings): void {
   gripStyleStore.set({
-    enabled: settings.showGrips,
+    // ADR-559 — `enabled` (grip-system master, AutoCAD GRIPS) and `showGrips` (visible on
+    // selection) are DISTINCT schema fields; map each from its NAMESAKE. The renderer gate is
+    // `!showGrips || !enabled`, so the «Εμφάνιση Χερουλιών» toggle (which writes `enabled`) now
+    // takes effect. Before this, BOTH store fields read `settings.showGrips`, so the toggle was a
+    // silent no-op (off → grips still painted).
+    enabled: settings.enabled,
     colors: settings.colors,
     gripSize: settings.gripSize,
     pickBoxSize: settings.pickBoxSize,

@@ -19,6 +19,9 @@ import { calculateMidpoint } from '../../rendering/entities/shared/geometry-util
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { useGripStyle } from '../../stores/GripStyleStore';
 import { isGripObjLimitExceeded } from './grip-obj-limit';
+// ADR-559 — the ONE grip-type display predicate, shared with the VISIBLE path
+// (BaseEntityRenderer.renderPhaseGrips) so hidden grips are also non-pickable.
+import { isGripTypeVisible } from './grip-type-visibility';
 // ADR-397 Φ2 — directional move: attach the entity's local frame + mm scale to its
 // MOVE grip so the click handler can move along a typed distance without the scene.
 import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
@@ -171,10 +174,12 @@ export function useGripRegistry({
   selectedEntityIds,
   selectedOverlays,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
-  const { showMidpoints, showCenters, maxGripsPerEntity, gripObjLimit } = useGripStyle();
+  const { showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit } = useGripStyle();
 
   return useMemo(() => {
     const result: UnifiedGripInfo[] = [];
+    // ADR-559 — single grip-type display rule (midpoint/center/quadrant gating).
+    const gripTypeFlags = { showMidpoints, showCenters, showQuadrants };
 
     // ADR-559 — AutoCAD GRIPOBJLIMIT: when the selection holds MORE objects than the
     // limit, suppress ALL grips (entities stay selected; only grip rendering is skipped
@@ -205,8 +210,7 @@ export function useGripRegistry({
           for (const grip of dxfGrips) {
             if (count >= maxGripsPerEntity) break;
             const wrapped = wrapDxfGrip(grip);
-            if (!showMidpoints && wrapped.type === 'edge') continue;
-            if (!showCenters && wrapped.type === 'center') continue;
+            if (!isGripTypeVisible(wrapped.type, gripTypeFlags)) continue;
             const withFrame = moveFrame && hotGripOpForKind(hotGripKindOf(wrapped)) === 'move'
               ? { ...wrapped, moveGlyphFrame: moveFrame, moveGlyphMmScale: mmScale }
               : wrapped;
@@ -222,12 +226,12 @@ export function useGripRegistry({
       if (overlay.polygon && overlay.polygon.length >= 2) {
         const overlayGrips = computeOverlayGrips(overlay.id, overlay.polygon);
         for (const grip of overlayGrips) {
-          if (!showMidpoints && grip.type === 'edge') continue;
+          if (!isGripTypeVisible(grip.type, gripTypeFlags)) continue;
           result.push(grip);
         }
       }
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, maxGripsPerEntity, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
 }

@@ -3,7 +3,7 @@
  * Βασισμένο στις AutoCAD system variables: GRIPSIZE, PICKBOX, APERTURE
  */
 
-import type { Point2D } from '../rendering/types/Types';
+import type { Point2D, GripKind } from '../rendering/types/Types';
 import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR } from '../config/color-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../rendering/entities/shared/geometry-utils';
@@ -23,7 +23,7 @@ export interface GripState {
   entityId: string;
   gripIndex: number;
   position: Point2D;
-  gripType: 'vertex' | 'edge' | 'center' | 'corner';
+  gripType: Extract<GripKind, 'vertex' | 'edge' | 'center' | 'corner'>; // ADR-559 projection of canonical GripKind
 }
 
 export interface GripInteractionState {

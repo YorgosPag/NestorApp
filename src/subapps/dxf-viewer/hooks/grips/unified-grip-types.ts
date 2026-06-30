@@ -9,7 +9,7 @@
  * types are re-exported from grip-computation.ts (pure-function module).
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, GripKind } from '../../rendering/types/Types';
 import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, LineGripKind, TextGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
@@ -107,8 +107,10 @@ export type { GripTemperature } from '../../rendering/grips/types';
 /** Source system that owns this grip */
 export type GripSource = 'dxf' | 'overlay';
 
-/** Grip type aligned with existing GripType from useGripMovement */
-export type UnifiedGripType = 'vertex' | 'center' | 'edge';
+/** Grip type for the hit-test/snap layer — ADR-559 projection of the canonical `GripKind` SSoT.
+ * Deliberately narrow: only the kinds the unified pick path distinguishes (incl. `'quadrant'`, so
+ * «Εμφάνιση Quadrants» gates hit-test too — visible ≡ pickable; circle radius edit keys on gripIndex). */
+export type UnifiedGripType = Extract<GripKind, 'vertex' | 'center' | 'edge' | 'quadrant'>;
 
 /**
  * Unified grip descriptor — one shape that covers both DXF and overlay grips.

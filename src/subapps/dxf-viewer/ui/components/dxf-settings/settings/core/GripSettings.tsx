@@ -3,7 +3,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { Factory, RotateCcw } from 'lucide-react';
-import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
+// ADR-559 — big-player practice (AutoCAD GRIPS/GRIPSIZE/GRIPOBJLIMIT system vars, Revit, Figma
+// global preferences): grip display settings are a SINGLE GLOBAL bucket, NOT a per-mode draft.
+// Read/write the GENERAL grip settings — the exact bucket `GripProvider` syncs into the runtime
+// `gripStyleStore` — so every panel edit reaches the renderer. (Previously this panel wrote to the
+// 'draft' specific bucket via `useUnifiedGripPreview`, which the store sync never read.)
+import { useGripSettingsFromProvider } from '../../../../../settings-provider';
+import { DEFAULT_GRIP_SETTINGS } from '../../../../../types/gripSettings';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { GripSettings as GripSettingsType } from '../../../../../settings-core/types';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
@@ -29,7 +35,13 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
   const { quick, getStatusBorder, getElementBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
   const notifications = useNotifications();
-  const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
+  // Single GLOBAL grip settings (general layer) = the SSoT the renderer reads via gripStyleStore.
+  const { settings: gripSettings, updateSettings: updateGripSettings } = useGripSettingsFromProvider();
+  // Grip-scoped reset — NOT the provider-wide resetToDefaults (which would also wipe line/text).
+  const resetToDefaults = React.useCallback(
+    () => updateGripSettings(DEFAULT_GRIP_SETTINGS),
+    [updateGripSettings]
+  );
   const { toggleSection, isOpen } = useAccordion('basic');
   const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
 

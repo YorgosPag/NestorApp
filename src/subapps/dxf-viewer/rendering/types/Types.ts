@@ -107,10 +107,28 @@ export interface RenderOptions {
 }
 
 // ===== GRIP TYPES =====
+// ADR-559 — 🏢 SSoT for the grip-KIND literal set. Before this, the same overlapping literals were
+// re-declared in ≥6 places (`GripInfo.type`, `rendering/grips/types.ts GripType`,
+// `unified-grip-types.ts UnifiedGripType`, `hooks/grip-kinds.ts GripType`, `OverlayPass.gripType`,
+// `gripSettings.ts GripState.gripType`) — adding ONE kind (e.g. `'quadrant'`) meant editing them all.
+// Now this is the ONE canonical union; every other grip-kind type is a PROJECTION (`Exclude`/`Extract`).
+// `'quadrant'` (circle/ellipse cardinal points) is kept distinct from `'vertex'` so «Εμφάνιση
+// Quadrants» can gate it without hiding real polyline vertices.
+export type GripKind =
+  | 'vertex'    // structural endpoint / polyline vertex (always shown)
+  | 'edge'      // edge/midpoint grip (legacy alias for midpoint)
+  | 'midpoint'  // explicit midpoint grip
+  | 'center'    // center point (circles, arcs, …)
+  | 'corner'    // corner grip (rectangles, special cases)
+  | 'control'   // control point (splines, …)
+  | 'quadrant'  // circle/ellipse cardinal point (gated by showQuadrants)
+  | 'close';    // close-polygon indicator (ADR-047)
+
 export interface GripInfo {
   id: string;
   position: Point2D;
-  type: 'corner' | 'midpoint' | 'center' | 'control' | 'vertex' | 'edge';
+  // Data-model grips never carry the render-only 'close' indicator.
+  type: Exclude<GripKind, 'close'>;
   entityId: string;
   isVisible: boolean;
   isSelected?: boolean;
@@ -118,7 +136,7 @@ export interface GripInfo {
 
   // ✅ ENTERPRISE FIX: Missing properties for useEntityGripInteraction
   gripIndex?: number;   // Index of the grip within the entity
-  gripType?: 'corner' | 'midpoint' | 'center' | 'control' | 'vertex' | 'edge'; // Alias for type (backward compatibility)
+  gripType?: Exclude<GripKind, 'close'>; // Alias for type (backward compatibility)
 
   // ADR-393 v2 — optional rendered-shape hint. When set (e.g. by
   // StairRenderer.getGrips for the move/rotation handles), GripPhaseRenderer
