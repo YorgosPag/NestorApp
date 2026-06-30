@@ -74,7 +74,7 @@ import {
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
 import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
-import { paintRotationDirectionArc } from './rotation-direction-arc';
+import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -193,7 +193,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // (ως προς τον άξονα αναφοράς, όχι world-X). Αντικαθιστά το παλιό λευκό readout pill (Giorgio
     // 2026-07-01: «σβήσε το λευκό label, γράψε τις μοίρες κόκκινες/πράσινες»).
     if (dp.rotatePivot && dp.anchorPos && dp.rotateReadoutAnchor && dp.rotateSweepDeg !== undefined) {
-      paintRotationDirectionArc(ctx, dp.rotatePivot, dp.anchorPos, dp.rotateReadoutAnchor, dp.rotateSweepDeg, t, vp);
+      paintDirectionArc(ctx, dp.rotatePivot, dp.anchorPos, dp.rotateReadoutAnchor, dp.rotateSweepDeg, t, vp);
     }
 
     // ADR-397 / ADR-357 — πορτοκαλί POLAR γραμμή + λευκές AutoAlign γραμμές/intersection/tooltip κατά

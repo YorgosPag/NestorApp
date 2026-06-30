@@ -5,8 +5,7 @@
  */
 
 import type { Point2D, ViewTransform, Viewport, Entity } from '../../rendering/types/Types';
-import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
-import type { AngleMeasurementEntity } from '../../types/scene';
+import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 // 🏢 ADR-040 / ADR-398 §4 — live transform SSoT (ίδιο read με τον main
 // `dxf-canvas-renderer`). render() διαβάζει zero-lag το τρέχον transform → το ghost
@@ -20,17 +19,12 @@ import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
 export type { PreviewRenderOptions } from './preview-renderer-types';
-import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } from './preview-renderer-types';
+import type { PreviewRenderOptions, PreviewRenderHelpers } from './preview-renderer-types';
 import { DEFAULT_PREVIEW_OPTIONS } from './preview-renderer-types';
 import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
-import {
-  renderLine, renderCircle, renderPolyline, renderRectangle,
-  renderAngleMeasurement, renderPoint, renderArc,
-} from './preview-entity-renderers';
-// ADR-362 Phase D1: dim entity preview routed through the dedicated renderer
-// (Phase C2 deliverable). PreviewRenderer keeps DIMSTYLE resolution local so
-// the dim creation flow doesn't have to thread styles through props.
-import { renderPreviewDimension } from './preview-dimension-renderer';
+// ADR-362 Phase D1 + SRP split: per-type preview entity dispatch (line/circle/…/
+// dimension) lives in a sibling module; DIMSTYLE resolution stays inside it.
+import { dispatchPreviewEntityRender } from './preview-entity-dispatch';
 // 🏢 WYSIWYG placement preview — render synthetic BIM entities (wall/foundation/…)
 // through the REAL entity renderers instead of a schematic green outline.
 import { BimPreviewRenderer } from './bim-preview-render';
@@ -40,8 +34,6 @@ import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-dr
 import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
 import { resolveGhostStatusColor, type GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
-import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
-import type { DimensionEntity } from '../../types/dimension';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking visual feedback (markers + paths).
 import {
@@ -68,6 +60,9 @@ import { paintRectGrid } from './rect-grid-paint';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 // ADR-357 Phase 1 — polar tracking line overlay (extracted, SRP — same pattern as the other *-paint helpers).
 import { paintPolarTrackingLine } from './polar-tracking-line-paint';
+// ADR-508 §wall-direction-arc — κοινό SSoT τόξο φοράς (rotation ⊕ wall drawing): χρωματισμένο
+// τόξο + βελάκι + baseline 0° + χρωματιστές μοίρες (🟢 πάνω / 🔴 κάτω από τον x-άξονα).
+import { paintDirectionArc } from './direction-arc-paint';
 // ADR-398 §3.20 — circumference quadrant-to-end alignment guide (dashed, same overlay SSoT).
 import { paintAlignmentGuide } from './alignment-guide-paint';
 import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
@@ -232,6 +227,25 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     paintWallHud(this.ctx, meta, specLabel, transform, viewport);
+  }
+
+  /**
+   * ADR-508 §wall-direction-arc — τόξο ΦΟΡΑΣ γωνίας τοίχου-φαντάσματος: μετά το 1ο κλικ, από τον
+   * `pivotW` (αρχή τοίχου) με άξονα αναφοράς το `anchorW` (world-X) προς τον `cursorW`, χρωματισμένο
+   * ανά πρόσημο `sweepDeg` (🟢 πάνω / 🔴 κάτω από τον x-άξονα) + βελάκι + baseline 0° + χρωματιστές
+   * μοίρες. Κοινός SSoT painter με την περιστροφή (ADR-397 §15). Called AFTER `drawPreview`· wiped στο
+   * επόμενο `drawPreview`/`clear`.
+   */
+  drawDirectionArc(
+    pivotW: Point2D,
+    anchorW: Point2D,
+    cursorW: Point2D,
+    sweepDeg: number,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    paintDirectionArc(this.ctx, pivotW, anchorW, cursorW, sweepDeg, transform, viewport);
   }
 
   /**
@@ -419,32 +433,8 @@ export class PreviewRenderer {
       renderInfoLabel: (c, pos, lines) => renderInfoLabel(c, pos, lines),
     };
 
-    // Dispatch to entity renderer
-    switch (entity.type) {
-      case 'line': renderLine(ctx, entity as ExtendedLineEntity, transform, renderOpts, helpers); break;
-      case 'circle': renderCircle(ctx, entity as ExtendedCircleEntity, transform, renderOpts, helpers); break;
-      case 'polyline': renderPolyline(ctx, entity as ExtendedPolylineEntity, transform, renderOpts, helpers); break;
-      case 'rectangle': renderRectangle(ctx, entity, transform, renderOpts, helpers); break;
-      case 'angle-measurement': renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, renderOpts, helpers); break;
-      case 'point': renderPoint(ctx, entity as PreviewPoint, transform, renderOpts, helpers); break;
-      case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, renderOpts, helpers); break;
-      // ADR-362 Phase D1: route dim preview through the Phase C2 renderer.
-      case 'dimension': {
-        const dimEntity = entity as DimensionEntity;
-        const registry = getDimStyleRegistry();
-        const style = registry.getStyle(dimEntity.styleId) ?? registry.getActiveStyle();
-        renderPreviewDimension({
-          ctx,
-          entity: dimEntity,
-          style,
-          transform,
-          viewport,
-          opts: { color: renderOpts.color, opacity: renderOpts.opacity },
-          sceneUnits: this.sceneUnits,
-        });
-        break;
-      }
-    }
+    // Dispatch to entity renderer (per-type routing extracted, SRP).
+    dispatchPreviewEntityRender(ctx, entity, transform, viewport, renderOpts, helpers, this.sceneUnits);
 
     // Render colored preview grips (FIRST=teal P1/cursor-start, SECOND=yellow intermediates, THIRD=red cursor)
     if (coloredGrips) {

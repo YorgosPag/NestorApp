@@ -294,6 +294,19 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (lineHud) {
           previewCanvasRef.current.drawWallHud(lineHud, '');
         }
+        // ADR-508 §wall-direction-arc — μετά το 1ο κλικ του τοίχου: χρωματισμένο τόξο ΦΟΡΑΣ από την
+        // αρχή (lastRefPt) με άξονα αναφοράς τον world-X προς τον κέρσορα (previewPt). 🟢 πάνω / 🔴 κάτω
+        // από τον x-άξονα + βελάκι + baseline 0° + χρωματιστές μοίρες — ΙΔΙΟ SSoT painter με την
+        // περιστροφή (ADR-397 §15). bearing = atan2(dy,dx) σε world (Y-up) → πάνω = θετικό = πράσινο.
+        if (activeTool === 'wall' && lastRefPt) {
+          const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
+          previewCanvasRef.current.drawDirectionArc(
+            lastRefPt,
+            { x: lastRefPt.x + 1, y: lastRefPt.y },
+            previewPt,
+            bearingDeg,
+          );
+        }
         // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
         // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.
         const openingConflict = (previewEntity as { openingConflict?: { bandMm: readonly [number, number] } }).openingConflict;

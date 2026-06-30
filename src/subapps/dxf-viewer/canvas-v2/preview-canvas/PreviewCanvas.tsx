@@ -130,6 +130,12 @@ export interface PreviewCanvasHandle {
    */
   drawWallHud: (meta: WallHudMeta, specLabel: string) => void;
   /**
+   * ADR-508 §wall-direction-arc — draw the colored angle direction arc (🟢 above / 🔴 below the
+   * x-axis) + arrowhead + dashed 0° baseline + colored signed degrees. Shared SSoT painter with the
+   * rotation arc (ADR-397 §15). Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
+   */
+  drawDirectionArc: (pivotW: Point2D, anchorW: Point2D, cursorW: Point2D, sweepDeg: number) => void;
+  /**
    * ADR-508 §opening-conflict — draw the 🔴 tooltip explaining the height-band opening cut.
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
@@ -410,6 +416,13 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
           const renderer = rendererRef.current;
           if (!renderer) return;
           renderer.drawWallHud(meta, specLabel, transformRef.current, viewportRef.current);
+        },
+
+        /** ADR-508 §wall-direction-arc: colored angle direction arc (shared SSoT with rotation) */
+        drawDirectionArc: (pivotW: Point2D, anchorW: Point2D, cursorW: Point2D, sweepDeg: number) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawDirectionArc(pivotW, anchorW, cursorW, sweepDeg, transformRef.current, viewportRef.current);
         },
 
         /** ADR-508 §opening-conflict: 🔴 tooltip explaining the height-band opening cut */

@@ -1,26 +1,25 @@
 /**
- * @module rotation-direction-arc
- * @description Ένδειξη ΦΟΡΑΣ περιστροφής (hot-grip rotate, ADR-397 §15) — διακεκομμένη baseline 0° +
- * χρωματισμένο τόξο φοράς + βελάκι + ΧΡΩΜΑΤΙΣΤΗ ζωντανή γωνία (signed, 2 δεκαδικά, χωρίς pill), από
- * τον άξονα αναφοράς προς τον κέρσορα. Revit/Maxon(C4D)/Figma-grade rotate HUD: το τόξο «γεμίζει»
- * κατά τη φορά της περιστροφής, με χρώμα ανά πρόσημο της γωνίας sweep:
- *   • sweep > 0 (CCW, η οντότητα ΑΝΕΒΑΙΝΕΙ ως προς τον άξονα αναφοράς) → 🟢 πράσινες μοίρες
- *   • sweep < 0 (CW,  η οντότητα ΚΑΤΕΒΑΙΝΕΙ ως προς τον άξονα αναφοράς) → 🔴 κόκκινες μοίρες
+ * @module direction-arc-paint
+ * @description Ένδειξη ΦΟΡΑΣ γωνίας — διακεκομμένη baseline 0° + χρωματισμένο τόξο φοράς + βελάκι +
+ * ΧΡΩΜΑΤΙΣΤΗ ζωντανή γωνία (signed, 2 δεκαδικά, χωρίς pill), από έναν άξονα αναφοράς προς τον κέρσορα.
+ * Revit/Maxon(C4D)/Figma-grade HUD: το τόξο «γεμίζει» κατά τη φορά, με χρώμα ανά πρόσημο της γωνίας:
+ *   • sweep > 0 (CCW, ΑΝΕΒΑΙΝΕΙ ως προς τον άξονα αναφοράς) → 🟢 πράσινες μοίρες
+ *   • sweep < 0 (CW,  ΚΑΤΕΒΑΙΝΕΙ ως προς τον άξονα αναφοράς) → 🔴 κόκκινες μοίρες
  *
- * Το πρόσημο/χρώμα οδηγείται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `rotateSweepDeg` (ήδη signed +CCW/−CW ως προς
- * τη γραμμή pivot→anchor) — ΟΧΙ από τον world-X — ώστε να ισχύει και για λοξό άξονα αναφοράς
- * (απόφαση Giorgio 2026-07-01). Η ΦΟΡΑ σχεδίασης του τόξου στην οθόνη υπολογίζεται από τις
- * screen θέσεις (Y-flip safe), ενώ το ΧΡΩΜΑ από το world sweep — διακριτές ευθύνες.
+ * **ΚΟΙΝΟ SSoT για 2 features** (Giorgio «FULL SSoT»):
+ *   1. **Hot-grip rotate** (ADR-397 §15) — pivot=κέντρο περιστροφής, ref=άξονας αναφοράς (pivot→anchor),
+ *      sweep=`rotateSweepDeg` (signed ως προς τον άξονα αναφοράς).
+ *   2. **Wall drawing** (ADR-508 §wall-direction-arc) — μετά το 1ο κλικ, pivot=αρχή τοίχου, ref=world-X
+ *      (οριζόντιος x-άξονας), sweep=bearing του τοίχου-φαντάσματος (πάνω→🟢, κάτω→🔴, αρχική προδιαγραφή).
  *
- * Pure module: zero React / stores / DOM-state (ADR-040 micro-leaf safe). Μηδέν νέα παλέτα —
- * αντλεί 🟢/🔴 από το `resolveGhostStatusColor` SSoT. Οι ζωντανές μοίρες (signed) ζωγραφίζονται
- * ΗΔΗ από το readout pill (`formatMoveAngle`) στο `useGripGhostPreview` — εδώ μόνο το τόξο.
+ * Η ΦΟΡΑ σχεδίασης του τόξου στην οθόνη υπολογίζεται από τις screen θέσεις (Y-flip safe), ενώ το
+ * ΧΡΩΜΑ/πρόσημο από το world `sweepDeg` — διακριτές ευθύνες. Pure module: zero React / stores /
+ * DOM-state (ADR-040 micro-leaf safe). Μηδέν νέα παλέτα — 🟢/🔴 από το `resolveGhostStatusColor` SSoT.
  *
- * @see hooks/tools/useGripGhostPreview — ο καταναλωτής (rotation branch)
- * @see hooks/grips/grip-projections.ts — πηγή `rotateSweepDeg` / `anchorPos` / `rotateReadoutAnchor`
+ * @see hooks/tools/useGripGhostPreview — rotation consumer (μέσω άμεσου ctx)
+ * @see canvas-v2/preview-canvas/PreviewRenderer — wall-drawing consumer (drawDirectionArc)
  * @see bim/ghosts/ghost-status-color.ts — SSoT 🟢/🔴 παλέτα
- * @see ADR-397 §15 — rotation direction arc
- * @see ADR-040 — Preview Canvas Performance
+ * @see ADR-397 §15 / ADR-508 §wall-direction-arc / ADR-040
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -30,8 +29,8 @@ import { formatAngleLocale } from '../../rendering/entities/shared/distance-labe
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-/** Κάτω από αυτό το |sweep| (μοίρες) δεν ζωγραφίζεται τόξο (μηδενική/θόρυβος περιστροφή). */
-export const ROTATION_ARC_MIN_SWEEP_DEG = 0.1;
+/** Κάτω από αυτό το |sweep| (μοίρες) δεν ζωγραφίζεται τόξο (μηδενική/θόρυβος γωνία). */
+export const DIRECTION_ARC_MIN_SWEEP_DEG = 0.1;
 /** Ελάχιστη ακτίνα τόξου (CSS px) ώστε να φαίνεται όταν ο κέρσορας είναι κοντά στο pivot. */
 const MIN_ARC_RADIUS_PX = 32;
 /** Απόσταση της ετικέτας μοιρών έξω από το τόξο, στη διχοτόμο. */
@@ -56,7 +55,7 @@ const BASELINE_LINE_WIDTH = 1;
 // ── Pure geometry / color ───────────────────────────────────────────────────────
 
 /** Screen-space γεωμετρία του τόξου φοράς (όλα σε CSS px, κέντρο στο pivot). */
-export interface RotationDirectionArc {
+export interface DirectionArc {
   readonly cx: number;
   readonly cy: number;
   readonly radius: number;
@@ -87,7 +86,7 @@ function normalizeToPi(rad: number): number {
  * Χρώμα τόξου ανά πρόσημο sweep, από το SSoT 🟢/🔴 (`resolveGhostStatusColor`). sweep ≥ 0 →
  * πράσινο (`beam`), sweep < 0 → κόκκινο (`overlap`). Μηδέν hardcode hex.
  */
-export function resolveRotationArcColor(sweepDeg: number): string {
+export function resolveDirectionArcColor(sweepDeg: number): string {
   const color = resolveGhostStatusColor(sweepDeg >= 0 ? 'beam' : 'overlap');
   // `beam`/`overlap` επιστρέφουν πάντα χρώμα (μόνο `neutral` → null)· fallback για type-safety.
   return color?.stroke ?? '#2e9e44';
@@ -98,13 +97,13 @@ export function resolveRotationArcColor(sweepDeg: number): string {
  * προβεβλημένα. Επιστρέφει `null` όταν το |sweep| είναι αμελητέο (καμία ένδειξη). Η ΦΟΡΑ τόξου
  * προκύπτει από τις screen θέσεις (Y-flip safe)· το ΧΡΩΜΑ/πρόσημο από το world `sweepDeg`.
  */
-export function resolveRotationDirectionArc(
+export function resolveDirectionArc(
   pivotS: Point2D,
   anchorS: Point2D,
   cursorS: Point2D,
   sweepDeg: number,
-): RotationDirectionArc | null {
-  if (!Number.isFinite(sweepDeg) || Math.abs(sweepDeg) < ROTATION_ARC_MIN_SWEEP_DEG) return null;
+): DirectionArc | null {
+  if (!Number.isFinite(sweepDeg) || Math.abs(sweepDeg) < DIRECTION_ARC_MIN_SWEEP_DEG) return null;
   const refAngle = Math.atan2(anchorS.y - pivotS.y, anchorS.x - pivotS.x);
   const curAngle = Math.atan2(cursorS.y - pivotS.y, cursorS.x - pivotS.x);
   const screenSweep = normalizeToPi(curAngle - refAngle);
@@ -175,12 +174,12 @@ function drawBaseline(ctx: CanvasRenderingContext2D, from: Point2D, to: Point2D)
 }
 
 /**
- * Ζωγράφισε το τόξο φοράς περιστροφής στο PreviewCanvas ctx: διακεκομμένη baseline 0° + χρωματισμένο
+ * Ζωγράφισε το τόξο φοράς γωνίας στο PreviewCanvas ctx: διακεκομμένη baseline 0° + χρωματισμένο
  * τόξο (🟢 +CCW / 🔴 −CW) + βελάκι στο άκρο «κέρσορας» + ΧΡΩΜΑΤΙΣΤΗ ζωντανή γωνία (signed, 2 δεκαδικά)
  * στη διχοτόμο. No-op όταν το |sweep| είναι αμελητέο. `pivotW`/`anchorW`/`cursorW` σε world·
  * προβάλλονται εδώ μέσω του `CoordinateTransforms` SSoT.
  */
-export function paintRotationDirectionArc(
+export function paintDirectionArc(
   ctx: CanvasRenderingContext2D,
   pivotW: Point2D,
   anchorW: Point2D,
@@ -192,9 +191,9 @@ export function paintRotationDirectionArc(
   const pivotS = CoordinateTransforms.worldToScreen(pivotW, transform, viewport);
   const anchorS = CoordinateTransforms.worldToScreen(anchorW, transform, viewport);
   const cursorS = CoordinateTransforms.worldToScreen(cursorW, transform, viewport);
-  const arc = resolveRotationDirectionArc(pivotS, anchorS, cursorS, sweepDeg);
+  const arc = resolveDirectionArc(pivotS, anchorS, cursorS, sweepDeg);
   if (!arc) return;
-  const color = resolveRotationArcColor(sweepDeg);
+  const color = resolveDirectionArcColor(sweepDeg);
   // Baseline 0° (διακεκομμένη, ουδέτερη) ΠΡΩΤΑ ώστε το τόξο/βέλος να πατούν από πάνω.
   drawBaseline(ctx, { x: arc.cx, y: arc.cy }, arc.baselineEnd);
   ctx.save();
