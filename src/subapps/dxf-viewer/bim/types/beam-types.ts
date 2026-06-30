@@ -43,6 +43,7 @@ import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { BeamReinforcement } from '../structural/reinforcement/beam-reinforcement-types';
 import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 import type { StripJustification } from './foundation-types';
+import type { ConcreteGrade } from '../structural/concrete-grades';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -200,6 +201,13 @@ export interface BeamParams {
    * `beam-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται (mirror κολόνας).
    */
   readonly reinforcement?: BeamReinforcement;
+  /**
+   * ADR-456 — Κατηγορία σκυροδέματος (EN 1992-1-1 Table 3.1, π.χ. 'C25/30').
+   * Optional/non-breaking: absent → χρησιμοποιείται `DEFAULT_CONCRETE_GRADE` για το
+   * βάρος σκυροδέματος στο BOQ/schedule. Typed πεδίο (όχι string FK υλικού) ώστε ο
+   * στατικός υπολογισμός να διαβάζει fck/Ecm απευθείας (mirror `ColumnParams`).
+   */
+  readonly concreteGrade?: ConcreteGrade;
   /**
    * ADR-467 — Φορτίο βαρύτητας δοκαριού από τη διαδρομή φορτίων (tributary strip
    * πλάκας πάνω στο δοκάρι + ίδιο βάρος). source='takedown' → αυτόματο από οργανισμό·

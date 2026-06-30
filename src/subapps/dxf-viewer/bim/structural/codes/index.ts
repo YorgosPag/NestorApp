@@ -20,6 +20,7 @@ export type {
   StructuralCodeProvider,
   ColumnSectionContext,
   ColumnReinforcementLimits,
+  BeamSectionContext,
 } from './structural-code-types';
 
 const PROVIDERS: Readonly<Record<StructuralCodeId, StructuralCodeProvider>> = {

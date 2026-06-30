@@ -6,7 +6,7 @@
  * (`useRibbonBeamBridge`). Mirrors `COLUMN_RIBBON_KEYS` pattern.
  */
 
-import type { BeamParams } from '../../../bim/types/beam-types';
+import type { BeamParams } from '../../../../bim/types/beam-types';
 import type { FinishParamField } from './finish-param';
 
 export const BEAM_RIBBON_KEYS = {

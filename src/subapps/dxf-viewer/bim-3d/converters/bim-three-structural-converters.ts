@@ -436,7 +436,7 @@ export function beamToMesh(
       const shape = buildShape(verts);
       if (!shape) return null;
       geo = extrudeAndRotate(shape, renderHeightM); // ADR-534 — clip στο soffit πλάκας (no-op αν δεν κόβεται)
-    } else if (!facedMesh) {
+    } else if (!facedMesh && trimmed !== null) {
       // `[]` = δοκάρι εξ ολοκλήρου μέσα στην κολόνα → δεν σχεδιάζεται.
       const shapes = trimmed
         .map((ring) => buildShape(ring.map((p) => ({ x: p.x, y: p.y, z: 0 }))))

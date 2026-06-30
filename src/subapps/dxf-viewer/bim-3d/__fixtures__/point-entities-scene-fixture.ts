@@ -144,11 +144,19 @@ const CLEAN: BimValidation = {
   lastValidatedAt: null,
 };
 
+/**
+ * Deterministic 22-char IFC4 GlobalId for fixtures. The golden-image harness must
+ * never see a random GUID (ADR-369 §9 Q8), so we pad a stable slug into the
+ * [0-9A-Za-z_$]{22} space instead of calling `generateIfcGuid()`.
+ */
+const _fixGuid = (slug: string): string => `FIX$${slug}`.padEnd(22, '0').slice(0, 22);
+
 // 1. Foundation — pad, anchor centre, at origin (0, 0)
 const _foundationParams = buildDefaultFoundationParams('pad');
 
 const foundationEntity: FoundationEntity = {
   id: 'fix-foundation-01',
+  ifcGuid: _fixGuid('foundation'),
   type: 'foundation',
   kind: 'pad',
   layerId: 'lyr_default',
@@ -173,6 +181,7 @@ const _panelParams = {
 
 const panelEntity: ElectricalPanelEntity = {
   id: 'fix-panel-01',
+  ifcGuid: _fixGuid('panel'),
   type: 'electrical-panel',
   kind: 'distribution-board',
   layerId: 'lyr_default',
@@ -199,6 +208,7 @@ const _manifoldParams = {
 
 const manifoldEntity: MepManifoldEntity = {
   id: 'fix-manifold-01',
+  ifcGuid: _fixGuid('manifold'),
   type: 'mep-manifold',
   kind: 'floor-manifold',
   layerId: 'lyr_default',
@@ -223,6 +233,7 @@ const _radiatorParams = {
 
 const radiatorEntity: MepRadiatorEntity = {
   id: 'fix-radiator-01',
+  ifcGuid: _fixGuid('radiator'),
   type: 'mep-radiator',
   kind: 'panel-radiator',
   layerId: 'lyr_default',
@@ -247,6 +258,7 @@ const _boilerParams = {
 
 const boilerEntity: MepBoilerEntity = {
   id: 'fix-boiler-01',
+  ifcGuid: _fixGuid('boiler'),
   type: 'mep-boiler',
   kind: 'wall-boiler',
   layerId: 'lyr_default',
@@ -271,6 +283,7 @@ const _waterHeaterParams = {
 
 const waterHeaterEntity: MepWaterHeaterEntity = {
   id: 'fix-water-heater-01',
+  ifcGuid: _fixGuid('waterheater'),
   type: 'mep-water-heater',
   kind: 'electric-water-heater',
   layerId: 'lyr_default',
@@ -296,6 +309,7 @@ const _railingParams = {
 
 const railingEntity: RailingEntity = {
   id: 'fix-railing-01',
+  ifcGuid: _fixGuid('railing'),
   type: 'railing',
   kind: 'railing',
   layerId: 'lyr_default',
@@ -324,6 +338,7 @@ const _roofParams = {
 
 const roofEntity: RoofEntity = {
   id: 'fix-roof-01',
+  ifcGuid: _fixGuid('roof'),
   type: 'roof',
   kind: 'roof',
   layerId: 'lyr_default',
@@ -354,6 +369,7 @@ const _floorFinishParams = {
 
 const floorFinishEntity: FloorFinishEntity = {
   id: 'fix-floor-finish-01',
+  ifcGuid: _fixGuid('floorfinish'),
   type: 'floor-finish',
   kind: DEFAULT_FLOOR_FINISH_MATERIAL_ID,
   layerId: 'lyr_default',
@@ -383,6 +399,7 @@ const _underfloorParams = {
 
 const underfloorEntity: MepUnderfloorEntity = {
   id: 'fix-underfloor-01',
+  ifcGuid: _fixGuid('underfloor'),
   type: 'mep-underfloor',
   kind: 'hydronic-loop',
   layerId: 'lyr_default',
@@ -406,6 +423,7 @@ const _furnitureParams = {
 
 const furnitureEntity: FurnitureEntity = {
   id: 'fix-furniture-01',
+  ifcGuid: _fixGuid('furniture'),
   type: 'furniture',
   kind: 'chair',
   layerId: 'lyr_default',

@@ -109,7 +109,7 @@ export const THERMI_288_08: StaticReportReference = Object.freeze({
   primaryOccupancy: 'residential',
   seismic: {
     hazardZone: 'I',
-    groundType: 'B',
+    groundType: 'B' as const,
     groundAccelRatio: 0.16,
     importanceFactorGammaI: 1.0,
     behaviourFactorQ: 2.0,

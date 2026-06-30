@@ -52,7 +52,9 @@ import type { ColumnFaceSnap } from './column-face-snap';
 
 // ADR-398 §3.20 — `PlacementAlignmentGuide` κεντρικοποιήθηκε στο `bim/framing/placement-alignment-guide`
 // (canonical SSoT, neutral home — μοιράζεται με το framing `beam-span-snap`, ADR-528· μηδέν εξάρτηση
-// framing→columns). Re-export alias εδώ: οι ιστορικοί importers (`./column-tangent-snap`) αμετάβλητοι.
+// framing→columns). Local import (in-scope χρήση παρακάτω) + re-export alias: οι ιστορικοί importers
+// (`./column-tangent-snap`) αμετάβλητοι.
+import type { PlacementAlignmentGuide } from '../framing/placement-alignment-guide';
 export type { PlacementAlignmentGuide } from '../framing/placement-alignment-guide';
 
 /** Hit κοινό με τους υπόλοιπους tiers του core resolver (snap + dist για nearest-wins). */

@@ -63,6 +63,12 @@ export type EntityWithStoreyParams = {
     readonly storeyId?: string;
     /** mm. Elevation offset από storey reference. Default 0. */
     readonly offsetFromStorey?: number;
+    /**
+     * Index signature ώστε να δέχεται ΟΠΟΙΑΔΗΠΟΤΕ params (π.χ. `FloorFinishParams` που δεν
+     * έχει καθόλου storey linkage) χωρίς το weak-type «no properties in common». Τα ονομαστικά
+     * storey πεδία παραμένουν αυστηρά τυποποιημένα (named members υπερισχύουν του index).
+     */
+    readonly [key: string]: unknown;
   };
 };
 

@@ -305,7 +305,7 @@ function spanGeometryFromFrame(
   cA: Point2D,
   cB: Point2D,
   perpOffset: number,
-): Omit<BeamSpanSnap, 'dist'> {
+): Omit<BeamSpanSnap, 'dist' | 'justification'> {
   const off: Point2D = { x: -fr.u.y * perpOffset, y: fr.u.x * perpOffset }; // κατά την κάθετο (perpDir·offset)
   return {
     start: addPoints(addPoints(fr.origin, scalePoint(fr.u, fr.sA)), off),

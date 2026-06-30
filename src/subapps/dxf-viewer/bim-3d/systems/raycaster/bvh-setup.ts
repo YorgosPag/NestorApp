@@ -33,14 +33,18 @@ const cleanRoots = new WeakSet<THREE.Object3D>();
 
 /**
  * Install the three-mesh-bvh prototype extensions ONCE. The `BufferGeometry`/`Mesh` augmentations
- * ship with three-mesh-bvh's own d.ts (`boundsTree`/`computeBoundsTree`/`disposeBoundsTree`), so no
- * `any` / `@ts-ignore` is needed. Idempotent.
+ * ship with three-mesh-bvh's own d.ts (`boundsTree`/`computeBoundsTree`/`disposeBoundsTree`).
+ * three@0.170 makes `BufferGeometry` generic, so `THREE.BufferGeometry.prototype` is typed
+ * `BufferGeometry<any>` and the augmented members don't resolve through the `any` instantiation.
+ * Narrowing the prototype to the default `BufferGeometry` (= `BufferGeometry<NormalBufferAttributes>`)
+ * surfaces them — no `any` / `@ts-ignore` needed. Idempotent.
  */
 export function installBvh(): void {
   if (installed) return;
   installed = true;
-  THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-  THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+  const geometryPrototype = THREE.BufferGeometry.prototype as THREE.BufferGeometry;
+  geometryPrototype.computeBoundsTree = computeBoundsTree;
+  geometryPrototype.disposeBoundsTree = disposeBoundsTree;
   THREE.Mesh.prototype.raycast = acceleratedRaycast;
 }
 

@@ -28,6 +28,9 @@ import { formatAngleLocale } from '../../rendering/entities/shared/distance-labe
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { drawOverlayLabel } from './overlay-text-style';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from './overlay-line-style';
+// SSoT label clearance: κοινό box-aware push με το wall HUD ώστε ο αριθμός να κάθεται πάντα ΚΑΘΑΡΟΣ
+// πέρα από τη dim line (η ΚΟΝΤΙΝΗ ακμή του, όχι το κέντρο) — ίδιο contract για όλα τα overlay numbers.
+import { measureOverlayLabelBox, clearanceForBox } from './overlay-label-layout';
 import type { OverlayProjector } from './overlay-projector';
 
 /** Projection helper: ο 3D projector όταν δίνεται (ADR-544), αλλιώς το 2D `worldToScreen`. */
@@ -80,7 +83,12 @@ export function paintGhostFaceDimensions(
   }
 }
 
-/** Place the number a few px BEYOND `sRef` along the screen-space outward vector (sRef − sBase). */
+/**
+ * Place the number BEYOND `sRef` along the screen-space outward vector (sRef − sBase). Η απόσταση
+ * είναι **box-aware** (SSoT `clearanceForBox`): η ΚΟΝΤΙΝΗ ακμή του αριθμού κάθεται `LABEL_CLEARANCE_PX`
+ * πέρα από τη dim line (όχι το κέντρο του) → ο αριθμός δεν ακουμπά ποτέ τη γραμμή, ίδιο contract με
+ * το wall HUD spec/γωνία. (Empty outward → fallback μοναδιαία προς τα κάτω.)
+ */
 function drawLabelBeyond(
   ctx: CanvasRenderingContext2D,
   label: string,
@@ -90,9 +98,9 @@ function drawLabelBeyond(
 ): void {
   const ox = sRef.x - sBase.x, oy = sRef.y - sBase.y;
   const olen = Math.hypot(ox, oy) || 1;
-  drawOverlayLabel(ctx, label, sRef.x + (ox / olen) * LABEL_CLEARANCE_PX, sRef.y + (oy / olen) * LABEL_CLEARANCE_PX, {
-    textColor, align: 'center',
-  });
+  const ux = olen > 1e-9 ? ox / olen : 0, uy = olen > 1e-9 ? oy / olen : 1;
+  const clear = clearanceForBox(ux, uy, measureOverlayLabelBox(ctx, label), LABEL_CLEARANCE_PX);
+  drawOverlayLabel(ctx, label, sRef.x + ux * clear, sRef.y + uy * clear, { textColor, align: 'center' });
 }
 
 /**

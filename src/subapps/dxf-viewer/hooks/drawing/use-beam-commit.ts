@@ -172,7 +172,7 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
   // (χωρίς location-line auto-flush). Καλεί τον ΙΔΙΟ resolver με το preview (το store
   // έχει ήδη συγχρονισμένες κολόνες) → preview === commit.
   const resolveStartAnchor = useCallback(
-    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean; spanEnd?: Point2D } => {
+    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean; spanEnd?: Point2D; spanJustification?: StripJustification } => {
       const widthMm = stateRef.current.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       // ADR-398 §3.10 — snap σε τοίχους+δοκάρια+πλάκες+γραμμές (Giorgio 2026-06-24 «ίδια με κολόνα»·

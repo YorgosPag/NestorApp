@@ -22,7 +22,9 @@ export function resolveMemberFootprintVertices(entity: Entity): ReadonlyArray<Po
   if (isColumnEntity(entity)) {
     verts = entity.geometry?.footprint?.vertices;
   } else if (isBeamEntity(entity)) {
-    verts = entity.geometry?.displayOutline?.vertices ?? entity.geometry?.outline?.vertices;
+    // ADR-458 — `displayOutline` είναι πλέον array από δαχτυλίδια (cutback μπορεί να δώσει
+    // πολλά κομμάτια)· για το footprint κρατάμε το πρώτο (κύριο). Fallback στο `outline` (Polygon3D).
+    verts = entity.geometry?.displayOutline?.[0] ?? entity.geometry?.outline?.vertices;
   }
   return verts && verts.length >= 3 ? verts : undefined;
 }

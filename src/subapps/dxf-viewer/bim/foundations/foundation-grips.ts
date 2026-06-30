@@ -82,8 +82,13 @@ function isLineFoundation(params: FoundationParams): params is LineFoundationPar
   return params.kind === 'strip' || params.kind === 'tie-beam';
 }
 
-/** Map a shared axis-box grip ROLE → the line-foundation discriminator kind. */
-const FOUNDATION_LINE_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, FoundationGripKind>> = {
+/**
+ * Map a shared axis-box grip ROLE → the line-foundation discriminator kind. `Partial` γιατί το
+ * foundation μένει στις 7 default λαβές — δεν εκπέμπει τα 2 opt-in column-parity mid-edges
+ * (`width-edge-far`/`length-edge-start`, μόνο wall+beam). Το `getAxisBoxGrips` εδώ καλείται χωρίς
+ * `extraMidEdges`, οπότε τα roles του lookup περιορίζονται στις 7 παρακάτω.
+ */
+const FOUNDATION_LINE_ROLE_TO_KIND: Readonly<Partial<Record<AxisBoxGripRole, FoundationGripKind>>> = {
   'width-edge': 'foundation-line-width',
   'length-edge': 'foundation-line-length',
   'corner-start-pos': 'foundation-corner-start-pos',

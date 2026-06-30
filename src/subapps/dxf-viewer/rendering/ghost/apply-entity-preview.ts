@@ -370,7 +370,9 @@ export function applyEntityPreview(
   // new position / rotation / height (+ width|widthFactor). `anchorPos` = the grabbed
   // grip world pos at mouseDown so the rotation sweep matches the commit. text-move
   // also routes here (its patch = position+delta) for one transform path, not two.
-  if (textGripKind && (entity.type === 'text' || entity.type === 'mtext')) {
+  // NOTE: `DxfEntityUnion` has no `mtext` variant — MTEXT is normalised to `'text'` at
+  // scene→Dxf conversion (`dxf-text-entity-converter`), so `'text'` covers both here.
+  if (textGripKind && entity.type === 'text') {
     const t = entity as unknown as DxfText;
     const currentPos: Point2D = anchorPos
       ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
@@ -487,13 +489,4 @@ export function applyEntityPreview(
 
   // Classic (non-parametric) path: whole-translation, edge-stretch, vertex-stretch.
   return applyClassicEntityPreview(entity, delta, gripIndex, movesEntity, edgeVertexIndices);
-}
-
-/**
- * Build a synthetic preview that translates an entire entity by `delta`.
- * Used by the Move tool (toolbar) to express each selected entity as a
- * standard `EntityPreviewTransform` so the same SSOT applies.
- */
-export function makeTranslationPreview(entityId: string, delta: Point2D): EntityPreviewTransform {
-  return { entityId, gripIndex: -1, delta, movesEntity: true };
 }

@@ -19,10 +19,12 @@ export type {
 } from './grip-kinds-mep-heating';
 
 /** Generic grip-type enumeration — ADR-559 projection of the canonical `GripKind` SSoT
- * (rendering/types/Types.ts). The interaction layer omits 'control'/'quadrant'/'close'.
+ * (rendering/types/Types.ts). The interaction layer omits only the data-model-only 'control'
+ * point and 'close'. `'quadrant'` IS included (ADR-559 «visible ≡ pickable»: circle/ellipse
+ * quadrant grips are gated by `isGripTypeVisible` in BOTH render + hit-test).
  * NOTE: distinct from `rendering/grips/types.ts GripType` (render layer) — flagged for a
  * future name de-collision pass; both now derive from the same canonical set. */
-export type GripType = Exclude<GripKind, 'control' | 'quadrant' | 'close'>;
+export type GripType = Exclude<GripKind, 'control' | 'close'>;
 
 /**
  * ADR-358 Phase 5b + ADR-393 — Stair grip kind (parametric grip type).

@@ -389,3 +389,23 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   αρχή: **own identity ≠ relational/inference dims** → διαφορετικό χρώμα. Η ορολογία μας (`listeningDim`)
   ήδη καθρεφτίζει τις Revit listening dimensions. Συνεπώς το «όλα σιελ» θα **έχανε** τη διάκριση «τι χτίζω»
   vs «πού βρίσκομαι ως προς υπάρχουσα γεωμετρία». Καμία αλλαγή κώδικα/jest (decision-only).
+- **2026-06-30 (§wall-hud / §label-layout — anti-collision των live wall-ghost labels σε ΚΑΘΕΤΟ/λοξό τοίχο)** —
+  ο Giorgio (2 screenshots) ανέφερε ότι σε **κάθετο** τοίχο-φάντασμα το HUD spec «πάχος 0,210 m · ύψος 3,000 m»
+  **πέφτει πάνω** στο μήκος «2,600 m» (σε οριζόντιο όχι). **Root (επιβεβαιωμένο γεωμετρικά):** ο `paintWallHudCore`
+  τοποθετούσε spec/μήκος σε **αντίθετες πλευρές** με σταθερό perpendicular offset (`labelOff = halfT +
+  LABEL_CLEAR_PX·wpp`) που **αγνοούσε το πλάτος του κειμένου**. Σε απότομο τοίχο η κάθετη γίνεται σχεδόν
+  οριζόντια → η perpendicular συνιστώσα σε screen-Y μικραίνει ΚΑΙ το πλατύ spec-text «γεφυρώνει» απέναντι πάνω
+  στον αριθμό. **FIX (FULL SSoT, big-player Revit/AutoCAD «dim text gap»):** NEW pure SSoT
+  `canvas-v2/preview-canvas/overlay-label-layout.ts` (`measureOverlayLabelBox` + `boxHalfExtentAlong` +
+  `clearanceForBox`) — **text-box-aware** clearance: η ΚΟΝΤΙΝΗ ακμή κάθε label κάθεται ακριβώς `baseClearPx` πέρα
+  από τον άξονα **ανεξάρτητα γωνίας** (κάθετο → καθαρίζει το μισό ΠΛΑΤΟΣ, οριζόντιο → το μισό ΥΨΟΣ). Επεκτείνει
+  το ΣΥΜΒΟΛΑΙΟ μη-επικάλυψης που ξεκίνησε το `CURSOR_LABEL_SLOTS` (overlay-text-style.ts) — «μη-επικάλυψη =
+  ΣΥΜΒΟΛΑΙΟ, όχι σύμπτωση». `paintWallHudCore`: spec + γωνία πλέον box-aware (διατηρεί world-offset→toScreen, ίδιο
+  μοτίβο call-counts → μηδέν test regression). **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ (Giorgio order):** το `drawLabelBeyond`
+  (ghost-face-dim-paint.ts — μοιραζόμενο από listening-dims ΚΑΙ μήκος) δρομολογήθηκε στον ΙΔΙΟ SSoT → όλοι οι
+  overlay αριθμοί box-aware (η κοντινή ακμή πέρα από τη dim line, ποτέ πάνω της). 24/24 jest GREEN
+  (`overlay-label-layout` νέο 17 + `wall-hud-paint-projector` 7 + `ghost-face-dim-paint` 5). **PENDING (Case A,
+  cross-layer):** το κίτρινο snap-label «Επί άξονα τοίχου» (`SnapIndicatorGlyph.tsx`, SVG/DOM overlay) που πέφτει
+  στο canvas dim pill είναι ΑΛΛΟ layer (DOM vs canvas) → ξεχωριστός μηχανισμός, follow-up. 🔴 browser-verify +
+  commit (CHECK 6D: stage ADR-508 + ADR-040· NEW overlay-label-layout.ts + mod wall-hud-paint.ts +
+  ghost-face-dim-paint.ts + 2 test).

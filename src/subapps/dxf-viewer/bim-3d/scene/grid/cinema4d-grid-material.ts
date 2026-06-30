@@ -139,6 +139,9 @@ export interface Cinema4DGridUniforms {
   uMaxOpacity: { value: number };
   uFadeNear: { value: number };
   uFadeFar: { value: number };
+  /** three's `ShaderMaterial.uniforms` is `{ [k: string]: IUniform }` — η index signature
+   *  επιτρέπει direct assign του typed bag (κάθε named member είναι `{ value }` = `IUniform`). */
+  [uniform: string]: THREE.IUniform;
 }
 
 /** Build the grid ShaderMaterial. Returns the typed `uniforms` reference alongside the material

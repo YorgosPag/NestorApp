@@ -28,6 +28,9 @@ import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geo
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
 import { drawOverlayLabel } from './overlay-text-style';
 import { OVERLAY_LINE_COLORS, applyOverlayLineStyle, strokeOverlaySegment } from './overlay-line-style';
+// SSoT anti-collision: text-box-aware perpendicular clearance ώστε spec/γωνία να ΜΗΝ διασχίζουν
+// ποτέ τον άξονα του τοίχου (κάθετος/λοξός) και να πέφτουν πάνω στη διάσταση μήκους.
+import { measureOverlayLabelBox, clearanceForBox, type LabelBox } from './overlay-label-layout';
 
 /** Καθαρά αριθμητικά δεδομένα HUD (κρέμονται στο ghost entity· N.11-clean — καμία μετάφραση εδώ). */
 export interface WallHudMeta {
@@ -114,25 +117,34 @@ export function paintWallHudCore(
   const wpp = proj.worldPerPixel;
   const halfT = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
   const dimOff = halfT + DIM_CLEAR_PX * wpp;
-  const labelOff = halfT + LABEL_CLEAR_PX * wpp;
   const mid: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+
+  // World→world perpendicular offset (scene units) που η ΚΟΝΤΙΝΗ ακμή του `box` να κάθεται
+  // `LABEL_CLEAR_PX` πέρα από την παρειά (`halfT`) του τοίχου. Η box-aware απόσταση (μέσω της
+  // SSoT `clearanceForBox`, που αξιοποιεί τις |px|,|py|) εξασφαλίζει ότι το ΠΛΑΤΥ spec-text δεν
+  // διασχίζει ποτέ τον άξονα σε κάθετο/λοξό τοίχο — ΜΗΔΕΝ επικάλυψη με τη διάσταση μήκους.
+  const perpClearOff = (box: LabelBox): number =>
+    halfT + clearanceForBox(px, py, box, LABEL_CLEAR_PX) * wpp;
 
   // (1) aligned διάσταση μήκους — κάτω από τον τοίχο (πλευρά +κάθετη), μέσω του injected drawer.
   const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
   proj.drawAlignedDim(start, end, dimRef, formatLengthForDisplay(lengthMm), HUD_COLOR);
 
-  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά, στη μέση. Κενό specLabel → η οντότητα δεν έχει
-  // BIM ταυτότητα (π.χ. γραμμή: μηδέν πάχος/ύψος) → παραλείπεται· μόνο μήκος + γωνία.
+  // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά (−κάθετη), στη μέση. Κενό specLabel → η οντότητα
+  // δεν έχει BIM ταυτότητα (π.χ. γραμμή: μηδέν πάχος/ύψος) → παραλείπεται· μόνο μήκος + γωνία.
   if (specLabel) {
-    const specW: Point2D = { x: mid.x - px * labelOff, y: mid.y - py * labelOff };
+    const specOff = perpClearOff(measureOverlayLabelBox(ctx, specLabel));
+    const specW: Point2D = { x: mid.x - px * specOff, y: mid.y - py * specOff };
     const sSpec = proj.toScreen(specW);
     drawOverlayLabel(ctx, specLabel, sSpec.x, sSpec.y, { textColor: HUD_COLOR, align: 'center' });
   }
 
-  // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά.
-  const angW: Point2D = { x: start.x - px * labelOff, y: start.y - py * labelOff };
+  // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά (box-aware, ίδιο SSoT clearance).
+  const angleLabel = `∠ ${formatAngleLocale(angleDeg)}`;
+  const angOff = perpClearOff(measureOverlayLabelBox(ctx, angleLabel));
+  const angW: Point2D = { x: start.x - px * angOff, y: start.y - py * angOff };
   const sAng = proj.toScreen(angW);
-  drawOverlayLabel(ctx, `∠ ${formatAngleLocale(angleDeg)}`, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
+  drawOverlayLabel(ctx, angleLabel, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
 }
 
 /**

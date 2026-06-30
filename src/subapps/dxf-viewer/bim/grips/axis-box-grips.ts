@@ -417,11 +417,12 @@ export function applyAxisBoxGripDrag(
  * bespoke (e.g. the wall) just omit that kind from their drag dispatch.
  */
 export function invertAxisBoxRoleMap<K extends string>(
-  roleToKind: Readonly<Record<AxisBoxGripRole, K>>,
+  roleToKind: Readonly<Partial<Record<AxisBoxGripRole, K>>>,
 ): Partial<Record<K, AxisBoxGripRole>> {
   const out: Partial<Record<K, AxisBoxGripRole>> = {};
   (Object.keys(roleToKind) as AxisBoxGripRole[]).forEach((role) => {
-    out[roleToKind[role]] = role;
+    const kind = roleToKind[role];
+    if (kind !== undefined) out[kind] = role;
   });
   return out;
 }

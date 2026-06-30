@@ -14,7 +14,8 @@
  * @see ADR-049 — Unified Move Tool
  */
 
-export { applyEntityPreview, makeTranslationPreview } from './apply-entity-preview';
+export { applyEntityPreview } from './apply-entity-preview';
+export { makeTranslationPreview } from './make-translation-preview';
 export type { EntityPreviewTransform } from './apply-entity-preview';
 export { drawGhostEntity } from './draw-ghost-entity';
 // Cross-backend ghost opacity policy (shared with the 3D WebGL overlays) — SSoT.

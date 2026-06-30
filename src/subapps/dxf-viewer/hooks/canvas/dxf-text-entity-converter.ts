@@ -27,8 +27,8 @@ export function convertTextEntity(entity: SceneEntity, base: DxfBaseFields): Dxf
   const withNode = entity as TextEntity;
   // ADR-344 Phase 6.E: entities from CreateTextCommand have no flat text — derive it.
   const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');
-  const textHeight = resolveTextHeight(entity);
-  const textStyle = extractFirstRunStyle(entity);
+  const textHeight = resolveTextHeight(withNode);
+  const textStyle = extractFirstRunStyle(withNode);
   // ADR-526 Φ5a — flat `fontFamily` (π.χ. εισαγωγή Τέκτονα, χωρίς textNode) → textStyle
   // when textNode set no font. Additive: DXF text keeps its textNode font → unchanged.
   const flatFont = withNode.fontFamily;

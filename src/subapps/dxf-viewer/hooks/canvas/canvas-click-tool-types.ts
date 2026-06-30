@@ -100,7 +100,8 @@ export interface ColumnToolLike {
 /** ADR-363 Phase 5 — Minimal beam tool interface for click routing. */
 export interface BeamToolLike {
   readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
+  /** ADR-528 §whole-line — `shiftKey` (optional) → Shift+κλικ auto-span όλης της σειράς. */
+  onCanvasClick: (point: Point2D, shiftKey?: boolean) => boolean;
 }
 
 /** ADR-436 Slice 1 — Minimal foundation pad tool interface for click routing. */

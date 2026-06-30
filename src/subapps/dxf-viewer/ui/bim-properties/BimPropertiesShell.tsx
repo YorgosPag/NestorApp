@@ -99,7 +99,7 @@ export function BimPropertiesShell(
 
   // Χωρίς επιλεγμένο BIM entity → ο router χειρίζεται empty/legacy state.
   if (!selected || !bimType) {
-    return <BimPropertiesRouter {...props} />;
+    return <BimPropertiesRouter {...props} primarySelectedId={primarySelectedId} />;
   }
 
   return (
@@ -125,7 +125,7 @@ export function BimPropertiesShell(
         </TabsList>
 
         <TabsContent value="parameters">
-          <BimPropertiesRouter {...props} />
+          <BimPropertiesRouter {...props} primarySelectedId={primarySelectedId} />
         </TabsContent>
 
         <TabsContent value="boq">

@@ -13,7 +13,7 @@ import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 
 export interface PolarTrackingConfig {
   incrementAngle: number;
-  additionalAngles: number[];
+  additionalAngles: readonly number[];
   angleTolerance: number;
   /**
    * ADR-508 (2026-06-21) — relative-polar base angle (degrees, world). The

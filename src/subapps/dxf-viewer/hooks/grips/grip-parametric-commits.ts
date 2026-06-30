@@ -435,9 +435,11 @@ export function commitFoundationGripDrag(
   let finalParams = newParams;
   let padRejection: { w: number; l: number; minW: number; minL: number } | null = null;
   if (newParams.kind === 'pad' && originalParams.kind === 'pad') {
+    // `getEntities` είναι optional στο ISceneManager (interfaces.ts) — ο adapter πάντα το παρέχει,
+    // αλλά guard-άρουμε με fallback `[]` (buildPadSizingInput → null σε άδειο → no-op παρακάτω).
     const input = buildPadSizingInput(
       foundation,
-      sceneManager.getEntities() as unknown as readonly Entity[],
+      (sceneManager.getEntities?.() ?? []) as unknown as readonly Entity[],
       useStructuralSettingsStore.getState().soilBearingCapacityKpa,
     );
     if (input) {

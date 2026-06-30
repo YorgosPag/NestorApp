@@ -113,6 +113,10 @@ export const BeamParamsSchema = z
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
     envelopeFunction: EnvelopeFunctionSchema.optional(),
+    // ─── ADR-456 — κατηγορία σκυροδέματος (mirror κολόνας) ────────────────────
+    concreteGrade: z
+      .enum(['C12/15', 'C16/20', 'C20/25', 'C25/30', 'C30/37', 'C35/45', 'C40/50', 'C45/55', 'C50/60'])
+      .optional(),
     // ─── ADR-459 Phase 4a — οπλισμός δοκού ────────────────────────────────────
     reinforcement: BeamReinforcementSchema.optional(),
     // ─── ADR-475 — auto διαστασιολόγηση διατομής (lock flag) ──────────────────
