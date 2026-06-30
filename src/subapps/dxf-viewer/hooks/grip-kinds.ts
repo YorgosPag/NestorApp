@@ -451,19 +451,24 @@ export type PolylineGripKind =
   | `polyline-arc-midpoint-${number}`;
 
 /**
- * ADR-363 Slice F — Line rotation grip kind (plain DXF `line` primitive, NOT a
- * BIM params entity). Tags the rotation handle emitted by `computeDxfEntityGrips`
- * (case 'line') so it opts into the SHARED hot-grip rotate flow (glyph + 6-click
- * reference + free spin + typed angle) — full parity with `wall-rotation`. The
- * line's endpoint (0/1) + midpoint-MOVE (2) grips stay untagged (standard
- * stretch / whole-move path); only the rotation handle carries this kind.
+ * ADR-363 Slice F/G.5 — Line grip kinds (plain DXF `line` primitive, NOT a BIM
+ * params entity). Tag the parametric handles emitted by `computeDxfEntityGrips`
+ * (case 'line') so they opt into the SHARED hot-grip flows (glyph + directional /
+ * rotate) — full parity with `wall-rotation` / `wall-midpoint`. The line's endpoint
+ * (0/1) + plain midpoint-MOVE (2) grips stay untagged (standard stretch / whole-move
+ * path); only the rotation + ¼-west move handles carry a kind.
  *
- *   - `line-rotation` → rotate the whole line about its midpoint (or a picked
- *     centre). Commit routes through `commitLineGripDrag()` + the canonical
+ *   - `line-rotation` (Slice F) → rotate the whole line about its midpoint (or a
+ *     picked centre). Commit routes through `commitLineGripDrag()` + the canonical
  *     `RotateEntityCommand` (NOT a bespoke transform); preview rotates start/end
  *     via the shared `rotateAxisPointsAboutPivot` SSoT (mirror `rotateWall`).
+ *   - `line-move` (Slice G.5) → the 4-arrow MOVE cross at ¼ axis length WEST of the
+ *     centre (mirror of the ¼-east rotation handle). Reuses the ENTIRE wall move
+ *     pipeline: `'move'` glyph (registry) + 3-click hot-grip move + per-arm
+ *     directional click→distance prompt (ADR-397 Φ2) + whole-entity translate
+ *     (`movesEntity`). NO new mechanism — only the kind + ¼-west position are added.
  */
-export type LineGripKind = 'line-rotation';
+export type LineGripKind = 'line-rotation' | 'line-move';
 
 // ADR-557 — Text / MText grip kinds live in the sibling module
 // `grip-kinds-text.ts` (SRP / N.7.1) and are re-exported here for backward

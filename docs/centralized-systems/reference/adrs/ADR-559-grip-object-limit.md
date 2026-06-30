@@ -38,7 +38,25 @@
 
 ## 3. Settings chain (mirror του `maxGripsPerEntity`)
 
-`config/validation-bounds-config.ts` (`GRIP_BOUNDS.OBJ_LIMIT {0,32767}` + `clampGripObjLimit`), `settings-core/types/domain.ts` (interface + `mergeGripSettings` default + clamp), `settings-core/defaults.ts`, `settings/FACTORY_DEFAULTS.ts`, `types/gripSettings.ts` (interface + default + `validateGripSettings` clamp), `rendering/types/Types.ts` (interface), `stores/GripStyleStore.ts` (`GripStyle` + init), `stores/grip-style-sync.ts` (forward → store), `adapters/ZustandToConsolidatedAdapter.ts` (read + write), `ui/hooks/useUnifiedSpecificSettings.ts` (preview mock + default).
+`config/validation-bounds-config.ts` (`GRIP_BOUNDS.OBJ_LIMIT {0,32767}` + `clampGripObjLimit`), `settings-core/types/domain.ts` (projection + `mergeGripSettings` default + clamp), `settings-core/defaults.ts`, `settings/FACTORY_DEFAULTS.ts`, `types/gripSettings.ts` (projection + default + `validateGripSettings` clamp), `rendering/types/Types.ts` (projection), `stores/GripStyleStore.ts` (`GripStyle` projection + init), `stores/grip-style-sync.ts` (forward → store), `adapters/ZustandToConsolidatedAdapter.ts` (read + write), `ui/hooks/useUnifiedSpecificSettings.ts` (preview mock + default).
+
+## 3b. Canonical grip-settings SCHEMA (Giorgio SSoT order — Figma/Revit-level)
+
+**Πρόβλημα που εντόπισε ο SSoT audit:** το grip-settings *shape* ήταν re-declared ως **8 ξεχωριστά interfaces** (5 «κανονικά» + 3 UI-local) → κάθε νέο field (όπως το `gripObjLimit`) έπρεπε να προστεθεί χειροκίνητα σε όλα.
+
+**Λύση — ΕΝΑ schema + projections (composition, μηδέν αλλαγή τιμών/συμπεριφοράς):** νέο `types/grip-settings-schema.ts` ορίζει το shape **μία φορά**:
+- `GripColors` (sentinel `cold:string|null`) / `ResolvedGripColors` (`cold:string`)
+- `GripSettingsBase` (τα 14 stored fields — **εδώ μπαίνει κάθε νέο grip field**)
+- `GripStyleExtras` (`showGripTips`/`dpiScale`) · `GripSettingsLegacyCompat` (legacy optional)
+- `GripSettingsFull = Base & Extras & Legacy & {colors:GripColors}` (input DTO)
+
+Οι **5** τύποι έγιναν **projections** (όχι re-declarations): `domain GripSettings = Base & {colors:GripColors}` · input DTO (`gripSettings.ts`, `rendering/Types.ts`) = `GripSettingsFull` (εξαλείφει το μεταξύ-τους διπλότυπο) · `GripStyle = Base & Extras & {colors:ResolvedGripColors}` · `MockGripSettings = Omit<Base,'showGrips'> & {colors:ResolvedGripColors}`.
+
+**3 UI-local `GripSettings`:** (1) `LinePreview.tsx` = γνήσιο subset → projection (`Omit<Base,'showGrips'|'gripObjLimit'> & {colors}`). (2) `CurrentSettingsDisplay.tsx` (έχει `gripShape`/`showFill` — display-only) → **rename** `GripSettingsSummary` (name-collision, ΟΧΙ duplicate· δεν μολύνει το schema). (3) `useSettingsPreview.ts` (`{color,size,style}` CSS) → **rename** `GripCssPreviewInput`.
+
+**Default VALUES** μένουν per-context (stored/runtime/draft/hover/preview διαφέρουν σκόπιμα — π.χ. aperture 10 vs 20, sentinel vs resolved colors) → κεντρικοποιήθηκε **μόνο το shape**, όχι οι τιμές (zero behavior change).
+
+**Ratchet guard:** module `grip-settings-schema` στο `.ssot-registry.json` (tier 3) — απαγορεύει νέο standalone `interface GripSettings|GripStyle|MockGripSettings` (0 violations· registry-golden 56/56 GREEN).
 
 **UI:** `ui/components/dxf-settings/settings/core/GripSettings.tsx` — `SliderInput` (0–1000 πρακτικό εύρος, `showNumberInput`· clamp εγγυάται μέχρι 32767 προγραμματιστικά). **`?? 100`** (όχι `|| 100`, γιατί `0` είναι έγκυρη τιμή = no limit). i18n key `settings.grip.labels.gripObjLimit` στα 3 locales (el/en/pseudo).
 
@@ -50,9 +68,11 @@
 
 - ✅ AutoCAD parity (default 100, `0`=unlimited), big-player practice, configurable από UI.
 - ✅ Full SSoT: ΕΝΑΣ κανόνας (predicate), reuse όλης της settings chain, μηδέν νέο store.
-- ⚠️ **Boy-Scout flag:** το grip-settings shape είναι ορισμένο **5×** ως ξεχωριστός τύπος + 6 default blocks (προϋπάρχον διπλότυπο). Πλήρης κεντρικοποίηση = large refactor → κατεγράφη στο `.claude-rules/pending-ratchet-work.md` (N.0.2), εκτός scope αυτού του task.
+- ✅ **Grip-settings shape κεντρικοποιήθηκε (Giorgio order):** 8 re-declared interfaces → ΕΝΑ canonical schema + projections + 2 de-collision renames + ratchet guard (§3b). Νέο grip field πλέον μπαίνει σε ΕΝΑ σημείο (`GripSettingsBase`).
 - 🔴 Εκκρεμεί browser-verify (2D πολλαπλή επιλογή >100 + 3D raw-DXF multi-select).
+- ⚠️ Type-safety: `@swc/jest` δεν κάνει type-check (N.17 → όχι tsc από agent)· οι projections επαληθεύτηκαν field-by-field + 261/262 jest GREEN (το 1 fail = προϋπάρχον MEP scene-manager mock gap, άσχετο — SWC σβήνει τύπους, type-edit δεν προκαλεί runtime error). Final type-check: Giorgio/pre-commit.
 
 ## Changelog
 
 - **2026-06-30** — Αρχική υλοποίηση: setting `gripObjLimit` (default 100) + predicate SSoT + 3 gates (2D + 2×3D) + UI slider + i18n + 7 jest. UNCOMMITTED.
+- **2026-06-30 (follow-up, Giorgio SSoT order)** — Κεντρικοποίηση grip-settings shape (§3b): νέο `types/grip-settings-schema.ts` (canonical) + 6 projections + 2 de-collision renames + ratchet guard module. Zero behavior change (μόνο types, όχι default values). 261/262 jest GREEN (1 προϋπάρχον MEP mock fail, άσχετο). UNCOMMITTED.

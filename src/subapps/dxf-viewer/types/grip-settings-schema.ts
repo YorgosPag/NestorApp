@@ -30,13 +30,10 @@ export interface GripColors {
   contour: string;     // Contour (Black)
 }
 
-/** Grip colours after the sentinel is resolved at write/render time (`cold` is always concrete). */
-export interface ResolvedGripColors {
-  cold: string;
-  warm: string;
-  hot: string;
-  contour: string;
-}
+// Grip colours after the sentinel is resolved (`cold` always concrete) — the SSoT type lives
+// with its resolver in `config/color-config.ts` (`resolveGripColors()`). Re-exported here so
+// grip-settings projections import it alongside the rest of the schema; NOT re-declared.
+export type { ResolvedGripColors } from '../config/color-config';
 
 /**
  * The grip-settings fields that live in STORED user settings (domain) — and that every

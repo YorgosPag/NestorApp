@@ -12,8 +12,8 @@
  *   - `computeDxfEntityGrips` emits the 4th grip with `lineGripKind` at that pos.
  */
 
-import { lineRotationHandlePos, applyLineRotationDrag, getLineGrips, LINE_ROTATION_KIND } from '../line-grips';
-import { axisQuarterRotationHandleWorld, axisToRectFrame } from '../../../bim/grips/axis-box-grips';
+import { lineRotationHandlePos, lineMoveHandlePos, applyLineRotationDrag, getLineGrips, LINE_ROTATION_KIND, LINE_MOVE_KIND } from '../line-grips';
+import { axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld, axisToRectFrame } from '../../../bim/grips/axis-box-grips';
 import { gripGlyphShape } from '../../../bim/grips/grip-glyph-registry';
 import { hotGripOpForKind } from '../../../hooks/grips/wall-hot-grip-fsm';
 import { computeDxfEntityGrips } from '../../../hooks/grip-computation';
@@ -99,31 +99,95 @@ describe('line-rotation shares the wall hot-grip + glyph vocabulary', () => {
   });
 });
 
+// ADR-363 Slice G.5 — the ¼-west MOVE cross.
+describe('lineMoveHandlePos — ¼ toward the west end (mirror of rotation)', () => {
+  it('horizontal line (0,0)→(100,0) → (25,0) = centre − ¼ length west', () => {
+    const p = lineMoveHandlePos({ x: 0, y: 0 }, { x: 100, y: 0 });
+    near(p.x, 25);
+    near(p.y, 0);
+  });
+
+  it('reversed horizontal (100,0)→(0,0) → still (25,0): geographic west, order-agnostic', () => {
+    const p = lineMoveHandlePos({ x: 100, y: 0 }, { x: 0, y: 0 });
+    near(p.x, 25);
+    near(p.y, 0);
+  });
+
+  it('vertical line (0,0)→(0,100) → (0,25): no east/west bias → tie-breaks SOUTH', () => {
+    const p = lineMoveHandlePos({ x: 0, y: 0 }, { x: 0, y: 100 });
+    near(p.x, 0);
+    near(p.y, 25);
+  });
+
+  it('is the EXACT mirror of the rotation handle about the centre (¼-west ↔ ¼-east)', () => {
+    const start = { x: 0, y: 0 };
+    const end = { x: 100, y: 0 };
+    const mid = { x: 50, y: 0 };
+    const move = lineMoveHandlePos(start, end);
+    const rot = lineRotationHandlePos(start, end);
+    // symmetric about the midpoint: move + rot = 2·mid on each axis.
+    near(move.x + rot.x, 2 * mid.x);
+    near(move.y + rot.y, 2 * mid.y);
+  });
+
+  it('is the EXACT same ¼-west function the shared axis-box SSoT exposes', () => {
+    const start = { x: 10, y: 20 };
+    const end = { x: 110, y: 80 };
+    const viaLine = lineMoveHandlePos(start, end);
+    const viaSsot = axisQuarterMoveHandleWorld(axisToRectFrame({ start, end, width: 0 }));
+    near(viaLine.x, viaSsot.x);
+    near(viaLine.y, viaSsot.y);
+  });
+});
+
+describe('line-move shares the wall hot-grip + glyph vocabulary (wall-midpoint parity)', () => {
+  it('renders the 4-arrow MOVE glyph (same as wall-midpoint)', () => {
+    expect(gripGlyphShape(LINE_MOVE_KIND)).toBe('move');
+    expect(gripGlyphShape(LINE_MOVE_KIND)).toBe(gripGlyphShape('wall-midpoint'));
+  });
+
+  it("opts into the shared 'move' hot-grip flow (same as wall-midpoint)", () => {
+    expect(hotGripOpForKind(LINE_MOVE_KIND)).toBe('move');
+    expect(hotGripOpForKind(LINE_MOVE_KIND)).toBe(hotGripOpForKind('wall-midpoint'));
+  });
+});
+
 describe('getLineGrips — the SSoT both grip paths consume', () => {
-  it('emits 4 grips: start / end / midpoint MOVE / rotation', () => {
+  it('emits 5 grips: start / end / centre midpoint / rotation (¼-east) / MOVE cross (¼-west)', () => {
     const grips = getLineGrips('L1', { x: 0, y: 0 }, { x: 100, y: 0 });
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(5);
     expect(grips[0]).toMatchObject({ gripIndex: 0, type: 'vertex', movesEntity: false });
     expect(grips[1]).toMatchObject({ gripIndex: 1, type: 'vertex', movesEntity: false });
-    // midpoint MOVE — ORTHO-eligible + StretchEntityCommand parity preserved.
+    // centre midpoint — kept as-is (ORTHO-eligible + StretchEntityCommand parity).
     expect(grips[2]).toMatchObject({ gripIndex: 2, type: 'edge', movesEntity: true, edgeVertexIndices: [0, 1] });
+    expect(grips[2].lineGripKind).toBeUndefined();
     near(grips[2].position.x, 50); near(grips[2].position.y, 0);
     // rotation handle — ¼ east, tagged so it opts into the shared rotate flow.
     expect(grips[3]).toMatchObject({ gripIndex: 3, type: 'vertex', movesEntity: false, lineGripKind: LINE_ROTATION_KIND });
     near(grips[3].position.x, 75); near(grips[3].position.y, 0);
+    // MOVE cross — ¼ west, tagged so it opts into the shared move flow (glyph +
+    // directional). `type: 'vertex'` so it always shows; whole-line translate parity.
+    expect(grips[4]).toMatchObject({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: LINE_MOVE_KIND });
+    near(grips[4].position.x, 25); near(grips[4].position.y, 0);
   });
 });
 
-describe('computeDxfEntityGrips (case line) — emits the rotation handle', () => {
-  it('adds a 4th grip tagged line-rotation at the shared ¼-east position', () => {
+describe('computeDxfEntityGrips (case line) — emits the rotation + move handles', () => {
+  it('adds the rotation (¼-east) and MOVE cross (¼-west) grips, tagged', () => {
     const line = { id: 'L1', type: 'line', start: { x: 0, y: 0 }, end: { x: 100, y: 0 } } as unknown as DxfEntityUnion;
     const grips = computeDxfEntityGrips(line);
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(5);
     const rot = grips[3];
     expect(rot.gripIndex).toBe(3);
     expect(rot.lineGripKind).toBe(LINE_ROTATION_KIND);
     expect(rot.movesEntity).toBe(false);
     near(rot.position.x, 75);
     near(rot.position.y, 0);
+    const move = grips[4];
+    expect(move.gripIndex).toBe(4);
+    expect(move.lineGripKind).toBe(LINE_MOVE_KIND);
+    expect(move.movesEntity).toBe(true);
+    near(move.position.x, 25);
+    near(move.position.y, 0);
   });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { LineType } from '../../../../../settings-core/types';
+import type { GripSettingsBase, GripColors } from '../../../../../types/grip-settings-schema';
 import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -40,26 +41,11 @@ interface TextSettings {
   isSubscript: boolean;
 }
 
-interface GripSettings {
-  enabled: boolean;
-  gripSize: number;
-  pickBoxSize: number;
-  apertureSize: number;
-  opacity: number;
-  colors: {
-    cold: string | null;
-    warm: string;
-    hot: string;
-    contour: string;
-  };
-  showAperture: boolean;
-  multiGripEdit: boolean;
-  snapToGrips: boolean;
-  showMidpoints: boolean;
-  showCenters: boolean;
-  showQuadrants: boolean;
-  maxGripsPerEntity: number;
-}
+// ADR-559 — local preview prop-type is a PROJECTION of the canonical grip schema
+// (the fields this preview reads; omits showGrips/gripObjLimit). One schema, no re-declaration.
+type GripSettings = Omit<GripSettingsBase, 'showGrips' | 'gripObjLimit'> & {
+  colors: GripColors;
+};
 
 interface LinePreviewProps {
   lineSettings: LineSettings;

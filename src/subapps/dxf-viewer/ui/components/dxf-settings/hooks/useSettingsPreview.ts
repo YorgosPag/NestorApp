@@ -157,7 +157,9 @@ export function useTextPreview(settings: TextSettings): UseTextPreviewReturn {
 // GRIP PREVIEW
 // ============================================================================
 
-export interface GripSettings {
+// ADR-559 — NOT the canonical grip settings: a tiny CSS-preview input ({color,size,style}).
+// Renamed to de-collide from the SSoT `GripSettings`.
+export interface GripCssPreviewInput {
   color: string;
   size: number;
   style: 'square' | 'circle' | 'cross';
@@ -174,7 +176,7 @@ export interface UseGripPreviewReturn {
  * @param settings - Current grip settings (color, size, style)
  * @returns {UseGripPreviewReturn} - Preview styles και grip shape
  */
-export function useGripPreview(settings: GripSettings): UseGripPreviewReturn {
+export function useGripPreview(settings: GripCssPreviewInput): UseGripPreviewReturn {
   const previewStyles = useMemo<React.CSSProperties>(() => {
     const baseStyles: React.CSSProperties = {
       backgroundColor: settings.color,

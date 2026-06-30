@@ -11,8 +11,11 @@
  *     explicit `params.rotation` (degrees, world CCW) → axes from that angle.
  *   - Linear entities (wall, beam, MEP segment, foundation strip) orient along
  *     their axis (`start→end`) → axisX runs along the element, axisY perpendicular.
- *   - Anything else (plain DXF line/circle, no orientation) → `null`, leaving the
- *     glyph screen-axis-aligned exactly as before (zero regression).
+ *   - Plain DXF `line` (no `params` — the axis lives in TOP-LEVEL `start`/`end`)
+ *     orients along that top-level axis → same `fromAxis` path (ADR-363 Slice G.5,
+ *     so the line's ¼-west MOVE cross rotates with the line + drives directional move).
+ *   - Anything else (circle, no orientation) → `null`, leaving the glyph
+ *     screen-axis-aligned exactly as before (zero regression).
  *
  * The renderer projects these world axes through `worldToScreen` to obtain the
  * on-screen glyph angle (handles the canvas Y-flip + scale), and the directional
@@ -69,16 +72,27 @@ interface OrientedParams {
  */
 export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
   const params = (entity as { params?: OrientedParams }).params;
-  if (!params) return null;
+  if (params) {
+    // Linear entities first: a real axis (wall/beam/segment/strip) defines orientation.
+    const a = params.start ?? params.startPoint;
+    const b = params.end ?? params.endPoint;
+    if (a && b) return fromAxis(b.x - a.x, b.y - a.y);
 
-  // Linear entities first: a real axis (wall/beam/segment/strip) defines orientation.
-  const a = params.start ?? params.startPoint;
-  const b = params.end ?? params.endPoint;
-  if (a && b) return fromAxis(b.x - a.x, b.y - a.y);
+    // Box / point entities: explicit rotation (degrees, world CCW).
+    if (typeof params.rotation === 'number' && Number.isFinite(params.rotation)) {
+      return fromAngleRad(params.rotation * DEG_TO_RAD);
+    }
+    return null;
+  }
 
-  // Box / point entities: explicit rotation (degrees, world CCW).
-  if (typeof params.rotation === 'number' && Number.isFinite(params.rotation)) {
-    return fromAngleRad(params.rotation * DEG_TO_RAD);
+  // ADR-363 Slice G.5 — plain DXF `line`: no `params`; the axis lives directly on
+  // the entity as top-level `start`/`end`. Gated to `type === 'line'` so no other
+  // params-less primitive (circle/arc/…) is accidentally given a frame (zero
+  // regression). Same `fromAxis` orientation as a wall, so the line's MOVE cross
+  // rotates with the line AND the directional move-by-value runs along its local axes.
+  const line = entity as { type?: string; start?: Point2D; end?: Point2D };
+  if (line.type === 'line' && line.start && line.end) {
+    return fromAxis(line.end.x - line.start.x, line.end.y - line.start.y);
   }
   return null;
 }

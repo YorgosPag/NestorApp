@@ -67,6 +67,8 @@ import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
 import type { GripSettings } from '../../types/gripSettings';
+// ADR-559 — canonical grip-settings schema (preview mock is a projection)
+import type { GripSettingsBase, ResolvedGripColors } from '../../types/grip-settings-schema';
 
 // Default settings για διαφορετικούς τύπους
 
@@ -207,27 +209,11 @@ export function useUnifiedTextPreview() {
 }
 
 // Grip settings (placeholder - θα χρειαστεί το actual GripSettings type)
-interface MockGripSettings {
-  enabled: boolean;
-  gripSize: number;
-  pickBoxSize: number;
-  apertureSize: number;
-  opacity: number;
-  colors: {
-    cold: string;
-    warm: string;
-    hot: string;
-    contour: string;
-  };
-  showAperture: boolean;
-  multiGripEdit: boolean;
-  snapToGrips: boolean;
-  showMidpoints: boolean;
-  showCenters: boolean;
-  showQuadrants: boolean;
-  maxGripsPerEntity: number;
-  gripObjLimit: number;
-}
+// ADR-559 — preview mock is a projection of the canonical schema: stored base WITHOUT
+// `showGrips`, with RESOLVED colours. One schema, no re-declaration.
+type MockGripSettings = Omit<GripSettingsBase, 'showGrips'> & {
+  colors: ResolvedGripColors;
+};
 
 const defaultGripPreviewSettings: MockGripSettings = {
   enabled: true,

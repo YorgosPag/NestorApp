@@ -40,7 +40,10 @@ interface TextSettings {
   isSubscript: boolean;
 }
 
-interface GripSettings {
+// ADR-559 — NOT the canonical grip settings: a local DISPLAY summary view-model with
+// display-only fields (gripShape / showFill) that do not belong in the settings schema.
+// Renamed to de-collide from the SSoT `GripSettings`.
+interface GripSettingsSummary {
   showGrips: boolean;
   gripSize: number;
   gripShape: 'square' | 'circle';
@@ -57,7 +60,7 @@ interface CurrentSettingsDisplayProps {
   activeTab: string | null; // 'lines' | 'text' | 'grips' | null
   lineSettings: LineSettings;
   textSettings: TextSettings;
-  gripSettings: GripSettings;
+  gripSettings: GripSettingsSummary;
   className?: string;
 }
 

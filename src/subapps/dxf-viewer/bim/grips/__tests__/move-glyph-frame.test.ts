@@ -63,10 +63,34 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     expect(f.axisX.x).toBeCloseTo(1, 6); // horizontal axis, not the 90° rotation
   });
 
-  it('no orientation (plain line, degenerate axis, missing params) → null', () => {
+  it('no orientation (params-less line w/o geometry, degenerate axis, missing params) → null', () => {
     expect(resolveMoveGlyphFrame(ent('line', {}))).toBeNull();
     expect(resolveMoveGlyphFrame(ent('wall', { start: { x: 5, y: 5 }, end: { x: 5, y: 5 } }))).toBeNull();
     expect(resolveMoveGlyphFrame({ id: 'x', type: 'line' } as unknown as Entity)).toBeNull();
+  });
+
+  // ADR-363 Slice G.5 — plain DXF line: the axis lives in TOP-LEVEL start/end (no
+  // `params`), so the resolver must read it there → the move cross orients + drives
+  // the directional move exactly like a wall axis.
+  it('plain DXF line (top-level start/end, no params) → axisX along start→end', () => {
+    const line = { id: 'L1', type: 'line', start: { x: 0, y: 0 }, end: { x: 100, y: 0 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(line)!;
+    expect(f.axisX.x).toBeCloseTo(1, 6);
+    expect(f.axisX.y).toBeCloseTo(0, 6);
+    expect(f.axisY.x).toBeCloseTo(0, 6);
+    expect(f.axisY.y).toBeCloseTo(1, 6);
+  });
+
+  it('plain DXF line (vertical, top-level) → axisX points +Y', () => {
+    const line = { id: 'L1', type: 'line', start: { x: 0, y: 0 }, end: { x: 0, y: 50 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(line)!;
+    expect(f.axisX.x).toBeCloseTo(0, 6);
+    expect(f.axisX.y).toBeCloseTo(1, 6);
+  });
+
+  it('gated to type "line": a params-less circle with top-level center is NOT given a frame', () => {
+    const circle = { id: 'C1', type: 'circle', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as unknown as Entity;
+    expect(resolveMoveGlyphFrame(circle)).toBeNull();
   });
 });
 

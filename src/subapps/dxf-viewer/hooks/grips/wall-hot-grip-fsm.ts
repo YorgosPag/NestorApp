@@ -113,9 +113,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'floorplan-symbol-corner-nw': 'corner',
   'floorplan-symbol-corner-sw': 'corner',
   'floorplan-symbol-corner-se': 'corner',
-  // Plain DXF line (ADR-363 Slice F) — rotation REFERENCE (6-click) / free spin,
-  // full wall parity. The line's endpoint/midpoint grips stay press-drag.
+  // Plain DXF line (ADR-363 Slice F/G.5) — rotation REFERENCE (6-click) / free spin
+  // + the ¼-west MOVE cross (3-click move + per-arm directional click→distance),
+  // full wall parity. The line's endpoint + centre-midpoint grips stay press-drag.
   'line-rotation': 'rotate',
+  'line-move': 'move',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */

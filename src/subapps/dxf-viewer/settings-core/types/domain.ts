@@ -133,8 +133,8 @@ export interface TextSettings {
 // ADR-559 — canonical grip-settings SHAPE lives in `types/grip-settings-schema.ts`.
 // `GripColors` is re-exported (consumers keep importing it from here); the stored-settings
 // `GripSettings` is a PROJECTION of the canonical base (no render extras, sentinel colours).
-export type { GripColors } from '../../types/grip-settings-schema';
 import type { GripSettingsBase, GripColors } from '../../types/grip-settings-schema';
+export type { GripColors };
 
 /**
  * Stored grip user-settings (persisted in the zustand store). The canonical `GripSettingsBase`
@@ -142,9 +142,9 @@ import type { GripSettingsBase, GripColors } from '../../types/grip-settings-sch
  * runtime-only render extras (`showGripTips` / `dpiScale`). Add new grip fields to
  * `GripSettingsBase` in the schema, not here.
  */
-export interface GripSettings extends GripSettingsBase {
+export type GripSettings = GripSettingsBase & {
   colors: GripColors;
-}
+};
 
 // ============================================================================
 // ENTERPRISE SETTINGS (Cursor, Grid, Ruler)

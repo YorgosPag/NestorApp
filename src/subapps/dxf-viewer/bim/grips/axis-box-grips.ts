@@ -244,8 +244,32 @@ function applyAxisBoxEdgeDrag(
  * diverge. `frame.halfWidth` = ½ axis length, so `halfWidth / 2` = ¼ length;
  * `rotationHandleAxialEastSign` (the shared policy SSoT) picks the east end.
  */
+/**
+ * ADR-363 Slice F/G.5 — the ONE axial-quarter handle placement: on the longitudinal
+ * centreline (perp = 0), at ¼ of the axis length toward the EAST end, then multiplied
+ * by `axialSign` (`+1` = ¼-EAST, `-1` = ¼-WEST mirror). `frame.halfWidth` = ½ axis
+ * length, so `halfWidth / 2` = ¼ length; `rotationHandleAxialEastSign` (the shared
+ * policy SSoT) picks the east end. The single source for BOTH the rotation handle
+ * (¼-east) AND the line MOVE cross (¼-west) — one formula, the sign is the only knob.
+ */
+function axisQuarterHandleWorld(frame: RectFrame, axialSign: 1 | -1): Point2D {
+  return rectLocalWorld(frame, axialSign * rotationHandleAxialEastSign(frame.rotationDeg) * (frame.halfWidth / 2), 0);
+}
+
 export function axisQuarterRotationHandleWorld(frame: RectFrame): Point2D {
-  return rectLocalWorld(frame, rotationHandleAxialEastSign(frame.rotationDeg) * (frame.halfWidth / 2), 0);
+  return axisQuarterHandleWorld(frame, 1);
+}
+
+/**
+ * ADR-363 Slice G.5 — the ¼-WEST MOVE-handle world position: the MIRROR IMAGE of
+ * `axisQuarterRotationHandleWorld` about the centre (the `-1` axial sign), so the
+ * move handle sits symmetrically opposite the rotation handle (Giorgio 2026-06-30
+ * «σταυρός μετακίνησης ¼-δυτικά, συμμετρικό του rotation ¼-east»). Consumed by the
+ * plain DXF line move grip (`systems/line/line-grips.ts`); NO second placement
+ * formula — the SAME `axisQuarterHandleWorld` SSoT, just the opposite sign.
+ */
+export function axisQuarterMoveHandleWorld(frame: RectFrame): Point2D {
+  return axisQuarterHandleWorld(frame, -1);
 }
 
 // ─── Grip emission ───────────────────────────────────────────────────────────

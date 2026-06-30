@@ -30,6 +30,16 @@
       ],
       "tier": 3
     },
+    "grip-settings-schema": {
+      "ssotFile": "src/subapps/dxf-viewer/types/grip-settings-schema.ts",
+      "description": "ADR-559 — the grip-settings object SHAPE is defined ONCE in types/grip-settings-schema.ts (GripSettingsBase + GripStyleExtras + GripColors/ResolvedGripColors + GripSettingsFull). Every other grip-settings type (domain GripSettings, GripStyle, the input DTO, MockGripSettings, preview prop-types) MUST be a PROJECTION (`type X = ... & Omit<...>` / re-export), not a standalone `interface GripSettings`/`GripStyle`/`MockGripSettings`. Re-declaring one reintroduces the 5+ divergent-copies duplication where adding one field meant editing every copy by hand. Add new grip fields to GripSettingsBase. Local view-models with extra display-only fields must use a distinct name (e.g. GripSettingsSummary / GripCssPreviewInput), not `GripSettings`.",
+      "forbiddenPatterns": [
+        "interface\\s+GripSettings\\b",
+        "interface\\s+GripStyle\\b",
+        "interface\\s+MockGripSettings\\b"
+      ],
+      "tier": 3
+    },
     "browser-performance-memory": {
       "ssotFile": "src/lib/platform/browser-performance-memory.ts",
       "description": "ADR-546 — The non-standard Chrome `performance.memory` API must be declared and read ONLY through src/lib/platform/browser-performance-memory.ts. Re-declaring `interface PerformanceWithMemory`/`PerformanceMemory` or casting `as PerformanceWithMemory` anywhere else reintroduces the 4-type + 12-reader cross-subapp duplication with inconsistent units (bytes vs MB) and unsafe non-optional casts. Use readPerformanceMemory() (raw bytes) or readCpuMemoryMb() (MB). Type re-exports via `export type { ... } from` are allowed.",

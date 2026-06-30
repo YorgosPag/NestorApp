@@ -29,15 +29,18 @@ function makeLine(): DxfEntityUnion {
 describe('computeDxfEntityGrips — line midpoint = whole-entity move (ADR-363 ORTHO regression)', () => {
   const grips = computeDxfEntityGrips(makeLine());
 
-  it('produces 4 grips: start (0), end (1), midpoint (2), rotation (3)', () => {
-    // ADR-363 Slice F — the 4th grip is the rotation handle (wall parity); the
-    // first 3 (start/end/midpoint) keep their indices + semantics unchanged.
-    expect(grips).toHaveLength(4);
+  it('produces 5 grips: start (0), end (1), midpoint (2), rotation (3), move cross (4)', () => {
+    // ADR-363 Slice F/G.5 — grip 3 is the rotation handle (¼-east) and grip 4 is the
+    // MOVE cross (¼-west); the first 3 (start/end/midpoint) keep their indices +
+    // semantics unchanged (appended-after, so this regression's contract holds).
+    expect(grips).toHaveLength(5);
     expect(grips[0].gripIndex).toBe(0);
     expect(grips[1].gripIndex).toBe(1);
     expect(grips[2].gripIndex).toBe(2);
     expect(grips[3].gripIndex).toBe(3);
     expect(grips[3].lineGripKind).toBe('line-rotation');
+    expect(grips[4].gripIndex).toBe(4);
+    expect(grips[4].lineGripKind).toBe('line-move');
   });
 
   it('endpoints reshape — movesEntity stays false', () => {
