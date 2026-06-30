@@ -1,6 +1,6 @@
 /**
  * @module direction-arc-paint.test
- * @description ADR-397 §15 / ADR-508 §wall-direction-arc — τόξο φοράς γωνίας: πρόσημο→χρώμα (🟢/🔴) +
+ * @description ADR-397 §15 (rotation + wall) — τόξο φοράς γωνίας: πρόσημο→χρώμα (🟢/🔴) +
  * screen-space γεωμετρία (φορά Y-flip safe, αιχμή στον κέρσορα, ακτίνα/clamp, baseline 0°). Pure unit
  * tests — μηδέν canvas/DOM. Κοινό SSoT για rotation + wall drawing.
  */

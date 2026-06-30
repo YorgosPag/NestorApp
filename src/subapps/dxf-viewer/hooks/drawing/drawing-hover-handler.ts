@@ -294,7 +294,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (lineHud) {
           previewCanvasRef.current.drawWallHud(lineHud, '');
         }
-        // ADR-508 §wall-direction-arc — μετά το 1ο κλικ του τοίχου: χρωματισμένο τόξο ΦΟΡΑΣ από την
+        // ADR-397 §15 (wall) — μετά το 1ο κλικ του τοίχου: χρωματισμένο τόξο ΦΟΡΑΣ από την
         // αρχή (lastRefPt) με άξονα αναφοράς τον world-X προς τον κέρσορα (previewPt). 🟢 πάνω / 🔴 κάτω
         // από τον x-άξονα + βελάκι + baseline 0° + χρωματιστές μοίρες — ΙΔΙΟ SSoT painter με την
         // περιστροφή (ADR-397 §15). bearing = atan2(dy,dx) σε world (Y-up) → πάνω = θετικό = πράσινο.

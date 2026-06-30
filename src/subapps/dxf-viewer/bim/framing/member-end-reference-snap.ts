@@ -126,3 +126,79 @@ export function resolveMemberEndReferenceSnap(
   // `targetId` διαδίδει τον host (preview≡commit).
   return { start, end, status: 'beam', targetId: best.id, justification: justificationForTier(best.off, side) };
 }
+
+/** Επιλεγμένος υποψήφιος corner-cap (κορυφή `e`, καθρεφτισμένη θέση γωνίας `q`, φορά/άκρη). */
+interface CornerCapHit {
+  readonly fr: MemberTargetFrame;
+  readonly id: string;
+  readonly e: number; // διαμήκης θέση κορυφής (location line / νότια παρειά φαντάσματος)
+  readonly q: number; // κάθετη θέση «πίσω-κάτω» γωνίας φαντάσματος = −cPerp (καθρέφτης), clamped στο πλάτος
+  readonly dir: number; // φορά απλώματος κατά `p` (cPerp≥0 → +1 ανατολικά· <0 → −1 δυτικά)
+  readonly endOut: number; // φορά «έξω» από το σώμα κατά `u` (top κορυφή +1 / bottom −1)
+  readonly beyond: number; // πόσο πέρα από την κορυφή είναι ο κέρσορας — nearest-wins
+}
+
+/**
+ * ADR-508 §end-reference (corner-cap / γωνία Γ) — όταν ο κέρσορας είναι **βόρεια της κορυφής** (εκεί που
+ * πριν έβγαινε 🔴 ομοαξονικό) ΚΑΙ **εντός του πλάτους** του υφιστάμενου (μέχρι την παρειά), το φάντασμα
+ * γίνεται **οριζόντιο** με τη **νότια παρειά flush στην κορυφή** (Giorgio: «πάντα νότια κολλάει στη βόρεια
+ * μικρή παρειά») και σχηματίζει **γωνία Γ**:
+ *
+ *   · cPerp ≥ 0 (δεξιά/ανατολικά) → απλώνεται ΑΝΑΤΟΛΑ· η ΝΔ γωνία = καθρέφτης `−cPerp` (στον άξονα→μέσο,
+ *     στην Α παρειά→ΒΔ γωνία· **ολισθαίνει**, Giorgio 1B).
+ *   · cPerp < 0 (αριστερά/δυτικά) → απλώνεται ΔΥΣΗ· η ΝΑ γωνία = καθρέφτης `−cPerp` (στη Δ παρειά→ΒΑ γωνία).
+ *
+ * Reuse ΟΛΟΥ του location-line + `justification` (start = η «πίσω-κάτω» γωνία ΠΑΝΩ στην κορυφή = pivot·
+ * σώμα «κρέμεται» έξω από το υφιστάμενο). Pure. `null` όταν ο κέρσορας δεν είναι πέρα από κορυφή / εκτός
+ * πλάτους → ο caller πέφτει στο §end-reference 3-tier (πλάι) ή στη συγγραμμική επέκταση.
+ */
+export function resolveMemberEndCornerCapSnap(
+  cursor: Readonly<Point2D>,
+  targets: readonly LinearMemberSnapTarget[],
+  opts: Readonly<LinearMemberFaceSnapOptions>,
+): MemberGhostSnapResult | null {
+  if (opts.memberWidthScene <= 0) return null;
+
+  let best: CornerCapHit | null = null;
+  for (const t of targets) {
+    if (t.axis.length < 2 || t.outline.length < 3) continue;
+    const fr = buildMemberTargetFrame(cursor, t);
+    if (!fr) continue;
+    const h = Math.max(Math.abs(fr.perpMin), Math.abs(fr.perpMax)); // ημι-πάχος υφιστάμενου
+    if (h < 1e-9) continue;
+
+    // ── εντός πλάτους (μέχρι την παρειά) — αλλιώς ο κέρσορας είναι «στο πλάι» → §end-reference 3-tier ──
+    if (Math.abs(fr.cPerp) > h) continue;
+
+    // ── πέρα από ποια κορυφή (βόρεια/νότια του σώματος); μέσα στο σώμα → ΟΧΙ corner-cap ──
+    let e: number;
+    let endOut: number;
+    let beyond: number;
+    if (fr.cAlong > fr.alongMax) { e = fr.alongMax; endOut = 1; beyond = fr.cAlong - fr.alongMax; }
+    else if (fr.cAlong < fr.alongMin) { e = fr.alongMin; endOut = -1; beyond = fr.alongMin - fr.cAlong; }
+    else continue;
+    if (beyond > opts.captureScene) continue; // πολύ μακριά από την κορυφή → ελεύθερη κίνηση
+
+    // «πίσω-κάτω» γωνία = καθρέφτης του κέρσορα κατά `p` (Giorgio 1B), clamped στο πλάτος [perpMin,perpMax].
+    const q = Math.min(Math.max(-fr.cPerp, fr.perpMin), fr.perpMax);
+    const dir = fr.cPerp >= 0 ? 1 : -1; // απλώνεται προς την πλευρά του κέρσορα
+    if (!best || beyond < best.beyond) best = { fr, id: t.id, e, q, dir, endOut, beyond };
+  }
+  if (!best) return null;
+
+  const { fr, e, q, dir, endOut } = best;
+  // start = η «πίσω-κάτω» γωνία ΠΑΝΩ στην κορυφή (= pivot + location line = νότια παρειά φαντάσματος).
+  const start: Point2D = {
+    x: fr.a.x + e * fr.u.x + q * fr.p.x,
+    y: fr.a.y + e * fr.u.y + q * fr.p.y,
+  };
+  // end = stub κατά μήκος της location line προς την πλευρά του κέρσορα (φάντασμα οριζόντιο).
+  const end: Point2D = {
+    x: start.x + dir * opts.ghostLenScene * fr.p.x,
+    y: start.y + dir * opts.ghostLenScene * fr.p.y,
+  };
+  // justification = το σώμα «κρέμεται» ΕΞΩ από το υφιστάμενο (κατά `endOut·u`). 'left'=+n_ccw του
+  // location line· `endOut·dir` = πρόσημο της προβολής του `endOut·u` στο +n_ccw (βλ. axis-justify).
+  const justification: StripJustification = endOut * dir > 0 ? 'left' : 'right';
+  return { start, end, status: 'beam', targetId: best.id, justification };
+}

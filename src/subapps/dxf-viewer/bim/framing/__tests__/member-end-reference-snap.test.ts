@@ -15,6 +15,7 @@
 
 import {
   resolveMemberEndReferenceSnap,
+  resolveMemberEndCornerCapSnap,
 } from '../member-end-reference-snap';
 import {
   type LinearMemberSnapTarget,
@@ -124,6 +125,72 @@ describe('Full chain — justification → alignmentPoint → buildDefaultWallPa
 
   it('Στάδιο Γ (1α≡κορυφή, right) → body axis y=850 (σώμα ΟΛΟ μέσα)', () => {
     expect(buildBodyAxisY(870)).toBeCloseTo(850, 6);
+  });
+});
+
+describe('resolveMemberEndCornerCapSnap — γωνία Γ ΒΟΡΕΙΑ της κορυφής (sliding, νότια flush)', () => {
+  it('Ανατολική παρειά, βόρεια: ΝΔ γωνία → ΒΔ γωνία υφιστάμενου (−100), απλώνεται ΑΝΑΤΟΛΑ, left', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: 100, y: 1100 }, [VERTICAL], OPTS);
+    expect(r).not.toBeNull();
+    expect(r!.status).toBe('beam');
+    expect(r!.start).toEqual({ x: -100, y: 1000 });
+    expect(r!.end).toEqual({ x: 1100, y: 1000 });
+    expect(r!.justification).toBe('left');
+  });
+
+  it('Πάνω στον άξονα, βόρεια: ΝΔ γωνία → ΜΕΣΟ κορυφής (0), απλώνεται ΑΝΑΤΟΛΑ', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: 0, y: 1100 }, [VERTICAL], OPTS);
+    expect(r!.start).toEqual({ x: 0, y: 1000 });
+    expect(r!.end).toEqual({ x: 1200, y: 1000 });
+    expect(r!.justification).toBe('left');
+  });
+
+  it('Δυτική παρειά, βόρεια: ΝΑ γωνία → ΒΑ γωνία υφιστάμενου (+100), απλώνεται ΔΥΣΗ, right', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: -100, y: 1100 }, [VERTICAL], OPTS);
+    expect(r!.start).toEqual({ x: 100, y: 1000 });
+    expect(r!.end).toEqual({ x: -1100, y: 1000 });
+    expect(r!.justification).toBe('right');
+  });
+
+  it('Ενδιάμεσα (cPerp=+50): η γωνία ΟΛΙΣΘΑΙΝΕΙ (καθρέφτης −50), 1B', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: 50, y: 1100 }, [VERTICAL], OPTS);
+    expect(r!.start).toEqual({ x: -50, y: 1000 });
+  });
+
+  it('Εκτός πλάτους (|cPerp|>h) → null (αφήνεται στο §end-reference 3-tier του πλαϊνού)', () => {
+    expect(resolveMemberEndCornerCapSnap({ x: 150, y: 1100 }, [VERTICAL], OPTS)).toBeNull();
+  });
+
+  it('Μέσα στο σώμα (όχι πέρα από κορυφή) → null', () => {
+    expect(resolveMemberEndCornerCapSnap({ x: 50, y: 500 }, [VERTICAL], OPTS)).toBeNull();
+  });
+
+  it('Πολύ μακριά βόρεια (πέρα από capture) → null', () => {
+    expect(resolveMemberEndCornerCapSnap({ x: 0, y: 1700 }, [VERTICAL], OPTS)).toBeNull();
+  });
+
+  it('Κάτω κορυφή (νότια του σώματος): ΝΑ παρειά flush στη νότια μικρή παρειά, σώμα νότια', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: 50, y: -100 }, [VERTICAL], OPTS);
+    expect(r!.start).toEqual({ x: -50, y: 0 });
+    expect(r!.justification).toBe('right');
+  });
+
+  it('Full chain: corner-cap → alignmentPoint → body axis νότια-flush (south face στο 1000, body 1150)', () => {
+    const r = resolveMemberEndCornerCapSnap({ x: 100, y: 1100 }, [VERTICAL], OPTS)!;
+    const alignmentPoint = alignmentPointForWallJustification(r.start, r.end, r.justification);
+    const params = buildDefaultWallParams(r.start, r.end, { thickness: 300 }, 'mm', alignmentPoint);
+    expect(params.start.y).toBeCloseTo(params.end.y, 6); // οριζόντιος
+    expect(params.start.y).toBeCloseTo(1150, 6); // body axis = κορυφή + ghostHalf (σώμα ΒΟΡΕΙΑ)
+  });
+});
+
+describe('resolveMemberGhostSnapFromStore — wiring: corner-cap ΠΡΙΝ 3-tier (αντικαθιστά το 🔴)', () => {
+  it('Βόρεια & στον άξονα (πρώην 🔴 ομοαξονικό) → 🟢 corner-cap (ΟΧΙ overlap)', () => {
+    const r = resolveMemberGhostSnapFromStore({ x: 0, y: 1100 }, [], [VERTICAL], 300, 'mm');
+    expect(r).not.toBeNull();
+    expect(r!.status).toBe('beam'); // 🟢 — όχι 'overlap'
+    expect(r!.start).toEqual({ x: 0, y: 1000 });
+    expect(r!.justification).toBe('left');
   });
 });
 

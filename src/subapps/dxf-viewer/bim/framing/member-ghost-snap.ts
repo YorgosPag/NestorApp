@@ -27,7 +27,7 @@ import {
   type MemberGhostSnapResult,
   type LinearMemberSnapTarget,
 } from './linear-member-face-snap';
-import { resolveMemberEndReferenceSnap } from './member-end-reference-snap';
+import { resolveMemberEndReferenceSnap, resolveMemberEndCornerCapSnap } from './member-end-reference-snap';
 
 /**
  * Dispatcher: mm→scene conversion + επιλογή στόχου face-snap (column-priority, μετά member).
@@ -69,9 +69,13 @@ export function resolveMemberGhostSnapFromStore(
       memberWidthScene: memberWidthMm * f,
       dominantUnitScene,
     };
-    // ADR-508 §end-reference — η κορυφή (κοντή άκρη) **νικά** το body Τ-framing ΚΟΝΤΑ στα άκρα: 3-tier
-    // flush (1α/2β/3γ ≡ κορυφή, nearest-wins). Επιστρέφει `null` μακριά από κορυφή/στον άξονα → ομαλή
-    // παράδοση στο body Τ-framing (🟢) ή στη συγγραμμική επέκταση (🔴). ΕΝΑΣ dispatcher → preview ≡ commit.
+    // ADR-508 §end-reference (corner-cap) — ΒΟΡΕΙΑ της κορυφής & ΕΝΤΟΣ πλάτους (εκεί που πριν έβγαινε 🔴
+    // ομοαξονικό): οριζόντια **γωνία Γ**, νότια παρειά flush στην κορυφή, σώμα έξω· η «πίσω-κάτω» γωνία
+    // καθρεφτίζει τον κέρσορα (ολισθαίνει). ΥΨΗΛΟΤΕΡΗ προτεραιότητα → αντικαθιστά το 🔴.
+    const cornerCap = resolveMemberEndCornerCapSnap(cursor, memberTargets, memberOpts);
+    if (cornerCap) return cornerCap;
+    // ADR-508 §end-reference (3-tier) — ΣΤΟ ΠΛΑΙ της κορυφής (κοντά σε μακριά παρειά): 1α/2β/3γ ≡ κορυφή,
+    // nearest-wins. `null` μακριά → body Τ-framing (🟢) ή συγγραμμική επέκταση (🔴). ΕΝΑΣ dispatcher → preview ≡ commit.
     const endRef = resolveMemberEndReferenceSnap(cursor, memberTargets, memberOpts);
     if (endRef) return endRef;
     return resolveLinearMemberFaceSnap(cursor, memberTargets, memberOpts);

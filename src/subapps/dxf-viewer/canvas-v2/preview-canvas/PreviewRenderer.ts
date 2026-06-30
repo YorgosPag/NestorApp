@@ -60,7 +60,7 @@ import { paintRectGrid } from './rect-grid-paint';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 // ADR-357 Phase 1 — polar tracking line overlay (extracted, SRP — same pattern as the other *-paint helpers).
 import { paintPolarTrackingLine } from './polar-tracking-line-paint';
-// ADR-508 §wall-direction-arc — κοινό SSoT τόξο φοράς (rotation ⊕ wall drawing): χρωματισμένο
+// ADR-397 §15 (wall) — κοινό SSoT τόξο φοράς (rotation ⊕ wall drawing): χρωματισμένο
 // τόξο + βελάκι + baseline 0° + χρωματιστές μοίρες (🟢 πάνω / 🔴 κάτω από τον x-άξονα).
 import { paintDirectionArc } from './direction-arc-paint';
 // ADR-398 §3.20 — circumference quadrant-to-end alignment guide (dashed, same overlay SSoT).
@@ -230,7 +230,7 @@ export class PreviewRenderer {
   }
 
   /**
-   * ADR-508 §wall-direction-arc — τόξο ΦΟΡΑΣ γωνίας τοίχου-φαντάσματος: μετά το 1ο κλικ, από τον
+   * ADR-397 §15 (wall) — τόξο ΦΟΡΑΣ γωνίας τοίχου-φαντάσματος: μετά το 1ο κλικ, από τον
    * `pivotW` (αρχή τοίχου) με άξονα αναφοράς το `anchorW` (world-X) προς τον `cursorW`, χρωματισμένο
    * ανά πρόσημο `sweepDeg` (🟢 πάνω / 🔴 κάτω από τον x-άξονα) + βελάκι + baseline 0° + χρωματιστές
    * μοίρες. Κοινός SSoT painter με την περιστροφή (ADR-397 §15). Called AFTER `drawPreview`· wiped στο

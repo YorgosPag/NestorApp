@@ -9,7 +9,7 @@
  * **ΚΟΙΝΟ SSoT για 2 features** (Giorgio «FULL SSoT»):
  *   1. **Hot-grip rotate** (ADR-397 §15) — pivot=κέντρο περιστροφής, ref=άξονας αναφοράς (pivot→anchor),
  *      sweep=`rotateSweepDeg` (signed ως προς τον άξονα αναφοράς).
- *   2. **Wall drawing** (ADR-508 §wall-direction-arc) — μετά το 1ο κλικ, pivot=αρχή τοίχου, ref=world-X
+ *   2. **Wall drawing** (ADR-397 §15, wall reuse) — μετά το 1ο κλικ, pivot=αρχή τοίχου, ref=world-X
  *      (οριζόντιος x-άξονας), sweep=bearing του τοίχου-φαντάσματος (πάνω→🟢, κάτω→🔴, αρχική προδιαγραφή).
  *
  * Η ΦΟΡΑ σχεδίασης του τόξου στην οθόνη υπολογίζεται από τις screen θέσεις (Y-flip safe), ενώ το
@@ -19,7 +19,7 @@
  * @see hooks/tools/useGripGhostPreview — rotation consumer (μέσω άμεσου ctx)
  * @see canvas-v2/preview-canvas/PreviewRenderer — wall-drawing consumer (drawDirectionArc)
  * @see bim/ghosts/ghost-status-color.ts — SSoT 🟢/🔴 παλέτα
- * @see ADR-397 §15 / ADR-508 §wall-direction-arc / ADR-040
+ * @see ADR-397 §15 (rotation + wall reuse) / ADR-040
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
