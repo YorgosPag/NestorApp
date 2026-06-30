@@ -32,17 +32,19 @@ let installed = false;
 const cleanRoots = new WeakSet<THREE.Object3D>();
 
 /**
- * Install the three-mesh-bvh prototype extensions ONCE. The `BufferGeometry`/`Mesh` augmentations
- * ship with three-mesh-bvh's own d.ts (`boundsTree`/`computeBoundsTree`/`disposeBoundsTree`).
- * three@0.170 makes `BufferGeometry` generic, so `THREE.BufferGeometry.prototype` is typed
- * `BufferGeometry<any>` and the augmented members don't resolve through the `any` instantiation.
- * Narrowing the prototype to the default `BufferGeometry` (= `BufferGeometry<NormalBufferAttributes>`)
- * surfaces them — no `any` / `@ts-ignore` needed. Idempotent.
+ * Install the three-mesh-bvh prototype extensions ONCE. three-mesh-bvh's module augmentation
+ * surfaces `computeBoundsTree`/`disposeBoundsTree` on *instance* access, but three@0.170's generic
+ * `BufferGeometry` types the *prototype* as `BufferGeometry<any>`, where those members don't resolve.
+ * We assign through a narrow structural view typed with three-mesh-bvh's own function signatures
+ * (no `any`, no `@ts-ignore`) — the runtime install is unchanged. Idempotent.
  */
 export function installBvh(): void {
   if (installed) return;
   installed = true;
-  const geometryPrototype = THREE.BufferGeometry.prototype as THREE.BufferGeometry;
+  const geometryPrototype = THREE.BufferGeometry.prototype as unknown as {
+    computeBoundsTree: typeof computeBoundsTree;
+    disposeBoundsTree: typeof disposeBoundsTree;
+  };
   geometryPrototype.computeBoundsTree = computeBoundsTree;
   geometryPrototype.disposeBoundsTree = disposeBoundsTree;
   THREE.Mesh.prototype.raycast = acceleratedRaycast;

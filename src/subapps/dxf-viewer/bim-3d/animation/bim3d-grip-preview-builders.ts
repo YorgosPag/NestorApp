@@ -133,7 +133,11 @@ export function buildFloorFinishReshapePreviewObject(
   const next = applyFloorFinishGripDrag(gripKind, { originalParams: ff.params, delta: deltaMm, rectilinear });
   if (next === ff.params) return null; // no-op (zero delta / out-of-range index)
   const preview = { ...ff, params: next };
-  return floorFinishToMesh(preview, 0, levelId, baseElevationM(ff, s));
+  // `FloorFinishParams` δεν έχει storey linkage (weak-type mismatch με `EntityWithStoreyParams`).
+  // Το base elevation εξαρτάται μόνο από floorId/buildingId (resolveEntityBuilding) → περνάμε
+  // adapter με κενά params· ίδιο runtime αποτέλεσμα (storeyId/offset → floorId fallback).
+  const ffElevRef: EntityWithStoreyParams = { floorId: ff.floorId, buildingId: ff.buildingId, params: {} };
+  return floorFinishToMesh(preview, 0, levelId, baseElevationM(ffElevRef, s));
 }
 
 /**
