@@ -1,24 +1,28 @@
 /**
- * cinema4d-grid-frame.test.ts — ADR-558 hard-extent math (the only CPU per-frame logic; the decade
- * LOD is per-fragment in the shader and not unit-testable here).
+ * cinema4d-grid-frame.test.ts — ADR-558 horizon-fade math (the only CPU per-frame logic; the decade
+ * LOD is computed per fragment in the shader and is not unit-testable here).
  */
 
-import { computeGrid3DExtent } from '../cinema4d-grid-frame';
-import { GRID3D_EXTENT_K } from '../cinema4d-grid-config';
+import { computeGrid3DFrame } from '../cinema4d-grid-frame';
+import { GRID3D_FADE_NEAR_K, GRID3D_FADE_FAR_K, GRID3D_MAX_REACH_M } from '../cinema4d-grid-config';
 
-describe('computeGrid3DExtent — hard finite boundary (C4D stops, never distance-fades)', () => {
-  it('ties the extent to the camera→target distance', () => {
-    expect(computeGrid3DExtent({ distance: 20 })).toBeCloseTo(20 * GRID3D_EXTENT_K, 6);
+describe('computeGrid3DFrame — view-relative horizon fade, capped at the hard reach', () => {
+  it('ties the fade radii to the camera distance (below the cap)', () => {
+    const smallD = (GRID3D_MAX_REACH_M / GRID3D_FADE_FAR_K) / 2; // fadeFar stays below the cap
+    const f = computeGrid3DFrame({ distance: smallD });
+    expect(f.fadeFar).toBeCloseTo(smallD * GRID3D_FADE_FAR_K, 6);
+    expect(f.fadeNear).toBeCloseTo(smallD * GRID3D_FADE_NEAR_K, 6);
+    expect(f.fadeFar).toBeGreaterThan(f.fadeNear);
   });
 
-  it('scales linearly with distance (edge sits near the horizon at any zoom)', () => {
-    const near = computeGrid3DExtent({ distance: 10 });
-    const far = computeGrid3DExtent({ distance: 40 });
-    expect(far / near).toBeCloseTo(4, 6);
+  it('caps the far radius at GRID3D_MAX_REACH_M when zoomed far out', () => {
+    const f = computeGrid3DFrame({ distance: 1e6 });
+    expect(f.fadeFar).toBeCloseTo(GRID3D_MAX_REACH_M, 6);
+    expect(f.fadeNear).toBeLessThan(f.fadeFar); // near kept below far even when capped
   });
 
-  it('clamps a zero/negative distance to a tiny positive extent (no degenerate boundary)', () => {
-    expect(computeGrid3DExtent({ distance: 0 })).toBeGreaterThan(0);
-    expect(computeGrid3DExtent({ distance: -5 })).toBeGreaterThan(0);
+  it('clamps a zero/negative distance to a finite positive fade (no degenerate grid)', () => {
+    expect(computeGrid3DFrame({ distance: 0 }).fadeFar).toBeGreaterThan(0);
+    expect(computeGrid3DFrame({ distance: -5 }).fadeFar).toBeGreaterThan(0);
   });
 });

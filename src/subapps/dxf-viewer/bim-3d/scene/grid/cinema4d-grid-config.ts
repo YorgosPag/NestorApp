@@ -9,10 +9,10 @@
  *    `…\\MAXON\\CINEMA 4D R15\\resource\\schemes\\Dark\\dark.col`, VIEWCOLORS section). They are
  *    not yet design tokens, so they live here as named constants citing that source.
  *
- * Dynamic model: per-fragment DECADE LOD (Blender / Maya / Ben Golus "pristine grid"). The shader
- * derives the line spacing from the screen-space derivative PER PIXEL, so the grid subdivides
- * continuously with zoom AND auto-coarsens toward the horizon under camera tilt — exactly the C4D
- * "Dynamic Grid 1..10" behaviour. (The 2D ortho single-scale cascade cannot express this; see ADR.)
+ * Model (C4D): a WORLD-LOCKED grid in true perspective with a PER-FRAGMENT decade LOD (the spacing is
+ * chosen per pixel from the screen-space derivative, so lines spawn/merge with both zoom and tilt),
+ * melted into the grey background by a soft HORIZON FADE keyed to the distance from the camera — no
+ * hard edge. Major every 10th, distinctly bolder than the minor.
  *
  * @module bim-3d/scene/grid/cinema4d-grid-config
  */
@@ -32,36 +32,47 @@ export const GRID3D_AXIS_X_COLOR = '#E52D2D';
 /** World Z axis (north = −Z) — VIEWCOLOR_ZAXIS (45,45,229). */
 export const GRID3D_AXIS_Z_COLOR = '#2D2DE5';
 
-// ── Geometry / decade LOD / fade (world metres unless noted) ──────────────────
+// ── Geometry / per-fragment decade LOD + horizon fade (world metres unless noted) ─────────────
 
-/** Ground-plane half-size (m). Bounded but large; the distance fog dissolves it before the edge,
- *  and the mesh re-centres on the camera target each frame so the window always covers the view. */
-export const GRID3D_PLANE_HALF_SIZE_M = 2000;
-
-/** Decade anchor cell (m). The per-fragment LOD multiplies this by powers of ten, so the visible
- *  minor spacing is always a clean 1 / 10 / 100 … m (or 0.1 / 0.01 m when zoomed in). C4D decade model. */
+/** Decade anchor (m). The per-fragment LOD multiplies this by powers of ten, so the visible minor
+ *  spacing is always a clean 0.1 / 1 / 10 / 100 … m. World-locked (lines at fixed world coords). */
 export const GRID3D_BASE_CELL_M = 1;
-/** Minor decade ratio — C4D "Major Lines Every nth" = 10 (major line every 10th minor). Decade grid. */
+/** STEPPING / TIMING knob (Giorgio 2026-06-30): the on-screen px spacing at which the finest minor
+ *  lines spawn (zoom-in / tilt-up) and merge away (zoom-out / tilt-down). The shader keeps the minor
+ *  spacing ≈ this many px PER FRAGMENT, so the grid responds to BOTH zoom AND camera tilt (lines
+ *  coarsen toward the horizon automatically). Larger = lines are born/killed later (sparser); smaller
+ *  = denser, lines spawn sooner. This is the dial for "when new lines appear vs disappear". */
+export const GRID3D_MIN_CELL_PX = 50;
+/** Major line every Nth minor (decade) — C4D "Major Lines Every 10th". */
 export const GRID3D_MAJOR_EVERY = 10;
-/** Minimum on-screen px between the FINEST minor lines. The LOD keeps minor spacing in
- *  [MIN_CELL_PX, 10·MIN_CELL_PX); the next finer decade only cross-fades in once it too clears this
- *  gap → never a solid sheet. Tuned to C4D's "~5–15 lines across the window" target density
- *  (research: GetGridStep). Larger = sparser. */
-export const GRID3D_MIN_CELL_PX = 64;
 
-/** Line widths (screen px, derivative AA). C4D R15 draws ALL grid lines at 1px and distinguishes
- *  major from minor by COLOUR ONLY (verified: no thicker-major directive anywhere in the resources;
- *  #414141 major is darker than #4B4B4B minor on the grey background → reads as the heavier line).
+/** Horizon fade band, in multiples of the camera→target distance. The grid is full strength up to
+ *  NEAR×distance from the camera, then dissolves into the grey background by FAR×distance — exactly
+ *  how C4D melts the grid into the horizon line (NOT a hard edge). Scales with zoom so the fade always
+ *  sits near the horizon. Larger FAR = grid reaches further before dissolving. */
+export const GRID3D_FADE_NEAR_K = 4;
+export const GRID3D_FADE_FAR_K = 16;
+
+/** Hard ceiling (world m) on how far the grid reaches before it has fully faded — caps the
+ *  view-relative fade so the grid never extends past this many metres (Giorgio test knob). */
+export const GRID3D_MAX_REACH_M = 1000;
+
+/** Line widths (screen px, derivative AA). Major stays a crisp 1px; MINOR is sub-pixel so the
+ *  secondary lines read THINNER/lighter than the major decade (Giorgio 2026-06-30) — below 1px the AA
+ *  yields partial coverage, i.e. a finer, fainter line. Tune MINOR lower for even thinner. Major vs
+ *  minor is keyed by BOTH width and the C4D token colours (#414141 darker major / #4B4B4B minor).
  *  Axes get a hair more presence (different element, colour-keyed). */
-export const GRID3D_MINOR_LINE_PX = 1.0;
+export const GRID3D_MINOR_LINE_PX = 0.7;
 export const GRID3D_MAJOR_LINE_PX = 1.0;
-export const GRID3D_AXIS_LINE_PX = 1.2;
+export const GRID3D_AXIS_LINE_PX = 1.0;
+/** 3D-only darken factor applied to the live major token colour (Giorgio 2026-06-30: "primary lines a
+ *  bit darker"). Multiplies the resolved major colour just for this 3D grid — the 2D grid + the shared
+ *  design token are untouched. <1 = darker. */
+export const GRID3D_MAJOR_DARKEN = 0.6;
 
-/** Finite grid extent as a multiple of the camera→target distance (d). C4D STOPS the grid at a hard
- *  boundary — it does NOT distance-fade toward the horizon (verified: GetGridStep's `fade` is the
- *  LOD-transition crossfade only, never a distance fade). Square half-size = K·d, tracking the view
- *  so the hard edge sits near the horizon at any zoom. Larger = the edge sits further out. */
-export const GRID3D_EXTENT_K = 16;
+/** Ground-plane half-size (world m). Large + re-centred on the target each frame so it always covers
+ *  the view out to where the horizon fade has fully dissolved the grid. */
+export const GRID3D_PLANE_HALF_SIZE_M = 4000;
 
 /** Peak grid opacity (subtle, C4D-like — lines sit just above the grey studio background). */
 export const GRID3D_MAX_OPACITY = 0.9;

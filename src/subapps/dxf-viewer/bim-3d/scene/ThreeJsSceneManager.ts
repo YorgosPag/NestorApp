@@ -157,7 +157,8 @@ export class ThreeJsSceneManager {
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // ADR-558 — Cinema-4D-style ground grid. Registers itself as a post-FX 'underlay' overlay
-    // (AO-immune, depth-tested → occluded by the building). Window follows the orbit target.
+    // (AO-immune, depth-tested → occluded by the building). C4D model: world-locked grid in true
+    // perspective + soft horizon fade (the cell step + fade radii scale with the camera distance).
     this.gridFloor = new Cinema4DGridFloor(
       this.scene,
       () => this.viewport.camera,

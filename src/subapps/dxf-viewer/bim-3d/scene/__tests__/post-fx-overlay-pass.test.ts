@@ -14,6 +14,7 @@ import {
   collectPostFxOverlayRoots,
   renderPostFxOverlays,
   PostFxOverlayPass,
+  OVERLAY_ORDER,
 } from '../post-fx-overlay-pass';
 
 /** Mock renderer that records the live `autoClear` + the root's `visible` at each `render()`. */
@@ -56,6 +57,32 @@ describe('registry (scene-scoped)', () => {
     shown = true;
     expect(collectPostFxOverlayRoots(scene)).toEqual([root]);
     off();
+  });
+
+  it('draws GROUND-order overlays first regardless of registration order (ADR-558 grid-below-DXF)', () => {
+    const scene = new THREE.Scene();
+    const dxf = new THREE.Group();
+    const grid = new THREE.Group();
+    // DXF underlay registers FIRST (like ThreeJsSceneManager), grid SECOND — yet GROUND z-order must
+    // still place the grid first in the draw list, so the DXF entities paint on top of the ground.
+    const offDxf = registerPostFxOverlay(scene, () => [dxf], 'underlay', OVERLAY_ORDER.CONTENT);
+    const offGrid = registerPostFxOverlay(scene, () => [grid], 'underlay', OVERLAY_ORDER.GROUND);
+
+    expect(collectPostFxOverlayRoots(scene, 'underlay')).toEqual([grid, dxf]);
+    expect(collectPostFxOverlayRoots(scene)).toEqual([grid, dxf]); // same order in the all-kinds path
+    offGrid();
+    offDxf();
+  });
+
+  it('keeps registration order for overlays sharing the same z-order (stable sort)', () => {
+    const scene = new THREE.Scene();
+    const first = new THREE.Group();
+    const second = new THREE.Group();
+    const off1 = registerPostFxOverlay(scene, () => [first]); // default CONTENT
+    const off2 = registerPostFxOverlay(scene, () => [second]); // default CONTENT
+    expect(collectPostFxOverlayRoots(scene)).toEqual([first, second]);
+    off1();
+    off2();
   });
 });
 

@@ -1,19 +1,20 @@
 /**
- * cinema4d-grid-material.ts — anti-aliased per-fragment DECADE-LOD grid material (ADR-558).
+ * cinema4d-grid-material.ts — anti-aliased world-locked perspective grid material (ADR-558, C4D model).
  *
- * Big-player technique (Blender `overlay_grid` / Maya / Ben Golus "pristine grid"): one ground quad
- * whose fragment shader derives the line spacing PER PIXEL from the screen-space derivative
- * (`fwidth`). Consequences, all free and continuous:
- *   • zoom in  → the decade LOD drops → finer minor lines fade in (the grid subdivides);
- *   • zoom out → the LOD climbs → fine lines merge, coarser decades remain;
- *   • camera tilt → far fragments have a larger derivative → they auto-coarsen toward the horizon,
- *     so the ground never turns into a solid moiré sheet.
- * Two line classes only: MINOR every decade cell, MAJOR (slightly bolder + darker token colour)
- * every 10th — the C4D "Major Lines Every 10th" model. The grid STOPS at a hard finite square
- * extent (C4D does NOT distance-fade toward the horizon — the lines just end). Lines are ~1px via
- * the derivative, never thickening with zoom; major vs minor by colour only (C4D-faithful).
+ * C4D model (Giorgio "do it like C4D" 2026-06-30): one ground quad whose fragment shader draws a
+ * WORLD-LOCKED grid (lines at fixed world coordinates) in true perspective, so all lines converge to
+ * the horizon. The decade LOD is computed PER FRAGMENT from the screen-space derivative (uMinCellPx is
+ * the spawn/merge threshold), so lines are born/killed continuously with BOTH zoom AND camera tilt
+ * (far fragments coarsen toward the horizon) -- this is what makes it dynamic. The over-dense finest
+ * minor fades out as a decade is about to merge (continuous, no pop); the major decade stays full.
  *
- * Rendered AO-immune via the post-FX `'underlay'` overlay pass (depth-tested → occluded by the
+ * Two line classes: MINOR every cell + MAJOR every uMajorEvery-th; major vs minor by COLOUR + WIDTH
+ * (major distinctly bolder so primary/secondary read apart). The grid does NOT stop at a hard edge --
+ * it is MELTED into the grey background by a soft HORIZON FADE keyed to the fragment distance from the
+ * camera (full strength up to uFadeNear, gone by uFadeFar), exactly how C4D dissolves it at the
+ * horizon; the radii scale with zoom (capped at a hard reach).
+ *
+ * Rendered AO-immune via the post-FX `'underlay'` overlay pass (depth-tested -> occluded by the
  * building, never tinted by SSAO). `toneMapped:false` + THREE.Color uniforms + the
  * `<colorspace_fragment>` chunk keep the resolved token hexes byte-exact.
  *
@@ -27,8 +28,8 @@ import {
   GRID3D_AXIS_X_COLOR,
   GRID3D_AXIS_Z_COLOR,
   GRID3D_BASE_CELL_M,
-  GRID3D_MAJOR_EVERY,
   GRID3D_MIN_CELL_PX,
+  GRID3D_MAJOR_EVERY,
   GRID3D_MINOR_LINE_PX,
   GRID3D_MAJOR_LINE_PX,
   GRID3D_AXIS_LINE_PX,
@@ -52,17 +53,18 @@ uniform vec3 uMinorColor;
 uniform vec3 uMajorColor;
 uniform vec3 uAxisXColor;
 uniform vec3 uAxisZColor;
-uniform float uBaseCell;       // decade anchor (m)
-uniform float uMajorEvery;     // major every nth minor (10 → decade)
-uniform float uMinCellPx;      // minimum on-screen px between the finest minor lines (sparse)
+uniform float uBaseCell;       // decade anchor (m) -- LOD multiplies this by powers of ten
+uniform float uMinCellPx;      // STEPPING knob: min on-screen px between the finest minor lines
+uniform float uMajorEvery;     // major line every Nth minor (10 -> decade)
 uniform float uMinorLinePx;
 uniform float uMajorLinePx;
 uniform float uAxisLinePx;
 uniform float uMaxOpacity;
-uniform vec3 uTarget;
-uniform float uExtent;         // hard finite half-size (m) around the target — grid STOPS here
+uniform float uFadeNear;       // distance from the camera (m) where the grid is still full strength
+uniform float uFadeFar;        // distance from the camera (m) where the grid has dissolved (horizon)
+// cameraPosition is injected automatically by three for ShaderMaterial.
 
-// AA coverage of the nearest line of a square grid with the given world cell, ~widthPx wide.
+// AA coverage of the nearest line of a square grid with the given world cell, about widthPx wide.
 float lineCoverage(vec2 p, float cell, float widthPx) {
   vec2 c = p / cell;
   vec2 d = max(fwidth(c), vec2(1e-6));
@@ -78,45 +80,44 @@ float axisCoverage(float coord, float widthPx) {
 }
 
 void main() {
+  // World-locked grid: lines live at fixed world coordinates and converge to the horizon in true
+  // perspective (C4D). One uniform cell size -> perspective compresses the cells toward the horizon
+  // (the 3D depth cue), no per-fragment rings, and the major sits exactly every 10th minor (BUG 2).
   vec2 p = vWorld.xz;
-
-  // ── Per-fragment decade LOD (sparse, big-player density) ───────────────────
-  // World units covered by one pixel at this fragment (isotropic upper bound).
+  // Per-fragment decade LOD: choose the spacing PER PIXEL from the screen-space derivative, so lines
+  // spawn (zoom-in / tilt-up) and merge (zoom-out / tilt-down) continuously -- dynamic with BOTH zoom
+  // and tilt. World-locked (lines at fixed world coords). uMinCellPx is the spawn/merge threshold.
   float worldPerPx = max(max(fwidth(p.x), fwidth(p.y)), 1e-6);
-  // Keep the finest minor lines ≥ uMinCellPx apart on screen → sparse, never a solid sheet.
   float lod = log2((worldPerPx * uMinCellPx) / uBaseCell) / log2(10.0);
-  float lf = ceil(lod);
-  float blend = clamp(lf - lod, 0.0, 1.0);              // 0 just after a decade step, 1 just before
-  float cellMinor = uBaseCell * pow(10.0, lf);          // minor spacing ∈ [uMinCellPx, 10·uMinCellPx)
-  float cellMajor = cellMinor * uMajorEvery;            // major: every 10th minor (decade)
-  float cellFiner = cellMinor / uMajorEvery;            // next finer decade — cross-fades the transition
+  float lodFloor = floor(lod);
+  float lodFade = lod - lodFloor;                       // 0 just after a decade step, ->1 just before
+  float cellMinor = uBaseCell * pow(10.0, lodFloor);    // finest minor (>= uMinCellPx on screen)
+  float cellMajor = cellMinor * uMajorEvery;            // major every 10th minor
 
-  float minorC = lineCoverage(p, cellMinor, uMinorLinePx);
-  // The finer decade only appears once it ALSO clears uMinCellPx (× blend so it grows in smoothly).
-  float finerPx = cellFiner / worldPerPx;
-  float finerC = lineCoverage(p, cellFiner, uMinorLinePx) * blend * smoothstep(uMinCellPx * 0.5, uMinCellPx, finerPx);
+  // The over-dense finest minor fades out as the decade is about to merge (continuous, no hard pop);
+  // the major decade stays full + bold so primary/secondary read clearly apart.
+  float minorC = lineCoverage(p, cellMinor, uMinorLinePx) * (1.0 - lodFade);
   float majorC = lineCoverage(p, cellMajor, uMajorLinePx);
 
   vec3 color = uMinorColor;
-  float a = max(minorC, finerC);
+  float a = minorC;
   if (majorC >= a) { color = uMajorColor; a = majorC; }
 
-  // ── World axes from origin: line at z==0 runs along X (red); x==0 runs along Z (blue) ─────────
+  // -- World axes from origin: line at z==0 runs along X (red); x==0 runs along Z (blue) -----------
   float axX = axisCoverage(vWorld.z, uAxisLinePx);
   float axZ = axisCoverage(vWorld.x, uAxisLinePx);
   if (axX > 0.001) { color = mix(color, uAxisXColor, axX); a = max(a, axX); }
   if (axZ > 0.001) { color = mix(color, uAxisZColor, axZ); a = max(a, axZ); }
 
-  // ── Hard finite extent — C4D STOPS the grid; lines do NOT distance-fade toward the horizon ────
-  // (GetGridStep fade is the LOD-transition crossfade only, never a distance fade.) Square
-  // boundary that tracks the view; a worldPerPx-wide AA keeps the cut edge clean, not jagged.
-  float edgeDist = max(abs(p.x - uTarget.x), abs(p.y - uTarget.z)); // p = world XZ → p.y is world Z
-  float inside = 1.0 - smoothstep(uExtent - worldPerPx * 1.5, uExtent, edgeDist);
-  a *= inside * uMaxOpacity;
-
+  // -- Horizon fade (C4D): melt the grid into the grey background as it nears the horizon. The fade
+  // is keyed to the fragment distance FROM THE CAMERA (full strength up to uFadeNear, gone by
+  // uFadeFar) -> a soft dissolve toward the horizon, never a hard edge. ----------------------------
+  float camDist = distance(vWorld, cameraPosition);
+  float fade = 1.0 - smoothstep(uFadeNear, uFadeFar, camDist);
+  a *= fade * uMaxOpacity;
   if (a < 0.002) discard;
   gl_FragColor = vec4(color, a);
-  // Linear → output colour space (sRGB), matching built-in materials so the THREE.Color uniforms
+  // Linear -> output colour space (sRGB), matching built-in materials so the THREE.Color uniforms
   // render byte-exact to their resolved token hexes (#414141 / #4B4B4B / axes).
   #include <colorspace_fragment>
 }
@@ -130,18 +131,20 @@ export interface Cinema4DGridUniforms {
   uAxisXColor: { value: THREE.Color };
   uAxisZColor: { value: THREE.Color };
   uBaseCell: { value: number };
-  uMajorEvery: { value: number };
   uMinCellPx: { value: number };
+  uMajorEvery: { value: number };
   uMinorLinePx: { value: number };
   uMajorLinePx: { value: number };
   uAxisLinePx: { value: number };
   uMaxOpacity: { value: number };
-  uTarget: { value: THREE.Vector3 };
-  uExtent: { value: number };
+  uFadeNear: { value: number };
+  uFadeFar: { value: number };
 }
 
 /** Build the grid ShaderMaterial. Returns the typed `uniforms` reference alongside the material
- *  (same object three stores as `material.uniforms`) so callers refresh uniforms without a cast. */
+ *  (same object three stores as `material.uniforms`) so callers refresh uniforms without a cast.
+ *  uFadeNear / uFadeFar are recomputed per frame (the horizon fade scales with the camera distance);
+ *  the decade LOD is derived per fragment in the shader. */
 export function createCinema4DGridMaterial(): { material: THREE.ShaderMaterial; uniforms: Cinema4DGridUniforms } {
   const uniforms: Cinema4DGridUniforms = {
     uMinorColor: { value: new THREE.Color(GRID3D_MINOR_COLOR_FALLBACK) },
@@ -149,14 +152,14 @@ export function createCinema4DGridMaterial(): { material: THREE.ShaderMaterial; 
     uAxisXColor: { value: new THREE.Color(GRID3D_AXIS_X_COLOR) },
     uAxisZColor: { value: new THREE.Color(GRID3D_AXIS_Z_COLOR) },
     uBaseCell: { value: GRID3D_BASE_CELL_M },
-    uMajorEvery: { value: GRID3D_MAJOR_EVERY },
     uMinCellPx: { value: GRID3D_MIN_CELL_PX },
+    uMajorEvery: { value: GRID3D_MAJOR_EVERY },
     uMinorLinePx: { value: GRID3D_MINOR_LINE_PX },
     uMajorLinePx: { value: GRID3D_MAJOR_LINE_PX },
     uAxisLinePx: { value: GRID3D_AXIS_LINE_PX },
     uMaxOpacity: { value: GRID3D_MAX_OPACITY },
-    uTarget: { value: new THREE.Vector3(0, 0, 0) },
-    uExtent: { value: 350 },
+    uFadeNear: { value: 0 }, // set per frame (NEAR_K x distance)
+    uFadeFar: { value: 1 },  // set per frame (FAR_K x distance)
   };
   const material = new THREE.ShaderMaterial({
     uniforms,

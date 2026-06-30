@@ -44,26 +44,45 @@ export type OverlayRootsProvider = () => readonly THREE.Object3D[];
  */
 export type PostFxOverlayKind = 'underlay' | 'gizmo';
 
-/** Per-scene map of overlay provider → its class (scene-scoped → no cross-viewport bleed). */
-const registries = new WeakMap<THREE.Object3D, Map<OverlayRootsProvider, PostFxOverlayKind>>();
+/**
+ * Z-order WITHIN the overlay collection: lower = drawn first = further back. Overlays that share a
+ * kind can be coplanar with `depthWrite:false` (the C4D ground grid and the DXF wireframe are BOTH
+ * `'underlay'`, both on the Y=0 plane), so neither wins on depth — DRAW ORDER alone decides which
+ * paints on top. The grid is the reference GROUND and must sit beneath all content; it registers at
+ * `GROUND`, every other overlay stays at `CONTENT`. Explicit z-order (Figma z-index / Revit draw-
+ * order / C4D object-order), never accidental construction order. (ADR-558 — DXF-above-grid fix.)
+ */
+export const OVERLAY_ORDER = { GROUND: -100, CONTENT: 0 } as const;
+
+/** A registered overlay: its depth/AO class + its z-order within the collection. */
+interface OverlayEntry {
+  readonly kind: PostFxOverlayKind;
+  readonly order: number;
+}
+
+/** Per-scene map of overlay provider → its entry (scene-scoped → no cross-viewport bleed). */
+const registries = new WeakMap<THREE.Object3D, Map<OverlayRootsProvider, OverlayEntry>>();
 
 /**
  * Register a post-FX overlay provider for `scene`. The owner keeps its roots `visible=false` (so
  * the main render skips them) and returns, each frame, the subset that should currently be drawn.
  * `kind` defaults to `'gizmo'` (the always-on-top manipulator class); the DXF underlay owner passes
- * `'underlay'`. Returns an unregister function (call it on dispose).
+ * `'underlay'`. `order` (default `CONTENT`) sets the draw order within a kind — the ground grid
+ * passes `GROUND` so it always paints beneath the coplanar DXF underlay. Returns an unregister
+ * function (call it on dispose).
  */
 export function registerPostFxOverlay(
   scene: THREE.Object3D,
   provider: OverlayRootsProvider,
   kind: PostFxOverlayKind = 'gizmo',
+  order: number = OVERLAY_ORDER.CONTENT,
 ): () => void {
   let map = registries.get(scene);
   if (!map) {
     map = new Map();
     registries.set(scene, map);
   }
-  map.set(provider, kind);
+  map.set(provider, { kind, order });
   return () => { map?.delete(provider); };
 }
 
@@ -74,9 +93,13 @@ export function registerPostFxOverlay(
 export function collectPostFxOverlayRoots(scene: THREE.Object3D, kind?: PostFxOverlayKind): THREE.Object3D[] {
   const map = registries.get(scene);
   if (!map || map.size === 0) return [];
+  // Filter by kind, then STABLE-sort by z-order (Array.prototype.sort is stable): GROUND first,
+  // CONTENT after; equal orders keep registration order. This is what decides which coplanar same-
+  // depth underlay paints on top — the grid (GROUND) beneath the DXF wireframe (CONTENT). (ADR-558.)
+  const entries = [...map].filter(([, e]) => kind === undefined || e.kind === kind);
+  entries.sort((a, b) => a[1].order - b[1].order);
   const out: THREE.Object3D[] = [];
-  for (const [provider, providerKind] of map) {
-    if (kind !== undefined && providerKind !== kind) continue;
+  for (const [provider] of entries) {
     for (const root of provider()) out.push(root);
   }
   return out;
