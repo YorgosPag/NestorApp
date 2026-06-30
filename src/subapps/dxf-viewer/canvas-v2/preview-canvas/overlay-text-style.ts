@@ -19,6 +19,23 @@ export const OVERLAY_TEXT_PX = 11;
 /** Clean sans-serif stack (native UI fonts → always resolves crisp). Change here only. */
 export const OVERLAY_TEXT_FONT = `${OVERLAY_TEXT_PX}px Verdana, Tahoma, "Segoe UI", sans-serif`;
 
+/**
+ * Anti-collision SLOTS για overlay labels αγκυρωμένα δίπλα στον ΚΕΡΣΟΡΑ. Δύο cursor-adjacent
+ * tooltips μπορεί να είναι ζωντανά ταυτόχρονα — το polar-tracking-line tooltip (πορτοκαλί) ΚΑΙ το
+ * object-snap-tracking distance tooltip (γκρι). Όταν αγκυρώνονταν στο ΙΔΙΟ offset έπεφταν το ένα
+ * πάνω στο άλλο (Giorgio 2026-06-30). Κάθε καταναλωτής διαλέγει ΔΙΑΦΟΡΕΤΙΚΟ slot εδώ ώστε να
+ * ΣΤΟΙΒΑΖΟΝΤΑΙ (ένα πάνω, ένα κάτω από τον κέρσορα) αντί να συγκρούονται — η μη-επικάλυψη είναι
+ * τεκμηριωμένο ΣΥΜΒΟΛΑΙΟ, όχι σύμπτωση. Screen px offsets από τον κέρσορα (`dx` δεξιά, `dy` κάτω).
+ */
+export const CURSOR_LABEL_SLOTS = {
+  /** Slot ΠΑΝΩ-δεξιά του κέρσορα — polar-tracking-line tooltip (πορτοκαλί). */
+  above: { dx: 14, dy: -10 },
+  /** Slot ΚΑΤΩ-δεξιά του κέρσορα — object-snap-tracking distance tooltip (γκρι). */
+  below: { dx: 14, dy: 16 },
+  /** Slot ΠΙΟ-ΚΑΤΩ — opening-conflict 🔴 tooltip (ADR-508)· στοιβάζεται κάτω από το `below`. */
+  belowFar: { dx: 14, dy: 42 },
+} as const;
+
 export interface OverlayLabelStyle {
   /** Glyph colour. */
   readonly textColor: string;

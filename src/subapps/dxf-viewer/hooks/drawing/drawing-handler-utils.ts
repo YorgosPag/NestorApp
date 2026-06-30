@@ -6,6 +6,9 @@ import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { findHostsAtPoint } from '../../systems/dimensions/dim-intersection-host-finder';
+import { applyPolar, type PolarSnapResult } from '../../systems/constraints/polar-utils';
+import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
+import { applyAlongAxisStepSnap } from '../../bim/grips/grip-step-quantize';
 
 /** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
 const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
@@ -97,4 +100,62 @@ export function hardOrtho(point: Pt, ref: Pt): Pt {
   return Math.abs(dx) >= Math.abs(dy)
     ? { x: point.x, y: ref.y }
     : { x: ref.x, y: point.y };
+}
+
+/**
+ * SSoT world-polar snap config (increment + additional angles + 3° tolerance), read
+ * LIVE from the polar-tracking store. ONE place owns the config that the preview
+ * (`drawing-hover-handler`) AND both commit paths (`useDrawingHandlers.onDrawingPoint`
+ * generic + `bim-ortho-reference.applyBimDrawingConstraint` BIM) feed into `applyPolar`
+ * — it used to be copy-pasted ~4×.
+ */
+export function worldPolarSnapConfig(): {
+  incrementAngle: number;
+  additionalAngles: readonly number[];
+  angleTolerance: number;
+} {
+  return {
+    incrementAngle: polarTrackingStore.incrementAngle,
+    additionalAngles: polarTrackingStore.additionalAngles,
+    angleTolerance: 3,
+  };
+}
+
+/** Result of {@link resolveOrthoPolarStep} — the constrained point plus the pre-step
+ *  value and the polar result (for the tracking-line overlay). */
+export interface OrthoPolarStepResult {
+  /** Point after the ORTHO/POLAR direction lock, BEFORE the fixed step grid — for
+   *  consumers that need the un-stepped value (e.g. snap-override / from / m2p). */
+  readonly constrained: Pt;
+  /** `constrained` after the fixed SNAP-MODE (F9 + Q) step grid — the value to commit/preview. */
+  readonly stepped: Pt;
+  /** Non-null when POLAR produced the lock (the overlay tracking line reads it), else null. */
+  readonly polarResult: PolarSnapResult | null;
+}
+
+/**
+ * SSoT for the drawing **ORTHO (F8) → POLAR (F10) → fixed-step (F9 + Q)** constraint
+ * chain relative to `ref`. ORTHO and POLAR are mutually exclusive (enforced by
+ * `useCadToggles`). Used by the preview (`drawing-hover-handler`) AND both commit
+ * paths (generic `onDrawingPoint` + BIM `applyBimDrawingConstraint`) so the rubber-band
+ * equals the committed geometry (WYSIWYG) — one constraint pipeline, zero duplication.
+ *
+ * Does NOT include the wall face-relative magnet (`resolveWallFaceRelativePolar`): that
+ * is wall-only, needs `worldPerPixel`, and owns its own zoom-adaptive step — the caller
+ * applies it BEFORE this and skips this when it fires.
+ */
+export function resolveOrthoPolarStep(
+  point: Pt,
+  ref: Pt,
+  opts: { ortho: boolean; polar: boolean },
+): OrthoPolarStepResult {
+  if (opts.ortho) {
+    const constrained = hardOrtho(point, ref);
+    return { constrained, stepped: applyAlongAxisStepSnap(constrained, ref), polarResult: null };
+  }
+  if (opts.polar) {
+    const polarResult = applyPolar(point, ref, worldPolarSnapConfig());
+    return { constrained: polarResult.point, stepped: applyAlongAxisStepSnap(polarResult.point, ref), polarResult };
+  }
+  return { constrained: point, stepped: applyAlongAxisStepSnap(point, ref), polarResult: null };
 }

@@ -68,7 +68,6 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // 🎯 ADR-047: Distance calculation for close-on-first-point
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-357 Phase 1: Polar Tracking
-import { applyPolar } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 // ADR-357 Phase 4: Object Snap Tracking
 import {
@@ -89,7 +88,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, hardOrtho, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext } from './drawing-handler-utils';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -265,15 +264,16 @@ export function useDrawingHandlers(
 
     // Normal point addition (not closing)
     const lastRef = drawingState.tempPoints[drawingState.tempPoints.length - 1];
-    const afterOrtho = orthoOnRef.current && lastRef ? hardOrtho(p, lastRef) : p;
-    // ADR-357 Phase 1: Polar snap after ortho (mutually exclusive — ensured by useCadToggles)
-    const afterPolar = !orthoOnRef.current && polarOnRef.current && lastRef
-      ? applyPolar(afterOrtho, lastRef, {
-          incrementAngle: polarTrackingStore.incrementAngle,
-          additionalAngles: polarTrackingStore.additionalAngles,
-          angleTolerance: 3,
-        }).point
-      : afterOrtho;
+    // ADR-363 — ORTHO(F8) → POLAR(F10) → fixed-step(F9+Q) via the shared SSoT
+    // (`resolveOrthoPolarStep`), the EXACT pipeline the preview (`drawing-hover-handler`)
+    // and the BIM commit (`applyBimDrawingConstraint`) use → commit ≡ ghost, zero duplication.
+    // `constrained` = pre-step (for the m2p/from override branches); `stepped` = the value the
+    // normal flow commits. Both no-op without an anchor or F9+Q.
+    const opStep = lastRef
+      ? resolveOrthoPolarStep(p, lastRef, { ortho: orthoOnRef.current, polar: polarOnRef.current })
+      : null;
+    const afterPolar = opStep ? opStep.constrained : p;
+    const afterStep = opStep ? opStep.stepped : p;
 
     // ADR-357 Phase 7: Snap Override — handle special multi-click modes before normal snap.
     const snapOverride = SnapOverrideOrchestrator.getOverride();
@@ -322,15 +322,15 @@ export function useDrawingHandlers(
       const findSnapFn = findSnapPointRef.current;
       if (findSnapFn) {
         try {
-          const overrideResult = findSnapFn(afterPolar.x, afterPolar.y);
+          const overrideResult = findSnapFn(afterStep.x, afterStep.y);
           if (overrideResult?.found && overrideResult.activeMode === engineTarget && overrideResult.snappedPoint) {
             overrideSnapped = overrideResult.snappedPoint;
           }
         } catch { /* snap error — fall back to applySnap */ }
       }
-      snappedPoint = overrideSnapped ?? applySnap(afterPolar);
+      snappedPoint = overrideSnapped ?? applySnap(afterStep);
     } else {
-      snappedPoint = applySnap(afterPolar);
+      snappedPoint = applySnap(afterStep);
     }
 
     // ADR-357 Phase 4: Object Snap Tracking — promote alignment-path hit to

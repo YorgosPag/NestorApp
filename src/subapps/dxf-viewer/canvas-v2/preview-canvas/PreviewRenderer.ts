@@ -39,7 +39,7 @@ import { BimPreviewRenderer } from './bim-preview-render';
 import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
 import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
 import { resolveGhostStatusColor, type GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { drawOverlayLabel } from './overlay-text-style';
+import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -247,7 +247,9 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx || !label) return;
     const screen = CoordinateTransforms.worldToScreen(anchorWorld, transform, viewport);
-    drawOverlayLabel(this.ctx, label, screen.x + 14, screen.y + 18, {
+    // ΚΑΤΩ-ΚΑΤΩ slot (CURSOR_LABEL_SLOTS.belowFar) ώστε το 🔴 conflict tooltip να στοιβάζεται κάτω
+    // από polar (above) + tracking (below) αντί να πέφτει πάνω τους — ίδιο SSoT συμβόλαιο θέσεων.
+    drawOverlayLabel(this.ctx, label, screen.x + CURSOR_LABEL_SLOTS.belowFar.dx, screen.y + CURSOR_LABEL_SLOTS.belowFar.dy, {
       textColor: resolveGhostStatusColor('overlap')?.stroke ?? '#d23b3b',
       align: 'left',
     });

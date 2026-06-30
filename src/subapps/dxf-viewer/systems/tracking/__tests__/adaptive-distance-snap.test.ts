@@ -7,7 +7,7 @@
  *     no-op on non-positive step.
  */
 
-import { adaptiveDistanceStep, quantizeAlongPath } from '../adaptive-distance-snap';
+import { adaptiveDistanceStep, quantizeAlongPath, quantizePointFromAnchor } from '../adaptive-distance-snap';
 
 describe('adaptiveDistanceStep', () => {
   it('returns a nice 1/2/5/10 × 10^k value', () => {
@@ -62,5 +62,28 @@ describe('quantizeAlongPath', () => {
   it('is a no-op when step is not positive', () => {
     const p = { x: 123.4, y: 0 };
     expect(quantizeAlongPath(p, anchor, 1, 0, 0)).toEqual(p);
+  });
+});
+
+describe('quantizePointFromAnchor — derive dir from anchor→point, then quantize length', () => {
+  const anchor = { x: 0, y: 0 };
+
+  it('quantizes the LENGTH along an angled ray, preserving the direction (3-4-5)', () => {
+    // (0.6, 0.8) dir, length 55 → nearest 25-multiple = 50 → (30, 40).
+    const q = quantizePointFromAnchor({ x: 33, y: 44 }, anchor, 25);
+    expect(q.x).toBeCloseTo(30);
+    expect(q.y).toBeCloseTo(40);
+  });
+
+  it('measures the length from a non-zero anchor', () => {
+    const q = quantizePointFromAnchor({ x: 1033, y: 2044 }, { x: 1000, y: 2000 }, 25);
+    expect(q.x).toBeCloseTo(1030);
+    expect(q.y).toBeCloseTo(2040);
+  });
+
+  it('is a no-op on non-positive step and on a degenerate (point == anchor) input', () => {
+    const p = { x: 33, y: 44 };
+    expect(quantizePointFromAnchor(p, anchor, 0)).toEqual(p);
+    expect(quantizePointFromAnchor({ x: 5, y: 5 }, { x: 5, y: 5 }, 25)).toEqual({ x: 5, y: 5 });
   });
 });

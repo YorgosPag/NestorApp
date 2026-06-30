@@ -33,6 +33,9 @@ import type { Point2D } from '../../rendering/types/Types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../keyboard/QKeyTracker';
+// ADR-363 — the ALONG-AXIS step (drawing) reuses the SAME ray-quantization SSoT the
+// zoom-adaptive wall step uses, so the fixed step "grows the length" identically.
+import { quantizePointFromAnchor } from '../../systems/tracking/adaptive-distance-snap';
 
 /** Default SNAP-MODE increment, in **millimetres** (the unit the user types). */
 export const DEFAULT_GRIP_SNAP_STEP = 50;
@@ -102,4 +105,25 @@ export function applyGripStepSnap(delta: Point2D): Point2D {
 export function applyPointStepSnap(point: Point2D, anchor: Point2D): Point2D {
   const d = applyGripStepSnap({ x: point.x - anchor.x, y: point.y - anchor.y });
   return { x: anchor.x + d.x, y: anchor.y + d.y };
+}
+
+/**
+ * ALONG-AXIS variant of the SNAP-MODE step (ADR-363) — quantize the DISTANCE from
+ * `anchor` to `point` ALONG their direction, so the drawn **length** lands on the
+ * step grid (e.g. 5 cm) while the direction (ORTHO / POLAR angle / free) is preserved.
+ *
+ * This is the correct semantic for DRAWING (a line/wall grows in length increments):
+ * the rectangular {@link applyPointStepSnap} quantizes X and Y independently, which on
+ * an angled (POLAR) segment snaps to a grid that does NOT keep the length a clean
+ * multiple — the cause of «το Q υπολογίζει το βήμα με βάση Χ,Υ και όχι τη γωνία».
+ * Grips keep {@link applyPointStepSnap} (moving an entity IS a rectangular X/Y delta).
+ *
+ * Same F9 + Q-held gate + mm→scene scale as the rest of the step SSoT; reuses the
+ * `quantizeAlongPath` ray-quantizer (the SAME SSoT the zoom-adaptive wall step uses).
+ * No-op (returns `point`) unless armed, or when point == anchor (degenerate).
+ */
+export function applyAlongAxisStepSnap(point: Point2D, anchor: Point2D): Point2D {
+  if (!isGripStepActive()) return point;
+  const stepScene = cadToggleState.getSnapStep() * immediateSceneScale.getMmToScene();
+  return quantizePointFromAnchor(point, anchor, stepScene);
 }

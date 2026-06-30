@@ -16,7 +16,7 @@ import type { TrackingPalette } from './tracking-colors';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import { applyOverlayLineStyle, OVERLAY_LINE_WIDTH_PX, OVERLAY_LINE_COLORS } from './overlay-line-style';
-import { drawOverlayLabel } from './overlay-text-style';
+import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
 
 /** Acquired-point `+` glyphs (persist across drawPreview cycles). */
 export function paintTrackingMarkers(
@@ -108,7 +108,9 @@ export function paintTooltip(
   if (!label) return;
   const screen = project(snappedPoint);
   // SSoT overlay label (font only, no background). Light grey to match the alignment line.
-  drawOverlayLabel(ctx, label, screen.x + 14, screen.y - 12, {
+  // ΚΑΤΩ-δεξιά slot (CURSOR_LABEL_SLOTS.below) ώστε να ΣΤΟΙΒΑΖΕΤΑΙ κάτω από το πορτοκαλί polar
+  // tooltip (ΠΑΝΩ slot) αντί να πέφτει πάνω του (Giorgio 2026-06-30).
+  drawOverlayLabel(ctx, label, screen.x + CURSOR_LABEL_SLOTS.below.dx, screen.y + CURSOR_LABEL_SLOTS.below.dy, {
     textColor: OVERLAY_LINE_COLORS.alignment,
     align: 'left',
   });

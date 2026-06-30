@@ -69,3 +69,20 @@ export function quantizeAlongPath(
   const tq = quantizeMagnitude(t, step);
   return { x: anchor.x + dirX * tq, y: anchor.y + dirY * tq };
 }
+
+/**
+ * Quantize `point` so its DISTANCE from `anchor` — measured ALONG the `anchor→point`
+ * direction — is a multiple of `step`, preserving that direction. The "derive the unit
+ * direction from anchor→point first" convenience over {@link quantizeAlongPath} (which
+ * needs a pre-computed unit dir). ONE SSoT for the idiom shared by the fixed SNAP-MODE
+ * step (`applyAlongAxisStepSnap`) AND the zoom-adaptive wall step
+ * (`resolveWallFaceRelativePolar`). No-op when `step ≤ 0` or `point == anchor`.
+ */
+export function quantizePointFromAnchor(point: Point2D, anchor: Point2D, step: number): Point2D {
+  if (!(step > 0)) return point;
+  const dx = point.x - anchor.x;
+  const dy = point.y - anchor.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return point;
+  return quantizeAlongPath(point, anchor, dx / len, dy / len, step);
+}

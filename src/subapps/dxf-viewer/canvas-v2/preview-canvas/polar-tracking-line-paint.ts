@@ -20,7 +20,7 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { applyOverlayLineStyle, OVERLAY_LINE_COLORS } from './overlay-line-style';
-import { drawOverlayLabel } from './overlay-text-style';
+import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
 
 /** Μήκος προέκτασης της ακτίνας σε screen px (αρκετό ώστε να καλύπτει όλο το viewport). */
 const EXTEND = 6000;
@@ -56,7 +56,9 @@ export function paintPolarTrackingLine(
   ctx.restore();
 
   // Tooltip near cursor — SSoT overlay label (font only), ORANGE to match the guide line.
-  drawOverlayLabel(ctx, label, cursorScreen.x + 14, cursorScreen.y - 8, {
+  // ΠΑΝΩ-δεξιά slot (CURSOR_LABEL_SLOTS.above) ώστε να μη συγκρούεται με το object-snap-tracking
+  // tooltip που πιάνει το ΚΑΤΩ slot (Giorgio 2026-06-30).
+  drawOverlayLabel(ctx, label, cursorScreen.x + CURSOR_LABEL_SLOTS.above.dx, cursorScreen.y + CURSOR_LABEL_SLOTS.above.dy, {
     textColor: OVERLAY_LINE_COLORS.drawingGuide,
     align: 'left',
   });

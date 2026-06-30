@@ -4,7 +4,7 @@
  * consumers' integration tests; here we pin the deterministic math.
  */
 
-import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap, applyPointStepSnap, isGripStepActive } from '../grip-step-quantize';
+import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap, applyPointStepSnap, applyAlongAxisStepSnap, isGripStepActive } from '../grip-step-quantize';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../../keyboard/QKeyTracker';
@@ -131,6 +131,55 @@ describe('applyPointStepSnap — anchor-relative point step grid (crosshair + dr
     const r = applyPointStepSnap({ x: 10.137, y: 9.788 }, anchor);
     expect(r.x).toBeCloseTo(10.15);
     expect(r.y).toBeCloseTo(9.8);
+  });
+});
+
+describe('applyAlongAxisStepSnap — DRAWING step quantizes LENGTH along the direction (angle-aware)', () => {
+  afterEach(() => {
+    cadToggleState.setSnap(false, 0);
+    immediateSceneScale.set(1);
+    QKeyTracker._setForTest(false);
+  });
+
+  it('snaps the length along an angled ray, PRESERVING the direction (the POLAR fix)', () => {
+    immediateSceneScale.set(1);
+    cadToggleState.setSnap(true, 25);
+    QKeyTracker._setForTest(true);
+    // 3-4-5 direction (0.6, 0.8), length 55 → nearest 25-multiple = 50 → (30, 40).
+    // Rectangular per-axis rounding would WRONGLY give (50, 50) — the bug Giorgio hit.
+    const r = applyAlongAxisStepSnap({ x: 33, y: 44 }, { x: 0, y: 0 });
+    expect(r.x).toBeCloseTo(30);
+    expect(r.y).toBeCloseTo(40);
+  });
+
+  it('contrasts with applyPointStepSnap (rectangular) on the SAME angled input', () => {
+    immediateSceneScale.set(1);
+    cadToggleState.setSnap(true, 25);
+    QKeyTracker._setForTest(true);
+    // Rectangular (grip-move semantic): X and Y rounded independently → (25, 50).
+    expect(applyPointStepSnap({ x: 33, y: 44 }, { x: 0, y: 0 })).toEqual({ x: 25, y: 50 });
+  });
+
+  it('works off a non-zero anchor (length measured from the previous point)', () => {
+    immediateSceneScale.set(1);
+    cadToggleState.setSnap(true, 25);
+    QKeyTracker._setForTest(true);
+    const r = applyAlongAxisStepSnap({ x: 1033, y: 2044 }, { x: 1000, y: 2000 });
+    expect(r.x).toBeCloseTo(1030);
+    expect(r.y).toBeCloseTo(2040);
+  });
+
+  it('is a no-op without F9 + Q, and on a degenerate (point == anchor) input', () => {
+    immediateSceneScale.set(1);
+    const p = { x: 33, y: 44 };
+    cadToggleState.setSnap(false, 25);
+    QKeyTracker._setForTest(true);
+    expect(applyAlongAxisStepSnap(p, { x: 0, y: 0 })).toEqual(p); // SNAP off
+    cadToggleState.setSnap(true, 25);
+    QKeyTracker._setForTest(false);
+    expect(applyAlongAxisStepSnap(p, { x: 0, y: 0 })).toEqual(p); // Q up
+    QKeyTracker._setForTest(true);
+    expect(applyAlongAxisStepSnap({ x: 5, y: 5 }, { x: 5, y: 5 })).toEqual({ x: 5, y: 5 }); // degenerate
   });
 });
 

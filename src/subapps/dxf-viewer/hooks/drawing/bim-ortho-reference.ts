@@ -13,19 +13,19 @@
  *   - `getBimOrthoReference` resolves the active anchor point for a BIM tool by
  *     reading its preview store. This is the ONE place that knows where the
  *     constraint baseline lives for each BIM tool.
- *   - `applyBimDrawingConstraint` projects a point onto the ortho/polar
- *     constraint relative to that anchor, reusing the existing `hardOrtho`
- *     (AutoCAD-style H/V lock) and `applyPolar` SSoT helpers, and reads the live
- *     toggle state from the non-React `cadToggleState` mirror so it can be
- *     called from the event-time BIM commit path that cannot subscribe to the
- *     React `useCadToggles` hook (ADR-040 orchestrator-decoupling).
+ *   - `applyBimDrawingConstraint` projects a point onto the ortho/polar/step
+ *     constraint relative to that anchor via the shared `resolveOrthoPolarStep`
+ *     SSoT (ORTHO→POLAR→fixed-step), and reads the live toggle state from the
+ *     non-React `cadToggleState` mirror so it can be called from the event-time
+ *     BIM commit path that cannot subscribe to the React `useCadToggles` hook
+ *     (ADR-040 orchestrator-decoupling). Wall-only face-relative magnet stays here.
  *
  * Both the preview path (`drawing-hover-handler`) and the commit path
  * (`useCanvasClickHandler`) resolve the reference through `getBimOrthoReference`
- * and apply the same `hardOrtho` / `applyPolar` math, so the rubber-band ghost
+ * and run the SAME `resolveOrthoPolarStep` pipeline, so the rubber-band ghost
  * always matches the committed geometry (WYSIWYG, Google-level).
  *
- * @see hooks/drawing/drawing-handler-utils.ts — hardOrtho SSoT
+ * @see hooks/drawing/drawing-handler-utils.ts — resolveOrthoPolarStep / hardOrtho SSoT
  * @see systems/constraints/polar-utils.ts — applyPolar SSoT
  * @see systems/constraints/cad-toggle-state.ts — live ortho/polar flags
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
@@ -38,18 +38,13 @@ import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-preview-store';
 import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
-import { hardOrtho } from './drawing-handler-utils';
+import { resolveOrthoPolarStep, worldPolarSnapConfig } from './drawing-handler-utils';
 import { applyPolar, type PolarSnapResult } from '../../systems/constraints/polar-utils';
-import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 // ADR-508 — reuse the SAME zoom-adaptive distance snap as the alignment traces
 // (no duplicate): the wall length grows in nice round steps that keep a constant
 // on-screen spacing. @see systems/tracking/adaptive-distance-snap.ts
-import { adaptiveDistanceStep, quantizeAlongPath, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
-// ADR-363 — fixed SNAP-MODE (F9 + Q) step grid, the SAME SSoT the grip-drag uses,
-// so the committed wall length "clicks" onto the user-defined increment exactly
-// like the rubber-band ghost. No-op unless F9 is armed and Q is held.
-import { applyPointStepSnap } from '../../bim/grips/grip-step-quantize';
+import { adaptiveDistanceStep, quantizePointFromAnchor, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
 const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor']);
@@ -148,23 +143,16 @@ export function resolveWallFaceRelativePolar(
   if (baseAngle === null) return null;
   const ref = getBimOrthoReference('wall');
   if (!ref) return null;
-  let result = applyPolar(point, ref, {
-    incrementAngle: polarTrackingStore.incrementAngle,
-    additionalAngles: polarTrackingStore.additionalAngles,
-    angleTolerance: 3,
-    baseAngle,
-  });
+  let result = applyPolar(point, ref, { ...worldPolarSnapConfig(), baseAngle });
   // ADR-508 — quantize the LENGTH along the (angle-snapped) ray in zoom-adaptive
   // steps. Reuses the alignment-trace SSoT so the wall "grows" exactly like the
   // green tracking lines do. Direction = ref → snapped point.
   const step = worldPerPixel ? adaptiveDistanceStep(worldPerPixel) : 0;
   if (step > 0) {
-    const dx = result.point.x - ref.x;
-    const dy = result.point.y - ref.y;
-    const len = Math.hypot(dx, dy);
+    const len = Math.hypot(result.point.x - ref.x, result.point.y - ref.y);
     if (len > 1e-9) {
-      const point2 = quantizeAlongPath(result.point, ref, dx / len, dy / len, step);
-      result = { ...result, point: point2, distance: quantizeMagnitude(len, step) };
+      // ONE SSoT for "quantize a point's length from an anchor along its direction".
+      result = { ...result, point: quantizePointFromAnchor(result.point, ref, step), distance: quantizeMagnitude(len, step) };
     }
   }
   return { ref, result, baseAngle };
@@ -190,22 +178,13 @@ export function applyBimDrawingConstraint(
   if (!isBimOrthoTool(tool)) return point;
   const ref = getBimOrthoReference(tool);
   if (!ref) return point;
-  // ADR-363 — the fixed SNAP-MODE (F9 + Q) step grid is applied on top of the
-  // ORTHO/POLAR/free direction so the length lands on the user-defined increment
-  // (e.g. 5 cm). Skipped for the face-relative magnet, which owns its own
-  // (zoom-adaptive) step so the wall stays flush to the member face. No-op unless
-  // F9 is armed + Q held → free movement by default.
-  if (cadToggleState.isOrthoOn()) return applyPointStepSnap(hardOrtho(point, ref), ref);
-  // ADR-508 — wall 2nd click anchored to a face → relative-polar-to-face (auto magnet)
-  // + zoom-adaptive length step (same SSoT as alignment traces).
+  // ORTHO (explicit world H/V lock) wins over the face magnet — via the shared
+  // ORTHO/POLAR/step SSoT so the fixed step grid (F9+Q) rides on top automatically.
+  if (cadToggleState.isOrthoOn()) return resolveOrthoPolarStep(point, ref, { ortho: true, polar: false }).stepped;
+  // ADR-508 — wall 2nd click anchored to a face → relative-polar-to-face (auto magnet),
+  // which owns its own zoom-adaptive step (not the fixed grid).
   const faceRel = resolveWallFaceRelativePolar(point, worldPerPixel);
   if (faceRel) return faceRel.result.point;
-  if (cadToggleState.isPolarOn()) {
-    return applyPointStepSnap(applyPolar(point, ref, {
-      incrementAngle: polarTrackingStore.incrementAngle,
-      additionalAngles: polarTrackingStore.additionalAngles,
-      angleTolerance: 3,
-    }).point, ref);
-  }
-  return applyPointStepSnap(point, ref);
+  // World POLAR or free → SAME ORTHO/POLAR/step SSoT the preview + line commit use.
+  return resolveOrthoPolarStep(point, ref, { ortho: false, polar: cadToggleState.isPolarOn() }).stepped;
 }
