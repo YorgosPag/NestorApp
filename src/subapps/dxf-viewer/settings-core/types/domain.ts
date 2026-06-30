@@ -130,34 +130,20 @@ export interface TextSettings {
 // GRIP TYPES & SETTINGS (AutoCAD Standards)
 // ============================================================================
 
-export interface GripColors {
-  cold: string | null; // Unselected — null = use GRIP_COLD_COLOR SSoT (Revit-style sentinel)
-  warm: string;        // Hover (Hot Pink)
-  hot: string;         // Selected (Red - ACI 1)
-  contour: string;     // Contour (Black)
-}
+// ADR-559 — canonical grip-settings SHAPE lives in `types/grip-settings-schema.ts`.
+// `GripColors` is re-exported (consumers keep importing it from here); the stored-settings
+// `GripSettings` is a PROJECTION of the canonical base (no render extras, sentinel colours).
+export type { GripColors } from '../../types/grip-settings-schema';
+import type { GripSettingsBase, GripColors } from '../../types/grip-settings-schema';
 
-export interface GripSettings {
-  enabled: boolean;
-  gripSize: number;         // 3 - 15 DIP
-  pickBoxSize: number;      // 1 - 20 DIP
-  apertureSize: number;     // 1 - 50 pixels
-  opacity: number;
+/**
+ * Stored grip user-settings (persisted in the zustand store). The canonical `GripSettingsBase`
+ * (incl. `maxGripsPerEntity` + AutoCAD `gripObjLimit`) with SENTINEL colours — without the
+ * runtime-only render extras (`showGripTips` / `dpiScale`). Add new grip fields to
+ * `GripSettingsBase` in the schema, not here.
+ */
+export interface GripSettings extends GripSettingsBase {
   colors: GripColors;
-  showAperture: boolean;
-  multiGripEdit: boolean;
-  snapToGrips: boolean;
-  showMidpoints: boolean;
-  showCenters: boolean;
-  showQuadrants: boolean;
-  maxGripsPerEntity: number;
-  /**
-   * AutoCAD GRIPOBJLIMIT — above this selection-object COUNT all grips are hidden
-   * (objects stay selected; only grip rendering is suppressed for performance).
-   * `0` = no limit (grips always shown). Range 0-32767, default 100.
-   */
-  gripObjLimit: number;
-  showGrips: boolean;
 }
 
 // ============================================================================

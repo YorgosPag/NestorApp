@@ -11,38 +11,12 @@ import { clamp } from '../rendering/entities/shared/geometry-utils';
 import { OPACITY_BOUNDS, GRIP_BOUNDS } from '../config/validation-bounds-config';
 // 🏢 SSoT base grip size
 import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+// 🏢 ADR-559: canonical grip-settings schema (this DTO === GripSettingsFull projection)
+import type { GripSettingsFull } from './grip-settings-schema';
 
-export interface GripSettings {
-  // === AutoCAD Variables ===
-  gripSize: number;         // GRIPSIZE: 1-255 DIPs, default 5
-  pickBoxSize: number;      // PICKBOX: 0-50 DIPs, default 3  
-  apertureSize: number;     // APERTURE: 1-50 px, default 10
-  showAperture: boolean;    // APBOX: show/hide osnap aperture
-  
-  // === Grip Colors (AutoCAD style) ===
-  colors: {
-    cold: string | null;    // GRIPCOLOR: null = use GRIP_COLD_COLOR SSoT (Revit-style sentinel)
-    warm: string;           // GRIPHOVER: hover (default orange)
-    hot: string;            // GRIPHOT: selected (default red)
-    contour: string;        // GRIPCONTOUR: border (default black)
-  };
-  
-  // === Advanced Settings ===
-  enabled: boolean;         // Enable/disable grip system
-  showGrips: boolean;       // Show/hide grips on selected entities
-  multiGripEdit: boolean;   // Allow multi-grip operations
-  snapToGrips: boolean;     // Enable snap to grips
-  showGripTips: boolean;    // Show grip tooltips
-  dpiScale: number;         // DPI scaling factor
-  maxGripsPerEntity: number; // Maximum grips per entity (performance)
-  gripObjLimit: number;     // GRIPOBJLIMIT: hide all grips above this selection-object count (0 = no limit)
-
-  // === Display Settings ===
-  opacity: number;          // Grip opacity (0.0 - 1.0)
-  showMidpoints: boolean;   // Show midpoint grips
-  showCenters: boolean;     // Show center grips
-  showQuadrants: boolean;   // Show quadrant grips
-}
+// ADR-559 — the AutoCAD-style input DTO is the canonical `GripSettingsFull` projection
+// (base + render extras + legacy compat, sentinel colours). One schema, no re-declaration.
+export type GripSettings = GripSettingsFull;
 
 export interface GripState {
   type: 'cold' | 'warm' | 'hot';

@@ -7,6 +7,8 @@
 // computed grip can carry an optional rendered-shape hint (move/rotation icon
 // glyphs for BIM parametric handles).
 import type { GripShape } from '../grips/types';
+// ADR-559 — canonical grip-settings schema (this rendering type === GripSettingsFull projection)
+import type { GripSettingsFull } from '../../types/grip-settings-schema';
 
 // ===== BASIC GEOMETRY TYPES =====
 /**
@@ -137,46 +139,9 @@ export interface GripInfo {
   moveHoveredZone?: import('../../bim/grips/move-glyph-zones').MoveGlyphZone;
 }
 
-export interface GripSettings {
-  // === AutoCAD Variables ===
-  gripSize: number;         // GRIPSIZE: 1-255 DIPs, default 5
-  pickBoxSize: number;      // PICKBOX: 0-50 DIPs, default 3
-  apertureSize: number;     // APERTURE: 1-50 px, default 10
-  showAperture: boolean;    // APBOX: show/hide osnap aperture
-
-  // === Grip Colors (AutoCAD style) ===
-  colors: {
-    cold: string | null;    // GRIPCOLOR: unselected (default blue). null = resolved via GRIP_COLD_COLOR SSoT
-    warm: string;           // GRIPHOVER: hover (default orange)
-    hot: string;            // GRIPHOT: selected (default red)
-    contour: string;        // GRIPCONTOUR: border (default black)
-  };
-
-  // === Advanced Settings ===
-  enabled: boolean;         // Enable/disable grip system
-  showGrips: boolean;       // Show/hide grips on selected entities
-  multiGripEdit: boolean;   // Allow multi-grip operations
-  snapToGrips: boolean;     // Enable snap to grips
-  showGripTips: boolean;    // Show grip tooltips
-  dpiScale: number;         // DPI scaling factor
-  maxGripsPerEntity: number; // Maximum grips per entity (performance)
-  gripObjLimit: number;     // GRIPOBJLIMIT: hide all grips above this selection-object count (0 = no limit)
-
-  // === Display Settings ===
-  opacity: number;          // Grip opacity (0.0 - 1.0)
-  showMidpoints: boolean;   // Show midpoint grips
-  showCenters: boolean;     // Show center grips
-  showQuadrants: boolean;   // Show quadrant grips
-
-  // Legacy compatibility
-  size?: number;
-  hoverSize?: number;
-  color?: string;
-  hoverColor?: string;
-  selectedColor?: string;
-  strokeWidth?: number;
-  showLabels?: boolean;
-}
+// ADR-559 — the rendering grip-settings type is the canonical `GripSettingsFull` projection
+// (base + render extras + legacy compat, sentinel colours). One schema, no re-declaration.
+export type GripSettings = GripSettingsFull;
 
 export interface GripInteractionState {
   hovered?: { entityId: string; gripIndex: number };

@@ -240,7 +240,7 @@ function applyAxisBoxEdgeDrag(
  * axis length toward the EAST-most end (the midpoint between the centre and the
  * east end-face midpoint). The ONE source for this placement — consumed by both
  * `getAxisBoxGrips` (straight wall) AND the plain DXF line rotation grip
- * (`systems/line/line-rotation-grip.ts`), so the wall and the line can never
+ * (`systems/line/line-grips.ts`), so the wall and the line can never
  * diverge. `frame.halfWidth` = ½ axis length, so `halfWidth / 2` = ¼ length;
  * `rotationHandleAxialEastSign` (the shared policy SSoT) picks the east end.
  */

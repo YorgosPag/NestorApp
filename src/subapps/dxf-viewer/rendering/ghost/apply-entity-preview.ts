@@ -23,7 +23,7 @@
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion, DxfText, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-363 Slice F — plain DXF line rotation live ghost (shared rotate SSoT).
-import { applyLineRotationDrag } from '../../systems/line/line-rotation-grip';
+import { applyLineRotationDrag } from '../../systems/line/line-grips';
 import type { Entity } from '../../types/entities';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).

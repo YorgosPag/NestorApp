@@ -9,31 +9,15 @@
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
 
-export interface GripStyle {
-  enabled: boolean;
-  colors: {
-    cold: string; // always resolved — resolveGripColors() called at write time in set()
-    warm: string;
-    hot: string;
-    contour: string;
-  };
-  gripSize: number;
-  pickBoxSize: number;
-  apertureSize: number;
-  showGrips: boolean;
-  opacity: number;
-  // ✅ ENTERPRISE: Additional grip settings (from GripSettings)
-  showAperture: boolean;      // Show aperture box (AutoCAD APBOX)
-  multiGripEdit: boolean;      // Enable multi-grip editing
-  snapToGrips: boolean;        // Snap to grip points
-  showGripTips: boolean;       // Show grip tooltips
-  dpiScale: number;            // DPI scaling factor
-  showMidpoints: boolean;      // Show midpoint grips
-  showCenters: boolean;        // Show center grips
-  showQuadrants: boolean;      // Show quadrant grips
-  maxGripsPerEntity: number;   // Maximum grips per entity
-  gripObjLimit: number;        // AutoCAD GRIPOBJLIMIT — hide all grips above this selection-object count (0 = no limit)
-}
+// ADR-559 — the runtime grip STYLE is a projection of the canonical schema: the stored
+// `GripSettingsBase` (incl. maxGripsPerEntity + gripObjLimit) + render extras
+// (showGripTips / dpiScale) with RESOLVED colours (`cold` always concrete — resolveGripColors()
+// runs at write time in set()). Add new grip fields to `GripSettingsBase`, not here.
+import type { GripSettingsBase, GripStyleExtras, ResolvedGripColors } from '../types/grip-settings-schema';
+
+export type GripStyle = GripSettingsBase & GripStyleExtras & {
+  colors: ResolvedGripColors;
+};
 
 import { useSyncExternalStore } from 'react';
 import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';

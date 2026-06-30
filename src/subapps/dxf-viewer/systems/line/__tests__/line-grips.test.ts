@@ -12,7 +12,7 @@
  *   - `computeDxfEntityGrips` emits the 4th grip with `lineGripKind` at that pos.
  */
 
-import { lineRotationHandlePos, applyLineRotationDrag, LINE_ROTATION_KIND } from '../line-rotation-grip';
+import { lineRotationHandlePos, applyLineRotationDrag, getLineGrips, LINE_ROTATION_KIND } from '../line-grips';
 import { axisQuarterRotationHandleWorld, axisToRectFrame } from '../../../bim/grips/axis-box-grips';
 import { gripGlyphShape } from '../../../bim/grips/grip-glyph-registry';
 import { hotGripOpForKind } from '../../../hooks/grips/wall-hot-grip-fsm';
@@ -96,6 +96,21 @@ describe('line-rotation shares the wall hot-grip + glyph vocabulary', () => {
   it("opts into the shared 'rotate' hot-grip flow (same as wall-rotation)", () => {
     expect(hotGripOpForKind(LINE_ROTATION_KIND)).toBe('rotate');
     expect(hotGripOpForKind(LINE_ROTATION_KIND)).toBe(hotGripOpForKind('wall-rotation'));
+  });
+});
+
+describe('getLineGrips — the SSoT both grip paths consume', () => {
+  it('emits 4 grips: start / end / midpoint MOVE / rotation', () => {
+    const grips = getLineGrips('L1', { x: 0, y: 0 }, { x: 100, y: 0 });
+    expect(grips).toHaveLength(4);
+    expect(grips[0]).toMatchObject({ gripIndex: 0, type: 'vertex', movesEntity: false });
+    expect(grips[1]).toMatchObject({ gripIndex: 1, type: 'vertex', movesEntity: false });
+    // midpoint MOVE — ORTHO-eligible + StretchEntityCommand parity preserved.
+    expect(grips[2]).toMatchObject({ gripIndex: 2, type: 'edge', movesEntity: true, edgeVertexIndices: [0, 1] });
+    near(grips[2].position.x, 50); near(grips[2].position.y, 0);
+    // rotation handle — ¼ east, tagged so it opts into the shared rotate flow.
+    expect(grips[3]).toMatchObject({ gripIndex: 3, type: 'vertex', movesEntity: false, lineGripKind: LINE_ROTATION_KIND });
+    near(grips[3].position.x, 75); near(grips[3].position.y, 0);
   });
 });
 

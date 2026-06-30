@@ -48,8 +48,12 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { pointToLineDistance } from './shared/geometry-utils';
-import { createEdgeGrips, renderSplitLine } from './shared/line-utils';
-import { createVertexGrip } from './shared/grip-utils';
+import { renderSplitLine } from './shared/line-utils';
+// ADR-363 Slice F/G.4 — line grips SSoT (start/end/midpoint MOVE + rotation handle),
+// the SAME source `computeDxfEntityGrips` (interaction + 3D) consumes, so the on-canvas
+// 2D grips match exactly (mirror `TextRenderer.getGrips` → `getTextGrips`).
+import { getLineGrips } from '../../systems/line/line-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 // 🏢 ADR-065: Centralized Distance & Vector Operations, ADR-124: Centralized Text Gap
 import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Entity Type Guards
@@ -129,20 +133,21 @@ export class LineRenderer extends BaseEntityRenderer {
     if (!lineData) return [];
     const { start, end } = lineData;
     const lineEntity = entity as EntityModel & { id: string };
-    
-    const grips: GripInfo[] = [];
-    
-    // Start point grip
-    grips.push(createVertexGrip(lineEntity.id, start, 0));
 
-    // End point grip
-    grips.push(createVertexGrip(lineEntity.id, end, 1));
-    
-    // Use shared utility for edge grip
-    const edgeGrips = createEdgeGrips(lineEntity.id, [start, end], false, 2);
-    grips.push(...edgeGrips);
-    
-    return grips;
+    // ADR-363 Slice F/G.4 — render the SAME 4 grips the interaction + 3D paths emit
+    // (`computeDxfEntityGrips` → `getLineGrips`), mapped to the render `GripInfo`
+    // shape (mirror `TextRenderer.getGrips`). Before this the renderer hand-emitted
+    // only 3 grips → the rotation handle was invisible on canvas. The rotation grip
+    // → curved-arrow glyph via the shared registry SSoT; the rest stay 'square'.
+    return getLineGrips(lineEntity.id, start, end).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+      shape: gripGlyphShape(g.lineGripKind),
+    }));
   }
 
 
