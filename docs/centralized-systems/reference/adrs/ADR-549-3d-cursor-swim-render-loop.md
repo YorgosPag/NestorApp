@@ -347,6 +347,7 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
 ---
 
 ## Changelog
+- **2026-06-30** — **Bugfix Phase-0 diag: `[FrameScheduler] Error in frame listener: TypeError: e.get is not a function` κάθε frame** (browser-reported, prod). Ρίζα: το `recordSchedulerFrame` (wired στο `BimViewport3D` via `onFrame`) καλούσε `bump(s.schedFrame, '_frame', …)` — αλλά το `bump()` περιμένει **Map** (`map.get(key)`) ενώ το `s.schedFrame` είναι ένα **single `Stat`** (`{count,total,max}`), όχι Map → `schedFrame.get` undefined → throw κάθε frame (πιανόταν από το try/catch του scheduler, άρα spam χωρίς να σπάει το render). Fix SSoT: εξήχθη `bumpStat(stat, ms)` (το χρησιμοποιεί κιόλας εσωτερικά το `bump`) και το `schedFrame` ενημερώνεται απευθείας με `bumpStat`. `bim3d-perf-diag.ts` only. 🟡 UNCOMMITTED.
 - **2026-06-29** — Phase 8 polish #2: οι 4 βραχίονες του σταυρού ΚΟΛΛΑΝΕ στις παρειές του pickbox
   (αίτημα Giorgio) — όταν υπάρχει κουτί `gap = pickbox/2` (η άκρη κάθε γραμμής πέφτει ακριβώς πάνω
   στην πλευρά του τετραγώνου, χωρίς κενό)· χωρίς κουτί ισχύει το `center_gap_px` του χρήστη ή 6.

@@ -60,10 +60,15 @@ function emptyReasons(): Record<keyof Bim3DRenderSample, number> {
   };
 }
 
+/** Fold one timing into a single {@link Stat} accumulator (count / total / running max). */
+function bumpStat(s: Stat, ms: number): void {
+  s.count += 1; s.total += ms; if (ms > s.max) s.max = ms;
+}
+
 function bump(map: Map<string, Stat>, key: string, ms: number): void {
   let s = map.get(key);
   if (!s) { s = { count: 0, total: 0, max: 0 }; map.set(key, s); }
-  s.count += 1; s.total += ms; if (ms > s.max) s.max = ms;
+  bumpStat(s, ms);
 }
 
 function logStatMap(title: string, map: Map<string, Stat>): void {
@@ -229,7 +234,7 @@ export function recordSchedulerFrame(m: {
 }): void {
   const s = getState();
   if (!s) return;
-  bump(s.schedFrame, '_frame', m.totalFrameTime);
+  bumpStat(s.schedFrame, m.totalFrameTime); // schedFrame is a single Stat, NOT a Map — must not go through bump()
   m.systemMetrics.forEach((sm, id) => { if (!sm.skipped) bump(s.scheduler, id, sm.renderTime); });
 }
 
