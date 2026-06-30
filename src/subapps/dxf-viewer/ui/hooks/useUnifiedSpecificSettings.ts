@@ -226,6 +226,7 @@ interface MockGripSettings {
   showCenters: boolean;
   showQuadrants: boolean;
   maxGripsPerEntity: number;
+  gripObjLimit: number;
 }
 
 const defaultGripPreviewSettings: MockGripSettings = {
@@ -246,7 +247,8 @@ const defaultGripPreviewSettings: MockGripSettings = {
   showMidpoints: true,      // ✅ Show midpoint grips
   showCenters: true,        // ✅ Show center grips
   showQuadrants: true,      // ✅ Show quadrant grips
-  maxGripsPerEntity: 50     // ✅ Default maximum grips per entity
+  maxGripsPerEntity: 50,    // ✅ Default maximum grips per entity
+  gripObjLimit: 100         // ✅ AutoCAD GRIPOBJLIMIT default: hide all grips above 100 selected objects
 };
 
 /**

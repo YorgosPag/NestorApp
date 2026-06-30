@@ -117,6 +117,7 @@ import {
   commitDimensionGripDrag,
   commitPolylineBulgeGripDrag,
   commitTextGripDrag,
+  commitLineGripDrag,
 } from './grip-parametric-commits';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
@@ -409,6 +410,14 @@ export function commitDxfGripDragModeAware(
   // `UpdateTextTransformCommand`. Covers BOTH TEXT (`widthFactor`) and MTEXT (`width`).
   if (grip.textGripKind) {
     commitTextGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Slice F — plain DXF line rotation grip path. Bypasses stretch/move
+  // because rotation is not a single displacement: routes through the canonical
+  // `RotateEntityCommand` (undoable, merge-coalescing) reading the picked pivot
+  // from `BimRotateHotGripStore`. Full wall-rotation parity, no bespoke transform.
+  if (grip.lineGripKind) {
+    commitLineGripDrag(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.

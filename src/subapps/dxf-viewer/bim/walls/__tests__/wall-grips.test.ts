@@ -492,19 +492,15 @@ describe('wall-grips (Phase 1C)', () => {
     expect(wallGripGlyphShape(undefined)).toBe('square');
   });
 
-  it('27. wall-rotation handle sits ON the OPPOSITE perp face from the thickness handle (clean separation, Revit-style)', () => {
+  it('27. wall-rotation handle sits ON the centreline at ¼ axis length toward the east end (axis-quarter, Giorgio 2026-06-30)', () => {
     const grips = getWallGrips(makeStraight());
     const rot = grips.find((g) => g.wallGripKind === 'wall-rotation')!;
-    const thickness = grips.find((g) => g.wallGripKind === 'wall-thickness')!;
-    const cornerNeg = grips.find((g) => g.wallGripKind === 'wall-corner-start-neg')!;
     expect(rot).toBeDefined();
-    // Centre of the 0→1000 length.
-    expect(rot.position.x).toBeCloseTo(500, 6);
-    // OPPOSITE perp face from the thickness handle (signs differ across the axis).
-    expect(Math.sign(rot.position.y)).toBe(-Math.sign(thickness.position.y));
-    // Sits ON the −perp face (offset 0): same perp distance from the centreline as the
-    // −perp corner — Giorgio «πάνω στην παρειά, όχι στον χώρο».
-    expect(Math.abs(rot.position.y)).toBeCloseTo(Math.abs(cornerNeg.position.y), 6);
+    // ADR-363 Slice F — `rotationPlacement: 'axis-quarter'`: centre (500) + ¼ of the
+    // 0→1000 length toward the east end = 750, ON the centreline (perp = 0), so it no
+    // longer overlaps the long-side edge midpoint. SAME SSoT the line rotation grip uses.
+    expect(rot.position.x).toBeCloseTo(750, 6);
+    expect(rot.position.y).toBeCloseTo(0, 6);
   });
 
   it('28. wall-rotation spins both endpoints 90° CCW about the midpoint', () => {

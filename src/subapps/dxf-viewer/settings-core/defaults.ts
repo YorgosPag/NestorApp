@@ -129,6 +129,7 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
   showCenters: true,           // Show center grips
   showQuadrants: true,         // Show quadrant grips
   maxGripsPerEntity: 50,       // Maximum grips per entity
+  gripObjLimit: 100,           // AutoCAD GRIPOBJLIMIT — hide all grips above this selection count (0 = no limit)
   showGrips: true              // ✅ ENTERPRISE: Added missing property expected by tests
 };
 

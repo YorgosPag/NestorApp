@@ -44,5 +44,6 @@ export function syncGripStyleStoreFromSettings(settings: GripSettings): void {
     showCenters: settings.showCenters,
     showQuadrants: settings.showQuadrants,
     maxGripsPerEntity: settings.maxGripsPerEntity,
+    gripObjLimit: settings.gripObjLimit,
   });
 }

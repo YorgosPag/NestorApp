@@ -25,6 +25,9 @@ import { reshapeGripsForFootprint } from '../grips/grip-3d-reshape-grips';
 import { commitGrip3DReshape } from '../grips/grip-3d-commit';
 import type { PlanElevationMmFor, GripWorldOffset } from '../grips/grip-3d-screen-project';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
+// ADR-559 — AutoCAD GRIPOBJLIMIT (selection-count grip suppression), read at event time.
+import { gripStyleStore } from '../../stores/GripStyleStore';
+import { isGripObjLimitExceeded } from '../../hooks/grips/grip-obj-limit';
 // ADR-535 Φ2/Φ3 — per-vertex top-surface elevation SSoT + building base resolver.
 // slab → slope plane (`slabTopZmmAt`); roof → lower-envelope (`roofZmm`).
 import { slabTopZmmAt, slabUndersideZmmAt } from '../../bim/geometry/slab-slope';
@@ -71,6 +74,13 @@ export function refreshReshapeGrips(
   bimType: string | null,
 ): void {
   if (entityIds.length !== 1 || !bimType || !RESHAPE_BIM_TYPES.has(bimType)) {
+    useGrip3DOverlayStore.getState().clear();
+    return;
+  }
+  // ADR-559 — AutoCAD GRIPOBJLIMIT parity: suppress grips above the selection-object limit.
+  // BIM footprint reshape is single-select today (guard above), so this only bites when the
+  // limit is set absurdly low; kept for parity + future multi-reshape. Shared rule SSoT.
+  if (isGripObjLimitExceeded(entityIds.length, gripStyleStore.get().gripObjLimit)) {
     useGrip3DOverlayStore.getState().clear();
     return;
   }

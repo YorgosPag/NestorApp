@@ -218,6 +218,7 @@ export function useZustandAsGripSettings() {
     showCenters: store.general.grip.showCenters,
     showQuadrants: store.general.grip.showQuadrants,
     maxGripsPerEntity: store.general.grip.maxGripsPerEntity,
+    gripObjLimit: store.general.grip.gripObjLimit,
     showGrips: store.general.grip.enabled // ✅ ENTERPRISE FIX: Map enabled to showGrips for interface compatibility
   }), [store.general.grip]);
 
@@ -235,7 +236,8 @@ export function useZustandAsGripSettings() {
       showMidpoints: updates.showMidpoints,
       showCenters: updates.showCenters,
       showQuadrants: updates.showQuadrants,
-      maxGripsPerEntity: updates.maxGripsPerEntity
+      maxGripsPerEntity: updates.maxGripsPerEntity,
+      gripObjLimit: updates.gripObjLimit
     });
   }, [store]);
 

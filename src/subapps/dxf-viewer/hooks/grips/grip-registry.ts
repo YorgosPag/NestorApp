@@ -18,6 +18,7 @@ import { computeDxfEntityGrips } from '../grip-computation';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { useGripStyle } from '../../stores/GripStyleStore';
+import { isGripObjLimitExceeded } from './grip-obj-limit';
 // ADR-397 Φ2 — directional move: attach the entity's local frame + mm scale to its
 // MOVE grip so the click handler can move along a typed distance without the scene.
 import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
@@ -93,6 +94,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.rayGripKind ? { rayGripKind: grip.rayGripKind } : {}),
     // ADR-510 Φ3c — forward multifunctional polyline grip discriminator.
     ...(grip.polylineGripKind ? { polylineGripKind: grip.polylineGripKind } : {}),
+    // ADR-363 Slice F — forward line rotation grip discriminator (shared hot-grip rotate).
+    ...(grip.lineGripKind ? { lineGripKind: grip.lineGripKind } : {}),
     // ADR-557 — forward text/mtext rect-box grip discriminator.
     ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
   };
@@ -168,10 +171,19 @@ export function useGripRegistry({
   selectedEntityIds,
   selectedOverlays,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
-  const { showMidpoints, showCenters, maxGripsPerEntity } = useGripStyle();
+  const { showMidpoints, showCenters, maxGripsPerEntity, gripObjLimit } = useGripStyle();
 
   return useMemo(() => {
     const result: UnifiedGripInfo[] = [];
+
+    // ADR-559 — AutoCAD GRIPOBJLIMIT: when the selection holds MORE objects than the
+    // limit, suppress ALL grips (entities stay selected; only grip rendering is skipped
+    // for performance). `0` = no limit. Distinct from `maxGripsPerEntity` (the
+    // per-single-entity grip cap applied in the loop below). Shared rule SSoT.
+    const selectedCount = selectedEntityIds.length + selectedOverlays.length;
+    if (isGripObjLimitExceeded(selectedCount, gripObjLimit)) {
+      return result;
+    }
 
     // 1. DXF entity grips
     if (dxfScene && selectedEntityIds.length > 0) {
@@ -217,5 +229,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, maxGripsPerEntity]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, maxGripsPerEntity, gripObjLimit]);
 }

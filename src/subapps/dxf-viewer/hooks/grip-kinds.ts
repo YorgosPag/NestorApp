@@ -451,31 +451,24 @@ export type PolylineGripKind =
   | `polyline-arc-midpoint-${number}`;
 
 /**
- * ADR-557 — Text / MText grip kind (parametric grip type). Routes commit through
- * `applyTextGripDrag()` + `UpdateTextTransformCommand` instead of the standard
- * `StretchEntityCommand` vertex path. FULL rectangular-box parity με τον τοίχο /
- * κολόνα (Giorgio 2026-06-30: «ίδιες λαβές, ίδιος κώδικας»): 4 γωνίες (opposite
- * corner fixed) + 4 μεσοπλευρικές (opposite edge fixed) + center MOVE + rotation,
- * όλα μέσω του κοινού `rect-grip-engine` SSoT. ΧΩΡΙΣ mirror (δεν ζητήθηκε).
+ * ADR-363 Slice F — Line rotation grip kind (plain DXF `line` primitive, NOT a
+ * BIM params entity). Tags the rotation handle emitted by `computeDxfEntityGrips`
+ * (case 'line') so it opts into the SHARED hot-grip rotate flow (glyph + 6-click
+ * reference + free spin + typed angle) — full parity with `wall-rotation`. The
+ * line's endpoint (0/1) + midpoint-MOVE (2) grips stay untagged (standard
+ * stretch / whole-move path); only the rotation handle carries this kind.
  *
- * Grips exposed by `getTextGrips` (`bim/text/text-grips.ts`):
- *   - `text-move`     → translate `position` (4-arrow MOVE glyph)
- *   - `text-rotation` → rotate γύρω από το bbox-center (re-homes `position`)
- *   - `text-corner-{ne,nw,sw,se}` → 2-DOF γωνία resize (opposite corner fixed)
- *   - `text-edge-{e,w,n,s}`       → edge-midpoint resize (opposite edge fixed):
- *       e/w → πλάτος (MTEXT `width` / TEXT `widthFactor`), n/s → ύψος (`height`).
+ *   - `line-rotation` → rotate the whole line about its midpoint (or a picked
+ *     centre). Commit routes through `commitLineGripDrag()` + the canonical
+ *     `RotateEntityCommand` (NOT a bespoke transform); preview rotates start/end
+ *     via the shared `rotateAxisPointsAboutPivot` SSoT (mirror `rotateWall`).
  */
-export type TextGripKind =
-  | 'text-move'
-  | 'text-rotation'
-  | 'text-corner-ne'
-  | 'text-corner-nw'
-  | 'text-corner-sw'
-  | 'text-corner-se'
-  | 'text-edge-e'
-  | 'text-edge-w'
-  | 'text-edge-n'
-  | 'text-edge-s';
+export type LineGripKind = 'line-rotation';
+
+// ADR-557 — Text / MText grip kinds live in the sibling module
+// `grip-kinds-text.ts` (SRP / N.7.1) and are re-exported here for backward
+// compatibility (existing `import { TextGripKind } from '../grip-kinds'`).
+export type { TextGripKind } from './grip-kinds-text';
 
 // ADR-406/408/410/415/359 — placeable-object + linear-element grip kinds live in
 // the sibling module `grip-kinds-placeable.ts` (SRP / N.7.1) and are re-exported

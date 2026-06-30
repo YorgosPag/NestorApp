@@ -24,7 +24,8 @@
         "contourColor": "Contour Color",
         "pickBoxSize": "Pick Box Size",
         "apertureSize": "Aperture Size",
-        "maxGrips": "Max Grips per Entity"
+        "maxGrips": "Max Grips per Entity",
+        "gripObjLimit": "Grip Object Limit (0 = no limit)"
       },
       "colorPicker": {
         "cold": "Select Cold Grip Color",

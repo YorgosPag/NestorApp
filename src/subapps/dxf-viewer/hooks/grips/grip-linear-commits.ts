@@ -12,12 +12,16 @@ import type { SceneEntity } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { XLineEntity, RayEntity, DimensionEntity } from '../../types/entities';
-import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfDimension, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
 import { applyRayGripDrag } from '../../systems/ray/ray-grips';
 import { applyDimensionGripDrag, diffDimEntity } from '../dimensions/useDimensionGrips';
 import { UpdateDimGripCommand } from '../../core/commands/entity-commands/UpdateDimGripCommand';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+// ADR-363 Slice F — line rotation commit reuses the canonical rotate SSoT.
+import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
+import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
+import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 
 /**
  * ADR-359 Phase 11 — XLine grip commit via `applyXLineGripDrag` + direct scene
@@ -61,6 +65,41 @@ export function commitRayGripDrag(
   const updates = applyRayGripDrag(grip.rayGripKind, { entity, delta, currentPos });
   if (Object.keys(updates).length === 0) return;
   sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
+}
+
+/**
+ * ADR-363 Slice F — plain DXF line rotation commit. The line is a primitive
+ * (`start`/`end`, no params), so the rotation routes through the CANONICAL
+ * `RotateEntityCommand` (the same undoable, merge-coalescing command the rotate
+ * tool uses) — NOT a bespoke transform. The hot-grip flow publishes {pivot,anchor}
+ * in `BimRotateHotGripStore` before commit (mirror `commitWallGripDrag`); the
+ * swept angle = `angle(anchor+delta) − angle(anchor)` about the pivot. Falls back
+ * to the line midpoint + grip position (legacy drag-handle) when no rotate context
+ * is published. A degenerate / zero sweep is a no-op (cursor on the pivot).
+ */
+export function commitLineGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.lineGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw || (raw as Record<string, unknown>).type !== 'line') return;
+  const line = raw as unknown as DxfLine;
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot = rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const pivot: Point2D = useRotatePivot
+    ? rotateCtx.pivot!
+    : { x: (line.start.x + line.end.x) / 2, y: (line.start.y + line.end.y) / 2 };
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const sweptDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
+  if (sweptDeg === null || sweptDeg === 0) return;
+  const command = new RotateEntityCommand([grip.entityId], pivot, sweptDeg, sceneManager);
+  if (command.validate() !== null) return;
+  deps.execute(command);
 }
 
 /** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */

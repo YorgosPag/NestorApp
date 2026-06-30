@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, TextGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, LineGripKind, TextGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -308,6 +308,13 @@ export interface UnifiedGripInfo {
    * standard `StretchEntityCommand` vertex path.
    */
   readonly polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-363 Slice F — line rotation grip discriminator (forwarded from
+   * `GripInfo.lineGripKind` in `grip-registry.wrapDxfGrip`). Opts the plain DXF
+   * line's rotation handle into the SHARED hot-grip rotate flow and routes commit
+   * through `commitLineGripDrag()` + `RotateEntityCommand` (full wall parity).
+   */
+  readonly lineGripKind?: LineGripKind;
   /**
    * ADR-557 — parametric text/mtext grip discriminator (forwarded from
    * `GripInfo.textGripKind` in `grip-registry.wrapDxfGrip`). Routes commit through

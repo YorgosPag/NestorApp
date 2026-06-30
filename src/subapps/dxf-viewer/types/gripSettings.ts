@@ -35,6 +35,7 @@ export interface GripSettings {
   showGripTips: boolean;    // Show grip tooltips
   dpiScale: number;         // DPI scaling factor
   maxGripsPerEntity: number; // Maximum grips per entity (performance)
+  gripObjLimit: number;     // GRIPOBJLIMIT: hide all grips above this selection-object count (0 = no limit)
 
   // === Display Settings ===
   opacity: number;          // Grip opacity (0.0 - 1.0)
@@ -81,6 +82,7 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
   showGripTips: false,
   dpiScale: 1.0,
   maxGripsPerEntity: 50,    // ✅ Default maximum grips per entity
+  gripObjLimit: 100,        // ✅ AutoCAD GRIPOBJLIMIT default: hide all grips above 100 selected objects
 
   // === Display Settings ===
   opacity: 1.0,             // ✅ Full opacity by default
@@ -108,6 +110,7 @@ export function validateGripSettings(settings: Partial<GripSettings>): GripSetti
   // 🏢 ADR-034: Clamp additional settings using centralized validation bounds
   result.opacity = clamp(result.opacity, OPACITY_BOUNDS.VISIBLE.min, OPACITY_BOUNDS.VISIBLE.max);
   result.maxGripsPerEntity = clamp(result.maxGripsPerEntity, GRIP_BOUNDS.MAX_PER_ENTITY.min, GRIP_BOUNDS.MAX_PER_ENTITY.max);
+  result.gripObjLimit = clamp(result.gripObjLimit, GRIP_BOUNDS.OBJ_LIMIT.min, GRIP_BOUNDS.OBJ_LIMIT.max);
 
   return result;
 }

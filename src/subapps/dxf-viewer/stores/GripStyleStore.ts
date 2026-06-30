@@ -32,6 +32,7 @@ export interface GripStyle {
   showCenters: boolean;        // Show center grips
   showQuadrants: boolean;      // Show quadrant grips
   maxGripsPerEntity: number;   // Maximum grips per entity
+  gripObjLimit: number;        // AutoCAD GRIPOBJLIMIT — hide all grips above this selection-object count (0 = no limit)
 }
 
 import { useSyncExternalStore } from 'react';
@@ -62,7 +63,8 @@ let current: GripStyle = {
   showMidpoints: true,      // ✅ Show midpoint grips
   showCenters: true,        // ✅ Show center grips
   showQuadrants: true,      // ✅ Show quadrant grips
-  maxGripsPerEntity: 50     // ✅ Maximum grips per entity
+  maxGripsPerEntity: 50,    // ✅ Maximum grips per entity
+  gripObjLimit: 100         // ✅ AutoCAD GRIPOBJLIMIT — hide all grips above 100 selected objects (0 = no limit)
 };
 
 const listeners = new Set<Listener>();

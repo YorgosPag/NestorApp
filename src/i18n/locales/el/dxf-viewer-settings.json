@@ -24,7 +24,8 @@
         "contourColor": "Χρώμα Περιγράμματος",
         "pickBoxSize": "Μέγεθος Πλαισίου Επιλογής",
         "apertureSize": "Μέγεθος Aperture",
-        "maxGrips": "Μέγιστα Χερούλια ανά Οντότητα"
+        "maxGrips": "Μέγιστα Χερούλια ανά Οντότητα",
+        "gripObjLimit": "Όριο Πλήθους για Λαβές (0 = χωρίς όριο)"
       },
       "colorPicker": {
         "cold": "Επιλογή Χρώματος Cold Grip",

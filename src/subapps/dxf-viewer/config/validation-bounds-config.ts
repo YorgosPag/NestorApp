@@ -128,6 +128,13 @@ export const GRIP_BOUNDS = {
 
   /** Maximum grips per entity full range (1-100) - legacy support */
   MAX_PER_ENTITY_LEGACY: { min: 1, max: 100 },
+
+  /**
+   * Grip object limit (0-32767) — AutoCAD `GRIPOBJLIMIT` system variable. Above this
+   * selection-object COUNT all grips are suppressed (performance); `0` = no limit
+   * (grips always shown). Distinct from MAX_PER_ENTITY (grips per single entity).
+   */
+  OBJ_LIMIT: { min: 0, max: 32767 },
 } as const;
 
 // ============================================================================
@@ -310,6 +317,15 @@ export function clampFitToViewPadding(value: number): number {
  */
 export function clampMaxGripsPerEntity(value: number): number {
   return clamp(value, GRIP_BOUNDS.MAX_PER_ENTITY.min, GRIP_BOUNDS.MAX_PER_ENTITY.max);
+}
+
+/**
+ * Clamp grip object limit to AutoCAD GRIPOBJLIMIT range (0-32767).
+ * `0` = no limit (grips always shown). Above the limit grips are suppressed.
+ * @example clampGripObjLimit(99999) // returns 32767
+ */
+export function clampGripObjLimit(value: number): number {
+  return clamp(value, GRIP_BOUNDS.OBJ_LIMIT.min, GRIP_BOUNDS.OBJ_LIMIT.max);
 }
 
 /**

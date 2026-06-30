@@ -21,7 +21,9 @@
  */
 
 import type { Point2D } from '../types/Types';
-import type { DxfEntityUnion, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfEntityUnion, DxfText, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-363 Slice F — plain DXF line rotation live ghost (shared rotate SSoT).
+import { applyLineRotationDrag } from '../../systems/line/line-rotation-grip';
 import type { Entity } from '../../types/entities';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
@@ -110,7 +112,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, textGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, textGripKind, lineGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -376,6 +378,19 @@ export function applyEntityPreview(
     const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos });
     if (Object.keys(patch).length === 0) return entity;
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Slice F — plain DXF line rotation live ghost ──────────────────
+  // The line is a primitive (start/end, no params); the rotation ghost spins both
+  // endpoints about `rotatePivot` (the picked centre) via the SAME shared
+  // `rotateAxisPointsAboutPivot` SSoT the commit (RotateEntityCommand) runs, so the
+  // preview ≡ commit. `anchorPos` = the reference anchor (swept angle starts at 0).
+  if (lineGripKind && anchorPos && entity.type === 'line') {
+    const line = entity as unknown as DxfLine;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const rotated = applyLineRotationDrag({ start: line.start, end: line.end, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
+    if (!rotated) return entity;
+    return { ...(entity as object), start: rotated.start, end: rotated.end } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────

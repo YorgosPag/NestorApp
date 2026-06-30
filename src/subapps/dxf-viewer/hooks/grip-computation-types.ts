@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, TextGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, TextGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -149,6 +149,13 @@ export interface DxfGripDragPreview {
    * rotation sweep can reconstruct the start angle around the bbox-center.
    */
   textGripKind?: TextGripKind;
+  /**
+   * ADR-363 Slice F — plain DXF line rotation discriminator. Routes the live ghost
+   * through `applyLineRotationDrag` (the SAME shared `rotateAxisPointsAboutPivot`
+   * the commit runs), so the spinning line is byte-identical preview ≡ commit.
+   * `anchorPos` carries the reference anchor so the swept angle starts at 0.
+   */
+  lineGripKind?: LineGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw

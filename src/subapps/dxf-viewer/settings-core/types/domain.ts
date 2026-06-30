@@ -151,6 +151,12 @@ export interface GripSettings {
   showCenters: boolean;
   showQuadrants: boolean;
   maxGripsPerEntity: number;
+  /**
+   * AutoCAD GRIPOBJLIMIT — above this selection-object COUNT all grips are hidden
+   * (objects stay selected; only grip rendering is suppressed for performance).
+   * `0` = no limit (grips always shown). Range 0-32767, default 100.
+   */
+  gripObjLimit: number;
   showGrips: boolean;
 }
 
@@ -426,6 +432,7 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
     showCenters: true,
     showQuadrants: true,
     maxGripsPerEntity: 50,
+    gripObjLimit: 100,
     showGrips: true
   };
 
@@ -449,5 +456,6 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
     apertureSize: clamp(settings.apertureSize ?? defaults.apertureSize, GRIP_BOUNDS.APERTURE.min, GRIP_BOUNDS.APERTURE.max),
     opacity: clamp(settings.opacity ?? defaults.opacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
     maxGripsPerEntity: clamp(settings.maxGripsPerEntity ?? defaults.maxGripsPerEntity, GRIP_BOUNDS.MAX_PER_ENTITY_LEGACY.min, GRIP_BOUNDS.MAX_PER_ENTITY_LEGACY.max),
+    gripObjLimit: clamp(settings.gripObjLimit ?? defaults.gripObjLimit, GRIP_BOUNDS.OBJ_LIMIT.min, GRIP_BOUNDS.OBJ_LIMIT.max),
   };
 };

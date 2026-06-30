@@ -113,6 +113,9 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'floorplan-symbol-corner-nw': 'corner',
   'floorplan-symbol-corner-sw': 'corner',
   'floorplan-symbol-corner-se': 'corner',
+  // Plain DXF line (ADR-363 Slice F) — rotation REFERENCE (6-click) / free spin,
+  // full wall parity. The line's endpoint/midpoint grips stay press-drag.
+  'line-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -133,7 +136,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind;
 }
 
 /**

@@ -35,6 +35,7 @@ import type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  LineGripKind,
   TextGripKind,
 } from './grip-kinds';
 
@@ -67,6 +68,7 @@ export type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  LineGripKind,
   TextGripKind,
 } from './grip-kinds';
 
@@ -250,6 +252,13 @@ export interface GripInfo {
    * curvature). Straight-segment grips keep the standard stretch/move path.
    */
   polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-363 Slice F — line rotation grip discriminator. Present only on the
+   * rotation handle of a plain DXF `line`; opts the grip into the SHARED hot-grip
+   * rotate flow and routes commit through `commitLineGripDrag()` +
+   * `RotateEntityCommand` (full `wall-rotation` parity, no bespoke transform).
+   */
+  lineGripKind?: LineGripKind;
   /**
    * ADR-557 — parametric text/mtext grip discriminator. Present only when the
    * grip belongs to a `DxfText` (TEXT or MTEXT normalised to 'text'); routes the

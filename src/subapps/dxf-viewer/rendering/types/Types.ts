@@ -160,6 +160,7 @@ export interface GripSettings {
   showGripTips: boolean;    // Show grip tooltips
   dpiScale: number;         // DPI scaling factor
   maxGripsPerEntity: number; // Maximum grips per entity (performance)
+  gripObjLimit: number;     // GRIPOBJLIMIT: hide all grips above this selection-object count (0 = no limit)
 
   // === Display Settings ===
   opacity: number;          // Grip opacity (0.0 - 1.0)

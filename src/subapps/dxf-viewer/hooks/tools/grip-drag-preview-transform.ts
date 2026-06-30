@@ -54,6 +54,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.hatchGripKind       ? { hatchGripKind:       dp.hatchGripKind }        : {}),
     // ADR-557 — text/mtext rect-box parametric ghost (move / rotation / corner+edge resize).
     ...(dp.textGripKind        ? { textGripKind:        dp.textGripKind }         : {}),
+    // ADR-363 Slice F — plain DXF line rotation ghost (rotate start/end about pivot).
+    ...(dp.lineGripKind        ? { lineGripKind:        dp.lineGripKind }         : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

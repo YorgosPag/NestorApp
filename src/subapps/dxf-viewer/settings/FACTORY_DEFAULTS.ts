@@ -180,6 +180,7 @@ const GRIP_DEFAULTS = {
   showCenters: true,            // ✅ FIX: Added showCenters (show center grips)
   showQuadrants: true,          // ✅ FIX: Added showQuadrants (show quadrant grips)
   maxGripsPerEntity: 50,        // ✅ FIX: Added maxGripsPerEntity (default max grips)
+  gripObjLimit: 100,            // ✅ AutoCAD GRIPOBJLIMIT — hide all grips above this selection count (0 = no limit)
   showGrips: true               // ✅ FIX: Added showGrips (grip visibility toggle)
 };
 

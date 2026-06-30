@@ -63,6 +63,8 @@ import {
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
+// ADR-363 Slice F — plain DXF line rotation handle (wall-parity position SSoT).
+import { lineRotationHandlePos, LINE_ROTATION_KIND } from '../systems/line/line-rotation-grip';
 
 // ============================================================================
 // TYPES — extracted to grip-computation-types.ts (re-exported for compat)
@@ -105,6 +107,17 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         entityId: entity.id, gripIndex: 2, type: 'edge',
         position: calculateMidpoint(entity.start, entity.end),
         movesEntity: true, edgeVertexIndices: [0, 1],
+      });
+      // ADR-363 Slice F — rotation handle (wall parity): on the centreline at ¼
+      // axis length toward the east end (between centre ↔ right endpoint), SAME
+      // `'axis-quarter'` position SSoT + curved ROTATION glyph + shared hot-grip
+      // rotate flow the wall uses. `type: 'vertex'` so it is never filtered by the
+      // showMidpoints/showCenters grip preferences; `lineGripKind` opts it into the
+      // shared rotate pipeline (commit → RotateEntityCommand). NO new mechanism.
+      grips.push({
+        entityId: entity.id, gripIndex: 3, type: 'vertex',
+        position: lineRotationHandlePos(entity.start, entity.end),
+        movesEntity: false, lineGripKind: LINE_ROTATION_KIND,
       });
       break;
     }

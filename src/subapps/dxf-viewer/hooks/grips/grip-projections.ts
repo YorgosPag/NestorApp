@@ -181,6 +181,10 @@ export function buildDxfDragPreview(
     // (applyEntityPreview → applyTextGripDrag, the SAME transform the commit runs).
     // `anchorPos` = the grabbed grip world pos at mouseDown (rotation sweep start).
     ...(activeGrip.textGripKind        ? { textGripKind:        activeGrip.textGripKind,        anchorPos } : {}),
+    // ADR-363 Slice F — plain DXF line rotation grip kind + anchor for the live
+    // spinning-line ghost (applyEntityPreview → applyLineRotationDrag, the SAME
+    // shared rotate SSoT the commit runs). Only the rotation handle carries the kind.
+    ...(activeGrip.lineGripKind        ? { lineGripKind:        activeGrip.lineGripKind,        anchorPos } : {}),
   };
 }
 
@@ -236,6 +240,9 @@ export function buildRotateReferencePreview(
     ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind } : {}),
     // ADR-415 — floorplan-symbol 6-click rotate live ghost.
     ...(activeGrip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: activeGrip.floorplanSymbolGripKind } : {}),
+    // ADR-363 Slice F — plain DXF line rotation live ghost (free spin / 6-click
+    // reference / typed angle), full wall parity via the shared hot-grip flow.
+    ...(activeGrip.lineGripKind ? { lineGripKind: activeGrip.lineGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

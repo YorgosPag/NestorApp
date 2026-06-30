@@ -29,6 +29,10 @@ import { SelectedEntitiesStore, subscribeSelection } from '../../systems/selecti
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useGrip3DOverlayStore } from '../stores/Grip3DOverlayStore';
+// ADR-559 — AutoCAD GRIPOBJLIMIT: read the live selection-count limit at event time
+// (ADR-040 getter, no subscription) to suppress grips for large 3D DXF selections.
+import { gripStyleStore } from '../../stores/GripStyleStore';
+import { isGripObjLimitExceeded } from '../../hooks/grips/grip-obj-limit';
 import { BimGripController3D } from '../grips/bim-grip-controller-3d';
 import { rawDxfReshapeGrips, scaleDxfGripsToMm } from '../grips/grip-3d-dxf-raw-grips';
 import { commitDxfGrip3D } from '../grips/grip-3d-dxf-commit';
@@ -127,6 +131,12 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
 
     const seatGrips = (eligibles: EligibleDxfEntity[]): boolean => {
       if (eligibles.length === 0) return false;
+      // ADR-559 — AutoCAD GRIPOBJLIMIT: above the selection-object limit suppress ALL grips
+      // (entities stay selected; only grip rendering is skipped). Shared rule SSoT.
+      if (isGripObjLimitExceeded(eligibles.length, gripStyleStore.get().gripObjLimit)) {
+        store().clear();
+        return false;
+      }
       // ADR-537 γ — seat grips in mm (scale native DXF coords by EACH floor's mm-per-unit
       // factor) so they align with the mm-based plan projector at any scene unit. ADR-543 —
       // concat the grips of all selected lines into one set (each GripInfo carries its own

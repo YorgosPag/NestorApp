@@ -68,6 +68,7 @@ export {
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
+  commitLineGripDrag,
 } from './grip-linear-commits';
 
 // ADR-406 / ADR-408 Φ3 / ADR-410 — centred-box grip commits (mep-fixture /

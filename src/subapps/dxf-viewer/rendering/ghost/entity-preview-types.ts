@@ -26,6 +26,7 @@ import type {
   MepManifoldGripKind,
   MepSegmentGripKind,
   FurnitureGripKind,
+  LineGripKind,
   TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
@@ -134,5 +135,12 @@ export interface EntityPreviewTransform {
    * `anchorPos` = the grabbed grip world pos at mouseDown (rotation sweep start).
    */
   readonly textGripKind?: TextGripKind;
+  /**
+   * ADR-363 Slice F — plain DXF line rotation discriminator. Routes preview
+   * through `applyLineRotationDrag` (the SAME shared `rotateAxisPointsAboutPivot`
+   * the commit runs) so the live ghost rotates start/end about `rotatePivot`
+   * (the picked centre) exactly like the wall. `anchorPos` = the reference anchor.
+   */
+  readonly lineGripKind?: LineGripKind;
   readonly anchorPos?: Point2D;
 }

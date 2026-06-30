@@ -234,6 +234,20 @@ function applyAxisBoxEdgeDrag(
   );
 }
 
+/**
+ * ADR-363 Slice F — the `'axis-quarter'` rotation-handle world position for a
+ * centre-axis `RectFrame`: ON the longitudinal centreline (perp = 0), at ¼ of the
+ * axis length toward the EAST-most end (the midpoint between the centre and the
+ * east end-face midpoint). The ONE source for this placement — consumed by both
+ * `getAxisBoxGrips` (straight wall) AND the plain DXF line rotation grip
+ * (`systems/line/line-rotation-grip.ts`), so the wall and the line can never
+ * diverge. `frame.halfWidth` = ½ axis length, so `halfWidth / 2` = ¼ length;
+ * `rotationHandleAxialEastSign` (the shared policy SSoT) picks the east end.
+ */
+export function axisQuarterRotationHandleWorld(frame: RectFrame): Point2D {
+  return rectLocalWorld(frame, rotationHandleAxialEastSign(frame.rotationDeg) * (frame.halfWidth / 2), 0);
+}
+
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
 /**
@@ -286,7 +300,7 @@ export function getAxisBoxGrips(
   // 'axis-quarter' (wall) → ON the centreline (perp = 0), at ¼ axis length toward the
   // east-most end. The other two placements keep perp = the policy offset at x = 0.
   const rotationPos = opts.rotationPlacement === 'axis-quarter'
-    ? rectLocalWorld(frame, rotationHandleAxialEastSign(frame.rotationDeg) * (frame.halfWidth / 2), 0)
+    ? axisQuarterRotationHandleWorld(frame)
     : rectLocalWorld(
         frame,
         0,

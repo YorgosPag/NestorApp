@@ -140,6 +140,16 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
     τοίχος όχι). NEW tunable `LINE_GHOST_STUB_LEN_MM`=300mm κόβει ΜΟΝΟ το οπτικό stub πριν το κλικ (`clampStubLength`,
     διατηρεί την κάθετη φορά)· η διαμήκης θέση + οι κυανές (`faceFrame`) ΔΕΝ επηρεάζονται· το πραγματικό μήκος της
     γραμμής μετά το κλικ ΑΜΕΤΑΒΛΗΤΟ.
+  - **SSoT centralization (Giorgio audit — «μηδέν διπλότυπα, μία πηγή αλήθειας»)**: το audit στον νέο κώδικα βρήκε
+    **2 διπλότυπα** (1 δικό μου + 1 προϋπάρχον) → κεντρικοποιήθηκαν:
+    · **`resizeSegmentToLength(start,end,length)`** NEW στο `rendering/entities/shared/geometry-vector-utils.ts` — η
+      γεωμετρία «μετακίνησε το άκρο σε δοθέν μήκος κατά μήκος της διεύθυνσης» ήταν αντιγραμμένη ως min-clamp (wall
+      `clampPreviewMinLength`) + max-clamp (line `clampStubLength`). Τώρα ΜΙΑ πηγή· wall+line την καλούν (η συνθήκη
+      min/max μένει στον caller).
+    · **`getDefaultLayerId()`** NEW στο `stores/LayerStore.ts` — το one-liner `getLayer(DXF_DEFAULT_LAYER)?.id ?? ''`
+      ήταν **ΠΡΟΫΠΑΡΧΟΝ διπλότυπο σε 9 αρχεία** (beam/column/foundation/slab/wall/line/xline/wall-covering preview
+      helpers + generator). Κεντρικοποιήθηκε (ADR-358 id-only WRITE)· και τα 10 σημεία (9 + το δικό μου) μεταναστεύθηκαν
+      → ΜΙΑ πηγή, 10 αντίγραφα διαγράφηκαν. (Οι 2 inline `?id` παραλλαγές διαφορετικού type contract — flagged, όχι εδώ.)
   - **Tests**: NEW `line-preview-helpers.test.ts` (8/8 GREEN): stub flush/κάθετο + κοντό μήκος (~300mm), faceFrame→dims, awaiting-end flush,
     preview≡commit, μακριά→null/αυτούσιο, armed ImmediateSnap. Regression: brain + column/foundation preview suites 58/58 GREEN.
     tsc DEFERRED (N.17).

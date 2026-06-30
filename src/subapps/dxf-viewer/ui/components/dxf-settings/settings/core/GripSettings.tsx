@@ -229,6 +229,13 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               </label>
               <SliderInput value={gripSettings.maxGripsPerEntity || 50} min={10} max={200} step={10} onChange={(v) => updateSettings({ maxGripsPerEntity: v })} showNumberInput />
             </div>
+            {/* Grip Object Limit (AutoCAD GRIPOBJLIMIT) — 0 = no limit (always show grips) */}
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
+                {t('settings.grip.labels.gripObjLimit')}: {gripSettings.gripObjLimit ?? 100}
+              </label>
+              <SliderInput value={gripSettings.gripObjLimit ?? 100} min={0} max={1000} step={10} onChange={(v) => updateSettings({ gripObjLimit: v })} showNumberInput />
+            </div>
             {/* Advanced Checkboxes */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>

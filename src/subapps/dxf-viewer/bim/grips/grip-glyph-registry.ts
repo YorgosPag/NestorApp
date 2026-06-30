@@ -88,6 +88,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // ROTATION glyph; the 4 corners + 4 edge midpoints render the default 'square'.
   'text-move': 'move',
   'text-rotation': 'rotation',
+  // Plain DXF line (ADR-363 Slice F) — the rotation handle renders the SAME curved
+  // ROTATION glyph as every BIM entity (wall parity); endpoints/midpoint stay default.
+  'line-rotation': 'rotation',
 } as const;
 
 /**
