@@ -55,6 +55,48 @@ describe('resolveMemberColumnFaceSnap — ΣΥΝΕΧΗΣ face snap (ADR-508 εν
   });
 });
 
+describe('resolveMemberColumnFaceSnap — ADR-508 §center-snap (κέντρο↔κέντρο, nearest-wins)', () => {
+  // COLUMN_FP 400×400, center (200,200) → centerCapture = min(200,200)·0.5 = 100.
+  const OPTS = { memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600 } as const;
+
+  it('center-wins: cursor κοντά στο centroid (εντός magnet 100) → start = centroid, faceFrame centered', () => {
+    const r = resolveMemberColumnFaceSnap({ x: 230, y: 210 }, [COLUMN_FP], OPTS); // dCenter≈31.6 < 100
+    expect(r!.start.x).toBeCloseTo(200);
+    expect(r!.start.y).toBeCloseTo(200);
+    expect(r!.third).toBe('mid');
+    expect(r!.faceFrame.facePerp).toBe(0);
+    expect(r!.faceFrame.ghostHalfWidth).toBe(0);
+    expect(r!.faceFrame.axisDir).toEqual({ x: 0, y: 1 }); // E face → άξονας κατά μήκος Y
+  });
+
+  it('face-wins: cursor κοντά σε παρειά (εκτός magnet) → start στην παρειά (όχι centroid)', () => {
+    const r = resolveMemberColumnFaceSnap({ x: 560, y: 200 }, [COLUMN_FP], OPTS); // dCenter≈360, dFace≈160
+    expect(r!.start.x).toBeCloseTo(400); // ανατολική παρειά, ΟΧΙ 200
+  });
+
+  it('tie-break (center-biased ≤): dCenter === dFace εκτός magnet → κέντρο κερδίζει', () => {
+    // N face· faceContact=(200,400)· cursor (200,300): dCenter=100=dFace → dCenter>dFace false → center.
+    const r = resolveMemberColumnFaceSnap({ x: 200, y: 300 }, [COLUMN_FP], OPTS);
+    expect(r!.start.x).toBeCloseTo(200);
+    expect(r!.start.y).toBeCloseTo(200);
+  });
+
+  it('magnet boundary: dCenter ≤ 100 → κέντρο· dCenter > 100 με παρειά πιο κοντά → παρειά', () => {
+    const inside = resolveMemberColumnFaceSnap({ x: 200, y: 295 }, [COLUMN_FP], OPTS); // dCenter=95 < 100
+    expect(inside!.start.y).toBeCloseTo(200); // centroid
+    const outside = resolveMemberColumnFaceSnap({ x: 200, y: 320 }, [COLUMN_FP], OPTS); // dCenter=120, dFace=80
+    expect(outside!.start.y).toBeCloseTo(400); // N παρειά flush
+  });
+
+  it('dispatcher: cursor κοντά στο centroid → status neutral + start = centroid + faceFrame', () => {
+    const r = resolveMemberGhostSnapFromStore({ x: 230, y: 210 }, [COLUMN_FP], [], 200, 'mm');
+    expect(r!.status).toBe('neutral');
+    expect(r!.start.x).toBeCloseTo(200);
+    expect(r!.start.y).toBeCloseTo(200);
+    expect(r!.faceFrame).toBeDefined();
+  });
+});
+
 describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () => {
   const MEMBER = {
     id: 'm1',

@@ -697,3 +697,89 @@ describe('computeWallTrims — Phase 1L «Disallow Join» (edge-only corner)', (
   });
 });
 
+// ─── ADR-363 Phase 1L-J — explicit join override ───────────────────────────────
+
+import { combineJoinModes } from '../wall-trims-corner-resolve';
+import type { WallJoinMode } from '../../types/wall-types';
+
+/** Return a copy of `wall` with an explicit join override at one endpoint. */
+function withJoin(wall: WallEntity, which: 'start' | 'end', mode: WallJoinMode): WallEntity {
+  const key = which === 'start' ? 'startJoin' : 'endJoin';
+  return { ...wall, params: { ...wall.params, [key]: mode } };
+}
+
+describe('computeWallTrims — explicit join override (Phase 1L-J)', () => {
+  it('combineJoinModes: precedence disallow > miter > butt/square > auto', () => {
+    expect(combineJoinModes('auto', 'auto')).toBe('auto');
+    expect(combineJoinModes('auto', 'miter')).toBe('miter');
+    expect(combineJoinModes('butt', 'auto')).toBe('butt');
+    expect(combineJoinModes('square', 'auto')).toBe('butt');   // square collapses to butt
+    expect(combineJoinModes('miter', 'butt')).toBe('miter');
+    expect(combineJoinModes('disallow', 'miter')).toBe('disallow');
+    expect(combineJoinModes('miter', 'disallow')).toBe('disallow');
+  });
+
+  it('J1. miter override forces a miter on a NON-coincident face-to-face butt', () => {
+    // A horizontal ends at (3000,0); B vertical ends at (3000,100) — i.e. on A's
+    // near FACE, gap = 100 = halfA (> 50 coincidence threshold). `auto` squares off.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'B');
+
+    // Control: auto → NO miter (the bug the override fixes).
+    const auto = computeWallTrims([wallA, wallB]);
+    expect(auto.get(wallA.id)?.endMiter).toBeUndefined();
+
+    // Override both endpoints to miter → geometric miter is produced.
+    const forced = computeWallTrims([
+      withJoin(wallA, 'end', 'miter'),
+      withJoin(wallB, 'end', 'miter'),
+    ]);
+    expect(forced.get(wallA.id)?.endMiter).toBeDefined();
+    expect(forced.get(wallB.id)?.endMiter).toBeDefined();
+  });
+
+  it('J2. disallow on a coincident corner → NO trim at all (walls stay rectangular)', () => {
+    // Test-3 config — coincident corner that normally mitres.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 0 }, 200, 'B');
+
+    // disallow on EITHER endpoint suppresses the whole junction.
+    const trims = computeWallTrims([withJoin(wallA, 'end', 'disallow'), wallB]);
+    expect(trims.has(wallA.id)).toBe(false);
+    expect(trims.has(wallB.id)).toBe(false);
+  });
+
+  it('J3. butt override on a would-be-miter corner → square-off (no miter)', () => {
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 0 }, 200, 'B');
+
+    const trims = computeWallTrims([
+      withJoin(wallA, 'end', 'butt'),
+      withJoin(wallB, 'end', 'butt'),
+    ]);
+    expect(trims.get(wallA.id)?.endMiter).toBeUndefined();
+    expect(trims.get(wallB.id)?.endMiter).toBeUndefined();
+  });
+
+  it('J4. disallow on a T-junction stem → no bevel', () => {
+    // A continues horizontally; B is a vertical stem hitting A's interior at t=0.5,
+    // penetrating to A's centreline (y=0) so `auto` produces a bevel.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 1500, y: 1500 }, { x: 1500, y: 0 }, 200, 'B');
+
+    // Control: auto → stem B gets a bevel.
+    const auto = computeWallTrims([wallA, wallB]);
+    expect(auto.has(wallB.id)).toBe(true);
+
+    // disallow on the stem endpoint → no bevel.
+    const trims = computeWallTrims([wallA, withJoin(wallB, 'end', 'disallow')]);
+    expect(trims.has(wallB.id)).toBe(false);
+  });
+
+  it('J5. idempotent with overrides — second call equals the first', () => {
+    const wallA = withJoin(makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A'), 'end', 'miter');
+    const wallB = withJoin(makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'B'), 'end', 'miter');
+    expect(computeWallTrims([wallA, wallB])).toEqual(computeWallTrims([wallA, wallB]));
+  });
+});
+

@@ -51,10 +51,14 @@ export function distanceToFootprintBounds(c: Readonly<Point2D>, b: FootprintBoun
   return Math.hypot(dx, dy);
 }
 
+/** Κέντρο (centroid) του world-aligned bbox — ΕΝΑ SSoT για κάθε AABB-based framing/column resolver. */
+export function footprintCenter(b: FootprintBounds): Point2D {
+  return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+}
+
 /** Κανονικοποιημένη θέση cursor → κυρίαρχος άξονας → πλευρά (E/W αν |ex|≥|ey|, αλλιώς N/S). */
 export function pickDominantFace(c: Readonly<Point2D>, b: FootprintBounds): FootprintFace {
-  const cx = (b.minX + b.maxX) / 2;
-  const cy = (b.minY + b.maxY) / 2;
+  const { x: cx, y: cy } = footprintCenter(b);
   const halfX = (b.maxX - b.minX) / 2;
   const halfY = (b.maxY - b.minY) / 2;
   const ex = halfX > 0 ? (c.x - cx) / halfX : 0;

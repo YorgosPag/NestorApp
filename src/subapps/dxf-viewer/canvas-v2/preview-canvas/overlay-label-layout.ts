@@ -74,3 +74,21 @@ export function boxHalfExtentAlong(nx: number, ny: number, box: LabelBox): numbe
 export function clearanceForBox(nx: number, ny: number, box: LabelBox, baseClearPx: number): number {
   return baseClearPx + boxHalfExtentAlong(nx, ny, box);
 }
+
+/**
+ * Επιπλέον ανύψωση (screen px) της ΕΤΙΚΕΤΑΣ ενός snap marker ΠΑΝΩ από το glyph του, ώστε το
+ * **transient** snap label (DOM/SVG) να κάθεται σε ΞΕΧΩΡΙΣΤΗ baseline από το **entity-anchored**
+ * dim pill (canvas), που κάθεται ΚΑΤΩ από το κέντρο της οντότητας. Cross-layer (DOM vs canvas):
+ * το κίτρινο «Επί άξονα τοίχου» (`SnapIndicatorGlyph`) έπεφτε πάνω στο «L=… t=…» pill του τοίχου
+ * (Case A). Big-player «separate baselines» (Revit/Figma): own dim ≠ transient inference label.
+ */
+export const SNAP_LABEL_BASELINE_LIFT_PX = 16;
+
+/**
+ * Screen-Y (`top`) μιας snap-marker ετικέτας, ανυψωμένη στη δική της baseline ΠΑΝΩ από το glyph
+ * (το glyph μένει ΠΑΝΩ στο snap point· μόνο η ετικέτα μετακινείται). Κρατά το transient snap
+ * label εκτός της ζώνης του dim pill (κάτω από το κέντρο) → ΜΗΔΕΝ επικάλυψη ανεξάρτητα layer.
+ */
+export function snapLabelTop(glyphScreenY: number, glyphHalf: number): number {
+  return glyphScreenY - glyphHalf - SNAP_LABEL_BASELINE_LIFT_PX;
+}

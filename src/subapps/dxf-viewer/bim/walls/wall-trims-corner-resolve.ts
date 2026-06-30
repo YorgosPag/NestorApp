@@ -22,6 +22,7 @@ import {
   MAX_BEVEL_FRACTION,
   type MiterPt,
 } from './wall-trims-geometry';
+import type { WallJoinMode } from '../types/wall-types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,23 @@ export interface EndpointRec {
   readonly half: number;
   readonly len: number;
   readonly flip: boolean;
+  /** ADR-363 Phase 1L-J — explicit join override at THIS endpoint (`'auto'` default). */
+  readonly joinMode: WallJoinMode;
+}
+
+// ─── Join-override resolution (ADR-363 Phase 1L-J) ─────────────────────────────
+
+/**
+ * Combine the two endpoints' explicit join modes into one junction decision.
+ * Most-restrictive wins: `disallow` > `miter` > `butt`/`square` > `auto`.
+ * `square` collapses to `butt` (same square-off engine; the ⟂-cap refinement is
+ * deferred). A junction is `auto` only when BOTH endpoints are `auto`.
+ */
+export function combineJoinModes(a: WallJoinMode, b: WallJoinMode): WallJoinMode {
+  if (a === 'disallow' || b === 'disallow') return 'disallow';
+  if (a === 'miter' || b === 'miter') return 'miter';
+  if (a === 'butt' || b === 'butt' || a === 'square' || b === 'square') return 'butt';
+  return 'auto';
 }
 
 // ─── Accumulator helpers ──────────────────────────────────────────────────────
@@ -209,14 +227,20 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
   const sinA = sinAngleBetween(a.ux, a.uy, b.ux, b.uy);
   if (sinA < Math.sin(MIN_ANGLE_RAD)) return; // collinear continuation → no trim
 
-  // ADR-363 Phase 1L «Disallow Join»: only mitre when the two corner endpoints
-  // COINCIDE. Walls that butt face-to-face (region-fill column corner) sit ~one
-  // half-thickness apart — they must NOT mitre (a miter would stretch a triangular
-  // cap through the neighbour). Instead each wall is squared off at the other's
-  // near face: any wall PENETRATING past that face (e.g. Phase 1K auto-join pushed
-  // its endpoint to the neighbour's centreline) is bevelled back; a wall already
-  // at/short of the face is left untouched (no gap). The corner stays open for a column.
-  if (!cornerEndpointsCoincide(a, b)) {
+  // ADR-363 Phase 1L-J — explicit join override steers WHICH cleanup runs; the
+  // geometry below is unchanged. `disallow` → no trim (walls stay rectangular).
+  // `miter` → force the geometric miter even when the endpoints do NOT coincide
+  // (this is the whole point of the override: a wall closed onto a neighbour's
+  // FACE still mitres on demand). `butt`/`square` → square off. `auto` → the
+  // original Phase 1L rule: mitre only when the corner endpoints COINCIDE,
+  // otherwise square off (the region-fill / column-gap case).
+  const joinMode = combineJoinModes(a.joinMode, b.joinMode);
+  if (joinMode === 'disallow') return;
+
+  const shouldMiter =
+    joinMode === 'miter' ||
+    (joinMode === 'auto' && cornerEndpointsCoincide(a, b));
+  if (!shouldMiter) {
     squareOffCorner(a, b, sinA, acc);
     return;
   }
@@ -284,6 +308,7 @@ function resolveMultiWayCorner(group: readonly EndpointRec[], acc: Map<string, M
   const primaryCollinear = sinAngleBetween(p.ux, p.uy, q.ux, q.uy) < Math.sin(MIN_ANGLE_RAD);
   if (primaryCollinear && !cornerEndpointsCoincide(p, q)) {
     for (let i = 0; i < group.length; i++) {
+      if (group[i]!.joinMode === 'disallow') continue; // ADR-363 Phase 1L-J — no cleanup
       if (!clusterStemIsThrough(group, i)) bevelStemByPenetration(group, i, acc);
     }
     return;
@@ -299,6 +324,7 @@ function resolveMultiWayCorner(group: readonly EndpointRec[], acc: Map<string, M
   // through-wall (coincident collinear partner) stays straight.
   for (let i = 0; i < group.length; i++) {
     if (i === pi || i === pj) continue;
+    if (group[i]!.joinMode === 'disallow') continue; // ADR-363 Phase 1L-J — no cleanup
     if (clusterStemIsThrough(group, i)) continue;
     bevelStemByPenetration(group, i, acc);
   }

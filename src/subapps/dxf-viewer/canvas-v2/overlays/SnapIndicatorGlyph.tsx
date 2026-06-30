@@ -30,6 +30,9 @@ import {
 } from '../../rendering/ui/snap/snap-visual-config';
 // ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
 import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
+// ADR-508 §label-layout (Case A) — το snap label σε ΞΕΧΩΡΙΣΤΗ baseline πάνω από το glyph ώστε να
+// μην πέφτει στο canvas dim pill (cross-layer separate-baselines contract).
+import { snapLabelTop } from '../preview-canvas/overlay-label-layout';
 
 // 🏢 ADR-137: Using centralized snap icon geometry
 const SNAP_INDICATOR_SIZE = SNAP_ICON_GEOMETRY.SIZE;
@@ -382,7 +385,9 @@ export function SnapIndicatorGlyph({ screenPos, type, description, className = '
           className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
           style={{
             left: screenPos.x + SNAP_INDICATOR_SIZE,
-            top: screenPos.y - SNAP_INDICATOR_HALF,
+            // ADR-508 §label-layout (Case A): ετικέτα σε δική της baseline ΠΑΝΩ από το glyph ώστε
+            // να μην επικαλύπτει το entity dim pill (που κάθεται ΚΑΤΩ από το κέντρο) — separate baselines.
+            top: snapLabelTop(screenPos.y, SNAP_INDICATOR_HALF),
             color: snapColor,
             whiteSpace: 'nowrap',
           }}

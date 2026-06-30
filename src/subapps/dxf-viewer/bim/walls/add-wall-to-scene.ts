@@ -70,18 +70,22 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
 }
 
 /**
- * Recompute miter / bevel patches for all remaining walls after one wall is
- * deleted. Symmetric to `addWallToScene`: clears stale trim data from walls
- * that were previously joined to the deleted wall, then emits
- * `drawing:entity-created` for each wall whose params changed so
- * `useWallPersistence` saves the corrected state to Firestore.
+ * SSoT idempotent wall-junction recompute (ADR-363 Phase 1E / 1L-J). Strips ALL
+ * existing trim data (`startMiter`/`endMiter`/`startBevel`/`endBevel`) from every
+ * wall, recomputes from current geometry + explicit join overrides, applies the
+ * fresh patches, and emits `drawing:entity-created` for each wall whose params
+ * changed so `useWallPersistence` saves the corrected state to Firestore.
  *
- * Must be called AFTER the deleted wall has already been removed from the scene
- * (i.e. after `setLevelScene` with the filtered entity list).
+ * The strip-first design makes the result a pure function of current geometry +
+ * overrides — so a wall that NO LONGER mitres (deleted neighbour, or a join
+ * override switched to `butt`/`disallow`) has its stale miter cleared instead of
+ * frozen (the `applyTrimPatches`-only overlay never clears, it only adds).
  *
- * @see hooks/data/useWallPersistence.ts — deleteWall caller
+ * Shared by:
+ *   - `recomputeWallTrimsAfterDelete` (after a wall is removed)
+ *   - `useWallRetrimEffect` (after a grip commit or a join-override change)
  */
-export function recomputeWallTrimsAfterDelete(accessor: WallSceneAccessor): void {
+export function recomputeWallTrims(accessor: WallSceneAccessor): void {
   const levelId = accessor.currentLevelId;
   if (!levelId) return;
   const scene = accessor.getLevelScene(levelId);
@@ -135,4 +139,15 @@ export function recomputeWallTrimsAfterDelete(accessor: WallSceneAccessor): void
       EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
     }
   }
+}
+
+/**
+ * Recompute wall trims after one wall is deleted. Thin alias over the SSoT
+ * {@link recomputeWallTrims} — kept as a named entry point for the delete caller.
+ * Must be called AFTER the deleted wall has been removed from the scene.
+ *
+ * @see hooks/data/useWallPersistence.ts — deleteWall caller
+ */
+export function recomputeWallTrimsAfterDelete(accessor: WallSceneAccessor): void {
+  recomputeWallTrims(accessor);
 }

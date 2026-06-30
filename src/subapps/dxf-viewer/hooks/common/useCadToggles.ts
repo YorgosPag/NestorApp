@@ -24,11 +24,13 @@ export interface CadToggles {
 }
 
 const DEFAULTS: CadTogglesSettingsSlice = {
+  // Giorgio 2026-06-30: app-open active defaults = OSNAP + SNAP + POLAR (+ AutoAlign,
+  // owned by ambientAlignmentConfigStore, already default ON). GRID/ORTHO/DYN start OFF.
   osnap: true,
-  grid: true,
-  snap: false,
+  grid: false,
+  snap: true,
   ortho: false,
-  polar: false,
+  polar: true,
   // ADR-357 §5.1 (revised 2026-05-27): Dynamic Input default OFF — user opt-in via status-bar toggle.
   // Rationale: Giorgio explicit override of original AutoCAD/BricsCAD "always-on" parity preference.
   dynInput: false,

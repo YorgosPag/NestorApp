@@ -1,0 +1,122 @@
+'use client';
+
+/**
+ * ADR-363 Phase 1L-J — Explicit wall-join override (Revit «Wall Joins» parity).
+ *
+ * Two dropdowns — «Ένωση Αρχής» / «Ένωση Τέλους» — that set `WallParams.startJoin`
+ * / `endJoin` per endpoint of the selected straight wall. The override steers WHICH
+ * junction cleanup `computeWallTrims` runs, decoupling the result from whether the
+ * endpoint happened to snap coincident: `miter` forces a geometric miter even on a
+ * face-to-face butt, `disallow` leaves the walls rectangular, `butt`/`square` square
+ * off. Default `auto` = the automatic geometric decision.
+ *
+ * Write path mirrors `RibbonWallDimensionWidget`: `useWallParamsDispatcher`
+ * (→ `UpdateWallParamsCommand`, undo + geometry recompute) then
+ * `emitBimEntityParamsUpdated('wall', id)` to trigger `useWallRetrimEffect`, which
+ * recomputes the junction across all walls. The patch also clears the stale
+ * `startMiter`/`startBevel` (resp. end) so the immediate recompute drops the old
+ * miter before the debounced retrim rebuilds it fresh.
+ *
+ * Straight-only — curved/polyline joins land with WallKind Phase 1.5.
+ *
+ * @see ../../../bim/walls/wall-trims-corner-resolve.ts — resolution logic
+ * @see ../../wall-advanced-panel/commands/dispatchWallParamPatch.ts — SSoT writer
+ */
+
+import React, { useCallback, useMemo } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useLevels } from '../../../systems/levels';
+import { useUniversalSelection } from '../../../systems/selection';
+import { isWallEntity } from '../../../types/entities';
+import type { WallEntity, WallParams, WallJoinMode } from '../../../bim/types/wall-types';
+import { useWallParamsDispatcher } from '../../wall-advanced-panel/commands/dispatchWallParamPatch';
+import { emitBimEntityParamsUpdated } from '../../../systems/events/emit-bim-entity-params-updated';
+
+const JOIN_MODES: readonly WallJoinMode[] = ['auto', 'miter', 'butt', 'square', 'disallow'] as const;
+
+export function RibbonWallJoinWidget(): React.JSX.Element | null {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const levelManager = useLevels();
+  const universalSelection = useUniversalSelection();
+  const dispatchPatch = useWallParamsDispatcher({ levelManager });
+
+  const wall = useMemo<WallEntity | null>(() => {
+    const id = universalSelection.getPrimaryId();
+    if (!id || !levelManager.currentLevelId) return null;
+    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+    if (!scene) return null;
+    const e = scene.entities.find((x) => x.id === id);
+    if (!e || !isWallEntity(e)) return null;
+    return e;
+  }, [levelManager, universalSelection]);
+
+  const setJoin = useCallback(
+    (endpoint: 'start' | 'end', mode: WallJoinMode) => {
+      if (!wall) return;
+      // Clear the stale resolved miter/bevel for THIS endpoint so the immediate
+      // recompute drops the old join before the debounced retrim rebuilds it.
+      const patch: Partial<WallParams> =
+        endpoint === 'start'
+          ? { startJoin: mode, startMiter: undefined, startBevel: undefined }
+          : { endJoin: mode, endMiter: undefined, endBevel: undefined };
+      dispatchPatch(wall, patch);
+      emitBimEntityParamsUpdated('wall', wall.id);
+    },
+    [wall, dispatchPatch],
+  );
+
+  // Joins are only meaningful for straight walls (the only kind computeWallTrims processes).
+  if (!wall || wall.kind !== 'straight') return null;
+
+  const startMode = wall.params.startJoin ?? 'auto';
+  const endMode = wall.params.endJoin ?? 'auto';
+
+  return (
+    <span className="dxf-ribbon-combobox-row flex-col items-start gap-1">
+      <JoinDropdown
+        labelKey="ribbon.commands.wallEditor.join.start"
+        value={startMode}
+        onChange={(m) => setJoin('start', m)}
+        t={t}
+      />
+      <JoinDropdown
+        labelKey="ribbon.commands.wallEditor.join.end"
+        value={endMode}
+        onChange={(m) => setJoin('end', m)}
+        t={t}
+      />
+    </span>
+  );
+}
+
+function JoinDropdown({ labelKey, value, onChange, t }: {
+  readonly labelKey: string;
+  readonly value: WallJoinMode;
+  readonly onChange: (mode: WallJoinMode) => void;
+  readonly t: (key: string) => string;
+}): React.JSX.Element {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="dxf-ribbon-combobox-label">{t(labelKey)}</span>
+      <Select value={value} onValueChange={(v) => onChange(v as WallJoinMode)}>
+        <SelectTrigger size="sm" aria-label={t(labelKey)}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="w-auto min-w-[9rem]">
+          {JOIN_MODES.map((m) => (
+            <SelectItem key={m} value={m} className="whitespace-nowrap">
+              {t(`ribbon.commands.wallEditor.join.mode.${m}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </span>
+  );
+}

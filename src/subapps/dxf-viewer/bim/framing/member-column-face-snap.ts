@@ -33,6 +33,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import {
   footprintBounds,
+  footprintCenter,
   distanceToFootprintBounds,
   pickDominantFace,
   type FootprintBounds,
@@ -41,6 +42,7 @@ import { pickThird, type MemberGhostThird } from './member-face-third';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import {
   buildColumnBboxFaceFrame,
+  buildCenteredAxisFaceFrame,
   proportionalSlideStep,
   type GhostFaceFrame,
 } from './linear-member-face-snap';
@@ -128,9 +130,57 @@ function resolveContinuousColumnFace(
 }
 
 /**
+ * ADR-508 §center-snap — magnet ζώνη κέντρου = `min(halfX,halfY) · CENTER_ZONE_FRACTION` (= ¼ της
+ * μικρότερης ΠΛΗΡΟΥΣ διάστασης· mirror της «εσωτερικής μισής ζώνης» ADR-398 §3.9).
+ */
+const CENTER_ZONE_FRACTION = 0.5;
+
+/** Μοναδιαίο κάθετο «προς τα έξω» της κυρίαρχης παρειάς. */
+const outwardNormal = (face: MemberGhostFace): Point2D =>
+  face === 'E' ? { x: 1, y: 0 } : face === 'W' ? { x: -1, y: 0 } : face === 'N' ? { x: 0, y: 1 } : { x: 0, y: -1 };
+
+/**
+ * ADR-508 §center-snap — **center-to-centroid** candidate (mirror ADR-398 §3.9, αντίστροφη φορά: ο
+ * ΤΟΙΧΟΣ κουμπώνει το κέντρο άξονά του στο ΚΕΝΤΡΟ της κολόνας). `null` (→ face-flush wins) όταν η
+ * face-flush επαφή είναι πλησιέστερη ΚΑΙ ο cursor εκτός magnet ζώνης κέντρου. Επειδή η face επαφή
+ * ολισθαίνει με τον cursor (πάντα μικρό `dFace`), το «κούμπωμα στο κέντρο» απαιτεί firm magnet ζώνη
+ * γύρω από το centroid (αλλιώς το κέντρο δεν κερδίζει σχεδόν ποτέ). Reuse `footprintCenter` +
+ * `buildCenteredAxisFaceFrame` (SSoT). Orientation-agnostic (AABB-based, scene units).
+ */
+function resolveColumnCenterSnap(
+  best: FootprintBounds,
+  cursor: Readonly<Point2D>,
+  face: MemberGhostFace,
+  faceContact: Readonly<Point2D>,
+  len: number,
+): MemberColumnFaceSnap | null {
+  const c = footprintCenter(best);
+  const centerCapture = Math.min((best.maxX - best.minX) / 2, (best.maxY - best.minY) / 2) * CENTER_ZONE_FRACTION;
+  const dCenter = Math.hypot(cursor.x - c.x, cursor.y - c.y);
+  const dFace = Math.hypot(cursor.x - faceContact.x, cursor.y - faceContact.y);
+  if (dCenter > dFace && dCenter > centerCapture) return null; // nearest-wins: face-flush κερδίζει
+  const n = outwardNormal(face);
+  const horizontal = face === 'E' || face === 'W';
+  const axisDir: Point2D = horizontal ? { x: 0, y: 1 } : { x: 1, y: 0 }; // κατά μήκος της κυρίαρχης παρειάς
+  const end: Point2D = { x: c.x + len * n.x, y: c.y + len * n.y };
+  return {
+    face, third: 'mid', start: c, end,
+    faceFrame: buildCenteredAxisFaceFrame(
+      c, axisDir, n,
+      horizontal ? best.minY - c.y : best.minX - c.x,
+      horizontal ? best.maxY - c.y : best.maxX - c.x,
+      0,
+    ),
+  };
+}
+
+/**
  * Επίλεξε face-snap για το ghost-before-click. Pure. `null` όταν καμία κολόνα δεν είναι εντός
  * `captureScene` (ελεύθερη κίνηση). Reuse κοινό bbox/face SSoT (`footprint-face-frame`) + συνεχής
  * ολίσθηση/magnet (`magnetizeGhostCenterAlong`) + `buildColumnBboxFaceFrame` — μηδέν διπλότυπο.
+ *
+ * ADR-508 §center-snap — δοκιμάζει ΠΡΩΤΑ το center-to-centroid candidate (nearest-wins με την παρειά):
+ * cursor κοντά στο κέντρο → κέντρο άξονα τοίχου ↔ κέντρο κολόνας· κοντά σε παρειά → face-flush.
  */
 export function resolveMemberColumnFaceSnap(
   cursor: Readonly<Point2D>,
@@ -154,5 +204,8 @@ export function resolveMemberColumnFaceSnap(
   const half = opts.memberWidthScene / 2;
   const face: MemberGhostFace = pickDominantFace(cursor, best); // reuse pickDominantFace SSoT
   const { third, start, end } = resolveContinuousColumnFace(best, face, cursor, half, opts.ghostLenScene, opts.dominantUnitScene);
+  // ADR-508 §center-snap — center-to-centroid override (nearest-wins)· `null` → κρατάμε το face-flush.
+  const center = resolveColumnCenterSnap(best, cursor, face, start, opts.ghostLenScene);
+  if (center) return center;
   return { face, third, start, end, faceFrame: buildColumnBboxFaceFrame(best, face, start) };
 }

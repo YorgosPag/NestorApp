@@ -228,6 +228,7 @@ function classifyPair(
         ux: dax / lenA, uy: day / lenA,
         halfSigned: (a.params.flip ? -1 : 1) * halfA, half: halfA, len: lenA,
         flip: !!a.params.flip,
+        joinMode: (aWhich === 'start' ? a.params.startJoin : a.params.endJoin) ?? 'auto',
       });
     }
     if (!endpointRecs.has(bKey)) {
@@ -237,6 +238,7 @@ function classifyPair(
         ux: dbx / lenB, uy: dby / lenB,
         halfSigned: (b.params.flip ? -1 : 1) * halfB, half: halfB, len: lenB,
         flip: !!b.params.flip,
+        joinMode: (bWhich === 'start' ? b.params.startJoin : b.params.endJoin) ?? 'auto',
       });
     }
     cornerRels.push({ aKey, bKey });
@@ -245,11 +247,17 @@ function classifyPair(
     // Phase 1L: trim B back to A's near FACE by the amount it PENETRATES past it
     // (region-fill stem already on the face → 0; auto-joined to A's centreline →
     // halfA). Generalises the old fixed `halfA/sinA` (which assumed the centreline).
+    // ADR-363 Phase 1L-J — `disallow` on the stem endpoint → no cleanup (stays rectangular).
+    const bJoin = (uNearStart ? b.params.startJoin : b.params.endJoin) ?? 'auto';
+    if (bJoin === 'disallow') return;
     const bEndX = uNearStart ? b1x : b2x, bEndY = uNearStart ? b1y : b2y;
     const bevelB = penetrationBevel(bEndX, bEndY, a1x, a1y, dax / lenA, day / lenA, halfA, sinA, lenB);
     if (bevelB > 0) accumBevel(acc, b.id, uNearStart ? 'start' : 'end', bevelB);
   } else if (uInterior && (tNearStart || tNearEnd)) {
     // ── T-junction: B continues; trim only A's stem endpoint ─────────────────
+    // ADR-363 Phase 1L-J — `disallow` on the stem endpoint → no cleanup (stays rectangular).
+    const aJoin = (tNearStart ? a.params.startJoin : a.params.endJoin) ?? 'auto';
+    if (aJoin === 'disallow') return;
     const aEndX = tNearStart ? a1x : a2x, aEndY = tNearStart ? a1y : a2y;
     const bevelA = penetrationBevel(aEndX, aEndY, b1x, b1y, dbx / lenB, dby / lenB, halfB, sinA, lenA);
     if (bevelA > 0) accumBevel(acc, a.id, tNearStart ? 'start' : 'end', bevelA);

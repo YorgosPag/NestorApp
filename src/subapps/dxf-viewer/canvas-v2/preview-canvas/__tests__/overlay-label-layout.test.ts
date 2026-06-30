@@ -11,6 +11,8 @@ import {
   measureOverlayLabelBox,
   boxHalfExtentAlong,
   clearanceForBox,
+  snapLabelTop,
+  SNAP_LABEL_BASELINE_LIFT_PX,
   EMPTY_LABEL_BOX,
   type LabelBox,
 } from '../overlay-label-layout';
@@ -105,5 +107,18 @@ describe('clearanceForBox — no-overlap invariant (near edge stays baseClearPx 
     const lenLeftEdge = distLen - boxHalfExtentAlong(1, 0, LEN);      // = +BASE
     expect(specRightEdge).toBeLessThan(lenLeftEdge);              // gap exists
     expect(lenLeftEdge - specRightEdge).toBeCloseTo(2 * BASE);    // = 2·baseClear
+  });
+});
+
+describe('snapLabelTop — Case A separate-baseline (snap label above its glyph)', () => {
+  const GLYPH_HALF = 6;
+
+  it('lifts the label ABOVE the glyph by the baseline-lift constant', () => {
+    expect(snapLabelTop(100, GLYPH_HALF)).toBe(100 - GLYPH_HALF - SNAP_LABEL_BASELINE_LIFT_PX);
+  });
+
+  it('the label top is strictly above the glyph top (so it never shares a below-centre pill band)', () => {
+    const glyphTop = 100 - GLYPH_HALF;
+    expect(snapLabelTop(100, GLYPH_HALF)).toBeLessThan(glyphTop);
   });
 });

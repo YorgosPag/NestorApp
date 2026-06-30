@@ -4,31 +4,22 @@
 
 import { useEffect } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
-import { isWallEntity } from '../../types/entities';
-import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
+import { recomputeWallTrims } from '../../bim/walls/add-wall-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
 /**
- * ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
- * Only runs when ≥2 walls exist and at least one bevel is needed.
+ * ADR-363 Phase 1E / 1L-J — Re-trim all walls after a grip commit or an explicit
+ * join-override change settles (200 ms debounce). Delegates to the SSoT
+ * `recomputeWallTrims` (strip → recompute → apply → persist-changed) so a wall
+ * that flips to `butt`/`disallow` correctly CLEARS its stale miter, and patched
+ * neighbours persist. `LevelsHookReturn` structurally satisfies `WallSceneAccessor`.
  */
 export function useWallRetrimEffect(levelManager: LevelsHookReturn): void {
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const cleanup = EventBus.on('bim:wall-params-updated', () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        const levelId = levelManager.currentLevelId;
-        if (!levelId) return;
-        const scene = levelManager.getLevelScene(levelId);
-        if (!scene) return;
-        const allWalls = scene.entities.filter(isWallEntity);
-        if (allWalls.length < 2) return;
-        const trims = computeWallTrims(allWalls);
-        if (trims.size === 0) return;
-        const patched = applyTrimPatches(scene.entities, trims);
-        levelManager.setLevelScene(levelId, { ...scene, entities: patched });
-      }, 200);
+      debounceTimer = setTimeout(() => recomputeWallTrims(levelManager), 200);
     });
     return () => {
       cleanup();

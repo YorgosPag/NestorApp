@@ -1250,6 +1250,7 @@
       "wallCategory": "Κατηγορία",
       "wallGeometry": "Γεωμετρία",
       "wallTilt": "Κλίση",
+      "wallJoins": "Ενώσεις",
       "wallMaterial": "Υλικό",
       "wallFamilyType": "Τύπος",
       "wallActions": "Ενέργειες",
@@ -2347,6 +2348,17 @@
           "off": "Όχι",
           "left": "Αριστερά",
           "right": "Δεξιά"
+        },
+        "join": {
+          "start": "Ένωση Αρχής",
+          "end": "Ένωση Τέλους",
+          "mode": {
+            "auto": "Αυτόματο",
+            "miter": "Μήτρα",
+            "butt": "Butt",
+            "square": "Τετράγωνη",
+            "disallow": "Αποσύνδεση"
+          }
         }
       },
       "bimFamilyType": {

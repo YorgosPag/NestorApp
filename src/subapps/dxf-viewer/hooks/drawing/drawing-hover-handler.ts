@@ -14,8 +14,9 @@ import {
   TrackingPointStore,
   ACQUISITION_DURATION_MS,
 } from '../../systems/tracking/TrackingPointStore';
-import { composeTrackingSnap } from '../../systems/tracking/ambient-tracking-compose';
-import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
+// ADR-357 / ADR-397 — κοινός SSoT resolver του alignment tracking (acquired ⊕ ambient),
+// μοιραζόμενος με την περιστροφή (rotation-tracking-overlay). Πριν ήταν inline μόνο εδώ.
+import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
@@ -23,7 +24,6 @@ import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // (HoverStore), matching AutoCAD DIMRADIUS (pick the body, not an OSNAP point).
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
-import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { resolveOrthoPolarStep } from './drawing-handler-utils';
@@ -46,7 +46,7 @@ import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // ADR-513 / ADR-357 Phase 13 G14: length/angle lock geometry constraint (SSoT helper —
 // shared με το wall click-commit ώστε preview ≡ committed).
 import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
-import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-scale';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 // ADR-508 §opening-conflict — i18n instance (non-React) για το 🔴 tooltip «κόβει άνοιγμα».
 import { i18n } from '@/i18n';
 
@@ -217,41 +217,21 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // Resolve tracking snap — alignment paths from acquired points. Polar
     // angles participate when F10 is on (so 45°/30° increments emanate from
     // every acquired point in addition to the H/V baseline).
-    const acquired = TrackingPointStore.getPoints();
-    const liveScale = getTransformScale();
-    const worldTolerance = pixelsToWorld(3, liveScale);
-    // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from
-    // the columns near the cursor — a SECOND source merged with the acquired
-    // (AutoCAD) points into the SAME resolver. Gated behind the AutoAlign toggle.
+    // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from the
+    // members near the cursor — a SECOND source merged with the acquired (AutoCAD)
+    // points into the SAME resolver. Gate the (perf-sensitive) scene read behind the
+    // AutoAlign toggle so it stays lazy (resolved once for the collector + the trace).
     const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
-    // 🔬 perf trace: resolve scene entities once (preserves prior single-call behavior)
-    // so we can both feed the collector and report the member count.
     const ambientEntities = (isDrawingTool && ambientCfg.enabled) ? getSceneEntities() : null;
-    const _ambT0 = performance.now();
-    const ambient = ambientEntities
-      ? collectAmbientAlignmentAnchors(previewPt, ambientEntities, {
-          // Screen-relative radius (zoom-adaptive): px → world, so the "members near
-          // my cursor on screen" feel stays constant at every zoom.
-          radiusWorld: pixelsToWorld(ambientCfg.radiusPx, liveScale),
-          maxMembers: ambientCfg.maxMembers,
-          axisToleranceWorld: worldTolerance,
-        })
-      : [];
-    const _ambMs = performance.now() - _ambT0;
-    // ADR-357 / ADR-543 — merge (acquired + ambient) → resolve alignment path →
-    // adaptive-distance quantize, via the SHARED tracking SSoT (`composeTrackingSnap`),
-    // the EXACT same brain the 3D wall placement reuses. Returns null when no anchor /
-    // no path within tolerance. The "magic" quantize (AutoCAD PolarSnap / Revit temp-dim,
-    // projection slides only) lives inside the helper.
+    // ADR-357 / ADR-397 — merge (acquired ⊕ ambient) → resolve alignment path →
+    // adaptive-distance quantize, via the SHARED tracking SSoT (`resolveAlignmentTracking`),
+    // the EXACT same brain the rotation overlay (ADR-397) reuses → preview ≡ rotation parity.
+    // Returns null when no anchor / no path within tolerance (caller keeps the raw cursor).
     const _trkT0 = performance.now();
-    const composedTracking = composeTrackingSnap(previewPt, acquired, ambient, {
-      polar: {
-        incrementAngle: polarTrackingStore.incrementAngle,
-        additionalAngles: polarTrackingStore.additionalAngles,
-        polarEnabled: polarOnRef.current && !orthoOnRef.current,
-      },
-      worldTolerance,
-      worldPerPixel: worldPerPixel(liveScale),
+    const composedTracking = resolveAlignmentTracking(previewPt, {
+      scale: getTransformScale(),
+      polarEnabled: polarOnRef.current && !orthoOnRef.current,
+      sceneEntities: ambientEntities,
     });
     const _trkMs = performance.now() - _trkT0;
     const trackingResult = composedTracking?.result ?? null;
@@ -401,7 +381,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (total >= PERF_DRAWHOVER_WARN_MS) {
           const members = ambientEntities ? ambientEntities.length : 0;
           console.warn(
-            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — ambient=${_ambMs.toFixed(1)} (members=${members}, anchors=${ambient.length}) tracking=${_trkMs.toFixed(1)} preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool}`,
+            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — tracking=${_trkMs.toFixed(1)} (members=${members}) preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool}`,
           );
         }
       } else if (DEBUG_DRAWING_HANDLERS) {

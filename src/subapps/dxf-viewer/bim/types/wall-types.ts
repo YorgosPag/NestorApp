@@ -72,6 +72,19 @@ export interface WallTilt {
   readonly angle: number;
 }
 
+/**
+ * ADR-363 Phase 1L-J — Explicit wall-join override (Revit «Wall Joins» parity).
+ * Set PER-ENDPOINT (`WallParams.startJoin` / `endJoin`). Overrides the automatic
+ * geometric decision in `computeWallTrims` (the one that only mitres when the two
+ * corner endpoints coincide). `undefined` ≡ `'auto'`.
+ *   - `auto`     — current geometric behaviour (coincident → miter, else square-off)
+ *   - `miter`    — force a geometric miter regardless of endpoint coincidence
+ *   - `butt`     — square off at the neighbour's near face (penetration trim)
+ *   - `square`   — square off flush (same engine as `butt` at right angles)
+ *   - `disallow` — no junction cleanup at all (walls stay rectangular, may overlap)
+ */
+export type WallJoinMode = 'auto' | 'miter' | 'butt' | 'square' | 'disallow';
+
 export interface WallParams {
   readonly category: WallCategory;
   /** Canvas world coordinates (DXF scene units). */
@@ -112,6 +125,15 @@ export interface WallParams {
    * Same semantics as `startMiter` but for `outerEdge[last]`/`innerEdge[last]`.
    */
   readonly endMiter?: { readonly outer: { readonly x: number; readonly y: number }; readonly inner: { readonly x: number; readonly y: number } };
+  /**
+   * ADR-363 Phase 1L-J — Explicit join override at the **start** endpoint.
+   * Overrides the automatic miter-vs-square decision in `computeWallTrims`.
+   * Absent ≡ `'auto'`. The resolved miter/bevel still lands in
+   * `startMiter`/`startBevel` (this field only steers WHICH cleanup runs).
+   */
+  readonly startJoin?: WallJoinMode;
+  /** ADR-363 Phase 1L-J — Explicit join override at the **end** endpoint. Absent ≡ `'auto'`. */
+  readonly endJoin?: WallJoinMode;
   /** Defined when `kind === 'polyline'`. mm. */
   readonly polylineVertices?: readonly Point3D[];
   /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */

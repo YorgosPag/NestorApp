@@ -49,6 +49,24 @@ describe('resolveMemberEndpointSnap', () => {
     expect(r.point.x).toBeCloseTo(400);
     expect(r.point.y).toBeCloseTo(250); // 252 → πλησιέστερο πολλαπλάσιο του 5mm
   });
+
+  it('ADR-508 §center-snap — Άκρο ΚΟΝΤΑ στο ΚΕΝΤΡΟ κολόνας → κουμπώνει centroid (όχι παρειά)', () => {
+    // center (200,200)· centerCapture = min(200,200)·0.5 = 100· cursor {215,190} → dCenter≈18 < 100.
+    const r = resolveMemberEndpointSnap({ x: 215, y: 190 }, [COLUMN_FP], [], 200, 'mm');
+    expect(r.point.x).toBeCloseTo(200);
+    expect(r.point.y).toBeCloseTo(200); // κέντρο άξονα τοίχου ↔ κέντρο κολόνας
+    expect(r.faceFrame).toBeDefined();
+  });
+
+  it('ADR-508 §center-snap — orientation-agnostic: εκτός-άξονα centroid (2η κολόνα μετατοπισμένη)', () => {
+    // Κολόνα μετατοπισμένη στο (1000,1000)-(1400,1400), center (1200,1200). cursor κοντά στο κέντρο της.
+    const COLUMN_FP2 = [
+      { x: 1000, y: 1000 }, { x: 1400, y: 1000 }, { x: 1400, y: 1400 }, { x: 1000, y: 1400 },
+    ];
+    const r = resolveMemberEndpointSnap({ x: 1215, y: 1190 }, [COLUMN_FP2], [], 200, 'mm');
+    expect(r.point.x).toBeCloseTo(1200); // φτάνει το centroid ανεξάρτητα από άξονα/polar
+    expect(r.point.y).toBeCloseTo(1200);
+  });
 });
 
 describe('resolveMemberEndpointWithFineStep — Shift 1cm βήμα στο ελεύθερο (face-snap νικά)', () => {

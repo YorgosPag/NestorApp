@@ -54,10 +54,6 @@ import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marke
 // ADR-408 Φ-C — connected pipe ends follow a moving plumbing host (SSoT builder,
 // shared with the commit + any future 3D pipe ghost), so the run stretches live.
 import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
-// ADR-543 — coincident-endpoint co-move: the partner line(s) sharing the dragged endpoint
-// follow live during the drag (SSoT pure builder, shared with the commit + 3D ghost).
-import { buildCoincidentPartnerGhostEntities } from '../../systems/stretch/coincident-endpoint-comove';
-import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
 import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 // ADR-363 — live move-distance readout pill at the grip-drag / Alt-drag leader midpoint
@@ -76,34 +72,28 @@ import {
 // ADR-507 Φ5 A4 — ίδια οπτική ένδειξη με την περιστροφή κολώνας (ADR-357/398): πορτοκαλί
 // polar-tracking ray στη γωνία + tooltip τιμής. Κεντρικό SSoT — μηδέν bespoke style.
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
+// ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
+import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
+import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// File-size SRP split — pure draw helpers (dashed leaders / readout arc / gradient
+// marker / ADR-543 co-move partner ghosts) live in a sibling module.
+import {
+  drawDashedSegment,
+  drawMoveReadoutLeader,
+  drawAngleArc,
+  drawGradientOriginMarker,
+  drawComovePartnerGhosts,
+} from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
 import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-/** ADR-363 Phase 1G — dash pattern for the corner hot-grip rubber-band leader. */
-const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
-
-/**
- * ADR-363 — discreet neutral colour for the live move-distance readout leader (Revit-grade).
- * Semi-transparent WHITE so it stays subtle yet visible on the pure-black AutoCAD canvas
- * (`CANVAS_BACKGROUND #000`) — a black leader would be invisible.
- */
-const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
-
 /** ADR-397 Σ3 — screen offset of the free-rotate angle readout pill from the cursor. */
 const ROTATE_READOUT_OFFSET_PX = 18;
-
-/** ADR-363 — angular-dimension arc (endpoint reshape readout): screen radius + neutral colour. */
-const ANGLE_ARC_RADIUS_PX = 22;
-const ANGLE_ARC_LABEL_GAP_PX = 12;
-const ANGLE_ARC_COLOR = 'rgba(255,255,255,0.7)';
-
-/** ADR-507 Φ5 A3b — half-size (CSS px) του live gradient-origin grip-marker (fixed on-screen). */
-const GRADIENT_ORIGIN_MARKER_HALF_PX = 5;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,127 +109,6 @@ export interface UseGripGhostPreviewProps {
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** ADR-363 Phase 1G.3 — draw one dashed world-space segment on the preview canvas. */
-function drawDashedSegment(
-  ctx: CanvasRenderingContext2D,
-  fromW: { x: number; y: number },
-  toW: { x: number; y: number },
-  transform: ViewTransform,
-  vp: { width: number; height: number },
-): void {
-  const fromS = CoordinateTransforms.worldToScreen(fromW, transform, vp);
-  const toS = CoordinateTransforms.worldToScreen(toW, transform, vp);
-  ctx.save();
-  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
-  ctx.strokeStyle = GHOST_DEFAULTS.color;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(fromS.x, fromS.y);
-  ctx.lineTo(toS.x, toS.y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-/** ADR-363 — draw the discreet neutral base→current leader for the move-distance readout. */
-function drawMoveReadoutLeader(
-  ctx: CanvasRenderingContext2D,
-  fromS: { x: number; y: number },
-  toS: { x: number; y: number },
-): void {
-  ctx.save();
-  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
-  ctx.strokeStyle = MOVE_READOUT_LEADER_COLOR;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(fromS.x, fromS.y);
-  ctx.lineTo(toS.x, toS.y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-/**
- * ADR-363 — AutoCAD-style angular-dimension arc for the endpoint-reshape readout. Draws a
- * short +X baseline tick at the fixed vertex (`centerS`) and an arc to the segment direction
- * (`segAngleRad`, SCREEN space so it hugs the visible segment). Returns the label anchor on
- * the arc bisector so the angle value sits just outside the arc.
- */
-function drawAngleArc(
-  ctx: CanvasRenderingContext2D,
-  centerS: { x: number; y: number },
-  segAngleRad: number,
-): { x: number; y: number } {
-  ctx.save();
-  ctx.strokeStyle = ANGLE_ARC_COLOR;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(centerS.x, centerS.y);
-  ctx.lineTo(centerS.x + ANGLE_ARC_RADIUS_PX, centerS.y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(centerS.x, centerS.y, ANGLE_ARC_RADIUS_PX, 0, segAngleRad, segAngleRad < 0);
-  ctx.stroke();
-  ctx.restore();
-  const bisector = segAngleRad / 2;
-  const r = ANGLE_ARC_RADIUS_PX + ANGLE_ARC_LABEL_GAP_PX;
-  return { x: centerS.x + r * Math.cos(bisector), y: centerS.y + r * Math.sin(bisector) };
-}
-
-/**
- * ADR-507 Φ5 A3b — live gradient-origin grip-marker. Ζωγραφίζει το «τετράγωνο» της λαβής
- * στη ΖΩΝΤΑΝΗ θέση (κέρσορας) στο preview canvas, full-opacity, ώστε να ΑΚΟΛΟΥΘΕΙ ορατά το
- * drag (το committed grip κρύβεται από το main canvas — `HatchRenderer.getGrips`). Ghost-cyan
- * γέμισμα + λευκό περίγραμμα = «η λαβή που σέρνεις», fixed on-screen size σε κάθε zoom.
- */
-function drawGradientOriginMarker(ctx: CanvasRenderingContext2D, screenPt: { x: number; y: number }): void {
-  const h = GRADIENT_ORIGIN_MARKER_HALF_PX;
-  ctx.save();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = GHOST_DEFAULTS.color;
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.rect(screenPt.x - h, screenPt.y - h, h * 2, h * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-}
-
-/**
- * ADR-543 — articulated joint: when a single line endpoint is reshaped and another selected
- * line shares that endpoint, draw the partner line(s) reshaping by the same delta (live preview
- * matching the co-move commit). The `startMoved === endMoved` guard keeps this to single-endpoint
- * reshapes only (excludes whole-entity move where both ends shift, and zero-delta). Reuses the
- * SSoT `buildCoincidentPartnerGhostEntities` so the preview geometry equals the commit.
- */
-function drawComovePartnerGhosts(
-  ctx: CanvasRenderingContext2D,
-  origEntity: Entity,
-  transformed: Entity,
-  getEntity: (id: string) => Entity | undefined,
-  t: ViewTransform,
-  vp: { width: number; height: number },
-): void {
-  if (!isLineEntity(origEntity) || !isLineEntity(transformed)) return;
-  const startMoved = transformed.start.x !== origEntity.start.x || transformed.start.y !== origEntity.start.y;
-  const endMoved = transformed.end.x !== origEntity.end.x || transformed.end.y !== origEntity.end.y;
-  if (startMoved === endMoved) return; // both (whole move) or neither (idle) → not a single-endpoint reshape
-  const kind = startMoved ? 'line-start' : 'line-end';
-  const origMoved = startMoved ? origEntity.start : origEntity.end;
-  const newMoved = startMoved ? transformed.start : transformed.end;
-  const ghosts = buildCoincidentPartnerGhostEntities({
-    draggedEntity: origEntity,
-    draggedRefs: [{ entityId: origEntity.id, kind }],
-    selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(),
-    getEntity,
-    delta: { x: newMoved.x - origMoved.x, y: newMoved.y - origMoved.y },
-  });
-  for (const ghost of ghosts) {
-    drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
-  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -280,9 +149,24 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const isHatchDrag = !!dragPreview.hatchGripKind;
     const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
     let dp = dragPreview;
-    if (effectiveCursor) {
+    // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (parity με σχεδίαση). Resolve
+    // ΠΡΙΝ το sweep ώστε ο polar/alignment-locked cursor να τροφοδοτήσει την περιστροφή → η πορτοκαλί/
+    // λευκή γραμμή να συμπίπτει με τον περιστρεφόμενο τοίχο. Μόνο στο cursor-driven free / align-end rotate.
+    let rotationTracking: RotationTracking | null = null;
+    let sweepCursor = effectiveCursor;
+    if (effectiveCursor && dragPreview.rotateCursorDriven && dragPreview.rotatePivot) {
+      const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+      const sceneEntitiesForAmbient = ambientOn && levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? null
+        : null;
+      rotationTracking = resolveRotationTracking(
+        dragPreview.rotatePivot, effectiveCursor, t.scale, sceneEntitiesForAmbient,
+      );
+      sweepCursor = rotationTracking.cursor;
+    }
+    if (sweepCursor) {
       if (dragPreview.rotateCursorDriven && dragPreview.rotatePivot && dragPreview.anchorPos) {
-        dp = { ...dragPreview, ...resolveLiveRotationFromCursor(dragPreview, effectiveCursor) };
+        dp = { ...dragPreview, ...resolveLiveRotationFromCursor(dragPreview, sweepCursor) };
       } else if (!isRotation && !isHatchDrag && dragPreview.anchorPos) {
         dp = {
           ...dragPreview,
@@ -313,6 +197,18 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     if (dp.rotateSweepDeg !== undefined && dp.rotateReadoutAnchor) {
       const anchorS = CoordinateTransforms.worldToScreen(dp.rotateReadoutAnchor, t, vp);
       drawDimPill(ctx, [formatMoveAngle(dp.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
+    }
+
+    // ADR-397 / ADR-357 — πορτοκαλί POLAR γραμμή + λευκές AutoAlign γραμμές/intersection/tooltip κατά
+    // την περιστροφή, μέσω των ΙΔΙΩΝ SSoT paints με τη σχεδίαση. toMm = scene-units → mm (ίδια μονάδα
+    // με το drawing tooltip). Wiped αυτόματα στο επόμενο frame (RAF clear), όπως τα υπόλοιπα overlays.
+    if (rotationTracking && dp.rotatePivot) {
+      const rotScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const rotUnits = resolveSceneUnits(rotScene);
+      paintRotationTracking(
+        ctx, dp.rotatePivot, rotationTracking.cursor, rotationTracking,
+        t, vp, (d) => sceneDistanceToMeters(d, rotUnits) * 1000,
+      );
     }
 
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the

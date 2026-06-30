@@ -405,3 +405,32 @@ export function buildColumnBboxFaceFrame(b: FootprintBounds, face: FootprintFace
     ghostCenterAlong: position.y - b.minY, ghostHalfWidth: 0,
   };
 }
+
+/**
+ * ADR-398 §3.11 — **κοινό** centered `GhostFaceFrame` (μοιράζεται §3.9 wall-axis, §3.11 slab-edge ΚΑΙ
+ * το §3.9-mirror «τοίχος → κέντρο κολώνας»): το φάντασμα κάθεται ΚΕΝΤΡΑΡΙΣΜΕΝΟ στον άξονα → `facePerp:0`,
+ * `ghostHalfWidth:0` (listening dims προς το κέντρο, Revit centerline), `outwardSign:1` (ουδέτερο).
+ * Ζει εδώ (δίπλα στο `GhostFaceFrame` + `buildColumnBboxFaceFrame`) ώστε το `bim/framing` να μην
+ * εξαρτάται από το `bim/columns`· re-export alias στο `column-face-snap-helpers` για column consumers.
+ * Μηδέν διπλό literal (N.0.2).
+ */
+export function buildCenteredAxisFaceFrame(
+  origin: Readonly<Point2D>,
+  axisDir: Readonly<Point2D>,
+  perpDir: Readonly<Point2D>,
+  faceAlongMin: number,
+  faceAlongMax: number,
+  ghostCenterAlong: number,
+  arc?: ArcMeta,
+  ghostPerpOffset?: number,
+): GhostFaceFrame {
+  return {
+    origin, axisDir, perpDir,
+    facePerp: 0, outwardSign: 1,
+    faceAlongMin, faceAlongMax,
+    ghostCenterAlong, ghostHalfWidth: 0,
+    ...(arc ? { arc } : {}), // ADR-398 §3.12 — κύκλος/τόξο → arc-length listening dims
+    // ADR-398 §3.20b — κάθετο (dy) offset κέντρου → επιπλέον κάθετη listening dim (πλήρες καρτεσιανό).
+    ...(ghostPerpOffset ? { ghostPerpOffset } : {}),
+  };
+}

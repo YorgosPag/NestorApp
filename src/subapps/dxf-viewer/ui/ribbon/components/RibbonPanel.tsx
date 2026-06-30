@@ -48,6 +48,7 @@ import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { RibbonWallFamilyTypeWidget } from './RibbonWallFamilyTypeWidget';
 import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget';
+import { RibbonWallJoinWidget } from './RibbonWallJoinWidget';
 import { RibbonSlabFamilyTypeWidget } from './RibbonSlabFamilyTypeWidget';
 import { RibbonRoofFamilyTypeWidget } from './RibbonRoofFamilyTypeWidget';
 import { RibbonRoofTypePropertiesWidget } from './RibbonRoofTypePropertiesWidget';
@@ -190,6 +191,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'wall-type-properties') {
       return <RibbonWallTypePropertiesWidget key="wall-type-properties-widget" />;
+    }
+    if (button.widgetId === 'wall-joins') {
+      return <RibbonWallJoinWidget key="wall-joins-widget" />;
     }
     if (button.widgetId === 'slab-family-type') {
       return <RibbonSlabFamilyTypeWidget key="slab-family-type-widget" />;

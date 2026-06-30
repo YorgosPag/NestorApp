@@ -105,6 +105,36 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-01 (§center-snap — κέντρο άξονα ΤΟΙΧΟΥ ↔ ΚΕΝΤΡΟ κολόνας, nearest-wins με τις παρειές)**
+  - **Αίτημα Giorgio (στιγμιότυπο)**: «σχεδιάζω κάθετο τοίχο προς κολόνα· καθώς κατεβαίνω, αντί να κεντράρει
+    το κέντρο άξονα του φαντάσματος στο **κέντρο** της κολόνας, με αναγκάζει είτε στη ΝΔ είτε στη ΝΑ **παρειά**.
+    Θέλω να προσφέρονται **ΚΑΙ** κέντρο-σε-κέντρο **ΚΑΙ** face-flush, με **το κοντινότερο να κερδίζει**.»
+  - **Ρίζα (3 Explore + 1 Plan agent)**: START (`makeWallGhostBeforeClick`) ΚΑΙ END (`resolveWallEndpointSnap`)
+    καταλήγουν στην ίδια pure `resolveMemberColumnFaceSnap`, που επέστρεφε **μόνο** face-flush contact
+    (`resolveContinuousColumnFace`). Το ιστορικό `mid`-third center magnet **είχε αφαιρεθεί** (2026-06-24,
+    «συνεχώς ομαλά») → το centroid δεν έπαιζε κανέναν ρόλο. Το Layer-1 OSNAP `BIM_CENTER` παρακάμπτεται
+    αρχιτεκτονικά (Layer-2 placement early-return εντός 600mm).
+  - **Fix (ZERO new mechanism, FULL SSoT reuse)**: NEW `resolveColumnCenterSnap` (chokepoint
+    `member-column-face-snap.ts`, σερβίρει start+end+commit) = **center-to-centroid** candidate (mirror του
+    ADR-398 §3.9 αλλά αντίστροφη φορά: τοίχος→κέντρο κολόνας). Nearest-wins: κέντρο κερδίζει όταν
+    `dCenter ≤ dFace` **Ή** `dCenter ≤ centerCapture`. **Magnet ζώνη απαραίτητη** (`min(halfX,halfY)·0.5`,
+    = ¼ της μικρότερης πλήρους διάστασης, mirror §3.9 «εσωτερικής μισής ζώνης»): η face-flush επαφή
+    ολισθαίνει με τον cursor (πάντα μικρό `dFace`) → σκέτο nearest-wins θα έκανε το κέντρο να μην κερδίζει
+    σχεδόν ποτέ. Reuse `footprintCenter` (NEW μικρός SSoT helper στο `footprint-face-frame.ts`,
+    αντικαθιστά inline `cx/cy`) + `buildCenteredAxisFaceFrame` (μετακινήθηκε `bim/columns/
+    column-face-snap-helpers.ts` → `bim/framing/linear-member-face-snap.ts` για να μην εξαρτάται το
+    `bim/framing` από το `bim/columns`· re-export alias byte-for-byte για column consumers).
+  - **Ροή τύπου**: `MemberColumnFaceSnap` shape αμετάβλητο → dispatcher/`MemberGhostSnapResult` ανέπαφα. END
+    κρατά `snap.start`(=centroid)· START before-click `snap.end`=centroid+ghostLen·outwardNormal → το 2ο
+    κλικ βγαίνει κάθετα (status `'neutral'`). `resolveWallFaceRelativePolar` ΑΜΕΤΑΒΛΗΤΟ (override σε
+    resolver-level φτάνει και εκτός-άξονα centroid).
+  - **Tests**: +6 `member-ghost-snap.test.ts` (center-wins/face-wins/tie-break center-biased/magnet
+    boundary/dispatcher) +2 `member-endpoint-snap.test.ts` (END center, orientation-agnostic off-axis). Όλα
+    τα προϋπάρχοντα regression (cursor x=700 → dCenter μακριά → face αμετάβλητο) πράσινα. 57+187 GREEN.
+  - ✅ Google-level: YES — ΕΝΑ chokepoint (start+end+commit, preview≡commit by construction), nearest-wins
+    με υπάρχον SSoT pattern, μηδέν διπλό geometry, orientation-agnostic AABB. 🔴 browser-verify (Giorgio).
+  - **Cross-ref**: ADR-398 §3.9 (το mirror center-on-axis + relocation του `buildCenteredAxisFaceFrame`).
+
 - **2026-06-30 (§line-cyan — κυανές listening dimensions + flush/κάθετο κούμπωμα ΚΑΙ στη ΓΡΑΜΜΗ, ίδιος εγκέφαλος έλξης με τον τοίχο)**
   - **Αίτημα Giorgio**: «όταν σχεδιάζω τοίχο κοντά σε υφιστάμενη οντότητα βλέπω ΚΥΑΝΕΣ ενδείξεις (gap-left/
     gap-right/κέντρο) και το φάντασμα κάθεται κάθετα/flush πάνω στην παρειά. Θέλω την ΙΔΙΑ συμπεριφορά στη
@@ -404,8 +434,14 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
   μοτίβο call-counts → μηδέν test regression). **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ (Giorgio order):** το `drawLabelBeyond`
   (ghost-face-dim-paint.ts — μοιραζόμενο από listening-dims ΚΑΙ μήκος) δρομολογήθηκε στον ΙΔΙΟ SSoT → όλοι οι
   overlay αριθμοί box-aware (η κοντινή ακμή πέρα από τη dim line, ποτέ πάνω της). 24/24 jest GREEN
-  (`overlay-label-layout` νέο 17 + `wall-hud-paint-projector` 7 + `ghost-face-dim-paint` 5). **PENDING (Case A,
-  cross-layer):** το κίτρινο snap-label «Επί άξονα τοίχου» (`SnapIndicatorGlyph.tsx`, SVG/DOM overlay) που πέφτει
-  στο canvas dim pill είναι ΑΛΛΟ layer (DOM vs canvas) → ξεχωριστός μηχανισμός, follow-up. 🔴 browser-verify +
-  commit (CHECK 6D: stage ADR-508 + ADR-040· NEW overlay-label-layout.ts + mod wall-hud-paint.ts +
-  ghost-face-dim-paint.ts + 2 test).
+  (`overlay-label-layout` νέο + `wall-hud-paint-projector` 7 + `ghost-face-dim-paint` 5). **Case A (cross-layer,
+  RESOLVED):** το κίτρινο snap-label «Επί άξονα τοίχου» (`SnapIndicatorGlyph.tsx`, SVG/DOM overlay, anchored στο
+  snap point) έπεφτε στο canvas **dim pill** («L=… t=…», `bim-dim-labels.ts drawEntityDimLabel`, κάτω από το
+  κέντρο). Διαφορετικά layers (DOM vs canvas) → ο canvas pill θα ήταν **stale** αν τον έκανα snap-aware (το snap
+  store δεν re-render-άρει αξιόπιστα το entity canvas), ενώ το snap label re-renders με το snap. **FIX:** το snap
+  **label** μπαίνει σε ΞΕΧΩΡΙΣΤΗ baseline ΠΑΝΩ από το glyph (το glyph μένει στο snap point) μέσω NEW pure SSoT
+  `snapLabelTop` (στο ίδιο `overlay-label-layout.ts`) — big-player «separate baselines» (Revit/Figma: own dim ≠
+  transient inference label). Το dim pill (κάτω από το κέντρο) και το snap label (πάνω από το glyph) δεν
+  μοιράζονται πια band. Συνολικά 13 jest στο νέο SSoT. 🔴 browser-verify + commit (CHECK 6D: stage ADR-508 +
+  ADR-040· NEW overlay-label-layout.ts + mod wall-hud-paint.ts + ghost-face-dim-paint.ts + SnapIndicatorGlyph.tsx
+  + 2 test).

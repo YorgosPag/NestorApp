@@ -17,15 +17,15 @@ import {
 } from '../geometry/shared/footprint-face-frame';
 import { type MemberGhostThird } from '../framing/member-face-third';
 import {
-  type ArcMeta,
   type LinearMemberSnapTarget,
   type GhostFaceFrame,
 } from '../framing/linear-member-face-snap';
 
-// ADR-508 §dim — `buildColumnBboxFaceFrame` μετακινήθηκε στο `linear-member-face-snap` (SSoT home
-// του `GhostFaceFrame`) ώστε να το μοιράζεται ΚΑΙ το framing («τοίχος/δοκάρι → κολώνα») χωρίς
-// εξάρτηση `bim/framing → bim/columns`. Re-export alias εδώ για συνέχεια των column consumers.
-export { buildColumnBboxFaceFrame } from '../framing/linear-member-face-snap';
+// ADR-508 §dim — `buildColumnBboxFaceFrame` + `buildCenteredAxisFaceFrame` μετακινήθηκαν στο
+// `linear-member-face-snap` (SSoT home του `GhostFaceFrame`) ώστε να τα μοιράζεται ΚΑΙ το framing
+// («τοίχος/δοκάρι → κολώνα», incl. το §3.9-mirror center snap) χωρίς εξάρτηση `bim/framing →
+// bim/columns`. Re-export aliases εδώ για συνέχεια των column consumers (byte-for-byte).
+export { buildColumnBboxFaceFrame, buildCenteredAxisFaceFrame } from '../framing/linear-member-face-snap';
 import {
   projectPointOnAxis,
   projectPolygonOnAxis,
@@ -87,32 +87,6 @@ export function resolveAxisCenterFoot(
   if (along < alongMin || along > alongMax) return null; // πέρα από τα άκρα → flush
   if (perp > perpThreshold) return null;                 // πιο μακριά από τη ζώνη → flush
   return { position: { x: a.x + along * u.x, y: a.y + along * u.y }, along, perp };
-}
-
-/**
- * ADR-398 §3.11 — **κοινό** centered `GhostFaceFrame` (μοιράζεται §3.9 wall-axis ΚΑΙ §3.11 slab-edge):
- * το φάντασμα κάθεται ΚΕΝΤΡΑΡΙΣΜΕΝΟ στον άξονα → `facePerp:0`, `ghostHalfWidth:0` (listening dims προς
- * το κέντρο, Revit centerline), `outwardSign:1` (ουδέτερο). Μηδέν διπλό literal (N.0.2).
- */
-export function buildCenteredAxisFaceFrame(
-  origin: Readonly<Point2D>,
-  axisDir: Readonly<Point2D>,
-  perpDir: Readonly<Point2D>,
-  faceAlongMin: number,
-  faceAlongMax: number,
-  ghostCenterAlong: number,
-  arc?: ArcMeta,
-  ghostPerpOffset?: number,
-): GhostFaceFrame {
-  return {
-    origin, axisDir, perpDir,
-    facePerp: 0, outwardSign: 1,
-    faceAlongMin, faceAlongMax,
-    ghostCenterAlong, ghostHalfWidth: 0,
-    ...(arc ? { arc } : {}), // ADR-398 §3.12 — κύκλος/τόξο → arc-length listening dims
-    // ADR-398 §3.20b — κάθετο (dy) offset κέντρου → επιπλέον κάθετη listening dim (πλήρες καρτεσιανό).
-    ...(ghostPerpOffset ? { ghostPerpOffset } : {}),
-  };
 }
 
 /**

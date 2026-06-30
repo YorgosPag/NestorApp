@@ -257,6 +257,31 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-363 Phase 1L-J — explicit wall-join override (Revit «Wall Joins»). Two
+      // dropdowns (start / end endpoint): Auto / Miter / Butt / Square / Disallow.
+      // Custom widget — writes startJoin/endJoin via UpdateWallParamsCommand then
+      // triggers the retrim effect. Straight-only (self-hides otherwise).
+      id: 'wall-joins',
+      labelKey: 'ribbon.panels.wallJoins',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'wall-joins',
+              command: {
+                id: 'wall.joins',
+                labelKey: 'ribbon.panels.wallJoins',
+                commandKey: 'wall.joins.field',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-363 Phase 4.5e-B — wall material picker (ENABLED). Wired to wall-level
       // hatch; DNA-bearing walls ignore this field (per-layer DNA rendering governs).
       id: 'wall-material',
