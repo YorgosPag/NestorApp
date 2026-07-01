@@ -41,6 +41,25 @@ describe('wall-in-region — findRectanglesFromSegments', () => {
     expect(rects[0].area).toBeCloseTo(15_000_000, 0);
   });
 
+  // Β (Giorgio 2026-07-01) — root cause του «hover δεν δείχνει διακεκομμένη»: σε
+  // πραγματική κάτοψη οι κορυφές ενός ορθογωνίου ΜΟΙΡΑΖΟΝΤΑΙ με γειτονικές γραμμές
+  // (κόμβος βαθμού >2). Ο corner-graph detector (που τώρα οδηγεί ΚΑΙ το hover preview
+  // του σκέτου τοίχου, όχι μόνο το click) πρέπει να το βρίσκει· ο αυστηρός
+  // simple-cycle loop walker (perimeter-from-faces) τον έχανε → preview κενό.
+  it('detects the rectangle even when a corner is shared with an extra line (degree-3 node)', () => {
+    const segs: RegionLineSeg[] = [
+      ...rectSegments(5000, 250),
+      { start: { x: 5000, y: 0 }, end: { x: 5000, y: -1200 } }, // extra line off corner (w,0)
+      { start: { x: 0, y: 0 }, end: { x: -1200, y: 0 } }, // extra line off corner (0,0)
+    ];
+    const rects = findRectanglesFromSegments(segs, TOL);
+    expect(rects.some((r) => r.longSide > 4990 && r.shortSide < 260)).toBe(true);
+    const enclosing = findEnclosingRectangle(segs, { x: 2500, y: 125 }, TOL);
+    expect(enclosing).not.toBeNull();
+    expect(enclosing?.longSide).toBeCloseTo(5000, 3);
+    expect(enclosing?.shortSide).toBeCloseTo(250, 3);
+  });
+
   it('detects a rotated (45°) rectangle', () => {
     // Square rotated 45°, corners on the axes.
     const segs: RegionLineSeg[] = [

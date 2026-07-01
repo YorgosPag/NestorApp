@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-01 — Canvas-stack shell cursor class: `cursor-none` → `cursor-crosshair` (ADR-549 §Phase 8, CHECK 6B)
+Το shell `CanvasLayerStack` container div (ο κάτοχος του hardware-cursor crosshair μέσω `useCrosshairCursor`) άλλαξε την κλάση κέρσορα από `cursor-none` σε `cursor-crosshair`: safety net ώστε αν πέσει το inline PNG crosshair, ο κέρσορας να υποχωρεί σε native crosshair αντί για αόρατο. Καθαρά className swap — **καμία νέα subscription**, ο shell παραμένει ADR-040-compliant (μηδέν `useSyncExternalStore`, CHECK 6C ασφαλές). Πλήρες detail: **ADR-549 changelog §Phase 8**.
+
 ### 2026-07-01 — Axis (location line) τοίχου κόβεται στην παρειά κολώνας (ADR-509 §axis-clip, CHECK 6B/6D)
 Οι διακεκομμένες γραμμές-άξονες των τοίχων διαπερνούσαν το σώμα της κολώνας αντί να σταματούν στις παρειές (Giorgio screenshot 212412). NEW per-frame builder `buildColumnFootprints(scene.entities)` (`dxf-renderer-frame-builders.ts`) → `DxfRenderer` το σπρώχνει στο `EntityRendererComposite.setColumnFootprints` → `WallRenderer.setColumnFootprints` (setter — ο renderer ΔΕΝ subscribe-άρει, ADR-040 micro-leaf compliant). Ο `WallRenderer.drawAxis` κόβει τον άξονα σε runs (ΕΞΩ από τα column footprints) μέσω NEW pure `bim/walls/wall-axis-clip.ts` που reuse-άρει το ΕΝΑ `coveredIntervals`/`exposedComplement` SSoT. Μηδέν subscriptions προστέθηκαν σε orchestrator/shell (CHECK 6C ασφαλές)· footprints = low-freq scene scan. Πλήρες detail: **ADR-509 changelog 2026-07-01 §axis-clip**. 8/8 NEW jest + 527/527 wall/renderer regression GREEN. 🔴 browser-verify + commit.
 

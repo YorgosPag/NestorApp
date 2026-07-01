@@ -394,4 +394,36 @@ describe('useWallTool', () => {
     act(() => { result.current.onCanvasClick({ x: 2500, y: 125 }); });
     expect(onWallCreated).toHaveBeenCalledTimes(2);
   });
+
+  // ─── Β (Giorgio 2026-07-01) — σκέτος «Τοίχος»: click μέσα σε DXF παραλληλόγραμμο ──
+  // γεμίζει τοίχο (auto), χωρίς να μπει σε in-region mode· εκτός παραλληλογράμμου →
+  // κανονική ελεύθερη σχεδίαση 2 κλικ.
+  it('plain wall: 1st click inside a detected DXF rectangle fills ONE wall (auto)', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => regionRectLines }),
+    );
+    // Default freehand + straight — καμία ρητή αλλαγή mode (αυτό είναι το ζητούμενο).
+    act(() => result.current.activate());
+    expect(result.current.state.placementMode).toBe('freehand');
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 125 }); });
+    // Ο τοίχος γέμισε το ορθογώνιο — ΔΕΝ ξεκίνησε freehand (δεν κρατήθηκε start).
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(result.current.state.startPoint).toBeNull();
+    expect(result.current.state.placementMode).toBe('freehand');
+  });
+
+  it('plain wall: 1st click in empty space starts normal freehand drawing (no fill)', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => regionRectLines }),
+    );
+    act(() => result.current.activate());
+    // Μακριά από κάθε παραλληλόγραμμο → κανονική αρχή freehand (κλικ 1 = start).
+    act(() => { result.current.onCanvasClick({ x: 999999, y: 999999 }); });
+    expect(onWallCreated).not.toHaveBeenCalled();
+    expect(result.current.state.phase).toBe('awaitingEnd');
+    expect(result.current.state.startPoint).not.toBeNull();
+  });
 });

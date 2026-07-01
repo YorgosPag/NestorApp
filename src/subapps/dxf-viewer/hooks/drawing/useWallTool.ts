@@ -73,6 +73,8 @@ import { applyLengthAngleLock, isLengthAngleLockActive } from '../../systems/dyn
 import { resolveWallEndpointSnap, resolveWallEndpointWithFineStep } from '../../bim/walls/wall-endpoint-snap';
 // ADR-363 — status-text resolver extracted for N.7.1 (≤500 lines).
 import { resolveWallToolStatusKey } from './wall-tool-status-text';
+// ADR-363 — preview-store sync effect extracted for N.7.1 (≤500 lines).
+import { useWallPreviewSync } from './use-wall-preview-sync';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -130,68 +132,9 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     [getSceneUnits],
   );
 
-  // ── preview store sync (ADR-363 Phase 1C) ────────────────────────────────
-  // Mirrors `stairPreviewStore` writer pattern: on every state transition we
-  // push the current preview shape (startPoint / curveControl / polyline
-  // vertices / overrides) so `useUnifiedDrawing.updatePreview` can read it
-  // synchronously without subscribing to wall-tool React state.
-  useEffect(() => {
-    if (state.phase === 'idle') {
-      wallPreviewStore.reset();
-      return;
-    }
-    // ADR-363 Phase 1K / «από περίγραμμα» — region & perimeter picks are surfaced
-    // via selection highlight (box-select), not a rubber-band ghost. No preview shape.
-    if (state.placementMode === 'in-region' || state.placementMode === 'outer-perimeter') {
-      wallPreviewStore.reset();
-      return;
-    }
-    // ADR-363 Phase 1J — on-entity: surface the picked line as a straight ghost
-    // (start→end shifted toward the live cursor, reusing the Phase 1F preview
-    // generator). Closed sources have no rubber-band ghost (multi-wall).
-    if (state.placementMode === 'on-entity') {
-      if (state.phase === 'awaitingSide' && state.pickedSource?.kind === 'line') {
-        wallPreviewStore.set({
-          startPoint: state.pickedSource.start,
-          endPoint: state.pickedSource.end,
-          curveControl: null,
-          polylineVertices: [],
-          overrides: state.overrides,
-        });
-      } else {
-        wallPreviewStore.reset();
-      }
-      return;
-    }
-    const curveControl =
-      state.kind === 'curved' && state.phase === 'awaitingCurveControl' && state.endPoint
-        ? null // user has not picked the control point yet — preview generator will use cursor
-        : null;
-    // ADR-363 Phase 1F — surface endPoint to the preview store only during the
-    // straight-kind awaitingAlignment phase. In every other state (including
-    // curved awaitingCurveControl) the preview falls back to the legacy
-    // "start → cursor" rubber band by leaving endPoint null.
-    const endPoint =
-      state.kind === 'straight' && state.phase === 'awaitingAlignment' ? state.endPoint : null;
-    wallPreviewStore.set({
-      startPoint: state.startPoint,
-      endPoint,
-      curveControl,
-      polylineVertices: state.polylineVertices,
-      overrides: state.overrides,
-      startAnchored: state.startAnchored,
-      startJustification: state.startJustification,
-      startFaceAngle: state.startFaceAngle,
-      anchoredHostId: state.anchoredHostId,
-    });
-  }, [state]);
-
-  // Drop preview state on unmount so other tools don't see stale ghosts.
-  useEffect(() => {
-    return () => {
-      wallPreviewStore.reset();
-    };
-  }, []);
+  // ── preview store sync (ADR-363 Phase 1C) — extracted for N.7.1 (≤500 lines) ──
+  // Pushes the current preview shape on every state transition + drops it on unmount.
+  useWallPreviewSync(state);
 
   // ── lifecycle + setters + incremental-back ESC handlers (extracted N.7.1) ──
   const {
@@ -216,7 +159,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, getSceneEntities, setState });
 
   // ── in-region / perimeter click handlers (extracted for N.7.1) ───────────
-  const { regionTol, onRegionClick, onPerimeterClick, getRegionPickIds } = useWallRegionClicks({
+  const { regionTol, fillEnclosingRectAt, onRegionClick, onPerimeterClick, getRegionPickIds } = useWallRegionClicks({
     stateRef,
     setState,
     getSceneEntities,
@@ -312,6 +255,16 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return false;
       }
 
+      // Β (Giorgio 2026-07-01) — σκέτος «Τοίχος» (ορθογώνιος/ευθύς): αν το 1ο κλικ
+      // πέσει μέσα σε εντοπισμένο DXF παραλληλόγραμμο → γέμισε τον τοίχο (ίδιο SSoT
+      // detection+commit με `wall-region-inside`· η πράσινη διακεκομμένη preview ≡
+      // commit). Εκτός/oversized παραλληλογράμμου → κανονική ελεύθερη σχεδίαση 2 κλικ.
+      // Εδώ φτάνει ΜΟΝΟ freehand + straight (in-region/perimeter/on-entity/polyline/
+      // curved επιστρέφουν νωρίτερα), οπότε δεν χρειάζεται επιπλέον gating.
+      if (s.phase === 'awaitingStart' && fillEnclosingRectAt(s, point).kind === 'filled') {
+        return true;
+      }
+
       // Straight kind — 2-click chain (ADR-508, mirror δοκαριού):
       //   click 1 (awaitingStart) → resolveWallStartAnchor → store start (+anchored), → awaitingEnd
       //   click 2 (awaitingEnd)   → commit (auto-flush σε κολόνα ή centerline αν anchored)
@@ -380,6 +333,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       commitOnEntity,
       getSceneEntities,
       getSceneUnits,
+      fillEnclosingRectAt,
       onRegionClick,
       onPerimeterClick,
       resolveWallStartAnchor,
@@ -435,6 +389,15 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   useEffect(() => {
     wallToolBridgeStore.set({
       isActive: state.phase !== 'idle',
+      // Β (Giorgio 2026-07-01) — «σε παραλληλόγραμμο DXF, κλικ γεμίζει τοίχο» eligible
+      // ΜΟΝΟ όταν ο σκέτος «Τοίχος» (ευθύς/ορθογώνιος, freehand) περιμένει το 1ο κλικ.
+      // Το `useRegionPerimeterMouseMove` το διαβάζει ώστε η διακεκομμένη preview να
+      // εμφανίζεται μόνο όταν όντως θα γεμίσει (preview ≡ commit· όχι μέσα σε freehand
+      // awaitingEnd όπου το 2ο κλικ ορίζει άκρο).
+      isRegionFillEligible:
+        state.phase === 'awaitingStart' &&
+        state.kind === 'straight' &&
+        state.placementMode === 'freehand',
       overrides: state.overrides,
       setParamOverrides,
       getSceneUnits: getSceneUnitsStable,
@@ -446,7 +409,15 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         wallToolBridgeStore.set(null);
       }
     };
-  }, [state.phase, state.overrides, setParamOverrides, getSceneUnitsStable, getSceneEntitiesStable]);
+  }, [
+    state.phase,
+    state.kind,
+    state.placementMode,
+    state.overrides,
+    setParamOverrides,
+    getSceneUnitsStable,
+    getSceneEntitiesStable,
+  ]);
 
   // ── side-effect listeners (extracted for N.7.1, parity preserved) ────────
   useWallToolDynamicInputListener({

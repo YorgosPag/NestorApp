@@ -200,6 +200,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dim:space-requested', { entityIds: [...selectedEntityIds] });
     return true;
   }
+  // ADR-562 Φ5 — «Εφαρμογή Στυλ»: propagate the primary dim's DIMSTYLE to every
+  // selected dimension (the `useDimensionModify` host runs the undoable command).
+  if (action === 'dim.style.apply') {
+    EventBus.emit('dim:apply-style-requested', { entityIds: [...selectedEntityIds] });
+    return true;
+  }
   // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
   if (action === 'animation.tool-toggle') {
     const state = useAnimationStore.getState();

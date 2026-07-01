@@ -90,3 +90,17 @@ export function isBimRegionOrPerimeterTool(tool: string | null | undefined): boo
     tool === 'column-discrete-from-perimeter-walls'
   );
 }
+
+/**
+ * Β (Giorgio 2026-07-01) — εργαλεία που δείχνουν τη διακεκομμένη «region/perimeter
+ * hover preview» (`useRegionPerimeterMouseMove`). Επιπλέον των region/perimeter
+ * εργαλείων, ΚΑΙ ο σκέτος «Τοίχος» (`'wall'`): hover πάνω σε εντοπισμένο DXF
+ * παραλληλόγραμμο → διακεκομμένη → κλικ γεμίζει τοίχο. ΣΤΕΝΟ predicate ΜΟΝΟ για το
+ * hover — δεν επεκτείνει το `isBimRegionOrPerimeterTool` (που οδηγεί grips /
+ * contextual-tab / click-routing και δεν πρέπει να αλλάξει για τον σκέτο τοίχο).
+ * Η τελική ορατότητα για τον σκέτο τοίχο κρίνεται επιπλέον από το `isRegionFillEligible`
+ * (awaitingStart) ώστε preview ≡ commit.
+ */
+export function isRegionHoverPreviewTool(tool: string | null | undefined): boolean {
+  return isBimRegionOrPerimeterTool(tool) || tool === 'wall';
+}

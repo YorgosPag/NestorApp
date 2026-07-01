@@ -19,6 +19,7 @@ import { getCursorSettings, subscribeToCursorSettings } from './config';
 import { useGripContext } from '../../providers/GripProvider';
 import { isCrosshairSuppressed, subscribeCrosshairSuppression } from './CrosshairSuppressionStore';
 import { buildCrosshairCursorValue } from './crosshair-cursor-image';
+import { subscribeDevicePixelRatio } from './device-pixel-ratio';
 
 /**
  * Σταθερή διάσταση (CSS px) του κεντρικού τετραγωνιδίου (pickbox) στο σταυρόνημα — αίτημα Giorgio.
@@ -44,8 +45,10 @@ export interface UseCrosshairCursorOptions {
  */
 export function useCrosshairCursor(
   targetRef: RefObject<HTMLElement | null>,
-  // Default 32px: browser-verified to render in Chrome (larger images can be silently rejected →
-  // the whole `cursor` declaration drops and the `cursor-none` class wins ⇒ no cursor at all).
+  // Default 32px: the builder is DPR-aware — it shrinks the CSS size so the DEVICE size stays ≤ the
+  // hardware-cursor cap on every dpr, so the image is never silently rejected (a rejected `cursor`
+  // declaration drops entirely → the element's class cursor wins ⇒ the crosshair vanishes). We also
+  // re-apply on dpr change below so a HiDPI/zoom switch re-rasterises at the right size.
   { enabled = true, size = 32, color, lineWidth }: UseCrosshairCursorOptions = {},
 ): void {
   const { gripSettings } = useGripContext();
@@ -57,6 +60,7 @@ export function useCrosshairCursor(
     let el: HTMLElement | null = null;
     let unsubSettings: () => void = () => {};
     let unsubSuppress: () => void = () => {};
+    let unsubDpr: () => void = () => {};
 
     const apply = (): void => {
       if (!el) return;
@@ -101,6 +105,9 @@ export function useCrosshairCursor(
       apply();
       unsubSettings = subscribeToCursorSettings(apply);
       unsubSuppress = subscribeCrosshairSuppression(apply); // ADR-513
+      // Re-rasterise on dpr change (HiDPI monitor switch / OS scaling / browser page-zoom): the
+      // device size must stay ≤ cap or the browser drops the cursor and the crosshair vanishes.
+      unsubDpr = subscribeDevicePixelRatio(apply);
     };
     attach();
 
@@ -108,6 +115,7 @@ export function useCrosshairCursor(
       if (timer) clearTimeout(timer);
       unsubSettings();
       unsubSuppress();
+      unsubDpr();
       if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
   }, [targetRef, enabled, size, color, lineWidth, showAperture]);

@@ -274,9 +274,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     state: guideWorkflowState,
   }), [activeTool, guideStateObj, cpStateObj, transform, guideWorkflowState]);
 
-  // ADR-549 Phase 8 — hardware-cursor crosshair on the canvas-stack div (overrides `cursor-none`).
-  // Perfect 1:1 tracking (OS cursor plane). Shown whenever the crosshair is enabled — no scene
-  // gate, for full parity with the 3D viewport (the crosshair shows on an empty canvas too).
+  // ADR-549 Phase 8 — hardware-cursor crosshair on the canvas-stack div (inline, overrides the class
+  // cursor). Perfect 1:1 tracking (OS cursor plane). Shown whenever the crosshair is enabled — no
+  // scene gate, for full parity with the 3D viewport (the crosshair shows on an empty canvas too).
+  // The container class is `cursor-crosshair` (safety net: a dropped inline PNG falls back to a
+  // native crosshair, never an invisible cursor).
   useCrosshairCursor(containerRef as React.RefObject<HTMLElement | null>, {
     enabled: crosshairSettings.enabled,
   });
@@ -285,7 +287,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       <div className="flex-1 relative">
         <div
           ref={containerRef as React.RefObject<HTMLDivElement>}
-          className={`canvas-stack relative w-full h-full cursor-none bg-[var(--canvas-background-dxf)] bg-[image:var(--canvas-background-dxf-image)] ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
+          className={`canvas-stack relative w-full h-full cursor-crosshair bg-[var(--canvas-background-dxf)] bg-[image:var(--canvas-background-dxf-image)] ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           onMouseMove={containerHandlers.onMouseMove}
           onMouseDown={containerHandlers.onMouseDown}
           onMouseUp={containerHandlers.onMouseUp}

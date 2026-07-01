@@ -156,6 +156,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // `useDimensionModify` host subscribes + runs the undoable command.
   'dim:break-requested': { entityIds: readonly string[] };
   'dim:space-requested': { entityIds: readonly string[] };
+  // 🏢 ADR-562 Φ5 — «Εφαρμογή Στυλ»: apply the primary selected dim's DIMSTYLE to
+  // every selected dimension (Revit «apply type to selection»). entityIds[0] is the
+  // primary (selection order) → its `styleId` is the source applied to the rest.
+  'dim:apply-style-requested': { entityIds: readonly string[] };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

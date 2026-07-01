@@ -42,9 +42,29 @@ export interface UseWallRegionClicksArgs {
   readonly commitPerimeterFaces: WallCommitApi['commitPerimeterFaces'];
 }
 
+/**
+ * Αποτέλεσμα της «κλικ μέσα σε εσώκλειστο ορθογώνιο» ανίχνευσης:
+ *   - `filled`    → βρέθηκε έγκυρο (μη-oversized) ορθογώνιο ΚΑΙ γεμίστηκε με τοίχο.
+ *   - `oversized` → βρέθηκε ορθογώνιο αλλά είναι πολύ μεγάλο (εξωτερικό περίγραμμα)·
+ *                   φέρει διαστάσεις για warning· ΔΕΝ δημιουργήθηκε τοίχος.
+ *   - `none`      → δεν υπάρχει εσώκλειστο ορθογώνιο κάτω από το σημείο.
+ */
+export type EnclosingRectFillResult =
+  | { readonly kind: 'filled' }
+  | { readonly kind: 'oversized'; readonly widthM: number; readonly depthM: number }
+  | { readonly kind: 'none' };
+
 export interface UseWallRegionClicksApi {
   /** World-unit merge/hit-test tolerance (scene-units-agnostic). */
   regionTol(): number;
+  /**
+   * ADR-419 §wall-inside SSoT — εντοπίζει το εσώκλειστο (μικρότερο) ορθογώνιο DXF
+   * κάτω από το σημείο και, αν είναι έγκυρο, γεμίζει έναν τοίχο μέσα του (ίδιο
+   * detection + commit με το `wall-region-inside`). Side-effect-free ως προς
+   * EventBus — ο caller αποφασίζει τι κάνει με `oversized`/`none` (ο σκέτος
+   * «Τοίχος» πέφτει σε freehand, το region tool δείχνει warning/diagnostics).
+   */
+  fillEnclosingRectAt(s: WallToolState, point: Readonly<Point2D>): EnclosingRectFillResult;
   /** In-region click: hit a line → accumulate (commit when 4 close a rect); miss → fill enclosing rect. */
   onRegionClick(s: WallToolState, point: Readonly<Point2D>): boolean;
   /** «Τοίχος από περίγραμμα» click-inside → build the perimeter(s) leg walls. */
@@ -73,6 +93,29 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
   const regionTol = useCallback(
     (): number => resolveRegionLoopTolWorld(getSceneUnits?.() ?? 'mm'),
     [getSceneUnits],
+  );
+
+  // ADR-419 §wall-inside SSoT — «κλικ μέσα σε εσώκλειστο ορθογώνιο» → ένας τοίχος
+  // που το γεμίζει. Κοινό detection+commit για (α) το `wall-region-inside` και (β)
+  // τον σκέτο «Τοίχο» (Giorgio 2026-07-01 «Β»: hover DXF παραλληλόγραμμο → κλικ
+  // γεμίζει). Καθαρό από EventBus ώστε ο σκέτος τοίχος να μπορεί να πέσει σιωπηλά
+  // σε freehand όταν δεν υπάρχει/είναι oversized το ορθογώνιο.
+  const fillEnclosingRectAt = useCallback(
+    (s: WallToolState, point: Readonly<Point2D>): EnclosingRectFillResult => {
+      const segs = extractLineSegments(getSceneEntities?.() ?? []);
+      const rect = findEnclosingRectangle(segs, point, regionTol());
+      if (!rect) return { kind: 'none' };
+      // ADR-419 Layer 4 — γιγάντιο ορθογώνιο (εξωτερικό περίγραμμα) → όχι garbage τοίχος.
+      const scale = mmToSceneUnits(getSceneUnits?.() ?? 'mm');
+      if (rect.shortSide / scale > REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM) {
+        stateRef.current = { ...stateRef.current, regionPicks: [] };
+        return { kind: 'oversized', widthM: rect.longSide / scale / 1000, depthM: rect.shortSide / scale / 1000 };
+      }
+      const ok = commitInRegionRects(s, [rect]);
+      stateRef.current = { ...stateRef.current, regionPicks: [] };
+      return ok ? { kind: 'filled' } : { kind: 'none' };
+    },
+    [getSceneEntities, getSceneUnits, regionTol, commitInRegionRects, stateRef],
   );
 
   // ADR-419 — click while in-region, gated ΑΥΣΤΗΡΑ ανά `regionMethod` (η μονή
@@ -105,22 +148,16 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         return true;
       }
       // 'inside' — μόνο το εσώκλειστο (μικρότερο) ορθογώνιο (αγνοεί τα picks γραμμών).
-      const rect = findEnclosingRectangle(segs, point, tol);
-      if (rect) {
+      const fill = fillEnclosingRectAt(s, point);
+      if (fill.kind === 'filled') return true;
+      if (fill.kind === 'oversized') {
         // ADR-419 Layer 4 — γιγάντιο ορθογώνιο (εξωτερικό περίγραμμα) → warning.
-        const scale = mmToSceneUnits(getSceneUnits?.() ?? 'mm');
-        if (rect.shortSide / scale > REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM) {
-          EventBus.emit('bim:region-perimeter-rejected', {
-            reason: 'oversized',
-            widthM: rect.longSide / scale / 1000,
-            depthM: rect.shortSide / scale / 1000,
-          });
-          stateRef.current = { ...stateRef.current, regionPicks: [] };
-          return true;
-        }
-        const ok = commitInRegionRects(s, [rect]);
-        stateRef.current = { ...stateRef.current, regionPicks: [] };
-        return ok;
+        EventBus.emit('bim:region-perimeter-rejected', {
+          reason: 'oversized',
+          widthM: fill.widthM,
+          depthM: fill.depthM,
+        });
+        return true;
       }
       // ADR-419 Layer 5 — δεν έκλεισε ορθογώνιο κοντά αλλά υπάρχουν ανοιχτές γραμμές.
       const openIds = findOpenChainLineIdsNear(point, entities, tol);
@@ -182,5 +219,5 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
     [],
   );
 
-  return { regionTol, onRegionClick, onPerimeterClick, getRegionPickIds };
+  return { regionTol, fillEnclosingRectAt, onRegionClick, onPerimeterClick, getRegionPickIds };
 }
