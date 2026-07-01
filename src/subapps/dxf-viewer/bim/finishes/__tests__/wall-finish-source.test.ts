@@ -49,6 +49,23 @@ const fullZ = { zBotMm: 0, zTopMm: 3000 };
 const totalLength = (segs: readonly { lengthM: number }[]): number =>
   segs.reduce((s, seg) => s + seg.lengthM, 0);
 
+describe('wallFootprintPolygon — ΑΓΝΟΕΙ trim miters (ADR-449 §merged-union-robustness)', () => {
+  it('startMiter/startBevel αγνοούνται → raw δομικό footprint (ίδιο με χωρίς trim)', () => {
+    // Το column-miter κάνει τον τοίχο flush στην παρειά → collinear touch → εύθραυστη ένωση
+    // σοβά (κενά/2 κομμάτια). Ο σοβάς πρέπει να δει το raw rect (επικαλύπτεται → robust union).
+    const base = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
+    const mitered: WallFinishObstacle = {
+      ...base,
+      params: {
+        ...base.params,
+        startMiter: { outer: { x: 300, y: 105 }, inner: { x: 300, y: -105 } },
+        startBevel: 45,
+      } as WallFinishObstacle['params'],
+    };
+    expect(wallFootprintPolygon(mitered)).toEqual(wallFootprintPolygon(base));
+  });
+});
+
 describe('wallDnaHasPlaster (X4 legacy detection)', () => {
   it('legacy DNA με mat-plaster layer → true', () => {
     expect(wallDnaHasPlaster(legacyPlasterDna())).toBe(true);

@@ -158,9 +158,11 @@ export interface BeamFinishSource {
   >;
 }
 
-/** Wall → plan footprint polygon (outer ακμή + αντίστροφη inner). */
+/** Wall → plan footprint (outer + reversed inner). ADR-449 §merged-union-robustness: ΑΓΝΟΕΙ
+ *  trim miters/bevels → raw rect που ΕΠΙΚΑΛΥΠΤΕΤΑΙ με κολόνα (flush core → degenerate union). */
 export function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
-  const g = computeWallGeometry(wall.params, wall.kind);
+  const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...rawParams } = wall.params;
+  const g = computeWallGeometry(rawParams as WallFinishObstacle['params'], wall.kind);
   const outer = g.outerEdge.points.map(toPt2);
   const inner = [...g.innerEdge.points].reverse().map(toPt2);
   return [...outer, ...inner];
