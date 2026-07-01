@@ -27,6 +27,12 @@ import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
 // ADR-532 B4 — grip render is selection-driven; the leaf self-subscribes so the
 // orchestrator (CanvasSection) no longer re-renders on entity selection.
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
+// 🏢 Live scene → canvas redraw (big-player invalidate-on-model-change, ADR-040 /
+// ADR-547): this render leaf subscribes to the scene SSoT and converts the fresh
+// snapshot itself, so a committed entity repaints on the SAME frame — instead of
+// waiting for a coincidental orchestrator re-render. ONLY this leaf re-renders.
+import { useLevelScene } from '../../systems/scene/useSceneSelectors';
+import type { SceneModel } from '../../types/scene';
 // ADR-550 — the leaf self-subscribes the store-driven transform tools (scale / stretch) so their
 // originals dim to ghosts while the real moving copy is shown (mirror of `movePreviewActive`).
 // Low-freq phase reads (one transition per click) → ADR-040-safe; the orchestrator stays inert.
@@ -142,7 +148,16 @@ export const DraftLayerSubscriber = React.memo(function DraftLayerSubscriber({
 
 interface DxfCanvasSubscriberProps {
   dxfCanvasRef: React.RefObject<DxfCanvasRef> | undefined;
+  /**
+   * Fallback converted scene (from the orchestrator). Kept for the first paint /
+   * SSR; the live paint source is the reactive `useLevelScene` + `convertScene`
+   * below so a committed entity shows immediately (big-player, ADR-040/547).
+   */
   scene: DxfScene | null;
+  /** Active level id — the scene slice this leaf subscribes to reactively. */
+  sceneLevelId: string | null;
+  /** Cached SceneModel → DxfScene converter (shares the orchestrator's WeakMap). */
+  convertScene: (scene: SceneModel | null) => DxfScene;
   transform: ViewTransform;
   viewport: { width: number; height: number };
   activeTool?: string;
@@ -187,7 +202,7 @@ interface DxfCanvasSubscriberProps {
  * Concrete typed props avoid forwardRef ComponentProps gymnastics.
  */
 export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
-  dxfCanvasRef, scene, transform, viewport, activeTool, overlayMode, colorLayers,
+  dxfCanvasRef, scene, sceneLevelId, convertScene, transform, viewport, activeTool, overlayMode, colorLayers,
   renderOptionsBase, crosshairSettings, gridSettings, rulerSettings,
   selectedGuideIds, constructionPoints, panelHighlightPointId,
   guideWorkflowComputedParams, isGripDragging, entityPickingActive,
@@ -199,6 +214,26 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   useEffect(() => {
     if (PERF_LINE_PROFILE) perfEnd('DxfCanvasSubscriber.commit', _perfRenderStart);
   });
+
+  // 🏢 LIVE SCENE → CANVAS REDRAW (big-player invalidate-on-model-change, ADR-040/547).
+  // Subscribe to the level's scene SSoT and convert the fresh snapshot HERE (leaf),
+  // so a committed entity (e.g. a new wall via `addWallToScene` → `SceneStore`) is
+  // painted on the next frame — no dependency on a coincidental orchestrator re-render.
+  // `useLevelScene` returns a reference-stable `SceneModel` (new only on a real
+  // mutation), so the `useMemo` reconverts (shared WeakMap cache) ONLY on a content
+  // change → a fresh `DxfScene` ref → DxfCanvas's `useEffect([scene])` marks dirty →
+  // bitmap cache invalidates on `sceneRef` → repaint. Hover/selection re-renders of
+  // this leaf reuse the cached ref (no needless rebuild). Falls back to the prop
+  // `scene` before the store has the level (first paint).
+  const liveSceneModel = useLevelScene(sceneLevelId);
+  // Recompute ONLY on a real scene mutation (liveSceneModel ref) or units change
+  // (convertScene) — NOT on this leaf's hover/selection re-renders → no needless
+  // bitmap rebuild. Falls back to the orchestrator prop before the store has the level.
+  const liveScene = useMemo(
+    () => (liveSceneModel ? convertScene(liveSceneModel) : null),
+    [liveSceneModel, convertScene],
+  );
+  const reactiveScene = liveScene ?? scene;
   // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).
   // CanvasSection uses useGuideActions() (no subscription) → guide drag at 60fps
   // no longer re-renders CanvasSection. Only this leaf re-renders on guide changes.
@@ -244,7 +279,7 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   return (
     <DxfCanvas
       ref={dxfCanvasRef}
-      scene={scene}
+      scene={reactiveScene}
       transform={transform}
       viewport={viewport}
       activeTool={activeTool}

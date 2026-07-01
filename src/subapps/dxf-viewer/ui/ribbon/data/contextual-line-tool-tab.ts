@@ -1,22 +1,36 @@
 /**
- * ADR-357 Phase 17 — Contextual ribbon tab για γρήγορο στυλ κατά τη σχεδίαση.
+ * ADR-357 Phase 17 / ADR-510 Φ2E + Φ4 — Contextual ribbon tab for a drawing
+ * primitive: draw-time «Quick Style» defaults AND a selected-entity property
+ * editor (Revit «διάλεξε → σχεδίασε» + «επίλεξε → επεξεργάσου»).
  *
- * Trigger: `line-tool-active` — dispatched από `useActiveContextualTrigger`
- * όταν `activeTool` είναι drawing tool (line, circle, rectangle, κλπ.).
+ * ADR-510 Φ4 — the fields were a single 5-combobox column that forced vertical
+ * scrolling. They are now split into AutoCAD-grade panels laid out HORIZONTALLY
+ * (each panel = a ≤3-field column → zero scroll):
  *
- * Panel "Quick Style": 3 comboboxes
- *   Lineweight → ISO subset (ByLayer + 0.05..2.00 mm)
- *   Linetype   → ByLayer + ISO 8 catalog names
- *   Color      → ByLayer + 7 ACI standard colors
+ *   Γενικά (General)         → Χρώμα · Επίπεδο · Διαφάνεια
+ *   Εμφάνιση Γραμμής         → [Τύπος · Πάχος · Κλίμακα] [Πλάτος]
+ *   Γεωμετρία (line-only)    → [Μήκος · Γωνία] [Αρχή Χ · Αρχή Υ] [Τέλος Χ · Τέλος Υ] [ΔΧ · ΔΥ]
  *
- * Bridge: `useRibbonLineToolBridge` (ADR-357 Phase 17).
- * Store SSoT: `stores/QuickStyleStore.ts`.
+ * ALL fields are visible inline (Giorgio 2026-07-01): every `RibbonRow` is a
+ * NON-flyout column, and the panel body lays its rows out HORIZONTALLY
+ * (`.dxf-ribbon-panel-body` = flex-row), so 2-field columns spread sideways with
+ * zero vertical scroll AND zero flyout expander — nothing is hidden behind a ▼.
  *
+ * The Geometry panel self-hides for non-`line` primitives via `visibilityKey`
+ * (`getPanelVisibility` in `useRibbonLineToolBridge`).
+ *
+ * Bridge: `useRibbonLineToolBridge`. Store SSoT: `stores/QuickStyleStore.ts`
+ * (draw-defaults) + `UpdateEntityCommand` (selected entity).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-510-line-creation-system.md §Φ4
  * @see docs/centralized-systems/reference/adrs/ADR-357-dxf-line-tool-google-level.md §G15
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
-import { LINE_TOOL_RIBBON_KEYS } from '../hooks/bridge/line-tool-command-keys';
+import {
+  LINE_TOOL_RIBBON_KEYS,
+  LINE_TOOL_PANEL_VISIBILITY_KEYS,
+} from '../hooks/bridge/line-tool-command-keys';
 import { LINETYPE_ISO_NAMES } from '../../../config/linetype-iso-catalog';
 // ADR-357 §G15 / ADR-507 Φ2 — ByLayer + ISO subset, shared SSoT (boy-scout extract).
 import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
@@ -78,6 +92,21 @@ const WIDTH_OPTIONS = [
   { value: '10', labelKey: '10', isLiteralLabel: true },
 ] as const;
 
+// ─── Transparency options (ADR-510 Φ4) ────────────────────────────────────────
+// AutoCAD object transparency 0 (opaque) .. 90. Editable integer, presets are
+// shortcuts. Draw-defaults show 0.
+
+const TRANSPARENCY_OPTIONS = [
+  { value: '0',  labelKey: '0',  isLiteralLabel: true },
+  { value: '25', labelKey: '25', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '75', labelKey: '75', isLiteralLabel: true },
+  { value: '90', labelKey: '90', isLiteralLabel: true },
+] as const;
+
+// ADR-510 Φ4 — editable numeric config for a signed display-unit coordinate/delta.
+const COORD_INPUT = { editable: true, allowNegative: true, allowDecimal: true } as const;
+
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
@@ -86,35 +115,14 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: LINE_TOOL_CONTEXTUAL_TRIGGER,
   panels: [
+    // ── Γενικά (AutoCAD «General») ────────────────────────────────────────────
     {
-      id: 'line-tool-quick-style',
-      labelKey: 'ribbon.panels.lineToolQuickStyle',
+      id: 'line-general',
+      labelKey: 'ribbon.panels.lineGeneral',
       rows: [
         {
           isInFlyout: false,
           buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.lineweight',
-                labelKey: 'ribbon.commands.quickStyle.lineweight',
-                commandKey: LINE_TOOL_RIBBON_KEYS.lineweight,
-                comboboxWidthPx: 100,
-                options: LINEWEIGHT_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.linetype',
-                labelKey: 'ribbon.commands.quickStyle.linetype',
-                commandKey: LINE_TOOL_RIBBON_KEYS.linetype,
-                comboboxWidthPx: 120,
-                options: LINETYPE_OPTIONS,
-              },
-            },
             {
               type: 'combobox',
               size: 'small',
@@ -130,6 +138,64 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
               type: 'combobox',
               size: 'small',
               command: {
+                id: 'lineToolStyle.layer',
+                labelKey: 'ribbon.commands.quickStyle.layer',
+                commandKey: LINE_TOOL_RIBBON_KEYS.layer,
+                comboboxWidthPx: 150,
+                // Options come from the bridge (live LayerStore).
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.transparency',
+                labelKey: 'ribbon.commands.quickStyle.transparency',
+                commandKey: LINE_TOOL_RIBBON_KEYS.transparency,
+                comboboxWidthPx: 80,
+                options: TRANSPARENCY_OPTIONS,
+                numericInput: { editable: true, min: 0, max: 90, allowDecimal: false },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ── Εμφάνιση Γραμμής (linetype / lineweight / scale + width flyout) ────────
+    {
+      id: 'line-appearance',
+      labelKey: 'ribbon.panels.lineAppearance',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.linetype',
+                labelKey: 'ribbon.commands.quickStyle.linetype',
+                commandKey: LINE_TOOL_RIBBON_KEYS.linetype,
+                comboboxWidthPx: 120,
+                options: LINETYPE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.lineweight',
+                labelKey: 'ribbon.commands.quickStyle.lineweight',
+                commandKey: LINE_TOOL_RIBBON_KEYS.lineweight,
+                comboboxWidthPx: 100,
+                options: LINEWEIGHT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
                 id: 'lineToolStyle.linetypeScale',
                 labelKey: 'ribbon.commands.quickStyle.linetypeScale',
                 commandKey: LINE_TOOL_RIBBON_KEYS.linetypeScale,
@@ -139,6 +205,11 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 numericInput: { editable: true, min: 0.01 },
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -150,6 +221,130 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 options: WIDTH_OPTIONS,
                 // ADR-510 Φ3d — editable numeric polyline width (≥ 0, display unit).
                 numericInput: { editable: true, min: 0 },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ── Γεωμετρία (AutoCAD «Geometry», line-only → self-hides otherwise) ───────
+    {
+      id: 'line-geometry',
+      labelKey: 'ribbon.panels.lineGeometry',
+      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.length',
+                labelKey: 'ribbon.commands.quickStyle.length',
+                commandKey: LINE_TOOL_RIBBON_KEYS.length,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: { editable: true, allowDecimal: true, min: 0.0001 },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.angle',
+                labelKey: 'ribbon.commands.quickStyle.angle',
+                commandKey: LINE_TOOL_RIBBON_KEYS.angle,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.startX',
+                labelKey: 'ribbon.commands.quickStyle.startX',
+                commandKey: LINE_TOOL_RIBBON_KEYS.startX,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.startY',
+                labelKey: 'ribbon.commands.quickStyle.startY',
+                commandKey: LINE_TOOL_RIBBON_KEYS.startY,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.endX',
+                labelKey: 'ribbon.commands.quickStyle.endX',
+                commandKey: LINE_TOOL_RIBBON_KEYS.endX,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.endY',
+                labelKey: 'ribbon.commands.quickStyle.endY',
+                commandKey: LINE_TOOL_RIBBON_KEYS.endY,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.deltaX',
+                labelKey: 'ribbon.commands.quickStyle.deltaX',
+                commandKey: LINE_TOOL_RIBBON_KEYS.deltaX,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'lineToolStyle.deltaY',
+                labelKey: 'ribbon.commands.quickStyle.deltaY',
+                commandKey: LINE_TOOL_RIBBON_KEYS.deltaY,
+                comboboxWidthPx: 90,
+                options: [],
+                numericInput: COORD_INPUT,
               },
             },
           ],

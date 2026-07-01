@@ -55,7 +55,7 @@ import { getStoreyComboboxState, applyStoreyComboboxChange } from './bridge/stor
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridge/beam-command-keys';
 import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
-import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
+import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
 import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
@@ -387,9 +387,11 @@ export function useRibbonCommands({
       if (isFurniturePanelVisibilityKey(visibilityKey)) return furnitureBridge.getPanelVisibility(visibilityKey);
       if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
       if (isHatchRibbonVisibilityKey(visibilityKey)) return hatchBridge.getPanelVisibility(visibilityKey);
+      // ADR-510 Φ4 — Geometry panel is line-only (bridge inspects the selection).
+      if (isLineToolPanelVisibilityKey(visibilityKey)) return lineToolBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, slabBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, hatchBridge],
+    [stairBridge, columnBridge, beamBridge, slabBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, hatchBridge, lineToolBridge],
   );
 
   // ADR-461 Phase C4 / ADR-467 — Revit-style advisory recommendation per active

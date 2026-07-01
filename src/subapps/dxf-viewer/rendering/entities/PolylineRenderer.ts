@@ -13,6 +13,10 @@ import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometr
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
+// ADR-561 — whole-polyline MOVE cross + rotation handle SSoT, shared with the
+// interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
+import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../../systems/polyline/polyline-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 // 🏢 ADR-510 Φ3: bulge (arc-segment) geometry SSoT
 import { hasAnyBulge, expandPolyline, bulgeToPolyline } from './shared/geometry-bulge-utils';
 // 🏢 ADR-510 Φ3d: wide / tapered polyline (per-segment width) geometry SSoT
@@ -241,7 +245,26 @@ export class PolylineRenderer extends BaseEntityRenderer {
     const closed = ('closed' in entity) ? entity.closed as boolean : false;
     const edgeGrips = createEdgeGrips(entity.id, vertices, closed, vertices.length);
     grips.push(...edgeGrips);
-    
+
+    // ADR-561 — render the SAME whole-polyline handles the interaction path emits
+    // (`getPolylineMoveRotateGrips`): centre → 4-arrow MOVE glyph, rotation → curved
+    // ROTATION glyph via the shared `gripGlyphShape` registry. Indices match the
+    // interaction path (`polylineMoveRotateStartIndex`) so paint ≡ hit-test.
+    const moveRotate = getPolylineMoveRotateGrips(
+      entity.id, vertices, closed, polylineMoveRotateStartIndex(vertices.length, closed),
+    );
+    for (const g of moveRotate) {
+      grips.push({
+        id: `${g.entityId}-grip-${g.gripIndex}`,
+        entityId: g.entityId,
+        type: g.type,
+        gripIndex: g.gripIndex,
+        position: g.position,
+        isVisible: true,
+        shape: gripGlyphShape(g.polylineGripKind),
+      });
+    }
+
     return grips;
   }
 

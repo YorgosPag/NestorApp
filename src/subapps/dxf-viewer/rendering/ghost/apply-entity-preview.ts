@@ -14,7 +14,6 @@
  * which previously drew the preview inline in the main canvas. The unified
  * preview architecture moves all ghost rendering to the dedicated PreviewCanvas
  * overlay, keeping the bitmap cache invalidation-free during drag.
- *
  * @see rendering/ghost/draw-ghost-entity — companion renderer
  * @see ADR-040 — Preview Canvas Performance (unified ghost preview)
  * @see ADR-049 — Move Tool / Grip Drag SSoT
@@ -123,8 +122,16 @@ export function applyEntityPreview(
     // hot-grip) rotates the ghost around the picked centre instead of the midpoint.
     const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === wall.params) return entity;
-    const newGeometry = computeWallGeometry(newParams, wall.kind);
-    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+    // Strip the stale join trim (miter/bevel) from the GHOST: the neighbour join was
+    // computed for the wall's ORIGINAL placement, so while it is being rotated/moved/
+    // reshaped that cut no longer applies — keeping it deforms the ghost (mitered corner
+    // spun with the wall → non-rectangular). Show the nominal wall instead; the commit
+    // recomputes trims (`recomputeWallTrims`), so the final result is correct. Same
+    // strip pattern the commit-side recompute uses (add-wall-to-scene.ts).
+    const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...nominalParams } = newParams;
+    const previewParams = nominalParams as typeof newParams;
+    const newGeometry = computeWallGeometry(previewParams, wall.kind);
+    return { ...(entity as object), params: previewParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-397 — parametric column live preview (move / rotation / resize) ────

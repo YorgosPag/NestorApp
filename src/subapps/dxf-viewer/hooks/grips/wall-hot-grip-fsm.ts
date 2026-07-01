@@ -118,6 +118,15 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // full wall parity. The line's endpoint + centre-midpoint grips stay press-drag.
   'line-rotation': 'rotate',
   'line-move': 'move',
+  // Plain DXF primitives (ADR-561) — full wall parity for the whole-entity handles.
+  // Circle = ΜΟΝΟ move (συμμετρικός). Arc + polyline (incl. rectangle) = move (3-click
+  // + per-arm directional) + rotate (6-click reference / free spin). Vertex / quadrant /
+  // edge / arc-apex grips stay press-drag (absent here).
+  'circle-move': 'move',
+  'arc-move': 'move',
+  'arc-rotation': 'rotate',
+  'polyline-move': 'move',
+  'polyline-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -138,7 +147,12 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind;
+  // ADR-561 — circle/arc/polyline discriminators join the chain so their
+  // move/rotation handles opt into the shared hot-grip flow. Non-hot polyline
+  // kinds (vertex / segment-midpoint / arc-apex) resolve to a string that is
+  // simply absent from HOT_GRIP_OP_REGISTRY → `hotGripOpForKind` returns null
+  // (stays press-drag), so widening the chain is safe.
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind;
 }
 
 /**

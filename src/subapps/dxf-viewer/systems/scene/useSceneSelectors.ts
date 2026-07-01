@@ -16,11 +16,30 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { AnySceneEntity } from '../../types/scene';
-import { subscribeScene } from './SceneStore';
+import type { AnySceneEntity, SceneModel } from '../../types/scene';
+import { subscribeScene, getSceneForLevel } from './SceneStore';
 import { getSceneEntitiesByType, getSceneEntityById } from './scene-selectors';
 
 type SliceGuard<T extends AnySceneEntity> = (e: AnySceneEntity) => e is T;
+
+/**
+ * Subscribe to a level's FULL scene (the whole `SceneModel`). Re-renders on ANY
+ * content change of that level's scene (add / remove / edit of any entity).
+ *
+ * This is the reactive counterpart of the non-reactive `getLevelScene()` prop
+ * (`useSceneState.ts`): a canvas render leaf subscribes here so a committed entity
+ * repaints IMMEDIATELY (big-player invalidate-on-model-change) instead of waiting
+ * for a coincidental React re-render of the orchestrator. Reference-stable — the
+ * `SceneStore` record only mints a new `SceneModel` on a real mutation, so
+ * `useSyncExternalStore`'s getSnapshot never tears (ADR-547 caching rule).
+ */
+export function useLevelScene(levelId: string | null): SceneModel | null {
+  const getSnapshot = useCallback(
+    () => (levelId ? getSceneForLevel(levelId) : null),
+    [levelId],
+  );
+  return useSyncExternalStore(subscribeScene, getSnapshot, getSnapshot);
+}
 
 /**
  * Subscribe to all entities of one type in a level's scene. Re-renders only when

@@ -748,3 +748,29 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   ΕΝΑ μενού** (modes/extras + polyline ops). 43 jest GREEN. **ΜΑΘΗΜΑ: grip-aware ops → right-click grip context menu
   (είναι grip-aware + κάνει stopPropagation που καταστέλλει το EntityContextMenu)· το hover menu = συμπληρωματικό
   μόνο όπου δεν υπάρχει right-click ισοδύναμο (line/arc).**
+- **2026-07-01** — **Φ4 — AutoCAD-grade contextual tab για ΕΠΙΛΕΓΜΕΝΗ γραμμή (split σε ενότητες + General/Geometry).**
+  Πρόβλημα (Giorgio, στιγμιότυπο 133300): επιλογή γραμμής → το tab είχε **5 comboboxes σε 1 panel/1 row**· το CSS
+  `.dxf-ribbon-panel-row[data-row-size="small"]` = `flex-direction:column` → κάθετη στοίβα → **scroll**. + λείπαν
+  ρυθμίσεις που έχουν οι μεγάλοι (research AutoCAD Properties palette: General = Color/Layer/Linetype/Scale/Lineweight/
+  **Transparency**· Geometry = Start/End/**Delta**/**Length**/**Angle**· Revit «Modify \| Lines» = Line Style/Length).
+  **FIX (split σε 3 panels οριζόντια, ≤3 πεδία/στήλη → μηδέν scroll):**
+  • **Γενικά** (`ribbon.panels.lineGeneral`): Χρώμα · **Επίπεδο** (NEW, live `LayerStore` options) · **Διαφάνεια** (NEW, 0..90).
+  • **Εμφάνιση Γραμμής** (`lineAppearance`): [Τύπος · Πάχος · Κλίμακα] [Πλάτος].
+  • **Γεωμετρία** (`lineGeometry`, **line-only** via `visibilityKey`→`getPanelVisibility`): [**Μήκος** · **Γωνία**]
+    [**Αρχή Χ** · **Αρχή Υ**] [**Τέλος Χ** · **Τέλος Υ**] [**ΔΧ** · **ΔΥ**]. Όλα **επεξεργάσιμα** (AutoCAD-style, Giorgio).
+  • **Follow-up (Giorgio στιγμιότυπο 140703): ΚΑΝΕΝΑ flyout ▼.** Ο 1ος σχεδιασμός έκρυβε Πλάτος + συντεταγμένες πίσω
+    από flyout expander· απόφαση: όλα ορατά inline. Κάθε `RibbonRow` = **NON-flyout στήλη**· το panel body
+    (`.dxf-ribbon-panel-body`=flex-row) απλώνει τις στήλες **οριζόντια** → μηδέν κάθετο scroll ΚΑΙ μηδέν ▼ (ο
+    `RibbonPanel` δεν ζωγραφίζει chevron όταν `flyoutRows.length===0`).
+  **SSoT reuse (μηδέν διπλότυπο):** νέες command keys στο `line-tool-command-keys.ts`· branches στον
+  `useRibbonLineToolBridge` (selected → `UpdateEntityCommand {layerId|transparency|start|end}`· defaults layer →
+  `setCurrentLayerId`)· editable-numeric comboboxes = ο ίδιος μηχανισμός με linetypeScale/width (`resolveNumericConfig`
+  `editable:true` δουλεύει & με κενή λίστα options). NEW pure `systems/properties/line-geometry-edit.ts` = **reuse**
+  `geometry-vector-utils` (`calculateDistance`/`calculateAngle`/`resizeSegmentToLength`/`pointOnCircle`) — καμία νέα
+  math. Συντεταγμένες/μήκος = display-unit μέσω `toDisplay`/`fromDisplay` (μοντέλο mm, ADR-462· ίδιο με Φ3d width)·
+  γωνία = μοίρες. Panel-visibility wired στο `useRibbonCommands` (`isLineToolPanelVisibilityKey`).
+  **Tests:** 20 NEW pure jest + 51 στο bridge suite (layer/transparency/geometry read+write + panel-visibility) GREEN.
+  i18n el+en (`ribbon.panels.lineGeneral/lineAppearance/lineGeometry` + `ribbon.commands.quickStyle.layer/transparency/
+  length/angle/startX/startY/endX/endY/deltaX/deltaY`). Ribbon-only αρχεία → ADR-040 CHECK 6B/6D **δεν** ενεργοποιείται.
+  🔴 tsc(N.17-skip· 71 jest GREEN) + browser-verify (επίλεξε γραμμή → 3 ενότητες χωρίς scroll· Μήκος/Γωνία/ΔΧ edit →
+  ζωντανή μετακίνηση άκρου + undo· Επίπεδο/Διαφάνεια· κύκλος/τόξο → κρύβεται η Γεωμετρία) + commit.

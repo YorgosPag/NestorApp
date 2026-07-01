@@ -19,7 +19,10 @@ interface ExtendedCircleEntity extends CircleEntity {
 
 // 🏢 ADR-102: Duplicate type guard REMOVED - using centralized isCircleEntity from types/entities.ts
 // 🏢 ADR-099: HoverManager import removed - CircleRenderer has no hover rendering
-import { createQuadrantGrips } from './shared/grip-utils';
+// ADR-561 — circle grip SSoT (centre MOVE cross + quadrants), shared with the
+// interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
+import { getCircleGrips } from '../../systems/circle/circle-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
@@ -153,30 +156,21 @@ export class CircleRenderer extends BaseEntityRenderer {
     const circleData = validateCircleEntity(entity);
     if (!circleData) return [];
     const { center, radius } = circleData;
-    const grips: GripInfo[] = [];
-    
-    // Center grip
-    grips.push({
-      id: `${entity.id}-center-0`,
-      entityId: entity.id,
-      type: 'center',
-      gripType: 'center',        // Backward compatibility
-      gripIndex: 0,
-      position: center,
-      isVisible: true
-    });
-    
-    // Quadrant grips (4 cardinal points)
-    const quadrants: Point2D[] = [
-      { x: center.x + radius, y: center.y },     // East
-      { x: center.x, y: center.y + radius },     // North
-      { x: center.x - radius, y: center.y },     // West
-      { x: center.x, y: center.y - radius }      // South
-    ];
-    
-    // ADR-559 — cardinal points are QUADRANT grips (gated by «Εμφάνιση Quadrants»), not vertices.
-    grips.push(...createQuadrantGrips(entity.id, quadrants));
-    return grips;
+
+    // ADR-561 — render the SAME grips the interaction path emits (`computeDxfEntityGrips`
+    // → `getCircleGrips`), mapped to the render `GripInfo` shape (mirror `LineRenderer`/
+    // `TextRenderer.getGrips`). The centre grip → 4-arrow MOVE glyph via the shared
+    // `gripGlyphShape` registry (`'circle-move'`); the 4 quadrants stay 'square'.
+    return getCircleGrips(entity.id, center, radius).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      entityId: g.entityId,
+      type: g.type,
+      gripType: g.type,          // Backward compatibility
+      gripIndex: g.gripIndex,
+      position: g.position,
+      isVisible: true,
+      shape: gripGlyphShape(g.circleGripKind),
+    }));
   }
 
   // ✅ ENTERPRISE: Required abstract method implementation

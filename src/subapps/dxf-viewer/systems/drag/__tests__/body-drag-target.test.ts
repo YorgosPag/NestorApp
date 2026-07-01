@@ -22,13 +22,13 @@ describe('resolveBodyDragTarget', () => {
     expect(result).toEqual(['a', 'b']);
   });
 
-  it('adopts just the hovered entity when it is NOT selected (Figma-style)', () => {
+  it('returns null when the hovered entity is NOT selected (select-first → click-select falls through)', () => {
     const result = resolveBodyDragTarget({
       hoveredEntityId: 'c',
       isSelected: (id) => id === 'a',
       selectedIds: ['a'],
     });
-    expect(result).toEqual(['c']);
+    expect(result).toBeNull();
   });
 
   it('falls back to [hovered] when it is selected but the selection list is empty', () => {

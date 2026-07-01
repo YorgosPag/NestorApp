@@ -71,6 +71,14 @@ export {
   commitLineGripDrag,
 } from './grip-linear-commits';
 
+// ADR-561 — plain DXF primitive rotation commits (arc / polyline / rectangle) live
+// in grip-primitive-rotate-commits.ts (N.7.1 file-size split). Re-exported here so
+// the commit API stays one import.
+export {
+  commitArcGripDrag,
+  commitPolylineRotationGripDrag,
+} from './grip-primitive-rotate-commits';
+
 // ADR-406 / ADR-408 Φ3 / ADR-410 — centred-box grip commits (mep-fixture /
 // electrical panel / furniture) live in grip-parametric-centred-box-commits.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.

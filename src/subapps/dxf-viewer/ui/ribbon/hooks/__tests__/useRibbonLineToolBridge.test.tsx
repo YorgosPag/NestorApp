@@ -11,7 +11,10 @@
 
 import { renderHook } from '@testing-library/react';
 import { useRibbonLineToolBridge } from '../useRibbonLineToolBridge';
-import { LINE_TOOL_RIBBON_KEYS } from '../bridge/line-tool-command-keys';
+import {
+  LINE_TOOL_RIBBON_KEYS,
+  LINE_TOOL_PANEL_VISIBILITY_KEYS,
+} from '../bridge/line-tool-command-keys';
 import { UpdateEntityCommand } from '../../../../core/commands/entity-commands/UpdateEntityCommand';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
 import {
@@ -57,6 +60,28 @@ jest.mock('../../../../stores/QuickStyleStore', () => ({
   setQuickStyleLineweight: (...a: unknown[]) => mockSetLineweight(...a),
   setQuickStyleColor: (...a: unknown[]) => mockSetColor(...a),
   setQuickStyleLtscale: (...a: unknown[]) => mockSetLtscale(...a),
+}));
+
+// ── Mock LayerStore (ADR-510 Φ4 — layer dropdown + current-layer default) ──────
+const mockLayerSnapshot = {
+  layers: [
+    { id: 'lvl-1', name: 'Layer 1' },
+    { id: 'lyr-2', name: 'Walls' },
+  ],
+  currentLayerId: 'lvl-1',
+  recentLayerIds: [] as string[],
+};
+jest.mock('../../../../stores/LayerStore', () => ({
+  getLayerStoreSnapshot: () => mockLayerSnapshot,
+  subscribeLayerStore: () => () => {},
+}));
+
+// ── Mock shared current-layer SSoT action (ADR-358/510 Φ4) — the ribbon default
+// (no-selection) layer change delegates to `useCurrentLayerChange`, the SAME
+// path as the CurrentLayerPicker popover (permission gate + toast + recent FIFO).
+const mockChangeCurrentLayer = jest.fn(() => 'changed' as const);
+jest.mock('../../../components/layer-picker/useCurrentLayerChange', () => ({
+  useCurrentLayerChange: () => ({ changeCurrentLayer: mockChangeCurrentLayer }),
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -111,6 +136,7 @@ beforeEach(() => {
   mockSetLineweight.mockClear();
   mockSetColor.mockClear();
   mockSetLtscale.mockClear();
+  mockChangeCurrentLayer.mockClear();
   mockQuickSnapshot.linetypeName = 'Continuous';
   mockQuickSnapshot.lineweightMm = -2;
   mockQuickSnapshot.colorMode = 'ByLayer';
@@ -311,5 +337,134 @@ describe('useRibbonLineToolBridge — non-primitive selected → draw-defaults',
     result.current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetype, 'DASHED');
     expect(mockSetLinetype).toHaveBeenCalledWith('DASHED');
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-510 Φ4 — AutoCAD-grade General (layer / transparency) + Geometry
+// ─────────────────────────────────────────────────────────────────────────────
+
+const K = LINE_TOOL_RIBBON_KEYS;
+const patchOf = (n = 0) =>
+  (UpdateEntityCommand as unknown as jest.Mock).mock.calls[n][1] as Record<string, unknown>;
+const renderLine = () =>
+  renderHook(() =>
+    useRibbonLineToolBridge({
+      levelManager: makeLevelManager(lineEntity),
+      universalSelection: makeSelection('line-1'),
+    }),
+  ).result;
+const renderPolyline = () =>
+  renderHook(() =>
+    useRibbonLineToolBridge({
+      levelManager: makeLevelManager(polylineEntity),
+      universalSelection: makeSelection('pl-1'),
+    }),
+  ).result;
+const renderNone = () =>
+  renderHook(() =>
+    useRibbonLineToolBridge({
+      levelManager: makeLevelManager(null),
+      universalSelection: makeSelection(null),
+    }),
+  ).result;
+
+describe('useRibbonLineToolBridge — Φ4 General (layer + transparency)', () => {
+  it('reads the entity layer id', () => {
+    expect(renderLine().current.getComboboxState(K.layer)?.value).toBe('lvl-1');
+  });
+
+  it('layer options come from the live LayerStore', () => {
+    const opts = renderLine().current.getComboboxState(K.layer)?.options ?? [];
+    expect(opts.map((o) => o.value)).toEqual(['lvl-1', 'lyr-2']);
+  });
+
+  it('layer change patches layerId on the selected entity', () => {
+    renderLine().current.onComboboxChange(K.layer, 'lyr-2');
+    expect(patchOf()).toEqual({ layerId: 'lyr-2' });
+  });
+
+  it('layer change with no selection routes through the shared current-layer SSoT', () => {
+    renderNone().current.onComboboxChange(K.layer, 'lyr-2');
+    expect(mockChangeCurrentLayer).toHaveBeenCalledWith('lyr-2');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('transparency defaults to 0 and clamps to 0..90 on write', () => {
+    const r = renderLine();
+    expect(r.current.getComboboxState(K.transparency)?.value).toBe('0');
+    r.current.onComboboxChange(K.transparency, '150');
+    expect(patchOf()).toEqual({ transparency: 90 });
+  });
+});
+
+describe('useRibbonLineToolBridge — Φ4 Geometry (selected line)', () => {
+  const unit = displayUnitState.getUnit();
+  const disp = (mm: number) => String(toDisplay(mm, unit).value);
+
+  it('reads length (display unit) and angle (degrees) from the endpoints', () => {
+    const r = renderLine();
+    expect(r.current.getComboboxState(K.length)?.value).toBe(disp(10));
+    expect(r.current.getComboboxState(K.angle)?.value).toBe('0');
+  });
+
+  it('reads start / end / delta coordinates in display units', () => {
+    const r = renderLine();
+    expect(r.current.getComboboxState(K.startX)?.value).toBe(disp(0));
+    expect(r.current.getComboboxState(K.endX)?.value).toBe(disp(10));
+    expect(r.current.getComboboxState(K.deltaX)?.value).toBe(disp(10));
+    expect(r.current.getComboboxState(K.deltaY)?.value).toBe(disp(0));
+  });
+
+  it('length change moves end to the typed length (display → mm)', () => {
+    renderLine().current.onComboboxChange(K.length, disp(20));
+    const end = patchOf().end as { x: number; y: number };
+    expect(end.x).toBeCloseTo(20, 6);
+    expect(end.y).toBeCloseTo(0, 6);
+  });
+
+  it('angle change rotates end about start keeping the length', () => {
+    renderLine().current.onComboboxChange(K.angle, '90');
+    const end = patchOf().end as { x: number; y: number };
+    expect(end.x).toBeCloseTo(0, 6);
+    expect(end.y).toBeCloseTo(10, 6);
+  });
+
+  it('startX change patches the start coordinate (display → mm)', () => {
+    renderLine().current.onComboboxChange(K.startX, disp(5));
+    const start = patchOf().start as { x: number; y: number };
+    expect(start.x).toBeCloseTo(5, 6);
+    expect(start.y).toBeCloseTo(0, 6);
+  });
+
+  it('deltaX change sets end so end-start equals the delta', () => {
+    renderLine().current.onComboboxChange(K.deltaX, disp(3));
+    const end = patchOf().end as { x: number; y: number };
+    expect(end.x).toBeCloseTo(3, 6);
+  });
+
+  it('geometry write is a no-op for a non-line primitive', () => {
+    renderPolyline().current.onComboboxChange(K.length, '5');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+});
+
+describe('useRibbonLineToolBridge — Φ4 panel visibility (geometry is line-only)', () => {
+  const GEOM = LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry;
+
+  it('geometry panel is visible for a selected line', () => {
+    expect(renderLine().current.getPanelVisibility(GEOM)).toBe(true);
+  });
+
+  it('geometry panel is hidden for a selected polyline', () => {
+    expect(renderPolyline().current.getPanelVisibility(GEOM)).toBe(false);
+  });
+
+  it('geometry panel is hidden with no selection', () => {
+    expect(renderNone().current.getPanelVisibility(GEOM)).toBe(false);
+  });
+
+  it('an unknown visibility key defaults to visible', () => {
+    expect(renderLine().current.getPanelVisibility('whatever')).toBe(true);
   });
 });

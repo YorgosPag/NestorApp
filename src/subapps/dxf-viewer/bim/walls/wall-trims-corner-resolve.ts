@@ -49,12 +49,21 @@ export const MIN_ANGLE_RAD = Math.PI / 12; // 15°
 const JOIN_COINCIDENCE_FRACTION = 0.5;
 
 /**
- * ADR-363 Phase 1N — tolerance band (fraction of the neighbour's half-thickness)
- * within which an endpoint counts as "sitting on the neighbour's FACE". A corner
- * is the region-fill «column-gap» butt only when BOTH endpoints sit on a face
- * (perp ≈ half on each side) — see `cornerIsFaceButt`. Perp ∈ [0.5·half, 1.5·half].
+ * ADR-363 Phase 1N — a corner is the region-fill «column-gap» butt when BOTH walls
+ * stop SHORT of the axis-junction J by more than this fraction of their half (each
+ * ends at the neighbour's FACE ≈ 1·half short). Free-end L-corners instead CROSS at
+ * J (one over, one short) — see `cornerShouldMiter`.
  */
-const FACE_BUTT_FRACTION = 0.5;
+const COLUMN_GAP_SHORT_FRACTION = 0.5;
+
+/**
+ * ADR-363 Phase 1N — tolerance (fraction of half) for "an endpoint lies ON the
+ * other wall's AXIS" and "the junction runs THROUGH a wall's body". Used only to
+ * detect a T-junction (a stem ending on a continuing wall's centreline) that the
+ * corner classifier grouped as a corner. Region-fill auto-join lands exactly on the
+ * centreline (perp ≈ 0), so a small tolerance separates it from a real free-end L.
+ */
+const MITER_NEAR_FRACTION = 0.2;
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -181,46 +190,59 @@ function cornerEndpointsCoincide(a: EndpointRec, b: EndpointRec): boolean {
 }
 
 /**
- * ADR-363 Phase 1N — distinguish a region-fill «column-gap» FACE-BUTT (→ square
- * off, leave the corner open for a column) from a free-end L-corner drawn slightly
- * apart (→ miter / extend the edges to close, big-player Revit/ArchiCAD «Allow
- * Join»). The old rule mitred ONLY when the endpoints coincided (< 0.5·half apart),
- * so two free wall ends drawn ~one thickness apart — the normal hand-draw — squared
- * off and left the corner OPEN (the reported bug, screenshot 025329).
- *
- * A face-butt is the column-gap signature: BOTH walls' corner endpoints sit on the
- * OTHER wall's FACE — each endpoint's ⊥distance to the other's axis ≈ that wall's
- * half-thickness (within FACE_BUTT_FRACTION). A genuine free-end L-corner has at
- * least one endpoint on/near the other's AXIS (⊥ ≈ 0, not ≈ half) → fails this test
- * → mitres. Coincident corners (⊥ ≈ 0 both sides) also fail it → miter, as before.
- * SSoT for the miter-vs-square-off decision; reuses `perpDistanceToAxis`.
- */
-function cornerIsFaceButt(a: EndpointRec, b: EndpointRec): boolean {
-  const aOnBFace = Math.abs(perpDistanceToAxis(a.px, a.py, b.px, b.py, b.ux, b.uy) - b.half) <= FACE_BUTT_FRACTION * b.half;
-  const bOnAFace = Math.abs(perpDistanceToAxis(b.px, b.py, a.px, a.py, a.ux, a.uy) - a.half) <= FACE_BUTT_FRACTION * a.half;
-  return aOnBFace && bOnAFace;
-}
-
-/**
  * ADR-363 Phase 1N — the point where the two walls' axes cross (their would-be
- * corner). Null only if parallel — never here, `sinA` already cleared MIN_ANGLE.
+ * corner J). Null only if parallel — never here, `sinA` already cleared MIN_ANGLE.
  */
 function axisJunction(a: EndpointRec, b: EndpointRec): { x: number; y: number } | null {
   const isect = lineLineIntersect(a.px, a.py, a.px + a.ux, a.py + a.uy, b.px, b.py, b.px + b.ux, b.py + b.uy);
   return isect ? { x: a.px + isect.t * a.ux, y: a.py + isect.t * a.uy } : null;
 }
 
-/**
- * ADR-363 Phase 1N — the junction sits DEEP inside this wall's body (the wall
- * passes THROUGH it, so its partner only T's into the side — not a free-end L).
- * Depth = (J − endpoint)·outward: >0 means J is on the body side; a genuine free
- * end has J at/ahead of its tip (≤0) or only a hair of overshoot. Threshold =
- * FACE_BUTT_FRACTION·half so sub-half snapping overshoot still counts as a free end.
- */
-function junctionRunsThroughBody(e: EndpointRec, jx: number, jy: number): boolean {
+/** Signed depth of the junction J into a wall's body: (J − endpoint)·outward.
+ *  >0 ⇒ the wall passes THROUGH J; <0 ⇒ it stops SHORT of J; ≈0 ⇒ ends at J. */
+function junctionDepth(e: EndpointRec, jx: number, jy: number): number {
   const out = outwardDir(e);
-  const depth = (jx - e.px) * out.x + (jy - e.py) * out.y;
-  return depth > FACE_BUTT_FRACTION * e.half && depth < e.len;
+  return (jx - e.px) * out.x + (jy - e.py) * out.y;
+}
+
+/**
+ * ADR-363 Phase 1N (rev 2) — decide miter vs square-off for an `auto` corner from
+ * HOW the two free ends meet their axis-junction J (DB-verified on real hand-drawn
+ * walls). Signed depth d = (J − endpoint)·outward tells where J sits per wall:
+ *   d < 0 → the wall stops SHORT of J;  d > 0 → its body runs THROUGH J.
+ *
+ *   • BOTH short (each by > 0.5·half) → region-fill column-gap butt → SQUARE OFF
+ *     (leave the corner open for a column).
+ *   • One wall's END lies on the other's AXIS (⊥ ≈ 0) while that other runs THROUGH
+ *     → T-junction (a stem into a continuing wall) → SQUARE OFF / bevel.
+ *   • Otherwise the free ends CROSS at J (one over + one short, or both overshoot)
+ *     → free-end L-corner → MITER (Revit/ArchiCAD «Allow Join»). Coincident ends are
+ *     the exact d≈0 case of this → miter, as before.
+ *
+ * Replaces the earlier ⊥-to-face band, which mis-squared oblique hand-drawn corners
+ * whose ⊥ landed near 0.5·half (screenshot 115754). Reuses `perpDistanceToAxis`.
+ */
+function cornerShouldMiter(a: EndpointRec, b: EndpointRec): boolean {
+  const j = axisJunction(a, b);
+  if (!j) return true; // non-parallel guaranteed by sinA; be permissive if degenerate
+
+  const depthA = junctionDepth(a, j.x, j.y);
+  const depthB = junctionDepth(b, j.x, j.y);
+
+  // Region-fill column gap: both walls fall well short of the corner.
+  const shortA = COLUMN_GAP_SHORT_FRACTION * a.half;
+  const shortB = COLUMN_GAP_SHORT_FRACTION * b.half;
+  if (depthA < -shortA && depthB < -shortB) return false;
+
+  // T-junction masquerading as a corner: one stem ends ON the other's centreline
+  // while that other continues through J.
+  const nearA = MITER_NEAR_FRACTION * a.half;
+  const nearB = MITER_NEAR_FRACTION * b.half;
+  const aOnBAxis = perpDistanceToAxis(a.px, a.py, b.px, b.py, b.ux, b.uy) < nearB;
+  const bOnAAxis = perpDistanceToAxis(b.px, b.py, a.px, a.py, a.ux, a.uy) < nearA;
+  if ((aOnBAxis && depthB > nearB) || (bOnAAxis && depthA > nearA)) return false;
+
+  return true; // free ends cross at J → miter
 }
 
 // ─── Pass 2: corner cluster resolution ────────────────────────────────────────
@@ -292,18 +314,12 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
   if (joinMode === 'disallow') return;
 
   // ADR-363 Phase 1N — big-player «Allow Join»: two FREE wall ends meeting at a
-  // corner miter (extend their edges to the intersection → the corner closes),
-  // EXCEPT (1) the region-fill column-gap face-butt (both ends on the other's
-  // FACE → stays square, open for a column) and (2) a through-wall the partner
-  // merely T's into (one wall's body runs through the junction). Coincident ends
-  // are just the exact case of a free-end L → miter.
-  const j = joinMode === 'auto' ? axisJunction(a, b) : null;
-  const isFreeEndCorner =
-    !cornerIsFaceButt(a, b) &&
-    !(j !== null && (junctionRunsThroughBody(a, j.x, j.y) || junctionRunsThroughBody(b, j.x, j.y)));
+  // corner miter (extend edges to the intersection → the corner closes), EXCEPT a
+  // region-fill column-gap (both ends short of the corner) or a T-junction (a stem
+  // ending on a continuing wall's centreline). `cornerShouldMiter` decides.
   const shouldMiter =
     joinMode === 'miter' ||
-    (joinMode === 'auto' && isFreeEndCorner);
+    (joinMode === 'auto' && cornerShouldMiter(a, b));
   if (!shouldMiter) {
     squareOffCorner(a, b, sinA, acc);
     return;

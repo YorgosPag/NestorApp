@@ -22,6 +22,9 @@ import { isGripObjLimitExceeded } from './grip-obj-limit';
 // ADR-559 — the ONE grip-type display predicate, shared with the VISIBLE path
 // (BaseEntityRenderer.renderPhaseGrips) so hidden grips are also non-pickable.
 import { isGripTypeVisible } from './grip-type-visibility';
+// ADR-559 §multi-select — with ≥2 objects selected, suppress per-object MOVE +
+// ROTATION glyphs on BOTH paths (visible ≡ pickable). Shared predicate SSoT.
+import { shouldHideDataGripForSelection } from './transform-glyph-visibility';
 // ADR-397 Φ2 — directional move: attach the entity's local frame + mm scale to its
 // MOVE grip so the click handler can move along a typed distance without the scene.
 import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
@@ -99,6 +102,9 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.polylineGripKind ? { polylineGripKind: grip.polylineGripKind } : {}),
     // ADR-363 Slice F — forward line rotation grip discriminator (shared hot-grip rotate).
     ...(grip.lineGripKind ? { lineGripKind: grip.lineGripKind } : {}),
+    // ADR-561 — forward circle/arc primitive move+rotation grip discriminators.
+    ...(grip.circleGripKind ? { circleGripKind: grip.circleGripKind } : {}),
+    ...(grip.arcGripKind ? { arcGripKind: grip.arcGripKind } : {}),
     // ADR-557 — forward text/mtext rect-box grip discriminator.
     ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
   };
@@ -209,6 +215,10 @@ export function useGripRegistry({
           let count = 0;
           for (const grip of dxfGrips) {
             if (count >= maxGripsPerEntity) break;
+            // ADR-559 §multi-select — ≥2 objects selected → drop the whole-object MOVE +
+            // ROTATION glyphs from the pickable/snap set too (so they are neither drawn
+            // nor hit-testable). Structural corner/midpoint/vertex grips stay.
+            if (shouldHideDataGripForSelection(grip, selectedCount)) continue;
             const wrapped = wrapDxfGrip(grip);
             if (!isGripTypeVisible(wrapped.type, gripTypeFlags)) continue;
             const withFrame = moveFrame && hotGripOpForKind(hotGripKindOf(wrapped)) === 'move'

@@ -9,6 +9,7 @@ import type { RefObject, MutableRefObject } from 'react';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { SceneModel } from '../../types/scene';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
@@ -93,6 +94,14 @@ export interface CanvasLayerStackProps {
 
   // === Canvas data ===
   dxfScene: DxfScene | null;
+  /**
+   * Cached SceneModel → DxfScene converter (shares the WeakMap with `dxfScene`).
+   * The DXF canvas render leaf uses it to convert the LIVE scene snapshot it reads
+   * reactively from the SceneStore SSoT (`useLevelScene`), so a committed entity
+   * repaints immediately without a coincidental orchestrator re-render (big-player
+   * invalidate-on-model-change). See ADR-040 §"Live scene → canvas redraw".
+   */
+  convertScene: (scene: SceneModel | null) => DxfScene;
   colorLayers: ColorLayer[];
   // 🚀 PERF (2026-05-09): colorLayersWithDraft computed via
   // `useDraftPolygonLayer` inside CanvasLayerStack — was previously prop-drilled

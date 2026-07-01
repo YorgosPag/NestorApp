@@ -365,6 +365,8 @@
     "newLayer": "New Layer",
     "openManager": "Layer Manager",
     "toastChanged": "Current layer: {name}",
+    "toastFrozen": "Layer \"{name}\" is frozen",
+    "toastLocked": "Layer \"{name}\" is locked",
     "category": {
       "architectural": "Architectural",
       "structural": "Structural",
@@ -1445,6 +1447,9 @@
       "bim": "Structural",
       "layers": "Layers",
       "lineToolQuickStyle": "Quick Style",
+      "lineGeneral": "General",
+      "lineAppearance": "Line Appearance",
+      "lineGeometry": "Geometry",
       "xlineMode": "Mode",
       "bimSchedule": "BIM Schedule",
       "thermalEnvelope": "Thermal Envelope",
@@ -3997,7 +4002,17 @@
         "linetype": "Linetype",
         "color": "Color",
         "linetypeScale": "Scale",
-        "width": "Width"
+        "width": "Width",
+        "layer": "Layer",
+        "transparency": "Transparency",
+        "length": "Length",
+        "angle": "Angle",
+        "startX": "Start X",
+        "startY": "Start Y",
+        "endX": "End X",
+        "endY": "End Y",
+        "deltaX": "Delta X",
+        "deltaY": "Delta Y"
       },
       "thermalEnvelope": {
         "label": "Apply Thermal Envelope",

@@ -53,7 +53,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
   containerRef, dxfCanvasRef, overlayCanvasRef, previewCanvasRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
-  dxfScene, colorLayers, draftPolygon, currentStatus,
+  dxfScene, convertScene, colorLayers, draftPolygon, currentStatus,
   settings, gripState,
   zoomSystem, dxfGripInteraction, universalSelection, setTransform,
   containerHandlers,
@@ -329,6 +329,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             <DxfCanvasSubscriber
               dxfCanvasRef={dxfCanvasRef}
               scene={dxfScene}
+              sceneLevelId={levelManager.currentLevelId}
+              convertScene={convertScene}
               transform={transform}
               viewport={viewport}
               activeTool={activeTool}

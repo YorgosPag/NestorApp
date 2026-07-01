@@ -398,6 +398,15 @@ export class PreviewRenderer {
         drawStatusGhostPolygon(ctx, outline, transform, viewport, statusColor);
         return;
       }
+      // ADR-363 §wall-joint-miter-preview («Επίπεδο 2») — LIVE join: draw the affected
+      // existing walls with their NEW miter FIRST (underneath), so the active ghost paints
+      // on top. Same real renderer as the ghost → WYSIWYG. Attached by `applyJointMiterPreview`.
+      const jointNeighbors = (entity as { jointNeighbors?: readonly unknown[] }).jointNeighbors;
+      if (jointNeighbors && jointNeighbors.length > 0) {
+        for (const neighbor of jointNeighbors) {
+          this.bimPreview.render(neighbor as unknown as Entity, transform, viewport);
+        }
+      }
       // ADR-398 — pass the canonical viewport (= prop viewport = DxfCanvas /
       // container rect) so the BIM ghost measures its y-flip against the SAME
       // viewport as the committed entity, not the PreviewCanvas's own rect.

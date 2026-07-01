@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -53,6 +53,84 @@ export interface UseDxfSceneConversionParams {
 
 export interface UseDxfSceneConversionReturn {
   dxfScene: DxfScene;
+  /**
+   * On-demand cached conversion of ANY `SceneModel` snapshot, reusing the SAME
+   * per-entity WeakMap cache as {@link dxfScene}. Lets a reactive render leaf
+   * (subscribed to the scene SSoT) convert a fresh snapshot IMMEDIATELY at commit
+   * time — without re-rendering this orchestrator — while unchanged entities stay
+   * reference-identical (shared cache → no divergence, no O(N) re-spread).
+   */
+  convertScene: (scene: SceneModel | null) => DxfScene;
+}
+
+// ============================================================================
+// CACHED CONVERSION CORE (SSoT — shared by the memo AND the on-demand converter)
+// ============================================================================
+
+type EntityCache = WeakMap<object, DxfEntityUnion>;
+type ArrayCache = WeakMap<object, DxfEntityUnion[]>;
+
+/**
+ * SceneModel → DxfScene using the caller-owned per-entity WeakMap caches. Extracted
+ * verbatim from the hook memo so the memo and the on-demand `convertScene` share ONE
+ * conversion pipeline + ONE cache (N.0.2 — no copy-paste). Pure: no side effects.
+ */
+function convertSceneToDxfWithCache(
+  scene: SceneModel | null,
+  userDrawingUnits: SceneUnits | undefined,
+  cache: EntityCache,
+  arrayCache: ArrayCache,
+): DxfScene {
+  const entities = scene?.entities ?? [];
+  const layers = scene?.layersById ?? {};
+  // ADR-358 Phase 9E-5: id-keyed primary for buildBase layerInfo lookup.
+  const layersById = scene?.layersById;
+  const converted: DxfEntityUnion[] = [];
+
+  for (const entity of entities) {
+    // ADR-353: ArrayEntity expands 1→N items before conversion.
+    if (isArrayEntity(entity)) {
+      let items = arrayCache.get(entity);
+      if (!items) {
+        const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
+          ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
+          : undefined;
+        const expanded = expandArrayEntity(entity, pathEnt);
+        items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
+          const c = convertEntity(e, layers, layersById);
+          if (c) acc.push(c);
+          return acc;
+        }, []);
+        if (items.length > 0) arrayCache.set(entity, items);
+      }
+      for (const item of items) converted.push(item);
+      continue;
+    }
+
+    let result = cache.get(entity);
+    if (!result) {
+      const c = convertEntity(entity, layers, layersById);
+      if (c) {
+        result = c;
+        cache.set(entity, c);
+      }
+    }
+    if (result) converted.push(result);
+  }
+
+  return {
+    // ADR-458 — beam-to-column cutback post-pass πάνω στο converted array (μετά το
+    // per-entity cache → πάντα fresh όταν κινείται κολόνα). Identity fast-path → μηδέν churn.
+    entities: applyBeamColumnCutback2D(converted),
+    layers: Object.keys(layers),
+    // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
+    layersById: scene?.layersById,
+    bounds: scene?.bounds ?? null,
+    // ADR-368 — user-specified drawing units take priority (set in import wizard).
+    // Falls back to R12 resolveSceneUnits() heuristic for files imported before
+    // ADR-368 or when user left the selection on 'auto'.
+    units: userDrawingUnits ?? resolveSceneUnits(scene),
+  };
 }
 
 // ============================================================================
@@ -124,60 +202,19 @@ export function useDxfSceneConversion({
   // ADR-353: 1:N cache for array entities (one ArrayEntity → multiple DxfEntityUnion items).
   const arrayCacheRef = useRef<WeakMap<object, DxfEntityUnion[]>>(new WeakMap());
 
-  const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () => {
-    const entities = currentScene?.entities ?? [];
-    const layers = currentScene?.layersById ?? {};
-    // ADR-358 Phase 9E-5: id-keyed primary for buildBase layerInfo lookup.
-    const layersById = currentScene?.layersById;
-    const cache = cacheRef.current;
-    const arrayCache = arrayCacheRef.current;
-    const converted: DxfEntityUnion[] = [];
+  const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () =>
+    convertSceneToDxfWithCache(currentScene, userDrawingUnits, cacheRef.current, arrayCacheRef.current),
+  ), [currentScene, userDrawingUnits]);
 
-    for (const entity of entities) {
-      // ADR-353: ArrayEntity expands 1→N items before conversion.
-      if (isArrayEntity(entity)) {
-        let items = arrayCache.get(entity);
-        if (!items) {
-          const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
-            ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
-            : undefined;
-          const expanded = expandArrayEntity(entity, pathEnt);
-          items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
-            const c = convertEntity(e, layers, layersById);
-            if (c) acc.push(c);
-            return acc;
-          }, []);
-          if (items.length > 0) arrayCache.set(entity, items);
-        }
-        for (const item of items) converted.push(item);
-        continue;
-      }
-
-      let result = cache.get(entity);
-      if (!result) {
-        const c = convertEntity(entity, layers, layersById);
-        if (c) {
-          result = c;
-          cache.set(entity, c);
-        }
-      }
-      if (result) converted.push(result);
-    }
-
-    return {
-      // ADR-458 — beam-to-column cutback post-pass πάνω στο converted array (μετά το
-      // per-entity cache → πάντα fresh όταν κινείται κολόνα). Identity fast-path → μηδέν churn.
-      entities: applyBeamColumnCutback2D(converted),
-      layers: Object.keys(layers),
-      // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
-      layersById: currentScene?.layersById,
-      bounds: currentScene?.bounds ?? null,
-      // ADR-368 — user-specified drawing units take priority (set in import wizard).
-      // Falls back to R12 resolveSceneUnits() heuristic for files imported before
-      // ADR-368 or when user left the selection on 'auto'.
-      units: userDrawingUnits ?? resolveSceneUnits(currentScene),
-    };
-  }), [currentScene, userDrawingUnits]);
+  // On-demand cached conversion (SAME WeakMaps as the memo) for reactive render
+  // leaves that subscribe to the scene SSoT and must convert a fresh snapshot at
+  // commit time without re-rendering this orchestrator. Stable across scene edits
+  // (deps: userDrawingUnits only) so the leaf's useMemo key stays effective.
+  const convertScene = useCallback(
+    (scene: SceneModel | null): DxfScene =>
+      convertSceneToDxfWithCache(scene, userDrawingUnits, cacheRef.current, arrayCacheRef.current),
+    [userDrawingUnits],
+  );
 
   // ADR-358 §5.6.bis Phase 10 prerequisite — hydrate LayerStore from the
   // SceneModel snapshot whenever the current scene changes. This bridges the
@@ -206,5 +243,5 @@ export function useDxfSceneConversion({
     immediateSceneScale.set(mmToSceneUnits(dxfScene.units ?? 'mm'));
   }, [dxfScene.units]);
 
-  return { dxfScene };
+  return { dxfScene, convertScene };
 }

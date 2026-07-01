@@ -35,6 +35,8 @@ import type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  CircleGripKind,
+  ArcGripKind,
   LineGripKind,
   TextGripKind,
 } from './grip-kinds';
@@ -68,6 +70,8 @@ export type {
   XLineGripKind,
   RayGripKind,
   PolylineGripKind,
+  CircleGripKind,
+  ArcGripKind,
   LineGripKind,
   TextGripKind,
 } from './grip-kinds';
@@ -252,6 +256,20 @@ export interface GripInfo {
    * curvature). Straight-segment grips keep the standard stretch/move path.
    */
   polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-561 — circle grip discriminator. Present only on the centre grip of a
+   * plain DXF `circle` (`'circle-move'`); opts it into the SHARED move pipeline
+   * (4-arrow glyph + per-arm directional prompt + whole-entity translate). The
+   * circle is symmetric → no rotation kind (parity με κυκλική κολόνα ADR-519).
+   */
+  circleGripKind?: CircleGripKind;
+  /**
+   * ADR-561 — arc grip discriminator. Present on the centre MOVE (`'arc-move'`)
+   * and the rotation handle (`'arc-rotation'`) of a plain DXF `arc`. Move → shared
+   * move pipeline· rotation → shared hot-grip rotate + `RotateEntityCommand`
+   * (pivot = centre), full `line-rotation` parity.
+   */
+  arcGripKind?: ArcGripKind;
   /**
    * ADR-363 Slice F — line rotation grip discriminator. Present only on the
    * rotation handle of a plain DXF `line`; opts the grip into the SHARED hot-grip

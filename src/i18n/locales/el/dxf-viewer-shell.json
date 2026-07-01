@@ -365,6 +365,8 @@
     "newLayer": "Νέο Επίπεδο",
     "openManager": "Διαχείριση Επιπέδων",
     "toastChanged": "Τρέχον επίπεδο: {name}",
+    "toastFrozen": "Το επίπεδο «{name}» είναι παγωμένο",
+    "toastLocked": "Το επίπεδο «{name}» είναι κλειδωμένο",
     "category": {
       "architectural": "Αρχιτεκτονικά",
       "structural": "Στατικά",
@@ -1445,6 +1447,9 @@
       "bim": "Δομικά",
       "layers": "Επίπεδα",
       "lineToolQuickStyle": "Γρήγορο Στυλ",
+      "lineGeneral": "Γενικά",
+      "lineAppearance": "Εμφάνιση Γραμμής",
+      "lineGeometry": "Γεωμετρία",
       "xlineMode": "Λειτουργία",
       "bimSchedule": "Πίνακας BIM",
       "thermalEnvelope": "Θερμοπρόσοψη",
@@ -3997,7 +4002,17 @@
         "linetype": "Τύπος Γραμμής",
         "color": "Χρώμα",
         "linetypeScale": "Βήμα",
-        "width": "Πλάτος"
+        "width": "Πλάτος",
+        "layer": "Επίπεδο",
+        "transparency": "Διαφάνεια",
+        "length": "Μήκος",
+        "angle": "Γωνία",
+        "startX": "Αρχή X",
+        "startY": "Αρχή Y",
+        "endX": "Τέλος X",
+        "endY": "Τέλος Y",
+        "deltaX": "ΔX",
+        "deltaY": "ΔY"
       },
       "thermalEnvelope": {
         "label": "Εφαρμογή Θερμοπρόσοψης",

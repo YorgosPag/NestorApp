@@ -23,6 +23,11 @@ import type { Entity } from '../../types/entities';
 // + live grip style, shared with the hit-test producer (grip-registry) so visible ≡ pickable.
 import { gripStyleStore } from '../../stores/GripStyleStore';
 import { isGripTypeVisible } from '../../hooks/grips/grip-type-visibility';
+// ADR-559 §multi-select — with ≥2 objects selected, hide per-object MOVE + ROTATION
+// glyphs (visible side of the shared predicate SSoT; the pickable side lives in
+// grip-registry). Read the live total selection at frame time (ADR-040 getter).
+import { hidesPerObjectTransformGlyphs, isTransformGlyphShape } from '../../hooks/grips/transform-glyph-visibility';
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-510 Φ2 — canvas linetype dash + glow pre-pass (SRP extraction, ≤500 LOC).
 import { applyEntityLinetypeDash, drawEntityGlowPrePass } from './base-entity-style-helpers';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -36,7 +41,6 @@ import { renderSquareGrip, calculateDistance } from './shared/geometry-rendering
 import {
   type BaseRenderingContext,
   calculateDistanceTextPositionImpl,
-  renderDistanceTextCommonImpl,
   renderInlineDistanceTextImpl,
   renderDistanceTextCentralizedImpl,
   renderDistanceTextPhaseAwareImpl,
@@ -47,7 +51,6 @@ import {
   drawCentralizedArcImpl,
   drawInternalAngleArcImpl,
   renderAngleAtVertexImpl,
-  drawInternalArcOnCanvas,
   applyAngleMeasurementTextStyleToCtx,
   applyDistanceMeasurementTextStyleToCtx,
   applyDistanceTextStyleToCtx,
@@ -212,8 +215,14 @@ export abstract class BaseEntityRenderer {
     // time (ADR-040 getter, no subscription) and filter by type via the SSoT predicate. Endpoint
     // grips ('vertex'/'corner'/'control') always pass; only midpoint/center/quadrant are gated.
     const { showMidpoints, showCenters, showQuadrants } = gripStyleStore.get();
+    // ADR-559 §multi-select — with ≥2 objects selected, hide this entity's whole-object
+    // MOVE + ROTATION glyphs. Total selection read at frame time from the selection SSoT
+    // (ADR-040 getter, no subscription) — robust to the single-entity overlay pass where
+    // DxfRenderer's local _selectionSet is size 1. Corners/midpoints/vertices stay.
+    const hideTransformGlyphs = hidesPerObjectTransformGlyphs(SelectedEntitiesStore.count());
     const visibleGrips = grips.filter((g) =>
-      isGripTypeVisible(g.type, { showMidpoints, showCenters, showQuadrants })
+      isGripTypeVisible(g.type, { showMidpoints, showCenters, showQuadrants }) &&
+      !(hideTransformGlyphs && isTransformGlyphShape(g.shape))
     );
 
     this.phaseManager.renderPhaseGrips(entity as Entity, visibleGrips, phaseState);
@@ -452,11 +461,6 @@ export abstract class BaseEntityRenderer {
     drawInternalAngleArcImpl(this.rc, vertex, point1, point2, radiusWorld);
   }
 
-  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
-  private renderDistanceTextCommon(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D, textPosition: Point2D): void {
-    renderDistanceTextCommonImpl(this.rc, worldStart, worldEnd, screenStart, screenEnd, textPosition);
-  }
-
   /**
    * Common vertex dots rendering - eliminates duplication across renderers
    */
@@ -487,10 +491,5 @@ export abstract class BaseEntityRenderer {
     arcRadius: number = 30, labelOffset: number = 15
   ): void {
     renderAngleAtVertexImpl(this.rc, prevVertex, currentVertex, nextVertex, prevScreen, currentScreen, nextScreen, arcRadius, labelOffset);
-  }
-
-  /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
-  private drawInternalArc(vertex: Point2D, prevUnit: Point2D, nextUnit: Point2D, rPx: number): void {
-    drawInternalArcOnCanvas(this.rc, vertex, prevUnit, nextUnit, rPx);
   }
 }

@@ -111,7 +111,32 @@
 - `bim/grips/axis-box-grips.ts` (`'vertex'|'edge'`) — BIM reshape context, διακριτό.
 - **Name collision** `rendering/grips/types.ts GripType` ↔ `hooks/grip-kinds.ts GripType` (δύο exports ίδιου ονόματος) — de-collision rename = ξεχωριστό pass (ευρύ blast radius· flagged στο `pending-ratchet-work.md`).
 
+## 3α. §multi-select — απόκρυψη MOVE + ROTATION glyph σε πολλαπλή επιλογή (Giorgio 2026-07-01)
+
+**Αίτημα:** Όταν επιλέγεται **μία** οντότητα (π.χ. τοίχος) → φαίνονται οι 8 λαβές (4 άκρα + 4 μέσα) **και** το σημάδι μετακίνησης **και** το σημάδι περιστροφής. Μόλις επιλεγεί **δεύτερη** οντότητα (δεύτερος τοίχος **ή** μια οντότητα DXF, π.χ. γραμμή) → το σημάδι **μετακίνησης** και το σημάδι **περιστροφής** εξαφανίζονται **από όλες** τις επιλεγμένες οντότητες. Οι δομικές λαβές (γωνίες/μέσα/κορυφές) μένουν. AutoCAD/Revit parity: πολλαπλή επιλογή → move/rotate μέσω εντολής, όχι per-entity glyph.
+
+**Διακριτή έννοια από το `gripObjLimit`:** το `gripObjLimit` (§1–3) κρύβει **ΟΛΕΣ** τις λαβές πάνω από ένα **μεγάλο** πλήθος (default 100, performance). Αυτός ο κανόνας κρύβει **ΜΟΝΟ** τα δύο transform glyph (MOVE 4-βελών + ROTATION καμπύλο βέλος) από **≥2** οντότητες — οι δομικές λαβές παραμένουν πλήρως λειτουργικές.
+
+**ΕΝΑΣ κανόνας (SSoT predicate):** νέο pure `hooks/grips/transform-glyph-visibility.ts`:
+- `MULTI_SELECT_HIDE_TRANSFORM_THRESHOLD = 2` + `hidesPerObjectTransformGlyphs(count) = count >= 2`
+- `isTransformGlyphShape(shape) = shape === 'move' || shape === 'rotation'` (πάνω στο `GripShape` του `gripGlyphShape` registry SSoT)
+- `dataGripGlyphShape(grip)` — entity-agnostic coalesce των `*GripKind` πεδίων → `gripGlyphShape` (για το registry, όπου το data-model grip δεν φέρει resolved `shape`)
+- `shouldHideDataGripForSelection(grip, count)` — σύνθεση των παραπάνω.
+
+**Δύο gates (visible ≡ pickable, ίδιο dual-gate invariant με §2):**
+
+| Path | Αρχείο | Μετρητής |
+|---|---|---|
+| **ΟΡΑΤΑ grips** | `rendering/entities/BaseEntityRenderer.ts` → `renderGrips` (`visibleGrips` filter) | `SelectedEntitiesStore.count()` |
+| hit-test / snap | `hooks/grips/grip-registry.ts` → `useGripRegistry` (μέσα στο DXF loop) | `selectedEntityIds.length + selectedOverlays.length` |
+
+**⚠️ Γιατί `SelectedEntitiesStore.count()` και όχι `_selectionSet.size`:** ο ορατός render των επιλεγμένων περνά από `DxfRenderer.renderSingleEntity` **ανά μία** οντότητα → εκεί το τοπικό `_selectionSet.size` είναι **πάντα 1** (δεν βλέπει το συνολικό πλήθος). Άρα το gate διαβάζει το **συνολικό** selection από το SSoT store `SelectedEntitiesStore` (ADR-532) με **frame-time getter** (`count()`, ADR-040 — καμία subscription), όπως ο `BaseEntityRenderer` ήδη διαβάζει το `gripStyleStore.get()`. Robustο και για dxf + overlay επιλογή.
+
+**Εύρος:** 2D DXF viewer (registry + `BaseEntityRenderer`). Οι 3D grip producers (ADR-535/543) είναι εκτός εύρους αυτού του αιτήματος.
+
 ## 4. Έλεγχος
+
+`hooks/grips/__tests__/transform-glyph-visibility.test.ts` — 8 jest (§3α): threshold (0/1 → εμφάνιση, ≥2 → απόκρυψη)· `isTransformGlyphShape` (μόνο move/rotation)· `dataGripGlyphShape` (move/rotation/square από κάθε entity kind)· `shouldHideDataGripForSelection` (μονή=εμφάνιση, πολλαπλή=απόκρυψη move+rotation, δομικές ΠΟΤΕ). ✅ 8/8.
 
 `hooks/grips/__tests__/grip-obj-limit.test.ts` — 7 jest: `<limit`/`===limit` ⇒ εμφάνιση, `>limit` ⇒ απόκρυψη, `0`/non-positive ⇒ ποτέ απόκρυψη, `GRIPOBJLIMIT=1` boundary, empty selection. ✅ 7/7.
 
@@ -134,4 +159,5 @@
 - **2026-06-30 (bugfix, Giorgio browser-verify)** — **Ctrl+A εμφάνιζε όλα τα grips:** ο αρχικός gate ήταν σε λάθος producer (`grip-registry`→hit-test μόνο). Προστέθηκε ο **πραγματικός** gate στο `DxfRenderer.renderEntityUnified` (`gripsVisible`, per-frame `_gripsSuppressedByObjLimit`) — ο visible-grips render path. ADR-040 changelog ενημερωμένο (CHECK 6B/6D). UNCOMMITTED.
 - **2026-06-30 (bugfix #3, Giorgio «οι ρυθμίσεις χερουλιών δεν λειτουργούν»)** — Ο render path αγνοούσε grip-style settings. Στο `GripPhaseRenderer.renderStandardGrips`: (α) **toggle «Εμφάνιση Χερουλιών»** — early-return αν `!style.showGrips || !style.enabled` (πριν: OFF αλλά τα grips φαίνονταν)· (β) **«Διαφάνεια»** — `ctx.globalAlpha = style.opacity` (save/restore) γύρω από το batch (ο `UnifiedGripRenderer` δεν είχε καθόλου alpha — η Διαφάνεια ποτέ δεν δούλευε). «Μέγεθος» ήδη περνούσε (`settings.gripSize`). 33 jest GREEN. UNCOMMITTED.
 - **2026-06-30 (bugfix #4, Giorgio «οι ρυθμίσεις δεν φτάνουν στο store» — root cause)** — §3c: οι gates του #3 ήταν σωστοί αλλά διάβαζαν **stale** store γιατί το panel έγραφε σε λάθος bucket. (α) `GripSettings.tsx` → `useGripSettingsFromProvider()` (general = το bucket που συγχρονίζει ο `GripProvider`, αντί του `useUnifiedGripPreview`→draft)· (β) `grip-style-sync.ts` → `enabled: settings.enabled` (αντί `settings.showGrips`) ώστε το toggle να τιμάται. Big-player practice (grip settings = ΕΝΑ global bucket). Reuse `syncGripStyleStoreFromSettings`/`gripStyleStore`/`GripProvider` — μηδέν νέο sync. +2 jest (7/7 suite). UNCOMMITTED.
+- **2026-07-01 (feature §3α, Giorgio «2 οντότητες → κρύψε move+rotation»)** — Νέος κανόνας: πολλαπλή επιλογή (≥2 αντικείμενα) κρύβει τα per-object MOVE + ROTATION glyph από ΟΛΕΣ τις επιλεγμένες (δομικές λαβές μένουν). ΕΝΑΣ pure predicate SSoT `hooks/grips/transform-glyph-visibility.ts` σε 2 gates (visible = `BaseEntityRenderer.renderGrips` μέσω `SelectedEntitiesStore.count()`· pickable = `grip-registry.ts`). Διακριτό από το `gripObjLimit` (μεγάλο πλήθος → όλες οι λαβές). 8 jest GREEN. Εύρος 2D· 3D εκτός. 🔴 browser-verify+commit εκκρεμεί. UNCOMMITTED.
 - **2026-06-30 (bugfix #5, Giorgio «Midpoints/Centers/Quadrants δεν λειτουργούν»)** — §3d: ο ορατός render path δεν φιλτράρει ανά τύπο + `showQuadrants` dead + quadrants τυποποιημένα ως `'vertex'`. ΕΝΑ SSoT predicate `isGripTypeVisible` (νέο `grip-type-visibility.ts` + 5 jest) που καλούν ΚΑΙ ο `BaseEntityRenderer.renderGrips` (visible) ΚΑΙ το `grip-registry.ts` (hit-test, αντικατέστησε inline dup)· νέος τύπος `'quadrant'` + `createQuadrantGrips`· Circle/Ellipse renderers + `grip-computation` circle → `'quadrant'` (radius edit αμετάβλητο, κλειδώνει σε gripIndex). **§3d-bis (SSoT ΔΙΑΤΑΓΗ):** κεντρικοποίηση ≥6 διπλότυπων grip-kind unions → ΕΝΑ canonical `GripKind` + projections (type-only, zero member change). 149/150 grip/render jest GREEN (1 προϋπάρχον MEP mock fail, άσχετο). UNCOMMITTED.

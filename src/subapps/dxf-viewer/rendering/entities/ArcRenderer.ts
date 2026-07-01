@@ -9,9 +9,12 @@ import type { Point2D } from '../types/Types';
 // 🏢 ADR-099: HoverManager import removed - ArcRenderer has no hover rendering
 import {
   renderDotAtPoint,
-  createArcGripPattern,
   hitTestArcEntity
 } from './shared';
+// ADR-561 — arc grip SSoT (centre MOVE + start/end/mid + rotation handle), shared
+// with the interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
+import { getArcGrips } from '../../systems/arc/arc-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { validateArcEntity } from './shared/entity-validation-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
@@ -118,22 +121,22 @@ export class ArcRenderer extends BaseEntityRenderer {
     // 🏢 ADR-165: Use centralized entity validation directly
     const arcData = validateArcEntity(entity);
     if (!arcData) return [];
-    
+
     const { center, radius, startAngle, endAngle } = arcData;
 
-    // 🏢 ADR-067: Use centralized angle conversion
-    const startRad = degToRad(startAngle);
-    const endRad = degToRad(endAngle);
-    const midRad = (startRad + endRad) / 2;
-    
-    // Calculate grip positions
-    // 🏢 ADR-074: Use centralized pointOnCircle
-    const startPoint = pointOnCircle(center, radius, startRad);
-    const endPoint = pointOnCircle(center, radius, endRad);
-    const midPoint = pointOnCircle(center, radius, midRad);
-    
-    // 🔺 Χρήση κεντρικοποιημένου arc grip pattern - μείωση διπλότυπου κώδικα
-    return createArcGripPattern(entity.id, center, startPoint, endPoint, midPoint);
+    // ADR-561 — render the SAME grips the interaction path emits (`computeDxfEntityGrips`
+    // → `getArcGrips`), mapped to the render `GripInfo` shape (mirror `LineRenderer`). The
+    // centre → 4-arrow MOVE glyph, the rotation handle → curved ROTATION glyph via the
+    // shared `gripGlyphShape` registry; start/end/mid stay 'square'.
+    return getArcGrips(entity.id, center, radius, startAngle, endAngle).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      entityId: g.entityId,
+      type: g.type,
+      gripIndex: g.gripIndex,
+      position: g.position,
+      isVisible: true,
+      shape: gripGlyphShape(g.arcGripKind),
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

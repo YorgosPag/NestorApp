@@ -36,13 +36,29 @@ import {
   subscribeLinetypeRegistry,
   listSelectableLinetypeNames,
 } from '../../../stores/LinetypeRegistry';
+// ADR-510 Φ4 — per-object layer list (AutoCAD «General» → Layer) from the SSoT store.
+import {
+  getLayerStoreSnapshot,
+  subscribeLayerStore,
+} from '../../../stores/LayerStore';
+import { useCurrentLayerChange } from '../../components/layer-picker/useCurrentLayerChange';
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
+import type { Point2D } from '../../../rendering/types/Types';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
 import { isStyleEditablePrimitiveType } from '../../../types/style-editable-primitives';
-// ADR-510 Φ3d — polyline width is model-space (drawing units): convert mm ↔ the
-// live display unit so the ribbon field matches the rest of the readouts (Q15).
+// ADR-510 Φ3d/Φ4 — polyline width + line coordinates are model-space (mm, ADR-462):
+// convert mm ↔ the live display unit so the ribbon fields match the status-bar readouts.
 import { toDisplay, fromDisplay } from '../../../config/units';
 import { displayUnitState } from '../../../config/display-unit-state';
+// ADR-510 Φ4 — pure line geometry read/edit helpers (reuse geometry-vector-utils SSoT).
+import {
+  lineLength,
+  lineAngleDeg,
+  endForLength,
+  endForAngleDeg,
+  endForDelta,
+  withCoord,
+} from '../../../systems/properties/line-geometry-edit';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -50,6 +66,7 @@ import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
 import {
   LINE_TOOL_RIBBON_KEYS,
+  LINE_TOOL_PANEL_VISIBILITY_KEYS,
   isLineToolRibbonKey,
 } from './bridge/line-tool-command-keys';
 import type { useLevels } from '../../../systems/levels';
@@ -73,9 +90,13 @@ export interface UseRibbonLineToolBridgeProps {
 export interface RibbonLineToolBridge {
   readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   readonly onComboboxChange: (commandKey: string, value: string) => void;
+  /** ADR-510 Φ4 — the Geometry panel self-hides unless a `line` is selected. */
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const BYLAYER = 'ByLayer';
+/** AutoCAD object transparency range: 0 (opaque) .. 90 (90% transparent). */
+const TRANSPARENCY_MAX = 90;
 
 /** Live linetype options — ΙΔΙΟΣ SSoT enumerator με το radial-ring (ByLayer + registry, ISO + custom). */
 function buildLinetypeOptions(): readonly RibbonComboboxOption[] {
@@ -153,6 +174,66 @@ function entityColorValue(entity: AnySceneEntity): string {
   return entity.colorAci != null ? String(entity.colorAci) : BYLAYER;
 }
 
+// ─── ADR-510 Φ4 — General (layer/transparency) + Geometry (line) helpers ───────
+
+/** Minimal shape of a scene layer for the ribbon dropdown (SSoT: LayerStore). */
+interface LayerLike {
+  readonly id?: string;
+  readonly name: string;
+}
+
+/** Layer combobox options (value = id ?? name, label = name) from the live store. */
+function buildLayerOptions(layers: ReadonlyArray<LayerLike>): readonly RibbonComboboxOption[] {
+  return layers.map((l) => ({
+    value: l.id ?? l.name, labelKey: l.name, isLiteralLabel: true,
+  }));
+}
+
+/** Combobox display value for an entity's per-object layer. */
+function entityLayerValue(entity: AnySceneEntity): string {
+  return entity.layerId ?? '';
+}
+
+/** Combobox display value for an entity's transparency (0 = opaque). */
+function entityTransparencyValue(entity: AnySceneEntity): string {
+  const raw = (entity as { transparency?: number }).transparency;
+  return String(typeof raw === 'number' ? raw : 0);
+}
+
+/** Clamp typed transparency to the AutoCAD 0..90 integer range. */
+function clampTransparency(n: number): number {
+  return Math.max(0, Math.min(TRANSPARENCY_MAX, Math.round(n)));
+}
+
+/** Narrow a selected entity to a line with valid endpoints (Geometry gate). */
+function asLine(entity: AnySceneEntity | null): { start: Point2D; end: Point2D } | null {
+  if (!entity || entity.type !== 'line') return null;
+  const l = entity as unknown as { start?: Point2D; end?: Point2D };
+  if (!l.start || !l.end) return null;
+  return { start: l.start, end: l.end };
+}
+
+/** mm → active display unit, as a combobox string. */
+function toDisp(mm: number): string {
+  return String(toDisplay(mm, displayUnitState.getUnit()).value);
+}
+
+/** Display-unit string → mm (inverse of {@link toDisp}). NaN on invalid input. */
+function fromDisp(value: string): number {
+  return fromDisplay(parseFloat(value), displayUnitState.getUnit());
+}
+
+/** The 8 AutoCAD «Geometry» command keys (line start/end/length/angle/delta). */
+const LINE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
+  LINE_TOOL_RIBBON_KEYS.length, LINE_TOOL_RIBBON_KEYS.angle,
+  LINE_TOOL_RIBBON_KEYS.startX, LINE_TOOL_RIBBON_KEYS.startY,
+  LINE_TOOL_RIBBON_KEYS.endX, LINE_TOOL_RIBBON_KEYS.endY,
+  LINE_TOOL_RIBBON_KEYS.deltaX, LINE_TOOL_RIBBON_KEYS.deltaY,
+]);
+function isLineGeometryKey(key: string): boolean {
+  return LINE_GEOMETRY_KEYS.has(key);
+}
+
 export function useRibbonLineToolBridge(
   props: UseRibbonLineToolBridgeProps,
 ): RibbonLineToolBridge {
@@ -166,10 +247,22 @@ export function useRibbonLineToolBridge(
   const registry = useSyncExternalStore(
     subscribeLinetypeRegistry, getLinetypeRegistrySnapshot, getLinetypeRegistrySnapshot,
   );
+  // ADR-510 Φ4 — live layer catalog for the «Επίπεδο» dropdown (low-frequency).
+  const layerSnapshot = useSyncExternalStore(
+    subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot,
+  );
+  // ADR-358/510 Φ4 — the «Επίπεδο» default (no-selection) change routes through
+  // the shared current-layer SSoT action (permission gate + toast + recent FIFO),
+  // the SAME path as the CurrentLayerPicker popover (Revit-grade parity).
+  const { changeCurrentLayer } = useCurrentLayerChange();
 
   const linetypeOptions = useMemo(
     () => buildLinetypeOptions(),
     [registry],
+  );
+  const layerOptions = useMemo(
+    () => buildLayerOptions(layerSnapshot.layers),
+    [layerSnapshot],
   );
 
   /** The selected style-editable primitive, or null (→ draw-defaults mode). */
@@ -223,6 +316,30 @@ export function useRibbonLineToolBridge(
           : '0';
         return { value, options: [] };
       }
+      // ADR-510 Φ4 — per-object layer (selected) / current drawing layer (defaults).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.layer) {
+        const value = selected ? entityLayerValue(selected) : (layerSnapshot.currentLayerId ?? '');
+        return { value, options: layerOptions };
+      }
+      // ADR-510 Φ4 — object transparency (0..90). Draw-defaults show opaque.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.transparency) {
+        return { value: selected ? entityTransparencyValue(selected) : '0', options: [] };
+      }
+      // ADR-510 Φ4 — Geometry (selected line only; panel hidden otherwise). Length /
+      // start / end / delta are display-unit; angle is degrees (unit-independent).
+      if (isLineGeometryKey(commandKey)) {
+        const line = asLine(selected);
+        if (!line) return { value: '', options: [] };
+        const { start, end } = line;
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.length) return { value: toDisp(lineLength(start, end)), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.angle)  return { value: String(Math.round(lineAngleDeg(start, end) * 100) / 100), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.startX) return { value: toDisp(start.x), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.startY) return { value: toDisp(start.y), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.endX)   return { value: toDisp(end.x), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.endY)   return { value: toDisp(end.y), options: [] };
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.deltaX) return { value: toDisp(end.x - start.x), options: [] };
+        return { value: toDisp(end.y - start.y), options: [] }; // deltaY
+      }
       // color
       if (selected) return { value: entityColorValue(selected), options: [] };
       const colorValue = snapshot.colorMode === BYLAYER
@@ -230,7 +347,7 @@ export function useRibbonLineToolBridge(
         : snapshot.colorAci !== null ? String(snapshot.colorAci) : BYLAYER;
       return { value: colorValue, options: [] };
     },
-    [resolveSelected, snapshot, linetypeOptions],
+    [resolveSelected, snapshot, linetypeOptions, layerOptions, layerSnapshot],
   );
 
   const onComboboxChange = useCallback(
@@ -274,6 +391,57 @@ export function useRibbonLineToolBridge(
         if (patch) patchEntity(selected, patch);
         return;
       }
+      // ADR-510 Φ4 — layer. Selected → per-object layerId; defaults → current layer.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.layer) {
+        if (!value) return;
+        if (selected) patchEntity(selected, { layerId: value });
+        else changeCurrentLayer(value);
+        return;
+      }
+      // ADR-510 Φ4 — transparency (0..90). Selected entity only (no draw-default yet).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.transparency) {
+        const n = parseFloat(value);
+        if (!Number.isFinite(n) || !selected) return;
+        patchEntity(selected, { transparency: clampTransparency(n) });
+        return;
+      }
+      // ADR-510 Φ4 — Geometry (selected line only). Recompute an endpoint, patch it.
+      if (isLineGeometryKey(commandKey)) {
+        const line = asLine(selected);
+        if (!line || !selected) return;
+        const { start, end } = line;
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.angle) {
+          const nextEnd = endForAngleDeg(start, end, parseFloat(value));
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+          return;
+        }
+        // The remaining Geometry fields are display-unit lengths → mm.
+        const mm = fromDisp(value);
+        if (!Number.isFinite(mm)) return;
+        if (commandKey === LINE_TOOL_RIBBON_KEYS.length) {
+          const nextEnd = endForLength(start, end, mm);
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.startX) {
+          const nextStart = withCoord(start, 'x', mm);
+          if (nextStart) patchEntity(selected, { start: nextStart });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.startY) {
+          const nextStart = withCoord(start, 'y', mm);
+          if (nextStart) patchEntity(selected, { start: nextStart });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.endX) {
+          const nextEnd = withCoord(end, 'x', mm);
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.endY) {
+          const nextEnd = withCoord(end, 'y', mm);
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.deltaX) {
+          const nextEnd = endForDelta(start, end, 'x', mm);
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+        } else if (commandKey === LINE_TOOL_RIBBON_KEYS.deltaY) {
+          const nextEnd = endForDelta(start, end, 'y', mm);
+          if (nextEnd) patchEntity(selected, { end: nextEnd });
+        }
+        return;
+      }
       // color
       if (value === BYLAYER) {
         if (selected) {
@@ -297,11 +465,22 @@ export function useRibbonLineToolBridge(
         setQuickStyleColor('Concrete', Number.isNaN(aci) ? null : aci, null);
       }
     },
-    [resolveSelected, patchEntity],
+    [resolveSelected, patchEntity, changeCurrentLayer],
+  );
+
+  // ADR-510 Φ4 — the Geometry panel is line-only; other primitives hide it.
+  const getPanelVisibility = useCallback(
+    (visibilityKey: string): boolean => {
+      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry) {
+        return asLine(resolveSelected()) !== null;
+      }
+      return true;
+    },
+    [resolveSelected],
   );
 
   return useMemo(
-    () => ({ getComboboxState, onComboboxChange }),
-    [getComboboxState, onComboboxChange],
+    () => ({ getComboboxState, onComboboxChange, getPanelVisibility }),
+    [getComboboxState, onComboboxChange, getPanelVisibility],
   );
 }

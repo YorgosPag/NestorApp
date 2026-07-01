@@ -69,9 +69,11 @@ export function calculateDistanceTextPositionImpl(
 }
 
 /**
- * Common distance text rendering with rotation and styling
+ * Common distance text rendering with rotation and styling.
+ * Module-internal (consumers are the sibling `renderInlineDistanceTextImpl` /
+ * `renderDistanceTextCentralizedImpl` in this file — no external importer).
  */
-export function renderDistanceTextCommonImpl(
+function renderDistanceTextCommonImpl(
   rc: BaseRenderingContext,
   worldStart: Point2D,
   worldEnd: Point2D,
@@ -309,8 +311,10 @@ export function renderAngleAtVertexImpl(
  * 🔺 Draw the SMALLER arc (internal angle) between two unit vectors
  * Always draws the shortest path (< 180°)
  * 🎯 FIX (2026-02-13): Correct quadrant selection with dot product
+ * Module-internal (consumers are `drawInternalAngleArcImpl` /
+ * `renderAngleAtVertexImpl` in this file — no external importer).
  */
-export function drawInternalArcOnCanvas(
+function drawInternalArcOnCanvas(
   rc: BaseRenderingContext,
   vertex: Point2D,
   prevUnit: Point2D,

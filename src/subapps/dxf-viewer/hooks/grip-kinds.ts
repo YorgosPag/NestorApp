@@ -437,45 +437,16 @@ export type FoundationGripKind =
   | 'foundation-corner-end-pos'
   | 'foundation-corner-end-neg';
 
-/**
- * ADR-510 Φ3c — Polyline multifunctional grip kind (plain DXF polyline, NOT a
- * BIM params entity). Tags each grip emitted by `computeDxfEntityGrips` (case
- * 'polyline') so the context menu (`buildPolylineOpsSection`) and the commit
- * pipeline (`commitPolylineBulgeGripDrag`) can branch by grip role:
- *   - `polyline-vertex-N`           → outline vertex N. Menu: Add / Remove /
- *                                     Convert-to-Arc (outgoing segment N).
- *   - `polyline-segment-midpoint-N` → midpoint of STRAIGHT segment N (chord
- *                                     midpoint). Menu: Add / Convert-to-Arc.
- *   - `polyline-arc-midpoint-N`     → apex of ARC segment N (`bulgeApexPoint`).
- *                                     Menu: Convert-to-Line. Drag = live bulge
- *                                     curvature (`bulgeFromApexPoint`).
- * Segment index N = AutoCAD outgoing-segment semantics (`bulges[N]` spans
- * `vertices[N] → vertices[N+1]`, closed: `bulges[n-1]` spans n-1 → 0).
- */
-export type PolylineGripKind =
-  | `polyline-vertex-${number}`
-  | `polyline-segment-midpoint-${number}`
-  | `polyline-arc-midpoint-${number}`;
-
-/**
- * ADR-363 Slice F/G.5 — Line grip kinds (plain DXF `line` primitive, NOT a BIM
- * params entity). Tag the parametric handles emitted by `computeDxfEntityGrips`
- * (case 'line') so they opt into the SHARED hot-grip flows (glyph + directional /
- * rotate) — full parity with `wall-rotation` / `wall-midpoint`. The line's endpoint
- * (0/1) + plain midpoint-MOVE (2) grips stay untagged (standard stretch / whole-move
- * path); only the rotation + ¼-west move handles carry a kind.
- *
- *   - `line-rotation` (Slice F) → rotate the whole line about its midpoint (or a
- *     picked centre). Commit routes through `commitLineGripDrag()` + the canonical
- *     `RotateEntityCommand` (NOT a bespoke transform); preview rotates start/end
- *     via the shared `rotateAxisPointsAboutPivot` SSoT (mirror `rotateWall`).
- *   - `line-move` (Slice G.5) → the 4-arrow MOVE cross at ¼ axis length WEST of the
- *     centre (mirror of the ¼-east rotation handle). Reuses the ENTIRE wall move
- *     pipeline: `'move'` glyph (registry) + 3-click hot-grip move + per-arm
- *     directional click→distance prompt (ADR-397 Φ2) + whole-entity translate
- *     (`movesEntity`). NO new mechanism — only the kind + ¼-west position are added.
- */
-export type LineGripKind = 'line-rotation' | 'line-move';
+// ADR-510/561/363 — plain-DXF-primitive grip kinds (polyline / circle / arc /
+// line) live in the sibling module `grip-kinds-primitives.ts` (SRP / N.7.1) and
+// are re-exported here for backward compatibility (existing
+// `import { LineGripKind } from '../grip-kinds'`).
+export type {
+  PolylineGripKind,
+  CircleGripKind,
+  ArcGripKind,
+  LineGripKind,
+} from './grip-kinds-primitives';
 
 // ADR-557 — Text / MText grip kinds live in the sibling module
 // `grip-kinds-text.ts` (SRP / N.7.1) and are re-exported here for backward

@@ -118,6 +118,8 @@ import {
   commitPolylineBulgeGripDrag,
   commitTextGripDrag,
   commitLineGripDrag,
+  commitArcGripDrag,
+  commitPolylineRotationGripDrag,
 } from './grip-parametric-commits';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
@@ -394,6 +396,22 @@ export function commitDxfGripDragModeAware(
   // ADR-359 Phase 11 — Ray grip path (basePoint translate or direction rotate).
   if (grip.rayGripKind) {
     commitRayGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-561 — arc ROTATION handle → rotate the arc about its centre via the
+  // canonical `RotateEntityCommand`. The `'arc-move'` centre carries an
+  // `arcGripKind` too but is a whole-entity TRANSLATE — it must fall through to the
+  // move/stretch path below (mirror the line's `'line-move'` gate), so gate to
+  // `'arc-rotation'` ONLY.
+  if (grip.arcGripKind === 'arc-rotation') {
+    commitArcGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-561 — polyline ROTATION handle → rotate all vertices (a scene rectangle
+  // explodes to a polyline first). Gate to `'polyline-rotation'` ONLY — the
+  // `'polyline-move'` cross + the vertex / segment / arc-apex grips fall through.
+  if (grip.polylineGripKind === 'polyline-rotation') {
+    commitPolylineRotationGripDrag(grip, delta, deps);
     return;
   }
   // ADR-510 Φ3c — polyline ARC-MIDPOINT grip → live bulge curvature drag (the

@@ -1,10 +1,16 @@
 /**
- * BODY-DRAG TARGET RESOLVER — ADR (Entity Body-Drag: move / Ctrl-copy)
+ * BODY-DRAG TARGET RESOLVER — ADR-560 (Entity Body-Drag: move / Ctrl-copy)
  *
  * Pure decision for "which entities travel when the user presses the mouse over
- * an entity body in select mode". AutoCAD/Figma semantics:
+ * an entity body in select mode". AutoCAD semantics (SELECT-FIRST):
  *   - press over a SELECTED entity → drag the WHOLE current selection
- *   - press over an UNSELECTED entity → adopt just that entity (Figma-style)
+ *   - press over an UNSELECTED entity → null: DO NOT arm a drag. The press must
+ *     fall through to the normal click-select pipeline so the entity gets
+ *     selected AND its grips are shown (a first click selects; a second press on
+ *     the now-selected body drags). Arming on an unselected body — the old
+ *     Figma-style behaviour — hijacked EVERY entity mousedown and returned before
+ *     the lasso-down/click-select was recorded, so entities selected "silently"
+ *     with no grips (regression: global select/grip break, all DXF + BIM).
  *   - press over empty space → null (caller falls through to lasso/select)
  *
  * Kept pure (no store imports) so the mousedown gate is unit-testable.
@@ -26,10 +32,12 @@ export function resolveBodyDragTarget(input: BodyDragTargetInput): string[] | nu
   const { hoveredEntityId, isSelected, selectedIds } = input;
   if (!hoveredEntityId) return null;
 
-  if (isSelected(hoveredEntityId)) {
-    // Grab the whole selection (the hovered entity is part of it).
-    return selectedIds.length > 0 ? [...selectedIds] : [hoveredEntityId];
-  }
-  // Hovered but not selected → adopt just this entity.
-  return [hoveredEntityId];
+  // SELECT-FIRST (AutoCAD): only an ALREADY-selected body starts a drag. An
+  // unselected hovered entity returns null so the press falls through to normal
+  // click-select (selects it + shows grips). This prevents the mousedown gate from
+  // swallowing every first click.
+  if (!isSelected(hoveredEntityId)) return null;
+
+  // Grab the whole selection (the hovered entity is part of it).
+  return selectedIds.length > 0 ? [...selectedIds] : [hoveredEntityId];
 }

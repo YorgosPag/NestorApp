@@ -10,7 +10,7 @@
  */
 
 import type { Point2D, GripKind } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, LineGripKind, TextGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, TextGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -310,6 +310,18 @@ export interface UnifiedGripInfo {
    * standard `StretchEntityCommand` vertex path.
    */
   readonly polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-561 — circle grip discriminator (forwarded from `GripInfo.circleGripKind`
+   * in `grip-registry.wrapDxfGrip`). Only `'circle-move'` — opts the centre into
+   * the shared MOVE pipeline (4-arrow glyph + directional prompt + translate).
+   */
+  readonly circleGripKind?: CircleGripKind;
+  /**
+   * ADR-561 — arc grip discriminator (forwarded from `GripInfo.arcGripKind`).
+   * `'arc-move'` → shared MOVE pipeline· `'arc-rotation'` → shared hot-grip rotate
+   * + `commitArcGripDrag()` (RotateEntityCommand about the centre).
+   */
+  readonly arcGripKind?: ArcGripKind;
   /**
    * ADR-363 Slice F — line rotation grip discriminator (forwarded from
    * `GripInfo.lineGripKind` in `grip-registry.wrapDxfGrip`). Opts the plain DXF

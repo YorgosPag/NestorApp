@@ -912,5 +912,65 @@ describe('computeWallTrims — Phase 1N free-end L-corner (screenshot 025329)', 
     expect(trims.get(stem.id)?.endBevel).toBeCloseTo(100, 0);
     expect(trims.get(through.id)?.endMiter).toBeUndefined();
   });
+
+  it('N4. real DB geometry (screenshot 115754b): oblique 65° free ends CROSS at J → miter, not bevel', () => {
+    // Vertical + a second hand-drawn diagonal. Endpoints ~113mm apart; ⊥ ≈ 0.58·half
+    // on both sides (which the old ⊥-band wrongly read as a column-gap face-butt →
+    // squared off). Signed-depth: vert OVERSHOOTS J by ~67, diag SHORT by ~67 → they
+    // CROSS → free-end L → miter.
+    const vert = makeWall({ x: 1812.9157, y: 2442.9837 }, { x: 1812.9157, y: 4242.9837 }, 210, 'V');
+    const diag = makeWall({ x: 1873.5408, y: 4147.8213 }, { x: 3278.3179, y: 3492.7630 }, 210, 'D');
+    const trims = computeWallTrims([vert, diag]);
+
+    expect(trims.get(vert.id)?.endMiter).toBeDefined();
+    expect(trims.get(diag.id)?.startMiter).toBeDefined();
+    expect(trims.get(vert.id)?.endBevel).toBeUndefined();
+    expect(trims.get(diag.id)?.startBevel).toBeUndefined();
+  });
+});
+
+// ─── ADR-363 Phase 1O — location-line join (mitred axis endpoints meet at J) ───
+
+describe('Phase 1O — mitred centreline meets the neighbour at J', () => {
+  it('O1. endMiter snaps the axis endpoint to midpoint(outer,inner), not the drawn end', () => {
+    // Asymmetric miter whose midpoint (3000,100) differs from the drawn end (3000,0).
+    const params: WallParams = {
+      ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }),
+      thickness: 200,
+      dna: undefined,
+      endMiter: { outer: { x: 3100, y: 200 }, inner: { x: 2900, y: 0 } },
+    };
+    const geo = computeWallGeometry(params, 'straight');
+    const axis = geo.axisPolyline.points;
+    const end = axis[axis.length - 1];
+
+    expect(end.x).toBeCloseTo(3000, 1);
+    expect(end.y).toBeCloseTo(100, 1);       // = midpoint of the miter, NOT drawn (3000,0)
+    expect(axis[0].x).toBeCloseTo(0, 1);     // start untouched (no startMiter)
+    expect(axis[0].y).toBeCloseTo(0, 1);
+  });
+
+  it('O2. end-to-end (real DB geometry, screenshot 115754): two free-end mitred axes CLOSE at one J', () => {
+    // Vertical + diagonal, endpoints 89mm apart → Phase 1N mitres, Phase 1O snaps
+    // BOTH axis endpoints to the shared junction J so the dashed centrelines meet.
+    const vert = makeWall({ x: 1812.9157, y: 2442.9837 }, { x: 1812.9157, y: 4242.9837 }, 210, 'V');
+    const diag = makeWall({ x: 1850.4230, y: 4162.5490 }, { x: 2922.8852, y: 3262.6463 }, 210, 'D');
+
+    const trims = computeWallTrims([vert, diag]);
+    expect(trims.get(vert.id)?.endMiter).toBeDefined(); // sanity: it mitred (not squared)
+
+    const patched = applyTrimPatches([vert, diag], trims) as WallEntity[];
+    const vGeo = patched.find((w) => w.id === vert.id)!.geometry;
+    const dGeo = patched.find((w) => w.id === diag.id)!.geometry;
+    const vEnd = vGeo.axisPolyline.points[vGeo.axisPolyline.points.length - 1];
+    const dStart = dGeo.axisPolyline.points[0];
+
+    // The two centreline endpoints now coincide (were 89mm apart before Phase 1O).
+    expect(vEnd.x).toBeCloseTo(dStart.x, 1);
+    expect(vEnd.y).toBeCloseTo(dStart.y, 1);
+    // …at the axis intersection J ≈ (1812.92, 4194.03).
+    expect(vEnd.x).toBeCloseTo(1812.9157, 1);
+    expect(vEnd.y).toBeCloseTo(4194.03, 1);
+  });
 });
 

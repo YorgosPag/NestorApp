@@ -93,6 +93,14 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // entity (wall parity); endpoints + centre midpoint stay default 'square'.
   'line-rotation': 'rotation',
   'line-move': 'move',
+  // Plain DXF primitives (ADR-561) — whole-entity move cross + rotation handle,
+  // ίδιο glyph vocabulary με τον τοίχο / line. Circle = ΜΟΝΟ move (συμμετρικός,
+  // parity κυκλικής κολόνας ADR-519)· arc + polyline (incl. rectangle) = και τα δύο.
+  'circle-move': 'move',
+  'arc-move': 'move',
+  'arc-rotation': 'rotation',
+  'polyline-move': 'move',
+  'polyline-rotation': 'rotation',
 } as const;
 
 /**

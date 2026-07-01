@@ -33,12 +33,12 @@ import {
 } from 'react';
 import {
   getLayerStoreSnapshot,
-  pushRecentLayer,
   setCurrentLayerId,
   setRecentLayerIds,
   subscribeLayerStore,
   upsertLayer,
 } from '../../../stores/LayerStore';
+import { useCurrentLayerChange } from './useCurrentLayerChange';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { useLevels } from '../../../systems/levels/useLevels';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
@@ -146,9 +146,12 @@ export function useCurrentLayerPickerState(): {
     return level?.projectId ?? null;
   }, [currentLevelId, levels.levels]);
 
-  const { success: notifySuccess, warning: notifyWarning } = useNotifications();
+  const { warning: notifyWarning } = useNotifications();
   const { t } = useTranslation('dxf-viewer-shell');
   const { canUnlockLayer } = useCanEditText();
+  // Shared SSoT for the user-initiated current-layer change (permission gate +
+  // toast + recent FIFO). Popover `selectLayer` wraps it with pulse + close.
+  const { changeCurrentLayer } = useCurrentLayerChange();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -325,32 +328,19 @@ export function useCurrentLayerPickerState(): {
   }, [groupedByCategory, normalizedQuery, matchesQuery]);
 
   // ── Actions ──
+  // Popover selection delegates to the shared `useCurrentLayerChange` SSoT
+  // (permission gate + toast + recent FIFO — ADR-358 / Revit parity) and only
+  // adds the picker-local UI: swatch pulse + popover close.
   const selectLayer = useCallback(
     (layerId: string) => {
-      const target = layerById.get(layerId);
-      if (!target) return;
-      if (target.frozen === true) {
-        notifyWarning(t('layerPicker.toastFrozen', { name: target.name }));
-        setIsOpen(false);
-        return;
-      }
-      if (target.locked && !canUnlockLayer) {
-        notifyWarning(t('layerPicker.toastLocked', { name: target.name }));
-        setIsOpen(false);
-        return;
-      }
-      if (snapshot.currentLayerId === layerId) {
-        pushRecentLayer(layerId);
+      const result = changeCurrentLayer(layerId);
+      if (result === 'not-found') return; // keep popover open on a stale row
+      if (result === 'changed' || result === 'reselected') {
         setPulseToken((n) => n + 1);
-        setIsOpen(false);
-        return;
       }
-      setCurrentLayerId(layerId);
-      setPulseToken((n) => n + 1);
-      notifySuccess(t('layerPicker.toastChanged', { name: target.name }));
       setIsOpen(false);
     },
-    [layerById, snapshot.currentLayerId, canUnlockLayer, notifySuccess, notifyWarning, t],
+    [changeCurrentLayer],
   );
 
   const toggleVisibility = useCallback(

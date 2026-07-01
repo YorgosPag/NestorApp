@@ -41,6 +41,14 @@ export interface MoveGlyphFrame {
   readonly axisY: Point2D;
 }
 
+/**
+ * ADR-561 — the WORLD-aligned frame (local +X = world +X, +Y = world +Y). Used by
+ * the plain DXF primitives (circle / arc / polyline / rectangle) whose MOVE cross
+ * has no intrinsic single axis: the 4 arms point world E/N/W/S and the per-arm
+ * directional move-by-value runs along the world axes.
+ */
+const IDENTITY_FRAME: MoveGlyphFrame = { axisX: { x: 1, y: 0 }, axisY: { x: 0, y: 1 } };
+
 /** Frame from a world-CCW angle (radians): axisX = (cos,sin), axisY = ⟂ left-hand. */
 function fromAngleRad(rad: number): MoveGlyphFrame {
   const c = Math.cos(rad);
@@ -93,6 +101,21 @@ export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
   const line = entity as { type?: string; start?: Point2D; end?: Point2D };
   if (line.type === 'line' && line.start && line.end) {
     return fromAxis(line.end.x - line.start.x, line.end.y - line.start.y);
+  }
+
+  // ADR-561 — plain DXF primitives (circle / arc / polyline; rectangle/rect/lwpolyline
+  // normalise to 'polyline' in the DXF pipeline but the scene entity keeps its own
+  // type, so accept them too). They are symmetric or have no single axis → the MOVE
+  // cross stays WORLD-aligned. A NON-NULL frame is REQUIRED so `grip-registry`
+  // attaches `moveGlyphFrame` + `moveGlyphMmScale` and the per-arm directional
+  // click→distance prompt runs (a null frame draws the glyph but leaves the arms
+  // inert — the exact bug the line hit before Slice G.5).
+  const primType = (entity as { type?: string }).type;
+  if (
+    primType === 'circle' || primType === 'arc' || primType === 'polyline' ||
+    primType === 'rectangle' || primType === 'rect' || primType === 'lwpolyline'
+  ) {
+    return IDENTITY_FRAME;
   }
   return null;
 }

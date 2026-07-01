@@ -92,7 +92,17 @@ export function computeWallGeometry(
 
   const rawVertices = pickAxisVertices(params, kind);
   const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0, s);
-  const axisPolyline: Polyline3D = { points: vertices, closed: false };
+
+  // ADR-363 Phase 1O — location-line join: when a corner mitres, the drawn
+  // CENTRELINE endpoint must meet the neighbour at the axis intersection J, else
+  // free-end corners (endpoints not coincident, Phase 1N) leave a visible gap
+  // between the two dashed axes. J is exactly the MIDPOINT of the miter outer/inner
+  // points: both are offset ±half from the axis so their mean lies ON this wall's
+  // axis, and being on BOTH walls' edge lines it is the axes' crossing → J. Applied
+  // to the axis polyline only; the body edges keep their exact miter points, and
+  // length/bbox stay on the nominal `vertices` (no BOQ ripple).
+  const axisVertices = applyMiterAxisJoin(vertices, params.startMiter, params.endMiter);
+  const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
 
   const halfThicknessCanvas = (params.thickness / 2) * s;
   const sign = params.flip ? -1 : 1;
@@ -273,6 +283,34 @@ function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[
  * region-fill stems kept overshooting to the neighbour centreline. ADR-363 Phase 1L.
  * Phase 1D-B: applied after vertex selection so all kinds benefit.
  */
+/** ADR-363 Phase 1O — a corner miter's axis-join point J = midpoint(outer, inner). */
+type WallMiterPoints = { readonly outer: { readonly x: number; readonly y: number }; readonly inner: { readonly x: number; readonly y: number } };
+
+function miterAxisPoint(m: WallMiterPoints, z: number): Point3D {
+  return { x: (m.outer.x + m.inner.x) / 2, y: (m.outer.y + m.inner.y) / 2, z };
+}
+
+/**
+ * ADR-363 Phase 1O — return a copy of the axis vertices whose FIRST/LAST point is
+ * snapped to the miter axis-join J (`miterAxisPoint`) when a start/end miter is
+ * present, so mitred free-end corners close their dashed centrelines. Non-mitred
+ * ends are untouched (returns the same array reference when there is nothing to do).
+ */
+function applyMiterAxisJoin(
+  pts: readonly Point3D[],
+  startMiter: WallMiterPoints | undefined,
+  endMiter: WallMiterPoints | undefined,
+): readonly Point3D[] {
+  if (pts.length < 1 || (!startMiter && !endMiter)) return pts;
+  const result = [...pts];
+  if (startMiter) result[0] = miterAxisPoint(startMiter, result[0].z);
+  if (endMiter) {
+    const last = result.length - 1;
+    result[last] = miterAxisPoint(endMiter, result[last].z);
+  }
+  return result;
+}
+
 function applyAxisBevels(
   pts: readonly Point3D[],
   startBevelMm: number,

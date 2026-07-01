@@ -172,7 +172,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
   // === DXF scene ===
-  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null, userDrawingUnits: Object.values(levelManager.floorplans).find(f => f.levelId === levelManager.currentLevelId)?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits });
+  const { dxfScene, convertScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null, userDrawingUnits: Object.values(levelManager.floorplans).find(f => f.levelId === levelManager.currentLevelId)?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits });
   const dxfSceneRef = useRef(dxfScene);
   dxfSceneRef.current = dxfScene;
   // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
@@ -447,6 +447,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         containerRef={containerRef} dxfCanvasRef={dxfCanvasRef} overlayCanvasRef={overlayCanvasRef}
         previewCanvasRef={previewCanvasRef} drawingHandlersRef={drawingHandlersRef}
         entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef} dxfScene={dxfScene}
+        convertScene={convertScene}
         colorLayers={colorLayers}
         draftPolygon={draftPolygon} currentStatus={currentStatus}
         settings={{ crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings }}

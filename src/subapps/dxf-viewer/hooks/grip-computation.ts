@@ -66,6 +66,11 @@ import { getRayGrips } from '../systems/ray/ray-grips';
 // ADR-363 Slice F/G.4 — plain DXF line grips SSoT (start/end/midpoint + rotation handle).
 // Shared with `LineRenderer.getGrips` so interaction + 2D painting never diverge.
 import { getLineGrips } from '../systems/line/line-grips';
+// ADR-561 — plain DXF primitive move/rotate grips SSoT (circle/arc/polyline).
+// Shared with the matching `*Renderer.getGrips` so interaction ≡ 2D painting.
+import { getCircleGrips } from '../systems/circle/circle-grips';
+import { getArcGrips } from '../systems/arc/arc-grips';
+import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../systems/polyline/polyline-grips';
 
 // ============================================================================
 // TYPES — extracted to grip-computation-types.ts (re-exported for compat)
@@ -98,24 +103,11 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'circle': {
-      grips.push({
-        entityId: entity.id, gripIndex: 0, type: 'center',
-        position: entity.center, movesEntity: true,
-      });
-      const quadrants: Point2D[] = [
-        { x: entity.center.x + entity.radius, y: entity.center.y },
-        { x: entity.center.x, y: entity.center.y + entity.radius },
-        { x: entity.center.x - entity.radius, y: entity.center.y },
-        { x: entity.center.x, y: entity.center.y - entity.radius },
-      ];
-      quadrants.forEach((pos, i) => {
-        grips.push({
-          // ADR-559 — quadrant grips (gripIndex 1-4 still drives radius edit) typed `'quadrant'`
-          // so the «Εμφάνιση Quadrants» toggle gates them in hit-test too (visible ≡ pickable).
-          entityId: entity.id, gripIndex: i + 1, type: 'quadrant',
-          position: pos, movesEntity: false,
-        });
-      });
+      // ADR-561 — centre MOVE cross (`'circle-move'` → 4-arrow glyph + directional
+      // move-by-value) + 4 quadrant radius handles, via the SHARED `getCircleGrips`
+      // SSoT (the SAME `CircleRenderer.getGrips` paints on canvas → interaction ≡
+      // render). The circle is symmetric → NO rotation handle (parity ADR-519).
+      grips.push(...getCircleGrips(entity.id, entity.center, entity.radius));
       break;
     }
 
@@ -150,42 +142,22 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
             : `polyline-segment-midpoint-${i}`,
         });
       }
+      // ADR-561 — whole-polyline MOVE cross + rotation handle (rect-box parity for a
+      // rectangle, bbox-relative otherwise), appended after the vertex/edge grips via
+      // the SHARED `getPolylineMoveRotateGrips` SSoT (the SAME `PolylineRenderer.getGrips`
+      // paints them → interaction ≡ render).
+      grips.push(...getPolylineMoveRotateGrips(
+        entity.id, entity.vertices, entity.closed,
+        polylineMoveRotateStartIndex(vLen, entity.closed),
+      ));
       break;
     }
 
     case 'arc': {
-      const startRad = (entity.startAngle * Math.PI) / 180;
-      const endRad = (entity.endAngle * Math.PI) / 180;
-      const midRad = (startRad + endRad) / 2;
-
-      grips.push({
-        entityId: entity.id, gripIndex: 0, type: 'center',
-        position: entity.center, movesEntity: true,
-      });
-      grips.push({
-        entityId: entity.id, gripIndex: 1, type: 'vertex',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(startRad),
-          y: entity.center.y + entity.radius * Math.sin(startRad),
-        },
-        movesEntity: false,
-      });
-      grips.push({
-        entityId: entity.id, gripIndex: 2, type: 'vertex',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(endRad),
-          y: entity.center.y + entity.radius * Math.sin(endRad),
-        },
-        movesEntity: false,
-      });
-      grips.push({
-        entityId: entity.id, gripIndex: 3, type: 'edge',
-        position: {
-          x: entity.center.x + entity.radius * Math.cos(midRad),
-          y: entity.center.y + entity.radius * Math.sin(midRad),
-        },
-        movesEntity: true,
-      });
+      // ADR-561 — centre MOVE cross + start/end/mid reshape + rotation handle
+      // (`'arc-rotation'` → RotateEntityCommand about the centre), via the SHARED
+      // `getArcGrips` SSoT (the SAME `ArcRenderer.getGrips` paints on canvas).
+      grips.push(...getArcGrips(entity.id, entity.center, entity.radius, entity.startAngle, entity.endAngle));
       break;
     }
 

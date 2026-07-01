@@ -542,6 +542,8 @@
 | **ADR-557** | Text / MText λαβές με ΠΛΗΡΗ parity ορθογώνιου τοίχου/κολόνας (SSoT) | ✅ 🟢 Slices 1-5 + **Φ-attachment** IMPLEMENTED (UNCOMMITTED) — grips browser-verified· Φ-attachment 🔴 εκκρεμεί browser-verify (Giorgio 2026-06-30) | 2026-06-30 | Canvas & Rendering / Grips | [📄](./adrs/ADR-557-text-mtext-rect-box-grip-parity.md) |
 | **ADR-558** | Cinema-4D-style ground grid στην 3D προβολή | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-558-cinema4d-3d-viewport-grid.md) |
 | **ADR-559** | Όριο πλήθους επιλογής για εμφάνιση λαβών (AutoCAD `GRIPOBJLIMIT`) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-559-grip-object-limit.md) |
+| **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | 2026-07-01 | DXF Viewer — 2D Editing / Pointer Interaction | [📄](./adrs/ADR-560-entity-body-drag-move-copy.md) |
+| **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-07-01 | DXF Viewer — Canvas & Rendering / Grips | [📄](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1066,6 +1068,8 @@
 | **ADR-556** | Central devicePixelRatio-change sync for all viewport canvases | ✅ APPROVED | [View](./adrs/ADR-556-device-pixel-ratio-change-sync.md) |
 | **ADR-558** | Cinema-4D-style ground grid στην 3D προβολή | ✅ APPROVED | [View](./adrs/ADR-558-cinema4d-3d-viewport-grid.md) |
 | **ADR-559** | Όριο πλήθους επιλογής για εμφάνιση λαβών (AutoCAD `GRIPOBJLIMIT`) | ✅ APPROVED | [View](./adrs/ADR-559-grip-object-limit.md) |
+| **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | [View](./adrs/ADR-560-entity-body-drag-move-copy.md) |
+| **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -88,9 +88,21 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     expect(f.axisX.y).toBeCloseTo(1, 6);
   });
 
-  it('gated to type "line": a params-less circle with top-level center is NOT given a frame', () => {
-    const circle = { id: 'C1', type: 'circle', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as unknown as Entity;
-    expect(resolveMoveGlyphFrame(circle)).toBeNull();
+  it('ADR-561: circle/arc/polyline get the WORLD-aligned identity frame (enables directional move)', () => {
+    for (const type of ['circle', 'arc', 'polyline'] as const) {
+      const prim = { id: 'P1', type } as unknown as Entity;
+      const f = resolveMoveGlyphFrame(prim)!;
+      expect(f).not.toBeNull();
+      expect(f.axisX.x).toBeCloseTo(1, 6);
+      expect(f.axisX.y).toBeCloseTo(0, 6);
+      expect(f.axisY.x).toBeCloseTo(0, 6);
+      expect(f.axisY.y).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('a params-less primitive with no recognised type is still NOT given a frame', () => {
+    const unknown = { id: 'U1', type: 'point', position: { x: 0, y: 0 } } as unknown as Entity;
+    expect(resolveMoveGlyphFrame(unknown)).toBeNull();
   });
 });
 

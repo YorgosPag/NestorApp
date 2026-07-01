@@ -47,6 +47,9 @@ import { isLengthAngleLockActive } from '../../systems/dynamic-input/length-angl
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
+// ADR-363 §wall-joint-miter-preview — LIVE Revit-grade miter (ghost + affected neighbours),
+// reusing the SAME computeWallTrims/applyTrimPatches SSoT as commit (preview === commit).
+import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
@@ -209,9 +212,13 @@ export function generateWallPreview(
   // Legacy `awaitingAlignment` (μη-straight modes που το θέτουν): endPoint fixed, cursor =
   // live side pick. Με το 2-κλικ straight flow (ADR-508) ΔΕΝ τίθεται για ευθύ τοίχο.
   if (preview.endPoint) {
-    return makeWallFootprintGhost(
-      'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
-      members, anchoredHost, openings, cursorPoint,
+    // Επίπεδο 2 — live joint miter (ghost + affected neighbours), SSoT με το commit.
+    return applyJointMiterPreview(
+      makeWallFootprintGhost(
+        'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
+        members, anchoredHost, openings, cursorPoint,
+      ),
+      walls, sceneUnits,
     );
   }
 
@@ -233,10 +240,15 @@ export function generateWallPreview(
   // ADR-513 — clamp ΜΟΝΟ του PREVIEW στο ελάχιστο μήκος (το commit μένει αυστηρός validator): ο χρήστης
   // βλέπει πάντα τον τοίχο ακόμη κι όταν πάει ΑΜΕΣΩΣ στο «Δαχτυλίδι Εντολών» χωρίς να τον τραβήξει.
   const endPt = kind === 'straight' ? clampPreviewMinLength(startPt, rawEnd, sceneUnits) : cursorPoint;
-  return makeWallWysiwygGhost(
-    'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
-    preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
-    endFaceFrame, preview.startJustification,
+  // Επίπεδο 2 — live joint miter (ghost + affected neighbours). No-op for curved / free /
+  // overlap ghosts, so behaviour is unchanged except when a real join forms.
+  return applyJointMiterPreview(
+    makeWallWysiwygGhost(
+      'preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits,
+      preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
+      endFaceFrame, preview.startJustification,
+    ),
+    walls, sceneUnits,
   );
 }
 

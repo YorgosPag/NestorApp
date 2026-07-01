@@ -62,7 +62,11 @@ import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity } from '../../types/entities';
+import { isLineEntity, isWallEntity } from '../../types/entities';
+// ADR-363 §wall-joint-miter-preview — LIVE join during rotate/move/reshape of a wall:
+// recompute the miter against neighbours (SAME SSoT as commit) so the future join shows.
+import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
+import type { ExtendedSceneEntity } from '../drawing/drawing-types';
 import type { HatchEntity } from '../../types/entities';
 // ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
 // (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
@@ -310,7 +314,30 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
       // the preview matches the committed form, not a silhouette. The original-position copy is
       // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
-      drawRealEntityPreview(getBimPreview(ctx), transformed, getLayersById(), t, vp);
+      const bimPreview = getBimPreview(ctx);
+      const layersById = getLayersById();
+      // ADR-363 §wall-joint-miter-preview — LIVE future join while rotating/moving/reshaping a
+      // WALL: recompute the miter against the level's OTHER walls (same computeWallTrims SSoT as
+      // commit → preview === commit). The ghost gets its NEW miter and each affected neighbour is
+      // drawn mitered FIRST (underneath), so the user sees exactly how the corner will close. The
+      // stale stored miter was already stripped in `applyEntityPreview` (nominal rect) → here it is
+      // re-formed live. No-op for non-wall / curved / no-near-wall (`applyJointMiterPreview`).
+      let wallGhostToDraw = transformed;
+      if ((transformed as { type?: string }).type === 'wall') {
+        const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+        const wallsForJoin = (joinScene?.entities ?? []).filter(isWallEntity);
+        const augmented = applyJointMiterPreview(
+          transformed as unknown as ExtendedSceneEntity, wallsForJoin, resolveSceneUnits(joinScene),
+        );
+        if (augmented) {
+          const neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
+          for (const n of neighbors) {
+            drawRealEntityPreview(bimPreview, n as unknown as DxfEntityUnion, layersById, t, vp);
+          }
+          wallGhostToDraw = augmented as unknown as DxfEntityUnion;
+        }
+      }
+      drawRealEntityPreview(bimPreview, wallGhostToDraw, layersById, t, vp);
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
       // NOT the selected dragged entity, so their originals stay SOLID on the main canvas.
