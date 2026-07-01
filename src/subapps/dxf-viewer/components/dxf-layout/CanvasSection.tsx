@@ -39,7 +39,7 @@ import {
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
-import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
+import { SnapSceneSyncLeaf } from './SnapSceneSyncLeaf';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units'; import { DEFAULT_DUCT_WIDTH_MM, DEFAULT_PIPE_DIAMETER_MM } from '../../bim/types/mep-segment-types';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf (subscription lives in DraftLayerSubscriber, canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
@@ -175,10 +175,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { dxfScene, convertScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null, userDrawingUnits: Object.values(levelManager.floorplans).find(f => f.levelId === levelManager.currentLevelId)?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits });
   const dxfSceneRef = useRef(dxfScene);
   dxfSceneRef.current = dxfScene;
-  // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
-  // The SnapEngine singleton's `initialize(allEntities)` is owned exclusively
-  // by this hook. `useSnapManager` instances are now consumers only.
-  useGlobalSnapSceneSync({ scene: props.currentScene ?? null, overlays: currentOverlays });
+  // === Snap engine scene-sync (SSoT, sole owner — ADR-040 / ADR-547) ===
+  // Driven by <SnapSceneSyncLeaf/> below (subscribes to live SceneStore + overlay
+  // SSoT; re-inits the snap engine on every in-session commit). Rationale: ADR-547.
   // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts.
   // setSelectedEntityIds writes through universalSelection (SSoT).
   useEffect(() => {
@@ -441,6 +440,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       {/* ADR-532 B4 — selection-subscribed grip registry publisher (renders null;
           keeps AllGripsStore current without re-rendering this orchestrator). */}
       <GripRegistryPublisher dxfScene={dxfScene} currentOverlays={currentOverlays} />
+      {/* ADR-547 — sole snap-scene-sync owner (re-inits snap engine; renders null). */}
+      <SnapSceneSyncLeaf levelId={levelManager.currentLevelId} fallbackScene={props.currentScene ?? null} />
       <CanvasLayerStack
         viewport={viewport} activeTool={activeTool} overlayMode={overlayMode}
         showLayers={showLayers} showDxfCanvas={showDxfCanvas} showLayerCanvas={showLayerCanvas}

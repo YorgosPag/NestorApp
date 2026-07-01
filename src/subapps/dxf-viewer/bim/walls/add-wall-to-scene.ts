@@ -16,10 +16,25 @@
  */
 import { EventBus } from '../../systems/events/EventBus';
 import type { SceneModel } from '../../types/scene';
-import { isWallEntity } from '../../types/entities';
+import type { AnySceneEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity } from '../../types/entities';
+import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallTrims, applyTrimPatches } from './wall-trims';
 import { computeWallGeometry } from '../geometry/wall-geometry';
+
+/**
+ * World-baked column footprint polygons of the scene — the ADR-363
+ * §wall-column-end-miter targets so a wall END framing a column is cut flush on the
+ * column face (Revit parity). SSoT extraction shared by both trim callers below.
+ */
+function collectColumnFootprints(entities: readonly AnySceneEntity[]): readonly (readonly Point2D[])[] {
+  const out: (readonly Point2D[])[] = [];
+  for (const e of entities) {
+    if (isColumnEntity(e)) out.push(e.geometry.footprint.vertices);
+  }
+  return out;
+}
 
 /**
  * Minimal level-scene accessor — structurally satisfied by both
@@ -45,7 +60,7 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   // Include the new wall BEFORE computing trims so neighbours are also patched.
   const entitiesWithNew = [...(scene.entities || []), wallEntity];
   const allWalls = entitiesWithNew.filter(isWallEntity);
-  const trims = computeWallTrims(allWalls);
+  const trims = computeWallTrims(allWalls, collectColumnFootprints(entitiesWithNew));
 
   const patchedEntities = applyTrimPatches(entitiesWithNew, trims);
   accessor.setLevelScene(levelId, { ...scene, entities: patchedEntities });
@@ -120,7 +135,7 @@ export function recomputeWallTrims(accessor: WallSceneAccessor): void {
   });
 
   const remainingWalls = strippedEntities.filter(isWallEntity);
-  const newTrims = computeWallTrims(remainingWalls);
+  const newTrims = computeWallTrims(remainingWalls, collectColumnFootprints(strippedEntities));
   const patchedEntities = applyTrimPatches(strippedEntities, newTrims);
   accessor.setLevelScene(levelId, { ...scene, entities: patchedEntities });
 

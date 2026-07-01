@@ -1015,3 +1015,52 @@ describe('Phase 1O — mitred centreline meets the neighbour at J', () => {
   });
 });
 
+// ─── Pass 3: wall END trapezoidal cut on a column face (ADR-363 §wall-column-end-miter) ──
+
+describe('computeWallTrims — column end-miter (Pass 3)', () => {
+  /** Axis-aligned square footprint (CCW), side `size`, centered at (cx, cy). */
+  function squareFootprint(cx: number, cy: number, size: number): { x: number; y: number }[] {
+    const h = size / 2;
+    return [
+      { x: cx - h, y: cy - h },
+      { x: cx + h, y: cy - h },
+      { x: cx + h, y: cy + h },
+      { x: cx - h, y: cy + h },
+    ];
+  }
+
+  it('C1. wall END on a column face → endMiter set (cut flush on the face)', () => {
+    const column = squareFootprint(0, 0, 400); // west face x = −200
+    const wall = makeWall({ x: -1000, y: -300 }, { x: -200, y: 0 });
+    const trims = computeWallTrims([wall], [column]);
+    const patch = trims.get(wall.id);
+    expect(patch?.endMiter).toBeDefined();
+    expect(patch?.endMiter?.outer.x).toBeCloseTo(-200, 3);
+    expect(patch?.endMiter?.inner.x).toBeCloseTo(-200, 3);
+  });
+
+  it('C2. back-compat — no columns arg → no column miter (unchanged)', () => {
+    const wall = makeWall({ x: -1000, y: -300 }, { x: -200, y: 0 });
+    expect(computeWallTrims([wall]).size).toBe(0);
+  });
+
+  it('C3. priority — a wall↔wall corner END keeps its wall miter (column does NOT override)', () => {
+    // Two walls form a 90° corner at (0,0); a column also sits at that corner.
+    const a = makeWall({ x: -2000, y: 0 }, { x: 0, y: 0 }, 200, '_a');
+    const b = makeWall({ x: 0, y: 0 }, { x: 0, y: 2000 }, 200, '_b');
+    const column = squareFootprint(0, 0, 400);
+    const withCol = computeWallTrims([a, b], [column]);
+    const noCol = computeWallTrims([a, b]);
+    // The wall↔wall corner miter is IDENTICAL with or without the column present —
+    // Pass 3 only fills ENDS free of a wall-junction trim.
+    expect(withCol.get(a.id)?.endMiter).toEqual(noCol.get(a.id)?.endMiter);
+    expect(withCol.get(b.id)?.startMiter).toEqual(noCol.get(b.id)?.startMiter);
+  });
+
+  it('C4. idempotent with columns', () => {
+    const column = squareFootprint(0, 0, 400);
+    const wall = makeWall({ x: -1000, y: -300 }, { x: -200, y: 0 });
+    expect(computeWallTrims([wall], [column])).toEqual(computeWallTrims([wall], [column]));
+  });
+});
+

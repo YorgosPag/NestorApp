@@ -35,8 +35,10 @@
 
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { AnySceneEntity } from '../../types/entities';
+import type { Point2D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { computeWallColumnEndMiter } from '../columns/wall-column-end-miter';
 import {
   lineLineIntersect,
   sinAngleBetween,
@@ -90,10 +92,19 @@ export interface WallTrimPatch {
 /**
  * Compute junction cleanup patches for all wall pairs in `walls`.
  *
+ * `columnFootprints` (ADR-363 §wall-column-end-miter, optional): world-baked column
+ * footprint polygons. When supplied, a wall END that lands on a column face gets a
+ * trapezoidal cut (`start/endMiter`) so it stops flush ON the column face instead of a
+ * square end-cap leaving a gap — Revit/AutoCAD parity. Default `[]` → back-compat (no
+ * column processing) for callers that pass only walls.
+ *
  * Idempotent: calling with the same input always returns the same patches.
  * Returns a Map keyed by wallId; walls with no trim are NOT included.
  */
-export function computeWallTrims(walls: readonly WallEntity[]): Map<string, WallTrimPatch> {
+export function computeWallTrims(
+  walls: readonly WallEntity[],
+  columnFootprints: readonly (readonly Point2D[])[] = [],
+): Map<string, WallTrimPatch> {
   const acc = new Map<string, MutablePatch>();
 
   // Pass 1 (pairwise): T-junctions resolve immediately (bevel the stem); corner
@@ -111,6 +122,28 @@ export function computeWallTrims(walls: readonly WallEntity[]): Map<string, Wall
 
   // Pass 2: cluster coincident corner endpoints and resolve each junction once.
   resolveCornerClusters(endpointRecs, cornerRels, acc);
+
+  // Pass 3 (ADR-363 §wall-column-end-miter): trapezoidal cut of a wall END against a
+  // COLUMN face. Runs AFTER wall↔wall resolution so a genuine wall corner/T keeps its
+  // join — the column-miter only fills an END still FREE of any wall-junction trim
+  // (column-priority: the wall stops flush on the column face). Idempotent (pure fn of
+  // current positions). Skipped entirely when no columns are supplied.
+  if (columnFootprints.length > 0) {
+    for (const wall of walls) {
+      if (wall.kind !== 'straight') continue;
+      const existing = acc.get(wall.id);
+      const startFree = existing?.startMiter === undefined && existing?.startBevel === undefined;
+      const endFree = existing?.endMiter === undefined && existing?.endBevel === undefined;
+      if (!startFree && !endFree) continue;
+      const cm = computeWallColumnEndMiter(wall, columnFootprints, wall.params.sceneUnits ?? 'mm');
+      if (!cm) continue;
+      const prev = acc.get(wall.id) ?? {};
+      const next: MutablePatch = { ...prev };
+      if (startFree && cm.startMiter) next.startMiter = cm.startMiter;
+      if (endFree && cm.endMiter) next.endMiter = cm.endMiter;
+      acc.set(wall.id, next);
+    }
+  }
 
   const result = new Map<string, WallTrimPatch>();
   for (const [id, patch] of acc) {

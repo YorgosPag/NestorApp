@@ -38,6 +38,8 @@ import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleSto
 import { convertEntity } from './dxf-scene-entity-converter';
 // ADR-458 — cross-element post-pass: beam-to-column cutback (column wins) → displayOutline.
 import { applyBeamColumnCutback2D } from './dxf-scene-beam-cutback';
+// ADR-458 — cross-element post-pass: wall-to-column cutback (column wins) → displayFootprint.
+import { applyWallColumnCutback2D } from './dxf-scene-wall-cutback';
 
 // ============================================================================
 // TYPES
@@ -119,9 +121,10 @@ function convertSceneToDxfWithCache(
   }
 
   return {
-    // ADR-458 — beam-to-column cutback post-pass πάνω στο converted array (μετά το
+    // ADR-458 — member-to-column cutback post-pass πάνω στο converted array (μετά το
     // per-entity cache → πάντα fresh όταν κινείται κολόνα). Identity fast-path → μηδέν churn.
-    entities: applyBeamColumnCutback2D(converted),
+    // Chain: beam (displayOutline) → wall (displayFootprint), «η κολόνα νικάει».
+    entities: applyWallColumnCutback2D(applyBeamColumnCutback2D(converted)),
     layers: Object.keys(layers),
     // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
     layersById: scene?.layersById,
@@ -176,9 +179,9 @@ export function convertSceneToDxf(
   }
 
   return {
-    // ADR-458 — beam-to-column cutback post-pass (column wins). Identity fast-path
-    // όταν δεν υπάρχουν κολόνες/δοκάρια → ίδιο reference, μηδέν κόστος.
-    entities: applyBeamColumnCutback2D(converted),
+    // ADR-458 — member-to-column cutback post-pass (column wins). Identity fast-path
+    // όταν δεν υπάρχουν κολόνες/δοκάρια/τοίχοι → ίδιο reference, μηδέν κόστος.
+    entities: applyWallColumnCutback2D(applyBeamColumnCutback2D(converted)),
     layers: Object.keys(layers),
     layersById,
     bounds: scene?.bounds ?? null,

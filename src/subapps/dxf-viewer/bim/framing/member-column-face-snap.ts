@@ -9,10 +9,15 @@
  * χαρακτηριστικά σημεία (κέντρο + flush σε κάθε γωνία) μέσω του ΚΟΙΝΟΥ `magnetizeGhostCenterAlong`.
  * Εκθέτει `GhostFaceFrame` (→ listening dimensions και στις κολόνες). Μακριά από κάθε κολόνα → `null`.
  *
+ * ADR-508 §rotated-column — **ΠΕΡΙΣΤΡΑΜΜΕΝΗ ορθογώνια κολόνα**: το snap δουλεύει στο **τοπικό πλαίσιο**
+ * της κολόνας (`RectFrame` u/v), άρα το μέλος βγαίνει κάθετα στην **πραγματική λοξή** παρειά (όχι στο
+ * AABB). Ίσιες κολόνες / κύκλοι / πολύγωνα Γ-Τ-Π μένουν στο ιστορικό world-aligned bbox path (μηδέν
+ * regression). Τα E/W/N/S παρακάτω είναι οι παρειές στο τοπικό πλαίσιο (world-aligned όταν rotation=0).
+ *
  * Σημασιολογία (Revit/ETABS-grade): το μέλος βγαίνει **κάθετα προς τα έξω** από την παρειά,
  * με το κοντινό short-end να πατά flush στην παρειά (full bearing):
- *   · E (ανατ.) / W (δυτ.)  → μέλος ΟΡΙΖΟΝΤΙΟ (άξονας κατά X)
- *   · N (βόρ.) / S (νότ.)   → μέλος ΚΑΘΕΤΟ   (άξονας κατά Y)
+ *   · E (ανατ.) / W (δυτ.)  → μέλος ΟΡΙΖΟΝΤΙΟ (άξονας κατά X — τοπικό u)
+ *   · N (βόρ.) / S (νότ.)   → μέλος ΚΑΘΕΤΟ   (άξονας κατά Y — τοπικό v)
  * Τα 3 thirds κατά μήκος της παρειάς:
  *   · `lo`  → γωνία-flush στη μία άκρη (πλάγια παρειά μέλους ≡ γωνιακή παρειά κολόνας)
  *   · `mid` → centerline ≡ κέντρο κολόνας
@@ -46,6 +51,13 @@ import {
   proportionalSlideStep,
   type GhostFaceFrame,
 } from './linear-member-face-snap';
+import {
+  rectFrameFromCorners,
+  rectLocalToWorld,
+  rectWorldToLocal,
+  rectDirToWorld,
+  type RectFrame,
+} from './rect-frame';
 
 /** Clamp σε [lo,hi] — local leaf (μηδέν cross-layer import από `bim/columns`). */
 const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), hi);
@@ -175,11 +187,111 @@ function resolveColumnCenterSnap(
 }
 
 /**
+ * ADR-508 §rotated-column — απόρριψη τυχόν κλείνουσας διπλής κορυφής (footprint μπορεί να είναι κλειστό).
+ */
+function stripClosingVertex(fp: readonly Point2D[]): readonly Point2D[] {
+  const n = fp.length;
+  if (n >= 2 && Math.abs(fp[0].x - fp[n - 1].x) < 1e-9 && Math.abs(fp[0].y - fp[n - 1].y) < 1e-9) {
+    return fp.slice(0, n - 1);
+  }
+  return fp;
+}
+
+/**
+ * ADR-508 §rotated-column — το ΠΕΡΙΣΤΡΑΜΜΕΝΟ ορθογώνιο πλαίσιο μιας κολόνας, ΜΟΝΟ όταν το footprint
+ * είναι πραγματικό ορθογώνιο (4 κορυφές, u⊥v) ΚΑΙ όχι world-aligned. Axis-aligned ορθογώνια, κύκλοι
+ * (πολλές κορυφές) και πολύγωνα Γ/Τ/Π → `null` → πέφτουν στο byte-identical AABB path (μηδέν regression).
+ */
+function orientedRectFrame(fp: readonly Point2D[]): RectFrame | null {
+  const corners = stripClosingVertex(fp);
+  if (corners.length !== 4) return null;
+  const rect = rectFrameFromCorners(corners);
+  if (!rect) return null;
+  if (Math.abs(rect.u.x * rect.v.x + rect.u.y * rect.v.y) > 1e-6) return null; // όχι ορθή γωνία → όχι ορθογώνιο
+  if (Math.abs(rect.u.x) < 1e-9 || Math.abs(rect.u.y) < 1e-9) return null; // world-aligned → AABB path (byte-identical)
+  return rect;
+}
+
+/** Υποψήφια κολόνα-στόχος: λοξό ορθογώνιο (τοπικό πλαίσιο) ή world-aligned bbox. + απόσταση από cursor. */
+type ColumnCandidate =
+  | { readonly kind: 'rect'; readonly rect: RectFrame; readonly dist: number }
+  | { readonly kind: 'aabb'; readonly bounds: FootprintBounds; readonly dist: number };
+
+/** Πλησιέστερη κολόνα εντός capture. Λοξό ορθογώνιο → απόσταση στο τοπικό πλαίσιο (rigid → ίδια μετρική). */
+function nearestColumnCandidate(
+  cursor: Readonly<Point2D>,
+  columnFootprints: readonly (readonly Point2D[])[],
+  captureScene: number,
+): ColumnCandidate | null {
+  let best: ColumnCandidate | null = null;
+  for (const fp of columnFootprints) {
+    const rect = orientedRectFrame(fp);
+    let cand: ColumnCandidate | null = null;
+    if (rect) {
+      const cl = rectWorldToLocal(rect, cursor);
+      const dist = distanceToFootprintBounds(cl, { minX: -rect.halfW, maxX: rect.halfW, minY: -rect.halfV, maxY: rect.halfV });
+      cand = { kind: 'rect', rect, dist };
+    } else {
+      const b = footprintBounds(fp);
+      if (!b) continue;
+      cand = { kind: 'aabb', bounds: b, dist: distanceToFootprintBounds(cursor, b) };
+    }
+    if (cand.dist <= captureScene && (!best || cand.dist < best.dist)) best = cand;
+  }
+  return best;
+}
+
+/**
+ * ADR-508 §center-snap — face-flush + center-to-centroid resolve πάνω σε **world-aligned bounds** (cursor
+ * σε ΙΔΙΕΣ συντεταγμένες). Είναι ΑΚΡΙΒΩΣ η ιστορική λογική· καλείται είτε με world bounds (AABB path)
+ * είτε με τοπικές bounds λοξής κολόνας (rotated path) → ΕΝΑΣ κώδικας για ίσιες ΚΑΙ γυρισμένες κολόνες.
+ */
+function resolveFaceSnapInBounds(
+  best: FootprintBounds,
+  cursor: Readonly<Point2D>,
+  half: number,
+  opts: Readonly<MemberColumnFaceSnapOptions>,
+): MemberColumnFaceSnap {
+  const face: MemberGhostFace = pickDominantFace(cursor, best); // reuse pickDominantFace SSoT
+  const { third, start, end } = resolveContinuousColumnFace(best, face, cursor, half, opts.ghostLenScene, opts.dominantUnitScene);
+  // ADR-508 §center-snap — center-to-centroid override (nearest-wins)· `null` → κρατάμε το face-flush.
+  const center = resolveColumnCenterSnap(best, cursor, face, start, opts.ghostLenScene);
+  if (center) return center;
+  return { face, third, start, end, faceFrame: buildColumnBboxFaceFrame(best, face, start) };
+}
+
+/**
+ * ADR-508 §rotated-column — γύρνα ένα τοπικό (rotated-frame) αποτέλεσμα πίσω στον κόσμο. Τα σημεία μέσω
+ * `rectLocalToWorld`, οι κατευθύνσεις του faceFrame μέσω `rectDirToWorld`· τα βαθμωτά (facePerp/along/
+ * ghostHalfWidth/outwardSign) είναι μήκη/πρόσημα κατά τον άξονα → **rotation-invariant** (αμετάβλητα).
+ */
+function localSnapToWorld(s: MemberColumnFaceSnap, rect: Readonly<RectFrame>): MemberColumnFaceSnap {
+  return {
+    face: s.face,
+    third: s.third,
+    start: rectLocalToWorld(rect, s.start.x, s.start.y),
+    end: rectLocalToWorld(rect, s.end.x, s.end.y),
+    faceFrame: {
+      ...s.faceFrame,
+      origin: rectLocalToWorld(rect, s.faceFrame.origin.x, s.faceFrame.origin.y),
+      axisDir: rectDirToWorld(rect, s.faceFrame.axisDir),
+      perpDir: rectDirToWorld(rect, s.faceFrame.perpDir),
+    },
+  };
+}
+
+/**
  * Επίλεξε face-snap για το ghost-before-click. Pure. `null` όταν καμία κολόνα δεν είναι εντός
  * `captureScene` (ελεύθερη κίνηση). Reuse κοινό bbox/face SSoT (`footprint-face-frame`) + συνεχής
- * ολίσθηση/magnet (`magnetizeGhostCenterAlong`) + `buildColumnBboxFaceFrame` — μηδέν διπλότυπο.
+ * ολίσθηση/magnet + `buildColumnBboxFaceFrame` — μηδέν διπλότυπο.
  *
- * ADR-508 §center-snap — δοκιμάζει ΠΡΩΤΑ το center-to-centroid candidate (nearest-wins με την παρειά):
+ * ADR-508 §rotated-column — **ΠΕΡΙΣΤΡΑΜΜΕΝΗ ορθογώνια κολόνα**: αντί να «ισιώσει» στο AABB (παλιό bug →
+ * ο τοίχος έβγαινε πάντα οριζόντιος/κάθετος), φέρνουμε τον cursor στο ΤΟΠΙΚΟ πλαίσιο της κολόνας
+ * (`rectWorldToLocal`), τρέχουμε την ΙΔΙΑ axis-aligned λογική (face-flush + 3-thirds + center-to-centroid)
+ * και γυρνάμε το αποτέλεσμα στον κόσμο (`localSnapToWorld`) → ο τοίχος ακολουθεί την πραγματική γωνία
+ * της λοξής παρειάς, με πλήρες parity μαγνητών. Ίσιες κολόνες / κύκλοι / Γ-Τ-Π → αμετάβλητο AABB path.
+ *
+ * ADR-508 §center-snap — δοκιμάζει το center-to-centroid candidate (nearest-wins με την παρειά):
  * cursor κοντά στο κέντρο → κέντρο άξονα τοίχου ↔ κέντρο κολόνας· κοντά σε παρειά → face-flush.
  */
 export function resolveMemberColumnFaceSnap(
@@ -187,25 +299,15 @@ export function resolveMemberColumnFaceSnap(
   columnFootprints: readonly (readonly Point2D[])[],
   opts: Readonly<MemberColumnFaceSnapOptions>,
 ): MemberColumnFaceSnap | null {
-  // ── πλησιέστερη κολόνα εντός capture (reuse footprintBounds + distanceToFootprintBounds) ──
-  let best: FootprintBounds | null = null;
-  let bestDist = Infinity;
-  for (const fp of columnFootprints) {
-    const b = footprintBounds(fp);
-    if (!b) continue;
-    const d = distanceToFootprintBounds(cursor, b);
-    if (d <= opts.captureScene && d < bestDist) {
-      bestDist = d;
-      best = b;
-    }
-  }
-  if (!best) return null;
-
+  const cand = nearestColumnCandidate(cursor, columnFootprints, opts.captureScene);
+  if (!cand) return null;
   const half = opts.memberWidthScene / 2;
-  const face: MemberGhostFace = pickDominantFace(cursor, best); // reuse pickDominantFace SSoT
-  const { third, start, end } = resolveContinuousColumnFace(best, face, cursor, half, opts.ghostLenScene, opts.dominantUnitScene);
-  // ADR-508 §center-snap — center-to-centroid override (nearest-wins)· `null` → κρατάμε το face-flush.
-  const center = resolveColumnCenterSnap(best, cursor, face, start, opts.ghostLenScene);
-  if (center) return center;
-  return { face, third, start, end, faceFrame: buildColumnBboxFaceFrame(best, face, start) };
+  // ── Λοξή κολόνα → resolve στο τοπικό πλαίσιο, μετά πίσω στον κόσμο (ADR-508 §rotated-column) ──
+  if (cand.kind === 'rect') {
+    const bLocal: FootprintBounds = { minX: -cand.rect.halfW, maxX: cand.rect.halfW, minY: -cand.rect.halfV, maxY: cand.rect.halfV };
+    const local = resolveFaceSnapInBounds(bLocal, rectWorldToLocal(cand.rect, cursor), half, opts);
+    return localSnapToWorld(local, cand.rect);
+  }
+  // ── World-aligned κολόνα (ίσια/κύκλος/πολύγωνο) → ιστορικό AABB path (byte-identical) ──
+  return resolveFaceSnapInBounds(cand.bounds, cursor, half, opts);
 }

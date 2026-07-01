@@ -47,3 +47,19 @@ export function rectLocalToWorld(rect: Readonly<RectFrame>, x: number, y: number
     y: rect.center.y + x * rect.u.y + y * rect.v.y,
   };
 }
+
+/**
+ * World → local (προβολή στους μοναδιαίους άξονες u/v γύρω από το `center`). Αντίστροφο του
+ * `rectLocalToWorld` (rigid transform → διατηρεί αποστάσεις). ΕΝΑ SSoT για snap σε **λοξό** ορθογώνιο:
+ * φέρε τον cursor στο τοπικό πλαίσιο, τρέξε την axis-aligned λογική, γύρνα το αποτέλεσμα πίσω.
+ */
+export function rectWorldToLocal(rect: Readonly<RectFrame>, p: Readonly<Point2D>): Point2D {
+  const dx = p.x - rect.center.x;
+  const dy = p.y - rect.center.y;
+  return { x: dx * rect.u.x + dy * rect.u.y, y: dx * rect.v.x + dy * rect.v.y };
+}
+
+/** Local **κατεύθυνση** (κατά u/v) → world κατεύθυνση (μόνο περιστροφή, χωρίς μετατόπιση κέντρου). */
+export function rectDirToWorld(rect: Readonly<RectFrame>, d: Readonly<Point2D>): Point2D {
+  return { x: d.x * rect.u.x + d.y * rect.v.x, y: d.x * rect.u.y + d.y * rect.v.y };
+}

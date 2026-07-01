@@ -22,6 +22,7 @@
 
 import type { ExtendedSceneEntity } from '../../hooks/drawing/drawing-types';
 import type { WallEntity, WallParams } from '../types/wall-types';
+import type { Point2D } from '../../rendering/types/Types';
 import { isWallEntity } from '../../types/entities';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { toWysiwygPreviewEntity } from '../../hooks/drawing/wysiwyg-preview-shared';
@@ -86,16 +87,51 @@ function selectNearWalls(
 }
 
 /**
+ * Column footprints whose expanded bbox contains EITHER ghost endpoint (within the join
+ * threshold) — the only columns whose face the ghost END could be cut against (ADR-363
+ * §wall-column-end-miter). Bbox+threshold (not vertex-proximity) so a large column whose
+ * corners sit >threshold from the endpoint still qualifies when the endpoint is on its
+ * face. Cheap pre-filter — the exact perp-straddle/gap gate lives in `computeWallColumnEndMiter`.
+ */
+function selectNearColumnFootprints(
+  ghost: WallEntity,
+  columnFootprints: readonly (readonly Point2D[])[],
+  sceneUnits: SceneUnits,
+): readonly (readonly Point2D[])[] {
+  if (columnFootprints.length === 0) return columnFootprints;
+  const thr = JOIN_THRESHOLD_MM * mmToSceneUnits(sceneUnits);
+  const gs = ghost.params.start, ge = ghost.params.end;
+  const near: (readonly Point2D[])[] = [];
+  for (const fp of columnFootprints) {
+    if (fp.length < 3) continue;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const v of fp) {
+      if (v.x < minX) minX = v.x;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    }
+    const inBox = (p: Readonly<Point2D>): boolean =>
+      p.x >= minX - thr && p.x <= maxX + thr && p.y >= minY - thr && p.y <= maxY + thr;
+    if (inBox(gs) || inBox(ge)) near.push(fp);
+  }
+  return near;
+}
+
+/**
  * Augment a straight wall ghost with its live join: applies the ghost's own miter
  * (params+geometry) and attaches `jointNeighbors` (affected existing walls, mitered).
+ * `columnFootprints` (ADR-363 §wall-column-end-miter) → a ghost END framing a column is
+ * cut flush trapezoidally on the column face, live (preview === commit).
  *
  * No-op (returns the input unchanged) when: ghost is null / not a straight wall / is a
- * 🔴 overlap ghost (no valid join) / no near walls / the solver produced no trim. So a
- * free-floating wall or a curved/polyline ghost renders exactly as before.
+ * 🔴 overlap ghost (no valid join) / no near walls NOR columns / the solver produced no
+ * trim. So a free-floating wall or a curved/polyline ghost renders exactly as before.
  */
 export function applyJointMiterPreview(
   ghost: ExtendedSceneEntity | null,
   walls: readonly WallEntity[],
+  columnFootprints: readonly (readonly Point2D[])[],
   sceneUnits: SceneUnits,
 ): ExtendedSceneEntity | null {
   if (!ghost) return ghost;
@@ -106,7 +142,8 @@ export function applyJointMiterPreview(
   if (g.kind !== 'straight') return ghost;
 
   const near = selectNearWalls(g, walls, sceneUnits);
-  if (near.length === 0) return ghost;
+  const nearColumns = selectNearColumnFootprints(g, columnFootprints, sceneUnits);
+  if (near.length === 0 && nearColumns.length === 0) return ghost;
 
   // STRIP each neighbour's stale committed miter BEFORE the recompute (preview === commit,
   // mirror `recomputeWallTrims`). computeWallTrims ignores stored miters, so this does NOT
@@ -114,7 +151,7 @@ export function applyJointMiterPreview(
   // CLEAN instead of carrying the join from the rotating wall's OLD position.
   const strippedNear = near.map(stripWallTrims);
   const all: WallEntity[] = [...strippedNear, g];
-  const trims = computeWallTrims(all);
+  const trims = computeWallTrims(all, nearColumns);
   const patched = applyTrimPatches(all, trims);
   const patchedById = new Map(
     patched.filter(isWallEntity).map((e) => [e.id, e as WallEntity] as const),

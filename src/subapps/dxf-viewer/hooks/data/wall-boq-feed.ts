@@ -8,13 +8,15 @@
  */
 
 import type { SceneModel } from '../../types/entities';
-import { isBeamEntity, isSlabEntity, isRoofEntity } from '../../types/entities';
-import type { WallEntity } from '../../bim/types/wall-types';
+import { isBeamEntity, isSlabEntity, isRoofEntity, isColumnEntity } from '../../types/entities';
+import type { WallEntity, WallGeometry } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
   computeWallGeometry,
+  buildWallFootprintRing,
   type OpeningFootprintForDeduction,
 } from '../../bim/geometry/wall-geometry';
+import { computeMemberCutbackRetentionRatio } from '../../bim/geometry/member-column-cutback';
 import {
   resolveWallTopProfile,
   type WallTopProfile,
@@ -84,17 +86,47 @@ function resolveAttachedWallProfiles(
 }
 
 /**
- * Build the BOQ-feed entity for a wall with net geometry (gross − openings).
+ * ADR-458 — NET στατικός όγκος τοίχου (Revit «Join Geometry», «η κολόνα νικάει»): όταν
+ * κολόνα κάθεται μέσα/πάνω στον τοίχο, ο κόμβος ανήκει στην κολόνα και μετριέται ΜΙΑ
+ * φορά — αλλιώς διπλομέτρηση μπετόν. Mirror του `beamNetCoreGeometry`, αλλά με **retention
+ * ratio** (net/gross plan footprint) αντί απόλυτο net area: το `area` του τοίχου είναι FACE
+ * area (μήκος×ύψος), όχι plan → ο λόγος (unit-independent) συνθέτει καθαρά πάνω σε ό,τι net
+ * έχει ήδη προκύψει από openings/attached profiles.
+ *
+ * DERIVED από τα live column footprints (ίδιο SSoT με 2Δ/3Δ). Καμία τομή → passthrough
+ * (byte-for-byte gross). v1 απλοποίηση (mirror beam): θεωρεί κατακόρυφη επικάλυψη = ύψος
+ * τοίχου (κολόνα πλήρους ορόφου — η τυπική περίπτωση)· μερική-ύψους κολόνα = DEFER.
+ */
+function wallNetCoreGeometry(geometry: WallGeometry, scene: SceneModel | null): WallGeometry {
+  if (!scene) return geometry;
+  const columnFootprints = scene.entities
+    .filter(isColumnEntity)
+    .map((c) => c.geometry?.footprint?.vertices)
+    .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
+    .map((f) => f.map((v) => ({ x: v.x, y: v.y })));
+  if (columnFootprints.length === 0) return geometry;
+
+  const ring = buildWallFootprintRing(geometry.outerEdge.points, geometry.innerEdge.points);
+  if (ring.length < 3) return geometry;
+  const ratio = computeMemberCutbackRetentionRatio(ring, columnFootprints);
+  if (ratio === null) return geometry;
+  return { ...geometry, area: geometry.area * ratio, volume: geometry.volume * ratio };
+}
+
+/**
+ * Build the BOQ-feed entity for a wall with net geometry (gross − openings − columns).
  * Geometry recomputed when openings exist **or** the wall is `attached`
  * (ADR-401 B3a/(γ) — profile-aware gross area/volume με top − base)· otherwise
- * reuse the entity's own (gross/flat) geometry.
+ * reuse the entity's own (gross/flat) geometry. Τέλος εφαρμόζεται το ADR-458 column
+ * cutback (net volume, «η κολόνα νικάει») — identity fast-path όταν καμία κολόνα δεν τέμνει.
  */
 export function wallBoqEntity(entity: WallEntity, scene: SceneModel | null): BimEntityForBoq {
   const openings = collectWallOpenings(scene, entity.id);
   const { top, base } = resolveAttachedWallProfiles(entity, scene);
-  const geometry = openings.length > 0 || top !== null || base !== null
+  const grossGeometry = openings.length > 0 || top !== null || base !== null
     ? computeWallGeometry(entity.params, entity.kind, openings, top ?? undefined, base ?? undefined)
     : entity.geometry;
+  const geometry = wallNetCoreGeometry(grossGeometry, scene);
   return {
     id: entity.id,
     kind: entity.kind,

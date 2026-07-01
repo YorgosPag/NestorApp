@@ -21,6 +21,8 @@ import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { buildCoincidentPartnerGhostEntities } from '../../systems/stretch/coincident-endpoint-comove';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+// ADR-449 — LIVE finish-skin (σοβάς) preview reuses the committed scene-level pass.
+import { drawStructuralFinishSkin2D } from '../../canvas-v2/dxf-canvas/dxf-renderer-structural-overlays';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -161,4 +163,46 @@ export function drawComovePartnerGhosts(
   for (const ghost of ghosts) {
     drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, t, vp);
   }
+}
+
+/**
+ * ADR-449 — pure entity list for the live finish-skin (σοβάς) preview: the full scene with
+ * the dragged wall (and its live-mitered neighbours) swapped for their PREVIEW versions, so
+ * the merged plaster silhouette re-forms around the wall's NEW position. The silhouette is
+ * scene-wide (exterior/interior classifier + union with stationary walls), so we must feed the
+ * whole scene — not just the moving wall — with only the affected entities replaced by id.
+ */
+export function buildFinishSkinPreviewEntities<E extends { readonly id: string }>(
+  sceneEntities: readonly E[],
+  ghostWall: E,
+  neighbours: readonly E[],
+): E[] {
+  const byId = new Map<string, E>();
+  byId.set(ghostWall.id, ghostWall);
+  for (const n of neighbours) byId.set(n.id, n);
+  return sceneEntities.map((e) => byId.get(e.id) ?? e);
+}
+
+/**
+ * ADR-449 / ADR-363 — LIVE finish-skin (σοβάς) preview while moving/rotating a WALL.
+ *
+ * Ζητούμενο (Giorgio): με ενεργή τη «Σοβατισμένη όψη», κατά την περιστροφή/μετακίνηση τοίχου η
+ * προεπισκόπηση να δείχνει και τον σοβά live — πώς ακριβώς θα τυλίγει τη ΝΕΑ θέση στο επόμενο κλικ.
+ *
+ * SSoT reuse (μηδέν νέα geometry): καλεί τον ΙΔΙΟ scene-level pass που ζωγραφίζει τον committed σοβά
+ * (`drawStructuralFinishSkin2D`), τροφοδοτημένο με τη σκηνή όπου ο dragged τοίχος + οι mitered γείτονες
+ * είναι στη θέση προεπισκόπησης → το merged silhouette (`computeStructuralFinishSilhouette`) ξαναχτίζεται
+ * στη νέα θέση. No-op όταν ο διακόπτης σοβά είναι κλειστός (ο pass κάνει gate ανά στοιχείο). ADR-040:
+ * pure draw, μηδέν subscriptions. Καλείται ΜΕΤΑ το σώμα-φάντασμα (mirror της committed σειράς).
+ */
+export function drawWallFinishSkinPreview(
+  ctx: CanvasRenderingContext2D,
+  sceneEntities: readonly { readonly id: string }[],
+  ghostWall: DxfEntityUnion,
+  neighbours: readonly { readonly id: string }[],
+  t: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  const preview = buildFinishSkinPreviewEntities<{ readonly id: string }>(sceneEntities, ghostWall, neighbours);
+  drawStructuralFinishSkin2D(ctx, preview as unknown as readonly DxfEntityUnion[], t, vp);
 }

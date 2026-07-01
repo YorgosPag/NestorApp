@@ -5,8 +5,11 @@
  * @module useGlobalSnapSceneSync
  * @description Sole owner of SnapEngine scene-initialize lifecycle (SSoT, GOL).
  *
- * MUST be invoked exactly ONCE per app lifecycle — from CanvasSection.
- * Other call sites are forbidden (enforced by registry rule `snap-scene-sync`).
+ * MUST be invoked exactly ONCE per app lifecycle — from `SnapSceneSyncLeaf`,
+ * which CanvasSection mounts once (ADR-547 fix: the leaf subscribes to the live
+ * SceneStore so in-session commits re-init the engine; the orchestrator went
+ * stale after ADR-547 moved rendering to a store-subscribed leaf). Other call
+ * sites are forbidden (see the `snap-engine` registry module).
  *
  * Two performance levers:
  *   1. Singleton engine (see `global-snap-engine.ts`) — eliminates 3× duplicate

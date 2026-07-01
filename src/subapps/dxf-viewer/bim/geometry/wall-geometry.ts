@@ -172,6 +172,24 @@ export function computeWallGeometry(
   };
 }
 
+/**
+ * Pure plan footprint ring (outer fwd + inner reversed) ενός τοίχου — ίδια σύμβαση με
+ * το `WallRenderer.traceFootprintRing` (canvas), αλλά **pure 2D** (μηδέν screen
+ * projection) για reuse σε BOQ net-volume (ADR-458 member↔column cutback) + 2Δ cutback
+ * post-pass. Επιστρέφει κλειστό polygon του footprint (μήκος × πάχος στην κάτοψη). Άδειο
+ * όταν κάποια ακμή έχει <2 σημεία.
+ */
+export function buildWallFootprintRing(
+  outer: readonly Point3D[],
+  inner: readonly Point3D[],
+): { x: number; y: number }[] {
+  if (outer.length < 2 || inner.length < 2) return [];
+  const ring: { x: number; y: number }[] = [];
+  for (const p of outer) ring.push({ x: p.x, y: p.y });
+  for (let i = inner.length - 1; i >= 0; i--) ring.push({ x: inner[i].x, y: inner[i].y });
+  return ring;
+}
+
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
 /** Ελάχιστο piecewise-linear segment (top ή base) — κοινό σχήμα. */

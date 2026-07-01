@@ -54,6 +54,8 @@ import {
 import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 import { wallLayerBoundaryPolylines } from '../walls/wall-layer-lines-2d';
+// N.7.1 split — pure Canvas2D path-tracing helpers extracted to keep this renderer <500 lines.
+import { traceWallBody, strokePerimeterOutline, strokePolyline } from './wall-render-paths';
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -138,7 +140,10 @@ export class WallRenderer extends BaseEntityRenderer {
       this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
       this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
       this.ctx.setLineDash([]);
-      this.drawPerimeterOutline(wall);
+      strokePerimeterOutline(
+        this.ctx, (p) => this.worldToScreen(p),
+        wall.geometry.outerEdge.points, wall.geometry.innerEdge.points,
+      );
       this.ctx.restore();
     }
 
@@ -225,7 +230,12 @@ export class WallRenderer extends BaseEntityRenderer {
   private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride): string | null {
     const outer = wall.geometry.outerEdge.points;
     const inner = wall.geometry.innerEdge.points;
-    if (outer.length < 2 || inner.length < 2) return null;
+    // ADR-458 — DERIVED footprint κομμένο στις παρειές τεμνόντων κολωνών («η κολόνα νικάει»).
+    // Απών → πλήρες outer+inner ring (μηδέν regression)· `[]` = τοίχος εξ ολοκλήρου μέσα σε
+    // κολόνα (δεν σχεδιάζεται)· ≥1 rings = τα κομμάτια που απομένουν.
+    const pieces = wall.geometry.displayFootprint;
+    if (pieces === undefined && (outer.length < 2 || inner.length < 2)) return null;
+    if (pieces !== undefined && pieces.length === 0) return null;
 
     const cat = wall.params.category;
     const _styles = useDrawingScaleStore.getState().objectStyles;
@@ -255,8 +265,9 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.setLineDash(bimDashPx(_edgePattern, this.transform.scale));
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
-    // so the perimeter is well-oriented for fill.
-    this.traceFootprintRing(outer, inner);
+    // so the perimeter is well-oriented for fill. ADR-458 — cut pieces όταν τέμνεται
+    // από κολόνα (multi-subpath), αλλιώς το πλήρες ring.
+    traceWallBody(this.ctx, (p) => this.worldToScreen(p), outer, inner, pieces);
     this.ctx.fill();
 
     // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
@@ -267,28 +278,12 @@ export class WallRenderer extends BaseEntityRenderer {
     // ring (save/restore does NOT restore the path). Re-trace the ring before
     // stroking, else the wall outline + mitred corners vanish when an opening
     // is hosted (the stroke would draw the opening rect instead).
-    this.traceFootprintRing(outer, inner);
+    traceWallBody(this.ctx, (p) => this.worldToScreen(p), outer, inner, pieces);
     // ADR-509 — background-adaptive + σαφώς φωτεινό δομικό γκρι (WALL_LINE_CONTRAST), χωρίς
     // ξέπλυμα ζωηρών V/G overrides: near-black #2b2f36 → ανοιχτό γκρι· κόκκινο override → μένει.
     if (_edgeColor !== null) this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(_edgeColor, WALL_LINE_CONTRAST);
     this.ctx.stroke();
     return _edgeColor;
-  }
-
-  /** Traces the wall footprint ring (outer fwd + inner reversed) as a closed path. */
-  private traceFootprintRing(outer: readonly Point3D[], inner: readonly Point3D[]): void {
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < outer.length; i++) {
-      const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    for (let i = inner.length - 1; i >= 0; i--) {
-      const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
   }
 
   /**
@@ -358,33 +353,8 @@ export class WallRenderer extends BaseEntityRenderer {
     if (edgeColor !== null) {
       this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(edgeColor, WALL_LINE_CONTRAST);
     }
-    this.drawPolyline(axis);
+    strokePolyline(this.ctx, (p) => this.worldToScreen(p), axis);
     this.ctx.restore();
-  }
-
-  /**
-   * Hover halo: tight OBB of the footprint vertices (outer + inner). Stair
-   * pattern (ADR-358 §G15) — per-edge halo on composite entities is clobbered
-   * by the next stroke, so a single OBB pass guarantees a continuous halo.
-   */
-  private drawPerimeterOutline(wall: WallEntity): void {
-    const outer = wall.geometry.outerEdge.points;
-    const inner = wall.geometry.innerEdge.points;
-    if (outer.length < 2 || inner.length < 2) return;
-
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < outer.length; i++) {
-      const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    for (let i = inner.length - 1; i >= 0; i--) {
-      const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-    this.ctx.stroke();
   }
 
   /**
@@ -408,8 +378,15 @@ export class WallRenderer extends BaseEntityRenderer {
     // ADR-507 Φ7 — υλικό + cutState → PAT pattern (MATERIAL_HATCH_MAP). Όριο = το wall
     // body ring (outer + reversed inner ως ΕΝΑ closed polygon)· τα segments έρχονται
     // ήδη clipped (μηδέν `ctx.clip()`).
-    const ring = closedRingFromEdges(outer, inner);
-    const segments = computeMaterialHatchSegments([ring], wall.params.material, _hatchCutState);
+    // ADR-458 — όταν τέμνεται από κολόνα, το hatch κλιπάρεται στα cut pieces (`displayFootprint`),
+    // αλλιώς το hatch θα γέμιζε την περιοχή της κολόνας και θα έκρυβε το cut. `[]` = πλήρης
+    // κατανάλωση → κανένα hatch.
+    const pieces = wall.geometry.displayFootprint;
+    const boundary: Point3D[][] = pieces
+      ? pieces.map((r) => r.map((p) => ({ x: p.x, y: p.y, z: 0 })))
+      : [closedRingFromEdges(outer, inner)];
+    if (boundary.length === 0) return;
+    const segments = computeMaterialHatchSegments(boundary, wall.params.material, _hatchCutState);
     if (segments.length === 0) return;
 
     // V/G cut-pattern override (color + line pattern) διατηρείται (wall-specific).
@@ -447,19 +424,7 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.strokeStyle = MATERIAL_HATCH_STROKE_RGBA;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     this.ctx.setLineDash([]);
-    for (const poly of lines) this.drawPolyline(poly);
+    for (const poly of lines) strokePolyline(this.ctx, (p) => this.worldToScreen(p), poly);
     this.ctx.restore();
-  }
-
-  private drawPolyline(points: ReadonlyArray<Point3D>): void {
-    if (points.length < 2) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: points[0].x, y: points[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < points.length; i++) {
-      const s = this.worldToScreen({ x: points[i].x, y: points[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
   }
 }

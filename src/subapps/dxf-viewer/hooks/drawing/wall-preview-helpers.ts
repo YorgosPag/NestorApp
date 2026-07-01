@@ -218,7 +218,7 @@ export function generateWallPreview(
         'preview_wall_footprint', startPt, preview.endPoint, overrides, 'straight', sceneUnits, null,
         members, anchoredHost, openings, cursorPoint,
       ),
-      walls, sceneUnits,
+      walls, footprints, sceneUnits,
     );
   }
 
@@ -248,7 +248,7 @@ export function generateWallPreview(
       preview.curveControl, preview.startAnchored, footprints, members, anchoredHost, openings,
       endFaceFrame, preview.startJustification,
     ),
-    walls, sceneUnits,
+    walls, footprints, sceneUnits,
   );
 }
 

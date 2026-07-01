@@ -62,7 +62,7 @@ import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity, isWallEntity } from '../../types/entities';
+import { isLineEntity, isWallEntity, isColumnEntity } from '../../types/entities';
 // ADR-363 §wall-joint-miter-preview — LIVE join during rotate/move/reshape of a wall:
 // recompute the miter against neighbours (SAME SSoT as commit) so the future join shows.
 import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
@@ -93,6 +93,7 @@ import {
   drawAngleArc,
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
+  drawWallFinishSkinPreview,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
@@ -349,21 +350,43 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // stale stored miter was already stripped in `applyEntityPreview` (nominal rect) → here it is
       // re-formed live. No-op for non-wall / curved / no-near-wall (`applyJointMiterPreview`).
       let wallGhostToDraw = transformed;
+      // ADR-449 — captured inside the wall branch so the live finish-skin (σοβάς) preview
+      // below can re-form the merged silhouette around the wall's new preview position.
+      let wallFinishPreview: {
+        scene: readonly { readonly id: string }[];
+        neighbours: readonly ExtendedSceneEntity[];
+      } | null = null;
       if ((transformed as { type?: string }).type === 'wall') {
         const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
         const wallsForJoin = (joinScene?.entities ?? []).filter(isWallEntity);
+        // ADR-363 §wall-column-end-miter — live trapezoidal cut of the moving wall END on a
+        // column face (same SSoT as commit): column footprints of the level.
+        const columnFootprintsForJoin = (joinScene?.entities ?? [])
+          .filter(isColumnEntity)
+          .map((c) => c.geometry.footprint.vertices);
         const augmented = applyJointMiterPreview(
-          transformed as unknown as ExtendedSceneEntity, wallsForJoin, resolveSceneUnits(joinScene),
+          transformed as unknown as ExtendedSceneEntity, wallsForJoin, columnFootprintsForJoin, resolveSceneUnits(joinScene),
         );
+        let neighbors: readonly ExtendedSceneEntity[] = [];
         if (augmented) {
-          const neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
+          neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
           for (const n of neighbors) {
             drawRealEntityPreview(bimPreview, n as unknown as DxfEntityUnion, layersById, t, vp);
           }
           wallGhostToDraw = augmented as unknown as DxfEntityUnion;
         }
+        wallFinishPreview = { scene: joinScene?.entities ?? [], neighbours: neighbors };
       }
       drawRealEntityPreview(bimPreview, wallGhostToDraw, layersById, t, vp);
+      // ADR-449 — LIVE σοβάς: after the wall body ghost, re-draw the merged finish-skin
+      // silhouette for the preview scene (dragged wall + mitered neighbours at their new
+      // positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη» is off.
+      // Mirrors the committed order (plaster painted after the body).
+      if (wallFinishPreview) {
+        drawWallFinishSkinPreview(
+          ctx, wallFinishPreview.scene, wallGhostToDraw, wallFinishPreview.neighbours, t, vp,
+        );
+      }
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
       // NOT the selected dragged entity, so their originals stay SOLID on the main canvas.

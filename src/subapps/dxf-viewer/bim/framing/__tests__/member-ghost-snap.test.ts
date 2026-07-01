@@ -97,6 +97,83 @@ describe('resolveMemberColumnFaceSnap — ADR-508 §center-snap (κέντρο↔
   });
 });
 
+describe('resolveMemberColumnFaceSnap — ADR-508 §rotated-column (λοξή ορθογώνια κολόνα)', () => {
+  const OPTS = { memberWidthScene: 200, ghostLenScene: 1200, captureScene: 600 } as const;
+  const SQRT1_2 = Math.SQRT1_2; // cos45 = sin45 ≈ 0.7071
+
+  /** Τετράγωνο `side` κεντραρισμένο στο (cx,cy), περιστραμμένο `deg` (CCW). Επιστρέφει 4 κορυφές. */
+  const rotatedSquare = (side: number, cx: number, cy: number, deg: number) => {
+    const h = side / 2;
+    const r = (deg * Math.PI) / 180;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    return [
+      { x: -h, y: -h }, { x: h, y: -h }, { x: h, y: h }, { x: -h, y: h },
+    ].map((p) => ({ x: cx + p.x * c - p.y * s, y: cy + p.x * s + p.y * c }));
+  };
+
+  it('45° κολόνα, cursor στην (λοξή) E παρειά → ο τοίχος βγαίνει στις 45° (ΟΧΙ οριζόντιος)', () => {
+    const fp = rotatedSquare(200, 0, 0, 45);
+    // world σημείο κατά μήκος του +u (45°): τοπικό (300,0) → world 300·u.
+    const cursor = { x: 300 * SQRT1_2, y: 300 * SQRT1_2 };
+    const r = resolveMemberColumnFaceSnap(cursor, [fp], OPTS);
+    expect(r).not.toBeNull();
+    expect(r!.face).toBe('E');
+    // start flush στη λοξή παρειά = κέντρο-παρειάς = 100·u
+    expect(r!.start.x).toBeCloseTo(100 * SQRT1_2);
+    expect(r!.start.y).toBeCloseTo(100 * SQRT1_2);
+    // ΚΡΙΣΙΜΟ: το ghost stub (end−start) δείχνει στις 45° (κάθετα στη λοξή παρειά), όχι οριζόντια.
+    const ang = (Math.atan2(r!.end.y - r!.start.y, r!.end.x - r!.start.x) * 180) / Math.PI;
+    expect(ang).toBeCloseTo(45);
+    // faceFrame: άξονας κατά μήκος της παρειάς = v (135°)· κάθετος = u (45°).
+    expect(r!.faceFrame.axisDir.x).toBeCloseTo(-SQRT1_2);
+    expect(r!.faceFrame.axisDir.y).toBeCloseTo(SQRT1_2);
+    expect(r!.faceFrame.perpDir.x).toBeCloseTo(SQRT1_2);
+    expect(r!.faceFrame.perpDir.y).toBeCloseTo(SQRT1_2);
+  });
+
+  it('45° κολόνα, cursor κοντά στο κέντρο → center-to-centroid magnet (parity) → start = κέντρο', () => {
+    const fp = rotatedSquare(200, 0, 0, 45);
+    const r = resolveMemberColumnFaceSnap({ x: 10, y: 10 }, [fp], OPTS); // dCenter τοπικό ≈14 < 50
+    expect(r!.start.x).toBeCloseTo(0);
+    expect(r!.start.y).toBeCloseTo(0);
+    expect(r!.third).toBe('mid');
+    expect(r!.faceFrame.facePerp).toBe(0);
+  });
+
+  it('30° κολόνα → faceFrame axisDir/perpDir ακολουθούν την πραγματική γωνία παρειάς', () => {
+    const fp = rotatedSquare(200, 0, 0, 30);
+    const c = Math.cos(Math.PI / 6); // 0.866
+    const s = Math.sin(Math.PI / 6); // 0.5
+    const cursor = { x: 300 * c, y: 300 * s }; // κατά μήκος +u (30°)
+    const r = resolveMemberColumnFaceSnap(cursor, [fp], OPTS);
+    expect(r!.face).toBe('E');
+    expect(r!.faceFrame.perpDir.x).toBeCloseTo(c); // κάθετος στην παρειά = u (30°)
+    expect(r!.faceFrame.perpDir.y).toBeCloseTo(s);
+    expect(r!.faceFrame.axisDir.x).toBeCloseTo(-s); // κατά μήκος παρειάς = v (120°)
+    expect(r!.faceFrame.axisDir.y).toBeCloseTo(c);
+  });
+
+  it('Λοξή κολόνα μακριά (πέρα από capture) → null', () => {
+    const fp = rotatedSquare(200, 0, 0, 45);
+    expect(resolveMemberColumnFaceSnap({ x: 5000, y: 5000 }, [fp], OPTS)).toBeNull();
+  });
+
+  it('ΜΗ-παλινδρόμηση: axis-aligned κολόνα ΔΕΝ περνά από το rotated path (world-aligned faceFrame)', () => {
+    const r = resolveMemberColumnFaceSnap({ x: 700, y: 200 }, [COLUMN_FP], OPTS);
+    expect(r!.faceFrame.axisDir).toEqual({ x: 0, y: 1 }); // ακριβώς world-aligned (όχι rotated float)
+  });
+
+  it('dispatcher: λοξή κολόνα → status neutral + rotated faceFrame', () => {
+    const fp = rotatedSquare(200, 0, 0, 45);
+    const cursor = { x: 300 * SQRT1_2, y: 300 * SQRT1_2 };
+    const r = resolveMemberGhostSnapFromStore(cursor, [fp], [], 200, 'mm');
+    expect(r!.status).toBe('neutral');
+    expect(r!.faceFrame).toBeDefined();
+    expect(r!.faceFrame!.perpDir.x).toBeCloseTo(SQRT1_2);
+  });
+});
+
 describe('resolveMemberGhostSnapFromStore — column-priority dispatcher', () => {
   const MEMBER = {
     id: 'm1',

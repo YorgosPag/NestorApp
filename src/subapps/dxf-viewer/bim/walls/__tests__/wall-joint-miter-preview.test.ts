@@ -42,7 +42,7 @@ describe('applyJointMiterPreview — live joint miter (Επίπεδο 2)', () =>
     // Ghost shares the corner at (3000,0), heading north → 90° miter.
     const ghost = asGhost(makeWall({ x: 3000, y: 0 }, { x: 3000, y: 3000 }, 'ignored'));
 
-    const result = applyJointMiterPreview(ghost, [existing], 'mm');
+    const result = applyJointMiterPreview(ghost, [existing], [], 'mm');
 
     expect(result).not.toBe(ghost); // augmented
     const neighbors = (result as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors;
@@ -54,14 +54,14 @@ describe('applyJointMiterPreview — live joint miter (Επίπεδο 2)', () =>
     const existing = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 'wall_existing');
     const ghost = asGhost(makeWall({ x: 50000, y: 50000 }, { x: 50000, y: 53000 }, 'ignored'));
 
-    expect(applyJointMiterPreview(ghost, [existing], 'mm')).toBe(ghost);
+    expect(applyJointMiterPreview(ghost, [existing], [], 'mm')).toBe(ghost);
   });
 
   it('3. curved ghost → no-op (miter is straight-only)', () => {
     const existing = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 'wall_existing');
     const ghost = asGhost(makeWall({ x: 3000, y: 0 }, { x: 3000, y: 3000 }, 'ignored', 'curved'));
 
-    expect(applyJointMiterPreview(ghost, [existing], 'mm')).toBe(ghost);
+    expect(applyJointMiterPreview(ghost, [existing], [], 'mm')).toBe(ghost);
   });
 
   it('4. overlap ghost (ghostStatusColor set) → no-op', () => {
@@ -71,10 +71,10 @@ describe('applyJointMiterPreview — live joint miter (Επίπεδο 2)', () =>
       { ghostStatusColor: { stroke: '#f00', fill: '#f00' } },
     );
 
-    expect(applyJointMiterPreview(ghost, [existing], 'mm')).toBe(ghost);
+    expect(applyJointMiterPreview(ghost, [existing], [], 'mm')).toBe(ghost);
   });
 
   it('5. null ghost → null', () => {
-    expect(applyJointMiterPreview(null, [], 'mm')).toBeNull();
+    expect(applyJointMiterPreview(null, [], [], 'mm')).toBeNull();
   });
 });

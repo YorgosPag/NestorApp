@@ -223,6 +223,13 @@ export interface WallGeometry {
   readonly area: number;
   /** m³ — `area × thickness/1000` (follows net area when openings subtracted). */
   readonly volume: number;
+  /**
+   * ADR-458 — DERIVED plan footprint κομμένο στις παρειές τεμνόντων κολωνών («η κολόνα
+   * νικάει»). Optional + ΠΟΤΕ persisted — το θέτει το 2Δ post-pass `applyWallColumnCutback2D`
+   * (mirror του beam `displayOutline`). Πολλά rings = κολόνα που χωρίζει τον τοίχο· `[]` =
+   * τοίχος εξ ολοκλήρου μέσα σε κολόνα (δεν σχεδιάζεται). Απών → πλήρες outer+inner ring.
+   */
+  readonly displayFootprint?: readonly (readonly Point3D[])[];
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

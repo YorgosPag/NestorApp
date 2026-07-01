@@ -106,6 +106,33 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-01 (§rotated-column — τοίχος/δοκάρι κουμπώνει στις ΛΟΞΕΣ παρειές περιστραμμένης ορθογώνιας κολόνας)**
+  - **Αίτημα Giorgio**: «ορθογώνια κολόνα τοποθετημένη **υπό γωνία** στην κάτοψη· επιλέγω *τοίχος* για να κολλήσω
+    τον τοίχο στις παρειές της. Ο τοίχος **δεν αναγνωρίζει τις κλίσεις** — κάθεται πάντα οριζόντιος ή κάθετος.»
+  - **Ρίζα (2 Explore agents — SSoT audit, επιβεβ. end-to-end)**: η διαδρομή τοίχου/δοκαριού→κολόνας
+    (`resolveBimCursorSnap` → `resolveMemberGhostSnapFromStore` → **`resolveMemberColumnFaceSnap`**) δούλευε
+    **αποκλειστικά με AABB** (`footprintBounds`, `pickDominantFace` μόνο E/W/N/S, normals μόνο `(±1,0)/(0,±1)`) →
+    «ίσιωνε» κάθε περιστραμμένη κολόνα στο ορθογώνιο-περίβλημά της. Ο rotation-aware SSoT (`footprintEdgeTargets`
+    → `resolveFootprintEdgeSnap`) που ΗΔΗ χρησιμοποιεί το εργαλείο **κολόνας** (ADR-514 Φ6d) δεν δινόταν ποτέ στον
+    τοίχο. **SSoT gap**, όχι έλλειψη μηχανισμού.
+  - **Fix (ZERO new geometry, FULL SSoT reuse)**: το `resolveMemberColumnFaceSnap` γενικεύτηκε ώστε, για
+    **πραγματικό ορθογώνιο** footprint (4 κορυφές, u⊥v) που είναι **περιστραμμένο**, να φέρνει τον cursor στο
+    **τοπικό πλαίσιο** της κολόνας (`RectFrame` u/v μέσω NEW `rectWorldToLocal`/`rectDirToWorld` στο `rect-frame.ts`),
+    να τρέχει την **ΙΔΙΑ** axis-aligned λογική (face-flush + 3-thirds + **center-to-centroid** magnet — πλήρες parity)
+    και να γυρνά start/end/faceFrame στον κόσμο (`rectLocalToWorld` + rotate dirs). Τα βαθμωτά (facePerp/along/
+    ghostHalfWidth/outwardSign) είναι rotation-invariant → αμετάβλητα.
+  - **Μηδέν regression**: ίσιες κολόνες / κύκλοι (πολλές κορυφές) / πολύγωνα Γ-Τ-Π → `null` από το rotated-guard →
+    πέφτουν στο **byte-identical** ιστορικό AABB path. Το axis-aligned quantization grid μένει ακριβώς ίδιο.
+  - **Ένα fix, τρία αποτελέσματα**: ο ίδιος resolver τροφοδοτεί (α) το ghost-πριν-το-κλικ, (β) το captured
+    `startFaceAngle` (→ face-relative polar 2ου κλικ, ADR-508 §angle-relative-to-face), (γ) το flush endpoint →
+    ο τοίχος «βλέπει» την πραγματική κλίση παντού.
+  - **Tests**: +6 `member-ghost-snap.test.ts` (45° E-face stub@45° + faceFrame u/v· 45° center-to-centroid parity·
+    30° faceFrame axis/perp· far→null· axis-aligned μη-παλινδρόμηση· dispatcher rotated). 27/27 GREEN + 41/41
+    συγγενικά (endpoint + beam→column) regression.
+  - **Εκκρεμεί (Phase 2, αν χρειαστεί μετά browser-verify)**: καθαρό σενάριο «τοίχος από έξω, το ΑΚΡΟ μπήγεται
+    κάθετα στη λοξή παρειά» — το endpoint snap σήμερα μόνο *μετακινεί* το σημείο (δεν *περιστρέφει*). Πιθανό
+    face-relative angle magnet στο άκρο (καθρέφτης του start-magnet).
+
 - **2026-07-01 (§end-reference — κορυφή κάθετου τοίχου: 3-tier flush 1α/2β/3γ, end-cap αδελφό του ADR-523)**
   - **Αίτημα Giorgio (2 στιγμιότυπα)**: «σχεδιάζω οριζόντιο τοίχο κοντά στη **βόρεια μικρή παρειά (κορυφή)**
     υφιστάμενου κάθετου τοίχου. Καθώς κατεβάζω τον κέρσορα θέλω 3 διαδοχικά κουμπώματα: (A) **νότια παρειά

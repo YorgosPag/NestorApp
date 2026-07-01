@@ -46,7 +46,9 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
 import { applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
-import { buildShape, extrudeAndRotate, tagMesh, buildWallShape, buildWallFootprintRing } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, buildWallShape, buildWallFootprintRing } from './bim-three-shape-helpers';
+// ADR-458 — wall-to-column cutback (pure generic SSoT, «η κολόνα νικάει»).
+import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
 // ADR-539 Φ3c — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
 import { shouldRenderFaced } from './should-render-faced';
@@ -320,14 +322,37 @@ function buildWallCoreBody(
   inner: readonly Point3D[],
   heightM: number,
   material: THREE.Material,
+  columnFootprintsM: readonly (readonly { readonly x: number; readonly y: number }[])[] = [],
 ): THREE.Mesh | null {
   const fa = wall.faceAppearance;
   if (shouldRenderFaced(fa)) {
+    // ADR-458 DEFER — faced (per-face paint) core κρατά το πλήρες footprint (uncut)· ο
+    // column cutback στο faced path (per-face appearance re-mapping) = μετέπειτα.
     const ring = buildWallFootprintRing(outer, inner);
     const mesh = buildFacedSolidBody(ring, heightM, fa ?? {}, material);
     // ADR-404 — battered wall shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.
     if (mesh) applyWallTilt(mesh.geometry, renderWall.params);
     return mesh;
+  }
+  // ADR-458 — wall-to-column cutback (Revit join, «η κολόνα νικάει»): κόβει το footprint του
+  // τοίχου στις παρειές των κολωνών που το τέμνουν → πραγματική τομή 3Δ (ο τοίχος τελειώνει
+  // στην παρειά, μηδέν εμβύθιση στο σώμα της κολόνας), parity με 2Δ κάτοψη + BOQ. DERIVED
+  // (ποτέ persisted). `null` → ίσιο single-shape extrude (byte-for-byte, zero regression).
+  // `[]` → τοίχος εξ ολοκλήρου μέσα σε κολόνα → δεν σχεδιάζεται. Πολλά κομμάτια → ΕΝΑ geometry.
+  const ring = buildWallFootprintRing(outer, inner);
+  const trimmed = columnFootprintsM.length > 0 && ring.length >= 3
+    ? computeMemberCutbackOutline(ring, columnFootprintsM)
+    : null;
+  if (trimmed !== null) {
+    if (trimmed.length === 0) return null;
+    const shapes = trimmed
+      .map((r) => buildShape(r.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const geo = extrudeShapesAndRotate(shapes, heightM);
+    if (!geo) return null;
+    ensureWorldUvs(geo);
+    applyWallTilt(geo, renderWall.params); // ADR-404 — no-op flat.
+    return new THREE.Mesh(geo, material);
   }
   const shape = buildWallShape(outer, inner);
   if (!shape) return null;
@@ -438,10 +463,16 @@ export function wallToMesh(
   // ADR-462 — outer/inner edge points (canvas units) → world metres.
   const outerScaled = scalePoints(renderWall.geometry.outerEdge.points, sceneToM);
   const innerScaled = scalePoints(renderWall.geometry.innerEdge.points, sceneToM);
+  // ADR-458 — column footprints (canvas units) → world metres με ΤΟ ΙΔΙΟ sceneToM (κοινός
+  // χώρος μέτρων με το wall ring), για την πραγματική τομή 3Δ στον flat solid path.
+  const columnFootprintsM = columns
+    .filter((c) => c.length >= 3)
+    .map((c) => scalePoints(c, sceneToM).map((p) => ({ x: p.x, y: p.y })));
   // ADR-539 Φ3c — faced (per-face paint) core when painted/targeted, else legacy extrude
   // (ADR-413 UVs + ADR-404 tilt baked inside the helper). Same [0, height] span → same position.y.
   const mesh = buildWallCoreBody(
     wall, renderWall, outerScaled, innerScaled, renderWall.params.height * MM_TO_M, material,
+    columnFootprintsM,
   );
   if (!mesh) return null;
   // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the
