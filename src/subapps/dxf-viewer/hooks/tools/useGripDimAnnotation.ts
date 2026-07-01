@@ -40,6 +40,9 @@ import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
+// ADR-508 §column-hud — ορθογώνιες κολόνες παίρνουν το πλούσιο HUD (useGripGhostPreview)· εδώ κρατάμε
+// τα pills ΜΟΝΟ για μη-ορθογώνιες (κύκλος/Γ/Τ/Π) → μηδέν διπλή ένδειξη. Κοινό SSoT «είναι box;».
+import { isRectFootprint } from '../../bim/framing/rect-frame';
 import {
   PILL_DIM_FONT,
   PILL_TEXT_COLOR,
@@ -264,7 +267,12 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
 
     let label: string | null = null;
     if (columnGripKind && isColumnEntity(entity)) {
-      label = buildColumnLabel(dragPreview, entity.params);
+      // ADR-508 §column-hud — ΟΡΘΟΓΩΝΙΑ & ΚΥΚΛΙΚΗ κολόνα → πλούσιο HUD (aligned dims / Ø) στο
+      // `useGripGhostPreview`· εδώ pill ΜΟΝΟ για Γ/Τ/Π/I/πολύγωνο (per-sub-dim feedback: arm/flange/leg).
+      const hasRichHud = isRectFootprint(entity.geometry.footprint.vertices) || entity.params.kind === 'circular';
+      if (!hasRichHud) {
+        label = buildColumnLabel(dragPreview, entity.params);
+      }
     } else if (beamGripKind && isBeamEntity(entity)) {
       label = buildBeamLabel(dragPreview, entity.params);
     } else if (foundationGripKind && isFoundationEntity(entity)) {

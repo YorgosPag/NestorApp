@@ -11,8 +11,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-398-column-placement-snap.md
  */
 
-/** Σημασιολογικό status ghost: 🟢 έγκυρος στόχος / 🔴 σύγκρουση / ουδέτερο. */
-export type GhostStatus = 'beam' | 'overlap' | 'neutral';
+/**
+ * Σημασιολογικό status ghost: 🟢 έγκυρος στόχος / 🔴 σύγκρουση / 🟠 προειδοποίηση / ουδέτερο.
+ * `warning` (🟠 πορτοκαλί) = επιτρεπτό αλλά «πρόσεξε» — ΟΧΙ απαγορευτικό (το 🔴 σημαίνει block).
+ * π.χ. ADR-363 §5.6: όσο το grip-drag κρατά την ορθογώνια κολόνα σε σχέσεις τοιχίου (aspect > 4).
+ */
+export type GhostStatus = 'beam' | 'overlap' | 'warning' | 'neutral';
 
 /** Χρωματισμός ghost ανά placement status (stroke + fill@alpha). */
 export interface GhostStatusColor {
@@ -20,10 +24,14 @@ export interface GhostStatusColor {
   readonly fill: string;
 }
 
-/** Παλέτα: 🟢 `beam` (έγκυρη σύνδεση/άξονας) / 🔴 `overlap` (επικάλυψη/σύγκρουση). */
-const GHOST_STATUS_COLORS: Readonly<Record<'beam' | 'overlap', GhostStatusColor>> = {
+/**
+ * Παλέτα: 🟢 `beam` (έγκυρη σύνδεση/άξονας) / 🔴 `overlap` (επικάλυψη/σύγκρουση) /
+ * 🟠 `warning` (πορτοκαλί — επιτρεπτό-με-προσοχή, ΟΧΙ απαγορευτικό).
+ */
+const GHOST_STATUS_COLORS: Readonly<Record<'beam' | 'overlap' | 'warning', GhostStatusColor>> = {
   beam: { stroke: '#2e9e44', fill: 'rgba(46, 158, 68, 0.30)' },
   overlap: { stroke: '#d23b3b', fill: 'rgba(210, 59, 59, 0.30)' },
+  warning: { stroke: '#f59e0b', fill: 'rgba(245, 158, 11, 0.30)' },
 };
 
 /** Resolve status → χρώμα· `null` για `neutral` (κρατά το default χρώμα τύπου). */

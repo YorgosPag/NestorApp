@@ -28,11 +28,7 @@ import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
-import {
-  detectRectColumnBecomesWall,
-  reclassifyRectToShearWall,
-} from '../../bim/columns/column-aspect';
-import { requestColumnBecomesWallConfirm } from '../../bim/columns/column-becomes-wall-confirm-store';
+import { runColumnEditGuards } from '../../bim/columns/column-edit-guard-flow';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
@@ -403,23 +399,9 @@ export function commitColumnGripDrag(
     }
   };
 
-  // ADR-363 §5.6 — edit-time aspect guard (grip resize): αν το σύρσιμο περνά το κατώφλι
-  // κολόνα→τοιχίο (EC2 §9.6.1, rounded aspect > 4) → non-blocking confirm ΣΤΟ RELEASE (το
-  // grip commit τρέχει ήδη μία φορά στο mouse-up· ΕΝΑ SSoT με το αριθμητικό path). Non-crossing
-  // → κατευθείαν finalize (μηδέν dialog).
-  const becomesWall = detectRectColumnBecomesWall(originalParams, newParams);
-  if (!becomesWall) {
-    finalize(newParams);
-    return;
-  }
-  void requestColumnBecomesWallConfirm({
-    aspect: becomesWall.aspect,
-    longSideMm: becomesWall.longSideMm,
-    shortSideMm: becomesWall.shortSideMm,
-  }).then((action) => {
-    if (action === 'cancel') return;
-    finalize(action === 'convert' ? reclassifyRectToShearWall(newParams) : newParams);
-  });
+  // ADR-363 §5.6/§5.6b — edit-time guards (grip resize) ΣΤΟ RELEASE (το grip commit τρέχει
+  // ήδη μία φορά στο mouse-up· ΕΝΑ SSoT με το αριθμητικό path μέσω `runColumnEditGuards`).
+  runColumnEditGuards(originalParams, newParams, finalize);
 }
 
 /**

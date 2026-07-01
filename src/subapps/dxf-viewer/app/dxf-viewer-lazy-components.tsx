@@ -46,6 +46,8 @@ export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialo
 export const ColumnAdoptSizeDialog = React.lazy(() => import('../ui/dialogs/ColumnAdoptSizeDialog').then(mod => ({ default: mod.ColumnAdoptSizeDialog })));
 // ADR-363 §5.6 — «Οι διαστάσεις δημιουργούν τοιχίο» edit-time confirm dialog (self-subscribing, zero props)
 export const ColumnBecomesWallDialog = React.lazy(() => import('../ui/dialogs/ColumnBecomesWallDialog').then(mod => ({ default: mod.ColumnBecomesWallDialog })));
+// ADR-363 §5.6b — «Ασυνήθιστες διαστάσεις τοιχίου» (πάχος/μήκος) edit-time confirm dialog (self-subscribing)
+export const ShearWallExtentDialog = React.lazy(() => import('../ui/dialogs/ShearWallExtentDialog').then(mod => ({ default: mod.ShearWallExtentDialog })));
 // ADR-524 — «Πολλαπλή πλήρωση όμοιων πλαισίων» confirm dialog (self-subscribing, zero props)
 export const ColumnBatchFillConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnBatchFillConfirmDialog').then(mod => ({ default: mod.ColumnBatchFillConfirmDialog })));
 // ADR-533 — «Ανίχνευση συμβόλου κουφώματος σε τοίχο» confirm dialog (self-subscribing, zero props)

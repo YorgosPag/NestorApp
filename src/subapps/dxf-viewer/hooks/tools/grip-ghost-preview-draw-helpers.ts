@@ -15,14 +15,29 @@
 
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { isLineEntity } from '../../types/entities';
+import { isLineEntity, isColumnEntity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-363 §5.6/§5.6b — live 🟠 warning outline όσο το grip-drag κρατά κολόνα σε σχέσεις τοιχίου (aspect>4)
+// Ή τοιχίο σε ασυνήθιστο πάχος/μήκος.
+import { detectRectColumnBecomesWall } from '../../bim/columns/column-aspect';
+import { detectShearWallExtentCrossing } from '../../bim/columns/shear-wall-extents';
+import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { buildCoincidentPartnerGhostEntities } from '../../systems/stretch/coincident-endpoint-comove';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 // ADR-449 — LIVE finish-skin (σοβάς) preview reuses the committed scene-level pass.
 import { drawStructuralFinishSkin2D } from '../../canvas-v2/dxf-canvas/dxf-renderer-structural-overlays';
+// ADR-508 §wall-hud / §column-hud — LIVE «λευκές ενδείξεις» τοίχου & κολόνας στο σύρσιμο λαβής, στο ΙΔΙΟ
+// RAF/frame με το ghost (ΚΟΙΝΟΣ SSoT με τη σχεδίαση → σταθερές, μηδέν flicker/διπλότυπο).
+import type { DxfGripDragPreview } from '../grip-computation';
+import type { SceneUnits } from '../../utils/scene-units';
+import type { WallEntity } from '../../bim/types/wall-types';
+import type { ColumnEntity } from '../../bim/types/column-types';
+import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
+import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
+import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -166,6 +181,48 @@ export function drawComovePartnerGhosts(
 }
 
 /**
+ * ADR-363 §5.6/§5.6b — LIVE 🟠 warning outline κατά το grip-drag κολόνας/τοιχίου: ζωγραφίζει το
+ * περίγραμμα του φαντάσματος **πορτοκαλί** (ΟΧΙ κόκκινο — δεν είναι απαγορευτικό, απλώς προειδοποιεί)
+ * όταν το τραβηγμένο σχήμα:
+ *   §5.6  — ορθογώνια κολόνα περνά το κατώφλι κολόνα→τοιχίο (rounded aspect > 4, EC2 §9.6.1), ή
+ *   §5.6b — τοιχίο ξεπερνά ασυνήθιστο πάχος (>1.5m) / μήκος (>30m).
+ * Μένει όσο ισχύει η υπέρβαση· χάνεται μόλις επανέλθει στο τυπικό. Ταυτίζεται 1:1 με τα dialog-on-release
+ * (ΙΔΙΑ gates `detectRectColumnBecomesWall` / `detectShearWallExtentCrossing`). Πάνω από το body ghost.
+ */
+export function drawColumnAspectWallWarning(
+  ctx: CanvasRenderingContext2D,
+  original: Entity,
+  transformed: Entity,
+  t: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  if (!isColumnEntity(original) || !isColumnEntity(transformed)) return;
+  const warn =
+    detectRectColumnBecomesWall(original.params, transformed.params) !== null ||
+    detectShearWallExtentCrossing(original.params, transformed.params) !== null;
+  if (!warn) return;
+  const verts = transformed.geometry?.footprint?.vertices ?? [];
+  if (verts.length < 2) return;
+  const color = resolveGhostStatusColor('warning');
+  if (!color) return;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
+  ctx.strokeStyle = color.stroke;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const first = CoordinateTransforms.worldToScreen(verts[0], t, vp);
+  ctx.moveTo(first.x, first.y);
+  for (let i = 1; i < verts.length; i++) {
+    const p = CoordinateTransforms.worldToScreen(verts[i], t, vp);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
  * ADR-449 — pure entity list for the live finish-skin (σοβάς) preview: the full scene with
  * the dragged wall (and its live-mitered neighbours) swapped for their PREVIEW versions, so
  * the merged plaster silhouette re-forms around the wall's NEW position. The silhouette is
@@ -209,4 +266,46 @@ export function drawStructuralFinishSkinPreview(
 ): void {
   const preview = buildFinishSkinPreviewEntities<{ readonly id: string }>(sceneEntities, ghostMember, neighbours);
   drawStructuralFinishSkin2D(ctx, preview as unknown as readonly DxfEntityUnion[], t, vp);
+}
+
+/**
+ * ADR-508 §wall-hud/§column-hud — grip kinds ΧΩΡΙΣ live HUD (καθαρή μετακίνηση / περιστροφή που έχει
+ * δική της ένδειξη). Τα `*-poly-vertex-*` (free-form) εξαιρούνται χωριστά (startsWith).
+ */
+const MEMBER_HUD_SKIP: ReadonlySet<string> = new Set([
+  'wall-midpoint', 'wall-rotation', 'column-center', 'column-rotation',
+]);
+
+/**
+ * ADR-508 §wall-hud/§column-hud — LIVE «λευκές ενδείξεις» ΤΟΙΧΟΥ ή ΚΟΛΟΝΑΣ κατά το σύρσιμο λαβής,
+ * ζωγραφισμένες στο **ΙΔΙΟ frame/RAF** με το grip ghost (ο caller το καλεί ΜΕΤΑ το ghost draw) → ΣΤΑΘΕΡΕΣ,
+ * χωρίς race με ξεχωριστό leaf. **FULL SSoT** — ΙΔΙΟΙ painters/formatters με τη σχεδίαση:
+ *   · τοίχος → `buildSegmentHudMeta` + `paintWallHud` (μήκος/γωνία/πάχος·ύψος)·
+ *   · ορθογώνια κολόνα → `paintColumnHud` (πλάτος/βάθος στις παρειές + ∠γωνία + ύψος· no-op σε κύκλο/Γ/Τ/Π).
+ * Μόνο σε λαβές αλλαγής διαστάσεων (skip move/rotate/poly-vertex). No-op σε μηδενική αλλαγή (`changed=false`).
+ */
+export function drawMemberGripHud(
+  ctx: CanvasRenderingContext2D,
+  dp: DxfGripDragPreview,
+  transformed: DxfEntityUnion,
+  changed: boolean,
+  sceneUnits: SceneUnits,
+  t: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  if (!changed) return;
+  const type = (transformed as { type?: string }).type;
+  if (dp.wallGripKind && !MEMBER_HUD_SKIP.has(dp.wallGripKind) && type === 'wall') {
+    const w = transformed as unknown as WallEntity;
+    const meta = buildSegmentHudMeta(w.params.start, w.params.end, sceneUnits, w.params.thickness, w.params.height);
+    paintWallHud(ctx, meta, buildWallHudSpecLabel(meta), t, vp);
+    return;
+  }
+  if (
+    dp.columnGripKind && !MEMBER_HUD_SKIP.has(dp.columnGripKind) &&
+    !dp.columnGripKind.startsWith('column-poly-vertex-') && type === 'column'
+  ) {
+    const c = transformed as unknown as ColumnEntity;
+    paintColumnHud(ctx, c.geometry.footprint.vertices, c.params.rotation, c.params.kind, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
+  }
 }

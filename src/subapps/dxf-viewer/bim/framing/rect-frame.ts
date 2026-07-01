@@ -63,3 +63,21 @@ export function rectWorldToLocal(rect: Readonly<RectFrame>, p: Readonly<Point2D>
 export function rectDirToWorld(rect: Readonly<RectFrame>, d: Readonly<Point2D>): Point2D {
   return { x: d.x * rect.u.x + d.y * rect.v.x, y: d.x * rect.u.y + d.y * rect.v.y };
 }
+
+/**
+ * `true` όταν το footprint είναι **πραγματικό ορθογώνιο** (4 κορυφές — ανοικτό ή κλειστό 5 — με ορθές
+ * γωνίες u⊥v). Πολύγωνα Γ/Τ/Π (≥6 κορυφές), κύκλοι (πολλές κορυφές) και μη-ορθογώνια τετράπλευρα → `false`.
+ * ΕΝΑ SSoT για «είναι box;» — μοιράζεται από το column HUD (aligned-dim path) και το pill-suppression.
+ */
+export function isRectFootprint(fp: readonly Point2D[]): boolean {
+  if (fp.length < 4 || fp.length > 5) return false;
+  const r = rectFrameFromCorners(fp);
+  if (!r) return false;
+  if (Math.abs(r.u.x * r.v.x + r.u.y * r.v.y) >= 1e-6) return false; // ορθή γωνία στην κορυφή 0
+  // Η 3η κορυφή πρέπει να ΚΛΕΙΝΕΙ το ορθογώνιο: c2 ≈ c1 + c3 − c0 (αλλιώς τραπέζιο/παραλληλόγραμμο).
+  const [c0, c1, c2, c3] = fp;
+  const ex = c1.x + c3.x - c0.x;
+  const ey = c1.y + c3.y - c0.y;
+  const tol = 1e-6 * (1 + Math.abs(ex) + Math.abs(ey));
+  return Math.abs(c2.x - ex) <= tol && Math.abs(c2.y - ey) <= tol;
+}

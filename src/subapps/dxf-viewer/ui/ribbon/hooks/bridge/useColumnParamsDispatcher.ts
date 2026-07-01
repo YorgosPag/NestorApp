@@ -25,11 +25,7 @@ import { alignColumnOnTypeChange } from '../../../../bim/columns/column-beam-ali
 import { resolveColumnSectionLock } from '../../../../bim/structural/sizing/column-size-patch';
 import { resolveActiveColumnDesignMoment } from '../../../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../../../bim/structural/codes';
-import {
-  detectRectColumnBecomesWall,
-  reclassifyRectToShearWall,
-} from '../../../../bim/columns/column-aspect';
-import { requestColumnBecomesWallConfirm } from '../../../../bim/columns/column-becomes-wall-confirm-store';
+import { runColumnEditGuards } from '../../../../bim/columns/column-edit-guard-flow';
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
@@ -89,23 +85,9 @@ export function useColumnParamsDispatcher(
         }
       };
 
-      // ADR-363 §5.6 — edit-time aspect guard: αλλαγή διαστάσεων ορθογώνιας κολόνας που περνά το
-      // κατώφλι κολόνα→τοιχίο (EC2 §9.6.1 / EC8 §5.4.2.4, rounded aspect > 4) → non-blocking warn
-      // (Revit-style): μετατροπή σε τοιχίο (reclassify) / κράτημα ως κολόνα / ακύρωση. Non-crossing
-      // edits περνούν κατευθείαν (μηδέν επιπλέον latency/dialog).
-      const becomesWall = detectRectColumnBecomesWall(column.params, nextParams);
-      if (!becomesWall) {
-        commit(nextParams);
-        return;
-      }
-      void requestColumnBecomesWallConfirm({
-        aspect: becomesWall.aspect,
-        longSideMm: becomesWall.longSideMm,
-        shortSideMm: becomesWall.shortSideMm,
-      }).then((action) => {
-        if (action === 'cancel') return;
-        commit(action === 'convert' ? reclassifyRectToShearWall(nextParams) : nextParams);
-      });
+      // ADR-363 §5.6/§5.6b — edit-time guards (κολόνα→τοιχίο aspect + shear-wall extent) μέσω
+      // του SSoT `runColumnEditGuards` (ΕΝΑ σημείο αλήθειας, κοινό με το grip-resize path).
+      runColumnEditGuards(column.params, nextParams, commit);
     },
     [executeCommand, levelManager],
   );

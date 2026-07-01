@@ -225,6 +225,14 @@
     "keepButton": "Keep as column",
     "cancel": "Cancel"
   },
+  "shearWallExtent": {
+    "title": "Unusual shear-wall dimensions",
+    "warningThickness": "⚠️ Thickness {thickness}: above typical — it now behaves as mass concrete, not a thin shear wall.",
+    "warningLength": "⚠️ Length {length}: very long continuous run — a movement/contraction joint is required (crack control EC2 §7.3).",
+    "message": "The Eurocodes set no maximum shear-wall thickness or length, but these dimensions are outside the typical range. Proceed?",
+    "proceedButton": "Proceed",
+    "cancel": "Cancel"
+  },
   "hatchOverlap": {
     "title": "Region already hatched",
     "message": "This region already has a hatch. Add another one on top?",
@@ -750,6 +758,7 @@
     },
     "column": {
       "statusPosition": "Click to place column — Tab cycles anchor",
+      "hudSpec": "height {height}",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
       "statusDiscretePerimeterPick": "Box-select faces → each perimeter a separate column or structural wall (auto-classified from side ratios)",
       "statusRegionLinesPick": "Pick 4 lines that form a rectangle → one column filling it",

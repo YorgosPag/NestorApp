@@ -61,10 +61,6 @@ import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
-// ADR-508 §wall-hud — LIVE «λευκές ενδείξεις» (γωνία/μήκος/πάχος/ύψος) στο σύρσιμο λαβής τοίχου,
-// στο ΙΔΙΟ RAF/frame με το ghost → ΚΟΙΝΟΣ SSoT με τη σχεδίαση (preview ≡ HUD), μηδέν flicker.
-import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity, isWallEntity, isColumnEntity } from '../../types/entities';
 // ADR-363 §wall-joint-miter-preview — LIVE join during rotate/move/reshape of a wall:
@@ -98,6 +94,8 @@ import {
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
+  drawColumnAspectWallWarning,
+  drawMemberGripHud,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
@@ -118,13 +116,6 @@ export interface UseGripGhostPreviewProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
-
-/**
- * ADR-508 §wall-hud — wall grip kinds που ΔΕΝ αλλάζουν διαστάσεις → κανένα live HUD: καθαρή μετακίνηση
- * (`wall-midpoint`) και περιστροφή (`wall-rotation`, έχει ήδη ένδειξη φοράς ADR-397 §15). Κάθε άλλη λαβή
- * (start/end/thickness/corner/curve/vertex) αλλάζει μήκος/πάχος → δείχνει τις ενδείξεις.
- */
-const WALL_HUD_SKIP: ReadonlySet<string> = new Set(['wall-midpoint', 'wall-rotation']);
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -429,27 +420,19 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         (id) => getEntity(id) as unknown as Entity | undefined,
         t, vp,
       );
+      // ADR-363 §5.6 — LIVE 🟠 warning outline: όσο το grip-drag κρατά την ορθογώνια κολόνα σε σχέσεις
+      // τοιχίου (aspect > 4), το περίγραμμα του φαντάσματος γίνεται πορτοκαλί (opaque, πάνω από το body).
+      // Ίδιο gate με το dialog-on-release (`detectRectColumnBecomesWall`). No-op για μη-crossing/άλλα είδη.
+      drawColumnAspectWallWarning(ctx, entity as unknown as Entity, transformed as unknown as Entity, t, vp);
       ctx.restore();
     }
 
-    // ADR-508 §wall-hud — LIVE «λευκές ενδείξεις» τοίχου (γωνία/μήκος/πάχος/ύψος) ΠΑΝΩ από το ghost,
-    // στο ΙΔΙΟ frame/RAF (μετά το ghost draw, πριν το επόμενο harness clear) → ΣΤΑΘΕΡΕΣ όσο σέρνεις, χωρίς
-    // race με ξεχωριστό leaf. ΙΔΙΟΣ SSoT με τη σχεδίαση: `buildSegmentHudMeta` + `paintWallHud` +
-    // `buildWallHudSpecLabel` (preview ≡ HUD, ίδια νούμερα/painters). Μόνο σε λαβές αλλαγής διαστάσεων.
-    if (
-      dp.wallGripKind && !WALL_HUD_SKIP.has(dp.wallGripKind) &&
-      transformed !== entity && (transformed as { type?: string }).type === 'wall'
-    ) {
-      const liveWall = transformed as unknown as WallEntity;
+    // ADR-508 §wall-hud/§column-hud — LIVE «λευκές ενδείξεις» τοίχου/κολόνας ΠΑΝΩ από το ghost, στο ΙΔΙΟ
+    // frame/RAF (μετά το ghost draw, πριν το επόμενο harness clear) → ΣΤΑΘΕΡΕΣ όσο σέρνεις, χωρίς race με
+    // ξεχωριστό leaf. FULL SSoT (ίδιοι painters με τη σχεδίαση) — όλη η λογική στο `drawMemberGripHud`.
+    {
       const hudScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const hudMeta = buildSegmentHudMeta(
-        liveWall.params.start,
-        liveWall.params.end,
-        resolveSceneUnits(hudScene),
-        liveWall.params.thickness,
-        liveWall.params.height,
-      );
-      paintWallHud(ctx, hudMeta, buildWallHudSpecLabel(hudMeta), t, vp);
+      drawMemberGripHud(ctx, dp, transformed, transformed !== entity, resolveSceneUnits(hudScene), t, vp);
     }
 
     // ADR-507 Φ5 A3b/A4 — live handle marker LAST (πάνω από το gradient ghost). Ζωντανή θέση

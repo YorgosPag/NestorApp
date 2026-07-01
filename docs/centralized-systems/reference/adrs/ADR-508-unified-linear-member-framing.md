@@ -106,6 +106,34 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-02 (§column-hud — live «λευκές ενδείξεις» ΚΑΙ στο σύρσιμο λαβών ΚΟΛΟΝΑΣ, parity με τον τοίχο)**
+  - **Αίτημα Giorgio**: «ό,τι έκανες για τον τοίχο, εφάρμοσέ το και στην κολόνα — full SSoT.» Επιλογή (AskUserQuestion):
+    «σαν τον τοίχο — διαστάσεις στις παρειές» (Option A).
+  - **Ρίζα (audit)**: η κολόνα ΔΕΝ έχει wall-HUD analog. Ο τοίχος είναι **τμήμα** (start→end → μία aligned διάσταση
+    μήκους)· η κολόνα είναι **σημείο + περιστραμμένο κουτί**. Στο σύρσιμο λαβής έδειχνε μόνο μικρά pills
+    («w=400») από το `useGripDimAnnotation`.
+  - **Fix (FULL SSoT reuse, μηδέν νέα σχεδίαση/μηχανή)**:
+    - NEW pure `canvas-v2/preview-canvas/column-hud-paint.ts → paintColumnHud`: **ορθογώνια/τοιχίο** →
+      **δύο** aligned διαστάσεις (πλάτος & βάθος, μία σε κάθε παρειά) + `∠ γωνία` + ύψος· **ΚΥΚΛΙΚΗ** (Giorgio
+      follow-up) → aligned διάσταση **διαμέτρου** `Ø` + ύψος (γωνία παραλείπεται — συμμετρική). Με τους
+      **ΙΔΙΟΥΣ** painters/χρώμα με τον τοίχο (`paintAlignedOverlayDimension` + `drawOverlayLabel`, HUD grey),
+      rotation-aware μέσω τοπικού `RectFrame` (u/v)· κύκλος μέσω `footprintBounds` (SSoT bbox). **No-op** σε
+      Γ/Τ/Π/I/πολύγωνο. Split σε `paintRectColumnHud`/`paintCircularColumnHud` (≤40 γρ.).
+    - NEW `hooks/drawing/column-hud-spec-label.ts → buildColumnHudSpecLabel(heightMm)` (i18n «ύψος X»,
+      αδελφό του wall spec-label) + NEW i18n key `tools.column.hudSpec`.
+    - NEW `rect-frame.ts → isRectFootprint(fp)` — ΕΝΑ SSoT «είναι box;» (4/5 κορυφές, u⊥v), κοινό από το
+      column HUD ΚΑΙ το pill-suppression.
+    - `grip-ghost-preview-draw-helpers.ts` (SRP split, όριο 500): NEW `drawMemberGripHud` — ΕΝΑ σημείο που
+      ζωγραφίζει τοίχο **ΚΑΙ** κολόνα HUD (κοινό `MEMBER_HUD_SKIP`)· καλείται από το `useGripGhostPreview`
+      στο **ΙΔΙΟ RAF/frame** με το ghost (όπως το §wall-hud) → ΣΤΑΘΕΡΟ, χωρίς flicker. Και τα δύο §wall-hud +
+      §column-hud μετακινήθηκαν εδώ (το useGripGhostPreview έπεσε 524→469 γρ.).
+    - `useGripDimAnnotation`: pill **καταστέλλεται για ορθογώνιες ΚΑΙ κυκλικές** κολόνες → μηδέν διπλή
+      ένδειξη· ΜΕΝΕΙ για Γ/Τ/Π/I/πολύγωνο (per-sub-dim feedback: arm/flange/leg που το HUD δεν έχει).
+  - **Εύρος (honest scope)**: πλήρες «σαν τον τοίχο» HUD = **ορθογώνιες/τοιχία + κυκλικές** κολόνες. Γ/Τ/Π/I/
+    πολύγωνο → διατηρούν τα υπάρχοντα pills (καταλληλότερα για τις υπο-διαστάσεις τους). Μηδέν regression.
+  - **Tests**: κανένα νέο — thin glue πάνω σε ήδη-δοκιμασμένα SSoT (`paintAlignedOverlayDimension`,
+    `rectFrameFromCorners`, `footprintBounds`, formatters — `wall-hud-paint-projector.test.ts` πράσινο). 🔴 browser-verify.
+
 - **2026-07-02 (§wall-hud — live «λευκές ενδείξεις» (γωνία/πάχος/ύψος/μήκος) ΚΑΙ στο σύρσιμο λαβών τοίχου)**
   - **Αίτημα Giorgio**: οι ενδείξεις που εμφανίζονται δίπλα στο φάντασμα τοίχου **κατά τη σχεδίαση** (μετά το 1ο
     κλικ — γωνία/πάχος/ύψος/μήκος σε λευκά κείμενα) να εμφανίζονται **και** όταν, σε ολοκληρωμένο τοίχο,
