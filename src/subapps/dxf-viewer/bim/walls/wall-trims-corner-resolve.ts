@@ -19,18 +19,37 @@
 import {
   sinAngleBetween,
   cornerMiter,
-  cornerMiterRatio,
   lineLineIntersect,
   MAX_BEVEL_FRACTION,
-  MITER_LIMIT_RATIO,
   type MiterPt,
 } from './wall-trims-geometry';
 import type { WallJoinMode } from '../types/wall-types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Angle below which axes are treated as parallel → no trim. */
+/**
+ * Collinearity / near-parallel tolerance. Two axes within this angle are treated
+ * as a straight continuation (through-wall) for MULTI-WALL junction resolution and
+ * the shared "parallel wall" detection reused by `wall-move-dim-references` and
+ * `opening-junction-refs`. It is NOT the 2-way corner-miter gate — an acute corner
+ * far below 15° is still a genuine sharp corner that must mitre (see
+ * `MIN_CORNER_MITER_ANGLE_RAD`).
+ */
 export const MIN_ANGLE_RAD = Math.PI / 12; // 15°
+
+/**
+ * ADR-363 §wall-acute-miter (Step 1) — the 2-way corner-miter classification gate.
+ *
+ * A corner is skipped ONLY when its two walls are TRULY parallel (no real
+ * intersection). Big players (Revit / ArchiCAD) mitre sharp corners all the way
+ * down to a near-parallel sliver — they do NOT square off at an angle limit the way
+ * SVG/Figma stroke-miterlimit does. So the classification gate is a tiny parallel
+ * threshold (~1°), decoupled from the larger `MIN_ANGLE_RAD` through-wall tolerance:
+ * an exactly-collinear run drawn as two coincident segments (drift ≈ 0°) is still
+ * below this gate → left straight, while a 5–14° corner now classifies & mitres
+ * instead of falling into a raw-overlap / bevel band.
+ */
+export const MIN_CORNER_MITER_ANGLE_RAD = Math.PI / 180; // 1°
 
 /**
  * ADR-363 Phase 1L — «Disallow Join» (auto square-off). A corner is a GENUINE
@@ -301,7 +320,7 @@ export function resolveCornerClusters(
  */
 function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, MutablePatch>): void {
   const sinA = sinAngleBetween(a.ux, a.uy, b.ux, b.uy);
-  if (sinA < Math.sin(MIN_ANGLE_RAD)) return; // collinear continuation → no trim
+  if (sinA < Math.sin(MIN_CORNER_MITER_ANGLE_RAD)) return; // truly parallel → no trim
 
   // ADR-363 Phase 1L-J — explicit join override steers WHICH cleanup runs; the
   // geometry below is unchanged. `disallow` → no trim (walls stay rectangular).
@@ -325,20 +344,14 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
     return;
   }
 
-  // ADR-363 Phase 1M — big-player miter-limit (SVG/Figma/Cinema4D; Revit auto
-  // Butt/Square at sharp joins). A corner sharper than MITER_LIMIT_RATIO would
-  // mitre into an unbounded acute spike, so clamp it to a square-off (bevel) —
-  // exactly as every major tool does. Applies ONLY to `auto`: an explicit `miter`
-  // override is a deliberate user choice (Revit forced Miter) and is honoured even
-  // when sharp. `α` is the interior corner angle, read from the OUTWARD directions.
-  if (joinMode === 'auto') {
-    const oa = outwardDir(a), ob = outwardDir(b);
-    if (cornerMiterRatio(oa.x, oa.y, ob.x, ob.y) > MITER_LIMIT_RATIO) {
-      squareOffCorner(a, b, sinA, acc);
-      return;
-    }
-  }
-
+  // ADR-363 §wall-acute-miter (Step 1) — the Phase 1M big-player miter-limit
+  // (SVG/Figma stroke-miterlimit → square-off below ~29°) was REMOVED for `auto`:
+  // Giorgio confirmed it is the wrong model for architectural walls. Revit/ArchiCAD
+  // MITRE sharp corners all the way down (extend both edges to their intersection),
+  // even when the join produces a long acute spike. Step 1 therefore shows the miter
+  // across the whole acute range; Step 2 will add a big-player miter-CUT for spikes
+  // that are too long (approach TBD). The `cornerMiter` overflow guard
+  // (MAX_BEVEL_FRACTION·len) stays as the only backstop against true inversion.
   const miter = cornerMiter(
     { x: a.px, y: a.py }, a.ux, a.uy, a.halfSigned, a.len,
     { x: b.px, y: b.py }, b.ux, b.uy, b.halfSigned, b.len,

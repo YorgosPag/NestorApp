@@ -10,8 +10,24 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Maximum bevel / miter-extension as fraction of axis length; prevents inversion. */
+/** Maximum bevel (square-off / penetration) as fraction of axis length; prevents
+ *  inversion. The corner-miter spike uses `MITER_MAX_EXTENSION_FRACTION` instead. */
 export const MAX_BEVEL_FRACTION = 0.40;
+
+/**
+ * ADR-363 §wall-acute-miter (Step 1) — the corner-MITER overflow cap, decoupled
+ * from the (bevel) `MAX_BEVEL_FRACTION`.
+ *
+ * A geometric miter at an acute corner grows an ever-longer spike as the angle
+ * closes (extension ≈ half / tan(α/2)). Giorgio's Step 1 decision is to SHOW that
+ * spike — Revit/ArchiCAD mitre sharp joins rather than square them off — so the
+ * miter is allowed to extend up to nearly the wall's OWN length before we fall back
+ * to a square-off. The guard only trips when the spike would reach past the far end
+ * of the wall (extension ≥ len), i.e. a physically degenerate corner that cannot be
+ * mitred without inverting the outline. The bevel-based cleanup keeps the tighter
+ * 0.40 cap (Step 2 will replace the fallback with a big-player miter-CUT).
+ */
+export const MITER_MAX_EXTENSION_FRACTION = 0.95;
 
 /**
  * ADR-363 Phase 1M — big-player miter-limit (SVG / Figma / Cinema4D).
@@ -175,12 +191,13 @@ export function cornerMiter(
   );
   if (!innerIsect) return null;
 
-  // Overflow guard: if the miter would extend more than MAX_BEVEL_FRACTION of
-  // either wall, the wall is too short/thick for a clean miter — caller falls back
-  // to axis-bevel. |t| is the extension along A's axis from its corner endpoint;
-  // |u| is the same for B.
-  const maxExtA = MAX_BEVEL_FRACTION * aLen;
-  const maxExtB = MAX_BEVEL_FRACTION * bLen;
+  // Overflow guard: if the miter spike would reach past the far end of either wall
+  // (extension ≥ MITER_MAX_EXTENSION_FRACTION·len) the corner cannot be mitred
+  // without inverting the outline — caller falls back to axis-bevel. Acute spikes
+  // SHORTER than the wall are kept (ADR-363 §wall-acute-miter Step 1: show the
+  // miter). |t| is the extension along A's axis from its corner endpoint; |u| for B.
+  const maxExtA = MITER_MAX_EXTENSION_FRACTION * aLen;
+  const maxExtB = MITER_MAX_EXTENSION_FRACTION * bLen;
   if (
     Math.abs(outerIsect.t) > maxExtA || Math.abs(innerIsect.t) > maxExtA ||
     Math.abs(outerIsect.u) > maxExtB || Math.abs(innerIsect.u) > maxExtB

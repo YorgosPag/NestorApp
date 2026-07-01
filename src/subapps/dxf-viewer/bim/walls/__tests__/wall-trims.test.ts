@@ -177,13 +177,32 @@ describe('computeWallTrims', () => {
     expect(trims.size).toBe(0);
   });
 
-  it('10. Nearly parallel angle (<15°) → no trim despite proximity', () => {
-    // Almost horizontal wall at 5° angle meeting A's endpoint
+  it('10. Shallow 5° kink → MITER (§wall-acute-miter Step 1: only truly-parallel is skipped)', () => {
+    // A ends at (3000,0); B continues at a 5° kink. The angle-limit that used to
+    // suppress everything below 15° was removed (Giorgio: walls mitre sharp joins),
+    // so a genuine 5° corner now mitres — a shallow continuation yields a small,
+    // geometrically-correct miter rather than a raw rectangular overlap notch.
     const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
     const angle5deg = 5 * Math.PI / 180;
     const wallB = makeWall(
       { x: 3000, y: 0 },
       { x: 3000 + 3000 * Math.cos(angle5deg), y: 3000 * Math.sin(angle5deg) },
+      200, 'B',
+    );
+
+    const trims = computeWallTrims([wallA, wallB]);
+    expect(trims.get(wallA.id)?.endMiter).toBeDefined();
+    expect(trims.get(wallB.id)?.startMiter).toBeDefined();
+  });
+
+  it('10b. TRULY parallel (<1° sliver) → still no trim (straight run split into segments)', () => {
+    // The classification gate is now a tiny ~1° parallel threshold: an exactly-
+    // collinear run drawn as two coincident segments (drift ≈ 0°) stays straight.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const angleHalfDeg = 0.5 * Math.PI / 180;
+    const wallB = makeWall(
+      { x: 3000, y: 0 },
+      { x: 3000 + 3000 * Math.cos(angleHalfDeg), y: 3000 * Math.sin(angleHalfDeg) },
       200, 'B',
     );
 
@@ -784,7 +803,11 @@ describe('computeWallTrims — explicit join override (Phase 1L-J)', () => {
   });
 });
 
-// ─── ADR-363 Phase 1M — big-player miter-limit (acute corner → square-off) ─────
+// ─── ADR-363 §wall-acute-miter (Step 1) — acute corners MITRE (no square-off) ──
+// The Phase 1M big-player miter-limit (square-off below ~29°) was REMOVED for
+// `auto`: Giorgio confirmed it is the wrong model for architectural walls
+// (Revit/ArchiCAD mitre sharp joins). `cornerMiterRatio`/`MITER_LIMIT_RATIO` remain
+// as a pure helper (Step 2 miter-CUT may reuse them) but no longer gate the join.
 
 import { cornerMiterRatio, MITER_LIMIT_RATIO } from '../wall-trims-geometry';
 
@@ -820,29 +843,28 @@ describe('cornerMiterRatio (Phase 1M pure helper)', () => {
   });
 });
 
-describe('computeWallTrims — Phase 1M miter-limit (acute coincident corner)', () => {
-  it('M1. acute 20° corner on LONG walls → square-off (NOT a length-overflow), no miter', () => {
-    // ratio = 1/sin(10°) ≈ 5.76 > 4 → square off. The walls are 3 m long so the
-    // miter extension (≈ half/tan(10°) ≈ 568 mm) is WELL under MAX_BEVEL_FRACTION·len
-    // (1200 mm): without the angle limit this would mitre into a 568 mm acute spike.
+describe('computeWallTrims — §wall-acute-miter Step 1 (acute corner MITRES)', () => {
+  it('M1. acute 20° corner on LONG walls → MITER (Phase 1M square-off removed)', () => {
+    // ratio = 1/sin(10°) ≈ 5.76 (> the old limit of 4) but Giorgio: walls mitre sharp
+    // joins. The 3 m walls give a ≈568 mm spike (well under the wall length) → shown.
     const [a, b] = makeAcuteCorner(20);
     const trims = computeWallTrims([a, b]);
 
-    expect(trims.get(a.id)?.startMiter).toBeUndefined();
-    expect(trims.get(b.id)?.startMiter).toBeUndefined();
-    // Falls back to the square-off bevel engine instead.
-    expect(trims.get(a.id)?.startBevel).toBeGreaterThan(0);
-    expect(trims.get(b.id)?.startBevel).toBeGreaterThan(0);
+    expect(trims.get(a.id)?.startMiter).toBeDefined();
+    expect(trims.get(b.id)?.startMiter).toBeDefined();
+    expect(trims.get(a.id)?.startBevel).toBeUndefined();
+    expect(trims.get(b.id)?.startBevel).toBeUndefined();
   });
 
-  it('M2. just SHARPER than the limit (25° < ~29°) → square-off', () => {
+  it('M2. still SHARPER (25°) → MITER (no square-off band any more)', () => {
     const [a, b] = makeAcuteCorner(25);
     const trims = computeWallTrims([a, b]);
-    expect(trims.get(a.id)?.startMiter).toBeUndefined();
-    expect(trims.get(b.id)?.startMiter).toBeUndefined();
+    expect(trims.get(a.id)?.startMiter).toBeDefined();
+    expect(trims.get(b.id)?.startMiter).toBeDefined();
+    expect(trims.get(a.id)?.startBevel).toBeUndefined();
   });
 
-  it('M3. just SHALLOWER than the limit (33° > ~29°) → clean miter (unchanged)', () => {
+  it('M3. shallow acute (33°) → clean miter (unchanged)', () => {
     const [a, b] = makeAcuteCorner(33);
     const trims = computeWallTrims([a, b]);
     expect(trims.get(a.id)?.startMiter).toBeDefined();
@@ -850,7 +872,7 @@ describe('computeWallTrims — Phase 1M miter-limit (acute coincident corner)', 
     expect(trims.get(a.id)?.startBevel).toBeUndefined();
   });
 
-  it('M4. obtuse & right angles are unaffected by the limit (45° / 90° still mitre)', () => {
+  it('M4. obtuse & right angles still mitre (45° / 90° / 120°)', () => {
     for (const deg of [45, 90, 120]) {
       const [a, b] = makeAcuteCorner(deg);
       const trims = computeWallTrims([a, b]);
@@ -859,14 +881,33 @@ describe('computeWallTrims — Phase 1M miter-limit (acute coincident corner)', 
     }
   });
 
-  it('M5. explicit `miter` override BYPASSES the limit (Revit forced Miter on a sharp join)', () => {
-    // Same 20° corner that `auto` squares off in M1 — forcing miter must still mitre.
+  it('M5. very acute (10°) LONG walls → MITER (spike under wall length)', () => {
+    // The whole point of Step 1: the reported −30..−70° rotation band (interior
+    // angles well below the old ~29° limit) now shows the miter instead of a
+    // raw-overlap / bevel. 10° on 3 m walls → ≈1143 mm spike < 0.95·len → mitred.
+    const [a, b] = makeAcuteCorner(10);
+    const trims = computeWallTrims([a, b]);
+    expect(trims.get(a.id)?.startMiter).toBeDefined();
+    expect(trims.get(b.id)?.startMiter).toBeDefined();
+  });
+
+  it('M6. explicit `miter` override still mitres a sharp join (unchanged)', () => {
     const [a0, b0] = makeAcuteCorner(20);
     const a = withJoin(a0, 'start', 'miter');
     const b = withJoin(b0, 'start', 'miter');
     const trims = computeWallTrims([a, b]);
     expect(trims.get(a.id)?.startMiter).toBeDefined();
     expect(trims.get(b.id)?.startMiter).toBeDefined();
+  });
+
+  it('M7. degenerate spike (2° on a wall shorter than the spike) → graceful bevel, no inversion', () => {
+    // At 2° the miter extension (≈ half/tan(1°) ≈ 5.7 m) exceeds the 3 m wall length,
+    // so mitring would invert the outline → the overflow guard falls back to a
+    // square-off. Step 2 will replace this with a big-player miter-CUT.
+    const [a, b] = makeAcuteCorner(2);
+    const trims = computeWallTrims([a, b]);
+    expect(trims.get(a.id)?.startMiter).toBeUndefined();
+    expect(trims.get(a.id)?.startBevel).toBeGreaterThan(0);
   });
 });
 

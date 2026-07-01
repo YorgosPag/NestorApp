@@ -79,6 +79,9 @@ import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tra
 // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
 import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
 import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
+// ADR-397 §15b — SECOND direction arc: the LIVE corner angle between the rotating wall
+// and the neighbour it is joined to (same 🟢/🔴 SSoT paint as the rotation arc).
+import { resolveNeighborAxisAngle } from '../../bim/walls/wall-rotation-neighbor-angle';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -226,6 +229,29 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     }
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview, previewCtx);
+
+    // ADR-397 §15b — SECOND direction arc while ROTATING a wall JOINED to a neighbour:
+    // the LIVE corner angle between the two walls' axes (Giorgio, στιγμιότυπο 153825).
+    // Same green/red SSoT paint as the rotation arc (#1 above), but the reference edge is
+    // the NEIGHBOUR axis (fixed) instead of the wall's original orientation → the value is
+    // the actual corner the two walls form right now. Radius = 35% of the live wall length
+    // so the arc is proportional & distinct from #1. No-op when the wall is free (no joined
+    // neighbour) or not rotating. Reuses the SSoT `JOIN_THRESHOLD_MM` neighbour detection.
+    if (isRotation && dp.rotatePivot && (transformed as { type?: string }).type === 'wall') {
+      const liveWall = transformed as unknown as WallEntity;
+      const cornerScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const cornerWalls = (cornerScene?.entities ?? []).filter(isWallEntity);
+      const wallLen = Math.hypot(
+        liveWall.params.end.x - liveWall.params.start.x,
+        liveWall.params.end.y - liveWall.params.start.y,
+      );
+      const cornerArc = resolveNeighborAxisAngle(
+        liveWall, cornerWalls, resolveSceneUnits(cornerScene), 0.35 * wallLen, dp.rotatePivot,
+      );
+      if (cornerArc) {
+        paintDirectionArc(ctx, cornerArc.pivotW, cornerArc.anchorW, cornerArc.cursorW, cornerArc.sweepDeg, t, vp);
+      }
+    }
 
     // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for
     // the reference + alignment lines regardless of ghost delta (they exist even

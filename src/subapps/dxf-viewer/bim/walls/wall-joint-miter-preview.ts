@@ -21,10 +21,11 @@
  */
 
 import type { ExtendedSceneEntity } from '../../hooks/drawing/drawing-types';
-import type { WallEntity } from '../types/wall-types';
+import type { WallEntity, WallParams } from '../types/wall-types';
 import { isWallEntity } from '../../types/entities';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { toWysiwygPreviewEntity } from '../../hooks/drawing/wysiwyg-preview-shared';
+import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeWallTrims, applyTrimPatches, JOIN_THRESHOLD_MM } from './wall-trims';
 
 /** Extra metadata carried on the wall ghost so the PreviewRenderer paints the
@@ -38,6 +39,23 @@ export interface JointMiterPreviewFields {
 function dist2(ax: number, ay: number, bx: number, by: number): number {
   const dx = ax - bx, dy = ay - by;
   return dx * dx + dy * dy;
+}
+
+/**
+ * Strip a neighbour's STALE stored trim (miter/bevel from the joined wall's OLD position)
+ * before the fresh recompute — mirror of the commit-side `recomputeWallTrims`
+ * (add-wall-to-scene.ts). Without this the preview keeps the neighbour's old join while the
+ * rotating wall has already moved (the L/R miter asymmetry). Geometry is recomputed clean.
+ */
+function stripWallTrims(w: WallEntity): WallEntity {
+  const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...rest } = w.params;
+  const cleanParams = rest as WallParams;
+  return { ...w, params: cleanParams, geometry: computeWallGeometry(cleanParams, w.kind) };
+}
+
+/** Signature of a wall's four trim fields — for detecting a trim change vs the committed state. */
+function trimSignature(p: WallParams): string {
+  return JSON.stringify([p.startMiter ?? null, p.endMiter ?? null, p.startBevel ?? null, p.endBevel ?? null]);
 }
 
 /**
@@ -90,23 +108,38 @@ export function applyJointMiterPreview(
   const near = selectNearWalls(g, walls, sceneUnits);
   if (near.length === 0) return ghost;
 
-  const all: WallEntity[] = [...near, g];
+  // STRIP each neighbour's stale committed miter BEFORE the recompute (preview === commit,
+  // mirror `recomputeWallTrims`). computeWallTrims ignores stored miters, so this does NOT
+  // change the ghost's own join — it only lets a neighbour that no longer mitres be shown
+  // CLEAN instead of carrying the join from the rotating wall's OLD position.
+  const strippedNear = near.map(stripWallTrims);
+  const all: WallEntity[] = [...strippedNear, g];
   const trims = computeWallTrims(all);
-  if (trims.size === 0) return ghost;
-
   const patched = applyTrimPatches(all, trims);
-  const patchedGhost = patched.find((e) => e.id === g.id) as WallEntity | undefined;
-  const jointNeighbors = patched
-    .filter((e): e is WallEntity => e.id !== g.id && trims.has(e.id) && isWallEntity(e))
-    .map((n) => toWysiwygPreviewEntity(n, n.id));
+  const patchedById = new Map(
+    patched.filter(isWallEntity).map((e) => [e.id, e as WallEntity] as const),
+  );
+  const patchedGhost = patchedById.get(g.id);
+  const ghostGainedTrim = !!patchedGhost && trimSignature(patchedGhost.params) !== trimSignature(g.params);
+
+  // A neighbour is redrawn when its trim CHANGED vs its COMMITTED state — gained, lost, or
+  // different. Redrawing a neighbour that LOST its miter (now clean) is what covers the stale
+  // committed neighbour on the main canvas (the L/R «different join shape» bug). Identical
+  // trims are skipped (the committed neighbour already looks right → no redundant overlay).
+  const jointNeighbors = near
+    .filter((committed) => {
+      const now = patchedById.get(committed.id);
+      return !!now && trimSignature(committed.params) !== trimSignature(now.params);
+    })
+    .map((committed) => toWysiwygPreviewEntity(patchedById.get(committed.id)!, committed.id));
 
   // Nothing changed for the ghost AND no neighbour trims → keep the input ref.
-  if (!patchedGhost && jointNeighbors.length === 0) return ghost;
+  if (!ghostGainedTrim && jointNeighbors.length === 0) return ghost;
 
   return {
     ...ghost,
     // Apply the ghost's own miter (params + recomputed geometry from the SSoT solver).
-    ...(patchedGhost ? { params: patchedGhost.params, geometry: patchedGhost.geometry } : {}),
+    ...(ghostGainedTrim && patchedGhost ? { params: patchedGhost.params, geometry: patchedGhost.geometry } : {}),
     ...(jointNeighbors.length > 0 ? { jointNeighbors } : {}),
   } as ExtendedSceneEntity;
 }

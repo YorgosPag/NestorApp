@@ -43,7 +43,7 @@ import {
   type MiterPt,
 } from './wall-trims-geometry';
 import {
-  MIN_ANGLE_RAD,
+  MIN_CORNER_MITER_ANGLE_RAD,
   accumBevel,
   endpointKey,
   penetrationBevel,
@@ -199,7 +199,9 @@ function classifyPair(
   const dax = a2x - a1x, day = a2y - a1y;
   const dbx = b2x - b1x, dby = b2y - b1y;
   const sinA = sinAngleBetween(dax, day, dbx, dby);
-  if (sinA < Math.sin(MIN_ANGLE_RAD)) return;
+  // ADR-363 §wall-acute-miter (Step 1) — classify down to a truly-parallel sliver so
+  // acute corners (5–14°) are recorded & mitred instead of skipped as raw overlap.
+  if (sinA < Math.sin(MIN_CORNER_MITER_ANGLE_RAD)) return;
 
   const halfA = (a.params.thickness / 2) * sA;
   const halfB = (b.params.thickness / 2) * sB;
