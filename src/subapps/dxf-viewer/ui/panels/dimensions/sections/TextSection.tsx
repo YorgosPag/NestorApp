@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/select';
 import type { DimStyle, DimTextVerticalPlacement } from '../../../../types/dimension';
 import type { UpdateCustomStylePatch } from '../../../../systems/dimensions/dim-style-registry';
+import { ColorField, SelectField } from './dim-style-fields';
+import { DIM_FONT_OPTIONS } from './dim-style-field-options';
 
 const TEXT_PLACEMENTS: DimTextVerticalPlacement[] = ['centered', 'above', 'outside', 'jis', 'below'];
 
@@ -30,6 +32,10 @@ export function TextSection({ style, onChange, readOnly = false }: TextSectionPr
 
   return (
     <div className="flex flex-col gap-2 py-1">
+      {/* ADR-562 Φ5 — text colour + font family */}
+      <ColorField label={f('dimclrt')} value={style.dimclrt} onChange={(v) => onChange({ dimclrt: v })} disabled={readOnly} />
+      <SelectField label={f('textFontFamily')} value={style.textFontFamily} options={DIM_FONT_OPTIONS} onChange={(v) => onChange({ textFontFamily: v })} disabled={readOnly} />
+
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor="dimtxt" className="text-xs shrink-0 w-36">{f('dimtxt')}</Label>
         <Input

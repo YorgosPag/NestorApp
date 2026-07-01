@@ -56,6 +56,8 @@ import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plan
 import { wallLayerBoundaryPolylines } from '../walls/wall-layer-lines-2d';
 // N.7.1 split — pure Canvas2D path-tracing helpers extracted to keep this renderer <500 lines.
 import { traceWallBody, strokePerimeterOutline, strokePolyline } from './wall-render-paths';
+// ADR-509 §axis-clip — κόβει τον άξονα στην παρειά κολώνας (reuse segment-polygon-coverage SSoT).
+import { clipPolylineOutsidePolygons } from '../walls/wall-axis-clip';
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -81,6 +83,19 @@ export class WallRenderer extends BaseEntityRenderer {
   /** Inject per-frame opening index. Composite calls this once per render. */
   setOpeningsByWall(map: OpeningsByWall): void {
     this.openingsByWall = map;
+  }
+
+  /**
+   * ADR-509 §axis-clip — per-frame λίστα column footprints (plan space). Ο άξονας
+   * (dashed centerline) κόβεται στην παρειά αυτών των σωμάτων ώστε να μη «διαπερνά»
+   * την κολώνα (Revit/AutoCAD location-line behaviour). Empty ⇒ legacy (χωρίς clip).
+   * Renderer never subscribes — ο composite το σπρώχνει μία φορά/frame (ADR-040).
+   */
+  private columnFootprints: readonly (readonly Point2D[])[] = [];
+
+  /** Inject per-frame column footprints (axis clip). Composite calls once per render. */
+  setColumnFootprints(footprints: readonly (readonly Point2D[])[]): void {
+    this.columnFootprints = footprints;
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -343,6 +358,11 @@ export class WallRenderer extends BaseEntityRenderer {
    * Axis polyline rendered dashed-thin (centerline visual aid). ADR-509 — η γραμμή άξονα
    * δεν είχε explicit χρώμα (κληρονομούσε το τελευταίο stroke)· τώρα παίρνει το **ίδιο
    * background-adaptive φωτεινό** χρώμα με το outline (`WALL_LINE_CONTRAST`) ώστε να ξεχωρίζει.
+   *
+   * ADR-509 §axis-clip — ο άξονας κόβεται στην παρειά τυχόν κολώνας που τον σκεπάζει
+   * (Revit/AutoCAD location line σταματά στο σώμα, δεν το διαπερνά). Το clip γίνεται μέσω
+   * του ΕΝΟΣ `coveredIntervals`/`exposedComplement` SSoT (segment-polygon-coverage). Χωρίς
+   * column footprints (default) → ένα run = ο άξονας αυτούσιος (μηδέν regression).
    */
   private drawAxis(wall: WallEntity, edgeColor: string | null): void {
     const axis = wall.geometry.axisPolyline.points;
@@ -353,7 +373,10 @@ export class WallRenderer extends BaseEntityRenderer {
     if (edgeColor !== null) {
       this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(edgeColor, WALL_LINE_CONTRAST);
     }
-    strokePolyline(this.ctx, (p) => this.worldToScreen(p), axis);
+    const runs = clipPolylineOutsidePolygons(axis, this.columnFootprints);
+    for (const run of runs) {
+      strokePolyline(this.ctx, (p) => this.worldToScreen(p), run);
+    }
     this.ctx.restore();
   }
 

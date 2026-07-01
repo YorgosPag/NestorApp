@@ -26,7 +26,11 @@
  */
 
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
+import type { LineweightMm } from '../../types/entities';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+// ADR-562 Φ2 — WYSIWYG preview: honor the committed per-part lineweight + dash
+// via the SAME shared SSoT the main renderer uses (keeps the preview color).
+import { resolveDimStroke } from '../../rendering/entities/dimension/dim-stroke-resolver';
 import {
   buildDimensionGeometry,
   type AngularDimGeometry,
@@ -123,11 +127,29 @@ function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts
   };
 }
 
-/** Stroke setup for the dim line + extension lines: shared overlay SSoT (listening dims) or
- *  the committed-dim solid 1px (default). */
-function applyDimStroke(ctx: CanvasRenderingContext2D, opts: ResolvedOpts): void {
-  if (opts.overlayLineStyle) applyOverlayLineStyle(ctx, opts.color);
-  else applySolidStroke(ctx, opts.color);
+/**
+ * Stroke setup for the dim line + extension lines. Either the shared overlay
+ * SSoT (listening dims — special dashed state, untouched by per-part styling) or,
+ * for a normal preview, the resolved per-part weight + dash (ADR-562 Φ2) so the
+ * preview matches what the committed dim will look like — while keeping the
+ * preview color override (green under-construction convention).
+ */
+function applyDimStroke(
+  ctx: CanvasRenderingContext2D,
+  opts: ResolvedOpts,
+  lineweight: LineweightMm,
+  linetype: string,
+  worldToScreenScale: number,
+): void {
+  if (opts.overlayLineStyle) {
+    applyOverlayLineStyle(ctx, opts.color);
+    return;
+  }
+  const stroke = resolveDimStroke(lineweight, linetype, worldToScreenScale);
+  ctx.strokeStyle = opts.color;
+  ctx.lineWidth = stroke.lineWidthPx;
+  ctx.setLineDash(stroke.dashPx);
+  ctx.lineCap = 'butt';
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -205,7 +227,7 @@ function drawExtensionLines(
   const ext1 = readExtLine(geometry, 1);
   const ext2 = readExtLine(geometry, 2);
   if (!ext1 && !ext2) return;
-  applyDimStroke(params.ctx, opts);
+  applyDimStroke(params.ctx, opts, params.style.dimlwe, params.style.dimltex1, viewScaleOf(params));
   if (ext1 && !params.style.suppressExtLine1) strokeSegment(params, ext1);
   if (ext2 && !params.style.suppressExtLine2) strokeSegment(params, ext2);
 }
@@ -215,7 +237,7 @@ function drawDimLineOrArc(
   geometry: DimGeometry,
   opts: ResolvedOpts,
 ): void {
-  applyDimStroke(params.ctx, opts);
+  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params));
   switch (geometry.kind) {
     case 'linear':
       if (!params.style.suppressDimLine1 && !params.style.suppressDimLine2) {
@@ -318,13 +340,6 @@ function withPreviewColors(style: DimStyle): DimStyle {
   // resolveDimColor() to the `layerColour` fallback which the caller has set
   // to the preview color.
   return { ...style, dimclrd: ACI_BYLAYER, dimclre: ACI_BYLAYER, dimclrt: ACI_BYLAYER };
-}
-
-function applySolidStroke(ctx: CanvasRenderingContext2D, color: string): void {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.setLineDash([]);
-  ctx.lineCap = 'butt';
 }
 
 function strokeSegment(params: PreviewDimensionRenderParams, seg: DimLineSegment): void {

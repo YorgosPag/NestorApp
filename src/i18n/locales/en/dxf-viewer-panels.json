@@ -201,7 +201,27 @@
           "dimtp": "Upper tolerance",
           "dimtm": "Lower tolerance",
           "dimtdec": "Tolerance decimal places",
-          "dimtolj": "Tolerance justification"
+          "dimtolj": "Tolerance justification",
+          "dimclrd": "Dimension line color",
+          "dimclre": "Extension line color",
+          "dimclrt": "Text color",
+          "dimlwd": "Dimension line weight",
+          "dimlwe": "Extension line weight",
+          "dimltype": "Dimension line type",
+          "dimltex1": "Extension line type",
+          "arrowColor": "Arrow color",
+          "textFontFamily": "Font family"
+        },
+        "byLayer": "ByLayer",
+        "colorOptions": {
+          "byLayer": "ByLayer",
+          "red": "Red",
+          "yellow": "Yellow",
+          "green": "Green",
+          "cyan": "Cyan",
+          "blue": "Blue",
+          "magenta": "Magenta",
+          "white": "White"
         },
         "dimtad": {
           "centered": "Centered",

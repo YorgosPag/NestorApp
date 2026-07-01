@@ -87,8 +87,11 @@ jest.mock('@/components/ui/select', () => ({
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
-    <option value={value}>{children}</option>
+  // Real Radix SelectItem is not an <option> and may hold rich children (e.g. a
+  // colour swatch span). The native-<select> mock cannot nest a <span> in <option>,
+  // so render the value only — assertions match by option `value`, not label text.
+  SelectItem: ({ value }: { value: string; children: React.ReactNode }) => (
+    <option value={value} />
   ),
 }));
 

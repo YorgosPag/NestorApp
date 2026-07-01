@@ -46,6 +46,7 @@ import type { RibbonFloorplanSymbolBridge } from './useRibbonFloorplanSymbolBrid
 import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibraryBridge';
 import type { RibbonMepRiserBridge } from './useRibbonMepRiserBridge';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
+import type { RibbonDimBridge } from './useRibbonDimBridge';
 import type { RibbonFloorFinishBridge } from './useRibbonFloorFinishBridge';
 import type { RibbonWallCoveringBridge } from './useRibbonWallCoveringBridge';
 import type { RibbonHatchBridge } from './useRibbonHatchBridge';
@@ -104,5 +105,6 @@ export interface UseRibbonCommandsProps {
   mepFixtureLibraryBridge: RibbonMepFixtureLibraryBridge;
   mepRiserBridge: RibbonMepRiserBridge;
   lineToolBridge: RibbonLineToolBridge;
+  dimBridge: RibbonDimBridge;
   xlineModeBridge: RibbonXlineModeBridge;
 }

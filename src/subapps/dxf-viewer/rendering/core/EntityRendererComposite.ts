@@ -252,6 +252,18 @@ export class EntityRendererComposite {
   }
 
   /**
+   * ADR-509 §axis-clip — forward the per-frame column footprints so the wall
+   * renderer clips its dashed axis at column faces (location line stops at the
+   * column body, Revit/AutoCAD-style). No-op when the wall renderer is absent.
+   */
+  setColumnFootprints(footprints: readonly (readonly Point2D[])[]): void {
+    const wall = this.renderers.get('wall');
+    if (wall instanceof WallRenderer) {
+      wall.setColumnFootprints(footprints);
+    }
+  }
+
+  /**
    * ADR-511 — forward the per-frame wall index so the wall-covering renderer can
    * resolve its host wall (O(1)) and compute the live face strip. No-op when the
    * covering renderer is absent (defensive for partial test setups).

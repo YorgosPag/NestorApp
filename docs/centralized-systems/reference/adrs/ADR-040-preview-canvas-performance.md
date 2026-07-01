@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-01 — Axis (location line) τοίχου κόβεται στην παρειά κολώνας (ADR-509 §axis-clip, CHECK 6B/6D)
+Οι διακεκομμένες γραμμές-άξονες των τοίχων διαπερνούσαν το σώμα της κολώνας αντί να σταματούν στις παρειές (Giorgio screenshot 212412). NEW per-frame builder `buildColumnFootprints(scene.entities)` (`dxf-renderer-frame-builders.ts`) → `DxfRenderer` το σπρώχνει στο `EntityRendererComposite.setColumnFootprints` → `WallRenderer.setColumnFootprints` (setter — ο renderer ΔΕΝ subscribe-άρει, ADR-040 micro-leaf compliant). Ο `WallRenderer.drawAxis` κόβει τον άξονα σε runs (ΕΞΩ από τα column footprints) μέσω NEW pure `bim/walls/wall-axis-clip.ts` που reuse-άρει το ΕΝΑ `coveredIntervals`/`exposedComplement` SSoT. Μηδέν subscriptions προστέθηκαν σε orchestrator/shell (CHECK 6C ασφαλές)· footprints = low-freq scene scan. Πλήρες detail: **ADR-509 changelog 2026-07-01 §axis-clip**. 8/8 NEW jest + 527/527 wall/renderer regression GREEN. 🔴 browser-verify + commit.
+
 ### 2026-07-01 — LIVE σοβάς (finish skin) preview κατά τη μετακίνηση/περιστροφή τοίχου (ADR-449, CHECK 6D)
 Το grip-drag/rotate preview τοίχου ζωγράφιζε μόνο το σώμα-φάντασμα, όχι τον σοβά. NEW `drawWallFinishSkinPreview` + pure `buildFinishSkinPreviewEntities` (`grip-ghost-preview-draw-helpers.ts`) καλούν τον **ΙΔΙΟ** committed scene-pass `drawStructuralFinishSkin2D` στο PreviewCanvas, τροφοδοτημένο με τη σκηνή προεπισκόπησης (dragged wall + mitered γείτονες στη νέα θέση) → το merged silhouette ξαναχτίζεται live. Wired στο `useGripGhostPreview` wall-branch (μετά το σώμα, mirror committed order). Pure draw, μηδέν subscriptions (ADR-040-safe). Πλήρες detail: **ADR-449 changelog 2026-07-01**. 🔴 browser-verify + commit.
 

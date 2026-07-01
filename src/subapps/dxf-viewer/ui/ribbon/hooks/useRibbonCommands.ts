@@ -56,6 +56,7 @@ import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridg
 import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
+import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
 import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
@@ -114,6 +115,7 @@ export function useRibbonCommands({
   mepFixtureLibraryBridge,
   mepRiserBridge,
   lineToolBridge,
+  dimBridge,
   xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // ADR-366 §C.1.b snap-to-grid — subscribe so ribbon re-renders on snap change.
@@ -256,6 +258,11 @@ export function useRibbonCommands({
         lineToolBridge.onComboboxChange(key, value);
         return;
       }
+      // ADR-562 Φ3 — per-part dimension style overrides (color/weight/type/arrow/font).
+      if (isDimRibbonKey(key)) {
+        dimBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isXlineRibbonKey(key)) {
         xlineModeBridge.onComboboxChange(key, value);
         return;
@@ -299,10 +306,12 @@ export function useRibbonCommands({
       if (isMepRiserKey(key) || isMepRiserStringKey(key)) return mepRiserBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
+      // ADR-562 Φ3 — dimension per-part style reads (resolved DIMSTYLE value).
+      if (isDimRibbonKey(key)) return dimBridge.getComboboxState(key);
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, dimBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = useEventCallback(

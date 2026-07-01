@@ -100,6 +100,12 @@ export function renderBimEntitiesToCanvas(
   stairRenderer.setTransform(transform);
 
   wallRenderer.setOpeningsByWall(buildOpeningsByWall(snapshot.openings));
+  // ADR-509 §axis-clip — κόψε τον άξονα τοίχου στην παρειά κολώνας (parity με live render).
+  wallRenderer.setColumnFootprints(
+    snapshot.columns
+      .map((c) => c.geometry?.footprint?.vertices)
+      .filter((v): v is NonNullable<typeof v> => !!v && v.length >= 3),
+  );
   slabRenderer.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(snapshot.slabOpenings));
 
   ctx.save();

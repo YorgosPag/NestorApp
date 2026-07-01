@@ -1,6 +1,6 @@
 # ADR-562 — Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης)
 
-> **Status:** 🟢 Φ1 IMPLEMENTED (UNCOMMITTED 2026-07-01) — data model έτοιμο· Φ2-Φ5 PROPOSED.
+> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED (UNCOMMITTED 2026-07-01) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls έτοιμα· Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
 > **Date:** 2026-07-01
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -132,44 +132,93 @@ Defaults στα 3 templates (`sharedDefaults()`): `dimlwd=dimlwe=-2` (ByLayer),
 δεν parsάρονται ακόμη — round-trip = Φ6). Το `resolveDimStyle()` δεν αλλάζει (generic merge πάνω σε
 `Partial<DimStyle>`). Test: `dim-style-templates-per-part.test.ts` (3) + 47 existing dim suites GREEN.
 
-### Φ2 — Rendering wiring 2D (`DimensionRenderer.ts` + `preview-dimension-renderer.ts`)
-- **Πάχος**: αντικατάσταση hardcoded `ctx.lineWidth=1` με resolved lineweight — **reuse του υπάρχοντος
-  lineweight→px resolver των γραμμών** (QuickStyle/line render· ό,τι χρησιμοποιεί το `LineEntity.lineWidth`).
-  Ξεχωριστά για dim-line (`dimlwd`) και extension lines (`dimlwe`).
-- **Τύπος γραμμής**: αντικατάσταση hardcoded solid με **reuse του Unified Linetype SSoT (ADR-510)**:
-  `linetype-iso-catalog` + `linetype-aliases.resolveAnyLinetype` + zoom×LTSCALE resolver
-  (`getDashArray`/`bim-dash-resolver`). Δίνει dash array στο `ctx.setLineDash()`.
-- **Βελάκια**: χρώμα από `resolveDimColor(style.arrowColor ?? style.dimclrd, layerColour)` αντί σκέτο
-  `dimclrd` (`DimensionRenderer.ts:354` + `dim-arrowhead-renderer.ts`).
-- Ο preview renderer αντικατοπτρίζει (ίδια sub-helpers· διατηρεί το preview-color override).
-- ⚠️ **ADR-040 CHECK 6B/6D**: αγγίζει `DimensionRenderer.ts` → στην υλοποίηση θα γίνει staged **αυτό**
-  το ADR (ή ADR-040) μαζί με τον κώδικα.
+### Φ2 — Rendering wiring 2D (`DimensionRenderer.ts` + `preview-dimension-renderer.ts`) — ✅ IMPLEMENTED 2026-07-01
+**SSoT audit refinement:** αντί να επαναλάβω τη resolve-logic σε 2 renderers, δημιουργήθηκε **ΕΝΑ shared
+pure helper** `rendering/entities/dimension/dim-stroke-resolver.ts` — `resolveDimStroke(lineweight,
+linetype, scale) → { lineWidthPx, dashPx }`. Κάνει **reuse** 3 υπάρχοντα SSoT: `lineweightToPx`
+(`config/lineweight-iso-catalog`, zoom-independent LWT), `resolveAnyDashMm` (`config/linetype-aliases`,
+ADR-510 catalog), `dashMmToScreenPx` (`rendering/linetype-dash-resolver`, zoom×LTSCALE). Καλείται και
+από τους δύο renderers → WYSIWYG preview↔commit, μηδέν διπλότυπο (N.0.2).
+- **Πάχος**: `applyLineStyle(aci, _suppressed)` → `applyLineStyle(aci, lineweight, linetype)`· dim-line
+  = `dimlwd`, ext-lines = `dimlwe`. Sentinels (-3/-2/-1) → baseline **1px** (`DIM_SENTINEL_STROKE_PX`),
+  ώστε κάθε ByLayer built-in να ζωγραφίζει byte-identical με πριν (zero regression· concrete layer/block
+  LWT inheritance = μελλοντική φάση). Glow pass = ίδιο width+glow αλλά **solid halo** (dashed halo=σπασμένο).
+- **Τύπος γραμμής**: `ctx.setLineDash([])` → `setLineDash(resolveDimStroke(...).dashPx)`· dim-line
+  = `dimltype`, ext-lines = `dimltex1`. 'ByLayer'/'Continuous'/unknown → `[]` = solid (zero regression).
+- **Βελάκια**: `resolveDimColor(r.style.arrowColor ?? r.style.dimclrd, layerColour)` (`DimensionRenderer.ts`
+  drawArrowheads) — ξεχωριστό κανάλι, fallback dimclrd όταν άδειο.
+- **Preview** (`preview-dimension-renderer.ts`): `applyDimStroke` δέχεται τώρα per-part lineweight+linetype+
+  scale, καλεί τον ίδιο `resolveDimStroke` (κρατά το preview-green color override). Το `overlayLineStyle`
+  "listening" state μένει άθικτο. `applySolidStroke` (dead πλέον) αφαιρέθηκε. Arrows μένουν green (preview
+  convention — arrowColor δεν εφαρμόζεται στο preview).
+- Tests: `dim-stroke-resolver.test.ts` (6) + 48 existing dim suites (DimensionRenderer/preview/text) GREEN.
+- ⚠️ **ADR-040 CHECK 6D**: αγγίζει `DimensionRenderer.ts` (entity renderer) → **stage ΑΥΤΟ το ADR** μαζί
+  με τον κώδικα, αλλιώς μπλοκάρει το pre-commit.
 
-### Φ3 — Ribbon bridge (πρότυπο ADR-510 `useRibbonLineToolBridge.ts`)
-- ΝΕΟ `ui/ribbon/hooks/useRibbonDimBridge.ts` — mirror του line bridge:
-  - `getComboboxState(key)`: διαβάζει `resolveDimStyle(selectedDim)` για την τρέχουσα τιμή.
-  - `onComboboxChange(key, value)`: γράφει στο `entity.overrides` μέσω **`UpdateEntityCommand`**
-    (undoable, ίδιο generic `patchEntity()` pattern — `useRibbonLineToolBridge.ts:278-289`),
-    π.χ. patch `{ overrides: { ...prev, dimclrd: aci } }`.
-- Εγγραφή στο `useRibbonCommands.ts` (mirror `isLineToolRibbonKey`, γρ. ~255-257 & ~301):
-  `if (isDimRibbonKey(key)) { dimBridge.onComboboxChange(key, value); return; }` και αντίστοιχα στο
-  `getComboboxState`.
-- Επέκταση `DIM_RIBBON_KEYS` (`dim-command-keys.ts`) με νέα keys ανά μέρος:
-  `dimLine.{color,weight,type}`, `ext.{color,weight,type}`, `arrow.{color,size,style}`,
-  `text.{color,font}` (κρατώντας τα υπάρχοντα `override.color`/`override.arrowStyle`/`text.height` κ.λπ.).
+### Φ3 — Ribbon bridge (πρότυπο ADR-510 `useRibbonLineToolBridge.ts`) — ✅ IMPLEMENTED 2026-07-01
+- ΝΕΟ `ui/ribbon/hooks/useRibbonDimBridge.ts` — mirror του line bridge (single-mode: overrides ΜΟΝΟ σε
+  επιλεγμένη διάσταση· τα global defaults = Style Manager Φ5, όχι draw-defaults):
+  - `resolveSelectedDim()` → `isDimensionEntity` narrow.
+  - `getComboboxState(key)`: `resolveDimStyle(entity, getDimStyleRegistry())` → τρέχουσα resolved τιμή.
+  - `onComboboxChange(key, value)`: patch `{ overrides: { ...prev, [field]: value } }` μέσω
+    **`UpdateEntityCommand`** (undoable). Καμία επιλογή → no-op.
+  - **Key→field map SSoT** (ΕΝΑ `DIM_KEY_MAP` οδηγεί read+write): color/lineweight/linetype/arrowStyle/
+    number/font kinds. **Unified writes:** ext linetype γράφει `dimltex1`+mirror `dimltex2`· arrow style
+    γράφει `dimblk`+clear `dimblk1/dimblk2` (και τα δύο άκρα κοινά).
+  - **Options reuse (μηδέν διπλή λίστα):** linetypes = `listSelectableLinetypeNames()` (ίδιο με line
+    bridge/radial-ring)· arrow styles = `listArrowheadBlockNames()` (τα 20 πραγματικά blocks). Colors/
+    weights/sizes/font = editable/color-swatch (τα presets τα δίνει το tab Φ4, το bridge μόνο την τιμή —
+    ίδιο pattern με `text.height`).
+- Εγγραφή στο `useRibbonCommands.ts`: `if (isDimRibbonKey(key)) return dimBridge.getComboboxState(key);`
+  + το αντίστοιχο στο `onComboboxChange` (πριν τον xline κλάδο)· props type `useRibbonCommands-types.ts`
+  (`dimBridge: RibbonDimBridge`)· instantiation `app/useDxfViewerRibbon.ts`
+  (`useRibbonDimBridge({ levelManager, universalSelection })`)· deps array getComboboxState.
+- Επέκταση `DIM_RIBBON_KEYS.override` (`dim-command-keys.ts`) με τα missing keys: `lineWeight`, `lineType`,
+  `extColor`, `extWeight`, `extType`, `arrowColor`, `arrowSize`, `textColor`, `textFont` (κρατώντας τα
+  υπάρχοντα `color`=dimclrd, `arrowStyle`=dimblk, `text.height`=paperTextHeight — reuse, όχι διπλότυπα).
+- Tests: `useRibbonDimBridge.test.tsx` (14, read/unified-write/guards) + line bridge suite GREEN (no regression).
 
-### Φ4 — Contextual tab controls (`contextual-dimension-tab.ts`)
-- Ενεργοποίηση των STUB controls + προσθήκη νέων, οργανωμένα σε panels ανά μέρος
-  (Γραμμή διάστασης / Προεκτάσεις / Βελάκια / Κείμενο): color-swatch + editable combobox για
-  πάχος/τύπος/μέγεθος. **Reuse** `ARROW_STYLE_OPTIONS` + το editable-combobox pattern του line tab.
-- i18n keys (N.11): προσθήκη σε `src/i18n/locales/el/*.json` **και** `en/*.json` **πριν** τη χρήση.
+### Φ4 — Contextual tab controls (`contextual-dimension-tab.ts`) — ✅ IMPLEMENTED 2026-07-01
+- **SSoT audit refinement:** το `type: 'color-swatch'` renders `RibbonColorSwatchWidget` που είναι
+  **hardwired στο text-toolbar store** (δεν περνά από το dim bridge) → το υπάρχον `dim.override.color`
+  color-swatch ήταν **σπασμένο stub** (έγραφε σε λάθος store). Αντ' αυτού ΟΛΑ τα per-part χρώματα =
+  **`combobox` + COLOR_OPTIONS** (ByLayer + 7 ACI, i18n-keyed) — το working pattern του line tool
+  (ADR-510), που περνά από το `onComboboxChange` → dim bridge. (Απόκλιση από το §4 «color-swatch»,
+  ακολουθεί το πραγματικό working SSoT.)
+- Το single «Παράκαμψη» panel σπάει σε **AutoCAD-grade per-part panels** (7 panels συνολικά):
+  Στυλ · **Γραμμή Διάστασης** (χρώμα/πάχος/τύπος) · **Προεκτάσεις** (χρώμα/πάχος/τύπος) · **Βελάκια**
+  (στυλ/χρώμα/μέγεθος) · Κείμενο (+χρώμα/γραμματοσειρά) · Τροποποίηση · Ιδιότητες. Το `reset` πήγε στο
+  Στυλ panel.
+- **Options reuse (μηδέν διπλή λίστα):** πάχος = shared `LINEWEIGHT_RIBBON_OPTIONS`· linetype + arrow-style
+  = **ΚΕΝΑ** στο tab (`options: []`), τα τροφοδοτεί live το bridge (Φ3)· arrow size = editable numericInput·
+  font = preset dropdown. Το παλιό μεταφρασμένο `ARROW_STYLE_OPTIONS` αφαιρέθηκε (bridge-supplied πλέον).
+- i18n keys (N.11): 3 panels (`dimLine/dimExt/dimArrow`) + 9 command labels + 8 `colorOptions.*` σε
+  **el ΚΑΙ en** `dxf-viewer-shell.json` (πριν τη χρήση). Ενημέρωση structural test (7 panels, color=combobox).
 
-### Φ5 — Style Manager controls (`ui/panels/dimensions/DimStyleAccordion/*`)
-- `LinesSection`: color pickers `dimclrd` + `dimclre`, + lineweight/linetype για dim & ext.
-- `TextSection`: color picker `dimclrt` + font-family control (`textFontFamily`).
-- `SymbolsSection`: arrow color (`arrowColor`).
-- **Reuse** των υπαρχόντων `NumField`/`Select` + κοινό color-field component. Γράφει μέσω
-  `getDimStyleRegistry().updateCustomStyle()`.
+### Φ5 — Style Manager controls (`ui/panels/dimensions/sections/*`) — ✅ IMPLEMENTED 2026-07-01
+**SSoT audit refinement:** τα `dimclrd/dimclre/dimclrt`/`arrowColor` είναι **ACI numbers** (0=ByBlock,
+256=ByLayer, 1-255). Ο υπάρχων `EnterpriseColorDialog`/`RibbonColorField` δουλεύει με **hex** → mismatch
+(lossy hex→ACI + απόκλιση από την αδελφή Φ4). Επιλέχθηκε **ACI `Select` + swatch** (AutoCAD/Revit DIMSTYLE
+colour-dropdown pattern) με το **ίδιο option set με τη Φ4** (`ByLayer + 7 ACI`) → συνέπεια Style Manager ↔
+contextual tab. Swatch = `resolveDimColor(aci)` + `getDynamicBackgroundClass` (dynamic bg χωρίς inline
+style, N.3).
+- **ΝΕΟ shared SSoT** `sections/dim-style-field-options.ts` (data): `DIM_COLOR_OPTIONS` (ByLayer+7 ACI),
+  `DIM_LINEWEIGHT_OPTIONS` (derived από `LINEWEIGHT_CONCRETE_MM_VALUES` + `LINEWEIGHT_SPECIAL.BYLAYER` —
+  τιμές `LineweightMm`, **μηδέν `as LineweightMm` cast**, ratchet-safe), `DIM_FONT_OPTIONS` (ίδιες 5 με Φ4).
+- **ΝΕΟ shared SSoT** `sections/dim-style-fields.tsx` (components): `NumField`/`BoolField` (extract από
+  `LinesSection` — ήταν local), `SelectField` (generic Radix Select), `ColorField` (ACI+swatch),
+  `LineweightField` (LineweightMm lookup, no cast), `LinetypeField` (live `listSelectableLinetypeNames()`).
+  Reuse και στα 3 sections → μηδέν copy-paste.
+- `LinesSection`: `ColorField dimclrd/dimclre` + `LineweightField dimlwd/dimlwe` + `LinetypeField
+  dimltype` + `dimltex1` (**unified mirror `dimltex2`**, όπως Φ3).
+- `TextSection`: `ColorField dimclrt` + `SelectField textFontFamily`.
+- `SymbolsSection`: `ColorField arrowColor` (κληρονομεί `dimclrd` όταν unset — `arrowColor ?? dimclrd`).
+- Γράφει μέσω του υπάρχοντος `onChange(patch)` → `getDimStyleRegistry().updateCustomStyle()` (Φ4/existing).
+- i18n (N.11): 9 field labels + `byLayer` + 8 `colorOptions.*` σε **el ΚΑΙ en** `dxf-viewer-panels.json`.
+- Tests: `dim-style-per-part-controls.test.tsx` (7) + 40 dim suites GREEN (542 tests, zero regression).
+- ⚠️ **Flagged consolidation (post-Φ4-commit):** τα `COLOR_OPTIONS`/`FONT_OPTIONS` της Φ4 είναι private
+  inline στο `contextual-dimension-tab.ts`. Δεν αγγίχθηκαν (κανόνας «μην ξαναγγίξεις Φ1-Φ4»)· μετά το
+  commit της Φ4 να migrate-άρουν ώστε να import-άρουν από το `dim-style-field-options.ts` (ένα SSoT).
 
 ### Φ6 — Μελλοντικές φάσεις (μόνο τεκμηρίωση, εκτός τρέχοντος scope)
 - **DXF round-trip**: writer `dxf-dimstyle-writer.ts` να εκπέμπει `DIMLWD/DIMLWE` (αντί hardcoded `-2`),
@@ -208,6 +257,41 @@ Defaults στα 3 templates (`sharedDefaults()`): `dimlwd=dimlwe=-2` (ByLayer),
 
 ## 7. Changelog
 
+- **2026-07-01 (Φ5 IMPLEMENTED, UNCOMMITTED)** — Style Manager per-part controls. SSoT audit (grep)
+  ΠΡΙΝ τον κώδικα: (α) τα dim colours = **ACI numbers** → `EnterpriseColorDialog` (hex) = mismatch →
+  **ACI `Select` + swatch** με ίδιο option set με Φ4 (συνέπεια), (β) lineweight derived από ISO catalog
+  SSoT **χωρίς `as LineweightMm` cast** (lookup — ratchet-safe), (γ) linetypes = live
+  `listSelectableLinetypeNames()`, (δ) swatch = `resolveDimColor` + `getDynamicBackgroundClass` (no inline
+  style). 2 ΝΕΑ shared SSoT αρχεία (`dim-style-field-options.ts` data + `dim-style-fields.tsx` components:
+  Num/Bool/Select/Color/Lineweight/Linetype fields — extract + reuse στα 3 sections, μηδέν copy-paste).
+  `LinesSection` (dimclrd/dimclre + dimlwd/dimlwe + dimltype + dimltex1 mirror dimltex2), `TextSection`
+  (dimclrt + textFontFamily), `SymbolsSection` (arrowColor `?? dimclrd`). i18n: 9 labels + byLayer + 8
+  colorOptions σε el+en. Tests: `dim-style-per-part-controls.test.tsx` (7) + accordion mock cleanup.
+  40 dim suites GREEN (542 tests, zero regression). 🔴 commit → Giorgio (stage: 2 ΝΕΑ + 3 sections +
+  1 accordion test + 1 ΝΕΟ test + 2 locales + ADR). ⚠️ browser-verify: Style Manager → edit custom
+  DIMSTYLE → χρώμα/πάχος/τύπος/font live update. ⚠️ flagged: unify Φ4 private COLOR/FONT options post-commit.
+- **2026-07-01 (Φ4 IMPLEMENTED, UNCOMMITTED)** — Contextual tab. SSoT audit βρήκε ότι `color-swatch` =
+  text-store-hardwired (σπασμένο για dims) → όλα τα per-part χρώματα combobox+COLOR_OPTIONS (bridge-wired).
+  Single «Παράκαμψη» → 7 AutoCAD-grade per-part panels (Γραμμή/Προεκτάσεις/Βελάκια + Κείμενο χρώμα/font).
+  Options reuse `LINEWEIGHT_RIBBON_OPTIONS`· linetype/arrow options=[] (bridge live). i18n: 3 panels +
+  9 commands + 8 colorOptions σε el+en. Structural test rewrite (15, 7 panels). jest: 120/120 GREEN
+  (8 dim suites Φ1-Φ4 + line bridge regression). 🔴 commit → Giorgio (stage: 1 tab + 1 test + 2 locales +
+  ADR). ⚠️ browser-verify: επιλογή διάστασης → per-part panel controls → live update + Ctrl+Z.
+- **2026-07-01 (Φ3 IMPLEMENTED, UNCOMMITTED)** — Ribbon bridge. SSoT audit (grep) → mirror ακριβώς του
+  `useRibbonLineToolBridge` (resolveSelected/UpdateEntityCommand/live options). ΝΕΟ `useRibbonDimBridge.ts`
+  (ΕΝΑ `DIM_KEY_MAP` οδηγεί read+write· unified ext-linetype mirror + arrow clear-siblings· options reuse
+  `listSelectableLinetypeNames`/`listArrowheadBlockNames`). Wiring 4 αρχεία (dim-command-keys keys,
+  useRibbonCommands 2 branches+deps, -types prop, useDxfViewerRibbon instantiation). Test
+  `useRibbonDimBridge.test.tsx` (14) + line bridge suite GREEN. 🔴 commit → Giorgio
+  (stage: 5 code [1 νέο] + 1 test + ADR). ⚠️ τα controls γίνονται ορατά/χρησιμοποιήσιμα στη Φ4 (tab).
+- **2026-07-01 (Φ2 IMPLEMENTED, UNCOMMITTED)** — 2D rendering wiring. SSoT audit (grep) βρήκε τα 3
+  canonical resolvers (`lineweightToPx`, `resolveAnyDashMm`, `dashMmToScreenPx`) → **ΕΝΑ** νέο shared pure
+  helper `dim-stroke-resolver.ts` (`resolveDimStroke`) που τα ενώνει, καλείται από **και τους δύο**
+  renderers (μηδέν διπλότυπο). `DimensionRenderer.ts`: `applyLineStyle` per-part width+dash, arrows
+  `arrowColor ?? dimclrd`. `preview-dimension-renderer.ts`: `applyDimStroke` per-part (κρατά preview color),
+  αφαιρέθηκε το dead `applySolidStroke`. Sentinel/ByLayer → 1px solid = **zero regression** (48 existing
+  dim suites GREEN). Νέο test `dim-stroke-resolver.test.ts` (6). ⚠️ ADR-040 CHECK 6D → stage ADR-562 με
+  τον κώδικα. 🔴 commit → Giorgio (stage: 3 code [1 νέο] + 1 test + ADR).
 - **2026-07-01 (Φ1 IMPLEMENTED, UNCOMMITTED)** — Data model per-part styling. SSoT audit (grep) ΠΡΙΝ
   τον κώδικα: (α) τα 6 πεδία απόντα, (β) βρέθηκε canonical `LineweightMm` SSoT → `dimlwd/dimlwe`
   τυποποιήθηκαν ως `LineweightMm` (όχι σκέτο number/hundredths), (γ) `arrowColor` έγινε **optional**

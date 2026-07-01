@@ -184,25 +184,29 @@ export function buildFinishSkinPreviewEntities<E extends { readonly id: string }
 }
 
 /**
- * ADR-449 / ADR-363 — LIVE finish-skin (σοβάς) preview while moving/rotating a WALL.
+ * ADR-449 / ADR-363 — LIVE finish-skin (σοβάς) preview while moving/rotating/resizing a
+ * structural member (WALL / COLUMN / BEAM).
  *
- * Ζητούμενο (Giorgio): με ενεργή τη «Σοβατισμένη όψη», κατά την περιστροφή/μετακίνηση τοίχου η
+ * Ζητούμενο (Giorgio): με ενεργή τη «Σοβατισμένη όψη», κατά την επεξεργασία δομικού μέλους η
  * προεπισκόπηση να δείχνει και τον σοβά live — πώς ακριβώς θα τυλίγει τη ΝΕΑ θέση στο επόμενο κλικ.
+ * (Αρχικά μόνο τοίχος· επεκτάθηκε σε κολώνα/δοκάρι — ίδιος SSoT μηχανισμός.)
  *
  * SSoT reuse (μηδέν νέα geometry): καλεί τον ΙΔΙΟ scene-level pass που ζωγραφίζει τον committed σοβά
- * (`drawStructuralFinishSkin2D`), τροφοδοτημένο με τη σκηνή όπου ο dragged τοίχος + οι mitered γείτονες
- * είναι στη θέση προεπισκόπησης → το merged silhouette (`computeStructuralFinishSilhouette`) ξαναχτίζεται
- * στη νέα θέση. No-op όταν ο διακόπτης σοβά είναι κλειστός (ο pass κάνει gate ανά στοιχείο). ADR-040:
- * pure draw, μηδέν subscriptions. Καλείται ΜΕΤΑ το σώμα-φάντασμα (mirror της committed σειράς).
+ * (`drawStructuralFinishSkin2D`), τροφοδοτημένο με τη σκηνή όπου το dragged μέλος (+ οι mitered γείτονες
+ * ενός τοίχου) είναι στη θέση προεπισκόπησης → το merged silhouette (`computeStructuralFinishSilhouette`)
+ * ξαναχτίζεται στη νέα θέση. Ο κάθε τύπος τροφοδοτεί ήδη φρέσκο footprint στο ghost του
+ * (`applyEntityPreview`: computeWallGeometry / computeColumnGeometry / beam outline). No-op όταν ο
+ * διακόπτης σοβά είναι κλειστός (gate ανά στοιχείο). ADR-040: pure draw, μηδέν subscriptions. Καλείται
+ * ΜΕΤΑ το σώμα-φάντασμα (mirror της committed σειράς).
  */
-export function drawWallFinishSkinPreview(
+export function drawStructuralFinishSkinPreview(
   ctx: CanvasRenderingContext2D,
   sceneEntities: readonly { readonly id: string }[],
-  ghostWall: DxfEntityUnion,
+  ghostMember: DxfEntityUnion,
   neighbours: readonly { readonly id: string }[],
   t: ViewTransform,
   vp: { width: number; height: number },
 ): void {
-  const preview = buildFinishSkinPreviewEntities<{ readonly id: string }>(sceneEntities, ghostWall, neighbours);
+  const preview = buildFinishSkinPreviewEntities<{ readonly id: string }>(sceneEntities, ghostMember, neighbours);
   drawStructuralFinishSkin2D(ctx, preview as unknown as readonly DxfEntityUnion[], t, vp);
 }

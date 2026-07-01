@@ -93,7 +93,7 @@ import {
   drawAngleArc,
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
-  drawWallFinishSkinPreview,
+  drawStructuralFinishSkinPreview,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
@@ -349,15 +349,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // drawn mitered FIRST (underneath), so the user sees exactly how the corner will close. The
       // stale stored miter was already stripped in `applyEntityPreview` (nominal rect) → here it is
       // re-formed live. No-op for non-wall / curved / no-near-wall (`applyJointMiterPreview`).
+      // ADR-449 — the live finish-skin (σοβάς) preview re-forms the merged silhouette around
+      // the dragged member's new position; hoisted so column/beam (not just wall) can use it.
+      const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       let wallGhostToDraw = transformed;
-      // ADR-449 — captured inside the wall branch so the live finish-skin (σοβάς) preview
-      // below can re-form the merged silhouette around the wall's new preview position.
-      let wallFinishPreview: {
-        scene: readonly { readonly id: string }[];
-        neighbours: readonly ExtendedSceneEntity[];
-      } | null = null;
-      if ((transformed as { type?: string }).type === 'wall') {
-        const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const draggedType = (transformed as { type?: string }).type;
+      // Walls also contribute mitered neighbours (jointNeighbors) to the finish swap set;
+      // columns/beams have no join preview, so their neighbour set stays empty.
+      let finishPreviewNeighbours: readonly ExtendedSceneEntity[] = [];
+      if (draggedType === 'wall') {
         const wallsForJoin = (joinScene?.entities ?? []).filter(isWallEntity);
         // ADR-363 §wall-column-end-miter — live trapezoidal cut of the moving wall END on a
         // column face (same SSoT as commit): column footprints of the level.
@@ -367,24 +367,23 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         const augmented = applyJointMiterPreview(
           transformed as unknown as ExtendedSceneEntity, wallsForJoin, columnFootprintsForJoin, resolveSceneUnits(joinScene),
         );
-        let neighbors: readonly ExtendedSceneEntity[] = [];
         if (augmented) {
-          neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
+          const neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
           for (const n of neighbors) {
             drawRealEntityPreview(bimPreview, n as unknown as DxfEntityUnion, layersById, t, vp);
           }
           wallGhostToDraw = augmented as unknown as DxfEntityUnion;
+          finishPreviewNeighbours = neighbors;
         }
-        wallFinishPreview = { scene: joinScene?.entities ?? [], neighbours: neighbors };
       }
       drawRealEntityPreview(bimPreview, wallGhostToDraw, layersById, t, vp);
-      // ADR-449 — LIVE σοβάς: after the wall body ghost, re-draw the merged finish-skin
-      // silhouette for the preview scene (dragged wall + mitered neighbours at their new
-      // positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη» is off.
-      // Mirrors the committed order (plaster painted after the body).
-      if (wallFinishPreview) {
-        drawWallFinishSkinPreview(
-          ctx, wallFinishPreview.scene, wallGhostToDraw, wallFinishPreview.neighbours, t, vp,
+      // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
+      // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
+      // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
+      // is off (internal per-element gate). Mirrors the committed order (plaster after body).
+      if (joinScene && (draggedType === 'wall' || draggedType === 'column' || draggedType === 'beam')) {
+        drawStructuralFinishSkinPreview(
+          ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
         );
       }
 

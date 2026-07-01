@@ -1,7 +1,11 @@
 /**
  * ADR-362 Phase E2 — DIM ribbon command-key registry.
  * Mirrors `stair-command-keys.ts` pattern (ADR-358 Phase 7a).
- * All writes are stubs in E2; real dispatch arrives in Phase F+G.
+ *
+ * ADR-562 Φ3 — the per-part styling keys under `override` are now LIVE (wired
+ * through `useRibbonDimBridge` → `entity.overrides` via `UpdateEntityCommand`),
+ * no longer E2 stubs. The rest (style chooser / modify / properties) stay routed
+ * through the action fallthrough.
  */
 
 export const DIM_RIBBON_KEYS = {
@@ -11,8 +15,21 @@ export const DIM_RIBBON_KEYS = {
     editStyle:    'dim.style.edit',
   },
   override: {
-    color:          'dim.override.color',
-    arrowStyle:     'dim.override.arrowStyle',
+    // Dim line (ADR-562 Φ3 — dimclrd/dimlwd/dimltype).
+    color:          'dim.override.color',       // dimclrd (existing key, now wired)
+    lineWeight:     'dim.override.lineWeight',   // dimlwd
+    lineType:       'dim.override.lineType',     // dimltype
+    // Extension lines (dimclre/dimlwe/dimltex1+2 unified).
+    extColor:       'dim.override.extColor',     // dimclre
+    extWeight:      'dim.override.extWeight',     // dimlwe
+    extType:        'dim.override.extType',       // dimltex1 (+dimltex2 mirror)
+    // Arrowheads (dimblk unified / arrowColor separate channel / dimasz).
+    arrowStyle:     'dim.override.arrowStyle',   // dimblk (existing key, now wired)
+    arrowColor:     'dim.override.arrowColor',    // arrowColor
+    arrowSize:      'dim.override.arrowSize',     // dimasz
+    // Text (dimclrt / textFontFamily).
+    textColor:      'dim.override.textColor',     // dimclrt
+    textFont:       'dim.override.textFont',      // textFontFamily
     resetOverrides: 'dim.override.reset',
   },
   text: {

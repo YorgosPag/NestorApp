@@ -2,51 +2,20 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import type { DimStyle } from '../../../../types/dimension';
 import type { UpdateCustomStylePatch } from '../../../../systems/dimensions/dim-style-registry';
+import {
+  NumField,
+  BoolField,
+  ColorField,
+  LineweightField,
+  LinetypeField,
+} from './dim-style-fields';
 
 interface LinesSectionProps {
   style: DimStyle;
   onChange: (patch: UpdateCustomStylePatch) => void;
   readOnly?: boolean;
-}
-
-function NumField({
-  id, label, value, onChange, disabled,
-}: {
-  id: string; label: string; value: number; onChange: (v: number) => void; disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <Label htmlFor={id} className="text-xs shrink-0 w-36">{label}</Label>
-      <Input
-        id={id}
-        type="number"
-        min={0}
-        step={0.1}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="h-6 text-xs w-20 px-1.5"
-      />
-    </div>
-  );
-}
-
-function BoolField({
-  id, label, checked, onChange, disabled,
-}: {
-  id: string; label: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Checkbox id={id} checked={checked} onCheckedChange={(v) => onChange(Boolean(v))} disabled={disabled} />
-      <Label htmlFor={id} className="text-xs cursor-pointer">{label}</Label>
-    </div>
-  );
 }
 
 export function LinesSection({ style, onChange, readOnly = false }: LinesSectionProps) {
@@ -55,6 +24,15 @@ export function LinesSection({ style, onChange, readOnly = false }: LinesSection
 
   return (
     <div className="flex flex-col gap-2 py-1">
+      {/* Dimension line — colour / weight / linetype (ADR-562 Φ5) */}
+      <ColorField label={f('dimclrd')} value={style.dimclrd} onChange={(v) => onChange({ dimclrd: v })} disabled={readOnly} />
+      <LineweightField label={f('dimlwd')} value={style.dimlwd} onChange={(v) => onChange({ dimlwd: v })} disabled={readOnly} />
+      <LinetypeField label={f('dimltype')} value={style.dimltype} onChange={(v) => onChange({ dimltype: v })} disabled={readOnly} />
+      {/* Extension lines — colour / weight / linetype (dimltex1 mirrors dimltex2, unified) */}
+      <ColorField label={f('dimclre')} value={style.dimclre} onChange={(v) => onChange({ dimclre: v })} disabled={readOnly} />
+      <LineweightField label={f('dimlwe')} value={style.dimlwe} onChange={(v) => onChange({ dimlwe: v })} disabled={readOnly} />
+      <LinetypeField label={f('dimltex1')} value={style.dimltex1} onChange={(v) => onChange({ dimltex1: v, dimltex2: v })} disabled={readOnly} />
+
       <NumField id="dimasz" label={f('dimasz')} value={style.dimasz} onChange={(v) => onChange({ dimasz: v })} disabled={readOnly} />
       <NumField id="dimexe" label={f('dimexe')} value={style.dimexe} onChange={(v) => onChange({ dimexe: v })} disabled={readOnly} />
       <NumField id="dimexo" label={f('dimexo')} value={style.dimexo} onChange={(v) => onChange({ dimexo: v })} disabled={readOnly} />

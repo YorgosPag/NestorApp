@@ -33,7 +33,11 @@ import {
   isDimensionEntity,
   type DimensionEntity,
   type DimStyle,
+  type LineweightMm,
 } from '../../types/entities';
+// ADR-562 Φ2 — per-part lineweight + linetype → canvas stroke via the shared SSoT
+// (reuses lineweightToPx + ADR-510 Unified Linetype dash catalog).
+import { resolveDimStroke } from './dimension/dim-stroke-resolver';
 // ADR-362 Round 22 — render grips from the SAME SSoT the interaction/pick path uses
 // (`getDimensionGrips`) so the drawn grips match the pickable ones exactly (5 grips
 // incl. the dim-extra handle + identical text-midpoint fallback). Pure function, no React.
@@ -303,7 +307,9 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const ext1 = readExtLine(r.geometry, 1);
     const ext2 = readExtLine(r.geometry, 2);
     if (!ext1 && !ext2) return;
-    this.applyLineStyle(r.style.dimclre, false);
+    // Extension lines share one stroke setup (unified per-part granularity):
+    // dimlwe + dimltex1 (dimltex1===dimltex2 while the UI sets both together).
+    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1);
     if (ext1 && !r.style.suppressExtLine1) {
       const segs = breaks?.extLine1Segments ?? [ext1];
       for (const s of segs) this.strokeSegment(s);
@@ -315,7 +321,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   private drawDimLineOrArc(r: ResolvedDimensionRender, breaks?: DimBreakResult): void {
-    this.applyLineStyle(r.style.dimclrd, false);
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype);
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
@@ -351,7 +357,9 @@ export class DimensionRenderer extends BaseEntityRenderer {
     // the annotation-scale SSoT) → screen px (× view scale).
     const unitPx =
       paperHeightToModel(r.style.dimasz, r.style.dimscale, this.sceneUnits) * this.transform.scale;
-    const colour = resolveDimColor(r.style.dimclrd, this.layerColour);
+    // ADR-562 Φ2 — arrows use the separate arrowColor channel when set, else
+    // inherit the dim-line color (`arrowColor ?? dimclrd`, exceeds AutoCAD).
+    const colour = resolveDimColor(r.style.arrowColor ?? r.style.dimclrd, this.layerColour);
     const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
     const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
 
@@ -397,10 +405,19 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   // ── Canvas helpers ───────────────────────────────────────────────────────
 
-  private applyLineStyle(aci: number, _suppressed: boolean): void {
-    if (!this._inGlowPass) this.ctx.strokeStyle = resolveDimColor(aci, this.layerColour);
-    this.ctx.lineWidth = this._inGlowPass ? 1 + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth : 1;
-    this.ctx.setLineDash([]);
+  private applyLineStyle(aci: number, lineweight: LineweightMm, linetype: string): void {
+    // ADR-562 Φ2 — resolved per-part width + dash (was hardcoded 1px solid).
+    const stroke = resolveDimStroke(lineweight, linetype, this.transform.scale);
+    if (this._inGlowPass) {
+      // Hover halo: keep the wider stroke but a CONTINUOUS line (a dashed halo
+      // reads as broken) — unchanged from the pre-ADR-562 glow behaviour.
+      this.ctx.lineWidth = stroke.lineWidthPx + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+      this.ctx.setLineDash([]);
+    } else {
+      this.ctx.strokeStyle = resolveDimColor(aci, this.layerColour);
+      this.ctx.lineWidth = stroke.lineWidthPx;
+      this.ctx.setLineDash(stroke.dashPx);
+    }
     this.ctx.lineCap = 'butt';
   }
 

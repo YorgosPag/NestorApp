@@ -12,6 +12,7 @@
  * orchestrator drives, the leaves never subscribe).
  */
 import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall, DxfBeam } from './dxf-types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
@@ -67,6 +68,22 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
     m.set(o.params.wallId, arr);
   }
   return m;
+}
+
+/**
+ * ADR-509 §axis-clip — build per-frame λίστα column footprints (plan-space vertices)
+ * ώστε ο `WallRenderer` να κόβει τον dashed άξονα στην παρειά της κολώνας (location
+ * line σταματά στο σώμα, δεν το διαπερνά). O(n) scan· `Point3D` (x,y,z?) ικανοποιεί
+ * δομικά το `Point2D` που καταναλώνει ο clip (μηδέν cast).
+ */
+export function buildColumnFootprints(entities: readonly DxfEntityUnion[]): ReadonlyArray<readonly Point2D[]> {
+  const out: (readonly Point2D[])[] = [];
+  for (const e of entities) {
+    if (e.type !== 'column') continue;
+    const verts = (e as DxfColumn).geometry?.footprint?.vertices;
+    if (verts && verts.length >= 3) out.push(verts);
+  }
+  return out;
 }
 
 /**

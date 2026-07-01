@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import type { DimStyle } from '../../../../types/dimension';
 import type { UpdateCustomStylePatch } from '../../../../systems/dimensions/dim-style-registry';
+import { ColorField } from './dim-style-fields';
 
 const ARROWHEAD_NAMES = [
   'none', 'closedFilled', 'closedBlank', 'closed', 'dot', 'dotSmall',
@@ -49,6 +50,9 @@ export function SymbolsSection({ style, onChange, readOnly = false }: SymbolsSec
           </SelectContent>
         </Select>
       </div>
+
+      {/* ADR-562 Φ5 — arrow colour (separate channel; inherits dimclrd when unset) */}
+      <ColorField label={f('arrowColor')} value={style.arrowColor ?? style.dimclrd} onChange={(v) => onChange({ arrowColor: v })} disabled={readOnly} />
 
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor="dimcen" className="text-xs shrink-0 w-36">{f('dimcen')}</Label>
