@@ -203,6 +203,36 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     expect(wallFaces).toHaveLength(0);
   });
 
+  // ─── ADR-458 §top-cap-cutback — ο top-cap τοίχου κόβεται στην παρειά κολώνας ─────
+  it('κολόνα πάνω στο άκρο τοίχου → top-cap ΔΕΝ προεξέχει μέσα στην κολόνα (ακολουθεί τον κομμένο πυρήνα)', () => {
+    // Κολόνα καλύπτει το δυτικό άκρο του τοίχου (wall x∈[0,3])· ανατολική παρειά x=0.2.
+    const col: HorizontalColumnSource = {
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: -0.3, y: -0.3 }, { x: 0.2, y: -0.3 }, { x: 0.2, y: 0.3 }, { x: -0.3, y: 0.3 },
+      ] } },
+    };
+    const allX = (fs: ReturnType<typeof run>['wallFaces']) => fs.flatMap((f) => f.polygons.flatMap((p) => p.outer)).map((pt) => pt.x);
+    const freeMinX = Math.min(...allX(run({ walls: [wall()] }).wallFaces));
+    const joined = run({ walls: [wall()], columns: [col] }).wallFaces;
+    expect(joined.length).toBeGreaterThan(0);
+    const joinedMinX = Math.min(...allX(joined));
+    expect(freeMinX).toBeLessThan(0.1); // ελεύθερο: top-cap φτάνει στο δυτικό άκρο (~0 − σοβάς)
+    expect(joinedMinX).toBeGreaterThanOrEqual(0.2 - 1e-3); // κομμένο: δεν μπαίνει δυτικά της παρειάς κολόνας (x=0.2)
+  });
+
+  it('κολόνα ΜΑΚΡΙΑ από τον τοίχο → top-cap αμετάβλητο (null cutback, μηδέν regression)', () => {
+    const farCol: HorizontalColumnSource = {
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: 50, y: 50 }, { x: 50.5, y: 50 }, { x: 50.5, y: 50.5 }, { x: 50, y: 50.5 },
+      ] } },
+    };
+    const free = run({ walls: [wall()] }).wallFaces;
+    const withFar = run({ walls: [wall()], columns: [farCol] }).wallFaces;
+    expect(withFar[0].areaM2).toBeCloseTo(free[0].areaM2, 6);
+  });
+
   it('ADR-449 height-SSoT: columnExtents override → cap στο resolved zTop (3000), ΟΧΙ raw params.height (2700)', () => {
     // Firestore repro: storey-ceiling κολόνα με raw height=2700 ενώ storey ceiling=3000.
     // Χωρίς extents → legacy cap στο 2700· με extents (= πυρήνας) → cap στο 3000.

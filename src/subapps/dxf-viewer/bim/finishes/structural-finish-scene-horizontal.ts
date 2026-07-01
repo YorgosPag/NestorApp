@@ -32,6 +32,8 @@ import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
+// ADR-458 §top-cap-cutback — ΙΔΙΟ SSoT με το core mesh: ο top-cap σοβά τοίχου κόβεται στην παρειά κολώνας.
+import { computeMemberCutbackOutline } from '../geometry/member-column-cutback';
 import { wallIsFinishMember } from './wall-finish-source';
 import type { ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
@@ -263,11 +265,22 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
 
   // ADR-449 Slice X4/E — finished outlines τοίχων-finish-members (core + σοβάς skin), lateral
   // obstacles = δομικοί γείτονες (κολόνα/δοκάρι envelopes) ώστε το top-cap να σταματά flush.
-  const wallFinished = walls.map((w, i) =>
-    wallIsFinishMember(w)
-      ? finishedObstacleOf(coresOf(wallFps[i]), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, wallZExtent(w, beamUndersideById, floorElevationMm))
-      : null,
-  );
+  // ADR-449 §top-cap-cutback (Giorgio 2026-07-01) — ο πυρήνας του τοίχου κόβεται στην παρειά
+  // κολώνας (column wins, ADR-458)· το οριζόντιο top-cap ΠΡΕΠΕΙ να ακολουθεί τον ΚΟΜΜΕΝΟ πυρήνα,
+  // αλλιώς ζωγραφιζόταν πάνω από το πλήρες footprint → ο σοβάς προεξείχε ΜΕΣΑ στην κολώνα («οι
+  // σοβάδες δεν αποδίδονται σωστά»). ΙΔΙΟ SSoT `computeMemberCutbackOutline` με το core mesh:
+  // `null` → καμία τομή → πλήρες footprint (μηδέν regression)· `[]` → τοίχος όλος μέσα σε κολώνα
+  // → κανένα cap· πολλά κομμάτια (κολώνα χωρίζει τον τοίχο) → ένα finished cap ανά κομμάτι.
+  const columnCutters = columnCores.filter((c): c is Pt2[] => c !== null && c.length >= 3);
+  const wallFinished: PlanObstacle[][] = walls.map((w, i) => {
+    if (!wallIsFinishMember(w)) return [];
+    const cut = columnCutters.length > 0 ? computeMemberCutbackOutline(wallFps[i], columnCutters) : null;
+    const pieces = cut ?? [wallFps[i]];
+    const z = wallZExtent(w, beamUndersideById, floorElevationMm);
+    return pieces
+      .map((piece) => finishedObstacleOf(coresOf(piece), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, z))
+      .filter((o): o is PlanObstacle => o !== null);
+  });
 
   const columnFaces: HorizontalFinishFace[] = [];
   const beamFaces: HorizontalFinishFace[] = [];
@@ -281,8 +294,7 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
     if (fin) collectBeamFaces(b, fin, slabObs, wallObs, unitToMeters, tol, beamFaces);
   });
   walls.forEach((w, i) => {
-    const fin = wallFinished[i];
-    if (fin) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
+    for (const fin of wallFinished[i]) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
   });
   return { columnFaces, beamFaces, wallFaces };
 }
