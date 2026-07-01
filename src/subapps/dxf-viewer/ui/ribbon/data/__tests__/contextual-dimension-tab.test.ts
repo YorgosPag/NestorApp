@@ -156,8 +156,9 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
   });
 
   it('remaining action stubs are marked comingSoon: true', () => {
+    // ADR-562 Φ5 — `dim.style.apply` is now LIVE (applies the primary dim's
+    // DIMSTYLE to every selected dimension via `dim:apply-style-requested`).
     const comingSoonKeys = [
-      'dim.style.apply',
       'dim.style.edit',
       'dim.override.reset',
       'dim.text.resetPosition',
@@ -168,5 +169,12 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
       const btn = allButtons.find((b) => b.command.commandKey === key);
       expect(btn?.command.comingSoon).toBe(true);
     }
+  });
+
+  it('dim.style.apply is wired (action set, not comingSoon)', () => {
+    const btn = collectAllButtons(DIMENSION_CONTEXTUAL_TAB)
+      .find((b) => b.command.commandKey === 'dim.style.apply');
+    expect(btn?.command.comingSoon).toBeUndefined();
+    expect(btn?.command.action).toBe('dim.style.apply');
   });
 });

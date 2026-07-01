@@ -83,6 +83,7 @@ function assembleGeometry(
   const textRotation = computeTextRotation(
     vectorAngle(subtractPoints(foot2, foot1)),
     style.dimtih,
+    entity.textRotation,
   );
   const extLine1 = style.suppressExtLine1
     ? null

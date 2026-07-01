@@ -257,6 +257,31 @@ style, N.3).
 
 ## 7. Changelog
 
+- **2026-07-01 (Φ5c FIX — «Στροφή/Θέση Κειμένου» wired, UNCOMMITTED)** — Browser-verify: το ribbon
+  **«Στροφή Κειμένου»** (`dim.text.rotation`) ΔΕΝ λειτουργούσε. **ΔΥΟ bugs:** (1) το `dim.text.rotation`
+  ΚΑΙ το `dim.text.position` ΔΕΝ ήταν στο `DIM_KEY_MAP` → `onComboboxChange` no-op (ίδιο μοτίβο με τον
+  chooser)· (2) ο `linear-aligned-builder` υπολόγιζε το text angle ΑΠΟΚΛΕΙΣΤΙΚΑ από τη γεωμετρία
+  (`computeTextRotation(angle, dimtih)`) **αγνοώντας** το entity-level `textRotation` override. **Fix:**
+  (α) bridge — `dim.text.position` → `DIM_KEY_MAP` (νέο `kind:'enum'`, γράφει `overrides.dimtad`)·
+  `dim.text.rotation` → special branch (entity field `textRotation` deg, ΟΧΙ override) read/write μέσω
+  `patchEntity`. (β) `computeTextRotation` (κοινό SSoT) δέχεται optional `overrideDeg` (deg→rad, replace)·
+  ο linear/aligned builder περνά `entity.textRotation` (καλύπτει linear+aligned+chained). Tests: bridge
+  position+rotation (5) + linear builder override (1) — 2742/2742 dim suites GREEN. 🔴 commit + browser-verify.
+  ⚠️ radial/angular/ordinate builders δέχονται το ίδιο param αλλά δεν το περνούν ακόμη (μελλοντικό, αν ζητηθεί).
+- **2026-07-01 (Φ5b FIX — DIMSTYLE chooser + «Εφαρμογή Στυλ» wired, UNCOMMITTED)** — Browser-verify
+  αποκάλυψε ότι το ribbon **«Στυλ Διάστασης» dropdown** (`dim.style.chooser`) ήταν **νεκρό stub**:
+  δεν υπήρχε στο `DIM_KEY_MAP` → `getComboboxState` null + `onComboboxChange` no-op → η επιλογή DIMSTYLE
+  ΔΕΝ εφαρμοζόταν στην επιλεγμένη διάσταση. Επίσης το κουμπί **«Εφαρμογή Στυλ»** (`dim.style.apply`) ήταν
+  `comingSoon` → toast «Σύντομα διαθέσιμο». **Fix (Revit type-selector):** (1) ο chooser wire-άρεται στο
+  `useRibbonDimBridge` — read = `entity.styleId`, options **registry-driven** (`getDimStyleRegistry().
+  getSnapshot().styles`, incl. custom), write = **immediate apply** `UpdateEntityCommand({ styleId })`
+  (undoable). Γενίκευση `patchOverrides`→`patchEntity` (overrides ΚΑΙ styleId). (2) «Εφαρμογή Στυλ»
+  γίνεται LIVE: propagates το styleId της primary διάστασης σε ΟΛΕΣ τις επιλεγμένες (batch «apply type to
+  selection») μέσω `dim:apply-style-requested` EventBus → `useDimensionModify.buildApplyStyleCommands`
+  (καθιερωμένο pattern, CompositeCommand atomic-undo). Αρχεία: `useRibbonDimBridge.ts`, `useDimensionModify.ts`,
+  `dxf-special-actions.ts`, `drawing-event-map.ts`, `contextual-dimension-tab.ts` (apply: comingSoon→action).
+  Tests: bridge chooser (4) + `buildApplyStyleCommands` (2) + tab structural update — 44/44 GREEN. 🔴 commit
+  → Giorgio + browser-verify (επιλογή στυλ → άμεση αλλαγή· «Εφαρμογή Στυλ» → όλες οι επιλεγμένες).
 - **2026-07-01 (Φ5 IMPLEMENTED, UNCOMMITTED)** — Style Manager per-part controls. SSoT audit (grep)
   ΠΡΙΝ τον κώδικα: (α) τα dim colours = **ACI numbers** → `EnterpriseColorDialog` (hex) = mismatch →
   **ACI `Select` + swatch** με ίδιο option set με Φ4 (συνέπεια), (β) lineweight derived από ISO catalog

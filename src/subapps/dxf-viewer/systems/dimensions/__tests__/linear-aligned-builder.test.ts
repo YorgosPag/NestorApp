@@ -122,6 +122,17 @@ describe('buildLinearGeometry', () => {
     expect(g.textRotation).toBeCloseTo(Math.PI / 2, 9);
   });
 
+  it('ADR-562 — entity.textRotation (deg) overrides the auto text angle', () => {
+    // Horizontal dim would auto-resolve textRotation=0; a 45° override wins (→ π/4 rad).
+    const entity = linearEntity([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 50, y: 50 },
+    ], 0, { textRotation: 45 });
+    const g = buildLinearGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.textRotation).toBeCloseTo(Math.PI / 4, 9);
+  });
+
   it('rotated linear (rotation=30) — measurement projected onto rotated axis', () => {
     const entity = linearEntity([
       { x: 0, y: 0 },

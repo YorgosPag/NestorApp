@@ -74,7 +74,7 @@ const ACI_BYLAYER = 256;
 // Per-part key → DimStyle field mapping (ONE source; drives read + write)
 // ──────────────────────────────────────────────────────────────────────────────
 
-type DimFieldKind = 'color' | 'lineweight' | 'linetype' | 'arrowStyle' | 'number' | 'font';
+type DimFieldKind = 'color' | 'lineweight' | 'linetype' | 'arrowStyle' | 'number' | 'font' | 'enum';
 
 interface DimKeySpec {
   /** Primary DIMSTYLE field this control reads/writes. */
@@ -87,6 +87,10 @@ interface DimKeySpec {
 }
 
 const K = DIM_RIBBON_KEYS.override;
+/** The DIMSTYLE chooser key — applies a whole style to the selected dim (styleId). */
+const CHOOSER = DIM_RIBBON_KEYS.style.chooser;
+/** Text rotation is an ENTITY field (`textRotation`, deg), not a DIMSTYLE override. */
+const TEXT_ROTATION = DIM_RIBBON_KEYS.text.rotation;
 
 const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.color]:      { field: 'dimclrd', kind: 'color' },
@@ -101,6 +105,8 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.textColor]:  { field: 'dimclrt', kind: 'color' },
   [K.textFont]:   { field: 'textFontFamily', kind: 'font' },
   [DIM_RIBBON_KEYS.text.height]: { field: 'paperTextHeight', kind: 'number' },
+  // Vertical text placement (DIMTAD) — a DIMSTYLE override (above/centered/below/…).
+  [DIM_RIBBON_KEYS.text.position]: { field: 'dimtad', kind: 'enum' },
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -133,6 +139,7 @@ function readValue(spec: DimKeySpec, style: DimStyle): string {
       return String(style.dimblk1 || style.dimblk);
     case 'linetype':
     case 'font':
+    case 'enum':
       return String(style[spec.field] ?? '');
     case 'number':
       return String(style[spec.field] ?? 0);
@@ -155,6 +162,7 @@ function parseValue(spec: DimKeySpec, value: string): DimStyle[keyof DimStyle] |
     case 'linetype':
     case 'font':
     case 'arrowStyle':
+    case 'enum':
       return value as DimStyle[keyof DimStyle];
   }
 }
@@ -197,6 +205,21 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
     [],
   );
 
+  // Live DIMSTYLE registry for the style chooser (all styles by id → name, incl.
+  // user-created). Revit «Type Selector» pattern — options come from the SSoT
+  // registry, not a static list, so custom styles appear automatically.
+  const dimStyleSnapshot = useSyncExternalStore(
+    (cb) => getDimStyleRegistry().subscribe(cb),
+    () => getDimStyleRegistry().getSnapshot(),
+    () => getDimStyleRegistry().getSnapshot(),
+  );
+  const styleOptions = useMemo<readonly RibbonComboboxOption[]>(
+    () => dimStyleSnapshot.styles.map((s) => ({
+      value: s.id, labelKey: s.name, isLiteralLabel: true,
+    })),
+    [dimStyleSnapshot],
+  );
+
   /** The selected dimension entity, or null. */
   const resolveSelectedDim = useCallback((): DimensionEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -206,14 +229,15 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
     return e && isDimensionEntity(e) ? e : null;
   }, [levelManager, universalSelection]);
 
-  const patchOverrides = useCallback(
-    (entity: DimensionEntity, nextOverrides: Record<string, unknown>): void => {
+  /** Undoable patch of arbitrary fields on the selected dim (overrides / styleId). */
+  const patchEntity = useCallback(
+    (entity: DimensionEntity, patch: Record<string, unknown>): void => {
       if (!levelManager.currentLevelId) return;
       const sm = createLevelSceneManagerAdapter(
         levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
       );
       executeCommand(
-        new UpdateEntityCommand(entity.id, { overrides: nextOverrides }, sm, 'Update dimension style'),
+        new UpdateEntityCommand(entity.id, patch, sm, 'Update dimension style'),
       );
     },
     [executeCommand, levelManager],
@@ -231,28 +255,49 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       if (!isDimRibbonKey(commandKey)) return null;
+      // DIMSTYLE chooser — reads the selected dim's `styleId` (Revit type selector).
+      if (commandKey === CHOOSER) {
+        const entity = resolveSelectedDim();
+        return { value: entity?.styleId ?? '', options: styleOptions };
+      }
+      // Text rotation — an ENTITY field (`textRotation`, deg); tab supplies the presets.
+      if (commandKey === TEXT_ROTATION) {
+        const entity = resolveSelectedDim();
+        return { value: entity ? String(entity.textRotation ?? 0) : '', options: [] };
+      }
       const spec = DIM_KEY_MAP[commandKey];
-      if (!spec) return null; // action-only dim keys (style chooser / modify) — not a combobox
+      if (!spec) return null; // action-only dim keys (apply / modify) — not a combobox
       const entity = resolveSelectedDim();
       if (!entity) return { value: '', options: optionsFor(spec.kind) };
       const style = resolveDimStyle(entity, getDimStyleRegistry());
       return { value: readValue(spec, style), options: optionsFor(spec.kind) };
     },
-    [resolveSelectedDim, optionsFor],
+    [resolveSelectedDim, optionsFor, styleOptions],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       if (!isDimRibbonKey(commandKey)) return;
-      const spec = DIM_KEY_MAP[commandKey];
-      if (!spec) return;
       const entity = resolveSelectedDim();
       if (!entity) return;
+      // DIMSTYLE chooser — applies the whole style to the dim immediately (styleId).
+      if (commandKey === CHOOSER) {
+        if (value && value !== entity.styleId) patchEntity(entity, { styleId: value });
+        return;
+      }
+      // Text rotation — write the ENTITY field `textRotation` (deg), not an override.
+      if (commandKey === TEXT_ROTATION) {
+        const deg = parseFloat(value);
+        if (Number.isFinite(deg)) patchEntity(entity, { textRotation: deg });
+        return;
+      }
+      const spec = DIM_KEY_MAP[commandKey];
+      if (!spec) return;
       const parsed = parseValue(spec, value);
       if (parsed === undefined) return;
-      patchOverrides(entity, buildOverridesPatch(spec, parsed, entity.overrides));
+      patchEntity(entity, { overrides: buildOverridesPatch(spec, parsed, entity.overrides) });
     },
-    [resolveSelectedDim, patchOverrides],
+    [resolveSelectedDim, patchEntity],
   );
 
   return useMemo(

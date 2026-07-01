@@ -26,6 +26,14 @@ import type { Entity } from '../../../../types/entities';
  */
 export interface WallToolBridgeHandle {
   readonly isActive: boolean;
+  /**
+   * Β (Giorgio 2026-07-01) — `true` όταν ο σκέτος «Τοίχος» (ευθύς/ορθογώνιος,
+   * freehand) περιμένει το 1ο κλικ, οπότε ένα κλικ μέσα σε εντοπισμένο DXF
+   * παραλληλόγραμμο θα γεμίσει τοίχο. Το `useRegionPerimeterMouseMove` το διαβάζει
+   * imperative ώστε η διακεκομμένη hover preview να εμφανίζεται μόνο όταν όντως θα
+   * γεμίσει (preview ≡ commit). `false` σε idle / awaitingEnd / curved / polyline.
+   */
+  readonly isRegionFillEligible: boolean;
   readonly overrides: WallParamOverrides;
   setParamOverrides(overrides: WallParamOverrides): void;
   /**

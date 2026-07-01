@@ -136,7 +136,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimApplyStyle',
                 icon: 'dim-apply-style',
                 commandKey: DIM_RIBBON_KEYS.style.applyStyle,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.style.applyStyle,
               },
             },
             {

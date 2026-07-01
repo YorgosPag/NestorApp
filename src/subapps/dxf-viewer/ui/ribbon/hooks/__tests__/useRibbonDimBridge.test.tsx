@@ -35,6 +35,7 @@ jest.mock(
 );
 
 const K = DIM_RIBBON_KEYS.override;
+const CHOOSER = DIM_RIBBON_KEYS.style.chooser;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 // ISO 129 built-in: dimclrd=dimclre=dimclrt=256 (ByLayer), dimlwd=dimlwe=-2,
@@ -168,6 +169,70 @@ describe('useRibbonDimBridge — selected dimension (write = undoable overrides)
     const ov = patchOf().overrides as Record<string, unknown>;
     expect(ov.dimclrd).toBe(7);
     expect(ov.dimlwd).toBe(0.35); // pre-existing override preserved
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIMSTYLE CHOOSER — reads styleId, applies immediately (Revit type selector)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonDimBridge — DIMSTYLE chooser', () => {
+  it('reads the selected dim styleId; options come from the registry (incl. built-ins)', () => {
+    const state = renderWith(dimPlain, 'dim-2').current.getComboboxState(CHOOSER);
+    expect(state?.value).toBe(ISO);
+    expect((state?.options ?? []).some((o) => o.value === ISO)).toBe(true);
+    expect((state?.options ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('picking a different style applies it immediately (styleId patch)', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(CHOOSER, BUILTIN_DIM_STYLE_IDS.ARCHITECTURAL_US);
+    expect(patchOf()).toEqual({ styleId: BUILTIN_DIM_STYLE_IDS.ARCHITECTURAL_US });
+  });
+
+  it('re-picking the current style is a no-op (no command)', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(CHOOSER, ISO);
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('no selection → empty chooser value + no command', () => {
+    const r = renderWith(null, null);
+    expect(r.current.getComboboxState(CHOOSER)?.value).toBe('');
+    r.current.onComboboxChange(CHOOSER, BUILTIN_DIM_STYLE_IDS.ASME_Y14_5);
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEXT POSITION (DIMTAD override) + TEXT ROTATION (entity field)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonDimBridge — text position + rotation', () => {
+  const POSITION = DIM_RIBBON_KEYS.text.position;
+  const ROTATION = DIM_RIBBON_KEYS.text.rotation;
+
+  it('reads DIMTAD from the resolved style (ISO 129 → above)', () => {
+    expect(renderWith(dimPlain, 'dim-2').current.getComboboxState(POSITION)?.value).toBe('above');
+  });
+
+  it('text position writes a DIMTAD override', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(POSITION, 'centered');
+    expect(patchOf()).toEqual({ overrides: { dimtad: 'centered' } });
+  });
+
+  it('reads text rotation from the entity field (defaults to 0)', () => {
+    expect(renderWith(dimPlain, 'dim-2').current.getComboboxState(ROTATION)?.value).toBe('0');
+    const rotated = { ...dimPlain, id: 'dim-r', textRotation: 45 };
+    expect(renderWith(rotated, 'dim-r').current.getComboboxState(ROTATION)?.value).toBe('45');
+  });
+
+  it('text rotation writes the entity `textRotation` field (deg), not an override', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(ROTATION, '90');
+    expect(patchOf()).toEqual({ textRotation: 90 });
+  });
+
+  it('invalid text rotation (NaN) writes no command', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(ROTATION, 'abc');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 });
 

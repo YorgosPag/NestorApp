@@ -18,7 +18,8 @@ import {
   type LinearDimGeometry,
 } from '../../systems/dimensions/dim-geometry-builder';
 import { computeAutoBreakPoints } from '../../systems/dimensions/dim-break-engine';
-import { buildBreakCommands, buildSpaceCommands } from '../useDimensionModify';
+import { ARCHITECTURAL_US_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
+import { buildBreakCommands, buildSpaceCommands, buildApplyStyleCommands } from '../useDimensionModify';
 
 // A throwaway scene manager — the builders only pass it to the command
 // constructor, which does not touch it until execute() (never called here).
@@ -119,5 +120,31 @@ describe('buildSpaceCommands', () => {
     const base = linearDim('base', { x: 0, y: 5 });
     // base + radius → only 1 spaceable → no spacing.
     expect(buildSpaceCommands([base, radius], { entities: [base, radius], sm: STUB_SM })).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Host — buildApplyStyleCommands (ADR-562 Φ5 «Εφαρμογή Στυλ»)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('buildApplyStyleCommands', () => {
+  it('sets styleId on the dims that differ from the source style', () => {
+    const primary = linearDim('p', { x: 0, y: 5 }, { styleId: ARCHITECTURAL_US_TEMPLATE.id });
+    const other = linearDim('o', { x: 0, y: 25 }, { styleId: ISO_129_TEMPLATE.id });
+    const cmds = buildApplyStyleCommands(
+      [primary, other], ARCHITECTURAL_US_TEMPLATE.id, { entities: [primary, other], sm: STUB_SM },
+    );
+    // Only `other` differs → 1 command; `primary` already has the style (skipped).
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0].getDescription()).toBe('Apply DIMSTYLE');
+    expect(cmds[0].getAffectedEntityIds()).toEqual(['o']);
+  });
+
+  it('no command when every selected dim already has the style (idempotent)', () => {
+    const a = linearDim('a', { x: 0, y: 5 }, { styleId: ISO_129_TEMPLATE.id });
+    const b = linearDim('b', { x: 0, y: 25 }, { styleId: ISO_129_TEMPLATE.id });
+    expect(
+      buildApplyStyleCommands([a, b], ISO_129_TEMPLATE.id, { entities: [a, b], sm: STUB_SM }),
+    ).toHaveLength(0);
   });
 });

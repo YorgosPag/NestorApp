@@ -83,11 +83,18 @@ export function computeTextAnchor(
 
 /**
  * Text rotation rule (universal across dim variants):
+ *   - `overrideDeg` set (per-entity `textRotation`, deg) → that angle in radians,
+ *     overriding the auto DIMTIH/DIMTOH resolution (ADR-562 — ribbon «Στροφή Κειμένου»).
  *   - DIMTIH=true (text always horizontal) → 0
  *   - DIMTIH=false (text aligned with reference angle) → reference angle,
  *     flipped by π when it would otherwise read upside-down (|angle| > π/2).
  */
-export function computeTextRotation(referenceAngleRad: number, dimtih: boolean): number {
+export function computeTextRotation(
+  referenceAngleRad: number,
+  dimtih: boolean,
+  overrideDeg?: number,
+): number {
+  if (overrideDeg !== undefined) return (overrideDeg * Math.PI) / 180;
   if (dimtih) return 0;
   let a = referenceAngleRad;
   if (a > HALF_PI) a -= Math.PI;

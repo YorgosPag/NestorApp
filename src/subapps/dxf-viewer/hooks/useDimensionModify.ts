@@ -120,6 +120,21 @@ export function buildSpaceCommands(
   return commands;
 }
 
+/** «Εφαρμογή Στυλ» — set every selected dim's `styleId` to `styleId` (undoable). */
+export function buildApplyStyleCommands(
+  dims: readonly DimensionEntity[],
+  styleId: string,
+  ctx: ModifyContext,
+): ICommand[] {
+  const commands: ICommand[] = [];
+  for (const dim of dims) {
+    if (dim.styleId !== styleId) {
+      commands.push(new UpdateEntityCommand(dim.id, { styleId }, ctx.sm, 'Apply DIMSTYLE'));
+    }
+  }
+  return commands;
+}
+
 export function useDimensionModify(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -150,9 +165,18 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       runAtomic(buildSpaceCommands(r.dims, r.ctx), execute);
     });
 
+    const unsubApplyStyle = EventBus.on('dim:apply-style-requested', ({ entityIds }) => {
+      const r = resolve(entityIds);
+      if (!r) return;
+      // Source = the primary selected dim (entityIds[0], selection order).
+      const source = r.dims.find((d) => d.id === entityIds[0]) ?? r.dims[0];
+      runAtomic(buildApplyStyleCommands(r.dims, source.styleId, r.ctx), execute);
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
+      unsubApplyStyle();
     };
   }, [levelManager, execute]);
 }
