@@ -347,6 +347,26 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
 ---
 
 ## Changelog
+- **2026-07-01** — 🐛 **Phase 8 bugfix: το hardware-cursor σταυρόνημα «εξαφανιζόταν» συχνά στο 3D (browser-reported Giorgio).**
+  **Root cause (SSoT audit, code = source of truth):** ο builder (`crosshair-cursor-image.ts`) έφτιαχνε το PNG σε
+  **σταθερά 32 CSS px χωρίς DPR scaling**. Σε HiDPI οθόνη / OS display-scaling / browser page-zoom (dpr>1) το device
+  μέγεθος γίνεται >32px (π.χ. 32×1.5=48) → **Windows/Chrome απορρίπτει σιωπηλά** ΟΛΗ τη δήλωση `cursor` → ισχύει η
+  κλάση `cursor-none` του container → **αόρατος κέρσορας**. Χειρότερα: το `apply()` ξανα-έτρεχε **μόνο** σε αλλαγή
+  settings/suppression (`useCrosshairCursor.ts`) — **ΟΧΙ** σε αλλαγή dpr/zoom/resize → μόλις «έπεφτε», έμενε πεσμένο
+  μέχρι άσχετο event («δεν καταλαβαίνω πότε φεύγει/ξαναέρχεται»). ΔΙΑΨΕΥΣΤΗΚΕ ότι φταίει stale θέση/NaN/RAF stall
+  (δεν υπάρχουν στον hardware-cursor σχεδιασμό).
+  **FIX (C = A+B, Google-level belt-and-suspenders, FULL SSoT — μηδέν νέο store/helper):**
+  **(A) DPR-aware, μη-απορριπτόμενο PNG** (`crosshair-cursor-image.ts`): νέα σταθερά `MAX_CURSOR_DEVICE_PX=32`· ο builder
+  **συρρικνώνει το CSS size** ώστε `cssSize×dpr ≤ cap` σε ΚΑΘΕ dpr (device μέγεθος ποτέ >32 → ποτέ rejection), rasterise
+  στο physical μέγεθος (`ctx.scale`) και δήλωση μέσω `image-set(url ... Ndpr x)` για crisp σε HiDPI· dpr==1 → plain `url()`
+  (backward-compat). Reuse SSoT `getDevicePixelRatio`/`toDevicePixels` (`systems/cursor/utils`). **(A2) Re-apply σε dpr change**:
+  `useCrosshairCursor` κάνει `subscribeDevicePixelRatio(apply)` (reuse SSoT re-arming matchMedia, ADR-549 Phase 7) → σε
+  monitor-switch / OS-scale / page-zoom ξανα-χτίζεται στο σωστό μέγεθος. **(B) Native safety-net**: η κλάση των container
+  (`BimViewport3D` 3D + `CanvasLayerStack` 2D) `cursor-none` → **`cursor-crosshair`** — αν ποτέ πέσει/καθαριστεί το inline
+  PNG, fallback σε **native σταυρόνημα** αντί για τίποτα. Tests: `crosshair-cursor-image.test.ts` ξαναγράφτηκε (10/10 — device-cap
+  ≤32 σε dpr 1/1.25/1.5/2/3, image-set@2x, plain@1x, pickbox). CHECK 6B/6D → stage αυτό το ADR + `crosshair-cursor-image.ts`
+  + `useCrosshairCursor.ts` + `BimViewport3D.tsx` + `CanvasLayerStack.tsx` + το test. 🔴 browser-verify (Giorgio: 3D σταυρόνημα
+  ΔΕΝ εξαφανίζεται πλέον σε zoom/HiDPI) + commit. 🟡 UNCOMMITTED.
 - **2026-06-30** — **Bugfix Phase-0 diag: `[FrameScheduler] Error in frame listener: TypeError: e.get is not a function` κάθε frame** (browser-reported, prod). Ρίζα: το `recordSchedulerFrame` (wired στο `BimViewport3D` via `onFrame`) καλούσε `bump(s.schedFrame, '_frame', …)` — αλλά το `bump()` περιμένει **Map** (`map.get(key)`) ενώ το `s.schedFrame` είναι ένα **single `Stat`** (`{count,total,max}`), όχι Map → `schedFrame.get` undefined → throw κάθε frame (πιανόταν από το try/catch του scheduler, άρα spam χωρίς να σπάει το render). Fix SSoT: εξήχθη `bumpStat(stat, ms)` (το χρησιμοποιεί κιόλας εσωτερικά το `bump`) και το `schedFrame` ενημερώνεται απευθείας με `bumpStat`. `bim3d-perf-diag.ts` only. 🟡 UNCOMMITTED.
 - **2026-06-29** — Phase 8 polish #2: οι 4 βραχίονες του σταυρού ΚΟΛΛΑΝΕ στις παρειές του pickbox
   (αίτημα Giorgio) — όταν υπάρχει κουτί `gap = pickbox/2` (η άκρη κάθε γραμμής πέφτει ακριβώς πάνω

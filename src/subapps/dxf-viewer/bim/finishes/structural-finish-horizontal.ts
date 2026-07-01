@@ -31,8 +31,12 @@ import type { FinishClassification, StructuralFinishSpec } from './structural-fi
 import { resolveFinishForClass } from './structural-finish-types';
 import { resolveStructuralFinishFaces } from './structural-finish-resolver';
 import { computeMiteredOuter, segOffsetVec } from './structural-finish-outline-geometry';
+// ADR-049 SSoT — grid-weld ώστε flush structural↔structural παρειές (float drift) να ενώνονται.
+import { snapToGrid } from '../../systems/grid/grid-snap';
 
 const MM_TO_M = 0.001;
+/** ADR-449 — grid-weld tolerance (mm) για flush structural↔structural union (mirror silhouette). */
+const WELD_TOL_MM = 1e-3;
 
 /** «Πάνω» (καπάκι/δοκάρι-πάνω) ή «κάτω» (soffit/βάση κολόνας) από τη δομική όψη. */
 export type HorizontalFaceDirection = 'up' | 'down';
@@ -172,6 +176,48 @@ export function computeHorizontalFinishFace(input: HorizontalFaceInput): Horizon
 /** m³ ισοδύναμο (area × thickness) — βοηθητικό για debugging/BOQ sanity (όχι BOQ μονάδα). */
 export function horizontalFaceVolumeM3(face: HorizontalFinishFace): number {
   return face.areaM2 * face.thicknessMm * MM_TO_M;
+}
+
+/**
+ * ADR-449 §top-cap-coincidence — ΕΝΑ ενιαίο, λείο σοβά-περίγραμμα από **union των ΠΥΡΗΝΩΝ**
+ * (κολόνα+δοκάρι+τοίχος) + **μία** εξωτερική διαστολή κατά `thicknessMm` (mirror ΑΚΡΙΒΩΣ του
+ * κάθετου σοβά `computeStructuralSilhouetteBands`: ένωσε cores → offset ΜΙΑ φορά).
+ *
+ * Γιατί ΟΧΙ per-member offset: όταν κάθε μέλος offset-άρει τον σοβά του **ανεξάρτητα** και
+ * μετά τα ενώνουμε, οι επί μέρους μετατοπίσεις **δεν κάνουν miter** στη συμβολή → δοντωτό
+ * ~thickness χείλος (Giorgio screenshots 221455/222828). Ένα outline διαστελλόμενο ΜΙΑ φορά
+ * κλείνει τις γωνίες συνεπώς → τέλεια ταύτιση παρειών, μηδέν εισχώρηση, μηδέν κενό.
+ *
+ * Επιστρέφει τα **finished outer rings** (ένα ανά disjoint κομμάτι). Κενό input → `[]`.
+ * (Holes/δωμάτια = εξωτερικό περίγραμμα v1, mirror του υπάρχοντος `computeFinishedOutline`.)
+ */
+export function mergeCoresToFinishedRings(
+  cores: readonly (readonly Pt2[])[],
+  thicknessMm: number,
+  s: number,
+): Pt2[][] {
+  // ADR-449 — grid-weld ΠΡΙΝ το union (ίδιο με τον κάθετο `unionFootprints`): δύο μέλη που
+  // κουμπώνουν παρειά-με-παρειά «από κάναβο» έχουν float drift (~1e-12mm) → η polygon-clipping
+  // δεν τα συγχωνεύει (sub-ULP) → ξεχωριστό καπάκι στη flush διεπαφή (Giorgio: «δύο καπάκια»).
+  // Snap σε grid 1μm ⇒ ακριβής σύμπτωση ⇒ ΕΝΑ ενιαίο περίγραμμα.
+  const weld = WELD_TOL_MM * s;
+  const polys = cores
+    .filter((c) => c.length >= 3)
+    .map((c) => footprintToClip(weld > 0 ? c.map((p) => snapToGrid(p, weld)) : c));
+  if (polys.length === 0) return [];
+  const u: MultiPolygon = polys.length === 1 ? [polys[0]] : safeUnion(polys[0], ...polys.slice(1));
+  const rings: Pt2[][] = [];
+  for (const poly of u) {
+    if (!poly.length) continue;
+    const outer = ringToPts(poly[0]);
+    if (outer.length < 3) continue;
+    // ADR-449 — offset του ενωμένου outline με τον ΙΔΙΟ resolver + `computeMiteredOuter`
+    // (μέσω `computeFinishedOutline`, obstacles=∅ → όλες οι ακμές εκτεθειμένες) που παράγει
+    // ο ΚΑΘΕΤΟΣ σοβάς → οι κατακόρυφες παρειές του καπακιού ευθυγραμμίζονται ΑΚΡΙΒΩΣ με τις
+    // παρειές του κάθετου σοβά (ίδιο miter στις γωνίες)· ΟΧΙ `dilatePolygonOutward` (άλλο miter).
+    rings.push(thicknessMm > 0 ? computeFinishedOutline(outer, [], thicknessMm, s) : outer);
+  }
+  return rings;
 }
 
 /** Outer ring του μεγαλύτερου polygon μιας MultiPolygon. `null` αν κενή. */

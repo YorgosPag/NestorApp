@@ -363,11 +363,14 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       onWheel={(e) => e.stopPropagation()}
     >
       {/* Three.js appends renderer canvas + ViewCube canvas directly into this div.
-          ADR-545: cursor-none over the canvas so the CAD crosshair replaces the OS arrow
-          (Revit/AutoCAD). Sibling buttons/overlays keep the root's cursor-default. */}
+          ADR-549 Phase 8: the hardware-cursor crosshair is set inline here by `useCrosshairCursor`
+          (the three.js canvas child inherits it). The class is `cursor-crosshair` (NOT `cursor-none`)
+          as a safety net: if the inline PNG cursor is ever dropped (e.g. rejected image, cleanup,
+          pre-mount), the element falls back to a NATIVE crosshair instead of an invisible cursor.
+          Sibling buttons/overlays keep the root's cursor-default. */}
       <div
         ref={containerRef}
-        className="absolute inset-0 cursor-none"
+        className="absolute inset-0 cursor-crosshair"
         role="presentation"
       />
       <CropRegionOverlay />

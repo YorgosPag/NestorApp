@@ -22,9 +22,10 @@ import type { ColumnParams } from '../types/column-types';
 import type { BeamParams } from '../types/beam-types';
 import type { SlabParams } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { isFinishActive, type StructuralFinishSpec } from './structural-finish-types';
+import { isFinishActive, createDefaultStructuralFinishSpec, type StructuralFinishSpec } from './structural-finish-types';
 import {
   computeHorizontalFinishFace,
+  mergeCoresToFinishedRings,
   type HorizontalFinishFace,
   type HorizontalFaceDirection,
 } from './structural-finish-horizontal';
@@ -32,8 +33,6 @@ import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
-// ADR-458 §top-cap-cutback — ΙΔΙΟ SSoT με το core mesh: ο top-cap σοβά τοίχου κόβεται στην παρειά κολώνας.
-import { computeMemberCutbackOutline } from '../geometry/member-column-cutback';
 import { wallIsFinishMember } from './wall-finish-source';
 import type { ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
@@ -265,22 +264,11 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
 
   // ADR-449 Slice X4/E — finished outlines τοίχων-finish-members (core + σοβάς skin), lateral
   // obstacles = δομικοί γείτονες (κολόνα/δοκάρι envelopes) ώστε το top-cap να σταματά flush.
-  // ADR-449 §top-cap-cutback (Giorgio 2026-07-01) — ο πυρήνας του τοίχου κόβεται στην παρειά
-  // κολώνας (column wins, ADR-458)· το οριζόντιο top-cap ΠΡΕΠΕΙ να ακολουθεί τον ΚΟΜΜΕΝΟ πυρήνα,
-  // αλλιώς ζωγραφιζόταν πάνω από το πλήρες footprint → ο σοβάς προεξείχε ΜΕΣΑ στην κολώνα («οι
-  // σοβάδες δεν αποδίδονται σωστά»). ΙΔΙΟ SSoT `computeMemberCutbackOutline` με το core mesh:
-  // `null` → καμία τομή → πλήρες footprint (μηδέν regression)· `[]` → τοίχος όλος μέσα σε κολώνα
-  // → κανένα cap· πολλά κομμάτια (κολώνα χωρίζει τον τοίχο) → ένα finished cap ανά κομμάτι.
-  const columnCutters = columnCores.filter((c): c is Pt2[] => c !== null && c.length >= 3);
-  const wallFinished: PlanObstacle[][] = walls.map((w, i) => {
-    if (!wallIsFinishMember(w)) return [];
-    const cut = columnCutters.length > 0 ? computeMemberCutbackOutline(wallFps[i], columnCutters) : null;
-    const pieces = cut ?? [wallFps[i]];
-    const z = wallZExtent(w, beamUndersideById, floorElevationMm);
-    return pieces
-      .map((piece) => finishedObstacleOf(coresOf(piece), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, z))
-      .filter((o): o is PlanObstacle => o !== null);
-  });
+  const wallFinished = walls.map((w, i) =>
+    wallIsFinishMember(w)
+      ? finishedObstacleOf(coresOf(wallFps[i]), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, wallZExtent(w, beamUndersideById, floorElevationMm))
+      : null,
+  );
 
   const columnFaces: HorizontalFinishFace[] = [];
   const beamFaces: HorizontalFinishFace[] = [];
@@ -294,9 +282,79 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
     if (fin) collectBeamFaces(b, fin, slabObs, wallObs, unitToMeters, tol, beamFaces);
   });
   walls.forEach((w, i) => {
-    for (const fin of wallFinished[i]) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
+    const fin = wallFinished[i];
+    if (fin) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
   });
   return { columnFaces, beamFaces, wallFaces };
+}
+
+/**
+ * ADR-449 §top-cap-coincidence (Giorgio 2026-07-01) — ΕΝΙΑΙΟ πάνω-καπάκι σοβά (`up`) όλης της
+ * δομικής ομάδας από **union των ΠΥΡΗΝΩΝ + μία διαστολή** (mirror του κάθετου silhouette), ώστε
+ * η ραφή τοίχου↔κολόνας↔δοκαριού στη συμβολή να ΜΗΝ είναι δοντωτή. Αντικαθιστά (για το render)
+ * τα per-member `up` καπάκια των `computeStructuralHorizontalFinishFaces` (που offset-άρουν ανά
+ * μέλος → ασυνεπείς γωνίες). Τα `down` καπάκια (soffit/βάση) μένουν per-member (καμία junction).
+ *
+ * Ένα face ανά (top-plane × disjoint κομμάτι). Γνήσια κάλυψη άνωθεν (πλάκα/δοκάρι) αφαιρείται
+ * μέσω `computeHorizontalFinishFace` (associative). `classification:'interior'` — ενιαίο σοβά
+ * κέλυφος (mirror silhouette). Κενό όταν κανένα μέλος με ενεργό σοβά.
+ */
+export function computeMergedStructuralTopCap(input: HorizontalFinishInput): HorizontalFinishFace[] {
+  const { columns, beams, walls, slabs, beamObstacles, floorElevationMm, columnExtents } = input;
+  const spec = createDefaultStructuralFinishSpec();
+  if (!isFinishActive(spec)) return [];
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
+  const s = mmToSceneUnits(sceneUnits);
+  const unitToMeters = (1 / s) * MM_TO_M;
+
+  // Δομικά μέλη με ενεργό σοβά + το top-plane z τους (building-relative mm).
+  const members: { core: Pt2[]; zTopMm: number }[] = [];
+  for (const c of columns) {
+    const core = coresOf(c.geometry?.footprint?.vertices);
+    if (core && isFinishActive(c.params.finish)) members.push({ core, zTopMm: columnZExtent(c, floorElevationMm, columnExtents).zTopMm });
+  }
+  for (const b of beams) {
+    const core = coresOf(b.geometry?.outline?.vertices);
+    if (core && isFinishActive(b.params.finish)) members.push({ core, zTopMm: beamZExtent(b.params).zTopMm });
+  }
+  const emptyUnderside = new Map<string, number>();
+  for (const w of walls) {
+    if (!wallIsFinishMember(w)) continue;
+    const core = coresOf(wallFootprintPolygon(w));
+    if (core) members.push({ core, zTopMm: wallZExtent(w, emptyUnderside, floorElevationMm).zTopMm });
+  }
+  if (members.length === 0) return [];
+
+  // Covers ΓΝΗΣΙΑΣ κάλυψης άνωθεν (πλάκες/δοκάρια): κρύβουν το καπάκι όπου φτάνουν το επίπεδο.
+  const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
+  const beamObs = beamObstacles
+    .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
+    .filter((o): o is PlanObstacle => o !== null);
+  const covers = [...slabObs, ...beamObs];
+
+  // Ομαδοποίηση ανά top-plane (μέλη ίδιου z ενώνονται σε ΕΝΑ ενιαίο silhouette).
+  const byPlane = new Map<number, Pt2[][]>();
+  const planeOf = new Map<number, number>();
+  for (const m of members) {
+    const key = Math.round(m.zTopMm * 1e3);
+    const g = byPlane.get(key);
+    if (g) g.push(m.core);
+    else { byPlane.set(key, [m.core]); planeOf.set(key, m.zTopMm); }
+  }
+
+  const faces: HorizontalFinishFace[] = [];
+  for (const [key, cores] of byPlane) {
+    const planeZmm = planeOf.get(key) ?? 0;
+    for (const ring of mergeCoresToFinishedRings(cores, spec.thickness, s)) {
+      const face = computeHorizontalFinishFace({
+        coreFootprint: ring,
+        coverFootprints: coversAtPlane(covers, planeZmm, bboxOf(ring), PLANE_TOL_MM),
+        zMm: planeZmm, direction: 'up', spec, classification: 'interior', unitToMeters,
+      });
+      if (face) faces.push(face);
+    }
+  }
+  return faces;
 }
 
 /**

@@ -8,10 +8,12 @@
 
 import {
   computeStructuralHorizontalFinishFaces,
+  computeMergedStructuralTopCap,
   type HorizontalColumnSource,
   type HorizontalBeamSource,
   type HorizontalSlabObstacle,
 } from '../structural-finish-scene-horizontal';
+import { mergeCoresToFinishedRings } from '../structural-finish-horizontal';
 import type { StructuralFinishSpec } from '../structural-finish-types';
 import type { WallFinishObstacle } from '../structural-finish-scene';
 import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
@@ -203,36 +205,6 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     expect(wallFaces).toHaveLength(0);
   });
 
-  // ─── ADR-458 §top-cap-cutback — ο top-cap τοίχου κόβεται στην παρειά κολώνας ─────
-  it('κολόνα πάνω στο άκρο τοίχου → top-cap ΔΕΝ προεξέχει μέσα στην κολόνα (ακολουθεί τον κομμένο πυρήνα)', () => {
-    // Κολόνα καλύπτει το δυτικό άκρο του τοίχου (wall x∈[0,3])· ανατολική παρειά x=0.2.
-    const col: HorizontalColumnSource = {
-      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
-      geometry: { footprint: { vertices: [
-        { x: -0.3, y: -0.3 }, { x: 0.2, y: -0.3 }, { x: 0.2, y: 0.3 }, { x: -0.3, y: 0.3 },
-      ] } },
-    };
-    const allX = (fs: ReturnType<typeof run>['wallFaces']) => fs.flatMap((f) => f.polygons.flatMap((p) => p.outer)).map((pt) => pt.x);
-    const freeMinX = Math.min(...allX(run({ walls: [wall()] }).wallFaces));
-    const joined = run({ walls: [wall()], columns: [col] }).wallFaces;
-    expect(joined.length).toBeGreaterThan(0);
-    const joinedMinX = Math.min(...allX(joined));
-    expect(freeMinX).toBeLessThan(0.1); // ελεύθερο: top-cap φτάνει στο δυτικό άκρο (~0 − σοβάς)
-    expect(joinedMinX).toBeGreaterThanOrEqual(0.2 - 1e-3); // κομμένο: δεν μπαίνει δυτικά της παρειάς κολόνας (x=0.2)
-  });
-
-  it('κολόνα ΜΑΚΡΙΑ από τον τοίχο → top-cap αμετάβλητο (null cutback, μηδέν regression)', () => {
-    const farCol: HorizontalColumnSource = {
-      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
-      geometry: { footprint: { vertices: [
-        { x: 50, y: 50 }, { x: 50.5, y: 50 }, { x: 50.5, y: 50.5 }, { x: 50, y: 50.5 },
-      ] } },
-    };
-    const free = run({ walls: [wall()] }).wallFaces;
-    const withFar = run({ walls: [wall()], columns: [farCol] }).wallFaces;
-    expect(withFar[0].areaM2).toBeCloseTo(free[0].areaM2, 6);
-  });
-
   it('ADR-449 height-SSoT: columnExtents override → cap στο resolved zTop (3000), ΟΧΙ raw params.height (2700)', () => {
     // Firestore repro: storey-ceiling κολόνα με raw height=2700 ενώ storey ceiling=3000.
     // Χωρίς extents → legacy cap στο 2700· με extents (= πυρήνας) → cap στο 3000.
@@ -253,5 +225,60 @@ describe('computeStructuralHorizontalFinishFaces', () => {
       columnExtents: new Map([['col_fb3215e9', { zBotMm: 0, zTopMm: 3000 }]]),
     }).columnFaces;
     expect(resolved[0].zMm).toBe(3000); // σοβάς = πυρήνας (storey ceiling)
+  });
+});
+
+// ─── ADR-449 §top-cap-coincidence — ΕΝΙΑΙΟ πάνω-καπάκι (union πυρήνων + μία διαστολή) ──────
+describe('computeMergedStructuralTopCap', () => {
+  const mrun = (over: {
+    columns?: HorizontalColumnSource[]; beams?: HorizontalBeamSource[]; slabs?: HorizontalSlabObstacle[]; walls?: WallFinishObstacle[];
+  } = {}) => computeMergedStructuralTopCap({
+    columns: over.columns ?? [], beams: over.beams ?? [], walls: over.walls ?? [], slabs: over.slabs ?? [],
+    beamObstacles: [], floorElevationMm: 0,
+  });
+  const polyCount = (fs: ReturnType<typeof mrun>) => fs.reduce((n, f) => n + f.polygons.length, 0);
+  const totalArea = (fs: ReturnType<typeof mrun>) => fs.reduce((a, f) => a + f.areaM2, 0);
+
+  it('μεμονωμένη κολόνα → ίδιο cap με per-member (union ενός = ο πυρήνας, offset ίδιο)', () => {
+    const faces = mrun({ columns: [column()] });
+    expect(faces).toHaveLength(1);
+    expect(faces[0].direction).toBe('up');
+    expect(faces[0].zMm).toBe(3000);
+    expect(faces[0].areaM2).toBeCloseTo(0.53 * 0.53, 3); // core 0.5 + 2×0.015
+  });
+
+  it('τοίχος + επικαλυπτόμενη κολόνα → ΕΝΑ ενιαίο συνδεδεμένο cap (μηδέν εσωτερική ραφή/εισχώρηση)', () => {
+    const col: HorizontalColumnSource = {
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: -0.3, y: -0.3 }, { x: 0.2, y: -0.3 }, { x: 0.2, y: 0.3 }, { x: -0.3, y: 0.3 },
+      ] } },
+    };
+    const merged = mrun({ walls: [wall()], columns: [col] });
+    expect(merged.length).toBeGreaterThan(0);
+    expect(polyCount(merged)).toBe(1); // ΕΝΑ συνδεδεμένο πολύγωνο → καμία ξεχωριστή ραφή
+    // Το ενιαίο εμβαδό < άθροισμα ξεχωριστών (η επικάλυψη τοίχου/κολόνας μετριέται ΜΙΑ φορά).
+    const wallOnly = totalArea(mrun({ walls: [wall()] }));
+    const colOnly = totalArea(mrun({ columns: [col] }));
+    expect(totalArea(merged)).toBeLessThan(wallOnly + colOnly);
+    expect(totalArea(merged)).toBeGreaterThan(Math.max(wallOnly, colOnly)); // ...αλλά καλύπτει και τα δύο
+  });
+
+  it('πλάκα πάνω από όλα → ενιαίο cap εξαφανίζεται (associative)', () => {
+    const merged = mrun({ walls: [wall()], columns: [column()], slabs: [slabAt(3000, -5, -5, 5, 5)] });
+    expect(merged).toHaveLength(0);
+  });
+
+  it('κανένα δομικό μέλος με σοβά → κενό', () => {
+    expect(mrun({ walls: [wall({ stripFinish: true })] })).toHaveLength(0);
+    expect(mrun({})).toHaveLength(0);
+  });
+
+  it('flush πυρήνες (float drift) → grid-weld ενώνει σε ΕΝΑ ring, ΟΧΙ δύο καπάκια', () => {
+    // Giorgio 2026-07-01: κάθετος τοίχος flush στην κολόνα (float drift ~1e-9) έμενε ξεχωριστό
+    // καπάκι. Το grid-weld (ADR-049) πριν το union κλείνει τη sub-ULP ραφή → ΕΝΑ ring.
+    const a = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+    const b = [{ x: 1 + 1e-9, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 1 + 1e-9, y: 1 }];
+    expect(mergeCoresToFinishedRings([a, b], 15, 1)).toHaveLength(1);
   });
 });

@@ -22,7 +22,7 @@ import { isWallTilted } from '../../bim/geometry/wall-tilt';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-finish-scene-silhouette';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
-import { computeStructuralHorizontalFinishFaces } from '../../bim/finishes/structural-finish-scene-horizontal';
+import { computeStructuralHorizontalFinishFaces, computeMergedStructuralTopCap } from '../../bim/finishes/structural-finish-scene-horizontal';
 import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
 import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
@@ -171,7 +171,7 @@ function addHorizontalFinish(
   sceneUnits: SceneUnits,
   columnExtents: ColumnVerticalExtentLookup,
 ): void {
-  const { columnFaces, beamFaces, wallFaces } = computeStructuralHorizontalFinishFaces({
+  const finishInput = {
     columns: g.columns,
     beams: g.beams,
     walls: entities.walls,
@@ -179,18 +179,24 @@ function addHorizontalFinish(
     beamObstacles: g.beams,
     floorElevationMm: ctx.floorElevationMm,
     columnExtents,
-  });
-  const colSkin = buildHorizontalFinishSkin(
-    columnFaces, 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${buildingId}`,
+  };
+  const { columnFaces, beamFaces } = computeStructuralHorizontalFinishFaces(finishInput);
+  const isUp = (f: { direction: string }) => f.direction === 'up';
+  // ADR-449 §top-cap-coincidence — ΕΝΙΑΙΟ πάνω-καπάκι από union ΠΥΡΗΝΩΝ + μία διαστολή (mirror
+  // του κάθετου silhouette): η ραφή τοίχου↔κολόνας↔δοκαριού στη συμβολή είναι λεία, με τέλεια
+  // ταύτιση παρειών (μηδέν δοντωτό χείλος, μηδέν εισχώρηση/κενό). Giorgio 2026-07-01.
+  const upSkin = buildHorizontalFinishSkin(
+    computeMergedStructuralTopCap(finishInput),
+    'wall', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hup-${buildingId}`,
   );
-  if (colSkin) { colSkin.userData['buildingId'] = buildingId; group.add(colSkin); }
-  const beamSkin = buildHorizontalFinishSkin(
-    beamFaces, 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
+  if (upSkin) { upSkin.userData['buildingId'] = buildingId; group.add(upSkin); }
+  // Down καπάκια (soffit δοκαριού, βάση pilotis κολόνας) — per-type· καμία junction ραφή εκεί.
+  const colDownSkin = buildHorizontalFinishSkin(
+    columnFaces.filter((f) => !isUp(f)), 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${buildingId}`,
   );
-  if (beamSkin) { beamSkin.userData['buildingId'] = buildingId; group.add(beamSkin); }
-  // ADR-449 Slice X4/E — top-cap ελεύθερης κορυφής τοίχου (όροφος-wide walls, ίδιο gating με τον κάθετο σοβά).
-  const wallSkin = buildHorizontalFinishSkin(
-    wallFaces, 'wall', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hwall-${buildingId}`,
+  if (colDownSkin) { colDownSkin.userData['buildingId'] = buildingId; group.add(colDownSkin); }
+  const beamDownSkin = buildHorizontalFinishSkin(
+    beamFaces.filter((f) => !isUp(f)), 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
   );
-  if (wallSkin) { wallSkin.userData['buildingId'] = buildingId; group.add(wallSkin); }
+  if (beamDownSkin) { beamDownSkin.userData['buildingId'] = buildingId; group.add(beamDownSkin); }
 }
