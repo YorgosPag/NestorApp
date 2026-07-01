@@ -404,6 +404,10 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     const isActive = state.phase !== 'idle';
     columnToolBridgeStore.set({
       isActive,
+      // Giorgio 2026-07-01 — «hover σε πλαίσιο → διακεκομμένη» eligible ΜΟΝΟ όταν ο
+      // σκέτος «Κολόνα» περιμένει θέση (awaitingPosition) & όχι κεκλιμένη (slant δεν
+      // υιοθετεί). Το `useRegionPerimeterMouseMove` το διαβάζει ώστε preview ≡ adopt-click.
+      isRegionFillEligible: state.phase === 'awaitingPosition' && !state.slantMode,
       kind: state.kind,
       anchor: state.anchor,
       slantMode: state.slantMode,
