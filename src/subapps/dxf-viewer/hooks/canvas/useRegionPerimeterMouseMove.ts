@@ -15,6 +15,16 @@ import {
 import { extractLineSegments, findEnclosingRectangle } from '../../bim/walls/wall-in-region';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
+// Giorgio 2026-07-01 — ο σκέτος «Κολόνα» δείχνει το ΙΔΙΟ σχήμα (ορθογώνιο ή Γ/Τ/Π)
+// που θα υιοθετήσει το adopt-click → ΚΟΙΝΟΣ detector `findAdoptableColumnPerimeter`.
+import {
+  findAdoptableColumnPerimeter,
+  resolvePerimeterAdoptInfo,
+  shouldProposeAdopt,
+} from '../../bim/columns/column-adopt-rect';
+import { getKindDimensionDefaults } from '../drawing/column-completion';
+import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
+import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
   setRegionPerimeterPreview,
   clearRegionPerimeterPreview,
@@ -77,7 +87,9 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
       const preview =
         tool === 'wall'
           ? resolvePlainWallRectPreview(worldPos, entities, sceneUnits, scale)
-          : resolvePerimeterPreview(worldPos, entities, sceneUnits, scale);
+          : tool === 'column'
+            ? resolveColumnShapePreview(worldPos, entities, sceneUnits)
+            : resolvePerimeterPreview(worldPos, entities, sceneUnits, scale);
       if (!preview) {
         clearPreviewIfShown();
         return;
@@ -153,14 +165,56 @@ function resolvePlainWallRectPreview(
 }
 
 /**
+ * Σκέτος «Κολόνα» — ΙΔΙΟΣ detector με το adopt-click (`findAdoptableColumnPerimeter`):
+ * ΚΑΘΕ κλειστό σχήμα (ορθογώνιο robust corner-graph ή Γ/Τ/Π/σύνθετο polygon-backed).
+ * Δείχνει ΟΛΟΚΛΗΡΟ το πολύγωνο του σχήματος → ό,τι φωτίζεται = ό,τι θα υιοθετήσει το
+ * κλικ (preview ≡ commit). `null` όταν δεν υπάρχει σχήμα ή είναι oversized.
+ */
+function resolveColumnShapePreview(
+  worldPos: Point2D,
+  entities: readonly Entity[],
+  sceneUnits: SceneUnits,
+): PreviewPick | null {
+  const tol = resolveRegionLoopTolWorld(sceneUnits);
+  const perimeter = findAdoptableColumnPerimeter(
+    worldPos,
+    sceneSnapTargetsStore.get().rectTargets,
+    entities,
+    tol,
+    sceneUnits,
+  );
+  if (!perimeter) return null;
+  const info = resolvePerimeterAdoptInfo(perimeter, sceneUnits);
+  // preview ≡ commit: για ΟΡΘΟΓΩΝΙΟ ≈ default το adopt-click δεν υιοθετεί (κανονική
+  // ροή) → μη δείχνεις διακεκομμένη. Τα Γ/Τ/Π ΠΑΝΤΑ υιοθετούνται. Effective defaults
+  // = ribbon override → kind default (ίδιο με το `tryAdoptRectColumn`).
+  if (info.isRectangle) {
+    const handle = columnToolBridgeStore.get();
+    const kindDims = getKindDimensionDefaults(handle?.kind ?? 'rectangular');
+    const eff = {
+      width: handle?.overrides.width ?? kindDims.width,
+      depth: handle?.overrides.depth ?? kindDims.depth,
+    };
+    if (!shouldProposeAdopt(info, eff)) return null;
+  }
+  const polygon = [...perimeter.polygon];
+  return {
+    polygon,
+    label: `${(info.widthMm / 1000).toFixed(2)} × ${(info.depthMm / 1000).toFixed(2)} m`,
+    sig: polygonSig(polygon),
+  };
+}
+
+/**
  * Β (Giorgio 2026-07-01) — δείξε τη region/perimeter hover preview για region/
- * perimeter εργαλεία ΠΑΝΤΑ, ΚΑΙ για τον σκέτο «Τοίχο» ΜΟΝΟ όταν το κλικ θα γεμίσει
- * (awaitingStart, ευθύς/freehand — `isRegionFillEligible`). Έτσι η διακεκομμένη
- * preview ≡ commit· δεν εμφανίζεται σε freehand awaitingEnd/curved/polyline.
+ * perimeter εργαλεία ΠΑΝΤΑ, ΚΑΙ για τους σκέτους «Τοίχο»/«Κολόνα» ΜΟΝΟ όταν το κλικ
+ * θα δράσει (`isRegionFillEligible` του αντίστοιχου bridge: τοίχος awaitingStart /
+ * κολόνα awaitingPosition). Έτσι η διακεκομμένη preview ≡ commit.
  */
 function isRegionPreviewActive(tool: string | undefined): boolean {
   if (!isRegionHoverPreviewTool(tool)) return false;
   if (tool === 'wall') return wallToolBridgeStore.get()?.isRegionFillEligible === true;
+  if (tool === 'column') return columnToolBridgeStore.get()?.isRegionFillEligible === true;
   return true;
 }
 

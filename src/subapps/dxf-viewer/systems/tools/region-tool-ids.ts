@@ -98,9 +98,12 @@ export function isBimRegionOrPerimeterTool(tool: string | null | undefined): boo
  * παραλληλόγραμμο → διακεκομμένη → κλικ γεμίζει τοίχο. ΣΤΕΝΟ predicate ΜΟΝΟ για το
  * hover — δεν επεκτείνει το `isBimRegionOrPerimeterTool` (που οδηγεί grips /
  * contextual-tab / click-routing και δεν πρέπει να αλλάξει για τον σκέτο τοίχο).
- * Η τελική ορατότητα για τον σκέτο τοίχο κρίνεται επιπλέον από το `isRegionFillEligible`
- * (awaitingStart) ώστε preview ≡ commit.
+ * Η τελική ορατότητα για τον σκέτο τοίχο/κολόνα κρίνεται επιπλέον από το
+ * `isRegionFillEligible` του αντίστοιχου bridge store ώστε preview ≡ commit.
+ *
+ * Giorgio 2026-07-01 — ΚΑΙ ο σκέτος «Κολόνα» (`'column'`): hover πάνω σε πλαίσιο
+ * (ορθογώνιο ή Γ/Τ/Π) → διακεκομμένη → κλικ → adopt confirm → κολώνα/τοιχίο.
  */
 export function isRegionHoverPreviewTool(tool: string | null | undefined): boolean {
-  return isBimRegionOrPerimeterTool(tool) || tool === 'wall';
+  return isBimRegionOrPerimeterTool(tool) || tool === 'wall' || tool === 'column';
 }

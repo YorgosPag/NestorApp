@@ -8,6 +8,8 @@ import {
   resolveAdoptProposal,
   shouldProposeAdopt,
   findAdoptableRectUnderPoint,
+  findAdoptableColumnPerimeter,
+  resolvePerimeterAdoptInfo,
   ADOPT_MIN_SIZE_MM,
 } from '../column-adopt-rect';
 import type { RectFrame } from '../../framing/rect-frame';
@@ -119,5 +121,52 @@ describe('findAdoptableRectUnderPoint — Φ2 (4 ξεχωριστές γραμμ
   });
   it('σημείο εκτός → null', () => {
     expect(findAdoptableRectUnderPoint({ x: 2000, y: 2000 }, [], square, 1)).toBeNull();
+  });
+});
+
+// Giorgio 2026-07-01 — «πλήρες/επαγγελματικό»: ο σκέτος «Κολόνα» πιάνει ΚΑΘΕ κλειστό
+// σχήμα (ορθογώνιο + Γ/Τ/Π). ΕΝΑ resolver για hover preview + adopt click.
+describe('findAdoptableColumnPerimeter — rect + Γ/Τ/Π', () => {
+  // 4 γραμμές → ορθογώνιο 500×250.
+  const rectLines: Entity[] = [
+    line('r1', 0, 0, 500, 0),
+    line('r2', 500, 0, 500, 250),
+    line('r3', 500, 250, 0, 250),
+    line('r4', 0, 250, 0, 0),
+  ];
+  // 6 γραμμές → σχήμα Γ (L): κάτω μπάρα 0..300 ×0..100, αριστερή κολόνα 0..100 ×0..300.
+  const lLines: Entity[] = [
+    line('a', 0, 0, 300, 0),
+    line('b', 300, 0, 300, 100),
+    line('c', 300, 100, 100, 100),
+    line('d', 100, 100, 100, 300),
+    line('e', 100, 300, 0, 300),
+    line('f', 0, 300, 0, 0),
+  ];
+
+  it('ορθογώνιο (4 γραμμές) → shape rectangle, isRectangle=true', () => {
+    const p = findAdoptableColumnPerimeter({ x: 250, y: 125 }, [], rectLines, 1, 'mm');
+    expect(p).not.toBeNull();
+    expect(p!.shape).toBe('rectangle');
+    const info = resolvePerimeterAdoptInfo(p!, 'mm');
+    expect(info.isRectangle).toBe(true);
+    expect(info.widthMm).toBeCloseTo(500);
+    expect(info.depthMm).toBeCloseTo(250);
+  });
+
+  it('σχήμα Γ (6 γραμμές) → μη-ορθογώνιο τοιχίο (polygon-backed)', () => {
+    const p = findAdoptableColumnPerimeter({ x: 50, y: 50 }, [], lLines, 1, 'mm');
+    expect(p).not.toBeNull();
+    expect(p!.shape).not.toBe('rectangle');
+    expect(p!.polygon.length).toBeGreaterThanOrEqual(6);
+    const info = resolvePerimeterAdoptInfo(p!, 'mm');
+    expect(info.isRectangle).toBe(false);
+    expect(info.isShearWall).toBe(true);
+    expect(info.widthMm).toBeCloseTo(300);
+    expect(info.depthMm).toBeCloseTo(300);
+  });
+
+  it('κενός χώρος (καμία γραμμή κοντά) → null', () => {
+    expect(findAdoptableColumnPerimeter({ x: 9999, y: 9999 }, [], rectLines, 1, 'mm')).toBeNull();
   });
 });
