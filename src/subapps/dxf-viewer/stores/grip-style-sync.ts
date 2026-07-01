@@ -33,12 +33,17 @@ export function syncGripStyleStoreFromSettings(settings: GripSettings): void {
     // `!showGrips || !enabled`, so the «Εμφάνιση Χερουλιών» toggle (which writes `enabled`) now
     // takes effect. Before this, BOTH store fields read `settings.showGrips`, so the toggle was a
     // silent no-op (off → grips still painted).
-    enabled: settings.enabled,
+    // 🛡️ ADR-559 hardening (2026-07-01) — a STALE/partial persisted settings blob (older schema,
+    // before `enabled` was a distinct field) hydrates these as `undefined`. Since the gate hides on
+    // `!enabled`/`!showGrips`, an undefined value would blank ALL grips (every entity, DXF + BIM)
+    // until any settings write re-filled them. Default undefined → `true` at this single writer
+    // boundary so a missing toggle can never suppress grips; an EXPLICIT `false` still hides.
+    enabled: settings.enabled ?? true,
     colors: settings.colors,
     gripSize: settings.gripSize,
     pickBoxSize: settings.pickBoxSize,
     apertureSize: settings.apertureSize,
-    showGrips: settings.showGrips,
+    showGrips: settings.showGrips ?? true,
     opacity: settings.opacity || 1.0,
     showAperture: settings.showAperture,
     multiGripEdit: settings.multiGripEdit,

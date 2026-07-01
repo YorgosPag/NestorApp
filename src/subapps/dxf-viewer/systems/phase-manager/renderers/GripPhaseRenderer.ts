@@ -171,10 +171,14 @@ export class GripPhaseRenderer {
   ): void {
     if (grips.length === 0) return;
     const style = getGripPreviewStyle();
-    // ADR-559 — honour the «Εμφάνιση Χερουλιών» toggle (grip style `showGrips`/`enabled`):
-    // when grips are switched off in settings, draw nothing for selected entities either.
-    // Before this, the render path ignored the toggle, so OFF still painted selection grips.
-    if (!style.showGrips || !style.enabled) return;
+    // ADR-559 — honour the «Εμφάνιση Χερουλιών» toggle: when grips are switched off in settings,
+    // draw nothing for selected entities either. Before bugfix #3 the render path ignored the toggle.
+    // 🛡️ Root fix (2026-07-01, bugfix #7) — gate on `enabled` ONLY (the sole field the panel toggle
+    // writes: `GripSettings.tsx` → `updateSettings({ enabled })`). `showGrips` has NO UI control, so a
+    // STALE persisted `showGrips:false` (older schema / an agent write) used to block ALL grips with
+    // NO user recourse but «Επαναφορά» — the exact lock Giorgio hit. It no longer participates in the
+    // gate. `=== false` (not `!enabled`) keeps an undefined value VISIBLE (safe default).
+    if (style.enabled === false) return;
     const settings: Partial<GripSettings> = {
       colors: style.colors,
       gripSize: style.gripSize,
