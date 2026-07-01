@@ -217,6 +217,14 @@
     "defaultButton": "No, default {size}",
     "cancel": "Cancel"
   },
+  "columnBecomesWall": {
+    "title": "These dimensions create a shear wall",
+    "warning": "⚠️ The new side ratio {long} / {short} = {aspect} exceeds 4.",
+    "message": "Per EC2 §9.6.1 / EC8 §5.4.2.4 the element is no longer a column and becomes a SHEAR WALL (loses its column properties, gains wall ones). What should I do?",
+    "convertButton": "Convert to shear wall",
+    "keepButton": "Keep as column",
+    "cancel": "Cancel"
+  },
   "hatchOverlap": {
     "title": "Region already hatched",
     "message": "This region already has a hatch. Add another one on top?",

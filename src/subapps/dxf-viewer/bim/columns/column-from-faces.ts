@@ -31,7 +31,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
-import { SHEAR_WALL_MIN_ASPECT_RATIO } from '../types/column-types';
+import { roundedRectAspect, isShearWallAspect } from './column-aspect';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import {
   perimeterFacesToRects,
@@ -113,13 +113,9 @@ export interface ColumnPlacement {
  * (union/clip) μπορούν να δώσουν 4.000…001 από αληθινό 4:1 ορθογώνιο.
  */
 function rectAspectKind(rect: DetectedRectangle): ColumnKind {
-  const aspect = rect.shortSide > 0 ? rect.longSide / rect.shortSide : 0;
-  // Round to 1dp before comparison: intermediate geometry calculations (polygon
-  // union, clipping) can produce 4.0000000000004 from a true 4:1 rectangle,
-  // bypassing the EC2 §9.6.1 dialog. Rounding matches what perimeterAspectRatio
-  // displays and is the clinically correct boundary: "displayed as 4.0 → column".
-  const rounded = Math.round(aspect * 10) / 10;
-  return rounded > SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
+  // SSoT: `column-aspect.ts` κρατά τον κανόνα «rounded(long/short) > 4 → τοιχίο»
+  // (rounding 1dp ώστε 4.0000…001 από union/clip να μη γίνει ψευδώς τοιχίο).
+  return isShearWallAspect(roundedRectAspect(rect.longSide, rect.shortSide)) ? 'shear-wall' : 'rectangular';
 }
 
 /**
@@ -168,7 +164,7 @@ export function splitColumnsByIntent(
 export function perimeterAspectRatio(perimeter: ClosedPerimeter): number {
   if (perimeter.shape === 'rectangle' && perimeter.rects.length > 0) {
     const rect = perimeter.rects[0];
-    return rect.shortSide > 0 ? Math.round((rect.longSide / rect.shortSide) * 10) / 10 : 0;
+    return roundedRectAspect(rect.longSide, rect.shortSide);
   }
   return 0;
 }
