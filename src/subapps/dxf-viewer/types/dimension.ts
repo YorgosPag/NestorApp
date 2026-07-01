@@ -22,6 +22,9 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
+// ADR-562 Φ1 — reuse the canonical lineweight SSoT (DXF g370, mm + special enums)
+// so per-part dim lineweights feed the SAME lineweight→px resolver as lines/layers.
+import type { LineweightMm } from './scene-types';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // DimensionType — sub-discriminator inside `type: 'dimension'`
@@ -103,8 +106,29 @@ export interface DimStyle {
   // ── Lines & extensions ─────────────────────────────────────────────────────
   /** DIMCLRD — dim line color (ACI 1-255 or 0=ByBlock / 256=ByLayer). */
   dimclrd: number;
+  /**
+   * DIMLWD — dim line lineweight. ADR-562 Φ1. Reuses the canonical `LineweightMm`
+   * SSoT (mm value, or `-3`=Default / `-2`=ByLayer / `-1`=ByBlock) so the 2D
+   * renderer (Φ2) resolves it through the SAME lineweight→px path as lines.
+   */
+  dimlwd: LineweightMm;
+  /**
+   * DIMLTYPE — dim line linetype name (ADR-510 `linetypeName` convention:
+   * `'ByLayer'` / `'Continuous'` / `'DASHED'` …). ADR-562 Φ1. Resolved to a dash
+   * array at render via the Unified Linetype SSoT (`resolveAnyLinetype`).
+   */
+  dimltype: string;
   /** DIMCLRE — extension line color. */
   dimclre: number;
+  /** DIMLWE — extension line lineweight (`LineweightMm` SSoT). ADR-562 Φ1. */
+  dimlwe: LineweightMm;
+  /**
+   * DIMLTEX1 / DIMLTEX2 — linetype names for the first / second extension line.
+   * ADR-562 Φ1. Unified UI sets both together for now; kept as 2 fields for the
+   * future per-side phase + DXF (346/347) round-trip parity.
+   */
+  dimltex1: string;
+  dimltex2: string;
   /** DIMEXE — extension beyond dim line (mm paper). */
   dimexe: number;
   /** DIMEXO — extension line offset from object (mm paper). */
@@ -127,6 +151,13 @@ export interface DimStyle {
   dimblk1: string;
   /** DIMBLK2 — arrowhead block name for second arrow. */
   dimblk2: string;
+  /**
+   * ADR-562 Φ1 — arrowhead color (ACI), a SEPARATE channel that exceeds AutoCAD
+   * (which binds arrowheads to DIMCLRD). Optional override: when **absent**, the
+   * arrows inherit `dimclrd` at render time (`arrowColor ?? dimclrd`). Non-standard
+   * for DXF export → falls back to `dimclrd`.
+   */
+  arrowColor?: number;
   /** DIMCEN — center mark size (D13). Positive=mark+line, Negative=mark+extensions, 0=none. */
   dimcen: number;
   /** DIMBREAK gap when DIMBREAK applied (mm paper, D12). */

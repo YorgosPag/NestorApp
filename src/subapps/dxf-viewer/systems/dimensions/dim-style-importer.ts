@@ -135,6 +135,15 @@ function translateToDimStyle(
     // Lines & extensions
     dimclrd: entry.dimclrd,
     dimclre: entry.dimclre,
+    // ADR-562 Φ1 — DXF DIMLWD/DIMLWE (371/372) + DIMLTYPE/DIMLTEX1/DIMLTEX2
+    // (345/346/347) are not parsed yet (writer/importer round-trip = future Φ6);
+    // seed ByLayer like the other no-DXF-equivalent fields above. `arrowColor`
+    // omitted → inherits dimclrd.
+    dimlwd: -2,
+    dimlwe: -2,
+    dimltype: 'ByLayer',
+    dimltex1: 'ByLayer',
+    dimltex2: 'ByLayer',
     dimexe: entry.dimexe,
     dimexo: entry.dimexo,
     dimdli: entry.dimdli,

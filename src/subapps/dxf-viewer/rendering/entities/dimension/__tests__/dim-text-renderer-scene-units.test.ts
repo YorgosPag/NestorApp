@@ -84,6 +84,7 @@ function makeStyle(): DimStyle {
     name: 'test',
     isBuiltIn: false,
     dimclrd: 256, dimclre: 256, dimclrt: 256,
+    dimlwd: -2, dimlwe: -2, dimltype: 'ByLayer', dimltex1: 'ByLayer', dimltex2: 'ByLayer',
     dimexe: 1.25, dimexo: 0.625, dimdli: 3.75,
     suppressDimLine1: false, suppressDimLine2: false,
     suppressExtLine1: false, suppressExtLine2: false,

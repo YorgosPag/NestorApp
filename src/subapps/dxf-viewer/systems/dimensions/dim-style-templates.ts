@@ -47,6 +47,14 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     // intentionally want a colored DIMSTYLE override below (ASME=5, Arch=5).
     dimclrd: 256,
     dimclre: 256,
+    // ADR-562 Φ1 — per-part lineweight & linetype default to ByLayer so committed
+    // dims inherit the layer's LWT/linetype (mirrors the dimclrd=256 ByLayer note).
+    // `arrowColor` is intentionally omitted → arrows inherit `dimclrd` at render.
+    dimlwd: -2,
+    dimlwe: -2,
+    dimltype: 'ByLayer',
+    dimltex1: 'ByLayer',
+    dimltex2: 'ByLayer',
     dimexe: 1.25,
     dimexo: 0.625,
     dimdli: 3.75,
