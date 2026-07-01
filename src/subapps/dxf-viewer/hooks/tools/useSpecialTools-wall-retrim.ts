@@ -13,16 +13,27 @@ import type { LevelsHookReturn } from '../../systems/levels';
  * `recomputeWallTrims` (strip → recompute → apply → persist-changed) so a wall
  * that flips to `butt`/`disallow` correctly CLEARS its stale miter, and patched
  * neighbours persist. `LevelsHookReturn` structurally satisfies `WallSceneAccessor`.
+ *
+ * ADR-363 §wall-column-end-miter (Giorgio 2026-07-01) — το column-miter (τραπεζοειδές
+ * κόψιμο άκρου τοίχου στην παρειά κολόνας) εξαρτάται από τα **column footprints**· γι'
+ * αυτό ο retrim πυροδοτείται ΚΑΙ όταν αλλάζει κολόνα (`bim:column-params-updated`
+ * rotate/resize) ή μετακινείται οποιοδήποτε δομικό (`bim:entities-moved`) — αλλιώς ο
+ * τοίχος κρατούσε stale bevel/miter όταν η κολόνα μετακινιόταν/περιστρεφόταν μετά.
  */
 export function useWallRetrimEffect(levelManager: LevelsHookReturn): void {
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = EventBus.on('bim:wall-params-updated', () => {
+    const schedule = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => recomputeWallTrims(levelManager), 200);
-    });
+    };
+    const unsubs = [
+      EventBus.on('bim:wall-params-updated', schedule),
+      EventBus.on('bim:column-params-updated', schedule),
+      EventBus.on('bim:entities-moved', schedule),
+    ];
     return () => {
-      cleanup();
+      for (const off of unsubs) off();
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [levelManager]);

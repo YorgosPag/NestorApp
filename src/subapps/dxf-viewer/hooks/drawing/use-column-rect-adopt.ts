@@ -22,11 +22,12 @@ import type { ColumnToolState } from './useColumnTool';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import {
-  findAdoptableRectUnderPoint,
-  resolveAdoptProposal,
+  findAdoptableColumnPerimeter,
+  resolvePerimeterAdoptInfo,
   shouldProposeAdopt,
   type AdoptProposal,
 } from '../../bim/columns/column-adopt-rect';
+import type { ClosedPerimeter } from '../../bim/walls/perimeter-from-faces';
 import { classifyColumnSectionSize } from '../../bim/validators/column-validator';
 import { requestColumnAdoptSizeConfirm } from '../../bim/columns/column-adopt-size-confirm-store';
 import {
@@ -38,8 +39,10 @@ import { formatLengthForDisplay } from '../../config/display-length-format';
 export interface ColumnRectAdoptParams {
   readonly getSceneEntitiesRef: MutableRefObject<(() => readonly Entity[]) | undefined>;
   readonly getSceneUnitsRef: MutableRefObject<(() => SceneUnits) | undefined>;
-  /** Υιοθέτηση: commit στοιχείου (κολόνα/τοιχίο) στο μέγεθος + κέντρο + γωνία + τύπο της πρότασης. */
+  /** Υιοθέτηση ΟΡΘΟΓΩΝΙΟΥ: commit στοιχείου (κολόνα/τοιχίο) στο μέγεθος + κέντρο + γωνία + τύπο. */
   readonly onAdopt: (s: ColumnToolState, proposal: AdoptProposal) => void;
+  /** Υιοθέτηση Γ/Τ/Π/σύνθετου: build+append τοιχίου του ΑΚΡΙΒΟΥΣ πολυγώνου (polygon-backed). */
+  readonly onAdoptShape: (s: ColumnToolState, perimeter: ClosedPerimeter) => void;
   /** Προεπιλογή («Όχι»): κανονική ροή τοποθέτησης (2-κλικ θέση→γωνία) στο σημείο κλικ. */
   readonly onDefault: (s: ColumnToolState, point: Point2D, anchor: ColumnAnchor) => void;
 }
@@ -54,51 +57,60 @@ export interface ColumnRectAdoptResult {
 }
 
 export function useColumnRectAdopt(params: ColumnRectAdoptParams): ColumnRectAdoptResult {
-  const { getSceneEntitiesRef, getSceneUnitsRef, onAdopt, onDefault } = params;
+  const { getSceneEntitiesRef, getSceneUnitsRef, onAdopt, onAdoptShape, onDefault } = params;
 
   const tryAdoptRectColumn = useCallback(
     (s: ColumnToolState, point: Readonly<Point2D>, anchor: ColumnAnchor): boolean => {
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const entities = getSceneEntitiesRef.current?.() ?? [];
       const tol = resolveRegionLoopTolWorld(sceneUnits);
-      const rect = findAdoptableRectUnderPoint(point, sceneSnapTargetsStore.get().rectTargets, entities, tol);
-      if (!rect) return false;
+      // FULL SSoT — ΚΑΘΕ κλειστό σχήμα κάτω από το σημείο (ορθογώνιο robust corner-graph
+      // Ή Γ/Τ/Π/σύνθετο polygon-backed). ΙΔΙΟ detection με το hover preview → preview ≡ commit.
+      const perimeter = findAdoptableColumnPerimeter(
+        point, sceneSnapTargetsStore.get().rectTargets, entities, tol, sceneUnits,
+      );
+      if (!perimeter) return false;
 
-      const proposal = resolveAdoptProposal(rect, sceneUnits);
+      const info = resolvePerimeterAdoptInfo(perimeter, sceneUnits);
       // Effective defaults = ribbon override → kind default (ώστε να μην ενοχλεί σε ≈default).
       const kindDims = getKindDimensionDefaults(s.kind);
       const eff = {
         width: s.overrides.width ?? kindDims.width,
         depth: s.overrides.depth ?? kindDims.depth,
       };
-      if (!shouldProposeAdopt(proposal, eff)) return false;
+      // Ορθογώνιο ≈ default → αθόρυβη κανονική ροή. Τα Γ/Τ/Π ΠΑΝΤΑ προτείνονται (δεν
+      // αναπαρίστανται ως default σημειακή κολόνα → το σχήμα είναι ρητή πρόθεση).
+      if (info.isRectangle && !shouldProposeAdopt(info, eff)) return false;
 
       // §3.17 — κλιμακωτό μέγεθος (ΕΝΑ SSoT με τον validator): block (μη κατασκευάσιμο) / warning / ok.
-      const shortMm = Math.min(proposal.widthMm, proposal.depthMm);
-      const tier = classifyColumnSectionSize(shortMm, proposal.isShearWall);
+      const shortMm = Math.min(info.widthMm, info.depthMm);
+      const tier = classifyColumnSectionSize(shortMm, info.isShearWall);
 
       const captured: Point2D = { x: point.x, y: point.y };
-      // Φώτισε το ανιχνευμένο περίγραμμα όσο είναι ανοιχτό το παράθυρο (reuse RegionPerimeterPreview SSoT).
-      // Κόκκινο (oversized flag) όταν block (μη κατασκευάσιμο), πράσινο αλλιώς. Καθαρίζεται στο resolve.
-      const label = `${formatLengthForDisplay(proposal.widthMm, { withUnit: false })} × ${formatLengthForDisplay(proposal.depthMm)}`;
-      setRegionPerimeterPreview({ polygon: [...rect.polygon], oversized: tier === 'block', label });
+      // Φώτισε το ανιχνευμένο περίγραμμα (ΟΛΟΚΛΗΡΟ το σχήμα — Γ/Τ/Π) όσο είναι ανοιχτό το
+      // παράθυρο (reuse RegionPerimeterPreview SSoT). Κόκκινο όταν block, πράσινο αλλιώς.
+      const label = `${formatLengthForDisplay(info.widthMm, { withUnit: false })} × ${formatLengthForDisplay(info.depthMm)}`;
+      setRegionPerimeterPreview({ polygon: [...perimeter.polygon], oversized: tier === 'block', label });
       void (async () => {
         const action = await requestColumnAdoptSizeConfirm({
-          widthMm: proposal.widthMm,
-          depthMm: proposal.depthMm,
+          widthMm: info.widthMm,
+          depthMm: info.depthMm,
           defaultWidthMm: eff.width,
           defaultDepthMm: eff.depth,
-          isShearWall: proposal.isShearWall,
+          isShearWall: info.isShearWall,
           tier,
         });
         clearRegionPerimeterPreview(); // σβήσε το highlight ό,τι κι αν επέλεξε ο χρήστης
-        if (action === 'adopt') onAdopt(s, proposal);
-        else if (action === 'default') onDefault(s, captured, anchor);
+        if (action === 'adopt') {
+          // Ορθογώνιο → παραμετρικό commit (υπάρχον path)· Γ/Τ/Π → polygon-backed τοιχίο.
+          if (info.isRectangle && info.rectProposal) onAdopt(s, info.rectProposal);
+          else onAdoptShape(s, perimeter);
+        } else if (action === 'default') onDefault(s, captured, anchor);
         // 'cancel' → τίποτα (το FSM μένει σε awaitingPosition).
       })();
       return true;
     },
-    [getSceneEntitiesRef, getSceneUnitsRef, onAdopt, onDefault],
+    [getSceneEntitiesRef, getSceneUnitsRef, onAdopt, onAdoptShape, onDefault],
   );
 
   return { tryAdoptRectColumn };
