@@ -37,7 +37,12 @@ import {
   findRectanglesFromSegments,
   type DetectedRectangle,
 } from '../walls/wall-in-region';
-import { rectColumnPlacement, isWallColumnKind } from './column-from-faces';
+import {
+  pickRegionPerimeterAt,
+  isPerimeterOversized,
+  type ClosedPerimeter,
+} from '../walls/perimeter-from-faces';
+import { rectColumnPlacement, isWallColumnKind, perimeterColumnKind } from './column-from-faces';
 
 /** Πρόταση υιοθέτησης: θέση + μέγεθος (mm) + γωνία + τύπος (κολόνα/τοιχίο κατά EC2). */
 export interface AdoptProposal {
@@ -162,4 +167,92 @@ export function findAdoptableRectUnderPoint(
     if (r.area < bestArea) { bestArea = r.area; best = r; }
   }
   return best;
+}
+
+// ─── Γ/Τ/Π shape adoption (Giorgio 2026-07-01, «πλήρες/επαγγελματικό») ─────────
+// Οι κολώνες/τοιχία ΔΕΝ είναι μόνο ορθογώνια — μπορεί να είναι Γ/Τ/Π/σύνθετα. Ο
+// σκέτος «Κολόνα» πιάνει τώρα ΚΑΘΕ κλειστό σχήμα κάτω από τον κέρσορα, με ΕΝΑ κοινό
+// resolver για hover preview + click adopt (preview ≡ commit).
+
+/** DetectedRectangle → ClosedPerimeter (shape='rectangle') ώστε rect + Γ/Τ/Π να έχουν ΕΝΑ τύπο. */
+function rectToPerimeter(rect: DetectedRectangle): ClosedPerimeter {
+  return { polygon: [...rect.polygon], shape: 'rectangle', rects: [rect] };
+}
+
+/** Axis-aligned bbox (πλάτος/ύψος, scene units) ενός πολυγώνου. */
+function polygonBbox(poly: readonly Point2D[]): { readonly w: number; readonly h: number } {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of poly) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { w: maxX - minX, h: maxY - minY };
+}
+
+/**
+ * FULL SSoT — το **υιοθετήσιμο κλειστό σχήμα** κάτω από το `point` για τον σκέτο
+ * «Κολόνα»: πρώτα robust ορθογώνιο (corner-graph `findAdoptableRectUnderPoint`,
+ * πιάνει κοινές κορυφές), αλλιώς Γ/Τ/Π/σύνθετο (`pickRegionPerimeterAt`,
+ * polygon-backed). ΚΟΙΝΟ detection για hover preview + click adopt → preview ≡
+ * commit. `null` αν κανένα ή oversized (εξωτερικό περίγραμμα σχεδίου).
+ */
+export function findAdoptableColumnPerimeter(
+  point: Readonly<Point2D>,
+  rectTargets: readonly RectFrame[],
+  entities: readonly Entity[],
+  tol: number,
+  sceneUnits: SceneUnits,
+): ClosedPerimeter | null {
+  const rect = findAdoptableRectUnderPoint(point, rectTargets, entities, tol);
+  if (rect) return rectToPerimeter(rect);
+  const { perimeter } = pickRegionPerimeterAt(point, entities, sceneUnits);
+  if (!perimeter) return null;
+  if (isPerimeterOversized(perimeter, mmToSceneUnits(sceneUnits) || 1)) return null;
+  return perimeter;
+}
+
+/** Στοιχεία μιας πρότασης υιοθέτησης σχήματος — τροφοδοτούν το confirm + το commit. */
+export interface PerimeterAdoptInfo {
+  /** `true` για ορθογώνιο (ακολουθεί το υπάρχον rect-adopt path)· `false` για Γ/Τ/Π/σύνθετο. */
+  readonly isRectangle: boolean;
+  /** mm — μεγάλη πλευρά (rect) ή bbox πλάτος (Γ/Τ/Π), για εμφάνιση στο dialog. */
+  readonly widthMm: number;
+  /** mm — μικρή πλευρά (rect) ή bbox ύψος (Γ/Τ/Π). */
+  readonly depthMm: number;
+  /** `true` = τοιχίο (rect aspect>4, ή κάθε Γ/Τ/Π/σύνθετο κατά EC8). */
+  readonly isShearWall: boolean;
+  /** Η rect πρόταση (μόνο όταν `isRectangle`) — για το υπάρχον commit path. `null` για Γ/Τ/Π. */
+  readonly rectProposal: AdoptProposal | null;
+}
+
+/**
+ * Στοιχεία υιοθέτησης ενός κλειστού περιγράμματος (SSoT ταξινόμηση): ορθογώνιο →
+ * `resolveAdoptProposal` (aspect kind)· Γ/Τ/Π/U → bbox μέγεθος + πάντα τοιχίο
+ * (`composite`/`U-shape` κατά EC8, `perimeterColumnKind`).
+ */
+export function resolvePerimeterAdoptInfo(
+  perimeter: ClosedPerimeter,
+  sceneUnits: SceneUnits,
+): PerimeterAdoptInfo {
+  if (perimeter.shape === 'rectangle' && perimeter.rects.length > 0) {
+    const proposal = resolveAdoptProposal(perimeter.rects[0], sceneUnits);
+    return {
+      isRectangle: true,
+      widthMm: proposal.widthMm,
+      depthMm: proposal.depthMm,
+      isShearWall: proposal.isShearWall,
+      rectProposal: proposal,
+    };
+  }
+  const s = mmToSceneUnits(sceneUnits) || 1;
+  const { w, h } = polygonBbox(perimeter.polygon);
+  return {
+    isRectangle: false,
+    widthMm: w / s,
+    depthMm: h / s,
+    isShearWall: isWallColumnKind(perimeterColumnKind(perimeter)),
+    rectProposal: null,
+  };
 }

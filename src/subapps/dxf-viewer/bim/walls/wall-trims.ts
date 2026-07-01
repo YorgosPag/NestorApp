@@ -124,23 +124,28 @@ export function computeWallTrims(
   resolveCornerClusters(endpointRecs, cornerRels, acc);
 
   // Pass 3 (ADR-363 §wall-column-end-miter): trapezoidal cut of a wall END against a
-  // COLUMN face. Runs AFTER wall↔wall resolution so a genuine wall corner/T keeps its
-  // join — the column-miter only fills an END still FREE of any wall-junction trim
-  // (column-priority: the wall stops flush on the column face). Idempotent (pure fn of
-  // current positions). Skipped entirely when no columns are supplied.
+  // COLUMN face. Runs AFTER wall↔wall resolution. **Column-priority (Giorgio 2026-07-01):**
+  // αν ένα άκρο τοίχου ακουμπά/μπαίνει σε κολόνα, η κολόνα ΝΙΚΑΕΙ — ο τοίχος ακολουθεί την
+  // παρειά της (τραπεζοειδές miter). Το column-miter επομένως ΥΠΕΡΙΣΧΥΕΙ ενός wall↔wall
+  // **bevel** (T-stem: ο βραχίονας κόβεται «τυφλά» — αλλά αν στη μέση υπάρχει κολόνα, πρέπει
+  // να σταματά στην κολόνα, ΟΧΙ 45° μέσα της). Ένα γνήσιο wall↔wall **miter** (2 άκρα σε γωνία)
+  // ΔΙΑΤΗΡΕΙΤΑΙ (δεν το πατάει). `computeWallColumnEndMiter` επιστρέφει miter ΜΟΝΟ όταν το άκρο
+  // πραγματικά straddle-άρει κολόνα εντός `JOIN_THRESHOLD_MM` → μηδέν false override. Idempotent.
   if (columnFootprints.length > 0) {
     for (const wall of walls) {
       if (wall.kind !== 'straight') continue;
       const existing = acc.get(wall.id);
-      const startFree = existing?.startMiter === undefined && existing?.startBevel === undefined;
-      const endFree = existing?.endMiter === undefined && existing?.endBevel === undefined;
+      // Ελεύθερο για column-miter = δεν υπάρχει wall↔wall MITER (το bevel επιτρέπεται να πατηθεί).
+      const startFree = existing?.startMiter === undefined;
+      const endFree = existing?.endMiter === undefined;
       if (!startFree && !endFree) continue;
       const cm = computeWallColumnEndMiter(wall, columnFootprints, wall.params.sceneUnits ?? 'mm');
       if (!cm) continue;
       const prev = acc.get(wall.id) ?? {};
       const next: MutablePatch = { ...prev };
-      if (startFree && cm.startMiter) next.startMiter = cm.startMiter;
-      if (endFree && cm.endMiter) next.endMiter = cm.endMiter;
+      // Column-miter set → καθάρισε το wall↔wall bevel του ΙΔΙΟΥ άκρου (η κολόνα το αντικαθιστά).
+      if (startFree && cm.startMiter) { next.startMiter = cm.startMiter; next.startBevel = undefined; }
+      if (endFree && cm.endMiter) { next.endMiter = cm.endMiter; next.endBevel = undefined; }
       acc.set(wall.id, next);
     }
   }

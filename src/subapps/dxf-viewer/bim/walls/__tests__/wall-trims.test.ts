@@ -1062,5 +1062,19 @@ describe('computeWallTrims — column end-miter (Pass 3)', () => {
     const wall = makeWall({ x: -1000, y: -300 }, { x: -200, y: 0 });
     expect(computeWallTrims([wall], [column])).toEqual(computeWallTrims([wall], [column]));
   });
+
+  it('C5. column-priority — wall END με wall↔wall BEVEL που ακουμπά κολόνα → column miter ΥΠΕΡΙΣΧΥΕΙ (Giorgio 2026-07-01)', () => {
+    // Wall B = δοκός· wall A = βραχίονας που το άκρο του κάθεται στην ΠΑΡΕΙΑ του B (T → startBevel).
+    // Μια κολόνα κάθεται στο άκρο του A → ο τοίχος πρέπει να ΑΚΟΛΟΥΘΕΙ την κολόνα (miter), ΟΧΙ 45° μέσα της.
+    const b = makeWall({ x: -2000, y: 500 }, { x: 2000, y: 500 }, 200, '_b');
+    const a = makeWall({ x: 0, y: 500 }, { x: 0, y: -1500 }, 200, '_a'); // start στην παρειά του B
+    // Χωρίς κολόνα: το A.start παίρνει bevel (T-stem).
+    expect(computeWallTrims([a, b]).get(a.id)?.startBevel).toBeDefined();
+    // Με κολόνα στο A.start: το column miter αντικαθιστά το bevel.
+    const withCol = computeWallTrims([a, b], [squareFootprint(0, 500, 600)]);
+    const pa = withCol.get(a.id);
+    expect(pa?.startMiter).toBeDefined();   // ακολουθεί την κολόνα
+    expect(pa?.startBevel).toBeUndefined(); // bevel καθαρίστηκε
+  });
 });
 
