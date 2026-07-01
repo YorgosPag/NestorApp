@@ -106,6 +106,30 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-02 (§wall-hud — live «λευκές ενδείξεις» (γωνία/πάχος/ύψος/μήκος) ΚΑΙ στο σύρσιμο λαβών τοίχου)**
+  - **Αίτημα Giorgio**: οι ενδείξεις που εμφανίζονται δίπλα στο φάντασμα τοίχου **κατά τη σχεδίαση** (μετά το 1ο
+    κλικ — γωνία/πάχος/ύψος/μήκος σε λευκά κείμενα) να εμφανίζονται **και** όταν, σε ολοκληρωμένο τοίχο,
+    σέρνω λαβές για να αλλάξω πλάτος/μήκος. «Θέλω τον ΙΔΙΟ ακριβώς κώδικα — full SSoT, μία πηγή αλήθειας.»
+  - **Ρίζα (2 Explore agents — SSoT audit)**: οι λευκές ενδείξεις = το **Wall HUD** (`buildSegmentHudMeta` →
+    `paintWallHud`, χρώμα `OVERLAY_LINE_COLORS.alignment`), όχι οι κυανές listening dims. Υπήρχε ήδη leaf
+    `useGripDimAnnotation`/`GripDimAnnotationMount` που ζωγραφίζει live διαστάσεις **κατά το σύρσιμο λαβών** —
+    αλλά **μόνο** για κολόνα/δοκάρι/πέδιλο (scalar pills)· **οι τοίχοι έλειπαν ρητά** (`isDimPreview` gate + καμία
+    `buildWallLabel`). Zero wall dim display στο grip drag σήμερα.
+  - **Fix (FULL SSoT reuse, μηδέν νέα σχεδίαση)**:
+    - NEW `hooks/drawing/wall-hud-spec-label.ts → buildWallHudSpecLabel(meta)` — **ΜΙΑ** πηγή της ετικέτας
+      «πάχος·ύψος» (i18n + display units). Ο `drawing-hover-handler` refactored να την καλεί (το inline
+      `i18n.t('tools.wall.hudSpec', …)` αφαιρέθηκε → μηδέν διπλότυπο).
+    - `useGripDimAnnotation`: NEW wall branch — `wallGripKind` στο gate + `paintWallGripHud` που παράγει live
+      params μέσω του κοινού `applyWallGripDrag` (ίδιος μετασχηματισμός με το grip ghost → preview ≡ HUD),
+      μετά `buildSegmentHudMeta` + `paintWallHud` + `buildWallHudSpecLabel`. **Ο ΙΔΙΟΣ ακριβώς κώδικας** με τη
+      σχεδίαση — ίδια νούμερα/painters/οπτική γλώσσα. ΟΧΙ pill (το HUD τοποθετείται στον άξονα του τοίχου).
+  - **Εύρος**: εμφανίζεται σε λαβές που αλλάζουν διαστάσεις (start/end/thickness/corner/curve/vertex).
+    Εξαιρούνται `wall-midpoint` (καθαρή μετακίνηση) & `wall-rotation` (έχει ήδη ένδειξη φοράς ADR-397 §15) μέσω
+    `WALL_HUD_SKIP`. Layer: ο ΙΔΙΟΣ PreviewCanvas, `clearMode:'skip-clear'` (πάνω από το grip ghost, ADR-040 leaf).
+  - **Tests**: κανένα νέο — thin glue πάνω σε ήδη-δοκιμασμένα SSoT (`buildSegmentHudMeta`, `applyWallGripDrag`,
+    `paintWallHud`/`paintWallHudCore` — `wall-hud-paint-projector.test.ts` πράσινο). Δεν υπάρχει test harness για
+    canvas/i18n hooks· αποφεύχθηκε τεχνητό mock. 🔴 browser-verify.
+
 - **2026-07-01 (§rotated-column — τοίχος/δοκάρι κουμπώνει στις ΛΟΞΕΣ παρειές περιστραμμένης ορθογώνιας κολόνας)**
   - **Αίτημα Giorgio**: «ορθογώνια κολόνα τοποθετημένη **υπό γωνία** στην κάτοψη· επιλέγω *τοίχος* για να κολλήσω
     τον τοίχο στις παρειές της. Ο τοίχος **δεν αναγνωρίζει τις κλίσεις** — κάθεται πάντα οριζόντιος ή κάθετος.»

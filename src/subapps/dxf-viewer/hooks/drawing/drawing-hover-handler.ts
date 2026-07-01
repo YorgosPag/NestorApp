@@ -35,6 +35,7 @@ import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-
 // οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import { buildWallHudSpecLabel } from './wall-hud-spec-label';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -280,12 +281,8 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         // Τα νούμερα/μετάφραση εδώ (i18n + display units)· το paint είναι pure (numbers in).
         const wallHud = (previewEntity as { wallHud?: WallHudMeta }).wallHud;
         if (wallHud) {
-          const specLabel = i18n.t('tools.wall.hudSpec', {
-            thickness: formatLengthForDisplay(wallHud.thicknessMm),
-            height: formatLengthForDisplay(wallHud.heightMm),
-            ns: 'dxf-viewer-shell',
-          });
-          previewCanvasRef.current.drawWallHud(wallHud, specLabel);
+          // ADR-508 §wall-hud — ΚΟΙΝΗ πηγή της ετικέτας «πάχος·ύψος» (ίδια με το grip-drag HUD).
+          previewCanvasRef.current.drawWallHud(wallHud, buildWallHudSpecLabel(wallHud));
         }
         // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
         // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)

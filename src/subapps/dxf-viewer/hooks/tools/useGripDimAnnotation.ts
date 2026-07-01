@@ -8,6 +8,10 @@
  * (width/depth) is dragged, a floating "w=350mm" label appears near the grip
  * handle on the preview canvas — Revit/AutoCAD live-dim convention.
  *
+ * ADR-508 §wall-hud — ο ΤΟΙΧΟΣ ΔΕΝ χειρίζεται εδώ: το live Wall HUD (γωνία/μήκος/πάχος/ύψος)
+ * ζωγραφίζεται στο ΙΔΙΟ RAF/frame με το grip ghost μέσα στο `useGripGhostPreview` (μετά το ghost,
+ * πριν το επόμενο clear) → ΣΤΑΘΕΡΟ, χωρίς race μεταξύ δύο ανεξάρτητων RAF leaves (αλλιώς τρεμοπαίζει).
+ *
  * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
  * lifecycle + canonical viewport/transform ζουν πλέον ΜΙΑ φορά στο harness·
  * εδώ μένει ΜΟΝΟ η draw logic (label pill).
@@ -220,6 +224,42 @@ function buildFoundationLabel(
   }
 }
 
+/**
+ * ADR-508 §wall-hud — wall grip kinds που ΔΕΝ αλλάζουν διαστάσεις → κανένα HUD: καθαρή μετακίνηση
+ * (`wall-midpoint`) και περιστροφή (`wall-rotation`· έχει ήδη τη δική της ένδειξη φοράς, ADR-397 §15).
+ * Κάθε άλλη λαβή (start/end/thickness/corner/curve/vertex) αλλάζει μήκος/πάχος → δείχνει το HUD.
+ */
+const WALL_HUD_SKIP: ReadonlySet<string> = new Set(['wall-midpoint', 'wall-rotation']);
+
+/**
+ * ADR-508 §wall-hud — ζωγραφίζει το live HUD του τοίχου (γωνία/μήκος/πάχος/ύψος) κατά το σύρσιμο
+ * λαβής, μέσω του **ΙΔΙΟΥ** SSoT με τη σχεδίαση (`buildSegmentHudMeta` + `paintWallHud` +
+ * `buildWallHudSpecLabel`) — ίδια νούμερα, ίδιοι painters, ίδια οπτική γλώσσα. Οι live διαστάσεις
+ * προκύπτουν από τον κοινό `applyWallGripDrag` (ίδιος μετασχηματισμός με το grip ghost → preview ≡ HUD).
+ * ΟΧΙ pill: το HUD τοποθετείται στον άξονα του τοίχου, όχι στη λαβή.
+ */
+function paintWallGripHud(
+  ctx: CanvasRenderingContext2D,
+  preview: DxfGripDragPreview,
+  wall: WallEntity,
+  sceneUnits: SceneUnits,
+  transform: ViewTransform,
+  viewport: { readonly width: number; readonly height: number },
+): void {
+  const { wallGripKind, anchorPos, delta, rotatePivot } = preview;
+  if (!wallGripKind || WALL_HUD_SKIP.has(wallGripKind) || !anchorPos) return;
+  const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+  const p = applyWallGripDrag(wallGripKind, {
+    originalParams: wall.params,
+    delta,
+    currentPos,
+    ...(rotatePivot ? { pivot: rotatePivot } : {}),
+  });
+  if (p === wall.params) return; // grip kind δεν άλλαξε γεωμετρία → τίποτα να δείξω
+  const meta = buildSegmentHudMeta(p.start, p.end, sceneUnits, p.thickness, p.height);
+  paintWallHud(ctx, meta, buildWallHudSpecLabel(meta), transform, viewport);
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
@@ -229,7 +269,8 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     dragPreview !== null &&
     (dragPreview.columnGripKind !== undefined ||
       dragPreview.beamGripKind !== undefined ||
-      dragPreview.foundationGripKind !== undefined);
+      dragPreview.foundationGripKind !== undefined ||
+      dragPreview.wallGripKind !== undefined);
 
   // cursorMode: 'none' — cursor comes via dragPreview.anchorPos + delta, not
   // useCursorWorldPosition. effectiveCursor will be null (unused below).
@@ -242,14 +283,22 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     // the already-cleared canvas. Two clears in the same frame = label wipe.
     if (!dragPreview?.anchorPos) return;
 
-    const { columnGripKind, beamGripKind, foundationGripKind, anchorPos, delta, entityId } = dragPreview;
-    if (!columnGripKind && !beamGripKind && !foundationGripKind) return;
+    const { columnGripKind, beamGripKind, foundationGripKind, wallGripKind, anchorPos, delta, entityId } = dragPreview;
+    if (!columnGripKind && !beamGripKind && !foundationGripKind && !wallGripKind) return;
 
     const lid = levelManager.currentLevelId;
     if (!lid) return;
     const scene = levelManager.getLevelScene(lid);
-    const entity = scene?.entities?.find(e => e.id === entityId);
+    if (!scene) return;
+    const entity = scene.entities?.find(e => e.id === entityId);
     if (!entity) return;
+
+    // ADR-508 §wall-hud — ο τοίχος δείχνει το ΙΔΙΟ live HUD (γωνία/μήκος/πάχος/ύψος) όπως στη
+    // σχεδίαση, μέσω του ΚΟΙΝΟΥ painter. ΟΧΙ pill (τοποθετείται στον άξονα) → επιστρέφει νωρίς.
+    if (wallGripKind && isWallEntity(entity)) {
+      paintWallGripHud(ctx, dragPreview, entity, resolveSceneUnits(scene), t, viewport);
+      return;
+    }
 
     const gripWorld: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
     // BUG FIX (Y-flip): use the canonical CoordinateTransforms.worldToScreen SSoT
