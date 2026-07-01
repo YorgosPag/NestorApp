@@ -29,6 +29,10 @@ import {
 } from '../../bim/types/column-types';
 // N.7.1 file-size split — pure column-from-click entity builder (extracted commitColumnAt core).
 import { buildClickColumnEntity, type ColumnSizeOverride } from './column-commit-build';
+// Giorgio 2026-07-01 — Γ/Τ/Π/σύνθετο shape adoption (πλήρες/επαγγελματικό): ΕΝΑ
+// polygon-backed τοιχίο ανά κλειστό περίγραμμα (SSoT builder, κοινό με «από περίγραμμα»).
+import { buildColumnsFromPerimeters } from '../../bim/columns/column-from-faces';
+import type { ClosedPerimeter } from '../../bim/walls/perimeter-from-faces';
 // N.7.1 file-size split — state-mutation actions (lifecycle + ribbon setters).
 import { useColumnToolStateActions } from './use-column-tool-actions';
 import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
@@ -235,10 +239,28 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     },
     [],
   );
+  // ADR-398 §3.17 (Γ/Τ/Π extension) — υιοθέτηση μη-ορθογώνιου σχήματος: ΕΝΑ
+  // polygon-backed τοιχίο (composite/U-shape) που γεμίζει το ακριβές περίγραμμα.
+  // Reuse ΤΟΥ ΙΔΙΟΥ SSoT builder με το «Τοιχίο από περίγραμμα» (`buildColumnsFromPerimeters`)
+  // + ΤΟΥ ΙΔΙΟΥ batch appender → μηδέν διπλότυπο. Το FSM μένει σε awaitingPosition
+  // (συνεχής τοποθέτηση), όπως και το rect adopt μετά το commit.
+  const onAdoptShape = useCallback(
+    (_s: ColumnToolState, perimeter: ClosedPerimeter): void => {
+      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const built = buildColumnsFromPerimeters([perimeter], currentLevelId, sceneUnits);
+      if (built.columns.length > 0) appendColumnsBatchRef.current(built.columns);
+      EventBus.emit('bim:columns-from-perimeter', {
+        built: built.columns.length,
+        ignored: built.ignored,
+      });
+    },
+    [currentLevelId, getSceneUnitsRef],
+  );
   const { tryAdoptRectColumn } = useColumnRectAdopt({
     getSceneEntitiesRef,
     getSceneUnitsRef,
     onAdopt: onAdoptRect,
+    onAdoptShape,
     onDefault: onAdoptDefault,
   });
 
