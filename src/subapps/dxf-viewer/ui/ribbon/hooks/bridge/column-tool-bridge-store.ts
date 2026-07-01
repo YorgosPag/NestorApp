@@ -36,6 +36,14 @@ import type {
  */
 export interface ColumnToolBridgeHandle {
   readonly isActive: boolean;
+  /**
+   * Giorgio 2026-07-01 — `true` όταν ο σκέτος «Κολόνα» περιμένει θέση (awaitingPosition,
+   * όχι κεκλιμένη), οπότε hover πάνω σε εντοπισμένο πλαίσιο (ορθογώνιο ή Γ/Τ/Π) δείχνει
+   * διακεκομμένη & κλικ ανοίγει το adopt confirm. Το `useRegionPerimeterMouseMove` το
+   * διαβάζει imperative ώστε η hover preview να εμφανίζεται μόνο όταν το κλικ θα υιοθετήσει
+   * (preview ≡ commit). `false` σε idle / awaitingRotation / awaitingTopLean / slant.
+   */
+  readonly isRegionFillEligible: boolean;
   readonly kind: ColumnKind;
   readonly anchor: ColumnAnchor;
   /** ADR-404 Φ5 — slant mode toggle («Κεκλιμένη»): 2-κλικ placement βάση→κορυφή. */
