@@ -1,16 +1,22 @@
 /**
- * ADR-363 Phase 1B + 1F — useWallTool state-machine tests.
+ * ADR-363 Phase 1B + ADR-508 — useWallTool state-machine tests.
  *
- * Covers the canonical 3-click placement flow (Phase 1F):
+ * Covers the canonical 2-click straight placement flow (ADR-508, mirror of the
+ * beam tool):
  *   - activate → 'awaitingStart'
  *   - click 1 → 'awaitingEnd' (startPoint stamped)
- *   - click 2 → 'awaitingAlignment' (endPoint stamped)
- *   - click 3 → commit with lateral offset toward C → back to 'awaitingStart'
+ *   - click 2 → commit (the drawn A→B line is the finish-face edge, +n_ccw side)
+ *               → continuous chain back to 'awaitingStart'
  *   - reset clears startPoint
  *   - deactivate returns to 'idle'
  *
+ * NOTE: the legacy 3-click `awaitingAlignment` side-pick is no longer reachable
+ * from mouse clicks (ADR-508). The `awaitingAlignment` state + `backToAwaitingEnd`
+ * back-step are retained only as a dormant precision path; the no-op guard is
+ * covered below ("backToAwaitingEnd is a no-op outside awaitingAlignment").
+ *
  * Validator hardErrors (e.g. zero-length wall) MUST not propagate as a commit
- * — the tool stays in `awaitingAlignment` and surfaces `state.error`.
+ * — the tool stays in `awaitingEnd` and surfaces `state.error`.
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -41,7 +47,7 @@ describe('useWallTool', () => {
     expect(result.current.state.startPoint).toEqual({ x: 100, y: 200 });
   });
 
-  it('second click stores endPoint and transitions to awaitingAlignment', () => {
+  it('second click commits the wall (2-click straight flow, ADR-508)', () => {
     const onWallCreated = jest.fn();
     const { result } = renderHook(() => useWallTool({ onWallCreated }));
     act(() => result.current.activate());
@@ -51,22 +57,24 @@ describe('useWallTool', () => {
     act(() => {
       result.current.onCanvasClick({ x: 5000, y: 0 });
     });
-    expect(onWallCreated).not.toHaveBeenCalled();
-    expect(result.current.state.phase).toBe('awaitingAlignment');
-    expect(result.current.state.endPoint).toEqual({ x: 5000, y: 0 });
-    expect(result.current.isAwaitingAlignment).toBe(true);
+    // ADR-508 — the straight wall commits on the 2nd click (mirror of the beam
+    // tool); there is no separate `awaitingAlignment` side-pick. The continuous
+    // chain resets the in-progress geometry and returns to `awaitingStart`.
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(result.current.state.endPoint).toBeNull();
+    expect(result.current.isAwaitingAlignment).toBe(false);
   });
 
-  it('third click commits with lateral offset (cross > 0 → wall shifts +n_ccw)', () => {
+  it('2-click straight commits with the drawn A→B line as the finish-face edge', () => {
     const onWallCreated = jest.fn();
     const { result } = renderHook(() => useWallTool({ onWallCreated }));
     act(() => result.current.activate());
-    // Axis along +X (A→B horizontal). With CCW perpendicular = +Y, the "left"
-    // side of A→B is +Y. A C-click at +Y => cross > 0 => axis shifts +Y by
-    // halfThickness => the "inner" edge (= old axis line) sits on A→B.
+    // ADR-508 "Location Line = Finish Face": axis along +X (A→B horizontal). The
+    // default side is +n_ccw (= +Y here), so the axis shifts +Y by halfThickness ⇒
+    // the drawn A→B line sits on the wall's −n_ccw edge and the body extends +Y.
     act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
     act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
-    act(() => { result.current.onCanvasClick({ x: 2500, y: 1000 }); });
     expect(onWallCreated).toHaveBeenCalledTimes(1);
     const entity = onWallCreated.mock.calls[0][0] as WallEntity;
     expect(entity.type).toBe('wall');
@@ -82,36 +90,34 @@ describe('useWallTool', () => {
     expect(result.current.state.endPoint).toBeNull();
   });
 
-  it('third click on the opposite side (cross < 0) shifts wall in -n_ccw direction', () => {
+  it('continuous chain: a second wall can be drawn immediately after commit', () => {
     const onWallCreated = jest.fn();
     const { result } = renderHook(() => useWallTool({ onWallCreated }));
     act(() => result.current.activate());
     act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
     act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
-    act(() => { result.current.onCanvasClick({ x: 2500, y: -1000 }); });
-    const entity = onWallCreated.mock.calls[0][0] as WallEntity;
-    const half = entity.params.thickness / 2;
-    expect(entity.params.start.y).toBeCloseTo(-half, 6);
-    expect(entity.params.end.y).toBeCloseTo(-half, 6);
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    // The tool is back at awaitingStart with no leftover geometry.
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(result.current.state.startPoint).toBeNull();
+    // A fresh 2-click chain (parallel wall, not collinear) commits a second wall.
+    act(() => { result.current.onCanvasClick({ x: 0, y: 2000 }); });
+    act(() => { result.current.onCanvasClick({ x: 5000, y: 2000 }); });
+    expect(onWallCreated).toHaveBeenCalledTimes(2);
   });
 
-  it('zero-length wall fails validation — no commit, stays in awaitingAlignment', () => {
+  it('zero-length wall fails validation — no commit, stays in awaitingEnd', () => {
     const onWallCreated = jest.fn();
     const { result } = renderHook(() => useWallTool({ onWallCreated }));
     act(() => result.current.activate());
     act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
     act(() => {
-      // Click 2 at same point as click 1 → stored as endPoint, validator
-      // does not run yet (commit happens on click 3).
+      // Click 2 at the same point as click 1 → the 2-click commit runs the
+      // validator → zero-length axis → hardError, no commit.
       result.current.onCanvasClick({ x: 0, y: 0 });
     });
-    expect(result.current.state.phase).toBe('awaitingAlignment');
-    act(() => {
-      // Click 3 → commit attempt → zero-length axis → validator hardError.
-      result.current.onCanvasClick({ x: 100, y: 100 });
-    });
     expect(onWallCreated).not.toHaveBeenCalled();
-    expect(result.current.state.phase).toBe('awaitingAlignment');
+    expect(result.current.state.phase).toBe('awaitingEnd');
     expect(result.current.state.error).toBeTruthy();
   });
 
@@ -179,7 +185,8 @@ describe('useWallTool', () => {
     act(() => {
       result.current.onCanvasClick({ x: 1000, y: 0 });
     });
-    expect(result.current.getStatusText()).toBe('tools.wall.statusAlignment');
+    // ADR-508 — the 2nd click commits; the continuous chain returns to the start prompt.
+    expect(result.current.getStatusText()).toBe('tools.wall.statusStart');
   });
 
   // ─── ADR-363 Phase 1C — curved + polyline flows ────────────────────────
@@ -235,38 +242,13 @@ describe('useWallTool', () => {
     expect(onWallCreated).not.toHaveBeenCalled();
   });
 
-  // ─── ADR-363 Phase 1H — ESC incremental back-step ──────────────────────
-
-  it('backToAwaitingEnd steps awaitingAlignment → awaitingEnd, drops end, keeps start', () => {
-    const { result } = renderHook(() => useWallTool());
-    act(() => result.current.activate());
-    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
-    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
-    expect(result.current.state.phase).toBe('awaitingAlignment');
-    let stepped = false;
-    act(() => { stepped = result.current.backToAwaitingEnd(); });
-    expect(stepped).toBe(true);
-    expect(result.current.state.phase).toBe('awaitingEnd');
-    expect(result.current.state.endPoint).toBeNull();
-    expect(result.current.state.startPoint).toEqual({ x: 0, y: 0 });
-  });
-
-  it('backToAwaitingEnd lets the user re-pick the end (back to awaitingAlignment)', () => {
-    const onWallCreated = jest.fn();
-    const { result } = renderHook(() => useWallTool({ onWallCreated }));
-    act(() => result.current.activate());
-    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
-    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
-    act(() => { result.current.backToAwaitingEnd(); });
-    // Re-pick a different end, then alignment, then commit.
-    act(() => { result.current.onCanvasClick({ x: 3000, y: 0 }); });
-    expect(result.current.state.phase).toBe('awaitingAlignment');
-    expect(result.current.state.endPoint).toEqual({ x: 3000, y: 0 });
-    act(() => { result.current.onCanvasClick({ x: 1500, y: 1000 }); });
-    expect(onWallCreated).toHaveBeenCalledTimes(1);
-    const entity = onWallCreated.mock.calls[0][0] as WallEntity;
-    expect(entity.params.end.x).toBeCloseTo(3000, 6);
-  });
+  // ─── ADR-363 Phase 1H / ADR-508 — ESC incremental back-step ────────────
+  // The legacy 3-click `awaitingAlignment` side-pick is no longer reachable from
+  // mouse clicks (ADR-508 committed the straight wall on the 2nd click), so the
+  // positive `backToAwaitingEnd` transition can only be exercised via the dormant
+  // precision path. The still-live guard — `backToAwaitingEnd`/ESC are inert
+  // outside `awaitingAlignment` — is what the 2-click flow relies on and is
+  // asserted below.
 
   it('backToAwaitingEnd is a no-op outside awaitingAlignment', () => {
     const { result } = renderHook(() => useWallTool());
@@ -276,19 +258,6 @@ describe('useWallTool', () => {
     expect(result.current.state.phase).toBe('awaitingEnd');
     expect(result.current.backToAwaitingEnd()).toBe(false);
     expect(result.current.state.phase).toBe('awaitingEnd');
-  });
-
-  it('ESC key routes through the escape bus to the back-step while awaitingAlignment', () => {
-    const { result } = renderHook(() => useWallTool());
-    act(() => result.current.activate());
-    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
-    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
-    expect(result.current.state.phase).toBe('awaitingAlignment');
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    });
-    expect(result.current.state.phase).toBe('awaitingEnd');
-    expect(result.current.state.endPoint).toBeNull();
   });
 
   // ─── ADR-363 Phase 1J — on-entity placement (pick line/rectangle) ──────
