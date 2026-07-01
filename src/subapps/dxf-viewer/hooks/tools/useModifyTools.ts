@@ -21,6 +21,7 @@ import { useWallSplitTool } from './useWallSplitTool';
 import { useWallAttachTool } from './useWallAttachTool';
 import { useBimCopyTool } from './useBimCopyTool';
 import { useEntityClipboard } from './useEntityClipboard';
+import { useEntityBodyDragCommit } from './useEntityBodyDragCommit';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -104,6 +105,14 @@ export function useModifyTools({
   // ADR-466 — Entity Clipboard (Revit Ctrl+C / Ctrl+V, cross-floor paste-in-place)
   const entityClipboard = useEntityClipboard({
     selectedEntityIds,
+    levelManager,
+    executeCommand,
+    selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),
+  });
+
+  // Body-drag commit (grab body → move; Ctrl+drag → copy). EventBus-driven,
+  // emitted by the canvas mouseup; shares the clone SSoT with the clipboard.
+  useEntityBodyDragCommit({
     levelManager,
     executeCommand,
     selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),

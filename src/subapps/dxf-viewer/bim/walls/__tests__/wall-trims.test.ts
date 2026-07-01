@@ -719,10 +719,11 @@ describe('computeWallTrims — explicit join override (Phase 1L-J)', () => {
     expect(combineJoinModes('miter', 'disallow')).toBe('disallow');
   });
 
-  it('J1. miter override forces a miter on a NON-coincident face-to-face butt', () => {
-    // A horizontal ends at (3000,0); B vertical ends at (3000,100) — i.e. on A's
-    // near FACE, gap = 100 = halfA (> 50 coincidence threshold). `auto` squares off.
-    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+  it('J1. miter override forces a miter on a column-gap FACE-butt', () => {
+    // Column gap (test-28 config): BOTH ends sit on the OTHER wall's FACE (⊥ ≈ half
+    // on both sides) → `auto` squares off (Phase 1N). The explicit miter override
+    // forces the geometric miter anyway.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 2900, y: 0 }, 200, 'A');
     const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'B');
 
     // Control: auto → NO miter (the bug the override fixes).
@@ -780,6 +781,136 @@ describe('computeWallTrims — explicit join override (Phase 1L-J)', () => {
     const wallA = withJoin(makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A'), 'end', 'miter');
     const wallB = withJoin(makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'B'), 'end', 'miter');
     expect(computeWallTrims([wallA, wallB])).toEqual(computeWallTrims([wallA, wallB]));
+  });
+});
+
+// ─── ADR-363 Phase 1M — big-player miter-limit (acute corner → square-off) ─────
+
+import { cornerMiterRatio, MITER_LIMIT_RATIO } from '../wall-trims-geometry';
+
+/**
+ * Build a coincident start+start L-corner of length `len` whose interior angle is
+ * exactly `angleDeg` (wall A along +x, wall B rotated by `angleDeg`). Both walls
+ * share the origin, so the corner endpoints COINCIDE → `auto` would normally miter.
+ */
+function makeAcuteCorner(angleDeg: number, len = 3000, thickness = 200): [WallEntity, WallEntity] {
+  const a = makeWall({ x: 0, y: 0 }, { x: len, y: 0 }, thickness, 'A');
+  const rad = (angleDeg * Math.PI) / 180;
+  const b = makeWall({ x: 0, y: 0 }, { x: len * Math.cos(rad), y: len * Math.sin(rad) }, thickness, 'B');
+  return [a, b];
+}
+
+describe('cornerMiterRatio (Phase 1M pure helper)', () => {
+  it('M0a. perpendicular outward dirs (90° corner) → ratio √2', () => {
+    expect(cornerMiterRatio(1, 0, 0, 1)).toBeCloseTo(Math.SQRT2, 6);
+  });
+  it('M0b. opposite outward dirs (straight continuation, 180°) → ratio 1', () => {
+    expect(cornerMiterRatio(1, 0, -1, 0)).toBeCloseTo(1, 6);
+  });
+  it('M0c. 60° interior angle → ratio 1/sin(30°) = 2', () => {
+    const r = (60 * Math.PI) / 180;
+    expect(cornerMiterRatio(1, 0, Math.cos(r), Math.sin(r))).toBeCloseTo(2, 6);
+  });
+  it('M0d. limit angle ≈ 28.96° → ratio == MITER_LIMIT_RATIO (4)', () => {
+    const r = (28.955 * Math.PI) / 180;
+    expect(cornerMiterRatio(1, 0, Math.cos(r), Math.sin(r))).toBeCloseTo(MITER_LIMIT_RATIO, 1);
+  });
+  it('M0e. degenerate zero-angle corner → Infinity (never mitres)', () => {
+    expect(cornerMiterRatio(1, 0, 1, 0)).toBe(Infinity);
+  });
+});
+
+describe('computeWallTrims — Phase 1M miter-limit (acute coincident corner)', () => {
+  it('M1. acute 20° corner on LONG walls → square-off (NOT a length-overflow), no miter', () => {
+    // ratio = 1/sin(10°) ≈ 5.76 > 4 → square off. The walls are 3 m long so the
+    // miter extension (≈ half/tan(10°) ≈ 568 mm) is WELL under MAX_BEVEL_FRACTION·len
+    // (1200 mm): without the angle limit this would mitre into a 568 mm acute spike.
+    const [a, b] = makeAcuteCorner(20);
+    const trims = computeWallTrims([a, b]);
+
+    expect(trims.get(a.id)?.startMiter).toBeUndefined();
+    expect(trims.get(b.id)?.startMiter).toBeUndefined();
+    // Falls back to the square-off bevel engine instead.
+    expect(trims.get(a.id)?.startBevel).toBeGreaterThan(0);
+    expect(trims.get(b.id)?.startBevel).toBeGreaterThan(0);
+  });
+
+  it('M2. just SHARPER than the limit (25° < ~29°) → square-off', () => {
+    const [a, b] = makeAcuteCorner(25);
+    const trims = computeWallTrims([a, b]);
+    expect(trims.get(a.id)?.startMiter).toBeUndefined();
+    expect(trims.get(b.id)?.startMiter).toBeUndefined();
+  });
+
+  it('M3. just SHALLOWER than the limit (33° > ~29°) → clean miter (unchanged)', () => {
+    const [a, b] = makeAcuteCorner(33);
+    const trims = computeWallTrims([a, b]);
+    expect(trims.get(a.id)?.startMiter).toBeDefined();
+    expect(trims.get(b.id)?.startMiter).toBeDefined();
+    expect(trims.get(a.id)?.startBevel).toBeUndefined();
+  });
+
+  it('M4. obtuse & right angles are unaffected by the limit (45° / 90° still mitre)', () => {
+    for (const deg of [45, 90, 120]) {
+      const [a, b] = makeAcuteCorner(deg);
+      const trims = computeWallTrims([a, b]);
+      expect(trims.get(a.id)?.startMiter).toBeDefined();
+      expect(trims.get(b.id)?.startMiter).toBeDefined();
+    }
+  });
+
+  it('M5. explicit `miter` override BYPASSES the limit (Revit forced Miter on a sharp join)', () => {
+    // Same 20° corner that `auto` squares off in M1 — forcing miter must still mitre.
+    const [a0, b0] = makeAcuteCorner(20);
+    const a = withJoin(a0, 'start', 'miter');
+    const b = withJoin(b0, 'start', 'miter');
+    const trims = computeWallTrims([a, b]);
+    expect(trims.get(a.id)?.startMiter).toBeDefined();
+    expect(trims.get(b.id)?.startMiter).toBeDefined();
+  });
+});
+
+// ─── ADR-363 Phase 1N — free-end L-corner closes (big-player «Allow Join») ─────
+
+describe('computeWallTrims — Phase 1N free-end L-corner (screenshot 025329)', () => {
+  it('N1. two free ends ~175mm apart at a 59° corner → BOTH miter (corner CLOSES)', () => {
+    // The reported bug: a vertical wall and a diagonal drawn end-to-end but NOT
+    // coincident (the diagonal ends 175mm short of the vertical's axis). The old
+    // coincidence-only rule squared this off → the vertical got a lone bevel and the
+    // diagonal nothing → an OPEN V-gap. Big players extend both edges → miter.
+    const vert = makeWall({ x: 0, y: 3000 }, { x: 0, y: 0 }, 220, 'VERT');    // end at (0,0)
+    const diag = makeWall({ x: 150, y: 90 }, { x: 2150, y: 1290 }, 220, 'DIAG'); // start 175mm short
+    const trims = computeWallTrims([vert, diag]);
+
+    expect(trims.get(vert.id)?.endMiter).toBeDefined();
+    expect(trims.get(diag.id)?.startMiter).toBeDefined();
+    // No longer a lone one-sided bevel.
+    expect(trims.get(vert.id)?.endBevel).toBeUndefined();
+  });
+
+  it('N2. REGRESSION: the column-gap FACE-butt still squares off (stays open for a column)', () => {
+    // Identical to test 28: both ends sit on the OTHER wall's FACE (⊥ ≈ half on both
+    // sides) → face-butt → must NOT miter (else the Phase 1L triangular-cap bug returns).
+    const wallC = makeWall({ x: 0, y: 0 },       { x: 2900, y: 0 },   200, 'C');
+    const wallA = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'A');
+    const trims = computeWallTrims([wallC, wallA]);
+
+    expect(trims.get(wallC.id)?.startMiter).toBeUndefined();
+    expect(trims.get(wallC.id)?.endMiter).toBeUndefined();
+    expect(trims.get(wallA.id)?.endMiter).toBeUndefined();
+  });
+
+  it('N3. REGRESSION: a through-wall the partner merely T\'s into is NOT mitred', () => {
+    // A vertical wall passes THROUGH the junction (ends 150mm past it); a horizontal
+    // wall ends on its centreline. Its body runs through → not a free-end L → the
+    // horizontal squares off (bevel) against the face, no miter (guards test 31).
+    const through = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: -150 }, 200, 'THRU');
+    const stem    = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'STEM');
+    const trims = computeWallTrims([through, stem]);
+
+    expect(trims.get(stem.id)?.endMiter).toBeUndefined();
+    expect(trims.get(stem.id)?.endBevel).toBeCloseTo(100, 0);
+    expect(trims.get(through.id)?.endMiter).toBeUndefined();
   });
 });
 

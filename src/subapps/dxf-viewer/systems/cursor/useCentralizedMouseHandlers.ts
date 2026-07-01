@@ -29,6 +29,12 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ADR-455 — on-canvas X/Y section-cut handle (transform-synced drag).
 import { hitTestAxisCutGrip } from '../axis-cut/axis-cut-grip';
 import { startAxisCutDrag, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
+// Body-drag (grab entity body → move; Ctrl+drag → copy).
+import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
+import { resolveBodyDragTarget } from '../drag/body-drag-target';
+import { getHoveredEntity } from '../hover/HoverStore';
+import { SelectedEntitiesStore } from '../selection/SelectedEntitiesStore';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 
 // Re-export types for consumers
 export type { SnapResultItem, ZoomConstraints, CentralizedMouseHandlersProps } from './mouse-handler-types';
@@ -192,6 +198,28 @@ export function useCentralizedMouseHandlers(
     // Grip drag-release (skip during drawing mode)
     if (e.button === 0 && !isToolInteractive && onGripMouseDown && onGripMouseDown(worldPos)) {
       return;
+    }
+
+    // Body-drag (grab an entity body → MOVE; Ctrl+drag → COPY). AutoCAD/Figma
+    // gesture: pressing on an entity body in select mode drags it INSTEAD of
+    // starting a lasso. Runs after the grip check (grips win) and before the
+    // lasso arm. The `copy` flag is FROZEN from Ctrl at press time (releasing
+    // Ctrl mid-drag does not change the committed gesture — mirror GripAltMove).
+    if (e.button === 0 && !isGripDragging && activeTool === 'select' && !isToolInteractive) {
+      const target = resolveBodyDragTarget({
+        hoveredEntityId: getHoveredEntity(),
+        isSelected: (id) => SelectedEntitiesStore.isSelected(id),
+        selectedIds: SelectedEntitiesStore.getIds(),
+      });
+      if (target) {
+        EntityBodyDragStore.arm({
+          anchor: worldPos,
+          entityIds: target,
+          copy: CtrlKeyTracker.getSnapshot(),
+        });
+        lassoDownRef.current = { pos: null, buttonHeld: false };
+        return;
+      }
     }
 
     // Lasso / box-select drag detection: record button-down position for the

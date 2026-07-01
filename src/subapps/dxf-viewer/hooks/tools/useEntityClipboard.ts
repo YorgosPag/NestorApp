@@ -27,18 +27,14 @@ import { useCallback, useEffect } from 'react';
 import { EventBus } from '../../systems/events';
 import { EntityClipboardStore } from '../../systems/clipboard/EntityClipboardStore';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { buildClonesFromEntities } from '../../bim/transforms/bim-copy-builder';
-import { PasteEntitiesCommand } from '../../core/commands/entity-commands/PasteEntitiesCommand';
-import { generateEntityId } from '../../systems/entity-creation/utils';
-import { isBimEntity } from '../../types/entities';
-import type { Entity } from '../../types/entities';
+import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
 import type { useLevels } from '../../systems/levels';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 /** Paste «Aligned to Same Place» — zero translation (Revit default for cross-floor). */
-const PASTE_IN_PLACE = { kind: 'translate', delta: { x: 0, y: 0 } } as const;
+const PASTE_IN_PLACE_DELTA = { x: 0, y: 0 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -94,20 +90,13 @@ export function useEntityClipboard({
     const snapshots = EntityClipboardStore.read();
     if (snapshots.length === 0) return;
 
-    // Split BIM (clone SSoT) vs DXF raw geometry (id-swap).
-    const bimSources = snapshots.filter((e) => isBimEntity(e as unknown as Entity));
-    const dxfSources = snapshots.filter((e) => !isBimEntity(e as unknown as Entity));
+    // Shared clone SSoT (BIM clone + DXF id-swap) — same path as the Ctrl+drag
+    // body copy, here with zero displacement (paste in place).
+    const result = buildEntityCloneCommand(snapshots, PASTE_IN_PLACE_DELTA, sm);
+    if (!result) return;
 
-    const bimResult = buildClonesFromEntities(bimSources, PASTE_IN_PLACE);
-    const dxfClones: SceneEntity[] = dxfSources.map(
-      (e) => ({ ...e, id: generateEntityId() }) as SceneEntity,
-    );
-
-    const allClones = [...bimResult.clones, ...dxfClones];
-    if (allClones.length === 0) return;
-
-    executeCommand(new PasteEntitiesCommand(bimResult.clones, dxfClones, sm));
-    selectEntities(allClones.map((c) => c.id));
+    executeCommand(result.command);
+    selectEntities(result.cloneIds);
   }, [getSceneManager, executeCommand, selectEntities]);
 
   // ── EventBus wiring (Ctrl+C / Ctrl+V → onAction → emit) ──────────────────

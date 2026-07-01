@@ -118,6 +118,16 @@ export const ESC_PRIORITY = {
   GRIP_DRAG: 450,
 
   /**
+   * P425 — Entity body-drag in progress (AutoCAD/Figma move / Ctrl-copy).
+   *
+   * Grabbing an entity on its body (not a grip) in select mode and dragging it.
+   * ESC aborts the in-flight body drag with no commit — sibling of GRIP_DRAG,
+   * placed just below it (the two gestures are mutually exclusive). Must beat
+   * ENTITY_SELECTION (250) so ESC cancels the drag before it deselects.
+   */
+  BODY_DRAG: 425,
+
+  /**
    * P400 — Draft polygon non-empty.
    *
    * Clears in-progress polygon points that aren't yet a saved overlay.

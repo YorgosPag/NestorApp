@@ -127,16 +127,23 @@ export function resolveMemberEndReferenceSnap(
   return { start, end, status: 'beam', targetId: best.id, justification: justificationForTier(best.off, side) };
 }
 
-/** Επιλεγμένος υποψήφιος corner-cap (κορυφή `e`, καθρεφτισμένη θέση γωνίας `q`, φορά/άκρη). */
+/** Επιλεγμένος υποψήφιος corner-cap (κορυφή `e`, διακριτή θέση γωνίας `q`, φορά/άκρη). */
 interface CornerCapHit {
   readonly fr: MemberTargetFrame;
   readonly id: string;
   readonly e: number; // διαμήκης θέση κορυφής (location line / νότια παρειά φαντάσματος)
-  readonly q: number; // κάθετη θέση «πίσω-κάτω» γωνίας φαντάσματος = −cPerp (καθρέφτης), clamped στο πλάτος
+  readonly q: number; // κάθετη θέση «πίσω-κάτω» γωνίας — ΜΟΝΟ μία από {perpMin, 0, perpMax} (διακριτή)
   readonly dir: number; // φορά απλώματος κατά `p` (cPerp≥0 → +1 ανατολικά· <0 → −1 δυτικά)
   readonly endOut: number; // φορά «έξω» από το σώμα κατά `u` (top κορυφή +1 / bottom −1)
   readonly beyond: number; // πόσο πέρα από την κορυφή είναι ο κέρσορας — nearest-wins
 }
+
+/**
+ * Giorgio: ΜΟΝΟ 3 διακριτές θέσεις (καμία ενδιάμεση). Στενή κεντρική ζώνη snap γύρω από τον άξονα →
+ * μέσο κορυφής· έξω από αυτήν → πλησιέστερη γωνία. `fraction` = κλάσμα του ημι-πάχους (tunable):
+ * `|cPerp| ≤ fraction·h` → μέσο, αλλιώς δεξιά→ΒΔ-γωνία / αριστερά→ΒΑ-γωνία.
+ */
+const CORNER_CAP_AXIS_SNAP_FRACTION = 0.25;
 
 /**
  * ADR-508 §end-reference (corner-cap / γωνία Γ) — όταν ο κέρσορας είναι **βόρεια της κορυφής** (εκεί που
@@ -144,9 +151,10 @@ interface CornerCapHit {
  * γίνεται **οριζόντιο** με τη **νότια παρειά flush στην κορυφή** (Giorgio: «πάντα νότια κολλάει στη βόρεια
  * μικρή παρειά») και σχηματίζει **γωνία Γ**:
  *
- *   · cPerp ≥ 0 (δεξιά/ανατολικά) → απλώνεται ΑΝΑΤΟΛΑ· η ΝΔ γωνία = καθρέφτης `−cPerp` (στον άξονα→μέσο,
- *     στην Α παρειά→ΒΔ γωνία· **ολισθαίνει**, Giorgio 1B).
- *   · cPerp < 0 (αριστερά/δυτικά) → απλώνεται ΔΥΣΗ· η ΝΑ γωνία = καθρέφτης `−cPerp` (στη Δ παρειά→ΒΑ γωνία).
+ * **ΜΟΝΟ 3 διακριτές θέσεις** (Giorgio: καμία ενδιάμεση) για την «πίσω-κάτω» γωνία:
+ *   · δεξιά του άξονα (έξω από στενή κεντρική ζώνη) → ΒΔ γωνία υφιστάμενου, απλώνεται ΑΝΑΤΟΛΑ.
+ *   · πάνω στον άξονα (κεντρική ζώνη `≤ 0.25·h`) → ΜΕΣΟ κορυφής, απλώνεται ΑΝΑΤΟΛΑ.
+ *   · αριστερά του άξονα → ΒΑ γωνία υφιστάμενου, απλώνεται ΔΥΣΗ.
  *
  * Reuse ΟΛΟΥ του location-line + `justification` (start = η «πίσω-κάτω» γωνία ΠΑΝΩ στην κορυφή = pivot·
  * σώμα «κρέμεται» έξω από το υφιστάμενο). Pure. `null` όταν ο κέρσορας δεν είναι πέρα από κορυφή / εκτός
@@ -179,9 +187,14 @@ export function resolveMemberEndCornerCapSnap(
     else continue;
     if (beyond > opts.captureScene) continue; // πολύ μακριά από την κορυφή → ελεύθερη κίνηση
 
-    // «πίσω-κάτω» γωνία = καθρέφτης του κέρσορα κατά `p` (Giorgio 1B), clamped στο πλάτος [perpMin,perpMax].
-    const q = Math.min(Math.max(-fr.cPerp, fr.perpMin), fr.perpMax);
-    const dir = fr.cPerp >= 0 ? 1 : -1; // απλώνεται προς την πλευρά του κέρσορα
+    // «πίσω-κάτω» γωνία = ΜΟΝΟ 3 διακριτές θέσεις (Giorgio: καμία ενδιάμεση): μέσο κορυφής (0) στη στενή
+    // κεντρική ζώνη, αλλιώς πλησιέστερη γωνία (perpMin/perpMax). Η φορά απλώματος = προς την πλευρά κέρσορα.
+    const axisSnapTol = h * CORNER_CAP_AXIS_SNAP_FRACTION;
+    let q: number;
+    let dir: number;
+    if (Math.abs(fr.cPerp) <= axisSnapTol) { q = 0; dir = 1; }        // μέσο κορυφής → απλώνεται ανατολικά
+    else if (fr.cPerp > 0) { q = fr.perpMin; dir = 1; }               // δεξιά → ΒΔ γωνία, απλώνεται ανατολικά
+    else { q = fr.perpMax; dir = -1; }                                // αριστερά → ΒΑ γωνία, απλώνεται δυτικά
     if (!best || beyond < best.beyond) best = { fr, id: t.id, e, q, dir, endOut, beyond };
   }
   if (!best) return null;

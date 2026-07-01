@@ -145,9 +145,24 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
     (`makeWallWysiwygGhost`) + commit (`commitStraightFromState`). **preview ≡ commit** (ΙΔΙΟ alignmentPoint και
     στα 3 σημεία). +6 tests (justification ανά βαθμίδα/πλευρά + **full-chain**: snap→alignment→`buildDefaultWallParams`
     βάζει τον body axis ΑΚΡΙΒΩΣ στο `g` ∈ {1150,1000,850} → επικυρώνει το sign του justification). 16/16 GREEN.
+  - **Follow-up 2 (Giorgio): corner-cap (γωνία Γ) ΑΝΤΙ 🔴 ομοαξονικού — κέρσορας ΒΟΡΕΙΑ της κορυφής & ΕΝΤΟΣ
+    πλάτους**: πριν, κέρσορας βόρεια της κορυφής & κοντά στον άξονα → 🔴 ομοαξονικό φάντασμα (block duplicate).
+    Τώρα → **οριζόντιο φάντασμα γωνίας**, **νότια παρειά flush στην κορυφή** (ΠΑΝΤΑ, Giorgio), σώμα έξω από το
+    υφιστάμενο. Η «πίσω-κάτω» γωνία έχει **ΜΟΝΟ 3 διακριτές θέσεις** (Giorgio, καμία ενδιάμεση): **στενή κεντρική
+    ζώνη** (`|cPerp| ≤ 0.25·h`, tunable `CORNER_CAP_AXIS_SNAP_FRACTION`) → **μέσο κορυφής** (απλώνεται ανατολικά)·
+    δεξιά → **ΒΔ γωνία** (perpMin, ανατολικά)· αριστερά → **ΒΑ γωνία** (perpMax, δυτικά). [Ιστορικό: 1ο 1B-sliding →
+    Giorgio «μόνο 3, καμία ενδιάμεση» → discrete.] NEW pure `resolveMemberEndCornerCapSnap` (ίδιο αρχείο· reuse
+    `buildMemberTargetFrame` + ΟΛΟ το location-line+
+    `justification` του Follow-up 1: start=η γωνία ΠΑΝΩ στην κορυφή=pivot, σώμα κρέμεται έξω). Gate: `|cPerp| ≤ h`
+    (μέχρι την παρειά) ΚΑΙ `cAlong` πέρα από κορυφή (εντός capture). Wire: **ΥΨΗΛΟΤΕΡΗ προτεραιότητα** στον
+    dispatcher (ΠΡΙΝ το 3-tier) → το 🔴 ομοαξονικό αντικαθίσταται από 🟢 γωνία (οριζόντιο=μη-παράλληλο, δεν πέφτει
+    στο `isMemberCollinearOverlap`). Διαχωρισμός: on-axis/βόρεια εντός πλάτους → corner-cap· **σαφώς στο πλάι**
+    (`|cPerp|>h`) → 3-tier (Follow-up 1). +11 tests (αν./άξονα/δυτ. + 3-διακριτές-θέσεις/boundary κεντρικής ζώνης +
+    εκτός-πλάτους/εντός-σώματος/μακριά null + κάτω κορυφή + **full-chain** νότια-flush + dispatcher 🟢-αντί-🔴).
+    27/27 end-ref + 1240/1240 framing/walls/columns GREEN.
   - ✅ Google-level: YES — αδελφό ενός proven pattern (ADR-523), ΕΝΑ projection SSoT (zero διπλό geometry),
-    nearest-wins, orientation-agnostic, location line = Revit-grade associative pivot (reuse axis-justify SSoT),
-    gate ώστε μηδέν regression σε body/overlap. ⚠️ faceFrame (listening dims ανά-βαθμίδα) = follow-up TODO.
+    nearest-wins + 3 διακριτές θέσεις, orientation-agnostic, location line = Revit-grade associative pivot (reuse
+    axis-justify SSoT), gate ώστε μηδέν regression σε body/overlap/3-tier. ⚠️ faceFrame (listening dims) = TODO.
     🔴 browser-verify (Giorgio). ⚠️ Pre-existing (ΟΧΙ από εδώ): 10 obsolete failures σε `useWallTool.test.tsx`/
     `floorplan-symbol-completion.test.ts` (περιμένουν legacy 3-click `awaitingAlignment`).
   - **Cross-ref**: ADR-523 (η μακριάς-παρειάς column-head αδελφή)· ADR-441/ADR-529 (`axis-justify` location-line SSoT).

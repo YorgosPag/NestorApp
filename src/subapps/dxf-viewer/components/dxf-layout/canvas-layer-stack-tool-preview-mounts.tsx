@@ -16,6 +16,7 @@ import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
+import { useEntityBodyDragPreview } from '../../hooks/tools/useEntityBodyDragPreview';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -102,6 +103,20 @@ export const StretchPreviewMount = React.memo(function StretchPreviewMount(
   props: StretchPreviewMountProps,
 ) {
   useStretchPreview(props);
+  return null;
+});
+
+export interface EntityBodyDragPreviewMountProps {
+  levelManager: Parameters<typeof useEntityBodyDragPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const EntityBodyDragPreviewMount = React.memo(function EntityBodyDragPreviewMount(
+  props: EntityBodyDragPreviewMountProps,
+) {
+  useEntityBodyDragPreview(props);
   return null;
 });
 

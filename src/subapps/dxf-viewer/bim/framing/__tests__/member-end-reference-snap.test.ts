@@ -152,9 +152,14 @@ describe('resolveMemberEndCornerCapSnap — γωνία Γ ΒΟΡΕΙΑ της κ
     expect(r!.justification).toBe('right');
   });
 
-  it('Ενδιάμεσα (cPerp=+50): η γωνία ΟΛΙΣΘΑΙΝΕΙ (καθρέφτης −50), 1B', () => {
+  it('ΜΟΝΟ 3 διακριτές θέσεις (καμία ενδιάμεση): cPerp=+50 (δεξιά, εκτός κεντρικής ζώνης) → ΒΔ γωνία (−100), ΟΧΙ −50', () => {
     const r = resolveMemberEndCornerCapSnap({ x: 50, y: 1100 }, [VERTICAL], OPTS);
-    expect(r!.start).toEqual({ x: -50, y: 1000 });
+    expect(r!.start).toEqual({ x: -100, y: 1000 });
+  });
+
+  it('Κεντρική ζώνη snap: cPerp=20 (≤ 0.25·h=25) → μέσο (0)· cPerp=30 (>25) → ΒΔ γωνία (−100)', () => {
+    expect(resolveMemberEndCornerCapSnap({ x: 20, y: 1100 }, [VERTICAL], OPTS)!.start).toEqual({ x: 0, y: 1000 });
+    expect(resolveMemberEndCornerCapSnap({ x: 30, y: 1100 }, [VERTICAL], OPTS)!.start).toEqual({ x: -100, y: 1000 });
   });
 
   it('Εκτός πλάτους (|cPerp|>h) → null (αφήνεται στο §end-reference 3-tier του πλαϊνού)', () => {
@@ -169,9 +174,9 @@ describe('resolveMemberEndCornerCapSnap — γωνία Γ ΒΟΡΕΙΑ της κ
     expect(resolveMemberEndCornerCapSnap({ x: 0, y: 1700 }, [VERTICAL], OPTS)).toBeNull();
   });
 
-  it('Κάτω κορυφή (νότια του σώματος): ΝΑ παρειά flush στη νότια μικρή παρειά, σώμα νότια', () => {
+  it('Κάτω κορυφή (νότια του σώματος): διακριτή γωνία flush στη νότια μικρή παρειά, σώμα νότια', () => {
     const r = resolveMemberEndCornerCapSnap({ x: 50, y: -100 }, [VERTICAL], OPTS);
-    expect(r!.start).toEqual({ x: -50, y: 0 });
+    expect(r!.start).toEqual({ x: -100, y: 0 });
     expect(r!.justification).toBe('right');
   });
 

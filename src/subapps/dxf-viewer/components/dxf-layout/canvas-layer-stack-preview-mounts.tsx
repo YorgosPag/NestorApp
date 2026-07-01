@@ -49,6 +49,7 @@ import {
   MirrorPreviewMount,
   ScalePreviewMount,
   StretchPreviewMount,
+  EntityBodyDragPreviewMount,
   GripDragPreviewMount,
   type RotationPreviewMountProps,
   type MovePreviewMountProps,
@@ -142,6 +143,14 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <StretchPreviewMount
         {...stretch}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* Body-drag (grab entity body → move; Ctrl+drag → copy). Store-driven:
+          activation + anchor live in EntityBodyDragStore (no payload prop). */}
+      <EntityBodyDragPreviewMount
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}

@@ -21,6 +21,14 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // useEntityClipboard (so the shortcut SSoT stays the single binding source).
   'clipboard:copy-requested': Record<string, never>;
   'clipboard:paste-requested': Record<string, never>;
+  // Entity Body-Drag (grab body → move; Ctrl+drag → copy). Emitted by the canvas
+  // mouseup when a body-drag session committed with a non-trivial displacement;
+  // consumed by useEntityBodyDragCommit (which owns executeCommand + levelManager).
+  'entity-body-drag:commit': {
+    entityIds: string[];
+    delta: Point2D;
+    copy: boolean;
+  };
   'dynamic-input-coordinate-submit': {
     tool: string;
     coordinates: Point2D;

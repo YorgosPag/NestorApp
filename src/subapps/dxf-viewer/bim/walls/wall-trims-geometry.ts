@@ -13,6 +13,40 @@
 /** Maximum bevel / miter-extension as fraction of axis length; prevents inversion. */
 export const MAX_BEVEL_FRACTION = 0.40;
 
+/**
+ * ADR-363 Phase 1M — big-player miter-limit (SVG / Figma / Cinema4D).
+ *
+ * The miter spike at a corner has length `width · (1 / sin(α/2))` where α is the
+ * INTERIOR angle between the two members. As α → 0 the spike → ∞, so every major
+ * tool clamps it: above this ratio the join falls back to a square-off (bevel)
+ * instead of an unbounded acute sliver. SVG `stroke-miterlimit` and Figma both
+ * default to **4** (⇒ cut-over interior angle ≈ 28.96°). Below ~29° corners square
+ * off — matching Revit's automatic Butt/Square behaviour at sharp wall joins.
+ *
+ * This is an ANGLE-based limit, independent of wall length — unlike the secondary
+ * `MAX_BEVEL_FRACTION` overflow guard (length-coupled), which stays as a backstop.
+ *
+ * @see https://www.w3.org/TR/SVG2/painting.html#StrokeMiterlimitProperty
+ */
+export const MITER_LIMIT_RATIO = 4;
+
+/**
+ * Miter ratio = miterLength / half-thickness = `1 / sin(α/2)` for a corner whose
+ * two members extend AWAY from the junction along the unit vectors (oax,oay) and
+ * (obx,oby) — i.e. α is the interior corner angle (`cos α = oa · ob`). Returns
+ * `Infinity` for a degenerate zero-angle corner (members fully overlapping).
+ *
+ * Big-player miter-limit test: `cornerMiterRatio(...) > MITER_LIMIT_RATIO` ⇒ the
+ * miter would spike too far → fall back to square-off. The inputs MUST be unit
+ * vectors (the caller's axis directions / `outwardDir` already are).
+ */
+export function cornerMiterRatio(oax: number, oay: number, obx: number, oby: number): number {
+  const cosAlpha = Math.max(-1, Math.min(1, oax * obx + oay * oby));
+  const sinHalf = Math.sqrt((1 - cosAlpha) / 2); // half-angle identity, α ∈ [0, π]
+  if (sinHalf < 1e-9) return Infinity;
+  return 1 / sinHalf;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** 2-point miter corner: outer face intersection and inner face intersection. */

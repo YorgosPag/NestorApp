@@ -48,6 +48,12 @@ import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 // ADR-507 — «Επιλογή γραμμοσκίασης»: armed hatch-only pick (even-odd SSoT, world-coords).
 import { isHatchSelectArmed, runArmedHatchPick } from '../../bim/hatch/hatch-select-mode-store';
+// Body-drag (grab body → move; Ctrl+drag → copy) — commit on mouseup.
+import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
+import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+
+/** Min pointer travel (px) before a body-drag counts as a drag (else it's a click). */
+const BODY_DRAG_MIN_PX = 3;
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -120,6 +126,35 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         cancelAnimationFrame(panState.animationId);
         panState.animationId = null;
       }
+    }
+
+    // Body-drag commit (grab body → MOVE; Ctrl+drag → COPY). Runs after pan
+    // cleanup and BEFORE grip/hatch/click so it owns the gesture it armed at
+    // mousedown. A near-zero displacement is treated as a plain click (clear +
+    // fall through to the selection pipeline below); a real drag emits the
+    // commit (consumed by useEntityBodyDragCommit) and consumes the mouseup.
+    if (EntityBodyDragStore.getActive() && e.button === 0 && !wasPanning) {
+      const session = EntityBodyDragStore.getSession();
+      EntityBodyDragStore.clear();
+      if (session) {
+        const bodySnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+        if (bodySnap) {
+          const upWorld = screenToWorldWithSnapshot(getScreenPosFromEvent(e, bodySnap), transform, bodySnap);
+          // ORTHO (F8) parity with the live ghost (`useEntityBodyDragPreview`).
+          const delta = applyOrthoToDelta({ x: upWorld.x - session.anchor.x, y: upWorld.y - session.anchor.y });
+          const movedPx = Math.hypot(delta.x, delta.y) * transform.scale;
+          if (movedPx >= BODY_DRAG_MIN_PX && session.entityIds.length > 0) {
+            EventBus.emit('entity-body-drag:commit', {
+              entityIds: [...session.entityIds],
+              delta,
+              copy: session.copy,
+            });
+            cursor.endSelection();
+            return;
+          }
+        }
+      }
+      // Near-zero → fall through to the normal click/selection pipeline below.
     }
 
     // ADR-507 — «Επιλογή γραμμοσκίασης» (armed): authoritative hatch-only pick. Τρέχει
