@@ -14,7 +14,7 @@ import type { DxfCommitDeps } from './unified-grip-types';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { ColumnEntity } from '../../bim/types/column-types';
+import type { ColumnEntity, ColumnParams } from '../../bim/types/column-types';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
@@ -28,6 +28,11 @@ import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import {
+  detectRectColumnBecomesWall,
+  reclassifyRectToShearWall,
+} from '../../bim/columns/column-aspect';
+import { requestColumnBecomesWallConfirm } from '../../bim/columns/column-becomes-wall-confirm-store';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
@@ -379,26 +384,42 @@ export function commitColumnGripDrag(
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
-  // ADR-503 Slice 2 — section-resize grip (`column-width`/`column-depth`) = χειροκίνητη
-  // διατομή → safety-gated lock (ίδιο SSoT με panel): ≥ επαρκές → lock· < επαρκές → ΜΠΛΟΚ
-  // (clamp στο ελάχιστο επαρκές, μένει AUTO). Endpoint/rotation grips → δεν αλλάζει διατομή → pass-through.
-  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  const lock = resolveColumnSectionLock(provider, originalParams, newParams, resolveActiveColumnDesignMoment(grip.entityId));
-  const command = new UpdateColumnParamsCommand(
-    grip.entityId,
-    lock.params,
-    originalParams,
-    sceneManager,
-    true,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  emitBimEntityParamsUpdated('column', grip.entityId);
-  if (lock.rejected) {
-    EventBus.emit('bim:column-section-rejected', {
-      columnId: grip.entityId, w: newParams.width, d: newParams.depth, minW: lock.minWidthMm, minD: lock.minDepthMm,
-    });
+  const entityId = grip.entityId;
+
+  // Τελικό write: ADR-503 Slice 2 — section-resize grip = χειροκίνητη διατομή → safety-gated
+  // lock (ίδιο SSoT με panel): ≥ επαρκές → lock· < επαρκές → ΜΠΛΟΚ (clamp στο ελάχιστο επαρκές,
+  // μένει AUTO). Endpoint/rotation grips → δεν αλλάζει διατομή → pass-through.
+  const finalize = (params: ColumnParams): void => {
+    const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+    const lock = resolveColumnSectionLock(provider, originalParams, params, resolveActiveColumnDesignMoment(entityId));
+    const command = new UpdateColumnParamsCommand(entityId, lock.params, originalParams, sceneManager, true);
+    if (command.validate() !== null) return;
+    deps.execute(command);
+    emitBimEntityParamsUpdated('column', entityId);
+    if (lock.rejected) {
+      EventBus.emit('bim:column-section-rejected', {
+        columnId: entityId, w: params.width, d: params.depth, minW: lock.minWidthMm, minD: lock.minDepthMm,
+      });
+    }
+  };
+
+  // ADR-363 §5.6 — edit-time aspect guard (grip resize): αν το σύρσιμο περνά το κατώφλι
+  // κολόνα→τοιχίο (EC2 §9.6.1, rounded aspect > 4) → non-blocking confirm ΣΤΟ RELEASE (το
+  // grip commit τρέχει ήδη μία φορά στο mouse-up· ΕΝΑ SSoT με το αριθμητικό path). Non-crossing
+  // → κατευθείαν finalize (μηδέν dialog).
+  const becomesWall = detectRectColumnBecomesWall(originalParams, newParams);
+  if (!becomesWall) {
+    finalize(newParams);
+    return;
   }
+  void requestColumnBecomesWallConfirm({
+    aspect: becomesWall.aspect,
+    longSideMm: becomesWall.longSideMm,
+    shortSideMm: becomesWall.shortSideMm,
+  }).then((action) => {
+    if (action === 'cancel') return;
+    finalize(action === 'convert' ? reclassifyRectToShearWall(newParams) : newParams);
+  });
 }
 
 /**
