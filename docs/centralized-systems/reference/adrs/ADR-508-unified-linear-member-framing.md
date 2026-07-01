@@ -119,13 +119,19 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
     - NEW `hooks/drawing/wall-hud-spec-label.ts → buildWallHudSpecLabel(meta)` — **ΜΙΑ** πηγή της ετικέτας
       «πάχος·ύψος» (i18n + display units). Ο `drawing-hover-handler` refactored να την καλεί (το inline
       `i18n.t('tools.wall.hudSpec', …)` αφαιρέθηκε → μηδέν διπλότυπο).
-    - `useGripDimAnnotation`: NEW wall branch — `wallGripKind` στο gate + `paintWallGripHud` που παράγει live
-      params μέσω του κοινού `applyWallGripDrag` (ίδιος μετασχηματισμός με το grip ghost → preview ≡ HUD),
-      μετά `buildSegmentHudMeta` + `paintWallHud` + `buildWallHudSpecLabel`. **Ο ΙΔΙΟΣ ακριβώς κώδικας** με τη
-      σχεδίαση — ίδια νούμερα/painters/οπτική γλώσσα. ΟΧΙ pill (το HUD τοποθετείται στον άξονα του τοίχου).
+    - `useGripGhostPreview`: το Wall HUD ζωγραφίζεται στο **ΙΔΙΟ RAF/frame με το grip ghost**, ΑΜΕΣΩΣ μετά το
+      `drawRealEntityPreview` του ghost, από το live `transformed` wall entity → `buildSegmentHudMeta` +
+      `paintWallHud` + `buildWallHudSpecLabel`. **Ο ΙΔΙΟΣ ακριβώς κώδικας/painters** με τη σχεδίαση. ΟΧΙ pill
+      (το HUD τοποθετείται στον άξονα του τοίχου).
+  - **Γιατί ΟΧΙ ξεχωριστό leaf (flicker fix — Giorgio «τρεμοπαίζουν, δεν μένουν σταθερές»)**: αρχικά μπήκε στο
+    `useGripDimAnnotation` (ξεχωριστό RAF leaf, `skip-clear`). Το ghost leaf (`useGripGhostPreview`, `on-gate-exit`)
+    κάνει **clear κάθε frame**· τα δύο leaves είναι **ανεξάρτητα RAF-coalesced throttles** με ξεχωριστά
+    frame-windows → σε κάποια frames το ghost έκανε clear χωρίς να ξανατρέξει το dim leaf → οι ενδείξεις
+    έσβηναν στιγμιαία. Η μεταφορά στο ΙΔΙΟ draw callback του ghost (ένα RAF, ένα clear, ντετερμινιστική σειρά)
+    εξαλείφει το race εξ ορισμού. (Το `useGripDimAnnotation` έμεινε ως έχει για τα pills κολόνας/δοκαριού/πεδίλου.)
   - **Εύρος**: εμφανίζεται σε λαβές που αλλάζουν διαστάσεις (start/end/thickness/corner/curve/vertex).
     Εξαιρούνται `wall-midpoint` (καθαρή μετακίνηση) & `wall-rotation` (έχει ήδη ένδειξη φοράς ADR-397 §15) μέσω
-    `WALL_HUD_SKIP`. Layer: ο ΙΔΙΟΣ PreviewCanvas, `clearMode:'skip-clear'` (πάνω από το grip ghost, ADR-040 leaf).
+    `WALL_HUD_SKIP`. Layer: ο ΙΔΙΟΣ PreviewCanvas (πάνω από το ghost, ADR-040 leaf).
   - **Tests**: κανένα νέο — thin glue πάνω σε ήδη-δοκιμασμένα SSoT (`buildSegmentHudMeta`, `applyWallGripDrag`,
     `paintWallHud`/`paintWallHudCore` — `wall-hud-paint-projector.test.ts` πράσινο). Δεν υπάρχει test harness για
     canvas/i18n hooks· αποφεύχθηκε τεχνητό mock. 🔴 browser-verify.
