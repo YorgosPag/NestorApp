@@ -36,14 +36,20 @@ function quantize(coord: number, gridMm: number): number {
   return snapToGrid({ x: coord, y: coord }, gridMm).x;
 }
 
-interface CoordSource {
+export interface CoordSource {
   readonly coord: number;
   readonly id: string;
   readonly edge: AutoDimEdge;
 }
 
-/** Dedup by quantized coord (first non-empty source wins), sorted ascending. */
-function dedupSorted(points: readonly ReferencePoint[]): CoordSource[] {
+/**
+ * Dedup by quantized coord (first non-empty source wins), sorted ascending.
+ * Accepts any point exposing `coord`/`sourceEntityId`/`edge` — so both the
+ * perimeter tier buckets and the Φ3 interior planner reuse the same quantizer.
+ */
+export function dedupSorted(
+  points: readonly Pick<ReferencePoint, 'coord' | 'sourceEntityId' | 'edge'>[],
+): CoordSource[] {
   const byCoord = new Map<number, CoordSource>();
   for (const p of points) {
     const q = quantize(p.coord, DEDUP_GRID_MM);
@@ -118,6 +124,7 @@ export function planChains(
       if (b.coord - a.coord < MIN_SEGMENT_MM) continue;
       const geom = buildSegmentGeometry(side, a.coord, b.coord, off, overall);
       segments.push({
+        axis: sideMeasuresX(side) ? 'x' : 'y',
         side,
         tier,
         defPoints: geom.defPoints,

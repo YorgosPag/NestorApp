@@ -47,6 +47,17 @@ describe('runAutoDimension', () => {
     expect(runAutoDimension([], AUTO_DIMENSION_DEFAULTS, CTX)).toEqual([]);
   });
 
+  it('Φ3 — adds interior chains only when interior is enabled', () => {
+    const perimeterOnly = runAutoDimension([c1, c2], AUTO_DIMENSION_DEFAULTS, CTX);
+    const withInterior = runAutoDimension(
+      [c1, c2],
+      { ...AUTO_DIMENSION_DEFAULTS, interior: true },
+      CTX,
+    );
+    // c1/c2 differ on X only → one extra interior horizontal (X) chain segment.
+    expect(withInterior.length).toBe(perimeterOnly.length + 1);
+  });
+
   it('keeps valid dimensions when the geometry-builder sanity check runs (real style)', () => {
     // The command flow passes a resolved style → factory runs buildDimensionGeometry.
     // Guard against it silently dropping every (valid) segment.

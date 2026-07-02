@@ -66,6 +66,13 @@ export interface AutoDimensionOptions {
   readonly referenceBasis: AutoDimReferenceBasis;
   /** Include opening (door/window) centers in the `detail` tier. */
   readonly includeOpenings: boolean;
+  /**
+   * Φ3 — also place two orthogonal INTERIOR chains (one horizontal measuring X,
+   * one vertical measuring Y) running through the plan centroid, dimensioning
+   * the structural grid (ArchiCAD "Interior Dimensioning", auto cut-line at
+   * center). Opt-in: default off keeps the perimeter-only output.
+   */
+  readonly interior: boolean;
   /** Perpendicular distance (mm) between adjacent chains — mirrors DIMDLI. */
   readonly distanceBetweenLines: number;
   /** Perpendicular distance (mm) from the model edge to the first (detail) chain. */
@@ -78,6 +85,7 @@ export const AUTO_DIMENSION_DEFAULTS: AutoDimensionOptions = {
   sides: { south: true, north: true, west: true, east: true },
   referenceBasis: 'smart',
   includeOpenings: true,
+  interior: false,
   distanceBetweenLines: 400,
   offsetFromModel: 600,
 };
@@ -111,8 +119,17 @@ export interface ReferencePoint {
  * entity factory.
  */
 export interface PlannedSegment {
-  readonly side: AutoDimSide;
-  readonly tier: AutoDimTier;
+  /**
+   * The world axis this segment measures — SSoT for the `bimExtent`
+   * associativity re-projection (X for horizontal chains, Y for vertical).
+   * Set by both the perimeter chain-planner and the Φ3 interior planner so the
+   * factory never has to infer it from `side` (interior segments have no side).
+   */
+  readonly axis: 'x' | 'y';
+  /** Perimeter-only metadata (which of the 4 sides). Absent for interior chains. */
+  readonly side?: AutoDimSide;
+  /** Perimeter-only metadata (which of the 3 tiers). Absent for interior chains. */
+  readonly tier?: AutoDimTier;
   /** [extOrigin1, extOrigin2, dimLineRef] — LinearDimensionEntity.defPoints. */
   readonly defPoints: readonly [Point2D, Point2D, Point2D];
   /** Dim line angle in degrees (0 = horizontal N/S, 90 = vertical E/W). */

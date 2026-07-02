@@ -287,6 +287,7 @@
       "basisFaces": "Faces",
       "basisAxes": "Axes / centers",
       "includeOpenings": "Include openings (centers)",
+      "interior": "Interior dimensions (grid)",
       "distance": "Distance between rows (mm)",
       "apply": "Apply",
       "cancel": "Cancel"

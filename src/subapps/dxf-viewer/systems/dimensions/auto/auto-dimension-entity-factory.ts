@@ -23,7 +23,7 @@ import type {
   LinearDimensionEntity,
 } from '../../../types/dimension';
 import { buildDimensionGeometry } from '../dim-geometry-builder';
-import { sideMeasuresX, type PlannedSegment } from './auto-dimension-types';
+import type { PlannedSegment } from './auto-dimension-types';
 
 /** Everything the factory needs that isn't derivable from a segment. */
 export interface AutoDimensionFactoryContext {
@@ -36,9 +36,10 @@ export interface AutoDimensionFactoryContext {
 }
 
 function associationsFor(seg: PlannedSegment): DimensionAssociation[] | undefined {
-  // Φ2 — the parent dim measures X on N/S sides, Y on E/W sides; each anchored
-  // def point rides its host's bbox `edge` on that axis (follow-on-move).
-  const axis: 'x' | 'y' = sideMeasuresX(seg.side) ? 'x' : 'y';
+  // Φ2/Φ3 — each anchored def point rides its host's bbox `edge` on the
+  // segment's measured axis (follow-on-move). `seg.axis` is the SSoT, set by
+  // both the perimeter chain-planner and the interior planner.
+  const axis = seg.axis;
   const out: DimensionAssociation[] = [];
   if (seg.source1) {
     out.push({ defPointIndex: 0, geometryId: seg.source1.id, associationType: 'bimExtent', bimAnchor: { axis, edge: seg.source1.edge } });

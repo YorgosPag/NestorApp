@@ -140,6 +140,15 @@ export const AutoDimensionOptionsDialog: React.FC = () => {
           </label>
 
           <label>
+            <input
+              type="checkbox"
+              checked={options.interior}
+              onChange={(e) => setOptions((o) => ({ ...o, interior: e.target.checked }))}
+            />
+            {t('autoDimension.dialog.interior')}
+          </label>
+
+          <label>
             {t('autoDimension.dialog.distance')}
             <input
               type="number"

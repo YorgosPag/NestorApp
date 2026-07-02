@@ -17,6 +17,7 @@ import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 import { unionBounds, type Bounds } from '../../zoom/utils/bounds';
 import { extractReferencePoints } from './auto-dimension-reference-extraction';
 import { planChains } from './auto-dimension-chain-planner';
+import { planInteriorChains } from './auto-dimension-interior-planner';
 import {
   buildAutoDimensionEntities,
   type AutoDimensionFactoryContext,
@@ -53,6 +54,9 @@ export function runAutoDimension(
   const overall = computeOverallBounds(elements);
   if (!overall) return [];
   const refs = extractReferencePoints(elements, options, overall);
-  const segments = planChains(refs, overall, options);
-  return buildAutoDimensionEntities(segments, ctx);
+  const perimeter = planChains(refs, overall, options);
+  const interior = options.interior
+    ? planInteriorChains(elements, options, overall)
+    : [];
+  return buildAutoDimensionEntities([...perimeter, ...interior], ctx);
 }

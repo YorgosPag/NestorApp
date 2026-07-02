@@ -35,30 +35,35 @@ import {
 } from './auto-dimension-types';
 
 /** Coarse element class driving reference selection. */
-type ElementClass = 'wall' | 'structural' | 'opening';
+export type ElementClass = 'wall' | 'structural' | 'opening';
 
-function classifyElement(e: Entity): ElementClass | null {
+export function classifyElement(e: Entity): ElementClass | null {
   if (isWallEntity(e)) return 'wall';
   if (isColumnEntity(e) || isFoundationEntity(e) || isBeamEntity(e)) return 'structural';
   if (isOpeningEntity(e)) return 'opening';
   return null;
 }
 
-/** Projection of a 2D AABB onto a side's measured axis (X for N/S, Y for E/W). */
-interface AxisProjection {
+/** Projection of a 2D AABB onto a measured axis (X for N/S, Y for E/W). */
+export interface AxisProjection {
   readonly lo: number;
   readonly hi: number;
   readonly center: number;
 }
 
-function projectOntoSideAxis(bounds: Bounds2D, side: AutoDimSide): AxisProjection {
-  const lo = sideMeasuresX(side) ? bounds.min.x : bounds.min.y;
-  const hi = sideMeasuresX(side) ? bounds.max.x : bounds.max.y;
+/** Project a 2D AABB onto one world axis (`measuresX` → X, else Y). */
+export function projectBoundsOntoAxis(bounds: Bounds2D, measuresX: boolean): AxisProjection {
+  const lo = measuresX ? bounds.min.x : bounds.min.y;
+  const hi = measuresX ? bounds.max.x : bounds.max.y;
   return { lo, hi, center: (lo + hi) / 2 };
 }
 
+function projectOntoSideAxis(bounds: Bounds2D, side: AutoDimSide): AxisProjection {
+  return projectBoundsOntoAxis(bounds, sideMeasuresX(side));
+}
+
 /** Detail-tier coordinates for one element (edges vs center per reference basis). */
-function detailCoordsFor(
+export function detailCoordsFor(
   cls: ElementClass,
   proj: AxisProjection,
   basis: AutoDimensionOptions['referenceBasis'],

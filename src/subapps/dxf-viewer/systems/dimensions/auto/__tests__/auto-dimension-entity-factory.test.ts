@@ -7,6 +7,7 @@ import type { PlannedSegment } from '../auto-dimension-types';
 
 function seg(overrides: Partial<PlannedSegment> = {}): PlannedSegment {
   return {
+    axis: 'x',
     side: 'south',
     tier: 'detail',
     defPoints: [
@@ -39,7 +40,7 @@ describe('buildAutoDimensionEntities', () => {
     ]);
   });
 
-  it('maps sources to per-def-point bimExtent associations (axis from side)', () => {
+  it('maps sources to per-def-point bimExtent associations on the segment axis', () => {
     const [dim] = buildAutoDimensionEntities([seg()], CTX);
     expect(dim.associations).toEqual([
       { defPointIndex: 0, geometryId: 'wallA', associationType: 'bimExtent', bimAnchor: { axis: 'x', edge: 'min' } },
@@ -47,8 +48,8 @@ describe('buildAutoDimensionEntities', () => {
     ]);
   });
 
-  it('uses the Y axis for E/W (vertical) chains', () => {
-    const [dim] = buildAutoDimensionEntities([seg({ side: 'west' })], CTX);
+  it('uses the Y axis for vertical chains (seg.axis SSoT)', () => {
+    const [dim] = buildAutoDimensionEntities([seg({ axis: 'y', side: 'west' })], CTX);
     expect(dim.associations?.[0].bimAnchor?.axis).toBe('y');
   });
 
