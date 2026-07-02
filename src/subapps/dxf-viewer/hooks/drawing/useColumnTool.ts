@@ -307,7 +307,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       }
       // ADR-419 — in-region: 4 κλικ σε γραμμές / 1 κλικ μέσα → ColumnEntity ανά ορθογώνιο.
       if (s.placementMode === 'in-region') {
-        return onRegionClick(s, point);
+        const handled = onRegionClick(s, point); // rectangle-first (μηδέν regression)
+        if (handled) return true;
+        // ADR-419 §non-rectangular — «Κολώνα μέσα σε περιοχή»: αν ΔΕΝ βρεθεί ορθογώνιο,
+        // fallback σε αυθαίρετο κλειστό περίγραμμα (Γ/L/T/composite) μέσω του ΙΔΙΟΥ
+        // loop-detector που ήδη τροφοδοτεί το hover-preview (`pickRegionPerimeterAt`) →
+        // preview ≡ commit. ΜΟΝΟ για 'inside' (click-inside)· 'lines'=accumulation, 'box'=drag.
+        if (s.regionMethod === 'inside') return onPerimeterClick(point);
+        return false;
       }
       // ADR-508 §column place+rotate / ADR-398 §3.10b — freehand 1ο κλικ (awaitingPosition):
       if (s.phase === 'awaitingPosition') {

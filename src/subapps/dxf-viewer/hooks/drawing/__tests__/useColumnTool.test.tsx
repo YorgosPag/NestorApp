@@ -18,6 +18,8 @@ import {
   ANCHOR_CYCLE_ORDER,
   type ColumnEntity,
 } from '../../../bim/types/column-types';
+import type { Point2D } from '../../../rendering/types/Types';
+import type { Entity, LWPolylineEntity } from '../../../types/entities';
 
 describe('useColumnTool', () => {
   it('initial state is idle until activated', () => {
@@ -111,4 +113,81 @@ describe('useColumnTool', () => {
     expect(result.current.getStatusText()).toBe('tools.column.statusPosition');
   });
 
+});
+
+// ADR-419 v1.5 — «Κολώνα μέσα σε περιοχή» (`column-region-inside`): click-inside σε
+// ΚΛΕΙΣΤΟ περίγραμμα. rectangle-first (findEnclosingRectangle)· αν ΔΕΝ βρεθεί ορθογώνιο
+// (π.χ. «Γ» με κεκλιμένο σκέλος / αμβλεία γωνία) → fallback στο ΙΔΙΟ loop-detector που
+// τροφοδοτεί το hover-preview (`pickRegionPerimeterAt`) → composite ColumnEntity (preview≡commit).
+describe('useColumnTool — in-region/inside non-rectangular fallback (ADR-419 v1.5)', () => {
+  const lwPolyline = (id: string, verts: Point2D[]): LWPolylineEntity =>
+    ({ id, type: 'lwpolyline', layerId: 'lyr', vertices: verts, closed: true } as LWPolylineEntity);
+
+  // Γ με ΚΕΚΛΙΜΕΝΟ κάθετο σκέλος (μη-κάθετες γωνίες → όχι ορθογώνιο) — το use-case του Giorgio.
+  const OBTUSE_L: Point2D[] = [
+    { x: 0, y: 0 },
+    { x: 3000, y: 0 },
+    { x: 3000, y: 300 },
+    { x: 800, y: 300 },
+    { x: 300, y: 3000 },
+    { x: 0, y: 3000 },
+  ];
+
+  // Απλό ορθογώνιο 1000×800 (aspect 1.25 → rectangular, υπάρχουσα συμπεριφορά).
+  const RECT: Point2D[] = [
+    { x: 0, y: 0 },
+    { x: 1000, y: 0 },
+    { x: 1000, y: 800 },
+    { x: 0, y: 800 },
+  ];
+
+  const renderInRegionInside = (entities: Entity[]) => {
+    const onColumnsCreated = jest.fn<void, [readonly ColumnEntity[]]>();
+    const hook = renderHook(() =>
+      useColumnTool({
+        onColumnsCreated,
+        getSceneUnits: () => 'mm',
+        getSceneEntities: () => entities,
+      }),
+    );
+    act(() => hook.result.current.activate());
+    act(() => hook.result.current.setPlacementMode('in-region'));
+    act(() => hook.result.current.setRegionMethod('inside'));
+    return { ...hook, onColumnsCreated };
+  };
+
+  it('click μέσα σε «Γ» (αμβλεία γωνία, ΟΧΙ ορθογώνιο) → ΕΝΑ composite ColumnEntity', () => {
+    const { result, onColumnsCreated } = renderInRegionInside([lwPolyline('L', OBTUSE_L)]);
+    let handled = false;
+    act(() => {
+      handled = result.current.onCanvasClick({ x: 150, y: 150 }); // εντός της γωνίας του Γ
+    });
+    expect(handled).toBe(true);
+    expect(onColumnsCreated).toHaveBeenCalledTimes(1);
+    const built = onColumnsCreated.mock.calls[0][0];
+    expect(built).toHaveLength(1);
+    expect(built[0].type).toBe('column');
+    expect(built[0].params.kind).toBe('composite');
+  });
+
+  it('click μέσα σε ορθογώνιο → rectangular (rectangle-first, καμία regression)', () => {
+    const { result, onColumnsCreated } = renderInRegionInside([lwPolyline('R', RECT)]);
+    act(() => {
+      result.current.onCanvasClick({ x: 500, y: 400 });
+    });
+    expect(onColumnsCreated).toHaveBeenCalledTimes(1);
+    const built = onColumnsCreated.mock.calls[0][0];
+    expect(built).toHaveLength(1);
+    expect(built[0].params.kind).toBe('rectangular');
+  });
+
+  it('click σε κενό χώρο (κανένα περίγραμμα) → no-op, καμία κολώνα', () => {
+    const { result, onColumnsCreated } = renderInRegionInside([lwPolyline('L', OBTUSE_L)]);
+    let handled = true;
+    act(() => {
+      handled = result.current.onCanvasClick({ x: 50000, y: 50000 }); // μακριά, εκτός loop
+    });
+    expect(handled).toBe(false);
+    expect(onColumnsCreated).not.toHaveBeenCalled();
+  });
 });
