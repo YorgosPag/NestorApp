@@ -8,15 +8,17 @@
  */
 
 import type { SceneModel } from '../../types/entities';
-import { isBeamEntity, isSlabEntity, isRoofEntity, isColumnEntity } from '../../types/entities';
+import { isBeamEntity, isSlabEntity, isRoofEntity, isColumnEntity, isWallEntity } from '../../types/entities';
 import type { WallEntity, WallGeometry } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import {
   computeWallGeometry,
   buildWallFootprintRing,
   type OpeningFootprintForDeduction,
 } from '../../bim/geometry/wall-geometry';
 import { computeMemberCutbackRetentionRatio } from '../../bim/geometry/member-column-cutback';
+import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
 import {
   resolveWallTopProfile,
   type WallTopProfile,
@@ -86,29 +88,51 @@ function resolveAttachedWallProfiles(
 }
 
 /**
- * ADR-458 — NET στατικός όγκος τοίχου (Revit «Join Geometry», «η κολόνα νικάει»): όταν
- * κολόνα κάθεται μέσα/πάνω στον τοίχο, ο κόμβος ανήκει στην κολόνα και μετριέται ΜΙΑ
- * φορά — αλλιώς διπλομέτρηση μπετόν. Mirror του `beamNetCoreGeometry`, αλλά με **retention
- * ratio** (net/gross plan footprint) αντί απόλυτο net area: το `area` του τοίχου είναι FACE
- * area (μήκος×ύψος), όχι plan → ο λόγος (unit-independent) συνθέτει καθαρά πάνω σε ό,τι net
- * έχει ήδη προκύψει από openings/attached profiles.
- *
- * DERIVED από τα live column footprints (ίδιο SSoT με 2Δ/3Δ). Καμία τομή → passthrough
- * (byte-for-byte gross). v1 απλοποίηση (mirror beam): θεωρεί κατακόρυφη επικάλυψη = ύψος
- * τοίχου (κολόνα πλήρους ορόφου — η τυπική περίπτωση)· μερική-ύψους κολόνα = DEFER.
+ * Winner-wall cutters for THIS wall at cross junctions (ADR-458 wall↔wall extension). Builds the
+ * cross inputs for `entity` + every other straight wall in the scene, runs the priority resolver,
+ * and returns the plan footprints of the walls that CROSS `entity` and WIN (→ they cut its net
+ * volume). `[]` when `entity` is a winner / uncrossed. `entityRing` = this wall's gross footprint.
  */
-function wallNetCoreGeometry(geometry: WallGeometry, scene: SceneModel | null): WallGeometry {
+function wallCrossCuttersFor(
+  entity: WallEntity,
+  entityRing: readonly Pt2[],
+  scene: SceneModel,
+): Pt2[][] {
+  const inputs: WallCrossInput[] = [{ id: entity.id, params: entity.params, footprint: entityRing }];
+  for (const e of scene.entities) {
+    if (e.id === entity.id || !isWallEntity(e) || e.kind !== 'straight' || !e.geometry) continue;
+    const r = buildWallFootprintRing(e.geometry.outerEdge.points, e.geometry.innerEdge.points);
+    if (r.length >= 3) inputs.push({ id: e.id, params: e.params, footprint: r });
+  }
+  return computeWallCrossCutters(inputs).get(entity.id) ?? [];
+}
+
+/**
+ * ADR-458 — NET στατικός όγκος τοίχου (Revit «Join Geometry»): όταν κολόνα Ή τοίχος-νικητής (cross)
+ * τέμνει τον τοίχο, ο κοινός όγκος μετριέται ΜΙΑ φορά — αλλιώς διπλομέτρηση μπετόν/τοιχοποιίας.
+ * Mirror του `beamNetCoreGeometry`, αλλά με **retention ratio** (net/gross plan footprint) αντί
+ * απόλυτο net area: το `area` του τοίχου είναι FACE area (μήκος×ύψος), όχι plan → ο λόγος
+ * (unit-independent) συνθέτει καθαρά πάνω σε ό,τι net έχει ήδη προκύψει από openings/attached.
+ *
+ * Cutters = κολόνες (η κολόνα πάντα νικάει) **+** τοίχοι υψηλότερης προτεραιότητας που τον
+ * διασταυρώνουν σε Χ (`wall-cross-cutback`). Ένα combined boolean difference → η επικάλυψη
+ * μετριέται μία φορά ανεξάρτητα από το πλήθος cutters. DERIVED (ίδιο SSoT με 2Δ/3Δ), καμία τομή →
+ * passthrough (byte-for-byte gross). v1 (mirror beam): κατακόρυφη επικάλυψη = ύψος τοίχου.
+ */
+function wallNetCoreGeometry(entity: WallEntity, geometry: WallGeometry, scene: SceneModel | null): WallGeometry {
   if (!scene) return geometry;
+  const ring = buildWallFootprintRing(geometry.outerEdge.points, geometry.innerEdge.points);
+  if (ring.length < 3) return geometry;
+
   const columnFootprints = scene.entities
     .filter(isColumnEntity)
     .map((c) => c.geometry?.footprint?.vertices)
     .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
     .map((f) => f.map((v) => ({ x: v.x, y: v.y })));
-  if (columnFootprints.length === 0) return geometry;
+  const cutters: Pt2[][] = [...columnFootprints, ...wallCrossCuttersFor(entity, ring, scene)];
+  if (cutters.length === 0) return geometry;
 
-  const ring = buildWallFootprintRing(geometry.outerEdge.points, geometry.innerEdge.points);
-  if (ring.length < 3) return geometry;
-  const ratio = computeMemberCutbackRetentionRatio(ring, columnFootprints);
+  const ratio = computeMemberCutbackRetentionRatio(ring, cutters);
   if (ratio === null) return geometry;
   return { ...geometry, area: geometry.area * ratio, volume: geometry.volume * ratio };
 }
@@ -117,8 +141,9 @@ function wallNetCoreGeometry(geometry: WallGeometry, scene: SceneModel | null): 
  * Build the BOQ-feed entity for a wall with net geometry (gross − openings − columns).
  * Geometry recomputed when openings exist **or** the wall is `attached`
  * (ADR-401 B3a/(γ) — profile-aware gross area/volume με top − base)· otherwise
- * reuse the entity's own (gross/flat) geometry. Τέλος εφαρμόζεται το ADR-458 column
- * cutback (net volume, «η κολόνα νικάει») — identity fast-path όταν καμία κολόνα δεν τέμνει.
+ * reuse the entity's own (gross/flat) geometry. Τέλος εφαρμόζεται το ADR-458 cutback (net volume):
+ * κολόνες («η κολόνα νικάει») + τοίχοι-νικητές σε διασταύρωση Χ (priority) — identity fast-path
+ * όταν τίποτα δεν τέμνει τον τοίχο.
  */
 export function wallBoqEntity(entity: WallEntity, scene: SceneModel | null): BimEntityForBoq {
   const openings = collectWallOpenings(scene, entity.id);
@@ -126,7 +151,7 @@ export function wallBoqEntity(entity: WallEntity, scene: SceneModel | null): Bim
   const grossGeometry = openings.length > 0 || top !== null || base !== null
     ? computeWallGeometry(entity.params, entity.kind, openings, top ?? undefined, base ?? undefined)
     : entity.geometry;
-  const geometry = wallNetCoreGeometry(grossGeometry, scene);
+  const geometry = wallNetCoreGeometry(entity, grossGeometry, scene);
   return {
     id: entity.id,
     kind: entity.kind,

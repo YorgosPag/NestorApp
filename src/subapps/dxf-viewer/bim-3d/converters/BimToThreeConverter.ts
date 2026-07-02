@@ -334,11 +334,11 @@ function buildWallCoreBody(
     if (mesh) applyWallTilt(mesh.geometry, renderWall.params);
     return mesh;
   }
-  // ADR-458 — wall-to-column cutback (Revit join, «η κολόνα νικάει»): κόβει το footprint του
-  // τοίχου στις παρειές των κολωνών που το τέμνουν → πραγματική τομή 3Δ (ο τοίχος τελειώνει
-  // στην παρειά, μηδέν εμβύθιση στο σώμα της κολόνας), parity με 2Δ κάτοψη + BOQ. DERIVED
-  // (ποτέ persisted). `null` → ίσιο single-shape extrude (byte-for-byte, zero regression).
-  // `[]` → τοίχος εξ ολοκλήρου μέσα σε κολόνα → δεν σχεδιάζεται. Πολλά κομμάτια → ΕΝΑ geometry.
+  // ADR-458 — cutback (Revit join): κόβει το footprint του τοίχου στους cutters που το τέμνουν
+  // → πραγματική τομή 3Δ, parity με 2Δ κάτοψη + BOQ. Cutters = κολόνες («η κολόνα νικάει») +
+  // τοίχοι-νικητές σε διασταύρωση Χ (priority, wall↔wall extension). DERIVED (ποτέ persisted).
+  // `null` → ίσιο single-shape extrude (byte-for-byte, zero regression). `[]` → τοίχος εξ
+  // ολοκλήρου μέσα σε cutter → δεν σχεδιάζεται. Πολλά κομμάτια → ΕΝΑ geometry.
   const ring = buildWallFootprintRing(outer, inner);
   const trimmed = columnFootprintsM.length > 0 && ring.length >= 3
     ? computeMemberCutbackOutline(ring, columnFootprintsM)
@@ -373,6 +373,7 @@ export function wallToMesh(
   topClip?: WallTopClipContext,
   nominalHeightMm?: number,
   columns: readonly (readonly Point3D[])[] = [],
+  wallCrossFootprints: readonly (readonly Point3D[])[] = [],
 ): THREE.Object3D | null {
   // ADR-448 Phase 1b — when `topBinding='storey-ceiling'` resolves a real storey
   // ceiling, render at that height (Revit «Top: Up to Level»). Stored `params.height`
@@ -463,16 +464,22 @@ export function wallToMesh(
   // ADR-462 — outer/inner edge points (canvas units) → world metres.
   const outerScaled = scalePoints(renderWall.geometry.outerEdge.points, sceneToM);
   const innerScaled = scalePoints(renderWall.geometry.innerEdge.points, sceneToM);
-  // ADR-458 — column footprints (canvas units) → world metres με ΤΟ ΙΔΙΟ sceneToM (κοινός
-  // χώρος μέτρων με το wall ring), για την πραγματική τομή 3Δ στον flat solid path.
-  const columnFootprintsM = columns
-    .filter((c) => c.length >= 3)
-    .map((c) => scalePoints(c, sceneToM).map((p) => ({ x: p.x, y: p.y })));
+  // ADR-458 — cutter footprints (canvas units) → world metres με ΤΟ ΙΔΙΟ sceneToM (κοινός
+  // χώρος μέτρων με το wall ring), για την πραγματική τομή 3Δ στον flat solid path. Cutters =
+  // κολόνες («η κολόνα νικάει») + τοίχοι-νικητές σε διασταύρωση Χ (priority, wall↔wall extension).
+  // Τα cross footprints ΔΕΝ μπαίνουν στο `columns` (το pullback είναι column-specific).
+  const scaleFootprints = (fps: readonly (readonly Point3D[])[]): { x: number; y: number }[][] =>
+    fps.filter((c) => c.length >= 3).map((c) => scalePoints(c, sceneToM).map((p) => ({ x: p.x, y: p.y })));
+  const columnFootprintsM = scaleFootprints(columns);
+  const crossFootprintsM = scaleFootprints(wallCrossFootprints);
+  const cutterFootprintsM = crossFootprintsM.length > 0
+    ? [...columnFootprintsM, ...crossFootprintsM]
+    : columnFootprintsM;
   // ADR-539 Φ3c — faced (per-face paint) core when painted/targeted, else legacy extrude
   // (ADR-413 UVs + ADR-404 tilt baked inside the helper). Same [0, height] span → same position.y.
   const mesh = buildWallCoreBody(
     wall, renderWall, outerScaled, innerScaled, renderWall.params.height * MM_TO_M, material,
-    columnFootprintsM,
+    cutterFootprintsM,
   );
   if (!mesh) return null;
   // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the

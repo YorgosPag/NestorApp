@@ -2396,6 +2396,14 @@
             "butt": "Butt",
             "square": "Square",
             "disallow": "Disallow"
+          },
+          "priority": "Join Priority",
+          "priorityMode": {
+            "auto": "Auto (by category)",
+            "low": "Low",
+            "medium": "Medium",
+            "high": "High",
+            "highest": "Highest"
           }
         }
       },

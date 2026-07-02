@@ -54,6 +54,9 @@ export const WallCategorySchema = z.enum([
   'fence',
 ]);
 
+/** ADR-363 Phase 1L-J — explicit per-endpoint join override (mirror `WallJoinMode`). */
+export const WallJoinModeSchema = z.enum(['auto', 'miter', 'butt', 'square', 'disallow']);
+
 // ─── IfcType narrowed for Wall ──────────────────────────────────────────────
 
 /** Wall-specific IFC4 classes (subset of IfcEntityType). */
@@ -84,6 +87,11 @@ const WallParamsBaseSchema = z
     dna: z.unknown().optional(),
     startBevel: z.number().min(0).optional(),
     endBevel: z.number().min(0).optional(),
+    // ─── ADR-363 Phase 1L-J — explicit join overrides (were missing from Zod) ──
+    startJoin: WallJoinModeSchema.optional(),
+    endJoin: WallJoinModeSchema.optional(),
+    // ─── ADR-458 (wall↔wall cross) — join priority (higher wins at X-crossings) ─
+    joinPriority: z.number().finite().optional(),
     polylineVertices: z.array(Point3DSchema).optional(),
     curveControl: Point3DSchema.optional(),
     material: z.string().min(1).optional(),

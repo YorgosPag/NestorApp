@@ -85,6 +85,22 @@ export interface WallTilt {
  */
 export type WallJoinMode = 'auto' | 'miter' | 'butt' | 'square' | 'disallow';
 
+/**
+ * ADR-458 (wall↔wall cross extension) — Wall join PRIORITY (Revit «structural priority» /
+ * ArchiCAD building-material priority). At a CROSS junction (two walls passing through each
+ * other → body-body overlap in the middle) the HIGHER-priority wall WINS and stays whole; the
+ * lower one is CUT at the overlap (net volume — the shared body counts once, belongs to the
+ * winner). Absent `WallParams.joinPriority` ⇒ this category default. Higher number wins; ties
+ * resolve deterministically (id tiebreak) so neither the plan nor the take-off flickers.
+ */
+export const WALL_JOIN_PRIORITY_BY_CATEGORY: Readonly<Record<WallCategory, number>> = {
+  exterior: 100,
+  interior: 80,
+  parapet: 60,
+  partition: 40,
+  fence: 20,
+};
+
 export interface WallParams {
   readonly category: WallCategory;
   /** Canvas world coordinates (DXF scene units). */
@@ -134,6 +150,13 @@ export interface WallParams {
   readonly startJoin?: WallJoinMode;
   /** ADR-363 Phase 1L-J — Explicit join override at the **end** endpoint. Absent ≡ `'auto'`. */
   readonly endJoin?: WallJoinMode;
+  /**
+   * ADR-458 (wall↔wall cross extension) — Join PRIORITY for CROSS junctions (Revit «structural
+   * priority»). At an X-crossing the higher-priority wall stays whole; the lower is cut at the
+   * overlap (net volume). Absent ⇒ category default (`WALL_JOIN_PRIORITY_BY_CATEGORY`). Higher
+   * wins; ties → deterministic id tiebreak. User-overridable via the wall properties panel.
+   */
+  readonly joinPriority?: number;
   /** Defined when `kind === 'polyline'`. mm. */
   readonly polylineVertices?: readonly Point3D[];
   /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */

@@ -18,6 +18,8 @@ import { isColumnTilted } from '../../bim/geometry/column-tilt';
 // ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο).
 import { ColumnBaseContinuityStore } from '../../bim/structural/organism/column-base-continuity-store';
 import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
+import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
+import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
 import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
 import type { BimCategory } from '../../config/bim-object-styles';
@@ -48,6 +50,17 @@ export function syncWalls(
   const columnFootprints = entities.columns
     .map((c) => c.geometry?.footprint?.vertices)
     .filter((v): v is readonly Point3D[] => !!v && v.length >= 3);
+
+  // ADR-458 (wall↔wall cross) — winner-wall cutters ανά τοίχο (priority): σε διασταύρωση Χ ο
+  // νικητής μένει ακέραιος, ο loser κόβεται στην τομή (πραγματικό notch 3Δ). Ένα O(n²) pass για
+  // όλους τους τοίχους· DERIVED, ίδιο SSoT με 2Δ/BOQ. Canvas units (scaled σε μέτρα στο wallToMesh).
+  const wallCrossInputs: WallCrossInput[] = [];
+  for (const w of entities.walls) {
+    if (w.kind !== 'straight' || !w.geometry) continue;
+    const ring = buildWallFootprintRing(w.geometry.outerEdge.points, w.geometry.innerEdge.points);
+    if (ring.length >= 3) wallCrossInputs.push({ id: w.id, params: w.params, footprint: ring });
+  }
+  const wallCrossCutterMap = computeWallCrossCutters(wallCrossInputs);
 
   for (const wall of entities.walls) {
     const r = resolveEntity(wall, 'wall', ctx);
@@ -84,9 +97,11 @@ export function syncWalls(
     // Degenerate params (missing height/offset) → undefined → legacy fallback.
     const rawWallTop = resolveWallNominalTopZmm(wall.params, topBase) - resolveWallBaseZmm(wall.params, topBase);
     const nominalHeightMm = Number.isFinite(rawWallTop) ? rawWallTop : undefined;
+    const wallCrossFootprints = (wallCrossCutterMap.get(wall.id) ?? [])
+      .map((r2) => r2.map((p) => ({ x: p.x, y: p.y, z: 0 })));
     const mesh = wallToMesh(
       wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile, topClip, nominalHeightMm,
-      columnFootprints,
+      columnFootprints, wallCrossFootprints,
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

@@ -41,6 +41,23 @@ import { emitBimEntityParamsUpdated } from '../../../systems/events/emit-bim-ent
 
 const JOIN_MODES: readonly WallJoinMode[] = ['auto', 'miter', 'butt', 'square', 'disallow'] as const;
 
+/**
+ * ADR-458 (wall↔wall cross) — join-priority presets. `undefined` = «auto» (category default,
+ * `WALL_JOIN_PRIORITY_BY_CATEGORY`). Higher wins at an X-crossing: the winner stays whole, the
+ * loser is cut at the overlap (net volume). Values mirror the category scale.
+ */
+const PRIORITY_OPTIONS: readonly { readonly key: string; readonly value: number | undefined }[] = [
+  { key: 'auto', value: undefined },
+  { key: 'low', value: 20 },
+  { key: 'medium', value: 40 },
+  { key: 'high', value: 80 },
+  { key: 'highest', value: 100 },
+] as const;
+
+function priorityOptionKey(joinPriority: number | undefined): string {
+  return PRIORITY_OPTIONS.find((o) => o.value === joinPriority)?.key ?? 'auto';
+}
+
 export function RibbonWallJoinWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const levelManager = useLevels();
@@ -72,6 +89,18 @@ export function RibbonWallJoinWidget(): React.JSX.Element | null {
     [wall, dispatchPatch],
   );
 
+  const setPriority = useCallback(
+    (key: string) => {
+      if (!wall) return;
+      const value = PRIORITY_OPTIONS.find((o) => o.key === key)?.value;
+      // joinPriority steers ONLY the cross cutback (DERIVED at scene time) — no persisted
+      // miter/bevel to clear. The emit re-derives the plan/3D/BOQ net geometry.
+      dispatchPatch(wall, { joinPriority: value });
+      emitBimEntityParamsUpdated('wall', wall.id);
+    },
+    [wall, dispatchPatch],
+  );
+
   // Joins are only meaningful for straight walls (the only kind computeWallTrims processes).
   if (!wall || wall.kind !== 'straight') return null;
 
@@ -92,6 +121,21 @@ export function RibbonWallJoinWidget(): React.JSX.Element | null {
         onChange={(m) => setJoin('end', m)}
         t={t}
       />
+      <span className="flex items-center gap-1">
+        <span className="dxf-ribbon-combobox-label">{t('ribbon.commands.wallEditor.join.priority')}</span>
+        <Select value={priorityOptionKey(wall.params.joinPriority)} onValueChange={setPriority}>
+          <SelectTrigger size="sm" aria-label={t('ribbon.commands.wallEditor.join.priority')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-auto min-w-[9rem]">
+            {PRIORITY_OPTIONS.map((o) => (
+              <SelectItem key={o.key} value={o.key} className="whitespace-nowrap">
+                {t(`ribbon.commands.wallEditor.join.priorityMode.${o.key}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </span>
     </span>
   );
 }
