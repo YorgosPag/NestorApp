@@ -26,6 +26,7 @@ import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-ty
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   computeCircuitWirePaths,
@@ -140,14 +141,18 @@ export function HomeRunWiresOverlay({
   const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const {
       scene: s, viewport: vp, systems: sys, visible: vis,
       gripDragPreview: drag, selectedSystemIds: selectedIds, waypointHover: hover, colorBySystem: colorOn,
     } = drawStateRef.current;
+
+    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store via the shared primitive (before:
+    // `width={viewport.width}` JSX attribute, NO dpr → blurry + inconsistent buffer with siblings).
+    // ctx is DPR-scaled → the MepWireRenderer draws stay in CSS/world coords unchanged.
+    const ctx = CanvasUtils.sizeCanvasToViewport(canvas, vp);
+    if (!ctx) return;
+    ctx.clearRect(0, 0, vp.width, vp.height);
 
     // ADR-408 Φ7 perf guard: skip the (non-trivial) routing recompute + draw when the
     // overlay canvas has no usable size (idle 0×0 viewport / collapsed shell).
@@ -202,9 +207,7 @@ export function HomeRunWiresOverlay({
     <canvas
       ref={canvasRef}
       data-dxf-overlay="mep-wires"
-      width={viewport.width}
-      height={viewport.height}
-      className="pointer-events-none absolute inset-0 z-[11]"
+      className="pointer-events-none absolute inset-0 w-full h-full z-[11]"
       aria-hidden="true"
     />
   );

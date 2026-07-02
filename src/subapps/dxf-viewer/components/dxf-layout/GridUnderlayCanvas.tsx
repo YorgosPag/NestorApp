@@ -19,6 +19,7 @@
 
 import { useEffect, useRef } from 'react';
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import type { GridSettings as GridRendererSettings } from '../../rendering/ui/grid/GridTypes';
 // Same GridSettings type the rest of the canvas stack passes around (layer-types).
 // The runtime object carries the full GridTypes shape (built by useCanvasSettings),
@@ -45,12 +46,14 @@ export function GridUnderlayCanvas({
   const rendererRef = useRef<GridRenderer | null>(null);
   if (!rendererRef.current) rendererRef.current = new GridRenderer();
 
-  // Resize backing store when the viewport changes.
+  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport, via the
+  // SAME primitive as dxf/layer/preview. Before: `canvas.width = viewport.width` (NO dpr) → the
+  // buffer was CSS-sized (the DOM «grid 670×1011» while sibling layers were 670×0.8=536) → the
+  // exact size desync that produced the right-side «dead zone» (this was a primary culprit).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
   }, [viewport.width, viewport.height]);
 
   // Repaint only when inputs change (no continuous RAF — same as FloorplanBackgroundCanvas).
@@ -78,8 +81,6 @@ export function GridUnderlayCanvas({
   return (
     <canvas
       ref={canvasRef}
-      width={viewport.width}
-      height={viewport.height}
       className={className}
       aria-hidden
     />

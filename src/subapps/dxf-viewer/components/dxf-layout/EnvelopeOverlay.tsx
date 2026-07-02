@@ -24,6 +24,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import {
@@ -149,9 +150,12 @@ export function EnvelopeOverlay({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store via the shared primitive (before:
+    // `width={viewport.width}` JSX attribute, NO dpr → blurry + inconsistent buffer with siblings).
+    // ctx is DPR-scaled → all EnvelopeRenderer draws stay in CSS/world coords unchanged.
+    const ctx = CanvasUtils.sizeCanvasToViewport(canvas, viewport);
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, viewport.width, viewport.height);
 
     if (!visible || !spec || !scene) return;
     // DxfWall (direct entity, ADR-363 §1B) έχει kind+params → structurally satisfies
@@ -215,9 +219,7 @@ export function EnvelopeOverlay({
     <canvas
       ref={canvasRef}
       data-dxf-overlay="envelope"
-      width={viewport.width}
-      height={viewport.height}
-      className="pointer-events-none absolute inset-0 z-[11]"
+      className="pointer-events-none absolute inset-0 w-full h-full z-[11]"
       aria-hidden="true"
     />
   );

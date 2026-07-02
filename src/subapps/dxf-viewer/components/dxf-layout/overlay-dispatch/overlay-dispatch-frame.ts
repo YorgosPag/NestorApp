@@ -19,7 +19,7 @@
  * size+clear+ordered-paint loop is identical and lives here.
  */
 
-import { getDevicePixelRatio } from '../../../systems/cursor/utils';
+import { CanvasUtils } from '../../../rendering/canvas/utils/CanvasUtils';
 import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
 
 /**
@@ -43,15 +43,11 @@ export function paintOverlayDispatchFrame(
   transform: ViewTransform,
   viewport: Viewport,
 ): void {
-  const ctx = canvas.getContext('2d');
+  // 🏢 SSoT sizing — DPR-aware backing store via the ONE primitive (CanvasUtils.sizeCanvasToViewport),
+  // shared with dxf/layer/preview/grid/floorplan. This block was byte-identical to the primitive; it
+  // now delegates so there is a single source of truth for canvas-layer sizing.
+  const ctx = CanvasUtils.sizeCanvasToViewport(canvas, viewport);
   if (!ctx) return;
-
-  const dpr = getDevicePixelRatio();
-  const w = Math.max(1, Math.round(viewport.width * dpr));
-  const h = Math.max(1, Math.round(viewport.height * dpr));
-  if (canvas.width !== w) canvas.width = w;
-  if (canvas.height !== h) canvas.height = h;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, viewport.width, viewport.height);
 
   for (const paint of painters) {

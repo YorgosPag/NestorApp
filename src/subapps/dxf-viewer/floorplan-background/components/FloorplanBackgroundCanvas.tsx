@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import type { CadCoordinateAdaptation, ViewTransform } from '../providers/types';
@@ -34,12 +35,14 @@ export function FloorplanBackgroundCanvas({
   const calibrationSession = useFloorplanBackgroundStore((s) => s.calibrationSession);
   const isCalibrating = calibrationSession?.floorId === floorId;
 
-  // Resize canvas backing store when viewport changes
+  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport, via the
+  // SAME primitive as dxf/layer/preview. Before: `canvas.width = viewport.width` (NO dpr) → the
+  // κάτοψη buffer was CSS-sized (a primary half of the size desync + blurry on HiDPI). The ctx is
+  // now dpr-scaled, so all drawing below works in CSS coords.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
   }, [viewport.width, viewport.height]);
 
   // Render only when inputs change — Phase G: eliminated continuous 60fps RAF loop.
@@ -81,11 +84,11 @@ export function FloorplanBackgroundCanvas({
     if (session.pointA && session.pointB) return; // both already set, waiting for dialog
     const canvas = e.currentTarget;
     const rect = canvas.getBoundingClientRect();
-    // Account for CSS scaling vs canvas resolution (device pixel ratio)
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // CSS-space coords — the ctx is DPR-scaled (sizeCanvasToViewport), so markers are drawn in CSS
+    // units. `rect` is CSS px → the raw offset already IS the CSS coordinate (no dpr scaling here,
+    // else the marker would double under the ctx transform).
     setCalibrationPoint(
-      { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY },
+      { x: e.clientX - rect.left, y: e.clientY - rect.top },
       worldToCanvas.scale,
     );
   }, [floorId, worldToCanvas]);
@@ -93,8 +96,6 @@ export function FloorplanBackgroundCanvas({
   return (
     <canvas
       ref={canvasRef}
-      width={viewport.width}
-      height={viewport.height}
       onClick={isCalibrating ? handleClick : undefined}
       style={isCalibrating ? { pointerEvents: 'auto' } : undefined}
       className={cn(
