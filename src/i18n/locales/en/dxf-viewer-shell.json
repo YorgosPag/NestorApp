@@ -898,6 +898,7 @@
     "beam": {
       "statusStart": "Pick beam start point",
       "statusEnd": "Pick beam end point",
+      "hudSpec": "b={width} · h={depth}",
       "statusCurveEnd": "Pick curved beam end point",
       "statusCurveControl": "Pick curve control point",
       "statusPickWall": "Pick a wall to place a beam on it",

@@ -898,6 +898,7 @@
     "beam": {
       "statusStart": "Επίλεξε αρχή δοκαριού",
       "statusEnd": "Επίλεξε τέλος δοκαριού",
+      "hudSpec": "b={width} · h={depth}",
       "statusCurveEnd": "Επίλεξε τέλος καμπυλωτού δοκαριού",
       "statusCurveControl": "Επίλεξε σημείο ελέγχου καμπύλης",
       "statusPickWall": "Επίλεξε τοίχο για τοποθέτηση δοκαριού",
