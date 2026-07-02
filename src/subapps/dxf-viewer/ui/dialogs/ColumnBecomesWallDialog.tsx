@@ -63,22 +63,28 @@ export const ColumnBecomesWallDialog: React.FC = () => {
         <p className="dxf-modal-note-warning">
           {t('columnBecomesWall.warning', { long, short, aspect })}
         </p>
-        <p className="dxf-modal-body">{t('columnBecomesWall.message')}</p>
+        {/* ADR-363 §5.6c — ορθογώνιο: μετατρέπεται σε τοιχίο· Γ/Τ/Π/Ι/σύνθετη: advisory (κρατά σχήμα). */}
+        <p className="dxf-modal-body">
+          {t(state.canReclassify ? 'columnBecomesWall.message' : 'columnBecomesWall.messageNonRect')}
+        </p>
         <div className="dxf-modal-actions dxf-modal-actions-stack">
+          {state.canReclassify && (
+            <button
+              type="button"
+              autoFocus
+              className="dxf-modal-button dxf-modal-button-warning"
+              onClick={() => resolveColumnBecomesWall('convert')}
+            >
+              {t('columnBecomesWall.convertButton')}
+            </button>
+          )}
           <button
             type="button"
-            autoFocus
-            className="dxf-modal-button dxf-modal-button-warning"
-            onClick={() => resolveColumnBecomesWall('convert')}
-          >
-            {t('columnBecomesWall.convertButton')}
-          </button>
-          <button
-            type="button"
-            className="dxf-modal-button"
+            autoFocus={!state.canReclassify}
+            className={state.canReclassify ? 'dxf-modal-button' : 'dxf-modal-button dxf-modal-button-warning'}
             onClick={() => resolveColumnBecomesWall('keep')}
           >
-            {t('columnBecomesWall.keepButton')}
+            {t(state.canReclassify ? 'columnBecomesWall.keepButton' : 'columnBecomesWall.continueButton')}
           </button>
           <button
             type="button"

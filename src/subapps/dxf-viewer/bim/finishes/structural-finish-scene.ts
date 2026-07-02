@@ -24,7 +24,6 @@ import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { WallEntity } from '../types/wall-types';
 import type { Point3D } from '../types/bim-base';
 import type { EnvelopeFunction } from '../types/thermal-envelope-types';
-import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeBuildingFootprint } from '../geometry/building-footprint';
 import { pointToSegmentDistance } from '../../systems/guides';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -158,15 +157,9 @@ export interface BeamFinishSource {
   >;
 }
 
-/** Wall → plan footprint (outer + reversed inner). ADR-449 §merged-union-robustness: ΑΓΝΟΕΙ
- *  trim miters/bevels → raw rect που ΕΠΙΚΑΛΥΠΤΕΤΑΙ με κολόνα (flush core → degenerate union). */
-export function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
-  const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...rawParams } = wall.params;
-  const g = computeWallGeometry(rawParams as WallFinishObstacle['params'], wall.kind);
-  const outer = g.outerEdge.points.map(toPt2);
-  const inner = [...g.innerEdge.points].reverse().map(toPt2);
-  return [...outer, ...inner];
-}
+// ADR-449 §angled-wall-miter-close — η μηχανή wall footprint→union ζει πλέον στο SSoT module
+// `wall-footprint-union.ts` (commit-split όριο 500). Re-export → σταθερό public API.
+export { wallFootprintPolygon } from './wall-footprint-union';
 
 /** Μοναδιαία κατεύθυνση άξονα δοκαριού-obstacle (start→end) στο plan. `null` αν εκφυλισμένη. */
 function beamObstacleAxis(beam: BeamFinishObstacle): Pt2 | null {

@@ -11,7 +11,7 @@
  * συμβατό με `useSyncExternalStore` (ADR-040 SSoT stores). Ένα μόνο dialog εκκρεμεί κάθε στιγμή.
  *
  * @see ../../ui/dialogs/ShearWallExtentDialog.tsx — ο consumer (self-subscribing portal dialog)
- * @see ./shear-wall-extents.ts — `detectShearWallExtentCrossing`
+ * @see ./shear-wall-extents.ts — `detectMemberExtentCrossing`
  * @see ./column-becomes-wall-confirm-store.ts — το precedent pattern
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6b
  */

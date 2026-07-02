@@ -7,7 +7,7 @@
  *
  * **ΜΗΔΕΝ διπλότυπο κανόνα:** οι «σχέσεις» κάθε τύπου ζουν ΗΔΗ στον validator· εδώ απλώς κάνουμε
  * `collectColumnViolationKeys` σε prev & next και επιστρέφουμε **μόνο τις ΝΕΕΣ** (crossing-only,
- * ίδιο μοτίβο με `detectRectColumnBecomesWall` / `detectShearWallExtentCrossing`) → μηδέν re-nag.
+ * ίδιο μοτίβο με `detectColumnBecomesWall` / `detectMemberExtentCrossing`) → μηδέν re-nag.
  *
  * **Κόστος (ADR-040):** `includeReinforcement:false` (default) = φθηνό (γεωμετρία+λυγηρότητα) → ασφαλές
  * για το live-ghost 60fps hot-path. `includeReinforcement:true` = πλήρες (incl. ρ, βαρύς suggester) →

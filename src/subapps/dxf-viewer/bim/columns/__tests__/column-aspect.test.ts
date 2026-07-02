@@ -11,6 +11,7 @@ import {
   isShearWallAspect,
   rectParamsAspect,
   detectRectColumnBecomesWall,
+  detectColumnBecomesWall,
   reclassifyRectToShearWall,
 } from '../column-aspect';
 import {
@@ -106,6 +107,48 @@ describe('detectRectColumnBecomesWall', () => {
     const prev = makeParams({ width: 400, depth: 400 });
     const next = makeParams({ kind: 'shear-wall', width: 2000, depth: 400 });
     expect(detectRectColumnBecomesWall(prev, next)).toBeNull();
+  });
+});
+
+describe('detectColumnBecomesWall (ADR-363 §5.6c — ΓΕΝΙΚΟ, όλοι οι τύποι)', () => {
+  it('ορθογώνιο επιμήκες → crossing + canReclassify=true', () => {
+    const res = detectColumnBecomesWall(makeParams({ width: 400, depth: 400 }), makeParams({ width: 2000, depth: 400 }));
+    expect(res?.aspect).toBe(5);
+    expect(res?.canReclassify).toBe(true);
+  });
+
+  it('Τ επιμήκες (bbox aspect > 4) → crossing + canReclassify=false (advisory)', () => {
+    const prev = makeParams({ kind: 'T-shape', width: 400, depth: 400 });
+    const next = makeParams({ kind: 'T-shape', width: 2000, depth: 400 });
+    const res = detectColumnBecomesWall(prev, next);
+    expect(res).not.toBeNull();
+    expect(res?.aspect).toBe(5);
+    expect(res?.canReclassify).toBe(false);
+  });
+
+  it('Γ επιμήκες σε ΟΠΟΙΑΔΗΠΟΤΕ κατεύθυνση (depth) → crossing (advisory)', () => {
+    const prev = makeParams({ kind: 'L-shape', width: 400, depth: 400 });
+    const next = makeParams({ kind: 'L-shape', width: 400, depth: 2200 });
+    expect(detectColumnBecomesWall(prev, next)?.canReclassify).toBe(false);
+  });
+
+  it('circular/polygon (συμμετρικά) → null (ποτέ wall-like)', () => {
+    const c = detectColumnBecomesWall(makeParams({ kind: 'circular', width: 400 }), makeParams({ kind: 'circular', width: 2000 }));
+    const p = detectColumnBecomesWall(makeParams({ kind: 'polygon', width: 400 }), makeParams({ kind: 'polygon', width: 2000 }));
+    expect(c).toBeNull();
+    expect(p).toBeNull();
+  });
+
+  it('shear-wall (ΗΔΗ τοιχίο) → null (καλύπτεται από §5.6b extent)', () => {
+    const prev = makeParams({ kind: 'shear-wall', width: 400, depth: 400 });
+    const next = makeParams({ kind: 'shear-wall', width: 2000, depth: 400 });
+    expect(detectColumnBecomesWall(prev, next)).toBeNull();
+  });
+
+  it('prev ήδη επιμήκες → null (μηδέν re-nag)', () => {
+    const prev = makeParams({ kind: 'T-shape', width: 2000, depth: 400 });
+    const next = makeParams({ kind: 'T-shape', width: 2500, depth: 400 });
+    expect(detectColumnBecomesWall(prev, next)).toBeNull();
   });
 });
 

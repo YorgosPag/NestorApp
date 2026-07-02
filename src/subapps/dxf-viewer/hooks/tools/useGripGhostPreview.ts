@@ -391,9 +391,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         (id) => getEntity(id) as unknown as Entity | undefined,
         t, vp,
       );
-      // ADR-363 §5.6 — LIVE 🟠 warning outline: όσο το grip-drag κρατά την ορθογώνια κολόνα σε σχέσεις
-      // τοιχίου (aspect > 4), το περίγραμμα του φαντάσματος γίνεται πορτοκαλί (opaque, πάνω από το body).
-      // Ίδιο gate με το dialog-on-release (`detectRectColumnBecomesWall`). No-op για μη-crossing/άλλα είδη.
+      // ADR-363 §5.6/§5.6b/§5.6c — LIVE 🟠 warning outline: όσο το grip-drag κρατά ΟΠΟΙΟΝΔΗΠΟΤΕ τύπο
+      // κολόνας/τοιχίου εκτός εύρους (επιμήκυνση σαν τοιχίο aspect>4 · ασυνήθιστα extents τοιχίου ·
+      // εκφύλιση αναλογίας Γ/Τ/Π/Ι), το περίγραμμα του φαντάσματος γίνεται πορτοκαλί (opaque, πάνω από το
+      // body). Ίδιο gate με το dialog-on-release. No-op για μη-crossing/άλλα είδη.
       drawColumnAspectWallWarning(ctx, entity as unknown as Entity, transformed as unknown as Entity, t, vp);
       ctx.restore();
     }

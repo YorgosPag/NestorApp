@@ -27,8 +27,8 @@ import type { ExtendedSceneEntity } from '../drawing/drawing-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-363 §5.6/§5.6b — live 🟠 warning outline όσο το grip-drag κρατά κολόνα σε σχέσεις τοιχίου (aspect>4)
 // Ή τοιχίο σε ασυνήθιστο πάχος/μήκος.
-import { detectRectColumnBecomesWall } from '../../bim/columns/column-aspect';
-import { detectShearWallExtentCrossing } from '../../bim/columns/shear-wall-extents';
+import { detectColumnBecomesWall } from '../../bim/columns/column-aspect';
+import { detectMemberExtentCrossing } from '../../bim/columns/shear-wall-extents';
 // ADR-363 §5.6c — ΓΕΝΙΚΟ live 🟠 gate για ΟΛΟΥΣ τους τύπους (Γ/Τ/Π/Ι/πολύγωνο). Φθηνό (includeReinforcement
 // default false) → ασφαλές για το 60fps hot-path (ADR-040): ΔΕΝ αγγίζει τον βαρύ suggester οπλισμού.
 import { detectColumnRelationshipWarning } from '../../bim/columns/section-relationship-warning';
@@ -210,8 +210,8 @@ export function drawColumnAspectWallWarning(
 ): void {
   if (!isColumnEntity(original) || !isColumnEntity(transformed)) return;
   const warn =
-    detectRectColumnBecomesWall(original.params, transformed.params) !== null ||
-    detectShearWallExtentCrossing(original.params, transformed.params) !== null ||
+    detectColumnBecomesWall(original.params, transformed.params) !== null ||
+    detectMemberExtentCrossing(original.params, transformed.params) !== null ||
     detectColumnRelationshipWarning(original.params, transformed.params) !== null;
   if (!warn) return;
   const verts = transformed.geometry?.footprint?.vertices ?? [];

@@ -221,15 +221,17 @@
     "title": "These dimensions create a shear wall",
     "warning": "⚠️ The new side ratio {long} / {short} = {aspect} exceeds 4.",
     "message": "Per EC2 §9.6.1 / EC8 §5.4.2.4 the element is no longer a column and becomes a SHEAR WALL (loses its column properties, gains wall ones). What should I do?",
+    "messageNonRect": "The section has become very elongated (ratio > 4) — per EC2 §9.6.1 / EC8 §5.4.2.4 it now behaves as a shear wall, not a column. This section type is not auto-converted to a wall (it keeps its shape). Proceed?",
     "convertButton": "Convert to shear wall",
     "keepButton": "Keep as column",
+    "continueButton": "Proceed",
     "cancel": "Cancel"
   },
   "shearWallExtent": {
-    "title": "Unusual shear-wall dimensions",
-    "warningThickness": "⚠️ Thickness {thickness}: above typical — it now behaves as mass concrete, not a thin shear wall.",
+    "title": "Unusual member dimensions",
+    "warningThickness": "⚠️ Thickness {thickness}: above typical — it behaves as mass concrete.",
     "warningLength": "⚠️ Length {length}: very long continuous run — a movement/contraction joint is required (crack control EC2 §7.3).",
-    "message": "The Eurocodes set no maximum shear-wall thickness or length, but these dimensions are outside the typical range. Proceed?",
+    "message": "The Eurocodes set no maximum member thickness or length, but these dimensions are outside the typical range. Proceed?",
     "proceedButton": "Proceed",
     "cancel": "Cancel"
   },

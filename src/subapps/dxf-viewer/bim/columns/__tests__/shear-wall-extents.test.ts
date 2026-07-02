@@ -7,7 +7,7 @@
 
 import {
   isShearWallExtentExceeded,
-  detectShearWallExtentCrossing,
+  detectMemberExtentCrossing,
 } from '../shear-wall-extents';
 import {
   MAX_TYPICAL_SHEAR_WALL_THICKNESS_MM,
@@ -56,13 +56,13 @@ describe('isShearWallExtentExceeded', () => {
   });
 });
 
-describe('detectShearWallExtentCrossing', () => {
+describe('detectMemberExtentCrossing', () => {
   it('εντός → εντός → null', () => {
-    expect(detectShearWallExtentCrossing(makeParams({}), makeParams({ width: 2500 }))).toBeNull();
+    expect(detectMemberExtentCrossing(makeParams({}), makeParams({ width: 2500 }))).toBeNull();
   });
 
   it('πάχος περνά το όριο → crossing (thickTooLarge)', () => {
-    const res = detectShearWallExtentCrossing(makeParams({}), makeParams({ depth: 1600 }));
+    const res = detectMemberExtentCrossing(makeParams({}), makeParams({ depth: 1600 }));
     expect(res).not.toBeNull();
     expect(res?.thickTooLarge).toBe(true);
     expect(res?.lengthTooLarge).toBe(false);
@@ -70,7 +70,7 @@ describe('detectShearWallExtentCrossing', () => {
   });
 
   it('μήκος περνά το όριο → crossing (lengthTooLarge)', () => {
-    const res = detectShearWallExtentCrossing(makeParams({}), makeParams({ width: 35000 }));
+    const res = detectMemberExtentCrossing(makeParams({}), makeParams({ width: 35000 }));
     expect(res).not.toBeNull();
     expect(res?.lengthTooLarge).toBe(true);
     expect(res?.lengthMm).toBe(35000);
@@ -79,20 +79,32 @@ describe('detectShearWallExtentCrossing', () => {
   it('prev ήδη εκτός πάχους, next ακόμη εκτός πάχους (καμία ΝΕΑ) → null (μη re-nag)', () => {
     const prev = makeParams({ depth: 1600 });
     const next = makeParams({ depth: 1700, width: 2500 });
-    expect(detectShearWallExtentCrossing(prev, next)).toBeNull();
+    expect(detectMemberExtentCrossing(prev, next)).toBeNull();
   });
 
   it('prev εκτός πάχους, next προσθέτει ΝΕΑ υπέρβαση μήκους → crossing', () => {
     const prev = makeParams({ depth: 1600 });
     const next = makeParams({ depth: 1600, width: 35000 });
-    const res = detectShearWallExtentCrossing(prev, next);
+    const res = detectMemberExtentCrossing(prev, next);
     expect(res).not.toBeNull();
     expect(res?.lengthTooLarge).toBe(true);
   });
 
-  it('next kind όχι shear-wall → null (scope)', () => {
-    const prev = makeParams({});
-    const next = makeParams({ kind: 'rectangular', depth: 1600 });
-    expect(detectShearWallExtentCrossing(prev, next)).toBeNull();
+  it('§5.6c B — ΓΕΝΙΚΟ: μη-shear-wall τύπος (Τ) που επιμηκύνεται > 30m → crossing (αρμός διαστολής)', () => {
+    const prev = makeParams({ kind: 'T-shape', width: 2000, depth: 400 });
+    const next = makeParams({ kind: 'T-shape', width: 35000, depth: 400 });
+    const res = detectMemberExtentCrossing(prev, next);
+    expect(res).not.toBeNull();
+    expect(res?.lengthTooLarge).toBe(true);
+  });
+
+  it('ορθογώνιο που επιμηκύνεται > 30m → crossing (πλέον όχι shear-wall-only)', () => {
+    const res = detectMemberExtentCrossing(makeParams({ kind: 'rectangular', width: 400 }), makeParams({ kind: 'rectangular', width: 35000 }));
+    expect(res?.lengthTooLarge).toBe(true);
+  });
+
+  it('circular/polygon (συμμετρικά) → null (καμία έννοια μήκους)', () => {
+    expect(detectMemberExtentCrossing(makeParams({ kind: 'circular' }), makeParams({ kind: 'circular', width: 35000 }))).toBeNull();
+    expect(detectMemberExtentCrossing(makeParams({ kind: 'polygon' }), makeParams({ kind: 'polygon', width: 35000 }))).toBeNull();
   });
 });

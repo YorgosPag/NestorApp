@@ -33,6 +33,11 @@ export interface ColumnBecomesWallState {
   readonly longSideMm: number;
   /** Μικρή πλευρά (mm) της νέας διατομής. */
   readonly shortSideMm: number;
+  /**
+   * ADR-363 §5.6c — true ΜΟΝΟ για ορθογώνιο (μόνο αυτό μετατρέπεται σε shear-wall) → δείξε το κουμπί
+   * «Μετατροπή σε τοιχίο». false (Γ/Τ/Π/Ι/σύνθετη) → advisory-only (Συνέχεια / Άκυρο, κρατά το σχήμα).
+   */
+  readonly canReclassify: boolean;
 }
 
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -42,6 +47,7 @@ const CLOSED: ColumnBecomesWallState = {
   aspect: 0,
   longSideMm: 0,
   shortSideMm: 0,
+  canReclassify: false,
 };
 
 let _state: ColumnBecomesWallState = CLOSED;
@@ -62,6 +68,7 @@ export function requestColumnBecomesWallConfirm(args: {
   aspect: number;
   longSideMm: number;
   shortSideMm: number;
+  canReclassify: boolean;
 }): Promise<ColumnBecomesWallAction> {
   return new Promise<ColumnBecomesWallAction>((resolve) => {
     _pendingResolve = resolve;
@@ -70,6 +77,7 @@ export function requestColumnBecomesWallConfirm(args: {
       aspect: args.aspect,
       longSideMm: args.longSideMm,
       shortSideMm: args.shortSideMm,
+      canReclassify: args.canReclassify,
     };
     _notify();
   });

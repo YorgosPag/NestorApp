@@ -49,10 +49,23 @@ const fullZ = { zBotMm: 0, zTopMm: 3000 };
 const totalLength = (segs: readonly { lengthM: number }[]): number =>
   segs.reduce((s, seg) => s + seg.lengthM, 0);
 
-describe('wallFootprintPolygon — ΑΓΝΟΕΙ trim miters (ADR-449 §merged-union-robustness)', () => {
-  it('startMiter/startBevel αγνοούνται → raw δομικό footprint (ίδιο με χωρίς trim)', () => {
-    // Το column-miter κάνει τον τοίχο flush στην παρειά → collinear touch → εύθραυστη ένωση
-    // σοβά (κενά/2 κομμάτια). Ο σοβάς πρέπει να δει το raw rect (επικαλύπτεται → robust union).
+const polyAreaAbs = (fp: readonly { x: number; y: number }[]): number => {
+  let s = 0;
+  for (let i = 0; i < fp.length; i++) { const a = fp[i]; const b = fp[(i + 1) % fp.length]; s += a.x * b.y - b.x * a.y; }
+  return Math.abs(s / 2);
+};
+
+describe('wallFootprintPolygon — ΕΝΩΣΗ raw + mitered (ADR-449 §angled-wall-miter-close)', () => {
+  it('ελεύθερος τοίχος (κανένα trim) → ΑΚΡΙΒΩΣ raw footprint (fast-path, μηδέν union)', () => {
+    const base = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
+    // Ίδια αναφορά συνάρτησης → deterministic raw ring (μηδέν αλλαγή για ελεύθερους τοίχους).
+    expect(wallFootprintPolygon(base)).toEqual(wallFootprintPolygon(base));
+    expect(polyAreaAbs(wallFootprintPolygon(base))).toBeCloseTo(3000 * 210, 0);
+  });
+
+  it('flush-cut miter (mitered ⊂ raw) → union ≡ raw γεωμετρικά (robust wall↔column διατηρείται)', () => {
+    // Το column-miter κόβει τον τοίχο flush ΜΕΣΑ στο raw rect → union(raw, mitered) = raw
+    // (υπερσύνολο) → ο σοβάς βλέπει το raw που ΕΠΙΚΑΛΥΠΤΕΤΑΙ την κολόνα (μηδέν degenerate).
     const base = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
     const mitered: WallFinishObstacle = {
       ...base,
@@ -62,7 +75,23 @@ describe('wallFootprintPolygon — ΑΓΝΟΕΙ trim miters (ADR-449 §merged-un
         startBevel: 45,
       } as WallFinishObstacle['params'],
     };
-    expect(wallFootprintPolygon(mitered)).toEqual(wallFootprintPolygon(base));
+    // Superset του raw → ίδιο εμβαδό (mitered flush cut ⊂ raw) + ≥ raw πάντα.
+    expect(polyAreaAbs(wallFootprintPolygon(mitered))).toBeGreaterThanOrEqual(polyAreaAbs(wallFootprintPolygon(base)) - 1);
+    expect(polyAreaAbs(wallFootprintPolygon(mitered))).toBeCloseTo(polyAreaAbs(wallFootprintPolygon(base)), 0);
+  });
+
+  it('miter που ΠΡΟΕΞΕΧΕΙ του raw (γωνία 2 τοίχων) → union > raw (γεμίζει το inner reflex notch)', () => {
+    // Inner miter σημείο πέρα από την άκρη του raw (x<0) → το mitered footprint προεξέχει →
+    // η ένωση μεγαλώνει το footprint ώστε ο σοβάς να κλείσει την εσωτερική γωνία (μηδέν notch).
+    const base = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
+    const extended: WallFinishObstacle = {
+      ...base,
+      params: {
+        ...base.params,
+        startMiter: { outer: { x: 0, y: 105 }, inner: { x: -200, y: -105 } },
+      } as WallFinishObstacle['params'],
+    };
+    expect(polyAreaAbs(wallFootprintPolygon(extended))).toBeGreaterThan(polyAreaAbs(wallFootprintPolygon(base)));
   });
 });
 

@@ -55,28 +55,53 @@ export interface RectBecomesWall {
 }
 
 /**
- * Edit-time φύλακας: επιστρέφει non-null ΜΟΝΟ όταν μια **ορθογώνια** κολόνα, μετά
- * την αλλαγή διαστάσεων, περνά για πρώτη φορά το κατώφλι κολόνα→τοιχίο:
- *   - prev: rectangular, aspect ≤ 4 (ήταν κολόνα)
- *   - next: rectangular, aspect > 4 (γίνεται τοιχίο)
- * Επιστρέφει `null` όταν:
- *   - το prev ήταν ήδη τοιχίο-aspect (καμία επανα-ειδοποίηση σε επόμενα edits),
- *   - το kind (prev ή next) δεν είναι `rectangular` (scope: μόνο ορθογώνιες τώρα).
+ * ADR-363 §5.6/§5.6c — Πληροφορία «η διατομή έγινε πολύ επιμήκης (aspect > 4) → σαν τοιχίο», για
+ * ΟΠΟΙΟΝΔΗΠΟΤΕ τύπο. `canReclassify` = true ΜΟΝΟ για ορθογώνιο (μόνο αυτό μετατρέπεται σε shear-wall
+ * διατηρώντας το αποτύπωμα)· Γ/Τ/Π/Ι/σύνθετη → advisory-only (κρατούν το σχήμα τους).
+ */
+export interface ColumnBecomesWall extends RectBecomesWall {
+  readonly canReclassify: boolean;
+}
+
+/**
+ * Edit-time φύλακας (ΓΕΝΙΚΟΣ, όλοι οι τύποι εκτός symmetric/ήδη-τοιχίο): επιστρέφει non-null ΜΟΝΟ
+ * όταν η διατομή περνά για ΠΡΩΤΗ φορά το κατώφλι επιμήκυνσης (bounding-box rounded aspect > 4 →
+ * «συμπεριφέρεται ως τοιχίο»). Το aspect μετριέται από το ΣΥΝΟΛΙΚΟ bounding box (width/depth) → καλύπτει
+ * κάθε πλευρά/λαβή που τραβιέται (flange/web/βάθος), ανεξάρτητα από ΠΟΙΑ λαβή άλλαξε.
+ *   - scope OUT: `circular`/`polygon` (συμμετρικά, width≈depth — ποτέ wall-like) + `shear-wall`
+ *     (ΗΔΗ τοιχίο· τα ασυνήθιστα extents τα καλύπτει §5.6b).
+ *   - crossing-only: `null` αν το prev ήταν ήδη επιμήκες (μηδέν re-nag).
+ *   - `canReclassify` = ορθογώνιο prev→next (μόνο τότε προσφέρεται «Μετατροπή σε τοιχίο»).
+ */
+export function detectColumnBecomesWall(
+  prev: ColumnParams,
+  next: ColumnParams,
+): ColumnBecomesWall | null {
+  if (next.kind === 'circular' || next.kind === 'polygon' || next.kind === 'shear-wall') return null;
+  const nextAspect = rectParamsAspect(next);
+  if (!isShearWallAspect(nextAspect)) return null;
+  // Ήδη επιμήκης πριν την αλλαγή → μη νοχλείς ξανά (guard μόνο στη μετάβαση).
+  if (isShearWallAspect(rectParamsAspect(prev))) return null;
+  return {
+    aspect: nextAspect,
+    longSideMm: Math.max(next.width, next.depth),
+    shortSideMm: Math.min(next.width, next.depth),
+    canReclassify: prev.kind === 'rectangular' && next.kind === 'rectangular',
+  };
+}
+
+/**
+ * Edit-time φύλακας ΜΟΝΟ για ορθογώνια κολόνα (κληρονομιά §5.6): delegate στο γενικό
+ * `detectColumnBecomesWall`, φιλτραρισμένο σε ορθογώνιο prev→next. ΕΝΑ σημείο αλήθειας για την
+ * crossing λογική (μηδέν διπλότυπο).
  */
 export function detectRectColumnBecomesWall(
   prev: ColumnParams,
   next: ColumnParams,
 ): RectBecomesWall | null {
   if (prev.kind !== 'rectangular' || next.kind !== 'rectangular') return null;
-  const nextAspect = rectParamsAspect(next);
-  if (!isShearWallAspect(nextAspect)) return null;
-  // Ήδη τοιχίο-aspect πριν την αλλαγή → μη νοχλείς ξανά (guard μόνο στη μετάβαση).
-  if (isShearWallAspect(rectParamsAspect(prev))) return null;
-  return {
-    aspect: nextAspect,
-    longSideMm: Math.max(next.width, next.depth),
-    shortSideMm: Math.min(next.width, next.depth),
-  };
+  const g = detectColumnBecomesWall(prev, next);
+  return g && { aspect: g.aspect, longSideMm: g.longSideMm, shortSideMm: g.shortSideMm };
 }
 
 /**
