@@ -11,10 +11,9 @@ import React, { useRef, useCallback, useEffect } from 'react';
 // wheel zoom. Direct render is preserved as the historical reference point.
 import { CanvasLayerStackTransformBridge as CanvasLayerStack } from './CanvasLayerStackTransformBridge';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
-// ADR-040 Phase XXII.A: switched from merged useCanvasContext (volatile, re-renders on
-// every wheel zoom) to useCanvasRefs (stable refs + setTransform). Transform values are
-// now read from ImmediateTransformStore at event time, not from React context. This breaks
-// the orchestrator-leak cascade documented in Phase XXII.A.
+// ADR-040 Phase XXII.A: useCanvasRefs (stable refs + setTransform) replaces merged
+// useCanvasContext (volatile). Transform read from ImmediateTransformStore at event time,
+// not React context — breaks the orchestrator-leak cascade documented in Phase XXII.A.
 import { useCanvasRefs } from '../../contexts/CanvasContext';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { isWallRegionTool } from '../../systems/tools/region-tool-ids';
@@ -37,6 +36,8 @@ import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/command
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useDrawingUIHandlers, useCanvasClickHandler, useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts, useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
+// ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush click wiring (direct import, όχι barrel).
+import { useFinishPaintClick } from '../../hooks/canvas/useFinishPaintClick';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { SnapSceneSyncLeaf } from './SnapSceneSyncLeaf';
@@ -101,10 +102,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
   // === Transform + Viewport ===
-  // ADR-040 XXII.A: transform value read once at render-top from SSoT. Hooks below
-  // read live transform at event time via `getImmediateTransform()` directly — the
-  // value passed here is for backward-compat signatures only and is effectively
-  // dead weight (renamed `_transform` in each hook). Will be removed in Phase XXII.B.
+  // ADR-040 XXII.A: transform read once at render-top from SSoT; hooks read live transform at
+  // event time via `getImmediateTransform()`. Value passed below is back-compat dead weight
+  // (renamed `_transform` in each hook) — removed in Phase XXII.B.
   const transform = getImmediateTransform();
   const contextSetTransform = canvasRefs?.setTransform || (() => {
     derr('CanvasSection', 'setTransform called but CanvasRefs not available');
@@ -119,10 +119,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
   // === Core stores + state ===
   const overlayStore = useOverlayStore();
-  // ADR-532 B4 — NON-reactive selection facade: CanvasSection no longer re-renders
-  // on dxf-entity selection. Render consumers moved to leaves (DxfCanvasSubscriber
-  // grips, PreviewCanvasMounts ghosts, PropertiesPalette, EntityContextMenuHost,
-  // GripRegistryPublisher); event-time consumers read the store at call time.
+  // ADR-532 B4 — NON-reactive selection facade: no re-render on dxf-entity selection. Render
+  // consumers moved to leaves (DxfCanvasSubscriber grips, PreviewCanvasMounts ghosts,
+  // PropertiesPalette, EntityContextMenuHost, GripRegistryPublisher); event-time consumers
+  // read the store at call time.
   const universalSelection = useUniversalSelectionStable();
   const { execute: executeCommand } = useCommandHistory();
   const { warning: notifyWarning, success: notifySuccess } = useNotifications();
@@ -136,12 +136,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-281: filter out overlays linked to soft-deleted properties
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
   // === Selection (SSoT: SelectedEntitiesStore) ===
-  // ADR-532 B4 — read fresh from the store each render (NOT memoized on the stable
-  // facade). The store getter returns a REFERENCE-STABLE array (cachedDxfIds) until
-  // the selection actually changes, so downstream memos in the modify tools don't
-  // thrash, yet whenever CanvasSection re-renders (tool/scene/phase change) the value
-  // is current. Truly in-place event handlers (keyboard/context-menu/reorder/grips)
-  // read the store directly at event time instead of this snapshot.
+  // ADR-532 B4 — read fresh each render (NOT memoized on the facade). The getter returns a
+  // REFERENCE-STABLE array (cachedDxfIds) until selection changes, so modify-tool memos don't
+  // thrash, yet the value is current on every re-render. In-place event handlers (keyboard/
+  // context-menu/reorder/grips) read the store directly at event time, not this snapshot.
   const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
   // SSoT: thin alias — delegates to replaceEntitySelection (SelectionSystem is the sole owner).
   // No functional-updater form: all consumers pass string[] directly.
@@ -154,9 +152,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-040 rule 2 — getter for event-time reads (useTextDoubleClickEditor).
   const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getSelectedEntityIds(), []);
   const entitySelectedOnMouseDownRef = useRef(false);
-  // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId +
-  // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions
-  // live exclusively in micro-leaves (DxfCanvasSubscriber, DraftLayerSubscriber).
+  // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId + hoveredOverlayId
+  // removed; HoverStore subscriptions live in micro-leaves (DxfCanvasSubscriber, DraftLayer).
   const eventBus = useEventBus();
   // === Settings ===
   const { state: { grid: gridContextSettings, rulers: rulerContextSettings } } = useRulersGridContext();
@@ -212,8 +209,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
   useTouchGestures({ targetRef: containerRef, enabled: canvasLayoutMode !== 'desktop', activeTool, transform, setTransform: contextSetTransform });
   // === Mouse event handling ===
-  // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
-  // SSoT lives in ImmediatePositionStore — see ADR-040.
+  // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED — SSoT in ImmediatePositionStore (ADR-040).
   const containerHandlerHook = useCanvasContainerHandlers({
     activeTool, transform, containerRef, executeCommand,
     unified: { handleMouseDown: unified.handleMouseDown, handleMouseUp: unified.handleMouseUp },
@@ -312,6 +308,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setSelectedGrips: unified.setSelectedGrips, overlayStoreRef, universalSelectionRef,
     levelManager, setSelectedEntityIds, eventBus, notifyWarning, notifySuccess, hoveredDxfGrip: unified.hoveredGrip,
   });
+  // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush click (κοινός apply SSoT + πλήρες useLevels() write path).
+  const handleFinishPaintClick = useFinishPaintClick(levelManager);
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
@@ -383,6 +381,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onGuideSelectToggle: guideWorkflows.handleGuideSelectToggle, onGuideDeselectAll: guideWorkflows.handleGuideDeselectAll,
     // ADR-344 Phase 6.E follow-up — text creation tool click handler
     onTextToolClick: textCreation.handleCanvasClick,
+    // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush click handler
+    onFinishPaintClick: handleFinishPaintClick,
   });
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,

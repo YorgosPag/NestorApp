@@ -261,5 +261,21 @@ export const STRUCTURAL_TAB: RibbonTab = {
         },
       ],
     },
+    // ── Φινιρίσματα (Revit "Paint") ──────────────────────────────────────────
+    // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush: ενεργοποιεί το εργαλείο
+    // `finish-paint` (κλικ σε όψη σοβά → per-face υλικό/χρώμα). Toggle-highlight +
+    // Esc-disarm δωρεάν από το ToolStateStore (όπως κάθε εργαλείο).
+    {
+      id: 'structural-finishes',
+      labelKey: 'ribbon.panels.structuralFinishes',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            toolBtn('structuralTab.finishPaint', 'ribbon.commands.bim.finishPaint.label', 'finish-paint', 'finish-paint'),
+          ],
+        },
+      ],
+    },
   ],
 };

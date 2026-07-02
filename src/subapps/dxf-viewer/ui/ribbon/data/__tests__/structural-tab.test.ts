@@ -38,6 +38,8 @@ const EXPECTED_COMMAND_KEYS = [
   'foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid',
   // circulation
   'stair', 'railing',
+  // finishes (ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush tool)
+  'finish-paint',
 ] as const;
 
 function allButtons() {
@@ -55,14 +57,17 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     expect(STRUCTURAL_TAB.contextualTrigger).toBeUndefined();
   });
 
-  it('declares the six Revit-style panels with canonical ids + label keys', () => {
+  it('declares the seven Revit-style panels with canonical ids + label keys', () => {
     expect(STRUCTURAL_TAB.panels.map((p) => p.id)).toEqual([
       'structural-walls', 'structural-columns', 'structural-beams',
       'structural-floors', 'structural-foundation', 'structural-circulation',
+      // ADR-449 PART B Slice C — «Φινιρίσματα» (Revit "Paint") panel.
+      'structural-finishes',
     ]);
     expect(STRUCTURAL_TAB.panels.map((p) => p.labelKey)).toEqual([
       'ribbon.panels.structuralWalls', 'ribbon.panels.structuralColumns', 'ribbon.panels.structuralBeams',
       'ribbon.panels.structuralFloors', 'ribbon.panels.structuralFoundation', 'ribbon.panels.structuralCirculation',
+      'ribbon.panels.structuralFinishes',
     ]);
   });
 

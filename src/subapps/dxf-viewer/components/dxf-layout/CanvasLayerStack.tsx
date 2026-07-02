@@ -37,6 +37,8 @@ import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; imp
 import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { ClashReportPanel } from './ClashReportPanel';
+// ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush material palette (leaf, gate σε activeTool).
+import { FinishPaint2DPanel } from './FinishPaint2DPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { UnifiedPerformanceHudLeaf } from './UnifiedPerformanceHudLeaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
@@ -457,6 +459,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       <AutoAreaResultPanel />
       {/* ADR-435 Slice 1b — Clash Detective results card (self-contained leaf). */}
       <ClashReportPanel />
+      {/* ADR-449 PART B Slice C — «Βαφή σοβά» palette (renders only όταν activeTool==='finish-paint'). */}
+      <FinishPaint2DPanel />
     </>
   );
 });

@@ -166,6 +166,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'guide-analysis': return <BarChart3 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'display-grid': return <Grid3X3 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'hatch': return <Grid3X3 width={sizePx[size]} height={sizePx[size]} className={className} />; // ADR-507 — γραμμοσκίαση
+    case 'finish-paint': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />; // ADR-449 — «Βαφή σοβά» 2D paintbrush
     case 'display-autocrop': return <Crop width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'crop-window': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'polygon-crop': return <Pentagon width={sizePx[size]} height={sizePx[size]} className={className} />;

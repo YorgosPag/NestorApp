@@ -1425,6 +1425,7 @@
       "structuralFloors": "Floors & Openings",
       "structuralFoundation": "Foundation",
       "structuralCirculation": "Stairs & Railings",
+      "structuralFinishes": "Finishes",
       "archRoofFloor": "Roof & Floor",
       "archSpaces": "Spaces",
       "electricalDevices": "Power & Low-Voltage",
@@ -1740,6 +1741,10 @@
         "railing": {
           "label": "Railing",
           "tooltip": "Draw a railing with 2 clicks (shortcut RL)"
+        },
+        "finishPaint": {
+          "label": "Paint Plaster",
+          "tooltip": "Per-face plaster paint (Revit «Paint» pattern): activate the tool, pick a material/colour from the palette and click plaster faces of columns/beams in plan"
         },
         "roof": {
           "label": "Roof",
@@ -4628,6 +4633,13 @@
         "nonPositiveBodyHeight": "Water heater height must be greater than 0"
       }
     }
+  },
+  "finishPaint": {
+    "title": "Paint Plaster",
+    "hint": "Pick a material or colour, then click plaster faces in the plan.",
+    "customColor": "Custom colour",
+    "customColorTitle": "Plaster colour",
+    "erase": "Erase (clear face)"
   },
   "railing": {
     "validation": {

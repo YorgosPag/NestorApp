@@ -169,6 +169,8 @@ export type ToolType =
   | 'wall-covering'
   // ADR-511 Slice C: Wall Covering room-fill (auto N regions per room, one undo)
   | 'wall-covering-room'
+  // ADR-449 PART B Slice C: «Βαφή σοβά» 2D paintbrush — click όψη σοβά → per-face material/χρώμα
+  | 'finish-paint'
   // ADR-406: point-based MEP fixture drawing tool (light fixture first)
   | 'mep-fixture'
   // ADR-430: point-based electrical socket (πρίζα / power outlet) — mep-fixture kind, power-in connector

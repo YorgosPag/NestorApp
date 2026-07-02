@@ -126,6 +126,15 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       );
       return; // πάντα consume — ΠΟΤΕ δημιουργία pick-point όσο armed
     }
+    // PRIORITY 0.65: ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush. Όσο το εργαλείο
+    // 'finish-paint' είναι ενεργό, ένα κλικ σε όψη σοβά τη βάφει με το τρέχον πινέλο
+    // (CanvasSection `useFinishPaintClick` → κοινός apply SSoT). Το εργαλείο είναι category
+    // 'drawing' → το mouse-up ΗΔΗ skip-άρει την επιλογή entity· εδώ consume-άρουμε ΠΑΝΤΑ το
+    // κλικ (πριν grips/drawing/selection) ώστε το paintbrush να μένει armed για πολλές όψεις.
+    if (activeTool === 'finish-paint') {
+      params.onFinishPaintClick?.(worldPoint);
+      return; // πάντα consume όσο το paintbrush είναι ενεργό
+    }
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
     if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && activeTool !== 'scale' && activeTool !== 'stretch' && activeTool !== 'mstretch' && dxfGripInteraction.handleGripClick(worldPoint)) {
       return;

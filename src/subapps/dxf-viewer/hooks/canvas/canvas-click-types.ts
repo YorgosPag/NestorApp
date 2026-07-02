@@ -399,6 +399,14 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-344 Phase 6.E follow-up: Text creation tool ──
   /** Click handler for the 'text' tool — returns true if click was consumed. */
   onTextToolClick?: (worldPoint: Point2D) => boolean;
+
+  // ── ADR-449 PART B Slice C: «Βαφή σοβά» 2D paintbrush ──
+  /**
+   * Click handler for the 'finish-paint' tool — paints the plaster face under the cursor
+   * with the current brush. Returns true if a face was painted (click consumed). Built in
+   * CanvasSection (`useFinishPaintClick`) where the full `useLevels()` write path is typed.
+   */
+  onFinishPaintClick?: (worldPoint: Point2D) => boolean;
 }
 
 export interface UseCanvasClickHandlerReturn {
