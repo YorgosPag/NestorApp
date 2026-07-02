@@ -31,6 +31,9 @@ import { resolveOrthoPolarStep } from './drawing-handler-utils';
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
 // there so the rubber-band preview honours F8/F10 (preview == commit).
 import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-reference';
+// ADR-363 §wall-ortho-tracking — OTRACK acquire (osnap-σε-οντότητα → tracking anchor) + Q-νικά-μαγνήτη.
+import { setPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
+import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
 // ADR-544 — ΕΝΑΣ canonical type για τα overlay-meta πεδία του placement ghost (πλέγμα/διαστάσεις/
 // οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
@@ -155,7 +158,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // ADR-508 — wall 2nd click anchored to a member face → relative-polar-to-face magnet
     // (auto, supersedes world polar) + its own zoom-adaptive length step. Returns null when
     // ORTHO is on or the start is not face-anchored. Shares the SSoT with the commit path.
-    const faceRel = resolveWallFaceRelativePolar(p, worldPerPixel(getTransformScale()));
+    // ADR-363 §wall-ortho-tracking — Q (F9+Q) ΝΙΚΑ τον μαγνήτη (ίδιο με το commit path) ώστε το
+    // ρητό βήμα του χρήστη να εφαρμόζεται αντί του zoom-adaptive step του magnet.
+    const faceRel = isGripStepActive() ? null : resolveWallFaceRelativePolar(p, worldPerPixel(getTransformScale()));
     if (faceRel) {
       polarSnapResult = faceRel.result;
       previewPt = faceRel.result.point;
@@ -193,6 +198,12 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const trackingState = trackingHoverRef.current;
     const immediateSnap = getImmediateSnap();
     const isDrawingTool = activeTool !== 'select' && activeTool !== 'pan';
+    // ADR-363 §wall-ortho-tracking (OTRACK acquire) — «κλείδωσε» το osnap-σε-οντότητα σημείο ως tracking
+    // αναφορά για το 1ο σημείο του τοίχου (ΟΡΘΟ/Q ως προς τη διπλανή κολόνα). `mode!=='grid'` → μόνο
+    // πραγματικές οντότητες (όχι το πλέγμα). Sticky: κρατά την τελευταία όσο ο κέρσορας είναι ελεύθερος.
+    if (isDrawingTool && immediateSnap?.found && immediateSnap.mode !== 'grid') {
+      setPlacementTrackingAnchor(immediateSnap.point);
+    }
     if (isDrawingTool && immediateSnap?.found) {
       const sameAsLast = trackingState.point
         && trackingState.snapType === immediateSnap.mode

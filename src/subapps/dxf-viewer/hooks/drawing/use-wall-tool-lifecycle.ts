@@ -17,6 +17,7 @@ import type { WallKind, WallCategory } from '../../bim/types/wall-types';
 import type { WallParamOverrides } from './wall-completion';
 import { EventBus } from '../../systems/events/EventBus';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
+import { clearPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
 import {
   INITIAL_STATE,
   type WallPlacementMode,
@@ -50,6 +51,7 @@ export function useWallToolLifecycle({
   const activate = useCallback(() => {
     // ADR-508 — φόρτωσε snap targets ΠΡΙΝ το 1ο hover ώστε το ghost-before-click να κουμπώνει.
     syncSceneTargetsToStore();
+    clearPlacementTrackingAnchor(); // ADR-363 §wall-ortho-tracking — fresh OTRACK session
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -110,6 +112,7 @@ export function useWallToolLifecycle({
   useEffect(() => EventBus.on('bim:set-wall-category', ({ category }) => setCategory(category)), [setCategory]);
 
   const deactivate = useCallback(() => {
+    clearPlacementTrackingAnchor(); // ADR-363 §wall-ortho-tracking — καθάρισε το OTRACK anchor
     setState(INITIAL_STATE);
   }, [setState]);
 

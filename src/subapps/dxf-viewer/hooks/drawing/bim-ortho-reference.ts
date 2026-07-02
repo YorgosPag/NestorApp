@@ -44,6 +44,8 @@ import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { getColumnPlacementAnchor } from '../../systems/cursor/ColumnPlacementAnchorStore';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
+import { getPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
+import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
 // ADR-508 — reuse the SAME zoom-adaptive distance snap as the alignment traces
 // (no duplicate): the wall length grows in nice round steps that keep a constant
 // on-screen spacing. @see systems/tracking/adaptive-distance-snap.ts
@@ -74,8 +76,10 @@ export function getBimOrthoReference(tool: string): Point2D | null {
       // endPoint present ⇒ straight-kind `awaitingAlignment`: the pending click
       // is the free lateral side-pick, which must NOT be ortho/polar-locked.
       if (s.endPoint) return null;
-      // `awaitingEnd` — lock the end against the start point.
-      return s.startPoint;
+      // `awaitingEnd` — lock the end against the start point. ADR-363 §wall-ortho-tracking:
+      // στο `awaitingStart` (startPoint=null) πέσε στο hover-acquired tracking anchor (OTRACK) —
+      // η αρχή κλειδώνει ΟΡΘΟ/Q ως προς την οντότητα που «αγγίζει» ο κέρσορας (π.χ. διπλανή κολόνα).
+      return s.startPoint ?? getPlacementTrackingAnchor();
     }
     case 'stair':
       // `awaitingDirection` — lock the direction click against the base point.
@@ -194,7 +198,9 @@ export function applyBimDrawingConstraint(
   if (cadToggleState.isOrthoOn()) return resolveOrthoPolarStep(point, ref, { ortho: true, polar: false }).stepped;
   // ADR-508 — wall 2nd click anchored to a face → relative-polar-to-face (auto magnet),
   // which owns its own zoom-adaptive step (not the fixed grid).
-  const faceRel = resolveWallFaceRelativePolar(point, worldPerPixel);
+  // ADR-363 §wall-ortho-tracking — Q (F9+Q fixed step) ΝΙΚΑ τον μαγνήτη παρειάς (Giorgio: όταν
+  // κρατάω Q θέλω το ΔΙΚΟ μου βήμα, όχι το zoom-adaptive του magnet) → skip magnet όσο Q κρατιέται.
+  const faceRel = isGripStepActive() ? null : resolveWallFaceRelativePolar(point, worldPerPixel);
   if (faceRel) return faceRel.result.point;
   // World POLAR or free → SAME ORTHO/POLAR/step SSoT the preview + line commit use.
   return resolveOrthoPolarStep(point, ref, { ortho: false, polar: cadToggleState.isPolarOn() }).stepped;

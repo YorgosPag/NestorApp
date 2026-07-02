@@ -29,6 +29,10 @@ import {
 } from '../../../systems/cursor/ColumnPlacementAnchorStore';
 import { setColumnRotationLock, clearColumnRotationLock } from '../../../systems/cursor/ColumnRotationStore';
 import { setColumnTopLeanLock, clearColumnTopLeanLock } from '../../../systems/cursor/ColumnTopLeanStore';
+import {
+  setPlacementTrackingAnchor,
+  clearPlacementTrackingAnchor,
+} from '../../../systems/cursor/PlacementTrackingAnchorStore';
 
 describe('bim-ortho-reference', () => {
   beforeEach(() => {
@@ -40,6 +44,7 @@ describe('bim-ortho-reference', () => {
     clearColumnPlacementAnchor();
     clearColumnRotationLock();
     clearColumnTopLeanLock();
+    clearPlacementTrackingAnchor();
     // ADR-508 relative-polar tests rely on a deterministic 15° increment / no extras.
     polarTrackingStore.setIncrementAngle(15);
     polarTrackingStore.setAdditionalAngles([]);
@@ -96,6 +101,23 @@ describe('bim-ortho-reference', () => {
 
     it('6. idle → null', () => {
       expect(getBimOrthoReference('wall')).toBeNull();
+    });
+
+    // ADR-363 §wall-ortho-tracking — 1ο σημείο (awaitingStart) πέφτει στο hover-acquired anchor.
+    it('6a. awaitingStart + hover tracking anchor → anchor (OTRACK για το 1ο σημείο)', () => {
+      setPlacementTrackingAnchor({ x: 250, y: 90 }); // κέντρο διπλανής κολόνας (osnap)
+      expect(getBimOrthoReference('wall')).toEqual({ x: 250, y: 90 });
+    });
+    it('6b. awaitingStart χωρίς tracking anchor → null (καμία osnap σε οντότητα)', () => {
+      expect(getBimOrthoReference('wall')).toBeNull();
+    });
+    it('6c. awaitingEnd (startPoint set) → startPoint ΥΠΕΡΙΣΧΥΕΙ του tracking anchor', () => {
+      setPlacementTrackingAnchor({ x: 999, y: 999 });
+      wallPreviewStore.set({
+        startPoint: { x: 10, y: 20 }, endPoint: null, curveControl: null,
+        polylineVertices: [], overrides: {},
+      });
+      expect(getBimOrthoReference('wall')).toEqual({ x: 10, y: 20 });
     });
   });
 
