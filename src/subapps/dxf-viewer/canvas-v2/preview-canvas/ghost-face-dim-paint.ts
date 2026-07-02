@@ -145,7 +145,10 @@ function paintStraightDimension(
   textColor: string,
   project: OverlayProjector | undefined,
 ): void {
-  const label = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+  const len = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+  // ADR-508 §neighbor-clearance — «γωνία μόνο σε λοξές»: όταν ο resolver όρισε `angleDeg` (μη-ορθή
+  // ένδειξη), προσάρτησέ την ως `/ γωνία°` μέσω του SSoT `formatAngleLocale` (ADR-082, el/en + °).
+  const label = d.angleDeg != null ? `${len} / ${formatAngleLocale(d.angleDeg)}` : len;
   paintAlignedOverlayDimension(ctx, d.p1, d.p2, d.dimLineRef, label, transform, viewport, textColor, project);
 }
 

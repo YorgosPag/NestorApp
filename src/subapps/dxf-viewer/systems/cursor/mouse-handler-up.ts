@@ -39,6 +39,9 @@ import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts
 import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completion';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
+import { applyBimDrawingConstraint } from '../../hooks/drawing/bim-ortho-reference';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+import { getImmediateTransform } from './ImmediateTransformStore';
 import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation, setColumnFaceSizing } from './ColumnPlacementGhostStatusStore';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
@@ -288,7 +291,11 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         // το `useColumnTool` (center-anchor όταν status==='beam').
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
         if (colHandle?.isActive) {
-          const effectiveCursor = resolveEffectivePreviewCursor(worldPoint);
+          // ADR-363 §column-ortho — ΟΡΘΟ(F8)/POLAR(F10)/step(F9+Q) ΜΕΤΑ το OSNAP, ώστε το directional
+          // lock να ΥΠΕΡΙΣΧΥΕΙ της έλξης — ΙΔΙΑ σειρά με το preview (`generateColumnPreview`: OSNAP →
+          // constraint → face-snap) → preview ≡ commit. No-op πριν την 1η κολόνα ή στη rotation phase.
+          const snappedCursor = resolveEffectivePreviewCursor(worldPoint);
+          const effectiveCursor = applyBimDrawingConstraint('column', snappedCursor, worldPerPixel(getImmediateTransform().scale));
           // ADR-398 §3.13 — Polar Magnet opts (ίδια με το ghost → preview ≡ commit).
           // §3.19 — `colHandle.kind` → circle radius (tangent candidates μόνο σε κυκλική).
           const polarOpts = buildColumnPolarSnapOptions(colHandle.overrides, colHandle.getSceneUnits(), colHandle.kind);

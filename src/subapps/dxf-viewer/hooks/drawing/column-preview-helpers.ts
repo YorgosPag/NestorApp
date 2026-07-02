@@ -31,7 +31,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
-import { DEFAULT_COLUMN_HEIGHT_MM } from '../../bim/types/column-types';
+import { DEFAULT_COLUMN_HEIGHT_MM, type ColumnParams } from '../../bim/types/column-types';
 import {
   buildColumnEntity,
   buildDefaultColumnParams,
@@ -39,6 +39,12 @@ import {
   type ColumnParamOverrides,
   type SceneUnits,
 } from './column-completion';
+// ADR-503 preview ≡ commit — ο ΙΔΙΟΣ auto-sizer με το commit (τρέχει στο `drawing:entity-created`).
+import { resolveStructuralCode } from '../../bim/structural/codes';
+import { useStructuralSettingsStore } from '../../state/structural-settings-store';
+import { suggestColumnSection } from '../../bim/structural/sizing/column-sizing';
+import { isColumnAutoSized } from '../../bim/structural/sizing/column-size-patch';
+import type { StructuralCodeProvider } from '../../bim/structural/codes/structural-code-types';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
@@ -54,10 +60,35 @@ import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
 import { resolveTopLeanTilt } from '../../bim/columns/column-tilt-from-points';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
+import { applyBimDrawingConstraint } from './bim-ortho-reference';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 
+
+/**
+ * ADR-503 preview ≡ commit — αντανάκλαση του proactive auto-sizer που τρέχει στο
+ * `drawing:entity-created` (useProactiveMemberSizing → AutoSizeMembersCommand →
+ * `buildColumnSizePatch`). Μια default ΤΕΤΡΑΓΩΝΗ 400×400 ορθογώνια κολόνα «μικραίνει»
+ * two-way στην ελάχιστη επαρκή διατομή (EC8 250×250 για μεμονωμένη κολόνα): έτσι το
+ * φάντασμα έδειχνε 400×400 ενώ η τοποθετημένη κατέληγε 250×250 (Giorgio 2026-07-02:
+ * «το φάντασμα μεγαλύτερο από την κολόνα»). Reuse του ΙΔΙΟΥ SSoT (`suggestColumnSection`
+ * + `isColumnAutoSized`) με το commit ⇒ ghost size == committed size by construction.
+ * `femMoment` absent (χωρίς οργανισμό/φορτίο πριν την τοποθέτηση) → nominal e₀ fallback,
+ * ίδιο με το πρώτο post-commit pass μιας μεμονωμένης κολόνας. Locked (`autoSized:false`,
+ * π.χ. L corner-gap / adopt-rect) ή μη-ορθογώνια → `suggestColumnSection`/`isColumnAutoSized`
+ * επιστρέφουν no-op → αμετάβλητο (ρητή διάσταση χρήστη). Pure — zero React/DOM.
+ */
+function autoSizeGhostColumnParams(
+  params: ColumnParams,
+  provider: StructuralCodeProvider,
+): ColumnParams {
+  if (!isColumnAutoSized(params)) return params;
+  const suggested = suggestColumnSection(provider, params);
+  if (!suggested) return params;
+  if (params.width === suggested.widthMm && params.depth === suggested.depthMm) return params;
+  return { ...params, width: suggested.widthMm, depth: suggested.depthMm, autoSized: true };
+}
 
 /**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a
@@ -79,6 +110,11 @@ export function generateColumnPreview(
 ): ExtendedSceneEntity | null {
   const handle = columnToolBridgeStore.get();
   if (!handle?.isActive) return null;
+
+  // ADR-503 preview ≡ commit — ενεργός κανονισμός (ίδιο SSoT με το `useProactiveMemberSizing`),
+  // για να «μικρύνει» το φάντασμα στην ίδια ελάχιστη επαρκή διατομή που θα αυτο-διαστασιολογηθεί
+  // η κολόνα μόλις τοποθετηθεί. Resolve μία φορά ανά frame.
+  const sizingProvider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
 
   // ADR-398 §3.13 — Polar/Rect Magnet opts (zoom + Shift fractions + edge clearance), ίδια με το commit.
   // §3.19 — `handle.kind` → circle radius (tangent candidates μόνο σε κυκλική).
@@ -102,7 +138,9 @@ export function generateColumnPreview(
       } : {}),
     };
     const params = buildDefaultColumnParams(position, handle.kind, overrides, sceneUnits);
-    const built = buildColumnEntity(params, getDefaultLayerId(), sceneUnits);
+    // ADR-503 — αντανάκλαση του commit-time auto-sizer (400×400 → 250×250 minimum adequate).
+    const sized = autoSizeGhostColumnParams(params, sizingProvider);
+    const built = buildColumnEntity(sized, getDefaultLayerId(), sceneUnits);
     return built.ok ? built.entity : null;
   };
 
@@ -133,14 +171,21 @@ export function generateColumnPreview(
       ...handle.overrides, kind: handle.kind, anchor: lean.anchor, rotation: lean.rotationDeg, tilt,
     };
     const params = buildDefaultColumnParams(lean.basePoint, handle.kind, overrides, sceneUnits);
-    const built = buildColumnEntity(params, getDefaultLayerId(), sceneUnits);
+    // ADR-503 — ίδιο auto-size με τους υπόλοιπους κλάδους (κεκλιμένη ορθογώνια κολόνα).
+    const sized = autoSizeGhostColumnParams(params, sizingProvider);
+    const built = buildColumnEntity(sized, getDefaultLayerId(), sceneUnits);
     return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
   }
 
   // ADR-398 §3.10 — awaitingPosition: sync-in-preview face-snap (ΕΝΑΣ εγκέφαλος, ΙΔΙΑ opts/targets/cursor
   // με το commit) → κοινή assembly (ghost + CL listening dims + polar/rect grid). ⚠️ effectiveCursor ΗΔΗ
   // snapped → ΧΩΡΙΣ findSnapPoint (no double-snap, ADR-514 §2).
-  const effectiveCursor = effectiveCursorOverride ?? resolveEffectivePreviewCursor(cursorPoint);
+  // ADR-363 §column-ortho — ΟΡΘΟ(F8)/POLAR(F10)/step(F9+Q) εφαρμόζονται ΜΕΤΑ το OSNAP ώστε το
+  // directional lock να ΥΠΕΡΙΣΧΥΕΙ της έλξης (AutoCAD: με SNAP ON, το ΟΡΘΟ/βήμα κερδίζει — αλλιώς το
+  // `resolveEffectivePreviewCursor` επέστρεφε πάντα το snap point και το ΟΡΘΟ/Q «δεν άκουγαν»). No-op
+  // όταν όλα off ή δεν υπάρχει αναφορά (προηγούμενη κολόνα) → ίδια συμπεριφορά με πριν.
+  const snappedCursor = effectiveCursorOverride ?? resolveEffectivePreviewCursor(cursorPoint);
+  const effectiveCursor = applyBimDrawingConstraint('column', snappedCursor, worldPerPixel(getImmediateTransform().scale));
   const snap = resolveBimCursorSnap({
     toolKind: 'column',
     cursor: effectiveCursor,

@@ -46,7 +46,15 @@ import { buildPlacementGridMeta } from './placement-grid-meta';
 import {
   resolveGhostFaceDimensionsMeta,
   toWysiwygPreviewEntity,
+  GHOST_DIM_GAP_OFFSET_PX,
+  GHOST_DIM_MIN_PX,
 } from '../../hooks/drawing/wysiwyg-preview-shared';
+import {
+  resolveNeighborClearanceDims,
+  NEIGHBOR_DIM_MAX_CLEARANCE_PX,
+} from '../framing/neighbor-clearance-dims';
+import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
+import type { Entity } from '../../types/entities';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 
@@ -121,9 +129,23 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
   const wpp = worldPerPixel(getImmediateTransform().scale);
   // cursor μέσα σε ορθογώνιο → 4 καρτεσιανά dx/dy dims· αλλιώς → CL listening dims (faceFrame, σιελ).
   const rect = findRectContaining(effectiveCursor, targets.rectTargets);
-  const faceDimensions: GhostFaceDimensionsMeta | null = (rect && faceSnap && !isOverlap)
+  let faceDimensions: GhostFaceDimensionsMeta | null = (rect && faceSnap && !isOverlap)
     ? { sceneUnits, dims: resolveRectCartesianDims(rect, faceSnap.position) }
     : resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
+
+  // ADR-508 §neighbor-clearance — ΕΛΕΥΘΕΡΟ ghost (κανένα κούμπωμα): έξυπνες προσωρινές διαστάσεις προς
+  // τον πλησιέστερο γείτονα ανά κατεύθυνση (Revit temporary dims). Fallback-only → μηδέν διπλή ένδειξη.
+  if (!faceDimensions && !isOverlap) {
+    const ghostFootprint = resolveMemberFootprintVertices(entity as unknown as Entity);
+    if (ghostFootprint) {
+      faceDimensions = resolveNeighborClearanceDims(ghostFootprint, targets, sceneUnits, {
+        gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
+        minValueScene: GHOST_DIM_MIN_PX * wpp,
+        maxClearanceScene: NEIGHBOR_DIM_MAX_CLEARANCE_PX * wpp,
+        orthoToleranceDeg: 1,
+      });
+    }
+  }
 
   const ghost = toWysiwygPreviewEntity(entity, ghostId, ghostStatusColor, faceDimensions);
   // polar/rect grid overlay (ΙΔΙΟΣ resolver με το snap → μηδέν απόκλιση πλέγματος↔snap).

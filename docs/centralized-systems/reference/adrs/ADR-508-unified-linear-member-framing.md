@@ -106,6 +106,35 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-02 (§neighbor-clearance — έξυπνες προσωρινές διαστάσεις γύρω από ΕΛΕΥΘΕΡΟ ghost κολόνας, Revit temporary dims)**
+  - **Αίτημα Giorgio**: κατά την τοποθέτηση κολόνας, όταν το φάντασμα αιωρείται **ελεύθερο** (χωρίς
+    κούμπωμα σε παρειά), να δείχνει απόσταση/γωνία προς τις πλησιέστερες γειτονικές οντότητες
+    (κολόνες/πέδιλα/τοίχους/δοκάρια) ώστε να τοποθετεί χωρίς πληκτρολόγηση — **χωρίς** να πλημμυρίζει ο
+    καμβάς. Αποφάσεις (AskUserQuestion): (1) **πλησιέστερη ανά κατεύθυνση** (max ~4)· (2) **παρειά-προς-
+    παρειά**· (3) **γωνία μόνο σε λοξές** θέσεις.
+  - **Ρίζα (SSoT audit)**: το §dim listening-dim σύστημα (`ghost-face-dim-references` +
+    `ghost-face-dim-paint`) δείχνει dims **μόνο** με `GhostFaceFrame` (μετά από κούμπωμα). Ελεύθερο ghost →
+    `faceDimensions=null` → καμία ένδειξη. Οι γείτονες ήταν **ήδη** προ-συλλεγμένοι στο `sceneSnapTargetsStore`.
+  - **Fix (fallback-only, μηδέν νέος painter/wiring σχεδίασης)**:
+    - NEW pure `bim/framing/neighbor-clearance-dims.ts` — `resolveNeighborClearanceDims(ghostFootprint,
+      targets, sceneUnits, opts)` → **ΙΔΙΟ** `GhostFaceDimensionsMeta` σχήμα. AABB face-to-face gap ανά
+      ημιάξονα (E/W/N/S) για κολόνες/πέδιλα (reuse `footprintBounds`) + perpendicular clearance για
+      τοίχους/δοκάρια (reuse `buildMemberTargetFrame` + `projectPolygonOnAxis`). «Έξυπνο»: overlap-gating +
+      nearest-per-direction + threshold (`NEIGHBOR_DIM_MAX_CLEARANCE_PX=700` × wpp, screen-relative).
+    - `GhostFaceDimension`: NEW kind `'clearance'` + optional `angleDeg?` (world γωνία, τίθεται ΜΟΝΟ σε
+      λοξή ένδειξη). `ghost-face-dim-paint.paintStraightDimension`: `angleDeg` → `/ formatAngleLocale()`
+      στο label (γωνία μόνο σε λοξές· ορθές αμετάβλητες → μηδέν regression σε wall/beam dims).
+    - `placement-ghost-assembly.assemblePlacementGhost`: fallback κλήση όταν `!faceDimensions && !isOverlap`,
+      footprint ghost μέσω SSoT `resolveMemberFootprintVertices`. Κούμπωμα → υπερισχύει το CL/cartesian
+      dims (πιο σχετικό) → μηδέν διπλή ένδειξη. Offset σταθερές exported από `wysiwyg-preview-shared`.
+  - **Εύρος/όρια**: awaitingPosition (πριν το κλικ)· γείτονες = BIM δομικά μέλη (raw DXF `lineTargets` +
+    foundation-pad ghost εκτός MVP — ο `resolveMemberFootprintVertices` καλύπτει column/beam)· χωρίς νέο toggle.
+  - **Tests**: `bim/framing/__tests__/neighbor-clearance-dims.test.ts` (8 — 1/4 γείτονες, overlap gating,
+    threshold, nearest-wins, flush→skip, λοξός τοίχος→angleDeg≈135°). Regression: ghost-face-dim +
+    placement-ghost suites 31/31 GREEN. tsc SKIP (N.17).
+  - ✅ Google-level: YES — SSoT reuse (painter/geometry/format), fallback-only (μηδέν regression),
+    pure/idempotent, draw-time imperative read (ADR-040). 🔴 browser-verify + commit (Giorgio· stage ADR-508).
+
 - **2026-07-02 (§column-hud — live HUD σε ΟΛΟΥΣ τους τύπους κολόνας: Γ/Τ/Π/Ι/πολύγωνο/τοιχίο — pills retired)**
   - **Αίτημα Giorgio**: οι υπόλοιποι τύποι (Γ/Τ/Π/Ι/πολύγωνο/τοιχίο) που έμεναν σε pills να πάρουν το ίδιο
     πλούσιο HUD. Επιλογή (AskUserQuestion, concrete L-shape παράδειγμα): **Option Γ** — «ΟΛΕΣ οι

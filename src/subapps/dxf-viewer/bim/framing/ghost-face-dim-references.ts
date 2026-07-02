@@ -49,8 +49,9 @@ export interface ArcDimSpan {
 
 /** A single listening dimension (scene units) — ευθεία (along-face) ή καμπύλη (arc-length). */
 export interface GhostFaceDimension {
-  /** Semantic role — drives label/tests· `arc*`/`radius` = ADR-398 §3.12 κύκλος/τόξο· `perp` = §3.20b κάθετη (dy). */
-  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter' | 'arcLeftGap' | 'arcRightGap' | 'radius' | 'perp';
+  /** Semantic role — drives label/tests· `arc*`/`radius` = ADR-398 §3.12 κύκλος/τόξο· `perp` = §3.20b κάθετη (dy)·
+   *  `clearance` = ADR-508 §neighbor-clearance (πλησιέστερος γείτονας ανά κατεύθυνση, ελεύθερο ghost). */
+  readonly kind: 'leftGap' | 'rightGap' | 'centerToCenter' | 'arcLeftGap' | 'arcRightGap' | 'radius' | 'perp' | 'clearance';
   /** Witness point A (scene units) — ON the face line (ευθύ) ή ON the circle at the «from» angle (arc). */
   readonly p1: Point2D;
   /** Witness point B (scene units). */
@@ -63,6 +64,9 @@ export interface GhostFaceDimension {
   readonly arc?: ArcDimSpan;
   /** ADR-398 §3.12 — γωνία τόξου (μοίρες) για το `labelMode:'angle'|'both'` (arc gaps μόνο). */
   readonly sweepDeg?: number;
+  /** ADR-508 §neighbor-clearance — world γωνία (μοίρες) της dim, τίθεται ΜΟΝΟ σε **λοξή** ένδειξη
+   *  (ορθές → undefined). Ο painter την προσαρτά ως `/ γωνία°` στο label (Giorgio: «γωνία μόνο σε λοξές»). */
+  readonly angleDeg?: number;
 }
 
 /** Renderable bundle attached to the wall ghost preview entity (carries the unit system). */

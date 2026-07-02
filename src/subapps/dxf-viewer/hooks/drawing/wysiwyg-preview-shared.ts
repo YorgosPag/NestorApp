@@ -27,9 +27,9 @@ import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-508 §dim — listening-dimension dim-line offsets, screen-relative (× worldPerPixel) so the
 // witness rows sit a constant pixel distance from the face at every zoom. SHARED SSoT for ALL
 // member ghosts (wall / beam / column) — μηδέν διπλότυπο.
-const GHOST_DIM_GAP_OFFSET_PX = 22;
+export const GHOST_DIM_GAP_OFFSET_PX = 22;
 const GHOST_DIM_CENTER_OFFSET_PX = 50;
-const GHOST_DIM_MIN_PX = 2;
+export const GHOST_DIM_MIN_PX = 2;
 
 /**
  * ADR-508 §opening-conflict — meta που επισυνάπτεται στο 🔴 wall ghost όταν ο κάθετος τοίχος κόβει

@@ -57,6 +57,8 @@ import {
   getColumnRotationLock,
   clearColumnRotationLock,
 } from '../../systems/cursor/ColumnRotationStore';
+// ADR-363 §column-ortho — κράτα το κέντρο της τοποθετημένης κολόνας ως ORTHO/step αναφορά της επόμενης.
+import { setColumnPlacementAnchor } from '../../systems/cursor/ColumnPlacementAnchorStore';
 // ADR-404 Phase 5 — slanted column 2-click (base→top-lean) place flow.
 import {
   setColumnTopLeanLock,
@@ -175,6 +177,9 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         return false;
       }
       onColumnCreated?.(built.entity);
+      // ADR-363 §column-ortho — η μόλις τοποθετημένη κολόνα γίνεται η αναφορά ORTHO/POLAR/step (F9+Q)
+      // της ΕΠΟΜΕΝΗΣ (AutoCAD relative-to-last-point). Το `position` είναι το κέντρο τοποθέτησης.
+      setColumnPlacementAnchor(position);
       setState({
         ...INITIAL_STATE,
         kind: s.kind,

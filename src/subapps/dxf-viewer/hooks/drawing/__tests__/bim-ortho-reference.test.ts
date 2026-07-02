@@ -23,6 +23,12 @@ import { beamPreviewStore } from '../../../bim/beams/beam-preview-store';
 import { slabPreviewStore } from '../../../bim/slabs/slab-preview-store';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 import { polarTrackingStore } from '../../../systems/constraints/polar-tracking-store';
+import {
+  setColumnPlacementAnchor,
+  clearColumnPlacementAnchor,
+} from '../../../systems/cursor/ColumnPlacementAnchorStore';
+import { setColumnRotationLock, clearColumnRotationLock } from '../../../systems/cursor/ColumnRotationStore';
+import { setColumnTopLeanLock, clearColumnTopLeanLock } from '../../../systems/cursor/ColumnTopLeanStore';
 
 describe('bim-ortho-reference', () => {
   beforeEach(() => {
@@ -31,20 +37,23 @@ describe('bim-ortho-reference', () => {
     beamPreviewStore.reset();
     slabPreviewStore.reset();
     cadToggleState.set(false, false);
+    clearColumnPlacementAnchor();
+    clearColumnRotationLock();
+    clearColumnTopLeanLock();
     // ADR-508 relative-polar tests rely on a deterministic 15° increment / no extras.
     polarTrackingStore.setIncrementAngle(15);
     polarTrackingStore.setAdditionalAngles([]);
   });
 
   describe('isBimOrthoTool', () => {
-    it('1. recognises the four anchored BIM tools', () => {
+    it('1. recognises the anchored BIM tools (incl. column, ADR-363 §column-ortho)', () => {
       expect(isBimOrthoTool('wall')).toBe(true);
       expect(isBimOrthoTool('stair')).toBe(true);
       expect(isBimOrthoTool('beam')).toBe(true);
       expect(isBimOrthoTool('slab')).toBe(true);
+      expect(isBimOrthoTool('column')).toBe(true);
     });
     it('2. rejects non-anchored / non-BIM tools', () => {
-      expect(isBimOrthoTool('column')).toBe(false);
       expect(isBimOrthoTool('opening')).toBe(false);
       expect(isBimOrthoTool('line')).toBe(false);
       expect(isBimOrthoTool('select')).toBe(false);
@@ -113,6 +122,32 @@ describe('bim-ortho-reference', () => {
 
     it('11. non-BIM tool → null', () => {
       expect(getBimOrthoReference('line')).toBeNull();
+    });
+  });
+
+  describe('getBimOrthoReference — column (ADR-363 §column-ortho)', () => {
+    it('11a. no previous column (fresh) → null (1st column unconstrained)', () => {
+      expect(getBimOrthoReference('column')).toBeNull();
+    });
+    it('11b. previous column placed → its centre is the anchor', () => {
+      setColumnPlacementAnchor({ x: 300, y: 120 });
+      expect(getBimOrthoReference('column')).toEqual({ x: 300, y: 120 });
+    });
+    it('11c. rotation phase (position locked) → null (2nd click sets ANGLE, not position)', () => {
+      setColumnPlacementAnchor({ x: 300, y: 120 });
+      setColumnRotationLock({ x: 300, y: 120 }, 'center');
+      expect(getBimOrthoReference('column')).toBeNull();
+    });
+    it('11d. top-lean phase (position locked) → null', () => {
+      setColumnPlacementAnchor({ x: 300, y: 120 });
+      setColumnTopLeanLock({ x: 300, y: 120 }, 'center', 0);
+      expect(getBimOrthoReference('column')).toBeNull();
+    });
+    it('11e. ortho ON → next column locks H/V to the previous column', () => {
+      setColumnPlacementAnchor({ x: 0, y: 0 });
+      cadToggleState.set(true, false);
+      // |dx|=100 > |dy|=30 → horizontal lock: y snaps to anchor.y (0).
+      expect(applyBimDrawingConstraint('column', { x: 100, y: 30 })).toEqual({ x: 100, y: 0 });
     });
   });
 

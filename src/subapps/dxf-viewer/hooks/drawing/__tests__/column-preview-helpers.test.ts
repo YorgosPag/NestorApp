@@ -189,6 +189,19 @@ describe('generateColumnPreview (ADR-398 §3.10 sync-in-preview)', () => {
     sceneSnapTargetsStore.reset();
     const ghost = generateColumnPreview({ x: 0, y: 0 }) as PreviewColumn;
     expect(ghost.params.kind).toBe('rectangular');
+    // Μη-τετράγωνη ρητή διατομή (800×600) → grow-only ήδη επαρκής → αμετάβλητη (μηδέν squaring).
     expect(ghost.params.width).toBe(800);
+  });
+
+  // ADR-503 preview ≡ commit (Giorgio 2026-07-02): το φάντασμα ήταν 400×400 ενώ η τοποθετημένη
+  // κολόνα «μίκραινε» άμεσα two-way στην ελάχιστη επαρκή διατομή (EC8 250×250) από τον proactive
+  // auto-sizer. Το φάντασμα πρέπει να δείχνει την ΙΔΙΑ διάσταση με την τοποθετημένη.
+  it('default 400×400 τετράγωνη → auto-sized στα 250×250 (ghost == placed)', () => {
+    activateColumnBridge({ kind: 'rectangular', overrides: {} });
+    clearImmediateSnap();
+    sceneSnapTargetsStore.reset();
+    const ghost = generateColumnPreview({ x: 0, y: 0 }) as PreviewColumn;
+    expect(ghost.params.kind).toBe('rectangular');
+    expect(ghost.params.width).toBe(250); // MIN_COLUMN_DIMENSION_MM (25cm), όχι το default 400
   });
 });

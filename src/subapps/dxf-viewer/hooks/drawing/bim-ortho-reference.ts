@@ -41,13 +41,16 @@ import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underflo
 import { resolveOrthoPolarStep, worldPolarSnapConfig } from './drawing-handler-utils';
 import { applyPolar, type PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { getColumnPlacementAnchor } from '../../systems/cursor/ColumnPlacementAnchorStore';
+import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
+import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
 // ADR-508 — reuse the SAME zoom-adaptive distance snap as the alignment traces
 // (no duplicate): the wall length grows in nice round steps that keep a constant
 // on-screen spacing. @see systems/tracking/adaptive-distance-snap.ts
 import { adaptiveDistanceStep, quantizePointFromAnchor, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
-const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor']);
+const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor', 'column']);
 
 /** True if `tool` is a BIM tool that participates in ortho/polar constraints. */
 export function isBimOrthoTool(tool: string): boolean {
@@ -93,6 +96,14 @@ export function getBimOrthoReference(tool: string): Point2D | null {
     case 'mep-underfloor': {
       const s = mepUnderfloorPreviewStore.get();
       return s.vertices.length > 0 ? s.vertices[s.vertices.length - 1] : null;
+    }
+    case 'column': {
+      // ADR-363 §column-ortho — αναφορά = η ΠΡΟΗΓΟΥΜΕΝΗ τοποθετημένη κολόνα (single-point tool,
+      // δεν έχει FSM anchor σαν τον τοίχο). Ενεργό ΜΟΝΟ στο 1ο κλικ (awaitingPosition): μόλις κλειδώσει
+      // η θέση (rotation/top-lean phase) το 2ο κλικ ορίζει ΓΩΝΙΑ/ΚΛΙΣΗ — η θέση δεν πρέπει να ξανα-
+      // περιοριστεί (θα μετακινούσε το κλειδωμένο origin). `null` πριν την 1η κολόνα → no-op (ως τώρα).
+      if (getColumnRotationLock() || getColumnTopLeanLock()) return null;
+      return getColumnPlacementAnchor();
     }
     default:
       return null;
