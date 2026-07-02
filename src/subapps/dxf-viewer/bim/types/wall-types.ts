@@ -159,7 +159,16 @@ export interface WallParams {
   readonly joinPriority?: number;
   /** Defined when `kind === 'polyline'`. mm. */
   readonly polylineVertices?: readonly Point3D[];
-  /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */
+  /**
+   * Defined when `kind === 'curved'` and the wall is a TRUE circular arc
+   * (ADR-565). Canonical DXF **bulge** = tan(sweep/4) of the arc spanning
+   * `start → end` (dimensionless, sign = CCW>0/CW<0). Fully encodes the arc
+   * (center/radius/sweep derivable via `bulgeToArc`) with no redundant fields —
+   * radius/3-point/IFC inputs all normalize to this ONE scalar (SSoT).
+   * Takes precedence over the legacy Bézier `curveControl` when present.
+   */
+  readonly arc?: number;
+  /** Defined when `kind === 'curved'`. mm. Legacy quadratic Bezier control point. */
   readonly curveControl?: Point3D;
   /** Material key for wall-level hatch (rc/masonry/aerated-concrete/gypsum).
    *  Ignored when `dna` is present — DNA layers govern per-layer materials. */

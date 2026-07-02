@@ -50,6 +50,7 @@ import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-
 // ADR-363 §wall-joint-miter-preview — LIVE Revit-grade miter (ghost + affected neighbours),
 // reusing the SAME computeWallTrims/applyTrimPatches SSoT as commit (preview === commit).
 import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
+import { bulgeFrom3Points } from '../../bim/walls/wall-arc-descriptor';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
@@ -209,6 +210,14 @@ export function generateWallPreview(
   }
 
   const startPt = tempPoints[0];
+
+  // ADR-565 — curved (circular-arc) live preview: both endpoints fixed, cursor =
+  // live on-arc "through" point. The bulge is normalized from the 3 points; a
+  // collinear cursor (no unique circle) falls back to a straight ghost. `curved`
+  // ghosts never overlap/miter, so no joint-miter/conflict pass is needed.
+  if (preview.arcEndPoint) {
+    return makeWallArcGhost('preview_wall_arc', startPt, preview.arcEndPoint, cursorPoint, overrides, sceneUnits);
+  }
 
   // Legacy `awaitingAlignment` (μη-straight modes που το θέτουν): endPoint fixed, cursor =
   // live side pick. Με το 2-κλικ straight flow (ADR-508) ΔΕΝ τίθεται για ευθύ τοίχο.
@@ -386,6 +395,31 @@ function makeWallFootprintGhost(
     ? null
     : { contactPt: startPt, thicknessMm: resolveWallThicknessMm(overrides), host, openings };
   return buildWallGhostEntity(id, finalParams, kind, sceneUnits, isOverlap, null, conflictCtx, true);
+}
+
+/**
+ * ADR-565 — WYSIWYG ghost for a curved (circular-arc) wall during
+ * `awaitingCurveControl`: the arc passes through `startPt → throughPt → endPt`.
+ * The through-point normalizes to the canonical `arc` bulge (SSoT
+ * `bulgeFrom3Points`); a collinear through-point yields no unique circle and
+ * falls back to the legacy Bézier `curveControl` so the ghost never disappears.
+ * Preview ≡ commit (same `buildWallEntity` via `buildWallGhostEntity`).
+ */
+function makeWallArcGhost(
+  id: string,
+  startPt: Readonly<Point2D>,
+  endPt: Readonly<Point2D>,
+  throughPt: Readonly<Point2D>,
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+): ExtendedSceneEntity | null {
+  const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
+  const bulge = bulgeFrom3Points(startPt, throughPt, endPt);
+  const params: WallParams =
+    bulge != null
+      ? { ...base, arc: bulge }
+      : { ...base, curveControl: { x: throughPt.x, y: throughPt.y, z: 0 } as Point3D };
+  return buildWallGhostEntity(id, params, 'curved', sceneUnits, false);
 }
 
 /**

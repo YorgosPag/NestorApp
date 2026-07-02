@@ -40,7 +40,8 @@ export function resolveWallToolStatusKey(s: WallToolState): string {
     case 'awaitingAlignment':
       return 'tools.wall.statusAlignment';
     case 'awaitingCurveControl':
-      return 'tools.wall.statusCurveControl';
+      // ADR-565 — the 3rd click is the point the circular arc passes through.
+      return 'tools.wall.statusArcThrough';
     case 'awaitingNextVertex':
       return 'tools.wall.statusPolyNext';
     default:

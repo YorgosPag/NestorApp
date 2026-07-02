@@ -214,6 +214,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'wall',
   },
+  // ADR-565 — dedicated chord for the circular-arc wall (3-point). Activates the
+  // wall tool + `curved` kind (arc). Distinct entry from W2 for discoverability.
+  wallArc: {
+    key: 'W4',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallArc',
+    action: 'tool:wall:arc',
+    category: 'tool',
+    toolType: 'wall',
+  },
   wallExterior: {
     key: 'WE',
     modifier: 'none',

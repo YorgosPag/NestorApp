@@ -34,6 +34,8 @@ import { applyRectWallGrip } from './wall-rect-adapter';
 // (swept angle from grip-math + canonical rotatePoint, ADR-188) is consumed by
 // both the wall and beam rotation grips. No re-implemented cos/sin here.
 import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
+// ADR-565 — arc apex drag ↔ bulge conversion reuses the bulge SSoT (ADR-510).
+import { bulgeApexPoint, bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 
 // ─── Whole-wall translation SSoT ─────────────────────────────────────────────
 
@@ -122,6 +124,7 @@ export function applyWallGripDrag(
   if (gripKind === 'wall-midpoint') return moveMidpoint(input);
   if (gripKind === 'wall-thickness') return resizeThickness(input); // curved/polyline path only
   if (gripKind === 'wall-rotation') return rotateWall(input);
+  if (gripKind === 'wall-arc-apex') return moveArcApex(input);
   if (gripKind === 'wall-curve') return moveCurveControl(input);
   if (gripKind.startsWith('wall-vertex-')) {
     const idx = parseInt(gripKind.slice('wall-vertex-'.length), 10);
@@ -229,6 +232,23 @@ function resizeThickness(input: Readonly<WallGripDragInput>): WallParams {
 // `applyRectWallGrip`, opposite-corner-fixed), and curved/polyline walls never
 // emit corner grips. Identical 2-DOF result (axial → length, perpendicular →
 // near-face thickness with axis recenter), now ONE code path with beam/foundation.
+
+/**
+ * ADR-565 — drag the circular arc's sagitta apex to reshape the radius/sweep.
+ * The apex position is `bulgeApexPoint(start, end, arc)`; the new bulge is the
+ * inverse `bulgeFromApexPoint` of the dragged apex (constrained to the chord's
+ * perpendicular at the midpoint — a symmetric radius handle). Reuses the bulge
+ * SSoT; geometry is recomputed by the caller (`UpdateWallParamsCommand`).
+ */
+function moveArcApex(input: Readonly<WallGripDragInput>): WallParams {
+  const { originalParams, delta } = input;
+  if (originalParams.arc == null) return originalParams;
+  const start: Point2D = { x: originalParams.start.x, y: originalParams.start.y };
+  const end: Point2D = { x: originalParams.end.x, y: originalParams.end.y };
+  const apex = bulgeApexPoint(start, end, originalParams.arc);
+  const nextApex: Point2D = { x: apex.x + delta.x, y: apex.y + delta.y };
+  return { ...originalParams, arc: bulgeFromApexPoint(start, end, nextApex) };
+}
 
 function moveCurveControl(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, delta } = input;

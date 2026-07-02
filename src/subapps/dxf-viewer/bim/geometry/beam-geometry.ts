@@ -27,6 +27,7 @@ import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
+import { subdivideQuadraticBezier } from './shared/curve-tessellation';
 import { iShapeCrossSectionAreaMm2 } from './shared/i-shape-profile';
 import { justifyAxisPoints } from '../grid/axis-justify';
 
@@ -134,34 +135,6 @@ function pickAxisVertices(params: BeamParams): readonly Point3D[] {
     return subdivideQuadraticBezier(startB, ctrlB, endB, CURVED_BEAM_SUBDIVISIONS);
   }
   return [startB, endB];
-}
-
-/**
- * Quadratic Bezier subdivision: `P(t) = (1-t)² P0 + 2(1-t)t P1 + t² P2`.
- * Returns N+1 vertices including endpoints. Z is interpolated linearly
- * between start/end (control point Z ignored — beams are 2D-extruded in
- * Phase 5).
- */
-function subdivideQuadraticBezier(
-  start: Point3D,
-  control: Point3D,
-  end: Point3D,
-  segments: number,
-): Point3D[] {
-  const pts: Point3D[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const oneMinusT = 1 - t;
-    const w0 = oneMinusT * oneMinusT;
-    const w1 = 2 * oneMinusT * t;
-    const w2 = t * t;
-    pts.push({
-      x: w0 * start.x + w1 * control.x + w2 * end.x,
-      y: w0 * start.y + w1 * control.y + w2 * end.y,
-      z: oneMinusT * (start.z ?? 0) + t * (end.z ?? 0),
-    });
-  }
-  return pts;
 }
 
 /**

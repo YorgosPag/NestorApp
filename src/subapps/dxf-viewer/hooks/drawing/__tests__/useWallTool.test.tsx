@@ -199,7 +199,11 @@ describe('useWallTool', () => {
     expect(result.current.state.phase).toBe('awaitingStart');
   });
 
-  it('curved kind: 3-click flow start → end → control → commit', () => {
+  // ADR-565 — the 3rd click is now the point the circular arc passes THROUGH
+  // (Tekla/AutoCAD 3-point ARC), normalized to the canonical `arc` bulge scalar.
+  // The legacy Bézier `curveControl` is no longer produced for a non-collinear
+  // 3rd click.
+  it('curved kind: 3-click flow start → end → on-arc → commit (arc bulge)', () => {
     const onWallCreated = jest.fn();
     const { result } = renderHook(() => useWallTool({ onWallCreated }));
     act(() => result.current.activate());
@@ -212,7 +216,9 @@ describe('useWallTool', () => {
     expect(onWallCreated).toHaveBeenCalledTimes(1);
     const entity = onWallCreated.mock.calls[0][0] as WallEntity;
     expect(entity.kind).toBe('curved');
-    expect(entity.params.curveControl).toMatchObject({ x: 500, y: 300 });
+    expect(entity.params.arc).toEqual(expect.any(Number));
+    expect(Number.isFinite(entity.params.arc)).toBe(true);
+    expect(entity.params.curveControl).toBeUndefined();
   });
 
   it('polyline kind: N-click flow + finishPolyline commits', () => {

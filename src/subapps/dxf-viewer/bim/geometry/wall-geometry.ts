@@ -26,6 +26,8 @@ import type { WallTopProfile } from './wall-top-profile';
 import type { WallBaseProfile } from './wall-base-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
+import { subdivideQuadraticBezier, tessellateArcAxis } from './shared/curve-tessellation';
+import { BULGE_STRAIGHT_EPS } from '../../rendering/entities/shared/geometry-bulge-utils';
 
 const MM_TO_M = 1 / 1000;
 /** mm² → m² (1e6). ADR-395 G6 opening face area conversion. */
@@ -276,12 +278,19 @@ function sumOpeningAreasM2(
 /**
  * Pick the axis vertices based on wall kind:
  *   - `polyline` + `polylineVertices` present → use them
- *   - `curved` + `curveControl` present → subdivide quadratic Bezier
+ *   - `curved` + `arc` (bulge) present → tessellate true circular arc (ADR-565)
+ *   - `curved` + `curveControl` present → subdivide quadratic Bezier (legacy)
  *   - else → [start, end] (straight kind, or curved fallback)
+ *
+ * `arc` (canonical DXF bulge) takes precedence over the legacy Bézier
+ * `curveControl` when both are somehow present.
  */
 function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
   if (kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
     return params.polylineVertices;
+  }
+  if (kind === 'curved' && params.arc != null && Math.abs(params.arc) > BULGE_STRAIGHT_EPS) {
+    return tessellateArcAxis(params.start, params.end, params.arc, params.sceneUnits);
   }
   if (kind === 'curved' && params.curveControl) {
     return subdivideQuadraticBezier(params.start, params.curveControl, params.end, CURVED_SUBDIVISIONS);
@@ -362,33 +371,6 @@ function applyAxisBevels(
   }
 
   return result;
-}
-
-/**
- * Quadratic Bezier subdivision: `P(t) = (1-t)² P0 + 2(1-t)t P1 + t² P2`.
- * Returns N+1 vertices including endpoints. Z is interpolated linearly between
- * start/end (control point Z is ignored — walls are 2D-extruded in Phase 1).
- */
-function subdivideQuadraticBezier(
-  start: Point3D,
-  control: Point3D,
-  end: Point3D,
-  segments: number,
-): Point3D[] {
-  const pts: Point3D[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const oneMinusT = 1 - t;
-    const w0 = oneMinusT * oneMinusT;
-    const w1 = 2 * oneMinusT * t;
-    const w2 = t * t;
-    pts.push({
-      x: w0 * start.x + w1 * control.x + w2 * end.x,
-      y: w0 * start.y + w1 * control.y + w2 * end.y,
-      z: oneMinusT * (start.z ?? 0) + t * (end.z ?? 0),
-    });
-  }
-  return pts;
 }
 
 /**

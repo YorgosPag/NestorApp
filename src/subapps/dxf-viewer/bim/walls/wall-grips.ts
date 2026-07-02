@@ -56,6 +56,8 @@ import { gripGlyphShape } from '../grips/grip-glyph-registry';
 // — zero wall-only geometry here (the far-thickness sign respects `flip` in the SSoT).
 import { getAxisBoxGrips, type AxisBoxParams } from '../grips/axis-box-grips';
 import { WALL_ROLE_TO_KIND, wallAxisBoxParams } from './wall-rect-adapter';
+// ADR-565 — arc apex handle (radius drag) reuses the bulge SSoT (ADR-510).
+import { bulgeApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 
 // Public API re-exports (consumers import from this module).
 export { applyWallGripDrag, translateWallParams } from './wall-grip-transforms';
@@ -172,8 +174,20 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     });
   }
 
-  // Curve control (curved kind only).
-  if (kind === 'curved' && params.curveControl) {
+  // ADR-565 — arc apex handle (curved circular-arc kind): dragging the sagitta
+  // apex changes the radius/sweep (via `bulgeFromApexPoint`). Takes the place of
+  // the legacy Bézier `wall-curve` handle when the wall stores an `arc` bulge.
+  if (kind === 'curved' && params.arc != null) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: grips.length,
+      type: 'vertex',
+      position: bulgeApexPoint(start, end, params.arc),
+      movesEntity: false,
+      wallGripKind: 'wall-arc-apex',
+    });
+  } else if (kind === 'curved' && params.curveControl) {
+    // Curve control (legacy Bézier curved kind only).
     grips.push({
       entityId: entity.id,
       gripIndex: grips.length,

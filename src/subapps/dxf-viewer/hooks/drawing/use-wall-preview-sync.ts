@@ -43,20 +43,22 @@ export function useWallPreviewSync(state: WallToolState): void {
       }
       return;
     }
-    const curveControl =
-      state.kind === 'curved' && state.phase === 'awaitingCurveControl' && state.endPoint
-        ? null // user has not picked the control point yet — preview generator will use cursor
-        : null;
     // ADR-363 Phase 1F — surface endPoint to the preview store only during the
-    // straight-kind awaitingAlignment phase. In every other state (including
-    // curved awaitingCurveControl) the preview falls back to the legacy
-    // "start → cursor" rubber band by leaving endPoint null.
+    // straight-kind awaitingAlignment phase. In every other state the straight
+    // preview falls back to the legacy "start → cursor" rubber band.
     const endPoint =
       state.kind === 'straight' && state.phase === 'awaitingAlignment' ? state.endPoint : null;
+    // ADR-565 — curved (circular-arc) live preview: during `awaitingCurveControl`
+    // both endpoints are fixed and the cursor is the on-arc "through" point, so
+    // surface the committed 2nd click as `arcEndPoint` and let the preview
+    // generator tessellate the arc `start → cursor → end`.
+    const arcEndPoint =
+      state.kind === 'curved' && state.phase === 'awaitingCurveControl' ? state.endPoint : null;
     wallPreviewStore.set({
       startPoint: state.startPoint,
       endPoint,
-      curveControl,
+      curveControl: null,
+      arcEndPoint,
       polylineVertices: state.polylineVertices,
       overrides: state.overrides,
       startAnchored: state.startAnchored,

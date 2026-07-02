@@ -47,6 +47,13 @@ export interface WallPreviewState {
    */
   readonly curveControl: Point2D | null;
   /**
+   * ADR-565 — for a curved (circular-arc) wall, the FIXED end point (2nd click)
+   * during the `awaitingCurveControl` phase. When set, the live cursor is the
+   * on-arc "through" point and the preview shows the arc `start → cursor → end`.
+   * `null` in every other phase / kind.
+   */
+  readonly arcEndPoint: Point2D | null;
+  /**
    * Polyline spine vertices (N-click flow). Empty in straight/curved modes.
    * Captured in user-click order; the active `awaitingNextVertex` cursor is
    * appended at render time by `generateWallPreview`.
@@ -89,6 +96,7 @@ const EMPTY: WallPreviewState = Object.freeze({
   startPoint: null,
   endPoint: null,
   curveControl: null,
+  arcEndPoint: null,
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
@@ -142,11 +150,12 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startJustification' | 'startFaceAngle' | 'anchoredHostId'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startJustification' | 'startFaceAngle' | 'anchoredHostId' | 'arcEndPoint'> & {
   readonly startAnchored?: boolean;
   readonly startJustification?: StripJustification | null;
   readonly startFaceAngle?: number | null;
   readonly anchoredHostId?: string | null;
+  readonly arcEndPoint?: Point2D | null;
 };
 
 export const wallPreviewStore = {
@@ -156,10 +165,12 @@ export const wallPreviewStore = {
     const nextJustification = next.startJustification ?? null;
     const nextFaceAngle = next.startFaceAngle ?? null;
     const nextHostId = next.anchoredHostId ?? null;
+    const nextArcEnd = next.arcEndPoint ?? null;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
       pointsEqual(currentState.curveControl, next.curveControl) &&
+      pointsEqual(currentState.arcEndPoint, nextArcEnd) &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       currentState.startAnchored === nextAnchored &&
       currentState.startJustification === nextJustification &&
@@ -173,6 +184,7 @@ export const wallPreviewStore = {
       startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
+      arcEndPoint: nextArcEnd ? { x: nextArcEnd.x, y: nextArcEnd.y } : null,
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,

@@ -93,6 +93,8 @@ const WallParamsBaseSchema = z
     // ─── ADR-458 (wall↔wall cross) — join priority (higher wins at X-crossings) ─
     joinPriority: z.number().finite().optional(),
     polylineVertices: z.array(Point3DSchema).optional(),
+    // ADR-565 — canonical circular-arc bulge (tan(sweep/4)); curved kind only.
+    arc: z.number().finite().optional(),
     curveControl: Point3DSchema.optional(),
     material: z.string().min(1).optional(),
     sceneUnits: z.string().optional(),
@@ -119,6 +121,14 @@ const WallParamsBaseSchema = z
  *   - topBinding !== 'unconnected' && unconnectedHeight !== undefined
  */
 export const WallParamsSchema = WallParamsBaseSchema.superRefine((data, ctx) => {
+  // ─── ADR-565 — circular arc is mutually exclusive with polyline vertices ────
+  if (data.arc !== undefined && data.polylineVertices !== undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['arc'],
+      message: 'WallParams: arc (circular) και polylineVertices αλληλοαποκλείονται.',
+    });
+  }
   if (data.topBinding === 'unconnected' && data.unconnectedHeight === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

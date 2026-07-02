@@ -246,6 +246,36 @@ export const ARC_TESSELLATION = {
   DEFAULT_SEGMENTS: 24,
 } as const;
 
+/**
+ * ADR-565 — Adaptive (deviation-driven) circular-arc tessellation for curved
+ * structural members (arc walls first, then beams/columns/footings).
+ *
+ * Unlike {@link ARC_TESSELLATION} (a fixed segment count), the arc-member axis is
+ * tessellated at a **chord-deviation tolerance**: the segment angle is chosen so
+ * the sagitta between chord and true arc stays under the tolerance, so segment
+ * count scales with the arc's radius/sweep (a 10 m-radius wall gets more segments
+ * than a 0.4 m one). Mirrors the industry norm (Tekla/ArchiCAD/BricsCAD store the
+ * curve parametrically and facet to a deviation tolerance).
+ *
+ *  - `CHORD_DEVIATION_MM` — commit-time world tolerance (zoom-independent). Feeds
+ *    the STORED geometry (BOQ / 3D / snap / hit-test).
+ *  - `RENDER_PIXEL_TOL`   — render-time pixel tolerance for the future zoom-adaptive
+ *    display axis (Phase 1.x, `worldTol = RENDER_PIXEL_TOL / transform.scale`).
+ *  - `MAX_SEGMENTS`       — performance cap (Tekla's 59; ArchiCAD's 36 is the lower
+ *    industry anchor).
+ *  - `MIN_SEGMENTS`       — smoothness floor for tight/short arcs.
+ */
+export const ADAPTIVE_ARC_TESSELLATION = {
+  /** Commit-time chord-deviation tolerance in mm (world, zoom-independent). */
+  CHORD_DEVIATION_MM: 2,
+  /** Render-time pixel tolerance for zoom-adaptive display re-tessellation. */
+  RENDER_PIXEL_TOL: 0.5,
+  /** Performance cap on segments per arc (Tekla). */
+  MAX_SEGMENTS: 59,
+  /** Smoothness floor on segments per arc. */
+  MIN_SEGMENTS: 4,
+} as const;
+
 // ===== SNAP ENGINE CONFIGURATION =====
 // 🏢 ADR-087: Centralized Snap Engine Configuration (2026-01-31)
 

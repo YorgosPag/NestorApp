@@ -28,6 +28,7 @@ import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-s
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
+import { bulgeFrom3Points } from '../../bim/walls/wall-arc-descriptor';
 
 export interface WallCommitContext {
   readonly currentLevelId: string;
@@ -166,14 +167,21 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     [currentLevelId, onWallCreated, getSceneUnits, setState],
   );
 
-  // ── commit (curved) ──────────────────────────────────────────────────────
+  // ── commit (curved, ADR-565) ─────────────────────────────────────────────
+  // The 3rd click is the point the arc passes THROUGH (Tekla/AutoCAD 3-point
+  // ARC). It normalizes to the canonical `arc` bulge; a collinear 3rd point
+  // (no unique circle) falls back to the legacy Bézier `curveControl` so the
+  // gesture never fails.
   const commitCurvedFromState = useCallback(
     (s: WallToolState, controlPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null || s.endPoint === null) return false;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const base = buildDefaultWallParams(s.startPoint, s.endPoint, s.overrides, sceneUnits);
-      const curveControl: Point3D = { x: controlPoint.x, y: controlPoint.y, z: 0 };
-      const params = { ...base, curveControl };
+      const bulge = bulgeFrom3Points(s.startPoint, controlPoint, s.endPoint);
+      const params =
+        bulge != null
+          ? { ...base, arc: bulge }
+          : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as Point3D };
       const result = buildWallEntity(params, currentLevelId, 'curved', sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });

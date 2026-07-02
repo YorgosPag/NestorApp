@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🔵 RESEARCH / PROPOSED — τεκμηρίωση αγοράς + σύσταση αρχιτεκτονικής· καμία υλοποίηση ακόμη |
+| **Status** | 🟢 Φ1 IMPLEMENTED (UNCOMMITTED) — καμπύλος (κυκλικό τόξο) τοίχος· research + απόφαση αναπαράστασης παρακάτω |
 | **Date** | 2026-07-02 |
 | **Category** | DXF Viewer · BIM · Geometry · Research |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-565-curved-circular-structural-bim-elements.md` |
@@ -188,6 +188,25 @@
 
 ---
 
+## 11. Υλοποίηση Φ1 — Καμπύλος (κυκλικό τόξο) τοίχος (2026-07-03)
+
+**Απόφαση αναπαράστασης (Giorgio scope):** επέκταση του υπάρχοντος `WallKind='curved'` (που ήταν **quadratic Bézier**) με ΕΝΑ canonical πεδίο `WallParams.arc?: number` = **DXF bulge** (`tan(sweep/4)` μεταξύ start/end). Το bulge κωδικοποιεί πλήρως το κυκλικό τόξο (center/radius/sweep derivable), είναι DXF-native, και έχει ήδη ολόκληρο SSoT (`geometry-bulge-utils`, ADR-510). Τα 3 input methods (3-point / radius / IFC) **normalize στο ΕΝΑ bulge** (SSoT — όχι 3 redundant πεδία). Bézier `curveControl` μένει legacy (precedence: `arc` > `curveControl`).
+
+**Draw UX:** 3-σημείων (Tekla/AutoCAD 3-point ARC) — το 3ο κλικ είναι σημείο απ' όπου περνά το τόξο· το FSM `awaitingCurveControl` επαναχρησιμοποιήθηκε. **Πλήκτρο:** νέο chord **`W`→`4`** («Τόξο», `tool:wall:arc`→kind `curved`) ξεχωριστό από το `W2` (Giorgio order 2026-07-03)· ⚠️ σήμερα W2 & W4 βγάζουν και τα δύο τόξο (Bézier μόνο collinear fallback) — αν χρειαστεί διαφοροποίηση W2=Bézier/W4=arc → mode flag στο FSM (Φ1.x).
+
+**Tessellation:** deviation-adaptive segment count (`adaptiveArcSegDeg`, chord-deviation `CHORD_DEVIATION_MM=2mm` world) στο commit-time· cap 59 (Tekla) / floor 4· render-time zoom-adaptive axis = Φ1.x follow-up.
+
+**Αρχεία (NEW):** `bim/geometry/shared/curve-tessellation.ts` (κεντρικό `adaptiveArcSegDeg` + `tessellateArcAxis` + centralized `subdivideQuadraticBezier`), `bim/walls/wall-arc-descriptor.ts` (`bulgeFrom3Points`/`bulgeFromRadius`/`arcCurveFromBulge`), `config/tolerance-config.ts` `ADAPTIVE_ARC_TESSELLATION`. **(MOD):** `wall-types.ts`+`wall.schemas.ts` (`arc?`), `wall-geometry.ts` (arc branch στο `pickAxisVertices`), `use-wall-commit.ts` (3-point→bulge), `wall-preview-store.ts`+`use-wall-preview-sync.ts`+`wall-preview-helpers.ts` (live arc preview via `arcEndPoint`), `wall-grips.ts`+`wall-grip-transforms.ts`+`grip-kinds.ts` (`wall-arc-apex` radius grip), `wall-tool-status-text.ts`+locales (`statusArcThrough`).
+
+**Boy Scout:** `subdivideQuadraticBezier` ήταν verbatim duplicate wall+beam → κεντρικοποιήθηκε στο `curve-tessellation.ts` (beam+wall imports).
+
+**3D:** μηδέν αλλαγή — ο 3D wall path διαβάζει `getWallAxisVertices`/footprint (τώρα arc-aware).
+
+**Tests:** 3 νέα suites (`wall-arc-descriptor` / `curve-tessellation` / `wall-geometry-arc`) + update `useWallTool` curved test. bim/walls+bim/geometry: **1515/1515 GREEN**· 2 pre-existing 3D failures (wall-tilt/column-base-offset) άσχετα (fail & σε καθαρό δέντρο).
+
+**Deferred (Φ2+):** tangent-miter καμπύλου↔ευθύγραμμου (γενίκευση `wall-trims.ts classifyPair` με end-tangent), arc `wall-split`, radius-input dynamic-input + IFC directrix import/export, render-time zoom-adaptive axis, endpoint sweep-preserve grip, **beam/κολόνα/πέδιλο arc** (reuse `curve-tessellation` + `wall-arc-descriptor` pattern).
+
 ## 10. Changelog
 
-- **2026-07-02** — Δημιουργία. Deep-research workflow (103 agents, 5.1M tokens, 5 γωνίες, 21 πηγές, 25 claims verified → 23 confirmed / 2 refuted). Τεκμηρίωση αγοράς + πρόταση αρχιτεκτονικής (storage παραμετρικό + display faceted). Status RESEARCH/PROPOSED — αναμονή απόφασης Giorgio στα 4 ανοιχτά ερωτήματα (§7.4) πριν οποιαδήποτε υλοποίηση.
+- **2026-07-03** — Φ1 IMPLEMENTED (UNCOMMITTED): καμπύλος κυκλικό-τόξο τοίχος (§11). Storage=canonical `arc` bulge, 3-point draw, deviation-adaptive tessellation, apex radius grip, live preview, Boy-Scout dedup του `subdivideQuadraticBezier`. 3 νέα jest suites· 1515/1515 walls+geometry green. Αναμονή browser-verify + commit από Giorgio.
+- **2026-07-02** — Δημιουργία. Deep-research workflow (103 agents, 5.1M tokens, 5 γωνίες, 21 πηγές, 25 claims verified → 23 confirmed / 2 refuted). Τεκμηρίωση αγοράς + πρόταση αρχιτεκτονικής (storage παραμετρικό + display faceted).

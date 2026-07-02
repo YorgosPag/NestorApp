@@ -132,6 +132,7 @@ export type WallGripKind =
   | 'wall-corner-end-pos'
   | 'wall-corner-end-neg'
   | 'wall-curve'
+  | 'wall-arc-apex'
   | `wall-vertex-${number}`;
 
 /**

@@ -28,6 +28,7 @@ const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight
   { firstKey: 'W', secondKey: '2', action: 'tool:wall:curved' },   // W+2 → wall curved
   { firstKey: 'W', secondKey: '3', action: 'tool:wall:polyline' }, // W+3 → wall polyline
+  { firstKey: 'W', secondKey: '4', action: 'tool:wall:arc' },      // W+4 → wall arc (ADR-565)
   // ADR-363 Phase A — wall category chords: W+letter activates wall tool + sets category
   { firstKey: 'W', secondKey: 'E', action: 'wall:category:exterior' },  // W+E → exterior
   { firstKey: 'W', secondKey: 'I', action: 'wall:category:interior' },  // W+I → interior
@@ -134,8 +135,14 @@ export function useDxfToolbarShortcuts(
         if (bimResult.kind === 'chord-completed') {
           e.preventDefault();
           const action = bimResult.action;
+          // ADR-565: W+4 → circular-arc wall. The arc IS the `curved` kind (the
+          // `arc` bulge field), so it maps to kind 'curved' — a dedicated,
+          // discoverable chord distinct from W+2.
+          if (action === 'tool:wall:arc') {
+            handleToolChange('wall');
+            EventBus.emit('bim:set-wall-kind', { kind: 'curved' });
           // ADR-363 Phase 7B: wall variant chords emit EventBus kind change + activate tool.
-          if (action === 'tool:wall:straight' || action === 'tool:wall:curved' || action === 'tool:wall:polyline') {
+          } else if (action === 'tool:wall:straight' || action === 'tool:wall:curved' || action === 'tool:wall:polyline') {
             const wallKind = action.slice('tool:wall:'.length) as WallKind;
             handleToolChange('wall');
             EventBus.emit('bim:set-wall-kind', { kind: wallKind });
