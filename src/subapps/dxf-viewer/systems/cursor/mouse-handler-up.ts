@@ -40,6 +40,9 @@ import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completi
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
 import { applyBimDrawingConstraint } from '../../hooks/drawing/bim-ortho-reference';
+// ADR-363 §neighbor-gap-step — το shift που υπολόγισε το preview (στρογγύλεμα διάκενου προς τη μεριά
+// κίνησης, Q κρατημένο)· το commit το εφαρμόζει αυτούσιο στο ελεύθερο ghost → preview ≡ commit.
+import { getGapPlacementShift } from './GapStepPlacementStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from './ImmediateTransformStore';
 import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation, setColumnFaceSizing } from './ColumnPlacementGhostStatusStore';
@@ -320,7 +323,11 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             setColumnFaceRotation(null);
             setColumnGhostStatus('neutral');
             setColumnFaceSizing(null);
-            worldPoint = snap.point; // effectiveCursor αυτούσιος (corner/grid-adjusted) — όπως το ghost
+            // ADR-363 §neighbor-gap-step — ελεύθερο ghost: εφάρμοσε το ΙΔΙΟ shift που υπολόγισε το
+            // preview (στρογγύλεμα διάκενου προς τη μεριά κίνησης, Q κρατημένο). {0,0} όταν όχι-Q ή
+            // χωρίς γείτονα → no-op = ακριβώς η προηγούμενη συμπεριφορά. preview ≡ commit.
+            const gapShift = getGapPlacementShift();
+            worldPoint = { x: snap.point.x + gapShift.x, y: snap.point.y + gapShift.y }; // όπως το ghost
           }
         } else if (activeTool === 'beam') {
           // preview ≡ commit (ADR-514 §2 / Giorgio 2026-06-25) — το beam tool, ΟΠΩΣ το column,

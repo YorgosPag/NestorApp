@@ -21,6 +21,7 @@ import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { clearColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { clearColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
 import { clearColumnPlacementAnchor } from '../../systems/cursor/ColumnPlacementAnchorStore';
+import { clearGapPlacement } from '../../systems/cursor/GapStepPlacementStore';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import {
   INITIAL_STATE,
@@ -56,6 +57,7 @@ export function useColumnToolStateActions(
   const activate = useCallback(() => {
     refreshSnapTargets(); // στόχοι έτοιμοι πριν το 1ο ghost frame
     clearColumnPlacementAnchor(); // ADR-363 §column-ortho — fresh start: η 1η κολόνα δεν έχει αναφορά
+    clearGapPlacement(); // ADR-363 §neighbor-gap-step — fresh start: μηδέν stale κατεύθυνση/shift
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -133,6 +135,7 @@ export function useColumnToolStateActions(
     clearColumnRotationLock(); // ADR-508 §column place+rotate — ακύρωση τυχόν ενεργού rotation
     clearColumnTopLeanLock(); // ADR-404 Φ5 — ακύρωση τυχόν ενεργού slant 2-click
     clearColumnPlacementAnchor(); // ADR-363 §column-ortho — καθάρισε την ortho/step αναφορά
+    clearGapPlacement(); // ADR-363 §neighbor-gap-step — καθάρισε κατεύθυνση/shift
     sceneSnapTargetsStore.reset(); // ADR-398 §3.10 — καθάρισε τους face-snap στόχους
     setState(INITIAL_STATE);
   }, [setState]);

@@ -67,6 +67,18 @@ export function isGripStepActive(): boolean {
 }
 
 /**
+ * Live SNAP-MODE step in **scene units**, or `0` when the step is not engaged (F9 off OR Q not held).
+ * SSoT for "the fixed step, in the drawing's units, right now" — the user-typed mm step converted via
+ * the live mm→scene scale, gated by the SAME {@link isGripStepActive} activation. Consumers that need
+ * the raw magnitude (e.g. the neighbor-clearance gap quantizer) read this instead of re-deriving
+ * `getSnapStep() * getMmToScene()` and re-checking the gate. Returns 0 → caller skips quantization.
+ */
+export function activeStepSceneUnits(): number {
+  if (!isGripStepActive()) return 0;
+  return cadToggleState.getSnapStep() * immediateSceneScale.getMmToScene();
+}
+
+/**
  * Event-time entry point: quantize a grip-drag displacement to the SNAP-MODE step.
  *
  * Activation model (Giorgio 2026-06-12): movement is FREE by default; the step

@@ -134,6 +134,10 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
     placement-ghost suites 31/31 GREEN. tsc SKIP (N.17).
   - ✅ Google-level: YES — SSoT reuse (painter/geometry/format), fallback-only (μηδέν regression),
     pure/idempotent, draw-time imperative read (ADR-040). 🔴 browser-verify + commit (Giorgio· stage ADR-508).
+  - **Follow-up (§neighbor-gap-step, ADR-363)**: το ίδιο AABB face-to-face gap οδηγεί πλέον και το **βήμα Q**
+    — κρατώντας Q το διάκενο προς τη μεριά κίνησης στρογγυλεύει στο step (Revit temp-dim snap). NEW pure
+    `resolveGapStepShift` (ΙΔΙΟ αρχείο, reuse `quantizeMagnitude` + AABB λογική). Πλήρης τεκμηρίωση:
+    **ADR-363 §neighbor-gap-step changelog**.
 
 - **2026-07-02 (§column-hud — live HUD σε ΟΛΟΥΣ τους τύπους κολόνας: Γ/Τ/Π/Ι/πολύγωνο/τοιχίο — pills retired)**
   - **Αίτημα Giorgio**: οι υπόλοιποι τύποι (Γ/Τ/Π/Ι/πολύγωνο/τοιχίο) που έμεναν σε pills να πάρουν το ίδιο

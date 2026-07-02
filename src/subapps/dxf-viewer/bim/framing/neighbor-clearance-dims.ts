@@ -34,6 +34,7 @@ import type { GhostFaceDimension, GhostFaceDimensionsMeta } from './ghost-face-d
 import { footprintBounds, footprintCenter, type FootprintBounds, type FootprintFace } from '../geometry/shared/footprint-face-frame';
 import { projectPolygonOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { buildMemberTargetFrame } from './linear-member-face-snap';
+import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 
 /** Default μέγιστο διάκενο σε **screen px** (× worldPerPixel από τον caller) — πέρα από αυτό δεν δείχνουμε. */
 export const NEIGHBOR_DIM_MAX_CLEARANCE_PX = 700;
@@ -222,4 +223,97 @@ function obliqueAngleDeg(dx: number, dy: number, tolDeg: number): number | null 
   const deg = ((Math.atan2(dy, dx) * 180) / Math.PI + 180) % 180; // [0,180)
   const nearest = Math.min(deg, Math.abs(deg - 90), Math.abs(deg - 180));
   return nearest <= tolDeg ? null : deg;
+}
+
+// ── ADR-363 §neighbor-gap-step ────────────────────────────────────────────────────────────────────
+// «Στρογγύλεμα του διάκενου προς τη μεριά κίνησης» (Giorgio 2026-07-02, επιλογή β). Όταν ο χρήστης
+// κρατά Q, στρογγυλοποιούμε το ΕΜΦΑΝΙΖΟΜΕΝΟ παρειά-προς-παρειά διάκενο (όχι την απόσταση κέντρου-από-
+// anchor) στο βήμα, ώστε ο αριθμός που διαβάζει ο χρήστης να είναι στρογγυλός (Revit temp-dim snap).
+
+/** Ένας υποψήφιος γείτονας: ημιάξονας + τρέχον διάκενο + μοναδιαία μετατόπιση ΚΕΝΤΡΟΥ ανά μονάδα
+ *  αύξησης του διάκενου (π.χ. γείτονας +X → αύξηση διάκενου = κέντρο προς −X). */
+interface GapStepCandidate {
+  readonly face: FootprintFace;
+  readonly gap: number;
+  readonly widen: Point2D;
+}
+
+/** Κατεύθυνση προς τον γείτονα ανά ημιάξονα (world frame) — για dot με το moveDir. */
+function faceOutward(face: FootprintFace): Point2D {
+  return face === 'E' ? { x: 1, y: 0 } : face === 'W' ? { x: -1, y: 0 } : face === 'N' ? { x: 0, y: 1 } : { x: 0, y: -1 };
+}
+
+/** AABB face-to-face διάκενα ghost↔γείτονα ανά ημιάξονα (μόνο με εγκάρσια επικάλυψη, εντός [ε,max]). */
+function pushGapCandidates(
+  out: GapStepCandidate[],
+  g: FootprintBounds,
+  nb: FootprintBounds,
+  maxClearance: number,
+): void {
+  const yOv = overlapLen(g.minY, g.maxY, nb.minY, nb.maxY);
+  const xOv = overlapLen(g.minX, g.maxX, nb.minX, nb.maxX);
+  const keep = (gap: number): boolean => gap > 1e-9 && gap <= maxClearance;
+  // +X (E): γείτονας δεξιά· διάκενο μεγαλώνει όταν το κέντρο πάει −X.
+  if (yOv > 0 && nb.minX >= g.maxX && keep(nb.minX - g.maxX)) out.push({ face: 'E', gap: nb.minX - g.maxX, widen: { x: -1, y: 0 } });
+  // −X (W): γείτονας αριστερά· μεγαλώνει όταν το κέντρο πάει +X.
+  if (yOv > 0 && nb.maxX <= g.minX && keep(g.minX - nb.maxX)) out.push({ face: 'W', gap: g.minX - nb.maxX, widen: { x: 1, y: 0 } });
+  // +Y (N): μεγαλώνει όταν το κέντρο πάει −Y.
+  if (xOv > 0 && nb.minY >= g.maxY && keep(nb.minY - g.maxY)) out.push({ face: 'N', gap: nb.minY - g.maxY, widen: { x: 0, y: -1 } });
+  // −Y (S): μεγαλώνει όταν το κέντρο πάει +Y.
+  if (xOv > 0 && nb.maxY <= g.minY && keep(g.minY - nb.maxY)) out.push({ face: 'S', gap: g.minY - nb.maxY, widen: { x: 0, y: 1 } });
+}
+
+/** Διάλεξε τον γείτονα προς τον οποίο ΚΙΝΕΙΤΑΙ ο κέρσορας (max positive dot moveDir↔outward)·
+ *  fallback: ο πλησιέστερος (μικρότερο διάκενο) όταν δεν υπάρχει κίνηση ή καμία μεριά δεν ταιριάζει. */
+function pickGapCandidate(cands: readonly GapStepCandidate[], moveDir: Point2D | null): GapStepCandidate | null {
+  if (cands.length === 0) return null;
+  if (moveDir) {
+    const len = Math.hypot(moveDir.x, moveDir.y);
+    if (len > 1e-9) {
+      const mx = moveDir.x / len, my = moveDir.y / len;
+      let best: GapStepCandidate | null = null;
+      let bestDot = 1e-6; // απαίτησε ουσιαστική συμφωνία κατεύθυνσης (όχι απλώς μη-αρνητική)
+      for (const c of cands) {
+        const o = faceOutward(c.face);
+        const dot = o.x * mx + o.y * my;
+        if (dot > bestDot) { bestDot = dot; best = c; }
+      }
+      if (best) return best;
+    }
+  }
+  return cands.reduce((a, b) => (b.gap < a.gap ? b : a));
+}
+
+/**
+ * Υπολόγισε τη μετατόπιση θέσης ενός ελεύθερου ghost ώστε το διάκενο προς τον γείτονα **στη μεριά
+ * κίνησης** (`moveDir`) να στρογγυλέψει στο `stepScene` (Revit temp-dimension snap). Reuse του ΙΔΙΟΥ
+ * `quantizeMagnitude` SSoT (με το zoom-adaptive & fixed step) + της ΙΔΙΑΣ AABB face-to-face λογικής με
+ * το `resolveNeighborClearanceDims` (μηδέν διπλή γεωμετρία). Επιστρέφει `{0,0}` όταν το διάκενο είναι
+ * ήδη στρογγυλό· `null` όταν το βήμα δεν είναι ενεργό, καμία AABB γείτονας ή degenerate footprint.
+ *
+ * Μόνο ορθογώνιοι/κυκλικοί (AABB) γείτονες — τοίχοι/δοκάρια (λοξά μέλη) όχι σε αυτή τη φάση (η ένδειξη
+ * τους παραμένει, απλώς δεν οδηγούν το βήμα· επέκταση αργότερα αν ζητηθεί).
+ */
+export function resolveGapStepShift(
+  ghostFootprint: readonly Point2D[],
+  targets: Readonly<SceneSnapTargets>,
+  stepScene: number,
+  maxClearanceScene: number,
+  moveDir: Point2D | null,
+): Point2D | null {
+  if (!(stepScene > 0)) return null;
+  const g = footprintBounds(ghostFootprint);
+  if (!g) return null;
+
+  const cands: GapStepCandidate[] = [];
+  for (const verts of [...targets.footprints, ...targets.circularFootprints]) {
+    const nb = footprintBounds(verts);
+    if (nb) pushGapCandidates(cands, g, nb, maxClearanceScene);
+  }
+  const chosen = pickGapCandidate(cands, moveDir);
+  if (!chosen) return null;
+
+  const delta = quantizeMagnitude(chosen.gap, stepScene) - chosen.gap; // πόσο πρέπει να αλλάξει το διάκενο
+  if (Math.abs(delta) < 1e-9) return { x: 0, y: 0 };
+  return { x: chosen.widen.x * delta, y: chosen.widen.y * delta };
 }

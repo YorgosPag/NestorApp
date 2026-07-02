@@ -51,9 +51,18 @@ import {
 } from '../../hooks/drawing/wysiwyg-preview-shared';
 import {
   resolveNeighborClearanceDims,
+  resolveGapStepShift,
   NEIGHBOR_DIM_MAX_CLEARANCE_PX,
 } from '../framing/neighbor-clearance-dims';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
+// ADR-363 §neighbor-gap-step — Q κρατιέται → στρογγύλεμα του παρειά-προς-παρειά διάκενου (όχι της
+// απόστασης κέντρου-από-anchor) προς τη μεριά κίνησης· κοινό shift preview↔commit.
+import { activeStepSceneUnits } from '../grips/grip-step-quantize';
+import {
+  trackGapPlacementCursor,
+  getGapPlacementMoveDir,
+  setGapPlacementShift,
+} from '../../systems/cursor/GapStepPlacementStore';
 import type { Entity } from '../../types/entities';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
@@ -120,7 +129,7 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
   const rotation: number | null = faceSnap ? faceSnap.rotation : null;
 
   // ADR-525 — auto-διαστασιολόγηση L corner-gap (one-shot)· `null` σε κάθε άλλο snap → ribbon διαστάσεις.
-  const entity = buildEntity(position, anchor, rotation, faceSnap?.sizing ?? null);
+  let entity = buildEntity(position, anchor, rotation, faceSnap?.sizing ?? null);
   if (!entity) return null;
 
   // 🔴 overlap → status schematic· 🟢/neutral → πλήρες WYSIWYG.
@@ -133,10 +142,30 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
     ? { sceneUnits, dims: resolveRectCartesianDims(rect, faceSnap.position) }
     : resolveGhostFaceDimensionsMeta(faceSnap?.faceFrame, isOverlap, sceneUnits, wpp);
 
+  // ADR-363 §neighbor-gap-step — default: το commit δεν μετακινεί (καθαρό κάθε frame· το free+Q block
+  // από κάτω το ξαναγράφει). Ώστε ένα προηγούμενο shift να μη «μολύνει» face-snap / non-Q frames.
+  setGapPlacementShift({ x: 0, y: 0 });
+
   // ADR-508 §neighbor-clearance — ΕΛΕΥΘΕΡΟ ghost (κανένα κούμπωμα): έξυπνες προσωρινές διαστάσεις προς
   // τον πλησιέστερο γείτονα ανά κατεύθυνση (Revit temporary dims). Fallback-only → μηδέν διπλή ένδειξη.
   if (!faceDimensions && !isOverlap) {
-    const ghostFootprint = resolveMemberFootprintVertices(entity as unknown as Entity);
+    let ghostFootprint = resolveMemberFootprintVertices(entity as unknown as Entity);
+    // ADR-363 §neighbor-gap-step — Q κρατιέται → στρογγύλεψε το διάκενο προς τη μεριά κίνησης (επιλογή
+    // β) μετακινώντας τη θέση· ξαναχτίζει την οντότητα/footprint ΠΡΙΝ τις dims ώστε ο αριθμός που θα
+    // δει ο χρήστης να είναι το στρογγυλεμένο. Το ίδιο shift εφαρμόζει και το commit (preview ≡ commit).
+    const stepScene = ghostFootprint ? activeStepSceneUnits() : 0;
+    if (ghostFootprint && stepScene > 0) {
+      trackGapPlacementCursor(position);
+      const shift = resolveGapStepShift(ghostFootprint, targets, stepScene, NEIGHBOR_DIM_MAX_CLEARANCE_PX * wpp, getGapPlacementMoveDir());
+      setGapPlacementShift(shift ?? { x: 0, y: 0 });
+      if (shift && (shift.x !== 0 || shift.y !== 0)) {
+        const shifted = buildEntity({ x: position.x + shift.x, y: position.y + shift.y }, anchor, rotation, faceSnap?.sizing ?? null);
+        if (shifted) {
+          entity = shifted;
+          ghostFootprint = resolveMemberFootprintVertices(shifted as unknown as Entity) ?? ghostFootprint;
+        }
+      }
+    }
     if (ghostFootprint) {
       faceDimensions = resolveNeighborClearanceDims(ghostFootprint, targets, sceneUnits, {
         gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
