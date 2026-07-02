@@ -68,6 +68,7 @@ import {
   toWysiwygPreviewEntity,
   resolveGhostFaceDimensionsMeta,
 } from './wysiwyg-preview-shared';
+import { applyBimDrawingConstraint } from './bim-ortho-reference';
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
@@ -269,12 +270,15 @@ function makeWallGhostBeforeClick(
   walls: readonly WallEntity[],
   openings: readonly OpeningEntity[],
 ): ExtendedSceneEntity | null {
-  const effectiveCursor = resolveEffectivePreviewCursor(cursorPoint);
   const thicknessMm = resolveWallThicknessMm(overrides);
   // ADR-508 (2026-06-24, Giorgio «να ολισθαίνει ΠΛΗΡΩΣ») — το `wpp` μένει ΜΟΝΟ για τα listening dims
   // (screen-relative offset)· ΔΕΝ περνά πια στο snap → πλήρως συνεχής ολίσθηση (μηδέν quantize/magnet,
   // ίδιο με την κολώνα). preview === commit (το click resolver επίσης χωρίς wpp).
   const wpp = worldPerPixel(getImmediateTransform().scale);
+  // ADR-363 §wall-ortho-tracking — ΟΡΘΟ(F8)/POLAR(F10)/Q(F9+Q) ΜΕΤΑ το OSNAP (ίδιο pattern με την
+  // κολόνα) → το ghost της αρχής κλειδώνει στο directional σημείο ως προς το hover-acquired anchor,
+  // όχι στην απλή έλξη/πλέγμα. No-op χωρίς tracking anchor → ίδια συμπεριφορά με πριν.
+  const effectiveCursor = applyBimDrawingConstraint('wall', resolveEffectivePreviewCursor(cursorPoint), wpp);
   // ADR-514 Φ3 — «Ένας Εγκέφαλος Έλξης»: ΕΝΑ unified entry (toolKind:'wall', default kinds
   // wall+beam+slab+line — snap ΚΑΙ σε σκέτες γραμμές, ίδιος resolver με την κολώνα). ⚠️ ADR-514 §2 —
   // ο effectiveCursor είναι ήδη snapped → ΧΩΡΙΣ findSnapPoint (anti double-snap). ΙΔΙΟ entry με το

@@ -34,6 +34,7 @@ import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-
 // ADR-363 §wall-ortho-tracking — OTRACK acquire (osnap-σε-οντότητα → tracking anchor) + Q-νικά-μαγνήτη.
 import { setPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
 import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
+import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 // ADR-544 — ΕΝΑΣ canonical type για τα overlay-meta πεδία του placement ghost (πλέγμα/διαστάσεις/
 // οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
@@ -313,6 +314,24 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
             { x: lastRefPt.x + 1, y: lastRefPt.y },
             previewPt,
             bearingDeg,
+          );
+        }
+        // ADR-363 §wall-ortho-tracking — ΟΡΑΤΗ γραμμή-οδηγός στο 1ο σημείο του τοίχου (awaitingStart):
+        // διακεκομμένη από το hover-acquired anchor (π.χ. κέντρο διπλανής κολόνας) προς την αρχή + γωνία/
+        // απόσταση, ώστε να ΦΑΙΝΕΤΑΙ το ΟΡΘΟ/Q κλείδωμα (το hard ΟΡΘΟ δεν παράγει `polarSnapResult` → χωρίς
+        // αυτό καμία ένδειξη — Giorgio «δεν λειτουργεί»). Μόνο awaitingStart (startPoint=null) & όταν δεν
+        // υπάρχει ήδη polar line (μη διπλή). ΙΔΙΟ SSoT painter με την πολική/στρέψης γραμμή.
+        if (
+          activeTool === 'wall' && lastRefPt && !polarSnapResult?.isSnapped &&
+          wallPreviewStore.get().startPoint === null
+        ) {
+          const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
+          const distMm = Math.hypot(previewPt.x - lastRefPt.x, previewPt.y - lastRefPt.y) / Math.max(getSceneUnitsScale(), 1e-9);
+          previewCanvasRef.current.drawPolarTrackingLine(
+            lastRefPt,
+            bearingDeg,
+            `${bearingDeg.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`,
+            previewPt,
           );
         }
         // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους

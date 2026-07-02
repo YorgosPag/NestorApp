@@ -107,7 +107,9 @@ export function getBimOrthoReference(tool: string): Point2D | null {
       // η θέση (rotation/top-lean phase) το 2ο κλικ ορίζει ΓΩΝΙΑ/ΚΛΙΣΗ — η θέση δεν πρέπει να ξανα-
       // περιοριστεί (θα μετακινούσε το κλειδωμένο origin). `null` πριν την 1η κολόνα → no-op (ως τώρα).
       if (getColumnRotationLock() || getColumnTopLeanLock()) return null;
-      return getColumnPlacementAnchor();
+      // ADR-363 §wall-ortho-tracking (extended to column) — hover σε υφιστάμενη οντότητα (OTRACK)
+      // ΥΠΕΡΙΣΧΥΕΙ (πιο πρόσφατη ρητή πρόθεση)· αλλιώς η προηγούμενη τοποθετημένη κολόνα.
+      return getPlacementTrackingAnchor() ?? getColumnPlacementAnchor();
     }
     default:
       return null;
