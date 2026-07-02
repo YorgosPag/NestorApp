@@ -117,31 +117,32 @@ function paintCircularColumnHud(
 }
 
 /**
- * ΠΟΛΥΓΩΝΟ (regular N-gon): διάμετρος περιγεγραμμένου (Ø = `params.width`) κατά τον u-άξονα +
+ * ΠΟΛΥΓΩΝΟ (regular N-gon): διάμετρος περιγεγραμμένου (Ø = `widthMm`) κατά τον u-άξονα +
  * αριθμός πλευρών (N) + ∠γωνία + ύψος. Parity με την κυκλική + N (η bbox δεν ισούται με Ø).
  */
 function paintPolygonColumnHud(
   ctx: CanvasRenderingContext2D,
   footprint: readonly Point2D[],
-  params: ColumnParams,
+  rotationDeg: number,
+  widthMm: number,
+  sides: number,
   heightSpecLabel: string,
   sceneUnits: SceneUnits,
   t: ViewTransform,
   vp: HudViewport,
 ): void {
-  const frame = orientedRectFrame(footprint, params.rotation);
+  const frame = orientedRectFrame(footprint, rotationDeg);
   if (!frame) return;
   const wpp = worldPerPixel(t.scale);
-  const rScene = (params.width * mmToSceneUnits(sceneUnits)) / 2; // Ø/2 (περιγεγραμμένη) σε scene units
+  const rScene = (widthMm * mmToSceneUnits(sceneUnits)) / 2; // Ø/2 (περιγεγραμμένη) σε scene units
   if (!(rScene > 0)) return;
   paintAlignedOverlayDimension(
     ctx, rectLocalToWorld(frame, -rScene, 0), rectLocalToWorld(frame, rScene, 0),
     rectLocalToWorld(frame, 0, frame.halfV + DIM_CLEAR_PX * wpp),
-    `Ø ${formatLengthForDisplay(params.width)}`, t, vp, HUD_COLOR,
+    `Ø ${formatLengthForDisplay(widthMm)}`, t, vp, HUD_COLOR,
   );
-  const sides = params.polygon?.sides ?? DEFAULT_POLYGON_SIDES;
   labelAt(ctx, `N ${sides}`, rectLocalToWorld(frame, 0, -(frame.halfV + LABEL_CLEAR_PX * wpp)), t, vp);
-  paintFrameAngleHeight(ctx, frame, params.rotation, heightSpecLabel, wpp, t, vp);
+  paintFrameAngleHeight(ctx, frame, rotationDeg, heightSpecLabel, wpp, t, vp);
 }
 
 /**
@@ -174,11 +175,63 @@ function paintProfileColumnHud(
 }
 
 /**
- * Ζωγραφίζει το live HUD κολόνας ΑΝΑ τύπο (full parity):
- *   · ορθογώνια/τοιχίο (rect footprint) → 2 aligned δ. στις παρειές + ∠ + ύψος·
- *   · κυκλική → Ø + ύψος·  · πολύγωνο → Ø + N + ∠ + ύψος·
+ * ADR-564 §footprint-hud — ελάχιστος **entity-agnostic** περιγραφέας του footprint HUD, ώστε το
+ * ΙΔΙΟ SSoT paint να καλείται ΚΑΙ από την κολόνα (`ColumnParams`) ΚΑΙ από το πέδιλο-pad
+ * (`FoundationParams`) — μηδέν παράλληλος painter, μηδέν type-lie cast. Τα rect/profile branches
+ * είναι ήδη ColumnParams-agnostic (χρειάζονται μόνο `rotationDeg`)· circular χρειάζεται μόνο το
+ * footprint· polygon χρειάζεται `widthMm` (Ø) + `polygonSides`.
+ */
+export interface FootprintHudDescriptor {
+  /** Σχήμα διατομής — καθορίζει τον κλάδο (το rect πιάνεται ΠΑΝΤΑ πρώτο από το `isRectFootprint`). */
+  readonly kind: 'rectangular' | 'circular' | 'polygon' | 'profile';
+  /** Μοίρες CCW — για ∠γωνία + oriented frame (rect/polygon/profile). */
+  readonly rotationDeg: number;
+  /** mm — Ø περιγεγραμμένου (μόνο polygon). */
+  readonly widthMm?: number;
+  /** αριθμός πλευρών (μόνο polygon). */
+  readonly polygonSides?: number;
+}
+
+/**
+ * Ζωγραφίζει το live footprint HUD ΑΝΑ τύπο (full parity — entity-agnostic πυρήνας):
+ *   · ορθογώνιο/τοιχίο (rect footprint) → 2 aligned δ. στις παρειές + ∠ + ύψος·
+ *   · κυκλικό → Ø + ύψος·  · πολύγωνο → Ø + N + ∠ + ύψος·
  *   · Γ/Τ/Π/Ι/σύνθετο → aligned δ. σε κάθε ακμή + ∠ + ύψος.
  * `footprint` = world-baked κορυφές (rotation ήδη μέσα). `heightSpecLabel` = ΗΔΗ μεταφρασμένο.
+ */
+export function paintFootprintHud(
+  ctx: CanvasRenderingContext2D,
+  footprint: readonly Point2D[],
+  descriptor: FootprintHudDescriptor,
+  heightSpecLabel: string,
+  sceneUnits: SceneUnits,
+  transform: ViewTransform,
+  viewport: HudViewport,
+): void {
+  if (isRectFootprint(footprint)) {
+    const rect = rectFrameFromCorners(footprint);
+    if (rect) paintRectColumnHud(ctx, rect, descriptor.rotationDeg, heightSpecLabel, sceneUnits, transform, viewport);
+    return;
+  }
+  if (descriptor.kind === 'circular') {
+    paintCircularColumnHud(ctx, footprint, heightSpecLabel, sceneUnits, transform, viewport);
+    return;
+  }
+  if (descriptor.kind === 'polygon') {
+    paintPolygonColumnHud(
+      ctx, footprint, descriptor.rotationDeg,
+      descriptor.widthMm ?? 0, descriptor.polygonSides ?? DEFAULT_POLYGON_SIDES,
+      heightSpecLabel, sceneUnits, transform, viewport,
+    );
+    return;
+  }
+  paintProfileColumnHud(ctx, footprint, descriptor.rotationDeg, heightSpecLabel, sceneUnits, transform, viewport);
+}
+
+/**
+ * Live HUD κολόνας — thin wrapper πάνω στο entity-agnostic `paintFootprintHud` (μηδέν αλλαγή
+ * συμπεριφοράς: map `ColumnParams` → `FootprintHudDescriptor`). Οι column consumers (grip-drag +
+ * placement) καλούν αυτό ΑΜΕΤΑΒΛΗΤΑ.
  */
 export function paintColumnHud(
   ctx: CanvasRenderingContext2D,
@@ -189,18 +242,14 @@ export function paintColumnHud(
   transform: ViewTransform,
   viewport: HudViewport,
 ): void {
-  if (isRectFootprint(footprint)) {
-    const rect = rectFrameFromCorners(footprint);
-    if (rect) paintRectColumnHud(ctx, rect, params.rotation, heightSpecLabel, sceneUnits, transform, viewport);
-    return;
-  }
-  if (params.kind === 'circular') {
-    paintCircularColumnHud(ctx, footprint, heightSpecLabel, sceneUnits, transform, viewport);
-    return;
-  }
-  if (params.kind === 'polygon') {
-    paintPolygonColumnHud(ctx, footprint, params, heightSpecLabel, sceneUnits, transform, viewport);
-    return;
-  }
-  paintProfileColumnHud(ctx, footprint, params.rotation, heightSpecLabel, sceneUnits, transform, viewport);
+  paintFootprintHud(
+    ctx, footprint,
+    {
+      kind: params.kind === 'circular' ? 'circular' : params.kind === 'polygon' ? 'polygon' : 'profile',
+      rotationDeg: params.rotation,
+      widthMm: params.width,
+      polygonSides: params.polygon?.sides,
+    },
+    heightSpecLabel, sceneUnits, transform, viewport,
+  );
 }

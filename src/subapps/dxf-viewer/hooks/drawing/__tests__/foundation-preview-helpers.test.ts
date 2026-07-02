@@ -41,6 +41,18 @@ describe('generateFoundationPreview', () => {
     // ribbon width override → committed (WYSIWYG) FoundationEntity width = 250.
     expect(preview.params.width).toBe(250);
   });
+
+  it('ADR-564 §foundation-hud — το γραμμικό band ghost φέρει wallHud (μήκος/γωνία) + hudSpecLabel', () => {
+    foundationPreviewStore.set({ startPoint: { x: 0, y: 0 }, endPoint: null, kind: 'strip', overrides: {} });
+    const ghost = generateFoundationPreview([{ x: 0, y: 0 }], { x: 2000, y: 0 }) as {
+      wallHud?: { lengthMm: number; angleDeg: number }; hudSpecLabel?: string;
+    };
+    expect(ghost.wallHud).toBeDefined();
+    expect(ghost.wallHud!.lengthMm).toBeCloseTo(2000); // start→cursor μήκος (mm)
+    expect(ghost.wallHud!.angleDeg).toBeCloseTo(0);    // οριζόντιο band
+    expect(typeof ghost.hudSpecLabel).toBe('string');
+    expect(ghost.hudSpecLabel!.length).toBeGreaterThan(0);
+  });
 });
 
 describe('generateFoundationPadPreview — ADR-514 Φ6c live pad ghost', () => {
@@ -63,6 +75,22 @@ describe('generateFoundationPadPreview — ADR-514 Φ6c live pad ghost', () => {
     expect(ghost.type).toBe('foundation');
     expect(ghost.wysiwygPreview).toBe(true);
     expect(ghost.params.position.x).toBeCloseTo(5000);
+  });
+
+  it('ADR-564 §foundation-hud — το pad ghost φέρει footprintHud (rectangular descriptor + label)', () => {
+    foundationPreviewStore.set({ startPoint: null, endPoint: null, kind: 'pad', overrides: {} });
+    const ghost = generateFoundationPadPreview({ x: 5000, y: 5000 }) as {
+      footprintHud?: {
+        footprint: readonly { x: number; y: number }[];
+        descriptor: { kind: string; rotationDeg: number };
+        heightSpecLabel: string;
+      };
+    };
+    expect(ghost.footprintHud).toBeDefined();
+    expect(ghost.footprintHud!.footprint.length).toBeGreaterThan(0); // world-baked rect κορυφές
+    expect(ghost.footprintHud!.descriptor.kind).toBe('rectangular'); // pad = πάντα ορθογώνιο
+    expect(Number.isFinite(ghost.footprintHud!.descriptor.rotationDeg)).toBe(true);
+    expect(ghost.footprintHud!.heightSpecLabel.length).toBeGreaterThan(0); // «βάθος X»
   });
 
   it('κοντά σε κολόνα → το pad κουμπώνει flush στην παρειά (preview ≡ commit)', () => {

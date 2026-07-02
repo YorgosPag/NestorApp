@@ -92,6 +92,7 @@ export function toWysiwygPreviewEntity<T extends object>(
   faceDimensions?: GhostFaceDimensionsMeta | null,
   openingConflict?: OpeningConflictMeta | null,
   wallHud?: WallHudMeta | null,
+  hudSpecLabel?: string | null,
 ): ExtendedSceneEntity {
   return {
     ...entity,
@@ -102,5 +103,9 @@ export function toWysiwygPreviewEntity<T extends object>(
     ...(faceDimensions && faceDimensions.dims.length > 0 ? { faceDimensions } : {}),
     ...(openingConflict ? { openingConflict } : {}),
     ...(wallHud ? { wallHud } : {}),
+    // ADR-564 §linear-hud — προ-μεταφρασμένη ετικέτα spec ανά μέλος (π.χ. δοκάρι «b·h»). Όταν
+    // απουσιάζει, ο handler πέφτει πίσω στην ετικέτα τοίχου (`buildWallHudSpecLabel`) — μηδέν
+    // αλλαγή στον τοίχο.
+    ...(hudSpecLabel ? { hudSpecLabel } : {}),
   } as unknown as ExtendedSceneEntity;
 }

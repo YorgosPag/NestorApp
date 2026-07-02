@@ -35,9 +35,14 @@ import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPoint
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import type { WallHudMeta } from './wall-hud-paint';
+import type { ColumnParams } from '../../bim/types/column-types';
+import type { FootprintHudDescriptor } from './column-hud-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import type { RectGrid } from '../../bim/columns/rect-cartesian-snap';
 import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-snap';
+// SRP split (ADR-040) — the imperative-handle factory (API→renderer mapping) lives in a
+// sibling module; this component keeps only the lifecycle wiring.
+import { createPreviewCanvasHandle } from './preview-canvas-handle';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -129,6 +134,10 @@ export interface PreviewCanvasHandle {
    * Call AFTER `drawPreview`; wiped on the next `drawPreview`/`clear`.
    */
   drawWallHud: (meta: WallHudMeta, specLabel: string) => void;
+  /** ADR-564 §footprint-hud: live column/pad footprint identity HUD (per-face dims + angle + height) */
+  drawColumnHud: (footprint: readonly Point2D[], params: ColumnParams, heightSpecLabel: string) => void;
+  /** ADR-564 §foundation-hud: entity-agnostic footprint HUD (pad) via minimal descriptor (no ColumnParams) */
+  drawFootprintHud: (footprint: readonly Point2D[], descriptor: FootprintHudDescriptor, heightSpecLabel: string) => void;
   /**
    * ADR-397 §15 (wall) — draw the colored angle direction arc (🟢 above / 🔴 below the
    * x-axis) + arrowhead + dashed 0° baseline + colored signed degrees. Shared SSoT painter with the
@@ -334,132 +343,18 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     // IMPERATIVE HANDLE - Direct API for mouse handlers
     // ============================================================================
 
+    // Imperative handle (API→renderer mapping) built by the SRP-extracted factory. Refs are stable
+    // object identities, so the handle stays valid for the component lifetime (empty dep array).
     useImperativeHandle(
       ref,
-      () => ({
-        /**
-         * 🏢 ENTERPRISE: Draw preview directly
-         * NO REACT RE-RENDER - direct canvas call!
-         */
-        drawPreview: (entity: ExtendedSceneEntity | null, options?: PreviewRenderOptions) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-
-          // Merge default options with provided options
-          const mergedOptions = {
-            ...optionsRef.current,
-            ...options,
-          };
-
-          // 🏢 ADR-040: Pass viewport for Y-axis inversion. Transform is NOT passed —
-          // the renderer reads it live from the SSoT at paint time (world-locked ghost).
-          renderer.drawPreview(entity, viewportRef.current, mergedOptions);
-        },
-
-        /**
-         * 🏢 ENTERPRISE: Clear preview
-         */
-        clear: () => {
-          rendererRef.current?.clear();
-        },
-
-        /**
-         * 🏢 ENTERPRISE: Get canvas element
-         */
-        getCanvas: () => canvasRef.current,
-
-        /** ADR-357 Phase 1: Polar tracking alignment path overlay */
-        drawPolarTrackingLine: (
-          ref: Point2D,
-          snappedAngle: number,
-          label: string,
-          cursorWorld: Point2D,
-        ) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawPolarTrackingLine(
-            ref,
-            snappedAngle,
-            label,
-            cursorWorld,
-            transformRef.current,
-            viewportRef.current,
-          );
-        },
-
-        /** ADR-357 Phase 4: Object Snap Tracking persistent markers */
-        setTrackingMarkers: (markers: readonly AcquiredTrackingPoint[]) => {
-          rendererRef.current?.setTrackingMarkers(markers);
-        },
-
-        /** ADR-357 Phase 4: Object Snap Tracking alignment + intersection overlay */
-        drawTrackingAlignment: (
-          paths: readonly TrackingAlignmentPath[],
-          intersections: readonly Point2D[],
-          snappedPoint: Point2D,
-          label: string | null,
-        ) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawTrackingAlignment(
-            paths,
-            intersections,
-            snappedPoint,
-            label,
-            transformRef.current,
-            viewportRef.current,
-          );
-        },
-
-        /** ADR-508 §dim: wall-ghost listening dimensions overlay */
-        drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-508 §wall-hud: live wall identity HUD (aligned length dim + angle + spec) */
-        drawWallHud: (meta: WallHudMeta, specLabel: string) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawWallHud(meta, specLabel, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-397 §15 (wall): colored angle direction arc (shared SSoT with rotation) */
-        drawDirectionArc: (pivotW: Point2D, anchorW: Point2D, cursorW: Point2D, sweepDeg: number) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawDirectionArc(pivotW, anchorW, cursorW, sweepDeg, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-508 §opening-conflict: 🔴 tooltip explaining the height-band opening cut */
-        drawGhostConflictTooltip: (label: string, anchorWorld: Point2D) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawGhostConflictTooltip(label, anchorWorld, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-398 §3.13: Polar Magnet grid overlay (center / rings / spokes) */
-        drawPolarDisk: (grid: PolarDiskGrid) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawPolarDisk(grid, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-398 §3.15: Cartesian Magnet grid overlay (u/v grid lines + center) */
-        drawRectGrid: (grid: RectGrid) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawRectGrid(grid, transformRef.current, viewportRef.current);
-        },
-
-        /** ADR-398 §3.20/§3.20d: alignment guide(s) overlay (έως 2 πλευρές στη γωνία ορθογωνίου) */
-        drawAlignmentGuide: (guide: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[]) => {
-          const renderer = rendererRef.current;
-          if (!renderer) return;
-          renderer.drawAlignmentGuide(guide, transformRef.current, viewportRef.current);
-        },
-      }),
+      () =>
+        createPreviewCanvasHandle({
+          canvasRef,
+          rendererRef,
+          transformRef,
+          viewportRef,
+          optionsRef,
+        }),
       []
     );
 

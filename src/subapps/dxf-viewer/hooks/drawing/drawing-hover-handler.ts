@@ -40,6 +40,12 @@ import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { buildWallHudSpecLabel } from './wall-hud-spec-label';
+// ADR-564 §footprint-hud — footprint HUD κολόνας/πέδιλου κατά την τοποθέτηση (πλάτος/βάθος/∠/ύψος).
+import { buildColumnHudSpecLabel } from './column-hud-spec-label';
+import type { ColumnParams } from '../../bim/types/column-types';
+// ADR-564 §foundation-hud — entity-agnostic footprint HUD descriptor (πέδιλο-pad ξαναχρησιμοποιεί τον
+// ΙΔΙΟ pure painter με την κολόνα μέσω ελάχιστου περιγραφέα, χωρίς ColumnParams).
+import type { FootprintHudDescriptor } from '../../canvas-v2/preview-canvas/column-hud-paint';
 // ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
@@ -294,7 +300,39 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         const wallHud = (previewEntity as { wallHud?: WallHudMeta }).wallHud;
         if (wallHud) {
           // ADR-508 §wall-hud — ΚΟΙΝΗ πηγή της ετικέτας «πάχος·ύψος» (ίδια με το grip-drag HUD).
-          previewCanvasRef.current.drawWallHud(wallHud, buildWallHudSpecLabel(wallHud));
+          // ADR-564 §linear-hud — το ghost μπορεί να φέρει προ-μεταφρασμένη ετικέτα ανά μέλος (π.χ.
+          // δοκάρι «b·h»)· όταν λείπει (τοίχος) → fallback στην ετικέτα τοίχου (μηδέν αλλαγή τοίχου).
+          const specLabel = (previewEntity as { hudSpecLabel?: string }).hudSpecLabel
+            ?? buildWallHudSpecLabel(wallHud);
+          previewCanvasRef.current.drawWallHud(wallHud, specLabel);
+        }
+        // ADR-564 §footprint-hud — κολόνα/πέδιλο (footprint μέλος): live πλάτος/βάθος ανά παρειά + ∠
+        // γωνία + ύψος, ΙΔΙΟΣ pure painter με το grip-drag (`paintColumnHud`). Το ghost φέρει
+        // footprint+params ως `columnHud` meta (ADR-398 assembly)· ο handler ζωγραφίζει + μεταφράζει
+        // την ετικέτα ύψους (i18n, N.11). Δουλεύει σε ΟΛΕΣ τις φάσεις (awaitingPosition/Rotation/Lean).
+        const columnHud = (previewEntity as {
+          columnHud?: { footprint: readonly Point2D[]; params: ColumnParams };
+        }).columnHud;
+        if (columnHud) {
+          previewCanvasRef.current.drawColumnHud(
+            columnHud.footprint,
+            columnHud.params,
+            buildColumnHudSpecLabel(columnHud.params.height),
+          );
+        }
+        // ADR-564 §foundation-hud — πέδιλο-pad (footprint μέλος): ΙΔΙΟΣ pure painter με την κολόνα
+        // (`paintFootprintHud`) αλλά μέσω ελάχιστου `FootprintHudDescriptor` + προ-μεταφρασμένης
+        // ετικέτας βάθους (το πέδιλο έχει `FoundationParams`, όχι `ColumnParams` → entity-agnostic
+        // seam, μηδέν type-lie). Το ghost φέρει footprint+descriptor+label ως `footprintHud` meta.
+        const footprintHud = (previewEntity as {
+          footprintHud?: { footprint: readonly Point2D[]; descriptor: FootprintHudDescriptor; heightSpecLabel: string };
+        }).footprintHud;
+        if (footprintHud) {
+          previewCanvasRef.current.drawFootprintHud(
+            footprintHud.footprint,
+            footprintHud.descriptor,
+            footprintHud.heightSpecLabel,
+          );
         }
         // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
         // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)
@@ -303,11 +341,18 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (lineHud) {
           previewCanvasRef.current.drawWallHud(lineHud, '');
         }
-        // ADR-397 §15 (wall) — μετά το 1ο κλικ του τοίχου: χρωματισμένο τόξο ΦΟΡΑΣ από την
-        // αρχή (lastRefPt) με άξονα αναφοράς τον world-X προς τον κέρσορα (previewPt). 🟢 πάνω / 🔴 κάτω
-        // από τον x-άξονα + βελάκι + baseline 0° + χρωματιστές μοίρες — ΙΔΙΟ SSoT painter με την
-        // περιστροφή (ADR-397 §15). bearing = atan2(dy,dx) σε world (Y-up) → πάνω = θετικό = πράσινο.
-        if (activeTool === 'wall' && lastRefPt) {
+        // ADR-397 §15 (wall) / ADR-564 §linear-hud (beam) — μετά το 1ο κλικ γραμμικού μέλους:
+        // χρωματισμένο τόξο ΦΟΡΑΣ από την αρχή (lastRefPt) με άξονα αναφοράς τον world-X προς τον
+        // κέρσορα (previewPt). 🟢 πάνω / 🔴 κάτω από τον x-άξονα + βελάκι + baseline 0° + χρωματιστές
+        // μοίρες — ΙΔΙΟ SSoT painter με την περιστροφή. bearing = atan2(dy,dx) σε world (Y-up) → πάνω
+        // = θετικό = πράσινο. Το δοκάρι κρατά την αρχή του στο dedicated preview store (ADR-363), οπότε
+        // το `lastRefPt` (= getBimOrthoReference) δείχνει την αρχή του δοκαριού ΟΠΩΣ και του τοίχου.
+        // ADR-564 §foundation-hud — τα γραμμικά πέδιλα (strip/tie-beam) είναι καθρέφτης του δοκαριού
+        // → ίδιο τόξο ΦΟΡΑΣ. pivot = αρχή band (lastRefPt = getBimOrthoReference, foundation case).
+        if (
+          (activeTool === 'wall' || activeTool === 'beam' ||
+            activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') && lastRefPt
+        ) {
           const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
           previewCanvasRef.current.drawDirectionArc(
             lastRefPt,
@@ -366,6 +411,16 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         if (colRot) {
           const snappedDeg = resolveColumnRotationDeg(colRot.origin, previewPt, worldPerPixel(getTransformScale()));
           previewCanvasRef.current.drawPolarTrackingLine(colRot.origin, snappedDeg, `${Math.round(snappedDeg)}°`, previewPt);
+          // ADR-564 §rotation-arc (Giorgio «και τα δύο») — ΔΙΠΛΑ στην πορτοκαλί ευθεία, το έγχρωμο τόξο
+          // ΦΟΡΑΣ (🟢 πάνω / 🔴 κάτω από τον world-X) + βελάκι + baseline — ΙΔΙΟ SSoT painter με τοίχο/
+          // grip-rotate. pivot = κλειδωμένη θέση, ref = world-X, bearing = φορά προς τον κέρσορα.
+          const arcBearingDeg = (Math.atan2(previewPt.y - colRot.origin.y, previewPt.x - colRot.origin.x) * 180) / Math.PI;
+          previewCanvasRef.current.drawDirectionArc(
+            colRot.origin,
+            { x: colRot.origin.x + 1, y: colRot.origin.y },
+            previewPt,
+            arcBearingDeg,
+          );
         }
         // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
         if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {

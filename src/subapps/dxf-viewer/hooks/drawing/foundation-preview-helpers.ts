@@ -20,9 +20,15 @@ import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
-import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM, type FoundationKind } from '../../bim/types/foundation-types';
+import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM, type FoundationKind, type FoundationParams } from '../../bim/types/foundation-types';
 import { toWysiwygPreviewEntity, resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
 import { getDefaultLayerId } from '../../stores/LayerStore';
+// ADR-564 §foundation-hud — το πέδιλο ξαναχρησιμοποιεί ΤΟΥΣ ΙΔΙΟΥΣ live HUD painters με τοίχο/δοκάρι/
+// κολόνα: γραμμικό (strip/tie) → `wall-hud-paint` (μήκος+∠+διατομή)· pad → `paintFootprintHud` (πλάτος/
+// βάθος ανά παρειά+∠+βάθος). Η μετάφραση ζει στο `foundation-hud-spec-label` (N.11-clean).
+import { buildSegmentHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import type { FootprintHudDescriptor } from '../../canvas-v2/preview-canvas/column-hud-paint';
+import { buildFoundationHudSpecLabel, buildFoundationPadHudSpecLabel } from './foundation-hud-spec-label';
 // ADR-514 Φ6c/Φ6d — live pad ghost: flush σε παρειά/άξονα κολόνας ΜΕΣΑ από τον ΕΝΑ εγκέφαλο έλξης +
 // ΚΟΙΝΗ assembly (ghost + CL dims + polar/rect grid + place→rotate) με την κολώνα — μηδέν διπλότυπο.
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
@@ -82,6 +88,27 @@ export function generateFoundationPreview(
  *
  * kind/overrides(+anchor) από το κοινό `foundationPreviewStore` (single-writer ο tool) → preview ≡ commit.
  */
+/**
+ * ADR-564 §foundation-hud — προσαρτά στο pad ghost τα δεδομένα του footprint HUD (`paintFootprintHud`):
+ * footprint κορυφές + ελάχιστος `FootprintHudDescriptor` (πάντα ορθογώνιο pad → `kind:'rectangular'` +
+ * γωνία) + προ-μεταφρασμένη ετικέτα βάθους. Ο `drawing-hover-handler` το διαβάζει και ζωγραφίζει live
+ * πλάτος/βάθος ανά παρειά + ∠ γωνία + βάθος κατά την τοποθέτηση (parity με κολόνα). Τα δεδομένα ζουν
+ * ΗΔΗ στο ghost (FoundationEntity) — απλή αναφορά, μηδέν αντιγραφή γεωμετρίας. No-op σε degenerate ghost.
+ */
+function attachFoundationPadHud(ghost: ExtendedSceneEntity | null): ExtendedSceneEntity | null {
+  if (!ghost) return ghost;
+  const fe = ghost as unknown as {
+    geometry?: { footprint?: { vertices?: readonly Point2D[] } };
+    params?: FoundationParams;
+  };
+  const footprint = fe.geometry?.footprint?.vertices;
+  const params = fe.params;
+  if (!footprint || footprint.length === 0 || !params || params.kind !== 'pad') return ghost;
+  const descriptor: FootprintHudDescriptor = { kind: 'rectangular', rotationDeg: params.rotation };
+  const heightSpecLabel = buildFoundationPadHudSpecLabel(params.thicknessMm);
+  return { ...ghost, footprintHud: { footprint, descriptor, heightSpecLabel } } as ExtendedSceneEntity;
+}
+
 export function generateFoundationPadPreview(
   cursorPoint: Point2D,
   sceneUnits: SceneUnits = 'mm',
@@ -111,7 +138,7 @@ export function generateFoundationPadPreview(
   // awaitingRotation — locked θέση, live περιστροφή προς τον κέρσορα (+ grid).
   const rot = getPlacementRotationLock();
   if (rot) {
-    return assemblePlacementRotationGhost({
+    return attachFoundationPadHud(assemblePlacementRotationGhost({
       origin: rot.origin,
       anchor: rot.anchor,
       cursor: cursorPoint,
@@ -120,7 +147,7 @@ export function generateFoundationPadPreview(
       polarOpts,
       ghostId: 'preview_foundation_pad',
       buildEntity: buildPadGhostEntity,
-    });
+    }));
   }
 
   // awaitingPosition — face-snap → κοινή assembly (ghost + CL dims + polar/rect grid).
@@ -132,7 +159,7 @@ export function generateFoundationPadPreview(
     sceneUnits,
     columnOpts: polarOpts,
   });
-  return assemblePlacementGhost({
+  return attachFoundationPadHud(assemblePlacementGhost({
     snap,
     effectiveCursor,
     targets,
@@ -141,7 +168,7 @@ export function generateFoundationPadPreview(
     fallbackAnchor: preview.overrides.anchor ?? 'center',
     ghostId: 'preview_foundation_pad',
     buildEntity: buildPadGhostEntity,
-  });
+  }));
 }
 
 function makeFoundationBandGhost(
@@ -156,5 +183,11 @@ function makeFoundationBandGhost(
   const params = buildDefaultFoundationParams(startPt, kind, { ...overrides, kind, axisEnd }, sceneUnits);
   const built = buildFoundationEntity(params, getDefaultLayerId());
   if (!built.ok) return null;
-  return toWysiwygPreviewEntity(built.entity, id);
+  // ADR-564 §foundation-hud — ζωντανή ταυτότητα γραμμικού πεδίλου (μήκος + ∠ γωνία + διατομή «b·h»),
+  // ΚΟΙΝΟΣ painter με τοίχο/δοκάρι (`buildSegmentHudMeta`→`paintWallHud`). `thicknessMm` param = πλάτος
+  // band (plan half-width → offset της dim line)· `heightMm` = βάθος διατομής (cosmetic — η ετικέτα
+  // έρχεται προ-μεταφρασμένη ως `hudSpecLabel`). Το τόξο φοράς το ζωγραφίζει ο handler (gate χαλαρωμένο).
+  const hudMeta = buildSegmentHudMeta(startPt, endPt, sceneUnits, params.width, params.thicknessMm);
+  const hudSpecLabel = buildFoundationHudSpecLabel(params.width, params.thicknessMm);
+  return toWysiwygPreviewEntity(built.entity, id, null, null, null, hudMeta, hudSpecLabel);
 }

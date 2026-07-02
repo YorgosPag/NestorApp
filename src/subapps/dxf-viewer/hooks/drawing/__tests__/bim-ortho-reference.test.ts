@@ -20,6 +20,7 @@ import {
 import { wallPreviewStore } from '../../../bim/walls/wall-preview-store';
 import { stairPreviewStore } from '../../../bim/stairs/stair-preview-store';
 import { beamPreviewStore } from '../../../bim/beams/beam-preview-store';
+import { foundationPreviewStore } from '../../../bim/foundations/foundation-preview-store';
 import { slabPreviewStore } from '../../../bim/slabs/slab-preview-store';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 import { polarTrackingStore } from '../../../systems/constraints/polar-tracking-store';
@@ -39,6 +40,7 @@ describe('bim-ortho-reference', () => {
     wallPreviewStore.reset();
     stairPreviewStore.reset();
     beamPreviewStore.reset();
+    foundationPreviewStore.reset();
     slabPreviewStore.reset();
     cadToggleState.set(false, false);
     clearColumnPlacementAnchor();
@@ -135,6 +137,15 @@ describe('bim-ortho-reference', () => {
     it('9. beam curved → endPoint anchors the control click', () => {
       beamPreviewStore.set({ startPoint: { x: 1, y: 2 }, endPoint: { x: 9, y: 2 }, kind: 'curved', overrides: {} });
       expect(getBimOrthoReference('beam')).toEqual({ x: 9, y: 2 });
+    });
+
+    it('9b. foundation-strip/tie-beam → startPoint anchors the arc pivot + ortho baseline (ADR-564)', () => {
+      foundationPreviewStore.set({ startPoint: { x: 3, y: 4 }, endPoint: null, kind: 'strip', overrides: {} });
+      expect(getBimOrthoReference('foundation-strip')).toEqual({ x: 3, y: 4 });
+      foundationPreviewStore.set({ startPoint: { x: 5, y: 6 }, endPoint: null, kind: 'tie-beam', overrides: {} });
+      expect(getBimOrthoReference('foundation-tie-beam')).toEqual({ x: 5, y: 6 });
+      expect(isBimOrthoTool('foundation-strip')).toBe(true);
+      expect(isBimOrthoTool('foundation-tie-beam')).toBe(true);
     });
 
     it('10. slab → last polygon vertex', () => {

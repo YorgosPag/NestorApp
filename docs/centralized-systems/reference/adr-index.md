@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 507 ADRs | Last Updated: 2026-06-30
+**📊 Stats**: 513 ADRs | Last Updated: 2026-07-02
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 291 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 295 | [View](#uncategorized) |
 
 ---
 
@@ -542,11 +542,12 @@
 | **ADR-557** | Text / MText λαβές με ΠΛΗΡΗ parity ορθογώνιου τοίχου/κολόνας (SSoT) | ✅ 🟢 Slices 1-5 + **Φ-attachment** IMPLEMENTED (UNCOMMITTED) — grips browser-verified· Φ-attachment 🔴 εκκρεμεί browser-verify (Giorgio 2026-06-30) | 2026-06-30 | Canvas & Rendering / Grips | [📄](./adrs/ADR-557-text-mtext-rect-box-grip-parity.md) |
 | **ADR-558** | Cinema-4D-style ground grid στην 3D προβολή | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-558-cinema4d-3d-viewport-grid.md) |
 | **ADR-559** | Όριο πλήθους επιλογής για εμφάνιση λαβών (AutoCAD `GRIPOBJLIMIT`) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-559-grip-object-limit.md) |
-| **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | 2026-07-01 | DXF Viewer — 2D Editing / Pointer Interaction | [📄](./adrs/ADR-560-entity-body-drag-move-copy.md) |
-| **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-07-01 | DXF Viewer — Canvas & Rendering / Grips | [📄](./adrs/ADR-561-move-rotate-grips-primitives.md) |
-| **ADR-562** | Dimension Per-Part Styling — χρώμα/πάχος/τύπος γραμμής/βελών ανά μέρος διάστασης | 🟡 PROPOSED | 2026-07-01 | DXF Viewer — Dimensions / Styling | [📄](./adrs/ADR-562-dimension-per-part-styling.md) |
-| **ADR-563** | Auto-Dimension Engine — αυτόματη περιμετρική διαστασιολόγηση κάτοψης (3 σειρές, ArchiCAD/Revit-grade) + BIM associativity | 🟢 Φ1+Φ2 IMPLEMENTED (UNCOMMITTED) | 2026-07-02 | DXF Viewer — Dimensions | [📄](./adrs/ADR-563-auto-dimension-engine.md) |
-| **ADR-564** | Ενοποιημένο BIM Placement HUD & Τόξο Φοράς — λευκές ενδείξεις (μήκος/γωνία/spec) + έγχρωμο τόξο (🟢/🔴) SSoT σε τοίχο/κολόνα/δοκάρι/πέδιλο | 🟡 PROPOSED | 2026-07-02 | DXF Viewer — BIM Placement / Preview Overlay | [📄](./adrs/ADR-564-unified-bim-placement-hud-overlay.md) |
+| **ADR-560** | Entity Body-Drag (Move / Ctrl-Copy) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-560-entity-body-drag-move-copy.md) |
+| **ADR-561** | Σταυρός Μετακίνησης + Σημάδι Περιστροφής σε Primitives (polyline / circle / arc / rectangle) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-561-move-rotate-grips-primitives.md) |
+| **ADR-562** | Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-562-dimension-per-part-styling.md) |
+| **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-563-auto-dimension-engine.md) |
+| **ADR-564** | Ενοποιημένο BIM Placement HUD & Τόξο Φοράς (SSoT overlay για τοίχο/κολόνα/δοκάρι/πέδιλο) | ✅ 🟢 Φ-beam + Φ-column + Φ-foundation (linear + pad) IMPLEMENTED (UNCOMMITTED) · Φ-tests μερικώς | 2026-07-02 | DXF Viewer · BIM Placement · Preview Overlay SSoT | [📄](./adrs/ADR-564-unified-bim-placement-hud-overlay.md) |
+| **ADR-565** | Καμπύλα & Κυκλικά Δομικά BIM Στοιχεία: Έρευνα Αγοράς + Πρόταση Υλοποίησης (τοίχοι/δοκάρια/κολόνες/πέδιλα/συνδετήρια) | ✅ 🔵 RESEARCH / PROPOSED — τεκμηρίωση αγοράς + σύσταση αρχιτεκτονικής· καμία υλοποίηση ακόμη | 2026-07-02 | DXF Viewer · BIM · Geometry · Research | [📄](./adrs/ADR-565-curved-circular-structural-bim-elements.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1071,11 +1072,10 @@
 | **ADR-556** | Central devicePixelRatio-change sync for all viewport canvases | ✅ APPROVED | [View](./adrs/ADR-556-device-pixel-ratio-change-sync.md) |
 | **ADR-558** | Cinema-4D-style ground grid στην 3D προβολή | ✅ APPROVED | [View](./adrs/ADR-558-cinema4d-3d-viewport-grid.md) |
 | **ADR-559** | Όριο πλήθους επιλογής για εμφάνιση λαβών (AutoCAD `GRIPOBJLIMIT`) | ✅ APPROVED | [View](./adrs/ADR-559-grip-object-limit.md) |
-| **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | [View](./adrs/ADR-560-entity-body-drag-move-copy.md) |
-| **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
-| **ADR-562** | Dimension Per-Part Styling — χρώμα/πάχος/τύπος γραμμής/βελών ανά μέρος διάστασης | 🟡 PROPOSED | [View](./adrs/ADR-562-dimension-per-part-styling.md) |
-| **ADR-563** | Auto-Dimension Engine — αυτόματη περιμετρική διαστασιολόγηση κάτοψης | 🟢 Φ1 IMPLEMENTED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
-| **ADR-564** | Ενοποιημένο BIM Placement HUD & Τόξο Φοράς (τοίχος/κολόνα/δοκάρι/πέδιλο) | 🟡 PROPOSED | [View](./adrs/ADR-564-unified-bim-placement-hud-overlay.md) |
+| **ADR-560** | Entity Body-Drag (Move / Ctrl-Copy) | ✅ APPROVED | [View](./adrs/ADR-560-entity-body-drag-move-copy.md) |
+| **ADR-561** | Σταυρός Μετακίνησης + Σημάδι Περιστροφής σε Primitives (polyline / circle / arc / rectangle) | ✅ APPROVED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
+| **ADR-562** | Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης) | ✅ APPROVED | [View](./adrs/ADR-562-dimension-per-part-styling.md) |
+| **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

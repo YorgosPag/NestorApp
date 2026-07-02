@@ -24,7 +24,11 @@ import {
   type BeamParamOverrides,
   type SceneUnits,
 } from './beam-completion';
-import { DEFAULT_BEAM_WIDTH_MM, type BeamKind, type BeamParams } from '../../bim/types/beam-types';
+import { DEFAULT_BEAM_WIDTH_MM, DEFAULT_BEAM_DEPTH_MM, type BeamKind, type BeamParams } from '../../bim/types/beam-types';
+// ADR-564 §linear-hud — το δοκάρι (γραμμικό μέλος) ξαναχρησιμοποιεί ΤΟΝ ΙΔΙΟ live HUD painter με τον
+// τοίχο (μήκος + ∠ γωνία + διατομή)· η μόνη διαφορά είναι η ετικέτα διατομής («b·h» αντί «πάχος·ύψος»).
+import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import { buildBeamHudSpecLabel } from './beam-hud-spec-label';
 import type { Point3D } from '../../bim/types/bim-base';
 import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { getDefaultLayerId } from '../../stores/LayerStore';
@@ -90,15 +94,21 @@ export function generateBeamPreview(
     // → preview ≡ commit) + Shift 1cm βήμα στο ελεύθερο (face-snap νικά). Μόνο straight/cantilever
     // (curved → raw cursor· το άκρο ορίζεται από το control point). Το δοκάρι δεν έχει length/angle
     // lock (wall-only ADR-513) → χωρίς lock branch.
+    const widthMm = preview.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+    const depthMm = preview.overrides.depth ?? DEFAULT_BEAM_DEPTH_MM;
     let endPt = cursorPoint;
     let endFaceFrame: GhostFaceFrame | null = null;
     if (preview.kind !== 'curved') {
-      const widthMm = preview.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
       const endSnap = resolveMemberEndpointSnap(cursorPoint, footprints, snapMembers, widthMm, sceneUnits);
       endPt = resolveMemberEndpointWithFineStep(endSnap, startPt);
       endFaceFrame = endSnap.faceFrame ?? null;
     }
-    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, endPt, preview.kind, preview.overrides, sceneUnits, null, footprints, preview.startAnchored, beamTargets, endFaceFrame);
+    // ADR-564 §linear-hud — ζωντανή ταυτότητα δοκαριού (μήκος + ∠ γωνία + διατομή «b·h»), ΚΟΙΝΟΣ
+    // painter με τον τοίχο (`buildSegmentHudMeta`→`paintWallHud`). Μόνο ευθύ/πρόβολο (curved → χωρίς
+    // aligned axis· το άκρο ορίζεται από το control point). Το τόξο φοράς το ζωγραφίζει ο handler.
+    const hudMeta = preview.kind !== 'curved' ? buildSegmentHudMeta(startPt, endPt, sceneUnits, widthMm, depthMm) : null;
+    const hudSpecLabel = hudMeta ? buildBeamHudSpecLabel(widthMm, depthMm) : null;
+    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, endPt, preview.kind, preview.overrides, sceneUnits, null, footprints, preview.startAnchored, beamTargets, endFaceFrame, hudMeta, hudSpecLabel);
   }
 
   // awaitingCurveControl (curved): cursor = quadratic Bezier control point.
@@ -189,6 +199,8 @@ function makeBeamWysiwygGhost(
   startAnchored: boolean,
   beamTargets: readonly BeamSnapTarget[],
   endFaceFrame: GhostFaceFrame | null = null,
+  hudMeta: WallHudMeta | null = null,
+  hudSpecLabel: string | null = null,
 ): ExtendedSceneEntity | null {
   let params: BeamParams;
   if (kind === 'curved') {
@@ -239,8 +251,8 @@ function makeBeamWysiwygGhost(
           ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
         },
       };
-      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor, endDims);
+      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor, endDims, null, hudMeta, hudSpecLabel);
     }
   }
-  return toWysiwygPreviewEntity(entity, id, ghostStatusColor, endDims);
+  return toWysiwygPreviewEntity(entity, id, ghostStatusColor, endDims, null, hudMeta, hudSpecLabel);
 }

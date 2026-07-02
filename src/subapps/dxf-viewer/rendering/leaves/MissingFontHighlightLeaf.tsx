@@ -19,6 +19,8 @@ import {
   subscribeMissingFontReport,
   getMissingFontReport,
 } from '../../text-engine/fonts/missing-font-store';
+// 🏢 SSoT canvas sizing — same core primitive as every 2D layer (DPR-aware, no JSX-attr own-sizing).
+import { CanvasUtils } from '../canvas/utils/CanvasUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,10 +69,13 @@ export const MissingFontHighlightLeaf = React.memo(
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const ctx = canvas.getContext('2d');
+      // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the
+      // ONE core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync). The ctx
+      // is DPR-scaled → the screen-space `entityBounds` strokeRects stay in CSS coords, unchanged.
+      const ctx = CanvasUtils.sizeCanvasToViewport(canvas, viewport);
       if (!ctx) return;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, viewport.width, viewport.height);
 
       if (!highlightActive || !report || report.affectedEntityIds.length === 0) return;
 
@@ -92,14 +97,12 @@ export const MissingFontHighlightLeaf = React.memo(
       }
 
       ctx.restore();
-    }, [report, highlightActive, entityBounds]);
+    }, [report, highlightActive, entityBounds, viewport.width, viewport.height]);
 
     return (
       <canvas
         ref={canvasRef}
-        width={viewport.width}
-        height={viewport.height}
-        className={`pointer-events-none absolute inset-0 ${className ?? ''}`}
+        className={`pointer-events-none absolute inset-0 w-full h-full ${className ?? ''}`}
         aria-hidden="true"
       />
     );

@@ -4,38 +4,31 @@
  * ADR-065 SRP split: 958 lines -> 3 files (types, entity-renderers, main)
  */
 
-import type { Point2D, ViewTransform, Viewport, Entity } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 // 🏢 ADR-040 / ADR-398 §4 — live transform SSoT (ίδιο read με τον main
 // `dxf-canvas-renderer`). render() διαβάζει zero-lag το τρέχον transform → το ghost
 // ακολουθεί zoom/pan world-locked χωρίς cached/stale τιμή.
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { renderDistanceLabelFromWorld, renderInfoLabel } from './preview-render-labels';
-import { OPACITY } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
 // 🏢 SSoT canvas sizing — same primitive as DxfCanvas/LayerCanvas (buffer από authoritative
 // viewport, DPR-aware, χωρίς inline style.width). Ενοποιεί την τετραπλή own-rect διαστασιολόγηση.
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
-import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
 export type { PreviewRenderOptions } from './preview-renderer-types';
-import type { PreviewRenderOptions, PreviewRenderHelpers } from './preview-renderer-types';
+import type { PreviewRenderOptions } from './preview-renderer-types';
 import { DEFAULT_PREVIEW_OPTIONS } from './preview-renderer-types';
 import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
-// ADR-362 Phase D1 + SRP split: per-type preview entity dispatch (line/circle/…/
-// dimension) lives in a sibling module; DIMSTYLE resolution stays inside it.
-import { dispatchPreviewEntityRender } from './preview-entity-dispatch';
 // 🏢 WYSIWYG placement preview — render synthetic BIM entities (wall/foundation/…)
 // through the REAL entity renderers instead of a schematic green outline.
 import { BimPreviewRenderer } from './bim-preview-render';
-// ADR-398 §beam-to-beam framing — 🔴 schematic override για το beam ghost (κοινό SSoT
-// με το column anchor ghost) όταν η σύνδεση είναι παράλογη (συγγραμμική κοντή άκρη).
-import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
-import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
-import { resolveGhostStatusColor, type GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+// SRP split (ADR-040) — active-entity paint pass (WYSIWYG BIM ghost + generic dispatch +
+// colored grips) lives in a sibling module; render() keeps the frame lifecycle only.
+import { paintPreviewEntity } from './preview-entity-paint';
+import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking visual feedback (markers + paths).
@@ -57,6 +50,10 @@ import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-reso
 import { paintGhostFaceDimensions } from './ghost-face-dim-paint';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { paintWallHud, type WallHudMeta } from './wall-hud-paint';
+// ADR-564 §footprint-hud — reuse του υπάρχοντος footprint HUD painter (πλάτος/βάθος ανά παρειά + ∠ +
+// ύψος) και κατά την ΤΟΠΟΘΕΤΗΣΗ κολόνας/πέδιλου (πριν: μόνο grip-drag).
+import { paintColumnHud, paintFootprintHud, type FootprintHudDescriptor } from './column-hud-paint';
+import type { ColumnParams } from '../../bim/types/column-types';
 import { paintPolarDisk } from './polar-disk-paint';
 import type { PolarDiskGrid } from '../../bim/columns/polar-disk-snap';
 import { paintRectGrid } from './rect-grid-paint';
@@ -232,6 +229,40 @@ export class PreviewRenderer {
   }
 
   /**
+   * ADR-564 §footprint-hud — «ζωντανή ταυτότητα» κολόνας/πέδιλου (footprint μέλος) κατά την
+   * τοποθέτηση: aligned διάσταση σε ΚΑΘΕ παρειά (πλάτος & βάθος / Ø) + ∠ γωνία + ύψος. Ίδιος pure
+   * painter με το grip-drag (`column-hud-paint`). `heightSpecLabel` = ΗΔΗ μεταφρασμένο (i18n handler).
+   * Called AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   */
+  drawColumnHud(
+    footprint: readonly Point2D[],
+    params: ColumnParams,
+    heightSpecLabel: string,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    paintColumnHud(this.ctx, footprint, params, heightSpecLabel, this.sceneUnits, transform, viewport);
+  }
+
+  /**
+   * ADR-564 §foundation-hud — entity-agnostic footprint HUD (πέδιλο-pad): ΙΔΙΟΣ pure painter με την
+   * κολόνα (`paintFootprintHud`) αλλά με ελάχιστο `FootprintHudDescriptor` αντί για `ColumnParams`,
+   * ώστε το πέδιλο (`FoundationParams`) να τον ξαναχρησιμοποιεί χωρίς type-lie cast. `heightSpecLabel`
+   * = ΗΔΗ μεταφρασμένο (i18n handler). Called AFTER `drawPreview`· wiped στο επόμενο `drawPreview`/`clear`.
+   */
+  drawFootprintHud(
+    footprint: readonly Point2D[],
+    descriptor: FootprintHudDescriptor,
+    heightSpecLabel: string,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    paintFootprintHud(this.ctx, footprint, descriptor, heightSpecLabel, this.sceneUnits, transform, viewport);
+  }
+
+  /**
    * ADR-397 §15 (wall) — τόξο ΦΟΡΑΣ γωνίας τοίχου-φαντάσματος: μετά το 1ο κλικ, από τον
    * `pivotW` (αρχή τοίχου) με άξονα αναφοράς το `anchorW` (world-X) προς τον `cursorW`, χρωματισμένο
    * ανά πρόσημο `sweepDeg` (🟢 πάνω / 🔴 κάτω από τον x-άξονα) + βελάκι + baseline 0° + χρωματιστές
@@ -376,88 +407,20 @@ export class PreviewRenderer {
       return;
     }
 
-    const entity = this.currentPreview;
-
-    // 🏢 WYSIWYG placement preview: when the tool's preview helper returns a full
-    // BIM entity (`.params` + `.geometry`, flagged `wysiwygPreview`), render it
-    // through the SAME real renderers as the committed scene so the rubber-band
-    // IS the final element (fill / hatch / lineweight), not a green outline.
-    // Tracking markers were already painted above; polar/tracking overlays draw
-    // on top via the handler's subsequent drawPolarTrackingLine/Alignment calls.
-    const bimMeta = entity as {
-      wysiwygPreview?: boolean;
-      ghostStatusColor?: GhostStatusColor | null;
-    };
-    if (bimMeta.wysiwygPreview && this.bimPreview) {
-      // ADR-398 §beam-to-beam framing — όταν η σύνδεση είναι παράλογη (🔴), ζωγράφισε
-      // κόκκινο schematic (outline + 30% fill) του outline αντί WYSIWYG amber, μέσω του
-      // κοινού `drawStatusGhostPolygon` SSoT (ίδιο look με το active column anchor ghost).
-      const statusColor = bimMeta.ghostStatusColor;
-      // SSoT: footprint polygon for ANY entity (column/beam → outline.vertices· τοίχος →
-      // outerEdge+innerEdge). Χωρίς αυτό το wall ghost δεν γινόταν ποτέ κόκκινο (ADR-508).
-      const outline = resolveStatusGhostOutline(entity);
-      if (statusColor && outline && outline.length >= 3) {
-        drawStatusGhostPolygon(ctx, outline, transform, viewport, statusColor);
-        return;
-      }
-      // ADR-363 §wall-joint-miter-preview («Επίπεδο 2») — LIVE join: draw the affected
-      // existing walls with their NEW miter FIRST (underneath), so the active ghost paints
-      // on top. Same real renderer as the ghost → WYSIWYG. Attached by `applyJointMiterPreview`.
-      const jointNeighbors = (entity as { jointNeighbors?: readonly unknown[] }).jointNeighbors;
-      if (jointNeighbors && jointNeighbors.length > 0) {
-        for (const neighbor of jointNeighbors) {
-          this.bimPreview.render(neighbor as unknown as Entity, transform, viewport);
-        }
-      }
-      // ADR-398 — pass the canonical viewport (= prop viewport = DxfCanvas /
-      // container rect) so the BIM ghost measures its y-flip against the SAME
-      // viewport as the committed entity, not the PreviewCanvas's own rect.
-      this.bimPreview.render(entity as unknown as Entity, transform, viewport);
-      return;
-    }
-
-    const opts = this.currentOptions;
-
-    // Colored preview grips override entity-renderer grips (ADR-142 icon click sequence)
-    const entityMeta = entity as { previewGripPoints?: Array<PreviewGripPoint>; showPreviewGrips?: boolean };
-    const coloredGrips = entityMeta.showPreviewGrips && entityMeta.previewGripPoints?.length
-      ? entityMeta.previewGripPoints
-      : null;
-
-    // Setup context style
-    ctx.strokeStyle = opts.color;
-    ctx.fillStyle = opts.gripColor;
-    ctx.lineWidth = opts.lineWidth;
-    ctx.globalAlpha = opts.opacity;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.setLineDash(opts.dashPattern.length > 0 ? opts.dashPattern : []);
-
-    // Suppress entity-level grips when colored grips handle rendering
-    const renderOpts = coloredGrips ? { ...opts, showGrips: false } : opts;
-
-    // Build helpers object for entity renderers
-    const helpers: PreviewRenderHelpers = {
+    // Paint the active preview entity (WYSIWYG BIM ghost + generic dispatch + colored
+    // grips). Extracted to `preview-entity-paint` (SRP) — render() owns only the frame
+    // lifecycle (clear + dirty + tracking markers). Grip painter is injected so the
+    // renderer keeps ownership of its `UnifiedGripRenderer`.
+    paintPreviewEntity(
+      ctx,
+      this.currentPreview,
+      transform,
       viewport,
-      renderGrip: (c, pos, o) => this.renderGrip(c, pos, o),
-      renderDistanceLabelFromWorld: (c, w1, w2, s1, s2) => renderDistanceLabelFromWorld(c, w1, w2, s1, s2),
-      renderInfoLabel: (c, pos, lines) => renderInfoLabel(c, pos, lines),
-    };
-
-    // Dispatch to entity renderer (per-type routing extracted, SRP).
-    dispatchPreviewEntityRender(ctx, entity, transform, viewport, renderOpts, helpers, this.sceneUnits);
-
-    // Render colored preview grips (FIRST=teal P1/cursor-start, SECOND=yellow intermediates, THIRD=red cursor)
-    if (coloredGrips) {
-      for (const grip of coloredGrips) {
-        const screenPos = CoordinateTransforms.worldToScreen(grip.position, transform, viewport);
-        this.renderGrip(ctx, screenPos, opts, grip.color);
-      }
-    }
-
-    // Reset context
-    ctx.globalAlpha = OPACITY.OPAQUE;
-    ctx.setLineDash([]);
+      this.currentOptions,
+      this.sceneUnits,
+      this.bimPreview,
+      (c, pos, o, cc) => this.renderGrip(c, pos, o, cc),
+    );
   }
 
   // ===== PRIVATE HELPERS =====

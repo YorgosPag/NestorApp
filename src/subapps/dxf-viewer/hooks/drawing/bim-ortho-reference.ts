@@ -35,6 +35,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
+import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-preview-store';
 import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
@@ -52,7 +53,7 @@ import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
 import { adaptiveDistanceStep, quantizePointFromAnchor, quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
-const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor', 'column']);
+const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor', 'column', 'foundation-strip', 'foundation-tie-beam']);
 
 /** True if `tool` is a BIM tool that participates in ortho/polar constraints. */
 export function isBimOrthoTool(tool: string): boolean {
@@ -87,6 +88,15 @@ export function getBimOrthoReference(tool: string): Point2D | null {
     case 'beam': {
       const s = beamPreviewStore.get();
       // Straight: lock end vs start. Curved: lock the bulge control vs the end.
+      return s.endPoint ?? s.startPoint;
+    }
+    case 'foundation-strip':
+    case 'foundation-tie-beam': {
+      // ADR-564 §foundation-hud — τα γραμμικά πέδιλα κρατούν τα σημεία τους στο dedicated
+      // `foundationPreviewStore` (ΟΧΙ στο `tempPoints`), όπως το δοκάρι. `awaitingEnd`: lock end
+      // vs start → η αναφορά = αρχή band (pivot του τόξου φοράς + βάση ΟΡΘΟ/POLAR). `null` πριν
+      // το 1ο κλικ → no-op (ίδιο με δοκάρι/τοίχο).
+      const s = foundationPreviewStore.get();
       return s.endPoint ?? s.startPoint;
     }
     case 'slab': {

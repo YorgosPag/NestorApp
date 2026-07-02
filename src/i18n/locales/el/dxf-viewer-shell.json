@@ -811,7 +811,9 @@
       "statusStart": "Κλικ για αρχή πεδιλοδοκού",
       "statusEnd": "Κλικ για τέλος πεδιλοδοκού",
       "statusPickWall": "Επίλεξε τοίχο για τοποθέτηση πεδιλοδοκού",
-      "errorNoWall": "Δεν βρέθηκε τοίχος στο σημείο που επέλεξες"
+      "errorNoWall": "Δεν βρέθηκε τοίχος στο σημείο που επέλεξες",
+      "hudSpec": "b={width} · h={height}",
+      "padHudSpec": "βάθος {depth}"
     },
     "mepFixture": {
       "statusPosition": "Κλικ για τοποθέτηση φωτιστικού"

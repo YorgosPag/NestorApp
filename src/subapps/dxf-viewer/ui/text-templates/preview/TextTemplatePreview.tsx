@@ -23,6 +23,9 @@ import {
   type TextTemplate,
 } from '@/subapps/dxf-viewer/text-engine/templates';
 import { drawTextNodePreview } from './canvas-text-renderer';
+// 🏢 SSoT canvas sizing — DPR-aware backing store via the shared primitive (was scattered
+// `window.devicePixelRatio || 1` + manual inline sizing). container-measurement variant.
+import { sizeCanvasToContainerDpr } from '@/subapps/dxf-viewer/rendering/canvas/withCanvasState';
 
 interface TextTemplatePreviewProps {
   readonly template: TextTemplate | null;
@@ -48,16 +51,14 @@ export const TextTemplatePreview: React.FC<TextTemplatePreviewProps> = ({
     if (!ctx) return;
 
     const render = () => {
-      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
       const cssW = wrapper.clientWidth;
       const cssH = wrapper.clientHeight;
       if (cssW <= 0 || cssH <= 0) return;
-      canvas.width = Math.round(cssW * dpr);
-      canvas.height = Math.round(cssH * dpr);
+      // 🏢 SSoT sizing — DPR-aware backing store + dpr transform + clear via the shared primitive
+      // (delegates to CanvasUtils.sizeCanvasToViewport). Keeps explicit CSS size (canvas isn't w-full).
+      sizeCanvasToContainerDpr(canvas, wrapper);
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${cssH}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, cssW, cssH);
       if (!template) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, cssW, cssH);

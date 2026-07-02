@@ -91,6 +91,25 @@ function autoSizeGhostColumnParams(
 }
 
 /**
+ * ADR-564 §footprint-hud — προσαρτά στο column ghost τα δεδομένα που χρειάζεται ο footprint HUD
+ * painter (`paintColumnHud`): footprint κορυφές + params (kind/width/depth/rotation/height). Ο
+ * `drawing-hover-handler` το διαβάζει και ζωγραφίζει live πλάτος/βάθος ανά παρειά + ∠ γωνία + ύψος
+ * κατά την τοποθέτηση (parity με τον τοίχο). Τα δεδομένα ζουν ΗΔΗ στο ghost (ColumnEntity) — απλή
+ * αναφορά, μηδέν αντιγραφή γεωμετρίας. No-op σε degenerate ghost.
+ */
+function attachColumnHud(ghost: ExtendedSceneEntity | null): ExtendedSceneEntity | null {
+  if (!ghost) return ghost;
+  const ce = ghost as unknown as {
+    geometry?: { footprint?: { vertices?: readonly Point2D[] } };
+    params?: ColumnParams;
+  };
+  const footprint = ce.geometry?.footprint?.vertices;
+  const params = ce.params;
+  if (!footprint || footprint.length === 0 || !params) return ghost;
+  return { ...ghost, columnHud: { footprint, params } } as ExtendedSceneEntity;
+}
+
+/**
  * Build the column WYSIWYG preview entity for the current cursor frame. Returns a
  * full `ColumnEntity` flagged `wysiwygPreview` (rendered through the real
  * `ColumnRenderer`), or `null` when the column tool is inactive / the would-be
@@ -148,7 +167,7 @@ export function generateColumnPreview(
   // θέση και ΠΕΡΙΣΤΡΕΦΕΤΑΙ live προς τον κέρσορα. Κρατά το πολικό/καρτεσιανό πλέγμα (ΕΝΑ SSoT assembly).
   const rot = getColumnRotationLock();
   if (rot) {
-    return assemblePlacementRotationGhost({
+    return attachColumnHud(assemblePlacementRotationGhost({
       origin: rot.origin,
       anchor: rot.anchor,
       cursor: cursorPoint,
@@ -157,7 +176,7 @@ export function generateColumnPreview(
       polarOpts,
       ghostId: 'preview_column_ghost',
       buildEntity: buildColumnGhostEntity,
-    });
+    }));
   }
 
   // ADR-404 Φ5 §slanted — μετά το 1ο κλικ (awaitingTopLean): η κολώνα μένει στη ΣΤΑΘΕΡΗ βάση και ΓΕΡΝΕΙ
@@ -174,7 +193,7 @@ export function generateColumnPreview(
     // ADR-503 — ίδιο auto-size με τους υπόλοιπους κλάδους (κεκλιμένη ορθογώνια κολόνα).
     const sized = autoSizeGhostColumnParams(params, sizingProvider);
     const built = buildColumnEntity(sized, getDefaultLayerId(), sceneUnits);
-    return built.ok ? toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null) : null;
+    return built.ok ? attachColumnHud(toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null)) : null;
   }
 
   // ADR-398 §3.10 — awaitingPosition: sync-in-preview face-snap (ΕΝΑΣ εγκέφαλος, ΙΔΙΑ opts/targets/cursor
@@ -195,7 +214,7 @@ export function generateColumnPreview(
     columnHead: resolveColumnHeadReferences(handle.kind, handle.overrides, sceneUnits),
     lShapeGhost: handle.kind === 'L-shape', // ADR-525 — ενεργοποίηση corner-gap auto-junction tier
   });
-  return assemblePlacementGhost({
+  return attachColumnHud(assemblePlacementGhost({
     snap,
     effectiveCursor,
     targets,
@@ -204,5 +223,5 @@ export function generateColumnPreview(
     fallbackAnchor: handle.anchor,
     ghostId: 'preview_column_ghost',
     buildEntity: buildColumnGhostEntity,
-  });
+  }));
 }

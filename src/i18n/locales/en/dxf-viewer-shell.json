@@ -811,7 +811,9 @@
       "statusStart": "Click for the strip-footing start",
       "statusEnd": "Click for the strip-footing end",
       "statusPickWall": "Pick a wall to place the strip footing",
-      "errorNoWall": "No wall found at the picked point"
+      "errorNoWall": "No wall found at the picked point",
+      "hudSpec": "b={width} · h={height}",
+      "padHudSpec": "depth {depth}"
     },
     "mepFixture": {
       "statusPosition": "Click to place light fixture"

@@ -23,6 +23,8 @@ import { findFocusedEntityData2D } from './focus-2d-order';
 import { entityTypeLabel } from '../bim-3d/accessibility/status-bar-text-generator';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../rendering/types/Types';
+// 🏢 SSoT canvas sizing — same core primitive as every 2D layer (DPR-aware, no JSX-attr own-sizing).
+import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
 
 export interface Focus2DOverlayProps {
   readonly scene: DxfScene | null;
@@ -55,6 +57,9 @@ export function Focus2DOverlay({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the ONE
+    // core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync with siblings).
+    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
     if (!active || !focusedId) {
       clearFocus2DOverlay(canvas);
       return;
@@ -86,9 +91,7 @@ export function Focus2DOverlay({
     <>
       <canvas
         ref={canvasRef}
-        width={viewport.width}
-        height={viewport.height}
-        className={className ?? 'pointer-events-none absolute inset-0 z-[18]'}
+        className={className ?? 'pointer-events-none absolute inset-0 w-full h-full z-[18]'}
         aria-hidden="true"
       />
       {data && (
