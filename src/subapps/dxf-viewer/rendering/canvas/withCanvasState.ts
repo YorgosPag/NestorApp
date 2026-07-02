@@ -19,6 +19,9 @@ import type { LineDashPattern, RenderLineWidth } from '../../config/text-renderi
 import { OPACITY } from '../../config/color-config';
 // 🏢 SSoT device-pixel-ratio (μία πηγή για όλα τα canvas).
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// 🏢 SSoT canvas sizing core — `sizeCanvasToContainerDpr` delegates the DPR-aware backing-store
+// math to this ONE primitive (the container variant just supplies clientW/H as the viewport).
+import { CanvasUtils } from './utils/CanvasUtils';
 
 // ============================================================================
 // TYPES
@@ -318,18 +321,17 @@ export function sizeCanvasToContainerDpr(
   container: HTMLElement,
   desynchronized = false,
 ): CanvasRenderingContext2D | null {
-  const dpr = getDevicePixelRatio();
   const cw = container.clientWidth;
   const ch = container.clientHeight;
-  const dw = Math.round(cw * dpr);
-  const dh = Math.round(ch * dpr);
-  if (canvas.width !== dw || canvas.height !== dh) {
-    canvas.width = dw;
-    canvas.height = dh;
-  }
-  const ctx = canvas.getContext('2d', { desynchronized });
+  // 🏢 SSoT: the DPR-aware sizing math lives in ONE place (`CanvasUtils.sizeCanvasToViewport`). The
+  // container variant is a thin wrapper: it supplies the container's own client size as the viewport
+  // (own-measurement — correct for standalone overlays with no shared viewport prop) + clears.
+  const ctx = CanvasUtils.sizeCanvasToViewport(
+    canvas,
+    { width: cw, height: ch },
+    { contextAttributes: { desynchronized } },
+  );
   if (!ctx) return null;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
   return ctx;
 }

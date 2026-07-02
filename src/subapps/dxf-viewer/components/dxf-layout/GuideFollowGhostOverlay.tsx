@@ -50,8 +50,10 @@ import { getDraggingGuideId, subscribeGuideDrag } from '../../systems/guides/gui
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 // SSoT canvas-DPR helpers (αντί για σκόρπιο `window.devicePixelRatio || 1` + inline clear).
-import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
+// 🏢 SSoT canvas sizing — same core primitive as every other 2D layer (no inline `round(vp*dpr)`).
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { GHOST_DEFAULTS } from '../../rendering/ghost';
 
@@ -143,6 +145,22 @@ function GuideFollowGhostOverlayInner({
   viewportRef.current = viewport;
   const rafRef = useRef<number | null>(null);
 
+  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the ONE
+  // core primitive (before: inline `width={round(vp*dpr)}` declarative attr = duplicated math).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) CanvasUtils.sizeCanvasToViewport(canvas, viewport);
+  }, [viewport.width, viewport.height]);
+  // A devicePixelRatio change fires no ResizeObserver — re-size so the backing store re-rasterizes.
+  useEffect(
+    () =>
+      subscribeDevicePixelRatio(() => {
+        const canvas = canvasRef.current;
+        if (canvas) CanvasUtils.sizeCanvasToViewport(canvas, viewportRef.current);
+      }),
+    [],
+  );
+
   const repaint = useCallback(() => {
     rafRef.current = null;
     const canvas = canvasRef.current;
@@ -195,13 +213,10 @@ function GuideFollowGhostOverlayInner({
     };
   }, [schedule, repaint]);
 
-  const dpr = getDevicePixelRatio();
   return (
     <canvas
       ref={canvasRef}
       data-dxf-overlay="guide-follow-ghost"
-      width={Math.max(1, Math.round(viewport.width * dpr))}
-      height={Math.max(1, Math.round(viewport.height * dpr))}
       className="pointer-events-none absolute inset-0 w-full h-full z-[14]"
       aria-hidden="true"
     />

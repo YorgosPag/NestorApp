@@ -47,25 +47,19 @@ export class CanvasUtils {
       throw new Error('Invalid canvas element provided');
     }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get canvas context');
-
+    // 🏢 SSoT: own-rect variant — measures THIS canvas's own bounds (legacy standalone path, e.g.
+    // CanvasManager.registerCanvas) then delegates the DPR-aware sizing to the ONE core
+    // `sizeCanvasToViewport`. Legacy dpr semantics preserved (HiDPI only when explicitly enabled).
+    // ⚠️ For canvas-stack layers prefer `sizeCanvasToViewport` with the SHARED viewport prop — the
+    // own-rect measurement here is exactly the per-canvas race that caused the size desync.
+    const rect = canvasBoundsService.getBounds(canvas); // 🏢 ENTERPRISE: cached bounds
     const dpr = config.enableHiDPI ? (config.devicePixelRatio || getDevicePixelRatio()) : 1; // 🏢 ADR-094
-    // 🏢 ENTERPRISE: Use cached bounds service
-    const rect = canvasBoundsService.getBounds(canvas);
-
-    // ✅ DON'T OVERRIDE CSS SIZE - respect existing CSS
-    // Only set backing store size for HiDPI
-
-    // Backing store size
-    // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
-    canvas.width = toDevicePixels(rect.width, dpr);
-    canvas.height = toDevicePixels(rect.height, dpr);
-
-    // Scale context
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = config.imageSmoothingEnabled !== false;
-
+    const ctx = this.sizeCanvasToViewport(
+      canvas,
+      { width: rect.width, height: rect.height },
+      { devicePixelRatio: dpr, imageSmoothingEnabled: config.imageSmoothingEnabled },
+    );
+    if (!ctx) throw new Error('Could not get canvas context');
     return ctx;
   }
 
@@ -88,10 +82,16 @@ export class CanvasUtils {
   static sizeCanvasToViewport(
     canvas: HTMLCanvasElement,
     viewport: Viewport,
-    config: Pick<CanvasConfig, 'enableHiDPI' | 'devicePixelRatio' | 'imageSmoothingEnabled'> = {}
+    config: {
+      enableHiDPI?: boolean;
+      devicePixelRatio?: number;
+      imageSmoothingEnabled?: boolean;
+      /** getContext attributes — applied only on the FIRST context creation (e.g. `desynchronized`). */
+      contextAttributes?: CanvasRenderingContext2DSettings;
+    } = {}
   ): CanvasRenderingContext2D | null {
     if (!canvas || typeof canvas.getContext !== 'function') return null;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', config.contextAttributes);
     if (!ctx) return null;
 
     // 🏢 ADR-094: centralized DPR (default HiDPI on, explicit override honored).
