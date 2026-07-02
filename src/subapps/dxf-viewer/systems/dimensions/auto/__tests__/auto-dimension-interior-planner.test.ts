@@ -26,21 +26,57 @@ describe('planInteriorChains', () => {
     expect(vertical[0].axis).toBe('y');
   });
 
-  it('smart/axes basis → centerline grid, placed through the centroid', () => {
+  it('smart/axes basis → centerline grid; ext origins on near faces, dim line on centroid', () => {
     const [h] = planInteriorChains(trio, AUTO_DIMENSION_DEFAULTS, overall).filter(
       (s) => s.rotation === 0,
     );
-    // X centers 200 & 2200 (not faces 0/400), dim line rides cy = 1700.
-    expect(h.defPoints[0]).toEqual({ x: 200, y: 1700 });
-    expect(h.defPoints[1]).toEqual({ x: 2200, y: 1700 });
+    // X centers 200 & 2200 measured; ext origins ride each host's near face
+    // (Φ4-Δ Gap-to-Element), dim line stays on cy = 1700.
+    expect(h.defPoints[0]).toEqual({ x: 200, y: 400 }); // c1 top face (nearest to cy)
+    expect(h.defPoints[1]).toEqual({ x: 2200, y: 400 }); // c2 top face
     expect(h.defPoints[2]).toEqual({ x: 200, y: 1700 }); // dimLineRef on the centroid line
 
     const [v] = planInteriorChains(trio, AUTO_DIMENSION_DEFAULTS, overall).filter(
       (s) => s.rotation === 90,
     );
-    // Y centers 200 & 3200, vertical chain at cx = 1200.
-    expect(v.defPoints[0]).toEqual({ x: 1200, y: 200 });
-    expect(v.defPoints[1]).toEqual({ x: 1200, y: 3200 });
+    // Y centers 200 & 3200 measured; ext origins on near faces (x), dim line at cx = 1200.
+    expect(v.defPoints[0]).toEqual({ x: 400, y: 200 }); // c1 east face (nearest to cx)
+    expect(v.defPoints[1]).toEqual({ x: 400, y: 3200 }); // c3 east face
+    expect(v.defPoints[2]).toEqual({ x: 1200, y: 200 }); // dimLineRef on the centroid line
+  });
+
+  it('Φ4-Δ: witness is non-zero — ext origin ≠ dim-line ref on the perpendicular axis', () => {
+    const segs = planInteriorChains(trio, AUTO_DIMENSION_DEFAULTS, overall);
+    for (const s of segs) {
+      // extOrigin1 and dimLineRef share the measured coord but differ on the
+      // perpendicular axis → a drawable witness line (Gap-to-Element).
+      expect(s.defPoints[0]).not.toEqual(s.defPoints[2]);
+    }
+  });
+
+  it('Φ4-Δ: witness aims at the NEAREST element to the dim line on a shared coord', () => {
+    // Two columns share X center 1000 at different Y distances from cy=2400.
+    // e1 faces {1400,1600} (near face 1600, dist 800); e2 faces {3000,3400}
+    // (near face 3000, dist 600) → e2 wins (closest to the dim line).
+    const e1 = makeBimMock('column', 'e1', 900, 1400, 1100, 1600);
+    const e2 = makeBimMock('column', 'e2', 900, 3000, 1100, 3400);
+    const e3 = makeBimMock('column', 'e3', 2900, 1400, 3100, 1600); // 2nd X coord
+    const set = [e1, e2, e3];
+    const bounds = computeOverallBounds(set)!; // cx=2000, cy=2400
+    const [h] = planInteriorChains(set, AUTO_DIMENSION_DEFAULTS, bounds).filter(
+      (s) => s.rotation === 0,
+    );
+    expect(h.defPoints[0]).toEqual({ x: 1000, y: 3000 }); // e2 near face, not e1's 1600
+    expect(h.defPoints[2]).toEqual({ x: 1000, y: 2400 }); // dim line on centroid
+  });
+
+  it('Φ4-Δ: witness origin is a host FACE, never the center', () => {
+    const [h] = planInteriorChains(trio, AUTO_DIMENSION_DEFAULTS, overall).filter(
+      (s) => s.rotation === 0,
+    );
+    // c1/c2 span Y 0..400 → center 200. The witness rides the face (400), not 200.
+    expect(h.defPoints[0].y).toBe(400);
+    expect(h.defPoints[0].y).not.toBe(200);
   });
 
   it('faces basis → element faces instead of centers', () => {

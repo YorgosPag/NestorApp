@@ -288,6 +288,7 @@
       "basisAxes": "Axes / centers",
       "includeOpenings": "Include openings (centers)",
       "interior": "Interior dimensions (grid)",
+      "alignedSkewed": "Aligned dimensions (skewed walls)",
       "distance": "Distance between rows (mm)",
       "apply": "Apply",
       "cancel": "Cancel"

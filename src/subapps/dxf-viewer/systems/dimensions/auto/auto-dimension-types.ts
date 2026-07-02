@@ -73,6 +73,13 @@ export interface AutoDimensionOptions {
    * center). Opt-in: default off keeps the perimeter-only output.
    */
   readonly interior: boolean;
+  /**
+   * Φ4-Β — also emit ALIGNED dimensions for SKEWED linear members (walls/beams
+   * whose axis is not ~horizontal/vertical), measured parallel to the element's
+   * own axis (Revit "Add Aligned Dimensions to Walls"). Axis-aligned members are
+   * left to the perimeter/interior chains. Opt-in: default off.
+   */
+  readonly alignedSkewed: boolean;
   /** Perpendicular distance (mm) between adjacent chains — mirrors DIMDLI. */
   readonly distanceBetweenLines: number;
   /** Perpendicular distance (mm) from the model edge to the first (detail) chain. */
@@ -86,6 +93,7 @@ export const AUTO_DIMENSION_DEFAULTS: AutoDimensionOptions = {
   referenceBasis: 'smart',
   includeOpenings: true,
   interior: false,
+  alignedSkewed: false,
   distanceBetweenLines: 400,
   offsetFromModel: 600,
 };
@@ -126,6 +134,12 @@ export interface PlannedSegment {
    * factory never has to infer it from `side` (interior segments have no side).
    */
   readonly axis: 'x' | 'y';
+  /**
+   * Which dimension entity the factory emits. `'linear'` (default) → axis-aligned
+   * `LinearDimensionEntity` with `rotation`; `'aligned'` (Φ4-Β) → `AlignedDimensionEntity`
+   * whose dim line is parallel to `defPoints[0]→defPoints[1]` (skewed members).
+   */
+  readonly dimensionType?: 'linear' | 'aligned';
   /** Perimeter-only metadata (which of the 4 sides). Absent for interior chains. */
   readonly side?: AutoDimSide;
   /** Perimeter-only metadata (which of the 3 tiers). Absent for interior chains. */

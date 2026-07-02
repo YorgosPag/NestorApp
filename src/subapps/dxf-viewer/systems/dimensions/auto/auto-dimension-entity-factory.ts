@@ -1,7 +1,7 @@
 /**
  * ADR-563 (Auto-Dimension) — Entity factory (pure).
  *
- * Turns `PlannedSegment[]` into real `LinearDimensionEntity[]` using the exact
+ * Turns `PlannedSegment[]` into real `AutoDimensionEntity[]` (linear or aligned) using the exact
  * same shape the interactive dimension tool produces, so every downstream
  * consumer (renderer, grips, DXF export, associativity observer) works with
  * zero special-casing.
@@ -18,12 +18,16 @@
 
 import { generateDimensionId } from '@/services/enterprise-id-convenience';
 import type {
+  AlignedDimensionEntity,
   DimensionAssociation,
   DimStyle,
   LinearDimensionEntity,
 } from '../../../types/dimension';
 import { buildDimensionGeometry } from '../dim-geometry-builder';
 import type { PlannedSegment } from './auto-dimension-types';
+
+/** Union produced by the factory — linear (perimeter/interior) or aligned (skewed). */
+export type AutoDimensionEntity = LinearDimensionEntity | AlignedDimensionEntity;
 
 /** Everything the factory needs that isn't derivable from a segment. */
 export interface AutoDimensionFactoryContext {
@@ -50,22 +54,26 @@ function associationsFor(seg: PlannedSegment): DimensionAssociation[] | undefine
   return out.length ? out : undefined;
 }
 
-function makeEntity(seg: PlannedSegment, ctx: AutoDimensionFactoryContext): LinearDimensionEntity {
-  return {
+function makeEntity(seg: PlannedSegment, ctx: AutoDimensionFactoryContext): AutoDimensionEntity {
+  const common = {
     id: generateDimensionId(),
-    type: 'dimension',
+    type: 'dimension' as const,
     layerId: ctx.layerId,
-    dimensionType: 'linear',
     styleId: ctx.styleId,
     defPoints: seg.defPoints,
-    rotation: seg.rotation,
     userText: '<>', // measured value (default token)
     associations: associationsFor(seg),
   };
+  // Φ4-Β — skewed members emit an aligned dim (dim line parallel to defPoints,
+  // no `rotation`). Everything else is a rotated linear dim as before.
+  if (seg.dimensionType === 'aligned') {
+    return { ...common, dimensionType: 'aligned' };
+  }
+  return { ...common, dimensionType: 'linear', rotation: seg.rotation };
 }
 
 /** True when the geometry builder accepts the entity (or no style to check). */
-function passesSanity(entity: LinearDimensionEntity, style?: DimStyle): boolean {
+function passesSanity(entity: AutoDimensionEntity, style?: DimStyle): boolean {
   if (!style) return true;
   try {
     buildDimensionGeometry(entity, style);
@@ -79,8 +87,8 @@ function passesSanity(entity: LinearDimensionEntity, style?: DimStyle): boolean 
 export function buildAutoDimensionEntities(
   segments: readonly PlannedSegment[],
   ctx: AutoDimensionFactoryContext,
-): LinearDimensionEntity[] {
-  const out: LinearDimensionEntity[] = [];
+): AutoDimensionEntity[] {
+  const out: AutoDimensionEntity[] = [];
   for (const seg of segments) {
     const entity = makeEntity(seg, ctx);
     if (passesSanity(entity, ctx.style)) out.push(entity);

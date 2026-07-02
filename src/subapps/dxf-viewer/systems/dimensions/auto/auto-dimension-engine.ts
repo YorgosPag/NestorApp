@@ -1,7 +1,8 @@
 /**
  * ADR-563 (Auto-Dimension) — Engine orchestrator (pure).
  *
- * Single entry point: BIM elements + options → `LinearDimensionEntity[]`.
+ * Single entry point: BIM elements + options → `AutoDimensionEntity[]`
+ * (linear perimeter/interior + aligned skewed).
  * Composes the three pure stages (extract → plan → factory) and computes the
  * overall model bounds via the existing SSoT (`calculateBimEntity2DBounds` +
  * `unionBounds`). No React, no stores, no Firestore — trivially unit-testable.
@@ -12,14 +13,15 @@
  */
 
 import type { Entity } from '../../../types/entities';
-import type { LinearDimensionEntity } from '../../../types/dimension';
 import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 import { unionBounds, type Bounds } from '../../zoom/utils/bounds';
 import { extractReferencePoints } from './auto-dimension-reference-extraction';
 import { planChains } from './auto-dimension-chain-planner';
 import { planInteriorChains } from './auto-dimension-interior-planner';
+import { planAlignedChains } from './auto-dimension-aligned-planner';
 import {
   buildAutoDimensionEntities,
+  type AutoDimensionEntity,
   type AutoDimensionFactoryContext,
 } from './auto-dimension-entity-factory';
 import type { AutoDimensionOptions, Bounds2D } from './auto-dimension-types';
@@ -50,7 +52,7 @@ export function runAutoDimension(
   elements: readonly Entity[],
   options: AutoDimensionOptions,
   ctx: AutoDimensionContext,
-): LinearDimensionEntity[] {
+): AutoDimensionEntity[] {
   const overall = computeOverallBounds(elements);
   if (!overall) return [];
   const refs = extractReferencePoints(elements, options, overall);
@@ -58,5 +60,7 @@ export function runAutoDimension(
   const interior = options.interior
     ? planInteriorChains(elements, options, overall)
     : [];
-  return buildAutoDimensionEntities([...perimeter, ...interior], ctx);
+  // Φ4-Β — aligned dims for skewed walls/beams (opt-in).
+  const aligned = options.alignedSkewed ? planAlignedChains(elements, options) : [];
+  return buildAutoDimensionEntities([...perimeter, ...interior, ...aligned], ctx);
 }

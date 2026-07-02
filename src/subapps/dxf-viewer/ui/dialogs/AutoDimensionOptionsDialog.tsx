@@ -149,6 +149,15 @@ export const AutoDimensionOptionsDialog: React.FC = () => {
           </label>
 
           <label>
+            <input
+              type="checkbox"
+              checked={options.alignedSkewed}
+              onChange={(e) => setOptions((o) => ({ ...o, alignedSkewed: e.target.checked }))}
+            />
+            {t('autoDimension.dialog.alignedSkewed')}
+          </label>
+
+          <label>
             {t('autoDimension.dialog.distance')}
             <input
               type="number"

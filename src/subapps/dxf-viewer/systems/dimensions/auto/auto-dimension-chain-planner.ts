@@ -36,6 +36,16 @@ function quantize(coord: number, gridMm: number): number {
   return snapToGrid({ x: coord, y: coord }, gridMm).x;
 }
 
+/**
+ * Public single-source wrapper: quantize a scalar coord exactly the way
+ * `dedupSorted` does internally (ADR-049 `snapToGrid`, `DEDUP_GRID_MM`). The
+ * Φ4-Δ interior planner keys its perpendicular map with this so the keys match
+ * `dedupSorted`'s output `coord` — no bespoke rounding (N.0.2).
+ */
+export function quantizeCoord(coord: number): number {
+  return quantize(coord, DEDUP_GRID_MM);
+}
+
 export interface CoordSource {
   readonly coord: number;
   readonly id: string;
