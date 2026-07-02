@@ -24,7 +24,7 @@
  * - Full TypeScript (ZERO any)
  */
 
-import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
@@ -41,8 +41,8 @@ import type { PlacementAlignmentGuide } from '../../bim/columns/column-tangent-s
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
-// 🏢 ADR-146: Canvas Size Observer Centralization
-import { useCanvasSizeObserver } from '../../hooks/canvas';
+// 🏢 ADR-549 Phase 7 — re-rasterize on a devicePixelRatio change (no ResizeObserver fires then).
+import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -220,10 +220,10 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
       renderer.initialize(canvas);
       rendererRef.current = renderer;
 
-      // Initial size update
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        renderer.updateSize(rect.width, rect.height);
+      // Initial size — from the authoritative viewport prop (SSoT), NOT getBoundingClientRect().
+      const vp = viewportRef.current;
+      if (vp.width > 0 && vp.height > 0) {
+        renderer.updateSize(vp.width, vp.height);
       }
 
       return () => {
@@ -238,22 +238,29 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     }, [sceneUnits]);
 
     // ============================================================================
-    // 🏢 ADR-146: Centralized Canvas Size Observer
+    // 🏢 SSoT CANVAS SIZING (ADR-040) — size the backing store from the authoritative `viewport`
+    // prop (container SSoT via useViewportManager), NEVER from this canvas's own
+    // getBoundingClientRect(). Per-canvas measurement at a different lifecycle moment was the
+    // preview-layer half of the size desync (stale buffer + inline px CSS → clipped column ghost
+    // on the right). `updateSize` self-guards against no-op re-sizes (won't clear the canvas).
     // ============================================================================
 
-    // 🔧 FIX (2026-02-13): Memoize callback to prevent useCanvasSizeObserver effect re-running
-    // on every React re-render. Without useCallback, the inline function creates a new reference
-    // each render → effect re-runs → updateSize() sets canvas.width → CLEARS THE CANVAS!
-    // This was the root cause of "preview disappears during mouse movement" bug.
-    const handleSizeChange = useCallback((canvas: HTMLCanvasElement) => {
-      const rect = canvas.getBoundingClientRect();
-      rendererRef.current?.updateSize(rect.width, rect.height);
-    }, []);
+    useEffect(() => {
+      if (viewport.width > 0 && viewport.height > 0) {
+        rendererRef.current?.updateSize(viewport.width, viewport.height);
+      }
+    }, [viewport.width, viewport.height]);
 
-    useCanvasSizeObserver({
-      canvasRef,
-      onSizeChange: handleSizeChange,
-    });
+    // A devicePixelRatio change fires no ResizeObserver (CSS size unchanged) — re-size so the
+    // backing store re-rasterizes at the new dpr (monitor/scaling switch → no stale region).
+    useEffect(
+      () =>
+        subscribeDevicePixelRatio(() => {
+          const vp = viewportRef.current;
+          if (vp.width > 0 && vp.height > 0) rendererRef.current?.updateSize(vp.width, vp.height);
+        }),
+      [],
+    );
 
     // ============================================================================
     // UNIFIED FRAME SCHEDULER INTEGRATION (ADR-030)

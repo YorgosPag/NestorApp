@@ -19,7 +19,7 @@ import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import { LassoStore } from '../../systems/cursor/LassoStore';
 import { SelectionRenderer } from '../layer-canvas/selection/SelectionRenderer';
-import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
+import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
 import { serviceRegistry } from '../../services';
 import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/layer-types';
@@ -29,9 +29,7 @@ import { GuideRenderer } from '../../systems/guides/guide-renderer';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { canvasUI } from '@/styles/design-tokens/canvas';
-import { CANVAS_THEME } from '../../config/color-config';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { useCanvasResize } from '../../hooks/canvas';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { useDxfCanvasRenderer } from './dxf-canvas-renderer';
@@ -137,7 +135,12 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
   const guideRendererRef = useRef<GuideRenderer | null>(null);
 
-  const { viewport, viewportRef, setInternalViewport } = useCanvasResize({ canvasRef, viewportProp });
+  // Stable indirection: lets useCanvasResize's DPR-change handler call the latest `setupCanvas`
+  // (defined below) — reuses the centralized DPR re-size path instead of a parallel subscription.
+  const setupCanvasRef = useRef<() => void>(() => {});
+  const runSetupCanvas = useCallback(() => setupCanvasRef.current(), []);
+
+  const { viewport } = useCanvasResize({ canvasRef, viewportProp, onSetupCanvas: runSetupCanvas });
 
   // Refs for RAF callback — prevents stale closures
   const transformRef = useRef(transform);
@@ -218,12 +221,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   });
 
-  const canvasConfig: CanvasConfig = {
-    devicePixelRatio: getDevicePixelRatio(),
-    enableHiDPI: true,
-    backgroundColor: CANVAS_THEME.CONTAINER
-  };
-
   // Initialize renderers
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -242,20 +239,21 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   }, []);
 
-  // Setup canvas
+  // Setup canvas — SSoT sizing (ADR-040): the backing store is sized from the authoritative
+  // `viewport` (container SSoT via useViewportManager), NEVER from this canvas's own
+  // getBoundingClientRect() (per-canvas race → the intermittent right-side «dead zone»).
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !(canvas instanceof HTMLCanvasElement)) return;
+    const vp = resolvedViewportRef.current;
+    if (!vp.width || !vp.height) return;
     try {
-      CanvasUtils.setupCanvasContext(canvas, canvasConfig);
-      const rect = canvas.getBoundingClientRect();
-      const newViewport = { width: rect.width, height: rect.height };
-      viewportRef.current = newViewport;
-      setInternalViewport(newViewport);
+      CanvasUtils.sizeCanvasToViewport(canvas, vp);
     } catch (error) {
       logger.error('Failed to setup DXF canvas', { error });
     }
   }, []);
+  setupCanvasRef.current = setupCanvas;
 
   // Refs are stable for component lifetime — bundle once to keep `renderScene`
   // useCallback dep stable across renders (was the dominant invalidation cause).

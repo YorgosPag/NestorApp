@@ -7,7 +7,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('CanvasUtils');
 
-import type { CanvasConfig, Point2D } from '../../types/Types';
+import type { CanvasConfig, Point2D, Viewport } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
@@ -63,6 +63,49 @@ export class CanvasUtils {
     canvas.height = toDevicePixels(rect.height, dpr);
 
     // Scale context
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = config.imageSmoothingEnabled !== false;
+
+    return ctx;
+  }
+
+  /**
+   * 🏢 SSoT CANVAS SIZING — race-proof, DPR-aware backing-store sizing από ΕΝΑ authoritative viewport.
+   *
+   * @description Big-player pattern (Figma / Revit web / Google Maps / CAD web viewers): ένας
+   * ResizeObserver στον container → ΕΝΑ authoritative μέγεθος → ΤΑΥΤΟΣΗΜΟ σε ΟΛΑ τα canvas layers.
+   * ΑΝΤΙΘΕΤΑ με το `setupCanvasContext`, ΔΕΝ διαβάζει ποτέ `getBoundingClientRect()` (per-canvas, stale/race)·
+   * η πηγή μεγέθους είναι ΜΟΝΟ το κοινό `viewport` (SSoT από `useViewportManager`). Το CSS μέγεθος
+   * μένει `w-full h-full` (=container) — ΔΕΝ γράφεται inline `style.width` (αυτό ήταν το desync).
+   *
+   * Καθιστά μηδενικό το race: άσχετο πότε γίνεται mount/resize, όλα καταλήγουν ίδιο buffer = viewport × dpr.
+   *
+   * @param canvas   Target canvas element.
+   * @param viewport Authoritative CSS dimensions (container-based SSoT).
+   * @param config   Optional HiDPI config — `enableHiDPI` (default true), explicit `devicePixelRatio`.
+   * @returns The 2D context, DPR-scaled (`setTransform(dpr,…)`), or `null` αν το canvas/ctx δεν είναι έγκυρα.
+   */
+  static sizeCanvasToViewport(
+    canvas: HTMLCanvasElement,
+    viewport: Viewport,
+    config: Pick<CanvasConfig, 'enableHiDPI' | 'devicePixelRatio' | 'imageSmoothingEnabled'> = {}
+  ): CanvasRenderingContext2D | null {
+    if (!canvas || typeof canvas.getContext !== 'function') return null;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // 🏢 ADR-094: centralized DPR (default HiDPI on, explicit override honored).
+    const dpr = config.enableHiDPI === false ? 1 : (config.devicePixelRatio || getDevicePixelRatio());
+
+    // 🏢 ADR-117: DPI-aware backing store. Guard the assignment — setting canvas.width CLEARS the
+    // canvas, so skip when unchanged (avoids gratuitous wipes on no-op re-sizes).
+    const bufferWidth = Math.max(1, toDevicePixels(viewport.width, dpr));
+    const bufferHeight = Math.max(1, toDevicePixels(viewport.height, dpr));
+    if (canvas.width !== bufferWidth) canvas.width = bufferWidth;
+    if (canvas.height !== bufferHeight) canvas.height = bufferHeight;
+
+    // Re-apply the DPR scale on every call — a DPR change re-rasterizes at the new ratio even when
+    // the CSS dimensions are identical (monitor/scaling switch fires no ResizeObserver).
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = config.imageSmoothingEnabled !== false;
 

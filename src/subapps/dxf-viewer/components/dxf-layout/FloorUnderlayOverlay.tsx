@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { DxfRenderer } from '../../canvas-v2/dxf-canvas/DxfRenderer';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { useFloors2DUnderlay } from '../../hooks/data/useFloors2DUnderlay';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -75,14 +76,10 @@ export function FloorUnderlayOverlay({ transform, viewport }: FloorUnderlayOverl
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // DPR-aware backing store sized from the authoritative viewport (mirror of
-    // DxfCanvas via CanvasUtils.setupCanvasContext, without getBoundingClientRect).
+    // 🏢 SSoT sizing — DPR-aware backing store from the authoritative viewport, via the SAME
+    // primitive as DxfCanvas/LayerCanvas/Preview (no getBoundingClientRect → no size desync).
+    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
     const dpr = getDevicePixelRatio();
-    const w = Math.max(1, Math.round(viewport.width * dpr));
-    const h = Math.max(1, Math.round(viewport.height * dpr));
-    if (canvas.width !== w) canvas.width = w;
-    if (canvas.height !== h) canvas.height = h;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, viewport.width, viewport.height);
 
     if (!active || !merged) return;

@@ -36,7 +36,7 @@ import { CANVAS_THEME } from '../../config/color-config';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import { useLayerCanvasRenderer } from './layer-canvas-hooks';
-import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
+import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -106,10 +106,16 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LayerRenderer | null>(null);
 
+  // Stable indirection: lets useCanvasResize's DPR-change handler call the latest `setupCanvas`
+  // (defined below) — reuses the centralized DPR re-size path instead of a parallel subscription.
+  const setupCanvasRef = useRef<() => void>(() => {});
+  const runSetupCanvas = useCallback(() => setupCanvasRef.current(), []);
+
   // 🏢 ADR-118: Centralized canvas resize hook
-  const { viewport, viewportRef, setInternalViewport } = useCanvasResize({
+  const { viewport } = useCanvasResize({
     canvasRef,
     viewportProp,
+    onSetupCanvas: runSetupCanvas,
   });
 
   // 🏢 FIX: Transform/viewport refs for RAF callback — prevents stale closures
@@ -133,12 +139,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const [_canvasInstance, setCanvasInstance] = useState<CanvasInstance | null>(null);
   const [eventSystem, setEventSystem] = useState<CanvasEventSystem | null>(null);
   const [_canvasSettings, setCanvasSettings] = useState<CanvasSettings | null>(null);
-
-  const canvasConfig: CanvasConfig = {
-    devicePixelRatio: getDevicePixelRatio(),
-    enableHiDPI: true,
-    backgroundColor: CANVAS_THEME.LAYER_CANVAS
-  };
 
   // ── Initialize unified canvas system and renderer ──────────────────
   useEffect(() => {
@@ -193,20 +193,21 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   }, []);
 
   // ── Canvas setup ───────────────────────────────────────────────────
+  // SSoT sizing (ADR-040): the backing store is sized from the authoritative `viewport`
+  // (container SSoT via useViewportManager), NEVER from this canvas's own getBoundingClientRect()
+  // (per-canvas race → the intermittent right-side «dead zone» that clipped entities/ghost).
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+    const vp = resolvedViewportRef.current;
+    if (!vp.width || !vp.height) return;
     try {
-      CanvasUtils.setupCanvasContext(canvas, canvasConfig);
-      const rect = canvas.getBoundingClientRect();
-      const newViewport = { width: rect.width, height: rect.height };
-      viewportRef.current = newViewport;
-      setInternalViewport(newViewport);
+      CanvasUtils.sizeCanvasToViewport(canvas, vp);
     } catch (error) {
       console.error('Failed to setup Layer canvas:', error);
     }
   }, []);
+  setupCanvasRef.current = setupCanvas;
 
   useEffect(() => {
     setupCanvas();

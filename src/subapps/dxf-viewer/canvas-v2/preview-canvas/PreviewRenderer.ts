@@ -15,6 +15,9 @@ import { renderDistanceLabelFromWorld, renderInfoLabel } from './preview-render-
 import { OPACITY } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
+// 🏢 SSoT canvas sizing — same primitive as DxfCanvas/LayerCanvas (buffer από authoritative
+// viewport, DPR-aware, χωρίς inline style.width). Ενοποιεί την τετραπλή own-rect διαστασιολόγηση.
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
@@ -123,11 +126,10 @@ export class PreviewRenderer {
     }
 
     this.dpr = dpr;
-    this.canvas.width = newWidth;
-    this.canvas.height = newHeight;
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // 🏢 SSoT sizing — same primitive as DxfCanvas/LayerCanvas. NO inline style.width/height:
+    // the CSS size stays `w-full h-full` (=container). The old inline px override was the
+    // preview-layer half of the size desync (the stale «1944px» that clipped the column ghost).
+    CanvasUtils.sizeCanvasToViewport(this.canvas, { width, height });
     this.isDirty = true;
   }
 
