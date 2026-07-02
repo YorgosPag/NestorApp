@@ -13,6 +13,7 @@ import { columnToMesh } from '../BimToThreeConverter';
 import { buildDefaultColumnParams, buildColumnEntity } from '../../../hooks/drawing/column-completion';
 import type { ColumnEntity } from '../../../bim/types/column-types';
 import type { StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
+import { finishFaceRef } from '../../../bim/finishes/structural-finish-face-ref';
 import type { ColumnTopProfile } from '../../../bim/geometry/column-vertical-profile';
 
 const PLASTER_HEX = 0xe8e0d0; // MATERIAL_DEFS['mat-plaster'] — όπου resolve τα mat-plaster-int/ext.
@@ -111,6 +112,20 @@ describe('columnToMesh integration (ADR-449 Slice 2)', () => {
   it('ανενεργός σοβάς → απλό Mesh (regression: ghost/χωρίς-finish path)', () => {
     const out = columnToMesh(column(), 0, '0', 0);
     expect(out).toBeInstanceOf(THREE.Mesh);
+  });
+
+  it('ADR-449 PART B Slice B — faceOverride colorOverride → band mesh με το custom χρώμα (Revit «Paint»)', () => {
+    const base = column(FINISH);
+    const v = base.geometry.footprint.vertices;
+    // Βάφουμε την πρώτη παρειά (v0→v1)· το key = γεωμετρικό midpoint-ref (element-owned).
+    const ref = finishFaceRef({ x: v[0].x, y: v[0].y }, { x: v[1].x, y: v[1].y });
+    const col = column({ ...FINISH, faceOverrides: { [ref]: { colorOverride: '#c0d8b0' } } });
+    const group = buildColumnFinishSkin(col, [], [], 0)!;
+    const painted = group.children.filter((c) => matHex(c as THREE.Mesh) === 0xc0d8b0);
+    expect(painted).toHaveLength(1); // ακριβώς η μία βαμμένη παρειά
+    // Οι υπόλοιπες παρειές κρατούν το χρώμα υλικού (plaster) — μηδέν παράπλευρη βαφή.
+    const plaster = group.children.filter((c) => matHex(c as THREE.Mesh) === PLASTER_HEX);
+    expect(plaster).toHaveLength(group.children.length - 1);
   });
 
   it('ADR-449 Slice 6 fix — attached κολώνα (topProfile.hasAttach) ΕΧΕΙ σοβά (όχι μόνο πυρήνας)', () => {

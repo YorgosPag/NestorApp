@@ -34,7 +34,7 @@ import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
 import { wallIsFinishMember } from './wall-finish-source';
-import type { ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
+import { beamFinishOutline, type ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
 const MM_TO_M = 0.001;
 /** Ανοχή (mm) κατακόρυφης εγγύτητας στο επίπεδο μιας οριζόντιας όψης. */
@@ -57,7 +57,11 @@ export interface HorizontalBeamSource {
     BeamParams,
     'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth' | 'envelopeFunction' | 'startPoint' | 'endPoint'
   >;
-  readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
+  readonly geometry?: {
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+    /** ADR-449/493 — άξονας (start/end) για επέκταση του outline μέσα στις πλαισιωμένες κολόνες (merged top-cap). */
+    readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
+  };
 }
 
 export interface HorizontalSlabObstacle {
@@ -309,13 +313,22 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
 
   // Δομικά μέλη με ενεργό σοβά + το top-plane z τους (building-relative mm).
   const members: { core: Pt2[]; zTopMm: number }[] = [];
+  // ADR-449/493 — footprints των finish-κολόνων· το δοκάρι που πλαισιώνεται στην παρειά τους
+  // επεκτείνεται ΜΕΣΑ τους (μόνο για το union) ώστε το καπάκι να συγχωνευτεί σε ΕΝΑ (mirror silhouette).
+  const columnFootprints: Pt2[][] = [];
   for (const c of columns) {
     const core = coresOf(c.geometry?.footprint?.vertices);
-    if (core && isFinishActive(c.params.finish)) members.push({ core, zTopMm: columnZExtent(c, floorElevationMm, columnExtents).zTopMm });
+    if (core && isFinishActive(c.params.finish)) {
+      members.push({ core, zTopMm: columnZExtent(c, floorElevationMm, columnExtents).zTopMm });
+      columnFootprints.push(core);
+    }
   }
   for (const b of beams) {
-    const core = coresOf(b.geometry?.outline?.vertices);
-    if (core && isFinishActive(b.params.finish)) members.push({ core, zTopMm: beamZExtent(b.params).zTopMm });
+    if (!isFinishActive(b.params.finish)) continue;
+    // Επέκταση του outline μέσα στις πλαισιωμένες κολόνες → πραγματική επικάλυψη → ΕΝΑ ενιαίο καπάκι
+    // στη συμβολή (ΙΔΙΟ SSoT `beamFinishOutline` με τον κάθετο silhouette· raw fallback = μηδέν regression).
+    const core = coresOf(beamFinishOutline(b, columnFootprints));
+    if (core) members.push({ core, zTopMm: beamZExtent(b.params).zTopMm });
   }
   const emptyUnderside = new Map<string, number>();
   for (const w of walls) {
@@ -330,7 +343,6 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
   const beamObs = beamObstacles
     .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
     .filter((o): o is PlanObstacle => o !== null);
-  const covers = [...slabObs, ...beamObs];
 
   // Ομαδοποίηση ανά top-plane (μέλη ίδιου z ενώνονται σε ΕΝΑ ενιαίο silhouette).
   const byPlane = new Map<number, Pt2[][]>();
@@ -345,6 +357,13 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
   const faces: HorizontalFinishFace[] = [];
   for (const [key, cores] of byPlane) {
     const planeZmm = planeOf.get(key) ?? 0;
+    // ADR-449/493 — up-cap covers: πλάκες όπως πριν (top-στο-plane = γνήσια κάλυψη άνωθεν), αλλά
+    // τα ΔΟΚΑΡΙΑ ΜΟΝΟ όταν εκτείνονται ΑΥΣΤΗΡΑ πάνω από το plane. Ένα δοκάρι με κορυφή ΣΤΟ ΙΔΙΟ
+    // plane ΕΙΝΑΙ το ίδιο μέλος αυτού του καπακιού → δεν καλύπτει τον εαυτό του (αλλιώς αφαιρούσε
+    // το footprint του → τρύπα «κανένα ενιαίο καπάκι πάνω στο δοκάρι», Giorgio 2026-07-02 screenshot
+    // 100928). Δοκάρι ΠΑΝΩ από χαμηλότερη κολόνα (top-plane > cap) καλύπτει κανονικά (μηδέν regression).
+    const beamCoversAbove = beamObs.filter((o) => o.zTopMm > planeZmm + PLANE_TOL_MM);
+    const covers = [...slabObs, ...beamCoversAbove];
     for (const ring of mergeCoresToFinishedRings(cores, spec.thickness, s)) {
       const face = computeHorizontalFinishFace({
         coreFootprint: ring,

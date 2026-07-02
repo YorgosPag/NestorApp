@@ -23,19 +23,21 @@ import type { ColumnEntity, ColumnGeometry, ColumnParams } from '../types/column
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { WallEntity } from '../types/wall-types';
 import type { Point3D } from '../types/bim-base';
-import type { EnvelopeFunction } from '../types/thermal-envelope-types';
-import { computeBuildingFootprint } from '../geometry/building-footprint';
-import { pointToSegmentDistance } from '../../systems/guides';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './structural-finish-resolver';
-import { isFinishActive, type StructuralFinishFaces } from './structural-finish-types';
+import { resolveStructuralFinishFaces } from './structural-finish-resolver';
+// ADR-449 — ο exterior/interior classifier ζει σε ξεχωριστό SSoT module (Google file-size, N.7.1).
+// Import ΚΑΙ re-export (back-compat: scene-silhouette τα εισάγει από εδώ).
+import { buildStructuralFinishClassifier, EXTERIOR_EDGE_TOL_MM } from './structural-finish-classifier';
+export { buildStructuralFinishClassifier, EXTERIOR_EDGE_TOL_MM };
+import { isFinishActive, type StructuralFinishFaces, type StructuralFinishSpec, type FinishFaceOverride, type FinishFaceSegment } from './structural-finish-types';
+import { finishFaceRef } from './structural-finish-face-ref';
+import { toPt2 } from './structural-finish-point';
+import { finishAreasByMaterial } from './structural-finish-area';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonAlongAxis } from '../geometry/shared/polygon-dilate';
 
 export const MM_TO_M = 0.001;
-/** Ανοχή (canvas units ανά mm) — 2mm για «πάνω στο εξώτατο όριο». */
-export const EXTERIOR_EDGE_TOL_MM = 2;
 /**
  * ADR-449 Slice 6 — Revit join tolerance (mm) για τα cross-structural obstacles
  * (δοκάρι→κολόνα). Dilation του obstacle footprint ώστε μια **flush** διεπαφή
@@ -62,7 +64,10 @@ export const STRUCTURAL_JOIN_TOL_MM = 10;
  */
 const WALL_BEAM_BAND_TOL_MM = 1;
 
-export const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
+// ADR-449 — `toPt2` ζει σε dependency-free leaf ώστε το `wall-footprint-union` να το εισάγει
+// από εκεί (σπάει την κυκλική εξάρτηση scene ⇄ wall-footprint-union). Re-export για back-compat
+// (scene-horizontal/scene-silhouette το εισάγουν από εδώ).
+export { toPt2 };
 
 /** Κατακόρυφη ζώνη βάθους δοκαριού (building-relative mm): κρέμεται `depth` κάτω από top. */
 function beamDepthBandMm(
@@ -158,8 +163,11 @@ export interface BeamFinishSource {
 }
 
 // ADR-449 §angled-wall-miter-close — η μηχανή wall footprint→union ζει πλέον στο SSoT module
-// `wall-footprint-union.ts` (commit-split όριο 500). Re-export → σταθερό public API.
-export { wallFootprintPolygon } from './wall-footprint-union';
+// `wall-footprint-union.ts` (commit-split όριο 500). Import ΚΑΙ re-export: το `export {..} from`
+// από μόνο του ΔΕΝ δημιουργεί τοπικό binding → το scene.ts το χρησιμοποιεί εσωτερικά
+// (`computeColumnFinishFaces`/`computeBeamFinishFaces`) → χωρίς import = `ReferenceError`.
+import { wallFootprintPolygon } from './wall-footprint-union';
+export { wallFootprintPolygon };
 
 /** Μοναδιαία κατεύθυνση άξονα δοκαριού-obstacle (start→end) στο plan. `null` αν εκφυλισμένη. */
 function beamObstacleAxis(beam: BeamFinishObstacle): Pt2 | null {
@@ -183,43 +191,6 @@ function beamObstaclePolygon(beam: BeamFinishObstacle, dCanvas: number): Pt2[] {
   return axis ? dilatePolygonAlongAxis(pts, axis, dCanvas) : pts;
 }
 
-/** Εξώτατες ακμές components που περικλείουν χώρο (holes>0) → exterior reference. */
-function collectExteriorEdges(walls: readonly WallFinishObstacle[]): Array<[Pt2, Pt2]> {
-  const fp = computeBuildingFootprint(
-    walls.map((w) => ({ id: w.id, kind: w.kind, params: w.params })),
-  );
-  const edges: Array<[Pt2, Pt2]> = [];
-  for (const comp of fp.components) {
-    if (comp.holes.length === 0) continue; // open-structure → όχι exterior boundary
-    const pts = comp.outer.points.points; // FootprintRing.points = Polyline3D → .points = Point3D[]
-    for (let i = 0; i < pts.length; i++) {
-      edges.push([toPt2(pts[i]), toPt2(pts[(i + 1) % pts.length])]);
-    }
-  }
-  return edges;
-}
-
-/**
- * Build classifier για δομικό στοιχείο (κολόνα/δοκάρι): override-aware + geometric
- * outer-ring test. Entity-agnostic — μόνο `envelopeFunction` + walls + tol. ΕΝΑ SSoT
- * για κολόνες ΚΑΙ δοκάρια (πρώην `buildColumnClassifier`).
- */
-export function buildStructuralFinishClassifier(
-  envelopeFunction: EnvelopeFunction | undefined,
-  walls: readonly WallFinishObstacle[],
-  tol: number,
-): FinishEdgeClassifier {
-  if (envelopeFunction === 'exterior') return () => 'exterior';
-  if (envelopeFunction === 'interior') return () => 'interior';
-  const exteriorEdges = collectExteriorEdges(walls);
-  return (mid) => {
-    for (const [a, b] of exteriorEdges) {
-      if (pointToSegmentDistance(mid, a, b) <= tol) return 'exterior';
-    }
-    return 'interior';
-  };
-}
-
 /**
  * SSoT για το «ποιες παρειές, πόσο εκτεθειμένες, τι υλικό» μιας κολόνας: χτίζει
  * obstacles (footprints τοίχων) + classifier (exterior/interior) και καλεί τον pure
@@ -231,6 +202,19 @@ export function buildStructuralFinishClassifier(
  * `coreFootprint`/`heightMm` δίνονται ρητά (όχι από το `column.geometry`) ώστε ο
  * BOQ feed να περνά profile-aware effective geometry, ενώ το 3D τα δικά του.
  */
+/**
+ * ADR-449 PART B — callback per-face override (element-owned Revit «Paint»): μετατρέπει το
+ * `spec.faceOverrides` (keyed by γεωμετρικό {@link finishFaceRef}) σε resolver callback. Absent
+ * → `undefined` (μηδέν override, byte-for-byte). Ο resolver το καλεί μία φορά ανά ακμή.
+ */
+export function faceOverrideResolver(
+  spec: StructuralFinishSpec,
+): ((a: Pt2, b: Pt2, index: number) => FinishFaceOverride | undefined) | undefined {
+  const overrides = spec.faceOverrides;
+  if (!overrides || Object.keys(overrides).length === 0) return undefined;
+  return (a, b) => overrides[finishFaceRef(a, b)];
+}
+
 export function computeColumnFinishFaces(
   column: ColumnFinishSource,
   coreFootprint: readonly { x: number; y: number }[],
@@ -259,6 +243,7 @@ export function computeColumnFinishFaces(
     junctionObstacles: beamObstacles, // ADR-449 Δρόμος Β: ΜΟΝΟ δοκάρια→corner-fill· wall-cut→square butt (#A)
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
+    faceOverride: faceOverrideResolver(spec), // ADR-449 PART B — per-face υλικό/χρώμα/πάχος
   });
 }
 
@@ -348,19 +333,15 @@ export function computeColumnFinishBands(
   ];
 }
 
-/** Σ (plan-length × band-height) ανά classification — banded εμβαδά για BOQ. */
-function bandedFinishAreasM2(bands: readonly ColumnFinishBand[]): { interiorAreaM2: number; exteriorAreaM2: number } {
-  let interiorAreaM2 = 0;
-  let exteriorAreaM2 = 0;
-  for (const band of bands) {
-    const hM = Math.max(0, band.zTopMm - band.zBottomMm) * MM_TO_M;
-    for (const seg of band.faces.segments) {
-      const area = seg.lengthM * hM;
-      if (seg.classification === 'exterior') exteriorAreaM2 += area;
-      else interiorAreaM2 += area;
-    }
-  }
-  return { interiorAreaM2, exteriorAreaM2 };
+/**
+ * ADR-449 PART B — banded ColumnFinishBand[] → {segments, heightM} entries για το
+ * group-by-material `finishAreasByMaterial` (κάθε ζώνη με το δικό της ύψος).
+ */
+function bandsForBoq(bands: readonly ColumnFinishBand[]): { segments: readonly FinishFaceSegment[]; heightM: number }[] {
+  return bands.map((band) => ({
+    segments: band.faces.segments,
+    heightM: Math.max(0, band.zTopMm - band.zBottomMm) * MM_TO_M,
+  }));
 }
 
 /** Μοναδιαία κατεύθυνση άξονα δοκαριού στο plan (start→end). `null` αν εκφυλισμένη. */
@@ -418,6 +399,7 @@ export function computeBeamFinishFaces(
     junctionObstacles: columnObstacles, // ADR-449 Δρόμος Β: ΜΟΝΟ κολόνες→corner-fill· wall-cut→square (#A)
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
+    faceOverride: faceOverrideResolver(spec), // ADR-449 PART B — per-face υλικό/χρώμα/πάχος
     // Κράτα μόνο ακμές ∥ άξονα (πλάγιες όψεις)· απόκλεισε τα άκρα (⊥ άξονα).
     includeEdge: (a, b) => {
       const ex = b.x - a.x;
@@ -449,15 +431,10 @@ export function computeColumnFinishContribution(
   const beams = scene.entities.filter(isBeamEntity);
   const bands = computeColumnFinishBands(column, geometry.footprint.vertices, geometry.height, walls, beams);
   if (!bands) return undefined;
-  const { interiorAreaM2, exteriorAreaM2 } = bandedFinishAreasM2(bands);
-  if (interiorAreaM2 <= 0 && exteriorAreaM2 <= 0) return undefined;
-
-  return {
-    interiorAreaM2,
-    exteriorAreaM2,
-    interiorMaterialId: spec.interiorMaterialId,
-    exteriorMaterialId: spec.exteriorMaterialId,
-  };
+  // ADR-449 PART B — group-by-material (το per-face `materialId` ενσωματώνει τα overrides).
+  const byMaterial = finishAreasByMaterial(bandsForBoq(bands));
+  if (byMaterial.length === 0) return undefined;
+  return { byMaterial };
 }
 
 /**
@@ -477,14 +454,11 @@ export function computeBeamFinishContribution(
   // όψης δοκαριού μέσα στη σύνδεση (ίδιο obstacle set με 2D/3D, ένας resolver).
   const columns = scene.entities.filter(isColumnEntity);
   const faces = computeBeamFinishFaces(beam, beam.geometry.outline.vertices, beam.params.depth, walls, columns);
-  if (!faces || (faces.interiorAreaM2 <= 0 && faces.exteriorAreaM2 <= 0)) return undefined;
-
-  return {
-    interiorAreaM2: faces.interiorAreaM2,
-    exteriorAreaM2: faces.exteriorAreaM2,
-    interiorMaterialId: spec.interiorMaterialId,
-    exteriorMaterialId: spec.exteriorMaterialId,
-  };
+  if (!faces) return undefined;
+  // ADR-449 PART B — group-by-material (μία ζώνη = οι πλάγιες όψεις × structural depth).
+  const byMaterial = finishAreasByMaterial([{ segments: faces.segments, heightM: faces.heightM }]);
+  if (byMaterial.length === 0) return undefined;
+  return { byMaterial };
 }
 
 // ADR-449 Slice 7 — Merged structural silhouette (scene adapter) μετακινήθηκε στο

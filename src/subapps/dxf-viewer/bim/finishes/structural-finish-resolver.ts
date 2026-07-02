@@ -27,6 +27,7 @@ import type {
   StructuralFinishSpec,
   StructuralFinishFaces,
   FinishFaceSegment,
+  FinishFaceOverride,
   FinishClassification,
 } from './structural-finish-types';
 import { resolveFinishForClass } from './structural-finish-types';
@@ -79,6 +80,14 @@ interface FinishResolveInput {
    * σημασιολογικά τα **άκρα** (⊥ άξονα = δομική σύνδεση/frame-into, ποτέ σοβάς).
    */
   readonly includeEdge?: (a: Pt2, b: Pt2, index: number) => boolean;
+  /**
+   * ADR-449 PART B — προαιρετικό per-face override (element-owned). Καλείται μία φορά ανά
+   * ακμή `i` (a→b) του footprint· ό,τι επιστρέψει (materialId/χρώμα/πάχος) υπερισχύει του
+   * interior/exterior spec για ΟΛΕΣ τις exposed υπο-ακμές αυτής της ακμής. `undefined` /
+   * απών → default συμπεριφορά (byte-for-byte). Ο caller το χτίζει από `spec.faceOverrides`
+   * μέσω {@link finishFaceRef} (element-owned Revit «Paint» semantics).
+   */
+  readonly faceOverride?: (a: Pt2, b: Pt2, index: number) => FinishFaceOverride | undefined;
   /**
    * ADR-449 Slice 7 — `true` όταν το `coreFootprint` είναι **τρύπα** (inner ring της
    * ένωσης = όψη δωματίου ενός δομικού πλαισίου). Τότε ο σοβάς πρέπει να εκτείνεται
@@ -172,6 +181,7 @@ function buildSegment(
   obstacles: readonly (readonly Pt2[])[],
   junctionObstacles: readonly (readonly Pt2[])[],
   junctionTol: number,
+  override: FinishFaceOverride | undefined,
 ): FinishFaceSegment {
   const pa = lerp(a, b, t0);
   const pb = lerp(a, b, t1);
@@ -181,7 +191,11 @@ function buildSegment(
   const outwardNormal: Pt2 = { x: dy, y: -dx }; // CCW polygon → outward = (dy,−dx)
   const classification: FinishClassification = classify(mid, outwardNormal);
   // ADR-449 Slice X4 — υλικό + ασύμμετρο πάχος ανά ταξινόμηση από ΕΝΑ SSoT helper.
-  const { materialId, thicknessMm: thickness } = resolveFinishForClass(spec, classification);
+  const base = resolveFinishForClass(spec, classification);
+  // ADR-449 PART B — per-face override (element-owned): ρητό υλικό/πάχος υπερισχύει του
+  // interior/exterior spec· `colorOverride` = μόνο οπτικό (δεν αλλάζει classification/BOQ area).
+  const materialId = override?.materialId ?? base.materialId;
+  const thickness = override?.thickness ?? base.thicknessMm;
   // ADR-449 — διάκριση ανά είδος γείτονα: δομικό (κολόνα/δοκάρι) → junction (corner-fill
   // EXTEND)· τοίχος (obstacle αλλά ΟΧΙ junctionObstacle) → square butt (ο τοίχος έχει δικό
   // του σοβά → ΜΗΝ εκτείνεσαι μέσα του, #A). Το junction υπερισχύει του square.
@@ -198,6 +212,7 @@ function buildSegment(
     bJunction,
     aSquareEnd: !aJunction && pointNearObstacle(pa, obstacles, junctionTol),
     bSquareEnd: !bJunction && pointNearObstacle(pb, obstacles, junctionTol),
+    ...(override?.colorOverride ? { colorOverride: override.colorOverride } : {}),
   };
 }
 
@@ -226,9 +241,11 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
     const a = footprint[i];
     const b = footprint[(i + 1) % n];
     if (includeEdge && !includeEdge(a, b, i)) continue; // π.χ. άκρα δοκαριού
+    // ADR-449 PART B — per-face override μία φορά ανά ακμή (element-owned Revit «Paint»).
+    const override = input.faceOverride?.(a, b, i);
     const covered = coveredByObstacles(a, b, obstacles);
     for (const [t0, t1] of exposedComplement(covered, minT)) {
-      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters, obstacles, junctionObstacles, junctionTol);
+      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters, obstacles, junctionObstacles, junctionTol, override);
       segments.push(seg);
       const area = seg.lengthM * heightM;
       if (seg.classification === 'exterior') exteriorAreaM2 += area;

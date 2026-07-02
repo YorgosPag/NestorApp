@@ -24,6 +24,8 @@ import {
   type SilhouetteMember,
   type WallObstacle,
 } from './structural-finish-silhouette';
+import { finishFaceRef } from './structural-finish-face-ref';
+import type { FinishOverrideEdge } from './structural-finish-attribution';
 import {
   toPt2,
   wallFootprintPolygon,
@@ -35,6 +37,9 @@ import {
 import { segOffsetVec } from './structural-finish-outline-geometry';
 import type { FinishFaceSegment } from './structural-finish-types';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
+// ADR-449/493 — reuse του pure primitive που επεκτείνει το outline δοκαριού ΜΕΣΑ στις πλαισιωμένες
+// κολόνες (ίδιο SSoT με το carve-mask του cutback ADR-458), εδώ ως union input για ενιαίο καπάκι σοβά.
+import { extendBeamOutlineIntoFramingColumns } from '../geometry/beam-column-cutback';
 
 /** Ray-cast point-in-polygon (Pt2 ring, ανοιχτό ή κλειστό). */
 function pointInRing(px: number, py: number, ring: readonly Pt2[]): boolean {
@@ -130,7 +135,11 @@ export type ColumnVerticalExtentLookup = ReadonlyMap<string, { readonly zBotMm: 
 export interface SilhouetteBeamSource {
   readonly id: string;
   readonly params: Pick<BeamParams, 'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth'>;
-  readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
+  readonly geometry?: {
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+    /** ADR-449/493 — άξονας (start/end) για επέκταση του outline μέσα στις πλαισιωμένες κολόνες (plaster union). */
+    readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
+  };
 }
 
 /**
@@ -198,6 +207,63 @@ function toMember(
 }
 
 /**
+ * ADR-449 PART B Slice B — per-face overrides ενός στοιχείου → `FinishOverrideEdge[]`
+ * (canvas units, ίδιος χώρος με τα members). Για κάθε ακμή a→b του footprint με entry
+ * στο `spec.faceOverrides` (matched μέσω {@link finishFaceRef} — element-owned Revit
+ * «Paint»), push `{a, b, override}`. Ανενεργό spec / χωρίς overrides → κενό. Το `push`
+ * σε shared `out` (ΕΝΑ pass πάνω σε columns + beams) αποφεύγει intermediate arrays.
+ */
+function pushFinishOverrideEdges(
+  out: FinishOverrideEdge[],
+  finish: StructuralFinishSpec | undefined,
+  vertices: readonly { x: number; y: number }[] | undefined,
+): void {
+  const overrides = finish?.faceOverrides;
+  if (!isFinishActive(finish) || !overrides || !vertices || vertices.length < 3) return;
+  const n = vertices.length;
+  for (let i = 0; i < n; i++) {
+    const a = toPt2(vertices[i]);
+    const b = toPt2(vertices[(i + 1) % n]);
+    const override = overrides[finishFaceRef(a, b)];
+    if (override) out.push({ a, b, override });
+  }
+}
+
+/**
+ * ADR-449/493 — minimal geometry-only source του `beamFinishOutline`: το ΙΔΙΟ primitive τρέφει
+ * ΚΑΙ τον κάθετο silhouette (`SilhouetteBeamSource`) ΚΑΙ το οριζόντιο merged top-cap
+ * (`HorizontalBeamSource`) χωρίς cast — και οι δύο εκθέτουν `geometry.outline`/`axisPolyline`.
+ */
+export interface BeamFinishOutlineSource {
+  readonly geometry?: {
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+    readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
+  };
+}
+
+/**
+ * ADR-449/493 — outline δοκαριού για το **plaster union**. Το raw `geometry.outline` σταματά στην
+ * παρειά της πλαισιωμένης κολόνας (frame-into: τα endpoints τραβιούνται στην παρειά, ADR-441/492) →
+ * μηδέν επικάλυψη με το footprint κολόνας → το `safeUnion` τα κρατά χωριστά → ασύνδετος σοβάς στη
+ * συμβολή. Επεκτείνουμε τα πλαισιωμένα άκρα ΜΕΣΑ στις κολόνες (reuse `extendBeamOutlineIntoFramingColumns`,
+ * το ΙΔΙΟ SSoT με το carve-mask του cutback) ώστε να υπάρξει πραγματική επικάλυψη → ΕΝΑ ενιαίο καπάκι
+ * (analog του untrimmed wall footprint). ΜΟΝΟ για το union — σώμα/BOQ/render χρησιμοποιούν το raw/display
+ * outline ξεχωριστά. Straight (2-σημείων) άξονας μόνο· curved/απών άξονας ή καμία κολόνα → raw (μηδέν regression).
+ * Το χρησιμοποιεί ΚΑΙ ο κάθετος silhouette ΚΑΙ το οριζόντιο merged top-cap (`computeMergedStructuralTopCap`).
+ */
+export function beamFinishOutline(
+  beam: BeamFinishOutlineSource,
+  columnFootprints: readonly (readonly Pt2[])[],
+): readonly { x: number; y: number }[] | undefined {
+  const raw = beam.geometry?.outline?.vertices;
+  if (!raw || raw.length < 3) return raw;
+  const pts = beam.geometry?.axisPolyline?.points;
+  if (!pts || pts.length !== 2 || columnFootprints.length === 0) return raw;
+  const ext = extendBeamOutlineIntoFramingColumns(raw.map(toPt2), toPt2(pts[0]), toPt2(pts[1]), columnFootprints);
+  return ext ?? raw;
+}
+
+/**
  * ADR-449 Slice 7 — SSoT για την ΕΝΙΑΙΑ σιλουέτα σοβά μιας δομικής ομάδας (κολόνες +
  * δοκάρια ενός κτιρίου/ορόφου). Χτίζει `SilhouetteMember[]` (building-relative z) +
  * wall obstacles (finished footprints dilated κατά join-tol ώστε flush διεπαφές να
@@ -228,8 +294,15 @@ export function computeStructuralFinishSilhouette(
     const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm, columnExtents));
     if (m) members.push(m);
   }
+  // ADR-449/493 — footprints των finish-κολόνων· το δοκάρι που πλαισιώνεται στην παρειά τους επεκτείνεται
+  // ΜΕΣΑ τους (μόνο για το union) ώστε να συγχωνευτεί σε ΕΝΑ καπάκι (βλ. `beamFinishOutline`).
+  const columnFootprints: Pt2[][] = [];
+  for (const c of columns) {
+    const v = c.geometry?.footprint?.vertices;
+    if (isFinishActive(c.params.finish) && v && v.length >= 3) columnFootprints.push(v.map(toPt2));
+  }
   for (const b of beams) {
-    const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b, beamTopClipById?.get(b.id)));
+    const m = toMember(b.params.finish, beamFinishOutline(b, columnFootprints), beamZExtent(b, beamTopClipById?.get(b.id)));
     if (m) members.push(m);
   }
 
@@ -269,12 +342,21 @@ export function computeStructuralFinishSilhouette(
     return { footprint: wallFootprintPolygon(w), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
   });
 
+  // ADR-449 PART B Slice B — per-face overrides (Revit «Paint») όλων των στοιχείων → edges σε
+  // canvas units. Το blanket τρέχει με ΕΝΑ default spec (ομοιόμορφο κέλυφος)· τα overrides
+  // stamp-άρονται/σπάνε πάνω στα ενωμένα segments μετά (split στο σύνορο υλικού/χρώματος).
+  const faceOverrideEdges: FinishOverrideEdge[] = [];
+  for (const c of columns) pushFinishOverrideEdges(faceOverrideEdges, c.params.finish, c.geometry?.footprint?.vertices);
+  for (const b of beams) pushFinishOverrideEdges(faceOverrideEdges, b.params.finish, b.geometry?.outline?.vertices);
+  for (const w of walls) pushFinishOverrideEdges(faceOverrideEdges, w.params.finish, wallFootprintPolygon(w));
+
   const bands = computeStructuralSilhouetteBands({
     members,
     wallObstacles,
     spec: createDefaultStructuralFinishSpec(),
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
+    faceOverrideEdges,
   });
   // ADR-449/458 — 2Δ κάτοψη: κρύψε junction-όψεις που η plan-προβολή σκεπάζει (δες
   // `dropPlanHiddenJunctionFaces`)· το 3Δ τις κρατά (δικές τους z-bands → ορατές κάτω από

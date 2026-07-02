@@ -49,7 +49,9 @@ export function collectFinishOutlinePlanPolylines(
     if (!offsets[i]) continue;
     out.push({
       points: [aCore[i], aOuter[i], bOuter[i], bCore[i]],
-      colorHex: getMaterialFlatColorHex(segs[i].materialId),
+      // ADR-449 PART B — per-face `colorOverride` (Revit «Paint») υπερισχύει του χρώματος
+      // υλικού· απόν → flat χρώμα καταλόγου (materialId, SSoT με 3Δ). BOQ αμετάβλητο.
+      colorHex: segs[i].colorOverride ?? getMaterialFlatColorHex(segs[i].materialId),
       heightMm,
     });
   }

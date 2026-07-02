@@ -28,6 +28,8 @@ import { snapToGrid } from '../../systems/grid/grid-snap';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './structural-finish-resolver';
 import type { StructuralFinishSpec, StructuralFinishFaces, FinishFaceSegment } from './structural-finish-types';
+import { mergeCollinearFinishSegments } from './structural-finish-merge';
+import { applyFinishOverrideEdges, type FinishOverrideEdge } from './structural-finish-attribution';
 
 /** Ένα δομικό στοιχείο που συνεισφέρει το core footprint του στη σιλουέτα. */
 export interface SilhouetteMember {
@@ -74,6 +76,13 @@ export interface SilhouetteInput {
   readonly classify: FinishEdgeClassifier;
   /** canvas-unit μήκος → ΜΕΤΡΑ (ίδια σύμβαση με τον resolver). */
   readonly unitToMeters: number;
+  /**
+   * ADR-449 PART B Slice B — per-face overrides (Revit «Paint») από τα element specs, σε
+   * canvas units (ίδιος χώρος με τα members). Εφαρμόζονται στα blanket segments **ΠΡΙΝ** το
+   * PART A merge (split στο σύνορο υλικού/χρώματος → merge ξαναενώνει τα same). Absent/κενό →
+   * ομοιόμορφο κέλυφος (byte-for-byte).
+   */
+  readonly faceOverrideEdges?: readonly FinishOverrideEdge[];
 }
 
 const EPS = 1e-6;
@@ -218,7 +227,19 @@ function resolveBandFaces(
   // **additive-outward** σοβάς (ΠΟΤΕ recess/bury). Στενότερο δοκάρι από τοίχο → ο additive
   // σοβάς πέφτει φυσικά ομοεπίπεδος· ίδιο πλάτος → ειλικρινώς proud (η ευθυγράμμιση είναι
   // ευθύνη διαστάσεων του αρχιτέκτονα, όχι auto-recess). Οι γωνίες (Β) λύνονται από το union.
-  return { segments: merged, heightM: heightMm * MM_TO_M, interiorAreaM2, exteriorAreaM2 };
+  // ADR-449 PART B Slice B — per-face overrides (Revit «Paint») στο blanket ΠΡΙΝ το merge:
+  // σπάει τα segments στα σύνορα υλικού/χρώματος (το union έχει αφαιρέσει την κοινή κορυφή δύο
+  // collinear στοιχείων — γι' αυτό split, όχι μόνο stamp). Ο tol collinearity = weld quantum
+  // (raw override-edges vs welded union — max drift ~quantum/2), με sub-mm floor.
+  const attribTol = Math.max(weldQuantum, WELD_TOL_MM * MM_TO_M);
+  const attributed = input.faceOverrideEdges?.length
+    ? applyFinishOverrideEdges(merged, input.faceOverrideEdges, attribTol)
+    : merged;
+  // ADR-449 PART A — συγχώνευση διαδοχικών collinear-same-material όψεων ΠΡΙΝ το miter/draw/
+  // extrude: εξαφανίζει τις κάθετες ραφές στις δομικές συμβολές μιας ευθείας (ενιαία «κουβέρτα»)·
+  // γραμμή μένει ΜΟΝΟ σε γωνία ή αλλαγή υλικού/χρώματος. BOQ αμετάβλητο (Σ lengthM = ταυτότητα).
+  const mergedSegs = mergeCollinearFinishSegments(attributed);
+  return { segments: mergedSegs, heightM: heightMm * MM_TO_M, interiorAreaM2, exteriorAreaM2 };
 }
 
 /**

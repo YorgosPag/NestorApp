@@ -49,7 +49,7 @@ import {
 } from './boq-multi-layer-builder';
 import {
   buildFinishBoqPayloads,
-  finishChildBoqId,
+  finishChildBoqIds,
   hasFinishContribution,
   type FinishBoqContribution,
 } from './structural-finish-boq';
@@ -309,11 +309,8 @@ class BimToBoqBridgeImpl {
     if (!hasFinishContribution(finish)) return;
 
     const coreQuantity = deriveAtoeQuantity(coreMapping.unit, entity.geometry);
-    const candidateIds = [
-      parentBoqId(entity.id),
-      finishChildBoqId(entity.id, 'interior'),
-      finishChildBoqId(entity.id, 'exterior'),
-    ];
+    // ADR-449 PART B — υποψήφια ids = parent + ένα child ανά υλικό (group-by-material).
+    const candidateIds = [parentBoqId(entity.id), ...finishChildBoqIds(entity.id, finish)];
     const states = await fetchRowStates(candidateIds);
     const existingCreatedAt = buildExistingCreatedAtMap(states);
 

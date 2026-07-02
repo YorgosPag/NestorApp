@@ -11,7 +11,8 @@ import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
-import { toPt2, type WallFinishObstacle } from './structural-finish-scene';
+import { toPt2 } from './structural-finish-point';
+import type { WallFinishObstacle } from './structural-finish-scene';
 
 /** Wall → plan footprint (outer + reversed inner) από τα δοσμένα params (miters ενσωματωμένα). */
 function wallFootprintFromParams(params: WallFinishObstacle['params'], kind: WallFinishObstacle['kind']): Pt2[] {

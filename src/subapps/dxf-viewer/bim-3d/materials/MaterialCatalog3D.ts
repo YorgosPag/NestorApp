@@ -410,6 +410,26 @@ export function getSystemTintedMaterial3D(
 }
 
 /**
+ * ADR-449 PART B Slice B — per-face colour-override material for the structural finish
+ * skin (Revit «Paint»). Keeps the plaster PBR base (roughness/matte of `mat-plaster`) but
+ * paints a custom base colour, so a painted face reads as **tinted plaster** rather than a
+ * foreign material — the geometry/BOQ still belong to the finish. Cached per `finish-color:
+ * ${hex}` (never mutates a shared singleton). Honours the Visual Style FACES axis + the
+ * finish depth tier (default units, ≥ its own structural core). Invalid hex → plaster flat.
+ */
+export function getFinishColorOverrideMaterial3D(colorHex: string): THREE.MeshStandardMaterial {
+  const cacheKey = `finish-color:${colorHex}`;
+  let mat = CACHE.get(cacheKey);
+  if (!mat) {
+    const def = MATERIAL_DEFS['mat-plaster']!;
+    // THREE.Color parses '#rrggbb'/'rgb(...)'/named CSS; getHex() → the def's numeric colour.
+    mat = buildMat({ ...def, color: new THREE.Color(colorHex).getHex() });
+    CACHE.set(cacheKey, mat);
+  }
+  return withFaceMode(withDepthPriority(mat, 'mat-plaster'));
+}
+
+/**
  * Dispose all cached materials. Call only on full app teardown —
  * NOT on 3D→2D mode toggle (ThreeJsSceneManager.dispose only disposes geometries).
  */

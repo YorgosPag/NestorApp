@@ -252,6 +252,54 @@ describe('ADR-449 Slice X1 — height-aware walls (grid coincident support, Fire
   });
 });
 
+describe('ADR-449 PART B Slice B — faceOverrideEdges (blanket per-face attribution)', () => {
+  it('override στη μισή κάτω παρειά → split: χρωματισμένο κομμάτι + default (colorOverride φτάνει στο band)', () => {
+    // Μέλος [0,100]×[0,50]· βάφουμε τη μισή κάτω παρειά (0,0)-(50,0) με χρώμα.
+    const out = computeStructuralSilhouetteBands({
+      ...baseInput([member(rect(0, 0, 100, 50), 0, 3000)]),
+      faceOverrideEdges: [
+        { a: { x: 0, y: 0 }, b: { x: 50, y: 0 }, override: { colorOverride: '#c0d8b0' } },
+      ],
+    });
+    expect(out).toHaveLength(1);
+    const segs = out[0].faces.segments;
+    // Χρωματισμένο κομμάτι στην κάτω παρειά (y=0, x∈[0,50]).
+    const painted = segs.filter((s) => s.colorOverride === '#c0d8b0');
+    expect(painted).toHaveLength(1);
+    expect(Math.abs(painted[0].a.y)).toBeLessThan(1e-6);
+    expect(Math.abs(painted[0].b.y)).toBeLessThan(1e-6);
+    expect(painted[0].lengthM).toBeCloseTo(50);
+    // Το υπόλοιπο κάτω κομμάτι (x∈[50,100]) μένει χωρίς χρώμα (default).
+    const bottomUnpainted = segs.filter(
+      (s) => Math.abs(s.a.y) < 1e-6 && Math.abs(s.b.y) < 1e-6 && !s.colorOverride,
+    );
+    expect(bottomUnpainted).toHaveLength(1);
+    // BOQ ταυτότητα: περίμετρος αμετάβλητη (300).
+    expect(totalLength(segs)).toBeCloseTo(300);
+  });
+
+  it('override materialId σε ΟΛΗ παρειά → ξεχωριστό segment (δεν ενώνεται με τις γειτονικές default)', () => {
+    const out = computeStructuralSilhouetteBands({
+      ...baseInput([member(rect(0, 0, 100, 50), 0, 3000)]),
+      faceOverrideEdges: [
+        { a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, override: { materialId: 'mat-gypsum-board' } },
+      ],
+    });
+    const gypsum = out[0].faces.segments.filter((s) => s.materialId === 'mat-gypsum-board');
+    expect(gypsum).toHaveLength(1);
+    expect(gypsum[0].lengthM).toBeCloseTo(100);
+  });
+
+  it('κενά faceOverrideEdges → byte-for-byte (μηδέν regression)', () => {
+    const withEmpty = computeStructuralSilhouetteBands({
+      ...baseInput([member(rect(0, 0, 50, 50), 0, 3000)]),
+      faceOverrideEdges: [],
+    });
+    const without = computeStructuralSilhouetteBands(baseInput([member(rect(0, 0, 50, 50), 0, 3000)]));
+    expect(withEmpty).toEqual(without);
+  });
+});
+
 describe('ADR-449 — flush column↔column union (Firestore-shaped, float-drift weld)', () => {
   // Οι ΑΚΡΙΒΕΙΣ footprints των δύο κολόνων σε σχήμα L (Firestore, mm). Οι παρειές επαφής
   // διαφέρουν κατά ~9e-13mm (float noise «από κάναβο») → χωρίς weld η polygon-clipping ΔΕΝ

@@ -69,6 +69,28 @@ export interface StructuralFinishSpec {
    * συμμετρικός σοβάς όπως πριν). ΠΟΤΕ δεν μπαίνει στο `width/depth`.
    */
   readonly exteriorThickness?: number;
+  /**
+   * ADR-449 PART B — per-face overrides (Revit «Paint»/«Split Face» · C4D polygon-selection
+   * tag · Figma node-local override: ownership = **element**, ανά **σταθερή αναφορά όψης**).
+   * Key = {@link FinishFaceRef} (γεωμετρικό midpoint-key της ακμής του footprint — επιβιώνει
+   * reorder κορυφών· αν η όψη εξαφανιστεί μετά reshape, το override πέφτει graceful, όπως στη
+   * Revit). Absent → ομοιόμορφος σοβάς (interior/exterior spec). Το `materialId` του override
+   * οδηγεί ΚΑΙ το BOQ (group-by-material)· το `colorOverride` είναι ΜΟΝΟ οπτικό (δεν σπάει BOQ).
+   */
+  readonly faceOverrides?: Readonly<Record<string, FinishFaceOverride>>;
+}
+
+/**
+ * ADR-449 PART B — override μιας συγκεκριμένης όψης (element-owned). Όλα optional: εφαρμόζεται
+ * μόνο ό,τι δηλωθεί (partial override πάνω στο interior/exterior spec).
+ */
+export interface FinishFaceOverride {
+  /** Ρητό υλικό αυτής της όψης (π.χ. `mat-gypsum-board` Knauf). Οδηγεί ΚΑΙ το BOQ. */
+  readonly materialId?: string;
+  /** CSS hex χρώμα εμφάνισης (π.χ. '#c0d8b0') — ΜΟΝΟ οπτικό, δεν επηρεάζει BOQ. */
+  readonly colorOverride?: string;
+  /** mm — ρητό πάχος σοβά αυτής της όψης (αλλιώς interior/exterior spec). */
+  readonly thickness?: number;
 }
 
 /** ADR-449 Slice X4 — resolved σοβάς (υλικό + πάχος) μιας ταξινομημένης παρειάς. */
@@ -144,6 +166,14 @@ export interface FinishFaceSegment {
   readonly aSquareEnd?: boolean;
   /** ADR-449 Δρόμος Β — το άκρο `b` ακουμπά τοίχο → square butt (βλ. {@link aSquareEnd}). */
   readonly bSquareEnd?: boolean;
+  /**
+   * ADR-449 PART B — προαιρετικό ρητό χρώμα εμφάνισης (CSS hex, π.χ. '#c0d8b0') για
+   * οπτική διάκριση περιοχής (per-region paint). Όταν υπάρχει, υπερισχύει του χρώματος
+   * που προκύπτει από το `materialId` (catalog). **DERIVED-only** — μπαίνει στα segments
+   * ΜΕΤΑ το region-override resolution (PART B), ΠΟΤΕ στο element spec. Το `materialId`
+   * παραμένει η SSoT για το BOQ.
+   */
+  readonly colorOverride?: string;
 }
 
 /**

@@ -30,9 +30,18 @@ function faceIdentity(face: SelectedFace3D): string {
   return `${face.bimId}|${face.faceKey}`;
 }
 
+/**
+ * ADR-449 PART B Slice C — ποιο **layer** βάφει το paint: το δομικό **σώμα** (`FaceAppearance`,
+ * ADR-539) ή το **δέρμα/σοβάς** (`faceOverrides`, ADR-449). ΕΝΑ picking/panel, δύο στόχοι —
+ * το `PolygonMaterialPanel` δίνει toggle, το apply route-άρει ανάλογα. Default `body` (539 parity).
+ */
+export type PolygonTargetLayer = 'body' | 'finish';
+
 interface PolygonMode3DState {
   /** True όταν το Polygon Mode είναι ενεργό (κλικ → επιλογή όψης αντί entity). */
   readonly active: boolean;
+  /** ADR-449 Slice C — στόχος βαφής: σώμα (539) ή σοβάς (449). Default `body`. */
+  readonly targetLayer: PolygonTargetLayer;
   /**
    * Το solid πάνω στο οποίο **άνοιξε** το Polygon Mode (primary anchor, π.χ. για framing/UX).
    * Φ4b: το faced render ΔΕΝ εξαρτάται πλέον από αυτό — όσο το mode είναι active, ΟΛΑ τα solids
@@ -46,6 +55,8 @@ interface PolygonMode3DState {
   readonly selectedFace: SelectedFace3D | null;
   /** Ρητό set του active + target solid (καθαρίζει επιλογή/target όταν off). */
   setActive(active: boolean, bimId?: string | null): void;
+  /** ADR-449 Slice C — εναλλαγή στόχου βαφής (σώμα ↔ σοβάς). */
+  setTargetLayer(layer: PolygonTargetLayer): void;
   /** Replace-select: αντικαθιστά το set με ΜΙΑ όψη (ή το αδειάζει με null). */
   selectFace(face: SelectedFace3D | null): void;
   /** Toggle add/remove ΜΙΑΣ όψης στο set (Shift+κλικ· anchor = η όψη αν προστέθηκε). */
@@ -58,6 +69,7 @@ interface PolygonMode3DState {
 
 export const usePolygonMode3DStore = create<PolygonMode3DState>((set) => ({
   active: false,
+  targetLayer: 'body',
   targetBimId: null,
   selectedFaces: [],
   selectedFace: null,
@@ -67,6 +79,7 @@ export const usePolygonMode3DStore = create<PolygonMode3DState>((set) => ({
     selectedFaces: active ? s.selectedFaces : [],
     selectedFace: active ? s.selectedFace : null,
   })),
+  setTargetLayer: (layer) => set({ targetLayer: layer }),
   selectFace: (face) => set({
     selectedFaces: face ? [face] : [],
     selectedFace: face,

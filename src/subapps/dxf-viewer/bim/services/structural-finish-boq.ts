@@ -4,11 +4,14 @@
  * Mirror του `boq-multi-layer-builder` (wall DNA) αλλά για finish skin:
  *   - parent = ο ΣΤΑΤΙΚΟΣ ΠΥΡΗΝΑΣ (π.χ. κολόνα OIK-2.03 m³ σκυρόδεμα) — αμετάβλητος,
  *     γίνεται `isGroupParent:true` ώστε να κρεμάει τα finish children.
- *   - child interior = εσωτ. σοβάς (Knauf, OIK-4.01 m²) — αν `interiorAreaM2 > 0`.
- *   - child exterior = εξωτ. σοβάς (OIK-4.03 m²) — αν `exteriorAreaM2 > 0`.
+ *   - child **ανά υλικό** (ADR-449 PART B, group-by-material): ένα child ανά distinct
+ *     `materialId` που εμφανίζεται στις όψεις (π.χ. Knauf `mat-gypsum-board` OIK-7.05 m² +
+ *     παραδοσιακός `mat-plaster-int` OIK-4.01 m²). Το χρώμα (`colorOverride`) ΔΕΝ σπάει BOQ
+ *     (Giorgio: επιμέτρηση ανά υλικό· χρώμα = μόνο οπτικό).
  *
  * Τα εμβαδά είναι ΗΔΗ καθαρά (εξαιρούν καλυμμένα από τοίχους κομμάτια) — βγαίνουν
- * από τον `structural-finish-resolver`. Idempotent deterministic IDs.
+ * από τον `structural-finish-resolver` (per-face `materialId` ενσωματώνει τα PART B
+ * overrides). Idempotent deterministic IDs (materialId-keyed).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md
  * @see boq-multi-layer-builder.ts (wall DNA sibling)
@@ -18,6 +21,9 @@ import type { BOQItem } from '@/types/boq';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
 import { resolveMaterialAtoeMapping } from '../config/material-to-atoe-mapping';
+// ADR-449 PART B — ο τύπος bucket + το grouping ζουν στο finishes layer (pure), ώστε ο scene
+// builder να ΜΗΝ εισάγει value από εδώ (αποφυγή κυκλικής εξάρτησης finishes↔services).
+import type { FinishMaterialBucket } from '../finishes/structural-finish-area';
 import {
   buildBaseRow,
   parentBoqId,
@@ -26,12 +32,17 @@ import {
   type ExistingCreatedAtMap,
 } from './boq-multi-layer-builder';
 
-/** Καθαρό derived contribution σοβά (από τον resolver) — input στο BOQ builder. */
+export type { FinishMaterialBucket } from '../finishes/structural-finish-area';
+
+/** Καθαρό derived contribution σοβά (από τον resolver), group-by-material — input στο BOQ. */
 export interface FinishBoqContribution {
-  readonly interiorAreaM2: number;
-  readonly exteriorAreaM2: number;
-  readonly interiorMaterialId: string;
-  readonly exteriorMaterialId: string;
+  /** Ένα bucket ανά distinct υλικό (θετικό εμβαδό), ταξινομημένα κατά `materialId`. */
+  readonly byMaterial: readonly FinishMaterialBucket[];
+}
+
+/** m² → canonical slug ασφαλές για document id (materialId είναι ήδη slug, π.χ. 'mat-plaster-int'). */
+function materialIdSlug(materialId: string): string {
+  return materialId.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
 interface FinishBoqBuildInput {
@@ -50,48 +61,51 @@ interface FinishBoqBuildResult {
   readonly children: readonly BuiltBoqRow[];
 }
 
-/** Deterministic finish child id (interior→`_finish_int`, exterior→`_finish_ext`). */
-export function finishChildBoqId(entityId: string, kind: 'interior' | 'exterior'): string {
-  return `boq_bim_${entityId}_finish_${kind === 'interior' ? 'int' : 'ext'}`;
+/** Deterministic finish child id ανά **υλικό** (ADR-449 PART B group-by-material). */
+export function finishChildBoqId(entityId: string, materialId: string): string {
+  return `boq_bim_${entityId}_finish_${materialIdSlug(materialId)}`;
+}
+
+/** Όλα τα υποψήφια child ids μιας συνεισφοράς (για fetch/detach guard στο bridge). */
+export function finishChildBoqIds(entityId: string, finish: FinishBoqContribution): string[] {
+  return finish.byMaterial.map((b) => finishChildBoqId(entityId, b.materialId));
 }
 
 /** True όταν το στοιχείο έχει έστω μία εκτεθειμένη παρειά σοβά (→ multi-layer path). */
 export function hasFinishContribution(c: FinishBoqContribution | undefined): c is FinishBoqContribution {
-  return !!c && (c.interiorAreaM2 > 0 || c.exteriorAreaM2 > 0);
+  return !!c && c.byMaterial.length > 0;
 }
 
 function buildFinishChild(
   entityId: string,
   entityType: BimEntityType,
   parentId: string,
-  kind: 'interior' | 'exterior',
-  areaM2: number,
-  materialId: string,
+  bucket: FinishMaterialBucket,
   layerIndex: number,
   context: MultiLayerBuildContext,
   existingCreatedAt: ExistingCreatedAtMap,
 ): BuiltBoqRow | null {
-  if (areaM2 <= 0) return null;
-  const mapping = resolveMaterialAtoeMapping(materialId);
+  if (bucket.areaM2 <= 0) return null;
+  const mapping = resolveMaterialAtoeMapping(bucket.materialId);
   if (!mapping) return null; // άγνωστο υλικό → skip (parent παραμένει)
-  const childId = finishChildBoqId(entityId, kind);
+  const childId = finishChildBoqId(entityId, bucket.materialId);
   const base = buildBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
   const item: BOQItem = {
     ...base,
     categoryCode: mapping.categoryCode,
     title: mapping.titleEL,
     unit: mapping.unit,
-    estimatedQuantity: areaM2,
+    estimatedQuantity: bucket.areaM2,
     parentBoqItemId: parentId,
     isGroupParent: false,
     layerIndex,
-    materialId,
+    materialId: bucket.materialId,
   };
   return { id: childId, payload: stripUndefinedDeep(item as unknown as Record<string, unknown>) };
 }
 
 /**
- * Build parent (στατικός πυρήνας) + finish children (interior/exterior σοβάς).
+ * Build parent (στατικός πυρήνας) + finish children **ανά υλικό** (group-by-material).
  * Caller filters με `hasFinishContribution()` πριν καλέσει.
  */
 export function buildFinishBoqPayloads(
@@ -119,10 +133,10 @@ export function buildFinishBoqPayloads(
   };
 
   const children: BuiltBoqRow[] = [];
-  const interior = buildFinishChild(entityId, entityType, parentId, 'interior', finish.interiorAreaM2, finish.interiorMaterialId, 0, context, existingCreatedAt);
-  if (interior) children.push(interior);
-  const exterior = buildFinishChild(entityId, entityType, parentId, 'exterior', finish.exteriorAreaM2, finish.exteriorMaterialId, 1, context, existingCreatedAt);
-  if (exterior) children.push(exterior);
+  finish.byMaterial.forEach((bucket, i) => {
+    const child = buildFinishChild(entityId, entityType, parentId, bucket, i, context, existingCreatedAt);
+    if (child) children.push(child);
+  });
 
   return { parent, children };
 }

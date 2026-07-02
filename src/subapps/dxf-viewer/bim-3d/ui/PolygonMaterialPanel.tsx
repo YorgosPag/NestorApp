@@ -27,15 +27,38 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseColorDialog } from '../../ui/color/EnterpriseColorDialog';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
-import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+import { usePolygonMode3DStore, type PolygonTargetLayer } from '../stores/PolygonMode3DStore';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
 import { applyFaceAppearanceToFaces } from './apply-face-appearance';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
+// ADR-449 PART B Slice C — «Σοβάς» layer: ίδιο picking/panel/dialog, route στο faceOverrides.
+import { applyFinishFaceOverrideToFaces } from './apply-finish-face-override';
+import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
+import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
+import type { FinishFaceOverride } from '../../bim/finishes/structural-finish-types';
 
 /** Default seed for the custom-colour dialog (a warm Cinema 4D red). */
 const DEFAULT_CUSTOM_COLOR = '#C0392B';
+
+/** Ένα swatch υλικού στο panel (layer-agnostic: catalog χρώμα + label + drag id). */
+interface SwatchItem {
+  readonly id: string;
+  readonly color: string;
+  readonly label: string;
+  /** Body swatches είναι draggable (drag-drop 539)· finish = click-only. */
+  readonly draggable: boolean;
+}
+
+/**
+ * ADR-449 Slice C — `FaceAppearance` (panel) → `FinishFaceOverride` (σοβάς). `colorHex` του
+ * panel = `colorOverride` του σοβά· `materialId` περνά αυτούσιο. `null` → clear.
+ */
+function toFinishOverride(value: FaceAppearance | null): FinishFaceOverride | null {
+  if (!value) return null;
+  return value.colorHex ? { colorOverride: value.colorHex } : { materialId: value.materialId };
+}
 
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
@@ -43,27 +66,40 @@ export function PolygonMaterialPanel() {
   const active = usePolygonMode3DStore((s) => s.active);
   const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
   const targetBimId = usePolygonMode3DStore((s) => s.targetBimId);
+  const targetLayer = usePolygonMode3DStore((s) => s.targetLayer);
+  const setTargetLayer = usePolygonMode3DStore((s) => s.setTargetLayer);
   const [colorOpen, setColorOpen] = useState(false);
   const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
 
   if (!active) return null;
 
+  const isFinish = targetLayer === 'finish';
+
   /**
-   * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool:
-   *   - N όψεις επιλεγμένες → βάψε ΑΥΤΕΣ (per-face overrides),
-   *   - καμία όψη → βάψε ΟΛΟ το ενεργό στοιχείο (base `'*'`, Cinema 4D base material tag).
-   * Και τα δύο μέσω του ΙΔΙΟΥ batch SSoT (`applyFaceAppearanceToFaces`) = ΕΝΑ undo.
+   * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool, δύο layers (Slice C):
+   *   - **Σώμα** (539): N όψεις → per-face· καμία όψη → ΟΛΟ το στοιχείο (base `'*'`).
+   *   - **Σοβάς** (449): ΜΟΝΟ per-face (το override είναι ανά ακμή· δεν υπάρχει base «όλο»)
+   *     → route στο `applyFinishFaceOverrideToFaces` (γράφει `spec.faceOverrides[ref]`).
+   * Και τα δύο μέσω batch SSoT = ΕΝΑ undo.
    */
   const apply = (value: FaceAppearance | null): void => {
     const faces = usePolygonMode3DStore.getState().selectedFaces;
+    if (usePolygonMode3DStore.getState().targetLayer === 'finish') {
+      if (faces.length > 0) applyFinishFaceOverrideToFaces(levels, faces, toFinishOverride(value));
+      return;
+    }
     const target = usePolygonMode3DStore.getState().targetBimId;
     if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
     else if (target) applyFaceAppearanceToFaces(levels, [{ bimId: target, faceKey: BASE_FACE_KEY }], value);
   };
 
   const faceCount = selectedFaces.length;
-  /** Μπορούμε να εφαρμόσουμε όταν υπάρχουν όψεις Ή ενεργό στοιχείο για «βάψε όλο». */
-  const canApply = faceCount > 0 || targetBimId !== null;
+  /** Σώμα: όψεις Ή «όλο το στοιχείο». Σοβάς: μόνο επιλεγμένες όψεις (per-face override). */
+  const canApply = faceCount > 0 || (!isFinish && targetBimId !== null);
+  /** Swatches ανά layer: σώμα = wall coverings (draggable)· σοβάς = finish materials (click-only). */
+  const swatches: SwatchItem[] = isFinish
+    ? FINISH_MATERIAL_OPTIONS.map((o) => ({ id: o.value, color: getMaterialFlatColorHex(o.value), label: t(o.labelKey), draggable: false }))
+    : listWallCoveringMaterials().map((m) => ({ id: m.id, color: m.color, label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`), draggable: true }));
 
   return (
     <section
@@ -77,44 +113,58 @@ export function PolygonMaterialPanel() {
             ? t('polygonMode.hintMultiFace', { count: faceCount })
             : faceCount === 1
               ? t('polygonMode.hintApply')
-              : targetBimId
-                ? t('polygonMode.hintWholeElement')
-                : t('polygonMode.hintPickFace')}
+              : isFinish
+                ? t('polygonMode.hintFinishPickFace')
+                : targetBimId
+                  ? t('polygonMode.hintWholeElement')
+                  : t('polygonMode.hintPickFace')}
         </p>
       </header>
+      {/* ADR-449 Slice C — layer toggle: σώμα (539 FaceAppearance) ↔ σοβάς (449 faceOverrides). */}
+      <fieldset className="mb-1.5 grid grid-cols-2 gap-1" aria-label={t('polygonMode.layerLabel')}>
+        {(['body', 'finish'] as PolygonTargetLayer[]).map((layer) => (
+          <button
+            key={layer}
+            type="button"
+            aria-pressed={targetLayer === layer}
+            onClick={() => setTargetLayer(layer)}
+            className={`rounded border px-1.5 py-1 text-[10px] transition-colors ${
+              targetLayer === layer ? 'border-white/60 bg-white/20' : 'border-white/15 hover:bg-white/10'
+            }`}
+          >
+            {t(layer === 'body' ? 'polygonMode.layerBody' : 'polygonMode.layerFinish')}
+          </button>
+        ))}
+      </fieldset>
       <ul className="grid grid-cols-2 gap-1">
-        {listWallCoveringMaterials().map((m) => {
-          const label = t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`);
-          return (
-            <li key={m.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* draggable ALWAYS (Cinema 4D: drag onto any face, no pre-select needed);
-                      click → selected faces, or the WHOLE active solid when none (apply() guards). */}
-                  <button
-                    type="button"
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData(BIM_MATERIAL_MIME, serializeFaceAppearanceDrag({ materialId: m.id }));
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onClick={() => apply({ materialId: m.id })}
-                    className="flex w-full cursor-grab items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 active:cursor-grabbing"
-                  >
-                    {/* Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch). */}
-                    <span
-                      className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
-                      style={{ backgroundColor: m.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate">{label}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{label}</TooltipContent>
-              </Tooltip>
-            </li>
-          );
-        })}
+        {swatches.map((m) => (
+          <li key={m.id}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* Body swatches: draggable (Cinema 4D drag-drop). Finish: click-only. */}
+                <button
+                  type="button"
+                  draggable={m.draggable}
+                  onDragStart={m.draggable ? (e) => {
+                    e.dataTransfer.setData(BIM_MATERIAL_MIME, serializeFaceAppearanceDrag({ materialId: m.id }));
+                    e.dataTransfer.effectAllowed = 'copy';
+                  } : undefined}
+                  onClick={() => apply({ materialId: m.id })}
+                  className={`flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                >
+                  {/* Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch). */}
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
+                    style={{ backgroundColor: m.color }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{m.label}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{m.label}</TooltipContent>
+            </Tooltip>
+          </li>
+        ))}
       </ul>
       {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the faces, or whole solid. */}
       <button

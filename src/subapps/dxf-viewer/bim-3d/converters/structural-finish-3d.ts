@@ -24,7 +24,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { stripPrismGeometry } from './envelope-three-mesh';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
-import { getMaterial3D } from '../materials/MaterialCatalog3D';
+import { getMaterial3D, getFinishColorOverrideMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
 import { mmToSceneUnits, sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
@@ -56,12 +56,16 @@ function addFinishPrism(
   // perimeter edge lines both follow the lean (the LineSegments2 overlay is a
   // separate interleaved geometry that cannot be re-sheared after the fact).
   shearGeo?: (geo: THREE.BufferGeometry) => void,
+  // ADR-449 PART B — per-face colour override (Revit «Paint»): τιντάρει τον σοβά (plaster
+  // PBR base + custom χρώμα)· απόν → material καταλόγου (SSoT με 2Δ). Δεν αλλάζει BOQ.
+  colorOverride?: string,
 ): void {
   if (quad.length < 4) return;
   const geo = stripPrismGeometry(quad, heightM);
   if (!geo) return;
   shearGeo?.(geo);
-  const mesh = new THREE.Mesh(geo, getMaterial3D(materialId));
+  const material = colorOverride ? getFinishColorOverrideMaterial3D(colorOverride) : getMaterial3D(materialId);
+  const mesh = new THREE.Mesh(geo, material);
   mesh.position.y = baseY;
   mesh.userData['bimId'] = id;
   mesh.userData['bimType'] = bimType;
@@ -121,7 +125,7 @@ export function buildFinishSkinFromFaces(
       { x: bOuterM[i].x, y: bOuterM[i].y, z: 0 },
       { x: aOuterM[i].x, y: aOuterM[i].y, z: 0 },
     ];
-    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId, shearGeo);
+    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId, shearGeo, seg.colorOverride);
   }
   if (group.children.length === 0) return null;
 

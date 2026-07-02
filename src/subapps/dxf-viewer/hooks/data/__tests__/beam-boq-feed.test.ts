@@ -45,8 +45,10 @@ describe('beamBoqEntity (ADR-449 Slice 4)', () => {
   it('ενεργός σοβάς → payload με finishContribution + params', () => {
     const out = beamBoqEntity(beam(FINISH), emptyScene);
     expect(out.finishContribution).toBeDefined();
-    expect(out.finishContribution!.interiorAreaM2).toBeGreaterThan(0);
-    expect(out.finishContribution!.interiorMaterialId).toBe('mat-plaster-int');
+    // ADR-449 PART B — group-by-material: buckets θετικού εμβαδού, εδώ interior plaster.
+    const byMat = out.finishContribution!.byMaterial;
+    expect(byMat.length).toBeGreaterThan(0);
+    expect(byMat.some((b) => b.materialId === 'mat-plaster-int' && b.areaM2 > 0)).toBe(true);
     expect(out.params).toBeDefined();
     expect(out.geometry).toBeDefined();
   });

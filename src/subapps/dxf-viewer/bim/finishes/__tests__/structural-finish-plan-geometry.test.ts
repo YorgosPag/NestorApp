@@ -35,6 +35,18 @@ describe('collectFinishOutlinePlanPolylines (ADR-505)', () => {
     expect(out[0].colorHex).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 
+  it('ADR-449 PART B — colorOverride υπερισχύει του χρώματος υλικού (Revit «Paint»)', () => {
+    const painted: FinishFaceSegment = { ...seg({ x: 0, y: 0 }, { x: 100, y: 0 }), colorOverride: '#c0d8b0' };
+    const out = collectFinishOutlinePlanPolylines(faces([painted]), 'mm', 0);
+    expect(out[0].colorHex).toBe('#c0d8b0');
+  });
+
+  it('χωρίς colorOverride → flat χρώμα υλικού (SSoT με 3Δ)', () => {
+    const out = collectFinishOutlinePlanPolylines(faces([seg({ x: 0, y: 0 }, { x: 100, y: 0 })]), 'mm', 0);
+    // mat-plaster-int → mat-plaster def color 0xe8e0d0.
+    expect(out[0].colorHex).toBe('#e8e0d0');
+  });
+
   it('undefined / κενές faces → []', () => {
     expect(collectFinishOutlinePlanPolylines(undefined, 'mm', 3000)).toEqual([]);
     expect(collectFinishOutlinePlanPolylines(faces([]), 'mm', 3000)).toEqual([]);

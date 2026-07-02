@@ -160,6 +160,7 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-02 (cross-ref → ADR-449 Slice C)** — Το polygon mode απέκτησε **layer target** (`PolygonMode3DStore.targetLayer: 'body'|'finish'`) ώστε το ΙΔΙΟ face-pick + `PolygonMaterialPanel` + `EnterpriseColorDialog` να βάφει ΕΙΤΕ το **σώμα** (`FaceAppearance`, εδώ) ΕΙΤΕ τον **σοβά** (`spec.faceOverrides`, ADR-449). Το `PolygonMaterialPanel` πήρε toggle «Σώμα|Σοβάς» + finish swatches· το `apply` route-άρει σε `applyFinishFaceOverrideToFaces` όταν layer='finish'. **Body path αμετάβλητο (byte-for-byte).** Πλήρες detail: **ADR-449 changelog (δ.PART-B-Slice-C-3D)**. Το `side:i` faceKey (`buildFacedPrism`) → `finishFaceRef` της ακμής i = η γέφυρα των δύο layer.
 - **2026-06-27 (Φ4b — MULTI-FACE SELECT + BATCH PAINT = ΕΝΑ UNDO, IMPLEMENTED UNCOMMITTED)** — «Advanced polygon
   editing» layer (2/4): Cinema 4D «Polygon Mode» multi-select. Shift+κλικ προσθέτει/αφαιρεί όψεις, N highlight
   overlays ταυτόχρονα, και κάθε βαφή/καθαρισμός/paste εφαρμόζεται σε **ΟΛΕΣ** τις επιλεγμένες όψεις με **ΕΝΑ
