@@ -36,6 +36,10 @@ import {
 import { normalizeAngleDiff } from '../../../rendering/entities/shared/geometry-angle-utils';
 import type { RadialDimGeometry } from '../dim-geometry-builder';
 import { computeTextRotation } from './shared-geometry-helpers';
+import {
+  resolveRadialTextFit,
+  computeRadialPlacement,
+} from './radial-text-fit';
 
 const ZERO_VEC: Point2D = { x: 0, y: 0 };
 const HALF_PI = Math.PI / 2;
@@ -46,6 +50,57 @@ const DEFAULT_LEADER_FACTOR = 3;
 /** Default leader length (mm world) when `entity.leaderLength` not provided. */
 function defaultLeaderLength(style: DimStyle): number {
   return style.dimasz * DEFAULT_LEADER_FACTOR;
+}
+
+/** Per-variant anchors + leader segments handed to the DIMTIX/DIMTOFL resolver. */
+interface RadialFitPieces {
+  readonly defaultOutside: boolean;
+  readonly isDiameter: boolean;
+  readonly insideAnchor: Point2D;
+  readonly outsideAnchor: Point2D;
+  readonly insideLinePath: readonly Point2D[];
+  readonly outsideLeaderPath: readonly Point2D[];
+  readonly outwardDir: Point2D;
+}
+
+/** Resolved `{ textAnchor, leaderPath }` for one radial variant. */
+interface RadialFitOutput {
+  readonly textAnchor: Point2D;
+  readonly leaderPath: readonly Point2D[];
+}
+
+/**
+ * ADR-362 Phase M3 — apply the faithful-AutoCAD DIMTIX/DIMTOFL/DIMTMOVE decision
+ * (via the pure `radial-text-fit` SSoT) to a variant's anchors + leader segments.
+ * `entity.textMidpoint` (user drag) always wins for the anchor; the leader still
+ * honours DIMTOFL/DIMTMOVE. With every flag at its default the output reproduces
+ * the pre-M3 geometry exactly (zero regression).
+ */
+function applyRadialFit(
+  entity: { readonly textMidpoint?: Point2D },
+  style: DimStyle,
+  pieces: RadialFitPieces,
+): RadialFitOutput {
+  const fit = resolveRadialTextFit({
+    defaultOutside: pieces.defaultOutside,
+    isDiameter: pieces.isDiameter,
+    dimtix: style.dimtix,
+    dimtofl: style.dimtofl,
+    dimtmove: style.dimtmove,
+  });
+  const placement = computeRadialPlacement({
+    fit,
+    insideAnchor: pieces.insideAnchor,
+    outsideAnchor: pieces.outsideAnchor,
+    insideLinePath: pieces.insideLinePath,
+    outsideLeaderPath: pieces.outsideLeaderPath,
+    outwardDir: pieces.outwardDir,
+    arrowSize: style.dimasz,
+  });
+  return {
+    textAnchor: entity.textMidpoint ?? placement.textAnchor,
+    leaderPath: placement.leaderPath,
+  };
 }
 
 /**
@@ -65,17 +120,26 @@ export function buildRadiusGeometry(
   const leaderLen = entity.leaderLength ?? defaultLeaderLength(style);
   const leaderEnd = addPoints(arcPoint, scalePoint(outward, leaderLen));
   const leaderMid = calculateMidpoint(arcPoint, leaderEnd);
+  const fit = applyRadialFit(entity, style, {
+    defaultOutside: true,
+    isDiameter: false,
+    insideAnchor: calculateMidpoint(center, arcPoint),
+    outsideAnchor: leaderMid,
+    insideLinePath: [center, arcPoint],
+    outsideLeaderPath: [arcPoint, leaderEnd],
+    outwardDir: outward,
+  });
   return {
     kind: 'radial',
     isDiameter: false,
     centerMarkExtent: style.dimcen,
     centerPoint: center,
-    leaderPath: [arcPoint, leaderEnd],
+    leaderPath: fit.leaderPath,
     arrowAnchor1: arcPoint,
     arrowAnchor2: arcPoint,
     arrowDirection1: outward,
     arrowDirection2: ZERO_VEC,
-    textAnchor: entity.textMidpoint ?? leaderMid,
+    textAnchor: fit.textAnchor,
     textRotation: computeTextRotation(vectorAngle(outward), style.dimtih),
     measurementValue: radius,
   };
@@ -97,17 +161,30 @@ export function buildDiameterGeometry(
   const center = calculateMidpoint(side1, side2);
   const outward1 = getUnitVector(center, side1);
   const outward2 = getUnitVector(center, side2);
+  // DIMTIX-on outside anchor: past `side2` along the diameter axis, clear of the
+  // arrowhead (2×dimasz) plus the DIMGAP margin. Leader ends at the arrow clearance.
+  const outsideLeaderEnd = addPoints(side2, scalePoint(outward2, 2 * style.dimasz));
+  const outsideAnchor = addPoints(side2, scalePoint(outward2, 2 * style.dimasz + style.dimgap));
+  const fit = applyRadialFit(entity, style, {
+    defaultOutside: false,
+    isDiameter: true,
+    insideAnchor: center,
+    outsideAnchor,
+    insideLinePath: [side1, side2],
+    outsideLeaderPath: [side2, outsideLeaderEnd],
+    outwardDir: outward2,
+  });
   return {
     kind: 'radial',
     isDiameter: true,
     centerMarkExtent: style.dimcen,
     centerPoint: center,
-    leaderPath: [side1, side2],
+    leaderPath: fit.leaderPath,
     arrowAnchor1: side1,
     arrowAnchor2: side2,
     arrowDirection1: outward1,
     arrowDirection2: outward2,
-    textAnchor: entity.textMidpoint ?? center,
+    textAnchor: fit.textAnchor,
     textRotation: computeTextRotation(vectorAngle(outward2), style.dimtih),
     measurementValue,
   };
@@ -158,17 +235,31 @@ export function buildArcLengthGeometry(
   const sweepSign = signedSweep >= 0 ? 1 : -1;
   const measurementValue = radius * Math.abs(signedSweep);
   const midAngle = startAngle + signedSweep / 2;
+  const arcSamples = sampleArc(center, radius, startAngle, signedSweep, ARC_LENGTH_SAMPLES);
+  const arcMid = pointOnCircle(center, radius, midAngle);
+  // DIMTIX-on pushes the label radially outward past the arc, clear of the arrow.
+  const outsideLeaderEnd = pointOnCircle(center, radius + 2 * style.dimasz, midAngle);
+  const outsideAnchor = pointOnCircle(center, radius + 2 * style.dimasz + style.dimgap, midAngle);
+  const fit = applyRadialFit(entity, style, {
+    defaultOutside: false,
+    isDiameter: false,
+    insideAnchor: arcMid,
+    outsideAnchor,
+    insideLinePath: arcSamples,
+    outsideLeaderPath: [arcMid, outsideLeaderEnd],
+    outwardDir: getUnitVector(center, arcMid),
+  });
   return {
     kind: 'radial',
     isDiameter: false,
     centerMarkExtent: style.dimcen,
     centerPoint: center,
-    leaderPath: sampleArc(center, radius, startAngle, signedSweep, ARC_LENGTH_SAMPLES),
+    leaderPath: fit.leaderPath,
     arrowAnchor1: arcStart,
     arrowAnchor2: arcEnd,
     arrowDirection1: arcTangentOutward(startAngle, sweepSign, true),
     arrowDirection2: arcTangentOutward(endAngle, sweepSign, false),
-    textAnchor: entity.textMidpoint ?? pointOnCircle(center, radius, midAngle),
+    textAnchor: fit.textAnchor,
     textRotation: computeTextRotation(normalizeAngleDiff(midAngle + HALF_PI), style.dimtih),
     measurementValue,
   };
@@ -195,17 +286,26 @@ export function buildJoggedRadiusGeometry(
   const jogTailDir = getUnitVector(jogVertex, jogPoint);
   const tailExtensionLength = calculateDistance(jogVertex, jogPoint);
   const leaderTail = addPoints(jogPoint, scalePoint(jogTailDir, tailExtensionLength));
+  const fit = applyRadialFit(entity, style, {
+    defaultOutside: true,
+    isDiameter: false,
+    insideAnchor: calculateMidpoint(center, arcPoint),
+    outsideAnchor: calculateMidpoint(jogPoint, leaderTail),
+    insideLinePath: [center, arcPoint],
+    outsideLeaderPath: [arcPoint, jogVertex, jogPoint, leaderTail],
+    outwardDir: jogTailDir,
+  });
   return {
     kind: 'radial',
     isDiameter: false,
     centerMarkExtent: style.dimcen,
     centerPoint: center,
-    leaderPath: [arcPoint, jogVertex, jogPoint, leaderTail],
+    leaderPath: fit.leaderPath,
     arrowAnchor1: arcPoint,
     arrowAnchor2: arcPoint,
     arrowDirection1: outward,
     arrowDirection2: ZERO_VEC,
-    textAnchor: entity.textMidpoint ?? calculateMidpoint(jogPoint, leaderTail),
+    textAnchor: fit.textAnchor,
     textRotation: computeTextRotation(vectorAngle(jogTailDir), style.dimtih),
     measurementValue: radius,
   };

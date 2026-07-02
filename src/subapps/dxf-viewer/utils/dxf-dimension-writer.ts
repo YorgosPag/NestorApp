@@ -145,18 +145,19 @@ function emitAlignedSubclass(sink: DimGroupSink, entity: AlignedDimensionEntity,
 
 function emitAngular2LSubclass(sink: DimGroupSink, entity: Angular2LDimensionEntity, scale: number): void {
   sink(100, 'AcDb2LineAngularDimension');
+  // AutoCAD DXF spec: line1 = code13→code14, line2 = code10(header ref)→code15, arc = code16.
   emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // line1.a
   emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale); // line1.b
-  emitPt(sink, 15, entity.defPoints[2] ?? ORIGIN, scale); // line2.a
-  // defPoints[3] = line2.b — not needed for DXF (vertex = intersection of lines)
+  emitPt(sink, 15, entity.defPoints[3] ?? ORIGIN, scale); // line2.b (line2.a is the header code 10)
   emitPt(sink, 16, entity.defPoints[4] ?? entity.defPoints[3] ?? ORIGIN, scale); // arc point
 }
 
 function emitAngular3PSubclass(sink: DimGroupSink, entity: Angular3PDimensionEntity, scale: number): void {
   sink(100, 'AcDb3PointAngularDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // vertex
-  emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale); // ray1End
-  emitPt(sink, 15, entity.defPoints[2] ?? ORIGIN, scale); // ray2End
+  // AutoCAD DXF spec: ray1 = code13, ray2 = code14, vertex = code15, arc = code16.
+  emitPt(sink, 13, entity.defPoints[1] ?? ORIGIN, scale); // ray1End
+  emitPt(sink, 14, entity.defPoints[2] ?? ORIGIN, scale); // ray2End
+  emitPt(sink, 15, entity.defPoints[0] ?? ORIGIN, scale); // vertex
   emitPt(sink, 16, entity.defPoints[3] ?? ORIGIN, scale); // arcPoint
 }
 
@@ -243,7 +244,8 @@ export function emitDimensionEntity(
       emitDiameterSubclass(sink, entity, scale);
       break;
     case 'ordinate': {
-      const flag = entity.axis === 'y' ? 6 | 64 : 6;
+      // AutoCAD DXF spec code-70 bit 64: set = X-type ordinate, clear = Y-type.
+      const flag = entity.axis === 'x' ? 6 | 64 : 6;
       emitDimHeader(sink, entry, flag, blockIndex, scale);
       emitOrdinateSubclass(sink, entity, scale);
       break;
@@ -281,10 +283,11 @@ function resolveRefPoint(entity: DimensionEntity): Point2D {
   ) {
     return entity.defPoints[2] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
   }
-  // Angular: arc/vertex reference
+  // Angular 2-line: code 10 = line2.a per DXF spec (line2 = code10 → code15).
   if (entity.dimensionType === 'angular2L') {
-    return entity.defPoints[4] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
+    return entity.defPoints[2] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
   }
+  // Angular 3-point: code 10 = dim-line arc location (== arcPoint here).
   if (entity.dimensionType === 'angular3P') {
     return entity.defPoints[3] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
   }

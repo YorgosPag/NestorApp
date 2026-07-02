@@ -118,16 +118,106 @@ describe('convertDimension — geometry-builder integration (render contract)', 
   });
 });
 
-describe('convertDimension — legacy fallback (angular / ordinate)', () => {
-  it('angular (type 2) → legacy text+line primitives (no dimension entity)', () => {
+describe('convertDimension — angular / ordinate (first-class, AutoCAD spec def-points)', () => {
+  it('angular2L (type 2) → defPoints [l1a, l1b, l2a, l2b, arc] from codes 13/14/10/15/16', () => {
     const data = {
       '70': '2',
-      '13': '0', '23': '0', '14': '100', '24': '0',
-      '10': '0', '20': '50', '11': '50', '21': '60', '42': '90',
+      '13': '0', '23': '0', // line1.a
+      '14': '100', '24': '0', // line1.b
+      '10': '0', '20': '0', // line2.a
+      '15': '0', '25': '100', // line2.b
+      '16': '40', '26': '40', // arc point
+      '42': '90',
     };
-    const result = convertDimension(data, 'L', 9);
-    expect(result.length).toBeGreaterThanOrEqual(1);
-    expect(result.every((e) => e.type !== 'dimension')).toBe(true);
-    expect(result.some((e) => e.type === 'text')).toBe(true);
+    const dim = asDim(convertDimension(data, 'L', 9));
+    expect(dim.dimensionType).toBe('angular2L');
+    expect(dim.defPoints).toEqual([
+      { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 100 }, { x: 40, y: 40 },
+    ]);
+  });
+
+  it('angular3P (type 5) → vertex from code 15, rays from 13/14, arc from 16', () => {
+    const data = {
+      '70': '5',
+      '15': '0', '25': '0', // vertex
+      '13': '100', '23': '0', // ray1
+      '14': '0', '24': '100', // ray2
+      '16': '40', '26': '40', // arc
+      '42': '90',
+    };
+    const dim = asDim(convertDimension(data, 'L', 10));
+    expect(dim.dimensionType).toBe('angular3P');
+    expect(dim.defPoints).toEqual([
+      { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }, { x: 40, y: 40 },
+    ]);
+  });
+
+  it('angular3P arc falls back to code 10 when 16 absent', () => {
+    const data = {
+      '70': '5', '15': '0', '25': '0', '13': '100', '23': '0', '14': '0', '24': '100',
+      '10': '30', '20': '30',
+    };
+    const dim = asDim(convertDimension(data, 'L', 11));
+    expect(dim.defPoints[3]).toEqual({ x: 30, y: 30 });
+  });
+
+  it('ordinate (type 6, no bit 64) → Y-type; feature/datum/leader mapped', () => {
+    const data = {
+      '70': '6',
+      '13': '100', '23': '200', // feature
+      '10': '0', '20': '0', // datum
+      '14': '120', '24': '200', // leader end → textMidpoint
+    };
+    const dim = asDim(convertDimension(data, 'L', 12));
+    expect(dim.dimensionType).toBe('ordinate');
+    if (dim.dimensionType === 'ordinate') {
+      expect(dim.axis).toBe('y');
+      expect(dim.datum).toEqual({ x: 0, y: 0 });
+    }
+    expect(dim.defPoints).toEqual([{ x: 100, y: 200 }]);
+    expect(dim.textMidpoint).toEqual({ x: 120, y: 200 });
+  });
+
+  it('ordinate with bit 64 (code 70 = 70) → X-type', () => {
+    const data = { '70': '70', '13': '100', '23': '200', '10': '0', '20': '0' };
+    const dim = asDim(convertDimension(data, 'L', 13));
+    if (dim.dimensionType === 'ordinate') expect(dim.axis).toBe('x');
+  });
+
+  it('angular2L missing a definition point → skipped (no crash, no entity)', () => {
+    const data = {
+      '70': '2', '13': '0', '23': '0', '14': '100', '24': '0',
+      '10': '0', '20': '0', '15': '0', '25': '100', // no code 16 (arc)
+    };
+    expect(convertDimension(data, 'L', 14)).toEqual([]);
+  });
+});
+
+describe('convertDimension — angular/ordinate geometry-builder integration', () => {
+  it('angular2L entity builds valid angular geometry', () => {
+    const data = {
+      '70': '2', '13': '0', '23': '0', '14': '100', '24': '0',
+      '10': '0', '20': '0', '15': '0', '25': '100', '16': '40', '26': '40',
+    };
+    const dim = asDim(convertDimension(data, 'L', 1));
+    const geom = buildDimensionGeometry(dim, ISO_129_TEMPLATE);
+    expect(geom.kind).toBe('angular');
+  });
+
+  it('angular3P entity builds valid angular geometry', () => {
+    const data = {
+      '70': '5', '15': '0', '25': '0', '13': '100', '23': '0',
+      '14': '0', '24': '100', '16': '40', '26': '40',
+    };
+    const dim = asDim(convertDimension(data, 'L', 1));
+    const geom = buildDimensionGeometry(dim, ISO_129_TEMPLATE);
+    expect(geom.kind).toBe('angular');
+  });
+
+  it('ordinate entity builds valid linear (leader) geometry', () => {
+    const data = { '70': '6', '13': '100', '23': '200', '10': '0', '20': '0', '14': '120', '24': '200' };
+    const dim = asDim(convertDimension(data, 'L', 1));
+    const geom = buildDimensionGeometry(dim, ISO_129_TEMPLATE);
+    expect(geom.kind).toBe('linear');
   });
 });

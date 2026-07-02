@@ -258,3 +258,70 @@ describe('buildJoggedRadiusGeometry', () => {
     );
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Phase M3 — DIMTIX / DIMTOFL / DIMTMOVE style-driven placement (faithful AutoCAD)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('radial DIMTIX/DIMTOFL/DIMTMOVE placement', () => {
+  const { dimasz, dimgap } = ISO_129_TEMPLATE;
+
+  it('radius DIMTOFL on → inside line prepended from centre (leaderPath length 3)', () => {
+    const entity = radiusEntity([{ x: 0, y: 0 }, { x: 50, y: 0 }]);
+    const g = buildRadiusGeometry(entity, { ...ISO_129_TEMPLATE, dimtofl: true });
+    expect(g.leaderPath).toHaveLength(3);
+    expectPoint(g.leaderPath[0], { x: 0, y: 0 }); // centre (inside line)
+    expectPoint(g.leaderPath[1], { x: 50, y: 0 }); // arcPoint (junction, de-duped)
+    expectPoint(g.leaderPath[2], { x: 50 + dimasz * 3, y: 0 }); // leaderEnd
+  });
+
+  it('radius DIMTMOVE=1 → landing tail appended along outward dir', () => {
+    const entity = radiusEntity([{ x: 0, y: 0 }, { x: 50, y: 0 }]);
+    const g = buildRadiusGeometry(entity, { ...ISO_129_TEMPLATE, dimtmove: 1 });
+    expect(g.leaderPath).toHaveLength(3);
+    expectPoint(g.leaderPath[2], { x: 50 + dimasz * 3 + 2 * dimasz, y: 0 });
+  });
+
+  it('diameter DIMTIX on → text forced outside past circumference, chord kept inside', () => {
+    const entity = diameterEntity([{ x: -50, y: 0 }, { x: 50, y: 0 }]);
+    const g = buildDiameterGeometry(entity, { ...ISO_129_TEMPLATE, dimtix: true });
+    // chord stays inside + outward leader segment past side2 → 3 vertices
+    expect(g.leaderPath).toHaveLength(3);
+    expectPoint(g.leaderPath[0], { x: -50, y: 0 });
+    expectPoint(g.leaderPath[1], { x: 50, y: 0 });
+    expectPoint(g.leaderPath[2], { x: 50 + 2 * dimasz, y: 0 });
+    // text now beyond the circumference (was at centre 0,0 when DIMTIX off)
+    expectPoint(g.textAnchor, { x: 50 + 2 * dimasz + dimgap, y: 0 });
+  });
+
+  it('diameter DIMTIX on + DIMTMOVE=1 → landing tail after the outward leader', () => {
+    const entity = diameterEntity([{ x: -50, y: 0 }, { x: 50, y: 0 }]);
+    const g = buildDiameterGeometry(entity, {
+      ...ISO_129_TEMPLATE,
+      dimtix: true,
+      dimtmove: 1,
+    });
+    expect(g.leaderPath).toHaveLength(4);
+    expectPoint(g.leaderPath[3], { x: 50 + 2 * dimasz + 2 * dimasz, y: 0 });
+  });
+
+  it('arcLength DIMTIX on → text pushed radially outside the arc (no inside line)', () => {
+    const entity = arcLengthEntity([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 0, y: 100 },
+    ]);
+    const g = buildArcLengthGeometry(entity, { ...ISO_129_TEMPLATE, dimtix: true });
+    // drawLineInside false → leader is only the outward radial segment (2 pts)
+    expect(g.leaderPath).toHaveLength(2);
+    const textRadius = Math.hypot(g.textAnchor.x, g.textAnchor.y);
+    expect(textRadius).toBeGreaterThan(100); // beyond the arc radius
+  });
+
+  it('defaults (dimtix/dimtofl off, dimtmove 0) reproduce pre-M3 geometry exactly', () => {
+    const entity = diameterEntity([{ x: -50, y: 0 }, { x: 50, y: 0 }]);
+    const g = buildDiameterGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.leaderPath).toHaveLength(2);
+    expectPoint(g.textAnchor, { x: 0, y: 0 }); // centre, unchanged
+  });
+});

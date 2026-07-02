@@ -332,13 +332,23 @@ describe('writeDimensionSection — angular2L (type 2)', () => {
     expect(findAllCodes(out, '24')).toContain('4');
   });
 
-  it('emits line2.a via codes 15/25', () => {
+  // AutoCAD DXF spec: line2 = code 10 (header ref) → code 15; so code 15 = line2.b.
+  it('emits line2.b via codes 15/25', () => {
     const entity = makeAngular2L({
       defPoints: [pt(1, 2), pt(3, 4), pt(5, 6), pt(7, 8), pt(9, 10)],
     });
     const out = writeDimensionSection([entry(entity)]);
-    expect(findAllCodes(out, '15')).toContain('5');
-    expect(findAllCodes(out, '25')).toContain('6');
+    expect(findAllCodes(out, '15')).toContain('7');
+    expect(findAllCodes(out, '25')).toContain('8');
+  });
+
+  it('emits line2.a as the header ref point via codes 10/20', () => {
+    const entity = makeAngular2L({
+      defPoints: [pt(1, 2), pt(3, 4), pt(5, 6), pt(7, 8), pt(9, 10)],
+    });
+    const out = writeDimensionSection([entry(entity)]);
+    expect(findAllCodes(out, '10')).toContain('5');
+    expect(findAllCodes(out, '20')).toContain('6');
   });
 
   it('emits arcPoint (defPoints[4]) via codes 16/26', () => {
@@ -375,31 +385,32 @@ describe('writeDimensionSection — angular3P (type 5)', () => {
     expect(findAllCodes(out, '100')).toContain('AcDb3PointAngularDimension');
   });
 
-  it('emits vertex via codes 13/23', () => {
+  // AutoCAD DXF spec: ray1 = code 13, ray2 = code 14, vertex = code 15, arc = code 16.
+  it('emits ray1End via codes 13/23', () => {
     const entity = makeAngular3P({
       defPoints: [pt(5, 5), pt(10, 0), pt(0, 10), pt(8, 8)],
     });
     const out = writeDimensionSection([entry(entity)]);
-    expect(findAllCodes(out, '13')).toContain('5');
-    expect(findAllCodes(out, '23')).toContain('5');
+    expect(findAllCodes(out, '13')).toContain('10');
+    expect(findAllCodes(out, '23')).toContain('0');
   });
 
-  it('emits ray1End via codes 14/24', () => {
+  it('emits ray2End via codes 14/24', () => {
     const entity = makeAngular3P({
       defPoints: [pt(5, 5), pt(10, 0), pt(0, 10), pt(8, 8)],
     });
     const out = writeDimensionSection([entry(entity)]);
-    expect(findAllCodes(out, '14')).toContain('10');
-    expect(findAllCodes(out, '24')).toContain('0');
+    expect(findAllCodes(out, '14')).toContain('0');
+    expect(findAllCodes(out, '24')).toContain('10');
   });
 
-  it('emits ray2End via codes 15/25', () => {
+  it('emits vertex via codes 15/25', () => {
     const entity = makeAngular3P({
       defPoints: [pt(5, 5), pt(10, 0), pt(0, 10), pt(8, 8)],
     });
     const out = writeDimensionSection([entry(entity)]);
-    expect(findAllCodes(out, '15')).toContain('0');
-    expect(findAllCodes(out, '25')).toContain('10');
+    expect(findAllCodes(out, '15')).toContain('5');
+    expect(findAllCodes(out, '25')).toContain('5');
   });
 
   it('emits arcPoint via codes 16/26', () => {
@@ -576,14 +587,15 @@ describe('writeDimensionSection — diameter (type 3)', () => {
 // ──────────────────────────────────────────────────────────────────────────────
 
 describe('writeDimensionSection — ordinate (type 6/70)', () => {
-  it('X-ordinate emits code 70 = "6"', () => {
+  // AutoCAD DXF spec code-70 bit 64: set = X-type, clear = Y-type.
+  it('X-ordinate emits code 70 = "70" (6 | 64)', () => {
     const out = writeDimensionSection([entry(makeOrdinate({ axis: 'x' }))]);
-    expect(findAllCodes(out, '70')).toContain('6');
+    expect(findAllCodes(out, '70')).toContain('70');
   });
 
-  it('Y-ordinate emits code 70 = "70" (6 | 64)', () => {
+  it('Y-ordinate emits code 70 = "6"', () => {
     const out = writeDimensionSection([entry(makeOrdinate({ axis: 'y' }))]);
-    expect(findAllCodes(out, '70')).toContain('70');
+    expect(findAllCodes(out, '70')).toContain('6');
   });
 
   it('emits AcDbOrdinateDimension subclass', () => {

@@ -15,13 +15,17 @@
  * colour) — exactly like AutoCAD/Revit. Per-entity multi-DIMSTYLE fidelity
  * (mapping code-3 style name → registry id) is Phase 2.
  *
- * Coverage (Phase 1 — the architectural ~90% of floor-plan dims):
- *   - linear   (type 0) → LinearDimensionEntity   defPoints [o1, o2, dimLineRef] + rotation
- *   - aligned  (type 1) → AlignedDimensionEntity  defPoints [o1, o2, dimLineRef]
- *   - diameter (type 3) → DiameterDimensionEntity defPoints [side1, side2]
- *   - radius   (type 4) → RadiusDimensionEntity   defPoints [center, arcPoint]
- * Best-effort (angular 2/5, ordinate 6) → `convertDimensionLegacy()` (text+lines,
- * no regression) until Phase 2 maps their defPoints through the builder.
+ * Coverage (all first-class families — AutoCAD DXF spec def-point mapping):
+ *   - linear    (type 0) → LinearDimensionEntity    defPoints [o1, o2, dimLineRef] + rotation
+ *   - aligned   (type 1) → AlignedDimensionEntity   defPoints [o1, o2, dimLineRef]
+ *   - angular2L (type 2) → Angular2LDimensionEntity defPoints [l1a, l1b, l2a, l2b, arcPoint]
+ *   - diameter  (type 3) → DiameterDimensionEntity  defPoints [side1, side2]
+ *   - radius    (type 4) → RadiusDimensionEntity    defPoints [center, arcPoint]
+ *   - angular3P (type 5) → Angular3PDimensionEntity defPoints [vertex, ray1, ray2, arcPoint]
+ *   - ordinate  (type 6) → OrdinateDimensionEntity  defPoints [feature] + axis + datum
+ * Phase 2 (this): angular/ordinate now render through the arrowhead-aware
+ * `DimensionRenderer` instead of the legacy text+line decomposition. The legacy
+ * fallback remains only for any genuinely unmapped variant (no regression).
  *
  * @see types/dimension.ts — DimensionEntity union + defPoints semantics
  * @see systems/dimensions/dim-style-importer.ts — registry seeding
@@ -33,9 +37,12 @@ import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import type {
   AlignedDimensionEntity,
+  Angular2LDimensionEntity,
+  Angular3PDimensionEntity,
   DiameterDimensionEntity,
   DimensionType,
   LinearDimensionEntity,
+  OrdinateDimensionEntity,
   RadiusDimensionEntity,
 } from '../types/dimension';
 import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
@@ -46,12 +53,24 @@ import { convertDimensionLegacy } from './dxf-dimension-legacy-fallback';
 // ============================================================================
 
 /** Variants handled by the first-class `DimensionEntity` path. Others fall back. */
-const DIM_TYPE_MAP: Record<number, Extract<DimensionType, 'linear' | 'aligned' | 'radius' | 'diameter'>> = {
+const DIM_TYPE_MAP: Record<
+  number,
+  Extract<
+    DimensionType,
+    'linear' | 'aligned' | 'radius' | 'diameter' | 'angular2L' | 'angular3P' | 'ordinate'
+  >
+> = {
   0: 'linear',
   1: 'aligned',
+  2: 'angular2L',
   3: 'diameter',
   4: 'radius',
+  5: 'angular3P',
+  6: 'ordinate',
 };
+
+/** DXF code-70 bit 6 (value 64): ordinate is X-type when set, Y-type when clear. */
+const ORDINATE_X_FLAG = 64;
 
 // ============================================================================
 // FIELD HELPERS
@@ -164,6 +183,87 @@ function buildDiameter(
   return { ...common, dimensionType: 'diameter', defPoints: [side1, side2], startPoint: side1, endPoint: side2 };
 }
 
+/**
+ * Angular 2-line (AutoCAD spec) — line1 = (13,23)→(14,24), line2 = (10,20)→(15,25),
+ * arc = (16,26). Maps to the builder's `[line1.a, line1.b, line2.a, line2.b, arcPoint]`
+ * (the vertex is derived at build time from the two-line intersection).
+ */
+function buildAngular2L(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): Angular2LDimensionEntity | null {
+  const line1a = point(data, '13', '23');
+  const line1b = point(data, '14', '24');
+  const line2a = point(data, '10', '20');
+  const line2b = point(data, '15', '25');
+  const arcPoint = point(data, '16', '26');
+  if (!line1a || !line1b || !line2a || !line2b || !arcPoint) return null;
+  const common = buildCommonFields(data, layer, index);
+  return {
+    ...common,
+    dimensionType: 'angular2L',
+    defPoints: [line1a, line1b, line2a, line2b, arcPoint],
+    startPoint: line1a,
+    endPoint: arcPoint,
+  };
+}
+
+/**
+ * Angular 3-point (AutoCAD spec) — vertex = (15,25), ray1 = (13,23), ray2 = (14,24),
+ * arc = (16,26) (falls back to the code-10 dim-line point). Maps to the builder's
+ * `[vertex, ray1End, ray2End, arcPoint]`.
+ */
+function buildAngular3P(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): Angular3PDimensionEntity | null {
+  const vertex = point(data, '15', '25');
+  const ray1 = point(data, '13', '23');
+  const ray2 = point(data, '14', '24');
+  const arcPoint = point(data, '16', '26') ?? point(data, '10', '20');
+  if (!vertex || !ray1 || !ray2 || !arcPoint) return null;
+  const common = buildCommonFields(data, layer, index);
+  return {
+    ...common,
+    dimensionType: 'angular3P',
+    defPoints: [vertex, ray1, ray2, arcPoint],
+    startPoint: vertex,
+    endPoint: arcPoint,
+  };
+}
+
+/**
+ * Ordinate (AutoCAD spec) — feature = (13,23), origin/datum = (10,20), leader end =
+ * (14,24). `axis` from code-70 bit 64 (set → X-type, clear → Y-type). defPoints =
+ * [featurePoint]; the leader endpoint becomes `textMidpoint` so the builder
+ * terminates the leader where AutoCAD placed it.
+ */
+function buildOrdinate(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): OrdinateDimensionEntity | null {
+  const feature = point(data, '13', '23');
+  const datum = point(data, '10', '20');
+  if (!feature || !datum) return null;
+  const rawFlag = parseInt(data['70'] || '0', 10);
+  const axis: 'x' | 'y' = rawFlag & ORDINATE_X_FLAG ? 'x' : 'y';
+  const leaderEnd = point(data, '14', '24');
+  const common = buildCommonFields(data, layer, index);
+  return {
+    ...common,
+    dimensionType: 'ordinate',
+    axis,
+    datum,
+    defPoints: [feature],
+    startPoint: feature,
+    endPoint: leaderEnd ?? datum,
+    ...(leaderEnd ? { textMidpoint: leaderEnd } : {}),
+  };
+}
+
 // ============================================================================
 // MAIN DIMENSION CONVERTER
 // ============================================================================
@@ -201,7 +301,19 @@ export function convertDimension(
     const entity = buildDiameter(data, layer, index);
     return entity ? [entity] : [];
   }
+  if (variant === 'angular2L') {
+    const entity = buildAngular2L(data, layer, index);
+    return entity ? [entity] : [];
+  }
+  if (variant === 'angular3P') {
+    const entity = buildAngular3P(data, layer, index);
+    return entity ? [entity] : [];
+  }
+  if (variant === 'ordinate') {
+    const entity = buildOrdinate(data, layer, index);
+    return entity ? [entity] : [];
+  }
 
-  // Angular (2-line / 3-point) + ordinate — best-effort until Phase 2.
+  // Any remaining/unmapped variant → legacy text+line decomposition (no regression).
   return convertDimensionLegacy(data, layer, index, header, dimStyles);
 }
