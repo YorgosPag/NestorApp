@@ -10,6 +10,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 
 /** Ορθογώνιο ως local πλαίσιο. `u` = άξονας πλάτους, `v` = άξονας ύψους (μοναδιαία). Scene units. */
 export interface RectFrame {
@@ -80,4 +81,74 @@ export function isRectFootprint(fp: readonly Point2D[]): boolean {
   const ey = c1.y + c3.y - c0.y;
   const tol = 1e-6 * (1 + Math.abs(ex) + Math.abs(ey));
   return Math.abs(c2.x - ex) <= tol && Math.abs(c2.y - ey) <= tol;
+}
+
+/**
+ * ADR-508 §column-hud — **Οριζόμενο (oriented) περιβάλλον ορθογώνιο** ενός ΟΠΟΙΟΥΔΗΠΟΤΕ footprint
+ * (Γ/Τ/Π/Ι/πολύγωνο), προβάλλοντας τις κορυφές στους άξονες u=(cosθ,sinθ) / v=(−sinθ,cosθ) της
+ * `rotationDeg` (CCW). Επιστρέφει `RectFrame` (κέντρο = μέσο του oriented bbox, ημι-εκτάσεις κατά u/v)
+ * ώστε το HUD να τοποθετεί ∠γωνία/ύψος και τη διάμετρο πολυγώνου στο ΣΩΣΤΟ πλαίσιο (rotation-aware),
+ * όχι σε axis-aligned bbox. `null` σε άδειο footprint. Reuse του `rectLocalToWorld` για placement.
+ */
+export function orientedRectFrame(footprint: readonly Point2D[], rotationDeg: number): RectFrame | null {
+  if (footprint.length < 3) return null;
+  const rad = degToRad(rotationDeg);
+  const u: Point2D = { x: Math.cos(rad), y: Math.sin(rad) };
+  const v: Point2D = { x: -Math.sin(rad), y: Math.cos(rad) };
+  const o = footprint[0];
+  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+  for (const p of footprint) {
+    const du = p.x - o.x, dv = p.y - o.y;
+    const pu = du * u.x + dv * u.y;
+    const pv = du * v.x + dv * v.y;
+    if (pu < minU) minU = pu;
+    if (pu > maxU) maxU = pu;
+    if (pv < minV) minV = pv;
+    if (pv > maxV) maxV = pv;
+  }
+  const midU = (minU + maxU) / 2, midV = (minV + maxV) / 2;
+  return {
+    center: { x: o.x + midU * u.x + midV * v.x, y: o.y + midU * u.y + midV * v.y },
+    u, v, halfW: (maxU - minU) / 2, halfV: (maxV - minV) / 2,
+  };
+}
+
+/** Μία ακμή footprint με το **εξωτερικό** μοναδιαίο κάθετο (winding-aware) + μήκος (scene units). */
+export interface FootprintEdge {
+  readonly p1: Point2D;
+  readonly p2: Point2D;
+  /** Μοναδιαίο κάθετο που δείχνει προς το ΕΞΩΤΕΡΙΚΟ της ακμής (μακριά από το υλικό). */
+  readonly nx: number;
+  readonly ny: number;
+  /** Μήκος ακμής σε scene units. */
+  readonly lengthScene: number;
+}
+
+/**
+ * ADR-508 §column-hud — Οι ακμές ενός footprint με το **εξωτερικό** κάθετο κάθε ακμής, winding-aware:
+ * το πρόσημο του 2D shoelace δίνει τη φορά (CCW→interior αριστερά· εξωτερικό = (dy,−dx)), οπότε το
+ * κάθετο δείχνει σωστά «έξω» ακόμη και σε flipY-reversed winding ΚΑΙ σε κοίλες ακμές (Γ/Τ/Π: το
+ * εξωτερικό μιας εσωτερικής ακμής δείχνει μέσα στην εγκοπή = κενός χώρος). SSoT για το per-edge
+ * dimensioning του live HUD — μηδέν per-shape mapping (κάθε παράμετρος = μήκος ακμής). `<3` → `[]`.
+ */
+export function footprintEdges(footprint: readonly Point2D[]): FootprintEdge[] {
+  const n = footprint.length;
+  if (n < 3) return [];
+  let area2 = 0;
+  for (let i = 0; i < n; i++) {
+    const a = footprint[i], b = footprint[(i + 1) % n];
+    area2 += a.x * b.y - b.x * a.y;
+  }
+  const s = area2 >= 0 ? 1 : -1; // CCW→+1
+  const edges: FootprintEdge[] = [];
+  for (let i = 0; i < n; i++) {
+    const p1 = footprint[i], p2 = footprint[(i + 1) % n];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy);
+    if (!(len > 1e-9)) continue;
+    // Εξωτερικό κάθετο: για CCW = (dy,−dx)· s το διορθώνει για CW winding.
+    const nx = (s * dy) / len, ny = (s * -dx) / len;
+    edges.push({ p1, p2, nx, ny, lengthScene: len });
+  }
+  return edges;
 }

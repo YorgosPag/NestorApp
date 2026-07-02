@@ -21,8 +21,7 @@ import type {
   OverlayProjection,
 } from './unified-grip-types';
 import type { HotGripStep } from './wall-hot-grip-fsm';
-import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
-import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
+import { applyMoveConstraints, applyResizeConstraints } from '../../bim/grips/grip-move-constraints';
 
 // ── ADR-397 Σ3 — pure rotate-angle helpers (typed angle ⇄ world delta) ──
 
@@ -82,12 +81,14 @@ export function resolveLiveRotationFromCursor(
 /**
  * SSoT — the grip-drag translate delta (raw cursor delta → CAD constraints).
  *
- * `movesWhole` (Alt move-from-base / a `movesEntity` grip / a wall "move" hot-grip)
- * ⇒ ORTHO (F8) then SNAP-MODE step; a parametric RESIZE grip keeps its geometry and
- * gets only the step quantize. The commit path runs the identical functions, so
- * ghost == result. Shared by `buildDxfDragPreview` (React path) AND the live
- * synchronous grip ghost (`useGripGhostPreview`, ADR-040 Φ12) so both derive the
- * delta from the ONE effective-world SSoT identically — no divergent re-implementation.
+ * BOTH families get ORTHO (F8) axis-lock now (AutoCAD/Revit parity — F8 locks a grip
+ * STRETCH exactly as it locks a move): `movesWhole` (Alt move-from-base / a `movesEntity`
+ * grip / a wall "move" hot-grip) ⇒ `applyMoveConstraints` (ORTHO ⊕ F9 step ⊕ Shift fine);
+ * a parametric RESIZE grip ⇒ `applyResizeConstraints` (ORTHO ⊕ F9 step, no Shift fine).
+ * The commit path runs the identical functions, so ghost == result. Shared by
+ * `buildDxfDragPreview` (React path) AND the live synchronous grip ghost
+ * (`useGripGhostPreview`, ADR-040 Φ12) so both derive the delta from the ONE
+ * effective-world SSoT identically — no divergent re-implementation.
  */
 export function resolveGripTranslateDelta(
   anchorPos: Point2D,
@@ -95,7 +96,7 @@ export function resolveGripTranslateDelta(
   movesWhole: boolean,
 ): Point2D {
   const rawDelta = { x: world.x - anchorPos.x, y: world.y - anchorPos.y };
-  return movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
+  return movesWhole ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
 }
 
 export function buildDxfDragPreview(
@@ -111,10 +112,11 @@ export function buildDxfDragPreview(
   if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
   }
-  // ORTHO (F8) applies only when the WHOLE entity translates (Alt move-from-base /
-  // a `movesEntity` grip / a wall "move" hot-grip) — parametric resize grips keep
-  // their own geometry and get only SNAP-MODE step. SSoT via `resolveGripTranslateDelta`
-  // (the live ghost reuses the SAME helper, so ghost == commit by construction).
+  // ORTHO (F8) axis-locks BOTH a whole-entity translate (Alt move-from-base / a
+  // `movesEntity` grip / a wall "move" hot-grip → +Shift fine step) AND a parametric
+  // resize grip (corner/edge/vertex reshape → no Shift fine) — AutoCAD/Revit parity.
+  // SSoT via `resolveGripTranslateDelta` (the live ghost reuses the SAME helper, so
+  // ghost == commit by construction).
   const movesWhole = altMove || activeGrip.movesEntity === true || hotGripMove;
   const delta = resolveGripTranslateDelta(anchorPos, currentWorldPos, movesWhole);
   // ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point»: emit a parametric-

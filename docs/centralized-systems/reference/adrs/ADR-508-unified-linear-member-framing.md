@@ -106,6 +106,30 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-02 (§column-hud — live HUD σε ΟΛΟΥΣ τους τύπους κολόνας: Γ/Τ/Π/Ι/πολύγωνο/τοιχίο — pills retired)**
+  - **Αίτημα Giorgio**: οι υπόλοιποι τύποι (Γ/Τ/Π/Ι/πολύγωνο/τοιχίο) που έμεναν σε pills να πάρουν το ίδιο
+    πλούσιο HUD. Επιλογή (AskUserQuestion, concrete L-shape παράδειγμα): **Option Γ** — «ΟΛΕΣ οι
+    χαρακτηριστικές διαστάσεις μαζί».
+  - **Ρίζα (audit)**: το **τοιχίο (shear-wall)** χτίζει ήδη ορθογώνιο footprint → `isRectFootprint`=true →
+    **ήδη δούλευε** μέσω του rect path (+ pill ήδη κατεσταλμένο). Πραγματικά ακάλυπτα: **Γ/Τ/Π/Ι/πολύγωνο/
+    σύνθετο**.
+  - **Fix (FULL SSoT reuse, geometry-derived — μηδέν per-shape mapping)**:
+    - NEW pure `rect-frame.ts → orientedRectFrame(fp, rotationDeg)` (oriented bbox οποιουδήποτε footprint,
+      προβολή κορυφών σε u/v) + `footprintEdges(fp)` (ακμές με **εξωτερικό** μοναδιαίο κάθετο, winding-aware
+      μέσω 2D shoelace — σωστό «έξω» ακόμη & σε flipY-reversed winding ή κοίλες ακμές Γ/Τ/Π).
+    - `column-hud-paint.ts → paintColumnHud` dispatch (νέα signature `(ctx, footprint, params, …)`):
+      **Γ/Τ/Π/Ι/σύνθετο** → NEW `paintProfileColumnHud`: aligned διάσταση σε **ΚΑΘΕ ακμή** (κάθε υπο-διάσταση
+      arm/flange/web/leg = μήκος ακμής, exterior side) + `∠γωνία` + ύψος· **πολύγωνο** → NEW
+      `paintPolygonColumnHud`: `Ø` (περιγεγραμμένο = `params.width`) + `N` πλευρές + `∠` + ύψος. MIN
+      screen-length gate (anti-clutter). Κοινό `paintFrameAngleHeight` (∠+ύψος). Ίδιοι painters/χρώμα.
+    - `useGripDimAnnotation`: **αφαιρέθηκε πλήρως το column pill** (ΟΛΟΙ οι τύποι έχουν πλέον HUD → μηδέν
+      διπλή ένδειξη)· `isDimPreview` + draw callback ενεργοποιούνται μόνο για **δοκάρι + πέδιλο**·
+      `buildColumnLabel` + imports `applyColumnGripDrag`/`isColumnEntity`/`isRectFootprint`/`ColumnParams`
+      αποσύρθηκαν.
+  - **preview ≡ commit**: όλα από `transformed.geometry.footprint.vertices` (ίδιος μετασχηματισμός με ghost).
+  - **Tests**: `rect-frame.test.ts` +6 (orientedRectFrame axis/rotated/degenerate· footprintEdges μήκη/
+    εξωτερικά κάθετα CCW & CW· 15/15 πράσινα). 🔴 browser-verify ανά τύπο.
+
 - **2026-07-02 (§column-hud — live «λευκές ενδείξεις» ΚΑΙ στο σύρσιμο λαβών ΚΟΛΟΝΑΣ, parity με τον τοίχο)**
   - **Αίτημα Giorgio**: «ό,τι έκανες για τον τοίχο, εφάρμοσέ το και στην κολόνα — full SSoT.» Επιλογή (AskUserQuestion):
     «σαν τον τοίχο — διαστάσεις στις παρειές» (Option A).

@@ -8,9 +8,13 @@
  *            confirm «Μετατροπή / Κράτημα / Άκυρο».
  *   2. §5.6b τοιχίο με ασυνήθιστο πάχος (>1.5m) ή μήκος (>30m) → SOFT confirm
  *            «Συνέχεια / Άκυρο» (ΠΟΤΕ block — οι Ευρωκώδικες δεν ορίζουν μέγιστο).
- *   3. αλλιώς → κατευθείαν finalize (μηδέν dialog, μηδέν latency).
+ *   3. §5.6c ΓΕΝΙΚΟ: κάθε τύπος (Γ/Τ/Π/Ι/πολύγωνο/σύνθετη/τοιχίο) που εισάγει νέα
+ *            παραβίαση «σχέσης» διατομής (γεωμετρική εκφύλιση / λυγηρότητα / ρ) →
+ *            SOFT confirm «Συνέχεια / Άκυρο» (ΠΛΗΡΗΣ έλεγχος, incl. οπλισμό).
+ *   4. αλλιώς → κατευθείαν finalize (μηδέν dialog, μηδέν latency).
  *
  * @see ./column-aspect.ts (detector §5.6) · ./shear-wall-extents.ts (detector §5.6b)
+ * @see ./section-relationship-warning.ts (detector §5.6c — validator-driven, όλοι οι τύποι)
  */
 
 import type { ColumnParams } from '../types/column-types';
@@ -21,6 +25,9 @@ import {
 import { requestColumnBecomesWallConfirm } from './column-becomes-wall-confirm-store';
 import { detectShearWallExtentCrossing } from './shear-wall-extents';
 import { requestShearWallExtentConfirm } from './shear-wall-extent-confirm-store';
+import { detectColumnRelationshipWarning } from './section-relationship-warning';
+import { requestSectionRelationshipConfirm } from './section-relationship-confirm-store';
+import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 
 /**
  * Εφαρμόζει τους §5.6/§5.6b guards πάνω στη μετάβαση `prevParams → nextParams` και
@@ -47,6 +54,19 @@ export function runColumnEditGuards(
   const extent = detectShearWallExtentCrossing(prevParams, nextParams);
   if (extent) {
     void requestShearWallExtentConfirm(extent).then((action) => {
+      if (action === 'cancel') return;
+      finalize(nextParams);
+    });
+    return;
+  }
+  // §5.6c — ΓΕΝΙΚΟΣ έλεγχος «σχέσεων» για όλους τους τύπους (validator-driven). Στο release/commit
+  // τρέχει ΠΛΗΡΗΣ (includeReinforcement:true) — μία κλήση, ADR-040 safe (το live-ghost gate μένει φθηνό).
+  const relationship = detectColumnRelationshipWarning(prevParams, nextParams, {
+    includeReinforcement: true,
+    codeId: useStructuralSettingsStore.getState().codeId,
+  });
+  if (relationship) {
+    void requestSectionRelationshipConfirm(relationship).then((action) => {
       if (action === 'cancel') return;
       finalize(nextParams);
     });

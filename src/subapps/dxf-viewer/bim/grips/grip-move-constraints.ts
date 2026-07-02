@@ -8,10 +8,13 @@
  * identical to constraining the cursor relative to the move base point, so this
  * stays a pure, anchor-agnostic transform.
  *
- * This module deliberately covers **only the whole-entity move** paths. Parametric
- * resize grips (wall thickness, corner reshape, slab vertex, …) interpret their
- * delta in entity-local terms and must NOT be axis-locked here — they keep the
- * plain {@link applyGripStepSnap} step quantization.
+ * ORTHO covers BOTH constraint families (AutoCAD/Revit parity — F8 locks a grip
+ * STRETCH exactly as it locks a move):
+ *   - whole-entity MOVE → {@link applyMoveConstraints} (ORTHO ⊕ F9 step ⊕ Shift fine);
+ *   - parametric RESIZE grip (wall thickness, corner/edge reshape, slab vertex, …) →
+ *     {@link applyResizeConstraints} (ORTHO ⊕ F9 step, NO Shift fine — see below).
+ * The axis-lock is on the WORLD drag delta (the current UCS), so a rotated entity's
+ * grip locks to world H/V just like AutoCAD (local-frame lock = separate refinement).
  *
  * Pipeline order matches AutoCAD: **ORTHO first** (axis lock), **then SNAP-MODE
  * step** (F9 increment quantize), **then the Shift fine step** (a fixed 1 cm
@@ -108,4 +111,22 @@ export function applyOrthoToDelta(delta: Point2D): Point2D {
  */
 export function applyMoveConstraints(delta: Point2D): Point2D {
   return applyMoveFineStep(applyGripStepSnap(applyOrthoToDelta(delta)));
+}
+
+/**
+ * Parametric RESIZE-grip pipeline: ORTHO (F8) axis-lock first, then the SNAP-MODE
+ * (F9) step quantize. AutoCAD/Revit parity — dragging a corner/edge/vertex reshape
+ * grip with ORTHO armed locks the stretch to the world H/V axis, exactly as ORTHO
+ * locks a whole-entity move. The lock is on the WORLD delta (UCS behaviour), so a
+ * rotated entity's grip still locks to world H/V (same as AutoCAD).
+ *
+ * OMITS the Shift fine 1 cm step that {@link applyMoveConstraints} adds: for a resize
+ * grip Shift already carries a rectilinear-constraint meaning (`ShiftKeyTracker`
+ * consumers), so the move-increment must not hijack it. No-op vs the previous
+ * behaviour when ORTHO is OFF (`applyOrthoToDelta` returns the delta verbatim) →
+ * free reshape by default, axis-locked only while F8 is armed. Shared by the grip
+ * preview ghost + commit so ghost == result (WYSIWYG).
+ */
+export function applyResizeConstraints(delta: Point2D): Point2D {
+  return applyGripStepSnap(applyOrthoToDelta(delta));
 }

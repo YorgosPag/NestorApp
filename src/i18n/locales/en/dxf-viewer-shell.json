@@ -233,6 +233,12 @@
     "proceedButton": "Proceed",
     "cancel": "Cancel"
   },
+  "sectionRelationship": {
+    "title": "Section relationships out of range",
+    "message": "The new dimensions push the section outside its logical/code range. The big players don't block this — they just warn. Proceed?",
+    "proceedButton": "Proceed",
+    "cancel": "Cancel"
+  },
   "hatchOverlap": {
     "title": "Region already hatched",
     "message": "This region already has a hatch. Add another one on top?",

@@ -9,6 +9,7 @@
 import {
   applyOrthoToDelta,
   applyMoveConstraints,
+  applyResizeConstraints,
   applyMoveFineStep,
   applyMoveFineStepAboutAnchor,
   isMoveFineStepActive,
@@ -65,6 +66,34 @@ describe('grip-move-constraints (ORTHO on a move delta)', () => {
       cadToggleState.set(true, false);
       cadToggleState.setSnap(false, 0);
       expect(applyMoveConstraints({ x: 5, y: 90 })).toEqual({ x: 0, y: 90 });
+    });
+  });
+
+  describe('applyResizeConstraints — ORTHO on a RESIZE grip (AutoCAD parity, no Shift fine)', () => {
+    it('16. ORTHO OFF + SNAP OFF → verbatim (free reshape, regression)', () => {
+      cadToggleState.set(false, false);
+      cadToggleState.setSnap(false, 0);
+      expect(applyResizeConstraints({ x: 13, y: 27 })).toEqual({ x: 13, y: 27 });
+    });
+
+    it('17. ORTHO ON → axis-locked exactly like a move (|dx|>|dy| → y zeroed)', () => {
+      cadToggleState.set(true, false);
+      cadToggleState.setSnap(false, 0);
+      expect(applyResizeConstraints({ x: 90, y: 5 })).toEqual({ x: 90, y: 0 });
+    });
+
+    it('18. ORTHO ON → locks to Y when |dy|>|dx| (zeroes x)', () => {
+      cadToggleState.set(true, false);
+      cadToggleState.setSnap(false, 0);
+      expect(applyResizeConstraints({ x: 6, y: -70 })).toEqual({ x: 0, y: -70 });
+    });
+
+    it('19. IGNORES the Shift fine step (unlike applyMoveConstraints)', () => {
+      immediateSceneScale.set(1);
+      cadToggleState.set(false, false);
+      cadToggleState.setSnap(false, 0);
+      ShiftKeyTracker._setForTest(true); // Shift held → move would quantize to 10; resize must not
+      expect(applyResizeConstraints({ x: 47, y: -43 })).toEqual({ x: 47, y: -43 });
     });
   });
 

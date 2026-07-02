@@ -115,6 +115,32 @@ export function validateColumnParams(
   return { hardErrors, codeViolations, bimValidation };
 }
 
+/**
+ * ADR-363 §5.6c — SSoT collector των «σχέσεων» διατομής ΜΙΑΣ κολόνας ως ΕΝΙΑΙΑ λίστα i18n keys
+ * (hard + code μαζί), ξαναχρησιμοποιώντας ΑΚΡΙΒΩΣ τις ίδιες internal check-συναρτήσεις με το
+ * `validateColumnParams` → μηδέν αντιγραφή κανόνα ανά τύπο (Γ/Τ/Π/Ι/πολύγωνο/σύνθετη/τοιχίο).
+ *
+ * Το χρησιμοποιεί ο edit-time relationship-warning detector (`section-relationship-warning.ts`):
+ *   - `includeReinforcement: false` (default) → ΦΘΗΝΟ (γεωμετρία + λυγηρότητα). Ασφαλές για το
+ *     60fps live-ghost hot-path (ADR-040): ΔΕΝ αγγίζει τον βαρύ suggester οπλισμού.
+ *   - `includeReinforcement: true` → ΠΛΗΡΕΣ (incl. ρ min/max). Μόνο στο dialog-on-release (μία κλήση).
+ *
+ * Επιστρέφει ΟΛΑ τα keys που ισχύουν ΤΩΡΑ (όχι diff)· τη μετάβαση prev→next την κρίνει ο detector.
+ */
+export function collectColumnViolationKeys(
+  params: ColumnParams,
+  opts?: { includeReinforcement?: boolean; codeId?: StructuralCodeId },
+): string[] {
+  const keys: string[] = [];
+  // Ίδιο array για hard+code → ενιαία λίστα «σχέσεων εκτός εύρους» (ο detector δεν χρειάζεται τον διαχωρισμό).
+  validateDimensions(params, keys, keys);
+  validateHeight(params, keys);
+  validateVariantParams(params, keys, keys);
+  validateSlenderness(params, keys);
+  if (opts?.includeReinforcement) validateReinforcementRatio(params, opts.codeId, keys);
+  return keys;
+}
+
 // ─── Internal checks ────────────────────────────────────────────────────────
 
 function validateDimensions(

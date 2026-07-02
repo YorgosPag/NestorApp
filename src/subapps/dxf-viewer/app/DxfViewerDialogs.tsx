@@ -32,7 +32,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, ColumnBatchFillConfirmDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -142,6 +142,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-363 §5.6b — «Ασυνήθιστες διαστάσεις τοιχίου» (πάχος/μήκος) edit-time warn (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>
         <ShearWallExtentDialog />
+      </React.Suspense>
+      {/* ADR-363 §5.6c — «Σχέσεις διατομής εκτός εύρους» ΓΕΝΙΚΟ edit-time warn (όλοι οι τύποι, self-subscribing). */}
+      <React.Suspense fallback={hiddenFallback}>
+        <SectionRelationshipDialog />
       </React.Suspense>
       {/* ADR-524 — «Πολλαπλή πλήρωση όμοιων πλαισίων» confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>

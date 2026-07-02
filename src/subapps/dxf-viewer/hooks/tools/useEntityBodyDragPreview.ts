@@ -23,7 +23,13 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { EntityBodyDragStore } from '../../systems/drag/EntityBodyDragStore';
 import { applyEntityPreview, makeTranslationPreview } from '../../rendering/ghost';
-import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+// ADR-449 — LIVE finish-skin (σοβάς) preview during body-drag MOVE, reusing the SAME SSoT helpers
+// as the grip-resize path so the moving ghost + plaster silhouette cannot diverge between gestures.
+import {
+  drawMemberBodyGhostWithJoinMiter,
+  drawStructuralFinishSkinPreviewForSwaps,
+  isStructuralFinishMember,
+} from './grip-ghost-preview-draw-helpers';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ORTHO (F8) axis-lock — shared SSoT with the Move ghost (no-op when OFF).
@@ -116,7 +122,8 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
 
     // Live distance readout pill (anchor → destination).
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-    const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
+    const sceneUnits = resolveSceneUnits(scene);
+    const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), sceneUnits);
     const readoutMid = moveReadoutMid(anchorPt, cursorPt);
     drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
 
@@ -124,14 +131,33 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     ctx.save();
     const bimPreview = getBimPreview(ctx);
     const layers = getLayersById();
+    const sceneEntities = scene?.entities ?? [];
+    // ADR-449 — accumulate every moved member ghost (+ its mitered wall neighbours) so the
+    // finish-skin silhouette re-forms ONCE around all of them (single unified pass below).
+    const finishSwaps = new Map<string, { readonly id: string }>();
+    let hasStructuralMember = false;
     for (const id of entityIds) {
       const entity = getEntity(id);
       if (!entity) continue;
       const preview = makeTranslationPreview(id, delta);
       const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
-      drawRealEntityPreview(bimPreview, transformed, layers, t, viewport);
+      // Draw the member body ghost with its LIVE wall join-miter (SHARED SSoT with grip-resize).
+      const { ghost, neighbours } = drawMemberBodyGhostWithJoinMiter(
+        bimPreview, transformed, sceneEntities, sceneUnits, layers, t, viewport,
+      );
+      finishSwaps.set(ghost.id, ghost);
+      for (const n of neighbours) finishSwaps.set(n.id, n);
+      if (isStructuralFinishMember((transformed as { type?: string }).type)) hasStructuralMember = true;
     }
     ctx.restore();
+
+    // ADR-449 — LIVE σοβάς: after the member body ghosts, re-draw the merged finish-skin silhouette
+    // for the preview scene (all dragged members + mitered neighbours at their new positions) via the
+    // SAME committed scene-pass as the grip-resize path. No-op when «Σοβατισμένη όψη» is off (internal
+    // per-element gate). Mirrors the committed order (plaster after body).
+    if (scene && hasStructuralMember) {
+      drawStructuralFinishSkinPreviewForSwaps(ctx, sceneEntities, finishSwaps, t, viewport);
+    }
 
     // Copy cue — small green «+» near the cursor (AutoCAD/Revit copy affordance).
     if (copy) {

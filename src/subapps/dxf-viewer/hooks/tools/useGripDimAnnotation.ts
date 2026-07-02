@@ -1,14 +1,18 @@
 /**
- * ADR-363 Phase 4.5c.5 — Live dimension annotation during column/beam grip drag.
+ * ADR-363 Phase 4.5c.5 — Live dimension annotation during beam/foundation grip drag.
  *
  * Mirrors `useGripGhostPreview` (ADR-049): RAF-based, draws to PreviewCanvas,
  * no React re-renders inside this hook. Clears the annotation on drag end.
  *
- * When a dimensional column grip (width/depth/arm/flange) or beam grip
- * (width/depth) is dragged, a floating "w=350mm" label appears near the grip
- * handle on the preview canvas — Revit/AutoCAD live-dim convention.
+ * When a dimensional beam grip (width/length) or foundation grip is dragged, a
+ * floating "w=350mm" label appears near the grip handle on the preview canvas —
+ * Revit/AutoCAD live-dim convention.
  *
- * ADR-508 §wall-hud — ο ΤΟΙΧΟΣ ΔΕΝ χειρίζεται εδώ: το live Wall HUD (γωνία/μήκος/πάχος/ύψος)
+ * ADR-508 §wall-hud / §column-hud — ο ΤΟΙΧΟΣ και η ΚΟΛΟΝΑ (ΟΛΟΙ οι τύποι) ΔΕΝ χειρίζονται εδώ: το
+ * live HUD (γωνία/μήκος/πάχος/ύψος · per-edge/Ø/παρειές)
+ * ζωγραφίζεται στο ΙΔΙΟ RAF/frame με το grip ghost μέσα στο `useGripGhostPreview` (μετά το ghost,
+ * πριν το επόμενο clear) → ΣΤΑΘΕΡΟ, χωρίς race μεταξύ δύο ανεξάρτητων RAF leaves (αλλιώς τρεμοπαίζει).
+ *
  * ζωγραφίζεται στο ΙΔΙΟ RAF/frame με το grip ghost μέσα στο `useGripGhostPreview` (μετά το ghost,
  * πριν το επόμενο clear) → ΣΤΑΘΕΡΟ, χωρίς race μεταξύ δύο ανεξάρτητων RAF leaves (αλλιώς τρεμοπαίζει).
  *
@@ -33,16 +37,14 @@ import { useCallback } from 'react';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
-import type { ColumnParams } from '../../bim/types/column-types';
 import type { BeamParams } from '../../bim/types/beam-types';
 import type { FoundationParams } from '../../bim/types/foundation-types';
-import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
-import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
-// ADR-508 §column-hud — ορθογώνιες κολόνες παίρνουν το πλούσιο HUD (useGripGhostPreview)· εδώ κρατάμε
-// τα pills ΜΟΝΟ για μη-ορθογώνιες (κύκλος/Γ/Τ/Π) → μηδέν διπλή ένδειξη. Κοινό SSoT «είναι box;».
-import { isRectFootprint } from '../../bim/framing/rect-frame';
+import { isBeamEntity, isFoundationEntity } from '../../types/entities';
+// ADR-508 §column-hud — ΟΛΟΙ οι τύποι κολόνας (ορθογ./τοιχίο/κύκλος/πολύγωνο/Γ/Τ/Π/Ι/σύνθετο) παίρνουν
+// πλέον το πλούσιο live HUD στο `useGripGhostPreview` (per-edge/Ø/παρειές + ∠ + ύψος) → ΚΑΝΕΝΑ column
+// pill εδώ (μηδέν διπλή ένδειξη). Το pill μένει μόνο για δοκάρι + πέδιλο.
 import {
   PILL_DIM_FONT,
   PILL_TEXT_COLOR,
@@ -97,50 +99,6 @@ function drawLabelPill(
   ctx.textBaseline = 'top';
   ctx.fillText(text, x + PILL_PADDING, y + PILL_PADDING);
   ctx.restore();
-}
-
-function buildColumnLabel(
-  preview: DxfGripDragPreview,
-  originalParams: ColumnParams,
-): string | null {
-  const { columnGripKind } = preview;
-  if (!columnGripKind) return null;
-  if (columnGripKind === 'column-center' || columnGripKind === 'column-rotation') return null;
-
-  const p = applyColumnGripDrag(columnGripKind, { originalParams, delta: preview.delta });
-
-  switch (columnGripKind) {
-    case 'column-width':
-      return `w=${Math.round(p.width)}`;
-    case 'column-depth':
-      return `d=${Math.round(p.depth)}`;
-    // ADR-363 Slice C — rect/shear-wall corners are 2-DOF: show both dimensions.
-    case 'column-corner-ne':
-    case 'column-corner-nw':
-    case 'column-corner-sw':
-    case 'column-corner-se':
-      return `w=${Math.round(p.width)} d=${Math.round(p.depth)}`;
-    case 'column-arm-length':
-      return `al=${Math.round(p.lshape?.armLength ?? p.depth / 3)}`;
-    case 'column-arm-width':
-      return `aw=${Math.round(p.lshape?.armWidth ?? p.width / 3)}`;
-    case 'column-flange-length':
-      return `fl=${Math.round(p.tshape?.flangeLength ?? p.width)}`;
-    case 'column-web-thickness':
-      return `wt=${Math.round(p.tshape?.webThickness ?? p.depth / 3)}`;
-    case 'column-i-flange-thickness':
-      return `tf=${Math.round(p.ishape?.flangeThickness ?? 20)}`;
-    case 'column-i-web-thickness':
-      return `tw=${Math.round(p.ishape?.webThickness ?? 15)}`;
-    case 'column-leg-thickness':
-      return `lt=${Math.round(p.ushape?.legThickness ?? p.width / 4)}`;
-    case 'column-base-thickness':
-      return `bt=${Math.round(p.ushape?.baseThickness ?? p.depth / 3)}`;
-    default:
-      // ADR-363 Phase 2b — `column-poly-vertex-${n}` per-vertex drags show no
-      // scalar dimension label (the moved vertex is free-form).
-      return null;
-  }
 }
 
 function buildBeamLabel(
@@ -232,10 +190,11 @@ function buildFoundationLabel(
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
   const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
 
+  // ADR-508 §column-hud — ΜΟΝΟ δοκάρι + πέδιλο ενεργοποιούν το pill leaf· η κολόνα (ΟΛΟΙ οι τύποι)
+  // δείχνει πλέον το πλούσιο HUD στο `useGripGhostPreview`.
   const isDimPreview =
     dragPreview !== null &&
-    (dragPreview.columnGripKind !== undefined ||
-      dragPreview.beamGripKind !== undefined ||
+    (dragPreview.beamGripKind !== undefined ||
       dragPreview.foundationGripKind !== undefined);
 
   // cursorMode: 'none' — cursor comes via dragPreview.anchorPos + delta, not
@@ -249,8 +208,8 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     // the already-cleared canvas. Two clears in the same frame = label wipe.
     if (!dragPreview?.anchorPos) return;
 
-    const { columnGripKind, beamGripKind, foundationGripKind, anchorPos, delta, entityId } = dragPreview;
-    if (!columnGripKind && !beamGripKind && !foundationGripKind) return;
+    const { beamGripKind, foundationGripKind, anchorPos, delta, entityId } = dragPreview;
+    if (!beamGripKind && !foundationGripKind) return;
 
     const lid = levelManager.currentLevelId;
     if (!lid) return;
@@ -266,14 +225,7 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     const { x: sx, y: sy } = CoordinateTransforms.worldToScreen(gripWorld, t, viewport);
 
     let label: string | null = null;
-    if (columnGripKind && isColumnEntity(entity)) {
-      // ADR-508 §column-hud — ΟΡΘΟΓΩΝΙΑ & ΚΥΚΛΙΚΗ κολόνα → πλούσιο HUD (aligned dims / Ø) στο
-      // `useGripGhostPreview`· εδώ pill ΜΟΝΟ για Γ/Τ/Π/I/πολύγωνο (per-sub-dim feedback: arm/flange/leg).
-      const hasRichHud = isRectFootprint(entity.geometry.footprint.vertices) || entity.params.kind === 'circular';
-      if (!hasRichHud) {
-        label = buildColumnLabel(dragPreview, entity.params);
-      }
-    } else if (beamGripKind && isBeamEntity(entity)) {
+    if (beamGripKind && isBeamEntity(entity)) {
       label = buildBeamLabel(dragPreview, entity.params);
     } else if (foundationGripKind && isFoundationEntity(entity)) {
       label = buildFoundationLabel(dragPreview, entity.params);

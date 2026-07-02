@@ -43,8 +43,6 @@ import {
   drawGhostEntity,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
-// Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
-import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -62,11 +60,7 @@ import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity, isWallEntity, isColumnEntity } from '../../types/entities';
-// ADR-363 §wall-joint-miter-preview — LIVE join during rotate/move/reshape of a wall:
-// recompute the miter against neighbours (SAME SSoT as commit) so the future join shows.
-import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
-import type { ExtendedSceneEntity } from '../drawing/drawing-types';
+import { isLineEntity, isWallEntity } from '../../types/entities';
 import type { HatchEntity } from '../../types/entities';
 // ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
 // (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
@@ -94,6 +88,8 @@ import {
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
+  drawMemberBodyGhostWithJoinMiter,
+  isStructuralFinishMember,
   drawColumnAspectWallWarning,
   drawMemberGripHud,
 } from './grip-ghost-preview-draw-helpers';
@@ -345,45 +341,20 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
       const bimPreview = getBimPreview(ctx);
       const layersById = getLayersById();
-      // ADR-363 §wall-joint-miter-preview — LIVE future join while rotating/moving/reshaping a
-      // WALL: recompute the miter against the level's OTHER walls (same computeWallTrims SSoT as
-      // commit → preview === commit). The ghost gets its NEW miter and each affected neighbour is
-      // drawn mitered FIRST (underneath), so the user sees exactly how the corner will close. The
-      // stale stored miter was already stripped in `applyEntityPreview` (nominal rect) → here it is
-      // re-formed live. No-op for non-wall / curved / no-near-wall (`applyJointMiterPreview`).
-      // ADR-449 — the live finish-skin (σοβάς) preview re-forms the merged silhouette around
-      // the dragged member's new position; hoisted so column/beam (not just wall) can use it.
+      // ADR-363 §wall-joint-miter-preview / ADR-449 — draw the moving member body ghost with its
+      // LIVE wall join-miter (neighbours mitered underneath, ghost on top), re-forming the future
+      // corner exactly as it will close on commit. Columns/beams have no join → drawn as-is. The
+      // returned ghost + neighbours feed the finish-skin silhouette below. SHARED SSoT helper with
+      // the body-drag MOVE path (`useEntityBodyDragPreview`) so the two gestures cannot diverge.
       const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      let wallGhostToDraw = transformed;
-      const draggedType = (transformed as { type?: string }).type;
-      // Walls also contribute mitered neighbours (jointNeighbors) to the finish swap set;
-      // columns/beams have no join preview, so their neighbour set stays empty.
-      let finishPreviewNeighbours: readonly ExtendedSceneEntity[] = [];
-      if (draggedType === 'wall') {
-        const wallsForJoin = (joinScene?.entities ?? []).filter(isWallEntity);
-        // ADR-363 §wall-column-end-miter — live trapezoidal cut of the moving wall END on a
-        // column face (same SSoT as commit): column footprints of the level.
-        const columnFootprintsForJoin = (joinScene?.entities ?? [])
-          .filter(isColumnEntity)
-          .map((c) => c.geometry.footprint.vertices);
-        const augmented = applyJointMiterPreview(
-          transformed as unknown as ExtendedSceneEntity, wallsForJoin, columnFootprintsForJoin, resolveSceneUnits(joinScene),
-        );
-        if (augmented) {
-          const neighbors = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
-          for (const n of neighbors) {
-            drawRealEntityPreview(bimPreview, n as unknown as DxfEntityUnion, layersById, t, vp);
-          }
-          wallGhostToDraw = augmented as unknown as DxfEntityUnion;
-          finishPreviewNeighbours = neighbors;
-        }
-      }
-      drawRealEntityPreview(bimPreview, wallGhostToDraw, layersById, t, vp);
+      const { ghost: wallGhostToDraw, neighbours: finishPreviewNeighbours } = drawMemberBodyGhostWithJoinMiter(
+        bimPreview, transformed, joinScene?.entities ?? [], resolveSceneUnits(joinScene), layersById, t, vp,
+      );
       // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
       // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
       // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
       // is off (internal per-element gate). Mirrors the committed order (plaster after body).
-      if (joinScene && (draggedType === 'wall' || draggedType === 'column' || draggedType === 'beam')) {
+      if (joinScene && isStructuralFinishMember((transformed as { type?: string }).type)) {
         drawStructuralFinishSkinPreview(
           ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
         );

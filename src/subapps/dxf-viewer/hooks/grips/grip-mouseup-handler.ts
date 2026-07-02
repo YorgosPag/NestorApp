@@ -15,7 +15,7 @@ import { resolveHotGripMouseUp } from './wall-hot-grip-fsm';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 import { commitHotGripCopy } from './grip-parametric-commits';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
-import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
+import { applyMoveConstraints, applyResizeConstraints } from '../../bim/grips/grip-move-constraints';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 // ADR-501 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
@@ -103,10 +103,10 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // move / corner — needs an anchor (base point / grip position).
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // ORTHO (F8) locks a "move" hot-grip to the H/V axis; corner reshape keeps its
-      // own geometry. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
+      // ORTHO (F8) locks BOTH a "move" hot-grip AND a corner reshape to the H/V axis
+      // (AutoCAD/Revit parity). SNAP-MODE (F9) step then quantizes (both no-op when OFF).
       const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      const delta: Point2D = hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
+      const delta: Point2D = hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
       // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
       // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
       // translating it. Dispatched entity-agnostically (wall-midpoint /
@@ -141,12 +141,13 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
         resetToIdle();
         return true;
       }
-      // ORTHO (F8) locks the displacement to the H/V axis when the WHOLE entity
-      // translates (a `movesEntity` grip or an Alt move-from-base-point); parametric
-      // resize grips skip it. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
+      // ORTHO (F8) locks the displacement to the H/V axis for BOTH a whole-entity
+      // translate (a `movesEntity` grip or an Alt move-from-base-point → +Shift fine)
+      // AND a parametric resize grip (corner/edge/vertex reshape → no Shift fine),
+      // AutoCAD/Revit parity. SNAP-MODE (F9) step then quantizes (all no-op when OFF).
       const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
       const movesWhole = activeGrip.movesEntity === true || GripAltMoveStore.getActive();
-      const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
+      const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
       commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       // The override is a per-drag modifier — clear it at commit so the
       // next drag starts from the natural grip anchor.

@@ -13,16 +13,25 @@
  * @see ADR-363 / ADR-507 / ADR-543 — the individual readout/co-move behaviours
  */
 
-import type { ViewTransform } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
-import { isLineEntity, isColumnEntity } from '../../types/entities';
+import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
+import { isLineEntity, isColumnEntity, isWallEntity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
+// ADR-449 — the moving member body ghost renders through the REAL entity renderer (WYSIWYG),
+// and a wall additionally re-forms its live join-miter (same SSoT as commit + resize).
+import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
+import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
+import type { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
+import type { ExtendedSceneEntity } from '../drawing/drawing-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-363 §5.6/§5.6b — live 🟠 warning outline όσο το grip-drag κρατά κολόνα σε σχέσεις τοιχίου (aspect>4)
 // Ή τοιχίο σε ασυνήθιστο πάχος/μήκος.
 import { detectRectColumnBecomesWall } from '../../bim/columns/column-aspect';
 import { detectShearWallExtentCrossing } from '../../bim/columns/shear-wall-extents';
+// ADR-363 §5.6c — ΓΕΝΙΚΟ live 🟠 gate για ΟΛΟΥΣ τους τύπους (Γ/Τ/Π/Ι/πολύγωνο). Φθηνό (includeReinforcement
+// default false) → ασφαλές για το 60fps hot-path (ADR-040): ΔΕΝ αγγίζει τον βαρύ suggester οπλισμού.
+import { detectColumnRelationshipWarning } from '../../bim/columns/section-relationship-warning';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { buildCoincidentPartnerGhostEntities } from '../../systems/stretch/coincident-endpoint-comove';
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
@@ -181,13 +190,16 @@ export function drawComovePartnerGhosts(
 }
 
 /**
- * ADR-363 §5.6/§5.6b — LIVE 🟠 warning outline κατά το grip-drag κολόνας/τοιχίου: ζωγραφίζει το
+ * ADR-363 §5.6/§5.6b/§5.6c — LIVE 🟠 warning outline κατά το grip-drag κολόνας/τοιχίου: ζωγραφίζει το
  * περίγραμμα του φαντάσματος **πορτοκαλί** (ΟΧΙ κόκκινο — δεν είναι απαγορευτικό, απλώς προειδοποιεί)
  * όταν το τραβηγμένο σχήμα:
  *   §5.6  — ορθογώνια κολόνα περνά το κατώφλι κολόνα→τοιχίο (rounded aspect > 4, EC2 §9.6.1), ή
- *   §5.6b — τοιχίο ξεπερνά ασυνήθιστο πάχος (>1.5m) / μήκος (>30m).
- * Μένει όσο ισχύει η υπέρβαση· χάνεται μόλις επανέλθει στο τυπικό. Ταυτίζεται 1:1 με τα dialog-on-release
- * (ΙΔΙΑ gates `detectRectColumnBecomesWall` / `detectShearWallExtentCrossing`). Πάνω από το body ghost.
+ *   §5.6b — τοιχίο ξεπερνά ασυνήθιστο πάχος (>1.5m) / μήκος (>30m), ή
+ *   §5.6c — ΟΠΟΙΟΣΔΗΠΟΤΕ τύπος (Γ/Τ/Π/Ι/πολύγωνο/σύνθετη/τοιχίο) εισάγει νέα παραβίαση «σχέσης»
+ *           διατομής (γεωμετρική εκφύλιση / λυγηρότητα — φθηνό gate, ΧΩΡΙΣ οπλισμό, ADR-040 hot-path safe).
+ * Μένει όσο ισχύει η υπέρβαση· χάνεται μόλις επανέλθει στο τυπικό. Ταυτίζεται με τα dialog-on-release
+ * (ΙΔΙΑ gates· το §5.6c ghost χρησιμοποιεί το φθηνό subset — ο πλήρης έλεγχος-incl-οπλισμό ζει στο dialog).
+ * Πάνω από το body ghost.
  */
 export function drawColumnAspectWallWarning(
   ctx: CanvasRenderingContext2D,
@@ -199,7 +211,8 @@ export function drawColumnAspectWallWarning(
   if (!isColumnEntity(original) || !isColumnEntity(transformed)) return;
   const warn =
     detectRectColumnBecomesWall(original.params, transformed.params) !== null ||
-    detectShearWallExtentCrossing(original.params, transformed.params) !== null;
+    detectShearWallExtentCrossing(original.params, transformed.params) !== null ||
+    detectColumnRelationshipWarning(original.params, transformed.params) !== null;
   if (!warn) return;
   const verts = transformed.geometry?.footprint?.vertices ?? [];
   if (verts.length < 2) return;
@@ -237,7 +250,28 @@ export function buildFinishSkinPreviewEntities<E extends { readonly id: string }
   const byId = new Map<string, E>();
   byId.set(ghostWall.id, ghostWall);
   for (const n of neighbours) byId.set(n.id, n);
-  return sceneEntities.map((e) => byId.get(e.id) ?? e);
+  return buildFinishSkinPreviewEntitiesFromSwaps(sceneEntities, byId);
+}
+
+/**
+ * ADR-449 — swap-map variant of {@link buildFinishSkinPreviewEntities} for a MULTI-member
+ * drag (body-drag can move several BIM members at once): replace every scene entity whose id
+ * is in `swaps` (dragged members + their mitered neighbours) with its preview version, keeping
+ * stationary entities by reference. One unified preview scene → ONE merged silhouette pass.
+ */
+export function buildFinishSkinPreviewEntitiesFromSwaps<E extends { readonly id: string }>(
+  sceneEntities: readonly E[],
+  swaps: ReadonlyMap<string, E>,
+): E[] {
+  return sceneEntities.map((e) => swaps.get(e.id) ?? e);
+}
+
+/** ADR-449 — structural member types that carry a finish-skin (σοβάς): wall / column / beam. */
+const STRUCTURAL_FINISH_MEMBER_TYPES: ReadonlySet<string> = new Set(['wall', 'column', 'beam']);
+
+/** ADR-449 — true when the dragged entity type carries a finish-skin (gate for the σοβά preview). */
+export function isStructuralFinishMember(type: string | undefined): boolean {
+  return type !== undefined && STRUCTURAL_FINISH_MEMBER_TYPES.has(type);
 }
 
 /**
@@ -269,6 +303,74 @@ export function drawStructuralFinishSkinPreview(
 }
 
 /**
+ * ADR-449 — MULTI-member variant of {@link drawStructuralFinishSkinPreview}: one unified merged
+ * silhouette pass over the whole scene with EVERY dragged member (+ its mitered neighbours,
+ * accumulated in `swaps`) swapped to its preview position. Used by the body-drag MOVE path where
+ * several BIM members can move together — calling the single-member draw once per member would
+ * paint the plaster N times with only one member displaced each time. No-op via the internal gate
+ * when «Σοβατισμένη όψη» is off. ADR-040: pure draw.
+ */
+export function drawStructuralFinishSkinPreviewForSwaps(
+  ctx: CanvasRenderingContext2D,
+  sceneEntities: readonly { readonly id: string }[],
+  swaps: ReadonlyMap<string, { readonly id: string }>,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  const preview = buildFinishSkinPreviewEntitiesFromSwaps(sceneEntities, swaps);
+  drawStructuralFinishSkin2D(ctx, preview as unknown as readonly DxfEntityUnion[], t, vp);
+}
+
+/** ADR-449 — the mitred ghost + neighbour ghosts a member body-preview drew (feed to the σοβά swap). */
+export interface MemberGhostPreviewResult {
+  /** The drawn member ghost — join-mitred for a wall, otherwise the input `transformed`. */
+  readonly ghost: DxfEntityUnion;
+  /** Mitred neighbour wall ghosts already drawn underneath — also part of the finish-skin swap. */
+  readonly neighbours: readonly ExtendedSceneEntity[];
+}
+
+/**
+ * ADR-363 §wall-joint-miter-preview / ADR-550 — draw ONE moving structural-member body ghost through
+ * the REAL entity renderer (WYSIWYG), re-forming a wall's LIVE join-miter against the scene first
+ * (same `applyJointMiterPreview` SSoT as commit): affected neighbours are drawn mitered UNDERNEATH,
+ * then the (possibly mitred) member ghost on top. Columns/beams have no join → drawn as-is.
+ *
+ * Shared by BOTH the grip-resize path (`useGripGhostPreview`) and the body-drag MOVE path
+ * (`useEntityBodyDragPreview`) so the moving ghost — and the finish-skin silhouette fed from its
+ * returned ghost+neighbours — cannot diverge between the two gestures. ADR-040: pure draw.
+ */
+export function drawMemberBodyGhostWithJoinMiter(
+  bimPreview: BimPreviewRenderer,
+  transformed: DxfEntityUnion,
+  sceneEntities: readonly AnySceneEntity[],
+  sceneUnits: SceneUnits,
+  layersById: Record<string, SceneLayer> | undefined,
+  t: ViewTransform,
+  vp: Viewport,
+): MemberGhostPreviewResult {
+  let ghost = transformed;
+  let neighbours: readonly ExtendedSceneEntity[] = [];
+  if ((transformed as { type?: string }).type === 'wall') {
+    const wallsForJoin = sceneEntities.filter(isWallEntity);
+    const columnFootprintsForJoin = sceneEntities
+      .filter(isColumnEntity)
+      .map((c) => c.geometry.footprint.vertices);
+    const augmented = applyJointMiterPreview(
+      transformed as unknown as ExtendedSceneEntity, wallsForJoin, columnFootprintsForJoin, sceneUnits,
+    );
+    if (augmented) {
+      neighbours = (augmented as { jointNeighbors?: readonly ExtendedSceneEntity[] }).jointNeighbors ?? [];
+      for (const n of neighbours) {
+        drawRealEntityPreview(bimPreview, n as unknown as DxfEntityUnion, layersById, t, vp);
+      }
+      ghost = augmented as unknown as DxfEntityUnion;
+    }
+  }
+  drawRealEntityPreview(bimPreview, ghost, layersById, t, vp);
+  return { ghost, neighbours };
+}
+
+/**
  * ADR-508 §wall-hud/§column-hud — grip kinds ΧΩΡΙΣ live HUD (καθαρή μετακίνηση / περιστροφή που έχει
  * δική της ένδειξη). Τα `*-poly-vertex-*` (free-form) εξαιρούνται χωριστά (startsWith).
  */
@@ -281,7 +383,8 @@ const MEMBER_HUD_SKIP: ReadonlySet<string> = new Set([
  * ζωγραφισμένες στο **ΙΔΙΟ frame/RAF** με το grip ghost (ο caller το καλεί ΜΕΤΑ το ghost draw) → ΣΤΑΘΕΡΕΣ,
  * χωρίς race με ξεχωριστό leaf. **FULL SSoT** — ΙΔΙΟΙ painters/formatters με τη σχεδίαση:
  *   · τοίχος → `buildSegmentHudMeta` + `paintWallHud` (μήκος/γωνία/πάχος·ύψος)·
- *   · ορθογώνια κολόνα → `paintColumnHud` (πλάτος/βάθος στις παρειές + ∠γωνία + ύψος· no-op σε κύκλο/Γ/Τ/Π).
+ *   · κολόνα (ΟΛΟΙ οι τύποι) → `paintColumnHud` (ορθογ./τοιχίο: παρειές· κύκλος: Ø· πολύγωνο: Ø+N·
+ *     Γ/Τ/Π/Ι/σύνθετο: aligned δ. ανά ακμή· + ∠γωνία + ύψος). Το per-sub-dim pill αποσύρθηκε.
  * Μόνο σε λαβές αλλαγής διαστάσεων (skip move/rotate/poly-vertex). No-op σε μηδενική αλλαγή (`changed=false`).
  */
 export function drawMemberGripHud(
@@ -306,6 +409,6 @@ export function drawMemberGripHud(
     !dp.columnGripKind.startsWith('column-poly-vertex-') && type === 'column'
   ) {
     const c = transformed as unknown as ColumnEntity;
-    paintColumnHud(ctx, c.geometry.footprint.vertices, c.params.rotation, c.params.kind, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
+    paintColumnHud(ctx, c.geometry.footprint.vertices, c.params, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
   }
 }

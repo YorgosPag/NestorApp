@@ -9,6 +9,8 @@ import {
   rectWorldToLocal,
   rectDirToWorld,
   isRectFootprint,
+  orientedRectFrame,
+  footprintEdges,
 } from '../rect-frame';
 import type { Point2D } from '../../../rendering/types/Types';
 
@@ -80,5 +82,60 @@ describe('isRectFootprint — classifier', () => {
       return { x: 200 * Math.cos(a), y: 200 * Math.sin(a) };
     });
     expect(isRectFootprint(circle)).toBe(false);
+  });
+});
+
+/** Γ-σχήμα CCW (ίδιο vertex order με το buildLshapeLocal): width=600, depth=600, arm=200. */
+const L_CCW: Point2D[] = [
+  { x: -300, y: -300 }, { x: 300, y: -300 }, { x: 300, y: -100 },
+  { x: -100, y: -100 }, { x: -100, y: 300 }, { x: -300, y: 300 },
+];
+
+describe('orientedRectFrame — oriented bbox οποιουδήποτε footprint', () => {
+  it('Γ-σχήμα @0° → κέντρο (0,0), ημι-εκτάσεις 300×300, u=(1,0)/v=(0,1)', () => {
+    const f = orientedRectFrame(L_CCW, 0)!;
+    expect(f).not.toBeNull();
+    expect(f.center.x).toBeCloseTo(0);
+    expect(f.center.y).toBeCloseTo(0);
+    expect(f.halfW).toBeCloseTo(300);
+    expect(f.halfV).toBeCloseTo(300);
+    expect(f.u.x).toBeCloseTo(1);
+    expect(f.v.y).toBeCloseTo(1);
+  });
+
+  it('λοξό τετράγωνο @30° → tight oriented bbox (ημι = s/2, όχι διεσταλμένο axis-aligned)', () => {
+    const f = orientedRectFrame(rotSquare(200, 5, -7, 30), 30)!;
+    expect(f.halfW).toBeCloseTo(100);
+    expect(f.halfV).toBeCloseTo(100);
+    expect(f.center.x).toBeCloseTo(5);
+    expect(f.center.y).toBeCloseTo(-7);
+  });
+
+  it('εκφυλισμένο (<3 κορυφές) → null', () => {
+    expect(orientedRectFrame([{ x: 0, y: 0 }, { x: 1, y: 1 }], 0)).toBeNull();
+  });
+});
+
+describe('footprintEdges — per-edge outward normals (winding-aware)', () => {
+  it('Γ-σχήμα CCW → 6 ακμές, σωστά μήκη + εξωτερικά κάθετα', () => {
+    const edges = footprintEdges(L_CCW);
+    expect(edges.map((e) => Math.round(e.lengthScene))).toEqual([600, 200, 400, 400, 200, 600]);
+    // κάτω ακμή (v0→v1) → κάθετο προς −y (έξω = κάτω)
+    expect(edges[0].nx).toBeCloseTo(0);
+    expect(edges[0].ny).toBeCloseTo(-1);
+    // αριστερή ακμή (v5→v0) → κάθετο προς −x
+    expect(edges[5].nx).toBeCloseTo(-1);
+    expect(edges[5].ny).toBeCloseTo(0);
+  });
+
+  it('αντεστραμμένο winding (CW) → ΙΔΙΑ εξωτερικά κάθετα (κάτω ακμή πάντα −y)', () => {
+    const cw = [...L_CCW].reverse();
+    const edges = footprintEdges(cw);
+    const bottom = edges.find((e) => Math.abs(e.p1.y + 300) < 1e-6 && Math.abs(e.p2.y + 300) < 1e-6)!;
+    expect(bottom.ny).toBeCloseTo(-1); // εξωτερικό κάτω, ανεξάρτητα winding
+  });
+
+  it('εκφυλισμένο (<3) → []', () => {
+    expect(footprintEdges([{ x: 0, y: 0 }, { x: 1, y: 0 }])).toEqual([]);
   });
 });
