@@ -46,6 +46,19 @@ export const HOME_DIMENSIONS_PANEL: RibbonPanelDef = {
             { id: 'dim.angular2L', labelKey: 'ribbon.commands.dimVariants.angular2L', icon: 'dim-angular2L', commandKey: 'dim-angular2L' },
           ],
         },
+        // ADR-563 — «Αυτόματη Διαστασιολόγηση»: one-shot ACTION (not a ToolType) →
+        // opens the options dialog, then auto-places perimeter dimensions.
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'dim.auto',
+            labelKey: 'ribbon.commands.autoDimension',
+            icon: 'dim-auto',
+            commandKey: 'auto-dimension',
+            action: 'auto-dimension',
+          },
+        },
       ],
     },
   ],

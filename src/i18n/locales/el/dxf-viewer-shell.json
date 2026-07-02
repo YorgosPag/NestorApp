@@ -270,6 +270,28 @@
     "fillAll": "Ναι, σε όλα",
     "cancel": "Όχι"
   },
+  "autoDimension": {
+    "dialog": {
+      "title": "Αυτόματη Διαστασιολόγηση",
+      "tiersLegend": "Σειρές διαστάσεων",
+      "tierDetail": "Ανοίγματα / επιμέρους",
+      "tierAxes": "Άξονες (τοίχος↔τοίχος)",
+      "tierOverall": "Ολική διάσταση",
+      "sidesLegend": "Πλευρές",
+      "sideSouth": "Κάτω (Νότος)",
+      "sideNorth": "Πάνω (Βορράς)",
+      "sideWest": "Αριστερά (Δύση)",
+      "sideEast": "Δεξιά (Ανατολή)",
+      "basisLegend": "Βάση αναφοράς",
+      "basisSmart": "Έξυπνη (ανά τύπο)",
+      "basisFaces": "Όψεις (παρειές)",
+      "basisAxes": "Άξονες / κέντρα",
+      "includeOpenings": "Συμπερίληψη ανοιγμάτων (κέντρα)",
+      "distance": "Απόσταση μεταξύ σειρών (mm)",
+      "apply": "Εφαρμογή",
+      "cancel": "Άκυρο"
+    }
+  },
   "dxfSymbolDetect": {
     "title": "Εντοπίστηκε κούφωμα ({index}/{total})",
     "messageDoor": "Πόρτα {width} m, μεντεσές {hinge}, άνοιγμα {dir} — να προστεθεί στον τοίχο;",
@@ -3585,6 +3607,7 @@
         "auto": "Αυτόματη Εμβαδομέτρηση"
       },
       "dim": "Διάσταση",
+      "autoDimension": "Αυτόματη Διαστασιολόγηση",
       "dimVariants": {
         "smart": "Έξυπνη Διάσταση",
         "linear": "Γραμμική",

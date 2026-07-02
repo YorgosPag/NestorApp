@@ -288,7 +288,10 @@ export type DimensionAssociationType =
   | 'midpoint'
   | 'center'
   | 'intersection'
-  | 'nearest';
+  | 'nearest'
+  // ADR-563 Φ2 — auto-dimension anchor to a BIM host's 2D bbox extent, locked to
+  // the parent dimension's measured axis (perpendicular component preserved).
+  | 'bimExtent';
 
 /** Single anchor: which defPoint follows which geometry. */
 export interface DimensionAssociation {
@@ -318,6 +321,19 @@ export interface DimensionAssociation {
   readonly geometryId2?: string;
   /** Sub-element index of the `geometryId2` host (vertex / segment), if any. */
   readonly subIndex2?: number;
+  /**
+   * ADR-563 Φ2 — for `bimExtent` associations only: which axis the parent dim
+   * measures (`x` for N/S horizontal chains, `y` for E/W vertical chains) and
+   * which extent of the host's current 2D bbox this def point rides. On host
+   * geometry change the recompute reads the host's `calculateBimEntity2DBounds`,
+   * takes `edge` on `axis`, and preserves the perpendicular component of the
+   * current def point (so the extension baseline stays put while the measured
+   * coordinate follows the wall/column/foundation).
+   */
+  readonly bimAnchor?: {
+    readonly axis: 'x' | 'y';
+    readonly edge: 'min' | 'max' | 'center';
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

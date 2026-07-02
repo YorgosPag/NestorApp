@@ -52,6 +52,8 @@ export const ShearWallExtentDialog = React.lazy(() => import('../ui/dialogs/Shea
 export const SectionRelationshipDialog = React.lazy(() => import('../ui/dialogs/SectionRelationshipDialog').then(mod => ({ default: mod.SectionRelationshipDialog })));
 // ADR-524 — «Πολλαπλή πλήρωση όμοιων πλαισίων» confirm dialog (self-subscribing, zero props)
 export const ColumnBatchFillConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnBatchFillConfirmDialog').then(mod => ({ default: mod.ColumnBatchFillConfirmDialog })));
+// ADR-563 — «Αυτόματη Διαστασιολόγηση» options dialog (self-subscribing, zero props)
+export const AutoDimensionOptionsDialog = React.lazy(() => import('../ui/dialogs/AutoDimensionOptionsDialog').then(mod => ({ default: mod.AutoDimensionOptionsDialog })));
 // ADR-533 — «Ανίχνευση συμβόλου κουφώματος σε τοίχο» confirm dialog (self-subscribing, zero props)
 export const DxfSymbolDetectConfirmDialog = React.lazy(() => import('../ui/dialogs/DxfSymbolDetectConfirmDialog').then(mod => ({ default: mod.DxfSymbolDetectConfirmDialog })));
 // ADR-529 — «Προαγωγή γωνιακής κολόνας σε Γ (boundary element)» confirm dialog (self-subscribing, zero props)

@@ -37,6 +37,8 @@ import {
 } from '../../types/entities';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveIntersectionDefPoint } from './dim-intersection-resolver';
+// ADR-563 Φ2 — BIM host bbox→2D SSoT, reused for `bimExtent` re-projection.
+import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 
 /**
  * Optional context for `recomputeAssociatedDefPoint` — only the `intersection`
@@ -172,6 +174,24 @@ export function recomputeAssociatedDefPoint(
         e2raw as unknown as Entity,
         ctx?.currentDefPoint ?? null,
       );
+    }
+
+    case 'bimExtent': {
+      // ADR-563 Φ2 — auto-dimension anchor to a BIM host's 2D bbox extent,
+      // locked to the parent dim's measured axis. Reuses the bbox→2D SSoT so
+      // the follow-on-move matches exactly how the extraction picked the point.
+      const anchor = assoc.bimAnchor;
+      if (!anchor) return null;
+      const bounds = calculateBimEntity2DBounds(e);
+      if (!bounds) return null;
+      const lo = anchor.axis === 'x' ? bounds.min.x : bounds.min.y;
+      const hi = anchor.axis === 'x' ? bounds.max.x : bounds.max.y;
+      const coord = anchor.edge === 'min' ? lo : anchor.edge === 'max' ? hi : (lo + hi) / 2;
+      // Update only the measured axis; keep the perpendicular (extension baseline).
+      const current = ctx?.currentDefPoint ?? null;
+      return anchor.axis === 'x'
+        ? { x: coord, y: current?.y ?? 0 }
+        : { x: current?.x ?? 0, y: coord };
     }
 
     default: {

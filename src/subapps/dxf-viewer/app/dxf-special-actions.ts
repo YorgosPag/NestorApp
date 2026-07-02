@@ -37,6 +37,8 @@ import {
 import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
 // ADR-391 — open AdminLayerManager dialog via store SSoT
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
+// ADR-563 — auto-dimension command flow (dialog → engine → batch commit)
+import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
 
 /** Deps for the special-action dispatcher (read at event time). */
 export interface DxfSpecialActionDeps {
@@ -104,6 +106,13 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // ADR-391: Open AdminLayerManager modal dialog (Revit View > Layer Manager pattern)
   if (action === 'open-layer-manager') {
     AdminLayerManagerDialogStore.open();
+    return true;
+  }
+  // ADR-563: «Αυτόματη Διαστασιολόγηση» — open options dialog, then auto-place
+  // perimeter dimensions over the selection (or whole plan). Selection-driven;
+  // levelManager satisfies SceneAppendAccessor (scene read + undoable batch commit).
+  if (action === 'auto-dimension') {
+    void runAutoDimensionFlow(levelManager, selectedEntityIds);
     return true;
   }
   // ADR-396 P6: Open Thermal Envelope (ETICS) authoring dialog (ThermalEnvelopeHost listens)

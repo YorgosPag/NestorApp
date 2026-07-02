@@ -270,6 +270,28 @@
     "fillAll": "Yes, all of them",
     "cancel": "No"
   },
+  "autoDimension": {
+    "dialog": {
+      "title": "Auto Dimension",
+      "tiersLegend": "Dimension rows",
+      "tierDetail": "Openings / individual",
+      "tierAxes": "Axes (wall↔wall)",
+      "tierOverall": "Overall dimension",
+      "sidesLegend": "Sides",
+      "sideSouth": "Bottom (South)",
+      "sideNorth": "Top (North)",
+      "sideWest": "Left (West)",
+      "sideEast": "Right (East)",
+      "basisLegend": "Reference basis",
+      "basisSmart": "Smart (per type)",
+      "basisFaces": "Faces",
+      "basisAxes": "Axes / centers",
+      "includeOpenings": "Include openings (centers)",
+      "distance": "Distance between rows (mm)",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    }
+  },
   "dxfSymbolDetect": {
     "title": "Opening detected ({index}/{total})",
     "messageDoor": "Door {width} m, hinge {hinge}, opens {dir} — add it to the wall?",
@@ -3585,6 +3607,7 @@
         "auto": "Auto Area Detection"
       },
       "dim": "Dimension",
+      "autoDimension": "Auto Dimension",
       "dimVariants": {
         "smart": "Smart Dimension",
         "linear": "Linear",

@@ -545,6 +545,7 @@
 | **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | 2026-07-01 | DXF Viewer — 2D Editing / Pointer Interaction | [📄](./adrs/ADR-560-entity-body-drag-move-copy.md) |
 | **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED (UNCOMMITTED) | 2026-07-01 | DXF Viewer — Canvas & Rendering / Grips | [📄](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-562** | Dimension Per-Part Styling — χρώμα/πάχος/τύπος γραμμής/βελών ανά μέρος διάστασης | 🟡 PROPOSED | 2026-07-01 | DXF Viewer — Dimensions / Styling | [📄](./adrs/ADR-562-dimension-per-part-styling.md) |
+| **ADR-563** | Auto-Dimension Engine — αυτόματη περιμετρική διαστασιολόγηση κάτοψης (3 σειρές, ArchiCAD/Revit-grade) + BIM associativity | 🟢 Φ1+Φ2 IMPLEMENTED (UNCOMMITTED) | 2026-07-02 | DXF Viewer — Dimensions | [📄](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1072,6 +1073,7 @@
 | **ADR-560** | Σύρσιμο σώματος οντότητας — μετακίνηση / Ctrl-αντιγραφή | ✅ IMPLEMENTED | [View](./adrs/ADR-560-entity-body-drag-move-copy.md) |
 | **ADR-561** | Σταυρός μετακίνησης + σημάδι περιστροφής σε polyline/circle/arc/rectangle | ✅ IMPLEMENTED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-562** | Dimension Per-Part Styling — χρώμα/πάχος/τύπος γραμμής/βελών ανά μέρος διάστασης | 🟡 PROPOSED | [View](./adrs/ADR-562-dimension-per-part-styling.md) |
+| **ADR-563** | Auto-Dimension Engine — αυτόματη περιμετρική διαστασιολόγηση κάτοψης | 🟢 Φ1 IMPLEMENTED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -185,6 +185,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'layering': return <Layers width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'fullscreen': return <Maximize2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-smart': return <Ruler width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-auto': return <Frame width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-linear': return <MoveHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-aligned': return <MoveDiagonal2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-angular2L': return <Triangle width={sizePx[size]} height={sizePx[size]} className={className} />;
