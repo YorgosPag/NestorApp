@@ -199,3 +199,39 @@ export function computeMiteredOuter(
   if (chamferOpenEnds) closeOpenOuterEnds(segs, offsets, aCore, bCore, aOuter, bOuter, aMit, bMit);
   return { aOuter, bOuter, aCore, bCore };
 }
+
+/**
+ * ADR-449 — ΕΝΑ mitered plan-quad (core+outer endpoints) ανά εκτεθειμένη όψη + το segment
+ * (attributes) της. **Το SSoT tuple** που καταναλώνουν ΚΑΙ το 3Δ (`buildFinishSkinFromFaces`/
+ * `buildFinishSkinFromStrips`), ΚΑΙ το 2Δ/DXF (`collectFinishOutlinePlanPolylines`), ΚΑΙ ο
+ * κάθετος band-merge (`mergeSilhouetteBandsToStrips`) — μηδέν διπλότυπο της offset→miter
+ * ακολουθίας. Οι consumers ταξινομούν τα 4 σημεία όπως χρειάζονται (3Δ: aCore→bCore→bOuter→
+ * aOuter· 2Δ: aCore→aOuter→bOuter→bCore).
+ */
+export interface BandFinishQuad {
+  readonly aCore: Vec2;
+  readonly bCore: Vec2;
+  readonly aOuter: Vec2;
+  readonly bOuter: Vec2;
+  readonly seg: FinishFaceSegment;
+}
+
+/**
+ * ADR-449 — offset→miter ακολουθία μιας ομάδας faces → mitered quads (SSoT). Αντικαθιστά την
+ * copy-paste τριάδα `segs.map(segOffsetVec)` + `computeMiteredOuter(…, true)` + skip-degenerate
+ * που ήταν σε 3Δ ΚΑΙ 2Δ. `offsetScale` = `mmToSceneUnits(sceneUnits)` (thickness mm → canvas
+ * units, ίδια σύμβαση με τους renderers). Degenerate offset (μηδενικό μήκος) → η όψη παραλείπεται.
+ */
+export function computeBandFinishQuads(
+  segments: readonly FinishFaceSegment[],
+  offsetScale: number,
+): BandFinishQuad[] {
+  const offsets = segments.map((seg) => segOffsetVec(seg, seg.thickness * offsetScale));
+  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segments, offsets, true);
+  const out: BandFinishQuad[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    if (!offsets[i]) continue;
+    out.push({ aCore: aCore[i], bCore: bCore[i], aOuter: aOuter[i], bOuter: bOuter[i], seg: segments[i] });
+  }
+  return out;
+}

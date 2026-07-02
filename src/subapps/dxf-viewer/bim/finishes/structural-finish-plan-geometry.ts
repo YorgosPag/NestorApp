@@ -17,7 +17,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { StructuralFinishFaces } from './structural-finish-types';
 import { getMaterialFlatColorHex } from '../materials/material-catalog-defs';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { computeMiteredOuter, segOffsetVec } from './structural-finish-outline-geometry';
+import { computeBandFinishQuads, type BandFinishQuad } from './structural-finish-outline-geometry';
+import type { FinishStrip } from './structural-finish-vertical-merge';
 
 /** Μια λωρίδα σοβά σε κάτοψη (world coords) + χρώμα υλικού + ύψος για extrusion. */
 export interface FinishPlanPolyline {
@@ -27,6 +28,19 @@ export interface FinishPlanPolyline {
   readonly colorHex: string;
   /** Ύψος (mm) της κατακόρυφης ζώνης σοβά — για DXF extrusion (group 39). */
   readonly heightMm: number;
+}
+
+/**
+ * ADR-449 — ΕΝΑ mitered quad (BandFinishQuad ή FinishStrip) → μία λωρίδα κάτοψης (4 σημεία
+ * aCore→aOuter→bOuter→bCore + χρώμα). Per-face `colorOverride` (Revit «Paint») υπερισχύει του
+ * χρώματος υλικού· απόν → flat χρώμα καταλόγου (materialId, SSoT με 3Δ). BOQ αμετάβλητο.
+ */
+function quadToPlanPolyline(q: BandFinishQuad | FinishStrip, heightMm: number): FinishPlanPolyline {
+  return {
+    points: [q.aCore, q.aOuter, q.bOuter, q.bCore],
+    colorHex: q.seg.colorOverride ?? getMaterialFlatColorHex(q.seg.materialId),
+    heightMm,
+  };
 }
 
 /**
@@ -40,20 +54,14 @@ export function collectFinishOutlinePlanPolylines(
 ): FinishPlanPolyline[] {
   if (!faces || faces.segments.length === 0) return [];
   const s = mmToSceneUnits(sceneUnits);
-  const segs = faces.segments;
-  const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
-  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
+  return computeBandFinishQuads(faces.segments, s).map((q) => quadToPlanPolyline(q, heightMm));
+}
 
-  const out: FinishPlanPolyline[] = [];
-  for (let i = 0; i < segs.length; i++) {
-    if (!offsets[i]) continue;
-    out.push({
-      points: [aCore[i], aOuter[i], bOuter[i], bCore[i]],
-      // ADR-449 PART B — per-face `colorOverride` (Revit «Paint») υπερισχύει του χρώματος
-      // υλικού· απόν → flat χρώμα καταλόγου (materialId, SSoT με 3Δ). BOQ αμετάβλητο.
-      colorHex: segs[i].colorOverride ?? getMaterialFlatColorHex(segs[i].materialId),
-      heightMm,
-    });
-  }
-  return out;
+/**
+ * ADR-449 Slice X6 — λωρίδες κάτοψης από κατακόρυφα-ενοποιημένα `FinishStrip[]` (DXF export):
+ * κάθε strip έχει έτοιμο mitered quad + το δικό του ύψος `zTop−zBot` → μία extrusion ανά συνεχή
+ * όψη (μηδέν στοιβαγμένες per-band extrusions στο εξαγόμενο μοντέλο). ΙΔΙΟ SSoT με το 2Δ/3Δ.
+ */
+export function collectFinishStripPlanPolylines(strips: readonly FinishStrip[]): FinishPlanPolyline[] {
+  return strips.map((strip) => quadToPlanPolyline(strip, Math.max(0, strip.zTopMm - strip.zBottomMm)));
 }

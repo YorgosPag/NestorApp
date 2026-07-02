@@ -30,7 +30,9 @@ import { mmToSceneUnits, sceneUnitsToMeters, type SceneUnits } from '../../utils
 import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
 import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 // ADR-449 Slice X2 — γωνιακή γεωμετρία = pure SSoT (κοινή με το 2Δ outline· πρώην εδώ).
-import { computeMiteredOuter, segOffsetVec } from '../../bim/finishes/structural-finish-outline-geometry';
+// ADR-449 Slice X6 — `computeBandFinishQuads` = η κοινή offset→miter ακολουθία (μηδέν copy-paste).
+import { computeBandFinishQuads, type BandFinishQuad } from '../../bim/finishes/structural-finish-outline-geometry';
+import type { FinishStrip } from '../../bim/finishes/structural-finish-vertical-merge';
 // ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
 // SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
 import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
@@ -98,37 +100,64 @@ export function buildFinishSkinFromFaces(
 ): THREE.Group | null {
   if (faces.segments.length === 0 || heightM <= 0) return null;
   const s = mmToSceneUnits(sceneUnits);
-  const segs = faces.segments;
-  const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
-  // ADR-449 Slice 9/10 — κλείσιμο ανοιχτών άκρων ανά τύπο (βλ. `closeOpenOuterEnds`): ελεύθερα
-  // άκρα → chamfer 45° (outer-only)· **junction** άκρα (`seg.aJunction/bJunction` από τον resolver
-  // — ακουμπούν γείτονα, π.χ. συμβολή «από κάναβο» ADR-441) → ορθογώνια **EXTEND** (core+outer →
-  // κάθετη τομή· ο σοβάς κλείνει flush στον διπλανό χωρίς λοξή ακμή). Γι' αυτό το quad διαβάζει
-  // τα (πιθανώς επεκταμένα) `aCore/bCore`, ΟΧΙ τα raw `seg.a/b`. Γωνίες ΙΔΙΟΥ στοιχείου = miter.
-  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
-
-  // ADR-462 — τα band coords (core/outer) είναι canvas units (ίδιος χώρος με το
-  // footprint) → world metres με sceneToM (SSoT `scalePoints`). Τα offsets (× s) είναι
-  // ήδη στον ίδιο canvas χώρο, οπότε όλο το quad κλιμακώνεται μαζί.
+  // ADR-449 Slice 9/10 + X5 — mitered quads μέσω του ΚΟΙΝΟΥ SSoT (offset→miter→skip-degenerate).
+  // Junction άκρα → ορθογώνια EXTEND (core+outer)· ελεύθερα → chamfer 45° — τα διαχειρίζεται εντός
+  // ο `computeMiteredOuter`, γι' αυτό το quad διαβάζει τα (πιθανώς επεκταμένα) `aCore/bCore`.
+  const quads = computeBandFinishQuads(faces.segments, s);
+  // ADR-462 — τα band coords (core/outer) είναι canvas units → world metres με sceneToM (SSoT `scalePoints`).
   const sceneToM = sceneUnitsToMeters(sceneUnits);
-  const aCoreM = scalePoints(aCore, sceneToM);
-  const bCoreM = scalePoints(bCore, sceneToM);
-  const aOuterM = scalePoints(aOuter, sceneToM);
-  const bOuterM = scalePoints(bOuter, sceneToM);
   const group = new THREE.Group();
-  for (let i = 0; i < segs.length; i++) {
-    if (!offsets[i]) continue;
-    const seg = segs[i];
-    const quad: Point3D[] = [
-      { x: aCoreM[i].x, y: aCoreM[i].y, z: 0 },
-      { x: bCoreM[i].x, y: bCoreM[i].y, z: 0 },
-      { x: bOuterM[i].x, y: bOuterM[i].y, z: 0 },
-      { x: aOuterM[i].x, y: aOuterM[i].y, z: 0 },
-    ];
-    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId, shearGeo, seg.colorOverride);
+  for (const q of quads) {
+    addFinishPrism(
+      group, quadToScenePoints(q, sceneToM), heightM, baseY, id, bimType,
+      q.seg.materialId, q.seg.classification, levelId, shearGeo, q.seg.colorOverride,
+    );
   }
   if (group.children.length === 0) return null;
 
+  group.userData['bimId'] = id;
+  group.userData['bimType'] = bimType;
+  group.userData['structuralFinish'] = true;
+  return group;
+}
+
+/**
+ * ADR-449 — mitered plan-quad (canvas units) → world-metre `Point3D[]` (order aCore→bCore→
+ * bOuter→aOuter, ίδιο με τον πυρήνα του prism). Reuse `scalePoints` (ΕΝΑ scale SSoT).
+ */
+function quadToScenePoints(q: BandFinishQuad | FinishStrip, sceneToM: number): Point3D[] {
+  const m = scalePoints([q.aCore, q.bCore, q.bOuter, q.aOuter], sceneToM);
+  return m.map((p) => ({ x: p.x, y: p.y, z: 0 }));
+}
+
+/**
+ * ADR-449 Slice X6 — ΕΝΑ prism ανά κατακόρυφα-ενοποιημένο `FinishStrip` (κάθε strip έχει το
+ * δικό του `[zBottomMm, zTopMm]`). Αντικαθιστά το «ένα prism ανά band» → μηδέν οριζόντια ραφή
+ * στις ελεύθερες παρειές (το `mergeSilhouetteBandsToStrips` ένωσε τα ταυτόσημα z-γειτονικά
+ * quads). `baseElevationM` = world datum· κάθε strip κάθεται στο `baseElevationM + zBottomMm`.
+ * `null` όταν κανένα strip. Flat-only (silhouette): κανένα shear (τα κεκλιμένα μέλη = per-element).
+ */
+export function buildFinishSkinFromStrips(
+  strips: readonly FinishStrip[],
+  sceneUnits: SceneUnits,
+  baseElevationM: number,
+  id: string,
+  bimType: 'column' | 'beam',
+  levelId?: string,
+): THREE.Group | null {
+  if (strips.length === 0) return null;
+  const sceneToM = sceneUnitsToMeters(sceneUnits);
+  const group = new THREE.Group();
+  for (const strip of strips) {
+    const heightM = (strip.zTopMm - strip.zBottomMm) * MM_TO_M;
+    if (heightM <= 0) continue;
+    const baseY = baseElevationM + strip.zBottomMm * MM_TO_M;
+    addFinishPrism(
+      group, quadToScenePoints(strip, sceneToM), heightM, baseY, id, bimType,
+      strip.seg.materialId, strip.seg.classification, levelId, undefined, strip.seg.colorOverride,
+    );
+  }
+  if (group.children.length === 0) return null;
   group.userData['bimId'] = id;
   group.userData['bimType'] = bimType;
   group.userData['structuralFinish'] = true;

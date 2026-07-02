@@ -1,12 +1,12 @@
 /**
  * ADR-449 Slice 7 — Merged Structural Silhouette 3D: bands → THREE.Group (σοβάς).
  *
- * Ο pure `computeStructuralSilhouetteBands` δίνει, ανά κατακόρυφη ζώνη, τις
- * ΕΝΙΑΙΕΣ finish faces (union δομικών cores − τοίχοι ως obstacles). Εδώ τις χτίζουμε
- * σε mitered band prisms μέσω του ΥΠΑΡΧΟΝΤΟΣ `buildFinishSkinFromFaces` (ίδιο SSoT
- * με το per-element 3D· `bimType:'column'` → καθαρά miters, μηδέν chamfer αφού το
- * outline είναι ήδη ενιαίο). Κάθε ζώνη στοιβάζεται στο σωστό `baseY` (building base +
- * z-bottom). ΕΝΑ scene-level group αντικαθιστά τα per-element skins (Slice 7).
+ * Ο pure `computeStructuralSilhouetteBands` δίνει, ανά κατακόρυφη ζώνη, τις ΕΝΙΑΙΕΣ finish
+ * faces (union δομικών cores − τοίχοι ως obstacles). ADR-449 Slice X6: τις περνάμε από τον
+ * κάθετο band-merge (`mergeSilhouetteBandsToStrips`) → τα z-γειτονικά ταυτόσημα quads (ελεύθερες
+ * παρειές) ενώνονται σε ΕΝΑ `FinishStrip` δάπεδο→κορυφή, και ο `buildFinishSkinFromStrips` εξωθεί
+ * **ένα prism ανά strip** → μηδέν οριζόντια ραφή στο soffit (ήταν: ένα prism ανά band → στοιβαγμένα
+ * prisms/ραφή). ΕΝΑ scene-level group αντικαθιστά τα per-element skins (Slice 7).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md §3.septies
  */
@@ -14,9 +14,8 @@
 import * as THREE from 'three';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { SilhouetteBand } from '../../bim/finishes/structural-finish-silhouette';
-import { buildFinishSkinFromFaces } from './structural-finish-3d';
-
-const MM_TO_M = 0.001;
+import { mergeSilhouetteBandsToStrips } from '../../bim/finishes/structural-finish-vertical-merge';
+import { buildFinishSkinFromStrips } from './structural-finish-3d';
 
 /** Σταθερό id για το ενιαίο silhouette skin group (visibility gate = global). */
 const SILHOUETTE_ID = 'structural-finish-silhouette';
@@ -51,15 +50,12 @@ export function buildStructuralSilhouetteSkin(
   id: string = SILHOUETTE_ID,
 ): THREE.Group | null {
   if (bands.length === 0) return null;
-  const group = new THREE.Group();
-  for (const band of bands) {
-    const heightM = (band.zTopMm - band.zBottomMm) * MM_TO_M;
-    if (heightM <= 0) continue;
-    const baseY = buildingBaseElevationM + band.zBottomMm * MM_TO_M;
-    const sub = buildFinishSkinFromFaces(band.faces, sceneUnits, heightM, baseY, id, 'column', levelId);
-    if (sub) while (sub.children.length) group.add(sub.children[0]);
-  }
-  if (group.children.length === 0) return null;
+  // ADR-449 Slice X6 — κάθετος band-merge: τα z-γειτονικά ταυτόσημα quads (ελεύθερες παρειές)
+  // ενώνονται σε ΕΝΑ strip δάπεδο→κορυφή → μηδέν οριζόντια ραφή στο soffit. Παρειά που την κόβει
+  // δοκάρι → το quad διαφέρει πάνω από το soffit → δεν ενώνεται → καθαρό τέλος (καπάκι) στο soffit.
+  const strips = mergeSilhouetteBandsToStrips(bands, sceneUnits);
+  const group = buildFinishSkinFromStrips(strips, sceneUnits, buildingBaseElevationM, id, 'column', levelId);
+  if (!group) return null;
   group.userData['bimId'] = id;
   group.userData['bimType'] = 'column';
   group.userData['structuralFinish'] = true;

@@ -14,7 +14,7 @@
  * `isStructuralComponentVisible('plaster'|'reinforcement', entity)` flag είναι ON
  * (per-element override → per-view). Layers (Revit subcategories): `ΣΟΒΑΣ` / `ΟΠΛΙΣΜΟΣ`.
  *
- *   - finish → `computeStructuralFinishSilhouette` → `collectFinishOutlinePlanPolylines`
+ *   - finish → `computeStructuralFinishSilhouette` → `mergeSilhouetteBandsToStrips` → `collectFinishStripPlanPolylines`
  *     → extruded lwpolyline (group-39 ύψος = ζώνη σοβά), χρώμα = flat υλικό.
  *   - rebar  → `collect{Column,Beam,Footing,Slab}RebarPlanGeometry` → lwpolyline (paths)
  *     + circle (διαμήκεις κουκκίδες κολώνας), χρώμα crimson.
@@ -44,7 +44,8 @@ import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { StructuralComponent } from '../../config/bim-structural-components';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
-import { collectFinishOutlinePlanPolylines } from '../../bim/finishes/structural-finish-plan-geometry';
+import { collectFinishStripPlanPolylines } from '../../bim/finishes/structural-finish-plan-geometry';
+import { mergeSilhouetteBandsToStrips } from '../../bim/finishes/structural-finish-vertical-merge';
 import { collectColumnRebarPlanGeometry } from '../../bim/structural/reinforcement/column-rebar-plan-geometry';
 import { collectBeamRebarPlanGeometry } from '../../bim/structural/reinforcement/linear-member-rebar-plan-geometry';
 import { collectFootingRebarPlanGeometry } from '../../bim/structural/reinforcement/footing-rebar-plan-geometry';
@@ -225,34 +226,34 @@ function collectFinishEntities(
   if (bands.length === 0) return;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
 
+  // ADR-449 Slice X6 — κάθετος band-merge: μία extrusion ανά συνεχή όψη (τα z-γειτονικά ταυτόσημα
+  // quads ενώνονται) → μηδέν στοιβαγμένες per-band extrusions/ραφή στο εξαγόμενο μοντέλο. ΙΔΙΟ SSoT
+  // με το 3Δ viewport. (base z=0 = υπάρχον plan-view export convention· storey stacking = DEFER.)
   let n = 0;
   let fills = 0;
-  for (const band of bands) {
-    const heightMm = Math.max(0, band.zTopMm - band.zBottomMm);
-    for (const pl of collectFinishOutlinePlanPolylines(band.faces, sceneUnits, heightMm)) {
-      if (pl.points.length < 2) continue;
-      const poly: ExtrudedLwpolyline = {
-        id: `__finish_${n++}`,
-        type: 'lwpolyline',
-        layerId: FINISH_LAYER_ID,
-        color: pl.colorHex,
-        visible: true,
-        vertices: pl.points.map(toVertex),
-        // closed quad (aCore→aOuter→bOuter→bCore→aCore) → καθαρό extruded prism, ΙΔΙΟ
-        // verified μονοπάτι με το σώμα (AutoCAD-friendly· όχι open-poly-with-thickness).
-        closed: true,
-        dxfThicknessMm: pl.heightMm > 0 ? pl.heightMm : undefined,
-      };
-      out.push(poly);
+  for (const pl of collectFinishStripPlanPolylines(mergeSilhouetteBandsToStrips(bands, sceneUnits))) {
+    if (pl.points.length < 2) continue;
+    const poly: ExtrudedLwpolyline = {
+      id: `__finish_${n++}`,
+      type: 'lwpolyline',
+      layerId: FINISH_LAYER_ID,
+      color: pl.colorHex,
+      visible: true,
+      vertices: pl.points.map(toVertex),
+      // closed quad (aCore→aOuter→bOuter→bCore→aCore) → καθαρό extruded prism, ΙΔΙΟ
+      // verified μονοπάτι με το σώμα (AutoCAD-friendly· όχι open-poly-with-thickness).
+      closed: true,
+      dxfThicknessMm: pl.heightMm > 0 ? pl.heightMm : undefined,
+    };
+    out.push(poly);
 
-      // ADR-505 §C — συμπαγές γέμισμα 3DFACE της ζώνης σοβά (base z=0, ίδιο με το
-      // outline extrude· χρώμα = flat υλικό σοβά) σε ΞΕΧΩΡΙΣΤΟ layer FINISH_FILL.
-      const fill = makeFillHatch(
-        `__finish_fill_${fills}`, FINISH_FILL_LAYER_ID, pl.colorHex,
-        pl.points, 0, pl.heightMm,
-      );
-      if (fill) { out.push(fill); fills++; }
-    }
+    // ADR-505 §C — συμπαγές γέμισμα 3DFACE της ζώνης σοβά (base z=0, ίδιο με το
+    // outline extrude· χρώμα = flat υλικό σοβά) σε ΞΕΧΩΡΙΣΤΟ layer FINISH_FILL.
+    const fill = makeFillHatch(
+      `__finish_fill_${fills}`, FINISH_FILL_LAYER_ID, pl.colorHex,
+      pl.points, 0, pl.heightMm,
+    );
+    if (fill) { out.push(fill); fills++; }
   }
   if (n > 0) layers[FINISH_LAYER_ID] = makeLayer(FINISH_LAYER_ID, FINISH_LAYER_COLOR);
   if (fills > 0) layers[FINISH_FILL_LAYER_ID] = makeLayer(FINISH_FILL_LAYER_ID, FINISH_LAYER_COLOR);
