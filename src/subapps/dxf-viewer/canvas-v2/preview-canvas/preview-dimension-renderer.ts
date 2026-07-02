@@ -40,7 +40,11 @@ import {
 } from '../../systems/dimensions/dim-geometry-builder';
 import { renderArrowhead } from '../../rendering/entities/dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from '../../rendering/entities/dimension/dim-text-renderer';
+// ADR-362 Phase M — text-fit resolver (SRP split): decides the DIMATFIT/DIMTMOVE
+// fit via the shared `assembleDimFit` SSoT so preview === committed decision.
+import { computePreviewFit, type PreviewFit } from './preview-dimension-fit';
 import { resolveEffectiveDimscale } from '../../utils/annotation-scale';
+import { addPoints, scalePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -192,12 +196,25 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
   scaledParams.ctx.globalAlpha = resolvedOpts.opacity;
 
   if (geometry) {
+    // ADR-362 Phase M — text-fit decided from the REAL (committed-scale) metrics so
+    // the preview decision matches the persistent DimensionRenderer (preview===commit).
+    const fit = computePreviewFit({
+      ctx: params.ctx,
+      entity: params.entity,
+      style: params.style,
+      geometry,
+      transform: params.transform,
+      viewport: params.viewport,
+      sceneUnits: params.sceneUnits,
+      viewScale: viewScaleOf(params),
+    });
     drawExtensionLines(scaledParams, geometry, resolvedOpts);
-    drawDimLineOrArc(scaledParams, geometry, resolvedOpts);
-    drawArrowheads(scaledParams, geometry, resolvedOpts);
+    drawDimLineOrArc(scaledParams, geometry, resolvedOpts, fit);
+    drawArrowheads(scaledParams, geometry, resolvedOpts, fit);
+    drawFitLeader(scaledParams, resolvedOpts, fit);
     // ADR-362 R9 — text uses the ORIGINAL params (real dimscale + real sceneUnits) so
     // preview text matches committed DimensionRenderer output; autoScale applies only to arrows.
-    drawText(params, geometry, resolvedOpts);
+    drawText(params, geometry, resolvedOpts, fit);
   }
 
   if (resolvedOpts.helperPath) {
@@ -236,16 +253,44 @@ function drawDimLineOrArc(
   params: PreviewDimensionRenderParams,
   geometry: DimGeometry,
   opts: ResolvedOpts,
+  fit?: PreviewFit | null,
 ): void {
   applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params));
   switch (geometry.kind) {
     case 'linear':
       if (!params.style.suppressDimLine1 && !params.style.suppressDimLine2) {
-        strokeSegment(params, geometry.dimLine);
+        // ADR-362 Phase M — mirror DimensionRenderer: suppress the inside dim line
+        // only when both text + arrows go outside w/o DIMTOFL; add outside stubs.
+        if (!fit || fit.fit.drawDimLineInside) {
+          strokeSegment(params, geometry.dimLine);
+        }
+        if (fit?.fit.arrowsOutside) {
+          const len = 2 * fit.arrowSize;
+          strokeSegment(params, {
+            start: geometry.dimLine.start,
+            end: addPoints(geometry.dimLine.start, scalePoint(geometry.arrowDirection1, len)),
+          });
+          strokeSegment(params, {
+            start: geometry.dimLine.end,
+            end: addPoints(geometry.dimLine.end, scalePoint(geometry.arrowDirection2, len)),
+          });
+        }
       }
       return;
     case 'angular':
       strokeArc(params, geometry);
+      // ADR-362 Phase M — tangent stubs at the arc ends when arrows flip outside.
+      if (fit?.fit.arrowsOutside) {
+        const len = 2 * fit.arrowSize;
+        strokeSegment(params, {
+          start: geometry.arrowAnchor1,
+          end: addPoints(geometry.arrowAnchor1, scalePoint(geometry.arrowDirection1, len)),
+        });
+        strokeSegment(params, {
+          start: geometry.arrowAnchor2,
+          end: addPoints(geometry.arrowAnchor2, scalePoint(geometry.arrowDirection2, len)),
+        });
+      }
       return;
     case 'radial':
       strokeLeader(params, geometry);
@@ -261,6 +306,7 @@ function drawArrowheads(
   params: PreviewDimensionRenderParams,
   geometry: DimGeometry,
   opts: ResolvedOpts,
+  fit?: PreviewFit | null,
 ): void {
   const block1Name = params.style.dimblk1 || params.style.dimblk;
   const block2Name = params.style.dimblk2 || params.style.dimblk;
@@ -269,21 +315,42 @@ function drawArrowheads(
   const unitPx = params.style.dimasz * params.style.dimscale * viewScaleOf(params);
   const a1 = toScreen(params, geometry.arrowAnchor1);
   const a2 = toScreen(params, geometry.arrowAnchor2);
+  // ADR-362 Phase M — flipped directions when DIMATFIT pushes arrows outside.
+  const dir1 = fit?.placement.arrowDirection1 ?? geometry.arrowDirection1;
+  const dir2 = fit?.placement.arrowDirection2 ?? geometry.arrowDirection2;
 
   renderArrowhead(params.ctx, block1, {
-    screenAnchor: a1, direction: geometry.arrowDirection1, side: 1,
+    screenAnchor: a1, direction: dir1, side: 1,
     unitPx, strokeColor: opts.color, fillColor: opts.color,
   });
   renderArrowhead(params.ctx, block2, {
-    screenAnchor: a2, direction: geometry.arrowDirection2, side: 2,
+    screenAnchor: a2, direction: dir2, side: 2,
     unitPx, strokeColor: opts.color, fillColor: opts.color,
   });
+}
+
+/**
+ * ADR-362 Phase M — leader from the dim line to the moved-out text (DIMTMOVE=1),
+ * mirroring `DimensionRenderer.drawFitLeader`. Uses the preview stroke SSoT.
+ */
+function drawFitLeader(
+  params: PreviewDimensionRenderParams,
+  opts: ResolvedOpts,
+  fit?: PreviewFit | null,
+): void {
+  const path = fit?.placement.leaderPath;
+  if (!path || path.length < 2) return;
+  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params));
+  for (let i = 1; i < path.length; i++) {
+    strokeSegment(params, { start: path[i - 1], end: path[i] });
+  }
 }
 
 function drawText(
   params: PreviewDimensionRenderParams,
   geometry: DimGeometry,
   opts: ResolvedOpts,
+  fit?: PreviewFit | null,
 ): void {
   // ADR-362 R14 — preview text must match committed output, which heals dimscale
   // via the same SSoT in DimensionRenderer.resolveFromEntity. Apply the identical
@@ -305,6 +372,8 @@ function drawText(
     viewport: params.viewport,
     layerColour: opts.color,
     sceneUnits: params.sceneUnits,
+    // ADR-362 Phase M — draw text at the moved-out anchor when DIMATFIT pushes it outside.
+    textAnchorOverride: fit && fit.fit.textOutside ? fit.placement.textAnchor : undefined,
   });
 }
 

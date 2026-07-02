@@ -39,7 +39,7 @@ import {
 import { resolveDimColor } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
 import { UI_COLORS, HOVER_HIGHLIGHT } from '../../../config/color-config';
-import type { ViewTransform } from '../../types/Types';
+import type { Point2D, ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
 // units before view-scale, otherwise meters/cm scenes draw text at the world-unit
@@ -67,6 +67,50 @@ interface DimTextRenderParams {
    */
   readonly sceneUnits?: SceneUnits;
   readonly hovered?: boolean;
+  /**
+   * ADR-362 Phase M — text-fit override. When set, the primary text is drawn at
+   * this WORLD anchor instead of `geometry.textAnchor` (used when DIMATFIT moves
+   * the text outside the extension lines). Absent = current behaviour (anchor at
+   * the geometry's `textAnchor`), so existing dims are byte-identical.
+   */
+  readonly textAnchorOverride?: Point2D;
+}
+
+/**
+ * ADR-362 Phase M — paper-mm DIMTXT → screen px, the ONE formula shared by the
+ * text renderer + the text-fit measurement. `style.dimscale` arrives already
+ * resolved (DimensionRenderer heals it once via `resolveEffectiveDimscale`).
+ */
+function primaryTextHeightPx(style: DimStyle, transform: ViewTransform, sceneUnits: SceneUnits): number {
+  return paperHeightToModel(style.dimtxt, style.dimscale, sceneUnits) * transform.scale;
+}
+
+/**
+ * ADR-362 Phase M — measure the primary label the SAME way `renderDimensionText`
+ * composes + fonts it (same height formula + `buildUIFont` + `buildFullText`),
+ * so the text-fit "does it fit?" decision uses the exact rendered width. Returns
+ * `null` when there is no primary text (suppressed / limits-only). Width is in
+ * screen px; the caller divides by `transform.scale` to reach scene units.
+ */
+export function measureDimPrimaryText(
+  ctx: CanvasRenderingContext2D,
+  params: DimTextRenderParams,
+): { text: string; widthPx: number } | null {
+  const sceneUnits = params.sceneUnits ?? 'mm';
+  const heightPx = primaryTextHeightPx(params.style, params.transform, sceneUnits);
+  const fontFamily = params.style.textFontFamily || 'arial';
+
+  const text =
+    params.geometry.kind === 'angular'
+      ? resolveDimensionText(params.geometry, params.style, params.entity.userText)
+      : buildFullText(params.geometry, params.style, params.entity.userText).primary;
+  if (!text) return null;
+
+  ctx.save();
+  ctx.font = buildUIFont(heightPx, fontFamily);
+  const widthPx = ctx.measureText ? ctx.measureText(text).width : text.length * heightPx * 0.6;
+  ctx.restore();
+  return { text, widthPx };
 }
 
 export function renderDimensionText(
@@ -74,7 +118,7 @@ export function renderDimensionText(
   params: DimTextRenderParams,
 ): void {
   const screenAnchor = CoordinateTransforms.worldToScreen(
-    params.geometry.textAnchor,
+    params.textAnchorOverride ?? params.geometry.textAnchor,
     params.transform,
     params.viewport,
   );
@@ -84,9 +128,11 @@ export function renderDimensionText(
   // `drawingScale` SSoT). So this leaf is "dumb": same paper→model SSoT as ribbon
   // Text (`paperHeightToModel`), then × view scale to reach screen px. No local
   // rescue heuristic (that lived here only for meters and missed mm/cm).
-  const primaryHeight =
-    paperHeightToModel(params.style.dimtxt, params.style.dimscale, params.sceneUnits ?? 'mm') *
-    params.transform.scale;
+  const primaryHeight = primaryTextHeightPx(
+    params.style,
+    params.transform,
+    params.sceneUnits ?? 'mm',
+  );
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
   const colour = params.hovered

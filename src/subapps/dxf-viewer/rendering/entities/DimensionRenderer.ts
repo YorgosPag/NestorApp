@@ -23,40 +23,22 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { Entity } from '../../types/entities';
 // ADR-362 Round 5 — scene-units awareness so paper-mm DIMSTYLE values
 // (dimtxt, dimasz, dimgap, dimexe, dimexo) convert to world units before the
 // view-scale multiplier. Without this, meters/cm scenes draw dims at the
 // world-unit size of the paper-mm number (e.g. 2.5 m text in a meters DXF).
 import { type SceneUnits } from '../../utils/scene-units';
-import {
-  isDimensionEntity,
-  type DimensionEntity,
-  type DimStyle,
-  type LineweightMm,
-} from '../../types/entities';
+import { type LineweightMm } from '../../types/entities';
 // ADR-562 Φ2 — per-part lineweight + linetype → canvas stroke via the shared SSoT
 // (reuses lineweightToPx + ADR-510 Unified Linetype dash catalog).
 import { resolveDimStroke } from './dimension/dim-stroke-resolver';
-// ADR-362 Round 22 — render grips from the SAME SSoT the interaction/pick path uses
-// (`getDimensionGrips`) so the drawn grips match the pickable ones exactly (5 grips
-// incl. the dim-extra handle + identical text-midpoint fallback). Pure function, no React.
-import { getDimensionGrips } from '../../hooks/dimensions/useDimensionGrips';
-import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import {
-  buildDimensionGeometry,
   type DimensionLookup,
-  type DimGeometry,
   type DimLineSegment,
-  type LinearDimGeometry,
   type AngularDimGeometry,
   type RadialDimGeometry,
 } from '../../systems/dimensions/dim-geometry-builder';
-import {
-  resolveDimStyle,
-} from '../../systems/dimensions/dim-style-resolver';
-import { paperHeightToModel, resolveEffectiveDimscale } from '../../utils/annotation-scale';
-import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { paperHeightToModel } from '../../utils/annotation-scale';
 import {
   getDimStyleRegistry,
   type DimStyleRegistry,
@@ -64,6 +46,7 @@ import {
 import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { renderArrowhead } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
+import { addPoints, scalePoint } from './shared/geometry-vector-utils';
 import { resolveDimColor } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import {
@@ -74,41 +57,19 @@ import {
   computeCenterMarkGeometry,
 } from '../../systems/dimensions/center-mark-builder';
 import { renderCenterMark } from '../../systems/dimensions/center-mark-renderer';
-// ADR-362 Phase I3 hotfix (2026-05-19) — shared dim-line + text anchor geometry.
-// ADR-362 Phase I per-variant hit (2026-06-24) — radial/angular/ordinate.
+// SRP split (ADR-362) — pure `this`-free logic (resolution, grips, hit-test,
+// geometry-offset scaling, text-fit) lives in the support module so this file
+// stays under the 500-line limit + focused on canvas drawing.
 import {
-  computeDimHitGeometry,
-  buildVariantHitGeometry,
-  hitTestDimGeometry,
-} from '../../systems/dimensions/dim-hit-geometry';
-import { pointToLineDistance } from './shared/geometry-utils';
-import { calculateDistance } from './shared/geometry-rendering-utils';
+  computeDimensionGrips,
+  dimensionEntityHitTest,
+  resolveDimensionRender,
+  computeDimFitForRender,
+  readExtLine,
+  type ResolvedDimensionRender,
+  type DimFitRender,
+} from './dimension/dimension-renderer-support';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
-
-/**
- * Paper-mm → pixel scale at the current view.
- *
- * AutoCAD DIMSCALE is unit-less; DIMSTYLE values (dimasz/dimtxt/dimgap/...) are
- * paper-mm by convention. To land in screen pixels we:
- *
- *   1. Convert paper-mm → world units of the active scene via `mmToSceneUnits`.
- *      For a mm-scene this is the identity (×1); for a meters scene it is
- *      ×0.001 — i.e. 2.5 paper-mm becomes 0.0025 world-meters.
- *   2. Multiply by the view scale (px / world-unit) to reach screen pixels.
- *
- * Without step 1 a 2.5 mm DIMTXT in a meters DXF would render as 2.5 m worth
- * of pixels (huge — the "ribbon dim larger than native DXF" bug, ADR-362
- * Round 5).
- */
-interface ResolvedDimensionRender {
-  readonly entity: DimensionEntity;
-  readonly style: DimStyle;
-  /** Style with paper-mm geometry offsets pre-scaled to world units (used by
-   *  break engine + geometry builder). Rendering fields (dimasz, dimtxt) are
-   *  NOT scaled here — those renderers apply dimscale×unitFactor themselves. */
-  readonly geoStyle: DimStyle;
-  readonly geometry: DimGeometry;
-}
 
 export class DimensionRenderer extends BaseEntityRenderer {
   private dimensionLookup: DimensionLookup = () => undefined;
@@ -160,7 +121,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     this._isHovered = options.hovered ?? false;
-    const resolved = this.resolveFromEntity(entity);
+    const resolved = resolveDimensionRender(entity, this.styleRegistry, this.sceneUnits, this.dimensionLookup);
     if (!resolved) return;
 
     // ADR-362 Phase K — DIMBREAK reads the entity's persisted `manualBreaks`
@@ -169,6 +130,10 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const breaks = resolved.entity.manualBreaks
       ? computeManualBreaks(resolved.geometry, resolved.entity.manualBreaks, resolved.geoStyle)
       : undefined;
+
+    // ADR-362 Phase M — decide text-fit ONCE (needs the render-time measured text
+    // width) so the glow pass, arrows, dim line/arc, text + leader all agree.
+    const lf = computeDimFitForRender(this.ctx, this.transform, this.sceneUnits, this.layerColour, resolved);
 
     // Glow pre-pass — SSoT: same HOVER_HIGHLIGHT.ENTITY config as BaseEntityRenderer
     if (this._isHovered) {
@@ -179,18 +144,19 @@ export class DimensionRenderer extends BaseEntityRenderer {
       this.ctx.shadowBlur = 0;
       this.ctx.shadowColor = 'transparent';
       this.drawExtensionLines(resolved, breaks);
-      this.drawDimLineOrArc(resolved, breaks);
-      this.drawArrowheads(resolved);
+      this.drawDimLineOrArc(resolved, breaks, lf);
+      this.drawArrowheads(resolved, lf);
       this.ctx.restore();
       this._inGlowPass = false;
     }
 
     this.ctx.save();
     this.drawExtensionLines(resolved, breaks);
-    this.drawDimLineOrArc(resolved, breaks);
-    this.drawArrowheads(resolved);
+    this.drawDimLineOrArc(resolved, breaks, lf);
+    this.drawArrowheads(resolved, lf);
     this.drawCenterMark(resolved);
-    this.drawPrimaryText(resolved, options);
+    this.drawFitLeader(resolved, lf);
+    this.drawPrimaryText(resolved, options, lf);
     this.ctx.restore();
 
     if (options.grips) {
@@ -199,106 +165,11 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (!isDimensionEntity(entity)) return [];
-    // Delegate to the interaction-path SSoT (`getDimensionGrips`) so the DRAWN grips
-    // match the PICKABLE ones exactly — same 5 grips (incl. the dim-extra rotation/
-    // arc handle) + same text-midpoint fallback. The renderer GripInfo shape differs
-    // (it needs `id`/`isVisible`); the `dimGripKind` discriminator is only needed by
-    // the pick/commit path (carried separately via grip-computation → wrapDxfGrip).
-    const dxfDim = { id: entity.id, dimensionEntity: entity as unknown as DimensionEntity } as DxfDimension;
-    return getDimensionGrips(dxfDim).map((g) => ({
-      id: `${entity.id}-${g.gripIndex}`,
-      entityId: entity.id,
-      gripIndex: g.gripIndex,
-      type: g.type,
-      position: g.position,
-      isVisible: true,
-    }));
+    return computeDimensionGrips(entity);
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    // ADR-362 Phase I3 hotfix (2026-05-19) — linear/aligned use computed foot
-    // points (shared SSoT in dim-hit-geometry.ts) so a click near the rendered
-    // dim line or text anchor selects the entity. ADR-362 Phase I (2026-06-24) —
-    // radial/angular/ordinate now hit-test against their actual rendered
-    // arc/leader/dim-line via `hitTestDimGeometry` (same SSoT), replacing the
-    // old defPoints-proximity fallback. The canonical hit path still runs through
-    // `performDetailedHitTest` in the HitTester; this renderer-level method is
-    // the leaf bypass used by canvas-v2 paths that hit-test directly against
-    // renderers. Both paths share the dim-hit-geometry helpers, so they agree.
-    const e = entity as Entity;
-    if (!isDimensionEntity(e)) return false;
-    const dim = e as DimensionEntity;
-    const pts = dim.defPoints;
-    if (!pts || pts.length === 0) return false;
-
-    const hitGeom = computeDimHitGeometry(dim);
-    if (hitGeom) {
-      if (calculateDistance(point, hitGeom.textAnchor) <= tolerance * 1.5) return true;
-      if (pointToLineDistance(point, hitGeom.footStart, hitGeom.footEnd) <= tolerance) return true;
-      if (pointToLineDistance(point, pts[0], hitGeom.footStart) <= tolerance) return true;
-      if (pointToLineDistance(point, pts[1], hitGeom.footEnd) <= tolerance) return true;
-    } else {
-      const variantGeom = buildVariantHitGeometry(dim);
-      if (variantGeom && hitTestDimGeometry(variantGeom, point, tolerance)) return true;
-    }
-    // defPoint proximity — catch clicks exactly on arrowhead origins / vertices
-    // (and the safety net for baseline/continued + degenerate geometry).
-    for (const pt of pts) {
-      if (calculateDistance(point, pt) <= tolerance) return true;
-    }
-    return false;
-  }
-
-  // ── Resolution ───────────────────────────────────────────────────────────
-
-  private resolveFromEntity(entity: EntityModel): ResolvedDimensionRender | null {
-    const e = entity as Entity;
-    if (!isDimensionEntity(e)) return null;
-    const dim = e as DimensionEntity;
-    const rawStyle = resolveDimStyle(dim, this.styleRegistry);
-    // ADR-344 Round 7 / ADR-362 Round 14 — resolve the effective annotation scale
-    // ONCE here (imported DIMSCALE>1 wins, else the `drawingScale` SSoT, ADR-375).
-    // Every downstream consumer (extension/dim-line offsets, arrowheads, text,
-    // center mark) reads `style.dimscale`, so healing it at the single resolution
-    // point fixes the whole dimension uniformly — no per-renderer heuristics. This
-    // replaces the old metre-only rescue that left mm/cm dimensions microscopic.
-    const drawingScale = useDrawingScaleStore.getState().drawingScale;
-    const style: DimStyle = {
-      ...rawStyle,
-      dimscale: resolveEffectiveDimscale(rawStyle.dimscale, drawingScale),
-    };
-    // ADR-362 R8 — paper-mm geometry offsets must be in world units before the
-    // geometry builder uses them as coordinate deltas. DIMASZ / DIMTXT are NOT
-    // scaled here because their renderers (drawArrowheads / dim-text-renderer)
-    // apply dimscale × mmToSceneUnits themselves.
-    const geoStyle = this.scaleGeometryOffsets(style);
-    let geometry: DimGeometry;
-    try {
-      geometry = buildDimensionGeometry(dim, geoStyle, this.dimensionLookup);
-    } catch {
-      // Builder throws on malformed input (e.g. baseline parent missing).
-      // Phase C1 swallows + returns null so a single broken dim doesn't crash
-      // the whole scene render. Diagnostics ride on the existing logger pipe.
-      return null;
-    }
-    return { entity: dim, style, geoStyle, geometry };
-  }
-
-  /** Scale paper-mm geometry offset fields to world units for the geometry builder
-   *  and break engine, via the annotation-scale SSoT (paper × dimscale ×
-   *  mmToSceneUnits). `style.dimscale` is already the effective value. */
-  private scaleGeometryOffsets(style: DimStyle): DimStyle {
-    const toModel = (paperMm: number) =>
-      paperHeightToModel(paperMm, style.dimscale, this.sceneUnits);
-    return {
-      ...style,
-      dimexo: toModel(style.dimexo),
-      dimexe: toModel(style.dimexe),
-      dimdli: toModel(style.dimdli),
-      dimcen: toModel(style.dimcen),
-      breakGap: toModel(style.breakGap),
-    };
+    return dimensionEntityHitTest(entity, point, tolerance);
   }
 
   // ── Geometry pieces ──────────────────────────────────────────────────────
@@ -320,17 +191,44 @@ export class DimensionRenderer extends BaseEntityRenderer {
     }
   }
 
-  private drawDimLineOrArc(r: ResolvedDimensionRender, breaks?: DimBreakResult): void {
+  private drawDimLineOrArc(
+    r: ResolvedDimensionRender,
+    breaks?: DimBreakResult,
+    lf?: DimFitRender | null,
+  ): void {
     this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype);
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
-          const segs = breaks?.dimLineSegments ?? [r.geometry.dimLine];
-          for (const s of segs) this.strokeSegment(s);
+          // ADR-362 Phase M — suppress the inside dim line only when BOTH text and
+          // arrows go outside and DIMTOFL is off (else draw it as before).
+          if (!lf || lf.fit.drawDimLineInside) {
+            const segs = breaks?.dimLineSegments ?? [r.geometry.dimLine];
+            for (const s of segs) this.strokeSegment(s);
+          }
+          // Outside stubs give the flipped arrowheads a line to rest on.
+          if (lf?.fit.arrowsOutside) {
+            const g = r.geometry;
+            this.drawOutsideStubs(
+              g.dimLine.start, g.arrowDirection1,
+              g.dimLine.end, g.arrowDirection2,
+              lf.arrowSize,
+            );
+          }
         }
         return;
       case 'angular':
+        // Angular arc is always drawn (it IS the dimension); when arrows flip
+        // outside, add tangent stubs at the arc ends for them to rest on.
         this.strokeArc(r.geometry);
+        if (lf?.fit.arrowsOutside) {
+          const g = r.geometry;
+          this.drawOutsideStubs(
+            g.arrowAnchor1, g.arrowDirection1,
+            g.arrowAnchor2, g.arrowDirection2,
+            lf.arrowSize,
+          );
+        }
         return;
       case 'radial': {
         const leaderSegs = breaks?.leaderSegments;
@@ -348,7 +246,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     }
   }
 
-  private drawArrowheads(r: ResolvedDimensionRender): void {
+  private drawArrowheads(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
     const block1Name = r.style.dimblk1 || r.style.dimblk;
     const block2Name = r.style.dimblk2 || r.style.dimblk;
     const block1 = getArrowheadBlock(block1Name);
@@ -362,10 +260,14 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const colour = resolveDimColor(r.style.arrowColor ?? r.style.dimclrd, this.layerColour);
     const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
     const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
+    // ADR-362 Phase M — when DIMATFIT moves arrows outside, the placement flips the
+    // outward directions so the heads sit outside the ext lines pointing inward.
+    const dir1 = lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1;
+    const dir2 = lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2;
 
     renderArrowhead(this.ctx, block1, {
       screenAnchor: screenA1,
-      direction: r.geometry.arrowDirection1,
+      direction: dir1,
       side: 1,
       unitPx,
       strokeColor: colour,
@@ -373,7 +275,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     });
     renderArrowhead(this.ctx, block2, {
       screenAnchor: screenA2,
-      direction: r.geometry.arrowDirection2,
+      direction: dir2,
       side: 2,
       unitPx,
       strokeColor: colour,
@@ -381,12 +283,53 @@ export class DimensionRenderer extends BaseEntityRenderer {
     });
   }
 
-  private drawPrimaryText(r: ResolvedDimensionRender, _options: RenderOptions): void {
+  /**
+   * ADR-362 Phase M — short stubs extending OUTWARD from each arrow anchor when
+   * the arrows are flipped outside, so each flipped arrowhead has a line to rest
+   * on (AutoCAD-faithful). Length = 2× arrow size along the geometry's outward
+   * direction (linear: along the dim line past each foot; angular: tangent past
+   * each arc end).
+   */
+  private drawOutsideStubs(
+    anchor1: Point2D,
+    dir1: Point2D,
+    anchor2: Point2D,
+    dir2: Point2D,
+    arrowSize: number,
+  ): void {
+    const len = 2 * arrowSize;
+    this.strokeSegment({ start: anchor1, end: addPoints(anchor1, scalePoint(dir1, len)) });
+    this.strokeSegment({ start: anchor2, end: addPoints(anchor2, scalePoint(dir2, len)) });
+  }
+
+  /**
+   * ADR-362 Phase M — leader connecting the moved-out text back to the dim line
+   * (DIMTMOVE=1). Uses the same dim-line stroke SSoT (`applyLineStyle`); the path
+   * is a dogleg to the text near edge + a shelf under the text.
+   */
+  private drawFitLeader(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
+    const path = lf?.placement.leaderPath;
+    if (!path || path.length < 2) return;
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype);
+    for (let i = 1; i < path.length; i++) {
+      this.strokeSegment({ start: path[i - 1], end: path[i] });
+    }
+  }
+
+  private drawPrimaryText(
+    r: ResolvedDimensionRender,
+    _options: RenderOptions,
+    lf?: DimFitRender | null,
+  ): void {
     // ADR-362 hotfix Round 4 (2026-05-19) — use CSS viewport (getBoundingClientRect)
     // not backing-store. See `toScreen` for the full reasoning. Without this fix,
     // dim text lands at the wrong screen Y under non-100% browser zoom / HiDPI
     // (visible as "dim text jumps to top of canvas").
     const rect = this.ctx.canvas.getBoundingClientRect();
+    // ADR-362 Phase M — when DIMATFIT moves the text outside, draw it at the
+    // placement anchor (beyond the second foot) instead of the span midpoint.
+    const textAnchorOverride =
+      lf && lf.fit.textOutside ? lf.placement.textAnchor : undefined;
     renderDimensionText(this.ctx, {
       entity: r.entity,
       geometry: r.geometry,
@@ -400,6 +343,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
       canvasBackground: this.canvasBackground,
       sceneUnits: this.sceneUnits,
       hovered: this._isHovered,
+      textAnchorOverride,
     });
   }
 
@@ -484,13 +428,4 @@ export class DimensionRenderer extends BaseEntityRenderer {
       height: rect.height || this.ctx.canvas.height,
     });
   }
-}
-
-// ── Geometry accessors (kept module-private — exhaustive on `kind`) ─────────
-
-function readExtLine(geom: DimGeometry, side: 1 | 2): DimLineSegment | null {
-  if (geom.kind === 'linear' || geom.kind === 'angular') {
-    return side === 1 ? geom.extLine1 : geom.extLine2;
-  }
-  return null;
 }
