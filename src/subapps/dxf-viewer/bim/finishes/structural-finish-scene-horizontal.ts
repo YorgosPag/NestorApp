@@ -325,10 +325,14 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
   }
   for (const b of beams) {
     if (!isFinishActive(b.params.finish)) continue;
-    // Επέκταση του outline μέσα στις πλαισιωμένες κολόνες → πραγματική επικάλυψη → ΕΝΑ ενιαίο καπάκι
-    // στη συμβολή (ΙΔΙΟ SSoT `beamFinishOutline` με τον κάθετο silhouette· raw fallback = μηδέν regression).
-    const core = coresOf(beamFinishOutline(b, columnFootprints));
-    if (core) members.push({ core, zTopMm: beamZExtent(b.params).zTopMm });
+    // ΟΡΑΤΟ ΣΩΜΑ δοκαριού (deep seat-fill + cutback + sliver-reject) → ένα core ανά κομμάτι· ίδιο
+    // top-plane. ΙΔΙΟ SSoT `beamFinishOutline` με τον κάθετο silhouette (τυλίγει τη μύτη miter, μηδέν
+    // poke στην εγκοπή). Καμία τομή → [raw] (μηδέν regression)· θαμμένο → [] (κανένα core).
+    const zTopMm = beamZExtent(b.params).zTopMm;
+    for (const ring of beamFinishOutline(b, columnFootprints)) {
+      const core = coresOf(ring);
+      if (core) members.push({ core, zTopMm });
+    }
   }
   const emptyUnderside = new Map<string, number>();
   for (const w of walls) {

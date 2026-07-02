@@ -37,9 +37,9 @@ import {
 import { segOffsetVec } from './structural-finish-outline-geometry';
 import type { FinishFaceSegment } from './structural-finish-types';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
-// ADR-449/493 — reuse του pure primitive που επεκτείνει το outline δοκαριού ΜΕΣΑ στις πλαισιωμένες
-// κολόνες (ίδιο SSoT με το carve-mask του cutback ADR-458), εδώ ως union input για ενιαίο καπάκι σοβά.
-import { extendBeamOutlineIntoFramingColumns } from '../geometry/beam-column-cutback';
+// ADR-449/493/458 — reuse των pure primitives που παράγουν το ΟΡΑΤΟ ΣΩΜΑ δοκαριού (deep seat-fill
+// επέκταση + cutback στην παρειά κολόνας + sliver-reject), ΤΑ ΙΔΙΑ SSoT με το μπετόν (BeamRenderer).
+import { extendBeamOutlineIntoFramingColumns, computeBeamCutbackOutline } from '../geometry/beam-column-cutback';
 
 /** Ray-cast point-in-polygon (Pt2 ring, ανοιχτό ή κλειστό). */
 function pointInRing(px: number, py: number, ring: readonly Pt2[]): boolean {
@@ -242,30 +242,40 @@ export interface BeamFinishOutlineSource {
 }
 
 /**
- * ADR-449/493 — outline δοκαριού για το **plaster union**. Το raw `geometry.outline` σταματά στην
- * παρειά της πλαισιωμένης κολόνας (frame-into: τα endpoints τραβιούνται στην παρειά, ADR-441/492) →
- * μηδέν επικάλυψη με το footprint κολόνας → το `safeUnion` τα κρατά χωριστά → ασύνδετος σοβάς στη
- * συμβολή. Επεκτείνουμε τα πλαισιωμένα άκρα ΜΕΣΑ στις κολόνες (reuse `extendBeamOutlineIntoFramingColumns`,
- * το ΙΔΙΟ SSoT με το carve-mask του cutback) ώστε να υπάρξει πραγματική επικάλυψη → ΕΝΑ ενιαίο καπάκι
- * (analog του untrimmed wall footprint). ΜΟΝΟ για το union — σώμα/BOQ/render χρησιμοποιούν το raw/display
- * outline ξεχωριστά. Straight (2-σημείων) άξονας μόνο· curved/απών άξονας ή καμία κολόνα → raw (μηδέν regression).
- * Το χρησιμοποιεί ΚΑΙ ο κάθετος silhouette ΚΑΙ το οριζόντιο merged top-cap (`computeMergedStructuralTopCap`).
+ * ADR-449/493/458 — outline(s) δοκαριού για το **plaster union**: **ΤΟ ΙΔΙΟ ΟΡΑΤΟ ΣΩΜΑ** που
+ * σχεδιάζει το μπετόν (`buildBeamCutbackDisplay` → `BeamRenderer`). Δηλαδή:
+ *   1. **deep seat-fill** επέκταση των πλαισιωμένων άκρων ΜΕΣΑ στις κολόνες
+ *      (`extendBeamOutlineIntoFramingColumns(..., deep=true)`) — ΟΣΟ ώστε ΚΑΙ οι δύο γωνίες της
+ *      απόληξης να μπουν (λοξό δοκάρι σε γωνιακή/επίπεδη παρειά → η diagonal «μύτη» miter),
+ *   2. **cutback** στην παρειά της κολόνας (`computeBeamCutbackOutline` = `safeDifference` + **2%
+ *      sliver-reject**) → το ορατό στερεό, κομμένο ακριβώς στην παρειά.
  *
- * ADR-458 §diagonal-corner-seat (Giorgio screenshot 122649): ο ΣΟΒΑΣ χρησιμοποιεί την «ως το κέντρο»
- * επέκταση (default, ΟΧΙ `deep`) — η βαθιά έδραση του **στερεού** cutback θα έκανε τον σοβά να προεξέχει
- * στην ΚΟΙΛΗ εγκοπή L/Γ (πράσινο poke). Center = αρκετή area επικάλυψη ώστε το finish union να συγχωνεύσει,
- * χωρίς να μπαίνει στην εγκοπή. Το στερεό (cutback 2Δ/3Δ) περνά `deep=true` ξεχωριστά για πλήρη έδραση.
+ * **Γιατί άλλαξε από «center» (ADR-458 §diagonal-corner-seat, deep=false):** το ρηχό center-extend
+ * σταματούσε ~ένα πάχος πριν τη μύτη → ο σοβάς άφηνε **γυμνό μπετόν** στη διαγώνια ακμή της μύτης
+ * (Giorgio 2026-07-02: L-κολόνα, λοξό δοκάρι — ο σοβάς της ΝΑ παρειάς έκανε miter, η ΒΑ ακμή όχι).
+ * Τυλίγοντας το ΙΔΙΟ ορατό σώμα, η μύτη καλύπτεται· το **sliver-reject** κόβει το «πράσινο poke»
+ * στην ΚΟΙΛΗ εγκοπή L/Γ (ίδιο 2% φίλτρο με το σώμα) → μηδέν προεξοχή στην εγκοπή. Το ορατό σώμα
+ * κόβεται στην παρειά αλλά ακουμπά edge-to-edge την κολόνα → το `safeUnion` (+ grid-weld) τα ενώνει
+ * σε ΕΝΑ καπάκι (browser/probe-verified, ίδιο και στην ορθή framing περίπτωση — μηδέν ADR-493 regression).
+ *
+ * Επιστρέφει **ένα ring ανά ορατό κομμάτι** (mid-span κολόνα → 2 κομμάτια). Καμία τομή → `[raw]`
+ * (μηδέν regression). Δοκάρι εξ ολοκλήρου μέσα σε κολόνα → `[]` (θαμμένο, κανένα member). Straight
+ * (2-σημείων) άξονας μόνο· curved/απών άξονας ή καμία κολόνα → `[raw]`. Το χρησιμοποιεί ΚΑΙ ο κάθετος
+ * silhouette ΚΑΙ το οριζόντιο merged top-cap. Η κοινή orchestration (deep+cutback) με το
+ * `buildBeamCutbackDisplay` προορίζεται για κεντρικοποίηση (Giorgio 2026-07-02: «πρώτα φτιάξ' το, μετά κεντρικοποιούμε»).
  */
 export function beamFinishOutline(
   beam: BeamFinishOutlineSource,
   columnFootprints: readonly (readonly Pt2[])[],
-): readonly { x: number; y: number }[] | undefined {
+): readonly (readonly Pt2[])[] {
   const raw = beam.geometry?.outline?.vertices;
-  if (!raw || raw.length < 3) return raw;
+  if (!raw || raw.length < 3) return [];
+  const rawPts = raw.map(toPt2);
   const pts = beam.geometry?.axisPolyline?.points;
-  if (!pts || pts.length !== 2 || columnFootprints.length === 0) return raw;
-  const ext = extendBeamOutlineIntoFramingColumns(raw.map(toPt2), toPt2(pts[0]), toPt2(pts[1]), columnFootprints);
-  return ext ?? raw;
+  if (!pts || pts.length !== 2 || columnFootprints.length === 0) return [rawPts];
+  const deepExt = extendBeamOutlineIntoFramingColumns(rawPts, toPt2(pts[0]), toPt2(pts[1]), columnFootprints, true);
+  const pieces = computeBeamCutbackOutline(deepExt ?? rawPts, columnFootprints);
+  return pieces === null ? [rawPts] : pieces; // null = καμία τομή → raw· `[]` = θαμμένο· αλλιώς τα ορατά κομμάτια
 }
 
 /**
@@ -307,8 +317,13 @@ export function computeStructuralFinishSilhouette(
     if (isFinishActive(c.params.finish) && v && v.length >= 3) columnFootprints.push(v.map(toPt2));
   }
   for (const b of beams) {
-    const m = toMember(b.params.finish, beamFinishOutline(b, columnFootprints), beamZExtent(b, beamTopClipById?.get(b.id)));
-    if (m) members.push(m);
+    // ADR-458 §diagonal-corner-seat — ένα member ανά ΟΡΑΤΟ κομμάτι σώματος (mid-span κολόνα → 2)·
+    // ίδιο z-extent για όλα. Ο σοβάς τυλίγει το ΙΔΙΟ ορατό σώμα → η diagonal μύτη miter καλύπτεται.
+    const bz = beamZExtent(b, beamTopClipById?.get(b.id));
+    for (const ring of beamFinishOutline(b, columnFootprints)) {
+      const m = toMember(b.params.finish, ring, bz);
+      if (m) members.push(m);
+    }
   }
 
   // ADR-449 Slice X1/X3 — beam undersides (height-aware z-extent των τοίχων): ένας

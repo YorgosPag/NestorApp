@@ -1,11 +1,12 @@
 /**
- * ADR-449/493 — `beamFinishOutline`: το outline δοκαριού για το plaster union επεκτείνεται ΜΕΣΑ
- * στις πλαισιωμένες κολόνες ώστε το `safeUnion` να δώσει ΕΝΑ ενιαίο καπάκι σοβά στη συμβολή.
+ * ADR-449/493/458 — `beamFinishOutline`: το outline δοκαριού για το plaster union = **ΤΟ ΟΡΑΤΟ ΣΩΜΑ**
+ * (deep seat-fill → cutback στην παρειά → sliver-reject), ίδιο SSoT με το μπετόν → ο σοβάς τυλίγει τη
+ * diagonal μύτη miter. Επιστρέφει **ένα ring ανά ορατό κομμάτι** (`readonly (readonly Pt2[])[]`).
  *
  * Setup: οριζόντιο δοκάρι (πλάτος 200) του οποίου ο άξονας σταματά ΑΚΡΙΒΩΣ στη δυτική παρειά μιας
- * κολόνας 400×400 (frame-into → μηδέν επικάλυψη raw). Το `beamFinishOutline` πρέπει να σπρώξει τα
- * ανατολικά άκρα μέσα στην κολόνα (μέχρι το «κέντρο-κατά-τον-άξονα») → πραγματική επικάλυψη.
- * Regression: καμία κολόνα / χωρίς άξονα / curved (>2 σημεία) → raw outline αμετάβλητο.
+ * κολόνας 400×400 (frame-into). Το ορατό σώμα κόβεται στη δυτική παρειά (x=800) και ακουμπά edge-to-edge
+ * την κολόνα → το `safeUnion` (+ grid-weld) δίνει ΕΝΑ ενιαίο καπάκι.
+ * Regression: καμία κολόνα / χωρίς άξονα / curved (>2 σημεία) → `[raw]` outline αμετάβλητο.
  */
 
 import { beamFinishOutline } from '../structural-finish-scene-silhouette';
@@ -39,34 +40,35 @@ function beam(geometry: {
   };
 }
 
-describe('beamFinishOutline (ADR-449/493) — επέκταση μέσα στις πλαισιωμένες κολόνες', () => {
-  it('straight δοκάρι, άκρο στην παρειά κολόνας → επεκτείνεται ΜΕΣΑ (επικάλυψη για ενιαίο καπάκι)', () => {
-    const out = beamFinishOutline(
+describe('beamFinishOutline (ADR-449/493/458) — ορατό σώμα δοκαριού (deep+cutback+sliver-reject)', () => {
+  it('straight δοκάρι, άκρο στην παρειά κολόνας → ορατό σώμα κομμένο στην παρειά (edge-to-edge, ενιαίο καπάκι)', () => {
+    const rings = beamFinishOutline(
       beam({ outline: { vertices: RAW_OUTLINE }, axisPolyline: { points: [{ x: 0, y: 0 }, { x: 800, y: 0 }] } }),
       [COLUMN_FP],
-    )!;
-    // Το ανατολικό άκρο (x=800, εφαπτόμενο) σπρώχνεται στο κέντρο-κατά-τον-άξονα (+200 → x=1000),
-    // που βρίσκεται ΜΕΣΑ στην κολόνα [800,1200] → πραγματική επικάλυψη (raw max x=800).
-    const maxX = Math.max(...out.map((p) => p.x));
-    expect(maxX).toBeCloseTo(1000);
+    );
+    expect(rings).toHaveLength(1); // ένα ορατό κομμάτι (κολόνα στο άκρο, όχι mid-span)
+    const pts = rings[0];
+    // Το deep-extend σπρώχνει το άκρο στο x=1000 (μέσα στην κολόνα) και το cutback το κόβει ΠΙΣΩ στη
+    // δυτική παρειά x=800 → το ορατό μπετόν σταματά flush στην παρειά (ακουμπά edge-to-edge → union).
+    expect(Math.max(...pts.map((p) => p.x))).toBeCloseTo(800);
     // Το δυτικό άκρο (x=0, μη πλαισιωμένο) μένει ακίνητο.
-    expect(Math.min(...out.map((p) => p.x))).toBeCloseTo(0);
+    expect(Math.min(...pts.map((p) => p.x))).toBeCloseTo(0);
   });
 
-  it('regression: καμία κολόνα → raw outline αμετάβλητο', () => {
+  it('regression: καμία κολόνα → [raw] outline αμετάβλητο', () => {
     const out = beamFinishOutline(
       beam({ outline: { vertices: RAW_OUTLINE }, axisPolyline: { points: [{ x: 0, y: 0 }, { x: 800, y: 0 }] } }),
       [],
     );
-    expect(out).toBe(RAW_OUTLINE);
+    expect(out).toEqual([RAW_OUTLINE]);
   });
 
-  it('regression: χωρίς άξονα → raw outline αμετάβλητο', () => {
+  it('regression: χωρίς άξονα → [raw] outline αμετάβλητο', () => {
     const out = beamFinishOutline(beam({ outline: { vertices: RAW_OUTLINE } }), [COLUMN_FP]);
-    expect(out).toBe(RAW_OUTLINE);
+    expect(out).toEqual([RAW_OUTLINE]);
   });
 
-  it('regression: curved δοκάρι (>2 σημεία άξονα) → raw outline αμετάβλητο', () => {
+  it('regression: curved δοκάρι (>2 σημεία άξονα) → [raw] outline αμετάβλητο', () => {
     const out = beamFinishOutline(
       beam({
         outline: { vertices: RAW_OUTLINE },
@@ -74,7 +76,7 @@ describe('beamFinishOutline (ADR-449/493) — επέκταση μέσα στις
       }),
       [COLUMN_FP],
     );
-    expect(out).toBe(RAW_OUTLINE);
+    expect(out).toEqual([RAW_OUTLINE]);
   });
 });
 
