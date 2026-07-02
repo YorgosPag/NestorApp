@@ -19,13 +19,13 @@
  * ΚΑΜΙΑ αναπαραγωγή geometry math πέρα από το shape analysis:
  *   - rectangle entity corners → `rectangleCorners` (wall-from-entity).
  *   - scene → segments → `extractLineSegments` (wall-in-region).
- *   - rect detection → `findRectanglesFromSegments` (wall-in-region).
+ *   - loose-line loops → `findClosedPolygonsFromLines` (auto-area planar-face SSoT).
  *   - boolean union → `safeUnion` (polygon-clipping SSoT).
  *
  * Περιορισμός Φάσης 0/1: σχήματα με γωνίες ≠ 90° χαρακτηρίζονται 'composite' και ΔΕΝ
  * αποσυντίθενται σε rects (τοίχοι → αγνοούνται· τοιχία Φάσης 3 → ΕΝΑ composite column).
- * Loose-line loops πιάνονται ως καθαρός απλός κύκλος (κάθε κόμβος βαθμού 2)· εφαπτόμενα
- * ορθογώνια με κοινή κορυφή πιάνονται από τον rectangle detector (`detectTouchingRects`).
+ * ADR-419 §planar-faces: τα loose-line loops πιάνονται με half-edge planar face traversal
+ * → junctions βαθμού >2 (εφαπτόμενα σχήματα με κοινή κορυφή), αμβλείες γωνίες & κενά OK.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6
  * @see ./perimeter-polygon-math.ts (pure polygon math)
@@ -45,13 +45,15 @@ import {
 import { rectangleCorners } from './wall-from-entity';
 import {
   extractLineSegments,
-  findRectanglesFromSegments,
   type DetectedRectangle,
   type RegionLineSeg,
 } from './wall-in-region';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { resolveRegionLoopTolWorld } from './region-tolerance';
+// ADR-419 §planar-faces — SSoT half-edge planar face traversal (auto-area). Χειρίζεται
+// junctions βαθμού >2 + αμβλείες γωνίες + κενά μετά explode — ό,τι ΔΕΝ κάνει ο simple-cycle.
+import { findClosedPolygonsFromLines } from '../../systems/auto-area/auto-area-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
 import {
   EPS,
@@ -82,6 +84,25 @@ export interface ClosedPerimeter {
   readonly shape: PerimeterShape;
   /** Ορθογώνια σκέλη (κενό για 'composite'). */
   readonly rects: readonly DetectedRectangle[];
+}
+
+/**
+ * SSoT — ένα ΑΥΘΑΙΡΕΤΟ κλειστό πολύγωνο (π.χ. σχεδιασμένο vertex-by-vertex από τον
+ * χρήστη) → `ClosedPerimeter`, με την ΙΔΙΑ κανονικοποίηση/ταξινόμηση/αποσύνθεση που
+ * χρησιμοποιεί το «από περίγραμμα» path (`perimeterFacesToRects`). Χρησιμοποιείται από
+ * το column polygon-sketch mode (`buildColumnFromSketchedPolygon`) ώστε η σχεδιασμένη
+ * περίμετρος να περνά από τον ΙΔΙΟ builder με τα περιγράμματα-από-γραμμές — μηδέν
+ * παράλληλη geometry. `polygon` = normalized (CCW, χωρίς διπλό κλείσιμο/συγγραμμικά).
+ */
+export function polygonToClosedPerimeter(
+  polygon: readonly Point2D[],
+  tol: number,
+): ClosedPerimeter {
+  return {
+    polygon: normalize(polygon, tol),
+    shape: classifyPerimeter(polygon, tol),
+    rects: decomposeRectilinear(polygon, tol),
+  };
 }
 
 /** Αποτέλεσμα ανάλυσης μιας μικτής επιλογής. */
@@ -147,59 +168,40 @@ function buildSegmentGraph(
   return { nodes, adj };
 }
 
-/** Διατρέχει απλό κύκλο από `start` (όλοι οι κόμβοι βαθμού 2). null αν δεν κλείνει. */
-function walkSimpleCycle(start: number, adj: readonly number[][]): number[] | null {
-  const cycle = [start];
-  let prev = -1;
-  let cur = start;
-  while (true) {
-    const nbrs = adj[cur];
-    if (nbrs.length !== 2) return null;
-    const next = nbrs[0] === prev ? nbrs[1] : nbrs[0];
-    if (next === start) return cycle;
-    if (cycle.includes(next) || cycle.length > 4096) return null;
-    cycle.push(next);
-    prev = cur;
-    cur = next;
-  }
-}
-
-/** Κλειστοί βρόχοι από αλυσίδες ανεξάρτητων γραμμών (καθαροί απλοί κύκλοι μόνο). */
+/**
+ * Κλειστοί βρόχοι από αλυσίδες ανεξάρτητων γραμμών.
+ *
+ * ADR-419 §planar-faces (2026-07-03): reuse του SSoT **half-edge planar face
+ * traversal** (`findClosedPolygonsFromLines`, auto-area). Αντικαθιστά τον
+ * degree-2-only `walkSimpleCycle`, που «έχανε ΟΛΑ» τα loops σε κόμβους junction
+ * βαθμού >2 — δηλ. σε ΚΑΘΕ exploded αρχιτεκτονική κάτοψη όπου το εξωτερικό
+ * περίγραμμα μοιράζεται κορυφές με τους εσωτερικούς διαχωρισμούς («σκάρα»). Ο
+ * νέος detector χειρίζεται junctions οποιουδήποτε βαθμού + αμβλείες/οξείες γωνίες
+ * (atan2) + κενά/overshoot μετά explode (`gapTol`). Τα polygons δεν χρειάζονται
+ * CCW/dedupe/collinear-removal εδώ — το κάνει `normalize()` στον orchestrator· το
+ * `polygonKey` dedup + `pickSmallestContainingPerimeter` απορροφούν over-detection.
+ */
 function buildPolygonLoops(segs: readonly RegionLineSeg[], tol: number): Point2D[][] {
   if (segs.length < 3) return [];
-  const { nodes, adj } = buildSegmentGraph(segs, tol);
-  const loops: Point2D[][] = [];
-  const visited = new Set<number>();
-  for (let s = 0; s < nodes.length; s++) {
-    if (visited.has(s) || adj[s].length !== 2) continue;
-    const cycle = walkSimpleCycle(s, adj);
-    visited.add(s);
-    if (!cycle) continue;
-    cycle.forEach((i) => visited.add(i));
-    if (cycle.length >= 4) loops.push(cycle.map((i) => nodes[i]));
-  }
-  return loops;
+  const pairs = segs.map((s) => [s.start, s.end] as const);
+  return findClosedPolygonsFromLines(pairs, tol, tol);
 }
 
 /**
  * Όλα τα κλειστά πολύγωνα από scene entities: κλειστά polylines + ορθογώνια
- * απευθείας· οι ανεξάρτητες γραμμές αλυσιδώνονται σε καθαρούς απλούς κύκλους.
+ * απευθείας· οι ανεξάρτητες γραμμές → `buildPolygonLoops` (planar face traversal,
+ * ADR-419 §planar-faces).
  *
- * `options.detectTouchingRects` (ADR-363 Phase 3b fix): τρέχει ΕΠΙΣΗΣ τον
- * corner-graph rectangle detector (`findRectanglesFromSegments`) στις σκόρπιες
- * γραμμές. Χρειάζεται όταν δύο εφαπτόμενα ορθογώνια (π.χ. Γ/L) σχεδιάζονται με
- * γραμμές που ΜΟΙΡΑΖΟΝΤΑΙ κορυφή: ο κοινός κόμβος γίνεται βαθμού >2 και ο
- * αυστηρός simple-cycle walker (`buildPolygonLoops`) τα χάνει ΟΛΑ. Ο detector τα
- * πιάνει ξεχωριστά· ο caller (`perimeterFacesToRects` με `unionTouching`) τα ενώνει
- * μετά σε Γ/Τ/Π — και το union απορροφά τυχόν over-detected υπο-ορθογώνια στο
- * τελικό περίγραμμα (γι' αυτό ενεργοποιείται μόνο μαζί με `unionTouching`). Τα
- * dedup με `polygonKey` ώστε ένα μεμονωμένο ορθογώνιο (που πιάνεται ΚΑΙ από τον
- * walker ΚΑΙ από τον detector) να μην μετρηθεί διπλά.
+ * ADR-419 §planar-faces (2026-07-03): το παλιό `options.detectTouchingRects`
+ * (corner-graph `findRectanglesFromSegments`) ΑΦΑΙΡΕΘΗΚΕ — ήταν workaround για την
+ * αδυναμία του simple-cycle walker σε εφαπτόμενα ορθογώνια με κοινή κορυφή (κόμβος
+ * βαθμού >2). Ο νέος half-edge planar detector πιάνει junctions εγγενώς, οπότε το
+ * workaround έγινε περιττό (και προκαλούσε double-count λόγω collinear κορυφών από
+ * το planarize). Dedup με `polygonKey`.
  */
 export function extractClosedPolygons(
   entities: readonly Entity[],
   tol: number,
-  options?: { readonly detectTouchingRects?: boolean },
 ): Point2D[][] {
   const polygons: Point2D[][] = [];
   const seen = new Set<string>();
@@ -219,12 +221,9 @@ export function extractClosedPolygons(
   }
 
   const segs = extractLineSegments(looseEntities);
-  // Καθαροί απλοί κύκλοι (μεμονωμένο ορθογώνιο, κλειστά L/U/πολύγωνα ως loose lines).
+  // Planar face traversal — μεμονωμένα ορθογώνια, κλειστά L/U/πολύγωνα, ΚΑΙ
+  // εφαπτόμενα σχήματα με κοινή κορυφή (junctions βαθμού >2) ως loose lines.
   for (const loop of buildPolygonLoops(segs, tol)) push(loop);
-  // Εφαπτόμενα ορθογώνια με κοινή κορυφή — βλ. doc παραπάνω.
-  if (options?.detectTouchingRects) {
-    for (const rect of findRectanglesFromSegments(segs, tol)) push([...rect.polygon]);
-  }
 
   return polygons;
 }
@@ -281,11 +280,9 @@ export function perimeterFacesToRects(
   tol: number,
   options?: { readonly unionTouching?: boolean },
 ): PerimeterFacesResult {
-  // Phase 3b fix: όταν θα ενώσουμε (column path), εξάγουμε ΚΑΙ τα εφαπτόμενα
-  // ορθογώνια (κοινή κορυφή → ο simple-cycle walker τα χάνει)· το union τα ραφράζει.
-  const closed = extractClosedPolygons(entities, tol, {
-    detectTouchingRects: options?.unionTouching,
-  });
+  // ADR-419 §planar-faces: ο planar detector πιάνει ΗΔΗ τα εφαπτόμενα σχήματα με
+  // κοινή κορυφή (junctions)· το union (column path) απλώς τα ραφράζει σε ΕΝΑ Γ/Τ/Π.
+  const closed = extractClosedPolygons(entities, tol);
   const polys = options?.unionTouching ? unionTouchingPolygons(closed) : closed;
   const perimeters: ClosedPerimeter[] = [];
   let ignoredCount = 0;

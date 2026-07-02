@@ -225,11 +225,11 @@ describe('perimeter-from-faces — perimeterFacesToRects (orchestrator)', () => 
 });
 
 // ─── ADR-363 Phase 3b fix — two touching rectangles drawn as LOOSE LINES ──────
-// Regression: a Γ/L pier drawn as a foot + a stem rectangle whose lines SHARE a
-// corner. The shared corner becomes a degree-4 graph node, so the strict
-// simple-cycle walker (`buildPolygonLoops`) traces NO loop and "Τοιχίο από
-// περίγραμμα" emitted "noneBuilt". The corner-graph rectangle detector recovers
-// both rects; `unionTouching` then merges them into the L.
+// ADR-419 §planar-faces: a Γ/L pier drawn as a foot + a stem rectangle whose lines
+// SHARE a corner. The shared corner becomes a degree-4 / T-junction graph node. The OLD
+// strict simple-cycle walker traced NO loop and "Τοιχίο από περίγραμμα" emitted
+// "noneBuilt". The NEW half-edge planar detector (`findClosedPolygonsFromLines`) handles
+// junctions of ANY degree, so both faces are found directly; `unionTouching` merges the L.
 
 // Foot A: x[300,3000] y[0,300]. Stem B: x[0,300] y[0,3000]. Share corner (300,0).
 const RECT_A_FOOT: Point2D[] = [
@@ -250,27 +250,19 @@ function looseRectLines(id: string, rect: readonly Point2D[]): Entity[] {
   return rect.map((v, i) => lineEntity(`${id}${i}`, v, rect[(i + 1) % rect.length]));
 }
 
-describe('perimeter-from-faces — touching loose-line rectangles (ADR-363 Phase 3b fix)', () => {
+describe('perimeter-from-faces — touching loose-line rectangles (ADR-419 planar faces)', () => {
   const touchingLoose: Entity[] = [
     ...looseRectLines('a', RECT_A_FOOT),
     ...looseRectLines('b', RECT_B_STEM),
   ];
 
-  it('simple-cycle walker alone misses them (shared corner = degree-4 node)', () => {
-    // Reproduces the bug: without rect-detection nothing is extracted.
-    expect(extractClosedPolygons(touchingLoose, TOL)).toHaveLength(0);
+  it('planar face traversal finds BOTH touching rects (shared-corner junction)', () => {
+    // Old degree-2-only walker missed these; the planar detector handles junctions.
+    expect(extractClosedPolygons(touchingLoose, TOL)).toHaveLength(2);
   });
 
-  it('detectTouchingRects recovers BOTH rectangles', () => {
-    const polys = extractClosedPolygons(touchingLoose, TOL, { detectTouchingRects: true });
-    expect(polys).toHaveLength(2);
-  });
-
-  it('does NOT double-count a single clean rectangle (walker + detector dedup)', () => {
-    const polys = extractClosedPolygons(looseRectLines('a', RECT_A_FOOT), TOL, {
-      detectTouchingRects: true,
-    });
-    expect(polys).toHaveLength(1);
+  it('does NOT double-count a single clean rectangle', () => {
+    expect(extractClosedPolygons(looseRectLines('a', RECT_A_FOOT), TOL)).toHaveLength(1);
   });
 
   it('perimeterFacesToRects + unionTouching merges them into ONE L (Γ)', () => {
@@ -280,8 +272,11 @@ describe('perimeter-from-faces — touching loose-line rectangles (ADR-363 Phase
     expect(res.ignoredCount).toBe(0);
   });
 
-  it('wall path (no unionTouching) stays conservative — touching loose rects not detected', () => {
-    expect(perimeterFacesToRects(touchingLoose, TOL).perimeters).toHaveLength(0);
+  it('wall path (no unionTouching) now detects both touching rects as separate members', () => {
+    // Junctions are handled → each closed face becomes its own rectangle member.
+    const { perimeters } = perimeterFacesToRects(touchingLoose, TOL);
+    expect(perimeters).toHaveLength(2);
+    expect(perimeters.every((p) => p.shape === 'rectangle')).toBe(true);
   });
 });
 
@@ -381,3 +376,53 @@ describe('perimeter-from-faces — open-loop diagnostics (Layer 5)', () => {
     expect(findOpenChainLineIdsNear({ x: 1500, y: 150 }, clean, 5)).toHaveLength(0);
   });
 });
+
+// ADR-419 §planar-faces — το πραγματικό use-case: exploded αρχιτεκτονική κάτοψη με
+// γραμμές που τέμνονται (junctions βαθμού >2) ΚΑΙ μη-ορθές (αμβλείες) γωνίες. Ο παλιός
+// simple-cycle walker τα έχανε ΟΛΑ· ο planar detector τα πιάνει.
+describe('perimeter-from-faces — planar faces: junctions + αμβλείες γωνίες', () => {
+  // «Γ» με ΚΕΚΛΙΜΕΝΟ κάθετο σκέλος (αμβλεία γωνία, μη-κάθετα σκέλη) ως loose lines.
+  const OBTUSE_L: Point2D[] = [
+    { x: 0, y: 0 },
+    { x: 3000, y: 0 },
+    { x: 3000, y: 300 },
+    { x: 800, y: 300 },
+    { x: 300, y: 3000 },
+    { x: 0, y: 3000 },
+  ];
+
+  it('αμβλεία γωνία «Γ» ως loose lines → ΕΝΑ composite περίγραμμα (rect detector θα το έχανε)', () => {
+    const { perimeters } = perimeterFacesToRects(looseRectLines('o', OBTUSE_L), TOL);
+    expect(perimeters).toHaveLength(1);
+    const pick = pickSmallestContainingPerimeter({ x: 150, y: 150 }, perimeters);
+    expect(pick).not.toBeNull();
+    expect(pick?.shape).toBe('composite');
+  });
+
+  it('junction βαθμού 3 (δωμάτιο χωρισμένο στη μέση) → click βρίσκει το ΕΛΑΧΙΣΤΟ μισό', () => {
+    // Ορθογώνιο 2000×1000 + εσωτερική διαχωριστική γραμμή x=1000 → T-junctions βαθμού 3.
+    const room = looseRectLines('r', [
+      { x: 0, y: 0 },
+      { x: 2000, y: 0 },
+      { x: 2000, y: 1000 },
+      { x: 0, y: 1000 },
+    ]);
+    const divider = lineEntity('d', { x: 1000, y: 0 }, { x: 1000, y: 1000 });
+    const { perimeters } = perimeterFacesToRects([...room, divider], TOL);
+    expect(perimeters).toHaveLength(2); // δύο μισά — ο παλιός walker έβγαζε 0
+    const left = pickSmallestContainingPerimeter({ x: 500, y: 500 }, perimeters);
+    expect(left).not.toBeNull();
+    expect(Math.round(polygonAreaAbs(left!.polygon))).toBe(1_000_000); // 1000×1000
+  });
+});
+
+/** |shoelace|/2 — απόλυτο εμβαδόν (ανεξάρτητο winding) για test assertions. */
+function polygonAreaAbs(poly: readonly Point2D[]): number {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i];
+    const q = poly[(i + 1) % poly.length];
+    a += p.x * q.y - q.x * p.y;
+  }
+  return Math.abs(a) / 2;
+}
