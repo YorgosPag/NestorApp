@@ -180,8 +180,20 @@ describe('getBimCharacteristicPoints — column', () => {
     expect(r.labelRoot).toBeNull();
   });
 
-  it('L-shape column: no label', () => {
-    expect(getBimCharacteristicPoints(makeColumn('L-shape')).labelRoot).toBeNull();
+  it('L-shape column: 6 REAL footprint corners (incl. reentrant) + 6 edge midpoints + centroid, no label', () => {
+    // ADR-363 Φ1G.5 — the stationary L exposes its ACTUAL vertices (not the 4 bbox
+    // corners) so a neighbour can magnet onto the notch/reentrant corner too.
+    const r = getBimCharacteristicPoints(makeColumn('L-shape'));
+    expect(r.corners).toHaveLength(6);
+    expect(r.midpoints).toHaveLength(6);
+    expect(r.center).not.toBeNull();
+    // The reentrant corner sits strictly INSIDE the bbox on both axes — proof it is a
+    // real vertex, not one of the 4 bounding-box corners.
+    const xs = r.corners.map((c) => c.x), ys = r.corners.map((c) => c.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    expect(r.corners.some((c) => c.x > minX && c.x < maxX && c.y > minY && c.y < maxY)).toBe(true);
+    expect(r.labelRoot).toBeNull();
   });
 });
 

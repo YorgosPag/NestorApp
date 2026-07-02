@@ -54,6 +54,7 @@ import { getBeamCornerWorldPoints } from '../beams/beam-corner-anchors';
 import { getSlabCornerWorldPoints } from '../slabs/slab-corner-anchors';
 import { getOpeningCornerWorldPoints } from '../walls/opening-corner-anchors';
 import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
+import { computeColumnGeometry } from '../geometry/column-geometry';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
 import { polygon2DCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
@@ -198,7 +199,22 @@ function beamPoints(entity: Entity): BimCharPoints {
 
 function columnPoints(entity: Entity): BimCharPoints {
   if (!isColumnEntity(entity)) return EMPTY;
-  return footprintPoints(getColumnCornerWorldPoints(entity).map((c) => c.point), getBimCharacteristicLabelRoot(entity));
+  const labelRoot = getBimCharacteristicLabelRoot(entity);
+  // Circular → keep the 4 perimeter (45°) anchors as "corners". A circle has NO real
+  // vertices; its `computeColumnGeometry` footprint is a fine tessellation (~32-64 pts)
+  // that must NOT be indexed as snap corners.
+  if (entity.params.kind === 'circular') {
+    return footprintPoints(getColumnCornerWorldPoints(entity).map((c) => c.point), labelRoot);
+  }
+  // ADR-398 / ADR-363 Φ1G.5 — polygonal kinds (rectangular / shear-wall / L / T / U / I /
+  // composite / polygon): index the ACTUAL footprint vertices, via the SAME
+  // `computeColumnGeometry` footprint SSoT the per-vertex grips + the moving column's
+  // corner projection use. So a STATIONARY L/T/U/Π column exposes its reentrant/notch
+  // corners (+ midpoints of ALL real edges + centroid) as snap targets — symmetric with
+  // the moving side — not just the 4 bounding-box corners. Rectangular → the 4 real
+  // vertices ARE the 4 bbox corners (zero regression).
+  const verts = computeColumnGeometry(entity.params).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  return footprintPoints(verts, labelRoot);
 }
 
 function foundationPoints(entity: Entity): BimCharPoints {

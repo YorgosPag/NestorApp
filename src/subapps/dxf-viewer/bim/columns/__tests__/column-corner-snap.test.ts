@@ -18,6 +18,7 @@ import {
   type FindSnapPoint,
 } from '../column-corner-snap';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
+import { computeColumnGeometry } from '../../geometry/column-geometry';
 import type { ColumnEntity, ColumnParams } from '../../types/column-types';
 import type { ProSnapResult } from '../../../snapping/extended-types';
 import type { Point2D } from '../../../rendering/types/Types';
@@ -142,6 +143,33 @@ describe('findColumnGripCornerSnap — Alt whole-entity move (ADR-363 Φ1G.5)', 
     // Corner already on target ⇒ zero correction (pure translate landed it exactly).
     expect(r!.adjustedCursorPos.x).toBeCloseTo(1200, 6);
     expect(r!.adjustedCursorPos.y).toBeCloseTo(1000, 6);
+  });
+});
+
+describe('findColumnGripCornerSnap — L-shape real footprint vertices (ADR-363 Φ1G.5)', () => {
+  it('snaps a REAL reentrant vertex no bounding-box corner reaches', () => {
+    // Regression for the L-shape ALT-move bug: the projection used the 4 bbox
+    // corners, so the concave (reentrant) vertex — which sits STRICTLY inside the
+    // bbox on both axes — could never magnet onto a neighbour. It now projects the
+    // ACTUAL footprint vertices (`computeColumnGeometry(...).footprint.vertices`).
+    const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'L-shape');
+    const col = makeColumn(params, 'col_L');
+    const verts = computeColumnGeometry(params).footprint.vertices;
+    const xs = verts.map((v) => v.x), ys = verts.map((v) => v.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    // The reentrant corner is the only vertex interior on BOTH axes → not a bbox corner.
+    const inner = verts.find((v) => v.x > minX && v.x < maxX && v.y > minY && v.y < maxY);
+    expect(inner).toBeDefined();
+    // Base === cursor ⇒ zero translate; the footprint stays put. Target 8/-5 off the
+    // real vertex; Alt whole-body move via a NON-projection grip (rotation).
+    const find = snapStub([{ near: { x: inner!.x, y: inner!.y }, snap: { x: inner!.x + 8, y: inner!.y - 5 }, dist: 9 }]);
+    const r = findColumnGripCornerSnap(col, 'column-rotation', { x: 0, y: 0 }, { x: 0, y: 0 }, find, true);
+    expect(r).not.toBeNull();
+    // Correction = target − vertex ⇒ the reentrant corner lands exactly on the snap.
+    expect(r!.adjustedCursorPos.x).toBeCloseTo(8, 6);
+    expect(r!.adjustedCursorPos.y).toBeCloseTo(-5, 6);
+    expect(r!.snapResult.snappedPoint).toEqual({ x: inner!.x + 8, y: inner!.y - 5 });
   });
 });
 

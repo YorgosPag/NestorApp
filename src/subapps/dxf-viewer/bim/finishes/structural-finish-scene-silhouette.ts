@@ -40,6 +40,8 @@ import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 // ADR-449/493 — reuse του pure primitive που επεκτείνει το outline δοκαριού ΜΕΣΑ στις πλαισιωμένες
 // κολόνες (ίδιο SSoT με το carve-mask του cutback ADR-458), εδώ ως union input για ενιαίο καπάκι σοβά.
 import { extendBeamOutlineIntoFramingColumns } from '../geometry/beam-column-cutback';
+import { safeUnion, safeIntersection } from '../geometry/shared/safe-polygon-boolean';
+import type { MultiPolygon, Polygon } from 'polygon-clipping';
 
 /** Ray-cast point-in-polygon (Pt2 ring, ανοιχτό ή κλειστό). */
 function pointInRing(px: number, py: number, ring: readonly Pt2[]): boolean {
@@ -250,7 +252,39 @@ export interface BeamFinishOutlineSource {
  * (analog του untrimmed wall footprint). ΜΟΝΟ για το union — σώμα/BOQ/render χρησιμοποιούν το raw/display
  * outline ξεχωριστά. Straight (2-σημείων) άξονας μόνο· curved/απών άξονας ή καμία κολόνα → raw (μηδέν regression).
  * Το χρησιμοποιεί ΚΑΙ ο κάθετος silhouette ΚΑΙ το οριζόντιο merged top-cap (`computeMergedStructuralTopCap`).
+ *
+ * ADR-458 §diagonal-corner-seat (Giorgio screenshot 122649): το ΣΚΕΤΟ extended outline προεξέχει στην
+ * ΚΟΙΛΗ εγκοπή L/Γ κολόνας (ο σοβάς «διαπερνούσε» τη δυτική παρειά — πράσινο). Λύση: ο πυρήνας σοβά =
+ * `rawBeam ∪ (extended ∩ columns)` — προσθέτουμε ΜΟΝΟ το κομμάτι της επέκτασης που πέφτει **ΜΕΣΑ** στην
+ * κολόνα (seat-fill → πραγματική area επικάλυψη ώστε το finish union να συγχωνεύσει), ΧΩΡΙΣ το notch-poke
+ * (κομμένο στο footprint της κολόνας). Perpendicular: το seat-fill = η επέκταση ως το κέντρο (byte-for-byte
+ * με πριν, μηδέν regression)· L/Γ διαγώνιο: το notch-poke αφαιρείται → ο σοβάς τυλίγει ΑΚΡΙΒΩΣ το στερεό.
  */
+function polyArea(r: readonly { x: number; y: number }[]): number {
+  let s = 0;
+  for (let i = 0; i < r.length; i++) { const a = r[i]; const b = r[(i + 1) % r.length]; s += a.x * b.y - b.x * a.y; }
+  return Math.abs(s / 2);
+}
+
+/** Pt2[] → polygon-clipping `Polygon` (ένα outer ring). */
+function toClipPoly(pts: readonly { x: number; y: number }[]): Polygon {
+  return [pts.map((p) => [p.x, p.y] as [number, number])];
+}
+
+/** Outer ring του μεγαλύτερου polygon μιας MultiPolygon → Pt2[] (ή `null` αν κενή). */
+function largestOuterRing(mp: MultiPolygon): Pt2[] | null {
+  let best: Pt2[] | null = null;
+  let bestA = -Infinity;
+  for (const poly of mp) {
+    const ring = poly[0];
+    if (!ring || ring.length < 3) continue;
+    const pts = ring.map(([x, y]) => ({ x, y }));
+    const a = polyArea(pts);
+    if (a > bestA) { bestA = a; best = pts; }
+  }
+  return best;
+}
+
 export function beamFinishOutline(
   beam: BeamFinishOutlineSource,
   columnFootprints: readonly (readonly Pt2[])[],
@@ -259,8 +293,16 @@ export function beamFinishOutline(
   if (!raw || raw.length < 3) return raw;
   const pts = beam.geometry?.axisPolyline?.points;
   if (!pts || pts.length !== 2 || columnFootprints.length === 0) return raw;
-  const ext = extendBeamOutlineIntoFramingColumns(raw.map(toPt2), toPt2(pts[0]), toPt2(pts[1]), columnFootprints);
-  return ext ?? raw;
+  const rawPts = raw.map(toPt2);
+  const ext = extendBeamOutlineIntoFramingColumns(rawPts, toPt2(pts[0]), toPt2(pts[1]), columnFootprints) ?? rawPts;
+  const colClips = columnFootprints.filter((c) => c.length >= 3).map(toClipPoly);
+  if (colClips.length === 0) return ext;
+  // Κράτα την επέκταση ΜΟΝΟ όπου πέφτει ΜΕΣΑ στην κολόνα Ή στο σώμα του raw δοκαριού: αυτό αφαιρεί το
+  // notch-poke (εκτός κολόνας ΚΑΙ εκτός raw, στην κοίλη εγκοπή L/Γ) αλλά ΚΡΑΤΑ το seat-fill μέσα στην
+  // κολόνα (πραγματική area επικάλυψη → το finish union συγχωνεύει, μηδέν grazing gap).
+  const keepRegion = safeUnion(toClipPoly(rawPts), ...colClips);
+  const clipped = safeIntersection(toClipPoly(ext), keepRegion);
+  return largestOuterRing(clipped) ?? ext;
 }
 
 /**

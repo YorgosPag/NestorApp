@@ -110,25 +110,7 @@ export function findColumnGripCornerSnap(
     delta,
     currentPos: cursorPos,
   });
-  const result = projectColumn(proposed, cursorPos, findSnapPoint, column.id);
-  // 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — REMOVE before commit. Now over the REAL
-  // footprint vertices (same source projectColumn uses).
-  if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
-    const verts = computeColumnGeometry(proposed).footprint.vertices;
-    const perVertex = verts.map((v) => {
-      const r = findSnapPoint(v.x, v.y);
-      return r?.found ? `${r.activeMode}@(${r.snappedPoint?.x.toFixed(0)},${r.snappedPoint?.y.toFixed(0)})` : 'none';
-    });
-    // eslint-disable-next-line no-console
-    console.log('[COLSNAP proj]', JSON.stringify({
-      kind: column.params.kind,
-      nVerts: verts.length,
-      delta: `(${delta.x.toFixed(0)},${delta.y.toFixed(0)})`,
-      result: result ? 'SNAP' : 'null',
-      perVertex,
-    }));
-  }
-  return result;
+  return projectColumn(proposed, cursorPos, findSnapPoint, column.id);
 }
 
 /**

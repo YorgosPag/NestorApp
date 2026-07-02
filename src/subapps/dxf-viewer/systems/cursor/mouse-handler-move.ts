@@ -51,11 +51,6 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { createRafCoalescedThrottle } from '../../hooks/raf-coalesced-throttle';
 
-// 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — prints ONCE at import. If you do NOT see this
-// after a reload, the new bundle is NOT loaded (hot-reload/build problem). REMOVE before commit.
-// eslint-disable-next-line no-console
-console.log('%c[COLSNAP] mouse-handler-move v3 LOADED', 'color:#0af;font-weight:bold');
-
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
   cursor: ReturnType<typeof import('./CursorSystem').useCursor>;
@@ -80,19 +75,6 @@ export function useMouseMoveHandler({
   const drawHoverThrottleRef = useRef(createRafCoalescedThrottle(DXF_TIMING.frame.THROTTLE_60));
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // 🔬 TEMP DIAGNOSTIC — very first line, before any early return. REMOVE before commit.
-    if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
-      const adg = getActiveDragGrip();
-      // eslint-disable-next-line no-console
-      console.log('[COLSNAP move]', JSON.stringify({
-        isGripDragging,
-        snapEnabled,
-        altActive: GripAltMoveStore.getActive(),
-        hasActiveDragGrip: !!adg,
-        gripKind: adg?.gripKind ?? null,
-        entityId: adg?.entityId ?? null,
-      }));
-    }
     if (debugEnabled) dperf('Performance', 'NATIVE_MOUSEMOVE');
 
     const pointerSnap = withPerf('coord-calc-snapshot', () =>

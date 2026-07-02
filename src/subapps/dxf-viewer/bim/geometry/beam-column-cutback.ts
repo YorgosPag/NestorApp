@@ -30,8 +30,37 @@ import {
 // Το outline/net-area είναι generic (member ↔ column). Τα beam call-sites/tests
 // συνεχίζουν να εισάγουν αυτά τα ονόματα — μηδέν blast radius από τη γενίκευση.
 
-/** @see computeMemberCutbackOutline — beam alias (ADR-458). */
-export const computeBeamCutbackOutline = computeMemberCutbackOutline;
+/** Εμβαδόν πολυγώνου (shoelace, canvas units²). */
+function ringArea2(r: readonly Pt2[]): number {
+  let s = 0;
+  for (let i = 0; i < r.length; i++) {
+    const a = r[i];
+    const b = r[(i + 1) % r.length];
+    s += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(s / 2);
+}
+
+/** Κλάσμα εμβαδού κάτω από το οποίο ένα cutback-κομμάτι θεωρείται spurious sliver → απορρίπτεται. */
+const SLIVER_AREA_FRACTION = 0.02;
+
+/**
+ * ADR-458/493 — beam cutback outline + απόρριψη spurious slivers. Η βαθιά «diagonal corner-seat»
+ * επέκταση ({@link extendBeamOutlineIntoFramingColumns}) μπορεί να αφήσει μικροσκοπικό ΑΠΟΜΟΝΩΜΕΝΟ
+ * κομμάτι στην κοίλη εγκοπή L/Γ κολώνας (over-extension artifact, ADR-529). Κρατά μόνο κομμάτια ≥ 2%
+ * του μεγαλύτερου· τα ΓΝΗΣΙΑ mid-span splits (κολόνα που χωρίζει το δοκάρι) είναι συγκρίσιμα → μένουν.
+ */
+export function computeBeamCutbackOutline(
+  memberOutline: readonly Pt2[],
+  columnFootprints: readonly (readonly Pt2[])[],
+): Pt2[][] | null {
+  const pieces = computeMemberCutbackOutline(memberOutline, columnFootprints);
+  if (!pieces || pieces.length <= 1) return pieces;
+  const areas = pieces.map(ringArea2);
+  const maxA = Math.max(...areas);
+  const kept = pieces.filter((_, i) => areas[i] >= maxA * SLIVER_AREA_FRACTION);
+  return kept.length > 0 ? kept : pieces;
+}
 /** @see computeMemberCutbackNetAreaM2 — beam alias (ADR-458). */
 export const computeBeamCutbackNetAreaM2 = computeMemberCutbackNetAreaM2;
 
@@ -53,7 +82,7 @@ const lerp2 = (a: Pt2, b: Pt2, t: number): Pt2 => ({ x: a.x + t * (b.x - a.x), y
  * την ακμή `p→q` (κρατάμε μόνο 0≤u≤1, η τομή πέφτει πάνω στην ακμή)· `null` όταν
  * παράλληλες/collinear ή η τομή πέφτει εκτός ακμής.
  */
-function lineEdgeT(a: Pt2, b: Pt2, p: Point3D, q: Point3D): number | null {
+function lineEdgeT(a: Pt2, b: Pt2, p: { x: number; y: number }, q: { x: number; y: number }): number | null {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const ex = q.x - p.x;
@@ -171,6 +200,22 @@ function outlineHalfWidth(outline: readonly Pt2[], ax: Pt2, ux: number, uy: numb
  * SSoT root με `projectColumnFootprintOnAxis`/ADR-494). Κύκλος/ορθογώνιο: midpoint = centroid
  * (μηδέν regression). Reuse `projectPolygonOnAxis` (N.0.2 — μηδέν διπλότυπη geometry).
  */
+/**
+ * Απόσταση κατά τη μοναδιαία `(ix,iy)` από τη γωνία `c` μέχρι την ΠΡΩΤΗ τομή με ακμή του
+ * `footprint` (= είσοδος στην κολώνα όταν η γωνία είναι έξω). `0` αν καμία τομή μπροστά.
+ * Reuse `lineEdgeT` (unit βήμα → η επιστρεφόμενη παράμετρος = απόσταση).
+ */
+function cornerEntryDistance(c: Pt2, ix: number, iy: number, footprint: readonly Pt2[]): number {
+  const b: Pt2 = { x: c.x + ix, y: c.y + iy };
+  let best = Infinity;
+  const n = footprint.length;
+  for (let i = 0; i < n; i++) {
+    const t = lineEdgeT(c, b, footprint[i], footprint[(i + 1) % n]);
+    if (t !== null && t > AXIS_T_EPS && t < best) best = t;
+  }
+  return best === Infinity ? 0 : best;
+}
+
 function framingInwardExtent(
   endpoint: Pt2,
   ix: number,
@@ -179,6 +224,10 @@ function framingInwardExtent(
   footprints: readonly (readonly Pt2[])[],
 ): number {
   let best = 0;
+  let bestScore = -Infinity;
+  // Εγκάρσια μοναδιαία (πλάτος δοκαριού): οι δύο γωνίες της απόληξης = endpoint ± halfWidth·perp.
+  const perpx = -iy;
+  const perpy = ix;
   for (const fp of footprints) {
     if (fp.length < 3) continue;
     // Footprint-aware προβολή στον ΕΣΩΤΕΡΙΚΟ άξονα (ix,iy): παρειές [alongMin,alongMax] + perp
@@ -191,7 +240,22 @@ function framingInwardExtent(
     // «Κέντρο» body εσωτερικά του άκρου = midpoint παρειών (clamp near-face στο 0 ώστε τυχόν
     // outward σκέλος —foot πέρα από το άκρο— να μη μειώνει την επέκταση μέσα στο σώμα).
     const centerAlong = (Math.max(alongMin, 0) + alongMax) / 2;
-    if (centerAlong > best) best = centerAlong;
+    // ADR-493 §diagonal-corner-seat: για ΛΟΞΟ δοκάρι σε ΕΠΙΠΕΔΗ παρειά, η καθυστερημένη γωνία της
+    // απόληξης μένει έξω από την παρειά ακόμη και μετά την «ως το κέντρο» επέκταση → μερική έδραση +
+    // εγκοπή/tab. Επέκτεινε ΟΣΟ ώστε ΚΑΙ οι δύο γωνίες να ΜΠΟΥΝ στην κολώνα. Οι γωνίες γίνονται inset
+    // ελαφρώς προς τον άξονα (αποφυγή ασάφειας ορίου όταν η παρειά δοκαριού είναι collinear με την
+    // παρειά κολώνας — π.χ. north-flush). Κριτήριο: αν η γωνία-ΜΕΤΑ-το-center είναι ΜΕΣΑ → seated
+    // (κράτα center· ADR-529 κάθετο/receding ΔΕΝ ρηχύνει)· αλλιώς πρόσθεσε το επιπλέον reach ως εκεί.
+    const inset = halfWidth * 0.999;
+    const cornerExt = (sx: number, sy: number): number => {
+      const start: Pt2 = { x: sx + ix * centerAlong, y: sy + iy * centerAlong };
+      return pointInPolygon(start, fp) ? centerAlong : centerAlong + cornerEntryDistance(start, ix, iy, fp);
+    };
+    const reach = Math.max(
+      cornerExt(endpoint.x + perpx * inset, endpoint.y + perpy * inset),
+      cornerExt(endpoint.x - perpx * inset, endpoint.y - perpy * inset),
+    );
+    if (centerAlong > bestScore) { bestScore = centerAlong; best = Math.max(centerAlong, reach); }
   }
   return best;
 }

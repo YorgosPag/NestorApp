@@ -80,8 +80,13 @@ describe('computeMemberCutbackRetentionRatio (ADR-458 γενίκευση)', () =
 });
 
 describe('backward-compat aliases (beam-column-cutback → member)', () => {
-  it('computeBeamCutbackOutline === computeMemberCutbackOutline', () => {
-    expect(computeBeamCutbackOutline).toBe(computeMemberCutbackOutline);
+  it('computeBeamCutbackOutline = member outline + sliver-filter (ADR-458/493): ίδιο σε single-piece', () => {
+    // Το beam variant δεν είναι πλέον alias — τυλίγει τον generic + απορρίπτει spurious slivers
+    // (diagonal corner-seat, ADR-493). Για απλή γωνιακή κοπή (1 κομμάτι) το αποτέλεσμα ταυτίζεται.
+    const column: Pt2[] = [
+      { x: -100, y: -100 }, { x: 100, y: -100 }, { x: 100, y: 100 }, { x: -100, y: 100 },
+    ];
+    expect(computeBeamCutbackOutline(MEMBER, [column])).toEqual(computeMemberCutbackOutline(MEMBER, [column]));
   });
   it('computeBeamCutbackNetAreaM2 === computeMemberCutbackNetAreaM2', () => {
     expect(computeBeamCutbackNetAreaM2).toBe(computeMemberCutbackNetAreaM2);
