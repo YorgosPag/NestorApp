@@ -192,7 +192,7 @@
 
 **Απόφαση αναπαράστασης (Giorgio scope):** επέκταση του υπάρχοντος `WallKind='curved'` (που ήταν **quadratic Bézier**) με ΕΝΑ canonical πεδίο `WallParams.arc?: number` = **DXF bulge** (`tan(sweep/4)` μεταξύ start/end). Το bulge κωδικοποιεί πλήρως το κυκλικό τόξο (center/radius/sweep derivable), είναι DXF-native, και έχει ήδη ολόκληρο SSoT (`geometry-bulge-utils`, ADR-510). Τα 3 input methods (3-point / radius / IFC) **normalize στο ΕΝΑ bulge** (SSoT — όχι 3 redundant πεδία). Bézier `curveControl` μένει legacy (precedence: `arc` > `curveControl`).
 
-**Draw UX:** 3-σημείων (Tekla/AutoCAD 3-point ARC) — το 3ο κλικ είναι σημείο απ' όπου περνά το τόξο· το FSM `awaitingCurveControl` επαναχρησιμοποιήθηκε. **Πλήκτρο:** νέο chord **`W`→`4`** («Τόξο», `tool:wall:arc`→kind `curved`) ξεχωριστό από το `W2` (Giorgio order 2026-07-03)· ⚠️ σήμερα W2 & W4 βγάζουν και τα δύο τόξο (Bézier μόνο collinear fallback) — αν χρειαστεί διαφοροποίηση W2=Bézier/W4=arc → mode flag στο FSM (Φ1.x).
+**Draw UX:** 3-σημείων (Tekla/AutoCAD 3-point ARC) — το 3ο κλικ είναι σημείο απ' όπου περνά το τόξο· το FSM `awaitingCurveControl` επαναχρησιμοποιήθηκε. **Πλήκτρο:** το ΥΠΑΡΧΟΝ **`W`→`2`** («Καμπύλος» = τόξο)· **κανένα ξεχωριστό arc chord** (βλ. §12 big-player practice).
 
 **Tessellation:** deviation-adaptive segment count (`adaptiveArcSegDeg`, chord-deviation `CHORD_DEVIATION_MM=2mm` world) στο commit-time· cap 59 (Tekla) / floor 4· render-time zoom-adaptive axis = Φ1.x follow-up.
 
@@ -206,7 +206,25 @@
 
 **Deferred (Φ2+):** tangent-miter καμπύλου↔ευθύγραμμου (γενίκευση `wall-trims.ts classifyPair` με end-tangent), arc `wall-split`, radius-input dynamic-input + IFC directrix import/export, render-time zoom-adaptive axis, endpoint sweep-preserve grip, **beam/κολόνα/πέδιλο arc** (reuse `curve-tessellation` + `wall-arc-descriptor` pattern).
 
+## 12. Big-player UX research — πώς εκθέτουν το curve drawing (2026-07-03)
+
+**Ερώτημα Giorgio:** «κάνε το όπως οι μεγάλοι (Revit / Maxon Cinema 4D / Figma-level)· αν οι μεγάλοι δεν το προτείνουν [ξεχωριστά πλήκτρα Bézier vs τόξο], ακολουθούμε την πρακτική τους.» Έρευνα (verified web sources):
+
+| Εργαλείο | Πώς εκθέτει το curve drawing | Δομικός τοίχος |
+|---|---|---|
+| **Revit** | Ο **τοίχος** σχεδιάζεται με **Line / Arc / Circle / Pick Lines** από **Draw panel gallery** στο ribbon. Το Arc έχει variants (Start-End-Radius / Center-Ends / Tangent / Fillet) — όλα στο ίδιο gallery. Ο χρήστης αλλάζει mode από on-screen gallery, **ΟΧΙ πλήκτρο ανά σχήμα**. | **ΚΑΝΕΝΑ spline/Bézier** για τη διαδρομή τοίχου (spline μόνο σε profile edit). Καμπύλος τοίχος = **κυκλικό τόξο**. |
+| **Cinema 4D (Maxon)** | Τύπος καμπύλης (Linear/Bézier/B-Spline/Akima/Cubic) = **dropdown/attribute** στο spline object· Arc/Circle = ξεχωριστά primitives. | General 3D — όχι BIM structural. |
+| **Figma** | **ΕΝΑ Pen tool** (+ Bend) για όλες τις καμπύλες (Bézier via handles)· κανένα ξεχωριστό «arc tool». | Vector design — Bézier. |
+
+**Σύνθεση / απόφαση:**
+- **Βιομηχανική νόρμα = ΕΝΑ εργαλείο με sub-modes** (Revit Draw gallery, Figma Pen), **ΟΧΙ** πολλά πλήκτρα ανά variant.
+- **Δομικός τοίχος = κυκλικό τόξο**, όχι Bézier/spline (Revit + IFC/Tekla από §2–§5).
+- **Άρα:** (1) **κανένα ξεχωριστό arc chord** — ένα «Καμπύλος τοίχος» = τόξο (`W2`)· το προσωρινό `W4` **καταργήθηκε** (αντι-SSoT, δεν το κάνουν οι μεγάλοι). (2) **Bézier `curveControl` = deprecated** για τοίχους (legacy render μόνο). (3) **Full Revit-parity (PROPOSED Φ1.x):** arc draw-variants (3-σημείων default τώρα· + κέντρο-άκρα / αρχή-τέλος-ακτίνα / εφαπτομενικό) ως **contextual options bar** στο ribbon του τοίχου (mirror Revit Draw gallery), όχι νέα πλήκτρα.
+
+**Πηγές:** Autodesk KB «Sketching Arcs» + Revit wall overview/forums (no-spline-wall)· Maxon C4D spline docs· Figma Learn (Pen/Bend).
+
 ## 10. Changelog
 
+- **2026-07-03 (β)** — Big-player UX research (§12): Revit/Cinema4D/Figma → ΕΝΑ εργαλείο με sub-modes, όχι πλήκτρο ανά variant· δομικός τοίχος = τόξο όχι Bézier. **Απόφαση:** κατάργηση του προσωρινού `W4` chord (ένα `W2`=«Καμπύλος»=τόξο)· Bézier deprecated για τοίχους· arc-variants σε contextual options bar = PROPOSED Φ1.x.
 - **2026-07-03** — Φ1 IMPLEMENTED (UNCOMMITTED): καμπύλος κυκλικό-τόξο τοίχος (§11). Storage=canonical `arc` bulge, 3-point draw, deviation-adaptive tessellation, apex radius grip, live preview, Boy-Scout dedup του `subdivideQuadraticBezier`. 3 νέα jest suites· 1515/1515 walls+geometry green. Αναμονή browser-verify + commit από Giorgio.
 - **2026-07-02** — Δημιουργία. Deep-research workflow (103 agents, 5.1M tokens, 5 γωνίες, 21 πηγές, 25 claims verified → 23 confirmed / 2 refuted). Τεκμηρίωση αγοράς + πρόταση αρχιτεκτονικής (storage παραμετρικό + display faceted).
