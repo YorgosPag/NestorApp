@@ -4,6 +4,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate, type Entity } from '../extended-types';
 import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE: Intersection calculators (extracted per ADR-065)
@@ -88,7 +90,7 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
     if (!entities || entities.length === 0) return;
 
     // Filter visible entities only
-    const visibleEntities = entities.filter(e => e.visible !== false);
+    const visibleEntities = entities.filter(isEntityVisibleForSnap);
 
     // 🚀 PERFORMANCE: Calculate all pairwise intersections (O(n²) but only once!)
     for (let i = 0; i < visibleEntities.length; i++) {

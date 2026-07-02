@@ -27,6 +27,8 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 import { isWallEntity } from '../../types/entities';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import { getWallCornerWorldPoints } from '../../bim/walls/wall-corner-anchors';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -69,7 +71,7 @@ export class WallFaceSnapEngine extends BaseSnapEngine {
     let best: { hit: FaceHit; entityId: string } | null = null;
     for (const entity of context.entities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
-      if (!entity.visible || !isWallEntity(entity)) continue;
+      if (!isEntityVisibleForSnap(entity) || !isWallEntity(entity)) continue;
 
       const hit = nearestFaceOnWall(entity, cursorPoint);
       if (!hit || hit.distance > radius) continue;

@@ -9,6 +9,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from './snap-visibility';
 
 export interface SnapEngineContext {
   entities: EntityModel[];
@@ -102,8 +104,8 @@ export abstract class BaseSnapEngine {
     
     for (const entity of entities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
-      if (!entity.visible) continue;
-      
+      if (!isEntityVisibleForSnap(entity)) continue;
+
       const points = getPointsFromEntity(entity, ...extraArgs);
       
       for (const pointData of points) {
@@ -152,7 +154,7 @@ export abstract class BaseSnapEngine {
 
     // Build index
     for (const entity of entities) {
-      if (!entity.visible) continue;
+      if (!isEntityVisibleForSnap(entity)) continue;
 
       const points = getPoints(entity);
       for (const point of points) {

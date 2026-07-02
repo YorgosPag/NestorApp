@@ -12,6 +12,8 @@ import { ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 // 🏢 ADR-065: Centralized Distance & Vector Operations
 import { calculateDistance, getUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE: Import centralized type guards
@@ -122,7 +124,7 @@ export class ParallelSnapEngine extends BaseSnapEngine {
     
     for (const entity of context.entities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
-      if (!entity.visible) continue;
+      if (!isEntityVisibleForSnap(entity)) continue;
 
       // 🏢 ENTERPRISE: Use type guards for safe property access
       if (isLineEntity(entity)) {

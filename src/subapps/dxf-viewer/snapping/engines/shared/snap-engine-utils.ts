@@ -16,6 +16,8 @@ import { GeometricCalculations } from '../../shared/GeometricCalculations';
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../../shared/snap-visibility';
 
 /**
  * 🏢 ENTERPRISE: Legacy rectangle entity interface for backward compatibility
@@ -87,8 +89,8 @@ export function filterValidEntities(
       return false;
     }
     
-    // Skip if entity is not visible
-    if (entity.visible === false) {
+    // Skip if entity is not visible (SSoT: missing `visible` = visible)
+    if (!isEntityVisibleForSnap(entity)) {
       return false;
     }
     
@@ -247,7 +249,7 @@ export function findStandardSnapCandidates(
   }
   
   for (const entity of entities) {
-    if (!entity || entity.visible === false) continue;
+    if (!entity || !isEntityVisibleForSnap(entity)) continue;
     
     const points = getPointsFunc(entity);
     for (const point of points) {

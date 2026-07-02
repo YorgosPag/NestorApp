@@ -12,6 +12,8 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import { findEntityBasedSnapCandidates } from './shared/snap-engine-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ENTERPRISE: Import centralized type guards
@@ -59,7 +61,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
     if (!Array.isArray(context.entities)) return { candidates: [] };
 
     for (const entity of context.entities) {
-      if (!entity.visible) continue;
+      if (!isEntityVisibleForSnap(entity)) continue;
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
 
       if (isWallEntity(entity)) {

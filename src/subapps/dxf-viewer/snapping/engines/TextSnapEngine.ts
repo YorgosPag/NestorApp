@@ -43,6 +43,8 @@ import {
 // ADR-378 §Step 4 — the 8-point geometry SSoT lives in TextSnapProvider; the engine
 // reuses it (font-free bbox feed) instead of re-implementing the rotation math.
 import { computeTextSnapGeometry, type TextSnapKind } from '../../text-engine/interaction/TextSnapProvider';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 
 interface IndexedTextPoint {
   readonly point: Point2D;
@@ -63,7 +65,7 @@ export class TextSnapEngine extends BaseSnapEngine {
   initialize(entities: EntityModel[]): void {
     const out: IndexedTextPoint[] = [];
     for (const entity of entities) {
-      if (!entity.visible) continue;
+      if (!isEntityVisibleForSnap(entity)) continue;
       if (!isTextEntity(entity) && !isMTextEntity(entity)) continue;
       const computed = computeTextSnapPoints(entity);
       for (const p of computed) {

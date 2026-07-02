@@ -7,6 +7,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
@@ -50,7 +52,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
     // Find the nearest point on any entity
     for (const entity of context.entities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
-      if (!entity.visible) continue;
+      if (!isEntityVisibleForSnap(entity)) continue;
       
       const nearestPoint = this.getNearestPointOnEntity(entity, cursorPoint);
       if (nearestPoint) {

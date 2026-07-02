@@ -6,6 +6,8 @@
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+// 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
+import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import type { ISpatialIndex } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -82,7 +84,7 @@ export class CenterSnapEngine extends BaseSnapEngine {
       
       for (const entity of context.entities) {
         if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
-        if (!entity.visible) continue;
+        if (!isEntityVisibleForSnap(entity)) continue;
         if (checkedEntities > this.maxEntitiesCheck) break;
         
         checkedEntities++;
