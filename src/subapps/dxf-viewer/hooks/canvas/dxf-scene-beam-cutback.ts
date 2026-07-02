@@ -101,6 +101,7 @@ export function buildBeamCutbackDisplay(
         { x: axisPts[0].x, y: axisPts[0].y },
         { x: axisPts[1].x, y: axisPts[1].y },
         columnFootprints,
+        true, // ADR-458 §diagonal-corner-seat: βαθιά έδραση ώστε ΛΟΞΟ δοκάρι να κάτσει πλήρως στη γωνία
       ) ?? outline2D)
     : outline2D;
   const pieces = computeBeamCutbackOutline(carveOutline, columnFootprints);

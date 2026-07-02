@@ -362,6 +362,7 @@ function buildBeam3DCarveOutline(
     { x: beam.params.startPoint.x * sceneToM, y: beam.params.startPoint.y * sceneToM },
     { x: beam.params.endPoint.x * sceneToM, y: beam.params.endPoint.y * sceneToM },
     hostFootprints,
+    true, // ADR-458 §diagonal-corner-seat: βαθιά έδραση (parity με 2Δ `buildBeamCutbackDisplay`)
   );
   return ext ?? flat;
 }

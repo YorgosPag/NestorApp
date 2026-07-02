@@ -222,6 +222,7 @@ function framingInwardExtent(
   iy: number,
   halfWidth: number,
   footprints: readonly (readonly Pt2[])[],
+  deep = false,
 ): number {
   let best = 0;
   let bestScore = -Infinity;
@@ -246,16 +247,20 @@ function framingInwardExtent(
     // ελαφρώς προς τον άξονα (αποφυγή ασάφειας ορίου όταν η παρειά δοκαριού είναι collinear με την
     // παρειά κολώνας — π.χ. north-flush). Κριτήριο: αν η γωνία-ΜΕΤΑ-το-center είναι ΜΕΣΑ → seated
     // (κράτα center· ADR-529 κάθετο/receding ΔΕΝ ρηχύνει)· αλλιώς πρόσθεσε το επιπλέον reach ως εκεί.
-    const inset = halfWidth * 0.999;
-    const cornerExt = (sx: number, sy: number): number => {
-      const start: Pt2 = { x: sx + ix * centerAlong, y: sy + iy * centerAlong };
-      return pointInPolygon(start, fp) ? centerAlong : centerAlong + cornerEntryDistance(start, ix, iy, fp);
-    };
-    const reach = Math.max(
-      cornerExt(endpoint.x + perpx * inset, endpoint.y + perpy * inset),
-      cornerExt(endpoint.x - perpx * inset, endpoint.y - perpy * inset),
-    );
-    if (centerAlong > bestScore) { bestScore = centerAlong; best = Math.max(centerAlong, reach); }
+    let ext = centerAlong;
+    if (deep) {
+      const inset = halfWidth * 0.999;
+      const cornerExt = (sx: number, sy: number): number => {
+        const start: Pt2 = { x: sx + ix * centerAlong, y: sy + iy * centerAlong };
+        return pointInPolygon(start, fp) ? centerAlong : centerAlong + cornerEntryDistance(start, ix, iy, fp);
+      };
+      ext = Math.max(
+        centerAlong,
+        cornerExt(endpoint.x + perpx * inset, endpoint.y + perpy * inset),
+        cornerExt(endpoint.x - perpx * inset, endpoint.y - perpy * inset),
+      );
+    }
+    if (centerAlong > bestScore) { bestScore = centerAlong; best = ext; }
   }
   return best;
 }
@@ -265,12 +270,18 @@ function framingInwardExtent(
  * άκρα που πλαισιώνονται από κολώνα, ώστε το επόμενο `safeDifference` να σκαλίσει την
  * ακριβή (υποχωρούσα) παρειά. Επιστρέφει νέο outline ή `null` (κανένα άκρο δεν χρειάζεται
  * επέκταση → ο caller κρατά το αρχικό, μηδέν regression). Μόνο straight 2-σημείων άξονας.
+ *
+ * `deep` (ADR-458 §diagonal-corner-seat): επεκτείνει ΟΣΟ ώστε ΚΑΙ οι δύο γωνίες της απόληξης να μπουν
+ * στην κολώνα (`max(center, lagging-corner reach)`) — για το **στερεό cutback** ώστε ΛΟΞΟ δοκάρι να
+ * εδράζεται πλήρως σε γωνιακή/επίπεδη παρειά. Default `false` = «ως το κέντρο» (ADR-529/493, ο ΣΟΒΑΣ το
+ * χρησιμοποιεί ώστε να μη προεξέχει στην κοίλη εγκοπή L/Γ)· receding/κυκλικές/κάθετα ίδια και στα δύο.
  */
 export function extendBeamOutlineIntoFramingColumns(
   beamOutline: readonly Pt2[],
   axisStart: Pt2,
   axisEnd: Pt2,
   columnFootprints: readonly (readonly Pt2[])[],
+  deep = false,
 ): Pt2[] | null {
   if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
   const dx = axisEnd.x - axisStart.x;
@@ -282,8 +293,8 @@ export function extendBeamOutlineIntoFramingColumns(
   const halfWidth = outlineHalfWidth(beamOutline, axisStart, ux, uy);
   if (halfWidth <= 0) return null;
 
-  const startExt = framingInwardExtent(axisStart, -ux, -uy, halfWidth, columnFootprints);
-  const endExt = framingInwardExtent(axisEnd, ux, uy, halfWidth, columnFootprints);
+  const startExt = framingInwardExtent(axisStart, -ux, -uy, halfWidth, columnFootprints, deep);
+  const endExt = framingInwardExtent(axisEnd, ux, uy, halfWidth, columnFootprints, deep);
   if (startExt <= 0 && endExt <= 0) return null;
 
   // Διαμέρισε κορυφές ανά διαμήκη προβολή: < μέσον → start edge (−u), ≥ μέσον → end edge (+u).
