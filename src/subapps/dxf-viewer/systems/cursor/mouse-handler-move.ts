@@ -29,6 +29,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
 import { getActiveDragGrip } from './GripDragStore';
+import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import {
@@ -49,6 +50,11 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 // leading-edge apply means the ghost has ZERO added lag, only the rapid burst coalesces.
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { createRafCoalescedThrottle } from '../../hooks/raf-coalesced-throttle';
+
+// 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — prints ONCE at import. If you do NOT see this
+// after a reload, the new bundle is NOT loaded (hot-reload/build problem). REMOVE before commit.
+// eslint-disable-next-line no-console
+console.log('%c[COLSNAP] mouse-handler-move v3 LOADED', 'color:#0af;font-weight:bold');
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -74,6 +80,19 @@ export function useMouseMoveHandler({
   const drawHoverThrottleRef = useRef(createRafCoalescedThrottle(DXF_TIMING.frame.THROTTLE_60));
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // 🔬 TEMP DIAGNOSTIC — very first line, before any early return. REMOVE before commit.
+    if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
+      const adg = getActiveDragGrip();
+      // eslint-disable-next-line no-console
+      console.log('[COLSNAP move]', JSON.stringify({
+        isGripDragging,
+        snapEnabled,
+        altActive: GripAltMoveStore.getActive(),
+        hasActiveDragGrip: !!adg,
+        gripKind: adg?.gripKind ?? null,
+        entityId: adg?.entityId ?? null,
+      }));
+    }
     if (debugEnabled) dperf('Performance', 'NATIVE_MOUSEMOVE');
 
     const pointerSnap = withPerf('coord-calc-snapshot', () =>
@@ -243,11 +262,17 @@ export function useMouseMoveHandler({
       // column's own footprint corners project onto nearby targets so a corner
       // snaps exactly, mirroring the wall face-corner projection above. The drag
       // anchor (move base / resize handle) rides on GripDragStore.
+      // ADR-363 Φ1G.5 — under Alt whole-entity move the grabbed grip is only a base
+      // point (the `column-center` grip is declutter-hidden, so Alt+drag starts from
+      // a rotation/width/depth handle). Run the projection then too, so the moving
+      // column's corners magnet onto neighbours regardless of the parametric kind —
+      // otherwise Alt+rotation (excluded from `isColumnCornerSnapGrip`) got no snap.
+      const columnAltMove = GripAltMoveStore.getActive();
       if (
         activeDragGrip &&
         activeDragGrip.dragAnchor &&
         scene &&
-        isColumnCornerSnapGrip(activeDragGrip.gripKind)
+        (columnAltMove || isColumnCornerSnapGrip(activeDragGrip.gripKind))
       ) {
         const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
         if (draggedColumn && isColumnEntity(draggedColumn)) {
@@ -257,6 +282,7 @@ export function useMouseMoveHandler({
             activeDragGrip.dragAnchor,
             worldPos,
             findSnapPoint!,
+            columnAltMove,
           );
           if (cornerSnap) {
             moveWorldPos = cornerSnap.adjustedCursorPos;

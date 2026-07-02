@@ -110,6 +110,14 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
     dxfCommitDeps, gripSizePx, markDragFinished,
   } = ctx;
+  // 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — REMOVE before commit. Fires on EVERY grip mousedown.
+  if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
+    // eslint-disable-next-line no-console
+    console.log('[COLSNAP down-entry]', JSON.stringify({
+      isGripMode, gripsCount: allGrips.length, phase,
+      altAtDown: GripAltMoveStore.wasAltAtMouseDown(),
+    }));
+  }
   if (mouseDownInProgressRef.current) return false;
   // ADR-357 Phase 12 — pick-mode interception: BasePoint and Reference picks
   // run DURING an active drag (phase === 'dragging') and must be consumed
@@ -192,6 +200,18 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // ghost + commit translate the entire entity. Arm the SSoT the live ghost
     // (buildDxfDragPreview) and the commit (commitDxfGripDragModeAware) read.
     const altMove = GripAltMoveStore.wasAltAtMouseDown();
+    // 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — REMOVE before commit.
+    if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
+      // eslint-disable-next-line no-console
+      console.warn('[COLSNAP down]', JSON.stringify({
+        source: nearGrip.source,
+        columnGripKind: nearGrip.columnGripKind ?? null,
+        wallGripKind: nearGrip.wallGripKind ?? null,
+        entityId: nearGrip.entityId ?? null,
+        altMove,
+        hotKind: hotGripKindOf(nearGrip) ?? null,
+      }));
+    }
     // ADR-363 Phase 1G — wall corner grips use the AutoCAD hot-grip (click-
     // click) flow instead of press-drag-release: 1st click enters `hotGrip`,
     // cursor moves live, 2nd click (mouseup) commits. All other wall grips

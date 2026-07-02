@@ -38,7 +38,7 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
-import { getColumnCornerWorldPointsFromParams } from './column-corner-anchors';
+import { computeColumnGeometry } from '../geometry/column-geometry';
 import { applyColumnGripDrag } from './column-grips';
 import { buildDefaultColumnParams } from '../../hooks/drawing/column-completion';
 import {
@@ -82,6 +82,15 @@ export function isColumnCornerSnapGrip(kind: string | null | undefined): boolean
  * @param dragAnchor    Drag origin (move base point / resize handle position).
  * @param cursorPos     Current world cursor.
  * @param findSnapPoint Snap engine query.
+ * @param altMove       ADR-363 Φ1G.5 — Alt whole-entity move. When true the grabbed
+ *                      grip is only a BASE POINT: the column TRANSLATES (never
+ *                      resizes/rotates), so the projection runs the pure
+ *                      `column-center` transform (`moveCenter`) regardless of the
+ *                      parametric grip kind — the rotation handle included, which is
+ *                      itself excluded from `isColumnCornerSnapGrip`. This makes the
+ *                      moving column's footprint corners magnet onto neighbours'
+ *                      corners/edges (AutoCAD base-point move), the behaviour the
+ *                      declutter-hidden `column-center` grip used to give.
  */
 export function findColumnGripCornerSnap(
   column: Readonly<ColumnEntity>,
@@ -89,15 +98,37 @@ export function findColumnGripCornerSnap(
   dragAnchor: Point2D,
   cursorPos: Point2D,
   findSnapPoint: FindSnapPoint,
+  altMove = false,
 ): CornerProjectionResult | null {
-  if (!isColumnCornerSnapGrip(gripKind)) return null;
+  // Alt move ⇒ whole-body translate (grabbed grip = base point); otherwise only the
+  // translate/resize kinds project (rotation is angular, not a corner-alignment op).
+  if (!altMove && !isColumnCornerSnapGrip(gripKind)) return null;
+  const effectiveKind: ColumnGripKind = altMove ? 'column-center' : gripKind;
   const delta: Point2D = { x: cursorPos.x - dragAnchor.x, y: cursorPos.y - dragAnchor.y };
-  const proposed = applyColumnGripDrag(gripKind, {
+  const proposed = applyColumnGripDrag(effectiveKind, {
     originalParams: column.params,
     delta,
     currentPos: cursorPos,
   });
-  return projectColumn(proposed, cursorPos, findSnapPoint, column.id);
+  const result = projectColumn(proposed, cursorPos, findSnapPoint, column.id);
+  // 🔬 TEMP DIAGNOSTIC (ADR-363 Φ1G.5) — REMOVE before commit. Now over the REAL
+  // footprint vertices (same source projectColumn uses).
+  if ((globalThis as unknown as { __DBG_COLSNAP?: unknown }).__DBG_COLSNAP) {
+    const verts = computeColumnGeometry(proposed).footprint.vertices;
+    const perVertex = verts.map((v) => {
+      const r = findSnapPoint(v.x, v.y);
+      return r?.found ? `${r.activeMode}@(${r.snappedPoint?.x.toFixed(0)},${r.snappedPoint?.y.toFixed(0)})` : 'none';
+    });
+    // eslint-disable-next-line no-console
+    console.log('[COLSNAP proj]', JSON.stringify({
+      kind: column.params.kind,
+      nVerts: verts.length,
+      delta: `(${delta.x.toFixed(0)},${delta.y.toFixed(0)})`,
+      result: result ? 'SNAP' : 'null',
+      perVertex,
+    }));
+  }
+  return result;
 }
 
 /**
@@ -116,9 +147,16 @@ export function findColumnDrawCornerSnap(
 }
 
 /**
- * Column-specific adapter: derive the proposed column's footprint corners (SSoT
- * `getColumnCornerWorldPointsFromParams`) and delegate the query/best/correction
- * loop to the shared {@link findBestCornerProjection} core (zero duplication).
+ * Column-specific adapter: derive the proposed column's footprint corners and
+ * delegate the query/best/correction loop to the shared {@link findBestCornerProjection}
+ * core (zero duplication).
+ *
+ * ADR-363 Φ1G.5 — projects the ACTUAL footprint vertices (all N for L/T/U/Π/polygon),
+ * via the SAME `computeColumnGeometry` footprint SSoT the per-vertex grips use, NOT the
+ * 4 bounding-box corners. An L-shape's bbox corners include a PHANTOM point in the
+ * reentrant notch (empty space) and miss the real vertices the user aligns, so
+ * corner-to-corner snap never fired against a neighbour. Rectangular → the 4 real
+ * corners = the bbox corners (zero regression).
  */
 function projectColumn(
   proposed: Readonly<ColumnParams>,
@@ -126,6 +164,6 @@ function projectColumn(
   findSnapPoint: FindSnapPoint,
   excludeEntityId: string | null,
 ): CornerProjectionResult | null {
-  const corners = getColumnCornerWorldPointsFromParams(proposed).map((c) => c.point);
+  const corners = computeColumnGeometry(proposed).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
   return findBestCornerProjection(corners, cursorPos, findSnapPoint, excludeEntityId);
 }

@@ -26,6 +26,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ProSnapResult } from '../../snapping/extended-types';
+import { isSnapMarkerVisible, toSnapIndicatorView } from '../../snapping/extended-types';
 
 /** Snap-engine query signature (shared by all corner-projection callers). */
 export type FindSnapPoint = (x: number, y: number) => ProSnapResult | null;
@@ -59,6 +60,14 @@ export function findBestCornerProjection(
   for (const corner of corners) {
     const result = findSnapPoint(corner.x, corner.y);
     if (!result?.found || !result.snappedPoint) continue;
+
+    // ADR-363 Φ1G.5 — reject SILENT snaps (grid / guide). Corner projection must
+    // magnet onto REAL structural geometry (BIM corners / faces / endpoints), never
+    // the ubiquitous grid: a grid landing is invisible (AutoCAD silent) AND its dense
+    // points sit near every corner, so it masks true corner-to-corner alignment with
+    // an imperceptible pull and no marker. Reuse the SAME visibility SSoT the marker
+    // overlay uses ⇒ the corner attracts exactly when a marker would show.
+    if (!isSnapMarkerVisible(toSnapIndicatorView(result))) continue;
 
     const targetEntityId = result.entityId ?? result.snapPoint?.entityId;
     if (excludeEntityId && targetEntityId === excludeEntityId) continue;

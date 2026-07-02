@@ -26,6 +26,7 @@ import { processMarqueeSelection } from './mouse-handler-up-marquee';
 // but the click world point was already snapped here BEFORE reaching that gate.
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip } from './GripDragStore';
+import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
@@ -215,11 +216,15 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
 
           // ADR-398 — Column Body Corner Projection Snap commit (move + resize).
           // Mirror of the move handler so the committed position equals the ghost.
+          // ADR-363 Φ1G.5 — same Alt whole-entity-move path as the move handler:
+          // the grabbed grip is only a base point (`column-center` is hidden), so
+          // the projection must run for any kind (rotation handle included).
+          const columnAltMove = GripAltMoveStore.getActive();
           if (
             activeDragGrip &&
             activeDragGrip.dragAnchor &&
             scene &&
-            isColumnCornerSnapGrip(activeDragGrip.gripKind)
+            (columnAltMove || isColumnCornerSnapGrip(activeDragGrip.gripKind))
           ) {
             const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
             if (draggedColumn && isColumnEntity(draggedColumn)) {
@@ -229,6 +234,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
                 activeDragGrip.dragAnchor,
                 rawUpWorldPos,
                 findSnapPoint,
+                columnAltMove,
               );
               if (cornerSnap) {
                 upWorldPos = cornerSnap.adjustedCursorPos;

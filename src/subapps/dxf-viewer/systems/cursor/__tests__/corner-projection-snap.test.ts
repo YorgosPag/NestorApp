@@ -58,4 +58,31 @@ describe('findBestCornerProjection', () => {
     ]), 'self');
     expect(r).toBeNull();
   });
+
+  // ADR-363 Φ1G.5 — silent snaps (grid/guide) must NOT attract the corner: they are
+  // invisible (no marker) and ubiquitous, so they masked true corner alignment.
+  const modeStub = (mode: string): FindSnapPoint => (x, y) => (
+    Math.hypot(x - 100, y - 100) <= 60
+      ? ({
+          found: true, snappedPoint: { x: 110, y: 108 },
+          snapPoint: { point: { x: 110, y: 108 }, type: mode, description: mode, distance: 5, priority: 0 } as never,
+          allCandidates: [], originalPoint: { x, y }, activeMode: mode as never,
+          timestamp: 0, distance: 5,
+        } as ProSnapResult)
+      : null
+  );
+
+  it('rejects a GRID snap (silent) — no corner attraction', () => {
+    expect(findBestCornerProjection(corners, { x: 50, y: 50 }, modeStub('grid'))).toBeNull();
+  });
+
+  it('rejects a GUIDE snap (silent) — no corner attraction', () => {
+    expect(findBestCornerProjection(corners, { x: 50, y: 50 }, modeStub('guide'))).toBeNull();
+  });
+
+  it('accepts a real BIM_CORNER snap (visible) — corner attracts', () => {
+    const r = findBestCornerProjection(corners, { x: 50, y: 50 }, modeStub('bim_corner'));
+    expect(r).not.toBeNull();
+    expect(r!.adjustedCursorPos).toEqual({ x: 60, y: 58 });
+  });
 });

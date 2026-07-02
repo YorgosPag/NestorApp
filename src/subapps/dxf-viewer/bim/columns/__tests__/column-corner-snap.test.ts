@@ -113,6 +113,38 @@ describe('findColumnGripCornerSnap — move', () => {
   });
 });
 
+describe('findColumnGripCornerSnap — Alt whole-entity move (ADR-363 Φ1G.5)', () => {
+  it('projects via translate for the rotation grip when altMove=true (else null)', () => {
+    const col = rect(0, 0);
+    // Base at (0,0), cursor (1000,1000) ⇒ translate delta (1000,1000) ⇒ NE corner
+    // moves (200,200)→(1200,1200). Target sits 14 units off that translated corner.
+    const find = snapStub([{ near: { x: 1200, y: 1200 }, snap: { x: 1210, y: 1210 }, dist: 14 }]);
+    // Rotation grip is excluded from the parametric projection → null without altMove.
+    expect(
+      findColumnGripCornerSnap(col, 'column-rotation', { x: 0, y: 0 }, { x: 1000, y: 1000 }, find),
+    ).toBeNull();
+    // With altMove the grabbed (rotation) grip is only a base point → whole-body translate.
+    const r = findColumnGripCornerSnap(col, 'column-rotation', { x: 0, y: 0 }, { x: 1000, y: 1000 }, find, true);
+    expect(r).not.toBeNull();
+    expect(r!.adjustedCursorPos.x).toBeCloseTo(1010, 6);
+    expect(r!.adjustedCursorPos.y).toBeCloseTo(1010, 6);
+    expect(r!.snapResult.snappedPoint).toEqual({ x: 1210, y: 1210 });
+  });
+
+  it('translates (not resizes) when altMove=true on a width grip', () => {
+    const col = rect(0, 0);
+    // Width handle base at (200,0); cursor (1200,1000) ⇒ delta (1000,1000). altMove ⇒
+    // the whole column translates so the NE corner lands at (1200,1200) — NOT a width
+    // resize. Target on that translated corner.
+    const find = snapStub([{ near: { x: 1200, y: 1200 }, snap: { x: 1200, y: 1200 }, dist: 0 }]);
+    const r = findColumnGripCornerSnap(col, 'column-width', { x: 200, y: 0 }, { x: 1200, y: 1000 }, find, true);
+    expect(r).not.toBeNull();
+    // Corner already on target ⇒ zero correction (pure translate landed it exactly).
+    expect(r!.adjustedCursorPos.x).toBeCloseTo(1200, 6);
+    expect(r!.adjustedCursorPos.y).toBeCloseTo(1000, 6);
+  });
+});
+
 describe('findColumnGripCornerSnap — resize', () => {
   it('returns a correction when a moving corner snaps during width drag', () => {
     const col = rect(0, 0); // width handle for center anchor at (200,0)
