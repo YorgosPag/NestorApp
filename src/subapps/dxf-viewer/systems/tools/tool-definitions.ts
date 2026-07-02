@@ -249,4 +249,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-362 Phase A1: Center mark + centerline tools
   'dim-center-mark':   { id: 'dim-center-mark',   category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-centerline':    { id: 'dim-centerline',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-563 Φ4-Α: interactive cut-line dimension tool (dialog → 3-click → ghost chain).
+  // `drawing` category → mouse-up skips selection + grips skipped, like the dim tools.
+  'auto-dim-cutline':  { id: 'auto-dim-cutline',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };

@@ -3610,6 +3610,7 @@
       },
       "dim": "Dimension",
       "autoDimension": "Auto Dimension",
+      "autoDimensionCutline": "Cut Line",
       "dimVariants": {
         "smart": "Smart Dimension",
         "linear": "Linear",

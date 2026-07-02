@@ -3,38 +3,9 @@
  *
  * @description
  * Κεντρικό hook που διαχειρίζεται όλα τα drawing και measurement interaction handlers.
- * Συνδυάζει unified drawing, snap system, και canvas operations.
- *
- * @features
- * - 🖱️ Mouse event handlers (click, move, right-click)
- * - 🔄 Drawing state management (useUnifiedDrawing)
- * - 📍 Snap system integration (grid, endpoint, midpoint, intersection)
- * - 📏 Measurement tools (distance, area, radius)
- * - 🎨 Settings integration (preview/completion colors)
- * - ✅ Entity creation & lifecycle
- *
- * @handlers
- * - `handleCanvasClick(point)` - Main click handler (snap + drawing)
- * - `handleMouseMove(point)` - Preview update handler
- * - `handleRightClick()` - Finish polyline / Cancel drawing
- * - `handleKeyPress(key)` - ESC to cancel, Enter to finish
- *
- * @integration
- * ```
- * useDrawingHandlers (THIS)
- *   ├── useUnifiedDrawing (drawing state + settings)
- *   ├── useSnapManager (snap point detection)
- *   └── useCanvasOperations (canvas queries)
- * ```
- *
- * @usage
- * ```tsx
- * const {
- *   handleCanvasClick,
- *   handleMouseMove,
- *   handleRightClick
- * } = useDrawingHandlers(activeTool, onEntityCreated, onToolChange, currentScene);
- * ```
+ * Συνδυάζει unified drawing (useUnifiedDrawing), snap system (useSnapManager), και canvas
+ * operations (useCanvasOperations). Εκθέτει τους click / hover / cancel / double-click
+ * handlers + entity creation lifecycle.
  *
  * @see {@link docs/LINE_DRAWING_SYSTEM.md} - Complete line drawing documentation
  * @see {@link docs/settings-system/08-LINE_DRAWING_INTEGRATION.md} - Settings integration
@@ -87,6 +58,10 @@ import { pixelsToWorld } from '../../rendering/utils/viewport-scale';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
+// ADR-563 Φ4-Α: interactive cut-line dimension tool (dialog + 3-click + ghost-chain preview).
+// Clicks are dispatched by useCanvasClickHandler (it has the levelManager accessor); this
+// hook owns the lifecycle (dialog + arm) + the RAF preview (it has previewCanvasRef + scene).
+import { useAutoDimCutlineTool } from '../dimensions/useAutoDimCutlineTool';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 Phase L2: Center mark + centerline standalone tools
@@ -94,7 +69,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish, commitM2PClick } from './drawing-handler-utils';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -116,6 +91,8 @@ export function useDrawingHandlers(
   const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef, onToolChange });
   // ADR-362 Phase L2: center mark + centerline tools
   const centerMarkCreate = useCenterMarkCreate({ activeTool, onEntityCreated, previewCanvasRef });
+  // ADR-563 Φ4-Α: interactive cut-line dimension tool — lifecycle + live ghost-chain preview.
+  useAutoDimCutlineTool({ activeTool, previewCanvasRef, getScene: () => currentScene, onToolChange });
 
   // ADR-508 §line-cyan — η ΓΡΑΜΜΗ χρειάζεται τους ΙΔΙΟΥΣ face-snap στόχους με τον τοίχο για το flush
   // κούμπωμα + κυανές. Τα BIM tools (wall/beam/...) γεμίζουν το κοινό `sceneSnapTargetsStore` μέσω
@@ -298,23 +275,18 @@ export function useDrawingHandlers(
     // ADR-357 Phase 7: Snap Override — handle special multi-click modes before normal snap.
     const snapOverride = SnapOverrideOrchestrator.getOverride();
 
-    // M2P: accumulate 2 clicks → commit midpoint (first click does NOT add a drawing point)
+    // M2P: accumulate 2 clicks → commit midpoint (first click does NOT add a drawing point).
+    // SSoT flow lives in `commitM2PClick` (drawing-handler-utils) — keeps this hook lean.
     if (snapOverride === 'm2p') {
-      const midPoint = SnapOverrideOrchestrator.advanceM2P(applySnap(afterPolar));
-      if (!midPoint) return; // first M2P click — waiting for second
-      // second click: midPoint is ready → commit it, clear override
-      SnapOverrideOrchestrator.clearOverride();
-      const transformUtils = canvasOps.getTransformUtils();
-      const completed = addPoint(midPoint, transformUtils);
-      if (!completed) {
-        window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: midPoint } }));
-      }
-      if (completed && previewCanvasRef?.current) previewCanvasRef.current.clear();
-      if (completed) TrackingPointStore.clearAll();
-      if (completed && onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(activeTool)) {
-        const allPoints = [...drawingState.tempPoints, midPoint];
-        onMeasurementComplete(allPoints, activeTool as ToolType);
-      }
+      commitM2PClick({
+        seed: afterPolar,
+        applySnap,
+        commitPoint: (pt) => addPoint(pt, canvasOps.getTransformUtils()),
+        clearPreview: () => previewCanvasRef?.current?.clear(),
+        tempPoints: drawingState.tempPoints,
+        activeTool,
+        onMeasurementComplete,
+      });
       return;
     }
 
@@ -418,6 +390,10 @@ export function useDrawingHandlers(
   }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
+    // ADR-563 Φ4-Α: the cut-line tool owns the PreviewCanvas via its own RAF
+    // callback (useAutoDimCutlineTool). Skip the generic drawing hover so it does
+    // not clear/fight the live ghost-chain overlay.
+    if (activeTool === 'auto-dim-cutline') return;
     processDrawingHover(p, {
       activeTool,
       isDimTool: dimRouting.isDimTool,

@@ -39,6 +39,8 @@ import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPoin
 import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
 // ADR-507 — armed «Επιλογή γραμμοσκίασης»: hatch-only pick (even-odd SSoT, world-coords).
 import { isHatchSelectArmed, runArmedHatchPick } from '../../bim/hatch/hatch-select-mode-store';
+// ADR-563 Φ4-Α — interactive cut-line dimension: advance the 3-click FSM + commit.
+import { advanceCutlineClick } from '../../systems/dimensions/auto/run-cutline-dimension';
 import type { Entity } from '../../types/entities';
 // ============================================================================
 // HOOK
@@ -134,6 +136,15 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (activeTool === 'finish-paint') {
       params.onFinishPaintClick?.(worldPoint);
       return; // πάντα consume όσο το paintbrush είναι ενεργό
+    }
+    // PRIORITY 0.66: ADR-563 Φ4-Α — «Γραμμή τομής» interactive dimensioning. Η
+    // 3-click FSM (αρχή/τέλος/τοποθέτηση) ζει σε zero-React store· ο κεντρικός
+    // dispatcher έχει τον `levelManager` (SceneAppendAccessor) για το undoable
+    // batch commit στο 3ο κλικ. Το `worldPoint` είναι ΗΔΗ snapped (κεντρικό
+    // findSnapPoint στο mouse-up). Πάντα consume όσο το εργαλείο είναι ενεργό.
+    if (activeTool === 'auto-dim-cutline') {
+      advanceCutlineClick(worldPoint, levelManager);
+      return;
     }
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
     if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && activeTool !== 'scale' && activeTool !== 'stretch' && activeTool !== 'mstretch' && dxfGripInteraction.handleGripClick(worldPoint)) {

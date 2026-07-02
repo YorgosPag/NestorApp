@@ -9,6 +9,8 @@ import { findHostsAtPoint } from '../../systems/dimensions/dim-intersection-host
 import { applyPolar, type PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { applyAlongAxisStepSnap } from '../../bim/grips/grip-step-quantize';
+import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
+import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
 
 /** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
 const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
@@ -139,6 +141,38 @@ export function performDoubleClickFinish(
     ops.onEntityCreated(newEntity as Entity);
   }
   handleToolCompletion(activeTool);
+}
+
+/**
+ * ADR-357 Phase 7 — M2P (mid-between-2-points) override click. First click stores the
+ * reference (returns without committing); second click commits the midpoint like a normal
+ * point (dispatches the legacy `canvas-click` for the Dynamic Input phase hook when the
+ * entity did not complete, clears the preview + tracking memory, and fires the B36 measure
+ * callback). Extracted from `useDrawingHandlers.onDrawingPoint` (SSoT, keeps the hook under
+ * the file-size budget). `commitPoint` returns true when the entity completed.
+ */
+export function commitM2PClick(opts: {
+  seed: Pt;
+  applySnap: (pt: Pt) => Pt;
+  commitPoint: (pt: Pt) => boolean;
+  clearPreview: () => void;
+  tempPoints: ReadonlyArray<Pt>;
+  activeTool: ToolType;
+  onMeasurementComplete?: (points: ReadonlyArray<Pt>, tool: ToolType) => void;
+}): void {
+  const midPoint = SnapOverrideOrchestrator.advanceM2P(opts.applySnap(opts.seed));
+  if (!midPoint) return; // first M2P click — waiting for second
+  SnapOverrideOrchestrator.clearOverride();
+  const completed = opts.commitPoint(midPoint);
+  if (!completed) {
+    window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: midPoint } }));
+    return;
+  }
+  opts.clearPreview();
+  TrackingPointStore.clearAll();
+  if (opts.onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(opts.activeTool)) {
+    opts.onMeasurementComplete([...opts.tempPoints, midPoint], opts.activeTool);
+  }
 }
 
 /** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */

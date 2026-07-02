@@ -3610,6 +3610,7 @@
       },
       "dim": "Διάσταση",
       "autoDimension": "Αυτόματη Διαστασιολόγηση",
+      "autoDimensionCutline": "Γραμμή Τομής",
       "dimVariants": {
         "smart": "Έξυπνη Διάσταση",
         "linear": "Γραμμική",

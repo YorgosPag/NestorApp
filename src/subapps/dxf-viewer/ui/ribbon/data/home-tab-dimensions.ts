@@ -59,6 +59,19 @@ export const HOME_DIMENSIONS_PANEL: RibbonPanelDef = {
             action: 'auto-dimension',
           },
         },
+        // ADR-563 Φ4-Α — «Γραμμή τομής»: interactive cut-line dimensioning. A real
+        // ToolType (no `action`) → routes via onToolChange → toolStateStore.selectTool
+        // → opens the options dialog, then the 3-click cut-line flow.
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'dim.cutline',
+            labelKey: 'ribbon.commands.autoDimensionCutline',
+            icon: 'dim-aligned',
+            commandKey: 'auto-dim-cutline',
+          },
+        },
       ],
     },
   ],
