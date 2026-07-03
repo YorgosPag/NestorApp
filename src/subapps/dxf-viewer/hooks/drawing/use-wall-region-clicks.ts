@@ -25,7 +25,12 @@ import {
   isPerimeterOversized,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
+  findOpenChainEndpointsNear,
 } from '../../bim/walls/perimeter-from-faces';
+import {
+  setRegionGapMarkers,
+  clearRegionGapMarkers,
+} from '../../systems/region-preview/RegionGapMarkersStore';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -125,6 +130,8 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
   //   - 'inside' → ΜΟΝΟ fill του εσώκλειστου ορθογωνίου κάτω από τον κέρσορα.
   const onRegionClick = useCallback(
     (s: WallToolState, point: Readonly<Point2D>): boolean => {
+      // ADR-419 Layer 5b — κάθε νέο κλικ ξεκινά καθαρό (τα προηγούμενα gap markers φεύγουν).
+      clearRegionGapMarkers();
       if (s.regionMethod === 'box') return false;
       const entities = getSceneEntities?.() ?? [];
       const segs = extractLineSegments(entities);
@@ -147,6 +154,15 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         setState(next);
         return true;
       }
+      // 'inside' — ADR-419 §thickness-zones: αν το εσώκλειστο περίγραμμα σπάει σε ΠΟΛΛΑ
+      // σκέλη σταθερού πλάτους (σύνθετο, π.χ. έκεντρο-Τ), δημιούργησε έναν τοίχο ΑΝΑ σκέλος
+      // (preview ≡ commit — ίδιο split που δείχνει η πράσινη διακεκομμένη). Απλό ορθογώνιο
+      // (1 σκέλος) → πέφτει στο υπάρχον single-rect fill (μηδέν regression).
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const { perimeter: pick } = pickRegionPerimeterAt(point, entities, sceneUnits);
+      if (pick && pick.rects.length > 1 && !isPerimeterOversized(pick, mmToSceneUnits(sceneUnits))) {
+        return commitInRegionRects({ ...s, regionPicks: [] }, pick.rects);
+      }
       // 'inside' — μόνο το εσώκλειστο (μικρότερο) ορθογώνιο (αγνοεί τα picks γραμμών).
       const fill = fillEnclosingRectAt(s, point);
       if (fill.kind === 'filled') return true;
@@ -164,6 +180,8 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
       if (openIds.length > 0) {
         EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
         EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
+        // ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα (AutoCAD BOUNDARY): «πού» είναι το κενό.
+        setRegionGapMarkers(findOpenChainEndpointsNear(point, entities, tol));
         return true;
       }
       return false;
@@ -176,6 +194,8 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
   // single-click convenience that mirrors in-region's click-inside path).
   const onPerimeterClick = useCallback(
     (s: WallToolState, point: Readonly<Point2D>): boolean => {
+      // ADR-419 Layer 5b — κάθε νέο κλικ ξεκινά καθαρό (τα προηγούμενα gap markers φεύγουν).
+      clearRegionGapMarkers();
       const entities = getSceneEntities?.() ?? [];
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const scale = mmToSceneUnits(sceneUnits);
@@ -187,6 +207,8 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         if (openIds.length === 0) return false;
         EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
         EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
+        // ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα (AutoCAD BOUNDARY): «πού» είναι το κενό.
+        setRegionGapMarkers(findOpenChainEndpointsNear(point, entities, tol));
         return true;
       }
       // Layer 4 — γιγάντιο περίγραμμα → warning, όχι garbage τοίχος.

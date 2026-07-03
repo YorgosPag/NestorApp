@@ -288,7 +288,12 @@ export function perimeterFacesToRects(
   let ignoredCount = 0;
   for (const polygon of polys) {
     const shape = classifyPerimeter(polygon, tol);
-    const rects = shape === 'composite' ? [] : decomposeRectilinear(polygon, tol);
+    // ADR-419 §thickness-zones — σπάσε ΚΑΘΕ ορθογωνικό περίγραμμα σε σκέλη σταθερού
+    // πλάτους (ένας τοίχος ανά σκέλος, πάχος = μικρή πλευρά). Το `decomposeRectilinear`
+    // επιστρέφει ΗΔΗ [] για μη-ορθογωνικά (γωνίες ≠90°) → αγνοούνται σωστά. Το παλιό
+    // gate `shape==='composite' ? []` πετούσε ΚΑΙ τα 100% ορθογωνικά με >8 κορυφές
+    // (π.χ. έκεντρο-Τ με 2+ μύτες διαφορετικού πάχους) — που ο slab-sweep σπάει μια χαρά.
+    const rects = decomposeRectilinear(polygon, tol);
     perimeters.push({ polygon: normalize(polygon, tol), shape, rects });
     if (rects.length === 0) ignoredCount++;
   }
@@ -447,4 +452,30 @@ export function findOpenChainLineIdsNear(
     if (openNodes.has(a) || openNodes.has(b)) ids.add(s.id);
   }
   return [...ids];
+}
+
+/**
+ * ADR-419 Layer 5b — τα ΣΗΜΕΙΑ (world units) των ανοιχτών άκρων κοντά στο pick.
+ *
+ * AutoCAD `BOUNDARY` red-circles feedback: όταν οι γραμμές δεν κλείνουν βρόχο, δείξε
+ * ΠΟΥ είναι το κενό — κόκκινος κύκλος σε κάθε ελεύθερο άκρο (κόμβος βαθμού 1). Ίδιος
+ * graph με το `findOpenChainLineIdsNear` (SSoT `buildSegmentGraph`), αλλά επιστρέφει
+ * τα σημεία των κόμβων αντί για τα ids των γραμμών, ώστε το overlay να τα σημαδέψει.
+ */
+export function findOpenChainEndpointsNear(
+  point: Readonly<Point2D>,
+  entities: readonly Entity[],
+  tol: number,
+): Point2D[] {
+  const segs = extractLineSegments(entities);
+  if (segs.length === 0) return [];
+  const { nodes, adj } = buildSegmentGraph(segs, tol);
+  const reach = Math.max(tol * 50, tol);
+  const open: Point2D[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    if (adj[i].length === 1 && dist(nodes[i], point as Point2D) <= reach) {
+      open.push({ x: nodes[i].x, y: nodes[i].y });
+    }
+  }
+  return open;
 }

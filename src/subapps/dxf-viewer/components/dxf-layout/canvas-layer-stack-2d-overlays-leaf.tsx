@@ -16,6 +16,7 @@
 
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
+import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
 import { AnalyticalDispatchCanvas } from './analytical-overlays/AnalyticalDispatchCanvas';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -33,6 +34,10 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
     <>
       <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
       <RegionPerimeterPreviewOverlay transform={transform} viewport={viewport} />
+      {/* ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα όταν το region/perimeter
+          pick δεν κλείνει βρόχο (AutoCAD BOUNDARY red-circles). Self-subscribes στο
+          RegionGapMarkersStore· read-only, pointer-events-none. STAGE ADR-040 + ADR-419. */}
+      <RegionGapMarkersOverlay transform={transform} viewport={viewport} />
       {/* ADR-552 — ΕΝΑΣ analytical dispatch canvas αντικαθιστά τα 7 ξεχωριστά
           analytical overlays (riser-through ADR-408 Φ15 · heat-load ADR-422 L1 ·
           pipe-sizing ADR-422 L3 · hydraulic-balancing ADR-422 L4 · utilization

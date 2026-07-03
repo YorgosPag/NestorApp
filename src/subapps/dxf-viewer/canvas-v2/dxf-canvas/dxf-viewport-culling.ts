@@ -36,6 +36,26 @@ interface BBox {
  *  (e.g. line caps, text glyph overflow, arc anti-aliasing). */
 const CULL_PADDING_PX = 32;
 
+/** Full-plane conservative bbox — used for entity types with no computable AABB. */
+const FULL_PLANE_BBOX: BBox = { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
+
+/**
+ * ADR-363 / ADR-040 Phase IX — world-space footprint AABB for BIM direct-entities.
+ *
+ * Every BIM entity (wall / column / beam / foundation / slab / roof / opening / …) spreads
+ * `geometry.bbox` (world-space plan AABB) at the top level of its `DxfEntityUnion` variant
+ * (HitTestingService §1B contract). Use it for culling so a member drawn in a **geo-referenced
+ * DXF** (coordinates ~1e7, e.g. EGSA87/UTM) is NOT dropped by the conservative `FULL_PLANE_BBOX`
+ * fallback — the exact bug that made committed walls invisible in the 2D base render while they
+ * stayed visible in 3D and on hover (both bypass viewport culling). Bbox-less types (dimension,
+ * ray, xline) fall back to the full-plane box.
+ */
+function geometryBBoxOrFullPlane(entity: DxfEntityUnion): BBox {
+  const bb = (entity as { geometry?: { bbox?: { min: { x: number; y: number }; max: { x: number; y: number } } } }).geometry?.bbox;
+  if (bb) return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
+  return FULL_PLANE_BBOX;
+}
+
 /**
  * Compute axis-aligned world-space bbox for a DXF entity. Cheap O(1) per
  * primitive except polylines, which are O(vertices).
@@ -105,25 +125,19 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
         maxY: bb.max.y,
       };
     }
-    case 'column': {
-      // ADR-363 Phase 4 — use geometry.bbox (world-space AABB of the footprint).
-      const bb = entity.geometry?.bbox;
-      if (bb) {
-        return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
-      }
-      return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
-    }
-    case 'foundation': {
-      // ADR-436 Slice 1 — use geometry.bbox (world-space AABB of the footprint).
-      const bb = entity.geometry?.bbox;
-      if (bb) {
-        return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
-      }
-      return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
-    }
+    // ADR-363 / ADR-436 / ADR-040 Phase IX — BIM direct-entities (wall/column/beam/foundation/
+    // slab/roof/opening/…) all carry a world-space `geometry.bbox`. Route them through ONE SSoT
+    // extractor so a member in a geo-referenced DXF (coords ~1e7) is culled by its REAL bounds,
+    // not the ±1e6 full-plane fallback (the "committed wall invisible in 2D" bug, 2026-07-03).
+    case 'column':
+    case 'foundation':
+    case 'wall':
+      return geometryBBoxOrFullPlane(entity);
     default: {
-      // Conservative fallback for entity types not yet handled (e.g. dimension).
-      return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
+      // Prefer the entity's own world-space AABB when present (all other BIM direct-entities:
+      // beam / slab / roof / opening / floor-finish / mep-* / …); bbox-less types (dimension,
+      // ray, xline) keep the conservative full-plane fallback.
+      return geometryBBoxOrFullPlane(entity);
     }
   }
 }

@@ -13,13 +13,23 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 
-export interface RegionPerimeterPreview {
-  /** Κλειστό πολύγωνο (world units) του ανιχνευμένου περιγράμματος. */
+/**
+ * ADR-419 §thickness-zones — μία ΖΩΝΗ σταθερού πάχους του ανιχνευμένου περιγράμματος.
+ * Ένα ενιαίο ορθογώνιο = 1 ζώνη· ένα σύνθετο (rectilinear) περίγραμμα σπάει σε N ζώνες
+ * (ένας τοίχος ανά ζώνη) → η preview δείχνει το ΙΔΙΟ split με το commit (preview ≡ commit).
+ */
+export interface RegionPerimeterZone {
+  /** Κλειστό πολύγωνο (world units) της ζώνης. */
   polygon: Point2D[];
+  /** Ετικέτα διαστάσεων της ζώνης, π.χ. «2.40 × 0.30 m». */
+  label: string;
+}
+
+export interface RegionPerimeterPreview {
+  /** Μία ή περισσότερες ζώνες σταθερού πάχους (ένας τοίχος ανά ζώνη). */
+  zones: RegionPerimeterZone[];
   /** `true` αν ξεπερνά το λογικό δομικό μέλος (Layer 4) → κόκκινο, δεν χτίζεται. */
   oversized: boolean;
-  /** Ετικέτα διαστάσεων, π.χ. «2.40 × 0.30 m». */
-  label: string;
 }
 
 let state: RegionPerimeterPreview | null = null;

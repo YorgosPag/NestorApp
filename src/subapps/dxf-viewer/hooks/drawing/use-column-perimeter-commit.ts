@@ -36,8 +36,13 @@ import {
   isPerimeterOversized,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
+  findOpenChainEndpointsNear,
   type ClosedPerimeter,
 } from '../../bim/walls/perimeter-from-faces';
+import {
+  setRegionGapMarkers,
+  clearRegionGapMarkers,
+} from '../../systems/region-preview/RegionGapMarkersStore';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import {
   requestColumnDiscreteIntentConfirm,
@@ -81,6 +86,8 @@ export function useColumnPerimeterCommit(
       | { kind: 'ok'; perimeter: ClosedPerimeter; sceneUnits: SceneUnits }
       | { kind: 'handled' }
       | { kind: 'none' } => {
+      // ADR-419 Layer 5b — κάθε νέο κλικ ξεκινά καθαρό (τα προηγούμενα gap markers φεύγουν).
+      clearRegionGapMarkers();
       const entities = getSceneEntitiesRef.current?.() ?? [];
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const scale = mmToSceneUnits(sceneUnits);
@@ -94,6 +101,8 @@ export function useColumnPerimeterCommit(
         if (openIds.length === 0) return { kind: 'none' };
         EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
         EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
+        // ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα (AutoCAD BOUNDARY): «πού» είναι το κενό.
+        setRegionGapMarkers(findOpenChainEndpointsNear(point, entities, tol));
         return { kind: 'handled' };
       }
       // Layer 4 — γιγάντιο περίγραμμα (εξωτερικό του σχεδίου) → warning, όχι garbage.

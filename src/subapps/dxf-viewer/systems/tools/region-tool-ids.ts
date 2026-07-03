@@ -51,12 +51,22 @@ export function isWallRegionTool(tool: string | null | undefined): boolean {
 /**
  * Όλα τα εργαλεία ΣΧΕΔΙΑΣΗΣ τοίχου που μοιράζονται το ίδιο contextual tab + τις
  * ίδιες draw-defaults (`wallToolBridgeStore`): ευθύς/καμπύλος/πολυγραμμή τοίχος
- * (`'wall'`), region 3-way (`isWallRegionTool`) και «από περίγραμμα». SSoT — το
- * inline check ζούσε διπλό σε `ribbon-contextual-config` + θα ζητηθεί και από το
- * αριστερό draft panel (`BimPropertiesRouter`) + το auto-switch (N.0.2).
+ * (`'wall'`), «σε υπάρχουσα οντότητα» (`'wall-on-entity'`), region 3-way
+ * (`isWallRegionTool`) και «από περίγραμμα». SSoT — το inline check ζούσε διπλό σε
+ * `ribbon-contextual-config` + ζητείται από το αριστερό draft panel
+ * (`BimPropertiesRouter`) + το auto-switch (N.0.2).
+ *
+ * ADR-443 §wall-entry-split — το `'wall-on-entity'` προστέθηκε ώστε, όταν το εργαλείο
+ * ζει πλέον ΜΕΣΑ στο contextual «Ιδιότητες τοίχου», το κλικ του να ΚΡΑΤΑ ανοιχτό το
+ * tab (αλλιώς ο trigger γινόταν null → το tab έκλεινε μόνο του).
  */
 export function isWallDrawingTool(tool: string | null | undefined): boolean {
-  return tool === 'wall' || isWallRegionTool(tool) || tool === 'wall-from-perimeter';
+  return (
+    tool === 'wall' ||
+    tool === 'wall-on-entity' ||
+    isWallRegionTool(tool) ||
+    tool === 'wall-from-perimeter'
+  );
 }
 
 /**

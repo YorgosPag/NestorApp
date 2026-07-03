@@ -34,39 +34,9 @@ import type { RibbonButton, RibbonCommand, RibbonTab } from '../types/ribbon-typ
 import type { ColumnKind } from '../../../bim/types/column-types';
 import { columnDrawKindAction } from '../hooks/bridge/column-command-keys';
 import { COLUMN_KIND_OPTIONS } from './contextual-column-tab';
-
-/** Helper: a LARGE tool button (commandKey → onToolChange, optional shortcut). */
-function toolBtn(
-  id: string, labelKey: string, icon: string, commandKey: string, shortcut?: string,
-): RibbonButton {
-  return { type: 'simple', size: 'large', command: { id, labelKey, icon, commandKey, ...(shortcut ? { shortcut } : {}) } };
-}
-
-/** Helper: a LARGE action button (action → onAction, e.g. «Εσχάρα από κάναβο»). */
-function actionBtn(
-  id: string, labelKey: string, icon: string, commandKey: string, action: string,
-): RibbonButton {
-  return { type: 'simple', size: 'large', command: { id, labelKey, icon, commandKey, action } };
-}
-
-/** Helper: ONE split-button variant that fires `onAction(action)` (no tool). */
-function actionVariant(id: string, labelKey: string, icon: string, action: string): RibbonCommand {
-  return { id, labelKey, icon, commandKey: action, action };
-}
-
-/**
- * Helper: a LARGE split-action button — main click fires `mainAction`, the dropdown
- * lists `variants` (ADR-441 «Εσχάρα από κάναβο» + 3 περιμετρικά modes).
- */
-function splitActionBtn(
-  id: string, labelKey: string, icon: string, mainAction: string, variants: RibbonCommand[],
-): RibbonButton {
-  return {
-    type: 'split', size: 'large',
-    command: { id, labelKey, icon, commandKey: mainAction, action: mainAction },
-    variants,
-  };
-}
+// SSoT — LARGE ribbon-button factories (πρώην local· εξήχθησαν αφού τα wall tools
+// μοιράζονται τους ίδιους helpers με το contextual-wall-tab, ADR-443 §wall-entry-split).
+import { toolBtn, actionBtn, actionVariant, splitActionBtn } from './ribbon-large-button-helpers';
 
 /**
  * ADR-521 — ONE «Τύποι» dropdown variant: επιλογή τύπου → `onAction('column.drawKind:<kind>')`
@@ -102,6 +72,11 @@ export const STRUCTURAL_TAB: RibbonTab = {
   labelKey: 'ribbon.tabs.structural',
   panels: [
     // ── Τοίχοι (Revit "Wall") ────────────────────────────────────────────────
+    // ADR-443 §wall-entry-split — Revit «Modify | Place Wall»: το permanent tab
+    // κρατά ΜΟΝΟ το entry-point «Τοίχος». Με το κλικ ενεργοποιείται το εργαλείο
+    // και ανοίγει το contextual «Ιδιότητες τοίχου» που φιλοξενεί ΟΛΑ τα υπόλοιπα
+    // εργαλεία τοίχου (wall-on-entity / 3× region / from-perimeter / from-grid) ως
+    // LARGE buttons (panel `wall-tools` στο `contextual-wall-tab.ts`).
     {
       id: 'structural-walls',
       labelKey: 'ribbon.panels.structuralWalls',
@@ -110,24 +85,6 @@ export const STRUCTURAL_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             toolBtn('structuralTab.wall', 'ribbon.commands.bim.wall.label', 'struct-wall-single', 'wall', 'W'),
-            toolBtn('structuralTab.wallOnEntity', 'ribbon.commands.bim.wallOnEntity.label', 'struct-wall-on-entity', 'wall-on-entity'),
-            toolBtn('structuralTab.wallRegionLines', 'ribbon.commands.bim.wallRegionLines.label', 'struct-wall-region-lines', 'wall-region-lines'),
-            toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'struct-wall-region-inside', 'wall-region-inside'),
-            toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'struct-wall-region-box', 'wall-region-box'),
-            toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'struct-wall-from-perimeter', 'wall-from-perimeter'),
-            // ADR-441 Slice GEN-WALL / 3-mode — «Τοίχοι από κάναβο»: split-button· main =
-            // inner (default), dropdown = Wall Location Line (Εσωτερικά/Κεντρικά/Εξωτερικά).
-            splitActionBtn(
-              'structuralTab.wallsFromGrid',
-              'ribbon.commands.bim.wallsFromGrid.label',
-              'struct-wall-from-grid',
-              'wall.actions.fromGrid',
-              [
-                actionVariant('structuralTab.wallsFromGridInner', 'ribbon.commands.bim.wallsFromGridInner.label', 'struct-wall-from-grid', 'wall.actions.fromGrid'),
-                actionVariant('structuralTab.wallsFromGridCenter', 'ribbon.commands.bim.wallsFromGridCenter.label', 'struct-wall-from-grid', 'wall.actions.fromGridCenter'),
-                actionVariant('structuralTab.wallsFromGridOuter', 'ribbon.commands.bim.wallsFromGridOuter.label', 'struct-wall-from-grid', 'wall.actions.fromGridOuter'),
-              ],
-            ),
           ],
         },
       ],

@@ -18,11 +18,13 @@
 import { STRUCTURAL_TAB } from '../structural-tab';
 import type { RibbonCommand } from '../../types/ribbon-types';
 
-// The 24 tool commandKeys + 3 «από κάναβο» action keys (foundation/column/wall).
+// Tool commandKeys + «από κάναβο» action keys (foundation/column/beam).
+// ADR-443 §wall-entry-split — το permanent tab κρατά ΜΟΝΟ το entry-point «Τοίχος»·
+// τα υπόλοιπα εργαλεία τοίχου (wall-on-entity / 3× region / from-perimeter / from-grid)
+// μεταφέρθηκαν στο contextual «Ιδιότητες τοίχου» (contextual-wall-tab.test.ts).
 const EXPECTED_COMMAND_KEYS = [
-  // walls (last = ADR-441 «Τοίχοι από κάναβο» action)
-  'wall', 'wall-on-entity', 'wall-region-lines', 'wall-region-inside', 'wall-region-box', 'wall-from-perimeter',
-  'wall.actions.fromGrid',
+  // walls — μόνο το entry-point (τα υπόλοιπα ζουν στο contextual wall tab)
+  'wall',
   // columns & piers (last = ADR-441 «Κολώνες από κάναβο» action)
   'column', 'column-region-lines', 'column-region-inside', 'column-region-box',
   'column-discrete-from-perimeter', 'column-from-perimeter', 'column-discrete-from-perimeter-walls',
@@ -83,7 +85,6 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
   // + 3 περιμετρικά modes στο dropdown)· ΟΛΑ τα υπόλοιπα = simple χωρίς variants.
   const GRID_SPLIT_KEYS: ReadonlySet<string> = new Set([
     'foundation.actions.fromGrid',
-    'wall.actions.fromGrid',
     'column.actions.fromGrid',
     'beam.actions.fromGrid',
   ]);
@@ -110,7 +111,6 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
   it('κάθε «από κάναβο» split-button λιστάρει τα 3 περιμετρικά modes ως action variants', () => {
     const families: ReadonlyArray<[string, readonly string[]]> = [
       ['foundation.actions.fromGrid', ['foundation.actions.fromGrid', 'foundation.actions.fromGridCenter', 'foundation.actions.fromGridOuter']],
-      ['wall.actions.fromGrid', ['wall.actions.fromGrid', 'wall.actions.fromGridCenter', 'wall.actions.fromGridOuter']],
       ['column.actions.fromGrid', ['column.actions.fromGrid', 'column.actions.fromGridCenter', 'column.actions.fromGridOuter']],
       ['beam.actions.fromGrid', ['beam.actions.fromGrid', 'beam.actions.fromGridCenter', 'beam.actions.fromGridOuter']],
     ];
@@ -142,8 +142,7 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     const iconByKey = new Map(allCommands().map((c) => [c.commandKey, c.icon]));
     // Walls + columns + beams + foundation = composed base×method tokens.
     const composed = [
-      'wall', 'wall-on-entity', 'wall-region-lines', 'wall-region-inside', 'wall-region-box',
-      'wall-from-perimeter', 'wall.actions.fromGrid',
+      'wall',
       'column', 'column-region-lines', 'column-region-inside', 'column-region-box',
       'column-discrete-from-perimeter', 'column-from-perimeter', 'column-discrete-from-perimeter-walls',
       'column.actions.fromGrid', 'beam', 'beam-from-wall', 'beam.actions.fromGrid',
@@ -167,10 +166,26 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     expect(shortcuts).toEqual(expect.arrayContaining(['W', 'CL', 'BM', 'SL', 'SO', 'OP', 'FP', 'FS', 'ST', 'RL']));
   });
 
-  it('wires the «… από κάναβο» one-shots as action buttons, not tools (foundation/column/wall)', () => {
-    for (const key of ['foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid', 'column.actions.fromGrid', 'wall.actions.fromGrid', 'beam.actions.fromGrid']) {
+  it('wires the «… από κάναβο» one-shots as action buttons, not tools (foundation/column/beam)', () => {
+    for (const key of ['foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid', 'column.actions.fromGrid', 'beam.actions.fromGrid']) {
       const fromGrid = allCommands().find((c) => c.commandKey === key);
       expect(fromGrid?.action).toBe(key);
+    }
+  });
+
+  // ADR-443 §wall-entry-split — Revit «Modify | Place Wall»: το permanent «Δομικά»
+  // tab κρατά ΜΟΝΟ το entry-point «Τοίχος». Τα υπόλοιπα εργαλεία τοίχου ζουν πλέον
+  // στο contextual «Ιδιότητες τοίχου» (contextual-wall-tab.test.ts).
+  it('keeps ONLY the «Τοίχος» entry-point in the walls panel (rest moved to contextual tab)', () => {
+    const wallsPanel = STRUCTURAL_TAB.panels.find((p) => p.id === 'structural-walls');
+    const buttons = wallsPanel?.rows.flatMap((r) => r.buttons) ?? [];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]?.command.commandKey).toBe('wall');
+    expect(buttons[0]?.size).toBe('large');
+    // κανένα από τα μεταφερμένα εργαλεία δεν έμεινε πίσω στο permanent tab
+    const allKeys = allCommands().map((c) => c.commandKey);
+    for (const moved of ['wall-on-entity', 'wall-region-lines', 'wall-region-inside', 'wall-region-box', 'wall-from-perimeter', 'wall.actions.fromGrid']) {
+      expect(allKeys).not.toContain(moved);
     }
   });
 });

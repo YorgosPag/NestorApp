@@ -203,7 +203,7 @@
   },
   "regionPerimeter": {
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
-    "noClosedLoop": "No closed boundary found near the point — the lines may not connect."
+    "noClosedLoop": "The lines don't form a closed loop. Join the marked endpoints (○) and try again."
   },
   "columnAdoptSize": {
     "title": "Adopt rectangle size",
@@ -1309,6 +1309,7 @@
       "stairMultiFlight": "Multi-Flight",
       "stairStructuralAttach": "Structural Attach",
       "stairActions": "Actions",
+      "wallTools": "Wall Tools",
       "wallDraw": "Draw",
       "wallCategory": "Category",
       "wallGeometry": "Geometry",

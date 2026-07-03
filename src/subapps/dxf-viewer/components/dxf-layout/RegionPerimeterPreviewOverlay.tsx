@@ -29,50 +29,59 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
     getRegionPerimeterPreview,
   );
 
-  if (!preview || preview.polygon.length < 3) return null;
-
-  const screenPts = preview.polygon.map((p) =>
-    CoordinateTransforms.worldToScreen(p, transform, viewport),
-  );
-  const d =
-    screenPts
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-      .join(' ') + ' Z';
+  if (!preview || preview.zones.length === 0) return null;
 
   const color = preview.oversized ? '#ef4444' : '#22c55e';
   const fill = preview.oversized ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.12)';
-  const centroid: Point2D = screenPts.reduce(
-    (acc, p) => ({ x: acc.x + p.x / screenPts.length, y: acc.y + p.y / screenPts.length }),
-    { x: 0, y: 0 },
-  );
 
   return (
     <svg
       className="absolute inset-0 size-full pointer-events-none z-10"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path
-        d={d}
-        fill={fill}
-        stroke={color}
-        strokeWidth="2"
-        strokeDasharray="8 4"
-        strokeLinejoin="round"
-      />
-      <text
-        x={centroid.x}
-        y={centroid.y}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="12"
-        fontWeight="600"
-        fill={color}
-        stroke="#0b0f19"
-        strokeWidth="0.5"
-        paintOrder="stroke"
-      >
-        {preview.label}
-      </text>
+      {/* ADR-419 §thickness-zones — ΚΑΘΕ ζώνη σταθερού πάχους ξεχωριστό περίγραμμα +
+          ετικέτα (ένας τοίχος ανά ζώνη), ώστε η preview να δείχνει ΑΚΡΙΒΩΣ ό,τι θα
+          δημιουργήσει το κλικ (preview ≡ commit). */}
+      {preview.zones.map((zone, zi) => {
+        if (zone.polygon.length < 3) return null;
+        const screenPts = zone.polygon.map((p) =>
+          CoordinateTransforms.worldToScreen(p, transform, viewport),
+        );
+        const d =
+          screenPts
+            .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+            .join(' ') + ' Z';
+        const centroid: Point2D = screenPts.reduce(
+          (acc, p) => ({ x: acc.x + p.x / screenPts.length, y: acc.y + p.y / screenPts.length }),
+          { x: 0, y: 0 },
+        );
+        return (
+          <g key={zi}>
+            <path
+              d={d}
+              fill={fill}
+              stroke={color}
+              strokeWidth="2"
+              strokeDasharray="8 4"
+              strokeLinejoin="round"
+            />
+            <text
+              x={centroid.x}
+              y={centroid.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="12"
+              fontWeight="600"
+              fill={color}
+              stroke="#0b0f19"
+              strokeWidth="0.5"
+              paintOrder="stroke"
+            >
+              {zone.label}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

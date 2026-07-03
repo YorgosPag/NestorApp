@@ -121,6 +121,30 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-07-03** — §wall-entry-split (Opus 4.8). Revit «Modify | Place Wall» refinement
+  for the **Τοίχος** family only (columns/beams/etc. follow later, same pattern). The
+  permanent `structural-walls` panel now keeps **ONLY the entry-point «Τοίχος»**
+  (`toolBtn 'wall'`); the other 6 wall tools (`wall-on-entity`, 3× region,
+  `wall-from-perimeter`, `walls-from-grid` split) **move into the existing contextual
+  «Ιδιότητες τοίχου» tab** (`contextual-wall-tab.ts`) as a NEW **first panel `wall-tools`**
+  with the same LARGE buttons — exactly Revit's permanent-launcher + contextual-tools model.
+  - **SSoT**: the 4 LARGE-button factories (`toolBtn` / `actionBtn` / `actionVariant` /
+    `splitActionBtn`) were **extracted** from `structural-tab.ts` into NEW
+    `ui/ribbon/data/ribbon-large-button-helpers.ts` (byte-identical), now shared by both the
+    permanent tab and the contextual wall panel — zero duplicate definitions (N.0.2 / N.12).
+    Same tool ids / labelKeys / icons / actions moved verbatim → zero new command semantics.
+  - **GOTCHA fix**: `systems/tools/region-tool-ids.ts` `isWallDrawingTool` now includes
+    `'wall-on-entity'`. It was absent, so clicking it inside the contextual tab would drop
+    the trigger to `null` and self-close the tab. Verified safe across all 3 callers
+    (`ribbon-contextual-config` trigger, `BimPropertiesRouter` draft panel,
+    `FloatingPanelContainer` transition) — all become more consistent, no regression.
+  - **i18n**: 1 new panel key `ribbon.panels.wallTools` (el «Εργαλεία τοίχου» / en «Wall Tools»).
+  - **NEW** `ribbon-large-button-helpers.ts`, `__tests__/contextual-wall-tab.test.ts` (6),
+    `systems/tools/__tests__/region-tool-ids.test.ts` (4). **MOD** `structural-tab.ts`,
+    `contextual-wall-tab.ts`, `region-tool-ids.ts`, `structural-tab.test.ts` (walls keys
+    trimmed + entry-point assertion), el/en locales. 21/21 targeted tests green. Reuses the
+    existing contextual-trigger + auto-switch machinery (RibbonRoot) — no new store/trigger.
+    Pending browser-verify + commit. See ADR-363 (contextual wall tab owner).
 - **2026-06-12** — Icon-distinction pass (Opus 4.8). Root bug: every variant of a family
   shared ONE glyph token (`bim-wall`×7, `bim-column`×9, `bim-beam`×6 incl. borrowed
   foundation icons) → users could not tell the creation methods apart. Fix = a Revit-grade

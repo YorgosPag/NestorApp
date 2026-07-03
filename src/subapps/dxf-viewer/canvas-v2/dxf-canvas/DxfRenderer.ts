@@ -34,6 +34,7 @@ import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 import { drawMemberReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
+
 export class DxfRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;

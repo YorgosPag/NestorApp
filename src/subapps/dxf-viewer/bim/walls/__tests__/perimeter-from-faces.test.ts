@@ -19,6 +19,7 @@ import {
   perimeterMemberThicknessMm,
   perimeterExtentMm,
   findOpenChainLineIdsNear,
+  findOpenChainEndpointsNear,
 } from '../perimeter-from-faces';
 
 const TOL = 5;
@@ -374,6 +375,63 @@ describe('perimeter-from-faces — open-loop diagnostics (Layer 5)', () => {
   it('returns nothing when there are no open endpoints near (clean closed rect)', () => {
     const clean = looseRectLines('c', RECT_A_FOOT);
     expect(findOpenChainLineIdsNear({ x: 1500, y: 150 }, clean, 5)).toHaveLength(0);
+  });
+
+  // ADR-419 Layer 5b — τα ΣΗΜΕΙΑ των ανοιχτών άκρων (AutoCAD BOUNDARY gap markers).
+  it('returns the open ENDPOINT POINTS near the pick (gap markers)', () => {
+    const pts = findOpenChainEndpointsNear({ x: 0, y: 15 }, GAPPED_RECT_LINES, 5);
+    expect(pts).toHaveLength(2);
+    const rounded = pts
+      .map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }))
+      .sort((a, b) => a.y - b.y);
+    expect(rounded).toEqual([{ x: 0, y: 0 }, { x: 0, y: 30 }]); // τα δύο ελεύθερα άκρα της γωνίας
+  });
+
+  it('returns no endpoint points for a clean closed rect', () => {
+    const clean = looseRectLines('c', RECT_A_FOOT);
+    expect(findOpenChainEndpointsNear({ x: 1500, y: 150 }, clean, 5)).toHaveLength(0);
+  });
+});
+
+// ADR-419 §thickness-zones — ένας τοίχος = ΕΝΑ πάχος. Ένα σύνθετο (rectilinear)
+// περίγραμμα με αλλαγή πάχους σπάει σε σκέλη σταθερού πλάτους (ένας τοίχος ανά σκέλος)·
+// το κοινό junction το παίρνει ο κύριος/συνεχής (μακρύτερος) τοίχος.
+describe('perimeter-from-faces — thickness-zones split', () => {
+  // Έκεντρο-Τ: οριζόντιος τοίχος (μήκος 2700, πάχος 200) + κατακόρυφη μύτη
+  // (πλάτος 450, εκτείνεται 400 κάτω), έκεντρα στο x∈[1000,1450].
+  const OFFSET_T: Point2D[] = [
+    { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: -400 }, { x: 1450, y: -400 },
+    { x: 1450, y: 0 }, { x: 2700, y: 0 }, { x: 2700, y: 200 }, { x: 0, y: 200 },
+  ];
+  // Διπλή μύτη διαφορετικού πάχους (12 κορυφές → shape 'composite', πρώην αγνοείτο).
+  const TWO_STUBS: Point2D[] = [
+    { x: 0, y: 0 }, { x: 500, y: 0 }, { x: 500, y: -400 }, { x: 800, y: -400 },
+    { x: 800, y: 0 }, { x: 1800, y: 0 }, { x: 1800, y: -600 }, { x: 2400, y: -600 },
+    { x: 2400, y: 0 }, { x: 3000, y: 0 }, { x: 3000, y: 200 }, { x: 0, y: 200 },
+  ];
+
+  it('έκεντρο-Τ (2 πάχη) → 2 σκέλη σταθερού πλάτους (junction στον κύριο)', () => {
+    const { rects } = perimeterFacesToRects(looseRectLines('t', OFFSET_T), TOL);
+    expect(rects).toHaveLength(2);
+    const shorts = rects.map((r) => Math.round(r.shortSide)).sort((a, b) => a - b);
+    expect(shorts).toEqual([200, 400]); // δύο διαφορετικά πάχη, ΟΧΙ ένας ενιαίος τοίχος
+    // ο κύριος (οριζόντιος) παίρνει ΟΛΟ το μήκος 2700 — συμπεριλαμβανομένου του junction.
+    const longest = Math.max(...rects.map((r) => Math.round(r.longSide)));
+    expect(longest).toBe(2700);
+  });
+
+  it('πολυζωνικό >8 κορυφές (πρώην composite→αγνοείτο) → σπάει σε 3 σκέλη, τίποτα ignored', () => {
+    const { rects, ignoredCount } = perimeterFacesToRects(looseRectLines('s', TWO_STUBS), TOL);
+    expect(rects).toHaveLength(3);
+    expect(ignoredCount).toBe(0);
+    // τρία διακριτά πάχη: ο οριζόντιος (200) + οι δύο μύτες (300, 600).
+    const shorts = rects.map((r) => Math.round(r.shortSide)).sort((a, b) => a - b);
+    expect(shorts).toEqual([200, 300, 600]);
+  });
+
+  it('απλό ορθογώνιο → ΕΝΑ σκέλος (μηδέν regression για ομοιόμορφο πάχος)', () => {
+    const { rects } = perimeterFacesToRects(looseRectLines('r', RECT_A_FOOT), TOL);
+    expect(rects).toHaveLength(1);
   });
 });
 

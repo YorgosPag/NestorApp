@@ -19,6 +19,9 @@
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
+// ADR-443 §wall-entry-split — τα εργαλεία τοίχου (πρώην στο permanent «Δομικά» tab)
+// φιλοξενούνται εδώ ως LARGE buttons· κοινοί helpers (SSoT) με το structural-tab.
+import { toolBtn, actionVariant, splitActionBtn } from './ribbon-large-button-helpers';
 import {
   WALL_RIBBON_KEYS,
   WALL_RIBBON_KEYS_ACTIONS,
@@ -94,6 +97,40 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
   contextualTrigger: WALL_CONTEXTUAL_TRIGGER,
   badgeKey: WALL_RIBBON_BADGE_KEYS.violations,
   panels: [
+    {
+      // ADR-443 §wall-entry-split — «Εργαλεία τοίχου» (Revit «Modify | Place Wall»):
+      // ΟΛΑ τα εργαλεία σχεδίασης τοίχου ως LARGE buttons, μεταφερμένα από το permanent
+      // «Δομικά» tab (που κρατά πλέον μόνο το entry-point «Τοίχος»). Ίδια tool ids /
+      // labelKeys / icons / actions — μηδέν νέα command semantics. Πρώτο panel (leftmost),
+      // πριν το «Draw Options Bar», όπως τα placement tools στο Revit contextual tab.
+      id: 'wall-tools',
+      labelKey: 'ribbon.panels.wallTools',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            toolBtn('structuralTab.wallOnEntity', 'ribbon.commands.bim.wallOnEntity.label', 'struct-wall-on-entity', 'wall-on-entity'),
+            toolBtn('structuralTab.wallRegionLines', 'ribbon.commands.bim.wallRegionLines.label', 'struct-wall-region-lines', 'wall-region-lines'),
+            toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'struct-wall-region-inside', 'wall-region-inside'),
+            toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'struct-wall-region-box', 'wall-region-box'),
+            toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'struct-wall-from-perimeter', 'wall-from-perimeter'),
+            // ADR-441 Slice GEN-WALL / 3-mode — «Τοίχοι από κάναβο»: split-button· main =
+            // inner (default), dropdown = Wall Location Line (Εσωτερικά/Κεντρικά/Εξωτερικά).
+            splitActionBtn(
+              'structuralTab.wallsFromGrid',
+              'ribbon.commands.bim.wallsFromGrid.label',
+              'struct-wall-from-grid',
+              'wall.actions.fromGrid',
+              [
+                actionVariant('structuralTab.wallsFromGridInner', 'ribbon.commands.bim.wallsFromGridInner.label', 'struct-wall-from-grid', 'wall.actions.fromGrid'),
+                actionVariant('structuralTab.wallsFromGridCenter', 'ribbon.commands.bim.wallsFromGridCenter.label', 'struct-wall-from-grid', 'wall.actions.fromGridCenter'),
+                actionVariant('structuralTab.wallsFromGridOuter', 'ribbon.commands.bim.wallsFromGridOuter.label', 'struct-wall-from-grid', 'wall.actions.fromGridOuter'),
+              ],
+            ),
+          ],
+        },
+      ],
+    },
     {
       // ADR-565 §12 / Φ1.x — «Draw Options Bar» (Revit «Draw» panel): επιλογέας τρόπου
       // σχεδίασης (Ευθύς / Καμπύλος×4 / Πολυγραμμή) ως σειρά εικονιδίων. Πρώτο panel,

@@ -28,7 +28,9 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import {
   setRegionPerimeterPreview,
   clearRegionPerimeterPreview,
+  type RegionPerimeterZone,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
+import { clearRegionGapMarkers } from '../../systems/region-preview/RegionGapMarkersStore';
 import { isRegionHoverPreviewTool } from '../../systems/tools/region-tool-ids';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
 import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -64,6 +66,8 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
       const tool = toolRef.current;
       if (!isRegionPreviewActive(tool)) {
         clearPreviewIfShown();
+        // ADR-419 Layer 5b — φεύγοντας από region/perimeter εργαλείο, σβήσε και τα gap markers.
+        clearRegionGapMarkers();
         return;
       }
 
@@ -98,7 +102,7 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
       // του overlay σε κάθε move μέσα στην ίδια περιοχή.
       if (preview.sig === _lastSig) return;
       _lastSig = preview.sig;
-      setRegionPerimeterPreview({ polygon: preview.polygon, oversized: false, label: preview.label });
+      setRegionPerimeterPreview({ zones: preview.zones, oversized: false });
       _hadPreview = true;
     },
     [],
@@ -110,14 +114,23 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
 // ─── Per-tool preview resolvers ──────────────────────────────────────────────
 
 interface PreviewPick {
-  readonly polygon: Point2D[];
-  readonly label: string;
-  /** Φθηνή υπογραφή ταυτότητας (κβαντισμένο πολύγωνο) — dedup redundant store writes. */
+  readonly zones: RegionPerimeterZone[];
+  /** Φθηνή υπογραφή ταυτότητας (κβαντισμένες ζώνες) — dedup redundant store writes. */
   readonly sig: string;
 }
 
 function polygonSig(polygon: readonly Point2D[]): string {
   return polygon.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+}
+
+function zonesSig(zones: readonly RegionPerimeterZone[]): string {
+  return zones.map((z) => polygonSig(z.polygon)).join('|');
+}
+
+/** Ένα single-zone PreviewPick (σκέτος τοίχος/κολόνα — ΕΝΑ σχήμα, χωρίς split). */
+function singleZone(polygon: Point2D[], label: string): PreviewPick {
+  const zones: RegionPerimeterZone[] = [{ polygon, label }];
+  return { zones, sig: zonesSig(zones) };
 }
 
 /**
@@ -133,13 +146,19 @@ function resolvePerimeterPreview(
 ): PreviewPick | null {
   const { perimeter: pick } = pickRegionPerimeterAt(worldPos, entities, sceneUnits);
   if (!pick || isPerimeterOversized(pick, scale)) return null;
+  // ADR-419 §thickness-zones — αν το περίγραμμα σπάει σε σκέλη σταθερού πλάτους
+  // (`decomposeRectilinear`), δείξε ΚΑΘΕ σκέλος ξεχωριστά — ΑΚΡΙΒΩΣ όσους τοίχους θα
+  // δημιουργήσει το commit (`buildFillingWalls` ένας τοίχος ανά σκέλος) → preview ≡ commit.
+  // Μη-ορθογωνικό loop (rects=[]) → ένα σχήμα (το commit ούτως ή άλλως το αγνοεί).
+  if (pick.rects.length > 0) {
+    const zones: RegionPerimeterZone[] = pick.rects.map((r) => ({
+      polygon: [...r.polygon],
+      label: `${(r.longSide / scale / 1000).toFixed(2)} × ${(r.shortSide / scale / 1000).toFixed(2)} m`,
+    }));
+    return { zones, sig: zonesSig(zones) };
+  }
   const { width, height } = perimeterExtentMm(pick, scale);
-  const polygon = [...pick.polygon];
-  return {
-    polygon,
-    label: `${(width / 1000).toFixed(2)} × ${(height / 1000).toFixed(2)} m`,
-    sig: polygonSig(polygon),
-  };
+  return singleZone([...pick.polygon], `${(width / 1000).toFixed(2)} × ${(height / 1000).toFixed(2)} m`);
 }
 
 /**
@@ -156,12 +175,10 @@ function resolvePlainWallRectPreview(
 ): PreviewPick | null {
   const rect = findEnclosingRectangle(extractLineSegments(entities), worldPos, resolveRegionLoopTolWorld(sceneUnits));
   if (!rect || rect.shortSide / scale > REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM) return null;
-  const polygon = [...rect.polygon];
-  return {
-    polygon,
-    label: `${(rect.longSide / scale / 1000).toFixed(2)} × ${(rect.shortSide / scale / 1000).toFixed(2)} m`,
-    sig: polygonSig(polygon),
-  };
+  return singleZone(
+    [...rect.polygon],
+    `${(rect.longSide / scale / 1000).toFixed(2)} × ${(rect.shortSide / scale / 1000).toFixed(2)} m`,
+  );
 }
 
 /**
@@ -197,12 +214,11 @@ function resolveColumnShapePreview(
     };
     if (!shouldProposeAdopt(info, eff)) return null;
   }
-  const polygon = [...perimeter.polygon];
-  return {
-    polygon,
-    label: `${(info.widthMm / 1000).toFixed(2)} × ${(info.depthMm / 1000).toFixed(2)} m`,
-    sig: polygonSig(polygon),
-  };
+  // Η κολόνα/τοιχίο = ΕΝΑ μέλος (δεν σπάει σε ζώνες) → single zone (ολόκληρο το σχήμα).
+  return singleZone(
+    [...perimeter.polygon],
+    `${(info.widthMm / 1000).toFixed(2)} × ${(info.depthMm / 1000).toFixed(2)} m`,
+  );
 }
 
 /**
