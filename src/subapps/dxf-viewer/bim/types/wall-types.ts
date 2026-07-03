@@ -39,6 +39,18 @@ import type { WallTypeParams } from './bim-family-type';
 export type WallKind = 'straight' | 'curved' | 'polyline';
 
 /**
+ * ADR-565 §12 / Φ1.x — Revit «Draw gallery» arc draw-variants για τον καμπύλο (`kind==='curved'`)
+ * τοίχο. Καθαρά **input-method** discriminator: όλα κανονικοποιούν στο ΕΝΑ `WallParams.arc` bulge
+ * (η αποθηκευμένη οντότητα ΔΕΝ ξέρει ποιο variant την παρήγαγε). Ζει εδώ (δίπλα στο `WallKind`)
+ * ώστε ο event-map + το FSM + το ribbon widget να το μοιράζονται χωρίς κύκλο εξαρτήσεων.
+ *   - '3-point'          → αρχή → τέλος → σημείο-στο-τόξο (default = Φ1).
+ *   - 'center-ends'      → κέντρο → αρχή(ακτίνα) → τέλος(γωνία).
+ *   - 'start-end-radius' → αρχή → τέλος → ακτίνα R (dynamic-input / cursor).
+ *   - 'tangent'          → αρχή → τέλος, εφαπτομενικά στο προηγ. τμήμα.
+ */
+export type WallArcVariant = '3-point' | 'center-ends' | 'start-end-radius' | 'tangent';
+
+/**
  * Nestor extends genarc's 3 categories with `parapet` + `fence` για ΟΙΚ-3.05/3.06
  * BOQ mapping (ADR-363 §10 wall presets).
  */

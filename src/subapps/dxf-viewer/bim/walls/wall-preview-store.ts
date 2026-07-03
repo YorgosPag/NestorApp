@@ -30,6 +30,7 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
 import type { StripJustification } from '../types/foundation-types';
+import type { WallArcVariant } from '../types/wall-types';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -53,6 +54,18 @@ export interface WallPreviewState {
    * `null` in every other phase / kind.
    */
   readonly arcEndPoint: Point2D | null;
+  /**
+   * ADR-565 Φ1.x — active arc draw-variant (Draw gallery). Το preview branch-άρει πάνω σ' αυτό:
+   * 'center-ends' → arc από `arcCenter`+start+cursor· 'tangent' → arc εφαπτομενικό στο προηγ.
+   * τμήμα· '3-point'/'start-end-radius' → μέσω `arcEndPoint`. Default '3-point'.
+   */
+  readonly arcVariant: WallArcVariant;
+  /**
+   * ADR-565 Φ1.x — «κέντρο-άκρα» variant: το κέντρο του τόξου (1ο κλικ). Set κατά το
+   * `awaitingArcRadiusPoint` ώστε το live preview να δείξει το τόξο start→(projected cursor).
+   * `null` στα υπόλοιπα variants / phases.
+   */
+  readonly arcCenter: Point2D | null;
   /**
    * Polyline spine vertices (N-click flow). Empty in straight/curved modes.
    * Captured in user-click order; the active `awaitingNextVertex` cursor is
@@ -97,6 +110,8 @@ const EMPTY: WallPreviewState = Object.freeze({
   endPoint: null,
   curveControl: null,
   arcEndPoint: null,
+  arcVariant: '3-point' as WallArcVariant,
+  arcCenter: null,
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
   startAnchored: false,
@@ -150,12 +165,14 @@ function overridesEqual(a: WallParamOverrides, b: WallParamOverrides): boolean {
   );
 }
 
-type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startJustification' | 'startFaceAngle' | 'anchoredHostId' | 'arcEndPoint'> & {
+type WallPreviewSet = Omit<WallPreviewState, 'startAnchored' | 'startJustification' | 'startFaceAngle' | 'anchoredHostId' | 'arcEndPoint' | 'arcVariant' | 'arcCenter'> & {
   readonly startAnchored?: boolean;
   readonly startJustification?: StripJustification | null;
   readonly startFaceAngle?: number | null;
   readonly anchoredHostId?: string | null;
   readonly arcEndPoint?: Point2D | null;
+  readonly arcVariant?: WallArcVariant;
+  readonly arcCenter?: Point2D | null;
 };
 
 export const wallPreviewStore = {
@@ -166,11 +183,15 @@ export const wallPreviewStore = {
     const nextFaceAngle = next.startFaceAngle ?? null;
     const nextHostId = next.anchoredHostId ?? null;
     const nextArcEnd = next.arcEndPoint ?? null;
+    const nextArcVariant = next.arcVariant ?? '3-point';
+    const nextArcCenter = next.arcCenter ?? null;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
       pointsEqual(currentState.curveControl, next.curveControl) &&
       pointsEqual(currentState.arcEndPoint, nextArcEnd) &&
+      pointsEqual(currentState.arcCenter, nextArcCenter) &&
+      currentState.arcVariant === nextArcVariant &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       currentState.startAnchored === nextAnchored &&
       currentState.startJustification === nextJustification &&
@@ -185,6 +206,8 @@ export const wallPreviewStore = {
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
       arcEndPoint: nextArcEnd ? { x: nextArcEnd.x, y: nextArcEnd.y } : null,
+      arcVariant: nextArcVariant,
+      arcCenter: nextArcCenter ? { x: nextArcCenter.x, y: nextArcCenter.y } : null,
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,

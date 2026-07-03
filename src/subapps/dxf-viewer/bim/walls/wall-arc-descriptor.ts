@@ -81,6 +81,54 @@ export function bulgeFromRadius(
 }
 
 /**
+ * ADR-565 Φ1.x «κέντρο–άκρα» — signed DXF bulge for the arc that starts at `start` (on a circle
+ * of centre `center`) and sweeps to the angle of `cursor` (projected back onto the same circle).
+ * Returns the bulge AND the resolved `endPoint` (the cursor angle projected onto the circle, i.e.
+ * the wall's `end`). The signed sweep follows the cursor side in `(-π, π]` (minor arc) in the SAME
+ * atan2 world-space `bulgeToArc` consumes (positive = CCW = positive bulge) — NOT the renderer's
+ * y-flipped `counterclockwise` flag. Returns `null` for a degenerate radius / zero sweep.
+ *
+ * NOTE (MVP limitation): the minor-arc convention caps the sweep at ±180°; crossing the antipode
+ * flips the arc side. Continuous >180° sweeps land in a later phase.
+ */
+export function bulgeFromCenterStartEnd(
+  center: Point2D,
+  start: Point2D,
+  cursor: Point2D,
+): { bulge: number; endPoint: Point2D } | null {
+  const rx = start.x - center.x;
+  const ry = start.y - center.y;
+  const radius = Math.hypot(rx, ry);
+  if (radius < 1e-9) return null;
+  const a0 = Math.atan2(ry, rx);
+  const a1 = Math.atan2(cursor.y - center.y, cursor.x - center.x);
+  let sweep = a1 - a0;
+  while (sweep <= -Math.PI) sweep += TWO_PI;
+  while (sweep > Math.PI) sweep -= TWO_PI;
+  if (Math.abs(sweep) < 1e-9) return null;
+  const endPoint: Point2D = { x: center.x + radius * Math.cos(a1), y: center.y + radius * Math.sin(a1) };
+  return { bulge: Math.tan(sweep / 4), endPoint };
+}
+
+/**
+ * ADR-565 Φ1.x «εφαπτομενικό» — signed DXF bulge for the arc `start → end` whose tangent at `start`
+ * has direction `tangentDirRad` (world radians). Uses the tangent-chord angle theorem: the angle δ
+ * between the tangent and the chord equals HALF the central sweep, so `bulge = tan(sweep/4) =
+ * tan(δ/2)`. Sign follows the chord side of the tangent (CCW → positive). Returns `null` for a
+ * collapsed chord; a (near-)collinear chord yields a (near-)zero bulge (caller may treat as straight).
+ */
+export function bulgeFromTangent(start: Point2D, end: Point2D, tangentDirRad: number): number | null {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (Math.hypot(dx, dy) < 1e-9) return null;
+  const chordDir = Math.atan2(dy, dx);
+  let delta = chordDir - tangentDirRad;
+  while (delta <= -Math.PI) delta += TWO_PI;
+  while (delta > Math.PI) delta -= TWO_PI;
+  return Math.tan(delta / 2);
+}
+
+/**
  * Invert a wall's canonical `arc` bulge back to center/radius/angles/sweep for
  * radius readout and IFC export (bulge → `IfcCircle` + `IfcTrimmedCurve`
  * directrix → `IfcRevolvedAreaSolid`). Thin wrapper over `bulgeToArc`; returns

@@ -51,6 +51,9 @@ import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-
 // reusing the SAME computeWallTrims/applyTrimPatches SSoT as commit (preview === commit).
 import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
 import { bulgeFrom3Points } from '../../bim/walls/wall-arc-descriptor';
+// ADR-565 §12 Φ1.x — per-variant arc preview via the SAME resolver as commit (preview ≡ commit).
+import { resolveCurvedArcParams, wallEndTangentAt } from '../../bim/walls/wall-curved-draw';
+import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
@@ -217,6 +220,27 @@ export function generateWallPreview(
   // ghosts never overlap/miter, so no joint-miter/conflict pass is needed.
   if (preview.arcEndPoint) {
     return makeWallArcGhost('preview_wall_arc', startPt, preview.arcEndPoint, cursorPoint, overrides, sceneUnits);
+  }
+
+  // ADR-565 §12 Φ1.x — «κέντρο-άκρα»: κέντρο + αρχή γνωστά, cursor = γωνία τέλους. Το ίδιο
+  // `resolveCurvedArcParams` με το commit → preview ≡ commit.
+  if (preview.arcVariant === 'center-ends' && preview.arcCenter) {
+    return makeWallArcGhostVariant(
+      'preview_wall_arc_center',
+      { arcVariant: 'center-ends', startPoint: startPt, endPoint: null, arcCenter: preview.arcCenter },
+      cursorPoint, overrides, sceneUnits, null,
+    );
+  }
+
+  // ADR-565 §12 Φ1.x — «εφαπτομενικό»: αρχή γνωστή, cursor = τέλος· η εφαπτομένη προκύπτει από το
+  // άκρο υπάρχοντος τοίχου στο start (ίδιος lookup + tol με το commit).
+  if (preview.arcVariant === 'tangent') {
+    const tangentDir = wallEndTangentAt(walls, startPt, axisHostTolScene(sceneUnits));
+    return makeWallArcGhostVariant(
+      'preview_wall_arc_tangent',
+      { arcVariant: 'tangent', startPoint: startPt, endPoint: null, arcCenter: null },
+      cursorPoint, overrides, sceneUnits, tangentDir,
+    );
   }
 
   // Legacy `awaitingAlignment` (μη-straight modes που το θέτουν): endPoint fixed, cursor =
@@ -419,6 +443,26 @@ function makeWallArcGhost(
     bulge != null
       ? { ...base, arc: bulge }
       : { ...base, curveControl: { x: throughPt.x, y: throughPt.y, z: 0 } as Point3D };
+  return buildWallGhostEntity(id, params, 'curved', sceneUnits, false);
+}
+
+/**
+ * ADR-565 §12 Φ1.x — WYSIWYG ghost for the «κέντρο-άκρα» / «εφαπτομενικό» arc variants via the
+ * SHARED `resolveCurvedArcParams` (ΙΔΙΑ geometry με το commit → preview ≡ commit). `bulge===null`
+ * (εκφυλισμένο / χωρίς εφαπτομένη αναφορά) → ευθύ-άξονα «curved» ghost (η χειρονομία δεν εξαφανίζεται).
+ */
+function makeWallArcGhostVariant(
+  id: string,
+  drawState: Parameters<typeof resolveCurvedArcParams>[0],
+  cursorPt: Readonly<Point2D>,
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+  tangentDirRad: number | null,
+): ExtendedSceneEntity | null {
+  const resolved = resolveCurvedArcParams(drawState, cursorPt, tangentDirRad);
+  if (!resolved) return null;
+  const base = buildDefaultWallParams(resolved.start, resolved.end, overrides, sceneUnits);
+  const params: WallParams = resolved.bulge != null ? { ...base, arc: resolved.bulge } : { ...base };
   return buildWallGhostEntity(id, params, 'curved', sceneUnits, false);
 }
 

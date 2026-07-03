@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import type { WallKind, WallCategory } from '../../bim/types/wall-types';
+import type { WallKind, WallCategory, WallArcVariant } from '../../bim/types/wall-types';
 import type { WallParamOverrides } from './wall-completion';
 import { EventBus } from '../../systems/events/EventBus';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
@@ -34,6 +34,7 @@ export interface UseWallToolLifecycleArgs {
 export interface UseWallToolLifecycleResult {
   readonly activate: () => void;
   readonly setKind: (kind: WallKind) => void;
+  readonly setArcVariant: (variant: WallArcVariant) => void;
   readonly setPlacementMode: (mode: WallPlacementMode) => void;
   readonly setRegionMethod: (regionMethod: RegionMethod) => void;
   readonly deactivate: () => void;
@@ -55,6 +56,7 @@ export function useWallToolLifecycle({
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
+      arcVariant: prev.arcVariant,
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       phase: 'awaitingStart',
@@ -65,6 +67,22 @@ export function useWallToolLifecycle({
     setState((prev) => ({
       ...INITIAL_STATE,
       kind,
+      // ADR-565 Φ1.x — κράτα το arc variant (η μπάρα το επαναφέρει όταν ξαναμπείς σε curved).
+      arcVariant: prev.arcVariant,
+      placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
+      phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
+      overrides: prev.overrides,
+    }));
+  }, [setState]);
+
+  // ADR-565 Φ1.x — switch curved arc draw-variant (Revit Draw gallery). Forces `kind='curved'`
+  // + resets the FSM (κρατά overrides / placementMode / regionMethod). Idle → μένει idle.
+  const setArcVariant = useCallback((variant: WallArcVariant) => {
+    setState((prev) => ({
+      ...INITIAL_STATE,
+      kind: 'curved',
+      arcVariant: variant,
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
@@ -80,6 +98,7 @@ export function useWallToolLifecycle({
       return {
         ...INITIAL_STATE,
         kind: prev.kind,
+        arcVariant: prev.arcVariant,
         overrides: prev.overrides,
         regionMethod: prev.regionMethod,
         placementMode: mode,
@@ -99,6 +118,9 @@ export function useWallToolLifecycle({
   // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
   // setKind is stable (useCallback []) so this listener registers exactly once.
   useEffect(() => EventBus.on('bim:set-wall-kind', ({ kind }) => setKind(kind)), [setKind]);
+
+  // ADR-565 Φ1.x — Draw gallery: switch arc draw-variant via event (mirror set-wall-kind).
+  useEffect(() => EventBus.on('bim:set-wall-arc-variant', ({ variant }) => setArcVariant(variant)), [setArcVariant]);
 
   const setCategory = useCallback((category: WallCategory) => {
     setState((prev) => ({
@@ -120,6 +142,7 @@ export function useWallToolLifecycle({
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
+      arcVariant: prev.arcVariant,
       placementMode: prev.placementMode,
       regionMethod: prev.regionMethod,
       overrides: prev.overrides,
@@ -181,6 +204,7 @@ export function useWallToolLifecycle({
   return {
     activate,
     setKind,
+    setArcVariant,
     setPlacementMode,
     setRegionMethod,
     deactivate,

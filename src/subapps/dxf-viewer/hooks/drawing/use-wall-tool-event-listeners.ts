@@ -25,6 +25,8 @@ import {
 import { perimeterFacesToRects, type PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { defaultEdgeAlignmentPoint, type WallParamOverrides } from './wall-completion';
 import type { WallToolState } from './wall-tool-types';
+// ADR-565 §12 Φ1.x — share the per-variant curved click FSM with the Dynamic-Input path.
+import { resolveCurvedClickTransition } from './wall-curved-click-fsm';
 
 export interface WallToolListenerCtx {
   readonly stateRef: MutableRefObject<WallToolState>;
@@ -38,6 +40,12 @@ export interface WallToolListenerCtx {
     s: WallToolState,
     controlPoint: Readonly<Point2D>,
   ) => boolean;
+  /** ADR-565 §12 Φ1.x — «αρχή-τέλος-ακτίνα»: commit από πληκτρολογημένη ακτίνα (mm). */
+  readonly commitCurvedRadius: (
+    s: WallToolState,
+    radiusMm: number,
+    sidePoint: Readonly<Point2D>,
+  ) => boolean;
 }
 
 /**
@@ -46,7 +54,7 @@ export interface WallToolListenerCtx {
  * Inline overrides (height/thickness/category/flip) flow through the same event.
  */
 export function useWallToolDynamicInputListener(ctx: WallToolListenerCtx): void {
-  const { stateRef, setState, commitStraightFromState, commitCurvedFromState } = ctx;
+  const { stateRef, setState, commitStraightFromState, commitCurvedFromState, commitCurvedRadius } = ctx;
   useEffect(() => {
     const onDynSubmit = (e: Event) => {
       const ce = e as CustomEvent<DynamicSubmitDetail>;
@@ -80,19 +88,21 @@ export function useWallToolDynamicInputListener(ctx: WallToolListenerCtx): void 
         return;
       }
       if (s.kind === 'curved') {
-        if (s.phase === 'awaitingEnd') {
-          setState({
-            ...mergedState,
-            phase: 'awaitingCurveControl',
-            endPoint: { x: target.x, y: target.y },
-            error: null,
-          });
+        // «αρχή-τέλος-ακτίνα»: πληκτρολογημένη ακτίνα (length mm) + cursor (side) → commit.
+        if (
+          s.arcVariant === 'start-end-radius' &&
+          s.phase === 'awaitingCurveControl' &&
+          typeof ce.detail.length === 'number' &&
+          s.startPoint &&
+          s.endPoint
+        ) {
+          commitCurvedRadius(mergedState, ce.detail.length, target);
           return;
         }
-        if (s.phase === 'awaitingCurveControl' && s.startPoint && s.endPoint) {
-          commitCurvedFromState(mergedState, target);
-          return;
-        }
+        // Otherwise route the coordinate submit through the SAME per-variant FSM as a click.
+        const tr = resolveCurvedClickTransition(mergedState, target);
+        if (tr.kind === 'commit') commitCurvedFromState(mergedState, target);
+        else if (tr.kind === 'advance') setState(tr.next);
         return;
       }
       // ADR-363 "Location Line = Finish Face" — DI is the precision path. Explicit

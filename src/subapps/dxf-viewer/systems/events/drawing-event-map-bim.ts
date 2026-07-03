@@ -10,7 +10,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/scene';
 import type { OpeningKind } from '../../bim/types/opening-types';
-import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
+import type { WallEntity, WallKind, WallCategory, WallArcVariant } from '../../bim/types/wall-types';
 import type { OpeningUpdate } from '../../bim/walls/wall-split';
 
 export interface BimEventMap {
@@ -294,6 +294,9 @@ export interface BimEventMap {
   'bim:set-opening-kind': { kind: OpeningKind };
   'bim:set-wall-kind': { kind: WallKind };
   'bim:set-wall-category': { category: WallCategory };
+  // ADR-565 Φ1.x — Revit «Draw gallery» arc draw-variant switch (3-point / center-ends /
+  // start-end-radius / tangent). Forces the curved kind + resets the FSM.
+  'bim:set-wall-arc-variant': { variant: WallArcVariant };
   // ADR-363 Phase 1K Mode C — «Τοίχος σε περιοχή» box-select: the marquee
   // (window/crossing) collected these line-entity ids. The wall tool detects
   // ALL enclosed rectangles among them and builds one filling wall per

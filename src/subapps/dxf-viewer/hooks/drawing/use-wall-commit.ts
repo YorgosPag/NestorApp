@@ -28,7 +28,9 @@ import { isMemberCollinearOverlap } from '../../bim/framing/linear-member-face-s
 import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
-import { bulgeFrom3Points } from '../../bim/walls/wall-arc-descriptor';
+import { bulgeFrom3Points, bulgeFromRadius } from '../../bim/walls/wall-arc-descriptor';
+import { resolveCurvedArcParams, wallEndTangentAt } from '../../bim/walls/wall-curved-draw';
+import type { WallParams } from '../../bim/types/wall-types';
 
 export interface WallCommitContext {
   readonly currentLevelId: string;
@@ -51,6 +53,12 @@ export interface WallCommitApi {
   ): boolean;
   /** Curved 3-click commit (start + end + quadratic Bezier control). */
   commitCurvedFromState(s: WallToolState, controlPoint: Readonly<Point2D>): boolean;
+  /**
+   * ADR-565 §12 Φ1.x «αρχή-τέλος-ακτίνα» — commit από πληκτρολογημένη ακτίνα (mm). Ο `sidePoint`
+   * (ο τρέχων cursor) επιλέγει πλευρά τόξου (CCW/CW ως προς τη χορδή start→end). No-op αν λείπουν
+   * start/end ή η ακτίνα είναι μικρότερη από τη μισή χορδή.
+   */
+  commitCurvedRadius(s: WallToolState, radiusMm: number, sidePoint: Readonly<Point2D>): boolean;
   /** Polyline N-click commit (Enter to finish, ≥2 vertices). */
   commitPolylineFromState(s: WallToolState): boolean;
   /** ADR-363 Phase 1J on-entity commit (pick-side click → wall(s)). */
@@ -87,6 +95,9 @@ function continueChain(s: WallToolState): WallToolState {
   return {
     ...INITIAL_STATE,
     kind: s.kind,
+    // ADR-565 §12 Φ1.x — preserve the active arc draw-variant across the continuous chain
+    // (μετά από commit ο επόμενος τοίχος κρατά τον ίδιο τρόπο σχεδίασης, όχι reset σε 3-point).
+    arcVariant: s.arcVariant,
     placementMode: s.placementMode,
     regionMethod: s.regionMethod,
     overrides: s.overrides,
@@ -167,21 +178,10 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     [currentLevelId, onWallCreated, getSceneUnits, setState],
   );
 
-  // ── commit (curved, ADR-565) ─────────────────────────────────────────────
-  // The 3rd click is the point the arc passes THROUGH (Tekla/AutoCAD 3-point
-  // ARC). It normalizes to the canonical `arc` bulge; a collinear 3rd point
-  // (no unique circle) falls back to the legacy Bézier `curveControl` so the
-  // gesture never fails.
-  const commitCurvedFromState = useCallback(
-    (s: WallToolState, controlPoint: Readonly<Point2D>): boolean => {
-      if (s.startPoint === null || s.endPoint === null) return false;
-      const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const base = buildDefaultWallParams(s.startPoint, s.endPoint, s.overrides, sceneUnits);
-      const bulge = bulgeFrom3Points(s.startPoint, controlPoint, s.endPoint);
-      const params =
-        bulge != null
-          ? { ...base, arc: bulge }
-          : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as Point3D };
+  // ── commit (curved, ADR-565 §12 Φ1.x — variant-aware) ────────────────────
+  // Shared tail: build via the SSoT `buildWallEntity('curved')`, validate, emit, continue chain.
+  const finishCurvedCommit = useCallback(
+    (s: WallToolState, params: WallParams, sceneUnits: SceneUnits): boolean => {
       const result = buildWallEntity(params, currentLevelId, 'curved', sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -191,7 +191,68 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       setState(continueChain(s));
       return true;
     },
-    [currentLevelId, onWallCreated, getSceneUnits, setState],
+    [currentLevelId, onWallCreated, setState],
+  );
+
+  // The final click meaning depends on the active arc draw-variant (Revit Draw gallery):
+  //   - '3-point' / 'start-end-radius' (click path): 3rd click = point the arc passes THROUGH
+  //     (Tekla/AutoCAD 3-point ARC). Collinear → legacy Bézier `curveControl` fallback (Φ1 parity).
+  //   - 'center-ends': 3rd click = end angle → `bulgeFromCenterStartEnd` (start/end on the circle).
+  //   - 'tangent': 2nd click = end → `bulgeFromTangent` off the previous wall's end tangent; no
+  //     tangent reference → `arc` omitted (straight-axis curved wall) so the gesture never fails.
+  const commitCurvedFromState = useCallback(
+    (s: WallToolState, controlPoint: Readonly<Point2D>): boolean => {
+      if (s.startPoint === null) return false;
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+
+      // 3-point / start-end-radius keep the EXACT Φ1 through-point + Bézier fallback.
+      if (s.arcVariant === '3-point' || s.arcVariant === 'start-end-radius') {
+        if (s.endPoint === null) return false;
+        const base = buildDefaultWallParams(s.startPoint, s.endPoint, s.overrides, sceneUnits);
+        const bulge = bulgeFrom3Points(s.startPoint, controlPoint, s.endPoint);
+        const params =
+          bulge != null
+            ? { ...base, arc: bulge }
+            : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as Point3D };
+        return finishCurvedCommit(s, params, sceneUnits);
+      }
+
+      // center-ends / tangent → the shared pure resolver (preview ≡ commit).
+      const tangentDirRad =
+        s.arcVariant === 'tangent'
+          ? wallEndTangentAt(
+              (getSceneEntities?.() ?? []).filter(isWallEntity),
+              s.startPoint,
+              axisHostTolScene(sceneUnits),
+            )
+          : null;
+      const resolved = resolveCurvedArcParams(s, controlPoint, tangentDirRad);
+      if (!resolved) return false;
+      const base = buildDefaultWallParams(resolved.start, resolved.end, s.overrides, sceneUnits);
+      const params = resolved.bulge != null ? { ...base, arc: resolved.bulge } : base;
+      return finishCurvedCommit(s, params, sceneUnits);
+    },
+    [getSceneUnits, getSceneEntities, finishCurvedCommit],
+  );
+
+  // ── commit (curved «αρχή-τέλος-ακτίνα» — typed radius) ────────────────────
+  const commitCurvedRadius = useCallback(
+    (s: WallToolState, radiusMm: number, sidePoint: Readonly<Point2D>): boolean => {
+      if (s.startPoint === null || s.endPoint === null) return false;
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      // Side of the chord (start→end) the cursor lies on: cross > 0 ⇒ left ⇒ CCW (positive bulge).
+      const cross =
+        (s.endPoint.x - s.startPoint.x) * (sidePoint.y - s.startPoint.y) -
+        (s.endPoint.y - s.startPoint.y) * (sidePoint.x - s.startPoint.x);
+      const bulge = bulgeFromRadius(s.startPoint, s.endPoint, radiusMm, cross >= 0 ? 'ccw' : 'cw', false, sceneUnits);
+      if (bulge == null) {
+        setState({ ...s, error: 'wall.validation.hardErrors.radiusTooSmall' });
+        return false;
+      }
+      const base = buildDefaultWallParams(s.startPoint, s.endPoint, s.overrides, sceneUnits);
+      return finishCurvedCommit(s, { ...base, arc: bulge }, sceneUnits);
+    },
+    [getSceneUnits, setState, finishCurvedCommit],
   );
 
   // ── commit (polyline) ────────────────────────────────────────────────────
@@ -317,6 +378,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
   return {
     commitStraightFromState,
     commitCurvedFromState,
+    commitCurvedRadius,
     commitPolylineFromState,
     commitOnEntity,
     commitInRegionRects,

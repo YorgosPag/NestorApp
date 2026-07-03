@@ -30,18 +30,27 @@ export function resolveWallToolStatusKey(s: WallToolState): string {
     if (s.phase === 'awaitingSide') return 'tools.wall.statusPickSide';
     return '';
   }
+  // ADR-565 §12 Φ1.x — arc draw-variant-specific prompts (Revit Draw gallery).
+  const curvedCenterEnds = s.kind === 'curved' && s.arcVariant === 'center-ends';
+  const curvedTangent = s.kind === 'curved' && s.arcVariant === 'tangent';
   switch (s.phase) {
     case 'awaitingStart':
-      return 'tools.wall.statusStart';
+      // «κέντρο-άκρα» — το 1ο κλικ είναι το ΚΕΝΤΡΟ του τόξου.
+      return curvedCenterEnds ? 'tools.wall.statusArcCenter' : 'tools.wall.statusStart';
     case 'awaitingEnd':
-      return s.kind === 'curved'
-        ? 'tools.wall.statusCurveEnd'
-        : 'tools.wall.statusEnd';
+      if (curvedCenterEnds) return 'tools.wall.statusArcRadiusStart'; // αρχή πάνω στον κύκλο (ακτίνα)
+      if (curvedTangent) return 'tools.wall.statusArcTangentEnd';     // 2-click εφαπτομενικό: τέλος
+      return s.kind === 'curved' ? 'tools.wall.statusCurveEnd' : 'tools.wall.statusEnd';
     case 'awaitingAlignment':
       return 'tools.wall.statusAlignment';
+    case 'awaitingArcRadiusPoint':
+      // «κέντρο-άκρα» — το 3ο κλικ ορίζει τη γωνία (τελικό άκρο) πάνω στον κύκλο.
+      return 'tools.wall.statusArcCenterEnd';
     case 'awaitingCurveControl':
-      // ADR-565 — the 3rd click is the point the circular arc passes through.
-      return 'tools.wall.statusArcThrough';
+      // «αρχή-τέλος-ακτίνα» — πληκτρολόγησε ακτίνα ή κλικ· «3-σημείων» — σημείο στο τόξο.
+      return s.arcVariant === 'start-end-radius'
+        ? 'tools.wall.statusArcRadiusValue'
+        : 'tools.wall.statusArcThrough';
     case 'awaitingNextVertex':
       return 'tools.wall.statusPolyNext';
     default:

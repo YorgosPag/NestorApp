@@ -95,6 +95,30 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
   badgeKey: WALL_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
+      // ADR-565 §12 / Φ1.x — «Draw Options Bar» (Revit «Draw» panel): επιλογέας τρόπου
+      // σχεδίασης (Ευθύς / Καμπύλος×4 / Πολυγραμμή) ως σειρά εικονιδίων. Πρώτο panel,
+      // όπως στο Revit. Custom widget (`RibbonWallDrawModeWidget`) — reactive στο active FSM.
+      id: 'wall-draw',
+      labelKey: 'ribbon.panels.wallDraw',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'wall-draw-mode',
+              command: {
+                id: 'wall.drawMode',
+                labelKey: 'ribbon.commands.wallEditor.drawMode.section',
+                commandKey: 'wall.drawMode.field',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'wall-category',
       labelKey: 'ribbon.panels.wallCategory',
       rows: [

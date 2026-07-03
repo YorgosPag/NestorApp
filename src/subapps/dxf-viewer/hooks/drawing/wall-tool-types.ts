@@ -8,7 +8,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { WallEntity, WallKind } from '../../bim/types/wall-types';
+import type { WallEntity, WallKind, WallArcVariant } from '../../bim/types/wall-types';
 import type { Entity } from '../../types/entities';
 import type { WallSource } from '../../bim/walls/wall-from-entity';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
@@ -24,9 +24,19 @@ export type WallToolPhase =
   | 'awaitingEnd'
   | 'awaitingAlignment'
   | 'awaitingCurveControl'
+  // ADR-565 Φ1.x — «κέντρο-άκρα» arc variant: κέντρο picked (click 1) + start/ακτίνα picked
+  // (click 2), εκκρεμεί το τελικό άκρο/γωνία (click 3). Το `arcCenter` κρατά το κέντρο, το
+  // `startPoint` την αρχή (πάνω στον κύκλο). Άσχετο στα άλλα variants.
+  | 'awaitingArcRadiusPoint'
   | 'awaitingNextVertex'
   // ADR-363 Phase 1J — on-entity: source picked (click 1), awaiting side click (click 2).
   | 'awaitingSide';
+
+/**
+ * ADR-565 Φ1.x — default arc variant (= η συμπεριφορά Φ1, μηδέν regression). Ο τύπος
+ * {@link WallArcVariant} ζει στο `bim/types/wall-types.ts` (SSoT, δίπλα στο `WallKind`).
+ */
+export const DEFAULT_ARC_VARIANT: WallArcVariant = '3-point';
 
 /**
  * Wall placement mode:
@@ -45,6 +55,17 @@ export type WallPlacementMode = 'freehand' | 'on-entity' | 'in-region' | 'outer-
 export interface WallToolState {
   readonly phase: WallToolPhase;
   readonly kind: WallKind;
+  /**
+   * ADR-565 Φ1.x — active arc draw-variant όταn `kind === 'curved'` (Revit Draw gallery
+   * sub-mode). Default `'3-point'` (= Φ1). Άσχετο στα straight/polyline.
+   */
+  readonly arcVariant: WallArcVariant;
+  /**
+   * ADR-565 Φ1.x — «κέντρο-άκρα» variant: το κέντρο του τόξου (click 1). Το `startPoint` γίνεται
+   * η αρχή (click 2, ορίζει ακτίνα) και το commit-cursor το τελικό άκρο/γωνία (click 3). `null`
+   * στα υπόλοιπα variants / phases.
+   */
+  readonly arcCenter: Point2D | null;
   readonly placementMode: WallPlacementMode;
   /**
    * ADR-419 — όταν `placementMode === 'in-region'`, ποιον τρόπο δέχεται το εργαλείο:
@@ -94,6 +115,8 @@ export interface WallToolState {
 export const INITIAL_STATE: WallToolState = {
   phase: 'idle',
   kind: 'straight',
+  arcVariant: DEFAULT_ARC_VARIANT,
+  arcCenter: null,
   placementMode: 'freehand',
   regionMethod: 'lines',
   startPoint: null,
@@ -136,6 +159,12 @@ export interface UseWallToolResult {
   /** Switch active kind (`'straight' | 'curved' | 'polyline'`). Resets the state machine. */
   setKind(kind: WallKind): void;
   /**
+   * ADR-565 Φ1.x — switch curved arc draw-variant (Revit Draw gallery). Forces `kind='curved'`
+   * + resets the state machine (keeps overrides / placementMode). Driven by the ribbon Draw-mode
+   * widget (`wallToolBridgeStore.setArcVariant`) + the `bim:set-wall-arc-variant` event.
+   */
+  setArcVariant(variant: WallArcVariant): void;
+  /**
    * ADR-363 Phase 1J — switch placement mode (`'freehand' | 'on-entity'`).
    * Resets the state machine (keeps kind + overrides). Driven by the active
    * tool id (`wall` → freehand, `wall-on-entity` → on-entity).
@@ -171,6 +200,8 @@ export interface UseWallToolResult {
   readonly isAwaitingEnd: boolean;
   readonly isAwaitingAlignment: boolean;
   readonly isAwaitingCurveControl: boolean;
+  /** ADR-565 Φ1.x — «κέντρο-άκρα» arc variant: κέντρο+αρχή picked, εκκρεμεί το τελικό άκρο. */
+  readonly isAwaitingArcRadiusPoint: boolean;
   readonly isAwaitingNextVertex: boolean;
   /** ADR-363 Phase 1J — on-entity: source picked, awaiting side click. */
   readonly isAwaitingSide: boolean;

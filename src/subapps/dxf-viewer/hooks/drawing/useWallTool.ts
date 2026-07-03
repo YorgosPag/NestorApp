@@ -60,6 +60,8 @@ import {
 } from './wall-tool-types';
 import type { Entity } from '../../types/entities';
 import { useWallCommit } from './use-wall-commit';
+// ADR-565 §12 Φ1.x — per-variant curved click FSM (pure transition).
+import { resolveCurvedClickTransition } from './wall-curved-click-fsm';
 // ADR-363 — in-region / perimeter click handlers extracted for N.7.1 (≤500 lines).
 import { useWallRegionClicks } from './use-wall-region-clicks';
 // ADR-363 — lifecycle + setters + incremental-back ESC handlers extracted for N.7.1.
@@ -140,6 +142,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const {
     activate,
     setKind,
+    setArcVariant,
     setPlacementMode,
     setRegionMethod,
     deactivate,
@@ -152,6 +155,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const {
     commitStraightFromState,
     commitCurvedFromState,
+    commitCurvedRadius,
     commitPolylineFromState,
     commitOnEntity,
     commitInRegionRects,
@@ -228,29 +232,14 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return false;
       }
 
-      // Curved kind — 3-click flow.
+      // Curved kind — ADR-565 §12 Φ1.x: per-variant click FSM (Revit Draw gallery).
+      // The transition is a pure function so the 4 variants stay testable + this hook small.
       if (s.kind === 'curved') {
-        if (s.phase === 'awaitingStart') {
-          setState({
-            ...s,
-            phase: 'awaitingEnd',
-            startPoint: { x: point.x, y: point.y },
-            endPoint: null,
-            error: null,
-          });
+        const tr = resolveCurvedClickTransition(s, point);
+        if (tr.kind === 'commit') return commitCurvedFromState(s, point);
+        if (tr.kind === 'advance') {
+          setState(tr.next);
           return true;
-        }
-        if (s.phase === 'awaitingEnd') {
-          setState({
-            ...s,
-            phase: 'awaitingCurveControl',
-            endPoint: { x: point.x, y: point.y },
-            error: null,
-          });
-          return true;
-        }
-        if (s.phase === 'awaitingCurveControl') {
-          return commitCurvedFromState(s, point);
         }
         return false;
       }
@@ -398,6 +387,11 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         state.phase === 'awaitingStart' &&
         state.kind === 'straight' &&
         state.placementMode === 'freehand',
+      // ADR-565 Φ1.x — active draw-mode → η Draw options bar highlight-άρει το ενεργό εικονίδιο.
+      kind: state.kind,
+      arcVariant: state.arcVariant,
+      setKind,
+      setArcVariant,
       overrides: state.overrides,
       setParamOverrides,
       getSceneUnits: getSceneUnitsStable,
@@ -412,8 +406,11 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   }, [
     state.phase,
     state.kind,
+    state.arcVariant,
     state.placementMode,
     state.overrides,
+    setKind,
+    setArcVariant,
     setParamOverrides,
     getSceneUnitsStable,
     getSceneEntitiesStable,
@@ -425,6 +422,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     setState,
     commitStraightFromState,
     commitCurvedFromState,
+    commitCurvedRadius,
   });
   useWallToolEnterListener({ stateRef, commitPolylineFromState });
 
@@ -432,6 +430,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     state,
     activate,
     setKind,
+    setArcVariant,
     setPlacementMode,
     setRegionMethod,
     deactivate,
@@ -447,6 +446,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     isAwaitingEnd: state.phase === 'awaitingEnd',
     isAwaitingAlignment: state.phase === 'awaitingAlignment',
     isAwaitingCurveControl: state.phase === 'awaitingCurveControl',
+    isAwaitingArcRadiusPoint: state.phase === 'awaitingArcRadiusPoint',
     isAwaitingNextVertex: state.phase === 'awaitingNextVertex',
     isAwaitingSide: state.phase === 'awaitingSide',
   };

@@ -54,11 +54,20 @@ export function useWallPreviewSync(state: WallToolState): void {
     // generator tessellate the arc `start → cursor → end`.
     const arcEndPoint =
       state.kind === 'curved' && state.phase === 'awaitingCurveControl' ? state.endPoint : null;
+    // ADR-565 §12 Φ1.x — per-variant live arc preview surface:
+    //   - '3-point'/'start-end-radius' → μέσω `arcEndPoint` (endPoint fixed, cursor = through).
+    //   - 'center-ends' → `arcCenter`+start fixed (awaitingArcRadiusPoint), cursor = end angle.
+    //   - 'tangent' → μόνο το `arcVariant` (start fixed, cursor = end· εφαπτομένη από τη σκηνή).
+    const arcVariant = state.kind === 'curved' ? state.arcVariant : '3-point';
+    const arcCenter =
+      state.kind === 'curved' && state.arcVariant === 'center-ends' ? state.arcCenter : null;
     wallPreviewStore.set({
       startPoint: state.startPoint,
       endPoint,
       curveControl: null,
       arcEndPoint,
+      arcVariant,
+      arcCenter,
       polylineVertices: state.polylineVertices,
       overrides: state.overrides,
       startAnchored: state.startAnchored,

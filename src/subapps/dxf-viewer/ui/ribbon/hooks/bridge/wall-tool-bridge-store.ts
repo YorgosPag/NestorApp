@@ -17,8 +17,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 5b
  */
 
+import { useSyncExternalStore } from 'react';
 import type { WallParamOverrides, SceneUnits } from '../../../../hooks/drawing/wall-completion';
 import type { Entity } from '../../../../types/entities';
+import type { WallArcVariant, WallKind } from '../../../../bim/types/wall-types';
 
 /**
  * Snapshot του user-editable state του wall tool που χρειάζεται το ribbon για να
@@ -34,7 +36,15 @@ export interface WallToolBridgeHandle {
    * γεμίσει (preview ≡ commit). `false` σε idle / awaitingEnd / curved / polyline.
    */
   readonly isRegionFillEligible: boolean;
+  /** ADR-565 Φ1.x — active wall draw kind (straight/curved/polyline) — active-highlight της Draw bar. */
+  readonly kind: WallKind;
+  /** ADR-565 Φ1.x — active arc draw-variant όταν `kind==='curved'` (Draw gallery sub-mode). */
+  readonly arcVariant: WallArcVariant;
   readonly overrides: WallParamOverrides;
+  /** ADR-565 Φ1.x — switch draw kind (straight/polyline). Reset FSM, keep overrides. */
+  setKind(kind: WallKind): void;
+  /** ADR-565 Φ1.x — switch curved arc variant (forces kind='curved'). Reset FSM, keep overrides. */
+  setArcVariant(variant: WallArcVariant): void;
   setParamOverrides(overrides: WallParamOverrides): void;
   /**
    * ADR-543 — active scene units, so the 3D wall placement bridge
@@ -62,6 +72,21 @@ function emit(): void {
   for (const l of listeners) l();
 }
 
+function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): WallToolBridgeHandle | null {
+  return handle;
+}
+
+function getServerSnapshot(): WallToolBridgeHandle | null {
+  return null;
+}
+
 export const wallToolBridgeStore = {
   /**
    * Writer — καλείται από το `useWallTool` effect σε κάθε render όπου το state ή
@@ -76,10 +101,12 @@ export const wallToolBridgeStore = {
     return handle;
   },
   /** Low-level subscribe (για όποιον reader χρειαστεί reactivity· ο bridge διαβάζει με get). */
-  subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+  subscribe,
+  /**
+   * ADR-565 Φ1.x — reactive read για components που πρέπει να re-render όταν αλλάζει ο draw-mode
+   * (η Draw options bar). Mirror του `columnToolBridgeStore.use()`.
+   */
+  use(): WallToolBridgeHandle | null {
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   },
 };

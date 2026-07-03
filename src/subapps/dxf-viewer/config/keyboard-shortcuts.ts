@@ -214,16 +214,10 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'wall',
   },
-  // ADR-565 — dedicated chord for the circular-arc wall (3-point). Activates the
-  // wall tool + `curved` kind (arc). Distinct entry from W2 for discoverability.
-  wallArc: {
-    key: 'W4',
-    modifier: 'none',
-    descriptionKey: 'shortcuts.tools.wallArc',
-    action: 'tool:wall:arc',
-    category: 'tool',
-    toolType: 'wall',
-  },
+  // ADR-565 — NOTE: no separate "arc" chord. Following big-player practice
+  // (Revit exposes ONE wall tool with a Draw gallery of shape modes, NOT a
+  // hotkey per curve variant), the curved wall = circular arc is the single
+  // `W2` (curved) entry; arc draw-variants belong in a contextual options bar.
   wallExterior: {
     key: 'WE',
     modifier: 'none',

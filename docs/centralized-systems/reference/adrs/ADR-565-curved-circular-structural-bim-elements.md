@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 Φ1 IMPLEMENTED (UNCOMMITTED) — καμπύλος (κυκλικό τόξο) τοίχος· research + απόφαση αναπαράστασης παρακάτω |
+| **Status** | 🟢 Φ1 + Φ1.x IMPLEMENTED (UNCOMMITTED) — καμπύλος τοίχος + Revit «Draw Options Bar» (4 arc draw-variants, §13)· research + απόφαση αναπαράστασης παρακάτω |
 | **Date** | 2026-07-02 |
 | **Category** | DXF Viewer · BIM · Geometry · Research |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-565-curved-circular-structural-bim-elements.md` |
@@ -223,8 +223,55 @@
 
 **Πηγές:** Autodesk KB «Sketching Arcs» + Revit wall overview/forums (no-spline-wall)· Maxon C4D spline docs· Figma Learn (Pen/Bend).
 
+## 13. Υλοποίηση Φ1.x — «Draw Options Bar» (4 arc draw-variants) (2026-07-03)
+
+**Status:** 🟢 IMPLEMENTED (UNCOMMITTED). Χτίστηκε ΠΑΝΩ στο Φ1 (§11) — μηδέν regression στο 3-σημείων.
+
+**Απόφαση UI (Giorgio):** **σειρά εικονιδίων** (Revit Draw gallery), **πλήρες Draw gallery** με 6 modes
+(Ευθύς / Καμπύλος×4 / Πολυγραμμή) σε ΕΝΑ contextual widget, πάντα ορατό όσο σχεδιάζεται τοίχος.
+
+**Αρχιτεκτονική (ΕΝΑ εργαλείο με sub-modes, §12):**
+- **Τύπος SSoT:** `WallArcVariant = '3-point' | 'center-ends' | 'start-end-radius' | 'tangent'` στο
+  `bim/types/wall-types.ts` (δίπλα στο `WallKind`). FSM state `arcVariant` (+ `arcCenter`, φάση
+  `awaitingArcRadiusPoint`) στο `wall-tool-types.ts`· default `'3-point'` (= Φ1).
+- **Arc math (reuse, μηδέν διπλότυπο):** `wall-arc-descriptor.ts` — `bulgeFrom3Points`/`bulgeFromRadius`
+  ΥΠΗΡΧΑΝ· **NEW** `bulgeFromCenterStartEnd` (project cursor→circle, signed sweep) + `bulgeFromTangent`
+  (tangent-chord angle `tan(δ/2)`). ΟΛΑ → canonical `arc` bulge.
+- **Pure resolver (preview ≡ commit):** **NEW** `bim/walls/wall-curved-draw.ts` `resolveCurvedArcParams`
+  (state+finalPoint → `{start,end,bulge}`) + `wallEndTangentAt` (εφαπτομένη από άκρο υπάρχοντος τοίχου,
+  straight & arc-aware). ΚΑΙ ο commit ΚΑΙ το ghost καλούν τον ΙΔΙΟ resolver.
+- **FSM (pure):** **NEW** `hooks/drawing/wall-curved-click-fsm.ts` `resolveCurvedClickTransition` — per-variant
+  click flow (3-point/radius = 3 κλικ· center-ends = κέντρο→αρχή→τέλος· tangent = 2 κλικ). Μοιράζεται από
+  click pipeline ΚΑΙ Dynamic-Input listener.
+- **Commit:** `use-wall-commit.ts` `commitCurvedFromState` variant-aware (3-point κρατά ΑΚΡΙΒΩΣ το Φ1 Bézier
+  fallback)· **NEW** `commitCurvedRadius` (πληκτρολογημένη ακτίνα mm + side από cursor → `bulgeFromRadius`).
+  `continueChain` πλέον διατηρεί το `arcVariant`.
+- **Preview:** `wall-preview-store.ts` (+`arcVariant`/`arcCenter`), `use-wall-preview-sync.ts` push ανά phase,
+  `wall-preview-helpers.ts` `makeWallArcGhostVariant` (center-ends/tangent μέσω του ΙΔΙΟΥ resolver).
+- **Ribbon:** **NEW** `RibbonWallDrawModeWidget.tsx` (6 εικονίδια inline SVG, active-highlight, reactive
+  `wallToolBridgeStore.use()`) + `wall-draw-mode.ts` SSoT descriptors· panel «Σχεδίαση» (1ο) στο
+  `contextual-wall-tab.ts`· `wall-tool-bridge-store` += kind/arcVariant/setKind/setArcVariant + `.use()`·
+  EventBus `bim:set-wall-arc-variant`.
+- **i18n:** `ribbon.panels.wallDraw` + `wallEditor.drawMode.*` + 5 `tools.wall.statusArc*` (el+en).
+
+**Tests:** `wall-arc-descriptor` (+8 center-ends/tangent), **NEW** `wall-curved-draw` / `wall-curved-click-fsm`
+/ `wall-draw-mode` — 67 GREEN μαζί με `useWallTool`. bim/walls+hooks/drawing: 898/900 (2 fails = pre-existing
+floorplan-symbol, άσχετα).
+
+**MVP όρια (browser-verify + refine αργότερα):** center-ends minor-arc ±180° (crossing antipode flips side)·
+start-end-radius typed-R εξαρτάται από Dynamic-Input radius field (plumbing έτοιμο, το click path δουλεύει ως
+3-σημείων)· tangent χωρίς αναφορά άκρου → ευθύ-άξονα fallback.
+
+**🔴 Εκκρεμεί:** browser-verify (κάθε variant: 2D+3D τόξο, zoom, BOQ=arc-length, options-bar highlight/switch,
+straight/polyline μηδέν regression) + commit από Giorgio.
+
 ## 10. Changelog
 
+- **2026-07-03 (γ)** — Φ1.x IMPLEMENTED (§13): «Draw Options Bar» = 6-mode Revit Draw gallery widget
+  (Ευθύς/Καμπύλος×4/Πολυγραμμή) στην contextual καρτέλα τοίχου. NEW `bulgeFromCenterStartEnd`/`bulgeFromTangent`
+  (arc math), `wall-curved-draw.ts` (pure resolver preview≡commit), `wall-curved-click-fsm.ts` (per-variant FSM),
+  `RibbonWallDrawModeWidget`. `commitCurvedFromState` variant-aware + `commitCurvedRadius`. 67 νέα/επεκτεταμένα
+  jest GREEN. Αναμονή browser-verify + commit.
 - **2026-07-03 (β)** — Big-player UX research (§12): Revit/Cinema4D/Figma → ΕΝΑ εργαλείο με sub-modes, όχι πλήκτρο ανά variant· δομικός τοίχος = τόξο όχι Bézier. **Απόφαση:** κατάργηση του προσωρινού `W4` chord (ένα `W2`=«Καμπύλος»=τόξο)· Bézier deprecated για τοίχους· arc-variants σε contextual options bar = PROPOSED Φ1.x.
 - **2026-07-03** — Φ1 IMPLEMENTED (UNCOMMITTED): καμπύλος κυκλικό-τόξο τοίχος (§11). Storage=canonical `arc` bulge, 3-point draw, deviation-adaptive tessellation, apex radius grip, live preview, Boy-Scout dedup του `subdivideQuadraticBezier`. 3 νέα jest suites· 1515/1515 walls+geometry green. Αναμονή browser-verify + commit από Giorgio.
 - **2026-07-02** — Δημιουργία. Deep-research workflow (103 agents, 5.1M tokens, 5 γωνίες, 21 πηγές, 25 claims verified → 23 confirmed / 2 refuted). Τεκμηρίωση αγοράς + πρόταση αρχιτεκτονικής (storage παραμετρικό + display faceted).
