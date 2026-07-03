@@ -268,6 +268,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'struct-col-region-box': return <StructuralToolIcon base="column" method="region-box" className={className} />;
     case 'struct-col-discrete-from-perimeter': return <StructuralToolIcon base="column" method="discrete-from-perimeter" className={className} />;
     case 'struct-col-from-perimeter': return <StructuralToolIcon base="column" method="from-perimeter" className={className} />;
+    case 'struct-col-from-polygon': return <StructuralToolIcon base="column" method="sketch-polygon" className={className} />;
     case 'struct-col-discrete-from-perimeter-walls': return <StructuralToolIcon base="column" method="discrete-from-perimeter-walls" className={className} />;
     case 'struct-col-from-grid': return <StructuralToolIcon base="column" method="from-grid" className={className} />;
     // Beams (base=beam × creation method).

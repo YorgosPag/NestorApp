@@ -26,6 +26,7 @@ export type StructuralMethod =
   | 'discrete-from-perimeter'
   | 'discrete-from-perimeter-walls'
   | 'from-grid'
+  | 'sketch-polygon'
   | 'tie';
 
 export const STRUCTURAL_METHOD_FRAGMENTS: Record<StructuralMethod, React.ReactNode> = {
@@ -74,6 +75,17 @@ export const STRUCTURAL_METHOD_FRAGMENTS: Record<StructuralMethod, React.ReactNo
       <polyline points="17,22 17,17.5 22,17.5" fill="none" strokeWidth="1" />
       <circle cx="15" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
       <circle cx="22" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // Sketched vertex-by-vertex (open click path + vertex dots) — ADR-363
+  // §column-polygon-sketch «Κολώνα από σχεδιασμένο πολύγωνο» (ίδιο engine με slab).
+  'sketch-polygon': (
+    <>
+      <polyline points="15,21.5 15.5,15.5 21.5,16 20,21.5" fill="none" strokeWidth="1.1" />
+      <circle cx="15" cy="21.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="21.5" cy="16" r="1" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="21.5" r="1" fill="currentColor" stroke="none" />
     </>
   ),
   // From a structural grid (grid lines + intersection dots).

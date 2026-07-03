@@ -17,7 +17,7 @@ const BASES: StructuralBase[] = ['wall', 'column', 'beam', 'foundation-pad', 'fo
 const METHODS: StructuralMethod[] = [
   'single', 'on-entity', 'region-lines', 'region-inside', 'region-box',
   'from-perimeter', 'discrete-from-perimeter', 'discrete-from-perimeter-walls',
-  'from-grid', 'tie',
+  'from-grid', 'sketch-polygon', 'tie',
 ];
 
 describe('ADR-443 — StructuralToolIcon (base × method composition)', () => {

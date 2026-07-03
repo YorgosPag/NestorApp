@@ -290,10 +290,13 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     activeTool === 'column-from-perimeter' ||
     activeTool === 'column-discrete-from-perimeter' ||
     activeTool === 'column-discrete-from-perimeter-walls' ||
+    activeTool === 'column-from-polygon' ||
     isColumnRegionTool(activeTool);
   useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
   useEffect(() => {
     if (activeTool === 'column') columnTool.setPlacementMode('freehand');
+    // ADR-363 §column-polygon-sketch — σχεδιασμένο πολύγωνο (vertex chain, όπως slab).
+    else if (activeTool === 'column-from-polygon') columnTool.setPlacementMode('polygon');
     else if (activeTool === 'column-from-perimeter') columnTool.setPlacementMode('outer-perimeter');
     // ADR-419 — «Πολλαπλή δημιουργία»: ίδιο discrete-perimeter mode, διαφορετικό intent.
     else if (activeTool === 'column-discrete-from-perimeter') {

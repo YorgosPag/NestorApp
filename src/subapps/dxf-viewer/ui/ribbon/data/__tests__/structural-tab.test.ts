@@ -26,6 +26,8 @@ const EXPECTED_COMMAND_KEYS = [
   // columns & piers (last = ADR-441 «Κολώνες από κάναβο» action)
   'column', 'column-region-lines', 'column-region-inside', 'column-region-box',
   'column-discrete-from-perimeter', 'column-from-perimeter', 'column-discrete-from-perimeter-walls',
+  // ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» (vertex chain).
+  'column-from-polygon',
   'column.actions.fromGrid',
   // beams (last = ADR-441 «Δοκάρια από κάναβο» action)
   'beam', 'beam-from-wall', 'beam.actions.fromGrid',
@@ -85,13 +87,18 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     'column.actions.fromGrid',
     'beam.actions.fromGrid',
   ]);
+  // ADR-521 — «Στήλη» → «Τύποι» dropdown (commandKey 'column'): επιλογή τύπου κολώνας
+  // πριν τη σχεδίαση (8 variants). LARGE dropdown, όχι simple/split.
+  const DROPDOWN_KEYS: ReadonlySet<string> = new Set(['column']);
 
-  it('renders every command as a LARGE button — οι 4 «από κάναβο» είναι splits (mode dropdown)', () => {
+  it('renders every command as a LARGE button — «από κάναβο» = splits, «Τύποι» = dropdown', () => {
     for (const button of allButtons()) {
       const isGridSplit = GRID_SPLIT_KEYS.has(button.command.commandKey);
+      const isDropdown = DROPDOWN_KEYS.has(button.command.commandKey);
       expect(button.size).toBe('large');
-      expect(button.type).toBe(isGridSplit ? 'split' : 'simple');
-      if (!isGridSplit) expect(button.variants).toBeUndefined();
+      const expectedType = isGridSplit ? 'split' : isDropdown ? 'dropdown' : 'simple';
+      expect(button.type).toBe(expectedType);
+      if (!isGridSplit && !isDropdown) expect(button.variants).toBeUndefined();
     }
     for (const panel of STRUCTURAL_TAB.panels) {
       for (const row of panel.rows) {

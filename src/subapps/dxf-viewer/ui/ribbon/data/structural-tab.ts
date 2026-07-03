@@ -148,6 +148,9 @@ export const STRUCTURAL_TAB: RibbonTab = {
             toolBtn('structuralTab.columnDiscreteFromPerimeter', 'ribbon.commands.bim.columnDiscreteFromPerimeter.label', 'struct-col-discrete-from-perimeter', 'column-discrete-from-perimeter'),
             toolBtn('structuralTab.columnFromPerimeter', 'ribbon.commands.bim.columnFromPerimeter.label', 'struct-col-from-perimeter', 'column-from-perimeter'),
             toolBtn('structuralTab.columnDiscreteFromPerimeterWalls', 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.label', 'struct-col-discrete-from-perimeter-walls', 'column-discrete-from-perimeter-walls'),
+            // ADR-363 §column-polygon-sketch — «Κολώνα από πολύγωνο»: σχεδίαση ελεύθερου
+            // κλειστού περιγράμματος με διαδοχικά κλικ (ΙΔΙΟ vertex-chain engine με slab).
+            toolBtn('structuralTab.columnFromPolygon', 'ribbon.commands.bim.columnFromPolygon.label', 'struct-col-from-polygon', 'column-from-polygon'),
             // ADR-441 Slice GEN-COL / 3-mode — «Κολώνες από κάναβο»: split-button· main =
             // inner (default), dropdown = περιμετρική έδραση anchor (Εσωτερικά/Κεντρικά/Εξωτερικά).
             splitActionBtn(

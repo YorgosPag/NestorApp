@@ -161,6 +161,14 @@ export function generatePreviewEntity(
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);
   }
+  // ── ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» branch ─
+  //    N-click closed-footprint polygon (ΙΔΙΟ vertex-chain engine με slab) → reuse
+  //    του tool-agnostic `generateSlabPreview` rubber-band outline + του ΙΔΙΟΥ
+  //    face-snap cursor (`resolvePolygonPreviewCursor`) → preview ≡ commit. Ελέγχεται
+  //    ΠΡΙΝ το single-click 'column' branch (διαφορετικό placement mode).
+  if (tool === 'column-from-polygon') {
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
+  }
   // ── ADR-398 §3.8 — Column tool WYSIWYG preview branch ─────────────────────
   //    Single-click member → no rubber-band tempPoints; the ghost is built from
   //    the snapped cursor + the live column-tool bridge/face-snap SSoT (preview

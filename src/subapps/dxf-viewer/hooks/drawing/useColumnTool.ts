@@ -33,6 +33,9 @@ import { buildClickColumnEntity, type ColumnSizeOverride } from './column-commit
 // polygon-backed τοιχίο ανά κλειστό περίγραμμα (SSoT builder, κοινό με «από περίγραμμα»).
 import { buildColumnsFromPerimeters } from '../../bim/columns/column-from-faces';
 import type { ClosedPerimeter } from '../../bim/walls/perimeter-from-faces';
+// ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» (N.7.1 split → sub-hook):
+// κοινό vertex-chain FSM (canonical sketch engine, κοινό με slab) + builder adapter + preview.
+import { useColumnPolygonSketch } from './use-column-polygon-sketch';
 // N.7.1 file-size split — state-mutation actions (lifecycle + ribbon setters).
 import { useColumnToolStateActions } from './use-column-tool-actions';
 import { useColumnAnchorTabCycle } from './use-column-anchor-tab-cycle';
@@ -292,11 +295,28 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     suggestBatchFillAt,
   });
 
+  // ── ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» ──────
+  // (N.7.1 split → use-column-polygon-sketch). Ο χρήστης σχεδιάζει ελεύθερα κλειστό
+  // περίγραμμα με διαδοχικά κλικ (ΙΔΙΟ vertex-chain engine με το slab) → ΕΝΑ ColumnEntity.
+  // Ο sub-hook owns το commit adapter + chain lifecycle + preview publish· εδώ διαβάζουμε
+  // πίσω μόνο το `onCanvasClick` (delegate) + το `phase` (status text).
+  const { onCanvasClick: sketchOnCanvasClick, phase: sketchPhase } = useColumnPolygonSketch({
+    currentLevelId,
+    placementMode: state.placementMode,
+    phase: state.phase,
+    getSceneUnits,
+    getSceneEntities,
+    getSceneUnitsRef,
+    appendColumnsRef: appendColumnsBatchRef,
+  });
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
       if (s.phase === 'idle') return false;
+      // ADR-363 §column-polygon-sketch — polygon mode → delegate στο κοινό vertex-chain FSM.
+      if (s.placementMode === 'polygon') return sketchOnCanvasClick(point);
       // ADR-363 Φάση 3 — outer-perimeter: click μέσα σε περίμετρο (box-select primary).
       if (s.placementMode === 'outer-perimeter') {
         return onPerimeterClick(point);
@@ -387,7 +407,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       }
       return false;
     },
-    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick, getSceneUnits, tryAdoptRectColumn],
+    [commitColumnAt, onPerimeterClick, onDiscretePerimeterClick, onRegionClick, getSceneUnits, tryAdoptRectColumn, sketchOnCanvasClick],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
@@ -405,7 +425,10 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
   // N.7.1 split — pure resolver lives σε column-status-text.ts (SSoT).
-  const getStatusText = useCallback((): string => resolveColumnStatusTextKey(stateRef.current), []);
+  const getStatusText = useCallback(
+    (): string => resolveColumnStatusTextKey(stateRef.current, sketchPhase),
+    [sketchPhase],
+  );
 
   // ── ADR-363 Phase 8D — publish handle to ribbon bridge store ────────────
   // Single writer pattern (mirror stair-status-store). Bridge reads via

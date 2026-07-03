@@ -735,6 +735,11 @@
       "statusCurveEnd": "Pick curved wall end point",
       "statusCurveControl": "Pick curve control point",
       "statusArcThrough": "Pick a point the arc passes through",
+      "statusArcCenter": "Pick the arc center",
+      "statusArcRadiusStart": "Pick the arc start (sets the radius)",
+      "statusArcCenterEnd": "Pick the arc end (angle)",
+      "statusArcRadiusValue": "Type a radius or click to set the arc",
+      "statusArcTangentEnd": "Pick the end — tangent to the previous segment",
       "statusPolyNext": "Pick next vertex (Enter to finish)",
       "statusPickEntity": "Pick a line or rectangle to place a wall",
       "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior",
@@ -797,6 +802,8 @@
       "statusRegionLinesPick": "Pick 4 lines that form a rectangle → one column filling it",
       "statusRegionInsidePick": "Click inside a closed rectangle → one column filling it",
       "statusRegionBoxPick": "Drag a box around rectangles → one column per rectangle",
+      "statusPolygonFirstVertex": "Click the first vertex of the column outline",
+      "statusPolygonNextVertex": "Click the next vertex — Enter or click the first vertex to close the outline",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -1302,6 +1309,7 @@
       "stairMultiFlight": "Multi-Flight",
       "stairStructuralAttach": "Structural Attach",
       "stairActions": "Actions",
+      "wallDraw": "Draw",
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
       "wallTilt": "Tilt",
@@ -1646,6 +1654,10 @@
         "columnDiscreteFromPerimeterWalls": {
           "label": "Bulk create structural walls",
           "tooltip": "Box-select faces → creates the structural walls directly; if columns are also detected, asks whether to create them too (auto-classified from side ratios)"
+        },
+        "columnFromPolygon": {
+          "label": "Column from polygon",
+          "tooltip": "Sketch the column outline freely with successive clicks (like a slab) → Enter or click the first vertex to close; the type (rectangular/L/composite) is derived automatically from the shape"
         },
         "opening": {
           "label": "Opening",
@@ -2363,6 +2375,33 @@
         }
       },
       "wallEditor": {
+        "drawMode": {
+          "section": "Draw mode",
+          "straight": {
+            "label": "Line",
+            "tooltip": "Straight wall (2 clicks: start, end)"
+          },
+          "arc3Point": {
+            "label": "3-point arc",
+            "tooltip": "Curved wall: start, end, point on the arc"
+          },
+          "arcCenterEnds": {
+            "label": "Center-ends arc",
+            "tooltip": "Curved wall: center, start (radius), end (angle)"
+          },
+          "arcStartEndRadius": {
+            "label": "Start-end-radius arc",
+            "tooltip": "Curved wall: start, end, type the radius"
+          },
+          "arcTangent": {
+            "label": "Tangent arc",
+            "tooltip": "Curved wall tangent to the previous segment"
+          },
+          "polyline": {
+            "label": "Polyline",
+            "tooltip": "Polyline wall (successive clicks, Enter to finish)"
+          }
+        },
         "height": "Height",
         "thickness": "Thickness",
         "length": "Length",
@@ -4517,7 +4556,8 @@
         "thicknessNonPositive": "Thickness must be greater than 0",
         "thicknessExceedsMax": "Thickness exceeds the maximum allowed",
         "heightNonPositive": "Height must be greater than 0",
-        "dnaThicknessMismatch": "The sum of the layers does not match the wall thickness"
+        "dnaThicknessMismatch": "The sum of the layers does not match the wall thickness",
+        "radiusTooSmall": "The radius is smaller than half the chord"
       },
       "codeViolations": {
         "thicknessBelowMin": "Thickness is below the minimum allowed",

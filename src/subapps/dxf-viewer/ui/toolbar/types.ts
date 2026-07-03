@@ -148,6 +148,9 @@ export type ToolType =
   // ADR-419 «Πολλαπλή δημιουργία τοιχίων» — discrete-from-perimeter με intent=walls
   // (καθρέφτης του 'column-discrete-from-perimeter' intent=columns· ίδια εντολή/SSoT)
   | 'column-discrete-from-perimeter-walls'
+  // ADR-363 §column-polygon-sketch «Κολώνα από σχεδιασμένο πολύγωνο»: ο χρήστης σχεδιάζει
+  // ελεύθερα κλειστό περίγραμμα με διαδοχικά κλικ (ΙΔΙΟ vertex-chain engine με το slab)
+  | 'column-from-polygon'
   // ADR-436 Slice 1: BIM Foundation pad drawing tool (μεμονωμένο πέδιλο, point-based)
   | 'foundation-pad'
   // ADR-436 Slice 2: BIM Foundation line tools (line-based, 2-click — mirror beam)

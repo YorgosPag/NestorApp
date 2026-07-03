@@ -4,15 +4,13 @@
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
-import { isColumnRegionTool, isWallRegionTool } from '../../systems/tools/region-tool-ids';
-import { handleMepPointPlacementClick } from './canvas-click-mep-dispatch';
+// PRIORITIES 4.5–4.96: BIM tool click-placement dispatch (SRP split, N.7.1).
+import { dispatchBimToolClick } from './canvas-click-bim-dispatch';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-// ADR-363 Phase 1J — wall-on-entity selects the hovered (picked) source entity.
-import { getHoveredEntity } from '../../systems/hover/HoverStore';
 // ADR-363 — apply F8 ortho / F10 polar to BIM tool clicks (wall/stair/beam/slab)
 // using their preview-store anchor, so the committed point matches the preview.
 import { applyBimDrawingConstraint } from '../drawing/bim-ortho-reference';
@@ -259,150 +257,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       worldPoint,
       worldPerPixel(getImmediateTransform().scale),
     );
-    // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
-    if (activeTool === 'stair' && stairTool?.isActive) {
-      stairTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).
-    // Phase 1J — 'wall-on-entity' shares the same tool; it hit-tests existing 2D
-    // geometry so it must receive the RAW worldPoint (ORTHO/POLAR must NOT shift
-    // the pick), whereas freehand 'wall' keeps the F8/F10-constrained bimPoint.
-    // PRIORITY 4.65: ADR-363 Phase 1K — Wall-in-region (pick 4 lines / click
-    // inside / box). Uses the RAW worldPoint (hit-tests existing 2D geometry, so
-    // ORTHO/POLAR must NOT shift the pick). Accumulated line picks are reflected
-    // as a selection highlight; a commit clears the picks → selection clears.
-    if (
-      (isWallRegionTool(activeTool) || activeTool === 'wall-from-perimeter') &&
-      wallTool?.isActive
-    ) {
-      wallTool.onCanvasClick(worldPoint);
-      universalSelection.replaceEntitySelection(wallTool.getRegionPickIds?.() ?? []);
-      return;
-    }
-    if ((activeTool === 'wall' || activeTool === 'wall-on-entity') && wallTool?.isActive) {
-      if (activeTool === 'wall-on-entity') {
-        // Click 1 (awaitingStart) picks the source entity; select the hovered
-        // entity for highlight + grips. Click 2 (awaitingSide) places the wall →
-        // clear the source selection. `isAwaitingStart` is read BEFORE the call
-        // (reflects the committed render state at this click boundary).
-        const wasPick = wallTool.isAwaitingStart;
-        const advanced = wallTool.onCanvasClick(worldPoint);
-        if (wasPick) {
-          const hoveredId = getHoveredEntity();
-          if (advanced && hoveredId) universalSelection.replaceEntitySelection([hoveredId]);
-        } else if (advanced) {
-          universalSelection.replaceEntitySelection([]);
-        }
-        return;
-      }
-      wallTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7: ADR-363 Phase 3 — Slab tool N-click polygon (Enter to commit).
-    if (activeTool === 'slab' && slabTool?.isActive) {
-      slabTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7b: ADR-417 — Roof tool N-click footprint polygon (Enter to commit).
-    if (activeTool === 'roof' && roofTool?.isActive) {
-      roofTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7c: ADR-419 — Floor-finish tool N-click covering polygon (Enter to commit).
-    if (activeTool === 'floor-finish' && floorFinishTool?.isActive) {
-      floorFinishTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7c-bis: ADR-511 — Wall-covering tool (manual 2-click span OR Slice C room-fill).
-    if ((activeTool === 'wall-covering' || activeTool === 'wall-covering-room') && wallCoveringTool?.isActive) {
-      wallCoveringTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7d: ADR-408 Εύρος Β #3 — Underfloor tool N-click heating-area polygon (Enter to commit).
-    if (activeTool === 'mep-underfloor' && mepUnderfloorTool?.isActive) {
-      mepUnderfloorTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7e: ADR-422 — Thermal-space tool single click-in-region (Revit «Place Space»).
-    if (activeTool === 'thermal-space' && thermalSpaceTool?.isActive) {
-      thermalSpaceTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.7f: ADR-437 — Space-separator tool 2-click line placement.
-    if (activeTool === 'space-separator' && spaceSeparatorTool?.isActive) {
-      spaceSeparatorTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
-    // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
-    // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
-    // existing geometry, ORTHO/POLAR must NOT shift the pick).
-    // ADR-419 — «Κολώνα σε περιοχή (4 γραμμές)»: ΙΔΙΑ region-detection SSoT με το
-    // wall-in-region. RAW worldPoint (hit-tests existing 2D geometry, ORTHO/POLAR
-    // must NOT shift the pick). Accumulated line picks reflected ως selection
-    // highlight· commit clears them → selection clears.
-    if (isColumnRegionTool(activeTool) && columnTool?.isActive) {
-      columnTool.onCanvasClick(worldPoint);
-      universalSelection.replaceEntitySelection(columnTool.getRegionPickIds?.() ?? []);
-      return;
-    }
-    if (
-      (activeTool === 'column' ||
-        activeTool === 'column-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter-walls') &&
-      columnTool?.isActive
-    ) {
-      columnTool.onCanvasClick(worldPoint);
-      return;
-    }
-    // PRIORITY 4.85: ADR-436 Slice 1 — Foundation pad tool single-click placement
-    // (mirror column freehand; RAW worldPoint so the anchor point matches the click).
-    if (activeTool === 'foundation-pad' && foundationTool?.isActive) {
-      foundationTool.onCanvasClick(worldPoint);
-      return;
-    }
-    // PRIORITY 4.86: ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) 2-click.
-    // Uses bimPoint (ORTHO/POLAR-snapped) so the axis aligns cleanly, mirror beam.
-    if ((activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') && foundationTool?.isActive) {
-      foundationTool.onCanvasClick(bimPoint);
-      return;
-    }
-    // PRIORITY 4.87: ADR-436 Slice 2 — «Πεδιλοδοκός από τοίχο» 1-click pick of an
-    // existing wall. RAW worldPoint (hit-tests geometry — ORTHO must NOT shift),
-    // mirror 'beam-from-wall'.
-    if (activeTool === 'foundation-strip-from-wall' && foundationTool?.isActive) {
-      foundationTool.onCanvasClick(worldPoint);
-      return;
-    }
-    // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
-    // ADR-528 §whole-line — forward `shiftKey`: Shift+κλικ → auto-span όλης της σειράς συγγραμμικών στηρίξεων.
-    if (activeTool === 'beam' && beamTool?.isActive) {
-      beamTool.onCanvasClick(bimPoint, shiftKey);
-      return;
-    }
-    // PRIORITY 4.91: ADR-363 «Δοκάρι από τοίχο» — 1-click pick of an existing
-    // wall. Uses the RAW worldPoint (hit-tests existing geometry, so ORTHO/POLAR
-    // must NOT shift the pick), mirroring 'wall-on-entity'.
-    if (activeTool === 'beam-from-wall' && beamTool?.isActive) {
-      beamTool.onCanvasClick(worldPoint);
-      return;
-    }
-    // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /
-    // electrical-panel / manifold / radiator / boiler / water-heater / segment / railing.
-    // Extracted to canvas-click-mep-dispatch.ts (SRP split, ADR N.7.1).
-    if (handleMepPointPlacementClick(worldPoint, bimPoint, params)) return;
-    // PRIORITY 4.95: ADR-363 Phase 3.7 — Slab-opening tool 2-click (host slab + position).
-    if (activeTool === 'slab-opening' && slabOpeningTool?.isActive) {
-      slabOpeningTool.onCanvasClick(worldPoint);
-      return;
-    }
-    // PRIORITY 4.96: ADR-363 Phase 2 — Opening tool 2-click (host wall + position along axis).
-    if (activeTool === 'opening' && openingTool?.isActive) {
-      openingTool.onCanvasClick(worldPoint);
-      return;
-    }
+    // PRIORITIES 4.5–4.96: BIM tool click-placement dispatch (stair / wall / slab /
+    // roof / floor-finish / wall-covering / column / foundation / beam / opening /
+    // MEP …). Extracted to canvas-click-bim-dispatch.ts (SRP split, N.7.1). Consumes
+    // the click (returns true) exactly as the inline block did.
+    if (dispatchBimToolClick(worldPoint, bimPoint, shiftKey, params)) return;
     // PRIORITY 5: Overlay polygon drawing (extracted — canvas-click-tool-handlers).
     if (overlayMode === 'draw') {
       handleOverlayDrawClick(worldPoint, params);

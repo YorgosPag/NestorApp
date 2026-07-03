@@ -31,12 +31,17 @@ import type { RegionMethod } from '../../systems/tools/region-tool-ids';
  *   - 'in-region'         — ADR-419 «Κολώνα σε περιοχή (4 γραμμές)»: 4 κλικ σε
  *                           γραμμές / 1 κλικ μέσα / box-select → ΕΝΑ ColumnEntity
  *                           ανά εσώκλειστο ορθογώνιο (ΙΔΙΑ SSoT με «Τοίχος σε περιοχή»).
+ *   - 'polygon'           — ADR-363 §column-polygon-sketch «Κολώνα από σχεδιασμένο
+ *                           πολύγωνο»: ο χρήστης σχεδιάζει ελεύθερα κλειστό περίγραμμα
+ *                           με διαδοχικά κλικ (ΙΔΙΟ vertex-chain engine με το slab) →
+ *                           ΕΝΑ ColumnEntity (auto shape: rectangular/L/composite/U).
  */
 export type ColumnPlacementMode =
   | 'freehand'
   | 'outer-perimeter'
   | 'discrete-perimeter'
-  | 'in-region';
+  | 'in-region'
+  | 'polygon';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 

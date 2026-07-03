@@ -262,6 +262,7 @@ export function useActiveContextualTrigger({
       activeTool === 'column-from-perimeter' ||
       activeTool === 'column-discrete-from-perimeter' ||
       activeTool === 'column-discrete-from-perimeter-walls' ||
+      activeTool === 'column-from-polygon' ||
       isColumnRegionTool(activeTool)
     )
       return COLUMN_CONTEXTUAL_TRIGGER;

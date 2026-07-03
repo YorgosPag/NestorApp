@@ -9,13 +9,26 @@
  */
 
 import type { ColumnToolState } from './useColumnTool';
+import type { PolygonSketchPhase } from './use-polygon-sketch-chain';
 
 /**
  * Επιστρέφει το i18n key του status prompt για την τρέχουσα κατάσταση του
  * εργαλείου κολώνας (caller-resolved translation). Empty string ⇒ no prompt.
+ *
+ * `sketchPhase` — ADR-363 §column-polygon-sketch: όταν placementMode='polygon', το
+ * πραγματικό FSM ζει στο κοινό vertex-chain primitive· ο caller περνά το chain phase.
  */
-export function resolveColumnStatusTextKey(s: ColumnToolState): string {
+export function resolveColumnStatusTextKey(
+  s: ColumnToolState,
+  sketchPhase?: PolygonSketchPhase,
+): string {
   if (s.phase === 'idle') return '';
+  // ADR-363 §column-polygon-sketch — σχεδιασμένο πολύγωνο (vertex chain, όπως slab).
+  if (s.placementMode === 'polygon') {
+    return sketchPhase === 'awaitingNextVertex'
+      ? 'tools.column.statusPolygonNextVertex'
+      : 'tools.column.statusPolygonFirstVertex';
+  }
   // ADR-363 Φάση 3 — outer-perimeter prompt (box-select τις παρειές).
   if (s.placementMode === 'outer-perimeter') return 'tools.column.statusPerimeterPick';
   // ADR-363 Φάση 3c — discrete-perimeter prompt (box-select· αυτόματη ταξινόμηση).

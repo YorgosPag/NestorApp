@@ -22,6 +22,8 @@ import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-p
 import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
 // ADR-363 Phase 5.5P — beam preview SSoT.
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
+// ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» footprint preview SSoT.
+import { columnPolygonPreviewStore } from '../../bim/columns/column-polygon-preview-store';
 // ADR-436 Slice 2 — foundation line preview SSoT (strip / tie-beam).
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 
@@ -61,6 +63,8 @@ export function resolveBimToolTempPoints(
   if (activeTool === 'floor-finish') return floorFinishPreviewStore.get().vertices;
   // ADR-408 Εύρος Β #3 — underfloor heating footprint vertices.
   if (activeTool === 'mep-underfloor') return mepUnderfloorPreviewStore.get().vertices;
+  // ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» footprint vertices.
+  if (activeTool === 'column-from-polygon') return columnPolygonPreviewStore.get().vertices;
   if (activeTool === 'beam') {
     // ADR-363 Phase 5.5P — beam tempPoints from store.
     const bp = beamPreviewStore.get();
