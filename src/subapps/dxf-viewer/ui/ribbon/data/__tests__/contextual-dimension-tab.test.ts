@@ -126,11 +126,19 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
       'dim.modify.dimBreak',
       'dim.modify.dimSpace',
       'dim.select.row',
+      // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle widget.
+      'dim.rowHandles.toggle',
     ]);
-    for (const btn of btns) {
+    // The 3 action buttons dispatch (action === commandKey); the row-handles entry
+    // is a self-contained toggle widget (no action — flips the store directly).
+    const actionBtns = btns.filter((b) => b.command.commandKey !== 'dim.rowHandles.toggle');
+    for (const btn of actionBtns) {
       expect(btn.command.comingSoon).toBeFalsy();
       expect(btn.command.action).toBe(btn.command.commandKey);
     }
+    const rowHandles = btns.find((b) => b.command.commandKey === 'dim.rowHandles.toggle');
+    expect(rowHandles?.type).toBe('widget');
+    expect((rowHandles as { widgetId?: string }).widgetId).toBe('dim-row-handles-toggle');
   });
 
   it('dim-properties panel has 3 buttons across 2 rows', () => {

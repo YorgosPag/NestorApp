@@ -46,6 +46,8 @@ import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane 
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
 import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
+// ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» row-move handle overlay (self-gated leaf).
+import { DimRowHandleOverlay } from './DimRowHandleOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
@@ -451,6 +453,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />
           <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
+          {/* ADR-362 Round 35 — row-move handles (self-gated: renders null unless the mode is ON). */}
+          <DimRowHandleOverlay transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           <SelectionCursorIcon />
           <ViewMode3DToggleButton /><CutPlaneSliderLeaf />{/* ADR-452 */}
           <AxisCutSliderLeaf bounds={dxfScene?.bounds ?? null} />{/* ADR-455 */}

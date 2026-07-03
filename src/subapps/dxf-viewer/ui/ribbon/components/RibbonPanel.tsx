@@ -63,6 +63,8 @@ import { RibbonMepCircuitWireStyleWidget } from './RibbonMepCircuitWireStyleWidg
 import { RibbonMepCircuitConductorsWidget } from './RibbonMepCircuitConductorsWidget';
 import { RibbonMepNetworkClassificationWidget } from './RibbonMepNetworkClassificationWidget';
 import { RibbonHatchListWidget } from './RibbonHatchListWidget';
+// ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle widget.
+import { DimRowHandlesToggle } from './DimRowHandlesToggle';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -120,6 +122,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'hide-bim') {
       return <HideBimToggle key="hide-bim-widget" />;
+    }
+    if (button.widgetId === 'dim-row-handles-toggle') {
+      return <DimRowHandlesToggle key="dim-row-handles-toggle-widget" />;
     }
     if (button.widgetId === 'mep-wire-toggle') {
       return <MepWireToggle key="mep-wire-toggle-widget" />;

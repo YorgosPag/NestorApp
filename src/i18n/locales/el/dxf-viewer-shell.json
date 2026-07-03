@@ -3753,6 +3753,13 @@
       "dimSpace": "Απόσταση Διαστάσεων",
       "dimSelectRow": "Επιλογή Σειράς",
       "dimTfillToggle": "Μάσκα Κειμένου",
+      "dimRowHandles": {
+        "label": "Λαβές Σειρών",
+        "on": "Ενεργές",
+        "off": "Ανενεργές",
+        "tooltipOn": "Εμφάνιση λαβών μετακίνησης ανά σειρά διαστάσεων",
+        "tooltipOff": "Απόκρυψη λαβών μετακίνησης σειρών"
+      },
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",

@@ -170,6 +170,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // whole stacked band can be moved / re-spaced together. `useDimensionModify`
   // host resolves the row via `collectDimensionRow` + replaces the selection.
   'dim:select-row-requested': { entityIds: readonly string[] };
+  // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών»: the row-handle overlay drags a
+  // whole row perpendicular to its axis and, on release, emits the row's dim ids +
+  // the projected (perpendicular, step-snapped) world delta. `useDimensionModify`
+  // host offsets every dim's dim line (defPoints[2]) as ONE atomic-undo command.
+  'dim:row-move-requested': { entityIds: readonly string[]; delta: Point2D };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

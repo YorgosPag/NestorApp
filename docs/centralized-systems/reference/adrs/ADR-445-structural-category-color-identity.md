@@ -1,6 +1,6 @@
 # ADR-445 — Per-Category Structural Colour Identity (Revit-grade)
 
-**Status:** 🟢 v1 implemented — pending browser-verify + commit (2026-06-12)
+**Status:** 🟢 v1.4 implemented — pending browser-verify + commit (last: 2026-07-03 beam-edge identity under finish skin)
 **Discipline:** DXF Viewer · BIM rendering (2D plan + 3D)
 **Related:** ADR-375 C.9 (Object Styles SSoT / `BIM_CATEGORY_LINE_COLORS`), ADR-363 (BIM drawing mode / per-entity render palettes), ADR-436 (foundation discipline)
 

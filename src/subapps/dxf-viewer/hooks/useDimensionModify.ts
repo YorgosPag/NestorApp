@@ -40,6 +40,11 @@ import { computeAutoBreakPoints } from '../systems/dimensions/dim-break-engine';
 // ADR-362 — «Επιλογή σειράς»: row detection + selection replacement SSoT.
 import { collectDimensionRow } from '../systems/dimensions/dim-row-detect';
 import { SelectedEntitiesStore } from '../systems/selection/SelectedEntitiesStore';
+// ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών»: row group-move commit reuses the
+// canonical dim-grip transform + undoable command (no new command class).
+import { UpdateDimGripCommand } from '../core/commands/entity-commands/UpdateDimGripCommand';
+import { applyDimensionGripDrag, diffDimEntity } from './dimensions/useDimensionGrips';
+import type { Point2D } from '../rendering/types/Types';
 import type { DimensionEntity, DimensionManualBreaks } from '../types/dimension';
 import { isDimensionEntity, type Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
@@ -123,6 +128,30 @@ export function buildSpaceCommands(
   return commands;
 }
 
+/**
+ * ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών»: offset every dim of a row by the
+ * SAME perpendicular `delta` (already projected + step-snapped by the overlay).
+ * Reuses the canonical `applyDimensionGripDrag('dim-line-ref')` (patches defPoints[2]
+ * only — never the ext-line origins, so the measured value is preserved) + the
+ * undoable `UpdateDimGripCommand`. The caller wraps the list in a `CompositeCommand`
+ * so one Ctrl+Z reverts the whole row move.
+ */
+export function buildRowMoveCommands(
+  dims: readonly DimensionEntity[],
+  delta: Point2D,
+  ctx: ModifyContext,
+): ICommand[] {
+  const commands: ICommand[] = [];
+  for (const dim of dims) {
+    const anchor = dim.defPoints[2] ?? { x: 0, y: 0 };
+    const moved = applyDimensionGripDrag('dim-line-ref', dim, delta, anchor);
+    const { patch, previous } = diffDimEntity(dim, moved);
+    if (Object.keys(patch).length === 0) continue;
+    commands.push(new UpdateDimGripCommand(dim.id, patch, previous, ctx.sm, false));
+  }
+  return commands;
+}
+
 /** «Εφαρμογή Στυλ» — set every selected dim's `styleId` to `styleId` (undoable). */
 export function buildApplyStyleCommands(
   dims: readonly DimensionEntity[],
@@ -195,11 +224,21 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       );
     });
 
+    // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών»: the overlay emits the row's
+    // dim ids + the projected perpendicular delta on handle release; offset the
+    // whole row's dim lines as ONE atomic-undo command.
+    const unsubRowMove = EventBus.on('dim:row-move-requested', ({ entityIds, delta }) => {
+      const r = resolve(entityIds);
+      if (!r) return;
+      runAtomic(buildRowMoveCommands(r.dims, delta, r.ctx), execute);
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
       unsubApplyStyle();
       unsubSelectRow();
+      unsubRowMove();
     };
   }, [levelManager, execute]);
 }

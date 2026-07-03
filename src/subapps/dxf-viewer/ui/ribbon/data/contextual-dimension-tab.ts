@@ -465,6 +465,23 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
             },
           ],
         },
+        // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle (self-contained widget
+        // that flips DimRowHandleModeStore; live pressed state via useSyncExternalStore).
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'dim-row-handles-toggle',
+              command: {
+                id: 'dim.rowHandles.toggle',
+                labelKey: 'ribbon.commands.dimRowHandles.label',
+                commandKey: DIM_RIBBON_KEYS.modify.rowHandles,
+              },
+            },
+          ],
+        },
       ],
     },
     // (G) Ιδιότητες — layer + annotation scale

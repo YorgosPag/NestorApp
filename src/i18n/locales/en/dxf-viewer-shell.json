@@ -3753,6 +3753,13 @@
       "dimSpace": "Dimension Space",
       "dimSelectRow": "Select Row",
       "dimTfillToggle": "Text Mask",
+      "dimRowHandles": {
+        "label": "Row Handles",
+        "on": "On",
+        "off": "Off",
+        "tooltipOn": "Show per-row dimension move handles",
+        "tooltipOff": "Hide row move handles"
+      },
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",

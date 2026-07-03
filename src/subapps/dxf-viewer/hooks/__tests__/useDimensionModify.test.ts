@@ -19,7 +19,7 @@ import {
 } from '../../systems/dimensions/dim-geometry-builder';
 import { computeAutoBreakPoints } from '../../systems/dimensions/dim-break-engine';
 import { ARCHITECTURAL_US_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
-import { buildBreakCommands, buildSpaceCommands, buildApplyStyleCommands } from '../useDimensionModify';
+import { buildBreakCommands, buildSpaceCommands, buildApplyStyleCommands, buildRowMoveCommands } from '../useDimensionModify';
 
 // A throwaway scene manager — the builders only pass it to the command
 // constructor, which does not touch it until execute() (never called here).
@@ -146,5 +146,28 @@ describe('buildApplyStyleCommands', () => {
     expect(
       buildApplyStyleCommands([a, b], ISO_129_TEMPLATE.id, { entities: [a, b], sm: STUB_SM }),
     ).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Host — buildRowMoveCommands (ADR-362 Round 35 «Λαβές Μετακίνησης Σειρών»)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('buildRowMoveCommands', () => {
+  it('offsets every dim of the row by the SAME delta (defPoints[2] only)', () => {
+    const a = linearDim('a', { x: 5, y: 100 });
+    const b = linearDim('b', { x: 5, y: 100 });
+    const delta: Point2D = { x: 0, y: 40 };
+    const cmds = buildRowMoveCommands([a, b], delta, { entities: [a, b], sm: STUB_SM });
+    expect(cmds).toHaveLength(2);
+    expect(cmds.map((c) => c.getAffectedEntityIds()[0])).toEqual(['a', 'b']);
+    // The dim line (defPoints[2]) shifts by delta; the ext origins stay put.
+    expect(cmds[0].getDescription()).toBe('Update dimension grip');
+  });
+
+  it('skips a zero-delta move (no undo pollution)', () => {
+    const a = linearDim('a', { x: 5, y: 100 });
+    const cmds = buildRowMoveCommands([a], { x: 0, y: 0 }, { entities: [a], sm: STUB_SM });
+    expect(cmds).toHaveLength(0);
   });
 });

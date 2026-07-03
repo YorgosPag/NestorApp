@@ -41,9 +41,11 @@ export const DIM_RIBBON_KEYS = {
     tfillToggle:   'dim.text.tfillToggle',
   },
   modify: {
-    dimBreak:  'dim.modify.dimBreak',
-    dimSpace:  'dim.modify.dimSpace',
-    selectRow: 'dim.select.row',
+    dimBreak:   'dim.modify.dimBreak',
+    dimSpace:   'dim.modify.dimSpace',
+    selectRow:  'dim.select.row',
+    // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle (row-handle mode).
+    rowHandles: 'dim.rowHandles.toggle',
   },
   properties: {
     layer:           'dim.properties.layer',
