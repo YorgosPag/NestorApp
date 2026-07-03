@@ -27,12 +27,24 @@ import type { WallEntity, WallParams } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { OpeningUpdate } from './wall-split';
 
-// ── Tolerances ──────────────────────────────────────────────────────────────
+// ── Tolerances (AutoCAD-JOIN-grade, forgiving) ──────────────────────────────
 
-/** Max |sin(angle)| between the two axes to be considered parallel (~0.5°). */
-const COLLINEAR_SIN_TOL = 0.01;
-/** Max perpendicular distance (scene units / mm) between the two axes. */
-const COLLINEAR_PERP_TOL = 1;
+/**
+ * Max |sin(angle)| between the two axes to be considered parallel (~5°). Generous
+ * on purpose: the user explicitly picks the two walls, and the merge STRAIGHTENS
+ * both endpoints onto the primary axis anyway — so a small drift still yields a
+ * clean straight wall (mirrors AutoCAD JOIN's tolerance).
+ */
+const COLLINEAR_SIN_TOL = 0.087;
+/**
+ * Absolute floor for the perpendicular-offset tolerance (scene units / mm). The
+ * effective tolerance is `max(this, PERP_TOL_THICKNESS_FRAC × thickness)` so that
+ * "visually collinear" walls (a few mm of hand-drawn drift) still merge, while
+ * parallel-ADJACENT walls (offset ≈ a full thickness) are still rejected.
+ */
+const COLLINEAR_PERP_TOL_ABS = 5;
+/** Perpendicular tolerance as a fraction of wall thickness (half → rejects adjacent). */
+const PERP_TOL_THICKNESS_FRAC = 0.5;
 /** Max thickness difference (mm) treated as "same thickness". */
 const THICKNESS_TOL = 1;
 
@@ -94,9 +106,15 @@ export function canMergeWalls(a: WallEntity, b: WallEntity): CanMergeResult {
   const sin = Math.abs(axisA.u.x * axisB.u.y - axisA.u.y * axisB.u.x);
   if (sin > COLLINEAR_SIN_TOL) return { ok: false, reason: 'not-collinear' };
   // … and B's endpoints lie on A's infinite line (same axis, not just parallel).
+  // Thickness-relative band: a few mm of drift merges; a full-thickness offset
+  // (parallel-adjacent walls) is rejected.
+  const perpTol = Math.max(
+    COLLINEAR_PERP_TOL_ABS,
+    PERP_TOL_THICKNESS_FRAC * Math.min(a.params.thickness, b.params.thickness),
+  );
   if (
-    perpDistance(axisA, { x: b.params.start.x, y: b.params.start.y }) > COLLINEAR_PERP_TOL ||
-    perpDistance(axisA, { x: b.params.end.x, y: b.params.end.y }) > COLLINEAR_PERP_TOL
+    perpDistance(axisA, { x: b.params.start.x, y: b.params.start.y }) > perpTol ||
+    perpDistance(axisA, { x: b.params.end.x, y: b.params.end.y }) > perpTol
   ) {
     return { ok: false, reason: 'not-collinear' };
   }

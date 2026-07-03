@@ -139,6 +139,8 @@
   "wallMerge": {
     "pickFirst": "Select the first wall to merge.",
     "pickSecond": "Select the second wall to merge.",
+    "merged": "Walls merged.",
+    "needTwo": "Select exactly 2 walls to merge.",
     "blocked": {
       "notStraight": "Cannot merge: straight walls only.",
       "notCollinear": "Cannot merge: the walls are not collinear.",

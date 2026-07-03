@@ -23,6 +23,8 @@ export interface RegionPerimeterZone {
   polygon: Point2D[];
   /** Ετικέτα διαστάσεων της ζώνης, π.χ. «2.40 × 0.30 m». */
   label: string;
+  /** ADR-567 — `true` αν η ζώνη πέφτει πάνω σε υπάρχουσα δομική οντότητα → κόκκινο, δεν θα χτιστεί. */
+  occupied?: boolean;
 }
 
 export interface RegionPerimeterPreview {

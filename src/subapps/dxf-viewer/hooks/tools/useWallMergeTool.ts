@@ -27,12 +27,14 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
+import { toast } from 'sonner';
 import { generateWallId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { isWallEntity } from '../../types/entities';
+import { SelectedEntitiesStore } from '../../systems/selection';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
@@ -162,7 +164,11 @@ export function useWallMergeTool({
   const collectSelectedWalls = useCallback((): WallEntity[] => {
     const scene = getScene();
     if (!scene?.entities) return [];
-    const idSet = new Set(selectedEntityIds);
+    // Prefer the prop; fall back to the selection SSoT store so activation-time
+    // reads are never stale (ADR-532: the orchestrator may not have re-rendered
+    // with the latest selection when the tool flips active).
+    const ids = selectedEntityIds.length ? selectedEntityIds : SelectedEntitiesStore.getSelectedEntityIds();
+    const idSet = new Set(ids);
     return scene.entities.filter((e): e is WallEntity => idSet.has(e.id) && isWallEntity(e));
   }, [getScene, selectedEntityIds]);
 
@@ -171,7 +177,9 @@ export function useWallMergeTool({
   const executeMerge = useCallback((a: WallEntity, b: WallEntity): boolean => {
     const check = canMergeWalls(a, b);
     if (!check.ok) {
+      const msg = i18next.t(BLOCK_REASON_KEY[check.reason], { ns: NS });
       setHint(BLOCK_REASON_KEY[check.reason]);
+      toast.warning(msg); // Revit-style non-blocking, prominent feedback
       return false;
     }
     const sm = getSceneManager();
@@ -206,6 +214,7 @@ export function useWallMergeTool({
       openingUpdates,
     });
     selectEntities?.([mergedId]);
+    toast.success(i18next.t('wallMerge.merged', { ns: NS }));
     return true;
   }, [getSceneManager, getScene, executeCommand, selectEntities, setHint]);
 

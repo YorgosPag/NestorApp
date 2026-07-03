@@ -30,6 +30,8 @@ import {
   clearRegionPerimeterPreview,
   type RegionPerimeterZone,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
+// ADR-567 — κόκκινη ζώνη όταν πέφτει πάνω σε υπάρχουσα δομική (ίδιο SSoT + entities με τον commit guard).
+import { findStructuralOverlap } from '../../bim/placement/structural-placement-overlap';
 import { clearRegionGapMarkers } from '../../systems/region-preview/RegionGapMarkersStore';
 import { isRegionHoverPreviewTool } from '../../systems/tools/region-tool-ids';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
@@ -102,13 +104,29 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
       // του overlay σε κάθε move μέσα στην ίδια περιοχή.
       if (preview.sig === _lastSig) return;
       _lastSig = preview.sig;
-      setRegionPerimeterPreview({ zones: preview.zones, oversized: false });
+      // ADR-567 — μαρκάρισε occupied ζώνες (πάνω σε υπάρχουσα δομική) → κόκκινο. Ίδια live
+      // `entities` με τον commit/append guard → preview ≡ commit (ίδιο κατώφλι 25%).
+      setRegionPerimeterPreview({ zones: markOccupiedZones(preview.zones, entities), oversized: false });
       _hadPreview = true;
     },
     [],
   );
 
   return { handleMouseMoveWithRegionPreview };
+}
+
+/**
+ * ADR-567 — μαρκάρει ΚΑΘΕ ζώνη ως `occupied` αν το πολύγωνό της επικαλύπτει ουσιαστικά υπάρχουσα
+ * δομική οντότητα (ίδιο SSoT `findStructuralOverlap` + κατώφλι 25% με τον commit/append guard →
+ * preview ≡ commit). Έτσι το hover highlight γίνεται κόκκινο ΠΡΙΝ το κλικ, αντί για πράσινο.
+ */
+function markOccupiedZones(
+  zones: readonly RegionPerimeterZone[],
+  entities: readonly Entity[],
+): RegionPerimeterZone[] {
+  return zones.map((z) =>
+    z.polygon.length >= 3 && findStructuralOverlap(z.polygon, entities) ? { ...z, occupied: true } : z,
+  );
 }
 
 // ─── Per-tool preview resolvers ──────────────────────────────────────────────

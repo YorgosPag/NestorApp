@@ -31,9 +31,6 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
 
   if (!preview || preview.zones.length === 0) return null;
 
-  const color = preview.oversized ? '#ef4444' : '#22c55e';
-  const fill = preview.oversized ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.12)';
-
   return (
     <svg
       className="absolute inset-0 size-full pointer-events-none z-10"
@@ -44,6 +41,10 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
           δημιουργήσει το κλικ (preview ≡ commit). */}
       {preview.zones.map((zone, zi) => {
         if (zone.polygon.length < 3) return null;
+        // ADR-419 Layer 4 (oversized) + ADR-567 (occupied) → κόκκινο ανά ζώνη· αλλιώς πράσινο.
+        const isRed = preview.oversized || zone.occupied === true;
+        const color = isRed ? '#ef4444' : '#22c55e';
+        const fill = isRed ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.12)';
         const screenPts = zone.polygon.map((p) =>
           CoordinateTransforms.worldToScreen(p, transform, viewport),
         );

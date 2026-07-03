@@ -50,9 +50,6 @@ function buildWallHudMeta(entity: WallEntity, sceneUnits: SceneUnits): WallHudMe
   return buildSegmentHudMeta(p.start, p.end, sceneUnits, p.thickness, p.height);
 }
 
-// TEMP ADR-567 debug — throttle state (module-level· αφαιρείται μετά το διαγνωστικό).
-let lastGhostDbg = '';
-
 /**
  * ADR-508 — SSoT overlap decision for EVERY wall-ghost path: 🔴 when the ghost lies
  * collinearly / on-top of (or whose body overlaps, incl. face-anchored) an existing member.
@@ -121,18 +118,10 @@ export function buildWallGhostEntity(
   // ≡ commit. Γωνίες/ενώσεις/διασταυρώσεις (μικρό κοινό εμβαδό) μένουν 🟢.
   const ghostFootprint = structuralFootprintOf(built.entity as unknown as Entity);
   const structuralEntities = sceneSnapTargetsStore.get().structuralEntities;
-  const overlapHit = ghostFootprint
-    ? findStructuralOverlap(ghostFootprint, structuralEntities, { excludeIds: new Set([built.entity.id]) })
-    : null;
-  const footprintOverlap = overlapHit !== null;
+  const footprintOverlap = ghostFootprint
+    ? findStructuralOverlap(ghostFootprint, structuralEntities, { excludeIds: new Set([built.entity.id]) }) !== null
+    : false;
   const overlap = isOverlap || conflict !== null || footprintOverlap;
-  // TEMP ADR-567 debug (αφαιρείται) — throttled: logάρει μόνο όταν αλλάζει η κατάσταση.
-  const dbg = `struct=${structuralEntities.length} fp=${ghostFootprint ? ghostFootprint.length : 'NULL'} fpOverlap=${footprintOverlap} collinear=${isOverlap} ratio=${overlapHit ? overlapHit.ratio.toFixed(3) : '-'}`;
-  if (dbg !== lastGhostDbg) {
-    lastGhostDbg = dbg;
-    // eslint-disable-next-line no-console
-    console.warn('[ADR-567 ghost]', dbg);
-  }
   const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;
   // 🔴 → ποτέ listening dims (mirror short-end overlap).
   const dims = overlap ? null : faceDimensions;

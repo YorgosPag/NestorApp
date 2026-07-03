@@ -109,6 +109,19 @@ describe('canMergeWalls', () => {
     expect(canMergeWalls(a, b)).toEqual({ ok: false, reason: 'not-straight' });
   });
 
+  test('small perpendicular drift within thickness band → ok (visually collinear)', () => {
+    // thickness 200 → perp band = max(5, 0.5*200) = 100mm. 50mm drift merges.
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 5000, y: 0, z: 0 }, thickness: 200 });
+    const b = makeWall({ id: 'b', start: { x: 5000, y: 50, z: 0 }, end: { x: 9000, y: 50, z: 0 }, thickness: 200 });
+    expect(canMergeWalls(a, b)).toEqual({ ok: true });
+  });
+
+  test('slightly angled but roughly collinear (~2°) → ok', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 5000, y: 0, z: 0 }, thickness: 200 });
+    const b = makeWall({ id: 'b', start: { x: 5000, y: 0, z: 0 }, end: { x: 8000, y: 100, z: 0 }, thickness: 200 });
+    expect(canMergeWalls(a, b)).toEqual({ ok: true });
+  });
+
   test('collinear on a diagonal axis → ok', () => {
     const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 3000, y: 4000, z: 0 } });
     const b = makeWall({ id: 'b', start: { x: 3000, y: 4000, z: 0 }, end: { x: 6000, y: 8000, z: 0 } });
