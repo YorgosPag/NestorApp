@@ -23,8 +23,25 @@ import { extractDimLineInfo, dimLineOffset, type DimLineInfo } from './dim-line-
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 
-/** Distance (screen px) the docked handle keeps from the viewport edge. */
-export const DIM_ROW_HANDLE_EDGE_INSET_PX = 24;
+/** Screen px reserved on each viewport side (ruler / cut-plane slider chrome). */
+export interface EdgeInsets {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
+/**
+ * Default docking clearances. Horizontal rows dock at the RIGHT inner edge, vertical
+ * rows at the BOTTOM inner edge; the band-clamp keeps handles off the top/left/bottom
+ * rulers (30px, COORDINATE_LAYOUT) and the right-hand 3D cut-plane slider (~48px).
+ */
+export const DIM_ROW_HANDLE_INSETS: EdgeInsets = {
+  top: 40,
+  right: 64,
+  bottom: 48,
+  left: 40,
+};
 
 export interface RowHandlePlacement {
   readonly screen: Point2D;
@@ -45,7 +62,7 @@ export function computeRowHandleScreenPos(
   info: DimLineInfo,
   transform: ViewTransform,
   viewport: Viewport,
-  insetPx: number = DIM_ROW_HANDLE_EDGE_INSET_PX,
+  insets: EdgeInsets = DIM_ROW_HANDLE_INSETS,
 ): RowHandlePlacement | null {
   const { width, height } = viewport;
   if (!(transform.scale > 0) || width <= 0 || height <= 0) return null;
@@ -56,16 +73,16 @@ export function computeRowHandleScreenPos(
 
   if (horizontal) {
     if (Math.abs(sdir.x) < 1e-9) return null;
-    const targetX = width - insetPx;
+    const targetX = width - insets.right;
     const y = p0.y + ((targetX - p0.x) / sdir.x) * sdir.y;
-    if (y < insetPx || y > height - insetPx) return null;
+    if (y < insets.top || y > height - insets.bottom) return null;
     return { screen: { x: targetX, y }, orientation: 'horizontal' };
   }
 
   if (Math.abs(sdir.y) < 1e-9) return null;
-  const targetY = height - insetPx;
+  const targetY = height - insets.bottom;
   const x = p0.x + ((targetY - p0.y) / sdir.y) * sdir.x;
-  if (x < insetPx || x > width - insetPx) return null;
+  if (x < insets.left || x > width - insets.right) return null;
   return { screen: { x, y: targetY }, orientation: 'vertical' };
 }
 

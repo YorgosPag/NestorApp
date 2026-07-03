@@ -4,22 +4,17 @@
  * ADR-443 — Dedicated glyph για το εργαλείο «Τοίχος πάνω σε οντότητα» (`wall-on-entity`).
  *
  * Εξαίρεση στο base+method composition (`StructuralToolIcon`): ο Giorgio ζήτησε ρητά
- * (screenshot 2026-07-03) το εικονίδιο να δείχνει τη ΣΧΕΣΗ — έναν κάθετο τοίχο που
- * πατάει (⊥) πάνω σε μια οριζόντια οντότητα-host — αντί για το γενικό «wall base +
- * on-entity badge». Δεν χωράει στο fragment map (το base=wall είναι πάντα 2 οριζόντιες
- * γραμμές), οπότε ζει ως ξεχωριστό component.
+ * (screenshots 2026-07-03) το εικονίδιο να δείχνει τη ΣΧΕΣΗ — ο τοίχος (φάντασμα) κυλά και
+ * πατάει (κάθετα) πάνω στο σώμα μιας υφιστάμενης οντότητας, σε σχήμα ✓:
+ *   · τοίχος   → καφέ `WallBar` (ταυτότητα τοίχου, SSoT `WALL_IDENTITY_COLOR`).
+ *   · οντότητα → λευκό `WallBar` (`HOST_ENTITY_COLOR`) — η υφιστάμενη οντότητα-host.
  *
- * Χρώματα (Giorgio):
- *   · Τοίχος   → `WALL_IDENTITY_COLOR` = το καφέ (brick-warm poché) που έχει ο τοίχος
- *     στον καμβά — SSoT `wall-render-palette`, ΟΧΙ hardcoded.
- *   · Οντότητα → `currentColor` = ίδιο χρώμα με όλα τα άλλα ribbon icons (theme-aware).
- *
- * Sizing όπως `StructuralToolIcon`/`CircleIcon`: no width/height — ο caller περνά το
- * ribbon icon class (`dxf-ribbon-btn-icon-large|small`).
+ * Και τα δύο μέλη = ΙΔΙΟ `WallBar` (ίδιες διαστάσεις με τους τοίχους των άλλων wall icons —
+ * Giorgio: «πάντοτε το ίδιο μέγεθος τοίχους»). Ο καφές είναι κάθετος στη host (90°).
  */
 
 import * as React from 'react';
-import { WALL_IDENTITY_COLOR } from '../../../../bim/walls/wall-render-palette';
+import { WallBar, HOST_ENTITY_COLOR } from './wall-icon-primitives';
 
 interface WallOnEntityIconProps {
   className?: string;
@@ -35,9 +30,9 @@ export const WallOnEntityIcon: React.FC<WallOnEntityIconProps> = ({ className })
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    {/* Οντότητα-host: οριζόντιο μέλος στη βάση — χρώμα άλλων icons (currentColor). */}
-    <rect x="2" y="16.75" width="20" height="4.75" rx="0.6" stroke="currentColor" />
-    {/* Τοίχος: κάθετο μέλος που πατάει (⊥) πάνω στο host — καφέ ταυτότητα τοίχου. */}
-    <rect x="9.5" y="2.5" width="5" height="14.25" rx="0.6" stroke={WALL_IDENTITY_COLOR} />
+    {/* Υφιστάμενη οντότητα (host): λευκό bar, κεκλιμένο (κάτω-δεξιά κλάδος του ✓). */}
+    <WallBar cx={14} cy={13.5} angle={-28} stroke={HOST_ENTITY_COLOR} />
+    {/* Τοίχος (φάντασμα): καφέ bar, κάθετο στη host, πατάει πάνω στο σώμα της. */}
+    <WallBar cx={8.1} cy={8.15} angle={62} />
   </svg>
 );

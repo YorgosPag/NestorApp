@@ -121,6 +121,20 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-07-04** — §wall-glyphs-consistent-size + on-entity-revamp (Opus 4.8). Ο Giorgio: «να
+  χρησιμοποιούμε ΠΑΝΤΟΤΕ το ίδιο μέγεθος τοίχους στα εικονίδια» + ξανασχεδίαση του «πάνω σε οντότητα»
+  (screenshot). **(1) SSoT μέγεθος:** NEW `wall-icon-primitives.tsx` — `WallBar` (rotated rect
+  σταθερών διαστάσεων `WALL_BAR_LENGTH=15 × WALL_BAR_WIDTH=3.6`) + `HOST_ENTITY_COLOR='#ffffff'`. Και
+  τα 3 wall glyphs (on-entity / from-lines / region-inside) ζωγραφίζουν τον καφέ τοίχο μέσω του ΙΔΙΟΥ
+  `WallBar` → εγγυημένα ίδιες διαστάσεις (τα from-lines/region-inside: κατακόρυφο `WallBar cx=4.1 cy=12
+  angle=90`, αντικατέστησε το ανά-icon `rect ...h=17`). **(2) on-entity revamp:** από ⊥ (κάθετος πάνω
+  σε οριζόντια host) → **σχήμα ✓**: καφέ τοίχος κάθετος που πατάει πάνω στο σώμα μιας **λευκής**
+  υφιστάμενης οντότητας (host `currentColor` → `#ffffff`, Giorgio). Και τα δύο μέλη = ίδιο `WallBar`
+  (κεκλιμένα -28° host / 62° wall). **⚠️ Known caveat (flagged στον Giorgio):** το λευκό host γίνεται
+  σχεδόν αόρατο σε ΑΝΟΙΧΤΟΧΡΩΜΟ ribbon/theme — αποδεκτό μόνο αν το ribbon είναι πάντα σκούρο· αλλιώς
+  fallback `currentColor`. CHECK 6B/6D: όχι· i18n: καμία· tsc SKIP (N.17). ✅ Google-level: YES —
+  ΕΝΑ SSoT `WallBar` (ίδιο μέγεθος παντού, μηδέν διπλότυπο rect). 🔴 browser-verify (ειδικά λευκό host
+  σε πραγματικό ribbon φόντο) + commit.
 - **2026-07-03** — §wall-region-inside-dedicated-glyph (Opus 4.8). Τρίτο dedicated glyph, ίδιο μοτίβο:
   ο Giorgio ζήτησε ρητά (screenshot) το εικονίδιο του **«Τοίχος μέσα σε περιοχή»** (`wall-region-inside`)
   να δείχνει την **περιοχή** ως **πράσινο διακεκομμένο (dashed) ΚΛΕΙΣΤΟ ορθογώνιο** — ακριβώς όπως η live

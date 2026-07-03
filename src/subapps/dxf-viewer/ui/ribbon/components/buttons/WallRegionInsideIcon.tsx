@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { WALL_IDENTITY_COLOR } from '../../../../bim/walls/wall-render-palette';
+import { WallBar } from './wall-icon-primitives';
 
 /**
  * Πράσινο της εντοπισμένης περιοχής — ταυτίζεται με το buildable dashed preview του
@@ -38,8 +38,8 @@ export const WallRegionInsideIcon: React.FC<WallRegionInsideIconProps> = ({ clas
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    {/* Τοίχος (output): κάθετο μέλος, καφέ ταυτότητα τοίχου. */}
-    <rect x="2.3" y="3.5" width="3.6" height="17" rx="0.5" stroke={WALL_IDENTITY_COLOR} />
+    {/* Τοίχος (output): κάθετο μέλος αριστερά — ΙΔΙΟ `WallBar` με τα άλλα wall icons. */}
+    <WallBar cx={4.1} cy={12} angle={90} />
     {/* Περιοχή (input): κλειστό κεκλιμένο ορθογώνιο, πράσινο διακεκομμένο. Κάθε πλευρά
         ξεχωριστή γραμμή με `pathLength=100` ώστε το dash να ΞΕΚΙΝΑ & ΤΕΛΕΙΩΝΕΙ ακριβώς στην
         κορυφή (d=g=100/(2n-1): μακριά n=4, κοντή n=2) → αιχμηρές, ορθογωνισμένες γωνίες αντί

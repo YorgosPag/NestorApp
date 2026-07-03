@@ -16,7 +16,7 @@
  */
 
 import * as React from 'react';
-import { WALL_IDENTITY_COLOR } from '../../../../bim/walls/wall-render-palette';
+import { WallBar } from './wall-icon-primitives';
 
 /** Μπλε των «επιλεγμένων γραμμών» (input) — Giorgio 2026-07-03· ξεχωρίζει από τον καφέ τοίχο. */
 const PICKED_LINE_COLOR = '#3b82f6';
@@ -35,8 +35,8 @@ export const WallFromLinesIcon: React.FC<WallFromLinesIconProps> = ({ className 
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    {/* Τοίχος (output): κάθετο μέλος, καφέ ταυτότητα τοίχου. */}
-    <rect x="2.3" y="3.5" width="3.6" height="17" rx="0.5" stroke={WALL_IDENTITY_COLOR} />
+    {/* Τοίχος (output): κάθετο μέλος αριστερά — ΙΔΙΟ `WallBar` με τα άλλα wall icons. */}
+    <WallBar cx={4.1} cy={12} angle={90} />
     {/* 4 διακριτές γραμμές (input): κεκλιμένο ορθογώνιο με κενά στις γωνίες. */}
     <g stroke={PICKED_LINE_COLOR}>
       <line x1="8.3" y1="13.3" x2="17.2" y2="6.3" />

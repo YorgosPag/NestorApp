@@ -66,11 +66,12 @@ describe('computeRowHandleScreenPos', () => {
   // 1:1 scale, no offset → world (x,y) → screen via margins + Y-flip.
   const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   const viewport: Viewport = { width: 800, height: 600 };
+  const U = { top: 24, right: 24, bottom: 24, left: 24 };
 
   it('docks a horizontal row to the RIGHT edge', () => {
     const a = linear({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 100 });
     const info = extractDimLineInfo(a)!;
-    const p = computeRowHandleScreenPos(info, transform, viewport, 24);
+    const p = computeRowHandleScreenPos(info, transform, viewport, U);
     expect(p).not.toBeNull();
     expect(p!.orientation).toBe('horizontal');
     expect(p!.screen.x).toBe(800 - 24);
@@ -79,7 +80,7 @@ describe('computeRowHandleScreenPos', () => {
   it('docks a vertical row to the BOTTOM edge', () => {
     const a = linear({ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 50 });
     const info = extractDimLineInfo(a)!;
-    const p = computeRowHandleScreenPos(info, transform, viewport, 24);
+    const p = computeRowHandleScreenPos(info, transform, viewport, U);
     expect(p).not.toBeNull();
     expect(p!.orientation).toBe('vertical');
     expect(p!.screen.y).toBe(600 - 24);
@@ -89,7 +90,7 @@ describe('computeRowHandleScreenPos', () => {
     // Horizontal line at world y=100000 → far above the 600px viewport.
     const a = linear({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 100000 });
     const info = extractDimLineInfo(a)!;
-    expect(computeRowHandleScreenPos(info, transform, viewport, 24)).toBeNull();
+    expect(computeRowHandleScreenPos(info, transform, viewport, U)).toBeNull();
   });
 });
 
