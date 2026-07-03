@@ -69,10 +69,15 @@
 
 - **Toast:** νέο event `bim:placement-blocked { entityType, blockedById, count }` → non-blocking warning
   (`registerPerimeterBuildNotifications`, `sonner`). i18n `placementBlock.overlap` / `overlapBatch`.
-- **Κόκκινο ghost (τοίχος):** το wall preview (`wall-preview-helpers.buildWallGhostEntity`) γίνεται 🔴
+- **Κόκκινο ghost (ευθύς τοίχος):** το wall preview (`wall-ghost-build.buildWallGhostEntity`) γίνεται 🔴
   όταν το footprint του φαντάσματος επικαλύπτει υπάρχουσα δομική — ΟΧΙ μόνο ομοαξονικά (το στενό
   `isMemberCollinearOverlap` έχανε τις κάθετες/υπό-γωνία). Ίδιο SSoT + κατώφλι με τον commit-guard →
   preview ≡ commit. Πηγή: `sceneSnapTargetsStore.structuralEntities` (νέο πεδίο, ίδια σκηνή).
+- **Κόκκινο region highlight («Τοίχος/Κολόνα σε περιοχή»):** το hover preview
+  (`useRegionPerimeterMouseMove` → `RegionPerimeterPreviewOverlay`) χρωματίζει **ανά ζώνη** — κάθε ζώνη
+  που πέφτει πάνω σε υπάρχουσα δομική γίνεται 🔴 (νέο `RegionPerimeterZone.occupied`), οι ελεύθερες
+  μένουν 🟢. `markOccupiedZones` καλεί το ΙΔΙΟ `findStructuralOverlap` με τα ΙΔΙΑ live `scene.entities`
+  του append guard → preview ≡ commit. (Αυτό ήταν το path που έβλεπε ο Giorgio — region mode, όχι ευθύ.)
 - **Perf:** AABB fast-reject στο `findStructuralOverlap` πριν το polygon-clipping (per-frame hover, N.17).
 - Κόκκινο ghost για τα ΑΛΛΑ tools (κολόνα/δοκός/πλάκα/θεμελίωση) = Φ2 (ο append-guard τα μπλοκάρει ήδη).
 
@@ -102,8 +107,11 @@
 | `systems/events/drawing-event-map-bim.ts` | `bim:placement-blocked` event |
 | `hooks/notifications/perimeter-build-notifications.ts` | toast registrar |
 | `i18n/locales/{el,en}/dxf-viewer-shell.json` | `placementBlock.*` |
-| `hooks/drawing/wall-preview-helpers.ts` | 🔴 ghost όταν footprint overlap (preview ≡ commit) |
+| `hooks/drawing/wall-ghost-build.ts` | 🔴 ghost όταν footprint overlap (ευθύς τοίχος, preview ≡ commit) |
 | `bim/framing/scene-snap-targets.ts` | νέο πεδίο `structuralEntities` |
+| `systems/region-preview/RegionPerimeterPreviewStore.ts` | `RegionPerimeterZone.occupied` |
+| `components/dxf-layout/RegionPerimeterPreviewOverlay.tsx` | per-zone χρώμα (🔴 occupied/oversized) |
+| `hooks/canvas/useRegionPerimeterMouseMove.ts` | `markOccupiedZones` (region hover → 🔴) |
 
 ---
 
