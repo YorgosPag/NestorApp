@@ -64,6 +64,9 @@ import {
   decomposeRectilinear,
   type PerimeterShape,
 } from './perimeter-polygon-math';
+// ADR-419 §thickness-zones — ΣΩΣΤΟ split τοίχων (centerline/grid, όχι slab-sweep λωρίδων):
+// κάθε σκέλος = ΕΝΑΣ τοίχος πλήρους πάχους, κόψιμο στα junctions & αλλαγές πάχους.
+import { decomposeWallsFromFootprint } from './wall-footprint-decompose';
 
 // Public API backward-compat — pure polygon math lives in the split module.
 export { classifyPerimeter, decomposeRectilinear } from './perimeter-polygon-math';
@@ -288,12 +291,12 @@ export function perimeterFacesToRects(
   let ignoredCount = 0;
   for (const polygon of polys) {
     const shape = classifyPerimeter(polygon, tol);
-    // ADR-419 §thickness-zones — σπάσε ΚΑΘΕ ορθογωνικό περίγραμμα σε σκέλη σταθερού
-    // πλάτους (ένας τοίχος ανά σκέλος, πάχος = μικρή πλευρά). Το `decomposeRectilinear`
-    // επιστρέφει ΗΔΗ [] για μη-ορθογωνικά (γωνίες ≠90°) → αγνοούνται σωστά. Το παλιό
-    // gate `shape==='composite' ? []` πετούσε ΚΑΙ τα 100% ορθογωνικά με >8 κορυφές
-    // (π.χ. έκεντρο-Τ με 2+ μύτες διαφορετικού πάχους) — που ο slab-sweep σπάει μια χαρά.
-    const rects = decomposeRectilinear(polygon, tol);
+    // ADR-419 §thickness-zones — σπάσε ΚΑΘΕ ορθογωνικό περίγραμμα σε τοίχους: κάθε
+    // σκέλος = ΕΝΑΣ τοίχος ΠΛΗΡΟΥΣ πάχους, κόψιμο στα junctions & στις αλλαγές πάχους
+    // (junction → κύριος/μακρύτερος τοίχος). `decomposeWallsFromFootprint` (centerline/
+    // grid) ΑΝΤΙ του slab-sweep `decomposeRectilinear` — ο slab έκοβε τον τοίχο σε λωρίδες
+    // ΚΑΤΑ ΜΗΚΟΣ (face-to-face στη μεγάλη πλευρά, παράλογο). Μη-ορθογωνικά → [] (αγνοούνται).
+    const rects = decomposeWallsFromFootprint(polygon, tol);
     perimeters.push({ polygon: normalize(polygon, tol), shape, rects });
     if (rects.length === 0) ignoredCount++;
   }

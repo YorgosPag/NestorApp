@@ -341,6 +341,15 @@ export interface BimEventMap {
     widthM?: number;
     depthM?: number;
   };
+  // ADR-419 §gap-close — μη κλειστός βρόχος με ακριβώς 2 ανοιχτά άκρα → πρόταση
+  // «Να κλείσω το κενό;». `start`/`end` = τα δύο άκρα (world units)· `layerId` = το
+  // layer της ανοιχτής παρειάς (η γραμμή-ένωσης το κληρονομεί). UI: confirm dialog →
+  // «Ναι» προσθέτει τη γραμμή που κλείνει τον βρόχο (`use-region-gap-close`).
+  'bim:region-gap-detected': {
+    start: Point2D;
+    end: Point2D;
+    layerId: string;
+  };
   // ADR-401 Phase F.3 — column attach mirrors of the wall events above. N columns
   // auto-attached their top/base to a just-created structural host. Undoable via
   // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).

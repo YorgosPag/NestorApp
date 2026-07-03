@@ -32,7 +32,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -130,6 +130,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-363 Φ3c — «Κολώνα από περίγραμμα» ενημερωτικό confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>
         <ColumnPerimeterConfirmDialog />
+      </React.Suspense>
+      {/* ADR-419 §gap-close — «Να κλείσω το κενό;» confirm (self-subscribing). */}
+      <React.Suspense fallback={hiddenFallback}>
+        <GapCloseConfirmDialog />
       </React.Suspense>
       {/* ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» confirm (self-subscribing). */}
       <React.Suspense fallback={hiddenFallback}>

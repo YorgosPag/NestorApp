@@ -35,6 +35,7 @@ import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { EventBus } from '../../systems/events/EventBus';
+import type { Entity } from '../../types/entities';
 import type { WallToolState, UseWallToolOptions } from './wall-tool-types';
 import type { WallCommitApi } from './use-wall-commit';
 
@@ -76,6 +77,30 @@ export interface UseWallRegionClicksApi {
   onPerimeterClick(s: WallToolState, point: Readonly<Point2D>): boolean;
   /** Deduped ids of the accumulated in-region picks (selection highlight). */
   getRegionPickIds(): string[];
+}
+
+/**
+ * ADR-419 Layer 5/5b/gap-close — κοινό feedback όταν ο βρόχος ΔΕΝ κλείνει: warning +
+ * line-highlight + κόκκινοι κύκλοι στα ανοιχτά άκρα. Αν το κενό είναι ΑΚΡΙΒΩΣ 1 (2 άκρα),
+ * emit-άρει `bim:region-gap-detected` → πρόταση «Να κλείσω το κενό;». Επιστρέφει `true`
+ * αν υπήρχαν ανοιχτές γραμμές (= handled), αλλιώς `false` (κενός χώρος).
+ */
+function emitOpenLoopFeedback(
+  point: Readonly<Point2D>, entities: readonly Entity[], tol: number,
+): boolean {
+  const openIds = findOpenChainLineIdsNear(point, entities, tol);
+  if (openIds.length === 0) return false;
+  EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
+  EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
+  const endpoints = findOpenChainEndpointsNear(point, entities, tol);
+  setRegionGapMarkers(endpoints);
+  // ΑΚΡΙΒΩΣ ένα κενό (2 ελεύθερα άκρα) → πρόταση κλεισίματος· η γραμμή-ένωσης κληρονομεί
+  // το layer της ανοιχτής παρειάς (`use-region-gap-close` προσθέτει τη γραμμή στο «Ναι»).
+  if (endpoints.length === 2) {
+    const layerId = entities.find((e) => e.id === openIds[0])?.layerId ?? '0';
+    EventBus.emit('bim:region-gap-detected', { start: endpoints[0], end: endpoints[1], layerId });
+  }
+  return true;
 }
 
 /** Same physical segment already picked? (id + endpoints, polyline-edge aware). */
@@ -175,16 +200,9 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         });
         return true;
       }
-      // ADR-419 Layer 5 — δεν έκλεισε ορθογώνιο κοντά αλλά υπάρχουν ανοιχτές γραμμές.
-      const openIds = findOpenChainLineIdsNear(point, entities, tol);
-      if (openIds.length > 0) {
-        EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
-        EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
-        // ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα (AutoCAD BOUNDARY): «πού» είναι το κενό.
-        setRegionGapMarkers(findOpenChainEndpointsNear(point, entities, tol));
-        return true;
-      }
-      return false;
+      // ADR-419 Layer 5/5b/gap-close — δεν έκλεισε loop· warning + line-highlight + κόκκινοι
+      // κύκλοι στα άκρα + (αν 1 κενό) πρόταση «Να κλείσω το κενό;».
+      return emitOpenLoopFeedback(point, entities, tol);
     },
     [getSceneEntities, getSceneUnits, regionTol, commitInRegionRects, stateRef, setState],
   );
@@ -202,14 +220,8 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
       // ADR-419 Layer 1 SSoT — μικρότερο εμπεριέχον loop + tol (cached, κοινό click/hover).
       const { perimeter: pick, tol } = pickRegionPerimeterAt(point, entities, sceneUnits);
       if (!pick) {
-        // Layer 5 — open-loop diagnostics.
-        const openIds = findOpenChainLineIdsNear(point, entities, tol);
-        if (openIds.length === 0) return false;
-        EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
-        EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
-        // ADR-419 Layer 5b — κόκκινοι κύκλοι στα ανοιχτά άκρα (AutoCAD BOUNDARY): «πού» είναι το κενό.
-        setRegionGapMarkers(findOpenChainEndpointsNear(point, entities, tol));
-        return true;
+        // Layer 5/5b/gap-close — open-loop diagnostics + πρόταση κλεισίματος κενού.
+        return emitOpenLoopFeedback(point, entities, tol);
       }
       // Layer 4 — γιγάντιο περίγραμμα → warning, όχι garbage τοίχος.
       if (isPerimeterOversized(pick, scale)) {

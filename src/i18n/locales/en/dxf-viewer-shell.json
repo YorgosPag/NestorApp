@@ -203,7 +203,13 @@
   },
   "regionPerimeter": {
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
-    "noClosedLoop": "The lines don't form a closed loop. Join the marked endpoints (○) and try again."
+    "noClosedLoop": "The lines don't form a closed loop. Join the marked endpoints (○) and try again.",
+    "gapClose": {
+      "title": "Close the loop",
+      "message": "The lines don't form a closed loop. Close the gap between the marked endpoints?",
+      "confirm": "Yes, close the gap",
+      "cancel": "No"
+    }
   },
   "columnAdoptSize": {
     "title": "Adopt rectangle size",

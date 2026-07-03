@@ -46,6 +46,7 @@ import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useS
 // area & space tools extracted to a sub-hook (N.7.1).
 import { useSpecialToolsAreaTools, type AreaToolsReturn } from './useSpecialTools-area-tools';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
+import { useRegionGapClose } from '../drawing/use-region-gap-close';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene, addColumnsToScene } from '../../bim/columns/add-column-to-scene';
 import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
@@ -411,6 +412,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);
   // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (extracted helper).
   useWallRetrimEffect(levelManager);
+  // ADR-419 §gap-close — «Να κλείσω το κενό;» όταν το region/perimeter pick βρίσκει
+  // ανοιχτό βρόχο· «Ναι» προσθέτει τη γραμμή-ένωσης (levelManager = scene accessor).
+  useRegionGapClose(levelManager);
   // AUTO AREA — clear result panel when tool changes away
   useEffect(() => {
     if (activeTool !== 'auto-measure-area') {

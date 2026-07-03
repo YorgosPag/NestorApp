@@ -42,6 +42,8 @@ export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayer
 export const FloorManagementDialogHost = React.lazy(() => import('./FloorManagementDialogHost').then(mod => ({ default: mod.FloorManagementDialogHost })));
 // ADR-363 Φ3c — «Κολώνα από περίγραμμα» confirm dialog (self-subscribing, zero props)
 export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPerimeterConfirmDialog').then(mod => ({ default: mod.ColumnPerimeterConfirmDialog })));
+// ADR-419 §gap-close — «Να κλείσω το κενό;» confirm dialog (self-subscribing, zero props)
+export const GapCloseConfirmDialog = React.lazy(() => import('../ui/dialogs/GapCloseConfirmDialog').then(mod => ({ default: mod.GapCloseConfirmDialog })));
 // ADR-398 §3.17 — «Υιοθέτηση μεγέθους ορθογωνίου» confirm dialog (self-subscribing, zero props)
 export const ColumnAdoptSizeDialog = React.lazy(() => import('../ui/dialogs/ColumnAdoptSizeDialog').then(mod => ({ default: mod.ColumnAdoptSizeDialog })));
 // ADR-363 §5.6 — «Οι διαστάσεις δημιουργούν τοιχίο» edit-time confirm dialog (self-subscribing, zero props)
