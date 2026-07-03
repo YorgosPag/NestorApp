@@ -19,6 +19,7 @@ import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
 import { useWallSplitTool } from './useWallSplitTool';
 import { useWallMergeTool } from './useWallMergeTool';
+import { useWallGapOpeningTool } from './useWallGapOpeningTool';
 import { useWallAttachTool } from './useWallAttachTool';
 import { useBimCopyTool } from './useBimCopyTool';
 import { useEntityClipboard } from './useEntityClipboard';
@@ -119,13 +120,11 @@ export function useModifyTools({
     selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),
   });
 
-  // ADR-363 Phase 5.6 — Wall Split Tool (Revit Split Element pattern)
-  // ADR-040 XXII.A: pass live scale via SSoT — useWallSplitTool now reads at event time.
+  // ADR-363 Phase 5.6 — Wall Split Tool (knife-line / Revit "split by line").
   const wallSplitTool = useWallSplitTool({
     activeTool,
     levelManager,
     executeCommand,
-    transformScale: getImmediateTransform().scale,
     onToolChange,
   });
 
@@ -142,6 +141,18 @@ export function useModifyTools({
   // ADR-566 — Wall Merge Tool (AutoCAD JOIN for walls). Dual-flow: command-first
   // (pick 2) + selection-first (2 pre-selected). Reuses selection highlight.
   const wallMergeTool = useWallMergeTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    transformScale: getImmediateTransform().scale,
+    onToolChange,
+    selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),
+  });
+
+  // ADR-568 — Wall gap-bridge + auto-opening. Sibling of wallMergeTool: joins 2
+  // collinear walls with a GAP into one wall + drops a door in the gap.
+  const wallGapOpeningTool = useWallGapOpeningTool({
     activeTool,
     selectedEntityIds,
     levelManager,
@@ -269,6 +280,7 @@ export function useModifyTools({
     wallSplitTool,
     wallAttachTool,
     wallMergeTool,
+    wallGapOpeningTool,
     bimCopyTool,
     entityClipboard,
     handleRotationAnglePrompt,

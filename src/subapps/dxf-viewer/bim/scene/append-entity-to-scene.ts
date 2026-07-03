@@ -52,7 +52,10 @@ function isStructuralOverlapBlocked(entity: Entity, existing: readonly Entity[])
   if (!STRUCTURAL_OVERLAP_TYPES.has(entity.type)) return false;
   const footprint = structuralFootprintOf(entity);
   if (!footprint) return false;
-  const hit = findStructuralOverlap(footprint, existing, { excludeIds: new Set([entity.id]) });
+  const hit = findStructuralOverlap(footprint, existing, {
+    excludeIds: new Set([entity.id]),
+    candidateType: entity.type,
+  });
   if (!hit) return false;
   EventBus.emit('bim:placement-blocked', { entityType: entity.type, blockedById: hit.blockedById, count: 1 });
   return true;
@@ -121,7 +124,7 @@ export function appendEntitiesToScene<E extends { id: string }>(
     if (STRUCTURAL_OVERLAP_TYPES.has(ent.type)) {
       const footprint = structuralFootprintOf(ent);
       const hit = footprint
-        ? findStructuralOverlap(footprint, existing, { excludeIds: new Set([ent.id]) })
+        ? findStructuralOverlap(footprint, existing, { excludeIds: new Set([ent.id]), candidateType: ent.type })
         : null;
       if (hit) {
         blocked++;

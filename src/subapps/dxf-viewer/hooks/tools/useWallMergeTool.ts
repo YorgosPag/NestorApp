@@ -1,18 +1,22 @@
 /**
  * USE WALL MERGE TOOL — ADR-566 (Merge/Join Walls, AutoCAD JOIN for walls).
  *
- * Dual-flow editing hook that merges two collinear straight walls into one.
+ * Dual-flow editing hook that joins two straight walls. The join TYPE is decided
+ * by `classifyWallJoin` (ADR-566 §corner-join):
+ *   • collinear (same axis)     → the two walls become ONE (`WallMergeCommand`).
+ *   • crossing / L (any angle)  → both axes are extended/trimmed to their
+ *     intersection, forming a corner — they stay TWO walls (2×
+ *     `UpdateWallParamsCommand` in a `CompositeCommand`, one Ctrl+Z).
  * The INVERSE of `useWallSplitTool`; combines two established patterns:
  *
  *   • Flow B (selection-first) — mirrors `useWallAttachTool`: on activation, if
- *     exactly two walls are already selected, merge them immediately and exit.
+ *     exactly two walls are already selected, join them immediately and exit.
  *   • Flow A (command-first) — mirrors `useWallSplitTool` picking loop: click
- *     wall 1 (highlight) → click wall 2 → merge → loop to pick again.
+ *     wall 1 (highlight) → click wall 2 → join → loop to pick again.
  *
- * Both flows funnel through the same gate (`canMergeWalls`) + command
- * (`WallMergeCommand`) + pure geometry (`bim/walls/wall-merge.ts`). Invalid
- * merges surface a Revit-style non-blocking hint (`toolHintOverrideStore`) and
- * leave the scene untouched.
+ * Both flows funnel through the same gate (`classifyWallJoin`) + pure geometry
+ * (`bim/walls/wall-merge.ts`). Invalid joins surface a Revit-style non-blocking
+ * hint (`toolHintOverrideStore`) and leave the scene untouched.
  *
  * Preview: no dedicated canvas renderer — the first-picked wall reuses the
  * standard selection highlight, the hover candidate reuses HoverStore (both
@@ -41,12 +45,15 @@ import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import {
-  canMergeWalls,
+  classifyWallJoin,
+  computeWallCornerJoin,
   buildMergedWallParams,
   collectMergedOpenings,
   type WallMergeBlockReason,
 } from '../../bim/walls/wall-merge';
 import { WallMergeCommand } from '../../core/commands/entity-commands/WallMergeCommand';
+import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
+import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { EventBus } from '../../systems/events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
@@ -84,6 +91,7 @@ const BLOCK_REASON_KEY: Readonly<Record<WallMergeBlockReason, string>> = {
   'not-straight': 'wallMerge.blocked.notStraight',
   'not-collinear': 'wallMerge.blocked.notCollinear',
   'different-thickness': 'wallMerge.blocked.differentThickness',
+  'parallel-offset': 'wallMerge.blocked.parallelOffset',
   'degenerate': 'wallMerge.blocked.degenerate',
 };
 
@@ -175,10 +183,10 @@ export function useWallMergeTool({
   // ── Merge execution (shared by both flows; preview ≡ commit) ───────────────
 
   const executeMerge = useCallback((a: WallEntity, b: WallEntity): boolean => {
-    const check = canMergeWalls(a, b);
-    if (!check.ok) {
-      const msg = i18next.t(BLOCK_REASON_KEY[check.reason], { ns: NS });
-      setHint(BLOCK_REASON_KEY[check.reason]);
+    const plan = classifyWallJoin(a, b);
+    if (plan.kind === 'blocked') {
+      const msg = i18next.t(BLOCK_REASON_KEY[plan.reason], { ns: NS });
+      setHint(BLOCK_REASON_KEY[plan.reason]);
       toast.warning(msg); // Revit-style non-blocking, prominent feedback
       return false;
     }
@@ -186,6 +194,26 @@ export function useWallMergeTool({
     const scene = getScene();
     if (!sm || !scene?.entities) return false;
 
+    // ── Corner join (ADR-566 §corner-join): extend/trim both axes to their L-corner.
+    // The two walls stay separate; each nearest endpoint moves onto the intersection.
+    // Two `UpdateWallParamsCommand` wrapped in a CompositeCommand → one Ctrl+Z; the
+    // hosted-opening cascade + geometry recompute + auto-save ride the standard path.
+    if (plan.kind === 'corner') {
+      const join = computeWallCornerJoin(a, b);
+      if (!join) {
+        setHint(BLOCK_REASON_KEY.degenerate);
+        toast.warning(i18next.t(BLOCK_REASON_KEY.degenerate, { ns: NS }));
+        return false;
+      }
+      const cmdA = new UpdateWallParamsCommand(a.id, join.wallAParams, a.params, sm, false, a.kind);
+      const cmdB = new UpdateWallParamsCommand(b.id, join.wallBParams, b.params, sm, false, b.kind);
+      executeCommand(new CompositeCommand([cmdA, cmdB]));
+      selectEntities?.([a.id, b.id]);
+      toast.success(i18next.t('wallMerge.joinedCorner', { ns: NS }));
+      return true;
+    }
+
+    // ── Collinear merge: the two walls become ONE (outer-to-outer span).
     const mergedParams = buildMergedWallParams(a, b);
     const mergedId = generateWallId();
 

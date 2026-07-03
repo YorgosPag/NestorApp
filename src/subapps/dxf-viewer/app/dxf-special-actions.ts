@@ -215,6 +215,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dim:apply-style-requested', { entityIds: [...selectedEntityIds] });
     return true;
   }
+  // ADR-362 — «Επιλογή σειράς»: grow the primary dim selection to its whole
+  // collinear row (the `useDimensionModify` host replaces the selection).
+  if (action === 'dim.select.row') {
+    EventBus.emit('dim:select-row-requested', { entityIds: [...selectedEntityIds] });
+    return true;
+  }
   // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
   if (action === 'animation.tool-toggle') {
     const state = useAnimationStore.getState();

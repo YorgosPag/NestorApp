@@ -15,8 +15,7 @@ import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-pro
 // useCanvasContext (volatile). Transform read from ImmediateTransformStore at event time,
 // not React context — breaks the orchestrator-leak cascade documented in Phase XXII.A.
 import { useCanvasRefs } from '../../contexts/CanvasContext';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { isWallRegionTool } from '../../systems/tools/region-tool-ids';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore'; import { isWallRegionTool } from '../../systems/tools/region-tool-ids';
 // ADR-362 — dim create tools join the entity hit-test SSoT (entityPickingActive) so hovering an arc/circle highlights it AND fills HoverStore for the radial entity pick.
 import { isDimTool } from '../../hooks/dimensions/useDimToolRouting';
 import { useOverlayStore } from '../../overlays/overlay-store';
@@ -203,7 +202,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -279,7 +278,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
-  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, bimCopyTool, handleRotationAnglePrompt } = useModifyTools({
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, wallGapOpeningTool, bimCopyTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
@@ -336,6 +335,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     mepRiserTool,
     railingTool,
     beamTool,
+    beamBetweenMembersTool,
     slabOpeningTool,
     openingTool,
     dxfGripInteraction: unified.dxfProjection,
@@ -345,7 +345,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
     stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
     trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick,
-    extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick, wallSplitIsActive: wallSplitTool.isActive, handleWallSplitClick: wallSplitTool.handleWallSplitClick, wallAttachIsActive: wallAttachTool.isActive, handleWallAttachClick: wallAttachTool.handleWallAttachClick, wallMergeIsActive: wallMergeTool.isActive, handleWallMergeClick: wallMergeTool.handleWallMergeClick, bimCopyIsActive: bimCopyTool.isActive, handleBimCopyClick: bimCopyTool.handleBimCopyClick,
+    extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick, wallSplitIsActive: wallSplitTool.isActive, handleWallSplitClick: wallSplitTool.handleWallSplitClick, wallAttachIsActive: wallAttachTool.isActive, handleWallAttachClick: wallAttachTool.handleWallAttachClick, wallMergeIsActive: wallMergeTool.isActive, handleWallMergeClick: wallMergeTool.handleWallMergeClick, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleWallGapOpeningClick: wallGapOpeningTool.handleWallGapOpeningClick, bimCopyIsActive: bimCopyTool.isActive, handleBimCopyClick: bimCopyTool.handleBimCopyClick,
     arrayPolarIsActive: arrayPolarTool.isActive, handleArrayPolarClick: arrayPolarTool.handleArrayPolarClick,
     handleArrayPolarCenterRepick,
     arrayPathIsActive: arrayPathTool.isActive, handleArrayPathClick: arrayPathTool.handleArrayPathClick,
@@ -404,7 +404,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,
     // ADR-397 Σ2 — rotate-free hot-grip keyboard («R» → reference flow).
     handleHotGripKeyDown: unified.handleHotGripKeyDown, hotGripKeyIsActive: unified.hotGripIsActive,
-    handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleWallMergeEscape: wallMergeTool.handleWallMergeEscape, wallMergeIsActive: wallMergeTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
+    handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleWallMergeEscape: wallMergeTool.handleWallMergeEscape, wallMergeIsActive: wallMergeTool.isActive, handleWallGapOpeningEscape: wallGapOpeningTool.handleWallGapOpeningEscape, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     // Canonical deselect (Escape): clear the entity selection AND the active
     // circuit (Revit wire-select has no entity, so the sync no longer clears it —
@@ -462,7 +462,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'wall-on-entity' || isWallRegionTool(activeTool) || activeTool === 'beam-from-wall' || wallAttachTool.isActive || wallMergeTool.isActive || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center' || isDimTool(activeTool)}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'wall-on-entity' || isWallRegionTool(activeTool) || activeTool === 'beam-from-wall' || activeTool === 'beam-between-members' || wallAttachTool.isActive || wallMergeTool.isActive || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center' || isDimTool(activeTool)}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}

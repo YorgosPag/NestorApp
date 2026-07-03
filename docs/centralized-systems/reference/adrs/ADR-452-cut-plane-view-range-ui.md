@@ -532,3 +532,43 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   section/cut/scene suites GREEN. Files: `section-stencil-materials.ts`, `section-stencil-renderer.ts`
   (+test). tsc SKIP (N.17 — verified με ts-jest). UNCOMMITTED — 🔴 browser-verify (zoom/orbit ομαλότητα +
   η τομή ίδια οπτικά) + commit=Giorgio. (σχετικό: ADR-366 §A.3 stencil, ADR-455 axis cuts, ADR-040.)
+- **2026-07-03** — v2.22 — **η τομή δεν γίνεται ΠΟΤΕ κούφια σε βαριές/γεωαναφερμένες κατόψεις (cap quad
+  centred on the scene, όχι στο world origin)** (Giorgio: σε βαριά κάτοψη ~808 στοιχείων / FPS ~4,
+  μετακινώντας το slider οριζόντιας τομής, κολόνες/τοίχοι φαίνονται «λεπτές κάθετες φέτες» αντί για συμπαγή
+  3Δ — clipped hull χωρίς ορατό cap — και **μένουν μόνιμα** έτσι· θέλει **πάντα συμπαγές poché**, Revit /
+  Cinema 4D grade).
+  **ΠΡΑΓΜΑΤΙΚΗ ΡΙΖΑ (εντοπίστηκε με live diagnostic, όχι με μαντεψιά):** το `SectionStencilRenderer.positionMesh`
+  τοποθετούσε το cap quad στο **σημείο του cut plane πιο κοντά στο world ORIGIN** (`normal * -constant`), ενώ
+  το μέγεθός του (`computeCapSize`) υπολογιζόταν από τα **scene bounds**. Σε **γεωαναφερμένη / offset** κάτοψη
+  (πραγματικές συντεταγμένες έργου, X/Z στις χιλιάδες+), το origin-projection πέφτει χιλιάδες μονάδες **μακριά
+  από το κτίριο** → το πεπερασμένο quad **δεν κάλυπτε καθόλου τη γεωμετρία** → η τομή διάβαζε κούφια, ΑΝΕΞΑΡΤΗΤΑ
+  από parity/depth. Οι **ελαφριές test-σκηνές** (κοντά στο origin) δούλευαν → γι' αυτό φαινόταν load-specific.
+  **Πώς εντοπίστηκε (100% ειλικρίνεια — 2 λάθος υποθέσεις πρώτα):** ένα dev diagnostic
+  (`localStorage['dxf-section-cap-debug']='1'`) που κάνει το γκρι cap **magenta + depthTest OFF + stencil-test OFF**
+  (flood ανεξάρτητο parity) + console breadcrumb. Το console έδειξε ότι το `renderAxisCutCap` **ΕΤΡΕΧΕ** (quality
+  colors/fast/full) αλλά **κανένα magenta δεν εμφανιζόταν** → το ίδιο το cap quad δεν παρήγαγε pixels → όχι
+  parity ούτε depth, αλλά **θέση/κάλυψη** του quad.
+  **FIX (primary):** `positionMesh` δέχεται πλέον το **scene centre** (`computeCapCenter` από τα ίδια effective
+  bounds με το `computeCapSize`, μέσω κοινού `resolveEffectiveBounds`) και προβάλλει **το κέντρο της σκηνής** στο
+  plane ως anchor του quad (fallback στο origin-projection μόνο αν τα bounds είναι άδεια). Threaded σε ΟΛΑ τα cap
+  paths: axis-cut grey+colour (`renderAxisCutCap`→`capCutSection`), box loop (`renderCapForPlane`), secondary
+  hatch/emphasis (`section-stencil-secondary-passes.ts`).
+  **FIX (defensive hardening — βρέθηκε στο audit, κρατήθηκε):** (α) **robust 2-pass parity** ΜΟΝΟ για το γκρι
+  base (νέα `createBackParityMaterial` BackSide-INCR + `createFrontParityMaterial` FrontSide-DECR, `depthTest=false`)
+  αντικαθιστά το εύθραυστο v2.20 single-pass cache-desync στην always-solid στρώση (`parityMode='twopass'`)· το
+  per-colour loop μένει `'single'`. (β) **Negative `polygonOffset`** στα visible cap materials
+  (`createOpaqueCutCapMaterial` + `getColorCapMaterial`) για rim z-fight σε μεγάλης έκτασης σκηνές (κρατά το v2.19
+  `depthTest:true` occlusion).
+  **Επαλήθευση μεγάλων παικτών:** three.js `webgl_clipping_stencil` = ίδια stencil τεχνική· Cinema 4D = single-pass
+  cap κάθε καρέ· Revit = cut πάντα Solid Fill poché, ΠΟΤΕ κούφιο.
+  **N.7.1 split (same commit):** `section-stencil-renderer.ts` ξεπερνούσε τις 500 γραμμές → εξήχθησαν 2 cohesive
+  helpers (extract, όχι trim σχολίων): NEW `section-cap-geometry.ts` (`resolveEffectiveBounds` / `computeCapSize` /
+  `computeCapCenter` / `positionCapMesh`) + NEW `section-cut-parity.ts` (`ParityMode` / `runCutParityPass` /
+  `applyCapDebugState` diagnostic). Renderer → 494 γραμμές.
+  **Files:** NEW `section-cap-geometry.ts`, NEW `section-cut-parity.ts`, `section-stencil-renderer.ts` (wires the
+  helpers + parityMode + dispose), `section-stencil-materials.ts` (2 parity mats + polygonOffset),
+  `section-cut-cap-groups.ts` (polygonOffset), `section-stencil-secondary-passes.ts` (capCenter threading),
+  `__tests__/section-stencil-renderer.test.ts` (8 tests: centre-over-scene anchor, 2-pass configs, parity split,
+  polygonOffset). Section/cut suites **287/287 GREEN**. tsc SKIP (N.17). UNCOMMITTED — 🔴 browser-verify σε βαριά
+  γεωαναφερμένη κάτοψη (✅ Giorgio: «λύθηκε, συμπαγή») + commit=Giorgio. (σχετικό: ADR-366 §A.3 stencil, ADR-455
+  axis cuts, ADR-040.)

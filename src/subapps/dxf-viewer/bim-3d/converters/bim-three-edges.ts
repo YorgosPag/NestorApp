@@ -42,6 +42,24 @@ const EDGE_DEFAULT_DPI = 96;
 const BIM_3D_EDGE_COLOR = '#1a1a1a';
 
 /**
+ * ADR-445 §structural-framing-reads-by-edges (Giorgio 2026-07-03) — «το δοκάρι
+ * καταπίνεται από τον τοίχο».
+ *
+ * Ένα δοκάρι που κάθεται flush ΠΑΝΩ σε τοίχο με το ΙΔΙΟ footprint (πλάτος = πάχος
+ * τοίχου) έχει τις πλάγιες όψεις του coplanar & συνεχείς με τις όψεις του τοίχου.
+ * Όταν η «Σοβατισμένη όψη» (ADR-449 finish skin) είναι ON, ΚΑΙ οι δύο βάφονται με
+ * τον ίδιο plaster (cream) → το amber core (`elem-beam`) κρύβεται → το δοκάρι «λιώνει».
+ *
+ * Fix «όπως οι μεγάλοι» (Revit Structural / Tekla): η δομή διαβάζεται από το category
+ * χρώμα των ΑΚΜΩΝ της. Το δοκάρι κρατά το amber (`BIM_CATEGORY_LINE_COLORS.beam`)
+ * silhouette του σε ΚΑΘΕ background — δεν πέφτει στο uniform near-black silhouette
+ * (v2.22) που κρατούν οι υπόλοιπες κατηγορίες στο light bg. Έτσι το περίγραμμα του
+ * δοκαριού διαβάζεται πάνω στις σκούρες ακμές του τοίχου, ακόμη & κάτω από τον σοβά.
+ * Στοχευμένο (μόνο `beam`) → μηδέν regression σε τοίχο/κολόνα/πλάκα.
+ */
+const STRUCTURAL_EDGE_IDENTITY_CATEGORIES: ReadonlySet<BimCategory> = new Set<BimCategory>(['beam']);
+
+/**
  * Build + attach the projection edge overlay for a BIM solid mesh.
  *
  * @param subcategoryKey ADR-377 — the geometry sub-pass this mesh represents
@@ -77,11 +95,17 @@ export function attachEdgesProjection(
   // v2.22's uniform near-black silhouette (Revit "Shaded with Edges"). width/pattern/
   // visibility stay resolver-driven in both.
   const darkBg = useBimRenderSettingsStore.getState().backgroundMode === 'dark';
+  // ADR-445 — structural framing (beam) keeps its category colour on light bg too, so a
+  // beam flush on a wall (same footprint + finish skin) still reads apart. All other
+  // categories keep the uniform near-black silhouette on light bg (v2.22). Guard on a
+  // resolved colour so a null/hidden style still falls back to the builder default.
+  const keepCategoryEdgeColor =
+    darkBg || (STRUCTURAL_EDGE_IDENTITY_CATEGORIES.has(category) && style.color !== null);
   attachEdgeOverlay(
     mesh,
     buildEdgeOverlay(mesh, {
       ...style,
-      ...(darkBg ? {} : { color: BIM_3D_EDGE_COLOR }),
+      ...(keepCategoryEdgeColor ? {} : { color: BIM_3D_EDGE_COLOR }),
       occlude: edgeMode !== 'all',
     }),
   );

@@ -19,6 +19,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
+import { segmentIntersection } from '../../utils/geometry/GeometryUtils';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,58 @@ export function redistributeOpenings(
   }
 
   return { wall1OpeningIds, wall2OpeningIds, openingUpdates };
+}
+
+// ── Knife-line crossings ────────────────────────────────────────────────────
+
+/** One wall crossed by the knife segment, with the on-axis intersection point. */
+export interface WallSegmentCrossing {
+  readonly wall: WallEntity;
+  /** World-coordinate point where the knife segment crosses the wall axis. */
+  readonly intersectionPoint: Point2D;
+}
+
+/**
+ * Returns every wall whose **axis polyline** is crossed by the straight knife
+ * segment `[p1, p2]` (Revit/AutoCAD "split by line" — a single sweep that cuts
+ * all walls it passes through).
+ *
+ * The crossing must lie strictly inside BOTH the knife segment and a wall-axis
+ * segment (`segmentIntersection` SSoT — clamped, not on the infinite extensions).
+ *
+ * When the knife crosses the same wall twice (e.g. a diagonal through a thick
+ * L-shaped wall), only the **first** crossing along `p1 → p2` is returned (one
+ * cut per wall — the caller splits each wall at most once).
+ *
+ * Non-straight walls (curved / polyline) are still reported here when their
+ * tessellated axis is crossed; the caller (`computeSplitOffset`) rejects them,
+ * so the knife simply skips them.
+ */
+export function wallsCrossedBySegment(
+  walls: readonly WallEntity[],
+  p1: Point2D,
+  p2: Point2D,
+): WallSegmentCrossing[] {
+  const crossings: WallSegmentCrossing[] = [];
+
+  for (const wall of walls) {
+    const points = wall.geometry?.axisPolyline?.points;
+    if (!points || points.length < 2) continue;
+
+    let first: { point: Point2D; t: number } | null = null;
+    for (let i = 1; i < points.length; i++) {
+      const a: Point2D = { x: points[i - 1].x, y: points[i - 1].y };
+      const b: Point2D = { x: points[i].x, y: points[i].y };
+      const hit = segmentIntersection(p1, p2, a, b);
+      if (hit && (first === null || hit.t < first.t)) {
+        first = { point: hit.point, t: hit.t };
+      }
+    }
+
+    if (first) crossings.push({ wall, intersectionPoint: first.point });
+  }
+
+  return crossings;
 }
 
 // ── Preview indicator ─────────────────────────────────────────────────────────

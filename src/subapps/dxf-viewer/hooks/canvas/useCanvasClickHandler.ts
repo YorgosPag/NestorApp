@@ -58,6 +58,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     foundationTool,
     beamTool,
+    beamBetweenMembersTool,
     mepFixtureTool,
     furnitureTool,
     floorplanSymbolTool,
@@ -84,6 +85,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     wallSplitIsActive = false, handleWallSplitClick,
     wallAttachIsActive = false, handleWallAttachClick,
     wallMergeIsActive = false, handleWallMergeClick,
+    wallGapOpeningIsActive = false, handleWallGapOpeningClick,
     bimCopyIsActive = false, handleBimCopyClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
@@ -202,6 +204,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.617: ADR-566 — Wall Merge tool click (pick wall 1 → wall 2)
     if (wallMergeIsActive && handleWallMergeClick) {
       handleWallMergeClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.618: ADR-568 — Wall gap-bridge + opening click (pick wall 1 → wall 2)
+    if (wallGapOpeningIsActive && handleWallGapOpeningClick) {
+      handleWallGapOpeningClick(worldPoint);
       return;
     }
     // PRIORITY 1.62: ADR-363 R1 — BIM Copy tool click (AutoCAD COPY: base + target)
@@ -325,6 +332,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     foundationTool,
     beamTool,
+    beamBetweenMembersTool,
     mepFixtureTool,
     furnitureTool,
     floorplanSymbolTool,

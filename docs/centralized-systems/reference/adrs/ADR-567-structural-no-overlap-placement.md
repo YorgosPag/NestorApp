@@ -13,9 +13,12 @@
 ήδη καταλαμβάνει άλλος τοίχος — και το ίδιο για **ΟΛΕΣ τις δομικές BIM οντότητες** («Δομικά»).
 
 **Κανόνας (επιβεβαιωμένος):**
-- **BLOCK** ουσιαστική επικάλυψη εμβαδού/όγκου — πλήρης (Α) ή μερική (Β).
+- **BLOCK** ουσιαστική επικάλυψη εμβαδού/όγκου — πλήρης (Α) ή μερική (Β) — **εντός ίδιας
+  collision group** (Φ1b, βλ. §1.1).
 - **ALLOW** γωνίες/ενώσεις/διασταυρώσεις που μοιράζονται μόνο παρειά/σημείο ή ένα μικρό
   τετράγωνο πάχος×πάχος (C) — αλλιώς δεν χτίζεται κανονική κάτοψη.
+- **ALLOW** οριζόντιο μέλος (δοκάρι/πλάκα) πάνω σε κατακόρυφο (τοίχο/κολόνα) — κάθεται σε
+  διαφορετικό Z (Φ1b· γι' αυτό «Δοκάρι από τοίχο» / «πλάκα πάνω σε τοίχους» είναι νόμιμα).
 
 ### Κατάσταση πριν
 - Οι τοίχοι είχαν **στενό** guard: `isMemberCollinearOverlap` (axis-based, `use-wall-commit.ts`) —
@@ -43,6 +46,27 @@
 **Κατώφλι (ratio-based):** `ratio = εμβαδόν_τομής / min(area_candidate, area_existing)`.
 - `DEFAULT_OVERLAP_RATIO_THRESHOLD = 0.25`.
 - Άγγιγμα-μόνο (εμβαδόν τομής ≈ 0) → allow. `ratio ≥ κατώφλι` → block.
+
+### 1.1 Collision groups (Φ1b — fix «Δεν επιτρέπεται τοποθέτηση πάνω σε υπάρχουσα δομική»)
+
+Το footprint overlap είναι **2D** — αγνοεί το Z. Δύο δομικές μπλοκάρουν **μόνο αν ανήκουν στην ΙΔΙΑ
+`StructuralCollisionGroup`** (`structuralCollisionGroupOf(type)`):
+
+| Ομάδα | Τύποι | Σκεπτικό |
+|---|---|---|
+| `vertical` | `wall`, `column` | Κατακόρυφα φέροντα· ίδιο κατακόρυφο εύρος ορόφου (0→ύψος) → σύγκρουση όγκου μεταξύ τους. |
+| `beam` | `beam` | Οριζόντιο· κάθεται ΠΑΝΩ (ring/tie beam στην κορυφή τοίχου). Μόνο δοκάρι↔δοκάρι μπλοκάρει. |
+| `slab` | `slab` | Οριζόντιο· πλάκα πάνω σε δοκάρια/τοίχους. Μόνο πλάκα↔πλάκα μπλοκάρει. |
+| `foundation` | `foundation` | Υπόβαση, κάτω από όλα. Μόνο πέδιλο↔πέδιλο μπλοκάρει. |
+
+Ο `findStructuralOverlap` δέχεται `candidateType` και φιλτράρει existing εκτός ομάδας ΠΡΙΝ το clipping.
+Έτσι **δοκάρι/πλάκα πάνω σε τοίχο/κολόνα → allow** (νόμιμο, διαφορετικό Z)· **τοίχος↔κολόνα (ίδια
+`vertical` ομάδα) → block** (Giorgio: «κολόνα μέσα σε τοίχο δεν μπαίνει»). Χωρίς `candidateType` →
+legacy (όλες οι δομικές).
+
+**ΓΙΑΤΙ (root cause):** Το «Δοκάρι από τοίχο» (ADR-363) χτίζει δοκάρι στον άξονα τοίχου με ίδιο
+footprint (100% overlap) → ο flat guard το μπλόκαρε πάντα. Ίδιο λανθάνον bug: πλάκα πάνω σε τοίχους,
+δοκάρι πάνω σε κολόνα.
 
 Παράδειγμα (τοίχος 3m × 0.2m, area 0.6m²):
 | Σενάριο | overlap | ratio | Αποτέλεσμα |
@@ -130,3 +154,14 @@
 - **2026-07-03** — Preview red-ghost fix (Giorgio browser-report: ghost έμενε πράσινο πάνω σε τοίχους).
   Wall ghost γίνεται 🔴 σε footprint overlap (όχι μόνο ομοαξονικό) μέσω `structuralEntities` +
   `findStructuralOverlap` + AABB fast-reject. 227 jest πράσινα.
+- **2026-07-03** — Region-mode fix (stack trace: `use-wall-region-clicks` → «Τοίχος σε περιοχή»). Το
+  πράσινο περίγραμμα ήταν το region hover highlight, όχι το wall ghost. Προστέθηκε per-zone `occupied`
+  → 🔴 highlight πάνω σε υπάρχουσα δομική (`markOccupiedZones`, ίδια entities/κατώφλι με τον commit).
+  ✅ Browser-verified από Giorgio (κόκκινο σε κατειλημμένες ζώνες, πράσινο στις ελεύθερες). 653 jest.
+- **2026-07-03 (Φ1b)** — **Collision groups** (Giorgio browser-report: «Δεν δημιουργείται δοκάρι —
+  *Δεν επιτρέπεται τοποθέτηση πάνω σε υπάρχουσα δομική οντότητα*»). Root: το «Δοκάρι από τοίχο» χτίζει
+  δοκάρι με ίδιο footprint με τον τοίχο (100% overlap) → ο flat guard το μπλόκαρε (+ λανθάνον: πλάκα
+  πάνω σε τοίχους, δοκάρι πάνω σε κολόνα). Fix: `StructuralCollisionGroup` + `structuralCollisionGroupOf`
+  + `candidateType` στο `findStructuralOverlap` — overlap μπλοκάρει μόνο εντός ίδιας ομάδας
+  (`vertical`=τοίχος/κολόνα· `beam`/`slab`/`foundation` = ξεχωριστά). Threaded σε όλους τους 6 callers
+  (append single/batch, add-wall, filling-walls, wall-ghost, region-preview). +8 jest (32 total στο suite).

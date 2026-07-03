@@ -86,6 +86,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   'canvas-fit-to-view-selected': {
     bounds: { min: Point2D; max: Point2D };
   };
+  // ADR-375 Phase B.4: explicit «Fit annotations» — recompute the fit-to-paper
+  // drawing scale from the live scene bounds. Emitted by DrawingScaleWidget (which
+  // has no scene access); handled by useFitToView which reads the DXF scene and
+  // forces `applyAutoDrawingScale`. No payload — the handler owns the bounds.
+  'annotation-fit-to-paper': Record<string, never>;
   'canvas-pan': {
     /** Pixel delta to apply to offsetX (positive = right) */
     dx: number;
@@ -160,6 +165,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // every selected dimension (Revit «apply type to selection»). entityIds[0] is the
   // primary (selection order) → its `styleId` is the source applied to the rest.
   'dim:apply-style-requested': { entityIds: readonly string[] };
+  // ADR-362 — «Επιλογή σειράς»: from the primary selected dim (entityIds[0]),
+  // select every dimension on the SAME dim line (collinear parallel row) so the
+  // whole stacked band can be moved / re-spaced together. `useDimensionModify`
+  // host resolves the row via `collectDimensionRow` + replaces the selection.
+  'dim:select-row-requested': { entityIds: readonly string[] };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

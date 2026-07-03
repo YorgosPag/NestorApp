@@ -13,6 +13,7 @@ import {
   computeSplitWallParams,
   redistributeOpenings,
   computeSplitIndicatorLine,
+  wallsCrossedBySegment,
 } from '../wall-split';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { OpeningEntity } from '../../types/opening-types';
@@ -261,5 +262,52 @@ describe('computeSplitIndicatorLine', () => {
     const [a, b] = computeSplitIndicatorLine(wall, splitPoint);
     expect(a).toEqual(splitPoint);
     expect(b).toEqual(splitPoint);
+  });
+});
+
+// ── wallsCrossedBySegment (knife-line) ────────────────────────────────────────
+
+describe('wallsCrossedBySegment', () => {
+  // Default makeWall is a horizontal wall (0,0) → (5000,0).
+  test('vertical knife through the axis returns one crossing at the intersection', () => {
+    const wall = makeWall({});
+    const crossings = wallsCrossedBySegment([wall], { x: 2500, y: -1000 }, { x: 2500, y: 1000 });
+    expect(crossings).toHaveLength(1);
+    expect(crossings[0].wall).toBe(wall);
+    expect(crossings[0].intersectionPoint.x).toBeCloseTo(2500);
+    expect(crossings[0].intersectionPoint.y).toBeCloseTo(0);
+  });
+
+  test('knife that misses the wall returns no crossing', () => {
+    const wall = makeWall({});
+    // x = 6000 is beyond the wall end (x=5000) → clamped segment, no intersection.
+    const crossings = wallsCrossedBySegment([wall], { x: 6000, y: -100 }, { x: 6000, y: 100 });
+    expect(crossings).toHaveLength(0);
+  });
+
+  test('crossing only on the extension (not within segment bounds) is excluded', () => {
+    const wall = makeWall({});
+    // Knife stays above the axis (y from 100 to 500) → never reaches y=0.
+    const crossings = wallsCrossedBySegment([wall], { x: 2500, y: 100 }, { x: 2500, y: 500 });
+    expect(crossings).toHaveLength(0);
+  });
+
+  test('one knife stroke crosses multiple walls', () => {
+    const wallA = makeWall({ id: 'wall-a' });
+    const wallB = makeWall({
+      id: 'wall-b',
+      start: { x: 0, y: 1000, z: 0 },
+      end: { x: 5000, y: 1000, z: 0 },
+    });
+    const crossings = wallsCrossedBySegment([wallA, wallB], { x: 2500, y: -500 }, { x: 2500, y: 1500 });
+    expect(crossings).toHaveLength(2);
+    expect(crossings.map((c) => c.wall.id).sort()).toEqual(['wall-a', 'wall-b']);
+  });
+
+  test('wall without axis geometry is skipped', () => {
+    const wall = makeWall({});
+    const broken = { ...wall, geometry: undefined } as unknown as typeof wall;
+    const crossings = wallsCrossedBySegment([broken], { x: 2500, y: -1000 }, { x: 2500, y: 1000 });
+    expect(crossings).toHaveLength(0);
   });
 });

@@ -83,6 +83,13 @@ export function getColorCapMaterial(
       // base in `createOpaqueCutCapMaterial`): without it the coloured cut faces drew on top
       // regardless of the camera, so the roof poché stayed in the foreground from below.
       depthTest: true,
+      // ADR-452 v2.22 — negative polygonOffset (same as the opaque base): the coloured cap
+      // quad is coplanar with the cut, so bias it a hair toward the camera to win the rim
+      // z-fight on heavy / large-extent scenes (coarser depth precision) without changing
+      // which geometry occludes it.
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
     });
     mat.stencilWrite = true;
     mat.stencilRef = 0;

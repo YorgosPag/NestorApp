@@ -119,7 +119,7 @@ export function buildWallGhostEntity(
   const ghostFootprint = structuralFootprintOf(built.entity as unknown as Entity);
   const structuralEntities = sceneSnapTargetsStore.get().structuralEntities;
   const footprintOverlap = ghostFootprint
-    ? findStructuralOverlap(ghostFootprint, structuralEntities, { excludeIds: new Set([built.entity.id]) }) !== null
+    ? findStructuralOverlap(ghostFootprint, structuralEntities, { excludeIds: new Set([built.entity.id]), candidateType: 'wall' }) !== null
     : false;
   const overlap = isOverlap || conflict !== null || footprintOverlap;
   const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;

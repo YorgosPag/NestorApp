@@ -139,6 +139,20 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
         maxY: bb.max.y,
       };
     }
+    // ADR-568 / ADR-040 Phase IX — the OPENING variant carries its world-space AABB NESTED under
+    // `openingEntity.geometry.bbox` (wrapper variant, like `stair` above), NOT at the top level
+    // like the direct entities (wall / beam / column, which spread `geometry` in the converter).
+    // Without this case it fell to the ±1e6 `FULL_PLANE_BBOX` fallback → every opening in a
+    // geo-referenced DXF (coords ~1.7e7) was culled from the 2D base pass. That produced the
+    // "wall cutout (hole) shows — but the BIM door κούφωμα is invisible" bug (2026-07-03): the
+    // hole is punched by the per-frame `openingsByWall` map (bypasses culling), while the
+    // OpeningRenderer entity goes through `isEntityInViewport` and was dropped. Sibling of the
+    // wall/dimension geo-referenced culling fixes. (slab / slab-opening share the same nesting —
+    // flagged for a follow-up; a pre-existing test asserts the top-level shape for slab.)
+    case 'opening': {
+      const bb = entity.openingEntity.geometry?.bbox;
+      return bb ? { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y } : FULL_PLANE_BBOX;
+    }
     // ADR-363 / ADR-436 / ADR-040 Phase IX — BIM direct-entities (wall/column/beam/foundation/
     // slab/roof/opening/…) all carry a world-space `geometry.bbox`. Route them through ONE SSoT
     // extractor so a member in a geo-referenced DXF (coords ~1e7) is culled by its REAL bounds,

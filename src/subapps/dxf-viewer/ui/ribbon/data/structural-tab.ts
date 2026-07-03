@@ -135,6 +135,8 @@ export const STRUCTURAL_TAB: RibbonTab = {
           buttons: [
             toolBtn('structuralTab.beam', 'ribbon.commands.bim.beam.label', 'struct-beam-single', 'beam', 'BM'),
             toolBtn('structuralTab.beamFromWall', 'ribbon.commands.bim.beamFromWall.label', 'struct-beam-on-entity', 'beam-from-wall'),
+            // ADR-569 — «Δοκάρι ανάμεσα σε μέλη»: σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά ζεύγος.
+            toolBtn('structuralTab.beamBetweenMembers', 'ribbon.commands.bim.beamBetweenMembers.label', 'struct-beam-single', 'beam-between-members'),
             // ADR-441 Slice GEN-BEAM / 3-mode — «Δοκάρια από κάναβο»: split-button· main =
             // inner (default), dropdown = περιμετρική έδραση (Εσωτερικά/Κεντρικά/Εξωτερικά).
             splitActionBtn(

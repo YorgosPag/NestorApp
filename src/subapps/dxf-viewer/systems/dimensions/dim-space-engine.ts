@@ -22,6 +22,8 @@
 
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-362 — dim-line frame SSoT (shared with dim-row-detect).
+import { extractDimLineInfo, dimLineOffset } from './dim-line-info';
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -60,18 +62,35 @@ export function computeDimSpacing(
   const spacing = resolveSpacing(mode, style, customValue);
   const baseInfo = extractDimLineInfo(baseDim);
   if (!baseInfo) return result;
+  const baseOffset = dimLineOffset(baseInfo);
 
+  // Pair each target with its dim-line frame + signed offset delta from the base.
+  const slots: { target: DimensionEntity; signedDelta: number }[] = [];
   for (const target of supported) {
-    const targetInfo = extractDimLineInfo(target);
-    if (!targetInfo) continue;
-
-    const newDefPoints = repositionDim(
-      target, baseInfo, targetInfo, spacing,
-    );
-    if (newDefPoints) {
-      result.set(target.id, { defPoints: newDefPoints });
-    }
+    const info = extractDimLineInfo(target);
+    if (!info) continue;
+    slots.push({ target, signedDelta: dimLineOffset(info) - baseOffset });
   }
+
+  // Split by side (above / below the base dim line) and order each side by
+  // distance from the base, so the nearest dim lands in slot 1, the next in
+  // slot 2, … → evenly STACKED. (Fixes the pre-fix bug where every target was
+  // placed at the SAME `baseOffset ± spacing`, re-overlapping 3+ rows.)
+  const above = slots.filter((s) => s.signedDelta >= 0).sort((a, b) => a.signedDelta - b.signedDelta);
+  const below = slots.filter((s) => s.signedDelta < 0).sort((a, b) => b.signedDelta - a.signedDelta);
+
+  const assignSide = (side: typeof slots, sign: 1 | -1): void => {
+    side.forEach((s, i) => {
+      const targetOffset = baseOffset + s.signedDelta;
+      const newOffset = baseOffset + sign * spacing * (i + 1);
+      const delta = newOffset - targetOffset;
+      if (Math.abs(delta) < 1e-9) return;
+      const pts = shiftDimLineRef(s.target, baseInfo.normal, delta);
+      if (pts) result.set(s.target.id, { defPoints: pts });
+    });
+  };
+  assignSide(above, 1);
+  assignSide(below, -1);
 
   return result;
 }
@@ -97,88 +116,21 @@ function filterSupportedDims(dims: readonly DimensionEntity[]): DimensionEntity[
 }
 
 /**
- * Information extracted from a linear/aligned dim needed for spacing.
- * `dimLineRef` is defPoints[2] (the reference point on the dim line side).
- * `originA` and `originB` are the two extension-line origin points (defPoints[0], [1]).
+ * Returns `target`'s defPoints with the dim-line reference (defPoints[2]) shifted
+ * by `delta` along the base `normal` — i.e. re-offsets the whole dim line while
+ * keeping its extension origins. `null` never returned (kept for symmetry with
+ * the previous signature; callers already guard `delta`).
  */
-interface DimLineInfo {
-  originA: Point2D;
-  originB: Point2D;
-  dimLineRef: Point2D;
-  /** Direction along the dim line (unit vector). */
-  dimDir: Point2D;
-  /** Normal to the dim line (unit vector, points from origins to dim-line side). */
-  normal: Point2D;
-}
-
-function extractDimLineInfo(dim: DimensionEntity): DimLineInfo | null {
-  if (dim.dimensionType !== 'linear' && dim.dimensionType !== 'aligned') {
-    return null;
-  }
-  const pts = dim.defPoints;
-  if (pts.length < 3) return null;
-
-  const [originA, originB, dimLineRef] = pts;
-
-  const dx = originB.x - originA.x;
-  const dy = originB.y - originA.y;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-9) return null;
-
-  const dimDir: Point2D = { x: dx / len, y: dy / len };
-  // Normal = perpendicular, oriented toward dimLineRef side
-  const rawNx = -dy / len;
-  const rawNy = dx / len;
-  const toDimLine: Point2D = {
-    x: dimLineRef.x - originA.x,
-    y: dimLineRef.y - originA.y,
-  };
-  const sign = rawNx * toDimLine.x + rawNy * toDimLine.y >= 0 ? 1 : -1;
-  const normal: Point2D = { x: rawNx * sign, y: rawNy * sign };
-
-  return { originA, originB, dimLineRef, dimDir, normal };
-}
-
-/**
- * Compute the signed perpendicular distance from `originA` to `dimLineRef`
- * along the `normal` direction.
- */
-function dimLineOffset(info: DimLineInfo): number {
-  const dx = info.dimLineRef.x - info.originA.x;
-  const dy = info.dimLineRef.y - info.originA.y;
-  return dx * info.normal.x + dy * info.normal.y;
-}
-
-/**
- * Returns the new defPoints for `target` repositioned at `baseOffset + spacing`.
- * The spacing sign is determined by the target's original side relative to base.
- */
-function repositionDim(
+function shiftDimLineRef(
   target: DimensionEntity,
-  base: DimLineInfo,
-  targetInfo: DimLineInfo,
-  spacing: number,
+  normal: Point2D,
+  delta: number,
 ): readonly Point2D[] | null {
-  const baseOffset = dimLineOffset(base);
-  const targetOffset = dimLineOffset(targetInfo);
-
-  // Determine how many "slots" away from base this target should be.
-  // For a single invocation (one base + N targets), we simply place each target
-  // at `sign(targetOffset - baseOffset) × spacing` from base.
-  const sign = targetOffset >= baseOffset ? 1 : -1;
-  const newOffset = baseOffset + sign * spacing;
-  const delta = newOffset - targetOffset;
-
-  if (Math.abs(delta) < 1e-9) return null;
-
-  // Shift the dimLineRef along the normal by `delta`.
-  const pts = [...target.defPoints];
+  const pts = [...target.defPoints] as Point2D[];
   const dimLineRef = pts[2];
-  const newDimLineRef: Point2D = {
-    x: dimLineRef.x + delta * base.normal.x,
-    y: dimLineRef.y + delta * base.normal.y,
+  pts[2] = {
+    x: dimLineRef.x + delta * normal.x,
+    y: dimLineRef.y + delta * normal.y,
   };
-  const result = [...pts] as Point2D[];
-  result[2] = newDimLineRef;
-  return result;
+  return pts;
 }

@@ -41,6 +41,14 @@ export const WALL_CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
 };
 
 /**
+ * Solid «ταυτότητα χρώματος τοίχου» (το καφέ brick-warm poché χωρίς το 0.22 alpha) για UI
+ * chrome — ribbon icons / legends — όπου το translucent γέμισμα δεν διαβάζεται. Ίδιο RGB με
+ * `WALL_CATEGORY_FILL.interior` (Giorgio: «το χρώμα που έχει ο τοίχος στον καμβά»). SSoT:
+ * μην hardcode-άρεις αυτό το καφέ αλλού — κάνε import από εδώ.
+ */
+export const WALL_IDENTITY_COLOR = 'rgb(205, 158, 110)';
+
+/**
  * Whether a wall function reads as "interior" for line-colour purposes.
  * interior + partition (διαχωριστικός) → εσωτερικός γκρι τόνος· exterior/parapet/
  * fence → εξωτερικός βαρύς τόνος (parent χρώμα). Local helper του

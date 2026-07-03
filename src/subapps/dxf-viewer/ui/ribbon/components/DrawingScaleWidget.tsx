@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Maximize2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +36,8 @@ import {
 } from '../../../state/drawing-scale-store';
 // ADR-364 — Escape Command Bus SSoT (no inline e.key === 'Escape' checks)
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
+// ADR-375 Phase B.4 — «Auto-fit» emits to the scene-aware fit handler (useFitToView).
+import { EventBus } from '../../../systems/events';
 
 const VALIDATION_OPTIONS = {
   minValue: DRAWING_SCALE_MIN,
@@ -81,6 +83,13 @@ export const DrawingScaleWidget: React.FC = () => {
     },
     [setDrawingScale],
   );
+
+  // ADR-375 Phase B.4 — «Auto-fit»: delegate to the scene-aware handler (this widget
+  // has no scene access) which computes the fit-to-paper 1:N and forces it.
+  const handleFitToPaper = useCallback(() => {
+    EventBus.emit('annotation-fit-to-paper', {});
+    setOpen(false);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -133,6 +142,15 @@ export const DrawingScaleWidget: React.FC = () => {
               className={`w-full ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center rounded ${PANEL_LAYOUT.SPACING.COMPACT_XS} ${colors.bg.secondary} ${getStatusBorder('muted')} ${colors.text.inverted} ${getFocusBorder('input')} focus:outline-none font-mono`}
             />
           </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={handleFitToPaper}
+            aria-label={t('ribbon.commands.drawingScale.fitToPaperAriaLabel')}
+            className={`flex items-center gap-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS} cursor-pointer`}
+          >
+            <Maximize2 className="w-3 h-3 opacity-70" />
+            <span>{t('ribbon.commands.drawingScale.fitToPaper')}</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           {DRAWING_SCALE_PRESETS.map((preset) => (
             <DropdownMenuItem

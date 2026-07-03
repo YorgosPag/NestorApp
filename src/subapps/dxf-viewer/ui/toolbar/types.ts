@@ -121,6 +121,8 @@ export type ToolType =
   | 'wall-split'
   // ADR-566: BIM Wall Merge tool (AutoCAD JOIN for walls)
   | 'wall-merge'
+  // ADR-568: BIM Wall gap-bridge + auto-opening (collinear walls with a gap → one wall + door)
+  | 'wall-gap-opening'
   // ADR-401 Phase E.1: BIM Wall Attach Top/Base pick-host (Revit Attach Top/Base)
   | 'wall-attach-top'
   | 'wall-attach-base'
@@ -164,6 +166,8 @@ export type ToolType =
   | 'beam'
   // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis
   | 'beam-from-wall'
+  // ADR-569 «Δοκάρι ανάμεσα σε μέλη» — σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά ζεύγος (παρειά→παρειά)
+  | 'beam-between-members'
   // ADR-363 Phase 3.7: BIM Slab-Opening drawing tool (shaft/well/duct/chimney)
   | 'slab-opening'
   // ADR-417: BIM Roof drawing tool (footprint polygon + per-edge slopes)
@@ -319,96 +323,9 @@ export interface MeasurementToolConfig {
   requiredPoints: number;
 }
 
-export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolConfig> = {
-  'measure-distance': {
-    id: 'measure-distance',
-    name: 'Απόσταση',
-    icon: 'Ruler',
-    shortcut: 'D',
-    description: 'Μέτρηση απόστασης μεταξύ 2 σημείων',
-    requiredPoints: 2
-  },
-  // 🏢 ENTERPRISE (2026-01-27): Continuous distance measurement
-  'measure-distance-continuous': {
-    id: 'measure-distance-continuous',
-    name: 'Συνεχόμενη Απόσταση',
-    icon: 'Ruler',
-    shortcut: 'D',
-    description: 'Συνεχόμενη μέτρηση απόστασης (πολλαπλά σημεία)',
-    requiredPoints: 2
-  },
-  'measure-area': {
-    id: 'measure-area',
-    name: 'Εμβαδό',
-    icon: 'Square',
-    shortcut: 'A',
-    description: 'Μέτρηση εμβαδού πολυγώνου (3+ σημεία)',
-    requiredPoints: 3
-  },
-  'auto-measure-area': {
-    id: 'auto-measure-area',
-    name: 'Αυτόματο Εμβαδό',
-    icon: 'ScanLine',
-    shortcut: '',
-    description: 'Κλικ εντός κλειστού πολυγώνου — αυτόματος υπολογισμός',
-    requiredPoints: 1
-  },
-  'measure-angle': {
-    id: 'measure-angle',
-    name: 'Γωνία',
-    icon: 'AngleIcon',
-    shortcut: 'T',
-    description: 'Μέτρηση γωνίας (3 σημεία)',
-    requiredPoints: 3
-  },
-  'measure-radius': {
-    id: 'measure-radius', 
-    name: 'Ακτίνα',
-    icon: 'Circle',
-    description: 'Μέτρηση ακτίνας κύκλου',
-    requiredPoints: 2
-  },
-  'measure-perimeter': {
-    id: 'measure-perimeter',
-    name: 'Περίμετρος',
-    icon: 'Pentagon',
-    description: 'Μέτρηση περιμέτρου σχήματος',
-    requiredPoints: 2
-  },
-  // ✅ ENTERPRISE FIX: Add missing angle measurement tool configs
-  'measure-angle-line-arc': {
-    id: 'measure-angle-line-arc',
-    name: 'Γωνία Γραμμή-Τόξο',
-    icon: 'AngleLineArcIcon',
-    shortcut: 'T',
-    description: 'Μέτρηση γωνίας μεταξύ γραμμής και τόξου',
-    requiredPoints: 3
-  },
-  'measure-angle-two-arcs': {
-    id: 'measure-angle-two-arcs',
-    name: 'Γωνία Δύο Τόξων',
-    icon: 'AngleTwoArcsIcon',
-    shortcut: 'T',
-    description: 'Μέτρηση γωνίας μεταξύ δύο τόξων',
-    requiredPoints: 3
-  },
-  'measure-angle-measuregeom': {
-    id: 'measure-angle-measuregeom',
-    name: 'Γωνία MeasureGeom',
-    icon: 'AngleMeasureGeomIcon',
-    shortcut: 'T',
-    description: 'Μέτρηση γωνίας με MEASUREGEOM (χωρίς διάσταση)',
-    requiredPoints: 3
-  },
-  'measure-angle-constraint': {
-    id: 'measure-angle-constraint',
-    name: 'Παραμετρικό Constraint Γωνίας',
-    icon: 'AngleConstraintIcon',
-    shortcut: 'T',
-    description: 'Παραμετρικό angle constraint',
-    requiredPoints: 3
-  }
-};
+// MEASUREMENT_TOOL_CONFIGS extracted to `./toolbar-measurement-tool-configs` to keep
+// this file under the Google 500-line limit. Re-exported here for backward compat.
+export { MEASUREMENT_TOOL_CONFIGS } from './toolbar-measurement-tool-configs';
 
 // ============================================================================
 // 🏢 ADR-050: OVERLAY TOOLBAR INTEGRATION (2027-01-27)

@@ -43,6 +43,36 @@ describe('getEntityBBox — BIM direct-entities use geometry.bbox', () => {
   });
 });
 
+/** Minimal DxfOpening — geometry.bbox NESTED under `openingEntity` (wrapper variant, ADR-568). */
+function openingEntity(minX: number, minY: number, maxX: number, maxY: number): DxfEntityUnion {
+  return {
+    type: 'opening',
+    openingEntity: { geometry: { bbox: { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 3 } } } },
+  } as unknown as DxfEntityUnion;
+}
+
+describe('getEntityBBox — opening uses NESTED openingEntity.geometry.bbox (ADR-568)', () => {
+  it('reads the real world-space bbox, not the ±1e6 fallback', () => {
+    // The gap door from the ADR-568 auto-opening lives at geo-referenced coords ~1.71e7.
+    const op = openingEntity(17_136_968, 4_190_117, 17_137_068, 4_190_817);
+    expect(getEntityBBox(op)).toEqual({
+      minX: 17_136_968, minY: 4_190_117, maxX: 17_137_068, maxY: 4_190_817,
+    });
+  });
+
+  it('is NOT culled at a geo-referenced viewport (the "door invisible" regression)', () => {
+    const op = openingEntity(17_136_968, 4_190_117, 17_137_068, 4_190_817);
+    // World viewport around the DXF (~1.71e7) — the opening must survive culling.
+    const worldViewport = { minX: 17_130_000, minY: 4_188_000, maxX: 17_140_000, maxY: 4_194_000 };
+    expect(isEntityInViewport(op, worldViewport)).toBe(true);
+  });
+
+  it('a degenerate opening without geometry falls back to the full-plane box', () => {
+    const noBbox = { type: 'opening', openingEntity: {} } as unknown as DxfEntityUnion;
+    expect(getEntityBBox(noBbox)).toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
+  });
+});
+
 /** Minimal DxfDimension wrapper carrying a linear DimensionEntity (defPoints at real coords). */
 function linearDim(
   p1: [number, number],

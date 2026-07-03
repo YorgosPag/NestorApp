@@ -45,6 +45,15 @@ export const BIM_SETTINGS_VERSION = 2;
 export const DRAWING_SCALE_PRESETS = [10, 20, 50, 100, 200, 500] as const;
 export type DrawingScalePreset = typeof DRAWING_SCALE_PRESETS[number];
 
+/**
+ * ADR-375 Phase B.4 — reference paper for the fit-to-paper AUTO drawing scale.
+ * A3 landscape = 420×297 mm; we reserve a ~10 mm margin per edge → 400×277 mm
+ * usable. `long`/`short` are orientation-agnostic: the auto-fit matches the
+ * scene's LONG side to the paper's LONG side, so a portrait scene still fits.
+ * @see systems/dimensions/auto-drawing-scale.ts — the pure fit-to-paper SSoT.
+ */
+export const FIT_TO_PAPER_A3_USABLE_MM = { long: 400, short: 277 } as const;
+
 // ── ADR-455 — vertical section cuts (X/Y) ───────────────────────────────────
 
 /**

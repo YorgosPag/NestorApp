@@ -307,8 +307,9 @@ export function buildWallEntity(
   layerId: string,
   kind: WallKind = 'straight',
   sceneUnits: SceneUnits = 'mm',
+  options?: { readonly minLengthMm?: number },
 ): BuildWallEntityResult {
-  const validation = validateWallParams(params, sceneUnits);
+  const validation = validateWallParams(params, sceneUnits, options);
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }

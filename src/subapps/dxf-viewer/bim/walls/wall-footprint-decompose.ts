@@ -155,14 +155,35 @@ function hRunLen(grid: Grid, i: number, j: number): number {
   return grid.xs[i1 + 1] - grid.xs[i0];
 }
 
-/** Ανάθεση κάθε συμπαγούς κελιού σε H/V: μακρύτερο run κερδίζει (ισοπαλία → H). */
+/** Συμπαγές κελί εντός ορίων (out-of-bounds = μη-συμπαγές). */
+function isSolidCell(grid: Grid, i: number, j: number): boolean {
+  const cols = grid.xs.length - 1;
+  const rows = grid.ys.length - 1;
+  return i >= 0 && j >= 0 && i < cols && j < rows && grid.solid[i][j];
+}
+
+/**
+ * Ανάθεση κάθε συμπαγούς κελιού σε H/V.
+ *
+ * ADR-419 §T-junction (Giorgio 2026-07-03) — **ΔΙΑΜΠΕΡΗΣ κερδίζει, ΤΕΡΜΑΤΙΖΩΝ κολλάει**
+ * (Revit T-junction), ΑΝΕΞΑΡΤΗΤΑ μήκους: ένα κελί όπου ο τοίχος συνεχίζεται (συμπαγή κελιά)
+ * **ΚΑΙ στις δύο** πλευρές κατά μία διεύθυνση = διαμπερής σε εκείνη· αν συνεχίζεται μόνο στη
+ * ΜΙΑ πλευρά = τερματίζει εκεί. Στο junction κερδίζει ο διαμπερής → ο μεγάλος οριζόντιος
+ * ΔΕΝ σπάει από έναν **ψηλότερο** κάθετο κορμό (πριν: «μακρύτερος κερδίζει» → ο ψηλός κορμός
+ * διέκοπτε τον οριζόντιο, άφηνε ασχημάτιστο κομμάτι). Ισοπαλία (σταυρός/άκρο, ή κανένας
+ * διαμπερής) → μακρύτερο run (η προηγούμενη συμπεριφορά, μηδέν regression για L/Τ-έκεντρα).
+ */
 function assignOrientations(grid: Grid): void {
   const cols = grid.xs.length - 1;
   const rows = grid.ys.length - 1;
   for (let i = 0; i < cols; i++) {
     for (let j = 0; j < rows; j++) {
       if (!grid.solid[i][j]) continue;
-      grid.assign[i][j] = hRunLen(grid, i, j) >= vRunLen(grid, i, j) ? 'H' : 'V';
+      const hThrough = isSolidCell(grid, i - 1, j) && isSolidCell(grid, i + 1, j);
+      const vThrough = isSolidCell(grid, i, j - 1) && isSolidCell(grid, i, j + 1);
+      if (hThrough && !vThrough) grid.assign[i][j] = 'H';
+      else if (vThrough && !hThrough) grid.assign[i][j] = 'V';
+      else grid.assign[i][j] = hRunLen(grid, i, j) >= vRunLen(grid, i, j) ? 'H' : 'V';
     }
   }
 }
@@ -242,7 +263,7 @@ function mergeStrips(
 
 // ─── LocalRect → DetectedRectangle ───────────────────────────────────────────
 
-function toDetectedRect(r: LocalRect, ang: number): DetectedRectangle {
+function toDetectedRect(r: LocalRect, ang: number, orient: 'H' | 'V'): DetectedRectangle {
   const corners: [Point2D, Point2D, Point2D, Point2D] = [
     rotate({ x: r.xa, y: r.y0 }, ang),
     rotate({ x: r.xb, y: r.y0 }, ang),
@@ -251,11 +272,21 @@ function toDetectedRect(r: LocalRect, ang: number): DetectedRectangle {
   ];
   const w = r.xb - r.xa;
   const h = r.y1 - r.y0;
+  // ADR-419 §T-junction — ΡΗΤΟΣ άξονας από τον γνωστό προσανατολισμό: H → κατά X (μεσοκάθετο
+  // στο y-κέντρο), V → κατά Y (στο x-κέντρο). Κρίσιμο για κοντό-χοντρό stub (μήκος < πάχος):
+  // ο άξονας μένει ΚΑΘΕΤΟΣ στον γείτονα ανεξάρτητα ποια πλευρά είναι μεγαλύτερη.
+  const yc = (r.y0 + r.y1) / 2;
+  const xc = (r.xa + r.xb) / 2;
+  const axis: [Point2D, Point2D] =
+    orient === 'H'
+      ? [rotate({ x: r.xa, y: yc }, ang), rotate({ x: r.xb, y: yc }, ang)]
+      : [rotate({ x: xc, y: r.y0 }, ang), rotate({ x: xc, y: r.y1 }, ang)];
   return {
     polygon: corners,
     longSide: Math.max(w, h),
     shortSide: Math.min(w, h),
     area: w * h,
+    axis,
   };
 }
 
@@ -291,7 +322,9 @@ export function decomposeWallsFromFootprint(
     y0: ys[jS],
     y1: ys[jE + 1],
   }));
-  return [...hRects, ...vRects]
-    .filter((r) => r.xb - r.xa > tol && r.y1 - r.y0 > tol)
-    .map((r) => toDetectedRect(r, ang));
+  const keep = (r: LocalRect): boolean => r.xb - r.xa > tol && r.y1 - r.y0 > tol;
+  return [
+    ...hRects.filter(keep).map((r) => toDetectedRect(r, ang, 'H')),
+    ...vRects.filter(keep).map((r) => toDetectedRect(r, ang, 'V')),
+  ];
 }

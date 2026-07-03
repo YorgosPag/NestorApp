@@ -86,6 +86,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'wall-split': { id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-566: Wall Merge (AutoCAD JOIN for walls — continuous pick loop, exits on ESC)
   'wall-merge': { id: 'wall-merge', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-568: Wall gap-bridge + auto-opening (collinear walls with a gap — continuous pick loop, exits on ESC)
+  'wall-gap-opening': { id: 'wall-gap-opening', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-401 Phase E.1/F.3: Wall + Column Attach Top/Base (pick one host then act, exits on click/ESC)
   'wall-attach-top': { id: 'wall-attach-top', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'wall-attach-base': { id: 'wall-attach-base', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
@@ -188,6 +190,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'foundation-tie-beam': { id: 'foundation-tie-beam', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-436 Slice 2 — συνδετήρια δοκός, 2-click line (mirror beam)
   'foundation-strip-from-wall': { id: 'foundation-strip-from-wall', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-436 Slice 2 — «Πεδιλοδοκός από τοίχο», 1-click pick wall → strip on its axis (auto-attach ADR-401 D)
   'beam-from-wall': { id: 'beam-from-wall', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis (auto-attaches wall top, ADR-401 D)
+  'beam-between-members': { id: 'beam-between-members', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-569 «Δοκάρι ανάμεσα σε μέλη» — σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά διαδοχικό ζεύγος (παρειά→παρειά, continuous chain + selection-first)
   'slab-opening': { id: 'slab-opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3.7 — 2-click (host slab + position), continuous chain
   'mep-fixture': { id: 'mep-fixture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-406 — single-click point-based MEP fixture (light fixture first)
   'mep-socket': { id: 'mep-socket', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-430 — single-click point-based electrical socket (πρίζα, mep-fixture kind, power-in connector)

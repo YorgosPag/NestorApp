@@ -711,6 +711,19 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-07-03 (Round 34 — ✨ «Επιλογή σειράς» + row-detect SSoT + DIMSPACE incremental-stack fix)**
+  - **Ζήτημα (Giorgio, screenshot)**: «συνονθύλευμα» στοιβαγμένων σειρών διαστάσεων με επικαλυπτόμενα κείμενα· «υπάρχει τρόπος να μετακινώ κάθε **σειρά** ανεξάρτητα και όχι μία-μία;». Επιβεβαιώθηκε (κλικ→επιλέγεται μία + ανοίγει καρτέλα Διάσταση) ότι είναι **πραγματικές οντότητες Διάστασης** (όχι exploded).
+  - **RECOGNITION**: το DIMSPACE (`dim-space-engine`) υπήρχε αλλά (α) απαιτεί ≥2 επιλεγμένες, (β) **bug**: το `repositionDim` έβαζε **όλα** τα targets στο ΙΔΙΟ `baseOffset ± spacing` (μία slot) → 3+ σειρές ξανα-επικαλύπτονταν. Δεν υπήρχε εύκολος τρόπος επιλογής ολόκληρης σειράς (κλικ = μία-μία).
+  - **Λύση (FULL SSoT)**:
+    - **NEW `systems/dimensions/dim-line-info.ts`** — κεντρικοποίηση του dim-line frame (`extractDimLineInfo`/`dimLineOffset`), πρώην private στο engine· τώρα shared με το row-detect (Boy-Scout SSoT).
+    - **NEW `systems/dimensions/dim-row-detect.ts`** — `collectDimensionRow(target, allDims)` / `isSameDimRow`: μια «σειρά» = linear/aligned dims με **παράλληλο άξονα + collinear dim line** (default tol: parallelDot cos1°, collinear 1mm ώστε να ΜΗ συγχωνεύει διαφορετικές στοιβαγμένες σειρές). Orientation-agnostic. Γεωμετρία μόνο (όχι styleId/layer coupling).
+    - **DIMSPACE fix** (`dim-space-engine`): incremental slots — sort ανά πλευρά+απόσταση, nearest→slot1, next→slot2… (`baseOffset + sign·spacing·(i+1)`). Ισοκατανομή αντί επικάλυψης. `align` mode (spacing 0) collapse αμετάβλητο.
+    - **«Επιλογή σειράς»** — νέα action `dim.select.row` + event `dim:select-row-requested` → `useDimensionModify` host διαβάζει ΟΛΕΣ τις scene dims, `collectDimensionRow` από την primary, `SelectedEntitiesStore.selectEntities(row)`. Κουμπί στο πάνελ «Τροποποίηση» (καρτέλα Διάσταση) + i18n el+en (`dimSelectRow`). Μετά: DIMSPACE (ξεστοίβαγμα) ή Μετακίνηση (η σειρά μετακινείται μαζί — το generic move μεταφέρει και τα δύο ext-origins → η μετρούμενη τιμή δεν αλλάζει).
+  - **Files**: 2 NEW SSoT (`dim-line-info`, `dim-row-detect`) + 2 NEW tests· MOD `dim-space-engine.ts`, `useDimensionModify.ts`, `dxf-special-actions.ts`, `contextual-dimension-tab.ts`, `dim-command-keys.ts`, `drawing-event-map.ts`, i18n el+en + 2 test updates (dim-space incremental, contextual-tab button count).
+  - **Tests**: 43/43 GREEN (5 row-detect + dim-space incremental + useDimensionModify + contextual-tab). tsc SKIP (N.17).
+  - **OUT OF SCOPE (follow-up)**: το πιο άμεσο gesture «σύρε ΕΝΑ dim-line grip → offset ΟΛΗΣ της σειράς» (group-aware `commitDimensionGripDrag` + preview parity) — αγγίζει το performance-critical grip/preview pipeline (ADR-040), αφήνεται για καθαρό session. Το «χειροκίνητη μετακίνηση σειράς» ήδη επιτυγχάνεται μέσω Επιλογή Σειράς → Μετακίνηση.
+  - ✅ Google-level: YES — καθαρό row SSoT (γεωμετρία-is-source), Boy-Scout κεντρικοποίηση dim-line frame, DIMSPACE bug root-fix με tests, μηδέν διπλότυπο.
+
 - **2026-07-03 (Round 33 — 🐛 FIX: διαστάσεις culled στο 2Δ σε γεωαναφερμένα DXF — cull-bbox από hit-geometry SSoT)**
   - **Σύμπτωμα (Giorgio)**: κάτοψη με πολλές διαστάσεις → **καμία δεν ζωγραφιζόταν** στον 2Δ, αλλά σε **hover φωτίζονταν**· μία outlier διάσταση πολύ μακριά φαινόταν.
   - **Ρίζα (DB/scene.json-verified)**: γεωαναφερμένο DXF (defPoints ~X 1.71e7, Y 4.18e6)· οι **320** διαστάσεις είναι `type:'dimension'` **χωρίς** `geometry.bbox` → το `getEntityBBox` (`dxf-viewport-culling.ts`, ADR-040 Phase IX) δεν είχε `case 'dimension'` → `FULL_PLANE_BBOX [-1e6,1e6]` → στο viewport@1.71e7 **δεν τέμνει** → `isEntityInViewport=false` → **όλες culled** από το base render loop· το hover (`renderSingleEntity`) παρακάμπτει culling → φωτίζονταν. **Αδελφό του wall/column/foundation culling-fix** (ADR-040 changelog 2026-07-03). Outlier = data error (`dim_86a06e54` `aligned` με defPoints στο origin (460,-380), έξω από scene.bounds).

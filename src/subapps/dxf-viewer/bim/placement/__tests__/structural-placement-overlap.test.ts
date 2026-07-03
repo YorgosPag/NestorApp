@@ -12,6 +12,7 @@ import {
   DEFAULT_OVERLAP_RATIO_THRESHOLD,
   structuralFootprintOf,
   findStructuralOverlap,
+  structuralCollisionGroupOf,
 } from '../structural-placement-overlap';
 
 /** Άξονο-ευθυγραμμισμένο ορθογώνιο footprint (κέντρο cx,cy · πλάτος w · ύψος h). */
@@ -31,6 +32,24 @@ function columnRect(id: string, cx: number, cy: number, w: number, h: number): E
   return {
     id,
     type: 'column',
+    geometry: { footprint: { vertices: rect(cx, cy, w, h).map((p) => ({ ...p, z: 0 })) } },
+  } as unknown as Entity;
+}
+
+/** Ελάχιστη SlabEntity (geometry.polygon.vertices). */
+function slabRect(id: string, cx: number, cy: number, w: number, h: number): Entity {
+  return {
+    id,
+    type: 'slab',
+    geometry: { polygon: { vertices: rect(cx, cy, w, h).map((p) => ({ ...p, z: 0 })) } },
+  } as unknown as Entity;
+}
+
+/** Ελάχιστη FoundationEntity (geometry.footprint.vertices). */
+function foundationRect(id: string, cx: number, cy: number, w: number, h: number): Entity {
+  return {
+    id,
+    type: 'foundation',
     geometry: { footprint: { vertices: rect(cx, cy, w, h).map((p) => ({ ...p, z: 0 })) } },
   } as unknown as Entity;
 }
@@ -127,6 +146,59 @@ describe('findStructuralOverlap · block/allow', () => {
 
   it('εκφυλισμένο candidate (<3 κορυφές) → ALLOW', () => {
     expect(findStructuralOverlap([{ x: 0, y: 0 }, { x: 1, y: 1 }], [columnRect('a', 0, 0, 100, 100)])).toBeNull();
+  });
+});
+
+describe('structuralCollisionGroupOf', () => {
+  it('τοίχος + κολόνα → ίδια ομάδα "vertical"', () => {
+    expect(structuralCollisionGroupOf('wall')).toBe('vertical');
+    expect(structuralCollisionGroupOf('column')).toBe('vertical');
+  });
+  it('δοκάρι/πλάκα/θεμέλιο → ξεχωριστές ομάδες', () => {
+    expect(structuralCollisionGroupOf('beam')).toBe('beam');
+    expect(structuralCollisionGroupOf('slab')).toBe('slab');
+    expect(structuralCollisionGroupOf('foundation')).toBe('foundation');
+  });
+  it('μη-δομικός τύπος → null', () => {
+    expect(structuralCollisionGroupOf('opening' as Entity['type'])).toBeNull();
+    expect(structuralCollisionGroupOf('furniture' as Entity['type'])).toBeNull();
+  });
+});
+
+describe('findStructuralOverlap · collision groups (ADR-567 Φ1b)', () => {
+  const existingColumn = columnRect('col', 0, 0, 200, 200);
+
+  it('«Δοκάρι από τοίχο»: δοκάρι πλήρως πάνω σε τοίχο/κολόνα → ALLOW (διαφορετική ομάδα)', () => {
+    // Το δοκάρι κάθεται στην κορυφή (διαφορετικό Z) — δεν συγκρούεται με το κατακόρυφο μέλος.
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'beam' })).toBeNull();
+  });
+
+  it('πλάκα πάνω σε κολόνα/τοίχο → ALLOW (διαφορετική ομάδα)', () => {
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'slab' })).toBeNull();
+  });
+
+  it('τοίχος πάνω σε κολόνα → BLOCK (ίδια ομάδα "vertical")', () => {
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'wall' })?.blockedById).toBe('col');
+  });
+
+  it('κολόνα πάνω σε κολόνα → BLOCK (ίδια ομάδα)', () => {
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'column' })?.blockedById).toBe('col');
+  });
+
+  it('δοκάρι πάνω σε δοκάρι-γείτονα (ίδια ομάδα) → BLOCK', () => {
+    // Το slab είναι δική του ομάδα· πλάκα πάνω σε πλάκα μπλοκάρεται.
+    const existingSlab = slabRect('sl', 0, 0, 200, 200);
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingSlab], { candidateType: 'slab' })?.blockedById).toBe('sl');
+  });
+
+  it('πέδιλο πάνω σε πέδιλο → BLOCK· δοκάρι πάνω σε πέδιλο → ALLOW', () => {
+    const existingFoundation = foundationRect('fnd', 0, 0, 200, 200);
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingFoundation], { candidateType: 'foundation' })?.blockedById).toBe('fnd');
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingFoundation], { candidateType: 'beam' })).toBeNull();
+  });
+
+  it('χωρίς candidateType → legacy (ελέγχονται όλες οι δομικές)', () => {
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn])?.blockedById).toBe('col');
   });
 });
 

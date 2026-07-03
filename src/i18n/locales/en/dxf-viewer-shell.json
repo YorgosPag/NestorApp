@@ -140,13 +140,28 @@
     "pickFirst": "Select the first wall to merge.",
     "pickSecond": "Select the second wall to merge.",
     "merged": "Walls merged.",
+    "joinedCorner": "Walls joined at a corner.",
     "needTwo": "Select exactly 2 walls to merge.",
     "blocked": {
       "notStraight": "Cannot merge: straight walls only.",
       "notCollinear": "Cannot merge: the walls are not collinear.",
       "differentThickness": "Cannot merge: different thickness.",
+      "parallelOffset": "Cannot join: parallel walls with no shared corner.",
       "degenerate": "Cannot merge: invalid wall."
     }
+  },
+  "wallGapOpening": {
+    "pickFirst": "Select the first wall to bridge.",
+    "pickSecond": "Select the second collinear wall.",
+    "bridged": "Walls joined — opening placed in the gap.",
+    "merged": "Walls merged.",
+    "needTwo": "Select exactly 2 collinear walls."
+  },
+  "wallSplit": {
+    "pickFirst": "Click the first cut point.",
+    "pickSecond": "Click the second point — walls the line crosses will be split.",
+    "noCuts": "No cut: the line does not cross any wall.",
+    "cut": "{count, plural, one {Split # wall.} other {Split # walls.}}"
   },
   "perimeterWall": {
     "built": "Created {built} walls from the perimeter.",
@@ -220,6 +235,14 @@
   "regionPerimeter": {
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
     "noClosedLoop": "The lines don't form a closed loop. Join the marked endpoints (○) and try again.",
+    "rejected": {
+      "lengthTooShort": "Wall is too short",
+      "thicknessTooThick": "Thickness too large for a wall",
+      "thicknessInvalid": "Invalid wall thickness",
+      "heightInvalid": "Invalid wall height",
+      "occupied": "A structural member already exists here",
+      "invalid": "Cannot become a wall"
+    },
     "gapClose": {
       "title": "Close the loop",
       "message": "The lines don't form a closed loop. Close the gap between the marked endpoints?",
@@ -926,6 +949,10 @@
     "railing": {
       "statusStart": "Pick railing start",
       "statusEnd": "Pick railing end"
+    },
+    "beamBetween": {
+      "statusFirst": "Click a column or wall for the beam's start",
+      "statusNext": "Click the next column/wall → a beam is created; keep going to chain"
     },
     "beam": {
       "statusStart": "Pick beam start point",
@@ -1717,6 +1744,10 @@
           "label": "Beam from wall",
           "tooltip": "Pick an existing wall → a beam is created on its axis (width = wall thickness); the wall auto-adjusts its top beneath the beam"
         },
+        "beamBetweenMembers": {
+          "label": "Beam between members",
+          "tooltip": "Click columns/walls in sequence → every second click creates a beam between the previous and current member (shortest path, face-to-face). With two members already selected → an immediate beam"
+        },
         "mepFixture": {
           "label": "Light fixture",
           "tooltip": "Place a ceiling light fixture with a single click (discipline: electrical) (shortcut LF)"
@@ -2434,6 +2465,7 @@
         "presetMenu": "Presets",
         "split": "Split",
         "merge": "Merge Walls",
+        "gapOpening": "Bridge with Opening",
         "close": "Close",
         "delete": "Delete",
         "attachTop": "Attach Top",
@@ -3719,6 +3751,7 @@
       "dimOpenPanel": "Properties...",
       "dimBreak": "Dimension Break",
       "dimSpace": "Dimension Space",
+      "dimSelectRow": "Select Row",
       "dimTfillToggle": "Text Mask",
       "dimContextual": {
         "styleOptions": {
@@ -3779,7 +3812,9 @@
         "label": "Scale",
         "ariaLabel": "Drawing scale 1:{scale}",
         "placeholder": "e.g. 100",
-        "inputAriaLabel": "Enter drawing scale denominator"
+        "inputAriaLabel": "Enter drawing scale denominator",
+        "fitToPaper": "Auto-fit",
+        "fitToPaperAriaLabel": "Auto-fit drawing scale to the drawing"
       },
       "viewRange": {
         "label": "View Range",

@@ -108,6 +108,27 @@ This auto-heals every level/user on next open without wiping genuine V/G edits.
 
 ## Changelog
 
+- **2026-07-03** — v1.4 (Opus 4.8). **«Το δοκάρι καταπίνεται από τον τοίχο» — structural
+  framing reads by its category edges (Giorgio 2026-07-03).** Πρόβλημα: δοκάρι flush ΠΑΝΩ σε
+  τοίχο με ΙΔΙΟ footprint (πλάτος = πάχος τοίχου) → οι πλάγιες όψεις coplanar & συνεχείς με τον
+  τοίχο· με «Σοβατισμένη όψη» ON (ADR-449 finish skin) ΚΑΙ τα δύο βάφονται με τον ίδιο plaster
+  (cream `#e8e0d0`) → το amber core (`elem-beam`) κρύβεται → το δοκάρι «λιώνει». **SSoT audit:**
+  το amber ΥΠΑΡΧΕΙ ήδη σε 2D outline + 3D core + 3D edges — το κενό ήταν ΜΟΝΟ στο **light bg**,
+  όπου το `bim-three-edges.ts` (v2.22, ADR-375 C.7) κάνει override ΟΛΕΣ τις ακμές σε uniform
+  near-black `#1a1a1a` → το δοκάρι έχανε την amber ταυτότητά του κάτω από τον σοβά. **Fix «όπως
+  οι μεγάλοι» (Revit Structural / Tekla — η δομή διαβάζεται από το category χρώμα των ακμών της):**
+  NEW `STRUCTURAL_EDGE_IDENTITY_CATEGORIES = {beam}` στο `bim-three-edges.ts` — το δοκάρι κρατά
+  το amber (`BIM_CATEGORY_LINE_COLORS.beam`) silhouette του σε ΚΑΘΕ background (guard σε
+  `style.color !== null` για fallback ασφάλεια)· οι υπόλοιπες κατηγορίες κρατούν το uniform
+  near-black silhouette στο light bg (μηδέν regression). Το περίγραμμα του δοκαριού (amber)
+  διαβάζεται πλέον πάνω στις σκούρες ακμές του τοίχου, ακόμη & κάτω από τον σοβά — 2Δ core
+  ΚΑΙ finish-skin prisms (και τα δύο περνούν category `beam`). **1 code (`bim-three-edges.ts`)
+  + 1 test (`bim-three-edges.test.ts`, +2 assertions: beam amber στο light bg / wall αμετάβλητος).**
+  ΜΗΔΕΝ νέο material path, μηδέν αλλαγή στο sizing/attach/finish geometry. SKIP tsc (N.17· jest δεν
+  έτρεξε — locked-down shell χωρίς node/npx). ΕΚΤΟΣ ADR-040 (converter, όχι micro-leaf). 🔴
+  browser-verify (δοκάρι-σε-τοίχο με «Σοβατισμένη όψη» ON, light + dark bg) + commit (git add ΜΟΝΟ
+  δικά μου: `bim-three-edges.ts` + test + αυτό το ADR). Related: ADR-375 C.7 (edge policy), ADR-449
+  (finish skin), ADR-363 (δοκάρι από τοίχο).
 - **2026-06-14** — v1.3 (Opus 4.8). **«Επιλογή Όμοιων Ίδιο Χρώμα» επεκτάθηκε σε ΟΛΕΣ τις
   BIM οντότητες** (Giorgio request). Πριν: το `findEntitiesWithSimilarColor` (context-menu
   εντολή, ADR-030) έλυνε χρώμα ΜΟΝΟ από το DXF layer cascade → οι BIM οντότητες έπεφταν σε

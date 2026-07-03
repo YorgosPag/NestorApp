@@ -41,8 +41,9 @@ export const DIM_RIBBON_KEYS = {
     tfillToggle:   'dim.text.tfillToggle',
   },
   modify: {
-    dimBreak: 'dim.modify.dimBreak',
-    dimSpace: 'dim.modify.dimSpace',
+    dimBreak:  'dim.modify.dimBreak',
+    dimSpace:  'dim.modify.dimSpace',
+    selectRow: 'dim.select.row',
   },
   properties: {
     layer:           'dim.properties.layer',

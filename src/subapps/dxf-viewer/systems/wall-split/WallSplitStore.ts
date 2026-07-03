@@ -1,15 +1,20 @@
 /**
- * Wall Split Store — ADR-363 Phase 5.6.
+ * Wall Split Store — ADR-363 Phase 5.6 (knife-line mode).
  *
- * Module-level pub/sub store for the wall-split tool hover preview.
- * Zero React state — mirrors TrimToolStore / WallPreviewStore pattern
- * (ADR-040: high-frequency mouse-move data must not flow through React state).
+ * Module-level pub/sub store for the wall-split KNIFE-LINE first point.
+ * Zero React state — mirrors ZoomWindowStore / LassoStore pattern
+ * (ADR-040: high-frequency preview data must not flow through React state).
  *
- * Single-writer: useWallSplitTool (updates on every mousemove).
- * Multi-reader:  wall-split preview renderer (reads split point + indicator line).
+ * The knife tool is a 2-click "split by line": the FIRST click sets `firstPoint`
+ * here; the live rubber-band preview (WallSplitKnifePreviewMount) reads it and
+ * draws the segment `firstPoint → cursor`, highlighting every wall the segment
+ * would cut. The SECOND click performs the multi-split and resets the store.
  *
- * Snapshot stability: when nothing changes between two reads, the same object
- * reference is returned — `useSyncExternalStore` skips re-renders on no-ops.
+ * Single-writer: useWallSplitTool (click / escape).
+ * Multi-reader:  WallSplitKnifePreviewMount leaf (subscribes to `firstPoint`).
+ *
+ * Snapshot stability: when `firstPoint` is unchanged the same object reference is
+ * returned — `useSyncExternalStore` skips re-renders on no-ops.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §Phase 5.6
  */
@@ -19,74 +24,43 @@ import type { Point2D } from '../../rendering/types/Types';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-export interface WallSplitHoverState {
-  /** ID of the wall currently under the cursor, or null when no wall is hit. */
-  readonly hoveredWallId: string | null;
-  /** Axis-projected split point in world coordinates. */
-  readonly splitPoint: Point2D | null;
-  /** Endpoints of the perpendicular indicator line across the wall width. */
-  readonly splitLine: readonly [Point2D, Point2D] | null;
+export interface WallSplitKnifeState {
+  /** First knife point (world coords), or null while awaiting the first click. */
+  readonly firstPoint: Point2D | null;
 }
 
-const EMPTY: WallSplitHoverState = Object.freeze({
-  hoveredWallId: null,
-  splitPoint: null,
-  splitLine: null,
-});
+const EMPTY: WallSplitKnifeState = Object.freeze({ firstPoint: null });
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
 type Listener = () => void;
-let current: WallSplitHoverState = EMPTY;
+let current: WallSplitKnifeState = EMPTY;
 const listeners = new Set<Listener>();
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }
 
-function getSnapshot(): WallSplitHoverState { return current; }
-function getServerSnapshot(): WallSplitHoverState { return EMPTY; }
+function getSnapshot(): WallSplitKnifeState { return current; }
+function getServerSnapshot(): WallSplitKnifeState { return EMPTY; }
 
 function notify(): void {
   for (const l of listeners) l();
 }
 
-function pointsEq(a: Point2D | null, b: Point2D | null): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.x === b.x && a.y === b.y;
-}
-
 // ── Public store API ──────────────────────────────────────────────────────────
 
 export const WallSplitStore = {
-  /**
-   * Update hover state. No-op when wall + split point are unchanged (ref +
-   * coordinate equality) so the renderer does not re-paint on every mousemove
-   * when the cursor sits on the same axis position.
-   */
-  set(next: WallSplitHoverState): void {
-    if (
-      next.hoveredWallId === current.hoveredWallId &&
-      pointsEq(next.splitPoint, current.splitPoint)
-    ) return;
-    current = {
-      hoveredWallId: next.hoveredWallId,
-      splitPoint: next.splitPoint ? { x: next.splitPoint.x, y: next.splitPoint.y } : null,
-      splitLine: next.splitLine
-        ? [
-            { x: next.splitLine[0].x, y: next.splitLine[0].y },
-            { x: next.splitLine[1].x, y: next.splitLine[1].y },
-          ]
-        : null,
-    };
+  /** Set the first knife point (world coords). No-op when unchanged. */
+  setFirstPoint(point: Point2D): void {
+    const prev = current.firstPoint;
+    if (prev && prev.x === point.x && prev.y === point.y) return;
+    current = { firstPoint: { x: point.x, y: point.y } };
     notify();
   },
 
-  /** Reset to empty (tool deactivated / cursor leaves canvas). */
+  /** Clear the first point (second click committed / tool deactivated / Escape). */
   reset(): void {
     if (current === EMPTY) return;
     current = EMPTY;
@@ -94,15 +68,16 @@ export const WallSplitStore = {
   },
 
   /** Non-React reader (tests + imperative code). */
-  get(): WallSplitHoverState { return current; },
+  get(): WallSplitKnifeState { return current; },
 
-  /** Raw subscribe for non-useSyncExternalStore consumers. */
   subscribe,
+  getSnapshot,
+  getServerSnapshot,
 };
 
 // ── React hook ────────────────────────────────────────────────────────────────
 
-/** Returns the current wall-split hover state for React renderer consumers. */
-export function useWallSplitPreview(): WallSplitHoverState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+/** Returns the current knife first point for the preview leaf consumer. */
+export function useWallSplitFirstPoint(): Point2D | null {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot).firstPoint;
 }

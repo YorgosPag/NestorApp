@@ -145,29 +145,40 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     }
   }, [syncSceneTargetsToStore]);
 
+  // FUNCTIONAL updater (ίδιος λόγος με setPlacementMode — συνέπεια με foundation SSoT):
+  // ασφαλές ακόμη κι αν κληθεί στο ίδιο commit με activate() (post-activate pending read).
   const setKind = useCallback((kind: BeamKind) => {
-    const prev = stateRef.current;
-    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
-    if (newPhase === 'idle') {
-      beamPreviewStore.reset();
-    } else {
-      beamPreviewStore.set({ startPoint: null, endPoint: null, kind, overrides: prev.overrides });
-    }
-    setState({ ...INITIAL_STATE, kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase });
+    setState((prev) => {
+      const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+      if (newPhase === 'idle') {
+        beamPreviewStore.reset();
+      } else {
+        beamPreviewStore.set({ startPoint: null, endPoint: null, kind, overrides: prev.overrides });
+      }
+      return { ...INITIAL_STATE, kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase };
+    });
   }, []);
 
   // ADR-363 «Δοκάρι από τοίχο» — switch placement mode (freehand ⇄ from-wall).
   // Mirrors useWallTool.setPlacementMode: resets the FSM, preserves kind/overrides.
+  // ⚠️ FUNCTIONAL updater (ΟΧΙ stateRef): το wiring (`useSpecialTools`) καλεί `activate()`
+  // (→ phase 'awaitingStart') ΚΑΙ ΜΕΤΑ `setPlacementMode('from-wall')` στο ΙΔΙΟ commit
+  // (useToolLifecycle δηλώνεται πριν το placement effect). Με stateRef διαβαζόταν η
+  // STALE pre-activate κατάσταση (phase 'idle') → newPhase 'idle' → η κατάσταση
+  // επανερχόταν σε idle → `isActive` false → το κλικ ΔΕΝ έφτανε στο commitFromWall
+  // (το δοκάρι δεν δημιουργούνταν). Ο functional updater διαβάζει την post-activate
+  // pending κατάσταση (phase 'awaitingStart') → σωστό newPhase.
   const setPlacementMode = useCallback((mode: BeamPlacementMode) => {
-    const prev = stateRef.current;
-    if (prev.placementMode === mode) return;
-    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
-    if (newPhase === 'idle') {
-      beamPreviewStore.reset();
-    } else {
-      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
-    }
-    setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: mode, overrides: prev.overrides, phase: newPhase });
+    setState((prev) => {
+      if (prev.placementMode === mode) return prev;
+      const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+      if (newPhase === 'idle') {
+        beamPreviewStore.reset();
+      } else {
+        beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
+      }
+      return { ...INITIAL_STATE, kind: prev.kind, placementMode: mode, overrides: prev.overrides, phase: newPhase };
+    });
   }, []);
 
   const deactivate = useCallback(() => {
@@ -176,14 +187,15 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   }, []);
 
   const reset = useCallback(() => {
-    const prev = stateRef.current;
-    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
-    if (newPhase === 'idle') {
-      beamPreviewStore.reset();
-    } else {
-      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
-    }
-    setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase });
+    setState((prev) => {
+      const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+      if (newPhase === 'idle') {
+        beamPreviewStore.reset();
+      } else {
+        beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
+      }
+      return { ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase };
+    });
   }, []);
 
   const setParamOverrides = useCallback((overrides: BeamParamOverrides) => {

@@ -21,10 +21,16 @@ import type { Point2D } from '../../rendering/types/Types';
 export interface RegionPerimeterZone {
   /** Κλειστό πολύγωνο (world units) της ζώνης. */
   polygon: Point2D[];
-  /** Ετικέτα διαστάσεων της ζώνης, π.χ. «2.40 × 0.30 m». */
+  /** Ετικέτα διαστάσεων της ζώνης, π.χ. «2.40 × 0.30 m». Κενή για rejected ζώνες (δείχνεται ο λόγος). */
   label: string;
   /** ADR-567 — `true` αν η ζώνη πέφτει πάνω σε υπάρχουσα δομική οντότητα → κόκκινο, δεν θα χτιστεί. */
   occupied?: boolean;
+  /**
+   * ADR-419 v2.4 «μία διαδρομή δημιουργίας» — i18n key του ΛΟΓΟΥ απόρριψης (π.χ.
+   * `regionPerimeter.rejected.lengthTooShort`) όταν το rect ΔΕΝ γίνεται τοίχος. Παρών → κόκκινο
+   * + tooltip με τον λόγο (Giorgio: επιλογή Α «κόκκινο + tooltip με ΛΟΓΟ»).
+   */
+  reason?: string;
 }
 
 export interface RegionPerimeterPreview {

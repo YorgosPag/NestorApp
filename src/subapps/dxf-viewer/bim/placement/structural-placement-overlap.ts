@@ -56,6 +56,32 @@ export const STRUCTURAL_OVERLAP_TYPES: ReadonlySet<Entity['type']> = new Set<Ent
  */
 export const DEFAULT_OVERLAP_RATIO_THRESHOLD = 0.25;
 
+/**
+ * Ομάδα σύγκρουσης κατοχής χώρου (ADR-567 Φ1b). Δύο δομικές μπλοκάρουν επικάλυψη **μόνο** αν
+ * ανήκουν στην ΙΔΙΑ ομάδα:
+ *   · `vertical` (τοίχος + κολόνα) — κατακόρυφα φέροντα· καταλαμβάνουν το ΙΔΙΟ κατακόρυφο εύρος
+ *     του ορόφου (0→ύψος), άρα δύο τους στην ίδια θέση = πραγματική σύγκρουση όγκου.
+ *   · `beam` / `slab` — οριζόντια μέλη που κάθονται ΠΑΝΩ (διαφορετικό Z: ring/tie beam στην κορυφή
+ *     τοίχου, πλάκα πάνω σε δοκάρια/τοίχους). Δεν συγκρούονται με τα κατακόρυφα → γι' αυτό «Δοκάρι
+ *     από τοίχο» / «πλάκα πάνω σε τοίχους» είναι ΝΟΜΙΜΑ (κάθε ομάδα κρίνεται μόνο εναντίον του εαυτού
+ *     της· διπλότυπο δοκάρι-σε-δοκάρι / πλάκα-σε-πλάκα εξακολουθεί να μπλοκάρεται).
+ *   · `foundation` — υπόβαση, κάτω από όλα· μόνο πέδιλο-σε-πέδιλο μπλοκάρει.
+ */
+export type StructuralCollisionGroup = 'vertical' | 'beam' | 'slab' | 'foundation';
+
+const COLLISION_GROUP_BY_TYPE: Partial<Record<Entity['type'], StructuralCollisionGroup>> = {
+  wall: 'vertical',
+  column: 'vertical',
+  beam: 'beam',
+  slab: 'slab',
+  foundation: 'foundation',
+};
+
+/** Η collision group ενός τύπου, ή `null` αν δεν είναι δομικός (host-child/thin/μη-δομικός). */
+export function structuralCollisionGroupOf(type: Entity['type']): StructuralCollisionGroup | null {
+  return COLLISION_GROUP_BY_TYPE[type] ?? null;
+}
+
 /** Αποτέλεσμα: η πρώτη υπάρχουσα οντότητα που μπλοκάρει την τοποθέτηση, + το ποσοστό επικάλυψης. */
 export interface StructuralOverlapHit {
   readonly blockedById: string;
@@ -89,14 +115,20 @@ export function structuralFootprintOf(entity: Entity): Point2D[] | null {
  * Η πρώτη υπάρχουσα δομική οντότητα της οποίας το footprint επικαλύπτεται με το `candidateFootprint`
  * πάνω από το κατώφλι· `null` αν καμία (καθαρή τοποθέτηση). Άγγιγμα-μόνο (εμβαδόν τομής ≈ 0) → allow.
  * Pure — ο caller δίνει τα `existing` (scene entities) + optional `excludeIds` (π.χ. self).
+ *
+ * `candidateType` (ADR-567 Φ1b): όταν δοθεί, ελέγχονται ΜΟΝΟ οι υπάρχουσες οντότητες της ΙΔΙΑΣ
+ * {@link StructuralCollisionGroup} με το candidate (π.χ. δοκάρι κρίνεται μόνο εναντίον δοκαριών,
+ * ΟΧΙ τοίχων — γι' αυτό «Δοκάρι από τοίχο» δεν μπλοκάρεται). Αν παραλειφθεί → ελέγχονται όλες οι
+ * δομικές (legacy behaviour).
  */
 export function findStructuralOverlap(
   candidateFootprint: readonly Point2D[],
   existing: readonly Entity[],
-  opts?: { excludeIds?: ReadonlySet<string>; ratioThreshold?: number },
+  opts?: { excludeIds?: ReadonlySet<string>; ratioThreshold?: number; candidateType?: Entity['type'] },
 ): StructuralOverlapHit | null {
   if (candidateFootprint.length < 3) return null;
   const threshold = opts?.ratioThreshold ?? DEFAULT_OVERLAP_RATIO_THRESHOLD;
+  const candGroup = opts?.candidateType ? structuralCollisionGroupOf(opts.candidateType) : null;
   const candClip = toClipPolygon(candidateFootprint);
   const candArea = multiPolygonArea([candClip]);
   if (candArea <= 0) return null;
@@ -105,6 +137,9 @@ export function findStructuralOverlap(
   for (const e of existing) {
     if (opts?.excludeIds?.has(e.id)) continue;
     if (!STRUCTURAL_OVERLAP_TYPES.has(e.type)) continue;
+    // ADR-567 Φ1b — μόνο ίδια collision group συγκρούεται (οριζόντιο δοκάρι/πλάκα κάθεται πάνω
+    // σε κατακόρυφο τοίχο/κολόνα σε διαφορετικό Z → δεν είναι επικάλυψη όγκου).
+    if (candGroup && structuralCollisionGroupOf(e.type) !== candGroup) continue;
     const ef = structuralFootprintOf(e);
     if (!ef) continue;
     // Φτηνό AABB fast-reject ΠΡΙΝ το βαρύ polygon-clipping (per-frame hover, N.17 perf).

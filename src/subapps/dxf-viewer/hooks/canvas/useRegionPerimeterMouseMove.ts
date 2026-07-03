@@ -13,8 +13,10 @@ import {
 // click-fill (`findEnclosingRectangle`) ώστε preview ≡ commit (corner-graph — πιάνει
 // ορθογώνια με κοινές κορυφές, όχι μόνο καθαρούς simple-cycles όπως το perimeter loop).
 import { extractLineSegments, findEnclosingRectangle } from '../../bim/walls/wall-in-region';
+import { computeFillingWalls, computeFillingWallFootprints } from '../../bim/walls/filling-walls-compute';
 import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
+import type { WallParamOverrides } from '../drawing/wall-completion';
 // Giorgio 2026-07-01 — ο σκέτος «Κολόνα» δείχνει το ΙΔΙΟ σχήμα (ορθογώνιο ή Γ/Τ/Π)
 // που θα υιοθετήσει το adopt-click → ΚΟΙΝΟΣ detector `findAdoptableColumnPerimeter`.
 import {
@@ -95,7 +97,14 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
           ? resolvePlainWallRectPreview(worldPos, entities, sceneUnits, scale)
           : tool === 'column'
             ? resolveColumnShapePreview(worldPos, entities, sceneUnits)
-            : resolvePerimeterPreview(worldPos, entities, sceneUnits, scale);
+            : resolvePerimeterPreview(
+                worldPos,
+                entities,
+                sceneUnits,
+                scale,
+                wallToolBridgeStore.get()?.overrides ?? {},
+                lm.currentLevelId ?? '',
+              );
       if (!preview) {
         clearPreviewIfShown();
         return;
@@ -125,7 +134,13 @@ function markOccupiedZones(
   entities: readonly Entity[],
 ): RegionPerimeterZone[] {
   return zones.map((z) =>
-    z.polygon.length >= 3 && findStructuralOverlap(z.polygon, entities) ? { ...z, occupied: true } : z,
+    // ADR-419 v2.4 — ζώνη με ήδη-γνωστό λόγο απόρριψης (π.χ. computeFillingWalls: occupied/κοντός)
+    // μένει ως έχει· ο structural έλεγχος αφορά μόνο τις (πράσινες) ζώνες χωρίς reason.
+    // Region-fill = κατακόρυφο μέλος (τοίχος/κολόνα, ίδια `vertical` group) → κρίνεται μόνο εναντίον
+    // κατακόρυφων· δεν κοκκινίζει πάνω από δοκάρι/πλάκα (διαφορετικό Z, νόμιμη συνύπαρξη).
+    !z.reason && z.polygon.length >= 3 && findStructuralOverlap(z.polygon, entities, { candidateType: 'wall' })
+      ? { ...z, occupied: true }
+      : z,
   );
 }
 
@@ -161,18 +176,33 @@ function resolvePerimeterPreview(
   entities: readonly Entity[],
   sceneUnits: SceneUnits,
   scale: number,
+  overrides: WallParamOverrides,
+  levelId: string,
 ): PreviewPick | null {
   const { perimeter: pick } = pickRegionPerimeterAt(worldPos, entities, sceneUnits);
   if (!pick || isPerimeterOversized(pick, scale)) return null;
-  // ADR-419 §thickness-zones — αν το περίγραμμα σπάει σε σκέλη σταθερού πλάτους
-  // (`decomposeRectilinear`), δείξε ΚΑΘΕ σκέλος ξεχωριστά — ΑΚΡΙΒΩΣ όσους τοίχους θα
-  // δημιουργήσει το commit (`buildFillingWalls` ένας τοίχος ανά σκέλος) → preview ≡ commit.
+  // ADR-419 v2.4 «μία διαδρομή δημιουργίας» — αν το περίγραμμα σπάει σε σκέλη
+  // (`decomposeRectilinear`), τρέξε ΤΟ ΙΔΙΟ `computeFillingWalls` που τρέχει ο commit:
+  // κάθε buildable τοίχος → πράσινο με το ΤΕΛΙΚΟ mitered footprint (extended + trimmed)·
+  // κάθε rejected rect → κόκκινο + ΛΟΓΟΣ (κοντός/χοντρός/κατειλημμένος). Έτσι ό,τι
+  // φωτίζεται = ΑΚΡΙΒΩΣ ό,τι δημιουργεί το κλικ (preview ≡ commit 100%).
   // Μη-ορθογωνικό loop (rects=[]) → ένα σχήμα (το commit ούτως ή άλλως το αγνοεί).
   if (pick.rects.length > 0) {
-    const zones: RegionPerimeterZone[] = pick.rects.map((r) => ({
-      polygon: [...r.polygon],
-      label: `${(r.longSide / scale / 1000).toFixed(2)} × ${(r.shortSide / scale / 1000).toFixed(2)} m`,
-    }));
+    const { walls, rejected } = computeFillingWalls(pick.rects, overrides, sceneUnits, levelId, entities);
+    const footprints = computeFillingWallFootprints(walls, entities);
+    const zones: RegionPerimeterZone[] = [];
+    walls.forEach((w, i) => {
+      const lenWorld = Math.hypot(w.params.end.x - w.params.start.x, w.params.end.y - w.params.start.y);
+      zones.push({
+        polygon: footprints[i] ?? [...pick.polygon],
+        label: `${(lenWorld / scale / 1000).toFixed(2)} × ${(w.params.thickness / 1000).toFixed(2)} m`,
+      });
+    });
+    // Giorgio (επιλογή Α): rejected → κόκκινο + tooltip με τον λόγο (i18n key).
+    for (const rej of rejected) {
+      zones.push({ polygon: [...rej.rect.polygon], label: '', reason: rej.reason });
+    }
+    if (zones.length === 0) return null;
     return { zones, sig: zonesSig(zones) };
   }
   const { width, height } = perimeterExtentMm(pick, scale);

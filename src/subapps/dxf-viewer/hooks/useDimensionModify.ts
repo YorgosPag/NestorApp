@@ -37,6 +37,9 @@ import { resolveDimStyle } from '../systems/dimensions/dim-style-resolver';
 import { buildDimensionGeometry } from '../systems/dimensions/dim-geometry-builder';
 import { computeDimSpacing } from '../systems/dimensions/dim-space-engine';
 import { computeAutoBreakPoints } from '../systems/dimensions/dim-break-engine';
+// ADR-362 — «Επιλογή σειράς»: row detection + selection replacement SSoT.
+import { collectDimensionRow } from '../systems/dimensions/dim-row-detect';
+import { SelectedEntitiesStore } from '../systems/selection/SelectedEntitiesStore';
 import type { DimensionEntity, DimensionManualBreaks } from '../types/dimension';
 import { isDimensionEntity, type Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
@@ -173,10 +176,30 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       runAtomic(buildApplyStyleCommands(r.dims, source.styleId, r.ctx), execute);
     });
 
+    // ADR-362 — «Επιλογή σειράς»: expand the primary selected dim to its whole
+    // collinear row, then replace the selection with the row (so DIMSPACE / drag
+    // act on the entire band). Reads ALL scene dims (not just the current
+    // selection) so a single-dim pick can grow to the full row.
+    const unsubSelectRow = EventBus.on('dim:select-row-requested', ({ entityIds }) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      const allEntities = scene.entities as unknown as readonly Entity[];
+      const allDims = allEntities.filter(isDimensionEntity);
+      const primary = allDims.find((d) => d.id === entityIds[0]);
+      if (!primary) return;
+      const row = collectDimensionRow(primary, allDims);
+      SelectedEntitiesStore.selectEntities(
+        row.map((d) => ({ id: d.id, type: 'dxf-entity' as const })),
+      );
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
       unsubApplyStyle();
+      unsubSelectRow();
     };
   }, [levelManager, execute]);
 }

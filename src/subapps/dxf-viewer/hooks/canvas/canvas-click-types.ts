@@ -34,6 +34,7 @@ import type {
   SlabToolLike,
   ColumnToolLike,
   BeamToolLike,
+  BeamBetweenMembersToolLike,
   FoundationToolLike,
   MepFixtureToolLike,
   MepSegmentToolLike,
@@ -88,6 +89,8 @@ export interface UseCanvasClickHandlerParams {
   foundationTool?: FoundationToolLike;
   /** ADR-363 Phase 5 — Beam tool click pipeline. */
   beamTool?: BeamToolLike;
+  /** ADR-569 — «Δοκάρι ανάμεσα σε μέλη» click pipeline. */
+  beamBetweenMembersTool?: BeamBetweenMembersToolLike;
   /** ADR-406 — MEP fixture tool click pipeline. */
   mepFixtureTool?: MepFixtureToolLike;
   /** ADR-408 Φ3 — Electrical panel tool click pipeline. */
@@ -180,6 +183,12 @@ export interface UseCanvasClickHandlerParams {
   wallMergeIsActive?: boolean;
   /** Click handler for the wall-merge state machine (pick wall 1 → wall 2). */
   handleWallMergeClick?: (worldPoint: Point2D) => void;
+
+  // ── ADR-568: Wall gap-bridge + auto-opening tool ──────────────────────────
+  /** Whether the wall-gap-opening tool is active (continuous pick loop, ESC to exit). */
+  wallGapOpeningIsActive?: boolean;
+  /** Click handler for the gap-opening state machine (pick wall 1 → wall 2). */
+  handleWallGapOpeningClick?: (worldPoint: Point2D) => void;
 
   // ── ADR-363 R1: BIM Copy tool ──────────────────────────────────────────
   /** Whether the bim-copy tool is active (base-point + continuous target picks). */

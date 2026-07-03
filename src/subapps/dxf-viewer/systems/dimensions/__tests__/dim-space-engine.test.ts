@@ -175,14 +175,25 @@ describe("computeDimSpacing 'auto' mode", () => {
 // ── Multiple targets ──────────────────────────────────────────────────────────
 
 describe('multiple target dimensions', () => {
-  it('all supported targets appear in result', () => {
+  it('stacks multiple targets at INCREMENTAL slots (nearest = slot 1)', () => {
+    // base=10, spacing=20. Two same-side targets, unevenly placed at 100 and 200.
+    // Incremental fix: nearest (t1) → slot 1 (offset 30), next (t2) → slot 2 (offset 50).
+    // (Pre-fix bug placed BOTH at offset 30, re-overlapping them.)
     const base = makeLinearDim(10);
-    const t1 = makeLinearDim(30);
-    const t2 = makeLinearDim(50);
+    const t1 = makeLinearDim(100);
+    const t2 = makeLinearDim(200);
     const result = computeDimSpacing(base, [t1, t2], makeStyle(), 'custom', 20);
-    // t1: baseOffset=10, target=30, sign=+1, newOffset=30, delta=0 → NOT in result
-    // t2: baseOffset=10, target=50, sign=+1, newOffset=30, delta=-20 → in result
-    expect(result.has(t2.id)).toBe(true);
+    expect(approx(result.get(t1.id)!.defPoints[2].y, 30)).toBe(true);
+    expect(approx(result.get(t2.id)!.defPoints[2].y, 50)).toBe(true);
+  });
+
+  it('already-evenly-spaced targets are left untouched (zero delta)', () => {
+    const base = makeLinearDim(10);
+    const t1 = makeLinearDim(30); // slot 1 = 10 + 20
+    const t2 = makeLinearDim(50); // slot 2 = 10 + 40
+    const result = computeDimSpacing(base, [t1, t2], makeStyle(), 'custom', 20);
+    expect(result.has(t1.id)).toBe(false);
+    expect(result.has(t2.id)).toBe(false);
   });
 
   it('angular dims in mixed list are filtered out', () => {

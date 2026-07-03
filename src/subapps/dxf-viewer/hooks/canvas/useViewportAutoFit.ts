@@ -27,6 +27,11 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import type { FloorplanBackgroundForLevelResult } from '../../floorplan-background';
 import { EventBus } from '../../systems/events';
 import { readPersistedViewport } from '../../services/viewport-persistence';
+// ADR-375 Phase B.4 — fit-to-paper AUTO drawing scale. Runs alongside the
+// content fit (not on persisted-viewport restore) so a fresh import auto-frames
+// its annotations at a standard 1:N instead of the oversized fixed 1:100.
+import { computeFitToPaperScale } from '../../systems/dimensions/auto-drawing-scale';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { MIN_VISIBLE_CONTENT_PX } from '../../config/transform-config';
 import {
   resolveAutoFitAction,
@@ -112,10 +117,22 @@ export function useViewportAutoFit({
   const setTransformRef = useRef(setTransform);
   setTransformRef.current = setTransform;
 
+  // ADR-375 Phase B.4 — pick a standard fit-to-paper 1:N from the scene's bounds
+  // (canonical mm) and apply it via the store, unless the user has manually set
+  // the scale this session (`applyAutoDrawingScale` guards that). Bounds are in mm
+  // by construction (ADR-462), matching the paper-mm reference.
+  const autoFitDrawingScale = (): void => {
+    const scene = sceneRef.current;
+    if (!sceneHasEntities(scene) || !scene?.bounds) return;
+    const scale = computeFitToPaperScale(scene.bounds);
+    if (scale != null) useBimRenderSettingsStore.getState().applyAutoDrawingScale(scale);
+  };
+
   // Fit the current content to extents via the calculation SSoT. DXF → canonical
   // EventBus path (combined bounds); background-only → zoomToFit on its bounds.
   const fitCurrentContent = (): void => {
     if (sceneHasEntities(sceneRef.current)) {
+      autoFitDrawingScale();
       EventBus.emit('canvas-fit-to-view', { source: 'auto' });
       return;
     }

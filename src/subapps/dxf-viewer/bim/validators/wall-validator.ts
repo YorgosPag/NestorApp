@@ -59,12 +59,13 @@ export interface WallValidationResult {
 export function validateWallParams(
   params: WallParams,
   sceneUnits: SceneUnits = 'mm',
+  options?: { readonly minLengthMm?: number },
 ): WallValidationResult {
   const hardErrors: string[] = [];
   const codeViolations: string[] = [];
   const s = mmToSceneUnits(sceneUnits);
 
-  validateGeometry(params, hardErrors, s);
+  validateGeometry(params, hardErrors, s, options?.minLengthMm ?? MIN_WALL_LENGTH_MM);
   validateThickness(params, hardErrors, codeViolations);
   validateHeight(params, hardErrors);
   validateDnaConsistency(params, hardErrors);
@@ -81,11 +82,16 @@ export function validateWallParams(
 
 // ─── Internal checks ────────────────────────────────────────────────────────
 
-function validateGeometry(params: WallParams, hardErrors: string[], s: number): void {
+function validateGeometry(
+  params: WallParams,
+  hardErrors: string[],
+  s: number,
+  minLengthMm: number,
+): void {
   const dx = params.end.x - params.start.x;
   const dy = params.end.y - params.start.y;
   const length = Math.hypot(dx, dy);
-  if (length < MIN_WALL_LENGTH_MM * s) {
+  if (length < minLengthMm * s) {
     hardErrors.push('wall.validation.hardErrors.lengthTooShort');
   }
 }

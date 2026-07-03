@@ -30,7 +30,7 @@ export interface SecondaryCapContext {
   readonly selectedCapScene: THREE.Scene;
   readonly hatchCapMesh: THREE.Mesh;
   readonly hatchCapScene: THREE.Scene;
-  positionMesh(mesh: THREE.Mesh, plane: THREE.Plane, size: number): void;
+  positionMesh(mesh: THREE.Mesh, plane: THREE.Plane, size: number, center: THREE.Vector3 | null): void;
 }
 
 export function renderEmphasisCapForPlane(
@@ -42,6 +42,7 @@ export function renderEmphasisCapForPlane(
   otherPlanes: THREE.Plane[],
   currentPlane: THREE.Plane,
   capSize: number,
+  capCenter: THREE.Vector3 | null,
   selectedBimIds: readonly string[],
 ): void {
   ctx.selectedCapMat.clippingPlanes = otherPlanes;
@@ -72,7 +73,7 @@ export function renderEmphasisCapForPlane(
 
   for (const obj of hidden) obj.visible = true;
 
-  ctx.positionMesh(ctx.selectedCapMesh, currentPlane, capSize);
+  ctx.positionMesh(ctx.selectedCapMesh, currentPlane, capSize, capCenter);
   renderer.render(ctx.selectedCapScene, camera);
 }
 
@@ -86,11 +87,12 @@ export function renderHatchOverlaysForPlane(
   otherPlanes: THREE.Plane[],
   currentPlane: THREE.Plane,
   capSize: number,
+  capCenter: THREE.Vector3 | null,
   hatchGroups: Map<SectionHatchKey, THREE.Object3D[]>,
 ): void {
   for (const [key, meshes] of hatchGroups) {
     renderHatchGroupForPlane(
-      ctx, renderer, mainScene, camera, gl, otherPlanes, currentPlane, capSize, key, meshes,
+      ctx, renderer, mainScene, camera, gl, otherPlanes, currentPlane, capSize, capCenter, key, meshes,
     );
   }
 }
@@ -108,6 +110,7 @@ function renderHatchGroupForPlane(
   otherPlanes: THREE.Plane[],
   currentPlane: THREE.Plane,
   capSize: number,
+  capCenter: THREE.Vector3 | null,
   key: SectionHatchKey,
   meshes: THREE.Object3D[],
 ): void {
@@ -143,6 +146,6 @@ function renderHatchGroupForPlane(
   mat.clippingPlanes = otherPlanes;
   setHatchRepeat(key, capSize);
   ctx.hatchCapMesh.material = mat;
-  ctx.positionMesh(ctx.hatchCapMesh, currentPlane, capSize);
+  ctx.positionMesh(ctx.hatchCapMesh, currentPlane, capSize, capCenter);
   renderer.render(ctx.hatchCapScene, camera);
 }

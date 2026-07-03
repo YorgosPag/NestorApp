@@ -14,6 +14,8 @@ import {
   buildMergedWallParams,
   collectMergedOpenings,
   computeMergedGhostAxis,
+  classifyWallJoin,
+  computeWallCornerJoin,
 } from '../wall-merge';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { OpeningEntity } from '../../types/opening-types';
@@ -222,5 +224,81 @@ describe('computeMergedGhostAxis', () => {
     expect(axis).not.toBeNull();
     expect(axis![0].x).toBeCloseTo(0);
     expect(axis![1].x).toBeCloseTo(9000);
+  });
+});
+
+// ── classifyWallJoin (ADR-566 §corner-join) ───────────────────────────────────
+
+describe('classifyWallJoin', () => {
+  test('collinear pair → collinear merge', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 } });
+    const b = makeWall({ id: 'b', start: { x: 3000, y: 0, z: 0 }, end: { x: 5000, y: 0, z: 0 } });
+    expect(classifyWallJoin(a, b)).toEqual({ kind: 'collinear' });
+  });
+
+  test('crossing (perpendicular) pair → corner at axis intersection', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 } });
+    const b = makeWall({ id: 'b', start: { x: 3000, y: -3000, z: 0 }, end: { x: 3000, y: -6000, z: 0 } });
+    const plan = classifyWallJoin(a, b);
+    expect(plan.kind).toBe('corner');
+    if (plan.kind === 'corner') {
+      expect(plan.joinPoint.x).toBeCloseTo(3000);
+      expect(plan.joinPoint.y).toBeCloseTo(0);
+    }
+  });
+
+  test('corner join allows different thickness (walls stay separate)', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 }, thickness: 200 });
+    const b = makeWall({ id: 'b', start: { x: 3000, y: -3000, z: 0 }, end: { x: 3000, y: -6000, z: 0 }, thickness: 350 });
+    expect(classifyWallJoin(a, b).kind).toBe('corner');
+  });
+
+  test('parallel but offset (no shared corner) → blocked parallel-offset', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 } });
+    const b = makeWall({ id: 'b', start: { x: 0, y: 1000, z: 0 }, end: { x: 1000, y: 1000, z: 0 } });
+    expect(classifyWallJoin(a, b)).toEqual({ kind: 'blocked', reason: 'parallel-offset' });
+  });
+
+  test('curved wall → blocked not-straight', () => {
+    const a = makeWall({ id: 'a', kind: 'curved' });
+    const b = makeWall({ id: 'b', start: { x: 3000, y: -3000, z: 0 }, end: { x: 3000, y: -6000, z: 0 } });
+    expect(classifyWallJoin(a, b)).toEqual({ kind: 'blocked', reason: 'not-straight' });
+  });
+});
+
+// ── computeWallCornerJoin ─────────────────────────────────────────────────────
+
+describe('computeWallCornerJoin', () => {
+  test('Giorgio example: extends both nearest endpoints onto the L-corner', () => {
+    // Horizontal 1m wall + vertical wall 3m right / 3m down. Axes meet at (3000, 0).
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 } });
+    const b = makeWall({ id: 'b', start: { x: 3000, y: -3000, z: 0 }, end: { x: 3000, y: -6000, z: 0 } });
+    const res = computeWallCornerJoin(a, b)!;
+    expect(res).not.toBeNull();
+    expect(res.joinPoint.x).toBeCloseTo(3000);
+    expect(res.joinPoint.y).toBeCloseTo(0);
+    // A: nearest endpoint is `end` (1000,0) → moves to corner; start untouched.
+    expect(res.wallAParams.start.x).toBeCloseTo(0);
+    expect(res.wallAParams.end.x).toBeCloseTo(3000);
+    expect(res.wallAParams.end.y).toBeCloseTo(0);
+    // B: nearest endpoint is `start` (3000,-3000) → moves to corner; end untouched.
+    expect(res.wallBParams.start.x).toBeCloseTo(3000);
+    expect(res.wallBParams.start.y).toBeCloseTo(0);
+    expect(res.wallBParams.end.y).toBeCloseTo(-6000);
+  });
+
+  test('clears miters + measurementLength (framing re-derives)', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 }, startMiter: 10, endMiter: 20, measurementLength: 999 } as Partial<WallParams>);
+    const b = makeWall({ id: 'b', start: { x: 3000, y: -3000, z: 0 }, end: { x: 3000, y: -6000, z: 0 } });
+    const res = computeWallCornerJoin(a, b)!;
+    expect(res.wallAParams.startMiter).toBeUndefined();
+    expect(res.wallAParams.endMiter).toBeUndefined();
+    expect(res.wallAParams.measurementLength).toBeUndefined();
+  });
+
+  test('parallel axes → null', () => {
+    const a = makeWall({ id: 'a', start: { x: 0, y: 0, z: 0 }, end: { x: 1000, y: 0, z: 0 } });
+    const b = makeWall({ id: 'b', start: { x: 0, y: 1000, z: 0 }, end: { x: 1000, y: 1000, z: 0 } });
+    expect(computeWallCornerJoin(a, b)).toBeNull();
   });
 });

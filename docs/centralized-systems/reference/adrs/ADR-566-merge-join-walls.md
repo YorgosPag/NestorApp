@@ -42,7 +42,16 @@
 
 **Pure geometry (`wall-merge.ts`):**
 - `canMergeWalls(a, b)` → `{ ok }` ή `{ ok:false, reason }` — straight-only, collinear
-  (παράλληλοι άξονες + perp-distance≈0), ίδιο πάχος.
+  (παράλληλοι άξονες + perp-distance≈0), ίδιο πάχος. *(collinear-only gate — παραμένει.)*
+- **`classifyWallJoin(a, b)` → `WallJoinPlan` (2026-07-03, corner-join):** το superset gate που
+  αποφασίζει ΤΟΝ ΤΥΠΟ ένωσης: `collinear` (→ ένας τοίχος) | `corner` (μη-παράλληλοι άξονες →
+  γωνία L στην τομή, ΔΥΟ τοίχοι) | `blocked` (typed reason). Παράλληλοι-μη-ομοαξονικοί →
+  `parallel-offset` (καμία κοινή γωνία). Corner επιτρέπει **διαφορετικό πάχος** (μένουν 2 τοίχοι).
+- **`computeWallCornerJoin(a, b)` → `{ joinPoint, wallAParams, wallBParams }` (2026-07-03):**
+  `lineIntersection` (infinite axes, reuse `angle-entity-math`) → μετακινεί το ΚΟΝΤΙΝΟΤΕΡΟ άκρο
+  κάθε τοίχου στο σημείο τομής (Revit "Wall Join" / AutoCAD trim-extend to corner = Fillet r=0).
+  Καλύπτει επέκταση (γωνία πέρα από τους τοίχους) ΚΑΙ κόψιμο (γωνία ανάμεσα). Το μακρινό άκρο
+  αμετάβλητο· clear miters + measurementLength (το wall corner framing ξανα-παράγει τη γωνία).
 - `buildMergedWallParams(a, b)` → clone PRIMARY params, άξονας outer-to-outer (προβολή
   και των 4 endpoints στον κοινό άξονα), bevel inheritance από τα outer άκρα, clear
   miters + measurementLength.
@@ -51,8 +60,15 @@
 
 **Dual-flow tool:** ο `useWallMergeTool` διαβάζει το selection στην ενεργοποίηση (ροή Β,
 mirror attach `wasActiveRef`)· αν 2 τοίχοι → άμεση ένωση· αλλιώς picking (ροή Α, mirror
-split). Και οι δύο ροές περνούν από `canMergeWalls` → `WallMergeCommand` → `executeCommand`
-+ `bim:wall-merge-committed` (persistence). **preview ≡ commit**.
+split). Και οι δύο ροές περνούν από `classifyWallJoin`:
+- **collinear** → `WallMergeCommand` → `executeCommand` + `bim:wall-merge-committed` (delete+add,
+  custom persistence).
+- **corner** (2026-07-03) → **2× `UpdateWallParamsCommand`** (a, b) τυλιγμένα σε **`CompositeCommand`**
+  (ένα Ctrl+Z). Καθαρό reuse: το `UpdateWallParamsCommand` κάνει ΗΔΗ geometry recompute + hosted-opening
+  cascade + auto-family-type reflow· η persistence ρέει από το **standard debounced wall auto-save**
+  (`useWallPersistence`, όπως grip/move) → ΚΑΝΕΝΑ custom event/command χρειάστηκε.
+
+**preview ≡ commit**.
 
 **Highlight/preview:** ΔΕΝ φτιάχτηκε νέος canvas renderer — ο πρώτος επιλεγμένος τοίχος
 χρησιμοποιεί το standard selection highlight, ο hover candidate το HoverStore (ήδη
@@ -62,13 +78,17 @@ renderάρονται). Αποφεύγει churn στα ADR-040 render αρχεί
 
 | Περίπτωση | Απόφαση |
 |-----------|---------|
-| Διαφορετικό πάχος | **ΜΠΛΟΚ** (`different-thickness`). Κατηγορία μπορεί να διαφέρει → primary wins. |
-| Κενό στον άξονα | **Γεφυρώνεται** (merged = outer-to-outer· καλύπτει επαφή + επικάλυψη + κενό). |
-| >2 τοίχοι | **Ακριβώς 2** (καθρέφτης split 1→2). Το geometry είναι γενικό → chain-merge = μελλοντική φάση. |
+| Μη-ομοαξονικοί (γωνία/κάθετα/υπό κλίση) | **CORNER JOIN** (2026-07-03, εντολή Giorgio): προέκταση/κόψιμο και των δύο αξόνων μέχρι την τομή → γωνία L· μένουν 2 τοίχοι. |
+| Διαφορετικό πάχος | Collinear → **ΜΠΛΟΚ** (`different-thickness`)· Corner → **ΕΠΙΤΡΕΠΕΤΑΙ** (2 ξεχωριστοί τοίχοι). Κατηγορία collinear → primary wins. |
+| Παράλληλοι αλλά με offset | **ΜΠΛΟΚ** (`parallel-offset`) — δεν είναι ομοαξονικοί ΚΑΙ δεν τέμνονται (καμία γωνία). |
+| Κενό στον άξονα (collinear) | **Γεφυρώνεται** (merged = outer-to-outer· καλύπτει επαφή + επικάλυψη + κενό). |
+| Ποιο άκρο μετακινείται (corner) | Το **κοντινότερο στην τομή** (Revit trim/extend)· το μακρινό αμετάβλητο. |
+| >2 τοίχοι | **Ακριβώς 2**. Chain-merge/multi-corner = μελλοντική φάση. |
 | Curved / polyline | Deferred (straight-only, όπως split Phase 1). |
 
-> ⚠️ Τα defaults τέθηκαν αυτόνομα (ο χρήστης έλειπε τη στιγμή της ερώτησης). Είναι όλα
-> ισολιμένα στο `canMergeWalls` / `buildMergedWallParams` — αλλάζουν με ελάχιστο ρίσκο.
+> ⚠️ Τα collinear defaults τέθηκαν αυτόνομα (2026-07-03 αρχικά)· το **corner-join ζητήθηκε ρητά
+> από τον Giorgio** με συγκεκριμένο παράδειγμα (οριζόντιος 1m + κάθετος 3m κάτω-δεξιά → γωνία στο
+> σημείο τομής αξόνων). Όλα ισολιμένα σε `classifyWallJoin` / `computeWallCornerJoin`.
 
 ## 5. Wiring
 
@@ -85,8 +105,10 @@ renderάρονται). Αποφεύγει churn στα ADR-040 render αρχεί
 
 ## 6. Tests
 
-- `bim/walls/__tests__/wall-merge.test.ts` — 17 tests (canMerge reasons, union/gap/overlap/reversed,
-  bevel inheritance, primary-wins, opening re-host, ghost axis).
+- `bim/walls/__tests__/wall-merge.test.ts` — 27 tests (canMerge reasons, union/gap/overlap/reversed,
+  bevel inheritance, primary-wins, opening re-host, ghost axis, **+8 corner-join 2026-07-03**:
+  `classifyWallJoin` collinear/corner/parallel-offset/not-straight/diff-thickness, `computeWallCornerJoin`
+  Giorgio-example/miter-clear/parallel-null).
 - `core/commands/entity-commands/__tests__/WallMergeCommand.test.ts` — 5 tests (execute/undo/redo/no-op/affected ids).
 
 ## 7. Verification (browser)
@@ -117,3 +139,10 @@ renderάρονται). Αποφεύγει churn στα ADR-040 render αρχεί
   (dual-flow) + `useWallMergePersistence` + wiring + i18n. 22 jest πράσινα.
 - **2026-07-03 (follow-up)** — highlight fixes (entityPickingActive + hovered-id pick) + dual
   contextual tab για ομοιογενή πολλαπλή επιλογή (composite trigger, §8).
+- **2026-07-03 (CORNER JOIN, εντολή Giorgio)** — η ΙΔΙΑ εντολή «Ένωση τοίχων» ενώνει πλέον ΚΑΙ
+  μη-ομοαξονικούς τοίχους (κάθετα/γωνία/υπό κλίση): προέκταση/κόψιμο και των δύο αξόνων μέχρι την
+  τομή → γωνία L, μένουν 2 τοίχοι. NEW `classifyWallJoin` + `computeWallCornerJoin` (`wall-merge.ts`,
+  reuse `lineIntersection`). Tool branch: corner → 2× `UpdateWallParamsCommand` σε `CompositeCommand`
+  (opening cascade + geometry recompute + auto-save = standard reuse, μηδέν custom event). NEW block
+  reason `parallel-offset` + i18n (`wallMerge.blocked.parallelOffset`, `wallMerge.joinedCorner`).
+  27 jest πράσινα. 🔴 browser-verify (γωνία/κάθετα/υπό-κλίση· 1 Ctrl+Z· openings· auto-save reload) + commit.

@@ -36,6 +36,7 @@ export function dispatchBimToolClick(
     columnTool,
     foundationTool,
     beamTool,
+    beamBetweenMembersTool,
     mepUnderfloorTool,
     thermalSpaceTool,
     spaceSeparatorTool,
@@ -179,6 +180,12 @@ export function dispatchBimToolClick(
   // must NOT shift the pick), mirroring 'wall-on-entity'.
   if (activeTool === 'beam-from-wall' && beamTool?.isActive) {
     beamTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.915: ADR-569 «Δοκάρι ανάμεσα σε μέλη» — κλικ σε υπάρχον μέλος (κολόνα/τοιχίο).
+  // RAW worldPoint (hit-tests existing geometry — ORTHO/POLAR must NOT shift the pick).
+  if (activeTool === 'beam-between-members' && beamBetweenMembersTool?.isActive) {
+    beamBetweenMembersTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /

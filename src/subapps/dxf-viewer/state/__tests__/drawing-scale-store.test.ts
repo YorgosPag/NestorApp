@@ -71,3 +71,35 @@ describe('drawingScaleStore', () => {
     expect(scale).toBe(500);
   });
 });
+
+// ADR-375 Phase B.4 — fit-to-paper auto-fit + manual-override guard.
+describe('applyAutoDrawingScale (Phase B.4)', () => {
+  it('applies the auto scale when the user has not set one manually', () => {
+    act(() => useDrawingScaleStore.getState().applyAutoDrawingScale(50));
+    expect(useDrawingScaleStore.getState().drawingScale).toBe(50);
+    // Auto must NOT lock further auto-fits.
+    expect(useDrawingScaleStore.getState().drawingScaleUserSet).toBe(false);
+  });
+
+  it('is ignored once the user set the scale manually', () => {
+    act(() => useDrawingScaleStore.getState().setDrawingScale(20)); // manual lock
+    act(() => useDrawingScaleStore.getState().applyAutoDrawingScale(200));
+    expect(useDrawingScaleStore.getState().drawingScale).toBe(20); // unchanged
+  });
+
+  it('force overrides the manual lock (explicit «Fit» button)', () => {
+    act(() => useDrawingScaleStore.getState().setDrawingScale(20)); // manual lock
+    act(() => useDrawingScaleStore.getState().applyAutoDrawingScale(200, { force: true }));
+    expect(useDrawingScaleStore.getState().drawingScale).toBe(200);
+    // Force does not re-lock — auto stays live afterwards.
+    act(() => useDrawingScaleStore.getState().applyAutoDrawingScale(50));
+    expect(useDrawingScaleStore.getState().drawingScale).toBe(50);
+  });
+
+  it('resetDrawingScale clears the manual lock', () => {
+    act(() => useDrawingScaleStore.getState().setDrawingScale(20)); // manual lock
+    act(() => useDrawingScaleStore.getState().resetDrawingScale());
+    act(() => useDrawingScaleStore.getState().applyAutoDrawingScale(200));
+    expect(useDrawingScaleStore.getState().drawingScale).toBe(200); // auto runs again
+  });
+});

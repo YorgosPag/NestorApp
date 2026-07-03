@@ -35,8 +35,12 @@ import {
 } from '../../hooks/drawing/beam-completion';
 
 /**
- * Διάλεξε τον ΠΛΗΣΙΕΣΤΕΡΟ τοίχο κάτω από το κλικ (hit-test στον άξονα start→end),
- * εντός `tolerance` (world units). Επιστρέφει `null` αν δεν βρεθεί τοίχος.
+ * Διάλεξε τον ΠΛΗΣΙΕΣΤΕΡΟ τοίχο κάτω από το κλικ. Revit/AutoCAD-style: κλικ
+ * οπουδήποτε στο **σώμα** του τοίχου τον επιλέγει — το threshold είναι
+ * `πάχος/2 + tolerance` (όχι σκέτο tolerance από τον αόρατο άξονα). Το μισό
+ * πάχος είναι πραγματικό μέγεθος (σωστό σε κάθε zoom by construction)· το
+ * `tolerance` μένει μικρό grace margin **πέρα από την παρειά** (world units).
+ * Επιστρέφει `null` αν το κλικ πέφτει εκτός σώματος (+margin) κάθε τοίχου.
  */
 export function pickWallEntityAt(
   point: Readonly<Point2D>,
@@ -44,7 +48,7 @@ export function pickWallEntityAt(
   tolerance: number,
 ): WallEntity | null {
   let best: WallEntity | null = null;
-  let bestDist = tolerance;
+  let bestDist = Infinity;
   for (const e of entities) {
     if (!isWallEntity(e)) continue;
     const w = e as WallEntity;
@@ -53,7 +57,9 @@ export function pickWallEntityAt(
       { x: w.params.start.x, y: w.params.start.y },
       { x: w.params.end.x, y: w.params.end.y },
     );
-    if (dist <= bestDist) {
+    // Κλικ μέσα στο σώμα (dist ≤ πάχος/2) → επιλογή· nearest-axis-wins σε επικάλυψη.
+    const threshold = (w.params.thickness ?? 0) / 2 + tolerance;
+    if (dist <= threshold && dist < bestDist) {
       bestDist = dist;
       best = w;
     }

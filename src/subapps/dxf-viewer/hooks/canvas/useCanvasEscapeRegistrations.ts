@@ -121,6 +121,7 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
   useEscapeHandler(buildModifyHandler('wall-split', p.handleWallSplitEscape, () => p.wallSplitIsActive));
   useEscapeHandler(buildModifyHandler('wall-attach', p.handleWallAttachEscape, () => p.wallAttachIsActive));
   useEscapeHandler(buildModifyHandler('wall-merge', p.handleWallMergeEscape, () => p.wallMergeIsActive));
+  useEscapeHandler(buildModifyHandler('wall-gap-opening', p.handleWallGapOpeningEscape, () => p.wallGapOpeningIsActive));
   useEscapeHandler(buildModifyHandler('bim-copy', p.handleBimCopyEscape, () => p.bimCopyIsActive));
   useEscapeHandler(buildModifyHandler('rotation', p.handleRotationEscape, () => p.rotationIsActive));
 

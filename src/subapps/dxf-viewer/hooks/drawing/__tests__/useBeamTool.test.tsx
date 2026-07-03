@@ -139,6 +139,39 @@ describe('useBeamTool', () => {
     expect(onBeamCreated).not.toHaveBeenCalled();
   });
 
+  // Regression: το wiring (`useSpecialTools`) καλεί activate() ΚΑΙ setPlacementMode('from-wall')
+  // στο ΙΔΙΟ commit (useToolLifecycle πριν το placement effect). Με stale-ref setPlacementMode η
+  // κατάσταση επανερχόταν σε idle → isActive false → το κλικ ΔΕΝ έφτανε στο commit → κανένα δοκάρι.
+  it('from-wall: activate() + setPlacementMode in one commit stays active (race regression)', () => {
+    const { result } = renderHook(() => useBeamTool({ onBeamCreated: jest.fn() }));
+    act(() => {
+      result.current.activate();
+      result.current.setPlacementMode('from-wall');
+    });
+    expect(result.current.state.placementMode).toBe('from-wall');
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(result.current.isActive).toBe(true);
+  });
+
+  it('from-wall: single click on a wall body builds a beam on its axis', () => {
+    const onBeamCreated = jest.fn();
+    const wall = wallFixture('w-2d');
+    const getSceneEntities = (): readonly Entity[] => [wall as unknown as Entity];
+    const { result } = renderHook(() => useBeamTool({ onBeamCreated, getSceneEntities }));
+    act(() => {
+      result.current.activate();
+      result.current.setPlacementMode('from-wall');
+    });
+    // Κλικ στο ΣΩΜΑ του τοίχου (y=50, εκτός άξονα αλλά εντός πάχους 300/2=150).
+    let consumed = false;
+    act(() => { consumed = result.current.onCanvasClick({ x: 2000, y: 50 }); });
+    expect(consumed).toBe(true);
+    expect(onBeamCreated).toHaveBeenCalledTimes(1);
+    const entity = onBeamCreated.mock.calls[0][0] as BeamEntity;
+    expect(entity.type).toBe('beam');
+    expect(entity.params.width).toBe(300); // = πάχος τοίχου
+  });
+
   it('deactivate returns to idle', () => {
     const { result } = renderHook(() => useBeamTool({ onBeamCreated: jest.fn() }));
     act(() => result.current.activate());

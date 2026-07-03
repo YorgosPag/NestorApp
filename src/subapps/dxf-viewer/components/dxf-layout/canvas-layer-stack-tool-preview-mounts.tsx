@@ -17,6 +17,10 @@ import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
 import { useEntityBodyDragPreview } from '../../hooks/tools/useEntityBodyDragPreview';
+import { useWallSplitKnifePreview } from '../../hooks/tools/useWallSplitKnifePreview';
+import { useWallSplitFirstPoint } from '../../systems/wall-split/WallSplitStore';
+import { useBeamBetweenMembersPreview } from '../../hooks/tools/useBeamBetweenMembersPreview';
+import { useBeamBetweenAnchor } from '../../systems/beam-between-members/BeamBetweenMembersStore';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -132,5 +136,48 @@ export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
   props: GripDragPreviewMountProps,
 ) {
   useGripGhostPreview(props);
+  return null;
+});
+
+// ── Wall-split knife-line preview (ADR-363 Phase 5.6) ─────────────────────────
+
+export interface WallSplitKnifePreviewMountProps {
+  levelManager: Parameters<typeof useWallSplitKnifePreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Store-driven: self-subscribes to the knife first point (WallSplitStore) — the
+ * orchestrator stays inert (ADR-040). The live cursor + RAF live in the harness.
+ */
+export const WallSplitKnifePreviewMount = React.memo(function WallSplitKnifePreviewMount(
+  props: WallSplitKnifePreviewMountProps,
+) {
+  const firstPoint = useWallSplitFirstPoint();
+  useWallSplitKnifePreview({ ...props, firstPoint });
+  return null;
+});
+
+// ── Beam-between-members preview (ADR-569) ────────────────────────────────────
+
+export interface BeamBetweenMembersPreviewMountProps {
+  levelManager: Parameters<typeof useBeamBetweenMembersPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Store-driven: self-subscribes στο anchor-μέλος (BeamBetweenMembersStore) — ο
+ * orchestrator μένει inert (ADR-040). Ζωγραφίζει το δοκάρι-φάντασμα από την παρειά του
+ * anchor προς το μέλος/κέρσορα. Live cursor + RAF ζουν στο harness.
+ */
+export const BeamBetweenMembersPreviewMount = React.memo(function BeamBetweenMembersPreviewMount(
+  props: BeamBetweenMembersPreviewMountProps,
+) {
+  const anchor = useBeamBetweenAnchor();
+  useBeamBetweenMembersPreview({ ...props, anchor });
   return null;
 });

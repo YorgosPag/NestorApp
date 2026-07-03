@@ -107,6 +107,9 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     currentLevelId: null,
     lastLocalMutationAt: 0,
     bimVisibilitySnapshot: null,
+    // ADR-375 Phase B.4 — session flag: user hasn't touched the scale yet, so the
+    // fit-to-paper auto-fit is free to set it on the first content / re-import.
+    drawingScaleUserSet: false,
 
     loadForLevel(levelId, settings) {
       // ADR-445 — one-time colour-refresh migration: old levels froze the FULL
@@ -147,15 +150,29 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
 
     setDrawingScale(scale) {
       const clamped = clampScale(scale);
-      set({ drawingScale: clamped, lastLocalMutationAt: Date.now() });
+      // ADR-375 Phase B.4 — a manual set locks out the auto fit-to-paper for the session.
+      set({ drawingScale: clamped, drawingScaleUserSet: true, lastLocalMutationAt: Date.now() });
       const { currentLevelId } = get();
+      if (currentLevelId) debounceWrite(currentLevelId, buildRaw({ ...get(), drawingScale: clamped }));
+    },
+
+    applyAutoDrawingScale(scale, opts) {
+      const { drawingScaleUserSet, currentLevelId } = get();
+      // Respect a manual override unless the explicit «Fit» button forces it.
+      if (drawingScaleUserSet && !opts?.force) return;
+      const clamped = clampScale(scale);
+      // Clears the manual lock: an auto pass (incl. the «Fit» button) leaves the
+      // scale in AUTO mode, so later loads/re-imports keep auto-fitting.
+      set({ drawingScale: clamped, drawingScaleUserSet: false, lastLocalMutationAt: Date.now() });
       if (currentLevelId) debounceWrite(currentLevelId, buildRaw({ ...get(), drawingScale: clamped }));
     },
 
     resetDrawingScale() {
       const { currentLevelId } = get();
       const clamped = clampScale(DEFAULT_DRAWING_SCALE);
-      set({ drawingScale: clamped, lastLocalMutationAt: Date.now() });
+      // ADR-375 Phase B.4 — reset = clean slate: clear the manual lock so the
+      // fit-to-paper auto-fit is free to run again on the next content/re-import.
+      set({ drawingScale: clamped, drawingScaleUserSet: false, lastLocalMutationAt: Date.now() });
       if (currentLevelId) debounceWrite(currentLevelId, buildRaw({ ...get(), drawingScale: clamped }));
     },
 

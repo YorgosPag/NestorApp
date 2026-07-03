@@ -17,8 +17,8 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import { buildWallForLine, buildWallsForClosed } from '../../bim/walls/wall-from-entity';
-import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wall-in-region';
-import { extendFillingWallToNeighbors } from '../../bim/walls/wall-region-autojoin';
+import type { DetectedRectangle } from '../../bim/walls/wall-in-region';
+import { computeFillingWalls } from '../../bim/walls/filling-walls-compute';
 import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { EventBus } from '../../systems/events/EventBus';
 import { alignmentPointForWallJustification, buildAnchoredWallParams, buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, resolveWallThicknessMm, type SceneUnits } from './wall-completion';
@@ -322,22 +322,19 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
   const buildFillingWalls = useCallback(
     (s: WallToolState, rects: readonly DetectedRectangle[]): number => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      // ADR-363 Phase 1K — Revit "Allow Join": extend each filling wall's endpoints
-      // to coincident neighbour centrelines so they connect cleanly instead of
-      // butting at the bounding line (= the neighbour's face) and being trimmed back.
-      // Neighbours = existing scene walls + siblings already built in THIS batch.
-      const sceneWalls = (getSceneEntities?.() ?? []).filter(isWallEntity);
-      const batch: WallEntity[] = [];
-      let built = 0;
-      for (const rect of rects) {
-        const raw = buildWallFillingRect(rect, s.overrides, sceneUnits, currentLevelId);
-        if (!raw) continue;
-        const entity = extendFillingWallToNeighbors(raw, [...sceneWalls, ...batch], sceneUnits);
-        batch.push(entity);
-        onWallCreated?.(entity);
-        built++;
-      }
-      return built;
+      // ADR-419 v2.4 «μία διαδρομή δημιουργίας» — build + validate + Revit auto-join +
+      // ADR-567 no-overlap ζουν στο ΕΝΑ SSoT `computeFillingWalls`, ΤΟ ΙΔΙΟ που τρέχει το
+      // preview (`resolvePerimeterPreview`) → ό,τι φωτίστηκε πράσινο = ΑΚΡΙΒΩΣ οι τοίχοι που
+      // χτίζονται. Το `onWallCreated` (addWallToScene) κάνει τον authoritative miter+persist.
+      const { walls } = computeFillingWalls(
+        rects,
+        s.overrides,
+        sceneUnits,
+        currentLevelId,
+        getSceneEntities?.() ?? [],
+      );
+      for (const entity of walls) onWallCreated?.(entity);
+      return walls.length;
     },
     [currentLevelId, onWallCreated, getSceneUnits, getSceneEntities],
   );

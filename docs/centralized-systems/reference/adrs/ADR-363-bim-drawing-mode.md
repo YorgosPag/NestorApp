@@ -2596,9 +2596,21 @@ Closes the two open items from the Phase 5.5h deferred list: H-beam visual varia
 
 ---
 
-### Phase 5.6 — Wall Split Tool *(✅ IMPLEMENTED 2026-05-19)*
+### Phase 5.6 — Wall Split Tool *(✅ IMPLEMENTED 2026-05-19 · 🔪 KNIFE-LINE mode 2026-07-03)*
 
-**Pattern**: Revit "Split Element" — dedicated tool mode (`wall-split`), continuous pick loop (multi-split, stays active until ESC), hover preview με perpendicular indicator line across wall at projected split point.
+**Pattern (2026-07-03)**: AutoCAD/Revit **"split by line" knife** — dedicated tool mode
+(`wall-split`), 2-click stroke that cuts **every** wall the segment crosses, continuous loop
+(stays active until ESC). Click 1 sets the first knife point; a live rubber-band segment
+`[p1 → snapped-cursor]` follows the cursor and highlights (bright perpendicular indicator) each
+wall that would be cut; click 2 splits them all at their intersection points. All cuts of one
+stroke are wrapped in a single `CompositeCommand` (one Ctrl+Z restores them together).
+
+> **Superseded**: the original 2026-05-19 design was a **single-click** split (click a wall →
+> split at the projected point) with a `WallSplitStore` hover-indicator that — per the code —
+> **was never wired to any renderer** (the `useWallSplitPreviewDraw` micro-leaf claimed below in
+> the 2026-05-19 changelog was aspirational and never landed). The knife-line rework replaces the
+> click FSM, repurposes `WallSplitStore` to hold the knife first point, and ships the **first
+> actually-rendered** preview via the shared `useCanvasGhostPreview` harness.
 
 **Architecture decision**: `useWallSplitTool` τοποθετείται σε `hooks/tools/` (ΟΧΙ `hooks/drawing/`) και εισάγεται μέσω `useModifyTools` — διότι είναι destructive editing operation που χρειάζεται `executeCommand` + undo/redo. Creation tools (wall, opening, slab) πηγαίνουν σε `useSpecialTools`.
 
@@ -2608,14 +2620,14 @@ Closes the two open items from the Phase 5.5h deferred list: H-beam visual varia
   - `computeSplitOffset(wall, splitPoint): number | null` — projects cursor onto wall axis via `projectPointOnWallAxis()` SSoT, clamps to `[MIN_SEGMENT_MM=100, totalLen-100]`, returns `null` για curved/polyline/degenerate walls.
   - `computeSplitWallParams(wall, splitOffset): { wall1Params, wall2Params }` — interpolates midpoint on axis, inherits bevels (wall1: `startBevel`; wall2: `endBevel`), clears `measurementLength`.
   - `redistributeOpenings(hostedOpeningIds, openingsByIdFn, splitOffset, wall1Id, wall2Id): RedistributeResult` — center-based assignment: `center > splitOffset` → wall2 (offset -= splitOffset, clamped to 0); else → wall1. Returns `wall1OpeningIds`, `wall2OpeningIds`, `openingUpdates`.
-  - `computeSplitIndicatorLine(wall, splitPoint): [Point2D, Point2D]` — perpendicular at `1.5 × half-thickness` (REACH_FACTOR=1.5).
-  - `OpeningUpdate { openingId, previousParams, nextParams }` exported type.
+  - `computeSplitIndicatorLine(wall, splitPoint): [Point2D, Point2D]` — perpendicular at `1.5 × half-thickness` (REACH_FACTOR=1.5). Reused by the knife preview to mark each cut.
+  - `wallsCrossedBySegment(walls, p1, p2): WallSegmentCrossing[]` *(2026-07-03)* — every wall whose **axis polyline** is crossed by the knife segment `[p1,p2]` (clamped `segmentIntersection` SSoT from `GeometryUtils`). One crossing per wall (first along `p1→p2`; a wall crossed twice cuts once). Non-straight walls reported but rejected downstream by `computeSplitOffset`.
+  - `OpeningUpdate { openingId, previousParams, nextParams }` + `WallSegmentCrossing { wall, intersectionPoint }` exported types.
 
-- `src/subapps/dxf-viewer/systems/wall-split/WallSplitStore.ts` — Module-level store (ADR-040 pattern, mirrors `TrimToolStore`/`WallPreviewStore`):
-  - State: `WallSplitHoverState { hoveredWallId: string|null, splitPoint: Point2D|null, splitLine: [Point2D,Point2D]|null }`.
-  - `WallSplitStore.set(next)` — equality guard on `hoveredWallId` + `splitPoint` coords, deep-copies on change.
-  - `WallSplitStore.reset()`, `.get()`, `.subscribe()`.
-  - `useWallSplitPreview()` hook via `useSyncExternalStore`.
+- `src/subapps/dxf-viewer/systems/wall-split/WallSplitStore.ts` — Module-level store (ADR-040 pattern, mirrors `ZoomWindowStore`/`LassoStore`). **Repurposed 2026-07-03** from hover-indicator to knife first point:
+  - State: `WallSplitKnifeState { firstPoint: Point2D|null }`.
+  - `WallSplitStore.setFirstPoint(p)` (coord-equality guard), `.reset()`, `.get()`, `.subscribe()` + `getSnapshot`/`getServerSnapshot`.
+  - `useWallSplitFirstPoint()` hook via `useSyncExternalStore` — consumed by `WallSplitKnifePreviewMount`.
 
 - `src/subapps/dxf-viewer/core/commands/entity-commands/WallSplitCommand.ts` — ICommand implementation:
   - `execute()`: `removeEntity(original.id)` → `addEntity(wall1)` → `addEntity(wall2)` → loop `openingUpdates` → `applyOpeningPatch(nextParams)`.
@@ -2624,27 +2636,29 @@ Closes the two open items from the Phase 5.5h deferred list: H-beam visual varia
   - `canMergeWith()` → `false` (no drag merge).
   - `getAffectedEntityIds()`: `originalWall.id + wall1.id + wall2.id + all opening IDs`.
 
-- `src/subapps/dxf-viewer/hooks/tools/useWallSplitTool.ts` — Editing tool hook:
-  - Props: `{ activeTool, levelManager, executeCommand, transformScale, onToolChange }`.
-  - Return: `{ isActive, handleWallSplitClick, handleWallSplitMouseMove, handleWallSplitEscape }`.
-  - `findWallAtPoint(worldPoint)`: iterates `isWallEntity` walls, calls `projectPointOnWallAxis()` + `calculateDistance()` vs `TOLERANCE_CONFIG.SNAP_DEFAULT / transformScaleRef.current`.
-  - `handleWallSplitMouseMove`: finds wall, projects cursor, calls `computeSplitIndicatorLine`, updates `WallSplitStore`.
-  - `useEffect` subscribes to `subscribeToImmediateWorldPosition` when `isActive` (resets store on deactivate).
-  - `handleWallSplitClick`: getSceneManager → `findWallAtPoint` → `computeSplitOffset` (null → return) → `computeSplitWallParams` → `generateWallId()×2` → `computeWallGeometry` for wall1+wall2 → `redistributeOpenings` → `new WallSplitCommand` → `executeCommand(cmd)`.
-  - `handleWallSplitEscape`: resets `WallSplitStore`, calls `onToolChange?.('select')`.
+- `src/subapps/dxf-viewer/hooks/tools/useWallSplitTool.ts` — Editing tool hook *(knife FSM, 2026-07-03)*:
+  - Props: `{ activeTool, levelManager, executeCommand, onToolChange }` (no `transformScale` — no per-wall hit-test any more).
+  - Return: `{ isActive, handleWallSplitClick, handleWallSplitEscape }`.
+  - `firstPointRef` FSM: click 1 → set ref + `WallSplitStore.setFirstPoint` + hint `wallSplit.pickSecond`. Click 2 → `wallsCrossedBySegment(walls, p1, p2)` → per crossing `buildWallSplitCommand` (module fn: `computeSplitOffset`→null-skip → `computeSplitWallParams` → `generateWallId()×2` → `computeWallGeometry` → `redistributeOpenings` → `new WallSplitCommand`) → wrap in **`CompositeCommand`** → `executeCommand` → emit `bim:wall-split-committed` per wall → `toast wallSplit.cut {count}` → reset + loop.
+  - No crossings → `toast wallSplit.noCuts`, reset, loop.
+  - `useEffect([isActive])`: set/clear `toolHintOverrideStore` (`wallSplit.pickFirst`) + reset knife on (de)activate.
+  - `handleWallSplitEscape`: reset knife + clear hint + `onToolChange?.('select')`.
 
-- `src/subapps/dxf-viewer/bim/walls/__tests__/wall-split.test.ts` — 21 test cases:
-  - `computeSplitOffset`: 7 cases (midpoint, clamp-start, clamp-end, curved→null, polyline→null, degenerate→null, off-axis projection).
-  - `computeSplitWallParams`: 5 cases (endpoints, startBevel inheritance, endBevel inheritance, property preservation, measurementLength cleared).
-  - `redistributeOpenings`: 6 cases (wall1 assignment, wall2 + offset adjust, straddle→wall1, missing→skip, offset≥0, previousParams for undo).
-  - `computeSplitIndicatorLine`: 3 cases (perpendicular endpoints, length=thickness×REACH_FACTOR, degenerate→zero-length pair).
+- `src/subapps/dxf-viewer/hooks/tools/useWallSplitKnifePreview.ts` *(NEW 2026-07-03)* — live preview via shared `useCanvasGhostPreview` harness (`useImmediateSnap: true` → preview ≡ commit). Draw delegate: dashed knife segment `#FF4444`, first-point `×` marker `#FFD700`, and a bright `#00E5FF` `computeSplitIndicatorLine` across every crossing where `computeSplitOffset !== null`. Zero React state on the move path.
+
+- `src/subapps/dxf-viewer/bim/walls/__tests__/wall-split.test.ts` — 26 test cases (5 new):
+  - `computeSplitOffset` (7), `computeSplitWallParams` (5), `redistributeOpenings` (6), `computeSplitIndicatorLine` (3).
+  - `wallsCrossedBySegment` (5): vertical knife → 1 crossing at intersection, miss → none, extension-only → none, one stroke crosses 2 walls, missing geometry → skipped.
 
 **Files modified:**
 
 - `src/subapps/dxf-viewer/ui/toolbar/types.ts` — `DxfTool` union += `'wall-split'`.
 - `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts` — entry: `{ id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }`.
 - `src/subapps/dxf-viewer/core/commands/entity-commands/index.ts` — re-exports `WallSplitCommand` + `WallSplitCommandParams`.
-- `src/subapps/dxf-viewer/hooks/tools/useModifyTools.ts` — imports + instantiates `useWallSplitTool`, exposes `wallSplitTool` in return.
+- `src/subapps/dxf-viewer/hooks/tools/useModifyTools.ts` — imports + instantiates `useWallSplitTool`, exposes `wallSplitTool` in return. *(2026-07-03: dropped `transformScale` prop.)*
+- `src/subapps/dxf-viewer/components/dxf-layout/canvas-layer-stack-tool-preview-mounts.tsx` *(2026-07-03)* — new store-driven `WallSplitKnifePreviewMount` (self-subscribes `useWallSplitFirstPoint`, drives `useWallSplitKnifePreview`).
+- `src/subapps/dxf-viewer/components/dxf-layout/canvas-layer-stack-preview-mounts.tsx` *(2026-07-03)* — mounts `WallSplitKnifePreviewMount` in `PreviewCanvasMounts` (shares `getCanvas`/`getViewportElement`/`transform`/`levelManager`).
+- `src/i18n/locales/{el,en}/dxf-viewer-shell.json` *(2026-07-03)* — `wallSplit.{pickFirst,pickSecond,noCuts,cut}` knife hints/toasts (ICU `count` plural on `cut`).
 - `src/subapps/dxf-viewer/hooks/canvas/canvas-click-types.ts` — `wallSplitIsActive?` + `handleWallSplitClick?` props added.
 - `src/subapps/dxf-viewer/hooks/canvas/useCanvasClickHandler.ts` — PRIORITY 1.61 branch after extend (1.60).
 - `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` — wires `wallSplitTool.isActive` + `handleWallSplitClick` → click handler; `handleWallSplitEscape` + `wallSplitIsActive` → keyboard shortcuts.
@@ -2672,7 +2686,7 @@ wall2: startBevel = undefined (clean cut),              endBevel = original.endB
 ```
 
 **Phase 5.6 Ribbon + Context Menu *(✅ IMPLEMENTED 2026-05-19)*:**
-- [x] Visual renderer — `useWallSplitPreviewDraw` micro-leaf (ADR-040 compliant, mirrors TrimPreviewMount). Dashed `#FFD24A` perpendicular line + split-point circle. Mounted in `canvas-layer-stack-leaves.tsx → PreviewCanvasMounts`.
+- [x] Visual renderer — **shipped 2026-07-03** as `useWallSplitKnifePreview` (via shared `useCanvasGhostPreview` harness), NOT the `useWallSplitPreviewDraw` micro-leaf named here on 2026-05-19 (that never landed — the single-click design had no rendered preview). See the knife-line rework above.
 - [x] Ribbon button "Χωρισμός" in `contextual-wall-tab.ts` wall-actions panel (`commandKey: 'wall-split'` → `onToolChange('wall-split')`). Icon: `bim-wall-split` (Scissors). Appears whenever any wall is selected (contextual tab trigger).
 - [x] Context menu entry "Χωρισμός Τοίχου" in `EntityContextMenu` — `canSplit` prop computed via `isWallEntity` guard on `currentScene.entities` (pure derivation, zero subscription). `SplitWallIcon` added to `MenuIcons.tsx`.
 
@@ -3323,6 +3337,7 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-07-03 | **§5.7 «Δοκάρι από τοίχο» — FIX: το εργαλείο δεν παρήγαγε δοκάρι (2 root causes).** Σύμπτωμα (Giorgio): «Δοκάρι από τοίχο» ενεργό → hover σε τοίχο μεταξύ 2 κολόνων **φωτίζει** (generic hover), αλλά **κλικ → κανένα δοκάρι**. Full pipeline trace (ribbon→activeTool→useSpecialTools→dispatch→FSM→commit→pick): το wiring άθικτο· 2 bugs. **(1) ΚΥΡΙΟ — activation race (isActive=false):** στο `useSpecialTools` το `useToolLifecycle(isBeamTool, activate,…)` δηλώνεται ΠΡΙΝ το placementMode effect → στο ΙΔΙΟ commit τρέχει `activate()` (setState phase 'awaitingStart') ΚΑΙ ΜΕΤΑ `setPlacementMode('from-wall')`. Το `setPlacementMode` διάβαζε **stale `stateRef.current`** (ακόμα phase 'idle') → `newPhase='idle'` → το batched setState επανέφερε **phase 'idle' → `isActive` false** → το dispatch (`canvas-click-bim-dispatch.ts:180 beamTool?.isActive`) απέτυχε → το κλικ έπεφτε στο selection (γι' αυτό ο τοίχος «φωτιζόταν»). Το freehand 'beam' δούλευε γιατί `setPlacementMode('freehand')`=no-op· μόνο το 'from-wall' πυροδοτούσε το race. **Foundation-strip-from-wall ΔΕΝ είχε το bug** — τα setKind/setPlacementMode του ήταν ΗΔΗ functional updaters (γι' αυτό «δούλευε»). **Fix:** `useBeamTool` setPlacementMode/setKind/reset → **functional `setState((prev)=>…)`** (διαβάζουν την post-activate pending κατάσταση), ευθυγράμμιση με το working foundation SSoT. **(2) pick tolerance:** `commitFromWall` (`use-beam-commit.ts:158`) περνούσε `HIT_TEST_FALLBACK=4` (**PIXELS**) ως world-unit threshold στο `pickWallEntityAt`, που το σύγκρινε με απόσταση από τον **άξονα** → κλικ στη μέση τοίχου 250mm (~125mm off-axis) ≫ 4 → null. **Fix:** `pickWallEntityAt` threshold=**`πάχος/2 + tolerance`** (Revit/AutoCAD body-hit, zoom-correct)· κοινό SSoT → ωφελεί & foundation. Σημασιολογία αμετάβλητη (option Α — Giorgio «όσο ο τοίχος», start→end, width=πάχος, auto-attach ADR-401 D). **Files: 3 MOD** (`useBeamTool.ts`, `beam-from-wall.ts`, +tests `useBeamTool.test.tsx`/`beam-from-wall.test.ts`) + ADR. Wiring/dispatch/builder/3D άθικτα. **Tests: 28/28 GREEN** (beam+foundation+3D-pick· 2 νέα race-regression [activate+setPlacementMode σε 1 commit → isActive true, from-wall single-click→beam] + 2 νέα body-hit). tsc SKIP (N.17). CHECK 6B/6D εκτός (hooks/pure bridge, όχι canvas renderer). ✅ Google-level: YES — root-cause σε 2 σημεία, functional-updater consistency με foundation, μηδέν νέο builder/geometry, big-player body-hit, μηδέν regression. 🔴 browser-verify (Δομικά → «Δοκάρι από τοίχο» → κλικ στη μέση τοίχου μεταξύ 2 στηριγμάτων → δοκάρι 2D+3D, τοίχος κονταίνει) + commit. | Claude Opus 4.8 |
 | 2026-07-03 | **§wall-tools-panel — τα εργαλεία τοίχου μεταφέρθηκαν στην contextual «Ιδιότητες τοίχου» (Revit «Modify \| Place Wall», ADR-443 §wall-entry-split).** Το permanent «Δομικά» tab κρατά πλέον ΜΟΝΟ το entry-point «Τοίχος»· τα υπόλοιπα 6 εργαλεία (wall-on-entity / 3× region / from-perimeter / from-grid split) ζουν σε **NEW πρώτο panel `wall-tools`** του `CONTEXTUAL_WALL_TAB` ως LARGE buttons (ίδια tool ids/labels/icons/actions — μηδέν νέα semantics). **SSoT:** οι 4 LARGE-button helpers εξήχθησαν σε NEW `ribbon-large-button-helpers.ts` (κοινοί με το structural-tab, μηδέν διπλότυπο). **GOTCHA:** `isWallDrawingTool` += `'wall-on-entity'` (αλλιώς το κλικ του μέσα στο tab μηδένιζε τον trigger → self-close)· verified safe και στους 3 callers. i18n `ribbon.panels.wallTools` (el/en). Reuse του υπάρχοντος trigger+auto-switch (RibbonRoot) — κανένα νέο store/trigger. 21/21 targeted jest GREEN. Owner τεκμηρίωσης: **ADR-443**. Μόνο ΤΟΙΧΟΣ (κολώνες/δοκάρια αργότερα, ίδιο pattern). 🔴 browser-verify + commit. | Claude Opus 4.8 |
 | 2026-07-03 | **N.7.1 SRP split — `useCanvasClickHandler` + `useColumnTool` > 500 γρ. (μετά το §column-polygon-sketch).** Το CHECK 4 (file-size) μπλόκαρε το commit: τα δύο αρχεία ξεπέρασαν το όριο καθώς μεγάλωσαν με το polygon-sketch. Καθαρές εξαγωγές, μηδέν αλλαγή συμπεριφοράς: **(1)** NEW `canvas-click-bim-dispatch.ts` — το BIM tool click-placement block (PRIORITY 4.5–4.96: stair/wall/slab/roof/floor-finish/wall-covering/column/foundation/beam/opening/MEP) βγήκε σε `dispatchBimToolClick(worldPoint, bimPoint, shiftKey, params): boolean` (mirror του υπάρχοντος `canvas-click-mep-dispatch.ts`). `useCanvasClickHandler` 506 → **358**. **(2)** NEW `use-column-polygon-sketch.ts` — το polygon-sketch concern (commit adapter + `usePolygonSketchChain` + chain lifecycle + preview publish) βγήκε σε sub-hook `useColumnPolygonSketch(...)` (mirror των `useColumnPerimeterCommit`/`useColumnRegionClicks`). `useColumnTool` 532 → **491**. Public API αμετάβλητο (byte-identical dispatch/FSM logic μετακινημένη). 🟡 UNCOMMITTED. | Claude Opus 4.8 |
 | 2026-07-03 | **§wall-draw-options-bar — Revit «Draw Options Bar» για τον καμπύλο τοίχο (4 arc draw-variants, ADR-565 §13).** Ο καμπύλος τοίχος (Φ1 = 3-σημείων) απέκτησε πλήρες Revit Draw gallery: **6 modes** (Ευθύς / Καμπύλος 3-σημείων / κέντρο-άκρα / αρχή-τέλος-ακτίνα / εφαπτομενικό / Πολυγραμμή) ως **ΕΝΑ εργαλείο με sub-modes** (ΟΧΙ πλήκτρο-ανά-variant, big-player norm) σε custom widget (`RibbonWallDrawModeWidget`, σειρά εικονιδίων inline SVG, reactive `wallToolBridgeStore.use()`) στο πρώτο panel «Σχεδίαση» της contextual καρτέλας τοίχου. FSM: `WallArcVariant` type (`wall-types.ts`) + `arcVariant`/`arcCenter` state + φάση `awaitingArcRadiusPoint` + pure `resolveCurvedClickTransition` (`wall-curved-click-fsm.ts`, per-variant click flow, κοινό click+DI). Arc math (reuse `wall-arc-descriptor.ts`): NEW `bulgeFromCenterStartEnd`/`bulgeFromTangent` (+`bulgeFromRadius` υπήρχε). Pure `resolveCurvedArcParams`+`wallEndTangentAt` (`wall-curved-draw.ts`) → **preview ≡ commit** (ίδιος resolver σε ghost+commit). `commitCurvedFromState` variant-aware (3-point κρατά ΑΚΡΙΒΩΣ Φ1) + NEW `commitCurvedRadius`. `continueChain` διατηρεί `arcVariant`. Preview store +`arcVariant`/`arcCenter`. i18n el+en (`wallDraw`, `drawMode.*`, `statusArc*`, `radiusTooSmall`). **Files: 4 NEW** (`wall-draw-mode`, `wall-curved-draw`, `wall-curved-click-fsm`, `RibbonWallDrawModeWidget`) + ~14 MOD (1 domain — dxf wall drawing + ribbon). **Tests: 67 GREEN** (wall-arc-descriptor +8, NEW wall-curved-draw/fsm/draw-mode, useWallTool)· bim/walls+hooks/drawing 898/900 (2 pre-existing floorplan-symbol fails, άσχετα). tsc SKIP (N.17). CHECK 6B/6D: το widget=ribbon UI (εκτός)· preview helpers touch → ADR-363/ADR-565 staged. ✅ Google-level: YES — big-player Revit Draw gallery, full SSoT (ΕΝΑ bulge, ΕΝΑΣ resolver preview≡commit, μηδέν διπλό arc math/FSM), μηδέν regression (default 3-point). ⚠️ MVP όρια (browser-verify): center-ends minor-arc ±180°· typed-R εξαρτάται από DI radius field (plumbing έτοιμο)· tangent χωρίς αναφορά→ευθύ. 🔴 browser-verify (κάθε variant 2D+3D+BOQ+options-bar highlight) + commit. | Claude Opus 4.8 |

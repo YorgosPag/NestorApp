@@ -33,14 +33,27 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * null = isolate not currently engaged.
    */
   bimVisibilitySnapshot: Partial<Record<BimCategory, boolean>> | null;
+  /**
+   * ADR-375 Phase B.4 — runtime-only flag: `true` once the user set the drawing
+   * scale MANUALLY (widget input/preset) this session. The fit-to-paper auto-fit
+   * (`applyAutoDrawingScale`) skips when set, so a genuine re-import never
+   * overwrites a scale the user deliberately chose (Revit annotation-scale rule).
+   */
+  drawingScaleUserSet: boolean;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   /** Called when active level changes — syncs store from Level.bimRenderSettings. */
   loadForLevel: (levelId: string, settings?: BimRenderSettings | null) => void;
 
-  /** Update drawingScale — persisted after 500 ms idle. */
+  /** Update drawingScale MANUALLY (marks `drawingScaleUserSet`) — persisted after 500 ms idle. */
   setDrawingScale: (scale: number) => void;
   resetDrawingScale: () => void;
+  /**
+   * ADR-375 Phase B.4 — apply the fit-to-paper AUTO scale. No-op when the user
+   * already set the scale manually, UNLESS `force` (the explicit «Fit» button).
+   * Does NOT set `drawingScaleUserSet`, so auto keeps working on later re-imports.
+   */
+  applyAutoDrawingScale: (scale: number, opts?: { force?: boolean }) => void;
 
   /** Patch individual ViewRange plane values (mm) — persisted after 500 ms idle. */
   setViewRangeField: (field: keyof ViewRange, valueMm: number) => void;

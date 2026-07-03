@@ -120,9 +120,13 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(btns[1].command.commandKey).toBe(DIM_RIBBON_KEYS.override.textFont);
   });
 
-  it('dim-modify panel: DIMBREAK + DIMSPACE carry actions (not stubs)', () => {
+  it('dim-modify panel: DIMBREAK + DIMSPACE + Select-Row carry actions (not stubs)', () => {
     const btns = buttonsOf('dim-modify');
-    expect(btns.map((b) => b.command.commandKey)).toEqual(['dim.modify.dimBreak', 'dim.modify.dimSpace']);
+    expect(btns.map((b) => b.command.commandKey)).toEqual([
+      'dim.modify.dimBreak',
+      'dim.modify.dimSpace',
+      'dim.select.row',
+    ]);
     for (const btn of btns) {
       expect(btn.command.comingSoon).toBeFalsy();
       expect(btn.command.action).toBe(btn.command.commandKey);

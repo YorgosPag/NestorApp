@@ -14,6 +14,9 @@ import { useEffect, type RefObject } from 'react';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { getPointerSnapshotFromElement } from '../../rendering/core/CoordinateTransforms';
 import { EventBus } from '../../systems/events';
+// ADR-375 Phase B.4 — explicit «Fit annotations» → recompute the fit-to-paper scale.
+import { computeFitToPaperScale } from '../../systems/dimensions/auto-drawing-scale';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { serviceRegistry } from '../../services';
 import { dwarn, derr } from '../../debug';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -184,10 +187,22 @@ export function useFitToView({
       setTransform(payload.transform);
     };
 
+    // ADR-375 Phase B.4 — «Fit annotations»: recompute the fit-to-paper 1:N from the
+    // live combined bounds (mm) and FORCE it, overriding any manual scale on request.
+    const handleFitAnnotationsToPaper = () => {
+      const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
+      if (!combinedBounds) return;
+      const scale = computeFitToPaperScale(combinedBounds);
+      if (scale != null) {
+        useBimRenderSettingsStore.getState().applyAutoDrawingScale(scale, { force: true });
+      }
+    };
+
     const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
     const cleanupSelected = EventBus.on('canvas-fit-to-view-selected', handleFitToViewSelected);
     const cleanupRestore = EventBus.on('canvas-restore-viewport', handleRestoreViewport);
-    return () => { cleanup(); cleanupSelected(); cleanupRestore(); };
+    const cleanupFitAnnotations = EventBus.on('annotation-fit-to-paper', handleFitAnnotationsToPaper);
+    return () => { cleanup(); cleanupSelected(); cleanupRestore(); cleanupFitAnnotations(); };
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   return { fitToOverlay };

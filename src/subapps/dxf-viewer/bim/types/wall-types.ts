@@ -309,6 +309,15 @@ export const DEFAULT_WALL_HEIGHT_MM = 3000;
 /** Minimum allowable wall length (mm). Below this the wall is invalid. */
 export const MIN_WALL_LENGTH_MM = 100;
 
+/**
+ * Minimum wall length (mm) για το **region-fill** path («τοίχος μέσα σε περιοχή / από
+ * περίγραμμα»). Πολύ μικρότερο από το freehand `MIN_WALL_LENGTH_MM=100`: εκεί το 100mm
+ * φυλάει από degenerate τυχαίο διπλό-κλικ, αλλά στο region-fill κάθε rect είναι
+ * **πραγματική εντοπισμένη γεωμετρία** (π.χ. κοντό στέλεχος κεφαλής Τ μετά το split στο
+ * junction) — δεν πρέπει να απορρίπτεται. 20mm = καθαρά degenerate floor (Giorgio 2026-07-03).
+ */
+export const REGION_FILL_MIN_WALL_LENGTH_MM = 20;
+
 /** Minimum allowable wall thickness (mm). ΝΟΚ ελάχιστο για δομικό στοιχείο. */
 export const MIN_WALL_THICKNESS_MM = 50;
 

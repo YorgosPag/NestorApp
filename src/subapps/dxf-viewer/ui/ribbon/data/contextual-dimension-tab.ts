@@ -451,6 +451,18 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 action: DIM_RIBBON_KEYS.modify.dimSpace,
               },
             },
+            // ADR-362 — «Επιλογή σειράς»: grow the pick to the whole collinear row.
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.select.row',
+                labelKey: 'ribbon.commands.dimSelectRow',
+                icon: 'dim-select-row',
+                commandKey: DIM_RIBBON_KEYS.modify.selectRow,
+                action: DIM_RIBBON_KEYS.modify.selectRow,
+              },
+            },
           ],
         },
       ],

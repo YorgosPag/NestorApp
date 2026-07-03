@@ -15,6 +15,7 @@ import {
   findEnclosingRectangle,
   buildWallFillingRect,
   type RegionLineSeg,
+  type DetectedRectangle,
 } from '../wall-in-region';
 
 const SU = 'mm' as const;
@@ -172,6 +173,64 @@ describe('wall-in-region — buildWallFillingRect', () => {
     // A 5000×3000 room outline → 3 m thick "wall" is unphysical → validator reject.
     const [rect] = findRectanglesFromSegments(rectSegments(5000, 3000), TOL);
     expect(buildWallFillingRect(rect, {}, SU, LEVEL)).toBeNull();
+  });
+
+  // ADR-419 §region-tolerance — κοντά στελέχη (π.χ. κεφαλή Τ μετά το junction-split)
+  // ΔΗΜΙΟΥΡΓΟΥΝΤΑΙ: το region-fill floor (20mm) αντικαθιστά το freehand 100mm.
+  it('builds a SHORT filling wall (long side 60mm < freehand 100mm floor)', () => {
+    const [rect] = findRectanglesFromSegments(rectSegments(60, 40), TOL);
+    const entity = buildWallFillingRect(rect, {}, SU, LEVEL);
+    expect(entity).not.toBeNull();
+    const e = entity as WallEntity;
+    const axisLen = Math.hypot(e.params.end.x - e.params.start.x, e.params.end.y - e.params.start.y);
+    expect(axisLen).toBeCloseTo(60, 3);
+    expect(e.params.thickness).toBeCloseTo(40, 3);
+  });
+
+  it('still returns null for a truly degenerate stub (long side 15mm < region-fill floor 20mm)', () => {
+    const [rect] = findRectanglesFromSegments(rectSegments(15, 12), TOL);
+    expect(buildWallFillingRect(rect, {}, SU, LEVEL)).toBeNull();
+  });
+
+  // ADR-419 §T-junction — κοντός-χοντρός τοίχος (μήκος < πάχος): με ΡΗΤΟ axis ο άξονας
+  // μένει ΚΑΘΕΤΟΣ στον γείτονα (όχι κατά τη μεγάλη πλευρά). 50 μήκος (X) × 100 πάχος (Y).
+  it('honors an explicit axis (fat-short stub → PERPENDICULAR axis, not long-side)', () => {
+    const rect: DetectedRectangle = {
+      polygon: [
+        { x: 0, y: 0 },
+        { x: 50, y: 0 },
+        { x: 50, y: 100 },
+        { x: 0, y: 100 },
+      ],
+      longSide: 100,
+      shortSide: 50,
+      area: 5000,
+      axis: [{ x: 0, y: 50 }, { x: 50, y: 50 }], // οριζόντια centerline (μήκος 50)
+    };
+    const e = buildWallFillingRect(rect, {}, SU, LEVEL) as WallEntity;
+    expect(e).not.toBeNull();
+    const dx = Math.abs(e.params.end.x - e.params.start.x);
+    const dy = Math.abs(e.params.end.y - e.params.start.y);
+    expect(dx).toBeGreaterThan(dy); // ΟΡΙΖΟΝΤΙΟΣ άξονας (μήκος 50)
+    expect(e.params.thickness).toBeCloseTo(100, 3); // πάχος = area/μήκος = 5000/50
+  });
+
+  it('without axis, falls back to long-side heuristic (same rect → axis = long side)', () => {
+    const rect: DetectedRectangle = {
+      polygon: [
+        { x: 0, y: 0 },
+        { x: 50, y: 0 },
+        { x: 50, y: 100 },
+        { x: 0, y: 100 },
+      ],
+      longSide: 100,
+      shortSide: 50,
+      area: 5000,
+    };
+    const e = buildWallFillingRect(rect, {}, SU, LEVEL) as WallEntity;
+    const dx = Math.abs(e.params.end.x - e.params.start.x);
+    const dy = Math.abs(e.params.end.y - e.params.start.y);
+    expect(dy).toBeGreaterThan(dx); // ΚΑΤΑΚΟΡΥΦΟΣ (μεγάλη πλευρά = Y = 100)
   });
 });
 

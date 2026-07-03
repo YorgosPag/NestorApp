@@ -104,6 +104,12 @@ export interface BeamToolLike {
   onCanvasClick: (point: Point2D, shiftKey?: boolean) => boolean;
 }
 
+/** ADR-569 — «Δοκάρι ανάμεσα σε μέλη»: click routing (RAW worldPoint → pick μέλους). */
+export interface BeamBetweenMembersToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-436 Slice 1 — Minimal foundation pad tool interface for click routing. */
 export interface FoundationToolLike {
   readonly isActive: boolean;

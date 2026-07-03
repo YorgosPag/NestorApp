@@ -78,6 +78,13 @@ export function createCapMaterial(): THREE.MeshBasicMaterial {
  * `autoClearDepth = false`), so depth-testing the cap against the clipped scene makes
  * nearer geometry hide it correctly (standard three.js `webgl_clipping_stencil` cap).
  * `depthWrite` stays false — the cap is a decorative final fill, it must not pollute Z.
+ *
+ * ADR-452 v2.22 — negative `polygonOffset` so the cap quad (coplanar with the cut) always
+ * WINS the depth z-fight against the clipped geometry's cut rim. On a heavy / large-extent
+ * scene the wider depth range gives coarser precision, so a plain `depthTest:true` cap can
+ * lose the tie at the rim and drop out (the «κούφιο λεπτό πανό»); biasing it a hair toward
+ * the camera keeps the poché solid without changing which geometry occludes it (units are
+ * tiny relative to the walls/columns that must still hide a roof cut from below, v2.19).
  */
 export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({
@@ -87,6 +94,9 @@ export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
     side: THREE.DoubleSide,
     depthWrite: false,
     depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   mat.stencilWrite = true;
   mat.stencilRef = 0;
@@ -146,5 +156,56 @@ export function createSinglePassCutParityMaterial(): THREE.MeshBasicMaterial {
   mat.stencilFail = THREE.KeepStencilOp;
   mat.stencilZFail = THREE.KeepStencilOp;
   mat.stencilZPass = THREE.IncrementWrapStencilOp;
+  return mat;
+}
+
+/**
+ * ADR-452 v2.22 — ROBUST 2-pass parity for the ALWAYS-SOLID grey base cap.
+ *
+ * The v2.20 single-pass parity ({@link createSinglePassCutParityMaterial}) folds
+ * back-increment + front-decrement into ONE DoubleSide render by seeding Three.js'
+ * stencil-op cache and then overriding the FRONT face with a raw
+ * `gl.stencilOpSeparate` call — relying on Three.js issuing `gl.stencilOp` EXACTLY
+ * once and cache-hitting for every subsequent object. On a heavy floor (≈800 meshes)
+ * a mid-render program compile / state re-validation can cache-MISS and re-issue
+ * `gl.stencilOp`, wiping the FRONT override → the front faces stop decrementing → the
+ * cross-section parity is wrong → the cap quad's `NotEqual(0)` mask fills nothing →
+ * the cut reads HOLLOW («λεπτά κάθετα κούφια πανό») and never recovers.
+ *
+ * The grey base is the one ALWAYS-ON, must-never-be-hollow layer, so it uses the
+ * proven pre-v2.20 explicit two-pass instead: BACK faces increment (this material),
+ * FRONT faces decrement ({@link createFrontParityMaterial}) as TWO plain scene
+ * renders — no cache trick, correct for ANY geometry (convex, nested, L-walls), not
+ * just a lucky cache state. Cost is +1 full-scene render on the grey layer ONLY; the
+ * per-material colour loop (settle-time refine, off the critical path) keeps the
+ * cheaper single-pass. `depthTest = false` matches the lone-plane rule (count parity
+ * over the whole sliced solid, independent of the already-clipped depth buffer).
+ */
+export function createBackParityMaterial(): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial();
+  mat.side = THREE.BackSide;
+  mat.colorWrite = false;
+  mat.depthWrite = false;
+  mat.depthTest = false;
+  mat.stencilWrite = true;
+  mat.stencilFunc = THREE.AlwaysStencilFunc;
+  mat.stencilFail = THREE.KeepStencilOp;
+  mat.stencilZFail = THREE.KeepStencilOp;
+  mat.stencilZPass = THREE.IncrementWrapStencilOp;
+  return mat;
+}
+
+/** ADR-452 v2.22 — FRONT-face decrement pass of the robust 2-pass grey-base parity. */
+export function createFrontParityMaterial(): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial();
+  mat.side = THREE.FrontSide;
+  mat.colorWrite = false;
+  mat.depthWrite = false;
+  mat.depthTest = false;
+  mat.stencilWrite = true;
+  mat.stencilFunc = THREE.AlwaysStencilFunc;
+  mat.stencilFail = THREE.KeepStencilOp;
+  mat.stencilZFail = THREE.KeepStencilOp;
+  mat.stencilZPass = THREE.DecrementWrapStencilOp;
   return mat;
 }

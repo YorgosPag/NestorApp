@@ -38,7 +38,7 @@ import { isPointInPolygon, arcToPolyline } from '../../utils/geometry/GeometryUt
 // ellipse/spline → trim SSoT. Έτσι τα καμπύλα όρια (τόξα/κύκλοι/τεταρτημόρια/καμπύλες)
 // συμμετέχουν στην ανίχνευση περιοχής όπως οι ευθείες.
 import { tessellateEllipse, tessellateSpline } from '../../systems/trim/trim-intersection-mapper';
-import type { WallEntity } from '../types/wall-types';
+import { REGION_FILL_MIN_WALL_LENGTH_MM, type WallEntity } from '../types/wall-types';
 import {
   buildDefaultWallParams,
   buildWallEntity,
@@ -64,6 +64,14 @@ export interface DetectedRectangle {
   /** Μικρή πλευρά (world/scene units) → πάχος τοίχου. */
   readonly shortSide: number;
   readonly area: number;
+  /**
+   * ADR-419 §T-junction — προαιρετικός ΡΗΤΟΣ άξονας (centerline endpoints, world units)
+   * όταν η πηγή γνωρίζει τον προσανατολισμό (`decomposeWallsFromFootprint` H/V). Ο
+   * `buildWallFillingRect` τον τιμά αντί για την ευριστική «μεγάλη πλευρά = άξονας» — ώστε
+   * ένας **κοντός-χοντρός** τοίχος (μήκος < πάχος, π.χ. 5×10cm stub) να έχει άξονα ΚΑΘΕΤΟ
+   * στον γείτονα (όχι παράλληλο). Απών → corner-graph fallback (μεγάλη πλευρά = άξονας).
+   */
+  readonly axis?: readonly [Point2D, Point2D];
 }
 
 // ─── Scene → candidate segments ──────────────────────────────────────────────
@@ -299,30 +307,63 @@ function midpoint(a: Point2D, b: Point2D): Point2D {
  * override (ο builder ξανα-μετατρέπει mm→scene στο `computeWallGeometry`).
  * Επιστρέφει `null` αν ο validator απορρίψει.
  */
-export function buildWallFillingRect(
+/** Κεντρική γραμμή (άξονας) + μήκος/πάχος ενός `DetectedRectangle` (world units). */
+export interface DetectedRectAxis {
+  readonly start: Point2D;
+  readonly end: Point2D;
+  /** Μήκος τοίχου = απόσταση άξονα. */
+  readonly length: number;
+  /** Πάχος τοίχου = κάθετη διάσταση. */
+  readonly thickness: number;
+}
+
+/**
+ * SSoT — ο άξονας (centerline) + μήκος/πάχος ενός ανιχνευμένου ορθογωνίου.
+ *
+ * Αν το rect φέρει ΡΗΤΟ `axis` (από `decomposeWallsFromFootprint`, γνωστός H/V
+ * προσανατολισμός) → τον τιμά (μήκος = |axis|, πάχος = area/μήκος). Αλλιώς (corner-graph)
+ * → ευριστική «μεγάλη πλευρά = άξονας». Έτσι ένας κοντός-χοντρός stub (μήκος < πάχος)
+ * κρατά άξονα ΚΑΘΕΤΟ στον γείτονα (Giorgio 2026-07-03) και preview ≡ commit
+ * (`resolvePerimeterPreview` και `buildWallFillingRect` μοιράζονται ΑΥΤΟΝ τον υπολογισμό).
+ */
+export function detectedRectAxis(rect: DetectedRectangle): DetectedRectAxis {
+  const [a, b, c, d] = rect.polygon;
+  const abLen = Math.hypot(b.x - a.x, b.y - a.y);
+  const bcLen = Math.hypot(c.x - b.x, c.y - b.y);
+  if (rect.axis) {
+    const start = { x: rect.axis[0].x, y: rect.axis[0].y };
+    const end = { x: rect.axis[1].x, y: rect.axis[1].y };
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    return { start, end, length, thickness: length > 1e-9 ? rect.area / length : Math.min(abLen, bcLen) };
+  }
+  if (abLen >= bcLen) {
+    return { start: midpoint(d, a), end: midpoint(b, c), length: abLen, thickness: bcLen };
+  }
+  return { start: midpoint(a, b), end: midpoint(c, d), length: bcLen, thickness: abLen };
+}
+
+/**
+ * Αποτέλεσμα του `buildWallFillingRectResult`: είτε ο γεμάτος τοίχος, είτε ο ΛΟΓΟΣ
+ * απόρριψης (validator hardError i18n key) ώστε το preview («μία διαδρομή δημιουργίας»,
+ * ADR-419 v2.4) να δείχνει κόκκινο + tooltip αντί απλώς να αποκρύπτει το rect.
+ */
+export type FillingRectBuild =
+  | { readonly ok: true; readonly wall: WallEntity }
+  | { readonly ok: false; readonly reason: string };
+
+/**
+ * ΕΝΑΣ γεμάτος τοίχος από ένα `DetectedRectangle`, ΚΡΑΤΩΝΤΑΣ τον λόγο απόρριψης όταν
+ * ο validator τον κόβει (μήκος/πάχος/ύψος). SSoT build path — ίδιο math με τον commit·
+ * ο `buildWallFillingRect` (null wrapper) και το `computeFillingWalls` (rejected reasons)
+ * καλούν ΑΥΤΟΝ ώστε preview ≡ commit 100%.
+ */
+export function buildWallFillingRectResult(
   rect: DetectedRectangle,
   overrides: WallParamOverrides,
   sceneUnits: SceneUnits,
   levelId: string,
-): WallEntity | null {
-  const [a, b, c, d] = rect.polygon;
-  const abLen = Math.hypot(b.x - a.x, b.y - a.y);
-  const bcLen = Math.hypot(c.x - b.x, c.y - b.y);
-  // Άξονας στη μεσοκάθετο ανάμεσα στις δύο ΜΕΓΑΛΕΣ πλευρές· πάχος = μικρή πλευρά.
-  let axisStart: Point2D;
-  let axisEnd: Point2D;
-  let shortSideWorld: number;
-  if (abLen >= bcLen) {
-    // AB/CD μεγάλες → άξονας midpoint(D,A) → midpoint(B,C), πάχος = BC.
-    axisStart = midpoint(d, a);
-    axisEnd = midpoint(b, c);
-    shortSideWorld = bcLen;
-  } else {
-    // BC/DA μεγάλες → άξονας midpoint(A,B) → midpoint(C,D), πάχος = AB.
-    axisStart = midpoint(a, b);
-    axisEnd = midpoint(c, d);
-    shortSideWorld = abLen;
-  }
+): FillingRectBuild {
+  const { start: axisStart, end: axisEnd, thickness: shortSideWorld } = detectedRectAxis(rect);
   const thicknessMm = shortSideWorld / mmToSceneUnits(sceneUnits);
   const params = buildDefaultWallParams(
     axisStart,
@@ -330,6 +371,23 @@ export function buildWallFillingRect(
     { ...overrides, thickness: thicknessMm },
     sceneUnits,
   );
-  const result = buildWallEntity(params, levelId, 'straight', sceneUnits);
-  return result.ok ? result.entity : null;
+  // ADR-419 §region-tolerance — region-fill: κάθε rect είναι πραγματική εντοπισμένη
+  // γεωμετρία (όχι degenerate κλικ), οπότε το freehand `MIN_WALL_LENGTH_MM=100` δεν
+  // ισχύει· χρησιμοποιούμε το degenerate floor ώστε κοντά στελέχη (π.χ. κεφαλή Τ μετά
+  // το junction-split) να ΔΗΜΙΟΥΡΓΟΥΝΤΑΙ αντί να απορρίπτονται (Giorgio 2026-07-03).
+  const result = buildWallEntity(params, levelId, 'straight', sceneUnits, {
+    minLengthMm: REGION_FILL_MIN_WALL_LENGTH_MM,
+  });
+  if (result.ok) return { ok: true, wall: result.entity };
+  return { ok: false, reason: result.hardErrors[0] ?? 'wall.validation.hardErrors.lengthTooShort' };
+}
+
+export function buildWallFillingRect(
+  rect: DetectedRectangle,
+  overrides: WallParamOverrides,
+  sceneUnits: SceneUnits,
+  levelId: string,
+): WallEntity | null {
+  const build = buildWallFillingRectResult(rect, overrides, sceneUnits, levelId);
+  return build.ok ? build.wall : null;
 }

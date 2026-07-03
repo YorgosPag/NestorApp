@@ -29,7 +29,7 @@ import { structuralFootprintOf, findStructuralOverlap } from '../placement/struc
  * §wall-column-end-miter targets so a wall END framing a column is cut flush on the
  * column face (Revit parity). SSoT extraction shared by both trim callers below.
  */
-function collectColumnFootprints(entities: readonly AnySceneEntity[]): readonly (readonly Point2D[])[] {
+export function collectColumnFootprints(entities: readonly AnySceneEntity[]): readonly (readonly Point2D[])[] {
   const out: (readonly Point2D[])[] = [];
   for (const e of entities) {
     if (isColumnEntity(e)) out.push(e.geometry.footprint.vertices);
@@ -65,6 +65,7 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   if (wallFootprint) {
     const hit = findStructuralOverlap(wallFootprint, scene.entities as unknown as Entity[], {
       excludeIds: new Set([wallEntity.id]),
+      candidateType: 'wall',
     });
     if (hit) {
       EventBus.emit('bim:placement-blocked', { entityType: 'wall', blockedById: hit.blockedById, count: 1 });

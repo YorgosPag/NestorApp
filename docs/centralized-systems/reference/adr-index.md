@@ -550,6 +550,8 @@
 | **ADR-565** | Καμπύλα & Κυκλικά Δομικά BIM Στοιχεία: Έρευνα Αγοράς + Πρόταση Υλοποίησης (τοίχοι/δοκάρια/κολόνες/πέδιλα/συνδετήρια) | ✅ 🔵 RESEARCH / PROPOSED — τεκμηρίωση αγοράς + σύσταση αρχιτεκτονικής· καμία υλοποίηση ακόμη | 2026-07-02 | DXF Viewer · BIM · Geometry · Research | [📄](./adrs/ADR-565-curved-circular-structural-bim-elements.md) |
 | **ADR-566** | Ένωση Τοίχων (Merge / Join Walls — AutoCAD JOIN για τοίχους, command-first + selection-first) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing | [📄](./adrs/ADR-566-merge-join-walls.md) |
 | **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard — ratio-based, SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Placement · Geometry | [📄](./adrs/ADR-567-structural-no-overlap-placement.md) |
+| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα στο κενό, reuse merge+opening SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing · Openings | [📄](./adrs/ADR-568-wall-gap-auto-opening.md) |
+| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά ζεύγος, παρειά→παρειά· + selection-first· live ghost) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Structural · Beams | [📄](./adrs/ADR-569-beam-between-members.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1080,6 +1082,8 @@
 | **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-566-merge-join-walls.md) |
 | **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-567-structural-no-overlap-placement.md) |
+| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-568-wall-gap-auto-opening.md) |
+| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (beam between two picked structural members) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-569-beam-between-members.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -502,6 +502,19 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
               },
             },
             {
+              // ADR-568 — «Γεφύρωση με Κούφωμα». Αδελφό του wall.merge: ενώνει 2
+              // ομοαξονικούς τοίχους με ΚΕΝΟ σε έναν τοίχο + τοποθετεί αυτόματα
+              // κούφωμα (πόρτα) στο κενό. Tool button (commandKey, χωρίς action).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.gapOpening',
+                labelKey: 'ribbon.commands.wallEditor.gapOpening',
+                icon: 'bim-wall-gap-opening',
+                commandKey: 'wall-gap-opening',
+              },
+            },
+            {
               type: 'simple',
               size: 'small',
               command: {

@@ -44,6 +44,23 @@ describe('validateWallParams — hard errors', () => {
     expect(r.hardErrors).toContain('wall.validation.hardErrors.lengthTooShort');
   });
 
+  // ADR-419 §region-tolerance — παραμετροποιημένο floor: το region-fill path περνά
+  // μικρότερο `minLengthMm` (κοντά στελέχη κεφαλής Τ = πραγματική γεωμετρία, όχι degenerate).
+  it('accepts a short wall (60mm) when minLengthMm is lowered (region-fill floor)', () => {
+    const r = validateWallParams(makeParams({ end: { x: 60, y: 0, z: 0 } }), 'mm', { minLengthMm: 20 });
+    expect(r.hardErrors).not.toContain('wall.validation.hardErrors.lengthTooShort');
+  });
+
+  it('still rejects the same 60mm wall with the default (freehand) floor', () => {
+    const r = validateWallParams(makeParams({ end: { x: 60, y: 0, z: 0 } }));
+    expect(r.hardErrors).toContain('wall.validation.hardErrors.lengthTooShort');
+  });
+
+  it('rejects a truly degenerate wall (10mm) even with the lowered region-fill floor (20mm)', () => {
+    const r = validateWallParams(makeParams({ end: { x: 10, y: 0, z: 0 } }), 'mm', { minLengthMm: 20 });
+    expect(r.hardErrors).toContain('wall.validation.hardErrors.lengthTooShort');
+  });
+
   it('flags non-positive thickness', () => {
     const r = validateWallParams(makeParams({ thickness: 0 }));
     expect(r.hardErrors).toContain('wall.validation.hardErrors.thicknessNonPositive');

@@ -121,6 +121,45 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-07-03** — §wall-region-inside-dedicated-glyph (Opus 4.8). Τρίτο dedicated glyph, ίδιο μοτίβο:
+  ο Giorgio ζήτησε ρητά (screenshot) το εικονίδιο του **«Τοίχος μέσα σε περιοχή»** (`wall-region-inside`)
+  να δείχνει την **περιοχή** ως **πράσινο διακεκομμένο (dashed) ΚΛΕΙΣΤΟ ορθογώνιο** — ακριβώς όπως η live
+  region-fill preview (`RegionPerimeterPreviewOverlay`, `#22c55e` + dashed) — με τον καφέ τοίχο-output
+  δίπλα. NEW `WallRegionInsideIcon.tsx`, wired στο `RibbonButtonIcon.tsx` (`case 'struct-wall-region-inside'`).
+  Το `region-inside` method fragment μένει ανέπαφο (`column-region-inside` — μηδέν regression).
+  **Διάκριση από `WallFromLinesIcon`:** «4 γραμμές» = μπλε SOLID με κενά στις γωνίες (4 ξεχωριστές
+  γραμμές)· «μέσα σε περιοχή» = πράσινο DASHED κλειστό περίγραμμα (region). Χρώματα SSoT: καφέ =
+  `WALL_IDENTITY_COLOR`. CHECK 6B/6D όχι· i18n καμία· tsc SKIP (N.17). ✅ Google-level: YES. 🔴 browser-verify + commit.
+- **2026-07-03** — §wall-region-lines-dedicated-glyph (Opus 4.8). Ίδιο μοτίβο εξαίρεσης με το
+  §wall-on-entity-dedicated-glyph: ο Giorgio ζήτησε ρητά (screenshot) το εικονίδιο του **«Τοίχος από
+  4 γραμμές»** (`wall-region-lines`) να δείχνει τη **ροή** — **4 διακριτές γραμμές** (κεκλιμένο
+  ορθογώνιο με **κενά στις γωνίες**, τονίζοντας «4 ξεχωριστές γραμμές, όχι κλειστό polygon») → **τοίχος**
+  που το γεμίζει — αντί για το γενικό `wall base + region-lines badge`. NEW dedicated component
+  `WallFromLinesIcon.tsx`, wired στο `RibbonButtonIcon.tsx` (`case 'struct-wall-region-lines'`). Το
+  `region-lines` method fragment **μένει ανέπαφο** (το μοιράζεται το `column-region-lines` — μηδέν
+  regression). **Χρώματα:** τοίχος = `WALL_IDENTITY_COLOR` (καφέ, SSoT από `wall-render-palette`, reuse
+  του wall-on-entity glyph)· οι 4 γραμμές (input) = μπλε `#3b82f6` (Giorgio 2026-07-03) — ξεχωρίζει
+  καθαρά από τον καφέ τοίχο-output. CHECK 6B/6D: όχι canvas drawing file· i18n: καμία· tsc SKIP
+  (N.17). ✅ Google-level: YES — σημασιολογικό glyph (input 4 γραμμές → output τοίχος), SSoT reuse του
+  καφέ, τεκμηριωμένη εξαίρεση. 🔴 browser-verify (ribbon «Δομικά»/contextual «Ιδιότητες τοίχου») + commit.
+- **2026-07-03** — §wall-on-entity-dedicated-glyph (Opus 4.8). Ο Giorgio ζήτησε ρητά
+  (screenshot) το εικονίδιο του **«Τοίχος πάνω σε οντότητα»** (`wall-on-entity`) να δείχνει
+  τη **σχέση** — έναν **κάθετο τοίχο που πατάει (⊥) πάνω σε οριζόντια οντότητα-host** — αντί
+  για το γενικό base+method (`wall base` = 2 οριζόντιες γραμμές + `on-entity` badge), που δεν
+  αποτύπωνε το νόημα. Επειδή δεν χωράει στο fragment map (base=wall είναι σταθερά 2 οριζόντιες
+  γραμμές), εισάγεται **ΕΞΑΙΡΕΣΗ**: NEW dedicated component `ui/ribbon/components/buttons/WallOnEntityIcon.tsx`,
+  wired στο `RibbonButtonIcon.tsx` (`case 'struct-wall-on-entity'` → `<WallOnEntityIcon/>` αντί
+  `<StructuralToolIcon base="wall" method="on-entity"/>`). Το `on-entity` **method fragment μένει
+  ανέπαφο** (το μοιράζεται το foundation strip-from-wall — μηδέν regression). **Χρώματα (Giorgio,
+  FULL SSoT):** τοίχος = **καφέ ταυτότητα** (brick-warm poché που έχει ο τοίχος στον καμβά) — NEW
+  export `WALL_IDENTITY_COLOR` (= solid `rgb(205,158,110)`, ίδιο RGB με `WALL_CATEGORY_FILL.interior`)
+  στο `bim/walls/wall-render-palette.ts`, import από το icon (ΟΧΙ hardcoded)· οντότητα-host =
+  `currentColor` (ίδιο με όλα τα άλλα ribbon icons, theme-aware). Και τα δύο μέλη = outlines (στιλ
+  screenshot + design-system). CHECK 6B/6D: όχι canvas drawing file → δεν χτυπά· i18n: καμία (μόνο
+  glyph). tsc SKIP (N.17). ✅ Google-level: YES — σημασιολογικό εικονίδιο (δείχνει τη σχέση τοίχου↔host),
+  full SSoT (καφέ = `WALL_IDENTITY_COLOR` από το palette, host = currentColor), τεκμηριωμένη εξαίρεση
+  χωρίς να σπάει το base+method SSoT για τα υπόλοιπα 21 icons. 🔴 browser-verify (ribbon «Δομικά» /
+  contextual «Ιδιότητες τοίχου» → το εικονίδιο δείχνει ⊥ καφέ-τοίχο-πάνω-σε-host) + commit.
 - **2026-07-03** — §wall-entry-split (Opus 4.8). Revit «Modify | Place Wall» refinement
   for the **Τοίχος** family only (columns/beams/etc. follow later, same pattern). The
   permanent `structural-walls` panel now keeps **ONLY the entry-point «Τοίχος»**

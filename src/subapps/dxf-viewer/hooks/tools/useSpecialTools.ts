@@ -24,6 +24,7 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useFoundationTool } from '../drawing/useFoundationTool';
 import { useBeamTool } from '../drawing/useBeamTool';
+import { useBeamBetweenMembersTool } from '../drawing/useBeamBetweenMembersTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useWallRetrimEffect } from './useSpecialTools-wall-retrim';
@@ -86,6 +87,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   columnTool: ReturnType<typeof useColumnTool>;
   foundationTool: ReturnType<typeof useFoundationTool>; // ADR-436
   beamTool: ReturnType<typeof useBeamTool>;
+  beamBetweenMembersTool: ReturnType<typeof useBeamBetweenMembersTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
 // HOOK IMPLEMENTATION
@@ -407,6 +409,27 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     if (activeTool === 'beam') beamTool.setPlacementMode('freehand');
     else if (activeTool === 'beam-from-wall') beamTool.setPlacementMode('from-wall');
   }, [activeTool, beamTool.setPlacementMode]);
+  // ============================================================================
+  // ADR-569 — «ΔΟΚΑΡΙ ΑΝΑΜΕΣΑ ΣΕ ΜΕΛΗ»
+  // ============================================================================
+  // Σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά διαδοχικό ζεύγος (παρειά→παρειά). Reuse του ΙΔΙΟΥ
+  // commit path με το freehand δοκάρι (`appendEntityToScene(..., 'beam')` → undo + Firestore autosave
+  // + ADR-567 overlap guard). Αντίστροφη ροή: ≥2 προεπιλεγμένα μέλη → άμεσο δοκάρι στην ενεργοποίηση.
+  const beamBetweenMembersTool = useBeamBetweenMembersTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
+    onBeamCreated: (beamEntity) => appendEntityToScene(levelManager, beamEntity, 'beam'),
+  });
+  useToolLifecycle(activeTool === 'beam-between-members', beamBetweenMembersTool.activate, beamBetweenMembersTool.deactivate);
   // ADR-363 Phase 3.7 — SLAB-OPENING TOOL (resolvers extracted: useSpecialTools-slab-opening.ts)
   const slabOpeningTool = useSlabOpeningTool(buildSlabOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);
@@ -452,6 +475,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepRiserTool,
     railingTool,
     beamTool,
+    beamBetweenMembersTool,
     slabOpeningTool,
   };
 }

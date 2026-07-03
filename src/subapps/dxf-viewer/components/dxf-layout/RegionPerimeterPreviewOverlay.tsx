@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useSyncExternalStore } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   subscribeRegionPerimeterPreview,
   getRegionPerimeterPreview,
@@ -23,6 +24,7 @@ interface Props {
  * shell). Mirror του `AutoAreaPreviewOverlay`.
  */
 export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
+  const { t } = useTranslation('dxf-viewer-shell');
   const preview = useSyncExternalStore(
     subscribeRegionPerimeterPreview,
     getRegionPerimeterPreview,
@@ -41,10 +43,13 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
           δημιουργήσει το κλικ (preview ≡ commit). */}
       {preview.zones.map((zone, zi) => {
         if (zone.polygon.length < 3) return null;
-        // ADR-419 Layer 4 (oversized) + ADR-567 (occupied) → κόκκινο ανά ζώνη· αλλιώς πράσινο.
-        const isRed = preview.oversized || zone.occupied === true;
+        // ADR-419 Layer 4 (oversized) + ADR-567 (occupied) + v2.4 (reason: κοντός/χοντρός/
+        // κατειλημμένος) → κόκκινο ανά ζώνη· αλλιώς πράσινο.
+        const isRed = preview.oversized || zone.occupied === true || zone.reason !== undefined;
         const color = isRed ? '#ef4444' : '#22c55e';
         const fill = isRed ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.12)';
+        // Rejected ζώνη → δείξε τον ΛΟΓΟ (Giorgio επιλογή Α)· αλλιώς τις διαστάσεις.
+        const labelText = zone.reason ? t(zone.reason) : zone.label;
         const screenPts = zone.polygon.map((p) =>
           CoordinateTransforms.worldToScreen(p, transform, viewport),
         );
@@ -65,7 +70,10 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
               strokeWidth="2"
               strokeDasharray="8 4"
               strokeLinejoin="round"
-            />
+            >
+              {/* Tooltip με τον λόγο απόρριψης (native SVG <title>). */}
+              {zone.reason ? <title>{labelText}</title> : null}
+            </path>
             <text
               x={centroid.x}
               y={centroid.y}
@@ -78,7 +86,7 @@ export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
               strokeWidth="0.5"
               paintOrder="stroke"
             >
-              {zone.label}
+              {labelText}
             </text>
           </g>
         );

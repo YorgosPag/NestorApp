@@ -38,6 +38,9 @@ import {
 import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
 import { XLINE_PATH, RAY_PATH } from './xline-ray-icon-paths';
 import { StructuralToolIcon } from './StructuralToolIcon';
+import { WallOnEntityIcon } from './WallOnEntityIcon';
+import { WallFromLinesIcon } from './WallFromLinesIcon';
+import { WallRegionInsideIcon } from './WallRegionInsideIcon';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -236,6 +239,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-wall-split': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-566 — Wall Merge (AutoCAD JOIN for walls).
     case 'bim-wall-merge': return <Merge width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-568 — Wall gap-bridge + auto-opening (collinear walls with a gap → one wall + door).
+    case 'bim-wall-gap-opening': return <DoorOpen width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-401 Phase E.1 — Wall Attach/Detach Top/Base (manual structural attach).
     case 'bim-wall-attach-top': return <ArrowUpToLine width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-wall-attach-base': return <ArrowDownToLine width={sizePx[size]} height={sizePx[size]} className={className} />;
@@ -257,9 +262,12 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     // ADR-443 — Structural «Δομικά» tab: distinct base×method composed icons.
     // Walls (base=wall × creation method).
     case 'struct-wall-single': return <StructuralToolIcon base="wall" method="single" className={className} />;
-    case 'struct-wall-on-entity': return <StructuralToolIcon base="wall" method="on-entity" className={className} />;
-    case 'struct-wall-region-lines': return <StructuralToolIcon base="wall" method="region-lines" className={className} />;
-    case 'struct-wall-region-inside': return <StructuralToolIcon base="wall" method="region-inside" className={className} />;
+    // Dedicated glyph (Giorgio): κάθετος τοίχος (καφέ) ⊥ πάνω σε οριζόντια οντότητα — όχι base+method badge.
+    case 'struct-wall-on-entity': return <WallOnEntityIcon className={className} />;
+    // Dedicated glyph (Giorgio): 4 διακριτές γραμμές (πράσινες) → καφέ τοίχος — όχι base+method badge.
+    case 'struct-wall-region-lines': return <WallFromLinesIcon className={className} />;
+    // Dedicated glyph (Giorgio): πράσινη διακεκομμένη περιοχή → καφέ τοίχος — όχι base+method badge.
+    case 'struct-wall-region-inside': return <WallRegionInsideIcon className={className} />;
     case 'struct-wall-region-box': return <StructuralToolIcon base="wall" method="region-box" className={className} />;
     case 'struct-wall-from-perimeter': return <StructuralToolIcon base="wall" method="from-perimeter" className={className} />;
     case 'struct-wall-from-grid': return <StructuralToolIcon base="wall" method="from-grid" className={className} />;

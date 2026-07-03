@@ -136,4 +136,45 @@ describe('buildOpeningMesh', () => {
       expect(count({ kind: 'bay-window', width: 2400, height: 1500, sillHeight: 600 })).toBe(5);
     });
   });
+
+  // ─── ADR-568 — mm-scene (geo-referenced DXF) placement + sizing ────────────
+  // The 3D world is in METRES. `geometry.position` is in SCENE UNITS, so it must
+  // scale by `sceneToM` (mm → m = ×0.001), and the mm dims must become metres.
+  // Regression guard for the «3D door body invisible» bug: the old `mmToSceneUnits`
+  // factor left a mm-scene body 1000× oversized AND ~1000× too far from the wall.
+  describe('mm-scene scaling (geo-referenced DXF)', () => {
+    function makeMmWall(): WallEntity {
+      const params: WallParams = {
+        category: 'exterior',
+        start: { x: 17137018, y: 4192517, z: 0 },
+        end: { x: 17137018, y: 4189217, z: 0 },
+        height: 3000, thickness: 100,
+        flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
+        baseOffset: 0, topOffset: 0, sceneUnits: 'mm',
+      };
+      return {
+        id: 'wall_mm', type: 'wall', kind: 'straight', layerId: '0', params,
+        geometry: computeWallGeometry(params, 'straight'),
+        validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+        visible: true,
+      } as unknown as WallEntity;
+    }
+
+    it('scales placement by sceneToM (mm → metres) and sizes the body in metres', () => {
+      const opening = makeOpening();
+      // position lives in scene units (mm) at the geo-referenced origin.
+      (opening.geometry as { position: { x: number; y: number; z: number } }).position = {
+        x: 17137018, y: 4190467, z: 0,
+      };
+      const g = buildOpeningMesh(opening, makeMmWall(), materials, 0, 0)!;
+      expect(g).not.toBeNull();
+      // Placement scaled 17_137_018 mm → 17_137.018 m (×0.001) — NOT left at ~1.7e7.
+      expect(g.position.x).toBeCloseTo(17137.018, 2);
+      expect(g.position.z).toBeCloseTo(-4190.467, 2);
+      // Body sized in metres: a 900 mm door → ~0.9 m wide, NOT 900 units.
+      const width = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()).x;
+      expect(width).toBeGreaterThan(0.5);
+      expect(width).toBeLessThan(1.5);
+    });
+  });
 });

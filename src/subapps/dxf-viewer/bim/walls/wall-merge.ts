@@ -26,6 +26,7 @@ import type { Point3D } from '../types/bim-base';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { OpeningUpdate } from './wall-split';
+import { lineIntersection } from '../../utils/angle-entity-math';
 
 // ── Tolerances (AutoCAD-JOIN-grade, forgiving) ──────────────────────────────
 
@@ -50,16 +51,29 @@ const THICKNESS_TOL = 1;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
-/** Why two walls cannot be merged — maps 1:1 to an i18n reason key. */
+/** Why two walls cannot be joined — maps 1:1 to an i18n reason key. */
 export type WallMergeBlockReason =
   | 'not-straight'
   | 'not-collinear'
   | 'different-thickness'
+  | 'parallel-offset'
   | 'degenerate';
 
 export type CanMergeResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: WallMergeBlockReason };
+
+/**
+ * The join the tool will perform for a pair of walls (ADR-566 §corner-join):
+ *   - `collinear` → the two walls become ONE wall (`buildMergedWallParams`).
+ *   - `corner`    → the two walls are extended/trimmed so their axes meet at
+ *     `joinPoint`, forming an L — they stay TWO walls (`computeWallCornerJoin`).
+ *   - `blocked`   → cannot join (typed reason for the UI).
+ */
+export type WallJoinPlan =
+  | { readonly kind: 'collinear' }
+  | { readonly kind: 'corner'; readonly joinPoint: Point2D }
+  | { readonly kind: 'blocked'; readonly reason: WallMergeBlockReason };
 
 // ── Internal geometry helpers ─────────────────────────────────────────────────
 
@@ -125,6 +139,94 @@ export function canMergeWalls(a: WallEntity, b: WallEntity): CanMergeResult {
   return { ok: true };
 }
 
+// ── Join classification (collinear merge vs corner join) ──────────────────────
+
+/**
+ * Decides HOW to join wall `a` (primary) with wall `b`:
+ *   - Parallel + collinear (same axis)   → `collinear` (single merged wall). Same
+ *     thickness required (mirror `canMergeWalls`).
+ *   - Parallel but offset (adjacent)     → `blocked: 'parallel-offset'` (no corner
+ *     exists — the axes never meet).
+ *   - Non-parallel (crossing/L)          → `corner` at the infinite-line axis
+ *     intersection. Different thickness is ALLOWED (they stay two walls).
+ *
+ * Straight-only; degenerate axes are blocked. This is the superset gate the
+ * knife-style merge tool uses; `canMergeWalls` remains the collinear-only gate.
+ */
+export function classifyWallJoin(a: WallEntity, b: WallEntity): WallJoinPlan {
+  if (a.kind !== 'straight' || b.kind !== 'straight') {
+    return { kind: 'blocked', reason: 'not-straight' };
+  }
+  const axisA = wallAxis(a);
+  const axisB = wallAxis(b);
+  if (!axisA || !axisB) return { kind: 'blocked', reason: 'degenerate' };
+
+  const sin = Math.abs(axisA.u.x * axisB.u.y - axisA.u.y * axisB.u.x);
+  if (sin <= COLLINEAR_SIN_TOL) {
+    // Parallel — collinear (merge) or offset (no corner).
+    const perpTol = Math.max(
+      COLLINEAR_PERP_TOL_ABS,
+      PERP_TOL_THICKNESS_FRAC * Math.min(a.params.thickness, b.params.thickness),
+    );
+    const collinear =
+      perpDistance(axisA, { x: b.params.start.x, y: b.params.start.y }) <= perpTol &&
+      perpDistance(axisA, { x: b.params.end.x, y: b.params.end.y }) <= perpTol;
+    if (!collinear) return { kind: 'blocked', reason: 'parallel-offset' };
+    if (Math.abs(a.params.thickness - b.params.thickness) > THICKNESS_TOL) {
+      return { kind: 'blocked', reason: 'different-thickness' };
+    }
+    return { kind: 'collinear' };
+  }
+
+  // Crossing axes → corner join at the infinite-line intersection (extends both).
+  const joinPoint = lineIntersection(a.params.start, a.params.end, b.params.start, b.params.end);
+  if (!joinPoint) return { kind: 'blocked', reason: 'degenerate' };
+  return { kind: 'corner', joinPoint };
+}
+
+// ── Corner join (extend/trim both axes to their intersection) ──────────────────
+
+export interface WallCornerJoinResult {
+  /** The shared L-corner point (infinite-axis intersection). */
+  readonly joinPoint: Point2D;
+  /** Primary wall params with its nearest endpoint moved onto `joinPoint`. */
+  readonly wallAParams: WallParams;
+  /** Secondary wall params with its nearest endpoint moved onto `joinPoint`. */
+  readonly wallBParams: WallParams;
+}
+
+/**
+ * Moves the endpoint of each wall that is NEAREST to the axis intersection onto
+ * that intersection, so the two walls meet at a clean L-corner (Revit "Wall Join"
+ * / AutoCAD trim-extend to corner — Fillet radius 0). Works for extension (corner
+ * beyond both walls) and trim (corner between them) alike. The far endpoint of
+ * each wall is untouched. `startMiter`/`endMiter`/`measurementLength` are cleared
+ * (geometry changed — the wall corner framing re-derives the miter). Openings are
+ * re-flowed by the caller's `UpdateWallParamsCommand` cascade (fixed offsets).
+ *
+ * Returns `null` when the axes are parallel (no intersection).
+ */
+export function computeWallCornerJoin(a: WallEntity, b: WallEntity): WallCornerJoinResult | null {
+  const joinPoint = lineIntersection(a.params.start, a.params.end, b.params.start, b.params.end);
+  if (!joinPoint) return null;
+  return {
+    joinPoint,
+    wallAParams: extendWallEndpointTo(a.params, joinPoint),
+    wallBParams: extendWallEndpointTo(b.params, joinPoint),
+  };
+}
+
+/** Returns `params` with whichever of start/end is nearest `target` moved onto it. */
+function extendWallEndpointTo(params: WallParams, target: Point2D): WallParams {
+  const dStart = Math.hypot(params.start.x - target.x, params.start.y - target.y);
+  const dEnd = Math.hypot(params.end.x - target.x, params.end.y - target.y);
+  const {
+    startMiter: _sm, endMiter: _em, measurementLength: _ml, ...rest
+  } = params;
+  const tgt: Point3D = { x: target.x, y: target.y, z: 0 };
+  return dStart <= dEnd ? { ...rest, start: tgt } : { ...rest, end: tgt };
+}
+
 // ── Merged axis span ──────────────────────────────────────────────────────────
 
 interface Endpoint {
@@ -163,6 +265,63 @@ export function computeMergedGhostAxis(a: WallEntity, b: WallEntity): readonly [
   }
   const at = (s: number): Point2D => ({ x: axis.origin.x + axis.u.x * s, y: axis.origin.y + axis.u.y * s });
   return [at(lo.scalar), at(hi.scalar)];
+}
+
+// ── Gap between two collinear walls (ADR-568 auto-opening) ────────────────────
+
+/**
+ * Passage-width floor (mm). A gap ≥ this bridges INTO an auto-opening; a smaller
+ * gap (or touch/overlap) bridges plain (single wall, no opening). Well above the
+ * hard opening floor `MIN_OPENING_WIDTH_MM` (200).
+ */
+export const MIN_GAP_FOR_OPENING_MM = 400;
+
+export interface WallGap {
+  /** Empty span (mm) between the two walls' facing endpoints along the shared axis. */
+  readonly gapMm: number;
+  /**
+   * Offset (mm) of the gap's near edge from the MERGED wall's start
+   * (`buildMergedWallParams` starts at the outer-most projection), i.e. the
+   * `offsetFromStart` an opening filling the gap must have on the merged wall.
+   */
+  readonly openingOffsetFromMergedStart: number;
+}
+
+/**
+ * The empty interval between two COLLINEAR walls along their shared axis. Projects
+ * both walls onto the primary (`a`) axis as intervals `[aLo,aHi]` / `[bLo,bHi]`; a
+ * gap exists ONLY when the intervals are disjoint — touch / overlap / containment
+ * all return `null` (no empty span to fill). The caller MUST have already gated
+ * collinearity via `canMergeWalls` (this treats `b` as if it lay on `a`'s axis).
+ *
+ * The merged wall (`buildMergedWallParams`) starts at `min(aLo,bLo)`, so the
+ * opening's `offsetFromStart` on the merged wall = gap near-edge − that origin.
+ */
+export function computeWallGap(a: WallEntity, b: WallEntity): WallGap | null {
+  const axis = wallAxis(a);
+  if (!axis) return null;
+  const aLo = Math.min(scalarAlong(axis, a.params.start), scalarAlong(axis, a.params.end));
+  const aHi = Math.max(scalarAlong(axis, a.params.start), scalarAlong(axis, a.params.end));
+  const bLo = Math.min(scalarAlong(axis, b.params.start), scalarAlong(axis, b.params.end));
+  const bHi = Math.max(scalarAlong(axis, b.params.start), scalarAlong(axis, b.params.end));
+
+  let gapLo: number;
+  let gapHi: number;
+  if (aHi <= bLo) {
+    gapLo = aHi; // B lies after A
+    gapHi = bLo;
+  } else if (bHi <= aLo) {
+    gapLo = bHi; // A lies after B
+    gapHi = aLo;
+  } else {
+    return null; // overlap / touch / containment — no empty span
+  }
+
+  const gapMm = gapHi - gapLo;
+  if (gapMm <= 1e-6) return null;
+
+  const mergedStart = Math.min(aLo, bLo);
+  return { gapMm, openingOffsetFromMergedStart: gapLo - mergedStart };
 }
 
 // ── Merged params ──────────────────────────────────────────────────────────────

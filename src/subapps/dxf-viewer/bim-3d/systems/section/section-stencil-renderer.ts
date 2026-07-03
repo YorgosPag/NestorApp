@@ -43,6 +43,8 @@ import {
   createCapMaterial,
   createSelectedCapMaterial,
   createSinglePassCutParityMaterial,
+  createBackParityMaterial,
+  createFrontParityMaterial,
   createOpaqueCutCapMaterial,
 } from './section-stencil-materials';
 import {
@@ -56,6 +58,18 @@ import {
   renderHatchOverlaysForPlane,
 } from './section-stencil-secondary-passes';
 import { isSectionParityOverlay } from './section-parity-overlay';
+import { SECTION_CUT_SURFACE } from '../../../config/color-config';
+import {
+  resolveEffectiveBounds,
+  computeCapSize,
+  computeCapCenter,
+  positionCapMesh,
+} from './section-cap-geometry';
+import {
+  type ParityMode,
+  applyCapDebugState,
+  runCutParityPass,
+} from './section-cut-parity';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -80,9 +94,6 @@ export interface StencilRendererDeps {
  */
 export type SectionCapQuality = 'fast' | 'colors' | 'full';
 
-const CAP_QUAD_SCALE_FACTOR = 4;
-const FALLBACK_CAP_SIZE = 100;
-
 export class SectionStencilRenderer {
   private readonly deps: StencilRendererDeps;
   /**
@@ -91,6 +102,13 @@ export class SectionStencilRenderer {
    * replacing the old two-pass back/front materials. `depthTest` off (lone-plane rule).
    */
   private readonly cutParitySinglePassMat: THREE.MeshBasicMaterial;
+  /**
+   * ADR-452 v2.22 — ROBUST explicit 2-pass parity (BACK increment + FRONT decrement) for the
+   * ALWAYS-SOLID grey base cap. Replaces the fragile v2.20 cache-desync single-pass on the one
+   * layer that must never read hollow. Colours/hatch keep the cheaper single-pass (refine path).
+   */
+  private readonly backParityMat: THREE.MeshBasicMaterial;
+  private readonly frontParityMat: THREE.MeshBasicMaterial;
   /** ADR-452 — OPAQUE grey base cap for the horizontal cut (crisp poché, no bleed-through). */
   private readonly cutCapMat: THREE.MeshBasicMaterial;
   private readonly cutCapMesh: THREE.Mesh;
@@ -114,6 +132,8 @@ export class SectionStencilRenderer {
   constructor(deps: StencilRendererDeps) {
     this.deps = deps;
     this.cutParitySinglePassMat = createSinglePassCutParityMaterial();
+    this.backParityMat = createBackParityMaterial();
+    this.frontParityMat = createFrontParityMaterial();
     this.cutCapMat = createOpaqueCutCapMaterial();
     this.cutCapMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.cutCapMat);
     this.cutCapMesh.frustumCulled = false;
@@ -145,7 +165,7 @@ export class SectionStencilRenderer {
       selectedCapScene: this.selectedCapScene,
       hatchCapMesh: this.hatchCapMesh,
       hatchCapScene: this.hatchCapScene,
-      positionMesh: (mesh, plane, size) => this.positionMesh(mesh, plane, size),
+      positionMesh: (mesh, plane, size, center) => positionCapMesh(mesh, plane, size, center),
     };
   }
 
@@ -177,7 +197,9 @@ export class SectionStencilRenderer {
   ): void {
     if (this.disposed) return;
 
-    const capSize = this.computeCapSize(sceneBounds);
+    const bounds = resolveEffectiveBounds(sceneBounds, this.deps.getBimGroup, this.deps.getDxfBounds);
+    const capSize = computeCapSize(bounds);
+    const capCenter = computeCapCenter(bounds);
     // Parity geometry: slice the solid at the cut plane (so the cross-section is
     // an open hole), and bound it to the section box / crop region when present.
     const parityClip = [cutPlane, ...boundPlanes] as THREE.Plane[];
@@ -199,10 +221,16 @@ export class SectionStencilRenderer {
     // (console flood + RAF jank). Nulling skips that path entirely. Restored below.
     mainScene.background = null;
 
-    // 1) OPAQUE grey base poché over ALL cut geometry — crisp, no bleed-through.
+    // ADR-452 v2.22 — dev-only diagnostic (magenta flood, see `applyCapDebugState`). No-op unless
+    // `dxf-section-cap-debug=1`; reset to the real render state every frame so the flag is live.
+    applyCapDebugState(this.cutCapMat, SECTION_CUT_SURFACE.color, quality);
+
+    // 1) OPAQUE grey base poché over ALL cut geometry — crisp, no bleed-through. ADR-452 v2.22 —
+    //    the ALWAYS-SOLID layer uses the ROBUST explicit 2-pass parity (no cache-desync trick),
+    //    so it can never read hollow on a heavy scene; colours below keep the cheap single-pass.
     this.capCutSection(
-      renderer, mainScene, camera, cutPlane, parityClip, others, capSize,
-      this.cutCapMesh, this.cutCapScene, this.cutCapMat, null,
+      renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
+      this.cutCapMesh, this.cutCapScene, this.cutCapMat, null, 'twopass',
     );
 
     // 2) Per-MATERIAL-COLOUR opaque cut faces — each cut section painted in its
@@ -220,8 +248,8 @@ export class SectionStencilRenderer {
         const mat = getColorCapMaterial(this.colorCapCache, hex);
         this.hatchCapMesh.material = mat;
         this.capCutSection(
-          renderer, mainScene, camera, cutPlane, parityClip, others, capSize,
-          this.hatchCapMesh, this.hatchCapScene, mat, meshes,
+          renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
+          this.hatchCapMesh, this.hatchCapScene, mat, meshes, 'single',
         );
       }
     }
@@ -235,11 +263,16 @@ export class SectionStencilRenderer {
 
   /**
    * ADR-452 — one cut-section cap pass for the horizontal plane: clear stencil, run the
-   * SINGLE-PASS back-increment / front-decrement parity (v2.20) over the (optionally
-   * isolated) solids sliced at the cut plane, then fill the cap quad where stencil != 0.
-   * Shared by the opaque grey base (all geometry) and each per-material colour overlay
-   * (`isolate` = that material's meshes), so the 2× full-scene-render saving applies to
-   * EVERY tier (grey 'fast', per-colour 'colors'/'full').
+   * back-increment / front-decrement parity over the (optionally isolated) solids sliced
+   * at the cut plane, then fill the cap quad where stencil != 0. Shared by the opaque grey
+   * base (all geometry, `isolate = null`) and each per-material colour overlay (`isolate` =
+   * that material's meshes).
+   *
+   * `parityMode` picks the parity strategy (ADR-452 v2.22):
+   *  • 'twopass' — ROBUST explicit two-pass (BACK incr + FRONT decr, no cache-desync). Used by
+   *                the ALWAYS-SOLID grey base so it can never read hollow on a heavy scene.
+   *  • 'single'  — cheaper v2.20 single-pass (warmup + raw FRONT override). Used by the
+   *                per-colour refine loop only (settle-time, off the must-be-solid path).
    */
   private capCutSection(
     renderer: THREE.WebGLRenderer,
@@ -249,10 +282,12 @@ export class SectionStencilRenderer {
     parityClip: THREE.Plane[],
     others: THREE.Plane[],
     capSize: number,
+    capCenter: THREE.Vector3 | null,
     capMesh: THREE.Mesh,
     capScene: THREE.Scene,
     capMaterial: THREE.Material,
     isolate: THREE.Object3D[] | null,
+    parityMode: ParityMode,
   ): void {
     // Hide objects that must NOT contribute to the stencil parity, restored after.
     //  • Fat-line edge overlays (ADR-375) are `LineSegments2`, which extend
@@ -279,29 +314,21 @@ export class SectionStencilRenderer {
       if (keep && ud['bimId'] !== undefined && !keep.has(obj)) { hidden.push(obj); obj.visible = false; }
     });
 
-    // ADR-452 v2.20 — SINGLE-PASS parity (was two full-scene passes). Seed Three.js'
-    // stencil-op cache with IncrementWrap via the zero-area warmup, override the FRONT
-    // face to DecrementWrap with a raw GL call (the JS cache stays IncrementWrap, so
-    // every BIM object cache-hits and our override survives), then render the sliced
-    // solid ONCE DoubleSide: back faces increment, front faces decrement → parity != 0
-    // at the cross-section. Halves the full-scene renders this hot path costs per frame
-    // (the section-nav lag). Mirrors renderCapForPlane's box trick; depthTest stays off
-    // on the parity material (lone-plane rule), independent of the cache seed.
-    const gl = renderer.getContext() as WebGL2RenderingContext;
-    renderer.clearStencil();
-    renderer.render(this.warmupScene, camera);
-    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
-    this.cutParitySinglePassMat.clippingPlanes = parityClip;
-    mainScene.overrideMaterial = this.cutParitySinglePassMat;
-    renderer.render(mainScene, camera);
+    // ADR-452 v2.22 — parity strategy (grey base = robust 'twopass', colours = 'single'), see
+    // `runCutParityPass`. Leaves stencil != 0 at the cut cross-section.
+    runCutParityPass(renderer, mainScene, camera, parityClip, parityMode, {
+      backParityMat: this.backParityMat,
+      frontParityMat: this.frontParityMat,
+      singlePassMat: this.cutParitySinglePassMat,
+      warmupScene: this.warmupScene,
+    });
 
-    mainScene.overrideMaterial = null;
     for (const obj of hidden) obj.visible = true;
 
     // Cap quad ON the cut plane, masked to stencil != 0. Bounded by the section /
     // crop planes but NOT the cut plane itself (the quad sits on that plane).
     (capMaterial as THREE.Material & { clippingPlanes: THREE.Plane[] | null }).clippingPlanes = others;
-    this.positionMesh(capMesh, cutPlane, capSize);
+    positionCapMesh(capMesh, cutPlane, capSize, capCenter);
     renderer.render(capScene, camera);
   }
 
@@ -326,7 +353,9 @@ export class SectionStencilRenderer {
   ): void {
     if (this.disposed || planes.length === 0) return;
 
-    const capSize = this.computeCapSize(sceneBounds);
+    const bounds = resolveEffectiveBounds(sceneBounds, this.deps.getBimGroup, this.deps.getDxfBounds);
+    const capSize = computeCapSize(bounds);
+    const capCenter = computeCapCenter(bounds);
     // ADR-452 v2.7 — hatch overlays are full-quality only (collect skipped on drafts).
     const hatchGroups = quality === 'full' ? collectHatchGroups(mainScene) : new Map<SectionHatchKey, THREE.Object3D[]>();
     const savedAutoClear = renderer.autoClear;
@@ -344,7 +373,7 @@ export class SectionStencilRenderer {
     mainScene.background = null;
 
     for (let i = 0; i < planes.length; i++) {
-      this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize, hatchGroups, quality);
+      this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize, capCenter, hatchGroups, quality);
     }
 
     mainScene.overrideMaterial = null;
@@ -362,6 +391,7 @@ export class SectionStencilRenderer {
     planes: ReadonlyArray<THREE.Plane>,
     index: number,
     capSize: number,
+    capCenter: THREE.Vector3 | null,
     hatchGroups: Map<SectionHatchKey, THREE.Object3D[]>,
     quality: SectionCapQuality,
   ): void {
@@ -393,7 +423,7 @@ export class SectionStencilRenderer {
     mainScene.overrideMaterial = null;
     for (const obj of hidden) obj.visible = true;
 
-    this.positionMesh(this.capMesh, currentPlane, capSize);
+    positionCapMesh(this.capMesh, currentPlane, capSize, capCenter);
     renderer.render(this.capScene, camera);
 
     // ADR-452 v2.7 — hatch overlays + selection emphasis are full-quality only; on
@@ -401,14 +431,14 @@ export class SectionStencilRenderer {
     // refine-on-idle pass restores these once motion settles.
     if (quality === 'full' && hatchGroups.size > 0) {
       renderHatchOverlaysForPlane(
-        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, hatchGroups,
+        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, capCenter, hatchGroups,
       );
     }
 
     const selectedBimIds = useSelection3DStore.getState().selectedBimIds;
     if (quality === 'full' && selectedBimIds.length > 0) {
       renderEmphasisCapForPlane(
-        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, selectedBimIds,
+        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, capCenter, selectedBimIds,
       );
     }
   }
@@ -434,36 +464,14 @@ export class SectionStencilRenderer {
     });
   }
 
-  private positionMesh(mesh: THREE.Mesh, plane: THREE.Plane, size: number): void {
-    const normal = plane.normal;
-    const pointOnPlane = normal.clone().multiplyScalar(-plane.constant);
-    mesh.position.copy(pointOnPlane);
-    const defaultNormal = new THREE.Vector3(0, 0, 1);
-    mesh.quaternion.setFromUnitVectors(defaultNormal, normal);
-    mesh.scale.set(size, size, 1);
-    mesh.updateMatrix();
-    mesh.updateMatrixWorld(true);
-  }
-
-  private computeCapSize(sceneBounds: THREE.Box3 | null): number {
-    if (!sceneBounds || sceneBounds.isEmpty()) {
-      const bimBox = new THREE.Box3().setFromObject(this.deps.getBimGroup());
-      const dxfBox = this.deps.getDxfBounds();
-      const combined = new THREE.Box3();
-      if (!bimBox.isEmpty()) combined.union(bimBox);
-      if (dxfBox && !dxfBox.isEmpty()) combined.union(dxfBox);
-      if (combined.isEmpty()) return FALLBACK_CAP_SIZE;
-      sceneBounds = combined;
-    }
-    const sphere = sceneBounds.getBoundingSphere(new THREE.Sphere());
-    return Math.max(sphere.radius * CAP_QUAD_SCALE_FACTOR, FALLBACK_CAP_SIZE);
-  }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     this.capMesh.geometry.dispose();
     this.cutParitySinglePassMat.dispose();
+    this.backParityMat.dispose();
+    this.frontParityMat.dispose();
     this.cutCapMesh.geometry.dispose();
     this.cutCapMat.dispose();
     this.singlePassStencilMat.dispose();

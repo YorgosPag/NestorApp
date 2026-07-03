@@ -51,6 +51,19 @@ describe('pickWallEntityAt', () => {
     ] as unknown as Entity[];
     expect(pickWallEntityAt({ x: 500, y: 10 }, entities, 200)?.id).toBe('near');
   });
+
+  // Regression: click on the wall BODY (off the invisible axis) selects it even with
+  // the tiny pixel-derived tolerance. Before the body-hit fix the ~100mm off-axis
+  // click vs tol=4 returned null → the «no beam is created» bug.
+  it('picks a wall when the click is on its body but off the axis (tol=4)', () => {
+    const entities = [wall('w1', 0, 0, 1000, 0, 250)] as unknown as Entity[]; // half = 125
+    expect(pickWallEntityAt({ x: 500, y: 100 }, entities, 4)?.id).toBe('w1');
+  });
+
+  it('returns null when the click is outside the wall body (+margin)', () => {
+    const entities = [wall('w1', 0, 0, 1000, 0, 250)] as unknown as Entity[]; // threshold = 129
+    expect(pickWallEntityAt({ x: 500, y: 200 }, entities, 4)).toBeNull();
+  });
 });
 
 describe('buildBeamFromWall', () => {

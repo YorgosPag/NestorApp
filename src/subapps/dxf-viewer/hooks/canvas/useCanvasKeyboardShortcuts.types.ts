@@ -105,6 +105,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallMergeEscape?: () => void;
   /** ADR-566: Whether the wall-merge tool is active */
   wallMergeIsActive?: boolean;
+  /** ADR-568: Wall gap-bridge + opening ESC handler */
+  handleWallGapOpeningEscape?: () => void;
+  /** ADR-568: Whether the wall-gap-opening tool is active */
+  wallGapOpeningIsActive?: boolean;
   /** ADR-363 R1: BIM Copy ESC handler */
   handleBimCopyEscape?: () => void;
   /** ADR-363 R1: Whether the bim-copy tool is active */

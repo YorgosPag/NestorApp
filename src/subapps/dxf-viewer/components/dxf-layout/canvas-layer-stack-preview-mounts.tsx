@@ -51,6 +51,8 @@ import {
   StretchPreviewMount,
   EntityBodyDragPreviewMount,
   GripDragPreviewMount,
+  WallSplitKnifePreviewMount,
+  BeamBetweenMembersPreviewMount,
   type RotationPreviewMountProps,
   type MovePreviewMountProps,
   type MirrorPreviewMountProps,
@@ -151,6 +153,22 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       {/* Body-drag (grab entity body → move; Ctrl+drag → copy). Store-driven:
           activation + anchor live in EntityBodyDragStore (no payload prop). */}
       <EntityBodyDragPreviewMount
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-363 Phase 5.6 — wall-split knife-line: dashed segment [p1 → cursor]
+          + per-crossing cut indicators. Store-driven first point (self-subscribes). */}
+      <WallSplitKnifePreviewMount
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-569 — «Δοκάρι ανάμεσα σε μέλη»: rubber-band δοκάρι-φάντασμα από την παρειά
+          του anchor-μέλους προς το μέλος/κέρσορα. Store-driven anchor (self-subscribes). */}
+      <BeamBetweenMembersPreviewMount
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}

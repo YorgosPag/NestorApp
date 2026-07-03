@@ -97,6 +97,29 @@ describe('ADR-377 Phase E — attachEdgesProjection (3D edge SSoT)', () => {
       expect(mat.color.getHex()).toBe(0xff0000);
     });
 
+    it('ADR-445 — beam keeps its amber category edge colour on LIGHT bg (δεν καταπίνεται)', () => {
+      // A beam flush on a wall (same footprint + σοβατισμένη όψη) would «λιώνει» if its
+      // edges fell to the uniform near-black silhouette. Structural framing keeps its
+      // category colour (amber) in EVERY background so its outline reads apart.
+      useBimRenderSettingsStore.getState().setBackgroundMode('environment');
+      setObjectStyles({});
+      const mesh = makeBoxMesh();
+      attachEdgesProjection(mesh, 'beam');
+      const mat = overlayOf(mesh)!.material as LineMaterial;
+      expect(mat.color.getHex()).toBe(new THREE.Color(BIM_CATEGORY_LINE_COLORS.beam).getHex());
+      expect(mat.color.getHex()).not.toBe(0x1a1a1a);
+    });
+
+    it('ADR-445 — wall still uses the uniform near-black silhouette on LIGHT bg (μηδέν regression)', () => {
+      // The beam exception must NOT leak to other categories: a wall on light bg keeps
+      // the v2.22 uniform near-black silhouette.
+      useBimRenderSettingsStore.getState().setBackgroundMode('environment');
+      setObjectStyles({});
+      const mesh = makeBoxMesh();
+      attachEdgesProjection(mesh, 'wall', 'common-edges');
+      expect((overlayOf(mesh)!.material as LineMaterial).color.getHex()).toBe(0x1a1a1a);
+    });
+
     it('subcategory projection pattern override → dashed 3D edge', () => {
       setObjectStyles({
         wall: {
