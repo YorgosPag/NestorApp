@@ -20,6 +20,16 @@ import type { RibbonTab } from '../types/ribbon-types';
 
 export const MULTI_SELECTION_CONTEXTUAL_TRIGGER = 'multi-selection-bim';
 
+/**
+ * ADR-566 — separator for a COMPOSITE contextual trigger. When a homogeneous
+ * multi-selection (e.g. 2 walls) should surface BOTH the per-kind properties tab
+ * (kept active) AND the multi-selection tab, the active trigger string joins the
+ * two tokens with this char. It stays a single string → the ADR-532 Stage 2
+ * string-identity perf (context consumers skip on unchanged value) is preserved.
+ * The char is control-only, so it can never collide with a real trigger token.
+ */
+export const CONTEXTUAL_TRIGGER_SEPARATOR = '';
+
 export const CONTEXTUAL_MULTI_SELECTION_TAB: RibbonTab = {
   id: 'multi-selection',
   labelKey: 'ribbon.tabs.multiSelection',

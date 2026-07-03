@@ -25,10 +25,8 @@
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { WallEntity } from '../../../bim/types/wall-types';
-import type { OpeningGeometry, OpeningParams } from '../../../bim/types/opening-types';
 import type { OpeningUpdate } from '../../../bim/walls/wall-split';
-import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
-import { validateOpeningParams } from '../../../bim/validators/opening-validator';
+import { applyOpeningHostPatch } from '../../../bim/walls/opening-host-patch';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 
 // ── Command params ────────────────────────────────────────────────────────────
@@ -68,7 +66,7 @@ export class WallSplitCommand implements ICommand {
     this.sceneManager.addEntity(wall1 as unknown as SceneEntity);
     this.sceneManager.addEntity(wall2 as unknown as SceneEntity);
     for (const upd of openingUpdates) {
-      this.applyOpeningPatch(upd.openingId, upd.nextParams);
+      applyOpeningHostPatch(this.sceneManager, upd.openingId, upd.nextParams);
     }
     this.wasExecuted = true;
   }
@@ -81,7 +79,7 @@ export class WallSplitCommand implements ICommand {
     this.sceneManager.addEntity(originalWall as unknown as SceneEntity);
     for (let i = openingUpdates.length - 1; i >= 0; i--) {
       const upd = openingUpdates[i];
-      this.applyOpeningPatch(upd.openingId, upd.previousParams);
+      applyOpeningHostPatch(this.sceneManager, upd.openingId, upd.previousParams);
     }
   }
 
@@ -130,28 +128,5 @@ export class WallSplitCommand implements ICommand {
       },
       version: 1,
     };
-  }
-
-  // ── Internals ────────────────────────────────────────────────────────────────
-
-  /**
-   * Patches opening params + recomputes geometry/validation from the host wall.
-   * Mirrors UpdateOpeningParamsCommand.applyPatch — soft-orphan safe (proceeds
-   * even if the host wall is not yet in the scene).
-   */
-  private applyOpeningPatch(openingId: string, params: OpeningParams): void {
-    const hostRaw = this.sceneManager.getEntity(params.wallId);
-    const hostCandidate = hostRaw as unknown as Partial<WallEntity>;
-    const patch: Record<string, unknown> = { params };
-
-    if (hostCandidate?.type === 'wall' && hostCandidate.params && hostCandidate.geometry) {
-      const host = hostCandidate as WallEntity;
-      const geometry: OpeningGeometry = computeOpeningGeometry(params, host, host.params.sceneUnits ?? 'mm');
-      const validation = validateOpeningParams(params, host).bimValidation;
-      patch.geometry = geometry;
-      patch.validation = validation;
-    }
-
-    this.sceneManager.updateEntity(openingId, patch as Partial<SceneEntity>);
   }
 }

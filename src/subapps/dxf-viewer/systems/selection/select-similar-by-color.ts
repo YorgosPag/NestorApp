@@ -21,6 +21,13 @@ import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { resolveRenderedColorHex } from '../properties/resolve-entity-style';
 import { resolveBimEntityColorHex } from './bim-entity-color';
+// ADR-362 — a dimension's rendered colour is its DIMSTYLE `dimclrd` (NOT `entity.color`, which
+// dimensions don't carry, and NOT a BIM category). Resolve through the SAME SSoT the
+// DimensionRenderer paints with, so "select similar" groups dims by the colour the eye sees.
+import type { DimensionEntity } from '../../types/dimension';
+import { resolveDimStyle } from '../dimensions/dim-style-resolver';
+import { getDimStyleRegistry } from '../dimensions/dim-style-registry';
+import { resolveDimColor } from '../../rendering/entities/dimension/dim-color-resolver';
 
 /** Live per-view Object Styles overrides (V/G), keyed by BIM category. */
 type ObjectStylesMap = Partial<Record<BimCategory, ObjectStyle>>;
@@ -53,6 +60,22 @@ export function resolveEntityColorHex(
   layersById: Record<string, SceneLayer>,
   objectStyles?: ObjectStylesMap,
 ): string | null {
+  // Dimension → DIMSTYLE colour (dimclrd) via the renderer's SSoT. Scene entities arrive as the
+  // WRAPPED DxfDimension (fields nested under `dimensionEntity`), so unwrap first; without this a
+  // dimension resolved to `entity.color` (undefined) → null → "select similar" skipped every dim.
+  if (entity.type === 'dimension') {
+    const dim = (entity as { dimensionEntity?: DimensionEntity }).dimensionEntity
+      ?? (entity as unknown as DimensionEntity);
+    if (!dim) return null;
+    // Colour is DIMSTYLE-driven and independent of geometry, so a dim with no defPoints still
+    // has a valid identity colour (its selectability by marquee is a separate, bounds concern).
+    const style = resolveDimStyle(dim, getDimStyleRegistry());
+    const layer = findEntityLayer(entity, layersById);
+    // resolveDimColor handles ACI 1-255 + ByLayer/ByBlock (uses the layer hex for the latter),
+    // matching DimensionRenderer.applyLineStyle exactly.
+    return resolveDimColor(style.dimclrd, layer?.color).toLowerCase();
+  }
+
   // BIM entity → structural colour identity (ADR-445). null ⇒ raw DXF, use cascade.
   const bimColor = resolveBimEntityColorHex(entity, objectStyles);
   if (bimColor !== null) return bimColor;

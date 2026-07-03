@@ -84,6 +84,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-363 Phase 5.6: Wall Split (Revit Split Element — continuous pick loop, exits on ESC)
   'wall-split': { id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-566: Wall Merge (AutoCAD JOIN for walls — continuous pick loop, exits on ESC)
+  'wall-merge': { id: 'wall-merge', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-401 Phase E.1/F.3: Wall + Column Attach Top/Base (pick one host then act, exits on click/ESC)
   'wall-attach-top': { id: 'wall-attach-top', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'wall-attach-base': { id: 'wall-attach-base', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },

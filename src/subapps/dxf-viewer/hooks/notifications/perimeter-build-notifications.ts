@@ -66,5 +66,11 @@ export function registerPerimeterBuildNotifications(t: TFunction): Array<() => v
         toast.warning(t('regionPerimeter.noClosedLoop'));
       }
     }),
+
+    // ADR-567 — μπλοκαρίστηκε τοποθέτηση δομικής πάνω σε υπάρχουσα δομική (επικάλυψη εμβαδού).
+    // Non-blocking warn· batch (region-fill) → πληθυντικός με τον αριθμό όσων παραλείφθηκαν.
+    EventBus.on('bim:placement-blocked', ({ count }) => {
+      toast.warning(count > 1 ? t('placementBlock.overlapBatch', { count }) : t('placementBlock.overlap'));
+    }),
   ];
 }

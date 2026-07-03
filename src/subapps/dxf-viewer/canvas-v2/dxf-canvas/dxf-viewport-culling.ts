@@ -24,6 +24,10 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 // ADR-557 Φ-attachment — attachment-aware text-box SSoT (same box the grips + hover
 // frame use), so culling / picking match exactly what the renderer draws.
 import { textBoxAABB } from '../../bim/text/text-box';
+// ADR-362 / ADR-040 Phase IX — dimension world-space AABB via the hit-geometry SSoT (same
+// geometry the picking path uses), so a dim in a geo-referenced DXF is culled by its REAL
+// bounds instead of the ±1e6 full-plane fallback (the "dims invisible but glow on hover" bug).
+import { getDimensionWorldBounds } from '../../systems/dimensions/dimension-cull-bounds';
 
 interface BBox {
   minX: number;
@@ -114,6 +118,16 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
         maxX: Math.max(...xs),
         maxY: Math.max(...ys),
       };
+    }
+    case 'dimension': {
+      // ADR-362 / ADR-040 Phase IX — real world-space AABB from the dimension's RENDERED
+      // geometry (hit-geometry SSoT: dim line / arc / leader / extension lines / text anchor),
+      // so a dim in a geo-referenced DXF (coords ~1.7e7) is culled by its true bounds — NOT the
+      // ±1e6 full-plane fallback. Without this EVERY dimension was dropped from the 2D base pass
+      // while hover (bypasses culling) still lit it: the "dims invisible but glow on hover" bug
+      // (2026-07-03). Direct sibling of the wall/column/foundation geometry.bbox fix above.
+      // Degenerate dims (no usable points) keep the conservative full-plane fallback.
+      return getDimensionWorldBounds(entity.dimensionEntity) ?? FULL_PLANE_BBOX;
     }
     case 'stair': {
       // ADR-358 Phase 5b — project the StairGeometry 3D bbox to 2D plan bounds.

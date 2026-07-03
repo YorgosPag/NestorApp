@@ -16,12 +16,13 @@
  */
 import { EventBus } from '../../systems/events/EventBus';
 import type { SceneModel } from '../../types/scene';
-import type { AnySceneEntity } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallTrims, applyTrimPatches } from './wall-trims';
 import { computeWallGeometry } from '../geometry/wall-geometry';
+import { structuralFootprintOf, findStructuralOverlap } from '../placement/structural-placement-overlap';
 
 /**
  * World-baked column footprint polygons of the scene — the ADR-363
@@ -57,6 +58,19 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   if (!levelId) return;
   const scene = accessor.getLevelScene(levelId);
   if (!scene) return;
+  // ADR-567 — ΠΟΤΕ τοίχος πάνω σε υπάρχουσα δομική οντότητα (ουσιαστική επικάλυψη εμβαδού).
+  // Καθολικό belt-and-suspenders δίπλα στο commit-time `isMemberCollinearOverlap` (κόκκινο ghost).
+  // Γωνίες/ενώσεις/διασταυρώσεις (κοινή παρειά ή μικρό τετράγωνο) περνούν (ratio < κατώφλι).
+  const wallFootprint = structuralFootprintOf(wallEntity as unknown as Entity);
+  if (wallFootprint) {
+    const hit = findStructuralOverlap(wallFootprint, scene.entities as unknown as Entity[], {
+      excludeIds: new Set([wallEntity.id]),
+    });
+    if (hit) {
+      EventBus.emit('bim:placement-blocked', { entityType: 'wall', blockedById: hit.blockedById, count: 1 });
+      return; // no-op: δεν εκπέμπει drawing:entity-created → μηδέν persist/scene mutation
+    }
+  }
   // Include the new wall BEFORE computing trims so neighbours are also patched.
   const entitiesWithNew = [...(scene.entities || []), wallEntity];
   const allWalls = entitiesWithNew.filter(isWallEntity);

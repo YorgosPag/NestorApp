@@ -119,6 +119,8 @@ export type ToolType =
   | 'wall-from-perimeter'
   // ADR-363 Phase 5.6: BIM Wall Split tool (Revit Split Element pattern)
   | 'wall-split'
+  // ADR-566: BIM Wall Merge tool (AutoCAD JOIN for walls)
+  | 'wall-merge'
   // ADR-401 Phase E.1: BIM Wall Attach Top/Base pick-host (Revit Attach Top/Base)
   | 'wall-attach-top'
   | 'wall-attach-base'

@@ -50,14 +50,13 @@ import {
 } from './wall-in-region';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { resolveRegionLoopTolWorld } from './region-tolerance';
+import { resolveRegionLoopTolerances } from './region-tolerance';
 // ADR-419 §planar-faces — SSoT half-edge planar face traversal (auto-area). Χειρίζεται
 // junctions βαθμού >2 + αμβλείες γωνίες + κενά μετά explode — ό,τι ΔΕΝ κάνει ο simple-cycle.
 import { findClosedPolygonsFromLines } from '../../systems/auto-area/auto-area-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
 import {
   EPS,
-  dist,
   normalize,
   polygonArea,
   classifyPerimeter,
@@ -77,6 +76,11 @@ export {
   perimeterExtentMm,
   isPerimeterOversized,
 } from './perimeter-measure';
+// Public API backward-compat — open-loop diagnostics (Layer 5, N.7.1 split).
+export {
+  findOpenChainLineIdsNear,
+  findOpenChainEndpointsNear,
+} from './perimeter-open-chain-diagnostics';
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -146,31 +150,6 @@ function rectEntityPolygon(e: Entity): Point2D[] | null {
   return corners.length === 4 ? corners : null;
 }
 
-/** Γράφος κόμβων/γειτνίασης από segments (συγχώνευση άκρων εντός tol). */
-function buildSegmentGraph(
-  segs: readonly RegionLineSeg[],
-  tol: number,
-): { nodes: Point2D[]; adj: number[][] } {
-  const nodes: Point2D[] = [];
-  const adj: number[][] = [];
-  const indexOf = (p: Point2D): number => {
-    for (let i = 0; i < nodes.length; i++) {
-      if (dist(nodes[i], p) <= tol) return i;
-    }
-    nodes.push({ x: p.x, y: p.y });
-    adj.push([]);
-    return nodes.length - 1;
-  };
-  for (const s of segs) {
-    const a = indexOf(s.start);
-    const b = indexOf(s.end);
-    if (a === b) continue;
-    if (!adj[a].includes(b)) adj[a].push(b);
-    if (!adj[b].includes(a)) adj[b].push(a);
-  }
-  return { nodes, adj };
-}
-
 /**
  * Κλειστοί βρόχοι από αλυσίδες ανεξάρτητων γραμμών.
  *
@@ -184,10 +163,14 @@ function buildSegmentGraph(
  * CCW/dedupe/collinear-removal εδώ — το κάνει `normalize()` στον orchestrator· το
  * `polygonKey` dedup + `pickSmallestContainingPerimeter` απορροφούν over-detection.
  */
-function buildPolygonLoops(segs: readonly RegionLineSeg[], tol: number): Point2D[][] {
+function buildPolygonLoops(
+  segs: readonly RegionLineSeg[],
+  mergeTol: number,
+  gapTol: number,
+): Point2D[][] {
   if (segs.length < 3) return [];
   const pairs = segs.map((s) => [s.start, s.end] as const);
-  return findClosedPolygonsFromLines(pairs, tol, tol);
+  return findClosedPolygonsFromLines(pairs, mergeTol, gapTol);
 }
 
 /**
@@ -205,12 +188,15 @@ function buildPolygonLoops(segs: readonly RegionLineSeg[], tol: number): Point2D
 export function extractClosedPolygons(
   entities: readonly Entity[],
   tol: number,
+  mergeTol: number = tol,
 ): Point2D[][] {
   const polygons: Point2D[][] = [];
   const seen = new Set<string>();
   const push = (poly: Point2D[]): void => {
     if (poly.length < 3) return;
-    const key = polygonKey(poly, tol);
+    // Dedup στο ΨΙΛΟΤΕΡΟ feature-tol (mergeTol), όχι στο gap-floor: αλλιώς δύο διακριτά
+    // μικρά features 50mm μακριά κβαντίζονταν στο ίδιο κλειδί → false dedup.
+    const key = polygonKey(poly, mergeTol);
     if (seen.has(key)) return;
     seen.add(key);
     polygons.push(poly);
@@ -226,7 +212,10 @@ export function extractClosedPolygons(
   const segs = extractLineSegments(looseEntities);
   // Planar face traversal — μεμονωμένα ορθογώνια, κλειστά L/U/πολύγωνα, ΚΑΙ
   // εφαπτόμενα σχήματα με κοινή κορυφή (junctions βαθμού >2) ως loose lines.
-  for (const loop of buildPolygonLoops(segs, tol)) push(loop);
+  // ADR-419 §region-tolerance: node-merge (`mergeTol`) ΔΙΑΧΩΡΙΣΜΕΝΟ από gap-closure
+  // (`tol` ως HPGAPTOL) — ο capped mergeTol αποτρέπει την κατάρρευση μικρών features
+  // (κουτί με ακμή < gap-floor), ενώ τα κενά μεγάλων τοίχων κλείνουν μέσω bridging.
+  for (const loop of buildPolygonLoops(segs, mergeTol, tol)) push(loop);
 
   return polygons;
 }
@@ -281,23 +270,31 @@ function unionTouchingPolygons(
 export function perimeterFacesToRects(
   entities: readonly Entity[],
   tol: number,
-  options?: { readonly unionTouching?: boolean },
+  options?: { readonly unionTouching?: boolean; readonly mergeTol?: number },
 ): PerimeterFacesResult {
   // ADR-419 §planar-faces: ο planar detector πιάνει ΗΔΗ τα εφαπτόμενα σχήματα με
   // κοινή κορυφή (junctions)· το union (column path) απλώς τα ραφράζει σε ΕΝΑ Γ/Τ/Π.
-  const closed = extractClosedPolygons(entities, tol);
+  // ADR-419 §region-tolerance: `options.mergeTol` (capped node-merge / feature epsilon)
+  // ΔΙΑΧΩΡΙΣΜΕΝΟ από το `tol` (gap-closure). Το `tol` (≥50mm) χρησιμοποιείται ΜΟΝΟ για
+  // το loop-closure bridging στο `buildPolygonLoops`. ΟΛΟ το downstream shape-math
+  // (dedup / classify / decompose grid+filter / normalize collinear) πρέπει να τρέχει
+  // στο ΨΙΛΟΤΕΡΟ `feat` — αλλιώς μια πλευρά < gap-floor (π.χ. 40mm) φιλτράρεται ως
+  // degenerate ή οι κορυφές της dedup-άρονται → το μικρό feature χάνει τα σκέλη του.
+  // Default `feat = tol` → μηδέν αλλαγή για callers με single tol (π.χ. tests).
+  const feat = options?.mergeTol ?? tol;
+  const closed = extractClosedPolygons(entities, tol, feat);
   const polys = options?.unionTouching ? unionTouchingPolygons(closed) : closed;
   const perimeters: ClosedPerimeter[] = [];
   let ignoredCount = 0;
   for (const polygon of polys) {
-    const shape = classifyPerimeter(polygon, tol);
+    const shape = classifyPerimeter(polygon, feat);
     // ADR-419 §thickness-zones — σπάσε ΚΑΘΕ ορθογωνικό περίγραμμα σε τοίχους: κάθε
     // σκέλος = ΕΝΑΣ τοίχος ΠΛΗΡΟΥΣ πάχους, κόψιμο στα junctions & στις αλλαγές πάχους
     // (junction → κύριος/μακρύτερος τοίχος). `decomposeWallsFromFootprint` (centerline/
     // grid) ΑΝΤΙ του slab-sweep `decomposeRectilinear` — ο slab έκοβε τον τοίχο σε λωρίδες
     // ΚΑΤΑ ΜΗΚΟΣ (face-to-face στη μεγάλη πλευρά, παράλογο). Μη-ορθογωνικά → [] (αγνοούνται).
-    const rects = decomposeWallsFromFootprint(polygon, tol);
-    perimeters.push({ polygon: normalize(polygon, tol), shape, rects });
+    const rects = decomposeWallsFromFootprint(polygon, feat);
+    perimeters.push({ polygon: normalize(polygon, feat), shape, rects });
     if (rects.length === 0) ignoredCount++;
   }
   return { perimeters, rects: perimeters.flatMap((p) => [...p.rects]), ignoredCount };
@@ -332,12 +329,6 @@ export function pickSmallestContainingPerimeter(
   return best;
 }
 
-/**
- * Layer 5 — open-loop diagnostics: ids των γραμμών κοντά στο `point` που έχουν
- * **ανοιχτό άκρο** (κόμβος βαθμού 1 στον γράφο των segments) — αυτές «δεν
- * ενώνονται» (Revit «these lines don't connect»). Reuse `extractLineSegments` +
- * `buildSegmentGraph`. Επιστρέφει deduped ids για highlight μέσω `dxf.highlightByIds`.
- */
 // ─── Cached region-perimeter detection (SSoT, κοινό hover + click) ────────────
 // Η ανίχνευση `perimeterFacesToRects` είναι O(n²) (segment graph) — ΑΠΑΓΟΡΕΥΕΤΑΙ να
 // τρέχει σε κάθε mousemove ΚΑΙ σε κάθε κλικ δημιουργίας (~1.5s freeze σε μεγάλο
@@ -350,10 +341,10 @@ export function pickSmallestContainingPerimeter(
 //      χωρίς recompute (μια κολώνα δεν είναι γραμμή → κανένα νέο loop).
 const _regionPerimeterCache = new WeakMap<
   readonly Entity[],
-  Map<number, readonly ClosedPerimeter[]>
+  Map<string, readonly ClosedPerimeter[]>
 >();
 let _lastLineSig = '';
-let _lastTolKey = Number.NaN;
+let _lastTolKey = '';
 let _lastRegionPerimeters: readonly ClosedPerimeter[] = [];
 
 /** Φθηνή (O(n)) υπογραφή ΜΟΝΟ των γραμμών — αλλάζει μόνο όταν αλλάζουν οι παρειές. */
@@ -383,8 +374,11 @@ function regionLineSignature(entities: readonly Entity[]): string {
 export function getCachedRegionPerimeters(
   entities: readonly Entity[],
   tol: number,
+  mergeTol: number = tol,
 ): readonly ClosedPerimeter[] {
-  const key = Math.round(tol * 1000); // αποφυγή cache-miss σε sub-pixel float drift
+  // αποφυγή cache-miss σε sub-pixel float drift· ΚΑΙ οι δύο ανοχές στο κλειδί (ADR-419
+  // §region-tolerance — node-merge + gap-closure διαχωρισμένα).
+  const key = `${Math.round(tol * 1000)}:${Math.round(mergeTol * 1000)}`;
   let byTol = _regionPerimeterCache.get(entities);
   if (byTol) {
     const cached = byTol.get(key);
@@ -397,7 +391,7 @@ export function getCachedRegionPerimeters(
   const result =
     sig === _lastLineSig && key === _lastTolKey
       ? _lastRegionPerimeters
-      : perimeterFacesToRects(entities, tol).perimeters;
+      : perimeterFacesToRects(entities, tol, { mergeTol }).perimeters;
   _lastLineSig = sig;
   _lastTolKey = key;
   _lastRegionPerimeters = result;
@@ -427,58 +421,14 @@ export function pickRegionPerimeterAt(
   entities: readonly Entity[],
   sceneUnits: SceneUnits,
 ): RegionPerimeterPick {
-  const tol = resolveRegionLoopTolWorld(sceneUnits);
-  const perimeter = pickSmallestContainingPerimeter(point, getCachedRegionPerimeters(entities, tol));
-  return { perimeter, tol };
-}
-
-export function findOpenChainLineIdsNear(
-  point: Readonly<Point2D>,
-  entities: readonly Entity[],
-  tol: number,
-): string[] {
-  const segs = extractLineSegments(entities);
-  if (segs.length === 0) return [];
-  const { nodes, adj } = buildSegmentGraph(segs, tol);
-  // Ανοιχτά άκρα = κόμβοι βαθμού 1· κρατάμε όσα είναι κοντά στο pick (εντός 50×tol).
-  const reach = Math.max(tol * 50, tol);
-  const openNodes = new Set<number>();
-  for (let i = 0; i < nodes.length; i++) {
-    if (adj[i].length === 1 && dist(nodes[i], point as Point2D) <= reach) openNodes.add(i);
-  }
-  if (openNodes.size === 0) return [];
-  const ids = new Set<string>();
-  for (const s of segs) {
-    if (!s.id) continue;
-    const a = nodes.findIndex((n) => dist(n, s.start) <= tol);
-    const b = nodes.findIndex((n) => dist(n, s.end) <= tol);
-    if (openNodes.has(a) || openNodes.has(b)) ids.add(s.id);
-  }
-  return [...ids];
-}
-
-/**
- * ADR-419 Layer 5b — τα ΣΗΜΕΙΑ (world units) των ανοιχτών άκρων κοντά στο pick.
- *
- * AutoCAD `BOUNDARY` red-circles feedback: όταν οι γραμμές δεν κλείνουν βρόχο, δείξε
- * ΠΟΥ είναι το κενό — κόκκινος κύκλος σε κάθε ελεύθερο άκρο (κόμβος βαθμού 1). Ίδιος
- * graph με το `findOpenChainLineIdsNear` (SSoT `buildSegmentGraph`), αλλά επιστρέφει
- * τα σημεία των κόμβων αντί για τα ids των γραμμών, ώστε το overlay να τα σημαδέψει.
- */
-export function findOpenChainEndpointsNear(
-  point: Readonly<Point2D>,
-  entities: readonly Entity[],
-  tol: number,
-): Point2D[] {
-  const segs = extractLineSegments(entities);
-  if (segs.length === 0) return [];
-  const { nodes, adj } = buildSegmentGraph(segs, tol);
-  const reach = Math.max(tol * 50, tol);
-  const open: Point2D[] = [];
-  for (let i = 0; i < nodes.length; i++) {
-    if (adj[i].length === 1 && dist(nodes[i], point as Point2D) <= reach) {
-      open.push({ x: nodes[i].x, y: nodes[i].y });
-    }
-  }
-  return open;
+  // ADR-419 §region-tolerance: node-merge (`mergeTol`, capped) ΔΙΑΧΩΡΙΣΜΕΝΟ από το
+  // gap-closure (`gapTol`, 50mm floor) ώστε μικρά κλειστά features να μην καταρρέουν.
+  // Επιστρέφουμε το `gapTol` ως `tol` — αυτό τροφοδοτεί τα open-chain diagnostics
+  // (`findOpenChain*Near` reach) που θέλουν τη γενναιόδωρη ανοχή.
+  const { mergeTol, gapTol } = resolveRegionLoopTolerances(sceneUnits);
+  const perimeter = pickSmallestContainingPerimeter(
+    point,
+    getCachedRegionPerimeters(entities, gapTol, mergeTol),
+  );
+  return { perimeter, tol: gapTol };
 }

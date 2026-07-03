@@ -179,13 +179,15 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         setState(next);
         return true;
       }
-      // 'inside' — ADR-419 §thickness-zones: αν το εσώκλειστο περίγραμμα σπάει σε ΠΟΛΛΑ
-      // σκέλη σταθερού πλάτους (σύνθετο, π.χ. έκεντρο-Τ), δημιούργησε έναν τοίχο ΑΝΑ σκέλος
-      // (preview ≡ commit — ίδιο split που δείχνει η πράσινη διακεκομμένη). Απλό ορθογώνιο
-      // (1 σκέλος) → πέφτει στο υπάρχον single-rect fill (μηδέν regression).
+      // 'inside' — ADR-419 §thickness-zones + §region-tolerance: το εσώκλειστο περίγραμμα
+      // (loop detector, capped node-merge) σπάει σε ΕΝΑ Η ΠΟΛΛΑ σκέλη σταθερού πλάτους →
+      // ένας τοίχος ΑΝΑ σκέλος (preview ≡ commit — ίδιο split/detector που δείχνει η πράσινη
+      // διακεκομμένη). Δρομολογούμε ΚΑΙ το απλό ορθογώνιο (1 σκέλος) εδώ ώστε μικρά πλαίσια
+      // (πλευρά < gap-floor) να μη χάνονται στον corner-graph `fillEnclosingRectAt` (που τα
+      // καταρρέει/απορρίπτει ως degenerate). Ο corner-graph μένει ΜΟΝΟ ως fallback (rects=[]).
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const { perimeter: pick } = pickRegionPerimeterAt(point, entities, sceneUnits);
-      if (pick && pick.rects.length > 1 && !isPerimeterOversized(pick, mmToSceneUnits(sceneUnits))) {
+      if (pick && pick.rects.length >= 1 && !isPerimeterOversized(pick, mmToSceneUnits(sceneUnits))) {
         return commitInRegionRects({ ...s, regionPicks: [] }, pick.rects);
       }
       // 'inside' — μόνο το εσώκλειστο (μικρότερο) ορθογώνιο (αγνοεί τα picks γραμμών).

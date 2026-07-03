@@ -35,6 +35,7 @@ import {
   type RibbonCommandsApi,
 } from '../context/RibbonCommandContext';
 import { useRibbonContextualTrigger } from '../context/RibbonContextualTabContext';
+import { CONTEXTUAL_TRIGGER_SEPARATOR } from '../data/contextual-multi-selection-tab';
 import type { RibbonTab } from '../types/ribbon-types';
 
 interface RibbonRootProps {
@@ -77,9 +78,14 @@ const RibbonTabsRegion: React.FC<RibbonTabsRegionProps> = ({
 
   const visibleContextualTabs = useMemo<readonly RibbonTab[]>(() => {
     if (!activeContextualTrigger || !contextualTabs?.length) return [];
-    return contextualTabs.filter(
-      (tab) => tab.contextualTrigger === activeContextualTrigger,
-    );
+    // ADR-566 — the trigger may be COMPOSITE (per-kind + multi-selection, joined
+    // by CONTEXTUAL_TRIGGER_SEPARATOR). Surface EVERY matching tab, ordered by the
+    // trigger token order so the per-kind tab (listed first) becomes active.
+    const tokens = activeContextualTrigger.split(CONTEXTUAL_TRIGGER_SEPARATOR);
+    const order = new Map(tokens.map((tok, i) => [tok, i]));
+    return contextualTabs
+      .filter((tab) => tab.contextualTrigger !== undefined && order.has(tab.contextualTrigger))
+      .sort((a, b) => (order.get(a.contextualTrigger!) ?? 0) - (order.get(b.contextualTrigger!) ?? 0));
   }, [contextualTabs, activeContextualTrigger]);
 
   const orderedTabs = useMemo(() => {

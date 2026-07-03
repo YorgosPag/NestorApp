@@ -101,6 +101,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallAttachEscape?: () => void;
   /** ADR-401 Phase E.1: Whether the wall-attach pick-host tool is active */
   wallAttachIsActive?: boolean;
+  /** ADR-566: Wall Merge ESC handler */
+  handleWallMergeEscape?: () => void;
+  /** ADR-566: Whether the wall-merge tool is active */
+  wallMergeIsActive?: boolean;
   /** ADR-363 R1: BIM Copy ESC handler */
   handleBimCopyEscape?: () => void;
   /** ADR-363 R1: Whether the bim-copy tool is active */

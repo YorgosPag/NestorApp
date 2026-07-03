@@ -548,6 +548,8 @@
 | **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-564** | Ενοποιημένο BIM Placement HUD & Τόξο Φοράς (SSoT overlay για τοίχο/κολόνα/δοκάρι/πέδιλο) | ✅ 🟢 Φ-beam + Φ-column + Φ-foundation (linear + pad) IMPLEMENTED (UNCOMMITTED) · Φ-tests μερικώς | 2026-07-02 | DXF Viewer · BIM Placement · Preview Overlay SSoT | [📄](./adrs/ADR-564-unified-bim-placement-hud-overlay.md) |
 | **ADR-565** | Καμπύλα & Κυκλικά Δομικά BIM Στοιχεία: Έρευνα Αγοράς + Πρόταση Υλοποίησης (τοίχοι/δοκάρια/κολόνες/πέδιλα/συνδετήρια) | ✅ 🔵 RESEARCH / PROPOSED — τεκμηρίωση αγοράς + σύσταση αρχιτεκτονικής· καμία υλοποίηση ακόμη | 2026-07-02 | DXF Viewer · BIM · Geometry · Research | [📄](./adrs/ADR-565-curved-circular-structural-bim-elements.md) |
+| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls — AutoCAD JOIN για τοίχους, command-first + selection-first) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing | [📄](./adrs/ADR-566-merge-join-walls.md) |
+| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard — ratio-based, SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Placement · Geometry | [📄](./adrs/ADR-567-structural-no-overlap-placement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1076,6 +1078,8 @@
 | **ADR-561** | Σταυρός Μετακίνησης + Σημάδι Περιστροφής σε Primitives (polyline / circle / arc / rectangle) | ✅ APPROVED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-562** | Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης) | ✅ APPROVED | [View](./adrs/ADR-562-dimension-per-part-styling.md) |
 | **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
+| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-566-merge-join-walls.md) |
+| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-567-structural-no-overlap-placement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

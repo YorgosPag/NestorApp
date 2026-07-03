@@ -28,6 +28,7 @@ import { isWallEntity } from '../types/entities';
 import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useWallPersistence } from '../hooks/data/useWallPersistence';
 import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
+import { useWallMergePersistence } from '../hooks/data/useWallMergePersistence';
 import { useBimFamilyTypes } from '../bim/family-types/useBimFamilyTypes';
 import { useFamilyTypeBoqRefeed } from '../hooks/data/useFamilyTypeBoqRefeed';
 import { WallCascadeDeleteDialog } from '../ui/dialogs/WallCascadeDeleteDialog';
@@ -117,6 +118,16 @@ function WallPersistenceHostImpl({
   }, [walls]);
 
   useWallSplitPersistence({
+    companyId: user?.companyId ?? null,
+    projectId,
+    floorplanId,
+    buildingId,
+    floorId,
+    userId: user?.uid ?? null,
+  });
+
+  // ADR-566 — Wall merge persistence (inverse of split): delete A+B, save merged.
+  useWallMergePersistence({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,

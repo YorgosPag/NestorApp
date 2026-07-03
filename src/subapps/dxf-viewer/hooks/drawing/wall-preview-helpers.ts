@@ -18,7 +18,6 @@ import {
   alignmentPointForWallJustification,
   buildAnchoredWallParams,
   buildDefaultWallParams,
-  buildWallEntity,
   resolveWallThicknessMm,
   type WallParamOverrides,
 } from './wall-completion';
@@ -29,7 +28,6 @@ import type { WallKind, WallParams } from '../../bim/types/wall-types';
 // ADR-513 — ελάχιστο μήκος για clamp του PREVIEW (το commit μένει αυστηρό μέσω validator).
 import { MIN_WALL_LENGTH_MM } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
-import { getDefaultLayerId } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
@@ -37,16 +35,12 @@ import { resizeSegmentToLength } from '../../rendering/entities/shared/geometry-
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { MEMBER_GHOST_LEN_MM } from '../../bim/framing/member-column-face-snap';
 import {
-  isMemberCollinearOverlap,
   type LinearMemberSnapTarget,
   type GhostFaceFrame,
 } from '../../bim/framing/linear-member-face-snap';
 // ADR-508 — endpoint face-snap (point snap, reuse dispatcher) + lock precedence (Δαχτυλίδι νικά).
 import { resolveWallEndpointSnap, resolveWallEndpointWithFineStep } from '../../bim/walls/wall-endpoint-snap';
 import { isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
-import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
-import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { resolveWallOpeningConflictForHost } from '../../bim/walls/wall-opening-conflict';
 // ADR-363 §wall-joint-miter-preview — LIVE Revit-grade miter (ghost + affected neighbours),
 // reusing the SAME computeWallTrims/applyTrimPatches SSoT as commit (preview === commit).
 import { applyJointMiterPreview } from '../../bim/walls/wall-joint-miter-preview';
@@ -56,101 +50,20 @@ import { resolveCurvedArcParams, wallEndTangentAt } from '../../bim/walls/wall-c
 import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-
-/**
- * ADR-508 §wall-hud — εξαγωγή των αριθμητικών HUD δεδομένων από τον ΧΤΙΣΜΕΝΟ τοίχο (μήκος/γωνία/
- * πάχος/ύψος). Καθαρά νούμερα (N.11-clean)· η μετάφραση/μορφοποίηση γίνεται στον renderer/handler.
- */
-function buildWallHudMeta(entity: WallEntity, sceneUnits: SceneUnits): WallHudMeta {
-  const p = entity.params;
-  // SSoT: ίδια length/angle μηχανή με τη γραμμή — ο τοίχος προσθέτει μόνο πάχος/ύψος.
-  return buildSegmentHudMeta(p.start, p.end, sceneUnits, p.thickness, p.height);
-}
 import {
   resolveEffectivePreviewCursor,
-  toWysiwygPreviewEntity,
   resolveGhostFaceDimensionsMeta,
 } from './wysiwyg-preview-shared';
 import { applyBimDrawingConstraint } from './bim-ortho-reference';
 import type { SceneUnits } from './stair-completion';
+// N.7.1 split — ghost build + overlap/conflict status SSoT (μηδέν circular import).
+import {
+  buildWallGhostEntity,
+  isWallGhostOverlap,
+  type WallGhostConflictCtx,
+} from './wall-ghost-build';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
-
-/**
- * ADR-508 — SSoT overlap decision for EVERY wall-ghost path: 🔴 when the ghost lies
- * collinearly / on-top of (or whose body overlaps, incl. face-anchored) an existing member.
- * `extra` short-circuits to true (e.g. snap short-end `status==='overlap'`). Curved → never.
- * One owner so no path can forget the check (the bug it fixes: it was missing from the
- * footprint path).
- */
-function isWallGhostOverlap(
-  start: Readonly<Point2D>,
-  end: Readonly<Point2D>,
-  memberTargets: readonly LinearMemberSnapTarget[],
-  overrides: WallParamOverrides,
-  sceneUnits: SceneUnits,
-  kind: WallKind,
-  extra = false,
-): boolean {
-  if (extra) return true;
-  if (kind === 'curved') return false;
-  const newHalfScene = (resolveWallThicknessMm(overrides) / 2) * mmToSceneUnits(sceneUnits);
-  return isMemberCollinearOverlap(start, end, memberTargets, newHalfScene);
-}
-
-/**
- * ADR-508 §opening-conflict — context για τον έλεγχο «κόβει άνοιγμα host;». Όταν δοθεί, ο builder
- * τρέχει το `resolveWallStartOpeningConflict` πάνω στην ΧΤΙΣΜΕΝΗ οντότητα (reuse `getEntityZExtents`)
- * και, σε conflict, κάνει το ghost 🔴 + κρύβει τις listening dims + επισυνάπτει το `openingConflict`
- * meta (κατακόρυφο εύρος σύγκρουσης → tooltip). `null` → η συμπεριφορά μένει αμετάβλητη.
- */
-interface WallGhostConflictCtx {
-  /** Σημείο επαφής του ghost στην παρειά host (centerline start). */
-  readonly contactPt: Readonly<Point2D>;
-  readonly thicknessMm: number;
-  /** Ο host τοίχος που ΗΔΗ επέλεξε το snap (`targetId`) — μηδέν re-derive. `null` = free placement. */
-  readonly host: WallEntity | null;
-  readonly openings: readonly OpeningEntity[];
-}
-
-/**
- * ADR-508 — SSoT build for EVERY wall-ghost path: build the WYSIWYG entity (same `buildWallEntity`
- * as commit), apply the 🔴 overlap status colour, attach optional listening dimensions. Returns
- * null on a degenerate frame. The ONE place that owns build + status, so the overlap→red look
- * stays identical everywhere (mirror του κόκκινου φαντάσματος κολώνας).
- */
-function buildWallGhostEntity(
-  id: string,
-  params: WallParams,
-  kind: WallKind,
-  sceneUnits: SceneUnits,
-  isOverlap: boolean,
-  faceDimensions: GhostFaceDimensionsMeta | null = null,
-  conflictCtx: WallGhostConflictCtx | null = null,
-  wantHud = false,
-): ExtendedSceneEntity | null {
-  const built = buildWallEntity(params, getDefaultLayerId(), kind, sceneUnits);
-  if (!built.ok) return null;
-  // ADR-508 §opening-conflict — 🔴 + block όταν ο κάθετος τοίχος κόβει άνοιγμα του host τοίχου.
-  const conflict = conflictCtx
-    ? resolveWallOpeningConflictForHost(
-        conflictCtx.contactPt, built.entity, conflictCtx.thicknessMm,
-        conflictCtx.host, conflictCtx.openings,
-      )
-    : null;
-  const overlap = isOverlap || conflict !== null;
-  const ghostStatusColor = overlap ? resolveGhostStatusColor('overlap') : null;
-  // 🔴 → ποτέ listening dims (mirror short-end overlap).
-  const dims = overlap ? null : faceDimensions;
-  // ADR-508 §wall-hud — ζωντανή ταυτότητα (μήκος/γωνία/πάχος/ύψος) μόνο σε ευθύ τοίχο που σχεδιάζεται.
-  const wallHud = wantHud && kind === 'straight' ? buildWallHudMeta(built.entity, sceneUnits) : null;
-  return toWysiwygPreviewEntity(
-    built.entity, id, ghostStatusColor, dims,
-    conflict ? { bandMm: conflict.bandMm } : null,
-    wallHud,
-  );
-}
 
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
 

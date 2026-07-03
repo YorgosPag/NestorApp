@@ -289,6 +289,13 @@ export interface BimEventMap {
     wall2: WallEntity;
     openingUpdates: readonly OpeningUpdate[];
   };
+  // ADR-566 — Wall merge committed: persist delete(A)+delete(B)+create(merged)+opening re-host
+  'bim:wall-merge-committed': {
+    wallAId: string;
+    wallBId: string;
+    merged: WallEntity;
+    openingUpdates: readonly OpeningUpdate[];
+  };
   // ADR-363 Phase 7B — BIM variant kind shortcuts (keyboard D / Wn)
   // ADR-363 Phase A — BIM wall category chords (We/Wi/Wp/Wf/Wt)
   'bim:set-opening-kind': { kind: OpeningKind };
@@ -424,6 +431,11 @@ export interface BimEventMap {
   'bim:beam-detail-requested': { beamId: string; levelId: string };
   /** ADR-476 — slab contextual «Λεπτομέρεια Οπλισμού» → open SlabDetailHost dialog. */
   'bim:slab-detail-requested': { slabId: string; levelId: string };
+  // ADR-567 — μπλοκαρίστηκε τοποθέτηση δομικής οντότητας πάνω σε υπάρχουσα δομική
+  // (ουσιαστική επικάλυψη εμβαδού). `entityType` = ο τύπος που απορρίφθηκε· `blockedById`
+  // = η υπάρχουσα οντότητα που την εμπόδισε· `count` = πόσες απορρίφθηκαν (batch region-fill,
+  // 1 σε single). UI: non-blocking warning toast (registerPerimeterBuildNotifications).
+  'bim:placement-blocked': { entityType: string; blockedById: string; count: number };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */
   'bim:ifc-export-requested': {
     /** Scope filter — if omitted, exports every building in project. */

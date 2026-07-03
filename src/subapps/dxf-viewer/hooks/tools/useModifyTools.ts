@@ -18,6 +18,7 @@ import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
 import { useWallSplitTool } from './useWallSplitTool';
+import { useWallMergeTool } from './useWallMergeTool';
 import { useWallAttachTool } from './useWallAttachTool';
 import { useBimCopyTool } from './useBimCopyTool';
 import { useEntityClipboard } from './useEntityClipboard';
@@ -138,6 +139,18 @@ export function useModifyTools({
     onToolChange,
   });
 
+  // ADR-566 — Wall Merge Tool (AutoCAD JOIN for walls). Dual-flow: command-first
+  // (pick 2) + selection-first (2 pre-selected). Reuses selection highlight.
+  const wallMergeTool = useWallMergeTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    transformScale: getImmediateTransform().scale,
+    onToolChange,
+    selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),
+  });
+
   const trimHitTest = useCallback((worldPoint: { x: number; y: number }): string | null => {
     if (!levelManager.currentLevelId) return null;
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
@@ -255,6 +268,7 @@ export function useModifyTools({
     arrayPathTool,
     wallSplitTool,
     wallAttachTool,
+    wallMergeTool,
     bimCopyTool,
     entityClipboard,
     handleRotationAnglePrompt,

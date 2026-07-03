@@ -54,3 +54,47 @@ describe('ADR-394 — calculateEntityBounds covers non-enumerated DXF types', ()
     expect(calculateEntityBounds(weird)).toBeNull();
   });
 });
+
+describe('window/crossing marquee selects dimensions (wrapped DxfDimension, 2026-07-03)', () => {
+  // The marquee is fed scene.entities = DxfEntityUnion[], so a dimension arrives WRAPPED:
+  // { type:'dimension', dimensionEntity: { defPoints, ... } }. Before the unwrap fix the flat
+  // bounds calculator read `defPoints` at the top level (undefined) → null → never selectable.
+  const wrappedDim = as({
+    id: 'dim_1',
+    type: 'dimension',
+    dimensionEntity: {
+      id: 'dim_1',
+      type: 'dimension',
+      dimensionType: 'linear',
+      rotation: 0,
+      defPoints: [
+        { x: 17_119_418, y: 4_184_017 },
+        { x: 17_157_268, y: 4_184_017 },
+        { x: 17_119_418, y: 4_182_617 },
+      ],
+    },
+  });
+
+  it('a wrapped geo-referenced dimension returns real bounds (not null)', () => {
+    const b = calculateEntityBounds(wrappedDim);
+    expect(b).not.toBeNull();
+    expect(b!.min.x).toBeCloseTo(17_119_418);
+    expect(b!.max.x).toBeCloseTo(17_157_268);
+    expect(b!.min.y).toBeCloseTo(4_182_617);
+    expect(b!.max.y).toBeCloseTo(4_184_017);
+  });
+
+  it('an already-flat dimension (top-level defPoints) still works', () => {
+    const flatDim = as({
+      id: 'dim_2', type: 'dimension', dimensionType: 'linear', rotation: 0,
+      defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: -30 }],
+    });
+    const b = calculateEntityBounds(flatDim);
+    expect(b).toEqual({ min: { x: 0, y: -30 }, max: { x: 100, y: 0 } });
+  });
+
+  it('a wrapped dimension with no defPoints → null (graceful, no crash)', () => {
+    const empty = as({ id: 'dim_3', type: 'dimension', dimensionEntity: { dimensionType: 'linear', rotation: 0, defPoints: [] } });
+    expect(calculateEntityBounds(empty)).toBeNull();
+  });
+});

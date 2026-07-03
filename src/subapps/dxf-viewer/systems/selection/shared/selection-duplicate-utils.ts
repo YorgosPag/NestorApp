@@ -23,6 +23,11 @@ import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 // (ellipse/spline/point/dimension/xline/ray), not just the enumerated primitives.
 import { BoundsCalculator } from '../../../rendering/hitTesting/Bounds';
 import type { EntityModel } from '../../../rendering/types/Types';
+// ADR-362 / ADR-040 — dimension world-bounds SSoT (same accurate bbox the viewport culling
+// uses). The marquee is fed the WRAPPED DxfDimension (fields nested under `dimensionEntity`),
+// so it must unwrap before reading defPoints — else window/crossing silently skips dimensions.
+import { getDimensionWorldBounds } from '../../dimensions/dimension-cull-bounds';
+import type { DimensionEntity } from '../../../types/dimension';
 
 /**
  * Calculate bounding box for entities
@@ -276,6 +281,18 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       }));
       return calculateVerticesBounds(worldCorners);
     }
+    case 'dimension': {
+      // ADR-362 / ADR-040 — the marquee receives the WRAPPED DxfDimension (all fields nested
+      // under `dimensionEntity`), but the flat bounds calculators read a top-level `defPoints`
+      // → it was `undefined` → null bounds → window/crossing NEVER selected a dimension. Unwrap
+      // and reuse the dimension-bounds SSoT (the same accurate bbox the viewport culling uses),
+      // so the marquee box matches what is drawn. Handles both wrapped and already-flat forms.
+      const dimEntity =
+        (entity as { dimensionEntity?: DimensionEntity }).dimensionEntity
+        ?? (entity as unknown as DimensionEntity);
+      const b = dimEntity?.defPoints ? getDimensionWorldBounds(dimEntity) : null;
+      return b ? { min: { x: b.minX, y: b.minY }, max: { x: b.maxX, y: b.maxY } } : null;
+    }
     // ADR-394 — DXF types that are click-selectable (hit-test SSoT covers them) but
     // were missing here, so Z fit-to-selection + window/crossing marquee skipped them.
     // Delegate to the full hit-test `BoundsCalculator` (no new bounds math). Listed
@@ -284,7 +301,6 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'ellipse':
     case 'spline':
     case 'point':
-    case 'dimension':
     case 'xline':
     case 'ray': {
       const bb = BoundsCalculator.calculateEntityBounds(entity as unknown as EntityModel, 0);

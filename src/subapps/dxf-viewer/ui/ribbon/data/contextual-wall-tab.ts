@@ -488,6 +488,20 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
               },
             },
             {
+              // ADR-566 — «Ένωση Τοίχων» (AutoCAD JOIN για τοίχους). Tool button
+              // (commandKey, χωρίς action) → onToolChange('wall-merge'). Δουλεύει
+              // ΚΑΙ command-first (πάτα→κλικ 2 τοίχους) ΚΑΙ selection-first
+              // (επίλεξε 2→πάτα). Αντίστροφο του wall.split, δίπλα του.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.merge',
+                labelKey: 'ribbon.commands.wallEditor.merge',
+                icon: 'bim-wall-merge',
+                commandKey: 'wall-merge',
+              },
+            },
+            {
               type: 'simple',
               size: 'small',
               command: {

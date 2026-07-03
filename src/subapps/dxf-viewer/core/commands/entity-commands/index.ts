@@ -14,4 +14,6 @@ export { TrimEntityCommand } from './TrimEntityCommand';
 export type { TrimCommandParams } from './TrimEntityCommand';
 export { WallSplitCommand } from './WallSplitCommand';
 export type { WallSplitCommandParams } from './WallSplitCommand';
+export { WallMergeCommand } from './WallMergeCommand';
+export type { WallMergeCommandParams } from './WallMergeCommand';
 export { ReorderEntityCommand } from './ReorderEntityCommand';

@@ -366,6 +366,59 @@ describe('perimeter-from-faces — gap-tolerant closure (Layer 2)', () => {
   });
 });
 
+// ─── ADR-419 §region-tolerance — μικρό κλειστό feature ΔΕΝ πρέπει να καταρρέει ─────
+// Bug (2026-07-03): μικρό magenta πλαίσιο με μικρή πλευρά < gap-floor (50mm) εξαφανιζόταν
+// από την preview. Αιτία: το region path χρησιμοποιούσε το gap-closure tol (max(pixel,50))
+// ΚΑΙ ως node-merge → οι απέναντι κορυφές της μικρής πλευράς merge-άρονταν → degenerate.
+// Fix: node-merge ΔΙΑΧΩΡΙΣΜΕΝΟ (`mergeTol` capped) από gap-closure (bridge). Coords γεω-
+// αναφερμένες (~1e7 mm) όπως το πραγματικό DXF ώστε να καλυφθεί και η float-συμπεριφορά.
+describe('perimeter-from-faces — small-feature detection (region-tolerance)', () => {
+  const OX = 17_120_531;
+  const OY = 4_191_493;
+  // Κουτί 300×40 (η μικρή πλευρά 40 < gap-floor 50mm) ως 4 loose lines.
+  const SMALL_BOX: Point2D[] = [
+    { x: OX, y: OY },
+    { x: OX + 300, y: OY },
+    { x: OX + 300, y: OY + 40 },
+    { x: OX, y: OY + 40 },
+  ];
+  const smallBoxLines = looseRectLines('sb', SMALL_BOX);
+
+  it('ΚΑΤΑΡΡΕΕΙ με floored node-merge (mergeTol = tol = 50) — αναπαράγει το bug', () => {
+    // Χωρίς `mergeTol` → default = tol → η μικρή πλευρά (40) < 50 καταρρέει → κανένα loop.
+    expect(perimeterFacesToRects(smallBoxLines, 50).perimeters).toHaveLength(0);
+  });
+
+  it('ΑΝΙΧΝΕΥΕΤΑΙ με capped node-merge (mergeTol = 10) — το fix', () => {
+    const { perimeters } = perimeterFacesToRects(smallBoxLines, 50, { mergeTol: 10 });
+    expect(perimeters).toHaveLength(1);
+    // ΚΑΙ σπάει σε ΕΝΑ σκέλος (ο downstream decompose τρέχει στο capped feature-tol).
+    expect(perimeters[0].rects).toHaveLength(1);
+    expect(Math.round(perimeters[0].rects[0].shortSide)).toBe(40);
+    expect(Math.round(perimeters[0].rects[0].longSide)).toBe(300);
+  });
+
+  it('pick-inside βρίσκει το μικρό κουτί με capped mergeTol', () => {
+    const { perimeters } = perimeterFacesToRects(smallBoxLines, 50, { mergeTol: 10 });
+    const pick = pickSmallestContainingPerimeter({ x: OX + 150, y: OY + 20 }, perimeters);
+    expect(pick).not.toBeNull();
+    expect(pick?.rects).toHaveLength(1);
+  });
+
+  it('regression: το gap-closure (κενό 30mm) ΕΠΙΒΙΩΝΕΙ με capped mergeTol (bridge, όχι node-merge)', () => {
+    // Το κενό είναι ανάμεσα σε ΔΙΑΦΟΡΕΤΙΚΑ segments → κλείνει μέσω HPGAPTOL bridge (gapTol=50),
+    // ΟΧΙ μέσω node-merge → ο capped mergeTol=10 δεν το χαλά.
+    expect(perimeterFacesToRects(GAPPED_RECT_LINES, 50, { mergeTol: 10 }).perimeters).toHaveLength(1);
+  });
+
+  it('big walls: μεγάλο ορθογώνιο (5000×300) αμετάβλητο με capped mergeTol', () => {
+    // Μηδέν regression: πλευρές >> mergeTol → ίδιο αποτέλεσμα με ή χωρίς cap.
+    const big = looseRectLines('big', RECT);
+    expect(perimeterFacesToRects(big, 50, { mergeTol: 10 }).perimeters).toHaveLength(1);
+    expect(perimeterFacesToRects(big, 50).perimeters).toHaveLength(1);
+  });
+});
+
 describe('perimeter-from-faces — open-loop diagnostics (Layer 5)', () => {
   it('returns the line ids with open endpoints near the pick', () => {
     const ids = findOpenChainLineIdsNear({ x: 0, y: 15 }, GAPPED_RECT_LINES, 5);

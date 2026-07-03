@@ -81,6 +81,33 @@ describe('findEntitiesWithSimilarColor', () => {
       .toEqual([]);
   });
 
+  // ADR-362 — dimensions resolve colour from DIMSTYLE dimclrd (not entity.color, not a BIM
+  // category). Scene entities arrive WRAPPED (fields under `dimensionEntity`); before the fix
+  // that resolved to `entity.color` (undefined) → null → "select similar" skipped every dim.
+  const wrappedDim = (id: string, dimclrd: number, opts: { visible?: boolean } = {}): Entity =>
+    ({
+      id, type: 'dimension', layerId: '', visible: opts.visible,
+      dimensionEntity: {
+        id, type: 'dimension', dimensionType: 'linear', rotation: 0,
+        defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: -30 }],
+        overrides: { dimclrd },
+      },
+    } as unknown as Entity);
+
+  it('resolves a wrapped dimension to its DIMSTYLE colour (was null → unselectable)', () => {
+    expect(resolveEntityColorHex(wrappedDim('d1', 1), {})).not.toBeNull();
+  });
+
+  it('groups dimensions sharing the same dimclrd, apart from a different-colour dim', () => {
+    const entities = [wrappedDim('d1', 1), wrappedDim('d2', 1), wrappedDim('d3', 5)];
+    expect(findEntitiesWithSimilarColor('d1', entities, {}).sort()).toEqual(['d1', 'd2']);
+  });
+
+  it('colour is DIMSTYLE-driven and independent of geometry (empty defPoints still resolves)', () => {
+    const noPts = { id: 'd0', type: 'dimension', layerId: '', dimensionEntity: { dimensionType: 'linear', rotation: 0, defPoints: [], overrides: { dimclrd: 1 } } } as unknown as Entity;
+    expect(resolveEntityColorHex(noPts, {})).not.toBeNull();
+  });
+
   // ADR-445 — BIM entities group by structural colour identity, not the DXF
   // layer cascade (columns blue, beams amber, …).
   it('groups BIM entities by category colour identity, separate from DXF', () => {

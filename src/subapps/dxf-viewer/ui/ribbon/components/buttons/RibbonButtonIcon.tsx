@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame, Merge } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -234,6 +234,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-duct': return <RectangleHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-pipe': return <Diameter width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-wall-split': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-566 — Wall Merge (AutoCAD JOIN for walls).
+    case 'bim-wall-merge': return <Merge width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-401 Phase E.1 — Wall Attach/Detach Top/Base (manual structural attach).
     case 'bim-wall-attach-top': return <ArrowUpToLine width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-wall-attach-base': return <ArrowDownToLine width={sizePx[size]} height={sizePx[size]} className={className} />;

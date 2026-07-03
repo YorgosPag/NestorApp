@@ -136,6 +136,16 @@
     "attachedManual": "Walls attached to the structural element.",
     "detached": "Walls detached from the structural element."
   },
+  "wallMerge": {
+    "pickFirst": "Select the first wall to merge.",
+    "pickSecond": "Select the second wall to merge.",
+    "blocked": {
+      "notStraight": "Cannot merge: straight walls only.",
+      "notCollinear": "Cannot merge: the walls are not collinear.",
+      "differentThickness": "Cannot merge: different thickness.",
+      "degenerate": "Cannot merge: invalid wall."
+    }
+  },
   "perimeterWall": {
     "built": "Created {built} walls from the perimeter.",
     "builtWithIgnored": "Created {built} walls; ignored {ignored} shapes.",
@@ -200,6 +210,10 @@
     "builtWalls": "{count, plural, one {Created # structural wall from the perimeter.} other {Created # structural walls from the perimeter.}}",
     "builtMixed": "Created {columns} and {walls} from the perimeter.",
     "noneBuilt": "No valid perimeter found in the selection."
+  },
+  "placementBlock": {
+    "overlap": "Cannot place on top of an existing structural element.",
+    "overlapBatch": "{count, plural, one {Skipped # element} other {Skipped # elements}} — placement over an existing structural element is not allowed."
   },
   "regionPerimeter": {
     "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
@@ -2417,6 +2431,7 @@
         "lengthDecrease": "Decrease length",
         "presetMenu": "Presets",
         "split": "Split",
+        "merge": "Merge Walls",
         "close": "Close",
         "delete": "Delete",
         "attachTop": "Attach Top",

@@ -19,7 +19,7 @@ import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '..
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
-import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
+import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
@@ -227,16 +227,29 @@ export function useActiveContextualTrigger({
     // equipment), mirroring the fixture's «Κύκλωμα» panel. So — unlike the panel
     // manage branch above — there is no separate manifold→network-tab branch here.
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
+    // ADR-566: όταν η πολλαπλή επιλογή είναι ΟΜΟΙΟΓΕΝΗΣ (π.χ. 2 τοίχοι) →
+    // κράτα ΕΝΕΡΓΟ το per-kind properties tab (Ιδιότητες Τοίχου) ΚΑΙ εμφάνισε
+    // ΚΑΙ το multi-selection tab (composite trigger, per-kind ΠΡΩΤΟ = active).
+    // Μεικτά είδη → μόνο multi-selection (κανένας single per-kind editor δεν ισχύει).
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
       let bimCount = 0;
+      let firstBim: Entity | null = null;
+      let homogeneous = true;
       for (const id of selectedEntityIds) {
         const e = entityIndex.get(id);
         if (e && BIM_KIND_TYPES.has(e.type)) {
           bimCount++;
-          if (bimCount >= 2) break;
+          if (!firstBim) firstBim = e;
+          else if (e.type !== firstBim.type) homogeneous = false;
         }
       }
-      if (bimCount >= 2) return MULTI_SELECTION_CONTEXTUAL_TRIGGER;
+      if (bimCount >= 2) {
+        if (homogeneous && firstBim) {
+          const perKind = resolveContextualTrigger(firstBim);
+          if (perKind) return `${perKind}${CONTEXTUAL_TRIGGER_SEPARATOR}${MULTI_SELECTION_CONTEXTUAL_TRIGGER}`;
+        }
+        return MULTI_SELECTION_CONTEXTUAL_TRIGGER;
+      }
     }
 
     const entity = resolveSelectedEntityFrom(

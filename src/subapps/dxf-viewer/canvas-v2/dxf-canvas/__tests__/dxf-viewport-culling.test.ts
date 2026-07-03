@@ -43,6 +43,58 @@ describe('getEntityBBox — BIM direct-entities use geometry.bbox', () => {
   });
 });
 
+/** Minimal DxfDimension wrapper carrying a linear DimensionEntity (defPoints at real coords). */
+function linearDim(
+  p1: [number, number],
+  p2: [number, number],
+  dimLineDef: [number, number],
+): DxfEntityUnion {
+  return {
+    type: 'dimension',
+    dimensionEntity: {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'linear',
+      rotation: 0,
+      defPoints: [
+        { x: p1[0], y: p1[1] },
+        { x: p2[0], y: p2[1] },
+        { x: dimLineDef[0], y: dimLineDef[1] },
+      ],
+    },
+  } as unknown as DxfEntityUnion;
+}
+
+describe('getEntityBBox — dimensions use real geometry, not the ±1e6 fallback (2026-07-03)', () => {
+  it('a geo-referenced linear dimension returns its real world-space bbox', () => {
+    // Real cluster coords from the "Κάτοψη ισογείου" DXF (X ~1.71e7, Y ~4.18e6).
+    const d = linearDim([17_119_418, 4_184_017], [17_157_268, 4_184_017], [17_119_418, 4_182_617]);
+    expect(getEntityBBox(d)).toEqual({
+      minX: 17_119_418, minY: 4_182_617, maxX: 17_157_268, maxY: 4_184_017,
+    });
+  });
+
+  it('a dimension with no usable points falls back to the full-plane box', () => {
+    const empty = { type: 'dimension', dimensionEntity: { dimensionType: 'linear', rotation: 0, defPoints: [] } } as unknown as DxfEntityUnion;
+    expect(getEntityBBox(empty)).toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
+  });
+});
+
+describe('isEntityInViewport — geo-referenced dimensions are NOT culled (the bug)', () => {
+  const buildingViewport = { minX: 17_107_368, minY: 4_168_981, maxX: 17_170_678, maxY: 4_210_192 };
+
+  it('a dimension inside the building viewport is kept (regression fixed)', () => {
+    const d = linearDim([17_119_418, 4_184_017], [17_157_268, 4_184_017], [17_119_418, 4_182_617]);
+    expect(isEntityInViewport(d, buildingViewport)).toBe(true);
+  });
+
+  it('the origin outlier dimension is correctly culled when viewing the building (no poisoning)', () => {
+    // The stray dim_86a06e54 at world origin (460,-380) — a far dim must NOT affect near ones.
+    const outlier = linearDim([460, -380], [780, -350], [815, -466]);
+    expect(isEntityInViewport(outlier, buildingViewport)).toBe(false);
+  });
+});
+
 describe('isEntityInViewport — geo-referenced walls are NOT culled (the bug)', () => {
   const geoViewport = { minX: 17_107_368, minY: 4_168_981, maxX: 17_170_678, maxY: 4_210_192 };
 

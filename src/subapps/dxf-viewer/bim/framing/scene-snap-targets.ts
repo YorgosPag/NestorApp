@@ -29,6 +29,7 @@ import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 import type { RectFrame } from './rect-frame';
 import type { WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
+import { STRUCTURAL_OVERLAP_TYPES } from '../placement/structural-placement-overlap';
 
 /**
  * Pre-collected face-snap στόχοι της σκηνής, **διαχωρισμένοι ανά είδος** (granular superset). Η
@@ -68,6 +69,9 @@ export interface SceneSnapTargets {
   readonly wallEntities: readonly WallEntity[];
   /** ADR-508 §opening-conflict — όλα τα ανοίγματα (πόρτες/παράθυρα) της σκηνής (φιλτράρονται ανά `wallId`). */
   readonly openings: readonly OpeningEntity[];
+  /** ADR-567 — δομικές οντότητες (wall/column/beam/slab/foundation) ΩΣ ΟΝΤΟΤΗΤΕΣ, για τον
+   *  no-overlap έλεγχο του φαντάσματος (κόκκινο ghost πάνω σε υπάρχουσα δομική). preview ≡ commit. */
+  readonly structuralEntities: readonly Entity[];
 }
 
 const EMPTY: SceneSnapTargets = Object.freeze({
@@ -82,6 +86,7 @@ const EMPTY: SceneSnapTargets = Object.freeze({
   rectTargets: Object.freeze([]) as readonly RectFrame[],
   wallEntities: Object.freeze([]) as readonly WallEntity[],
   openings: Object.freeze([]) as readonly OpeningEntity[],
+  structuralEntities: Object.freeze([]) as readonly Entity[],
 });
 
 /**
@@ -104,6 +109,8 @@ export function collectSceneSnapTargets(entities: readonly Entity[]): SceneSnapT
     // ADR-508 §opening-conflict — full wall/opening entities (1 pass, ίδια σκηνή → preview≡commit).
     wallEntities: entities.filter((e): e is WallEntity => e.type === 'wall'),
     openings: entities.filter((e): e is OpeningEntity => e.type === 'opening'),
+    // ADR-567 — δομικές οντότητες για τον no-overlap έλεγχο φαντάσματος (ίδια σκηνή → preview≡commit).
+    structuralEntities: entities.filter((e) => STRUCTURAL_OVERLAP_TYPES.has(e.type)),
   };
 }
 

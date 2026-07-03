@@ -83,6 +83,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     extendIsActive = false, handleExtendClick,
     wallSplitIsActive = false, handleWallSplitClick,
     wallAttachIsActive = false, handleWallAttachClick,
+    wallMergeIsActive = false, handleWallMergeClick,
     bimCopyIsActive = false, handleBimCopyClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
@@ -196,6 +197,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.615: ADR-401 Phase E.1 — Wall Attach Top/Base pick-host click
     if (wallAttachIsActive && handleWallAttachClick) {
       handleWallAttachClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.617: ADR-566 — Wall Merge tool click (pick wall 1 → wall 2)
+    if (wallMergeIsActive && handleWallMergeClick) {
+      handleWallMergeClick(worldPoint);
       return;
     }
     // PRIORITY 1.62: ADR-363 R1 — BIM Copy tool click (AutoCAD COPY: base + target)
