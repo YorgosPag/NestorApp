@@ -365,3 +365,25 @@ export function normalizeHex(hex: string, options: FormatOptions = {}): string {
     return hex;
   }
 }
+
+/**
+ * Normalise an arbitrary colour string to a 7-char `#rrggbb` hex suitable for a
+ * native `<input type="color">` (which rejects alpha / rgba notation, falling back
+ * to black). Accepts `#rrggbb`, `#rgb` (expanded), and `rgb()/rgba()` (alpha
+ * dropped); anything else → `#ffffff`.
+ *
+ * 🏢 Color-Conversion SSoT (ADR-573): single home for what was duplicated verbatim
+ * in `OpeningTagStyleColorWidget` + `OpeningTagStyleDialog`.
+ */
+export function toColorInputHex(raw: string): string {
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`;
+  }
+  const rgba = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (rgba) {
+    const hex = (n: string) => Number(n).toString(16).padStart(2, '0');
+    return `#${hex(rgba[1]!)}${hex(rgba[2]!)}${hex(rgba[3]!)}`;
+  }
+  return '#ffffff';
+}

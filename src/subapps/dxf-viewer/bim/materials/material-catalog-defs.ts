@@ -19,7 +19,7 @@
 import type { BimMaterialCategory } from '../types/bim-material-types';
 // 🏢 ADR-571: MEP water/plumbing cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
 import { MEP_WATER_COLOR } from '../../config/color-config';
-import { hexToTrueColor } from '../../utils/dxf-true-color';
+import { hexToTrueColor, trueColorToHex } from '../../utils/dxf-true-color';
 
 /** Flat PBR appearance definition for a resolved material key. */
 export interface PbrMaterialDef {
@@ -161,7 +161,7 @@ export function resolveMaterialKey(materialId: string): string {
  */
 export function getMaterialFlatColorHex(materialId: string): string {
   const def = MATERIAL_DEFS[resolveMaterialKey(materialId)] ?? MATERIAL_DEFS[DEFAULT_MATERIAL_KEY]!;
-  return `#${def.color.toString(16).padStart(6, '0')}`;
+  return trueColorToHex(def.color);
 }
 
 /**

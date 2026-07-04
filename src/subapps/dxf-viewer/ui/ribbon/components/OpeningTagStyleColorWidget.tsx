@@ -21,23 +21,12 @@ import {
   type OpeningTagStyle,
 } from '../../../bim/services/opening-tag-style-service';
 import { markAllCanvasDirty } from '../../../rendering/core/UnifiedFrameScheduler';
+// 🏢 Color-Conversion SSoT (ADR-573): shared <input type=color> hex normaliser.
+import { toColorInputHex } from '../../color/utils';
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 type ColorField = 'pillBgColor' | 'leaderColor';
-
-function normaliseHex(raw: string): string {
-  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
-  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
-    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`;
-  }
-  const rgba = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-  if (rgba) {
-    const hex = (n: string) => Number(n).toString(16).padStart(2, '0');
-    return `#${hex(rgba[1]!)}${hex(rgba[2]!)}${hex(rgba[3]!)}`;
-  }
-  return '#ffffff';
-}
 
 // ─── Shared parametric widget ─────────────────────────────────────────────────
 
@@ -53,7 +42,7 @@ function OpeningTagStyleColorWidget({ field, labelKey }: OpeningTagStyleColorWid
   useEffect(() => getOpeningTagStyleService().subscribe(forceRender), []);
 
   const style = getOpeningTagStyleService().getCurrentStyle();
-  const hex = normaliseHex(style[field]);
+  const hex = toColorInputHex(style[field]);
 
   const handleChange = useCallback(
     (color: string) => {

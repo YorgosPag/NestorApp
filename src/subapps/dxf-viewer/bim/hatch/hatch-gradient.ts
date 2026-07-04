@@ -13,6 +13,10 @@
  * @see AutoCAD DXF Reference: HATCH gradient data (codes 450/452/460/461/462/470)
  */
 
+// 🏢 Color-Conversion SSoT (ADR-573): tint = blend-toward-white via canonical `mixHex`.
+// color-math is pure (zero cycle) — leaf-safe.
+import { mixHex } from '../../config/color-math';
+
 /**
  * Τύπος gradient (DXF group 470, lowercase). LINEAR/CYLINDER → γραμμικό· οι
  * SPHERICAL/HEMISPHERICAL/CURVED → ακτινικό. Οι `inv*` αντιστρέφουν τη σειρά χρωμάτων.
@@ -81,13 +85,14 @@ export function normalizeGradientShift(shift: number | undefined): number {
  * tint=1 → πλήρες χρώμα, tint=0 → λευκό). Μη-έγκυρο hex → επιστρέφει το input.
  */
 export function applyTint(hex: string, tint: number): string {
+  // Guard preserves the original contract: only 6-digit hex is tinted; anything else
+  // (3-digit, rgba, invalid) is returned verbatim — no case change.
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
   if (!m) return hex;
   const t = Math.min(1, Math.max(0, tint));
-  const n = parseInt(m[1], 16);
-  const r = (n >> 16) & 0xff; const g = (n >> 8) & 0xff; const b = n & 0xff;
-  const mix = (c: number): number => Math.round(c * t + 255 * (1 - t));
-  return `#${((mix(r) << 16) | (mix(g) << 8) | mix(b)).toString(16).padStart(6, '0').toUpperCase()}`;
+  // blend hex → white by (1 - t): tint=1 → full colour, tint=0 → white. Uppercase to
+  // preserve this module's historical output format.
+  return mixHex(hex, '#ffffff', 1 - t).toUpperCase();
 }
 
 /**

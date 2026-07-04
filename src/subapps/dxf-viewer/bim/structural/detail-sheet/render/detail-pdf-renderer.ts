@@ -22,6 +22,8 @@ import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import type { DetailPrimitive, DetailSheetModel, SheetRegion, SheetStroke } from '../detail-sheet-types';
 import { resolveDimGeometry } from '../detail-sheet-dim';
 import { containFitRectMm } from './detail-raster-fit';
+// 🏢 Color-Conversion SSoT (ADR-573): hex→rgb via canonical `config/color-math`.
+import { parseHex } from '../../../../config/color-math';
 
 /** 1 mm expressed in PDF points — the unit jsPDF font size expects. */
 const MM_TO_PT = 2.834645669;
@@ -39,12 +41,10 @@ const MIN_LINE_WIDTH_MM = 0.05;
 
 type RGB = readonly [number, number, number];
 
-/** Parses a `#rgb` / `#rrggbb` hex string to an [r,g,b] triple (0..255). */
+/** Parses a `#rgb` / `#rrggbb` hex string to an [r,g,b] triple (0..255). Invalid → black. */
 function hexToRgb(hex: string): RGB {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  const int = parseInt(full, 16) || 0;
-  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+  const c = parseHex(hex);
+  return c ? [c.r, c.g, c.b] : [0, 0, 0];
 }
 
 function applyStroke(pdf: jsPDF, stroke: SheetStroke): void {

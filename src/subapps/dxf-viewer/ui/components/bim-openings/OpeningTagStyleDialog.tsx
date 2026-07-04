@@ -42,6 +42,8 @@ import {
   OPENING_TAG_STYLE_RANGES,
   type OpeningTagLeaderStyle,
 } from '../../../bim/services/opening-tag-style-service';
+// 🏢 Color-Conversion SSoT (ADR-573): shared <input type=color> hex normaliser.
+import { toColorInputHex } from '../../color/utils';
 
 export interface OpeningTagStyleDialogProps {
   readonly open: boolean;
@@ -162,7 +164,7 @@ export function OpeningTagStyleDialog(props: OpeningTagStyleDialogProps): React.
               <input
                 id="opening-tag-pill-bg"
                 type="color"
-                value={normaliseColorForInput(style.pillBgColor)}
+                value={toColorInputHex(style.pillBgColor)}
                 onChange={handlePillBg}
                 aria-label={t('ribbon.commands.openingEditor.tagStyle.fields.pillBgColor')}
                 className="h-9 w-full cursor-pointer rounded-md border border-input bg-background"
@@ -175,7 +177,7 @@ export function OpeningTagStyleDialog(props: OpeningTagStyleDialogProps): React.
               <input
                 id="opening-tag-leader-color"
                 type="color"
-                value={normaliseColorForInput(style.leaderColor)}
+                value={toColorInputHex(style.leaderColor)}
                 onChange={handleLeaderColor}
                 aria-label={t('ribbon.commands.openingEditor.tagStyle.fields.leaderColor')}
                 className="h-9 w-full cursor-pointer rounded-md border border-input bg-background"
@@ -208,20 +210,3 @@ export function OpeningTagStyleDialog(props: OpeningTagStyleDialogProps): React.
   );
 }
 
-/**
- * `<input type="color">` requires a 7-char `#rrggbb` hex. Strip alpha / rgba
- * notation so the user-supplied default `rgba(255,255,255,0.88)` does not
- * make the picker fall back to black.
- */
-function normaliseColorForInput(raw: string): string {
-  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
-  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
-    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`;
-  }
-  const rgba = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-  if (rgba) {
-    const hex = (n: string) => Number(n).toString(16).padStart(2, '0');
-    return `#${hex(rgba[1]!)}${hex(rgba[2]!)}${hex(rgba[3]!)}`;
-  }
-  return '#ffffff';
-}

@@ -41,6 +41,8 @@ import {
 } from '../../config/lineweight-iso-catalog';
 import { resolveDefaultLineweight } from '../../config/default-lineweight-resolver';
 import { getAciColor } from '../../settings/standards/aci';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
+import { trueColorToHex } from '../../utils/dxf-true-color';
 import type {
   BlockStyleInput,
   DefaultStyleInput,
@@ -72,11 +74,6 @@ interface ResolveOptions {
 }
 
 // ─── Color cascade ───────────────────────────────────────────────────────────
-
-function trueColorToHex(int: number): string {
-  const clamped = Math.max(0, Math.min(0xffffff, Math.trunc(int)));
-  return `#${clamped.toString(16).toUpperCase().padStart(6, '0')}`;
-}
 
 function resolveColorLevel(
   level: { colorTrueColor?: number | null; colorAci?: number; colorHex?: string },

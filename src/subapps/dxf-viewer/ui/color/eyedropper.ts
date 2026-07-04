@@ -18,6 +18,8 @@
 
 import { createLoupe, type LoupeHandle } from './eyedropper-loupe';
 import { setupScreenCapture, type ScreenCapture } from './eyedropper-screen-capture';
+// 🏢 Color-Conversion SSoT (ADR-573): rgb→hex via canonical `config/color-math`.
+import { rgbToHex } from '../../config/color-math';
 
 export interface EyedropperResult {
   sRGBHex: string;
@@ -201,7 +203,7 @@ function pickAt(
     if (el instanceof HTMLElement) {
       const rgb = parseRgbColor(getComputedStyle(el).backgroundColor);
       if (rgb && rgb.a >= 0.5) {
-        return { source: null, snapX: 0, snapY: 0, hex: rgbToHex(rgb.r, rgb.g, rgb.b) };
+        return { source: null, snapX: 0, snapY: 0, hex: rgbToHex({ r: rgb.r, g: rgb.g, b: rgb.b }) };
       }
     }
   }
@@ -243,7 +245,7 @@ function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): s
     ctx.drawImage(canvas, x, y, 1, 1, 0, 0, 1, 1);
     const d = ctx.getImageData(0, 0, 1, 1).data;
     if (d[3] < 10) return null;
-    return rgbToHex(d[0], d[1], d[2]);
+    return rgbToHex({ r: d[0], g: d[1], b: d[2] });
   } catch {
     return null;
   }
@@ -265,7 +267,7 @@ function readImagePixelAt(img: HTMLImageElement, ix: number, iy: number): string
     ctx.drawImage(img, x, y, 1, 1, 0, 0, 1, 1);
     const d = ctx.getImageData(0, 0, 1, 1).data;
     if (d[3] < 10) return null;
-    return rgbToHex(d[0], d[1], d[2]);
+    return rgbToHex({ r: d[0], g: d[1], b: d[2] });
   } catch {
     return null;
   }
@@ -280,9 +282,4 @@ function parseRgbColor(css: string): { r: number; g: number; b: number; a: numbe
     b: Number(match[3]),
     a: match[4] !== undefined ? Number(match[4]) : 1,
   };
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  const hex = (v: number): string => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0');
-  return `#${hex(r)}${hex(g)}${hex(b)}`;
 }

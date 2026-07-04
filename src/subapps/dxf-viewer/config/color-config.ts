@@ -4,6 +4,11 @@
  * Eliminates hardcoded color values and ensures consistency
  */
 
+// 🏢 Color-Conversion SSoT (ADR-573): contrast/luminance math lives in `color-math`
+// (pure leaf, zero cycle). `getContrastColor` delegates here instead of a naive
+// `.includes('fff')` heuristic.
+import { contrastRatio, parseHex, channelToHex } from './color-math';
+
 // ============================================================================
 // GRIP COLOR SSOT — single source for all 6 consumers
 // Change here → changes everywhere (constants.ts, panel-tokens.ts,
@@ -342,12 +347,16 @@ export const withOpacity = (color: string, opacity: number): string => {
   return color;
 };
 
+/**
+ * Pick black or white foreground text for best legibility on `backgroundColor`,
+ * using the WCAG contrast SSoT (`color-math.contrastRatio`) — whichever of
+ * black/white yields the higher ratio wins. Unparseable input → white (assume dark).
+ */
 export const getContrastColor = (backgroundColor: string): string => {
-  // Simple contrast calculation - can be enhanced
-  const isLight = backgroundColor === UI_COLORS_BASE.WHITE ||
-                  backgroundColor.includes('fff') ||
-                  backgroundColor.includes('FFF');
-  return isLight ? UI_COLORS_BASE.BLACK : UI_COLORS_BASE.WHITE;
+  if (!parseHex(backgroundColor)) return UI_COLORS_BASE.WHITE;
+  const onWhite = contrastRatio(backgroundColor, UI_COLORS_BASE.WHITE);
+  const onBlack = contrastRatio(backgroundColor, UI_COLORS_BASE.BLACK);
+  return onBlack >= onWhite ? UI_COLORS_BASE.BLACK : UI_COLORS_BASE.WHITE;
 };
 
 // Predefined color schemes
