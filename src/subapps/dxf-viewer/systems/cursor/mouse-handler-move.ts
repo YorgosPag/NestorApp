@@ -28,8 +28,7 @@ import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
-import { getActiveDragGrip } from './GripDragStore';
-import { GripAltMoveStore } from '../grip/GripAltMoveStore';
+import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 // ADR-562 Φ9.2 / ADR-357 — grip-drag AutoAlign tracking SSoT (extracted for N.7.1 size budget).
@@ -261,7 +260,11 @@ export function useMouseMoveHandler({
       // a rotation/width/depth handle). Run the projection then too, so the moving
       // column's corners magnet onto neighbours regardless of the parametric kind —
       // otherwise Alt+rotation (excluded from `isColumnCornerSnapGrip`) got no snap.
-      const columnAltMove = GripAltMoveStore.getActive();
+      // ADR-560 — blur-proof: baked `altMove` (survives Windows Alt→blur) via the SSoT
+      // resolver, so the column corner-projection OSNAP keeps firing mid-drag exactly
+      // like the AutoAlign traces (which already read the baked flag). The live-store-only
+      // read here was the bug: Alt→blur cleared it → no OSNAP marker / no neighbour pull.
+      const columnAltMove = isActiveGripAltMove();
       if (
         activeDragGrip &&
         activeDragGrip.dragAnchor &&

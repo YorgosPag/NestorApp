@@ -21,12 +21,13 @@
 
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion, DxfText, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
-// ADR-363 Slice F — plain DXF line rotation live ghost (shared rotate SSoT).
+// ADR-363 Slice F — plain DXF line rotation live ghost (shared axis-box rotate SSoT).
 import { applyLineRotationDrag } from '../../systems/line/line-grips';
-// ADR-561 — plain DXF arc rotation live ghost (shared rotate SSoT, preview ≡ commit).
-import { applyArcRotationDrag } from '../../systems/arc/arc-grips';
-// ADR-561 — plain DXF polyline/rectangle rotation live ghost (shared rotate SSoT, preview ≡ commit).
-import { applyPolylineRotationDrag } from '../../systems/polyline/polyline-grips';
+// ADR-561 — plain DXF arc + polyline/rectangle rotation live ghost: the ONE shared
+// `rotateEntity`-delegating SSoT the commit (`RotateEntityCommand`) runs (preview ≡ commit
+// by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
+import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation-drag';
+import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
 import type { Entity } from '../../types/entities';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
@@ -240,48 +241,34 @@ export function applyEntityPreview(
     return { ...(entity as object), start: rotated.start, end: rotated.end } as unknown as DxfEntityUnion;
   }
 
-  // ── ADR-561 — plain DXF arc ROTATION live ghost ───────────────────────────
-  // The arc is a primitive (centre / radius / start-end angle); the rotation ghost spins
-  // its centre about `rotatePivot` (default = the arc centre) + offsets both angles by the
-  // swept angle, via the SAME `applyArcRotationDrag` SSoT the commit runs (`commitArcGripDrag`
-  // → `RotateEntityCommand`), so preview ≡ commit. `anchorPos` = the reference anchor (swept
-  // angle starts at 0). Only the rotation handle carries `'arc-rotation'`; the centre MOVE grip
-  // (`'arc-move'`, `movesEntity`) falls through to the classic whole-entity translate below.
+  // ── ADR-561 — plain DXF arc + polyline / rectangle ROTATION live ghost ────
+  // Both are primitives whose rotation the ONE `rotateEntity` engine already owns (arc:
+  // centre + start/end angle· polyline: every vertex), so the ghost delegates to the
+  // SHARED `applyPrimitiveRotationDrag` — the SAME `sweptAngleDegAboutPivot` +
+  // `rotateEntity` the commit runs (`commitArcGripDrag` / `commitPolylineRotationGripDrag`
+  // → `RotateEntityCommand`) — making preview ≡ commit by IDENTITY, not hand-kept parity.
+  // `anchorPos` = the reference anchor (swept angle starts at 0). The pivot defaults to the
+  // arc centre / the polyline bbox centre (the commit's per-primitive fallback) when no
+  // hot-grip centre was picked. A scene rectangle is already a closed 4-vertex polyline here,
+  // so the polyline branch covers it. Only the rotation handle carries the `*-rotation` kind;
+  // the centre MOVE grip (`movesEntity`) falls through to the classic translate below.
   if (arcGripKind === 'arc-rotation' && anchorPos && entity.type === 'arc') {
     const arc = entity as unknown as DxfArc;
     const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
-    const rotated = applyArcRotationDrag({
-      center: arc.center,
-      startAngleDeg: arc.startAngle,
-      endAngleDeg: arc.endAngle,
-      anchor: anchorPos,
-      currentPos,
-      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
+      anchor: anchorPos, currentPos, pivot: rotatePivot ?? arc.center,
     });
-    if (!rotated) return entity;
-    return { ...(entity as object), center: rotated.center, startAngle: rotated.startAngle, endAngle: rotated.endAngle } as unknown as DxfEntityUnion;
+    if (!patch) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
-
-  // ── ADR-561 — plain DXF polyline / rectangle ROTATION live ghost ──────────
-  // A polyline is a primitive (a bag of vertices); the rotation ghost spins EVERY vertex
-  // about `rotatePivot` (default = the vertices' bbox centre) by the swept angle, via the
-  // SAME `applyPolylineRotationDrag` SSoT the commit runs (`commitPolylineRotationGripDrag`
-  // → `RotateEntityCommand` polyline case / rectangle explode-to-polyline), so preview ≡
-  // commit. `anchorPos` = the reference anchor (swept angle starts at 0). A scene rectangle
-  // is already a closed 4-vertex polyline here, so this one branch covers both. Only the
-  // rotation handle carries `'polyline-rotation'`; the centre MOVE grip (`'polyline-move'`,
-  // `movesEntity`) falls through to the classic whole-entity translate below.
   if (polylineGripKind === 'polyline-rotation' && anchorPos && entity.type === 'polyline') {
     const poly = entity as unknown as DxfPolyline;
     const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
-    const rotated = applyPolylineRotationDrag({
-      vertices: poly.vertices,
-      anchor: anchorPos,
-      currentPos,
-      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
+      anchor: anchorPos, currentPos, pivot: rotatePivot ?? polylineBboxCenter(poly.vertices),
     });
-    if (!rotated) return entity;
-    return { ...(entity as object), vertices: rotated } as unknown as DxfEntityUnion;
+    if (!patch) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────

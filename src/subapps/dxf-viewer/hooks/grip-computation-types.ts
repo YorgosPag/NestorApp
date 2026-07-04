@@ -158,17 +158,17 @@ export interface DxfGripDragPreview {
   lineGripKind?: LineGripKind;
   /**
    * ADR-561 — plain DXF arc rotation discriminator (forwarded from `UnifiedGripInfo.
-   * arcGripKind` via `buildRotateReferencePreview`). Routes the live ghost through
-   * `applyArcRotationDrag` (the SAME `sweptAngleDegAboutPivot` + `rotateEntity`-arc the
-   * commit runs), so preview ≡ commit. `anchorPos` carries the reference anchor (sweep 0).
+   * arcGripKind` via `buildRotateReferencePreview`). Routes the live ghost through the
+   * shared `applyPrimitiveRotationDrag` → `rotateEntity` the commit runs, so preview ≡
+   * commit by identity. `anchorPos` carries the reference anchor (sweep 0).
    */
   arcGripKind?: ArcGripKind;
   /**
    * ADR-561 — plain DXF polyline/rectangle rotation discriminator (forwarded from
    * `UnifiedGripInfo.polylineGripKind` via `buildRotateReferencePreview`). Routes the live
-   * ghost through `applyPolylineRotationDrag` (the SAME `sweptAngleDegAboutPivot` +
-   * `rotateEntity`-polyline the commit runs — rotate every vertex), so preview ≡ commit.
-   * `anchorPos` carries the reference anchor (sweep 0).
+   * ghost through the SAME shared `applyPrimitiveRotationDrag` → `rotateEntity` (rotate
+   * every vertex) the commit runs, so preview ≡ commit by identity. `anchorPos` carries
+   * the reference anchor (sweep 0).
    */
   polylineGripKind?: PolylineGripKind;
   /**

@@ -10,7 +10,7 @@
  */
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { getActiveDragGrip } from './GripDragStore';
+import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
 import { resolveActionAlignmentTracking } from '../../hooks/dimensions/dim-alignment-tracking';
 import { toDimensionEntity, getDimGripAlignmentAnchors } from '../../hooks/dimensions/useDimensionGrips';
 import { setGripAlignmentTracking, clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
@@ -19,9 +19,6 @@ import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 import { isLineEntity, type Entity } from '../../types/entities';
 // ADR-560 — body-drag (grab body → move/copy) as a THIRD consumer of the same AutoAlign SSoT.
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
-// ADR-560 — grip Alt-move (whole-entity move from a grabbed grip base) = FOURTH consumer, generic
-// over entity type (column/wall/any BIM|DXF) via the SAME base-point tracking as body-drag.
-import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import type { Point2D } from '../../rendering/types/Types';
 
 type WorldPoint = ReturnType<typeof CoordinateTransforms.screenToWorld>;
@@ -58,9 +55,10 @@ export function applyGripDragAlignmentTracking(
     // όλη η οντότητα γλιστρά σε ortho/aligned ίχνη από εκεί ⊕ ambient γείτονες (τα κυανά ίχνη +
     // η έλξη προς κάθε οντότητα). Τρέχει ΠΡΙΝ τα line-specific anchors ώστε ένα Alt-move γραμμής
     // να παρακολουθεί κι αυτό από το base (όχι από άκρο). ΕΝΑ base-point brain (κοινό με body-drag).
-    // Το baked `altMove` (ADR-560) είναι blur-proof — το live `GripAltMoveStore.getActive()` το Alt→
-    // blur στα Windows το μηδενίζει mid-drag, οπότε προτιμούμε το baked flag (fallback το live store).
-    if ((dimGrip.altMove || GripAltMoveStore.getActive()) && dimGrip.dragAnchor) {
+    // ADR-560 — blur-proof altMove via the SSoT resolver (`isActiveGripAltMove`): prefers the
+    // baked flag over the live `GripAltMoveStore` that the Windows Alt→blur clears mid-drag. ONE
+    // resolver shared with the OSNAP corner-projection so the two paths can never disagree.
+    if (isActiveGripAltMove() && dimGrip.dragAnchor) {
       return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale);
     }
     // ADR-357/363 — plain DXF LINE grip drag (χωρίς Alt): anchors per grip (fixed endpoint / move

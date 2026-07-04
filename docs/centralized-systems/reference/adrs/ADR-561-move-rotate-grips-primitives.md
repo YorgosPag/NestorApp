@@ -110,25 +110,29 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
-- **2026-07-04** — 🐛 **polyline / rectangle rotation LIVE GHOST fix** (Giorgio: «θέλω τον ίδιο ακριβώς
-  κώδικα περιστροφής της γραμμής και στο τετράγωνο»). ΙΔΙΑ οικογένεια bug με το τόξο: το **commit** του
-  polyline rotation δούλευε (`commitPolylineRotationGripDrag` → `RotateEntityCommand` / rectangle
-  explode-to-polyline) + ο hot-grip FSM ξεκινούσε ήδη τη ροή rotate (`polyline-rotation` → `'rotate'`),
-  αλλά το **preview ghost** έκοβε — έλειπε ΜΟΝΟ η γεωμετρία (τα βέλη + POLAR/AutoAlign ίχνη είναι ήδη
-  generic → εμφανίστηκαν μόνα τους μόλις μπήκε το ghost). Fix (mirror του arc path 1:1, full SSoT): νέο
-  pure `applyPolylineRotationDrag` (`systems/polyline/polyline-grips.ts`) = thin adapter πάνω στα ΙΔΙΑ
-  `sweptAngleDegAboutPivot` + `rotatePoint` primitives που τρέχει το commit (`rotateEntity` polyline
-  case — rotate κάθε vertex), με fallback pivot = `polylineBboxCenter` (ίδιο με το commit) → preview ≡
-  commit by construction, μηδέν νέα rotate math. **Τροποποιημένα**: `hooks/grip-computation-types.ts`
-  (`DxfGripDragPreview` +`polylineGripKind` +`arcGripKind` — Boy-Scout N.0.2: το arc fix το ξέχασε,
-  ώστε τα `dp.arcGripKind`/`dp.polylineGripKind` reads να είναι type-clean), `rendering/ghost/
-  entity-preview-types.ts` (+`polylineGripKind`), `hooks/tools/grip-drag-preview-transform.ts`
-  (pass-through), `hooks/grips/grip-projections.ts` (`buildRotateReferencePreview` forward),
-  `rendering/ghost/apply-entity-preview.ts` (polyline-rotation branch),
-  `systems/polyline/__tests__/polyline-grips.test.ts` (parity tests vs `rotateEntity` polyline case,
-  rectangle 90°, degenerate→null, external+bbox pivot). jest ✅ 11/11. 🔴 εκκρεμεί browser-verify: 1
-  περιστροφή τετραγώνου (ghost + βέλη + ίχνη) + η ειδική απαίτηση «ομοαξονικός βραχίονας αναφοράς με
-  πλευρά ορθογωνίου» (verify-then-decide — αγγίζει το κοινό free-rotate flow line/arc).
+- **2026-07-05** — 🐛 **polyline / rectangle rotation LIVE GHOST + rotate-preview SSoT κεντρικοποίηση**
+  (Giorgio: «θέλω τον ίδιο ακριβώς κώδικα περιστροφής της γραμμής και στο τετράγωνο» + SSoT audit «μην
+  δημιουργείς διπλότυπα, κεντρικοποίησε και τα προϋπάρχοντα»). ΙΔΙΑ οικογένεια bug με το τόξο: commit
+  (`commitPolylineRotationGripDrag`) + hot-grip FSM (`polyline-rotation`→`'rotate'`) δούλευαν ήδη· έλειπε
+  ΜΟΝΟ η γεωμετρία του ghost (βέλη + POLAR/AutoAlign ίχνη είναι ήδη generic → εμφανίστηκαν μόνα τους).
+  **Wiring** (mirror του arc): `hooks/grip-computation-types.ts` (`DxfGripDragPreview` +`polylineGripKind`
+  +`arcGripKind` — Boy-Scout N.0.2: το arc fix το ξέχασε), `rendering/ghost/entity-preview-types.ts`
+  (+`polylineGripKind`), `hooks/tools/grip-drag-preview-transform.ts` (pass-through),
+  `hooks/grips/grip-projections.ts` (`buildRotateReferencePreview` forward),
+  `rendering/ghost/apply-entity-preview.ts` (arc + polyline rotation branches).
+  **🎯 SSoT κεντρικοποίηση (η ουσία)**: αντί για per-primitive `applyArcRotationDrag` /
+  `applyPolylineRotationDrag` (που ήταν verbatim αντίγραφα των arc/polyline cases του `rotateEntity`),
+  ΕΝΑΣ κοινός SSoT `hooks/grips/primitive-rotation-drag.ts` — `resolveSweptRotationDeg` (guarded
+  anchor-relative swept angle) + `applyPrimitiveRotationDrag(entity, {anchor,currentPos,pivot})` που
+  **delegate-άρει τη γεωμετρία στο ΕΝΑ `rotateEntity`** που τρέχει το commit (`RotateEntityCommand`).
+  ⇒ preview ≡ commit **by identity**, όχι hand-kept parity. **Καταργήθηκαν** τα δύο bespoke helpers
+  (arc-grips.ts, polyline-grips.ts) + το commit `resolveRotation` χρησιμοποιεί πλέον το ίδιο
+  `resolveSweptRotationDeg` (commit ↔ preview twins). Το `line` δεν ρουτάρεται εδώ — μένει στη
+  διαφορετική (κι αυτή κεντρική) `axis-box` μηχανή, parity με τον τοίχο, χωρίς fork. **Tests**: νέο
+  `hooks/grips/__tests__/primitive-rotation-drag.test.ts` (swept-guard + arc/polyline patch === `rotateEntity`
+  + degenerate→null)· τα per-helper describes αφαιρέθηκαν. jest ✅ 26/26 (5 suites). 🔴 εκκρεμεί
+  browser-verify: 1 περιστροφή τετραγώνου (ghost + βέλη + ίχνη) + ειδική απαίτηση «ομοαξονικός βραχίονας
+  αναφοράς με πλευρά ορθογωνίου» (verify-then-decide — αγγίζει το κοινό free-rotate flow line/arc).
 - **2026-07-04** — 🐛 **arc rotation LIVE GHOST fix** (Giorgio: «όταν πατάω το σημάδι περιστροφής
   δεν εμφανίζεται preview ghost του τόξου»). Το **commit** του arc rotation δούλευε (`commitArcGripDrag`
   → `RotateEntityCommand`), αλλά το **preview** έκοβε: (1) το `EntityPreviewTransform` δεν είχε πεδίο

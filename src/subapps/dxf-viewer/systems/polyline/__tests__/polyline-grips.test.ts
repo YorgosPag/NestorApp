@@ -4,12 +4,9 @@
 import {
   getPolylineMoveRotateGrips,
   polylineMoveRotateStartIndex,
-  applyPolylineRotationDrag,
   POLYLINE_MOVE_KIND,
   POLYLINE_ROTATION_KIND,
 } from '../polyline-grips';
-import { rotateEntity } from '../../../utils/rotation-math';
-import type { Entity } from '../../../types/entities';
 
 describe('polylineMoveRotateStartIndex', () => {
   it('closed ring: vertices + N edges', () => {
@@ -49,62 +46,5 @@ describe('getPolylineMoveRotateGrips (ADR-561)', () => {
 
   it('degenerate ring (<2 vertices) → no handles', () => {
     expect(getPolylineMoveRotateGrips('P1', [{ x: 0, y: 0 }], true, 1)).toHaveLength(0);
-  });
-});
-
-describe('applyPolylineRotationDrag (ADR-561 — live rotation ghost)', () => {
-  it('rotates every vertex +90° CCW about an EXTERNAL pivot', () => {
-    // anchor @ 0° (east), cursor @ 90° (north) → swept = +90° CCW about origin.
-    const verts = [{ x: 10, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 10 }, { x: 10, y: 10 }];
-    const rotated = applyPolylineRotationDrag({
-      vertices: verts, anchor: { x: 1, y: 0 }, currentPos: { x: 0, y: 1 }, pivot: { x: 0, y: 0 },
-    });
-    expect(rotated).not.toBeNull();
-    // (10,0) → (0,10); (20,0) → (0,20); (20,10) → (−10,20); (10,10) → (−10,10).
-    expect(rotated![0].x).toBeCloseTo(0, 6);
-    expect(rotated![0].y).toBeCloseTo(10, 6);
-    expect(rotated![2].x).toBeCloseTo(-10, 6);
-    expect(rotated![2].y).toBeCloseTo(20, 6);
-  });
-
-  it('defaults the pivot to the vertices bbox centre (commit fallback parity)', () => {
-    // 40×20 rectangle, bbox centre (20,10). anchor @ centre+east, cursor @ centre+north → +90°.
-    const verts = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 20 }, { x: 0, y: 20 }];
-    const rotated = applyPolylineRotationDrag({
-      vertices: verts, anchor: { x: 30, y: 10 }, currentPos: { x: 20, y: 20 },
-    });
-    expect(rotated).not.toBeNull();
-    // (0,0) rotated +90° about (20,10) → (30, −10).
-    expect(rotated![0].x).toBeCloseTo(30, 6);
-    expect(rotated![0].y).toBeCloseTo(-10, 6);
-  });
-
-  it('returns null for a degenerate / zero sweep (cursor on the pivot)', () => {
-    expect(applyPolylineRotationDrag({
-      vertices: [{ x: 10, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 10 }],
-      anchor: { x: 10, y: 0 }, currentPos: { x: 0, y: 0 }, pivot: { x: 0, y: 0 },
-    })).toBeNull();
-  });
-
-  it('returns null for <2 vertices', () => {
-    expect(applyPolylineRotationDrag({
-      vertices: [{ x: 5, y: 5 }], anchor: { x: 1, y: 0 }, currentPos: { x: 0, y: 1 }, pivot: { x: 0, y: 0 },
-    })).toBeNull();
-  });
-
-  it('is byte-identical to the commit SSoT (rotateEntity polyline case) for the same sweep', () => {
-    const verts = [{ x: 3, y: 7 }, { x: 25, y: 7 }, { x: 25, y: 18 }, { x: 3, y: 18 }];
-    const pivot = { x: 0, y: 0 };
-    const anchor = { x: 10, y: 0 };    // 0°
-    const currentPos = { x: 0, y: 10 }; // 90° → swept = +90°
-    const viaPreview = applyPolylineRotationDrag({ vertices: verts, anchor, currentPos, pivot });
-    const viaCommit = rotateEntity(
-      { type: 'polyline', vertices: verts, closed: true } as unknown as Entity, pivot, 90,
-    ) as { vertices: { x: number; y: number }[] };
-    expect(viaPreview).not.toBeNull();
-    viaPreview!.forEach((p, i) => {
-      expect(p.x).toBeCloseTo(viaCommit.vertices[i].x, 6);
-      expect(p.y).toBeCloseTo(viaCommit.vertices[i].y, 6);
-    });
   });
 });

@@ -145,19 +145,18 @@ export interface EntityPreviewTransform {
    */
   readonly lineGripKind?: LineGripKind;
   /**
-   * ADR-561 — plain DXF arc rotation discriminator. Routes preview through
-   * `applyArcRotationDrag` (the SAME `sweptAngleDegAboutPivot` + `rotateEntity`-arc
-   * primitives the commit runs) so the live ghost rotates the arc about `rotatePivot`
-   * (its centre) exactly like the line. `anchorPos` = the reference anchor (sweep start).
+   * ADR-561 — plain DXF arc rotation discriminator. Routes preview through the shared
+   * `applyPrimitiveRotationDrag` (the SAME `sweptAngleDegAboutPivot` + `rotateEntity` the
+   * commit runs) so the live ghost rotates the arc about `rotatePivot` (its centre).
+   * `anchorPos` = the reference anchor (sweep start).
    */
   readonly arcGripKind?: ArcGripKind;
   /**
-   * ADR-561 — plain DXF polyline/rectangle rotation discriminator. Routes preview
-   * through `applyPolylineRotationDrag` (the SAME `sweptAngleDegAboutPivot` +
-   * `rotateEntity`-polyline the commit runs — rotate every vertex) so the live ghost
-   * spins about `rotatePivot` (the picked centre) exactly like the arc. `anchorPos` =
-   * the reference anchor (sweep start). A scene rectangle is already a closed 4-vertex
-   * polyline at this point, so this one branch covers both.
+   * ADR-561 — plain DXF polyline/rectangle rotation discriminator. Routes preview through
+   * the SAME shared `applyPrimitiveRotationDrag` → `rotateEntity` (rotate every vertex) the
+   * commit runs, so the live ghost spins about `rotatePivot` (the picked centre) exactly
+   * like the arc. `anchorPos` = the reference anchor (sweep start). A scene rectangle is
+   * already a closed 4-vertex polyline at this point, so this one branch covers both.
    */
   readonly polylineGripKind?: PolylineGripKind;
   readonly anchorPos?: Point2D;

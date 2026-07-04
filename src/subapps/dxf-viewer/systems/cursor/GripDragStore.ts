@@ -15,6 +15,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionGripKind, LineGripKind } from '../../hooks/grip-types';
 import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 import { clearMoveOrthoAxis } from '../grip/MoveOrthoAxisStore';
+import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 
 export interface ActiveDragGripInfo {
   entityId: string;
@@ -70,6 +71,23 @@ export function setActiveDragGripAnchor(anchor: Point2D): void {
 /** Read — called by mouse handlers to know which grip is being dragged */
 export function getActiveDragGrip(): ActiveDragGripInfo | null {
   return activeDragGrip;
+}
+
+/**
+ * ADR-560 — SSoT «is the active grip drag a whole-entity Alt-move?» resolution.
+ *
+ * The ONE blur-proof source of truth every consumer must read — AutoAlign
+ * tracking, OSNAP corner-projection (preview + commit), the ghost translate, and
+ * the commit mode decision. Prefers the BAKED `activeDragGrip.altMove` (captured
+ * once at grip mousedown), which survives the Windows Alt→`blur` that clears the
+ * live `GripAltMoveStore` MID-drag (see the `altMove` field note above +
+ * `GripAltMoveStore.onBlur`). Falls back to the live store for the pre-bake window
+ * / non-grip callers. Reading this ONE helper everywhere makes it IMPOSSIBLE for
+ * two paths to disagree — the exact defect that hid the OSNAP marks on an Alt-move
+ * while the AutoAlign traces (which already read the baked flag) kept working.
+ */
+export function isActiveGripAltMove(): boolean {
+  return activeDragGrip?.altMove === true || GripAltMoveStore.getActive();
 }
 
 /** Clear — called by resetToIdle in useUnifiedGripInteraction */

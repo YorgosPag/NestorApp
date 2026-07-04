@@ -25,7 +25,7 @@ import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesS
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
-import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
+import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { executeWholeEntityConnectivityMove } from '../../bim/mep-segments/build-whole-entity-connectivity-move';
 import type { Entity } from '../../types/entities';
@@ -186,7 +186,7 @@ export function commitDxfGripDragModeAware(
   // the user intends a WHOLE-ENTITY move (connectivity-preserving), not an outlet
   // bump — fall through to the Alt branch below so the manifold actually moves.
   if (
-    !GripAltMoveStore.getActive() &&
+    !isActiveGripAltMove() &&
     (grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ||
       grip.mepManifoldGripKind === 'mep-manifold-outlet-remove')
   ) {
@@ -195,17 +195,18 @@ export function commitDxfGripDragModeAware(
   }
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
-  // ADR-363 Phase 1G.5 — Alt-armed drag → whole-entity "move from characteristic
-  // point" (AutoCAD base-point move). The flag is armed at grip mousedown from
-  // the native `e.altKey` (GripAltMoveStore), so it survives the whole drag even
-  // if Alt is released or the window blurs mid-gesture. Bypasses EVERY parametric
+  // ADR-363 Phase 1G.5 / ADR-560 — Alt-armed drag → whole-entity "move from
+  // characteristic point" (AutoCAD base-point move). Read via the blur-proof SSoT
+  // resolver (`isActiveGripAltMove`): the flag is baked at grip mousedown from the
+  // native `e.altKey`, so it survives the whole drag even if Alt is released or the
+  // Windows Alt→blur clears the live store mid-gesture. Bypasses EVERY parametric
   // grip path below: the grabbed grip (corner / endpoint / midpoint / thickness /
   // corner-resize) becomes the base point — `delta` is already measured from
   // `grip.position` upstream — so the WHOLE entity translates instead of
   // reshaping. Alt+Ctrl (or the right-click Copy toggle) clones with the same
   // base point. Sole move-from-point path for params-driven BIM entities, whose
   // parametric returns otherwise pre-empt the `mode === 'move'` branch far below.
-  if (GripAltMoveStore.getActive()) {
+  if (isActiveGripAltMove()) {
     // ADR-363 Φ1G.5 Slice 2 — a hosted opening cannot free-translate (it lives ON
     // a wall; `calculateBimMovedGeometry` no-ops for it). Slide it ALONG the host
     // wall instead — base point = grabbed grip, displacement projected onto the

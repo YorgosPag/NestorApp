@@ -25,8 +25,7 @@ import { processMarqueeSelection } from './mouse-handler-up-marquee';
 // Round 1+2 gated snap only in the downstream `useDrawingHandlers.onDrawingPoint`,
 // but the click world point was already snapped here BEFORE reaching that gate.
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
-import { getActiveDragGrip } from './GripDragStore';
-import { GripAltMoveStore } from '../grip/GripAltMoveStore';
+import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity, isLineEntity, type Entity } from '../../types/entities';
@@ -239,7 +238,9 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           // ADR-363 Φ1G.5 — same Alt whole-entity-move path as the move handler:
           // the grabbed grip is only a base point (`column-center` is hidden), so
           // the projection must run for any kind (rotation handle included).
-          const columnAltMove = GripAltMoveStore.getActive();
+          // ADR-560 — blur-proof baked `altMove` (SSoT resolver) so the committed
+          // position matches the preview corner-snap even after a Windows Alt→blur.
+          const columnAltMove = isActiveGripAltMove();
           if (
             activeDragGrip &&
             activeDragGrip.dragAnchor &&
