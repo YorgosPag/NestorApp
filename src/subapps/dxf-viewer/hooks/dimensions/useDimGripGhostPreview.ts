@@ -27,17 +27,20 @@
 
 import React, { useCallback } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
-import type { DimensionEntity } from '../../types/dimension';
-import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { useLevels } from '../../systems/levels';
-import { applyDimensionGripDrag } from './useDimensionGrips';
+import { applyDimensionGripDrag, toDimensionEntity } from './useDimensionGrips';
 import { renderPreviewDimension } from '../../canvas-v2/preview-canvas/preview-dimension-renderer';
 import { resolveDimStyle } from '../../systems/dimensions/dim-style-resolver';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useCanvasGhostPreview } from '../tools/useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// ADR-562 Φ9.2 — paint the AutoAlign traces (resolved once by the mouse-move handler) on
+// top of the live dim ghost, so geometry + traces share ONE resolve (WYSIWYG, ADR-357).
+import { paintDimAlignmentTracking } from './dim-alignment-tracking';
+import { getDimAlignmentTracking } from '../../systems/cursor/DimAlignmentTrackingStore';
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
 
@@ -62,27 +65,38 @@ export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void
     const scene = levelManager.getLevelScene(levelId);
     if (!scene?.entities) return;
 
-    const raw = scene.entities.find(e => e.id === dragPreview.entityId);
-    if (!raw || (raw as { type?: string }).type !== 'dimension') return;
-
-    // SceneModel stores DimensionEntity directly; the DxfDimension wrapper exists
-    // only for the render pipeline (mirror commitDimensionGripDrag's resolution).
-    const wrapper = raw as unknown as DxfDimension;
-    const dimEntity: DimensionEntity = wrapper.dimensionEntity ?? (raw as unknown as DimensionEntity);
+    // SceneModel stores DimensionEntity directly; the DxfDimension wrapper exists only
+    // for the render pipeline — `toDimensionEntity` normalises both (shared SSoT with the
+    // mouse handlers, so the ghost + the alignment resolve see the identical entity).
+    const dimEntity = toDimensionEntity(scene.entities.find(e => e.id === dragPreview.entityId));
+    if (!dimEntity) return;
 
     // gripPos = the grip world position at mouseDown (anchorPos) — matches the
     // commit's `grip.position` for the linear rotation handle (preview ≡ commit).
     const gripPos = dragPreview.anchorPos ?? dimEntity.defPoints[0] ?? { x: 0, y: 0 };
     const newDim = applyDimensionGripDrag(dragPreview.dimGripKind, dimEntity, dragPreview.delta, gripPos);
 
+    const sceneUnits = resolveSceneUnits(scene);
     renderPreviewDimension({
       ctx,
       entity: newDim,
       style: resolveDimStyle(newDim, getDimStyleRegistry()),
       transform: t,
       viewport,
-      sceneUnits: resolveSceneUnits(scene),
+      sceneUnits,
     });
+
+    // ADR-562 Φ9.2 — AutoAlign traces on top of the ghost. The mouse-move handler already
+    // resolved them (aligning the same aligned point that fed `dragPreview.delta`) and
+    // published the result → ONE resolve feeds both geometry and paint (WYSIWYG). Cleared
+    // with the drag (GripDragStore.clearActiveDragGrip) so nothing lingers. toMm mirrors
+    // the drawing-time tooltip unit (scene-units → mm).
+    const dimTracking = getDimAlignmentTracking();
+    if (dimTracking) {
+      paintDimAlignmentTracking(
+        ctx, dimTracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
+      );
+    }
   }, [dragPreview, levelManager]);
 
   useCanvasGhostPreview({

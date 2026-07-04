@@ -28,7 +28,7 @@ import type { SceneModel } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
-import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
+import { getRealtimeWorldCursor } from '../../systems/cursor/ImmediatePositionStore';
 import { requestAutoDimensionDialog } from '../../systems/dimensions/auto/auto-dimension-dialog-store';
 import {
   armCutline,
@@ -63,7 +63,10 @@ function paintCutlinePreview(previewRef: PreviewRef, scene: SceneModel | undefin
   const canvas = previewRef?.current;
   if (!canvas) return;
   const s = getCutlineSession();
-  const cursor = getImmediateWorldPosition();
+  // Realtime 60fps un-throttled channel — the SSoT every ghost reads (ADR-040
+  // cursor-lag Φ12). The throttled ~20fps `getImmediateWorldPosition` lagged the
+  // rubber-band so the cut line didn't follow the cursor live after click 1.
+  const cursor = getRealtimeWorldCursor();
 
   if (s.phase === 'awaitingEnd' && s.cutStart && cursor) {
     canvas.drawPreview(cutlinePreviewLine(s.cutStart, cursor) as unknown as Parameters<typeof canvas.drawPreview>[0]);

@@ -167,6 +167,67 @@ export function applyDimensionGripDrag(
   }
 }
 
+// ─── Public: alignment-tracking anchors (ADR-562 Φ9.2) ──────────────────────────
+
+/**
+ * Resolve a raw scene entity to its `DimensionEntity`. The SceneModel stores the
+ * `DimensionEntity` directly, while the `DxfDimension` wrapper (with `.dimensionEntity`)
+ * exists only for the render pipeline — this normalises both. Returns `null` for a
+ * missing / non-dimension entity. Shared SSoT so every dim consumer (grip ghost,
+ * mouse handlers) resolves the entity identically.
+ */
+export function toDimensionEntity(raw: unknown): DimensionEntity | null {
+  if (!raw || (raw as { type?: string }).type !== 'dimension') return null;
+  const wrapper = raw as { dimensionEntity?: DimensionEntity };
+  return wrapper.dimensionEntity ?? (raw as DimensionEntity);
+}
+
+/**
+ * ADR-562 Φ9.2 / ADR-357 — the explicit alignment anchors for a dimension grip drag.
+ *
+ * When a dimension grip is dragged, the AutoAlign traces should emanate from the
+ * dimension's OTHER real-world points (the anchors we align the moving point to),
+ * exactly as the creation flow uses the already-picked clicks. This returns those
+ * anchors per grip kind; ambient + acquired anchors are merged by
+ * `resolveDimAlignmentTracking` on top.
+ *
+ * Returns `null` when the grip does NOT translate a point (linear rotation handle,
+ * angular vertices) — alignment tracking is meaningless there and the caller skips it.
+ * An empty array means "no explicit anchor, but still run ambient/acquired tracking".
+ */
+export function getDimGripAlignmentAnchors(
+  kind: DimensionGripKind,
+  dim: DimensionEntity,
+): Point2D[] | null {
+  const pts = dim.defPoints;
+  switch (kind) {
+    // Extension-line origins align to their partner origin (H/V/polar from the pair).
+    case 'dim-defpoint-0': return pts.length >= 2 ? [pts[1]] : [];
+    case 'dim-defpoint-1': return pts.length >= 1 ? [pts[0]] : [];
+    // Dim-line offset + text align to both measured origins (keep the run parallel).
+    case 'dim-line-ref':   return pts.slice(0, 2);
+    case 'dim-text':       return pts.slice(0, Math.min(2, pts.length));
+    case 'dim-extra':
+      switch (dim.dimensionType) {
+        case 'aligned':  return pts.slice(0, 2);        // patches defPoints[2]
+        case 'radius':
+        case 'diameter': return pts.length >= 1 ? [pts[0]] : []; // measure point → centre
+        case 'ordinate': return pts.length >= 1 ? [pts[0]] : []; // datum → leader origin
+        // Linear rotation handle = an ANGLE, angular vertices = arc geometry: no
+        // point translation to align → skip alignment tracking entirely.
+        case 'linear':
+        case 'angular2L':
+        case 'angular3P':
+        default:         return null;
+      }
+    default: {
+      const _exhaustive: never = kind;
+      void _exhaustive;
+      return null;
+    }
+  }
+}
+
 // ─── Public: undoable patch diff (grip commit) ──────────────────────────────────
 
 /**

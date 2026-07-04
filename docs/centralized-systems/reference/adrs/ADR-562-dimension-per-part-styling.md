@@ -1,6 +1,6 @@
 # ADR-562 — Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης)
 
-> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED + Φ9.1 (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails** + **Φ9.1 alignment traces στη ΔΗΜΙΟΥΡΓΙΑ διάστασης** έτοιμα· Φ9.2 (λαβές) + Φ9.3 (μετακίνηση) + Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
+> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED + Φ9.1+Φ9.2+Φ9.3(MOVE tool) (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails** + **Φ9.1 alignment traces στη ΔΗΜΙΟΥΡΓΙΑ** + **Φ9.2 στις ΛΑΒΕΣ (grip-drag)** + **Φ9.3 στο MOVE tool (2-click «M»)** έτοιμα· Φ9.3 row-move overlay DEFERRED (SVG↔canvas paint) + Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
 > **Date:** 2026-07-01
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -312,9 +312,31 @@ acquired (`TrackingPointStore`) ⊕ ambient (`collectAmbientAlignmentAnchors`, A
   στο free dim-line offset pick (`isDimLineRefPhase`).
 - Commit parity (WYSIWYG): `useDrawingHandlers.onDrawingPoint` (dim κλάδος) — ίδιο override στο committed point.
 
-**Φ9.2 — Λαβές (PROPOSED):** `mouse-handler-move.ts`/`mouse-handler-up.ts` (override του grip world point, gated
-σε dim grip) + `useDimGripGhostPreview.ts` (paint). ⚠️ ADR-040 CHECK 6D (`cursor/`).
-**Φ9.3 — Μετακίνηση (PROPOSED):** row-move overlay (`projectRowDelta`) + MOVE tool (`useMoveTool`/`useMovePreview`).
+**Φ9.2 — Λαβές (IMPLEMENTED 2026-07-04):** όταν σέρνεις λαβή διάστασης, εμφανίζονται τα ίδια ίχνη ευθυγράμμισης
+με anchors τα **υπόλοιπα defPoints** της διάστασης ⊕ acquired ⊕ ambient.
+- **Anchors SSoT:** `useDimensionGrips.getDimGripAlignmentAnchors(kind, dim)` — ανά grip-kind επιστρέφει τα ρητά
+  anchors (endpoint→partner origin· dim-line/text→οι δύο origins· aligned-extra→origins· radius/diameter/ordinate
+  extra→center/datum-origin) ή `null` όταν η λαβή δεν μεταφράζει σημείο (linear rotation handle, angular vertices) →
+  παράλειψη. `toDimensionEntity(raw)` = κοινός resolver του `DimensionEntity` (wrapper ή raw).
+- **Resolve override (WYSIWYG):** `mouse-handler-move.ts` — ΜΕΤΑ το OSNAP/face/corner snap, ανεξάρτητα του OSNAP
+  toggle, `resolveDimAlignmentTracking(moveWorldPos, anchors, …)` → override του `moveWorldPos` (→ grip delta →
+  ghost geometry) + publish στο `DimAlignmentTrackingStore` (zero-React). `mouse-handler-up.ts` — ΙΔΙΟ override στο
+  `upWorldPos` (commit ≡ preview). Το `dimGripKind` εκτίθεται στο mousedown (`grip-mouse-handlers` → `GripDragStore`).
+- **Paint:** `useDimGripGhostPreview.ts` διαβάζει το store + `paintDimAlignmentTracking(...)` (νέος thin wrapper στο
+  `dim-alignment-tracking.ts`, mirror του `paintRotationTracking`) πάνω από το ghost. ΕΝΑΣ resolve/frame τρέφει
+  geometry + paint. Lifecycle clear: `GripDragStore.clearActiveDragGrip` (release/ESC) + commit. ⚠️ ADR-040 CHECK 6D (`cursor/`).
+**Φ9.3 — Μετακίνηση (MERO — MOVE tool IMPLEMENTED 2026-07-04· row-move DEFERRED):**
+- **MOVE tool (2-click «M») — IMPLEMENTED:** `useMovePreview.ts` (destination override + traces) + `useMoveTool.ts`
+  (commit override), με ref anchor το base point (click #1) ⊕ ambient. Νέος convenience SSoT
+  `resolveActionAlignmentTracking(cursor, refPoints, scale, sceneEntities)` στο `dim-alignment-tracking.ts` (διαβάζει
+  POLAR/ORTHO + AutoAlign toggle, delegate στο `resolveDimAlignmentTracking`). Σειρά: ORTHO(F8) → AutoAlign override →
+  ίδιο override σε preview & commit (WYSIWYG). Gated: με όλα τα CAD aids OFF → identity (καμία αλλαγή). Ισχύει για
+  **κάθε** επιλογή (Revit/AutoCAD parity — το MOVE δείχνει ίχνη· 3px tolerance = απαλός μαγνήτης).
+- **Row-move overlay («Λαβές Μετακίνησης Σειρών») — DEFERRED:** το `DimRowHandleOverlay` ζωγραφίζει **SVG** ghost
+  (όχι canvas PreviewCanvas), οπότε τα canvas-based traces (`tracking-paint` SSoT) δεν ταιριάζουν χωρίς αρχιτεκτονική
+  απόφαση (είτε SVG-paint των traces μέσα στο overlay = παράλληλο paint, είτε δρομολόγηση του row-ghost μέσω του
+  canvas preview). Επιπλέον είναι ADR-040 perf-critical micro-leaf + η αλληλεπίδραση alignment↔normal-constrain
+  (`projectRowDelta`) χρειάζεται προσοχή. Χρειάζεται ξεχωριστό session/απόφαση Giorgio → βλ. handoff.
 
 **SSoT reuse:** `resolveAlignmentTracking`/`composeTrackingSnap`/`collectAmbientAlignmentAnchors`/`TrackingPointStore`,
 `ambientAlignmentConfigStore` (AutoAlign toggle), `tracking-paint.ts`, `rotation-tracking-overlay.ts` (πρότυπο).
@@ -348,6 +370,25 @@ Ref: ADR-357 (Object Snap Tracking), ADR-397 (rotation consumer).
 
 ## 7. Changelog
 
+- **2026-07-04 (Φ9.3 — Alignment traces στο MOVE tool (2-click «M»), UNCOMMITTED)** — Η μετακίνηση με το εργαλείο
+  MOVE δείχνει πλέον ίχνη ευθυγράμμισης με ref anchor το base point (click #1) ⊕ ambient, WYSIWYG (preview ≡ commit).
+  Νέος convenience SSoT `resolveActionAlignmentTracking` (`dim-alignment-tracking.ts` — διαβάζει POLAR/ORTHO +
+  AutoAlign toggle, delegate στο `resolveDimAlignmentTracking`). Wiring: `useMovePreview` (override του destination +
+  `paintDimAlignmentTracking`) + `useMoveTool.handleMoveClick` (ίδιο override στο commit). ORTHO(F8)→AutoAlign σειρά.
+  Gated: με CAD aids OFF → identity (καμία αλλαγή). Ισχύει για ΚΑΘΕ επιλογή (Revit/AutoCAD parity, 3px tolerance).
+  **DEFERRED — row-move overlay:** SVG ghost vs canvas traces + ADR-040 perf-critical leaf → ξεχωριστό session (handoff).
+- **2026-07-04 (Φ9.2 — Alignment traces στις ΛΑΒΕΣ διάστασης / grip-drag, UNCOMMITTED)** — Το grip-drag διάστασης
+  (endpoint / dim-line offset / text / aligned-extra / radius-diameter-ordinate extra) δείχνει πλέον τα ίδια ίχνη
+  ευθυγράμμισης (AutoAlign) με τη δημιουργία. SSoT audit (grep) ΠΡΙΝ: επαναχρησιμοποιήθηκε ο έτοιμος wrapper
+  `resolveDimAlignmentTracking` (Φ9.1) + το πρότυπο grip consumer `rotation-tracking-overlay`. Νέο: (α)
+  `useDimensionGrips.getDimGripAlignmentAnchors` (anchors ανά grip-kind, `null` όπου δεν έχει νόημα) + κοινός
+  `toDimensionEntity`· (β) `paintDimAlignmentTracking` (thin wrapper στα `tracking-paint` SSoT, mirror του
+  `paintRotationTracking`)· (γ) zero-React `DimAlignmentTrackingStore` (μία resolve/frame → geometry + paint).
+  Wiring: `grip-mouse-handlers`→`GripDragStore.dimGripKind` (publish στο mousedown)· `mouse-handler-move` (override
+  `moveWorldPos` + store set, ΜΕΤΑ OSNAP/face/corner, ανεξ. OSNAP toggle)· `mouse-handler-up` (ίδιο override στο
+  `upWorldPos` → commit ≡ preview)· `useDimGripGhostPreview` (paint traces πάνω από το ghost). Lifecycle clear στο
+  `clearActiveDragGrip` (release/ESC) + commit. ⚠️ ADR-040 CHECK 6D (staged με `mouse-handler-*` + `GripDragStore`).
+  Επόμενο: Φ9.3 μετακίνηση (row-move + MOVE tool).
 - **2026-07-04 (Φ9.1 — Alignment traces στη δημιουργία διάστασης, UNCOMMITTED)** — Η δημιουργία διάστασης
   δείχνει πλέον τα ίδια ίχνη ευθυγράμμισης (AutoAlign) με κάθε άλλο εργαλείο, με anchors τα ήδη-picked σημεία
   ⊕ acquired ⊕ ambient. Νέος κοινός SSoT wrapper `hooks/dimensions/dim-alignment-tracking.ts`

@@ -13,6 +13,7 @@ import {
   applyAssociationUpdates,
 } from '../dim-association-service';
 import { ISO_129_TEMPLATE } from '../dim-style-templates';
+import { makeBimMock } from '../auto/__tests__/auto-dim-test-mocks';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Fixture helpers
@@ -411,5 +412,61 @@ describe('applyAssociationUpdates', () => {
     expect(updated.defPoints[0]).toEqual({ x: 77, y: 88 }); // updated
     expect(updated.defPoints[1]).toEqual({ x: 100, y: 0 }); // orphan → preserved
     expect(orphanCount).toBe(1);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ADR-563 Φ4-Α — cutLineIntersect (cut-line dimension follow-on-move)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('recomputeAssociatedDefPoint — cutLineIntersect', () => {
+  // Horizontal cut line along y=0 (fixed, captured at commit).
+  const CUT = { start: { x: -100, y: 0 }, end: { x: 100, y: 0 } };
+  const cutAssoc = (edge?: 'min' | 'max' | 'center'): DimensionAssociation => ({
+    geometryId: 'geo',
+    defPointIndex: 0,
+    associationType: 'cutLineIntersect',
+    cutLine: { ...CUT, edge },
+  });
+
+  it('raw LINE: def point follows the crossing when the line moves', () => {
+    // Vertical line moved to x=30 → crosses the fixed cut line at (30, 0).
+    const line = makeLine({ x: 30, y: -50 }, { x: 30, y: 50 });
+    expect(recomputeAssociatedDefPoint(cutAssoc(), line)).toEqual({ x: 30, y: 0 });
+  });
+
+  it('raw LINE: infinite crossing follows even past the finite cut segment', () => {
+    const line = makeLine({ x: 500, y: -50 }, { x: 500, y: 50 }); // beyond cut end x=100
+    expect(recomputeAssociatedDefPoint(cutAssoc(), line)).toEqual({ x: 500, y: 0 });
+  });
+
+  it('raw LINE parallel to the cut line → null (preserve)', () => {
+    const line = makeLine({ x: -50, y: 20 }, { x: 50, y: 20 }); // horizontal ∥ cut
+    expect(recomputeAssociatedDefPoint(cutAssoc(), line)).toBeNull();
+  });
+
+  it('raw POLYLINE: picks the crossing nearest the current def point', () => {
+    // Zig-zag crossing the cut line twice (x≈-40 and x≈40).
+    const poly = makePolyline([
+      { x: -40, y: -30 }, { x: -40, y: 30 },
+      { x: 40, y: 30 }, { x: 40, y: -30 },
+    ]);
+    const near40 = recomputeAssociatedDefPoint(cutAssoc(), poly, { currentDefPoint: { x: 38, y: 0 } });
+    expect(near40?.x).toBeCloseTo(40, 3);
+    const nearMinus40 = recomputeAssociatedDefPoint(cutAssoc(), poly, { currentDefPoint: { x: -38, y: 0 } });
+    expect(nearMinus40?.x).toBeCloseTo(-40, 3);
+  });
+
+  it('BIM host: def point rides the bbox extent projected on the cut axis', () => {
+    // 300mm column centred at (500,0) → bbox centre projects to (500,0) on y=0 cut.
+    const col = makeBimMock('column', 'geo', 350, -150, 650, 150);
+    const p = recomputeAssociatedDefPoint(cutAssoc('center'), col as unknown as SceneEntity);
+    expect(p?.x).toBeCloseTo(500, 3);
+    expect(p?.y).toBeCloseTo(0, 3);
+  });
+
+  it('returns null when the captured cut line is missing', () => {
+    const bare: DimensionAssociation = { geometryId: 'geo', defPointIndex: 0, associationType: 'cutLineIntersect' };
+    expect(recomputeAssociatedDefPoint(bare, makeLine({ x: 0, y: -5 }, { x: 0, y: 5 }))).toBeNull();
   });
 });

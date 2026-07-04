@@ -42,6 +42,12 @@ import { resolveIntersectionDefPoint } from './dim-intersection-resolver';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 // ADR-362 Phase N — wall span key-points SSoT, reused for pick-entity `endpoint` follow.
 import { getBimEntityKeyPoints2D } from '../../bim/utils/bim-entity-points';
+// ADR-563 Φ4-Α — cut-line associativity: bbox→cut-axis projection SSoT + infinite
+// line×line crossing + segment crossing, all reused (no new geometry, N.0.2).
+import { projectBoundsOntoCutAxis } from './auto/cut-axis-projection';
+import { intersectLines } from './builders/shared-geometry-helpers';
+import { segmentIntersection } from '../../utils/geometry/GeometryUtils';
+import { unitVector } from '../../bim/grips/grip-math';
 
 /**
  * Optional context for `recomputeAssociatedDefPoint` — only the `intersection`
@@ -204,12 +210,62 @@ export function recomputeAssociatedDefPoint(
         : { x: current?.x ?? 0, y: coord };
     }
 
+    case 'cutLineIntersect': {
+      // ADR-563 Φ4-Α — the def point rides where the FIXED cut line crosses the
+      // host. Both branches return a point ON the cut line (no perpendicular slip).
+      const cl = assoc.cutLine;
+      if (!cl) return null;
+      const bounds = calculateBimEntity2DBounds(e);
+      if (bounds) {
+        // BIM host → current bbox extent projected on the cut axis (stored edge).
+        const u = unitVector(cl.start, cl.end);
+        if (!u) return null;
+        const proj = projectBoundsOntoCutAxis(bounds, cl.start, u);
+        const along = cl.edge === 'min' ? proj.lo : cl.edge === 'max' ? proj.hi : proj.center;
+        return { x: cl.start.x + along * u.x, y: cl.start.y + along * u.y };
+      }
+      // Raw LINE → infinite line×line crossing (follows even past the finite cut).
+      if (isLineEntity(e)) {
+        const cd: Point2D = { x: cl.end.x - cl.start.x, y: cl.end.y - cl.start.y };
+        return intersectLines(cl.start, cd, e.start, { x: e.end.x - e.start.x, y: e.end.y - e.start.y });
+      }
+      // Raw POLYLINE → the actual crossing segment nearest the current def point.
+      if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
+        return nearestPolylineCutCrossing(e.vertices, e.closed ?? false, cl, ctx?.currentDefPoint ?? null);
+      }
+      return null;
+    }
+
     default: {
       const _exhaustive: never = assoc.associationType;
       void _exhaustive;
       return null;
     }
   }
+}
+
+/** ADR-563 Φ4-Α — closest cut-line×polyline-segment crossing to `current`. */
+function nearestPolylineCutCrossing(
+  verts: readonly Point2D[] | undefined,
+  closed: boolean,
+  cl: { start: Point2D; end: Point2D },
+  current: Point2D | null,
+): Point2D | null {
+  if (!verts || verts.length < 2) return null;
+  const last = closed ? verts.length : verts.length - 1;
+  let best: Point2D | null = null;
+  let bestD = Infinity;
+  for (let i = 0; i < last; i++) {
+    const hit = segmentIntersection(cl.start, cl.end, verts[i], verts[(i + 1) % verts.length])?.point;
+    if (!hit) continue;
+    if (!current) return hit;
+    const d = (hit.x - current.x) ** 2 + (hit.y - current.y) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = hit;
+    }
+  }
+  return best;
 }
 
 /**

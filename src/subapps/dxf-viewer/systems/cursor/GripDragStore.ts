@@ -12,6 +12,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { DimensionGripKind } from '../../hooks/grip-types';
+import { clearDimAlignmentTracking } from './DimAlignmentTrackingStore';
 
 export interface ActiveDragGripInfo {
   entityId: string;
@@ -22,6 +24,12 @@ export interface ActiveDragGripInfo {
    * the base is picked on the 2nd click; consumers must guard for `undefined`.
    */
   dragAnchor?: Point2D;
+  /**
+   * ADR-562 Φ9.2 — dimension grip discriminator. Set when a `dim-*` grip is dragged
+   * so the mouse handlers run AutoAlign tracking (`resolveDimAlignmentTracking`) with
+   * the dimension's other defPoints as anchors, exactly like the creation flow.
+   */
+  dimGripKind?: DimensionGripKind | null;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
@@ -50,4 +58,7 @@ export function getActiveDragGrip(): ActiveDragGripInfo | null {
 /** Clear — called by resetToIdle in useUnifiedGripInteraction */
 export function clearActiveDragGrip(): void {
   activeDragGrip = null;
+  // ADR-562 Φ9.2 — drag lifecycle SSoT: any active dim-grip AutoAlign traces end with
+  // the drag (release / ESC / cancel) so a stale result never bleeds into the next drag.
+  clearDimAlignmentTracking();
 }

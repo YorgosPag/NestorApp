@@ -23,7 +23,7 @@
 
 import { useCallback, useRef } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MovePhase } from './useMoveTool';
@@ -45,6 +45,9 @@ import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
+// ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
+// SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
+import { resolveActionAlignmentTracking, paintDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -139,7 +142,18 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // No-op when ORTHO is OFF.
     const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - basePoint.x, y: effectiveCursor.y - basePoint.y });
     const orthoDestination: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
-    const cursorScreen = CoordinateTransforms.worldToScreen(orthoDestination, t, viewport);
+
+    // ADR-562 Φ9.3 — AutoAlign override + traces on the ORTHO-locked destination (base
+    // point ⊕ ambient). SAME resolve as the commit (useMoveTool) → the ghost, rubber band
+    // and committed move all land on the aligned point (WYSIWYG). Gated behind POLAR /
+    // AutoAlign inside the helper → identity (previous behaviour) when the aids are off.
+    const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+    const moveTrk = resolveActionAlignmentTracking(
+      orthoDestination, [basePoint], t.scale,
+      (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+    );
+    const destination = moveTrk ? moveTrk.point : orthoDestination;
+    const cursorScreen = CoordinateTransforms.worldToScreen(destination, t, viewport);
 
     // Rubber band (dashed gold)
     ctx.save();
@@ -153,14 +167,18 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.setLineDash([]);
     ctx.restore();
 
+    // AutoAlign traces (dashed paths + intersection halo + distance tooltip) on top of the
+    // rubber band, via the SAME SSoT paint the dim grip + creation flows use.
+    if (moveTrk) {
+      const units = resolveSceneUnits(scene);
+      paintDimAlignmentTracking(ctx, moveTrk, t, viewport, (d) => sceneDistanceToMeters(d, units) * 1000);
+    }
+
     // Ghost + tooltip only during awaiting-destination
     if (phase !== 'awaiting-destination') return;
 
-    // Same ORTHO-locked displacement the rubber band + commit use (WYSIWYG).
-    const delta: Point2D = orthoDelta;
-
-    // Live move-distance readout: a discreet Revit-grade pill at the rubber-band midpoint.
-    const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+    // Same ORTHO+AutoAlign-locked displacement the rubber band + commit use (WYSIWYG).
+    const delta: Point2D = { x: destination.x - basePoint.x, y: destination.y - basePoint.y };
     const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
     const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
     drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);

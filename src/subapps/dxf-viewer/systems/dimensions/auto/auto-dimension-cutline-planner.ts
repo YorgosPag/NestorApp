@@ -36,23 +36,19 @@ import { isLineEntity, isPolylineEntity, isLWPolylineEntity } from '../../../typ
 import type { Point2D } from '../../../rendering/types/Types';
 import { unitVector, perpUnit } from '../../../bim/grips/grip-math';
 import { dotProduct } from '../../../rendering/entities/shared/geometry-vector-utils';
-import {
-  projectPointOnAxis,
-  projectPolygonOnAxis,
-} from '../../../bim/geometry/shared/polygon-axis-projection';
+import { projectPointOnAxis } from '../../../bim/geometry/shared/polygon-axis-projection';
 import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 import { segmentIntersection } from '../../../utils/geometry/GeometryUtils';
 import { lineIntersectsRectangle } from '../../selection/universal-marquee-geometry';
 import {
   classifyElement,
   detailCoordsFor,
-  type AxisProjection,
 } from './auto-dimension-reference-extraction';
+import { projectBoundsOntoCutAxis } from './cut-axis-projection';
 import { dedupSorted, type CoordSource } from './auto-dimension-chain-planner';
 import type {
   AutoDimReferenceBasis,
   AutoDimensionOptions,
-  Bounds2D,
   PlannedSegment,
 } from './auto-dimension-types';
 
@@ -67,33 +63,6 @@ const MIN_SEGMENT_MM = 1;
  */
 function cutlineBasis(basis: AutoDimReferenceBasis): AutoDimReferenceBasis {
   return basis === 'smart' ? 'axes' : basis;
-}
-
-/** The four corners of an axis-aligned bbox (for skew-axis face projection). */
-function bboxCorners(b: Bounds2D): readonly Point2D[] {
-  return [
-    { x: b.min.x, y: b.min.y },
-    { x: b.max.x, y: b.min.y },
-    { x: b.max.x, y: b.max.y },
-    { x: b.min.x, y: b.max.y },
-  ];
-}
-
-/**
- * Project one element's bbox onto the cut-line axis → an `AxisProjection`
- * `{lo, hi, center}` in along-axis scalars, so `detailCoordsFor` picks the exact
- * same centers/faces it does for the perimeter & interior chains.
- */
-function projectOntoCutAxis(
-  bounds: Bounds2D,
-  start: Point2D,
-  u: Point2D,
-): AxisProjection {
-  const poly = projectPolygonOnAxis(bboxCorners(bounds), start.x, start.y, u.x, u.y);
-  const cx = (bounds.min.x + bounds.max.x) / 2;
-  const cy = (bounds.min.y + bounds.max.y) / 2;
-  const center = projectPointOnAxis(cx, cy, start.x, start.y, u.x, u.y).along;
-  return { lo: poly.alongMin, hi: poly.alongMax, center };
 }
 
 /**
@@ -148,7 +117,7 @@ function crossedCoords(
       const bounds = calculateBimEntity2DBounds(e);
       if (!bounds) continue;
       if (!lineIntersectsRectangle(start, end, bounds)) continue;
-      const proj = projectOntoCutAxis(bounds, start, u);
+      const proj = projectBoundsOntoCutAxis(bounds, start, u);
       for (const c of detailCoordsFor(cls, proj, basis)) {
         raw.push({ coord: c.coord, sourceEntityId: e.id, edge: c.edge });
       }
@@ -195,6 +164,7 @@ export function planCutLineChain(
     y: cutStart.y + along * u.y,
   });
 
+  const cutLine = { start: cutStart, end: cutEnd };
   const out: PlannedSegment[] = [];
   for (let i = 0; i < coords.length - 1; i++) {
     const a = coords[i];
@@ -204,12 +174,16 @@ export function planCutLineChain(
     const extO2 = pointAt(b.coord);
     const dimLineRef: Point2D = { x: extO1.x + perp.x * off, y: extO1.y + perp.y * off };
     out.push({
-      // `axis` only satisfies the type — no sources means the factory never
-      // reads it (cut-line aligned dims are non-associative in this slice).
       axis: Math.abs(u.x) >= Math.abs(u.y) ? 'x' : 'y',
       dimensionType: 'aligned',
       defPoints: [extO1, extO2, dimLineRef],
       rotation: 0, // unused by AlignedDimensionEntity (dim line ∥ defPoints).
+      // ADR-563 Φ4-Α associativity — each ext origin rides where this FIXED cut
+      // line crosses its host; `cutLineIntersect` recompute re-solves on move.
+      // `edge` steers the BIM bbox extent; raw hosts (bounds=null) ignore it.
+      ...(a.id ? { source1: { id: a.id, edge: a.edge } } : {}),
+      ...(b.id ? { source2: { id: b.id, edge: b.edge } } : {}),
+      cutLine,
     });
   }
   return out;

@@ -309,7 +309,12 @@ export type DimensionAssociationType =
   | 'nearest'
   // ADR-563 Φ2 — auto-dimension anchor to a BIM host's 2D bbox extent, locked to
   // the parent dimension's measured axis (perpendicular component preserved).
-  | 'bimExtent';
+  | 'bimExtent'
+  // ADR-563 Φ4-Α — cut-line dimension: the def point rides where a FIXED (captured)
+  // cut line crosses the host. Recompute re-solves that crossing on the current
+  // geometry — BIM host → bbox extent projected on the cut axis; raw line/polyline
+  // → exact (infinite-line) intersection. Follows the host on move (raw + BIM).
+  | 'cutLineIntersect';
 
 /** Single anchor: which defPoint follows which geometry. */
 export interface DimensionAssociation {
@@ -351,6 +356,18 @@ export interface DimensionAssociation {
   readonly bimAnchor?: {
     readonly axis: 'x' | 'y';
     readonly edge: 'min' | 'max' | 'center';
+  };
+  /**
+   * ADR-563 Φ4-Α — for `cutLineIntersect` associations only: the FIXED cut line
+   * (captured at commit, NOT a scene entity). On host change the recompute
+   * re-solves the crossing of this line with the current geometry. `edge` is used
+   * only for BIM hosts (which bbox extent along the cut axis); raw line/polyline
+   * hosts take the exact geometric crossing and ignore `edge`.
+   */
+  readonly cutLine?: {
+    readonly start: Point2D;
+    readonly end: Point2D;
+    readonly edge?: 'min' | 'max' | 'center';
   };
 }
 

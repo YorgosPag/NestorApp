@@ -28,6 +28,11 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient), same
+// SSoT resolve as the ghost (useMovePreview) → WYSIWYG. Gated behind POLAR/AutoAlign.
+import { resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import type { Entity } from '../../types/entities';
 
 // ============================================================================
 // TYPES
@@ -149,10 +154,22 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
       if (phase === 'awaiting-destination' && basePoint) {
         // ORTHO (F8) locks the destination to the H/V axis from the base point
         // (AutoCAD MOVE+ORTHO). No-op when OFF. Matches the live ghost (useMovePreview).
-        const delta: Point2D = applyOrthoToDelta({
+        const orthoDelta = applyOrthoToDelta({
           x: worldPoint.x - basePoint.x,
           y: worldPoint.y - basePoint.y,
         });
+        // ADR-562 Φ9.3 — AutoAlign override on the ORTHO-locked destination (base point
+        // ⊕ ambient), so the committed move lands EXACTLY where the ghost trace snapped
+        // (WYSIWYG). The helper gates ambient/polar behind the CAD toggles → no-op when
+        // AutoAlign + POLAR are off (identity delta = the previous behaviour).
+        const orthoDest: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
+        const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+        const alignTrk = resolveActionAlignmentTracking(
+          orthoDest, [basePoint], getImmediateTransform().scale,
+          (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+        );
+        const finalDest = alignTrk ? alignTrk.point : orthoDest;
+        const delta: Point2D = { x: finalDest.x - basePoint.x, y: finalDest.y - basePoint.y };
         if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
         const commands: ICommand[] = [];

@@ -15,7 +15,7 @@
  * @see hooks/tools/rotation-tracking-overlay.ts — το πρότυπο grip-drag consumer
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { TrackingPointStore, type AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import { composeTrackingSnap, type ComposedTracking } from '../../systems/tracking/ambient-tracking-compose';
@@ -23,6 +23,11 @@ import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-a
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-scale';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { formatLengthForDisplay } from '../../config/display-length-format';
+import { paintAlignmentPaths, paintIntersections, paintTooltip } from '../../canvas-v2/preview-canvas/tracking-paint';
+import { getCurrentTrackingPalette } from '../../canvas-v2/preview-canvas/tracking-colors';
+import { fromTransform } from '../../canvas-v2/preview-canvas/overlay-projector';
 
 /** `sourceSnapType` tag για τα explicit reference points της τρέχουσας διάστασης. */
 const DIM_REF_SOURCE = 'dim-refpoint';
@@ -78,4 +83,64 @@ export function resolveDimAlignmentTracking(
     worldTolerance,
     worldPerPixel: worldPerPixel(scale),
   });
+}
+
+/**
+ * ADR-562 Φ9.3 — convenience wrapper for the interactive ACTION flows (2-click MOVE,
+ * future move gestures) that don't already read the CAD toggles: reads the POLAR/ORTHO
+ * state (`cadToggleState`) and the AutoAlign toggle (`ambientAlignmentConfigStore`)
+ * internally, then delegates to `resolveDimAlignmentTracking`. The caller passes the
+ * level's scene entities (or `null`); the ambient scan is gated here so it stays lazy.
+ *
+ * `refPoints` = the explicit anchors of the action (e.g. the MOVE base point). Polar
+ * increments participate only when POLAR is on AND ORTHO is off (parity with drawing).
+ */
+export function resolveActionAlignmentTracking(
+  cursor: Point2D,
+  refPoints: readonly Point2D[],
+  scale: number,
+  sceneEntities: readonly Entity[] | null,
+): ComposedTracking | null {
+  const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+  return resolveDimAlignmentTracking(cursor, refPoints, {
+    scale,
+    polarEnabled: cadToggleState.isPolarOn() && !cadToggleState.isOrthoOn(),
+    sceneEntities: ambientOn ? sceneEntities : null,
+  });
+}
+
+/**
+ * Paint the alignment traces (dashed paths + intersection halos + distance tooltip)
+ * for a resolved dim tracking result onto a preview-canvas ctx. Reuses the EXACT SSoT
+ * paints of the drawing flow (`paintAlignmentPaths`/`paintIntersections`/`paintTooltip`)
+ * — same colour/dash/width/label-slot — so the grip-drag traces are visually identical
+ * to the creation-time traces. Mirror of `rotation-tracking-overlay.paintRotationTracking`
+ * (without the polar ray — the dim flow shows only alignment lines, matching creation).
+ *
+ * `toMm` converts a world distance → millimetres for the distance label (the caller
+ * supplies it from the active level's scene units).
+ *
+ * @see hooks/tools/rotation-tracking-overlay.ts — the sibling grip-drag paint helper
+ * @see hooks/drawing/drawing-hover-handler.ts — the creation-time paint (drawTrackingAlignment)
+ */
+export function paintDimAlignmentTracking(
+  ctx: CanvasRenderingContext2D,
+  tracking: ComposedTracking,
+  transform: ViewTransform,
+  viewport: Viewport,
+  toMm: (worldDist: number) => number,
+): void {
+  const palette = getCurrentTrackingPalette();
+  const project = fromTransform(transform, viewport);
+  const r = tracking.result;
+  paintAlignmentPaths(ctx, r.activePaths, project, palette);
+  paintIntersections(ctx, r.intersections, project, palette);
+  const distWorld = Math.hypot(
+    tracking.point.x - r.anchorPoint.x,
+    tracking.point.y - r.anchorPoint.y,
+  );
+  const label = r.snappedAngle !== null
+    ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(toMm(distWorld))}`
+    : null;
+  paintTooltip(ctx, tracking.point, label, project, palette);
 }

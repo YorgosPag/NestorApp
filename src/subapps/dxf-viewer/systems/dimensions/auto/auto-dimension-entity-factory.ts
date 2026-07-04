@@ -40,6 +40,21 @@ export interface AutoDimensionFactoryContext {
 }
 
 function associationsFor(seg: PlannedSegment): DimensionAssociation[] | undefined {
+  // ADR-563 Φ4-Α — cut-line segments: each ext origin rides where the FIXED cut
+  // line crosses its host (`cutLineIntersect`), so the dim follows the host on
+  // move for BOTH BIM hosts (bbox extent on the cut axis, steered by `edge`) and
+  // raw exploded lines (exact crossing, `edge` ignored).
+  if (seg.cutLine) {
+    const cl = seg.cutLine;
+    const out: DimensionAssociation[] = [];
+    if (seg.source1) {
+      out.push({ defPointIndex: 0, geometryId: seg.source1.id, associationType: 'cutLineIntersect', cutLine: { ...cl, edge: seg.source1.edge } });
+    }
+    if (seg.source2) {
+      out.push({ defPointIndex: 1, geometryId: seg.source2.id, associationType: 'cutLineIntersect', cutLine: { ...cl, edge: seg.source2.edge } });
+    }
+    return out.length ? out : undefined;
+  }
   // Φ2/Φ3 — each anchored def point rides its host's bbox `edge` on the
   // segment's measured axis (follow-on-move). `seg.axis` is the SSoT, set by
   // both the perimeter chain-planner and the interior planner.

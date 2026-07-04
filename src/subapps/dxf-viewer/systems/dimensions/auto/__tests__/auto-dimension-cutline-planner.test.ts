@@ -191,13 +191,33 @@ describe('planCutLineChain — raw (non-BIM) exploded geometry', () => {
 });
 
 describe('cut-line chain → entity factory', () => {
-  it('produces non-associative AlignedDimensionEntity chain', () => {
+  it('produces an associative AlignedDimensionEntity chain (cutLineIntersect)', () => {
     const cols = [column('c1', 0, 0), column('c2', 5000, 0), column('c3', 9000, 0)];
-    const segs = planCutLineChain(cols, { x: -1000, y: 0 }, { x: 10000, y: 0 }, { x: 0, y: 1000 }, AUTO_DIMENSION_DEFAULTS);
+    const cutStart = { x: -1000, y: 0 };
+    const cutEnd = { x: 10000, y: 0 };
+    const segs = planCutLineChain(cols, cutStart, cutEnd, { x: 0, y: 1000 }, AUTO_DIMENSION_DEFAULTS);
     const dims = buildAutoDimensionEntities(segs, CTX);
     expect(dims).toHaveLength(2);
     expect(dims.every((d) => d.dimensionType === 'aligned')).toBe(true);
     expect(dims.every((d) => !('rotation' in d))).toBe(true);
-    expect(dims.every((d) => d.associations === undefined)).toBe(true);
+    // ADR-563 Φ4-Α — each ext origin now rides the fixed cut line (follows on move).
+    expect(dims.every((d) => d.associations?.length === 2)).toBe(true);
+    expect(dims.every((d) => d.associations?.every((a) => a.associationType === 'cutLineIntersect'))).toBe(true);
+    expect(dims[0].associations?.[0].cutLine?.start).toEqual(cutStart);
+    expect(dims[0].associations?.[0].cutLine?.end).toEqual(cutEnd);
+    // Column centres (axes basis) → edge 'center' captured for the BIM projection.
+    expect(dims[0].associations?.[0].cutLine?.edge).toBe('center');
+  });
+
+  it('captures cutLineIntersect for RAW lines with no bbox edge dependence', () => {
+    const segs = planCutLineChain(
+      [vLine('l1', 0), vLine('l2', 5000)],
+      { x: -1000, y: 0 }, { x: 10000, y: 0 }, { x: 0, y: 1000 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    const dims = buildAutoDimensionEntities(segs, CTX);
+    expect(dims).toHaveLength(1);
+    expect(dims[0].associations?.map((a) => a.geometryId)).toEqual(['l1', 'l2']);
+    expect(dims[0].associations?.every((a) => a.associationType === 'cutLineIntersect')).toBe(true);
   });
 });

@@ -29,7 +29,11 @@ import { getActiveDragGrip } from './GripDragStore';
 import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
-import { isWallEntity, isColumnEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity, type Entity } from '../../types/entities';
+// ADR-562 Φ9.2 — commit parity for the dim-grip AutoAlign (WYSIWYG preview ≡ commit).
+import { resolveActionAlignmentTracking } from '../../hooks/dimensions/dim-alignment-tracking';
+import { toDimensionEntity, getDimGripAlignmentAnchors } from '../../hooks/dimensions/useDimensionGrips';
+import { clearDimAlignmentTracking } from './DimAlignmentTrackingStore';
 import {
   findColumnGripCornerSnap,
   isColumnCornerSnapGrip,
@@ -247,6 +251,25 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
               }
             }
           }
+        }
+
+        // ADR-562 Φ9.2 / ADR-357 — commit parity for the dim-grip AutoAlign. SAME resolver
+        // + inputs as the live move override, applied to `upWorldPos` so the committed
+        // defPoint lands EXACTLY where the ghost trace snapped (WYSIWYG). Runs after the
+        // OSNAP/face/corner snaps and independently of the OSNAP toggle (matches the move
+        // handler). Traces are cleared once consumed (belt-and-suspenders vs resetToIdle).
+        const dimGrip = getActiveDragGrip();
+        if (dimGrip?.dimGripKind) {
+          const dimEntity = toDimensionEntity(scene?.entities?.find(en => en.id === dimGrip.entityId));
+          const anchors = dimEntity ? getDimGripAlignmentAnchors(dimGrip.dimGripKind, dimEntity) : null;
+          if (anchors) {
+            const dimTracking = resolveActionAlignmentTracking(
+              upWorldPos, anchors, transform.scale,
+              (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+            );
+            if (dimTracking) upWorldPos = dimTracking.point;
+          }
+          clearDimAlignmentTracking();
         }
 
         if (onGripMouseUp(upWorldPos)) {

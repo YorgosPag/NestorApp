@@ -31,7 +31,12 @@ import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, S
 import { getActiveDragGrip } from './GripDragStore';
 import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
-import { isWallEntity, isColumnEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity, type Entity } from '../../types/entities';
+// ADR-562 Φ9.2 / ADR-357 — AutoAlign traces during a DIMENSION grip drag (same SSoT
+// brain + paints as creation). Resolve overrides the grip cursor; result → store → ghost paint.
+import { resolveActionAlignmentTracking } from '../../hooks/dimensions/dim-alignment-tracking';
+import { toDimensionEntity, getDimGripAlignmentAnchors } from '../../hooks/dimensions/useDimensionGrips';
+import { setDimAlignmentTracking, clearDimAlignmentTracking } from './DimAlignmentTrackingStore';
 import {
   findColumnGripCornerSnap,
   isColumnCornerSnapGrip,
@@ -283,6 +288,30 @@ export function useMouseMoveHandler({
               entityId: cornerSnap.snapResult.snapPoint?.entityId,
             });
           }
+        }
+      }
+    }
+
+    // ADR-562 Φ9.2 / ADR-357 — AutoAlign traces while dragging a DIMENSION grip. Runs
+    // AFTER the OSNAP + face/corner snaps (SAME override point) and independently of the
+    // OSNAP toggle (alignment tracking is a separate Revit-style aid). Anchors = the
+    // dimension's OTHER defPoints ⊕ acquired ⊕ ambient (AutoAlign-gated → lazy scene read).
+    // The aligned point overrides `moveWorldPos` (→ grip delta → ghost geometry) and the
+    // result is published for the ghost paint — ONE resolve, WYSIWYG (preview ≡ commit).
+    if (isGripDragging) {
+      const dimGrip = getActiveDragGrip();
+      if (dimGrip?.dimGripKind) {
+        const dimEntity = toDimensionEntity(scene?.entities?.find(en => en.id === dimGrip.entityId));
+        const anchors = dimEntity ? getDimGripAlignmentAnchors(dimGrip.dimGripKind, dimEntity) : null;
+        if (anchors) {
+          const dimTracking = resolveActionAlignmentTracking(
+            moveWorldPos, anchors, transform.scale,
+            (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+          );
+          setDimAlignmentTracking(dimTracking);
+          if (dimTracking) moveWorldPos = dimTracking.point;
+        } else {
+          clearDimAlignmentTracking();
         }
       }
     }

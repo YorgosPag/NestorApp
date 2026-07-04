@@ -217,8 +217,13 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
 - **Raw (non-BIM) γεωμετρία (2026-07-04):** εκτός από BIM walls/structural/openings, η γραμμή τομής
   διαστασιολογεί πλέον και **σκέτες `line`/`polyline`/`lwpolyline`** (exploded DXF) — ακριβές
   segment-segment σημείο τομής (`rawLinearCutCoords`, reuse `segmentIntersection`), όχι AABB. Βλ. changelog.
-- **Γνωστός περιορισμός (follow-up, ίδιο με Φ4-Β):** **μη-associative** σε αυθαίρετο άξονα. Επίσης
-  witness lines κάθονται στη γραμμή τομής (Gap-to-Element ανά στοιχείο = follow-up, όπως Φ4-Δ).
+- **Associative follow-on-move (2026-07-04):** αίρεται ο περιορισμός «μη-associative». Νέος association
+  type **`cutLineIntersect`** (κρατά τη σταθερή γραμμή τομής ως captured data — η γραμμή δεν είναι entity):
+  στο move ξαναλύνεται το σημείο τομής **πάνω στη σταθερή γραμμή τομής** — BIM host → bbox extent στον
+  άξονα τομής (`projectBoundsOntoCutAxis`), raw line → infinite `intersectLines`, raw polyline → πλησιέστερη
+  segment-τομή. Live drag + commit δωρεάν (κοινό `recomputeAssociatedDefPoint` SSoT). Βλ. changelog.
+- **Γνωστός περιορισμός (follow-up):** witness lines κάθονται στη γραμμή τομής (Gap-to-Element ανά
+  στοιχείο = follow-up, όπως Φ4-Δ).
 
 ---
 
@@ -292,6 +297,24 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
   preview μέσω `useAutoDimCutlineTool` (RAF `registerRenderCallback` + **υπάρχον** `drawGhostFaceDimensions`,
   **μηδέν αλλαγή σε renderer/PreviewCanvas**)· ribbon «Γραμμή τομής» + i18n el/en + escape-bus. Μη-associative
   slice (follow-up: vector `bimAnchor`). 104 jest (auto+dim-association, +8 cut-line planner) GREEN.
+- **2026-07-04** — Φ4-Α **associative follow-on-move + preview fix** (Giorgio: «η διάσταση δεν
+  ενημερώνεται όταν μετακινώ οντότητα· θέλω real-time· + rubber-band από το 1ο κλικ»).
+  **(1) Associativity**: νέος association type **`cutLineIntersect`** (`types/dimension.ts` — union +
+  `cutLine?: {start,end,edge?}` field· η γραμμή τομής ΔΕΝ είναι entity, αποθηκεύεται ως captured data).
+  Recompute (`dim-association-service.ts`, νέο case): BIM host (`calculateBimEntity2DBounds`≠null) → bbox
+  extent προβεβλημένο στον άξονα τομής + stored edge· raw LINE → infinite `intersectLines` (robust follow
+  ακόμη κι εκτός πεπερασμένης cut)· raw POLYLINE → πλησιέστερη segment-τομή στο `ctx.currentDefPoint`.
+  **Και οι δύο branches επιστρέφουν σημείο ΠΑΝΩ στη σταθερή γραμμή τομής** → μηδέν perpendicular slip
+  (σε αντίθεση με το directional `bimExtent`). Capture: `auto-dimension-cutline-planner.ts` δίνει σε κάθε
+  `PlannedSegment` `source1/source2 + cutLine`· factory (`associationsFor`) εκπέμπει `cutLineIntersect`
+  (BIM+raw). **Live drag ΚΑΙ commit δωρεάν** — κοινό `applyAssociationUpdates`/`recomputeAssociatedDefPoint`
+  (observer + `paintAssociatedDimensionGhosts`), μηδέν νέο wiring. Νέο SSoT `cut-axis-projection.ts`
+  (`projectBoundsOntoCutAxis`/`bboxCorners`, extracted από τον planner, κοινό με το service).
+  **(2) Preview fix**: `useAutoDimCutlineTool` διάβαζε το throttled ~20fps `getImmediateWorldPosition` →
+  το rubber-band δεν ακολουθούσε ζωντανά· άλλαξε σε **`getRealtimeWorldCursor`** (60fps ghost κανάλι,
+  ADR-040 Φ12). Διορθώνει και το `awaitingEnd` rubber-band και το `awaitingPlacement` ghost chain.
+  +8 jest (planner associations raw+BIM· service recompute raw-move/infinite/parallel/polyline-nearest/BIM/
+  missing-cutLine) → **626/626 dimension GREEN**, μηδέν regression. tsc SKIP (N.17).
 - **2026-07-04** — Φ4-Α **επέκταση σε raw (non-BIM) γεωμετρία** (Giorgio: «δεν λειτουργεί» σε **exploded**
   DXF). **Ρίζα**: το `crossedCoords` αγνοούσε σιωπηλά κάθε οντότητα όπου `classifyElement`→null (δηλ.
   σκέτες `line`/`polyline`/`lwpolyline`) → 0 crossings → 0 διαστάσεις χωρίς μήνυμα. Τα exploded σχέδια

@@ -152,4 +152,12 @@ export interface PlannedSegment {
   readonly source1?: { readonly id: string; readonly edge: AutoDimEdge };
   /** Association source for defPoint 1, if any. */
   readonly source2?: { readonly id: string; readonly edge: AutoDimEdge };
+  /**
+   * ADR-563 Φ4-Α — present only for cut-line segments: the FIXED cut line the
+   * def points ride. The factory turns each source into a `cutLineIntersect`
+   * association (carrying this line) so the dim follows its host on move — for
+   * both BIM hosts (bbox extent on the cut axis) and raw exploded lines (exact
+   * crossing). Absent → perimeter/interior/aligned segments keep `bimExtent`.
+   */
+  readonly cutLine?: { readonly start: Point2D; readonly end: Point2D };
 }
