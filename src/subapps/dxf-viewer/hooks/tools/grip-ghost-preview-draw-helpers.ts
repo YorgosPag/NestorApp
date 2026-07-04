@@ -44,7 +44,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-363 / ADR-572 Γ1 — leader dash+colour SSoT (μηδέν bespoke inline setLineDash/strokeStyle).
-import { applyOverlayLeaderStyle, OVERLAY_LINE_COLORS } from '../../canvas-v2/preview-canvas/overlay-line-style';
+import { applyOverlayLeaderStyle } from '../../canvas-v2/preview-canvas/overlay-line-style';
 import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
@@ -52,8 +52,8 @@ import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-// ADR-363 leader dash ([6,4]) + discreet semi-white move-readout colour → now SSoT tokens in
-// overlay-line-style.ts (`OVERLAY_LEADER_DASH` / `OVERLAY_LINE_COLORS.moveLeader`, ADR-572 Γ1).
+// ADR-363 leader dash ([6,4]) → SSoT token in overlay-line-style.ts (`OVERLAY_LEADER_DASH`).
+// The discreet move-readout leader colour was removed with the pill (ADR-560, Giorgio 2026-07-04).
 
 /** ADR-507 Φ5 A3b — half-size (CSS px) του live gradient-origin grip-marker (fixed on-screen). */
 const GRADIENT_ORIGIN_MARKER_HALF_PX = 5;
@@ -73,21 +73,6 @@ export function drawDashedSegment(
   ctx.save();
   // Rubber-band «κουμπώνει» στο ghost → χρώμα derived από GHOST_DEFAULTS.color (semantic), dash/width SSoT.
   applyOverlayLeaderStyle(ctx, GHOST_DEFAULTS.color);
-  ctx.beginPath();
-  ctx.moveTo(fromS.x, fromS.y);
-  ctx.lineTo(toS.x, toS.y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-/** ADR-363 — draw the discreet neutral base→current leader for the move-distance readout. */
-export function drawMoveReadoutLeader(
-  ctx: CanvasRenderingContext2D,
-  fromS: { x: number; y: number },
-  toS: { x: number; y: number },
-): void {
-  ctx.save();
-  applyOverlayLeaderStyle(ctx, OVERLAY_LINE_COLORS.moveLeader);
   ctx.beginPath();
   ctx.moveTo(fromS.x, fromS.y);
   ctx.lineTo(toS.x, toS.y);

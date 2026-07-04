@@ -34,9 +34,8 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ORTHO (F8) axis-lock — shared SSoT with the Move ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// Live distance readout pill — same Revit-grade pill as Move / grip drag.
-import { drawDimPill } from '../../bim/labels/bim-dim-labels';
-import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
+// ADR-560 — scene→meters για το tooltip απόστασης των κυανών alignment traces (καμία πινακίδα).
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-560/572 — cyan AutoAlign traces RESOLVED-IN-DRAW (mirror useMovePreview, self-contained).
 // Το tracking υπολογίζεται ΤΟΠΙΚΑ εδώ ανά frame από το ΙΔΙΟ SSoT resolve (`resolveActionAlignmentTracking`)
@@ -116,7 +115,6 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     );
     const destination: Point2D = tracking ? tracking.point : orthoDestination;
     const delta: Point2D = { x: destination.x - anchor.x, y: destination.y - anchor.y };
-    const anchorPt = toScreen(anchor);
     const cursorPt = toScreen(destination);
 
     // ADR-508 §neighbor-clearance — κυανές listening dims (ΕΝΑΣ κοινός entry point με το Move tool·
@@ -126,15 +124,12 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
       entityIds, delta, scene?.entities ?? [], sceneUnits, worldPerPixel(t.scale),
     );
 
+    // ΚΑΜΙΑ πινακίδα (Giorgio 2026-07-04): όταν κουμπώνει ίχνος → κυανά traces + tooltip· αλλιώς
+    // μηδέν ένδειξη απόστασης (η παλιά fallback `drawDimPill` αφαιρέθηκε από ΟΛΕΣ τις ροές move).
     if (tracking) {
       paintGripAlignmentTracking(
         ctx, tracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
       );
-    } else if (!clearanceDims) {
-      // Χωρίς κούμπωμα ΚΑΙ χωρίς κυανές → μικρή διακριτική ένδειξη απόστασης (anchor → destination).
-      const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), sceneUnits);
-      const readoutMid = moveReadoutMid(anchorPt, cursorPt);
-      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
     }
 
     // WYSIWYG real copies at the destination (full fidelity, byte-identical to commit).
@@ -185,17 +180,6 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
 
     // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
     if (clearanceDims) paintGhostFaceDimensions(ctx, clearanceDims, t, viewport);
-
-    // 🔬🔬🔬 TEMP DIAGNOSTIC (listening-dims στη μετακίνηση — ΝΑ ΑΦΑΙΡΕΘΕΙ) — on-screen HUD.
-    {
-      ctx.save();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
-      ctx.font = 'bold 15px monospace';
-      ctx.fillStyle = clearanceDims ? '#29B6F6' : '#FF2222';
-      ctx.fillText(`CLEARANCE drag: dims=${clearanceDims ? clearanceDims.dims.length : 'NULL'}  scene=${scene?.entities?.length ?? 0}`, 20, 110);
-      ctx.restore();
-    }
   }, [getEntity, getBimPreview, getLayersById, levelManager]);
 
   useCanvasGhostPreview({

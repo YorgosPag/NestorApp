@@ -33,6 +33,8 @@
  */
 
 import { getAciColor } from '../settings/standards/aci';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
+import { trueColorToHex } from '../utils/dxf-true-color';
 import {
   createLayerState,
   createLayerStateEntry,
@@ -257,10 +259,6 @@ function finalizeEntry(entry: MutableEntry): LayerStateEntry {
     transparency: entry.transparency ?? 0,
     plottable: (flags & FLAG_PLOTTABLE) !== 0,
   });
-}
-
-function trueColorToHex(value: number): string {
-  return `#${(value & 0xffffff).toString(16).toUpperCase().padStart(6, '0')}`;
 }
 
 function clampTransparency(t: number): number {

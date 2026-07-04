@@ -37,16 +37,12 @@ export const OVERLAY_LEADER_WIDTH_PX = 1;
  *                     neutral so they don't clash with the GREEN snap-point labels («ΓΩΝΙΑ ΤΟΙΧΟΥ»)
  *   - `drawingGuide`  ORANGE     — wall-tool drawing guide (polar / face-relative slope line)
  *   - `listeningDim`  CYAN       — wall-ghost listening dimensions (lines + numbers)
- *   - `moveLeader`    SEMI-WHITE — ADR-363 discreet move-distance readout leader; semi-transparent so
- *                     it stays subtle yet visible on the pure-black AutoCAD canvas (a black leader
- *                     would be invisible). Used with the READOUT-LEADER style (`applyOverlayLeaderStyle`).
  * One place owns the palette so the families never collide or drift.
  */
 export const OVERLAY_LINE_COLORS = {
   alignment: '#CCCCCC',
   drawingGuide: '#FF9800',
   listeningDim: '#29B6F6',
-  moveLeader: 'rgba(255,255,255,0.5)',
 } as const;
 
 /**

@@ -2,12 +2,11 @@
  * ADR-363 / ADR-462 — move-readout SSoT tests.
  *
  * Verifies the live move-distance readout helpers: the formatter routes through the
- * display-length SSoT (display unit + label, ADR-462), the scene-unit→metre
- * conversion matches the scene-units table, and the midpoint helper returns the
- * true midpoint.
+ * display-length SSoT (display unit + label, ADR-462) and the scene-unit→metre
+ * conversion matches the scene-units table.
  */
 
-import { formatMoveDistance, sceneDistanceToMeters, moveReadoutMid, formatMoveAngle } from '../move-readout';
+import { formatMoveDistance, sceneDistanceToMeters, formatMoveAngle } from '../move-readout';
 import { formatAngleLocale } from '../../../rendering/entities/shared/distance-label-utils';
 import { formatLengthMm } from '../../../config/display-length-format';
 import { displayUnitState } from '../../../config/display-unit-state';
@@ -51,15 +50,5 @@ describe('formatMoveAngle', () => {
   it('delegates to the locale angle formatter (degree symbol included)', () => {
     expect(formatMoveAngle(30)).toBe(formatAngleLocale(30));
     expect(formatMoveAngle(45)).toContain('°');
-  });
-});
-
-describe('moveReadoutMid', () => {
-  it('returns the midpoint of two points', () => {
-    expect(moveReadoutMid({ x: 0, y: 0 }, { x: 10, y: 20 })).toEqual({ x: 5, y: 10 });
-  });
-
-  it('handles negative coordinates', () => {
-    expect(moveReadoutMid({ x: -4, y: 6 }, { x: 4, y: -6 })).toEqual({ x: 0, y: 0 });
   });
 });

@@ -1,12 +1,11 @@
 /**
- * Move-distance readout SSoT (ADR-363) — the ONE formatter + midpoint helper for the
- * live "how far did it move" annotation drawn during EVERY move gesture: the 2D Move
- * tool, a grip-drag / Alt-drag-from-point, and the 3D gizmo / opening drag.
+ * Move-distance readout SSoT (ADR-363) — the ONE distance/angle formatter for the live
+ * "how far did it move" annotation. After ADR-560 (Giorgio 2026-07-04 «καμία πινακίδα»)
+ * the 2D move flows show cyan alignment traces instead of a pill, so the only remaining
+ * consumer is the 3D gizmo / opening-drag readout (`TempMoveReadoutOverlay`).
  *
- * One place owns: (1) the displayed distance TEXT (`formatMoveDistance`), (2) the
- * scene-unit → metre conversion (`sceneDistanceToMeters`), and (3) the label/pill
- * anchor midpoint (`moveReadoutMid`). The 2D pill, the 3D line+label, and any future
- * readout therefore cannot visually diverge.
+ * One place owns: (1) the displayed distance TEXT (`formatMoveDistance`) and (2) the
+ * scene-unit → metre conversion (`sceneDistanceToMeters`), so 2D & 3D cannot diverge.
  *
  * The number goes through the display-length formatter SSoT (`formatLengthMm`),
  * so it follows the status-bar unit selector (m / cm / mm / …) in real time and
@@ -17,10 +16,8 @@
  * allocation beyond the small midpoint object).
  *
  * @see rendering/entities/shared/distance-label-utils.ts — distance formatter SSoT
- * @see bim/labels/bim-dim-labels.ts — `drawDimPill` (the 2D pill the 2D readout reuses)
  */
 
-import type { Point2D } from '../../rendering/types/Types';
 import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { formatLengthMm } from '../../config/display-length-format';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
@@ -42,11 +39,6 @@ export function formatMoveDistance(meters: number): string {
  */
 export function sceneDistanceToMeters(distanceSceneUnits: number, units: SceneUnits): number {
   return distanceSceneUnits * sceneUnitsToMeters(units);
-}
-
-/** Midpoint of two points — the readout pill / label anchor. Pure, allocation-light. */
-export function moveReadoutMid(p1: Point2D, p2: Point2D): Point2D {
-  return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 }
 
 /**

@@ -859,30 +859,10 @@ export const ACI_COLORS: Record<number, string> = {
   // ... more colors can be added (ACI has 256 colors)
 } as const;
 
-/**
- * Convert hex color to ACI (best match)
- */
-export function hexToAci(hex: string): number {
-  // Simple implementation - find closest ACI color
-  // Full implementation would use color distance calculation
-  const normalized = hex.toUpperCase().replace('#', '');
-
-  for (const [aci, color] of Object.entries(ACI_COLORS)) {
-    if (color.toUpperCase().replace('#', '') === normalized) {
-      return parseInt(aci, 10);
-    }
-  }
-
-  // Default to white/black (7) if no match
-  return 7;
-}
-
-/**
- * Convert ACI to hex color
- */
-export function aciToHex(aci: number): string {
-  return ACI_COLORS[aci] || '#FFFFFF';
-}
+// 🏢 Color-Conversion SSoT (ADR-573): the dead `hexToAci` / `aciToHex` duplicate
+// converters were removed here. Canonical hex↔ACI SSoT = `settings/standards/aci.ts`
+// (`ACI_PALETTE` 256 + `findClosestAci`). `ACI_COLORS` above stays ONLY as the frozen
+// DXF-export contract mirror for the ezdxf microservice (per ADR-571), NOT as a converter.
 
 // ============================================================================
 // TYPE GUARDS

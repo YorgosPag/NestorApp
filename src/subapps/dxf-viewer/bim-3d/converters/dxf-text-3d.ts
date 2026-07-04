@@ -16,6 +16,8 @@
 
 import * as THREE from 'three';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
+import { trueColorToHex } from '../../utils/dxf-true-color';
 import {
   getTextHeightWithFallback,
   TEXT_FONTS,
@@ -45,11 +47,6 @@ export interface DxfTextMeshBundle {
   readonly geometry: THREE.PlaneGeometry;
   readonly material: THREE.MeshBasicMaterial;
   readonly texture: THREE.CanvasTexture;
-}
-
-/** `0xRRGGBB` → `#rrggbb`. */
-function intToHex(colorInt: number): string {
-  return '#' + (colorInt & 0xffffff).toString(16).padStart(6, '0');
 }
 
 /**
@@ -95,7 +92,7 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   canvas.height = m.height;
   // Resizing the canvas resets the 2D context → re-apply all draw state before filling.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = intToHex(colorInt);
+  ctx.fillStyle = trueColorToHex(colorInt);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = font;

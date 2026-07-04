@@ -41,6 +41,8 @@ import {
 } from '../../systems/dimensions/dim-block-primitives';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
+import { trueColorToHex } from '../../utils/dxf-true-color';
 // ADR-507 Φ1a/Φ5 — HATCH emission split out (N.7.1 file-size SSoT). `Pair`/`EmitLine`
 // types live with the HATCH writer; `emitLine` (below) stays the ONE definition and
 // is injected into `emitHatch` for the exploded (Τέκτονας) path.
@@ -154,12 +156,12 @@ export function writeDxfAscii(
  */
 function resolveAci(e: Entity, layer: DxfWriteLayer | undefined): number {
   if (e.colorMode !== 'ByLayer') {
-    if (e.colorTrueColor != null) return hexToAci(intToHex(e.colorTrueColor));
+    if (e.colorTrueColor != null) return hexToAci(trueColorToHex(e.colorTrueColor));
     if (e.colorAci != null && e.colorAci > 0) return e.colorAci;
     if (e.color) return hexToAci(e.color);
   }
   if (layer) {
-    if (layer.colorTrueColor != null) return hexToAci(intToHex(layer.colorTrueColor));
+    if (layer.colorTrueColor != null) return hexToAci(trueColorToHex(layer.colorTrueColor));
     if (layer.colorAci != null && layer.colorAci > 0) return layer.colorAci;
     if (layer.color) return hexToAci(layer.color);
   }
@@ -430,10 +432,6 @@ function arcPoints(c: Point2D, r: number, startDeg: number, endDeg: number): Poi
 function num(n: number): string {
   if (!Number.isFinite(n)) return '0';
   return n.toFixed(6).replace(/\.?0+$/, '') || '0';
-}
-
-function intToHex(rgb: number): string {
-  return `#${(rgb & 0xffffff).toString(16).padStart(6, '0')}`;
 }
 
 function sanitizeText(text: string): string {

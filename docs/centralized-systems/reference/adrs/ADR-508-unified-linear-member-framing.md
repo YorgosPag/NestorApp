@@ -106,6 +106,36 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-04 (§move-clearance — κυανές listening dimensions ΚΑΤΑ ΤΗ ΜΕΤΑΚΙΝΗΣΗ, για ΟΠΟΙΑΔΗΠΟΤΕ οντότητα BIM/DXF)**
+  - **Αίτημα Giorgio (browser-confirmed)**: όταν ΜΕΤΑΚΙΝΩ ένα στοιχείο (2-click Move tool **ή** body-drag), να
+    εμφανίζονται οι κυανές listening dimensions (#29B6F6) προς τους γείτονες — όπως στο placement/σχεδίαση.
+    (1) για **οποιαδήποτε** οντότητα που μετακινώ (BIM ή DXF), (2) και όταν ο γείτονας είναι **DXF/γραμμή**,
+    (3) **χωρίς** τη λευκή πινακίδα απόστασης (ΟΧΙ διπλή ένδειξη).
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα + Giorgio SSoT order)**: το §neighbor-clearance (`resolveNeighborClearanceDims`)
+    υπήρχε ΑΛΛΑ το καλούσε **μόνο** το `placement-ghost-assembly` — τα move hooks (`useMovePreview`/
+    `useEntityBodyDragPreview`) δεν έδειχναν καθόλου clearance dims. Επιπλέον το «build opts + call» idiom
+    (`gap/min/max × wpp + orthoToleranceDeg`) ήταν **διπλότυπο** (placement inline) → κεντρικοποιήθηκε.
+  - **FIX (πλήρες SSoT — ένα σημείο ανά κρίκο)**:
+    - NEW `bim/framing/clearance-dims.ts` — `resolveClearanceDimsForGhost(footprint, targets, sceneUnits, wpp)`:
+      το **ΜΟΝΟ** σημείο που ορίζει τα clearance metrics. Το καλούν **ΚΑΙ** placement **ΚΑΙ** move (μηδέν inline opts).
+    - NEW `bim/framing/entity-footprint-for-dims.ts` — `resolveEntityFootprintForDims`: γενικό footprint ανά type
+      (κολόνα/δοκός → `resolveMemberFootprintVertices`, τοίχος → `wallFootprintPolygon`, λοιπά DXF → `getEntityBounds`
+      bbox). Το υιοθέτησε **ΚΑΙ** το placement (footprint unification· bonus: wall placement δείχνει πλέον clearance).
+    - NEW `bim/framing/move-clearance-dims.ts` — `resolveMoveClearanceForSelection`: **ΕΝΑΣ** entry για Move tool +
+      body-drag (footprint-shift κατά delta + **self-exclusion** των κινούμενων + drag-cached `collectSceneSnapTargets`).
+    - `resolveNeighborClearanceDims`: +`lineTargets` +`slabTargets` ως γείτονες → clearance και κοντά σε DXF/γραμμή/πλάκα.
+    - `useMovePreview` + `useEntityBodyDragPreview`: καλούν τον entry + `paintGhostFaceDimensions`· η πινακίδα απόστασης
+      (`drawDimPill`) εμφανίζεται **μόνο** όταν ΔΕΝ υπάρχουν κυανές (μηδέν διπλή ένδειξη).
+  - **SSoT chain (κάθε κρίκος = ΕΝΑ σημείο)**: footprint (`resolveEntityFootprintForDims`) → metrics (`clearance-dims`)
+    → μηχανή (`resolveNeighborClearanceDims`) → paint (`paintGhostFaceDimensions`, χρώμα `OVERLAY_LINE_COLORS.listeningDim`).
+    placement + Move + body-drag μοιράζονται ΟΛΟΥΣ τους κρίκους.
+  - **Tests**: NEW `entity-footprint-for-dims.test.ts` (routing member/wall/bbox + move short-circuit) + neighbor
+    regression → **248/248 GREEN** (framing + placement).
+  - ✅ Google-level: YES — μηδέν διπλότυπο (εξαλείφθηκε ΚΑΙ το προϋπάρχον placement opts), reuse όλης της μηχανής.
+  - CHECK 6D → stage αυτό το ADR + τα preview hooks. 🟡 UNCOMMITTED placement/hooks (commit: Giorgio). ΣΗΜ.: το feature
+    (framing helpers + 8px alignment) μπήκε ήδη στο commit `d1db5189` (Giorgio, add race)· εκκρεμεί το footprint
+    unification + HUD-removal.
+
 - **2026-07-04 (§line local-ortho — F8 στη μετακίνηση μέσου λοξής γραμμής κλειδώνει ΚΑΘΕΤΑ/ΠΑΡΑΛΛΗΛΑ στον άξονά της)**
   - **Αίτημα Giorgio**: λοξή γραμμή· πιάνω το **μέσο** (grip 2) ή το **MOVE-cross** (grip 4) και θέλω, με **F8 ORTHO**,
     η μετακίνηση να κλειδώνει **κάθετα (ή παράλληλα) στον άξονα ΤΗΣ ΓΡΑΜΜΗΣ** (όχι world Χ/Υ), να **βλέπω την

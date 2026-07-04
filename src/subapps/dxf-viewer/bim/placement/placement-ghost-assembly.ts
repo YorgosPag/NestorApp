@@ -52,7 +52,9 @@ import {
   NEIGHBOR_DIM_MAX_CLEARANCE_PX,
 } from '../framing/neighbor-clearance-dims';
 import { resolveClearanceDimsForGhost } from '../framing/clearance-dims';
-import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
+// ADR-508 §neighbor-clearance (SSoT, Giorgio 2026-07-04) — ΚΟΙΝΟ footprint entry με τη μετακίνηση:
+// κολόνα/δοκός → member footprint, τοίχος → wall footprint, λοιπά → bbox (πληρέστερο του member-only).
+import { resolveEntityFootprintForDims } from '../framing/entity-footprint-for-dims';
 // ADR-363 §neighbor-gap-step — Q κρατιέται → στρογγύλεμα του παρειά-προς-παρειά διάκενου (όχι της
 // απόστασης κέντρου-από-anchor) προς τη μεριά κίνησης· κοινό shift preview↔commit.
 import { activeStepSceneUnits } from '../grips/grip-step-quantize';
@@ -147,7 +149,7 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
   // ADR-508 §neighbor-clearance — ΕΛΕΥΘΕΡΟ ghost (κανένα κούμπωμα): έξυπνες προσωρινές διαστάσεις προς
   // τον πλησιέστερο γείτονα ανά κατεύθυνση (Revit temporary dims). Fallback-only → μηδέν διπλή ένδειξη.
   if (!faceDimensions && !isOverlap) {
-    let ghostFootprint = resolveMemberFootprintVertices(entity as unknown as Entity);
+    let ghostFootprint = resolveEntityFootprintForDims(entity as unknown as Entity);
     // ADR-363 §neighbor-gap-step — Q κρατιέται → στρογγύλεψε το διάκενο προς τη μεριά κίνησης (επιλογή
     // β) μετακινώντας τη θέση· ξαναχτίζει την οντότητα/footprint ΠΡΙΝ τις dims ώστε ο αριθμός που θα
     // δει ο χρήστης να είναι το στρογγυλεμένο. Το ίδιο shift εφαρμόζει και το commit (preview ≡ commit).
@@ -160,7 +162,7 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
         const shifted = buildEntity({ x: position.x + shift.x, y: position.y + shift.y }, anchor, rotation, faceSnap?.sizing ?? null);
         if (shifted) {
           entity = shifted;
-          ghostFootprint = resolveMemberFootprintVertices(shifted as unknown as Entity) ?? ghostFootprint;
+          ghostFootprint = resolveEntityFootprintForDims(shifted as unknown as Entity) ?? ghostFootprint;
         }
       }
     }

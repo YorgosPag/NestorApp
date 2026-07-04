@@ -40,10 +40,8 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
-// grip-drag preview + the 3D overlay (`drawDimPill` is the same Revit-grade dim pill).
-import { drawDimPill } from '../../bim/labels/bim-dim-labels';
-import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
+// ADR-560 — scene→meters για το tooltip απόστασης των κυανών AutoAlign traces (καμία πινακίδα).
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
@@ -191,11 +189,9 @@ export function useMovePreview(props: UseMovePreviewProps): void {
       selectedEntityIds, delta, scene?.entities ?? [], resolveSceneUnits(scene), worldPerPixel(t.scale),
     );
 
-    if (!moveClearanceDims) {
-      const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
-      const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
-      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
-    }
+    // ΚΑΜΙΑ πινακίδα (Giorgio 2026-07-04): τα κυανά AutoAlign traces (paintGripAlignmentTracking
+    // παραπάνω) + το rubber-band δείχνουν ήδη την ένδειξη· η παλιά fallback `drawDimPill`
+    // αφαιρέθηκε από ΟΛΕΣ τις ροές μετακίνησης (grip + body + MOVE tool) για πλήρη συνέπεια.
 
     // ADR-550 (WYSIWYG preview) — solid REAL-renderer copies at the destination (full
     // fidelity, byte-identical to the committed render), AutoCAD/Revit parity. The originals
@@ -239,17 +235,6 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
     if (moveClearanceDims) paintGhostFaceDimensions(ctx, moveClearanceDims, t, viewport);
-
-    // 🔬🔬🔬 TEMP DIAGNOSTIC (listening-dims στη μετακίνηση — ΝΑ ΑΦΑΙΡΕΘΕΙ) — on-screen HUD.
-    {
-      ctx.save();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
-      ctx.font = 'bold 15px monospace';
-      ctx.fillStyle = moveClearanceDims ? '#29B6F6' : '#FF2222';
-      ctx.fillText(`CLEARANCE move: dims=${moveClearanceDims ? moveClearanceDims.dims.length : 'NULL'}  scene=${scene?.entities?.length ?? 0}`, 20, 110);
-      ctx.restore();
-    }
   }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview, getLayersById]);
 
   useCanvasGhostPreview({

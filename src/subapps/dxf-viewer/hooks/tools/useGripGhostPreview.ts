@@ -32,7 +32,7 @@
  */
 
 import { useCallback } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -54,10 +54,8 @@ import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marke
 import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
 // ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
 import { toEntityPreviewTransform } from './grip-drag-preview-transform';
-// ADR-363 — live move-distance readout pill at the grip-drag / Alt-drag leader midpoint
-// (SSoT shared with useMovePreview + the 3D overlay).
-import { drawDimPill } from '../../bim/labels/bim-dim-labels';
-import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
+// ADR-363/560 — scene→meters (alignment-trace tooltip) + angle formatter (hatch angle readout).
+import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity, isWallEntity } from '../../types/entities';
@@ -83,7 +81,6 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // marker / ADR-543 co-move partner ghosts) live in a sibling module.
 import {
   drawDashedSegment,
-  drawMoveReadoutLeader,
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
@@ -95,13 +92,10 @@ import {
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
 import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDegFromDirs } from '../grips/grip-projections';
-// ADR-357/363 — plain-line grip Object-Snap-Tracking traces: SAME store + paint SSoT the
-// dimension grip drag uses (resolved once by the mouse-move handler, published to the store).
-import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
-import { paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
-// ADR-363 §line local-ortho — ⟂/∥ ένδειξη στο move pill όταν το F8 κλειδώνει στον άξονα λοξής γραμμής.
-import { getMoveOrthoAxis } from '../../systems/grip/MoveOrthoAxisStore';
-import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+// ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror body-drag).
+// Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
+import { paintGripAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -282,49 +276,26 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
-    // ADR-363 — live move-distance readout for ANY whole-entity TRANSLATE: a plain
-    // center/midpoint move grip (e.g. a line), an Alt move-from-point, or a corner "move"
-    // hot-grip. Draws a discreet base→current leader (skipped when the hot-grip already drew
-    // its own) + a distance pill at the midpoint. Rotation flows (rotatePivot set) excluded.
-    const isTranslate =
-      (dp.movesEntity === true || dp.hotGrip === true) && !dp.rotatePivot;
-    if (isTranslate && dp.anchorPos && (dp.delta.x !== 0 || dp.delta.y !== 0)) {
-      const fromS = CoordinateTransforms.worldToScreen(dp.anchorPos, t, vp);
-      const toS = CoordinateTransforms.worldToScreen(
-        { x: dp.anchorPos.x + dp.delta.x, y: dp.anchorPos.y + dp.delta.y },
-        t, vp,
-      );
-      // ADR-560 TASK B — όταν υπάρχει ενεργό κυανό ίχνος ευθυγράμμισης (μόνο line grips γεμίζουν το
-      // store), το tooltip των ιχνών (paintGripAlignmentTracking, παρακάτω) καλύπτει την απόσταση →
-      // κρύψε τον leader + την πινακίδα. Χωρίς κούμπωμα → κράτα τη μικρή ένδειξη (Giorgio Q2). Τοίχος/
-      // κολόνα translate → store null → πινακίδα ως έχει.
-      const hasAlignmentTrace = getGripAlignmentTracking() !== null;
-      if (!dp.hotGrip && !hasAlignmentTrace) drawMoveReadoutLeader(ctx, fromS, toS);
-      const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const meters = sceneDistanceToMeters(Math.hypot(dp.delta.x, dp.delta.y), resolveSceneUnits(scene));
-      const mid = moveReadoutMid(fromS, toS);
-      // ADR-363 §line local-ortho — όταν το F8 κλειδώνει στον άξονα λοξής γραμμής, δείξε αν η μετατόπιση
-      // είναι ΚΑΘΕΤΗ (⟂) ή ΠΑΡΑΛΛΗΛΗ (∥) στη γραμμή (Giorgio «να βλέπω πόσο σε κάθετη διεύθυνση»).
-      const orthoAxis = getMoveOrthoAxis();
-      let moveLabel = formatMoveDistance(meters);
-      if (orthoAxis && cadToggleState.isOrthoOn()) {
-        const along = Math.abs(dp.delta.x * orthoAxis.x + dp.delta.y * orthoAxis.y);
-        const perp = Math.abs(dp.delta.x * -orthoAxis.y + dp.delta.y * orthoAxis.x);
-        moveLabel = `${perp >= along ? '⟂' : '∥'} ${moveLabel}`;
-      }
-      if (!hasAlignmentTrace) drawDimPill(ctx, [moveLabel], mid.x, mid.y);
-    }
-
-    // ADR-357/363 — plain-line grip Object-Snap-Tracking traces (endpoint reshape + centre/MOVE).
-    // The mouse-move handler already resolved them (aligning the SAME point that fed the ghost
-    // delta) and published to the shared store, so geometry + traces come from ONE resolve
-    // (WYSIWYG) — the SAME central system + paints the dimension grip drag and the wall rotation
-    // use. Only line drags populate the store (wall/column leave it null → no-op); cleared with
-    // the drag lifecycle (GripDragStore.clearActiveDragGrip).
-    if (isLineEntity(entity as unknown as Entity)) {
-      const lineTracking = getGripAlignmentTracking();
+    // ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror
+    // useEntityBodyDragPreview): το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον
+    // `effectiveCursor` (= το ΗΔΗ ευθυγραμμισμένο realtime σημείο που το point-override στο
+    // mouse-handler-move έθρεψε ΚΑΙ στο grip delta) με anchors από το line SSoT → self-contained,
+    // ΜΗΔΕΝ εξάρτηση από το cross-tick `GripAlignmentTrackingStore` (τέλος του timing-skew όπου
+    // τα ίχνη «χάνονταν» → έπεφτε στην πινακίδα). Idempotent double-resolve (ίδιο pure input →
+    // ίδιο output) → WYSIWYG με το commit. Anchors: endpoint reshape → fixed endpoint· centre/
+    // MOVE-cross → drag base· rotation → null (τα ίχνη του τρέχουν στο resolveRotationTracking).
+    // Μόνο line drags έχουν anchors (wall/column → null → no-op). ΚΑΜΙΑ πινακίδα (Giorgio).
+    if (effectiveCursor && isLineEntity(entity as unknown as Entity)) {
+      const line = entity as unknown as { start: Point2D; end: Point2D };
+      const lineAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
+      const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const lineTracking = lineAnchors
+        ? resolveActionAlignmentTracking(
+            effectiveCursor, lineAnchors, t.scale,
+            (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
+          )
+        : null;
       if (lineTracking) {
-        const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
         const trkUnits = resolveSceneUnits(trkScene);
         paintGripAlignmentTracking(
           ctx, lineTracking, t, vp, (d) => sceneDistanceToMeters(d, trkUnits) * 1000,
