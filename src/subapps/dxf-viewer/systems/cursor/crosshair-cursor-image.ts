@@ -95,7 +95,18 @@ export function buildCrosshairCursorValue(opts: CrosshairCursorOptions): string 
   const maxCssForDevice = MAX_CURSOR_DEVICE_PX / dpr;
   const cssSize = Math.max(MIN_CURSOR_CSS_PX, Math.min(opts.size ?? 32, maxCssForDevice));
   const devicePx = Math.min(toDevicePixels(cssSize, dpr), MAX_CURSOR_DEVICE_PX);
-  const hot = Math.round(cssSize / 2);
+  // ⚠️ HOTSPOT vs VISUAL CENTRE (ADR-549 Phase 8 fix, 2026-07-04): the hotspot must sit on
+  // the crosshair's visual centre in the image's DISPLAYED CSS-px space, else the true
+  // pointer (what the canvas reads on click) drifts from the cross the user sees. The
+  // displayed size differs by emit path (see the return below):
+  //   • dpr > 1 → `image-set(url … ${dpr}x)` shows the raster at devicePx/dpr = cssSize.
+  //   • dpr ≤ 1 → a plain `url()` shows the raster 1:1 = devicePx.
+  // The drawn cross is always centred at devicePx/2 in the raster. Using `cssSize/2` was
+  // correct only when devicePx == cssSize (dpr == 1 or 2); on a sub-1 dpr (e.g. 80% zoom →
+  // dpr 0.8: cssSize 32 but devicePx 26) it put the hotspot ~3px below-right of the visual
+  // centre → the "cursor centre ≠ read point" drift Giorgio hit (rectangle side off ~5cm).
+  const emittedCssSize = dpr > 1 ? cssSize : devicePx;
+  const hot = Math.round(emittedCssSize / 2);
 
   const canvas = document.createElement('canvas');
   canvas.width = devicePx;

@@ -12,7 +12,7 @@
  *   - `computeDxfEntityGrips` emits the 4th grip with `lineGripKind` at that pos.
  */
 
-import { lineRotationHandlePos, lineMoveHandlePos, applyLineRotationDrag, getLineGrips, LINE_ROTATION_KIND, LINE_MOVE_KIND } from '../line-grips';
+import { lineRotationHandlePos, lineMoveHandlePos, applyLineRotationDrag, getLineGrips, getLineGripAlignmentAnchors, LINE_ROTATION_KIND, LINE_MOVE_KIND } from '../line-grips';
 import { axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld, axisToRectFrame } from '../../../bim/grips/axis-box-grips';
 import { gripGlyphShape } from '../../../bim/grips/grip-glyph-registry';
 import { hotGripOpForKind } from '../../../hooks/grips/wall-hot-grip-fsm';
@@ -169,6 +169,37 @@ describe('getLineGrips — the SSoT both grip paths consume', () => {
     // directional). `type: 'vertex'` so it always shows; whole-line translate parity.
     expect(grips[4]).toMatchObject({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: LINE_MOVE_KIND });
     near(grips[4].position.x, 25); near(grips[4].position.y, 0);
+  });
+});
+
+// ADR-357/363 — the alignment-tracking anchors per line grip (Object-Snap-Tracking parity).
+describe('getLineGripAlignmentAnchors — per-grip Object-Snap-Tracking anchor SSoT', () => {
+  const line = { start: { x: 0, y: 0 }, end: { x: 100, y: 0 } };
+
+  it('dragging START (grip 0) → tracks off the FIXED end', () => {
+    expect(getLineGripAlignmentAnchors(0, null, line, line.start)).toEqual([line.end]);
+  });
+
+  it('dragging END (grip 1) → tracks off the FIXED start', () => {
+    expect(getLineGripAlignmentAnchors(1, null, line, line.end)).toEqual([line.start]);
+  });
+
+  it('centre midpoint MOVE (grip 2) → tracks off the move BASE point', () => {
+    const base = { x: 50, y: 0 };
+    expect(getLineGripAlignmentAnchors(2, null, line, base)).toEqual([base]);
+  });
+
+  it('MOVE cross (grip 4, line-move) → tracks off the move BASE point', () => {
+    const base = { x: 25, y: 0 };
+    expect(getLineGripAlignmentAnchors(4, LINE_MOVE_KIND, line, base)).toEqual([base]);
+  });
+
+  it('rotation handle (grip 3, line-rotation) → null (rotate flow owns its traces)', () => {
+    expect(getLineGripAlignmentAnchors(3, LINE_ROTATION_KIND, line, { x: 75, y: 0 })).toBeNull();
+  });
+
+  it('a move with no base point yet → null (caller keeps the raw cursor)', () => {
+    expect(getLineGripAlignmentAnchors(2, null, line, null)).toBeNull();
   });
 });
 

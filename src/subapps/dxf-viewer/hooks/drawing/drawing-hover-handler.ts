@@ -26,7 +26,7 @@ import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // (HoverStore), matching AutoCAD DIMRADIUS (pick the body, not an OSNAP point).
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
-import { ExtendedSnapType } from '../../snapping/extended-types';
+import { ExtendedSnapType, isVisibleSnapMode } from '../../snapping/extended-types';
 import { resolveOrthoPolarStep } from './drawing-handler-utils';
 // ADR-363: BIM tools (wall/stair/beam/slab) keep their points in dedicated
 // preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
@@ -224,9 +224,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     const immediateSnap = getImmediateSnap();
     const isDrawingTool = activeTool !== 'select' && activeTool !== 'pan';
     // ADR-363 §wall-ortho-tracking (OTRACK acquire) — «κλείδωσε» το osnap-σε-οντότητα σημείο ως tracking
-    // αναφορά για το 1ο σημείο του τοίχου (ΟΡΘΟ/Q ως προς τη διπλανή κολόνα). `mode!=='grid'` → μόνο
-    // πραγματικές οντότητες (όχι το πλέγμα). Sticky: κρατά την τελευταία όσο ο κέρσορας είναι ελεύθερος.
-    if (isDrawingTool && immediateSnap?.found && immediateSnap.mode !== 'grid') {
+    // αναφορά για το 1ο σημείο του τοίχου (ΟΡΘΟ/Q ως προς τη διπλανή κολόνα). `isVisibleSnapMode` (ΤΟ
+    // ΙΔΙΟ SSoT με τη fux): μόνο ΠΡΑΓΜΑΤΙΚΕΣ/ορατές έλξεις — όχι grid/guide (σιωπηλά aids, χωρίς marker →
+    // δεν γίνονται anchor). Sticky: κρατά την τελευταία όσο ο κέρσορας είναι ελεύθερος.
+    if (isDrawingTool && immediateSnap?.found && isVisibleSnapMode(immediateSnap.mode)) {
       setPlacementTrackingAnchor(immediateSnap.point);
     }
     if (isDrawingTool && immediateSnap?.found) {
@@ -269,6 +270,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       scale: getTransformScale(),
       polarEnabled: polarOnRef.current && !orthoOnRef.current,
       sceneEntities: ambientEntities,
+      // OTRACK clean-corner: the segment's start ray × an anchor trace (e.g. the
+      // rectangle corner). null on the free first point. (2026-07-04)
+      segmentBase: lastRefPt ?? null,
     });
     const _trkMs = performance.now() - _trkT0;
     const trackingResult = composedTracking?.result ?? null;

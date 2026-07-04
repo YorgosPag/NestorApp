@@ -4,9 +4,12 @@
  * Pure producer of transient alignment anchors for the Object Snap Tracking
  * resolver. Where the AutoCAD model requires the user to hover-acquire a point
  * for 1s (`TrackingPointStore`), this module emits anchors AUTOMATICALLY from
- * the STRUCTURAL members near the cursor — the Revit "ambient alignment"
- * behavior. Members covered (Giorgio 2026-06-21): column, wall, beam, slab,
- * foundation.
+ * the members near the cursor — the Revit "ambient alignment" behavior.
+ * Members covered:
+ *   • BIM (Giorgio 2026-06-21): column, wall, beam, slab, foundation.
+ *   • Plain CAD geometry (Giorgio 2026-07-04): line, polyline, lwpolyline,
+ *     rectangle, arc — endpoints + midpoints, so a drawn line's corner emits a
+ *     vertical/horizontal trace WITHOUT the AutoCAD hover-acquire (OTRACK) step.
  *
  * It returns the SAME `AcquiredTrackingPoint[]` shape the resolver already
  * consumes, so the caller simply MERGES `[...TrackingPointStore.getPoints(),
@@ -34,6 +37,10 @@ import {
   footprintBounds,
   distanceToFootprintBounds,
 } from '../../bim/geometry/shared/footprint-face-frame';
+// ADR-357 (2026-07-04) — plain-geometry endpoints/midpoints reuse the OSNAP
+// geometry SSoT (the SAME extractor the Endpoint/Midpoint snap engines consume),
+// so a drawn line participates in alignment with zero duplicate geometry.
+import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
 
 /** `sourceSnapType` tag identifying anchors produced by the ambient source. */
 export const AMBIENT_SOURCE_TYPE = 'ambient-member';
@@ -41,6 +48,15 @@ export const AMBIENT_SOURCE_TYPE = 'ambient-member';
 /** Structural member entity types the ambient source aligns to. */
 const STRUCTURAL_MEMBER_TYPES: ReadonlySet<string> = new Set([
   'column', 'wall', 'beam', 'slab', 'foundation',
+]);
+
+/**
+ * Plain CAD geometry whose endpoints + midpoints also feed alignment (Revit-style,
+ * Giorgio 2026-07-04). Their characteristic points come from the OSNAP geometry
+ * SSoT (`GeometricCalculations`) — the SAME extractor the snap engines use.
+ */
+const PLAIN_GEOMETRY_TYPES: ReadonlySet<string> = new Set([
+  'line', 'polyline', 'lwpolyline', 'rectangle', 'arc',
 ]);
 
 export interface AmbientAlignmentConfig {
@@ -57,7 +73,7 @@ export interface AmbientAlignmentConfig {
 }
 
 interface MemberProximity {
-  /** The characteristic world points (corners + midpoints + center). */
+  /** The characteristic world points (corners/endpoints + midpoints + center). */
   readonly points: readonly Point2D[];
   /** Cursor distance to the member footprint bbox (0 when inside). */
   readonly distance: number;
@@ -81,7 +97,7 @@ export function collectAmbientAlignmentAnchors(
   return anchors;
 }
 
-/** Single linear scan: structural members whose footprint bbox is within radius, nearest-N. */
+/** Single linear scan: members whose footprint bbox is within radius, nearest-N. */
 function nearestMembersWithinRadius(
   cursor: Point2D,
   entities: readonly Entity[],
@@ -89,17 +105,36 @@ function nearestMembersWithinRadius(
 ): MemberProximity[] {
   const out: MemberProximity[] = [];
   for (const e of entities) {
-    if (!STRUCTURAL_MEMBER_TYPES.has(e.type)) continue;
-    const cp = getBimCharacteristicPoints(e);
-    const bounds = footprintBounds(cp.corners);
+    const points = ambientPointsForEntity(e);
+    if (points.length === 0) continue;
+    const bounds = footprintBounds(points);
     if (!bounds) continue;
     const distance = distanceToFootprintBounds(cursor, bounds);
     if (distance > cfg.radiusWorld) continue;
-    const points = [...cp.corners, ...cp.midpoints, ...(cp.center ? [cp.center] : [])];
     out.push({ points, distance });
   }
   out.sort((a, b) => a.distance - b.distance);
   return out.length > cfg.maxMembers ? out.slice(0, cfg.maxMembers) : out;
+}
+
+/**
+ * Characteristic world points feeding alignment for one entity, or [] when the
+ * type does not participate. BIM members → the BIM char-point dispatcher; plain
+ * CAD geometry → the OSNAP endpoint/midpoint SSoT. One place decides the source
+ * per type — no duplicate geometry, no parallel engine.
+ */
+function ambientPointsForEntity(e: Entity): Point2D[] {
+  if (STRUCTURAL_MEMBER_TYPES.has(e.type)) {
+    const cp = getBimCharacteristicPoints(e);
+    return [...cp.corners, ...cp.midpoints, ...(cp.center ? [cp.center] : [])];
+  }
+  if (PLAIN_GEOMETRY_TYPES.has(e.type)) {
+    return [
+      ...GeometricCalculations.getEntityEndpoints(e),
+      ...GeometricCalculations.getEntityMidpoints(e),
+    ];
+  }
+  return [];
 }
 
 /** Emit each point sharing the cursor's row OR column as a transient ambient anchor. */

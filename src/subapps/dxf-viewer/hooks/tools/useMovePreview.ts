@@ -47,7 +47,7 @@ import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../..
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
-import { resolveActionAlignmentTracking, paintDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { resolveActionAlignmentTracking, paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -171,7 +171,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // rubber band, via the SAME SSoT paint the dim grip + creation flows use.
     if (moveTrk) {
       const units = resolveSceneUnits(scene);
-      paintDimAlignmentTracking(ctx, moveTrk, t, viewport, (d) => sceneDistanceToMeters(d, units) * 1000);
+      paintGripAlignmentTracking(ctx, moveTrk, t, viewport, (d) => sceneDistanceToMeters(d, units) * 1000);
     }
 
     // Ghost + tooltip only during awaiting-destination

@@ -48,9 +48,11 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { hardOrtho } from '../../hooks/drawing/drawing-handler-utils';
-import { applyGripStepSnap, quantizeDeltaToStep } from './grip-step-quantize';
+import { applyGripStepSnap, quantizeDeltaToStep, quantizeValueToStep, activeStepSceneUnits } from './grip-step-quantize';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
+// ADR-363 §line local-ortho — ο τοπικός άξονας μιας λοξής γραμμής κατά τη μετακίνηση μέσου/MOVE-cross.
+import { getMoveOrthoAxis } from '../../systems/grip/MoveOrthoAxisStore';
 
 /** Origin reference for ortho-on-a-delta (constrain the displacement itself). */
 const DELTA_ORIGIN: Point2D = { x: 0, y: 0 };
@@ -102,14 +104,45 @@ export function applyOrthoToDelta(delta: Point2D): Point2D {
 }
 
 /**
+ * ADR-363 §line local-ortho — ORTHO πάνω σε whole-entity move όταν είναι ενεργό το ΤΟΠΙΚΟ
+ * πλαίσιο άξονα (σύρσιμο μέσου / MOVE-cross λοξής γραμμής, `MoveOrthoAxisStore`): κλείδωσε τη
+ * μετατόπιση στον ΔΙΚΟ ΤΗΣ άξονα (∥ û) Ή στην κάθετή του (⟂ n̂) — νικά η μεγαλύτερη προβολή
+ * (τοπικό `hardOrtho`). Ύστερα το F9 SNAP-MODE step + το Shift fine step κβαντίζουν τη ΒΑΘΜΩΤΗ
+ * απόσταση ΚΑΤΑ ΜΗΚΟΣ του locked άξονα (όχι world X/Y), ώστε μια λοξή μετατόπιση να πέφτει σε
+ * καθαρά βήματα. Reuse των ΙΔΙΩΝ activation gates + mm→scene SSoT με το world path — μηδέν νέα
+ * μηχανή βήματος. (Giorgio 2026-07-04 «κάθετα/παράλληλα στον άξονα, με βήμα πάνω στη διεύθυνση».)
+ */
+export function applyLocalOrthoMove(delta: Point2D, u: Point2D): Point2D {
+  const n: Point2D = { x: -u.y, y: u.x };        // μοναδιαία κάθετη
+  const along = delta.x * u.x + delta.y * u.y;   // ∥ προβολή
+  const perp = delta.x * n.x + delta.y * n.y;    // ⟂ προβολή
+  const useAlong = Math.abs(along) >= Math.abs(perp);
+  const axis = useAlong ? u : n;
+  let s = useAlong ? along : perp;
+  // F9 SNAP-MODE step ΚΑΤΑ ΜΗΚΟΣ του locked άξονα (scalar quantize), μετά Shift fine step.
+  const stepScene = activeStepSceneUnits();
+  if (stepScene > 0) s = quantizeValueToStep(s, stepScene);
+  if (isMoveFineStepActive()) {
+    s = quantizeValueToStep(s, MOVE_FINE_STEP_MM * immediateSceneScale.getMmToScene());
+  }
+  return { x: axis.x * s, y: axis.y * s };
+}
+
+/**
  * Full whole-entity-move pipeline: ORTHO (F8) axis-lock first, then SNAP-MODE
  * (F9) step quantize, then the Shift fine 1 cm step. Use this at every MOVE
  * chokepoint (preview + commit) so the ghost and the committed translation always
  * agree. The fine step runs last so a held Shift has final say over the
  * increment; on an mm-scale grid 10 mm divides the usual F9 steps, so the two
  * never fight when both are engaged.
+ *
+ * ADR-363 §line local-ortho — όταν το `MoveOrthoAxisStore` έχει άξονα (σύρσιμο μέσου/MOVE-cross
+ * λοξής γραμμής) ΚΑΙ το ORTHO είναι armed, το lock γίνεται στο ΤΟΠΙΚΟ πλαίσιο της γραμμής μέσω
+ * `applyLocalOrthoMove`. Χωρίς άξονα → world H/V (αμετάβλητη συμπεριφορά — μηδέν regression).
  */
 export function applyMoveConstraints(delta: Point2D): Point2D {
+  const axis = getMoveOrthoAxis();
+  if (axis && cadToggleState.isOrthoOn()) return applyLocalOrthoMove(delta, axis);
   return applyMoveFineStep(applyGripStepSnap(applyOrthoToDelta(delta)));
 }
 

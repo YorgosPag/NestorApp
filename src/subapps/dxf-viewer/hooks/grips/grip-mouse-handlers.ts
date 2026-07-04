@@ -19,7 +19,10 @@ import {
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
 } from './wall-hot-grip-fsm';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
-import { commitDxfGripDragModeAware, type DxfCommitDeps } from './grip-commit-adapters';
+import { commitDxfGripDragModeAware, createSceneManagerAdapter, type DxfCommitDeps } from './grip-commit-adapters';
+// ADR-363 §line local-ortho — αποτύπωση του άξονα λοξής γραμμής στην αρχή μετακίνησης μέσου/MOVE-cross.
+import { isLineEntity, type Entity } from '../../types/entities';
+import { setMoveOrthoAxis, clearMoveOrthoAxis } from '../../systems/grip/MoveOrthoAxisStore';
 // ADR-397 Φ2 — directional move-by-value: classify the clicked MOVE arm, prompt for
 // a distance (the rotation-angle PromptDialog SSoT), translate along that local axis.
 import {
@@ -185,6 +188,22 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   }
   // DXF grip
   if (nearGrip.source === 'dxf') {
+    // ADR-363 §line local-ortho — για λαβή ΟΛΙΚΗΣ μετακίνησης (`movesEntity`) απλής ΓΡΑΜΜΗΣ (μέσο grip 2
+    // / MOVE-cross grip 4), αποτύπωσε τον ΤΟΠΙΚΟ άξονα `û` (start→end, normalized) ώστε το F8 ORTHO να
+    // κλειδώνει κάθετα/παράλληλα στη λοξή γραμμή (MoveOrthoAxisStore, διαβάζεται από το move-constraint SSoT
+    // ΚΑΙ στο preview ΚΑΙ στο commit → WYSIWYG). Μη-γραμμή / μη-move → clear (world H/V όπως πριν).
+    const moveEnt = (nearGrip.movesEntity === true && nearGrip.entityId
+      ? createSceneManagerAdapter(dxfCommitDeps)?.getEntity(nearGrip.entityId)
+      : null) as unknown as Entity | null | undefined;
+    if (moveEnt && isLineEntity(moveEnt)) {
+      const dx = moveEnt.end.x - moveEnt.start.x;
+      const dy = moveEnt.end.y - moveEnt.start.y;
+      const len = Math.hypot(dx, dy);
+      if (len > 1e-9) setMoveOrthoAxis({ x: dx / len, y: dy / len });
+      else clearMoveOrthoAxis();
+    } else {
+      clearMoveOrthoAxis();
+    }
     // ADR-363 Phase 1G.5 — Alt held at press → «move-from-characteristic-point».
     // The grabbed grip (corner / endpoint / midpoint / thickness) becomes the
     // base point of a WHOLE-entity move: skip the hot-grip click-click flow and
@@ -245,7 +264,14 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       // ADR-363 Phase 1G.3 — prompt the first awaited pick (centre / base).
       applyHotGripHint(op, initialStep);
       if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-      setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: hotGripKindOf(nearGrip) ?? null });
+      setActiveDragGrip({
+        entityId: nearGrip.entityId!,
+        gripKind: hotGripKindOf(nearGrip) ?? null,
+        // ADR-357/363 — line MOVE-cross (`line-move`) hot-grip: expose the kind + index so the
+        // whole-line translate lights up the same Object-Snap-Tracking traces (anchor = base).
+        gripIndex: nearGrip.gripIndex,
+        lineGripKind: nearGrip.lineGripKind ?? null,
+      });
       GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
       return true;
     }
@@ -268,6 +294,11 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       // ADR-562 Φ9.2 — expose the dim grip kind so the mouse handlers show the SAME
       // AutoAlign traces during a dimension grip drag as every other tool.
       dimGripKind: nearGrip.dimGripKind ?? null,
+      // ADR-357/363 — line endpoint (0/1) / centre-move (2) press-drag: the index +
+      // kind drive the alignment anchor (`getLineGripAlignmentAnchors`) so the moving
+      // end / whole line tracks off the fixed end / base point ⊕ ambient neighbours.
+      gripIndex: nearGrip.gripIndex,
+      lineGripKind: nearGrip.lineGripKind ?? null,
     });
     // ADR-357 Phase 12 — mark the start of the grip-hot session so the
     // right-click `Undo` extra can bound the global CommandHistory to

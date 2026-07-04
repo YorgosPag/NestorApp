@@ -12,8 +12,9 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { DimensionGripKind } from '../../hooks/grip-types';
-import { clearDimAlignmentTracking } from './DimAlignmentTrackingStore';
+import type { DimensionGripKind, LineGripKind } from '../../hooks/grip-types';
+import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
+import { clearMoveOrthoAxis } from '../grip/MoveOrthoAxisStore';
 
 export interface ActiveDragGripInfo {
   entityId: string;
@@ -30,6 +31,14 @@ export interface ActiveDragGripInfo {
    * the dimension's other defPoints as anchors, exactly like the creation flow.
    */
   dimGripKind?: DimensionGripKind | null;
+  /**
+   * ADR-357/363 — plain-line grip discriminators. `gripIndex` (0=start, 1=end, 2=midpoint,
+   * 3=rotation, 4=MOVE-cross) + `lineGripKind` let the mouse handlers pick the alignment
+   * anchor (`getLineGripAlignmentAnchors`) so a line endpoint / centre drag lights up the
+   * SAME Object-Snap-Tracking traces as every other tool. Set only for line-entity grips.
+   */
+  gripIndex?: number;
+  lineGripKind?: LineGripKind | null;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
@@ -58,7 +67,9 @@ export function getActiveDragGrip(): ActiveDragGripInfo | null {
 /** Clear — called by resetToIdle in useUnifiedGripInteraction */
 export function clearActiveDragGrip(): void {
   activeDragGrip = null;
-  // ADR-562 Φ9.2 — drag lifecycle SSoT: any active dim-grip AutoAlign traces end with
-  // the drag (release / ESC / cancel) so a stale result never bleeds into the next drag.
-  clearDimAlignmentTracking();
+  // ADR-357/562/363 — drag lifecycle SSoT: any active grip AutoAlign traces (dim OR line)
+  // end with the drag (release / ESC / cancel) so a stale result never bleeds into the next.
+  clearGripAlignmentTracking();
+  // ADR-363 §line local-ortho — ο τοπικός άξονας μετακίνησης λήγει επίσης με το drag.
+  clearMoveOrthoAxis();
 }

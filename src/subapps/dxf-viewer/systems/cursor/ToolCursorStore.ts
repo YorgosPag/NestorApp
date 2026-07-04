@@ -10,7 +10,7 @@
  * @see systems/cursor/config.ts  — user-configurable cursor preferences
  */
 
-export type ToolCursorVariant = 'default' | 'trim-pickbox' | 'extend-arrow';
+export type ToolCursorVariant = 'default' | 'trim-pickbox' | 'extend-arrow' | 'offset-pickbox' | 'fillet-pickbox' | 'chamfer-pickbox';
 
 let _variant: ToolCursorVariant = 'default';
 const _listeners = new Set<() => void>();

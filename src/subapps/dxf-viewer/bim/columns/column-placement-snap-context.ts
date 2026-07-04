@@ -28,7 +28,7 @@ import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
 import { findEntityOverlap } from '../geometry/entity-overlap';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
-import { ExtendedSnapType, type ProSnapResult } from '../../snapping/extended-types';
+import { isVisibleSnapMode, type ProSnapResult } from '../../snapping/extended-types';
 import type { CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
 
 /**
@@ -38,7 +38,7 @@ import type { CornerProjectionResult } from '../../systems/cursor/corner-project
  */
 function isVisibleIndicatorSnap(r: ProSnapResult | null): boolean {
   if (!r?.found || !r.snappedPoint) return false;
-  return r.activeMode !== ExtendedSnapType.GRID && r.activeMode !== ExtendedSnapType.GUIDE;
+  return isVisibleSnapMode(r.activeMode);
 }
 
 /** Το επιλεγμένο snap για την τοποθέτηση κολώνας: η γλυφή/ετικέτα (`snapResult`) + το σημείο

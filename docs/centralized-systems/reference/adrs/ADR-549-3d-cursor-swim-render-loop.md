@@ -347,6 +347,20 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
 ---
 
 ## Changelog
+- **2026-07-04** — 🐛 **Phase 8 bugfix: hotspot ≠ οπτικό κέντρο σε sub-1 dpr → «ο κέρσορας δείχνει εδώ, ο καμβάς διαβάζει παραδίπλα» (browser-reported Giorgio, 80% zoom).**
+  **Συμπτώμα:** σχεδίαση ορθογωνίου με το εργαλείο Γραμμή — η κάτω πλευρά κλείδωνε ~444,86 αντί 450 (η ελεύθερη κάτω-δεξιά κορυφή «γλιστρούσε» ~5cm), ενώ το πεδίο ήταν καθαρό.
+  **Root cause (SSoT audit, code = source of truth — `crosshair-cursor-image.ts`):** ο hardware cursor (ADR-549 Phase 8)
+  δηλώνει hotspot `hot = round(cssSize/2)`. Όμως το εμφανιζόμενο μέγεθος του PNG **διαφέρει ανά emit path**: σε `dpr>1`
+  βγαίνει `image-set(url … ${dpr}x)` → εμφανίζεται `devicePx/dpr = cssSize`· σε `dpr≤1` βγαίνει **σκέτο `url()`** →
+  εμφανίζεται το raster **1:1 = `devicePx`**. Ο σταυρός σχεδιάζεται πάντα στο κέντρο `devicePx/2`. Στα **80% zoom → dpr 0.8**:
+  `cssSize=32` αλλά `devicePx=round(32×0.8)=26`, άρα οπτικό κέντρο = 13 CSS px ενώ `hot=round(32/2)=16` → **hotspot 3px κάτω-δεξιά
+  του σταυρού** → ο pointer που διαβάζει ο καμβάς (`clientX/Y−rect.left → screenToWorld`) πέφτει 3px παραδίπλα. Σταθερή
+  μετατόπιση → σβήνεται σε κορυφές που κουμπώνουν (snap), μένει στην ελεύθερη κορυφή → στραβό μήκος. Καθαρό μόνο σε dpr 1/2
+  (όπου `devicePx==cssSize`), γι' αυτό δεν φαινόταν στα 100%/200%.
+  **FIX (surgical, 1 αρχείο — `crosshair-cursor-image.ts`):** ο hotspot βγαίνει από το **πραγματικό εμφανιζόμενο** μέγεθος:
+  `emittedCssSize = dpr>1 ? cssSize : devicePx; hot = round(emittedCssSize/2)`. Στα 0.8: `hot 16→13` = ταυτίζεται με το οπτικό
+  κέντρο. dpr 1/2 αμετάβλητα (0 regression). CHECK 6B/6D → stage αυτό το ADR + `crosshair-cursor-image.ts`. 🔴 browser-verify
+  (Giorgio: ορθογώνιο 450 στα 80%) + commit. 🟡 UNCOMMITTED.
 - **2026-07-01** — 🐛 **Phase 8 bugfix: το hardware-cursor σταυρόνημα «εξαφανιζόταν» συχνά στο 3D (browser-reported Giorgio).**
   **Root cause (SSoT audit, code = source of truth):** ο builder (`crosshair-cursor-image.ts`) έφτιαχνε το PNG σε
   **σταθερά 32 CSS px χωρίς DPR scaling**. Σε HiDPI οθόνη / OS display-scaling / browser page-zoom (dpr>1) το device

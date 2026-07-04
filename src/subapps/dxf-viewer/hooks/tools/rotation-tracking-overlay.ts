@@ -83,7 +83,7 @@ export function paintRotationTracking(
       ctx,
       pivot,
       result.polar.snappedAngle,
-      formatPolarLabel(result.polar.snappedAngle, result.polar.distance),
+      formatPolarLabel(result.polar.snappedAngle, toMm(result.polar.distance)),
       cursor,
       transform,
       viewport,

@@ -6,6 +6,8 @@
  *   - column outside radius → excluded
  *   - maxMembers cap honored (nearest-N)
  *   - non-column structural members (walls) also participate
+ *   - plain CAD geometry (lines) participate via endpoints/midpoints (2026-07-04)
+ *   - a non-participating type (circle) → []
  *   - axis gating: only points sharing the cursor's row/column are emitted
  *   - every emitted anchor: sourceSnapType 'ambient-column' & acquiredAt 0
  */
@@ -43,6 +45,18 @@ function wallAlongX(x0: number, x1: number): WallEntity {
   return built.entity;
 }
 
+/** Plain CAD line from (x0,y0) to (x1,y1). */
+function lineFrom(x0: number, y0: number, x1: number, y1: number): Entity {
+  return {
+    id: `line_${x0}_${y0}_${x1}_${y1}`,
+    type: 'line',
+    layerId: '0',
+    start: { x: x0, y: y0 },
+    end: { x: x1, y: y1 },
+    visible: true,
+  } as unknown as Entity;
+}
+
 const CFG = (over: Partial<AmbientAlignmentConfig> = {}): AmbientAlignmentConfig => ({
   radiusWorld: 100000,
   maxMembers: 6,
@@ -55,9 +69,26 @@ describe('collectAmbientAlignmentAnchors (ADR-357 ambient)', () => {
     expect(collectAmbientAlignmentAnchors({ x: 0, y: 0 }, [], CFG())).toEqual([]);
   });
 
-  it('returns [] when no entity is a structural member', () => {
-    const nonStructural = [{ id: 'x', type: 'line' } as unknown as Entity];
-    expect(collectAmbientAlignmentAnchors({ x: 0, y: 0 }, nonStructural, CFG())).toEqual([]);
+  it('returns [] for a non-participating type (circle)', () => {
+    const nonParticipating = [{ id: 'x', type: 'circle' } as unknown as Entity];
+    expect(collectAmbientAlignmentAnchors({ x: 0, y: 0 }, nonParticipating, CFG())).toEqual([]);
+  });
+
+  it('emits anchors for a plain line endpoint aligned with the cursor column', () => {
+    // Vertical line at x=300; cursor at (300,-100) shares x=300 → vertical alignment.
+    const anchors = collectAmbientAlignmentAnchors({ x: 300, y: -100 }, [lineFrom(300, 0, 300, 500)], CFG());
+    expect(anchors.length).toBeGreaterThan(0);
+    for (const a of anchors) {
+      expect(a.sourceSnapType).toBe(AMBIENT_SOURCE_TYPE);
+      expect(a.acquiredAt).toBe(0);
+      expect(Math.abs(a.x - 300)).toBeLessThan(1); // every emitted point sits on x=300
+    }
+  });
+
+  it('drops a plain line whose points are off both cursor axes', () => {
+    // Diagonal line far from x=0 and y=0; cursor at origin → no axis-aligned point.
+    const anchors = collectAmbientAlignmentAnchors({ x: 0, y: 0 }, [lineFrom(500, 500, 600, 600)], CFG());
+    expect(anchors).toEqual([]);
   });
 
   it('also emits anchors for non-column structural members (walls)', () => {

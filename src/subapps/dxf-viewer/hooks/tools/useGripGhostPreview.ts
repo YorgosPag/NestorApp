@@ -84,7 +84,6 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import {
   drawDashedSegment,
   drawMoveReadoutLeader,
-  drawAngleArc,
   drawGradientOriginMarker,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
@@ -95,7 +94,14 @@ import {
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
-import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
+import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDegFromDirs } from '../grips/grip-projections';
+// ADR-357/363 — plain-line grip Object-Snap-Tracking traces: SAME store + paint SSoT the
+// dimension grip drag uses (resolved once by the mouse-move handler, published to the store).
+import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
+import { paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+// ADR-363 §line local-ortho — ⟂/∥ ένδειξη στο move pill όταν το F8 κλειδώνει στον άξονα λοξής γραμμής.
+import { getMoveOrthoAxis } from '../../systems/grip/MoveOrthoAxisStore';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -292,14 +298,42 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       const meters = sceneDistanceToMeters(Math.hypot(dp.delta.x, dp.delta.y), resolveSceneUnits(scene));
       const mid = moveReadoutMid(fromS, toS);
-      drawDimPill(ctx, [formatMoveDistance(meters)], mid.x, mid.y);
+      // ADR-363 §line local-ortho — όταν το F8 κλειδώνει στον άξονα λοξής γραμμής, δείξε αν η μετατόπιση
+      // είναι ΚΑΘΕΤΗ (⟂) ή ΠΑΡΑΛΛΗΛΗ (∥) στη γραμμή (Giorgio «να βλέπω πόσο σε κάθετη διεύθυνση»).
+      const orthoAxis = getMoveOrthoAxis();
+      let moveLabel = formatMoveDistance(meters);
+      if (orthoAxis && cadToggleState.isOrthoOn()) {
+        const along = Math.abs(dp.delta.x * orthoAxis.x + dp.delta.y * orthoAxis.y);
+        const perp = Math.abs(dp.delta.x * -orthoAxis.y + dp.delta.y * orthoAxis.x);
+        moveLabel = `${perp >= along ? '⟂' : '∥'} ${moveLabel}`;
+      }
+      drawDimPill(ctx, [moveLabel], mid.x, mid.y);
     }
 
-    // ADR-363 — endpoint RESHAPE readout (AutoCAD/Revit angular-dimension style): stretching a
-    // line's endpoint grip shows the resulting segment LENGTH (pill at the midpoint) plus an
-    // ANGLE ARC drawn at the fixed vertex with the degree value beside it — the angle is shown
-    // graphically, not just numerically. The guide line is the ghost itself. The moved endpoint
-    // is the changed one; the fixed end anchors the arc. Excludes move/hot-grip/rotation (above).
+    // ADR-357/363 — plain-line grip Object-Snap-Tracking traces (endpoint reshape + centre/MOVE).
+    // The mouse-move handler already resolved them (aligning the SAME point that fed the ghost
+    // delta) and published to the shared store, so geometry + traces come from ONE resolve
+    // (WYSIWYG) — the SAME central system + paints the dimension grip drag and the wall rotation
+    // use. Only line drags populate the store (wall/column leave it null → no-op); cleared with
+    // the drag lifecycle (GripDragStore.clearActiveDragGrip).
+    if (isLineEntity(entity as unknown as Entity)) {
+      const lineTracking = getGripAlignmentTracking();
+      if (lineTracking) {
+        const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+        const trkUnits = resolveSceneUnits(trkScene);
+        paintGripAlignmentTracking(
+          ctx, lineTracking, t, vp, (d) => sceneDistanceToMeters(d, trkUnits) * 1000,
+        );
+      }
+    }
+
+    // ADR-357/397 — endpoint RESHAPE direction arc: dragging a line's endpoint pivots the segment
+    // about the FIXED vertex, so this shows the SAME centralized 🟢/🔴 direction arc + live signed
+    // angle the wall rotation uses (`paintDirectionArc`) — replacing the old ad-hoc grey arc +
+    // angle/length pills (Giorgio «το ΙΔΙΟ που χρησιμοποιεί ο τοίχος»). pivot = fixed vertex,
+    // baseline = the ORIGINAL segment direction, cursor = the new moved endpoint. Distance shows
+    // via the alignment tooltip above when the endpoint snaps to a trace. Excludes move/hot-grip/
+    // rotation (handled above). The guide line is the ghost itself.
     const origLine = entity as unknown as Entity;
     const tLine = transformed as unknown as Entity;
     if (
@@ -309,17 +343,11 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const startMoved = tLine.start.x !== origLine.start.x || tLine.start.y !== origLine.start.y;
       const fixedW = startMoved ? tLine.end : tLine.start;
       const movedW = startMoved ? tLine.start : tLine.end;
-      const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const lenMeters = sceneDistanceToMeters(Math.hypot(movedW.x - fixedW.x, movedW.y - fixedW.y), resolveSceneUnits(scene));
-      const fixedS = CoordinateTransforms.worldToScreen(fixedW, t, vp);
-      const movedS = CoordinateTransforms.worldToScreen(movedW, t, vp);
-      // Length pill at the segment midpoint.
-      const midS = moveReadoutMid(fixedS, movedS);
-      drawDimPill(ctx, [formatMoveDistance(lenMeters)], midS.x, midS.y);
-      // Angle arc + value at the fixed vertex (screen-space angle → arc & number always agree).
-      const segAngle = Math.atan2(movedS.y - fixedS.y, movedS.x - fixedS.x);
-      const angleLabelS = drawAngleArc(ctx, fixedS, segAngle);
-      drawDimPill(ctx, [formatMoveAngle((Math.abs(segAngle) * 180) / Math.PI)], angleLabelS.x, angleLabelS.y);
+      const origMovedW = startMoved ? origLine.start : origLine.end;
+      const refDir = { x: origMovedW.x - fixedW.x, y: origMovedW.y - fixedW.y };
+      const curDir = { x: movedW.x - fixedW.x, y: movedW.y - fixedW.y };
+      const sweepDeg = rotateSweepDegFromDirs(refDir, curDir);
+      paintDirectionArc(ctx, fixedW, origMovedW, movedW, sweepDeg, t, vp);
     }
 
     // ADR-507 Φ5 A3b/A4 — gradient-origin/angle drag: η λαβή ακολουθεί τον κέρσορα.

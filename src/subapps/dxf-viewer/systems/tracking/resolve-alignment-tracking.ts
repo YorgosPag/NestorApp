@@ -31,6 +31,12 @@ export interface AlignmentTrackingInput {
    * `ambientAlignmentConfigStore.getSnapshot().enabled` so it stays lazy.
    */
   readonly sceneEntities: readonly Entity[] | null;
+  /**
+   * The current segment's start (rubber-band base / last placed point), or null for
+   * the free first point. Threads to the OTRACK clean-corner intersection so the
+   * ghost locks onto `base × anchor-trace` (e.g. the rectangle corner). (2026-07-04)
+   */
+  readonly segmentBase?: Point2D | null;
 }
 
 /**
@@ -44,7 +50,7 @@ export function resolveAlignmentTracking(
   cursor: Point2D,
   input: AlignmentTrackingInput,
 ): ComposedTracking | null {
-  const { scale, polarEnabled, sceneEntities } = input;
+  const { scale, polarEnabled, sceneEntities, segmentBase } = input;
   const worldTolerance = pixelsToWorld(3, scale);
   const acquired = TrackingPointStore.getPoints();
   // Ambient (Revit-style auto-anchors): only when the caller supplied a scene snapshot
@@ -65,5 +71,6 @@ export function resolveAlignmentTracking(
     },
     worldTolerance,
     worldPerPixel: worldPerPixel(scale),
+    segmentBase: segmentBase ?? null,
   });
 }

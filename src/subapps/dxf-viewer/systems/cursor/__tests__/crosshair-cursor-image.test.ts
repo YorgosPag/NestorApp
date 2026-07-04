@@ -91,4 +91,17 @@ describe('buildCrosshairCursorValue', () => {
       expect(ctx.scale).toHaveBeenCalledWith(2, 2);
     });
   });
+
+  describe('hotspot ≡ visual centre (2026-07-04 fix — "cursor centre ≠ read point")', () => {
+    it('puts the hotspot at the DISPLAYED-image centre on sub-1 dpr (plain url)', () => {
+      // dpr 0.8 (e.g. 80% zoom): cssSize stays 32 but the PNG rasterises to
+      // round(32×0.8)=26 device px and is emitted as a plain url() → shown 1:1 at 26
+      // CSS px, whose centre is 13. The hotspot MUST be 13 (not the old 16 = cssSize/2),
+      // else the true pointer sits ~3px off the cross the user sees.
+      setDpr(0.8);
+      const v = buildCrosshairCursorValue({ color: '#fff', size: 32 });
+      expect(v).toBe('url("data:image/png;base64,ABC") 13 13, crosshair');
+      expect(canvas.width).toBe(26);
+    });
+  });
 });

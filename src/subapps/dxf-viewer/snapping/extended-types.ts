@@ -136,9 +136,20 @@ export function toSnapIndicatorView(result: ProSnapResult | null): SnapIndicator
  *   - `CrosshairOverlay` (αν true → κρύβει το pickbox του σταυρονήματος — το marker «κουμπώνει»
  *     το κέντρο, οπότε το τετράγωνο περισσεύει)
  */
+/**
+ * 🏢 SSoT primitive — «είναι ΟΡΑΤΗ/σκληρή έλξη αυτό το mode;» πάνω στο raw string.
+ * grid & guide = ΣΙΩΠΗΛΑ (AutoCAD σύμβαση) → false· κάθε άλλο ενεργό mode → true. ΕΝΑ κριτήριο,
+ * καταναλώνεται όπου κρίνεται «τι βλέπει/κλείδωσε ρητά ο χρήστης», ανεξάρτητα από το shape του snap
+ * (`SnapIndicatorView.type` / `ProSnapResult.activeMode` / `ImmediateSnapResult.mode`). Έτσι π.χ.
+ * το «η fux φαίνεται» και το «η κορυφή παρακάμπτει το line-flush» ΔΕΝ μπορούν να αποκλίνουν.
+ */
+export function isVisibleSnapMode(mode: string | null | undefined): boolean {
+  return !!mode && mode !== 'grid' && mode !== 'guide';
+}
+
 export function isSnapMarkerVisible(view: SnapIndicatorView | null | undefined): view is SnapIndicatorView {
   if (!view || !view.point) return false;
-  return view.type !== 'grid' && view.type !== 'guide';
+  return isVisibleSnapMode(view.type);
 }
 
 // Per-mode tolerances σε pixels

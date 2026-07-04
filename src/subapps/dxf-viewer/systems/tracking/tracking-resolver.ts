@@ -7,9 +7,11 @@
  * screen-space tolerance.
  *
  * Priority (ADR-357 §5.1):
- *   1. Intersection of two alignment paths (highest priority).
- *   2. Intersection of one path with an existing snap candidate (Phase 5+).
- *   3. Pure alignment path projection.
+ *   1a. Clean corner — the current segment's base rays × an anchor path (OTRACK;
+ *       always evaluated, exempt from the flood cap). (2026-07-04)
+ *   1b. Intersection of two anchor alignment paths (flood-capped).
+ *   2.  Intersection of one path with an existing snap candidate (Phase 5+).
+ *   3.  Pure alignment path projection.
  *
  * Geometry: alignment paths emanate from each acquired point along
  *   • horizontal (0° / 180°)
@@ -94,42 +96,63 @@ export function resolveTrackingSnap(
   acquired: readonly AcquiredTrackingPoint[],
   polar: TrackingPolarConfig,
   worldTolerance: number,
+  segmentBase?: Point2D | null,
 ): TrackingSnapResult | null {
   if (acquired.length === 0) return null;
 
   const paths = buildAlignmentPaths(acquired, polar);
   if (paths.length === 0) return null;
 
-  // Intersection scan is O(n²); skip it past the cap (projection still runs).
-  const intersection = paths.length <= MAX_INTERSECTION_PATHS
+  // 1a — CLEAN CORNER: the current segment's start (rubber-band base) is ALWAYS a
+  // tracking origin (AutoCAD/Revit OTRACK). Base-rays × anchor-paths is O(n) and
+  // EXEMPT from the flood cap, so the corner forms even when POLAR inflates the
+  // path count past MAX_INTERSECTION_PATHS. (2026-07-04)
+  const baseIntersection = segmentBase
+    ? findClosestBaseIntersection(buildBasePaths(segmentBase, polar), paths, cursor, worldTolerance)
+    : null;
+  // 1b — anchor × anchor crossings (acquired-point intersections). O(n²); gated by
+  // the flood cap so ambient-heavy frames stay within the ADR-040 budget.
+  const anchorIntersection = paths.length <= MAX_INTERSECTION_PATHS
     ? findClosestIntersection(paths, cursor, worldTolerance)
     : null;
-  if (intersection) {
-    return {
-      point: intersection.point,
-      alignmentPaths: paths,
-      activePaths: [intersection.pathA, intersection.pathB],
-      intersections: [intersection.point],
-      anchorPoint: intersection.anchor,
-      kind: 'intersection',
-      snappedAngle: null,
-    };
-  }
+  const intersection = closerIntersection(baseIntersection, anchorIntersection);
+  if (intersection) return intersectionResult(intersection, paths);
 
   const projection = findClosestProjection(paths, cursor, worldTolerance, acquired);
-  if (projection) {
-    return {
-      point: projection.point,
-      alignmentPaths: paths,
-      activePaths: [projection.path],
-      intersections: [],
-      anchorPoint: projection.anchor,
-      kind: 'projection',
-      snappedAngle: projection.path.angleDeg,
-    };
-  }
-
+  if (projection) return projectionResult(projection, paths);
   return null;
+}
+
+/** Build the `TrackingSnapResult` for a resolved path intersection (clean corner / crossing). */
+function intersectionResult(
+  m: IntersectionMatch,
+  paths: readonly TrackingAlignmentPath[],
+): TrackingSnapResult {
+  return {
+    point: m.point,
+    alignmentPaths: paths,
+    activePaths: [m.pathA, m.pathB],
+    intersections: [m.point],
+    anchorPoint: m.anchor,
+    kind: 'intersection',
+    snappedAngle: null,
+  };
+}
+
+/** Build the `TrackingSnapResult` for a resolved single-path projection. */
+function projectionResult(
+  m: ProjectionMatch,
+  paths: readonly TrackingAlignmentPath[],
+): TrackingSnapResult {
+  return {
+    point: m.point,
+    alignmentPaths: paths,
+    activePaths: [m.path],
+    intersections: [],
+    anchorPoint: m.anchor,
+    kind: 'projection',
+    snappedAngle: m.path.angleDeg,
+  };
 }
 
 function buildAlignmentPaths(
@@ -150,6 +173,18 @@ function buildAlignmentPaths(
     }
   }
   return paths;
+}
+
+/**
+ * Alignment rays emanating from the current segment's base (rubber-band start).
+ * Reuses `buildAlignmentPaths` — same angle set as any anchor — so the base is a
+ * first-class tracking origin with zero duplicated geometry.
+ */
+function buildBasePaths(base: Point2D, polar: TrackingPolarConfig): TrackingAlignmentPath[] {
+  return buildAlignmentPaths(
+    [{ x: base.x, y: base.y, acquiredAt: 0, sourceSnapType: 'segment-base' }],
+    polar,
+  );
 }
 
 function collectAngles(polar: TrackingPolarConfig): number[] {
@@ -208,6 +243,44 @@ function findClosestIntersection(
     }
   }
   return best;
+}
+
+/**
+ * Closest intersection of a base ray with an ANCHOR path — the OTRACK clean-corner
+ * case (e.g. horizontal-from-base ∩ vertical-from-A → the rectangle corner). Labels
+ * from the anchor path's origin (the alignment reference) and renders the anchor path
+ * + base ray as the two active alignment lines. O(baseRays × paths), no flood cap.
+ */
+function findClosestBaseIntersection(
+  baseParts: readonly TrackingAlignmentPath[],
+  paths: readonly TrackingAlignmentPath[],
+  cursor: Point2D,
+  worldTolerance: number,
+): IntersectionMatch | null {
+  let best: IntersectionMatch | null = null;
+  for (const base of baseParts) {
+    for (const p of paths) {
+      if (p.origin.x === base.origin.x && p.origin.y === base.origin.y) continue;
+      const inter = intersectRays(base, p);
+      if (!inter) continue;
+      const distance = Math.hypot(inter.x - cursor.x, inter.y - cursor.y);
+      if (distance > worldTolerance) continue;
+      if (!best || distance < best.distance) {
+        best = { point: inter, anchor: acquiredFromPath(p), distance, pathA: p, pathB: base };
+      }
+    }
+  }
+  return best;
+}
+
+/** The nearer of two intersection candidates (either may be null). */
+function closerIntersection(
+  a: IntersectionMatch | null,
+  b: IntersectionMatch | null,
+): IntersectionMatch | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a.distance <= b.distance ? a : b;
 }
 
 interface ProjectionMatch {

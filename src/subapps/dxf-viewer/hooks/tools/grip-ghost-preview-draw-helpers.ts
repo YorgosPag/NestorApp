@@ -60,11 +60,6 @@ const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
  */
 const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
 
-/** ADR-363 — angular-dimension arc (endpoint reshape readout): screen radius + neutral colour. */
-const ANGLE_ARC_RADIUS_PX = 22;
-const ANGLE_ARC_LABEL_GAP_PX = 12;
-const ANGLE_ARC_COLOR = 'rgba(255,255,255,0.7)';
-
 /** ADR-507 Φ5 A3b — half-size (CSS px) του live gradient-origin grip-marker (fixed on-screen). */
 const GRADIENT_ORIGIN_MARKER_HALF_PX = 5;
 
@@ -106,33 +101,6 @@ export function drawMoveReadoutLeader(
   ctx.lineTo(toS.x, toS.y);
   ctx.stroke();
   ctx.restore();
-}
-
-/**
- * ADR-363 — AutoCAD-style angular-dimension arc for the endpoint-reshape readout. Draws a
- * short +X baseline tick at the fixed vertex (`centerS`) and an arc to the segment direction
- * (`segAngleRad`, SCREEN space so it hugs the visible segment). Returns the label anchor on
- * the arc bisector so the angle value sits just outside the arc.
- */
-export function drawAngleArc(
-  ctx: CanvasRenderingContext2D,
-  centerS: { x: number; y: number },
-  segAngleRad: number,
-): { x: number; y: number } {
-  ctx.save();
-  ctx.strokeStyle = ANGLE_ARC_COLOR;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(centerS.x, centerS.y);
-  ctx.lineTo(centerS.x + ANGLE_ARC_RADIUS_PX, centerS.y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(centerS.x, centerS.y, ANGLE_ARC_RADIUS_PX, 0, segAngleRad, segAngleRad < 0);
-  ctx.stroke();
-  ctx.restore();
-  const bisector = segAngleRad / 2;
-  const r = ANGLE_ARC_RADIUS_PX + ANGLE_ARC_LABEL_GAP_PX;
-  return { x: centerS.x + r * Math.cos(bisector), y: centerS.y + r * Math.sin(bisector) };
 }
 
 /**
@@ -410,5 +378,17 @@ export function drawMemberGripHud(
   ) {
     const c = transformed as unknown as ColumnEntity;
     paintColumnHud(ctx, c.geometry.footprint.vertices, c.params, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
+    return;
+  }
+  // ADR-508 §line-hud / ADR-363 Slice F/G — plain DXF LINE parity με τον τοίχο (Giorgio 2026-07-04
+  // «όταν σέρνω άκρο ή μέσο της γραμμής, γωνία+μήκος ΑΚΡΙΒΩΣ όπως ο τοίχος»): endpoint reshape
+  // (grip 0/1) + midpoint/MOVE-cross (grip 2/4) δείχνουν την ΙΔΙΑ aligned διάσταση μήκους + ∠γωνία,
+  // μέσω του ΚΟΙΝΟΥ `buildSegmentHudMeta`+`paintWallHud`. Η γραμμή δεν έχει BIM ταυτότητα → `specLabel=''`
+  // (μόνο μήκος+γωνία, χωρίς πάχος/ύψος). Η λαβή περιστροφής (`line-rotation`) εξαιρείται — έχει το δικό
+  // της arc/polar overlay (mirror του `wall-rotation` skip). N.11-clean: κενό label, καμία μετάφραση εδώ.
+  const asEntity = transformed as unknown as Entity;
+  if (isLineEntity(asEntity) && dp.lineGripKind !== 'line-rotation') {
+    const meta = buildSegmentHudMeta(asEntity.start, asEntity.end, sceneUnits);
+    paintWallHud(ctx, meta, '', t, vp);
   }
 }

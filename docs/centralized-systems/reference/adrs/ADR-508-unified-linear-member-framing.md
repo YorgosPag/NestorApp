@@ -106,6 +106,69 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-04 (§line local-ortho — F8 στη μετακίνηση μέσου λοξής γραμμής κλειδώνει ΚΑΘΕΤΑ/ΠΑΡΑΛΛΗΛΑ στον άξονά της)**
+  - **Αίτημα Giorgio**: λοξή γραμμή· πιάνω το **μέσο** (grip 2) ή το **MOVE-cross** (grip 4) και θέλω, με **F8 ORTHO**,
+    η μετακίνηση να κλειδώνει **κάθετα (ή παράλληλα) στον άξονα ΤΗΣ ΓΡΑΜΜΗΣ** (όχι world Χ/Υ), να **βλέπω την
+    κάθετη απόσταση** από την αρχική θέση, και με **F9 βήμα** πάνω σε αυτή τη διεύθυνση. Επιλογή: «ΚΑΙ κάθετα ΚΑΙ
+    παράλληλα» (τοπικό ORTHO, AutoCAD «rotated ORTHO/UCS»).
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα)**: το `bim/grips/grip-move-constraints.ts:applyMoveConstraints` = ΕΝΑ chokepoint
+    (preview `resolveGripTranslateDelta` **και** commit `grip-mouseup-handler`), με σχόλιο που ήδη προέβλεπε «local-frame
+    lock = separate refinement». Το ORTHO/step διαβάζουν **live stores** μέσα στη συνάρτηση (`cadToggleState`,
+    `immediateSceneScale`). → μηδέν νέα μηχανή, μηδέν signature threading.
+  - **FIX (store-based, WYSIWYG by construction)**:
+    - NEW `systems/grip/MoveOrthoAxisStore.ts` — κρατά το unit `û` (γραμμή start→end) που αποτυπώνεται ΜΙΑ φορά στο
+      mousedown (`grip-mouse-handlers.ts`, μόνο για `movesEntity` λαβή γραμμής) και clear στο drag-end
+      (`GripDragStore.clearActiveDragGrip`).
+    - `applyMoveConstraints`: αν το store έχει άξονα **& ORTHO on** → NEW `applyLocalOrthoMove` (τοπικό `hardOrtho`:
+      προβολή σε `û`/`n̂`, νικά η μεγαλύτερη· F9 + Shift-fine κβαντίζουν τη **βαθμωτή** απόσταση κατά μήκος του locked
+      άξονα μέσω `quantizeValueToStep`+`activeStepSceneUnits`). Χωρίς άξονα → world H/V (**μηδέν regression**).
+    - `useGripGhostPreview.ts`: το move pill προθέτει **⟂ / ∥** ανάλογα με τον locked άξονα («βλέπω πόσο κάθετα»).
+  - **Scope**: μόνο η **μετακίνηση** μέσου/MOVE-cross γραμμής (το άκρο = reshape, μένει world). Τοίχος/άλλα = αμετάβλητα.
+  - CHECK 6D → stage αυτό το ADR + τα 5 αρχεία. 🟡 UNCOMMITTED (commit: Giorgio).
+
+- **2026-07-04 (§line-hud grip-drag — η ΓΡΑΜΜΗ δείχνει live μήκος+γωνία στο σύρσιμο ΑΚΡΟΥ/ΜΕΣΟΥ, parity με τον τοίχο)**
+  - **Αίτημα Giorgio (browser-reported, 2 screenshots):** όταν σέρνει **λαβή άκρου** (grip 0/1) ή **μέσου/μετακίνησης**
+    (grip 2/4) μιας γραμμής, να εμφανίζεται η ίδια ένδειξη **γωνίας + μήκους** που δείχνει ο τοίχος στο αντίστοιχο
+    σύρσιμο. Η γραμμή έδειχνε μόνο τα γαλάζια AutoAlign ίχνη + το κόκκινο τόξο φοράς — **όχι** την aligned διάσταση μήκους.
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα):** το `wall-hud-paint.ts:buildSegmentHudMeta` ήταν **ΗΔΗ** φτιαγμένο να δέχεται
+    γραμμή (σχόλιο: «τοίχο ΚΑΙ γραμμή, 0 = χωρίς BIM ταυτότητα»)· απλώς δεν είχε συνδεθεί ποτέ. Το `drawMemberGripHud`
+    (`grip-ghost-preview-draw-helpers.ts`) είχε gate **μόνο** σε `wallGripKind`/`columnGripKind` → η γραμμή δεν πιανόταν.
+  - **Διόρθωση αρχικής παρανόησης (κώδικας = source of truth):** το handoff το είχε πλαισιώσει ως «περιστροφή». Runtime
+    probes (temp) επιβεβαίωσαν ότι η 🟠 polar ακτίνα ανήκει **αποκλειστικά** στο rotation path (`resolveRotationTracking`,
+    χρειάζεται `rotatePivot`)· το σύρσιμο **άκρου** τοίχου δείχνει **μόνο** το member-HUD (aligned μήκος + ∠γωνία), όχι polar.
+    Ο Giorgio επιβεβαίωσε: «μόνο μήκος+γωνία, ακριβώς όπως ο τοίχος» → μηδέν νέο polar overlay.
+  - **FIX (ZERO new mechanism, `grip-ghost-preview-draw-helpers.ts`):** branch στο `drawMemberGripHud` για γραμμή —
+    `isLineEntity(transformed) && dp.lineGripKind !== 'line-rotation'` → `buildSegmentHudMeta(start,end,sceneUnits)` +
+    `paintWallHud(ctx, meta, '', …)` (κενό `specLabel` → μόνο μήκος+∠γωνία, χωρίς πάχος/ύψος). Ίδιος painter/frame/RAF με
+    τον τοίχο. Η λαβή **περιστροφής** εξαιρείται (έχει το δικό της arc/polar overlay — mirror του `wall-rotation` skip).
+  - **Tests**: κανένα νέο — thin glue πάνω σε ήδη-δοκιμασμένα SSoT (`buildSegmentHudMeta`, `paintWallHud`).
+  - CHECK 6D/6B → stage αυτό το ADR + `grip-ghost-preview-draw-helpers.ts`. 🟡 UNCOMMITTED (commit: Giorgio).
+
+- **2026-07-04 (§line-cyan bugfix — «η πραγματική κορυφή νικάει»: το OSNAP endpoint υπερισχύει του flush στο 1ο κλικ γραμμής)**
+  - **Σύμπτωμα (browser-reported Giorgio):** εργαλείο Γραμμή, hover σε γωνία ορθογωνίου → η fux (OSNAP endpoint)
+    εμφανιζόταν ΣΩΣΤΑ πάνω στη γωνία, αλλά με το κλικ η **αρχή** της γραμμής δημιουργούνταν **δεξιότερα** — όχι
+    στη γωνία. (Επιβεβαιώθηκε ότι σε ΚΕΝΟ σημείο η αρχή πέφτει ακριβώς στον κέρσορα → το πρόβλημα ήταν κοντά σε μέλος.)
+  - **Root cause (`useDrawingHandlers.onDrawingPoint`, code = source of truth):** στο 1ο κλικ, ΜΕΤΑ την OSNAP,
+    έτρεχε πάντα το `resolveLineCommitPoint` (flush/κάθετο κούμπωμα στην παρειά, §line-cyan). Κοντά σε γωνία το
+    flush **παρέκαμπτε** το ρητό OSNAP endpoint και γλιστρούσε την αρχή πάνω στην παρειά → μετατόπιση από την
+    πραγματική κορυφή. Παραβίαζε την οδηγία «η πραγματική κορυφή νικάει».
+  - **FIX (`useDrawingHandlers.ts`):** το flush **παρακάμπτεται** όταν στο κλικ υπάρχει locked **ορατό** OSNAP —
+    `getImmediateSnap()?.found && isVisibleSnapMode(mode)`. Χωρίς ορατό snap ή μακριά από μέλος → το flush δουλεύει
+    κανονικά (καμία παλινδρόμηση). Στο κενό / commit-parity αμετάβλητα (browser-verified Giorgio: αρχή κολλάει στη γωνία).
+  - **SSoT consolidation (κλείδωμα, big-player presubmit):** το κριτήριο «ορατή/σκληρή έλξη» (grid & guide σιωπηλά)
+    ήταν σκορπισμένο inline σε ≥3 σημεία (`isSnapMarkerVisible`, `isVisibleIndicatorSnap` column — «Mirror του hide-rule»,
+    + το νέο gate). Κεντρικοποιήθηκε σε **`isVisibleSnapMode(mode)`** (`snapping/extended-types.ts`) και το καταναλώνουν
+    και οι 3 → «παρακάμπτεται το flush» ⟺ «φαίνεται η fux» **εξ ορισμού** (δεν ξαναποκλίνουν). Αφαιρέθηκε το duplicate
+    `ExtendedSnapType.GRID/GUIDE` inline του column-context. **Regression test:** `snapping/__tests__/visible-snap-mode.test.ts`
+    (grid/guide→false, endpoint/intersection/…→true, null→false, `isSnapMarkerVisible` delegation) — 5 tests ✅.
+  - **+ OTRACK acquire ενοποιήθηκε (Giorgio decision, big-player):** το `drawing-hover-handler.ts:229` χρησιμοποιούσε inline
+    `mode !== 'grid'` (ελλιπές — το ίδιο του το σχόλιο έλεγε «μόνο πραγματικές οντότητες», αλλά δεν εξαιρούσε το guide, silent
+    aid χωρίς marker). Ενώθηκε στο `isVisibleSnapMode` → OTRACK anchor **μόνο** από ορατή έλξη (AutoCAD/Revit: acquire από
+    osnap πραγματικής γεωμετρίας, όχι από σιωπηλά aids). 5 consumers, ΜΗΔΕΝ inline duplicate του κριτηρίου πλέον.
+    Behavior change (τεκμηριωμένο): snap σε οδηγό δεν κλειδώνει πλέον tracking anchor (δεν έβγαζε ούτως ή άλλως marker).
+  - CHECK 6D → stage αυτό το ADR + `useDrawingHandlers.ts` + `snapping/extended-types.ts` +
+    `bim/columns/column-placement-snap-context.ts` + το test. 🟡 UNCOMMITTED.
+
 - **2026-07-02 (§neighbor-clearance — έξυπνες προσωρινές διαστάσεις γύρω από ΕΛΕΥΘΕΡΟ ghost κολόνας, Revit temporary dims)**
   - **Αίτημα Giorgio**: κατά την τοποθέτηση κολόνας, όταν το φάντασμα αιωρείται **ελεύθερο** (χωρίς
     κούμπωμα σε παρειά), να δείχνει απόσταση/γωνία προς τις πλησιέστερες γειτονικές οντότητες

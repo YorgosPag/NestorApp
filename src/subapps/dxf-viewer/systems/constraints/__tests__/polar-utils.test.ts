@@ -172,12 +172,17 @@ describe('applyPolar — relative-polar baseAngle (ADR-508)', () => {
 });
 
 describe('formatPolarLabel', () => {
-  it('formats angle and distance with 1 decimal', () => {
-    expect(formatPolarLabel(45, 125.333)).toBe('45.0° / 125.3');
+  it('prefixes the snapped angle (1 decimal) + slash, then the display-unit distance', () => {
+    // The distance now routes through the display-measurement SSoT (mm → cm/m + unit
+    // label); its unit/locale correctness is covered by display-length-format's own
+    // tests. Here we lock the angle format + that a non-empty distance is appended.
+    const label = formatPolarLabel(45, 125.333);
+    expect(label.startsWith('45.0° / ')).toBe(true);
+    expect(label.replace('45.0° / ', '').length).toBeGreaterThan(0);
   });
 
-  it('shows 0.0 for zero distance', () => {
-    expect(formatPolarLabel(90, 0)).toBe('90.0° / 0.0');
+  it('keeps the angle format for zero distance', () => {
+    expect(formatPolarLabel(90, 0).startsWith('90.0° / ')).toBe(true);
   });
 });
 

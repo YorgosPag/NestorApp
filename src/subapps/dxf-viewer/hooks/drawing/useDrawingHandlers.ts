@@ -31,6 +31,8 @@ import type { SceneModel } from '../../types/scene';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
 // ADR-508 §line-cyan — commit-time flush/κάθετο κούμπωμα γραμμής (ίδιος εγκέφαλος με το preview).
 import { resolveLineCommitPoint } from './line-preview-helpers';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { isVisibleSnapMode } from '../../snapping/extended-types'; // «κορυφή νικάει» flush-gate (SSoT)
 // ADR-508 §line-cyan — η γραμμή συλλέγει τους ΙΔΙΟΥΣ face-snap στόχους σκηνής με τον τοίχο (κοινό store).
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // ADR-513 §line-parity — length/angle lock της γραμμής στο commit (mirror του preview & του τοίχου).
@@ -44,16 +46,15 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // 🎯 ADR-047: Distance calculation for close-on-first-point
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-// ADR-357 Phase 1: Polar Tracking
-import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 // ADR-357 Phase 4: Object Snap Tracking
 import {
   TrackingPointStore,
   subscribeTrackingPoints,
   getTrackingPointsSnapshot,
 } from '../../systems/tracking/TrackingPointStore';
-import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
-import { pixelsToWorld } from '../../rendering/utils/viewport-scale';
+// ADR-357 / 2026-07-04 — commit shares the preview's tracking SSoT (acquired ⊕
+// ambient ⊕ segment-base clean-corner) so the clicked point ≡ the locked ghost.
+import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
@@ -344,19 +345,22 @@ export function useDrawingHandlers(
       snappedPoint = applySnap(afterStep);
     }
 
-    // ADR-357 Phase 4: Object Snap Tracking — promote alignment-path hit to
-    // the committed point so clicks lock onto path intersections / projections.
-    const acquired = TrackingPointStore.getPoints();
+    // ADR-357 Phase 4 / 2026-07-04 — promote the alignment hit to the committed
+    // point through the SAME SSoT as the preview (`resolveAlignmentTracking`:
+    // acquired ⊕ ambient ⊕ segment-base clean-corner + adaptive quantize), so the
+    // clicked point is IDENTICAL to the locked ghost (WYSIWYG). Previously this used
+    // `resolveTrackingSnap` with acquired points ONLY — no ambient, no base corner,
+    // no quantize → preview≠commit for line-endpoint alignment (rectangle wouldn't
+    // actually close on click).
     let finalPoint = snappedPoint;
-    if (acquired.length > 0) {
-      const worldTolerance = pixelsToWorld(3, canvasOps.getTransform().scale);
-      const trackingResult = resolveTrackingSnap(snappedPoint, acquired, {
-        incrementAngle: polarTrackingStore.incrementAngle,
-        additionalAngles: polarTrackingStore.additionalAngles,
-        polarEnabled: polarOnRef.current && !orthoOnRef.current,
-      }, worldTolerance);
-      if (trackingResult) finalPoint = trackingResult.point;
-    }
+    const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+    const committedTracking = resolveAlignmentTracking(snappedPoint, {
+      scale: canvasOps.getTransform().scale,
+      polarEnabled: polarOnRef.current && !orthoOnRef.current,
+      sceneEntities: ambientOn ? (currentScene?.entities ?? null) : null,
+      segmentBase: lastRef ?? null,
+    });
+    if (committedTracking) finalPoint = committedTracking.point;
 
     // ADR-513 §line-parity — length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush face-snap, ΑΚΡΙΒΩΣ
     // όπως το preview (drawing-hover-handler:268 → updatePreview → generateLinePreview). Χωρίς αυτό, lock
@@ -366,12 +370,16 @@ export function useDrawingHandlers(
       finalPoint = applyLengthAngleLock(finalPoint, lastRef);
     }
 
-    // ADR-508 §line-cyan — flush/κάθετο κούμπωμα της ΓΡΑΜΜΗΣ σε υφιστάμενη γραμμή/μέλος ΜΟΝΟ στο **1ο κλικ**
-    // (η αρχή κάθεται flush στην παρειά, ΙΔΙΟΣ εγκέφαλος με το preview → preview ≡ commit). ΜΕΤΑ το 1ο κλικ
-    // (awaiting-end, υπάρχει ήδη tempPoint) η γραμμή περιστρέφεται ΕΛΕΥΘΕΡΑ — ΟΧΙ flush κατά μήκος του
-    // σώματος (Giorgio). Μακριά από μέλος → σημείο αυτούσιο (αμετάβλητο).
+    // ADR-508 §line-cyan — flush/κάθετο κούμπωμα της ΓΡΑΜΜΗΣ στο **1ο κλικ** (αρχή flush στην παρειά,
+    // ΙΔΙΟΣ εγκέφαλος με preview → preview ≡ commit). Μετά το 1ο κλικ / μακριά από μέλος → αυτούσιο.
+    // «Πραγματική κορυφή νικάει» (2026-07-04): locked ορατό OSNAP (fux) παρακάμπτει το flush → η αρχή
+    // μένει ΑΚΡΙΒΩΣ στη γωνία. Χωρίς ορατό snap (ή grid/guide silent) → το flush aid δουλεύει κανονικά.
     if (activeTool === 'line' && drawingState.tempPoints.length === 0) {
-      finalPoint = resolveLineCommitPoint(finalPoint, resolveSceneUnits(currentScene));
+      const lockedSnap = getImmediateSnap();
+      const visibleOsnap = !!lockedSnap?.found && isVisibleSnapMode(lockedSnap.mode);
+      if (!visibleOsnap) {
+        finalPoint = resolveLineCommitPoint(finalPoint, resolveSceneUnits(currentScene));
+      }
     }
 
     const transformUtils = canvasOps.getTransformUtils();

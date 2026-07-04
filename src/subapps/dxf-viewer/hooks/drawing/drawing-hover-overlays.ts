@@ -211,7 +211,8 @@ export function paintDrawingHoverOverlays(
     canvas.drawPolarTrackingLine(
       lastRefPt,
       polarSnapResult.snappedAngle,
-      formatPolarLabel(labelAngle, polarSnapResult.distance),
+      // world → canonical mm so the tooltip shows the display unit (cm/m), not raw units.
+      formatPolarLabel(labelAngle, polarSnapResult.distance / Math.max(getSceneUnitsScale(), 1e-9)),
       previewPt,
     );
   }

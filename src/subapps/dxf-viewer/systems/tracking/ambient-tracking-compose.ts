@@ -38,6 +38,12 @@ export interface ComposeTrackingOptions {
   readonly worldTolerance: number;
   /** Working-space units per screen pixel — drives the adaptive quantize step. */
   readonly worldPerPixel: number;
+  /**
+   * The current segment's start (rubber-band base), or null. Its ortho/polar rays
+   * always participate as OTRACK tracking origins → the clean-corner intersection
+   * (base × anchor path) forms regardless of the anchor-path flood cap. (2026-07-04)
+   */
+  readonly segmentBase?: Point2D | null;
 }
 
 export interface ComposedTracking {
@@ -63,7 +69,7 @@ export function composeTrackingSnap(
   const merged = ambient.length > 0 ? [...acquired, ...ambient] : acquired;
   if (merged.length === 0) return null;
 
-  const result = resolveTrackingSnap(cursor, merged, opts.polar, opts.worldTolerance);
+  const result = resolveTrackingSnap(cursor, merged, opts.polar, opts.worldTolerance, opts.segmentBase);
   if (!result) return null;
 
   // "Magic" adaptive distance snap (AutoCAD PolarSnap / Revit temp-dim): round the

@@ -125,6 +125,35 @@ export function getLineGrips(entityId: string, start: Point2D, end: Point2D): Gr
   ];
 }
 
+/**
+ * ADR-357/363 — the alignment-tracking anchor point(s) for a plain-line grip drag, so the
+ * SAME centralized Object-Snap-Tracking (`resolveActionAlignmentTracking`) the dimension and
+ * drawing flows use lights up while a line grip is dragged. Mirror of
+ * `getDimGripAlignmentAnchors` (its dim sibling) — ONE resolver, per-family anchor providers.
+ *
+ *   • endpoint reshape (grip 0 = start, grip 1 = end) → the OTHER, FIXED endpoint: the moving
+ *     end tracks horizontally/vertically off the fixed end ⊕ ambient neighbours (AutoCAD/Revit).
+ *   • centre-move (grip 2) / MOVE-cross (grip 4) → the move BASE point (`dragAnchor`): the whole
+ *     line slides along ortho/aligned traces from where the drag started ⊕ ambient.
+ *   • rotation handle (grip 3, `line-rotation`) → `null`: the rotate flow already shows the
+ *     centralized POLAR/AutoAlign traces via `resolveRotationTracking` in the ghost (no double).
+ *
+ * Returns `null` when there is no meaningful anchor (rotation, or a move with no base yet), so
+ * the caller keeps the raw cursor. Pure — zero React / DOM / store deps.
+ */
+export function getLineGripAlignmentAnchors(
+  gripIndex: number,
+  lineGripKind: LineGripKind | null | undefined,
+  line: { readonly start: Point2D; readonly end: Point2D },
+  dragAnchor: Point2D | null | undefined,
+): Point2D[] | null {
+  if (lineGripKind === LINE_ROTATION_KIND) return null;
+  if (gripIndex === 0) return [line.end];
+  if (gripIndex === 1) return [line.start];
+  // Whole-line translate (classic midpoint grip 2 or the ¼-west MOVE cross grip 4).
+  return dragAnchor ? [{ x: dragAnchor.x, y: dragAnchor.y }] : null;
+}
+
 export interface LineRotationDragInput {
   readonly start: Point2D;
   readonly end: Point2D;

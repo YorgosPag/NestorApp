@@ -29,11 +29,13 @@ import { getActiveDragGrip } from './GripDragStore';
 import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
-import { isWallEntity, isColumnEntity, type Entity } from '../../types/entities';
+import { isWallEntity, isColumnEntity, isLineEntity, type Entity } from '../../types/entities';
 // ADR-562 Φ9.2 — commit parity for the dim-grip AutoAlign (WYSIWYG preview ≡ commit).
 import { resolveActionAlignmentTracking } from '../../hooks/dimensions/dim-alignment-tracking';
 import { toDimensionEntity, getDimGripAlignmentAnchors } from '../../hooks/dimensions/useDimensionGrips';
-import { clearDimAlignmentTracking } from './DimAlignmentTrackingStore';
+import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
+// ADR-357/363 — plain-line grip alignment anchors (commit parity with the live move override).
+import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 import {
   findColumnGripCornerSnap,
   isColumnCornerSnapGrip,
@@ -269,7 +271,24 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             );
             if (dimTracking) upWorldPos = dimTracking.point;
           }
-          clearDimAlignmentTracking();
+          clearGripAlignmentTracking();
+        } else if (dimGrip) {
+          // ADR-357/363 — commit parity for a plain-line grip: SAME resolver + anchors as the
+          // live move override so the committed endpoint / whole line lands EXACTLY where the
+          // ghost trace snapped (WYSIWYG). Rotation handle → null anchors → raw cursor (its own
+          // rotate-tracking already committed via the ghost). Traces cleared once consumed.
+          const lineEnt = scene?.entities?.find(en => en.id === dimGrip.entityId) as unknown as Entity | undefined;
+          const anchors = lineEnt && isLineEntity(lineEnt) && dimGrip.gripIndex !== undefined
+            ? getLineGripAlignmentAnchors(dimGrip.gripIndex, dimGrip.lineGripKind, lineEnt, dimGrip.dragAnchor)
+            : null;
+          if (anchors) {
+            const lineTracking = resolveActionAlignmentTracking(
+              upWorldPos, anchors, transform.scale,
+              (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+            );
+            if (lineTracking) upWorldPos = lineTracking.point;
+            clearGripAlignmentTracking();
+          }
         }
 
         if (onGripMouseUp(upWorldPos)) {

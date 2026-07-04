@@ -10,6 +10,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { AngleUtils, DistanceUtils } from './constraints-geometry';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// Display-unit SSoT for the tooltip distance (mm → cm/m/… + locale + unit label).
+import { formatLengthForDisplay } from '../../config/display-length-format';
 
 export interface PolarTrackingConfig {
   incrementAngle: number;
@@ -112,11 +114,16 @@ export function applyPolar(
 }
 
 /**
- * Format polar tooltip label: "45.0° / 125.3"
- * Distance in raw world units (mm). Display unit conversion in Phase 2.
+ * Format polar tooltip label: "45.0° / 1,25 m" — the snapped angle + the slide
+ * distance in the LIVE display unit (mm → cm/m/… + locale separator + unit label,
+ * via the display-measurement SSoT). `distanceMm` is the canonical-millimetre slide
+ * length; the CALLER converts world → mm (÷ sceneUnitsScale) so this stays pure.
+ *
+ * (2026-07-04 — completes the deferred "Phase 2" unit conversion: the label used to
+ * emit raw world units, e.g. "180.0° / 4448.7" instead of "180.0° / 444,87 cm".)
  */
-export function formatPolarLabel(snappedAngle: number, distance: number): string {
-  return `${snappedAngle.toFixed(1)}° / ${distance.toFixed(1)}`;
+export function formatPolarLabel(snappedAngle: number, distanceMm: number): string {
+  return `${snappedAngle.toFixed(1)}° / ${formatLengthForDisplay(distanceMm)}`;
 }
 
 /**
