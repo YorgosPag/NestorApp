@@ -13,8 +13,9 @@
  * per-part overrides ΜΟΝΟ σε επιλεγμένη οντότητα· τα global DIMSTYLE defaults
  * επεξεργάζονται από τον Style Manager (Φ5), όχι από draw-defaults εδώ.
  *
- * Options SSoT (καμία διπλή λίστα): linetypes = `listSelectableLinetypeNames()`
- * (ίδιο με line bridge/radial-ring), arrow styles = `listArrowheadBlockNames()`
+ * Options SSoT (καμία διπλή λίστα): linetypes = `buildLinetypeRibbonOptions()`
+ * (ΚΟΙΝΟΣ helper με το line bridge — ByLayer + registry + inline thumbnails),
+ * arrow styles = `listArrowheadBlockNames()`
  * (τα 20 πραγματικά blocks που αποδίδει ο renderer). Colors/weights/sizes/font
  * = editable/color-swatch — τα presets τα δηλώνει το tab (Φ4), το bridge δίνει
  * μόνο την τιμή (ίδιο pattern με `text.height`).
@@ -26,8 +27,9 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import {
   getLinetypeRegistrySnapshot,
   subscribeLinetypeRegistry,
-  listSelectableLinetypeNames,
 } from '../../../stores/LinetypeRegistry';
+// SSoT — κοινή λίστα «Τύπος Γραμμής» (ByLayer + registry) με inline-SVG thumbnails.
+import { buildLinetypeRibbonOptions } from '../data/linetype-ribbon-options';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
 import type { LineweightMm } from '../../../types/entities';
 import {
@@ -210,11 +212,9 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
 
   // ADR-562 Φ8 — each option carries an inline-SVG preview descriptor (linetype
   // dash / arrowhead shape). Feeds «Τύπος» (line + extension) and «Στυλ» previews.
+  // SSoT: κοινό `buildLinetypeRibbonOptions()` (ίδιο με το line-tool bridge).
   const linetypeOptions = useMemo<readonly RibbonComboboxOption[]>(
-    () => listSelectableLinetypeNames().map((name) => ({
-      value: name, labelKey: name, isLiteralLabel: true,
-      thumbnail: { kind: 'linetype' as const, name },
-    })),
+    () => buildLinetypeRibbonOptions(),
     [registry],
   );
   const arrowStyleOptions = useMemo<readonly RibbonComboboxOption[]>(

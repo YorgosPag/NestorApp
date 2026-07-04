@@ -212,7 +212,18 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
   - **Live preview** (`useAutoDimCutlineTool` σε `useDrawingHandlers`): RAF `registerRenderCallback`
     (mirror `dim-preview-persist`) → rubber-band γραμμή (`drawPreview`) + ghost αλυσίδα μέσω του
     **υπάρχοντος** `drawGhostFaceDimensions` (array of aligned overlay dims → `renderPreviewDimension`)
-    — **μηδέν αλλαγή σε renderer/PreviewCanvas**. Cursor via `getImmediateWorldPosition`.
+    — **μηδέν αλλαγή σε renderer/PreviewCanvas**. Cursor via `getRealtimeWorldCursor` (un-throttled
+    60fps channel — ADR-040 Φ12, ώστε η rubber-band να ακολουθεί ζωντανά μετά το 1ο κλικ).
+  - **Ίχνη ευθυγράμμισης + Polar (§cutline-tracking, 2026-07-04):** μετά το 1ο κλικ (φάση `awaitingEnd`)
+    και στην τοποθέτηση offset (`awaitingPlacement`), το preview δείχνει **ΤΑ ΙΔΙΑ** ίχνη με τη σχεδίαση
+    τοίχου: πράσινες dashed γραμμές ευθυγράμμισης (`drawTrackingAlignment`) + πορτοκαλί γραμμή/γωνία POLAR
+    (`drawPolarTrackingLine`). **Μηδέν νέα μηχανή:** νέος SSoT `resolveDimActionEndpoint` +
+    `paintDimActionTracking` (`hooks/dimensions/dim-alignment-tracking.ts`) που **συνθέτει** τα υπάρχοντα
+    primitives — `resolveOrthoPolarStep` (POLAR/ORTHO angle-lock, ίδια σειρά με τη σχεδίαση) ⊕
+    `resolveActionAlignmentTracking` (acquired ⊕ ambient ⊕ ref anchors, AutoAlign-gated). **Commit parity
+    (WYSIWYG):** το `advanceCutlineClick` (φάση `awaitingEnd`) αποθηκεύει το `cutEnd` μέσω του **ίδιου**
+    resolver → η αποθηκευμένη γραμμή τομής == το preview. Αδελφός: `rotation-tracking-overlay` (ίδια
+    primitives για περιστροφή). Ref: ADR-357 (Object Snap Tracking) / ADR-562 Φ9 (dim alignment SSoT).
   - Ribbon κουμπί «Γραμμή τομής» (ToolType, routes μέσω `onToolChange`) + i18n el/en. Esc → escape-bus.
 - **Raw (non-BIM) γεωμετρία (2026-07-04):** εκτός από BIM walls/structural/openings, η γραμμή τομής
   διαστασιολογεί πλέον και **σκέτες `line`/`polyline`/`lwpolyline`** (exploded DXF) — ακριβές
@@ -325,3 +336,42 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
   αμετάβλητο (early-`continue`). LINE → 1 τομή· POLYLINE/LWPOLYLINE → ανά segment (closed-aware)· η exploded
   παρειά-παρειά αλυσίδα (πάχος+κενά) προκύπτει φυσικά. +6 jest (raw lines / exploded wall / rect lwpolyline /
   mixed BIM+raw / parallel-skip) → **55/55 auto GREEN**, μηδέν regression. tsc SKIP (N.17).
+- **2026-07-04** — Φ4-Α **δυναμικά ίχνη ευθυγράμμισης + POLAR στο preview** (Giorgio: «θέλω τις ίδιες
+  ακριβώς ενδείξεις που εμφανίζονται όταν σχεδιάζω τοίχο μετά το 1ο κλικ»· screenshot: πράσινες γραμμές
+  ευθυγράμμισης + πορτοκαλί γωνία/γραμμή POLAR). **SSoT audit:** το rubber-band υπήρχε ήδη· το tracking+Polar
+  σύστημα υπήρχε ολόκληρο (`dim-alignment-tracking.ts` + `systems/tracking/*`) αλλά **δεν το καλούσε** το
+  cutline. **Fix (μηδέν νέα μηχανή, N.0.2):** νέος composed SSoT `resolveDimActionEndpoint` +
+  `paintDimActionTracking` στο `hooks/dimensions/dim-alignment-tracking.ts` — **συνθέτει** τα υπάρχοντα
+  `resolveOrthoPolarStep` (POLAR/ORTHO angle-lock, ίδια σειρά με σχεδίαση) ⊕ `resolveActionAlignmentTracking`
+  (acquired ⊕ ambient ⊕ ref anchors, AutoAlign-gated)· ζωγραφίζει με τα **ίδια handle methods** του τοίχου
+  (`drawPolarTrackingLine`/`drawTrackingAlignment`). Wiring: `useAutoDimCutlineTool.paintCutlinePreview`
+  (φάσεις `awaitingEnd` + `awaitingPlacement` — Giorgio «και στην τοποθέτηση offset»· visual-only στο offset,
+  ο κέρσορας μένει ελεύθερος). **Commit parity (WYSIWYG, ADR-562 Φ9):** `advanceCutlineClick` (`awaitingEnd`)
+  αποθηκεύει το `cutEnd` μέσω του ίδιου resolver → αποθηκευμένη γραμμή == preview. Αδελφός `rotation-tracking-
+  overlay` (ίδια primitives). Το wall-HUD «πάχος/ύψος» ΔΕΝ αντιγράφηκε (άσχετο με γραμμή τομής). Ref: ADR-357 /
+  ADR-562 Φ9. 3 αρχεία + ADR· μηδέν νέο store/paint/i18n· μηδέν `any`. tsc SKIP (N.17).
+- **2026-07-04** — Φ4-Α **root-cause fix: το preview ΔΕΝ εμφανιζόταν καθόλου** (Giorgio: «ούτε rubber-band,
+  ούτε ίχνη»). **Διάγνωση (runtime diagnostics):** το `useDrawingHandlers` γίνεται **mount ΔΥΟ φορές** —
+  `useCanvasEffects` (CanvasSection, **ΜΕ** `previewCanvasRef`) και `useDxfViewerState` (**ΧΩΡΙΣ** ref, γρ.
+  117-130, περνά μόνο 4 args). Και τα δύο mounts καλούσαν το `useAutoDimCutlineTool`, που δήλωνε RAF callback
+  με **ίδιο id** `'auto-dim-cutline-preview'`· ο `UnifiedFrameScheduler.register` **αντικαθιστά** στο διπλότυπο
+  id → κέρδιζε το mount **χωρίς** ref → `previewRef.current === undefined` → το `paintCutlinePreview` έκανε
+  early-return (`hasCanvas:false`) κάθε frame → **μηδέν ζωγράφισμα**. Ο τοίχος/γραμμή δεν επηρεάζονται γιατί το
+  preview τους οδηγείται από το `processDrawingHover` (μέσω `drawingHandlersRef`, ΕΝΑ instance), όχι από
+  same-id RAF. **Fix:** το `isActive` του cut-line tool gate-άρεται σε `&& !!previewCanvasRef` — το instance
+  χωρίς render target γίνεται πλήρως inert (δεν δηλώνει RAF/dialog/escape), οπότε **μόνο** το instance με τον
+  ref κατέχει το preview. 1 γραμμή, χειρουργικό. ⚠️ **Related (pending):** το ίδιο διπλό-mount αφορά και
+  `useDimToolRouting` (`'dim-preview-persist'`) + `useCenterMarkCreate` — πιθανή ίδια same-id RAF κόντρα·
+  βαθύτερη εκκαθάριση (γιατί δύο `useDrawingHandlers`) = χωριστό, μεγαλύτερο task. tsc SKIP (N.17).
+- **2026-07-04** — Φ4-Α **live preview fix: το rubber-band ενημερωνόταν μόνο όταν σταματούσε ο κέρσορας**
+  (Giorgio). **Ρίζα:** το cut-line παρακάμπτει το `processDrawingHover` (`if activeTool==='auto-dim-cutline'
+  return` στο `useDrawingHandlers.onDrawingHover`), που είναι ό,τι δίνει σε ΚΑΘΕ άλλο εργαλείο το **σύγχρονο**
+  per-move repaint· έμενε μόνο το RAF persist, που ανανεώνει στην idle cadence του scheduler → «μόνο όταν
+  σταματάς». **Fix (reuse SSoT, μηδέν νέος μηχανισμός):** `subscribeRealtimeWorldCursor` (ADR-040 Φ12 — το ΙΔΙΟ
+  60fps κανάλι που fires ΣΥΓΧΡΟΝΑ μέσα στο mousemove, όπως τα ghosts) → repaint live· το RAF μένει ως persist
+  (survives clears όσο ο κέρσορας είναι ακίνητος). tsc SKIP (N.17).
+- **2026-07-04** — Φ4-Α **+ έγχρωμο τόξο ΦΟΡΑΣ στη χάραξη** (Giorgio «τα κόκκινα/πράσινα τόξα που είναι
+  κεντρικοποιημένα»). Στη φάση `awaitingEnd`, από το `cutStart` προς το (snapped) τέλος, ζωγραφίζεται το ΙΔΙΟ
+  SSoT `canvas.drawDirectionArc` (🟢 πάνω / 🔴 κάτω από τον world-X + βελάκι + baseline 0° + έγχρωμες μοίρες)
+  που χρησιμοποιούν τοίχος/δοκός/foundation/περιστροφή (ADR-397 §15). Είχε αρχικά εξαιρεθεί (ρητή ερώτηση) —
+  προστέθηκε κατ' εντολή. tsc SKIP (N.17).

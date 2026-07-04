@@ -15,8 +15,14 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { SceneModel } from '../../../types/scene';
+import type { Entity } from '../../../types/entities';
 import type { SceneAppendAccessor } from '../../../bim/scene/append-entity-to-scene';
 import { addDimensionsToScene } from '../../../bim/scene/add-dimensions-to-scene';
+// ADR-563 §cutline-tracking — commit parity: the stored end snaps with the SAME
+// POLAR/alignment resolver the preview paints (WYSIWYG). Zero new mechanism.
+import { resolveDimActionEndpoint } from '../../../hooks/dimensions/dim-alignment-tracking';
+import { getImmediateTransform } from '../../cursor/ImmediateTransformStore';
+import { ambientAlignmentConfigStore } from '../../tracking/ambient-alignment-config-store';
 import { getLayer } from '../../../stores/LayerStore';
 import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
 import { resolveSceneUnits } from '../../../utils/scene-units';
@@ -39,6 +45,12 @@ import type { AutoDimensionOptions } from './auto-dimension-types';
 function activeScene(accessor: SceneAppendAccessor): SceneModel | null {
   const levelId = accessor.currentLevelId;
   return levelId ? accessor.getLevelScene(levelId) : null;
+}
+
+/** Ambient-alignment scene entities for commit-time tracking, gated by the AutoAlign toggle. */
+function cutlineAmbientEntities(accessor: SceneAppendAccessor): readonly Entity[] | null {
+  if (!ambientAlignmentConfigStore.getSnapshot().enabled) return null;
+  return activeScene(accessor)?.entities ?? null;
 }
 
 /**
@@ -76,7 +88,14 @@ export function advanceCutlineClick(worldPoint: Point2D, accessor: SceneAppendAc
     return;
   }
   if (s.phase === 'awaitingEnd') {
-    setCutlineEnd(worldPoint);
+    // Commit parity (WYSIWYG): snap the stored end to the SAME POLAR/alignment result
+    // the preview shows, so the committed cut line == the previewed rubber-band.
+    const end = s.cutStart
+      ? resolveDimActionEndpoint(
+          [s.cutStart], worldPoint, getImmediateTransform().scale, cutlineAmbientEntities(accessor),
+        ).point
+      : worldPoint;
+    setCutlineEnd(end);
     return;
   }
   if (s.phase === 'awaitingPlacement' && s.cutStart && s.cutEnd && s.options) {
