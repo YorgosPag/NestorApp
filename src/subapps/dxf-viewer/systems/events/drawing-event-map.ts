@@ -48,6 +48,15 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   'drawing:entity-created': {
     entity: AnySceneEntity;
     tool: string;
+    /**
+     * ADR-533 — γιατί εκπέμφθηκε. `'create'` (ή undefined = default) = πραγματικά
+     * νέα οντότητα → οι always-on hosts (π.χ. `DxfSymbolDetectHost` opening-detect)
+     * επιτρέπεται να αντιδράσουν. `'retrim'` = persistence re-save υπάρχοντος τοίχου
+     * μετά από recompute miters (add-wall-to-scene neighbours / recomputeWallTrims) —
+     * μόνο τα persistence hooks το χρειάζονται· οι detectors ΤΟ ΑΓΝΟΟΥΝ, αλλιώς κάθε
+     * move/rotate άσχετου entity ξανα-πυροδοτεί τον ανιχνευτή κουφωμάτων (false positive).
+     */
+    origin?: 'create' | 'retrim';
   };
   'drawing:cancelled': {
     tool: string;

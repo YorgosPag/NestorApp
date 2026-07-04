@@ -44,6 +44,11 @@ export function DxfSymbolDetectHost({ levelManager }: DxfSymbolDetectHostProps):
   useEffect(() => {
     return EventBus.on('drawing:entity-created', (payload) => {
       if (payload.tool !== 'wall') return;
+      // ADR-533 — μόνο σε ΠΡΑΓΜΑΤΙΚΑ νέο τοίχο (`origin:'create'`/undefined). Τα
+      // `origin:'retrim'` re-emits (recompute miters μετά από move/rotate ΟΠΟΙΟΥΔΗΠΟΤΕ
+      // entity) είναι persistence-only → αλλιώς το dialog «Εντοπίστηκε κούφωμα»
+      // εμφανιζόταν ενώ ο χρήστης απλώς περιέστρεψε μια άσχετη γραμμή.
+      if (payload.origin === 'retrim') return;
       const wall = payload.entity;
       if (!isWallEntity(wall)) return;
       void detectAndPropose(wall, lmRef.current);

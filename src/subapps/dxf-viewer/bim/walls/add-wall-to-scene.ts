@@ -95,7 +95,9 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
     if (entity.id === wallEntity.id) continue;          // new wall already handled
     if (!isWallEntity(entity)) continue;
     if (!trims.has(entity.id)) continue;               // no patch → nothing changed
-    EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
+    // ADR-533 — γείτονας υπάρχων τοίχος που πήρε miter patch: persistence re-save,
+    // ΟΧΙ νέος τοίχος → `origin:'retrim'` ώστε ο opening-detector να μην ξανατρέξει.
+    EventBus.emit('drawing:entity-created', { entity, tool: 'wall', origin: 'retrim' });
   }
 }
 
@@ -166,7 +168,10 @@ export function recomputeWallTrims(accessor: WallSceneAccessor): void {
       prev.startBevel !== n.startBevel ||
       prev.endBevel   !== n.endBevel;
     if (changed) {
-      EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
+      // ADR-533 — retrim persistence re-save (strip→recompute→apply), ΟΧΙ νέος τοίχος.
+      // `origin:'retrim'` κρατά τον opening-detector σιωπηλό όταν ένα move/rotate
+      // (ακόμη και άσχετης γραμμής) πυροδοτεί wall-retrim μέσω `bim:entities-moved`.
+      EventBus.emit('drawing:entity-created', { entity, tool: 'wall', origin: 'retrim' });
     }
   }
 }
