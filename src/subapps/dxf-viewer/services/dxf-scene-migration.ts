@@ -15,6 +15,7 @@
 
 import { createSceneLayer, type SceneLayer } from '../types/entities';
 import { DEFAULT_LINETYPE_NAME } from '../config/linetype-iso-catalog';
+import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 
 /** Raw shape from a pre-ADR-358 Firestore scene JSON — partial at best. */
 type LegacyLayerRaw = Partial<SceneLayer> & Record<string, unknown>;
@@ -67,6 +68,40 @@ export function migrateLayersById(
   const result: Record<string, SceneLayer> = {};
   for (const [key, raw] of Object.entries(rawMap)) {
     result[key] = migrateSceneLayerV1ToV2(key, raw);
+  }
+  return result;
+}
+
+/**
+ * ADR-358 — δίχτυ ασφαλείας φόρτωσης: ανακατασκευάζει ένα ελάχιστο `layersById`
+ * ΑΠΟ ΤΑ ΙΔΙΑ ΤΑ ENTITIES, όταν το αποθηκευμένο scene δεν έφερε καθόλου layer
+ * table (vintage/exploded DXF χωρίς LAYER table, ή stale layerless blob). Χωρίς
+ * αυτό, τα «Επίπεδο» dropdowns (status bar + line contextual tab) έμεναν **κενά**
+ * επειδή ο `LayerStore` γεμίζει από `SceneModel.layersById` (useDxfSceneConversion).
+ *
+ * Κάθε distinct entity layer reference (stable `layerId`, ή legacy name `.layer`)
+ * γίνεται ένα SceneLayer με `id = ref` ΩΣΤΕ να ταιριάζει με το `entity.layerId`
+ * που διαβάζει το dropdown (`buildLayerOptions` value = `l.id`). Το πραγματικό
+ * όνομα δεν σώθηκε στο entity, οπότε name = ref (λειτουργικό fallback). Εγγύηση
+ * AutoCAD-parity: πάντα τουλάχιστον το implicit layer «0».
+ */
+export function deriveLayersByIdFromEntities(
+  entities: ReadonlyArray<unknown>,
+): Record<string, SceneLayer> {
+  const result: Record<string, SceneLayer> = {};
+  for (const e of entities) {
+    const ent = e as { layerId?: unknown; layer?: unknown };
+    const ref =
+      (typeof ent.layerId === 'string' && ent.layerId.length > 0) ? ent.layerId :
+      (typeof ent.layer === 'string' && ent.layer.length > 0) ? ent.layer :
+      undefined;
+    if (!ref || result[ref]) continue;
+    result[ref] = createSceneLayer({ id: ref, name: ref, source: 'dxf-import' });
+  }
+  if (Object.keys(result).length === 0) {
+    result[DXF_DEFAULT_LAYER] = createSceneLayer({
+      id: DXF_DEFAULT_LAYER, name: DXF_DEFAULT_LAYER, source: 'dxf-import',
+    });
   }
   return result;
 }

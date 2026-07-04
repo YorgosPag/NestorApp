@@ -126,14 +126,36 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
     expect(result?.layersById['OLD']).toBeUndefined();
   });
 
-  test('scene with neither layersById nor layers defaults to empty object', () => {
-    const minimal = {
-      entities: [{ id: 'ent_1' }],
+  // ADR-358 δίχτυ ασφαλείας — layerless αποθηκευμένο scene ΔΕΝ μένει πια με κενό
+  // layer table· ανακατασκευάζεται από τα entities ώστε τα «Επίπεδο» dropdowns να
+  // μη βγαίνουν ποτέ άδεια (πάντα ≥1 επίπεδο).
+  test('scene with no layers but entities carrying layerId derives layers from them', () => {
+    const noLayers = {
+      entities: [
+        { id: 'ent_1', type: 'line', layerId: 'lyr_walls' },
+        { id: 'ent_2', type: 'line', layerId: 'lyr_walls' }, // duplicate ref → one layer
+        { id: 'ent_3', type: 'line', layerId: 'lyr_dims' },
+      ],
       bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
       units: 'mm',
     };
-    const result = parseAndValidateScene(JSON.stringify(minimal));
-    expect(result?.layersById).toEqual({});
+    const result = parseAndValidateScene(JSON.stringify(noLayers));
+    expect(Object.keys(result?.layersById ?? {}).sort()).toEqual(['lyr_dims', 'lyr_walls']);
+    // id === entity.layerId so the dropdown option value matches the selected entity.
+    expect(result?.layersById['lyr_walls']).toEqual(
+      expect.objectContaining({ id: 'lyr_walls', name: 'lyr_walls' }),
+    );
+  });
+
+  test('scene with no layers and entities with no layer ref falls back to implicit "0"', () => {
+    const bare = {
+      entities: [{ id: 'ent_1', type: 'line' }],
+      bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+      units: 'mm',
+    };
+    const result = parseAndValidateScene(JSON.stringify(bare));
+    expect(Object.keys(result?.layersById ?? {})).toEqual(['0']);
+    expect(result?.layersById['0']).toEqual(expect.objectContaining({ id: '0', name: '0' }));
   });
 
   test('already-migrated V2 layer passes through migration unchanged', () => {

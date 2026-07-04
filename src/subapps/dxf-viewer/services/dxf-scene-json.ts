@@ -18,7 +18,7 @@
  */
 
 import type { SceneModel, SceneLayer } from '../types/entities';
-import { migrateLayersById } from './dxf-scene-migration';
+import { migrateLayersById, deriveLayersByIdFromEntities } from './dxf-scene-migration';
 
 /**
  * Parse scene JSON text into a validated SceneModel.
@@ -35,10 +35,17 @@ export function parseAndValidateScene(text: string): SceneModel | null {
     if (!Array.isArray(entities) || entities.length === 0) return null;
 
     const rawLayers = (parsed.layersById ?? parsed.layers ?? {}) as Record<string, Partial<SceneLayer> & Record<string, unknown>>;
+    const migratedLayers = migrateLayersById(rawLayers);
+    // ADR-358 δίχτυ ασφαλείας — αποθηκευμένο scene χωρίς layer table (vintage/exploded
+    // DXF ή stale layerless blob): ανακατασκεύασε ελάχιστα layers από τα entities ώστε
+    // το «Επίπεδο» dropdown να μην είναι ποτέ κενό (πάντα ≥1, implicit «0» ως έσχατη λύση).
+    const layersById = Object.keys(migratedLayers).length > 0
+      ? migratedLayers
+      : deriveLayersByIdFromEntities(entities);
 
     return {
       entities: entities as SceneModel['entities'],
-      layersById: migrateLayersById(rawLayers),
+      layersById,
       bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
       units: (parsed.units ?? 'mm') as SceneModel['units'],
     };
