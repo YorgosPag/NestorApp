@@ -113,3 +113,27 @@ export interface ScreenPoint {
 export interface ScreenProjection extends ScreenPoint {
   readonly behindCamera: boolean;
 }
+
+export interface ViewportCameraOptions {
+  readonly initialPosition: THREE.Vector3;
+  readonly initialTarget?: THREE.Vector3;
+  readonly onRenderNeeded: () => void;
+  readonly onInteractionStart: () => void;
+  readonly onInteractionEnd: () => void;
+  /** Returns true when reduced motion is active. Checked at animation call time. */
+  readonly getReducedMotion?: () => boolean;
+  /** ADR-366 §A.6.Q5 — static Alt+left-click in perspective (forwarded to tumble). */
+  readonly onAltClick?: (clientX: number, clientY: number) => void;
+  /** Alt+left pointer-down → re-centre orbit pivot on the cursor point (forwarded to tumble). */
+  readonly onAltPress?: (clientX: number, clientY: number) => void;
+  /**
+   * ADR-363 Φ1G.5 / §empty-dxf — resolve the world ANCHOR point under the cursor for the Revit
+   * surface-anchored wheel zoom. SSoT `raycastWorldPointOrPlane`: BIM surface hit → DXF ground-plane
+   * → camera-facing plane through the orbit target. So a BIM surface, the DXF underlay AND empty
+   * canvas all yield a real anchor → the ONE exponential dolly runs everywhere (Revit/Figma: zoom in
+   * empty space anchors to a work/target plane, never switches to a different zoom mechanism).
+   * Returns null only in degenerate cases (canvas not laid out) → the wheel falls back to the default
+   * OrbitControls dolly. Optional / back-compat.
+   */
+  readonly resolveSurfacePoint?: (clientX: number, clientY: number) => THREE.Vector3 | null;
+}

@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { ViewportCamera, ProjectionMode, SpeedModifier } from './viewport-types';
+import type { ViewportCamera, ProjectionMode, SpeedModifier, ViewportCameraOptions } from './viewport-types';
 import { createViewportAnimation } from './viewport-animation';
 import { computePerspectiveFraming, computeOrthoFraming } from './viewport-framing';
 import { createTumbleRotation } from './tumble-rotation';
@@ -23,30 +23,6 @@ import {
 import { attachSurfaceWheelZoom } from './viewport-camera-wheel-zoom';
 import { getPixelWorldSize } from './coordinate-transforms';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
-
-export interface ViewportCameraOptions {
-  readonly initialPosition: THREE.Vector3;
-  readonly initialTarget?: THREE.Vector3;
-  readonly onRenderNeeded: () => void;
-  readonly onInteractionStart: () => void;
-  readonly onInteractionEnd: () => void;
-  /** Returns true when reduced motion is active. Checked at animation call time. */
-  readonly getReducedMotion?: () => boolean;
-  /** ADR-366 §A.6.Q5 — static Alt+left-click in perspective (forwarded to tumble). */
-  readonly onAltClick?: (clientX: number, clientY: number) => void;
-  /** Alt+left pointer-down → re-centre orbit pivot on the cursor point (forwarded to tumble). */
-  readonly onAltPress?: (clientX: number, clientY: number) => void;
-  /**
-   * ADR-363 Φ1G.5 / §empty-dxf — resolve the world ANCHOR point under the cursor for the Revit
-   * surface-anchored wheel zoom. SSoT `raycastWorldPointOrPlane`: BIM surface hit → DXF ground-plane
-   * → camera-facing plane through the orbit target. So a BIM surface, the DXF underlay AND empty
-   * canvas all yield a real anchor → the ONE exponential dolly runs everywhere (Revit/Figma: zoom in
-   * empty space anchors to a work/target plane, never switches to a different zoom mechanism).
-   * Returns null only in degenerate cases (canvas not laid out) → the wheel falls back to the default
-   * OrbitControls dolly. Optional / back-compat.
-   */
-  readonly resolveSurfacePoint?: (clientX: number, clientY: number) => THREE.Vector3 | null;
-}
 
 const _snapDir = new THREE.Vector3();
 const _direction = new THREE.Vector3();
@@ -139,6 +115,12 @@ export function createViewportCamera(
   }
 
   function frameBounds(min: THREE.Vector3, max: THREE.Vector3): void {
+    // Defense-in-depth (ADR-537) — NEVER tween the camera toward a non-finite target. A single NaN
+    // bound (e.g. a corrupt DXF entity feeding `getBounds`) would otherwise NaN the camera position
+    // + orbit target → NaN view/projection matrix → the ENTIRE scene (BIM + DXF) blanks. Bailing
+    // keeps the camera at its last valid pose. Sole guard for EVERY framing caller (DXF auto-fit,
+    // frame-selection/extents, animation), so no upstream path can ever blank the viewport again.
+    if (![min.x, min.y, min.z, max.x, max.y, max.z].every(Number.isFinite)) return;
     animation.cancel();
     const viewDir = _direction.subVectors(controls.target, activeCamera.position).normalize();
     if (activeCamera instanceof THREE.PerspectiveCamera) {

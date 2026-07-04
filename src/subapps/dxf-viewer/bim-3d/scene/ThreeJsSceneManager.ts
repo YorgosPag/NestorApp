@@ -11,7 +11,6 @@ import type { QualityModulator } from '../lighting/quality-modulator'; import ty
 import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { EnvmapGenerator } from '../lighting/envmap-generator'; import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
-import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, raycastBimFace, raycastWorldPointOrPlane, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
@@ -27,13 +26,13 @@ import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { type FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
-import { createCanonicalViewService } from '../viewport/CanonicalViewService'; import type { CanonicalViewService } from '../viewport/CanonicalViewService';
+import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId, ProjectionMode } from '../viewport/viewport-types';
-import { createAnimationManager } from '../viewport/animation-manager'; import type { AnimationManager } from '../viewport/animation-manager';
+import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
-import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
+import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, getRendererViewportSize } from './scene-setup';
 import { applyViewportResize, applyDevicePixelRatioSync, buildSceneResizeDeps, type SceneResizeDeps } from './scene-manager-resize';
-import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
+import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelectFocused } from './scene-manager-a11y';
@@ -45,11 +44,11 @@ import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHov
 import { isSceneDirtyFromState, buildSceneDirtyState } from './scene-dirty-state';
 import { recordRender as diagRecordRender, recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
+import { buildSceneManagerParts } from './scene-manager-construct';
 import {
   setBimOrbitPivot,
   applyBimSelection,
   loadHdriIntoStore,
-  initBackgroundModeSubscription,
   type SyncDxfOverlayDeps,
 } from './scene-manager-actions';
 import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, buildBimSyncDeps, buildSceneSyncSideEffects, buildSyncDxfOverlayDeps, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
@@ -148,66 +147,28 @@ export class ThreeJsSceneManager {
     this.pathTracerRenderer = subs.pathTracerRenderer;
     this.idleDetector = subs.idleDetector;
     this.performanceCollector = subs.performanceCollector;
-    // ADR-536 — highlighter feeds the selected meshes into the silhouette outline.
-    this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass);
-    // ADR-538 — hover highlighter → SAME pass, yellow silhouette (via `setHovered`).
-    this.hoverHighlighter = new BimSelectionHighlighter(this.bimLayer.group, subs.selectionOutlinePass, (p, o) => p.setHovered(o));
-    this.faceHighlighter = new FaceSelectionHighlighter(this.bimLayer.group);
-    this.faceHoverHighlighter = new FaceSelectionHighlighter(this.bimLayer.group, 0xffd400, 0.3); // ADR-539 Φ2 hover
-    this.poi = createPoi();
-    this.scene.add(this.poi.root);
-    // ADR-558 — Cinema-4D-style ground grid. Registers itself as a post-FX 'underlay' overlay
-    // (AO-immune, depth-tested → occluded by the building). C4D model: world-locked grid in true
-    // perspective + soft horizon fade (the cell step + fade radii scale with the camera distance).
-    this.gridFloor = new Cinema4DGridFloor(
-      this.scene,
-      () => this.viewport.camera,
-      () => this.viewport.target,
-    );
-    // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
-    this.animationManager = createAnimationManager();
-    // Phase 4.4: instantiated once, shared by ViewCube and keyboard dispatcher.
-    this.canonicalViewService = createCanonicalViewService(this.viewport, this.animationManager);
-    // Phase 4.5 A.7.Q1: focus state machine + outline. Subscribe to drive the outline.
-    this.keyboardFocusManager = createKeyboardFocusManager();
-    this.focusOutlineRenderer = new FocusOutlineRenderer(this.scene);
-    this.focusUnsub = this.keyboardFocusManager.subscribe((focusedId) => {
-      this.focusOutlineRenderer.setTargetById(this.bimLayer.group, focusedId);
+    // ADR-040 §SRP — post-viewport subsystem wiring lives in scene-manager-construct (keeps this
+    // class < 500 lines). Runtime construction order is preserved (viewport + rendering subs first).
+    const parts = buildSceneManagerParts({
+      container, renderer: this.renderer, scene: this.scene, bimLayer: this.bimLayer,
+      dxfConverter: this.dxfConverter, viewport: this.viewport,
+      envmapGenerator: this.envmapGenerator, pathTracerRenderer: this.pathTracerRenderer,
+      ssaoModulator: this.ssaoModulator, shadowModulator: this.shadowModulator,
+      idleDetector: this.idleDetector, selectionOutlinePass: subs.selectionOutlinePass,
+      markDirty: () => this.markSceneDirty(),
+      isInteracting: () => this.isInteracting,
+      onViewCubeContextMenu: (x, y) => this.viewCubeContextMenuCb?.(x, y),
+      onHdriUrl: (url) => { void this.loadHdriEnvironment(url); },
     });
-    this.viewCube = initViewCube({
-      container,
-      renderer: this.renderer, // ADR-553 — scissored sub-viewport of the main renderer (1 WebGL context).
-      onRenderNeeded: () => this.markSceneDirty(),
-      viewport: this.viewport,
-      canonicalViewService: this.canonicalViewService,
-      onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
-    });
-    this.envStoreUnsub = useEnvironmentStore.subscribe(
-      (s) => s.hdriUrl,
-      (url) => { if (url) void this.loadHdriEnvironment(url); },
-    );
-    // ADR-446 §2 — visible-background mode subscription (logic in scene-manager-actions).
-    this.bgModeUnsub = initBackgroundModeSubscription(this.envmapGenerator, () => this.markSceneDirty());
-    // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
-    this.sectionController = new SectionSceneController({
-      renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
-      getBimGroup: () => this.bimLayer.group, getDxfBounds: () => this.dxfConverter.getBounds(),
-      invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(), markDirty: () => this.markSceneDirty(), // ADR-452 cut-plane drag → repaint
-    });
-    // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
-    this.waypointDragHandleRenderer = new WaypointDragHandleRenderer(this.scene);
-    // ADR-516 Phase 2 — frozen DXF backdrop. Gated OFF while section-cut / path-trace own the frame.
-    this.dxfBackdrop = new DxfBackdropCache({ isSectionActive: () => this.sectionController.isStencilActive(), isPathTracerActive: () => this.pathTracerRenderer.isActive });
-    // ADR-040 Phase XXIII — cache render-frame context once. Scheduler drives tick().
-    this.frameContext = {
-      renderer: this.renderer, scene: this.scene, dxfBackdrop: this.dxfBackdrop,
-      viewport: this.viewport, viewCube: this.viewCube,
-      animationManager: this.animationManager, focusOutlineRenderer: this.focusOutlineRenderer,
-      idleDetector: this.idleDetector, ssaoModulator: this.ssaoModulator,
-      shadowModulator: this.shadowModulator,
-      pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController,
-      poi: this.poi, isInteracting: () => this.isInteracting,
-    };
+    this.selectionHighlighter = parts.selectionHighlighter; this.hoverHighlighter = parts.hoverHighlighter;
+    this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
+    this.poi = parts.poi; this.gridFloor = parts.gridFloor;
+    this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
+    this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
+    this.focusUnsub = parts.focusUnsub; this.viewCube = parts.viewCube;
+    this.envStoreUnsub = parts.envStoreUnsub; this.bgModeUnsub = parts.bgModeUnsub;
+    this.sectionController = parts.sectionController; this.waypointDragHandleRenderer = parts.waypointDragHandleRenderer;
+    this.dxfBackdrop = parts.dxfBackdrop; this.frameContext = parts.frameContext;
   }
 
   /** ADR-366 Phase 9 / C.5.Q5 — update override; viewport reads it at animation-call time. */
@@ -332,6 +293,7 @@ export class ThreeJsSceneManager {
       { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
       this.syncSideEffects(),
     );
+    this.ensureInitialCameraFit();
   }
 
   /** Shared sync deps (BIM layer + selection/focus/render subsystems). */
@@ -359,6 +321,7 @@ export class ThreeJsSceneManager {
       { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
       this.syncSideEffects(),
     );
+    this.ensureInitialCameraFit();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void { if (!this.disposed) applyFloorVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty()); }
@@ -377,6 +340,26 @@ export class ThreeJsSceneManager {
 
   /** First-frame camera-fit latch (read + set `initialCameraFitDone`). */
   private dxfFitState(): DxfOverlayFitState { return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } }; }
+
+  /**
+   * ADR-537 — one-shot initial camera-fit FALLBACK. The primary initial fit rides on the DXF overlay
+   * bounds (`applyDxfOverlayFraming`); a BIM-only scene, or one whose DXF overlay yields null bounds
+   * (degenerate NaN entity / not yet loaded), would otherwise never auto-frame → the user had to
+   * press F. When (and only when) there are NO DXF bounds, this frames the combined BIM∪DXF scene
+   * bounds instead, sharing the SAME `initialCameraFitDone` latch so it fires at most once and never
+   * fights the DXF path or a restored camera pose (ADR-400). The `getBounds()` guard keeps the DXF
+   * path strictly primary — the normal DXF-present flow is byte-for-byte unchanged. Reuses the
+   * blessed `viewport.frameBounds` (keeps the ViewCube synced — no repeat of the reverted 3D
+   * camera-fit regression, mem `camera_fit_3d_regression`).
+   */
+  private ensureInitialCameraFit(): void {
+    if (this.disposed || this.initialCameraFitDone) return;
+    if (this.dxfConverter.getBounds()) return; // DXF present → let applyDxfOverlayFraming own the fit
+    const bounds = this.getSceneFramingBounds(); // BIM (∪ DXF=null) — NaN-safe (finiteBox3FromObject)
+    if (!bounds || bounds.isEmpty()) return; // no framable geometry yet → retry on the next sync
+    this.viewport.frameBounds(bounds.min, bounds.max);
+    this.initialCameraFitDone = true;
+  }
 
   /** Replace (plain click) or toggle (ADR-402 Φ-C Shift+click) one entity in the selection; null clears. */
   selectBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'replace'); }
