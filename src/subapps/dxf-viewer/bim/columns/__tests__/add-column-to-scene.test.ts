@@ -146,7 +146,10 @@ describe('commitHotGripCopy dispatch', () => {
     const original = makeColumn({ x: 0, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
 
-    const result = commitHotGripCopy(centerGrip(original.id), { x: 100, y: 0 }, makeDeps(scene));
+    // ADR-567 — the copy must clear the original's footprint (400×400 → ±200), else the
+    // structural no-overlap guard blocks the insert. This test verifies the DISPATCH routing
+    // (column-center → copy path), so we translate well past the footprint (Δx=500 > width).
+    const result = commitHotGripCopy(centerGrip(original.id), { x: 500, y: 0 }, makeDeps(scene));
 
     expect(result).toBe(true);
     expect(scene.current!.entities).toHaveLength(2);

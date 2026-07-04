@@ -33,9 +33,9 @@ import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που επανα-διαστασιολογούν τη θεμελίωση. */
 const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
-  'drawing:entity-created',
+  // ADR-459 v19 — SINGLE-PATH: αντικαθιστά τα generic `drawing:entity-created` + `bim:entities-moved`.
+  'bim:structural-geometry-changed',
   'bim:column-params-updated', // grip-resize / ribbon edit / γεωμετρική αλλαγή
-  'bim:entities-moved', // drag-move κολόνας (MoveEntityCommand) → re-derive layout
   'bim:column-delete-requested',
   'bim:structural-loads-computed',
 ];

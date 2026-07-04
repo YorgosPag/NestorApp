@@ -394,6 +394,15 @@ export interface BimEventMap {
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).
   'bim:entities-moved': { movedEntities: ReadonlyArray<AnySceneEntity> };
+  // ADR-459 v19 — SINGLE-PATH σημασιολογικό event (μία πηγή αλήθειας για «άλλαξε δομική
+  // γεωμετρία»). Εκπέμπεται ΜΙΑ φορά από τον `useStructuralRelevanceRouter` όταν ένα generic
+  // geometry change (`bim:entities-moved` / `drawing:entity-created`) αγγίζει ≥1 δομικό μέλος.
+  // ΟΛΟΙ οι structural reactors (loads/reinforce/sizing/foundation/organism/wall-retrim) ακούν
+  // ΑΥΤΟ αντί να φιλτράρουν οι ίδιοι τα generic events → αδύνατο να ξεχαστεί ο gate (big-player).
+  'bim:structural-geometry-changed': {
+    members: ReadonlyArray<AnySceneEntity>;
+    sourceEvent: 'bim:entities-moved' | 'drawing:entity-created';
+  };
   // ADR-396 P7 Part B — thermal envelope applied to a floor: per-element
   // `envelopeLayer`/`revealInsulation` written into the scene. Carries the
   // changed entities directly (same stale-state guard as `bim:entities-moved`)

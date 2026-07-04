@@ -62,6 +62,7 @@ import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnec
 import { useDimensionModify } from '../hooks/useDimensionModify';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
+import { useStructuralRelevanceRouter } from '../hooks/useStructuralRelevanceRouter';
 import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
 import { useAutoFoundationDesign } from '../hooks/useAutoFoundationDesign';
@@ -309,6 +310,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useProactiveOrganismReinforce({ levelManager }); // ADR-459 Φ8 — PROACTIVE auto-reinforce (organism grows → οπλίζεται μόνο του)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (ribbon manual trigger)
   useStructuralSettingsRecompute(); // ADR-479 Slice 2b — building-level settings change (preset/ribbon) → άμεσος επανυπολογισμός φορτίων→οπλισμού→σχεδίων
+  // ADR-459 v19 — SINGLE-PATH relevance router (ΜΙΑ πηγή αλήθειας): κρίνει ΜΙΑ φορά αν ένα
+  // generic geometry change αγγίζει δομικό μέλος → εκπέμπει `bim:structural-geometry-changed`.
+  // ΟΛΟΙ οι παρακάτω structural reactors ακούν ΑΥΤΟ (μηδέν per-subscriber gate).
+  useStructuralRelevanceRouter();
   // ADR-459 Φ9 — PROACTIVE φορτία (το ΠΡΩΤΟ σκαλί της αλυσίδας). ΣΕΙΡΑ: mounted ΠΡΙΝ
   // από organism/auto-foundation ⇒ ο load handler τρέχει+emit-άρει πρώτος στο microtask
   // flush, ώστε το foundation re-sizing να διαβάσει το φρέσκο appliedLoad (ΕΝΑ pass).

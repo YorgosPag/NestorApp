@@ -26,6 +26,7 @@ import { radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { rotatePoint } from '../../utils/rotation-math';
 import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
 import { generateEntityId } from '../entity-creation/utils';
+import { createRectangleVertices } from '../selection/shared/selection-duplicate-utils';
 
 /** Entity types that EXPLODE can break apart (Φ5.1). */
 const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect']);
@@ -99,21 +100,45 @@ function explodePolyline(source: Entity): Entity[] {
 
 /** Rectangle → 4 boundary lines (rotation-aware, about the rect centre). */
 function explodeRectangle(source: RectangleEntity | RectEntity): Entity[] {
-  const { x, y, width, height } = source;
+  // A DRAWN rectangle persists ONLY corner1/corner2 (drawing-entity-builders); the
+  // x/y/width/height fields are optional/computed and stay `undefined`. Read corners
+  // defensively so BOTH models work — reading x/y/w/h blindly gave NaN → invisible
+  // rectangle (ADR-510 Φ5 Bug 1). Corner→vertices via the canonical SSoT, no re-math.
+  const c1: Point2D = source.corner1 ?? { x: source.x, y: source.y };
+  const c2: Point2D = source.corner2 ?? { x: source.x + source.width, y: source.y + source.height };
+  const verts = createRectangleVertices(c1, c2);
   const rotation = source.rotation ?? 0;
-  const corners: Point2D[] = [
-    { x, y },
-    { x: x + width, y },
-    { x: x + width, y: y + height },
-    { x, y: y + height },
-  ];
-  const pivot: Point2D = { x: x + width / 2, y: y + height / 2 };
-  const pts = rotation ? corners.map((c) => rotatePoint(c, pivot, rotation)) : corners;
+  const pivot: Point2D = { x: (c1.x + c2.x) / 2, y: (c1.y + c2.y) / 2 };
+  const pts = rotation ? verts.map((v) => rotatePoint(v, pivot, rotation)) : verts;
   const out: Entity[] = [];
   for (let i = 0; i < 4; i += 1) {
-    out.push(makeLine(source, pts[i], pts[(i + 1) % 4]));
+    const a = pts[i];
+    const b = pts[(i + 1) % 4];
+    // Fresh point objects — never alias the source corner references into new lines.
+    out.push(makeLine(source, { x: a.x, y: a.y }, { x: b.x, y: b.y }));
   }
   return out;
+}
+
+/** Guard: a derived primitive must carry finite geometry — a broken/degenerate
+ *  source must NEVER inject NaN entities into the scene (idempotent, defensive). */
+function isFinitePoint(p: Point2D | undefined): boolean {
+  return !!p && Number.isFinite(p.x) && Number.isFinite(p.y);
+}
+
+function isFiniteEntity(e: Entity): boolean {
+  if (e.type === 'line') {
+    const l = e as LineEntity;
+    return isFinitePoint(l.start) && isFinitePoint(l.end);
+  }
+  if (e.type === 'arc') {
+    const a = e as ArcEntity;
+    return isFinitePoint(a.center)
+      && Number.isFinite(a.radius)
+      && Number.isFinite(a.startAngle)
+      && Number.isFinite(a.endAngle);
+  }
+  return true;
 }
 
 /**
@@ -121,12 +146,15 @@ function explodeRectangle(source: RectangleEntity | RectEntity): Entity[] {
  * explode (a primitive line/circle/arc/text, or a degenerate polyline).
  */
 export function explodeEntity(entity: Entity): Entity[] | null {
+  let segs: Entity[] | null = null;
   if (entity.type === 'polyline' || entity.type === 'lwpolyline') {
-    const segs = explodePolyline(entity);
-    return segs.length > 0 ? segs : null;
+    segs = explodePolyline(entity);
+  } else if (entity.type === 'rectangle' || entity.type === 'rect') {
+    segs = explodeRectangle(entity as RectangleEntity | RectEntity);
   }
-  if (entity.type === 'rectangle' || entity.type === 'rect') {
-    return explodeRectangle(entity as RectangleEntity | RectEntity);
-  }
-  return null;
+  if (!segs) return null;
+  // Belt-and-suspenders: drop any primitive with non-finite geometry so a broken
+  // source can never make an entity "disappear" or poison downstream hit-tests.
+  const finite = segs.filter(isFiniteEntity);
+  return finite.length > 0 ? finite : null;
 }

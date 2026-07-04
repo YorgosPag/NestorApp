@@ -12,7 +12,7 @@
  * των proactive hooks (ώστε η μετακίνηση μιας απλής γραμμής να ΜΗΝ πυροδοτεί
  * full load-takedown/οπλισμό — ADR-459). Ένα σύνολο, μηδέν drift.
  *
- * @see hooks/structural-relevant-trigger.ts — event-payload gate των proactive hooks
+ * @see hooks/useStructuralRelevanceRouter.ts — SINGLE-PATH relevance router (χρησιμοποιεί isStructuralMemberEntity)
  * @see hooks/useStructuralComponentOverride.ts — ADR-470 consumer
  */
 

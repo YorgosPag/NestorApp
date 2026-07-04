@@ -7,11 +7,15 @@
  * τοίχοι «άλλαζαν» → re-emit structural event → proactive load-takedown σε όλο το κτίριο
  * (spurious toast «N μέλη έλαβαν φορτίο» ΜΟΝΟ στην πρώτη μετακίνηση μετά από hard refresh).
  *
- * @see hooks/tools/useSpecialTools-wall-retrim.ts — ο gate (eventTouchesStructuralMember)
+ * ADR-459 v19 — end-to-end SINGLE-PATH: ο `useStructuralRelevanceRouter` κρίνει τη σχετικότητα ΜΙΑ
+ * φορά και εκπέμπει `bim:structural-geometry-changed`· ο wall-retrim ακούει ΑΥΤΟ (μηδέν δικό του gate).
+ *
+ * @see hooks/useStructuralRelevanceRouter.ts — ο SINGLE-PATH relevance router
  */
 
 import { act, renderHook } from '@testing-library/react';
 import { EventBus } from '../../../systems/events/EventBus';
+import { useStructuralRelevanceRouter } from '../../useStructuralRelevanceRouter';
 
 const recomputeWallTrims = jest.fn();
 jest.mock('../../../bim/walls/add-wall-to-scene', () => ({
@@ -35,7 +39,10 @@ describe('useWallRetrimEffect — structural-relevance gate (wiring)', () => {
   });
 
   it('μετακίνηση ΓΡΑΜΜΗΣ → ο wall-retrim ΔΕΝ τρέχει (το reported bug)', () => {
-    renderHook(() => useWallRetrimEffect(levelManager));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useWallRetrimEffect(levelManager);
+    });
     act(() => {
       EventBus.emit('bim:entities-moved', { movedEntities: [{ id: 'l1', type: 'line' }] } as never);
     });
@@ -46,7 +53,10 @@ describe('useWallRetrimEffect — structural-relevance gate (wiring)', () => {
   });
 
   it('μετακίνηση ΤΟΙΧΟΥ → ο wall-retrim τρέχει κανονικά', () => {
-    renderHook(() => useWallRetrimEffect(levelManager));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useWallRetrimEffect(levelManager);
+    });
     act(() => {
       EventBus.emit('bim:entities-moved', { movedEntities: [{ id: 'w1', type: 'wall' }] } as never);
     });
@@ -57,7 +67,10 @@ describe('useWallRetrimEffect — structural-relevance gate (wiring)', () => {
   });
 
   it('μετακίνηση ΚΟΛΟΝΑΣ → ο wall-retrim τρέχει (column-miter dependency)', () => {
-    renderHook(() => useWallRetrimEffect(levelManager));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useWallRetrimEffect(levelManager);
+    });
     act(() => {
       EventBus.emit('bim:entities-moved', { movedEntities: [{ id: 'c1', type: 'column' }] } as never);
     });
@@ -68,7 +81,10 @@ describe('useWallRetrimEffect — structural-relevance gate (wiring)', () => {
   });
 
   it('bim:wall-params-updated → τρέχει πάντα (ήδη structural-scoped, χωρίς gate)', () => {
-    renderHook(() => useWallRetrimEffect(levelManager));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useWallRetrimEffect(levelManager);
+    });
     act(() => {
       EventBus.emit('bim:wall-params-updated', { entityId: 'w1' } as never);
     });

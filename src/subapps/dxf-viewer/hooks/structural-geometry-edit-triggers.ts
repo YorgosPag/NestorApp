@@ -42,6 +42,9 @@ import type { DrawingEventType } from '../systems/events/EventBus';
  * πάνω του (`appendToLast`). Κάθε άλλο trigger (batch / derived chain) → standalone.
  */
 export const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set<DrawingEventType>([
+  // ADR-459 v19 — το SINGLE-PATH σημασιολογικό event· πάντα πηγάζει από move/create (άμεσες
+  // geometry edits) → η structural αντίδραση ομαδοποιείται στο ΙΔΙΟ atomic undo step.
+  'bim:structural-geometry-changed',
   // Δημιουργία — Create*Command (νέα κολόνα/δοκάρι/πλάκα/πέδιλο/τοίχος).
   'drawing:entity-created',
   // Επεξεργασία παραμέτρων/διατομής — Update*ParamsCommand (grip-resize / ribbon edit).

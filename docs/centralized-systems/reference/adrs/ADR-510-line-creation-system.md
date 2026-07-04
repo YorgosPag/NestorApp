@@ -1091,3 +1091,16 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   polyline/rectangle· **Φ5.2 (μελλοντικά):** block/dimension/hatch. **Tests:** `explode-entity.test.ts` + `ExplodeEntityCommand.test.ts`
   → 15/15 GREEN (open/closed polyline, bulge→arc, rectangle±rotation, style-inherit, multi-select, undo/redo, primitive→null/skip).
   tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ5 Bug 1 fix — ορθογώνιο εξαφανιζόταν μετά τη Διάλυση.** Ρίζα: ένα **σχεδιασμένο** ορθογώνιο persistάρεται
+  ΜΟΝΟ με `corner1`/`corner2` (`drawing-entity-builders.ts`)· τα `x/y/width/height` είναι optional/computed → `undefined`. Ο
+  `explodeRectangle` διάβαζε `{x,y,width,height}` → NaN γωνίες → 4 lines με NaN coords → δεν renderάρονταν («εξαφανίστηκε»). Η
+  πολύγραμμη ήταν ΟΚ (δικό της vertices μοντέλο). **Fix (SSoT reuse):** resolve corners defensively (`corner1 ?? {x,y}`,
+  `corner2 ?? {x+width,y+height}`) + κορυφές μέσω του **canonical** `createRectangleVertices` (`systems/selection/shared/
+  selection-duplicate-utils.ts`) — μηδέν re-implemented corner math· rotation μόνο αν `source.rotation` (pivot = midpoint των
+  πραγματικών corners)· fresh point objects (no aliasing). **Belt-and-suspenders (N.7.2):** `isFiniteEntity` guard στο output
+  boundary του `explodeEntity` → drop primitives με μη-finite geometry, ώστε σπασμένη πηγή ΠΟΤΕ να μην εισάγει NaN entities (που
+  θα «εξαφάνιζαν» σχήμα ή θα δηλητηρίαζαν downstream hit-tests). **Test gap που άφησε το bug:** το παλιό `mkRect` fixture είχε
+  x/y/w/h (ΟΧΙ corner1/corner2) → πέρναγε ενώ το πραγματικό έσπαγε. Προστέθηκαν corner-based fixture + finite-guard tests →
+  `explode-entity.test.ts` 12/12, `ExplodeEntityCommand.test.ts` 6/6 GREEN. **Bug 2 (hover δεν φωτίζει):** repro-first — πιθανό
+  downstream (παλιά persisted NaN entities)· ο NaN guard αφαιρεί τον γνωστό μηχανισμό· εκκρεμεί browser repro Giorgio σε καθαρή
+  σκηνή πριν οποιοδήποτε άγγιγμα του hover subsystem. tsc SKIP (N.17)· browser-verify + commit → Giorgio.

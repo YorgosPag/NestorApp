@@ -43,6 +43,7 @@ import { StructuralToolIcon } from './StructuralToolIcon';
 import { WallOnEntityIcon } from './WallOnEntityIcon';
 import { WallFromLinesIcon } from './WallFromLinesIcon';
 import { WallRegionInsideIcon } from './WallRegionInsideIcon';
+import { WallSingleIcon } from './WallSingleIcon';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -264,7 +265,9 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-thermal-envelope': return <Thermometer width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-443 — Structural «Δομικά» tab: distinct base×method composed icons.
     // Walls (base=wall × creation method).
-    case 'struct-wall-single': return <StructuralToolIcon base="wall" method="single" className={className} />;
+    // Dedicated glyph (Giorgio 2026-07-04): καφές τοίχος-ορθογώνιο (WallBar SSoT, ίδιο χρώμα/διαστάσεις
+    // με τα contextual wall icons) αντί για το παλιό «δύο παράλληλες γραμμές» base+method σύμβολο.
+    case 'struct-wall-single': return <WallSingleIcon className={className} />;
     // Dedicated glyph (Giorgio): κάθετος τοίχος (καφέ) ⊥ πάνω σε οριζόντια οντότητα — όχι base+method badge.
     case 'struct-wall-on-entity': return <WallOnEntityIcon className={className} />;
     // Dedicated glyph (Giorgio): 4 διακριτές γραμμές (πράσινες) → καφέ τοίχος — όχι base+method badge.

@@ -1,8 +1,9 @@
 /**
- * Wiring test (end-to-end του gate): αποδεικνύει ότι το `bim:entities-moved` με
- * ΜΗ-δομικό entity (γραμμή) ΔΕΝ καλεί τον πυρήνα `runStructuralLoadTakedown`, ενώ με
- * δομικό μέλος (κολόνα) τον καλεί. Κλειδώνει τη διόρθωση 2026-07-04 στη σωστή στρώση
- * (useGroupedStructuralReaction → eventTouchesStructuralMember), όχι μόνο τον predicate.
+ * Wiring test (end-to-end SINGLE-PATH, ADR-459 v19): mount `useStructuralRelevanceRouter` +
+ * `useProactiveStructuralLoads`, emit το generic `bim:entities-moved` → ο router κρίνει τη
+ * σχετικότητα ΜΙΑ φορά και (μόνο για δομικά) εκπέμπει `bim:structural-geometry-changed`, που ο
+ * hook ακούει. Αποδεικνύει: γραμμή → ο πυρήνας `runStructuralLoadTakedown` ΔΕΝ καλείται· κολόνα
+ * / μεικτή → καλείται ΜΙΑ φορά. Κλειδώνει το single-path (μηδέν per-subscriber gate).
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -24,6 +25,8 @@ jest.mock('../../state/structural-settings-store', () => ({
 }));
 
 import { useProactiveStructuralLoads } from '../useProactiveStructuralLoads';
+// ADR-459 v19 — end-to-end SINGLE-PATH: ο router κρίνει τη σχετικότητα, ο hook αντιδρά στο σημασιολογικό event.
+import { useStructuralRelevanceRouter } from '../useStructuralRelevanceRouter';
 
 async function flush(): Promise<void> {
   await act(async () => {
@@ -40,7 +43,10 @@ describe('useProactiveStructuralLoads — structural-relevance gate (wiring)', (
   });
 
   it('μετακίνηση ΓΡΑΜΜΗΣ → ο πυρήνας φορτίων ΔΕΝ καλείται (το reported bug)', async () => {
-    renderHook(() => useProactiveStructuralLoads({ levelManager: {} as never }));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useProactiveStructuralLoads({ levelManager: {} as never });
+    });
     await act(async () => {
       EventBus.emit('bim:entities-moved', {
         movedEntities: [{ id: 'l1', type: 'line' }],
@@ -51,7 +57,10 @@ describe('useProactiveStructuralLoads — structural-relevance gate (wiring)', (
   });
 
   it('μετακίνηση ΚΟΛΟΝΑΣ → ο πυρήνας φορτίων καλείται κανονικά', async () => {
-    renderHook(() => useProactiveStructuralLoads({ levelManager: {} as never }));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useProactiveStructuralLoads({ levelManager: {} as never });
+    });
     await act(async () => {
       EventBus.emit('bim:entities-moved', {
         movedEntities: [{ id: 'c1', type: 'column' }],
@@ -62,7 +71,10 @@ describe('useProactiveStructuralLoads — structural-relevance gate (wiring)', (
   });
 
   it('μεικτή μετακίνηση (γραμμή + κολόνα) → καλείται (χρειάζεται recompute)', async () => {
-    renderHook(() => useProactiveStructuralLoads({ levelManager: {} as never }));
+    renderHook(() => {
+      useStructuralRelevanceRouter();
+      useProactiveStructuralLoads({ levelManager: {} as never });
+    });
     await act(async () => {
       EventBus.emit('bim:entities-moved', {
         movedEntities: [{ id: 'l1', type: 'line' }, { id: 'c1', type: 'column' }],

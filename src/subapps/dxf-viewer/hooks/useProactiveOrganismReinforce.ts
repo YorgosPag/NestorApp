@@ -35,12 +35,12 @@ import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που δημιουργούν/μεγαλώνουν τον οργανισμό → re-reinforce. */
 const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
-  'drawing:entity-created', // νέα κολόνα/δοκάρι/πέδιλο/εδαφόπλακα
+  // ADR-459 v19 — SINGLE-PATH: αντικαθιστά τα generic `drawing:entity-created` + `bim:entities-moved`.
+  'bim:structural-geometry-changed',
   'bim:column-params-updated',
   'bim:beam-params-updated',
   'bim:foundation-params-updated',
   'bim:slab-params-updated', // ADR-476 — αλλαγή πάχους/outline πλάκας → re-study σχάρας
-  'bim:entities-moved',
   'bim:columns-from-grid',
   'bim:beams-from-grid',
   'bim:foundations-from-grid',

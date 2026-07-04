@@ -121,6 +121,15 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-07-04** — §wall-single-entry-dedicated-glyph (Opus 4.8). Ο Giorgio: το entry-point εικονίδιο
+  «Τοίχος» στην καρτέλα **Δομικά** (`struct-wall-single`) να ΜΗΝ είναι πια το σύμβολο «δύο παράλληλες
+  γραμμές» (`StructuralToolIcon base="wall" method="single"`), αλλά ένας **καφές τοίχος-ορθογώνιο** στο
+  ΙΔΙΟ χρώμα/διαστάσεις με τους τοίχους των contextual wall icons. NEW `WallSingleIcon.tsx` — reuse του
+  SSoT `WallBar` (κατακόρυφος, `cx=12 cy=12 angle=90`, `WALL_IDENTITY_COLOR`) → μηδέν hardcoded rect/χρώμα·
+  wired στο `RibbonButtonIcon.tsx` (`case 'struct-wall-single'`). Το `wall` base fragment +
+  `StructuralToolIcon` μένουν ανέπαφα (χρησιμοποιούνται ακόμη από `region-box`/`from-perimeter`/`from-grid`
+  → μηδέν regression). CHECK 6B/6D: όχι· i18n: καμία (ίδιο `ribbon.commands.bim.wall.label`)· tsc SKIP
+  (N.17). ✅ Google-level: YES — ΕΝΑ SSoT `WallBar` (ίδιος τοίχος παντού). 🔴 browser-verify + commit.
 - **2026-07-04** — §wall-glyphs-consistent-size + on-entity-revamp (Opus 4.8). Ο Giorgio: «να
   χρησιμοποιούμε ΠΑΝΤΟΤΕ το ίδιο μέγεθος τοίχους στα εικονίδια» + ξανασχεδίαση του «πάνω σε οντότητα»
   (screenshot). **(1) SSoT μέγεθος:** NEW `wall-icon-primitives.tsx` — `WallBar` (rotated rect

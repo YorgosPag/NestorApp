@@ -49,12 +49,13 @@ import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που αλλάζουν τη διαδρομή φορτίων → recompute. */
 const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
-  'drawing:entity-created', // νέα κολόνα/δοκάρι/πλάκα
+  // ADR-459 v19 — SINGLE-PATH: αντικαθιστά τα generic `drawing:entity-created` + `bim:entities-moved`
+  // (move/create δομικού μέλους, gated ΜΙΑ φορά στον `useStructuralRelevanceRouter`).
+  'bim:structural-geometry-changed',
   'bim:column-params-updated', // grip-resize / ribbon edit (διατομή → tributary)
   'bim:beam-params-updated',
   'bim:slab-params-updated', // ADR-476 — αλλαγή πλάκας → re-derive tributary/area load
   'bim:wall-params-updated', // ADR-478 — πάχος/υλικό/ύψος τοίχου → re-derive γραμμικό φορτίο δοκού
-  'bim:entities-moved', // drag-move → re-derive tributary
   'bim:column-delete-requested',
   'bim:beam-delete-requested',
   'bim:wall-delete-requested', // ADR-478 — αφαίρεση τοίχου → μειώνεται το φορτίο δοκού

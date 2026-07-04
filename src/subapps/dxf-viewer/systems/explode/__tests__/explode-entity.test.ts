@@ -13,6 +13,15 @@ const mkPoly = (vertices: { x: number; y: number }[], extra: Record<string, unkn
 const mkRect = (extra: Record<string, unknown> = {}): Entity =>
   ({ id: 'r1', type: 'rectangle', layerId: 'lyr_a', color: '#00ff00', x: 0, y: 0, width: 10, height: 4, ...extra } as unknown as Entity);
 
+// A REAL drawn rectangle persists ONLY corner1/corner2 (no x/y/width/height) —
+// this is the shape that broke Bug 1 while the x/y/w/h fixture above passed.
+const mkRectCorners = (extra: Record<string, unknown> = {}): Entity =>
+  ({ id: 'r2', type: 'rectangle', layerId: 'lyr_a', color: '#00ff00',
+     corner1: { x: 0, y: 0 }, corner2: { x: 10, y: 4 }, ...extra } as unknown as Entity);
+
+const allFinite = (lines: LineEntity[]): boolean =>
+  lines.every((l) => [l.start.x, l.start.y, l.end.x, l.end.y].every(Number.isFinite));
+
 describe('ADR-510 Φ5 — isExplodable', () => {
   it('flags compound types, rejects primitives', () => {
     expect(isExplodable(mkPoly([{ x: 0, y: 0 }, { x: 1, y: 0 }]))).toBe(true);
@@ -86,6 +95,33 @@ describe('ADR-510 Φ5 — explodeEntity: rectangle', () => {
     expect(out).toHaveLength(4);
     // rotation applied → first corner moved off (0,0)
     expect(out[0].start).not.toEqual({ x: 0, y: 0 });
+  });
+
+  // 🔴 Bug 1 (ADR-510 Φ5): a drawn rectangle has corner1/corner2, NOT x/y/w/h.
+  it('corner-based rectangle (corner1/corner2, no x/y/w/h) → 4 FINITE lines', () => {
+    const out = explodeEntity(mkRectCorners()) as LineEntity[];
+    expect(out).toHaveLength(4);
+    expect(out.every((e) => e.type === 'line')).toBe(true);
+    expect(allFinite(out)).toBe(true); // ← would be false (NaN) before the fix
+    expect(out[0].start).toEqual({ x: 0, y: 0 });
+    expect(out[0].end).toEqual({ x: 10, y: 0 });
+    expect(out[2].end).toEqual({ x: 0, y: 4 });
+    expect(out[3].end).toEqual({ x: 0, y: 0 }); // closes back to origin
+  });
+
+  it('corner-based rectangle inherits style + fresh ids', () => {
+    const out = explodeEntity(mkRectCorners()) as LineEntity[];
+    expect(out[0].color).toBe('#00ff00');
+    expect(out[0].layerId).toBe('lyr_a');
+    expect(out[0].id).not.toBe('r2');
+  });
+});
+
+describe('ADR-510 Φ5 — explodeEntity: finite-geometry guard (Bug 1 belt-and-suspenders)', () => {
+  it('a degenerate source producing only NaN geometry → null (never injected)', () => {
+    // No corner1/corner2 AND no x/y/w/h → every corner resolves to NaN.
+    const broken = { id: 'rx', type: 'rectangle', layerId: 'lyr_a' } as unknown as Entity;
+    expect(explodeEntity(broken)).toBeNull();
   });
 });
 

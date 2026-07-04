@@ -33,9 +33,10 @@ interface LevelManagerLike {
 
 /** Structural mutations που επηρεάζουν τον οργανισμό → trigger recompute. */
 const ORGANISM_EVENTS: readonly DrawingEventType[] = [
-  'drawing:entity-created',
+  // ADR-459 v19 — SINGLE-PATH: αντικαθιστά τα generic `drawing:entity-created` + `bim:entities-moved`
+  // (drag-move/create δομικού → re-derive organism)· πλέον ΔΕΝ τρέχει diagnostics σε μετακίνηση γραμμής.
+  'bim:structural-geometry-changed',
   'bim:column-params-updated',
-  'bim:entities-moved', // ADR-459 Φ7 — drag-move μέλους → re-derive organism (bearing edge follows)
   'bim:column-delete-requested',
   'bim:beam-params-updated',
   'bim:beam-delete-requested',

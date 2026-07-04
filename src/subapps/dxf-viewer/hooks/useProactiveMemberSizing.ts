@@ -45,8 +45,8 @@ import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
  * edit τριγκάρει πρώτα load takedown).
  */
 const PROACTIVE_SIZE_EVENTS: readonly DrawingEventType[] = [
-  'drawing:entity-created',
-  'bim:entities-moved',
+  // ADR-459 v19 — SINGLE-PATH: αντικαθιστά τα generic `drawing:entity-created` + `bim:entities-moved`.
+  'bim:structural-geometry-changed',
   'bim:beams-from-grid',
   'bim:structural-loads-computed',
 ];
