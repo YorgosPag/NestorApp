@@ -47,7 +47,8 @@ import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ADR-076: Centralized Color Conversion
-import { rgbToHex } from '../../../../../color/utils';
+// 🏢 Color-Conversion SSoT (ADR-573): parse rgba/hex via the color-picker utils (→ color-math).
+import { rgbToHex, parseColor } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized Panel Layout tokens (spacing, gaps, margins)
@@ -96,8 +97,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   // 🏢 ENTERPRISE: Extract opacity from various color formats
   const getOpacityFromColor = (color: string): number => {
     if (color.includes('rgba')) {
-      const match = color.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-      return match ? parseFloat(match[1]) : 1.0;
+      const parsed = parseColor(color);
+      return parsed.valid ? parsed.color.alpha : 1.0;
     }
     // Handle hex+alpha format (#RRGGBBAA)
     if (color.startsWith('#') && color.length === 9) {
@@ -111,10 +112,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   // 🏢 ADR-076: Uses centralized color conversion
   const getBaseColor = (color: string): string => {
     if (color.includes('rgba')) {
-      const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-      if (match) {
-        return rgbToHex({ r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) });
-      }
+      const parsed = parseColor(color);
+      if (parsed.valid) return rgbToHex(parsed.color.rgb);
     }
     // Handle hex+alpha format (#RRGGBBAA)
     if (color.startsWith('#') && color.length === 9) {

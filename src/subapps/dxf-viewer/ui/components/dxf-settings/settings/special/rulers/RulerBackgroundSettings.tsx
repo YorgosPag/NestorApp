@@ -10,7 +10,8 @@ import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Color Picker (same as GridSettings, CrosshairSettings, etc.)
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 // 🏢 ADR-076: Centralized Color Conversion
-import { rgbToHex } from '../../../../../color/utils';
+// 🏢 Color-Conversion SSoT (ADR-573): parse rgba/hex via the color-picker utils (→ color-math).
+import { rgbToHex, parseColor } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -93,11 +94,10 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       // CSS variable format - use default white
       setRulerBackgroundColor(UI_COLORS.WHITE);
     } else if (bgColor.includes('rgba')) {
-      // 🏢 ADR-076: Extract hex from rgba using centralized function
-      const match = bgColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-      if (match) {
-        const hexColor = rgbToHex({ r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) });
-        setRulerBackgroundColor(hexColor);
+      // 🏢 Color-Conversion SSoT (ADR-573): extract base hex via parseColor (→ color-math).
+      const parsed = parseColor(bgColor);
+      if (parsed.valid) {
+        setRulerBackgroundColor(rgbToHex(parsed.color.rgb));
       } else {
         setRulerBackgroundColor(UI_COLORS.WHITE);
       }
@@ -145,8 +145,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
     const bgColor = rulerSettings.horizontal.backgroundColor;
     let opacity = 0.8;
     if (bgColor.includes('rgba')) {
-      const match = bgColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-      if (match) opacity = parseFloat(match[1]);
+      const parsed = parseColor(bgColor);
+      if (parsed.valid) opacity = parsed.color.alpha;
     }
 
     // Use centralized withOpacity function instead of manual rgba construction
@@ -253,8 +253,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           value={(() => {
             const bgColor = rulerSettings.horizontal.backgroundColor;
             if (bgColor.includes('rgba')) {
-              const match = bgColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-              return match ? parseFloat(match[1]) : 0.8;
+              const parsed = parseColor(bgColor);
+              return parsed.valid ? parsed.color.alpha : 0.8;
             }
             return 0.8;
           })()}
