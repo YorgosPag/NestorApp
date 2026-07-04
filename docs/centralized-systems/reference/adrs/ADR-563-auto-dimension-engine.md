@@ -214,6 +214,9 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
     **υπάρχοντος** `drawGhostFaceDimensions` (array of aligned overlay dims → `renderPreviewDimension`)
     — **μηδέν αλλαγή σε renderer/PreviewCanvas**. Cursor via `getImmediateWorldPosition`.
   - Ribbon κουμπί «Γραμμή τομής» (ToolType, routes μέσω `onToolChange`) + i18n el/en. Esc → escape-bus.
+- **Raw (non-BIM) γεωμετρία (2026-07-04):** εκτός από BIM walls/structural/openings, η γραμμή τομής
+  διαστασιολογεί πλέον και **σκέτες `line`/`polyline`/`lwpolyline`** (exploded DXF) — ακριβές
+  segment-segment σημείο τομής (`rawLinearCutCoords`, reuse `segmentIntersection`), όχι AABB. Βλ. changelog.
 - **Γνωστός περιορισμός (follow-up, ίδιο με Φ4-Β):** **μη-associative** σε αυθαίρετο άξονα. Επίσης
   witness lines κάθονται στη γραμμή τομής (Gap-to-Element ανά στοιχείο = follow-up, όπως Φ4-Δ).
 
@@ -289,3 +292,13 @@ Revit aligned pick-line). Απόφαση Giorgio (AskUserQuestion): **3-click Ar
   preview μέσω `useAutoDimCutlineTool` (RAF `registerRenderCallback` + **υπάρχον** `drawGhostFaceDimensions`,
   **μηδέν αλλαγή σε renderer/PreviewCanvas**)· ribbon «Γραμμή τομής» + i18n el/en + escape-bus. Μη-associative
   slice (follow-up: vector `bimAnchor`). 104 jest (auto+dim-association, +8 cut-line planner) GREEN.
+- **2026-07-04** — Φ4-Α **επέκταση σε raw (non-BIM) γεωμετρία** (Giorgio: «δεν λειτουργεί» σε **exploded**
+  DXF). **Ρίζα**: το `crossedCoords` αγνοούσε σιωπηλά κάθε οντότητα όπου `classifyElement`→null (δηλ.
+  σκέτες `line`/`polyline`/`lwpolyline`) → 0 crossings → 0 διαστάσεις χωρίς μήνυμα. Τα exploded σχέδια
+  έχουν **γραμμές, όχι BIM τοίχους**. **Fix** (`auto-dimension-cutline-planner.ts`): νέο branch
+  `rawLinearCutCoords` — για κάθε non-BIM entity υπολογίζει το **ακριβές** segment-segment σημείο τομής με
+  τη γραμμή τομής (reuse `segmentIntersection` SSoT από `GeometryUtils`, **σωστό για κάθε κλίση** αντί για
+  AABB projection) → προβολή στον άξονα (`projectPointOnAxis`), edge `'center'` (zero-thickness). Το BIM path
+  αμετάβλητο (early-`continue`). LINE → 1 τομή· POLYLINE/LWPOLYLINE → ανά segment (closed-aware)· η exploded
+  παρειά-παρειά αλυσίδα (πάχος+κενά) προκύπτει φυσικά. +6 jest (raw lines / exploded wall / rect lwpolyline /
+  mixed BIM+raw / parallel-skip) → **55/55 auto GREEN**, μηδέν regression. tsc SKIP (N.17).

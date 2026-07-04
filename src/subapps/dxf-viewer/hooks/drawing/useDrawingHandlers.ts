@@ -70,6 +70,11 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish, commitM2PClick } from './drawing-handler-utils';
+// ADR-562 Φ9 / ADR-357 — dim-creation alignment traces (commit parity with the hover preview).
+import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
+import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
+import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -203,9 +208,23 @@ export function useDrawingHandlers(
       const { snapped, hoveredEntity, snapMode, secondEntity } = resolveDimPickContext(
         p, applySnap, findSnapPoint, currentScene?.entities,
       );
+      // ADR-562 Φ9 / ADR-357 — commit parity: apply the SAME alignment override the hover
+      // preview showed, so the committed defPoint equals the trace (WYSIWYG). Skipped on the
+      // free dim-line offset pick (isDimLineRefPhase), matching OSNAP + the hover path.
+      let alignedSnapped = snapped;
+      if (!isDimLineRefPhase()) {
+        const refPoints = dimensionCreateStore.get().clicks.map((c) => c.world);
+        const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+        const composed = resolveDimAlignmentTracking(snapped, refPoints, {
+          scale: canvasOps.getTransform().scale,
+          polarEnabled: polarOnRef.current && !orthoOnRef.current,
+          sceneEntities: ambientOn ? (currentScene?.entities ?? null) : null,
+        });
+        if (composed) alignedSnapped = composed.point;
+      }
       // ADR-362 Phase J3 (gap #2) — forward snap mode + 2nd intersection host so
       // the association capture records intersection / parametric-nearest anchors.
-      dimRouting.handlePoint(snapped, hoveredEntity, { snapMode, secondEntity });
+      dimRouting.handlePoint(alignedSnapped, hoveredEntity, { snapMode, secondEntity });
       return;
     }
     // ADR-362 Phase L2: route center mark / centerline tools.

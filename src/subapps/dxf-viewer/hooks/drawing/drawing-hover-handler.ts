@@ -17,13 +17,14 @@ import {
 // ADR-357 / ADR-397 — κοινός SSoT resolver του alignment tracking (acquired ⊕ ambient),
 // μοιραζόμενος με την περιστροφή (rotation-tracking-overlay). Πριν ήταν inline μόνο εδώ.
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
+import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-362 — dim entity pick reads the entity-under-cursor from the hit-test SSoT
 // (HoverStore), matching AutoCAD DIMRADIUS (pick the body, not an OSNAP point).
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
-import { formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { resolveOrthoPolarStep } from './drawing-handler-utils';
@@ -34,21 +35,9 @@ import { getBimOrthoReference, resolveWallFaceRelativePolar } from './bim-ortho-
 // ADR-363 §wall-ortho-tracking — OTRACK acquire (osnap-σε-οντότητα → tracking anchor) + Q-νικά-μαγνήτη.
 import { setPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
 import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
-import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
-// ADR-544 — ΕΝΑΣ canonical type για τα overlay-meta πεδία του placement ghost (πλέγμα/διαστάσεις/
-// οδηγός)· SSoT κοινός με τον 3D reader (placement-overlay-meta) — μηδέν διπλή γνώση πεδίων.
-import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
-import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-import { buildWallHudSpecLabel } from './wall-hud-spec-label';
-// ADR-564 §footprint-hud — footprint HUD κολόνας/πέδιλου κατά την τοποθέτηση (πλάτος/βάθος/∠/ύψος).
-import { buildColumnHudSpecLabel } from './column-hud-spec-label';
-import type { ColumnParams } from '../../bim/types/column-types';
-// ADR-564 §foundation-hud — entity-agnostic footprint HUD descriptor (πέδιλο-pad ξαναχρησιμοποιεί τον
-// ΙΔΙΟ pure painter με την κολόνα μέσω ελάχιστου περιγραφέα, χωρίς ColumnParams).
-import type { FootprintHudDescriptor } from '../../canvas-v2/preview-canvas/column-hud-paint';
-// ADR-508 §column place+rotate — πορτοκαλί γραμμή στρέψης + γωνία κατά το awaitingRotation.
-import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
-import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
+// ADR-363 Phase 1C / N.7.1 — the ghost-overlay painters (HUDs, tracking lines, arcs,
+// magnets, guides) live in a dedicated pure module so this handler stays ≤500 lines.
+import { paintDrawingHoverOverlays } from './drawing-hover-overlays';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
@@ -58,8 +47,6 @@ import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // shared με το wall click-commit ώστε preview ≡ committed).
 import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
-// ADR-508 §opening-conflict — i18n instance (non-React) για το 🔴 tooltip «κόβει άνοιγμα».
-import { i18n } from '@/i18n';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
@@ -116,7 +103,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // ADR-362 hotfix (2026-05-19): symmetric to onDrawingPoint — skip snap on
     // the dim-line-offset hover so preview position equals committed position.
     const skipSnap = isDimLineRefPhase();
-    const snapped = p ? (skipSnap ? p : applySnap(p)) : null;
+    let snapped = p ? (skipSnap ? p : applySnap(p)) : null;
     // ADR-362 hotfix: pass hovered entity to smart dim detector so it can resolve
     // correct dim type (line→aligned, circle→diameter, arc→radius, etc.)
     // Skip entity resolution on dimLineRef phase — no entity to hit anyway.
@@ -129,7 +116,38 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       const hoveredId = getHoveredEntity() ?? snap?.entityId;
       if (hoveredId) hoveredEntity = resolveEntity(hoveredId);
     }
+    // ADR-562 Φ9 / ADR-357 — alignment traces during dim CREATION. Anchors = the
+    // already-picked clicks (explicit refs) ⊕ acquired ⊕ ambient (AutoAlign-gated) —
+    // the SAME tracking brain every other drawing tool uses. Skipped on the free
+    // dim-line offset pick (skipSnap), matching OSNAP. Override the point so the dim
+    // preview follows the trace; commit parity lives in `onDrawingPoint` (WYSIWYG).
+    let dimTracking: ReturnType<typeof resolveDimAlignmentTracking> = null;
+    if (snapped && !skipSnap) {
+      const refPoints = dimensionCreateStore.get().clicks.map((c) => c.world);
+      const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+      dimTracking = resolveDimAlignmentTracking(snapped, refPoints, {
+        scale: getTransformScale(),
+        polarEnabled: polarOnRef.current && !orthoOnRef.current,
+        sceneEntities: ambientOn ? getSceneEntities() : null,
+      });
+      if (dimTracking) snapped = dimTracking.point;
+    }
     handleDimHover(snapped, hoveredEntity);
+    // Paint the trace ON TOP of the dim preview (handleDimHover just repainted it).
+    if (dimTracking && previewCanvasRef?.current) {
+      const r = dimTracking.result;
+      const distWorld = Math.hypot(
+        dimTracking.point.x - r.anchorPoint.x,
+        dimTracking.point.y - r.anchorPoint.y,
+      );
+      const distMm = distWorld / Math.max(getSceneUnitsScale(), 1e-9);
+      const label = r.snappedAngle !== null
+        ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
+        : null;
+      previewCanvasRef.current.drawTrackingAlignment(
+        r.activePaths, r.intersections, dimTracking.point, label,
+      );
+    }
     return;
   }
   // ADR-362 Phase L2: center mark hover (rubber-band preview).
@@ -286,182 +304,13 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
         });
       }
       if (previewEntity) {
-        previewCanvasRef.current.drawPreview(previewEntity);
-        // ADR-508 §dim: wall-ghost listening dimensions overlay (gap-left / gap-right /
-        // centre-to-centre along the existing member's face). Attached as ghost metadata.
-        // ADR-544 — ΕΝΑ structural read των overlay πεδίων (πλέγμα/διαστάσεις/οδηγός) μέσω canonical type.
-        const overlay = previewEntity as PlacementOverlayFields;
-        const faceDims = overlay.faceDimensions;
-        if (faceDims) {
-          previewCanvasRef.current.drawGhostFaceDimensions(faceDims);
-        }
-        // ADR-508 §wall-hud — ζωντανή ταυτότητα τοίχου: aligned διάσταση μήκους + γωνία + πάχος·ύψος.
-        // Τα νούμερα/μετάφραση εδώ (i18n + display units)· το paint είναι pure (numbers in).
-        const wallHud = (previewEntity as { wallHud?: WallHudMeta }).wallHud;
-        if (wallHud) {
-          // ADR-508 §wall-hud — ΚΟΙΝΗ πηγή της ετικέτας «πάχος·ύψος» (ίδια με το grip-drag HUD).
-          // ADR-564 §linear-hud — το ghost μπορεί να φέρει προ-μεταφρασμένη ετικέτα ανά μέλος (π.χ.
-          // δοκάρι «b·h»)· όταν λείπει (τοίχος) → fallback στην ετικέτα τοίχου (μηδέν αλλαγή τοίχου).
-          const specLabel = (previewEntity as { hudSpecLabel?: string }).hudSpecLabel
-            ?? buildWallHudSpecLabel(wallHud);
-          previewCanvasRef.current.drawWallHud(wallHud, specLabel);
-        }
-        // ADR-564 §footprint-hud — κολόνα/πέδιλο (footprint μέλος): live πλάτος/βάθος ανά παρειά + ∠
-        // γωνία + ύψος, ΙΔΙΟΣ pure painter με το grip-drag (`paintColumnHud`). Το ghost φέρει
-        // footprint+params ως `columnHud` meta (ADR-398 assembly)· ο handler ζωγραφίζει + μεταφράζει
-        // την ετικέτα ύψους (i18n, N.11). Δουλεύει σε ΟΛΕΣ τις φάσεις (awaitingPosition/Rotation/Lean).
-        const columnHud = (previewEntity as {
-          columnHud?: { footprint: readonly Point2D[]; params: ColumnParams };
-        }).columnHud;
-        if (columnHud) {
-          previewCanvasRef.current.drawColumnHud(
-            columnHud.footprint,
-            columnHud.params,
-            buildColumnHudSpecLabel(columnHud.params.height),
-          );
-        }
-        // ADR-564 §foundation-hud — πέδιλο-pad (footprint μέλος): ΙΔΙΟΣ pure painter με την κολόνα
-        // (`paintFootprintHud`) αλλά μέσω ελάχιστου `FootprintHudDescriptor` + προ-μεταφρασμένης
-        // ετικέτας βάθους (το πέδιλο έχει `FoundationParams`, όχι `ColumnParams` → entity-agnostic
-        // seam, μηδέν type-lie). Το ghost φέρει footprint+descriptor+label ως `footprintHud` meta.
-        const footprintHud = (previewEntity as {
-          footprintHud?: { footprint: readonly Point2D[]; descriptor: FootprintHudDescriptor; heightSpecLabel: string };
-        }).footprintHud;
-        if (footprintHud) {
-          previewCanvasRef.current.drawFootprintHud(
-            footprintHud.footprint,
-            footprintHud.descriptor,
-            footprintHud.heightSpecLabel,
-          );
-        }
-        // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
-        // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)
-        // → κενό specLabel (παραλείπεται). Το `liveDimHud` τέθηκε στο applyPreviewStyling (line tool).
-        const lineHud = (previewEntity as { liveDimHud?: WallHudMeta }).liveDimHud;
-        if (lineHud) {
-          previewCanvasRef.current.drawWallHud(lineHud, '');
-        }
-        // ADR-397 §15 (wall) / ADR-564 §linear-hud (beam) — μετά το 1ο κλικ γραμμικού μέλους:
-        // χρωματισμένο τόξο ΦΟΡΑΣ από την αρχή (lastRefPt) με άξονα αναφοράς τον world-X προς τον
-        // κέρσορα (previewPt). 🟢 πάνω / 🔴 κάτω από τον x-άξονα + βελάκι + baseline 0° + χρωματιστές
-        // μοίρες — ΙΔΙΟ SSoT painter με την περιστροφή. bearing = atan2(dy,dx) σε world (Y-up) → πάνω
-        // = θετικό = πράσινο. Το δοκάρι κρατά την αρχή του στο dedicated preview store (ADR-363), οπότε
-        // το `lastRefPt` (= getBimOrthoReference) δείχνει την αρχή του δοκαριού ΟΠΩΣ και του τοίχου.
-        // ADR-564 §foundation-hud — τα γραμμικά πέδιλα (strip/tie-beam) είναι καθρέφτης του δοκαριού
-        // → ίδιο τόξο ΦΟΡΑΣ. pivot = αρχή band (lastRefPt = getBimOrthoReference, foundation case).
-        if (
-          (activeTool === 'wall' || activeTool === 'beam' ||
-            activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') && lastRefPt
-        ) {
-          const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
-          previewCanvasRef.current.drawDirectionArc(
-            lastRefPt,
-            { x: lastRefPt.x + 1, y: lastRefPt.y },
-            previewPt,
-            bearingDeg,
-          );
-        }
-        // ADR-363 §wall-ortho-tracking — ΟΡΑΤΗ γραμμή-οδηγός στο 1ο σημείο του τοίχου (awaitingStart):
-        // διακεκομμένη από το hover-acquired anchor (π.χ. κέντρο διπλανής κολόνας) προς την αρχή + γωνία/
-        // απόσταση, ώστε να ΦΑΙΝΕΤΑΙ το ΟΡΘΟ/Q κλείδωμα (το hard ΟΡΘΟ δεν παράγει `polarSnapResult` → χωρίς
-        // αυτό καμία ένδειξη — Giorgio «δεν λειτουργεί»). Μόνο awaitingStart (startPoint=null) & όταν δεν
-        // υπάρχει ήδη polar line (μη διπλή). ΙΔΙΟ SSoT painter με την πολική/στρέψης γραμμή.
-        if (
-          activeTool === 'wall' && lastRefPt && !polarSnapResult?.isSnapped &&
-          wallPreviewStore.get().startPoint === null
-        ) {
-          const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
-          const distMm = Math.hypot(previewPt.x - lastRefPt.x, previewPt.y - lastRefPt.y) / Math.max(getSceneUnitsScale(), 1e-9);
-          previewCanvasRef.current.drawPolarTrackingLine(
-            lastRefPt,
-            bearingDeg,
-            `${bearingDeg.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`,
-            previewPt,
-          );
-        }
-        // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
-        // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.
-        const openingConflict = (previewEntity as { openingConflict?: { bandMm: readonly [number, number] } }).openingConflict;
-        if (openingConflict) {
-          const [lo, hi] = openingConflict.bandMm;
-          const range = `${formatLengthForDisplay(lo, { withUnit: false })}–${formatLengthForDisplay(hi)}`;
-          const label = i18n.t('tools.wall.openingCutConflict', { range, ns: 'dxf-viewer-shell' });
-          previewCanvasRef.current.drawGhostConflictTooltip(label, previewPt);
-        }
-        // ADR-398 §3.13 — Polar Magnet: όταν ο cursor είναι μέσα σε κυκλικό δίσκο, overlay πολικό
-        // πλέγμα (κέντρο/δακτύλιοι/ακτίνες). Attached ως ghost metadata από το `generateColumnPreview`.
-        const polarGrid = overlay.polarDiskGrid;
-        if (polarGrid) {
-          previewCanvasRef.current.drawPolarDisk(polarGrid);
-        }
-        // ADR-398 §3.15 — Cartesian Magnet: cursor μέσα σε ορθογώνιο → overlay καρτεσιανό πλέγμα.
-        const rectGrid = overlay.rectGrid;
-        if (rectGrid) {
-          previewCanvasRef.current.drawRectGrid(rectGrid);
-        }
-        // ADR-398 §3.20/§3.20d — alignment guide(s): dashed οδηγός στο άκρο/μέσον παρειάς ή πλευρά(ές)
-        // ορθογωνίου (έως 2 στη γωνία). Ο renderer κάνει normalize σε array.
-        const alignGuide = overlay.alignmentGuide;
-        if (alignGuide) {
-          previewCanvasRef.current.drawAlignmentGuide(alignGuide);
-        }
-        // ADR-508 §column place+rotate — μετά το 1ο κλικ: ΠΟΡΤΟΚΑΛΙ γραμμή στρέψης + γωνία (ίδιο
-        // SSoT `drawPolarTrackingLine` = drawingGuide χρώμα) από την κλειδωμένη θέση προς τον κέρσορα.
-        const colRot = getColumnRotationLock();
-        if (colRot) {
-          const snappedDeg = resolveColumnRotationDeg(colRot.origin, previewPt, worldPerPixel(getTransformScale()));
-          previewCanvasRef.current.drawPolarTrackingLine(colRot.origin, snappedDeg, `${Math.round(snappedDeg)}°`, previewPt);
-          // ADR-564 §rotation-arc (Giorgio «και τα δύο») — ΔΙΠΛΑ στην πορτοκαλί ευθεία, το έγχρωμο τόξο
-          // ΦΟΡΑΣ (🟢 πάνω / 🔴 κάτω από τον world-X) + βελάκι + baseline — ΙΔΙΟ SSoT painter με τοίχο/
-          // grip-rotate. pivot = κλειδωμένη θέση, ref = world-X, bearing = φορά προς τον κέρσορα.
-          const arcBearingDeg = (Math.atan2(previewPt.y - colRot.origin.y, previewPt.x - colRot.origin.x) * 180) / Math.PI;
-          previewCanvasRef.current.drawDirectionArc(
-            colRot.origin,
-            { x: colRot.origin.x + 1, y: colRot.origin.y },
-            previewPt,
-            arcBearingDeg,
-          );
-        }
-        // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
-        if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {
-          // ADR-508 — face-relative wall snap: label the angle RELATIVE to the face
-          // (perpendicular ⇒ 90°), not the absolute world heading (which read e.g.
-          // "41.9°" while the wall was visibly perpendicular). The ray itself still
-          // points along the absolute snapped angle.
-          const labelAngle = faceRel
-            ? faceRelativeDisplayAngle(polarSnapResult.snappedAngle, faceRel.baseAngle)
-            : polarSnapResult.snappedAngle;
-          previewCanvasRef.current.drawPolarTrackingLine(
-            lastRefPt,
-            polarSnapResult.snappedAngle,
-            formatPolarLabel(labelAngle, polarSnapResult.distance),
-            previewPt,
-          );
-        }
-        // ADR-357 Phase 4: Object Snap Tracking alignment overlay (dashed
-        // paths from acquired points + intersection halo + distance label).
-        if (trackingResult && trackingPoint) {
-          // Distance from anchor to the (quantized) snap point → display unit
-          // (mm internal → cm/m/… via the live displayUnitState SSoT).
-          const distWorld = Math.hypot(
-            trackingPoint.x - trackingResult.anchorPoint.x,
-            trackingPoint.y - trackingResult.anchorPoint.y,
-          );
-          const distMm = distWorld / Math.max(getSceneUnitsScale(), 1e-9);
-          // SSoT: value + active display-unit label in ONE call (no manual
-          // formatDisplayValue + DISPLAY_UNIT_LABELS combo).
-          const label = trackingResult.snappedAngle !== null
-            ? `${trackingResult.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
-            : null;
-          // ADR-357 ambient: draw ONLY the cursor-aligned path(s), not every
-          // built path — mirrors Revit/AutoCAD and prevents ambient-source clutter.
-          previewCanvasRef.current.drawTrackingAlignment(
-            trackingResult.activePaths,
-            trackingResult.intersections,
-            trackingPoint,
-            label,
-          );
-        }
+        // ADR-363 Phase 1C / N.7.1 — every ghost decoration (HUDs, tracking lines,
+        // direction arcs, magnets, guides) lives in the extracted pure painter so this
+        // handler stays under the 500-line budget. 1:1 lift — zero behaviour change.
+        paintDrawingHoverOverlays(previewCanvasRef.current, previewEntity, {
+          activeTool, lastRefPt, previewPt, polarSnapResult, faceRel,
+          trackingResult, trackingPoint, getSceneUnitsScale, getTransformScale,
+        });
       } else {
         // 🔧 FIX (2026-01-27): Clear canvas when preview entity is null
         // This happens when drawing is completed (2nd click on line/measure-distance)

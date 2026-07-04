@@ -1,6 +1,6 @@
 # ADR-562 — Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης)
 
-> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails (inline-SVG previews στα «Τύπος»/«Στυλ» dropdowns)** έτοιμα· Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
+> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED + Φ9.1 (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails** + **Φ9.1 alignment traces στη ΔΗΜΙΟΥΡΓΙΑ διάστασης** έτοιμα· Φ9.2 (λαβές) + Φ9.3 (μετακίνηση) + Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
 > **Date:** 2026-07-01
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -294,6 +294,34 @@ previews, Revit Line Pattern) = **οπτικό preview (μικρογραφία)*
 
 ---
 
+### Φ9 — Alignment traces (AutoAlign) στις ροές της διάστασης — phased (Giorgio 2026-07-04)
+
+**Πρόβλημα:** τα ίχνη ευθυγράμμισης (dashed alignment traces + intersection halo + label) που κάθε εργαλείο
+σχεδίασης δείχνει (SSoT brain `resolveAlignmentTracking`, `systems/tracking/`) **παρακάμπτονταν** και στις 3
+ροές της διάστασης (δημιουργία / λαβές / μετακίνηση).
+
+**Κοινός SSoT wrapper** `hooks/dimensions/dim-alignment-tracking.ts` — `resolveDimAlignmentTracking(cursor,
+refPoints, {scale, polarEnabled, sceneEntities})`: mirror του `rotation-tracking-overlay.ts`, αλλά δέχεται
+**ρητά reference points** (τα ήδη-picked σημεία της τρέχουσας διάστασης) ως extra anchors, merged με
+acquired (`TrackingPointStore`) ⊕ ambient (`collectAmbientAlignmentAnchors`, AutoAlign-gated) → το ΙΔΙΟ
+`composeTrackingSnap`. Μηδέν παράλληλη μηχανή.
+
+**Φ9.1 — Δημιουργία (IMPLEMENTED):**
+- Hover: `drawing-hover-handler.ts` (dim κλάδος) — resolve με refPoints=`dimensionCreateStore.get().clicks`,
+  override του preview point + `previewCanvasRef.drawTrackingAlignment(...)` πάνω από το dim preview. Skipped
+  στο free dim-line offset pick (`isDimLineRefPhase`).
+- Commit parity (WYSIWYG): `useDrawingHandlers.onDrawingPoint` (dim κλάδος) — ίδιο override στο committed point.
+
+**Φ9.2 — Λαβές (PROPOSED):** `mouse-handler-move.ts`/`mouse-handler-up.ts` (override του grip world point, gated
+σε dim grip) + `useDimGripGhostPreview.ts` (paint). ⚠️ ADR-040 CHECK 6D (`cursor/`).
+**Φ9.3 — Μετακίνηση (PROPOSED):** row-move overlay (`projectRowDelta`) + MOVE tool (`useMoveTool`/`useMovePreview`).
+
+**SSoT reuse:** `resolveAlignmentTracking`/`composeTrackingSnap`/`collectAmbientAlignmentAnchors`/`TrackingPointStore`,
+`ambientAlignmentConfigStore` (AutoAlign toggle), `tracking-paint.ts`, `rotation-tracking-overlay.ts` (πρότυπο).
+Ref: ADR-357 (Object Snap Tracking), ADR-397 (rotation consumer).
+
+---
+
 ## 5. SSoT reuse (N.0 / N.12 — καμία διπλή υλοποίηση)
 
 | Ανάγκη | Επαναχρησιμοποιούμενο SSoT | Αρχείο |
@@ -320,6 +348,13 @@ previews, Revit Line Pattern) = **οπτικό preview (μικρογραφία)*
 
 ## 7. Changelog
 
+- **2026-07-04 (Φ9.1 — Alignment traces στη δημιουργία διάστασης, UNCOMMITTED)** — Η δημιουργία διάστασης
+  δείχνει πλέον τα ίδια ίχνη ευθυγράμμισης (AutoAlign) με κάθε άλλο εργαλείο, με anchors τα ήδη-picked σημεία
+  ⊕ acquired ⊕ ambient. Νέος κοινός SSoT wrapper `hooks/dimensions/dim-alignment-tracking.ts`
+  (`resolveDimAlignmentTracking`, δέχεται ρητά refPoints — mirror του `rotation-tracking-overlay`). Wiring: dim
+  κλάδος στο `drawing-hover-handler.ts` (hover override + `drawTrackingAlignment`) + `useDrawingHandlers.onDrawingPoint`
+  (commit parity, WYSIWYG). Skipped στο free dim-line offset pick. Phased (Giorgio): Φ9.2 λαβές + Φ9.3 μετακίνηση
+  σε επόμενο γύρο. Reuse: `composeTrackingSnap`/`collectAmbientAlignmentAnchors`/`TrackingPointStore`. 🔴 browser-verify.
 - **2026-07-04 (Φ7 test-alignment)** — `useRibbonDimBridge.test.tsx`: ευθυγράμμιση των 5 stale assertions με το
   Φ7 hex-picker contract (ο κώδικας ήταν ήδη σωστός — code = SoT). Read πεδία χρώματος → **HEX** (`dimclrd`
   ACI 1 → `#FF0000`, `arrowColor` ACI 3 → `#00FF00`, ByLayer 256 → default `#ffffff`)· writes → **ACI

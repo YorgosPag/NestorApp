@@ -194,3 +194,42 @@ describe('renderDimensionText — applies dimscale VERBATIM (rescue is upstream,
     expect(extractFontHeight(calls[0].font)).toBeCloseTo(125, 4);
   });
 });
+
+describe('renderDimensionText — DIMTAD «Θέση Κειμένου» perpendicular offset', () => {
+  // The DIMTAD offset is the SECOND translate (index 1): the first translates to
+  // the screen anchor, then rotate, then this perpendicular text-local shift.
+  function dimtadTranslate(dimtad: DimStyle['dimtad']): [number, number] {
+    const { ctx } = makeCtxSpy();
+    renderDimensionText(ctx, {
+      entity: makeEntity(),
+      geometry: makeLinearGeometry(),
+      style: { ...makeStyle(), dimtad, dimscale: 1 },
+      transform: { scale: 1, offsetX: 0, offsetY: 0 },
+      viewport: { width: 800, height: 600 },
+      layerColour: '#888',
+      sceneUnits: 'mm',
+    });
+    return (ctx.translate as jest.Mock).mock.calls[1] as [number, number];
+  }
+
+  // primaryHeight = dimtxt(2.5)×dimscale(1)×mm(1)×scale(1) = 2.5.
+  // gapPx        = dimgap(0.625)×1×1×1 = 0.625. magnitude = 2.5/2 + 0.625 = 1.875.
+  const MAG = 1.875;
+
+  it('centered → no perpendicular offset (text sits ON the dim line)', () => {
+    expect(dimtadTranslate('centered')).toEqual([0, 0]);
+  });
+
+  it('above → lifts the text UP (canvas −Y) by ½ height + DIMGAP', () => {
+    expect(dimtadTranslate('above')).toEqual([0, -MAG]);
+  });
+
+  it('below → drops the text DOWN (canvas +Y) by ½ height + DIMGAP', () => {
+    expect(dimtadTranslate('below')).toEqual([0, MAG]);
+  });
+
+  it('outside / jis map to the same "above" offset', () => {
+    expect(dimtadTranslate('outside')).toEqual([0, -MAG]);
+    expect(dimtadTranslate('jis')).toEqual([0, -MAG]);
+  });
+});

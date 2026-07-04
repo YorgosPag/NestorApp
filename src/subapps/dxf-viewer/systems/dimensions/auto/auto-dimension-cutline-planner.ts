@@ -32,6 +32,7 @@
  */
 
 import type { Entity } from '../../../types/entities';
+import { isLineEntity, isPolylineEntity, isLWPolylineEntity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
 import { unitVector, perpUnit } from '../../../bim/grips/grip-math';
 import { dotProduct } from '../../../rendering/entities/shared/geometry-vector-utils';
@@ -40,6 +41,7 @@ import {
   projectPolygonOnAxis,
 } from '../../../bim/geometry/shared/polygon-axis-projection';
 import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
+import { segmentIntersection } from '../../../utils/geometry/GeometryUtils';
 import { lineIntersectsRectangle } from '../../selection/universal-marquee-geometry';
 import {
   classifyElement,
@@ -94,6 +96,40 @@ function projectOntoCutAxis(
   return { lo: poly.alongMin, hi: poly.alongMax, center };
 }
 
+/**
+ * ADR-563 Φ4-Α — raw (non-BIM) linear geometry the cut line can also dimension.
+ * Exploded DXF plans carry plain `LINE` / `POLYLINE` / `LWPOLYLINE` segments
+ * instead of BIM walls, so `classifyElement` returns null and the BIM bbox path
+ * skips them. Here each REAL crossing contributes ONE coord — the exact
+ * segment-segment intersection point projected onto the cut axis (correct for
+ * any orientation, unlike an AABB projection). Reuses the `segmentIntersection`
+ * SSoT (GeometryUtils); zero-thickness → edge always 'center'.
+ */
+function rawLinearCutCoords(
+  e: Entity,
+  start: Point2D,
+  end: Point2D,
+  u: Point2D,
+): { coord: number; edge: CoordSource['edge'] }[] {
+  const out: { coord: number; edge: CoordSource['edge'] }[] = [];
+  const addHit = (p: Point2D | null | undefined): void => {
+    if (!p) return;
+    out.push({ coord: projectPointOnAxis(p.x, p.y, start.x, start.y, u.x, u.y).along, edge: 'center' });
+  };
+  if (isLineEntity(e)) {
+    addHit(segmentIntersection(start, end, e.start, e.end)?.point);
+  } else if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
+    const v = e.vertices;
+    if (v && v.length >= 2) {
+      const last = e.closed ? v.length : v.length - 1;
+      for (let i = 0; i < last; i++) {
+        addHit(segmentIntersection(start, end, v[i], v[(i + 1) % v.length])?.point);
+      }
+    }
+  }
+  return out;
+}
+
 /** Deduped along-axis coordinates of every element the cut line crosses. */
 function crossedCoords(
   elements: readonly Entity[],
@@ -106,13 +142,20 @@ function crossedCoords(
   const raw: { coord: number; sourceEntityId: string; edge: CoordSource['edge'] }[] = [];
   for (const e of elements) {
     const cls = classifyElement(e);
-    if (!cls) continue;
-    if (cls === 'opening' && !options.includeOpenings) continue;
-    const bounds = calculateBimEntity2DBounds(e);
-    if (!bounds) continue;
-    if (!lineIntersectsRectangle(start, end, bounds)) continue;
-    const proj = projectOntoCutAxis(bounds, start, u);
-    for (const c of detailCoordsFor(cls, proj, basis)) {
+    if (cls) {
+      // BIM path — walls/structural/openings dimensioned via their bbox extent.
+      if (cls === 'opening' && !options.includeOpenings) continue;
+      const bounds = calculateBimEntity2DBounds(e);
+      if (!bounds) continue;
+      if (!lineIntersectsRectangle(start, end, bounds)) continue;
+      const proj = projectOntoCutAxis(bounds, start, u);
+      for (const c of detailCoordsFor(cls, proj, basis)) {
+        raw.push({ coord: c.coord, sourceEntityId: e.id, edge: c.edge });
+      }
+      continue;
+    }
+    // Non-BIM path — raw exploded LINE / POLYLINE geometry (exact crossing).
+    for (const c of rawLinearCutCoords(e, start, end, u)) {
       raw.push({ coord: c.coord, sourceEntityId: e.id, edge: c.edge });
     }
   }
@@ -122,7 +165,9 @@ function crossedCoords(
 /**
  * Plan the aligned dimension chain for a user cut line.
  *
- * @param elements     candidate BIM entities (whole active-level plan).
+ * @param elements     candidate entities (whole active-level plan): BIM
+ *                     walls/structural/openings (bbox extent) AND raw exploded
+ *                     LINE / POLYLINE / LWPOLYLINE geometry (exact crossing).
  * @param cutStart     first click — cut-line start (world mm, snapped).
  * @param cutEnd       second click — cut-line end (world mm, snapped).
  * @param dimLinePoint third click / live cursor — its perpendicular distance

@@ -3,6 +3,7 @@
  */
 
 import type { Point2D } from '../../../../rendering/types/Types';
+import type { Entity } from '../../../../types/entities';
 import { planCutLineChain } from '../auto-dimension-cutline-planner';
 import { buildAutoDimensionEntities } from '../auto-dimension-entity-factory';
 import { AUTO_DIMENSION_DEFAULTS } from '../auto-dimension-types';
@@ -13,6 +14,11 @@ const CTX = { styleId: 'iso', layerId: '0' };
 /** 300mm-square column centred at (cx,cy). */
 function column(id: string, cx: number, cy: number) {
   return makeBimMock('column', id, cx - 150, cy - 150, cx + 150, cy + 150);
+}
+
+/** Raw vertical DXF LINE at x, spanning y0..y1 (exploded-plan geometry). */
+function vLine(id: string, x: number, y0 = -500, y1 = 500): Entity {
+  return { id, type: 'line', start: { x, y: y0 }, end: { x, y: y1 }, layerId: '0' } as unknown as Entity;
 }
 
 function dist(a: Point2D, b: Point2D): number {
@@ -107,6 +113,80 @@ describe('planCutLineChain', () => {
     expect(off).toEqual([]);
     expect(on).toHaveLength(1);
     expect(dist(on[0].defPoints[0], on[0].defPoints[1])).toBeCloseTo(3000, 3);
+  });
+});
+
+describe('planCutLineChain — raw (non-BIM) exploded geometry', () => {
+  it('dimensions plain vertical LINES crossed by a horizontal cut line', () => {
+    const lines = [vLine('l1', 0), vLine('l2', 5000), vLine('l3', 9000)];
+    const segs = planCutLineChain(
+      lines,
+      { x: -1000, y: 0 },
+      { x: 10000, y: 0 },
+      { x: 0, y: 1000 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    expect(segs).toHaveLength(2);
+    expect(dist(segs[0].defPoints[0], segs[0].defPoints[1])).toBeCloseTo(5000, 3);
+    expect(dist(segs[1].defPoints[0], segs[1].defPoints[1])).toBeCloseTo(4000, 3);
+  });
+
+  it('exploded wall (two face lines) → thickness + gap + thickness chain', () => {
+    const lines = [vLine('a1', 0), vLine('a2', 200), vLine('b1', 3000), vLine('b2', 3200)];
+    const segs = planCutLineChain(
+      lines,
+      { x: -500, y: 0 },
+      { x: 4000, y: 0 },
+      { x: 0, y: 500 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    expect(segs).toHaveLength(3);
+    expect(dist(segs[0].defPoints[0], segs[0].defPoints[1])).toBeCloseTo(200, 3); // wall A thickness
+    expect(dist(segs[1].defPoints[0], segs[1].defPoints[1])).toBeCloseTo(2800, 3); // gap
+    expect(dist(segs[2].defPoints[0], segs[2].defPoints[1])).toBeCloseTo(200, 3); // wall B thickness
+  });
+
+  it('closed rectangle LWPOLYLINE → its two crossed edges', () => {
+    const rect = {
+      id: 'r1', type: 'lwpolyline', closed: true, layerId: '0',
+      vertices: [{ x: 0, y: -100 }, { x: 400, y: -100 }, { x: 400, y: 100 }, { x: 0, y: 100 }],
+    } as unknown as Entity;
+    const segs = planCutLineChain(
+      [rect, vLine('l', 2000)],
+      { x: -500, y: 0 },
+      { x: 3000, y: 0 },
+      { x: 0, y: 500 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    expect(segs).toHaveLength(2);
+    expect(dist(segs[0].defPoints[0], segs[0].defPoints[1])).toBeCloseTo(400, 3); // rect width
+    expect(dist(segs[1].defPoints[0], segs[1].defPoints[1])).toBeCloseTo(1600, 3); // to next line
+  });
+
+  it('mixes BIM columns and raw lines in one chain', () => {
+    const segs = planCutLineChain(
+      [column('c1', 0, 0), vLine('l', 5000)],
+      { x: -1000, y: 0 },
+      { x: 10000, y: 0 },
+      { x: 0, y: 1000 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    expect(segs).toHaveLength(1);
+    expect(dist(segs[0].defPoints[0], segs[0].defPoints[1])).toBeCloseTo(5000, 3);
+  });
+
+  it('ignores a raw line parallel to (never crossing) the cut line', () => {
+    // Horizontal line at y=0 is collinear with the horizontal cut → no crossing.
+    const parallel = { id: 'p', type: 'line', start: { x: 0, y: 0 }, end: { x: 100, y: 0 }, layerId: '0' } as unknown as Entity;
+    const segs = planCutLineChain(
+      [parallel, vLine('l1', 2000), vLine('l2', 4000)],
+      { x: -500, y: 0 },
+      { x: 5000, y: 0 },
+      { x: 0, y: 500 },
+      AUTO_DIMENSION_DEFAULTS,
+    );
+    expect(segs).toHaveLength(1); // only the two vertical lines count
+    expect(dist(segs[0].defPoints[0], segs[0].defPoints[1])).toBeCloseTo(2000, 3);
   });
 });
 

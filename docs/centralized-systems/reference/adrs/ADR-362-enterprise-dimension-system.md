@@ -711,6 +711,14 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-07-04 (🔴 BUGFIX — «Θέση Κειμένου» (DIMTAD) δεν λειτουργούσε καθόλου)**
+  - **Ζήτημα (Giorgio)**: ό,τι κι αν επιλέγεις στη «Θέση Κειμένου» (πάνω/κέντρο/κάτω) το κείμενο δεν άλλαζε θέση.
+  - **Root cause (full-pipeline trace)**: το override `dimtad` **γραφόταν** σωστά (`useRibbonDimBridge` → `overrides.dimtad`, test-verified) και resolve-άρονταν στο `DimStyle`, **ΑΛΛΑ κανένας renderer/geometry builder δεν το κατανάλωνε ποτέ**. Ο `dim-text-renderer` ζωγράφιζε πάντα το κείμενο κεντραρισμένο (`textBaseline:'middle'`) πάνω στο `geometry.textAnchor` (= midpoint της dim line), αγνοώντας το `dimtad`. (grep: `dimtad` υπήρχε μόνο σε parse/import/write/store — μηδέν σε rendering.)
+  - **Λύση**: νέα `dimtadOffsetY(style, primaryHeight, transform, sceneUnits)` στον `dim-text-renderer.ts` — κάθετη μετατόπιση στο text-local frame (μετά translate(anchor)+rotate): `centered`→0· `below`→+(½ ύψος + DIMGAP)· `above`/`outside`/`jis`→ ίδιο ποσό προς τα πάνω (canvas −Y). DIMGAP→px μέσω του ΙΔΙΟΥ `paperHeightToModel` SSoT με το DIMTXT. Εφαρμόζεται σε linear/radial **και** angular branch (`ctx.translate(0, tadOffsetY)`). Η dim line είναι συνεχής (gap μόνο με manual DIMBREAK), οπότε το default ISO `above` τώρα αποδίδεται σωστά **πάνω** από τη γραμμή αντί για πάνω στη γραμμή.
+  - **Σημείωση (honesty)**: το fix καλύπτει on-screen **+ preview** (κοινός `renderDimensionText` → `preview-dimension-renderer`). Το DXF export-block text position δεν εφαρμόζει ακόμη DIMTAD (pre-existing gap — το DIMTAD δεν τιμόταν ΠΟΥΘΕΝΑ πριν)· ξεχωριστό follow-up αν χρειαστεί.
+  - **Files**: MOD `rendering/entities/dimension/dim-text-renderer.ts` + `__tests__/dim-text-renderer-scene-units.test.ts` (+4 tests: centered/above/below/outside+jis), αυτό το ADR.
+  - **Tests**: `dim-text-renderer-scene-units.test.ts` **12/12 GREEN** + dimension render suite 12/12. tsc SKIP (N.17). 🔴 browser-verify (Giorgio).
+
 - **2026-07-04 (Phase N — ✨ «Διάσταση Οντότητας» / pick-entity quick dimension — AutoCAD DIM «select object»)**
   - **Ζήτημα (Giorgio)**: τρόπος μέτρησης όπου **επιλέγεις ΜΙΑ οντότητα** (γραμμή/τοίχο/κύκλο/τόξο) και με **δεύτερο κλικ** εμφανίζεται αυτόματα η διάστασή της — όπως το AutoCAD `DIM` σε "select object" mode. Δεν υπήρχε για γραμμικά στοιχεία (`dim-linear`/`dim-aligned` = 3 κλικ σε σημεία)· το pick-entity pattern (`firstClickNeedsEntityPick` + `requiredClickCount=2`) υπήρχε **μόνο** για ακτίνα/διάμετρο.
   - **Αποφάσεις Giorgio (AskUserQuestion)**: (1) **Δυναμικός τύπος** — το drag του 2ου κλικ αποφασίζει: σέρσιμο ⟂ στην οντότητα → **πραγματικό μήκος (aligned)**· πάνω/κάτω → **οριζόντια προβολή (linear rot 0, ΔX)**· αριστερά/δεξιά → **κάθετη προβολή (linear rot 90, ΔY)**. (2) **Πλήρες scope** — γραμμή/τοίχος → μήκος, κύκλος → διάμετρος, τόξο → ακτίνα (ένα εργαλείο).
