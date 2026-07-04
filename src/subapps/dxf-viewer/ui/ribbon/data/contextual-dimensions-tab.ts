@@ -9,13 +9,16 @@
  * the full toolset as LARGE grouped buttons, and auto-closes when you leave.
  *
  * This is the CREATION surface. Dimension EDITING (a placed dimension selected)
- * keeps its OWN contextual tab — `DIMENSION_CONTEXTUAL_TAB` / `dim-selected`
- * (`contextual-dimension-tab.ts`). The two never co-exist (placing vs selected),
- * matching Revit's "place" vs "Modify | Dimensions" split.
+ * has its OWN contextual tab — `DIMENSION_CONTEXTUAL_TAB` / `dim-selected`
+ * (`contextual-dimension-tab.ts`). Per Giorgio (2026-07-04) the two now CO-EXIST:
+ * selecting a placed dimension surfaces a COMPOSITE trigger (`dim-selected` +
+ * `dim-tool-active`, in `ribbon-contextual-config.ts`) so the «Ιδιότητες
+ * Διάστασης» tab opens active AND this creation tab stays beside it.
  *
  * LAYOUT: every command is a LARGE icon-button — nothing hidden in a dropdown.
- * Three Revit-style groups: Linear / Radial & Angular / Centers. Ribbon body
- * scrolls horizontally (`overflow-x: auto`) on overflow.
+ * Four Revit-style groups: Linear / Radial & Angular / Centers / Αυτόματη
+ * (auto-dimension + cut-line, moved here from the Home launcher 2026-07-04).
+ * Ribbon body scrolls horizontally (`overflow-x: auto`) on overflow.
  *
  * SSoT: reuses the EXACT commandKeys / icons / i18n labels also used by the Home
  * launcher (`home-tab-dimensions.ts`). Every `commandKey` is a `ToolType` routed
@@ -26,6 +29,7 @@
  */
 
 import type { RibbonButton, RibbonTab } from '../types/ribbon-types';
+import { DIM_RIBBON_KEYS } from '../hooks/bridge/dim-command-keys';
 
 export const DIMENSIONS_CONTEXTUAL_TRIGGER = 'dim-tool-active';
 
@@ -49,6 +53,7 @@ export const CONTEXTUAL_DIMENSIONS_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             dimBtn('dim.smart', 'ribbon.commands.dimVariants.smart', 'dim-smart', 'dim-smart', 'DIM'),
+            dimBtn('dim.entity', 'ribbon.commands.dimVariants.entity', 'dim-entity', 'dim-entity'),
             dimBtn('dim.linear', 'ribbon.commands.dimVariants.linear', 'dim-linear', 'dim-linear'),
             dimBtn('dim.aligned', 'ribbon.commands.dimVariants.aligned', 'dim-aligned', 'dim-aligned'),
             dimBtn('dim.baseline', 'ribbon.commands.dimBaseline', 'dim-baseline', 'dim-baseline'),
@@ -86,6 +91,72 @@ export const CONTEXTUAL_DIMENSIONS_TAB: RibbonTab = {
           buttons: [
             dimBtn('dim.centerMark', 'ribbon.commands.dimCenterMark', 'dim-center-mark', 'dim-center-mark'),
             dimBtn('dim.centerLine', 'ribbon.commands.dimCenterLine', 'dim-centerline', 'dim-centerline'),
+          ],
+        },
+      ],
+    },
+    // ── Αυτόματη ─────────────────────────────────────────────────────────────
+    // Moved here from the Home launcher (2026-07-04) so Home keeps ONE «Διάσταση»
+    // button. NOT `dimBtn` tools: «Αυτόματη Διαστασιολόγηση» is a one-shot ACTION
+    // (ADR-563, opens the options dialog then auto-places perimeter dims); «Γραμμή
+    // Τομής» is the `auto-dim-cutline` ToolType (interactive 3-click cut-line).
+    {
+      id: 'dim-create-auto',
+      labelKey: 'ribbon.panels.dimAuto',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'dim.auto',
+                labelKey: 'ribbon.commands.autoDimension',
+                icon: 'dim-auto',
+                commandKey: 'auto-dimension',
+                action: 'auto-dimension',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'dim.cutline',
+                labelKey: 'ribbon.commands.autoDimensionCutline',
+                icon: 'dim-aligned',
+                commandKey: 'auto-dim-cutline',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ── Ενέργειες ────────────────────────────────────────────────────────────
+    // «Κλείσιμο» (2026-07-04) — mirror of the «Ιδιότητες Κολώνας» close. Routes to
+    // the central `isContextualTabCloseAction` → `closeContextualTab` (clearAll +
+    // tool→select), which exits the active dim tool AND drops any selection, so it
+    // dismisses this creation tab in BOTH the pure-tool and the selection-composite
+    // cases. No «Διαγραφή» here — there is no placed dimension to delete while
+    // creating (that lives on the «Διάσταση» edit tab).
+    {
+      id: 'dim-create-actions',
+      labelKey: 'ribbon.panels.dimActions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'dim.actions.close',
+                labelKey: 'ribbon.commands.dimContextual.close',
+                icon: 'select',
+                commandKey: DIM_RIBBON_KEYS.actions.close,
+                action: DIM_RIBBON_KEYS.actions.close,
+              },
+            },
           ],
         },
       ],

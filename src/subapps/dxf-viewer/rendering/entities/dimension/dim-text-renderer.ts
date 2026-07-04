@@ -36,7 +36,7 @@ import {
   RADIAL_RADIUS_PREFIX,
   type FullDimText,
 } from '../../../systems/dimensions/dim-text-formatter';
-import { resolveDimColor } from './dim-color-resolver';
+import { resolveDimColor, resolveDimColorTC } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
 import { UI_COLORS, HOVER_HIGHLIGHT } from '../../../config/color-config';
 import type { Point2D, ViewTransform } from '../../types/Types';
@@ -86,6 +86,30 @@ function primaryTextHeightPx(style: DimStyle, transform: ViewTransform, sceneUni
 }
 
 /**
+ * ADR-362 — DIMTAD vertical text placement → screen-px offset in the text-LOCAL
+ * frame (applied AFTER `translate(anchor)` + `rotate(screenRotation)`, so it
+ * shifts the label perpendicular to the dim line, together with its mask /
+ * tolerance / alt-unit stack):
+ *   · `centered` (DIMTAD 0) → 0: text sits ON the dim line (previous behaviour).
+ *   · `below`    (DIMTAD 4) → +(½ height + DIMGAP): text drops below the line.
+ *   · every "above" family (`above`/`outside`/`jis`, DIMTAD 1/2/3) → the same
+ *     amount UP (canvas −Y): the ISO default — text rides above the dim line.
+ * DIMGAP is paper-mm → px via the SAME `paperHeightToModel` SSoT as DIMTXT, so
+ * the clearance tracks zoom + annotation scale exactly like the glyph height.
+ */
+function dimtadOffsetY(
+  style: DimStyle,
+  primaryHeight: number,
+  transform: ViewTransform,
+  sceneUnits: SceneUnits,
+): number {
+  if (style.dimtad === 'centered') return 0;
+  const gapPx = paperHeightToModel(style.dimgap, style.dimscale, sceneUnits) * transform.scale;
+  const magnitude = primaryHeight / 2 + gapPx;
+  return style.dimtad === 'below' ? magnitude : -magnitude;
+}
+
+/**
  * ADR-362 Phase M — measure the primary label the SAME way `renderDimensionText`
  * composes + fonts it (same height formula + `buildUIFont` + `buildFullText`),
  * so the text-fit "does it fit?" decision uses the exact rendered width. Returns
@@ -128,16 +152,16 @@ export function renderDimensionText(
   // `drawingScale` SSoT). So this leaf is "dumb": same paper→model SSoT as ribbon
   // Text (`paperHeightToModel`), then × view scale to reach screen px. No local
   // rescue heuristic (that lived here only for meters and missed mm/cm).
-  const primaryHeight = primaryTextHeightPx(
-    params.style,
-    params.transform,
-    params.sceneUnits ?? 'mm',
-  );
+  const sceneUnits = params.sceneUnits ?? 'mm';
+  const primaryHeight = primaryTextHeightPx(params.style, params.transform, sceneUnits);
+  // ADR-362 — DIMTAD «Θέση Κειμένου»: perpendicular offset from the dim line
+  // (above / centered / below). Applied in the text-local frame below.
+  const tadOffsetY = dimtadOffsetY(params.style, primaryHeight, params.transform, sceneUnits);
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
   const colour = params.hovered
     ? HOVER_HIGHLIGHT.ENTITY.glowColor
-    : resolveDimColor(params.style.dimclrt, params.layerColour);
+    : resolveDimColorTC(params.style.dimclrtTrueColor, params.style.dimclrt, params.layerColour);
   const fontFamily = params.style.textFontFamily || 'arial';
 
   // Angular dims: simplified path (no tolerance/limits/inspection in G2/G3).
@@ -147,6 +171,7 @@ export function renderDimensionText(
     ctx.save();
     ctx.translate(screenAnchor.x, screenAnchor.y);
     ctx.rotate(screenRotation);
+    ctx.translate(0, tadOffsetY); // DIMTAD vertical placement (above/centered/below)
     ctx.font = buildUIFont(primaryHeight, fontFamily);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -163,6 +188,7 @@ export function renderDimensionText(
   ctx.save();
   ctx.translate(screenAnchor.x, screenAnchor.y);
   ctx.rotate(screenRotation);
+  ctx.translate(0, tadOffsetY); // DIMTAD vertical placement (above/centered/below)
   ctx.font = buildUIFont(primaryHeight, fontFamily);
   ctx.textAlign = 'center';
   // ADR-362 Phase K3 — DIMTFILL background mask drawn before text + arrowheads.

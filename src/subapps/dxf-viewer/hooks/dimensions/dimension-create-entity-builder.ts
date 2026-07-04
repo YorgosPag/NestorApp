@@ -36,6 +36,7 @@ import {
   buildBaseline,
   buildContinued,
 } from './dimension-create-chained-builders';
+import { buildEntityPickDimension } from './dimension-create-entity-pick-builder';
 import { collectAssociations } from './dimension-create-association-builders';
 
 const PREVIEW_ID_SENTINEL = '__dim_preview__';
@@ -104,6 +105,11 @@ function buildFromState(
   state: DimensionCreateState,
   opts: BuildOpts,
 ): DimensionEntity | null {
+  // ADR-362 Phase N — pick-entity mode derives the whole dimension from click 1's
+  // entity + the placement drag, regardless of the detector-resolved `currentType`.
+  if (state.mode === 'entity') {
+    return buildEntityPickDimension(state, opts);
+  }
   switch (state.currentType) {
     case 'linear':
       return buildLinear(state, opts);

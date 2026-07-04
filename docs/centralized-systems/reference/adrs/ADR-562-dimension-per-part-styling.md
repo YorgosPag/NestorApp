@@ -1,6 +1,6 @@
 # ADR-562 — Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης)
 
-> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED (UNCOMMITTED 2026-07-01) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls έτοιμα· Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
+> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails (inline-SVG previews στα «Τύπος»/«Στυλ» dropdowns)** έτοιμα· Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
 > **Date:** 2026-07-01
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -231,6 +231,69 @@ style, N.3).
 
 ---
 
+### Φ7 — Dimension true-color (IMPLEMENTED) — enterprise color picker στα 4 ribbon πεδία «Χρώμα»
+
+**Πρόβλημα:** Τα 4 πεδία «Χρώμα» του contextual tab «Διάσταση» (γραμμή `dimclrd`, προεκτάσεις `dimclre`,
+βελάκια `arrowColor`, κείμενο `dimclrt`) ήταν ACI dropdown («Κατά Επίπεδο» + 7 χρώματα). Ο Giorgio ζήτησε
+αντικατάσταση με τον **υπάρχοντα enterprise color picker** (`ColorDialogTrigger`/`EnterpriseColorDialog`,
+ίδιος με «Ρυθμίσεις DXF»), με **πλήρες true-color** (ακριβές hex, όχι snap σε ACI παλέτα).
+
+**Λύση — companion true-color πεδία (μοτίβο `BaseEntity.colorTrueColor`):**
+- **Data model** (`types/dimension.ts`): προαιρετικά `dimclrdTrueColor?`, `dimclreTrueColor?`,
+  `dimclrtTrueColor?`, `arrowTrueColor?` — packed 24-bit `0xRRGGBB` `number | null`. `null`/absent → χρήση
+  του ACI καναλιού. Templates/registry/`resolveDimStyle` (spread merge) & persistence (JSON blob σε Storage)
+  τα καλύπτουν αυτόματα — καμία αλλαγή (ίδιο convention με το υπάρχον optional `arrowColor`).
+- **Resolver** (`dim-color-resolver.ts`): νέο `resolveDimColorTC(trueColor, aci, layerColour)` — true-color
+  πρώτα (`trueColorToHex`), αλλιώς `resolveDimColor` (ίδιο ByLayer/ByBlock fallback). Το `resolveDimColor`
+  μένει ως έχει (χρησιμοποιείται από `dimtfillclr` κ.λπ.).
+- **Render** (`DimensionRenderer.ts` γραμμή/προεκτάσεις/βελάκια, `dim-text-renderer.ts` κείμενο,
+  `preview-dimension-renderer.ts`): κάθε χρωματικό κανάλι περνά το companion στο `resolveDimColorTC`. Τα
+  βελάκια κληρονομούν το true-color της γραμμής όταν το δικό τους κανάλι είναι κενό (mirror του
+  `arrowColor ?? dimclrd`). Το preview μηδενίζει τα companion ώστε το ByLayer→preview-colour routing να μη σκιάζεται.
+- **Ribbon bridge** (`useRibbonDimBridge.ts`): τα 4 color keys μιλούν **hex** (in/out). Read → hex μέσω
+  `resolveDimColorTC`. Write (hex από picker) → γράφει **και** το εξακ true-color companion (`hexToTrueColor`,
+  render/persist) **και** το πλησιέστερο ACI (`findClosestAci`, DXF export degrade). Νέο `trueColorField` στο
+  `DimKeySpec`.
+- **Tab** (`contextual-dimension-tab.ts`): τα 4 color commands → `comboboxVariant:'dxf-color'`
+  (→ `RibbonDxfColorPickerWidget` → `RibbonColorField`, ήδη hex in/out). Ο ACI `COLOR_OPTIONS` const αφαιρέθηκε.
+- **DXF export** (`dxf-dimstyle-writer.ts`): helper `dimColorAci(aci, tc)` — degrade true-color→πλησιέστερο ACI
+  για τα codes 176/177/178 (το DXF DIMSTYLE δεν έχει group code για true-color· τεκμηριωμένο όριο).
+
+**SSoT reuse:** `trueColorToHex`/`hexToTrueColor` (`utils/dxf-true-color.ts`), `findClosestAci`/`getAciColor`
+(`settings/standards/aci.ts`), `RibbonColorField` + `comboboxVariant:'dxf-color'`. Καμία νέα υποδομή.
+
+**Όριο/όριο απώλειας:** το ByLayor «Κατά Επίπεδο» ως ρητή επιλογή dropdown χάνεται (ο picker είναι hex)· η
+επιλογή χρώματος γίνεται πλέον explicit true-color. **Εκτός scope:** Style Manager `dim-style-fields.tsx`
+(ξεχωριστό `ColorField`, «Edit style» comingSoon), `dimtfillclr` (φόντο κειμένου — παραμένει ACI).
+
+---
+
+### Φ8 — Linetype/Arrowhead thumbnails (IMPLEMENTED) — inline-SVG previews στα ribbon dropdowns
+
+**Πρόβλημα:** Τα dropdown «Τύπος» (linetype) και «Στυλ» (βελάκια) της Διάστασης έδειχναν **μόνο κείμενο**.
+Industry standard (AutoCAD linetype preview + DIMSTYLE arrowhead icon, Figma/Illustrator/Affinity stroke
+previews, Revit Line Pattern) = **οπτικό preview (μικρογραφία)** δίπλα στο όνομα.
+
+**Λύση — inline SVG με `currentColor` (μοτίβο `HatchPatternPicker`, theme-correct):**
+- **SSoT builders** (pure + memoized, ίδια γεωμετρία με τον renderer):
+  - `rendering/linetype-thumbnail.ts` — `buildLinetypeThumbnail(name)` → `stroke-dasharray` px, μέσω
+    `resolveAnyDashMm` (+ `resolveLinetype` fallback) + `dashMmToScreenPx`. Solid → κενό dash.
+  - `systems/dimensions/arrowhead-thumbnail.ts` — `buildArrowheadThumbnail(name)` → normalized SVG
+    primitives (line/polygon/circle) από το `ARROWHEAD_BLOCKS` unit-space SSoT (bbox-fit, flip Y).
+- **Renderer component** `ui/ribbon/components/buttons/RibbonComboboxThumbnail.tsx` — inline `<svg>` με
+  `stroke`/`fill="currentColor"` (μηδέν hardcoded χρώμα, N.3· αλλάζει με light/dark + hover).
+- **Shared combobox** — νέο `RibbonComboboxThumbnailDescriptor` + optional `thumbnail?` στο
+  `RibbonComboboxOption` (`ribbon-types.ts`)· ο `RibbonComboboxDefault` (`RibbonCombobox.tsx`) το ζωγραφίζει
+  σε trigger + items (κανονικό ύψος σειράς, δίπλα στο υπάρχον `imageUrl` path).
+- **Wiring** (`useRibbonDimBridge.ts`) — τα live `linetypeOptions` (τύπος γραμμής **+** προεκτάσεων) και
+  `arrowStyleOptions` αποκτούν `thumbnail:{kind,name}`. Ένα σημείο, SSoT.
+
+**SSoT reuse:** `resolveAnyDashMm`/`resolveLinetype`/`dashMmToScreenPx`, `getArrowheadBlock`/`ARROWHEAD_BLOCKS`,
+`imageUrl` rendering pattern. **Reusable:** ο builder δουλεύει και για τον Line-tool linetype dropdown (ADR-510),
+μελλοντικά. **Εκτός scope:** Style Manager dialog.
+
+---
+
 ## 5. SSoT reuse (N.0 / N.12 — καμία διπλή υλοποίηση)
 
 | Ανάγκη | Επαναχρησιμοποιούμενο SSoT | Αρχείο |
@@ -257,6 +320,29 @@ style, N.3).
 
 ## 7. Changelog
 
+- **2026-07-04 (Φ7 test-alignment)** — `useRibbonDimBridge.test.tsx`: ευθυγράμμιση των 5 stale assertions με το
+  Φ7 hex-picker contract (ο κώδικας ήταν ήδη σωστός — code = SoT). Read πεδία χρώματος → **HEX** (`dimclrd`
+  ACI 1 → `#FF0000`, `arrowColor` ACI 3 → `#00FF00`, ByLayer 256 → default `#ffffff`)· writes → **ACI
+  (`findClosestAci`) + true-color companion (`hexToTrueColor`)** (`dimclrd`+`dimclrdTrueColor`,
+  `arrowColor`+`arrowTrueColor`). Καμία αλλαγή production κώδικα. **23/23 GREEN**. (Παράλληλα: το
+  `contextual-dimensions-tab.test.ts` ενημερώθηκε για το νέο `dim-entity` tool — 15 tool keys.)
+- **2026-07-04 (Φ8 — Linetype/Arrowhead thumbnails, UNCOMMITTED)** — Τα ribbon dropdowns «Τύπος» (linetype,
+  γραμμή + προεκτάσεις) και «Στυλ» (βελάκια) της Διάστασης δείχνουν πλέον **inline-SVG preview** δίπλα στο
+  όνομα (AutoCAD/Figma-style), theme-correct μέσω `currentColor`. Νέοι SSoT builders
+  `rendering/linetype-thumbnail.ts` + `systems/dimensions/arrowhead-thumbnail.ts` (ίδια γεωμετρία με renderer)·
+  νέο component `RibbonComboboxThumbnail.tsx`· `RibbonComboboxOption.thumbnail?` + rendering στο
+  `RibbonComboboxDefault`· wiring στο `useRibbonDimBridge`. Reuse: `resolveAnyDashMm`/`dashMmToScreenPx`,
+  `ARROWHEAD_BLOCKS`, `imageUrl` pattern· πρότυπο `HatchPatternPicker`/`hatch-pattern-thumbnail.ts`. 🔴 browser-verify.
+- **2026-07-04 (Φ7 — Dimension true-color / enterprise color picker, UNCOMMITTED)** — Τα 4 ribbon πεδία
+  «Χρώμα» της Διάστασης (γραμμή/προεκτάσεις/βελάκια/κείμενο) άλλαξαν από ACI dropdown σε **enterprise color
+  picker** (`comboboxVariant:'dxf-color'` → `RibbonColorField`), με **πλήρες true-color**. Νέα optional companion
+  πεδία στο `DimStyle` (`dimclrdTrueColor`/`dimclreTrueColor`/`dimclrtTrueColor`/`arrowTrueColor`, packed
+  `0xRRGGBB`)· νέος resolver `resolveDimColorTC` (true-color πρώτα, αλλιώς ACI)· render (main+preview+text) περνά
+  τα companion· bridge γράφει hex→(true-color + πλησιέστερο ACI)· DXF writer degrade true-color→ACI (176/177/178).
+  Reuse: `trueColorToHex`/`hexToTrueColor`, `findClosestAci`. Αφαιρέθηκε ο ACI `COLOR_OPTIONS`. Αρχεία:
+  `types/dimension.ts`, `dim-color-resolver.ts`, `DimensionRenderer.ts`, `dim-text-renderer.ts`,
+  `preview-dimension-renderer.ts`, `useRibbonDimBridge.ts`, `contextual-dimension-tab.ts`, `dxf-dimstyle-writer.ts`.
+  ⚠️ ADR-040 CHECK 6B/6D: τροποποιεί `DimensionRenderer.ts`/preview → staged ADR (αυτό το αρχείο). 🔴 browser-verify.
 - **2026-07-01 (Φ5c FIX — «Στροφή/Θέση Κειμένου» wired, UNCOMMITTED)** — Browser-verify: το ribbon
   **«Στροφή Κειμένου»** (`dim.text.rotation`) ΔΕΝ λειτουργούσε. **ΔΥΟ bugs:** (1) το `dim.text.rotation`
   ΚΑΙ το `dim.text.position` ΔΕΝ ήταν στο `DIM_KEY_MAP` → `onComboboxChange` no-op (ίδιο μοτίβο με τον

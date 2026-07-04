@@ -50,6 +50,8 @@ const DIM_TOOL_INPUTS: Readonly<Partial<Record<ToolType, DimensionCreateStartInp
   'dim-smart': 'smart',
   'dim-linear': 'linear',
   'dim-aligned': 'aligned',
+  // ADR-362 Phase N — pick-entity quick dimension
+  'dim-entity': 'entity',
   'dim-angular2L': 'angular2L',
   'dim-angular3P': 'angular3P',
   // ADR-362 Phase D2 — radial family + ordinate

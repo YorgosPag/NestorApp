@@ -40,6 +40,7 @@ import { useRibbonComboboxState } from '../../context/useRibbonFieldSelectors';
 import { RibbonEditableCombobox } from './RibbonEditableCombobox';
 import { HatchPatternPicker } from './HatchPatternPicker';
 import { RibbonDxfColorPickerWidget } from './RibbonDxfColorPickerWidget';
+import { RibbonComboboxThumbnail } from './RibbonComboboxThumbnail';
 import { resolveNumericConfig } from './ribbon-combobox-numeric';
 
 const DEFAULT_WIDTH_PX = 140;
@@ -126,6 +127,8 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
   // the (collapsed) trigger too, and let the trigger grow to fit it.
   const selectedOption = value !== null ? options.find((o) => o.value === value) : undefined;
   const selectedImageUrl = selectedOption?.imageUrl;
+  // ADR-562 Φ8 — inline-SVG preview (linetype/arrowhead) for the selected option.
+  const selectedThumbnail = selectedOption?.thumbnail;
   // Closed → only the selected item is mounted (keeps Radix value↔label + a11y);
   // open → the full list. `selectedOption` already includes an injected free-form
   // value (see `options` above), so the trigger label never goes blank.
@@ -201,6 +204,12 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
               />
               <span className="truncate">{resolveLabel(selectedOption!, t)}</span>
             </span>
+          ) : selectedThumbnail ? (
+            // ADR-562 Φ8 — inline-SVG preview at normal row height (no min-h-20 growth).
+            <span className="flex items-center gap-2">
+              <RibbonComboboxThumbnail thumbnail={selectedThumbnail} />
+              <span className="truncate">{resolveLabel(selectedOption!, t)}</span>
+            </span>
           ) : (
             <SelectValue placeholder={MIXED_PLACEHOLDER} />
           )}
@@ -225,6 +234,11 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
                     className="h-16 w-16 shrink-0 rounded object-contain bg-white/5 p-0.5"
                     loading="lazy"
                   />
+                  <span>{resolveLabel(opt, t)}</span>
+                </span>
+              ) : opt.thumbnail ? (
+                <span className="flex items-center gap-2">
+                  <RibbonComboboxThumbnail thumbnail={opt.thumbnail} />
                   <span>{resolveLabel(opt, t)}</span>
                 </span>
               ) : (

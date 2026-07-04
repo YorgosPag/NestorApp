@@ -6,10 +6,11 @@
  *
  * Coverage:
  *   - Contextual tab metadata (id / label / isContextual / trigger)
- *   - 3 panels (Linear / Radial-Angular / Centers), canonical ids + label keys
- *   - ALL 14 dimension ToolType commandKeys present + unique (no tool lost)
+ *   - 4 panels (Linear / Radial-Angular / Centers / Αυτόματη), canonical ids + labels
+ *   - ALL 15 dimension ToolType commandKeys present + unique (no tool lost)
+ *   - The 2 auto keys (auto-dimension + auto-dim-cutline) moved here from Home
  *   - EVERY button LARGE simple, no flyout/dropdown
- *   - i18n labels in `ribbon.commands.dim*`; non-empty icons; no comingSoon
+ *   - i18n labels in `ribbon.commands.dim*` / `.autoDimension*`; non-empty icons
  *   - Shortcut uniqueness (only Smart DIM = 'DIM')
  */
 
@@ -19,11 +20,17 @@ import {
 } from '../contextual-dimensions-tab';
 import type { RibbonCommand } from '../../types/ribbon-types';
 
-const EXPECTED_COMMAND_KEYS = [
-  'dim-smart', 'dim-linear', 'dim-aligned', 'dim-baseline', 'dim-continued', 'dim-ordinate',
+// The 15 dimension ToolType keys (creation tools; incl. `dim-entity` = «από οντότητα»).
+const EXPECTED_TOOL_KEYS = [
+  'dim-smart', 'dim-entity', 'dim-linear', 'dim-aligned', 'dim-baseline', 'dim-continued', 'dim-ordinate',
   'dim-radius', 'dim-diameter', 'dim-jogged-radius', 'dim-arc-length', 'dim-angular2L', 'dim-angular3P',
   'dim-center-mark', 'dim-centerline',
 ] as const;
+// ADR-563 auto actions moved here from the Home launcher (2026-07-04).
+const EXPECTED_AUTO_KEYS = ['auto-dimension', 'auto-dim-cutline'] as const;
+// 2026-07-04 — «Κλείσιμο» action (mirror of «Ιδιότητες Κολώνας»); no «Διαγραφή» here.
+const EXPECTED_ACTION_KEYS = ['dim.actions.close'] as const;
+const EXPECTED_COMMAND_KEYS = [...EXPECTED_TOOL_KEYS, ...EXPECTED_AUTO_KEYS, ...EXPECTED_ACTION_KEYS] as const;
 
 function allButtons() {
   return CONTEXTUAL_DIMENSIONS_TAB.panels.flatMap((p) => p.rows.flatMap((r) => r.buttons));
@@ -41,19 +48,22 @@ describe('ADR-362 Phase E3 — CONTEXTUAL_DIMENSIONS_TAB', () => {
     expect(DIMENSIONS_CONTEXTUAL_TRIGGER).toBe('dim-tool-active');
   });
 
-  it('declares the three Revit-style panels with canonical ids + label keys', () => {
+  it('declares the five Revit-style panels with canonical ids + label keys', () => {
     expect(CONTEXTUAL_DIMENSIONS_TAB.panels.map((p) => p.id)).toEqual([
-      'dim-create-linear', 'dim-create-radial', 'dim-create-centers',
+      'dim-create-linear', 'dim-create-radial', 'dim-create-centers', 'dim-create-auto', 'dim-create-actions',
     ]);
     expect(CONTEXTUAL_DIMENSIONS_TAB.panels.map((p) => p.labelKey)).toEqual([
       'ribbon.panels.dimLinear', 'ribbon.panels.dimRadialAngular', 'ribbon.panels.dimCenters',
+      'ribbon.panels.dimAuto', 'ribbon.panels.dimActions',
     ]);
   });
 
-  it('keeps ALL 14 dimension ToolType commandKeys present + unique (no tool lost)', () => {
+  it('keeps ALL 15 tool keys + 2 auto keys + the «Κλείσιμο» action, present + unique', () => {
     const keys = allCommands().map((c) => c.commandKey);
     expect(new Set(keys).size).toBe(keys.length);
     expect(new Set(keys)).toEqual(new Set(EXPECTED_COMMAND_KEYS));
+    for (const k of EXPECTED_AUTO_KEYS) expect(keys).toContain(k);
+    expect(keys).toContain('dim.actions.close');
   });
 
   it('renders EVERY command as a LARGE simple button — nothing in a flyout/dropdown', () => {
@@ -71,7 +81,9 @@ describe('ADR-362 Phase E3 — CONTEXTUAL_DIMENSIONS_TAB', () => {
 
   it('routes every label through the i18n namespace, no comingSoon, non-empty icon (N.11)', () => {
     for (const command of allCommands()) {
-      expect(command.labelKey).toMatch(/^ribbon\.commands\.dim/);
+      // Creation tools live under `ribbon.commands.dim*`; the moved auto actions
+      // keep their existing `ribbon.commands.autoDimension*` keys (SSoT, no new keys).
+      expect(command.labelKey).toMatch(/^ribbon\.commands\.(dim|autoDimension)/);
       expect(command.comingSoon).toBeFalsy();
       expect(typeof command.icon).toBe('string');
       expect(command.icon).not.toBe('');

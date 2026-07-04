@@ -22,6 +22,7 @@ const PANEL_IDS = [
   'dim-text',
   'dim-modify',
   'dim-properties',
+  'dim-actions',
 ];
 const PANEL_LABEL_KEYS = [
   'ribbon.panels.dimStyle',
@@ -31,6 +32,7 @@ const PANEL_LABEL_KEYS = [
   'ribbon.panels.dimText',
   'ribbon.panels.dimModify',
   'ribbon.panels.dimProperties',
+  'ribbon.panels.dimActions',
 ];
 
 function collectAllButtons(tab: typeof DIMENSION_CONTEXTUAL_TAB) {
@@ -57,8 +59,8 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(DIMENSION_CONTEXTUAL_TAB.labelKey).toBe('ribbon.tabs.dimension');
   });
 
-  it('declares exactly 7 panels in the canonical per-part order', () => {
-    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(7);
+  it('declares exactly 8 panels in the canonical per-part order', () => {
+    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(8);
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.id)).toEqual(PANEL_IDS);
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.labelKey)).toEqual(PANEL_LABEL_KEYS);
   });
@@ -86,10 +88,11 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     ]);
   });
 
-  it('dim-line color is now a bridge-wired combobox (not the broken color-swatch)', () => {
+  it('dim-line color is now the enterprise dxf-color picker (ADR-562 Φ6, not the broken color-swatch)', () => {
     const colorBtn = buttonsOf('dim-line')[0];
     expect(colorBtn.type).toBe('combobox');
-    expect((colorBtn.command.options ?? []).length).toBeGreaterThan(1);
+    // Φ6 — hex/true-color picker variant; options are supplied by the picker, not statically.
+    expect(colorBtn.command.comboboxVariant).toBe('dxf-color');
   });
 
   it('dim-ext panel wires 3 comboboxes → dimclre / dimlwe / dimltex keys', () => {
@@ -145,6 +148,22 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     const panel = panelById('dim-properties');
     expect(panel.rows.flatMap((r) => r.buttons)).toHaveLength(3);
     expect(panel.rows).toHaveLength(2);
+  });
+
+  it('dim-actions panel: «Κλείσιμο» + «Διαγραφή», both wired (action === commandKey)', () => {
+    const btns = buttonsOf('dim-actions');
+    expect(btns.map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.actions.close,
+      DIM_RIBBON_KEYS.actions.delete,
+    ]);
+    for (const btn of btns) {
+      expect(btn.type).toBe('simple');
+      expect(btn.command.action).toBe(btn.command.commandKey);
+      expect(btn.command.comingSoon).toBeFalsy();
+    }
+    // Close carries the selection-arrow icon (mirror of «Ιδιότητες Κολώνας»).
+    expect(btns[0].command.icon).toBe('select');
+    expect(btns[1].command.icon).toBe('trash');
   });
 
   it('routes all labelKeys through the ribbon.* namespace (SOS N.11 — no hardcoded text)', () => {

@@ -188,6 +188,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'layering': return <Layers width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'fullscreen': return <Maximize2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-smart': return <Ruler width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-entity': return <Wand2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-auto': return <Frame width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-linear': return <MoveHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-aligned': return <MoveDiagonal2 width={sizePx[size]} height={sizePx[size]} className={className} />;

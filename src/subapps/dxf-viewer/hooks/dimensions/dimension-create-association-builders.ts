@@ -27,6 +27,17 @@ export function collectAssociations(
   state: DimensionCreateState,
   entity: DimensionEntity,
 ): readonly DimensionAssociation[] {
+  // ADR-362 Phase N — pick-entity linear/aligned dims anchor BOTH span endpoints
+  // (defPoints[0,1]) to the single picked line/wall so the dim follows it on
+  // move/resize. defPoints[2] (placement) stays free. Radius/diameter fall
+  // through to their own `dimensionType` cases below (unchanged capture).
+  if (
+    state.mode === 'entity' &&
+    (entity.dimensionType === 'linear' || entity.dimensionType === 'aligned')
+  ) {
+    return collectEntityPickSpanAssociations(state);
+  }
+
   const out: DimensionAssociation[] = [];
   switch (entity.dimensionType) {
     case 'linear':
@@ -138,6 +149,23 @@ function makeCircleAngleAssociation(
     param: angle,
     subIndex,
   };
+}
+
+/**
+ * ADR-362 Phase N — pick-entity span capture. defPoints[0,1] both ride on the
+ * single picked line/wall as its two span endpoints (subIndex 0 = start / first,
+ * 1 = end / last). The resolver's `endpoint` case handles both line and wall
+ * (BIM key-points) so the dim follows the host on move/resize.
+ */
+function collectEntityPickSpanAssociations(
+  state: DimensionCreateState,
+): readonly DimensionAssociation[] {
+  const picked = state.clicks[0]?.pickedEntity;
+  if (!picked || (picked.type !== 'line' && picked.type !== 'wall')) return [];
+  return [
+    { defPointIndex: 0, geometryId: picked.id, associationType: 'endpoint', subIndex: 0 },
+    { defPointIndex: 1, geometryId: picked.id, associationType: 'endpoint', subIndex: 1 },
+  ];
 }
 
 function pushLineAssociation(

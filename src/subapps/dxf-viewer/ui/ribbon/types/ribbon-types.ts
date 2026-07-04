@@ -14,6 +14,15 @@ export type ButtonType = 'simple' | 'split' | 'toggle' | 'dropdown' | 'combobox'
  * the bridge via `getComboboxState(commandKey).options` and override
  * the static list at runtime.
  */
+/**
+ * ADR-562 Φ8 — Inline-SVG preview descriptor για ένα combobox option (linetype
+ * μοτίβο / arrowhead σχήμα). Rendered από το `RibbonComboboxThumbnail` με
+ * `currentColor` (theme-correct). Η γεωμετρία αντλείται live από τα SSoT builders.
+ */
+export type RibbonComboboxThumbnailDescriptor =
+  | { readonly kind: 'linetype'; readonly name: string }
+  | { readonly kind: 'arrowhead'; readonly name: string };
+
 export interface RibbonComboboxOption {
   /** Stable value passed through onComboboxChange. */
   value: string;
@@ -23,6 +32,12 @@ export interface RibbonComboboxOption {
   isLiteralLabel?: boolean;
   /** Optional preview thumbnail URL (ADR-410 furniture library picker). */
   imageUrl?: string;
+  /**
+   * ADR-562 Φ8 — optional inline-SVG preview (linetype dash / arrowhead shape),
+   * rendered theme-correct via `currentColor`. Preferred over `imageUrl` for
+   * vector previews (proper aspect ratio + light/dark). @see RibbonComboboxThumbnail
+   */
+  thumbnail?: RibbonComboboxThumbnailDescriptor;
 }
 
 /**

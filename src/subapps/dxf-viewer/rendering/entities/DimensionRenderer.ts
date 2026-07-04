@@ -47,7 +47,7 @@ import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks
 import { renderArrowhead } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
 import { addPoints, scalePoint } from './shared/geometry-vector-utils';
-import { resolveDimColor } from './dimension/dim-color-resolver';
+import { resolveDimColorTC } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import {
   computeManualBreaks,
@@ -180,7 +180,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     if (!ext1 && !ext2) return;
     // Extension lines share one stroke setup (unified per-part granularity):
     // dimlwe + dimltex1 (dimltex1===dimltex2 while the UI sets both together).
-    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1);
+    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1, r.style.dimclreTrueColor);
     if (ext1 && !r.style.suppressExtLine1) {
       const segs = breaks?.extLine1Segments ?? [ext1];
       for (const s of segs) this.strokeSegment(s);
@@ -196,7 +196,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     breaks?: DimBreakResult,
     lf?: DimFitRender | null,
   ): void {
-    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype);
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor);
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
@@ -257,7 +257,13 @@ export class DimensionRenderer extends BaseEntityRenderer {
       paperHeightToModel(r.style.dimasz, r.style.dimscale, this.sceneUnits) * this.transform.scale;
     // ADR-562 Φ2 — arrows use the separate arrowColor channel when set, else
     // inherit the dim-line color (`arrowColor ?? dimclrd`, exceeds AutoCAD).
-    const colour = resolveDimColor(r.style.arrowColor ?? r.style.dimclrd, this.layerColour);
+    // ADR-562 Φ7 — mirror the ACI inheritance for true-color: the separate arrow
+    // channel wins; else (arrow channel unset) inherit the dim-line true-color.
+    const arrowTc =
+      r.style.arrowTrueColor ?? (r.style.arrowColor == null ? r.style.dimclrdTrueColor : null);
+    const colour = resolveDimColorTC(
+      arrowTc, r.style.arrowColor ?? r.style.dimclrd, this.layerColour,
+    );
     const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
     const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
     // ADR-362 Phase M — when DIMATFIT moves arrows outside, the placement flips the
@@ -310,7 +316,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
   private drawFitLeader(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
     const path = lf?.placement.leaderPath;
     if (!path || path.length < 2) return;
-    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype);
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor);
     for (let i = 1; i < path.length; i++) {
       this.strokeSegment({ start: path[i - 1], end: path[i] });
     }
@@ -349,7 +355,12 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   // ── Canvas helpers ───────────────────────────────────────────────────────
 
-  private applyLineStyle(aci: number, lineweight: LineweightMm, linetype: string): void {
+  private applyLineStyle(
+    aci: number,
+    lineweight: LineweightMm,
+    linetype: string,
+    trueColor?: number | null,
+  ): void {
     // ADR-562 Φ2 — resolved per-part width + dash (was hardcoded 1px solid).
     const stroke = resolveDimStroke(lineweight, linetype, this.transform.scale);
     if (this._inGlowPass) {
@@ -358,7 +369,8 @@ export class DimensionRenderer extends BaseEntityRenderer {
       this.ctx.lineWidth = stroke.lineWidthPx + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
       this.ctx.setLineDash([]);
     } else {
-      this.ctx.strokeStyle = resolveDimColor(aci, this.layerColour);
+      // ADR-562 Φ7 — true-color companion wins, else ACI (ByLayer fallback).
+      this.ctx.strokeStyle = resolveDimColorTC(trueColor, aci, this.layerColour);
       this.ctx.lineWidth = stroke.lineWidthPx;
       this.ctx.setLineDash(stroke.dashPx);
     }

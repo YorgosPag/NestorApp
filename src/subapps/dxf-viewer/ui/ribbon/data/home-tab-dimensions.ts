@@ -1,20 +1,20 @@
 /**
- * ADR-362 Phase E3 — Home → Dimensions QUICK-ACCESS launcher.
+ * ADR-362 Phase E3 / Φ-Ε4 (2026-07-04) — Home → Dimensions SINGLE launcher.
  *
  * The full dimension-creation toolset lives in the CONTEXTUAL «Διαστάσεις» tab
  * (`contextual-dimensions-tab.ts`, `dim-tool-active`), which auto-opens the
  * moment a dim tool is picked — mirroring the guides contextual tab (ADR-442).
- * This panel is the compact Home entry point (AutoCAD "Home → Annotation"): a
- * single Dimension button so the most frequent action is one click away, and it
- * drives `dim-smart` → the contextual «Διαστάσεις» tab auto-opens.
+ * Per Giorgio (2026-07-04): Home keeps EXACTLY ONE «Διάσταση» button — the whole
+ * type gallery (the old split dropdown) AND the auto-dimension + cut-line actions
+ * now live as LARGE icons in the «Διαστάσεις» tab, not on Home. This mirrors
+ * AutoCAD "Home → Annotation" collapsed to its single most-frequent action.
  *
- * A single large split-button:
- *   • main click → `dim-smart` (Smart DIM) → starts dimensioning
- *   • dropdown   → the 6 most-common types (smart / linear / aligned / radius /
- *                  diameter / angular2L); the remaining types live on Annotate.
+ * A single large SIMPLE button:
+ *   • click → `dim-smart` (Smart DIM) → starts dimensioning → the contextual
+ *     «Διαστάσεις» tab auto-opens with the full toolset (incl. auto / cut-line).
  *
- * SSoT: reuses the exact commandKeys / icons / i18n labels also used by
- * `contextual-dimensions-tab.ts`. Zero new keys. Every `commandKey` is a `ToolType`
+ * SSoT: reuses the exact commandKey / icon / i18n label also used by
+ * `contextual-dimensions-tab.ts`. Zero new keys. `dim-smart` is a `ToolType`
  * routed via `useDimToolRouting` → `DimensionCreateStore`.
  */
 
@@ -28,7 +28,7 @@ export const HOME_DIMENSIONS_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       buttons: [
         {
-          type: 'split',
+          type: 'simple',
           size: 'large',
           command: {
             id: 'dim.smart',
@@ -36,40 +36,6 @@ export const HOME_DIMENSIONS_PANEL: RibbonPanelDef = {
             icon: 'dim-smart',
             commandKey: 'dim-smart',
             shortcut: 'DIM',
-          },
-          variants: [
-            { id: 'dim.smart', labelKey: 'ribbon.commands.dimVariants.smart', icon: 'dim-smart', commandKey: 'dim-smart' },
-            { id: 'dim.linear', labelKey: 'ribbon.commands.dimVariants.linear', icon: 'dim-linear', commandKey: 'dim-linear' },
-            { id: 'dim.aligned', labelKey: 'ribbon.commands.dimVariants.aligned', icon: 'dim-aligned', commandKey: 'dim-aligned' },
-            { id: 'dim.radius', labelKey: 'ribbon.commands.dimVariants.radius', icon: 'dim-radius', commandKey: 'dim-radius' },
-            { id: 'dim.diameter', labelKey: 'ribbon.commands.dimVariants.diameter', icon: 'dim-diameter', commandKey: 'dim-diameter' },
-            { id: 'dim.angular2L', labelKey: 'ribbon.commands.dimVariants.angular2L', icon: 'dim-angular2L', commandKey: 'dim-angular2L' },
-          ],
-        },
-        // ADR-563 — «Αυτόματη Διαστασιολόγηση»: one-shot ACTION (not a ToolType) →
-        // opens the options dialog, then auto-places perimeter dimensions.
-        {
-          type: 'simple',
-          size: 'large',
-          command: {
-            id: 'dim.auto',
-            labelKey: 'ribbon.commands.autoDimension',
-            icon: 'dim-auto',
-            commandKey: 'auto-dimension',
-            action: 'auto-dimension',
-          },
-        },
-        // ADR-563 Φ4-Α — «Γραμμή τομής»: interactive cut-line dimensioning. A real
-        // ToolType (no `action`) → routes via onToolChange → toolStateStore.selectTool
-        // → opens the options dialog, then the 3-click cut-line flow.
-        {
-          type: 'simple',
-          size: 'large',
-          command: {
-            id: 'dim.cutline',
-            labelKey: 'ribbon.commands.autoDimensionCutline',
-            icon: 'dim-aligned',
-            commandKey: 'auto-dim-cutline',
           },
         },
       ],

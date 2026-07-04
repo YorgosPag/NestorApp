@@ -32,6 +32,18 @@ import type {
   DimToleranceJustify,
 } from '../types/dimension';
 import type { DimGroupSink } from './dxf-dimension-writer';
+import { findClosestAci } from '../settings/standards/aci';
+import { trueColorToHex } from './dxf-true-color';
+
+/**
+ * ADR-562 Φ7 — DIMSTYLE colours are ACI-only in DXF (no true-color group code).
+ * When a Nestor true-color companion is present, degrade to the nearest ACI so the
+ * exported 176/177/178 codes stay valid. (The ribbon bridge already keeps the ACI
+ * channel in sync, so this is belt-and-suspenders for any true-color-only path.)
+ */
+function dimColorAci(aci: number, trueColor?: number | null): number {
+  return trueColor != null ? findClosestAci(trueColorToHex(trueColor)) : aci;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Enum → DXF code lookup maps
@@ -128,9 +140,11 @@ export function emitDimStyle(sink: DimGroupSink, s: DimStyle, scale = 1): void {
   sink(175, 0);                         // DIMSOXD
 
   // ── Colors (codes 176-178) ────────────────────────────────────────────────
-  sink(176, s.dimclrd);
-  sink(177, s.dimclre);
-  sink(178, s.dimclrt);
+  // ADR-562 Φ7 — degrade any true-color companion to nearest ACI (no true-color
+  // group code exists for DIMSTYLE).
+  sink(176, dimColorAci(s.dimclrd, s.dimclrdTrueColor));
+  sink(177, dimColorAci(s.dimclre, s.dimclreTrueColor));
+  sink(178, dimColorAci(s.dimclrt, s.dimclrtTrueColor));
 
   // ── Angular precision (code 179) ──────────────────────────────────────────
   sink(179, s.dimadec);

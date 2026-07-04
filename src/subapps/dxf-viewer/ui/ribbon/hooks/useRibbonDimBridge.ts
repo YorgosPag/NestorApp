@@ -36,6 +36,9 @@ import {
   type DimStyle,
 } from '../../../types/entities';
 import { resolveDimStyle } from '../../../systems/dimensions/dim-style-resolver';
+import { resolveDimColorTC } from '../../../rendering/entities/dimension/dim-color-resolver';
+import { findClosestAci } from '../../../settings/standards/aci';
+import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { getDimStyleRegistry } from '../../../systems/dimensions/dim-style-registry';
 import { listArrowheadBlockNames } from '../../../systems/dimensions/dim-arrowhead-blocks';
 import { useCommandHistory } from '../../../core/commands';
@@ -84,6 +87,11 @@ interface DimKeySpec {
   readonly sameValue?: readonly (keyof DimStyle)[];
   /** Fields reset to '' so both arrowheads inherit the unified `dimblk`. */
   readonly clear?: readonly (keyof DimStyle)[];
+  /**
+   * ADR-562 Φ7 — for `kind:'color'`, the true-color companion field. Written with
+   * the packed hex on change (exact colour), while `field` gets the nearest ACI.
+   */
+  readonly trueColorField?: keyof DimStyle;
 }
 
 const K = DIM_RIBBON_KEYS.override;
@@ -93,16 +101,16 @@ const CHOOSER = DIM_RIBBON_KEYS.style.chooser;
 const TEXT_ROTATION = DIM_RIBBON_KEYS.text.rotation;
 
 const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
-  [K.color]:      { field: 'dimclrd', kind: 'color' },
+  [K.color]:      { field: 'dimclrd', kind: 'color', trueColorField: 'dimclrdTrueColor' },
   [K.lineWeight]: { field: 'dimlwd', kind: 'lineweight' },
   [K.lineType]:   { field: 'dimltype', kind: 'linetype' },
-  [K.extColor]:   { field: 'dimclre', kind: 'color' },
+  [K.extColor]:   { field: 'dimclre', kind: 'color', trueColorField: 'dimclreTrueColor' },
   [K.extWeight]:  { field: 'dimlwe', kind: 'lineweight' },
   [K.extType]:    { field: 'dimltex1', kind: 'linetype', sameValue: ['dimltex2'] },
   [K.arrowStyle]: { field: 'dimblk', kind: 'arrowStyle', clear: ['dimblk1', 'dimblk2'] },
-  [K.arrowColor]: { field: 'arrowColor', kind: 'color' },
+  [K.arrowColor]: { field: 'arrowColor', kind: 'color', trueColorField: 'arrowTrueColor' },
   [K.arrowSize]:  { field: 'dimasz', kind: 'number' },
-  [K.textColor]:  { field: 'dimclrt', kind: 'color' },
+  [K.textColor]:  { field: 'dimclrt', kind: 'color', trueColorField: 'dimclrtTrueColor' },
   [K.textFont]:   { field: 'textFontFamily', kind: 'font' },
   [DIM_RIBBON_KEYS.text.height]: { field: 'paperTextHeight', kind: 'number' },
   // Vertical text placement (DIMTAD) — a DIMSTYLE override (above/centered/below/…).
@@ -113,26 +121,34 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
 // Value formatting (read) + parsing (write) — pure
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** ACI → combobox string (256 → 'ByLayer'). */
-function colorToValue(aci: number): string {
-  return aci === ACI_BYLAYER ? BYLAYER : String(aci);
-}
-
 /** LineweightMm → combobox string (-2 → 'ByLayer'). */
 function lineweightToValue(lw: LineweightMm): string {
   return lw === LINEWEIGHT_SPECIAL.BYLAYER ? BYLAYER : String(lw);
 }
 
-/** Effective arrow color: the separate channel when set, else the dim-line color. */
-function arrowColorValue(style: DimStyle): string {
-  return colorToValue(style.arrowColor ?? style.dimclrd);
+/**
+ * ADR-562 Φ7 — effective hex for a color channel (the ribbon color picker is
+ * hex in/out). The true-color companion wins; else the ACI channel. No
+ * `layerColour` is passed → a ByLayer channel resolves to the default hex, so
+ * the picker opens on a sane initial swatch instead of an empty value.
+ */
+function colorToHex(spec: DimKeySpec, style: DimStyle): string {
+  if (spec.field === 'arrowColor') {
+    // Mirror the render inheritance: arrow channel wins, else inherit dim line.
+    const tc = style.arrowTrueColor ?? (style.arrowColor == null ? style.dimclrdTrueColor : null);
+    return resolveDimColorTC(tc, style.arrowColor ?? style.dimclrd);
+  }
+  const tc = spec.trueColorField
+    ? (style[spec.trueColorField] as number | null | undefined)
+    : undefined;
+  return resolveDimColorTC(tc, style[spec.field] as number);
 }
 
 /** Read one control's display value from the resolved style. */
 function readValue(spec: DimKeySpec, style: DimStyle): string {
   switch (spec.kind) {
     case 'color':
-      return spec.field === 'arrowColor' ? arrowColorValue(style) : colorToValue(style[spec.field] as number);
+      return colorToHex(spec, style);
     case 'lineweight':
       return lineweightToValue(style[spec.field] as LineweightMm);
     case 'arrowStyle':
@@ -192,15 +208,19 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
     subscribeLinetypeRegistry, getLinetypeRegistrySnapshot, getLinetypeRegistrySnapshot,
   );
 
+  // ADR-562 Φ8 — each option carries an inline-SVG preview descriptor (linetype
+  // dash / arrowhead shape). Feeds «Τύπος» (line + extension) and «Στυλ» previews.
   const linetypeOptions = useMemo<readonly RibbonComboboxOption[]>(
     () => listSelectableLinetypeNames().map((name) => ({
       value: name, labelKey: name, isLiteralLabel: true,
+      thumbnail: { kind: 'linetype' as const, name },
     })),
     [registry],
   );
   const arrowStyleOptions = useMemo<readonly RibbonComboboxOption[]>(
     () => listArrowheadBlockNames().map((name) => ({
       value: name, labelKey: name, isLiteralLabel: true,
+      thumbnail: { kind: 'arrowhead' as const, name },
     })),
     [],
   );
@@ -293,6 +313,18 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
       }
       const spec = DIM_KEY_MAP[commandKey];
       if (!spec) return;
+      // ADR-562 Φ7 — color channels are hex (ribbon picker). Store BOTH the exact
+      // true-color companion (drives render + persist) and the nearest ACI (kept
+      // for DXF export degrade, since DIMSTYLE has no true-color group code).
+      if (spec.kind === 'color') {
+        const next: Record<string, unknown> = {
+          ...entity.overrides,
+          [spec.field]: findClosestAci(value),
+        };
+        if (spec.trueColorField) next[spec.trueColorField] = hexToTrueColor(value);
+        patchEntity(entity, { overrides: next });
+        return;
+      }
       const parsed = parseValue(spec, value);
       if (parsed === undefined) return;
       patchEntity(entity, { overrides: buildOverridesPatch(spec, parsed, entity.overrides) });

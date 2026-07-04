@@ -244,6 +244,8 @@ export type ToolType =
   | 'dim-smart'           // AutoCAD 2016+ Smart DIM — detector auto-picks type from hover
   | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)
   | 'dim-aligned'         // Manual aligned (parallel to measured segment)
+  // ADR-362 Phase N: pick-entity quick dimension (AutoCAD DIM "select object")
+  | 'dim-entity'          // Pick a line/wall/circle/arc → 2nd click auto-dimensions it (drag picks aligned/H/V)
   | 'auto-dim-cutline'    // ADR-563 Φ4-Α — interactive cut-line dimension chain
   | 'dim-angular2L'       // Manual angular between 2 line picks
   | 'dim-angular3P'       // Manual angular from vertex + 2 rays

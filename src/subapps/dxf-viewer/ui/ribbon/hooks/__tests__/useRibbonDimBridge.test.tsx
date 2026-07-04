@@ -16,6 +16,11 @@ import { DIM_RIBBON_KEYS } from '../bridge/dim-command-keys';
 import { BUILTIN_DIM_STYLE_IDS } from '../../../../systems/dimensions/dim-style-templates';
 import { UpdateEntityCommand } from '../../../../core/commands/entity-commands/UpdateEntityCommand';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+// ADR-562 Φ7 — the per-part color controls are now the enterprise hex color picker.
+// getComboboxState returns a HEX string; onComboboxChange writes BOTH the nearest ACI
+// (`findClosestAci`) AND the packed true-color companion (`hexToTrueColor`).
+import { findClosestAci } from '../../../../settings/standards/aci';
+import { hexToTrueColor } from '../../../../utils/dxf-true-color';
 
 // ── Mock UpdateEntityCommand to capture selected-entity writes ─────────────────
 jest.mock(
@@ -101,20 +106,24 @@ beforeEach(() => {
 describe('useRibbonDimBridge — selected dimension (read)', () => {
   const r = () => renderWith(dimWithOverrides, 'dim-1');
 
-  it('reads dim-line color / weight / linetype from overrides', () => {
-    expect(r().current.getComboboxState(K.color)?.value).toBe('1');
+  it('reads dim-line color (as HEX, Φ7 picker) / weight / linetype from overrides', () => {
+    // ACI 1 (red) override → the picker reads it back as its hex form.
+    expect(r().current.getComboboxState(K.color)?.value).toBe('#FF0000');
     expect(r().current.getComboboxState(K.lineWeight)?.value).toBe('0.35');
     expect(r().current.getComboboxState(K.lineType)?.value).toBe('Dashed');
   });
 
-  it('reads arrow size + separate arrow color + font', () => {
+  it('reads arrow size + separate arrow color (as HEX, Φ7 picker) + font', () => {
     expect(r().current.getComboboxState(K.arrowSize)?.value).toBe('5');
-    expect(r().current.getComboboxState(K.arrowColor)?.value).toBe('3');
+    // ACI 3 (green) arrow-color override → hex form.
+    expect(r().current.getComboboxState(K.arrowColor)?.value).toBe('#00FF00');
     expect(r().current.getComboboxState(K.textFont)?.value).toBe('Roboto');
   });
 
-  it('un-overridden extension color falls back to the ByLayer built-in (256)', () => {
-    expect(r().current.getComboboxState(K.extColor)?.value).toBe('ByLayer');
+  it('un-overridden extension color resolves the ByLayer built-in (256) to the default hex', () => {
+    // Φ7 — the picker has no ByLayer sentinel; ACI 256 with no layer colour resolves
+    // to the neutral default swatch so the picker opens on a sane value.
+    expect(r().current.getComboboxState(K.extColor)?.value).toBe('#ffffff');
   });
 
   it('linetype options come from the live registry; arrow options from the block SSoT', () => {
@@ -134,9 +143,13 @@ describe('useRibbonDimBridge — selected dimension (read)', () => {
 describe('useRibbonDimBridge — selected dimension (write = undoable overrides)', () => {
   const r = () => renderWith(dimPlain, 'dim-2');
 
-  it('color change writes an overrides patch with the ACI', () => {
-    r().current.onComboboxChange(K.color, '5');
-    expect(patchOf()).toEqual({ overrides: { dimclrd: 5 } });
+  it('color change (hex picker) writes the nearest ACI + the true-color companion', () => {
+    const HEX = '#0000ff'; // pure blue → ACI 5
+    r().current.onComboboxChange(K.color, HEX);
+    expect(patchOf()).toEqual({
+      overrides: { dimclrd: findClosestAci(HEX), dimclrdTrueColor: hexToTrueColor(HEX) },
+    });
+    expect(findClosestAci(HEX)).toBe(5); // sanity: pure blue → ACI 5
   });
 
   it('lineweight ByLayer → -2 sentinel', () => {
@@ -154,9 +167,13 @@ describe('useRibbonDimBridge — selected dimension (write = undoable overrides)
     expect(patchOf()).toEqual({ overrides: { dimblk: 'oblique', dimblk1: '', dimblk2: '' } });
   });
 
-  it('arrow color writes the separate arrowColor channel', () => {
-    r().current.onComboboxChange(K.arrowColor, '4');
-    expect(patchOf()).toEqual({ overrides: { arrowColor: 4 } });
+  it('arrow color (hex picker) writes the separate arrowColor ACI + true-color companion', () => {
+    const HEX = '#00ffff'; // pure cyan → ACI 4
+    r().current.onComboboxChange(K.arrowColor, HEX);
+    expect(patchOf()).toEqual({
+      overrides: { arrowColor: findClosestAci(HEX), arrowTrueColor: hexToTrueColor(HEX) },
+    });
+    expect(findClosestAci(HEX)).toBe(4); // sanity: pure cyan → ACI 4
   });
 
   it('invalid arrow size (NaN) writes no command', () => {
@@ -165,9 +182,11 @@ describe('useRibbonDimBridge — selected dimension (write = undoable overrides)
   });
 
   it('write merges on top of existing overrides (non-destructive)', () => {
-    renderWith(dimWithOverrides, 'dim-1').current.onComboboxChange(K.color, '7');
+    const HEX = '#ffffff'; // white → ACI 7
+    renderWith(dimWithOverrides, 'dim-1').current.onComboboxChange(K.color, HEX);
     const ov = patchOf().overrides as Record<string, unknown>;
-    expect(ov.dimclrd).toBe(7);
+    expect(ov.dimclrd).toBe(findClosestAci(HEX));
+    expect(ov.dimclrdTrueColor).toBe(hexToTrueColor(HEX)); // Φ7 companion also written
     expect(ov.dimlwd).toBe(0.35); // pre-existing override preserved
   });
 });

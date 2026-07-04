@@ -408,7 +408,13 @@ function withPreviewColors(style: DimStyle): DimStyle {
   // Cheap clone: only the color fields need overriding. ByLayer (256) routes
   // resolveDimColor() to the `layerColour` fallback which the caller has set
   // to the preview color.
-  return { ...style, dimclrd: ACI_BYLAYER, dimclre: ACI_BYLAYER, dimclrt: ACI_BYLAYER };
+  // ADR-562 Φ7 — also clear the true-color companions so a stored exact hex does
+  // not shadow the ByLayer→preview-colour routing above.
+  return {
+    ...style,
+    dimclrd: ACI_BYLAYER, dimclre: ACI_BYLAYER, dimclrt: ACI_BYLAYER,
+    dimclrdTrueColor: null, dimclreTrueColor: null, dimclrtTrueColor: null, arrowTrueColor: null,
+  };
 }
 
 function strokeSegment(params: PreviewDimensionRenderParams, seg: DimLineSegment): void {

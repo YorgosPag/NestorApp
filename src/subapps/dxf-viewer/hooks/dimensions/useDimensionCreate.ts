@@ -52,8 +52,14 @@ import type { DimensionCreateMode } from './dimension-create-state';
 // Public types
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Initial type pick at flow start — 'smart' = detector-driven, else manual. */
-export type DimensionCreateStartInput = 'smart' | DimensionType;
+/**
+ * Initial type pick at flow start:
+ *   - 'smart'  = detector-driven (Smart DIM)
+ *   - 'entity' = ADR-362 Phase N pick-entity quick dim (detector-driven type, but
+ *                click 1 picks a whole entity → 2-click flow)
+ *   - else     = manual override (one specific `DimensionType`)
+ */
+export type DimensionCreateStartInput = 'smart' | 'entity' | DimensionType;
 
 /** Modifier keys recognised by the creation flow (subset of physical events). */
 export type DimensionCreateKey = 'Tab' | 'Space' | 'Escape' | 'Enter';
@@ -201,7 +207,7 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
       // instead of 3 by pressing Enter after placing the 2nd point).
       const state = dimensionCreateStore.get();
       if (state.status !== 'collecting' || !state.cursorWorld || !state.currentType) return;
-      const needed = requiredClickCount(state.currentType);
+      const needed = requiredClickCount(state.currentType, state.mode);
       if (state.clicks.length === needed - 1) {
         dimensionCreateStore.click({
           world: state.cursorWorld,
@@ -233,6 +239,7 @@ function makeStartParams(
   styleId: string,
 ): { mode: DimensionCreateMode; styleId: string; manualOverride?: DimensionType } {
   if (initial === 'smart') return { mode: 'smart', styleId };
+  if (initial === 'entity') return { mode: 'entity', styleId };
   return { mode: 'manual', styleId, manualOverride: initial };
 }
 

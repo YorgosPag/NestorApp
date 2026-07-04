@@ -1,46 +1,45 @@
 /**
- * ADR-362 Phase E3 — Tests for the Home → Dimensions QUICK-ACCESS launcher.
+ * ADR-362 Phase E3 / Φ-Ε4 (2026-07-04) — Tests for the Home → Dimensions launcher.
  *
- * The full toolset lives in the contextual «Διαστάσεις» tab
- * (`contextual-dimensions-tab.ts`); Home keeps a single compact split-button
- * (AutoCAD "Home → Annotation" pattern).
+ * Per Giorgio (2026-07-04): Home keeps EXACTLY ONE «Διάσταση» button. The whole
+ * type gallery + auto-dimension + cut-line moved to the contextual «Διαστάσεις»
+ * tab (`contextual-dimensions-tab.ts`).
  *
  * Coverage:
- *   - One large split button, commandKey `dim-smart`, shortcut DIM
- *   - Dropdown = 6 common types, all `commandKey`s ∈ the Annotate full set
- *   - i18n labels in the `ribbon.commands.dim*` namespace; non-empty icons
+ *   - EXACTLY one large SIMPLE button, commandKey `dim-smart`, shortcut DIM
+ *   - No split / dropdown / variants left on Home
+ *   - The button drives a key that exists in the full creation set (SSoT)
+ *   - i18n label in the `ribbon.commands.dim*` namespace; non-empty icon
  */
 
 import { HOME_DIMENSIONS_PANEL } from '../home-tab-dimensions';
 import { CONTEXTUAL_DIMENSIONS_TAB } from '../contextual-dimensions-tab';
 
-// SSoT cross-check: the Home launcher must only offer dim types that also exist
-// in the full contextual «Διαστάσεις» creation tab.
+// SSoT cross-check: the Home button must drive a key that also exists in the
+// full contextual «Διαστάσεις» creation tab.
 const FULL_SET_KEYS = new Set(
   CONTEXTUAL_DIMENSIONS_TAB.panels.flatMap((p) => p.rows.flatMap((r) => r.buttons.map((b) => b.command.commandKey))),
 );
 
-describe('ADR-362 Phase E3 — HOME_DIMENSIONS_PANEL quick-access launcher', () => {
-  it('is a single large split button anchored on Smart DIM', () => {
+describe('ADR-362 Φ-Ε4 — HOME_DIMENSIONS_PANEL single «Διάσταση» button', () => {
+  it('is EXACTLY one large simple button anchored on Smart DIM', () => {
     expect(HOME_DIMENSIONS_PANEL.id).toBe('dimensions');
     expect(HOME_DIMENSIONS_PANEL.labelKey).toBe('ribbon.panels.dimensions');
     expect(HOME_DIMENSIONS_PANEL.rows).toHaveLength(1);
     expect(HOME_DIMENSIONS_PANEL.rows[0].buttons).toHaveLength(1);
     const btn = HOME_DIMENSIONS_PANEL.rows[0].buttons[0];
-    expect(btn.type).toBe('split');
+    expect(btn.type).toBe('simple');
     expect(btn.size).toBe('large');
+    expect(btn.variants).toBeUndefined();
     expect(btn.command.commandKey).toBe('dim-smart');
     expect(btn.command.shortcut).toBe('DIM');
   });
 
-  it('only offers common dim types that also exist in the full creation set (SSoT)', () => {
-    const variants = HOME_DIMENSIONS_PANEL.rows[0].buttons[0].variants ?? [];
-    expect(variants.length).toBeGreaterThanOrEqual(5);
-    for (const v of variants) {
-      expect(FULL_SET_KEYS.has(v.commandKey)).toBe(true);
-      expect(v.labelKey).toMatch(/^ribbon\.commands\.dim/);
-      expect(typeof v.icon).toBe('string');
-      expect(v.icon).not.toBe('');
-    }
+  it('drives a key that exists in the full creation set + valid i18n/icon (SSoT)', () => {
+    const cmd = HOME_DIMENSIONS_PANEL.rows[0].buttons[0].command;
+    expect(FULL_SET_KEYS.has(cmd.commandKey)).toBe(true);
+    expect(cmd.labelKey).toMatch(/^ribbon\.commands\.dim/);
+    expect(typeof cmd.icon).toBe('string');
+    expect(cmd.icon).not.toBe('');
   });
 });

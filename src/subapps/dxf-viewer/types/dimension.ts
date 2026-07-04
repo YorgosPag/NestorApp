@@ -107,6 +107,13 @@ export interface DimStyle {
   /** DIMCLRD — dim line color (ACI 1-255 or 0=ByBlock / 256=ByLayer). */
   dimclrd: number;
   /**
+   * ADR-562 Φ7 — dim line true-color companion (packed 24-bit `0xRRGGBB`).
+   * When set (`!= null`), wins over `dimclrd` at render (exact hex from the
+   * ribbon color picker); `dimclrd` keeps the nearest-ACI degrade for DXF export.
+   * `null`/absent → use `dimclrd` (ACI).
+   */
+  dimclrdTrueColor?: number | null;
+  /**
    * DIMLWD — dim line lineweight. ADR-562 Φ1. Reuses the canonical `LineweightMm`
    * SSoT (mm value, or `-3`=Default / `-2`=ByLayer / `-1`=ByBlock) so the 2D
    * renderer (Φ2) resolves it through the SAME lineweight→px path as lines.
@@ -120,6 +127,8 @@ export interface DimStyle {
   dimltype: string;
   /** DIMCLRE — extension line color. */
   dimclre: number;
+  /** ADR-562 Φ7 — extension line true-color companion (packed `0xRRGGBB`). null/absent → `dimclre`. */
+  dimclreTrueColor?: number | null;
   /** DIMLWE — extension line lineweight (`LineweightMm` SSoT). ADR-562 Φ1. */
   dimlwe: LineweightMm;
   /**
@@ -158,6 +167,13 @@ export interface DimStyle {
    * for DXF export → falls back to `dimclrd`.
    */
   arrowColor?: number;
+  /**
+   * ADR-562 Φ7 — arrowhead true-color companion (packed `0xRRGGBB`), the
+   * true-color sibling of `arrowColor`. Inheritance mirrors the ACI channel:
+   * when both `arrowColor` and this are absent, arrows inherit the dim-line
+   * color (`dimclrdTrueColor` / `dimclrd`) at render. null/absent → use `arrowColor`.
+   */
+  arrowTrueColor?: number | null;
   /** DIMCEN — center mark size (D13). Positive=mark+line, Negative=mark+extensions, 0=none. */
   dimcen: number;
   /** DIMBREAK gap when DIMBREAK applied (mm paper, D12). */
@@ -168,6 +184,8 @@ export interface DimStyle {
   dimtxt: number;
   /** DIMCLRT — text color (ACI). */
   dimclrt: number;
+  /** ADR-562 Φ7 — text true-color companion (packed `0xRRGGBB`). null/absent → `dimclrt`. */
+  dimclrtTrueColor?: number | null;
   /** DIMGAP — gap text ↔ dim line (mm paper). */
   dimgap: number;
   /** DIMTAD — text vertical placement. */

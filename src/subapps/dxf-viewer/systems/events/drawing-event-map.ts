@@ -175,6 +175,9 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // the projected (perpendicular, step-snapped) world delta. `useDimensionModify`
   // host offsets every dim's dim line (defPoints[2]) as ONE atomic-undo command.
   'dim:row-move-requested': { entityIds: readonly string[]; delta: Point2D };
+  // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): delete the selected dimension(s)
+  // through the canonical undoable `deleteEntitiesById` SSoT. `useDimensionModify` host.
+  'dim:delete-requested': { entityIds: readonly string[] };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

@@ -33,12 +33,15 @@ import {
   isLWPolylineEntity,
   isCircleEntity,
   isArcEntity,
+  isWallEntity,
   type Entity,
 } from '../../types/entities';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveIntersectionDefPoint } from './dim-intersection-resolver';
 // ADR-563 Φ2 — BIM host bbox→2D SSoT, reused for `bimExtent` re-projection.
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
+// ADR-362 Phase N — wall span key-points SSoT, reused for pick-entity `endpoint` follow.
+import { getBimEntityKeyPoints2D } from '../../bim/utils/bim-entity-points';
 
 /**
  * Optional context for `recomputeAssociatedDefPoint` — only the `intersection`
@@ -134,6 +137,13 @@ export function recomputeAssociatedDefPoint(
         // (subIndex 1) to the arc's own start/end angle so they follow re-shapes.
         const angle = assoc.subIndex === 0 ? e.startAngle : e.endAngle;
         return pointOnCircle(e.center, e.radius, angle);
+      }
+      if (isWallEntity(e)) {
+        // ADR-362 Phase N — pick-entity span endpoints ride the wall's centerline
+        // key-points (subIndex 0 = first, else last) so the dim tracks moves/resizes.
+        const kp = getBimEntityKeyPoints2D(e);
+        if (kp.length < 2) return null;
+        return assoc.subIndex === 0 ? kp[0] : kp[kp.length - 1];
       }
       return null;
     }

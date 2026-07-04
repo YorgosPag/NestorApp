@@ -37,6 +37,7 @@ import type {
   LineEntity,
   LWPolylineEntity,
   PolylineEntity,
+  WallEntity,
 } from '../../types/entities';
 import type { DimensionType } from '../../types/dimension';
 
@@ -50,7 +51,11 @@ export type DetectableEntity =
   | CircleEntity
   | ArcEntity
   | PolylineEntity
-  | LWPolylineEntity;
+  | LWPolylineEntity
+  // ADR-362 Phase N — walls are dim-able (centerline length). Their runtime
+  // instances already flow through the type-agnostic hit-test/HoverStore chain;
+  // this widens the compile-time union so the pick-entity flow can read them.
+  | WallEntity;
 
 export interface DetectionContext {
   /** Cursor position in world coordinates (used for polyline edge selection). */
@@ -79,6 +84,7 @@ export interface DetectionContext {
  */
 const SPACE_CYCLE: Readonly<Record<string, readonly DimensionType[]>> = {
   line: ['linear', 'aligned'],
+  wall: ['linear', 'aligned'],
   circle: ['diameter', 'radius'],
   arc: ['radius', 'arcLength', 'diameter'],
   polyline: ['aligned', 'linear'],
@@ -121,6 +127,16 @@ function baseTypeFromHover(ctx: DetectionContext): DimensionType | null {
   switch (e.type) {
     case 'line':
       return isAxisAligned(e.start, e.end) ? 'linear' : 'aligned';
+    case 'wall':
+      // ADR-362 Phase N — centerline axis-alignment picks the base hint; the
+      // final aligned/H/V type for pick-entity mode is decided by drag direction
+      // in the entity-pick builder, so this only keeps the preview non-null.
+      return isAxisAligned(
+        { x: e.params.start.x, y: e.params.start.y },
+        { x: e.params.end.x, y: e.params.end.y },
+      )
+        ? 'linear'
+        : 'aligned';
     case 'circle':
       return 'diameter';
     case 'arc':
@@ -179,6 +195,7 @@ function hoverCycleKey(e: DetectableEntity | undefined): string | null {
   if (!e) return null;
   switch (e.type) {
     case 'line': return 'line';
+    case 'wall': return 'wall';
     case 'circle': return 'circle';
     case 'arc': return 'arc';
     case 'polyline': return 'polyline';

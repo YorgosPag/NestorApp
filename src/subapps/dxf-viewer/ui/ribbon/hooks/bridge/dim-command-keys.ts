@@ -52,6 +52,17 @@ export const DIM_RIBBON_KEYS = {
     annotationScale: 'dim.properties.annotationScale',
     openPanel:       'dim.properties.openPanel',
   },
+  // 2026-07-04 — «Ενέργειες» panel (mirror of the BIM contextual tabs).
+  //   · close  → matched by the central `isContextualTabCloseAction`
+  //     (`/\.actions?\.close$/`) → `closeContextualTab` (clearAll + tool→select),
+  //     so it dismisses BOTH the edit tab and the composite creation tab.
+  //   · delete → routed via `dispatchDxfSpecialAction` → `dim:delete-requested`
+  //     → `useDimensionModify` deletes the selected dims through the canonical
+  //     `deleteEntitiesById` SSoT (undoable + cascades), mirror of the columns.
+  actions: {
+    close:  'dim.actions.close',
+    delete: 'dim.actions.delete',
+  },
 } as const;
 
 const ALL_DIM_KEYS: ReadonlySet<string> = new Set(

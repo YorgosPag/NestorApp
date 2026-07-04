@@ -35,7 +35,7 @@ import {
 // Public types
 // ──────────────────────────────────────────────────────────────────────────────
 
-export type DimensionCreateMode = 'smart' | 'manual';
+export type DimensionCreateMode = 'smart' | 'manual' | 'entity';
 
 /** Reducer lifecycle phase — drives the hook's commit / preview decisions. */
 export type DimensionCreateStatus = 'idle' | 'collecting' | 'commit-ready';
@@ -128,8 +128,18 @@ export const initialDimensionCreateState: DimensionCreateState = Object.freeze({
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Clicks needed to finish the given dimension type (see ADR-362 §3 D4 + §7 Phase D2). */
-export function requiredClickCount(type: DimensionType): number {
+/**
+ * Clicks needed to finish the given dimension type (see ADR-362 §3 D4 + §7 Phase D2).
+ *
+ * ADR-362 Phase N — in entity-pick mode (`dim-entity`) EVERY variant collapses to
+ * 2 clicks: click 1 picks the whole entity (endpoints / center+radius auto-derived),
+ * click 2 is the placement/offset. The resolved `type` is irrelevant to the count.
+ */
+export function requiredClickCount(
+  type: DimensionType,
+  mode?: DimensionCreateMode | null,
+): number {
+  if (mode === 'entity') return 2;
   switch (type) {
     case 'joggedRadius':
       // [center via entity pick, arcPoint, jogPoint, jogVertex]
@@ -179,6 +189,21 @@ function firstClickNeedsEntityPick(
     default:
       return false;
   }
+}
+
+/**
+ * ADR-362 Phase N: entity-pick mode gate. Click 1 of `dim-entity` must land on a
+ * dim-able entity — a line/wall (→ length) or circle/arc (→ diameter/radius).
+ * Anything else (or empty space) is rejected silently so the user keeps hovering.
+ */
+function isEntityPickable(picked: DetectableEntity | undefined): boolean {
+  if (!picked) return false;
+  return (
+    picked.type === 'line' ||
+    picked.type === 'wall' ||
+    picked.type === 'circle' ||
+    picked.type === 'arc'
+  );
 }
 
 /** Resolve `currentType` for the given state using the Phase C2 detector. */
@@ -294,6 +319,15 @@ function handleClick(
     return state;
   }
 
+  // ADR-362 Phase N: entity-pick mode requires a dim-able entity under click 1.
+  if (
+    state.mode === 'entity' &&
+    state.clicks.length === 0 &&
+    !isEntityPickable(action.hoveredEntity)
+  ) {
+    return state;
+  }
+
   // Phase D3 pre-requisite guard: chained dims need a parent id set BEFORE any
   // click is registered. Hook orchestrator validates + dispatches setParent at
   // start() time; this is defensive (programmer-error path, silent no-op).
@@ -327,7 +361,7 @@ function handleClick(
     action.world,
   );
   const effectiveType = nextType ?? state.currentType ?? 'linear';
-  const required = requiredClickCount(effectiveType);
+  const required = requiredClickCount(effectiveType, state.mode);
   const status: DimensionCreateStatus =
     nextClicks.length >= required ? 'commit-ready' : 'collecting';
 

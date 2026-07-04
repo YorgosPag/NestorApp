@@ -10,6 +10,11 @@ import { requiredClickCount } from './dimension-create-state';
 export function isDimLineRefPhase(): boolean {
   const state = dimensionCreateStore.get();
   const type = state.currentType;
+  // ADR-362 Phase N: entity-pick mode — the 2nd (placement) click is a free
+  // offset pick, so it skips OSNAP just like the linear/aligned dimLineRef click.
+  if (state.mode === 'entity') {
+    return type !== null && state.clicks.length === requiredClickCount(type, 'entity') - 1;
+  }
   if (type !== 'linear' && type !== 'aligned') return false;
   return state.clicks.length === requiredClickCount(type) - 1;
 }

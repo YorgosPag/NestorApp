@@ -14,6 +14,7 @@
 
 import { getAciColor } from '../../../settings/standards/aci';
 import { CAD_UI_COLORS } from '../../../config/color-config';
+import { trueColorToHex } from '../../../utils/dxf-true-color';
 
 const ACI_BYBLOCK = 0;
 const ACI_BYLAYER = 256;
@@ -32,4 +33,24 @@ export function resolveDimColor(aci: number, layerColour?: string): string {
     return CAD_UI_COLORS.entity.default;
   }
   return getAciColor(aci);
+}
+
+/**
+ * ADR-562 Φ7 — resolve a DIMSTYLE colour channel with true-color priority.
+ *
+ * When a true-color companion is set (`!= null`, packed `0xRRGGBB`) it wins and
+ * renders the EXACT hex chosen in the ribbon color picker. Otherwise falls back
+ * to the ACI channel via `resolveDimColor` (identical ByLayer/ByBlock behaviour).
+ *
+ * @param trueColor   - packed 24-bit true-color companion (or null/undefined)
+ * @param aci         - the ACI colour code (0=ByBlock, 1-255=ACI, 256=ByLayer)
+ * @param layerColour - owning layer hex (ByLayer/ByBlock fallback)
+ */
+export function resolveDimColorTC(
+  trueColor: number | null | undefined,
+  aci: number,
+  layerColour?: string,
+): string {
+  if (trueColor != null) return trueColorToHex(trueColor);
+  return resolveDimColor(aci, layerColour);
 }

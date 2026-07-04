@@ -39,18 +39,9 @@ const DIMSTYLE_OPTIONS = [
   { value: 'architectural', labelKey: 'ribbon.commands.dimContextual.styleOptions.architectural', isLiteralLabel: false },
 ] as const;
 
-// ADR-562 Φ4 — ByLayer + 7 standard ACI colors (value = ACI string / 'ByLayer',
-// parsed by the bridge). Shared across every per-part color control.
-const COLOR_OPTIONS = [
-  { value: 'ByLayer', labelKey: 'ribbon.commands.dimContextual.colorOptions.byLayer', isLiteralLabel: false },
-  { value: '1',       labelKey: 'ribbon.commands.dimContextual.colorOptions.red',     isLiteralLabel: false },
-  { value: '2',       labelKey: 'ribbon.commands.dimContextual.colorOptions.yellow',  isLiteralLabel: false },
-  { value: '3',       labelKey: 'ribbon.commands.dimContextual.colorOptions.green',   isLiteralLabel: false },
-  { value: '4',       labelKey: 'ribbon.commands.dimContextual.colorOptions.cyan',    isLiteralLabel: false },
-  { value: '5',       labelKey: 'ribbon.commands.dimContextual.colorOptions.blue',    isLiteralLabel: false },
-  { value: '6',       labelKey: 'ribbon.commands.dimContextual.colorOptions.magenta', isLiteralLabel: false },
-  { value: '7',       labelKey: 'ribbon.commands.dimContextual.colorOptions.white',   isLiteralLabel: false },
-] as const;
+// ADR-562 Φ7 — the per-part color controls now use the enterprise color picker
+// (`comboboxVariant:'dxf-color'`), so the former ACI `COLOR_OPTIONS` dropdown list
+// was removed. The bridge speaks hex ↔ ACI+true-color; the picker ignores `options`.
 
 // Arrow size presets (paper mm). Numeric literals — editable (type any value).
 const ARROW_SIZE_OPTIONS = [
@@ -181,7 +172,9 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimColorOverride',
                 commandKey: O.color,
                 comboboxWidthPx: 110,
-                options: COLOR_OPTIONS,
+                // ADR-562 Φ7 — enterprise color picker (hex/true-color) instead of the
+                // ACI dropdown. Bridge maps hex ↔ ACI+true-color. Options unused here.
+                comboboxVariant: 'dxf-color',
               },
             },
             {
@@ -227,7 +220,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimExtColor',
                 commandKey: O.extColor,
                 comboboxWidthPx: 110,
-                options: COLOR_OPTIONS,
+                comboboxVariant: 'dxf-color', // ADR-562 Φ7 — enterprise color picker
               },
             },
             {
@@ -284,7 +277,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimArrowColor',
                 commandKey: O.arrowColor,
                 comboboxWidthPx: 110,
-                options: COLOR_OPTIONS,
+                comboboxVariant: 'dxf-color', // ADR-562 Φ7 — enterprise color picker
               },
             },
             {
@@ -320,7 +313,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimTextColor',
                 commandKey: O.textColor,
                 comboboxWidthPx: 110,
-                options: COLOR_OPTIONS,
+                comboboxVariant: 'dxf-color', // ADR-562 Φ7 — enterprise color picker
               },
             },
             {
@@ -526,6 +519,42 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 icon: 'dim-open-panel',
                 commandKey: DIM_RIBBON_KEYS.properties.openPanel,
                 comingSoon: true,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // (H) Ενέργειες — «Κλείσιμο» + «Διαγραφή» (mirror of the BIM contextual tabs,
+    // e.g. «Ιδιότητες Κολώνας»). Close = central deselect+tool-reset SSoT· Delete =
+    // canonical undoable delete (via `dim:delete-requested` → useDimensionModify).
+    {
+      id: 'dim-actions',
+      labelKey: 'ribbon.panels.dimActions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.actions.close',
+                labelKey: 'ribbon.commands.dimContextual.close',
+                icon: 'select',
+                commandKey: DIM_RIBBON_KEYS.actions.close,
+                action: DIM_RIBBON_KEYS.actions.close,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.actions.delete',
+                labelKey: 'ribbon.commands.dimContextual.delete',
+                icon: 'trash',
+                commandKey: DIM_RIBBON_KEYS.actions.delete,
+                action: DIM_RIBBON_KEYS.actions.delete,
               },
             },
           ],

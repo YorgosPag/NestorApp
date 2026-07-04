@@ -40,6 +40,9 @@ import { computeAutoBreakPoints } from '../systems/dimensions/dim-break-engine';
 // ADR-362 — «Επιλογή σειράς»: row detection + selection replacement SSoT.
 import { collectDimensionRow } from '../systems/dimensions/dim-row-detect';
 import { SelectedEntitiesStore } from '../systems/selection/SelectedEntitiesStore';
+// 2026-07-04 — «Διαγραφή» reuses the canonical delete core (undoable + cascades),
+// the SAME SSoT the ribbon (`useRibbonEntityDelete`) + keyboard (`useSmartDelete`) use.
+import { deleteEntitiesById } from './canvas/delete-entities-core';
 // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών»: row group-move commit reuses the
 // canonical dim-grip transform + undoable command (no new command class).
 import { UpdateDimGripCommand } from '../core/commands/entity-commands/UpdateDimGripCommand';
@@ -233,12 +236,35 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       runAtomic(buildRowMoveCommands(r.dims, delta, r.ctx), execute);
     });
 
+    // 2026-07-04 — «Διαγραφή»: delete the selected dimension(s) through the
+    // canonical `deleteEntitiesById` core (undoable + cascades), then clear the
+    // dxf-entity selection so the contextual tab closes (mirror of the keyboard /
+    // `useRibbonEntityDelete` paths). Confirm already happened in special-actions.
+    // Builds the adapter directly (proper `LevelSceneManagerAdapter` type) instead
+    // of reusing `resolve()`'s widened `ISceneManager`.
+    const unsubDelete = EventBus.on('dim:delete-requested', ({ entityIds }) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      const adapter = createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+      const entities = scene.entities as unknown as readonly Entity[];
+      const selected = new Set(entityIds);
+      const dimIds = entities
+        .filter((e): e is DimensionEntity => selected.has(e.id) && isDimensionEntity(e))
+        .map((d) => d.id);
+      if (dimIds.length === 0) return;
+      void deleteEntitiesById(dimIds, { adapter, sceneEntities: entities, executeCommand: execute })
+        .then((ok) => { if (ok) SelectedEntitiesStore.clearByType('dxf-entity'); });
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
       unsubApplyStyle();
       unsubSelectRow();
       unsubRowMove();
+      unsubDelete();
     };
   }, [levelManager, execute]);
 }

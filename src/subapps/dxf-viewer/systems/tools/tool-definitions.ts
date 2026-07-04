@@ -241,6 +241,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-aligned':    { id: 'dim-aligned',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-362 Phase N: pick-entity quick dimension — 2-click (entity pick + placement), drag decides aligned/H/V.
+  'dim-entity':     { id: 'dim-entity',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-angular2L':  { id: 'dim-angular2L',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-angular3P':  { id: 'dim-angular3P',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-362 Phase D2: Radial family + Ordinate creation tools

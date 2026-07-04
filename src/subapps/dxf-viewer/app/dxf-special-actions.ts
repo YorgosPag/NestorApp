@@ -221,6 +221,16 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dim:select-row-requested', { entityIds: [...selectedEntityIds] });
     return true;
   }
+  // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): confirm (mirror of the column
+  // editor) then delete the selected dimension(s) through the canonical undoable
+  // path (`useDimensionModify` → `deleteEntitiesById`).
+  if (action === 'dim.actions.delete') {
+    if (selectedEntityIds.length === 0) return true;
+    if (window.confirm(t('ribbon.commands.dimContextual.deleteConfirm'))) {
+      EventBus.emit('dim:delete-requested', { entityIds: [...selectedEntityIds] });
+    }
+    return true;
+  }
   // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
   if (action === 'animation.tool-toggle') {
     const state = useAnimationStore.getState();

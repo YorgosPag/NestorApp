@@ -1551,6 +1551,7 @@
       "dimLinear": "Linear",
       "dimRadialAngular": "Radial & Angular",
       "dimCenters": "Centers",
+      "dimAuto": "Automatic",
       "dimStyle": "Style",
       "dimOverride": "Override",
       "dimLine": "Dimension Line",
@@ -1559,6 +1560,7 @@
       "dimText": "Text",
       "dimProperties": "Properties",
       "dimModify": "Modify",
+      "dimActions": "Actions",
       "bim": "Structural",
       "layers": "Layers",
       "lineToolQuickStyle": "Quick Style",
@@ -3712,6 +3714,7 @@
       "autoDimensionCutline": "Cut Line",
       "dimVariants": {
         "smart": "Smart Dimension",
+        "entity": "Entity",
         "linear": "Linear",
         "aligned": "Aligned",
         "angular2L": "Angular (2 Lines)",
@@ -3761,6 +3764,9 @@
         "tooltipOff": "Hide row move handles"
       },
       "dimContextual": {
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete dimension? This action cannot be undone.",
         "styleOptions": {
           "iso": "ISO 129",
           "asme": "ASME Y14.5",

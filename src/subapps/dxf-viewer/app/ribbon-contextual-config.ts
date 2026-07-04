@@ -256,6 +256,14 @@ export function useActiveContextualTrigger({
       primarySelectedId, currentScene?.entities, crossLevelEntities,
     );
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
+    // Giorgio 2026-07-04 — a SELECTED placed dimension surfaces a COMPOSITE
+    // trigger: the «Ιδιότητες Διάστασης» edit tab (`dim-selected`, first token →
+    // becomes active) AND the «Διαστάσεις» creation tab (`dim-tool-active`) stay
+    // OPEN together — never one replacing the other. Mirrors the ADR-566
+    // homogeneous multi-select composite (per-kind first = active, extra beside).
+    if (fromSelection === DIMENSION_CONTEXTUAL_TRIGGER) {
+      return `${DIMENSION_CONTEXTUAL_TRIGGER}${CONTEXTUAL_TRIGGER_SEPARATOR}${DIMENSIONS_CONTEXTUAL_TRIGGER}`;
+    }
     if (fromSelection) return fromSelection;
     if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
     // ADR-363 Phase 1K / «από περίγραμμα» — in-region & outer-perimeter share the
@@ -329,8 +337,8 @@ export function useActiveContextualTrigger({
     if (activeTool.startsWith('guide-')) return GUIDES_CONTEXTUAL_TRIGGER;
     // ADR-362 Phase E3 — any dimension creation tool active → «Διαστάσεις» tab
     // (mirror of guides). All dim ToolTypes share the `dim-` prefix. A SELECTED
-    // dimension instead surfaces the edit tab (`dim-selected`, resolved earlier
-    // via `fromSelection`), so placing vs editing never collide.
+    // dimension surfaces the edit tab (`dim-selected`) COMPOSED with this creation
+    // tab (resolved earlier via `fromSelection`), so both stay open together.
     if (activeTool.startsWith('dim-')) return DIMENSIONS_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
