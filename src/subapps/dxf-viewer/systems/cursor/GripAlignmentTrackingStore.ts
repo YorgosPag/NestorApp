@@ -4,7 +4,7 @@
  * ADR-357 / ADR-562 Φ9.2 / ADR-363 — while ANY entity grip is dragged (dimension defPoint,
  * plain DXF line endpoint / centre-move, …), the mouse-move handler resolves the alignment
  * tracking ONCE per frame (`resolveActionAlignmentTracking`) and publishes the result here.
- * The matching ghost hook reads it and paints the traces via `paintGripAlignmentTracking`,
+ * The matching ghost hook reads it and paints the traces via `paintActionAlignmentTracking`,
  * so the geometry (the aligned point that fed the ghost delta) and the painted traces derive
  * from the SAME single resolve — ONE brain, zero double ambient-scan (Google-level, WYSIWYG
  * preview ≡ commit).

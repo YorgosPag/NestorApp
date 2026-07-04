@@ -155,3 +155,180 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function compositeOverHex(fg: RgbaColor, bgHex: string): string {
   return mixHex(bgHex, rgbToHex(fg), fg.a);
 }
+
+// ── 8-digit alpha hex + HSL/HSV (SSoT for the colour-picker superset, ADR-573) ──
+//
+// Absorbed here so `ui/color/utils` becomes thin adapters (big-player single colour
+// module — Figma-style). Channel ranges: r/g/b 0..255, alpha 0..1, h 0..360, s/l/v 0..100.
+
+/** Hue-Saturation-Lightness (h 0..360, s/l 0..100). Alpha is carried by the caller. */
+export interface Hsl {
+  readonly h: number;
+  readonly s: number;
+  readonly l: number;
+}
+
+/** Hue-Saturation-Value (h 0..360, s/v 0..100). Alpha is carried by the caller. */
+export interface Hsv {
+  readonly h: number;
+  readonly s: number;
+  readonly v: number;
+}
+
+/**
+ * Parse `#rgb` / `#rrggbb` / `#rrggbbaa` → `{r,g,b,a}` (channels 0..255, alpha 0..1).
+ * `null` σε άκυρο input (non-throwing). Το 8-digit κωδικοποιεί alpha ως byte/255· τα
+ * 3/6-digit → `a=1`. Reuse `parseHex` για το 3/6-digit μέρος (μηδέν duplicate).
+ */
+export function parseHexAlpha(hex: string): RgbaColor | null {
+  const m = hex.trim().replace(/^#/, '');
+  if (m.length === 8) {
+    const r = parseInt(m.slice(0, 2), 16);
+    const g = parseInt(m.slice(2, 4), 16);
+    const b = parseInt(m.slice(4, 6), 16);
+    const a = parseInt(m.slice(6, 8), 16);
+    if ([r, g, b, a].some(Number.isNaN)) return null;
+    return { r, g, b, a: a / 255 };
+  }
+  const rgb = parseHex(hex);
+  return rgb ? { ...rgb, a: 1 } : null;
+}
+
+/** `Rgb` (0..255) → `Hsl` (h 0..360, s/l 0..100). */
+export function rgbToHsl(rgb: Rgb): Hsl {
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (delta !== 0) {
+    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+
+    switch (max) {
+      case r:
+        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / delta + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / delta + 4) / 6;
+        break;
+    }
+  }
+
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+/** `Hsl` (h 0..360, s/l 0..100) → `Rgb` (0..255, un-rounded floats). */
+export function hslToRgb(hsl: Hsl): Rgb {
+  const h = hsl.h / 360;
+  const s = hsl.s / 100;
+  const l = hsl.l / 100;
+
+  let r: number;
+  let g: number;
+  let b: number;
+
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number): number => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+
+  return { r: r * 255, g: g * 255, b: b * 255 };
+}
+
+/** `Rgb` (0..255) → `Hsv` (h 0..360, s/v 0..100). */
+export function rgbToHsv(rgb: Rgb): Hsv {
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let h = 0;
+  const s = max === 0 ? 0 : delta / max;
+  const v = max;
+
+  if (delta !== 0) {
+    switch (max) {
+      case r:
+        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / delta + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / delta + 4) / 6;
+        break;
+    }
+  }
+
+  return { h: h * 360, s: s * 100, v: v * 100 };
+}
+
+/** `Hsv` (h 0..360, s/v 0..100) → `Rgb` (0..255, un-rounded floats). */
+export function hsvToRgb(hsv: Hsv): Rgb {
+  const h = hsv.h / 360;
+  const s = hsv.s / 100;
+  const v = hsv.v / 100;
+
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+
+  let r: number;
+  let g: number;
+  let b: number;
+
+  switch (i % 6) {
+    case 0:
+      [r, g, b] = [v, t, p];
+      break;
+    case 1:
+      [r, g, b] = [q, v, p];
+      break;
+    case 2:
+      [r, g, b] = [p, v, t];
+      break;
+    case 3:
+      [r, g, b] = [p, q, v];
+      break;
+    case 4:
+      [r, g, b] = [t, p, v];
+      break;
+    case 5:
+      [r, g, b] = [v, p, q];
+      break;
+    default:
+      [r, g, b] = [0, 0, 0];
+  }
+
+  return { r: r * 255, g: g * 255, b: b * 255 };
+}

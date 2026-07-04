@@ -31,22 +31,26 @@ describe('color-config — withOpacity (exact string output, LOCKED)', () => {
   });
 });
 
-describe('color-config — getContrastColor (naive pre-Phase-A behavior, LOCKED)', () => {
-  it('exact white / #fff-containing → black', () => {
+describe('color-config — getContrastColor (WCAG contrast via color-math, Phase A fix)', () => {
+  it('white / light backgrounds → black text', () => {
     expect(getContrastColor(UI_COLORS_BASE.WHITE)).toBe(UI_COLORS_BASE.BLACK);
     expect(getContrastColor('#ffffff')).toBe(UI_COLORS_BASE.BLACK);
     expect(getContrastColor('#FFF')).toBe(UI_COLORS_BASE.BLACK);
   });
 
-  it('dark colors → white', () => {
+  it('dark backgrounds → white text', () => {
     expect(getContrastColor('#000000')).toBe(UI_COLORS_BASE.WHITE);
     expect(getContrastColor('#123456')).toBe(UI_COLORS_BASE.WHITE);
   });
 
-  it('KNOWN NAIVE DIVERGENCE: light non-#fff colors wrongly get white text', () => {
-    // '#eeeeee' is a light background → correct answer is BLACK, but naive
-    // '.includes(fff)' returns WHITE. Phase A (WCAG) will flip these.
-    expect(getContrastColor('#eeeeee')).toBe(UI_COLORS_BASE.WHITE); // naive = wrong
-    expect(getContrastColor('#cccccc')).toBe(UI_COLORS_BASE.WHITE); // naive = wrong
+  it('FIXED: light non-#fff colors now correctly get black text (was WHITE with naive .includes)', () => {
+    // Pre-Phase-A naive `.includes('fff')` wrongly returned WHITE here; WCAG contrast
+    // correctly picks BLACK for these light backgrounds.
+    expect(getContrastColor('#eeeeee')).toBe(UI_COLORS_BASE.BLACK);
+    expect(getContrastColor('#cccccc')).toBe(UI_COLORS_BASE.BLACK);
+  });
+
+  it('unparseable input → white (assume dark)', () => {
+    expect(getContrastColor('not-a-color')).toBe(UI_COLORS_BASE.WHITE);
   });
 });

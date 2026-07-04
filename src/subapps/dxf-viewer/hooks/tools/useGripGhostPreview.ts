@@ -94,7 +94,7 @@ import {
 import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDegFromDirs } from '../grips/grip-projections';
 // ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror body-drag).
 // Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
-import { paintGripAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -296,10 +296,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
           )
         : null;
       if (lineTracking) {
-        const trkUnits = resolveSceneUnits(trkScene);
-        paintGripAlignmentTracking(
-          ctx, lineTracking, t, vp, (d) => sceneDistanceToMeters(d, trkUnits) * 1000,
-        );
+        paintActionAlignmentTracking(ctx, lineTracking, t, vp, resolveSceneUnits(trkScene));
       }
     }
 

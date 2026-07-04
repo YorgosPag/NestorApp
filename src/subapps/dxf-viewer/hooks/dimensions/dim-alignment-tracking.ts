@@ -31,6 +31,8 @@ import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distanc
 import { paintAlignmentPaths, paintIntersections, paintTooltip } from '../../canvas-v2/preview-canvas/tracking-paint';
 import { getCurrentTrackingPalette } from '../../canvas-v2/preview-canvas/tracking-colors';
 import { fromTransform } from '../../canvas-v2/preview-canvas/overlay-projector';
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
+import type { SceneUnits } from '../../utils/scene-units';
 
 /** `sourceSnapType` tag για τα explicit reference points της τρέχουσας διάστασης. */
 const DIM_REF_SOURCE = 'dim-refpoint';
@@ -232,13 +234,11 @@ export function paintDimActionTracking(
  * Shared SSoT paint for EVERY grip-drag consumer (dimension defPoint, plain-line endpoint /
  * centre-move) — the store scopes it to one active drag, so one painter, no per-family copy.
  *
- * `toMm` converts a world distance → millimetres for the distance label (the caller
- * supplies it from the active level's scene units).
- *
- * @see hooks/tools/rotation-tracking-overlay.ts — the sibling grip-drag paint helper
- * @see hooks/drawing/drawing-hover-handler.ts — the creation-time paint (drawTrackingAlignment)
+ * `toMm` converts a world distance → millimetres for the distance label. INTERNAL: every
+ * app consumer goes through `paintActionAlignmentTracking` (scene-units overload) below —
+ * this generic form only exists so the tooltip unit-mapping has one seam.
  */
-export function paintGripAlignmentTracking(
+function paintGripAlignmentTracking(
   ctx: CanvasRenderingContext2D,
   tracking: ComposedTracking,
   transform: ViewTransform,
@@ -258,4 +258,25 @@ export function paintGripAlignmentTracking(
     ? formatSnapTrackingLabel(r.snappedAngle, toMm(distWorld))
     : null;
   paintTooltip(ctx, tracking.point, label, project, palette);
+}
+
+/**
+ * SSoT paint for EVERY action-alignment consumer (2-click MOVE, body-drag, plain-line grip,
+ * dimension grip). ONE public entry: the caller supplies the active level's `sceneUnits` and
+ * the world→mm tooltip mapping (`sceneDistanceToMeters(d) * 1000`) lives here ONCE — no more
+ * per-hook `(d) => sceneDistanceToMeters(d, units) * 1000` boilerplate copied across 4 files.
+ *
+ * @see hooks/tools/rotation-tracking-overlay.ts — the sibling grip-drag paint helper
+ * @see hooks/drawing/drawing-hover-handler.ts — the creation-time paint (drawTrackingAlignment)
+ */
+export function paintActionAlignmentTracking(
+  ctx: CanvasRenderingContext2D,
+  tracking: ComposedTracking,
+  transform: ViewTransform,
+  viewport: Viewport,
+  sceneUnits: SceneUnits,
+): void {
+  paintGripAlignmentTracking(
+    ctx, tracking, transform, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
+  );
 }

@@ -34,13 +34,11 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ORTHO (F8) axis-lock — shared SSoT with the Move ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// ADR-560 — scene→meters για το tooltip απόστασης των κυανών alignment traces (καμία πινακίδα).
-import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-560/572 — cyan AutoAlign traces RESOLVED-IN-DRAW (mirror useMovePreview, self-contained).
 // Το tracking υπολογίζεται ΤΟΠΙΚΑ εδώ ανά frame από το ΙΔΙΟ SSoT resolve (`resolveActionAlignmentTracking`)
 // αντί να διαβάζεται από το cross-tick `GripAlignmentTrackingStore` → μηδέν timing-skew (τα ίχνη δεν «χάνονται»).
-import { paintGripAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 // ADR-508 §neighbor-clearance — κυανές listening dims στη μετακίνηση (twin του placement ghost).
 import { resolveMoveClearanceForSelection } from '../../bim/framing/move-clearance-dims';
 import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
@@ -127,9 +125,7 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     // ΚΑΜΙΑ πινακίδα (Giorgio 2026-07-04): όταν κουμπώνει ίχνος → κυανά traces + tooltip· αλλιώς
     // μηδέν ένδειξη απόστασης (η παλιά fallback `drawDimPill` αφαιρέθηκε από ΟΛΕΣ τις ροές move).
     if (tracking) {
-      paintGripAlignmentTracking(
-        ctx, tracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
-      );
+      paintActionAlignmentTracking(ctx, tracking, t, viewport, sceneUnits);
     }
 
     // WYSIWYG real copies at the destination (full fidelity, byte-identical to commit).

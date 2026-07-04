@@ -9,40 +9,32 @@
  */
 
 import type { RGBColor, HSLColor, HSVColor, ParseResult, FormatOptions } from './types';
-// 🏢 ADR-071: Centralized clamp function
-import { clamp255 } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 Color-Conversion SSoT (ADR-573): the hex/HSL/HSV math lives in `config/color-math`
+// (big-player single colour module). These functions are thin adapters that preserve this
+// module's public contract — `RGBColor`/`HSLColor`/`HSVColor` shapes, the throw-on-invalid
+// `parseHex`, and the `FormatOptions` on `rgbToHex`.
+import {
+  parseHexAlpha,
+  channelToHex,
+  rgbToHsl as cmRgbToHsl,
+  hslToRgb as cmHslToRgb,
+  rgbToHsv as cmRgbToHsv,
+  hsvToRgb as cmHsvToRgb,
+} from '../../config/color-math';
 
 // ===== PARSING =====
 
 /**
- * Parse hex color string to RGB
+ * Parse hex color string to RGB. Supports `#rgb` / `#rrggbb` / `#rrggbbaa`.
+ * THROWS on invalid input — consumers rely on this (`aci.findClosestAci`,
+ * `LegacyGridAdapter`). Delegates the parse to the `color-math` SSoT.
  */
 export function parseHex(hex: string): RGBColor {
-  let cleanHex = hex.trim();
-
-  if (cleanHex.startsWith('#')) {
-    cleanHex = cleanHex.slice(1);
-  }
-
-  // Expand shorthand #RGB → #RRGGBB
-  if (cleanHex.length === 3) {
-    cleanHex = cleanHex
-      .split('')
-      .map((c) => c + c)
-      .join('');
-  }
-
-  // Parse components
-  const r = parseInt(cleanHex.slice(0, 2), 16);
-  const g = parseInt(cleanHex.slice(2, 4), 16);
-  const b = parseInt(cleanHex.slice(4, 6), 16);
-  const a = cleanHex.length === 8 ? parseInt(cleanHex.slice(6, 8), 16) / 255 : 1;
-
-  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+  const c = parseHexAlpha(hex);
+  if (!c) {
     throw new Error(`Invalid hex color: ${hex}`);
   }
-
-  return { r, g, b, a };
+  return { r: c.r, g: c.g, b: c.b, a: c.a };
 }
 
 /**
@@ -127,11 +119,10 @@ export function parseColor(color: string): ParseResult {
 export function rgbToHex(rgb: RGBColor, options: FormatOptions = {}): string {
   const { alpha = false, uppercase = false, short = false } = options;
 
-  // 🏢 ADR-071: Using centralized clamp255 for RGB values
+  // 🏢 Color-Conversion SSoT (ADR-573): per-channel byte formatting via `channelToHex`
+  // (clamp+round+2-digit). Uppercase is this module's format option.
   const toHex = (n: number) => {
-    const hex = clamp255(Math.round(n))
-      .toString(16)
-      .padStart(2, '0');
+    const hex = channelToHex(n);
     return uppercase ? hex.toUpperCase() : hex;
   };
 
@@ -182,166 +173,35 @@ export function formatHsl(hsl: HSLColor, alpha: boolean = false): string {
 // ===== COLOR SPACE CONVERSIONS =====
 
 /**
- * Convert RGB to HSL
+ * Convert RGB to HSL. Delegates the math to the `color-math` SSoT; carries alpha.
  */
 export function rgbToHsl(rgb: RGBColor): HSLColor {
-  const r = rgb.r / 255;
-  const g = rgb.g / 255;
-  const b = rgb.b / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (delta !== 0) {
-    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-
-    switch (max) {
-      case r:
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / delta + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / delta + 4) / 6;
-        break;
-    }
-  }
-
-  return {
-    h: h * 360,
-    s: s * 100,
-    l: l * 100,
-    a: rgb.a,
-  };
+  const { h, s, l } = cmRgbToHsl(rgb);
+  return { h, s, l, a: rgb.a };
 }
 
 /**
- * Convert HSL to RGB
+ * Convert HSL to RGB. Delegates the math to the `color-math` SSoT; carries alpha.
  */
 export function hslToRgb(hsl: HSLColor): RGBColor {
-  const h = hsl.h / 360;
-  const s = hsl.s / 100;
-  const l = hsl.l / 100;
-
-  let r, g, b;
-
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-
-  return {
-    r: r * 255,
-    g: g * 255,
-    b: b * 255,
-    a: hsl.a,
-  };
+  const { r, g, b } = cmHslToRgb(hsl);
+  return { r, g, b, a: hsl.a };
 }
 
 /**
- * Convert RGB to HSV
+ * Convert RGB to HSV. Delegates the math to the `color-math` SSoT; carries alpha.
  */
 export function rgbToHsv(rgb: RGBColor): HSVColor {
-  const r = rgb.r / 255;
-  const g = rgb.g / 255;
-  const b = rgb.b / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let h = 0;
-  const s = max === 0 ? 0 : delta / max;
-  const v = max;
-
-  if (delta !== 0) {
-    switch (max) {
-      case r:
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / delta + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / delta + 4) / 6;
-        break;
-    }
-  }
-
-  return {
-    h: h * 360,
-    s: s * 100,
-    v: v * 100,
-    a: rgb.a,
-  };
+  const { h, s, v } = cmRgbToHsv(rgb);
+  return { h, s, v, a: rgb.a };
 }
 
 /**
- * Convert HSV to RGB
+ * Convert HSV to RGB. Delegates the math to the `color-math` SSoT; carries alpha.
  */
 export function hsvToRgb(hsv: HSVColor): RGBColor {
-  const h = hsv.h / 360;
-  const s = hsv.s / 100;
-  const v = hsv.v / 100;
-
-  const i = Math.floor(h * 6);
-  const f = h * 6 - i;
-  const p = v * (1 - s);
-  const q = v * (1 - f * s);
-  const t = v * (1 - (1 - f) * s);
-
-  let r, g, b;
-
-  switch (i % 6) {
-    case 0:
-      [r, g, b] = [v, t, p];
-      break;
-    case 1:
-      [r, g, b] = [q, v, p];
-      break;
-    case 2:
-      [r, g, b] = [p, v, t];
-      break;
-    case 3:
-      [r, g, b] = [p, q, v];
-      break;
-    case 4:
-      [r, g, b] = [t, p, v];
-      break;
-    case 5:
-      [r, g, b] = [v, p, q];
-      break;
-    default:
-      [r, g, b] = [0, 0, 0];
-  }
-
-  return {
-    r: r * 255,
-    g: g * 255,
-    b: b * 255,
-    a: hsv.a,
-  };
+  const { r, g, b } = cmHsvToRgb(hsv);
+  return { r, g, b, a: hsv.a };
 }
 
 // ===== VALIDATION =====

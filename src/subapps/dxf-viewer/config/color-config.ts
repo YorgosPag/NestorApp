@@ -327,13 +327,12 @@ export const OVERLAY_OPACITY = {
 
 // Color utility functions
 export const withOpacity = (color: string, opacity: number): string => {
-  // Handle hex colors
+  // Handle hex colors — append an 8-bit alpha byte (#rrggbb → #rrggbbAA).
+  // 🏢 Color-Conversion SSoT (ADR-573): alpha byte via `color-math.channelToHex`.
   if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
-    return `${color}${alpha}`;
+    return `${color}${channelToHex(opacity * 255)}`;
   }
-  
+
   // Handle rgb colors
   if (color.startsWith('rgb(')) {
     return color.replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);

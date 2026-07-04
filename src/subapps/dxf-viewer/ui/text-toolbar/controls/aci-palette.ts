@@ -10,6 +10,9 @@
  */
 
 import type { DxfColor } from '../../../text-engine/types';
+// 🏢 Color-Conversion SSoT (ADR-573): hex↔rgb via canonical `config/color-math`
+// (fixes the missing-Math.round in the old inline rgbToHex; adds 3-digit parsing).
+import { parseHex as cmParseHex, rgbToHex as cmRgbToHex } from '../../../config/color-math';
 
 // 🏢 ADR-571: canonical ACI→hex SSoT = `settings/standards/aci.ts`. This RGB-tuple
 // table + ramp math is an intentional, self-contained encoding for the text-toolbar
@@ -62,18 +65,15 @@ export function aciToRgb(index: number): readonly [number, number, number] | und
   return table[index];
 }
 
-/** Parse `#RRGGBB` → [r, g, b]; returns null on invalid input. */
+/** Parse `#RGB` / `#RRGGBB` → [r, g, b] tuple; returns null on invalid input. */
 export function parseHex(hex: string): readonly [number, number, number] | null {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return null;
-  const n = parseInt(m[1]!, 16);
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+  const c = cmParseHex(hex);
+  return c ? [c.r, c.g, c.b] : null;
 }
 
-/** Format `[r,g,b]` → `#RRGGBB`. */
+/** Format `(r,g,b)` → `#rrggbb` (clamped + rounded via the color-math SSoT). */
 export function rgbToHex(r: number, g: number, b: number): string {
-  const h = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
-  return `#${h(r)}${h(g)}${h(b)}`;
+  return cmRgbToHex({ r, g, b });
 }
 
 /**

@@ -38,9 +38,8 @@ import { useCanvasGhostPreview } from '../tools/useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // ADR-562 Φ9.2 — paint the AutoAlign traces (resolved once by the mouse-move handler) on
 // top of the live dim ghost, so geometry + traces share ONE resolve (WYSIWYG, ADR-357).
-import { paintGripAlignmentTracking } from './dim-alignment-tracking';
+import { paintActionAlignmentTracking } from './dim-alignment-tracking';
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
-import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
 
@@ -93,9 +92,7 @@ export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void
     // the drawing-time tooltip unit (scene-units → mm).
     const dimTracking = getGripAlignmentTracking();
     if (dimTracking) {
-      paintGripAlignmentTracking(
-        ctx, dimTracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
-      );
+      paintActionAlignmentTracking(ctx, dimTracking, t, viewport, sceneUnits);
     }
   }, [dragPreview, levelManager]);
 

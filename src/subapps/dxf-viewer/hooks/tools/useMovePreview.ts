@@ -40,12 +40,10 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// ADR-560 — scene→meters για το tooltip απόστασης των κυανών AutoAlign traces (καμία πινακίδα).
-import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
-import { resolveActionAlignmentTracking, paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { resolveActionAlignmentTracking, paintActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 // ADR-508 §neighbor-clearance — κυανές listening dims στη μετακίνηση (twin του placement ghost).
 import { resolveMoveClearanceForSelection } from '../../bim/framing/move-clearance-dims';
 import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
@@ -172,8 +170,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // AutoAlign traces (dashed paths + intersection halo + distance tooltip) on top of the
     // rubber band, via the SAME SSoT paint the dim grip + creation flows use.
     if (moveTrk) {
-      const units = resolveSceneUnits(scene);
-      paintGripAlignmentTracking(ctx, moveTrk, t, viewport, (d) => sceneDistanceToMeters(d, units) * 1000);
+      paintActionAlignmentTracking(ctx, moveTrk, t, viewport, resolveSceneUnits(scene));
     }
 
     // Ghost + tooltip only during awaiting-destination
@@ -189,7 +186,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
       selectedEntityIds, delta, scene?.entities ?? [], resolveSceneUnits(scene), worldPerPixel(t.scale),
     );
 
-    // ΚΑΜΙΑ πινακίδα (Giorgio 2026-07-04): τα κυανά AutoAlign traces (paintGripAlignmentTracking
+    // ΚΑΜΙΑ πινακίδα (Giorgio 2026-07-04): τα κυανά AutoAlign traces (paintActionAlignmentTracking
     // παραπάνω) + το rubber-band δείχνουν ήδη την ένδειξη· η παλιά fallback `drawDimPill`
     // αφαιρέθηκε από ΟΛΕΣ τις ροές μετακίνησης (grip + body + MOVE tool) για πλήρη συνέπεια.
 
