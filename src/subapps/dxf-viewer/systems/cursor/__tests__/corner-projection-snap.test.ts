@@ -85,4 +85,34 @@ describe('findBestCornerProjection', () => {
     expect(r).not.toBeNull();
     expect(r!.adjustedCursorPos).toEqual({ x: 60, y: 58 });
   });
+
+  // ADR-560 §grip-OSNAP (λ) — REGRESSION LOCK (Giorgio 2026-07-05, confirmed fix).
+  // Corner projection κουμπώνει ΜΟΝΟ σε ΔΙΑΚΡΙΤΟΥΣ στόχους. Οι γραμμικές construction έλξεις
+  // (perpendicular/extension/tangent/nearest/parallel/ortho) υπάρχουν σε ΚΑΘΕ ακμή, είναι πιο
+  // κοντά, και έπνιγαν το `bim_corner` → η κολόνα «κολλούσε» σε καθέτους αντί για γωνία-σε-γωνία.
+  // Ο cursorProbe (ρητή θέση κέρσορα) τα δέχεται ακόμη — ΜΟΝΟ αυτός ο core τα απορρίπτει.
+  it('rejects a PERPENDICULAR snap (construction line, not a corner target)', () => {
+    expect(findBestCornerProjection(corners, { x: 50, y: 50 }, modeStub('perpendicular'))).toBeNull();
+  });
+
+  it('rejects an EXTENSION snap (construction line)', () => {
+    expect(findBestCornerProjection(corners, { x: 50, y: 50 }, modeStub('extension'))).toBeNull();
+  });
+
+  it('a CLOSER perpendicular does NOT mask a farther discrete bim_corner', () => {
+    const mk = (mode: string, snap: Point2D, dist: number): ProSnapResult => ({
+      found: true, snappedPoint: { ...snap },
+      snapPoint: { point: snap, type: mode, description: mode, distance: dist, priority: 0 } as never,
+      allCandidates: [], originalPoint: { x: 0, y: 0 }, activeMode: mode as never, timestamp: 0, distance: dist,
+    } as ProSnapResult);
+    // corner (0,0) → perpendicular dist 2 (would win by distance); corner (100,100) → bim_corner dist 20.
+    const stub: FindSnapPoint = (x, y) => {
+      if (Math.hypot(x, y) <= 30) return mk('perpendicular', { x: 1, y: 0 }, 2);
+      if (Math.hypot(x - 100, y - 100) <= 30) return mk('bim_corner', { x: 108, y: 106 }, 20);
+      return null;
+    };
+    const r = findBestCornerProjection(corners, { x: 50, y: 50 }, stub);
+    expect(r).not.toBeNull();
+    expect(r!.snapResult.activeMode).toBe('bim_corner'); // discrete corner wins, not the closer perpendicular
+  });
 });

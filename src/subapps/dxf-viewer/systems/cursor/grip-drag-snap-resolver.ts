@@ -77,9 +77,6 @@ function resolveGripCornerProjection(
  * @param altMove        Blur-proof whole-entity Alt-move (`isActiveGripAltMove()`).
  * @returns `{ snapResult, moveWorldPos }` όταν κουμπώνει ΟΡΑΤΗ έλξη· αλλιώς `null`.
  */
-// 🔬 TEMP DIAGNOSTIC throttle timestamp (ADR-560) — αφαιρείται μαζί με το log μέσα στη συνάρτηση.
-let __gripOsnapDiagLast = 0;
-
 export function resolveGripDragSnap(
   entities: readonly Entity[] | null | undefined,
   activeDragGrip: ActiveDragGripInfo | null,
@@ -93,29 +90,6 @@ export function resolveGripDragSnap(
 
   const corner = resolveGripCornerProjection(entity, activeDragGrip, cursorPos, findSnapPoint, altMove);
   const picked = resolveProjectedSnap(cursorPos, corner, findSnapPoint);
-
-  // 🔬 TEMP DIAGNOSTIC (ADR-560 §grip-OSNAP) — αφαιρείται μόλις ο Giorgio επιβεβαιώσει. Throttled ~150ms.
-  if (typeof performance !== 'undefined') {
-    const now = performance.now();
-    if (now - __gripOsnapDiagLast > 150) {
-      __gripOsnapDiagLast = now;
-      const cursorProbe = findSnapPoint(cursorPos.x, cursorPos.y);
-      // eslint-disable-next-line no-console
-      console.log('[grip-osnap]', {
-        type: entity.type,
-        gripKind: activeDragGrip.gripKind,
-        hasAnchor: !!activeDragGrip.dragAnchor,
-        altMove,
-        cursor: { x: Math.round(cursorPos.x), y: Math.round(cursorPos.y) },
-        cornerMode: corner?.snapResult?.activeMode ?? null,
-        cornerPt: corner?.adjustedCursorPos ?? null,
-        cursorProbeMode: cursorProbe?.activeMode ?? null,
-        pickedVisible: picked?.visible ?? null,
-        pickedMode: picked?.snapResult?.activeMode ?? null,
-      });
-    }
-  }
-
   // Grip drag δέχεται ΜΟΝΟ ορατές έλξεις — σιωπηλό grid/guide → null ώστε να νικήσει το AutoAlign
   // (αντί να τραβήξει το ghost σε αόρατο grid point ΧΩΡΙΣ marker — το ADR-560 θ/ι root cause).
   return picked?.visible ? { snapResult: picked.snapResult, moveWorldPos: picked.ghostPoint } : null;

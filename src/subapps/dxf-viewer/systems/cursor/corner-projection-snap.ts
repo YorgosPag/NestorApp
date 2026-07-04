@@ -31,6 +31,25 @@ import { isSnapMarkerVisible, toSnapIndicatorView } from '../../snapping/extende
 /** Snap-engine query signature (shared by all corner-projection callers). */
 export type FindSnapPoint = (x: number, y: number) => ProSnapResult | null;
 
+/**
+ * Construction / line snaps that are NOT valid corner-projection targets. Corner
+ * projection means «does MY corner land on a DISCRETE feature of a neighbour»
+ * (γωνία/άκρο/μέσο/τομή/κέντρο). Perpendicular/tangent/nearest/extension/parallel/
+ * ortho είναι ΓΡΑΜΜΙΚΕΣ construction έλξεις που υπάρχουν ΠΑΝΤΟΥ (κάθε ακμή τις παράγει)
+ * και «πνίγουν» το διακριτό `bim_corner` με μια αδύναμη έλξη σε τυχαία κάθετο — η κολόνα
+ * «κολλάει» σε perpendicular γραμμές αντί να κουμπώνει γωνία-σε-γωνία όπως ο τοίχος
+ * (Giorgio 2026-07-05, runtime diagnostics). Ο cursorProbe (ρητή πρόθεση κάτω από το
+ * σταυρόνημα) ΤΑ ΔΕΧΕΤΑΙ ακόμη — μόνο η geometric corner-projection τα απορρίπτει.
+ */
+const NON_CORNER_TARGET_MODES = new Set<string>([
+  'perpendicular', 'tangent', 'nearest', 'near', 'extension', 'parallel', 'ortho',
+]);
+
+/** True όταν το snap mode είναι διακριτός στόχος ευθυγράμμισης γωνίας (όχι construction line). */
+function isCornerAlignmentTarget(result: ProSnapResult): boolean {
+  return !NON_CORNER_TARGET_MODES.has(String(result.activeMode ?? ''));
+}
+
 export interface CornerProjectionResult {
   /** Snap result at the matched target corner (indicator + label shown HERE). */
   readonly snapResult: ProSnapResult;
@@ -68,6 +87,11 @@ export function findBestCornerProjection(
     // an imperceptible pull and no marker. Reuse the SAME visibility SSoT the marker
     // overlay uses ⇒ the corner attracts exactly when a marker would show.
     if (!isSnapMarkerVisible(toSnapIndicatorView(result))) continue;
+
+    // ADR-560 §grip-OSNAP — corner projection κουμπώνει ΜΟΝΟ σε διακριτούς στόχους (γωνία/άκρο/
+    // μέσο/τομή/κέντρο), όχι σε γραμμικές construction έλξεις (perpendicular/extension/…) που
+    // υπάρχουν παντού και πνίγουν το bim_corner (Giorgio runtime diagnostics 2026-07-05).
+    if (!isCornerAlignmentTarget(result)) continue;
 
     const targetEntityId = result.entityId ?? result.snapPoint?.entityId;
     if (excludeEntityId && targetEntityId === excludeEntityId) continue;
