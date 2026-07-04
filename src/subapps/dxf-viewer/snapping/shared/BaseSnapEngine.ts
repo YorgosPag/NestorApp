@@ -8,7 +8,7 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
-import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
+import { createInfinityBounds, isInfinityBounds, isFinitePoint } from '../../config/geometry-constants';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
 import { isEntityVisibleForSnap } from './snap-visibility';
 
@@ -158,6 +158,9 @@ export abstract class BaseSnapEngine {
 
       const points = getPoints(entity);
       for (const point of points) {
+        // 🛡️ ADR-510 Φ5 Bug 2 — skip non-finite snap points (a legacy NaN entity must
+        // not enter the Grid index, mirror of the aggregate guard below).
+        if (!isFinitePoint(point)) continue;
         spatialIndex.insert({
           id: `${entity.id}_${pointType}_${point.x}_${point.y}`,
           bounds: {
@@ -196,6 +199,9 @@ export abstract class BaseSnapEngine {
     for (const entity of entities) {
       const points = getPoints(entity);
       for (const point of points) {
+        // 🛡️ ADR-510 Φ5 Bug 2 — a single non-finite point must not poison the
+        // aggregate (NaN → Grid index built at {0,0,0,0} → all snap points rejected).
+        if (!isFinitePoint(point)) continue;
         bounds.minX = Math.min(bounds.minX, point.x);
         bounds.minY = Math.min(bounds.minY, point.y);
         bounds.maxX = Math.max(bounds.maxX, point.x);

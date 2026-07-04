@@ -8,6 +8,7 @@ import type { Entity } from '../../types/entities';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
+import { isFiniteBounds } from '../../config/geometry-constants';
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../stores/LayerStore';
@@ -60,7 +61,9 @@ export class HitTester {
       }
       entities.forEach((entity, index) => {
         const entityBounds = calcEntityBounds(entity);
-        if (entityBounds && this.spatialIndex) {
+        // 🛡️ ADR-510 Φ5 Bug 2 — never insert a non-finite entity (would spam
+        // "outside index bounds" per frame + is un-hittable anyway).
+        if (entityBounds && isFiniteBounds(entityBounds) && this.spatialIndex) {
           this.spatialIndex.insert({
             id: entity.id || `entity-${index}`,
             bounds: { minX: entityBounds.minX, minY: entityBounds.minY, maxX: entityBounds.maxX, maxY: entityBounds.maxY },
@@ -80,7 +83,7 @@ export class HitTester {
 
     if (this.spatialIndex) {
       const entityBounds = calcEntityBounds(entity);
-      if (entityBounds) {
+      if (entityBounds && isFiniteBounds(entityBounds)) {
         this.spatialIndex.insert({
           id: entity.id,
           bounds: { minX: entityBounds.minX, minY: entityBounds.minY, maxX: entityBounds.maxX, maxY: entityBounds.maxY },

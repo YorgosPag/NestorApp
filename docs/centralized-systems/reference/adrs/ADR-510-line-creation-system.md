@@ -1104,3 +1104,16 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   `explode-entity.test.ts` 12/12, `ExplodeEntityCommand.test.ts` 6/6 GREEN. **Bug 2 (hover δεν φωτίζει):** repro-first — πιθανό
   downstream (παλιά persisted NaN entities)· ο NaN guard αφαιρεί τον γνωστό μηχανισμό· εκκρεμεί browser repro Giorgio σε καθαρή
   σκηνή πριν οποιοδήποτε άγγιγμα του hover subsystem. tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ5 Bug 2 fix — hover ΚΑΙ wall-ghost/snap νεκρά (spatial-index NaN poisoning).** Το browser console
+  (`Local_ΑΝΑΛΥΣΗ_1.txt`) έδειξε `🚧 QuadTree: Item outside index bounds, skipping insertion` ×843 (hit-test) + `🚧 Grid: …`
+  ×1940 (snap) — **καμία** JS error. **Ρίζα:** ένα persisted entity με μη-finite coords (από το σπασμένο explode ΠΡΙΝ το Bug 1 fix)
+  δηλητηρίαζε το **aggregate bounds**: `Math.min/max(finite, NaN) = NaN` → τα συνολικά bounds NaN → `SpatialUtils.sanitizeBounds`
+  τα κατέρρεε σε `{0,0,0,0}` → **ΚΑΘΕ** πραγματικό entity «outside index bounds» → QuadTree/Grid άδειοι → `hitTest`→null (hover
+  νεκρό) + snap index άδειος (wall-ghost/snap νεκρά). Δύο ανεξάρτητα aggregate paths δηλητηριάζονταν: `calculateBoundsFromEntities`
+  (`hit-tester-utils.ts`) + `calculateBoundsFromPoints` (`BaseSnapEngine.ts`). **Fix (Google-level robustness — ένα degenerate
+  entity ΔΕΝ σπάει ποτέ ολόκληρο τον index, όπως AutoCAD/Revit):** νέοι SSoT guards `isFiniteBounds`/`isFinitePoint`
+  (`config/geometry-constants.ts`, δίπλα στο `isInfinityBounds`)· skip non-finite στα ΔΥΟ aggregates + στους insert loops
+  (`HitTester.setEntities`/`addEntity`, snap `initializeSpatialIndex`). **Δεν αγγίχτηκε** hover subsystem/HoverStore/ADR-040 leaves —
+  η ρίζα ήταν 100% στο bounds aggregation. Τα persisted NaN entities μένουν αόρατα/un-hittable (αβλαβή πλέον)· νέα δεν παράγονται
+  (Bug 1 guard). **Test:** `bounds-nan-guard.test.ts` (NaN entity δεν μολύνει το aggregate) → 4/4· hitTesting+explode σουίτες 39/39
+  GREEN. tsc SKIP (N.17)· browser-verify + commit → Giorgio.

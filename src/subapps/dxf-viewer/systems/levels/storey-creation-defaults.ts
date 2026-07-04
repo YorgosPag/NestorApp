@@ -56,7 +56,13 @@ export function readActiveStoreyContext(): ActiveStoreyContext | null {
 export function resolveStoreyCeilingRelativeMm(
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): number | null {
-  return storey?.storeyHeightMm ?? null;
+  // 🛡️ A non-positive / non-finite storey height is NOT a valid ceiling height.
+  // Nullish `??` let a literal `0` through → `resolveStoreyHeightMm` returned 0 →
+  // every wall/column got height 0 → `validateWallParams` rejected it (heightNonPositive)
+  // → EVERY wall ghost was nulled at every phase (ADR-508 ghost + ADR-450 height SSoT).
+  // Return null for 0/negative/NaN so the caller falls back to its positive default.
+  const h = storey?.storeyHeightMm;
+  return typeof h === 'number' && Number.isFinite(h) && h > 0 ? h : null;
 }
 
 /**
@@ -70,7 +76,13 @@ export function resolveStoreyHeightMm(
   fallbackMm: number,
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): number {
-  return overrideHeight ?? resolveStoreyCeilingRelativeMm(storey) ?? fallbackMm;
+  // Pick the first POSITIVE finite candidate — a 0/negative/NaN override or storey
+  // height must NOT win over the fallback (see resolveStoreyCeilingRelativeMm above).
+  if (typeof overrideHeight === 'number' && Number.isFinite(overrideHeight) && overrideHeight > 0) {
+    return overrideHeight;
+  }
+  const storeyMm = resolveStoreyCeilingRelativeMm(storey);
+  return storeyMm !== null ? storeyMm : fallbackMm;
 }
 
 /**

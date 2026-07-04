@@ -52,6 +52,23 @@ describe('resolveStoreyHeightMm', () => {
   it('legacy fallback when storey is null', () => {
     expect(resolveStoreyHeightMm(undefined, 3000, null)).toBe(3000);
   });
+
+  // 🔴 Regression — a storey with storeyHeightMm===0 (nullish `??` let 0 through) gave
+  // height 0 → validateWallParams(heightNonPositive) → EVERY wall ghost nulled at every
+  // phase. 0/negative/NaN height (override OR storey) must fall back to the positive default.
+  it('storey height 0 → falls back to positive default (not 0)', () => {
+    const ctx0: ActiveStoreyContext = { ...ctxFor('upr'), storeyHeightMm: 0 };
+    expect(resolveStoreyCeilingRelativeMm(ctx0)).toBeNull();
+    expect(resolveStoreyHeightMm(undefined, 3000, ctx0)).toBe(3000);
+  });
+  it('negative / NaN storey height → fallback', () => {
+    expect(resolveStoreyHeightMm(undefined, 3000, { ...ctxFor('upr'), storeyHeightMm: -100 })).toBe(3000);
+    expect(resolveStoreyHeightMm(undefined, 3000, { ...ctxFor('upr'), storeyHeightMm: NaN })).toBe(3000);
+  });
+  it('override 0 is ignored (does NOT beat storey/fallback)', () => {
+    expect(resolveStoreyHeightMm(0, 3000, ctxFor('upr'))).toBe(3500); // storey wins
+    expect(resolveStoreyHeightMm(0, 3000, null)).toBe(3000);          // fallback wins
+  });
 });
 
 describe('resolveStoreyCeilingElevationMm — floor-relative', () => {

@@ -11,7 +11,7 @@ import { BoundingBox, BoundsCalculator } from './Bounds';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-5b-i: id-first resolver SSoT (collapsed in 9D-5b-i — id-only).
 import { resolveEntityLayerName } from '../../stores/LayerStore';
-import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
+import { createInfinityBounds, isInfinityBounds, isFiniteBounds } from '../../config/geometry-constants';
 
 /** Calculate bounds from an array of entities */
 export function calculateBoundsFromEntities(entities: Entity[]): BoundingBox | null {
@@ -22,7 +22,10 @@ export function calculateBoundsFromEntities(entities: Entity[]): BoundingBox | n
   for (const entity of entities) {
     try {
       const entityBounds = BoundsCalculator.calculateEntityBounds(entity, 0);
-      if (entityBounds) {
+      // 🛡️ ADR-510 Φ5 Bug 2 — skip a NON-FINITE entity (NaN/±Infinity coords, e.g. a
+      // legacy broken explode) so it can't turn the AGGREGATE into NaN and collapse the
+      // whole spatial index to {0,0,0,0} (→ every entity "outside bounds" → hover dead).
+      if (entityBounds && isFiniteBounds(entityBounds)) {
         bounds.minX = Math.min(bounds.minX, entityBounds.minX);
         bounds.minY = Math.min(bounds.minY, entityBounds.minY);
         bounds.maxX = Math.max(bounds.maxX, entityBounds.maxX);

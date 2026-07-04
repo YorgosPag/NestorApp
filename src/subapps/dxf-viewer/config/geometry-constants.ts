@@ -223,6 +223,26 @@ export function isInfinityBounds(bounds: InfinityBounds): boolean {
   return bounds.minX === Infinity;
 }
 
+/**
+ * 🛡️ ADR-510 Φ5 — True iff all four bounds fields are FINITE (no NaN / ±Infinity).
+ *
+ * WHY (Bug 2 root cause): a single NON-FINITE entity must never poison an
+ * AGGREGATE bounds fold. `Math.min/max` with `NaN` yields `NaN`, so one bad
+ * entity turns the whole index bounds into NaN → `sanitizeBounds` collapses it
+ * to `{0,0,0,0}` → EVERY real entity is rejected as "outside index bounds" →
+ * hit-test / snap index empty → hover dead + ghost/snap dead. Callers skip an
+ * entity/point whose coords are non-finite BEFORE folding it into the aggregate.
+ */
+export function isFiniteBounds(bounds: { minX: number; minY: number; maxX: number; maxY: number }): boolean {
+  return Number.isFinite(bounds.minX) && Number.isFinite(bounds.minY)
+    && Number.isFinite(bounds.maxX) && Number.isFinite(bounds.maxY);
+}
+
+/** 🛡️ ADR-510 Φ5 — True iff both point coords are finite (aggregate-poisoning guard). */
+export function isFinitePoint(p: { x: number; y: number }): boolean {
+  return Number.isFinite(p.x) && Number.isFinite(p.y);
+}
+
 // ============================================================================
 // 📦 ADR-034: EMPTY_SPATIAL_BOUNDS CONSOLIDATION
 // ============================================================================
