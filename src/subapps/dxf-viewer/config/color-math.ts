@@ -1,9 +1,9 @@
 /**
- * Color math — pure SSoT (ADR-509 adaptive entity color).
+ * Color math — pure SSoT (ADR-509 adaptive entity color· ADR-573 color-conversion consolidation).
  *
- * Κοινό low-level χρωματικό math: hex parsing, luminance, WCAG contrast ratio, mix. Εξήχθη
- * για να **σταματήσει η διασπορά** (private `parseHex`/`luminance` στο `print-color-policy.ts`
- * + naive `getContrastColor` στο `color-config.ts`) — ΕΝΑ σπίτι, μηδέν διπλότυπο (N.0.2/N.12).
+ * Κοινό low-level χρωματικό math: hex/rgba/HSL/HSV parsing, luminance, WCAG contrast ratio, mix,
+ * 8-digit alpha. Εξήχθη για να **σταματήσει η διασπορά** (private `parseHex`/`luminance` στο
+ * `print-color-policy.ts` + διάσπαρτοι converters, ADR-573) — ΕΝΑ σπίτι, μηδέν διπλότυπο (N.0.2/N.12).
  *
  * Δύο luminance: `luminance601` (ITU-R BT.601 perceptual, ό,τι ήδη χρησιμοποιεί το print path)
  * + `srgbRelativeLuminance` (WCAG 2.x linearized — η σωστή για contrast ratio).
