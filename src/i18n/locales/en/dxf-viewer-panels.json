@@ -565,10 +565,13 @@
       "polarAddAngle": "Add",
       "polarCustomPlaceholder": "e.g. 33",
       "snapStepTitle": "Snap step (mm)",
+      "snapStepFree": "Free",
       "displayUnit": "UNIT",
       "displayUnitDesc": "Measurement display unit",
       "ltscale": "LTSCALE",
-      "ltscaleDesc": "Linetype scale (whole drawing)"
+      "ltscaleDesc": "Linetype scale (whole drawing)",
+      "lineweight": "LWT",
+      "lineweightDesc": "Show lineweights — fixed on screen regardless of zoom"
     },
     "panels": {
       "objectSnap": "Object Snap",

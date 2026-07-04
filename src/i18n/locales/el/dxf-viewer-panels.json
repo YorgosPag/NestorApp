@@ -565,10 +565,13 @@
       "polarAddAngle": "Προσθήκη",
       "polarCustomPlaceholder": "π.χ. 33",
       "snapStepTitle": "Βήμα πρόσδεσης (mm)",
+      "snapStepFree": "Ελεύθερο",
       "displayUnit": "ΜΟΝΑΔΑ",
       "displayUnitDesc": "Μονάδα εμφάνισης μετρήσεων",
       "ltscale": "LTSCALE",
-      "ltscaleDesc": "Κλίμακα τύπων γραμμής (όλο το σχέδιο)"
+      "ltscaleDesc": "Κλίμακα τύπων γραμμής (όλο το σχέδιο)",
+      "lineweight": "ΠΑΧΟΣ",
+      "lineweightDesc": "Εμφάνιση πάχους γραμμών — σταθερό στην οθόνη ανεξάρτητα από το ζουμ"
     },
     "panels": {
       "objectSnap": "Σημεία Πρόσδεσης",

@@ -791,6 +791,31 @@
     "lockedSkipped": "{count} entities on locked layer were skipped",
     "noIntersectionDeleted": "Entity had no intersection and was deleted"
   },
+  "offsetTool": {
+    "promptSource": "Select an entity to offset or [Erase source(E)]:",
+    "promptSide": "Click the side or type a distance — ENTER/ESC to exit:",
+    "eraseOn": "Erase source: On",
+    "eraseOff": "Erase source: Off"
+  },
+  "filletTool": {
+    "promptFirst": "Select first line or [Radius(R) / Trim(T) / Polyline(P)]:",
+    "promptSecond": "Select second line — ENTER/ESC to exit:",
+    "promptPolyline": "Select a polyline to fillet every corner or [Radius(R) / Trim(T)]:",
+    "radius": "Type fillet radius:",
+    "trimOn": "Trim: On",
+    "trimOff": "Trim: Off",
+    "polylineDone": "Filleted {filleted} corners ({skipped} skipped — radius does not fit)"
+  },
+  "chamferTool": {
+    "promptFirst": "Select first line or [Distance(D) / Angle(A) / Trim(T) / Polyline(P)]:",
+    "promptSecond": "Select second line — ENTER/ESC to exit:",
+    "promptPolyline": "Select a polyline to chamfer every corner or [Distance(D) / Trim(T)]:",
+    "distanceMode": "Mode: Distance–Distance",
+    "angleMode": "Mode: Distance–Angle",
+    "trimOn": "Trim: On",
+    "trimOff": "Trim: Off",
+    "polylineDone": "Chamfered {chamfered} corners ({skipped} skipped — distance does not fit)"
+  },
   "extendTool": {
     "promptPick": "Select objects to extend or [Boundary(B) / Undo(U) / Mode(M) / Edge(E)]:",
     "promptStandardEdges": "Select boundary edges or press ENTER for all:",

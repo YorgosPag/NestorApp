@@ -1567,6 +1567,7 @@
       "lineGeneral": "General",
       "lineAppearance": "Line Appearance",
       "lineGeometry": "Geometry",
+      "lineModify": "Modify",
       "xlineMode": "Mode",
       "bimSchedule": "BIM Schedule",
       "thermalEnvelope": "Thermal Envelope",
@@ -2209,6 +2210,10 @@
       "extend": "Extend",
       "offset": "Offset",
       "fillet": "Fillet",
+      "filletRadius": "Radius",
+      "chamferDist1": "Distance 1",
+      "chamferDist2": "Distance 2",
+      "chamferAngle": "Angle",
       "array": "Array",
       "explode": "Explode",
       "delete": "Delete",
@@ -4199,6 +4204,7 @@
       "fullscreen": "Full Screen",
       "bimSchedule": "BIM Schedule",
       "quickStyle": {
+        "lineStyle": "Line Style",
         "lineweight": "Lineweight",
         "linetype": "Linetype",
         "color": "Color",
@@ -4214,6 +4220,16 @@
         "endY": "End Y",
         "deltaX": "Delta X",
         "deltaY": "Delta Y"
+      },
+      "lineStyleNames": {
+        "thin": "Thin",
+        "medium": "Medium",
+        "thick": "Thick",
+        "hidden": "Hidden",
+        "center": "Center (Axis)",
+        "cut": "Section",
+        "projection": "Projection",
+        "sketch": "Sketch"
       },
       "thermalEnvelope": {
         "label": "Apply Thermal Envelope",

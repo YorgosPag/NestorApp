@@ -1567,6 +1567,7 @@
       "lineGeneral": "Γενικά",
       "lineAppearance": "Εμφάνιση Γραμμής",
       "lineGeometry": "Γεωμετρία",
+      "lineModify": "Τροποποίηση",
       "xlineMode": "Λειτουργία",
       "bimSchedule": "Πίνακας BIM",
       "thermalEnvelope": "Θερμοπρόσοψη",
@@ -2209,6 +2210,10 @@
       "extend": "Επέκταση",
       "offset": "Παράλληλη Μετατόπιση",
       "fillet": "Συναρμογή",
+      "filletRadius": "Ακτίνα",
+      "chamferDist1": "Απόσταση 1",
+      "chamferDist2": "Απόσταση 2",
+      "chamferAngle": "Γωνία",
       "array": "Πίνακας",
       "explode": "Διάλυση",
       "delete": "Διαγραφή",
@@ -4199,6 +4204,7 @@
       "fullscreen": "Πλήρης Οθόνη",
       "bimSchedule": "Πίνακας BIM",
       "quickStyle": {
+        "lineStyle": "Στυλ Γραμμής",
         "lineweight": "Πάχος",
         "linetype": "Τύπος Γραμμής",
         "color": "Χρώμα",
@@ -4214,6 +4220,16 @@
         "endY": "Τέλος Y",
         "deltaX": "ΔX",
         "deltaY": "ΔY"
+      },
+      "lineStyleNames": {
+        "thin": "Λεπτή",
+        "medium": "Μεσαία",
+        "thick": "Χοντρή",
+        "hidden": "Κρυφή",
+        "center": "Κεντρική (Άξονας)",
+        "cut": "Τομής",
+        "projection": "Όψης",
+        "sketch": "Πρόχειρη"
       },
       "thermalEnvelope": {
         "label": "Εφαρμογή Θερμοπρόσοψης",
