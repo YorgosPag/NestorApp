@@ -326,10 +326,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       // wall-tool lag is attributable to ambient-scan vs tracking vs preview vs draw.
       if (PERF_DRAWHOVER_TRACE) {
         const total = t4 - t0;
-        if (total >= PERF_DRAWHOVER_WARN_MS) {
+        if (total >= PERF_DRAWHOVER_WARN_MS || activeTool === 'wall') {
           const members = ambientEntities ? ambientEntities.length : 0;
           console.warn(
-            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — tracking=${_trkMs.toFixed(1)} (members=${members}) preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool}`,
+            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — tracking=${_trkMs.toFixed(1)} (members=${members}) preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool} ghost=${previewEntity ? previewEntity.type : 'NULL'}`,
           );
         }
       } else if (DEBUG_DRAWING_HANDLERS) {
