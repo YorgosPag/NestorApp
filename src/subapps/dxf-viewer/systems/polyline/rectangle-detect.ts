@@ -63,8 +63,9 @@ interface RectOrPolylineShape {
  * DXF pipeline: a `rectangle`/`rect` yields its 4 axis-aligned corners (from
  * `corner1`/`corner2` or `x`/`y`/`width`/`height`), any other shape yields its own
  * `vertices`. Returns `null` when neither is available. Consumed by BOTH the rotation
- * commit (`commitPolylineRotationGripDrag`) and the live rect-axis rotation reference
- * (`resolveRectRotationReference`), so the two can never disagree on «what ring is this».
+ * commit (`commitPolylineRotationGripDrag`) and the live rotation reference axis
+ * (`resolveRotateReferenceAnchor`, rectangle branch), so the two can never disagree on
+ * «what ring is this».
  */
 export function rectOrPolylineVertices(entity: unknown): Point2D[] | null {
   const e = entity as RectOrPolylineShape;

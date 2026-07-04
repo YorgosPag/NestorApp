@@ -110,25 +110,26 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
-- **2026-07-05** — ✨ **Ομοαξονικός άξονας/σταυρός αναφοράς περιστροφής ΟΡΘΟΓΩΝΙΟΥ** (Giorgio: «όταν το
-  κέντρο περιστροφής ταυτίζεται με μία από τις 8 λαβές του τετραγώνου, η ευθεία αναφοράς 0° να είναι
-  ομοαξονική με τις πλευρές· αλλιώς άφησε τον κώδικα ως έχει»). Στη free-rotate ροή, ο άξονας αναφοράς
-  0° κανονικά ξεκινά από την πρώτη κίνηση κέρσορα (τυχαία φορά). Νέος κανόνας ΜΟΝΟ για ορθογώνιο: όταν
-  το picked κέντρο πέφτει (σχετική ανοχή 15% του μικρού ημι-άξονα) σε μία από τις **8 λαβές** (4 γωνίες
-  + 4 μεσοπλευρικές), η αναφορά γίνεται **σταυρός** των δύο (ενδεχ. γυρισμένων) αξόνων πλευρών μέσα από
-  το pivot, και το 0° = ο άξονας πλευράς **πλησιέστερος στον κέρσορα** (Giorgio: «και οι 2 άξονες,
-  κουμπώνει φυσικά και στους 2»). Νέο pure SSoT `systems/polyline/rect-rotation-reference.ts`
-  (`resolveRectRotationReference`) που κάνει reuse `asOrientedRect` + `rectCornerWorld`/`rectEdgeWorld`
-  (τις ΙΔΙΕΣ 8 λαβές) + `rotateVector` — μηδέν νέα orientation math· επιστρέφει `null` εκτός λαβής / μη-
-  ορθογώνιο (⇒ ο caller κρατά την υπάρχουσα συμπεριφορά, μηδέν regression σε γραμμή/τόξο). **Wiring**:
-  `hooks/grips/grip-dxf-drag-preview-resolver.ts` — override `freeBaseline` + ο σταυρός ζωγραφίζεται
-  μέσω των ΥΠΑΡΧΟΝΤΩΝ `rotateRefLine`/`rotateAlignLine` (dashed paint στο `useGripGhostPreview`, **κανένα
-  ADR-040 rendering αρχείο δεν αγγίχτηκε**). **Boy-Scout dedup**: νέο SSoT `rectOrPolylineVertices`
-  (`systems/polyline/rectangle-detect.ts`) — ο commit (`commitPolylineRotationGripDrag`) το χρησιμοποιεί
-  αντί του inline `rectangleSceneVertices` (καταργήθηκε). **Tests**: `rect-rotation-reference.test.ts`
-  (on-corner/edge → nearest arm + σταυρός· tilted rect· off-handle→null· triangle→null· no-cursor). jest
-  ✅ 25/25. 🔴 εκκρεμεί browser-verify + tunable: αν το live «γύρισμα» του 0° στο 45° φανεί απότομο →
-  κλείδωμα στον αρχικό άξονα.
+- **2026-07-05** — ✨ **Άξονας αναφοράς περιστροφής ΟΡΘΟΓΩΝΙΟΥ = ΠΛΗΡΕΣ SSoT του ΤΟΙΧΟΥ, ΕΝΑΣ άξονας**
+  (Giorgio: «μελέτησε πώς περιστρέφεται ο τοίχος και βάλε τον ΙΔΙΟ κώδικα στο τετράγωνο· θέλω ΕΝΑΝ άξονα,
+  όχι δύο»). ⚠️ Αντικαθιστά μια προηγούμενη λάθος προσπάθεια (σταυρός 2 αξόνων + gating σε 8 λαβές —
+  **καταργήθηκε πλήρως**: διαγράφηκε το `rect-rotation-reference.ts` + το wiring στον resolver έγινε
+  revert). **Root cause**: ο τοίχος στη free-rotate ζωγραφίζει ΕΝΑΝ διακεκομμένο άξονα αναφοράς 0°
+  (`paintDirectionArc`, pivot→`anchorPos`), όπου `anchorPos = pivot + refDir` και `refDir` =
+  `resolveRotateReferenceAnchor` (ο κύριος άξονας του τοίχου, προς το σώμα). Το ορθογώνιο έπαιρνε
+  `IDENTITY_FRAME` (world) από το `resolveMoveGlyphFrame` → ο άξονας έδειχνε world-δυτικά, ΟΧΙ στην
+  (γυρισμένη) πλευρά. **Fix (ίδιο SSoT τοίχου)**: επέκταση `bim/grips/rotate-reference-axis.ts` με
+  branch ορθογωνίου (`rectReferenceAnchor`) που ανακτά τον oriented frame από τα vertices (SSoT
+  `asOrientedRect` + `rectOrPolylineVertices`) και δίνει τον άξονα της **μείζονος πλευράς προς το σώμα**
+  με το ΙΔΙΟ flip-rule (`proj>ε ? +major : −major`) + `MAJOR_AXIS_PROJ_EPS` που χρησιμοποιεί ο τοίχος →
+  το υπάρχον `paintDirectionArc` ζωγραφίζει αυτόματα τον ΕΝΑΝ ομοαξονικό άξονα (μηδέν νέο rendering,
+  μηδέν σταυρός). Non-rect (γραμμή/τόξο/generic polyline) → fall-through, μηδέν regression. **Bonus fix**:
+  ο κύκλος (συμμετρικός, χωρίς λαβή περιστροφής) → ρητό `null` (το `move-glyph-frame` IDENTITY του commit
+  `08cf7f6a` είχε σπάσει το `circle→null` test — αποκαταστάθηκε, χωρίς άγγιγμα του `move-glyph-frame.ts`).
+  **Boy-Scout dedup**: νέο SSoT `rectOrPolylineVertices` (`rectangle-detect.ts`) — ο commit
+  (`commitPolylineRotationGripDrag`) το χρησιμοποιεί αντί inline `rectangleSceneVertices` (καταργήθηκε).
+  **Tests**: `rotate-reference-axis.test.ts` +5 rectangle cases (NE/SW corner→major toward body· scene
+  rectangle· tilted 90°· taller-than-wide). jest ✅ 37/37. 🔴 εκκρεμεί browser-verify.
 - **2026-07-05** — 🐛 **polyline / rectangle rotation LIVE GHOST + rotate-preview SSoT κεντρικοποίηση**
   (Giorgio: «θέλω τον ίδιο ακριβώς κώδικα περιστροφής της γραμμής και στο τετράγωνο» + SSoT audit «μην
   δημιουργείς διπλότυπα, κεντρικοποίησε και τα προϋπάρχοντα»). ΙΔΙΑ οικογένεια bug με το τόξο: commit

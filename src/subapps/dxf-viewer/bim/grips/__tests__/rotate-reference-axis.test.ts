@@ -99,6 +99,59 @@ describe('resolveRotateReferenceAnchor — wall 9-grip truth-table (Giorgio spec
   });
 });
 
+describe('resolveRotateReferenceAnchor — RECTANGLE (ADR-561, wall parity, ONE axis)', () => {
+  // 40×20 axis-aligned rectangle polyline → major = +X (width 40 > height 20), centre (20,10).
+  const rect = {
+    type: 'polyline',
+    vertices: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 20 }, { x: 0, y: 20 }],
+    closed: true,
+  } as unknown as Entity;
+
+  it('pivot at NE corner → reference along the major (long) side, toward the body (−X)', () => {
+    const anchor = resolveRotateReferenceAnchor(rect, { x: 40, y: 20 })!;
+    expect(anchor).not.toBeNull();
+    near(anchor.x - 40, -1); // −X unit (coaxial with the long side, toward centre)
+    near(anchor.y - 20, 0);
+  });
+
+  it('pivot at SW corner → reference points +X (toward the body), still coaxial with the side', () => {
+    const anchor = resolveRotateReferenceAnchor(rect, { x: 0, y: 0 })!;
+    near(anchor.x - 0, 1);
+    near(anchor.y - 0, 0);
+  });
+
+  it('scene rectangle (corner1/corner2) resolves identically to its polyline form', () => {
+    const sceneRect = { type: 'rectangle', corner1: { x: 0, y: 0 }, corner2: { x: 40, y: 20 } } as unknown as Entity;
+    const anchor = resolveRotateReferenceAnchor(sceneRect, { x: 40, y: 20 })!;
+    near(anchor.x - 40, -1);
+    near(anchor.y - 20, 0);
+  });
+
+  it('TILTED rectangle (90°) → reference tilts with it (runs along the now-vertical long side)', () => {
+    // 40×20 rect rotated 90° CCW: long side now vertical (world +Y), centre (−10,20).
+    const tilted = {
+      type: 'polyline',
+      vertices: [{ x: 0, y: 0 }, { x: 0, y: 40 }, { x: -20, y: 40 }, { x: -20, y: 0 }],
+      closed: true,
+    } as unknown as Entity;
+    const anchor = resolveRotateReferenceAnchor(tilted, { x: 0, y: 40 })!;
+    near(anchor.x - 0, 0);   // no X → vertical axis (coaxial with the tilted long side)
+    near(anchor.y - 40, -1); // toward the body (−Y)
+  });
+
+  it('taller-than-wide rectangle → major axis is the vertical (long) side', () => {
+    // 20×40 rect → halfLength(20) > halfWidth(10) → major uses local +Y.
+    const tall = {
+      type: 'polyline',
+      vertices: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 40 }, { x: 0, y: 40 }],
+      closed: true,
+    } as unknown as Entity;
+    const anchor = resolveRotateReferenceAnchor(tall, { x: 20, y: 40 })!;
+    near(anchor.x - 20, 0);   // vertical major axis
+    near(anchor.y - 40, -1);  // toward the body (−Y)
+  });
+});
+
 describe('resolveRotateReferenceAnchor — no orientation → null (legacy fallback)', () => {
   it('params-less non-line primitive (circle) → null', () => {
     const circle = { id: 'X', type: 'circle', center: { x: 0, y: 0 }, radius: 50 } as unknown as Entity;

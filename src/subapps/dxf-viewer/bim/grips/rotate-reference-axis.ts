@@ -31,6 +31,8 @@
 import type { Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { resolveMoveGlyphFrame } from './move-glyph-frame';
+import { rotateVector } from './grip-math';
+import { rectOrPolylineVertices, asOrientedRect } from '../../systems/polyline/rectangle-detect';
 
 /**
  * World-unit threshold separating a pivot that sits OFF the axis of symmetry (so the
@@ -89,6 +91,30 @@ function axisYIsMajor(entity: Entity): boolean {
 }
 
 /**
+ * ADR-561 — the rectangle sibling of the wall's major-axis reference. Recovers the
+ * oriented rect frame from the entity's vertices (SSoT `asOrientedRect`) and returns the
+ * baseline anchor along its MAJOR side (the longer edge), flipped toward the box centre by
+ * the SAME rule the generic path uses (`proj > ε ? +major : −major`). Returns `null` for a
+ * non-rectangle (⇒ caller falls through to the generic move-glyph-frame path — zero
+ * regression to line/arc/generic-polyline). One axis, coaxial with a side, exactly like the
+ * wall — the existing `paintDirectionArc` then draws that single dashed 0° baseline.
+ */
+function rectReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null {
+  const vertices = rectOrPolylineVertices(entity);
+  if (!vertices) return null;
+  const rect = asOrientedRect(vertices);
+  if (!rect) return null;
+  // Major side = the longer edge → wall parity (the wall's major axis is its length). The
+  // frame's local +X runs along the first edge (halfWidth); +Y along the second (halfLength).
+  const majorDeg = rect.halfLength > rect.halfWidth ? rect.rotationDeg + 90 : rect.rotationDeg;
+  const major = rotateVector({ x: 1, y: 0 }, majorDeg);
+  let dir: Point2D = { x: -major.x, y: -major.y };
+  const proj = (rect.center.x - pivot.x) * major.x + (rect.center.y - pivot.y) * major.y;
+  if (proj > MAJOR_AXIS_PROJ_EPS) dir = major;
+  return { x: pivot.x + dir.x, y: pivot.y + dir.y };
+}
+
+/**
  * Resolve the free-rotate reference baseline anchor (`pivot + majorAxisUnit`,
  * oriented toward the entity body) for `entity`, or `null` when the entity has no
  * planar orientation (caller falls back to the legacy first-move baseline).
@@ -98,6 +124,21 @@ function axisYIsMajor(entity: Entity): boolean {
  * the 6-click reference flow and the typed-angle flow seed their anchors.
  */
 export function resolveRotateReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null {
+  // A CIRCLE is symmetric and carries no rotation handle (ADR-561: circle = move only), so it
+  // has no meaningful reference axis → null (first-move fallback). Explicit guard because
+  // `resolveMoveGlyphFrame` hands the circle a world-aligned IDENTITY frame for its MOVE glyph,
+  // which must NOT be misread here as a rotation axis (would yield an arbitrary world-X baseline).
+  if ((entity as { type?: string }).type === 'circle') return null;
+
+  // ADR-561 — a RECTANGLE rotates about the SAME single reference axis a wall does (its own
+  // major side, oriented toward the body), but its planar orientation lives in its VERTICES,
+  // not a move-glyph frame — `resolveMoveGlyphFrame` returns a world-aligned IDENTITY for a
+  // rectangle, which would give a world-axis 0° baseline (wrong for a tilted box). Derive the
+  // oriented frame from the vertices so the reference is coaxial with a side — identical
+  // single-axis behaviour to the wall (Giorgio 2026-07-05: «ίδιος κώδικας τοίχου, ΕΝΑΣ άξονας»).
+  const rectAnchor = rectReferenceAnchor(entity, pivot);
+  if (rectAnchor) return rectAnchor;
+
   const frame = resolveMoveGlyphFrame(entity);
   if (!frame) return null;
   const major = axisYIsMajor(entity) ? frame.axisY : frame.axisX;
