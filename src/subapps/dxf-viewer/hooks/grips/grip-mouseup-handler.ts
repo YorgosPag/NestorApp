@@ -27,7 +27,7 @@ import {
 } from './overlay-grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
-import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
+import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
@@ -134,7 +134,7 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // fall through to the existing commit below.
       const clickDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
       const movedPx = Math.hypot(clickDelta.x, clickDelta.y) * getImmediateTransform().scale;
-      if (movedPx < ARM_CLICK_MAX_MOVE_PX && !GripAltMoveStore.getActive()) {
+      if (movedPx < ARM_CLICK_MAX_MOVE_PX && !isActiveGripAltMove()) {
         applyGripArmClick(activeGrip);
         GripBasePointStore.clear();
         markDragFinished();
@@ -146,7 +146,7 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // AND a parametric resize grip (corner/edge/vertex reshape → no Shift fine),
       // AutoCAD/Revit parity. SNAP-MODE (F9) step then quantizes (all no-op when OFF).
       const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      const movesWhole = activeGrip.movesEntity === true || GripAltMoveStore.getActive();
+      const movesWhole = activeGrip.movesEntity === true || isActiveGripAltMove();
       const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
       commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       // The override is a per-drag modifier — clear it at commit so the

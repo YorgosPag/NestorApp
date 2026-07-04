@@ -17,7 +17,7 @@ import { buildDxfDragPreview, buildRotateReferencePreview } from './grip-project
 import { createSceneManagerAdapter, type DxfCommitDeps } from './grip-commit-adapters';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
 import type { Entity } from '../../types/entities';
-import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
+import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 
 export interface ResolveDxfDragPreviewParams {
   phase: UnifiedGripPhase;
@@ -74,7 +74,9 @@ export function resolveDxfDragPreview(params: ResolveDxfDragPreviewParams): DxfG
   // The last flag marks a wall "move" hot-grip so ORTHO (F8) locks its ghost too.
   return buildDxfDragPreview(
     phase, activeGrip, anchorPos, currentWorldPos,
-    GripAltMoveStore.getActive(),
+    // ADR-560 — blur-proof baked altMove (SSoT resolver) so a React re-render after the
+    // Windows Alt→blur cannot flip the ghost back to a parametric edit mid-drag.
+    isActiveGripAltMove(),
     phase === 'hotGrip' && hotGripOp === 'move',
   );
 }
