@@ -29,6 +29,7 @@ import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
+import { finiteBox3FromObject } from '../scene/finite-bounds';
 import {
   toDxfOverlaySyncKey,
   isSameDxfOverlaySync,
@@ -98,6 +99,11 @@ export function resolveEntityColor(
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
 function pushSeg(buf: number[], ax: number, az: number, bx: number, bz: number): void {
+  // ADR-537 NaN-guard — ONE non-finite coordinate poisons the whole overlay `Box3`
+  // (`getBounds` → `setFromObject`), which NaN-frames the SHARED camera → BOTH the DXF underlay
+  // AND the lit BIM scene vanish (empty 3D). This is the SSoT chokepoint every line / circle /
+  // arc / polyline segment flows through, so drop the bad segment here and keep the rest.
+  if (!Number.isFinite(ax) || !Number.isFinite(az) || !Number.isFinite(bx) || !Number.isFinite(bz)) return;
   buf.push(ax, 0, az, bx, 0, bz);
 }
 
@@ -278,7 +284,18 @@ export class DxfToThreeConverter {
     for (const entity of dxfScene.entities) {
       if (entity.type !== 'text' || !entity.visible) continue;
       const bundle = buildDxfTextMesh(entity, resolveEntityColor(entity, layersById));
-      if (bundle) group.add(bundle.mesh);
+      if (!bundle) continue;
+      // ADR-537 NaN-guard — a text entity with a non-finite anchor/height yields a NaN mesh
+      // position (or geometry) → the same Box3 poisoning as `pushSeg`. Skip it (and free its GPU
+      // resources, since the disposeRoot traversal below will no longer reach an un-added mesh).
+      const p = bundle.mesh.position;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+        bundle.geometry.dispose();
+        bundle.material.dispose();
+        bundle.texture.dispose();
+        continue;
+      }
+      group.add(bundle.mesh);
     }
 
     if (group.children.length === 0) return null;
@@ -294,8 +311,10 @@ export class DxfToThreeConverter {
 
   getBounds(): THREE.Box3 | null {
     if (!this.root) return null;
-    const box = new THREE.Box3().setFromObject(this.root);
-    return box.isEmpty() ? null : box;
+    // ADR-537 defense-in-depth — NaN-safe bounds SSoT: `Box3.isEmpty()` is NaN-BLIND, so a
+    // non-finite bound would otherwise slip through and NaN-frame the shared camera. Returns null
+    // (the caller's "no bounds → no-op" branch) on empty OR non-finite — belt to the source guards.
+    return finiteBox3FromObject(this.root);
   }
 
   private disposeRoot(): void {
