@@ -96,8 +96,6 @@ import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDe
 // Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
-// ADR-560 — whole-entity Alt-move (κολόνα/τοίχος/any): base-point traces parity με το body-drag.
-import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 // ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag (ΙΔΙΟ SSoT
 // με useMovePreview + useEntityBodyDragPreview). Το grip-drag ήταν ο μόνος move path που ΔΕΝ τα έδειχνε.
 import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims';
@@ -284,16 +282,17 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     }
 
     // ADR-357/363/560 — action-alignment traces RESOLVED-IN-DRAW (mirror useEntityBodyDragPreview):
-    // το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον `effectiveCursor` (= το ΗΔΗ
-    // ευθυγραμμισμένο realtime σημείο που το point-override στο mouse-handler-move έθρεψε ΚΑΙ στο
-    // grip delta) → self-contained, ΜΗΔΕΝ timing-skew· idempotent double-resolve → WYSIWYG. Anchors:
-    //  · whole-entity Alt-move ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας (κολόνα/τοίχος/DXF|BIM) → base point [anchorPos]
-    //    (parity με body-drag· εδώ εμφανίζονται τα κυανά ίχνη + η έλξη προς κάθε γείτονα).
-    //  · plain line grip (χωρίς Alt) → line SSoT anchors (endpoint reshape → fixed endpoint·
-    //    centre/MOVE-cross → drag base· rotation → null, τα ίχνη του τρέχουν στο resolveRotationTracking).
-    // ΚΑΜΙΑ πινακίδα (Giorgio). Non-line non-Alt grip → null → no-op.
+    // το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον `effectiveCursor` → self-contained,
+    // ΜΗΔΕΝ timing-skew· idempotent double-resolve → WYSIWYG. Anchors:
+    //  · whole-entity translate — Alt-move ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας (κολόνα/τοίχος/DXF|BIM) ή line
+    //    move-cross/hot-grip move → base point [anchorPos] (parity με body-drag· κυανά ίχνη + έλξη
+    //    προς κάθε γείτονα). Gate στο BAKED `dp.movesEntity` — ΟΧΙ στο volatile `GripAltMoveStore.
+    //    getActive()`, που το Alt→blur στα Windows το μηδενίζει ενώ ο RAF-decoupled ghost συνεχίζει
+    //    (το `dragPreview.movesEntity` χτίστηκε μία φορά στο drag-start → σταθερό όλο το gesture).
+    //  · line ENDPOINT reshape (movesEntity=false) → line SSoT anchors (fixed endpoint· rotation→null).
+    // ΚΑΜΙΑ πινακίδα (Giorgio). Non-line non-move grip → null → no-op.
     let alignAnchors: Point2D[] | null = null;
-    if (GripAltMoveStore.getActive() && dp.anchorPos) {
+    if (dp.movesEntity === true && !dp.rotatePivot && dp.anchorPos) {
       alignAnchors = [dp.anchorPos];
     } else if (isLineEntity(entity as unknown as Entity)) {
       const line = entity as unknown as { start: Point2D; end: Point2D };

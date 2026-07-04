@@ -1,7 +1,9 @@
 /**
  * ADR-561 — `getArcGrips` SSoT tests (centre MOVE + start/end/mid + rotation handle).
  */
-import { getArcGrips, arcRotationHandlePos, ARC_MOVE_KIND, ARC_ROTATION_KIND } from '../arc-grips';
+import { getArcGrips, arcRotationHandlePos, applyArcRotationDrag, ARC_MOVE_KIND, ARC_ROTATION_KIND } from '../arc-grips';
+import { rotateEntity } from '../../../utils/rotation-math';
+import type { Entity } from '../../../types/entities';
 
 describe('getArcGrips (ADR-561)', () => {
   const center = { x: 0, y: 0 };
@@ -42,5 +44,53 @@ describe('getArcGrips (ADR-561)', () => {
     expect(grips[1].arcGripKind).toBeUndefined();
     expect(grips[2].arcGripKind).toBeUndefined();
     expect(grips[3].arcGripKind).toBeUndefined();
+  });
+});
+
+describe('applyArcRotationDrag (ADR-561 — live rotation ghost)', () => {
+  it('rotates 90° CCW about the arc centre: centre fixed, both angles offset by the sweep', () => {
+    // anchor @ 0° (east), cursor @ 90° (north) → swept = +90° CCW.
+    const rotated = applyArcRotationDrag({
+      center: { x: 0, y: 0 }, startAngleDeg: 0, endAngleDeg: 90,
+      anchor: { x: 10, y: 0 }, currentPos: { x: 0, y: 10 },
+    });
+    expect(rotated).not.toBeNull();
+    expect(rotated!.center).toEqual({ x: 0, y: 0 });
+    expect(rotated!.startAngle).toBeCloseTo(90, 6);
+    expect(rotated!.endAngle).toBeCloseTo(180, 6);
+  });
+
+  it('orbits the centre about an EXTERNAL pivot (AutoCAD ROTATE «specify centre»)', () => {
+    const rotated = applyArcRotationDrag({
+      center: { x: 10, y: 0 }, startAngleDeg: 0, endAngleDeg: 90,
+      anchor: { x: 1, y: 0 }, currentPos: { x: 0, y: 1 }, pivot: { x: 0, y: 0 },
+    });
+    expect(rotated).not.toBeNull();
+    expect(rotated!.center.x).toBeCloseTo(0, 6);   // (10,0) rotated +90° about origin → (0,10)
+    expect(rotated!.center.y).toBeCloseTo(10, 6);
+  });
+
+  it('returns null for a degenerate / zero sweep (cursor on the pivot)', () => {
+    expect(applyArcRotationDrag({
+      center: { x: 0, y: 0 }, startAngleDeg: 0, endAngleDeg: 90,
+      anchor: { x: 10, y: 0 }, currentPos: { x: 0, y: 0 }, pivot: { x: 0, y: 0 },
+    })).toBeNull();
+  });
+
+  it('is byte-identical to the commit SSoT (rotateEntity arc case) for the same sweep', () => {
+    const arc = { type: 'arc', center: { x: 5, y: 5 }, radius: 10, startAngle: 30, endAngle: 120 };
+    const pivot = { x: 0, y: 0 };
+    const anchor = { x: 10, y: 0 };   // 0°
+    const currentPos = { x: 0, y: 10 }; // 90° → swept = +90°
+    const viaPreview = applyArcRotationDrag({
+      center: arc.center, startAngleDeg: arc.startAngle, endAngleDeg: arc.endAngle, anchor, currentPos, pivot,
+    });
+    const viaCommit = rotateEntity(arc as unknown as Entity, pivot, 90) as {
+      center: { x: number; y: number }; startAngle: number; endAngle: number;
+    };
+    expect(viaPreview!.center.x).toBeCloseTo(viaCommit.center.x, 6);
+    expect(viaPreview!.center.y).toBeCloseTo(viaCommit.center.y, 6);
+    expect(viaPreview!.startAngle).toBeCloseTo(viaCommit.startAngle, 6);
+    expect(viaPreview!.endAngle).toBeCloseTo(viaCommit.endAngle, 6);
   });
 });

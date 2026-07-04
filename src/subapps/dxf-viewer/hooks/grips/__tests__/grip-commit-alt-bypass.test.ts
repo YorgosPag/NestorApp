@@ -27,8 +27,12 @@ jest.mock('../grip-parametric-commits', () => ({
 }));
 
 // Mock the scene-manager adapter + CopyEntityCommand for the copy path.
+// `getEntity` returns undefined so `executeWholeEntityConnectivityMove` (ADR-408 Φ-C, reached by
+// the plain whole-entity move) sees no plumbing host → returns false → falls back to the standard
+// `deps.moveEntities`. Without it the adapter was a bare `{}` and the connectivity check threw
+// `getEntity is not a function` (the executor was added after this test's mock was written).
 jest.mock('../grip-scene-manager-adapter', () => ({
-  createSceneManagerAdapter: () => ({}),
+  createSceneManagerAdapter: () => ({ getEntity: () => undefined }),
 }));
 jest.mock('../../../core/commands/entity-commands/CopyEntityCommand', () => ({
   CopyEntityCommand: class {

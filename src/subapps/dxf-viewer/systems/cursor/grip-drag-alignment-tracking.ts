@@ -58,7 +58,9 @@ export function applyGripDragAlignmentTracking(
     // όλη η οντότητα γλιστρά σε ortho/aligned ίχνη από εκεί ⊕ ambient γείτονες (τα κυανά ίχνη +
     // η έλξη προς κάθε οντότητα). Τρέχει ΠΡΙΝ τα line-specific anchors ώστε ένα Alt-move γραμμής
     // να παρακολουθεί κι αυτό από το base (όχι από άκρο). ΕΝΑ base-point brain (κοινό με body-drag).
-    if (GripAltMoveStore.getActive() && dimGrip.dragAnchor) {
+    // Το baked `altMove` (ADR-560) είναι blur-proof — το live `GripAltMoveStore.getActive()` το Alt→
+    // blur στα Windows το μηδενίζει mid-drag, οπότε προτιμούμε το baked flag (fallback το live store).
+    if ((dimGrip.altMove || GripAltMoveStore.getActive()) && dimGrip.dragAnchor) {
       return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale);
     }
     // ADR-357/363 — plain DXF LINE grip drag (χωρίς Alt): anchors per grip (fixed endpoint / move

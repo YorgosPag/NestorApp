@@ -110,6 +110,19 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-04** — 🐛 **arc rotation LIVE GHOST fix** (Giorgio: «όταν πατάω το σημάδι περιστροφής
+  δεν εμφανίζεται preview ghost του τόξου»). Το **commit** του arc rotation δούλευε (`commitArcGripDrag`
+  → `RotateEntityCommand`), αλλά το **preview** έκοβε: (1) το `EntityPreviewTransform` δεν είχε πεδίο
+  `arcGripKind`· (2) το `toEntityPreviewTransform` δεν το προωθούσε· (3) το `buildRotateReferencePreview`
+  δεν το προωθούσε (ενώ προωθούσε `lineGripKind`)· (4) το `applyEntityPreview` δεν είχε arc-rotation
+  branch → `transformed === entity` → μηδέν ghost. Fix (mirror του `line-rotation` path, full SSoT):
+  νέο pure `applyArcRotationDrag` (`systems/arc/arc-grips.ts`) = thin adapter πάνω στα ΙΔΙΑ
+  `sweptAngleDegAboutPivot` + `rotatePoint` + `normalizeAngleDeg` primitives που τρέχει το commit
+  (`rotateEntity` arc case) → preview ≡ commit by construction, μηδέν νέα rotate math. **Τροποποιημένα**:
+  `rendering/ghost/entity-preview-types.ts` (+`arcGripKind`), `hooks/tools/grip-drag-preview-transform.ts`
+  (pass-through), `hooks/grips/grip-projections.ts` (`buildRotateReferencePreview` forward),
+  `rendering/ghost/apply-entity-preview.ts` (arc-rotation branch), `systems/arc/arc-grips.ts`
+  (`applyArcRotationDrag` + parity tests vs `rotateEntity`). jest ✅.
 - **2026-07-01** — Αρχική υλοποίηση (UNCOMMITTED). circle=μόνο move· arc+polyline=move+rotation·
   rectangle μέσω polyline (oriented rect-box placement + explode-to-polyline στο rotation).
   Αποφάσεις Giorgio μέσω AskUserQuestion. 🔴 εκκρεμεί browser-verify (`/dxf/viewer`).

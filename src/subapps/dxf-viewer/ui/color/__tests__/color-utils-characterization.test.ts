@@ -11,7 +11,15 @@
  * είναι regression (ή συνειδητή αλλαγή με έγκριση).
  */
 
-import { parseHex, parseColor, rgbToHex, isValidHex, normalizeHex } from '../utils';
+import {
+  parseHex,
+  parseColor,
+  rgbToHex,
+  isValidHex,
+  normalizeHex,
+  extractColorOpacity,
+  stripAlphaToBaseHex,
+} from '../utils';
 
 describe('ui/color/utils — parseHex (superset: 8-digit alpha, THROWS)', () => {
   it('6-digit → {r,g,b,a:1}', () => {
@@ -110,5 +118,21 @@ describe('ui/color/utils — isValidHex / normalizeHex', () => {
   it('normalizeHex: valid → normalized, invalid → passthrough (no throw)', () => {
     expect(normalizeHex('#FFF')).toBe('#ffffff');
     expect(normalizeHex('nope')).toBe('nope');
+  });
+});
+
+describe('ui/color/utils — extractColorOpacity / stripAlphaToBaseHex (ruler SSoT, ADR-573)', () => {
+  it('extractColorOpacity: rgba → alpha, #rrggbbaa → byte/255, else → fallback', () => {
+    expect(extractColorOpacity('rgba(0, 0, 0, 0.5)')).toBeCloseTo(0.5, 6);
+    expect(extractColorOpacity('#12345680')).toBeCloseTo(128 / 255, 6);
+    expect(extractColorOpacity('#123456', 0.8)).toBe(0.8); // opaque hex → fallback
+    expect(extractColorOpacity('garbage', 0.8)).toBe(0.8);
+  });
+
+  it('stripAlphaToBaseHex: rgba → base hex, #rrggbbaa → #rrggbb, else verbatim', () => {
+    expect(stripAlphaToBaseHex('rgba(18, 52, 86, 0.5)')).toBe('#123456');
+    expect(stripAlphaToBaseHex('#12345680')).toBe('#123456'); // slice preserves case
+    expect(stripAlphaToBaseHex('#123456')).toBe('#123456');
+    expect(stripAlphaToBaseHex('teal')).toBe('teal');
   });
 });

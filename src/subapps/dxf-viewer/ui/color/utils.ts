@@ -247,3 +247,39 @@ export function toColorInputHex(raw: string): string {
   }
   return '#ffffff';
 }
+
+/**
+ * Extract the opacity (0..1) encoded in a colour string. Handles `rgba(...)` and
+ * `#rrggbbaa`; any other format → `fallback`.
+ *
+ * 🏢 Color-Conversion SSoT (ADR-573): single home for what was duplicated verbatim
+ * across the ruler-settings widgets (`RulerMajor/Minor/BackgroundSettings`).
+ */
+export function extractColorOpacity(color: string, fallback = 1): number {
+  if (color.includes('rgba')) {
+    const parsed = parseColor(color);
+    return parsed.valid ? parsed.color.alpha : fallback;
+  }
+  if (color.startsWith('#') && color.length === 9) {
+    return parseInt(color.slice(7, 9), 16) / 255;
+  }
+  return fallback;
+}
+
+/**
+ * Strip any alpha channel → opaque base `#rrggbb`. `rgba(...)` → hex; `#rrggbbaa`
+ * → `#rrggbb`; anything else returned verbatim.
+ *
+ * 🏢 Color-Conversion SSoT (ADR-573): single home for the ruler widgets' base-colour
+ * extraction (was duplicated as `getBaseColor` in `RulerMajor/MinorLinesSettings`).
+ */
+export function stripAlphaToBaseHex(color: string): string {
+  if (color.includes('rgba')) {
+    const parsed = parseColor(color);
+    if (parsed.valid) return rgbToHex(parsed.color.rgb);
+  }
+  if (color.startsWith('#') && color.length === 9) {
+    return color.slice(0, 7);
+  }
+  return color;
+}

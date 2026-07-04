@@ -10,8 +10,8 @@ import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Color Picker (same as GridSettings, CrosshairSettings, etc.)
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 // 🏢 ADR-076: Centralized Color Conversion
-// 🏢 Color-Conversion SSoT (ADR-573): parse rgba/hex via the color-picker utils (→ color-math).
-import { rgbToHex, parseColor } from '../../../../../color/utils';
+// 🏢 Color-Conversion SSoT (ADR-573): parse rgba/hex + opacity extraction via color/utils.
+import { rgbToHex, parseColor, extractColorOpacity } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -143,11 +143,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
     // Get current opacity
     const bgColor = rulerSettings.horizontal.backgroundColor;
-    let opacity = 0.8;
-    if (bgColor.includes('rgba')) {
-      const parsed = parseColor(bgColor);
-      if (parsed.valid) opacity = parsed.color.alpha;
-    }
+    const opacity = extractColorOpacity(bgColor, 0.8);
 
     // Use centralized withOpacity function instead of manual rgba construction
     const colorWithOpacity = withOpacity(color, opacity);
@@ -250,14 +246,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.opacity.description')}</div>
         </div>
         <SliderInput
-          value={(() => {
-            const bgColor = rulerSettings.horizontal.backgroundColor;
-            if (bgColor.includes('rgba')) {
-              const parsed = parseColor(bgColor);
-              return parsed.valid ? parsed.color.alpha : 0.8;
-            }
-            return 0.8;
-          })()}
+          value={extractColorOpacity(rulerSettings.horizontal.backgroundColor, 0.8)}
           min={0.1}
           max={1}
           step={0.1}

@@ -106,6 +106,30 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-04 (§move-clearance grip-drag parity + arc footprint — κυανές ΚΑΙ στο σύρσιμο λαβών· τόξο = σαρωμένη καμπύλη)**
+  - **Αίτημα Giorgio**: το **τόξο «φοράς ανοίγματος»** (DXF arc) δεν έδειχνε τις κυανές κεντρικοποιημένες ενδείξεις
+    ούτε στο σύρσιμο **λαβών** (κέντρο/άκρα) ούτε στο **body-drag** — «ίδια συμπεριφορά, ΜΙΑ πηγή αλήθειας» με τις
+    άλλες οντότητες.
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα)** — δύο διαφορετικές ρίζες:
+    - **grip-drag (ΟΛΕΣ οι οντότητες)**: το `useGripGhostPreview` **ποτέ** δεν καλούσε `resolveMoveClearance*`/
+      `paintGhostFaceDimensions` (τα καλούσαν μόνο `useMovePreview` + `useEntityBodyDragPreview`) → σε grip-drag
+      καμία οντότητα δεν έδειχνε κυανές.
+    - **arc footprint**: το `resolveEntityFootprintForDims(arc)` έπεφτε στο generic **disc-bbox** (center±r). Για
+      τεταρτοκύκλιο = τεράστιο τετράγωνο που περιλαμβάνει τη γωνία-κέντρο (μεντεσές) → perp-overlap με τον host
+      τοίχο → η μηχανή (`pushMemberCandidate`) απέρριπτε ΟΛΟΥΣ τους γείτονες ως «πολύ κοντά» → `null`.
+  - **FIX (πλήρες SSoT)**:
+    - `useGripGhostPreview.ts`: μετά το `transformed` ghost, καλεί τον **ΙΔΙΟ** `resolveMoveClearanceDims` (delta {0,0}
+      πάνω στο μετασχηματισμένο entity → καλύπτει move **ΚΑΙ** endpoint reshape με ΕΝΑ path) + `paintGhostFaceDimensions`.
+      Εξαιρείται περιστροφή (`rotatePivot`) + hatch-gradient. Parity με τους δύο άλλους consumers (τρίτος move path).
+    - `entity-footprint-for-dims.ts`: το **τόξο** → η πραγματική **σαρωμένη καμπύλη** (`arcToPolyline`, 24 δείγματα)
+      αντί disc-bbox → η καμπύλη (χωρίς το κέντρο) δίνει το σωστό λεπτό perp extent → clearance στη σαρωμένη ακμή
+      (Revit door-swing parity). Μοιράζεται το `arcToPolyline` SSoT με το arc listening-dim paint.
+  - **Tests**: `arc-grips.test.ts` (+arc rotation ghost, βλ. ADR-561), NEW `entity-footprint-for-dims-arc.test.ts`
+    (curve ≠ bbox· όλα τα σημεία στην περιφέρεια). jest ✅.
+  - ✅ Google-level: YES — μηδέν διπλότυπο· ο τρίτος move path (grip) ενοποιήθηκε με τους άλλους δύο· το τόξο μοιράζεται
+    το `arcToPolyline` SSoT.
+  - CHECK 6D → stage αυτό το ADR + `useGripGhostPreview.ts`. 🟡 UNCOMMITTED (commit: Giorgio).
+
 - **2026-07-04 (§move-clearance — κυανές listening dimensions ΚΑΤΑ ΤΗ ΜΕΤΑΚΙΝΗΣΗ, για ΟΠΟΙΑΔΗΠΟΤΕ οντότητα BIM/DXF)**
   - **Αίτημα Giorgio (browser-confirmed)**: όταν ΜΕΤΑΚΙΝΩ ένα στοιχείο (2-click Move tool **ή** body-drag), να
     εμφανίζονται οι κυανές listening dimensions (#29B6F6) προς τους γείτονες — όπως στο placement/σχεδίαση.

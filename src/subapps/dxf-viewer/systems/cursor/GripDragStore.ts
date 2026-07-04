@@ -39,6 +39,14 @@ export interface ActiveDragGripInfo {
    */
   gripIndex?: number;
   lineGripKind?: LineGripKind | null;
+  /**
+   * ADR-363 Φ1G.5 / ADR-560 — whole-entity Alt-move flag, captured ONCE at grip mousedown.
+   * A BLUR-PROOF mirror of `GripAltMoveStore.getActive()`: on Windows holding Alt can fire a
+   * window `blur` that clears the live store MID-drag, so the AutoAlign resolve read it as false
+   * and the cyan traces + neighbour pull vanished. This baked flag survives the whole gesture, so
+   * a column/wall/any Alt-move keeps its base-point tracking. Set only when the drag armed with Alt.
+   */
+  altMove?: boolean;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;

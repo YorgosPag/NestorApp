@@ -47,8 +47,8 @@ import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ADR-076: Centralized Color Conversion
-// 🏢 Color-Conversion SSoT (ADR-573): parse rgba/hex via the color-picker utils (→ color-math).
-import { rgbToHex, parseColor } from '../../../../../color/utils';
+// 🏢 Color-Conversion SSoT (ADR-573): base-hex + opacity extraction live once in color/utils.
+import { stripAlphaToBaseHex as getBaseColor, extractColorOpacity as getOpacityFromColor } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized Panel Layout tokens (spacing, gaps, margins)
@@ -94,33 +94,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   // HELPER FUNCTIONS (must be before handlers that use them)
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Extract opacity from various color formats
-  const getOpacityFromColor = (color: string): number => {
-    if (color.includes('rgba')) {
-      const parsed = parseColor(color);
-      return parsed.valid ? parsed.color.alpha : 1.0;
-    }
-    // Handle hex+alpha format (#RRGGBBAA)
-    if (color.startsWith('#') && color.length === 9) {
-      const alphaHex = color.slice(7, 9);
-      return parseInt(alphaHex, 16) / 255;
-    }
-    return 1.0;
-  };
-
-  // 🏢 ENTERPRISE: Extract base color (without alpha) from various formats
-  // 🏢 ADR-076: Uses centralized color conversion
-  const getBaseColor = (color: string): string => {
-    if (color.includes('rgba')) {
-      const parsed = parseColor(color);
-      if (parsed.valid) return rgbToHex(parsed.color.rgb);
-    }
-    // Handle hex+alpha format (#RRGGBBAA)
-    if (color.startsWith('#') && color.length === 9) {
-      return color.slice(0, 7);
-    }
-    return color;
-  };
+  // 🏢 Color-Conversion SSoT (ADR-573): getBaseColor / getOpacityFromColor are now the
+  // shared `stripAlphaToBaseHex` / `extractColorOpacity` from color/utils (imported above).
 
   // Helper function to get color for preview icon (handles rgba)
   const getPreviewColor = (color: string): string => {

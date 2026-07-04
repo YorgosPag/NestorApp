@@ -291,6 +291,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       entityId: nearGrip.entityId!,
       gripKind: nearGrip.wallGripKind ?? nearGrip.columnGripKind ?? null,
       dragAnchor: nearGrip.position,
+      // ADR-560 — blur-proof whole-entity Alt-move flag (baked here, survives the Alt→blur that
+      // clears the live GripAltMoveStore), so the AutoAlign base-point tracking keeps running.
+      altMove,
       // ADR-562 Φ9.2 — expose the dim grip kind so the mouse handlers show the SAME
       // AutoAlign traces during a dimension grip drag as every other tool.
       dimGripKind: nearGrip.dimGripKind ?? null,

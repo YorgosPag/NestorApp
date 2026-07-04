@@ -24,6 +24,10 @@ import { isColumnEntity, isBeamEntity, isWallEntity, type Entity } from '../../t
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
+import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
+
+/** Δείγματα της σαρωμένης καμπύλης τόξου ως footprint (πυκνά αρκετά για ομαλό perp clearance). */
+const ARC_FOOTPRINT_SEGMENTS = 24;
 
 /** Plan footprint (world/scene coords) του entity για clearance dims, ή `undefined` αν δεν ορίζεται. */
 export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Point2D> | undefined {
@@ -35,6 +39,20 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
     // WallEntity ⊇ WallFinishObstacle ({id, kind, params}) — μηδέν cast, structural.
     const fp = wallFootprintPolygon({ id: entity.id, kind: entity.kind, params: entity.params });
     if (fp.length >= 3) return fp;
+  }
+  // ADR-508 §move-clearance — ΤΟΞΟ: η ΠΡΑΓΜΑΤΙΚΗ σαρωμένη καμπύλη (δειγματοληπτημένη), ΟΧΙ το γεμάτο
+  // disc-bbox (center±r). Το bbox περιλαμβάνει τη γωνία-κέντρο (π.χ. μεντεσές πόρτας) που συχνά κάθεται
+  // ΠΑΝΩ στον host τοίχο → perp-overlap → η μηχανή clearance (`pushMemberCandidate`) απορρίπτει ΟΛΟΥΣ
+  // τους γείτονες ως «πολύ κοντά» → καμία κυανή dim. Η καμπύλη (χωρίς το κέντρο) δίνει το σωστό λεπτό
+  // perp extent → clearance στη σαρωμένη ακμή (Revit door-swing parity). Μοιράζεται το `arcToPolyline`
+  // SSoT με το arc listening-dim paint. Το κυκλικό/full arc πέφτει πάλι στο bbox παρακάτω (curve ≈ disc).
+  if (entity.type === 'arc') {
+    const arc = entity as unknown as { center: Point2D; radius: number; startAngle: number; endAngle: number };
+    const curve = arcToPolyline(
+      { center: arc.center, radius: arc.radius, startAngle: arc.startAngle, endAngle: arc.endAngle },
+      ARC_FOOTPRINT_SEGMENTS,
+    );
+    if (curve.length >= 2) return curve;
   }
   // Γενικό fallback (Giorgio: «οποιαδήποτε οντότητα BIM ή DXF»): axis-aligned bounding box ως footprint
   // — γραμμή/πολυγραμμή/ορθογώνιο/κύκλος/τόξο + λοιπά. Προσέγγιση αρκετή για clearance dims (bbox παρειές).
