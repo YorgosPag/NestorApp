@@ -87,3 +87,56 @@ export function findBestCornerProjection(
 
   return best;
 }
+
+/** A snap chosen by {@link resolveProjectedSnap}: the indicator (`snapResult`) + the
+ *  point the ghost lands on (`ghostPoint`, corner-corrected when a corner projected),
+ *  plus whether the overlay actually paints a glyph (`visible` — grid/guide are silent). */
+export interface ProjectedSnap {
+  readonly snapResult: ProSnapResult;
+  readonly ghostPoint: Point2D;
+  readonly visible: boolean;
+}
+
+/** True when the overlay would paint a glyph for this result (found + real snappedPoint
+ *  + non-silent mode). Mirrors the hide-rule in `SnapIndicatorOverlay` — the ONE SSoT. */
+function isVisibleProjectionResult(r: ProSnapResult | null): boolean {
+  if (!r?.found || !r.snappedPoint) return false;
+  return isSnapMarkerVisible(toSnapIndicatorView(r));
+}
+
+/**
+ * Revit-grade snap precedence shared by the column DRAW tool (`resolveColumnDrawSnap`)
+ * AND the grip Alt-drag / body-drag path (`resolveGripDragSnap`) — the SINGLE priority
+ * implementation, so draw · move-preview · commit can never diverge:
+ *
+ *   1. **Visible corner-projection** — a projected corner landed on a discrete target
+ *      (γωνία/άκρο/τομή): keep the corner alignment (glyph on the target).
+ *   2. **Visible cursor snap** — a BIM characteristic under the crosshair: the user's
+ *      explicit intent (previously masked when a corner landed on a SILENT grid).
+ *   3. **Silent fallback** — grid/guide alignment (corner over cursor). Returned with
+ *      `visible:false` so a caller can accept it (draw placement) or reject it (grip →
+ *      let AutoAlign take over instead of pulling to an invisible grid point).
+ *
+ * Pure. `cornerProjection` = the caller's own corner-projection (may be `null`);
+ * `findSnapPoint` = the unified snap engine (cursor query).
+ */
+export function resolveProjectedSnap(
+  cursorPos: Readonly<Point2D>,
+  cornerProjection: CornerProjectionResult | null,
+  findSnapPoint: FindSnapPoint,
+): ProjectedSnap | null {
+  if (cornerProjection && isVisibleProjectionResult(cornerProjection.snapResult)) {
+    return { snapResult: cornerProjection.snapResult, ghostPoint: cornerProjection.adjustedCursorPos, visible: true };
+  }
+  const cursorSnap = findSnapPoint(cursorPos.x, cursorPos.y);
+  if (isVisibleProjectionResult(cursorSnap)) {
+    return { snapResult: cursorSnap!, ghostPoint: cursorSnap!.snappedPoint!, visible: true };
+  }
+  if (cornerProjection) {
+    return { snapResult: cornerProjection.snapResult, ghostPoint: cornerProjection.adjustedCursorPos, visible: false };
+  }
+  if (cursorSnap?.found && cursorSnap.snappedPoint) {
+    return { snapResult: cursorSnap, ghostPoint: cursorSnap.snappedPoint, visible: false };
+  }
+  return null;
+}

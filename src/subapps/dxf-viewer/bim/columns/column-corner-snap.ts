@@ -39,8 +39,8 @@ import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
 import { computeColumnGeometry } from '../geometry/column-geometry';
-import { applyColumnGripDrag } from './column-grips';
 import { buildDefaultColumnParams } from '../../hooks/drawing/column-completion';
+import { findMemberGripCornerSnap, isColumnCornerSnapGrip } from '../structural/member-grip-corner-snap';
 import {
   findBestCornerProjection,
   type CornerProjectionResult,
@@ -52,29 +52,16 @@ export type { FindSnapPoint };
 /** @deprecated alias — use {@link CornerProjectionResult}. */
 export type ColumnCornerSnapResult = CornerProjectionResult;
 
-/** Grip kinds that translate/resize the body — corner projection applies. */
-const PROJECTION_GRIP_KINDS = new Set<ColumnGripKind>([
-  'column-center',
-  'column-width',
-  'column-depth',
-  'column-arm-length',
-  'column-arm-width',
-  'column-flange-length',
-  'column-web-thickness',
-  'column-i-flange-thickness',
-  'column-i-web-thickness',
-]);
+// The column projection-grip predicate now lives with the generic member SSoT
+// (κολόνα/δοκός/θεμέλιο μοιράζονται ΕΝΑ corner-source). Re-exported for callers/tests.
+export { isColumnCornerSnapGrip };
 
 /**
- * True for grip kinds where the column's corners should project & snap. Excludes
- * `column-rotation` (rotation is angular, not a corner-alignment operation).
- */
-export function isColumnCornerSnapGrip(kind: string | null | undefined): boolean {
-  return kind != null && PROJECTION_GRIP_KINDS.has(kind as ColumnGripKind);
-}
-
-/**
- * Corner projection for an in-progress MOVE or RESIZE grip drag.
+ * Corner projection for an in-progress column MOVE / RESIZE / Alt whole-body grip drag.
+ *
+ * Thin back-compat wrapper: delegates to the generic {@link findMemberGripCornerSnap}
+ * (κολόνα/δοκός/θεμέλιο, ίδιος shared core) so a column behaves EXACTLY like a wall/
+ * beam/foundation during grip Alt-drag OSNAP. Kept for column call-sites + tests.
  *
  * @param column        The column entity being dragged.
  * @param gripKind      The active parametric grip kind (`column-center` = move,
@@ -82,15 +69,7 @@ export function isColumnCornerSnapGrip(kind: string | null | undefined): boolean
  * @param dragAnchor    Drag origin (move base point / resize handle position).
  * @param cursorPos     Current world cursor.
  * @param findSnapPoint Snap engine query.
- * @param altMove       ADR-363 Φ1G.5 — Alt whole-entity move. When true the grabbed
- *                      grip is only a BASE POINT: the column TRANSLATES (never
- *                      resizes/rotates), so the projection runs the pure
- *                      `column-center` transform (`moveCenter`) regardless of the
- *                      parametric grip kind — the rotation handle included, which is
- *                      itself excluded from `isColumnCornerSnapGrip`. This makes the
- *                      moving column's footprint corners magnet onto neighbours'
- *                      corners/edges (AutoCAD base-point move), the behaviour the
- *                      declutter-hidden `column-center` grip used to give.
+ * @param altMove       ADR-363 Φ1G.5 — Alt whole-entity move (whole-body translate).
  */
 export function findColumnGripCornerSnap(
   column: Readonly<ColumnEntity>,
@@ -100,17 +79,7 @@ export function findColumnGripCornerSnap(
   findSnapPoint: FindSnapPoint,
   altMove = false,
 ): CornerProjectionResult | null {
-  // Alt move ⇒ whole-body translate (grabbed grip = base point); otherwise only the
-  // translate/resize kinds project (rotation is angular, not a corner-alignment op).
-  if (!altMove && !isColumnCornerSnapGrip(gripKind)) return null;
-  const effectiveKind: ColumnGripKind = altMove ? 'column-center' : gripKind;
-  const delta: Point2D = { x: cursorPos.x - dragAnchor.x, y: cursorPos.y - dragAnchor.y };
-  const proposed = applyColumnGripDrag(effectiveKind, {
-    originalParams: column.params,
-    delta,
-    currentPos: cursorPos,
-  });
-  return projectColumn(proposed, cursorPos, findSnapPoint, column.id);
+  return findMemberGripCornerSnap(column, gripKind, dragAnchor, cursorPos, findSnapPoint, altMove);
 }
 
 /**

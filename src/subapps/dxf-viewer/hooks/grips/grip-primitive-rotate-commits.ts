@@ -33,7 +33,7 @@ import { resolveSweptRotationDeg } from './primitive-rotation-drag';
 import { rotatePoint } from '../../utils/rotation-math';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
+import { polylineBboxCenter, rectOrPolylineVertices } from '../../systems/polyline/rectangle-detect';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /** Minimal structural view of the primitive scene shapes we read here. */
@@ -42,12 +42,6 @@ interface PrimitiveSceneShape {
   center?: Point2D;
   vertices?: Point2D[];
   closed?: boolean;
-  corner1?: Point2D;
-  corner2?: Point2D;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
 }
 
 /** The resolved rotation: pivot + swept angle, or `null` for a degenerate sweep. */
@@ -75,24 +69,6 @@ function resolveRotation(
   const sweptDeg = resolveSweptRotationDeg(pivot, anchor, currentPos);
   if (sweptDeg === null) return null;
   return { pivot, sweptDeg };
-}
-
-/** The 4 axis-aligned vertices of a rectangle scene shape (corner1/corner2 or x/y/w/h). */
-function rectangleSceneVertices(e: PrimitiveSceneShape): Point2D[] | null {
-  if (e.corner1 && e.corner2) {
-    return [
-      e.corner1,
-      { x: e.corner2.x, y: e.corner1.y },
-      e.corner2,
-      { x: e.corner1.x, y: e.corner2.y },
-    ];
-  }
-  if (e.x != null && e.y != null && e.width != null && e.height != null) {
-    const c1: Point2D = { x: e.x, y: e.y };
-    const c2: Point2D = { x: e.x + e.width, y: e.y + e.height };
-    return [c1, { x: c2.x, y: c1.y }, c2, { x: c1.x, y: c2.y }];
-  }
-  return null;
 }
 
 /**
@@ -135,7 +111,7 @@ export function commitPolylineRotationGripDrag(
   if (!raw) return;
 
   const isRect = raw.type === 'rectangle' || raw.type === 'rect';
-  const vertices = isRect ? rectangleSceneVertices(raw) : raw.vertices;
+  const vertices = rectOrPolylineVertices(raw);
   if (!vertices || vertices.length < 2) return;
 
   const res = resolveRotation(grip, delta, polylineBboxCenter(vertices));

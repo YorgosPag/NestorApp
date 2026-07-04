@@ -16,6 +16,7 @@ import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
 import { buildDxfDragPreview, buildRotateReferencePreview } from './grip-projections';
 import { createSceneManagerAdapter, type DxfCommitDeps } from './grip-commit-adapters';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
+import { resolveRectRotationReference, type RectRotationReference } from '../../systems/polyline/rect-rotation-reference';
 import type { Entity } from '../../types/entities';
 import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 
@@ -53,12 +54,25 @@ export function resolveDxfDragPreview(params: ResolveDxfDragPreviewParams): DxfG
     // mutable `hotGripRotateBase` (which the Slice G.6 seed could lose). Null
     // entity / no orientation → first-move baseline fallback.
     let freeBaseline = hotGripRotateBase;
+    // ADR-561 — RECTANGLE + pivot-on-handle: the reference is a CROSS coaxial with the box
+    // sides, 0° = the side arm nearest the cursor (Giorgio 2026-07-05). Only when the pivot
+    // lands on one of the 8 handles; otherwise fall back to the generic major-axis baseline
+    // (and non-rect entities always fall back → zero regression to line/arc/etc.).
+    let rectCross: RectRotationReference['cross'] | null = null;
     if (pivot && activeGrip.entityId) {
       const entity = createSceneManagerAdapter(dxfCommitDeps)?.getEntity(activeGrip.entityId);
-      const axisBaseline = entity ? resolveRotateReferenceAnchor(entity as unknown as Entity, pivot) : null;
-      if (axisBaseline) freeBaseline = axisBaseline;
+      if (entity) {
+        const rectRef = resolveRectRotationReference(entity as unknown as Entity, pivot, currentWorldPos);
+        if (rectRef) {
+          freeBaseline = rectRef.refAnchor;
+          rectCross = rectRef.cross;
+        } else {
+          const axisBaseline = resolveRotateReferenceAnchor(entity as unknown as Entity, pivot);
+          if (axisBaseline) freeBaseline = axisBaseline;
+        }
+      }
     }
-    return buildRotateReferencePreview(
+    const preview = buildRotateReferencePreview(
       activeGrip,
       hotGripStep,
       pivot,
@@ -69,6 +83,13 @@ export function resolveDxfDragPreview(params: ResolveDxfDragPreviewParams): DxfG
       freeBaseline,
       typedRotateDeg,
     );
+    // Paint the coaxial cross via the SAME dashed refLine/alignLine channels the ghost
+    // already renders (`useGripGhostPreview`) — only during the terminal free-rotate step
+    // (the 6-click reference flow owns those channels itself).
+    if (preview && rectCross && hotGripStep === 'rotate-free') {
+      return { ...preview, rotateRefLine: rectCross.axisRef, rotateAlignLine: rectCross.axisAlign };
+    }
+    return preview;
   }
   // ADR-363 Phase 1G.5 — Alt drag → whole-entity move ghost (base = grabbed grip).
   // The last flag marks a wall "move" hot-grip so ORTHO (F8) locks its ghost too.

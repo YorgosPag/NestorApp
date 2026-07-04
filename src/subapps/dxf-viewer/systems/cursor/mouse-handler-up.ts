@@ -27,18 +27,14 @@ import { processMarqueeSelection } from './mouse-handler-up-marquee';
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
-import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
-import { isWallEntity, isColumnEntity, isLineEntity, type Entity } from '../../types/entities';
+import { resolveGripDragSnap } from './grip-drag-snap-resolver';
+import { isLineEntity } from '../../types/entities';
 // ADR-562 Φ9.2 — commit parity for the dim-grip AutoAlign (WYSIWYG preview ≡ commit).
 import { resolveActionAlignmentTracking } from '../../hooks/dimensions/dim-alignment-tracking';
 import { toDimensionEntity, getDimGripAlignmentAnchors } from '../../hooks/dimensions/useDimensionGrips';
 import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 // ADR-357/363 — plain-line grip alignment anchors (commit parity with the live move override).
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
-import {
-  findColumnGripCornerSnap,
-  isColumnCornerSnapGrip,
-} from '../../bim/columns/column-corner-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts';
 import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completion';
@@ -51,7 +47,6 @@ import { getGapPlacementShift } from './GapStepPlacementStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from './ImmediateTransformStore';
 import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation, setColumnFaceSizing } from './ColumnPlacementGhostStatusStore';
-import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
 import { LassoStore, computeLassoMode } from './LassoStore';
@@ -204,64 +199,20 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         // so the committed delta matches the preview (which used the raw cursor).
         const rawUpWorldPos = upWorldPos;
 
+        // ADR-560 §grip-OSNAP-unified — commit parity: ΙΔΙΑ κλήση με το move handler (ίδιος
+        // resolver, ίδιο RAW cursor) ώστε η δεσμευμένη θέση να ισούται ΑΚΡΙΒΩΣ με το ghost που
+        // έδειξε το preview (WYSIWYG). Καλύπτει τοίχο/κολόνα/δοκό/θεμέλιο ενιαία, και δέχεται
+        // ΜΟΝΟ ορατές έλξεις — διορθώνει το παλιό commit gap όπου το generic cursor-snap κούμπωνε
+        // ακόμη και σε σιωπηλό grid (preview≠commit).
         if (snapEnabled && findSnapPoint) {
-          const snapResult = findSnapPoint(upWorldPos.x, upWorldPos.y);
-          if (snapResult && snapResult.found && snapResult.snappedPoint) {
-            upWorldPos = snapResult.snappedPoint;
-          }
-
-          // ADR-371 extension — Wall Face Corner Projection Snap commit
-          // Apply the same face corner projection on mouseup so the committed
-          // entity position matches what was shown during drag preview.
-          const activeDragGrip = getActiveDragGrip();
-          if (
-            activeDragGrip &&
-            scene &&
-            (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
-          ) {
-            const draggedEntity = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
-            if (draggedEntity && isWallEntity(draggedEntity)) {
-              const faceSnap = findWallFaceCornerSnap(
-                draggedEntity,
-                activeDragGrip.gripKind as 'wall-start' | 'wall-end',
-                upWorldPos,
-                findSnapPoint,
-              );
-              if (faceSnap) {
-                upWorldPos = faceSnap.adjustedAxisPos;
-              }
-            }
-          }
-
-          // ADR-398 — Column Body Corner Projection Snap commit (move + resize).
-          // Mirror of the move handler so the committed position equals the ghost.
-          // ADR-363 Φ1G.5 — same Alt whole-entity-move path as the move handler:
-          // the grabbed grip is only a base point (`column-center` is hidden), so
-          // the projection must run for any kind (rotation handle included).
-          // ADR-560 — blur-proof baked `altMove` (SSoT resolver) so the committed
-          // position matches the preview corner-snap even after a Windows Alt→blur.
-          const columnAltMove = isActiveGripAltMove();
-          if (
-            activeDragGrip &&
-            activeDragGrip.dragAnchor &&
-            scene &&
-            (columnAltMove || isColumnCornerSnapGrip(activeDragGrip.gripKind))
-          ) {
-            const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
-            if (draggedColumn && isColumnEntity(draggedColumn)) {
-              const cornerSnap = findColumnGripCornerSnap(
-                draggedColumn,
-                activeDragGrip.gripKind as ColumnGripKind,
-                activeDragGrip.dragAnchor,
-                rawUpWorldPos,
-                findSnapPoint,
-                columnAltMove,
-              );
-              if (cornerSnap) {
-                upWorldPos = cornerSnap.adjustedCursorPos;
-              }
-            }
-          }
+          const gripSnap = resolveGripDragSnap(
+            (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+            getActiveDragGrip(),
+            rawUpWorldPos,
+            findSnapPoint,
+            isActiveGripAltMove(),
+          );
+          if (gripSnap) upWorldPos = gripSnap.moveWorldPos;
         }
 
         // ADR-562 Φ9.2 / ADR-357 — commit parity for the dim-grip AutoAlign. SAME resolver

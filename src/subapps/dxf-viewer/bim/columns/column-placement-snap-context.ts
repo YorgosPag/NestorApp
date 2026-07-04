@@ -28,18 +28,8 @@ import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
 import { findEntityOverlap } from '../geometry/entity-overlap';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
-import { isVisibleSnapMode, type ProSnapResult } from '../../snapping/extended-types';
-import type { CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
-
-/**
- * Ένα snap που ο `SnapIndicatorOverlay` **όντως ζωγραφίζει** γλυφή. Τα `grid`/`guide` είναι
- * σιωπηλά (ο overlay τα κρύβει ρητά — AutoCAD convention) → δεν μετράνε ως «ορατό» feedback.
- * Mirror του hide-rule στο `SnapIndicatorOverlay.tsx` (`type === 'grid' || 'guide'`).
- */
-function isVisibleIndicatorSnap(r: ProSnapResult | null): boolean {
-  if (!r?.found || !r.snappedPoint) return false;
-  return isVisibleSnapMode(r.activeMode);
-}
+import type { ProSnapResult } from '../../snapping/extended-types';
+import { resolveProjectedSnap, type CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
 
 /** Το επιλεγμένο snap για την τοποθέτηση κολώνας: η γλυφή/ετικέτα (`snapResult`) + το σημείο
  *  στο οποίο κουμπώνει το ghost (`ghostPoint`, με την corner-διόρθωση όταν υπάρχει). */
@@ -77,20 +67,11 @@ export function resolveColumnDrawSnap(
   drawCorner: CornerProjectionResult | null,
   findSnapPoint: (x: number, y: number) => ProSnapResult | null,
 ): ColumnDrawSnap | null {
-  if (drawCorner && isVisibleIndicatorSnap(drawCorner.snapResult)) {
-    return { snapResult: drawCorner.snapResult, ghostPoint: drawCorner.adjustedCursorPos };
-  }
-  const cursorSnap = findSnapPoint(cursorPos.x, cursorPos.y);
-  if (isVisibleIndicatorSnap(cursorSnap)) {
-    return { snapResult: cursorSnap!, ghostPoint: cursorSnap!.snappedPoint };
-  }
-  if (drawCorner) {
-    return { snapResult: drawCorner.snapResult, ghostPoint: drawCorner.adjustedCursorPos };
-  }
-  if (cursorSnap?.found && cursorSnap.snappedPoint) {
-    return { snapResult: cursorSnap, ghostPoint: cursorSnap.snappedPoint };
-  }
-  return null;
+  // Thin wrapper πάνω στο κοινό priority SSoT (ADR-560 §grip-OSNAP-unified). Το draw path κρατά
+  // ΚΑΙ τις σιωπηλές placement-έλξεις (grid placement είναι θεμιτό στο εργαλείο), οπότε δέχεται
+  // κάθε αποτέλεσμα του `resolveProjectedSnap` ανεξαρτήτως `visible` — ίδια 4-tier σειρά με πριν.
+  const picked = resolveProjectedSnap(cursorPos, drawCorner, findSnapPoint);
+  return picked ? { snapResult: picked.snapResult, ghostPoint: picked.ghostPoint } : null;
 }
 
 /** Η πρώτη υπάρχουσα κολώνα της οποίας το footprint περιέχει τον cursor (`null` αν καμία).

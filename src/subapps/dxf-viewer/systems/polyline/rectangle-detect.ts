@@ -46,6 +46,47 @@ export function polylineBboxCenter(vertices: readonly Point2D[]): Point2D {
   return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
 }
 
+/** Minimal structural view of the scene shapes that carry a polyline vertex ring. */
+interface RectOrPolylineShape {
+  readonly type?: string;
+  readonly vertices?: readonly Point2D[];
+  readonly corner1?: Point2D;
+  readonly corner2?: Point2D;
+  readonly x?: number;
+  readonly y?: number;
+  readonly width?: number;
+  readonly height?: number;
+}
+
+/**
+ * ADR-561 — the SSoT vertex ring of a scene shape that behaves as a polyline in the
+ * DXF pipeline: a `rectangle`/`rect` yields its 4 axis-aligned corners (from
+ * `corner1`/`corner2` or `x`/`y`/`width`/`height`), any other shape yields its own
+ * `vertices`. Returns `null` when neither is available. Consumed by BOTH the rotation
+ * commit (`commitPolylineRotationGripDrag`) and the live rect-axis rotation reference
+ * (`resolveRectRotationReference`), so the two can never disagree on «what ring is this».
+ */
+export function rectOrPolylineVertices(entity: unknown): Point2D[] | null {
+  const e = entity as RectOrPolylineShape;
+  if (e.type === 'rectangle' || e.type === 'rect') {
+    if (e.corner1 && e.corner2) {
+      return [
+        e.corner1,
+        { x: e.corner2.x, y: e.corner1.y },
+        e.corner2,
+        { x: e.corner1.x, y: e.corner2.y },
+      ];
+    }
+    if (e.x != null && e.y != null && e.width != null && e.height != null) {
+      const c1: Point2D = { x: e.x, y: e.y };
+      const c2: Point2D = { x: e.x + e.width, y: e.y + e.height };
+      return [c1, { x: c2.x, y: c1.y }, c2, { x: c1.x, y: c2.y }];
+    }
+    return null;
+  }
+  return e.vertices ? e.vertices.slice() : null;
+}
+
 /**
  * Drop a trailing vertex that just repeats the first (some closed rings duplicate
  * the start point). Returns the distinct-corner list.

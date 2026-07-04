@@ -16,8 +16,7 @@ import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition, setRealtimeWorldCursor } from './ImmediatePositionStore';
 import { setColumnPolarShiftFractions } from './ColumnPolarStore';
-import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
-import { isVisibleSnapMode } from '../../snapping/extended-types';
+import { resolveGripDragSnap, publishGripSnap, clearGripSnap } from './grip-drag-snap-resolver';
 import { getLockedGripWorldPos } from './GripSnapStore';
 import { getGripStepAnchor } from './GripStepAnchorStore';
 import { applyPointStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
@@ -30,19 +29,13 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
 import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
-import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
-import { isWallEntity, isColumnEntity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 // ADR-562 Φ9.2 / ADR-357 — grip-drag AutoAlign tracking SSoT (extracted for N.7.1 size budget).
 // ADR-560 — body-drag reuses the SAME SSoT via applyBodyDragAlignmentTracking.
 import { applyGripDragAlignmentTracking, applyBodyDragAlignmentTracking } from './grip-drag-alignment-tracking';
 // ADR-560 §OSNAP-priority — clear stale AutoAlign traces όταν το OSNAP νικάει (κουμπώνει σε σημείο).
 import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
-import {
-  findColumnGripCornerSnap,
-  isColumnCornerSnapGrip,
-} from '../../bim/columns/column-corner-snap';
-import type { ColumnGripKind } from '../../hooks/useGripMovement';
 // ADR-040 Φ11: draw-snap (column-draw corner snap + columnToolBridgeStore) moved to the
 // decoupled snap-scheduler; this handler only arms it.
 import { requestSnapDetection, clearSnapDetection } from './snap-scheduler';
@@ -187,125 +180,24 @@ export function useMouseMoveHandler({
     // νοητό άξονα ευθυγράμμισης (Giorgio 2026-07-04 «να έλκομαι μόνο από τα κοντινά σημεία»).
     let osnapFound = false;
     if (isGripDragging && snapEnabled && findSnapPoint) {
-      const gripSnapResult = findSnapPoint(worldPos.x, worldPos.y);
-      // ADR-560 — grip-move OSNAP priority (mirror του draw path `resolveColumnDrawSnap`): δέχεσαι
-      // ΜΟΝΟ ΟΡΑΤΕΣ έλξεις (`isVisibleSnapMode` — ΤΟ ΙΔΙΟ SSoT με το corner-projection). Το σιωπηλό
-      // grid/guide είναι ΠΑΝΤΟΥ κάτω από τη λαβή· αν το δεχόμασταν, «κλείδωνε» το osnapFound (καθάριζε
-      // το AutoAlign) ΚΑΙ έθετε moveWorldPos σε αόρατο grid point ΧΩΡΙΣ marker → έπνιγε το column-corner
-      // projection (η γωνία). Silent → πέφτει στο else (clear) ώστε να νικήσει το projection ή το AutoAlign.
-      if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint && isVisibleSnapMode(gripSnapResult.activeMode)) {
-        moveWorldPos = gripSnapResult.snappedPoint;
+      // ADR-560 §grip-OSNAP-unified — ΜΙΑ πηγή αλήθειας για τοίχο/κολόνα/δοκό/θεμέλιο. Ο κοινός
+      // resolver κάνει corner-source dispatch (wall face / member footprint) + τον ΙΔΙΟ priority
+      // resolver με το draw path (ορατή γωνία > ορατό cursor > σιωπηλό grid). Δέχεται ΜΟΝΟ ορατές
+      // έλξεις· σιωπηλό grid → null → νικάει το AutoAlign παρακάτω (ADR-560 θ/ι root cause). Ίδια
+      // κλήση με το commit (mouse-handler-up) → preview===commit εξ ορισμού.
+      const gripSnap = resolveGripDragSnap(
+        scene?.entities as unknown as readonly Entity[] | null | undefined,
+        getActiveDragGrip(),
+        worldPos,
+        findSnapPoint,
+        isActiveGripAltMove(),
+      );
+      if (gripSnap) {
+        moveWorldPos = gripSnap.moveWorldPos;
         osnapFound = true;
-        // Propagate to SnapIndicatorOverlay — grip drag bypasses the throttled block below
-        setSnapResults([{
-          point: gripSnapResult.snappedPoint,
-          type: gripSnapResult.activeMode || 'default',
-          entityId: gripSnapResult.snapPoint?.entityId || null,
-          distance: gripSnapResult.snapPoint?.distance || 0,
-          priority: 0,
-        }]);
-        setFullSnapResult(gripSnapResult);
-        setImmediateSnap({
-          found: true,
-          point: gripSnapResult.snappedPoint,
-          mode: gripSnapResult.activeMode || 'endpoint',
-          entityId: gripSnapResult.snapPoint?.entityId,
-        });
+        publishGripSnap(gripSnap.snapResult, setSnapResults);
       } else {
-        // No snap near cursor during grip drag — clear indicator
-        setSnapResults([]);
-        setFullSnapResult(null);
-        clearImmediateSnap();
-      }
-
-      // ADR-371 extension — Wall Face Corner Projection Snap (Revit-style)
-      // If dragging a wall endpoint grip, check whether a face corner (axis ± halfThickness)
-      // snaps to a nearby BIM corner. If so, override moveWorldPos to the adjusted axis pos
-      // so the face corner aligns exactly with the target corner.
-      const activeDragGrip = getActiveDragGrip();
-      if (
-        activeDragGrip &&
-        scene &&
-        (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
-      ) {
-        const draggedEntity = scene.entities?.find(e => e.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
-        if (draggedEntity && isWallEntity(draggedEntity)) {
-          const faceSnap = findWallFaceCornerSnap(
-            draggedEntity,
-            activeDragGrip.gripKind as 'wall-start' | 'wall-end',
-            worldPos,
-            findSnapPoint!,
-          );
-          if (faceSnap) {
-            moveWorldPos = faceSnap.adjustedAxisPos;
-            osnapFound = true;
-            setSnapResults([{
-              point: faceSnap.snapResult.snappedPoint!,
-              type: faceSnap.snapResult.activeMode || 'default',
-              entityId: faceSnap.snapResult.snapPoint?.entityId || null,
-              distance: faceSnap.snapResult.snapPoint?.distance || 0,
-              priority: 0,
-            }]);
-            setFullSnapResult(faceSnap.snapResult);
-            setImmediateSnap({
-              found: true,
-              point: faceSnap.snapResult.snappedPoint!,
-              mode: faceSnap.snapResult.activeMode || 'endpoint',
-              entityId: faceSnap.snapResult.snapPoint?.entityId,
-            });
-          }
-        }
-      }
-
-      // ADR-398 — Column Body Corner Projection Snap (move + resize). The dragged
-      // column's own footprint corners project onto nearby targets so a corner
-      // snaps exactly, mirroring the wall face-corner projection above. The drag
-      // anchor (move base / resize handle) rides on GripDragStore.
-      // ADR-363 Φ1G.5 — under Alt whole-entity move the grabbed grip is only a base
-      // point (the `column-center` grip is declutter-hidden, so Alt+drag starts from
-      // a rotation/width/depth handle). Run the projection then too, so the moving
-      // column's corners magnet onto neighbours regardless of the parametric kind —
-      // otherwise Alt+rotation (excluded from `isColumnCornerSnapGrip`) got no snap.
-      // ADR-560 — blur-proof: baked `altMove` (survives Windows Alt→blur) via the SSoT
-      // resolver, so the column corner-projection OSNAP keeps firing mid-drag exactly
-      // like the AutoAlign traces (which already read the baked flag). The live-store-only
-      // read here was the bug: Alt→blur cleared it → no OSNAP marker / no neighbour pull.
-      const columnAltMove = isActiveGripAltMove();
-      if (
-        activeDragGrip &&
-        activeDragGrip.dragAnchor &&
-        scene &&
-        (columnAltMove || isColumnCornerSnapGrip(activeDragGrip.gripKind))
-      ) {
-        const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
-        if (draggedColumn && isColumnEntity(draggedColumn)) {
-          const cornerSnap = findColumnGripCornerSnap(
-            draggedColumn,
-            activeDragGrip.gripKind as ColumnGripKind,
-            activeDragGrip.dragAnchor,
-            worldPos,
-            findSnapPoint!,
-            columnAltMove,
-          );
-          if (cornerSnap) {
-            moveWorldPos = cornerSnap.adjustedCursorPos;
-            osnapFound = true;
-            setSnapResults([{
-              point: cornerSnap.snapResult.snappedPoint!,
-              type: cornerSnap.snapResult.activeMode || 'default',
-              entityId: cornerSnap.snapResult.snapPoint?.entityId || null,
-              distance: cornerSnap.snapResult.snapPoint?.distance || 0,
-              priority: 0,
-            }]);
-            setFullSnapResult(cornerSnap.snapResult);
-            setImmediateSnap({
-              found: true,
-              point: cornerSnap.snapResult.snappedPoint!,
-              mode: cornerSnap.snapResult.activeMode || 'endpoint',
-              entityId: cornerSnap.snapResult.snapPoint?.entityId,
-            });
-          }
-        }
+        clearGripSnap(setSnapResults);
       }
     }
 
