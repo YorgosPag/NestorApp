@@ -17,11 +17,15 @@ import type { DxfEntityUnion } from './dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { CAD_UI_COLORS } from '../../config/color-config';
 import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
-import { lineweightToPx } from '../../config/lineweight-iso-catalog';
+// SSoT — id-first/name-fallback επίλυση owning layer (κοινή με το ribbon color swatch).
+import { resolveEntityLayer } from '../../systems/properties/resolve-entity-color';
+import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+// ADR-510 Φ2G — global "Show Lineweight" toggle (AutoCAD LWDISPLAY). The single
+// gate lives here so BOTH the LINE batch path and the per-entity path honour it.
+import { getShowLineweight } from '../../stores/LineweightDisplayStore';
 import { resolveAnyDashMm } from '../../config/linetype-aliases';
 import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
 import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
-import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
@@ -70,11 +74,24 @@ export function resolveEntityRenderStyle(
 ): ResolvedRenderStyle {
   // ADR-454 — active only during offscreen print render (null otherwise).
   const printPolicy = getPrintColorPolicy();
+  // ADR-510 Φ2G — screen LWDISPLAY toggle. Print/plot ALWAYS renders real weights
+  // (AutoCAD parity), so a print policy forces the gate open. When closed, every
+  // stroke collapses to a 1px hairline (zoom-independent, big-player LWT-off).
+  const showLineweight = printPolicy !== null || getShowLineweight();
+  const gatePx = (px: number): number => (showLineweight ? Math.max(1, px) : 1);
+  // ADR-510 Φ2G — even without a layer/cascade context, the entity's OWN concrete
+  // lineweight (mm) must still paint (mirror of the `resolveAnyDashMm` linetype
+  // fallback below). A freshly-drawn line whose layer isn't in `layersById` would
+  // otherwise ignore the "Πάχος" field entirely and fall back to legacy px.
+  const dpiForMm = printPolicy ? printPolicy.dpi : 96;
+  const ownLineweightPx = isConcreteLineweight(entity.lineweightMm)
+    ? lineweightToPx(entity.lineweightMm, dpiForMm)
+    : 0;
   const fallback: ResolvedRenderStyle = {
     colorHex: printPolicy
       ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
       : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
-    lineWidthPx: Math.max(1, entity.lineWidth || 1),
+    lineWidthPx: gatePx(ownLineweightPx || (entity.lineWidth || 1)),
     // ADR-510 Φ2E — even without a layer/cascade context, the entity's OWN
     // linetype must still render dashed. Reuses the SAME `resolveAnyDashMm` SSoT
     // as the BIM renderers — ByLayer/ByBlock/Continuous/unknown ⇒ [] (solid).
@@ -82,13 +99,9 @@ export function resolveEntityRenderStyle(
     alpha: 1,
   };
   if (!layersById) return applyIsolateAlpha(fallback, entity);
-  // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder).
-  // Name-keyed fallback handles legacy/Firestore scenes without layersById.
-  const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
-  const layer = layerById ?? (() => {
-    const name = resolveEntityLayerName(entity);
-    return name ? layersById[name] : undefined;
-  })();
+  // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder),
+  // name-keyed fallback for legacy/Firestore scenes — SSoT `resolveEntityLayer`.
+  const layer = resolveEntityLayer(entity, layersById);
   if (!layer) return applyIsolateAlpha(fallback, entity);
   const styleInput = entityToStyleInput({
     color: entity.color,
@@ -102,7 +115,7 @@ export function resolveEntityRenderStyle(
   const resolved = resolveEntityStyle(styleInput, layer);
   // ADR-454 — print render: convert ISO mm at the real print DPI (not screen 96)
   // and remap colour to a white-safe print colour. No-op when policy is null.
-  const px = lineweightToPx(resolved.lineweight, printPolicy ? printPolicy.dpi : 96);
+  const px = lineweightToPx(resolved.lineweight, dpiForMm);
   const colorHex = printPolicy
     ? applyPlotColor(resolved.color, resolved.colorAci, printPolicy)
     : adaptEntityColorForCanvas(resolved.color);
@@ -110,7 +123,8 @@ export function resolveEntityRenderStyle(
   return applyIsolateAlpha(
     {
       colorHex,
-      lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
+      // ADR-510 Φ2G — resolved mm → fixed px, gated by the global LWDISPLAY toggle.
+      lineWidthPx: gatePx(px || (entity.lineWidth || 1)),
       alpha: baseAlpha,
       // ADR-510 Φ2 — resolved metric dash pattern ([] for Continuous).
       dashMm: resolved.linetype.pattern,

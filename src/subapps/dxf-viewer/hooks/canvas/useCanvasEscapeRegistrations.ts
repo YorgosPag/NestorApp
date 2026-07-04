@@ -61,6 +61,12 @@ export interface UseCanvasEscapeRegistrationsParams {
   readonly stretchIsActive: boolean;
   readonly handleTrimEscape?: () => void;
   readonly trimIsActive: boolean;
+  readonly handleOffsetEscape?: () => void;
+  readonly offsetIsActive: boolean;
+  readonly handleFilletEscape?: () => void;
+  readonly filletIsActive: boolean;
+  readonly handleChamferEscape?: () => void;
+  readonly chamferIsActive: boolean;
   readonly handleExtendEscape?: () => void;
   readonly extendIsActive: boolean;
   readonly handleArrayPolarEscape?: () => void;
@@ -115,6 +121,9 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
   useEscapeHandler(buildModifyHandler('scale', p.handleScaleEscape, () => p.scaleIsActive));
   useEscapeHandler(buildModifyHandler('stretch', p.handleStretchEscape, () => p.stretchIsActive));
   useEscapeHandler(buildModifyHandler('trim', p.handleTrimEscape, () => p.trimIsActive));
+  useEscapeHandler(buildModifyHandler('offset', p.handleOffsetEscape, () => p.offsetIsActive));
+  useEscapeHandler(buildModifyHandler('fillet', p.handleFilletEscape, () => p.filletIsActive));
+  useEscapeHandler(buildModifyHandler('chamfer', p.handleChamferEscape, () => p.chamferIsActive));
   useEscapeHandler(buildModifyHandler('extend', p.handleExtendEscape, () => p.extendIsActive));
   useEscapeHandler(buildModifyHandler('array-polar', p.handleArrayPolarEscape, () => p.arrayPolarIsActive));
   useEscapeHandler(buildModifyHandler('array-path', p.handleArrayPathEscape, () => p.arrayPathIsActive));

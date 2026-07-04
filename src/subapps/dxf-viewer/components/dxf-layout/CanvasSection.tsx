@@ -278,7 +278,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
-  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, wallGapOpeningTool, bimCopyTool, handleRotationAnglePrompt } = useModifyTools({
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, offsetTool, filletTool, chamferTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, wallGapOpeningTool, bimCopyTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
@@ -344,7 +344,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     mirrorIsActive: mirrorTool.isCollectingInput, handleMirrorClick: mirrorTool.handleMirrorClick,
     scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
     stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
-    trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick,
+    trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick, offsetIsActive: offsetTool.isActive, handleOffsetClick: offsetTool.handleOffsetClick, filletIsActive: filletTool.isActive, handleFilletClick: filletTool.handleFilletClick, chamferIsActive: chamferTool.isActive, handleChamferClick: chamferTool.handleChamferClick,
     extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick, wallSplitIsActive: wallSplitTool.isActive, handleWallSplitClick: wallSplitTool.handleWallSplitClick, wallAttachIsActive: wallAttachTool.isActive, handleWallAttachClick: wallAttachTool.handleWallAttachClick, wallMergeIsActive: wallMergeTool.isActive, handleWallMergeClick: wallMergeTool.handleWallMergeClick, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleWallGapOpeningClick: wallGapOpeningTool.handleWallGapOpeningClick, bimCopyIsActive: bimCopyTool.isActive, handleBimCopyClick: bimCopyTool.handleBimCopyClick,
     arrayPolarIsActive: arrayPolarTool.isActive, handleArrayPolarClick: arrayPolarTool.handleArrayPolarClick,
     handleArrayPolarCenterRepick,
@@ -398,7 +398,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleMirrorConfirm: mirrorTool.handleMirrorConfirm, mirrorAwaitingConfirm: mirrorTool.phase === 'awaiting-keep-originals',
     handleScaleEscape: scaleTool.handleScaleEscape, handleScaleKeyDown: scaleTool.handleScaleKeyDown, scaleIsActive: scaleTool.isCollectingInput,
     handleStretchEscape: stretchTool.handleStretchEscape, handleStretchKeyDown: stretchTool.handleStretchKeyDown, stretchIsActive: stretchTool.isCollectingInput,
-    handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
+    handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive, handleOffsetEscape: offsetTool.handleOffsetEscape, handleOffsetKeyDown: offsetTool.handleOffsetKeyDown, offsetIsActive: offsetTool.isActive, handleFilletEscape: filletTool.handleFilletEscape, handleFilletKeyDown: filletTool.handleFilletKeyDown, filletIsActive: filletTool.isActive, handleChamferEscape: chamferTool.handleChamferEscape, handleChamferKeyDown: chamferTool.handleChamferKeyDown, chamferIsActive: chamferTool.isActive,
     handleExtendEscape: extendTool.handleExtendEscape, handleExtendKeyDown: extendTool.handleExtendKeyDown, extendIsActive: extendTool.isActive,
     handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
     handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,

@@ -37,6 +37,13 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { MODAL_Z_INDEX } from '../../config/modal-config';
 
 /**
+ * Τελευταία θέση που έσυρε ο χρήστης το color dialog — κοινή (module-level) ώστε ΚΑΘΕ
+ * color picker να ανοίγει εκεί που το άφησες, όχι ξανά στο κέντρο (persist ανά app-session).
+ * In-memory by design· δεν επιβιώνει reload (session-scoped, όπως ζήτησε ο Giorgio).
+ */
+let lastDialogPosition: { x: number; y: number } | null = null;
+
+/**
  * Enterprise Color Dialog Component
  *
  * @example
@@ -56,6 +63,7 @@ export function EnterpriseColorDialog({
   onClose,
   title = 'Color Picker',
   showFooter = true,
+  dimBackdrop = true,
   value,
   onChange,
   onChangeEnd,
@@ -100,10 +108,17 @@ export function EnterpriseColorDialog({
     if (isOpen) {
       setLocalColor(value);
       setOriginalValue(value);
-      setPosition({ x: 0, y: 0 });
+      // Άνοιξε στην τελευταία θέση που το έσυρε ο χρήστης (ή στο κέντρο την 1η φορά).
+      setPosition(lastDialogPosition ?? { x: 0, y: 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync only when dialog opens
   }, [isOpen]);
+
+  // Θυμήσου τη θέση όσο το dialog είναι ανοιχτό (κάθε drag ενημερώνει το shared module-level
+  // `lastDialogPosition`) → η επόμενη εμφάνιση οποιουδήποτε color picker ανοίγει εκεί.
+  useEffect(() => {
+    if (isOpen) lastDialogPosition = position;
+  }, [isOpen, position]);
 
   // Cleanup pending RAF on unmount
   useEffect(() => {
@@ -184,10 +199,14 @@ export function EnterpriseColorDialog({
           className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center cursor-default pointer-events-none`}
           style={{ zIndex: MODAL_Z_INDEX.COLOR_DIALOG_CONTAINER }}
         >
-          {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
-          <div
-            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} pointer-events-none`}
-          />
+          {/* Backdrop — visual dim only (no click handlers). Skipped when
+              `dimBackdrop === false` (canvas color pickers) so το σχέδιο μένει
+              πλήρως ορατό για live σύγκριση χρώματος. */}
+          {dimBackdrop && (
+            <div
+              className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} pointer-events-none`}
+            />
+          )}
 
           {/* Dialog - ✅ ENTERPRISE: Draggable + Cursor fix + Max z-index */}
           <FocusScope contain restoreFocus autoFocus>

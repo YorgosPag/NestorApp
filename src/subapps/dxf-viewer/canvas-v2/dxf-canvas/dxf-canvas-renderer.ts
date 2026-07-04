@@ -32,6 +32,9 @@ import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
 // ADR-358 §5.6.bis Phase 10 — re-render on LayerStore mutations (visible/frozen toggles).
 import { subscribeLayerStore } from '../../stores/LayerStore';
+// ADR-510 Φ2G — global LWDISPLAY toggle: read at entity-paint time (not the cache
+// key), so a flip must invalidate the normal-state bitmap (same contract as LayerStore).
+import { subscribeLineweightDisplay } from '../../stores/LineweightDisplayStore';
 // ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 // ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
@@ -407,6 +410,16 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     });
     void preloadCadSubstituteFonts();
     return unsubscribe;
+  }, []);
+
+  // ADR-510 Φ2G — mark dirty when the global "Show Lineweight" (LWDISPLAY) toggle
+  // flips. The resolved px width is read at entity-paint time (resolveEntityRenderStyle
+  // → getShowLineweight), NOT baked into the bitmap cache key → invalidate to rebuild.
+  useEffect(() => {
+    return subscribeLineweightDisplay(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
   }, []);
 
   // Selection dirty-marking handled by DxfCanvas imperative SelectionStore

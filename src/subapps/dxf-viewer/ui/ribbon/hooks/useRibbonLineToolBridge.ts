@@ -34,8 +34,18 @@ import {
 import {
   getLinetypeRegistrySnapshot,
   subscribeLinetypeRegistry,
-  listSelectableLinetypeNames,
 } from '../../../stores/LinetypeRegistry';
+// SSoT — κοινή λίστα «Τύπος Γραμμής» (ByLayer + registry) με inline-SVG thumbnails
+// (ίδιο helper με το dim bridge → μία και μοναδική πηγή αλήθειας).
+import { buildLinetypeRibbonOptions } from '../data/linetype-ribbon-options';
+// ADR-570 Φ1 — named line-style («Στυλ Γραμμής» ByStyle) registry + options SSoT.
+import {
+  getLineStyleRegistry,
+  getLineStyleSnapshot,
+  subscribeLineStyles,
+} from '../../../systems/line-styles/line-style-registry';
+import { buildLineStyleRibbonOptions } from '../data/line-style-ribbon-options';
+import { LINE_STYLE_BYLAYER_LWT } from '../../../systems/line-styles/line-style-types';
 // ADR-510 Φ4 — per-object layer list (AutoCAD «General» → Layer) from the SSoT store.
 import {
   getLayerStoreSnapshot,
@@ -43,13 +53,15 @@ import {
 } from '../../../stores/LayerStore';
 import { useCurrentLayerChange } from '../../components/layer-picker/useCurrentLayerChange';
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
-import type { Point2D } from '../../../rendering/types/Types';
+// ADR-510 Φ4b — το «Χρώμα» πεδίο χρησιμοποιεί τον κεντρικό dxf-color picker (HEX in/out,
+// ίδιος με τις «Ρυθμίσεις DXF»). Read = SSoT `resolveEntityColorHex` (layer-aware effective
+// χρώμα)· write = SSoT hex ↔ true-color/ACI. Zero ad-hoc color/layer helpers εδώ.
+import { resolveEntityColorHex } from '../../../systems/properties/resolve-entity-color';
+import { useLevelLayersById } from '../../../hooks/tools/useLevelLayersById';
+import { findClosestAci } from '../../../settings/standards/aci';
+import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
 import { isStyleEditablePrimitiveType } from '../../../types/style-editable-primitives';
-// ADR-510 Φ3d/Φ4 — polyline width + line coordinates are model-space (mm, ADR-462):
-// convert mm ↔ the live display unit so the ribbon fields match the status-bar readouts.
-import { toDisplay, fromDisplay } from '../../../config/units';
-import { displayUnitState } from '../../../config/display-unit-state';
 // ADR-510 Φ4 — pure line geometry read/edit helpers (reuse geometry-vector-utils SSoT).
 import {
   lineLength,
@@ -63,12 +75,36 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { RibbonComboboxOption } from '../types/ribbon-types';
 import {
   LINE_TOOL_RIBBON_KEYS,
   LINE_TOOL_PANEL_VISIBILITY_KEYS,
   isLineToolRibbonKey,
 } from './bridge/line-tool-command-keys';
+// ADR-510 Φ4e — FILLET radius field routes to the FilletToolStore (tool state, not
+// an entity/style edit). Read for the live combobox value, write on numeric commit.
+import { FilletToolStore } from '../../../systems/corner/FilletToolStore';
+// ADR-510 Φ4f — CHAMFER distance/angle fields route to the ChamferToolStore.
+import { ChamferToolStore } from '../../../systems/corner/ChamferToolStore';
+// ADR-510 Φ4 / ADR-570 — pure value/patch helpers (extracted for N.7.1 size budget).
+import {
+  BYLAYER,
+  entityLinetypeValue,
+  entityLineweightValue,
+  entityLtscaleValue,
+  isPolylineLike,
+  entityWidthDisplayValue,
+  widthPatchForEntity,
+  buildLayerOptions,
+  entityLayerValue,
+  entityTransparencyValue,
+  clampTransparency,
+  byStylePatch,
+  asLine,
+  toDisp,
+  fromDisp,
+  isLineGeometryKey,
+  type WidthCapableEntity,
+} from './useRibbonLineToolBridge.helpers';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -94,146 +130,6 @@ export interface RibbonLineToolBridge {
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
-const BYLAYER = 'ByLayer';
-/** AutoCAD object transparency range: 0 (opaque) .. 90 (90% transparent). */
-const TRANSPARENCY_MAX = 90;
-
-/** Live linetype options — ΙΔΙΟΣ SSoT enumerator με το radial-ring (ByLayer + registry, ISO + custom). */
-function buildLinetypeOptions(): readonly RibbonComboboxOption[] {
-  return listSelectableLinetypeNames().map((name) => ({
-    value: name, labelKey: name, isLiteralLabel: true,
-  }));
-}
-
-/** Combobox display value for an entity's linetype (declared, not resolved — Revit shows «By Layer»). */
-function entityLinetypeValue(entity: AnySceneEntity): string {
-  return entity.linetypeName && entity.linetypeName.length > 0 ? entity.linetypeName : BYLAYER;
-}
-
-/** Combobox display value for an entity's lineweight. */
-function entityLineweightValue(entity: AnySceneEntity): string {
-  const lw = entity.lineweightMm;
-  if (lw === undefined || lw === LINEWEIGHT_SPECIAL.BYLAYER) return BYLAYER;
-  return String(lw);
-}
-
-/** Combobox display value for an entity's per-object linetype scale (CELTSCALE). */
-function entityLtscaleValue(entity: AnySceneEntity): string {
-  return String(entity.ltscale ?? 1);
-}
-
-/** Polyline-like entity shape carrying the Φ3d per-segment width arrays. */
-interface WidthCapableEntity {
-  readonly type: string;
-  readonly vertices?: ReadonlyArray<unknown>;
-  readonly closed?: boolean;
-  readonly startWidths?: readonly number[];
-  readonly endWidths?: readonly number[];
-  readonly constantWidth?: number;
-}
-
-/** Only polylines carry an edge-to-edge width. */
-function isPolylineLike(type: string): boolean {
-  return type === 'polyline' || type === 'lwpolyline';
-}
-
-/** Current uniform width of a polyline, in the active display unit (string). */
-function entityWidthDisplayValue(entity: WidthCapableEntity): string {
-  const mm = entity.startWidths?.find((w) => w > 0)
-    ?? entity.endWidths?.find((w) => w > 0)
-    ?? entity.constantWidth
-    ?? 0;
-  const { value } = toDisplay(mm, displayUnitState.getUnit());
-  return String(value);
-}
-
-/**
- * Build a uniform-width patch (all segments share one width) from a display-unit
- * input. Returns null for a non-polyline, a degenerate polyline, or invalid input.
- */
-function widthPatchForEntity(
-  entity: WidthCapableEntity,
-  displayValue: string,
-): Record<string, unknown> | null {
-  if (!isPolylineLike(entity.type)) return null;
-  const n = entity.vertices?.length ?? 0;
-  if (n < 2) return null;
-  const parsed = parseFloat(displayValue);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  const mm = fromDisplay(parsed, displayUnitState.getUnit());
-  const segs = entity.closed ? n : n - 1;
-  return {
-    startWidths: new Array(segs).fill(mm),
-    endWidths: new Array(segs).fill(mm),
-  };
-}
-
-/** Combobox display value for an entity's color (ByLayer or ACI number). */
-function entityColorValue(entity: AnySceneEntity): string {
-  if (entity.colorMode === BYLAYER || entity.colorMode === undefined) return BYLAYER;
-  return entity.colorAci != null ? String(entity.colorAci) : BYLAYER;
-}
-
-// ─── ADR-510 Φ4 — General (layer/transparency) + Geometry (line) helpers ───────
-
-/** Minimal shape of a scene layer for the ribbon dropdown (SSoT: LayerStore). */
-interface LayerLike {
-  readonly id?: string;
-  readonly name: string;
-}
-
-/** Layer combobox options (value = id ?? name, label = name) from the live store. */
-function buildLayerOptions(layers: ReadonlyArray<LayerLike>): readonly RibbonComboboxOption[] {
-  return layers.map((l) => ({
-    value: l.id ?? l.name, labelKey: l.name, isLiteralLabel: true,
-  }));
-}
-
-/** Combobox display value for an entity's per-object layer. */
-function entityLayerValue(entity: AnySceneEntity): string {
-  return entity.layerId ?? '';
-}
-
-/** Combobox display value for an entity's transparency (0 = opaque). */
-function entityTransparencyValue(entity: AnySceneEntity): string {
-  const raw = (entity as { transparency?: number }).transparency;
-  return String(typeof raw === 'number' ? raw : 0);
-}
-
-/** Clamp typed transparency to the AutoCAD 0..90 integer range. */
-function clampTransparency(n: number): number {
-  return Math.max(0, Math.min(TRANSPARENCY_MAX, Math.round(n)));
-}
-
-/** Narrow a selected entity to a line with valid endpoints (Geometry gate). */
-function asLine(entity: AnySceneEntity | null): { start: Point2D; end: Point2D } | null {
-  if (!entity || entity.type !== 'line') return null;
-  const l = entity as unknown as { start?: Point2D; end?: Point2D };
-  if (!l.start || !l.end) return null;
-  return { start: l.start, end: l.end };
-}
-
-/** mm → active display unit, as a combobox string. */
-function toDisp(mm: number): string {
-  return String(toDisplay(mm, displayUnitState.getUnit()).value);
-}
-
-/** Display-unit string → mm (inverse of {@link toDisp}). NaN on invalid input. */
-function fromDisp(value: string): number {
-  return fromDisplay(parseFloat(value), displayUnitState.getUnit());
-}
-
-/** The 8 AutoCAD «Geometry» command keys (line start/end/length/angle/delta). */
-const LINE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
-  LINE_TOOL_RIBBON_KEYS.length, LINE_TOOL_RIBBON_KEYS.angle,
-  LINE_TOOL_RIBBON_KEYS.startX, LINE_TOOL_RIBBON_KEYS.startY,
-  LINE_TOOL_RIBBON_KEYS.endX, LINE_TOOL_RIBBON_KEYS.endY,
-  LINE_TOOL_RIBBON_KEYS.deltaX, LINE_TOOL_RIBBON_KEYS.deltaY,
-]);
-function isLineGeometryKey(key: string): boolean {
-  return LINE_GEOMETRY_KEYS.has(key);
-}
-
 export function useRibbonLineToolBridge(
   props: UseRibbonLineToolBridgeProps,
 ): RibbonLineToolBridge {
@@ -255,14 +151,33 @@ export function useRibbonLineToolBridge(
   // the shared current-layer SSoT action (permission gate + toast + recent FIFO),
   // the SAME path as the CurrentLayerPicker popover (Revit-grade parity).
   const { changeCurrentLayer } = useCurrentLayerChange();
+  // ADR-510 Φ4b — SSoT getter του id-keyed layer table της ενεργής σκηνής (ΙΔΙΟΣ που
+  // τροφοδοτεί τον renderer)· το color swatch λύνει το owning/current layer από εδώ.
+  const getLayersById = useLevelLayersById(levelManager);
 
   const linetypeOptions = useMemo(
-    () => buildLinetypeOptions(),
+    () => buildLinetypeRibbonOptions(),
     [registry],
   );
   const layerOptions = useMemo(
     () => buildLayerOptions(layerSnapshot.layers),
     [layerSnapshot],
+  );
+  // ADR-570 Φ1 — live named line-style catalog (low-frequency: CRUD is rare).
+  const lineStyleSnap = useSyncExternalStore(
+    subscribeLineStyles, getLineStyleSnapshot, getLineStyleSnapshot,
+  );
+  const lineStyleOptions = useMemo(
+    () => buildLineStyleRibbonOptions(lineStyleSnap.styles),
+    [lineStyleSnap],
+  );
+  // ADR-510 Φ4e — live FILLET radius so the ribbon field mirrors keyboard entry.
+  const filletRadius = useSyncExternalStore(
+    FilletToolStore.subscribe, () => FilletToolStore.getState().radius,
+  );
+  // ADR-510 Φ4f — live CHAMFER state so the distance/angle fields mirror keyboard entry.
+  const chamfer = useSyncExternalStore(
+    ChamferToolStore.subscribe, () => ChamferToolStore.getState(),
   );
 
   /** The selected style-editable primitive, or null (→ draw-defaults mode). */
@@ -291,8 +206,26 @@ export function useRibbonLineToolBridge(
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       if (!isLineToolRibbonKey(commandKey)) return null;
+
+      // ADR-510 Φ4e — FILLET radius: tool state, independent of any selection.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {
+        return { value: String(filletRadius), options: [] };
+      }
+      // ADR-510 Φ4f — CHAMFER distances/angle: tool state, independent of selection.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferDist1) return { value: String(chamfer.d1), options: [] };
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferDist2) return { value: String(chamfer.d2), options: [] };
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferAngle) return { value: String(chamfer.angle), options: [] };
+
       const selected = resolveSelected();
 
+      // ADR-570 Φ1 — «Στυλ Γραμμής» (ByStyle). Selected → the entity's pointer;
+      // draw-defaults → the registry's active style. Options from the registry.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.lineStyle) {
+        const value = selected
+          ? (selected.lineStyleId ?? '')
+          : lineStyleSnap.activeStyleId;
+        return { value, options: lineStyleOptions };
+      }
       if (commandKey === LINE_TOOL_RIBBON_KEYS.linetype) {
         const value = selected ? entityLinetypeValue(selected) : snapshot.linetypeName;
         return { value, options: linetypeOptions };
@@ -340,21 +273,80 @@ export function useRibbonLineToolBridge(
         if (commandKey === LINE_TOOL_RIBBON_KEYS.deltaX) return { value: toDisp(end.x - start.x), options: [] };
         return { value: toDisp(end.y - start.y), options: [] }; // deltaY
       }
-      // color
-      if (selected) return { value: entityColorValue(selected), options: [] };
-      const colorValue = snapshot.colorMode === BYLAYER
-        ? BYLAYER
-        : snapshot.colorAci !== null ? String(snapshot.colorAci) : BYLAYER;
-      return { value: colorValue, options: [] };
+      // color — ο dxf-color picker μιλάει HEX (ADR-510 Φ4b, mirror του dim bridge). Το
+      // effective (rendered) χρώμα το δίνει ο SSoT `resolveEntityColorHex` (layer-aware:
+      // trueColor ▸ ACI ▸ ByLayer, ίδιο owning-layer resolution με τον renderer). Για
+      // draw-defaults φτιάχνουμε pseudo-source στο ΤΡΕΧΟΝ layer.
+      const layersById = getLayersById();
+      if (selected) {
+        return { value: resolveEntityColorHex(selected, layersById), options: [] };
+      }
+      return {
+        value: resolveEntityColorHex(
+          {
+            colorMode: snapshot.colorMode,
+            colorAci: snapshot.colorAci ?? undefined,
+            colorTrueColor: snapshot.colorTrueColor,
+            layerId: layerSnapshot.currentLayerId ?? undefined,
+          },
+          layersById,
+        ),
+        options: [],
+      };
     },
-    [resolveSelected, snapshot, linetypeOptions, layerOptions, layerSnapshot],
+    [resolveSelected, snapshot, linetypeOptions, layerOptions, layerSnapshot, getLayersById, lineStyleOptions, lineStyleSnap, filletRadius, chamfer],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       if (!isLineToolRibbonKey(commandKey)) return;
+
+      // ADR-510 Φ4e — FILLET radius: drive the FilletToolStore (mirrors keyboard entry).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {
+        const n = parseFloat(value);
+        if (Number.isFinite(n) && n >= 0) FilletToolStore.setRadius(n);
+        return;
+      }
+      // ADR-510 Φ4f — CHAMFER distances/angle: drive the ChamferToolStore.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferDist1) {
+        const n = parseFloat(value);
+        if (Number.isFinite(n) && n >= 0) ChamferToolStore.setD1(n);
+        return;
+      }
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferDist2) {
+        const n = parseFloat(value);
+        if (Number.isFinite(n) && n >= 0) ChamferToolStore.setD2(n);
+        return;
+      }
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.chamferAngle) {
+        const n = parseFloat(value);
+        if (Number.isFinite(n)) ChamferToolStore.setAngle(n);
+        return;
+      }
+
       const selected = resolveSelected();
 
+      // ADR-570 Φ1 — «Στυλ Γραμμής» (ByStyle). Picking a style stores the pointer
+      // (`lineStyleId`) AND applies its ByStyle props so the change is instantly
+      // visible + undoable. Draw-defaults set the active style + seed QuickStyle
+      // linetype/lineweight for the NEXT line.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.lineStyle) {
+        if (!value) return;
+        const style = getLineStyleRegistry().getStyle(value);
+        if (!style) return;
+        if (selected) {
+          patchEntity(selected, byStylePatch(style));
+        } else {
+          getLineStyleRegistry().setActiveStyleId(value);
+          setQuickStyleLinetype(style.pattern);
+          setQuickStyleLineweight(
+            style.lineweight === LINE_STYLE_BYLAYER_LWT
+              ? LINEWEIGHT_SPECIAL.BYLAYER
+              : (style.lineweight as LineweightMm),
+          );
+        }
+        return;
+      }
       if (commandKey === LINE_TOOL_RIBBON_KEYS.linetype) {
         if (selected) patchEntity(selected, { linetypeName: value });
         else setQuickStyleLinetype(value);
@@ -442,27 +434,23 @@ export function useRibbonLineToolBridge(
         }
         return;
       }
-      // color
-      if (value === BYLAYER) {
-        if (selected) {
-          patchEntity(selected, {
-            colorMode: 'ByLayer', colorAci: undefined, color: undefined, colorTrueColor: null,
-          });
-        } else {
-          setQuickStyleColor('ByLayer', null, null);
-        }
-        return;
-      }
-      const aci = parseInt(value, 10);
+      // color — hex από τον dxf-color picker. Γράφουμε ΚΑΙ τα ΤΡΙΑ κανάλια ώστε ΚΑΘΕ
+      // resolution path να δείχνει το ίδιο χρώμα: `colorTrueColor` (exact, wins στο
+      // resolveEntityStyle + persist)· `colorAci` (πλησιέστερο, για DXF export degrade)·
+      // `color` (hex) — απαραίτητο για το FALLBACK render path (`resolveEntityRenderStyle`
+      // όταν δεν βρεθεί owning layer/`layersById`) που διαβάζει ΜΟΝΟ `entity.color`.
+      // ADR-510 Φ4b — αλλιώς η γραμμή έμενε στο χρώμα του layer (bug: «δεν αλλάζει»).
+      const trueColor = hexToTrueColor(value);
+      const closestAci = findClosestAci(value);
       if (selected) {
         patchEntity(selected, {
           colorMode: 'Concrete',
-          colorAci: Number.isNaN(aci) ? undefined : aci,
-          color: undefined,
-          colorTrueColor: null,
+          color: value,
+          colorTrueColor: trueColor,
+          colorAci: closestAci,
         });
       } else {
-        setQuickStyleColor('Concrete', Number.isNaN(aci) ? null : aci, null);
+        setQuickStyleColor('Concrete', closestAci, trueColor);
       }
     },
     [resolveSelected, patchEntity, changeCurrentLayer],

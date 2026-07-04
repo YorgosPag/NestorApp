@@ -23,6 +23,10 @@ import {
 } from '../../../../stores/LinetypeRegistry';
 import { toDisplay, fromDisplay } from '../../../../config/units';
 import { displayUnitState } from '../../../../config/display-unit-state';
+// ADR-510 Φ4b — το «Χρώμα» πεδίο μιλάει HEX μέσω του κεντρικού dxf-color picker· το
+// bridge αποθηκεύει true-color (`hexToTrueColor`) + πλησιέστερο ACI (`findClosestAci`).
+import { getAciColor, findClosestAci } from '../../../../settings/standards/aci';
+import { hexToTrueColor } from '../../../../utils/dxf-true-color';
 
 // ── Mock UpdateEntityCommand to capture selected-entity writes ─────────────────
 jest.mock(
@@ -47,6 +51,7 @@ const mockQuickSnapshot = {
   lineweightMm: -2, // ByLayer sentinel
   colorMode: 'ByLayer' as 'ByLayer' | 'Concrete',
   colorAci: null as number | null,
+  colorTrueColor: null as number | null,
   ltscale: 1,
 };
 const mockSetLinetype = jest.fn();
@@ -65,8 +70,10 @@ jest.mock('../../../../stores/QuickStyleStore', () => ({
 // ── Mock LayerStore (ADR-510 Φ4 — layer dropdown + current-layer default) ──────
 const mockLayerSnapshot = {
   layers: [
-    { id: 'lvl-1', name: 'Layer 1' },
-    { id: 'lyr-2', name: 'Walls' },
+    // ADR-510 Φ4b — `color` lets the dxf-color swatch resolve a ByLayer entity to
+    // the layer's rendered hex (via the SSoT resolveRenderedColorHex cascade).
+    { id: 'lvl-1', name: 'Layer 1', color: '#00FF00' },
+    { id: 'lyr-2', name: 'Walls', color: '#123456' },
   ],
   currentLayerId: 'lvl-1',
   recentLayerIds: [] as string[],
@@ -74,6 +81,8 @@ const mockLayerSnapshot = {
 jest.mock('../../../../stores/LayerStore', () => ({
   getLayerStoreSnapshot: () => mockLayerSnapshot,
   subscribeLayerStore: () => () => {},
+  // Used by the SSoT resolveEntityLayer name-fallback (id lookup wins first in these tests).
+  resolveEntityLayerName: (e: { layerId?: string } | null) => e?.layerId ?? null,
 }));
 
 // ── Mock shared current-layer SSoT action (ADR-358/510 Φ4) — the ribbon default
@@ -113,8 +122,17 @@ const polylineEntity = {
   endWidths: [100, 100],
 };
 
+// ADR-510 Φ4b — layers ενός φορτωμένου DXF ζουν στο `scene.layersById` (id-keyed),
+// ΟΧΙ στο project-wide LayerStore· ο color swatch τα επιλύει από εκεί (όπως ο renderer).
+const sceneLayersById = {
+  'lvl-1': { id: 'lvl-1', name: 'Layer 1', color: '#00FF00' },
+  'lyr-2': { id: 'lyr-2', name: 'Walls', color: '#123456' },
+};
+
 function makeLevelManager(entity: unknown | null) {
-  const scene = entity ? { entities: [entity] } : { entities: [] };
+  const scene = entity
+    ? { entities: [entity], layersById: sceneLayersById }
+    : { entities: [], layersById: sceneLayersById };
   return {
     currentLevelId: 'lvl-1',
     getLevelScene: jest.fn(() => scene),
@@ -141,6 +159,7 @@ beforeEach(() => {
   mockQuickSnapshot.lineweightMm = -2;
   mockQuickSnapshot.colorMode = 'ByLayer';
   mockQuickSnapshot.colorAci = null;
+  mockQuickSnapshot.colorTrueColor = null;
   mockQuickSnapshot.ltscale = 1;
 });
 
@@ -166,19 +185,51 @@ describe('useRibbonLineToolBridge — selected primitive (read)', () => {
     expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.lineweight)?.value).toBe('0.35');
   });
 
-  it('reads color (ACI) from the selected entity', () => {
-    expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value).toBe('1');
+  it('reads color as effective hex (Concrete ACI → dxf-color picker hex)', () => {
+    // colorAci 1 wins over the layer color (Concrete) → getAciColor(1), uppercased.
+    expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value)
+      .toBe(getAciColor(1).toUpperCase());
+  });
+
+  it('reads a baked concrete-hex line from entity.color when no layer resolves (bug: swatch λευκό)', () => {
+    // Exploded DXF: πράσινη γραμμή με baked `color` hex, layerId εκτός layersById → το
+    // swatch πρέπει να δείχνει το entity.color, ΟΧΙ fallback λευκό.
+    const bakedLine = { id: 'baked-1', type: 'line' as const, layerId: 'ghost-layer', visible: true,
+      start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, color: '#00FF00' };
+    const r = renderHook(() =>
+      useRibbonLineToolBridge({
+        levelManager: makeLevelManager(bakedLine),
+        universalSelection: makeSelection('baked-1'),
+      }),
+    ).result;
+    expect(r.current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value).toBe('#00FF00');
+  });
+
+  it('reads a ByLayer line color from scene.layersById (bug: swatch έδειχνε λευκό)', () => {
+    // Γραμμή ByLayer σε DXF layer «lvl-1» (πράσινο, μόνο στο scene.layersById) → το
+    // swatch πρέπει να δείχνει το χρώμα του layer, ΟΧΙ fallback λευκό.
+    const byLayerLine = { id: 'bl-1', type: 'line' as const, layerId: 'lvl-1', visible: true,
+      start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, colorMode: 'ByLayer' as const };
+    const r = renderHook(() =>
+      useRibbonLineToolBridge({
+        levelManager: makeLevelManager(byLayerLine),
+        universalSelection: makeSelection('bl-1'),
+      }),
+    ).result;
+    expect(r.current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value).toBe('#00FF00');
   });
 
   it('reads linetype scale (CELTSCALE) from the selected entity', () => {
     expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.linetypeScale)?.value).toBe('2');
   });
 
-  it('linetype options come from the live registry (ByLayer + registered names)', () => {
+  it('linetype options come from the live registry (ByLayer + registered names) with thumbnails', () => {
     const opts = render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.linetype)?.options ?? [];
     expect(opts[0]?.value).toBe('ByLayer');
     expect(opts.some((o) => o.value === 'Continuous')).toBe(true);
     expect(opts.length).toBeGreaterThan(1);
+    // ADR-510 Φ4b — κάθε επιλογή φέρει inline-SVG thumbnail (κοινό SSoT με διαστάσεις).
+    expect(opts[0]?.thumbnail).toEqual({ kind: 'linetype', name: 'ByLayer' });
   });
 });
 
@@ -217,18 +268,17 @@ describe('useRibbonLineToolBridge — selected primitive (write = undoable comma
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 
-  it('color → ByLayer clears the concrete color fields', () => {
-    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.color, 'ByLayer');
+  it('color (hex) stores all three channels (hex + true-color + closest ACI, Concrete)', () => {
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.color, '#0000FF');
+    // color:hex drives the fallback render path· colorTrueColor drives resolveEntityStyle·
+    // colorAci is the DXF export degrade. All three set → κάθε path δείχνει το ίδιο χρώμα.
     expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({
-      colorMode: 'ByLayer', colorAci: undefined, color: undefined, colorTrueColor: null,
+      colorMode: 'Concrete',
+      color: '#0000FF',
+      colorTrueColor: hexToTrueColor('#0000FF'),
+      colorAci: findClosestAci('#0000FF'),
     });
-  });
-
-  it('color → ACI sets a Concrete color patch', () => {
-    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.color, '3');
-    expect((UpdateEntityCommand as unknown as jest.Mock).mock.calls[0][1]).toEqual({
-      colorMode: 'Concrete', colorAci: 3, color: undefined, colorTrueColor: null,
-    });
+    expect(findClosestAci('#0000FF')).toBe(5); // sanity: pure blue → ACI 5
   });
 
   it('registered custom linetype appears in the live options', () => {
@@ -271,6 +321,17 @@ describe('useRibbonLineToolBridge — no selection → QuickStyle draw-defaults'
   it('linetype scale change writes to QuickStyle, not an entity command', () => {
     render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.linetypeScale, '2.5');
     expect(mockSetLtscale).toHaveBeenCalledWith(2.5);
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('reads color (ByLayer default) as the current layer hex', () => {
+    // colorMode 'ByLayer' + currentLayerId lvl-1 (color #00FF00) → resolved layer hex.
+    expect(render().current.getComboboxState(LINE_TOOL_RIBBON_KEYS.color)?.value).toBe('#00FF00');
+  });
+
+  it('color (hex) change writes a Concrete true-color + closest ACI to QuickStyle', () => {
+    render().current.onComboboxChange(LINE_TOOL_RIBBON_KEYS.color, '#0000FF');
+    expect(mockSetColor).toHaveBeenCalledWith('Concrete', findClosestAci('#0000FF'), hexToTrueColor('#0000FF'));
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
   });
 });

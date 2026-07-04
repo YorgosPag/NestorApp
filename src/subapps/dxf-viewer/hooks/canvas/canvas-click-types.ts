@@ -160,6 +160,20 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for trim state machine (shiftKey = inverse EXTEND, Q9) */
   handleTrimClick?: (worldPoint: Point2D, shiftKey: boolean) => void;
 
+  // ── ADR-510 Φ4d: Offset tool ───────────────────────────────────────────
+  /** Whether the offset tool is active (picking-source / picking-side) */
+  offsetIsActive?: boolean;
+  /** Click handler for the offset state machine (pick source, then side) */
+  handleOffsetClick?: (worldPoint: Point2D) => void;
+  /** Whether the fillet tool is active (picking-first / picking-second / polyline) */
+  filletIsActive?: boolean;
+  /** Click handler for the fillet state machine (pick line 1, then line 2 / polyline) */
+  handleFilletClick?: (worldPoint: Point2D) => void;
+  /** Whether the chamfer tool is active (picking-first / picking-second / polyline) */
+  chamferIsActive?: boolean;
+  /** Click handler for the chamfer state machine (pick line 1, then line 2 / polyline) */
+  handleChamferClick?: (worldPoint: Point2D) => void;
+
   // ── ADR-353: Extend tool ───────────────────────────────────────────────
   /** Whether the extend tool is in `picking` / `selectingEdges` phase */
   extendIsActive?: boolean;

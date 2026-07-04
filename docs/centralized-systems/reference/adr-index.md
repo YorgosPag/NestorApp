@@ -552,6 +552,7 @@
 | **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard — ratio-based, SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Placement · Geometry | [📄](./adrs/ADR-567-structural-no-overlap-placement.md) |
 | **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα στο κενό, reuse merge+opening SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing · Openings | [📄](./adrs/ADR-568-wall-gap-auto-opening.md) |
 | **ADR-569** | Δοκάρι ανάμεσα σε μέλη (σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά ζεύγος, παρειά→παρειά· + selection-first· live ghost) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Structural · Beams | [📄](./adrs/ADR-569-beam-between-members.md) |
+| **ADR-570** | Line Style System (named «Στυλ Γραμμής» picker + πλήρες 5-panel contextual tab: Στυλ&Γενικά/Εμφάνιση/Γεωμετρία/Ενέργειες/Προχωρημένα· ByStyle registry ξεχωριστό από BIM Object Styles· Match Properties paintbrush) | 📝 PROPOSED | 2026-07-04 | DXF Viewer · Ribbon · Line Styles SSoT | [📄](./adrs/ADR-570-line-style-system.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1083,6 +1084,7 @@
 | **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-566-merge-join-walls.md) |
 | **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-567-structural-no-overlap-placement.md) |
 | **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-568-wall-gap-auto-opening.md) |
+| **ADR-570** | Line Style System (named «Στυλ Γραμμής» + πλήρες contextual tab, big-player-grade) | 📝 PROPOSED | [View](./adrs/ADR-570-line-style-system.md) |
 | **ADR-569** | Δοκάρι ανάμεσα σε μέλη (beam between two picked structural members) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-569-beam-between-members.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 

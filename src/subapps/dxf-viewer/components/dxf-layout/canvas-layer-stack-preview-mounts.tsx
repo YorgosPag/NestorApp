@@ -42,6 +42,9 @@ import { DimAssociationGhostPreviewMount } from '../../hooks/dimensions/useDimAs
 // ADR-362 Phase I (Round 22) — live dimension ghost while dragging a dim grip.
 import { DimGripGhostPreviewMount } from '../../hooks/dimensions/useDimGripGhostPreview';
 import { TrimPreviewMount } from './TrimPreviewMount';
+import { OffsetPreviewMount } from './OffsetPreviewMount';
+import { FilletPreviewMount } from './FilletPreviewMount';
+import { ChamferPreviewMount } from './ChamferPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import {
   RotationPreviewMount,
@@ -178,6 +181,26 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
+      />
+      <OffsetPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-510 Φ4e — FILLET live ghost (tangent arc + trims / rounded polyline).
+          Reads the live scene at frame time for the hover hit-test (levelManager). */}
+      <FilletPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+        levelManager={levelManager}
+      />
+      {/* ADR-510 Φ4f — CHAMFER live ghost (bevel line + trims / beveled polyline). */}
+      <ChamferPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+        levelManager={levelManager}
       />
       <ExtendPreviewOverlay
         transform={transform}

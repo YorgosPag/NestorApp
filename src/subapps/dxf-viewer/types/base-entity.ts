@@ -136,6 +136,14 @@ export interface BaseEntity {
   breakAtCenter?: boolean;
   showEdgeDistances?: boolean;
 
+  /**
+   * ADR-570 Φ1 — ByStyle pointer to a named `LineStyle`
+   * (`systems/line-styles/line-style-registry`). Absent ⇒ ByLayer / per-object
+   * override (backward-compatible; no migration needed). Firestore `?? null`,
+   * NEVER explicit `undefined`. Resolution: per-object override → ByStyle → ByLayer.
+   */
+  lineStyleId?: string;
+
   colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
   colorAci?: number;
   colorTrueColor?: number | null;

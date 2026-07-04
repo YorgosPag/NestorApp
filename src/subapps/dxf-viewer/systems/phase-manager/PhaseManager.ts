@@ -58,6 +58,23 @@ import { GripPhaseRenderer } from './renderers/GripPhaseRenderer';
 import { DragMeasurementFactory } from './drag-measurements';
 
 // ============================================================================
+// STROKE-WIDTH RESOLUTION (ADR-510 Φ2G — lineweight render)
+// ============================================================================
+
+/**
+ * Resolve an entity's on-screen stroke width (px).
+ *
+ * `entity.lineweight` already carries the RESOLVED, LWDISPLAY-gated pixel width
+ * (mm → fixed px via `resolveEntityRenderStyle` → `buildEntityModelFromDxf`, the
+ * single gate). This is a safe accessor with a THIN hairline fallback for entities
+ * built outside the DXF style cascade (previews, synthetic overlays).
+ */
+export function resolveEntityStrokeWidthPx(entity: Entity): number {
+  const px = entity.lineweight;
+  return typeof px === 'number' && px > 0 ? px : RENDER_LINE_WIDTHS.THIN;
+}
+
+// ============================================================================
 // RE-EXPORTS (Backward Compatibility)
 // ============================================================================
 
@@ -300,7 +317,10 @@ export class PhaseManager {
    */
   private applyNormalStyle(entity: Entity): void {
     // ✅ ENTERPRISE FIX: Always render with full opacity
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
+    // ADR-510 Φ2G — stroke at the entity's RESOLVED lineweight (px, already gated by
+    // the global LWDISPLAY toggle in resolveEntityRenderStyle). Absent ⇒ THIN hairline.
+    // This is THE fix: previously hardcoded THIN, so the "Πάχος" (mm) field never painted.
+    this.ctx.lineWidth = resolveEntityStrokeWidthPx(entity);
     this.ctx.setLineDash([]);
     // ✅ Use entity.color if available, fallback to WHITE (not dark colors!)
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
@@ -322,7 +342,9 @@ export class PhaseManager {
    */
   private applyHighlightedStyle(entity: Entity): void {
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // ADR-510 Φ2G — hover keeps the entity's real weight; NORMAL is only a floor so
+    // thin lines still get a subtle hover emphasis (a thick line must NOT get thinner).
+    this.ctx.lineWidth = Math.max(resolveEntityStrokeWidthPx(entity), RENDER_LINE_WIDTHS.NORMAL);
     this.ctx.setLineDash([]);
     this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.opacity;
     // Glow is rendered as a double-stroke pre-pass in renderWithPhases (shadowBlur removed — GPU-expensive)

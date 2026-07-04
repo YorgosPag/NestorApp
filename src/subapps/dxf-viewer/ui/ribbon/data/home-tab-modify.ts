@@ -183,8 +183,8 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             labelKey: 'ribbon.commands.offset',
             icon: 'offset',
             commandKey: 'offset',
-            shortcut: 'O',
-            comingSoon: true,
+            shortcut: 'OF',
+            comingSoon: false,
           },
         },
         {
@@ -196,7 +196,7 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'fillet',
             commandKey: 'fillet',
             shortcut: 'F',
-            comingSoon: true,
+            comingSoon: false, // ADR-510 Φ4e — Fillet is live
           },
           variants: [
             {
@@ -204,14 +204,14 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
               labelKey: 'ribbon.commands.filletVariants.fillet',
               icon: 'fillet',
               commandKey: 'fillet',
-              comingSoon: true,
+              comingSoon: false, // ADR-510 Φ4e — Fillet is live
             },
             {
               id: 'fillet.chamfer',
               labelKey: 'ribbon.commands.filletVariants.chamfer',
               icon: 'chamfer',
               commandKey: 'chamfer',
-              comingSoon: true,
+              comingSoon: false, // ADR-510 Φ4f — Chamfer is live
             },
           ],
         },
@@ -302,15 +302,15 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.offset', labelKey: 'ribbon.commands.offset', icon: 'offset', commandKey: 'offset', shortcut: 'O', comingSoon: true },
+          command: { id: 'edit.offset', labelKey: 'ribbon.commands.offset', icon: 'offset', commandKey: 'offset', shortcut: 'OF', comingSoon: false },
         },
         {
           type: 'split',
           size: 'small',
-          command: { id: 'edit.fillet', labelKey: 'ribbon.commands.fillet', icon: 'fillet', commandKey: 'fillet', shortcut: 'F', comingSoon: true },
+          command: { id: 'edit.fillet', labelKey: 'ribbon.commands.fillet', icon: 'fillet', commandKey: 'fillet', shortcut: 'F', comingSoon: false },
           variants: [
-            { id: 'fillet2.fillet', labelKey: 'ribbon.commands.filletVariants.fillet', icon: 'fillet', commandKey: 'fillet', comingSoon: true },
-            { id: 'fillet2.chamfer', labelKey: 'ribbon.commands.filletVariants.chamfer', icon: 'chamfer', commandKey: 'chamfer', comingSoon: true },
+            { id: 'fillet2.fillet', labelKey: 'ribbon.commands.filletVariants.fillet', icon: 'fillet', commandKey: 'fillet', comingSoon: false },
+            { id: 'fillet2.chamfer', labelKey: 'ribbon.commands.filletVariants.chamfer', icon: 'chamfer', commandKey: 'chamfer', comingSoon: false },
           ],
         },
       ],

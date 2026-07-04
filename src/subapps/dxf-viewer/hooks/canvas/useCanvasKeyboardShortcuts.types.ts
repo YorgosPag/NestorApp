@@ -75,6 +75,24 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleTrimKeyDown?: (key: string, shiftKey: boolean) => boolean;
   /** ADR-350: Whether the trim tool is active and in pick/edges phase */
   trimIsActive?: boolean;
+  /** ADR-510 Φ4d: Offset tool cancel handler (two-level: deselect source, then exit) */
+  handleOffsetEscape?: () => void;
+  /** ADR-510 Φ4d: Offset tool key handler (digits/backspace/E/U) — returns true if consumed */
+  handleOffsetKeyDown?: (key: string) => boolean;
+  /** ADR-510 Φ4d: Whether the offset tool is active */
+  offsetIsActive?: boolean;
+  /** ADR-510 Φ4e: Fillet tool cancel handler (two-level: deselect line 1, then exit) */
+  handleFilletEscape?: () => void;
+  /** ADR-510 Φ4e: Fillet tool key handler (digits/backspace/R/T/P/U) — returns true if consumed */
+  handleFilletKeyDown?: (key: string) => boolean;
+  /** ADR-510 Φ4e: Whether the fillet tool is active */
+  filletIsActive?: boolean;
+  /** ADR-510 Φ4f: Chamfer tool cancel handler (two-level: deselect line 1, then exit) */
+  handleChamferEscape?: () => void;
+  /** ADR-510 Φ4f: Chamfer tool key handler (digits/backspace/D/A/T/P/U) — returns true if consumed */
+  handleChamferKeyDown?: (key: string) => boolean;
+  /** ADR-510 Φ4f: Whether the chamfer tool is active */
+  chamferIsActive?: boolean;
   /** ADR-353: Extend tool cancel handler */
   handleExtendEscape?: () => void;
   /** ADR-353: Extend tool key handler — returns true if key was consumed */

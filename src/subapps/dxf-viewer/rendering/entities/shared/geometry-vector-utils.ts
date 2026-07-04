@@ -101,6 +101,73 @@ export function dotProduct(v1: Point2D, v2: Point2D): number {
   return v1.x * v2.x + v1.y * v2.y;
 }
 
+/**
+ * Signed perpendicular distance of `point` from the infinite line through
+ * `a → b`. Sign follows the CCW perpendicular unit vector (`getPerpendicularUnitVector`):
+ * positive = left of travel `a→b`, negative = right. Zero for a degenerate line.
+ *
+ * SSoT for the "which side + how far" probe used by the OFFSET tool (ADR-510 Φ4d)
+ * and the existing parallel-line math (`createParallelLine` inlines this same
+ * dot-against-normal formula — a future ratchet can fold it onto this helper).
+ */
+export function signedDistanceToLine(point: Point2D, a: Point2D, b: Point2D): number {
+  const perp = getPerpendicularUnitVector(a, b);
+  if (perp.x === 0 && perp.y === 0) return 0;
+  return dotProduct(subtractPoints(point, a), perp);
+}
+
+/**
+ * Intersection of the two INFINITE lines through (a1,a2) and (b1,b2); null when the
+ * directions are parallel/degenerate (denominator ≈ 0).
+ *
+ * SSoT for line–line intersection — used by the OFFSET miter reconciliation
+ * (`systems/offset/offset-polyline.ts`) and the FILLET/CHAMFER corner math
+ * (`systems/corner/corner-math.ts`, ADR-510 Φ4e). Solves for `t` along `a1→a2`.
+ */
+export function infiniteLineIntersection(
+  a1: Point2D,
+  a2: Point2D,
+  b1: Point2D,
+  b2: Point2D,
+): Point2D | null {
+  const dax = a2.x - a1.x, day = a2.y - a1.y;
+  const dbx = b2.x - b1.x, dby = b2.y - b1.y;
+  const denom = dax * dby - day * dbx;
+  if (Math.abs(denom) < 1e-12) return null;
+  const t = ((b1.x - a1.x) * dby - (b1.y - a1.y) * dbx) / denom;
+  return { x: a1.x + dax * t, y: a1.y + day * t };
+}
+
+/**
+ * Intersections of the INFINITE line through `a→b` with the circle (`center`, `radius`).
+ * Returns 0, 1 (tangent) or 2 points. Unlike `GeometricCalculations.getLineCircleIntersections`
+ * (which clamps `t∈[0,1]` to the SEGMENT), this treats the line as infinite — required by the
+ * FILLET curve solver where each entity is offset to an infinite center-locus (ADR-510 Φ4e.2).
+ */
+export function infiniteLineCircleIntersections(
+  a: Point2D,
+  b: Point2D,
+  center: Point2D,
+  radius: number,
+): Point2D[] {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const fx = a.x - center.x, fy = a.y - center.y;
+  const A = dx * dx + dy * dy;
+  if (A < 1e-18) return [];
+  const B = 2 * (fx * dx + fy * dy);
+  const C = fx * fx + fy * fy - radius * radius;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return [];
+  const sq = Math.sqrt(disc);
+  const t1 = (-B - sq) / (2 * A);
+  const pts: Point2D[] = [{ x: a.x + t1 * dx, y: a.y + t1 * dy }];
+  if (disc > 1e-12) {
+    const t2 = (-B + sq) / (2 * A);
+    pts.push({ x: a.x + t2 * dx, y: a.y + t2 * dy });
+  }
+  return pts;
+}
+
 // ===== POINT ON CIRCLE =====
 
 /**

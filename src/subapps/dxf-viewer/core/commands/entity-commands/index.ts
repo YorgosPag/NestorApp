@@ -12,6 +12,10 @@ export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './DeleteEnti
 export { JoinEntityCommand } from './JoinEntityCommand';
 export { TrimEntityCommand } from './TrimEntityCommand';
 export type { TrimCommandParams } from './TrimEntityCommand';
+export { OffsetEntityCommand } from './OffsetEntityCommand';
+export type { OffsetCommandParams } from './OffsetEntityCommand';
+export { CornerEntityCommand } from './CornerEntityCommand';
+export type { CornerCommandParams, CornerTrimOp, CornerKind } from './CornerEntityCommand';
 export { WallSplitCommand } from './WallSplitCommand';
 export type { WallSplitCommandParams } from './WallSplitCommand';
 export { WallMergeCommand } from './WallMergeCommand';

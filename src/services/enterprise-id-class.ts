@@ -305,6 +305,7 @@ export class EnterpriseIdService {
   // DXF Enterprise Dimension System (ADR-362)
   generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
   generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }
+  generateLineStyleId(): string { return this.generateId(P.LINE_STYLE).id; } // ADR-570
   generateCenterMarkId(): string { return this.generateId(P.CENTER_MARK).id; }
   generateCenterLineId(): string { return this.generateId(P.CENTER_LINE).id; }
 

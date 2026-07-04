@@ -17,9 +17,10 @@ import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
 import { LinetypeScaleControl } from './LinetypeScaleControl';
-import { StatusBarNumericField } from './StatusBarNumericField';
+import { LineweightDisplayControl } from './LineweightDisplayControl';
+import { AutoAlignToggle } from './AutoAlignToggle';
+import { StatusBarEditableCombobox, type StatusBarComboboxPreset } from './StatusBarEditableCombobox';
 import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
-import { ambientAlignmentConfigStore } from '../systems/tracking/ambient-alignment-config-store';
 import { useDisplayUnit } from '../hooks/common/useDisplayUnit';
 import {
   type DisplayUnit,
@@ -138,6 +139,8 @@ export default function CadStatusBar() {
           <DisplayUnitSelector displayUnit={displayUnit} onUnitChange={setDisplayUnit} t={t} />
           {/* ADR-510 Φ2E #2: global linetype scale (LTSCALE) */}
           <LinetypeScaleControl />
+          {/* ADR-510 Φ2G: global lineweight display (LWDISPLAY) */}
+          <LineweightDisplayControl />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
           <IsolateStatusIndicator />
           <span className="shrink-0 text-xs text-muted-foreground">
@@ -186,43 +189,18 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
   );
 }
 
-/**
- * ADR-357 ambient extension — Revit-style auto-alignment toggle. Reads the
- * standalone `ambientAlignmentConfigStore` (localStorage micro-leaf, NOT the
- * Firestore CAD-toggles slice). Status-bar toggle only (AutoCAD-web pattern,
- * like Dynamic Input) — no F-key binding.
- */
-function AutoAlignToggle({ id, label, description }: {
-  id: string;
-  label: string;
-  description: string;
-}) {
-  const snapshot = useSyncExternalStore(
-    ambientAlignmentConfigStore.subscribe,
-    () => ambientAlignmentConfigStore.getSnapshot(),
-    () => ambientAlignmentConfigStore.getSnapshot(),
-  );
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
-            <span className={`text-xs leading-none font-semibold ${snapshot.enabled ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
-          </label>
-          <Switch
-            id={id}
-            checked={snapshot.enabled}
-            onCheckedChange={() => ambientAlignmentConfigStore.toggle()}
-            className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
-          />
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top">{description}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-const POLAR_INCREMENT_OPTIONS = ['5', '10', '15', '18', '22.5', '30', '45', '90'] as const;
+// ADR-357 — increment-angle presets for the shared status-bar editable combobox.
+// Editable: any 0–360° value can be typed in; these are just the quick picks.
+const POLAR_INCREMENT_PRESETS: readonly StatusBarComboboxPreset[] = [
+  { value: 5, label: '5' },
+  { value: 10, label: '10' },
+  { value: 15, label: '15' },
+  { value: 18, label: '18' },
+  { value: 22.5, label: '22.5' },
+  { value: 30, label: '30' },
+  { value: 45, label: '45' },
+  { value: 90, label: '90' },
+];
 
 function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
   id: string;
@@ -287,19 +265,18 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
           <p className="text-xs font-semibold">{t('cadDock.statusBar.polarSettingsTitle')}</p>
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.polarIncrement')}</p>
-            <Select
-              value={String(snapshot.incrementAngle)}
-              onValueChange={(v) => polarTrackingStore.setIncrementAngle(parseFloat(v))}
-            >
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {POLAR_INCREMENT_OPTIONS.map(opt => (
-                  <SelectItem key={opt} value={opt} className="text-xs">{opt}°</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <StatusBarEditableCombobox
+              id="polar-increment"
+              value={snapshot.incrementAngle}
+              onCommit={(n) => polarTrackingStore.setIncrementAngle(n)}
+              presets={POLAR_INCREMENT_PRESETS}
+              ariaLabel={t('cadDock.statusBar.polarIncrement')}
+              allowDecimal
+              min={0}
+              max={360}
+              unitSuffix="°"
+              widthClass="w-full"
+            />
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.polarAdditional')}</p>
@@ -357,6 +334,18 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
 }) {
   const { t } = useTranslation('dxf-viewer-panels');
 
+  // SNAP-step presets (mm) for the shared editable combobox. `0` = «Ελεύθερο»
+  // (SNAP on, no quantization — see cad-toggle-state: step 0 ⇒ no snap grid).
+  const snapPresets: readonly StatusBarComboboxPreset[] = [
+    { value: 0, label: t('cadDock.statusBar.snapStepFree') },
+    { value: 10, label: '10' },
+    { value: 25, label: '25' },
+    { value: 50, label: '50' },
+    { value: 100, label: '100' },
+    { value: 500, label: '500' },
+    { value: 1000, label: '1000' },
+  ];
+
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       <Tooltip>
@@ -381,13 +370,14 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
         <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
       </Tooltip>
       {toggle.on && (
-        <StatusBarNumericField
+        <StatusBarEditableCombobox
           id={`${id}-step`}
           value={step}
           onCommit={onStepChange}
+          presets={snapPresets}
           ariaLabel={t('cadDock.statusBar.snapStepTitle')}
+          allowDecimal
           min={0}
-          step={1}
           unitSuffix="mm"
         />
       )}

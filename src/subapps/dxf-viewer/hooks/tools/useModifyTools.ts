@@ -14,6 +14,9 @@ import { useScaleTool } from './useScaleTool';
 import { useStretchTool } from './useStretchTool';
 import { useTrimTool } from './useTrimTool';
 import { useExtendTool } from './useExtendTool';
+import { useOffsetTool } from './useOffsetTool';
+import { useFilletTool } from './useFilletTool';
+import { useChamferTool } from './useChamferTool';
 import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
@@ -186,6 +189,21 @@ export function useModifyTools({
     activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
   });
 
+  // ADR-510 Φ4d — Offset (shares the trim hit-test; «άμεσο» live-ghost UX).
+  const offsetTool = useOffsetTool({
+    activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
+  });
+
+  // ADR-510 Φ4e — Fillet (shares the trim hit-test; two-lines + polyline modes).
+  const filletTool = useFilletTool({
+    activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
+  });
+
+  // ADR-510 Φ4f — Chamfer (shares the trim hit-test; two-lines + polyline modes).
+  const chamferTool = useChamferTool({
+    activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
+  });
+
   // ADR-353 Phase A — Rectangular Array (single-shot from pre-selection).
   const replaceWithArrayId = useCallback(
     (ids: string[]) => {
@@ -274,6 +292,9 @@ export function useModifyTools({
     stretchTool,
     trimTool,
     extendTool,
+    offsetTool,
+    filletTool,
+    chamferTool,
     arrayTool,
     arrayPolarTool,
     arrayPathTool,

@@ -69,6 +69,15 @@ export function useCanvasKeyboardShortcuts({
   handleTrimEscape,
   handleTrimKeyDown,
   trimIsActive = false,
+  handleOffsetEscape,
+  handleOffsetKeyDown,
+  offsetIsActive = false,
+  handleFilletEscape,
+  handleFilletKeyDown,
+  filletIsActive = false,
+  handleChamferEscape,
+  handleChamferKeyDown,
+  chamferIsActive = false,
   handleExtendEscape,
   handleExtendKeyDown,
   extendIsActive = false,
@@ -124,6 +133,24 @@ export function useCanvasKeyboardShortcuts({
       // ADR-350: Trim tool — intercepts before global shortcuts when active
       if (trimIsActive && handleTrimKeyDown) {
         const consumed = handleTrimKeyDown(e.key, e.shiftKey);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-510 Φ4d: Offset tool — intercepts digits/backspace/E/U before global shortcuts
+      if (offsetIsActive && handleOffsetKeyDown) {
+        const consumed = handleOffsetKeyDown(e.key);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-510 Φ4e: Fillet tool — intercepts digits/backspace/R/T/P/U before global shortcuts
+      if (filletIsActive && handleFilletKeyDown) {
+        const consumed = handleFilletKeyDown(e.key);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-510 Φ4f: Chamfer tool — intercepts digits/backspace/D/A/T/P/U before global shortcuts
+      if (chamferIsActive && handleChamferKeyDown) {
+        const consumed = handleChamferKeyDown(e.key);
         if (consumed) { e.preventDefault(); return; }
       }
 
@@ -304,7 +331,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleOffsetKeyDown, offsetIsActive, handleFilletKeyDown, filletIsActive, handleChamferKeyDown, chamferIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
 
   // ADR-364 — auto-clear DDE buffer when the active drawing flow resets
   // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.
@@ -336,6 +363,12 @@ export function useCanvasKeyboardShortcuts({
     stretchIsActive,
     handleTrimEscape,
     trimIsActive,
+    handleOffsetEscape,
+    offsetIsActive,
+    handleFilletEscape,
+    filletIsActive,
+    handleChamferEscape,
+    chamferIsActive,
     handleExtendEscape,
     extendIsActive,
     handleArrayPolarEscape,

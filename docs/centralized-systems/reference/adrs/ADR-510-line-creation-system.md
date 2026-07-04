@@ -774,3 +774,260 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   length/angle/startX/startY/endX/endY/deltaX/deltaY`). Ribbon-only αρχεία → ADR-040 CHECK 6B/6D **δεν** ενεργοποιείται.
   🔴 tsc(N.17-skip· 71 jest GREEN) + browser-verify (επίλεξε γραμμή → 3 ενότητες χωρίς scroll· Μήκος/Γωνία/ΔΧ edit →
   ζωντανή μετακίνηση άκρου + undo· Επίπεδο/Διαφάνεια· κύκλος/τόξο → κρύβεται η Γεωμετρία) + commit.
+- **2026-07-04** — **Φ4b — «Χρώμα» → κεντρικός dxf-color picker + «Τύπος Γραμμής» → inline-SVG thumbnails (SSoT, Giorgio).**
+  Πρόβλημα (Giorgio, στιγμιότυπο 101025): το πεδίο **Χρώμα** στο contextual tab της γραμμής ήταν ACI **dropdown** αντί
+  για τον κεντρικό color picker των «Ρυθμίσεων DXF»· ο **Τύπος Γραμμής** ήταν απλή λίστα ονομάτων **χωρίς μικρογραφίες**
+  (ενώ οι διαστάσεις έχουν ήδη thumbnails). Απαίτηση: **μία και μοναδική πηγή αλήθειας** και για τα δύο.
+  **FIX (μηδέν νέος μηχανισμός — reuse των υπαρχόντων SSoT):**
+  • **Χρώμα** → `comboboxVariant:'dxf-color'` στο tab → `RibbonDxfColorPickerWidget` → `RibbonColorField` →
+    `EnterpriseColorDialog` (ο **ΙΔΙΟΣ** picker με «Ρυθμίσεις DXF» + διαστάσεις: HEX/RGB/HSL, παλέτες DXF/semantic/
+    material, recent, eyedropper). Ο former ACI `COLOR_OPTIONS` dropdown αφαιρέθηκε. Ο `useRibbonLineToolBridge`
+    μιλάει πλέον **HEX** (mirror του dim Φ7): read → effective hex μέσω του SSoT `resolveRenderedColorHex` (trueColor
+    ▸ ACI ▸ **ByLayer** από τον owning/current layer)· write → `colorMode:'Concrete'` + `colorTrueColor:hexToTrueColor`
+    (οδηγεί render/persist) + `colorAci:findClosestAci` (DXF export degrade). Ισχύει σε επιλεγμένο entity **και** σε
+    draw-defaults (`QuickStyleStore`). **Trade-off:** ο picker είναι καθαρά hex → χάνεται η ρητή «ByLayer» επιλογή από
+    το πεδίο (ίδια συμπεριφορά με τις διαστάσεις)· το swatch δείχνει το πραγματικό χρώμα.
+  • **Τύπος Γραμμής** → νέο **κοινό SSoT** `ui/ribbon/data/linetype-ribbon-options.ts::buildLinetypeRibbonOptions()`
+    (ByLayer + `listSelectableLinetypeNames()` registry + `thumbnail:{kind:'linetype',name}`). **Ενοποίησε το διπλότυπο
+    mapping**: ΚΑΙ ο `useRibbonLineToolBridge` (πριν χωρίς thumbnails) ΚΑΙ ο `useRibbonDimBridge` (inline map) το
+    καταναλώνουν τώρα → μία λίστα. Render από `RibbonComboboxThumbnail` + `buildLinetypeThumbnail` (ίδιο SSoT με τον
+    renderer, ADR-562 Φ8).
+  **Files:** `contextual-line-tool-tab.ts` (color variant + καθαρισμός COLOR_OPTIONS/LINETYPE_OPTIONS)·
+  `useRibbonLineToolBridge.ts` (hex color read/write + shared linetype options)· `useRibbonDimBridge.ts` (shared
+  helper)· NEW `linetype-ribbon-options.ts`. **Tests:** line-tool bridge suite ενημερωμένο (ACI→hex read, hex→
+  trueColor+closestAci write, ByLayer→layer hex, thumbnail assertion) — **61/61 GREEN** (line+dim). Ribbon-only →
+  ADR-040 CHECK 6B/6D **δεν** ενεργοποιείται. 🔴 tsc(N.17-skip) — jest GREEN + browser-verify + commit.
+  **Follow-up fixes (Giorgio browser-verify):**
+  (1) **«το χρώμα δεν άλλαζε»** — το write έγραφε `color:undefined`· ο fallback render path
+  (`resolveEntityRenderStyle` όταν δεν βρεθεί owning layer/`layersById`) διαβάζει ΜΟΝΟ `entity.color` → η
+  γραμμή έμενε στο χρώμα του layer. FIX: γράφουμε ΚΑΙ τα 3 κανάλια (`color` hex + `colorTrueColor` +
+  `colorAci`) → κάθε resolution path δείχνει το ίδιο χρώμα.
+  (2) **«ByLayer γραμμή → swatch λευκό»** (στιγμιότυπο 103739: πράσινη γραμμή, swatch λευκό) — το read
+  έψαχνε το owning layer ΜΟΝΟ στο project-wide `LayerStore`, αλλά τα layers ενός φορτωμένου DXF ζουν στο
+  `scene.layersById`. FIX: το swatch επιλύει layer με τη ΣΕΙΡΑ του renderer (id ▸ name fallback).
+  Tests: +ByLayer-from-scene read.
+  **Κεντρικοποίηση (Giorgio audit — «μια και μοναδική πηγή αλήθειας»):** τα ad-hoc color/layer helpers που
+  είχα γράψει inline στο bridge (`sceneLayerFor`/`findLayerById`/`colorSourceToHex`/`FALLBACK_COLOR_HEX`)
+  ήταν **διπλότυπα** του `resolveRenderedColorHex` (SSoT, select-similar-by-color), του `useLevelLayersById`
+  (SSoT getter) και της inline layer-resolution του renderer. Αφαιρέθηκαν ΟΛΑ. Νέος **SSoT**
+  `systems/properties/resolve-entity-color.ts` → `resolveEntityLayer(entity, layersById)` (id-first/name-fallback)
+  + `resolveEntityColorHex(entity, layersById)` (effective hex· trueColor ▸ ACI ▸ legacy `color` hex ▸ κεντρικό
+  λευκό `CAD_UI_COLORS.entity.default`). **Και το προϋπάρχον διπλότυπο** — η inline layer-resolution στο
+  `dxf-renderer-style-resolve.ts` (γραμμές 87-91) — αντικαταστάθηκε με το ΙΔΙΟ `resolveEntityLayer` (μία πηγή για
+  renderer + swatch). Ο bridge πλέον: read = `resolveEntityColorHex` + `useLevelLayersById`· μηδέν local color/layer
+  helper. Ref ADR-040 changelog (perf-file touch).
+  (3) **«ΠΑΛΙ swatch λευκό σε πράσινη γραμμή»** — exploded DXF γραμμή με **baked `color` hex** (χωρίς ACI/
+  trueColor) και layer εκτός `layersById`. Το no-layer fallback έλεγχε trueColor+ACI αλλά ΟΧΙ το legacy
+  `entity.color` (ενώ ο renderer's fallback ΤΟ χρησιμοποιεί: `entity.color || default`). FIX: το
+  `resolveEntityColorHex` fallback πλέον trueColor ▸ ACI ▸ **`entity.color`** ▸ λευκό. Tests: +baked-hex read →
+  **40/40 GREEN**.
+- **2026-07-04** — **Φ2G — ΣΥΝΔΕΣΗ «Πάχος γραμμής» (mm) στο ΠΡΑΓΜΑΤΙΚΟ render (big-player LWT, FULL SSoT).**
+  Πρόβλημα (Giorgio, επιβεβαιωμένο): αλλαγή στο πεδίο «Πάχος» (ή σε στυλ που αλλάζει πάχος) **δεν πάχαινε ποτέ** τη
+  γραμμή. **ΡΙΖΑ (χαρτογραφημένη με grep):** ο resolver `resolveEntityStyle`/`resolveEntityRenderStyle` υπολόγιζε
+  ΣΩΣΤΑ το `lineWidthPx` από το `lineweightMm` (μέσω του **υπάρχοντος** `lineweightToPx`, config/lineweight-iso-catalog)
+  και το έβαζε στο `EntityModel.lineweight`, ΑΛΛΑ το πραγματικό stroke των non-batched committed entities (polyline/
+  circle/arc/rect) γινόταν στο `PhaseManager.applyNormalStyle` με **hardcoded `RENDER_LINE_WIDTHS.THIN` (1px)** — αγνοούσε
+  εντελώς το `entity.lineweight`. (Το LINE batch path στο `DxfRenderer` ήδη χρησιμοποιούσε το `resolved.lineWidthPx`, γι'
+  αυτό απλές γραμμές πάχαιναν αλλά polylines όχι.) Το `PathCache.ts:198` που ανέφερε το handoff ήταν παραπλανητικό (μόνο
+  cache key, + ήδη διαβάζει `entity.lineweight`).
+  **Αποφάσεις Giorgio (big-player practice):** (1) **zoom-INDEPENDENT** πάχος (σταθερό σε px, AutoCAD LWT — ΟΧΙ zoom-
+  scaled όπως το dash)· (2) global διακόπτης **«Εμφάνιση Πάχους»** (AutoCAD LWDISPLAY), status-bar, **default ON**·
+  (3) **φυσικά σωστό** `mm × 96/25.4` με ελάχιστο **1px hairline** — μηδέν αυθαίρετος πολλαπλασιαστής (όπως AutoCAD/Revit
+  onscreen· το Figma κλιμακώνει-με-zoom = design tool, δεν ταιριάζει σε CAD).
+  **Υλοποίηση (ΕΝΑ gate, μηδέν διπλότυπο):**
+  • **NEW** `stores/LineweightDisplayStore.ts` — micro-leaf singleton SSoT του LWDISPLAY (mirror `LinetypeScaleStore`·
+    zero-React, localStorage, `getShowLineweight`/`setShowLineweight`/`toggleShowLineweight`/`subscribeLineweightDisplay`,
+    default ON). Print/plot **αγνοεί** τον διακόπτη (πάντα πραγματικά πάχη).
+  • **MOD** `dxf-renderer-style-resolve.ts` — το **μοναδικό gate**: `showLineweight = printPolicy!==null || getShowLineweight()`·
+    `lineWidthPx = show ? Math.max(1, lineweightToPx(mm,96)) : 1`. Καλύπτει **και** το batch path **και** το per-entity
+    path (και τα δύο διαβάζουν αυτό το ένα `lineWidthPx`). **Reuse μόνο** του υπάρχοντος `lineweightToPx` — κανένας νέος
+    mm→px helper.
+  • **2η ΡΙΖΑ (browser-verify Giorgio «ΠΑΛΙ δεν αλλάζει»):** το **fallback path** του resolver (όταν ο owning layer ΔΕΝ
+    βρίσκεται στο `layersById` — τυπικό για φρεσκο-σχεδιασμένη γραμμή) διάβαζε **μόνο** το legacy `entity.lineWidth` (px)
+    και **αγνοούσε** το `entity.lineweightMm`. Ακριβώς το ίδιο κενό που είχε το dash πριν το Φ2E fix. **FIX:** το fallback
+    πλέον τιμά το **ΔΙΚΟ** του concrete mm: `ownLineweightPx = isConcreteLineweight(lineweightMm) ? lineweightToPx(mm,dpi) : 0`·
+    `lineWidthPx = gatePx(ownLineweightPx || entity.lineWidth || 1)` (mirror του `resolveAnyDashMm(entity.linetypeName)`).
+  • **MOD** `PhaseManager` — NEW pure `resolveEntityStrokeWidthPx(entity)` (safe accessor του ήδη-gated `entity.lineweight`,
+    THIN fallback)· `applyNormalStyle` πλέον στρώνει το resolved πάχος (**ο πραγματικός fix**)· `applyHighlightedStyle`
+    = `max(resolved, NORMAL)` (hover floor — χοντρή γραμμή δεν λεπταίνει στο hover).
+  • **MOD** `dxf-canvas-renderer.ts` — subscription στο `subscribeLineweightDisplay` → `bitmapCache.invalidate()` +
+    dirty (ίδιο ADR-040 contract με LayerStore/font: ο διακόπτης διαβάζεται σε paint-time, ΟΧΙ στο cache key).
+  • **NEW** `statusbar/LineweightDisplayControl.tsx` + wiring στο `CadStatusBar` (Switch, mirror AutoAlign)· i18n
+    `cadDock.statusBar.lineweight`/`lineweightDesc` el+en (el: «ΠΑΧΟΣ»· en: «LWT»).
+  **Cache invalidation του `lineweightMm` edit:** το per-entity mm edit αλλάζει το scene ref → ο bitmap cache
+  (`sceneRef !== scene`) rebuild-άρει αυτόματα (ίδιο μονοπάτι με color/linetype edits που ήδη δούλευαν). `PathCache`
+  αμετάβλητο (χρησιμοποιεί ήδη `entity.lineweight` = resolved px).
+  **Tests:** NEW `LineweightDisplayStore.test.ts` (5) + `dxf-renderer-style-resolve-lineweight.test.ts` (4· ON→mm px,
+  OFF→1px hairline, monotonic, ≥1px floor) → **9/9 GREEN**. ⚠️ render αρχεία (`dxf-canvas-renderer`, `dxf-renderer-style-
+  resolve`, `PhaseManager`) → ADR-040 CHECK 6B/6D → stage **ADR-040 + ADR-510** στο ίδιο commit. 🔴 tsc(N.17-skip) +
+  browser-verify (σχεδίασε polyline → «Πάχος» 0.25→1.0 → παχαίνει· διακόπτης «ΠΑΧΟΣ» OFF → όλα 1px· zoom in/out → σταθερό
+  πάχος) + commit. **ΜΑΘΗΜΑ:** το stroke των committed non-LINE entities ζει στο `PhaseManager.applyNormalStyle`, ΟΧΙ
+  στο PathCache· ο resolver μπορεί να είναι σωστός αλλά ένα hardcoded THIN κάτω-κάτω τον ακυρώνει.
+- **2026-07-04** — **Φ4c — panel «Τροποποίηση» στο contextual tab της γραμμής (Revit «Modify \| Lines» parity, SSoT).**
+  Παρατήρηση Giorgio: τα Trim/Extend ζούσαν **μόνο** στο Home → Modify, όχι στο contextual tab της γραμμής. **Απόφαση
+  (τεκμηριωμένη big-player):** AutoCAD τα έχει μόνο στο Home/Modify (πάντα διαθέσιμα· δεν έχει καν contextual line tab)·
+  **Revit** «Modify \| Lines» τα έχει **και** στο contextual Modify panel. Επειδή το project έχει ήδη contextual line
+  tab (Revit-grade), η σωστή κίνηση = **ΚΑΙ στα δύο** (add, ΟΧΙ move — το «μόνο contextual» θα έχανε τη διαθεσιμότητα
+  χωρίς επιλογή). **PHASE 1 audit:** το `routeRibbonAction` (`useRibbonCommands-action.ts`) είναι **tab-agnostic** —
+  τα `trim`/`extend` δεν ανήκουν σε κανένα bridge → πέφτουν στον ΙΔΙΟ generic `wrappedHandleAction` (DxfViewerContent)
+  με το Home. Άρα ίδιο `commandKey` → ίδιο tool, **μηδέν νέο wiring, μηδέν διπλότυπη λογική**. **Υλοποίηση:** NEW panel
+  `line-modify` (πρώτο, Revit-parity) στο `CONTEXTUAL_LINE_TOOL_TAB` με simple/split buttons που reuse-άρουν τα **ίδια**
+  command keys + `comingSoon` flags με το Home: **Trim** (TR) + **Extend** (EX) λειτουργικά (ADR-350/353)· **Offset** (O)
+  + **Fillet ▾** (Fillet/Chamfer) `comingSoon:true` (ίδιο status με το Home — μία πηγή αλήθειας για το «τι είναι έτοιμο»).
+  Icons (`trim`/`extend`/`offset`/`fillet`/`chamfer`) + command labels (`ribbon.commands.trim`/`extend`/`offset`/`fillet`/
+  `filletVariants.*`) **προϋπάρχουν** (Home). **Μόνο νέο i18n:** panel label `ribbon.panels.lineModify` el(«Τροποποίηση»)/
+  en(«Modify») στο `dxf-viewer-shell.json`. **Files:** `contextual-line-tool-tab.ts` (+panel) + 2 locales + ADR. Ribbon
+  data only → ADR-040 CHECK 6B/6D **δεν** ενεργοποιείται. 🔴 tsc(N.17-skip) + browser-verify (επίλεξε γραμμή → tab
+  «Στυλ Γραμμής» δείχνει panel «Τροποποίηση» → Trim κόβει σε τομή· Offset/Fillet → «σύντομα διαθέσιμο») + commit.
+- **2026-07-04** — **Φ4d — OFFSET modify tool λειτουργικό (AutoCAD OFFSET, «άμεσο»/Revit UX, FULL SSoT).** Ο διακόπτης
+  «Τροποποίηση» έβγαλε το Offset από `comingSoon` → πλήρες εργαλείο. **UX (απόφαση Giorgio):** επίλεξε αντικείμενο →
+  live ghost ακολουθεί τον cursor → κλικ = commit· προαιρετική πληκτρολόγηση ακριβούς απόστασης (η ΠΛΕΥΡΑ πάντα από τον
+  cursor). Continuous· ENTER/ESC/δεξί κλικ = έξοδος· keyword E/Ε = «Διαγραφή πηγής», U = undo-last. **Scope:** γραμμή,
+  κύκλος, τόξο, πολυγραμμή (ίσια **και** με τόξα/bulges). **Αρχιτεκτονική = mirror του Trim (ADR-350)**, PHASE-1 audit με
+  3 Explore agents (Trim template 19-step + geometry SSoT + activation pipeline). **Geometry — reuse μόνο, μηδέν διπλότυπο:**
+  γραμμή `createParallelLine`/`offsetPoint`· κύκλος/τόξο `radius±d`· ίσια πολυγραμμή `geometry-offset-utils.offsetPolyline`
+  (miter, το generic ΟΧΙ το BIM διπλότυπο)· τόξα-πολυγραμμής **NEW** `systems/offset/offset-polyline.ts` (concentric,
+  `bulge` αναλλοίωτο — μόνο τα endpoints radially, key insight audit). **NEW SSoT** `signedDistanceToLine` (geometry-vector-utils).
+  **Files (systems/offset/):** `offset-types` · `offset-entity-geometry` (`offsetEntity` dispatcher + `isOffsettable`) ·
+  `offset-polyline` · `offset-side` (`resolveOffsetDistance`/`resolveSignedOffset`) · `OffsetToolStore` (mirror TrimToolStore).
+  **Command:** `OffsetEntityCommand` (execute→add(+erase remove)· undo mirror· ISceneManager boundary· register index.ts).
+  **Hook/preview:** `useOffsetTool` (state machine) · `useOffsetPreview` (RAF ghost, **μηδέν pointer-capture** — το «άμεσο»
+  UX διαβάζει `effectiveCursor` κάθε frame) · `OffsetPreviewMount` (micro-leaf) → mount στο `canvas-layer-stack-preview-mounts`.
+  **Wiring (mirror trim):** `tool-definitions` (+`offset`) · `ToolType` union (`ui/toolbar/types`) · `ToolCursorStore`
+  (`offset-pickbox`) · `CommandAliasRegistry` (`OF`/`OFFSET`· το bare `O` πιασμένο από `opening`) · `useModifyTools`
+  (instantiate) · `CanvasSection` (thread) · `canvas-click-types`+`useCanvasClickHandler` (PRIORITY 1.595 branch) ·
+  `useCanvasKeyboardShortcuts`(+types) · `useCanvasEscapeRegistrations` (`buildModifyHandler('offset',…)`) · un-comingSoon
+  σε `home-tab-modify` (modify+edit.offset) + `contextual-line-tool-tab`. **i18n:** `tool-hints:offsetTool.*` el+en (το
+  `ribbon.commands.offset` προϋπήρχε). **Tests:** `offset-entity-geometry` (γραμμή/κύκλος/τόξο/πολυγραμμή ίσια+bulge +
+  `signedDistanceToLine` + `resolveSignedOffset`) + `offset-command-store` → **27/27 GREEN** (100/100 μαζί με trim regression).
+  ⚠️ `CanvasSection` + click/keyboard handlers = ADR-040 CHECK 6B/6D → stage **ADR-040 + ADR-510**. 🔴 tsc(N.17-skip) +
+  browser-verify (γραμμή/κύκλος/τόξο/πολυγραμμή· πληκτρολόγηση απόστασης· undo· «Διαγραφή πηγής») + commit.
+  **Εκτός scope (επόμενα sessions):** Fillet, Chamfer.
+
+- **2026-07-04** — **Φ4e — FILLET modify tool λειτουργικό (AutoCAD FILLET, tangent arc + trim, FULL SSoT).** Ο διακόπτης
+  `comingSoon` έβγαλε το **Fillet** (variant του split button) → πλήρες εργαλείο· το **Chamfer** variant μένει `comingSoon`
+  (Φ4f, επόμενο). **UX (αποφάσεις Giorgio 2026-07-04):** (1) ακτίνα R **ΚΑΙ** πληκτρολόγηση ζωντανά (keyword `R` + digits)
+  **ΚΑΙ** πεδίο ribbon (numeric editable combobox). (2) **Trim** default ΝΑΙ (AutoCAD) — keyword `T` → No-trim (μόνο το τόξο).
+  (3) **Δύο modes:** two-lines (pick γραμμή 1 → pick γραμμή 2) **ΚΑΙ** Polyline mode (keyword `P` / pick πολυγραμμής → fillet
+  ΟΛΩΝ των γωνιών που χωρούν, μία εντολή). Continuous· ENTER/ESC/δεξί κλικ = έξοδος· `U` = undo-last. **Geometry (NEW, καθαρή
+  μαθηματική, reuse μόνο primitives):** `t = R/tan(θ/2)`, κέντρο `C = V + διχοτόμος·(R/sin(θ/2))`, `R=0` → καθαρό extend-to-corner.
+  **Κοινό corner harness** `systems/corner/corner-math.ts` (`resolveCornerAnchors` — vertex/keep-endpoint-από-pick/angle,
+  `trimLineToCorner`) = SSoT για Fillet **ΚΑΙ** Chamfer (Φ4f). **Boy-scout dedup (N.0.2):** το `infiniteLineIntersection`
+  βγήκε από το `offset-polyline.ts` → shared `geometry-vector-utils.ts` (re-point offset, μηδέν 2ο αντίγραφο). **Files
+  (systems/corner/):** `corner-math` · `fillet-geometry` (`computeFilletArc`/`computeFilletTwoLines`/`computeFilletPolyline`) ·
+  `fillet-types` · `FilletToolStore` (mirror OffsetToolStore). **Command:** `FilletEntityCommand` (unified `trims` [updateEntity]
+  + optional `addArc` [addEntity]· undo mirror· `geometryFromSnapshot` SSoT· ISceneManager boundary· register index.ts).
+  **Hook/preview:** `useFilletTool` (state machine, two-lines + polyline) · `useFilletPreview` (RAF ghost — hover hit-test της
+  2ης γραμμής/πολυγραμμής → candidate arc+trims ζωντανά) · `FilletPreviewMount` (micro-leaf, δέχεται `levelManager` για το
+  frame-time scene read). **Wiring (mirror offset):** `tool-definitions` (+`fillet`) · `ToolType` union · `ToolCursorStore`
+  (`fillet-pickbox`) · `CommandAliasRegistry` (`F`/`FIL`/`FILLET`) · `useModifyTools` (instantiate, reuse `trimHitTest`) ·
+  `CanvasSection` (thread) · `canvas-click-types`+`useCanvasClickHandler` (PRIORITY 1.618 branch) · `useCanvasKeyboardShortcuts`
+  (+types· R/T/P/U + digits) · `useCanvasEscapeRegistrations` (`buildModifyHandler('fillet',…)`) · un-comingSoon fillet σε
+  `home-tab-modify` (modify+edit) + `contextual-line-tool-tab` (chamfer μένει comingSoon). **Ribbon radius field:** νέο key
+  `LINE_TOOL_RIBBON_KEYS.filletRadius` → `useRibbonLineToolBridge` read/write στο `FilletToolStore` (live subscription) +
+  combobox «Ακτίνα» (presets 0/5/10/20/50, editable) στο line-modify panel. **i18n:** `tool-hints:filletTool.*` +
+  `ribbon.commands.filletRadius` el+en. **Tests:** `corner-math` + `fillet-geometry` → **20/20 GREEN** (tangent distance
+  90°/45°, arc center/tangency, R=0 extend, trim vs no-trim, polyline all-corners + skip-count, degenerate/parallel· offset
+  regression 27/27 μετά το dedup). ⚠️ `CanvasSection` + click/keyboard handlers + preview-mounts = ADR-040 CHECK 6B/6D → stage
+  **ADR-040 + ADR-510**. 🔴 tsc(N.17-skip) + browser-verify (2 γραμμές→τόξο+trim· πληκτρολόγηση/πεδίο ακτίνας· `T` no-trim·
+  `P`/πολυγραμμή→όλες οι γωνίες· continuous· undo) + commit. **§Limitations (Φ4e.2 επόμενο):** line-arc/arc-arc fillet
+  (εφαπτόμενος κύκλος — πολλαπλές λύσεις + side pick)· δύο picks στην ΙΔΙΑ πολυγραμμή (v1 → χρήση Polyline mode).
+  **Εκτός scope:** Chamfer (Φ4f). **⚠️ Σημ. (Φ4f):** το `FilletEntityCommand` **γενικεύτηκε** σε `CornerEntityCommand`
+  (`kind:'fillet'|'chamfer'`, `addArc`→`addEntity`) ώστε να το μοιράζονται fillet+chamfer (SSoT)· τα `FilletTrim`/`makeTrim`
+  βγήκαν στο `corner-math` ως `CornerLineTrim`/`makeLineTrim`.
+
+- **2026-07-04** — **Φ4f — CHAMFER modify tool λειτουργικό (AutoCAD CHAMFER, straight bevel + trim, FULL SSoT).** Ο διακόπτης
+  `comingSoon` έβγαλε το **Chamfer** variant → πλήρες εργαλείο (κλείνει τον split button Fillet▾/Chamfer). **UX (αποφάσεις
+  Giorgio 2026-07-04):** (1) **ΚΑΙ οι 2 τρόποι:** Απόσταση–Απόσταση (d1,d2· keyword `D`) **ΚΑΙ** Απόσταση–Γωνία (d1 + γωνία από
+  γραμμή 1· keyword `A`). (2) **Default ίσες αποστάσεις** — keyboard digits θέτουν d1=d2 (συμμετρική 45°)· ribbon «Απ.2»/«Γωνία»
+  τα αλλάζουν ανεξάρτητα. (3) Mirror Fillet: **Trim** default (keyword `T`)· **Polyline mode** (`P`/pick πολυγραμμής → όλες οι
+  γωνίες)· continuous· `U` undo· live preview. **Geometry (NEW, reuse corner harness):** distance → `P1=V+dir1·d1`,
+  `P2=V+dir2·d2`· **angle (law of sines)** → `d2 = d1·sin(α)/sin(θ+α)`. Connector = **ευθεία `LineEntity` P1→P2** (inherit
+  style γραμμής 1). Polyline → insert `[P_in,P_out]` με straight segment (κανένα bulge). **Κοινό corner harness (Φ4e):**
+  `resolveCornerAnchors`/`makeLineTrim` + **NEW shared** `segBulge`/`cornerIndices`/`pruneCornerCandidates` (asymmetric
+  distPrev/distNext — καλύπτει fillet symmetric ΚΑΙ chamfer asymmetric· fillet refactored να τα χρησιμοποιεί → SSoT, μηδέν
+  διπλότυπο). **Files (systems/corner/):** `chamfer-geometry` (`computeChamferTwoLines`/`computeChamferPolyline`/
+  `resolveChamferDistances`) · `chamfer-types` · `ChamferToolStore`. **Command:** `CornerEntityCommand` kind:'chamfer'
+  (γενικευμένο στο Φ4f). **Hook/preview:** `useChamferTool` · `useChamferPreview` (RAF ghost — hover hit-test → candidate bevel+
+  trims) · `ChamferPreviewMount` (micro-leaf). **Wiring (mirror fillet):** tool-definitions · ToolType · ToolCursorStore
+  (`chamfer-pickbox`) · CommandAliasRegistry (`CHA`/`CHAMFER`) · useModifyTools · CanvasSection · canvas-click (PRIORITY 1.63) ·
+  keyboard (D/A/T/P/U+digits) · escape-registrations · preview-mount · un-comingSoon chamfer (home-tab-modify + contextual).
+  **Ribbon fields:** `LINE_TOOL_RIBBON_KEYS.chamferDist1/Dist2/Angle` → `useRibbonLineToolBridge` read/write `ChamferToolStore`
+  (live) + 3 comboboxes «Απόσταση 1/2»/«Γωνία». **i18n:** `tool-hints:chamferTool.*` + `ribbon.commands.chamferDist1/Dist2/Angle`
+  el+en. **Tests:** `chamfer-geometry` (distance d1=d2/d1≠d2, angle law-of-sines, trim/no-trim, polyline all-corners+skip,
+  parallel/doesn't-fit) → **59/59 GREEN** μαζί με fillet 20 + corner-math + offset regression 27 (μετά command/harness refactor).
+  ⚠️ ADR-040 CHECK 6B/6D → stage **ADR-040 + ADR-510**. 🔴 tsc(N.17-skip) + browser-verify (2 γραμμές→bevel+trim· απόσταση
+  keyboard/πεδίο· `A`+γωνία· `T` no-trim· `P`/πολυγραμμή· continuous· undo) + commit. **§Limitations (Φ4f.2):** line-arc/arc-arc
+  chamfer· δύο picks στην ΙΔΙΑ πολυγραμμή (→ Polyline mode). **Με το Φ4f ολοκληρώνεται το split button Fillet/Chamfer.**
+- **2026-07-04** — **BUGFIX Φ4e/Φ4f — το pickbox + «R …»/«d1×d2» label εμφανιζόταν σε ΚΑΘΕ εργαλείο** (Giorgio:
+  «τι είναι το πορτοκαλί τετράγωνο + R 0.00 στο σταυρόνημα στην Επιλογή;»). **Ρίζα:** τα `FilletPreviewMount`/
+  `ChamferPreviewMount` είναι **πάντα** mounted (canvas-layer-stack-preview-mounts, όπως όλα τα ghost mounts), και το
+  `useFilletPreview`/`useChamferPreview` gate-άρανε το `isActive` **μόνο** στο store phase. Όμως το `FilletToolStore`/
+  `ChamferToolStore` έχει `INITIAL.phase = 'picking-first'` και το `reset()` το **διατηρεί** (δεν υπάρχει ξεχωριστό
+  `'idle'`), άρα το gate ήταν **μονίμως true** → το `draw` ζωγράφιζε το pickbox (`#FFD24A` 12×12) + το radius/απόσταση
+  label σε κάθε frame, σε κάθε εργαλείο, από την εκκίνηση. (Τα offset/trim ghosts δεν διαρρέουν γιατί το draw τους είναι
+  κενό σε ηρεμία.) **Fix (2 αρχεία, SSoT):** το `isActive` gate-άρεται πλέον ΚΑΙ σε `useActiveTool() === 'fillet'/'chamfer'`
+  (ADR-055 tool-state SSoT· ίδιο precedent με `FinishPaint2DPanel`)· `useCanvasGhostPreview` καθαρίζει το canvas στο
+  gate-exit → το pickbox εξαφανίζεται μόλις αλλάξει εργαλείο. Μηδέν prop-threading, μηδέν άγγιγμα στο architecture-critical
+  CanvasLayerStack. tsc SKIP (N.17).
+- **2026-07-04** — **BUGFIX (ΙΔΙΟ root) — OFFSET pickbox.** Ο Giorgio: «το πορτοκαλί τετράγωνο μένει, και **κάνει lag**
+  σε σχέση με τον κέρσορα» → το lag αποδεικνύει ότι είναι **canvas-drawn** (RAF-throttled), όχι το hardware-cursor aperture.
+  Το `useOffsetPreview` είχε την ΙΔΙΑ διαρροή: `OffsetToolStore.INITIAL.phase = 'picking-source'` (χωρίς `'idle'`), το gate
+  `isActive` μόνο σε phase → πάντα true → το `#FFD24A` pickbox (`strokeRect` 12×12, χωρίς phase-guard) ζωγραφιζόταν σε κάθε
+  εργαλείο. **Fix:** `isActive` gate-άρεται πλέον ΚΑΙ σε `useActiveTool() === 'offset'`. **Σημ.:** τα `useTrimPreview`/
+  `useExtendPreview` ΔΕΝ επηρεάζονται — έχουν πραγματικό `'idle'` phase (`isActive: phase !== 'idle'`). tsc SKIP (N.17).
+- **2026-07-04** — **Φ4e.2 — FILLET σε ΤΟΞΑ/ΚΥΚΛΟΥΣ (line–arc / arc–arc / line–circle), πραγματικό AutoCAD feature, FULL SSoT.**
+  **Big-player verify (Giorgio ζήτησε PHASE-1):** AutoCAD **FILLET** δουλεύει σε line/arc/circle/polyline (εφαπτόμενο τόξο
+  ακτίνας R)· διαλέγει τη λύση **πλησιέστερη στα δύο pick points**· **circle ΔΕΝ κόβεται ποτέ** (μένει ολόκληρος), line
+  resize, arc trim/extend. Αντίθετα **CHAMFER = ΜΟΝΟ lines/polylines** → «arc chamfer» **δεν** υλοποιήθηκε (Φ4f.2 μένει
+  εκτός, επιβεβαιωμένο). **SSoT audit (grep):** αποκλείστηκαν ως άσχετα το `useCircleTTT`/`circleTangentTo3Lines` (incircle
+  3 γραμμών) και το `TangentSnapEngine.getTangentPoints` (tangent από εξωτερικό σημείο)· δεν υπήρχε «tangent circle ακτίνας R
+  σε δύο καμπύλες». **Νέο κεντρικό geometry:** `systems/corner/fillet-curve-geometry.ts` — **offset-curve intersection**
+  (line→2 παράλληλες, arc/circle→ομόκεντροι κύκλοι r±R· τομές μέσω `infiniteLineIntersection` + **ΝΕΟ**
+  `infiniteLineCircleIntersections` (geometry-vector-utils, infinite — ο segment-clamped `getLineCircleIntersections` δεν κάνει)
+  + `GeometricCalculations.getCircleIntersections`)· tangent point = foot-of-perp (line) / O→C ray (arc/circle)· επιλογή centre
+  με ελάχιστη απόσταση tangent→pick (AutoCAD). Trim: `trimLineAtPoint` (νέο στο corner-math, reuse `pickKeepEndpoint`) +
+  `trimArcAtPoint` (rebuild μέσω `arcFrom3Points`, extend/trim, circle=χωρίς op). **Command αμετάβλητο** — το `CornerEntityCommand`
+  ήταν ήδη γενικό (`trims[]`+`addEntity` μέσω `updateEntity` merge). **Hook/preview:** `useFilletTool.performFilletPick`
+  δέχεται line/arc/circle (`isFilletCurveEntity`)· dispatch line–line→υπάρχον, αλλιώς→curve solver· `FilletToolStore.first`
+  ευρύνθηκε (`FilletFirstEntity`)· `useFilletPreview` hover σε line/arc/circle + ghost.
+  **🔴 BUGFIX (rad→deg, pre-existing) — το line–line fillet έσπαγε στο commit:** το `computeFilletArc` έχτιζε το `ArcEntity`
+  με `atan2` (**radians**) απευθείας στο `startAngle/endAngle`, ενώ ο `ArcRenderer` κάνει `degToRad(...)` (**degrees**) → το
+  committed arc ρεντάρονταν ως σχεδόν αόρατο slice (0–1.57° αντί 0–90°). Δεν πιάστηκε γιατί τα tests έλεγχαν μόνο tangent
+  points και το preview τυχαία «κάλυπτε» το bug (ο trim tessellator διαβάζει κι αυτός radians). **Fix (SSoT):** νέο
+  `solveTangentArc` (fillet-geometry) χτίζει το τόξο μέσω του tested `arcFrom3Points` (T1, midpoint-toward-corner, T2 →
+  DEGREES + σωστό ccw/Y-flip)· χρησιμοποιείται **και** από το line–line **και** από τον curve solver. Το fillet ghost περνά
+  πλέον από **ΝΕΟ** `tessellateArcDegrees` (geometry-arc-utils, world-space DEGREES μέσω `arcVisibleCcwRange`) αντί του
+  radians `tessellateArc` του trim → preview ≡ commit. **⚠️ Pending (N.0.2):** το ευρύτερο split σύμβασης γωνιών τόξου
+  (trim subsystem = radians vs render/DXF = degrees) → ξεχωριστό cross-cutting ratchet, εκτός scope Φ4e.2.
+  **Tests:** `fillet-curve-geometry.test.ts` (line–circle tangency, arc trim, circle-not-trimmed, no-solution, rad→deg
+  regression) — 67/67 corner+offset GREEN, 206/206 shared-geometry GREEN. tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4e.2 (B) — FILLET με δύο picks στην ΙΔΙΑ πολυγραμμή (round ONE shared corner), FULL SSoT.** Στη
+  default (non-Polyline) λειτουργία: pick 2 **γειτονικών** segments της ίδιας polyline → fillet **μόνο** στην κοινή κορυφή
+  (rebuild vertices/bulges), σε αντίθεση με το `P`/Polyline mode που στρογγυλεύει ΟΛΕΣ τις γωνίες. **Reuse (μηδέν διπλότυπο):**
+  το `computeFilletPolyline` refactor-αρίστηκε → εξήχθη `buildFilletedPolyline(entity, candidates, totalCorners)` που τρέφει
+  και το all-corners **και** το νέο `computeFilletPolylineCorner(entity, cornerIndex, radius)` (ίδιο `cornerCandidate` +
+  `pruneCornerCandidates`). Ο εντοπισμός της κοινής κορυφής: `resolveSharedPolylineCorner(poly, p1, p2)` (adjacency + closed
+  wrap) πάνω στο **ΝΕΟ κεντρικό** `nearestPolylineSegment` (geometry-rendering-utils) — SSoT που αντικαθιστά τα per-hook
+  `findPolylineSegment` (useCircleTTT/useLinePerpendicular, pending migration). **Command/persist αμετάβλητα** (polyline replace
+  ως ένα `trims[0]`, atomic undo). **Hook:** `useFilletTool.performFilletPick` → polyline-target branch (setFirst → 2ο pick ίδιας
+  polyline → commit corner)· `FilletFirstEntity` ευρύνθηκε με polyline types· mixed poly↔curve fillet = εκτός v1 (restart).
+  **Preview:** `useFilletPreview` δείχνει live ghost της στρογγυλεμένης κορυφής όταν ο κέρσορας είναι πάνω στην ίδια polyline.
+  **§Limitations:** μόνο **γειτονικά** segments (AutoCAD «ένα segment απόσταση» → follow-up). **Tests:** +8 (resolveSharedPolylineCorner
+  adjacency/wrap/non-adjacent/same· computeFilletPolylineCorner round-one/non-corner) — 279/279 GREEN (corner+offset+shared).
+  tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4f.2 — CHAMFER με δύο picks στην ΙΔΙΑ πολυγραμμή (bevel ONE shared corner), FULL SSoT** (αναλογικό του
+  Φ4e.2 B, μετά από ερώτηση Giorgio «υπάρχει κι άλλη φάση;»). **Big-player:** το «arc/circle chamfer» ΔΕΝ ισχύει (AutoCAD
+  CHAMFER = μόνο lines/polylines) → το μόνο υπόλοιπο του Φ4f.2 ήταν το same-polyline. **Reuse:** `computeChamferPolyline`
+  refactor → `buildChameferedPolyline(entity, candidates, totalCorners)` κοινό για all-corners **και** για το νέο
+  `computeChamferPolylineCorner(entity, cornerIndex, d1, d2)` (ίδιο `chamferCandidate`+`pruneCornerCandidates`). **SSoT move
+  (N.0.2):** το `resolveSharedPolylineCorner` **μετακινήθηκε** από `fillet-geometry` → `corner-math` (generic corner logic,
+  κοινό fillet+chamfer)· ενημερώθηκαν τα 3 fillet import sites· το `nearestPolylineSegment` (geometry-rendering-utils) παραμένει
+  ο SSoT εντοπισμού segment. **Hook:** `useChamferTool.performChamferPick` → polyline-target branch (setFirst → 2ο pick ίδιας
+  polyline → commit corner)· `ChamferFirstEntity` ευρύνθηκε με polyline types· mixed poly↔line = εκτός v1 (restart). **Preview:**
+  `useChamferPreview` live ghost της λοξοτομημένης κορυφής όταν ο κέρσορας είναι πάνω στην ίδια polyline. **Command/persist
+  αμετάβλητα.** **Note:** στο single-corner το `d1` πάει στο prev segment, `d2` στο next (ίδιο με το polyline mode)· με το
+  default equal distances (CHAMFER default) είναι αδιάφορο· asymmetric με βάση pick-order = follow-up. **§Limitations:** μόνο
+  **γειτονικά** segments (όπως fillet). **Tests:** +5 (computeChamferPolylineCorner round-one/non-corner/closed-wrap) — 284/284
+  GREEN (corner+offset+shared). **Με το Φ4f.2 ολοκληρώνεται το same-polyline και για τα δύο εργαλεία (fillet+chamfer).**
+  tsc SKIP (N.17)· browser-verify + commit → Giorgio.

@@ -260,6 +260,13 @@ export interface EnterpriseColorDialogProps extends EnterpriseColorPickerProps {
 
   /** Show footer actions */
   showFooter?: boolean;
+
+  /**
+   * Dim/blur the backdrop behind the dialog (default: true).
+   * Set `false` for canvas color pickers (ribbon color fields) so the drawing
+   * stays fully visible while choosing a colour — live WYSIWYG comparison.
+   */
+  dimBackdrop?: boolean;
 }
 
 // ===== STORE TYPES =====

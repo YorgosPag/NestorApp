@@ -81,6 +81,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     scaleIsActive = false, handleScaleClick,
     stretchIsActive = false, handleStretchClick,
     trimIsActive = false, handleTrimClick,
+    offsetIsActive = false, handleOffsetClick,
+    filletIsActive = false, handleFilletClick,
+    chamferIsActive = false, handleChamferClick,
     extendIsActive = false, handleExtendClick,
     wallSplitIsActive = false, handleWallSplitClick,
     wallAttachIsActive = false, handleWallAttachClick,
@@ -184,6 +187,21 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.59: ADR-350 — Trim tool click (single pick / SHIFT+click = EXTEND)
     if (trimIsActive && handleTrimClick) {
       handleTrimClick(worldPoint, shiftKey);
+      return;
+    }
+    // PRIORITY 1.595: ADR-510 Φ4d — Offset tool click (pick source, then side)
+    if (offsetIsActive && handleOffsetClick) {
+      handleOffsetClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.618: ADR-510 Φ4e — Fillet tool click (pick line 1, then line 2 / polyline)
+    if (filletIsActive && handleFilletClick) {
+      handleFilletClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.63: ADR-510 Φ4f — Chamfer tool click (pick line 1, then line 2 / polyline)
+    if (chamferIsActive && handleChamferClick) {
+      handleChamferClick(worldPoint);
       return;
     }
     // PRIORITY 1.60: ADR-353 — Extend tool click (single pick / SHIFT+click = TRIM inverse)
@@ -354,6 +372,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     scaleIsActive, handleScaleClick,
     stretchIsActive, handleStretchClick,
     trimIsActive, handleTrimClick,
+    offsetIsActive, handleOffsetClick,
+    filletIsActive, handleFilletClick,
+    chamferIsActive, handleChamferClick,
     extendIsActive, handleExtendClick,
     arrayPolarIsActive, handleArrayPolarClick,
     handleArrayPolarCenterRepick,

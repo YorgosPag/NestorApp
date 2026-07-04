@@ -235,6 +235,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF Enterprise Dimension System (ADR-362)
   DIMENSION: 'dim',            // dimension entity (10 variants: linear/aligned/angular/radial/diameter/ordinate/baseline/continued/arcLength/joggedRadius)
   DIM_STYLE: 'dimstyle',       // DIMSTYLE — ~60 vars, 3 built-in templates + user customs
+  LINE_STYLE: 'linestyle',     // ADR-570 — named line style (ByStyle), 8 built-ins + user customs
   CENTER_MARK: 'cmark',        // standalone center mark (D13)
   CENTER_LINE: 'cline',        // standalone centerline (D13)
 

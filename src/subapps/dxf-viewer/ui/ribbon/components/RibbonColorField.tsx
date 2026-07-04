@@ -47,6 +47,9 @@ export function RibbonColorField({ label, value, onChange, buttonLabel }: Ribbon
           palettes={['dxf', 'semantic', 'material']}
           recent
           eyedropper
+          // Canvas color picker → μηδέν dim backdrop: το σχέδιο μένει πλήρως ορατό
+          // ώστε να συγκρίνεις ζωντανά το χρώμα με τις άλλες οντότητες.
+          dimBackdrop={false}
         />
       </span>
     </span>

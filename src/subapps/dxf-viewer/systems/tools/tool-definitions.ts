@@ -102,6 +102,12 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'extend': { id: 'extend', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-510 Φ4d: Offset (pick source → live ghost → click; continuous, exits on ENTER/ESC/right-click)
+  'offset': { id: 'offset', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-510 Φ4e: Fillet (pick 2 lines → tangent arc + trim, or Polyline mode; continuous, exits on ENTER/ESC/right-click)
+  'fillet': { id: 'fillet', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-510 Φ4f: Chamfer (pick 2 lines → bevel line + trim, or Polyline mode; continuous, exits on ENTER/ESC/right-click)
+  'chamfer': { id: 'chamfer', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353 Phase A: Rectangular Array (single-shot: pre-select sources → activate → array created → ribbon contextual tab adjusts params)
   'array-rect': { id: 'array-rect', category: 'editing', requiresCanvas: false, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-353 Phase B: Polar Array (requiresCanvas=true: B2 adds interactive center-pick)

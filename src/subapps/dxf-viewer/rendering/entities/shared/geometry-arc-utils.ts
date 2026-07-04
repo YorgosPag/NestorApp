@@ -226,6 +226,31 @@ export function arcFromMovedEndpoint(
 }
 
 /**
+ * Tessellate an arc into `n+1` world-space points along its VISIBLE sweep. Angles are in
+ * DEGREES (matching `ArcEntity` / the DXF scene); the traversed sweep is the CCW range from
+ * {@link arcVisibleCcwRange} so it matches exactly what `ArcRenderer` draws (Y-flip aware).
+ *
+ * SSoT for overlay ghosts that must agree with the committed render — e.g. the FILLET preview
+ * (ADR-510 Φ4e). Do NOT use the trim `tessellateArc`, which reads angles as RADIANS.
+ */
+export function tessellateArcDegrees(
+  arc: { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean },
+  n: number,
+): Point2D[] {
+  const { start, end } = arcVisibleCcwRange(arc.startAngle, arc.endAngle, arc.counterclockwise);
+  const s = degToRad(start);
+  let sweep = degToRad(end) - s;
+  while (sweep < 0) sweep += TAU;
+  while (sweep >= TAU) sweep -= TAU;
+  const pts: Point2D[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = s + (sweep * i) / n;
+    pts.push({ x: arc.center.x + arc.radius * Math.cos(t), y: arc.center.y + arc.radius * Math.sin(t) });
+  }
+  return pts;
+}
+
+/**
  * Calculate arc length
  */
 export function calculateArcLength(radius: number, startAngle: number, endAngle: number): number {

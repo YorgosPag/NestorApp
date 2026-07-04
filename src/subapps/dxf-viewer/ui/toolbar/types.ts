@@ -49,6 +49,12 @@ export type ToolType =
   | 'trim'
   // ADR-353: Extend command (Επέκταση — quick + standard, with SHIFT→TRIM inverse)
   | 'extend'
+  // ADR-510 Φ4d: Offset command (Παράλληλη — «άμεσο» UX, live ghost, continuous)
+  | 'offset'
+  // ADR-510 Φ4e: Fillet command (Στρογγύλεμα — tangent arc + trim, or Polyline mode)
+  | 'fillet'
+  // ADR-510 Φ4f: Chamfer command (Λοξοτομή — bevel line + trim, or Polyline mode)
+  | 'chamfer'
   // ADR-353: Rectangular Array command (Πίνακας — Phase A: rect only)
   | 'array-rect'
   // ADR-353: Polar Array command (Πίνακας Πολικός — Phase B)

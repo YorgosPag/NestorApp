@@ -8,6 +8,8 @@
  */
 
 export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
+  // ADR-570 Φ1 — named line-style (ByStyle) chooser.
+  lineStyle:     'lineToolStyle.lineStyle',
   lineweight:    'lineToolStyle.lineweight',
   linetype:      'lineToolStyle.linetype',
   color:         'lineToolStyle.color',
@@ -27,6 +29,12 @@ export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
   endY:   'lineToolStyle.endY',
   deltaX: 'lineToolStyle.deltaX', // end.x - start.x
   deltaY: 'lineToolStyle.deltaY', // end.y - start.y
+  // ── ADR-510 Φ4e — FILLET radius (drives FilletToolStore, not an entity edit) ──
+  filletRadius: 'lineToolStyle.filletRadius',
+  // ── ADR-510 Φ4f — CHAMFER distances + angle (drive ChamferToolStore) ─────────
+  chamferDist1: 'lineToolStyle.chamferDist1',
+  chamferDist2: 'lineToolStyle.chamferDist2',
+  chamferAngle: 'lineToolStyle.chamferAngle',
 } as const);
 
 export type LineToolRibbonKey =

@@ -227,6 +227,42 @@ export function getPolylineSegments(points: Point2D[], isClosed: boolean): Array
   return segments;
 }
 
+/** Squared distance from `p` to the SEGMENT `a→b` (clamped to the endpoints). */
+function pointToSegmentDistanceSq(p: Point2D, a: Point2D, b: Point2D): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+  const cx = a.x + t * dx, cy = a.y + t * dy;
+  return (p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy);
+}
+
+/**
+ * The polyline segment nearest to `p` (incl. the closing segment when `isClosed`). Returns the
+ * segment endpoints + its index (aligned with {@link getPolylineSegments}), or null if <2 points.
+ *
+ * SSoT for "which segment did the user click": replaces the per-hook `findPolylineSegment` copies
+ * in `useCircleTTT` / `useLinePerpendicular` (pending migration) and backs the FILLET same-polyline
+ * two-segment pick (ADR-510 Φ4e.2).
+ */
+export function nearestPolylineSegment(
+  points: Point2D[],
+  isClosed: boolean,
+  p: Point2D,
+): { start: Point2D; end: Point2D; segmentIndex: number } | null {
+  if (!points || points.length < 2) return null;
+  const segments = getPolylineSegments(points, isClosed);
+  let best: { start: Point2D; end: Point2D; segmentIndex: number } | null = null;
+  let bestD = Infinity;
+  for (let i = 0; i < segments.length; i++) {
+    const d = pointToSegmentDistanceSq(p, segments[i].start, segments[i].end);
+    if (d < bestD) {
+      bestD = d;
+      best = { start: segments[i].start, end: segments[i].end, segmentIndex: i };
+    }
+  }
+  return best;
+}
+
 /**
  * Render a square grip at specified position
  */
