@@ -35,6 +35,8 @@ import { isWallEntity, isColumnEntity } from '../../types/entities';
 // ADR-562 Φ9.2 / ADR-357 — grip-drag AutoAlign tracking SSoT (extracted for N.7.1 size budget).
 // ADR-560 — body-drag reuses the SAME SSoT via applyBodyDragAlignmentTracking.
 import { applyGripDragAlignmentTracking, applyBodyDragAlignmentTracking } from './grip-drag-alignment-tracking';
+// ADR-560 §OSNAP-priority — clear stale AutoAlign traces όταν το OSNAP νικάει (κουμπώνει σε σημείο).
+import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import {
   findColumnGripCornerSnap,
@@ -180,10 +182,15 @@ export function useMouseMoveHandler({
 
     // Grip drag snap preview
     let moveWorldPos = worldPos;
+    // ADR-560 §OSNAP-priority — αν το OSNAP (ή wall-face/column-corner snap) κουμπώσει σε
+    // χαρακτηριστικό σημείο, ΝΙΚΑΕΙ το AutoAlign: το φάντασμα κουμπώνει εκεί, χωρίς να πεταχτεί σε
+    // νοητό άξονα ευθυγράμμισης (Giorgio 2026-07-04 «να έλκομαι μόνο από τα κοντινά σημεία»).
+    let osnapFound = false;
     if (isGripDragging && snapEnabled && findSnapPoint) {
       const gripSnapResult = findSnapPoint(worldPos.x, worldPos.y);
       if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint) {
         moveWorldPos = gripSnapResult.snappedPoint;
+        osnapFound = true;
         // Propagate to SnapIndicatorOverlay — grip drag bypasses the throttled block below
         setSnapResults([{
           point: gripSnapResult.snappedPoint,
@@ -226,6 +233,7 @@ export function useMouseMoveHandler({
           );
           if (faceSnap) {
             moveWorldPos = faceSnap.adjustedAxisPos;
+            osnapFound = true;
             setSnapResults([{
               point: faceSnap.snapResult.snappedPoint!,
               type: faceSnap.snapResult.activeMode || 'default',
@@ -272,6 +280,7 @@ export function useMouseMoveHandler({
           );
           if (cornerSnap) {
             moveWorldPos = cornerSnap.adjustedCursorPos;
+            osnapFound = true;
             setSnapResults([{
               point: cornerSnap.snapResult.snappedPoint!,
               type: cornerSnap.snapResult.activeMode || 'default',
@@ -292,11 +301,14 @@ export function useMouseMoveHandler({
     }
 
     // ADR-562 Φ9.2 / ADR-357 — AutoAlign traces while dragging a DIMENSION or plain-LINE grip.
-    // Runs AFTER the OSNAP + face/corner snaps (SAME override point) and independently of the
-    // OSNAP toggle. Overrides `moveWorldPos` (→ grip delta → ghost geometry) AND publishes the
-    // tracking result for the ghost paint — ONE resolve, WYSIWYG (preview ≡ commit). SSoT brain
-    // extracted to grip-drag-alignment-tracking (N.7.1 size budget).
-    if (isGripDragging) {
+    // Runs AFTER the OSNAP + face/corner snaps and publishes the tracking result for the ghost
+    // paint — ONE resolve, WYSIWYG. SSoT brain extracted to grip-drag-alignment-tracking.
+    // ADR-560 §OSNAP-priority (Giorgio 2026-07-04) — ΠΑΡΑΚΑΜΠΤΕΤΑΙ όταν το OSNAP κούμπωσε: η έλξη σε
+    // χαρακτηριστικό σημείο (άκρο/μέσο/κέντρο) νικάει, το φάντασμα ΔΕΝ πετάγεται σε άξονα ευθυγράμμισης.
+    // Καθαρίζουμε το store ώστε κανένας consumer (dim-grip paint) να μη δείξει stale ίχνη.
+    if (osnapFound) {
+      clearGripAlignmentTracking();
+    } else if (isGripDragging) {
       moveWorldPos = applyGripDragAlignmentTracking(moveWorldPos, scene, transform.scale);
     } else if (EntityBodyDragStore.getActive()) {
       // ADR-560 — body-drag (grab body → move/copy): SAME AutoAlign SSoT, base-point tracking.

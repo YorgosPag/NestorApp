@@ -96,6 +96,9 @@ import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDe
 // Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
+// ADR-560 §OSNAP-priority — όταν το OSNAP κουμπώνει σε χαρακτηριστικό σημείο, κρύβουμε τις κυανές
+// γραμμές ευθυγράμμισης (φαίνεται το OSNAP marker □/△/○ αντ' αυτών· Giorgio 2026-07-04).
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag (ΙΔΙΟ SSoT
 // με useMovePreview + useEntityBodyDragPreview). Το grip-drag ήταν ο μόνος move path που ΔΕΝ τα έδειχνε.
 import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims';
@@ -298,7 +301,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const line = entity as unknown as { start: Point2D; end: Point2D };
       alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
     }
-    if (effectiveCursor && alignAnchors) {
+    // OSNAP-priority: όσο κουμπώνει χαρακτηριστικό σημείο, το OSNAP marker αναλαμβάνει — καμία κυανή.
+    if (effectiveCursor && alignAnchors && !getImmediateSnap()?.found) {
       const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       const actionTracking = resolveActionAlignmentTracking(
         effectiveCursor, alignAnchors, t.scale,
