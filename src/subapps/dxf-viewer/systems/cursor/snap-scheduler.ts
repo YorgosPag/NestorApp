@@ -27,6 +27,8 @@
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
+// ADR-560 — grip-drag ownership guard: skip the decoupled scheduler while a grip drag owns the snap.
+import { getActiveDragGrip } from './GripDragStore';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
 import { resolveColumnDrawSnap } from '../../bim/columns/column-placement-snap-context';
 import { clearColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
@@ -152,6 +154,15 @@ function runSnapDetection(input: SnapDetectionInput): void {
 function onSnapFrame(): void {
   const input = latest;
   if (!input) { dirty = false; return; }
+  // ADR-560 — while a GRIP DRAG is active the synchronous grip handler owns the snap SSoT
+  // (column-corner projection etc.). This decoupled scheduler MUST NOT run its generic
+  // raw-cursor `findSnapPoint` here: it would overwrite the grip's VISIBLE corner snap with a
+  // generic (often SILENT grid) cursor snap → the column-corner marker vanishes / the attraction
+  // goes to grid. Column-specific symptom (lines have no corner-projection, so generic == expected).
+  // Guard on the imperative `getActiveDragGrip()` (stable for the whole drag) — NOT the React
+  // `isGripDragging` prop, which flickers and let stale-armed frames slip through. Bail WITHOUT
+  // clearing the store, so the grip handler's result stands.
+  if (getActiveDragGrip()) { dirty = false; return; }
   const now = performance.now();
   if (now - lastRunMs < PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE) return; // retry next frame
   lastRunMs = now;

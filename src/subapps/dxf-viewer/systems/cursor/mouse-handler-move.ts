@@ -17,6 +17,7 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition, setRealtimeWorldCursor } from './ImmediatePositionStore';
 import { setColumnPolarShiftFractions } from './ColumnPolarStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
+import { isVisibleSnapMode } from '../../snapping/extended-types';
 import { getLockedGripWorldPos } from './GripSnapStore';
 import { getGripStepAnchor } from './GripStepAnchorStore';
 import { applyPointStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
@@ -187,7 +188,12 @@ export function useMouseMoveHandler({
     let osnapFound = false;
     if (isGripDragging && snapEnabled && findSnapPoint) {
       const gripSnapResult = findSnapPoint(worldPos.x, worldPos.y);
-      if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint) {
+      // ADR-560 — grip-move OSNAP priority (mirror του draw path `resolveColumnDrawSnap`): δέχεσαι
+      // ΜΟΝΟ ΟΡΑΤΕΣ έλξεις (`isVisibleSnapMode` — ΤΟ ΙΔΙΟ SSoT με το corner-projection). Το σιωπηλό
+      // grid/guide είναι ΠΑΝΤΟΥ κάτω από τη λαβή· αν το δεχόμασταν, «κλείδωνε» το osnapFound (καθάριζε
+      // το AutoAlign) ΚΑΙ έθετε moveWorldPos σε αόρατο grid point ΧΩΡΙΣ marker → έπνιγε το column-corner
+      // projection (η γωνία). Silent → πέφτει στο else (clear) ώστε να νικήσει το projection ή το AutoAlign.
+      if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint && isVisibleSnapMode(gripSnapResult.activeMode)) {
         moveWorldPos = gripSnapResult.snappedPoint;
         osnapFound = true;
         // Propagate to SnapIndicatorOverlay — grip drag bypasses the throttled block below
