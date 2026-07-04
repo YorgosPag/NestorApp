@@ -27,6 +27,7 @@ import type {
   MepSegmentGripKind,
   FurnitureGripKind,
   LineGripKind,
+  ArcGripKind,
   TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
@@ -142,5 +143,12 @@ export interface EntityPreviewTransform {
    * (the picked centre) exactly like the wall. `anchorPos` = the reference anchor.
    */
   readonly lineGripKind?: LineGripKind;
+  /**
+   * ADR-561 — plain DXF arc rotation discriminator. Routes preview through
+   * `applyArcRotationDrag` (the SAME `sweptAngleDegAboutPivot` + `rotateEntity`-arc
+   * primitives the commit runs) so the live ghost rotates the arc about `rotatePivot`
+   * (its centre) exactly like the line. `anchorPos` = the reference anchor (sweep start).
+   */
+  readonly arcGripKind?: ArcGripKind;
   readonly anchorPos?: Point2D;
 }

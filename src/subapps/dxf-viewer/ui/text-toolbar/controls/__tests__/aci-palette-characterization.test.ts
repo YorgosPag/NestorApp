@@ -2,13 +2,10 @@
  * CHARACTERIZATION tests — `aci-palette` (Color-Conversion SSoT consolidation).
  *
  * Κλειδώνουν την ΤΩΡΙΝΗ (pre-refactor) συμπεριφορά:
- *  1. `hexToAci` — ο ΠΡΟΣΕΓΓΙΣΤΙΚΟΣ ramp (10-hue × 24-chroma). Αυτό είναι το LIVE export
- *     mapping (`dxf-ascii-writer` → entities). Στο **Phase C** αντικαθίσταται από το
- *     `settings/standards/aci.findClosestAci` (πραγματικό ACI_PALETTE). Το inline snapshot
- *     εδώ θα ΣΠΑΣΕΙ τότε → τα deltas (μόνο μη-βασικά χρώματα) παρουσιάζονται στον Giorgio
- *     ΠΡΙΝ κλειδωθούν (guarded, behavior-affecting).
- *  2. `parseHex` / `rgbToHex` — tuple μορφή· στο **Phase B** γίνονται delegates στο color-math
- *     (διορθώνει missing-Math.round + προσθέτει 3-digit). Οι βασικές τιμές πρέπει να μείνουν.
+ *  1. `hexToAci` — **Phase C DONE**: πλέον delegateάρει στο `settings/standards/aci.findClosestAci`
+ *     (πραγματικό ACI_PALETTE, single SSoT). Ο παλιός προσεγγιστικός ramp ΑΦΑΙΡΕΘΗΚΕ. Οι τιμές
+ *     του snapshot είναι οι ΣΩΣΤΕΣ ACI (near-exact matches), όχι οι παλιές λάθος ramp τιμές.
+ *  2. `parseHex` / `rgbToHex` — tuple μορφή· delegates στο color-math (Phase B). Βασικές τιμές μένουν.
  *
  * Βασικά χρώματα (ACI 1-9) ΔΕΝ αλλάζουν από κανένα mapper → hard asserts.
  */
@@ -34,32 +31,32 @@ describe('aci-palette — hexToAci (basic colors, STABLE across mappers)', () =>
   });
 });
 
-describe('aci-palette — hexToAci (NON-basic colors, LOCKED ramp behavior)', () => {
-  // Spread of intermediate hexes — these are the ones the Phase C swap will shift.
+describe('aci-palette — hexToAci (NON-basic colors, real ACI_PALETTE SSoT)', () => {
+  // Intermediate hexes → correct ACI indices from findClosestAci (post-Phase-C).
   const spread = [
     '#804020', '#3366cc', '#c0c0c0', '#808080', '#123456',
     '#2b2f36', '#b07d1f', '#7f3fff', '#00994c', '#cc6600',
     '#264c26', '#66cc99', '#993333', '#4c2f26', '#a0a0a0',
   ] as const;
-  it('ramp snapshot (pre-Phase-C)', () => {
+  it('SSoT nearest-match snapshot', () => {
     const map = Object.fromEntries(spread.map((h) => [h, hexToAci(h)]));
     expect(map).toMatchInlineSnapshot(`
 {
-  "#00994c": 170,
-  "#123456": 146,
-  "#264c26": 91,
-  "#2b2f36": 83,
-  "#3366cc": 227,
-  "#4c2f26": 84,
-  "#66cc99": 245,
-  "#7f3fff": 253,
-  "#804020": 93,
+  "#00994c": 114,
+  "#123456": 148,
+  "#264c26": 99,
+  "#2b2f36": 250,
+  "#3366cc": 152,
+  "#4c2f26": 29,
+  "#66cc99": 113,
+  "#7f3fff": 190,
+  "#804020": 17,
   "#808080": 8,
-  "#993333": 86,
+  "#993333": 15,
   "#a0a0a0": 253,
-  "#b07d1f": 103,
+  "#b07d1f": 45,
   "#c0c0c0": 9,
-  "#cc6600": 39,
+  "#cc6600": 32,
 }
 `);
   });

@@ -96,6 +96,13 @@ import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDe
 // Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
+// ADR-560 — whole-entity Alt-move (κολόνα/τοίχος/any): base-point traces parity με το body-drag.
+import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
+// ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag (ΙΔΙΟ SSoT
+// με useMovePreview + useEntityBodyDragPreview). Το grip-drag ήταν ο μόνος move path που ΔΕΝ τα έδειχνε.
+import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims';
+import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -276,27 +283,30 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
-    // ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror
-    // useEntityBodyDragPreview): το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον
-    // `effectiveCursor` (= το ΗΔΗ ευθυγραμμισμένο realtime σημείο που το point-override στο
-    // mouse-handler-move έθρεψε ΚΑΙ στο grip delta) με anchors από το line SSoT → self-contained,
-    // ΜΗΔΕΝ εξάρτηση από το cross-tick `GripAlignmentTrackingStore` (τέλος του timing-skew όπου
-    // τα ίχνη «χάνονταν» → έπεφτε στην πινακίδα). Idempotent double-resolve (ίδιο pure input →
-    // ίδιο output) → WYSIWYG με το commit. Anchors: endpoint reshape → fixed endpoint· centre/
-    // MOVE-cross → drag base· rotation → null (τα ίχνη του τρέχουν στο resolveRotationTracking).
-    // Μόνο line drags έχουν anchors (wall/column → null → no-op). ΚΑΜΙΑ πινακίδα (Giorgio).
-    if (effectiveCursor && isLineEntity(entity as unknown as Entity)) {
+    // ADR-357/363/560 — action-alignment traces RESOLVED-IN-DRAW (mirror useEntityBodyDragPreview):
+    // το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον `effectiveCursor` (= το ΗΔΗ
+    // ευθυγραμμισμένο realtime σημείο που το point-override στο mouse-handler-move έθρεψε ΚΑΙ στο
+    // grip delta) → self-contained, ΜΗΔΕΝ timing-skew· idempotent double-resolve → WYSIWYG. Anchors:
+    //  · whole-entity Alt-move ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας (κολόνα/τοίχος/DXF|BIM) → base point [anchorPos]
+    //    (parity με body-drag· εδώ εμφανίζονται τα κυανά ίχνη + η έλξη προς κάθε γείτονα).
+    //  · plain line grip (χωρίς Alt) → line SSoT anchors (endpoint reshape → fixed endpoint·
+    //    centre/MOVE-cross → drag base· rotation → null, τα ίχνη του τρέχουν στο resolveRotationTracking).
+    // ΚΑΜΙΑ πινακίδα (Giorgio). Non-line non-Alt grip → null → no-op.
+    let alignAnchors: Point2D[] | null = null;
+    if (GripAltMoveStore.getActive() && dp.anchorPos) {
+      alignAnchors = [dp.anchorPos];
+    } else if (isLineEntity(entity as unknown as Entity)) {
       const line = entity as unknown as { start: Point2D; end: Point2D };
-      const lineAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
+      alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
+    }
+    if (effectiveCursor && alignAnchors) {
       const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const lineTracking = lineAnchors
-        ? resolveActionAlignmentTracking(
-            effectiveCursor, lineAnchors, t.scale,
-            (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
-          )
-        : null;
-      if (lineTracking) {
-        paintActionAlignmentTracking(ctx, lineTracking, t, vp, resolveSceneUnits(trkScene));
+      const actionTracking = resolveActionAlignmentTracking(
+        effectiveCursor, alignAnchors, t.scale,
+        (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
+      );
+      if (actionTracking) {
+        paintActionAlignmentTracking(ctx, actionTracking, t, vp, resolveSceneUnits(trkScene));
       }
     }
 
@@ -406,6 +416,27 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     {
       const hudScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       drawMemberGripHud(ctx, dp, transformed, transformed !== entity, resolveSceneUnits(hudScene), t, vp);
+    }
+
+    // ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
+    // `resolveMoveClearanceDims` + `paintGhostFaceDimensions` SSoT που τρέχουν το 2-click Move
+    // (`useMovePreview`) + το body-drag (`useEntityBodyDragPreview`). Το grip-drag ήταν ο μόνος move
+    // path που ΔΕΝ τα έδειχνε → parity. Χρήση του ΗΔΗ υπολογισμένου `transformed` ghost με delta {0,0}
+    // → καλύπτει ΚΑΙ whole-move (κεντρικό grip) ΚΑΙ endpoint reshape με ΕΝΑ path (footprint του
+    // μετασχηματισμένου). Self-excluded (το κινούμενο entity δεν μετριέται ως στόχος). Εξαιρείται η
+    // περιστροφή (`rotatePivot` → το τόξο/μέλος δείχνει άλλα ίχνη) + hatch-gradient (bespoke). Paint
+    // LAST (convention: listening-dim overlay πάνω από το ghost), όπως στους δύο άλλους consumers.
+    if (transformed !== entity && !dp.rotatePivot && !isHatchDrag) {
+      const clScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const clearanceDims = resolveMoveClearanceDims(
+        transformed as unknown as Entity,
+        { x: 0, y: 0 },
+        new Set([dp.entityId]),
+        clScene?.entities ?? [],
+        resolveSceneUnits(clScene),
+        worldPerPixel(t.scale),
+      );
+      if (clearanceDims) paintGhostFaceDimensions(ctx, clearanceDims, t, vp);
     }
 
     // ADR-507 Φ5 A3b/A4 — live handle marker LAST (πάνω από το gradient ghost). Ζωντανή θέση

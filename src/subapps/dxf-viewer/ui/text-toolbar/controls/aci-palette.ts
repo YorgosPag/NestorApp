@@ -1,68 +1,26 @@
 /**
- * ADR-344 Phase 5.C + Q13 — AutoCAD Color Index (ACI) palette + hex<->ACI mapping.
+ * ADR-344 Phase 5.C + Q13 — AutoCAD Color Index (ACI) picker adapters.
  *
- * The full 256-entry ACI table is widely documented; this file embeds the
- * canonical RGB values used by AutoCAD for indices 1–9 (named colors) and
- * derives the rest of the cube (10–255) per the standard formula.
- *
- * hexToAci uses Euclidean distance in RGB space — fast and AutoCAD-accurate
- * for the typical CAD color set.
+ * 🏢 Color-Conversion SSoT (ADR-573): the ACI table has ONE home —
+ * `settings/standards/aci.ts` (`ACI_PALETTE` 256 + `findClosestAci`). The old
+ * self-contained 10-hue ramp approximation that lived here was REMOVED — it
+ * diverged badly from the real palette (e.g. `#00994c` → ACI 170 = blue) and
+ * produced entity colours in the DXF export that disagreed with the dimstyle
+ * path (which already used `findClosestAci`). Both directions now derive from
+ * the same SSoT so hex→index→hex round-trips are consistent.
  */
 
 import type { DxfColor } from '../../../text-engine/types';
-// 🏢 Color-Conversion SSoT (ADR-573): hex↔rgb via canonical `config/color-math`
-// (fixes the missing-Math.round in the old inline rgbToHex; adds 3-digit parsing).
+// 🏢 Color-Conversion SSoT (ADR-573): rgb↔hex via `config/color-math`;
+// ACI table + nearest-match via `settings/standards/aci` (the single ACI SSoT).
 import { parseHex as cmParseHex, rgbToHex as cmRgbToHex } from '../../../config/color-math';
+import { findClosestAci, getAciColor } from '../../../settings/standards/aci';
 
-// 🏢 ADR-571: canonical ACI→hex SSoT = `settings/standards/aci.ts`. This RGB-tuple
-// table + ramp math is an intentional, self-contained encoding for the text-toolbar
-// nearest-color picker. Index 4 (`[0,255,255]` cyan) mirrors the SSoT — NOT a hardcode.
-const NAMED_ACI: ReadonlyArray<readonly [number, number, number]> = [
-  [0, 0, 0],         // 0 = ByBlock (not a real color)
-  [255, 0, 0],       // 1 red
-  [255, 255, 0],     // 2 yellow
-  [0, 255, 0],       // 3 green
-  [0, 255, 255],     // 4 cyan
-  [0, 0, 255],       // 5 blue
-  [255, 0, 255],     // 6 magenta
-  [255, 255, 255],   // 7 white/black
-  [128, 128, 128],   // 8 dark gray
-  [192, 192, 192],   // 9 light gray
-] as const;
-
-/** Reduced quantization table for indices 10–249 (AutoCAD ramp). */
-const RAMP_LEVELS: ReadonlyArray<number> = [0, 38, 76, 115, 153, 191, 229, 255] as const;
-
-let cachedTable: readonly (readonly [number, number, number])[] | null = null;
-
-function buildAciTable(): readonly (readonly [number, number, number])[] {
-  if (cachedTable) return cachedTable;
-  const table: Array<readonly [number, number, number]> = [];
-  for (let i = 0; i < NAMED_ACI.length; i++) {
-    table.push(NAMED_ACI[i]!);
-  }
-  // Indices 10–249 ramp: 10 hues × 24 chroma steps. Approximation good
-  // enough for nearest-color search; full AutoCAD ACI is in the renderer.
-  for (let i = NAMED_ACI.length; i < 250; i++) {
-    const h = (i - 10) % RAMP_LEVELS.length;
-    const s = Math.floor((i - 10) / RAMP_LEVELS.length) % RAMP_LEVELS.length;
-    const l = Math.floor((i - 10) / (RAMP_LEVELS.length * RAMP_LEVELS.length)) % RAMP_LEVELS.length;
-    table.push([RAMP_LEVELS[h]!, RAMP_LEVELS[s]!, RAMP_LEVELS[l]!]);
-  }
-  // 250–255 reserved grays
-  for (let i = 0; i < 6; i++) {
-    const g = 64 + i * 32;
-    table.push([g, g, g]);
-  }
-  cachedTable = table;
-  return table;
-}
-
-/** ACI index → [r, g, b]. Undefined for out-of-range index. */
+/** ACI index (1–255) → [r, g, b] from the canonical `ACI_PALETTE`. Undefined out of range. */
 export function aciToRgb(index: number): readonly [number, number, number] | undefined {
-  const table = buildAciTable();
-  if (index < 0 || index >= table.length) return undefined;
-  return table[index];
+  if (index < 1 || index > 255) return undefined;
+  const c = cmParseHex(getAciColor(index));
+  return c ? [c.r, c.g, c.b] : undefined;
 }
 
 /** Parse `#RGB` / `#RRGGBB` → [r, g, b] tuple; returns null on invalid input. */
@@ -77,24 +35,11 @@ export function rgbToHex(r: number, g: number, b: number): string {
 }
 
 /**
- * Snap a hex color to the closest ACI index. Returns the index (1–255).
- * Uses Euclidean distance in RGB space — fast and accurate enough.
+ * Snap a hex colour to the closest ACI index (1–255) using the canonical
+ * `ACI_PALETTE` nearest-match SSoT (`findClosestAci`). Invalid hex → 7 (white).
  */
 export function hexToAci(hex: string): number {
-  const rgb = parseHex(hex);
-  if (!rgb) return 7; // white/black fallback
-  const table = buildAciTable();
-  let best = 1;
-  let bestDist = Number.POSITIVE_INFINITY;
-  for (let i = 1; i < table.length; i++) {
-    const [r, g, b] = table[i]!;
-    const d = (r - rgb[0]) ** 2 + (g - rgb[1]) ** 2 + (b - rgb[2]) ** 2;
-    if (d < bestDist) {
-      bestDist = d;
-      best = i;
-    }
-  }
-  return best;
+  return parseHex(hex) ? findClosestAci(hex) : 7;
 }
 
 /**

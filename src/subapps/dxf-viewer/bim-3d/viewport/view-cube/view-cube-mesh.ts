@@ -5,6 +5,8 @@
 
 import * as THREE from 'three';
 import { drawZoneHighlight, type FaceZone } from './view-cube-highlight';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
+import { trueColorToHex } from '../../../utils/dxf-true-color';
 
 export const FACE_DIRS: readonly THREE.Vector3[] = [
   new THREE.Vector3( 1,  0,  0),
@@ -32,7 +34,7 @@ export interface HitUserData {
  * 2D stroke + THREE LineBasicMaterial) stay in sync from one value.
  */
 const VIEWCUBE_OUTLINE_COLOR_HEX = 0x1a1a1a;
-const VIEWCUBE_OUTLINE_COLOR_CSS = `#${VIEWCUBE_OUTLINE_COLOR_HEX.toString(16).padStart(6, '0')}`;
+const VIEWCUBE_OUTLINE_COLOR_CSS = trueColorToHex(VIEWCUBE_OUTLINE_COLOR_HEX);
 /** Width (px, texture space) of the per-face 3×3 button-zone grid lines. */
 const OUTLINE_LINE_WIDTH = 3;
 

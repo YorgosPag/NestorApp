@@ -245,6 +245,9 @@ export function buildRotateReferencePreview(
     // ADR-363 Slice F — plain DXF line rotation live ghost (free spin / 6-click
     // reference / typed angle), full wall parity via the shared hot-grip flow.
     ...(activeGrip.lineGripKind ? { lineGripKind: activeGrip.lineGripKind } : {}),
+    // ADR-561 — plain DXF arc rotation live ghost (free spin / 6-click reference /
+    // typed angle), same shared hot-grip flow as the line.
+    ...(activeGrip.arcGripKind ? { arcGripKind: activeGrip.arcGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

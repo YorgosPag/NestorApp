@@ -32,6 +32,12 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, ArcGripKind } from '../../hooks/grip-types';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
+// ADR-561 — live arc ROTATION ghost SSoT: the SAME swept-angle + rotate primitives the
+// commit runs (`commitArcGripDrag` → `resolveRotation` → `RotateEntityCommand`), so
+// preview ≡ commit by construction (μηδέν νέα rotate math — mirror `applyLineRotationDrag`).
+import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
+import { rotatePoint } from '../../utils/rotation-math';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 
 /** The arc MOVE + ROTATION grip kinds (mirror `line-move` / `line-rotation`). */
 export const ARC_MOVE_KIND: ArcGripKind = 'arc-move';
@@ -87,4 +93,44 @@ export function getArcGrips(
       position: arcRotationHandlePos(center, radius), movesEntity: false, arcGripKind: ARC_ROTATION_KIND,
     },
   ];
+}
+
+/** The minimal arc geometry the rotation ghost reads + returns (mirror `applyLineRotationDrag`). */
+export interface ArcRotationDragInput {
+  readonly center: Point2D;
+  readonly startAngleDeg: number;
+  readonly endAngleDeg: number;
+  /** Reference anchor at mouseDown — the swept angle is anchor-relative (`angle(cur) − angle(anchor)`). */
+  readonly anchor: Point2D;
+  /** Live world cursor position (= anchor + delta). */
+  readonly currentPos: Point2D;
+  /** Rotation centre. Absent → the arc's own centre (AutoCAD ROTATE default = arc centre). */
+  readonly pivot?: Point2D;
+}
+
+/** The rotated arc geometry patch (centre spun about the pivot + start/end angles offset by the sweep). */
+export interface ArcRotationDragResult {
+  readonly center: Point2D;
+  readonly startAngle: number;
+  readonly endAngle: number;
+}
+
+/**
+ * ADR-561 — rotate the arc about the pivot (or its own centre) by the anchor-relative swept angle.
+ * Thin adapter over the EXACT rotate primitives the commit runs (`commitArcGripDrag` →
+ * `resolveRotation` → `RotateEntityCommand`): `sweptAngleDegAboutPivot` for the angle, then
+ * `rotatePoint` the centre + `normalizeAngleDeg` the start/end angles — identical to the arc branch
+ * of `rotateEntity` (rotation-math). So the live ghost ≡ the committed result by construction (NO
+ * re-implemented rotate math here — one engine, mirror `applyLineRotationDrag`). Returns `null` for a
+ * degenerate / zero sweep (cursor on the pivot) so callers no-op.
+ */
+export function applyArcRotationDrag(input: ArcRotationDragInput): ArcRotationDragResult | null {
+  const pivot = input.pivot ?? input.center;
+  const sweptDeg = sweptAngleDegAboutPivot(pivot, input.anchor, input.currentPos);
+  if (sweptDeg === null || sweptDeg === 0) return null;
+  return {
+    center: rotatePoint(input.center, pivot, sweptDeg),
+    startAngle: normalizeAngleDeg(input.startAngleDeg + sweptDeg),
+    endAngle: normalizeAngleDeg(input.endAngleDeg + sweptDeg),
+  };
 }

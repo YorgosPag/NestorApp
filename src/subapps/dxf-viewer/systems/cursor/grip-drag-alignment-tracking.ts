@@ -19,6 +19,10 @@ import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 import { isLineEntity, type Entity } from '../../types/entities';
 // ADR-560 — body-drag (grab body → move/copy) as a THIRD consumer of the same AutoAlign SSoT.
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
+// ADR-560 — grip Alt-move (whole-entity move from a grabbed grip base) = FOURTH consumer, generic
+// over entity type (column/wall/any BIM|DXF) via the SAME base-point tracking as body-drag.
+import { GripAltMoveStore } from '../grip/GripAltMoveStore';
+import type { Point2D } from '../../rendering/types/Types';
 
 type WorldPoint = ReturnType<typeof CoordinateTransforms.screenToWorld>;
 
@@ -49,8 +53,16 @@ export function applyGripDragAlignmentTracking(
       clearGripAlignmentTracking();
     }
   } else if (dimGrip) {
-    // ADR-357/363 — plain DXF LINE grip drag: anchors per grip (fixed endpoint / move base)
-    // come from the line SSoT; the rotation handle returns null (its traces run in the ghost).
+    // ADR-560 parity — whole-entity Alt-move (κολόνα / τοίχος / κύκλος / ΟΠΟΙΑΔΗΠΟΤΕ BIM|DXF):
+    // base-point tracking, ΠΑΝΟΜΟΙΟΤΥΠΟ με το body-drag. Η λαβή είναι μόνο το base point, οπότε
+    // όλη η οντότητα γλιστρά σε ortho/aligned ίχνη από εκεί ⊕ ambient γείτονες (τα κυανά ίχνη +
+    // η έλξη προς κάθε οντότητα). Τρέχει ΠΡΙΝ τα line-specific anchors ώστε ένα Alt-move γραμμής
+    // να παρακολουθεί κι αυτό από το base (όχι από άκρο). ΕΝΑ base-point brain (κοινό με body-drag).
+    if (GripAltMoveStore.getActive() && dimGrip.dragAnchor) {
+      return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale);
+    }
+    // ADR-357/363 — plain DXF LINE grip drag (χωρίς Alt): anchors per grip (fixed endpoint / move
+    // base) from the line SSoT; the rotation handle returns null (its traces run in the ghost).
     const lineEnt = scene?.entities?.find(en => en.id === dimGrip.entityId) as unknown as Entity | undefined;
     const anchors = lineEnt && isLineEntity(lineEnt) && dimGrip.gripIndex !== undefined
       ? getLineGripAlignmentAnchors(dimGrip.gripIndex, dimGrip.lineGripKind, lineEnt, dimGrip.dragAnchor)
@@ -70,15 +82,33 @@ export function applyGripDragAlignmentTracking(
 }
 
 /**
- * ADR-560 — body-drag AutoAlign tracking. While an entity is dragged by its BODY
- * (not a grip), track the SINGLE grabbed base point against the SAME Object-Snap-
- * Tracking brain (acquired ⊕ ambient ⊕ base anchor), exactly like the AutoCAD MOVE
- * base-point tracking. Generic over entity type (the base point is all that matters),
- * so a line / wall / column / circle body-drag all get identical cyan traces.
+ * ADR-560 — SSoT base-point AutoAlign tracking: a whole-entity MOVE from ONE base point
+ * (AutoCAD MOVE base tracking). Resolves the SAME Object-Snap-Tracking brain against
+ * `[anchor]` ⊕ acquired ⊕ ambient, publishes the result for the ghost paint, and returns the
+ * possibly-overridden world point (→ ghost delta). Generic over entity type (the base point is
+ * all that matters), so line / wall / column / circle get identical cyan traces + neighbour pull.
  *
- * Thin adapter over `resolveActionAlignmentTracking` + `GripAlignmentTrackingStore` —
- * ΙΔΙΟ resolve + ΙΔΙΟ store + ΙΔΙΟ paint με τη λαβή (ONE brain, zero copy). Overrides the
- * effective world point (→ ghost delta) AND publishes the tracking for the ghost paint →
+ * The ONE brain shared by BOTH whole-entity move gestures — body-drag AND grip Alt-move — so the
+ * two cannot diverge (ΕΝΑ resolve + ΕΝΑ store + ΕΝΑ paint, zero copy).
+ */
+function resolveBasePointTracking(
+  moved: WorldPoint,
+  anchor: Point2D,
+  scene: DxfScene | null,
+  transformScale: number,
+): WorldPoint {
+  const tracking = resolveActionAlignmentTracking(
+    moved, [anchor], transformScale,
+    (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+  );
+  setGripAlignmentTracking(tracking);
+  return tracking ? tracking.point : moved;
+}
+
+/**
+ * ADR-560 — body-drag AutoAlign tracking. While an entity is dragged by its BODY (not a grip),
+ * track the SINGLE grabbed base point via the shared `resolveBasePointTracking` brain. Overrides
+ * the effective world point (→ ghost delta) AND publishes the tracking for the ghost paint →
  * WYSIWYG (preview ≡ commit). Must be called only while a body-drag is active.
  */
 export function applyBodyDragAlignmentTracking(
@@ -91,10 +121,5 @@ export function applyBodyDragAlignmentTracking(
     clearGripAlignmentTracking();
     return moveWorldPos;
   }
-  const tracking = resolveActionAlignmentTracking(
-    moveWorldPos, [anchor], transformScale,
-    (scene?.entities ?? null) as unknown as readonly Entity[] | null,
-  );
-  setGripAlignmentTracking(tracking);
-  return tracking ? tracking.point : moveWorldPos;
+  return resolveBasePointTracking(moveWorldPos, anchor, scene, transformScale);
 }

@@ -1,13 +1,12 @@
 /**
  * CHARACTERIZATION test — export ACI (code 62) για non-basic entity colors.
  *
- * Κλειδώνει το ΤΩΡΙΝΟ end-to-end export mapping hex → ACI μέσω `writeDxfAscii`
- * (entities path → `resolveAci` → `hexToAci` ramp). Στο **Phase C** ο ramp
- * αντικαθίσταται από `findClosestAci` → οι μη-βασικές τιμές θα μετακινηθούν· το
- * inline snapshot θα σπάσει και τα deltas θα παρουσιαστούν στον Giorgio πριν
- * κλειδωθούν. Επίσης τεκμηριώνει το ΤΩΡΙΝΟ entity-vs-dimstyle inconsistency:
- * το ίδιο hex δίνει ενδεχομένως διαφορετικό ACI από το dimstyle path
- * (`dxf-dimstyle-writer` → `findClosestAci`).
+ * **Phase C DONE:** το end-to-end export mapping hex → ACI μέσω `writeDxfAscii`
+ * (entities path → `resolveAci` → `hexToAci`) πλέον delegateάρει στο
+ * `findClosestAci` (πραγματικό ACI_PALETTE, single SSoT). Οι snapshot τιμές είναι
+ * οι ΣΩΣΤΕΣ ACI. Το entity-vs-dimstyle inconsistency ΛΥΘΗΚΕ: entity path και
+ * dimstyle path (`dxf-dimstyle-writer` → `findClosestAci`) συμφωνούν πλέον →
+ * μηδέν divergences.
  */
 
 import { writeDxfAscii } from '../dxf-ascii-writer';
@@ -38,19 +37,19 @@ function aciCodes(dxf: string): number[] {
 
 const NON_BASIC = ['#804020', '#3366cc', '#123456', '#b07d1f', '#00994c', '#cc6600'] as const;
 
-describe('export ACI — entities path (LOCKED, pre-Phase-C ramp)', () => {
+describe('export ACI — entities path (real ACI_PALETTE SSoT, post-Phase-C)', () => {
   it('code-62 per non-basic color (snapshot)', () => {
     const entities = NON_BASIC.map((hex, i) => coloredLine(`e${i}`, hex));
     const codes = aciCodes(writeDxfAscii(entities, { layersById: LAYERS }));
     const map = Object.fromEntries(NON_BASIC.map((hex, i) => [hex, codes[i]]));
     expect(map).toMatchInlineSnapshot(`
 {
-  "#00994c": 170,
-  "#123456": 146,
-  "#3366cc": 227,
-  "#804020": 93,
-  "#b07d1f": 103,
-  "#cc6600": 39,
+  "#00994c": 114,
+  "#123456": 148,
+  "#3366cc": 152,
+  "#804020": 17,
+  "#b07d1f": 45,
+  "#cc6600": 32,
 }
 `);
   });
@@ -64,14 +63,13 @@ describe('export ACI — entities path (LOCKED, pre-Phase-C ramp)', () => {
   });
 });
 
-describe('export ACI — entity-vs-dimstyle inconsistency (the bug, documented)', () => {
-  // dimstyle path uses findClosestAci (real ACI_PALETTE); entity path uses the ramp.
-  // Where they disagree today, Phase C makes them agree. Snapshot the divergence set.
-  it('divergence between entity-ramp ACI and dimstyle findClosestAci', () => {
+describe('export ACI — entity/dimstyle consistency (bug FIXED in Phase C)', () => {
+  // Both the entity path (writeDxfAscii → hexToAci → findClosestAci) and the dimstyle
+  // path (dxf-dimstyle-writer → findClosestAci) now derive from the same ACI SSoT.
+  it('entity ACI == dimstyle findClosestAci for every colour (zero divergence)', () => {
     const entities = NON_BASIC.map((hex, i) => coloredLine(`e${i}`, hex));
     const entityCodes = aciCodes(writeDxfAscii(entities, { layersById: LAYERS }));
     const divergences = NON_BASIC.filter((hex, i) => entityCodes[i] !== findClosestAci(hex));
-    // Pre-Phase-C: expect at least one divergence (proves the bug exists).
-    expect(divergences.length).toMatchInlineSnapshot(`6`);
+    expect(divergences.length).toBe(0);
   });
 });

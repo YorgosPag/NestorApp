@@ -555,6 +555,7 @@
 | **ADR-570** | Line Style System (named «Στυλ Γραμμής» picker + πλήρες 5-panel contextual tab: Στυλ&Γενικά/Εμφάνιση/Γεωμετρία/Ενέργειες/Προχωρημένα· ByStyle registry ξεχωριστό από BIM Object Styles· Match Properties paintbrush) | 📝 PROPOSED | 2026-07-04 | DXF Viewer · Ribbon · Line Styles SSoT | [📄](./adrs/ADR-570-line-style-system.md) |
 | **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών/teal σε MEP renderers/ghosts, tool previews, guides· νέο CYAN/MEP/TOOL block στο color-config.ts· καμία οπτική αλλαγή) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-04 | DXF Viewer · Color SSoT · MEP | [📄](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
 | **ADR-572** | Alignment Traces (ίχνη ευθυγράμμισης) SSoT Audit & Centralization (locale γωνίας μέσω `formatAngleLocale` σε 8 σημεία action+creation· leader style SSoT στο overlay-line-style.ts· 3D χρώμα RESOLVED-no-change per-context tuning) | 🟢 IMPLEMENTED (Γ2+Γ1) · 🟦 RESOLVED (Γ3) | 2026-07-04 | DXF Viewer · Alignment Traces SSoT | [📄](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
+| **ADR-573** | Color-Conversion SSoT (big-player single color module — κεντρικοποίηση ~15+ διάσπαρτων hex↔rgb↔int↔ACI↔HSL/HSV converters σε 3 SSoT· αφαίρεση προσεγγιστικού ACI ramp· διόρθωση entity-vs-dimstyle export bug· `color-math` extend 8-digit alpha + HSL/HSV· `ui/color/utils`+`aci-palette` → thin adapters) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-04 | DXF Viewer · Color SSoT · ACI export | [📄](./adrs/ADR-573-color-conversion-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1089,6 +1090,7 @@
 | **ADR-570** | Line Style System (named «Στυλ Γραμμής» + πλήρες contextual tab, big-player-grade) | 📝 PROPOSED | [View](./adrs/ADR-570-line-style-system.md) |
 | **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών/teal) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
 | **ADR-572** | Alignment Traces SSoT Audit (locale γωνίας + leader style SSoT· 3D no-change) | 🟢 IMPLEMENTED / 🟦 RESOLVED | [View](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
+| **ADR-573** | Color-Conversion SSoT (single color module· 3 SSoT· ACI ramp removed· entity-vs-dimstyle export bug fixed) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-573-color-conversion-ssot.md) |
 | **ADR-569** | Δοκάρι ανάμεσα σε μέλη (beam between two picked structural members) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-569-beam-between-members.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
