@@ -21,7 +21,15 @@ export type ButtonType = 'simple' | 'split' | 'toggle' | 'dropdown' | 'combobox'
  */
 export type RibbonComboboxThumbnailDescriptor =
   | { readonly kind: 'linetype'; readonly name: string }
-  | { readonly kind: 'arrowhead'; readonly name: string };
+  | { readonly kind: 'arrowhead'; readonly name: string }
+  // ADR-570 Φ1b — a named «Στυλ Γραμμής» preview: dash pattern (reuses the linetype
+  // SSoT) enriched with the style's lineweight + pen color (Revit/Figma-grade swatch).
+  | {
+      readonly kind: 'line-style';
+      readonly pattern: string;
+      readonly lineweight: number;
+      readonly penColor: string;
+    };
 
 export interface RibbonComboboxOption {
   /** Stable value passed through onComboboxChange. */

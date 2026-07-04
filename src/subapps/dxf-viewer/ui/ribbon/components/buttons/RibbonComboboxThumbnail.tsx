@@ -15,6 +15,7 @@ import React from 'react';
 import type { RibbonComboboxThumbnailDescriptor } from '../../types/ribbon-types';
 import { buildLinetypeThumbnail } from '../../../../rendering/linetype-thumbnail';
 import { buildArrowheadThumbnail } from '../../../../systems/dimensions/arrowhead-thumbnail';
+import { buildLineStyleThumbnail } from '../../../../systems/line-styles/line-style-thumbnail';
 
 const LinetypeThumb: React.FC<{ name: string }> = ({ name }) => {
   const t = buildLinetypeThumbnail(name);
@@ -85,15 +86,48 @@ const ArrowheadThumb: React.FC<{ name: string }> = ({ name }) => {
   );
 };
 
+// ADR-570 Φ1b — named line-style swatch: dash μοτίβο (linetype SSoT) + πάχος +
+// χρώμα πένας. ByLayer → `currentColor` (theme-correct)· concrete → hex stroke
+// (dynamic SVG attribute, όχι inline CSS style — mirror του color swatch).
+const LineStyleThumb: React.FC<{ pattern: string; lineweight: number; penColor: string }> = ({
+  pattern,
+  lineweight,
+  penColor,
+}) => {
+  const t = buildLineStyleThumbnail(pattern, lineweight, penColor);
+  return (
+    <svg
+      viewBox={`0 0 ${t.width} ${t.height}`}
+      className="h-3.5 w-10 shrink-0"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <line
+        x1={0}
+        y1={t.height / 2}
+        x2={t.width}
+        y2={t.height / 2}
+        stroke={t.color ?? 'currentColor'}
+        strokeWidth={t.strokeWidth}
+        strokeDasharray={t.dash.length > 0 ? t.dash.join(' ') : undefined}
+      />
+    </svg>
+  );
+};
+
 /** Ζωγραφίζει το κατάλληλο inline-SVG preview ανάλογα με το `kind` του descriptor. */
 export function RibbonComboboxThumbnail({
   thumbnail,
 }: {
   thumbnail: RibbonComboboxThumbnailDescriptor;
 }) {
-  return thumbnail.kind === 'linetype' ? (
-    <LinetypeThumb name={thumbnail.name} />
-  ) : (
-    <ArrowheadThumb name={thumbnail.name} />
+  if (thumbnail.kind === 'linetype') return <LinetypeThumb name={thumbnail.name} />;
+  if (thumbnail.kind === 'arrowhead') return <ArrowheadThumb name={thumbnail.name} />;
+  return (
+    <LineStyleThumb
+      pattern={thumbnail.pattern}
+      lineweight={thumbnail.lineweight}
+      penColor={thumbnail.penColor}
+    />
   );
 }

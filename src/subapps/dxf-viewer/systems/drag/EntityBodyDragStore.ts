@@ -29,6 +29,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { escapeBus } from '../escape-bus/EscapeCommandBus';
 import { ESC_PRIORITY } from '../escape-bus/escape-priority';
+// ADR-560 / ADR-357 — drag lifecycle SSoT: the body-drag AutoAlign traces end with the drag
+// (commit / ESC / blur), mirror of GripDragStore.clearActiveDragGrip → clearGripAlignmentTracking.
+import { clearGripAlignmentTracking } from '../cursor/GripAlignmentTrackingStore';
 
 export interface EntityBodyDragSession {
   /** World-space base point captured at mousedown (the grabbed point on the body). */
@@ -93,6 +96,8 @@ class EntityBodyDragStoreImpl {
   clear(): void {
     if (this.session === null) return;
     this.session = null;
+    // ADR-560 — end the AutoAlign traces with the drag so a stale result never lingers.
+    clearGripAlignmentTracking();
     this.emit();
   }
 

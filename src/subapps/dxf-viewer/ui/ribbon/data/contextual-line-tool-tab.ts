@@ -16,8 +16,20 @@
  * (`.dxf-ribbon-panel-body` = flex-row), so 2-field columns spread sideways with
  * zero vertical scroll AND zero flyout expander — nothing is hidden behind a ▼.
  *
- * The Geometry panel self-hides for non-`line` primitives via `visibilityKey`
- * (`getPanelVisibility` in `useRibbonLineToolBridge`).
+ * ADR-510 Φ4g — the «Τροποποίηση» panel now leads the tab with 5 LARGE modify
+ * tools (Trim · Extend · Offset · Fillet · Chamfer, left→right — Revit «Modify»
+ * panel). Their numeric parameters no longer crowd that panel: the FILLET radius
+ * and the CHAMFER distances/angle live in dedicated «Options Bar» panels that
+ * surface ONLY while the matching tool is active (`visibilityKey` → `activeTool`),
+ * so the tab stays zero-scroll:
+ *
+ *   Τροποποίηση              → [Trim] [Extend] [Offset] [Fillet] [Chamfer]  (large)
+ *   Επιλογές Συναρμογής*     → Ακτίνα                       (*fillet active only)
+ *   Επιλογές Λοξοτομής*      → Απόσταση 1 · Απόσταση 2 · Γωνία (*chamfer active only)
+ *
+ * Panel-level self-hiding: the Geometry panel is line-only, and the fillet/chamfer
+ * option panels are active-tool-only — all via `visibilityKey` → `getPanelVisibility`
+ * in `useRibbonLineToolBridge` (active-tool SSoT: `stores/ToolStateStore.ts`).
  *
  * Bridge: `useRibbonLineToolBridge`. Store SSoT: `stores/QuickStyleStore.ts`
  * (draw-defaults) + `UpdateEntityCommand` (selected entity).
@@ -33,6 +45,8 @@ import {
 } from '../hooks/bridge/line-tool-command-keys';
 // ADR-357 §G15 / ADR-507 Φ2 — ByLayer + ISO subset, shared SSoT (boy-scout extract).
 import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
+// ADR-510 Φ4g — SSoT LARGE tool-button factory (Revit «Modify» flat buttons).
+import { toolBtn } from './ribbon-large-button-helpers';
 
 export const LINE_TOOL_CONTEXTUAL_TRIGGER = 'line-tool-active';
 
@@ -122,12 +136,14 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
   contextualTrigger: LINE_TOOL_CONTEXTUAL_TRIGGER,
   panels: [
     // ── Τροποποίηση (Revit «Modify | Lines») ──────────────────────────────────
-    // ADR-510 Φ4c — Trim/Extend/Offset/Fillet ζουν ΚΑΙ εδώ (contextual, Revit) ΚΑΙ
-    // στο Home → Modify (AutoCAD, πάντα διαθέσιμα). **ΙΔΙΑ command keys** ('trim'/
-    // 'extend'/'offset'/'fillet'/'chamfer') → ο tab-agnostic `routeRibbonAction` τα
-    // στέλνει στον ΙΔΙΟ generic handler· μηδέν διπλότυπη λογική, μηδέν νέο wiring.
-    // Trim/Extend λειτουργικά (ADR-350/353)· Offset/Fillet/Chamfer `comingSoon`
-    // (ίδιο status με το Home panel — μία πηγή αλήθειας για το τι είναι έτοιμο).
+    // ADR-510 Φ4g — 5 LARGE modify tools (Trim · Extend · Offset · Fillet · Chamfer),
+    // αριστερά→δεξιά, στην ΑΡΧΗ της καρτέλας (mirror του Revit «Modify» panel). ΙΔΙΑ
+    // command keys ('trim'/'extend'/'offset'/'fillet'/'chamfer') → ο tab-agnostic
+    // `routeRibbonAction` τα στέλνει στον ΙΔΙΟ generic handler· μηδέν νέο wiring. Τα
+    // μεγάλα κουμπιά = SSoT `toolBtn` (ribbon-large-button-helpers). Οι numeric
+    // παράμετροι (fillet radius / chamfer d1·d2·γωνία) ΔΕΝ ζουν εδώ: εμφανίζονται
+    // contextually στα δικά τους panels μόλις ενεργοποιηθεί το εργαλείο (Revit
+    // «Options Bar») → η καρτέλα μένει ZERO-SCROLL, χωρίς flyout που κρύβει πεδία.
     {
       id: 'line-modify',
       labelKey: 'ribbon.panels.lineModify',
@@ -135,77 +151,28 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'lineModify.trim',
-                labelKey: 'ribbon.commands.trim',
-                icon: 'trim',
-                commandKey: 'trim',
-                shortcut: 'TR',
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'lineModify.extend',
-                labelKey: 'ribbon.commands.extend',
-                icon: 'extend',
-                commandKey: 'extend',
-                shortcut: 'EX',
-                comingSoon: false,
-              },
-            },
+            toolBtn('lineModify.trim', 'ribbon.commands.trim', 'trim', 'trim', 'TR'),
+            toolBtn('lineModify.extend', 'ribbon.commands.extend', 'extend', 'extend', 'EX'),
+            toolBtn('lineModify.offset', 'ribbon.commands.offset', 'offset', 'offset', 'OF'),
+            toolBtn('lineModify.fillet', 'ribbon.commands.fillet', 'fillet', 'fillet', 'F'),
+            toolBtn('lineModify.chamfer', 'ribbon.commands.chamfer', 'chamfer', 'chamfer'),
           ],
         },
+      ],
+    },
+    // ── Επιλογές Συναρμογής (Fillet «Options Bar» — ορατό ΜΟΝΟ όταν ενεργό το Fillet) ─
+    // ADR-510 Φ4g — FILLET radius (editable numeric· presets 0/5/10/20/50). Οδηγεί τον
+    // FilletToolStore μέσω του line-tool bridge (commandKey filletRadius). Το panel
+    // αυτο-κρύβεται (`visibilityKey` → activeTool==='fillet') → zero-scroll στη ρίζα.
+    {
+      id: 'line-fillet-options',
+      labelKey: 'ribbon.panels.lineFilletOptions',
+      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions,
+      rows: [
         {
           isInFlyout: false,
           buttons: [
             {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'lineModify.offset',
-                labelKey: 'ribbon.commands.offset',
-                icon: 'offset',
-                commandKey: 'offset',
-                shortcut: 'OF',
-                comingSoon: false,
-              },
-            },
-            {
-              type: 'split',
-              size: 'small',
-              command: {
-                id: 'lineModify.fillet',
-                labelKey: 'ribbon.commands.fillet',
-                icon: 'fillet',
-                commandKey: 'fillet',
-                shortcut: 'F',
-                comingSoon: false, // ADR-510 Φ4e — Fillet is live
-              },
-              variants: [
-                {
-                  id: 'lineFillet.fillet',
-                  labelKey: 'ribbon.commands.filletVariants.fillet',
-                  icon: 'fillet',
-                  commandKey: 'fillet',
-                  comingSoon: false, // ADR-510 Φ4e — Fillet is live
-                },
-                {
-                  id: 'lineFillet.chamfer',
-                  labelKey: 'ribbon.commands.filletVariants.chamfer',
-                  icon: 'chamfer',
-                  commandKey: 'chamfer',
-                  comingSoon: false, // ADR-510 Φ4f — Chamfer is live
-                },
-              ],
-            },
-            {
-              // ADR-510 Φ4e — FILLET radius (editable numeric; presets 0/5/10/20/50).
-              // Drives FilletToolStore via the line-tool bridge (commandKey filletRadius).
               type: 'combobox',
               size: 'small',
               command: {
@@ -217,8 +184,22 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 numericInput: { editable: true, min: 0, allowDecimal: true },
               },
             },
+          ],
+        },
+      ],
+    },
+    // ── Επιλογές Λοξοτομής (Chamfer «Options Bar» — ορατό ΜΟΝΟ όταν ενεργό το Chamfer) ─
+    // ADR-510 Φ4g — CHAMFER distance 1/2 + γωνία → ChamferToolStore (d1/d2/angle). Το
+    // panel αυτο-κρύβεται (`visibilityKey` → activeTool==='chamfer').
+    {
+      id: 'line-chamfer-options',
+      labelKey: 'ribbon.panels.lineChamferOptions',
+      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
-              // ADR-510 Φ4f — CHAMFER distance 1 → ChamferToolStore.d1.
               type: 'combobox',
               size: 'small',
               command: {
@@ -231,7 +212,6 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-510 Φ4f — CHAMFER distance 2 → ChamferToolStore.d2.
               type: 'combobox',
               size: 'small',
               command: {
@@ -244,7 +224,6 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-510 Φ4f — CHAMFER angle (Angle mode) → ChamferToolStore.angle.
               type: 'combobox',
               size: 'small',
               command: {

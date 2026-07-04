@@ -38,6 +38,10 @@ import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
+// ADR-560 — cyan AutoAlign traces: SAME store + paint SSoT the grip drag uses (useGripGhostPreview).
+// The mouse-move handler (applyBodyDragAlignmentTracking) resolves + publishes; here we only paint.
+import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
+import { paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import type { useLevels } from '../../systems/levels';
@@ -96,36 +100,26 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     const anchorPt = toScreen(anchor);
     const cursorPt = toScreen(destination);
 
-    // Base point crosshair (red)
-    ctx.save();
-    ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(anchorPt.x - 8, anchorPt.y); ctx.lineTo(anchorPt.x + 8, anchorPt.y);
-    ctx.moveTo(anchorPt.x, anchorPt.y - 8); ctx.lineTo(anchorPt.x, anchorPt.y + 8);
-    ctx.stroke();
-    ctx.restore();
-
-    // Rubber band (dashed gold)
-    ctx.save();
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(anchorPt.x, anchorPt.y);
-    ctx.lineTo(cursorPt.x, cursorPt.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-
     if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
-    // Live distance readout pill (anchor → destination).
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
     const sceneUnits = resolveSceneUnits(scene);
-    const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), sceneUnits);
-    const readoutMid = moveReadoutMid(anchorPt, cursorPt);
-    drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
+
+    // ADR-560 — cyan AutoAlign traces (ΙΔΙΟ store + ΙΔΙΟ paint SSoT με τη λαβή). Ο mouse-move handler
+    // (applyBodyDragAlignmentTracking) έκανε το ΙΔΙΟ resolve που κούμπωσε τον effective cursor που
+    // τρέφει το `delta` → γεωμετρία + ίχνη από ΕΝΑ resolve (WYSIWYG). Null όταν δεν κουμπώνει πουθενά.
+    // Αντικαθιστούν την παλιά πινακίδα (Giorgio TASK B) + τον κόκκινο σταυρό/κίτρινη rubber-band (Q3).
+    const tracking = getGripAlignmentTracking();
+    if (tracking) {
+      paintGripAlignmentTracking(
+        ctx, tracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
+      );
+    } else {
+      // Χωρίς κούμπωμα → μικρή διακριτική ένδειξη απόστασης (anchor → destination).
+      const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), sceneUnits);
+      const readoutMid = moveReadoutMid(anchorPt, cursorPt);
+      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
+    }
 
     // WYSIWYG real copies at the destination (full fidelity, byte-identical to commit).
     ctx.save();

@@ -48,9 +48,17 @@ export function isLineToolRibbonKey(key: string): key is LineToolRibbonKey {
  * ADR-510 Φ4 — the Geometry panel (start/end/length/angle) is meaningful only for
  * a selected `line`; for the other style-editable primitives (circle/arc/…) it
  * self-hides via `RibbonPanelDef.visibilityKey` → `getPanelVisibility`.
+ *
+ * ADR-510 Φ4g — Revit «Options Bar» pattern: the FILLET radius and the CHAMFER
+ * distance/angle numeric fields live in their OWN panels that appear ONLY while
+ * the matching tool is active (`toolStateStore.activeTool`). Keeping them out of
+ * the always-visible «Τροποποίηση» panel is what makes the tab zero-scroll — the
+ * 5 large modify buttons stay narrow, and the parameters surface contextually.
  */
 export const LINE_TOOL_PANEL_VISIBILITY_KEYS = Object.freeze({
   geometry: 'lineTool.panel.geometry',
+  filletOptions: 'lineTool.panel.filletOptions',
+  chamferOptions: 'lineTool.panel.chamferOptions',
 } as const);
 
 export type LineToolPanelVisibilityKey =

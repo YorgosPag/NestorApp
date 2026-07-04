@@ -33,7 +33,9 @@ import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 // ADR-562 Φ9.2 / ADR-357 — grip-drag AutoAlign tracking SSoT (extracted for N.7.1 size budget).
-import { applyGripDragAlignmentTracking } from './grip-drag-alignment-tracking';
+// ADR-560 — body-drag reuses the SAME SSoT via applyBodyDragAlignmentTracking.
+import { applyGripDragAlignmentTracking, applyBodyDragAlignmentTracking } from './grip-drag-alignment-tracking';
+import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import {
   findColumnGripCornerSnap,
   isColumnCornerSnapGrip,
@@ -296,6 +298,10 @@ export function useMouseMoveHandler({
     // extracted to grip-drag-alignment-tracking (N.7.1 size budget).
     if (isGripDragging) {
       moveWorldPos = applyGripDragAlignmentTracking(moveWorldPos, scene, transform.scale);
+    } else if (EntityBodyDragStore.getActive()) {
+      // ADR-560 — body-drag (grab body → move/copy): SAME AutoAlign SSoT, base-point tracking.
+      // Overrides the effective world (→ ghost delta) + publishes the traces for the ghost paint.
+      moveWorldPos = applyBodyDragAlignmentTracking(moveWorldPos, scene, transform.scale);
     }
 
     // 🚀 ADR-040 cursor-lag Φ12 — publish the FINAL effective world (snapped +

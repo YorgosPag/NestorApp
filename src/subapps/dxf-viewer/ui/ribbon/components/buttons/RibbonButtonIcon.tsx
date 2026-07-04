@@ -19,6 +19,8 @@ import {
   FILLET_PATH, CHAMFER_PATH,
   ARRAY_RECT_PATH, ARRAY_PATH_PATH, ARRAY_POLAR_PATH,
   EXPLODE_PATH, SELECT_PATH, GRIP_EDIT_PATH,
+} from './RibbonButtonIconPaths';
+import {
   PAN_PATH, ZOOM_PATH, ZOOM_IN_PATH, ZOOM_OUT_PATH,
   ZOOM_WINDOW_PATH, ZOOM_EXTENTS_PATH, ZOOM_PREV_PATH,
   ZOOM_REALTIME_PATH, ZOOM_RESET_PATH,
@@ -34,7 +36,7 @@ import {
   GUIDE_PARALLEL_PATH, GUIDE_PERPENDICULAR_PATH,
   MEASURE_DISTANCE_PATH, MEASURE_DISTANCE_CONTINUOUS_PATH,
   MEASURE_AREA_PATH, MEASURE_AREA_AUTO_PATH,
-} from './RibbonButtonIconPaths';
+} from './ribbon-icon-paths-view-measure';
 import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
 import { XLINE_PATH, RAY_PATH } from './xline-ray-icon-paths';
 import { StructuralToolIcon } from './StructuralToolIcon';

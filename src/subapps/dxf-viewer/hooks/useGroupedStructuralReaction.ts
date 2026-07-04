@@ -17,6 +17,11 @@
  *    `executeGrouped` → ομαδοποιείται στο ΙΔΙΟ undo step με το user command (reuse
  *    `CommandHistory.appendToLast` + `CompositeCommand`, ADR-459 v8.3). Αλλιώς `execute`
  *    (standalone — batch from-grid / παράγωγα chain events).
+ * 3. **Structural-relevance gate** — μέσω `eventTouchesStructuralMember`: τα generic
+ *    events (`bim:entities-moved` / `drawing:entity-created`, που εκπέμπονται για **κάθε**
+ *    τύπο entity) πυροδοτούν recompute ΜΟΝΟ αν το payload τους αγγίζει δομικό μέλος. Χωρίς
+ *    αυτό, η μετακίνηση/δημιουργία μιας απλής γραμμής DXF έτρεχε full load-takedown/οπλισμό
+ *    σε όλο το κτίριο (bug 2026-07-04).
  *
  * Ο καλών δίνει ΜΟΝΟ (α) τη λίστα events και (β) το `run(exec)` με τη δική του (μοναδική)
  * λογική recompute — η αντιγραμμένη υδραυλική ζει εδώ, μία φορά. Το `run` διαβάζεται μέσω
@@ -25,6 +30,7 @@
  *
  * @see proactive-coalescer.ts — createMicrotaskCoalescer (coalescing SSoT)
  * @see structural-geometry-edit-triggers.ts — isGeometryEditTrigger (classification SSoT)
+ * @see structural-relevant-trigger.ts — eventTouchesStructuralMember (relevance gate SSoT)
  * @see core/commands/CommandHistory.ts — appendToLast / executeGrouped (grouping SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 7
  */
@@ -34,6 +40,7 @@ import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createMicrotaskCoalescer } from './proactive-coalescer';
 import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
+import { eventTouchesStructuralMember } from './structural-relevant-trigger';
 import type { ICommand } from '../core/commands/interfaces';
 
 /** Η εκτέλεση command που επιλέγεται ανά pass: grouped (atomic undo) ή standalone. */
@@ -62,11 +69,15 @@ export function useGroupedStructuralReaction(
       groupable = false;
       runRef.current(exec);
     });
-    const schedule = (ev: DrawingEventType): void => {
+    const schedule = (ev: DrawingEventType, payload: unknown): void => {
+      // Structural-relevance gate: τα generic events (move/create οποιουδήποτε
+      // entity) πυροδοτούν recompute ΜΟΝΟ αν αγγίζουν δομικό μέλος — αλλιώς η
+      // μετακίνηση μιας απλής γραμμής θα έτρεχε full load-takedown σε όλο το κτίριο.
+      if (!eventTouchesStructuralMember(ev, payload)) return;
       if (isGeometryEditTrigger(ev)) groupable = true;
       coalescer.schedule();
     };
-    const unsubs = events.map((ev) => EventBus.on(ev, () => schedule(ev)));
+    const unsubs = events.map((ev) => EventBus.on(ev, (payload) => schedule(ev, payload)));
     return () => unsubs.forEach((u) => u());
   }, [events, execute, executeGrouped]);
 }

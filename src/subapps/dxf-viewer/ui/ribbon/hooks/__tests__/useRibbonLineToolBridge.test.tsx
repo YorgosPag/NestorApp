@@ -23,6 +23,8 @@ import {
 } from '../../../../stores/LinetypeRegistry';
 import { toDisplay, fromDisplay } from '../../../../config/units';
 import { displayUnitState } from '../../../../config/display-unit-state';
+// ADR-510 Φ4g — active-tool SSoT drives the contextual fillet/chamfer option panels.
+import { toolStateStore } from '../../../../stores/ToolStateStore';
 // ADR-510 Φ4b — το «Χρώμα» πεδίο μιλάει HEX μέσω του κεντρικού dxf-color picker· το
 // bridge αποθηκεύει true-color (`hexToTrueColor`) + πλησιέστερο ACI (`findClosestAci`).
 import { getAciColor, findClosestAci } from '../../../../settings/standards/aci';
@@ -527,5 +529,33 @@ describe('useRibbonLineToolBridge — Φ4 panel visibility (geometry is line-onl
 
   it('an unknown visibility key defaults to visible', () => {
     expect(renderLine().current.getPanelVisibility('whatever')).toBe(true);
+  });
+});
+
+describe('useRibbonLineToolBridge — Φ4g Options-Bar visibility (fillet/chamfer active-tool)', () => {
+  const FILLET = LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions;
+  const CHAMFER = LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions;
+
+  afterEach(() => toolStateStore.selectTool('select'));
+
+  it('fillet options are hidden unless the fillet tool is active', () => {
+    toolStateStore.selectTool('select');
+    expect(renderNone().current.getPanelVisibility(FILLET)).toBe(false);
+    toolStateStore.selectTool('fillet');
+    expect(renderNone().current.getPanelVisibility(FILLET)).toBe(true);
+  });
+
+  it('chamfer options are hidden unless the chamfer tool is active', () => {
+    toolStateStore.selectTool('select');
+    expect(renderNone().current.getPanelVisibility(CHAMFER)).toBe(false);
+    toolStateStore.selectTool('chamfer');
+    expect(renderNone().current.getPanelVisibility(CHAMFER)).toBe(true);
+  });
+
+  it('the two option panels are mutually exclusive by active tool', () => {
+    toolStateStore.selectTool('fillet');
+    const r = renderNone().current;
+    expect(r.getPanelVisibility(FILLET)).toBe(true);
+    expect(r.getPanelVisibility(CHAMFER)).toBe(false);
   });
 });

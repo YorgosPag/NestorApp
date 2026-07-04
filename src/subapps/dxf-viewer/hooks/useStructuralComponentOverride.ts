@@ -21,24 +21,14 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { SetComponentVisibilityCommand } from '../core/commands/entity-commands/SetComponentVisibilityCommand';
-import {
-  isColumnEntity, isBeamEntity, isWallEntity, isSlabEntity, isStairEntity, isFoundationEntity,
-} from '../types/entities';
-import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
+// ADR-470 scope (σώμα/σοβά/οπλισμό) = SSoT «δομικά μέλη» (column/beam/wall/slab/stair/foundation).
+import { isStructuralMemberEntity } from '../types/structural-entity-types';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene: (levelId: string) => SceneModel | null;
   setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
-
-/** True για τα δομικά στοιχεία που έχουν σώμα/σοβά/οπλισμό (ADR-470 scope). */
-function isStructuralEntity(e: Entity): boolean {
-  return (
-    isColumnEntity(e) || isBeamEntity(e) || isWallEntity(e) ||
-    isSlabEntity(e) || isStairEntity(e) || isFoundationEntity(e)
-  );
 }
 
 export function useStructuralComponentOverride(props: { levelManager: LevelManagerLike }): void {
@@ -52,8 +42,8 @@ export function useStructuralComponentOverride(props: { levelManager: LevelManag
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
       const selected = new Set(entityIds);
-      const structuralIds = (scene.entities as unknown as readonly Entity[])
-        .filter((e) => selected.has(e.id) && isStructuralEntity(e))
+      const structuralIds = (scene.entities as unknown as ReadonlyArray<{ id: string; type: string }>)
+        .filter((e) => selected.has(e.id) && isStructuralMemberEntity(e))
         .map((e) => e.id);
       if (structuralIds.length === 0) return;
       const sm = createLevelSceneManagerAdapter(

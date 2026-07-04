@@ -85,6 +85,9 @@ import {
 import { FilletToolStore } from '../../../systems/corner/FilletToolStore';
 // ADR-510 Φ4f — CHAMFER distance/angle fields route to the ChamferToolStore.
 import { ChamferToolStore } from '../../../systems/corner/ChamferToolStore';
+// ADR-510 Φ4g — active-tool SSoT drives the contextual fillet/chamfer option panels
+// (Revit «Options Bar»: parameters appear only while their tool is active → zero-scroll).
+import { toolStateStore } from '../../../stores/ToolStateStore';
 // ADR-510 Φ4 / ADR-570 — pure value/patch helpers (extracted for N.7.1 size budget).
 import {
   BYLAYER,
@@ -178,6 +181,11 @@ export function useRibbonLineToolBridge(
   // ADR-510 Φ4f — live CHAMFER state so the distance/angle fields mirror keyboard entry.
   const chamfer = useSyncExternalStore(
     ChamferToolStore.subscribe, () => ChamferToolStore.getState(),
+  );
+  // ADR-510 Φ4g — live active tool so the fillet/chamfer OPTION panels surface only
+  // while their tool is active (Revit «Options Bar» → the tab stays zero-scroll).
+  const activeTool = useSyncExternalStore(
+    toolStateStore.subscribe, () => toolStateStore.get().activeTool,
   );
 
   /** The selected style-editable primitive, or null (→ draw-defaults mode). */
@@ -457,14 +465,21 @@ export function useRibbonLineToolBridge(
   );
 
   // ADR-510 Φ4 — the Geometry panel is line-only; other primitives hide it.
+  // ADR-510 Φ4g — the fillet/chamfer option panels are active-tool-only (Options Bar).
   const getPanelVisibility = useCallback(
     (visibilityKey: string): boolean => {
       if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry) {
         return asLine(resolveSelected()) !== null;
       }
+      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions) {
+        return activeTool === 'fillet';
+      }
+      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions) {
+        return activeTool === 'chamfer';
+      }
       return true;
     },
-    [resolveSelected],
+    [resolveSelected, activeTool],
   );
 
   return useMemo(

@@ -294,7 +294,12 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         { x: dp.anchorPos.x + dp.delta.x, y: dp.anchorPos.y + dp.delta.y },
         t, vp,
       );
-      if (!dp.hotGrip) drawMoveReadoutLeader(ctx, fromS, toS);
+      // ADR-560 TASK B — όταν υπάρχει ενεργό κυανό ίχνος ευθυγράμμισης (μόνο line grips γεμίζουν το
+      // store), το tooltip των ιχνών (paintGripAlignmentTracking, παρακάτω) καλύπτει την απόσταση →
+      // κρύψε τον leader + την πινακίδα. Χωρίς κούμπωμα → κράτα τη μικρή ένδειξη (Giorgio Q2). Τοίχος/
+      // κολόνα translate → store null → πινακίδα ως έχει.
+      const hasAlignmentTrace = getGripAlignmentTracking() !== null;
+      if (!dp.hotGrip && !hasAlignmentTrace) drawMoveReadoutLeader(ctx, fromS, toS);
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       const meters = sceneDistanceToMeters(Math.hypot(dp.delta.x, dp.delta.y), resolveSceneUnits(scene));
       const mid = moveReadoutMid(fromS, toS);
@@ -307,7 +312,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         const perp = Math.abs(dp.delta.x * -orthoAxis.y + dp.delta.y * orthoAxis.x);
         moveLabel = `${perp >= along ? '⟂' : '∥'} ${moveLabel}`;
       }
-      drawDimPill(ctx, [moveLabel], mid.x, mid.y);
+      if (!hasAlignmentTrace) drawDimPill(ctx, [moveLabel], mid.x, mid.y);
     }
 
     // ADR-357/363 — plain-line grip Object-Snap-Tracking traces (endpoint reshape + centre/MOVE).

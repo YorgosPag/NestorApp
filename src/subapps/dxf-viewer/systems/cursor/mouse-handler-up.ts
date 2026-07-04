@@ -152,7 +152,15 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       if (session) {
         const bodySnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
         if (bodySnap) {
-          const upWorld = screenToWorldWithSnapshot(getScreenPosFromEvent(e, bodySnap), transform, bodySnap);
+          let upWorld = screenToWorldWithSnapshot(getScreenPosFromEvent(e, bodySnap), transform, bodySnap);
+          // ADR-560 — AutoAlign commit parity: re-resolve the SAME base-point tracking the live ghost
+          // used (applyBodyDragAlignmentTracking) so the committed destination == the previewed one
+          // (WYSIWYG). Mirror of the dim/line grip commit parity above. Runs BEFORE the ORTHO lock.
+          const bodyTracking = resolveActionAlignmentTracking(
+            upWorld, [session.anchor], transform.scale,
+            (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+          );
+          if (bodyTracking) upWorld = bodyTracking.point;
           // ORTHO (F8) parity with the live ghost (`useEntityBodyDragPreview`).
           const delta = applyOrthoToDelta({ x: upWorld.x - session.anchor.x, y: upWorld.y - session.anchor.y });
           const movedPx = Math.hypot(delta.x, delta.y) * transform.scale;

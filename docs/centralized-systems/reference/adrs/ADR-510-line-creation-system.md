@@ -1031,3 +1031,26 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   **γειτονικά** segments (όπως fillet). **Tests:** +5 (computeChamferPolylineCorner round-one/non-corner/closed-wrap) — 284/284
   GREEN (corner+offset+shared). **Με το Φ4f.2 ολοκληρώνεται το same-polyline και για τα δύο εργαλεία (fillet+chamfer).**
   tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4g — Αναδιάταξη contextual tab «Στυλ Γραμμής»: 5 ΜΕΓΑΛΑ modify εικονίδια + zero-scroll (Revit «Modify» +
+  «Options Bar»).** Αίτημα Giorgio: (1) μεγάλα εικονίδια Ψαλίδισμα·Επέκταση·Παράλληλη·Συναρμογή·Λοξοτομή αριστερά→δεξιά στην
+  αρχή του ribbon· (2) κανένα scroll/κρυμμένο πεδίο· (3) thumbnails στο dropdown «Στυλ Γραμμής» (→ βλ. ADR-570 Φ1b).
+  **Big-player verify:** Revit «Modify» panel = μεγάλα flat κουμπιά· οι numeric παράμετροι ζουν στην «Options Bar» contextually,
+  ΟΧΙ μόνιμα ορατές → δικαιώνει τα δύο σημεία. **Υλοποίηση (FULL SSoT):** το `line-modify` panel γίνεται 5 `size:'large'` κουμπιά
+  μέσω του υπάρχοντος SSoT `toolBtn` (`ribbon-large-button-helpers.ts`) — **ΙΔΙΑ command keys** ('trim'/'extend'/'offset'/
+  'fillet'/'chamfer'), μηδέν νέο wiring, καταργήθηκε το fillet/chamfer split-button. Οι numeric παράμετροι (fillet radius,
+  chamfer d1·d2·γωνία) μεταφέρθηκαν σε **2 νέα panels** (`line-fillet-options` / `line-chamfer-options`) με `visibilityKey` που
+  αυτο-κρύβονται εκτός του ενεργού εργαλείου. Νέο routing: ο `useRibbonLineToolBridge` κάνει `useSyncExternalStore` στο **SSoT
+  `ToolStateStore`** (`activeTool`) και το `getPanelVisibility` επιστρέφει `activeTool==='fillet'`/'chamfer'· τα νέα visibility
+  keys (`filletOptions`/`chamferOptions`) προστέθηκαν στο `LINE_TOOL_PANEL_VISIBILITY_KEYS` (auto-routed από `useRibbonCommands`).
+  **i18n (N.11, el+en πρώτα):** `ribbon.panels.lineFilletOptions`/`lineChamferOptions` + top-level `ribbon.commands.chamfer`
+  (έλειπε — το chamfer έδειχνε μόνο ως `filletVariants.chamfer`). **Tests:** `contextual-line-tool-tab.test.ts` (5 large σε σειρά +
+  option panels με visibilityKey, 6 tests)· +3 στο `useRibbonLineToolBridge.test.tsx` (fillet/chamfer active-tool visibility) →
+  43/43 GREEN. tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4g (icons) — Χρωματικός διαχωρισμός «σημείων αλλαγής» στα 5 modify εικονίδια** (αίτημα Giorgio: τα
+  σταθερά σώματα γραμμών λευκά, τα σημεία τροποποίησης σε άλλο χρώμα για καλύτερη αναγνώριση). Στο `RibbonButtonIconPaths.tsx`
+  τα TRIM/EXTEND/OFFSET/FILLET/CHAMFER κρατούν τα σώματα σε `currentColor` και βάφουν με **SSoT `ICON_CLICK_COLORS.THIRD`**
+  (κόκκινο accent, ίδιο με τα draw-tool dots — μηδέν νέος μηχανισμός χρώματος, N.0.2) το σημείο/τμήμα που αλλάζει: trim=κουκκίδα
+  στο σημείο κοπής· extend=βέλος-στόχος· offset=double-arrow απόστασης· fillet=τόξο· chamfer=λοξή ακμή. Τα φαντάσματα της
+  αρχικής (αφαιρούμενης) γωνίας σε fillet/chamfer = `ICON_CLICK_COLORS.REFERENCE` (γκρι dashed). **OFFSET:** αυξήθηκε η απόσταση
+  των παράλληλων (gap 8→12) ώστε το double-arrow να σχεδιάζεται καθαρά ανάμεσά τους. Καμία αλλαγή wiring/λογικής — μόνο SVG
+  data. tsc SKIP (N.17)· browser-verify + commit → Giorgio.

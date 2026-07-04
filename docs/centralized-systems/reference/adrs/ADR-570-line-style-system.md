@@ -156,6 +156,16 @@ export interface LineStyle {
 
 ## 8. Changelog
 
+- **2026-07-04 (Φ1b impl)** — **Thumbnails στο dropdown «Στυλ Γραμμής» (Revit/Figma-grade preview).** Enhancement του Φ1
+  chooser (μέρος του ADR-510 Φ4g reorg — αίτημα Giorgio: το dropdown έδειχνε μόνο κείμενα). Big-player: Figma/Revit style
+  pickers δείχνουν οπτικό preview (μοτίβο+πάχος+χρώμα) δίπλα στο όνομα. **FULL SSoT:** νέος builder
+  `systems/line-styles/line-style-thumbnail.ts` (`buildLineStyleThumbnail`) που **κάνει reuse το `buildLinetypeThumbnail`**
+  (Unified Linetype SSoT) για το dash — μηδέν δεύτερη dash math — και το εμπλουτίζει με lineweight→px stroke + penColor
+  (hex, ή `null`=ByLayer → `currentColor`, theme-correct N.3). Ο `RibbonComboboxThumbnailDescriptor` (`ribbon-types.ts`)
+  επεκτάθηκε με `kind:'line-style'` (pattern/lineweight/penColor)· ο `RibbonComboboxThumbnail` απέκτησε `LineStyleThumb`
+  branch (mirror του `LinetypeThumb`)· το `buildLineStyleRibbonOptions` προσαρτά `thumbnail` ανά στυλ (έχει ήδη όλο το
+  `LineStyle`). Render path υπήρχε ήδη (`RibbonCombobox` ζωγραφίζει `opt.thumbnail`). **Tests:** `line-style-thumbnail.test.ts`
+  (7 jest ✅ — solid/dashed/color/ByLayer/lineweight clamp). tsc SKIP (N.17)· browser-verify + commit → Giorgio.
 - **2026-07-04 (Φ1 impl)** — **Named Style SSoT υλοποιήθηκε.** Νέα αρχεία στο
   `systems/line-styles/`: `line-style-types.ts` (interface `LineStyle` + sentinels +
   `LinePatternKey` = catalog linetype name, reuse ADR-358), `line-style-templates.ts`
