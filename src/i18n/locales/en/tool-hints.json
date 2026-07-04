@@ -777,6 +777,9 @@
     "mstretchSelectFirst": "Draw 1st crossing window",
     "mstretchSelectNext": "Next crossing window or ENTER to finish"
   },
+  "explode": {
+    "selectEntities": "Select objects to explode (polyline/rectangle)"
+  },
   "trimTool": {
     "promptPick": "Select objects to trim or [Boundary(B) / eRase(R) / Undo(U) / Mode(M) / Edge(E)]:",
     "promptStandardEdges": "Select cutting edges or press ENTER for all:",

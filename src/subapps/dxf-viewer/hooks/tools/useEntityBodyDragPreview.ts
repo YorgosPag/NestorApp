@@ -18,7 +18,7 @@
 
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { EntityBodyDragStore } from '../../systems/drag/EntityBodyDragStore';
@@ -38,10 +38,10 @@ import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
 import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
-// ADR-560 — cyan AutoAlign traces: SAME store + paint SSoT the grip drag uses (useGripGhostPreview).
-// The mouse-move handler (applyBodyDragAlignmentTracking) resolves + publishes; here we only paint.
-import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
-import { paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+// ADR-560/572 — cyan AutoAlign traces RESOLVED-IN-DRAW (mirror useMovePreview, self-contained).
+// Το tracking υπολογίζεται ΤΟΠΙΚΑ εδώ ανά frame από το ΙΔΙΟ SSoT resolve (`resolveActionAlignmentTracking`)
+// αντί να διαβάζεται από το cross-tick `GripAlignmentTrackingStore` → μηδέν timing-skew (τα ίχνη δεν «χάνονται»).
+import { paintGripAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import type { useLevels } from '../../systems/levels';
@@ -93,23 +93,28 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
 
     const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
 
-    // ORTHO (F8): lock the destination to the H/V axis from the anchor so the
-    // rubber band, ghost, and tooltip all match the committed result. No-op when OFF.
-    const delta = applyOrthoToDelta({ x: effectiveCursor.x - anchor.x, y: effectiveCursor.y - anchor.y });
-    const destination: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
-    const anchorPt = toScreen(anchor);
-    const cursorPt = toScreen(destination);
+    // ORTHO (F8): lock the destination to the H/V axis from the anchor (no-op when OFF).
+    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - anchor.x, y: effectiveCursor.y - anchor.y });
+    const orthoDestination: Point2D = { x: anchor.x + orthoDelta.x, y: anchor.y + orthoDelta.y };
 
-    if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
+    if (Math.abs(orthoDelta.x) < 0.001 && Math.abs(orthoDelta.y) < 0.001) return;
 
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
     const sceneUnits = resolveSceneUnits(scene);
 
-    // ADR-560 — cyan AutoAlign traces (ΙΔΙΟ store + ΙΔΙΟ paint SSoT με τη λαβή). Ο mouse-move handler
-    // (applyBodyDragAlignmentTracking) έκανε το ΙΔΙΟ resolve που κούμπωσε τον effective cursor που
-    // τρέφει το `delta` → γεωμετρία + ίχνη από ΕΝΑ resolve (WYSIWYG). Null όταν δεν κουμπώνει πουθενά.
-    // Αντικαθιστούν την παλιά πινακίδα (Giorgio TASK B) + τον κόκκινο σταυρό/κίτρινη rubber-band (Q3).
-    const tracking = getGripAlignmentTracking();
+    // ADR-560/572 — cyan AutoAlign traces RESOLVED-IN-DRAW (mirror useMovePreview): το ΙΔΙΟ SSoT resolve
+    // τρέχει ΤΟΠΙΚΑ ανά frame πάνω στο ORTHO-locked destination με anchor την αρχή του drag → self-contained,
+    // ΜΗΔΕΝ εξάρτηση από το cross-tick `GripAlignmentTrackingStore` (τέλος του timing-skew όπου τα ίχνη
+    // «χάνονταν»). Το resolved point τρέφει ΚΑΙ τη γεωμετρία του ghost ΚΑΙ τα ίχνη → WYSIWYG (ο
+    // mouse-handler-up κάνει το ΙΔΙΟ resolve στο commit). Null όταν δεν κουμπώνει → διακριτική πινακίδα.
+    const tracking = resolveActionAlignmentTracking(
+      orthoDestination, [anchor], t.scale, (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+    );
+    const destination: Point2D = tracking ? tracking.point : orthoDestination;
+    const delta: Point2D = { x: destination.x - anchor.x, y: destination.y - anchor.y };
+    const anchorPt = toScreen(anchor);
+    const cursorPt = toScreen(destination);
+
     if (tracking) {
       paintGripAlignmentTracking(
         ctx, tracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,

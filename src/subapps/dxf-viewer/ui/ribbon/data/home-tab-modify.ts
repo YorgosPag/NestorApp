@@ -254,12 +254,15 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'small',
           command: {
+            // ADR-510 Φ5 — γενικό EXPLODE (polyline/rectangle → primitives). Immediate
+            // action στην τρέχουσα επιλογή (όχι persistent tool) → `action:'explode'`.
             id: 'modify.explode',
             labelKey: 'ribbon.commands.explode',
             icon: 'explode',
             commandKey: 'explode',
+            action: 'explode',
             shortcut: 'X',
-            comingSoon: true,
+            comingSoon: false,
           },
         },
       ],
@@ -331,7 +334,7 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.explode', labelKey: 'ribbon.commands.explode', icon: 'explode', commandKey: 'explode', shortcut: 'X', comingSoon: true },
+          command: { id: 'edit.explode', labelKey: 'ribbon.commands.explode', icon: 'explode', commandKey: 'explode', action: 'explode', shortcut: 'X', comingSoon: false },
         },
       ],
     },

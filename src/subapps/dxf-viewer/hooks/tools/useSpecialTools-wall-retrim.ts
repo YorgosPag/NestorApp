@@ -5,6 +5,8 @@
 import { useEffect } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
 import { recomputeWallTrims } from '../../bim/walls/add-wall-to-scene';
+// ADR-459 — structural-relevance gate SSoT (ίδιο με τους proactive structural hooks).
+import { eventTouchesStructuralMember } from '../structural-relevant-trigger';
 import type { LevelsHookReturn } from '../../systems/levels';
 
 /**
@@ -27,10 +29,19 @@ export function useWallRetrimEffect(levelManager: LevelsHookReturn): void {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => recomputeWallTrims(levelManager), 200);
     };
+    // ADR-459 relevance gate — ο wall-retrim εξαρτάται ΜΟΝΟ από τοίχους/κολόνες. Το generic
+    // `bim:entities-moved` εκπέμπεται για ΚΑΘΕ entity· χωρίς gate, η μετακίνηση μιας απλής γραμμής
+    // πυροδοτούσε full `recomputeWallTrims` → (cold, 1η φορά) οι τοίχοι «άλλαζαν» → re-emit structural
+    // event → proactive load-takedown σε όλο το κτίριο (spurious toast «N μέλη έλαβαν φορτίο»). Τα άλλα
+    // δύο events είναι ήδη structural-scoped (wall/column params) → περνούν ως έχουν.
+    const scheduleOnStructuralMove = (payload: unknown): void => {
+      if (!eventTouchesStructuralMember('bim:entities-moved', payload)) return;
+      schedule();
+    };
     const unsubs = [
       EventBus.on('bim:wall-params-updated', schedule),
       EventBus.on('bim:column-params-updated', schedule),
-      EventBus.on('bim:entities-moved', schedule),
+      EventBus.on('bim:entities-moved', scheduleOnStructuralMove),
     ];
     return () => {
       for (const off of unsubs) off();

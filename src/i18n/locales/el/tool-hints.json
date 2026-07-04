@@ -749,6 +749,9 @@
     "mstretchSelectFirst": "Σχεδιάστε 1ο crossing window",
     "mstretchSelectNext": "Επόμενο crossing window ή ENTER για ολοκλήρωση"
   },
+  "explode": {
+    "selectEntities": "Επιλέξτε αντικείμενα προς διάλυση (πολυγραμμή/ορθογώνιο)"
+  },
   "trimTool": {
     "promptPick": "Επιλέξτε αντικείμενα προς ψαλίδισμα ή [Όρια(Ο) / Διαγραφή(Δ) / Αναίρεση(Α) / Λειτουργία(Λ) / Άκρη(Ε)]:",
     "promptStandardEdges": "Επιλέξτε όρια ή πατήστε ENTER για όλα:",

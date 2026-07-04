@@ -14,6 +14,8 @@ export { TrimEntityCommand } from './TrimEntityCommand';
 export type { TrimCommandParams } from './TrimEntityCommand';
 export { OffsetEntityCommand } from './OffsetEntityCommand';
 export type { OffsetCommandParams } from './OffsetEntityCommand';
+// ADR-510 Φ5 — generic EXPLODE (polyline/rectangle → primitives, undoable).
+export { ExplodeEntityCommand } from './ExplodeEntityCommand';
 export { CornerEntityCommand } from './CornerEntityCommand';
 export type { CornerCommandParams, CornerTrimOp, CornerKind } from './CornerEntityCommand';
 export { WallSplitCommand } from './WallSplitCommand';

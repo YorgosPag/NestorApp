@@ -1075,3 +1075,19 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   null) μένεις στην αρχική. Ένα `useEffect` καταγράφει το last non-modify trigger. **Και οι δύο απαιτήσεις Giorgio καλύπτονται:**
   contextual→μένει contextual· Home→μένει Home. Καμία αλλαγή στο `RibbonRoot` (generic logic ανέγγιχτη). tsc SKIP (N.17)·
   browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ5 — Γενική εντολή «Διάλυση» (EXPLODE) υλοποιήθηκε (πολυγραμμή/ορθογώνιο → primitives, undoable).** Το κουμπί
+  ήταν `comingSoon:true`. Big-player: AutoCAD EXPLODE / Revit (explode μόνο imported CAD) / Cinema 4D «Connect+Delete» / Figma
+  «Flatten» → **γενικό Modify command**, μένει στην αρχική (ΟΧΙ per-object contextual, ίδιο σκεπτικό με Array — απόφαση Giorgio).
+  **Υλοποίηση (FULL SSoT):** (1) νέος καθαρός helper `systems/explode/explode-entity.ts` (`explodeEntity`/`isExplodable`): polyline/
+  lwpolyline (closed polyline == polygon) → line/arc ανά segment — **bulged segment → arc** μέσω `bulgeToArc` (SSoT bulge math)·
+  rectangle/rect → 4 lines (rotation-aware μέσω `rotatePoint`)· primitive → `null` (no-op). Angles: `bulgeToArc` δίνει **radians**, το
+  `ArcEntity` αποθηκεύει **degrees** → `radToDeg` (SSoT). (2) **Νέο SSoT** `systems/entity-creation/inherit-entity-style.ts`
+  (`inheritEntityStyle` + `ENTITY_STYLE_SKIP`) — extracted από το local του fillet (fillet migrate = pending-ratchet, shared tree)·
+  κάθε παράγωγο κληρονομεί layer/χρώμα/lineweight/linetype. (3) `ExplodeEntityCommand` (undoable, multi-select, mirror
+  `ExplodeArrayCommand`) + export στο `entity-commands/index.ts`. (4) Ribbon: `home-tab-modify.ts` `comingSoon:false` +
+  `action:'explode'` (2 κουμπιά)· νέο `useExplodeRibbonAction` interceptor (mirror `useArrayRibbonActions`, chain: explode → array →
+  base) στο `useDxfViewerRibbon` — διαβάζει `getSelectedEntityIds`, φιλτράρει explodable, `ExplodeEntityCommand`→execute→reselect
+  created→tool 'select'· τίποτα explodable → tool-hint. **i18n (N.11):** `tool-hints:explode.selectEntities` (el+en). **Scope Φ5.1:**
+  polyline/rectangle· **Φ5.2 (μελλοντικά):** block/dimension/hatch. **Tests:** `explode-entity.test.ts` + `ExplodeEntityCommand.test.ts`
+  → 15/15 GREEN (open/closed polyline, bulge→arc, rectangle±rotation, style-inherit, multi-select, undo/redo, primitive→null/skip).
+  tsc SKIP (N.17)· browser-verify + commit → Giorgio.
