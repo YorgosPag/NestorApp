@@ -147,6 +147,15 @@ function readFixtureKind(params: unknown): string | undefined {
   return undefined;
 }
 
+// ADR-510 Φ4i — line-modify tools (Revit «Modify | Lines»: Trim/Extend/Offset/
+// Fillet/Chamfer). They are TAB-NEUTRAL: pressing one must NOT switch the ribbon
+// tab. It preserves the current context — stays on the «Στυλ Γραμμής» contextual
+// tab if it was open, stays on Home otherwise — instead of collapsing the tab
+// (trigger → null) and snapping to Home. Same 5 keys as the modify panel + Home.
+const LINE_MODIFY_TOOLS: ReadonlySet<string> = new Set([
+  'trim', 'extend', 'offset', 'fillet', 'chamfer',
+]);
+
 export function useActiveContextualTrigger({
   primarySelectedId, selectedEntityIds, currentScene, activeTool,
 }: {
@@ -177,7 +186,10 @@ export function useActiveContextualTrigger({
     for (const e of currentScene?.entities ?? []) index.set(e.id, e);
     return index;
   }, [currentScene]);
-  return React.useMemo<string | null>(() => {
+  // ADR-510 Φ4i — last NON-modify trigger, so a tab-neutral line-modify tool can
+  // restore the context it was pressed from (see LINE_MODIFY_TOOLS below).
+  const lastNonModifyTriggerRef = React.useRef<string | null>(null);
+  const trigger = React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
     // Wire-selected circuit (no competing entity selection) → «Κύκλωμα» tab.
     if (!primarySelectedId && activeSystemId && mepSystems.some((s) => s.id === activeSystemId)) {
@@ -360,8 +372,18 @@ export function useActiveContextualTrigger({
       activeTool === 'polygon' ||
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
+    // ADR-510 Φ4i — a line-modify tool is TAB-NEUTRAL: preserve the context it was
+    // pressed from (last non-modify trigger). If «Στυλ Γραμμής» was open it stays
+    // open; if you were on Home (trigger null) you stay on Home. No tab snapping.
+    if (LINE_MODIFY_TOOLS.has(activeTool)) return lastNonModifyTriggerRef.current;
     return null;
   }, [primarySelectedId, selectedEntityIds, currentScene, entityIndex, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities]);
+  // ADR-510 Φ4i — record the last NON-modify resolution so the sticky branch above
+  // can restore it when a tab-neutral line-modify tool becomes active.
+  React.useEffect(() => {
+    if (!LINE_MODIFY_TOOLS.has(activeTool)) lastNonModifyTriggerRef.current = trigger;
+  }, [trigger, activeTool]);
+  return trigger;
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

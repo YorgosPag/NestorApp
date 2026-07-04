@@ -28,7 +28,10 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
           },
         },
         {
-          type: 'split',
+          // ADR-510 Φ4h — μόνο η ΒΑΣΙΚΗ γραμμή ζει στην αρχική (single large button).
+          // Οι υπο-λειτουργίες «Κάθετη» / «Παράλληλη Γραμμή» (draw tools, ΟΧΙ το modify
+          // «offset») μεταφέρθηκαν στο contextual «Στυλ Γραμμής» tab (panel `line-draw`).
+          type: 'simple',
           size: 'large',
           command: {
             id: 'draw.line',
@@ -37,26 +40,6 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             commandKey: 'line',
             shortcut: 'L',
           },
-          variants: [
-            {
-              id: 'line.line',
-              labelKey: 'ribbon.commands.lineVariants.line',
-              icon: 'line',
-              commandKey: 'line',
-            },
-            {
-              id: 'line.perpendicular',
-              labelKey: 'ribbon.commands.lineVariants.perpendicular',
-              icon: 'line-perpendicular',
-              commandKey: 'line-perpendicular',
-            },
-            {
-              id: 'line.parallel',
-              labelKey: 'ribbon.commands.lineVariants.parallel',
-              icon: 'line-parallel',
-              commandKey: 'line-parallel',
-            },
-          ],
         },
         {
           type: 'simple',

@@ -1054,3 +1054,24 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   αρχικής (αφαιρούμενης) γωνίας σε fillet/chamfer = `ICON_CLICK_COLORS.REFERENCE` (γκρι dashed). **OFFSET:** αυξήθηκε η απόσταση
   των παράλληλων (gap 8→12) ώστε το double-arrow να σχεδιάζεται καθαρά ανάμεσά τους. Καμία αλλαγή wiring/λογικής — μόνο SVG
   data. tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4h — Μεταφορά draw υπο-λειτουργιών γραμμής (Κάθετη/Παράλληλη) από Home → contextual «Στυλ Γραμμής».**
+  Αίτημα Giorgio: στην αρχική να μείνει ΜΟΝΟ η βασική «Γραμμή» (single large button)· οι υπο-λειτουργίες να ζουν στο contextual
+  tab. **Διευκρίνιση (επιβεβαιώθηκε στον κώδικα):** το `line-parallel` (draw ToolType, «Παράλληλη Γραμμή») είναι **ΞΕΧΩΡΙΣΤΟ**
+  από το modify `offset` («Παράλληλη Μετατόπιση») — άλλη εντολή, όχι διπλότυπο. **Υλοποίηση:** (1) `home-tab-draw.ts` — το
+  `draw.line` split (3 variants) έγινε **απλό** large button (μόνο `commandKey:'line'`, shortcut L). (2) Νέο **πρώτο panel
+  `line-draw`** στο `contextual-line-tool-tab.ts` με 3 large `toolBtn` (Βασική·Κάθετη·Παράλληλη Γραμμή) — **ΙΔΙΑ command keys**
+  ('line'/'line-perpendicular'/'line-parallel'), μηδέν νέο wiring. Το `ribbon-contextual-config.ts` ήδη ενεργοποιεί το
+  `line-tool-active` trigger και για τα τρία → η καρτέλα δεν εξαφανίζεται κατά την εναλλαγή υπο-λειτουργίας. **i18n (N.11):**
+  `ribbon.panels.lineDraw` (el «Γραμμή» / en «Line»)· labels reuse `ribbon.commands.lineVariants.*`. **Tests:**
+  `contextual-line-tool-tab.test.ts` → 7/7 GREEN (line-draw first + 3 draw tools). tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-04** — **Φ4i (BUGFIX) — τα modify εικονίδια στο contextual «Στυλ Γραμμής» πετούσαν τον χρήστη στην αρχική.**
+  Report Giorgio: κλικ σε ψαλίδισμα/επέκταση/παράλληλη μετατόπιση/συναρμογή/λοξοτομή ενώ ήσουν στο contextual tab → πήγαινε
+  αμέσως στην αρχική. **Ρίζα:** τα modify ToolTypes (trim/extend/offset/fillet/chamfer) ΔΕΝ ήταν στο `resolveContextualTrigger`
+  (`useActiveContextualTrigger`, `app/ribbon-contextual-config.ts`)· όταν σε draw-mode (χωρίς selection) πατούσες modify, το
+  `activeTool` άλλαζε → trigger `null` → το contextual tab σβήνει → `RibbonRoot` fallback στο 'home'. **Fix (tab-neutral, Revit
+  «Modify | Lines»):** τα 5 modify tools είναι πλέον TAB-NEUTRAL — **διατηρούν** το τρέχον context. Νέο `LINE_MODIFY_TOOLS` set +
+  `lastNonModifyTriggerRef`: όταν ενεργό modify tool (και ΧΩΡΙΣ selection — το selection-based resolution προηγείται), ο resolver
+  επιστρέφει το **τελευταίο non-modify trigger** → αν «Στυλ Γραμμής» ήταν ανοιχτό μένει ανοιχτό, αν ήσουν στην αρχική (trigger
+  null) μένεις στην αρχική. Ένα `useEffect` καταγράφει το last non-modify trigger. **Και οι δύο απαιτήσεις Giorgio καλύπτονται:**
+  contextual→μένει contextual· Home→μένει Home. Καμία αλλαγή στο `RibbonRoot` (generic logic ανέγγιχτη). tsc SKIP (N.17)·
+  browser-verify + commit → Giorgio.

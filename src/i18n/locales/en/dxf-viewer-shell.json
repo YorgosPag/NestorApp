@@ -1567,6 +1567,7 @@
       "lineGeneral": "General",
       "lineAppearance": "Line Appearance",
       "lineGeometry": "Geometry",
+      "lineDraw": "Line",
       "lineModify": "Modify",
       "lineFilletOptions": "Fillet Options",
       "lineChamferOptions": "Chamfer Options",

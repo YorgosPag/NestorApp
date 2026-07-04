@@ -135,6 +135,28 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: LINE_TOOL_CONTEXTUAL_TRIGGER,
   panels: [
+    // ── Γραμμή (draw υπο-λειτουργίες — Revit «Modify | Lines» Draw panel) ──────
+    // ADR-510 Φ4h — οι draw υπο-λειτουργίες της γραμμής ζουν ΕΔΩ (μεταφέρθηκαν από το
+    // Home split, όπου έμεινε ΜΟΝΟ η βασική «Γραμμή»): Βασική · Κάθετη · Παράλληλη
+    // Γραμμή. ΙΔΙΑ command keys ('line'/'line-perpendicular'/'line-parallel' — draw
+    // ToolTypes, **ΞΕΧΩΡΙΣΤΑ** από το modify 'offset'/«Παράλληλη Μετατόπιση»)· μηδέν νέο
+    // wiring. Το contextual trigger παραμένει ενεργό και για τα τρία (βλ. `ribbon-
+    // contextual-config.ts`) → η καρτέλα δεν εξαφανίζεται όταν αλλάζεις υπο-λειτουργία.
+    // Large buttons = SSoT `toolBtn` (ribbon-large-button-helpers).
+    {
+      id: 'line-draw',
+      labelKey: 'ribbon.panels.lineDraw',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            toolBtn('lineDraw.line', 'ribbon.commands.lineVariants.line', 'line', 'line', 'L'),
+            toolBtn('lineDraw.perpendicular', 'ribbon.commands.lineVariants.perpendicular', 'line-perpendicular', 'line-perpendicular'),
+            toolBtn('lineDraw.parallel', 'ribbon.commands.lineVariants.parallel', 'line-parallel', 'line-parallel'),
+          ],
+        },
+      ],
+    },
     // ── Τροποποίηση (Revit «Modify | Lines») ──────────────────────────────────
     // ADR-510 Φ4g — 5 LARGE modify tools (Trim · Extend · Offset · Fillet · Chamfer),
     // αριστερά→δεξιά, στην ΑΡΧΗ της καρτέλας (mirror του Revit «Modify» panel). ΙΔΙΑ
