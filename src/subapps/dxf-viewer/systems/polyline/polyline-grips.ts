@@ -38,6 +38,12 @@ import type { GripInfo, PolylineGripKind } from '../../hooks/grip-types';
 import { rectLocalWorld } from '../../bim/grips/rect-frame';
 import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
 import { asOrientedRect, polylineBbox, polylineBboxCenter } from './rectangle-detect';
+// ADR-561 — live polyline/rectangle ROTATION ghost SSoT: the SAME swept-angle + rotate
+// primitives the commit runs (`commitPolylineRotationGripDrag` → `resolveRotation` →
+// `RotateEntityCommand` / explode-to-polyline), so preview ≡ commit by construction (μηδέν
+// νέα rotate math — mirror `applyArcRotationDrag` / `applyLineRotationDrag`).
+import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
+import { rotatePoint } from '../../utils/rotation-math';
 
 /** The polyline whole-entity grip kinds (mirror `wall-midpoint` / `wall-rotation`). */
 export const POLYLINE_MOVE_KIND: PolylineGripKind = 'polyline-move';
@@ -98,4 +104,35 @@ export function getPolylineMoveRotateGrips(
       position: { x: center.x, y: center.y + rotOffsetY }, movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
     },
   ];
+}
+
+/** The minimal polyline geometry the rotation ghost reads (mirror `ArcRotationDragInput`). */
+export interface PolylineRotationDragInput {
+  /** The polyline's vertices (a rectangle is already exploded to 4 corners upstream). */
+  readonly vertices: readonly Point2D[];
+  /** Reference anchor at mouseDown — the swept angle is anchor-relative (`angle(cur) − angle(anchor)`). */
+  readonly anchor: Point2D;
+  /** Live world cursor position (= anchor + delta). */
+  readonly currentPos: Point2D;
+  /** Rotation centre. Absent → the vertices' axis-aligned-bbox centre (commit's fallback pivot). */
+  readonly pivot?: Point2D;
+}
+
+/**
+ * ADR-561 — rotate every polyline vertex about the pivot (or its bbox centre) by the
+ * anchor-relative swept angle. Thin adapter over the EXACT rotate primitives the commit runs
+ * (`commitPolylineRotationGripDrag` → `resolveRotation` → `RotateEntityCommand` polyline case /
+ * rectangle explode): `sweptAngleDegAboutPivot` for the angle, then `rotatePoint` on every vertex
+ * — identical to the `polyline`/`lwpolyline` branch of `rotateEntity` (rotation-math). So the live
+ * ghost ≡ the committed result by construction (NO re-implemented rotate math — one engine, mirror
+ * `applyArcRotationDrag`). The bbox-centre fallback matches the commit's `polylineBboxCenter` pivot,
+ * so a legacy (non-hot-grip) drag previews identically too. Returns `null` for a degenerate / zero
+ * sweep (cursor on the pivot) so callers no-op.
+ */
+export function applyPolylineRotationDrag(input: PolylineRotationDragInput): Point2D[] | null {
+  if (input.vertices.length < 2) return null;
+  const pivot = input.pivot ?? polylineBboxCenter(input.vertices);
+  const sweptDeg = sweptAngleDegAboutPivot(pivot, input.anchor, input.currentPos);
+  if (sweptDeg === null || sweptDeg === 0) return null;
+  return input.vertices.map((v) => rotatePoint(v, pivot, sweptDeg));
 }

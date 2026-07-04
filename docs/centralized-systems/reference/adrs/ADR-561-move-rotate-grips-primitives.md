@@ -110,6 +110,25 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-04** — 🐛 **polyline / rectangle rotation LIVE GHOST fix** (Giorgio: «θέλω τον ίδιο ακριβώς
+  κώδικα περιστροφής της γραμμής και στο τετράγωνο»). ΙΔΙΑ οικογένεια bug με το τόξο: το **commit** του
+  polyline rotation δούλευε (`commitPolylineRotationGripDrag` → `RotateEntityCommand` / rectangle
+  explode-to-polyline) + ο hot-grip FSM ξεκινούσε ήδη τη ροή rotate (`polyline-rotation` → `'rotate'`),
+  αλλά το **preview ghost** έκοβε — έλειπε ΜΟΝΟ η γεωμετρία (τα βέλη + POLAR/AutoAlign ίχνη είναι ήδη
+  generic → εμφανίστηκαν μόνα τους μόλις μπήκε το ghost). Fix (mirror του arc path 1:1, full SSoT): νέο
+  pure `applyPolylineRotationDrag` (`systems/polyline/polyline-grips.ts`) = thin adapter πάνω στα ΙΔΙΑ
+  `sweptAngleDegAboutPivot` + `rotatePoint` primitives που τρέχει το commit (`rotateEntity` polyline
+  case — rotate κάθε vertex), με fallback pivot = `polylineBboxCenter` (ίδιο με το commit) → preview ≡
+  commit by construction, μηδέν νέα rotate math. **Τροποποιημένα**: `hooks/grip-computation-types.ts`
+  (`DxfGripDragPreview` +`polylineGripKind` +`arcGripKind` — Boy-Scout N.0.2: το arc fix το ξέχασε,
+  ώστε τα `dp.arcGripKind`/`dp.polylineGripKind` reads να είναι type-clean), `rendering/ghost/
+  entity-preview-types.ts` (+`polylineGripKind`), `hooks/tools/grip-drag-preview-transform.ts`
+  (pass-through), `hooks/grips/grip-projections.ts` (`buildRotateReferencePreview` forward),
+  `rendering/ghost/apply-entity-preview.ts` (polyline-rotation branch),
+  `systems/polyline/__tests__/polyline-grips.test.ts` (parity tests vs `rotateEntity` polyline case,
+  rectangle 90°, degenerate→null, external+bbox pivot). jest ✅ 11/11. 🔴 εκκρεμεί browser-verify: 1
+  περιστροφή τετραγώνου (ghost + βέλη + ίχνη) + η ειδική απαίτηση «ομοαξονικός βραχίονας αναφοράς με
+  πλευρά ορθογωνίου» (verify-then-decide — αγγίζει το κοινό free-rotate flow line/arc).
 - **2026-07-04** — 🐛 **arc rotation LIVE GHOST fix** (Giorgio: «όταν πατάω το σημάδι περιστροφής
   δεν εμφανίζεται preview ghost του τόξου»). Το **commit** του arc rotation δούλευε (`commitArcGripDrag`
   → `RotateEntityCommand`), αλλά το **preview** έκοβε: (1) το `EntityPreviewTransform` δεν είχε πεδίο

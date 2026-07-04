@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, TextGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, TextGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -156,6 +156,21 @@ export interface DxfGripDragPreview {
    * `anchorPos` carries the reference anchor so the swept angle starts at 0.
    */
   lineGripKind?: LineGripKind;
+  /**
+   * ADR-561 — plain DXF arc rotation discriminator (forwarded from `UnifiedGripInfo.
+   * arcGripKind` via `buildRotateReferencePreview`). Routes the live ghost through
+   * `applyArcRotationDrag` (the SAME `sweptAngleDegAboutPivot` + `rotateEntity`-arc the
+   * commit runs), so preview ≡ commit. `anchorPos` carries the reference anchor (sweep 0).
+   */
+  arcGripKind?: ArcGripKind;
+  /**
+   * ADR-561 — plain DXF polyline/rectangle rotation discriminator (forwarded from
+   * `UnifiedGripInfo.polylineGripKind` via `buildRotateReferencePreview`). Routes the live
+   * ghost through `applyPolylineRotationDrag` (the SAME `sweptAngleDegAboutPivot` +
+   * `rotateEntity`-polyline the commit runs — rotate every vertex), so preview ≡ commit.
+   * `anchorPos` carries the reference anchor (sweep 0).
+   */
+  polylineGripKind?: PolylineGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw

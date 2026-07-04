@@ -248,6 +248,10 @@ export function buildRotateReferencePreview(
     // ADR-561 — plain DXF arc rotation live ghost (free spin / 6-click reference /
     // typed angle), same shared hot-grip flow as the line.
     ...(activeGrip.arcGripKind ? { arcGripKind: activeGrip.arcGripKind } : {}),
+    // ADR-561 — plain DXF polyline/rectangle rotation live ghost (free spin / 6-click
+    // reference / typed angle), same shared hot-grip flow as the line/arc. Without this
+    // forward the ghost never receives the discriminator in the rotate flow.
+    ...(activeGrip.polylineGripKind ? { polylineGripKind: activeGrip.polylineGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

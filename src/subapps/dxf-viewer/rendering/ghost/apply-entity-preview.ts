@@ -20,11 +20,13 @@
  */
 
 import type { Point2D } from '../types/Types';
-import type { DxfEntityUnion, DxfText, DxfLine, DxfArc } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfEntityUnion, DxfText, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-363 Slice F — plain DXF line rotation live ghost (shared rotate SSoT).
 import { applyLineRotationDrag } from '../../systems/line/line-grips';
 // ADR-561 — plain DXF arc rotation live ghost (shared rotate SSoT, preview ≡ commit).
 import { applyArcRotationDrag } from '../../systems/arc/arc-grips';
+// ADR-561 — plain DXF polyline/rectangle rotation live ghost (shared rotate SSoT, preview ≡ commit).
+import { applyPolylineRotationDrag } from '../../systems/polyline/polyline-grips';
 import type { Entity } from '../../types/entities';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
@@ -89,7 +91,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -258,6 +260,28 @@ export function applyEntityPreview(
     });
     if (!rotated) return entity;
     return { ...(entity as object), center: rotated.center, startAngle: rotated.startAngle, endAngle: rotated.endAngle } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-561 — plain DXF polyline / rectangle ROTATION live ghost ──────────
+  // A polyline is a primitive (a bag of vertices); the rotation ghost spins EVERY vertex
+  // about `rotatePivot` (default = the vertices' bbox centre) by the swept angle, via the
+  // SAME `applyPolylineRotationDrag` SSoT the commit runs (`commitPolylineRotationGripDrag`
+  // → `RotateEntityCommand` polyline case / rectangle explode-to-polyline), so preview ≡
+  // commit. `anchorPos` = the reference anchor (swept angle starts at 0). A scene rectangle
+  // is already a closed 4-vertex polyline here, so this one branch covers both. Only the
+  // rotation handle carries `'polyline-rotation'`; the centre MOVE grip (`'polyline-move'`,
+  // `movesEntity`) falls through to the classic whole-entity translate below.
+  if (polylineGripKind === 'polyline-rotation' && anchorPos && entity.type === 'polyline') {
+    const poly = entity as unknown as DxfPolyline;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const rotated = applyPolylineRotationDrag({
+      vertices: poly.vertices,
+      anchor: anchorPos,
+      currentPos,
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    });
+    if (!rotated) return entity;
+    return { ...(entity as object), vertices: rotated } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
