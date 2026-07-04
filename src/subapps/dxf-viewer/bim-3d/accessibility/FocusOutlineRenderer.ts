@@ -17,6 +17,7 @@
 
 import * as THREE from 'three';
 import { BIM_FOCUS_OUTLINE_COLOR_THREE } from '../../accessibility/bim-a11y-color-tokens';
+import { finiteBox3FromObject } from '../scene/finite-bounds';
 
 const FOCUS_OUTLINE_COLOR = BIM_FOCUS_OUTLINE_COLOR_THREE;
 const FOCUS_OUTLINE_DASH_SIZE = 0.08;
@@ -78,8 +79,8 @@ export class FocusOutlineRenderer {
   /** Compute the world-space center of the focused entity (null when nothing focused). */
   getCurrentWorldCenter(): THREE.Vector3 | null {
     if (!this.currentMesh) return null;
-    const box = new THREE.Box3().setFromObject(this.currentMesh);
-    if (box.isEmpty()) return null;
+    const box = finiteBox3FromObject(this.currentMesh);
+    if (!box) return null;
     return box.getCenter(new THREE.Vector3());
   }
 

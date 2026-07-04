@@ -30,6 +30,17 @@
       ],
       "tier": 3
     },
+    "nan-safe-box3-bounds": {
+      "ssotFile": "src/subapps/dxf-viewer/bim-3d/scene/finite-bounds.ts",
+      "description": "ADR-537 — every 3D bounds-from-object computation MUST go through finiteBox3FromObject() in bim-3d/scene/finite-bounds.ts. A raw `new THREE.Box3().setFromObject(obj)` + `.isEmpty()` is NaN-BLIND (`isEmpty()` is `max < min`, which is `false` when a bound is NaN), so a single corrupt vertex yields a box that reports 'not empty' yet carries NaN bounds. Fed into the SHARED camera frame (viewport.frameBounds) or the section box, that NaN blanks the ENTIRE viewport — both the DXF underlay AND the lit BIM. finiteBox3FromObject() returns null on empty OR non-finite so callers hit their existing no-op branch. It is the ONLY legitimate `setFromObject` site. Route new bounds sites through it (null-guard per local semantics), never inline. Test files are exempt (they assert on raw bounds).",
+      "forbiddenPatterns": [
+        "\\.setFromObject\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim-3d/scene/finite-bounds.ts"
+      ],
+      "tier": 3
+    },
     "grip-settings-schema": {
       "ssotFile": "src/subapps/dxf-viewer/types/grip-settings-schema.ts",
       "description": "ADR-559 — the grip-settings object SHAPE is defined ONCE in types/grip-settings-schema.ts (GripSettingsBase + GripStyleExtras + GripColors/ResolvedGripColors + GripSettingsFull). Every other grip-settings type (domain GripSettings, GripStyle, the input DTO, MockGripSettings, preview prop-types) MUST be a PROJECTION (`type X = ... & Omit<...>` / re-export), not a standalone `interface GripSettings`/`GripStyle`/`MockGripSettings`. Re-declaring one reintroduces the 5+ divergent-copies duplication where adding one field meant editing every copy by hand. Add new grip fields to GripSettingsBase. Local view-models with extra display-only fields must use a distinct name (e.g. GripSettingsSummary / GripCssPreviewInput), not `GripSettings`.",

@@ -29,6 +29,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../scene/finite-bounds';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
@@ -92,8 +93,8 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
     cached.updateMatrixWorld(true);
     // Land the anchor edge (base/top) on the mounting plane using the real bbox.
     // An empty group (no meshes) → anchor at origin so position.y === mounting.
-    const box = new THREE.Box3().setFromObject(cached);
-    const anchorY = box.isEmpty() ? 0 : (p.verticalAnchor === 'top' ? box.max.y : box.min.y);
+    const box = finiteBox3FromObject(cached);
+    const anchorY = box ? (p.verticalAnchor === 'top' ? box.max.y : box.min.y) : 0;
     cached.position.y = mountingY - anchorY;
     tagObject(cached, p);
     return cached;

@@ -68,4 +68,28 @@ describe('getSlabCornerWorldPoints', () => {
   it('degenerate: empty polygon returns []', () => {
     expect(getSlabCornerWorldPoints(makeSlabEntity([]))).toHaveLength(0);
   });
+
+  // ADR-363 — geometry is DERIVED and can be transiently absent (freshly-loaded slab
+  // before `reconcileLoadedSceneBim` recomputes it). Ambient alignment tracking then
+  // crashed on `slab.geometry.polygon` (undefined). Fall back to the persisted
+  // params.outline (identical CCW ring) instead of throwing.
+  it('geometry absent: falls back to params.outline vertices', () => {
+    const slab = {
+      id: 'slab_no_geom', type: 'slab', kind: 'floor', layerId: '0', visible: true,
+      params: { outline: { vertices: SQUARE.map(v => ({ x: v.x, y: v.y })) } },
+      geometry: undefined,
+      validation: undefined,
+    } as unknown as SlabEntity;
+    const result = getSlabCornerWorldPoints(slab);
+    expect(result).toHaveLength(4);
+    expect(result[0]!.point).toEqual({ x: 0, y: 0 });
+  });
+
+  it('both geometry and params.outline absent: returns [] (no throw)', () => {
+    const slab = {
+      id: 'slab_empty', type: 'slab', kind: 'floor', layerId: '0', visible: true,
+      params: {}, geometry: undefined, validation: undefined,
+    } as unknown as SlabEntity;
+    expect(getSlabCornerWorldPoints(slab)).toHaveLength(0);
+  });
 });

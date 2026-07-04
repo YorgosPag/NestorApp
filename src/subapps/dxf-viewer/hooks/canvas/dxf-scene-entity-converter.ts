@@ -10,14 +10,13 @@
  */
 
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-363 — SSoT sub-entity wrapping (slab/slab-opening/opening/stair/dimension →
+// nested payload field). Shared with the drag-preview wrapper (draw-real-entity-preview).
+import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, HatchEntity } from '../../types/entities';
 import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
-import type { StairEntity } from '../../bim/types/stair-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import type { OpeningEntity } from '../../bim/types/opening-types';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
 // ADR-363 Phase 5 — beam wrapper for DXF render pipeline.
@@ -50,7 +49,6 @@ import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
 import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
-import type { DimensionEntity } from '../../types/dimension';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
@@ -215,28 +213,28 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       // ADR-358 Phase 5b — wrap StairEntity into DxfStair (no expansion). The
       // StairRenderer renders directly from `stairEntity.geometry`, and grip
       // computation reads the parametric grips from the StairEntity params via
-      // `getStairGrips()`. SSoT: zero geometry duplication.
-      const e = entity as StairEntity;
-      return { ...base, type: 'stair' as const, stairEntity: e } as DxfEntityUnion;
+      // `getStairGrips()`. SSoT: zero geometry duplication. Sub-entity field via
+      // `dxfSubEntityPayload` (shared with the drag-preview wrapper).
+      return { ...base, type: 'stair' as const, ...dxfSubEntityPayload(entity) } as DxfEntityUnion;
     }
     case 'dimension': {
       // ADR-362 — wrap DimensionEntity into DxfDimension so DxfRenderer +
       // buildDimensionLookup() see it. Without this case, freshly-committed dims
       // from useDimensionCreate were silently dropped here → invisible on canvas.
-      return { ...base, type: 'dimension' as const, dimensionEntity: entity as DimensionEntity } as DxfEntityUnion;
+      return { ...base, type: 'dimension' as const, ...dxfSubEntityPayload(entity) } as DxfEntityUnion;
     }
     case 'slab': {
       // ADR-363 Phase 3.7 — wrap SlabEntity. SlabRenderer renders geometry.polygon
       // fill + hatch. Per-frame slabOpeningsBySlab map cuts boolean holes.
       return isSlabEntity(entity)
-        ? { ...base, type: 'slab' as const, slabEntity: entity as SlabEntity } as DxfEntityUnion
+        ? { ...base, type: 'slab' as const, ...dxfSubEntityPayload(entity) } as DxfEntityUnion
         : null;
     }
     case 'slab-opening': {
       // ADR-363 Phase 3.7 — wrap SlabOpeningEntity. SlabOpeningRenderer draws
       // dashed outline + kind annotation over the host slab cutout.
       return isSlabOpeningEntity(entity)
-        ? { ...base, type: 'slab-opening' as const, slabOpeningEntity: entity as SlabOpeningEntity } as DxfEntityUnion
+        ? { ...base, type: 'slab-opening' as const, ...dxfSubEntityPayload(entity) } as DxfEntityUnion
         : null;
     }
     case 'opening': {
@@ -244,7 +242,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       // draws outline + kind overlay; per-frame openingsByWall map drives WallRenderer
       // boolean cutouts so openings visually punch through wall fills.
       return isOpeningEntity(entity)
-        ? { ...base, type: 'opening' as const, openingEntity: entity as OpeningEntity } as DxfEntityUnion
+        ? { ...base, type: 'opening' as const, ...dxfSubEntityPayload(entity) } as DxfEntityUnion
         : null;
     }
     case 'wall': {

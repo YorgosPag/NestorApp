@@ -13,6 +13,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../scene/finite-bounds';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
 import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
@@ -100,8 +101,8 @@ export function findBimEntityWorldBox(group: THREE.Object3D, bimId: string): THR
   group.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     if ((obj.userData['bimId'] as string | undefined) !== bimId) return;
-    const b = new THREE.Box3().setFromObject(obj);
-    if (b.isEmpty()) return;
+    const b = finiteBox3FromObject(obj);
+    if (!b) return;
     if (box) box.union(b);
     else box = b;
   });

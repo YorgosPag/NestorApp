@@ -21,6 +21,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../../../../bim-3d/scene/finite-bounds';
 import type { ColumnEntity } from '../../../types/column-types';
 import type { Point2D } from '../../../../rendering/types/Types';
 import { computeColumnGeometry } from '../../../geometry/column-geometry';
@@ -220,8 +221,8 @@ export function captureColumnDetail3d(
     renderer.setClearColor(SCENE_BG_HEX, 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    const box = new THREE.Box3().setFromObject(scene);
-    if (box.isEmpty()) return null;
+    const box = finiteBox3FromObject(scene);
+    if (!box) return null;
     const camera = frameCamera(box, widthPx / heightPx);
     renderer.render(scene, camera);
 

@@ -22,6 +22,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../../../../bim-3d/scene/finite-bounds';
 import type {
   FoundationEntity,
   FoundationParams,
@@ -137,8 +138,8 @@ export function captureFootingDetail3d(
 
   const { widthPx, heightPx } = options;
   try {
-    const box = new THREE.Box3().setFromObject(scene);
-    if (box.isEmpty()) return null;
+    const box = finiteBox3FromObject(scene);
+    if (!box) return null;
     const camera = frameCamera(box, widthPx / heightPx);
     const dataUrl = renderSceneToDataUrl(scene, camera, widthPx, heightPx);
     if (!dataUrl) return null;

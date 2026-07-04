@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../../scene/finite-bounds';
 
 const CAP_QUAD_SCALE_FACTOR = 4;
 const FALLBACK_CAP_SIZE = 100;
@@ -25,10 +26,10 @@ export function resolveEffectiveBounds(
   getDxfBounds: () => THREE.Box3 | null,
 ): THREE.Box3 | null {
   if (sceneBounds && !sceneBounds.isEmpty()) return sceneBounds;
-  const bimBox = new THREE.Box3().setFromObject(getBimGroup());
+  const bimBox = finiteBox3FromObject(getBimGroup());
   const dxfBox = getDxfBounds();
   const combined = new THREE.Box3();
-  if (!bimBox.isEmpty()) combined.union(bimBox);
+  if (bimBox) combined.union(bimBox);
   if (dxfBox && !dxfBox.isEmpty()) combined.union(dxfBox);
   return combined.isEmpty() ? null : combined;
 }

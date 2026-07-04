@@ -126,6 +126,23 @@ interface EntityRenderContract<E> {
 
 ## Changelog
 
+### 2026-07-05 — Φ-Preview2D hotfix: wrapped sub-entity SSoT (crash «Cannot read properties of undefined») (UNCOMMITTED)
+**Πλαίσιο (Giorgio):** runtime crash κατά το **grip/Move ghost preview** πλάκας/ανοίγματος:
+`TypeError: Cannot read properties of undefined (reading 'kind')` στο `buildEntityModelFromDxf`
+(`dxf-renderer-entity-model.ts:105`, `const s = entity.slabEntity; … s.kind`) ← `drawRealEntityPreview` ← `drawMemberBodyGhostWithJoinMiter`. Επίσης δεύτερο, ανεξάρτητο crash στο ίδιο slab-drag: `Cannot read properties of undefined (reading 'polygon')` στο `getSlabCornerWorldPoints` (ambient alignment tracking).
+
+**Ρίζα (crash #1 — wrapping mismatch, ΟΧΙ optional-chaining bug):** το preview pipeline (`useGripGhostPreview` + `useMovePreview`) τρέχει `applyEntityPreview` πάνω στο **flat** scene entity (διαβάζει `.params`/`.geometry` στο top level για slab/opening) και το επιστρέφει **flat**. Όμως **5 variants** (`slab`/`slab-opening`/`opening`/`stair`/`dimension`) κρατούν το payload σε **nested sub-entity field** (`slabEntity` κλπ), που το `buildEntityModelFromDxf` κάνει dereference **χωρίς guard**. Στο committed path το wrapping γίνεται από το `convertEntity` (`dxf-scene-entity-converter`)· το preview path το **παρέκαμπτε** → `undefined.kind`. (Το `stair` δεν έσκαγε γιατί το `applyEntityPreview` το ξανα-τυλίγει μόνο του — pre-existing ασυνέπεια.)
+
+**Απόφαση/υλοποίηση — ΜΙΑ SSoT για το sub-entity wrapping (μηδέν διπλότυπο):**
+- **NEW SSoT** `DXF_WRAPPED_SUBENTITY_FIELD` + `dxfSubEntityPayload()` στο `canvas-v2/dxf-canvas/dxf-types.ts` (δίπλα στα interface definitions που ορίζουν το σχήμα = η πηγή αλήθειας). ΕΝΑ σημείο ορίζει «ποιος wrapped τύπος τυλίγεται σε ποιο field».
+- **Κεντρικοποίηση προϋπάρχοντος implicit διπλότυπου (εντολή Giorgio):** το `convertEntity` (5 wrapped cases) ξαναγράφτηκε να χρησιμοποιεί το `dxfSubEntityPayload()` (behavior-preserving· αφαιρέθηκαν 5 πλέον-αχρησιμοποίητα type imports).
+- **Preview boundary:** το `drawRealEntityPreview` (κοινό chokepoint grip **+** Move) normalize-άρει το transformed entity μέσω `toWrappedPreviewEntity()` που διαβάζει την **ΙΔΙΑ** SSoT — no-op για direct entities (wall/beam/column/…) και για ήδη-wrapped (stair). Το `transformed` στα hooks μένει flat (οι υπόλοιποι consumers — clearance dims κλπ — δεν επηρεάζονται).
+
+**Ρίζα (crash #2 — derived-cache χωρίς guard):** το `getSlabCornerWorldPoints` (SSoT slab corners, ADR-370 §5.3) διάβαζε `slab.geometry.polygon.vertices` **unguarded**, ενώ τα αδέλφια polygon members (slab-opening/roof/thermal) διαβάζουν `params.X?.vertices` **guarded**. Το `geometry` είναι **derived** και λείπει transiently (freshly-loaded slab πριν το `reconcileLoadedSceneBim`). **Fix:** geometry-preferred με fallback στο persisted `params.outline` (identical CCW ring — `SlabGeometry.polygon` = re-export του `outline`) + guard. Μηδέν νέα SSoT (source-over-derived pattern).
+
+**Verify:** jest GREEN — `draw-real-entity-preview` (10, +slab/opening/dimension wrap + direct no-op + stair no-double-wrap), `slab-corner-anchors` (9, +geometry-absent fallback), `useDxfSceneConversion` (18, converter regression). tsc SKIP (N.17). ⚠️ CHECK 6D → stage **ADR-550**. 🔴 PENDING: browser-verify (σύρσιμο λαβής πλάκας/ανοίγματος → ghost χωρίς crash) + commit (Giorgio).
+> Άσχετο pre-existing failing test (ΟΧΙ από αυτή τη δουλειά): `apply-entity-preview-text` (MTEXT move/resize) — δεν αγγίχτηκε.
+
 ### 2026-06-29 — Φ-Ghost3D (3D «original μένει φάντασμα») + Φ-Preview2D-B (Stretch/Scale/Rotate real renderer) (UNCOMMITTED)
 **Πλαίσιο (Giorgio):** (Α) στην 3D προβολή, κατά το rigid move/rotate, το αντικείμενο **εξαφανιζόταν** από την αρχική θέση (έμεναν μόνο οι 2D λαβές) αντί να μένει **dimmed φάντασμα** όπως στον 2D καμβά — σε **οποιαδήποτε** όψη (top/perspective). (Β) τα ribbon εργαλεία Stretch/Scale/Rotate κρατούσαν δικό τους **simplified ghost** (το «Out of scope» της προηγούμενης εγγραφής).
 

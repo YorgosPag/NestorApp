@@ -13,6 +13,7 @@
 
 import * as THREE from 'three';
 import type { FocusEntityLabelData } from './FocusIndicator3D';
+import { finiteBox3FromObject } from '../scene/finite-bounds';
 
 /** Navigation order for keyboard traversal. */
 export type NavOrder = 'spatial' | 'semantic';
@@ -96,8 +97,8 @@ export function computeFocusOrder(
       if (!parent.visible) return;
       parent = parent.parent;
     }
-    const box = new THREE.Box3().setFromObject(obj);
-    if (box.isEmpty()) return;
+    const box = finiteBox3FromObject(obj);
+    if (!box) return;
     box.getCenter(reuseCenter);
     if (!frustum.containsPoint(reuseCenter)) return;
 
@@ -154,8 +155,8 @@ export function findFocusedEntityData(
     if (result) return;
     if (!(obj instanceof THREE.Mesh)) return;
     if ((obj.userData['bimId'] as string | undefined) !== bimId) return;
-    const box = new THREE.Box3().setFromObject(obj);
-    if (box.isEmpty()) return;
+    const box = finiteBox3FromObject(obj);
+    if (!box) return;
     const bimType = (obj.userData['bimType'] as string | undefined) ?? '';
     const entityName = (obj.userData['bimName'] as string | undefined) ?? bimId;
     result = {

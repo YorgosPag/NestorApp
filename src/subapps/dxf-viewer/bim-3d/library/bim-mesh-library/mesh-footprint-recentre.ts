@@ -18,6 +18,7 @@
  */
 
 import * as THREE from 'three';
+import { finiteBox3FromObject } from '../../scene/finite-bounds';
 
 /**
  * Wrap `scene` so its X/Z footprint centre sits on the local origin (Y unchanged).
@@ -28,8 +29,8 @@ import * as THREE from 'three';
  */
 export function recentreMeshFootprint(scene: THREE.Group): THREE.Group {
   scene.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(scene);
-  if (box.isEmpty()) return scene;
+  const box = finiteBox3FromObject(scene);
+  if (!box) return scene;
   const cx = (box.min.x + box.max.x) / 2;
   const cz = (box.min.z + box.max.z) / 2;
   scene.position.set(-cx, 0, -cz);

@@ -28,6 +28,35 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
 import { buildEntityModelFromDxf } from '../../canvas-v2/dxf-canvas/dxf-renderer-entity-model';
 import { resolveEntityRenderStyle } from '../../canvas-v2/dxf-canvas/dxf-renderer-style-resolve';
+import { DXF_WRAPPED_SUBENTITY_FIELD, dxfSubEntityPayload, type DxfWrappedType } from '../../canvas-v2/dxf-canvas/dxf-types';
+
+/**
+ * ADR-363/ADR-550 — normalise a preview entity into a VALID `DxfEntityUnion` before
+ * `buildEntityModelFromDxf` (the SSoT DxfEntityUnion→Entity mapper shared with the
+ * committed canvas) reads it.
+ *
+ * WHY: the preview pipeline (grip drag `useGripGhostPreview` + Move tool `useMovePreview`)
+ * runs `applyEntityPreview` on the FLAT scene entity — it reads `.params`/`.geometry`
+ * at top level (see its slab/opening branches) and returns them flat. But five variants
+ * carry their payload in a sub-entity wrapper (`slab`→`slabEntity`, `slab-opening`→
+ * `slabOpeningEntity`, `opening`→`openingEntity`, `stair`→`stairEntity`, `dimension`→
+ * `dimensionEntity`), which `buildEntityModelFromDxf` dereferences unconditionally
+ * (`s.kind`). On the committed path the entity is wrapped by `convertEntity`
+ * (dxf-scene-entity-converter); the preview path skipped that step, so a moving slab/
+ * opening ghost dereferenced `undefined.kind` and crashed the RAF draw.
+ *
+ * Nest the flat entity into its own payload via the SAME SSoT `convertEntity` uses
+ * (`dxfSubEntityPayload` + `DXF_WRAPPED_SUBENTITY_FIELD`) — one source for the field
+ * names, zero duplication. No-op for direct entities (wall/beam/column/foundation/…)
+ * and for already-wrapped ones (stair, which `applyEntityPreview` re-wraps itself).
+ */
+function toWrappedPreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
+  const field = DXF_WRAPPED_SUBENTITY_FIELD[entity.type as DxfWrappedType];
+  if (!field) return entity; // direct entity — read flat, no wrapper needed
+  const rec = entity as unknown as Record<string, unknown>;
+  if (rec[field]) return entity; // already wrapped (e.g. stair from applyEntityPreview)
+  return { ...rec, ...dxfSubEntityPayload(entity) } as unknown as DxfEntityUnion;
+}
 
 /**
  * Draw one already-transformed preview entity at full real fidelity on the
@@ -42,7 +71,10 @@ export function drawRealEntityPreview(
   transform: ViewTransform,
   viewport: Viewport,
 ): void {
-  const resolved = resolveEntityRenderStyle(transformed, layersById);
-  const model = buildEntityModelFromDxf(transformed, false, resolved);
+  // ADR-363/ADR-550 — wrap flat slab/opening/… previews into the sub-entity payload
+  // the SSoT model builder dereferences (mirrors `convertEntity` on the committed path).
+  const renderable = toWrappedPreviewEntity(transformed);
+  const resolved = resolveEntityRenderStyle(renderable, layersById);
+  const model = buildEntityModelFromDxf(renderable, false, resolved);
   bimPreview.render(model, transform, viewport);
 }

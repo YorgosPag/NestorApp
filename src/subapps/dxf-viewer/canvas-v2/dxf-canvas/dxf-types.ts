@@ -528,6 +528,41 @@ export interface DxfRay extends DxfEntity {
 
 export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
 
+// === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
+/**
+ * ADR-363 — SSoT map of the five `DxfEntityUnion` variants that carry their BIM
+ * payload in a NESTED sub-entity field, versus the ~30 "direct" variants that spread
+ * `kind`/`params`/`geometry` at the top level (wall/beam/column/foundation/roof/…).
+ *
+ * This is the ONE place that owns "which field a wrapped variant nests under". Both
+ * writers of the wrapped shape read it from here — `convertEntity`
+ * (committed scene→Dxf, `dxf-scene-entity-converter`) and `toWrappedPreviewEntity`
+ * (grip/Move drag preview, `draw-real-entity-preview`) — and `buildEntityModelFromDxf`
+ * dereferences the same field on the read side. Adding a new wrapped type = one line
+ * here (+ its interface above), never a scattered edit across the pipeline.
+ */
+export const DXF_WRAPPED_SUBENTITY_FIELD = {
+  'slab': 'slabEntity',
+  'slab-opening': 'slabOpeningEntity',
+  'opening': 'openingEntity',
+  'stair': 'stairEntity',
+  'dimension': 'dimensionEntity',
+} as const satisfies Partial<Record<DxfEntityUnion['type'], string>>;
+
+/** A `DxfEntityUnion['type']` whose payload is nested under a sub-entity field. */
+export type DxfWrappedType = keyof typeof DXF_WRAPPED_SUBENTITY_FIELD;
+
+/**
+ * The `{ <subEntityField>: entity }` fragment for a wrapped variant, or `{}` for a
+ * direct one. Spread onto a scene entity to project it into a valid `DxfEntityUnion`
+ * (the payload IS the entity itself — mirrors both `convertEntity` and the preview
+ * wrapper). SSoT via {@link DXF_WRAPPED_SUBENTITY_FIELD} — no per-call-site field names.
+ */
+export function dxfSubEntityPayload(entity: { readonly type: string }): Record<string, unknown> {
+  const field = DXF_WRAPPED_SUBENTITY_FIELD[entity.type as DxfWrappedType];
+  return field ? { [field]: entity } : {};
+}
+
 // === DXF SCENE ===
 export interface DxfScene {
   entities: DxfEntityUnion[];
