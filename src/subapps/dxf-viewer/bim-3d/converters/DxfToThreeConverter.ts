@@ -23,6 +23,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { ACI_PALETTE } from '../../settings/standards/aci';
+// 🏢 ADR-571: hex→int SSoT (μηδέν local parseInt duplicate)
+import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
@@ -47,12 +49,12 @@ const ACI_MAP = ACI_PALETTE as unknown as Record<number, string | undefined>;
 function aciToInt(aci: number): number {
   const hex = ACI_MAP[aci];
   if (!hex) return DEFAULT_COLOR;
-  return parseInt(hex.slice(1), 16);
+  return hexToTrueColor(hex); // ADR-571 SSoT
 }
 
 function hexCssToInt(hex: string): number {
-  const v = parseInt(hex.startsWith('#') ? hex.slice(1) : hex, 16);
-  return isNaN(v) ? DEFAULT_COLOR : v;
+  // ADR-571: delegate το parse στο hexToTrueColor SSoT· κρατά το DEFAULT_COLOR fallback σε άκυρο hex.
+  return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(hex.trim()) ? hexToTrueColor(hex) : DEFAULT_COLOR;
 }
 
 function resolveLayer(

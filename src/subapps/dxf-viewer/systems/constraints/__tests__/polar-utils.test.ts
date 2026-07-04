@@ -5,6 +5,7 @@
 
 import { applyPolar, formatPolarLabel, faceRelativeDisplayAngle } from '../polar-utils';
 import type { PolarTrackingConfig } from '../polar-utils';
+import { formatAngleLocale, formatSnapTrackingLabel } from '../../../rendering/entities/shared/distance-label-utils';
 
 const REF = { x: 0, y: 0 };
 
@@ -172,17 +173,36 @@ describe('applyPolar — relative-polar baseAngle (ADR-508)', () => {
 });
 
 describe('formatPolarLabel', () => {
-  it('prefixes the snapped angle (1 decimal) + slash, then the display-unit distance', () => {
-    // The distance now routes through the display-measurement SSoT (mm → cm/m + unit
-    // label); its unit/locale correctness is covered by display-length-format's own
-    // tests. Here we lock the angle format + that a non-empty distance is appended.
+  // ADR-572 Γ2 — the angle part MUST route through the locale-aware SSoT `formatAngleLocale`
+  // (1 decimal), NOT an inline `toFixed(1) + '°'` (which always emitted a '.' separator, wrong
+  // for el). We assert against `formatAngleLocale(...)` itself so the test locks the SSoT
+  // delegation regardless of the active locale's decimal separator.
+  it('prefixes the locale angle (1 decimal) via formatAngleLocale + slash, then the distance', () => {
     const label = formatPolarLabel(45, 125.333);
-    expect(label.startsWith('45.0° / ')).toBe(true);
-    expect(label.replace('45.0° / ', '').length).toBeGreaterThan(0);
+    const anglePart = `${formatAngleLocale(45, 1)} / `;
+    expect(label.startsWith(anglePart)).toBe(true);
+    expect(label.slice(anglePart.length).length).toBeGreaterThan(0);
   });
 
-  it('keeps the angle format for zero distance', () => {
-    expect(formatPolarLabel(90, 0).startsWith('90.0° / ')).toBe(true);
+  it('keeps the locale angle format for zero distance', () => {
+    expect(formatPolarLabel(90, 0).startsWith(`${formatAngleLocale(90, 1)} / `)).toBe(true);
+  });
+
+  it('delegates to the formatSnapTrackingLabel SSoT (1 decimal) — no bespoke composition', () => {
+    // formatPolarLabel is now a thin wrapper; the whole «γωνία / μήκος» composition lives in ONE SSoT.
+    expect(formatPolarLabel(45, 125.333)).toBe(formatSnapTrackingLabel(45, 125.333, 1));
+  });
+});
+
+describe('formatSnapTrackingLabel (ADR-572 Γ2 — SSoT composer «<γωνία> / <μήκος>»)', () => {
+  it('composes locale angle (default 0 decimals) + " / " + display-unit length', () => {
+    const label = formatSnapTrackingLabel(45, 1250);
+    expect(label.startsWith(`${formatAngleLocale(45, 0)} / `)).toBe(true);
+    expect(label.slice(`${formatAngleLocale(45, 0)} / `.length).length).toBeGreaterThan(0);
+  });
+
+  it('honours the angleDecimals override (POLAR passes 1)', () => {
+    expect(formatSnapTrackingLabel(45, 1250, 1).startsWith(`${formatAngleLocale(45, 1)} / `)).toBe(true);
   });
 });
 

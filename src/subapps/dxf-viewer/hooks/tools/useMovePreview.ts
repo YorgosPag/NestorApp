@@ -48,6 +48,10 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
 import { resolveActionAlignmentTracking, paintGripAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+// ADR-508 §neighbor-clearance — κυανές listening dims στη μετακίνηση (twin του placement ghost).
+import { resolveMoveClearanceForSelection } from '../../bim/framing/move-clearance-dims';
+import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -179,9 +183,19 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     // Same ORTHO+AutoAlign-locked displacement the rubber band + commit use (WYSIWYG).
     const delta: Point2D = { x: destination.x - basePoint.x, y: destination.y - basePoint.y };
-    const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
-    const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
-    drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
+
+    // ADR-508 §neighbor-clearance — κυανές listening dims (ΕΝΑΣ κοινός entry point με το body-drag·
+    // self-excluded)· «σβήνουν» την πινακίδα όταν υπάρχουν. Paint στο τέλος (μετά το ghost).
+    const moveClearanceDims = resolveMoveClearanceForSelection(
+      (id) => getEntity(id) as unknown as Entity | null,
+      selectedEntityIds, delta, scene?.entities ?? [], resolveSceneUnits(scene), worldPerPixel(t.scale),
+    );
+
+    if (!moveClearanceDims) {
+      const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
+      const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
+      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
+    }
 
     // ADR-550 (WYSIWYG preview) — solid REAL-renderer copies at the destination (full
     // fidelity, byte-identical to the committed render), AutoCAD/Revit parity. The originals
@@ -221,6 +235,20 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         }
         ctx.restore();
       }
+    }
+
+    // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
+    if (moveClearanceDims) paintGhostFaceDimensions(ctx, moveClearanceDims, t, viewport);
+
+    // 🔬🔬🔬 TEMP DIAGNOSTIC (listening-dims στη μετακίνηση — ΝΑ ΑΦΑΙΡΕΘΕΙ) — on-screen HUD.
+    {
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = moveClearanceDims ? '#29B6F6' : '#FF2222';
+      ctx.fillText(`CLEARANCE move: dims=${moveClearanceDims ? moveClearanceDims.dims.length : 'NULL'}  scene=${scene?.entities?.length ?? 0}`, 20, 110);
+      ctx.restore();
     }
   }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview, getLayersById]);
 

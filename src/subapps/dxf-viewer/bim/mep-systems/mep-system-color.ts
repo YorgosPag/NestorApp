@@ -25,6 +25,11 @@ import type {
   DuctSystemClassification,
   FuelSystemClassification,
 } from '../types/mep-connector-types';
+// 🏢 ADR-571: cyan/teal εγγραφές της categorical παλέτας → SSoT
+import { MEP_WATER_COLOR, MEP_TEAL_COLOR } from '../../config/color-config';
+// 🏢 ADR-571: color-conversion SSoT (μηδέν local duplicate — delegate κάτω)
+import { hexToRgba as hexToRgbaSSoT } from '../../config/color-math';
+import { hexToTrueColor } from '../../utils/dxf-true-color';
 
 /**
  * Curated, high-contrast palette for electrical circuits (distinct hues, readable
@@ -37,12 +42,12 @@ export const MEP_SYSTEM_PALETTE: readonly string[] = [
   '#16a34a', // green
   '#9333ea', // purple
   '#ea580c', // orange
-  '#0891b2', // cyan
+  MEP_WATER_COLOR, // cyan (ADR-571 SSoT)
   '#ca8a04', // gold
   '#db2777', // pink
   '#4d7c0f', // olive
   '#7c3aed', // violet
-  '#0d9488', // teal
+  MEP_TEAL_COLOR, // teal (ADR-571 SSoT)
   '#b45309', // brown
 ];
 
@@ -102,7 +107,7 @@ export function ductClassificationDefaultColor(
     case 'supply-air':
       return '#38bdf8'; // light blue (supply air)
     case 'return-air':
-      return '#0d9488'; // teal (return air)
+      return MEP_TEAL_COLOR; // teal (return air, ADR-571 SSoT)
   }
 }
 
@@ -283,10 +288,13 @@ export function getEntitySystemColorIndexCached(
   return _idxVal;
 }
 
-/** Parse a `#rrggbb` hex into a THREE colour int (0xrrggbb). Returns null if invalid. */
+/**
+ * Parse a `#rrggbb` hex into a THREE colour int (0xrrggbb). Returns null if invalid.
+ * 🏢 ADR-571: delegates the parse to the `hexToTrueColor` SSoT (utils/dxf-true-color.ts);
+ * keeps the nullable contract (consumers here null-skip invalid entries).
+ */
 export function hexToThreeInt(hex: string): number | null {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-  return m ? parseInt(m[1]!, 16) : null;
+  return /^#?[0-9a-fA-F]{6}$/.test(hex.trim()) ? hexToTrueColor(hex) : null;
 }
 
 /** Build the `entityId → THREE colour int` index for 3D material tinting. */
@@ -301,12 +309,11 @@ export function buildEntitySystemColorIntIndex(
   return out;
 }
 
-/** Hex colour → `rgba(r,g,b,a)` string for translucent 2D fills. Falls back to the hex. */
+/**
+ * Hex colour → `rgba(r,g,b,a)` string for translucent 2D fills. Falls back to the hex.
+ * 🏢 ADR-571: delegates to the `hexToRgba` SSoT (config/color-math.ts). Kept as a re-export
+ * so existing `mep-system-color` import paths stay stable — μηδέν local duplicate.
+ */
 export function hexToRgba(hex: string, alpha: number): string {
-  const int = hexToThreeInt(hex);
-  if (int === null) return hex;
-  const r = (int >> 16) & 0xff;
-  const g = (int >> 8) & 0xff;
-  const b = int & 0xff;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return hexToRgbaSSoT(hex, alpha);
 }

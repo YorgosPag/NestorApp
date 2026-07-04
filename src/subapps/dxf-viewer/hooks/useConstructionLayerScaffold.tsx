@@ -18,6 +18,8 @@ import { createSceneLayer } from '../types/entities';
 import { getIsoLinetype } from '../config/linetype-iso-catalog';
 import { LINEWEIGHT_SPECIAL } from '../config/lineweight-iso-catalog';
 import { hasConstructionLayer } from '../services/construction-layer-detector';
+// 🏢 ADR-571: cyan (ACI 4) construction-layer default → ACI palette SSoT
+import { ACI_PALETTE } from '../settings/standards/aci';
 
 const DISMISSED_KEY = 'dxf:constructionLayerDismissed';
 
@@ -36,7 +38,7 @@ function useConstructionLayerScaffoldState() {
   const handleCreate = useCallback(() => {
     const layer = createSceneLayer({
       name: 'Construction',
-      color: '#00FFFF',
+      color: ACI_PALETTE[4],
       colorAci: 4,
       colorTrueColor: null,
       linetype: getIsoLinetype('Dashed')?.name ?? 'Continuous',

@@ -5,6 +5,10 @@
  * @related ADR-402 (3D Viewport BIM Element Editing) — GenArc gizmo port.
  */
 
+// 🏢 ADR-571: gizmo endpoint teal SSoT + hex→int SSoT (utils/dxf-true-color.ts)
+import { GIZMO_ENDPOINT_TEAL } from '../../config/color-config';
+import { hexToTrueColor } from '../../utils/dxf-true-color';
+
 // -- Axis Colors (reference HTML: warmer red, brighter green, purple-blue) ----
 export const GIZMO_COLOR_X = 0xe52d2d;
 // Vertical (Y) axis — darker green per Giorgio (was lime 0x2de52d).
@@ -118,7 +122,7 @@ export const ALIGNMENT_LINE_RENDER_ORDER = 1998;
  * Endpoint handle colour — a clear teal "control point", distinct from the axis
  * reds/greens/blues and the orange centre, so a pipe-end grab reads unambiguously.
  */
-export const GIZMO_ENDPOINT_COLOR = 0x16b8c0;
+export const GIZMO_ENDPOINT_COLOR = hexToTrueColor(GIZMO_ENDPOINT_TEAL);
 /** Endpoint visual = a small camera-facing RING (torus). Hollow centre keeps the pipe-end
  *  cap visible (a solid disc hid it). Outer ring radius, before screen-constant scaling. */
 export const ENDPOINT_RING_RADIUS = 0.045;

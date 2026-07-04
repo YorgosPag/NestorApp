@@ -213,7 +213,11 @@ export const migrations: Migration[] = [
         [key: string]: unknown;
       };
 
-      // ✅ ENTERPRISE: Default colors from ACI palette
+      // ✅ ENTERPRISE: Default colors from ACI palette.
+      // 🏢 ADR-571: these are the HISTORICAL pre-v7 grip defaults for THIS migration
+      // step — intentionally frozen (must not drift). NOT the current SSoT: today's
+      // warm is GRIP_WARM_COLOR '#FF7F00' (orange). Do NOT "sync" this to the SSoT —
+      // it would rewrite what old stored settings migrate to. See grip-cold-color-migrations.ts.
       const DEFAULT_COLORS: Required<GripColors> = {
         cold: '#0000FF',      // Blue (ACI 5)
         warm: '#00FFFF',      // Cyan (ACI 4)

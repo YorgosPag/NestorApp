@@ -22,7 +22,7 @@ import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { formatPolarLabel } from '../../systems/constraints/polar-utils';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 import { paintAlignmentPaths, paintIntersections, paintTooltip } from '../../canvas-v2/preview-canvas/tracking-paint';
 import { getCurrentTrackingPalette } from '../../canvas-v2/preview-canvas/tracking-colors';
@@ -101,7 +101,7 @@ export function paintRotationTracking(
       trk.point.y - trk.result.anchorPoint.y,
     );
     const label = trk.result.snappedAngle !== null
-      ? `${trk.result.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(toMm(distWorld))}`
+      ? formatSnapTrackingLabel(trk.result.snappedAngle, toMm(distWorld))
       : null;
     paintTooltip(ctx, trk.point, label, project, palette);
   }

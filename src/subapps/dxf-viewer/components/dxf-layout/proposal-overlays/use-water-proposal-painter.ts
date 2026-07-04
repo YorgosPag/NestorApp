@@ -11,10 +11,13 @@ import type { OverlayDispatchPainter } from '../overlay-dispatch/overlay-dispatc
 import { paintGhostSegments, type GhostSegmentDraw } from '../proposal-ghost-paint';
 import { useWaterProposal } from '../../../systems/mep-design/water/water-proposal-store';
 import { mmToSceneUnits } from '../../../utils/scene-units';
+// 🏢 ADR-571: MEP water/plumbing cyan SSoT + hexToRgba SSoT (color-math.ts)
+import { MEP_WATER_COLOR, MEP_WATER_GHOST_FILL } from '../../../config/color-config';
+import { hexToRgba } from '../../../config/color-math';
 
 // ─── Per-service ghost palette (proposed runs) ─────────────────────────────────
-const COLD_STROKE = '#0891b2';
-const COLD_FILL = 'rgba(34, 211, 238, 0.22)';
+const COLD_STROKE = MEP_WATER_COLOR;
+const COLD_FILL = hexToRgba(MEP_WATER_GHOST_FILL, 0.22);
 const HOT_STROKE = '#dc2626';
 const HOT_FILL = 'rgba(248, 113, 113, 0.22)';
 

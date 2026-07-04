@@ -93,10 +93,11 @@ describe('buildMepManifoldSymbol — drainage collector grating', () => {
 // ADR-408 Φ14 — the equipment palette SSoT shared by the renderer + both ghosts.
 describe('resolveManifoldPalette', () => {
   it('water manifold = cyan-teal', () => {
-    expect(resolveManifoldPalette('floor-manifold')).toEqual({ strokeHex: '#0891b2', fillRgb: '8, 145, 178' });
+    // ADR-571 — palette carries only strokeHex now; fills derived via hexToRgba(strokeHex, alpha).
+    expect(resolveManifoldPalette('floor-manifold')).toEqual({ strokeHex: '#0891b2' });
   });
   it('drainage collector = brown (CIBSE sanitary)', () => {
-    expect(resolveManifoldPalette('drainage-collector')).toEqual({ strokeHex: '#b45309', fillRgb: '180, 83, 9' });
+    expect(resolveManifoldPalette('drainage-collector')).toEqual({ strokeHex: '#b45309' });
   });
 });
 

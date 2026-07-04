@@ -29,7 +29,9 @@ import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+// 🏢 ADR-571: electrical-panel teal SSoT + hexToRgba SSoT (color-math.ts)
+import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 import { getLayer } from '../../stores/LayerStore';
 
 /**
@@ -38,8 +40,8 @@ import { getLayer } from '../../stores/LayerStore';
  * Electrical Equipment carries no circuit colour). It keeps this equipment teal;
  * only the connected fixtures take the circuit colour.
  */
-const PANEL_STROKE = '#0d9488';
-const PANEL_FILL = 'rgba(13, 148, 136, 0.18)';
+const PANEL_STROKE = MEP_TEAL_COLOR;
+const PANEL_FILL = hexToRgba(MEP_TEAL_COLOR, 0.18);
 
 export class ElectricalPanelRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {

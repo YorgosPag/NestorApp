@@ -31,6 +31,8 @@ import type {
 import { clampOutletCount } from './mep-manifold-geometry';
 import { isDrainageCollectorKind } from '../types/mep-manifold-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+// 🏢 ADR-571: MEP water/plumbing cyan SSoT
+import { MEP_WATER_COLOR } from '../../config/color-config';
 
 /** A polyline of world-space points (canvas units). */
 export type ManifoldStroke = readonly Point3D[];
@@ -57,18 +59,17 @@ const GRATING_INSET = 0.15;
  * ADR-408 Φ12/Φ14 — the equipment palette for a manifold kind, the SINGLE source
  * shared by the 2D renderer, the 2D placement ghost, and the 3D placement ghost so
  * all three read identically (a water manifold = cyan-teal equipment; a drainage
- * collector = brown, the CIBSE sanitary convention). `fillRgb` is the `r, g, b`
- * triple so each caller composes its own translucency (renderer 0.18, ghost 0.30).
+ * collector = brown, the CIBSE sanitary convention). Each caller derives its own
+ * translucent fill from `strokeHex` via `hexToRgba(strokeHex, alpha)` (renderer 0.18,
+ * ghost 0.30) — ΜΙΑ αναπαράσταση, μηδέν ξεχωριστό rgb tuple (ADR-571).
  */
 export interface ManifoldPalette {
-  /** Outline / symbol stroke colour (`#rrggbb`). */
+  /** Outline / symbol stroke colour (`#rrggbb`) — και η απόχρωση του fill (μέσω hexToRgba). */
   readonly strokeHex: string;
-  /** Fill colour as an `r, g, b` triple for `rgba(<rgb>, <alpha>)`. */
-  readonly fillRgb: string;
 }
 
-const MANIFOLD_PALETTE_WATER: ManifoldPalette = { strokeHex: '#0891b2', fillRgb: '8, 145, 178' };
-const MANIFOLD_PALETTE_DRAINAGE: ManifoldPalette = { strokeHex: '#b45309', fillRgb: '180, 83, 9' };
+const MANIFOLD_PALETTE_WATER: ManifoldPalette = { strokeHex: MEP_WATER_COLOR };
+const MANIFOLD_PALETTE_DRAINAGE: ManifoldPalette = { strokeHex: '#b45309' };
 
 /** Resolve the equipment palette for a manifold kind (SSoT for 2D + 3D + ghosts). */
 export function resolveManifoldPalette(kind: MepManifoldKind): ManifoldPalette {

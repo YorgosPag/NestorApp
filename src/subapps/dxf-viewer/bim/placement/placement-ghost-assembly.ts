@@ -46,14 +46,12 @@ import { buildPlacementGridMeta } from './placement-grid-meta';
 import {
   resolveGhostFaceDimensionsMeta,
   toWysiwygPreviewEntity,
-  GHOST_DIM_GAP_OFFSET_PX,
-  GHOST_DIM_MIN_PX,
 } from '../../hooks/drawing/wysiwyg-preview-shared';
 import {
-  resolveNeighborClearanceDims,
   resolveGapStepShift,
   NEIGHBOR_DIM_MAX_CLEARANCE_PX,
 } from '../framing/neighbor-clearance-dims';
+import { resolveClearanceDimsForGhost } from '../framing/clearance-dims';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 // ADR-363 §neighbor-gap-step — Q κρατιέται → στρογγύλεμα του παρειά-προς-παρειά διάκενου (όχι της
 // απόστασης κέντρου-από-anchor) προς τη μεριά κίνησης· κοινό shift preview↔commit.
@@ -167,12 +165,8 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
       }
     }
     if (ghostFootprint) {
-      faceDimensions = resolveNeighborClearanceDims(ghostFootprint, targets, sceneUnits, {
-        gapOffsetScene: GHOST_DIM_GAP_OFFSET_PX * wpp,
-        minValueScene: GHOST_DIM_MIN_PX * wpp,
-        maxClearanceScene: NEIGHBOR_DIM_MAX_CLEARANCE_PX * wpp,
-        orthoToleranceDeg: 1,
-      });
+      // ΚΟΙΝΟΣ SSoT (ίδια metrics με το move) — μηδέν inline opts εδώ.
+      faceDimensions = resolveClearanceDimsForGhost(ghostFootprint, targets, sceneUnits, wpp);
     }
   }
 

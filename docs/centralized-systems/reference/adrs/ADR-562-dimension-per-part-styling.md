@@ -1,6 +1,6 @@
 # ADR-562 — Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης)
 
-> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED + Φ9.1+Φ9.2+Φ9.3(MOVE tool) (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails** + **Φ9.1 alignment traces στη ΔΗΜΙΟΥΡΓΙΑ** + **Φ9.2 στις ΛΑΒΕΣ (grip-drag)** + **Φ9.3 στο MOVE tool (2-click «M»)** έτοιμα· Φ9.3 row-move overlay DEFERRED (SVG↔canvas paint) + Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
+> **Status:** 🟢 Φ1+Φ2+Φ3+Φ4+Φ5+Φ7+Φ8 IMPLEMENTED + Φ9.1+Φ9.2+Φ9.3(MOVE tool) (UNCOMMITTED) — data model + 2D rendering + ribbon bridge + contextual tab + Style Manager controls + **Φ7 dimension true-color (enterprise color picker)** + **Φ8 linetype/arrowhead thumbnails** + **Φ9.1 alignment traces στη ΔΗΜΙΟΥΡΓΙΑ** + **Φ9.2 στις ΛΑΒΕΣ (grip-drag)** + **Φ9.3 στο MOVE tool (2-click «M»)** + **Φ9.4 action-drag «tracking pull» aperture BUGFIX (τα ίχνη ΕΠΙΤΕΛΟΥΣ εμφανίζονται σε MOVE/body-drag/grip — 8px αντί 3px)** έτοιμα· Φ9.3 row-move overlay DEFERRED (SVG↔canvas paint) + Φ6 (DXF round-trip / per-side / 3D) PROPOSED.
 > **Date:** 2026-07-01
 > **Subapp:** `src/subapps/dxf-viewer` (https://nestorconstruct.gr/dxf/viewer)
 > **Author:** Giorgio + agent
@@ -338,6 +338,20 @@ acquired (`TrackingPointStore`) ⊕ ambient (`collectAmbientAlignmentAnchors`, A
   canvas preview). Επιπλέον είναι ADR-040 perf-critical micro-leaf + η αλληλεπίδραση alignment↔normal-constrain
   (`projectRowDelta`) χρειάζεται προσοχή. Χρειάζεται ξεχωριστό session/απόφαση Giorgio → βλ. handoff.
 
+**Φ9.4 — Action-drag «tracking pull» aperture (BUGFIX 2026-07-04):** τα ίχνη του Φ9.2/Φ9.3 (grip / MOVE / body-drag)
+**ποτέ δεν εμφανίζονταν οπτικά** — το `resolveActionAlignmentTracking` γύριζε null σε κάθε frame. Root cause: τα action
+drags έχουν **φτωχό anchor set** (μόνο `[basePoint]` ⊕ ambient· κανένα hover-acquired point — ο acquisition timer
+τρέχει μόνο στο drawing-hover-handler) **και δεν κάνουν POLAR-lock πρώτα** (μόνο ORTHO), οπότε το single-anchor
+`findClosestProjection` απαιτούσε τον **raw/ORTHO-only** cursor εντός **3px** ενός H/V/polar path → σε ελεύθερο
+hand-drag πρακτικά ποτέ → null → fallback distance pill («λευκή πινακίδα κατά το σύρσιμο»). Η ΔΗΜΙΟΥΡΓΙΑ δούλευε γιατί
+(α) κάνει hover-acquire σημεία, (β) περνά `segmentBase` (clean-corner intersections, flood-cap-exempt), (γ) POLAR-lock
+πρώτα → ο cursor κάθεται στον άξονα → το ίδιο 3px κουμπώνει συχνά. **Fix:** το `matchTolerancePx` έγινε παράμετρος του
+`resolveDimAlignmentTracking` (default 3 = OSNAP hover aperture, η δημιουργία αμετάβλητη)· ο `resolveActionAlignmentTracking`
+περνά **8px** (`ACTION_ALIGN_TOLERANCE_PX` = AutoCAD tracking aperture). Έτσι όλοι οι action-drag consumers (MOVE 2-click,
+body-drag, grip) παίρνουν ενιαία την ευρύτερη ανοχή → τα ίχνη κουμπώνουν όταν όντως ευθυγραμμίζεσαι, χωρίς να «κολλάνε»
+παντού. Το προηγούμενο σχόλιο «3px = απαλός μαγνήτης» (Φ9.3) ήταν λάθος: 3px = ξυράφι για hand-drag. Test:
+`dim-alignment-tracking-tolerance.test.ts` (3px reject / 8px resolve / 12px still-bounded).
+
 **SSoT reuse:** `resolveAlignmentTracking`/`composeTrackingSnap`/`collectAmbientAlignmentAnchors`/`TrackingPointStore`,
 `ambientAlignmentConfigStore` (AutoAlign toggle), `tracking-paint.ts`, `rotation-tracking-overlay.ts` (πρότυπο).
 Ref: ADR-357 (Object Snap Tracking), ADR-397 (rotation consumer).
@@ -370,6 +384,15 @@ Ref: ADR-357 (Object Snap Tracking), ADR-397 (rotation consumer).
 
 ## 7. Changelog
 
+- **2026-07-04 (Φ9.4 — Action-drag «tracking pull» aperture, BUGFIX, UNCOMMITTED)** — Τα alignment ίχνη των Φ9.2/Φ9.3
+  (grip / MOVE / body-drag) **ποτέ δεν εμφανίζονταν** (`resolveActionAlignmentTracking` → null κάθε frame): τα action
+  drags έχουν μόνο `[basePoint]` anchor, κανένα hover-acquire, και δεν κάνουν POLAR-lock → το single-anchor projection
+  με **3px** (OSNAP hover aperture) δεν κουμπώνει ποτέ με το χέρι → fallback «λευκή πινακίδα». Fix: `matchTolerancePx`
+  παράμετρος στο `resolveDimAlignmentTracking` (default 3, δημιουργία αμετάβλητη)· ο `resolveActionAlignmentTracking`
+  περνά **8px** (`ACTION_ALIGN_TOLERANCE_PX`, AutoCAD tracking aperture) → όλοι οι action-drag consumers παίρνουν ενιαία
+  την ευρύτερη ανοχή. ΕΝΑ αρχείο (`dim-alignment-tracking.ts`)· τα preview hooks το κληρονομούν. Test:
+  `dim-alignment-tracking-tolerance.test.ts` (3/3 GREEN, +179 tracking/dim regression GREEN). Διορθώνει το ΠΡΟΒΛΗΜΑ Α
+  του handoff-2026-07-04 (structural-single-path-and-gesture-unification). Εκκρεμεί browser-verify (screenshot-driven).
 - **2026-07-04 (Φ9.3 — Alignment traces στο MOVE tool (2-click «M»), UNCOMMITTED)** — Η μετακίνηση με το εργαλείο
   MOVE δείχνει πλέον ίχνη ευθυγράμμισης με ref anchor το base point (click #1) ⊕ ambient, WYSIWYG (preview ≡ commit).
   Νέος convenience SSoT `resolveActionAlignmentTracking` (`dim-alignment-tracking.ts` — διαβάζει POLAR/ORTHO +

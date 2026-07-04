@@ -19,6 +19,8 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import type { MepManifoldKind } from '../types/mep-manifold-types';
 import { isDrainageCollectorKind } from '../types/mep-manifold-types';
 import { resolveManifoldPalette, buildDrainageGratingStrokes } from './mep-manifold-symbol';
+// 🏢 ADR-571: hexToRgba SSoT (fill derived from strokeHex — μηδέν rgb tuple)
+import { hexToRgba } from '../../config/color-math';
 
 /** Ghost fill translucency (slightly more opaque than the committed renderer). */
 const GHOST_FILL_ALPHA = 0.3;
@@ -44,7 +46,7 @@ export class MepManifoldGhostRenderer {
     const { footprint, kind, cursor, transform, viewport } = input;
     const palette = resolveManifoldPalette(kind);
     if (footprint.length >= 3) {
-      this.drawFill(footprint, palette.fillRgb, transform, viewport);
+      this.drawFill(footprint, palette.strokeHex, transform, viewport);
       this.drawOutline(footprint, palette.strokeHex, transform, viewport);
       // ADR-408 Φ14 — a drainage collector (φρεάτιο) previews its grating too, so
       // the ghost reads exactly as the committed catch-basin symbol (WYSIWYG).
@@ -73,13 +75,13 @@ export class MepManifoldGhostRenderer {
 
   private drawFill(
     vertices: ReadonlyArray<{ x: number; y: number }>,
-    fillRgb: string,
+    fillHex: string,
     transform: ViewTransform,
     viewport: { readonly width: number; readonly height: number },
   ): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.fillStyle = `rgba(${fillRgb}, ${GHOST_FILL_ALPHA})`;
+    ctx.fillStyle = hexToRgba(fillHex, GHOST_FILL_ALPHA);
     this.tracePath(vertices, transform, viewport);
     ctx.fill();
     ctx.restore();

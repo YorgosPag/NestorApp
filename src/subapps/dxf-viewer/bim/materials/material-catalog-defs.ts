@@ -17,6 +17,9 @@
  */
 
 import type { BimMaterialCategory } from '../types/bim-material-types';
+// 🏢 ADR-571: MEP water/plumbing cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
+import { MEP_WATER_COLOR } from '../../config/color-config';
+import { hexToTrueColor } from '../../utils/dxf-true-color';
 
 /** Flat PBR appearance definition for a resolved material key. */
 export interface PbrMaterialDef {
@@ -116,7 +119,7 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // ADR-408 Φ12 — MEP plumbing manifold (συλλέκτης): cyan-teal (plumbing
   // equipment — distinguishable from copper pipe 0xb87333 and duct 0xb0b4b8).
   // Matte-ish plastic/composite housing, low metalness.
-  'elem-mep-manifold':   { color: 0x0891b2, roughness: 0.50, metalness: 0.20 },
+  'elem-mep-manifold':   { color: hexToTrueColor(MEP_WATER_COLOR), roughness: 0.50, metalness: 0.20 },
   // ADR-408 Εύρος Β — heating radiator: warm-red matte steel/aluminium panel.
   'elem-mep-radiator':   { color: 0xdc2626, roughness: 0.60, metalness: 0.10 },
   // ADR-408 Εύρος Β — heating boiler (λέβητας): hydronic-supply warm-red

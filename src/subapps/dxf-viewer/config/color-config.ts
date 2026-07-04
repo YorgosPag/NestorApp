@@ -514,6 +514,27 @@ export const SNAP_MARKER_COLORS = {
 } as const;
 
 // ============================================================================
+// 🏢 ADR-571: CONSTRUCTION / MEP / TOOL CYAN SSoT
+// ============================================================================
+//
+// Single source of truth για τα σημασιολογικά ΚΥΑΝΑ/TEAL χρώματα που παλιότερα
+// ήταν hardcoded ως inline literals σε renderers, ghosts, tool-previews & 3D
+// handles. Κάθε const = ΕΝΑ νόημα, ΜΙΑ αναπαράσταση (**μόνο hex**). Τα translucent
+// fills παράγονται με `hexToRgba(hex, alpha)` (config/color-math.ts) και τα 3D
+// numerics με `hexToTrueColor(hex)` (utils/dxf-true-color.ts) — ΚΑΝΕΝΑ ξεχωριστό
+// rgb-tuple/helper εδώ (θα ήταν δεύτερη αναπαράσταση που ξεφεύγει).
+//
+// @see ADR-571
+export const MEP_WATER_COLOR = '#0891b2' as const;       // cyan-teal — plumbing/νερό stroke + equipment fill (pipe/manifold/water-proposal + 3D material)
+export const MEP_WATER_GHOST_FILL = '#22d3ee' as const;  // ανοιχτό κυανό — ghost/proposal fill (segment ghost, cold-water proposal)
+export const MEP_TEAL_COLOR = '#0d9488' as const;        // teal — electrical panel + thermal space + HVAC return-air (stroke + fill)
+// == value με SNAP_MARKER_COLORS.BASE ('#00e5ff'), αλλά ΞΕΧΩΡΙΣΤΟ νόημα: highlight
+// «κλειδωμένου/anchor» στοιχείου & cut-indicator σε tool previews (structural + 3D wire).
+export const TOOL_ANCHOR_CYAN = '#00E5FF' as const;
+export const LASSO_STROKE_CYAN = '#0e7490' as const;     // dark cyan — freehand lasso path/ring/dot
+export const GIZMO_ENDPOINT_TEAL = '#16b8c0' as const;   // teal — 3D gizmo endpoint control ring
+
+// ============================================================================
 // CANVAS THEME SYSTEM - Enterprise Canvas Background Management (ADR-004)
 // ============================================================================
 //

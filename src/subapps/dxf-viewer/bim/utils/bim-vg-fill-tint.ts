@@ -17,19 +17,20 @@
  */
 import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import type { CutState } from '../../config/bim-view-range';
+// 🏢 ADR-571: color-conversion SSoT (reuse parse/format — μηδέν local duplicate)
+import { parseHex, rgbaString } from '../../config/color-math';
 
 /** Alpha used when tinting the body fill with a V/G color. */
 export const VG_FILL_ALPHA = 0.2;
 
 /**
- * Convert a 6-digit hex color (`#rrggbb`) to a `rgba(r, g, b, alpha)` string.
- * Returns `null` if the input is not a valid hex.
+ * Convert a hex color (`#rgb`/`#rrggbb`) to a `rgba(r, g, b, alpha)` string.
+ * Returns `null` if the input is not a valid hex (renderer then keeps its default).
+ * 🏢 ADR-571: reuses the `parseHex`+`rgbaString` SSoT (config/color-math.ts) — μηδέν duplicate.
  */
 export function hexToRgba(hex: string, alpha: number): string | null {
-  const m = /^#([0-9a-fA-F]{6})$/.exec(hex);
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`;
+  const rgb = parseHex(hex);
+  return rgb ? rgbaString({ ...rgb, a: alpha }) : null;
 }
 
 /**

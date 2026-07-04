@@ -27,13 +27,25 @@ import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-sca
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { formatPolarLabel, type PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 import { paintAlignmentPaths, paintIntersections, paintTooltip } from '../../canvas-v2/preview-canvas/tracking-paint';
 import { getCurrentTrackingPalette } from '../../canvas-v2/preview-canvas/tracking-colors';
 import { fromTransform } from '../../canvas-v2/preview-canvas/overlay-projector';
 
 /** `sourceSnapType` tag για τα explicit reference points της τρέχουσας διάστασης. */
 const DIM_REF_SOURCE = 'dim-refpoint';
+
+/**
+ * ADR-562 Φ9.4 — «tracking pull» ανοχή (px) για τις interactive ACTION drags (2-click MOVE,
+ * body-drag, grip). Ευρύτερη από την 3px OSNAP hover aperture που κρατά η ΔΗΜΙΟΥΡΓΙΑ: σε ένα
+ * ελεύθερο hand-drag δεν υπάρχει hover-acquire dwell ούτε POLAR-lock που να κάθεται τον cursor
+ * πάνω στον άξονα, οπότε το single-anchor projection με 3px δεν κουμπώνει ποτέ → τα ίχνη «χάνονται».
+ * ~8px = η AutoCAD tracking aperture: κουμπώνει όταν όντως ευθυγραμμίζεσαι, χωρίς να «κολλάει» παντού.
+ */
+const ACTION_ALIGN_TOLERANCE_PX = 8;
+
+/** Default match aperture (px) — η OSNAP hover ανοχή που κρατά η δημιουργία διάστασης/γραμμής. */
+const DEFAULT_ALIGN_TOLERANCE_PX = 3;
 
 export interface DimAlignmentInput {
   /** Live transform scale (viewport). */
@@ -46,6 +58,13 @@ export interface DimAlignmentInput {
    * (`ambientAlignmentConfigStore.enabled`) ώστε το scene read να μένει lazy.
    */
   readonly sceneEntities: readonly Entity[] | null;
+  /**
+   * Match aperture σε screen px (default {@link DEFAULT_ALIGN_TOLERANCE_PX} = 3, η OSNAP hover
+   * ανοχή της δημιουργίας). Οι interactive action drags περνούν {@link ACTION_ALIGN_TOLERANCE_PX}
+   * (ευρύτερο pull) μέσω του `resolveActionAlignmentTracking`. Ο caller δίνει px· εδώ γίνεται
+   * `pixelsToWorld` ώστε το feel να μένει σταθερό σε κάθε zoom.
+   */
+  readonly matchTolerancePx?: number;
 }
 
 /**
@@ -59,7 +78,7 @@ export function resolveDimAlignmentTracking(
   input: DimAlignmentInput,
 ): ComposedTracking | null {
   const { scale, polarEnabled, sceneEntities } = input;
-  const worldTolerance = pixelsToWorld(3, scale);
+  const worldTolerance = pixelsToWorld(input.matchTolerancePx ?? DEFAULT_ALIGN_TOLERANCE_PX, scale);
 
   // Τα ήδη-picked σημεία ως ρητά anchors (transient — acquiredAt:0, δεν μπαίνουν στο FIFO),
   // μαζί με τα AutoCAD hover-acquired points.
@@ -109,6 +128,9 @@ export function resolveActionAlignmentTracking(
     scale,
     polarEnabled: cadToggleState.isPolarOn() && !cadToggleState.isOrthoOn(),
     sceneEntities: ambientOn ? sceneEntities : null,
+    // Interactive drag → ευρύτερο tracking pull (χωρίς hover-acquire dwell/POLAR-lock, το 3px
+    // single-anchor projection δεν κουμπώνει ποτέ με το χέρι → τα ίχνη έλειπαν εντελώς).
+    matchTolerancePx: ACTION_ALIGN_TOLERANCE_PX,
   });
 }
 
@@ -193,7 +215,7 @@ export function paintDimActionTracking(
     const r = tracking.result;
     const distWorld = Math.hypot(point.x - r.anchorPoint.x, point.y - r.anchorPoint.y);
     const label = r.snappedAngle !== null
-      ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(toMm(distWorld))}`
+      ? formatSnapTrackingLabel(r.snappedAngle, toMm(distWorld))
       : null;
     canvas.drawTrackingAlignment(r.activePaths, r.intersections, point, label);
   }
@@ -233,7 +255,7 @@ export function paintGripAlignmentTracking(
     tracking.point.y - r.anchorPoint.y,
   );
   const label = r.snappedAngle !== null
-    ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(toMm(distWorld))}`
+    ? formatSnapTrackingLabel(r.snappedAngle, toMm(distWorld))
     : null;
   paintTooltip(ctx, tracking.point, label, project, palette);
 }

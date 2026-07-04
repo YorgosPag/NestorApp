@@ -20,7 +20,7 @@ import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignme
 import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-362 — dim entity pick reads the entity-under-cursor from the hit-test SSoT
 // (HoverStore), matching AutoCAD DIMRADIUS (pick the body, not an OSNAP point).
@@ -53,7 +53,7 @@ const DEBUG_DRAWING_HANDLERS = false;
 // 🔬 ADR-516 perf trace (wall-tool lag diagnosis): when true, logs a per-op
 // breakdown ONLY for laggy frames (≥ PERF_DRAWHOVER_WARN_MS). Set to false again
 // once measured. Separate from DEBUG_DRAWING_HANDLERS so it adds no other noise.
-const PERF_DRAWHOVER_TRACE = true;
+const PERF_DRAWHOVER_TRACE = false;
 const PERF_DRAWHOVER_WARN_MS = 4; // ~1/4 frame @60fps — flag anything above this
 
 type Pt = Point2D;
@@ -142,7 +142,7 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       );
       const distMm = distWorld / Math.max(getSceneUnitsScale(), 1e-9);
       const label = r.snappedAngle !== null
-        ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
+        ? formatSnapTrackingLabel(r.snappedAngle, distMm)
         : null;
       previewCanvasRef.current.drawTrackingAlignment(
         r.activePaths, r.intersections, dimTracking.point, label,
@@ -326,10 +326,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       // wall-tool lag is attributable to ambient-scan vs tracking vs preview vs draw.
       if (PERF_DRAWHOVER_TRACE) {
         const total = t4 - t0;
-        if (total >= PERF_DRAWHOVER_WARN_MS || activeTool === 'wall') {
+        if (total >= PERF_DRAWHOVER_WARN_MS) {
           const members = ambientEntities ? ambientEntities.length : 0;
           console.warn(
-            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — tracking=${_trkMs.toFixed(1)} (members=${members}) preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool} ghost=${previewEntity ? previewEntity.type : 'NULL'}`,
+            `[PERF_DRAWHOVER] ${total.toFixed(1)}ms — tracking=${_trkMs.toFixed(1)} (members=${members}) preview=${_prevMs.toFixed(1)} draw=${(t4 - t3).toFixed(1)} tool=${activeTool}`,
           );
         }
       } else if (DEBUG_DRAWING_HANDLERS) {

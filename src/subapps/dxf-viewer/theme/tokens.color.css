@@ -73,6 +73,10 @@
   --cp-warning: rgb(245, 158, 11);
 
   /* ===== ACCESSIBILITY ===== */
+  /* 🏢 ADR-571: canonical focus-outline SSoT lives in TS —
+     accessibility/bim-a11y-color-tokens.ts (BIM_FOCUS_OUTLINE_COLOR_CSS/_THREE).
+     This CSS var is currently unreferenced inside dxf-viewer; kept as the CSS-side
+     mirror of the same value. Do NOT diverge from the TS SSoT. */
   --bim-focus-outline: #00ffff;
 }
 

@@ -24,6 +24,9 @@
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MepSegmentDomain } from '../types/mep-segment-types';
+// 🏢 ADR-571: MEP water/plumbing cyan SSoT + hexToRgba SSoT (color-math.ts)
+import { MEP_WATER_COLOR, MEP_WATER_GHOST_FILL } from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -31,9 +34,9 @@ import type { MepSegmentDomain } from '../types/mep-segment-types';
 const DUCT_STROKE = '#2563eb';
 const DUCT_FILL   = 'rgba(96, 165, 250, 0.25)';
 
-/** Pipe (plumbing) ghost palette — teal. */
-const PIPE_STROKE = '#0891b2';
-const PIPE_FILL   = 'rgba(34, 211, 238, 0.25)';
+/** Pipe (plumbing) ghost palette — teal (ADR-571 SSoT). */
+const PIPE_STROKE = MEP_WATER_COLOR;
+const PIPE_FILL   = hexToRgba(MEP_WATER_GHOST_FILL, 0.25);
 
 const GHOST_LINE_WIDTH    = 2;
 const AXIS_LINE_WIDTH     = 1;

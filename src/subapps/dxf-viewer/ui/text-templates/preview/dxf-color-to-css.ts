@@ -14,6 +14,10 @@
  */
 import type { DxfColor } from '@/subapps/dxf-viewer/text-engine/types/text-toolbar.types';
 
+// 🏢 ADR-571: canonical ACI→hex SSoT = `settings/standards/aci.ts`. This local
+// minimal 8-entry table is intentional (preview has no scene context; avoids
+// pulling the 256-entry palette). Index 4 (`#00ffff`) mirrors the SSoT — NOT a
+// cyan hardcode.
 const ACI_PALETTE: Readonly<Record<number, string>> = {
   1: '#ff0000', // red
   2: '#ffff00', // yellow

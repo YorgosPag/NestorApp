@@ -42,6 +42,10 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 // Το tracking υπολογίζεται ΤΟΠΙΚΑ εδώ ανά frame από το ΙΔΙΟ SSoT resolve (`resolveActionAlignmentTracking`)
 // αντί να διαβάζεται από το cross-tick `GripAlignmentTrackingStore` → μηδέν timing-skew (τα ίχνη δεν «χάνονται»).
 import { paintGripAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+// ADR-508 §neighbor-clearance — κυανές listening dims στη μετακίνηση (twin του placement ghost).
+import { resolveMoveClearanceForSelection } from '../../bim/framing/move-clearance-dims';
+import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import type { useLevels } from '../../systems/levels';
@@ -115,12 +119,19 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     const anchorPt = toScreen(anchor);
     const cursorPt = toScreen(destination);
 
+    // ADR-508 §neighbor-clearance — κυανές listening dims (ΕΝΑΣ κοινός entry point με το Move tool·
+    // self-excluded). Υπολογίζονται ΕΔΩ ώστε να «σβήνουν» την πινακίδα όταν υπάρχουν. Paint στο τέλος.
+    const clearanceDims = resolveMoveClearanceForSelection(
+      (id) => getEntity(id) as unknown as Entity | null,
+      entityIds, delta, scene?.entities ?? [], sceneUnits, worldPerPixel(t.scale),
+    );
+
     if (tracking) {
       paintGripAlignmentTracking(
         ctx, tracking, t, viewport, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
       );
-    } else {
-      // Χωρίς κούμπωμα → μικρή διακριτική ένδειξη απόστασης (anchor → destination).
+    } else if (!clearanceDims) {
+      // Χωρίς κούμπωμα ΚΑΙ χωρίς κυανές → μικρή διακριτική ένδειξη απόστασης (anchor → destination).
       const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), sceneUnits);
       const readoutMid = moveReadoutMid(anchorPt, cursorPt);
       drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
@@ -169,6 +180,20 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
       ctx.moveTo(cx - 5, cy); ctx.lineTo(cx + 5, cy);
       ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5);
       ctx.stroke();
+      ctx.restore();
+    }
+
+    // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
+    if (clearanceDims) paintGhostFaceDimensions(ctx, clearanceDims, t, viewport);
+
+    // 🔬🔬🔬 TEMP DIAGNOSTIC (listening-dims στη μετακίνηση — ΝΑ ΑΦΑΙΡΕΘΕΙ) — on-screen HUD.
+    {
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = clearanceDims ? '#29B6F6' : '#FF2222';
+      ctx.fillText(`CLEARANCE drag: dims=${clearanceDims ? clearanceDims.dims.length : 'NULL'}  scene=${scene?.entities?.length ?? 0}`, 20, 110);
       ctx.restore();
     }
   }, [getEntity, getBimPreview, getLayersById, levelManager]);

@@ -28,6 +28,9 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import type { useLevels } from '../../systems/levels';
 import type { BeamBetweenAnchor } from '../../systems/beam-between-members/BeamBetweenMembersStore';
 import { pickStructuralMemberAt, computeBeamAxisBetweenMembers } from '../../bim/beams/beam-between-members';
+// 🏢 ADR-571: tool-anchor cyan SSoT + hexToRgba SSoT (color-math.ts)
+import { TOOL_ANCHOR_CYAN } from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 import { closestPointOnPolygonOutline } from '../../bim/geometry/shared/polygon-nearest';
 import { DEFAULT_BEAM_WIDTH_MM } from '../../bim/types/beam-types';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
@@ -51,8 +54,8 @@ const GHOST_FILL = 'rgba(255, 179, 0, 0.28)';
 const GHOST_STROKE = '#FFB300';
 // Persistent «selected/locked» highlight του anchor-μέλους (το native HoverStore αναλαμβάνει
 // τον φωτισμό κάτω-από-τον-κέρσορα μέσω `entityPickingActive` — εδώ μένει ΜΟΝΟ το κλειδωμένο μέλος).
-const ANCHOR_STROKE = '#00E5FF';
-const ANCHOR_FILL = 'rgba(0, 229, 255, 0.22)';
+const ANCHOR_STROKE = TOOL_ANCHOR_CYAN;
+const ANCHOR_FILL = hexToRgba(TOOL_ANCHOR_CYAN, 0.22);
 
 // ── Draw helpers (pure canvas, screen-space) ────────────────────────────────────
 

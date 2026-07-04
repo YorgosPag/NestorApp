@@ -177,7 +177,11 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
         {ariaLabel}
       </span>
       <Select
-        value={value ?? undefined}
+        // Always CONTROLLED: `value ?? ''` (never `undefined`). Το `undefined` εναλλάσσει το
+        // Radix Select uncontrolled↔controlled ανά render (mixed→value) → React warning «changing
+        // from uncontrolled to controlled». Το `''` = controlled «καμία επιλογή» → placeholder
+        // (κανένα SelectItem δεν έχει value="" — βλ. options guard παραπάνω). ADR-001.
+        value={value ?? ''}
         onValueChange={handleValueChange}
         open={open}
         onOpenChange={setOpen}

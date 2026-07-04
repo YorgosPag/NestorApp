@@ -28,6 +28,8 @@ import {
 } from '../../bim/walls/wall-split';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// 🏢 ADR-571: tool-anchor/cut-indicator cyan SSoT
+import { TOOL_ANCHOR_CYAN } from '../../config/color-config';
 import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,7 +51,7 @@ export interface UseWallSplitKnifePreviewProps {
 // Knife styling (canvas literals, consistent with useMirrorPreview siblings).
 const KNIFE_LINE = '#FF4444';
 const KNIFE_POINT = '#FFD700';
-const CUT_INDICATOR = '#00E5FF';
+const CUT_INDICATOR = TOOL_ANCHOR_CYAN;
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 

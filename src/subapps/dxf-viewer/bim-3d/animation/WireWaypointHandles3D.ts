@@ -15,9 +15,12 @@
  */
 
 import * as THREE from 'three';
+// 🏢 ADR-571: tool-anchor cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
+import { TOOL_ANCHOR_CYAN } from '../../config/color-config';
+import { hexToTrueColor } from '../../utils/dxf-true-color';
 
 const NODE_COLOR = 0xffffff;
-const NODE_HOVER_COLOR = 0x00e5ff;
+const NODE_HOVER_COLOR = hexToTrueColor(TOOL_ANCHOR_CYAN);
 const INSERT_COLOR = 0x22c55e;
 const RENDER_ORDER = 1998;
 /** Screen-constant scale: world radius ≈ dist·tan(fov/2)·this. */

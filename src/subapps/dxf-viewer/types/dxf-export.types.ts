@@ -838,7 +838,12 @@ export interface EzdxfMicroserviceHealth {
 // ============================================================================
 
 /**
- * AutoCAD Color Index (ACI) standard colors
+ * AutoCAD Color Index (ACI) standard colors.
+ *
+ * 🏢 ADR-571: canonical ACI→hex SSoT = `settings/standards/aci.ts` (`ACI_PALETTE`).
+ * This 10-entry map is an intentional, self-contained DXF-EXPORT CONTRACT mirror
+ * (frozen for the ezdxf Python microservice) — kept literal on purpose, NOT a
+ * cyan hardcode. Keep index 4 (`#00FFFF`) in sync with the SSoT.
  */
 export const ACI_COLORS: Record<number, string> = {
   0: '#000000',   // ByBlock

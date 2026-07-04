@@ -11,7 +11,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { AngleUtils, DistanceUtils } from './constraints-geometry';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 // Display-unit SSoT for the tooltip distance (mm → cm/m/… + locale + unit label).
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 
 export interface PolarTrackingConfig {
   incrementAngle: number;
@@ -123,7 +123,7 @@ export function applyPolar(
  * emit raw world units, e.g. "180.0° / 4448.7" instead of "180.0° / 444,87 cm".)
  */
 export function formatPolarLabel(snappedAngle: number, distanceMm: number): string {
-  return `${snappedAngle.toFixed(1)}° / ${formatLengthForDisplay(distanceMm)}`;
+  return formatSnapTrackingLabel(snappedAngle, distanceMm, 1);
 }
 
 /**

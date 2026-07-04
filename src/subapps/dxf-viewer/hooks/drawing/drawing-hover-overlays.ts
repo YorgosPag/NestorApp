@@ -14,6 +14,7 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { PolarSnapResult } from '../../systems/constraints/polar-utils';
 import type { ExtendedSceneEntity } from './drawing-types';
 import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel, formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
@@ -152,7 +153,7 @@ export function paintDrawingHoverOverlays(
     canvas.drawPolarTrackingLine(
       lastRefPt,
       bearingDeg,
-      `${bearingDeg.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`,
+      formatSnapTrackingLabel(bearingDeg, distMm),
       previewPt,
     );
   }
@@ -187,7 +188,7 @@ export function paintDrawingHoverOverlays(
   const colRot = getColumnRotationLock();
   if (colRot) {
     const snappedDeg = resolveColumnRotationDeg(colRot.origin, previewPt, worldPerPixel(getTransformScale()));
-    canvas.drawPolarTrackingLine(colRot.origin, snappedDeg, `${Math.round(snappedDeg)}°`, previewPt);
+    canvas.drawPolarTrackingLine(colRot.origin, snappedDeg, formatAngleLocale(snappedDeg, 0), previewPt);
     // ADR-564 §rotation-arc (Giorgio «και τα δύο») — ΔΙΠΛΑ στην πορτοκαλί ευθεία, το έγχρωμο τόξο
     // ΦΟΡΑΣ (🟢 πάνω / 🔴 κάτω από τον world-X) + βελάκι + baseline — ΙΔΙΟ SSoT painter με τοίχο/
     // grip-rotate. pivot = κλειδωμένη θέση, ref = world-X, bearing = φορά προς τον κέρσορα.
@@ -229,7 +230,7 @@ export function paintDrawingHoverOverlays(
     // SSoT: value + active display-unit label in ONE call (no manual
     // formatDisplayValue + DISPLAY_UNIT_LABELS combo).
     const label = trackingResult.snappedAngle !== null
-      ? `${trackingResult.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
+      ? formatSnapTrackingLabel(trackingResult.snappedAngle, distMm)
       : null;
     // ADR-357 ambient: draw ONLY the cursor-aligned path(s), not every
     // built path — mirrors Revit/AutoCAD and prevents ambient-source clutter.

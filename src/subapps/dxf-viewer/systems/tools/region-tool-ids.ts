@@ -115,5 +115,8 @@ export function isBimRegionOrPerimeterTool(tool: string | null | undefined): boo
  * (ορθογώνιο ή Γ/Τ/Π) → διακεκομμένη → κλικ → adopt confirm → κολώνα/τοιχίο.
  */
 export function isRegionHoverPreviewTool(tool: string | null | undefined): boolean {
-  return isBimRegionOrPerimeterTool(tool) || tool === 'wall' || tool === 'column';
+  // ADR-363 Phase 1J — ΚΑΙ ο «Τοίχος πάνω σε οντότητα» (`'wall-on-entity'`): hover πάνω σε ΚΛΕΙΣΤΟ
+  // περίγραμμα (ορθογώνιο/polyline) → πράσινη διακεκομμένη περίμετρος (η κλειστή πηγή γεννά N τοίχους,
+  // που ο single-entity preview canvas δεν ζωγραφίζει· η γραμμική πηγή δείχνει WYSIWYG ghost αλλού).
+  return isBimRegionOrPerimeterTool(tool) || tool === 'wall' || tool === 'column' || tool === 'wall-on-entity';
 }

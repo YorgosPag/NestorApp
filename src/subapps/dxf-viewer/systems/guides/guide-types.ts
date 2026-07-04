@@ -15,7 +15,8 @@
 import type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-189: Centralized hover highlight config (single source of truth)
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+// 🏢 ADR-571: GUIDE_X cyan SSoT — μην ξανα-hardcode-άρεις '#00BCD4' εδώ
+import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
 
 // Re-export for convenience
 export type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
@@ -90,8 +91,8 @@ export interface GuideRenderStyle {
 
 /** Default colors per guide axis — construction-industry standard */
 export const GUIDE_COLORS = {
-  /** Electric cyan — vertical (X-axis) guides */
-  X: '#00BCD4',
+  /** Electric cyan — vertical (X-axis) guides (ADR-571 SSoT → UI_COLORS_BASE.GUIDE_X) */
+  X: UI_COLORS_BASE.GUIDE_X,
   /** Tomato — horizontal (Z/Y-axis) guides */
   Y: '#FF6347',
   /** Indigo — diagonal (XZ) guides */
@@ -104,7 +105,7 @@ export const GUIDE_COLORS = {
 
 /** B6: Preset color palette for guide customization (AutoCAD/Revit-inspired) */
 export const GUIDE_COLOR_PALETTE = [
-  { hex: '#00BCD4', name: 'Cyan' },
+  { hex: UI_COLORS_BASE.GUIDE_X, name: 'Cyan' }, // ADR-571 SSoT
   { hex: '#FF6347', name: 'Tomato' },
   { hex: '#6366F1', name: 'Indigo' },
   { hex: '#9370DB', name: 'Purple' },

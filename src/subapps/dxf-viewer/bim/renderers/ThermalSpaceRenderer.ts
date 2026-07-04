@@ -28,10 +28,12 @@ import type { ThermalSpaceEntity } from '../types/thermal-space-types';
 import { resolveThermalSpaceSetpointC } from '../thermal/thermal-space-use-catalog';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+// 🏢 ADR-571: teal analytical accent SSoT + hexToRgba SSoT (color-math.ts)
+import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 
-/** Analytical accent colour (teal) — Revit «Space» analytical overlay. */
-const THERMAL_SPACE_COLOR = '#0d9488';
+/** Analytical accent colour (teal) — Revit «Space» analytical overlay (ADR-571 SSoT). */
+const THERMAL_SPACE_COLOR = MEP_TEAL_COLOR;
 const TAG_FONT = '12px sans-serif';
 const TAG_LINE_HEIGHT_PX = 14;
 
@@ -76,7 +78,7 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
 
     // Translucent analytical fill — stronger when selected so the whole area reads as picked.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(options.selected ? 'rgba(13, 148, 136, 0.24)' : 'rgba(13, 148, 136, 0.12)');
+    this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(MEP_TEAL_COLOR, options.selected ? 0.24 : 0.12));
     this.drawPolygonPath(verts);
     this.ctx.fill();
 

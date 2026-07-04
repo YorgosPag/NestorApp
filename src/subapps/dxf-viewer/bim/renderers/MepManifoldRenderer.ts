@@ -24,6 +24,8 @@ import { isMepManifoldEntity } from '../../types/entities';
 import type { MepManifoldEntity } from '../types/mep-manifold-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifolds/mep-manifold-symbol';
+// 🏢 ADR-571: hexToRgba SSoT (fill derived from strokeHex — μηδέν rgb tuple)
+import { hexToRgba } from '../../config/color-math';
 import { getMepManifoldGrips } from '../mep-manifolds/mep-manifold-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -81,7 +83,7 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // drainage collector (φρεάτιο). Manifolds are not coloured by circuit (source).
     const palette = resolveManifoldPalette(manifold.params.kind);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(`rgba(${palette.fillRgb}, ${MANIFOLD_FILL_ALPHA})`);
+    this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(palette.strokeHex, MANIFOLD_FILL_ALPHA));
     this.drawPolygonPath(verts);
     this.ctx.fill();
     this.ctx.strokeStyle = palette.strokeHex;

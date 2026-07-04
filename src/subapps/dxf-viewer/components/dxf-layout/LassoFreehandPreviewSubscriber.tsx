@@ -10,6 +10,8 @@ import React, { useSyncExternalStore } from 'react';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-571: lasso dark-cyan stroke SSoT
+import { LASSO_STROKE_CYAN } from '../../config/color-config';
 
 interface LassoFreehandPreviewSubscriberProps {
   transform: ViewTransform;
@@ -46,7 +48,7 @@ export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandP
       <polyline
         points={polylineStr}
         fill="none"
-        stroke="#0e7490"
+        stroke={LASSO_STROKE_CYAN}
         strokeWidth={1.5}
         strokeDasharray="5 3"
         strokeLinejoin="round"
@@ -55,17 +57,17 @@ export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandP
         <line
           x1={last.x} y1={last.y}
           x2={first.x} y2={first.y}
-          stroke="#0e7490" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={nearClose ? 0.9 : 0.4}
+          stroke={LASSO_STROKE_CYAN} strokeWidth={1} strokeDasharray="2 4" strokeOpacity={nearClose ? 0.9 : 0.4}
         />
       )}
       {/* Snap-to-close: outer ring when near start */}
       {nearClose && (
-        <circle cx={first.x} cy={first.y} r={14} fill="none" stroke="#0e7490" strokeWidth={1.5} strokeOpacity={0.5} />
+        <circle cx={first.x} cy={first.y} r={14} fill="none" stroke={LASSO_STROKE_CYAN} strokeWidth={1.5} strokeOpacity={0.5} />
       )}
       <circle
         cx={first.x} cy={first.y}
         r={nearClose ? 8 : 5}
-        fill="#0e7490"
+        fill={LASSO_STROKE_CYAN}
         fillOpacity={nearClose ? 1 : 0.8}
         style={{ transition: 'r 0.1s ease' }}
       />

@@ -76,8 +76,11 @@ export function resolveNeighborClearanceDims(
     const nb = footprintBounds(verts);
     if (nb) pushAabbCandidate(cands, g, nb, opts);
   }
-  // Γραμμικά μέλη (τοίχοι + δοκάρια): perpendicular clearance στην παρειά (λοξό → γωνία).
-  for (const t of [...targets.wallTargets, ...targets.beamTargets]) {
+  // Γραμμικά μέλη + DXF: perpendicular clearance στην παρειά/ακμή (λοξό → γωνία). ADR-508 §move-clearance
+  // (2026-07-04): πέραν των δομικών (τοίχοι/δοκάρια), ΚΑΙ `lineTargets` (σκέτες γραμμές/πολυγραμμές/
+  // ορθογώνια/κύκλοι-τόξα ως zero-width edges) + `slabTargets` (ακμές πλάκας) ώστε η μετακίνηση κοντά σε
+  // ΟΠΟΙΑΔΗΠΟΤΕ οντότητα (BIM ή DXF) να δείχνει κυανές διαστάσεις (Giorgio: «οποιαδήποτε οντότητα»).
+  for (const t of [...targets.wallTargets, ...targets.beamTargets, ...targets.lineTargets, ...targets.slabTargets]) {
     pushMemberCandidate(cands, ghostFootprint, g, t, opts);
   }
 

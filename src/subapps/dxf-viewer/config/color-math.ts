@@ -138,6 +138,17 @@ export function rgbaString(c: RgbaColor): string {
 }
 
 /**
+ * **SSoT** `#hex` (`#rgb`/`#rrggbb`) + alpha 0..1 → `rgba(r, g, b, a)` string για translucent fills.
+ * Reuse `parseHex` + `rgbaString` — μηδέν duplicate parse/format. Άκυρο hex → επιστρέφει το hex ως
+ * ασφαλές fallback (μη-throwing). Οι domain wrappers (`mep-system-color`, `bim-vg-fill-tint`)
+ * delegateάρουν εδώ (N.0.2/N.12).
+ */
+export function hexToRgba(hex: string, alpha: number): string {
+  const rgb = parseHex(hex);
+  return rgb ? rgbaString({ ...rgb, a: alpha }) : hex;
+}
+
+/**
  * Alpha-composite ένα translucent χρώμα πάνω σε opaque hex φόντο → effective **opaque** hex.
  * `out = fg·a + bg·(1−a)` = `mixHex(bg, fg, a)` (reuse — μηδέν duplicate compositing math).
  */

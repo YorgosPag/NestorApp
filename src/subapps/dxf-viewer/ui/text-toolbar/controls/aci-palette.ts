@@ -11,6 +11,9 @@
 
 import type { DxfColor } from '../../../text-engine/types';
 
+// 🏢 ADR-571: canonical ACI→hex SSoT = `settings/standards/aci.ts`. This RGB-tuple
+// table + ramp math is an intentional, self-contained encoding for the text-toolbar
+// nearest-color picker. Index 4 (`[0,255,255]` cyan) mirrors the SSoT — NOT a hardcode.
 const NAMED_ACI: ReadonlyArray<readonly [number, number, number]> = [
   [0, 0, 0],         // 0 = ByBlock (not a real color)
   [255, 0, 0],       // 1 red

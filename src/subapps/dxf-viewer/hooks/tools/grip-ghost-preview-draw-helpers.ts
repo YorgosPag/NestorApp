@@ -43,6 +43,8 @@ import type { DxfGripDragPreview } from '../grip-computation';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
+// ADR-363 / ADR-572 Γ1 — leader dash+colour SSoT (μηδέν bespoke inline setLineDash/strokeStyle).
+import { applyOverlayLeaderStyle, OVERLAY_LINE_COLORS } from '../../canvas-v2/preview-canvas/overlay-line-style';
 import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
@@ -50,15 +52,8 @@ import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-/** ADR-363 Phase 1G — dash pattern for the corner hot-grip rubber-band leader. */
-const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
-
-/**
- * ADR-363 — discreet neutral colour for the live move-distance readout leader (Revit-grade).
- * Semi-transparent WHITE so it stays subtle yet visible on the pure-black AutoCAD canvas
- * (`CANVAS_BACKGROUND #000`) — a black leader would be invisible.
- */
-const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
+// ADR-363 leader dash ([6,4]) + discreet semi-white move-readout colour → now SSoT tokens in
+// overlay-line-style.ts (`OVERLAY_LEADER_DASH` / `OVERLAY_LINE_COLORS.moveLeader`, ADR-572 Γ1).
 
 /** ADR-507 Φ5 A3b — half-size (CSS px) του live gradient-origin grip-marker (fixed on-screen). */
 const GRADIENT_ORIGIN_MARKER_HALF_PX = 5;
@@ -76,9 +71,8 @@ export function drawDashedSegment(
   const fromS = CoordinateTransforms.worldToScreen(fromW, transform, vp);
   const toS = CoordinateTransforms.worldToScreen(toW, transform, vp);
   ctx.save();
-  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
-  ctx.strokeStyle = GHOST_DEFAULTS.color;
-  ctx.lineWidth = 1;
+  // Rubber-band «κουμπώνει» στο ghost → χρώμα derived από GHOST_DEFAULTS.color (semantic), dash/width SSoT.
+  applyOverlayLeaderStyle(ctx, GHOST_DEFAULTS.color);
   ctx.beginPath();
   ctx.moveTo(fromS.x, fromS.y);
   ctx.lineTo(toS.x, toS.y);
@@ -93,9 +87,7 @@ export function drawMoveReadoutLeader(
   toS: { x: number; y: number },
 ): void {
   ctx.save();
-  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
-  ctx.strokeStyle = MOVE_READOUT_LEADER_COLOR;
-  ctx.lineWidth = 1;
+  applyOverlayLeaderStyle(ctx, OVERLAY_LINE_COLORS.moveLeader);
   ctx.beginPath();
   ctx.moveTo(fromS.x, fromS.y);
   ctx.lineTo(toS.x, toS.y);

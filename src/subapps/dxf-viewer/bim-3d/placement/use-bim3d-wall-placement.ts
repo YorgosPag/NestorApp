@@ -62,7 +62,7 @@ import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-a
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an orbit
  *  drag, not a placement — skip it (avoids accidental wall endpoints). */
@@ -151,7 +151,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
         const distScene = Math.hypot(composed.point.x - r.anchorPoint.x, composed.point.y - r.anchorPoint.y);
         const distMm = distScene / Math.max(mmToSceneUnits(units), 1e-9);
         const label = r.snappedAngle !== null
-          ? `${r.snappedAngle.toFixed(0)}° / ${formatLengthForDisplay(distMm)}`
+          ? formatSnapTrackingLabel(r.snappedAngle, distMm)
           : null;
         trackingPayload = {
           paths: r.activePaths,

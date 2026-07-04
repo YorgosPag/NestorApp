@@ -16,10 +16,13 @@
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-571: electrical-panel teal SSoT + hexToRgba SSoT (color-math.ts)
+import { MEP_TEAL_COLOR } from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 
-/** Teal panel palette — mirror of `ElectricalPanelRenderer`. */
-const PANEL_STROKE = '#0d9488';
-const PANEL_FILL = 'rgba(13, 148, 136, 0.30)';
+/** Teal panel palette — mirror of `ElectricalPanelRenderer` (ADR-571 SSoT). */
+const PANEL_STROKE = MEP_TEAL_COLOR;
+const PANEL_FILL = hexToRgba(MEP_TEAL_COLOR, 0.30);
 const GHOST_LINE_WIDTH = 2;
 const ANCHOR_MARKER_SIZE_PX = 5;
 

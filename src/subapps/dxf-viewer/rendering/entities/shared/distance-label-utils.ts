@@ -35,7 +35,7 @@ import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 // 🏢 ADR-082: Enterprise Number Formatting
 import { FormatterRegistry, type Precision } from '../../../formatting';
 // 🏢 ADR-462: display-unit SSoT — entity distance labels follow the status-bar unit
-import { formatLengthMm } from '../../../config/display-length-format';
+import { formatLengthMm, formatLengthForDisplay } from '../../../config/display-length-format';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
 import { normalizeTextAngle } from './geometry-utils';
 // 🏢 ADR-XXX: Centralized Overlay Colors
@@ -210,6 +210,30 @@ export function formatAngleLocale(angle: number, decimals: number = 1): string {
   }
   const registry = FormatterRegistry.getInstance();
   return registry.formatAngle(angle, decimals as Precision);
+}
+
+/**
+ * 🏢 ADR-572 Γ2 — SSoT composer for the snap/object-tracking tooltip label «<γωνία>° / <μήκος>».
+ *
+ * ONE place owns the composition shown on EVERY alignment trace, POLAR ray and object-snap tracking
+ * tooltip — δημιουργία (`drawing-hover-*`), grip-drag (`dim-alignment-tracking`), rotation
+ * (`rotation-tracking-overlay`), POLAR (`polar-utils`) και 3D wall placement (`use-bim3d-wall-placement`).
+ * Συνθέτει locale-aware γωνία (`formatAngleLocale`) + ` / ` + display-unit μήκος (`formatLengthForDisplay`),
+ * ώστε ο separator, η σειρά και η μονάδα να μην αποκλίνουν ποτέ ξανά ανά call-site.
+ *
+ * `angleDecimals` default 0 (σύμβαση alignment/tracking traces)· η POLAR ακτίνα περνά 1.
+ *
+ * @param angleDeg - γωνία σε μοίρες (snapped/bearing)
+ * @param distanceMm - απόσταση σε canonical χιλιοστά (ο caller κάνει world→mm)
+ * @param angleDecimals - δεκαδικά γωνίας (default 0)
+ * @returns π.χ. «45° / 1,25 m» (locale-correct)
+ */
+export function formatSnapTrackingLabel(
+  angleDeg: number,
+  distanceMm: number,
+  angleDecimals: number = 0,
+): string {
+  return `${formatAngleLocale(angleDeg, angleDecimals)} / ${formatLengthForDisplay(distanceMm)}`;
 }
 
 /**
