@@ -3,25 +3,40 @@
  *
  * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): το RAF
  * lifecycle + DPR-clear + canonical viewport/transform + snapped-cursor ζουν πλέον
- * ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic (rubber-band segment outline).
+ * ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
  *
- * This is a 2-click placement tool (like a wall or beam, NOT a point element like
- * the fixture). The hook is active only during `isAwaitingEnd` (the first click has
- * been made and we are waiting for the second). `getGhostSegment` provides the start
- * point + current section width; the cursor provides the end point live.
+ * ADR-574 Σ2 — WYSIWYG rubber-band: το draw closure χτίζει ΠΛΗΡΗ `MepSegmentEntity`
+ * με τους ΙΔΙΟΥΣ commit builders (`buildDefaultMepSegmentParams` +
+ * `buildMepSegmentEntity`, ίδιο overrides/domain/sceneUnits source με το commit —
+ * το bridge mirror του `useMepSegmentTool` FSM) από (startPoint = 1o click) →
+ * (endPoint = live cursor), και το ζωγραφίζει μέσω του κοινού
+ * `renderWysiwygPlacementGhost` (πραγματικός segment renderer). Έτσι η rubber-band
+ * ΕΙΝΑΙ byte-identical με το committed duct/pipe (section fill / material hatch /
+ * lineweight), αντί για το legacy translucent offset-rectangle + anchor-dots.
+ * preview ≡ commit by identity.
  *
- * OSNAP support: when a snap hit is present the effective cursor locks to the
- * snapped point — matches the committed second-click point (WYSIWYG).
+ * This is a 2-click placement tool: the hook is active only during `isAwaitingEnd`
+ * (first click done, awaiting the second). The fixed start point + section spec
+ * come from the segment tool bridge (same source the commit reads); the cursor
+ * provides the live end point. OSNAP: the effective cursor locks to the snapped
+ * point — matches the committed second-click point (WYSIWYG).
  *
- * @see bim/mep-segments/MepSegmentGhostRenderer.ts — pure canvas renderer
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
+ * @see docs/centralized-systems/reference/adrs/ADR-574-ghost-preview-ssot-audit.md
  * @see hooks/tools/useCanvasGhostPreview — shared RAF/clear/viewport harness (ADR-398 §4)
+ * @see bim/ghosts/wysiwyg-placement-ghost — renderWysiwygPlacementGhost SSoT
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { MepSegmentGhostRenderer } from '../../bim/mep-segments/MepSegmentGhostRenderer';
+import type { Entity, Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { MepSegmentDomain } from '../../bim/types/mep-segment-types';
+import {
+  buildDefaultMepSegmentParams,
+  buildMepSegmentEntity,
+} from '../drawing/mep-segment-completion';
+import { renderWysiwygPlacementGhost } from '../../bim/ghosts/wysiwyg-placement-ghost';
+import { getDefaultLayerId } from '../../stores/LayerStore';
+import { mepSegmentToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-segment-tool-bridge-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -47,11 +62,10 @@ export interface UseMepSegmentGhostPreviewProps {
   readonly isAwaitingEnd: boolean;
   readonly transform: ViewTransform;
   /**
-   * Getter called each RAF frame with the current cursor position (may be null
-   * when the cursor is outside the canvas). Returns the fixed start spec or
-   * null when no preview should be drawn (e.g. no start point committed yet).
+   * Legacy segment-spec getter — kept for parent wiring parity (ADR-574: unused
+   * here; the WYSIWYG draw reads start + section spec from the bridge instead).
    */
-  getGhostSegment(cursorPos: Readonly<Point2D> | null): GhostSegmentSpec | null;
+  getGhostSegment?(cursorPos: Readonly<Point2D> | null): GhostSegmentSpec | null;
   getCanvas(): HTMLCanvasElement | null;
   /** Viewport element for size measurement; falls back to `getCanvas` (handled by harness). */
   getViewportElement?(): HTMLElement | null;
@@ -62,21 +76,30 @@ export interface UseMepSegmentGhostPreviewProps {
 export function useMepSegmentGhostPreview(
   props: Readonly<UseMepSegmentGhostPreviewProps>,
 ): void {
-  const { isAwaitingEnd, transform, getGhostSegment, getCanvas, getViewportElement } = props;
+  const { isAwaitingEnd, transform, getCanvas, getViewportElement } = props;
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!effectiveCursor) return;
-    const spec = getGhostSegment(effectiveCursor);
-    if (!spec) return;
-    new MepSegmentGhostRenderer(ctx).render({
-      startPoint: spec.startPoint,
-      cursor: effectiveCursor,
-      sectionWidthCanvas: spec.sectionWidthCanvas,
-      domain: spec.domain,
-      transform: t,
-      viewport,
-    });
-  }, [getGhostSegment]);
+    // ADR-574 Σ2 — build the FULL duct/pipe entity with the SAME commit builders +
+    // start/overrides/domain/sceneUnits source (bridge mirrors the tool FSM), so the
+    // rubber-band ≡ commit. Start = 1st click (bridge), end = live cursor. The end
+    // is a free point (cursor carries no connector z) — matches the free-end commit.
+    const h = mepSegmentToolBridgeStore.get();
+    const startPoint = h?.startPoint;
+    if (!startPoint) return;
+    const params = buildDefaultMepSegmentParams(
+      startPoint,
+      effectiveCursor,
+      h?.domain,
+      h?.overrides ?? {},
+      h?.getSceneUnits?.() ?? 'mm',
+      h?.startElevationMm ?? null,
+      null,
+    );
+    const built = buildMepSegmentEntity(params, getDefaultLayerId());
+    if (!built.ok) return;
+    renderWysiwygPlacementGhost(ctx, built.entity as unknown as Entity, t, viewport);
+  }, []);
 
   useCanvasGhostPreview({
     isActive: isAwaitingEnd,
