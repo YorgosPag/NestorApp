@@ -656,6 +656,19 @@ export interface ArrayEntity extends BaseEntity {
   readonly basePointOverride?: Point2D;
 }
 
+// ADR-575 — GROUP «Ομαδοποίηση»: N entities → ONE in-place composite container.
+// In-place (IDENTITY transform, Revit/Figma/Cinema 4D model): members keep their
+// ABSOLUTE world coordinates and are OWNED by the container (removed from the live
+// scene, expanded 1:1 at conversion tagged with the group id — the exact
+// ArrayEntity.hiddenSources pattern, so render/hit-test/selection come for free).
+// Defined HERE (not in systems/group) to avoid the Entity↔GroupEntity circular
+// import via `members: Entity[]`, exactly like ArrayEntity above.
+export interface GroupEntity extends BaseEntity {
+  readonly type: 'group';
+  /** The owned member entities (absolute coords, removed from the live scene). */
+  readonly members: Entity[];
+}
+
 // Union type for all entities
 // ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
 export type Entity = (
@@ -679,6 +692,7 @@ export type Entity = (
   | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
   | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
   | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
+  | GroupEntity              // ADR-575: composite GROUP «Ομαδοποίηση» (in-place container)
   | StairEntity              // ADR-358: Parametric stair (11 kinds)
   | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
   | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
@@ -840,6 +854,10 @@ export const isRayEntity = (entity: Entity): entity is RayEntity =>
 // ADR-353
 export const isArrayEntity = (entity: Entity): entity is ArrayEntity =>
   entity.type === 'array';
+
+// ADR-575 — GROUP container «Ομαδοποίηση»
+export const isGroupEntity = (entity: Entity): entity is GroupEntity =>
+  entity.type === 'group';
 
 // ADR-358
 export const isStairEntity = (entity: Entity): entity is StairEntity =>

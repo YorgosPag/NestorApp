@@ -310,6 +310,7 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'xline': 'XLINE',
   'ray': 'RAY',
   'array': null,           // Internal associative array — exploded for export
+  'group': null,           // ADR-575 — internal GROUP container — expanded to members for export
   'stair': null,           // BIM stair — not exported as native DXF entity
   'center-mark': null,     // ADR-362 — center mark annotation, exported via composite
   'centerline': null,      // ADR-362 — centerline annotation, exported via composite

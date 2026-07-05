@@ -39,6 +39,8 @@ export type EntityType =
   | 'xline'
   | 'ray'
   | 'array'
+  // ADR-575 — composite GROUP «Ομαδοποίηση» (in-place container of member entities).
+  | 'group'
   | 'stair'
   | 'center-mark'
   | 'centerline'
