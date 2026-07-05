@@ -265,6 +265,21 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             comingSoon: false,
           },
         },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            // ADR-186 — γενικό JOIN «Ένωση» (lines/arcs/polylines → 1 entity), το
+            // αντίστροφο του EXPLODE. Immediate action στην τρέχουσα επιλογή.
+            id: 'modify.join',
+            labelKey: 'ribbon.commands.join',
+            icon: 'join',
+            commandKey: 'join',
+            action: 'join',
+            shortcut: 'J',
+            comingSoon: false,
+          },
+        },
       ],
     },
   ],
@@ -335,6 +350,11 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'small',
           command: { id: 'edit.explode', labelKey: 'ribbon.commands.explode', icon: 'explode', commandKey: 'explode', action: 'explode', shortcut: 'X', comingSoon: false },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.join', labelKey: 'ribbon.commands.join', icon: 'join', commandKey: 'join', action: 'join', shortcut: 'J', comingSoon: false },
         },
       ],
     },
