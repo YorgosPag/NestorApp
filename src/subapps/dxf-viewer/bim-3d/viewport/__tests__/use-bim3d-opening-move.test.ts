@@ -64,6 +64,15 @@ jest.mock('../../placement/TempOpeningDimOverlay', () => ({
     dispose(): void {}
   },
 }));
+// ADR-363 — live move-distance readout overlay (ίδιο pattern με το dim overlay· mocked ώστε
+// να μην αγγίζει την πραγματική THREE.Scene στα unit tests — ο ctor του κάνει `scene.add`).
+jest.mock('../../placement/TempMoveReadoutOverlay', () => ({
+  TempMoveReadoutOverlay: class {
+    update(): void {}
+    hide(): void {}
+    dispose(): void {}
+  },
+}));
 jest.mock('../../../bim/walls/opening-grips', () => ({
   resolveOpeningAltMove: () => mockResolved,
   openingRehostToleranceWorld: () => 600,

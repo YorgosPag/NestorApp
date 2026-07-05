@@ -116,9 +116,18 @@ describe('computeColumnResizeParams (ADR-402 Phase B)', () => {
     expect(next!.width).toBeCloseTo(expected.width, 9);
   });
 
-  it('circular column depth (resize-z) is a no-op → null', () => {
+  it('circular column depth (resize-z) → symmetric diameter resize (ADR-519 N-quadrant)', () => {
+    // ADR-519 — η circular κολόνα εκπέμπει τα quadrant grips με τα ΙΔΙΑ kinds width(E)/depth(N),
+    // ώστε ΚΑΘΕ quadrant να κάνει συμμετρικό diameter resize. Άρα το 3D resize-z (→ column-depth)
+    // ΔΕΝ είναι no-op πλέον· αλλάζει τη διάμετρο (3Δ === 2Δ N-quadrant).
     const circular = buildDefaultColumnParams({ x: 0, y: 0 }, 'circular');
-    expect(computeColumnResizeParams(circular, drag('z', { x: 0, y: 50 }))).toBeNull();
+    const next = computeColumnResizeParams(circular, drag('z', { x: 0, y: 50 }));
+    expect(next).not.toBeNull();
+    const expected = applyColumnGripDrag('column-depth', {
+      originalParams: circular, delta: toCanvasDelta({ x: 0, y: 50 }, mmScaleFor(circular)),
+    });
+    expect(next!.width).toBeCloseTo(expected.width, 6); // circular quadrant → diameter (width)
+    expect(next!.width).not.toBeCloseTo(circular.width, 6);
   });
 });
 

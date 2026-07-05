@@ -161,7 +161,9 @@ export function resolveMaterialKey(materialId: string): string {
  */
 export function getMaterialFlatColorHex(materialId: string): string {
   const def = MATERIAL_DEFS[resolveMaterialKey(materialId)] ?? MATERIAL_DEFS[DEFAULT_MATERIAL_KEY]!;
-  return trueColorToHex(def.color);
+  // Canonical BIM material colour = lowercase `#rrggbb` (docstring contract + THREE.Color
+  // convention). Το DXF-domain `trueColorToHex` uppercase-άρει (ACI/DXF), οπότε κανονικοποιούμε εδώ.
+  return trueColorToHex(def.color).toLowerCase();
 }
 
 /**

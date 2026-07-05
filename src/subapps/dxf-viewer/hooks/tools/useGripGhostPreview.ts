@@ -40,6 +40,8 @@ import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
 // ADR-513 §grip-parity — length/angle lock για την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής (ίδιος SSoT preview≡commit).
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
+// ADR-357/513 §grip-polar — POLAR angle-snap του άκρου (γραμμή + polyline), κοινό preview+commit SSoT.
+import { resolveEndpointReshapePolarLock, type EndpointReshapePolarLock } from '../grips/grip-endpoint-polar-lock';
 import {
   applyEntityPreview,
   normalizePreviewEntity,
@@ -48,7 +50,6 @@ import {
 } from '../../rendering/ghost';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
 // tool draws (useRotationPreview), so both rotation flows look identical.
 import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
@@ -62,15 +63,13 @@ import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-re
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity, isPolylineEntity, isWallEntity } from '../../types/entities';
-import type { HatchEntity, LineEntity } from '../../types/entities';
+import type { LineEntity } from '../../types/entities';
 // ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) στη whole-line MOVE της
 // κεντρικής λαβής· ΙΔΙΟΣ overlay dim SSoT με το body-drag → μία όψη, μηδέν διπλότυπο. ORTHO-gated.
 import { paintLineParallelOffsetDim } from '../../canvas-v2/preview-canvas/line-offset-dim-paint';
 // ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
 // (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
-import {
-  isHatchOriginGripKind, isHatchAngleGripKind, hatchBoundsCenter, hatchGradientAngleGripPos,
-} from '../../bim/hatch/hatch-grips';
+import { isHatchOriginGripKind, isHatchAngleGripKind } from '../../bim/hatch/hatch-grips';
 // ADR-507 Φ5 A4 — ίδια οπτική ένδειξη με την περιστροφή κολώνας (ADR-357/398): πορτοκαλί
 // polar-tracking ray στη γωνία + tooltip τιμής. Κεντρικό SSoT — μηδέν bespoke style.
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
@@ -87,7 +86,6 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // marker / ADR-543 co-move partner ghosts) live in a sibling module.
 import {
   drawDashedSegment,
-  drawGradientOriginMarker,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
   drawMemberBodyGhostWithJoinMiter,
@@ -107,11 +105,9 @@ import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline
 // ADR-560 §OSNAP-priority — όταν το OSNAP κουμπώνει σε χαρακτηριστικό σημείο, κρύβουμε τις κυανές
 // γραμμές ευθυγράμμισης (φαίνεται το OSNAP marker □/△/○ αντ' αυτών· Giorgio 2026-07-04).
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
-// ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag (ΙΔΙΟ SSoT
-// με useMovePreview + useEntityBodyDragPreview). Το grip-drag ήταν ο μόνος move path που ΔΕΝ τα έδειχνε.
-import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims';
-import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
-import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+// ADR-508/507 — grip-drag tail overlays (move-clearance dims + hatch gradient handle marker) σε δικό
+// τους module (file-size SRP N.7.1, 2026-07-05). Gates/SSoT ζουν μέσα στους helpers.
+import { paintGripMoveClearanceDims, drawHatchGradientHandleMarker } from './grip-ghost-preview-overlay-helpers';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,11 +205,23 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
 
     // ADR-513 §grip-parity — length/angle lock στο ghost της ΕΠΕΚΤΑΣΗΣ ΑΚΡΟΥ γραμμής (grip 0/1). Ο
     // ΙΔΙΟΣ helper τρέχει και στο commit (grip-mouseup) → preview ≡ commit. No-op όταν δεν υπάρχει lock.
+    let endpointPolar: EndpointReshapePolarLock | null = null;
     if (!isRotation && !isHatchDrag && dp.anchorPos && effectiveCursor) {
       const lockedDelta = resolveLineEndpointLockedDelta(
         entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
       );
-      if (lockedDelta) dp = { ...dp, delta: lockedDelta };
+      if (lockedDelta) {
+        dp = { ...dp, delta: lockedDelta };
+      } else {
+        // ADR-357/513 §grip-polar — POLAR angle-snap του ΑΚΡΟΥ (γραμμή grip 0/1 ή ανοιχτό polyline
+        // endpoint) γύρω από τον ΣΤΑΘΕΡΟ γείτονα, ΙΔΙΟ SSoT με τη σχεδίαση (`resolveOrthoPolarStep`).
+        // Ο ίδιος resolver τρέχει στο commit (grip-mouseup) → preview ≡ commit. No-op όταν POLAR off,
+        // ORTHO on, δεν είναι άκρο, ή ο κέρσορας δεν κούμπωσε σε polar ακτίνα.
+        endpointPolar = resolveEndpointReshapePolarLock(
+          entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
+        );
+        if (endpointPolar) dp = { ...dp, delta: endpointPolar.delta };
+      }
     }
 
     const vp = viewport;
@@ -344,6 +352,17 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       }
     }
 
+    // ADR-357/513 §grip-polar — πορτοκαλί polar ray + γωνία από τον ΣΤΑΘΕΡΟ γείτονα προς το κλειδωμένο
+    // άκρο (ΙΔΙΟ `paintPolarTrackingLine` SSoT με σχεδίαση/περιστροφή/κολώνα — μηδέν νέο paint). Γραμμή
+    // + ενωμένο σύστημα (polyline) parity: μόλις το άκρο κουμπώσει σε 0°/45°/90°… φαίνεται η ένδειξη.
+    if (endpointPolar && dp.anchorPos && endpointPolar.polar.snappedAngle !== null) {
+      const lockedPt = { x: dp.anchorPos.x + endpointPolar.delta.x, y: dp.anchorPos.y + endpointPolar.delta.y };
+      paintPolarTrackingLine(
+        ctx, endpointPolar.fixed, endpointPolar.polar.snappedAngle,
+        formatMoveAngle(endpointPolar.polar.snappedAngle), lockedPt, t, vp,
+      );
+    }
+
     // Κάθετη διάσταση αρχικής↔φαντάσματος για whole-line MOVE μέσω κεντρικής λαβής (πλήρης ISO dim,
     // ORTHO-gated εσωτερικά). `dp.delta` = η ήδη ORTHO+F9/Q constrained μετάθεση → preview≡commit.
     if (dp.movesEntity === true && !dp.rotatePivot && isLineEntity(entity as unknown as Entity)) {
@@ -444,46 +463,23 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawMemberGripHud(ctx, dp, transformed, transformed !== entity, resolveSceneUnits(hudScene), t, vp);
     }
 
-    // ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
-    // `resolveMoveClearanceDims` + `paintGhostFaceDimensions` SSoT που τρέχουν το 2-click Move
-    // (`useMovePreview`) + το body-drag (`useEntityBodyDragPreview`). Το grip-drag ήταν ο μόνος move
-    // path που ΔΕΝ τα έδειχνε → parity. Χρήση του ΗΔΗ υπολογισμένου `transformed` ghost με delta {0,0}
-    // → καλύπτει ΚΑΙ whole-move (κεντρικό grip) ΚΑΙ endpoint reshape με ΕΝΑ path (footprint του
-    // μετασχηματισμένου). Self-excluded (το κινούμενο entity δεν μετριέται ως στόχος). Εξαιρείται η
-    // περιστροφή (`rotatePivot` → το τόξο/μέλος δείχνει άλλα ίχνη) + hatch-gradient (bespoke). Paint
-    // LAST (convention: listening-dim overlay πάνω από το ghost), όπως στους δύο άλλους consumers.
-    if (transformed !== entity && !dp.rotatePivot && !isHatchDrag) {
+    // ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag (ΙΔΙΟ SSoT
+    // με useMovePreview + useEntityBodyDragPreview). Paint LAST (listening-dim overlay πάνω από το
+    // ghost). Όλη η λογική/gates (self-exclude, rotate/hatch skip, zero-delta) στο overlay helper.
+    {
       const clScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const clearanceDims = resolveMoveClearanceDims(
-        transformed as unknown as Entity,
-        { x: 0, y: 0 },
-        new Set([dp.entityId]),
-        clScene?.entities ?? [],
-        resolveSceneUnits(clScene),
-        worldPerPixel(t.scale),
+      paintGripMoveClearanceDims(
+        ctx, dp, transformed as unknown as Entity, entity as unknown as Entity,
+        (clScene?.entities ?? []) as unknown as readonly Entity[], resolveSceneUnits(clScene), t, vp,
       );
-      if (clearanceDims) paintGhostFaceDimensions(ctx, clearanceDims, t, vp);
     }
 
-    // ADR-507 Φ5 A3b/A4 — live handle marker LAST (πάνω από το gradient ghost). Ζωντανή θέση
-    // από το preview entity (ή το committed σε zero-delta). Origin → τετράγωνο στο κέντρο·
-    // angle → δαχτυλίδι-βραχίονας (origin→handle dashed) + τετράγωνο στο άκρο = «περιστροφή».
-    if (isHatchOriginDrag || isHatchAngleDrag) {
-      const live = (transformed !== entity ? transformed : entity) as unknown as HatchEntity;
-      const originW = live.patternOrigin ?? hatchBoundsCenter(live.boundaryPaths ?? []);
-      if (originW && isHatchOriginDrag) {
-        drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(originW, t, vp));
-      } else if (originW && isHatchAngleDrag) {
-        const angleDeg = live.gradient?.angleDeg ?? 0;
-        const handleW = hatchGradientAngleGripPos(originW, angleDeg, live.boundaryPaths ?? []);
-        if (handleW) {
-          // ΙΔΙΑ ένδειξη με την περιστροφή κολώνας: πορτοκαλί guide ray στη (snapped) γωνία +
-          // tooltip τιμής (formatMoveAngle). Έτσι ο χρήστης ΒΛΕΠΕΙ τη γωνία + το «κούμπωμα» 15°.
-          paintPolarTrackingLine(ctx, originW, angleDeg, formatMoveAngle(angleDeg), handleW, t, vp);
-          drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(handleW, t, vp));
-        }
-      }
-    }
+    // ADR-507 Φ5 A3b/A4 — live gradient handle marker LAST (πάνω από το gradient ghost). Origin →
+    // τετράγωνο· angle → βραχίονας + πορτοκαλί polar ray (SSoT overlay helper· gates εσωτερικά).
+    drawHatchGradientHandleMarker(
+      ctx, isHatchOriginDrag, isHatchAngleDrag,
+      transformed as unknown as Entity, entity as unknown as Entity, t, vp,
+    );
   }, [dragPreview, getEntity, levelManager, getBimPreview, getLayersById]);
 
   useCanvasGhostPreview({

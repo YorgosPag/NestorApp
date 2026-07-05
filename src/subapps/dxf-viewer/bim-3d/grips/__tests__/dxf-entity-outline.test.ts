@@ -70,20 +70,21 @@ describe('dxfEntityOutlineSegments', () => {
     expect(dxfEntityOutlineSegments(line(), 1)).toEqual(dxfEntityOutlineSegments(line()));
   });
 
-  // ADR-537 β — text glows as its closed bounding box (same box the pick uses).
-  it('returns a closed bbox rectangle for text', () => {
+  // ADR-557 Φ-attachment — text glows as its attachment-aware box (SAME box grips/2D frame/3D use).
+  // Default justification 'TL' (top-left): height 5 hangs BELOW the insertion point (y∈[15,20]),
+  // width 6 to the right ('AB' = 2·5·CHAR_WIDTH_MONOSPACE, x∈[10,16]). Corners NE,NW,SW,SE + closing NE.
+  it('returns a closed attachment-aware bbox rectangle for text', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t);
-    // bbox x∈[10,17], y∈[15,25]; 5 corners (closed loop).
     expect(seg).toEqual([
-      { x: 10, y: 15 }, { x: 17, y: 15 }, { x: 17, y: 25 }, { x: 10, y: 25 }, { x: 10, y: 15 },
+      { x: 16, y: 20 }, { x: 10, y: 20 }, { x: 10, y: 15 }, { x: 16, y: 15 }, { x: 16, y: 20 },
     ]);
   });
 
   it('scales the text bbox to mm for a cm scene (unitToMm = 10)', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t, 10);
-    expect(seg[0]).toEqual({ x: 100, y: 150 });
-    expect(seg[2]).toEqual({ x: 170, y: 250 });
+    expect(seg[0]).toEqual({ x: 160, y: 200 }); // NE
+    expect(seg[2]).toEqual({ x: 100, y: 150 }); // SW
   });
 });

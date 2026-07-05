@@ -85,16 +85,17 @@ describe('BimSceneLayer.syncMultiFloor — ADR-399 Phase B', () => {
     // wallToMesh(wall, openings, floorElevationMm, activeLevelId, baseElevation, profile?, baseProfile?, topClip?, nominalHeightMm?, columns?)
     // ADR-401: args 6-8 = WallTopProfile/WallBaseProfile/WallTopClip (all undefined for non-attached walls).
     // ADR-448 1b: arg 9 = storey-ceiling render height (undefined for these param-less fixture walls).
-    // ADR-456/457: arg 10 = column footprints για embed άκρης (κενό [] χωρίς κολόνες στον όροφο).
-    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined, []);
-    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined, undefined, undefined, undefined, []);
+    // ADR-456/457: arg 10 = column footprints (embed άκρης), arg 11 = wall-cross footprints
+    // (ADR-458 cutback) — αμφότερα κενά [] χωρίς κολόνες/διασταυρώσεις στον όροφο.
+    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined, [], []);
+    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined, undefined, undefined, undefined, [], []);
   });
 
   it('skips a floor whose visibility mode is hide (pre-mesh gate)', () => {
     const floorModes = new Map<string, FloorVisMode>([['L2', 'hide']]);
     new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack, [], [], null, new Map(), floorModes);
     expect(wallToMesh).toHaveBeenCalledTimes(1);
-    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined, []);
+    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined, [], []);
   });
 
   it('does not accumulate meshes across rebuilds (single clearGroup)', () => {

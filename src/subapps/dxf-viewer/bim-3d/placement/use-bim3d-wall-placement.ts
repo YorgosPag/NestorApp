@@ -57,11 +57,9 @@ import { setWall3DHud, clearWall3DHud } from '../viewport/wall-hud/wall-3d-hud-s
 import { setImmediateSnap, clearImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-543 (COL traces 3D) — Revit-style ambient alignment tracking, SAME brain as 2D.
 import { setTracking3D, clearTracking3D, type Tracking3DPayload } from '../viewport/tracking/tracking-3d-store';
-import { composeTrackingSnap } from '../../systems/tracking/ambient-tracking-compose';
-import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
+import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
-import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an orbit
@@ -96,7 +94,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
      * marker (plan mm, or null when tracking superseded it), and the tracking overlay
      * payload (or null). `null` when the ray misses the floor.
      *
-     * Tracking reuses the SAME `composeTrackingSnap` brain as the 2D `drawing-hover-handler`,
+     * Tracking reuses the SAME canonical `resolveAlignmentTracking` as the 2D `drawing-hover-handler`,
      * fed the SAME ambient member set (via the wall bridge) and a camera-derived screen scale
      * — so the alignment behaviour is identical on both canvases.
      */
@@ -119,26 +117,20 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       // Ambient COL traces (ADR-357): scene-units domain, screen scale derived from the
       // live camera at the cursor (mirror of `WallHudOverlay3D`'s `scenePerPx`), so the
       // "members near my cursor on screen" feel and the adaptive step stay zoom-constant.
+      // ΕΝΑΣ canonical resolver (`resolveAlignmentTracking`) — ΤΟ ΙΔΙΟ SSoT με τη 2D σχεδίαση/
+      // περιστροφή/διάσταση, μηδέν inline assembly. Το camera-derived `scenePerPx` γίνεται ο
+      // ισοδύναμος transform scale (`worldPerPixel(1/s)=s`, `pixelsToWorld(px,1/s)=px·s`), οπότε
+      // η ανοχή/radius/adaptive step μένουν byte-identical με το παλιό inline compose. F8/F10 δεν
+      // εκτίθενται ακόμα σε 3D → `polarEnabled:false` (H/V ambient COL traces only).
       const dist = camera.position.distanceTo(world);
       const scenePerPx = getPixelWorldSize(dist, camera, canvasEl) * 1000 * mmToSceneUnits(units);
       const cfg = ambientAlignmentConfigStore.getSnapshot();
-      const sceneEntities = cfg.enabled ? (wallToolBridgeStore.get()?.getSceneEntities() ?? []) : [];
-      const ambient = sceneEntities.length > 0
-        ? collectAmbientAlignmentAnchors(scenePt, sceneEntities, {
-            radiusWorld: cfg.radiusPx * scenePerPx,
-            maxMembers: cfg.maxMembers,
-            axisToleranceWorld: 3 * scenePerPx,
-          })
-        : [];
+      const sceneEntities = cfg.enabled ? (wallToolBridgeStore.get()?.getSceneEntities() ?? []) : null;
       const acquired = TrackingPointStore.getPoints();
-      const composed = composeTrackingSnap(scenePt, acquired, ambient, {
-        polar: {
-          incrementAngle: polarTrackingStore.incrementAngle,
-          additionalAngles: polarTrackingStore.additionalAngles,
-          polarEnabled: false, // 3D wall: H/V ambient COL traces (no F8/F10 surface yet)
-        },
-        worldTolerance: 3 * scenePerPx,
-        worldPerPixel: scenePerPx,
+      const composed = resolveAlignmentTracking(scenePt, {
+        scale: 1 / Math.max(scenePerPx, 1e-9),
+        polarEnabled: false,
+        sceneEntities,
       });
 
       let trackingPayload: Tracking3DPayload | null = null;

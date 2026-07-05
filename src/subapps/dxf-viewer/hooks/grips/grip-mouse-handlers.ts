@@ -17,6 +17,7 @@ import { findNearestGrip } from './grip-hit-testing';
 import {
   resolveHotGripMouseDown, isWallHotGripKind,
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
+  type WallHotGripOp, type HotGripStep,
 } from './wall-hot-grip-fsm';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware, createSceneManagerAdapter, type DxfCommitDeps } from './grip-commit-adapters';
@@ -53,6 +54,9 @@ import type {
 import { applyHotGripHint, seedRotateFreeStep } from './grip-hotgrip-actions';
 // ADR-561 EXT (Ctrl-endpoint rotate-copy) — pure gesture resolver + the major-axis baseline SSoT.
 import { resolveCtrlEndpointRotateCopy } from './ctrl-endpoint-rotate-copy';
+// ADR-513 §grip-parity — plain-line endpoint → click-move-click hot-grip entry (Dynamic Input ON).
+import { resolveLineEndpointHotGrip } from './line-endpoint-hotgrip';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
 import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
@@ -103,6 +107,58 @@ async function runDirectionalMove(
   const canvas = mm * (grip.moveGlyphMmScale ?? 1);
   const delta: Point2D = { x: dir.x * canvas, y: dir.y * canvas };
   commitDxfGripDragModeAware(grip, delta, deps, GripModeStore.getSnapshot());
+}
+
+// ============================================================================
+// ADR-363/397/513 — HOT-GRIP SESSION ENTRY (SSoT)
+// ============================================================================
+/**
+ * Enter the AutoCAD "hot grip" (click-move-click) session for `grip`: flip the phase,
+ * reset ALL hot-grip refs to a clean slate, and clear the warm-hover timer. ONE source
+ * for the entry boilerplate shared by every hot-grip trigger — the registry-driven
+ * wall/column/line enter, the Ctrl-endpoint rotate-copy, and the ADR-513 line-endpoint
+ * click-move-click — so a new trigger can never drift or forget a field (e.g. the
+ * `BimRotateHotGripStore.clear()` that a hand-rolled copy silently omitted).
+ *
+ * The per-trigger tail (step seeding for rotate, `applyHotGripHint`, `setActiveDragGrip`
+ * with the trigger's grip-kind fields, `markSessionStart`) stays at the call site — only
+ * the identical reset boilerplate is centralized here.
+ */
+function beginHotGripSession(
+  grip: UnifiedGripInfo,
+  ctx: GripMouseDownCtx,
+  cfg: {
+    op: WallHotGripOp;
+    awaitingFirstRelease: boolean;
+    /** Rotation centre / base point stored in `hotGripBaseRef` (pivot for Ctrl-rotate, else null). */
+    base: Point2D | null;
+    /** Terminal anchor + live preview seed (grip position for corner/endpoint, null for move/rotate await-base). */
+    anchor: Point2D | null;
+    /** Initial hot-grip step; omit when a later seeder sets it (e.g. rotate-free via `seedRotateFreeStep`). */
+    step?: HotGripStep;
+  },
+): void {
+  const {
+    setActiveGrip, setPhase, setCurrentWorldPos, anchorRef, warmTimerRef,
+    hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef,
+    hotGripBaseRef, hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
+  } = ctx;
+  setActiveGrip(grip);
+  setPhase('hotGrip');
+  unlockGripSnapPosition();
+  hotGripOpRef.current = cfg.op;
+  hotGripAwaitingFirstReleaseRef.current = cfg.awaitingFirstRelease;
+  hotGripMovedRef.current = false;
+  hotGripBaseRef.current = cfg.base;
+  hotGripRefStartRef.current = null;
+  hotGripRefEndRef.current = null;
+  hotGripAlignStartRef.current = null;
+  hotGripRotateBaseRef.current = null;
+  BimRotateHotGripStore.clear();
+  if (cfg.step !== undefined) hotGripStepRef.current = cfg.step;
+  anchorRef.current = cfg.anchor;
+  setCurrentWorldPos(cfg.anchor);
+  if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
 }
 
 // ============================================================================
@@ -231,17 +287,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       const rotateCopy = resolveCtrlEndpointRotateCopy(gripEntity, nearGrip, CtrlKeyTracker.getSnapshot());
       if (rotateCopy && gripEntity) {
         const { pivot, syntheticGrip } = rotateCopy;
-        setActiveGrip(syntheticGrip);
-        setPhase('hotGrip');
-        unlockGripSnapPosition();
-        hotGripOpRef.current = 'rotate';
-        hotGripAwaitingFirstReleaseRef.current = true;
-        hotGripMovedRef.current = false;
-        hotGripBaseRef.current = pivot;              // rotation centre = the grabbed endpoint
-        hotGripRefStartRef.current = null;
-        hotGripRefEndRef.current = null;
-        hotGripAlignStartRef.current = null;
-        BimRotateHotGripStore.clear();
+        // Enter hot-grip (rotate) via the SSoT; the `rotate-free` step + rotateBase are seeded
+        // just below by `seedRotateFreeStep` (so no `step` here). base = the grabbed endpoint = pivot.
+        beginHotGripSession(syntheticGrip, ctx, { op: 'rotate', awaitingFirstRelease: true, base: pivot, anchor: null });
         // Transition to the terminal `rotate-free` step via the SHARED SSoT (same seed the
         // normal centre-pick runs): major-axis baseline + rotation snap targets (pivot ⊙ +
         // this entity's grips → cyan magnetism). The pivot is pre-picked at the endpoint.
@@ -252,12 +300,47 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
           hotGripStepRef, hotGripRotateBaseRef, anchorRef, setCurrentWorldPos,
         });
         applyHotGripHint('rotate', 'rotate-free');
-        if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
         setActiveDragGrip({
           entityId: nearGrip.entityId!,
           gripKind: syntheticGrip.lineGripKind ?? syntheticGrip.arcGripKind ?? syntheticGrip.polylineGripKind ?? null,
           gripIndex: nearGrip.gripIndex,
           lineGripKind: syntheticGrip.lineGripKind ?? null,
+        });
+        GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
+        return true;
+      }
+      // ADR-513 §grip-parity-hotgrip — plain-LINE endpoint → click-move-click hot-grip when
+      // Dynamic Input is ON, working EXACTLY like the wall/line ring: the endpoint becomes the
+      // point being placed, follows the cursor button-free, the «Δαχτυλίδι Εντολών» wedges are
+      // clickable, and the terminal placement is a canvas click (or Enter → synthetic click) —
+      // driven by the SAME `placementMode='canvas-click'` ring the wall uses (`DynamicInputSubscriber`).
+      // Bespoke entry (the endpoint grip carries no kind → absent from HOT_GRIP_OP_REGISTRY):
+      // op 'endpoint-stretch' shares the 'corner' shape (anchor = the grabbed endpoint, terminal
+      // 'tracking' = 2-click). With Dynamic Input OFF the endpoint keeps its press-drag path below
+      // (zero regression). Runs AFTER the Ctrl-endpoint rotate-copy so Ctrl still wins; Alt (base-
+      // point move) took priority.
+      if (cadToggleState.isDynInputOn() && resolveLineEndpointHotGrip(gripEntity, nearGrip)) {
+        // Enter hot-grip via the SSoT. NO arm release: the canvas-click ring blocks ALL inside
+        // events (incl. the grab-click release) exactly like the wall, so there is no release to
+        // arm on — enter tracking directly (awaiting=false); the grab-click's own release resolves
+        // to 'stay' (moved=false), and the FIRST moved click (wedge Enter → synthetic canvas click,
+        // or a click outside the wheel) commits. Anchor = the grabbed endpoint (like a corner):
+        // the ghost + commit measure the stretch from here. Mirrors the wall (1st click = a point,
+        // no hot-grip arm).
+        beginHotGripSession(nearGrip, ctx, {
+          op: 'endpoint-stretch',
+          awaitingFirstRelease: false,
+          base: null,
+          anchor: nearGrip.position,
+          step: initialHotGripStep('endpoint-stretch'), // 'tracking' (terminal)
+        });
+        // ADR-513 §grip-parity — expose the endpoint (gripIndex 0/1, no lineGripKind) so
+        // `isLineEndpointDragInfo` is true → `DynamicInputSubscriber` mounts the ring.
+        setActiveDragGrip({
+          entityId: nearGrip.entityId!,
+          gripKind: null,
+          gripIndex: nearGrip.gripIndex,
+          lineGripKind: null,
         });
         GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
         return true;
@@ -289,33 +372,18 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
           return true;
         }
       }
-      setActiveGrip(nearGrip);
-      setPhase('hotGrip');
-      unlockGripSnapPosition();
-      hotGripOpRef.current = op;
       const initialStep = initialHotGripStep(op);
-      hotGripStepRef.current = initialStep;
-      hotGripAwaitingFirstReleaseRef.current = true;
-      hotGripMovedRef.current = false;
-      hotGripBaseRef.current = null;
-      hotGripRefStartRef.current = null;
-      hotGripRefEndRef.current = null;
-      hotGripAlignStartRef.current = null;
-      hotGripRotateBaseRef.current = null;
-      BimRotateHotGripStore.clear();
-      if (op === 'corner') {
-        // Corner: the grip itself is the anchor (2-click flow).
-        anchorRef.current = nearGrip.position;
-        setCurrentWorldPos(nearGrip.position);
-      } else {
-        // Move / rotate: the base point / rotation centre is picked on the
-        // 2nd click — no anchor or preview yet (await-base step).
-        anchorRef.current = null;
-        setCurrentWorldPos(null);
-      }
+      // Enter hot-grip via the SSoT. Corner: the grip itself is the anchor (2-click flow). Move /
+      // rotate: the base point / rotation centre is picked on the 2nd click → no anchor/preview yet.
+      beginHotGripSession(nearGrip, ctx, {
+        op,
+        awaitingFirstRelease: true,
+        base: null,
+        anchor: op === 'corner' ? nearGrip.position : null,
+        step: initialStep,
+      });
       // ADR-363 Phase 1G.3 — prompt the first awaited pick (centre / base).
       applyHotGripHint(op, initialStep);
-      if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
       setActiveDragGrip({
         entityId: nearGrip.entityId!,
         gripKind: hotGripKindOf(nearGrip) ?? null,

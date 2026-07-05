@@ -42,8 +42,15 @@ export function isWallCornerGripKind(kind: string | undefined | null): boolean {
  *                 (rubber-band base→cursor) → commit (whole-entity translate).
  *  - `'rotate'` → 6-click AutoCAD ROTATE→Reference (rotation glyph): click glyph →
  *                 pick centre → reference line (2 pts) → alignment line (2 pts).
+ *  - `'endpoint-stretch'` → 2-click plain-LINE endpoint reshape (ADR-513 §grip-parity):
+ *                 click the endpoint (release the button) → the end follows the cursor
+ *                 button-UP → click to place. Same shape as `'corner'` (the grabbed grip
+ *                 is the anchor, `tracking` is terminal) so the «Δαχτυλίδι Εντολών» wedges
+ *                 are clickable while the button is free. Entered bespoke (the endpoint grip
+ *                 carries NO kind, so it is absent from {@link HOT_GRIP_OP_REGISTRY}) only
+ *                 when Dynamic Input is ON; otherwise the endpoint stays press-drag.
  */
-export type WallHotGripOp = 'corner' | 'move' | 'rotate';
+export type WallHotGripOp = 'corner' | 'move' | 'rotate' | 'endpoint-stretch';
 
 /**
  * ADR-397 §12 D2 — single registry mapping a grip KIND (any BIM entity) to its
@@ -192,9 +199,12 @@ export type HotGripStep =
   | 'await-align-start'
   | 'await-align-end';
 
-/** Corners anchor on the glyph itself (straight to tracking); move/rotate must pick a base first. */
+/**
+ * Corners AND plain-line endpoint reshape (ADR-513) anchor on the grabbed grip itself
+ * (straight to the terminal `tracking` step — 2-click); move/rotate must pick a base first.
+ */
 export function initialHotGripStep(op: WallHotGripOp): HotGripStep {
-  return op === 'corner' ? 'tracking' : 'await-base';
+  return op === 'corner' || op === 'endpoint-stretch' ? 'tracking' : 'await-base';
 }
 
 /**
@@ -230,7 +240,7 @@ export function advanceHotGripStep(op: WallHotGripOp, step: HotGripStep): HotGri
     }
   }
   if (op === 'move' && step === 'await-base') return 'tracking';
-  return step; // move/corner tracking = terminal
+  return step; // move/corner/endpoint-stretch tracking = terminal
 }
 
 /**

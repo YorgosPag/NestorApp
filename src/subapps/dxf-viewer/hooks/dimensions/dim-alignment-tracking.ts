@@ -1,29 +1,29 @@
 /**
- * ADR-562 Φ9 / ADR-357 — Alignment-tracking SSoT wrapper για τις διαστάσεις.
+ * ADR-562 Φ9 / ADR-357 — Dimension / interactive-ACTION alignment: **thin adapter + paints**.
  *
- * Οι ροές της διάστασης (δημιουργία / λαβές / μετακίνηση) χρειάζονται τα ΙΔΙΑ ίχνη
- * ευθυγράμμισης με κάθε άλλο εργαλείο, αλλά με έναν επιπλέον τύπο anchor: τα **ήδη
- * picked σημεία** της τρέχουσας ενέργειας (clicks δημιουργίας ή τα υπόλοιπα defPoints
- * της διάστασης). Το `resolveAlignmentTracking` διαβάζει μόνο store+ambient, οπότε εδώ
- * περνάμε ΡΗΤΑ τα reference points ως extra anchors — ακριβώς όπως το
- * `rotation-tracking-overlay` περνά το pivot.
+ * Ο resolver εδώ (`resolveDimAlignmentTracking`) ΔΕΝ έχει δικό του tracking assembly πλέον:
+ * είναι thin adapter με εργονομικό `(cursor, refPoints, input)` signature πάνω στον **ΕΝΑΝ**
+ * canonical `resolveAlignmentTracking` (systems/tracking) — τα ήδη-picked σημεία της ενέργειας
+ * περνούν ως per-context `refPoints`, ακριβώς όπως η σχεδίαση περνά `segmentBase` και η περιστροφή
+ * το pivot. ΕΝΑ brain (acquired ⊕ ambient ⊕ polar → `composeTrackingSnap`), per-context anchors —
+ * Revit/AutoCAD-OTRACK style, μηδέν διπλότυπο.
  *
- * Ίδια μηχανή (`composeTrackingSnap`), ίδιο ambient gate, ίδιο adaptive-distance quantize
- * — μηδέν παράλληλο σύστημα. ΕΝΑ brain, τώρα τρεις ακόμη consumers (dim create/grip/move).
+ * Το αρχείο κρατά επιπλέον τις domain-specific ΣΥΝΘΕΣΕΙΣ/paints (ΟΧΙ διπλότυπα):
+ *   • `resolveActionAlignmentTracking` — convenience entry για ACTION drags (διαβάζει CAD toggles +
+ *     ευρύτερο 8px pull), delegate στον adapter,
+ *   • `resolveDimActionEndpoint` — POLAR/ORTHO lock ⊕ alignment override (cut-line / offset endpoint),
+ *   • `paintDimActionTracking` / `paintActionAlignmentTracking` — SSoT paints των ίχνων.
  *
- * @see systems/tracking/resolve-alignment-tracking.ts — ο generic wrapper (store+ambient)
- * @see hooks/tools/rotation-tracking-overlay.ts — το πρότυπο grip-drag consumer
+ * @see systems/tracking/resolve-alignment-tracking.ts — ο canonical resolver (per-context anchors)
+ * @see hooks/tools/rotation-tracking-overlay.ts — ο rotation αδελφός των ίδιων primitives
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-import { TrackingPointStore, type AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
-import { composeTrackingSnap, type ComposedTracking } from '../../systems/tracking/ambient-tracking-compose';
-import { collectAmbientAlignmentAnchors } from '../../systems/tracking/ambient-alignment-source';
+import type { ComposedTracking } from '../../systems/tracking/ambient-tracking-compose';
+import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
-import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
-import { worldPerPixel, pixelsToWorld } from '../../rendering/utils/viewport-scale';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { formatPolarLabel, type PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
@@ -34,9 +34,6 @@ import { fromTransform } from '../../canvas-v2/preview-canvas/overlay-projector'
 import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import type { SceneUnits } from '../../utils/scene-units';
 
-/** `sourceSnapType` tag για τα explicit reference points της τρέχουσας διάστασης. */
-const DIM_REF_SOURCE = 'dim-refpoint';
-
 /**
  * ADR-562 Φ9.4 — «tracking pull» ανοχή (px) για τις interactive ACTION drags (2-click MOVE,
  * body-drag, grip). Ευρύτερη από την 3px OSNAP hover aperture που κρατά η ΔΗΜΙΟΥΡΓΙΑ: σε ένα
@@ -45,9 +42,6 @@ const DIM_REF_SOURCE = 'dim-refpoint';
  * ~8px = η AutoCAD tracking aperture: κουμπώνει όταν όντως ευθυγραμμίζεσαι, χωρίς να «κολλάει» παντού.
  */
 const ACTION_ALIGN_TOLERANCE_PX = 8;
-
-/** Default match aperture (px) — η OSNAP hover ανοχή που κρατά η δημιουργία διάστασης/γραμμής. */
-const DEFAULT_ALIGN_TOLERANCE_PX = 3;
 
 export interface DimAlignmentInput {
   /** Live transform scale (viewport). */
@@ -61,51 +55,30 @@ export interface DimAlignmentInput {
    */
   readonly sceneEntities: readonly Entity[] | null;
   /**
-   * Match aperture σε screen px (default {@link DEFAULT_ALIGN_TOLERANCE_PX} = 3, η OSNAP hover
-   * ανοχή της δημιουργίας). Οι interactive action drags περνούν {@link ACTION_ALIGN_TOLERANCE_PX}
-   * (ευρύτερο pull) μέσω του `resolveActionAlignmentTracking`. Ο caller δίνει px· εδώ γίνεται
-   * `pixelsToWorld` ώστε το feel να μένει σταθερό σε κάθε zoom.
+   * Match aperture σε screen px (default 3, η OSNAP hover ανοχή της δημιουργίας). Οι interactive
+   * action drags περνούν {@link ACTION_ALIGN_TOLERANCE_PX} (ευρύτερο pull) μέσω του
+   * `resolveActionAlignmentTracking`.
    */
   readonly matchTolerancePx?: number;
 }
 
 /**
- * Resolve το καλύτερο alignment-path snap από (refPoints ⊕ acquired ⊕ ambient) προς τον
- * `cursor`. Επιστρέφει null όταν δεν υπάρχει anchor / path εντός tolerance (ο caller κρατά
- * τον raw cursor). Τα `refPoints` είναι τα ήδη-picked σημεία της τρέχουσας διάστασης.
+ * Thin adapter με το εργονομικό `(cursor, refPoints, input)` signature της domain των διαστάσεων /
+ * ACTION drags πάνω στον canonical {@link resolveAlignmentTracking}. Τα `refPoints` (ήδη-picked
+ * σημεία της τρέχουσας ενέργειας) forward-άρονται ως per-context transient anchors — ΜΗΔΕΝ
+ * διπλότυπο assembly: το acquired⊕ambient⊕polar → `composeTrackingSnap` ζει ΜΙΑ φορά στον canonical.
  */
 export function resolveDimAlignmentTracking(
   cursor: Point2D,
   refPoints: readonly Point2D[],
   input: DimAlignmentInput,
 ): ComposedTracking | null {
-  const { scale, polarEnabled, sceneEntities } = input;
-  const worldTolerance = pixelsToWorld(input.matchTolerancePx ?? DEFAULT_ALIGN_TOLERANCE_PX, scale);
-
-  // Τα ήδη-picked σημεία ως ρητά anchors (transient — acquiredAt:0, δεν μπαίνουν στο FIFO),
-  // μαζί με τα AutoCAD hover-acquired points.
-  const refAnchors: AcquiredTrackingPoint[] = refPoints.map((p) => ({
-    x: p.x, y: p.y, acquiredAt: 0, sourceSnapType: DIM_REF_SOURCE,
-  }));
-  const acquired: readonly AcquiredTrackingPoint[] = [...refAnchors, ...TrackingPointStore.getPoints()];
-
-  const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
-  const ambient = sceneEntities
-    ? collectAmbientAlignmentAnchors(cursor, sceneEntities, {
-        radiusWorld: pixelsToWorld(ambientCfg.radiusPx, scale),
-        maxMembers: ambientCfg.maxMembers,
-        axisToleranceWorld: worldTolerance,
-      })
-    : [];
-
-  return composeTrackingSnap(cursor, acquired, ambient, {
-    polar: {
-      incrementAngle: polarTrackingStore.incrementAngle,
-      additionalAngles: polarTrackingStore.additionalAngles,
-      polarEnabled,
-    },
-    worldTolerance,
-    worldPerPixel: worldPerPixel(scale),
+  return resolveAlignmentTracking(cursor, {
+    scale: input.scale,
+    polarEnabled: input.polarEnabled,
+    sceneEntities: input.sceneEntities,
+    refPoints,
+    matchTolerancePx: input.matchTolerancePx,
   });
 }
 

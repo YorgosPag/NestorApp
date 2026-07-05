@@ -231,18 +231,19 @@ export function RadialCommandRing({
   // συνεχίζει να δέχεται mousemove). Άρα το κλικ σε wedge το πιάνουμε εδώ (window capture) ΚΑΙ
   // μπλοκάρουμε το commit. Κλικ έξω από τα wedges (annulus) → περνά κανονικά = commit.
   useEffect(() => {
-    // ADR-513 §grip-parity — lock-only (press-drag άκρου): ΜΗΝ παρεμβαίνεις στα mouse events.
-    // Το commit το κάνει το πραγματικό grip mouseup· μπλοκάρισμα εδώ θα το έκοβε. Η είσοδος γίνεται
-    // αποκλειστικά μέσω heads-up πληκτρολογίου (ψηφίο → «Μήκος», Tab → «Γωνία»).
-    if (placementMode !== 'canvas-click') return;
     const intercept = (e: MouseEvent) => {
       if (placingRef.current) return; // synthetic placement events → άφησέ τα να φτάσουν στον καμβά
-      if (popupRef.current?.contains(e.target as Node)) return; // popup: άφησέ το
+      if (popupRef.current?.contains(e.target as Node)) return; // popup: άφησέ το (stopPropagation στο popup div κόβει το bubbling στους canvas handlers)
       const c = centerRef.current;
       const cur = cursorRef.current;
       if (!c || !cur) return;
       const d = Math.hypot(cur.x - c.x, cur.y - c.y);
       if (cursorZone(d) !== 'inside') return; // annulus/outside → άφησε το commit
+      // ADR-513 §grip-parity — lock-only (press-drag άκρου): μπλοκάρουμε ΜΟΝΟ για να ΑΝΟΙΞΟΥΜΕ φέτα
+      // (mousedown) ή όσο ένα popup είναι ήδη ανοιχτό. ΠΟΤΕ δεν «τρώμε» ένα σκέτο release πάνω σε φέτα —
+      // αυτό το release είναι το commit του grip (αλλιώς κόβεται η επέκταση άκρου). Στη ΣΧΕΔΙΑΣΗ
+      // (canvas-click) μπλοκάρουμε όλα τα inside events όπως πριν (το synthetic click κάνει το commit).
+      if (placementMode === 'lock-only' && e.type !== 'mousedown' && openField === null) return;
       if (e.type === 'mousedown') {
         openWedge(wedgePositionAtAngle((Math.atan2(cur.y - c.y, cur.x - c.x) * 180) / Math.PI));
       }
@@ -258,7 +259,7 @@ export function RadialCommandRing({
       window.removeEventListener('mouseup', intercept, true);
       window.removeEventListener('click', intercept, true);
     };
-  }, [openWedge, placementMode]);
+  }, [openWedge, placementMode, openField]);
 
   // Επιστρέφει `true` ΜΟΝΟ όταν όντως κλειδώθηκε αριθμητική τιμή (έγκυρη έκφραση) — ώστε το
   // Enter να τοποθετεί σημείο μόνο σε επιτυχές commit (όχι σε άκυρη/κενή είσοδο).
@@ -409,6 +410,14 @@ export function RadialCommandRing({
           ref={popupRef}
           className={`absolute -translate-x-1/2 -translate-y-1/2 ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
           style={anchorStyle(popupAnchor.x, popupAnchor.y)}
+          // ADR-513 §grip-parity-hotgrip — το popup είναι DOM-παιδί του καμβά/container: χωρίς αυτό, ένα
+          // mousedown/mouseup/click ΠΑΝΩ στο popup ανεβαίνει (bubbles) στον `handleContainerMouseUp` →
+          // κάνει commit το ενεργό grip (hot-grip terminal) → ο τροχός ξε-mountάρεται κι ΚΛΕΙΝΕΙ ΤΟ ΠΕΔΙΟ
+          // στην ΠΡΩΤΗ πληκτρολόγηση. Σταματάμε το propagation ώστε η αλληλεπίδραση με το πεδίο να μη φτάνει
+          // ΠΟΤΕ στους canvas handlers (το input κρατά focus/keydown/change κανονικά).
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {openFieldDef.kind === 'numeric' ? (
             <input

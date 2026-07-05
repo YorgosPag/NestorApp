@@ -114,6 +114,19 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-05** — ✨ **POLAR angle-snap + πορτοκαλί ray στο endpoint RESHAPE (γραμμή + ενωμένο polyline)** (Giorgio: «όταν
+  μετακινώ το άκρο, με POLAR on, θέλω τα polar ίχνη — snap + ray»). **Ρίζα**: το grip-reshape flow (γραμμή ΚΑΙ polyline)
+  ΔΕΝ έκανε polar — το `applyResizeConstraints` κάνει μόνο ORTHO, και το action-tracking έδειχνε «μόνο alignment lines,
+  without the polar ray» (εσκεμμένη επιλογή εμβέλειας, όχι hard blocker: το grip-reshape ξαναχρησιμοποιούσε μόνο το
+  AutoAlign κομμάτι, όχι το polar lock+ray της σχεδίασης). **Fix (ZERO νέος μηχανισμός)**: NEW κοινός SSoT
+  `resolveEndpointReshapePolarLock` (`hooks/grips/grip-endpoint-polar-lock.ts`) — mirror του `resolveLineEndpointLockedDelta`
+  (length/angle lock): fixed anchor → `getLineGripAlignmentAnchors`/`getPolylineGripAlignmentAnchors` (ο σταθερός γείτονας),
+  polar snap → `resolveOrthoPolarStep` (ΙΔΙΟ 0°/45°/90° lock με τη σχεδίαση). Καλείται από **preview** (`useGripGhostPreview`)
+  ΚΑΙ **commit** (`grip-mouseup-handler`, press-drag + click-move-click) → preview ≡ committed (WYSIWYG). Το πορτοκαλί ray
+  μέσω του ΗΔΗ-υπάρχοντος `paintPolarTrackingLine` SSoT (μηδέν νέο paint). Gate: POLAR on && ORTHO off (parity με drawing).
+  Δέχεται `'polyline'` (preview, normalized) ΚΑΙ `'lwpolyline'` (commit, raw scene). No-op όταν off/μη-endpoint/δεν κούμπωσε.
+  **Αρχεία**: NEW `grip-endpoint-polar-lock.ts`, `useGripGhostPreview.ts`, `grip-mouseup-handler.ts`. CHECK 6D → stage αυτό το
+  ADR. 🟡 UNCOMMITTED (commit: Giorgio).
 - **2026-07-05** — ✨ **Ενωμένο σύστημα → ΔΕΥΤΕΡΟ 🟢/🔴 τόξο «γωνίας γωνίας» στο endpoint reshape** (Giorgio: «όταν
   μετακινώ το άκρο ενός σκέλους ενωμένων γραμμών, θέλω και δεύτερο ζεύγος κόκκινου/πράσινου τόξου που να δείχνει τη
   γωνία ανάμεσα στο κινούμενο σκέλος και το σταθερό σκέλος»). Μέχρι τώρα το `paintGripEndpointReshapeArcs` (open
@@ -126,8 +139,9 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
   διαβάζεται από τα ΑΡΧΙΚΑ vertices (δεν κινείται). **Anti-overlap**: επειδή ΚΑΙ το τόξο στροφής ΚΑΙ αυτό τελειώνουν
   στο φάντασμα → ίδια ακτίνα → στοιβαγμένα βελάκια· το τόξο γωνίας φωλιάζει ΟΜΟΚΕΝΤΡΑ σε `cornerArcRadiusScale`
   (0.62, **local const** — self-contained για Fast-Refresh safety· ένα νέο module-level const + ταυτόχρονη χρήση του
-  έριξε `ReferenceError: … is not defined` σε HMR) — arrow-σημείο στην ΙΔΙΑ κατεύθυνση φαντάσματος αλλά πιο κοντά στο
-  pivot (ίδια γωνία/χρώμα, το `rotateSweepDegFromDirs` αναλλοίωτο). Interior/κλειστό/μεμονωμένη-γραμμή-ως-polyline →
+  έριξε `ReferenceError: … is not defined` σε HMR) — το nested arrow-σημείο μέσω του ΚΟΙΝΟΥ `lerpPoint` SSoT (μηδέν inline
+  lerp, Boy-Scout N.0.2 μετά SSoT audit Giorgio 2026-07-05)· ίδια κατεύθυνση φαντάσματος αλλά πιο κοντά στο pivot (ίδια
+  γωνία/χρώμα, το `rotateSweepDegFromDirs` αναλλοίωτο). Interior/κλειστό/μεμονωμένη-γραμμή-ως-polyline →
   no-op. **Αρχείο**:
   `hooks/tools/grip-ghost-preview-draw-helpers.ts`. CHECK 6D → stage αυτό το ADR. 🟡 UNCOMMITTED (commit: Giorgio).
 - **2026-07-05** — 🐛 **Ενωμένες γραμμές (`lwpolyline`) → εμφάνιση φαντάσματος σε ΟΛΑ τα grip gestures (reshape/edge/move/rotation)** (Giorgio:

@@ -45,7 +45,7 @@ describe('slugForMaterialCategory', () => {
     ['window-frame', 'metal'],
     ['door-frame', 'wood'],
     ['paint', 'plaster'],
-    ['roofing', 'tile'],
+    ['roofing', 'roof-tiles'],
     ['waterproofing', 'stone'],
     ['other', null],
   ];

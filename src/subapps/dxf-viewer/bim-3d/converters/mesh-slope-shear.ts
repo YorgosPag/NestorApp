@@ -68,6 +68,33 @@ function applyHorizontalTiltShear(
 }
 
 /**
+ * ADR-404 — the world-space `Matrix4` FORM of {@link applyHorizontalTiltShear}, and its SSoT sibling.
+ *
+ * When the shear is LINEAR in height (`shearAt(h) = h · shearAt(1)` — exactly the case for
+ * wall/column tilt: `mag = h·tan(angle)`), the whole per-vertex transform collapses into ONE shear
+ * matrix. Use it to tilt a POSITIONED / ORIENTED `Object3D` (e.g. an opening body: a group with its
+ * own basis + placement) WITHOUT mutating geometry — the per-vertex applier can't reach a rotated
+ * child frame. IDENTICAL convention to `applyHorizontalTiltShear` (worldX += dx, worldZ += −dy) with
+ * the base anchored at `floorY` (`heightAboveBase = worldY − floorY`, so the base stays put).
+ *
+ * ⚠️ Valid ONLY for a linear `shearAt` (a single matrix cannot express a non-linear height-shear —
+ * for those use the per-vertex {@link applyHorizontalTiltShear}). Reuse the amount SSoT
+ * (`wallTiltShearAt` / `columnTiltShearAt`) for `shearAt` — never re-derive the tilt maths here.
+ */
+export function horizontalTiltShearMatrix(
+  shearAt: (heightM: number) => { readonly dx: number; readonly dy: number },
+  floorY = 0,
+): THREE.Matrix4 {
+  const { dx, dy } = shearAt(1); // per-unit-height shift (linear → exact for any height)
+  return new THREE.Matrix4().set(
+    1, dx, 0, -dx * floorY,
+    0, 1, 0, 0,
+    0, -dy, 1, dy * floorY,
+    0, 0, 0, 1,
+  );
+}
+
+/**
  * Raking column shear. `baseHeightM` (default 0 = solid path· >0 = attached prism /
  * pieces piece το οποίο ζει σε floor-local Y, βλ. `applyHorizontalTiltShear`).
  */

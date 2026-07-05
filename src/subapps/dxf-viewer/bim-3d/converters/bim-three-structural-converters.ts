@@ -30,8 +30,8 @@ import { isStructuralComponentVisible } from '../../bim/visibility/structural-co
 import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 // ADR-456 Slice 3 — 3Δ/τομή κλωβός οπλισμού (κοινό geometry SSoT με το 2Δ).
 import { buildColumnRebarCage } from './column-rebar-3d';
-// ADR-471 Slice 3 — 3Δ κλωβός οπλισμού δοκού (longitudinal· κοινό geometry SSoT με το 2Δ).
-import { buildBeamRebarCage } from './beam-rebar-3d';
+// ADR-471 Slice 3 — beam rebar cage attach (own module, file-size SSoT N.7.1, 2026-07-05).
+import { attachBeamRebar } from './bim-three-beam-rebar-attach';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -179,7 +179,11 @@ export function columnToMesh(
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
   // ADR-488 §6.1 — −baseDropMm κατεβάζει τη βάση στο πέδιλο (κορυφή αμετάβλητη).
-  mesh.position.y = (nominalBaseAbsMm - baseDropMm) * MM_TO_M + buildingBaseElevationM;
+  // Το lift μπαίνει στο ΤΕΛΙΚΟ root (πυρήνας + σοβάς + οπλισμός ως ενιαίο): πυρήνας & finish/rebar
+  // χτίζονται σε local frame (baseY=0) και ανυψώνονται μαζί από το root — ίδιο pattern με `wallToMesh`.
+  // (Αλλιώς το `composeColumnWithFinish` θα τύλιγε τον πυρήνα σε Group@0 «ορφανεύοντας» το lift στο child.)
+  const baseWorldY = (nominalBaseAbsMm - baseDropMm) * MM_TO_M + buildingBaseElevationM;
+  mesh.position.y = 0;
   const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
   attachEdgesProjection(tagged, 'column');
 
@@ -188,15 +192,17 @@ export function columnToMesh(
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
   // ADR-470 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
   // ADR-488 §6.1 — σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος ώστε να φτάνουν στο πέδιλο.
-  return applyStructuralCoreVisibility3D(
+  const composed = applyStructuralCoreVisibility3D(
     attachColumnRebar(
       composeColumnWithFinish(
-        tagged, column, walls, beams, mesh.position.y, levelId, effectiveHeightMm, suppressFinishSkin,
+        tagged, column, walls, beams, 0, levelId, effectiveHeightMm, suppressFinishSkin,
       ),
-      column, mesh.position.y, effectiveHeightMm, levelId,
+      column, 0, effectiveHeightMm, levelId,
     ),
     tagged, column,
   );
+  composed.position.y = baseWorldY;
+  return composed;
 }
 
 /**
@@ -293,53 +299,6 @@ function buildAttachedColumnPrism(
     cornerBaseLocalM,
     cornerTopLocalM,
   );
-}
-
-/**
- * ADR-534 Φ3c-B3a — απόλυτο **top-clip Y** (world m) του κλωβού οπλισμού δοκού από το ίδιο
- * `clipTopZmm` (absolute mm) που κόβει το ορατό στερεό (`beamToMesh`). Datum-mapping: η κάτω
- * παρειά (`bottomFaceY`, world m) αντιστοιχεί στο `beamBottomAbsMm` → απόλυτο mm → world m με
- * `MM_TO_M`. `undefined` όταν δεν υπάρχει κάλυψη ή το clip είναι ≥ κορυφής (μηδέν regression).
- */
-function beamRebarTopClipY(
-  beam: BeamEntity,
-  bottomFaceY: number,
-  clipTopZmm?: number,
-): number | undefined {
-  const beamTopAbsMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  if (clipTopZmm === undefined || clipTopZmm >= beamTopAbsMm) return undefined;
-  const beamBottomAbsMm = beamTopAbsMm - beam.params.depth;
-  return bottomFaceY + (clipTopZmm - beamBottomAbsMm) * MM_TO_M;
-}
-
-/**
- * ADR-471 Slice 3 — προσθέτει τον κλωβό οπλισμού (διαμήκεις + συνδετήρες) στο ήδη
- * συντεθειμένο beam result (πυρήνας ή πυρήνας+σοβάς). Mirror του `attachColumnRebar`:
- * επιστρέφει το ίδιο αντικείμενο όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς
- * `reinforcement`). `bottomFaceY` = κάτω παρειά πυρήνα (ίδιο datum → ευθυγράμμιση).
- * Gate μόνο στον δικό του διακόπτη `showReinforcement` — ΑΝΕΞΑΡΤΗΤΟΣ από `suppressFinishSkin`.
- */
-function attachBeamRebar(
-  composed: THREE.Mesh | THREE.Group,
-  beam: BeamEntity,
-  bottomFaceY: number,
-  levelId: string | undefined,
-  clipTopZmm?: number,
-): THREE.Mesh | THREE.Group {
-  // ADR-470 — per-element οπλισμός override → per-view flag (Revit precedence).
-  if (!isStructuralComponentVisible('reinforcement', beam)) return composed;
-  const cage = buildBeamRebarCage(beam, bottomFaceY, levelId, beamRebarTopClipY(beam, bottomFaceY, clipTopZmm));
-  if (!cage) return composed;
-  if (composed instanceof THREE.Group) {
-    composed.add(cage);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(cage);
-  group.userData['bimId'] = beam.id;
-  group.userData['bimType'] = 'beam';
-  return group;
 }
 
 // ── Beam ──────────────────────────────────────────────────────────────────────

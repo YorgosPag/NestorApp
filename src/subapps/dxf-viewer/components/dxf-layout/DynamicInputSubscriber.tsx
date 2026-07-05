@@ -131,14 +131,17 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
     onEntityCreated: noopEntityCreated,
   });
 
-  // ADR-513 §grip-parity — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (press-drag): δείξε το ΙΔΙΟ «Δαχτυλίδι Εντολών»
-  // (Μήκος/Γωνία) σε lock-only mode. Ανεξάρτητο από το `interactive` gate — στο grip-drag το ενεργό
-  // εργαλείο είναι συνήθως 'select', οπότε δεν περνά το `isInteractiveTool`. Ίδιος 3D-yield κανόνας.
+  // ADR-513 §grip-parity-hotgrip — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (click-move-click, hot-grip): δείξε το ΙΔΙΟ
+  // «Δαχτυλίδι Εντολών» (Μήκος/Γωνία) σε **`canvas-click`** mode — ΑΚΡΙΒΩΣ ο μηχανισμός του τοίχου/γραμμής
+  // (Giorgio: «πανομοιότυπη λειτουργία με τον τοίχο»). Ο τροχός μπλοκάρει ΟΛΑ τα inside events άνευ όρων
+  // (μηδέν race), το κλικ σε φέτα ανοίγει πεδίο, Enter → κλείδωμα + synthetic canvas click που κάνει το
+  // commit του grip (hot-grip terminal), κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. Ανεξάρτητο από το
+  // `interactive` gate (στο grip-drag το εργαλείο είναι 'select'). Ίδιος 3D-yield κανόνας.
   if (dynInput.on && !is3D && lineEndpointDrag && activeDrag && getSceneUnits) {
     return (
       <RadialCommandRing
         config={GRIP_LINEAR_RING_CONFIG}
-        placementMode="lock-only"
+        placementMode="canvas-click"
         startKey={`grip:${activeDrag.entityId}:${activeDrag.gripIndex}`}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}

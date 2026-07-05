@@ -136,6 +136,46 @@ Giorgio: «το ΙΔΙΟ σύστημα, μία και μοναδική πηγή
 (μόνο pub/sub στο υπάρχον `GripDragStore` + prop στο υπάρχον ring). Scope: line endpoint· ο helper
 γενικεύεται εύκολα σε polyline/wall άκρα. 251 jest GREEN (240 dynamic-input+line + 11 νέα).
 
+### §grip-parity-hotgrip — χειρονομία **click-move-click** = ο ΜΗΧΑΝΙΣΜΟΣ ΤΟΥ ΤΟΙΧΟΥ (2026-07-05, Giorgio)
+Το press-drag κρατά το κουμπί πατημένο → οι φέτες **δεν γίνονται κλικ**. Giorgio ρητά: «πανομοιότυπη
+λειτουργία με τον **ΤΟΙΧΟ** — χρησιμοποίησε τον κώδικα της Δυναμικής Εισαγωγής του τοίχου που ήδη δουλεύει».
+Άρα η επέκταση άκρου χρησιμοποιεί **ΤΟΝ ΙΔΙΟ** `placementMode='canvas-click'` ring με τον τοίχο/γραμμή —
+όχι το εύθραυστο `lock-only` (που είχε race στο release). Χειρονομία: ΚΛΙΚ λαβή (αφήνεις) → άκρο ακολουθεί
+κέρσορα (κουμπί πάνω) → ΚΛΙΚ φέτα «Μήκος»/«Γωνία» → πληκτρολογείς → **Enter** (κλείδωμα + synthetic canvas
+click = commit) **ή** ΚΛΙΚ έξω από τον τροχό = commit στον κέρσορα. Πανομοιότυπο με τον τοίχο.
+
+**Καθρέφτισμα υπαρχόντων, ΜΗΔΕΝ νέο FSM/commit/ring-mode:**
+- **FSM:** το endpoint reshape είναι λειτουργικά πανομοιότυπο με το `'corner'` op του `wall-hot-grip-fsm`
+  (grabbed grip = anchor, terminal `tracking`). Νέο op **`'endpoint-stretch'`** στο ίδιο FSM
+  (`initialHotGripStep`→`tracking`· `advanceHotGripStep` default = terminal). **ΧΩΡΙΣ arm-release**
+  (`awaitingFirstRelease=false`): ο canvas-click τροχός μπλοκάρει ΟΛΑ τα inside events (όπως στον τοίχο)
+  άρα δεν υπάρχει release να «οπλίσει»· το release του grab-click → `'stay'` (moved=false), το ΠΡΩΤΟ moved
+  κλικ (synthetic Enter ή έξω-κλικ) → commit. Καθρέφτης του τοίχου (1ο κλικ = τοποθέτηση, χωρίς hot-grip arm).
+- **Είσοδος:** bespoke (το endpoint grip 0/1 δεν έχει kind → απών από `HOT_GRIP_OP_REGISTRY`): νέος pure
+  `line-endpoint-hotgrip.ts` (`resolveLineEndpointHotGrip`, mirror `ctrl-endpoint-rotate-copy`) + caller-gate
+  `cadToggleState.isDynInputOn()`. Δυναμική Εισαγωγή **OFF** → press-drag (μηδέν regression).
+- **Ring:** ΙΔΙΟ `RadialCommandRing` + `placementMode='canvas-click'` (μηδέν αλλαγή στο component — ο ΙΔΙΟΣ
+  μηχανισμός του τοίχου: inside events blocked, Enter→`placeAtCursor` synthetic canvas click, έξω-κλικ περνά).
+  Mount οδηγείται από `isLineEndpointDragInfo(activeDragGrip)` (gripIndex 0/1, lineGripKind null).
+- **Commit:** το synthetic/έξω canvas click κάνει terminal commit του hot-grip· short-circuit στο
+  `grip-mouseup-handler` καλεί το **ίδιο** `resolveLineEndpointCommitLock` → το πληκτρολογημένο μήκος/γωνία
+  υπερισχύει της θέσης του synthetic click (ΙΔΙΟ idiom με τον τοίχο). No-op/null για corner/move.
+- **Preview:** `buildDxfDragPreview` ήδη χειρίζεται `phase==='hotGrip'`· `resolveLineEndpointLockedDelta`
+  στο `useGripGhostPreview` τρέχει ήδη ανεξαρτήτως phase → preview≡commit.
+- **ESC:** γενικό `ESC_PRIORITY.HOT_GRIP_OP` ακυρώνει κάθε `phase==='hotGrip'` → `resetToIdle` (unmount + unlock).
+
+**🐛 Root-cause fix (εντοπίστηκε με runtime diagnostics, Giorgio browser console):** το `mouseup` πάνω σε φέτα
+είχε `target = popup` → ο window-capture interceptor το άφηνε να περάσει (ώστε να δουλεύει το input), ΑΛΛΑ το
+popup είναι DOM-παιδί του καμβά/container → το event **ανέβαινε (bubbled)** στον `handleContainerMouseUp` →
+έκανε **commit** το hot-grip (terminal) → ο τροχός ξε-mountάρονταν κι έκλεινε το πεδίο στην ΠΡΩΤΗ πληκτρολόγηση
+(«κάτι το κατέπινε»). Fix: `onMouseDown/onMouseUp/onClick → e.stopPropagation()` στο popup `<div>` του
+`RadialCommandRing`, ώστε η αλληλεπίδραση με το πεδίο να μη φτάνει ΠΟΤΕ στους canvas grip handlers (το input
+κρατά focus/keydown/change). Ο τοίχος δεν το εκδήλωνε γιατί δεν κάνει commit σε σκέτο bubbled mouseup.
+
+→ 363 jest GREEN (grips+dynamic-input+line), 0 regression. Το `lock-only` mode μένει στο component αλλά δεν το
+χρησιμοποιεί πλέον κανείς (vestigial — υποψήφιο για μελλοντικό cleanup). Parity note: στο live-ghost το
+`hotGrip===true` περνά ως `movesWhole` (όπως όλα τα corner hot-grips)· χωρίς lock/ORTHO/Shift = identity = resize.
+
 ## Consequences
 - **+** Η γενίκευση tool-agnostic άνοιξε δρόμο για δοκάρι/κολώνα/πλάκα = απλώς νέο `RingConfig`.
 - **+** Revit/AutoCAD-grade in-canvas editing του τοίχου, μηδέν διπλότυπο (lock/parser/overrides reuse).
@@ -171,6 +211,17 @@ Giorgio: «το ΙΔΙΟ σύστημα, μία και μοναδική πηγή
 `i18n/locales/{el,en}/dxf-viewer-shell.json` (`tools.ring.endpointLabel`).
 **STAGE:** ADR-040 (CHECK 6B/6D — DynamicInputSubscriber leaf + cursor store touch).
 
+**§grip-parity-hotgrip (2026-07-05):**
+**NEW:** `hooks/grips/line-endpoint-hotgrip.ts` (+test — `resolveLineEndpointHotGrip` entry resolver).
+**MOD:** `hooks/grips/wall-hot-grip-fsm.ts` (op `'endpoint-stretch'` + `initialHotGripStep`),
+`hooks/grips/grip-mouse-handlers.ts` (bespoke hot-grip entry, `awaitingFirstRelease=false`, gate
+`cadToggleState.isDynInputOn()`), `hooks/grips/grip-mouseup-handler.ts` (hot-grip commit lock + POLAR
+parity mirror), `hooks/grips/__tests__/wall-hot-grip-fsm.test.ts` (endpoint-stretch cases),
+`components/dxf-layout/DynamicInputSubscriber.tsx` (grip ring → `placementMode='canvas-click'` = ο ΙΔΙΟΣ
+μηχανισμός του τοίχου), `systems/dynamic-input/components/RadialCommandRing.tsx` (🐛 popup `<div>`
+`stopPropagation` — κόβει το bubbling του popup mouseup στους canvas grip handlers).
+**STAGE:** ADR-513 (this doc). 363 jest GREEN.
+
 ## Sources (μελέτη AutoCAD NavWheel)
 - About SteeringWheels — https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-0345448F-5C16-4566-90A7-A6D33A70F67F.htm
 - SteeringWheels Settings Dialog — https://help.autodesk.com/cloudhelp/2019/ENU/AutoCAD-Core/files/GUID-D613FA7A-160C-475F-A83E-B788720C44D0.htm
@@ -204,6 +255,18 @@ Giorgio: «το ΙΔΙΟ σύστημα, μία και μοναδική πηγή
   (`subscribeActiveDragGrip`) + predicate `isLineEndpointDragInfo`. Seams: `useGripGhostPreview` (ghost) +
   `grip-mouseup-handler` (commit· νικά arm-click + ortho/step). Μηδέν νέο store/lock/fork. 251 jest GREEN.
   🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit (Giorgio). Shared tree με agent ADR-508 §line-hud (μόνο τα δικά μου αρχεία).
+- **2026-07-05 (§grip-parity-hotgrip)** — Giorgio ρητά: «πανομοιότυπη λειτουργία με τον ΤΟΙΧΟ — χρησιμοποίησε
+  τον κώδικα Δυναμικής Εισαγωγής του τοίχου». Η χειρονομία της ΕΠΕΚΤΑΣΗΣ ΑΚΡΟΥ άλλαξε **press-drag →
+  click-move-click** (AutoCAD hot-grip) όταν Δυναμική Εισαγωγή ON, με τον **ΙΔΙΟ `placementMode='canvas-click'`
+  ring** του τοίχου/γραμμής (ΟΧΙ το εύθραυστο lock-only). ΜΗΔΕΝ νέο FSM/commit/ring-mode: νέο op
+  `'endpoint-stretch'` στο κοινό `wall-hot-grip-fsm` (καθρέφτης του `'corner'`, terminal `tracking`, **χωρίς
+  arm** — `awaitingFirstRelease=false`, όπως ο τοίχος)· bespoke entry via νέο pure `line-endpoint-hotgrip.ts`
+  (mirror `ctrl-endpoint-rotate-copy`) + gate `cadToggleState.isDynInputOn()` (OFF → press-drag, μηδέν
+  regression). Commit = synthetic canvas click (Enter) ή έξω-κλικ → hot-grip terminal → `resolveLineEndpointCommitLock`
+  (+ POLAR parity mirror). 🐛 Root-cause (runtime diagnostics στον browser): το mouseup της φέτας είχε
+  `target=popup` → περνούσε τον interceptor αλλά **bubbled** στον `handleContainerMouseUp` → commit → έκλεινε
+  το πεδίο στην 1η πληκτρολόγηση («κάτι το κατέπινε»). Fix: `stopPropagation` στο popup `<div>` του
+  `RadialCommandRing`. Το lock-only mode έμεινε vestigial. 363 jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
 - **2026-06-30 (§line-parity — SSoT audit follow-up, Giorgio)** — Εντοπίστηκε & διορθώθηκε διπλότυπο
   που είχα φτιάξει: η απαρίθμηση «ByLayer + registry linetypes» υπήρχε ΗΔΗ στο ribbon
   (`useRibbonLineToolBridge.buildLinetypeOptions`) και την ξανάγραψα στο `line-ring-config`. **FIX:** NEW

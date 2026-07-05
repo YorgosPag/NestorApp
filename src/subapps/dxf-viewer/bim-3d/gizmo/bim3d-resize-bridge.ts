@@ -117,7 +117,9 @@ function columnGripFor(axis: GizmoAxis): ColumnGripKind | null {
  * breaks attach", Giorgio-confirmed) — reusing the generic `detachEntitySide` SSoT.
  *
  * Axis-X/Z → width / depth via the 2D `applyColumnGripDrag` SSoT (returns the
- * original params referentially on a no-op, e.g. depth on a circular column).
+ * original params referentially on a genuine no-op → we surface `null`). ADR-519:
+ * σε circular κολόνα ΚΑΙ οι δύο άξονες (width-E / depth-N quadrant) κάνουν συμμετρικό
+ * diameter resize — δεν είναι no-op (3Δ === 2Δ).
  */
 export function computeColumnResizeParams(
   params: ColumnParams,

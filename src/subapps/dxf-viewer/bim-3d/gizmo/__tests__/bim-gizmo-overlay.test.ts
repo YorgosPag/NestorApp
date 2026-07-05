@@ -10,6 +10,9 @@
 
 import * as THREE from 'three';
 import { BimGizmoOverlay, activeHandlesFor, isPlanarMoveType } from '../bim-gizmo-overlay';
+// ADR-537 — the base-point ⊙ & snap markers keep `root.visible = false` (main render skips them);
+// their real shown-state lives in the post-FX overlay roots, so assert via `collectPostFxOverlayRoots`.
+import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
 
 function findByName(scene: THREE.Scene, name: string): THREE.Object3D | null {
   let found: THREE.Object3D | null = null;
@@ -113,16 +116,17 @@ describe('BimGizmoOverlay — relocatable base-point marker (ADR-408)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
-    // Hidden by default (no override).
-    expect(findByName(scene, 'gizmo-base-point-marker')?.visible).toBe(false);
+    // Hidden by default (no override). ADR-537 — `root.visible` stays false; the shown-state
+    // lives in the post-FX overlay roots.
+    expect(collectPostFxOverlayRoots(scene)).not.toContain(findByName(scene, 'gizmo-base-point-marker'));
 
     overlay.setBasePointMarker(new THREE.Vector3(1, 2, 3));
     const marker = findByName(scene, 'gizmo-base-point-marker');
-    expect(marker?.visible).toBe(true);
+    expect(collectPostFxOverlayRoots(scene)).toContain(marker);
     expect(marker?.position.toArray()).toEqual([1, 2, 3]);
 
     overlay.setBasePointMarker(null);
-    expect(findByName(scene, 'gizmo-base-point-marker')?.visible).toBe(false);
+    expect(collectPostFxOverlayRoots(scene)).not.toContain(findByName(scene, 'gizmo-base-point-marker'));
 
     overlay.dispose();
   });
@@ -138,7 +142,7 @@ describe('BimGizmoOverlay — relocatable base-point marker (ADR-408)', () => {
     overlay.updateScale(camera);
 
     const marker = findByName(scene, 'gizmo-base-point-marker');
-    expect(marker?.visible).toBe(true);
+    expect(collectPostFxOverlayRoots(scene)).toContain(marker); // ADR-537 — shown via post-FX pass
     expect(Number.isFinite(marker?.scale.x ?? NaN)).toBe(true);
     expect((marker?.scale.x ?? 0)).toBeGreaterThan(0);
 
@@ -292,12 +296,12 @@ describe('BimGizmoOverlay — collapse to move handles during a drag (ADR-363 Φ
 
     overlay.collapseToMoveHandles();
     overlay.showSnapMarker(at, camera); // a snap during the drag
-    expect(snapCube.visible).toBe(true); // visible (small) — Slice 2i feedback
+    expect(collectPostFxOverlayRoots(scene)).toContain(snapCube); // ADR-537 — shown via post-FX (root.visible stays false)
     const movedScale = snapCube.scale.x;
 
     overlay.restoreConfiguredHandles();
     overlay.showSnapMarker(at, camera);
-    expect(snapCube.visible).toBe(true); // normal OSNAP marker once the drag ends
+    expect(collectPostFxOverlayRoots(scene)).toContain(snapCube); // ADR-537 — normal OSNAP marker once the drag ends (shown via post-FX)
     const restoredScale = snapCube.scale.x;
 
     // The collapsed-move glyph is meaningfully smaller than the full-size OSNAP marker.

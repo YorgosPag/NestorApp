@@ -48,6 +48,9 @@ import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
  * Returns an empty array when the polygon is degenerate (<3 vertices).
  */
 export function getSlabGrips(entity: Readonly<SlabEntity>): GripInfo[] {
+  // Degenerate polygon (<3 κορυφές) → μηδέν grips. Guard στο RAW outline, ΟΧΙ στα enriched
+  // characteristic key-points (που μπορεί να πυκνώσουν/ανακατασκευάσουν ένα εκφυλισμένο outline).
+  if (entity.params.outline.vertices.length < 3) return [];
   const verts = getBimEntityKeyPoints2D(entity as Entity);
   if (verts.length < 3) return [];
   const grips: GripInfo[] = [];

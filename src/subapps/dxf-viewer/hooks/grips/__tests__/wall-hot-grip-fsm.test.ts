@@ -94,6 +94,25 @@ describe('hotGripOpForKind / isWallHotGripKind / initialHotGripStep', () => {
   });
 });
 
+describe('ADR-513 §grip-parity — endpoint-stretch op (plain-line endpoint click-move-click)', () => {
+  it("initialHotGripStep('endpoint-stretch') → 'tracking' (2-click, like corner)", () => {
+    expect(initialHotGripStep('endpoint-stretch')).toBe('tracking');
+  });
+
+  it("advanceHotGripStep: tracking = terminal (self → commit on the next moved click)", () => {
+    expect(advanceHotGripStep('endpoint-stretch', 'tracking')).toBe('tracking');
+  });
+
+  it("resolveHotGripMouseUp: arm (1st release) → stay (stray) → commit (moved terminal)", () => {
+    // 1st-click release arms, stays hot.
+    expect(resolveHotGripMouseUp('endpoint-stretch', 'hotGrip', true, 'tracking', false)).toBe('arm');
+    // Stray same-tick release with no move → stay (never burns the commit).
+    expect(resolveHotGripMouseUp('endpoint-stretch', 'hotGrip', false, 'tracking', false)).toBe('stay');
+    // Deliberate (moved) click on the terminal tracking step → commit.
+    expect(resolveHotGripMouseUp('endpoint-stretch', 'hotGrip', false, 'tracking', true)).toBe('commit');
+  });
+});
+
 describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
   it("column-center → 'move', column-rotation → 'rotate'", () => {
     expect(hotGripOpForKind('column-center')).toBe('move');

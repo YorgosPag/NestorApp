@@ -19,7 +19,6 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
-import { buildOpeningMesh, type OpeningMeshMaterials } from './opening-mesh';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, type WallOpeningPiece } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
@@ -56,6 +55,8 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
 import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
+// ADR-421 §A6 — opening 3D body attach (own module, file-size SSoT N.7.1, 2026-07-05).
+import { attachOpeningMeshes } from './bim-three-wall-opening-attach';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
@@ -271,36 +272,6 @@ export function buildStraightWallWithOpenings(
   group.userData['bimId'] = wall.id;
   group.userData['bimType'] = 'wall';
   return group;
-}
-
-// ── ADR-421 §A6 — opening 3D body attach ──────────────────────────────────────
-
-/**
- * Build + attach the parametric 3D mesh of each hosted opening into the wall
- * `group`. Materials resolved once (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί· τα
- * glazed kinds επιλέγουν γυαλί στο `buildOpeningMesh`). No-op όταν δεν υπάρχουν
- * openings (π.χ. το group προέκυψε λόγω wallTop/wallBase profile).
- */
-function attachOpeningMeshes(
-  group: THREE.Object3D,
-  wall: WallEntity,
-  openings: readonly OpeningEntity[],
-  floorElevationMm: number,
-  buildingBaseElevationM: number,
-  levelId?: string,
-): void {
-  if (openings.length === 0) return;
-  const materials: OpeningMeshMaterials = {
-    frame: getMaterial3D('mat-wood'),
-    leaf: getMaterial3D('mat-wood'),
-    glass: getMaterial3D('mat-glass'),
-  };
-  for (const opening of openings) {
-    const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM);
-    if (!mesh) continue;
-    if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-    group.add(mesh);
-  }
 }
 
 // ── Public converters ─────────────────────────────────────────────────────────
