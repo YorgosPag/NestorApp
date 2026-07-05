@@ -38,6 +38,7 @@ import {
   TRANSITION_RULES,
   TOOL_POINT_REQUIREMENTS,
 } from './interfaces';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /**
  * Drawing State Machine Implementation
@@ -45,20 +46,23 @@ import {
  * Enterprise-grade state machine for managing drawing operations
  */
 export class DrawingStateMachine implements IDrawingStateMachine {
-  private state: DrawingMachineState;
-  private listeners: Set<DrawingMachineListener> = new Set();
+  // SSoT pub/sub via createExternalStore (WAVE 2.7). `state` is a single discriminated
+  // object replaced wholesale on every transition (reducer-over-single-object shape) —
+  // no `equals` guard, every valid transition/reset notifies unconditionally, matching
+  // the hand-rolled `notifyListeners()` behaviour it replaces. The public `subscribe`
+  // signature passes the new `DrawingMachineState` to the listener (unlike the factory's
+  // bare `() => void`), so the wrapper below reads `store.get()` at notify time.
+  private readonly store = createExternalStore<DrawingMachineState>({
+    currentState: 'IDLE',
+    context: { ...DEFAULT_DRAWING_CONTEXT },
+    history: ['IDLE'],
+  });
   private config: Required<DrawingStateMachineConfig>;
 
   constructor(config: DrawingStateMachineConfig = {}) {
     this.config = { ...DEFAULT_STATE_MACHINE_CONFIG, ...config };
 
-    this.state = {
-      currentState: 'IDLE',
-      context: { ...DEFAULT_DRAWING_CONTEXT },
-      history: ['IDLE'],
-    };
-
-    this.log('State machine initialized', this.state);
+    this.log('State machine initialized', this.store.get());
   }
 
   // ==========================================================================
@@ -69,28 +73,28 @@ export class DrawingStateMachine implements IDrawingStateMachine {
    * Get full state
    */
   getState(): DrawingMachineState {
-    return this.state;
+    return this.store.get();
   }
 
   /**
    * Get current state type
    */
   getCurrentStateType(): DrawingStateType {
-    return this.state.currentState;
+    return this.store.get().currentState;
   }
 
   /**
    * Get current context
    */
   getContext(): DrawingContext {
-    return this.state.context;
+    return this.store.get().context;
   }
 
   /**
    * Get state info
    */
   getStateInfo(): DrawingStateInfo {
-    return DRAWING_STATES[this.state.currentState];
+    return DRAWING_STATES[this.store.get().currentState];
   }
 
   /**
@@ -109,12 +113,12 @@ export class DrawingStateMachine implements IDrawingStateMachine {
     const transition = this.findTransition(type);
 
     if (!transition) {
-      this.log(`No valid transition for ${type} from ${this.state.currentState}`);
+      this.log(`No valid transition for ${type} from ${this.store.get().currentState}`);
       return;
     }
 
     // Check guard condition
-    if (transition.guard && !transition.guard(this.state.context, event as DrawingEvent)) {
+    if (transition.guard && !transition.guard(this.store.get().context, event as DrawingEvent)) {
       this.log(`Guard blocked transition for ${type}`);
       return;
     }
@@ -134,20 +138,18 @@ export class DrawingStateMachine implements IDrawingStateMachine {
    * Subscribe to state changes
    */
   subscribe(listener: DrawingMachineListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.store.subscribe(() => listener(this.store.get()));
   }
 
   /**
    * Reset to initial state
    */
   reset(): void {
-    this.state = {
+    this.store.set({
       currentState: 'IDLE',
       context: { ...DEFAULT_DRAWING_CONTEXT, lastStateChange: Date.now() },
       history: ['IDLE'],
-    };
-    this.notifyListeners();
+    });
     this.log('State machine reset');
   }
 
@@ -156,19 +158,19 @@ export class DrawingStateMachine implements IDrawingStateMachine {
   // ==========================================================================
 
   canAddPoint(): boolean {
-    return DRAWING_STATES[this.state.currentState].allowsAddPoint;
+    return DRAWING_STATES[this.store.get().currentState].allowsAddPoint;
   }
 
   canComplete(): boolean {
-    return DRAWING_STATES[this.state.currentState].allowsComplete;
+    return DRAWING_STATES[this.store.get().currentState].allowsComplete;
   }
 
   canCancel(): boolean {
-    return DRAWING_STATES[this.state.currentState].allowsCancel;
+    return DRAWING_STATES[this.store.get().currentState].allowsCancel;
   }
 
   canPreview(): boolean {
-    return DRAWING_STATES[this.state.currentState].allowsPreview;
+    return DRAWING_STATES[this.store.get().currentState].allowsPreview;
   }
 
   // ==========================================================================
@@ -234,7 +236,7 @@ export class DrawingStateMachine implements IDrawingStateMachine {
    */
   private findTransition(eventType: DrawingEventType): TransitionRule | undefined {
     return TRANSITION_RULES.find(
-      (rule) => rule.from === this.state.currentState && rule.on === eventType
+      (rule) => rule.from === this.store.get().currentState && rule.on === eventType
     );
   }
 
@@ -242,7 +244,7 @@ export class DrawingStateMachine implements IDrawingStateMachine {
    * Execute state transition
    */
   private executeTransition(transition: TransitionRule, event: DrawingEvent): void {
-    const previousState = this.state.currentState;
+    const previousState = this.store.get().currentState;
     const newContext = this.computeNewContext(event);
 
     // Check if min points reached (auto-transition)
@@ -252,16 +254,15 @@ export class DrawingStateMachine implements IDrawingStateMachine {
     }
 
     // Update state
-    const newHistory = [...this.state.history, targetState].slice(-this.config.maxHistorySize);
+    const newHistory = [...this.store.get().history, targetState].slice(-this.config.maxHistorySize);
 
-    this.state = {
+    this.store.set({
       currentState: targetState,
       context: newContext,
       history: newHistory,
-    };
+    });
 
     this.log(`Transition: ${previousState} -> ${targetState}`);
-    this.notifyListeners();
 
     // Handle auto-reset for terminal states
     if (targetState === 'COMPLETED' || targetState === 'CANCELLED') {
@@ -273,7 +274,7 @@ export class DrawingStateMachine implements IDrawingStateMachine {
    * Compute new context based on event
    */
   private computeNewContext(event: DrawingEvent): DrawingContext {
-    const currentContext = this.state.context;
+    const currentContext = this.store.get().context;
 
     switch (event.type) {
       case 'SELECT_TOOL': {
@@ -412,28 +413,12 @@ export class DrawingStateMachine implements IDrawingStateMachine {
   private scheduleAutoReset(): void {
     if (this.config.autoResetDelay > 0) {
       setTimeout(() => {
-        if (
-          this.state.currentState === 'COMPLETED' ||
-          this.state.currentState === 'CANCELLED'
-        ) {
+        const currentState = this.store.get().currentState;
+        if (currentState === 'COMPLETED' || currentState === 'CANCELLED') {
           this.send('RESET', {});
         }
       }, this.config.autoResetDelay);
     }
-  }
-
-  /**
-   * Notify all listeners
-   */
-  private notifyListeners(): void {
-    const state = this.state;
-    this.listeners.forEach((listener) => {
-      try {
-        listener(state);
-      } catch (error) {
-        console.error('[DrawingStateMachine] Listener error:', error);
-      }
-    });
   }
 
   /**

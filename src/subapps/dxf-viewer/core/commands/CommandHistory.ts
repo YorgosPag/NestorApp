@@ -20,6 +20,7 @@ import type {
 } from './interfaces';
 import { DEFAULT_HISTORY_CONFIG } from './interfaces';
 import { CompositeCommand } from './CompositeCommand';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /**
  * Command History Manager
@@ -28,11 +29,25 @@ import { CompositeCommand } from './CompositeCommand';
 export class CommandHistory implements ICommandHistory {
   private undoStack: ICommand[] = [];
   private redoStack: ICommand[] = [];
-  private listeners: Set<CommandHistoryListener> = new Set();
+  // SSoT pub/sub via createExternalStore (WAVE 2.7): the public `subscribe`
+  // signature hands the caller a per-event PAYLOAD (`CommandHistoryEvent`),
+  // not a bare notify — createExternalStore's listener contract is `() =>
+  // void`. So this is a version-signal internally (bumps on every mutation)
+  // with `lastEvent` as a side-channel the wrapper reads to forward the
+  // exact same payload shape callers had before migration.
+  private readonly versionStore = createExternalStore<number>(0);
+  private lastEvent: CommandHistoryEvent;
   private config: CommandHistoryConfig;
 
   constructor(config: Partial<CommandHistoryConfig> = {}) {
     this.config = { ...DEFAULT_HISTORY_CONFIG, ...config };
+    this.lastEvent = {
+      type: 'clear',
+      canUndo: false,
+      canRedo: false,
+      undoStackSize: 0,
+      redoStackSize: 0,
+    };
   }
 
   /**
@@ -197,8 +212,7 @@ export class CommandHistory implements ICommandHistory {
    * Returns unsubscribe function
    */
   subscribe(listener: CommandHistoryListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.versionStore.subscribe(() => listener(this.lastEvent));
   }
 
   /**
@@ -251,7 +265,7 @@ export class CommandHistory implements ICommandHistory {
    * Notify all listeners of a change
    */
   private notifyListeners(type: CommandHistoryEvent['type'], command?: ICommand): void {
-    const event: CommandHistoryEvent = {
+    this.lastEvent = {
       type,
       command,
       canUndo: this.canUndo(),
@@ -259,14 +273,7 @@ export class CommandHistory implements ICommandHistory {
       undoStackSize: this.undoStack.length,
       redoStackSize: this.redoStack.length,
     };
-
-    this.listeners.forEach((listener) => {
-      try {
-        listener(event);
-      } catch (error) {
-        console.error('[CommandHistory] Error in listener:', error);
-      }
-    });
+    this.versionStore.set(this.versionStore.get() + 1);
   }
 }
 
