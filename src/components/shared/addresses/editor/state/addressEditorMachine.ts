@@ -20,6 +20,7 @@ import {
   computeNextState,
   type MachineConfig,
 } from './transitions';
+import { createExternalStore } from '@/lib/state/createExternalStore';
 
 export const INITIAL_STATE: AddressEditorState = { phase: 'idle' };
 
@@ -54,28 +55,21 @@ export function createAddressEditorMachine(
   config: MachineConfig = DEFAULT_CONFIG,
   initial: AddressEditorState = INITIAL_STATE,
 ): AddressEditorMachine {
-  let state = initial;
-  const listeners = new Set<(state: AddressEditorState) => void>();
+  // SSoT pub/sub primitive (WAVE 3). No `equals`: `send` keeps its own `next !== prev`
+  // identity guard (a no-op transition never notifies), while `reset()` — a public
+  // runtime API — force-notifies with the initial state even when unchanged. Payload
+  // subscribers get the current state via the wrapper.
+  const store = createExternalStore<AddressEditorState>(initial);
 
   return {
-    getState: () => state,
+    getState: () => store.get(),
     send: (event) => {
-      const next = computeNextState(state, event, config);
-      if (next !== state) {
-        state = next;
-        listeners.forEach((l) => l(state));
-      }
-      return state;
+      const prev = store.get();
+      const next = computeNextState(prev, event, config);
+      if (next !== prev) store.set(next);
+      return store.get();
     },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    reset: () => {
-      state = initial;
-      listeners.forEach((l) => l(state));
-    },
+    subscribe: (listener) => store.subscribe(() => listener(store.get())),
+    reset: () => store.set(initial),
   };
 }

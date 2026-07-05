@@ -25,6 +25,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isFloorKind, type FloorKind } from '@/utils/floor-naming';
+import { createExternalStore, type ExternalStore } from '@/lib/state/createExternalStore';
 
 const logger = createModuleLogger('useFloorsByBuilding');
 
@@ -70,10 +71,12 @@ interface FloorsSnapshot {
 
 type FloorsListener = (snapshot: FloorsSnapshot) => void;
 
-/** A shared, reference-counted `FLOORS`-per-building subscription (SSoT). */
+/** A shared, reference-counted `FLOORS`-per-building subscription (SSoT). The per-key
+ *  snapshot lives on a WAVE 3 createExternalStore; `subscriberCount` is the side-channel
+ *  ref-count that drives Firestore listener teardown (precedent: ModalPresenceStore). */
 interface FloorsCacheEntry {
-  snapshot: FloorsSnapshot;
-  readonly listeners: Set<FloorsListener>;
+  readonly store: ExternalStore<FloorsSnapshot>;
+  subscriberCount: number;
   unsubscribe: () => void;
 }
 
@@ -112,21 +115,19 @@ function subscribeShared(userId: string, buildingId: string, listener: FloorsLis
 
   if (!entry) {
     const created: FloorsCacheEntry = {
-      snapshot: { floors: [], loading: true },
-      listeners: new Set<FloorsListener>(),
+      store: createExternalStore<FloorsSnapshot>({ floors: [], loading: true }),
+      subscriberCount: 0,
       unsubscribe: () => {},
     };
     floorsCache.set(key, created);
     created.unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
       'FLOORS',
       (result) => {
-        created.snapshot = { floors: mapFloorsResult(result.documents), loading: false };
-        created.listeners.forEach((l) => l(created.snapshot));
+        created.store.set({ floors: mapFloorsResult(result.documents), loading: false });
       },
       (err) => {
         logger.error('Failed to subscribe to floors', { error: err.message, buildingId });
-        created.snapshot = { floors: [], loading: false };
-        created.listeners.forEach((l) => l(created.snapshot));
+        created.store.set({ floors: [], loading: false });
       },
       { constraints: [where('buildingId', '==', buildingId)] },
     );
@@ -134,14 +135,16 @@ function subscribeShared(userId: string, buildingId: string, listener: FloorsLis
   }
 
   const liveEntry = entry;
-  liveEntry.listeners.add(listener);
+  const unsubscribeFromStore = liveEntry.store.subscribe(() => listener(liveEntry.store.get()));
+  liveEntry.subscriberCount += 1;
   // Emit the current snapshot immediately so a late subscriber is not stuck on the
   // initial `loading` state when the listener has already delivered data.
-  listener(liveEntry.snapshot);
+  listener(liveEntry.store.get());
 
   return () => {
-    liveEntry.listeners.delete(listener);
-    if (liveEntry.listeners.size === 0) {
+    unsubscribeFromStore();
+    liveEntry.subscriberCount -= 1;
+    if (liveEntry.subscriberCount === 0) {
       liveEntry.unsubscribe();
       floorsCache.delete(key);
     }
