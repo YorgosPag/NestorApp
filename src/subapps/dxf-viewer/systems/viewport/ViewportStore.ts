@@ -25,19 +25,20 @@
 import type { AnnotationScale } from '../../text-engine/types';
 import { buildDefaultScaleList } from './standard-scales';
 import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type ViewportListener = () => void;
 
 // Canvas IDs that depend on viewport annotation scale (text rendering pipeline).
 const VIEWPORT_DIRTY_CANVAS_IDS = ['dxf-canvas'] as const;
 
-// ─── Internal mutable state ───────────────────────────────────────────────────
+// ─── Internal state (createExternalStore SSoT — two independent signals) ─────
 
-let _activeScaleName: string = '1:1';
-let _scaleList: readonly AnnotationScale[] = buildDefaultScaleList();
-
-const activeScaleListeners = new Set<ViewportListener>();
-const scaleListListeners = new Set<ViewportListener>();
+const activeScaleStore = createExternalStore<string>('1:1', { equals: Object.is });
+const scaleListStore = createExternalStore<readonly AnnotationScale[]>(
+  buildDefaultScaleList(),
+  { equals: sameScaleList },
+);
 
 // ─── Setters (skip-if-unchanged, granular notification) ──────────────────────
 
@@ -49,10 +50,9 @@ const scaleListListeners = new Set<ViewportListener>();
  * render time.
  */
 export function setActiveScale(name: string): void {
-  if (name === _activeScaleName) return;
-  _activeScaleName = name;
+  if (name === activeScaleStore.get()) return;
+  activeScaleStore.set(name);
   markSystemsDirty([...VIEWPORT_DIRTY_CANVAS_IDS]);
-  activeScaleListeners.forEach((cb) => cb());
 }
 
 /**
@@ -61,10 +61,9 @@ export function setActiveScale(name: string): void {
  * to avoid re-render storms on no-op updates.
  */
 export function setScaleList(next: readonly AnnotationScale[]): void {
-  if (sameScaleList(_scaleList, next)) return;
-  _scaleList = next;
+  if (sameScaleList(scaleListStore.get(), next)) return;
+  scaleListStore.set(next);
   markSystemsDirty([...VIEWPORT_DIRTY_CANVAS_IDS]);
-  scaleListListeners.forEach((cb) => cb());
 }
 
 function sameScaleList(
@@ -86,11 +85,11 @@ function sameScaleList(
 // ─── Getters (synchronous, zero-lag) ──────────────────────────────────────────
 
 export function getActiveScaleName(): string {
-  return _activeScaleName;
+  return activeScaleStore.get();
 }
 
 export function getScaleList(): readonly AnnotationScale[] {
-  return _scaleList;
+  return scaleListStore.get();
 }
 
 /**
@@ -99,19 +98,17 @@ export function getScaleList(): readonly AnnotationScale[] {
  * or skip annotative scaling).
  */
 export function getActiveScale(): AnnotationScale | null {
-  return _scaleList.find((s) => s.name === _activeScaleName) ?? null;
+  return scaleListStore.get().find((s) => s.name === activeScaleStore.get()) ?? null;
 }
 
 // ─── Subscribe APIs (useSyncExternalStore-compatible) ────────────────────────
 
 export function subscribeActiveScale(cb: ViewportListener): () => void {
-  activeScaleListeners.add(cb);
-  return () => { activeScaleListeners.delete(cb); };
+  return activeScaleStore.subscribe(cb);
 }
 
 export function subscribeScaleList(cb: ViewportListener): () => void {
-  scaleListListeners.add(cb);
-  return () => { scaleListListeners.delete(cb); };
+  return scaleListStore.subscribe(cb);
 }
 
 // ─── Canonical facade ─────────────────────────────────────────────────────────
@@ -137,8 +134,6 @@ export const ViewportStore = {
  * code. Intentionally exported separately to avoid accidental usage.
  */
 export function __resetViewportStoreForTests(): void {
-  _activeScaleName = '1:1';
-  _scaleList = buildDefaultScaleList();
-  activeScaleListeners.clear();
-  scaleListListeners.clear();
+  activeScaleStore.reset('1:1');
+  scaleListStore.reset(buildDefaultScaleList());
 }

@@ -18,6 +18,7 @@ import {
   BUILTIN_DIM_STYLES,
   DEFAULT_ACTIVE_DIM_STYLE_ID,
 } from './dim-style-templates';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type RegistryListener = () => void;
 
@@ -32,7 +33,10 @@ export interface DimStyleSnapshot {
 export class DimStyleRegistry {
   private readonly styles = new Map<string, DimStyle>();
   private activeStyleId: string = DEFAULT_ACTIVE_DIM_STYLE_ID;
-  private readonly listeners = new Set<RegistryListener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.7). Carries ONLY the version-signal
+  // integer; `styles`/`activeStyleId`/`cachedSnapshot` stay plain fields as mutation
+  // accelerators — consumers re-read them via `getSnapshot()`/`getStyle()` on notify.
+  private readonly store = createExternalStore<number>(0);
   private cachedSnapshot: DimStyleSnapshot | null = null;
 
   constructor() {
@@ -134,15 +138,12 @@ export class DimStyleRegistry {
   // ── Subscription ─────────────────────────────────────────────────────────
 
   subscribe(listener: RegistryListener): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return this.store.subscribe(listener);
   }
 
   private notify(): void {
     this.cachedSnapshot = null;
-    this.listeners.forEach((cb) => cb());
+    this.store.set(this.store.get() + 1);
   }
 }
 

@@ -24,13 +24,17 @@ import {
   BUILTIN_LINE_STYLES,
   DEFAULT_ACTIVE_LINE_STYLE_ID,
 } from './line-style-templates';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type RegistryListener = () => void;
 
 export class LineStyleRegistry {
   private readonly styles = new Map<string, LineStyle>();
   private activeStyleId: string = DEFAULT_ACTIVE_LINE_STYLE_ID;
-  private readonly listeners = new Set<RegistryListener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.7). Carries ONLY the version-signal
+  // integer; `styles`/`activeStyleId`/`cachedSnapshot` stay plain fields as mutation
+  // accelerators — consumers re-read them via `getSnapshot()`/`getStyle()` on notify.
+  private readonly store = createExternalStore<number>(0);
   private cachedSnapshot: LineStyleSnapshot | null = null;
 
   constructor() {
@@ -131,15 +135,12 @@ export class LineStyleRegistry {
   // ── Subscription ─────────────────────────────────────────────────────────
 
   subscribe(listener: RegistryListener): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return this.store.subscribe(listener);
   }
 
   private notify(): void {
     this.cachedSnapshot = null;
-    this.listeners.forEach((cb) => cb());
+    this.store.set(this.store.get() + 1);
   }
 }
 

@@ -15,33 +15,27 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 type GuideDragListener = () => void;
 
-let draggingGuideId: string | null = null;
-const listeners = new Set<GuideDragListener>();
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.7). `equals: Object.is`
+// reproduces the hand-rolled `if (draggingGuideId === id) return` guard. This
+// is click-driven (drag start/end), NOT a per-frame write — the live follow
+// position is owned by the ghost overlay, not this store.
+const store = createExternalStore<string | null>(null, { equals: Object.is });
 
 /** Όρισε/καθάρισε τον οδηγό που σύρεται. No-op αν δεν αλλάζει (αποφυγή churn). */
 export function setDraggingGuideId(id: string | null): void {
-  if (draggingGuideId === id) return;
-  draggingGuideId = id;
-  listeners.forEach((l) => {
-    try {
-      l();
-    } catch (err) {
-      console.error('guide-drag-store listener error:', err);
-    }
-  });
+  store.set(id);
 }
 
 /** Ο οδηγός που σύρεται τώρα, ή `null`. Safe σε event-time/render-time read. */
 export function getDraggingGuideId(): string | null {
-  return draggingGuideId;
+  return store.get();
 }
 
 /** Subscribe σε αλλαγές drag-state (set/clear). Επιστρέφει unsubscribe. */
 export function subscribeGuideDrag(listener: GuideDragListener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  return store.subscribe(listener);
 }

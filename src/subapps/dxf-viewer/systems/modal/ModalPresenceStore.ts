@@ -28,24 +28,24 @@
  * @module systems/modal/ModalPresenceStore
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
 import { detectOpenModal } from './modal-presence-detect';
 
 type ModalPresenceListener = () => void;
 
-let isModalOpen = false;
-const listeners = new Set<ModalPresenceListener>();
-let observer: MutationObserver | null = null;
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.7). `equals: Object.is`
+// reproduces the hand-rolled `if (next === isModalOpen) return` guard.
+const store = createExternalStore<boolean>(false, { equals: Object.is });
 
-function setModalOpen(next: boolean): void {
-  if (next === isModalOpen) return;
-  isModalOpen = next;
-  listeners.forEach((cb) => cb());
-}
+let observer: MutationObserver | null = null;
+// Mirrors the store's internal listener count so the observer can be ref-counted
+// (attach on first subscriber, detach on last) without the store exposing size.
+let subscriberCount = 0;
 
 /** Re-detect modal presence. Runs on subscribe + on each body childList mutation. */
 function scan(): void {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
-  setModalOpen(detectOpenModal(document, window));
+  store.set(detectOpenModal(document, window));
 }
 
 function startObserver(): void {
@@ -60,33 +60,35 @@ function startObserver(): void {
 function stopObserver(): void {
   observer?.disconnect();
   observer = null;
-  isModalOpen = false;
+  store.set(false);
 }
 
 /** Current snapshot — stable primitive, safe for `useSyncExternalStore`. */
 export function getIsModalOpen(): boolean {
-  return isModalOpen;
+  return store.get();
 }
 
 /** Subscribe to modal open/close. Lazily (de)activates the body observer. */
 export function subscribeModalPresence(cb: ModalPresenceListener): () => void {
-  if (listeners.size === 0) startObserver();
-  listeners.add(cb);
+  if (subscriberCount === 0) startObserver();
+  subscriberCount++;
+  const unsubscribe = store.subscribe(cb);
   return () => {
-    listeners.delete(cb);
-    if (listeners.size === 0) stopObserver();
+    unsubscribe();
+    subscriberCount--;
+    if (subscriberCount === 0) stopObserver();
   };
 }
 
 // ─── Test-only hooks (jsdom has no real portal lifecycle) ────────────────────
 export function __setModalOpenForTest(next: boolean): void {
-  setModalOpen(next);
+  store.set(next);
 }
 export function __scanForTest(): void {
   scan();
 }
 export function __resetForTest(): void {
   stopObserver();
-  listeners.clear();
-  isModalOpen = false;
+  subscriberCount = 0;
+  store.reset(false);
 }

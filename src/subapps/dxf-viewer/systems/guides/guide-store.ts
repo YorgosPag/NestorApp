@@ -27,6 +27,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Guide, GuideGroup, GridGuideStyle } from './guide-types';
 import { GUIDE_LIMITS, pointToSegmentDistance } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
+import { createExternalStore } from '../../stores/createExternalStore';
 import {
   batchRemoveGuides,
   batchSetGuidesLocked,
@@ -64,29 +65,25 @@ export class GuideStore implements IGridHeadlessAPI {
   private groups: GuideGroup[] = [];
   private visible = true;
   private snapToGrid = true;
-  private listeners = new Set<StoreListener>();
-  private version = 0;
+  // SSoT pub/sub via createExternalStore (WAVE 2.7): the four mutation
+  // accelerators above stay as private fields; the store carries only the
+  // version-signal (no combined snapshot object — the fields don't pack
+  // cleanly into ONE value, but a monotonic counter for React memoization
+  // already existed pre-migration).
+  private readonly versionStore = createExternalStore<number>(0);
 
   // ── Observer Pattern ──
 
   subscribe(listener: StoreListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.versionStore.subscribe(listener);
   }
 
   private notify(): void {
-    this.version++;
-    this.listeners.forEach(listener => {
-      try {
-        listener();
-      } catch (err) {
-        console.error('[GuideStore] Listener error:', err);
-      }
-    });
+    this.versionStore.set(this.versionStore.get() + 1);
   }
 
   getVersion(): number {
-    return this.version;
+    return this.versionStore.get();
   }
 
   // ── Read Operations ──

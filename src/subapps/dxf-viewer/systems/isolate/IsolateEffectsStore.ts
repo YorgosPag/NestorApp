@@ -17,6 +17,7 @@
  */
 
 import { dequal } from 'dequal';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type IsolateEffectsListener = () => void;
 
@@ -61,26 +62,22 @@ const INITIAL_SNAPSHOT: IsolateEffectsSnapshot = Object.freeze({
   category: null
 });
 
-let snapshot: IsolateEffectsSnapshot = INITIAL_SNAPSHOT;
-const subscribers = new Set<IsolateEffectsListener>();
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
-}
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.7). No `equals` option —
+// `setIsolateEffects` already runs its own dequal-based field-compare guard
+// before deciding whether to write a new frozen snapshot, so the store itself
+// always-notifies on `set` (byte-identical to the hand-rolled `notify()`).
+const store = createExternalStore<IsolateEffectsSnapshot>(INITIAL_SNAPSHOT);
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getIsolateEffectsSnapshot(): IsolateEffectsSnapshot {
-  return snapshot;
+  return store.get();
 }
 
 // ─── Subscription ────────────────────────────────────────────────────────────
 
 export function subscribeIsolateEffects(cb: IsolateEffectsListener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
@@ -118,19 +115,20 @@ export function setIsolateEffects(input: SetIsolateEffectsInput): void {
         ? input.isolatedCategories
         : new Set(input.isolatedCategories);
 
+  const current = store.get();
   if (
-    snapshot.active &&
-    snapshot.mode === input.mode &&
-    snapshot.dimOpacityPercent === input.dimOpacityPercent &&
-    snapshot.category === (input.category ?? null) &&
-    dequal(snapshot.isolatedLayerIds, nextLayerSet) &&
-    dequal(snapshot.isolatedEntityIds, nextEntitySet) &&
-    dequal(snapshot.isolatedCategories, nextCategorySet)
+    current.active &&
+    current.mode === input.mode &&
+    current.dimOpacityPercent === input.dimOpacityPercent &&
+    current.category === (input.category ?? null) &&
+    dequal(current.isolatedLayerIds, nextLayerSet) &&
+    dequal(current.isolatedEntityIds, nextEntitySet) &&
+    dequal(current.isolatedCategories, nextCategorySet)
   ) {
     return;
   }
 
-  snapshot = Object.freeze({
+  store.set(Object.freeze({
     active: true,
     mode: input.mode,
     isolatedLayerIds: nextLayerSet,
@@ -138,21 +136,18 @@ export function setIsolateEffects(input: SetIsolateEffectsInput): void {
     isolatedCategories: nextCategorySet,
     dimOpacityPercent: input.dimOpacityPercent,
     category: input.category ?? null
-  });
-  notify();
+  }));
 }
 
 /** Deactivate isolate effects (zero-cost passthrough until next `setIsolateEffects`). */
 export function clearIsolateEffects(): void {
-  if (!snapshot.active) return;
-  snapshot = INITIAL_SNAPSHOT;
-  notify();
+  if (!store.get().active) return;
+  store.set(INITIAL_SNAPSHOT);
 }
 
 // ─── Test-only reset (NOT exported from index — direct import only) ──────────
 
 /** @internal Reset to empty state + clear subscribers. Tests only. */
 export function __resetIsolateEffectsForTesting(): void {
-  snapshot = INITIAL_SNAPSHOT;
-  subscribers.clear();
+  store.reset(INITIAL_SNAPSHOT);
 }

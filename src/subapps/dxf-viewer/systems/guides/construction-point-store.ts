@@ -19,6 +19,7 @@ import type { ConstructionPoint } from './guide-types';
 import { CONSTRUCTION_POINT_LIMITS } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
 import { nowISO } from '@/lib/date-local';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ============================================================================
 // TYPES
@@ -37,32 +38,27 @@ type StoreListener = () => void;
  */
 export class ConstructionPointStore {
   private points: ConstructionPoint[] = [];
-  private listeners = new Set<StoreListener>();
-  private version = 0;
+  // SSoT pub/sub via createExternalStore (WAVE 2.7): `points` stays as the
+  // mutation accelerator; the store carries only the version-signal (mirrors
+  // GuideStore — a monotonic counter for React memoization, no combined
+  // snapshot object needed since there's a single field here already).
+  private readonly versionStore = createExternalStore<number>(0);
 
   // ── Observer Pattern ──
 
   /** Subscribe to store changes. Returns unsubscribe function. */
   subscribe(listener: StoreListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.versionStore.subscribe(listener);
   }
 
   /** Notify all subscribers of a state change */
   private notify(): void {
-    this.version++;
-    this.listeners.forEach(listener => {
-      try {
-        listener();
-      } catch (err) {
-        console.error('[ConstructionPointStore] Listener error:', err);
-      }
-    });
+    this.versionStore.set(this.versionStore.get() + 1);
   }
 
   /** Current version (increments on every mutation — for React memoization) */
   getVersion(): number {
-    return this.version;
+    return this.versionStore.get();
   }
 
   // ── Read Operations ──
