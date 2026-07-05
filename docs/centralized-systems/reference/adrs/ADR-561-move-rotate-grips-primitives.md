@@ -5,7 +5,9 @@
 - **Related**: ADR-397 (BIM grip glyph behavior SSoT — MOVE 4-arrow / ROTATION curved),
   ADR-363 Slice F/G.5 (plain DXF line rotation + ¼-west MOVE cross),
   ADR-557 (Text/MText rect-box grip parity), ADR-519 (κυκλική κολόνα — μόνο move, όχι rotation),
-  ADR-188 (RotateEntityCommand), ADR-559 (quadrant grips visible ≡ pickable)
+  ADR-188 (RotateEntityCommand), ADR-559 (quadrant grips visible ≡ pickable),
+  ADR-357 Φ12 / ADR-560 (grip copy SSoT — `RotateEntityCommand.copyMode` / `CtrlKeyTracker`),
+  ADR-049 (inverted-ghost dim· copy → αρχική solid)
 
 ## Context
 
@@ -110,6 +112,27 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-05** — ✨ **Ctrl + drag ΑΚΡΟΥ/ΚΟΡΥΦΗΣ = ROTATE-COPY (μεντεσές) με όλα τα ίχνη** (Giorgio:
+  «πατάω & κρατάω κλικ σε άκρο + Control → αντίγραφο που περιστρέφεται γύρω από το άκρο· στο release νέα
+  γραμμή ενωμένη στο άκρο· η αρχική μένει· ΟΛΑ τα ίχνη περιστροφής να τρέχουν»· εύρος **γραμμή + τόξο +
+  polyline**· ΕΝΑ αντίγραφο/release· αρχική **solid** + φάντασμα αντιγράφου· Ctrl-copy **και στη λαβή
+  περιστροφής grip 3**). **SSoT audit**: ~95% υπήρχε ήδη → μηδέν νέος μηχανισμός. **(1) Copy commit**:
+  `commitLineGripDrag` (grip-linear-commits.ts) + `commitArcGripDrag`/`commitPolylineRotationGripDrag`
+  (grip-primitive-rotate-commits.ts) περνούν πλέον `copyMode = GripCopyModeStore.enabled ||
+  CtrlKeyTracker` στο **υπάρχον** `RotateEntityCommand.copyMode` (ADR-357 Φ12· clone+id+undo/redo)· ίδιο
+  copy-trigger με το move-copy → καλύπτει ΚΑΙ το grip-3 Ctrl-copy. Rect-copy = **νέα** closed polyline
+  (`CreateEntityCommand`, inherit layer/style) αντί explode-in-place (το scene rect αγνοεί `rotation`).
+  **(2) Trigger**: νέος pure SSoT `hooks/grips/ctrl-endpoint-rotate-copy.ts` `resolveCtrlEndpointRotateCopy`
+  (αυστηρό gate: Ctrl + PLAIN vertex line/arc/polyline → pivot=άκρο + synthetic rotation-kind grip)·
+  `runGripMouseDown` προ-γεμίζει το free-rotate (step `rotate-free`, `hotGripBase`=άκρο, baseline μείζονος
+  άξονα, arm rotation-snap targets) — mirror του `advanceHotGripPick`. Χωρίς Ctrl → αμετάβλητο stretch.
+  Preview + commit δρομολογούνται αυτόματα μέσω του synthetic kind (μηδέν νέος preview/commit κώδικας).
+  **(3) Copy-ghost** (⚠️ ADR-040 hot files, CHECK 6B/6D): νέο `gripDragIsCopy` στα `DxfRenderOptions`
+  (dxf-types.ts) → ο `dxf-canvas-renderer` ΔΕΝ dim-άρει την αρχική όταν copy (μένει solid, ADR-049
+  inverted-ghost gate)· `CanvasLayerStack` το υπολογίζει με plain getSnapshot (CHECK 6C-safe).
+  **Tests**: `ctrl-endpoint-rotate-copy.test.ts` (gate/regression) + `RotateEntityCommand.copy.test.ts`
+  (hinge geometry + undo). jest ✅ 17/17 νέα + 40/40 regression. 🔴 εκκρεμεί browser-verify (γραμμή/τόξο/
+  polyline rotate-copy: ghost αντιγράφου + όλα τα ίχνη + hinge στο άκρο + grip-3 Ctrl-copy).
 - **2026-07-05** — ✨ **Άξονας αναφοράς περιστροφής ΟΡΘΟΓΩΝΙΟΥ = ΠΛΗΡΕΣ SSoT του ΤΟΙΧΟΥ, ΕΝΑΣ άξονας**
   (Giorgio: «μελέτησε πώς περιστρέφεται ο τοίχος και βάλε τον ΙΔΙΟ κώδικα στο τετράγωνο· θέλω ΕΝΑΝ άξονα,
   όχι δύο»). ⚠️ Αντικαθιστά μια προηγούμενη λάθος προσπάθεια (σταυρός 2 αξόνων + gating σε 8 λαβές —
