@@ -59,7 +59,10 @@ import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-re
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
 import { isLineEntity, isWallEntity } from '../../types/entities';
-import type { HatchEntity } from '../../types/entities';
+import type { HatchEntity, LineEntity } from '../../types/entities';
+// ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) στη whole-line MOVE της
+// κεντρικής λαβής· ΙΔΙΟΣ overlay dim SSoT με το body-drag → μία όψη, μηδέν διπλότυπο. ORTHO-gated.
+import { paintLineParallelOffsetDim } from '../../canvas-v2/preview-canvas/line-offset-dim-paint';
 // ADR-507 Φ5 A3b — gradient-origin λαβή που ακολουθεί LIVE τον κέρσορα στο preview canvas
 // (το main-canvas grip κρύβεται όσο σέρνεται· βλ. HatchRenderer.getGrips).
 import {
@@ -311,6 +314,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       if (actionTracking) {
         paintActionAlignmentTracking(ctx, actionTracking, t, vp, resolveSceneUnits(trkScene));
       }
+    }
+
+    // Κάθετη διάσταση αρχικής↔φαντάσματος για whole-line MOVE μέσω κεντρικής λαβής (πλήρης ISO dim,
+    // ORTHO-gated εσωτερικά). `dp.delta` = η ήδη ORTHO+F9/Q constrained μετάθεση → preview≡commit.
+    if (dp.movesEntity === true && !dp.rotatePivot && isLineEntity(entity as unknown as Entity)) {
+      const offScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      paintLineParallelOffsetDim(ctx, entity as unknown as LineEntity, dp.delta, t, vp, resolveSceneUnits(offScene));
     }
 
     // ADR-357/397 — endpoint RESHAPE direction arc: dragging a line's endpoint pivots the segment

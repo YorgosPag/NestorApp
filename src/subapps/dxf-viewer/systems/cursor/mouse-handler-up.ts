@@ -58,6 +58,8 @@ import { isHatchSelectArmed, runArmedHatchPick } from '../../bim/hatch/hatch-sel
 // Body-drag (grab body → move; Ctrl+drag → copy) — commit on mouseup.
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-363 — F9/Q SNAP-MODE step layer for the body-drag COMMIT (WYSIWYG with the live ghost).
+import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
 
 /** Min pointer travel (px) before a body-drag counts as a drag (else it's a click). */
 const BODY_DRAG_MIN_PX = 3;
@@ -150,13 +152,14 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           // ADR-560 — AutoAlign commit parity: re-resolve the SAME base-point tracking the live ghost
           // used (applyBodyDragAlignmentTracking) so the committed destination == the previewed one
           // (WYSIWYG). Mirror of the dim/line grip commit parity above. Runs BEFORE the ORTHO lock.
-          const bodyTracking = resolveActionAlignmentTracking(
+          // Step grid engaged (F9+Q) → the grid wins, skip the AutoAlign snap (parity with the ghost).
+          const bodyTracking = isGripStepActive() ? null : resolveActionAlignmentTracking(
             upWorld, [session.anchor], transform.scale,
             (scene?.entities ?? null) as unknown as readonly Entity[] | null,
           );
           if (bodyTracking) upWorld = bodyTracking.point;
-          // ORTHO (F8) parity with the live ghost (`useEntityBodyDragPreview`).
-          const delta = applyOrthoToDelta({ x: upWorld.x - session.anchor.x, y: upWorld.y - session.anchor.y });
+          // ORTHO (F8) + F9/Q SNAP-MODE step — SAME transform as the live ghost (`useEntityBodyDragPreview`) → WYSIWYG.
+          const delta = applyGripStepSnap(applyOrthoToDelta({ x: upWorld.x - session.anchor.x, y: upWorld.y - session.anchor.y }));
           const movedPx = Math.hypot(delta.x, delta.y) * transform.scale;
           if (movedPx >= BODY_DRAG_MIN_PX && session.entityIds.length > 0) {
             EventBus.emit('entity-body-drag:commit', {

@@ -34,7 +34,15 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ORTHO (F8) axis-lock — shared SSoT with the Move ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-363 — F9/Q SNAP-MODE step layer (parity with the grip-move path). `isGripStepActive` gates
+// "grid wins over AutoAlign snap" so body-drag and centre-grip move quantize identically.
+import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
 import { resolveSceneUnits } from '../../utils/scene-units';
+// ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) via the shared overlay dim
+// SSoT (βέλη + extension lines + αριθμός). ORTHO-gated internally (Giorgio 2026-07-05).
+import { isLineEntity } from '../../types/entities';
+import type { LineEntity } from '../../types/entities';
+import { paintLineParallelOffsetDim } from '../../canvas-v2/preview-canvas/line-offset-dim-paint';
 // ADR-560/572 — cyan AutoAlign traces RESOLVED-IN-DRAW (mirror useMovePreview, self-contained).
 // Το tracking υπολογίζεται ΤΟΠΙΚΑ εδώ ανά frame από το ΙΔΙΟ SSoT resolve (`resolveActionAlignmentTracking`)
 // αντί να διαβάζεται από το cross-tick `GripAlignmentTrackingStore` → μηδέν timing-skew (τα ίχνη δεν «χάνονται»).
@@ -94,11 +102,12 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
 
     const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
 
-    // ORTHO (F8): lock the destination to the H/V axis from the anchor (no-op when OFF).
-    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - anchor.x, y: effectiveCursor.y - anchor.y });
-    const orthoDestination: Point2D = { x: anchor.x + orthoDelta.x, y: anchor.y + orthoDelta.y };
+    // ORTHO (F8) axis-lock, THEN the F9/Q SNAP-MODE step (parity with the grip-move path — both
+    // gestures now quantize identically). Both no-op when their toggle is off, so default is unchanged.
+    const moveDelta = applyGripStepSnap(applyOrthoToDelta({ x: effectiveCursor.x - anchor.x, y: effectiveCursor.y - anchor.y }));
+    const constrainedDestination: Point2D = { x: anchor.x + moveDelta.x, y: anchor.y + moveDelta.y };
 
-    if (Math.abs(orthoDelta.x) < 0.001 && Math.abs(orthoDelta.y) < 0.001) return;
+    if (Math.abs(moveDelta.x) < 0.001 && Math.abs(moveDelta.y) < 0.001) return;
 
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
     const sceneUnits = resolveSceneUnits(scene);
@@ -108,10 +117,12 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     // ΜΗΔΕΝ εξάρτηση από το cross-tick `GripAlignmentTrackingStore` (τέλος του timing-skew όπου τα ίχνη
     // «χάνονταν»). Το resolved point τρέφει ΚΑΙ τη γεωμετρία του ghost ΚΑΙ τα ίχνη → WYSIWYG (ο
     // mouse-handler-up κάνει το ΙΔΙΟ resolve στο commit). Null όταν δεν κουμπώνει → διακριτική πινακίδα.
-    const tracking = resolveActionAlignmentTracking(
-      orthoDestination, [anchor], t.scale, (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+    // While the step grid is engaged (F9+Q) the grid wins → skip the AutoAlign snap so the ghost
+    // rides clean step multiples; otherwise resolve the cyan AutoAlign traces as before (no regression).
+    const tracking = isGripStepActive() ? null : resolveActionAlignmentTracking(
+      constrainedDestination, [anchor], t.scale, (scene?.entities ?? null) as unknown as readonly Entity[] | null,
     );
-    const destination: Point2D = tracking ? tracking.point : orthoDestination;
+    const destination: Point2D = tracking ? tracking.point : constrainedDestination;
     const delta: Point2D = { x: destination.x - anchor.x, y: destination.y - anchor.y };
     const cursorPt = toScreen(destination);
 
@@ -176,6 +187,15 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
 
     // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
     if (clearanceDims) paintGhostFaceDimensions(ctx, clearanceDims, t, viewport);
+
+    // Κάθετη διάσταση αρχικής↔φαντάσματος για κάθε μετακινούμενη ΓΡΑΜΜΗ (πλήρης ISO dim). ORTHO-gated
+    // εσωτερικά· κάθε γραμμή έχει το δικό της κάθετο offset ως προς τον ΔΙΚΟ της άξονα.
+    for (const id of entityIds) {
+      const entity = getEntity(id);
+      if (entity && isLineEntity(entity as unknown as Entity)) {
+        paintLineParallelOffsetDim(ctx, entity as unknown as LineEntity, delta, t, viewport, sceneUnits);
+      }
+    }
   }, [getEntity, getBimPreview, getLayersById, levelManager]);
 
   useCanvasGhostPreview({
